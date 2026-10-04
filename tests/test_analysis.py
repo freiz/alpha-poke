@@ -34,3 +34,47 @@ def test_roles_from_reveals_and_prior():
     )
     p = species_role_prior(s)
     assert abs(p["screens"] - 0.2) < 1e-9  # max over correlated indicators, not noisy-OR
+
+
+def test_team_prior_beats_species_prior_on_copied_team():
+    import pandas as pd
+
+    from alpha_poke.belief.priors import SpeciesReplayPrior, TeamPrior
+
+    class Empty:
+        def predict(self, species, team):
+            from alpha_poke.belief.priors import Dist
+
+            return Dist({}, {}, {})
+
+    team_a, team_b = "A|B|C|D|E|F", "A|G|H|I|J|K"
+    rows = []
+    for i in range(20):  # on team_a, A always holds Leftovers; elsewhere Choice Scarf
+        rows.append(
+            dict(
+                id=f"a{i}",
+                side="p1",
+                species="A",
+                team=team_a,
+                item="Leftovers",
+                tera_type=None,
+                moves="Earthquake",
+            )
+        )
+        rows.append(
+            dict(
+                id=f"b{i}",
+                side="p1",
+                species="A",
+                team=team_b,
+                item="Choice Scarf",
+                tera_type=None,
+                moves="U-turn",
+            )
+        )
+    train = pd.DataFrame(rows)
+    sp = SpeciesReplayPrior(train, Empty())
+    tp = TeamPrior(train, sp)
+    team = tuple(team_a.split("|"))
+    assert abs(sp.predict("A", team).item["leftovers"] - 0.5) < 0.1
+    assert tp.predict("A", team).item["leftovers"] > 0.8
