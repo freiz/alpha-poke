@@ -1,0 +1,59 @@
+Great Tusk @ Rocky Helmet
+Ability: Protosynthesis
+Tera Type: Water
+EVs: 252 HP / 4 Atk / 252 Def
+Impish Nature
+- Stealth Rock
+- Headlong Rush
+- Rapid Spin
+- Knock Off
+
+Gholdengo @ Leftovers
+Ability: Good as Gold
+Tera Type: Fairy
+EVs: 252 HP / 4 Def / 252 SpA
+Modest Nature
+- Make It Rain
+- Shadow Ball
+- Nasty Plot
+- Recover
+
+Kingambit @ Leftovers
+Ability: Supreme Overlord
+Tera Type: Dark
+EVs: 252 HP / 252 Atk / 4 SpD
+Adamant Nature
+- Swords Dance
+- Kowtow Cleave
+- Sucker Punch
+- Iron Head
+
+Landorus-Therian @ Rocky Helmet
+Ability: Intimidate
+Tera Type: Water
+EVs: 252 HP / 252 Def / 4 SpD
+Impish Nature
+- Earthquake
+- U-turn
+- Stealth Rock
+- Taunt
+
+Garganacl @ Leftovers
+Ability: Purifying Salt
+Tera Type: Ghost
+EVs: 252 HP / 4 Atk / 252 SpD
+Careful Nature
+- Salt Cure
+- Recover
+- Protect
+- Stealth Rock
+
+Dragapult @ Choice Specs
+Ability: Clear Body
+Tera Type: Ghost
+EVs: 4 HP / 252 SpA / 252 Spe
+Timid Nature
+- Draco Meteor
+- Shadow Ball
+- U-turn
+- Flamethrower
