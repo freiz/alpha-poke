@@ -131,3 +131,18 @@ def test_all_local_samples_parse():
     for f in Path("data/replays_sample").glob("*.json"):
         r = parse_replay(json.loads(f.read_text()))
         assert r.winner in ("p1", "p2") and len(r.teams["p1"]) >= 6
+
+
+def test_generic_from_tags_reveal_ability_and_item():
+    r = parse_replay(
+        synth(
+            "|switch|p1a: G|Garchomp, M|100/100",
+            "|switch|p2a: T|Great Tusk|100/100",
+            "|turn|1",
+            "|-immune|p1a: G|[from] ability: Good as Gold",
+            "|-status|p2a: T|brn|[from] item: Flame Orb",
+            "|-item|p2a: T|Leftovers|[from] ability: Frisk|[of] p1a: G",
+        )
+    )
+    assert mon(r, "p1", "Garchomp").ability == "Good as Gold"
+    assert mon(r, "p2", "Great Tusk").item == "Flame Orb"

@@ -18,6 +18,25 @@ import re
 from dataclasses import asdict, dataclass, field
 
 SIDES = ("p1", "p2")
+# commands whose handler interprets [from] item: / [from] ability: itself
+_OWN_TAG_HANDLING = frozenset(
+    {
+        "move",
+        "-item",
+        "-enditem",
+        "-ability",
+        "-damage",
+        "-heal",
+        "-weather",
+        "-fieldstart",
+        "-activate",
+        "switch",
+        "drag",
+        "replace",
+        "detailschange",
+        "-formechange",
+    }
+)
 _POS = re.compile(r"^(p[12])([a-c])?: (.*)$")
 _RATING = re.compile(r"^(.*)'s rating: (\d+) &rarr; <strong>(\d+)</strong>")
 
@@ -207,6 +226,22 @@ class ReplayParser:
         if lost and mon.item == item:
             mon.item_lost = lost
 
+    def _reveal_from_tags(self, args: list[str]) -> None:
+        """Generic reveal for lines like ``|-immune|p1a: X|[from] ability: Good as Gold``.
+
+        The holder is the ``[of]`` mon when present, otherwise the first mon on the line.
+        """
+        tags = _tags(args)
+        src = tags.get("from", "")
+        if not (src.startswith("ability:") or src.startswith("item:")):
+            return
+        first = next((a for a in args if _POS.match(a.strip())), None)
+        holder = self._holder(self._mon(first) if first else (None, None), tags)
+        if src.startswith("ability:"):
+            self._reveal_ability(holder, src[8:].strip())
+        else:
+            self._reveal_item(holder, src[5:].strip())
+
     def _reveal_ability(self, mon: MonRecord | None, ability: str) -> None:
         if mon is None or not ability:
             return
@@ -225,6 +260,8 @@ class ReplayParser:
             handler = getattr(self, f"_on_{cmd.strip('-').replace(':', '')}", None)
             if handler:
                 handler(args)
+            if cmd not in _OWN_TAG_HANDLING:
+                self._reveal_from_tags(args)
         return Replay(
             id=self.raw.get("id", ""),
             format=self.raw.get("formatid") or self.tier,
@@ -423,6 +460,8 @@ class ReplayParser:
         if "from" in tags and tags["from"].startswith("move:"):
             return  # Trick / Switcheroo / Thief: not the original item
         self._reveal_item(mon, a[1])
+        if tags.get("from", "").startswith("ability:"):  # e.g. Frisk: ability belongs to [of]
+            self._reveal_ability(self._holder((None, None), tags), tags["from"][8:].strip())
 
     def _on_enditem(self, a):
         side, mon = self._mon(a[0])

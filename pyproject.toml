@@ -7,7 +7,9 @@ authors = [
 ]
 requires-python = ">=3.12"
 dependencies = [
+    "pandas>=3.0.6",
     "poke-env>=0.16.1",
+    "pyarrow>=25.0.1",
 ]
 
 [project.scripts]
