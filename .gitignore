@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.ruff_cache/
+
+# Local Showdown server
+vendor/
+
+# Experiment artifacts (keep dirs, ignore contents)
+runs/
+checkpoints/
+logs/
+wandb/
+*.pt
+*.pth
+*.ckpt
+*.npz
+
+# Data
+data/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
