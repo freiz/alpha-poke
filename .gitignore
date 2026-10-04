@@ -22,7 +22,7 @@ wandb/
 *.npz
 
 # Data
-data/
+/data/
 
 # Editor / OS
 .vscode/
