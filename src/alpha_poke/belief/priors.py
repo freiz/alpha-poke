@@ -15,6 +15,7 @@ Priors (each falls back to the previous one, Dirichlet-smoothed with strength ``
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 
+import numpy as np
 import pandas as pd
 
 from alpha_poke.analysis.cores import Core, team_cores
@@ -140,3 +141,72 @@ class TeamPrior:
         b = self.base.predict(species, team)
         key = ("|".join(sorted(team)), species)
         return self.c[key].dist(b, self.alpha) if key in self.c else b
+
+
+class SetMixturePrior:
+    """Mixture over mined set archetypes (``analysis.sets``), with the archetype weights
+    conditioned on the most specific context seen in training: exact team, else largest core,
+    else the species-level weights. Prediction = sum_k P(k | context) * phi_k."""
+
+    name = "set_mixture"
+
+    def __init__(self, train, sets, cores, base, min_games: int = 5, alpha: float = 3.0):
+        from alpha_poke.analysis.cores import team_cores  # noqa: F401 (used via CorePrior)
+
+        self.sets, self.base, self.alpha = sets, base, alpha
+        self.core_helper = CorePrior(train.iloc[:0], cores, base)
+        games = train.drop_duplicates(["id", "side"]).team.value_counts()
+        self.known = set(games[games >= min_games].index)
+        self.w: dict[tuple, np.ndarray] = {}
+        for r in train.itertuples():
+            ss = sets.get(r.species)
+            if ss is None:
+                continue
+            post = ss.posterior(
+                r.item, r.ability, r.tera_type, [m for m in (r.moves or "").split("|") if m]
+            )
+            team = tuple(r.team.split("|"))
+            for key in self._contexts(r.species, team):
+                self.w[key] = self.w.get(key, 0) + post
+        self._phi = {
+            sp: {
+                a: [
+                    {to_id(v): float(p) for v, p in zip(ss.vocab[a], ss.params[a][k], strict=False)}
+                    for k in range(ss.k)
+                ]
+                for a in ("item", "tera", "move")
+            }
+            for sp, ss in sets.items()
+        }
+
+    def _contexts(self, species, team):
+        tk = "|".join(sorted(team))
+        out = []
+        if tk in self.known:
+            out.append(("team", tk, species))
+        core = self.core_helper._core_for(species, tuple(sorted(team)))
+        if core:
+            out.append(("core", core, species))
+        return out
+
+    def predict(self, species, team) -> Dist:
+        ss = self.sets.get(species)
+        if ss is None:
+            return self.base.predict(species, team)
+        weights = ss.params["pi"]
+        for key in self._contexts(species, team):  # most specific first
+            if key in self.w:
+                c = self.w[key]
+                weights = (c + self.alpha * ss.params["pi"]) / (c.sum() + self.alpha)
+                break
+        b = self.base.predict(species, team)
+        out = {}
+        for a in ("item", "tera", "move"):
+            mix: dict[str, float] = {}
+            for k, wk in enumerate(weights):
+                for v, p in self._phi[species][a][k].items():
+                    mix[v] = mix.get(v, 0.0) + wk * p
+            # small back-off to the base prior for values outside the mined vocabulary
+            keys = set(mix) | set(getattr(b, a))
+            out[a] = {v: 0.95 * mix.get(v, 0.0) + 0.05 * getattr(b, a).get(v, 0.0) for v in keys}
+        return Dist(out["item"], out["tera"], out["move"])

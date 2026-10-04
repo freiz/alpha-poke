@@ -11,9 +11,16 @@ import pandas as pd
 
 from alpha_poke.analysis.archetypes import team_table
 from alpha_poke.analysis.cores import mine_cores
+from alpha_poke.analysis.sets import mine_sets
 from alpha_poke.analysis.tables import OUT
 from alpha_poke.belief.evaluate import evaluate
-from alpha_poke.belief.priors import CorePrior, SmogonPrior, SpeciesReplayPrior, TeamPrior
+from alpha_poke.belief.priors import (
+    CorePrior,
+    SetMixturePrior,
+    SmogonPrior,
+    SpeciesReplayPrior,
+    TeamPrior,
+)
 from alpha_poke.data.smogon_stats import DEFAULT_DIR, UsageStats
 
 
@@ -51,8 +58,11 @@ def main() -> None:
     sp = SpeciesReplayPrior(train, smog)
     core = CorePrior(train, cores, sp)
     team = TeamPrior(train, core)
+    sets = mine_sets(m[m.id.isin(train_ids)])
+    setmix = SetMixturePrior(train, sets, cores, sp)
+    priors = (smog, sp, core, team, setmix)
     rows = {}
-    for prior in (smog, sp, core, team):
+    for prior in priors:
         rows[prior.name] = evaluate(prior, test)
     df = pd.DataFrame(rows).T
     cols = ["item_nll", "item_top1", "tera_nll", "tera_top1", "move_nll", "move_recall@4"]
@@ -63,7 +73,7 @@ def main() -> None:
     is_known = test.team.isin(known)
     print(f"\ntest mons whose exact team was seen >=5 times in train: {is_known.mean():.1%}")
     sub = test[is_known]
-    rows = {p.name: evaluate(p, sub) for p in (smog, sp, core, team)}
+    rows = {p.name: evaluate(p, sub) for p in priors}
     print("on that subset:")
     print(pd.DataFrame(rows).T[cols].round(3).to_string())
 

@@ -28,3 +28,6 @@ wandb/
 .vscode/
 .idea/
 .DS_Store
+
+# Secrets (API keys)
+.env
