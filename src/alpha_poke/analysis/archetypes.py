@@ -75,3 +75,51 @@ def cluster_teams(
             )
         )
     return lab, out
+
+
+@dataclass
+class SoftArchetype:
+    component: int
+    weight: float  # total mixture mass over all teams (≈ "number of teams" of this type)
+    dominant: int  # teams where this is the largest component
+    win_rate: float  # mixture-weighted win rate
+    top: list[tuple[str, float]]  # species with the largest loadings (normalized to max=1)
+
+
+def soft_archetypes(
+    teams: pd.DataFrame, k: int = 20, min_count: int = 30, iters: int = 300, seed: int = 0
+) -> tuple[np.ndarray, list[SoftArchetype]]:
+    """L3: non-negative matrix factorization of the team x species matrix.
+
+    X (teams x species, multi-hot) ≈ W H with W, H >= 0. Row-normalized W gives each team a
+    *mixture* over archetypes (a team can be e.g. 60% sun + 40% hazard stack).
+    Returns (mixture matrix of shape [teams, k], component descriptions).
+    """
+    counts = pd.Series([s for sp in teams.species for s in sp]).value_counts()
+    vocab = counts[counts >= min_count].index.tolist()
+    idx = {s: i for i, s in enumerate(vocab)}
+    x = np.zeros((len(teams), len(vocab)), np.float64)
+    for r, sp in enumerate(teams.species):
+        for s in sp:
+            if s in idx:
+                x[r, idx[s]] = 1.0
+    x /= np.sqrt(x.mean(0) + 1e-3)  # same frequency down-weighting as the k-means version
+    rng = np.random.default_rng(seed)
+    w = rng.random((x.shape[0], k)) + 0.1
+    h = rng.random((k, x.shape[1])) + 0.1
+    eps = 1e-9
+    for _ in range(iters):  # Lee & Seung multiplicative updates (Frobenius loss)
+        h *= (w.T @ x) / (w.T @ w @ h + eps)
+        w *= (x @ h.T) / (w @ (h @ h.T) + eps)
+    mix = w / (w.sum(1, keepdims=True) + eps)
+    won = teams.won.astype(float).to_numpy()
+    ok = ~np.isnan(won)
+    dom = mix.argmax(1)
+    out = []
+    for j in range(k):
+        load = h[j] / (h[j].max() + eps)
+        top = [(vocab[i], float(load[i])) for i in np.argsort(-load)[:8] if load[i] > 0.15]
+        wr = float((mix[ok, j] * won[ok]).sum() / (mix[ok, j].sum() + eps))
+        out.append(SoftArchetype(j, float(mix[:, j].sum()), int((dom == j).sum()), wr, top))
+    out.sort(key=lambda a: -a.weight)
+    return mix, out

@@ -1,6 +1,5 @@
 """Markdown report over the parsed replay tables (+ Smogon usage stats for comparison)."""
 
-import itertools
 import math
 import time
 from collections import Counter
@@ -8,7 +7,9 @@ from pathlib import Path
 
 import pandas as pd
 
-from alpha_poke.analysis.archetypes import cluster_teams, team_table
+from alpha_poke.analysis.archetypes import soft_archetypes, team_table
+from alpha_poke.analysis.cores import mine_cores
+from alpha_poke.analysis.roles import ROLE_NAMES, RoleModel
 from alpha_poke.analysis.tables import OUT, to_id
 from alpha_poke.data.smogon_stats import DEFAULT_DIR as SMOGON_DIR
 from alpha_poke.data.smogon_stats import UsageStats
@@ -95,40 +96,102 @@ def build_report(format_id: str = "gen9ou", top: int = 25) -> str:
         "",
     ]
 
-    # ---- cores --------------------------------------------------------------------------
+    # ---- L1 roles ---------------------------------------------------------------------
     teams = team_table(m)
-    cnt, pair = Counter(), Counter()
-    for t in teams.species:
-        t = sorted(t)
-        cnt.update(t)
-        pair.update(itertools.combinations(t, 2))
-    rows = [(n, n * len(teams) / (cnt[a] * cnt[b]), a, b) for (a, b), n in pair.items() if n >= 150]
+    if smog:
+        rm = RoleModel(smog)
+        L += [
+            "## 3. L1 角色（Smogon 先验的保守下界 + replay 已暴露信息）",
+            "",
+            "每支队伍的角色数 = 6 只宝可梦该角色概率之和；下表是所有队伍的平均值。",
+            "",
+            "| 角色 | 每队平均 | 至少 1 只的队伍比例（≥0.5） |",
+            "|---|---|---|",
+        ]
+        prof = []
+        for _key, d in m.groupby(["id", "side"]):
+            tot = dict.fromkeys(ROLE_NAMES, 0.0)
+            for r in d.itertuples():
+                for k, v in rm.roles(
+                    r.species, r.moves.split("|") if r.moves else [], r.ability, r.item
+                ).items():
+                    tot[k] += v
+            prof.append(tot)
+        prof = pd.DataFrame(prof)
+        for role in prof.mean().sort_values(ascending=False).index:
+            L.append(f"| {role} | {prof[role].mean():.2f} | {_pct((prof[role] >= 0.5).mean())} |")
+        L.append("")
+
+    # ---- L2 cores -----------------------------------------------------------------------
+    cores = mine_cores(
+        [tuple(t) for t in teams.species], won=teams.won.tolist(), max_size=6, absorb=0.6
+    )
     L += [
-        "## 3. 核心搭配（lift 最高的组合，出现 ≥150 次）",
+        "## 4. L2 核心与完整队伍（最大核心，2–6 只）",
         "",
-        "lift = 实际共同出现次数 ÷ 独立时的期望次数，越高说明越是刻意的搭配。",
+        '只保留"最大核心"：每个成员在其余成员出现时的条件概率 ≥0.35、lift ≥3，'
+        "且没有被一个出现次数 ≥60% 的超集吸收。6 只的核心就是被大量照搬的完整队伍。",
         "",
-        "| 组合 | 次数 | lift |",
-        "|---|---|---|",
     ]
-    for n, lift, a, b in sorted(rows, key=lambda r: -r[1])[:20]:
-        L.append(f"| {a} + {b} | {n} | {lift:.1f} |")
+    by_size = Counter(c.size for c in cores)
+    L.append(
+        "核心数量（按大小）：" + "，".join(f"{k} 只 {v} 个" for k, v in sorted(by_size.items()))
+    )
+    L.append("")
+    L += ["| 大小 | 成员 | 次数 | 条件概率下限 | 胜率 | 子核心数 |", "|---|---|---|---|---|---|"]
+    for c in cores[:30]:
+        L.append(
+            f"| {c.size} | {' + '.join(c.members)} | {c.support} | "
+            f"{c.min_conditional:.2f} | {_pct(c.win_rate)} | {len(c.subcores)} |"
+        )
     L.append("")
 
-    # ---- archetypes ---------------------------------------------------------------------
-    _, arch = cluster_teams(teams)
+    # popular identical teams and their reconstructed sets
+    key = m.groupby(["id", "side"]).species.transform(lambda x: "/".join(sorted(x)))
+    m2 = m.assign(team_key=key)
+    per_team = m2.drop_duplicates(["id", "side"]).team_key.value_counts()
+    popular = per_team[per_team >= 50]
     L += [
-        "## 4. 队伍类型（按物种组成聚类，k=24）",
+        "### 4.1 被照搬的完整队伍",
         "",
-        '"特征"= 在该类中常见且明显多于整体平均的宝可梦。名字需要人工或 LLM 解读。',
+        f"使用 ≥50 次的相同 6 只队伍有 **{len(popular)}** 支，覆盖 "
+        f"**{_pct(popular.sum() / len(teams))}** 的队伍。同一队伍的使用者配置几乎一致，"
+        "把多场 replay 中零散暴露的信息汇总即可重建完整配置（下面是前 5 支）。",
         "",
-        "| 类 | 队伍数 | 胜率 | 特征 | 常见成员 |",
+    ]
+    for tk, n in popular.head(5).items():
+        L.append(f"**{tk}**（{n} 次）")
+        d = m2[(m2.team_key == tk) & m2.brought]
+        for sp, gg in d.groupby("species"):
+            items = gg.item.value_counts(normalize=True).head(2)
+            tera = gg.tera_type.value_counts(normalize=True).head(2)
+            mv = Counter(x for v in gg.moves for x in v.split("|") if x)
+            mv_s = ", ".join(f"{k} {v / len(gg):.0%}" for k, v in mv.most_common(5))
+            L.append(
+                f"- {sp}："
+                + " / ".join(f"{k} {v:.0%}" for k, v in items.items())
+                + "；太晶 "
+                + " / ".join(f"{k} {v:.0%}" for k, v in tera.items())
+                + f"；招式 {mv_s}"
+            )
+        L.append("")
+
+    # ---- L3 soft archetypes -------------------------------------------------------------
+    mix, soft = soft_archetypes(teams)
+    second = float((pd.DataFrame(mix).apply(lambda r: sorted(r)[-2], axis=1) >= 0.3).mean())
+    L += [
+        "## 5. L3 队伍类型（NMF 软聚类，k=20）",
+        "",
+        '每支队伍得到各类型的混合比例；"质量"= 所有队伍在该类型上的比例之和。'
+        f"第二大类型占比 ≥30% 的队伍：{_pct(second)}。名字需人工或 LLM 解读。",
+        "",
+        "| 类型 | 质量 | 主导队伍数 | 加权胜率 | 主要成员（载荷） |",
         "|---|---|---|---|---|",
     ]
-    for a in arch:
+    for sa in soft:
+        tops = ", ".join(f"{sp} {w:.2f}" for sp, w in sa.top[:6])
         L.append(
-            f"| {a.cluster} | {a.size} | {_pct(a.win_rate)} {_ci(a.size)} | "
-            f"{', '.join(a.signature)} | {', '.join(a.common[:6])} |"
+            f"| {sa.component} | {sa.weight:.0f} | {sa.dominant} | {_pct(sa.win_rate)} | {tops} |"
         )
     L.append("")
 
@@ -168,7 +231,7 @@ def build_report(format_id: str = "gen9ou", top: int = 25) -> str:
     tera_side = t.groupby(["id", "side"]).size()
     rev = brought
     L += [
-        "## 6. 太晶与信息暴露",
+        "## 7. 太晶与信息暴露",
         "",
         f"- 使用太晶的队伍：{_pct(len(tera_side) / sides)}；太晶回合中位数 "
         f"{t.tera_turn.median():.0f}",

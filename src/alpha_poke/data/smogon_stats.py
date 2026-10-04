@@ -35,7 +35,8 @@ class SpeciesStats:
     raw_count: int
     abilities: dict[str, float]
     items: dict[str, float]
-    moves: dict[str, float]
+    moves: dict[str, float]  # share of move slots (sums to 1)
+    move_has: dict[str, float]  # P(set contains the move) = count / species weight
     tera_types: dict[str, float]
     spreads: dict[str, float]  # "Nature:HP/Atk/Def/SpA/SpD/Spe" -> probability
     teammates: dict[str, float]  # co-occurrence weight (not a probability)
@@ -50,6 +51,7 @@ class UsageStats:
         self.battles: int = info["number of battles"]
         self.species: dict[str, SpeciesStats] = {}
         for name, d in raw["data"].items():
+            weight = sum(d.get("Abilities", {}).values()) or 1.0
             self.species[name] = SpeciesStats(
                 name=name,
                 usage=d.get("usage", 0.0),
@@ -57,6 +59,12 @@ class UsageStats:
                 abilities=_norm(d.get("Abilities", {})),
                 items=_norm(d.get("Items", {})),
                 moves=_norm({k: v for k, v in d.get("Moves", {}).items() if k}),
+                move_has=dict(
+                    sorted(
+                        ((k, min(v / weight, 1.0)) for k, v in d.get("Moves", {}).items() if k),
+                        key=lambda kv: -kv[1],
+                    )
+                ),
                 tera_types=_norm(d.get("Tera Types", {})),
                 spreads=_norm(d.get("Spreads", {})),
                 teammates=dict(sorted(d.get("Teammates", {}).items(), key=lambda kv: -kv[1])),
@@ -79,7 +87,7 @@ class UsageStats:
         return (
             f"{s.name}  usage {100 * s.usage:.1f}%  (raw {s.raw_count})\n"
             f"  abilities: {fmt(s.abilities)}\n  items:     {fmt(s.items)}\n"
-            f"  tera:      {fmt(s.tera_types)}\n  moves:     {fmt(s.moves)}\n"
+            f"  tera:      {fmt(s.tera_types)}\n  moves:     {fmt(s.move_has)}\n"
             f"  spreads:   {fmt(s.spreads)}\n"
             f"  teammates: {', '.join(list(s.teammates)[:top])}"
         )
