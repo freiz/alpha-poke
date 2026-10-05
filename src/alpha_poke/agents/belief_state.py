@@ -35,6 +35,17 @@ class BeliefModel:
     spreads: dict[str, Spread]  # species id -> most common spread
     lead_rate: dict[str, float]  # species -> P(lead | on team)
     names: dict[str, str]  # species id -> name as used in replay tables (e.g. 'Zamazenta-*')
+    in_battle_update: bool = True  # re-weight unrevealed moves with set-archetype posteriors
+
+    def marginal_only(self) -> "BeliefModel":
+        """Ablation: Smogon marginal prior per species, no team/core conditioning, no in-battle
+        archetype update (revealed information is still used)."""
+        from dataclasses import replace
+
+        smogon = self.prior
+        while hasattr(smogon, "base"):
+            smogon = smogon.base
+        return replace(self, prior=smogon, in_battle_update=False)
 
     @classmethod
     def build(cls, format_id: str = "gen9ou", cutoff: int = 1825) -> "BeliefModel":
@@ -101,7 +112,7 @@ class BeliefModel:
         move_p = dict(dist.move)
         ss = self.sets.get(species)
         revealed = [m.id for m in mon.moves.values()]
-        if ss is not None and (revealed or mon.item or mon.tera_type):
+        if self.in_battle_update and ss is not None and (revealed or mon.item or mon.tera_type):
             post = ss.posterior(
                 item=_display_item(mon.item, ss), moves=[_display_move(x, ss) for x in revealed]
             )

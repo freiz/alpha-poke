@@ -19,6 +19,7 @@ Any exception falls back to poke-env's SimpleHeuristicsPlayer decision.
 """
 
 import logging
+import random
 from dataclasses import dataclass, field
 
 from poke_env.battle import (
@@ -76,9 +77,22 @@ class Plan:
 
 
 class KnowledgePlayer(Player):
-    def __init__(self, belief: BeliefModel, library: dict | None = None, **kwargs):
+    def __init__(
+        self,
+        belief: BeliefModel,
+        library: dict | None = None,
+        use_plan: bool = True,
+        plan_lead: bool = True,
+        lead_prior: str = "human",
+        random_lead: bool = False,
+        **kwargs,
+    ):
         super().__init__(**kwargs)
         self.belief = belief
+        self.use_plan = use_plan  # ablation: no threats / answers / win conditions / preserve
+        self.plan_lead = plan_lead and use_plan  # ablation: lead = first slot of the team file
+        self.lead_prior = lead_prior  # "human": replay lead rates; "uniform": any of the six
+        self.random_lead = random_lead  # ablation: uniformly random lead
         self.library = library
         self.plans: dict[str, Plan] = {}
         self.fallbacks = 0
@@ -126,10 +140,14 @@ class KnowledgePlayer(Player):
             if len(plan.answers[t]) == 1:
                 plan.preserve.add(plan.answers[t][0])
         # lead: expected matchup vs their likely leads
-        rates = {
-            t: self.belief.lead_rate.get(n, 1 / 6)
-            for t, n in zip(their_keys, plan.opp_species, strict=False)
-        }
+        rates = (
+            {t: 1.0 for t in their_keys}
+            if self.lead_prior == "uniform"
+            else {
+                t: self.belief.lead_rate.get(n, 1 / 6)
+                for t, n in zip(their_keys, plan.opp_species, strict=False)
+            }
+        )
         total = sum(rates.values()) or 1.0
 
         def lead_value(o: str) -> float:
@@ -142,7 +160,12 @@ class KnowledgePlayer(Player):
                 v -= 0.15
             return v
 
-        plan.lead = max(our_keys, key=lead_value)
+        if self.random_lead:
+            plan.lead = random.choice(our_keys)
+        else:
+            plan.lead = max(our_keys, key=lead_value) if self.plan_lead else our_keys[0]
+        if not self.use_plan:  # keep the matchup cache (pure knowledge), drop the strategy
+            plan.threats, plan.answers, plan.win_conditions, plan.preserve = [], {}, [], set()
         if self.library:
             names = set(plan.opp_species)
             hits = [c for c in self.library.get("cores", []) if set(c["members"]) <= names]
