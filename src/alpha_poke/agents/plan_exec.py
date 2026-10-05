@@ -516,8 +516,8 @@ def plan_terms(state: PlanState, battle, option, ctx: dict) -> dict[str, float]:
             elif key != a.get("primary"):
                 terms["wincon_hidden"] = W["wincon_hidden"]
         for kind, args in rules:
-            if kind == "switch_to" and p.names.our(args[0]) == key:
-                terms["rule"] = W["rule"]
+            if kind == "switch_to" and p.names.our(args[0]) == key and trust:
+                terms["rule"] = W["rule"] * trust  # same staleness guard as assignments
         return terms
     move, tera = option
     from alpha_poke.agents.damage import is_damaging

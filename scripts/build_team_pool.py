@@ -151,13 +151,14 @@ def main() -> None:
     ap.add_argument("--max-teams", type=int, default=40)
     ap.add_argument("--out", default=str(ROOT / "data" / "teams" / "pool"))
     ap.add_argument("--spread-mode", choices=["top", "sample"], default="sample")
+    ap.add_argument("--offset", type=int, default=0, help="skip the N most used teams")
     ap.add_argument("--seed", type=int, default=0)
     a = ap.parse_args()
     m = pd.read_parquet(OUT / "gen9ou_mons.parquet")
     months = sorted(p.name for p in Path(DEFAULT_DIR).iterdir() if p.is_dir())
     stats = UsageStats.load(DEFAULT_DIR / months[-1] / "chaos" / "gen9ou-1825.json")
     per_team = m.drop_duplicates(["id", "side"]).team.value_counts()
-    popular = per_team[per_team >= a.min_uses].index[: a.max_teams]
+    popular = per_team[per_team >= a.min_uses].index[a.offset : a.offset + a.max_teams]
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     for f in out.glob("*.txt"):

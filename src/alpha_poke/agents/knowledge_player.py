@@ -92,6 +92,8 @@ def _display_species(species_id: str) -> str:
 
 STALL_TURNS = 25  # turns without a faint after which the bot actively tries to break the stall
 KO_BONUS = 1.0  # bonus for an attack expected to KO (was 0.5: too close to a 50% heal)
+TERA_COST = 0.3  # opportunity cost of spending the one Terastallization of the game
+PLAN_BONUS_CAP = 0.5  # max total positive plan bonus on one option (terms must not stack up)
 
 
 class BattleMemory:
@@ -579,6 +581,8 @@ class KnowledgePlayer(Player):
                             continue
                 terms = plan_terms(state, battle, c, ctx)
             loop = self._loop_adjust(battle, mem, c, v) if self.anti_loop else 0.0
+            pos = sum(x for x in terms.values() if x > 0)
+            plan_total = min(pos, PLAN_BONUS_CAP) + sum(x for x in terms.values() if x < 0)
             rows.append(
                 {
                     "dmg": dmg,
@@ -587,7 +591,7 @@ class KnowledgePlayer(Player):
                     "tactical": v,
                     "plan": terms,
                     "loop": loop,
-                    "total": v + sum(terms.values()) + loop,
+                    "total": v + plan_total + loop,
                 }
             )
         best = max(rows, key=lambda r: r["total"])
@@ -700,6 +704,13 @@ class KnowledgePlayer(Player):
         n_opp_left = 6 - sum(m.fainted for m in battle.opponent_team.values())
         n_my_left = sum(not m.fainted for m in battle.team.values())
         is_wincon = me.species in plan.win_conditions
+        # a KO we land before the opponent can act needs no Tera at all
+        secure_ko = any(
+            is_damaging(m)
+            and damage_fraction(mv, ov, m, battle) >= opp_hp
+            and moves_first(mv, ov, m, battle) == 1.0
+            for m in battle.available_moves
+        )
         out = []
         for move in battle.available_moves:
             first = moves_first(mv, ov, move, battle)
@@ -729,7 +740,13 @@ class KnowledgePlayer(Player):
                 or plan.tera_target == me.species
                 or (sum(not m.fainted for m in battle.team.values()) == 1)
             )
-            if battle.can_tera and me.tera_type is not None and is_damaging(move) and tera_allowed:
+            if (
+                battle.can_tera
+                and me.tera_type is not None
+                and is_damaging(move)
+                and tera_allowed
+                and not secure_ko
+            ):
                 tv = self._tera_value(battle, plan, move, mv, ov, opp_kos_me, first)
                 if tv is not None:
                     out.append((tv, (move, True)))
@@ -810,7 +827,8 @@ class KnowledgePlayer(Player):
         v = min(d, opp.current_hp_fraction) + (KO_BONUS if d >= opp.current_hp_fraction else 0)
         if defensive:
             v += 0.3
-        return v + (0.1 if is_wincon else 0.0)
+        # tera is a once-per-game resource: only worth it for a clear gain
+        return v + (0.1 if is_wincon else 0.0) - (0.0 if last else TERA_COST)
 
     def _score_switch(self, battle, plan, s, ov, ov_moves, opp_move, forced: bool) -> float:
         sv = own_view(s)
