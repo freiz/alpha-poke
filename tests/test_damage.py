@@ -95,3 +95,25 @@ def test_variable_power_moves():
     user = view("araquanid", "Sassy:252/0/0/4/252/0")
     user.mon.set_hp_status("1/100")
     assert damage_fraction(user, heavy, endeavor) > 0.9
+
+
+def test_entry_hazard_cost():
+    from poke_env.battle import SideCondition
+
+    from alpha_poke.agents.damage import entry_hazard_cost
+
+    rocks_spikes = {SideCondition.STEALTH_ROCK: 1, SideCondition.SPIKES: 2}
+    moltres = Pokemon(gen=9, species="moltres")  # 4x weak to Rock, Flying: no Spikes
+    assert abs(entry_hazard_cost(moltres, rocks_spikes) - 0.5) < 1e-9
+    kyurem = Pokemon(gen=9, species="kyurem")  # 2x weak to Rock, grounded
+    assert abs(entry_hazard_cost(kyurem, rocks_spikes) - (0.25 + 1 / 6)) < 1e-9
+    kyurem._item = "heavydutyboots"
+    assert entry_hazard_cost(kyurem, rocks_spikes) == 0.0
+    assert entry_hazard_cost(Pokemon(gen=9, species="kyurem"), {}) == 0.0
+
+
+def test_mon_loss_is_cheap_only_when_nearly_dead():
+    from alpha_poke.agents.knowledge_player import KO_BONUS, mon_loss
+
+    assert mon_loss(1.0) == 1.0 + KO_BONUS  # same as the credit for a KO on a full-HP mon
+    assert mon_loss(0.05) < 0.2

@@ -41,6 +41,7 @@ from alpha_poke.agents.damage import (
     _recovers,  # noqa: F401 (recovery-aware chip value)
     best_damage,
     damage_fraction,
+    entry_hazard_cost,
     is_damaging,
     moves_first,
     one_v_one,
@@ -94,6 +95,12 @@ STALL_TURNS = 25  # turns without a faint after which the bot actively tries to 
 KO_BONUS = 1.0  # bonus for an attack expected to KO (was 0.5: too close to a 50% heal)
 TERA_COST = 0.3  # opportunity cost of spending the one Terastallization of the game
 PLAN_BONUS_CAP = 0.5  # max total positive plan bonus on one option (terms must not stack up)
+
+
+def mon_loss(hp: float) -> float:
+    """Cost of losing one of our Pokemon at ``hp``: its HP plus the same KO_BONUS we credit for
+    removing an opposing mon, scaled down below 50% HP (a nearly dead mon is cheap to sack)."""
+    return hp + KO_BONUS * min(1.0, 2 * hp)
 
 
 class BattleMemory:
@@ -581,6 +588,11 @@ class KnowledgePlayer(Player):
                             continue
                 terms = plan_terms(state, battle, c, ctx)
             loop = self._loop_adjust(battle, mem, c, v) if self.anti_loop else 0.0
+            # damage we take by staying in; switches already pay it on the switch-in. Kept out
+            # of `tactical` so the plan layer's usefulness / trust checks see the action itself.
+            stay = (
+                self._stay_cost(battle, mv, ov, c, incoming, first) if isinstance(c, tuple) else 0.0
+            )
             pos = sum(x for x in terms.values() if x > 0)
             plan_total = min(pos, PLAN_BONUS_CAP) + sum(x for x in terms.values() if x < 0)
             rows.append(
@@ -589,9 +601,10 @@ class KnowledgePlayer(Player):
                     "first": first,
                     "choice": c,
                     "tactical": v,
+                    "stay": stay,
                     "plan": terms,
                     "loop": loop,
-                    "total": v + plan_total + loop,
+                    "total": v - stay + plan_total + loop,
                 }
             )
         best = max(rows, key=lambda r: r["total"])
@@ -655,7 +668,7 @@ class KnowledgePlayer(Player):
             return c.species if isinstance(c, Pokemon) else c[0].id + ("+tera" if c[1] else "")
 
         top = sorted(rows, key=lambda r: -r["total"])[:5]
-        best_tactical = max(rows, key=lambda r: r["tactical"] + r["loop"])
+        best_tactical = max(rows, key=lambda r: r["tactical"] - r["stay"] + r["loop"])
         row = {
             "turn": battle.turn,
             "me": battle.active_pokemon.species,
@@ -675,6 +688,7 @@ class KnowledgePlayer(Player):
                     "a": name(r["choice"]),
                     "total": round(r["total"], 3),
                     "tactical": round(r["tactical"], 3),
+                    "stay": round(r["stay"], 3),
                     "loop": round(r["loop"], 3),
                     "plan": {k: round(v, 3) for k, v in r["plan"].items()},
                     "dmg": None if r["dmg"] is None else round(r["dmg"], 3),
@@ -810,14 +824,7 @@ class KnowledgePlayer(Player):
         d = damage_fraction(mv, ov, move, battle) * stab_gain
         secures_ko = d >= opp.current_hp_fraction > damage_fraction(mv, ov, move, battle)
         # defensive flip: does tera turn a predicted KO into survival?
-        defensive = False
-        if opp_kos_me:
-            mult_now = max((me.damage_multiplier(t) for t in opp.types if t), default=1)
-            mult_tera = max(
-                (t.damage_multiplier(tera, None, type_chart=_TYPE_CHART) for t in opp.types if t),
-                default=1,
-            )
-            defensive = mult_tera < mult_now
+        defensive = opp_kos_me and _tera_def_ratio(me, opp) < 1.0
         if not (secures_ko or defensive):
             return None
         is_wincon = me.species in plan.win_conditions
@@ -825,24 +832,37 @@ class KnowledgePlayer(Player):
         if not (is_wincon or last or secures_ko):
             return None
         v = min(d, opp.current_hp_fraction) + (KO_BONUS if d >= opp.current_hp_fraction else 0)
-        if defensive:
-            v += 0.3
         # tera is a once-per-game resource: only worth it for a clear gain
         return v + (0.1 if is_wincon else 0.0) - (0.0 if last else TERA_COST)
+
+    def _stay_cost(self, battle, mv, ov, choice, incoming: float, first: float) -> float:
+        """Expected loss from staying in with ``choice``: the HP the opponent's best attack
+        takes, or the whole mon (mon_loss) when that attack KOs us. Zero if our attack KOs
+        first (half on a speed tie)."""
+        move, tera = choice
+        me, opp = mv.mon, ov.mon
+        if tera:
+            incoming *= _tera_def_ratio(me, opp)
+        factor = 1.0
+        if is_damaging(move) and damage_fraction(mv, ov, move, battle) >= opp.current_hp_fraction:
+            factor = 1.0 - first  # first: 1 = we move first, 0.5 = speed tie
+        hp = me.current_hp_fraction
+        return factor * (mon_loss(hp) if incoming >= hp else incoming)
 
     def _score_switch(self, battle, plan, s, ov, ov_moves, opp_move, forced: bool) -> float:
         sv = own_view(s)
         taken = 0.0
         if not forced and opp_move is not None:
             taken = damage_fraction(ov, sv, opp_move, battle)
-        hp_after = max(0.0, s.current_hp_fraction - taken)
+        hazard = entry_hazard_cost(s, battle.side_conditions)
+        hp_after = max(0.0, s.current_hp_fraction - hazard - taken)
         if hp_after <= 0:
-            return -1.0
+            return -mon_loss(s.current_hp_fraction)  # we would just lose this mon instead
         # live 1v1 (current boosts / HP of the opponent): the preview table goes stale
         mu = one_v_one(sv, ov, list(s.moves.values()), ov_moves, battle)
         # matchup was computed at full HP; scale by remaining HP
         mu = mu * (0.5 + 0.5 * hp_after)
-        v = 0.6 * mu - taken
+        v = 0.6 * mu - taken - hazard
         if s.species in plan.preserve and taken > 0.35:
             v -= 0.3  # plan: don't take big hits with mons we must keep
         if s.species in plan.win_conditions and forced and mu < 0.3:
@@ -864,3 +884,16 @@ class KnowledgePlayer(Player):
 from poke_env.data import GenData  # noqa: E402
 
 _TYPE_CHART = GenData.from_gen(9).type_chart
+
+
+def _tera_def_ratio(me: Pokemon, opp: Pokemon) -> float:
+    """Damage multiplier of the opponent's STAB types against our tera type, relative to our
+    current typing (< 1: tera makes us take less)."""
+    if me.tera_type is None:
+        return 1.0
+    now = max((me.damage_multiplier(t) for t in opp.types if t), default=1)
+    tera = max(
+        (t.damage_multiplier(me.tera_type, None, type_chart=_TYPE_CHART) for t in opp.types if t),
+        default=1,
+    )
+    return tera / now if now else 1.0

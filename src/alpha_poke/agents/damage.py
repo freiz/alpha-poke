@@ -263,6 +263,44 @@ def best_damage(att: MonView, dfn: MonView, moves, battle=None) -> tuple[Move | 
     return best, frac
 
 
+SPIKES_DAMAGE = {0: 0.0, 1: 1 / 8, 2: 1 / 6, 3: 1 / 4}
+TOXIC_SPIKES_COST = {0: 0.0, 1: 0.08, 2: 0.15}  # HP-equivalent of regular / bad poison
+STICKY_WEB_COST = 0.05
+
+
+def _grounded(mon: Pokemon) -> bool:
+    return (
+        PokemonType.FLYING not in mon.types
+        and mon.ability != "levitate"
+        and mon.item != "airballoon"
+    )
+
+
+def entry_hazard_cost(mon: Pokemon, side_conditions) -> float:
+    """HP fraction (plus an HP-equivalent for poison / Sticky Web) that ``mon`` loses when it
+    switches in on a side with ``side_conditions`` ({SideCondition: layers})."""
+    from poke_env.battle import SideCondition
+
+    if mon.item == "heavydutyboots" or mon.ability == "magicguard":
+        return 0.0
+    cost = 0.0
+    if SideCondition.STEALTH_ROCK in side_conditions:
+        cost += mon.damage_multiplier(PokemonType.ROCK) / 8
+    if _grounded(mon):
+        cost += SPIKES_DAMAGE[min(3, side_conditions.get(SideCondition.SPIKES, 0))]
+        tspikes = min(2, side_conditions.get(SideCondition.TOXIC_SPIKES, 0))
+        if (
+            tspikes
+            and mon.status is None
+            and not {PokemonType.POISON, PokemonType.STEEL} & set(mon.types)
+            and mon.ability not in NO_POISON_ABILITIES
+        ):
+            cost += TOXIC_SPIKES_COST[tspikes]
+        if SideCondition.STICKY_WEB in side_conditions:
+            cost += STICKY_WEB_COST
+    return cost
+
+
 RECOVERY_MOVES = {
     "recover",
     "roost",
