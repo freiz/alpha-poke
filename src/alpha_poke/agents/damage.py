@@ -92,8 +92,26 @@ def moves_first(a: MonView, b: MonView, move: Move | None, battle=None) -> float
     return 1.0 if sa > sb else 0.0 if sa < sb else 0.5
 
 
+FIXED_LEVEL_DAMAGE = {"seismictoss", "nightshade"}  # damage = user's level (100)
+HALF_HP_MOVES = {"ruination", "superfang", "naturesmadness"}  # half the target's current HP
+
+
+def is_damaging(move: Move) -> bool:
+    """Attacking move (including fixed-damage moves such as Seismic Toss / Ruination)."""
+    if move.id in FIXED_LEVEL_DAMAGE or move.id in HALF_HP_MOVES:
+        return True
+    return move.category != MoveCategory.STATUS and bool(move.base_power)
+
+
 def damage_fraction(att: MonView, dfn: MonView, move: Move, battle=None) -> float:
     """Expected fraction of the defender's max HP removed by ``move`` (0 for status moves)."""
+    if move.id in FIXED_LEVEL_DAMAGE or move.id in HALF_HP_MOVES:
+        if dfn.mon.damage_multiplier(move) == 0:  # e.g. Seismic Toss vs Ghost
+            return 0.0
+        acc = move.accuracy if isinstance(move.accuracy, float) else 1.0
+        if move.id in FIXED_LEVEL_DAMAGE:
+            return acc * 100 / max(dfn.stats["hp"], 1)
+        return acc * 0.5 * dfn.hp_fraction
     if move.category == MoveCategory.STATUS or not move.base_power:
         return 0.0
     eff = dfn.mon.damage_multiplier(move)

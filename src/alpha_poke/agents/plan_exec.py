@@ -10,7 +10,8 @@ A plan (from the LLM or from rules) is turned into *directives* the action layer
   tera          {who, when: <condition>, never_before: <phase name>}
   rules         [{if: <condition>, then: <action>}]
 
-Condition language (evaluated every turn; AND binds tighter than OR, no parentheses):
+Condition language (evaluated every turn; AND binds tighter than OR, no parentheses; any atom
+may be prefixed with NOT):
   fainted:X  alive:X  active:X  our_active:X  their_hp_below:X:0.5  our_hp_below:X:0.5
   our_hazard_set:stealthrock  their_hazard_set:spikes  their_tera:X  their_tera_used
   our_tera_used  revealed_item:X:Item Name  revealed_move:X:Move Name  turn_after:N
@@ -25,7 +26,7 @@ poke-env species keys of our / their Pokemon.
 import re
 from dataclasses import dataclass, field
 
-from poke_env.battle import MoveCategory, SideCondition
+from poke_env.battle import SideCondition
 
 from alpha_poke.analysis.roles import to_id
 
@@ -106,6 +107,7 @@ class PlanError(ValueError):
 class Atom:
     kind: str
     args: tuple[str, ...]
+    negated: bool = False
 
 
 @dataclass
@@ -121,12 +123,15 @@ class Condition:
         for part in re.split(r"\s+OR\s+", text.strip()):
             atoms = []
             for raw in re.split(r"\s+AND\s+", part.strip()):
+                negated = raw.strip().upper().startswith("NOT ")
+                if negated:
+                    raw = raw.strip()[4:]
                 kind, *args = [x.strip() for x in raw.split(":")]
                 if kind not in ATOMS:
                     raise PlanError(f"unknown condition {kind!r} in {text!r}")
                 if len(args) != ATOMS[kind]:
                     raise PlanError(f"{kind} needs {ATOMS[kind]} argument(s) in {text!r}")
-                atoms.append(Atom(kind, tuple(args)))
+                atoms.append(Atom(kind, tuple(args), negated))
             clauses.append(atoms)
         return cls(clauses, text)
 
@@ -327,7 +332,10 @@ def eval_atom(a: Atom, battle, names: Names, tera_ctx: dict | None = None) -> bo
 def eval_condition(c: Condition | None, battle, names: Names, tera_ctx=None) -> bool:
     if c is None:
         return False
-    return any(all(eval_atom(a, battle, names, tera_ctx) for a in clause) for clause in c.clauses)
+    return any(
+        all(eval_atom(a, battle, names, tera_ctx) != a.negated for a in clause)
+        for clause in c.clauses
+    )
 
 
 @dataclass
@@ -337,6 +345,7 @@ class PlanState:
     plan: ExecPlan
     phase: int = 0
     log: list[str] = field(default_factory=list)  # phase changes / repairs (for traces)
+    matchup: dict = field(default_factory=dict)  # (our key, their key) -> 1v1 score
 
     @property
     def phase_name(self) -> str:
@@ -394,11 +403,18 @@ class PlanState:
                     )
                     a["primary"], a["backup"] = a["backup"], None
                 else:
-                    self.log.append(f"T{battle.turn}: {their} lost its answers")
-                    a["primary"] = None
+                    best = self._best_alive_answer(their, alive, a.get("avoid", []))
+                    self.log.append(f"T{battle.turn}: {their} answers fainted -> reassigned {best}")
+                    a["primary"] = best
         wincons = [k for k, r in self.plan.roles.items() if r == "win_condition"]
         if wincons and not any(w in alive for w in wincons) and "wincon_lost" not in self.log:
             self.log.append("wincon_lost")
+
+    def _best_alive_answer(self, their: str, alive: set[str], avoid: list[str]) -> str | None:
+        """Local repair: best remaining mon by the computed matchup table (score > 0)."""
+        cands = [(self.matchup.get((o, their), 0.0), o) for o in alive if o not in avoid]
+        cands = [c for c in cands if c[0] > 0]
+        return max(cands)[1] if cands else None
 
     def in_endgame(self) -> bool:
         return any(g[0] in ("sweep", "setup") for g in self.goals())
@@ -451,7 +467,9 @@ def plan_terms(state: PlanState, battle, option, ctx: dict) -> dict[str, float]:
                 terms["rule"] = W["rule"]
         return terms
     move, tera = option
-    attacking = move.category != MoveCategory.STATUS and bool(move.base_power)
+    from alpha_poke.agents.damage import is_damaging
+
+    attacking = is_damaging(move)
     names = p.names
     for kind, args in state.goals():
         if state.goal_done((kind, args), battle):

@@ -28,7 +28,6 @@ from pathlib import Path
 from poke_env.battle import (
     AbstractBattle,
     Battle,
-    MoveCategory,
     Pokemon,
     PokemonType,
     SideCondition,
@@ -37,7 +36,14 @@ from poke_env.battle.move import Move
 from poke_env.player import Player, SimpleHeuristicsPlayer
 
 from alpha_poke.agents.belief_state import BeliefModel, own_view
-from alpha_poke.agents.damage import MonView, best_damage, damage_fraction, moves_first, one_v_one
+from alpha_poke.agents.damage import (
+    MonView,
+    best_damage,
+    damage_fraction,
+    is_damaging,
+    moves_first,
+    one_v_one,
+)
 from alpha_poke.agents.plan_exec import ExecPlan, Names, PlanState, plan_terms
 
 HAZARDS = {
@@ -351,7 +357,7 @@ class KnowledgePlayer(Player):
         d = plan.llm_raw if plan.source == "llm" and plan.llm_raw.get("phases") else None
         if d is None:
             d = self._computed_exec(battle, plan, our, their)
-        state = PlanState(ExecPlan.from_dict(d, names))
+        state = PlanState(ExecPlan.from_dict(d, names), matchup=plan.matchup)
         plan.exec_state = state
         return state
 
@@ -559,7 +565,7 @@ class KnowledgePlayer(Player):
                     adj -= 0.25
             return adj
         move, _ = choice
-        attacking = move.category != MoveCategory.STATUS and bool(move.base_power)
+        attacking = is_damaging(move)
         if stall >= 15 and not attacking:
             adj -= 0.04 * mem.recent_uses(move.id, battle.turn, window=10)
         if stall >= STALL_TURNS:
@@ -615,7 +621,7 @@ class KnowledgePlayer(Player):
         for move in battle.available_moves:
             first = moves_first(mv, ov, move, battle)
             v = 0.0
-            if move.category != MoveCategory.STATUS and move.base_power:
+            if is_damaging(move):
                 d = damage_fraction(mv, ov, move, battle)
                 v = min(d, opp_hp)
                 if d >= opp_hp:
@@ -638,7 +644,7 @@ class KnowledgePlayer(Player):
                 or plan.tera_target == me.species
                 or (sum(not m.fainted for m in battle.team.values()) == 1)
             )
-            if battle.can_tera and me.tera_type is not None and move.base_power and tera_allowed:
+            if battle.can_tera and me.tera_type is not None and is_damaging(move) and tera_allowed:
                 tv = self._tera_value(battle, plan, move, mv, ov, opp_kos_me, first)
                 if tv is not None:
                     out.append((tv, (move, True)))

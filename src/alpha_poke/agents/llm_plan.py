@@ -144,6 +144,33 @@ def canonical_team(mons: list[dict]) -> list[dict]:
     return out
 
 
+def template_hash() -> str:
+    return hashlib.sha256((SYSTEM + json.dumps(SCHEMA)).encode()).hexdigest()[:16]
+
+
+# Plans cached before the template hash entered the key (plan-v2, 2026-10-04) were generated
+# with exactly this template; they may be reused (and migrated) only while it is unchanged.
+LEGACY_V2_TEMPLATE = "5c873e92a4eec2f8"
+
+
+def legacy_key(model, effort, ours, their_species, their_info, matchups) -> str:
+    """The key formula used before the template hash was added (for the one-time migration)."""
+    blob = json.dumps(
+        {
+            "v": PROMPT_VERSION,
+            "model": model,
+            "effort": effort,
+            "ours": canonical_team(ours),
+            "theirs": sorted(their_species),
+            "their_info": their_info,
+            "matchups": matchups,
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    return hashlib.sha256(blob.encode()).hexdigest()
+
+
 def plan_key(
     model: str,
     effort: str | None,
@@ -155,6 +182,8 @@ def plan_key(
     blob = json.dumps(
         {
             "v": PROMPT_VERSION,
+            # template hash: editing SYSTEM / SCHEMA can never silently reuse stale plans
+            "template": template_hash(),
             "model": model,
             "effort": effort,
             "ours": canonical_team(ours),
@@ -258,6 +287,17 @@ class LLMPlanner:
         their_species = [t["species"] for t in their_info]
         key = plan_key(self.client.model, self.effort, ours, their_species, their_info, matchups)
         path = PLAN_CACHE / f"{key}.json"
+        if (
+            not path.exists()
+            and PROMPT_VERSION == "plan-v2"
+            and template_hash() == LEGACY_V2_TEMPLATE
+        ):
+            lk = legacy_key(
+                self.client.model, self.effort, ours, their_species, their_info, matchups
+            )
+            old = PLAN_CACHE / f"{lk}.json"
+            if old.exists():  # one-time migration of a plan cached under the old key formula
+                path.write_text(old.read_text())
         if path.exists():
             d = json.loads(path.read_text())
             return LLMPlan(key, d["plan"], True, 0.0, 0.0, d.get("problems", []))

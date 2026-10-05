@@ -31,3 +31,16 @@ def test_toxic_breaks_a_recovery_wall():
     assert one_v_one(attacker, wall, toxic, wall_moves) >= one_v_one(
         attacker, wall, plain, wall_moves
     )
+
+
+def test_fixed_damage_moves_are_attacks():
+    from alpha_poke.agents.damage import damage_fraction, is_damaging
+
+    blissey = view("blissey", "Bold:252/0/252/0/4/0")
+    target = view("greattusk", "Jolly:0/252/0/0/4/252")
+    target.mon.set_hp_status("100/100")  # a fresh Pokemon has no HP information
+    toss, ruin = Move("seismictoss", gen=9), Move("ruination", gen=9)
+    assert is_damaging(toss) and is_damaging(ruin)
+    assert abs(damage_fraction(blissey, target, toss) - 100 / target.stats["hp"]) < 1e-9
+    # half the target's current HP, times Ruination's 90% accuracy
+    assert abs(damage_fraction(blissey, target, ruin) - 0.5 * ruin.accuracy) < 1e-9

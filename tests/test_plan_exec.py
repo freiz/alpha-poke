@@ -135,3 +135,16 @@ def test_state_machine_and_terms():
     corv.fainted = True
     st.update(b)
     assert st.plan.assignments["dragapult"]["primary"] == "kingambit"
+
+
+def test_not_conditions():
+    tusk, gambit = mon("greattusk"), mon("kingambit")
+    pult = mon("dragapult")
+    b = battle([tusk, gambit], [pult], tusk, pult)
+    assert eval_condition(
+        Condition.parse("active:Dragapult AND NOT our_active:Kingambit"), b, NAMES
+    )
+    b.active_pokemon = gambit
+    assert not eval_condition(
+        Condition.parse("active:Dragapult AND NOT our_active:Kingambit"), b, NAMES
+    )
