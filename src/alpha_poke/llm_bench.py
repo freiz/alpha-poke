@@ -303,7 +303,12 @@ def grade_simple(qs, answers, key="truth") -> dict:
             )
         except (TypeError, ValueError):
             pass
-    return {"accuracy": ok / len(qs), "answered": min(len(answers), len(qs)) / len(qs)}
+    return {
+        "accuracy": ok / len(qs),
+        "correct": ok,
+        "n": len(qs),
+        "answered": min(len(answers), len(qs)) / len(qs),
+    }
 
 
 # ---- grounded naming ----------------------------------------------------------------------
@@ -403,11 +408,30 @@ STALL = {
 }
 
 
-def clear_tags(core: Core, sets: dict[str, SpeciesSets]) -> set[str]:
+def _move_rate(species: str, move: str, core: Core, sets, mons) -> float:
+    """P(the member carries ``move``): within the exact team for 6-mon cores (copied teams),
+    otherwise from the species' set archetypes (sum_k weight_k * P(move | archetype k))."""
+    if core.size == 6 and mons is not None:
+        key = "|".join(sorted(core.members))
+        g = mons[(mons.team == key) & (mons.species == species) & mons.brought]
+        if len(g):
+            # revealed share; moves show up in ~half of the games, so x2 ~ P(carried)
+            share = g.moves.str.split("|").apply(lambda ms: move in ms).mean()
+            return float(share) * 2
+    ss = sets.get(species)
+    if ss is None:
+        return 0.0
+    return sum(a.weight * dict(a.moves).get(move, 0.0) for a in ss.sets)
+
+
+def clear_tags(core: Core, sets: dict[str, SpeciesSets], mons=None) -> set[str]:
+    """Unambiguous tags used as ground truth: weather setters (by species, or Chilly Reception
+    for snow), Sticky Web, and stall (>= 4 classic stall mons)."""
     tags = {WEATHER[m] for m in core.members if m in WEATHER}
     for m in core.members:
-        ss = sets.get(m)
-        if ss and any(mv == "Sticky Web" and p >= 0.5 for a in ss.sets for mv, p in a.moves[:6]):
+        if _move_rate(m, "Chilly Reception", core, sets, mons) >= 0.4:
+            tags.add("snow")
+        if _move_rate(m, "Sticky Web", core, sets, mons) >= 0.4:
             tags.add("sticky_web")
     if len(STALL & set(core.members)) >= 4:
         tags.add("stall")
@@ -425,7 +449,7 @@ def run_naming(client, cores, sets, mons) -> list[dict]:
             + "\n\nReturn a JSON object with exactly these keys:\n"
             + json.dumps(NAMING_SCHEMA, indent=1)
         )
-        rec = {"members": core.members, "clear_tags": sorted(clear_tags(core, sets))}
+        rec = {"members": core.members, "clear_tags": sorted(clear_tags(core, sets, mons))}
         try:
             ans = client.chat_json(
                 [{"role": "system", "content": NAMING_SYSTEM}, {"role": "user", "content": user}]
@@ -466,6 +490,10 @@ def grade_naming(recs: list[dict]) -> dict:
     viol = sum(len(r["violations"]) for r in recs)
     return {
         "json_ok": sum(r["json_ok"] for r in recs) / len(recs),
+        "tag_tp": tp,
+        "tag_fp": fp,
+        "tag_fn": fn,
+        "violations": viol,
         "tag_precision": tp / max(tp + fp, 1),
         "tag_recall": tp / max(tp + fn, 1),
         "grounding_violations_per_core": viol / len(recs),

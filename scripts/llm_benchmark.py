@@ -131,26 +131,27 @@ def main() -> None:
         )
         print(model, json.dumps(res, indent=1, default=str), flush=True)
 
+    def frac(d: dict) -> str:
+        return f"{d['correct']}/{d['n']}" if d else ""
+
     rows = []
     for name, r in results.items():
-        s, n = r.get("set", {}), r.get("naming", {})
+        s_, n_ = r.get("set", {}), r.get("naming", {})
+        pct = lambda x: f"{100 * x:.0f}%" if x is not None else ""  # noqa: E731
         rows.append(
             {
                 "model": name,
-                "item@1": s.get("item_top1"),
-                "item@3": s.get("item_top3"),
-                "tera@1": s.get("tera_top1"),
-                "moves@4": s.get("move_recall@4"),
-                "bad_moves": s.get("bad_moves_rate"),
-                "type_chart": r.get("type_chart", {}).get("accuracy"),
-                "speed": r.get("speed", {}).get("accuracy"),
-                "tag_P": n.get("tag_precision"),
-                "tag_R": n.get("tag_recall"),
-                "viol/core": n.get("grounding_violations_per_core"),
-                "viol_rate": n.get("violation_rate"),
-                "json_ok": n.get("json_ok"),
-                "cost$": r.get("cost_usd"),
-                "wall_s": r.get("wall_s"),
+                "item@1": pct(s_.get("item_top1")),
+                "item@3": pct(s_.get("item_top3")),
+                "tera@1": pct(s_.get("tera_top1")),
+                "moves@4": pct(s_.get("move_recall@4")),
+                "bad_moves": pct(s_.get("bad_moves_rate")),
+                "type_chart": frac(r.get("type_chart", {})),
+                "speed": frac(r.get("speed", {})),
+                "tags tp/fp/fn": f"{n_['tag_tp']}/{n_['tag_fp']}/{n_['tag_fn']}" if n_ else "",
+                "violations": n_.get("violations", ""),
+                "cost$": f"{r['cost_usd']:.3f}" if "cost_usd" in r else "",
+                "errors": ",".join(f"{k}:{v[:20]}" for k, v in r.get("error", {}).items()),
             }
         )
     df = pd.DataFrame(rows)
