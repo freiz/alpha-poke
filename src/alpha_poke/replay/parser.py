@@ -18,6 +18,9 @@ import re
 from dataclasses import asdict, dataclass, field
 
 SIDES = ("p1", "p2")
+_ABILITY_CHANGERS = frozenset(
+    {"Skill Swap", "Role Play", "Entrainment", "Worry Seed", "Simple Beam", "Doodle", "Gastro Acid"}
+)
 # commands whose handler interprets [from] item: / [from] ability: itself
 _OWN_TAG_HANDLING = frozenset(
     {
@@ -169,6 +172,7 @@ class ReplayParser:
         self.tera_pending: dict[str, str] = {}
         self.order = 0
         self.transformed: set[str] = set()
+        self.ability_changed: set[str] = set()  # sides whose active mon's ability was swapped
         self.gametype = "singles"
 
     # ---- helpers ---------------------------------------------------------------------
@@ -226,17 +230,21 @@ class ReplayParser:
         if lost and mon.item == item:
             mon.item_lost = lost
 
-    def _reveal_from_tags(self, args: list[str]) -> None:
-        """Generic reveal for lines like ``|-immune|p1a: X|[from] ability: Good as Gold``.
+    def _reveal_from_tags(self, args: list[str], cmd: str = "") -> None:
+        """Generic reveal for ``[from] ability: X`` / ``[from] item: Y`` on any message.
 
-        The holder is the ``[of]`` mon when present, otherwise the first mon on the line.
+        Showdown's convention: a trailing ``[of]`` names the holder of the ability / item
+        (``-status|ATTACKER|brn|[from] ability: Flame Body|[of] HOLDER``). Absorb-style
+        abilities are the exception: ``-immune`` / ``-heal`` lines name the holder first and use
+        ``[of]`` for the attacker; those are resolved to the first mon on the line.
         """
         tags = _tags(args)
         src = tags.get("from", "")
         if not (src.startswith("ability:") or src.startswith("item:")):
             return
         first = next((a for a in args if _POS.match(a.strip())), None)
-        holder = self._holder(self._mon(first) if first else (None, None), tags)
+        line_mon = self._mon(first) if first else (None, None)
+        holder = line_mon[1] if cmd in ("-immune", "-heal") else self._holder(line_mon, tags)
         if src.startswith("ability:"):
             self._reveal_ability(holder, src[8:].strip())
         else:
@@ -261,7 +269,7 @@ class ReplayParser:
             if handler:
                 handler(args)
             if cmd not in _OWN_TAG_HANDLING:
-                self._reveal_from_tags(args)
+                self._reveal_from_tags(args, cmd)
         return Replay(
             id=self.raw.get("id", ""),
             format=self.raw.get("formatid") or self.tier,
@@ -364,6 +372,7 @@ class ReplayParser:
             self.order += 1
         self.active[side] = mon
         self.transformed.discard(side)
+        self.ability_changed.discard(side)
 
     def _on_drag(self, a):
         self._on_switch(a, drag=True)
@@ -436,20 +445,23 @@ class ReplayParser:
             mon.tera_turn = self.turn
             self.tera_pending[side] = a[1]
 
-    def _on_damage(self, a):
+    def _on_damage(self, a, heal: bool = False):
         side, mon = self._mon(a[0])
         if mon is None:
             return
         self._set_hp(side, mon, a[1])
         tags = _tags(a[2:])
         src = tags.get("from", "")
+        # -damage ... [from] item: Rocky Helmet / ability: Rough Skin | [of] HOLDER
+        # -heal   ... [from] ability: Water Absorb | [of] ATTACKER  (holder = healed mon)
+        holder = mon if heal else self._holder((side, mon), tags)
         if src.startswith("item:"):
-            self._reveal_item(self._holder((side, mon), tags), src[5:].strip())
+            self._reveal_item(holder, src[5:].strip())
         elif src.startswith("ability:"):
-            self._reveal_ability(self._holder((side, mon), tags), src[8:].strip())
+            self._reveal_ability(holder, src[8:].strip())
 
     def _on_heal(self, a):
-        self._on_damage(a)
+        self._on_damage(a, heal=True)
 
     def _on_sethp(self, a):
         pass
@@ -457,11 +469,18 @@ class ReplayParser:
     def _on_item(self, a):
         side, mon = self._mon(a[0])
         tags = _tags(a[2:])
-        if "from" in tags and tags["from"].startswith("move:"):
+        src = tags.get("from", "")
+        if src.startswith("move:"):
             return  # Trick / Switcheroo / Thief: not the original item
+        if src.startswith("ability:"):
+            ability = src[8:].strip()
+            if ability == "Frisk":  # -item|TARGET|its item|[from] ability: Frisk|[of] FRISKER
+                self._reveal_ability(self._holder((None, None), tags), ability)
+                self._reveal_item(mon, a[1])
+            else:  # Pickpocket / Magician / ...: the line mon took someone else's item
+                self._reveal_ability(mon, ability)
+            return
         self._reveal_item(mon, a[1])
-        if tags.get("from", "").startswith("ability:"):  # e.g. Frisk: ability belongs to [of]
-            self._reveal_ability(self._holder((None, None), tags), tags["from"][8:].strip())
 
     def _on_enditem(self, a):
         side, mon = self._mon(a[0])
@@ -475,6 +494,8 @@ class ReplayParser:
         tags = _tags(a[2:])
         if "from" in tags and tags["from"].startswith("ability:"):
             return  # Trace / Skill Swap style transfers
+        if side in self.ability_changed:
+            return  # ability acquired via Skill Swap / Role Play / Entrainment / ...
         self._reveal_ability(mon, a[1])
 
     def _on_activate(self, a):
@@ -482,6 +503,12 @@ class ReplayParser:
         if mon is None or len(a) < 2:
             return
         what = a[1]
+        if what.replace("move: ", "") in _ABILITY_CHANGERS:
+            self.ability_changed.add(side)
+            of = _tags(a[2:]).get("of")
+            if of and self._mon(of)[0]:
+                self.ability_changed.add(self._mon(of)[0])
+            return
         if what.startswith("ability:"):
             self._reveal_ability(mon, what[8:].strip())
         elif what.startswith("item:"):

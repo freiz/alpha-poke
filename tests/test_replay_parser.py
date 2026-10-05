@@ -146,3 +146,51 @@ def test_generic_from_tags_reveal_ability_and_item():
     )
     assert mon(r, "p1", "Garchomp").ability == "Good as Gold"
     assert mon(r, "p2", "Great Tusk").item == "Flame Orb"
+
+
+def test_ability_holder_semantics():
+    r = parse_replay(
+        synth(
+            "|switch|p1a: G|Garchomp, M|100/100",
+            "|switch|p2a: T|Great Tusk|100/100",
+            "|turn|1",
+            # Water Absorb heals the line mon; [of] is the attacker
+            "|-heal|p1a: G|100/100|[from] ability: Water Absorb|[of] p2a: T",
+            # Pickpocket: the line mon stole the [of] mon's item
+            "|-item|p2a: T|Heavy-Duty Boots|[from] ability: Pickpocket|[of] p1a: G",
+            "|turn|2",
+            "|-activate|p1a: G|move: Skill Swap|Rough Skin|Protosynthesis|[of] p2a: T",
+            "|-ability|p1a: G|Protosynthesis",
+        )
+    )
+    g, t = mon(r, "p1", "Garchomp"), mon(r, "p2", "Great Tusk")
+    assert g.ability == "Water Absorb"  # first reveal; the swapped one is ignored
+    assert t.ability == "Pickpocket"
+    assert t.item is None  # the stolen Boots were not Great Tusk's original item
+
+
+def test_rough_skin_damage_belongs_to_of_mon():
+    r = parse_replay(
+        synth(
+            "|switch|p1a: G|Garchomp, M|100/100",
+            "|switch|p2a: T|Great Tusk|100/100",
+            "|turn|1",
+            "|-damage|p2a: T|90/100|[from] ability: Rough Skin|[of] p1a: G",
+        )
+    )
+    assert mon(r, "p1", "Garchomp").ability == "Rough Skin"
+    assert mon(r, "p2", "Great Tusk").ability is None
+
+
+def test_contact_ability_status_belongs_to_of_mon():
+    r = parse_replay(
+        synth(
+            "|switch|p1a: G|Garchomp, M|100/100",
+            "|switch|p2a: T|Great Tusk|100/100",
+            "|turn|1",
+            "|-status|p2a: T|brn|[from] ability: Flame Body|[of] p1a: G",
+            "|-immune|p2a: T|[from] ability: Volt Absorb|[of] p1a: G",
+        )
+    )
+    assert mon(r, "p1", "Garchomp").ability == "Flame Body"
+    assert mon(r, "p2", "Great Tusk").ability == "Volt Absorb"
