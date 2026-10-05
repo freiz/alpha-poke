@@ -220,7 +220,7 @@ def test_lookahead_penalises_a_switch_in_that_is_just_as_threatened():
 
     from alpha_poke.agents.knowledge_player import KnowledgePlayer
 
-    bot = SimpleNamespace(_first=lambda *a, **k: KnowledgePlayer._first(None, *a, **k))
+    bot = SimpleNamespace(_first=lambda *a, **k: KnowledgePlayer._first(None, *a, **k), _threat=0.0)
     wake = view("walkingwake", "Timid:0/0/0/252/4/252", "choicespecs")
     draco = [Move("dracometeor", gen=9), Move("hydrosteam", gen=9)]
     kingambit = view("kingambit", "Adamant:252/252/0/0/4/0")

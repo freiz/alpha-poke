@@ -8,6 +8,7 @@ ignoring the long tail of special cases is intentional: this feeds heuristics, n
 """
 
 import math
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 
 from poke_env.battle import MoveCategory, Pokemon, PokemonType, Status, Weather
@@ -151,6 +152,8 @@ def moves_first(a: MonView, b: MonView, move: Move | None, battle=None) -> float
     faster or not at all."""
     if move is not None and move.priority > 0:
         return 1.0
+    if move is not None and move.priority < 0:  # Roar / Dragon Tail / ...: always last
+        return 0.0
     sa, sb = effective_speed(a, battle), effective_speed(b, battle)
     trick_room = battle is not None and any("trickroom" in str(f).lower() for f in battle.fields)
     pa, pb = min(1.0, a.item_p("choicescarf")), min(1.0, b.item_p("choicescarf"))
@@ -286,12 +289,19 @@ def damage_fraction(att: MonView, dfn: MonView, move: Move, battle=None) -> floa
     a_stat, d_stat = ("atk", "def") if physical else ("spa", "spd")
     if move.id == "bodypress":
         a_stat = "def"
-    a = att.stats[a_stat] * BOOST[att.mon.boosts.get(a_stat, 0)]
+    # Unaware: the holder ignores the other side's stat stages
+    att_stage = 0.0 if dfn.ability_p("unaware") >= 0.5 else 1.0
+    dfn_stage = 0.0 if att.ability_p("unaware") >= 0.5 else 1.0
+
+    def stage(view, stat, use):
+        return BOOST[view.mon.boosts.get(stat, 0)] if use else 1.0
+
+    a = att.stats[a_stat] * stage(att, a_stat, att_stage)
     if move.id == "foulplay":
-        a = dfn.stats["atk"] * BOOST[dfn.mon.boosts.get("atk", 0)]
-    d = dfn.stats[d_stat] * BOOST[dfn.mon.boosts.get(d_stat, 0)]
+        a = dfn.stats["atk"] * stage(dfn, "atk", att_stage)
+    d = dfn.stats[d_stat] * stage(dfn, d_stat, dfn_stage)
     if move.id in ("psyshock", "psystrike", "secretsword"):
-        d = dfn.stats["def"] * BOOST[dfn.mon.boosts.get("def", 0)]
+        d = dfn.stats["def"] * stage(dfn, "def", dfn_stage)
     bp = variable_base_power(att, dfn, move) if move.id in VARIABLE_BP else move.base_power
     if move.id == "knockoff" and dfn.mon.item not in (None, ""):
         bp *= 1.5
@@ -322,6 +332,8 @@ def damage_fraction(att: MonView, dfn: MonView, move: Move, battle=None) -> floa
                     if move.type == PokemonType.WATER
                     else 1
                 )
+    if battle is not None:
+        mult *= _screen_multiplier(battle, dfn, physical, move)
     mult *= 1 + 0.5 * att.item_p("choiceband" if physical else "choicespecs")
     mult *= 1 + 0.3 * att.item_p("lifeorb")
     mult *= 1 - 0.33 * dfn.item_p("assaultvest") if not physical else 1.0
@@ -329,6 +341,36 @@ def damage_fraction(att: MonView, dfn: MonView, move: Move, battle=None) -> floa
     acc = move.accuracy if isinstance(move.accuracy, float) else 1.0
     dmg = base * mult * hits * acc
     return dmg / max(dfn.stats["hp"], 1)
+
+
+def _screen_multiplier(battle, dfn: "MonView", physical: bool, move: Move) -> float:
+    """Reflect / Light Screen / Aurora Veil on the defender's side halve the damage (Brick
+    Break / Psychic Fangs break them, crits ignore them: both ignored here)."""
+    from poke_env.battle import SideCondition
+
+    try:
+        ours = any(dfn.mon is m for m in battle.team.values())
+        side = battle.side_conditions if ours else battle.opponent_side_conditions
+    except AttributeError:
+        return 1.0
+    screen = SideCondition.REFLECT if physical else SideCondition.LIGHT_SCREEN
+    if screen in side or SideCondition.AURORA_VEIL in side:
+        return 0.5
+    return 1.0
+
+
+@contextmanager
+def boosts_as(mon: Pokemon, **stages: int):
+    """Temporarily set some of ``mon``'s stat stages (e.g. to value a setup move or what a
+    boosted opponent would do without its boosts); restored afterwards."""
+    saved = {k: mon.boosts.get(k, 0) for k in stages}
+    try:
+        for k, v in stages.items():
+            mon.boosts[k] = max(-6, min(6, v))
+        yield mon
+    finally:
+        for k, v in saved.items():
+            mon.boosts[k] = v
 
 
 def best_damage(att: MonView, dfn: MonView, moves, battle=None) -> tuple[Move | None, float]:

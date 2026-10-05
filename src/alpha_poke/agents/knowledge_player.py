@@ -36,7 +36,8 @@ from poke_env.battle.move import Move
 from poke_env.data.normalize import to_id_str
 from poke_env.player import Player, SimpleHeuristicsPlayer
 
-from alpha_poke.agents.belief_state import BeliefModel, own_view
+from alpha_poke.agents import status_moves as sm
+from alpha_poke.agents.belief_state import BeliefModel, ability_probs, own_view
 from alpha_poke.agents.damage import (
     MonView,
     _recovers,  # noqa: F401 (recovery-aware chip value)
@@ -95,6 +96,27 @@ def _display_species(species_id: str) -> str:
 STALL_TURNS = 25  # turns without a faint after which the bot actively tries to break the stall
 KO_BONUS = 1.0  # bonus for an attack expected to KO (was 0.5: too close to a 50% heal)
 TERA_COST = 0.3  # opportunity cost of spending the one Terastallization of the game
+SETUP_IDS = {
+    "swordsdance",
+    "dragondance",
+    "calmmind",
+    "nastyplot",
+    "quiverdance",
+    "bulkup",
+    "shellsmash",
+    "agility",
+    "curse",
+    "coil",
+    "victorydance",
+    "tidyup",
+    "bellydrum",
+    "irondefense",
+    "amnesia",
+    "geomancy",
+    "shiftgear",
+    "filletaway",
+    "clangoroussoul",
+}
 ABSORB_HEAL = {"waterabsorb", "voltabsorb", "dryskin", "eartheater"}  # heal instead of damage
 LOOKAHEAD_W = 0.6  # weight of the switch-in's next-turn value in the switch score
 MATCHUP_W = 0.3  # weight of the longer-horizon 1v1 estimate (was 0.6 alone)
@@ -102,6 +124,7 @@ STATUS_BASELINE = 0.1  # rough value of a status / utility move in the lookahead
 RESWITCH_FLOOR = -0.5  # a threatened switch-in can switch out again: its loss is bounded
 SWITCH_MARGIN = 0.15  # a voluntary switch must beat the best move by this much
 CHAIN_SWITCH_MARGIN = 0.25  # extra margin right after a switch (no chains of switches)
+FREE_TURN_SETUP = 0.2  # a switch can hand a setup user a free boost
 SURE_FIRST = 0.9  # "we surely move first" (moves_first is a probability with a possible Scarf)
 NO_EFFECT_VALUE = -0.1  # an action seen to do nothing: below any useful move, so we change
 PLAN_BONUS_CAP = 0.5  # max total positive plan bonus on one option (terms must not stack up)
@@ -159,6 +182,8 @@ class BattleMemory:
         # our moves the battle showed had no effect (immune / absorbed); key = move type for
         # attacks, move id for status moves
         self.no_effect: set[tuple[str, bool, str]] = set()
+        self.opp_last_move: dict[str, str] = {}  # their species -> last move since it came in
+        self.opp_setups: dict[str, int] = {}  # their species -> setup moves used (whole game)
         self._scanned = 0
 
     @staticmethod
@@ -180,6 +205,18 @@ class BattleMemory:
                     cur = None
                 continue
             kind = ev[1]
+            if kind in ("move", "switch", "drag") and role and not ev[2].startswith(role):
+                try:
+                    sp = battle.get_pokemon(ev[2]).species
+                except Exception:  # noqa: BLE001
+                    sp = None
+                if sp and kind == "move":
+                    mid = to_id_str(ev[3])
+                    self.opp_last_move[sp] = mid
+                    if mid in SETUP_IDS:
+                        self.opp_setups[sp] = self.opp_setups.get(sp, 0) + 1
+                elif sp:
+                    self.opp_last_move.pop(sp, None)  # a fresh switch-in has no last move
             if kind == "move":
                 cur = ev[3] if role and ev[2].startswith(role) else None
             elif kind in ("switch", "drag", "turn", "upkeep", "faint"):
@@ -519,6 +556,7 @@ class KnowledgePlayer(Player):
                 "ability": display_ability(m.ability, m.species),
                 "tera": m.tera_type.name.title() if m.tera_type else "",
                 "moves": [display_move(x) for x in m.moves],
+                "speed": (m.stats or {}).get("spe") or 0,
             }
             for m in ours_raw
         ]
@@ -530,12 +568,21 @@ class KnowledgePlayer(Player):
             dist = self.belief.prior.predict(tname, team_names)
             name = tname.replace("-*", "")
             their_name[self._key(t)] = name
+            tv, _ = self._opp(battle, t)
             their_info.append(
                 {
                     "species": name,
                     "items": [[display_item(i), p] for i, p in top(dist.item, 3)],
                     "tera": [[x.title(), p] for x, p in top(dist.tera, 2)],
                     "moves": [[display_move(x), p] for x, p in top(dist.move, 8) if p >= 0.04],
+                    "abilities": [
+                        [display_ability(a, t.species), round(p, 2)]
+                        for a, p in sorted(ability_probs(t).items(), key=lambda x: -x[1])[:2]
+                        if p >= 0.05
+                    ],
+                    "speed": int(tv.stats.get("spe", 0)),
+                    "scarf": round(tv.item_p("choicescarf"), 2),
+                    "lead": round(self.belief.lead_rate.get(tname, 1 / 6), 2),
                 }
             )
         their_info.sort(key=lambda x: x["species"])
@@ -644,6 +691,21 @@ class KnowledgePlayer(Player):
 
         mem = self.memory.setdefault(battle.battle_tag, BattleMemory())
         mem.observe(battle)
+        self._sctx = sm.Ctx(
+            battle,
+            mv,
+            ov,
+            ov_moves,
+            incoming,
+            n_opp_left=6 - sum(m.fainted for m in battle.opponent_team.values()),
+            n_my_left=sum(not m.fainted for m in battle.team.values()),
+            is_wincon=me.species in plan.win_conditions,
+            opp_last_move=mem.opp_last_move.get(opp.species),
+            used_protect_last_turn=any(
+                k == "move" and x in sm.PROTECT and t >= battle.turn - 1 for t, k, x in mem.actions
+            ),
+        )
+        self._threat = sm.boost_threat(self._sctx)
         tactical: list[tuple[float, object]] = []
         if battle.available_moves:
             tactical += self._score_moves(battle, plan, mv, ov, incoming, opp_kos_me, ov_moves, mem)
@@ -679,6 +741,11 @@ class KnowledgePlayer(Player):
                 if isinstance(c, tuple):
                     d = dmg
                     ctx["damage"] = d
+                    ctx["heals"] = sm.heal_fraction(c[0], battle) > 0 or c[0].id in (
+                        "rest",
+                        "wish",
+                        "painsplit",
+                    )
                     if c[1]:  # tera option: respect the plan's tera directive
                         tera_ctx = {
                             "secures_ko": d >= opp.current_hp_fraction,
@@ -872,6 +939,9 @@ class KnowledgePlayer(Player):
                     v += 0.1 if plan.matchup.get((me.species, opp.species), 0) < 0 else 0.0
                 if move.recoil:
                     v -= 0.3 * move.recoil * min(d, opp_hp)
+                v += sm.attack_bonus(self._sctx, move, self._threat)
+                if self._threat > 0:  # focus a boosted opponent: removing it is worth more
+                    v += KO_BONUS * self._threat if d >= opp_hp else 0.5 * self._threat * min(d, 1)
             else:
                 v = self._status_value(
                     battle, move, mv, ov, incoming, n_opp_left, n_my_left, is_wincon
@@ -901,7 +971,7 @@ class KnowledgePlayer(Player):
         return v * (1 - status_block_p(move, ov)) if v > 0 else v
 
     def _status_value_raw(self, battle, move, mv, ov, incoming, n_opp_left, n_my_left, is_wincon):
-        me, opp = mv.mon, ov.mon
+        opp = ov.mon
         mid = move.id
         plan = self.plans.get(battle.battle_tag)
         hz = {"high": 1.6, "normal": 1.0, "low": 0.5}.get(
@@ -917,34 +987,32 @@ class KnowledgePlayer(Player):
             ):
                 return 0.0
             return hz * (0.4 if mid == "stealthrock" else 0.3) * min(1.0, n_opp_left / 4)
+        if mid == "courtchange":
+            return sm.court_change_value(self._sctx)
         if mid in REMOVAL:
             layers = len([c for c in battle.side_conditions if c in HAZARDS.values()])
             return hz * 0.3 * layers if n_my_left >= 2 else 0.0
-        if move.heal:
-            missing = 1 - me.current_hp_fraction
-            v = max(0.0, min(move.heal, missing) - 0.5 * incoming) if missing > 0.35 else 0.0
-            return v * (1.3 if defensive else 1.0)
-        if move.boosts and move.target == "self":
-            if any(me.boosts.get(s, 0) >= 4 for s in move.boosts):
-                return 0.0
-            safe = incoming < 0.35 and me.current_hp_fraction >= 0.6
-            return (0.45 + (0.1 if is_wincon else 0.0)) if safe else 0.05
+        threat = self._threat
         if opp.status is None and move.status is not None:
+            bonus = sm.status_threat_bonus(move, self._sctx, threat)
             types = set(opp.types)
             if (
                 mid == "willowisp"
                 and PokemonType.FIRE not in types
-                and ov.stats["atk"] > ov.stats["spa"]
+                and (ov.stats["atk"] > ov.stats["spa"] or opp.boosts.get("atk", 0) > 0)
             ):
-                return 0.4
+                return 0.4 + bonus
             if mid == "thunderwave" and not types & {PokemonType.ELECTRIC, PokemonType.GROUND}:
-                return 0.35 if moves_first(mv, ov, None, battle) < 0.5 else 0.15
+                return (0.35 if moves_first(mv, ov, None, battle) < 0.5 else 0.15) + bonus
             if mid == "toxic" and not types & {PokemonType.POISON, PokemonType.STEEL}:
                 return 0.3
             if mid in SLEEP and not any(
                 m.status and m.status.name == "SLP" for m in battle.opponent_team.values()
             ):
                 return 0.55
+        v = sm.misc_status_value(self._sctx, move, threat)
+        if v is not None:
+            return v * (1.3 if defensive and sm.heal_fraction(move, battle) > 0 else 1.0)
         return 0.02
 
     def _tera_value(self, battle, plan, move, mv, ov, opp_kos_me, first):
@@ -977,10 +1045,20 @@ class KnowledgePlayer(Player):
         me, opp = mv.mon, ov.mon
         if tera:
             incoming *= _tera_def_ratio(me, opp)
+        if move.id in sm.PROTECT and not self._sctx.used_protect_last_turn:
+            return 0.0  # the hit is blocked (the free turn it gives is in protect_value)
         factor = 1.0
         if is_damaging(move) and damage_fraction(mv, ov, move, battle) >= opp.current_hp_fraction:
             factor = 1.0 - first  # first: 1 = we move first, 0.5 = speed tie
         hp = me.current_hp_fraction
+        heal = sm.heal_fraction(move, battle) if move.id not in ("rest", "wish") else 0.0
+        if move.id == "rest" and me.status is None:
+            heal = 1.0
+        if heal:  # healing first (faster) means the hit lands on the healed HP
+            healed = min(1.0, hp + heal)
+            cost_after = mon_loss(healed) if incoming >= healed else incoming
+            cost_before = mon_loss(hp) if incoming >= hp else incoming
+            return first * cost_after + (1 - first) * cost_before
         return factor * (mon_loss(hp) if incoming >= hp else incoming)
 
     def _next_turn_value(self, battle, sv, ov, ov_moves, hp: float) -> float:
@@ -997,7 +1075,7 @@ class KnowledgePlayer(Player):
                 continue
             d = damage_fraction(sv, ov, m, battle)
             f = self._first(battle, sv, ov, m, ov_moves, hp=hp)
-            val = min(d, opp_hp) + (KO_BONUS if d >= opp_hp else 0.0)
+            val = min(d, opp_hp) + (KO_BONUS * (1 + self._threat) if d >= opp_hp else 0.0)
             if kos_us:
                 val *= f + (1 - f) * 0.15
             cost = (1 - f if d >= opp_hp else 1.0) * hit_cost
@@ -1037,7 +1115,25 @@ class KnowledgePlayer(Player):
                 if ov_best >= active.current_hp_fraction:
                     v += 0.2
             v -= {"aggressive": 0.2, "defensive": 0.06}.get(plan.pace, 0.12)  # switching tempo
+            v -= self._free_turn_cost(battle, sv, ov, ov_moves)
         return v
+
+    def _free_turn_cost(self, battle, sv, ov, ov_moves) -> float:
+        """The opponent need not attack our switch: a setup user boosts, a recovery user heals.
+        Costs more when the switch-in cannot threaten it (it can set up for free again)."""
+        opp = ov.mon
+        d_s = max(
+            (damage_fraction(sv, ov, m, battle) for m in sv.mon.moves.values() if is_damaging(m)),
+            default=0.0,
+        )
+        cost = 0.0
+        if sm.positive_stages(opp) < 4 and any(m.id in SETUP_IDS for m in ov_moves):
+            cost += FREE_TURN_SETUP if d_s < 0.35 else 0.4 * FREE_TURN_SETUP
+        if 1 - opp.current_hp_fraction > 0.25 and any(
+            sm.heal_fraction(m, battle) > 0 for m in ov_moves
+        ):
+            cost += 0.08
+        return cost
 
 
 from poke_env.data import GenData  # noqa: E402

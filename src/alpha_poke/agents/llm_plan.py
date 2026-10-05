@@ -68,7 +68,7 @@ def display_ability(ability_id: str | None, species_id: str) -> str:
 
 ROOT = Path(__file__).resolve().parents[3]
 PLAN_CACHE = ROOT / "data" / "llm_plans"
-PROMPT_VERSION = "plan-v2"
+PROMPT_VERSION = "plan-v3"
 
 SYSTEM = (
     "You are a top competitive Pokemon player (Smogon Gen 9 OU singles, 6v6, team preview, "
@@ -83,10 +83,15 @@ SYSTEM = (
     "  fainted:X  alive:X  active:X (their active)  our_active:Y  their_hp_below:X:0.5  "
     "our_hp_below:Y:0.5  our_hazard_set:stealthrock|spikes|toxicspikes|stickyweb (on THEIR "
     "side)  their_hazard_set:<hazard> (on OUR side)  their_tera:X  their_tera_used  "
-    "our_tera_used  revealed_item:X:Item  revealed_move:X:Move  turn_after:N  secures_ko  "
+    "our_tera_used  revealed_item:X:Item  revealed_move:X:Move  turn_after:N  "
+    "their_boosted:X:N (X has >= N positive Atk/SpA/Spe stages)  secures_ko  "
     "saves_from_ko (the last two only in tera.when)\n"
     "Goals: set_hazard:<hazard>  clear_hazards  chip:X  ko:X  setup:Y  sweep:Y  status:X  "
-    "scout\n"
+    "scout  stop_setup:X (phaze / Haze / Encore / Taunt / burn / paralyse X, or KO it, once it "
+    "boosts)  heal:Y (keep Y healthy with its recovery move)  remove_item:X (Knock Off / Trick)\n"
+    "Plan the status moves too (hazards, recovery, phazing, Encore / Taunt, Knock Off), not only "
+    "attacks. For EVERY opposing Pokemon whose likely set has a boosting move, give a "
+    "setup_answers entry: which of YOUR Pokemon deals with it after it boosts, and how.\n"
     "Rule actions: switch_to:Y  use_move:<Move>  tera_now  setup\n"
     "X = one of THEIR Pokemon, Y = one of YOUR Pokemon. Answer with one JSON object only."
 )
@@ -115,6 +120,9 @@ SCHEMA = {
     '"sweep:Y"]}]; the last phase has no until',
     "tera": '{"who": YOUR Pokemon or null, "when": condition, "never_before": phase name or null}',
     "rules": '0-3 reactive rules: [{"if": condition, "then": action}]',
+    "setup_answers": 'object: THEIR Pokemon that can boost -> {"who": YOUR Pokemon that '
+    'answers it once boosted, "how": one of phaze, haze, encore, taunt, status, ko, unaware, '
+    "revenge}",
 }
 
 
@@ -139,6 +147,7 @@ def canonical_team(mons: list[dict]) -> list[dict]:
                 "ability": m.get("ability") or "",
                 "tera": m.get("tera") or "",
                 "moves": sorted(m.get("moves") or []),
+                "speed": int(m.get("speed") or 0),
             }
         )
     return out
@@ -209,7 +218,7 @@ def build_prompt(
     for m in canonical_team(ours):
         lines.append(
             f"- {m['species']} @ {m['item'] or 'no item'} | ability {m['ability']} | "
-            f"tera {m['tera']} | moves: {', '.join(m['moves'])}"
+            f"tera {m['tera']} | speed {m['speed']} | moves: {', '.join(m['moves'])}"
         )
     lines += [
         "",
@@ -217,9 +226,17 @@ def build_prompt(
         "(percent = estimated probability; move percent = share of revealed move slots):",
     ]
     for t in their_info:
+        extra = ""
+        if t.get("abilities"):
+            extra += f"; ability {_fmt(t['abilities'])}"
+        if t.get("speed"):
+            scarf = f", Choice Scarf {round(100 * t['scarf'])}%" if t.get("scarf") else ""
+            extra += f"; speed ~{t['speed']}{scarf}"
+        if t.get("lead") is not None:
+            extra += f"; leads {round(100 * t['lead'])}% of games"
         lines.append(
             f"- {t['species']}: items {_fmt(t['items'])}; tera {_fmt(t['tera'])}; "
-            f"moves {_fmt(t['moves'])}"
+            f"moves {_fmt(t['moves'])}{extra}"
         )
     if cores:
         lines += ["", "Opponent archetype (from our archetype library): " + "; ".join(cores[:2])]
@@ -289,7 +306,7 @@ class LLMPlanner:
         path = PLAN_CACHE / f"{key}.json"
         if (
             not path.exists()
-            and PROMPT_VERSION == "plan-v2"
+            and PROMPT_VERSION == "plan-v2"  # legacy migration: inactive since plan-v3
             and template_hash() == LEGACY_V2_TEMPLATE
         ):
             lk = legacy_key(

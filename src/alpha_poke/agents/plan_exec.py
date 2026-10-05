@@ -65,6 +65,7 @@ ATOMS = {
     "turn_after": 1,
     "secures_ko": 0,
     "saves_from_ko": 0,
+    "their_boosted": 2,  # their_boosted:X:N = X has >= N positive Atk/SpA/Spe stages
 }
 GOALS = {
     "set_hazard": 1,
@@ -75,6 +76,27 @@ GOALS = {
     "sweep": 1,
     "status": 1,
     "scout": 0,
+    "stop_setup": 1,  # stop THEIR X's boosting: phaze / Haze / Encore / Taunt / status / KO
+    "heal": 1,  # keep YOUR Y healthy with its recovery
+    "remove_item": 1,  # Knock Off / Trick THEIR X's item
+}
+OPEN_GOALS = ("sweep", "scout", "stop_setup", "heal")  # never "done": do not close a phase
+HOW = {"phaze", "haze", "encore", "taunt", "status", "ko", "unaware", "revenge"}
+ANTI_SETUP_IDS = {
+    "roar",
+    "whirlwind",
+    "dragontail",
+    "circlethrow",
+    "haze",
+    "clearsmog",
+    "encore",
+    "taunt",
+    "willowisp",
+    "thunderwave",
+    "glare",
+    "nuzzle",
+    "perishsong",
+    "spectralthief",
 }
 ACTIONS = {"switch_to": 1, "use_move": 1, "tera_now": 0, "setup": 0}
 
@@ -96,6 +118,10 @@ W = {
     "wincon_endgame": 0.15,
     "rule": 0.5,
     "rule_move": 0.4,
+    "goal_stop_setup": 0.35,
+    "goal_heal": 0.2,
+    "goal_remove_item": 0.2,
+    "setup_answer": 0.4,
 }
 
 
@@ -149,6 +175,7 @@ class Condition:
                     "their_tera",
                     "revealed_item",
                     "revealed_move",
+                    "their_boosted",
                 ):
                     out.add(a.args[0])
         return out
@@ -200,6 +227,8 @@ class ExecPlan:
     tera_when: Condition | None = None
     tera_never_before: str | None = None
     rules: list[tuple[Condition, tuple[str, tuple[str, ...]]]] = field(default_factory=list)
+    # their setup threat key -> {"who": our key or None, "how": one of HOW}
+    setup_answers: dict[str, dict] = field(default_factory=dict)
     problems: list[str] = field(default_factory=list)
 
     @classmethod
@@ -252,6 +281,16 @@ class ExecPlan:
                 except PlanError as e:
                     p.problems.append(f"phase {i}: {e}")
             p.phases.append(Phase(str(ph.get("name") or f"phase{i}"), until, goals))
+        for mon, a in (d.get("setup_answers") or {}).items():
+            key = names.their(mon)
+            if key is None or not isinstance(a, dict):
+                p.problems.append(f"setup_answers: dropped {mon}")
+                continue
+            how = str(a.get("how") or "").lower()
+            p.setup_answers[key] = {
+                "who": names.our(a.get("who") or ""),
+                "how": how if how in HOW else "ko",
+            }
         tera = d.get("tera") or {}
         if tera.get("who"):
             p.tera_who = names.our(tera["who"])
@@ -326,7 +365,26 @@ def eval_atom(a: Atom, battle, names: Names, tera_ctx: dict | None = None) -> bo
         return bool(mon and mon.item and to_id(mon.item) == to_id(args[1]))
     if k == "revealed_move":
         return bool(mon and to_id(args[1]) in mon.moves)
+    if k == "their_boosted":
+        try:
+            n = int(float(args[1]))
+        except ValueError:
+            return False
+        return bool(mon and boosted_stages(mon) >= n)
     return False
+
+
+def _stops_setup(move, ctx: dict, opp) -> bool:
+    """An answer to a (possibly) boosting opponent: an anti-setup move, or an attack that KOs."""
+    if move.id in ANTI_SETUP_IDS:
+        return True
+    from alpha_poke.agents.damage import is_damaging
+
+    return is_damaging(move) and ctx.get("damage", 0) >= ctx.get("opp_hp", 1)
+
+
+def boosted_stages(mon) -> int:
+    return sum(max(0, mon.boosts.get(s, 0)) for s in ("atk", "spa", "spe"))
 
 
 def eval_condition(c: Condition | None, battle, names: Names, tera_ctx=None) -> bool:
@@ -382,7 +440,11 @@ class PlanState:
             ref = names.any(args[0])
             mon = _mon(battle, *ref) if ref else None
             return bool(mon and (mon.fainted or max(mon.boosts.values(), default=0) >= 2))
-        return False  # sweep / scout: open-ended
+        if kind == "remove_item":
+            ref = names.any(args[0])
+            mon = _mon(battle, *ref) if ref else None
+            return bool(mon and (mon.fainted or mon.item == ""))
+        return False  # sweep / scout / stop_setup / heal: open-ended
 
     def observe(self, battle) -> None:
         """Outcome bookkeeping: goal completion, assignment results, win-condition KOs."""
@@ -392,7 +454,7 @@ class PlanState:
                 if (
                     i <= self.phase
                     and not any(x.endswith(" " + tag) for x in self.goals_done)
-                    and g[0] not in ("sweep", "scout")
+                    and g[0] not in OPEN_GOALS
                     and self.goal_done(g, battle)
                 ):
                     self.goals_done.append(f"T{battle.turn} {tag}")
@@ -417,7 +479,7 @@ class PlanState:
         self.observe(battle)
         while self.phase < len(self.plan.phases) - 1:
             ph = self.plan.phases[self.phase]
-            closable = [g for g in ph.goals if g[0] not in ("sweep", "scout")]
+            closable = [g for g in ph.goals if g[0] not in OPEN_GOALS]
             done = closable and all(self.goal_done(g, battle) for g in closable)
             if eval_condition(ph.until, battle, self.plan.names) or done:
                 self.phase += 1
@@ -508,6 +570,9 @@ def plan_terms(state: PlanState, battle, option, ctx: dict) -> dict[str, float]:
             terms["assign_backup"] = W["assign_backup"] * trust
         if key in a.get("avoid", []):
             terms["assign_avoid"] = W["assign_avoid"]
+        sa = p.setup_answers.get(opp.species) if opp is not None else None
+        if sa and sa["who"] == key and boosted_stages(opp) >= 1 and trust:
+            terms["setup_answer"] = W["setup_answer"] * trust  # bring the planned answer in
         if not ctx.get("forced") and me is not None and p.roles.get(me.species) == "sacrifice_ok":
             terms["sacrifice_stay"] = W["sacrifice_stay"]
         if p.roles.get(key) == "win_condition" and not ctx.get("forced"):
@@ -528,7 +593,7 @@ def plan_terms(state: PlanState, battle, option, ctx: dict) -> dict[str, float]:
     # the tactical layer decides whether it can work
     if attacking and ctx.get("damage", 1.0) <= 0:
         return terms
-    if not attacking and ctx.get("tactical", 1.0) <= 0.02:
+    if not attacking and ctx.get("tactical", 1.0) <= 0.0:  # 0 / negative = known useless
         return terms
     names = p.names
     for kind, args in state.goals():
@@ -561,6 +626,28 @@ def plan_terms(state: PlanState, battle, option, ctx: dict) -> dict[str, float]:
             terms["goal_setup"] = W["goal_setup"]
         elif kind == "sweep" and me is not None and me.species == target and attacking:
             terms["goal_sweep"] = W["goal_sweep"]
+        elif kind == "stop_setup" and opp is not None and opp.species == target:
+            if _stops_setup(move, ctx, opp):
+                terms["goal_stop_setup"] = W["goal_stop_setup"]
+        elif (
+            kind == "heal"
+            and me is not None
+            and me.species == target
+            and ctx.get("heals")
+            and me.current_hp_fraction < 0.6
+        ):
+            terms["goal_heal"] = W["goal_heal"]
+        elif (
+            kind == "remove_item"
+            and opp is not None
+            and opp.species == target
+            and move.id in ("knockoff", "trick", "switcheroo", "thief", "covet")
+            and opp.item != ""
+        ):
+            terms["goal_remove_item"] = W["goal_remove_item"]
+    sa = p.setup_answers.get(opp.species) if opp is not None else None
+    if sa and boosted_stages(opp) >= 1 and _stops_setup(move, ctx, opp):
+        terms["setup_answer"] = W["setup_answer"]
     if attacking and opp is not None and opp.species in p.kill_priority:
         rank = p.kill_priority.index(opp.species)
         share = (len(p.kill_priority) - rank) / len(p.kill_priority)
