@@ -38,6 +38,7 @@ from poke_env.player import Player, SimpleHeuristicsPlayer
 
 from alpha_poke.agents.belief_state import BeliefModel, own_view
 from alpha_poke.agents.damage import MonView, best_damage, damage_fraction, moves_first, one_v_one
+from alpha_poke.agents.plan_exec import ExecPlan, Names, PlanState, plan_terms
 
 HAZARDS = {
     "stealthrock": SideCondition.STEALTH_ROCK,
@@ -138,6 +139,8 @@ class Plan:
     hazards_priority: str = "normal"  # high | normal | low
     source: str = "computed"  # computed | llm | computed(llm-failed)
     llm: dict = field(default_factory=dict)  # key, cached, cost, problems, game_plan, ...
+    llm_raw: dict = field(default_factory=dict)  # the validated LLM plan (executable part)
+    exec_state: object = None  # plan_exec.PlanState for this battle
 
     def summary(self) -> str:
         return (
@@ -161,6 +164,16 @@ class Plan:
             "hazards_priority": self.hazards_priority,
             "opp_cores": self.opp_cores[:1],
             "llm": self.llm,
+            "exec": None
+            if self.exec_state is None
+            else {
+                "phases": [ph.name for ph in self.exec_state.plan.phases],
+                "final_phase": self.exec_state.phase_name,
+                "events": self.exec_state.log,
+                "problems": self.exec_state.plan.problems,
+                "roles": self.exec_state.plan.roles,
+                "kill_priority": self.exec_state.plan.kill_priority,
+            },
         }
 
 
@@ -273,6 +286,75 @@ class KnowledgePlayer(Player):
             plan.opp_cores = [f"{c['name']} ({' + '.join(c['members'])})" for c in hits]
         return plan
 
+    # ---- executable plans ------------------------------------------------------------------
+    def _name_maps(self, battle) -> tuple[dict[str, str], dict[str, str]]:
+        """(our key -> display name, their key -> display name) as used in plans/prompts."""
+        our = {self._key(m): _display_species(m.species) for m in battle.team.values()}
+        theirs_raw = battle.teampreview_opponent_team or list(battle.opponent_team.values())
+        names = self._opp_team_names(battle)
+        their = {self._key(t): n.replace("-*", "") for t, n in zip(theirs_raw, names, strict=False)}
+        return our, their
+
+    def _computed_exec(self, battle, plan: Plan, our: dict, their: dict) -> dict:
+        """Rule-generated executable plan with the same structure as the LLM's (so that
+        LLM vs rules compares plan *content*, not execution machinery)."""
+        ours = list(battle.team.values())
+        roles = {}
+        for m in ours:
+            mv, k = set(m.moves), self._key(m)
+            if k in plan.win_conditions:
+                roles[our[k]] = "win_condition"
+            elif mv & set(HAZARDS):
+                roles[our[k]] = "hazard_setter"
+            elif mv & REMOVAL:
+                roles[our[k]] = "hazard_removal"
+            elif k not in plan.preserve:
+                roles[our[k]] = "sacrifice_ok"
+        assignments = {}
+        for t in their:
+            ranked = sorted(our, key=lambda o, t=t: -plan.matchup.get((o, t), 0.0))
+            assignments[their[t]] = {
+                "primary": our[ranked[0]],
+                "backup": our[ranked[1]] if len(ranked) > 1 else None,
+                "avoid": [our[o] for o in ranked if plan.matchup.get((o, t), 0) < -0.6],
+            }
+        threats = [their[t] for t in plan.threats[:2] if t in their]
+        phases = []
+        setter = next((m for m in ours if set(m.moves) & {"stealthrock", "spikes"}), None)
+        if setter is not None:
+            hz = "stealthrock" if "stealthrock" in setter.moves else "spikes"
+            phases.append(
+                {
+                    "name": "early",
+                    "until": f"our_hazard_set:{hz} OR turn_after:8",
+                    "goals": [f"set_hazard:{hz}"],
+                }
+            )
+        if threats:
+            until = " AND ".join(f"fainted:{t}" for t in threats) + " OR turn_after:40"
+            phases.append({"name": "mid", "until": until, "goals": [f"ko:{t}" for t in threats]})
+        wc = [our[w] for w in plan.win_conditions if w in our]
+        goals = [f"setup:{wc[0]}", f"sweep:{wc[0]}"] if wc else ["scout"]
+        phases.append({"name": "endgame", "goals": goals})
+        return {
+            "roles": roles,
+            "assignments": assignments,
+            "kill_priority": threats,
+            "phases": phases,
+            "tera": {"who": wc[0] if wc else None, "when": "secures_ko OR saves_from_ko"},
+            "rules": [],
+        }
+
+    def _init_exec(self, battle, plan: Plan) -> PlanState:
+        our, their = self._name_maps(battle)
+        names = Names({v: k for k, v in our.items()}, {v: k for k, v in their.items()})
+        d = plan.llm_raw if plan.source == "llm" and plan.llm_raw.get("phases") else None
+        if d is None:
+            d = self._computed_exec(battle, plan, our, their)
+        state = PlanState(ExecPlan.from_dict(d, names))
+        plan.exec_state = state
+        return state
+
     # ---- LLM plan --------------------------------------------------------------------------
     def _llm_inputs(self, battle, plan: Plan):
         """Prompt inputs + name maps. Opponent: species and *belief* estimates only."""
@@ -336,6 +418,7 @@ class KnowledgePlayer(Player):
         plan.pace = p.get("pace", "balanced")
         plan.hazards_priority = p.get("hazards_priority", "normal")
         plan.source = "llm"
+        plan.llm_raw = p
         plan.llm = {
             "key": llm.key[:16],
             "cached": llm.cached,
@@ -368,6 +451,8 @@ class KnowledgePlayer(Player):
                     plan.source = "computed(llm-failed)"
                     plan.llm = {"error": f"{type(e).__name__}: {e}"[:200]}
             self.plans[battle.battle_tag] = plan
+            if self.use_plan:
+                self._init_exec(battle, plan)
             ours = list(battle.team.values())
             order = sorted(range(len(ours)), key=lambda i: self._key(ours[i]) != plan.lead)
             for mon in ours:
@@ -396,33 +481,63 @@ class KnowledgePlayer(Player):
         plan = self.plans.get(battle.battle_tag)
         if plan is None:
             plan = self.plans[battle.battle_tag] = self.make_plan(battle)
-        mv, ov_moves = own_view(me), None
+        state = plan.exec_state
+        if state is None and self.use_plan:
+            state = self._init_exec(battle, plan)
+        if state is not None:
+            state.update(battle)
+        mv = own_view(me)
         ov, ov_moves = self._opp(battle, opp)
         opp_move, incoming = best_damage(ov, mv, ov_moves, battle)
         opp_kos_me = incoming >= me.current_hp_fraction
+        forced = not battle.available_moves
 
-        options: list[tuple[float, object]] = []
+        tactical: list[tuple[float, object]] = []
         if battle.available_moves:
-            options += self._score_moves(battle, plan, mv, ov, incoming, opp_kos_me)
+            tactical += self._score_moves(battle, plan, mv, ov, incoming, opp_kos_me)
         for s in battle.available_switches:
-            options.append(
-                (
-                    self._score_switch(
-                        battle, plan, s, ov, ov_moves, opp_move, forced=not battle.available_moves
-                    ),
-                    s,
-                )
+            tactical.append(
+                (self._score_switch(battle, plan, s, ov, ov_moves, opp_move, forced), s)
             )
-        if not options:
+        if not tactical:
             return self.choose_random_move(battle)
         mem = self.memory.setdefault(battle.battle_tag, BattleMemory())
         mem.observe(battle)
-        if self.anti_loop:
-            options = [(v + self._loop_adjust(battle, mem, c, v), c) for v, c in options]
-        score, choice = max(options, key=lambda x: x[0])
+        rows = []
+        for v, c in tactical:
+            terms: dict[str, float] = {}
+            if state is not None:
+                ctx = {
+                    "forced": forced,
+                    "opp_hp": opp.current_hp_fraction,
+                    "safe": incoming < 0.35 and me.current_hp_fraction >= 0.6,
+                }
+                if isinstance(c, tuple):
+                    d = damage_fraction(mv, ov, c[0], battle)
+                    ctx["damage"] = d
+                    if c[1]:  # tera option: respect the plan's tera directive
+                        tera_ctx = {
+                            "secures_ko": d >= opp.current_hp_fraction,
+                            "saves_from_ko": opp_kos_me,
+                        }
+                        if not state.tera_allowed(battle, me.species, tera_ctx):
+                            continue
+                terms = plan_terms(state, battle, c, ctx)
+            loop = self._loop_adjust(battle, mem, c, v) if self.anti_loop else 0.0
+            rows.append(
+                {
+                    "choice": c,
+                    "tactical": v,
+                    "plan": terms,
+                    "loop": loop,
+                    "total": v + sum(terms.values()) + loop,
+                }
+            )
+        best = max(rows, key=lambda r: r["total"])
+        choice = best["choice"]
         mem.record(battle, choice)
         if self.trace_dir:
-            self._trace(battle, mem, options, choice, incoming)
+            self._trace(battle, mem, rows, best, incoming, state)
         if isinstance(choice, Pokemon):
             return self.create_order(choice)
         move, tera = choice
@@ -454,11 +569,12 @@ class KnowledgePlayer(Player):
                 adj -= 0.5 * max(value, 0.0)  # status / recovery values halved
         return adj
 
-    def _trace(self, battle, mem, options, choice, incoming) -> None:
+    def _trace(self, battle, mem, rows, best, incoming, state) -> None:
         def name(c):
             return c.species if isinstance(c, Pokemon) else c[0].id + ("+tera" if c[1] else "")
 
-        top = sorted(options, key=lambda x: -x[0])[:5]
+        top = sorted(rows, key=lambda r: -r["total"])[:5]
+        best_tactical = max(rows, key=lambda r: r["tactical"] + r["loop"])
         row = {
             "turn": battle.turn,
             "me": battle.active_pokemon.species,
@@ -467,8 +583,24 @@ class KnowledgePlayer(Player):
             "opp_hp": round(battle.opponent_active_pokemon.current_hp_fraction, 3),
             "incoming_est": round(incoming, 3),
             "stall": battle.turn - mem.last_progress_turn,
-            "options": [[name(c), round(v, 3)] for v, c in top],
-            "chosen": name(choice),
+            "phase": state.phase_name if state else None,
+            "rules_active": [f"{k}:{':'.join(a)}" for k, a in state.active_rules(battle)]
+            if state
+            else [],
+            "options": [
+                {
+                    "a": name(r["choice"]),
+                    "total": round(r["total"], 3),
+                    "tactical": round(r["tactical"], 3),
+                    "loop": round(r["loop"], 3),
+                    "plan": {k: round(v, 3) for k, v in r["plan"].items()},
+                }
+                for r in top
+            ],
+            "chosen": name(best["choice"]),
+            "followed_plan": sum(best["plan"].values()) > 0,
+            "plan_changed_decision": best is not best_tactical,
+            "events": state.log[-3:] if state else [],
         }
         with open(self.trace_dir / f"{battle.battle_tag}_{self.username}.jsonl", "a") as f:
             f.write(json.dumps(row) + "\n")
@@ -488,8 +620,6 @@ class KnowledgePlayer(Player):
                 v = min(d, opp_hp)
                 if d >= opp_hp:
                     v += 0.5
-                if opp.species in plan.threats[:2]:
-                    v *= 1.25  # plan: focus damage on the main threats
                 if plan.pace == "aggressive":
                     v += 0.05
                 if move.id in PIVOT:
@@ -542,8 +672,7 @@ class KnowledgePlayer(Player):
             if any(me.boosts.get(s, 0) >= 4 for s in move.boosts):
                 return 0.0
             safe = incoming < 0.35 and me.current_hp_fraction >= 0.6
-            # plan: win conditions set up when it is safe
-            return (0.45 + (0.25 if is_wincon else 0.0)) if safe else 0.05
+            return (0.45 + (0.1 if is_wincon else 0.0)) if safe else 0.05
         if opp.status is None and move.status is not None:
             types = set(opp.types)
             if (
@@ -607,8 +736,6 @@ class KnowledgePlayer(Player):
         # matchup was computed at full HP; scale by remaining HP
         mu = mu * (0.5 + 0.5 * hp_after)
         v = 0.6 * mu - taken
-        if s.species in plan.answers.get(opp.species, []):
-            v += 0.25  # plan: bring the designated answer to this threat
         if s.species in plan.preserve and taken > 0.35:
             v -= 0.3  # plan: don't take big hits with mons we must keep
         if s.species in plan.win_conditions and forced and mu < 0.3:

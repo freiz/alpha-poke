@@ -68,16 +68,27 @@ def display_ability(ability_id: str | None, species_id: str) -> str:
 
 ROOT = Path(__file__).resolve().parents[3]
 PLAN_CACHE = ROOT / "data" / "llm_plans"
-PROMPT_VERSION = "plan-v1"
+PROMPT_VERSION = "plan-v2"
 
 SYSTEM = (
     "You are a top competitive Pokemon player (Smogon Gen 9 OU singles, 6v6, team preview, "
     "terastallization, October 2026 metagame). Before the battle you see your full team and only "
     "the six species of the opponent. You are also given the opponent's LIKELY sets estimated "
     "from thousands of high-rated replays, the archetype they most likely play, and a "
-    "computed one-vs-one matchup table. Make a concrete game plan. Rules: refer to Pokemon, "
-    "moves and items exactly as written in the input; only use moves your Pokemon actually "
-    "have; be decisive. Answer with one JSON object only."
+    "computed one-vs-one matchup table. Make a concrete, EXECUTABLE game plan: a program will "
+    "follow it turn by turn. Rules: refer to Pokemon, moves and items exactly as written in "
+    "the input; only use moves your Pokemon actually have; be decisive.\n"
+    "Conditions (used in phases.until, tera.when, rules.if) must use ONLY these atoms, joined "
+    "with AND / OR (no parentheses):\n"
+    "  fainted:X  alive:X  active:X (their active)  our_active:Y  their_hp_below:X:0.5  "
+    "our_hp_below:Y:0.5  our_hazard_set:stealthrock|spikes|toxicspikes|stickyweb (on THEIR "
+    "side)  their_hazard_set:<hazard> (on OUR side)  their_tera:X  their_tera_used  "
+    "our_tera_used  revealed_item:X:Item  revealed_move:X:Move  turn_after:N  secures_ko  "
+    "saves_from_ko (the last two only in tera.when)\n"
+    "Goals: set_hazard:<hazard>  clear_hazards  chip:X  ko:X  setup:Y  sweep:Y  status:X  "
+    "scout\n"
+    "Rule actions: switch_to:Y  use_move:<Move>  tera_now  setup\n"
+    "X = one of THEIR Pokemon, Y = one of YOUR Pokemon. Answer with one JSON object only."
 )
 
 SCHEMA = {
@@ -92,6 +103,18 @@ SCHEMA = {
     "their_win_route": "1-2 sentences: how the opponent most likely tries to win",
     "game_plan": "2-4 sentences: how you win this matchup",
     "notes": "object: THEIR Pokemon -> one short tactical note",
+    "roles": "object: each of YOUR Pokemon -> one of lead, hazard_setter, hazard_removal, pivot, "
+    "wallbreaker, win_condition, sacrifice_ok, check, utility",
+    "assignments": 'object: each of THEIR Pokemon -> {"primary": YOUR Pokemon that switches '
+    'in / handles it, "backup": another, "avoid": [YOUR Pokemon that must not face it]}',
+    "kill_priority": "THEIR Pokemon to remove first (2-3, most important first)",
+    "phases": '2-3 phases in order, e.g. [{"name": "early", "until": '
+    '"our_hazard_set:stealthrock OR turn_after:6", "goals": '
+    '["set_hazard:stealthrock"]}, {"name": "mid", "until": "fainted:X", '
+    '"goals": ["ko:X"]}, {"name": "endgame", "goals": ["setup:Y", '
+    '"sweep:Y"]}]; the last phase has no until',
+    "tera": '{"who": YOUR Pokemon or null, "when": condition, "never_before": phase name or null}',
+    "rules": '0-3 reactive rules: [{"if": condition, "then": action}]',
 }
 
 
@@ -254,6 +277,11 @@ class LLMPlanner:
             [{"role": "system", "content": SYSTEM}, {"role": "user", "content": prompt}]
         )
         plan, problems = validate(raw, [m["species"] for m in ours], their_species)
+        # check the executable part with the same validator the bot uses
+        from alpha_poke.agents.plan_exec import ExecPlan, Names
+
+        names = Names({m["species"]: m["species"] for m in ours}, {x: x for x in their_species})
+        problems += ExecPlan.from_dict(raw, names).problems
         cost = self.client.spent_usd - spent0
         path.write_text(
             json.dumps(
