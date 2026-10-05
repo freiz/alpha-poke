@@ -10,6 +10,7 @@ Stats use the species' most common Smogon spread.
 import json
 import pickle
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 
 import pandas as pd
@@ -150,7 +151,34 @@ class BeliefModel:
             if mid not in likely and mid in _MOVES:
                 likely.append(mid)
         moves = [mon.moves[m] if m in mon.moves else Move(m, gen=9) for m in likely]
-        return MonView(mon, stats, items, mon.ability), moves
+        return MonView(mon, stats, items, mon.ability, ability_probs(mon)), moves
+
+
+@lru_cache(maxsize=1)
+def _ability_usage(format_id: str = "gen9ou") -> dict[str, dict[str, float]]:
+    """species id -> {ability id: share} from the latest Smogon month (all ratings)."""
+    months = sorted(p.name for p in Path(DEFAULT_DIR).iterdir() if p.is_dir())
+    stats = UsageStats.load(DEFAULT_DIR / months[-1] / "chaos" / f"{format_id}-0.json")
+    return {
+        to_id(n): {to_id(k): v for k, v in s.abilities.items()} for n, s in stats.species.items()
+    }
+
+
+def ability_probs(mon: Pokemon) -> dict[str, float]:
+    """Distribution over an opponent's ability while it is unknown: Smogon usage restricted to
+    the species' possible abilities, uniform over them when there is no usage data."""
+    if mon.ability:
+        return {to_id(mon.ability): 1.0}
+    possible = [to_id(a) for a in (mon.possible_abilities or [])]
+    try:
+        usage = _ability_usage().get(to_id(mon.species), {})
+    except (OSError, ValueError, KeyError):
+        usage = {}
+    d = {a: usage.get(a, 0.0) for a in possible} if possible else dict(usage)
+    t = sum(d.values())
+    if t <= 0:
+        return {a: 1 / len(possible) for a in possible} if possible else {}
+    return {a: v / t for a, v in d.items()}
 
 
 def own_view(mon: Pokemon) -> MonView:

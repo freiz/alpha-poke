@@ -133,7 +133,7 @@ def main() -> None:
             best = t["options"][0]
             dmg_opts = [o for o in t["options"] if (o.get("dmg") or 0) >= 0.25]
             # judge the action itself: the stay cost (damage we take) is shared by all moves
-            if best["total"] + best.get("stay", 0) <= 0.05 and dmg_opts:
+            if best["total"] + best.get("stay", 0) - best.get("future", 0) <= 0.05 and dmg_opts:
                 anomalies["passive"].append((b, t))
             if nxt and t["plan_changed_decision"] and nxt["our_fainted"] > t["our_fainted"]:
                 anomalies["plan_hurt"].append((b, t))

@@ -33,6 +33,7 @@ from poke_env.battle import (
     SideCondition,
 )
 from poke_env.battle.move import Move
+from poke_env.data.normalize import to_id_str
 from poke_env.player import Player, SimpleHeuristicsPlayer
 
 from alpha_poke.agents.belief_state import BeliefModel, own_view
@@ -94,7 +95,49 @@ def _display_species(species_id: str) -> str:
 STALL_TURNS = 25  # turns without a faint after which the bot actively tries to break the stall
 KO_BONUS = 1.0  # bonus for an attack expected to KO (was 0.5: too close to a 50% heal)
 TERA_COST = 0.3  # opportunity cost of spending the one Terastallization of the game
+ABSORB_HEAL = {"waterabsorb", "voltabsorb", "dryskin", "eartheater"}  # heal instead of damage
+LOOKAHEAD_W = 0.6  # weight of the switch-in's next-turn value in the switch score
+MATCHUP_W = 0.3  # weight of the longer-horizon 1v1 estimate (was 0.6 alone)
+STATUS_BASELINE = 0.1  # rough value of a status / utility move in the lookahead
+RESWITCH_FLOOR = -0.5  # a threatened switch-in can switch out again: its loss is bounded
+SWITCH_MARGIN = 0.15  # a voluntary switch must beat the best move by this much
+CHAIN_SWITCH_MARGIN = 0.25  # extra margin right after a switch (no chains of switches)
+SURE_FIRST = 0.9  # "we surely move first" (moves_first is a probability with a possible Scarf)
+NO_EFFECT_VALUE = -0.1  # an action seen to do nothing: below any useful move, so we change
 PLAN_BONUS_CAP = 0.5  # max total positive plan bonus on one option (terms must not stack up)
+
+
+FOE_TARGETS = {
+    "NORMAL",
+    "ANY",
+    "ADJACENT_FOE",
+    "ALL_ADJACENT_FOES",
+    "ALL_ADJACENT",
+    "RANDOM_NORMAL",
+}
+STATUS_IMMUNE = {  # move id -> abilities that ignore it (besides the general ones below)
+    "willowisp": ("flashfire", "waterveil", "waterbubble", "thermalexchange"),
+    "thunderwave": ("voltabsorb", "lightningrod", "motordrive", "limber"),
+    "toxic": ("immunity", "poisonheal", "magicguard", "toxicboost"),
+    "spore": ("insomnia", "vitalspirit", "sweetveil", "overcoat"),
+    "sleeppowder": ("insomnia", "vitalspirit", "sweetveil", "overcoat"),
+    "yawn": ("insomnia", "vitalspirit", "sweetveil"),
+}
+
+
+def status_block_p(move: Move, ov) -> float:
+    """Probability that the opponent's ability makes a status move / hazard useless:
+    Magic Bounce reflects it, Good as Gold blocks status moves aimed at it, and status
+    immunities (Purifying Salt, Comatose, move-specific ones)."""
+    p = 0.0
+    if "reflectable" in (move.flags or set()):
+        p += ov.ability_p("magicbounce")
+    target = getattr(move.target, "name", "")
+    if target in FOE_TARGETS:
+        p += ov.ability_p("goodasgold")
+        if move.status is not None or move.id in STATUS_IMMUNE:
+            p += ov.ability_p("purifyingsalt", "comatose", *STATUS_IMMUNE.get(move.id, ()))
+    return min(1.0, p)
 
 
 def mon_loss(hp: float) -> float:
@@ -112,8 +155,51 @@ class BattleMemory:
         self.fainted = 0
         self.last_progress_turn = 0
         self.attacks: deque = deque(maxlen=6)  # (turn, move id or None, opp species, opp hp)
+        # fallback for whatever the damage model missed: (opp species, terastallized, key) of
+        # our moves the battle showed had no effect (immune / absorbed); key = move type for
+        # attacks, move id for status moves
+        self.no_effect: set[tuple[str, bool, str]] = set()
+        self._scanned = 0
+
+    @staticmethod
+    def effect_key(move: Move) -> str:
+        return f"type:{move.type.name}" if is_damaging(move) else move.id
+
+    def blocked(self, opp: Pokemon, move: Move) -> bool:
+        return (opp.species, opp.is_terastallized, self.effect_key(move)) in self.no_effect
+
+    def scan_events(self, battle) -> None:
+        """Read the new protocol lines: one of our moves followed by '-immune' on the opponent,
+        or by an ability heal on it (Water Absorb, Volt Absorb, ...), had no effect."""
+        data = getattr(battle, "_replay_data", None) or []
+        role = battle.player_role or ""
+        cur = None
+        for ev in data[self._scanned :]:
+            if len(ev) < 3:
+                if len(ev) > 1 and ev[1] in ("turn", "upkeep"):
+                    cur = None
+                continue
+            kind = ev[1]
+            if kind == "move":
+                cur = ev[3] if role and ev[2].startswith(role) else None
+            elif kind in ("switch", "drag", "turn", "upkeep", "faint"):
+                cur = None
+            elif cur and not ev[2].startswith(role):
+                absorbed = kind == "-heal" and any(
+                    x.startswith("[from] ability:") and to_id_str(x[15:]) in ABSORB_HEAL
+                    for x in ev[3:]
+                )  # not residual heals like Poison Heal, which also say "[from] ability:"
+                if kind == "-immune" or absorbed:
+                    try:
+                        mon = battle.get_pokemon(ev[2])
+                        key = self.effect_key(Move(to_id_str(cur), gen=9))
+                    except Exception:  # noqa: BLE001 - unknown move / mon: skip the line
+                        continue
+                    self.no_effect.add((mon.species, mon.is_terastallized, key))
+        self._scanned = len(data)
 
     def observe(self, battle) -> None:
+        self.scan_events(battle)
         fainted = sum(m.fainted for m in battle.team.values()) + sum(
             m.fainted for m in battle.opponent_team.values()
         )
@@ -164,6 +250,10 @@ class BattleMemory:
     def switched_out_recently(self, species: str, turn: int, within: int) -> bool:
         t = self.switch_outs.get(species)
         return t is not None and turn - t <= within
+
+    def switched_since(self, turn: int) -> bool:
+        """Did we switch (voluntarily or after a faint) at or after ``turn``?"""
+        return any(k == "switch" and t >= turn for t, k, _ in self.actions)
 
     def recent_switches(self, turn: int, window: int) -> int:
         return sum(1 for t, k, _ in self.actions if k == "switch" and turn - t < window)
@@ -552,22 +642,32 @@ class KnowledgePlayer(Player):
         opp_kos_me = incoming >= me.current_hp_fraction
         forced = not battle.available_moves
 
+        mem = self.memory.setdefault(battle.battle_tag, BattleMemory())
+        mem.observe(battle)
         tactical: list[tuple[float, object]] = []
         if battle.available_moves:
-            tactical += self._score_moves(battle, plan, mv, ov, incoming, opp_kos_me, ov_moves)
+            tactical += self._score_moves(battle, plan, mv, ov, incoming, opp_kos_me, ov_moves, mem)
         for s in battle.available_switches:
             tactical.append(
                 (self._score_switch(battle, plan, s, ov, ov_moves, opp_move, forced), s)
             )
         if not tactical:
             return self.choose_random_move(battle)
-        mem = self.memory.setdefault(battle.battle_tag, BattleMemory())
-        mem.observe(battle)
+        stay_future = 0.0
+        if battle.available_moves and not forced:
+            hp_next = me.current_hp_fraction - incoming
+            if hp_next > 0:  # if we are KO'd, the stay cost already counts the whole mon
+                stay_future = LOOKAHEAD_W * self._next_turn_value(battle, mv, ov, ov_moves, hp_next)
+        switch_margin = SWITCH_MARGIN + (
+            CHAIN_SWITCH_MARGIN if mem.switched_since(battle.turn - 1) else 0.0
+        )
         rows = []
         for v, c in tactical:
             terms: dict[str, float] = {}
-            dmg = damage_fraction(mv, ov, c[0], battle) if isinstance(c, tuple) else None
-            first = moves_first(mv, ov, c[0], battle) if isinstance(c, tuple) else None
+            dmg = None
+            if isinstance(c, tuple):
+                dmg = 0.0 if mem.blocked(opp, c[0]) else damage_fraction(mv, ov, c[0], battle)
+            first = self._first(battle, mv, ov, c[0], ov_moves) if isinstance(c, tuple) else None
             if state is not None:
                 ctx = {
                     "forced": forced,
@@ -577,7 +677,7 @@ class KnowledgePlayer(Player):
                     "tactical": v,
                 }
                 if isinstance(c, tuple):
-                    d = damage_fraction(mv, ov, c[0], battle)
+                    d = dmg
                     ctx["damage"] = d
                     if c[1]:  # tera option: respect the plan's tera directive
                         tera_ctx = {
@@ -593,6 +693,12 @@ class KnowledgePlayer(Player):
             stay = (
                 self._stay_cost(battle, mv, ov, c, incoming, first) if isinstance(c, tuple) else 0.0
             )
+            # switches are scored with the switch-in's next turn: give staying the same horizon,
+            # and make a voluntary switch clear a margin (bigger right after another switch)
+            if isinstance(c, tuple):
+                future = stay_future
+            else:
+                future = 0.0 if forced else -switch_margin
             pos = sum(x for x in terms.values() if x > 0)
             plan_total = min(pos, PLAN_BONUS_CAP) + sum(x for x in terms.values() if x < 0)
             rows.append(
@@ -602,9 +708,10 @@ class KnowledgePlayer(Player):
                     "choice": c,
                     "tactical": v,
                     "stay": stay,
+                    "future": future,
                     "plan": terms,
                     "loop": loop,
-                    "total": v - stay + plan_total + loop,
+                    "total": v - stay + future + plan_total + loop,
                 }
             )
         best = max(rows, key=lambda r: r["total"])
@@ -668,7 +775,7 @@ class KnowledgePlayer(Player):
             return c.species if isinstance(c, Pokemon) else c[0].id + ("+tera" if c[1] else "")
 
         top = sorted(rows, key=lambda r: -r["total"])[:5]
-        best_tactical = max(rows, key=lambda r: r["tactical"] - r["stay"] + r["loop"])
+        best_tactical = max(rows, key=lambda r: r["tactical"] - r["stay"] + r["future"] + r["loop"])
         row = {
             "turn": battle.turn,
             "me": battle.active_pokemon.species,
@@ -689,6 +796,7 @@ class KnowledgePlayer(Player):
                     "total": round(r["total"], 3),
                     "tactical": round(r["tactical"], 3),
                     "stay": round(r["stay"], 3),
+                    "future": round(r["future"], 3),
                     "loop": round(r["loop"], 3),
                     "plan": {k: round(v, 3) for k, v in r["plan"].items()},
                     "dmg": None if r["dmg"] is None else round(r["dmg"], 3),
@@ -712,7 +820,25 @@ class KnowledgePlayer(Player):
         with open(self.trace_dir / f"{battle.battle_tag}_{self.username}.jsonl", "a") as f:
             f.write(json.dumps(row) + "\n")
 
-    def _score_moves(self, battle, plan, mv, ov, incoming, opp_kos_me, ov_moves=()):
+    def _first(self, battle, mv, ov, move, ov_moves, hp: float | None = None) -> float:
+        """P(we act before the opponent) with ``move``: speed (with a possible Scarf), and 0 if
+        one of the opponent's likely higher-priority attacks KOs us first (Sucker Punch /
+        Thunderclap only work against an attack)."""
+        f = moves_first(mv, ov, move, battle)
+        if f <= 0:
+            return f
+        prio = move.priority if move is not None else 0
+        hp = mv.mon.current_hp_fraction if hp is None else hp
+        for m in ov_moves:
+            if m.priority <= prio or not is_damaging(m):
+                continue
+            if m.id in ("suckerpunch", "thunderclap") and (move is None or not is_damaging(move)):
+                continue
+            if damage_fraction(ov, mv, m, battle) >= hp:
+                return 0.0
+        return f
+
+    def _score_moves(self, battle, plan, mv, ov, incoming, opp_kos_me, ov_moves=(), mem=None):
         me, opp = mv.mon, ov.mon
         opp_hp = opp.current_hp_fraction
         n_opp_left = 6 - sum(m.fainted for m in battle.opponent_team.values())
@@ -722,12 +848,16 @@ class KnowledgePlayer(Player):
         secure_ko = any(
             is_damaging(m)
             and damage_fraction(mv, ov, m, battle) >= opp_hp
-            and moves_first(mv, ov, m, battle) == 1.0
+            and self._first(battle, mv, ov, m, ov_moves) >= SURE_FIRST
             for m in battle.available_moves
         )
         out = []
         for move in battle.available_moves:
-            first = moves_first(mv, ov, move, battle)
+            if mem is not None and mem.blocked(opp, move):
+                # the battle already showed this has no effect on this target: never again
+                out.append((NO_EFFECT_VALUE, (move, False)))
+                continue
+            first = self._first(battle, mv, ov, move, ov_moves)
             v = 0.0
             if is_damaging(move):
                 d = damage_fraction(mv, ov, move, battle)
@@ -746,8 +876,8 @@ class KnowledgePlayer(Player):
                 v = self._status_value(
                     battle, move, mv, ov, incoming, n_opp_left, n_my_left, is_wincon
                 )
-            if opp_kos_me and first < 1.0:
-                v *= 0.15  # we probably faint before acting
+            if opp_kos_me:
+                v *= first + (1 - first) * 0.15  # if we are slower we faint before acting
             out.append((v, (move, False)))
             tera_allowed = (
                 plan.tera_target is None
@@ -767,6 +897,10 @@ class KnowledgePlayer(Player):
         return out
 
     def _status_value(self, battle, move, mv, ov, incoming, n_opp_left, n_my_left, is_wincon):
+        v = self._status_value_raw(battle, move, mv, ov, incoming, n_opp_left, n_my_left, is_wincon)
+        return v * (1 - status_block_p(move, ov)) if v > 0 else v
+
+    def _status_value_raw(self, battle, move, mv, ov, incoming, n_opp_left, n_my_left, is_wincon):
         me, opp = mv.mon, ov.mon
         mid = move.id
         plan = self.plans.get(battle.battle_tag)
@@ -804,7 +938,7 @@ class KnowledgePlayer(Player):
             ):
                 return 0.4
             if mid == "thunderwave" and not types & {PokemonType.ELECTRIC, PokemonType.GROUND}:
-                return 0.35 if moves_first(mv, ov, None, battle) < 1 else 0.15
+                return 0.35 if moves_first(mv, ov, None, battle) < 0.5 else 0.15
             if mid == "toxic" and not types & {PokemonType.POISON, PokemonType.STEEL}:
                 return 0.3
             if mid in SLEEP and not any(
@@ -849,6 +983,27 @@ class KnowledgePlayer(Player):
         hp = me.current_hp_fraction
         return factor * (mon_loss(hp) if incoming >= hp else incoming)
 
+    def _next_turn_value(self, battle, sv, ov, ov_moves, hp: float) -> float:
+        """Value of the switch-in's best action on the turn after it comes in at ``hp``: the
+        same 'action value minus stay cost' as for the active mon, floored at the cost of
+        switching out again."""
+        inc = max((damage_fraction(ov, sv, m, battle) for m in ov_moves), default=0.0)
+        kos_us = inc >= hp
+        hit_cost = mon_loss(hp) if kos_us else inc
+        opp_hp = ov.mon.current_hp_fraction
+        best = STATUS_BASELINE - hit_cost  # a status / utility move: we take the hit
+        for m in sv.mon.moves.values():
+            if not is_damaging(m):
+                continue
+            d = damage_fraction(sv, ov, m, battle)
+            f = self._first(battle, sv, ov, m, ov_moves, hp=hp)
+            val = min(d, opp_hp) + (KO_BONUS if d >= opp_hp else 0.0)
+            if kos_us:
+                val *= f + (1 - f) * 0.15
+            cost = (1 - f if d >= opp_hp else 1.0) * hit_cost
+            best = max(best, val - cost)
+        return max(best, RESWITCH_FLOOR)
+
     def _score_switch(self, battle, plan, s, ov, ov_moves, opp_move, forced: bool) -> float:
         sv = own_view(s)
         taken = 0.0
@@ -862,7 +1017,11 @@ class KnowledgePlayer(Player):
         mu = one_v_one(sv, ov, list(s.moves.values()), ov_moves, battle)
         # matchup was computed at full HP; scale by remaining HP
         mu = mu * (0.5 + 0.5 * hp_after)
-        v = 0.6 * mu - taken - hazard
+        # one-turn lookahead: next turn the opponent aims its best move at the switch-in, so a
+        # switch-in that is just as threatened as the current mon gains nothing (no chains of
+        # switches that hand out free hits)
+        nxt = self._next_turn_value(battle, sv, ov, ov_moves, hp_after)
+        v = LOOKAHEAD_W * nxt + MATCHUP_W * mu - taken - hazard
         if s.species in plan.preserve and taken > 0.35:
             v -= 0.3  # plan: don't take big hits with mons we must keep
         if s.species in plan.win_conditions and forced and mu < 0.3:

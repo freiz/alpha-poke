@@ -8,7 +8,7 @@ ignoring the long tail of special cases is intentional: this feeds heuristics, n
 """
 
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from poke_env.battle import MoveCategory, Pokemon, PokemonType, Status, Weather
 from poke_env.battle.move import Move
@@ -49,7 +49,8 @@ class MonView:
     mon: Pokemon
     stats: dict[str, int]
     item_probs: dict[str, float]  # item id -> probability (exact item -> {id: 1.0})
-    ability: str | None = None
+    ability: str | None = None  # known ability (ours, revealed, or the species' only one)
+    ability_probs: dict[str, float] = field(default_factory=dict)  # when unknown: usage dist
 
     @property
     def hp_fraction(self) -> float:
@@ -57,6 +58,69 @@ class MonView:
 
     def item_p(self, *ids: str) -> float:
         return sum(self.item_probs.get(i, 0.0) for i in ids)
+
+    def ability_p(self, *ids: str) -> float:
+        known = _norm_id(self.ability)
+        if known and known not in ("unknown", "unknownability"):
+            return 1.0 if known in ids else 0.0
+        return min(1.0, sum(self.ability_probs.get(i, 0.0) for i in ids))
+
+
+def _norm_id(x: str | None) -> str:
+    return "".join(c for c in (x or "").lower() if c.isalnum())
+
+
+# abilities that make the holder immune to (or absorb) a move type
+IMMUNE_ABILITIES = {
+    PokemonType.GROUND: ("levitate", "eartheater"),
+    PokemonType.WATER: ("waterabsorb", "stormdrain", "dryskin"),
+    PokemonType.ELECTRIC: ("voltabsorb", "lightningrod", "motordrive"),
+    PokemonType.FIRE: ("flashfire", "wellbakedbody"),
+    PokemonType.GRASS: ("sapsipper",),
+}
+IGNORE_ABILITY = ("moldbreaker", "teravolt", "turboblaze")
+PRIORITY_BLOCKERS = ("dazzling", "queenlymajesty", "armortail")
+
+
+def ability_multiplier(att: "MonView", dfn: "MonView", move: Move, eff: float) -> float:
+    """Expected damage multiplier from the defender's (possibly unknown) ability and an Air
+    Balloon: immunities / absorption weighted by their probability, plus the common damage
+    reducers. 1.0 when the attacker ignores abilities."""
+    if att.ability_p(*IGNORE_ABILITY) >= 0.5:
+        return 1.0
+    t = move.type
+    flags = move.flags or set()
+    p_immune = dfn.ability_p(*IMMUNE_ABILITIES.get(t, ()))
+    if t == PokemonType.GROUND and move.id != "thousandarrows":
+        p_immune += dfn.item_p("airballoon")
+    if "bullet" in flags:
+        p_immune += dfn.ability_p("bulletproof")
+    if "sound" in flags:
+        p_immune += dfn.ability_p("soundproof")
+    if "wind" in flags:
+        p_immune += dfn.ability_p("windrider")
+    if move.priority > 0:
+        p_immune += dfn.ability_p(*PRIORITY_BLOCKERS)
+    if eff <= 1:
+        p_immune += dfn.ability_p("wonderguard")
+    m = 1.0
+    if t in (PokemonType.FIRE, PokemonType.ICE):
+        m *= 1 - 0.5 * dfn.ability_p("thickfat")
+    if t == PokemonType.FIRE:
+        m *= 1 - 0.5 * dfn.ability_p("heatproof", "waterbubble")
+        if "contact" in flags:
+            m *= 1 + dfn.ability_p("fluffy")  # Fluffy: fire x2 (contact halving cancels)
+    elif "contact" in flags:
+        m *= 1 - 0.5 * dfn.ability_p("fluffy")
+    if t == PokemonType.GHOST:
+        m *= 1 - 0.5 * dfn.ability_p("purifyingsalt")
+    if dfn.hp_fraction >= 1.0:
+        m *= 1 - 0.5 * dfn.ability_p("multiscale", "shadowshield")
+    if eff > 1:
+        m *= 1 - 0.25 * dfn.ability_p("filter", "solidrock", "prismarmor")
+    if move.category == MoveCategory.SPECIAL:
+        m *= 1 - 0.5 * dfn.ability_p("icescales")
+    return max(0.0, 1 - min(1.0, p_immune)) * m
 
 
 def _attack_types(mon: Pokemon) -> set[PokemonType]:
@@ -77,19 +141,29 @@ def effective_speed(v: MonView, battle=None) -> float:
     spe = v.stats["spe"] * BOOST[v.mon.boosts.get("spe", 0)]
     if v.mon.status == Status.PAR:
         spe *= 0.5
-    spe *= 1 + 0.5 * v.item_p("choicescarf")
-    return spe
+    return spe  # Choice Scarf is handled as a mixture in moves_first
 
 
 def moves_first(a: MonView, b: MonView, move: Move | None, battle=None) -> float:
-    """Probability-ish (0, 0.5, 1) that ``a`` acts before ``b`` with ``move``."""
+    """Probability that ``a`` acts before ``b`` with ``move`` (our priority moves always first;
+    the opponent's priority moves are checked by the caller). A possible Choice Scarf is a
+    mixture of the with / without cases, not a blended speed: a 30% Scarf mon is either 1.5x
+    faster or not at all."""
     if move is not None and move.priority > 0:
         return 1.0
     sa, sb = effective_speed(a, battle), effective_speed(b, battle)
     trick_room = battle is not None and any("trickroom" in str(f).lower() for f in battle.fields)
-    if trick_room:
-        sa, sb = sb, sa
-    return 1.0 if sa > sb else 0.0 if sa < sb else 0.5
+    pa, pb = min(1.0, a.item_p("choicescarf")), min(1.0, b.item_p("choicescarf"))
+    p = 0.0
+    for wa, fa in ((1 - pa, 1.0), (pa, 1.5)):
+        for wb, fb in ((1 - pb, 1.0), (pb, 1.5)):
+            if wa * wb == 0:
+                continue
+            x, y = sa * fa, sb * fb
+            if trick_room:
+                x, y = y, x
+            p += wa * wb * (1.0 if x > y else 0.0 if x < y else 0.5)
+    return p
 
 
 FIXED_LEVEL_DAMAGE = {"seismictoss", "nightshade"}  # damage = user's level (100)
@@ -205,6 +279,9 @@ def damage_fraction(att: MonView, dfn: MonView, move: Move, battle=None) -> floa
     eff = dfn.mon.damage_multiplier(move)
     if eff == 0:
         return 0.0
+    ab = ability_multiplier(att, dfn, move, eff)
+    if ab == 0:
+        return 0.0
     physical = move.category == MoveCategory.PHYSICAL
     a_stat, d_stat = ("atk", "def") if physical else ("spa", "spd")
     if move.id == "bodypress":
@@ -221,7 +298,7 @@ def damage_fraction(att: MonView, dfn: MonView, move: Move, battle=None) -> floa
     if move.id == "facade" and att.mon.status is not None:
         bp *= 2
     base = math.floor(math.floor(math.floor(2 * 100 / 5 + 2) * bp * a / max(d, 1)) / 50) + 2
-    mult = stab(att.mon, move.type) * eff * AVG_ROLL
+    mult = stab(att.mon, move.type) * eff * ab * AVG_ROLL
     if physical and att.mon.status == Status.BRN and move.id != "facade":
         mult *= 0.5
     if battle is not None and battle.weather:
