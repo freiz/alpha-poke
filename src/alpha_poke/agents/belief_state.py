@@ -7,6 +7,7 @@ remaining moves given what has been revealed (the in-battle update that measured
 Stats use the species' most common Smogon spread.
 """
 
+import json
 import pickle
 from dataclasses import dataclass
 from pathlib import Path
@@ -48,8 +49,15 @@ class BeliefModel:
         return replace(self, prior=smogon, in_battle_update=False)
 
     @classmethod
-    def build(cls, format_id: str = "gen9ou", cutoff: int = 1825) -> "BeliefModel":
+    def build(
+        cls, format_id: str = "gen9ou", cutoff: int = 1825, exclude_teams: set[str] | None = None
+    ) -> "BeliefModel":
+        """``exclude_teams``: team keys ('A|B|...' sorted species) whose games are removed from the
+        training data, so that those teams are *unknown* to the model (held-out evaluation)."""
         m = pd.read_parquet(OUT / f"{format_id}_mons.parquet")
+        if exclude_teams:
+            bad = set(m.loc[m.team.isin(exclude_teams), "id"])
+            m = m[~m.id.isin(bad)]
         brought = m[m.brought]
         months = sorted(p.name for p in Path(DEFAULT_DIR).iterdir() if p.is_dir())
         stats = UsageStats.load(DEFAULT_DIR / months[-1] / "chaos" / f"{format_id}-{cutoff}.json")
@@ -83,11 +91,17 @@ class BeliefModel:
         return entry["name"] if entry else species
 
     @classmethod
-    def load(cls, rebuild: bool = False) -> "BeliefModel":
-        if CACHE.exists() and not rebuild:
-            return pickle.loads(CACHE.read_bytes())
-        model = cls.build()
-        CACHE.write_bytes(pickle.dumps(model))
+    def load(cls, rebuild: bool = False, heldout_pool: str | None = None) -> "BeliefModel":
+        """Cached model. ``heldout_pool``: a team-pool directory (with ``index.json``) whose
+        teams are excluded from training -> belief_model_heldout.pkl."""
+        path = CACHE if heldout_pool is None else CACHE.with_name("belief_model_heldout.pkl")
+        if path.exists() and not rebuild:
+            return pickle.loads(path.read_bytes())
+        exclude = None
+        if heldout_pool is not None:
+            exclude = set(json.loads((Path(heldout_pool) / "index.json").read_text()).values())
+        model = cls.build(exclude_teams=exclude)
+        path.write_bytes(pickle.dumps(model))
         return model
 
     # ---------------------------------------------------------------------------------

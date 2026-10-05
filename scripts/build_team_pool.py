@@ -3,7 +3,8 @@
 For each 6-mon team used >= --min-uses times in the parsed replays:
   item / ability / tera = most common revealed value within that exact team (else Smogon);
   moves = most revealed moves within the team, topped up from the species' Smogon moves;
-  EVs / nature = the species' most common Smogon spread (never visible in replays).
+  EVs / nature = sampled from the species' Smogon spread distribution (``--spread-mode sample``,
+  default) or its most common spread (``top``); never visible in replays.
 Teams are validated with the local Showdown validator; invalid ones are reported and skipped.
 Output: data/teams/pool/<n>.txt (Showdown export format).
 
@@ -11,6 +12,8 @@ Usage: uv run python scripts/build_team_pool.py [--min-uses 50] [--max-teams 40]
 """
 
 import argparse
+import json
+import random
 import subprocess
 from collections import Counter
 from pathlib import Path
@@ -48,7 +51,24 @@ def smogon_entry(stats: UsageStats, species: str):
     return None
 
 
-def build_set(species: str, rows: pd.DataFrame, stats: UsageStats) -> str:
+def pick_spread(smog, mode: str, rng: random.Random) -> str:
+    """'top': the species' most common Smogon spread; 'sample': draw from the spread
+    distribution (so that a belief model assuming the top spread is not exactly right)."""
+    if smog is None or not smog.spreads:
+        return "Serious:84/84/84/84/84/84"
+    if mode == "top":
+        return next(iter(smog.spreads))
+    names, weights = zip(*smog.spreads.items(), strict=True)
+    return rng.choices(names, weights=weights, k=1)[0]
+
+
+def build_set(
+    species: str,
+    rows: pd.DataFrame,
+    stats: UsageStats,
+    spread_mode: str = "top",
+    rng: random.Random | None = None,
+) -> str:
     name = PREVIEW_FORMS.get(species, species)
     smog = smogon_entry(stats, name)
     item = rows.item.dropna().mode()
@@ -124,6 +144,8 @@ def main() -> None:
     ap.add_argument("--min-uses", type=int, default=50)
     ap.add_argument("--max-teams", type=int, default=40)
     ap.add_argument("--out", default=str(ROOT / "data" / "teams" / "pool"))
+    ap.add_argument("--spread-mode", choices=["top", "sample"], default="sample")
+    ap.add_argument("--seed", type=int, default=0)
     a = ap.parse_args()
     m = pd.read_parquet(OUT / "gen9ou_mons.parquet")
     months = sorted(p.name for p in Path(DEFAULT_DIR).iterdir() if p.is_dir())
@@ -135,15 +157,21 @@ def main() -> None:
     for f in out.glob("*.txt"):
         f.unlink()
     ok = 0
+    rng = random.Random(a.seed)
+    index = {}
     for i, team in enumerate(popular):
         d = m[(m.team == team) & m.brought]
-        text = "\n\n".join(build_set(sp, d[d.species == sp], stats) for sp in team.split("|"))
+        text = "\n\n".join(
+            build_set(sp, d[d.species == sp], stats, a.spread_mode, rng) for sp in team.split("|")
+        )
         err = validate(text)
         if err:
             print(f"[skip] team {i} ({team}): {err.splitlines()[0][:120]}")
             continue
         (out / f"team_{i:02d}.txt").write_text(text + "\n")
+        index[f"team_{i:02d}"] = team
         ok += 1
+    (out / "index.json").write_text(json.dumps(index, indent=1))
     print(f"{ok}/{len(popular)} teams valid -> {out}")
 
 
