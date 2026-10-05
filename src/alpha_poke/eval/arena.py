@@ -28,8 +28,18 @@ from alpha_poke.analysis.roles import to_id
 from alpha_poke.teams import load_team_files
 
 
+def _base(species: str) -> str:
+    """Base species id, so that in-battle forme changes (e.g. Ogerpon's Tera formes, Mimikyu
+    busted) are not reported as team mismatches."""
+    from poke_env.data import GenData
+
+    sid = to_id(species)
+    entry = GenData.from_gen(9).pokedex.get(sid, {})
+    return to_id(entry.get("baseSpecies") or entry.get("name") or sid)
+
+
 def _species(packed: str) -> list[str]:
-    return sorted(to_id(m.species or m.nickname) for m in Teambuilder.parse_packed_team(packed))
+    return sorted(_base(m.species or m.nickname) for m in Teambuilder.parse_packed_team(packed))
 
 
 @dataclass
@@ -76,11 +86,16 @@ async def _lane(bot_a, bot_b, matches, port, pool_dir, heldout, lane_id, log_pat
         team_ok = bool(
             battle
             and new_b
-            and sorted(to_id(p.species) for p in battle.team.values()) == expected[m.team_a]
-            and sorted(to_id(p.species) for p in new_b[0].team.values()) == expected[m.team_b]
+            and sorted(_base(p.species) for p in battle.team.values()) == expected[m.team_a]
+            and sorted(_base(p.species) for p in new_b[0].team.values()) == expected[m.team_b]
         )
         plan = getattr(a, "plans", {}).get(battle.battle_tag) if battle else None
         plan_b = getattr(b, "plans", {}).get(battle.battle_tag) if battle else None
+        # the final KO happens without another decision: record the end state once more
+        if plan is not None and plan.exec_state is not None:
+            plan.exec_state.observe(battle)
+        if plan_b is not None and plan_b.exec_state is not None and new_b:
+            plan_b.exec_state.observe(new_b[0])
         row = asdict(m) | {
             "bot_a": bot_a,
             "bot_b": bot_b,

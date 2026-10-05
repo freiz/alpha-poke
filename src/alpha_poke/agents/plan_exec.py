@@ -346,6 +346,12 @@ class PlanState:
     phase: int = 0
     log: list[str] = field(default_factory=list)  # phase changes / repairs (for traces)
     matchup: dict = field(default_factory=dict)  # (our key, their key) -> 1v1 score
+    # outcome metrics (filled by observe(); reported in the arena log)
+    goals_done: list = field(default_factory=list)  # "T12 ko:Toxapex"
+    assign_won: int = 0  # their mon fainted while facing its assigned answer
+    assign_lost: int = 0  # assigned answer fainted while facing that mon
+    wincon_kos: int = 0  # their faints while one of our win conditions was active
+    _prev: tuple = ()  # (our active, their active, our fainted set, their fainted set)
 
     @property
     def phase_name(self) -> str:
@@ -378,8 +384,37 @@ class PlanState:
             return bool(mon and (mon.fainted or max(mon.boosts.values(), default=0) >= 2))
         return False  # sweep / scout: open-ended
 
+    def observe(self, battle) -> None:
+        """Outcome bookkeeping: goal completion, assignment results, win-condition KOs."""
+        for i, ph in enumerate(self.plan.phases):
+            for g in ph.goals:
+                tag = f"{g[0]}:{':'.join(g[1])}" if g[1] else g[0]
+                if (
+                    i <= self.phase
+                    and not any(x.endswith(" " + tag) for x in self.goals_done)
+                    and g[0] not in ("sweep", "scout")
+                    and self.goal_done(g, battle)
+                ):
+                    self.goals_done.append(f"T{battle.turn} {tag}")
+        ours_f = {m.species for m in battle.team.values() if m.fainted}
+        theirs_f = {m.species for m in battle.opponent_team.values() if m.fainted}
+        if self._prev:
+            me, opp, prev_ours_f, prev_theirs_f = self._prev
+            assigned = self.plan.assignments.get(opp, {}).get("primary") if opp else None
+            if opp in theirs_f - prev_theirs_f:
+                if me is not None and me == assigned:
+                    self.assign_won += 1
+                if self.plan.roles.get(me) == "win_condition":
+                    self.wincon_kos += 1
+            if me in ours_f - prev_ours_f and me is not None and me == assigned:
+                self.assign_lost += 1
+        me = battle.active_pokemon.species if battle.active_pokemon else None
+        opp = battle.opponent_active_pokemon.species if battle.opponent_active_pokemon else None
+        self._prev = (me, opp, ours_f, theirs_f)
+
     def update(self, battle) -> None:
         """Advance phases (several at once if needed) and repair broken assignments."""
+        self.observe(battle)
         while self.phase < len(self.plan.phases) - 1:
             ph = self.plan.phases[self.phase]
             closable = [g for g in ph.goals if g[0] not in ("sweep", "scout")]
@@ -420,13 +455,20 @@ class PlanState:
         return any(g[0] in ("sweep", "setup") for g in self.goals())
 
     def tera_allowed(self, battle, me_key: str, tera_ctx: dict) -> bool:
+        """Tera directive, applied softly: the designated mon may tera before ``never_before``
+        when it secures a KO or saves it from one; once the designated mon has fainted, any mon
+        may tera under the same 'secures / saves' test."""
         p = self.plan
+        urgent = bool(tera_ctx.get("secures_ko") or tera_ctx.get("saves_from_ko"))
         if p.tera_who is not None and p.tera_who != me_key:
-            return sum(not m.fainted for m in battle.team.values()) == 1
+            if sum(not m.fainted for m in battle.team.values()) == 1:
+                return True
+            who = _mon(battle, "ours", p.tera_who)
+            return bool(who is not None and who.fainted and urgent)
         if p.tera_never_before:
             names = [ph.name for ph in p.phases]
             if p.tera_never_before in names and self.phase < names.index(p.tera_never_before):
-                return False
+                return urgent
         if p.tera_when is not None:
             return eval_condition(p.tera_when, battle, p.names, tera_ctx)
         return True
@@ -449,10 +491,21 @@ def plan_terms(state: PlanState, battle, option, ctx: dict) -> dict[str, float]:
     if not isinstance(option, tuple):  # a switch target
         key = option.species
         a = p.assignments.get(opp.species, {}) if opp is not None else {}
-        if key == a.get("primary"):
-            terms["assign_primary"] = W["assign_primary"]
-        elif key == a.get("backup"):
-            terms["assign_backup"] = W["assign_backup"]
+        if (
+            battle.turn <= 1
+            and not ctx.get("forced")
+            and me is not None
+            and me.species == ctx.get("lead")
+        ):
+            a = {}  # the planned lead gets its first turn: no assignment-driven switch-out
+        # the assignment was made at team preview; if the tactical layer now rates this switch
+        # as bad (e.g. the opponent has boosted since), trust the assignment less
+        tv = ctx.get("tactical", 0.0)
+        trust = 1.0 if tv >= 0 else 0.5 if tv >= -0.4 else 0.0
+        if key == a.get("primary") and trust:
+            terms["assign_primary"] = W["assign_primary"] * trust
+        elif key == a.get("backup") and trust:
+            terms["assign_backup"] = W["assign_backup"] * trust
         if key in a.get("avoid", []):
             terms["assign_avoid"] = W["assign_avoid"]
         if not ctx.get("forced") and me is not None and p.roles.get(me.species) == "sacrifice_ok":
@@ -470,6 +523,13 @@ def plan_terms(state: PlanState, battle, option, ctx: dict) -> dict[str, float]:
     from alpha_poke.agents.damage import is_damaging
 
     attacking = is_damaging(move)
+    # never promote an action the tactical layer considers useless (status move into an
+    # immune target, an attack that does no damage, ...): the plan decides *what* to want,
+    # the tactical layer decides whether it can work
+    if attacking and ctx.get("damage", 1.0) <= 0:
+        return terms
+    if not attacking and ctx.get("tactical", 1.0) <= 0.02:
+        return terms
     names = p.names
     for kind, args in state.goals():
         if state.goal_done((kind, args), battle):
@@ -504,7 +564,11 @@ def plan_terms(state: PlanState, battle, option, ctx: dict) -> dict[str, float]:
     if attacking and opp is not None and opp.species in p.kill_priority:
         rank = p.kill_priority.index(opp.species)
         share = (len(p.kill_priority) - rank) / len(p.kill_priority)
-        terms["kill_priority"] = W["kill_priority"] * share * min(1.0, ctx.get("damage", 0) * 2)
+        d, hp = ctx.get("damage", 0.0), ctx.get("opp_hp", 1.0)
+        # only reward real progress on a priority target: a KO, or a hit of >= 35% max HP
+        progress = 1.0 if d >= hp else 0.5 if d >= 0.35 else 0.0
+        if progress:
+            terms["kill_priority"] = W["kill_priority"] * share * progress
     for kind, args in rules:
         if kind == "use_move" and move.id == to_id(args[0]):
             terms["rule_move"] = W["rule_move"]

@@ -101,6 +101,75 @@ def main() -> None:
                 f"avg turns {sum(len(per_game[b]) for b in g) / len(g):.0f}"
             )
 
+    # ---- outcome metrics of plan execution -------------------------------------------------
+    gd, aw, al, wk, alive_end, nwc = Counter(), 0, 0, 0, 0, 0
+    for r in rows:
+        ex = (r.get(f"plan_{a.side}") or {}).get("exec") or {}
+        for g in ex.get("goals_done") or []:
+            gd[g.split(" ", 1)[1].split(":")[0]] += 1
+        aw += ex.get("assign_won", 0)
+        al += ex.get("assign_lost", 0)
+        wk += ex.get("wincon_kos", 0)
+        wcs = [k for k, v in (ex.get("roles") or {}).items() if v == "win_condition"]
+        nwc += len(wcs)
+        alive_end += len(ex.get("wincon_alive_end") or [])
+    print("goals completed (by type):", dict(gd))
+    print(
+        f"assigned answers: won {aw} / lost {al} of their matchups; win-condition KOs {wk}; "
+        f"win conditions alive at the end {alive_end}/{nwc}\n"
+    )
+
+    # ---- anomaly detection -----------------------------------------------------------------
+    anomalies: dict[str, list] = {
+        k: [] for k in ("missed_ko", "passive", "plan_hurt", "repeat", "switch_in_died")
+    }
+    for b, ts in per_game.items():
+        for i, t in enumerate(ts):
+            nxt = ts[i + 1] if i + 1 < len(ts) else None
+            chosen = t["chosen"]
+            ko = [x for x in t.get("ko_available", []) if not x.endswith("+tera")]
+            if ko and chosen not in ko and chosen.replace("+tera", "") not in ko:
+                anomalies["missed_ko"].append((b, t))
+            best = t["options"][0]
+            dmg_opts = [o for o in t["options"] if (o.get("dmg") or 0) >= 0.25]
+            if best["total"] <= 0.05 and dmg_opts:
+                anomalies["passive"].append((b, t))
+            if nxt and t["plan_changed_decision"] and nxt["our_fainted"] > t["our_fainted"]:
+                anomalies["plan_hurt"].append((b, t))
+            if (
+                i >= 3
+                and len({x["chosen"] for x in ts[i - 3 : i + 1]}) == 1
+                and len({x["me_hp"] for x in ts[i - 3 : i + 1]}) == 1
+                and len({x["opp_hp"] for x in ts[i - 3 : i + 1]}) == 1
+            ):
+                anomalies["repeat"].append((b, t))
+            is_switch = not any(o["a"] == chosen and o.get("dmg") is not None for o in t["options"])
+            if is_switch and nxt and nxt["our_fainted"] > t["our_fainted"] and nxt["me"] == chosen:
+                anomalies["switch_in_died"].append((b, t))
+    labels = {
+        "missed_ko": "KO available but not taken",
+        "passive": "near-zero action while a >=25% attack existed",
+        "plan_hurt": "plan changed the decision and we lost a mon next turn",
+        "repeat": "same action 4 turns, no HP change",
+        "switch_in_died": "switched-in mon fainted on the next turn",
+    }
+    print(f"anomalies over {n} decisions:")
+    for k, v in anomalies.items():
+        print(f"  {labels[k]}: {len(v)}")
+    for k, v in anomalies.items():
+        for b, t in v[:2]:
+            opts = ", ".join(
+                f"{o['a']} {o['total']:+.2f}"
+                + (f"(d{o['dmg']:.2f})" if o.get("dmg") is not None else "")
+                + (f"[{','.join(o['plan'])}]" if o["plan"] else "")
+                for o in t["options"][:4]
+            )
+            print(
+                f"    [{k}] {b} T{t['turn']} {t['me']} {t['me_hp']:.0%} vs {t['opp']} "
+                f"{t['opp_hp']:.0%}: chose {t['chosen']} | {opts}"
+            )
+    print()
+
     # ---- a few games in detail ------------------------------------------------------------
     for r in rows[: a.games]:
         p = r.get(f"plan_{a.side}") or {}

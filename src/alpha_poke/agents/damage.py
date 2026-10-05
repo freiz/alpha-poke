@@ -96,15 +96,101 @@ FIXED_LEVEL_DAMAGE = {"seismictoss", "nightshade"}  # damage = user's level (100
 HALF_HP_MOVES = {"ruination", "superfang", "naturesmadness"}  # half the target's current HP
 
 
+VARIABLE_BP = {
+    "lowkick",
+    "grassknot",
+    "heavyslam",
+    "heatcrash",
+    "electroball",
+    "gyroball",
+    "reversal",
+    "flail",
+    "hardpress",
+    "crushgrip",
+    "wringout",
+}
+HP_DIFF_MOVES = {"endeavor", "finalgambit"}  # fixed damage from the HP of the two mons
+
+
+def _weight(mon) -> float:
+    entry = GEN.pokedex.get(mon.species, {})
+    return (
+        float(entry.get("weightkg") or mon.weight or 50.0)
+        if hasattr(mon, "weight")
+        else float(entry.get("weightkg") or 50.0)
+    )
+
+
+def variable_base_power(att: "MonView", dfn: "MonView", move: Move) -> int:
+    """Base power of moves whose power depends on weight, speed or HP (basePower 0 in data)."""
+    mid = move.id
+    if mid in ("lowkick", "grassknot"):
+        w = _weight(dfn.mon)
+        return (
+            20
+            if w < 10
+            else 40
+            if w < 25
+            else 60
+            if w < 50
+            else 80
+            if w < 100
+            else 100
+            if w < 200
+            else 120
+        )
+    if mid in ("heavyslam", "heatcrash"):
+        r = _weight(att.mon) / max(_weight(dfn.mon), 0.1)
+        return 120 if r >= 5 else 100 if r >= 4 else 80 if r >= 3 else 60 if r >= 2 else 40
+    if mid == "electroball":
+        r = effective_speed(att) / max(effective_speed(dfn), 1)
+        return 150 if r >= 4 else 120 if r >= 3 else 80 if r >= 2 else 60 if r >= 1 else 40
+    if mid == "gyroball":
+        return int(min(150, 25 * effective_speed(dfn) / max(effective_speed(att), 1)) + 1)
+    if mid in ("reversal", "flail"):
+        p = att.hp_fraction
+        return (
+            200
+            if p < 0.0417
+            else 150
+            if p < 0.1042
+            else 100
+            if p < 0.2083
+            else 80
+            if p < 0.3542
+            else 40
+            if p < 0.6875
+            else 20
+        )
+    if mid == "hardpress":
+        return max(1, int(100 * dfn.hp_fraction))
+    if mid in ("crushgrip", "wringout"):
+        return max(1, int(120 * dfn.hp_fraction))
+    return move.base_power
+
+
 def is_damaging(move: Move) -> bool:
-    """Attacking move (including fixed-damage moves such as Seismic Toss / Ruination)."""
-    if move.id in FIXED_LEVEL_DAMAGE or move.id in HALF_HP_MOVES:
+    """Attacking move (including fixed-damage, HP-based and weight/speed-based moves)."""
+    if (
+        move.id in FIXED_LEVEL_DAMAGE
+        or move.id in HALF_HP_MOVES
+        or move.id in VARIABLE_BP
+        or move.id in HP_DIFF_MOVES
+    ):
         return True
     return move.category != MoveCategory.STATUS and bool(move.base_power)
 
 
 def damage_fraction(att: MonView, dfn: MonView, move: Move, battle=None) -> float:
     """Expected fraction of the defender's max HP removed by ``move`` (0 for status moves)."""
+    if move.id in HP_DIFF_MOVES:
+        if dfn.mon.damage_multiplier(move) == 0:
+            return 0.0
+        own = att.hp_fraction * att.stats["hp"]
+        if move.id == "finalgambit":
+            return own / max(dfn.stats["hp"], 1)
+        target = dfn.hp_fraction * dfn.stats["hp"]
+        return max(0.0, target - own) / max(dfn.stats["hp"], 1)
     if move.id in FIXED_LEVEL_DAMAGE or move.id in HALF_HP_MOVES:
         if dfn.mon.damage_multiplier(move) == 0:  # e.g. Seismic Toss vs Ghost
             return 0.0
@@ -112,7 +198,9 @@ def damage_fraction(att: MonView, dfn: MonView, move: Move, battle=None) -> floa
         if move.id in FIXED_LEVEL_DAMAGE:
             return acc * 100 / max(dfn.stats["hp"], 1)
         return acc * 0.5 * dfn.hp_fraction
-    if move.category == MoveCategory.STATUS or not move.base_power:
+    if move.category == MoveCategory.STATUS:
+        return 0.0
+    if not move.base_power and move.id not in VARIABLE_BP:
         return 0.0
     eff = dfn.mon.damage_multiplier(move)
     if eff == 0:
@@ -127,7 +215,7 @@ def damage_fraction(att: MonView, dfn: MonView, move: Move, battle=None) -> floa
     d = dfn.stats[d_stat] * BOOST[dfn.mon.boosts.get(d_stat, 0)]
     if move.id in ("psyshock", "psystrike", "secretsword"):
         d = dfn.stats["def"] * BOOST[dfn.mon.boosts.get("def", 0)]
-    bp = move.base_power
+    bp = variable_base_power(att, dfn, move) if move.id in VARIABLE_BP else move.base_power
     if move.id == "knockoff" and dfn.mon.item not in (None, ""):
         bp *= 1.5
     if move.id == "facade" and att.mon.status is not None:

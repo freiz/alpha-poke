@@ -38,6 +38,7 @@ from poke_env.player import Player, SimpleHeuristicsPlayer
 from alpha_poke.agents.belief_state import BeliefModel, own_view
 from alpha_poke.agents.damage import (
     MonView,
+    _recovers,  # noqa: F401 (recovery-aware chip value)
     best_damage,
     damage_fraction,
     is_damaging,
@@ -90,6 +91,7 @@ def _display_species(species_id: str) -> str:
 
 
 STALL_TURNS = 25  # turns without a faint after which the bot actively tries to break the stall
+KO_BONUS = 1.0  # bonus for an attack expected to KO (was 0.5: too close to a 50% heal)
 
 
 class BattleMemory:
@@ -100,6 +102,7 @@ class BattleMemory:
         self.switch_outs: dict[str, int] = {}  # species -> last turn it was switched out
         self.fainted = 0
         self.last_progress_turn = 0
+        self.attacks: deque = deque(maxlen=6)  # (turn, move id or None, opp species, opp hp)
 
     def observe(self, battle) -> None:
         fainted = sum(m.fainted for m in battle.team.values()) + sum(
@@ -110,12 +113,44 @@ class BattleMemory:
             self.last_progress_turn = battle.turn
 
     def record(self, battle, choice) -> None:
+        opp = battle.opponent_active_pokemon
+        self.attacks.append(
+            (
+                battle.turn,
+                None if isinstance(choice, Pokemon) else choice[0].id,
+                opp.species if opp else None,
+                opp.current_hp_fraction if opp else None,
+            )
+        )
         if isinstance(choice, Pokemon):
             if battle.active_pokemon is not None:
                 self.switch_outs[battle.active_pokemon.species] = battle.turn
             self.actions.append((battle.turn, "switch", choice.species))
         else:
             self.actions.append((battle.turn, "move", choice[0].id))
+
+    def futile_repeats(self, move_id: str, opp_species: str, opp_hp: float) -> int:
+        """How many of the last decisions used ``move_id`` on the same opponent without its HP
+        going down by decision time (e.g. it heals back every turn): 0 if progress was made."""
+        n = 0
+        for _, mid, sp, hp in reversed(self.attacks):
+            if mid != move_id or sp != opp_species or hp is None or opp_hp < hp - 0.02:
+                break
+            n += 1
+        return n
+
+    def stalemate(self, opp_species: str, opp_hp: float, window: int = 4) -> int:
+        """Decisions in a row facing ``opp_species`` (at most 6). Returns that count when the
+        opponent's HP now is not lower than ``window`` decisions ago (no net progress, e.g. it
+        heals back what we deal every other turn), otherwise 0."""
+        same = []
+        for _, _, sp, hp in reversed(self.attacks):
+            if sp != opp_species or hp is None:
+                break
+            same.append(hp)
+        if len(same) < window:
+            return 0
+        return len(same) if opp_hp >= same[window - 1] - 0.05 else 0
 
     def switched_out_recently(self, species: str, turn: int, within: int) -> bool:
         t = self.switch_outs.get(species)
@@ -179,6 +214,16 @@ class Plan:
                 "problems": self.exec_state.plan.problems,
                 "roles": self.exec_state.plan.roles,
                 "kill_priority": self.exec_state.plan.kill_priority,
+                "goals_done": self.exec_state.goals_done,
+                "assign_won": self.exec_state.assign_won,
+                "assign_lost": self.exec_state.assign_lost,
+                "wincon_kos": self.exec_state.wincon_kos,
+                "wincon_alive_end": [
+                    k
+                    for k, r in self.exec_state.plan.roles.items()
+                    if r == "win_condition"
+                    and k not in (self.exec_state._prev[2] if self.exec_state._prev else set())
+                ],
             },
         }
 
@@ -500,7 +545,7 @@ class KnowledgePlayer(Player):
 
         tactical: list[tuple[float, object]] = []
         if battle.available_moves:
-            tactical += self._score_moves(battle, plan, mv, ov, incoming, opp_kos_me)
+            tactical += self._score_moves(battle, plan, mv, ov, incoming, opp_kos_me, ov_moves)
         for s in battle.available_switches:
             tactical.append(
                 (self._score_switch(battle, plan, s, ov, ov_moves, opp_move, forced), s)
@@ -512,11 +557,15 @@ class KnowledgePlayer(Player):
         rows = []
         for v, c in tactical:
             terms: dict[str, float] = {}
+            dmg = damage_fraction(mv, ov, c[0], battle) if isinstance(c, tuple) else None
+            first = moves_first(mv, ov, c[0], battle) if isinstance(c, tuple) else None
             if state is not None:
                 ctx = {
                     "forced": forced,
                     "opp_hp": opp.current_hp_fraction,
                     "safe": incoming < 0.35 and me.current_hp_fraction >= 0.6,
+                    "lead": plan.lead,
+                    "tactical": v,
                 }
                 if isinstance(c, tuple):
                     d = damage_fraction(mv, ov, c[0], battle)
@@ -532,6 +581,8 @@ class KnowledgePlayer(Player):
             loop = self._loop_adjust(battle, mem, c, v) if self.anti_loop else 0.0
             rows.append(
                 {
+                    "dmg": dmg,
+                    "first": first,
                     "choice": c,
                     "tactical": v,
                     "plan": terms,
@@ -555,8 +606,14 @@ class KnowledgePlayer(Player):
         the same hazard forever). Grows with the number of turns since the last faint."""
         stall = battle.turn - mem.last_progress_turn
         adj = 0.0
+        opp = battle.opponent_active_pokemon
+        stuck = mem.stalemate(opp.species, opp.current_hp_fraction) if opp is not None else 0
         if isinstance(choice, Pokemon):
             forced = not battle.available_moves
+            if not forced and stuck >= 3:
+                # this matchup is a stalemate: bring something that can break it (the longer
+                # it lasts, the stronger the push)
+                adj += min(0.9, 0.2 + 0.1 * stuck)
             if not forced:
                 if mem.switched_out_recently(choice.species, battle.turn, within=2):
                     adj -= 0.25  # switching back to what we just switched out
@@ -566,6 +623,20 @@ class KnowledgePlayer(Player):
             return adj
         move, _ = choice
         attacking = is_damaging(move)
+        ko_now = (
+            attacking
+            and opp is not None
+            and damage_fraction(
+                own_view(battle.active_pokemon), self._opp(battle, opp)[0], move, battle
+            )
+            >= opp.current_hp_fraction
+        )
+        if attacking and opp is not None and not ko_now:  # repeated KO attempts are not futile
+            futile = mem.futile_repeats(move.id, opp.species, opp.current_hp_fraction)
+            if futile >= 2:  # our damage is undone every turn (recovery loop): try something else
+                adj -= 0.3 * (futile - 1)
+        if stuck >= 3 and not attacking and (move.heal or move.id in ("rest",)):
+            adj -= 0.2  # healing does not break a stalemate
         if stall >= 15 and not attacking:
             adj -= 0.04 * mem.recent_uses(move.id, battle.turn, window=10)
         if stall >= STALL_TURNS:
@@ -589,6 +660,8 @@ class KnowledgePlayer(Player):
             "opp_hp": round(battle.opponent_active_pokemon.current_hp_fraction, 3),
             "incoming_est": round(incoming, 3),
             "stall": battle.turn - mem.last_progress_turn,
+            "our_fainted": sum(m.fainted for m in battle.team.values()),
+            "their_fainted": sum(m.fainted for m in battle.opponent_team.values()),
             "phase": state.phase_name if state else None,
             "rules_active": [f"{k}:{':'.join(a)}" for k, a in state.active_rules(battle)]
             if state
@@ -600,8 +673,18 @@ class KnowledgePlayer(Player):
                     "tactical": round(r["tactical"], 3),
                     "loop": round(r["loop"], 3),
                     "plan": {k: round(v, 3) for k, v in r["plan"].items()},
+                    "dmg": None if r["dmg"] is None else round(r["dmg"], 3),
+                    "first": r["first"],
                 }
                 for r in top
+            ],
+            "opp_kos_me": incoming >= battle.active_pokemon.current_hp_fraction,
+            "ko_available": [
+                name(r["choice"])
+                for r in rows
+                if r["dmg"] is not None
+                and r["dmg"] >= battle.opponent_active_pokemon.current_hp_fraction
+                and (r["first"] == 1.0 or incoming < battle.active_pokemon.current_hp_fraction)
             ],
             "chosen": name(best["choice"]),
             "followed_plan": sum(best["plan"].values()) > 0,
@@ -611,7 +694,7 @@ class KnowledgePlayer(Player):
         with open(self.trace_dir / f"{battle.battle_tag}_{self.username}.jsonl", "a") as f:
             f.write(json.dumps(row) + "\n")
 
-    def _score_moves(self, battle, plan, mv, ov, incoming, opp_kos_me):
+    def _score_moves(self, battle, plan, mv, ov, incoming, opp_kos_me, ov_moves=()):
         me, opp = mv.mon, ov.mon
         opp_hp = opp.current_hp_fraction
         n_opp_left = 6 - sum(m.fainted for m in battle.opponent_team.values())
@@ -625,7 +708,9 @@ class KnowledgePlayer(Player):
                 d = damage_fraction(mv, ov, move, battle)
                 v = min(d, opp_hp)
                 if d >= opp_hp:
-                    v += 0.5
+                    v += KO_BONUS  # removing a Pokemon is worth far more than its last HP
+                elif d < 0.5 and _recovers(ov_moves):
+                    v *= 0.5  # chip that a reliable-recovery user heals back next turn
                 if plan.pace == "aggressive":
                     v += 0.05
                 if move.id in PIVOT:
@@ -722,23 +807,21 @@ class KnowledgePlayer(Player):
         last = sum(not m.fainted for m in battle.team.values()) == 1
         if not (is_wincon or last or secures_ko):
             return None
-        v = min(d, opp.current_hp_fraction) + (0.5 if d >= opp.current_hp_fraction else 0)
+        v = min(d, opp.current_hp_fraction) + (KO_BONUS if d >= opp.current_hp_fraction else 0)
         if defensive:
             v += 0.3
         return v + (0.1 if is_wincon else 0.0)
 
     def _score_switch(self, battle, plan, s, ov, ov_moves, opp_move, forced: bool) -> float:
         sv = own_view(s)
-        opp = ov.mon
         taken = 0.0
         if not forced and opp_move is not None:
             taken = damage_fraction(ov, sv, opp_move, battle)
         hp_after = max(0.0, s.current_hp_fraction - taken)
         if hp_after <= 0:
             return -1.0
-        mu = plan.matchup.get((s.species, opp.species))
-        if mu is None:
-            mu = one_v_one(sv, ov, list(s.moves.values()), ov_moves, battle)
+        # live 1v1 (current boosts / HP of the opponent): the preview table goes stale
+        mu = one_v_one(sv, ov, list(s.moves.values()), ov_moves, battle)
         # matchup was computed at full HP; scale by remaining HP
         mu = mu * (0.5 + 0.5 * hp_after)
         v = 0.6 * mu - taken

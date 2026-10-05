@@ -148,3 +148,65 @@ def test_not_conditions():
     assert not eval_condition(
         Condition.parse("active:Dragapult AND NOT our_active:Kingambit"), b, NAMES
     )
+
+
+def test_soft_tera_kill_priority_and_lead_exemption():
+    tusk, gambit, corv = mon("greattusk"), mon("kingambit"), mon("corviknight")
+    pex, pult = mon("toxapex", hp=0.8), mon("dragapult")
+    d = {
+        "assignments": {"Dragapult": {"primary": "Corviknight"}},
+        "kill_priority": ["Dragapult"],
+        "phases": [
+            {"name": "early", "goals": ["scout"], "until": "turn_after:5"},
+            {"name": "endgame", "goals": ["sweep:Kingambit"]},
+        ],
+        "tera": {"who": "Kingambit", "when": "secures_ko", "never_before": "endgame"},
+    }
+    st = PlanState(ExecPlan.from_dict(d, NAMES))
+    b = battle([tusk, gambit, corv], [pex, pult], gambit, pult)
+    # before the endgame: tera only if it is urgent
+    assert not st.tera_allowed(b, "kingambit", {"secures_ko": False, "saves_from_ko": False})
+    assert st.tera_allowed(b, "kingambit", {"saves_from_ko": True})
+    # other mons may tera only once the designated one is gone (and only if urgent)
+    assert not st.tera_allowed(b, "greattusk", {"secures_ko": True})
+    gambit.fainted = True
+    assert st.tera_allowed(b, "greattusk", {"secures_ko": True})
+    # kill priority: no reward for chip damage, reward for a KO
+    hit = Move("earthquake", gen=9)
+    assert "kill_priority" not in plan_terms(st, b, (hit, False), {"damage": 0.1, "opp_hp": 1})
+    assert plan_terms(st, b, (hit, False), {"damage": 1.2, "opp_hp": 1})["kill_priority"] > 0
+    # turn 1: the planned lead is not switched out because of an assignment
+    b.active_pokemon = tusk
+    terms = plan_terms(st, b, corv, {"forced": False, "lead": "greattusk"})
+    assert "assign_primary" not in terms
+    b.turn = 2
+    assert "assign_primary" in plan_terms(st, b, corv, {"forced": False, "lead": "greattusk"})
+
+
+def test_plan_never_promotes_useless_actions():
+    tusk = mon("greattusk")
+    pex = mon("toxapex")
+    d = {
+        "phases": [{"name": "mid", "goals": ["status:Toxapex", "ko:Toxapex"]}],
+        "rules": [{"if": "active:Toxapex", "then": "use_move:Toxic"}],
+    }
+    st = PlanState(ExecPlan.from_dict(d, NAMES))
+    b = battle([tusk], [pex], tusk, pex)
+    toxic = Move("toxic", gen=9)
+    # tactical value 0 (e.g. the target is immune): no goal / rule bonus
+    assert plan_terms(st, b, (toxic, False), {"tactical": 0.0}) == {}
+    assert plan_terms(st, b, (toxic, False), {"tactical": 0.3})
+    eq = Move("earthquake", gen=9)
+    assert plan_terms(st, b, (eq, False), {"damage": 0.0, "opp_hp": 1.0}) == {}
+
+
+def test_assignment_trust_drops_when_switch_is_tactically_bad():
+    tusk, corv = mon("greattusk"), mon("corviknight")
+    pult = mon("dragapult")
+    d = {"assignments": {"Dragapult": {"primary": "Corviknight"}}}
+    st = PlanState(ExecPlan.from_dict(d, NAMES))
+    b = battle([tusk, corv], [pult], tusk, pult, turn=5)
+    full = plan_terms(st, b, corv, {"forced": False, "tactical": 0.2})["assign_primary"]
+    half = plan_terms(st, b, corv, {"forced": False, "tactical": -0.2})["assign_primary"]
+    assert half == full / 2
+    assert "assign_primary" not in plan_terms(st, b, corv, {"forced": False, "tactical": -0.6})

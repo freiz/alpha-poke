@@ -44,3 +44,54 @@ def test_fixed_damage_moves_are_attacks():
     assert abs(damage_fraction(blissey, target, toss) - 100 / target.stats["hp"]) < 1e-9
     # half the target's current HP, times Ruination's 90% accuracy
     assert abs(damage_fraction(blissey, target, ruin) - 0.5 * ruin.accuracy) < 1e-9
+
+
+def test_futile_attack_detection():
+    from types import SimpleNamespace as NS
+
+    from alpha_poke.agents.knowledge_player import BattleMemory
+
+    mem = BattleMemory()
+    move = NS(id="ruination")
+    for turn in (3, 4, 5):  # opponent back at 51% (healed) at every decision
+        opp = NS(species="moltres", current_hp_fraction=0.51)
+        mem.record(NS(turn=turn, opponent_active_pokemon=opp, active_pokemon=None), (move, False))
+    assert mem.futile_repeats("ruination", "moltres", 0.51) == 3
+    assert mem.futile_repeats("ruination", "moltres", 0.30) == 0  # progress was made
+
+
+def test_stalemate_detects_alternating_heal_loops():
+    from types import SimpleNamespace as NS
+
+    from alpha_poke.agents.knowledge_player import BattleMemory
+
+    mem = BattleMemory()
+    move = NS(id="ruination")
+    for turn, hp in zip(range(1, 6), (1.0, 0.51, 1.0, 0.51, 1.0), strict=True):
+        opp = NS(species="moltres", current_hp_fraction=hp)
+        mem.record(NS(turn=turn, opponent_active_pokemon=opp, active_pokemon=None), (move, False))
+    assert mem.stalemate("moltres", 0.51) >= 4  # no net progress over 4 decisions
+    mem2 = BattleMemory()
+    for turn, hp in zip(range(1, 6), (1.0, 0.8, 0.6, 0.4, 0.2), strict=True):
+        opp = NS(species="moltres", current_hp_fraction=hp)
+        mem2.record(NS(turn=turn, opponent_active_pokemon=opp, active_pokemon=None), (move, False))
+    assert mem2.stalemate("moltres", 0.1) == 0
+
+
+def test_variable_power_moves():
+    from alpha_poke.agents.damage import damage_fraction, is_damaging, variable_base_power
+
+    gambit = view("kingambit", "Adamant:252/252/0/0/4/0")
+    heavy = view("dondozo", "Impish:252/0/252/0/4/0")  # 220 kg
+    light = view("ribombee", "Timid:0/0/0/252/4/252")  # 0.5 kg
+    for v in (heavy, light):
+        v.mon.set_hp_status("100/100")
+    low_kick = Move("lowkick", gen=9)
+    assert is_damaging(low_kick)
+    assert variable_base_power(gambit, heavy, low_kick) == 120
+    assert variable_base_power(gambit, light, low_kick) == 20
+    assert damage_fraction(gambit, heavy, low_kick) > 0
+    endeavor = Move("endeavor", gen=9)
+    user = view("araquanid", "Sassy:252/0/0/4/252/0")
+    user.mon.set_hp_status("1/100")
+    assert damage_fraction(user, heavy, endeavor) > 0.9
