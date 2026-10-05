@@ -90,6 +90,8 @@ async def _lane(bot_a, bot_b, matches, port, pool_dir, heldout, lane_id, log_pat
             "team_ok": team_ok,
             "lead_a": plan.lead if plan else None,
             "lead_b": plan_b.lead if plan_b else None,
+            "plan_a": plan.to_log() if plan else None,
+            "plan_b": plan_b.to_log() if plan_b else None,
             "fallbacks_a": getattr(a, "fallbacks", 0),
             "fallbacks_b": getattr(b, "fallbacks", 0),
         }

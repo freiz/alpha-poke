@@ -15,6 +15,7 @@ VARIANTS: dict[str, tuple[bool, bool, bool, dict]] = {
     "k_uniformlead": (True, True, True, {"lead_prior": "uniform"}),
     "k_none": (False, False, False, {}),
     "k_noloopfix": (True, True, True, {"anti_loop": False}),
+    "k_llmplan": (True, True, True, {"plan_mode": "llm"}),
 }
 BASELINES = {
     "heuristic": SimpleHeuristicsPlayer,

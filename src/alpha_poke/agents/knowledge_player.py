@@ -58,6 +58,30 @@ PIVOT = {
 SLEEP = {"spore", "sleeppowder", "hypnosis", "yawn", "darkvoid", "lovelykiss"}
 
 log = logging.getLogger("alpha_poke.knowledge")
+
+
+def sync_tera_types(battle) -> None:
+    """poke-env ignores the request's ``teraType`` field, so our own mons' tera types are None
+    unless set here (without this the bot never terastallized)."""
+    for mon in battle.team.values():
+        if mon.tera_type is None:
+            req = getattr(mon, "_last_request", None) or {}
+            if req.get("teraType"):
+                mon._terastallized_type = PokemonType.from_name(req["teraType"])
+
+
+def top(d: dict[str, float], k: int) -> list[list]:
+    """Top-k (name, probability rounded to 2 decimals) of a distribution."""
+    return [[n, round(p, 2)] for n, p in sorted(d.items(), key=lambda kv: -kv[1])[:k]]
+
+
+def _display_species(species_id: str) -> str:
+    from poke_env.data import GenData
+
+    entry = GenData.from_gen(9).pokedex.get(species_id)
+    return entry["name"] if entry else species_id
+
+
 STALL_TURNS = 25  # turns without a faint after which the bot actively tries to break the stall
 
 
@@ -109,13 +133,35 @@ class Plan:
     preserve: set[str] = field(default_factory=set)
     lead: str | None = None
     opp_cores: list[str] = field(default_factory=list)
+    tera_target: str | None = None  # None = no restriction (computed plans)
+    pace: str = "balanced"  # aggressive | balanced | defensive
+    hazards_priority: str = "normal"  # high | normal | low
+    source: str = "computed"  # computed | llm | computed(llm-failed)
+    llm: dict = field(default_factory=dict)  # key, cached, cost, problems, game_plan, ...
 
     def summary(self) -> str:
         return (
-            f"lead={self.lead} wincons={self.win_conditions} threats={self.threats[:3]} "
+            f"[{self.source}] lead={self.lead} wincons={self.win_conditions} "
+            f"preserve={sorted(self.preserve)} threats={self.threats[:3]} "
             f"answers={ {t: self.answers.get(t, []) for t in self.threats[:3]} } "
-            f"opp_cores={self.opp_cores[:2]}"
+            f"tera={self.tera_target} pace={self.pace} hazards={self.hazards_priority} "
+            f"opp_cores={self.opp_cores[:1]}"
         )
+
+    def to_log(self) -> dict:
+        return {
+            "source": self.source,
+            "lead": self.lead,
+            "win_conditions": self.win_conditions,
+            "preserve": sorted(self.preserve),
+            "threats": self.threats[:4],
+            "answers": {t: self.answers.get(t, []) for t in self.threats[:4]},
+            "tera_target": self.tera_target,
+            "pace": self.pace,
+            "hazards_priority": self.hazards_priority,
+            "opp_cores": self.opp_cores[:1],
+            "llm": self.llm,
+        }
 
 
 class KnowledgePlayer(Player):
@@ -129,6 +175,8 @@ class KnowledgePlayer(Player):
         random_lead: bool = False,
         anti_loop: bool = True,
         trace_dir: str | None = None,
+        plan_mode: str = "computed",
+        llm_model: str | None = None,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -145,6 +193,9 @@ class KnowledgePlayer(Player):
         if self.trace_dir:
             self.trace_dir.mkdir(parents=True, exist_ok=True)
         self.memory: dict[str, BattleMemory] = {}
+        self.plan_mode = plan_mode  # "computed" (rules) or "llm" (one cached LLM call per pair)
+        self.llm_model = llm_model
+        self._planner = None
 
     # ---- helpers ------------------------------------------------------------------------
     def _opp_team_names(self, battle: AbstractBattle) -> tuple[str, ...]:
@@ -222,9 +273,100 @@ class KnowledgePlayer(Player):
             plan.opp_cores = [f"{c['name']} ({' + '.join(c['members'])})" for c in hits]
         return plan
 
-    def teampreview(self, battle: AbstractBattle) -> str:
+    # ---- LLM plan --------------------------------------------------------------------------
+    def _llm_inputs(self, battle, plan: Plan):
+        """Prompt inputs + name maps. Opponent: species and *belief* estimates only."""
+        from alpha_poke.agents.llm_plan import display_ability, display_item, display_move
+
+        ours_raw = list(battle.team.values())
+        our_name = {self._key(m): _display_species(m.species) for m in ours_raw}
+        ours = [
+            {
+                "species": our_name[self._key(m)],
+                "item": display_item(m.item),
+                "ability": display_ability(m.ability, m.species),
+                "tera": m.tera_type.name.title() if m.tera_type else "",
+                "moves": [display_move(x) for x in m.moves],
+            }
+            for m in ours_raw
+        ]
+        theirs_raw = battle.teampreview_opponent_team or list(battle.opponent_team.values())
+        team_names = self._opp_team_names(battle)
+        their_name = {}
+        their_info = []
+        for t, tname in zip(theirs_raw, team_names, strict=False):
+            dist = self.belief.prior.predict(tname, team_names)
+            name = tname.replace("-*", "")
+            their_name[self._key(t)] = name
+            their_info.append(
+                {
+                    "species": name,
+                    "items": [[display_item(i), p] for i, p in top(dist.item, 3)],
+                    "tera": [[x.title(), p] for x, p in top(dist.tera, 2)],
+                    "moves": [[display_move(x), p] for x, p in top(dist.move, 8) if p >= 0.04],
+                }
+            )
+        their_info.sort(key=lambda x: x["species"])
+        matchups = []
+        for o in sorted(our_name, key=our_name.get):
+            row = [
+                (their_name[t], round(plan.matchup.get((o, t), 0.0), 1))
+                for t in sorted(their_name, key=their_name.get)
+            ]
+            matchups.append([our_name[o], row])
+        return ours, their_info, plan.opp_cores[:2], matchups, our_name, their_name
+
+    def _apply_llm(self, plan: Plan, llm, our_name: dict, their_name: dict) -> None:
+        our_key = {v: k for k, v in our_name.items()}
+        their_key = {v: k for k, v in their_name.items()}
+        p = llm.raw
+        if p.get("lead") in our_key:
+            plan.lead = our_key[p["lead"]]
+        plan.win_conditions = [our_key[x] for x in p.get("win_conditions", []) if x in our_key]
+        plan.preserve = {our_key[x] for x in p.get("preserve", []) if x in our_key}
+        plan.preserve |= set(plan.win_conditions)
+        plan.threats = [their_key[x] for x in p.get("threats", []) if x in their_key]
+        plan.answers = {
+            their_key[t]: [our_key[a] for a in v if a in our_key]
+            for t, v in (p.get("answers") or {}).items()
+            if t in their_key
+        }
+        tt = p.get("tera_target")
+        plan.tera_target = our_key.get(tt) if tt else None
+        plan.pace = p.get("pace", "balanced")
+        plan.hazards_priority = p.get("hazards_priority", "normal")
+        plan.source = "llm"
+        plan.llm = {
+            "key": llm.key[:16],
+            "cached": llm.cached,
+            "cost_usd": round(llm.cost_usd, 5),
+            "latency_s": round(llm.latency_s, 2),
+            "problems": llm.problems,
+            "game_plan": p.get("game_plan", ""),
+            "their_win_route": p.get("their_win_route", ""),
+        }
+
+    async def teampreview(self, battle: AbstractBattle) -> str:
         try:
+            sync_tera_types(battle)
             plan = self.make_plan(battle)
+            if self.plan_mode == "llm":
+                import asyncio
+
+                from alpha_poke.agents.llm_plan import LLMPlanner
+
+                try:
+                    if self._planner is None:
+                        self._planner = LLMPlanner(model=self.llm_model)
+                    ours, info, cores, matchups, our_name, their_name = self._llm_inputs(
+                        battle, plan
+                    )
+                    llm = await asyncio.to_thread(self._planner.plan, ours, info, cores, matchups)
+                    self._apply_llm(plan, llm, our_name, their_name)
+                except Exception as e:  # noqa: BLE001 - keep playing with the computed plan
+                    log.exception("LLM plan failed; using the computed plan")
+                    plan.source = "computed(llm-failed)"
+                    plan.llm = {"error": f"{type(e).__name__}: {e}"[:200]}
             self.plans[battle.battle_tag] = plan
             ours = list(battle.team.values())
             order = sorted(range(len(ours)), key=lambda i: self._key(ours[i]) != plan.lead)
@@ -247,6 +389,7 @@ class KnowledgePlayer(Player):
             return SimpleHeuristicsPlayer.choose_singles_move(battle)[0]
 
     def _choose(self, battle: Battle):
+        sync_tera_types(battle)
         me, opp = battle.active_pokemon, battle.opponent_active_pokemon
         if me is None or opp is None:
             return self.choose_random_move(battle)
@@ -346,7 +489,9 @@ class KnowledgePlayer(Player):
                 if d >= opp_hp:
                     v += 0.5
                 if opp.species in plan.threats[:2]:
-                    v *= 1.15
+                    v *= 1.25  # plan: focus damage on the main threats
+                if plan.pace == "aggressive":
+                    v += 0.05
                 if move.id in PIVOT:
                     v += 0.1 if plan.matchup.get((me.species, opp.species), 0) < 0 else 0.0
                 if move.recoil:
@@ -358,7 +503,12 @@ class KnowledgePlayer(Player):
             if opp_kos_me and first < 1.0:
                 v *= 0.15  # we probably faint before acting
             out.append((v, (move, False)))
-            if battle.can_tera and me.tera_type is not None and move.base_power:
+            tera_allowed = (
+                plan.tera_target is None
+                or plan.tera_target == me.species
+                or (sum(not m.fainted for m in battle.team.values()) == 1)
+            )
+            if battle.can_tera and me.tera_type is not None and move.base_power and tera_allowed:
                 tv = self._tera_value(battle, plan, move, mv, ov, opp_kos_me, first)
                 if tv is not None:
                     out.append((tv, (move, True)))
@@ -367,6 +517,11 @@ class KnowledgePlayer(Player):
     def _status_value(self, battle, move, mv, ov, incoming, n_opp_left, n_my_left, is_wincon):
         me, opp = mv.mon, ov.mon
         mid = move.id
+        plan = self.plans.get(battle.battle_tag)
+        hz = {"high": 1.6, "normal": 1.0, "low": 0.5}.get(
+            plan.hazards_priority if plan else "", 1.0
+        )
+        defensive = plan is not None and plan.pace == "defensive"
         if mid in HAZARDS:
             if HAZARDS[mid] in battle.opponent_side_conditions and mid != "spikes":
                 return 0.0
@@ -375,18 +530,20 @@ class KnowledgePlayer(Player):
                 and battle.opponent_side_conditions.get(SideCondition.SPIKES, 0) >= 3
             ):
                 return 0.0
-            return (0.4 if mid == "stealthrock" else 0.3) * min(1.0, n_opp_left / 4)
+            return hz * (0.4 if mid == "stealthrock" else 0.3) * min(1.0, n_opp_left / 4)
         if mid in REMOVAL:
             layers = len([c for c in battle.side_conditions if c in HAZARDS.values()])
-            return 0.3 * layers if n_my_left >= 2 else 0.0
+            return hz * 0.3 * layers if n_my_left >= 2 else 0.0
         if move.heal:
             missing = 1 - me.current_hp_fraction
-            return max(0.0, min(move.heal, missing) - 0.5 * incoming) if missing > 0.35 else 0.0
+            v = max(0.0, min(move.heal, missing) - 0.5 * incoming) if missing > 0.35 else 0.0
+            return v * (1.3 if defensive else 1.0)
         if move.boosts and move.target == "self":
             if any(me.boosts.get(s, 0) >= 4 for s in move.boosts):
                 return 0.0
             safe = incoming < 0.35 and me.current_hp_fraction >= 0.6
-            return (0.45 + (0.15 if is_wincon else 0.0)) if safe else 0.05
+            # plan: win conditions set up when it is safe
+            return (0.45 + (0.25 if is_wincon else 0.0)) if safe else 0.05
         if opp.status is None and move.status is not None:
             types = set(opp.types)
             if (
@@ -451,13 +608,22 @@ class KnowledgePlayer(Player):
         mu = mu * (0.5 + 0.5 * hp_after)
         v = 0.6 * mu - taken
         if s.species in plan.answers.get(opp.species, []):
-            v += 0.15
+            v += 0.25  # plan: bring the designated answer to this threat
         if s.species in plan.preserve and taken > 0.35:
-            v -= 0.2
+            v -= 0.3  # plan: don't take big hits with mons we must keep
         if s.species in plan.win_conditions and forced and mu < 0.3:
             v -= 0.15  # don't throw the win condition in early
         if not forced:
-            v -= 0.12  # tempo cost of switching
+            active = battle.active_pokemon
+            # plan: save a preserved mon that is about to be KO'd
+            if active is not None and active.species in plan.preserve:
+                ov_best = max(
+                    (damage_fraction(ov, own_view(active), m, battle) for m in ov_moves),
+                    default=0.0,
+                )
+                if ov_best >= active.current_hp_fraction:
+                    v += 0.2
+            v -= {"aggressive": 0.2, "defensive": 0.06}.get(plan.pace, 0.12)  # switching tempo
         return v
 
 

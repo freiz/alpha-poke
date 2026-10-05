@@ -17,12 +17,54 @@ Cache: two layers.
   2. ``LLMClient``'s exact-message cache as a safety net.
 """
 
+import fcntl
 import hashlib
 import json
 from dataclasses import dataclass, field
+from functools import lru_cache
 from pathlib import Path
 
 from alpha_poke.llm import LLMClient
+
+
+@lru_cache(maxsize=1)
+def _item_names() -> dict[str, str]:
+    """Item id -> display name, from every item revealed in our replay tables."""
+    import pandas as pd
+
+    from alpha_poke.analysis.roles import to_id
+    from alpha_poke.analysis.tables import OUT
+
+    items = pd.read_parquet(OUT / "gen9ou_mons.parquet", columns=["item"]).item.dropna().unique()
+    return {to_id(i): i for i in items}
+
+
+def display_item(item_id: str | None) -> str:
+    if not item_id or item_id == "unknown_item":
+        return ""
+    return _item_names().get(item_id, item_id)
+
+
+def display_move(move_id: str) -> str:
+    from poke_env.data import GenData
+
+    entry = GenData.from_gen(9).moves.get(move_id)
+    return entry["name"] if entry else move_id
+
+
+def display_ability(ability_id: str | None, species_id: str) -> str:
+    from poke_env.data import GenData
+
+    from alpha_poke.analysis.roles import to_id
+
+    if not ability_id:
+        return ""
+    entry = GenData.from_gen(9).pokedex.get(species_id, {})
+    for a in (entry.get("abilities") or {}).values():
+        if to_id(a) == ability_id:
+            return a
+    return ability_id
+
 
 ROOT = Path(__file__).resolve().parents[3]
 PLAN_CACHE = ROOT / "data" / "llm_plans"
@@ -103,6 +145,11 @@ def plan_key(
     return hashlib.sha256(blob.encode()).hexdigest()
 
 
+def _fmt(pairs) -> str:
+    """[['Leftovers', 0.62], ...] -> 'Leftovers 62%, ...' (probability = share among sets)."""
+    return ", ".join(f"{n} {round(100 * p)}%" for n, p in pairs) or "unknown"
+
+
 def build_prompt(
     ours: list[dict], their_info: list[dict], cores: list[str], matchups: list[list]
 ) -> str:
@@ -112,10 +159,15 @@ def build_prompt(
             f"- {m['species']} @ {m['item'] or 'no item'} | ability {m['ability']} | "
             f"tera {m['tera']} | moves: {', '.join(m['moves'])}"
         )
-    lines += ["", "OPPONENT TEAM (species from team preview) with LIKELY sets from replay data:"]
+    lines += [
+        "",
+        "OPPONENT TEAM (species from team preview) with LIKELY sets from replay data "
+        "(percent = estimated probability; move percent = share of revealed move slots):",
+    ]
     for t in their_info:
         lines.append(
-            f"- {t['species']}: items {t['items']}; tera {t['tera']}; likely moves {t['moves']}"
+            f"- {t['species']}: items {_fmt(t['items'])}; tera {_fmt(t['tera'])}; "
+            f"moves {_fmt(t['moves'])}"
         )
     if cores:
         lines += ["", "Opponent archetype (from our archetype library): " + "; ".join(cores[:2])]
@@ -186,6 +238,16 @@ class LLMPlanner:
         if path.exists():
             d = json.loads(path.read_text())
             return LLMPlan(key, d["plan"], True, 0.0, 0.0, d.get("problems", []))
+        # cross-process lock per key: concurrent battles with the same team pair must not
+        # both miss the cache and pay twice
+        with open(PLAN_CACHE / f"{key}.lock", "w") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            if path.exists():
+                d = json.loads(path.read_text())
+                return LLMPlan(key, d["plan"], True, 0.0, 0.0, d.get("problems", []))
+            return self._call(key, path, ours, their_info, their_species, cores, matchups)
+
+    def _call(self, key, path, ours, their_info, their_species, cores, matchups) -> LLMPlan:
         prompt = build_prompt(ours, their_info, cores, matchups)
         spent0 = self.client.spent_usd
         raw = self.client.chat_json(
