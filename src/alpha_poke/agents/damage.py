@@ -157,12 +157,62 @@ def best_damage(att: MonView, dfn: MonView, moves, battle=None) -> tuple[Move | 
     return best, frac
 
 
+RECOVERY_MOVES = {
+    "recover",
+    "roost",
+    "slackoff",
+    "moonlight",
+    "morningsun",
+    "synthesis",
+    "softboiled",
+    "shoreup",
+    "strengthsap",
+    "milkdrink",
+    "rest",
+    "wish",
+    "lunarblessing",
+    "junglehealing",
+}
+NO_POISON_ABILITIES = {"poisonheal", "magicguard", "immunity", "purifyingsalt", "comatose"}
+
+
+def _recovers(moves) -> bool:
+    return any(m.id in RECOVERY_MOVES for m in moves)
+
+
+def _passive_heal(v: MonView) -> float:
+    return 0.0625 * v.item_p("leftovers", "blacksludge")
+
+
+def _can_toxic(att_moves, dfn: MonView) -> bool:
+    if not any(m.id == "toxic" for m in att_moves) or dfn.mon.status is not None:
+        return False
+    if {PokemonType.POISON, PokemonType.STEEL} & set(dfn.mon.types):
+        return False
+    return (dfn.ability or "") not in NO_POISON_ABILITIES
+
+
+def _hits_to_ko(att: MonView, dfn: MonView, att_moves, dfn_moves, dmg: float) -> int:
+    """Turns ``att`` needs to KO ``dfn``, accounting for the defender's sustain: a defender with
+    reliable recovery that takes less than 50% per hit can heal forever; Leftovers / Black
+    Sludge offset 1/16 per turn; Toxic eventually wears down a non-immune defender."""
+    hp = max(dfn.hp_fraction, 0.01)
+    net = dmg - _passive_heal(dfn)
+    walled = net <= 0 or (_recovers(dfn_moves) and dmg < 0.5)
+    if walled:
+        return 12 if _can_toxic(att_moves, dfn) else 99
+    return math.ceil(hp / net)
+
+
 def one_v_one(a: MonView, b: MonView, a_moves, b_moves, battle=None) -> float:
-    """Crude 1v1 score in [-1, 1]: >0 means ``a`` is expected to win the exchange."""
+    """Crude 1v1 score in [-1, 1]: >0 means ``a`` is expected to win the exchange.
+    99 hits on both sides = mutual stall (score 0)."""
     ma, da = best_damage(a, b, a_moves, battle)
     mb, db = best_damage(b, a, b_moves, battle)
-    hits_a = math.ceil(max(b.hp_fraction, 0.01) / da) if da > 0 else 99
-    hits_b = math.ceil(max(a.hp_fraction, 0.01) / db) if db > 0 else 99
+    hits_a = _hits_to_ko(a, b, a_moves, b_moves, da)
+    hits_b = _hits_to_ko(b, a, b_moves, a_moves, db)
+    if hits_a >= 99 and hits_b >= 99:
+        return 0.0
     first = moves_first(a, b, ma, battle)
     if hits_a < hits_b or (hits_a == hits_b and first > 0.5):
         margin = (hits_b - hits_a) + (0.5 if first > 0.5 else 0)

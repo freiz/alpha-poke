@@ -250,8 +250,13 @@ class ReplayParser:
         else:
             self._reveal_item(holder, src[5:].strip())
 
-    def _reveal_ability(self, mon: MonRecord | None, ability: str) -> None:
+    def _reveal_ability(self, mon: MonRecord | None, ability: str, original: bool = False) -> None:
+        """Record ``mon``'s ability. Ignored while the mon carries an ability acquired from
+        Skill Swap / Trace / Worry Seed / ... (until it switches out), unless the message states
+        the *original* ability explicitly (``original=True``)."""
         if mon is None or not ability:
+            return
+        if not original and any(self.active.get(s) is mon for s in self.ability_changed):
             return
         if mon.ability is None:
             mon.ability = ability
@@ -491,11 +496,28 @@ class ReplayParser:
 
     def _on_ability(self, a):
         side, mon = self._mon(a[0])
+        rest = [x for x in a[2:] if not x.startswith("[")]
         tags = _tags(a[2:])
-        if "from" in tags and tags["from"].startswith("ability:"):
-            return  # Trace / Skill Swap style transfers
-        if side in self.ability_changed:
-            return  # ability acquired via Skill Swap / Role Play / Entrainment / ...
+        src = tags.get("from", "")
+        if src.startswith("ability:"):
+            # |-ability|GARDEVOIR|Drought|Trace|[from] ability: Trace|[of] TORKOAL
+            # a[1] = copied ability (belongs to [of]); a[2] = the line mon's own ability
+            if rest:
+                self._reveal_ability(mon, rest[0], original=True)
+            of = tags.get("of")
+            if of:
+                self._reveal_ability(self._mon(of)[1], a[1], original=True)
+            if side:
+                self.ability_changed.add(side)
+            return
+        if src.startswith("move:"):
+            # |-ability|TARGET|Insomnia|Magic Guard|[from] move: Worry Seed
+            # a[1] = new ability, a[2] = the original one
+            if rest:
+                self._reveal_ability(mon, rest[0], original=True)
+            if side:
+                self.ability_changed.add(side)
+            return
         self._reveal_ability(mon, a[1])
 
     def _on_activate(self, a):
@@ -504,10 +526,16 @@ class ReplayParser:
             return
         what = a[1]
         if what.replace("move: ", "") in _ABILITY_CHANGERS:
-            self.ability_changed.add(side)
+            # |-activate|SOURCE|move: Skill Swap|TARGET_ABILITY|SOURCE_ABILITY|[of] TARGET
+            rest = [x for x in a[2:] if not x.startswith("[")]
             of = _tags(a[2:]).get("of")
-            if of and self._mon(of)[0]:
-                self.ability_changed.add(self._mon(of)[0])
+            target = self._mon(of) if of else (None, None)
+            if what.replace("move: ", "") == "Skill Swap" and len(rest) >= 2:
+                self._reveal_ability(mon, rest[1], original=True)
+                self._reveal_ability(target[1], rest[0], original=True)
+            self.ability_changed.add(side)
+            if target[0]:
+                self.ability_changed.add(target[0])
             return
         if what.startswith("ability:"):
             self._reveal_ability(mon, what[8:].strip())

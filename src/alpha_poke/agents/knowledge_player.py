@@ -18,9 +18,12 @@ Each turn (heuristic actions, scored in "HP-fraction swing" units):
 Any exception falls back to poke-env's SimpleHeuristicsPlayer decision.
 """
 
+import json
 import logging
 import random
+from collections import deque
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from poke_env.battle import (
     AbstractBattle,
@@ -55,6 +58,45 @@ PIVOT = {
 SLEEP = {"spore", "sleeppowder", "hypnosis", "yawn", "darkvoid", "lovelykiss"}
 
 log = logging.getLogger("alpha_poke.knowledge")
+STALL_TURNS = 25  # turns without a faint after which the bot actively tries to break the stall
+
+
+class BattleMemory:
+    """Per-battle history used by the anti-loop rules."""
+
+    def __init__(self):
+        self.actions: deque = deque(maxlen=30)  # (turn, kind, key)
+        self.switch_outs: dict[str, int] = {}  # species -> last turn it was switched out
+        self.fainted = 0
+        self.last_progress_turn = 0
+
+    def observe(self, battle) -> None:
+        fainted = sum(m.fainted for m in battle.team.values()) + sum(
+            m.fainted for m in battle.opponent_team.values()
+        )
+        if fainted != self.fainted:
+            self.fainted = fainted
+            self.last_progress_turn = battle.turn
+
+    def record(self, battle, choice) -> None:
+        if isinstance(choice, Pokemon):
+            if battle.active_pokemon is not None:
+                self.switch_outs[battle.active_pokemon.species] = battle.turn
+            self.actions.append((battle.turn, "switch", choice.species))
+        else:
+            self.actions.append((battle.turn, "move", choice[0].id))
+
+    def switched_out_recently(self, species: str, turn: int, within: int) -> bool:
+        t = self.switch_outs.get(species)
+        return t is not None and turn - t <= within
+
+    def recent_switches(self, turn: int, window: int) -> int:
+        return sum(1 for t, k, _ in self.actions if k == "switch" and turn - t < window)
+
+    def recent_uses(self, move_id: str, turn: int, window: int) -> int:
+        return sum(
+            1 for t, k, x in self.actions if k == "move" and x == move_id and turn - t < window
+        )
 
 
 @dataclass
@@ -85,6 +127,8 @@ class KnowledgePlayer(Player):
         plan_lead: bool = True,
         lead_prior: str = "human",
         random_lead: bool = False,
+        anti_loop: bool = True,
+        trace_dir: str | None = None,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -96,6 +140,11 @@ class KnowledgePlayer(Player):
         self.library = library
         self.plans: dict[str, Plan] = {}
         self.fallbacks = 0
+        self.anti_loop = anti_loop
+        self.trace_dir = Path(trace_dir) if trace_dir else None
+        if self.trace_dir:
+            self.trace_dir.mkdir(parents=True, exist_ok=True)
+        self.memory: dict[str, BattleMemory] = {}
 
     # ---- helpers ------------------------------------------------------------------------
     def _opp_team_names(self, battle: AbstractBattle) -> tuple[str, ...]:
@@ -223,11 +272,63 @@ class KnowledgePlayer(Player):
             )
         if not options:
             return self.choose_random_move(battle)
+        mem = self.memory.setdefault(battle.battle_tag, BattleMemory())
+        mem.observe(battle)
+        if self.anti_loop:
+            options = [(v + self._loop_adjust(battle, mem, c, v), c) for v, c in options]
         score, choice = max(options, key=lambda x: x[0])
+        mem.record(battle, choice)
+        if self.trace_dir:
+            self._trace(battle, mem, options, choice, incoming)
         if isinstance(choice, Pokemon):
             return self.create_order(choice)
         move, tera = choice
         return self.create_order(move, terastallize=tera)
+
+    # ---- anti-loop --------------------------------------------------------------------------
+    def _loop_adjust(self, battle, mem: "BattleMemory", choice, value: float) -> float:
+        """Score adjustment that breaks repetition loops (e.g. ping-pong switching, re-setting
+        the same hazard forever). Grows with the number of turns since the last faint."""
+        stall = battle.turn - mem.last_progress_turn
+        adj = 0.0
+        if isinstance(choice, Pokemon):
+            forced = not battle.available_moves
+            if not forced:
+                if mem.switched_out_recently(choice.species, battle.turn, within=2):
+                    adj -= 0.25  # switching back to what we just switched out
+                adj -= 0.08 * mem.recent_switches(battle.turn, window=6)
+                if stall >= STALL_TURNS:
+                    adj -= 0.25
+            return adj
+        move, _ = choice
+        attacking = move.category != MoveCategory.STATUS and bool(move.base_power)
+        if stall >= 15 and not attacking:
+            adj -= 0.04 * mem.recent_uses(move.id, battle.turn, window=10)
+        if stall >= STALL_TURNS:
+            if attacking:
+                adj += 0.05
+            else:
+                adj -= 0.5 * max(value, 0.0)  # status / recovery values halved
+        return adj
+
+    def _trace(self, battle, mem, options, choice, incoming) -> None:
+        def name(c):
+            return c.species if isinstance(c, Pokemon) else c[0].id + ("+tera" if c[1] else "")
+
+        top = sorted(options, key=lambda x: -x[0])[:5]
+        row = {
+            "turn": battle.turn,
+            "me": battle.active_pokemon.species,
+            "me_hp": round(battle.active_pokemon.current_hp_fraction, 3),
+            "opp": battle.opponent_active_pokemon.species,
+            "opp_hp": round(battle.opponent_active_pokemon.current_hp_fraction, 3),
+            "incoming_est": round(incoming, 3),
+            "stall": battle.turn - mem.last_progress_turn,
+            "options": [[name(c), round(v, 3)] for v, c in top],
+            "chosen": name(choice),
+        }
+        with open(self.trace_dir / f"{battle.battle_tag}_{self.username}.jsonl", "a") as f:
+            f.write(json.dumps(row) + "\n")
 
     def _score_moves(self, battle, plan, mv, ov, incoming, opp_kos_me):
         me, opp = mv.mon, ov.mon

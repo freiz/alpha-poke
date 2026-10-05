@@ -14,6 +14,7 @@ VARIANTS: dict[str, tuple[bool, bool, bool, dict]] = {
     "k_randlead": (True, True, True, {"random_lead": True}),
     "k_uniformlead": (True, True, True, {"lead_prior": "uniform"}),
     "k_none": (False, False, False, {}),
+    "k_noloopfix": (True, True, True, {"anti_loop": False}),
 }
 BASELINES = {
     "heuristic": SimpleHeuristicsPlayer,
@@ -30,6 +31,8 @@ def make_bot(
     team: str,
     concurrency: int = 1,
     heldout_pool: str | None = None,
+    trace_dir: str | None = None,
+    replay_dir: str | None = None,
 ) -> Player:
     """``team``: a Showdown-format team (replaced per battle with ``update_team``).
     ``heldout_pool``: use the belief model trained without that pool's teams."""
@@ -40,6 +43,8 @@ def make_bot(
         max_concurrent_battles=concurrency,
         team=team,
     )
+    if replay_dir:
+        kw["save_replays"] = replay_dir
     if kind in VARIANTS:
         from alpha_poke.agents.belief_state import BeliefModel
         from alpha_poke.agents.knowledge_player import KnowledgePlayer
@@ -50,6 +55,12 @@ def make_bot(
         if not full:
             belief = belief.marginal_only()
         return KnowledgePlayer(
-            belief, library=load_library(), use_plan=use_plan, plan_lead=plan_lead, **extra, **kw
+            belief,
+            library=load_library(),
+            use_plan=use_plan,
+            plan_lead=plan_lead,
+            trace_dir=trace_dir,
+            **extra,
+            **kw,
         )
     return BASELINES[kind](**kw)

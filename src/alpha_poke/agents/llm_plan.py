@@ -67,18 +67,26 @@ def canonical_team(mons: list[dict]) -> list[dict]:
     """Sorted, normalized team description used both in the prompt and the cache key."""
     out = []
     for m in sorted(mons, key=lambda x: x["species"]):
-        out.append({
-            "species": m["species"],
-            "item": m.get("item") or "",
-            "ability": m.get("ability") or "",
-            "tera": m.get("tera") or "",
-            "moves": sorted(m.get("moves") or []),
-        })
+        out.append(
+            {
+                "species": m["species"],
+                "item": m.get("item") or "",
+                "ability": m.get("ability") or "",
+                "tera": m.get("tera") or "",
+                "moves": sorted(m.get("moves") or []),
+            }
+        )
     return out
 
 
-def plan_key(model: str, effort: str | None, ours: list[dict], their_species: list[str],
-             their_info: list[dict], matchups: list[list]) -> str:
+def plan_key(
+    model: str,
+    effort: str | None,
+    ours: list[dict],
+    their_species: list[str],
+    their_info: list[dict],
+    matchups: list[list],
+) -> str:
     blob = json.dumps(
         {
             "v": PROMPT_VERSION,
@@ -95,12 +103,15 @@ def plan_key(model: str, effort: str | None, ours: list[dict], their_species: li
     return hashlib.sha256(blob.encode()).hexdigest()
 
 
-def build_prompt(ours: list[dict], their_info: list[dict], cores: list[str],
-                 matchups: list[list]) -> str:
+def build_prompt(
+    ours: list[dict], their_info: list[dict], cores: list[str], matchups: list[list]
+) -> str:
     lines = ["YOUR TEAM (full sets):"]
     for m in canonical_team(ours):
-        lines.append(f"- {m['species']} @ {m['item'] or 'no item'} | ability {m['ability']} | "
-                     f"tera {m['tera']} | moves: {', '.join(m['moves'])}")
+        lines.append(
+            f"- {m['species']} @ {m['item'] or 'no item'} | ability {m['ability']} | "
+            f"tera {m['tera']} | moves: {', '.join(m['moves'])}"
+        )
     lines += ["", "OPPONENT TEAM (species from team preview) with LIKELY sets from replay data:"]
     for t in their_info:
         lines.append(
@@ -108,12 +119,14 @@ def build_prompt(ours: list[dict], their_info: list[dict], cores: list[str],
         )
     if cores:
         lines += ["", "Opponent archetype (from our archetype library): " + "; ".join(cores[:2])]
-    lines += ["", "ONE-VS-ONE MATCHUP TABLE (your Pokemon vs theirs, -1 = you lose, +1 = you "
-              "win; from a simple damage model, use as a hint only):"]
+    lines += [
+        "",
+        "ONE-VS-ONE MATCHUP TABLE (your Pokemon vs theirs, -1 = you lose, +1 = you "
+        "win; from a simple damage model, use as a hint only):",
+    ]
     for row in matchups:
         lines.append(f"- {row[0]} vs " + ", ".join(f"{o} {s:+.1f}" for o, s in row[1]))
-    lines += ["", "Return a JSON object with exactly these keys:",
-              json.dumps(SCHEMA, indent=1)]
+    lines += ["", "Return a JSON object with exactly these keys:", json.dumps(SCHEMA, indent=1)]
     return "\n".join(lines)
 
 
@@ -148,8 +161,10 @@ def validate(raw: dict, our_species: list[str], their_species: list[str]) -> tup
     if tt is not None and tt not in ours:
         problems.append(f"tera_target: invalid {tt!r}")
         out["tera_target"] = None
-    for k, allowed in (("pace", {"aggressive", "balanced", "defensive"}),
-                       ("hazards_priority", {"high", "normal", "low"})):
+    for k, allowed in (
+        ("pace", {"aggressive", "balanced", "defensive"}),
+        ("hazards_priority", {"high", "normal", "low"}),
+    ):
         if raw.get(k) not in allowed:
             problems.append(f"{k}: invalid {raw.get(k)!r}")
             out[k] = "balanced" if k == "pace" else "normal"
@@ -162,8 +177,9 @@ class LLMPlanner:
         self.effort = reasoning_effort
         PLAN_CACHE.mkdir(parents=True, exist_ok=True)
 
-    def plan(self, ours: list[dict], their_info: list[dict], cores: list[str],
-             matchups: list[list]) -> LLMPlan:
+    def plan(
+        self, ours: list[dict], their_info: list[dict], cores: list[str], matchups: list[list]
+    ) -> LLMPlan:
         their_species = [t["species"] for t in their_info]
         key = plan_key(self.client.model, self.effort, ours, their_species, their_info, matchups)
         path = PLAN_CACHE / f"{key}.json"
@@ -177,9 +193,20 @@ class LLMPlanner:
         )
         plan, problems = validate(raw, [m["species"] for m in ours], their_species)
         cost = self.client.spent_usd - spent0
-        path.write_text(json.dumps({
-            "key": key, "model": self.client.model, "prompt_version": PROMPT_VERSION,
-            "prompt": prompt, "raw": raw, "plan": plan, "problems": problems,
-            "cost_usd": cost, "latency_s": self.client.last_latency,
-        }, indent=1))
+        path.write_text(
+            json.dumps(
+                {
+                    "key": key,
+                    "model": self.client.model,
+                    "prompt_version": PROMPT_VERSION,
+                    "prompt": prompt,
+                    "raw": raw,
+                    "plan": plan,
+                    "problems": problems,
+                    "cost_usd": cost,
+                    "latency_s": self.client.last_latency,
+                },
+                indent=1,
+            )
+        )
         return LLMPlan(key, plan, False, cost, self.client.last_latency, problems)

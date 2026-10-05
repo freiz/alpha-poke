@@ -26,6 +26,8 @@ def main() -> None:
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--heldout", action="store_true")
     ap.add_argument("--pool", default="data/teams/pool")
+    ap.add_argument("--trace", action="store_true", help="per-turn decision logs (knowledge bots)")
+    ap.add_argument("--replays", action="store_true", help="save Showdown HTML replays")
     a = ap.parse_args()
     items = a.matchups
     if all(":" not in x for x in items):
@@ -35,7 +37,17 @@ def main() -> None:
         bot_a, bot_b = item.split(":")
         assert bot_a in BOT_NAMES and bot_b in BOT_NAMES, f"unknown bot in {item}: {BOT_NAMES}"
         res = run_arena(
-            bot_a, bot_b, a.pairs, a.pool, tuple(a.ports), a.procs, a.lanes, a.seed, a.heldout
+            bot_a,
+            bot_b,
+            a.pairs,
+            a.pool,
+            tuple(a.ports),
+            a.procs,
+            a.lanes,
+            a.seed,
+            a.heldout,
+            trace=a.trace,
+            replays=a.replays,
         )
         tag = " [heldout belief]" if a.heldout else ""
         print(

@@ -44,10 +44,13 @@ STAT_NAMES = ("HP", "Atk", "Def", "SpA", "SpD", "Spe")
 
 
 def smogon_entry(stats: UsageStats, species: str):
-    sid = to_id(species)
-    for k, v in stats.species.items():
-        if to_id(k) == sid:
-            return v
+    """Smogon stats for a species; falls back to the base species (Smogon merges some formes,
+    e.g. 'Zarude-Dada' is listed as 'Zarude')."""
+    for name in (species, species.split("-")[0]):
+        sid = to_id(name)
+        for k, v in stats.species.items():
+            if to_id(k) == sid:
+                return v
     return None
 
 
@@ -87,6 +90,9 @@ def build_set(
             ability = _display_ability(name, next(iter(smog.abilities)))
         if tera is None and smog.tera_types:
             tera = next(iter(smog.tera_types)).title()
+    if ability is None:  # last resort: the species' first listed ability
+        abilities = (GEN.pokedex.get(to_id(name), {}).get("abilities") or {}).values()
+        ability = next(iter(abilities), None)
     legal = _learnset(name) or set()
     counts = Counter(m for v in rows.moves for m in v.split("|") if m)
     moves = [m for m, _ in counts.most_common() if to_id(m) in legal][:4]

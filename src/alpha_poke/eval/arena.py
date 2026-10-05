@@ -52,14 +52,14 @@ def make_schedule(team_names: list[str], n_pairs: int, seed: int = 0) -> list[Ma
     return out
 
 
-async def _lane(bot_a, bot_b, matches, port, pool_dir, heldout, lane_id, log_path):
+async def _lane(bot_a, bot_b, matches, port, pool_dir, heldout, lane_id, log_path, extras):
     from alpha_poke.eval.bots import make_bot
 
     teams = load_team_files(pool_dir)
     first = next(iter(teams.values()))
     tag = f"{os.getpid() % 10000}l{lane_id}"
-    a = make_bot(bot_a, f"A{tag}", port, first, heldout_pool=heldout)
-    b = make_bot(bot_b, f"B{tag}", port, first, heldout_pool=heldout)
+    a = make_bot(bot_a, f"A{tag}", port, first, heldout_pool=heldout, **extras)
+    b = make_bot(bot_b, f"B{tag}", port, first, heldout_pool=heldout, **extras)
     expected = {k: _species(v) for k, v in teams.items()}
     rows = []
     for m in matches:
@@ -100,7 +100,7 @@ async def _lane(bot_a, bot_b, matches, port, pool_dir, heldout, lane_id, log_pat
 
 
 def _worker(args):
-    bot_a, bot_b, lanes, port, pool_dir, heldout, log_path, wid = args
+    bot_a, bot_b, lanes, port, pool_dir, heldout, log_path, wid, extras = args
     import logging
 
     logging.basicConfig(level=logging.WARNING)
@@ -108,7 +108,7 @@ def _worker(args):
     async def run():
         return await asyncio.gather(
             *[
-                _lane(bot_a, bot_b, ms, port, pool_dir, heldout, f"{wid}x{i}", log_path)
+                _lane(bot_a, bot_b, ms, port, pool_dir, heldout, f"{wid}x{i}", log_path, extras)
                 for i, ms in enumerate(lanes)
             ]
         )
@@ -127,6 +127,8 @@ def run_arena(
     seed: int = 0,
     heldout: bool = False,
     log_dir: str = "data/eval",
+    trace: bool = False,
+    replays: bool = False,
 ) -> dict:
     names = sorted(load_team_files(pool_dir))
     schedule = make_schedule(names, n_pairs, seed)
@@ -137,6 +139,11 @@ def run_arena(
     Path(log_dir).mkdir(parents=True, exist_ok=True)
     run_id = f"{time.strftime('%Y%m%d-%H%M%S')}_{bot_a}_vs_{bot_b}{'_heldout' if heldout else ''}"
     log_path = str(Path(log_dir) / f"{run_id}.jsonl")
+    extras = {}
+    if trace:
+        extras["trace_dir"] = str(Path(log_dir) / "traces" / run_id)
+    if replays:
+        extras["replay_dir"] = str(Path(log_dir) / "replays" / run_id)
     jobs = [
         (
             bot_a,
@@ -147,6 +154,7 @@ def run_arena(
             pool_dir if heldout else None,
             log_path,
             w,
+            extras,
         )
         for w in range(procs)
     ]

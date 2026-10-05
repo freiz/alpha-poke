@@ -194,3 +194,33 @@ def test_contact_ability_status_belongs_to_of_mon():
     )
     assert mon(r, "p1", "Garchomp").ability == "Flame Body"
     assert mon(r, "p2", "Great Tusk").ability == "Volt Absorb"
+
+
+def test_trace_worry_seed_and_skill_swap_reveal_original_abilities():
+    r = parse_replay(
+        synth(
+            "|switch|p1a: G|Garchomp, M|100/100",
+            "|switch|p2a: T|Great Tusk|100/100",
+            "|turn|1",
+            # Trace: Garchomp copies Protosynthesis from Great Tusk
+            "|-ability|p1a: G|Protosynthesis|Trace|[from] ability: Trace|[of] p2a: T",
+            "|-weather|SunnyDay|[from] ability: Drought|[of] p1a: G",  # ignored (traced)
+            "|turn|2",
+        )
+    )
+    assert mon(r, "p1", "Garchomp").ability == "Trace"
+    assert mon(r, "p2", "Great Tusk").ability == "Protosynthesis"
+
+    r = parse_replay(
+        synth(
+            "|switch|p1a: G|Garchomp, M|100/100",
+            "|switch|p2a: T|Great Tusk|100/100",
+            "|turn|1",
+            "|-ability|p2a: T|Insomnia|Protosynthesis|[from] move: Worry Seed",
+            "|turn|2",
+            "|-activate|p1a: G|move: Skill Swap|Insomnia|Rough Skin|[of] p2a: T",
+            "|-heal|p1a: G|100/100|[from] ability: Insomnia",  # acquired: ignored
+        )
+    )
+    assert mon(r, "p2", "Great Tusk").ability == "Protosynthesis"
+    assert mon(r, "p1", "Garchomp").ability == "Rough Skin"
