@@ -31,3 +31,6 @@ wandb/
 
 # Secrets (API keys)
 .env
+
+# third-party bots run as separate processes (own venvs, not part of this repo)
+/external/

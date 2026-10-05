@@ -52,7 +52,7 @@ def main() -> None:
     per_game = {}
     for f in trace_dir.glob("*.jsonl"):
         battle, user = f.stem.rsplit("_", 1)
-        if not user.startswith(side_prefix):
+        if not user.lower().startswith(side_prefix.lower()):  # vs_foulplay names us "ab..."
             continue
         per_game[battle] = [json.loads(x) for x in f.read_text().splitlines() if x]
     won = {
