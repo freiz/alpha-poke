@@ -160,7 +160,10 @@ class SearchPlayer(KnowledgePlayer):
         if self.backend == "ismcts":
             budget = max(20, self.search_ms - int((time.time() - t0) * 1000))
             ours, n, _, _ = alpha_search.ismcts(
-                [s.to_string() for s in states], budget, chance_depth=self.chance_depth
+                [s.to_string() for s in states],
+                budget,
+                chance_depth=self.chance_depth,
+                threads=self.threads,  # Rust threads (root parallel), no process pool
             )
             results = [([(c, v) for c, v, _ in ours], n)]
         elif pool is not None:  # parallel: each sample gets the full budget on its own core

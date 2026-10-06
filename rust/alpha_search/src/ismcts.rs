@@ -362,6 +362,55 @@ pub fn search(
     }
 }
 
+/// Root-parallel search: `threads` independent trees over (copies of) all worlds with
+/// different seeds; our root statistics are merged by label (visits summed, means weighted).
+pub fn search_parallel(
+    worlds: &[State],
+    duration: Duration,
+    max_iterations: u32,
+    cfg: &Config,
+    seed: Option<u64>,
+    threads: usize,
+) -> SearchResult {
+    let threads = threads.max(1);
+    let per_thread = if max_iterations > 0 {
+        max_iterations.div_ceil(threads as u32)
+    } else {
+        0
+    };
+    let results: Vec<SearchResult> = std::thread::scope(|scope| {
+        let handles: Vec<_> = (0..threads)
+            .map(|t| {
+                let mut own: Vec<State> = worlds.to_vec();
+                let seed = seed.map(|s| s.wrapping_add(t as u64 * 0x9E37_79B9));
+                scope.spawn(move || search(&mut own, duration, per_thread, cfg, seed))
+            })
+            .collect();
+        handles.into_iter().map(|h| h.join().unwrap()).collect()
+    });
+    let mut merged: Vec<(Label, u32, f32)> = Vec::new();
+    for r in &results {
+        for &(l, visits, mean) in &r.s1 {
+            match merged.iter_mut().find(|m| m.0 == l) {
+                Some(m) => {
+                    let total = m.1 + visits;
+                    if total > 0 {
+                        m.2 = (m.2 * m.1 as f32 + mean * visits as f32) / total as f32;
+                    }
+                    m.1 = total;
+                }
+                None => merged.push((l, visits, mean)),
+            }
+        }
+    }
+    SearchResult {
+        s1: merged,
+        iterations: results.iter().map(|r| r.iterations).sum(),
+        nodes: results.iter().map(|r| r.nodes).sum(),
+        max_depth: results.iter().map(|r| r.max_depth).max().unwrap_or(0),
+    }
+}
+
 /// Our root option in `state` for a label (our side is the same in every world).
 pub fn our_choice(state: &State, l: Label) -> Option<MoveChoice> {
     let (o1, _) = state.root_get_all_options();
@@ -457,6 +506,26 @@ mod tests {
             closed_children > closed_joint,
             "{closed_children} children for {closed_joint} joint actions"
         );
+    }
+
+    #[test]
+    fn parallel_search_merges_threads_and_leaves_worlds_untouched() {
+        let worlds = vec![fixture(), variant(Choices::SPLASH)];
+        let before: Vec<String> = worlds.iter().map(|w| w.serialize()).collect();
+        let res = search_parallel(
+            &worlds,
+            Duration::ZERO,
+            20_000,
+            &Config::default(),
+            Some(9),
+            4,
+        );
+        assert!(res.iterations >= 20_000);
+        // every thread's root visits are merged: our options' visits add up to the iterations
+        let visits: u32 = res.s1.iter().map(|x| x.1).sum();
+        assert_eq!(visits, res.iterations);
+        let after: Vec<String> = worlds.iter().map(|w| w.serialize()).collect();
+        assert_eq!(before, after);
     }
 
     #[test]

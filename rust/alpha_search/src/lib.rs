@@ -59,10 +59,11 @@ fn reference_mcts(
 }
 
 /// SO-ISMCTS over belief-sampled worlds (state strings sharing our side). Returns
-/// ([(our option, visits, mean value)], iterations, tree nodes, max depth).
+/// ([(our option, visits, mean value)], iterations, tree nodes, max depth). threads > 1: root
+/// parallel (independent trees, merged root statistics).
 #[pyfunction(name = "ismcts")]
 #[pyo3(signature = (states, duration_ms, iterations=0, seed=None, c=std::f32::consts::SQRT_2,
-                    cache_root=true, branch_depth=2, chance_depth=0))]
+                    cache_root=true, branch_depth=2, chance_depth=0, threads=1))]
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 fn py_ismcts(
     py: Python<'_>,
@@ -74,6 +75,7 @@ fn py_ismcts(
     cache_root: bool,
     branch_depth: u16,
     chance_depth: u16,
+    threads: usize,
 ) -> PyResult<(Vec<(String, u32, f32)>, u32, usize, u16)> {
     if states.is_empty() {
         return Err(PyValueError::new_err("ismcts needs at least one world"));
@@ -89,13 +91,24 @@ fn py_ismcts(
         chance_depth,
     };
     let res = py.detach(|| {
-        ismcts::search(
-            &mut worlds,
-            Duration::from_millis(duration_ms),
-            iterations,
-            &cfg,
-            seed,
-        )
+        if threads > 1 {
+            ismcts::search_parallel(
+                &worlds,
+                Duration::from_millis(duration_ms),
+                iterations,
+                &cfg,
+                seed,
+                threads,
+            )
+        } else {
+            ismcts::search(
+                &mut worlds,
+                Duration::from_millis(duration_ms),
+                iterations,
+                &cfg,
+                seed,
+            )
+        }
     });
     let w0 = &worlds[0];
     let mut ours = Vec::with_capacity(res.s1.len());
