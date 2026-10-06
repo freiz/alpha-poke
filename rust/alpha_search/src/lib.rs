@@ -166,6 +166,18 @@ fn featurize<'py>(
     )
 }
 
+/// poke-engine's handcrafted evaluation of many state strings (side one's view; the leaf value
+/// the search uses is sigmoid(0.0125 * (eval - root eval))). Offline baseline for the value net.
+#[pyfunction]
+fn evaluate(py: Python<'_>, states: Vec<String>) -> Vec<f32> {
+    py.detach(|| {
+        states
+            .iter()
+            .map(|s| poke_engine::engine::evaluate::evaluate(&State::deserialize(s)))
+            .collect()
+    })
+}
+
 /// Feature shapes and embedding table sizes.
 #[pyfunction]
 fn feature_dims(py: Python<'_>) -> PyResult<Bound<'_, PyDict>> {
@@ -186,5 +198,6 @@ fn alpha_search(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(py_ismcts, m)?)?;
     m.add_function(wrap_pyfunction!(featurize, m)?)?;
     m.add_function(wrap_pyfunction!(feature_dims, m)?)?;
+    m.add_function(wrap_pyfunction!(evaluate, m)?)?;
     Ok(())
 }

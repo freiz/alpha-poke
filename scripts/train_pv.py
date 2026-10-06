@@ -38,9 +38,12 @@ SIZES = {
 DIMS = alpha_search.feature_dims()
 
 
-def featurize_shard(path: Path, cache: Path) -> dict:
+def featurize_shard(path: Path, cache: Path) -> int:
+    """Write the shard's feature cache (if missing); returns its number of positions."""
     if cache.exists():
-        return dict(np.load(cache))
+        with np.load(cache) as z:
+            if "evalv" in z.files:  # caches from before the handcrafted evaluation are rebuilt
+                return len(z["action"])
     t = pq.read_table(
         path, columns=["game", "turn", "state", "action", "won", "rating", "uploadtime"]
     )
@@ -54,6 +57,10 @@ def featurize_shard(path: Path, cache: Path) -> dict:
         parts["glob"].append(np.frombuffer(gl, np.float32).reshape(-1, g).astype(np.float16))
         parts["mask"].append(np.frombuffer(ma, np.uint8).reshape(-1, a))
     out = {k: np.concatenate(v) for k, v in parts.items()}
+    out["evalv"] = np.concatenate(
+        [np.asarray(alpha_search.evaluate(states[i : i + 50_000]), np.float32)
+         for i in range(0, len(states), 50_000)]
+    )  # fmt: skip
     out["action"] = np.asarray(t.column("action").to_pylist(), np.int64)
     out["won"] = np.asarray(t.column("won").to_pylist(), np.float32)
     out["turn"] = np.asarray(t.column("turn").to_pylist(), np.int32)
@@ -65,19 +72,37 @@ def featurize_shard(path: Path, cache: Path) -> dict:
     ok = (out["action"] < a) & (out["mask"][np.arange(len(act)), act] == 1)
     out = {k: v[ok] for k, v in out.items()}
     cache.parent.mkdir(parents=True, exist_ok=True)
-    np.savez(cache, **out)
-    return out
+    tmp = cache.with_name(cache.stem + ".tmp.npz")  # atomic: a killed run leaves no broken cache
+    np.savez(tmp, **out)
+    tmp.rename(cache)
+    return len(out["action"])
 
 
 def load(data: str) -> dict:
+    """All shards in one set of arrays, filled shard by shard into preallocated arrays (peak
+    memory = the result + one shard; concatenating would double it: 2026-10-06 OOM)."""
     root = Path("data/train") / data
-    files = sorted(glob.glob(str(root / "*.parquet")))
-    shards = [featurize_shard(Path(f), root / "features" / (Path(f).stem + ".npz")) for f in files]
-    shards = [s for s in shards if len(s["action"])]
-    return {k: np.concatenate([s[k] for s in shards]) for k in shards[0]}
+    files = [f for f in sorted(glob.glob(str(root / "*.parquet"))) if pq.read_metadata(f).num_rows]
+    caches = [root / "features" / (Path(f).stem + ".npz") for f in files]
+    sizes = [featurize_shard(Path(f), c) for f, c in zip(files, caches, strict=True)]
+    total = sum(sizes)
+    out: dict = {}
+    pos = 0
+    for c, n in zip(caches, sizes, strict=True):
+        if not n:
+            continue
+        with np.load(c) as z:
+            for k in z.files:
+                v = z[k]
+                if k not in out:
+                    out[k] = np.empty((total, *v.shape[1:]), v.dtype)
+                out[k][pos : pos + n] = v
+        pos += n
+    return out
 
 
 def to_torch(d: dict, idx: np.ndarray, device) -> tuple:
+    """(sparse, dense, glob, mask, action, won, handcrafted eval / 100)"""
     return (
         torch.from_numpy(d["sparse"][idx].astype(np.int64)).to(device, non_blocking=True),
         torch.from_numpy(d["dense"][idx].astype(np.float32)).to(device, non_blocking=True),
@@ -85,7 +110,15 @@ def to_torch(d: dict, idx: np.ndarray, device) -> tuple:
         torch.from_numpy(d["mask"][idx].astype(bool)).to(device, non_blocking=True),
         torch.from_numpy(d["action"][idx]).to(device, non_blocking=True),
         torch.from_numpy(d["won"][idx]).to(device, non_blocking=True),
+        torch.from_numpy(d["evalv"][idx] / 100).to(device, non_blocking=True),
     )
+
+
+def value_logit(model, v, ev):
+    """Residual value (--value-residual): a * handcrafted eval / 100 + b + the net's output."""
+    if getattr(model, "residual", None) is None:
+        return v
+    return model.residual[0] * ev + model.residual[1] + v
 
 
 @torch.no_grad()
@@ -95,10 +128,10 @@ def evaluate(model, d, idx, device, batch=16384) -> dict:
     probs, wons, turns = [], [], []
     for i in range(0, len(idx), batch):
         b = idx[i : i + batch]
-        sp, de, gl, ma, act, won = to_torch(d, b, device)
+        sp, de, gl, ma, act, won, ev = to_torch(d, b, device)
         with torch.autocast(device.type, dtype=torch.bfloat16, enabled=device.type == "cuda"):
             logits, v = model(sp, de, gl, ma)
-        logits, v = logits.float(), v.float()
+        logits, v = logits.float(), value_logit(model, v.float(), ev)
         sums["ce"] += F.cross_entropy(logits, act, reduction="sum").item()
         top = logits.topk(3, dim=-1).indices
         sums["top1"] += (top[:, 0] == act).sum().item()
@@ -138,6 +171,11 @@ def main() -> None:
     ap.add_argument("--lr", type=float, default=2e-3)
     ap.add_argument("--wd", type=float, default=1e-4)
     ap.add_argument("--value-weight", type=float, default=1.0)
+    ap.add_argument(
+        "--value-residual",
+        action="store_true",
+        help="value = a * handcrafted eval + b + net (starts at the baseline)",
+    )
     ap.add_argument("--half-life", type=float, default=180.0, help="days; 0 = no time weighting")
     ap.add_argument("--val-frac", type=float, default=0.03)
     ap.add_argument("--eval-every", type=int, default=500)
@@ -175,7 +213,13 @@ def main() -> None:
               val=len(val_idx), load_s=round(time.time() - t0, 1),
               eff_train=float(w[train_idx].sum() ** 2 / (w[train_idx] ** 2).sum())))  # fmt: skip
 
-    model = PolicyValueNet(DIMS, **SIZES[a.size]).to(device)
+    model = PolicyValueNet(DIMS, **SIZES[a.size])
+    model.residual = None
+    if a.value_residual:  # start exactly at the fitted handcrafted baseline
+        model.residual = torch.nn.Parameter(torch.tensor([0.714, 0.078]))
+        torch.nn.init.zeros_(model.value.weight)
+        torch.nn.init.zeros_(model.value.bias)
+    model = model.to(device)
     n_params = sum(p.numel() for p in model.parameters())
     opt = torch.optim.AdamW(model.parameters(), lr=a.lr, weight_decay=a.wd)
     steps = int(a.epochs * len(train_idx) / a.batch)
@@ -191,12 +235,14 @@ def main() -> None:
     agg = dict(ce=0.0, bce=0.0, acc=0.0, gn=0.0, k=0)
     t_last = time.time()
     for step in range(1, steps + 1):
-        b = train_idx[rng.choice(len(train_idx), a.batch, p=probs)]  # time-weighted sampling
-        sp, de, gl, ma, act, won = to_torch(d, b, device)
+        if (step - 1) % 1000 == 0:  # time-weighted sampling, drawn 1000 steps at a time
+            block = train_idx[rng.choice(len(train_idx), (1000, a.batch), p=probs)]
+        b = block[(step - 1) % 1000]
+        sp, de, gl, ma, act, won, ev = to_torch(d, b, device)
         with torch.autocast(device.type, dtype=torch.bfloat16, enabled=device.type == "cuda"):
             logits, v = model(sp, de, gl, ma)
         ce = F.cross_entropy(logits.float(), act)
-        bce = F.binary_cross_entropy_with_logits(v.float(), won)
+        bce = F.binary_cross_entropy_with_logits(value_logit(model, v.float(), ev), won)
         loss = ce + a.value_weight * bce
         opt.zero_grad(set_to_none=True)
         loss.backward()
@@ -221,7 +267,7 @@ def main() -> None:
             emit(dict(event="val", step=step, **{k: float(v) for k, v in m.items()}))
             val_loss = m["ce"] + a.value_weight * m["bce"]
             ckpt = {"model": model.state_dict(), "dims": DIMS, "size": SIZES[a.size],
-                    "step": step, "val": m}  # fmt: skip
+                    "step": step, "val": m, "value_residual": a.value_residual}  # fmt: skip
             torch.save(ckpt, out_dir / "last.pt")
             if val_loss < best:
                 best = val_loss
