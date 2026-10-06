@@ -19,6 +19,7 @@ import multiprocessing as mp
 import os
 import random
 import time
+from concurrent.futures import ProcessPoolExecutor
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
@@ -176,7 +177,8 @@ def run_arena(
         for w in range(procs)
     ]
     t0 = time.time()
-    with mp.get_context("spawn").Pool(procs) as pool:
+    # non-daemonic workers: a search bot starts its own MCTS process pool
+    with ProcessPoolExecutor(procs, mp_context=mp.get_context("spawn")) as pool:
         rows = [r for part in pool.map(_worker, jobs) for r in part]
     return summarize(rows) | {"log": log_path, "seconds": round(time.time() - t0, 1)}
 

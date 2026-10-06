@@ -37,13 +37,15 @@ def make_bot(
     heldout_pool: str | None = None,
     trace_dir: str | None = None,
     replay_dir: str | None = None,
+    server_configuration=None,
+    account_configuration=None,
 ) -> Player:
     """``team``: a Showdown-format team (replaced per battle with ``update_team``).
     ``heldout_pool``: use the belief model trained without that pool's teams."""
     kw = dict(
-        account_configuration=account(name),
+        account_configuration=account_configuration or account(name),
         battle_format="gen9ou",
-        server_configuration=local_server(port),
+        server_configuration=server_configuration or local_server(port),
         max_concurrent_battles=concurrency,
         team=team,
     )

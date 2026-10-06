@@ -2,7 +2,10 @@
 
 Team preview (LLM plan, lead) is the KnowledgePlayer's. Every decision:
   1. draw ``samples`` full opponent sets from the belief model (engine_state.build_state),
-  2. run poke-engine's MCTS on each determinization for search_ms / samples,
+  2. run poke-engine's MCTS on each determinization: with ``workers`` > 1 the samples run in
+     parallel single-threaded processes for the full search_ms each (poke-engine's mcts holds
+     the GIL; one multi-threaded shared-tree search gets ~40% of the iterations), otherwise
+     sequentially for search_ms / samples each,
   3. average the root visit shares of our options across the samples (+ an optional small plan
      prior), play the best one that maps to a legal order.
 Any failure falls back to the KnowledgePlayer's heuristic decision (counted in ``fallbacks``).
@@ -14,10 +17,13 @@ import os
 import random
 import time
 from collections import defaultdict
+from concurrent.futures import ProcessPoolExecutor
+from multiprocessing import get_context
 from pathlib import Path
 
 import poke_engine as pe
 
+from alpha_poke.agents import mcts_worker
 from alpha_poke.agents.engine_state import build_state, engine_move_to_order
 from alpha_poke.agents.knowledge_player import KnowledgePlayer, sync_tera_types
 
@@ -36,8 +42,20 @@ class SearchPlayer(KnowledgePlayer):
         super().__init__(*args, **kwargs)
         self.search_ms = search_ms or _env_int("ALPHA_SEARCH_MS", 1000)
         self.samples = samples or _env_int("ALPHA_SEARCH_SAMPLES", 4)
-        self.threads = threads or _env_int("ALPHA_SEARCH_THREADS", 1)
+        self.threads = threads or _env_int("ALPHA_SEARCH_THREADS", 1)  # = worker processes
         self.search_fallbacks = 0
+        self._pool = None
+
+    def _workers(self):
+        if self.threads > 1 and self._pool is None:
+            self._pool = ProcessPoolExecutor(self.threads, mp_context=get_context("spawn"))
+        return self._pool
+
+    def close(self) -> None:
+        """Stop the worker processes (a live pool keeps its parent from exiting)."""
+        if self._pool is not None:
+            self._pool.shutdown(wait=False, cancel_futures=True)
+            self._pool = None
 
     def choose_move(self, battle):
         try:
@@ -55,17 +73,27 @@ class SearchPlayer(KnowledgePlayer):
             return None
         names = self._opp_team_names(battle)
         rng = random.Random(f"{battle.battle_tag}:{battle.turn}:{len(battle.available_moves)}")
-        per = max(20, self.search_ms // self.samples)
         share: dict[str, float] = defaultdict(float)
         t0 = time.time()
         iters = 0
-        for _ in range(self.samples):
-            state = build_state(battle, self.belief, names, rng)
-            res = pe.monte_carlo_tree_search(state, per, 0, self.threads)
-            iters += res.total_visits
-            total = sum(x.visits for x in res.side_one) or 1
-            for x in res.side_one:
-                share[x.move_choice] += x.visits / total / self.samples
+        states = [build_state(battle, self.belief, names, rng) for _ in range(self.samples)]
+        pool = self._workers()
+        if pool is not None:  # parallel: each sample gets the full budget on its own core
+            futs = [pool.submit(mcts_worker.run, s.to_string(), self.search_ms) for s in states]
+            results = [f.result() for f in futs]
+        else:
+            per = max(20, self.search_ms // self.samples)
+            results = []
+            for s in states:
+                res = pe.monte_carlo_tree_search(s, per, 0, 1)
+                results.append(
+                    ([(x.move_choice, x.visits) for x in res.side_one], res.total_visits)
+                )
+        for visits, n in results:
+            iters += n
+            total = sum(v for _, v in visits) or 1
+            for choice, v in visits:
+                share[choice] += v / total / len(results)
         ranked = sorted(share.items(), key=lambda kv: -kv[1])
         order = None
         chosen = None

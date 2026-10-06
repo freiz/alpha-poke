@@ -17,6 +17,7 @@ import os
 import shutil
 import subprocess
 import time
+from concurrent.futures import ProcessPoolExecutor
 from dataclasses import asdict
 from pathlib import Path
 
@@ -141,6 +142,8 @@ async def _lane(bot, matches, port, pool_dir, lane, log_path, opp, extras, run_d
         if proc.poll() is None:
             proc.terminate()
         fp_log.close()
+        if hasattr(me, "close"):
+            me.close()
     return rows
 
 
@@ -198,7 +201,8 @@ def run_external(
         for i in range(lanes)
     ]
     t0 = time.time()
-    with mp.get_context("spawn").Pool(lanes) as pool:
+    # non-daemonic workers: a search bot starts its own MCTS process pool
+    with ProcessPoolExecutor(lanes, mp_context=mp.get_context("spawn")) as pool:
         rows = [r for part in pool.map(_worker, jobs) for r in part]
     return summarize(rows) | {
         "log": log_path,
