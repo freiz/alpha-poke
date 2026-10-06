@@ -136,8 +136,18 @@ def _oracle_set(mon, oracle: dict[str, OracleSet]) -> "SampledSet | None":
     )
 
 
-def sample_set(belief: BeliefModel, mon, team_names: tuple[str, ...], rng: random.Random):
-    """One plausible full set for an opposing mon, consistent with what it revealed."""
+def sample_set(
+    belief: BeliefModel,
+    mon,
+    team_names: tuple[str, ...],
+    rng: random.Random,
+    move_beta: float = 0.0,
+):
+    """One plausible full set for an opposing mon, consistent with what it revealed.
+    Moves: from the sampled (species-level) archetype; with ``move_beta`` > 0 the archetype's
+    move weights are multiplied by the team-conditioned move marginal ** move_beta (the archetype
+    ignores the opponent's team; the team prior is much sharper: time-split coverage of later
+    revealed moves 61.7% -> 77.3% / 81.1% / 82.6% at beta 1 / 2 / 3, design D11)."""
     species = _preview_name(mon, team_names)
     dist = belief.prior.predict(species, team_names)
     revealed = [m for m in mon.moves if m in _MOVES]
@@ -178,6 +188,8 @@ def sample_set(belief: BeliefModel, mon, team_names: tuple[str, ...], rng: rando
         weights = {
             to_id(n): float(w) for n, w in zip(ss.vocab["move"], ss.params["move"][k], strict=False)
         }
+        if move_beta > 0:
+            weights = {mid: w * dist.move.get(mid, 1e-4) ** move_beta for mid, w in weights.items()}
     else:
         weights = dict(dist.move)
     for mid in list(weights):
@@ -325,6 +337,7 @@ def build_state(
     rng: random.Random,
     oracle: dict[str, OracleSet] | None = None,
     oracle_fields: frozenset[str] | None = None,
+    move_beta: float = 0.0,
 ) -> pe.State:
     """One determinization of the current battle (side_one = us). With ``oracle`` (the
     opponent's true sets, local evaluation only) nothing is sampled; with ``oracle_fields`` too
@@ -351,10 +364,10 @@ def build_state(
     def their_set(m) -> SampledSet:
         truth = _oracle_set(m, oracle) if oracle else None
         if truth is None:
-            return sample_set(belief, m, team_names, rng)
+            return sample_set(belief, m, team_names, rng, move_beta)
         if oracle_fields is None:
             return truth
-        s = sample_set(belief, m, team_names, rng)
+        s = sample_set(belief, m, team_names, rng, move_beta)
         for f in oracle_fields:
             setattr(
                 s, "stats" if f == "spread" else f, getattr(truth, "stats" if f == "spread" else f)
