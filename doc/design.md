@@ -371,6 +371,13 @@ LLM 每局只调用一次（预览时），产出的是"这一局怎么赢"的�
 8. 决策：我方根节点访问数最多的行动（保留访问分布，之后可按分布抽样做混合策略）。
 - 节点存储：用 `Vec<Node>` + 下标代替 poke-engine 的裸指针，子节点表 `HashMap<(节点, 我方标签, 对方标签), 下标>`；目标速度不低于 poke-engine MCTS 的 70%。
 
+**Python / Rust 分工（2026-10-06，用户确认）**：不整体重写对战主程序。实测一步决策（搜索 100 ms、4 个世界）总耗时中位 113.5 ms，Python 部分约 13 ms；`build_state` 每个世界 0.9 ms、`to_string` < 0.1 ms，N=32 时约 30 ms，占 500 ms 预算 6%（1 s 档 3%）——整体换 Rust 最多多出约 5% 的搜索时间。而 poke-env 承担的协议、登录（含官方服务器认证）和局面跟踪细节极多（Illusion、太晶、形态、PP、道具暴露……，Encore 卡死就是这类细节），Rust 没有同等成熟的库。分工：
+- **Rust（`rust/alpha_search`）**：每步决策里反复跑的计算——搜索；之后视需要移植世界采样（信念参数导出为简单格式）、树内网络推理和评估。
+- **Python 主程序**：薄适配层——poke-env 收发、把局面 / 信念参数交给 Rust、把结果转成指令；不放决策逻辑。
+- **Python 其余**：脚本、分析、评测、训练。
+- 交互约定：粗粒度接口（每步决策调用一次，不在节点级跨语言）；数据用局面字符串和基本类型（之后网络特征用 numpy 数组零拷贝，`numpy` crate）；Rust 的 panic 在 Python 侧转成普通异常并退回启发式；搜索期间释放 GIL。
+- 重新评估整体 Rust 化的时机：强化学习 self-play 需要上百万局、"本地 Showdown + poke-env"成为吞吐瓶颈时（先用 `scripts/bench_poke_env.py` 实测）。
+
 **已知局限与后续**：
 - SO-ISMCTS 让双方共用同一份节点统计，对方的选择也是"跨世界平均"的——相当于对方不知道自己的配置（反向的策略融合）。正解是 **MO-ISMCTS**（每个玩家一棵自己信息集上的树），列为第二阶段；也可以先折中：对方在每个世界里按该世界的选项选，但统计按标签共享。
 - 树内信念更新（B3）：模拟中出现的伤害 / 先后手可以给世界重新加权；在 ISMCTS 里可以做成"世界权重 × 该路径上观察的似然"。
@@ -388,6 +395,15 @@ LLM 每局只调用一次（预览时），产出的是"这一局怎么赢"的�
 **已确认（2026-10-06）**：自有 crate + poke-engine 作依赖；第一版开环随机、SO-ISMCTS；N 先取 32；maturin 构建、uv 本地包安装。
 - **仓库管理**：crate 在本仓库 `rust/alpha_search/`，正常提交（与 Python 端接口一起演进，不用 sub-module）；poke-engine 从 crates.io 按 `=0.0.48` 固定版本取，`Cargo.lock` 入库；`/rust/*/target/` 忽略。根 `pyproject.toml` 用 `[tool.uv.sources]` 指向该目录，crate 的 `pyproject.toml` 设 `cache-keys`（`src/**/*.rs`、`Cargo.toml`、`Cargo.lock`），改 Rust 代码后 `uv run` 自动重编。将来若要改 poke-engine，用 cargo 的 git 依赖或 `[patch.crates-io]`，仍不用 sub-module。
 - ✅ **S0（2026-10-06）**：`alpha_search.roundtrip`（局面字符串解析再序列化）与 `alpha_search.reference_mcts`（在本 crate 内调用 poke-engine 自带 MCTS，搜索期间释放 GIL）。真实 6v6 局面字符串往返完全一致（`tests/test_alpha_search.py`，夹具 `tests/fixtures/engine_state_6v6.txt`）；速度 51.6 万次迭代 / 秒（Python 包 48.5 万），根节点访问分布一致。构建 10 秒（首次），之后增量约 4 秒。
+- ✅ **S1（2026-10-06）**：`rust/alpha_search/src/ismcts.rs`（SO-ISMCTS：跨世界的行动标签——对方招式按招式 id、换人按队伍位置；双方解耦的可用性 UCB；开环随机；叶节点同 poke-engine），Python 接口 `alpha_search.ismcts(states, duration_ms, ...)`，`SearchPlayer(backend="ismcts", worlds=N)`（构建世界的时间从搜索预算里扣除，决策总时长与确定化版持平），变体 `s_ismcts`（N=32）、`s_ismcts_n1`。
+  - Rust 单元测试（`cargo test`）：搜索后每个世界的局面逐字节复原；对方只在部分世界存在的招式，可用次数恰为对应的迭代数；单世界时首选在 poke-engine MCTS 的前三之内。
+  - **测试抓到的 bug**：最初按（节点, 联合行动, 世界）缓存浅层节点的指令表，局面无法复原（对方后备血量 1 → −29）。原因：poke-engine 的指令带绝对的旧值 / 新值，开环下同一节点在同一世界里会以不同局面到达（上面抽到的随机结果不同），缓存的指令会应用并撤销错误的值。改为只缓存根节点（根局面恒定）。
+  - 速度：约 22 万次迭代 / 秒，poke-engine MCTS 约 43 万（52%，低于 70% 的目标）。开环的固有代价：每次迭代的每一步都要重新生成选项和结果（poke-engine 闭环，每个节点只生成一次）。换 FxHash 只小幅改善。对局：每步 0.51 s、约 10 万次迭代，无退回。
+- ✅ **S2 第一批实验（2026-10-06，heldout 信念，500 ms，各 300 局 / 150 对）**：
+  - **E-I2：`s_ismcts`（N=32）对 `s_computed`（确定化 K=4）57.3% ± 5.3%**（显著，下限约 52%）。尽管每步迭代数只有约 10 万（确定化约 29 万），一棵树跨世界共享的收益更大。量级与 oracle 差距（约 8 个点，条件不同只能粗比）接近。
+  - **E-I1：`s_ismcts_n1` 对 `s_c_k1`（都只用 1 个世界）50.7% ± 5.4%**：单世界时 ISMCTS 与 poke-engine MCTS 持平——开环随机和速度减半没有可测的代价，E-I2 的提升完全来自跨世界共享。
+  - 300 局中有 1 次搜索退回启发式（非异常、无挂起）；E1 的 `s_computed` 也出现过 1 次，与后端无关，疑为某个时刻没有在场宝可梦的边界情况，待查。
+- **浅层闭环（实现完成，默认关闭，待评测）**：`chance_depth`（默认 0 = S1 的开环）——深度小于它的节点按**可观察结果签名**分子节点（双方在场位置、HP 八分位、状态、倒下数、攻击 / 特攻 / 速度能力等级；HP 用百分比，跨世界一致），例如"对方被击倒"和"没倒"分开。根节点缓存改为按引用应用和撤销（不再复制）。速度不受影响（N=32：21.9 万 vs 21.3 万次 / 秒）；Rust 测试覆盖开环时每个联合行动一个子节点、闭环时分裂成多个。
 
 ## 5. 暂定架构草图（非最终）
 

@@ -8,6 +8,9 @@ Team preview (LLM plan, lead) is the KnowledgePlayer's. Every decision:
      sequentially for search_ms / samples each,
   3. average the root visit shares of our options across the samples, play the best one that
      maps to a legal order.
+ISMCTS backend (``backend="ismcts"``, design D12): ``worlds`` determinizations go to ONE
+information-set tree (rust/alpha_search); the time spent building them is taken out of the
+search budget so that the decision time matches the determinized backend.
 Plan prior (design D11, A1; ``plan_prior`` > 0, env ALPHA_PLAN_PRIOR): the KnowledgePlayer's
 plan terms of each option (goals, assignments, rules, ...; the same trust checks as the
 heuristic) are added to the visit shares as ``plan_prior * plan_total``, and tera options the
@@ -27,6 +30,7 @@ from concurrent.futures import ProcessPoolExecutor
 from multiprocessing import get_context
 from pathlib import Path
 
+import alpha_search
 from poke_env.battle import Pokemon
 
 from alpha_poke.agents import mcts_worker
@@ -75,6 +79,8 @@ class SearchPlayer(KnowledgePlayer):
         plan_prior=None,
         oracle=False,
         move_beta=None,
+        backend=None,
+        worlds=None,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
@@ -98,6 +104,10 @@ class SearchPlayer(KnowledgePlayer):
         self.move_beta = move_beta if move_beta is not None else _env_float("ALPHA_MOVE_BETA", 1.0)
         self._row_choice: dict = {}
         self._pool = None
+        # "determinized" (K independent poke-engine trees) or "ismcts" (one tree, design D12)
+        self.backend = backend or os.environ.get("ALPHA_SEARCH_BACKEND", "determinized")
+        self.worlds = worlds or _env_int("ALPHA_ISMCTS_WORLDS", 32)
+        assert self.backend in ("determinized", "ismcts"), self.backend
 
     def _workers(self):
         if self.threads > 1 and self._pool is None:
@@ -136,12 +146,17 @@ class SearchPlayer(KnowledgePlayer):
         t0 = time.time()
         iters = 0
         oracle = self.oracle if self.use_oracle else None
+        n_states = self.worlds if self.backend == "ismcts" else self.samples
         states = [
             build_state(battle, self.belief, names, rng, oracle, self.oracle_fields, self.move_beta)
-            for _ in range(self.samples)
+            for _ in range(n_states)
         ]
-        pool = self._workers()
-        if pool is not None:  # parallel: each sample gets the full budget on its own core
+        pool = None if self.backend == "ismcts" else self._workers()
+        if self.backend == "ismcts":
+            budget = max(20, self.search_ms - int((time.time() - t0) * 1000))
+            ours, n, _, _ = alpha_search.ismcts([s.to_string() for s in states], budget)
+            results = [([(c, v) for c, v, _ in ours], n)]
+        elif pool is not None:  # parallel: each sample gets the full budget on its own core
             futs = [pool.submit(mcts_worker.run, s.to_string(), self.search_ms) for s in states]
             results = [f.result() for f in futs]
         else:

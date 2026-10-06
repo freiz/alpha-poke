@@ -33,6 +33,9 @@ VARIANTS: dict[str, tuple[bool, bool, bool, dict]] = {
         f"s_c_tm{b}": (True, True, True, {"search": True, "move_beta": float(b)})
         for b in (0, 1, 2, 3)
     },
+    # ISMCTS backend (design D12; computed plan, no LLM): one tree over N belief worlds
+    "s_ismcts": (True, True, True, {"search": True, "backend": "ismcts", "worlds": 32}),
+    "s_ismcts_n1": (True, True, True, {"search": True, "backend": "ismcts", "worlds": 1}),
     # oracle decomposition (computed plan, no LLM): only one kind of true information each
     "s_c_oracle": (True, True, True, {"search": True, "oracle": True}),
     **{
