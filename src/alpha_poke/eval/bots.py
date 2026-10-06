@@ -16,6 +16,9 @@ VARIANTS: dict[str, tuple[bool, bool, bool, dict]] = {
     "k_none": (False, False, False, {}),
     "k_noloopfix": (True, True, True, {"anti_loop": False}),
     "k_llmplan": (True, True, True, {"plan_mode": "llm"}),
+    # search (belief-sampled poke-engine MCTS); budget via ALPHA_SEARCH_MS / _SAMPLES / _THREADS
+    "s_llmplan": (True, True, True, {"plan_mode": "llm", "search": True}),
+    "s_computed": (True, True, True, {"search": True}),
 }
 BASELINES = {
     "heuristic": SimpleHeuristicsPlayer,
@@ -55,7 +58,13 @@ def make_bot(
         belief = BeliefModel.load(heldout_pool=heldout_pool)
         if not full:
             belief = belief.marginal_only()
-        return KnowledgePlayer(
+        extra = dict(extra)
+        cls = KnowledgePlayer
+        if extra.pop("search", False):
+            from alpha_poke.agents.search_player import SearchPlayer
+
+            cls = SearchPlayer
+        return cls(
             belief,
             library=load_library(),
             use_plan=use_plan,

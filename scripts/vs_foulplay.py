@@ -46,4 +46,4 @@ if __name__ == "__main__":
         f"{res['paired_mean']:.1%} ± {res['ci95_paired']:.1%}; failed {res['failed_games']}; "
         f"team mismatches {res['team_mismatches']}; {res['seconds']}s"
     )
-    print(json.dumps({"log": res["log"], "foulplay_logs": res["foulplay_logs"]}))
+    print(json.dumps({"log": res["log"], "opponent_logs": res["opponent_logs"]}))
