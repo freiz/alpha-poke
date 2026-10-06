@@ -125,3 +125,18 @@ def test_last_move_sets_encore_move_or_drops_encore():
     # unknown: drop Encore rather than build a state the engine panics on
     kw, vol = _last_move(_poke_env_mon(encored=True), em)
     assert kw == {} and "encore" not in vol
+
+
+def test_unrevealed_opponent_mon_is_at_full_hp():
+
+    from poke_env.battle import Pokemon
+
+    from alpha_poke.agents.engine_state import SampledSet, _their_mon
+
+    stats = {"hp": 391, "atk": 200, "def": 200, "spa": 300, "spd": 200, "spe": 250}
+    s = SampledSet(["icebeam"], "leftovers", "pressure", "ground", stats)
+    preview = Pokemon(details="Kyurem", gen=9)  # team preview only: HP fraction reads 0
+    assert _their_mon(preview, s).hp == 391
+    seen = Pokemon(details="Kyurem", gen=9)
+    seen.set_hp_status("50/100")
+    assert _their_mon(seen, s).hp == round(0.5 * 391)

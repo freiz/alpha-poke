@@ -233,3 +233,12 @@ def test_lookahead_penalises_a_switch_in_that_is_just_as_threatened():
     threatened = nv(bot, None, kingambit, wake, draco, 0.3)
     answer = nv(bot, None, clefable, wake, draco, 1.0)
     assert threatened < 0 < answer
+
+
+def test_preview_only_mon_is_at_full_hp():
+    from poke_env.battle import Pokemon
+
+    from alpha_poke.agents.damage import MonView
+
+    v = MonView(Pokemon(details="Kyurem", gen=9), {"hp": 391}, {})
+    assert v.hp_fraction == 1.0

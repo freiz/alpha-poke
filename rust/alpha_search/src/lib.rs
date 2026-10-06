@@ -2,6 +2,7 @@
 //! instruction generation, evaluation, apply / reverse. Python passes poke-engine state strings
 //! (`poke_engine.State.to_string()`); see design D12.
 
+pub mod features;
 pub mod ismcts;
 
 use poke_engine::engine::state::MoveChoice;
@@ -9,6 +10,7 @@ use poke_engine::mcts::perform_mcts;
 use poke_engine::state::{Side, State};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
+use pyo3::types::{PyBytes, PyDict};
 use std::time::Duration;
 
 /// Same strings as the poke-engine Python binding: "earthquake", "earthquake-tera",
@@ -122,10 +124,67 @@ fn py_ismcts(
     Ok((ours, res.iterations, res.nodes, res.max_depth))
 }
 
+fn le_bytes<T: Copy, const N: usize>(v: &[T], f: impl Fn(T) -> [u8; N]) -> Vec<u8> {
+    v.iter().flat_map(|&x| f(x)).collect()
+}
+
+/// Features of many state strings (side one's view, design D13) as raw little-endian buffers:
+/// (sparse int32 [B, 12, 10], dense float32 [B, 12, 23], global float32 [B, G], mask uint8
+/// [B, 14]); shapes in `feature_dims()`.
+#[pyfunction]
+#[allow(clippy::type_complexity)]
+fn featurize<'py>(
+    py: Python<'py>,
+    states: Vec<String>,
+) -> (
+    Bound<'py, PyBytes>,
+    Bound<'py, PyBytes>,
+    Bound<'py, PyBytes>,
+    Bound<'py, PyBytes>,
+) {
+    let (sparse, dense, global, mask) = py.detach(|| {
+        let (mut sparse, mut dense, mut global, mut mask) = (vec![], vec![], vec![], vec![]);
+        for s in &states {
+            let f = features::featurize(&State::deserialize(s));
+            sparse.extend(f.sparse);
+            dense.extend(f.dense);
+            global.extend(f.global);
+            mask.extend(f.mask);
+        }
+        (
+            le_bytes(&sparse, i32::to_le_bytes),
+            le_bytes(&dense, f32::to_le_bytes),
+            le_bytes(&global, f32::to_le_bytes),
+            mask,
+        )
+    });
+    (
+        PyBytes::new(py, &sparse),
+        PyBytes::new(py, &dense),
+        PyBytes::new(py, &global),
+        PyBytes::new(py, &mask),
+    )
+}
+
+/// Feature shapes and embedding table sizes.
+#[pyfunction]
+fn feature_dims(py: Python<'_>) -> PyResult<Bound<'_, PyDict>> {
+    let d = PyDict::new(py);
+    d.set_item("entities", features::N_ENTITIES)?;
+    d.set_item("sparse", features::SPARSE)?;
+    d.set_item("dense", features::DENSE)?;
+    d.set_item("global", features::GLOBAL)?;
+    d.set_item("actions", features::N_ACTIONS)?;
+    d.set_item("vocab", features::VOCAB.to_vec())?;
+    Ok(d)
+}
+
 #[pymodule]
 fn alpha_search(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(roundtrip, m)?)?;
     m.add_function(wrap_pyfunction!(reference_mcts, m)?)?;
     m.add_function(wrap_pyfunction!(py_ismcts, m)?)?;
+    m.add_function(wrap_pyfunction!(featurize, m)?)?;
+    m.add_function(wrap_pyfunction!(feature_dims, m)?)?;
     Ok(())
 }

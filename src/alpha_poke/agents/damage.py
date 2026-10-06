@@ -55,6 +55,9 @@ class MonView:
 
     @property
     def hp_fraction(self) -> float:
+        # a mon seen only in team preview reports 0 (no HP known yet): it is at full HP
+        if not self.mon.max_hp and not self.mon.fainted:
+            return 1.0
         return self.mon.current_hp_fraction
 
     def item_p(self, *ids: str) -> float:

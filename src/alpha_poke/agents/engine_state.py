@@ -91,6 +91,28 @@ class SampledSet:
 
 
 @dataclass
+class KnownSet:
+    """What a player knows of its own mon although the battle has not shown it yet (training
+    positions from replays: everything the mon revealed during the whole game)."""
+
+    moves: list[str]  # move ids
+    item: str | None = None  # item id (the original item)
+    ability: str | None = None
+    tera: str | None = None  # tera type, lower case
+
+
+@dataclass
+class SpectatorSide:
+    """Side one rebuilt from a spectator log (design D13): the full team in preview order
+    (poke-env mons, for those not yet on the field fresh preview mons) and per species id the
+    game-wide known parts of its set; the rest is sampled from the belief."""
+
+    team: list
+    known: dict[str, KnownSet]
+    names: tuple[str, ...]  # belief team names of this side
+
+
+@dataclass
 class OracleSet:
     moves: list[str]
     item: str
@@ -142,8 +164,10 @@ def sample_set(
     team_names: tuple[str, ...],
     rng: random.Random,
     move_beta: float = 0.0,
+    known: KnownSet | None = None,
 ):
-    """One plausible full set for an opposing mon, consistent with what it revealed.
+    """One plausible full set for an opposing mon, consistent with what it revealed (and with
+    ``known``: game-wide facts about the mon, used for side one of replay positions).
     Moves: from the sampled (species-level) archetype; with ``move_beta`` > 0 the archetype's
     move weights are multiplied by the team-conditioned move marginal ** move_beta (the archetype
     ignores the opponent's team; the team prior is much sharper: time-split coverage of later
@@ -154,6 +178,12 @@ def sample_set(
     ss = belief.sets.get(species)
     item = mon.item if mon.item not in (None, "unknown_item") else None
     tera = _tera(mon) if mon.is_terastallized else None
+    if known is not None:
+        revealed += [m for m in known.moves if m in _MOVES and m not in revealed]
+        if item is None and known.item:
+            item = known.item
+        if tera is None and known.tera:
+            tera = known.tera
     k = None
     if ss is not None and ss.params:
         names = {to_id(n): n for n in ss.vocab["move"]}
@@ -179,6 +209,8 @@ def sample_set(
     if tera is None:
         tera = draw("tera", dist.tera) or _tera(mon)
     ability = to_id(mon.ability) if mon.ability else None
+    if ability is None and known is not None and known.ability:
+        ability = known.ability
     if ability is None:
         ap = ability_probs(mon)
         ability = (rng.choices(list(ap), weights=list(ap.values()))[0] if ap else None) or "none"
@@ -282,7 +314,14 @@ def _our_mon(mon, available_moves: set[str] | None) -> pe.Pokemon:
 
 def _their_mon(mon, s: SampledSet) -> pe.Pokemon:
     maxhp = s.stats["hp"]
-    hp = 0 if mon.fainted else max(1, round(mon.current_hp_fraction * maxhp))
+    if mon.fainted:
+        hp = 0
+    elif not mon.max_hp:
+        # never on the field (team preview only): poke-env reports an HP fraction of 0; the
+        # mon is at full HP (before 2026-10-06 this gave it 1 HP in every search)
+        hp = maxhp
+    else:
+        hp = max(1, round(mon.current_hp_fraction * maxhp))
     return pe.Pokemon(
         id=mon.species,
         level=mon.level or 100,
@@ -338,16 +377,31 @@ def build_state(
     oracle: dict[str, OracleSet] | None = None,
     oracle_fields: frozenset[str] | None = None,
     move_beta: float = 0.0,
+    spectator: SpectatorSide | None = None,
 ) -> pe.State:
     """One determinization of the current battle (side_one = us). With ``oracle`` (the
     opponent's true sets, local evaluation only) nothing is sampled; with ``oracle_fields`` too
     (subset of item / moves / tera / ability / spread) only those fields are true, the rest is
-    sampled as usual (decomposing the oracle advantage, design D11 B)."""
+    sampled as usual (decomposing the oracle advantage, design D11 B). With ``spectator`` side
+    one comes from a spectator log (no request): built like the opponent, from the known parts
+    of each set plus belief samples (training positions, design D13)."""
     turn = battle.turn
-    ours = list(battle.team.values())
     active = battle.active_pokemon
-    avail = {m.id for m in battle.available_moves} if battle.available_moves else None
-    our_mons = [_our_mon(m, avail if m is active else None) for m in ours]
+    if spectator is None:
+        ours = list(battle.team.values())
+        avail = {m.id for m in battle.available_moves} if battle.available_moves else None
+        our_mons = [_our_mon(m, avail if m is active else None) for m in ours]
+    else:
+        ours, avail = spectator.team, None
+        our_mons = []
+        for m in ours:
+            s = sample_set(
+                belief, m, spectator.names, rng, move_beta, spectator.known.get(to_id(m.species))
+            )
+            # known moves come first in sample_set; in a real battle our moves are in moveset
+            # order, unrelated to use: shuffle so the slot does not leak which move gets used
+            rng.shuffle(s.moves)
+            our_mons.append(_their_mon(m, s))
     our_idx = next((i for i, m in enumerate(ours) if m is active), 0)
     if battle.force_switch or (active is not None and active.fainted):
         our_idx = next((i for i, m in enumerate(ours) if m.active), our_idx)
@@ -388,8 +442,14 @@ def build_state(
         side_conditions=_side_conditions(battle.side_conditions, turn),
         volatile_statuses=our_vol,
         substitute_health=(
-            int((active.max_hp or 4) // 4)
-            if active is not None and Effect.SUBSTITUTE in active.effects
+            (
+                int((active.max_hp or 4) // 4)
+                if spectator is None
+                else our_mons[our_active_idx].maxhp // 4
+            )
+            if active is not None
+            and Effect.SUBSTITUTE in active.effects
+            and our_active_idx is not None
             else 0
         ),
         force_switch=bool(battle.force_switch),

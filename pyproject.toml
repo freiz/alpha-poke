@@ -26,6 +26,10 @@ dev = [
     "pytest>=9.1.1",
     "ruff>=0.16.10",
 ]
+train = [
+    "safetensors>=0.8.0",
+    "torch>=2.14.1",
+]
 
 [tool.ruff]
 line-length = 100
