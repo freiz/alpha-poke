@@ -36,6 +36,12 @@ VARIANTS: dict[str, tuple[bool, bool, bool, dict]] = {
     # ISMCTS backend (design D12; computed plan, no LLM): one tree over N belief worlds
     "s_ismcts": (True, True, True, {"search": True, "backend": "ismcts", "worlds": 32}),
     "s_ismcts_n1": (True, True, True, {"search": True, "backend": "ismcts", "worlds": 1}),
+    "s_ismcts_cl2": (
+        True,
+        True,
+        True,
+        {"search": True, "backend": "ismcts", "worlds": 32, "chance_depth": 2},
+    ),  # fmt: skip
     # oracle decomposition (computed plan, no LLM): only one kind of true information each
     "s_c_oracle": (True, True, True, {"search": True, "oracle": True}),
     **{

@@ -81,6 +81,7 @@ class SearchPlayer(KnowledgePlayer):
         move_beta=None,
         backend=None,
         worlds=None,
+        chance_depth=None,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
@@ -107,6 +108,10 @@ class SearchPlayer(KnowledgePlayer):
         # "determinized" (K independent poke-engine trees) or "ismcts" (one tree, design D12)
         self.backend = backend or os.environ.get("ALPHA_SEARCH_BACKEND", "determinized")
         self.worlds = worlds or _env_int("ALPHA_ISMCTS_WORLDS", 32)
+        # ISMCTS: split shallow children by the observable outcome below this depth (0 = open-loop)
+        self.chance_depth = (
+            chance_depth if chance_depth is not None else _env_int("ALPHA_ISMCTS_CHANCE_DEPTH", 0)
+        )
         assert self.backend in ("determinized", "ismcts"), self.backend
 
     def _workers(self):
@@ -154,7 +159,9 @@ class SearchPlayer(KnowledgePlayer):
         pool = None if self.backend == "ismcts" else self._workers()
         if self.backend == "ismcts":
             budget = max(20, self.search_ms - int((time.time() - t0) * 1000))
-            ours, n, _, _ = alpha_search.ismcts([s.to_string() for s in states], budget)
+            ours, n, _, _ = alpha_search.ismcts(
+                [s.to_string() for s in states], budget, chance_depth=self.chance_depth
+            )
             results = [([(c, v) for c, v, _ in ours], n)]
         elif pool is not None:  # parallel: each sample gets the full budget on its own core
             futs = [pool.submit(mcts_worker.run, s.to_string(), self.search_ms) for s in states]
