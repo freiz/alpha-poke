@@ -8,6 +8,9 @@ build/
 .pytest_cache/
 .ruff_cache/
 
+# Rust build output
+/rust/*/target/
+
 # Local Showdown server
 vendor/
 

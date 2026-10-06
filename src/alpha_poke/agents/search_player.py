@@ -93,8 +93,9 @@ class SearchPlayer(KnowledgePlayer):
         self.samples = samples or _env_int("ALPHA_SEARCH_SAMPLES", 4)
         self.threads = threads or _env_int("ALPHA_SEARCH_THREADS", 1)  # = worker processes
         self.search_fallbacks = 0
-        # sampled moves x team-conditioned move marginal ** move_beta (0 = archetype only)
-        self.move_beta = move_beta if move_beta is not None else _env_float("ALPHA_MOVE_BETA", 0.0)
+        # sampled moves x team-conditioned move marginal ** move_beta (0 = archetype only; default
+        # 1 since 2026-10-06: coverage of later revealed moves 61.7% -> 77.3%, design D11)
+        self.move_beta = move_beta if move_beta is not None else _env_float("ALPHA_MOVE_BETA", 1.0)
         self._row_choice: dict = {}
         self._pool = None
 

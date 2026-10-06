@@ -1,0 +1,22 @@
+[package]
+name = "alpha_search"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Search for alpha-poke (ISMCTS over belief-sampled worlds) on top of poke-engine"
+
+[lib]
+name = "alpha_search"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# MIT; must be built exactly like the Python `poke-engine` package (pyproject.toml:
+# --no-default-features --features terastallization, which implies gen9) so that state strings
+# from poke_engine.State.to_string() parse identically here.
+poke-engine = { version = "=0.0.48", default-features = false, features = ["terastallization"] }
+# extension-module is enabled by maturin only (pyproject.toml), so `cargo test` can link
+pyo3 = "0.29"
+rand = "0.9"
+
+[profile.release]
+debug = 1

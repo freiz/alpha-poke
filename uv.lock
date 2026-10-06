@@ -15,6 +15,7 @@ name = "alpha-poke"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "alpha-search" },
     { name = "pandas" },
     { name = "poke-engine" },
     { name = "poke-env" },
@@ -29,6 +30,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "alpha-search", directory = "rust/alpha_search" },
     { name = "pandas", specifier = ">=3.0.6" },
     { name = "poke-engine", specifier = "==0.0.48" },
     { name = "poke-env", specifier = ">=0.16.1" },
@@ -40,6 +42,11 @@ dev = [
     { name = "pytest", specifier = ">=9.1.1" },
     { name = "ruff", specifier = ">=0.16.10" },
 ]
+
+[[package]]
+name = "alpha-search"
+version = "0.1.0"
+source = { directory = "rust/alpha_search" }
 
 [[package]]
 name = "certifi"

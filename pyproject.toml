@@ -7,6 +7,7 @@ authors = [
 ]
 requires-python = ">=3.12"
 dependencies = [
+    "alpha-search",
     "pandas>=3.0.6",
     "poke-engine==0.0.48",
     "poke-env>=0.16.1",
@@ -39,3 +40,7 @@ testpaths = ["tests"]
 [tool.uv.config-settings-package]
 # poke-engine (MIT, Rust): build the Gen 9 engine with terastallization
 poke-engine = { "build-args" = "--features poke-engine/terastallization --no-default-features" }
+
+[tool.uv.sources]
+# our Rust search crate (design D12), built with maturin; poke-engine comes from crates.io
+alpha-search = { path = "rust/alpha_search" }

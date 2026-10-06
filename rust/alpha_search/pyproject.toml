@@ -1,0 +1,22 @@
+[build-system]
+requires = ["maturin>=1.9,<2"]
+build-backend = "maturin"
+
+[project]
+name = "alpha-search"
+version = "0.1.0"
+description = "alpha-poke search (Rust, on top of poke-engine)"
+requires-python = ">=3.12"
+
+[tool.maturin]
+module-name = "alpha_search"
+features = ["pyo3/extension-module"]
+
+[tool.uv]
+# rebuild the extension whenever the Rust sources change
+cache-keys = [
+    { file = "pyproject.toml" },
+    { file = "Cargo.toml" },
+    { file = "Cargo.lock" },
+    { file = "src/**/*.rs" },
+]

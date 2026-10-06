@@ -27,9 +27,11 @@ VARIANTS: dict[str, tuple[bool, bool, bool, dict]] = {
     "s_oracle": (True, True, True, {"plan_mode": "llm", "search": True, "oracle": True}),
     # samples per decision at a fixed total budget (B1; computed plan, no LLM)
     **{f"s_c_k{k}": (True, True, True, {"search": True, "samples": k}) for k in (1, 2, 8, 16)},
-    # sampled moves weighted by the team-conditioned move prior ** beta (computed plan, no LLM)
+    # sampled moves weighted by the team-conditioned move prior ** beta (computed plan, no LLM);
+    # the search default is beta 1 (= s_c_tm1); s_c_tm0 = the archetype-only sampler before it
     **{
-        f"s_c_tm{b}": (True, True, True, {"search": True, "move_beta": float(b)}) for b in (1, 2, 3)
+        f"s_c_tm{b}": (True, True, True, {"search": True, "move_beta": float(b)})
+        for b in (0, 1, 2, 3)
     },
     # oracle decomposition (computed plan, no LLM): only one kind of true information each
     "s_c_oracle": (True, True, True, {"search": True, "oracle": True}),

@@ -348,6 +348,47 @@ LLM 每局只调用一次（预览时），产出的是"这一局怎么赢"的�
 5. 都有正结果，再决定 fork 引擎做 A2 / B2。
 - **评测中发现的 bug（已修）**：E1、E2 各有 2 局挂起直到超时。原因：对方或我方被 Encore 时，`build_state` 加了 `encore` 状态但没设 `last_used_move`，poke-engine 直接 panic（"Encore should not be active when last used move is not a move"）；pyo3 的 `PanicException` 继承 `BaseException`，`except Exception` 接不住，bot 不出招，本地服务器无计时器，整局挂起。修复：按 poke-env 的 `is_last_used` 设置双方的 `last_used_move`（被 Encore 且请求只给一个招式时用它；无法确定时去掉 Encore）；所有引擎调用经 `mcts_worker.search` 把 panic 转成 `RuntimeError`，搜索出错退回启发式。**官方服务器对战也会被这个 bug 卡住**（对方用 Encore 即触发），已一并修复。待办：评测 lane 加单局超时，避免任何挂起拖住整个评测。
 
+### D12. ISMCTS 设计方案（2026-10-06）
+
+**动机**：B1 实验表明，确定化（K 份世界各自搜索）里"世界多样性"和"每棵树的深度"争同一份预算（K = 4–8 最优，K=1 和 K=16 都更差）；oracle 分解表明差距几乎全在对方招式的不确定性。ISMCTS 用**一棵树**、每次迭代换一个世界，多样性和深度同时拿到。
+
+**为什么用 Rust、不用 Python**（2026-10-06 实测，真实 6v6 局面）：poke-engine 自带 MCTS 约 **47 万次迭代 / 秒**（每次含多回合展开和评估）；Python 端只做"从根节点生成并应用一回合再撤销"（无树、无评估、无选项生成）也只有约 **1.4 万次 / 秒**——Python 绑定每次调用都把整个局面从 Python 对象转换成 Rust 结构体。Python 版完整 ISMCTS 预计慢约 100 倍，500 ms 只有几千次迭代，结论不能迁移到实战预算。
+
+**架构：自有 Rust crate，把 poke-engine 当库用（不 fork、不抽代码）**。poke-engine 本身就是 Rust 库 crate（`[lib] name = "poke_engine"`），公开模块 `state`、`engine`（`generate_instructions`、`evaluate`）、`instruction`、`mcts`。它自己的 MCTS（`src/mcts.rs`，354 行）只用了五个公开接口：`state.get_all_options()`、`generate_instructions_from_move_pair(state, s1, s2, branch_on_damage)`、`evaluate(state)`、`state.apply_instructions / reverse_instructions`、`state.battle_is_over()`。我们的搜索用同样的接口。
+- 位置：`rust/alpha_search/`（crate 名 `alpha_search`），依赖 crates.io 上的 `poke-engine = "=0.0.48"`（features：`gen9`、`terastallization`，与 Python 包的编译选项一致），`pyo3` + `maturin` 构建为 Python 扩展，由 uv 作为本地包安装。
+- 接口：Python 端照旧用信念模型（β=1）采样 N 个世界，传入**局面字符串**列表（`State.to_string()`，同版本同编译选项，可无损互通；加往返测试）和时间预算；Rust 返回我方根节点各选项的访问数 / 平均值（与 `monte_carlo_tree_search` 的结果同形，`SearchPlayer` 只需换一个后端）。
+- 搜索期间释放 GIL（`py.allow_threads`）：之后可以用线程代替进程池做并行，省去序列化和进程开销。
+- 许可：poke-engine 为 MIT，作为依赖使用；Foul Play（GPL）仍只作为外部进程对手。
+
+**算法（第一版：SO-ISMCTS，适配同时出招）**
+1. 根节点：N 个世界（N = 32–64，从后验采样，等权），每个世界记下自己的根评估值。
+2. 每次迭代：轮流（或按权重抽）选一个世界 w，在 w 的根局面上从树根往下走。
+3. **节点按"可观察的行动历史"索引**：子节点的键是（我方行动标签，对方行动标签）。我方标签在所有世界相同；对方标签用招式 id / 换上的物种，跨世界一致（不同世界里对方的招式集合不同，所以标签的"可用性"随世界变化）。
+4. **选择**：沿用 poke-engine 的解耦 UCB（双方各自按 UCB1 选，近似同时出招的混合策略），但改为**可用性 UCB**（Cowling 等 2012）：每个行动单独记录"被访问时可用的次数"，UCB 的探索项用 ln(可用次数) 而不是父节点访问数——否则只在少数世界里存在的招式会被系统性地低估或高估。双方都用（开环随机后，我方的合法选项也可能变化，例如被击倒后强制换人）。
+5. **随机性：先做开环（open-loop）**——树里不存随机结果节点，每次迭代经过一个联合行动时，在当前世界里按概率抽一个结果并应用（不同世界的结果集合本来就不同，无法共享随机节点）。poke-engine 自己是闭环（按结果分支，伤害分支只在前两层）；开环可能损失"打空 / 暴击之后怎么应对"的区分，若 E-I1 显示有损失，第二步改为按**可观察结果签名**（双方当前宝可梦的血量区间、是否倒下、状态变化）分支。
+6. 叶节点：`sigmoid(evaluate(state) − 该世界的根评估)`，与 poke-engine 相同；终局用胜负。
+7. 回传：沿路径更新双方行动的统计，撤销指令回到世界 w 的根局面（每个世界保留一份局面，原地 apply / reverse，不复制）。
+8. 决策：我方根节点访问数最多的行动（保留访问分布，之后可按分布抽样做混合策略）。
+- 节点存储：用 `Vec<Node>` + 下标代替 poke-engine 的裸指针，子节点表 `HashMap<(节点, 我方标签, 对方标签), 下标>`；目标速度不低于 poke-engine MCTS 的 70%。
+
+**已知局限与后续**：
+- SO-ISMCTS 让双方共用同一份节点统计，对方的选择也是"跨世界平均"的——相当于对方不知道自己的配置（反向的策略融合）。正解是 **MO-ISMCTS**（每个玩家一棵自己信息集上的树），列为第二阶段；也可以先折中：对方在每个世界里按该世界的选项选，但统计按标签共享。
+- 树内信念更新（B3）：模拟中出现的伤害 / 先后手可以给世界重新加权；在 ISMCTS 里可以做成"世界权重 × 该路径上观察的似然"。
+- 这个 crate 也是方向 A3（策略网络给 PUCT 先验）和价值网络接入的位置：节点选择处留出先验接口，叶节点评估留出替换接口。
+
+**验证与实验**
+- 正确性：N=1 时 ISMCTS 应与 poke-engine MCTS 实力相当（E-I1，`s_ismcts_n1` vs `s_c_k1`，同 500 ms，300 局）；这同时测出"开环 vs 闭环"的代价。局面字符串往返测试；对固定局面比较两者根节点访问分布的相关性。
+- 速度：每秒迭代数 vs poke-engine MCTS。
+- E-I2：ISMCTS（N=32）vs 当前确定化（K=4，`s_computed`），同 500 ms，heldout 信念，300 局。
+- E-I3：与 oracle 的差距缩小了多少（ISMCTS vs `s_c_oracle`）。
+- E-I4：对 Foul Play 10 ms / 1000 ms。
+
+**分阶段**：S0 crate 骨架、uv / maturin 构建、局面字符串互通、调用 poke-engine 自带 MCTS 的冒烟测试（约半天）→ S1 SO-ISMCTS（开环 + 可用性 UCB）+ 单元测试 + 速度测量（1–2 天）→ S2 实验 E-I1–E-I3 → S3 视结果：结果签名分支、MO-ISMCTS、树内信念更新、先验 / 价值接口。
+
+**已确认（2026-10-06）**：自有 crate + poke-engine 作依赖；第一版开环随机、SO-ISMCTS；N 先取 32；maturin 构建、uv 本地包安装。
+- **仓库管理**：crate 在本仓库 `rust/alpha_search/`，正常提交（与 Python 端接口一起演进，不用 sub-module）；poke-engine 从 crates.io 按 `=0.0.48` 固定版本取，`Cargo.lock` 入库；`/rust/*/target/` 忽略。根 `pyproject.toml` 用 `[tool.uv.sources]` 指向该目录，crate 的 `pyproject.toml` 设 `cache-keys`（`src/**/*.rs`、`Cargo.toml`、`Cargo.lock`），改 Rust 代码后 `uv run` 自动重编。将来若要改 poke-engine，用 cargo 的 git 依赖或 `[patch.crates-io]`，仍不用 sub-module。
+- ✅ **S0（2026-10-06）**：`alpha_search.roundtrip`（局面字符串解析再序列化）与 `alpha_search.reference_mcts`（在本 crate 内调用 poke-engine 自带 MCTS，搜索期间释放 GIL）。真实 6v6 局面字符串往返完全一致（`tests/test_alpha_search.py`，夹具 `tests/fixtures/engine_state_6v6.txt`）；速度 51.6 万次迭代 / 秒（Python 包 48.5 万），根节点访问分布一致。构建 10 秒（首次），之后增量约 4 秒。
+
 ## 5. 暂定架构草图（非最终）
 
 ```
