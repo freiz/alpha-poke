@@ -19,6 +19,12 @@ VARIANTS: dict[str, tuple[bool, bool, bool, dict]] = {
     # search (belief-sampled poke-engine MCTS); budget via ALPHA_SEARCH_MS / _SAMPLES / _THREADS
     "s_llmplan": (True, True, True, {"plan_mode": "llm", "search": True}),
     "s_computed": (True, True, True, {"search": True}),
+    # + root plan prior (design D11, A1): visit share + plan_prior * plan bonus
+    "s_llmplan_prior": (True, True, True, {"plan_mode": "llm", "search": True, "plan_prior": 0.3}),
+    "s_computed_prior": (True, True, True, {"search": True, "plan_prior": 0.3}),
+    # oracle upper bound (D11 B): the opponent's TRUE sets instead of belief samples (local
+    # evaluation only: the evaluator passes the opponent's team with set_oracle)
+    "s_oracle": (True, True, True, {"plan_mode": "llm", "search": True, "oracle": True}),
 }
 BASELINES = {
     "heuristic": SimpleHeuristicsPlayer,

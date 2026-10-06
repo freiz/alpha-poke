@@ -19,7 +19,7 @@ from poke_env.battle.move import Move
 from poke_env.data import GenData
 
 from alpha_poke.agents.belief_state import BeliefModel, _preview_name, ability_probs
-from alpha_poke.agents.damage import calc_stats
+from alpha_poke.agents.damage import Spread, calc_stats
 from alpha_poke.analysis.roles import to_id
 
 GEN = GenData.from_gen(9)
@@ -88,6 +88,52 @@ class SampledSet:
     ability: str
     tera: str
     stats: dict[str, int]
+
+
+@dataclass
+class OracleSet:
+    moves: list[str]
+    item: str
+    ability: str
+    tera: str
+    spread: Spread
+
+
+def oracle_sets(team_text: str) -> dict[str, OracleSet]:
+    """species id -> the opponent's TRUE set, from its Showdown export (local evaluation only:
+    the oracle upper bound of design D11, direction B)."""
+    from poke_env.teambuilder import Teambuilder
+
+    out = {}
+    for m in Teambuilder.parse_showdown_team(team_text + "\n\n"):
+        if not (m.species or m.nickname):
+            continue
+        evs = tuple(int(x or 0) for x in (m.evs or [0] * 6))  # no EVs line = all 0
+        out[to_id(m.species or m.nickname)] = OracleSet(
+            moves=[to_id(x) for x in m.moves],
+            item=to_id(m.item) if m.item else "none",
+            ability=to_id(m.ability) if m.ability else "none",
+            tera=(m.tera_type or "").lower() or "typeless",
+            spread=Spread((m.nature or "serious").lower(), evs),
+        )
+    return out
+
+
+def _oracle_set(mon, oracle: dict[str, OracleSet]) -> "SampledSet | None":
+    sid = to_id(mon.species)
+    o = oracle.get(sid) or next(
+        (v for k, v in oracle.items() if sid.startswith(k) or k.startswith(sid)), None
+    )
+    if o is None:
+        return None
+    item = mon.item if mon.item not in (None, "unknown_item") else o.item
+    return SampledSet(
+        moves=o.moves or ["tackle"],
+        item=item or "none",  # "" = known to have no item (knocked off / consumed)
+        ability=to_id(mon.ability) if mon.ability else o.ability,
+        tera=_tera(mon) if mon.is_terastallized else o.tera,
+        stats=calc_stats(mon.base_stats, o.spread, level=mon.level or 100),
+    )
 
 
 def sample_set(belief: BeliefModel, mon, team_names: tuple[str, ...], rng: random.Random):
@@ -248,14 +294,39 @@ def _their_mon(mon, s: SampledSet) -> pe.Pokemon:
     )
 
 
+def _last_move(mon, engine_mon, avail: set[str] | None = None) -> tuple[dict, set[str]]:
+    """(``last_used_move`` Side kwarg, volatiles) for an active mon. The engine panics on an
+    Encore without a last used move, so Encore is dropped when we cannot tell the move."""
+    vol = _volatiles(mon) if mon is not None else set()
+    if mon is None or engine_mon is None:
+        vol.discard("encore")
+        return {}, vol
+    ids = [m.id for m in engine_mon.moves]
+    idx = next(
+        (ids.index(mid) for mid, mv in mon.moves.items() if mv.is_last_used and mid in ids), None
+    )
+    if idx is None and "encore" in vol and avail is not None and len(avail) == 1:
+        (only,) = avail  # we are encored: the request offers only the encored move
+        idx = ids.index(only) if only in ids else None
+    if idx is None:
+        vol.discard("encore")
+        return {}, vol
+    return {"last_used_move": f"move:{idx}"}, vol
+
+
 def _pad(mons: list) -> list:
     return (mons + [pe.Pokemon.create_fainted() for _ in range(6)])[:6]
 
 
 def build_state(
-    battle, belief: BeliefModel, team_names: tuple[str, ...], rng: random.Random
+    battle,
+    belief: BeliefModel,
+    team_names: tuple[str, ...],
+    rng: random.Random,
+    oracle: dict[str, OracleSet] | None = None,
 ) -> pe.State:
-    """One determinization of the current battle (side_one = us)."""
+    """One determinization of the current battle (side_one = us). With ``oracle`` (the
+    opponent's true sets, local evaluation only) nothing is sampled."""
     turn = battle.turn
     ours = list(battle.team.values())
     active = battle.active_pokemon
@@ -273,32 +344,45 @@ def build_state(
             if not any(to_id(t.species).startswith(base) for t in theirs):
                 theirs.append(m)
     opp_active = battle.opponent_active_pokemon
-    their_mons = [_their_mon(m, sample_set(belief, m, team_names, rng)) for m in theirs]
+    their_mons = [
+        _their_mon(
+            m,
+            (oracle and _oracle_set(m, oracle)) or sample_set(belief, m, team_names, rng),
+        )
+        for m in theirs
+    ]
     their_idx = next((i for i, m in enumerate(theirs) if m is opp_active), 0)
+    our_active_idx = next((i for i, m in enumerate(ours) if m is active), None)
+    our_last, our_vol = _last_move(
+        active, our_mons[our_active_idx] if our_active_idx is not None else None, avail
+    )
+    their_last, their_vol = _last_move(opp_active, their_mons[their_idx] if their_mons else None)
 
     side_one = pe.Side(
         pokemon=_pad(our_mons),
         active_index=pe.PokemonIndex(str(our_idx)),
         side_conditions=_side_conditions(battle.side_conditions, turn),
-        volatile_statuses=_volatiles(active) if active is not None else set(),
+        volatile_statuses=our_vol,
         substitute_health=(
             int((active.max_hp or 4) // 4)
             if active is not None and Effect.SUBSTITUTE in active.effects
             else 0
         ),
         force_switch=bool(battle.force_switch),
+        **our_last,
         **(_boosts(active) if active is not None else {}),
     )
     side_two = pe.Side(
         pokemon=_pad(their_mons),
         active_index=pe.PokemonIndex(str(their_idx)),
         side_conditions=_side_conditions(battle.opponent_side_conditions, turn),
-        volatile_statuses=_volatiles(opp_active) if opp_active is not None else set(),
+        volatile_statuses=their_vol,
         substitute_health=(
             their_mons[their_idx].maxhp // 4
             if opp_active is not None and Effect.SUBSTITUTE in opp_active.effects
             else 0
         ),
+        **their_last,
         **(_boosts(opp_active) if opp_active is not None else {}),
     )
     weather, wturns = "none", 0
@@ -342,4 +426,4 @@ def engine_move_to_order(player, battle, choice: str):
     return None
 
 
-__all__ = ["build_state", "sample_set", "engine_move_to_order", "Move"]
+__all__ = ["build_state", "sample_set", "oracle_sets", "engine_move_to_order", "Move"]

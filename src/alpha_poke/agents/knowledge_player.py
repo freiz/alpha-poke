@@ -671,10 +671,28 @@ class KnowledgePlayer(Player):
             return SimpleHeuristicsPlayer.choose_singles_move(battle)[0]
 
     def _choose(self, battle: Battle):
+        scored = self._score_options(battle)
+        if scored is None:
+            return self.choose_random_move(battle)
+        rows, mem, incoming, state = scored
+        best = max(rows, key=lambda r: r["total"])
+        choice = best["choice"]
+        mem.record(battle, choice)
+        if self.trace_dir:
+            self._trace(battle, mem, rows, best, incoming, state)
+        if isinstance(choice, Pokemon):
+            return self.create_order(choice)
+        move, tera = choice
+        return self.create_order(move, terastallize=tera)
+
+    def _score_options(self, battle: Battle):
+        """Score every legal option: (rows, memory, incoming estimate, plan state), or None
+        when there is nothing to score. Each row: choice, tactical / stay / future / loop
+        terms, plan terms and the total. Updates the battle memory and the plan state."""
         sync_tera_types(battle)
         me, opp = battle.active_pokemon, battle.opponent_active_pokemon
         if me is None or opp is None:
-            return self.choose_random_move(battle)
+            return None
         plan = self.plans.get(battle.battle_tag)
         if plan is None:
             plan = self.plans[battle.battle_tag] = self.make_plan(battle)
@@ -714,7 +732,7 @@ class KnowledgePlayer(Player):
                 (self._score_switch(battle, plan, s, ov, ov_moves, opp_move, forced), s)
             )
         if not tactical:
-            return self.choose_random_move(battle)
+            return None
         stay_future = 0.0
         if battle.available_moves and not forced:
             hp_next = me.current_hp_fraction - incoming
@@ -778,18 +796,11 @@ class KnowledgePlayer(Player):
                     "future": future,
                     "plan": terms,
                     "loop": loop,
+                    "plan_total": plan_total,
                     "total": v - stay + future + plan_total + loop,
                 }
             )
-        best = max(rows, key=lambda r: r["total"])
-        choice = best["choice"]
-        mem.record(battle, choice)
-        if self.trace_dir:
-            self._trace(battle, mem, rows, best, incoming, state)
-        if isinstance(choice, Pokemon):
-            return self.create_order(choice)
-        move, tera = choice
-        return self.create_order(move, terastallize=tera)
+        return (rows, mem, incoming, state) if rows else None
 
     # ---- anti-loop --------------------------------------------------------------------------
     def _loop_adjust(self, battle, mem: "BattleMemory", choice, value: float) -> float:

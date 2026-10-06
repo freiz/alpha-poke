@@ -102,6 +102,8 @@ async def _lane(bot, matches, port, pool_dir, lane, log_path, opp, extras, run_d
         await asyncio.sleep(6 if opp["kind"] == "foulplay" else 20)
         for m in matches:
             me.update_team(teams[m.team_a])
+            if getattr(me, "use_oracle", False):
+                me.set_oracle((Path(pool_dir) / f"{m.team_b}.txt").read_text())
             before = set(me.battles)
             if we_challenge:
                 await me.send_challenges(opp_name, n_challenges=1)

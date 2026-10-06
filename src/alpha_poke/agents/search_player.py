@@ -6,11 +6,17 @@ Team preview (LLM plan, lead) is the KnowledgePlayer's. Every decision:
      parallel single-threaded processes for the full search_ms each (poke-engine's mcts holds
      the GIL; one multi-threaded shared-tree search gets ~40% of the iterations), otherwise
      sequentially for search_ms / samples each,
-  3. average the root visit shares of our options across the samples (+ an optional small plan
-     prior), play the best one that maps to a legal order.
+  3. average the root visit shares of our options across the samples, play the best one that
+     maps to a legal order.
+Plan prior (design D11, A1; ``plan_prior`` > 0, env ALPHA_PLAN_PRIOR): the KnowledgePlayer's
+plan terms of each option (goals, assignments, rules, ...; the same trust checks as the
+heuristic) are added to the visit shares as ``plan_prior * plan_total``, and tera options the
+plan's tera directive forbids are dropped. It only moves the choice between close options.
+Without it the plan only picks the lead.
 Any failure falls back to the KnowledgePlayer's heuristic decision (counted in ``fallbacks``).
 """
 
+import asyncio
 import json
 import logging
 import os
@@ -21,10 +27,10 @@ from concurrent.futures import ProcessPoolExecutor
 from multiprocessing import get_context
 from pathlib import Path
 
-import poke_engine as pe
+from poke_env.battle import Pokemon
 
 from alpha_poke.agents import mcts_worker
-from alpha_poke.agents.engine_state import build_state, engine_move_to_order
+from alpha_poke.agents.engine_state import build_state, engine_move_to_order, oracle_sets
 from alpha_poke.agents.knowledge_player import KnowledgePlayer, sync_tera_types
 
 log = logging.getLogger("alpha_poke.search")
@@ -37,19 +43,60 @@ def _env_int(name: str, default: int) -> int:
         return default
 
 
+def _env_float(name: str, default: float) -> float:
+    try:
+        return float(os.environ.get(name, default))
+    except ValueError:
+        return default
+
+
+def _option_key(choice) -> tuple:
+    """Same key for a KnowledgePlayer row choice ((move, tera) or a Pokemon) and an order."""
+    if isinstance(choice, tuple):
+        return ("move", choice[0].id, bool(choice[1]))
+    return ("switch", choice.species)
+
+
+def _order_key(order) -> tuple:
+    o = order.order
+    if isinstance(o, Pokemon):
+        return ("switch", o.species)
+    return ("move", o.id, bool(order.terastallize))
+
+
 class SearchPlayer(KnowledgePlayer):
-    def __init__(self, *args, search_ms=None, samples=None, threads=None, **kwargs):
+    def __init__(
+        self,
+        *args,
+        search_ms=None,
+        samples=None,
+        threads=None,
+        plan_prior=None,
+        oracle=False,
+        **kwargs,
+    ):
         super().__init__(*args, **kwargs)
+        # oracle (local evaluation only, design D11 B): the evaluator hands us the opponent's
+        # true team with set_oracle() before every game; the search then samples nothing
+        self.use_oracle = oracle
+        self.oracle = None
+        self.plan_prior = (
+            plan_prior if plan_prior is not None else _env_float("ALPHA_PLAN_PRIOR", 0.0)
+        )
         self.search_ms = search_ms or _env_int("ALPHA_SEARCH_MS", 1000)
         self.samples = samples or _env_int("ALPHA_SEARCH_SAMPLES", 4)
         self.threads = threads or _env_int("ALPHA_SEARCH_THREADS", 1)  # = worker processes
         self.search_fallbacks = 0
+        self._row_choice: dict = {}
         self._pool = None
 
     def _workers(self):
         if self.threads > 1 and self._pool is None:
             self._pool = ProcessPoolExecutor(self.threads, mp_context=get_context("spawn"))
         return self._pool
+
+    def set_oracle(self, team_text: str) -> None:
+        self.oracle = oracle_sets(team_text)
 
     def close(self) -> None:
         """Stop the worker processes (a live pool keeps its parent from exiting)."""
@@ -62,7 +109,10 @@ class SearchPlayer(KnowledgePlayer):
             order = self._search(battle)
             if order is not None:
                 return order
-        except Exception:  # noqa: BLE001 - never lose a game to a search bug
+        except (KeyboardInterrupt, SystemExit, asyncio.CancelledError):
+            raise
+        except BaseException:  # noqa: BLE001 - never lose (or hang) a game to a search bug;
+            # BaseException: an engine panic (pyo3 PanicException) is not an Exception
             log.exception("search failed; heuristic decision")
         self.search_fallbacks += 1
         return super().choose_move(battle)
@@ -76,37 +126,60 @@ class SearchPlayer(KnowledgePlayer):
         share: dict[str, float] = defaultdict(float)
         t0 = time.time()
         iters = 0
-        states = [build_state(battle, self.belief, names, rng) for _ in range(self.samples)]
+        oracle = self.oracle if self.use_oracle else None
+        states = [build_state(battle, self.belief, names, rng, oracle) for _ in range(self.samples)]
         pool = self._workers()
         if pool is not None:  # parallel: each sample gets the full budget on its own core
             futs = [pool.submit(mcts_worker.run, s.to_string(), self.search_ms) for s in states]
             results = [f.result() for f in futs]
         else:
             per = max(20, self.search_ms // self.samples)
-            results = []
-            for s in states:
-                res = pe.monte_carlo_tree_search(s, per, 0, 1)
-                results.append(
-                    ([(x.move_choice, x.visits) for x in res.side_one], res.total_visits)
-                )
+            results = [mcts_worker.search(s, per) for s in states]
         for visits, n in results:
             iters += n
             total = sum(v for _, v in visits) or 1
             for choice, v in visits:
                 share[choice] += v / total / len(results)
         ranked = sorted(share.items(), key=lambda kv: -kv[1])
-        order = None
-        chosen = None
-        for choice, _ in ranked:
-            order = engine_move_to_order(self, battle, choice)
-            if order is not None:
-                chosen = choice
-                break
+        orders = [(c, s, engine_move_to_order(self, battle, c)) for c, s in ranked]
+        orders = [(c, s, o) for c, s, o in orders if o is not None]
+        if not orders:
+            return None
+        prior = self._plan_prior(battle) if self.plan_prior > 0 else None
+        scored = []
+        for c, s, o in orders:
+            p = 0.0
+            if prior is not None:
+                p = prior.get(_order_key(o))
+                if p is None:  # an option the plan rules out (tera against its directive)
+                    continue
+            scored.append((s + self.plan_prior * p, c, s, p, o))
+        if not scored:  # the plan forbids everything the search found: trust the search
+            scored = [(s, c, s, 0.0, o) for c, s, o in orders]
+        best = max(scored, key=lambda x: x[0])
+        if prior is not None and (rc := self._row_choice.get(_order_key(best[4]))) is not None:
+            self.memory[battle.battle_tag].record(battle, rc)
         if self.trace_dir:
-            self._trace_search(battle, ranked, chosen, iters, time.time() - t0)
-        return order
+            self._trace_search(
+                battle, ranked, best[1], iters, time.time() - t0,
+                prior={c: round(p, 3) for _, c, _, p, _ in scored if p} if prior else None,
+                changed=prior is not None and best[1] != orders[0][0],
+            )  # fmt: skip
+        return best[4]
 
-    def _trace_search(self, battle, ranked, chosen, iters, seconds) -> None:
+    def _plan_prior(self, battle) -> dict | None:
+        """Plan total of every option the heuristic scores (forbidden tera options are absent).
+        Also keeps the battle memory and the plan state up to date."""
+        scored = self._score_options(battle)
+        if scored is None:
+            return None
+        rows = scored[0]
+        self._row_choice = {_option_key(r["choice"]): r["choice"] for r in rows}
+        return {_option_key(r["choice"]): r["plan_total"] for r in rows}
+
+    def _trace_search(
+        self, battle, ranked, chosen, iters, seconds, prior=None, changed=False
+    ) -> None:
         me, opp = battle.active_pokemon, battle.opponent_active_pokemon
         row = {
             "turn": battle.turn,
@@ -121,6 +194,11 @@ class SearchPlayer(KnowledgePlayer):
             "iterations": iters,
             "seconds": round(seconds, 2),
         }
+        if self.use_oracle:
+            row["oracle"] = self.oracle is not None
+        if prior is not None:
+            row["plan_prior"] = prior
+            row["plan_changed"] = changed
         d = Path(self.trace_dir)
         d.mkdir(parents=True, exist_ok=True)
         with open(d / f"{battle.battle_tag}_{self.username}.jsonl", "a") as f:

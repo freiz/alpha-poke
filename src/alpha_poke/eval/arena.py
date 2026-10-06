@@ -76,6 +76,9 @@ async def _lane(bot_a, bot_b, matches, port, pool_dir, heldout, lane_id, log_pat
     for m in matches:
         a.update_team(teams[m.team_a])
         b.update_team(teams[m.team_b])
+        for me, other in ((a, m.team_b), (b, m.team_a)):  # oracle bots see the true team
+            if getattr(me, "use_oracle", False):
+                me.set_oracle((Path(pool_dir) / f"{other}.txt").read_text())
         before, before_b = set(a.battles), set(b.battles)
         if m.a_challenges:
             await a.battle_against(b, n_battles=1)
@@ -110,10 +113,15 @@ async def _lane(bot_a, bot_b, matches, port, pool_dir, heldout, lane_id, log_pat
             "plan_b": plan_b.to_log() if plan_b else None,
             "fallbacks_a": getattr(a, "fallbacks", 0),
             "fallbacks_b": getattr(b, "fallbacks", 0),
+            "search_fallbacks_a": getattr(a, "search_fallbacks", None),
+            "search_fallbacks_b": getattr(b, "search_fallbacks", None),
         }
         rows.append(row)
         with open(log_path, "a") as f:
             f.write(json.dumps(row) + "\n")
+    for me in (a, b):  # search bots with worker processes must stop them
+        if hasattr(me, "close"):
+            me.close()
     return rows
 
 
