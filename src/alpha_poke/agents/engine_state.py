@@ -324,9 +324,12 @@ def build_state(
     team_names: tuple[str, ...],
     rng: random.Random,
     oracle: dict[str, OracleSet] | None = None,
+    oracle_fields: frozenset[str] | None = None,
 ) -> pe.State:
     """One determinization of the current battle (side_one = us). With ``oracle`` (the
-    opponent's true sets, local evaluation only) nothing is sampled."""
+    opponent's true sets, local evaluation only) nothing is sampled; with ``oracle_fields`` too
+    (subset of item / moves / tera / ability / spread) only those fields are true, the rest is
+    sampled as usual (decomposing the oracle advantage, design D11 B)."""
     turn = battle.turn
     ours = list(battle.team.values())
     active = battle.active_pokemon
@@ -344,13 +347,21 @@ def build_state(
             if not any(to_id(t.species).startswith(base) for t in theirs):
                 theirs.append(m)
     opp_active = battle.opponent_active_pokemon
-    their_mons = [
-        _their_mon(
-            m,
-            (oracle and _oracle_set(m, oracle)) or sample_set(belief, m, team_names, rng),
-        )
-        for m in theirs
-    ]
+
+    def their_set(m) -> SampledSet:
+        truth = _oracle_set(m, oracle) if oracle else None
+        if truth is None:
+            return sample_set(belief, m, team_names, rng)
+        if oracle_fields is None:
+            return truth
+        s = sample_set(belief, m, team_names, rng)
+        for f in oracle_fields:
+            setattr(
+                s, "stats" if f == "spread" else f, getattr(truth, "stats" if f == "spread" else f)
+            )
+        return s
+
+    their_mons = [_their_mon(m, their_set(m)) for m in theirs]
     their_idx = next((i for i, m in enumerate(theirs) if m is opp_active), 0)
     our_active_idx = next((i for i, m in enumerate(ours) if m is active), None)
     our_last, our_vol = _last_move(

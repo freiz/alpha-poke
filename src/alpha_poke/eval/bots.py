@@ -25,6 +25,14 @@ VARIANTS: dict[str, tuple[bool, bool, bool, dict]] = {
     # oracle upper bound (D11 B): the opponent's TRUE sets instead of belief samples (local
     # evaluation only: the evaluator passes the opponent's team with set_oracle)
     "s_oracle": (True, True, True, {"plan_mode": "llm", "search": True, "oracle": True}),
+    # samples per decision at a fixed total budget (B1; computed plan, no LLM)
+    **{f"s_c_k{k}": (True, True, True, {"search": True, "samples": k}) for k in (1, 2, 8, 16)},
+    # oracle decomposition (computed plan, no LLM): only one kind of true information each
+    "s_c_oracle": (True, True, True, {"search": True, "oracle": True}),
+    **{
+        f"s_c_oracle_{f}": (True, True, True, {"search": True, "oracle": f})
+        for f in ("item", "moves", "tera", "spread")
+    },
 }
 BASELINES = {
     "heuristic": SimpleHeuristicsPlayer,

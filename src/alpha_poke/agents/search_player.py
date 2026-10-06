@@ -34,6 +34,7 @@ from alpha_poke.agents.engine_state import build_state, engine_move_to_order, or
 from alpha_poke.agents.knowledge_player import KnowledgePlayer, sync_tera_types
 
 log = logging.getLogger("alpha_poke.search")
+ORACLE_FIELDS = frozenset({"item", "moves", "tera", "ability", "spread"})
 
 
 def _env_int(name: str, default: int) -> int:
@@ -77,8 +78,12 @@ class SearchPlayer(KnowledgePlayer):
     ):
         super().__init__(*args, **kwargs)
         # oracle (local evaluation only, design D11 B): the evaluator hands us the opponent's
-        # true team with set_oracle() before every game; the search then samples nothing
-        self.use_oracle = oracle
+        # true team with set_oracle() before every game; the search then samples nothing.
+        # oracle="item,moves" (subset of item / moves / tera / ability / spread): only those
+        # fields are true, the rest is sampled from the belief as usual.
+        self.use_oracle = bool(oracle)
+        self.oracle_fields = None if oracle is True or not oracle else frozenset(oracle.split(","))
+        assert self.oracle_fields is None or self.oracle_fields <= ORACLE_FIELDS, oracle
         self.oracle = None
         self.plan_prior = (
             plan_prior if plan_prior is not None else _env_float("ALPHA_PLAN_PRIOR", 0.0)
@@ -127,7 +132,10 @@ class SearchPlayer(KnowledgePlayer):
         t0 = time.time()
         iters = 0
         oracle = self.oracle if self.use_oracle else None
-        states = [build_state(battle, self.belief, names, rng, oracle) for _ in range(self.samples)]
+        states = [
+            build_state(battle, self.belief, names, rng, oracle, self.oracle_fields)
+            for _ in range(self.samples)
+        ]
         pool = self._workers()
         if pool is not None:  # parallel: each sample gets the full budget on its own core
             futs = [pool.submit(mcts_worker.run, s.to_string(), self.search_ms) for s in states]
