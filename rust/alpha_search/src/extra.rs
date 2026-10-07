@@ -245,6 +245,22 @@ fn max_damage(
         .map(|d| d.max(0) as f32)
 }
 
+/// `max_damage` on the unmodified state, memoized per (attacking side, move slot, defending
+/// slot): the same calls recur (the predicted move, the threats, the actives' moves).
+struct DamageMemo<'a> {
+    state: &'a State,
+    refs: [SideReference; 2],
+    memo: [[[Option<Option<f32>>; 6]; 4]; 2],
+}
+
+impl DamageMemo<'_> {
+    /// `att`: index into `refs` of the attacking side (its active attacks with move `slot`)
+    fn get(&mut self, att: usize, slot: usize, choice: &Choice, def: usize) -> Option<f32> {
+        *self.memo[att][slot][def]
+            .get_or_insert_with(|| max_damage(self.state, &self.refs[att], choice, def))
+    }
+}
+
 /// (ENT_EXTRA per entity in view order: own 0-5, opponent 0-5; GLOBAL_EXTRA).
 pub fn featurize_extra(state: &State, flip: bool) -> (Vec<f32>, Vec<f32>) {
     let mut ent = vec![0.0f32; 12 * ENT_EXTRA];
@@ -258,6 +274,11 @@ pub fn featurize_extra(state: &State, flip: bool) -> (Vec<f32>, Vec<f32>) {
         sides[0].active_index as usize,
         sides[1].active_index as usize,
     ];
+    let mut memo = DamageMemo {
+        state,
+        refs,
+        memo: [[[None; 6]; 4]; 2],
+    };
     let speed_act = [
         effective_speed(state, sides[0], act[0]),
         effective_speed(state, sides[1], act[1]),
@@ -271,10 +292,11 @@ pub fn featurize_extra(state: &State, flip: bool) -> (Vec<f32>, Vec<f32>) {
         let predicted = if attacker_alive && me.pokemon.pkmn[act[s]].hp > 0 {
             att_moves
                 .iter()
-                .filter(|m| !m.disabled)
-                .filter_map(|m| max_damage(state, &refs[1 - s], &m.choice, act[s]).map(|d| (d, m)))
+                .enumerate()
+                .filter(|(_, m)| !m.disabled)
+                .filter_map(|(k, m)| memo.get(1 - s, k, &m.choice, act[s]).map(|d| (d, k)))
                 .max_by(|a, b| a.0.total_cmp(&b.0))
-                .map(|(_, m)| &m.choice)
+                .map(|(_, k)| k)
         } else {
             None
         };
@@ -290,8 +312,8 @@ pub fn featurize_extra(state: &State, flip: bool) -> (Vec<f32>, Vec<f32>) {
                 let h = hazard_damage(me, p);
                 e[20] = h;
                 e[21] = (h * p.maxhp as f32 >= p.hp as f32) as u8 as f32;
-                if let Some(c) = predicted {
-                    let d = max_damage(state, &refs[1 - s], c, j).unwrap_or(0.0);
+                if let Some(k) = predicted {
+                    let d = memo.get(1 - s, k, &att_moves[k].choice, j).unwrap_or(0.0);
                     let hp = p.hp as f32;
                     e[22] = (d / hp).min(2.0);
                     e[23] = (d >= hp) as u8 as f32;
@@ -309,10 +331,11 @@ pub fn featurize_extra(state: &State, flip: bool) -> (Vec<f32>, Vec<f32>) {
             }
             let hp = p.hp as f32;
             if attacker_alive {
-                let best = [&att.moves.m0, &att.moves.m1, &att.moves.m2, &att.moves.m3]
+                let best = att_moves
                     .iter()
-                    .filter(|m| !m.disabled)
-                    .filter_map(|m| max_damage(state, &refs[1 - s], &m.choice, j))
+                    .enumerate()
+                    .filter(|(_, m)| !m.disabled)
+                    .filter_map(|(k, m)| memo.get(1 - s, k, &m.choice, j))
                     .fold(0.0f32, f32::max);
                 e[1] = (best / hp).min(2.0);
                 e[2] = (0.85 * best >= hp) as u8 as f32;
@@ -329,7 +352,7 @@ pub fn featurize_extra(state: &State, flip: bool) -> (Vec<f32>, Vec<f32>) {
                 .enumerate()
             {
                 let o = 4 + 4 * i;
-                if let Some(d) = max_damage(state, &refs[s], &m.choice, act[1 - s]) {
+                if let Some(d) = memo.get(s, i, &m.choice, act[1 - s]) {
                     let hp = target.hp as f32;
                     e[o] = (d / hp).min(2.0);
                     e[o + 1] = (0.85 * d >= hp) as u8 as f32;

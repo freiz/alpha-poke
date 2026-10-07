@@ -6,6 +6,9 @@ training, float32 (TF32 off), the value residual on the handcrafted evaluation i
 With ``graphs`` (default on CUDA) the forward pass runs as a captured CUDA graph per padded
 batch size (SIZES; the padding rows repeat the first row and are dropped): one launch instead
 of hundreds of small kernels. Falls back to eager execution if a capture fails.
+``launch(batch)`` / ``result(handle)``: the same, asynchronous (inputs through pinned staging
+buffers, outputs copied back to pinned memory, an event to wait on), so that the next batch
+can be collected on the CPU meanwhile. One launch in flight at a time.
 """
 
 import alpha_search
@@ -81,6 +84,66 @@ class GpuNet:
         with torch.cuda.graph(g):
             out = self.forward(*static)
         return g, static, out
+
+    KEYS = (("sparse", np.int32, np.int64), ("dense", np.float32, None),
+            ("global", np.float32, None), ("mask", np.uint8, bool), ("hsparse", np.int32, np.int64),
+            ("hdense", np.float32, None))  # fmt: skip
+    XKEYS = (("reveal", np.uint8, np.int64), ("ent2", np.float32, None),
+             ("glob2", np.float32, None), ("turn", np.int32, np.int64),
+             ("rating", np.int32, np.int64))  # fmt: skip
+
+    @torch.no_grad()
+    def launch(self, b: dict):
+        """Start the forward pass of a batch; returns a handle for ``result``."""
+        n = b["rows"]
+        size = next((s for s in SIZES if s >= n), None)
+        if not (self.use_graphs and size is not None):
+            return ("sync", self(b))
+        if size not in self.graphs:
+            args, x, ev = self.tensors(b)
+            self.graphs[size] = self.graph(size, args, x, ev)
+        g, (sa, sx, se), (v, logits) = self.graphs[size]
+        dsts = list(sa) + [sx[k] for k, _, _ in self.XKEYS] + [se]
+        specs = list(self.KEYS) + list(self.XKEYS) + [("eval", np.float32, None)]
+        for dst, (key, dt, cast) in zip(dsts, specs, strict=True):
+            a = np.frombuffer(b[key], dt).reshape((n, *dst.shape[1:]))
+            a = a.astype(cast) if cast is not None else a.copy()  # writable for torch
+            stage = self._stage(key, dst, size)
+            stage[:n].copy_(torch.from_numpy(a))
+            dst[:n].copy_(stage[:n], non_blocking=True)
+            if n < size:  # padding rows: copies of the first row
+                dst[n:].copy_(dst[:1].expand(size - n, *dst.shape[1:]))
+        g.replay()
+        hv, hl = self._out(size, v, logits)
+        hv[:n].copy_(v[:n], non_blocking=True)
+        hl[:n].copy_(logits[:n], non_blocking=True)
+        ev = torch.cuda.Event()
+        ev.record()
+        return ("async", (ev, n, hv, hl))
+
+    def result(self, handle) -> tuple[np.ndarray, np.ndarray]:
+        kind, h = handle
+        if kind == "sync":
+            return h
+        ev, n, hv, hl = h
+        ev.synchronize()
+        return hv[:n].numpy().copy(), hl[:n].numpy().reshape(-1).copy()
+
+    def _stage(self, key: str, like: torch.Tensor, size: int) -> torch.Tensor:
+        st = getattr(self, "_stages", None)
+        if st is None:
+            st = self._stages = {}
+        t = st.get(key)
+        if t is None or t.shape[0] < size:
+            t = st[key] = torch.empty((SIZES[-1], *like.shape[1:]), dtype=like.dtype).pin_memory()
+        return t
+
+    def _out(self, size: int, v: torch.Tensor, logits: torch.Tensor):
+        o = getattr(self, "_outs", None)
+        if o is None:
+            o = self._outs = (torch.empty(SIZES[-1]).pin_memory(),
+                              torch.empty((SIZES[-1], logits.shape[1])).pin_memory())  # fmt: skip
+        return o
 
     @torch.no_grad()
     def __call__(self, b: dict) -> tuple[np.ndarray, np.ndarray]:

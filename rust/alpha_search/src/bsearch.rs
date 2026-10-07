@@ -19,6 +19,9 @@
 //!   in parallel and handed out as arrays; `apply` takes the value logits and policy logits. A
 //!   new node gets both sides' priors from its own evaluation (in the world that created it).
 //! * The root is evaluated first (its priors), before any descent.
+//! * Pipelining: `collect` hands out only the leaves it adds (a batch can be collected while the
+//!   previous one is being evaluated; its leaves count as pending), `apply` takes the oldest
+//!   batch handed out.
 //! * The root's instruction lists are cached per (joint action, world), shared by the threads
 //!   (the root state of a world is the same in every thread's copy); no outcome-split children
 //!   (`chance_depth` 0).
@@ -81,6 +84,10 @@ pub struct BatchSearch {
     vl: u32,
     /// seconds spent in collect: descents (with the leaves' inputs), packing
     pub timing: [f64; 2],
+    /// pending leaves already handed out by `collect` (the oldest ones)
+    returned: usize,
+    /// sizes of the batches handed out and not applied yet, oldest first
+    in_flight: std::collections::VecDeque<usize>,
 }
 
 /// The network inputs of a batch, row-major arrays (`rows` = 2 per pending leaf: side one's
@@ -331,14 +338,17 @@ impl BatchSearch {
             round: 0,
             vl: vl.max(1),
             timing: [0.0; 2],
+            returned: 0,
+            in_flight: Default::default(),
         }
     }
 
     /// Descents until `n` pending leaves (none while the root is pending); their inputs.
     pub fn collect(&mut self, n: usize) -> Batch {
         let t0 = std::time::Instant::now();
-        let empty = self.shared.get_mut().unwrap().pending.is_empty();
-        if empty {
+        let root_pending = self.shared.get_mut().unwrap().tree.nodes[0].pending;
+        let target = self.returned + n;
+        if !root_pending {
             self.round += 1;
             let threads = self.worlds.len();
             let (shared, ctxs, evals, cfg) =
@@ -353,7 +363,7 @@ impl BatchSearch {
                         for _ in 0..(4 * n).div_ceil(threads) {
                             let w = {
                                 let mut g = shared.lock().unwrap();
-                                if g.pending.len() >= n {
+                                if g.pending.len() >= target {
                                     break;
                                 }
                                 g.next_world += 1;
@@ -385,27 +395,35 @@ impl BatchSearch {
             }
         }
         let mut b = Batch::default();
-        for p in &g.pending {
+        for p in &g.pending[self.returned..] {
             b.push(&p.inputs.0);
             b.push(&p.inputs.1);
         }
+        let new = g.pending.len() - self.returned;
+        if new > 0 {
+            self.in_flight.push_back(new);
+        }
+        self.returned = g.pending.len();
         self.timing[1] += t1.elapsed().as_secs_f64();
         b
     }
 
+    /// leaves in the oldest batch handed out and not applied yet
     pub fn n_pending(&mut self) -> usize {
-        self.shared.get_mut().unwrap().pending.len()
+        self.in_flight.front().copied().unwrap_or(0)
     }
 
     /// The batch's outputs: value logits [rows] (side one's view rows are used) and policy logits
     /// [rows * 14] (-inf on illegal slots), in `collect`'s row order.
     pub fn apply(&mut self, values: &[f32], logits: &[f32]) {
         let (policy_opponent, vl) = (self.cfg.policy_opponent, self.vl);
+        let k = self.in_flight.pop_front().expect("no batch to apply");
+        self.returned -= k;
         let g = self.shared.get_mut().unwrap();
         for path in std::mem::take(&mut g.collided) {
             g.undo(&path, vl);
         }
-        let pending = std::mem::take(&mut g.pending);
+        let pending: Vec<Pending> = g.pending.drain(..k).collect();
         assert_eq!(values.len(), 2 * pending.len());
         assert_eq!(logits.len(), 2 * pending.len() * N_ACTIONS);
         for (k, p) in pending.into_iter().enumerate() {
@@ -443,8 +461,9 @@ impl BatchSearch {
     /// The pending leaves evaluated by the CPU network: (value logits, policy logits) in
     /// `collect`'s row order.
     pub fn evaluate_cpu(&mut self, net: &crate::tnet::TNet) -> (Vec<f32>, Vec<f32>) {
+        let k = self.n_pending();
         let g = self.shared.get_mut().unwrap();
-        let outs = crate::par_map(&g.pending, |p| {
+        let outs = crate::par_map(&g.pending[..k], |p| {
             (net.forward(&p.inputs.0), net.forward(&p.inputs.1))
         });
         let (mut values, mut logits) = (Vec::new(), Vec::new());

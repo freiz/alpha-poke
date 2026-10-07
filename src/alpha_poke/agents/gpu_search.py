@@ -46,19 +46,34 @@ class GpuSearch:
                 return sum(s.stats()[0] for s in searches) >= iterations
             return time.time() - t0 >= seconds
 
-        while not done():
-            batches = list(self.pool.map(lambda s: s.collect(self.batch), searches))
-            b = merge(batches)
-            if b["rows"] == 0:
-                continue
-            values, logits = self.net(b)
-            calls += 1
+        def collect() -> tuple[list, dict]:
+            if self.trees == 1:
+                batches = [searches[0].collect(self.batch)]
+            else:
+                batches = list(self.pool.map(lambda s: s.collect(self.batch), searches))
+            return batches, merge(batches)
+
+        def finish(batches: list, handle) -> None:
+            values, logits = self.net.result(handle)
             r = 0
             for s, bi in zip(searches, batches, strict=True):
                 n = bi["rows"]
                 if n:
                     s.apply(values[r : r + n].tolist(), logits[r * 14 : (r + n) * 14].tolist())
                 r += n
+
+        # pipeline: the next batch is collected while the GPU evaluates the previous one
+        inflight = None
+        while not done():
+            batches, b = collect()
+            if inflight is not None:
+                finish(*inflight)
+                inflight = None
+            if b["rows"]:
+                inflight = (batches, self.net.launch(b))
+                calls += 1
+        if inflight is not None:
+            finish(*inflight)
         merged: dict = {}
         for s in searches:
             for name, visits, mean in s.root():
