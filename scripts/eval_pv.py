@@ -33,7 +33,8 @@ def load_run(run: Path, device) -> torch.nn.Module:
     kw = {}
     if arch == "transformer":
         kw = {"mtp": ck.get("mtp", 0), "feats": tuple(ck.get("feats", ())),
-              "aux_heads": tuple(ck.get("aux_heads", ()))}  # fmt: skip
+              "aux_heads": tuple(ck.get("aux_heads", ())),
+              "mask_hidden": ck.get("mask_hidden", False)}  # fmt: skip
     model = cls(ck["dims"], **ck["size"], history=history, **kw)
     sd = {("emb." + k if k.startswith(EMB) else k): v for k, v in ck["model"].items()}
     model.residual = None
@@ -68,6 +69,7 @@ def main() -> None:
             "top3_switch",
             "ce_switch",
             "bce",
+            "bce_t12",
             "vacc",
             "value_ece",
             "opp_act_acc",

@@ -3,7 +3,8 @@
 Usage: uv run python scripts/build_training_data.py --name v1 --per-game 4 --workers 8
 
 Source: Metamon's Gen9 OU replays (data/metamon/gen9ou, scripts/fetch_metamon.py), all of them
-by default. Every game gives ``--per-game`` positions drawn at random among its decision points
+by default. Every game gives ``--per-game`` positions drawn at random among its turn-start
+decision points (+ ``--extra-per-game`` of its forced / pivot switches and unseen choices, v4)
 (many games x few positions: positions of one game are strongly correlated and share one
 outcome); each is the poke-engine state seen by the player to act (its own sets: game-wide reveals
 + belief samples; the opponent: reveals so far + belief samples), the action it took (14 slots)
@@ -42,14 +43,19 @@ def _init(heldout: bool):
 
 
 def _work(args):
-    rows, seed, move_beta, per_game = args
+    rows, seed, move_beta, per_game, extra_per_game, game_seed = args
     from alpha_poke.train.positions import positions_from_replay
 
     rng = random.Random(seed)
     out, failed = [], 0
     for r in rows:
         try:
-            out += [asdict(p) for p in positions_from_replay(r, _belief, rng, move_beta, per_game)]
+            out += [
+                asdict(p)
+                for p in positions_from_replay(
+                    r, _belief, rng, move_beta, per_game, extra_per_game, game_seed
+                )
+            ]
         except Exception:  # noqa: BLE001 - a broken log must not stop the build
             failed += 1
     return out, failed
@@ -69,6 +75,9 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--name", required=True)
     ap.add_argument("--per-game", type=int, default=4, help="positions per game (0 = all)")
+    ap.add_argument("--extra-per-game", type=int, default=0,
+                    help="v4: other decision points per game (forced / pivot switches, turns "
+                         "whose action the log does not show)")  # fmt: skip
     ap.add_argument("--min-rating", type=int, default=0)
     ap.add_argument("--since", default="2022-01-01")
     ap.add_argument("--fraction", type=float, default=1.0, help="of the games of each shard")
@@ -96,6 +105,8 @@ def main() -> None:
                     a.seed * 1_000_003 + k * 10_007 + i,
                     a.move_beta,
                     a.per_game,
+                    a.extra_per_game,
+                    a.seed,
                 )  # fmt: skip
                 for i in range(0, len(rows), a.chunk)
             ]

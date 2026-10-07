@@ -422,6 +422,9 @@ def evaluate(model, d, idx, device, batch=16384) -> dict:
             if (bins == k).any()
         )  # fmt: skip
     )
+    late = t >= 12  # value BCE where it is learnable (the opening is close to a coin flip)
+    pl = p[late].clip(1e-7, 1 - 1e-7)
+    out["bce_t12"] = float(-(w[late] * np.log(pl) + (1 - w[late]) * np.log(1 - pl)).mean())
     for name, lo, hi in (("early", 0, 10), ("mid", 10, 25), ("late", 25, 10_000)):
         sel = (t >= lo) & (t < hi)
         if sel.any():
@@ -443,6 +446,8 @@ def main() -> None:
     ap.add_argument("--feats", default="", help=f"v3 input groups, comma-separated: {FEATS}")
     ap.add_argument("--aux", default="", help=f"v3 auxiliary heads, comma-separated: {AUX_HEADS}")
     ap.add_argument("--aux-weight", type=float, default=0.3)
+    ap.add_argument("--mask-hidden", action="store_true",
+                    help="unrevealed opponent fields -> unknown (no belief sample)")  # fmt: skip
     ap.add_argument("--value-per-game", type=float, default=0,
                     help="value loss weight min(1, N / game's positions); 0 = off")  # fmt: skip
     ap.add_argument("--epochs", type=float, default=6)
@@ -510,7 +515,7 @@ def main() -> None:
     assert not (feats or heads) or v3_ok, "--feats / --aux: transformer + v3 data"
     if a.arch == "transformer":
         model = TransformerPV(dims, **size, history=a.history, mtp=a.mtp, feats=feats,
-                              aux_heads=heads)  # fmt: skip
+                              aux_heads=heads, mask_hidden=a.mask_hidden)  # fmt: skip
     else:
         model = PolicyValueNet(dims, **size, history=a.history)
     model.residual = None
@@ -576,7 +581,8 @@ def main() -> None:
             val_loss = m["ce"] + a.value_weight * m["bce"]
             ckpt = {"model": model.state_dict(), "dims": dims, "size": size, "arch": a.arch,
                     "history": a.history, "mtp": a.mtp, "feats": feats, "aux_heads": heads,
-                    "step": step, "val": m, "value_residual": a.value_residual}  # fmt: skip
+                    "mask_hidden": a.mask_hidden, "step": step, "val": m,
+                    "value_residual": a.value_residual}  # fmt: skip
             torch.save(ckpt, out_dir / "last.pt")
             if val_loss < best:
                 best = val_loss

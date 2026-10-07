@@ -378,13 +378,16 @@ def build_state(
     oracle_fields: frozenset[str] | None = None,
     move_beta: float = 0.0,
     spectator: SpectatorSide | None = None,
+    force_switch: bool | None = None,
 ) -> pe.State:
     """One determinization of the current battle (side_one = us). With ``oracle`` (the
     opponent's true sets, local evaluation only) nothing is sampled; with ``oracle_fields`` too
     (subset of item / moves / tera / ability / spread) only those fields are true, the rest is
     sampled as usual (decomposing the oracle advantage, design D11 B). With ``spectator`` side
     one comes from a spectator log (no request): built like the opponent, from the known parts
-    of each set plus belief samples (training positions, design D13)."""
+    of each set plus belief samples (training positions, design D13). ``force_switch`` overrides
+    side one's switch request (training positions of forced / pivot switches; a spectator log
+    has no request)."""
     turn = battle.turn
     active = battle.active_pokemon
     if spectator is None:
@@ -452,7 +455,7 @@ def build_state(
             and our_active_idx is not None
             else 0
         ),
-        force_switch=bool(battle.force_switch),
+        force_switch=bool(battle.force_switch) if force_switch is None else force_switch,
         **our_last,
         **(_boosts(active) if active is not None else {}),
     )

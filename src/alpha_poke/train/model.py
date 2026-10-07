@@ -27,6 +27,9 @@ v3 (design D13, network v3 first batch; TransformerPV only), inputs ``x`` from t
   * matchup: per entity speed vs the opposing active, the threat from it, the active's moves'
     damage vs the opposing active (also fed to the move-slot scores), entry hazard damage of the
     benched mons, who moves first.
+``mask_hidden`` (needs the reveal bits): the opponent's fields not revealed yet (item, ability,
+tera type, unused moves) are replaced by an "unknown" id (the last of each table) instead of the
+belief sample -- the input without the belief model.
 Auxiliary heads (``aux_heads``, training-time only): oppset (the opponent's sets as revealed by
 the end: item / ability / tera type / moves, from the opponent entity tokens), faint (each
 active faints this turn), margin (mons left at the end, own - opponent, 13 classes), turns
@@ -198,8 +201,12 @@ class TransformerPV(nn.Module):
         mtp: int = 0,
         feats: tuple = (),
         aux_heads: tuple = (),
+        mask_hidden: bool = False,
     ):
         super().__init__()
+        assert not mask_hidden or feats, "mask_hidden needs the v3 inputs (reveal bits)"
+        self.mask_hidden = mask_hidden
+        self.unknown = [v - 1 for v in dims["vocab"]]  # species, item, ability, type, move
         assert set(feats) <= set(FEATS) and set(aux_heads) <= set(AUX_HEADS), (feats, aux_heads)
         self.emb = Embeddings(dims, feats)
         self.feats, self.aux_heads = tuple(feats), tuple(aux_heads)
@@ -242,13 +249,15 @@ class TransformerPV(nn.Module):
         """``x`` (v3): reveal uint8 [B,12], ent2 [B,12,E], glob2 [B,G2], turn [B]. With ``aux``
         also (MTP heads or None, dict of the auxiliary heads' outputs)."""
         xin = x
+        if self.mask_hidden:
+            sparse = self.hide(sparse, xin["reveal"])
         x, moves = self.emb.entities(sparse, dense, xin)
         b = x.shape[0]
         if self.feats:
             g2 = xin["glob2"]
             num = torch.cat([g2[:, NUM_IDX], (xin["turn"].float() / 50)[:, None]], dim=-1)
-            glob = torch.cat([glob, num * float("num" in self.feats),
-                              g2[:, MATCHUP_IDX] * float("matchup" in self.feats)], dim=-1)  # fmt: skip
+            mu = g2[:, MATCHUP_IDX] * float("matchup" in self.feats)
+            glob = torch.cat([glob, num * float("num" in self.feats), mu], dim=-1)
         types = torch.tensor([0] * 6 + [1] * 6 + [2], device=x.device)
         toks = [self.ent_in(x), self.glob_in(glob)[:, None]]
         pad = torch.zeros(b, 13, dtype=torch.bool, device=x.device)
@@ -277,6 +286,19 @@ class TransformerPV(nn.Module):
         if not aux:
             return logits, value
         return logits, value, self.mtp_heads(t, h) if self.mtp else None, self.aux_out(t, h)
+
+    def hide(self, sparse, reveal):
+        """Opponent fields not revealed yet -> the unknown id (see ``mask_hidden``)."""
+        sparse = sparse.clone()
+        opp = sparse[:, 6:12]
+        bits = (reveal[:, 6:12, None] >> torch.arange(8, device=sparse.device)) & 1  # [B,6,8]
+        _, u_item, u_ability, u_type, u_move = self.unknown
+        for col, bit, unk in ((1, 1, u_item), (2, 2, u_ability), (3, 3, u_type)):
+            opp[..., col] = torch.where(bits[..., bit] == 1, opp[..., col], unk)
+        mv = opp[..., 6:10]
+        opp[..., 6:10] = torch.where((bits[..., 4:8] == 1) | (mv == 0), mv, u_move)
+        sparse[:, 6:12] = opp
+        return sparse
 
     def aux_out(self, t, h) -> dict:
         out = {}

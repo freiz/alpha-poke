@@ -106,6 +106,12 @@ class Action:
     forced: bool = False  # switch after a faint
     pivot: bool = False  # switch right after the same side's move (U-turn, Baton Pass, ...)
     order: int = 0  # position within the turn (0 = first)
+    # outcome of a move (direct effects on the opposing active until the next action): HP percent
+    # taken from it, critical hit, missed / failed / no effect, it fainted
+    dmg: int = 0
+    crit: bool = False
+    miss: bool = False
+    ko: bool = False
 
 
 @dataclass
@@ -122,6 +128,7 @@ class Replay:
     teams: dict[str, list[MonRecord]]
     actions: list[Action]
     hp_by_turn: dict[int, dict[str, tuple[str, int]]]  # turn -> side -> (species, hp%)
+    cants: list[tuple[int, str, str]]  # (turn, side, reason): could not act (par, slp, flinch...)
     field_events: list[dict]
     warnings: list[str]
 
@@ -171,6 +178,8 @@ class ReplayParser:
         self.pending_forced: set[str] = set()
         self.tera_pending: dict[str, str] = {}
         self.order = 0
+        self.cants: list[tuple[int, str, str]] = []
+        self.last_move: Action | None = None  # the move whose outcome is being recorded
         self.transformed: set[str] = set()
         self.ability_changed: set[str] = set()  # sides whose active mon's ability was swapped
         self.gametype = "singles"
@@ -288,6 +297,7 @@ class ReplayParser:
             teams=self.teams,
             actions=self.actions,
             hp_by_turn=self.hp_by_turn,
+            cants=self.cants,
             field_events=self.field_events,
             warnings=self.warnings,
         )
@@ -320,6 +330,7 @@ class ReplayParser:
     def _on_turn(self, a):
         self.turn = int(a[0])
         self.order = 0
+        self.last_move = None
         self.pending_forced.clear()
         snap = {}
         for s in SIDES:
@@ -378,6 +389,7 @@ class ReplayParser:
         self.active[side] = mon
         self.transformed.discard(side)
         self.ability_changed.discard(side)
+        self.last_move = None
 
     def _on_drag(self, a):
         self._on_switch(a, drag=True)
@@ -424,13 +436,16 @@ class ReplayParser:
             if move not in mon.moves:
                 mon.moves.append(move)
         tera = self.tera_pending.pop(side, None) is not None
-        self.actions.append(
-            Action(self.turn, side, "move", mon.species, move=move, tera=tera, order=self.order)
-        )
+        act = Action(self.turn, side, "move", mon.species, move=move, tera=tera, order=self.order)
+        self.actions.append(act)
+        self.last_move = act
         self.order += 1
 
     def _on_cant(self, a):
         side, mon = self._mon(a[0])
+        if side is not None:
+            self.cants.append((self.turn, side, a[1] if len(a) > 1 else ""))
+            self.last_move = None
         if mon is not None and len(a) > 2 and a[2] and side not in self.transformed:
             if a[2] not in mon.moves:
                 mon.moves.append(a[2])
@@ -441,6 +456,8 @@ class ReplayParser:
             mon.fainted_turn = self.turn
             mon.hp = 0
             self.pending_forced.add(side)
+            if self._outcome_target(side):
+                self.last_move.ko = True
 
     # ---- reveals ---------------------------------------------------------------------
     def _on_terastallize(self, a):
@@ -450,12 +467,40 @@ class ReplayParser:
             mon.tera_turn = self.turn
             self.tera_pending[side] = a[1]
 
+    def _outcome_target(self, side: str | None) -> bool:
+        """Whether an effect on ``side``'s active belongs to the current move's outcome."""
+        m = self.last_move
+        return m is not None and side is not None and m.side != side and m.turn == self.turn
+
+    def _on_crit(self, a):
+        side, _ = self._mon(a[0])
+        if self._outcome_target(side):
+            self.last_move.crit = True
+
+    def _on_miss(self, a):
+        if self.last_move is not None and self.last_move.turn == self.turn:
+            self.last_move.miss = True
+
+    def _on_fail(self, a):
+        side, _ = self._mon(a[0])
+        if self.last_move is not None and side == self.last_move.side:
+            self.last_move.miss = True
+
+    def _on_immune(self, a):
+        side, _ = self._mon(a[0])
+        if self._outcome_target(side):
+            self.last_move.miss = True
+
     def _on_damage(self, a, heal: bool = False):
         side, mon = self._mon(a[0])
         if mon is None:
             return
+        before = mon.hp
         self._set_hp(side, mon, a[1])
         tags = _tags(a[2:])
+        if not heal and "from" not in tags and self._outcome_target(side):
+            if before is not None and mon.hp is not None:
+                self.last_move.dmg += max(0, before - mon.hp)
         src = tags.get("from", "")
         # -damage ... [from] item: Rocky Helmet / ability: Rough Skin | [of] HOLDER
         # -heal   ... [from] ability: Water Absorb | [of] ATTACKER  (holder = healed mon)
