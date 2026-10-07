@@ -87,6 +87,12 @@ def main() -> None:
             "margin_ce",
             "margin_acc",
             "turns_mae",
+            "ce_forced",
+            "top1_forced",
+            "ce_turn",
+            "ce_blind",
+            "bce_all",
+            "bce_blind",
         )
         print(json.dumps({"run": Path(r).name} | {k: round(m[k], 4) for k in keys if k in m}))
 

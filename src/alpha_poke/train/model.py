@@ -26,7 +26,13 @@ v3 (design D13, network v3 first batch; TransformerPV only), inputs ``x`` from t
   * movetab: the static move table (alpha_search.move_table) projected onto the move embeddings;
   * matchup: per entity speed vs the opposing active, the threat from it, the active's moves'
     damage vs the opposing active (also fed to the move-slot scores), entry hazard damage of the
-    benched mons, who moves first.
+    benched mons, who moves first;
+  * elo (v4): both players' ratings before the game ((r - 1500) / 300, the difference, known
+    flags; 0 = unknown) -> global token;
+  * hres (v4): the history steps' outcomes (damage, crit, miss, KO, acted first, prevented,
+    fainted first); without it the step inputs are the v2 ones;
+  * counter (v4): per benched entity the damage taken from the opposing active's predicted move
+    and its own best damage against the opposing active.
 ``mask_hidden`` (needs the reveal bits): the opponent's fields not revealed yet (item, ability,
 tera type, unused moves) are replaced by an "unknown" id (the last of each table) instead of the
 belief sample -- the input without the belief model.
@@ -43,12 +49,25 @@ from torch import nn
 
 # dense feature indices (rust/alpha_search/src/features.rs)
 D_ALIVE, D_ACTIVE, D_USABLE = 1, 2, slice(17, 21)
-FEATS = ("reveal", "num", "movetab", "matchup")
+FEATS = ("reveal", "num", "movetab", "matchup", "elo", "hres", "counter")
 AUX_HEADS = ("oppset", "faint", "margin", "turns")
 N_REVEAL = 8
 # global extras (extra.rs): 0-15 per side numbers, 16-17 who moves first / speed ratio
 # ("matchup"), 18-19 weather / terrain turns ("num")
 NUM_IDX, MATCHUP_IDX = [*range(16), 18, 19], [16, 17]
+
+
+N_ELO = 5
+
+
+def elo_features(rating):
+    """rating [B,2] (own, opponent; 0 = unknown) -> [B,5]: both normalized, their difference
+    (when both are known), known flags."""
+    r = rating.float()
+    known = (r > 0).float()
+    z = (r - 1500) / 300 * known
+    diff = (z[:, :1] - z[:, 1:]) * known[:, :1] * known[:, 1:]
+    return torch.cat([z, diff, known], dim=-1)
 
 
 def mlp(*sizes: int) -> nn.Sequential:
@@ -71,10 +90,14 @@ class Embeddings(nn.Module):
         self.ptype = nn.Embedding(v_type, 8)  # not "type": nn.Module.type()
         self.move = nn.Embedding(v_move, 32)
         self.d_entity = 32 + 16 + 16 + 3 * 8 + 32 + dims["dense"]
-        self.d_step = 6 * 32 + dims.get("hist_dense", 7)
+        # history step inputs: the v2 ones (7 dense) unless the outcomes are fed (hres)
+        self.n_hdense = dims.get("hist_dense", 7) if "hres" in self.feats else 7
+        self.d_step = 6 * 32 + self.n_hdense
         self.v3 = bool(self.feats)
+        # entity extras: 22 (v3) unless the switch-in counters are fed (counter)
+        self.n_ent2 = dims.get("ent_extra", 22) if "counter" in self.feats else 22
         if self.v3:
-            self.d_entity += N_REVEAL + dims["ent_extra"]
+            self.d_entity += N_REVEAL + self.n_ent2
         if "movetab" in self.feats:
             table = np.frombuffer(alpha_search.move_table(), np.float32).reshape(v_move, -1)
             self.register_buffer("move_table", torch.from_numpy(table.copy()), persistent=False)
@@ -100,7 +123,8 @@ class Embeddings(nn.Module):
         if self.v3:
             bits = (x["reveal"][..., None] >> torch.arange(N_REVEAL, device=dense.device)) & 1
             bits = bits.float() * float("reveal" in self.feats)
-            dense = torch.cat([dense, bits, x["ent2"] * float("matchup" in self.feats)], dim=-1)
+            ent2 = x["ent2"][..., : self.n_ent2] * float("matchup" in self.feats)
+            dense = torch.cat([dense, bits, ent2], dim=-1)
         x = torch.cat(
             [
                 self.species(sparse[..., 0]),
@@ -127,7 +151,7 @@ class Embeddings(nn.Module):
             self.move_vec(hsparse[..., 4]),
             self.species(hsparse[..., 5]),
         ]
-        return torch.cat(e + [hdense], dim=-1)
+        return torch.cat(e + [hdense[..., : self.n_hdense]], dim=-1)
 
 
 class PolicyValueNet(nn.Module):
@@ -233,6 +257,7 @@ class TransformerPV(nn.Module):
             self.turns_head = nn.Linear(d_model, 1)
         self.ent_in = nn.Linear(self.emb.d_entity, d_model)
         d_glob = dims["global"] + (dims["global_extra"] + 1 if feats else 0)
+        d_glob += N_ELO if "elo" in feats else 0
         self.glob_in = nn.Linear(d_glob, d_model)
         self.step_in = nn.Linear(self.emb.d_step, d_model) if history else None
         self.tok_type = nn.Embedding(3 + dims.get("hist", 8), d_model)  # own, opp, global, h_k
@@ -258,6 +283,8 @@ class TransformerPV(nn.Module):
             num = torch.cat([g2[:, NUM_IDX], (xin["turn"].float() / 50)[:, None]], dim=-1)
             mu = g2[:, MATCHUP_IDX] * float("matchup" in self.feats)
             glob = torch.cat([glob, num * float("num" in self.feats), mu], dim=-1)
+            if "elo" in self.feats:
+                glob = torch.cat([glob, elo_features(xin["rating"])], dim=-1)
         types = torch.tensor([0] * 6 + [1] * 6 + [2], device=x.device)
         toks = [self.ent_in(x), self.glob_in(glob)[:, None]]
         pad = torch.zeros(b, 13, dtype=torch.bool, device=x.device)

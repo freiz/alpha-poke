@@ -20,6 +20,11 @@ over the first K decision steps from the position (design D14-8), weight ``--mtp
 v3 (design D13, data with a ``reveal`` column): ``--feats`` (reveal, num, movetab, matchup) and
 ``--aux`` (oppset, faint, margin, turns; weight ``--aux-weight`` each) switch the new input groups
 and auxiliary heads on (alpha_poke.train.model); the caches always hold all of them.
+v4 (data with ``kind`` / ratings, design D13): ``--kinds`` picks the decision points to train on
+(main = turn starts; forced / pivot switches; blind = a turn start whose action the log does not
+show, trained with a partial label: some move slot, tera known); ``--elo-dropout`` hides each
+player's rating with that probability in training. Evaluation: the usual metrics on the
+turn-start positions only (comparable with v3), plus the forced / pivot switch accuracy.
 """
 
 import argparse
@@ -49,6 +54,7 @@ T_SIZES = {
     "large": dict(d_model=192, n_layers=4, n_heads=6, d_ff=384),
 }
 DIMS = alpha_search.feature_dims()
+HDMG = [8, 15]  # history dense: own / opponent damage dealt (features.rs history_features)
 
 
 def featurize_shard(path: Path, cache: Path) -> int:
@@ -62,12 +68,19 @@ def featurize_shard(path: Path, cache: Path) -> int:
             ok_hist = not has_hist or ("hsp" in z.files and z["hsp"].shape[1] == DIMS["hist"])
             ok_fut = not has_fut or "fsp" in z.files
             ok_v3 = not has_v3 or ("ent2" in z.files and z["ent2"].shape[2] == DIMS["ent_extra"])
-            if fresh and "evalv" in z.files and ok_hist and ok_fut and ok_v3:
+            # v4: the damage columns (fractions) are kept apart as percents ("hdmg"); the first
+            # v4 caches stored them in the uint8 "hde" and truncated them to 0
+            hdmg_ok = DIMS["hist_dense"] == 7 or "hdmg" in z.files
+            ok_hd = not has_hist or (z["hde"].shape[2] == DIMS["hist_dense"] and hdmg_ok)
+            ok_v4 = ("kind" in names) == ("kind" in z.files)
+            if fresh and "evalv" in z.files and ok_hist and ok_fut and ok_v3 and ok_hd and ok_v4:
                 return len(z["action"])
     cols = ["game", "turn", "state", "action", "won", "rating", "uploadtime"]
     extra = (["history"] if has_hist else []) + (["future"] if has_fut else [])
     if has_v3:
         extra += ["reveal", "opp_sets", "faint", "left_own", "left_opp", "turns"]
+    if "kind" in names:
+        extra += ["rating_own", "rating_opp", "kind"]
     t = pq.read_table(path, columns=cols + extra)
     states = t.column("state").to_pylist()
     e, s, d, g, a = DIMS["entities"], DIMS["sparse"], DIMS["dense"], DIMS["global"], DIMS["actions"]
@@ -91,6 +104,10 @@ def featurize_shard(path: Path, cache: Path) -> int:
         out["hde"] = np.concatenate(
             [np.frombuffer(x, np.float32).reshape(-1, hs, hd[1]).astype(np.uint8) for x in de]
         )
+        if hd[1] > 7:  # v4 outcomes: the damage dealt by each side, as percent
+            out["hdmg"] = np.concatenate([
+                (np.frombuffer(x, np.float32).reshape(-1, hs, hd[1])[..., HDMG] * 100).round()
+                .astype(np.uint8) for x in de])  # fmt: skip
     if has_fut:  # same encoding; steps reversed so that slot k = future step k
         fut = [";".join(reversed(x.split(";"))) for x in t.column("future").to_pylist()]
         hs, hd = DIMS["hist"], (DIMS["hist_sparse"], DIMS["hist_dense"])
@@ -115,6 +132,7 @@ def featurize_shard(path: Path, cache: Path) -> int:
     )
     act = out["action"].clip(0, a - 1)
     ok = (out["action"] < a) & (out["mask"][np.arange(len(act)), act] == 1)
+    ok |= out["action"] < 0  # partial labels (v4 blind positions)
     out = {k: v[ok] for k, v in out.items()}
     cache.parent.mkdir(parents=True, exist_ok=True)
     tmp = cache.with_name(cache.stem + ".tmp.npz")  # atomic: a killed run leaves no broken cache
@@ -153,11 +171,15 @@ def v3_arrays(t, states: list[str]) -> dict:
     out["set_ability"] = ids["ability"].reshape(n, 6)
     out["set_tera"] = ids["type"].reshape(n, 6)
     out["set_move"] = ids["move"].reshape(n, 6, 4)
+    if "kind" in t.column_names:
+        out["rating"] = np.stack([np.asarray(t.column(c).to_pylist(), np.int16)
+                                  for c in ("rating_own", "rating_opp")], 1)  # fmt: skip
+        out["kind"] = np.asarray(t.column("kind").to_pylist(), np.uint8)
     return out
 
 
 V3_KEYS = ("reveal", "ent2", "glob2", "turn", "faint", "margin", "turns", "set_item",
-           "set_ability", "set_tera", "set_move")  # fmt: skip
+           "set_ability", "set_tera", "set_move", "rating", "kind")  # fmt: skip
 
 
 def load(data: str) -> dict:
@@ -186,11 +208,13 @@ def load(data: str) -> dict:
 def to_torch(d: dict, idx: np.ndarray, device) -> tuple:
     """(sparse, dense, glob, mask, action, won, handcrafted eval / 100, history sparse, history
     dense); the history is None without a history in the data"""
-    hist = (
-        (torch.from_numpy(d["hsp"][idx].astype(np.int64)).to(device, non_blocking=True),
-         torch.from_numpy(d["hde"][idx].astype(np.float32)).to(device, non_blocking=True))
-        if "hsp" in d else (None, None)
-    )  # fmt: skip
+    hist = (None, None)
+    if "hsp" in d:
+        hde = d["hde"][idx].astype(np.float32)
+        if "hdmg" in d:
+            hde[..., HDMG] = d["hdmg"][idx] / 100
+        hist = (torch.from_numpy(d["hsp"][idx].astype(np.int64)).to(device, non_blocking=True),
+                torch.from_numpy(hde).to(device, non_blocking=True))  # fmt: skip
     fut = (
         (torch.from_numpy(d["fsp"][idx].astype(np.int64)).to(device, non_blocking=True),
          torch.from_numpy(d["fde"][idx].astype(np.float32)).to(device, non_blocking=True))
@@ -199,7 +223,7 @@ def to_torch(d: dict, idx: np.ndarray, device) -> tuple:
     x = None
     if "ent2" in d:
         x = {}
-        for k in V3_KEYS:
+        for k in (k for k in V3_KEYS if k in d):
             v = d[k][idx]
             v = v.astype(np.float32) if v.dtype == np.float16 else v.astype(np.int64)
             x[k] = torch.from_numpy(v).to(device, non_blocking=True)
@@ -342,6 +366,25 @@ def aux_loss(out: dict, x: dict, sp, turn, bw, heads, stats: dict | None = None)
     return torch.stack(losses).mean() if losses else torch.zeros((), device=sp.device)
 
 
+def policy_loss(logits, act, mask, reduction="mean"):
+    """Cross-entropy; a negative action is a partial label (v4 blind positions: -1 some move slot
+    without tera, -2 with tera): -log of the probability of that set of legal slots."""
+    logits = logits.float()
+    full = act >= 0
+    ce = torch.zeros(len(act), device=logits.device)
+    if full.any():
+        ce[full] = F.cross_entropy(logits[full], act[full], reduction="none")
+    part = ~full
+    if part.any():
+        slots = torch.arange(logits.shape[1], device=logits.device)
+        tera = (act[part] == -2)[:, None]
+        allowed = mask[part] & torch.where(tera, (slots >= 4) & (slots < 8), slots < 4)
+        num = logits[part].masked_fill(~allowed, float("-inf")).logsumexp(-1)
+        nll = logits[part].logsumexp(-1) - num
+        ce[part] = torch.where(allowed.any(-1), nll, torch.zeros_like(nll))
+    return ce.mean() if reduction == "mean" else ce
+
+
 def value_logit(model, v, ev):
     """Residual value (--value-residual): a * handcrafted eval / 100 + b + the net's output."""
     if getattr(model, "residual", None) is None:
@@ -351,6 +394,42 @@ def value_logit(model, v, ev):
 
 @torch.no_grad()
 def evaluate(model, d, idx, device, batch=16384) -> dict:
+    """Metrics on the turn-start positions of ``idx`` with a visible action (comparable with v3);
+    v4 data, over all its decision points: forced / pivot switch accuracy (``*_forced``), the
+    policy loss over all turn starts (``ce_turn``: the unseen choices with their partial label;
+    the visible ones alone are a biased sample, they miss the turns where the player was KOed
+    first or could not move, which always chose a move), value BCE on all positions
+    (``bce_all``) and on the unseen-choice ones (``bce_blind``)."""
+    if "kind" not in d:
+        return _evaluate(model, d, idx, device, batch)
+    k = d["kind"][idx]
+    out = _evaluate(model, d, idx[k == 0], device, batch)
+    v3 = getattr(model, "feats", None) is not None
+    amp = dict(dtype=torch.bfloat16, enabled=device.type == "cuda")
+    pl, vl, hit = [], [], []
+    model.eval()
+    for i in range(0, len(idx), batch):
+        b = idx[i : i + batch]
+        sp, de, gl, ma, act, won, ev, hs, hd, fs, fd, x = to_torch(d, b, device)
+        with torch.autocast(device.type, **amp):
+            o = model(sp, de, gl, ma, hs, hd, **({"x": x} if v3 else {}))
+        lg = o[0].float()
+        pl.append(policy_loss(lg, act, ma, reduction="none").cpu().numpy())
+        v = value_logit(model, o[1].float(), ev)
+        vl.append(F.binary_cross_entropy_with_logits(v, won, reduction="none").cpu().numpy())
+        hit.append((lg.argmax(-1) == act).cpu().numpy())
+    model.train()
+    pl, vl, hit = np.concatenate(pl), np.concatenate(vl), np.concatenate(hit)
+    sw, turn, blind = (k == 1) | (k == 2), (k == 0) | (k == 3), k == 3
+    if sw.any():
+        out |= {"ce_forced": float(pl[sw].mean()), "top1_forced": float(hit[sw].mean())}
+    out |= {"ce_turn": float(pl[turn].mean()), "bce_all": float(vl.mean())}
+    if blind.any():
+        out |= {"ce_blind": float(pl[blind].mean()), "bce_blind": float(vl[blind].mean())}
+    return out
+
+
+def _evaluate(model, d, idx, device, batch=16384) -> dict:
     model.eval()
     sums = dict(ce=0.0, top1=0.0, top2=0.0, top3=0.0, top5=0.0, bce=0.0, vacc=0.0,
                 uniform_ce=0.0, n_sw=0.0, top1_sw=0.0, top3_sw=0.0, ce_sw=0.0)  # fmt: skip
@@ -446,6 +525,8 @@ def main() -> None:
     ap.add_argument("--feats", default="", help=f"v3 input groups, comma-separated: {FEATS}")
     ap.add_argument("--aux", default="", help=f"v3 auxiliary heads, comma-separated: {AUX_HEADS}")
     ap.add_argument("--aux-weight", type=float, default=0.3)
+    ap.add_argument("--kinds", default="main", help="v4 decision points: main,forced,pivot,blind")
+    ap.add_argument("--elo-dropout", type=float, default=0.25)
     ap.add_argument("--mask-hidden", action="store_true",
                     help="unrevealed opponent fields -> unknown (no belief sample)")  # fmt: skip
     ap.add_argument("--value-per-game", type=float, default=0,
@@ -493,6 +574,10 @@ def main() -> None:
     cutoff = a.val_cutoff or np.quantile(np.fromiter(game_time.values(), np.int64), 1 - a.val_frac)
     is_val = np.array([game_time[g] >= cutoff for g in d["game"]])
     train_idx, val_idx = np.flatnonzero(~is_val), np.flatnonzero(is_val)
+    if "kind" in d:  # v4: the decision points to train on
+        names = ("main", "forced", "pivot", "blind")
+        use = [names.index(k) for k in a.kinds.split(",")]
+        train_idx = train_idx[np.isin(d["kind"][train_idx], use)]
     age_days = (d["uploadtime"].max() - d["uploadtime"]) / 86400
     w = 0.5 ** (age_days / a.half_life) if a.half_life > 0 else np.ones(n)
     w = (w / w[train_idx].mean()).astype(np.float32)
@@ -544,10 +629,13 @@ def main() -> None:
         b = block[(step - 1) % 1000]
         sp, de, gl, ma, act, won, ev, hs, hd, fs, fd, x = to_torch(d, b, device)
         kw = {"x": x} if a.arch == "transformer" and x is not None else {}
+        if x is not None and "rating" in x and a.elo_dropout > 0:  # unknown ratings, as in play
+            drop = torch.rand(x["rating"].shape, device=device) < a.elo_dropout
+            x["rating"] = x["rating"].masked_fill(drop, 0)
         with torch.autocast(device.type, dtype=torch.bfloat16, enabled=device.type == "cuda"):
             out = model(sp, de, gl, ma, hs, hd, aux=bool(a.mtp or heads), **kw)
         logits, v = out[0], out[1]
-        ce = F.cross_entropy(logits.float(), act)
+        ce = policy_loss(logits, act, ma)
         bw = torch.from_numpy(vw[b]).to(device)
         vl = value_logit(model, v.float(), ev)
         bce = (F.binary_cross_entropy_with_logits(vl, won, reduction="none") * bw).sum() / bw.sum()

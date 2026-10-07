@@ -15,6 +15,9 @@
 //!   - benched only: entry hazard damage on switching in (Stealth Rock by type, Spikes when
 //!     grounded; Heavy-Duty Boots / Magic Guard: none) as a fraction of max HP, and whether it
 //!     faints on entry;
+//!   - benched only (v4, switch-in counters): the damage it takes from the opposing active's
+//!     predicted move (its strongest against this side's active) / HP and whether that KOs, and
+//!     its own best move's damage against the opposing active / that one's HP;
 //! * global (`GLOBAL_EXTRA`): per side (own, opponent) the living mons / 6, their summed HP
 //!   fraction / 6, tera used, the last used move (none-or-switch / slot 0-3, a Choice lock); then
 //!   who moves first between the actives (+1 own, -1 opponent, 0 tie; trick room counted) and the
@@ -35,7 +38,7 @@ use poke_engine::state::{
 };
 
 pub const MOVE_FEAT: usize = 20 + 3 + 3 + 16 + 3 + 1 + 2 + 4 + 1;
-pub const ENT_EXTRA: usize = 4 + 4 * 4 + 2;
+pub const ENT_EXTRA: usize = 4 + 4 * 4 + 2 + 3;
 pub const SIDE_EXTRA: usize = 3 + 5;
 pub const GLOBAL_EXTRA: usize = 2 * SIDE_EXTRA + 2 + 2;
 
@@ -263,6 +266,19 @@ pub fn featurize_extra(state: &State, flip: bool) -> (Vec<f32>, Vec<f32>) {
         let (me, other) = (sides[s], sides[1 - s]);
         let attacker_alive = other.pokemon.pkmn[act[1 - s]].hp > 0;
         let att = &other.pokemon.pkmn[act[1 - s]];
+        let att_moves = [&att.moves.m0, &att.moves.m1, &att.moves.m2, &att.moves.m3];
+        // the opposing active's predicted move: its strongest against this side's active
+        let predicted = if attacker_alive && me.pokemon.pkmn[act[s]].hp > 0 {
+            att_moves
+                .iter()
+                .filter(|m| !m.disabled)
+                .filter_map(|m| max_damage(state, &refs[1 - s], &m.choice, act[s]).map(|d| (d, m)))
+                .max_by(|a, b| a.0.total_cmp(&b.0))
+                .map(|(_, m)| &m.choice)
+        } else {
+            None
+        };
+        let target_hp = att.hp.max(1) as f32;
         for j in 0..6 {
             let p = &me.pokemon.pkmn[j];
             if p.hp <= 0 {
@@ -274,6 +290,22 @@ pub fn featurize_extra(state: &State, flip: bool) -> (Vec<f32>, Vec<f32>) {
                 let h = hazard_damage(me, p);
                 e[20] = h;
                 e[21] = (h * p.maxhp as f32 >= p.hp as f32) as u8 as f32;
+                if let Some(c) = predicted {
+                    let d = max_damage(state, &refs[1 - s], c, j).unwrap_or(0.0);
+                    let hp = p.hp as f32;
+                    e[22] = (d / hp).min(2.0);
+                    e[23] = (d >= hp) as u8 as f32;
+                }
+                if attacker_alive {
+                    // this bench mon's best move vs the opposing active (as if it were in)
+                    let mut st = state.clone();
+                    st.get_side(&refs[s]).active_index = PokemonIndex::deserialize(&j.to_string());
+                    let best = [&p.moves.m0, &p.moves.m1, &p.moves.m2, &p.moves.m3]
+                        .iter()
+                        .filter_map(|m| max_damage(&st, &refs[s], &m.choice, act[1 - s]))
+                        .fold(0.0f32, f32::max);
+                    e[24] = (best / target_hp).min(2.0);
+                }
             }
             let hp = p.hp as f32;
             if attacker_alive {

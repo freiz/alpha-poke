@@ -141,6 +141,27 @@ fn py_ismcts(
     Ok((ours, res.iterations, res.nodes, res.max_depth))
 }
 
+/// `f` on every item, the items split into contiguous chunks over the available cores; results in
+/// input order (batch featurization of training data).
+fn par_map<T: Sync, R: Send>(items: &[T], f: impl Fn(&T) -> R + Sync) -> Vec<R> {
+    let n = std::thread::available_parallelism().map_or(1, |n| n.get());
+    if n <= 1 || items.len() < 256 {
+        return items.iter().map(f).collect();
+    }
+    let chunk = items.len().div_ceil(n);
+    let f = &f;
+    std::thread::scope(|sc| {
+        let handles: Vec<_> = items
+            .chunks(chunk)
+            .map(|c| sc.spawn(move || c.iter().map(f).collect::<Vec<R>>()))
+            .collect();
+        handles
+            .into_iter()
+            .flat_map(|h| h.join().expect("featurize thread"))
+            .collect()
+    })
+}
+
 fn le_bytes<T: Copy, const N: usize>(v: &[T], f: impl Fn(T) -> [u8; N]) -> Vec<u8> {
     v.iter().flat_map(|&x| f(x)).collect()
 }
@@ -164,8 +185,9 @@ fn featurize<'py>(
 ) {
     let (sparse, dense, global, mask) = py.detach(|| {
         let (mut sparse, mut dense, mut global, mut mask) = (vec![], vec![], vec![], vec![]);
-        for s in &states {
-            let f = features::featurize_view(&State::deserialize(s), flip);
+        for f in par_map(&states, |s| {
+            features::featurize_view(&State::deserialize(s), flip)
+        }) {
             sparse.extend(f.sparse);
             dense.extend(f.dense);
             global.extend(f.global);
@@ -218,8 +240,9 @@ fn featurize_extra<'py>(
 ) -> (Bound<'py, PyBytes>, Bound<'py, PyBytes>) {
     let (ent, glob) = py.detach(|| {
         let (mut ent, mut glob) = (vec![], vec![]);
-        for s in &states {
-            let (e, g) = extra::featurize_extra(&State::deserialize(s), flip);
+        for (e, g) in par_map(&states, |s| {
+            extra::featurize_extra(&State::deserialize(s), flip)
+        }) {
             ent.extend(e);
             glob.extend(g);
         }
@@ -267,10 +290,9 @@ fn encode_ids(kind: &str, names: Vec<String>) -> PyResult<Vec<i32>> {
 #[pyfunction]
 fn evaluate(py: Python<'_>, states: Vec<String>) -> Vec<f32> {
     py.detach(|| {
-        states
-            .iter()
-            .map(|s| poke_engine::engine::evaluate::evaluate(&State::deserialize(s)))
-            .collect()
+        par_map(&states, |s| {
+            poke_engine::engine::evaluate::evaluate(&State::deserialize(s))
+        })
     })
 }
 

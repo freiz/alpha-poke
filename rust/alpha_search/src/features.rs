@@ -19,8 +19,11 @@
 //!   the two sides' actions in poke-engine's terms — a turn's chosen actions, a forced switch
 //!   after a faint, a pivot switch. Sparse per step (`HIST_SPARSE`): own actor species, own move,
 //!   own switch-in species, the same for the opponent (0 = none); dense (`HIST_DENSE`): step
-//!   present, own move / switch / tera, opponent move / switch / tera. Independent of the state:
-//!   training gets the steps from the replay, the search from the real game + its tree path.
+//!   present, own move / switch / tera, opponent move / switch / tera, then (v4) each side's
+//!   outcome: acted first, damage dealt (HP percent of the opposing active / 100), critical hit,
+//!   missed / failed, KO, prevented (`|cant|`), fainted before acting. Independent of the state:
+//!   training gets the steps from the replay, the search from the real game + its tree path (no
+//!   outcomes on the tree path yet).
 
 use poke_engine::choices::Choices;
 use poke_engine::engine::state::MoveChoice;
@@ -38,7 +41,7 @@ pub const N_ACTIONS: usize = 14;
 pub const VOCAB: [usize; 5] = [1536, 256, 384, 32, 1024];
 pub const HIST: usize = 8; // stored / featurized steps; a model may use fewer (config `hist`)
 pub const HIST_SPARSE: usize = 6;
-pub const HIST_DENSE: usize = 7;
+pub const HIST_DENSE: usize = 7 + 2 * 7;
 
 /// One side's action in a decision step. `kind`: 0 none, 1 move, 2 switch; `target`: the move
 /// (`Choices`) or the switch-in species (`PokemonName`) id; `actor`: the acting mon's species.
@@ -48,6 +51,14 @@ pub struct Act {
     pub tera: bool,
     pub actor: i32,
     pub target: i32,
+    // outcome (v4; replay history only)
+    pub first: bool,
+    pub dmg: u8,
+    pub crit: bool,
+    pub miss: bool,
+    pub ko: bool,
+    pub prevented: bool,
+    pub fainted_first: bool,
 }
 
 /// Both sides' actions in one decision step (side one / side two of the state).
@@ -58,26 +69,51 @@ pub struct Step {
 }
 
 impl Act {
-    /// "" (none), "m:ACTOR:MOVE", "t:ACTOR:MOVE" (with tera), "s:ACTOR:SWITCHIN" (engine ids).
+    /// "" (none), "m:ACTOR:MOVE", "t:ACTOR:MOVE" (with tera), "s:ACTOR:SWITCHIN" (engine ids),
+    /// optionally followed by ":DMG:FLAGS" (v4 outcome: HP percent dealt; c crit, x missed, k KO,
+    /// f acted first); "p:ACTOR:REASON" (prevented) and "d:ACTOR:" (fainted before acting) are
+    /// no action with that outcome.
     pub fn parse(s: &str) -> Act {
         let f: Vec<&str> = s.split(':').collect();
-        if f.len() != 3 {
+        if f.len() < 3 {
             return Act::default();
         }
         let species = |x: &str| PokemonName::from_str(x).map_or(0, |p| p as i32);
         let actor = species(f[1]);
+        let flags = f.get(4).copied().unwrap_or("");
+        let outcome = Act {
+            first: flags.contains('f'),
+            dmg: f
+                .get(3)
+                .and_then(|x| x.parse::<u16>().ok())
+                .unwrap_or(0)
+                .min(100) as u8,
+            crit: flags.contains('c'),
+            miss: flags.contains('x'),
+            ko: flags.contains('k'),
+            ..Act::default()
+        };
         match f[0] {
             "m" | "t" => Act {
                 kind: 1,
                 tera: f[0] == "t",
                 actor,
                 target: Choices::from_str(f[2]).map_or(0, |c| c as i32),
+                ..outcome
             },
             "s" => Act {
                 kind: 2,
-                tera: false,
                 actor,
                 target: species(f[2]),
+                ..outcome
+            },
+            "p" => Act {
+                prevented: true,
+                ..Act::default()
+            },
+            "d" => Act {
+                fainted_first: true,
+                ..Act::default()
             },
             _ => Act::default(),
         }
@@ -93,12 +129,13 @@ impl Act {
                 tera: matches!(mc, MoveChoice::MoveTera(_)),
                 actor,
                 target: me.moves[i].id as i32,
+                ..Act::default()
             },
             MoveChoice::Switch(p) => Act {
                 kind: 2,
-                tera: false,
                 actor,
                 target: side.pokemon[*p].id as i32,
+                ..Act::default()
             },
             _ => Act::default(),
         }
@@ -146,6 +183,17 @@ pub fn history_features(hist: &[Step], flip: bool, sparse: &mut Vec<i32>, dense:
                 (a.kind == 1) as u8 as f32,
                 (a.kind == 2) as u8 as f32,
                 a.tera as u8 as f32,
+            ]);
+        }
+        for a in [me, them] {
+            dense.extend_from_slice(&[
+                a.first as u8 as f32,
+                a.dmg as f32 / 100.0,
+                a.crit as u8 as f32,
+                a.miss as u8 as f32,
+                a.ko as u8 as f32,
+                a.prevented as u8 as f32,
+                a.fainted_first as u8 as f32,
             ]);
         }
     }
@@ -378,6 +426,7 @@ mod tests {
             tera: false,
             actor: me.id as i32,
             target: me.moves.m0.id as i32,
+            ..Act::default()
         };
         assert_eq!(a, want);
         let text = format!("m:{}:{}/", me.id, me.moves.m0.id);
@@ -385,5 +434,19 @@ mod tests {
         for &id in &sp {
             assert!(id >= 0 && (id as usize) < VOCAB[0].max(VOCAB[4]));
         }
+        // v4 outcomes
+        let h = parse_history("m:GREATTUSK:HEADLONGRUSH:57:fck/d:KINGAMBIT:;p:A:par/s:X:Y::f");
+        assert_eq!(h[0].one.dmg, 57);
+        assert!(h[0].one.first && h[0].one.crit && h[0].one.ko && !h[0].one.miss);
+        assert!(h[0].two.fainted_first && h[0].two.kind == 0);
+        assert!(h[1].one.prevented && h[1].two.kind == 2 && h[1].two.first);
+        let (mut sp, mut de) = (vec![], vec![]);
+        history_features(&h, false, &mut sp, &mut de);
+        // most recent step first: prevented / switch
+        assert_eq!(de[7 + 5], 1.0); // own prevented
+        assert_eq!(de[14], 1.0); // opponent acted first
+        let o = HIST_DENSE; // the older step
+        assert_eq!(&de[o + 7..o + 14], &[1.0, 0.57, 1.0, 0.0, 1.0, 0.0, 0.0]);
+        assert_eq!(de[o + 14 + 6], 1.0); // opponent fainted before acting
     }
 }
