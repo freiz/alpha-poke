@@ -50,6 +50,7 @@ def main() -> None:
     ap.add_argument("--iterations", type=int, default=2000)
     ap.add_argument("--batch", type=int, default=32)
     ap.add_argument("--check", type=int, default=10, help="positions with the CPU output check")
+    ap.add_argument("--threads", type=int, default=1, help="threads descending the batched tree")
     ap.add_argument("--trees", type=int, default=0)
     ap.add_argument("--tree-batch", type=int, default=16)
     a = ap.parse_args()
@@ -63,14 +64,14 @@ def main() -> None:
     agree_b = agree_n = 0
     tv_b, tv_n, tv_g = [], [], []
     agree_g = 0
-    gs = GpuSearch(net, a.trees, a.tree_batch) if a.trees > 1 else None
+    gs = GpuSearch(net, a.tree_batch, threads=8, trees=a.trees) if a.trees > 0 else None
     t_b = t_c = 0.0
     n_b = n_c = 0
     for i, r in enumerate(rows):
         states = [r["state"]] * a.worlds
         ctx = (list(r["reveal"]), (r["rating_own"], r["rating_opp"]), r["turn"], r["history"])
         ctxs = [ctx] * a.worlds
-        bs = alpha_search.BatchSearch(states, ctxs, seed=i)
+        bs = alpha_search.BatchSearch(states, ctxs, seed=i, threads=a.threads)
         t0 = time.time()
         while bs.stats()[0] < a.iterations:
             b = bs.collect(a.batch)

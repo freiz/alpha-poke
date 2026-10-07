@@ -1,9 +1,13 @@
-"""ISMCTS with the network on the GPU (design D13): ``trees`` independent batched searches
-(root parallel, different seeds) collect their leaves in parallel threads (the Rust side
-releases the GIL), one GPU forward pass evaluates all of them, the outputs go back to each tree;
-the root statistics are merged by option at the end (as alpha_search's root-parallel search).
-Each tree's batch stays small (``batch``), which keeps the virtual-loss distortion small; the
-GPU sees ``trees * batch`` leaves (2 rows each) per call.
+"""ISMCTS with the network on the GPU (design D13): one batched search tree
+(alpha_search.BatchSearch) with ``threads`` threads descending it in parallel (tree parallel,
+virtual loss); each round collects ``batch`` new leaves, one GPU forward pass evaluates them
+(2 rows each: both sides' views), the outputs are backed up. ``trees`` > 1 adds independent
+root-parallel trees (merged by option at the end); measured not to help (8 trees of ~2k
+iterations choose like one tree of 2k), kept for comparisons.
+Defaults (2026-10-07, 0.5 s per decision, agreement with a deep 16k-iteration search on 40
+positions): batch 32 x 8 threads ~11k leaves per decision, 75% same top option (CPU search
+3.6k leaves, 65%; two deep searches 82%); larger batches lose more to virtual loss than they
+gain (64: 70%, 128: 57%).
 """
 
 import time
@@ -23,15 +27,16 @@ def merge(batches: list[dict]) -> dict:
 
 
 class GpuSearch:
-    def __init__(self, net, trees: int = 4, batch: int = 32):
-        self.net, self.trees, self.batch = net, trees, batch
+    def __init__(self, net, batch: int = 32, threads: int = 8, trees: int = 1, vl: int = 1):
+        self.net, self.trees, self.batch, self.threads, self.vl = net, trees, batch, threads, vl
         self.pool = ThreadPoolExecutor(trees)
 
     def run(self, states: list[str], contexts: list, seconds: float, seed: int = 0,
             iterations: int = 0) -> tuple[list, int, dict]:  # fmt: skip
         """([(our option, visits, mean value)], iterations, stats) after ``seconds`` (or, if
         > 0, at least ``iterations`` leaves in total)."""
-        searches = [alpha_search.BatchSearch(states, contexts, seed=seed * 1009 + k)
+        searches = [alpha_search.BatchSearch(states, contexts, seed=seed * 1009 + k,
+                                             threads=self.threads, vl=self.vl)
                     for k in range(self.trees)]  # fmt: skip
         t0 = time.time()
         calls = 0

@@ -128,11 +128,11 @@ class SearchPlayer(KnowledgePlayer):
         # a transformer run (design D13 v3 / v4) also reads the history, the public-information
         # bits, the ratings and the turn: built per decision by net_context
         self.model_transformer = bool(self.model) and _is_transformer(self.model)
-        # transformer on the GPU: batched search, `gpu_trees` root-parallel trees of
+        # transformer on the GPU: one batched tree, `gpu_threads` threads descending it,
         # `gpu_batch` leaves per network call (agents.gpu_search); "cpu" = Rust CPU inference
         self.device = device or os.environ.get("ALPHA_SEARCH_DEVICE", "cpu")
-        self.gpu_trees = _env_int("ALPHA_GPU_TREES", 8)
-        self.gpu_batch = _env_int("ALPHA_GPU_BATCH", 16)
+        self.gpu_threads = _env_int("ALPHA_GPU_THREADS", 8)
+        self.gpu_batch = _env_int("ALPHA_GPU_BATCH", 32)
         # > 0: a fixed number of iterations (leaves) per decision instead of the time budget
         # (equal-work comparisons, e.g. GPU vs CPU search)
         self.search_iterations = _env_int("ALPHA_SEARCH_ITERATIONS", 0)
@@ -263,7 +263,7 @@ class SearchPlayer(KnowledgePlayer):
             from alpha_poke.agents.gpu_net import GpuNet  # torch only when used
             from alpha_poke.agents.gpu_search import GpuSearch
 
-            self._gpu = GpuSearch(GpuNet(self.model), self.gpu_trees, self.gpu_batch)
+            self._gpu = GpuSearch(GpuNet(self.model), self.gpu_batch, self.gpu_threads)
         ours, n, _ = self._gpu.run(
             [s.to_string() for s in states],
             ctxs,

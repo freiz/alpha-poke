@@ -428,7 +428,7 @@ struct PyBatchSearch {
 impl PyBatchSearch {
     #[new]
     #[pyo3(signature = (states, contexts, c_puct=1.0, policy_opponent=true, seed=None,
-                        chance_depth=0, branch_depth=2, cache_root=true))]
+                        branch_depth=2, threads=1, vl=1))]
     #[allow(clippy::too_many_arguments)]
     fn new(
         states: Vec<String>,
@@ -436,9 +436,9 @@ impl PyBatchSearch {
         c_puct: f32,
         policy_opponent: bool,
         seed: Option<u64>,
-        chance_depth: u16,
         branch_depth: u16,
-        cache_root: bool,
+        threads: usize,
+        vl: u32,
     ) -> PyResult<Self> {
         if states.is_empty() || states.len() != contexts.len() {
             return Err(PyValueError::new_err(
@@ -451,16 +451,16 @@ impl PyBatchSearch {
             .map(to_context)
             .collect::<PyResult<Vec<_>>>()?;
         let cfg = ismcts::Config {
-            cache_root,
+            cache_root: false,
             branch_depth,
-            chance_depth,
+            chance_depth: 0,
             use_policy: true,
             policy_opponent,
             c_puct,
             ..ismcts::Config::default()
         };
         Ok(PyBatchSearch {
-            inner: bsearch::BatchSearch::new(worlds, ctxs, cfg, seed),
+            inner: bsearch::BatchSearch::new(worlds, ctxs, cfg, seed, threads, vl),
         })
     }
 
@@ -515,7 +515,7 @@ impl PyBatchSearch {
     }
 
     fn apply(&mut self, values: Vec<f32>, logits: Vec<f32>) -> PyResult<()> {
-        if values.len() != 2 * self.inner.pending.len()
+        if values.len() != 2 * self.inner.n_pending()
             || logits.len() != values.len() * features::N_ACTIONS
         {
             return Err(PyValueError::new_err(
@@ -528,14 +528,15 @@ impl PyBatchSearch {
 
     /// The pending batch evaluated by the Rust CPU network (`model_dir`): (values, logits) as
     /// `apply` takes them. For checking the GPU outputs, and a CPU fallback.
-    fn evaluate_cpu(&self, py: Python<'_>, model_dir: &str) -> PyResult<(Vec<f32>, Vec<f32>)> {
+    fn evaluate_cpu(&mut self, py: Python<'_>, model_dir: &str) -> PyResult<(Vec<f32>, Vec<f32>)> {
         let net = tnet::shared(model_dir).map_err(PyValueError::new_err)?;
-        let inner = &self.inner;
+        let inner = &mut self.inner;
         Ok(py.detach(|| inner.evaluate_cpu(&net)))
     }
 
-    fn root(&self) -> Vec<(String, u32, f32)> {
-        let w0 = &self.inner.worlds[0];
+    fn root(&mut self) -> Vec<(String, u32, f32)> {
+        let w0 = self.inner.world0().clone();
+        let w0 = &w0;
         self.inner
             .root()
             .into_iter()
@@ -549,12 +550,13 @@ impl PyBatchSearch {
             .collect()
     }
 
-    fn stats(&self) -> (u32, u32, usize) {
-        (
-            self.inner.iterations,
-            self.inner.collisions,
-            self.inner.tree.nodes.len(),
-        )
+    fn stats(&mut self) -> (u32, u32, usize) {
+        self.inner.stats()
+    }
+
+    /// seconds spent in collect: (descents, input building)
+    fn timing(&self) -> (f64, f64) {
+        (self.inner.timing[0], self.inner.timing[1])
     }
 }
 
