@@ -2,10 +2,12 @@
 //! instruction generation, evaluation, apply / reverse. Python passes poke-engine state strings
 //! (`poke_engine.State.to_string()`); see design D12.
 
+pub mod bsearch;
 pub mod extra;
 pub mod features;
 pub mod ismcts;
 pub mod net;
+pub mod tnet;
 
 use poke_engine::engine::state::MoveChoice;
 use poke_engine::mcts::perform_mcts;
@@ -64,12 +66,14 @@ fn reference_mcts(
 
 /// SO-ISMCTS over belief-sampled worlds (state strings sharing our side). Returns
 /// ([(our option, visits, mean value)], iterations, tree nodes, max depth). threads > 1: root
-/// parallel (independent trees, merged root statistics).
+/// parallel (independent trees, merged root statistics). A transformer model directory (config
+/// arch "transformer") needs `contexts`: per world (public-information bits [12], (own rating,
+/// opponent rating), turn, history string), side one's view.
 #[pyfunction(name = "ismcts")]
 #[pyo3(signature = (states, duration_ms, iterations=0, seed=None, c=std::f32::consts::SQRT_2,
                     cache_root=true, branch_depth=2, chance_depth=0, threads=1,
                     model_dir=None, use_policy=false, policy_opponent=true, c_puct=1.0,
-                    net_value=true))]
+                    net_value=true, contexts=None))]
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 fn py_ismcts(
     py: Python<'_>,
@@ -87,6 +91,7 @@ fn py_ismcts(
     policy_opponent: bool,
     c_puct: f32,
     net_value: bool,
+    contexts: Option<Vec<PyContext>>,
 ) -> PyResult<(Vec<(String, u32, f32)>, u32, usize, u16)> {
     if states.is_empty() {
         return Err(PyValueError::new_err("ismcts needs at least one world"));
@@ -95,24 +100,45 @@ fn py_ismcts(
     if worlds[0].root_get_all_options().0.len() <= 1 {
         iterations = 100; // one option: quick exit
     }
+    // a transformer run (config.json arch) or the v1 MLP
+    let is_transformer = model_dir.as_ref().is_some_and(|d| {
+        std::fs::read_to_string(std::path::Path::new(d).join("config.json"))
+            .is_ok_and(|c| c.contains("\"arch\": \"transformer\""))
+    });
+    let (net, tnet) = match &model_dir {
+        Some(d) if is_transformer => (None, Some(tnet::shared(d).map_err(PyValueError::new_err)?)),
+        Some(d) => (Some(net::shared(d).map_err(PyValueError::new_err)?), None),
+        None => (None, None),
+    };
+    let ctxs: Vec<tnet::Context> = match (&tnet, contexts) {
+        (Some(_), Some(cs)) if cs.len() == worlds.len() => cs
+            .into_iter()
+            .map(to_context)
+            .collect::<PyResult<Vec<_>>>()?,
+        (Some(_), _) => {
+            return Err(PyValueError::new_err(
+                "a transformer model needs one context per world",
+            ))
+        }
+        _ => Vec::new(),
+    };
     let cfg = ismcts::Config {
         c,
         cache_root,
         branch_depth,
         chance_depth,
-        net: match &model_dir {
-            Some(d) => Some(net::shared(d).map_err(PyValueError::new_err)?),
-            None => None,
-        },
+        net,
         use_policy,
         policy_opponent,
         c_puct,
         net_value,
+        tnet,
     };
     let res = py.detach(|| {
         if threads > 1 {
             ismcts::search_parallel(
                 &worlds,
+                &ctxs,
                 Duration::from_millis(duration_ms),
                 iterations,
                 &cfg,
@@ -122,6 +148,7 @@ fn py_ismcts(
         } else {
             ismcts::search(
                 &mut worlds,
+                &ctxs,
                 Duration::from_millis(duration_ms),
                 iterations,
                 &cfg,
@@ -143,7 +170,7 @@ fn py_ismcts(
 
 /// `f` on every item, the items split into contiguous chunks over the available cores; results in
 /// input order (batch featurization of training data).
-fn par_map<T: Sync, R: Send>(items: &[T], f: impl Fn(&T) -> R + Sync) -> Vec<R> {
+pub(crate) fn par_map<T: Sync, R: Send>(items: &[T], f: impl Fn(&T) -> R + Sync) -> Vec<R> {
     let n = std::thread::available_parallelism().map_or(1, |n| n.get());
     if n <= 1 || items.len() < 256 {
         return items.iter().map(f).collect();
@@ -321,6 +348,216 @@ fn net_forward(
     }))
 }
 
+/// The transformer network (model directory: best.safetensors + config.json) on many
+/// positions: `states`, per position the public-information bits (12 ints, side one's view),
+/// ratings (own, opponent), turn and history string ("ONE/TWO;..."); `flip` = side two's view.
+/// Returns (policy logits [B * 14], -inf on illegal slots; value logits [B]). For checking the
+/// Rust forward pass against PyTorch.
+#[pyfunction]
+#[pyo3(signature = (model_dir, states, reveals, ratings, turns, histories, flip=false))]
+#[allow(clippy::too_many_arguments)]
+fn tnet_forward(
+    py: Python<'_>,
+    model_dir: &str,
+    states: Vec<String>,
+    reveals: Vec<Vec<u8>>,
+    ratings: Vec<(i32, i32)>,
+    turns: Vec<i32>,
+    histories: Vec<String>,
+    flip: bool,
+) -> PyResult<(Vec<f32>, Vec<f32>)> {
+    let net = tnet::shared(model_dir).map_err(PyValueError::new_err)?;
+    let n = states.len();
+    if [reveals.len(), ratings.len(), turns.len(), histories.len()] != [n; 4] {
+        return Err(PyValueError::new_err("one context per state"));
+    }
+    Ok(py.detach(|| {
+        let outs = par_map(&(0..n).collect::<Vec<_>>(), |&i| {
+            let st = State::deserialize(&states[i]);
+            let mut reveal = [0u8; features::N_ENTITIES];
+            reveal.copy_from_slice(&reveals[i][..features::N_ENTITIES]);
+            let ctx = tnet::Context {
+                reveal,
+                rating: [ratings[i].0, ratings[i].1],
+                turn: turns[i],
+                history: features::parse_history(&histories[i]),
+            };
+            let ev = poke_engine::engine::evaluate::evaluate(&st);
+            net.forward(&tnet::Input::new(&st, &ctx, flip, ev))
+        });
+        let (mut logits, mut values) = (Vec::with_capacity(n * 14), Vec::with_capacity(n));
+        for o in outs {
+            logits.extend_from_slice(&o.logits);
+            values.push(o.value);
+        }
+        (logits, values)
+    }))
+}
+
+/// A search context from Python: (public-information bits [12], (own rating, opponent rating),
+/// turn, history string), side one's view.
+type PyContext = (Vec<u8>, (i32, i32), i32, String);
+
+fn to_context((rv, (r1, r2), turn, h): PyContext) -> PyResult<tnet::Context> {
+    if rv.len() != features::N_ENTITIES {
+        return Err(PyValueError::new_err(
+            "12 public-information bytes per context",
+        ));
+    }
+    let mut reveal = [0u8; features::N_ENTITIES];
+    reveal.copy_from_slice(&rv);
+    Ok(tnet::Context {
+        reveal,
+        rating: [r1, r2],
+        turn,
+        history: features::parse_history(&h),
+    })
+}
+
+/// Batched ISMCTS (design D13, `bsearch`): the network runs outside (PyTorch on the GPU).
+/// `collect(n)` -> dict of input arrays (bytes; 2 rows per pending leaf: side one's view, side
+/// two's) + "rows"; `apply(values, logits)` with the value logits [rows] and policy logits
+/// [rows * 14]; `root()` -> [(our option, visits, mean value)]; `stats()` -> (iterations,
+/// collisions, nodes).
+#[pyclass(name = "BatchSearch")]
+struct PyBatchSearch {
+    inner: bsearch::BatchSearch,
+}
+
+#[pymethods]
+impl PyBatchSearch {
+    #[new]
+    #[pyo3(signature = (states, contexts, c_puct=1.0, policy_opponent=true, seed=None,
+                        chance_depth=0, branch_depth=2, cache_root=true))]
+    #[allow(clippy::too_many_arguments)]
+    fn new(
+        states: Vec<String>,
+        contexts: Vec<PyContext>,
+        c_puct: f32,
+        policy_opponent: bool,
+        seed: Option<u64>,
+        chance_depth: u16,
+        branch_depth: u16,
+        cache_root: bool,
+    ) -> PyResult<Self> {
+        if states.is_empty() || states.len() != contexts.len() {
+            return Err(PyValueError::new_err(
+                "one context per world, at least one world",
+            ));
+        }
+        let worlds: Vec<State> = states.iter().map(|s| State::deserialize(s)).collect();
+        let ctxs = contexts
+            .into_iter()
+            .map(to_context)
+            .collect::<PyResult<Vec<_>>>()?;
+        let cfg = ismcts::Config {
+            cache_root,
+            branch_depth,
+            chance_depth,
+            use_policy: true,
+            policy_opponent,
+            c_puct,
+            ..ismcts::Config::default()
+        };
+        Ok(PyBatchSearch {
+            inner: bsearch::BatchSearch::new(worlds, ctxs, cfg, seed),
+        })
+    }
+
+    fn collect<'py>(&mut self, py: Python<'py>, n: usize) -> PyResult<Bound<'py, PyDict>> {
+        let inner = &mut self.inner;
+        let b = py.detach(|| inner.collect(n));
+        let d = PyDict::new(py);
+        d.set_item("rows", b.rows)?;
+        d.set_item(
+            "sparse",
+            PyBytes::new(py, &le_bytes(&b.sparse, i32::to_le_bytes)),
+        )?;
+        d.set_item(
+            "dense",
+            PyBytes::new(py, &le_bytes(&b.dense, f32::to_le_bytes)),
+        )?;
+        d.set_item(
+            "global",
+            PyBytes::new(py, &le_bytes(&b.global, f32::to_le_bytes)),
+        )?;
+        d.set_item("mask", PyBytes::new(py, &b.mask))?;
+        d.set_item(
+            "hsparse",
+            PyBytes::new(py, &le_bytes(&b.hsparse, i32::to_le_bytes)),
+        )?;
+        d.set_item(
+            "hdense",
+            PyBytes::new(py, &le_bytes(&b.hdense, f32::to_le_bytes)),
+        )?;
+        d.set_item(
+            "ent2",
+            PyBytes::new(py, &le_bytes(&b.ent2, f32::to_le_bytes)),
+        )?;
+        d.set_item(
+            "glob2",
+            PyBytes::new(py, &le_bytes(&b.glob2, f32::to_le_bytes)),
+        )?;
+        d.set_item("reveal", PyBytes::new(py, &b.reveal))?;
+        d.set_item(
+            "turn",
+            PyBytes::new(py, &le_bytes(&b.turn, i32::to_le_bytes)),
+        )?;
+        d.set_item(
+            "rating",
+            PyBytes::new(py, &le_bytes(&b.rating, i32::to_le_bytes)),
+        )?;
+        d.set_item(
+            "eval",
+            PyBytes::new(py, &le_bytes(&b.eval, f32::to_le_bytes)),
+        )?;
+        Ok(d)
+    }
+
+    fn apply(&mut self, values: Vec<f32>, logits: Vec<f32>) -> PyResult<()> {
+        if values.len() != 2 * self.inner.pending.len()
+            || logits.len() != values.len() * features::N_ACTIONS
+        {
+            return Err(PyValueError::new_err(
+                "outputs do not match the collected batch",
+            ));
+        }
+        self.inner.apply(&values, &logits);
+        Ok(())
+    }
+
+    /// The pending batch evaluated by the Rust CPU network (`model_dir`): (values, logits) as
+    /// `apply` takes them. For checking the GPU outputs, and a CPU fallback.
+    fn evaluate_cpu(&self, py: Python<'_>, model_dir: &str) -> PyResult<(Vec<f32>, Vec<f32>)> {
+        let net = tnet::shared(model_dir).map_err(PyValueError::new_err)?;
+        let inner = &self.inner;
+        Ok(py.detach(|| inner.evaluate_cpu(&net)))
+    }
+
+    fn root(&self) -> Vec<(String, u32, f32)> {
+        let w0 = &self.inner.worlds[0];
+        self.inner
+            .root()
+            .into_iter()
+            .map(|(l, v, m)| {
+                let name = match ismcts::our_choice(w0, l) {
+                    Some(mc) => choice_str(&w0.side_one, &mc),
+                    None => format!("{l:?}"),
+                };
+                (name, v, m)
+            })
+            .collect()
+    }
+
+    fn stats(&self) -> (u32, u32, usize) {
+        (
+            self.inner.iterations,
+            self.inner.collisions,
+            self.inner.tree.nodes.len(),
+        )
+    }
+}
+
 /// Feature shapes and embedding table sizes.
 #[pyfunction]
 fn feature_dims(py: Python<'_>) -> PyResult<Bound<'_, PyDict>> {
@@ -351,6 +588,8 @@ fn alpha_search(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(featurize_extra, m)?)?;
     m.add_function(wrap_pyfunction!(move_table, m)?)?;
     m.add_function(wrap_pyfunction!(encode_ids, m)?)?;
+    m.add_function(wrap_pyfunction!(tnet_forward, m)?)?;
+    m.add_class::<PyBatchSearch>()?;
     m.add_function(wrap_pyfunction!(evaluate, m)?)?;
     m.add_function(wrap_pyfunction!(net_forward, m)?)?;
     Ok(())

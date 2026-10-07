@@ -10,7 +10,9 @@ Team preview (LLM plan, lead) is the KnowledgePlayer's. Every decision:
      maps to a legal order.
 ISMCTS backend (``backend="ismcts"``, design D12): ``worlds`` determinizations go to ONE
 information-set tree (rust/alpha_search); the time spent building them is taken out of the
-search budget so that the decision time matches the determinized backend.
+search budget so that the decision time matches the determinized backend. With a transformer
+model the per-world contexts (history, public-information bits, ratings, turn) come from
+``net_context`` and their time is taken out of the budget too.
 Plan prior (design D11, A1; ``plan_prior`` > 0, env ALPHA_PLAN_PRIOR): the KnowledgePlayer's
 plan terms of each option (goals, assignments, rules, ...; the same trust checks as the
 heuristic) are added to the visit shares as ``plan_prior * plan_total``, and tera options the
@@ -33,7 +35,7 @@ from pathlib import Path
 import alpha_search
 from poke_env.battle import Pokemon
 
-from alpha_poke.agents import mcts_worker
+from alpha_poke.agents import mcts_worker, net_context
 from alpha_poke.agents.engine_state import build_state, engine_move_to_order, oracle_sets
 from alpha_poke.agents.knowledge_player import KnowledgePlayer, sync_tera_types
 
@@ -53,6 +55,14 @@ def _env_float(name: str, default: float) -> float:
         return float(os.environ.get(name, default))
     except ValueError:
         return default
+
+
+def _is_transformer(model_dir: str) -> bool:
+    try:
+        cfg = json.loads((Path(model_dir) / "config.json").read_text())
+        return cfg.get("arch") == "transformer"
+    except (OSError, ValueError):
+        return False
 
 
 def _option_key(choice) -> tuple:
@@ -85,6 +95,7 @@ class SearchPlayer(KnowledgePlayer):
         model=None,
         net_policy=None,
         net_value=None,
+        device=None,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
@@ -114,6 +125,18 @@ class SearchPlayer(KnowledgePlayer):
         # ISMCTS leaf value from a trained network (model directory, design D13); None =
         # poke-engine's handcrafted evaluation
         self.model = model or os.environ.get("ALPHA_SEARCH_MODEL") or None
+        # a transformer run (design D13 v3 / v4) also reads the history, the public-information
+        # bits, the ratings and the turn: built per decision by net_context
+        self.model_transformer = bool(self.model) and _is_transformer(self.model)
+        # transformer on the GPU: batched search, `gpu_trees` root-parallel trees of
+        # `gpu_batch` leaves per network call (agents.gpu_search); "cpu" = Rust CPU inference
+        self.device = device or os.environ.get("ALPHA_SEARCH_DEVICE", "cpu")
+        self.gpu_trees = _env_int("ALPHA_GPU_TREES", 8)
+        self.gpu_batch = _env_int("ALPHA_GPU_BATCH", 16)
+        # > 0: a fixed number of iterations (leaves) per decision instead of the time budget
+        # (equal-work comparisons, e.g. GPU vs CPU search)
+        self.search_iterations = _env_int("ALPHA_SEARCH_ITERATIONS", 0)
+        self._gpu = None
         # PUCT with the network's policy priors: None = off, "both" = both sides, "ours" = ours
         # only (the opponent keeps UCB1)
         self.net_policy = net_policy or os.environ.get("ALPHA_NET_POLICY") or None
@@ -141,6 +164,9 @@ class SearchPlayer(KnowledgePlayer):
         if self._pool is not None:
             self._pool.shutdown(wait=False, cancel_futures=True)
             self._pool = None
+        if self._gpu is not None:
+            self._gpu.close()
+            self._gpu = None
 
     def choose_move(self, battle):
         try:
@@ -174,17 +200,23 @@ class SearchPlayer(KnowledgePlayer):
         ]
         pool = None if self.backend == "ismcts" else self._workers()
         if self.backend == "ismcts":
+            ctxs = net_context.contexts(battle, states) if self.model_transformer else None
             budget = max(20, self.search_ms - int((time.time() - t0) * 1000))
-            ours, n, _, _ = alpha_search.ismcts(
-                [s.to_string() for s in states],
-                budget,
-                chance_depth=self.chance_depth,
-                threads=self.threads,  # Rust threads (root parallel), no process pool
-                model_dir=self.model,
-                use_policy=self.net_policy is not None,
-                policy_opponent=self.net_policy == "both",
-                net_value=self.net_value,
-            )
+            if self.model_transformer and self.device == "cuda":
+                ours, n = self._gpu_search(states, ctxs, budget, rng)
+            else:
+                ours, n, _, _ = alpha_search.ismcts(
+                    [s.to_string() for s in states],
+                    budget,
+                    iterations=self.search_iterations,
+                    chance_depth=self.chance_depth,
+                    threads=self.threads,  # Rust threads (root parallel), no process pool
+                    model_dir=self.model,
+                    use_policy=self.net_policy is not None,
+                    policy_opponent=self.net_policy == "both",
+                    net_value=self.net_value,
+                    contexts=ctxs,
+                )
             results = [([(c, v) for c, v, _ in ours], n)]
         elif pool is not None:  # parallel: each sample gets the full budget on its own core
             futs = [pool.submit(mcts_worker.run, s.to_string(), self.search_ms) for s in states]
@@ -224,6 +256,22 @@ class SearchPlayer(KnowledgePlayer):
                 changed=prior is not None and best[1] != orders[0][0],
             )  # fmt: skip
         return best[4]
+
+    def _gpu_search(self, states, ctxs, budget_ms: int, rng) -> tuple[list, int]:
+        """The batched search with the network on the GPU (agents.gpu_search)."""
+        if self._gpu is None:
+            from alpha_poke.agents.gpu_net import GpuNet  # torch only when used
+            from alpha_poke.agents.gpu_search import GpuSearch
+
+            self._gpu = GpuSearch(GpuNet(self.model), self.gpu_trees, self.gpu_batch)
+        ours, n, _ = self._gpu.run(
+            [s.to_string() for s in states],
+            ctxs,
+            budget_ms / 1000,
+            seed=rng.randrange(1 << 30),
+            iterations=self.search_iterations,
+        )
+        return ours, n
 
     def _plan_prior(self, battle) -> dict | None:
         """Plan total of every option the heuristic scores (forbidden tera options are absent).

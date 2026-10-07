@@ -255,6 +255,12 @@ class TransformerPV(nn.Module):
             self.margin_head = nn.Linear(d_model, 13)
         if "turns" in aux_heads:
             self.turns_head = nn.Linear(d_model, 1)
+        # index / token-type tensors on the module's device (no host copies in the forward pass,
+        # so it can be captured as a CUDA graph); not part of the weights
+        self.register_buffer("num_idx", torch.tensor(NUM_IDX), persistent=False)
+        self.register_buffer("matchup_idx", torch.tensor(MATCHUP_IDX), persistent=False)
+        types = [0] * 6 + [1] * 6 + [2] + [3 + k for k in range(dims.get("hist", 8))]
+        self.register_buffer("tok_types", torch.tensor(types), persistent=False)
         self.ent_in = nn.Linear(self.emb.d_entity, d_model)
         d_glob = dims["global"] + (dims["global_extra"] + 1 if feats else 0)
         d_glob += N_ELO if "elo" in feats else 0
@@ -280,19 +286,19 @@ class TransformerPV(nn.Module):
         b = x.shape[0]
         if self.feats:
             g2 = xin["glob2"]
-            num = torch.cat([g2[:, NUM_IDX], (xin["turn"].float() / 50)[:, None]], dim=-1)
-            mu = g2[:, MATCHUP_IDX] * float("matchup" in self.feats)
+            num = torch.cat([g2[:, self.num_idx], (xin["turn"].float() / 50)[:, None]], dim=-1)
+            mu = g2[:, self.matchup_idx] * float("matchup" in self.feats)
             glob = torch.cat([glob, num * float("num" in self.feats), mu], dim=-1)
             if "elo" in self.feats:
                 glob = torch.cat([glob, elo_features(xin["rating"])], dim=-1)
-        types = torch.tensor([0] * 6 + [1] * 6 + [2], device=x.device)
+        types = self.tok_types[:13]
         toks = [self.ent_in(x), self.glob_in(glob)[:, None]]
         pad = torch.zeros(b, 13, dtype=torch.bool, device=x.device)
         if self.history:
             s = self.hist_len
             hsparse, hdense = hsparse[:, :s], hdense[:, :s]
             toks.append(self.step_in(self.emb.steps(hsparse, hdense)))
-            types = torch.cat([types, 3 + torch.arange(s, device=x.device)])
+            types = self.tok_types[: 13 + s]
             pad = torch.cat([pad, hdense[..., 0] == 0], dim=1)  # missing steps
         z = torch.cat(toks, dim=1) + self.tok_type(types)
         z = self.norm(self.encoder(z, src_key_padding_mask=pad))

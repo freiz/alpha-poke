@@ -78,6 +78,33 @@ VARIANTS: dict[str, tuple[bool, bool, bool, dict]] = {
             "model": "data/train/v1/runs/v1-medium-residual",
         },
     ),  # fmt: skip
+    # the transformer network trained on the full data (design D13 v5): priors both sides + value
+    "s_ismcts_tf": (
+        True,
+        True,
+        True,
+        {
+            "search": True,
+            "backend": "ismcts",
+            "worlds": 32,
+            "net_policy": "both",
+            "model": "data/train/v5/runs/v5-final",
+        },
+    ),  # fmt: skip
+    # the same on the GPU (batched search, agents.gpu_search)
+    "s_ismcts_tfg": (
+        True,
+        True,
+        True,
+        {
+            "search": True,
+            "backend": "ismcts",
+            "worlds": 32,
+            "net_policy": "both",
+            "model": "data/train/v5/runs/v5-final",
+            "device": "cuda",
+        },
+    ),  # fmt: skip
     "s_ismcts_cl2": (
         True,
         True,

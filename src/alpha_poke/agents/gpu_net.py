@@ -1,0 +1,105 @@
+"""The transformer network on the GPU for the batched search (design D13; rust bsearch).
+
+``GpuNet(run)(batch)`` takes the arrays of ``alpha_search.BatchSearch.collect`` and returns
+(value logits, policy logits) as ``BatchSearch.apply`` takes them: the same PyTorch module as in
+training, float32 (TF32 off), the value residual on the handcrafted evaluation included.
+With ``graphs`` (default on CUDA) the forward pass runs as a captured CUDA graph per padded
+batch size (SIZES; the padding rows repeat the first row and are dropped): one launch instead
+of hundreds of small kernels. Falls back to eager execution if a capture fails.
+"""
+
+import alpha_search
+import numpy as np
+import torch
+
+from alpha_poke.train.load import load_run
+
+D = alpha_search.feature_dims()
+
+
+SIZES = (32, 64, 128, 256, 512, 1024)
+
+
+class GpuNet:
+    def __init__(self, run: str, device: str = "cuda", graphs: bool = True):
+        torch.backends.cuda.matmul.allow_tf32 = False  # float32, as the CPU reference
+        self.device = torch.device(device if torch.cuda.is_available() else "cpu")
+        self.model = load_run(run, self.device).float()
+        self.use_graphs = graphs and self.device.type == "cuda"
+        self.graphs: dict = {}  # padded size -> (graph, static inputs, static outputs)
+
+    def tensors(self, b: dict) -> tuple:
+        n, e = b["rows"], D["entities"]
+
+        def t(key, dt, shape, cast=None):
+            a = np.frombuffer(b[key], dt).reshape(shape)
+            a = a.astype(cast) if cast is not None else a.copy()  # writable for torch
+            return torch.from_numpy(a).to(self.device, non_blocking=True)
+
+        args = (
+            t("sparse", np.int32, (n, e, D["sparse"]), np.int64),
+            t("dense", np.float32, (n, e, D["dense"])),
+            t("global", np.float32, (n, D["global"])),
+            t("mask", np.uint8, (n, D["actions"]), bool),
+            t("hsparse", np.int32, (n, D["hist"], D["hist_sparse"]), np.int64),
+            t("hdense", np.float32, (n, D["hist"], D["hist_dense"])),
+        )
+        x = {
+            "reveal": t("reveal", np.uint8, (n, e), np.int64),
+            "ent2": t("ent2", np.float32, (n, e, D["ent_extra"])),
+            "glob2": t("glob2", np.float32, (n, D["global_extra"])),
+            "turn": t("turn", np.int32, (n,), np.int64),
+            "rating": t("rating", np.int32, (n, 2), np.int64),
+        }
+        return args, x, t("eval", np.float32, (n,))
+
+    def forward(self, args, x, ev):
+        logits, v = self.model(*args, x=x)
+        if self.model.residual is not None:
+            v = self.model.residual[0] * ev / 100 + self.model.residual[1] + v
+        return v, logits
+
+    @staticmethod
+    def pad(t: torch.Tensor, size: int) -> torch.Tensor:
+        n = t.shape[0]
+        if n == size:
+            return t
+        return torch.cat([t, t[:1].expand(size - n, *t.shape[1:])])
+
+    def graph(self, size: int, args, x, ev):
+        """Capture the forward pass for `size` rows (shapes of these example inputs)."""
+        sa = [self.pad(a, size).clone() for a in args]
+        sx = {k: self.pad(v, size).clone() for k, v in x.items()}
+        static = (sa, sx, self.pad(ev, size).clone())
+        stream = torch.cuda.Stream()
+        stream.wait_stream(torch.cuda.current_stream())
+        with torch.cuda.stream(stream):
+            for _ in range(3):  # warm-up before the capture
+                self.forward(*static)
+        torch.cuda.current_stream().wait_stream(stream)
+        g = torch.cuda.CUDAGraph()
+        with torch.cuda.graph(g):
+            out = self.forward(*static)
+        return g, static, out
+
+    @torch.no_grad()
+    def __call__(self, b: dict) -> tuple[np.ndarray, np.ndarray]:
+        args, x, ev = self.tensors(b)
+        n = b["rows"]
+        size = next((s for s in SIZES if s >= n), None)
+        if self.use_graphs and size is not None:
+            try:
+                if size not in self.graphs:
+                    self.graphs[size] = self.graph(size, args, x, ev)
+                g, (sa, sx, se), (v, logits) = self.graphs[size]
+                for dst, src in zip(sa, args, strict=True):
+                    dst.copy_(self.pad(src, size))
+                for k in sx:
+                    sx[k].copy_(self.pad(x[k], size))
+                se.copy_(self.pad(ev, size))
+                g.replay()
+                return v[:n].float().cpu().numpy(), logits[:n].float().cpu().numpy().reshape(-1)
+            except RuntimeError:  # a capture that does not work: eager from now on
+                self.use_graphs = False
+        v, logits = self.forward(args, x, ev)
+        return v.float().cpu().numpy(), logits.float().cpu().numpy().reshape(-1)
