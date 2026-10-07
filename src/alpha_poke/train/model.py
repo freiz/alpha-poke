@@ -45,6 +45,7 @@ active faints this turn), margin (mons left at the end, own - opponent, 13 class
 import alpha_search
 import numpy as np
 import torch
+import torch.nn.functional as F
 from torch import nn
 
 # dense feature indices (rust/alpha_search/src/features.rs)
@@ -210,6 +211,62 @@ class PolicyValueNet(nn.Module):
         return logits.masked_fill(~mask, float("-inf")), value
 
 
+class Block(nn.Module):
+    """Pre-norm Transformer block with the architecture options of ``TransformerPV`` (``opts``):
+    ffn "relu" (d_ff hidden) / "swiglu" (gated, d_ff hidden), norm "ln" / "rms", qk_norm
+    (RMS-normalized queries and keys per head), smolgen > 0: a dynamic per-head attention bias
+    over the token pairs generated from the whole position (Leela Chess Zero's smolgen): the
+    normed tokens compressed to 8 dims each -> hidden ``smolgen`` -> per head 32 -> the shared
+    ``gen`` projection to T x T, added to the attention logits."""
+
+    def __init__(self, d: int, heads: int, d_ff: int, n_tok: int, opts: dict, gen=None):
+        super().__init__()
+        self.heads, self.n_tok = heads, n_tok
+        norm = nn.RMSNorm if opts.get("norm") == "rms" else nn.LayerNorm
+        self.norm1, self.norm2 = norm(d), norm(d)
+        self.qkv = nn.Linear(d, 3 * d)
+        self.out = nn.Linear(d, d)
+        self.qk_norm = opts.get("qk_norm", False)
+        if self.qk_norm:
+            self.q_norm, self.k_norm = nn.RMSNorm(d // heads), nn.RMSNorm(d // heads)
+        self.swiglu = opts.get("ffn") == "swiglu"
+        if self.swiglu:
+            self.w12 = nn.Linear(d, 2 * d_ff)
+            self.w3 = nn.Linear(d_ff, d)
+        else:
+            self.ff1, self.ff2 = nn.Linear(d, d_ff), nn.Linear(d_ff, d)
+        self.smolgen = opts.get("smolgen", 0)
+        if self.smolgen:
+            self.sg_compress = nn.Linear(d, 8, bias=False)
+            self.sg_hidden = nn.Sequential(nn.Linear(n_tok * 8, self.smolgen), nn.SiLU(),
+                                           nn.LayerNorm(self.smolgen))  # fmt: skip
+            self.sg_heads = nn.Linear(self.smolgen, heads * 32)
+            self.gen = gen  # shared across the blocks (not a submodule of this one)
+
+    def forward(self, z, pad):
+        b, t, d = z.shape
+        h = self.heads
+        y = self.norm1(z)
+        q, k, v = self.qkv(y).view(b, t, 3, h, d // h).permute(2, 0, 3, 1, 4)  # [B,H,T,hd]
+        if self.qk_norm:
+            q, k = self.q_norm(q), self.k_norm(k)
+        mask = torch.zeros(b, 1, 1, t, device=z.device, dtype=q.dtype)
+        mask = mask.masked_fill(pad[:, None, None, :], float("-inf"))
+        if self.smolgen:
+            c = self.sg_compress(y).reshape(b, t * 8)
+            g = self.sg_heads(self.sg_hidden(c)).view(b, h, 32)
+            mask = mask + self.gen[0](g).view(b, h, t, t)
+        a = F.scaled_dot_product_attention(q, k, v, attn_mask=mask)
+        z = z + self.out(a.transpose(1, 2).reshape(b, t, d))
+        y = self.norm2(z)
+        if self.swiglu:
+            g1, g2 = self.w12(y).chunk(2, dim=-1)
+            z = z + self.w3(F.silu(g1) * g2)
+        else:
+            z = z + self.ff2(F.relu(self.ff1(y)))
+        return z
+
+
 class TransformerPV(nn.Module):
     """Tokens: 12 entities (type own / opponent), 1 global, the history steps (type = recency);
     pre-norm Transformer encoder; heads as PolicyValueNet's with t = the global token."""
@@ -226,9 +283,15 @@ class TransformerPV(nn.Module):
         feats: tuple = (),
         aux_heads: tuple = (),
         mask_hidden: bool = False,
+        arch: dict | None = None,
     ):
+        """``arch`` (architecture experiments, design D13): ffn "relu" / "swiglu", norm "ln" /
+        "rms", qk_norm, smolgen (hidden size, 0 = off); empty / None = PyTorch's encoder layer
+        (the checkpoints before the experiments)."""
         super().__init__()
         assert not mask_hidden or feats, "mask_hidden needs the v3 inputs (reveal bits)"
+        self.arch = {k: v for k, v in (arch or {}).items() if v not in (None, False, 0, "relu",
+                                                                         "ln")}  # fmt: skip
         self.mask_hidden = mask_hidden
         self.unknown = [v - 1 for v in dims["vocab"]]  # species, item, ability, type, move
         assert set(feats) <= set(FEATS) and set(aux_heads) <= set(AUX_HEADS), (feats, aux_heads)
@@ -267,11 +330,23 @@ class TransformerPV(nn.Module):
         self.glob_in = nn.Linear(d_glob, d_model)
         self.step_in = nn.Linear(self.emb.d_step, d_model) if history else None
         self.tok_type = nn.Embedding(3 + dims.get("hist", 8), d_model)  # own, opp, global, h_k
-        layer = nn.TransformerEncoderLayer(
-            d_model, n_heads, d_ff, dropout=0.0, batch_first=True, norm_first=True
-        )
-        self.encoder = nn.TransformerEncoder(layer, n_layers, enable_nested_tensor=False)
-        self.norm = nn.LayerNorm(d_model)
+        if self.arch:
+            n_tok = 13 + (self.hist_len if history else 0)
+            # smolgen's last projection, shared by all blocks (as in Leela Chess Zero)
+            gen = [nn.Linear(32, n_tok * n_tok)] if self.arch.get("smolgen") else None
+            if gen:
+                self.smolgen_gen = gen[0]
+            self.blocks = nn.ModuleList(
+                [Block(d_model, n_heads, d_ff, n_tok, self.arch, gen) for _ in range(n_layers)]
+            )
+            self.norm = nn.RMSNorm(d_model) if self.arch.get("norm") == "rms" else nn.LayerNorm(
+                d_model)  # fmt: skip
+        else:
+            layer = nn.TransformerEncoderLayer(
+                d_model, n_heads, d_ff, dropout=0.0, batch_first=True, norm_first=True
+            )
+            self.encoder = nn.TransformerEncoder(layer, n_layers, enable_nested_tensor=False)
+            self.norm = nn.LayerNorm(d_model)
         self.value = nn.Linear(d_model, 1)
         self.move_head = mlp(d_model + 32 + 1 + (4 if feats else 0), 64, 2)
         self.switch_head = mlp(2 * d_model, 64, 1)
@@ -301,7 +376,12 @@ class TransformerPV(nn.Module):
             types = self.tok_types[: 13 + s]
             pad = torch.cat([pad, hdense[..., 0] == 0], dim=1)  # missing steps
         z = torch.cat(toks, dim=1) + self.tok_type(types)
-        z = self.norm(self.encoder(z, src_key_padding_mask=pad))
+        if self.arch:
+            for blk in self.blocks:
+                z = blk(z, pad)
+            z = self.norm(z)
+        else:
+            z = self.norm(self.encoder(z, src_key_padding_mask=pad))
         h, t = z[:, :12], z[:, 12]
         value = self.value(t).squeeze(-1)
         own_active = dense[:, :6, D_ACTIVE]

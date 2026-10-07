@@ -638,6 +638,15 @@ def main() -> None:
     ap.add_argument("--aux", default="", help=f"v3 auxiliary heads, comma-separated: {AUX_HEADS}")
     ap.add_argument("--aux-weight", type=float, default=0.3)
     ap.add_argument("--kinds", default="main", help="v4 decision points: main,forced,pivot,blind")
+    # architecture experiments (transformer): sizes override --size; block options (model.Block)
+    ap.add_argument("--d-model", type=int, default=0)
+    ap.add_argument("--layers", type=int, default=0)
+    ap.add_argument("--heads", type=int, default=0)
+    ap.add_argument("--d-ff", type=int, default=0)
+    ap.add_argument("--ffn", choices=["relu", "swiglu"], default="relu")
+    ap.add_argument("--norm", choices=["ln", "rms"], default="ln")
+    ap.add_argument("--qk-norm", action="store_true")
+    ap.add_argument("--smolgen", type=int, default=0, help="dynamic attention bias hidden size")
     ap.add_argument("--elo-dropout", type=float, default=0.25)
     ap.add_argument("--stream", type=int, default=0, help="shards per chunk (0 = all in memory)")
     ap.add_argument("--val-max", type=int, default=500_000, help="--stream: validation positions")
@@ -726,7 +735,12 @@ def main() -> None:
               val=len(val_idx), val_cutoff=int(cutoff), load_s=round(time.time() - t0, 1),
               eff_train=float(w[train_idx].sum() ** 2 / (w[train_idx] ** 2).sum())))  # fmt: skip
 
-    size = (T_SIZES if a.arch == "transformer" else SIZES)[a.size]
+    size = dict((T_SIZES if a.arch == "transformer" else SIZES)[a.size])
+    for k, v in (("d_model", a.d_model), ("n_layers", a.layers), ("n_heads", a.heads),
+                 ("d_ff", a.d_ff)):  # fmt: skip
+        if v:
+            size[k] = v
+    arch_opts = {"ffn": a.ffn, "norm": a.norm, "qk_norm": a.qk_norm, "smolgen": a.smolgen}
     assert a.hist_len <= DIMS["hist"], f"--hist-len > the {DIMS['hist']} featurized steps"
     dims = DIMS | {"hist": a.hist_len}
     assert not a.mtp or (a.arch == "transformer" and "fsp" in keys), "--mtp: transformer + future"
@@ -736,7 +750,8 @@ def main() -> None:
     assert not (feats or heads) or v3_ok, "--feats / --aux: transformer + v3 data"
     if a.arch == "transformer":
         model = TransformerPV(dims, **size, history=a.history, mtp=a.mtp, feats=feats,
-                              aux_heads=heads, mask_hidden=a.mask_hidden)  # fmt: skip
+                              aux_heads=heads, mask_hidden=a.mask_hidden,
+                              arch=arch_opts)  # fmt: skip
     else:
         model = PolicyValueNet(dims, **size, history=a.history)
     model.residual = None
@@ -815,7 +830,8 @@ def main() -> None:
             val_loss = m[sel[0]] + a.value_weight * m[sel[1]]
             ckpt = {"model": model.state_dict(), "dims": dims, "size": size, "arch": a.arch,
                     "history": a.history, "mtp": a.mtp, "feats": feats, "aux_heads": heads,
-                    "mask_hidden": a.mask_hidden, "step": step, "val": m,
+                    "mask_hidden": a.mask_hidden, "arch_opts": getattr(model, "arch", {}),
+                    "step": step, "val": m,
                     "value_residual": a.value_residual}  # fmt: skip
             torch.save(ckpt, out_dir / "last.pt")
             if val_loss < best:
@@ -829,7 +845,7 @@ def main() -> None:
                for k, v in best_ckpt["model"].items()}, out_dir / "best.safetensors")  # fmt: skip
     (out_dir / "config.json").write_text(json.dumps(
         {"dims": dims, "size": size, "arch": a.arch, "history": a.history, "mtp": a.mtp,
-         "feats": feats, "aux_heads": heads,
+         "feats": feats, "aux_heads": heads, "arch_opts": getattr(model, "arch", {}),
          "step": best_ckpt["step"], "val": best_ckpt["val"]}, indent=2))  # fmt: skip
     emit(dict(event="done", best_val_loss=best, minutes=round((time.time() - t0) / 60, 1)))
 
