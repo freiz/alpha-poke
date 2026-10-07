@@ -182,6 +182,27 @@ fn featurize<'py>(
     )
 }
 
+/// History features (design D13 v2) of many history strings ("ONE/TWO;..." oldest first, side
+/// one = the player to act; see features::parse_history): (sparse int32 [B, HIST, HIST_SPARSE],
+/// dense float32 [B, HIST, HIST_DENSE]).
+#[pyfunction]
+fn featurize_history<'py>(
+    py: Python<'py>,
+    histories: Vec<String>,
+) -> (Bound<'py, PyBytes>, Bound<'py, PyBytes>) {
+    let (sparse, dense) = py.detach(|| {
+        let (mut sparse, mut dense) = (vec![], vec![]);
+        for h in &histories {
+            features::history_features(&features::parse_history(h), false, &mut sparse, &mut dense);
+        }
+        (
+            le_bytes(&sparse, i32::to_le_bytes),
+            le_bytes(&dense, f32::to_le_bytes),
+        )
+    });
+    (PyBytes::new(py, &sparse), PyBytes::new(py, &dense))
+}
+
 /// poke-engine's handcrafted evaluation of many state strings (side one's view; the leaf value
 /// the search uses is sigmoid(0.0125 * (eval - root eval))). Offline baseline for the value net.
 #[pyfunction]
@@ -229,6 +250,9 @@ fn feature_dims(py: Python<'_>) -> PyResult<Bound<'_, PyDict>> {
     d.set_item("global", features::GLOBAL)?;
     d.set_item("actions", features::N_ACTIONS)?;
     d.set_item("vocab", features::VOCAB.to_vec())?;
+    d.set_item("hist", features::HIST)?;
+    d.set_item("hist_sparse", features::HIST_SPARSE)?;
+    d.set_item("hist_dense", features::HIST_DENSE)?;
     Ok(d)
 }
 
@@ -238,6 +262,7 @@ fn alpha_search(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(reference_mcts, m)?)?;
     m.add_function(wrap_pyfunction!(py_ismcts, m)?)?;
     m.add_function(wrap_pyfunction!(featurize, m)?)?;
+    m.add_function(wrap_pyfunction!(featurize_history, m)?)?;
     m.add_function(wrap_pyfunction!(feature_dims, m)?)?;
     m.add_function(wrap_pyfunction!(evaluate, m)?)?;
     m.add_function(wrap_pyfunction!(net_forward, m)?)?;

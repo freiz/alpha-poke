@@ -8,6 +8,9 @@ the position is the poke-engine state at the start of that turn seen by that pla
   * label: the action it took, in the fixed 14-slot action space; value: whether it won.
 Forced switches after a faint and pivot switches (U-turn, ...) are mid-turn decisions in a
 different state and are skipped for now; so are ties and replays the parser warns about.
+History (v2): the decision steps before the position, in poke-engine's terms (one per turn for
+the chosen actions, one for a pivot switch, one for the forced switches after faints), as the
+string alpha_search.featurize_history reads ("OWN/OPP;..." oldest first, the last HIST steps).
 """
 
 import logging
@@ -38,6 +41,53 @@ class Position:
     won: float  # 1.0 if that player won the game, else 0.0
     rating: int | None
     uploadtime: int
+    history: str = ""
+
+
+HIST = 8  # rust/alpha_search/src/features.rs
+
+
+def _eng(name: str) -> str:
+    return to_id(name.replace("-*", "")).upper()
+
+
+def _act(a) -> str:
+    if a is None:
+        return ""
+    if a.kind == "move":
+        return f"{'t' if a.tera else 'm'}:{_eng(a.mon)}:{_eng(a.move or '')}"
+    return f"s:{_eng(a.mon)}:{_eng(a.to or '')}"
+
+
+def decision_steps(actions) -> dict[int, list[dict]]:
+    """Turn -> its decision steps in order, each {side: action or None}: the chosen actions
+    (the first move / voluntary switch of each side; none if it could not act), then each pivot
+    switch, then the forced switches after faints (one step for both sides)."""
+    by_turn: dict[int, list] = {}
+    for a in actions:
+        if a.turn >= 1 and a.kind in ("move", "switch"):
+            by_turn.setdefault(a.turn, []).append(a)
+    out = {}
+    for t, acts in by_turn.items():
+        acts.sort(key=lambda a: a.order)
+        main = {}
+        for a in acts:
+            if not a.forced and not a.pivot:
+                main.setdefault(a.side, a)
+        steps = [main]
+        steps += [{a.side: a} for a in acts if a.pivot]
+        forced = {a.side: a for a in acts if a.forced}
+        if forced:
+            steps.append(forced)
+        out[t] = steps
+    return out
+
+
+def history_string(steps: dict[int, list[dict]], turn: int, side: str) -> str:
+    """The last HIST steps before ``turn`` from ``side``'s point of view."""
+    other = "p2" if side == "p1" else "p1"
+    seq = [s for t in sorted(steps) if t < turn for s in steps[t]][-HIST:]
+    return ";".join(f"{_act(s.get(side))}/{_act(s.get(other))}" for s in seq)
 
 
 def _known(rec) -> KnownSet:
@@ -86,6 +136,7 @@ def positions_from_replay(
             names.setdefault(f[2], f[3])
     if set(names) != {"p1", "p2"}:
         return []
+    steps = decision_steps(rep.actions)
     battles = {s: Battle(f"battle-{row['id']}-{s}", names[s], _log, gen=9) for s in ("p1", "p2")}
     records = {s: [m for m in rep.teams[s] if not m.phantom] for s in ("p1", "p2")}
     known = {s: {to_id(m.species): _known(m) for m in records[s]} for s in ("p1", "p2")}
@@ -120,6 +171,7 @@ def positions_from_replay(
                         float(rep.winner == side),
                         _rating(row),
                         int(row.get("uploadtime") or 0),
+                        history_string(steps, turn, side),
                     )  # fmt: skip
                 )
     return out

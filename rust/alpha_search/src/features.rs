@@ -15,9 +15,18 @@
 //!   healing wish, lunar dance, wish, future sight, substitute, the seven boosts, force switch,
 //!   force trapped, and the 104 volatile-status bits of its active mon.
 //! * legal action mask (`N_ACTIONS`): 0-3 move slot, 4-7 move slot + tera, 8-13 switch to slot.
+//! * history (v2, `history_features`): the last `HIST` decision steps (most recent first), each
+//!   the two sides' actions in poke-engine's terms — a turn's chosen actions, a forced switch
+//!   after a faint, a pivot switch. Sparse per step (`HIST_SPARSE`): own actor species, own move,
+//!   own switch-in species, the same for the opponent (0 = none); dense (`HIST_DENSE`): step
+//!   present, own move / switch / tera, opponent move / switch / tera. Independent of the state:
+//!   training gets the steps from the replay, the search from the real game + its tree path.
 
+use poke_engine::choices::Choices;
 use poke_engine::engine::state::MoveChoice;
+use poke_engine::pokemon::PokemonName;
 use poke_engine::state::{Pokemon, Side, State};
+use std::str::FromStr;
 
 pub const N_ENTITIES: usize = 12;
 pub const SPARSE: usize = 10;
@@ -27,6 +36,120 @@ pub const GLOBAL: usize = 8 + 5 + 2 + 2 * SIDE_GLOBAL;
 pub const N_ACTIONS: usize = 14;
 /// embedding table sizes: species, item, ability, type (tera / type 1 / type 2), move
 pub const VOCAB: [usize; 5] = [1536, 256, 384, 32, 1024];
+pub const HIST: usize = 8;
+pub const HIST_SPARSE: usize = 6;
+pub const HIST_DENSE: usize = 7;
+
+/// One side's action in a decision step. `kind`: 0 none, 1 move, 2 switch; `target`: the move
+/// (`Choices`) or the switch-in species (`PokemonName`) id; `actor`: the acting mon's species.
+#[derive(Clone, Copy, Default, Debug, PartialEq)]
+pub struct Act {
+    pub kind: u8,
+    pub tera: bool,
+    pub actor: i32,
+    pub target: i32,
+}
+
+/// Both sides' actions in one decision step (side one / side two of the state).
+#[derive(Clone, Copy, Default, Debug, PartialEq)]
+pub struct Step {
+    pub one: Act,
+    pub two: Act,
+}
+
+impl Act {
+    /// "" (none), "m:ACTOR:MOVE", "t:ACTOR:MOVE" (with tera), "s:ACTOR:SWITCHIN" (engine ids).
+    pub fn parse(s: &str) -> Act {
+        let f: Vec<&str> = s.split(':').collect();
+        if f.len() != 3 {
+            return Act::default();
+        }
+        let species = |x: &str| PokemonName::from_str(x).map_or(0, |p| p as i32);
+        let actor = species(f[1]);
+        match f[0] {
+            "m" | "t" => Act {
+                kind: 1,
+                tera: f[0] == "t",
+                actor,
+                target: Choices::from_str(f[2]).map_or(0, |c| c as i32),
+            },
+            "s" => Act {
+                kind: 2,
+                tera: false,
+                actor,
+                target: species(f[2]),
+            },
+            _ => Act::default(),
+        }
+    }
+
+    /// The action `mc` of `side` in the state it is chosen in (the search's tree path).
+    pub fn of_choice(side: &Side, mc: &MoveChoice) -> Act {
+        let me = side.get_active_immutable();
+        let actor = me.id as i32;
+        match mc {
+            MoveChoice::Move(i) | MoveChoice::MoveTera(i) => Act {
+                kind: 1,
+                tera: matches!(mc, MoveChoice::MoveTera(_)),
+                actor,
+                target: me.moves[i].id as i32,
+            },
+            MoveChoice::Switch(p) => Act {
+                kind: 2,
+                tera: false,
+                actor,
+                target: side.pokemon[*p].id as i32,
+            },
+            _ => Act::default(),
+        }
+    }
+}
+
+/// "ONE/TWO;ONE/TWO;..." (oldest first; ONE = side one's action) -> steps.
+pub fn parse_history(s: &str) -> Vec<Step> {
+    s.split(';')
+        .filter(|x| !x.is_empty())
+        .map(|x| {
+            let (a, b) = x.split_once('/').unwrap_or((x, ""));
+            Step {
+                one: Act::parse(a),
+                two: Act::parse(b),
+            }
+        })
+        .collect()
+}
+
+/// History features of the last `HIST` steps (most recent first); `flip`: side two's view.
+pub fn history_features(hist: &[Step], flip: bool, sparse: &mut Vec<i32>, dense: &mut Vec<f32>) {
+    for k in 0..HIST {
+        let Some(st) = hist.len().checked_sub(k + 1).map(|i| hist[i]) else {
+            sparse.extend_from_slice(&[0; HIST_SPARSE]);
+            dense.extend_from_slice(&[0.0; HIST_DENSE]);
+            continue;
+        };
+        let (me, them) = if flip {
+            (st.two, st.one)
+        } else {
+            (st.one, st.two)
+        };
+        dense.push(1.0);
+        for a in [me, them] {
+            let (mv, sw) = match a.kind {
+                1 => (a.target, 0),
+                2 => (0, a.target),
+                _ => (0, 0),
+            };
+            sparse.extend_from_slice(&[if a.kind == 0 { 0 } else { a.actor }, mv, sw]);
+        }
+        for a in [me, them] {
+            dense.extend_from_slice(&[
+                (a.kind == 1) as u8 as f32,
+                (a.kind == 2) as u8 as f32,
+                a.tera as u8 as f32,
+            ]);
+        }
+    }
+}
 
 pub struct Features {
     pub sparse: Vec<i32>, // [N_ENTITIES * SPARSE]
@@ -189,6 +312,7 @@ pub fn featurize_view(state: &State, flip: bool) -> Features {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use poke_engine::state::PokemonMoveIndex;
 
     const FIXTURE: &str = include_str!("../../../tests/fixtures/engine_state_6v6.txt");
 
@@ -218,6 +342,48 @@ mod tests {
             let (o1, _) = state.root_get_all_options();
             let n = f.mask.iter().filter(|&&m| m == 1).count();
             assert_eq!(n, o1.iter().filter(|m| **m != MoveChoice::None).count());
+        }
+    }
+
+    #[test]
+    fn history_parse_and_layout() {
+        let h = parse_history("m:GLIMMORA:POWERGEM/s:IRONVALIANT:GREATTUSK;t:GLIMMORA:EARTHPOWER/");
+        assert_eq!(h.len(), 2);
+        assert_eq!(h[0].one.kind, 1);
+        assert_eq!(h[0].one.target, Choices::POWERGEM as i32);
+        assert_eq!(h[0].two.kind, 2);
+        assert_eq!(h[0].two.target, PokemonName::GREATTUSK as i32);
+        assert!(h[1].one.tera && h[1].two.kind == 0);
+        let (mut sp, mut de) = (vec![], vec![]);
+        history_features(&h, false, &mut sp, &mut de);
+        assert_eq!(
+            (sp.len(), de.len()),
+            (HIST * HIST_SPARSE, HIST * HIST_DENSE)
+        );
+        // most recent first: tera Earth Power, opponent did nothing
+        assert_eq!(sp[1], Choices::EARTHPOWER as i32);
+        assert_eq!(&sp[3..6], &[0, 0, 0]);
+        assert_eq!(&de[..7], &[1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0]);
+        // flipped: the opponent's switch is "own"
+        let (mut sp2, mut de2) = (vec![], vec![]);
+        history_features(&h, true, &mut sp2, &mut de2);
+        assert_eq!(sp2[HIST_SPARSE + 2], PokemonName::GREATTUSK as i32);
+        assert!(de[2 * HIST_DENSE..].iter().all(|&x| x == 0.0)); // padding
+                                                                 // the tree path gives the same ids
+        let state = State::deserialize(FIXTURE.lines().next().unwrap());
+        let a = Act::of_choice(&state.side_one, &MoveChoice::Move(PokemonMoveIndex::M0));
+        let me = state.side_one.get_active_immutable();
+        let want = Act {
+            kind: 1,
+            tera: false,
+            actor: me.id as i32,
+            target: me.moves.m0.id as i32,
+        };
+        assert_eq!(a, want);
+        let text = format!("m:{}:{}/", me.id, me.moves.m0.id);
+        assert_eq!(parse_history(&text)[0].one, want); // engine names round-trip
+        for &id in &sp {
+            assert!(id >= 0 && (id as usize) < VOCAB[0].max(VOCAB[4]));
         }
     }
 }
