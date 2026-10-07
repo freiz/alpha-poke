@@ -55,7 +55,21 @@ def main() -> None:
     print(f"{a.data}: {len(idx)} positions from {len(games)} games uploaded >= {a.since}")
     for r in a.runs:
         m = train_pv.evaluate(load_run(Path(r), device), d, idx, device)
-        keys = ("ce", "top1", "top3", "top1_switch", "ce_switch", "bce", "vacc", "value_ece")
+        keys = (
+            "ce",
+            "top1",
+            "top2",
+            "top3",
+            "top5",
+            "top1_switch",
+            "top3_switch",
+            "ce_switch",
+            "bce",
+            "vacc",
+            "value_ece",
+            "opp_act_acc",
+            "opp_act_top3",
+        )
         print(json.dumps({"run": Path(r).name} | {k: round(m[k], 4) for k in keys if k in m}))
 
 

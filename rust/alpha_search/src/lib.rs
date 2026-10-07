@@ -146,12 +146,15 @@ fn le_bytes<T: Copy, const N: usize>(v: &[T], f: impl Fn(T) -> [u8; N]) -> Vec<u
 
 /// Features of many state strings (side one's view, design D13) as raw little-endian buffers:
 /// (sparse int32 [B, 12, 10], dense float32 [B, 12, 23], global float32 [B, G], mask uint8
-/// [B, 14]); shapes in `feature_dims()`.
+/// [B, 14]); shapes in `feature_dims()`. `flip`: side two's view (its team first, its options
+/// in the mask), as the search computes the opponent's prior.
 #[pyfunction]
+#[pyo3(signature = (states, flip=false))]
 #[allow(clippy::type_complexity)]
 fn featurize<'py>(
     py: Python<'py>,
     states: Vec<String>,
+    flip: bool,
 ) -> (
     Bound<'py, PyBytes>,
     Bound<'py, PyBytes>,
@@ -161,7 +164,7 @@ fn featurize<'py>(
     let (sparse, dense, global, mask) = py.detach(|| {
         let (mut sparse, mut dense, mut global, mut mask) = (vec![], vec![], vec![], vec![]);
         for s in &states {
-            let f = features::featurize(&State::deserialize(s));
+            let f = features::featurize_view(&State::deserialize(s), flip);
             sparse.extend(f.sparse);
             dense.extend(f.dense);
             global.extend(f.global);

@@ -179,20 +179,38 @@ def mtp_targets(sp, fs, fd, k: int):
     return kind, move_id, match.float().argmax(-1), match.any(-1), valid
 
 
-def mtp_loss(aux, targets) -> tuple:
-    """(loss, opponent step-0 action accuracy, its count)"""
+def opp_topk(aux, targets, k: int) -> float:
+    """Hits of the opponent's step-0 action among the k most likely of the joint distribution
+    over none / each move / each switch-in (log P(kind) + log P(target | kind))."""
+    kl, ml, sl = (x[:, 0, 1].float() for x in aux)
+    kind, move_id, sw_idx, sw_ok, valid = (x[:, 0, 1] for x in targets)
+    lk = kl.log_softmax(-1)
+    joint = torch.cat([lk[:, :1], lk[:, 1:2] + ml.log_softmax(-1), lk[:, 2:3] + sl.log_softmax(-1)],
+                      dim=-1)  # fmt: skip
+    nm = ml.shape[-1]
+    target = torch.where(kind == 1, 1 + move_id, torch.where(kind == 2, 1 + nm + sw_idx, 0))
+    ok = valid & ~((kind == 2) & ~sw_ok)
+    hit = (joint.topk(k, dim=-1).indices == target[:, None]).any(-1)
+    return hit[ok].float().sum().item()
+
+
+def mtp_loss(aux, targets, decay: float = 1.0) -> tuple:
+    """(loss, opponent step-0 action accuracy, its count); step k weighs decay ** k"""
     kl, ml, sl = (x.float() for x in aux)
     kind, move_id, sw_idx, sw_ok, valid = targets
+    k = kl.shape[1]
+    w = (decay ** torch.arange(k, device=kl.device, dtype=torch.float32))[None, :, None]
+    w = w.expand_as(valid)
     # joint NLL of each (step, side) action: -log P(kind) - log P(move | move) - log P(switch-in
     # | switch), averaged over the same valid targets (a proper likelihood, not 1:1:1 averages)
-    nll = F.cross_entropy(kl[valid], kind[valid], reduction="sum")
+    nll = (F.cross_entropy(kl[valid], kind[valid], reduction="none") * w[valid]).sum()
     mm = valid & (kind == 1) & (move_id > 0)
     if mm.any():
-        nll = nll + F.cross_entropy(ml[mm], move_id[mm], reduction="sum")
+        nll = nll + (F.cross_entropy(ml[mm], move_id[mm], reduction="none") * w[mm]).sum()
     ss = valid & (kind == 2) & sw_ok
     if ss.any():
-        nll = nll + F.cross_entropy(sl[ss], sw_idx[ss], reduction="sum")
-    loss = nll / valid.sum().clamp(min=1)
+        nll = nll + (F.cross_entropy(sl[ss], sw_idx[ss], reduction="none") * w[ss]).sum()
+    loss = nll / w[valid].sum().clamp(min=1e-6)
     o = valid[:, 0, 1]
     pk = kl[:, 0, 1].argmax(-1)
     k0, m0, s0 = kind[:, 0, 1], move_id[:, 0, 1], sw_idx[:, 0, 1]
@@ -211,10 +229,10 @@ def value_logit(model, v, ev):
 @torch.no_grad()
 def evaluate(model, d, idx, device, batch=16384) -> dict:
     model.eval()
-    sums = dict(ce=0.0, top1=0.0, top3=0.0, bce=0.0, vacc=0.0, uniform_ce=0.0,
-                n_sw=0.0, top1_sw=0.0, ce_sw=0.0)  # fmt: skip
+    sums = dict(ce=0.0, top1=0.0, top2=0.0, top3=0.0, top5=0.0, bce=0.0, vacc=0.0,
+                uniform_ce=0.0, n_sw=0.0, top1_sw=0.0, top3_sw=0.0, ce_sw=0.0)  # fmt: skip
     mtp = getattr(model, "mtp", 0) and "fsp" in d
-    m_sum = dict(loss=0.0, acc=0.0, n=0.0, b=0)
+    m_sum = dict(loss=0.0, acc=0.0, acc3=0.0, n=0.0, b=0)
     probs, wons, turns = [], [], []
     for i in range(0, len(idx), batch):
         b = idx[i : i + batch]
@@ -223,20 +241,24 @@ def evaluate(model, d, idx, device, batch=16384) -> dict:
             out = model(sp, de, gl, ma, hs, hd, aux=True) if mtp else model(sp, de, gl, ma, hs, hd)
         logits, v = out[0].float(), value_logit(model, out[1].float(), ev)
         if mtp:
-            ml, acc, cnt = mtp_loss(out[2], mtp_targets(sp, fs, fd, model.mtp))
+            tg = mtp_targets(sp, fs, fd, model.mtp)
+            ml, acc, cnt = mtp_loss(out[2], tg)
             m_sum["loss"] += ml.item()
             m_sum["acc"] += acc
+            m_sum["acc3"] += opp_topk(out[2], tg, 3)
             m_sum["n"] += cnt
             m_sum["b"] += 1
         ce = F.cross_entropy(logits, act, reduction="none")
         sums["ce"] += ce.sum().item()
-        top = logits.topk(3, dim=-1).indices
+        top = logits.topk(5, dim=-1).indices  # fewer legal actions: the true one comes first
+        hit = top == act[:, None]
+        for k in (1, 2, 3, 5):
+            sums[f"top{k}"] += hit[:, :k].any(-1).sum().item()
         sw = act >= 8  # switches: where reading the opponent matters most
         sums["n_sw"] += sw.sum().item()
-        sums["top1_sw"] += (top[:, 0] == act)[sw].sum().item()
+        sums["top1_sw"] += hit[:, 0][sw].sum().item()
+        sums["top3_sw"] += hit[:, :3].any(-1)[sw].sum().item()
         sums["ce_sw"] += ce[sw].sum().item()
-        sums["top1"] += (top[:, 0] == act).sum().item()
-        sums["top3"] += (top == act[:, None]).any(-1).sum().item()
         sums["bce"] += F.binary_cross_entropy_with_logits(v, won, reduction="sum").item()
         p = torch.sigmoid(v)
         sums["vacc"] += ((p > 0.5).float() == won).sum().item()
@@ -246,11 +268,14 @@ def evaluate(model, d, idx, device, batch=16384) -> dict:
         turns.append(d["turn"][b])
     n = len(idx)
     n_sw = max(1.0, sums.pop("n_sw"))
-    top1_sw, ce_sw = sums.pop("top1_sw") / n_sw, sums.pop("ce_sw") / n_sw
+    top1_sw, top3_sw = sums.pop("top1_sw") / n_sw, sums.pop("top3_sw") / n_sw
+    ce_sw = sums.pop("ce_sw") / n_sw
     out = {k: v / n for k, v in sums.items()}
-    out |= {"top1_switch": top1_sw, "ce_switch": ce_sw, "switch_frac": n_sw / n}
+    out |= {"top1_switch": top1_sw, "top3_switch": top3_sw, "ce_switch": ce_sw,
+            "switch_frac": n_sw / n}  # fmt: skip
     if mtp:
-        out |= {"mtp_loss": m_sum["loss"] / m_sum["b"], "opp_act_acc": m_sum["acc"] / m_sum["n"]}
+        out |= {"mtp_loss": m_sum["loss"] / m_sum["b"], "opp_act_acc": m_sum["acc"] / m_sum["n"],
+                "opp_act_top3": m_sum["acc3"] / m_sum["n"]}  # fmt: skip
     p, w, t = np.concatenate(probs), np.concatenate(wons), np.concatenate(turns)
     bins = np.minimum((p * 10).astype(int), 9)
     out["value_ece"] = float(
@@ -277,6 +302,7 @@ def main() -> None:
     ap.add_argument("--hist-len", type=int, default=8, help="most recent steps the model reads")
     ap.add_argument("--mtp", type=int, default=0, help="future steps to predict (auxiliary)")
     ap.add_argument("--mtp-weight", type=float, default=0.5)
+    ap.add_argument("--mtp-decay", type=float, default=1.0, help="weight of future step k: d^k")
     ap.add_argument("--value-per-game", type=float, default=0,
                     help="value loss weight min(1, N / game's positions); 0 = off")  # fmt: skip
     ap.add_argument("--epochs", type=float, default=6)
@@ -376,7 +402,8 @@ def main() -> None:
         bce = (F.binary_cross_entropy_with_logits(vl, won, reduction="none") * bw).sum() / bw.sum()
         loss = ce + a.value_weight * bce
         if a.mtp:
-            loss = loss + a.mtp_weight * mtp_loss(out[2], mtp_targets(sp, fs, fd, a.mtp))[0]
+            tg = mtp_targets(sp, fs, fd, a.mtp)
+            loss = loss + a.mtp_weight * mtp_loss(out[2], tg, a.mtp_decay)[0]
         opt.zero_grad(set_to_none=True)
         loss.backward()
         gn = torch.nn.utils.clip_grad_norm_(model.parameters(), 5.0).item()
