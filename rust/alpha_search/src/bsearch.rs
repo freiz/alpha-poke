@@ -29,7 +29,8 @@
 use crate::extra::{ENT_EXTRA, GLOBAL_EXTRA};
 use crate::features::{HIST, HIST_DENSE, HIST_SPARSE, N_ACTIONS, N_ENTITIES, SPARSE};
 use crate::ismcts::{
-    arm_index, label, sample, select_puct, set_priors, Config, Label, Node, PathCtx, Tree,
+    add_root_noise, arm_index, label, sample, select_puct, set_priors, Config, Label, Node,
+    PathCtx, Tree,
 };
 use crate::tnet::{Context, Input};
 use poke_engine::engine::evaluate::evaluate;
@@ -417,6 +418,8 @@ impl BatchSearch {
     /// [rows * 14] (-inf on illegal slots), in `collect`'s row order.
     pub fn apply(&mut self, values: &[f32], logits: &[f32]) {
         let (policy_opponent, vl) = (self.cfg.policy_opponent, self.vl);
+        let (noise_eps, noise_conc, seed) =
+            (self.cfg.root_noise_eps, self.cfg.root_noise_conc, self.seed);
         let k = self.in_flight.pop_front().expect("no batch to apply");
         self.returned -= k;
         let g = self.shared.get_mut().unwrap();
@@ -447,6 +450,14 @@ impl BatchSearch {
             set_priors(&mut n.s1, &av1, l1);
             if policy_opponent {
                 set_priors(&mut n.s2, &av2, l2);
+            }
+            if p.node == 0 && noise_eps > 0.0 {
+                let mut rng = StdRng::seed_from_u64(seed ^ 0xD1B5_4A32_D192_ED03);
+                let (e, c) = (noise_eps, noise_conc);
+                add_root_noise(&mut n.s1, &av1, e, c, &mut rng);
+                if policy_opponent {
+                    add_root_noise(&mut n.s2, &av2, e, c, &mut rng);
+                }
             }
             n.priors_set = true;
             n.pending = false;

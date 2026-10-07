@@ -132,6 +132,10 @@ pub struct Config {
     pub net_value: bool,
     /// the transformer instead of `net` (needs one `Context` per world)
     pub tnet: Option<Arc<TNet>>,
+    /// self-play exploration: the root priors of both sides become (1 - eps) p + eps eta,
+    /// eta ~ Dirichlet(conc / n options) (AlphaZero); eps 0 = off
+    pub root_noise_eps: f32,
+    pub root_noise_conc: f32,
 }
 
 impl Default for Config {
@@ -147,6 +151,8 @@ impl Default for Config {
             c_puct: 1.0,
             net_value: true,
             tnet: None,
+            root_noise_eps: 0.0,
+            root_noise_conc: 10.0,
         }
     }
 }
@@ -160,6 +166,8 @@ pub struct Tree {
 pub struct SearchResult {
     /// our root actions: (label, visits, mean value)
     pub s1: Vec<(Label, u32, f32)>,
+    /// our root actions' priors (PUCT; < 0 = none, e.g. without a network)
+    pub s1_priors: Vec<(Label, f32)>,
     pub iterations: u32,
     pub nodes: usize,
     pub max_depth: u16,
@@ -304,6 +312,32 @@ pub(crate) fn set_priors(arms: &mut [Arm], avail: &[(usize, MoveChoice)], logits
     }
 }
 
+/// Mix Dirichlet noise into the priors of the available arms (root exploration, self-play).
+pub(crate) fn add_root_noise(
+    arms: &mut [Arm],
+    avail: &[(usize, MoveChoice)],
+    eps: f32,
+    conc: f32,
+    rng: &mut impl Rng,
+) {
+    if eps <= 0.0 || avail.len() < 2 {
+        return;
+    }
+    let alpha = (conc / avail.len() as f32).max(1e-3);
+    let gamma = rand_distr::Gamma::new(alpha, 1.0).expect("gamma");
+    let draws: Vec<f32> = avail.iter().map(|_| rng.sample(gamma)).collect();
+    let total: f32 = draws.iter().sum::<f32>().max(1e-12);
+    let uniform = 1.0 / avail.len() as f32;
+    for (&(i, _), d) in avail.iter().zip(&draws) {
+        let p = if arms[i].prior >= 0.0 {
+            arms[i].prior
+        } else {
+            uniform
+        };
+        arms[i].prior = (1.0 - eps) * p + eps * d / total;
+    }
+}
+
 /// PUCT over the available arms: Q + c * P * sqrt(N) / (1 + n); N = visits of the available
 /// arms (availability, as the UCB variant); unvisited arms get the mean Q of the visited ones.
 pub(crate) fn select_puct(
@@ -443,6 +477,19 @@ impl Tree {
                     if cfg.policy_opponent {
                         let f2 = crate::features::featurize_view(state, true);
                         set_priors(&mut n.s2, &av2, &net.forward(&f2, -ev).logits);
+                    }
+                }
+                if node == 0 && cfg.root_noise_eps > 0.0 {
+                    add_root_noise(
+                        &mut n.s1,
+                        &av1,
+                        cfg.root_noise_eps,
+                        cfg.root_noise_conc,
+                        rng,
+                    );
+                    if cfg.policy_opponent {
+                        let (e, c) = (cfg.root_noise_eps, cfg.root_noise_conc);
+                        add_root_noise(&mut n.s2, &av2, e, c, rng);
                     }
                 }
                 n.priors_set = true;
@@ -601,6 +648,7 @@ pub fn search(
             .iter()
             .map(|a| (a.label, a.visits, a.mean()))
             .collect(),
+        s1_priors: root.s1.iter().map(|a| (a.label, a.prior)).collect(),
         iterations: it,
         nodes: tree.nodes.len(),
         max_depth: tree.nodes.iter().map(|n| n.depth).max().unwrap_or(0),
@@ -651,6 +699,10 @@ pub fn search_parallel(
     }
     SearchResult {
         s1: merged,
+        s1_priors: results
+            .first()
+            .map(|r| r.s1_priors.clone())
+            .unwrap_or_default(),
         iterations: results.iter().map(|r| r.iterations).sum(),
         nodes: results.iter().map(|r| r.nodes).sum(),
         max_depth: results.iter().map(|r| r.max_depth).max().unwrap_or(0),
@@ -834,6 +886,32 @@ mod tests {
         assert!(
             top3.contains(&best),
             "ismcts best {best:?} not in reference top 3 {top3:?}"
+        );
+    }
+
+    #[test]
+    fn root_noise_mixes_priors() {
+        let mut arms: Vec<Arm> = (0..4)
+            .map(|k| Arm {
+                label: Label::Other(MoveChoice::None),
+                visits: 0,
+                avail: 0,
+                total: 0.0,
+                prior: [0.7, 0.2, 0.1, 0.0][k],
+            })
+            .collect();
+        let avail: Vec<(usize, MoveChoice)> = (0..4).map(|i| (i, MoveChoice::None)).collect();
+        let before: Vec<f32> = arms.iter().map(|a| a.prior).collect();
+        let mut rng = StdRng::seed_from_u64(3);
+        add_root_noise(&mut arms, &avail, 0.0, 10.0, &mut rng);
+        assert_eq!(before, arms.iter().map(|a| a.prior).collect::<Vec<_>>());
+        add_root_noise(&mut arms, &avail, 0.25, 10.0, &mut rng);
+        let after: Vec<f32> = arms.iter().map(|a| a.prior).collect();
+        assert!((after.iter().sum::<f32>() - 1.0).abs() < 1e-5, "{after:?}");
+        assert!(after[3] > 0.0, "the zero prior gets some mass: {after:?}");
+        assert!(
+            after[0] < 0.7 + 0.25 && after[0] >= 0.75 * 0.7 - 1e-6,
+            "{after:?}"
         );
     }
 }

@@ -73,7 +73,7 @@ fn reference_mcts(
 #[pyo3(signature = (states, duration_ms, iterations=0, seed=None, c=std::f32::consts::SQRT_2,
                     cache_root=true, branch_depth=2, chance_depth=0, threads=1,
                     model_dir=None, use_policy=false, policy_opponent=true, c_puct=1.0,
-                    net_value=true, contexts=None))]
+                    net_value=true, contexts=None, root_noise=(0.0, 10.0)))]
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 fn py_ismcts(
     py: Python<'_>,
@@ -92,6 +92,7 @@ fn py_ismcts(
     c_puct: f32,
     net_value: bool,
     contexts: Option<Vec<PyContext>>,
+    root_noise: (f32, f32),
 ) -> PyResult<(Vec<(String, u32, f32)>, u32, usize, u16)> {
     if states.is_empty() {
         return Err(PyValueError::new_err("ismcts needs at least one world"));
@@ -133,6 +134,8 @@ fn py_ismcts(
         c_puct,
         net_value,
         tnet,
+        root_noise_eps: root_noise.0,
+        root_noise_conc: root_noise.1,
     };
     let res = py.detach(|| {
         if threads > 1 {
@@ -428,7 +431,7 @@ struct PyBatchSearch {
 impl PyBatchSearch {
     #[new]
     #[pyo3(signature = (states, contexts, c_puct=1.0, policy_opponent=true, seed=None,
-                        branch_depth=2, threads=1, vl=1))]
+                        branch_depth=2, threads=1, vl=1, root_noise=(0.0, 10.0)))]
     #[allow(clippy::too_many_arguments)]
     fn new(
         states: Vec<String>,
@@ -439,6 +442,7 @@ impl PyBatchSearch {
         branch_depth: u16,
         threads: usize,
         vl: u32,
+        root_noise: (f32, f32),
     ) -> PyResult<Self> {
         if states.is_empty() || states.len() != contexts.len() {
             return Err(PyValueError::new_err(
@@ -457,6 +461,8 @@ impl PyBatchSearch {
             use_policy: true,
             policy_opponent,
             c_puct,
+            root_noise_eps: root_noise.0,
+            root_noise_conc: root_noise.1,
             ..ismcts::Config::default()
         };
         Ok(PyBatchSearch {
@@ -560,6 +566,49 @@ impl PyBatchSearch {
     }
 }
 
+/// The network's policy priors over our root options (as the search uses them, no noise):
+/// [(our option, prior)]. `model_dir` / `contexts` as for `ismcts` (a transformer needs the
+/// contexts).
+#[pyfunction]
+#[pyo3(signature = (states, model_dir, contexts=None))]
+fn root_priors(
+    py: Python<'_>,
+    states: Vec<String>,
+    model_dir: String,
+    contexts: Option<Vec<PyContext>>,
+) -> PyResult<Vec<(String, f32)>> {
+    let mut worlds: Vec<State> = states.iter().map(|s| State::deserialize(s)).collect();
+    let mut cfg = ismcts::Config {
+        use_policy: true,
+        ..ismcts::Config::default()
+    };
+    let ctxs = match contexts {
+        Some(cs) => {
+            cfg.tnet = Some(tnet::shared(&model_dir).map_err(PyValueError::new_err)?);
+            cs.into_iter()
+                .map(to_context)
+                .collect::<PyResult<Vec<_>>>()?
+        }
+        None => {
+            cfg.net = Some(net::shared(&model_dir).map_err(PyValueError::new_err)?);
+            Vec::new()
+        }
+    };
+    let res = py.detach(|| ismcts::search(&mut worlds, &ctxs, Duration::ZERO, 1, &cfg, Some(0)));
+    let w0 = &worlds[0];
+    Ok(res
+        .s1_priors
+        .into_iter()
+        .map(|(l, p)| {
+            let name = match ismcts::our_choice(w0, l) {
+                Some(mc) => choice_str(&w0.side_one, &mc),
+                None => format!("{l:?}"),
+            };
+            (name, p)
+        })
+        .collect())
+}
+
 /// Feature shapes and embedding table sizes.
 #[pyfunction]
 fn feature_dims(py: Python<'_>) -> PyResult<Bound<'_, PyDict>> {
@@ -592,6 +641,7 @@ fn alpha_search(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(encode_ids, m)?)?;
     m.add_function(wrap_pyfunction!(tnet_forward, m)?)?;
     m.add_class::<PyBatchSearch>()?;
+    m.add_function(wrap_pyfunction!(root_priors, m)?)?;
     m.add_function(wrap_pyfunction!(evaluate, m)?)?;
     m.add_function(wrap_pyfunction!(net_forward, m)?)?;
     Ok(())

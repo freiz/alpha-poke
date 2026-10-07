@@ -27,6 +27,7 @@ if __name__ == "__main__":
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--trace", action="store_true")
     ap.add_argument("--replays", action="store_true")
+    ap.add_argument("--heldout", action="store_true", help="belief model without the pool's teams")
     a = ap.parse_args()
     res = run_vs_foulplay(
         a.bot,
@@ -39,6 +40,7 @@ if __name__ == "__main__":
         a.seed,
         a.trace,
         a.replays,
+        heldout=a.heldout,
     )
     print(
         f"{a.bot} vs foulplay({a.search_ms}ms x{a.parallelism}): {res['a_wins']}W "

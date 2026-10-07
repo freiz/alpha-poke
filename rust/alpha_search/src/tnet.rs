@@ -905,7 +905,7 @@ mod tests {
             reveal: [1; N_ENTITIES],
             rating: [1500, 1500],
             turn: 10,
-            history: parse_history(&vec![step; 8].join(";")),
+            history: parse_history(&[step; 8].join(";")),
         };
         let ev = poke_engine::engine::evaluate::evaluate(&st);
         let x = Input::new(&st, &ctx, false, ev);

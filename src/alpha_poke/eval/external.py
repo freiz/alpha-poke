@@ -178,8 +178,10 @@ def run_external(
     trace: bool = False,
     replays: bool = False,
     log_dir: str = "data/eval",
+    heldout: bool = False,
 ) -> dict:
-    """Paired run of our ``bot`` against an opponent process (see ``_opponent_cmd``)."""
+    """Paired run of our ``bot`` against an opponent process (see ``_opponent_cmd``).
+    ``heldout``: our belief model without the pool's teams (as arena --heldout)."""
     names = sorted(load_team_files(pool_dir))
     schedule = make_schedule(names, n_pairs, seed)
     pairs = [schedule[i : i + 2] for i in range(0, len(schedule), 2)]
@@ -189,11 +191,13 @@ def run_external(
         tag = f"foulplay{opp['search_ms']}x{opp['parallelism']}"
     else:
         tag = f"{opp['bot']}@{opp.get('rev', Path(opp['path']).name)}"
-    run_id = f"{time.strftime('%Y%m%d-%H%M%S')}_{bot}_vs_{tag}"
+    run_id = f"{time.strftime('%Y%m%d-%H%M%S')}_{bot}_vs_{tag}" + ("_heldout" if heldout else "")
     run_dir = Path(log_dir) / "external" / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
     log_path = str(Path(log_dir) / f"{run_id}.jsonl")
     extras = {}
+    if heldout:
+        extras["heldout_pool"] = pool_dir
     if trace:
         extras["trace_dir"] = str(Path(log_dir) / "traces" / run_id)
     if replays:
@@ -216,6 +220,7 @@ def run_external(
 
 def run_vs_foulplay(bot: str, n_pairs: int, pool_dir="data/teams/pool", ports=(8000,), lanes=2,
                     search_ms=1000, parallelism=4, seed=0, trace=False, replays=False,
-                    log_dir="data/eval") -> dict:  # fmt: skip
+                    log_dir="data/eval", heldout=False) -> dict:  # fmt: skip
     opp = {"kind": "foulplay", "search_ms": search_ms, "parallelism": parallelism}
-    return run_external(bot, opp, n_pairs, pool_dir, ports, lanes, seed, trace, replays, log_dir)
+    return run_external(bot, opp, n_pairs, pool_dir, ports, lanes, seed, trace, replays, log_dir,
+                        heldout)  # fmt: skip
