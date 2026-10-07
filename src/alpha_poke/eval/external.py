@@ -105,6 +105,7 @@ async def _lane(bot, matches, port, pool_dir, lane, log_path, opp, extras, run_d
             if getattr(me, "use_oracle", False):
                 me.set_oracle((Path(pool_dir) / f"{m.team_b}.txt").read_text())
             before = set(me.battles)
+            fb0 = (getattr(me, "fallbacks", 0), getattr(me, "search_fallbacks", 0))
             if we_challenge:
                 await me.send_challenges(opp_name, n_challenges=1)
             else:
@@ -131,8 +132,8 @@ async def _lane(bot, matches, port, pool_dir, lane, log_path, opp, extras, run_d
                 "lead_a": plan.lead if plan else None,
                 "plan_a": plan.to_log() if plan else None,
                 "plan_b": None,
-                "fallbacks_a": getattr(me, "fallbacks", 0),
-                "search_fallbacks_a": getattr(me, "search_fallbacks", None),
+                "fallbacks_a": getattr(me, "fallbacks", 0) - fb0[0],  # this game only
+                "search_fallbacks_a": getattr(me, "search_fallbacks", 0) - fb0[1],
                 "fallbacks_b": 0,
             }
             rows.append(row)

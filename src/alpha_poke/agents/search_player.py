@@ -82,6 +82,8 @@ class SearchPlayer(KnowledgePlayer):
         backend=None,
         worlds=None,
         chance_depth=None,
+        model=None,
+        net_policy=None,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
@@ -108,6 +110,13 @@ class SearchPlayer(KnowledgePlayer):
         # "determinized" (K independent poke-engine trees) or "ismcts" (one tree, design D12)
         self.backend = backend or os.environ.get("ALPHA_SEARCH_BACKEND", "determinized")
         self.worlds = worlds or _env_int("ALPHA_ISMCTS_WORLDS", 32)
+        # ISMCTS leaf value from a trained network (model directory, design D13); None =
+        # poke-engine's handcrafted evaluation
+        self.model = model or os.environ.get("ALPHA_SEARCH_MODEL") or None
+        # PUCT with the network's policy priors: None = off, "both" = both sides, "ours" = ours
+        # only (the opponent keeps UCB1)
+        self.net_policy = net_policy or os.environ.get("ALPHA_NET_POLICY") or None
+        assert self.net_policy in (None, "both", "ours"), self.net_policy
         # ISMCTS: split shallow children by the observable outcome below this depth (0 = open-loop)
         self.chance_depth = (
             chance_depth if chance_depth is not None else _env_int("ALPHA_ISMCTS_CHANCE_DEPTH", 0)
@@ -135,15 +144,17 @@ class SearchPlayer(KnowledgePlayer):
                 return order
         except (KeyboardInterrupt, SystemExit, asyncio.CancelledError):
             raise
-        except BaseException:  # noqa: BLE001 - never lose (or hang) a game to a search bug;
+        except BaseException as e:  # noqa: BLE001 - never lose (or hang) a game to a search bug;
             # BaseException: an engine panic (pyo3 PanicException) is not an Exception
             log.exception("search failed; heuristic decision")
+            self._trace_fallback(battle, f"error: {e!r}"[:300])
         self.search_fallbacks += 1
         return super().choose_move(battle)
 
     def _search(self, battle):
         sync_tera_types(battle)
         if battle.active_pokemon is None or battle.opponent_active_pokemon is None:
+            self._trace_fallback(battle, "no active pokemon")
             return None
         names = self._opp_team_names(battle)
         rng = random.Random(f"{battle.battle_tag}:{battle.turn}:{len(battle.available_moves)}")
@@ -164,6 +175,9 @@ class SearchPlayer(KnowledgePlayer):
                 budget,
                 chance_depth=self.chance_depth,
                 threads=self.threads,  # Rust threads (root parallel), no process pool
+                model_dir=self.model,
+                use_policy=self.net_policy is not None,
+                policy_opponent=self.net_policy == "both",
             )
             results = [([(c, v) for c, v, _ in ours], n)]
         elif pool is not None:  # parallel: each sample gets the full budget on its own core
@@ -181,6 +195,7 @@ class SearchPlayer(KnowledgePlayer):
         orders = [(c, s, engine_move_to_order(self, battle, c)) for c, s in ranked]
         orders = [(c, s, o) for c, s, o in orders if o is not None]
         if not orders:
+            self._trace_fallback(battle, f"no legal order among {[c for c, _ in ranked[:6]]}")
             return None
         prior = self._plan_prior(battle) if self.plan_prior > 0 else None
         scored = []
@@ -213,6 +228,22 @@ class SearchPlayer(KnowledgePlayer):
         rows = scored[0]
         self._row_choice = {_option_key(r["choice"]): r["choice"] for r in rows}
         return {_option_key(r["choice"]): r["plan_total"] for r in rows}
+
+    def _trace_fallback(self, battle, reason: str) -> None:
+        """Why the search gave no order (the heuristic decides instead)."""
+        if not self.trace_dir:
+            return
+        row = {
+            "turn": battle.turn,
+            "fallback": reason,
+            "force_switch": battle.force_switch,
+            "moves": [m.id for m in battle.available_moves],
+            "switches": [m.species for m in battle.available_switches],
+        }
+        d = Path(self.trace_dir)
+        d.mkdir(parents=True, exist_ok=True)
+        with open(d / f"{battle.battle_tag}_{self.username}.jsonl", "a") as f:
+            f.write(json.dumps(row) + "\n")
 
     def _trace_search(
         self, battle, ranked, chosen, iters, seconds, prior=None, changed=False

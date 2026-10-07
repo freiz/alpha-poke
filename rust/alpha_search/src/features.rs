@@ -117,27 +117,45 @@ fn side_global(s: &Side, g: &mut Vec<f32>) {
     }
 }
 
-pub fn legal_mask(state: &State) -> Vec<u8> {
+/// Action slot of a move choice (relative to the side that makes it).
+pub fn slot(mc: &MoveChoice) -> Option<usize> {
+    let i = match mc {
+        MoveChoice::Move(i) => *i as usize,
+        MoveChoice::MoveTera(i) => 4 + *i as usize,
+        MoveChoice::Switch(p) => 8 + *p as usize,
+        _ => return None,
+    };
+    (i < N_ACTIONS).then_some(i)
+}
+
+fn mask_of(options: &[MoveChoice]) -> Vec<u8> {
     let mut mask = vec![0u8; N_ACTIONS];
-    let (o1, _) = state.root_get_all_options();
-    for mc in o1 {
-        let i = match mc {
-            MoveChoice::Move(i) => i as usize,
-            MoveChoice::MoveTera(i) => 4 + i as usize,
-            MoveChoice::Switch(p) => 8 + p as usize,
-            _ => continue,
-        };
-        if i < N_ACTIONS {
-            mask[i] = 1;
-        }
+    for i in options.iter().filter_map(slot) {
+        mask[i] = 1;
     }
     mask
 }
 
+pub fn legal_mask(state: &State) -> Vec<u8> {
+    mask_of(&state.root_get_all_options().0)
+}
+
+/// Side one's view (training and the value at the leaves).
 pub fn featurize(state: &State) -> Features {
+    featurize_view(state, false)
+}
+
+/// ``flip``: side two's view (its team first, its options in the mask) — the opponent's
+/// policy prior in the search (design D13).
+pub fn featurize_view(state: &State, flip: bool) -> Features {
+    let (me, them) = if flip {
+        (&state.side_two, &state.side_one)
+    } else {
+        (&state.side_one, &state.side_two)
+    };
     let mut sparse = Vec::with_capacity(N_ENTITIES * SPARSE);
     let mut dense = Vec::with_capacity(N_ENTITIES * DENSE);
-    for (own, side) in [(true, &state.side_one), (false, &state.side_two)] {
+    for (own, side) in [(true, me), (false, them)] {
         let active = side.active_index as usize;
         for (j, p) in side.pokemon.pkmn.iter().enumerate() {
             entity(p, j == active, own, &mut sparse, &mut dense);
@@ -152,8 +170,8 @@ pub fn featurize(state: &State) -> Features {
     global.extend_from_slice(&t);
     global.push(state.trick_room.active as u8 as f32);
     global.push(state.trick_room.turns_remaining as f32 / 5.0);
-    side_global(&state.side_one, &mut global);
-    side_global(&state.side_two, &mut global);
+    side_global(me, &mut global);
+    side_global(them, &mut global);
     debug_assert_eq!(sparse.len(), N_ENTITIES * SPARSE);
     debug_assert_eq!(dense.len(), N_ENTITIES * DENSE);
     debug_assert_eq!(global.len(), GLOBAL);
@@ -161,7 +179,10 @@ pub fn featurize(state: &State) -> Features {
         sparse,
         dense,
         global,
-        mask: legal_mask(state),
+        mask: {
+            let (o1, o2) = state.root_get_all_options();
+            mask_of(if flip { &o2 } else { &o1 })
+        },
     }
 }
 

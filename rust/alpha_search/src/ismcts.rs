@@ -54,6 +54,8 @@ pub struct Arm {
     pub visits: u32,
     pub avail: u32,
     pub total: f32,
+    /// policy prior (PUCT); < 0 = none (an action first seen in a later world: uniform)
+    pub prior: f32,
 }
 
 impl Arm {
@@ -79,6 +81,10 @@ pub struct Node {
     pub depth: u16,
     pub s1: Vec<Arm>,
     pub s2: Vec<Arm>,
+    /// priors set (first selection at this node, in whatever world it happens)
+    pub priors_set: bool,
+    /// side one's policy logits from the forward pass that valued this node as a leaf
+    pub logits1: Option<Box<[f32; crate::features::N_ACTIONS]>>,
 }
 
 fn arm_index(arms: &mut Vec<Arm>, l: Label) -> usize {
@@ -90,13 +96,14 @@ fn arm_index(arms: &mut Vec<Arm>, l: Label) -> usize {
                 visits: 0,
                 avail: 0,
                 total: 0.0,
+                prior: -1.0,
             });
             arms.len() - 1
         }
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Config {
     pub c: f32,
     /// cache the root's instruction lists per (joint action, world)
@@ -105,6 +112,13 @@ pub struct Config {
     pub branch_depth: u16,
     /// split children by the observable outcome for nodes shallower than this (0 = open-loop)
     pub chance_depth: u16,
+    /// value network for the leaves (design D13); None = poke-engine's handcrafted evaluation
+    pub net: Option<std::sync::Arc<crate::net::Net>>,
+    /// PUCT with the network's policy priors (needs `net`); else decoupled UCB1
+    pub use_policy: bool,
+    /// also the opponent's priors (its view, one more forward pass per node); else UCB1 for it
+    pub policy_opponent: bool,
+    pub c_puct: f32,
 }
 
 impl Default for Config {
@@ -114,6 +128,10 @@ impl Default for Config {
             cache_root: true,
             branch_depth: 2,
             chance_depth: 0,
+            net: None,
+            use_policy: false,
+            policy_opponent: true,
+            c_puct: 1.0,
         }
     }
 }
@@ -162,8 +180,78 @@ pub fn outcome_signature(state: &State) -> u64 {
     h.finish()
 }
 
+/// Value of a non-terminal leaf for side one: the value network if there is one (its residual
+/// uses the handcrafted evaluation), else poke-engine's leaf value relative to the root.
+fn leaf_value(state: &State, root_eval: f32, cfg: &Config) -> f32 {
+    match &cfg.net {
+        Some(net) => {
+            let logit = net.value(&crate::features::featurize(state), evaluate(state));
+            1.0 / (1.0 + (-logit).exp())
+        }
+        None => sigmoid(evaluate(state) - root_eval),
+    }
+}
+
 fn sigmoid(x: f32) -> f32 {
     1.0 / (1.0 + (-0.0125 * x).exp())
+}
+
+/// Softmax of `logits` over the available options; their arms get the probabilities as priors.
+fn set_priors(arms: &mut [Arm], avail: &[(usize, MoveChoice)], logits: &[f32]) {
+    let slots: Vec<Option<usize>> = avail
+        .iter()
+        .map(|(_, mc)| crate::features::slot(mc))
+        .collect();
+    let m = slots
+        .iter()
+        .flatten()
+        .map(|&k| logits[k])
+        .filter(|x| x.is_finite())
+        .fold(f32::MIN, f32::max);
+    let exps: Vec<f32> = slots
+        .iter()
+        .map(|s| match s {
+            Some(k) if logits[*k].is_finite() => (logits[*k] - m).exp(),
+            _ => 0.0,
+        })
+        .collect();
+    let z: f32 = exps.iter().sum();
+    for (j, &(i, _)) in avail.iter().enumerate() {
+        arms[i].prior = if z > 0.0 {
+            exps[j] / z
+        } else {
+            1.0 / avail.len() as f32
+        };
+    }
+}
+
+/// PUCT over the available arms: Q + c * P * sqrt(N) / (1 + n); N = visits of the available
+/// arms (availability, as the UCB variant); unvisited arms get the mean Q of the visited ones.
+fn select_puct(arms: &[Arm], avail: &[(usize, MoveChoice)], c: f32) -> (usize, MoveChoice) {
+    let n: u32 = avail.iter().map(|&(i, _)| arms[i].visits).sum();
+    let sq = (n.max(1) as f32).sqrt();
+    let (mut qs, mut k) = (0.0f32, 0u32);
+    for &(i, _) in avail {
+        if arms[i].visits > 0 {
+            qs += arms[i].mean();
+            k += 1;
+        }
+    }
+    let fpu = if k > 0 { qs / k as f32 } else { 0.5 };
+    let uniform = 1.0 / avail.len() as f32;
+    let mut best = avail[0];
+    let mut best_u = f32::MIN;
+    for &(i, mc) in avail {
+        let a = &arms[i];
+        let q = if a.visits > 0 { a.mean() } else { fpu };
+        let p = if a.prior >= 0.0 { a.prior } else { uniform };
+        let u = q + c * p * sq / (1.0 + a.visits as f32);
+        if u > best_u {
+            best_u = u;
+            best = (i, mc);
+        }
+    }
+    best
 }
 
 fn select(arms: &[Arm], avail: &[(usize, MoveChoice)], c: f32) -> (usize, MoveChoice) {
@@ -238,11 +326,37 @@ impl Tree {
                 n.s2[i].avail += 1;
                 av2.push((i, mc));
             }
-            let (i1, m1) = select(&n.s1, &av1, cfg.c);
-            let (i2, m2) = select(&n.s2, &av2, cfg.c);
+            if cfg.use_policy && !n.priors_set {
+                if let Some(net) = &cfg.net {
+                    let ev = evaluate(state);
+                    let l1 = match n.logits1.take() {
+                        Some(l) => *l,
+                        None => {
+                            net.forward(&crate::features::featurize_view(state, false), ev)
+                                .logits
+                        }
+                    };
+                    set_priors(&mut n.s1, &av1, &l1);
+                    if cfg.policy_opponent {
+                        let f2 = crate::features::featurize_view(state, true);
+                        set_priors(&mut n.s2, &av2, &net.forward(&f2, -ev).logits);
+                    }
+                }
+                n.priors_set = true;
+            }
+            let (i1, m1) = if cfg.use_policy {
+                select_puct(&n.s1, &av1, cfg.c_puct)
+            } else {
+                select(&n.s1, &av1, cfg.c)
+            };
+            let (i2, m2) = if cfg.use_policy && cfg.policy_opponent {
+                select_puct(&n.s2, &av2, cfg.c_puct)
+            } else {
+                select(&n.s2, &av2, cfg.c)
+            };
             let depth = n.depth;
             if m1 == MoveChoice::None && m2 == MoveChoice::None {
-                break sigmoid(evaluate(state) - root_eval);
+                break leaf_value(state, root_eval, cfg);
             }
             let (i1, i2) = (i1 as u16, i2 as u16);
             let branch = depth < cfg.branch_depth;
@@ -281,8 +395,13 @@ impl Tree {
                         1.0
                     } else if over < 0.0 {
                         0.0
+                    } else if let (true, Some(net)) = (cfg.use_policy, &cfg.net) {
+                        // one forward pass: the leaf value and the new node's own priors
+                        let out = net.forward(&crate::features::featurize(state), evaluate(state));
+                        self.nodes[child as usize].logits1 = Some(Box::new(out.logits));
+                        1.0 / (1.0 + (-out.value).exp())
                     } else {
-                        sigmoid(evaluate(state) - root_eval)
+                        leaf_value(state, root_eval, cfg)
                     };
                 }
             }
@@ -524,6 +643,41 @@ mod tests {
         // every thread's root visits are merged: our options' visits add up to the iterations
         let visits: u32 = res.s1.iter().map(|x| x.1).sum();
         assert_eq!(visits, res.iterations);
+        let after: Vec<String> = worlds.iter().map(|w| w.serialize()).collect();
+        assert_eq!(before, after);
+    }
+
+    #[test]
+    fn puct_with_network_priors() {
+        let dir = std::path::Path::new("../../data/train/v1/runs/v1-medium-residual");
+        let Ok(net) = crate::net::Net::load(dir) else {
+            return; // no trained model in this checkout
+        };
+        let cfg = Config {
+            net: Some(std::sync::Arc::new(net)),
+            use_policy: true,
+            ..Config::default()
+        };
+        let mut worlds = [fixture(), variant(Choices::SPLASH)];
+        let before: Vec<String> = worlds.iter().map(|w| w.serialize()).collect();
+        let mut tree = Tree::new();
+        let mut rng = StdRng::seed_from_u64(11);
+        let evals: Vec<f32> = worlds.iter().map(evaluate).collect();
+        for it in 0..3000u32 {
+            let w = (it % 2) as usize;
+            tree.iterate(&mut worlds[w], w as u16, evals[w], &cfg, &mut rng);
+        }
+        let root = &tree.nodes[0];
+        assert!(root.priors_set);
+        let p1: f32 = root.s1.iter().map(|a| a.prior).sum();
+        assert!((p1 - 1.0).abs() < 1e-3, "our root priors sum to {p1}");
+        assert!(root.s2.iter().any(|a| a.prior > 0.0), "opponent priors set");
+        let top = root
+            .s1
+            .iter()
+            .max_by(|a, b| a.prior.total_cmp(&b.prior))
+            .unwrap();
+        assert!(top.visits > 0, "the highest-prior action is searched");
         let after: Vec<String> = worlds.iter().map(|w| w.serialize()).collect();
         assert_eq!(before, after);
     }

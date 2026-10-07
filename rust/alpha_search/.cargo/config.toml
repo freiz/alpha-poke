@@ -1,0 +1,3 @@
+# Local builds only: use this machine's CPU features (AVX2 / FMA) for the network inference.
+[build]
+rustflags = ["-C", "target-cpu=native"]

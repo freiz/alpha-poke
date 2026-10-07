@@ -36,6 +36,34 @@ VARIANTS: dict[str, tuple[bool, bool, bool, dict]] = {
     # ISMCTS backend (design D12; computed plan, no LLM): one tree over N belief worlds
     "s_ismcts": (True, True, True, {"search": True, "backend": "ismcts", "worlds": 32}),
     "s_ismcts_n1": (True, True, True, {"search": True, "backend": "ismcts", "worlds": 1}),
+    # ISMCTS with the v1 value network (medium, residual) at the leaves (design D13)
+    "s_ismcts_net": (
+        True,
+        True,
+        True,
+        {
+            "search": True,
+            "backend": "ismcts",
+            "worlds": 32,
+            "model": "data/train/v1/runs/v1-medium-residual",
+        },
+    ),  # fmt: skip
+    # + PUCT with the network's policy priors (both sides / ours only)
+    **{
+        f"s_ismcts_pv{suffix}": (
+            True,
+            True,
+            True,
+            {
+                "search": True,
+                "backend": "ismcts",
+                "worlds": 32,
+                "net_policy": pol,
+                "model": "data/train/v1/runs/v1-medium-residual",
+            },
+        )
+        for suffix, pol in (("", "both"), ("1", "ours"))
+    },  # fmt: skip
     "s_ismcts_cl2": (
         True,
         True,

@@ -4,6 +4,7 @@
 
 pub mod features;
 pub mod ismcts;
+pub mod net;
 
 use poke_engine::engine::state::MoveChoice;
 use poke_engine::mcts::perform_mcts;
@@ -65,7 +66,8 @@ fn reference_mcts(
 /// parallel (independent trees, merged root statistics).
 #[pyfunction(name = "ismcts")]
 #[pyo3(signature = (states, duration_ms, iterations=0, seed=None, c=std::f32::consts::SQRT_2,
-                    cache_root=true, branch_depth=2, chance_depth=0, threads=1))]
+                    cache_root=true, branch_depth=2, chance_depth=0, threads=1,
+                    model_dir=None, use_policy=false, policy_opponent=true, c_puct=1.0))]
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 fn py_ismcts(
     py: Python<'_>,
@@ -78,6 +80,10 @@ fn py_ismcts(
     branch_depth: u16,
     chance_depth: u16,
     threads: usize,
+    model_dir: Option<String>,
+    use_policy: bool,
+    policy_opponent: bool,
+    c_puct: f32,
 ) -> PyResult<(Vec<(String, u32, f32)>, u32, usize, u16)> {
     if states.is_empty() {
         return Err(PyValueError::new_err("ismcts needs at least one world"));
@@ -91,6 +97,13 @@ fn py_ismcts(
         cache_root,
         branch_depth,
         chance_depth,
+        net: match &model_dir {
+            Some(d) => Some(net::shared(d).map_err(PyValueError::new_err)?),
+            None => None,
+        },
+        use_policy,
+        policy_opponent,
+        c_puct,
     };
     let res = py.detach(|| {
         if threads > 1 {
@@ -178,6 +191,31 @@ fn evaluate(py: Python<'_>, states: Vec<String>) -> Vec<f32> {
     })
 }
 
+/// The trained network (model directory with best.safetensors) on many state strings:
+/// (policy logits [B * 14] with -inf on illegal slots, value logits [B]). For checking the Rust
+/// forward pass against PyTorch and for offline use.
+#[pyfunction]
+fn net_forward(
+    py: Python<'_>,
+    model_dir: &str,
+    states: Vec<String>,
+) -> PyResult<(Vec<f32>, Vec<f32>)> {
+    let net = net::shared(model_dir).map_err(PyValueError::new_err)?;
+    Ok(py.detach(|| {
+        let (mut logits, mut values) = (Vec::new(), Vec::new());
+        for s in &states {
+            let st = State::deserialize(s);
+            let out = net.forward(
+                &features::featurize(&st),
+                poke_engine::engine::evaluate::evaluate(&st),
+            );
+            logits.extend_from_slice(&out.logits);
+            values.push(out.value);
+        }
+        (logits, values)
+    }))
+}
+
 /// Feature shapes and embedding table sizes.
 #[pyfunction]
 fn feature_dims(py: Python<'_>) -> PyResult<Bound<'_, PyDict>> {
@@ -199,5 +237,6 @@ fn alpha_search(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(featurize, m)?)?;
     m.add_function(wrap_pyfunction!(feature_dims, m)?)?;
     m.add_function(wrap_pyfunction!(evaluate, m)?)?;
+    m.add_function(wrap_pyfunction!(net_forward, m)?)?;
     Ok(())
 }

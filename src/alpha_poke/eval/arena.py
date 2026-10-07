@@ -80,6 +80,8 @@ async def _lane(bot_a, bot_b, matches, port, pool_dir, heldout, lane_id, log_pat
             if getattr(me, "use_oracle", False):
                 me.set_oracle((Path(pool_dir) / f"{other}.txt").read_text())
         before, before_b = set(a.battles), set(b.battles)
+        # the counters live on the lane's players: log this game's increase only
+        fb0 = [(getattr(me, "fallbacks", 0), getattr(me, "search_fallbacks", 0)) for me in (a, b)]
         if m.a_challenges:
             await a.battle_against(b, n_battles=1)
         else:
@@ -111,10 +113,10 @@ async def _lane(bot_a, bot_b, matches, port, pool_dir, heldout, lane_id, log_pat
             "lead_b": plan_b.lead if plan_b else None,
             "plan_a": plan.to_log() if plan else None,
             "plan_b": plan_b.to_log() if plan_b else None,
-            "fallbacks_a": getattr(a, "fallbacks", 0),
-            "fallbacks_b": getattr(b, "fallbacks", 0),
-            "search_fallbacks_a": getattr(a, "search_fallbacks", None),
-            "search_fallbacks_b": getattr(b, "search_fallbacks", None),
+            "fallbacks_a": getattr(a, "fallbacks", 0) - fb0[0][0],
+            "fallbacks_b": getattr(b, "fallbacks", 0) - fb0[1][0],
+            "search_fallbacks_a": getattr(a, "search_fallbacks", 0) - fb0[0][1],
+            "search_fallbacks_b": getattr(b, "search_fallbacks", 0) - fb0[1][1],
         }
         rows.append(row)
         with open(log_path, "a") as f:
@@ -222,8 +224,8 @@ def summarize(rows: list[dict]) -> dict:
         "paired_mean": round(mean, 4),
         "ci95_paired": round(1.96 * math.sqrt(var / max(len(scores), 1)), 4),
         "split_pairs": sum(1 for x in scores if x == 0.5),
-        "fallbacks_a": max((r["fallbacks_a"] for r in rows), default=0),
-        "fallbacks_b": max((r["fallbacks_b"] for r in rows), default=0),
+        "fallbacks_a": sum(r["fallbacks_a"] or 0 for r in rows),  # per-game counts
+        "fallbacks_b": sum(r["fallbacks_b"] or 0 for r in rows),
         "failed_games": len(rows) - n,
         "team_mismatches": sum(1 for r in rows if not r.get("team_ok", True)),
     }
