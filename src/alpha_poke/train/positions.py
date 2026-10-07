@@ -11,6 +11,15 @@ different state and are skipped for now; so are ties and replays the parser warn
 History (v2): the decision steps before the position, in poke-engine's terms (one per turn for
 the chosen actions, one for a pivot switch, one for the forced switches after faints), as the
 string alpha_search.featurize_history reads ("OWN/OPP;..." oldest first, the last HIST steps).
+v3 (design D13, network v3 first batch):
+  * ``reveal``: public information per entity of the state (own 0-5, opponent 0-5), bit flags
+    (REVEAL_BITS): been on the field, item / ability / tera type revealed, move slot 0-3 revealed.
+    The opponent's: what the player has seen; its own: what the opponent has seen of it (the
+    other player's view of the same log);
+  * auxiliary targets: ``opp_sets`` (the opponent's sets as revealed by the end of the game, per
+    opponent entity of the state: "ITEM|ABILITY|TERA|MOVE,MOVE;..." in engine names, empty =
+    never revealed), ``faint`` (bit 0: the player's mon fainted during this turn, bit 1: the
+    opponent's), ``left_own`` / ``left_opp`` (mons left at the end) and ``turns`` (game length).
 """
 
 import logging
@@ -43,8 +52,15 @@ class Position:
     uploadtime: int
     history: str = ""
     future: str = ""  # the decision steps from this one on (MTP targets), same format
+    reveal: list[int] | None = None  # v3: REVEAL_BITS per entity, state order
+    opp_sets: str = ""
+    faint: int = 0
+    left_own: int = 0
+    left_opp: int = 0
+    turns: int = 0
 
 
+REVEAL_BITS = ("seen", "item", "ability", "tera", "move0", "move1", "move2", "move3")
 HIST = 8  # stored steps (rust/alpha_search/src/features.rs HIST); models may use fewer
 
 
@@ -122,6 +138,38 @@ def _rating(row: dict) -> int | None:
         return None
 
 
+def _public(mon) -> tuple[bool, bool, bool, set[str]]:
+    """What a player's view (poke-env, as the opponent's mon) shows of ``mon``: item, ability,
+    tera type known; the revealed moves (engine names)."""
+    item = mon.item not in (None, "unknown_item")
+    return item, mon.ability is not None, mon.is_terastallized, {_eng(m) for m in mon.moves}
+
+
+def reveal_flags(state, view_of_opp, view_of_own) -> list[int]:
+    """REVEAL_BITS per entity of the poke-engine ``state`` (side one = the player): side two
+    from the player's view (``view_of_opp``: its battle's opponent_team), side one from the
+    opponent's view of the player (``view_of_own``: the other battle's opponent_team)."""
+    out = []
+    for side, seen in ((state.side_one, view_of_own), (state.side_two, view_of_opp)):
+        for p in side.pokemon:
+            mon = next((m for m in seen if _same_species(m.species, p.id)), None) if p.id else None
+            if mon is None:
+                out.append(0)
+                continue
+            item, ability, tera, moves = _public(mon)
+            bits = 1 | item << 1 | ability << 2 | tera << 3
+            for k, m in enumerate(p.moves[:4]):
+                bits |= (_eng(m.id) in moves) << (4 + k)
+            out.append(bits)
+    return out
+
+
+def _set_label(rec) -> str:
+    k = _known(rec)
+    return "|".join([_eng(k.item or ""), _eng(k.ability or ""), (k.tera or "").upper(),
+                     ",".join(_eng(m) for m in k.moves)])  # fmt: skip
+
+
 def positions_from_replay(
     row: dict, belief, rng: random.Random, move_beta: float = 1.0, per_game: int = 0
 ):
@@ -148,6 +196,17 @@ def positions_from_replay(
     if set(names) != {"p1", "p2"}:
         return []
     steps = decision_steps(rep.actions)
+    # per turn and side: fainted during the turn; whole game: faints, length
+    faints: dict[tuple[int, str], int] = {}
+    total_faints = {"p1": 0, "p2": 0}
+    cur = 0
+    for x in lines:
+        f = x.split("|")
+        if len(f) > 2 and f[1] == "turn":
+            cur = int(f[2])
+        elif len(f) > 2 and f[1] == "faint" and f[2][:2] in total_faints:
+            faints[(cur, f[2][:2])] = 1
+            total_faints[f[2][:2]] += 1
     battles = {s: Battle(f"battle-{row['id']}-{s}", names[s], _log, gen=9) for s in ("p1", "p2")}
     records = {s: [m for m in rep.teams[s] if not m.phantom] for s in ("p1", "p2")}
     known = {s: {to_id(m.species): _known(m) for m in records[s]} for s in ("p1", "p2")}
@@ -168,10 +227,19 @@ def positions_from_replay(
             a = actions.get((turn, side))
             if a is None:
                 continue
+            other = "p2" if side == "p1" else "p1"
             pos = _position(battles[side], side, a, records[side], known[side], belief, rng,
                             move_beta)  # fmt: skip
             if pos is not None:
-                state, action = pos
+                st, action = pos
+                state = st.to_string()
+                reveal = reveal_flags(st, list(battles[side].opponent_team.values()),
+                                      list(battles[other].opponent_team.values()))  # fmt: skip
+                labels = {to_id(r.species.replace("-*", "")): _set_label(r) for r in records[other]}
+                opp_sets = ";".join(
+                    next((v for k, v in labels.items() if p.id and _same_species(k, p.id)), "")
+                    for p in st.side_two.pokemon
+                )
                 out.append(
                     Position(
                         row["id"],
@@ -184,6 +252,12 @@ def positions_from_replay(
                         int(row.get("uploadtime") or 0),
                         history_string(steps, turn, side),
                         future_string(steps, turn, side),
+                        reveal,
+                        opp_sets,
+                        faints.get((turn, side), 0) | faints.get((turn, other), 0) << 1,
+                        len(records[side]) - total_faints[side],
+                        len(records[other]) - total_faints[other],
+                        cur,
                     )  # fmt: skip
                 )
     return out
@@ -215,4 +289,4 @@ def _position(battle, side, a, records, known, belief, rng, move_beta):
         if j is None or j >= 6 or team[j] is me:
             return None
         action = SWITCH_OFFSET + j
-    return state.to_string(), action
+    return state, action

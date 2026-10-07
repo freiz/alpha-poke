@@ -30,7 +30,10 @@ def load_run(run: Path, device) -> torch.nn.Module:
     ck = torch.load(run / "best.pt", weights_only=False, map_location="cpu")
     arch, history = ck.get("arch", "mlp"), ck.get("history", False)
     cls = TransformerPV if arch == "transformer" else PolicyValueNet
-    kw = {"mtp": ck.get("mtp", 0)} if arch == "transformer" else {}
+    kw = {}
+    if arch == "transformer":
+        kw = {"mtp": ck.get("mtp", 0), "feats": tuple(ck.get("feats", ())),
+              "aux_heads": tuple(ck.get("aux_heads", ()))}  # fmt: skip
     model = cls(ck["dims"], **ck["size"], history=history, **kw)
     sd = {("emb." + k if k.startswith(EMB) else k): v for k, v in ck["model"].items()}
     model.residual = None
@@ -69,6 +72,19 @@ def main() -> None:
             "value_ece",
             "opp_act_acc",
             "opp_act_top3",
+            "set_item_net",
+            "set_item_belief",
+            "set_ability_net",
+            "set_ability_belief",
+            "set_tera_net",
+            "set_tera_belief",
+            "set_move_net",
+            "set_move_belief",
+            "faint_bce",
+            "faint_acc",
+            "margin_ce",
+            "margin_acc",
+            "turns_mae",
         )
         print(json.dumps({"run": Path(r).name} | {k: round(m[k], 4) for k in keys if k in m}))
 

@@ -2,6 +2,7 @@
 //! instruction generation, evaluation, apply / reverse. Python passes poke-engine state strings
 //! (`poke_engine.State.to_string()`); see design D12.
 
+pub mod extra;
 pub mod features;
 pub mod ismcts;
 pub mod net;
@@ -206,6 +207,61 @@ fn featurize_history<'py>(
     (PyBytes::new(py, &sparse), PyBytes::new(py, &dense))
 }
 
+/// v3 features of many state strings (design D13, `extra.rs`): (entity extras float32
+/// [B, 12, ENT_EXTRA], global extras float32 [B, GLOBAL_EXTRA]); `flip` as in `featurize`.
+#[pyfunction]
+#[pyo3(signature = (states, flip=false))]
+fn featurize_extra<'py>(
+    py: Python<'py>,
+    states: Vec<String>,
+    flip: bool,
+) -> (Bound<'py, PyBytes>, Bound<'py, PyBytes>) {
+    let (ent, glob) = py.detach(|| {
+        let (mut ent, mut glob) = (vec![], vec![]);
+        for s in &states {
+            let (e, g) = extra::featurize_extra(&State::deserialize(s), flip);
+            ent.extend(e);
+            glob.extend(g);
+        }
+        (
+            le_bytes(&ent, f32::to_le_bytes),
+            le_bytes(&glob, f32::to_le_bytes),
+        )
+    });
+    (PyBytes::new(py, &ent), PyBytes::new(py, &glob))
+}
+
+/// The static move table (float32 [VOCAB move, MOVE_FEAT], row = move id; `extra::move_table`).
+#[pyfunction]
+fn move_table(py: Python<'_>) -> Bound<'_, PyBytes> {
+    let t = extra::move_table(features::VOCAB[4]);
+    PyBytes::new(py, &le_bytes(&t, f32::to_le_bytes))
+}
+
+/// Engine ids of names (case-insensitive engine spelling, e.g. "CHOICESCARF"): `kind` is
+/// "species", "item", "ability", "type" or "move"; unknown names give 0.
+#[pyfunction]
+fn encode_ids(kind: &str, names: Vec<String>) -> PyResult<Vec<i32>> {
+    use poke_engine::choices::Choices;
+    use poke_engine::engine::abilities::Abilities;
+    use poke_engine::engine::items::Items;
+    use poke_engine::pokemon::PokemonName;
+    use poke_engine::state::PokemonType;
+    use std::str::FromStr;
+    let f: fn(&str) -> i32 = match kind {
+        "species" => |x| PokemonName::from_str(x).map_or(0, |v| v as i32),
+        "item" => |x| Items::from_str(x).map_or(0, |v| v as i32),
+        "ability" => |x| Abilities::from_str(x).map_or(0, |v| v as i32),
+        "type" => |x| PokemonType::from_str(x).map_or(0, |v| v as i32),
+        "move" => |x| Choices::from_str(x).map_or(0, |v| v as i32),
+        _ => return Err(PyValueError::new_err(format!("unknown kind {kind}"))),
+    };
+    Ok(names
+        .iter()
+        .map(|n| if n.is_empty() { 0 } else { f(n) })
+        .collect())
+}
+
 /// poke-engine's handcrafted evaluation of many state strings (side one's view; the leaf value
 /// the search uses is sigmoid(0.0125 * (eval - root eval))). Offline baseline for the value net.
 #[pyfunction]
@@ -256,6 +312,9 @@ fn feature_dims(py: Python<'_>) -> PyResult<Bound<'_, PyDict>> {
     d.set_item("hist", features::HIST)?;
     d.set_item("hist_sparse", features::HIST_SPARSE)?;
     d.set_item("hist_dense", features::HIST_DENSE)?;
+    d.set_item("ent_extra", extra::ENT_EXTRA)?;
+    d.set_item("global_extra", extra::GLOBAL_EXTRA)?;
+    d.set_item("move_feat", extra::MOVE_FEAT)?;
     Ok(d)
 }
 
@@ -267,6 +326,9 @@ fn alpha_search(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(featurize, m)?)?;
     m.add_function(wrap_pyfunction!(featurize_history, m)?)?;
     m.add_function(wrap_pyfunction!(feature_dims, m)?)?;
+    m.add_function(wrap_pyfunction!(featurize_extra, m)?)?;
+    m.add_function(wrap_pyfunction!(move_table, m)?)?;
+    m.add_function(wrap_pyfunction!(encode_ids, m)?)?;
     m.add_function(wrap_pyfunction!(evaluate, m)?)?;
     m.add_function(wrap_pyfunction!(net_forward, m)?)?;
     Ok(())

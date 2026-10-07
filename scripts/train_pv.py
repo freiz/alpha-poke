@@ -17,6 +17,9 @@ transformer`` the small Transformer; ``--value-per-game N`` scales each position
 that every game counts as at most N positions (many positions per game share one outcome).
 ``--mtp K`` (Transformer, data with a ``future`` column): auxiliary multi-step action prediction
 over the first K decision steps from the position (design D14-8), weight ``--mtp-weight``.
+v3 (design D13, data with a ``reveal`` column): ``--feats`` (reveal, num, movetab, matchup) and
+``--aux`` (oppset, faint, margin, turns; weight ``--aux-weight`` each) switch the new input groups
+and auxiliary heads on (alpha_poke.train.model); the caches always hold all of them.
 """
 
 import argparse
@@ -33,7 +36,7 @@ import pyarrow.parquet as pq
 import torch
 import torch.nn.functional as F
 
-from alpha_poke.train.model import PolicyValueNet, TransformerPV
+from alpha_poke.train.model import AUX_HEADS, FEATS, PolicyValueNet, TransformerPV
 
 SIZES = {
     "small": dict(d_ent=64, d_trunk=128, d_global=32),
@@ -51,17 +54,20 @@ DIMS = alpha_search.feature_dims()
 def featurize_shard(path: Path, cache: Path) -> int:
     """Write the shard's feature cache (if missing); returns its number of positions."""
     names = pq.read_schema(path).names
-    has_hist, has_fut = "history" in names, "future" in names
+    has_hist, has_fut, has_v3 = "history" in names, "future" in names, "reveal" in names
     if cache.exists():
         with np.load(cache) as z:
             # caches from before the handcrafted evaluation / the history are rebuilt
             fresh = cache.stat().st_mtime >= path.stat().st_mtime  # data rebuilt since?
             ok_hist = not has_hist or ("hsp" in z.files and z["hsp"].shape[1] == DIMS["hist"])
             ok_fut = not has_fut or "fsp" in z.files
-            if fresh and "evalv" in z.files and ok_hist and ok_fut:
+            ok_v3 = not has_v3 or ("ent2" in z.files and z["ent2"].shape[2] == DIMS["ent_extra"])
+            if fresh and "evalv" in z.files and ok_hist and ok_fut and ok_v3:
                 return len(z["action"])
     cols = ["game", "turn", "state", "action", "won", "rating", "uploadtime"]
     extra = (["history"] if has_hist else []) + (["future"] if has_fut else [])
+    if has_v3:
+        extra += ["reveal", "opp_sets", "faint", "left_own", "left_opp", "turns"]
     t = pq.read_table(path, columns=cols + extra)
     states = t.column("state").to_pylist()
     e, s, d, g, a = DIMS["entities"], DIMS["sparse"], DIMS["dense"], DIMS["global"], DIMS["actions"]
@@ -94,6 +100,8 @@ def featurize_shard(path: Path, cache: Path) -> int:
                                      .astype(np.int16) for c in chunks])  # fmt: skip
         out["fde"] = np.concatenate([np.frombuffer(c[1], np.float32).reshape(-1, hs, hd[1])[:, :4]
                                      .astype(np.uint8) for c in chunks])  # fmt: skip
+    if has_v3:
+        out |= v3_arrays(t, states)
     out["evalv"] = np.concatenate(
         [np.asarray(alpha_search.evaluate(states[i : i + 50_000]), np.float32)
          for i in range(0, len(states), 50_000)]
@@ -113,6 +121,43 @@ def featurize_shard(path: Path, cache: Path) -> int:
     np.savez(tmp, **out)
     tmp.rename(cache)
     return len(out["action"])
+
+
+def v3_arrays(t, states: list[str]) -> dict:
+    """v3 inputs (featurize_extra, reveal bits, turn) and auxiliary targets of a shard."""
+    e, g = DIMS["ent_extra"], DIMS["global_extra"]
+    ent, glob = [], []
+    for i in range(0, len(states), 20_000):
+        a, b = alpha_search.featurize_extra(states[i : i + 20_000])
+        ent.append(np.frombuffer(a, np.float32).reshape(-1, 12, e).astype(np.float16))
+        glob.append(np.frombuffer(b, np.float32).reshape(-1, g).astype(np.float16))
+    out = {"ent2": np.concatenate(ent), "glob2": np.concatenate(glob)}
+    out["reveal"] = np.asarray(t.column("reveal").to_pylist(), np.uint8).reshape(-1, 12)
+    out["faint"] = np.asarray(t.column("faint").to_pylist(), np.uint8)
+    own, opp = (np.asarray(t.column(c).to_pylist(), np.int8) for c in ("left_own", "left_opp"))
+    out["margin"] = (own - opp).clip(-6, 6).astype(np.int8) + 6  # class 0..12
+    out["turns"] = np.asarray(t.column("turns").to_pylist(), np.int16)
+    # opponent sets as revealed by the end: per opponent entity item, ability, tera, 4 moves
+    n = len(states)
+    fields = {"item": [], "ability": [], "type": [], "move": []}
+    for row in t.column("opp_sets").to_pylist():
+        mons = (row.split(";") + [""] * 6)[:6]
+        for m in mons:
+            f = (m.split("|") + ["", "", "", ""])[:4]
+            fields["item"].append(f[0])
+            fields["ability"].append(f[1])
+            fields["type"].append(f[2])
+            fields["move"] += ((f[3].split(",") if f[3] else []) + [""] * 4)[:4]
+    ids = {k: np.asarray(alpha_search.encode_ids(k, v), np.int16) for k, v in fields.items()}
+    out["set_item"] = ids["item"].reshape(n, 6)
+    out["set_ability"] = ids["ability"].reshape(n, 6)
+    out["set_tera"] = ids["type"].reshape(n, 6)
+    out["set_move"] = ids["move"].reshape(n, 6, 4)
+    return out
+
+
+V3_KEYS = ("reveal", "ent2", "glob2", "turn", "faint", "margin", "turns", "set_item",
+           "set_ability", "set_tera", "set_move")  # fmt: skip
 
 
 def load(data: str) -> dict:
@@ -151,6 +196,13 @@ def to_torch(d: dict, idx: np.ndarray, device) -> tuple:
          torch.from_numpy(d["fde"][idx].astype(np.float32)).to(device, non_blocking=True))
         if "fsp" in d else (None, None)
     )  # fmt: skip
+    x = None
+    if "ent2" in d:
+        x = {}
+        for k in V3_KEYS:
+            v = d[k][idx]
+            v = v.astype(np.float32) if v.dtype == np.float16 else v.astype(np.int64)
+            x[k] = torch.from_numpy(v).to(device, non_blocking=True)
     return (
         torch.from_numpy(d["sparse"][idx].astype(np.int64)).to(device, non_blocking=True),
         torch.from_numpy(d["dense"][idx].astype(np.float32)).to(device, non_blocking=True),
@@ -161,6 +213,7 @@ def to_torch(d: dict, idx: np.ndarray, device) -> tuple:
         torch.from_numpy(d["evalv"][idx] / 100).to(device, non_blocking=True),
         *hist,
         *fut,
+        x,
     )
 
 
@@ -219,6 +272,76 @@ def mtp_loss(aux, targets, decay: float = 1.0) -> tuple:
     return loss, ok[o].float().sum().item(), o.sum().item()
 
 
+def aux_loss(out: dict, x: dict, sp, turn, bw, heads, stats: dict | None = None):
+    """Mean of the auxiliary heads' losses (each head weighs 1; game-level targets -- margin,
+    turns -- use the value loss weights ``bw``). With ``stats`` (evaluation) also accumulates
+    metric sums, the opponent-set ones on the fields not yet revealed at the position, against
+    the belief sample in the state."""
+    losses = []
+
+    def add(k: str, v: float) -> None:
+        stats[k] = stats.get(k, 0) + v
+
+    if "oppset" in heads:
+        exists = sp[:, 6:12, 0] > 0
+        bits = (x["reveal"][:, 6:12, None] >> torch.arange(8, device=sp.device)) & 1  # [B,6,8]
+        terms = []
+        for key, col, bit in (("item", 1, 1), ("ability", 2, 2), ("tera", 3, 3)):
+            lab, lg = x[f"set_{key}"], out[f"set_{key}"].float()
+            ok = exists & (lab > 0)
+            if ok.any():
+                terms.append(F.cross_entropy(lg[ok], lab[ok]))
+            if stats is not None:
+                hid = ok & (bits[..., bit] == 0)
+                add(f"n_{key}", hid.sum().item())
+                add(f"net_{key}", (lg.argmax(-1) == lab)[hid].sum().item())
+                add(f"belief_{key}", (sp[:, 6:12, col] == lab)[hid].sum().item())
+        lab, lg = x["set_move"], out["set_move"].float()  # [B,6,4], [B,6,V]
+        ok = exists[..., None] & (lab > 0)
+        if ok.any():
+            lp = lg.log_softmax(-1).gather(-1, lab)  # [B,6,4]
+            terms.append(-lp[ok].mean())
+        if stats is not None:
+            st_moves = sp[:, 6:12, 6:10]  # the world's moves; the revealed ones flagged
+            rev = bits[..., 4:8].bool() & (st_moves > 0)
+            n_rev = rev.sum(-1, keepdim=True)  # [B,6,1]
+            masked = lg.scatter(-1, st_moves * rev, float("-inf"))  # revealed moves out
+            masked[..., 0] = float("-inf")
+            is_rev = ((lab[..., :, None] == st_moves[..., None, :]) & rev[..., None, :]).any(-1)
+            hid = ok & ~is_rev  # label moves not revealed yet
+            score = masked.gather(-1, lab)
+            rank = (masked[..., None, :] > score[..., None]).sum(-1)  # [B,6,4]
+            net_hit = rank < (4 - n_rev)
+            sampled = st_moves[..., None, :] == lab[..., None]  # [B,6,4(label),4(slot)]
+            belief_hit = (sampled & ~rev[..., None, :]).any(-1)
+            add("n_move", hid.sum().item())
+            add("net_move", net_hit[hid].sum().item())
+            add("belief_move", belief_hit[hid].sum().item())
+        if terms:
+            losses.append(torch.stack(terms).mean())
+    if "faint" in heads:
+        y = torch.stack([(x["faint"] & 1), (x["faint"] >> 1) & 1], -1).float()
+        lg = out["faint"].float()
+        losses.append(F.binary_cross_entropy_with_logits(lg, y))
+        if stats is not None:
+            add("faint_bce", F.binary_cross_entropy_with_logits(lg, y, reduction="sum").item() / 2)
+            add("faint_acc", ((lg > 0) == y.bool()).float().mean(-1).sum().item())
+    if "margin" in heads:
+        lg = out["margin"].float()
+        ce = F.cross_entropy(lg, x["margin"], reduction="none")
+        losses.append((ce * bw).sum() / bw.sum())
+        if stats is not None:
+            add("margin_ce", ce.sum().item())
+            add("margin_acc", (lg.argmax(-1) == x["margin"]).sum().item())
+    if "turns" in heads:
+        y = torch.log1p((x["turns"] - turn).clamp(min=0).float())
+        pred = out["turns"].float()
+        losses.append((F.smooth_l1_loss(pred, y, reduction="none") * bw).sum() / bw.sum())
+        if stats is not None:
+            add("turns_mae", (torch.expm1(pred.clamp(max=6)) - torch.expm1(y)).abs().sum().item())
+    return torch.stack(losses).mean() if losses else torch.zeros((), device=sp.device)
+
+
 def value_logit(model, v, ev):
     """Residual value (--value-residual): a * handcrafted eval / 100 + b + the net's output."""
     if getattr(model, "residual", None) is None:
@@ -232,13 +355,19 @@ def evaluate(model, d, idx, device, batch=16384) -> dict:
     sums = dict(ce=0.0, top1=0.0, top2=0.0, top3=0.0, top5=0.0, bce=0.0, vacc=0.0,
                 uniform_ce=0.0, n_sw=0.0, top1_sw=0.0, top3_sw=0.0, ce_sw=0.0)  # fmt: skip
     mtp = getattr(model, "mtp", 0) and "fsp" in d
+    heads = getattr(model, "aux_heads", ())
+    v3 = "ent2" in d and getattr(model, "feats", None) is not None
+    a_stats: dict = {}
     m_sum = dict(loss=0.0, acc=0.0, acc3=0.0, n=0.0, b=0)
     probs, wons, turns = [], [], []
     for i in range(0, len(idx), batch):
         b = idx[i : i + batch]
-        sp, de, gl, ma, act, won, ev, hs, hd, fs, fd = to_torch(d, b, device)
+        sp, de, gl, ma, act, won, ev, hs, hd, fs, fd, x = to_torch(d, b, device)
+        kw = {"x": x} if v3 else {}
         with torch.autocast(device.type, dtype=torch.bfloat16, enabled=device.type == "cuda"):
-            out = model(sp, de, gl, ma, hs, hd, aux=True) if mtp else model(sp, de, gl, ma, hs, hd)
+            out = model(sp, de, gl, ma, hs, hd, aux=bool(mtp or heads), **kw)
+        if heads:
+            aux_loss(out[3], x, sp, x["turn"], torch.ones_like(won), heads, a_stats)
         logits, v = out[0].float(), value_logit(model, out[1].float(), ev)
         if mtp:
             tg = mtp_targets(sp, fs, fd, model.mtp)
@@ -276,6 +405,14 @@ def evaluate(model, d, idx, device, batch=16384) -> dict:
     if mtp:
         out |= {"mtp_loss": m_sum["loss"] / m_sum["b"], "opp_act_acc": m_sum["acc"] / m_sum["n"],
                 "opp_act_top3": m_sum["acc3"] / m_sum["n"]}  # fmt: skip
+    for k in ("item", "ability", "tera", "move"):
+        if a_stats.get(f"n_{k}"):
+            nk = a_stats[f"n_{k}"]
+            out[f"set_{k}_net"] = a_stats[f"net_{k}"] / nk
+            out[f"set_{k}_belief"] = a_stats[f"belief_{k}"] / nk
+    for k in ("faint_bce", "faint_acc", "margin_ce", "margin_acc", "turns_mae"):
+        if k in a_stats:
+            out[k] = a_stats[k] / n
     p, w, t = np.concatenate(probs), np.concatenate(wons), np.concatenate(turns)
     bins = np.minimum((p * 10).astype(int), 9)
     out["value_ece"] = float(
@@ -303,6 +440,9 @@ def main() -> None:
     ap.add_argument("--mtp", type=int, default=0, help="future steps to predict (auxiliary)")
     ap.add_argument("--mtp-weight", type=float, default=0.5)
     ap.add_argument("--mtp-decay", type=float, default=1.0, help="weight of future step k: d^k")
+    ap.add_argument("--feats", default="", help=f"v3 input groups, comma-separated: {FEATS}")
+    ap.add_argument("--aux", default="", help=f"v3 auxiliary heads, comma-separated: {AUX_HEADS}")
+    ap.add_argument("--aux-weight", type=float, default=0.3)
     ap.add_argument("--value-per-game", type=float, default=0,
                     help="value loss weight min(1, N / game's positions); 0 = off")  # fmt: skip
     ap.add_argument("--epochs", type=float, default=6)
@@ -364,8 +504,13 @@ def main() -> None:
     assert a.hist_len <= DIMS["hist"], f"--hist-len > the {DIMS['hist']} featurized steps"
     dims = DIMS | {"hist": a.hist_len}
     assert not a.mtp or (a.arch == "transformer" and "fsp" in d), "--mtp: transformer + future data"
+    feats = tuple(f for f in a.feats.split(",") if f)
+    heads = tuple(f for f in a.aux.split(",") if f)
+    v3_ok = a.arch == "transformer" and "ent2" in d
+    assert not (feats or heads) or v3_ok, "--feats / --aux: transformer + v3 data"
     if a.arch == "transformer":
-        model = TransformerPV(dims, **size, history=a.history, mtp=a.mtp)
+        model = TransformerPV(dims, **size, history=a.history, mtp=a.mtp, feats=feats,
+                              aux_heads=heads)  # fmt: skip
     else:
         model = PolicyValueNet(dims, **size, history=a.history)
     model.residual = None
@@ -392,9 +537,10 @@ def main() -> None:
         if (step - 1) % 1000 == 0:  # time-weighted sampling, drawn 1000 steps at a time
             block = train_idx[rng.choice(len(train_idx), (1000, a.batch), p=probs)]
         b = block[(step - 1) % 1000]
-        sp, de, gl, ma, act, won, ev, hs, hd, fs, fd = to_torch(d, b, device)
+        sp, de, gl, ma, act, won, ev, hs, hd, fs, fd, x = to_torch(d, b, device)
+        kw = {"x": x} if a.arch == "transformer" and x is not None else {}
         with torch.autocast(device.type, dtype=torch.bfloat16, enabled=device.type == "cuda"):
-            out = model(sp, de, gl, ma, hs, hd, aux=bool(a.mtp))
+            out = model(sp, de, gl, ma, hs, hd, aux=bool(a.mtp or heads), **kw)
         logits, v = out[0], out[1]
         ce = F.cross_entropy(logits.float(), act)
         bw = torch.from_numpy(vw[b]).to(device)
@@ -404,6 +550,8 @@ def main() -> None:
         if a.mtp:
             tg = mtp_targets(sp, fs, fd, a.mtp)
             loss = loss + a.mtp_weight * mtp_loss(out[2], tg, a.mtp_decay)[0]
+        if heads:
+            loss = loss + a.aux_weight * aux_loss(out[3], x, sp, x["turn"], bw, heads)
         opt.zero_grad(set_to_none=True)
         loss.backward()
         gn = torch.nn.utils.clip_grad_norm_(model.parameters(), 5.0).item()
@@ -427,7 +575,7 @@ def main() -> None:
             emit(dict(event="val", step=step, **{k: float(v) for k, v in m.items()}))
             val_loss = m["ce"] + a.value_weight * m["bce"]
             ckpt = {"model": model.state_dict(), "dims": dims, "size": size, "arch": a.arch,
-                    "history": a.history, "mtp": a.mtp,
+                    "history": a.history, "mtp": a.mtp, "feats": feats, "aux_heads": heads,
                     "step": step, "val": m, "value_residual": a.value_residual}  # fmt: skip
             torch.save(ckpt, out_dir / "last.pt")
             if val_loss < best:
@@ -440,7 +588,8 @@ def main() -> None:
     save_file({k.removeprefix("emb."): v.float().contiguous()
                for k, v in best_ckpt["model"].items()}, out_dir / "best.safetensors")  # fmt: skip
     (out_dir / "config.json").write_text(json.dumps(
-        {"dims": dims, "size": size, "arch": a.arch, "history": a.history,
+        {"dims": dims, "size": size, "arch": a.arch, "history": a.history, "mtp": a.mtp,
+         "feats": feats, "aux_heads": heads,
          "step": best_ckpt["step"], "val": best_ckpt["val"]}, indent=2))  # fmt: skip
     emit(dict(event="done", best_val_loss=best, minutes=round((time.time() - t0) / 60, 1)))
 

@@ -18,13 +18,34 @@ own entity tokens. ``mtp`` > 0 adds multi-step action prediction heads (training
 targets, design D14-8): for each future decision step k < mtp and side (own / opponent; own step
 0 is the policy label itself and is skipped), the kind of action (none / move / switch), the move
 (tied to the move embedding table) and the switch-in (a pointer over that side's entity tokens).
+v3 (design D13, network v3 first batch; TransformerPV only), inputs ``x`` from the data
+(scripts/train_pv.py) in groups that can be switched off (``feats``) for ablations:
+  * reveal: 8 public-information bits per entity (positions.REVEAL_BITS) -> entity inputs;
+  * num: global extras (alpha_search.featurize_extra: living mons, HP, tera used, last move per
+    side) + the turn -> global token;
+  * movetab: the static move table (alpha_search.move_table) projected onto the move embeddings;
+  * matchup: per entity speed vs the opposing active, the threat from it, the active's moves'
+    damage vs the opposing active (also fed to the move-slot scores), entry hazard damage of the
+    benched mons, who moves first.
+Auxiliary heads (``aux_heads``, training-time only): oppset (the opponent's sets as revealed by
+the end: item / ability / tera type / moves, from the opponent entity tokens), faint (each
+active faints this turn), margin (mons left at the end, own - opponent, 13 classes), turns
+(remaining turns, log1p).
 """
 
+import alpha_search
+import numpy as np
 import torch
 from torch import nn
 
 # dense feature indices (rust/alpha_search/src/features.rs)
 D_ALIVE, D_ACTIVE, D_USABLE = 1, 2, slice(17, 21)
+FEATS = ("reveal", "num", "movetab", "matchup")
+AUX_HEADS = ("oppset", "faint", "margin", "turns")
+N_REVEAL = 8
+# global extras (extra.rs): 0-15 per side numbers, 16-17 who moves first / speed ratio
+# ("matchup"), 18-19 weather / terrain turns ("num")
+NUM_IDX, MATCHUP_IDX = [*range(16), 18, 19], [16, 17]
 
 
 def mlp(*sizes: int) -> nn.Sequential:
@@ -37,8 +58,9 @@ def mlp(*sizes: int) -> nn.Sequential:
 class Embeddings(nn.Module):
     """Entity inputs (ids -> embeddings + dense) and history step inputs, shared tables."""
 
-    def __init__(self, dims: dict):
+    def __init__(self, dims: dict, feats: tuple = ()):
         super().__init__()
+        self.feats = set(feats)
         v_species, v_item, v_ability, v_type, v_move = dims["vocab"]
         self.species = nn.Embedding(v_species, 32)
         self.item = nn.Embedding(v_item, 16)
@@ -47,10 +69,35 @@ class Embeddings(nn.Module):
         self.move = nn.Embedding(v_move, 32)
         self.d_entity = 32 + 16 + 16 + 3 * 8 + 32 + dims["dense"]
         self.d_step = 6 * 32 + dims.get("hist_dense", 7)
+        self.v3 = bool(self.feats)
+        if self.v3:
+            self.d_entity += N_REVEAL + dims["ent_extra"]
+        if "movetab" in self.feats:
+            table = np.frombuffer(alpha_search.move_table(), np.float32).reshape(v_move, -1)
+            self.register_buffer("move_table", torch.from_numpy(table.copy()), persistent=False)
+            self.move_proj = nn.Linear(table.shape[1], 32)
 
-    def entities(self, sparse, dense):
+    def move_vec(self, ids):
+        """Move embeddings (+ the projected static properties with the movetab group)."""
+        e = self.move(ids)
+        if "movetab" in self.feats:
+            e = e + self.move_proj(self.move_table[ids])
+        return e
+
+    def move_matrix(self):
+        """[V_move, 32]: every move's vector (tied output layer of move predictions)."""
+        w = self.move.weight
+        if "movetab" in self.feats:
+            w = w + self.move_proj(self.move_table)
+        return w
+
+    def entities(self, sparse, dense, x=None):
         """-> (entity inputs [B,12,d_entity], move embeddings [B,12,4,32])"""
-        moves = self.move(sparse[..., 6:10])
+        moves = self.move_vec(sparse[..., 6:10])
+        if self.v3:
+            bits = (x["reveal"][..., None] >> torch.arange(N_REVEAL, device=dense.device)) & 1
+            bits = bits.float() * float("reveal" in self.feats)
+            dense = torch.cat([dense, bits, x["ent2"] * float("matchup" in self.feats)], dim=-1)
         x = torch.cat(
             [
                 self.species(sparse[..., 0]),
@@ -71,10 +118,10 @@ class Embeddings(nn.Module):
         opponent), hdense float [B,S,7] -> step inputs [B,S,d_step]"""
         e = [
             self.species(hsparse[..., 0]),
-            self.move(hsparse[..., 1]),
+            self.move_vec(hsparse[..., 1]),
             self.species(hsparse[..., 2]),
             self.species(hsparse[..., 3]),
-            self.move(hsparse[..., 4]),
+            self.move_vec(hsparse[..., 4]),
             self.species(hsparse[..., 5]),
         ]
         return torch.cat(e + [hdense], dim=-1)
@@ -149,9 +196,13 @@ class TransformerPV(nn.Module):
         d_ff: int = 256,
         history: bool = True,
         mtp: int = 0,
+        feats: tuple = (),
+        aux_heads: tuple = (),
     ):
         super().__init__()
-        self.emb = Embeddings(dims)
+        assert set(feats) <= set(FEATS) and set(aux_heads) <= set(AUX_HEADS), (feats, aux_heads)
+        self.emb = Embeddings(dims, feats)
+        self.feats, self.aux_heads = tuple(feats), tuple(aux_heads)
         self.history = history
         self.hist_len = dims.get("hist", 8)
         self.mtp = mtp
@@ -161,8 +212,21 @@ class TransformerPV(nn.Module):
             self.mtp_kind = nn.Linear(d_model, 3)
             self.mtp_move = nn.Linear(d_model, 32)  # dot with the move embeddings
             self.mtp_switch = nn.Linear(d_model, d_model)  # dot with the entity tokens
+        v_species, v_item, v_ability, v_type, v_move = dims["vocab"]
+        if "oppset" in aux_heads:
+            self.set_item = nn.Linear(d_model, v_item)
+            self.set_ability = nn.Linear(d_model, v_ability)
+            self.set_tera = nn.Linear(d_model, v_type)
+            self.set_move = nn.Linear(d_model, 32)  # dot with the move vectors
+        if "faint" in aux_heads:
+            self.faint_head = nn.Linear(d_model, 2)
+        if "margin" in aux_heads:
+            self.margin_head = nn.Linear(d_model, 13)
+        if "turns" in aux_heads:
+            self.turns_head = nn.Linear(d_model, 1)
         self.ent_in = nn.Linear(self.emb.d_entity, d_model)
-        self.glob_in = nn.Linear(dims["global"], d_model)
+        d_glob = dims["global"] + (dims["global_extra"] + 1 if feats else 0)
+        self.glob_in = nn.Linear(d_glob, d_model)
         self.step_in = nn.Linear(self.emb.d_step, d_model) if history else None
         self.tok_type = nn.Embedding(3 + dims.get("hist", 8), d_model)  # own, opp, global, h_k
         layer = nn.TransformerEncoderLayer(
@@ -171,12 +235,20 @@ class TransformerPV(nn.Module):
         self.encoder = nn.TransformerEncoder(layer, n_layers, enable_nested_tensor=False)
         self.norm = nn.LayerNorm(d_model)
         self.value = nn.Linear(d_model, 1)
-        self.move_head = mlp(d_model + 32 + 1, 64, 2)
+        self.move_head = mlp(d_model + 32 + 1 + (4 if feats else 0), 64, 2)
         self.switch_head = mlp(2 * d_model, 64, 1)
 
-    def forward(self, sparse, dense, glob, mask, hsparse=None, hdense=None, aux=False):
-        x, moves = self.emb.entities(sparse, dense)
+    def forward(self, sparse, dense, glob, mask, hsparse=None, hdense=None, aux=False, x=None):
+        """``x`` (v3): reveal uint8 [B,12], ent2 [B,12,E], glob2 [B,G2], turn [B]. With ``aux``
+        also (MTP heads or None, dict of the auxiliary heads' outputs)."""
+        xin = x
+        x, moves = self.emb.entities(sparse, dense, xin)
         b = x.shape[0]
+        if self.feats:
+            g2 = xin["glob2"]
+            num = torch.cat([g2[:, NUM_IDX], (xin["turn"].float() / 50)[:, None]], dim=-1)
+            glob = torch.cat([glob, num * float("num" in self.feats),
+                              g2[:, MATCHUP_IDX] * float("matchup" in self.feats)], dim=-1)  # fmt: skip
         types = torch.tensor([0] * 6 + [1] * 6 + [2], device=x.device)
         toks = [self.ent_in(x), self.glob_in(glob)[:, None]]
         pad = torch.zeros(b, 13, dtype=torch.bool, device=x.device)
@@ -194,20 +266,39 @@ class TransformerPV(nn.Module):
         am = (moves[:, :6] * own_active[..., None, None]).sum(1)
         usable = (dense[:, :6, D_USABLE] * own_active[..., None]).sum(1)
         tt = t[:, None, :].expand(-1, 4, -1)
-        mh = self.move_head(torch.cat([tt, am, usable[..., None]], dim=-1))
+        parts = [tt, am, usable[..., None]]
+        if self.feats:  # the active's moves vs the opposing active (damage, KO, effectiveness)
+            mv = (xin["ent2"][:, :6, 4:20] * own_active[..., None]).sum(1).view(b, 4, 4)
+            parts.append(mv * float("matchup" in self.feats))
+        mh = self.move_head(torch.cat(parts, dim=-1))
         sw = self.switch_head(torch.cat([t[:, None, :].expand(-1, 6, -1), h[:, :6]], dim=-1))
         logits = torch.cat([mh[..., 0], mh[..., 1], sw.squeeze(-1)], dim=-1)
         logits = logits.masked_fill(~mask, float("-inf"))
         if not aux:
             return logits, value
-        return logits, value, self.mtp_heads(t, h)
+        return logits, value, self.mtp_heads(t, h) if self.mtp else None, self.aux_out(t, h)
+
+    def aux_out(self, t, h) -> dict:
+        out = {}
+        if "oppset" in self.aux_heads:
+            o = h[:, 6:12]
+            out["set_item"], out["set_ability"] = self.set_item(o), self.set_ability(o)
+            out["set_tera"] = self.set_tera(o)
+            out["set_move"] = self.set_move(o) @ self.emb.move_matrix().T  # [B,6,V_move]
+        if "faint" in self.aux_heads:
+            out["faint"] = self.faint_head(t)
+        if "margin" in self.aux_heads:
+            out["margin"] = self.margin_head(t)
+        if "turns" in self.aux_heads:
+            out["turns"] = self.turns_head(t).squeeze(-1)
+        return out
 
     def mtp_heads(self, t, h):
         """-> kind [B,K,2,3], move [B,K,2,V_move], switch [B,K,2,6] (side 0 own, 1 opponent)"""
         b, k = t.shape[0], self.mtp
         q = self.mtp_body(t[:, None, :] + self.mtp_query.weight[None])  # [B,2K,d]
         q = q.view(b, k, 2, -1)
-        move = self.mtp_move(q) @ self.emb.move.weight.T
+        move = self.mtp_move(q) @ self.emb.move_matrix().T
         sides = torch.stack([h[:, :6], h[:, 6:12]], dim=1)  # [B,2,6,d]
         switch = torch.einsum("bksd,bsed->bkse", self.mtp_switch(q), sides)
         return self.mtp_kind(q), move, switch
