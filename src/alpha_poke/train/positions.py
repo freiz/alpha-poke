@@ -62,6 +62,10 @@ class Position:
     rating_own: int = 0  # v4: the players' ratings before the game (0 = unknown)
     rating_opp: int = 0
     kind: int = 0  # v4: KIND_MAIN / KIND_FORCED / KIND_PIVOT / KIND_BLIND
+    # v4: sampling weight = the size of the pool the position was drawn from / how many were
+    # drawn from it in this game (turn starts and the other decision points are separate pools
+    # with different rates; weighting restores the game's real mix)
+    weight: float = 1.0
 
 
 REVEAL_BITS = ("seen", "item", "ability", "tera", "move0", "move1", "move2", "move3")
@@ -256,6 +260,7 @@ def positions_from_replay(
     per_game: int = 0,
     extra_per_game: int = 0,
     seed: int = 0,
+    pool: str = "split",
 ):
     """``row``: a replay dict with ``id``, ``log`` (+ ``rating``, ``uploadtime``). ``per_game``
     > 0: only that many decision points, drawn at random (positions within a game are strongly
@@ -263,7 +268,9 @@ def positions_from_replay(
     are built only for those, which is the expensive part.
     ``extra_per_game`` > 0 (v4): also that many of the other decision points (forced switches
     after a faint, pivot switches, Blind turn starts), drawn with their own generator (seeded
-    from the game id) so that the turn-start positions stay exactly as without them."""
+    from the game id) so that the turn-start positions stay exactly as without them.
+    ``pool="all"``: one pool of all decision points (turn starts and the others), ``per_game``
+    drawn from it, so each kind keeps its real share (no sampling weights needed)."""
     rep = parse_replay(row)
     if rep.warnings or rep.winner not in ("p1", "p2"):
         return []
@@ -271,9 +278,52 @@ def positions_from_replay(
     for a in rep.actions:
         if a.turn >= 1 and not a.forced and not a.pivot and a.kind in ("move", "switch"):
             actions.setdefault((a.turn, a.side), a)
+    n_main = len(actions)
+    if pool == "all":
+        return _from_pool(row, rep, actions, belief, rng, move_beta, per_game, seed)
     if per_game and len(actions) > per_game:
         keep = set(rng.sample(sorted(actions), per_game))
         actions = {k: v for k, v in actions.items() if k in keep}
+    w_main = n_main / max(1, len(actions))
+    blind = blind_sides(rep)
+    extra: list = []
+    rng2 = random.Random(zlib.crc32(f"{seed}:{row['id']}".encode()))
+    if extra_per_game:
+        extra = _extra_points(rep, blind)
+    n_extra = len(extra)
+    if extra_per_game and len(extra) > extra_per_game:
+        extra = [extra[i] for i in sorted(rng2.sample(range(len(extra)), extra_per_game))]
+    w_extra = n_extra / max(1, len(extra))
+    return _emit_positions(row, rep, blind, actions, extra, w_main, w_extra, belief, rng, rng2,
+                           move_beta)  # fmt: skip
+
+
+def _extra_points(rep, blind) -> list:
+    """The decision points other than visible turn starts: (kind, turn, side, action or Blind)."""
+    extra = []
+    for a in rep.actions:
+        if a.turn >= 1 and a.kind == "switch" and (a.forced or a.pivot):
+            extra.append((KIND_FORCED if a.forced else KIND_PIVOT, a.turn, a.side, a))
+    return extra + [(KIND_BLIND, t, sd, b) for (t, sd), b in sorted(blind.items())]
+
+
+def _from_pool(row, rep, actions, belief, rng, move_beta, per_game, seed):
+    """pool="all": per_game decision points from all of them, each kind at its real share."""
+    blind = blind_sides(rep)
+    extra_all = _extra_points(rep, blind)
+    cands = [("m", k) for k in sorted(actions)] + [("x", i) for i in range(len(extra_all))]
+    n = len(cands)
+    if per_game and n > per_game:
+        cands = [cands[i] for i in sorted(rng.sample(range(n), per_game))]
+    w = n / max(1, len(cands))
+    main = {k: actions[k] for t, k in cands if t == "m"}
+    extra = [extra_all[i] for t, i in cands if t == "x"]
+    rng2 = random.Random(zlib.crc32(f"{seed}:{row['id']}".encode()))
+    return _emit_positions(row, rep, blind, main, extra, w, w, belief, rng, rng2, move_beta)
+
+
+def _emit_positions(row, rep, blind, actions, extra, w_main, w_extra, belief, rng, rng2,
+                    move_beta):  # fmt: skip
     lines = row["log"].split("\n")
     names: dict[str, str] = {}
     for x in lines:  # first non-empty name: logs often end with "|player|p1|" (player left)
@@ -282,18 +332,7 @@ def positions_from_replay(
             names.setdefault(f[2], f[3])
     if set(names) != {"p1", "p2"}:
         return []
-    blind = blind_sides(rep)
     steps = decision_steps(rep.actions, blind)
-    # extra decision points: (kind, turn, side, action or Blind)
-    extra: list = []
-    rng2 = random.Random(zlib.crc32(f"{seed}:{row['id']}".encode()))
-    if extra_per_game:
-        for a in rep.actions:
-            if a.turn >= 1 and a.kind == "switch" and (a.forced or a.pivot):
-                extra.append((KIND_FORCED if a.forced else KIND_PIVOT, a.turn, a.side, a))
-        extra += [(KIND_BLIND, t, sd, b) for (t, sd), b in sorted(blind.items())]
-        if len(extra) > extra_per_game:
-            extra = [extra[i] for i in sorted(rng2.sample(range(len(extra)), extra_per_game))]
     blind_at = {(t, sd): b for k, t, sd, b in extra if k == KIND_BLIND}
     switch_at = {id(a): k for k, _, _, a in extra if k in (KIND_FORCED, KIND_PIVOT)}
     # per turn and side: fainted during the turn; whole game: faints, length
@@ -340,6 +379,7 @@ def positions_from_replay(
                 len(records[side]) - total_faints[side],
                 len(records[other]) - total_faints[other],
                 cur, ratings[side], ratings[other], kind,
+                w_main if kind == KIND_MAIN else w_extra,
             )
         )  # fmt: skip
 

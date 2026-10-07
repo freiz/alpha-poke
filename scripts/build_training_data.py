@@ -43,7 +43,7 @@ def _init(heldout: bool):
 
 
 def _work(args):
-    rows, seed, move_beta, per_game, extra_per_game, game_seed = args
+    rows, seed, move_beta, per_game, extra_per_game, game_seed, pool = args
     from alpha_poke.train.positions import positions_from_replay
 
     rng = random.Random(seed)
@@ -53,7 +53,7 @@ def _work(args):
             out += [
                 asdict(p)
                 for p in positions_from_replay(
-                    r, _belief, rng, move_beta, per_game, extra_per_game, game_seed
+                    r, _belief, rng, move_beta, per_game, extra_per_game, game_seed, pool
                 )
             ]
         except Exception:  # noqa: BLE001 - a broken log must not stop the build
@@ -78,6 +78,8 @@ def main() -> None:
     ap.add_argument("--extra-per-game", type=int, default=0,
                     help="v4: other decision points per game (forced / pivot switches, turns "
                          "whose action the log does not show)")  # fmt: skip
+    ap.add_argument("--pool", choices=["split", "all"], default="split",
+                    help="all: --per-game from all decision points (real shares)")  # fmt: skip
     ap.add_argument("--min-rating", type=int, default=0)
     ap.add_argument("--since", default="2022-01-01")
     ap.add_argument("--fraction", type=float, default=1.0, help="of the games of each shard")
@@ -107,6 +109,7 @@ def main() -> None:
                     a.per_game,
                     a.extra_per_game,
                     a.seed,
+                    a.pool,
                 )  # fmt: skip
                 for i in range(0, len(rows), a.chunk)
             ]

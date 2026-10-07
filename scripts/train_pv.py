@@ -25,6 +25,11 @@ v4 (data with ``kind`` / ratings, design D13): ``--kinds`` picks the decision po
 show, trained with a partial label: some move slot, tera known); ``--elo-dropout`` hides each
 player's rating with that probability in training. Evaluation: the usual metrics on the
 turn-start positions only (comparable with v3), plus the forced / pivot switch accuracy.
+``--stream K`` (data larger than memory, e.g. the full set: ~2.5 KB per position): only the small
+columns of all shards stay in memory (splits and weights); the validation positions (at most
+``--val-max``, random) are loaded once; training reads K whole shards at a time (Metamon's shards
+are random in time), samples its batches there by time weight, and loads the next K shards in the
+background. Shard order is reshuffled every pass.
 """
 
 import argparse
@@ -33,6 +38,7 @@ import json
 import math
 import time
 import zlib
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import alpha_search
@@ -72,7 +78,9 @@ def featurize_shard(path: Path, cache: Path) -> int:
             # v4 caches stored them in the uint8 "hde" and truncated them to 0
             hdmg_ok = DIMS["hist_dense"] == 7 or "hdmg" in z.files
             ok_hd = not has_hist or (z["hde"].shape[2] == DIMS["hist_dense"] and hdmg_ok)
-            ok_v4 = ("kind" in names) == ("kind" in z.files)
+            ok_v4 = ("kind" in names) == ("kind" in z.files) and ("weight" in names) == (
+                "sw" in z.files
+            )
             if fresh and "evalv" in z.files and ok_hist and ok_fut and ok_v3 and ok_hd and ok_v4:
                 return len(z["action"])
     cols = ["game", "turn", "state", "action", "won", "rating", "uploadtime"]
@@ -81,6 +89,8 @@ def featurize_shard(path: Path, cache: Path) -> int:
         extra += ["reveal", "opp_sets", "faint", "left_own", "left_opp", "turns"]
     if "kind" in names:
         extra += ["rating_own", "rating_opp", "kind"]
+    if "weight" in names:
+        extra += ["weight"]
     t = pq.read_table(path, columns=cols + extra)
     states = t.column("state").to_pylist()
     e, s, d, g, a = DIMS["entities"], DIMS["sparse"], DIMS["dense"], DIMS["global"], DIMS["actions"]
@@ -175,6 +185,8 @@ def v3_arrays(t, states: list[str]) -> dict:
         out["rating"] = np.stack([np.asarray(t.column(c).to_pylist(), np.int16)
                                   for c in ("rating_own", "rating_opp")], 1)  # fmt: skip
         out["kind"] = np.asarray(t.column("kind").to_pylist(), np.uint8)
+    if "weight" in t.column_names:
+        out["sw"] = np.asarray(t.column("weight").to_pylist(), np.float32)
     return out
 
 
@@ -203,6 +215,101 @@ def load(data: str) -> dict:
                 out[k][pos : pos + n] = v
         pos += n
     return out
+
+
+SMALL = ("game", "uploadtime", "kind", "sw", "turn")
+
+
+def shard_caches(data: str) -> tuple[list[Path], list[int]]:
+    """The shards' feature caches (built if missing) and their sizes."""
+    root = Path("data/train") / data
+    files = [f for f in sorted(glob.glob(str(root / "*.parquet"))) if pq.read_metadata(f).num_rows]
+    caches = [root / "features" / (Path(f).stem + ".npz") for f in files]
+    sizes = [featurize_shard(Path(f), c) for f, c in zip(files, caches, strict=True)]
+    return [c for c, n in zip(caches, sizes, strict=True) if n], [n for n in sizes if n]
+
+
+def load_small(caches: list[Path], sizes: list[int]) -> dict:
+    """The small columns (SMALL) of all shards + each row's shard and row number."""
+    out: dict = {"shard": np.repeat(np.arange(len(sizes)), sizes),
+                 "row": np.concatenate([np.arange(n) for n in sizes])}  # fmt: skip
+    for k in SMALL:
+        parts = []
+        for c in caches:
+            with np.load(c) as z:
+                if k not in z.files:
+                    break
+                parts.append(z[k])
+        if len(parts) == len(caches):
+            out[k] = np.concatenate(parts)
+    return out
+
+
+def gather(caches: list[Path], small: dict, idx: np.ndarray) -> dict:
+    """All columns of the rows ``idx`` (global), read shard by shard."""
+    out: dict = {}
+    order = np.argsort(small["shard"][idx], kind="stable")
+    idx = idx[order]
+    pos = 0
+    for s_id in np.unique(small["shard"][idx]):
+        rows = small["row"][idx[small["shard"][idx] == s_id]]
+        with np.load(caches[s_id]) as z:
+            for k in z.files:
+                v = z[k][rows]
+                if k not in out:
+                    out[k] = np.empty((len(idx), *v.shape[1:]), v.dtype)
+                out[k][pos : pos + len(rows)] = v
+        pos += len(rows)
+    return out
+
+
+class ChunkStream:
+    """Batches from K shards at a time (see --stream): yields (chunk data, local rows, global
+    rows); the next chunk loads in a background thread."""
+
+    def __init__(self, caches, small, train_idx, probs_w, k, batch, rng):
+        self.caches, self.small, self.k, self.batch, self.rng = caches, small, k, batch, rng
+        self.train = np.zeros(len(small["shard"]), bool)
+        self.train[train_idx] = True
+        self.w = np.zeros(len(small["shard"]))
+        self.w[train_idx] = probs_w
+        self.pool = ThreadPoolExecutor(1)
+        self.order: list = []
+        self.next = self.pool.submit(self._load, self._next_shards())
+        self._advance()
+
+    def _next_shards(self) -> list[int]:
+        if len(self.order) < self.k:
+            self.order += list(self.rng.permutation(len(self.caches)))
+        out, self.order = self.order[: self.k], self.order[self.k :]
+        return out
+
+    def _load(self, shards):
+        glob_rows = np.flatnonzero(np.isin(self.small["shard"], shards) & self.train)
+        return glob_rows, gather(self.caches, self.small, glob_rows)
+
+    def _advance(self):
+        self.glob_rows, self.chunk = self.next.result()
+        # gather sorts by shard: map its row order back to the global ids
+        order = np.argsort(self.small["shard"][self.glob_rows], kind="stable")
+        self.glob_rows = self.glob_rows[order]
+        self.next = self.pool.submit(self._load, self._next_shards())
+        w = self.w[self.glob_rows]
+        self.p = w / w.sum()
+        self.left = max(1, len(self.glob_rows) // self.batch)
+        self.block, self.used = None, 0
+
+    def batch_rows(self):
+        if self.left == 0:
+            self._advance()
+        if self.block is None or self.used == len(self.block):
+            m = min(1000, self.left)
+            self.block = self.rng.choice(len(self.glob_rows), (m, self.batch), p=self.p)
+            self.used = 0
+        b = self.block[self.used]
+        self.used += 1
+        self.left -= 1
+        return self.chunk, b, self.glob_rows[b]
 
 
 def to_torch(d: dict, idx: np.ndarray, device) -> tuple:
@@ -399,7 +506,8 @@ def evaluate(model, d, idx, device, batch=16384) -> dict:
     policy loss over all turn starts (``ce_turn``: the unseen choices with their partial label;
     the visible ones alone are a biased sample, they miss the turns where the player was KOed
     first or could not move, which always chose a move), value BCE on all positions
-    (``bce_all``) and on the unseen-choice ones (``bce_blind``)."""
+    (``bce_all``) and on the unseen-choice ones (``bce_blind``); with sampling weights in the
+    data also ``ce_turn_w`` / ``bce_all_w`` weighted by them (the selection metric)."""
     if "kind" not in d:
         return _evaluate(model, d, idx, device, batch)
     k = d["kind"][idx]
@@ -424,6 +532,10 @@ def evaluate(model, d, idx, device, batch=16384) -> dict:
     if sw.any():
         out |= {"ce_forced": float(pl[sw].mean()), "top1_forced": float(hit[sw].mean())}
     out |= {"ce_turn": float(pl[turn].mean()), "bce_all": float(vl.mean())}
+    if "sw" in d:  # weighted by the sampling weights: the game's real mix of decision points
+        w = d["sw"][idx]
+        out |= {"ce_turn_w": float(np.average(pl[turn], weights=w[turn])),
+                "bce_all_w": float(np.average(vl, weights=w))}  # fmt: skip
     if blind.any():
         out |= {"ce_blind": float(pl[blind].mean()), "bce_blind": float(vl[blind].mean())}
     return out
@@ -527,6 +639,10 @@ def main() -> None:
     ap.add_argument("--aux-weight", type=float, default=0.3)
     ap.add_argument("--kinds", default="main", help="v4 decision points: main,forced,pivot,blind")
     ap.add_argument("--elo-dropout", type=float, default=0.25)
+    ap.add_argument("--stream", type=int, default=0, help="shards per chunk (0 = all in memory)")
+    ap.add_argument("--val-max", type=int, default=500_000, help="--stream: validation positions")
+    ap.add_argument("--sample-weights", action="store_true",
+                    help="weight the losses by the sampling weights (v4 data)")  # fmt: skip
     ap.add_argument("--mask-hidden", action="store_true",
                     help="unrevealed opponent fields -> unknown (no belief sample)")  # fmt: skip
     ap.add_argument("--value-per-game", type=float, default=0,
@@ -565,8 +681,13 @@ def main() -> None:
         print(" ".join(parts), flush=True)
 
     t0 = time.time()
-    d = load(a.data)
-    n = len(d["action"])
+    if a.stream:
+        caches, sizes = shard_caches(a.data)
+        d = load_small(caches, sizes)  # small columns only; the rest is read chunk by chunk
+        n = len(d["game"])
+    else:
+        d = load(a.data)
+        n = len(d["action"])
     # validation: the most recent games (whole games)
     game_time = {}
     for g, ut in zip(d["game"], d["uploadtime"], strict=True):
@@ -582,10 +703,25 @@ def main() -> None:
     w = 0.5 ** (age_days / a.half_life) if a.half_life > 0 else np.ones(n)
     w = (w / w[train_idx].mean()).astype(np.float32)
     vw = np.ones(n, np.float32)  # value loss weights
+    pw = np.ones(n, np.float32)  # policy loss weights
+    _, inv, cnt = np.unique(d["game"], return_inverse=True, return_counts=True)
     if a.value_per_game > 0:
-        _, inv, cnt = np.unique(d["game"], return_inverse=True, return_counts=True)
         vw = np.minimum(1.0, a.value_per_game / cnt[inv]).astype(np.float32)
-    assert not a.history or "hsp" in d, "--history needs data built with a history column"
+    if a.sample_weights:
+        assert "sw" in d, "--sample-weights needs data with sampling weights"
+        pw = (d["sw"] / d["sw"][train_idx].mean()).astype(np.float32)
+        # value: each game keeps its total weight, spread over its positions by sampling weight
+        game_mean = np.bincount(inv, weights=d["sw"]) / cnt
+        vw = (vw * d["sw"] / game_mean[inv]).astype(np.float32)
+    if a.stream:  # the columns the data has (every shard has the same)
+        with np.load(caches[0]) as z:
+            keys = set(z.files)
+        if len(val_idx) > a.val_max:
+            val_idx = np.sort(rng.choice(val_idx, a.val_max, replace=False))
+        dv, v_idx = gather(caches, d, val_idx), np.arange(len(val_idx))
+    else:
+        keys, dv, v_idx = set(d), d, val_idx
+    assert not a.history or "hsp" in keys, "--history needs data built with a history column"
     emit(dict(event="data", positions=n, games=len(game_time), train=len(train_idx),
               val=len(val_idx), val_cutoff=int(cutoff), load_s=round(time.time() - t0, 1),
               eff_train=float(w[train_idx].sum() ** 2 / (w[train_idx] ** 2).sum())))  # fmt: skip
@@ -593,10 +729,10 @@ def main() -> None:
     size = (T_SIZES if a.arch == "transformer" else SIZES)[a.size]
     assert a.hist_len <= DIMS["hist"], f"--hist-len > the {DIMS['hist']} featurized steps"
     dims = DIMS | {"hist": a.hist_len}
-    assert not a.mtp or (a.arch == "transformer" and "fsp" in d), "--mtp: transformer + future data"
+    assert not a.mtp or (a.arch == "transformer" and "fsp" in keys), "--mtp: transformer + future"
     feats = tuple(f for f in a.feats.split(",") if f)
     heads = tuple(f for f in a.aux.split(",") if f)
-    v3_ok = a.arch == "transformer" and "ent2" in d
+    v3_ok = a.arch == "transformer" and "ent2" in keys
     assert not (feats or heads) or v3_ok, "--feats / --aux: transformer + v3 data"
     if a.arch == "transformer":
         model = TransformerPV(dims, **size, history=a.history, mtp=a.mtp, feats=feats,
@@ -621,13 +757,18 @@ def main() -> None:
               steps=steps, device=str(device), args=json.dumps(vars(a))))  # fmt: skip
     best = float("inf")
     probs = w[train_idx] / w[train_idx].sum()
+    stream = ChunkStream(caches, d, train_idx, probs, a.stream, a.batch, rng) if a.stream else None
     agg = dict(ce=0.0, bce=0.0, acc=0.0, gn=0.0, k=0)
     t_last = time.time()
     for step in range(1, steps + 1):
-        if (step - 1) % 1000 == 0:  # time-weighted sampling, drawn 1000 steps at a time
-            block = train_idx[rng.choice(len(train_idx), (1000, a.batch), p=probs)]
-        b = block[(step - 1) % 1000]
-        sp, de, gl, ma, act, won, ev, hs, hd, fs, fd, x = to_torch(d, b, device)
+        if stream is not None:  # chunk data, its rows, their global ids
+            dd, b_loc, b = stream.batch_rows()
+        else:
+            if (step - 1) % 1000 == 0:  # time-weighted sampling, drawn 1000 steps at a time
+                block = train_idx[rng.choice(len(train_idx), (1000, a.batch), p=probs)]
+            dd, b = d, block[(step - 1) % 1000]
+            b_loc = b
+        sp, de, gl, ma, act, won, ev, hs, hd, fs, fd, x = to_torch(dd, b_loc, device)
         kw = {"x": x} if a.arch == "transformer" and x is not None else {}
         if x is not None and "rating" in x and a.elo_dropout > 0:  # unknown ratings, as in play
             drop = torch.rand(x["rating"].shape, device=device) < a.elo_dropout
@@ -635,7 +776,8 @@ def main() -> None:
         with torch.autocast(device.type, dtype=torch.bfloat16, enabled=device.type == "cuda"):
             out = model(sp, de, gl, ma, hs, hd, aux=bool(a.mtp or heads), **kw)
         logits, v = out[0], out[1]
-        ce = policy_loss(logits, act, ma)
+        pwb = torch.from_numpy(pw[b]).to(device)
+        ce = (policy_loss(logits, act, ma, reduction="none") * pwb).sum() / pwb.sum()
         bw = torch.from_numpy(vw[b]).to(device)
         vl = value_logit(model, v.float(), ev)
         bce = (F.binary_cross_entropy_with_logits(vl, won, reduction="none") * bw).sum() / bw.sum()
@@ -664,9 +806,13 @@ def main() -> None:
             agg = dict(ce=0.0, bce=0.0, acc=0.0, gn=0.0, k=0)
             t_last = time.time()
         if step % a.eval_every == 0 or step == steps:
-            m = evaluate(model, d, val_idx, device)
+            m = evaluate(model, dv, v_idx, device)
             emit(dict(event="val", step=step, **{k: float(v) for k, v in m.items()}))
-            val_loss = m["ce"] + a.value_weight * m["bce"]
+            # selection: all turn starts + all positions when the data has them (the visible
+            # turn starts alone are a biased sample), weighted when it has sampling weights
+            sel = ("ce_turn_w", "bce_all_w") if "ce_turn_w" in m else (
+                ("ce_turn", "bce_all") if "ce_turn" in m else ("ce", "bce"))  # fmt: skip
+            val_loss = m[sel[0]] + a.value_weight * m[sel[1]]
             ckpt = {"model": model.state_dict(), "dims": dims, "size": size, "arch": a.arch,
                     "history": a.history, "mtp": a.mtp, "feats": feats, "aux_heads": heads,
                     "mask_hidden": a.mask_hidden, "step": step, "val": m,

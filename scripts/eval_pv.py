@@ -51,11 +51,14 @@ def main() -> None:
     ap.add_argument("--since", type=int, default=1776921722, help="unix time (v1 val cutoff)")
     a = ap.parse_args()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    d = train_pv.load(a.data)
-    idx = np.flatnonzero(d["uploadtime"] >= a.since)
+    # only the anchor games' rows are read (the full set does not fit in memory)
+    caches, sizes = train_pv.shard_caches(a.data)
+    small = train_pv.load_small(caches, sizes)
+    idx = np.flatnonzero(small["uploadtime"] >= a.since)
     # whole games: a game counts by its latest upload time (as in train_pv)
-    games = set(d["game"][idx].tolist())
-    idx = np.flatnonzero(np.isin(d["game"], list(games)))
+    games = set(small["game"][idx].tolist())
+    d = train_pv.gather(caches, small, np.flatnonzero(np.isin(small["game"], list(games))))
+    idx = np.arange(len(d["game"]))
     print(f"{a.data}: {len(idx)} positions from {len(games)} games uploaded >= {a.since}")
     for r in a.runs:
         m = train_pv.evaluate(load_run(Path(r), device), d, idx, device)
@@ -93,6 +96,8 @@ def main() -> None:
             "ce_blind",
             "bce_all",
             "bce_blind",
+            "ce_turn_w",
+            "bce_all_w",
         )
         print(json.dumps({"run": Path(r).name} | {k: round(m[k], 4) for k in keys if k in m}))
 
