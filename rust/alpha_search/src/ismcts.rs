@@ -398,7 +398,9 @@ impl Tree {
                         1.0
                     } else if over < 0.0 {
                         0.0
-                    } else if let (true, true, Some(net)) = (cfg.use_policy, cfg.net_value, &cfg.net) {
+                    } else if let (true, true, Some(net)) =
+                        (cfg.use_policy, cfg.net_value, &cfg.net)
+                    {
                         // one forward pass: the leaf value and the new node's own priors
                         let out = net.forward(&crate::features::featurize(state), evaluate(state));
                         self.nodes[child as usize].logits1 = Some(Box::new(out.logits));
