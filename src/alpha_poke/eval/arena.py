@@ -18,6 +18,7 @@ import math
 import multiprocessing as mp
 import os
 import random
+import subprocess
 import time
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import asdict, dataclass
@@ -187,10 +188,39 @@ def run_arena(
         for w in range(procs)
     ]
     t0 = time.time()
+    meta = run_meta(bot_a, bot_b, n_pairs=n_pairs, procs=procs, lanes=lanes_per_proc, seed=seed,
+                    heldout=heldout, pool=pool_dir)  # fmt: skip
+    meta_path = Path(log_path).with_suffix(".meta.json")
+    meta_path.write_text(json.dumps(meta, indent=1))
     # non-daemonic workers: a search bot starts its own MCTS process pool
     with ProcessPoolExecutor(procs, mp_context=mp.get_context("spawn")) as pool:
         rows = [r for part in pool.map(_worker, jobs) for r in part]
-    return summarize(rows) | {"log": log_path, "seconds": round(time.time() - t0, 1)}
+    res = summarize(rows) | {"log": log_path, "seconds": round(time.time() - t0, 1)}
+    meta_path.write_text(json.dumps(meta | {"result": res}, indent=1))
+    return res
+
+
+def run_meta(bot_a: str, bot_b: str, **args) -> dict:
+    """Everything needed to compare runs later: code version, settings, bot definitions."""
+    from alpha_poke.eval.bots import VARIANTS
+
+    def git(*cmd):
+        try:
+            return subprocess.run(["git", *cmd], capture_output=True, text=True).stdout.strip()
+        except OSError:
+            return None
+
+    return {
+        "commit": git("rev-parse", "--short", "HEAD"),
+        "dirty": bool(git("status", "--porcelain", "--untracked-files=no")),
+        "env": {
+            k: v
+            for k, v in sorted(os.environ.items())
+            if k.startswith("ALPHA_") or k == "LLM_BUDGET_USD"
+        },  # fmt: skip
+        "args": args,
+        "bots": {b: repr(VARIANTS.get(b, "baseline")) for b in (bot_a, bot_b)},
+    }
 
 
 def _score(r: dict) -> float | None:

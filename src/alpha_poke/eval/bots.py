@@ -64,6 +64,20 @@ VARIANTS: dict[str, tuple[bool, bool, bool, dict]] = {
         )
         for suffix, pol in (("", "both"), ("1", "ours"))
     },  # fmt: skip
+    # priors from the network (both sides), handcrafted evaluation at the leaves
+    "s_ismcts_p": (
+        True,
+        True,
+        True,
+        {
+            "search": True,
+            "backend": "ismcts",
+            "worlds": 32,
+            "net_policy": "both",
+            "net_value": False,
+            "model": "data/train/v1/runs/v1-medium-residual",
+        },
+    ),  # fmt: skip
     "s_ismcts_cl2": (
         True,
         True,

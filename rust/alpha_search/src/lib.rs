@@ -67,7 +67,8 @@ fn reference_mcts(
 #[pyfunction(name = "ismcts")]
 #[pyo3(signature = (states, duration_ms, iterations=0, seed=None, c=std::f32::consts::SQRT_2,
                     cache_root=true, branch_depth=2, chance_depth=0, threads=1,
-                    model_dir=None, use_policy=false, policy_opponent=true, c_puct=1.0))]
+                    model_dir=None, use_policy=false, policy_opponent=true, c_puct=1.0,
+                    net_value=true))]
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 fn py_ismcts(
     py: Python<'_>,
@@ -84,6 +85,7 @@ fn py_ismcts(
     use_policy: bool,
     policy_opponent: bool,
     c_puct: f32,
+    net_value: bool,
 ) -> PyResult<(Vec<(String, u32, f32)>, u32, usize, u16)> {
     if states.is_empty() {
         return Err(PyValueError::new_err("ismcts needs at least one world"));
@@ -104,6 +106,7 @@ fn py_ismcts(
         use_policy,
         policy_opponent,
         c_puct,
+        net_value,
     };
     let res = py.detach(|| {
         if threads > 1 {

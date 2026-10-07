@@ -119,6 +119,8 @@ pub struct Config {
     /// also the opponent's priors (its view, one more forward pass per node); else UCB1 for it
     pub policy_opponent: bool,
     pub c_puct: f32,
+    /// leaf values from the network; false = handcrafted evaluation even with `net` (priors only)
+    pub net_value: bool,
 }
 
 impl Default for Config {
@@ -132,6 +134,7 @@ impl Default for Config {
             use_policy: false,
             policy_opponent: true,
             c_puct: 1.0,
+            net_value: true,
         }
     }
 }
@@ -183,7 +186,7 @@ pub fn outcome_signature(state: &State) -> u64 {
 /// Value of a non-terminal leaf for side one: the value network if there is one (its residual
 /// uses the handcrafted evaluation), else poke-engine's leaf value relative to the root.
 fn leaf_value(state: &State, root_eval: f32, cfg: &Config) -> f32 {
-    match &cfg.net {
+    match cfg.net.as_ref().filter(|_| cfg.net_value) {
         Some(net) => {
             let logit = net.value(&crate::features::featurize(state), evaluate(state));
             1.0 / (1.0 + (-logit).exp())
@@ -395,7 +398,7 @@ impl Tree {
                         1.0
                     } else if over < 0.0 {
                         0.0
-                    } else if let (true, Some(net)) = (cfg.use_policy, &cfg.net) {
+                    } else if let (true, true, Some(net)) = (cfg.use_policy, cfg.net_value, &cfg.net) {
                         // one forward pass: the leaf value and the new node's own priors
                         let out = net.forward(&crate::features::featurize(state), evaluate(state));
                         self.nodes[child as usize].logits1 = Some(Box::new(out.logits));

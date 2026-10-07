@@ -84,6 +84,7 @@ class SearchPlayer(KnowledgePlayer):
         chance_depth=None,
         model=None,
         net_policy=None,
+        net_value=None,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
@@ -117,6 +118,10 @@ class SearchPlayer(KnowledgePlayer):
         # only (the opponent keeps UCB1)
         self.net_policy = net_policy or os.environ.get("ALPHA_NET_POLICY") or None
         assert self.net_policy in (None, "both", "ours"), self.net_policy
+        # leaf values from the network (default) or the handcrafted evaluation (priors only)
+        self.net_value = (
+            net_value if net_value is not None else os.environ.get("ALPHA_NET_VALUE", "1") != "0"
+        )
         # ISMCTS: split shallow children by the observable outcome below this depth (0 = open-loop)
         self.chance_depth = (
             chance_depth if chance_depth is not None else _env_int("ALPHA_ISMCTS_CHANCE_DEPTH", 0)
@@ -178,6 +183,7 @@ class SearchPlayer(KnowledgePlayer):
                 model_dir=self.model,
                 use_policy=self.net_policy is not None,
                 policy_opponent=self.net_policy == "both",
+                net_value=self.net_value,
             )
             results = [([(c, v) for c, v, _ in ours], n)]
         elif pool is not None:  # parallel: each sample gets the full budget on its own core
