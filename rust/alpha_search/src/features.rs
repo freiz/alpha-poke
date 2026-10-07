@@ -36,7 +36,7 @@ pub const GLOBAL: usize = 8 + 5 + 2 + 2 * SIDE_GLOBAL;
 pub const N_ACTIONS: usize = 14;
 /// embedding table sizes: species, item, ability, type (tera / type 1 / type 2), move
 pub const VOCAB: [usize; 5] = [1536, 256, 384, 32, 1024];
-pub const HIST: usize = 8;
+pub const HIST: usize = 8; // stored / featurized steps; a model may use fewer (config `hist`)
 pub const HIST_SPARSE: usize = 6;
 pub const HIST_DENSE: usize = 7;
 

@@ -30,7 +30,8 @@ def load_run(run: Path, device) -> torch.nn.Module:
     ck = torch.load(run / "best.pt", weights_only=False, map_location="cpu")
     arch, history = ck.get("arch", "mlp"), ck.get("history", False)
     cls = TransformerPV if arch == "transformer" else PolicyValueNet
-    model = cls(ck["dims"], **ck["size"], history=history)
+    kw = {"mtp": ck.get("mtp", 0)} if arch == "transformer" else {}
+    model = cls(ck["dims"], **ck["size"], history=history, **kw)
     sd = {("emb." + k if k.startswith(EMB) else k): v for k, v in ck["model"].items()}
     model.residual = None
     if "residual" in sd:

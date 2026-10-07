@@ -42,9 +42,10 @@ class Position:
     rating: int | None
     uploadtime: int
     history: str = ""
+    future: str = ""  # the decision steps from this one on (MTP targets), same format
 
 
-HIST = 8  # rust/alpha_search/src/features.rs
+HIST = 8  # stored steps (rust/alpha_search/src/features.rs HIST); models may use fewer
 
 
 def _eng(name: str) -> str:
@@ -87,6 +88,16 @@ def history_string(steps: dict[int, list[dict]], turn: int, side: str) -> str:
     """The last HIST steps before ``turn`` from ``side``'s point of view."""
     other = "p2" if side == "p1" else "p1"
     seq = [s for t in sorted(steps) if t < turn for s in steps[t]][-HIST:]
+    return ";".join(f"{_act(s.get(side))}/{_act(s.get(other))}" for s in seq)
+
+
+FUTURE = 4  # stored future steps (step 0 = this decision: own label + the opponent's action)
+
+
+def future_string(steps: dict[int, list[dict]], turn: int, side: str) -> str:
+    """The first FUTURE steps from ``turn`` on, from ``side``'s point of view (oldest first)."""
+    other = "p2" if side == "p1" else "p1"
+    seq = [s for t in sorted(steps) if t >= turn for s in steps[t]][:FUTURE]
     return ";".join(f"{_act(s.get(side))}/{_act(s.get(other))}" for s in seq)
 
 
@@ -172,6 +183,7 @@ def positions_from_replay(
                         _rating(row),
                         int(row.get("uploadtime") or 0),
                         history_string(steps, turn, side),
+                        future_string(steps, turn, side),
                     )  # fmt: skip
                 )
     return out

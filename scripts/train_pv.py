@@ -15,6 +15,8 @@ exported as safetensors with a JSON config for the Rust inference later.
 v2: ``--history`` feeds the decision-step history (data built with a ``history`` column), ``--arch
 transformer`` the small Transformer; ``--value-per-game N`` scales each position's value loss so
 that every game counts as at most N positions (many positions per game share one outcome).
+``--mtp K`` (Transformer, data with a ``future`` column): auxiliary multi-step action prediction
+over the first K decision steps from the position (design D14-8), weight ``--mtp-weight``.
 """
 
 import argparse
@@ -48,14 +50,19 @@ DIMS = alpha_search.feature_dims()
 
 def featurize_shard(path: Path, cache: Path) -> int:
     """Write the shard's feature cache (if missing); returns its number of positions."""
-    has_hist = "history" in pq.read_schema(path).names
+    names = pq.read_schema(path).names
+    has_hist, has_fut = "history" in names, "future" in names
     if cache.exists():
         with np.load(cache) as z:
             # caches from before the handcrafted evaluation / the history are rebuilt
-            if "evalv" in z.files and (not has_hist or "hsp" in z.files):
+            fresh = cache.stat().st_mtime >= path.stat().st_mtime  # data rebuilt since?
+            ok_hist = not has_hist or ("hsp" in z.files and z["hsp"].shape[1] == DIMS["hist"])
+            ok_fut = not has_fut or "fsp" in z.files
+            if fresh and "evalv" in z.files and ok_hist and ok_fut:
                 return len(z["action"])
     cols = ["game", "turn", "state", "action", "won", "rating", "uploadtime"]
-    t = pq.read_table(path, columns=cols + (["history"] if has_hist else []))
+    extra = (["history"] if has_hist else []) + (["future"] if has_fut else [])
+    t = pq.read_table(path, columns=cols + extra)
     states = t.column("state").to_pylist()
     e, s, d, g, a = DIMS["entities"], DIMS["sparse"], DIMS["dense"], DIMS["global"], DIMS["actions"]
     parts = {"sparse": [], "dense": [], "glob": [], "mask": []}
@@ -78,6 +85,15 @@ def featurize_shard(path: Path, cache: Path) -> int:
         out["hde"] = np.concatenate(
             [np.frombuffer(x, np.float32).reshape(-1, hs, hd[1]).astype(np.uint8) for x in de]
         )
+    if has_fut:  # same encoding; steps reversed so that slot k = future step k
+        fut = [";".join(reversed(x.split(";"))) for x in t.column("future").to_pylist()]
+        hs, hd = DIMS["hist"], (DIMS["hist_sparse"], DIMS["hist_dense"])
+        chunks = [alpha_search.featurize_history(fut[i : i + 50_000])
+                  for i in range(0, len(fut), 50_000)]  # fmt: skip
+        out["fsp"] = np.concatenate([np.frombuffer(c[0], np.int32).reshape(-1, hs, hd[0])[:, :4]
+                                     .astype(np.int16) for c in chunks])  # fmt: skip
+        out["fde"] = np.concatenate([np.frombuffer(c[1], np.float32).reshape(-1, hs, hd[1])[:, :4]
+                                     .astype(np.uint8) for c in chunks])  # fmt: skip
     out["evalv"] = np.concatenate(
         [np.asarray(alpha_search.evaluate(states[i : i + 50_000]), np.float32)
          for i in range(0, len(states), 50_000)]
@@ -130,6 +146,11 @@ def to_torch(d: dict, idx: np.ndarray, device) -> tuple:
          torch.from_numpy(d["hde"][idx].astype(np.float32)).to(device, non_blocking=True))
         if "hsp" in d else (None, None)
     )  # fmt: skip
+    fut = (
+        (torch.from_numpy(d["fsp"][idx].astype(np.int64)).to(device, non_blocking=True),
+         torch.from_numpy(d["fde"][idx].astype(np.float32)).to(device, non_blocking=True))
+        if "fsp" in d else (None, None)
+    )  # fmt: skip
     return (
         torch.from_numpy(d["sparse"][idx].astype(np.int64)).to(device, non_blocking=True),
         torch.from_numpy(d["dense"][idx].astype(np.float32)).to(device, non_blocking=True),
@@ -139,7 +160,45 @@ def to_torch(d: dict, idx: np.ndarray, device) -> tuple:
         torch.from_numpy(d["won"][idx]).to(device, non_blocking=True),
         torch.from_numpy(d["evalv"][idx] / 100).to(device, non_blocking=True),
         *hist,
+        *fut,
     )
+
+
+def mtp_targets(sp, fs, fd, k: int):
+    """Targets of the first k future steps, side 0 = own / 1 = opponent: kind (0 none, 1 move,
+    2 switch), move id, switch-in entity index (+ whether it matched an entity), valid mask (step
+    present; own step 0 excluded: it is the policy label)."""
+    fs, fd = fs[:, :k], fd[:, :k]
+    kind = torch.stack([fd[..., 1] + 2 * fd[..., 2], fd[..., 4] + 2 * fd[..., 5]], 2).long()
+    move_id = torch.stack([fs[..., 1], fs[..., 4]], 2)
+    species = torch.stack([fs[..., 2], fs[..., 5]], 2)
+    ents = torch.stack([sp[:, :6, 0], sp[:, 6:12, 0]], 1)  # [B,2,6]
+    match = species[..., None] == ents[:, None]  # [B,k,2,6]
+    valid = (fd[..., 0] > 0)[..., None].expand(-1, -1, 2).clone()
+    valid[:, 0, 0] = False
+    return kind, move_id, match.float().argmax(-1), match.any(-1), valid
+
+
+def mtp_loss(aux, targets) -> tuple:
+    """(loss, opponent step-0 action accuracy, its count)"""
+    kl, ml, sl = (x.float() for x in aux)
+    kind, move_id, sw_idx, sw_ok, valid = targets
+    # joint NLL of each (step, side) action: -log P(kind) - log P(move | move) - log P(switch-in
+    # | switch), averaged over the same valid targets (a proper likelihood, not 1:1:1 averages)
+    nll = F.cross_entropy(kl[valid], kind[valid], reduction="sum")
+    mm = valid & (kind == 1) & (move_id > 0)
+    if mm.any():
+        nll = nll + F.cross_entropy(ml[mm], move_id[mm], reduction="sum")
+    ss = valid & (kind == 2) & sw_ok
+    if ss.any():
+        nll = nll + F.cross_entropy(sl[ss], sw_idx[ss], reduction="sum")
+    loss = nll / valid.sum().clamp(min=1)
+    o = valid[:, 0, 1]
+    pk = kl[:, 0, 1].argmax(-1)
+    k0, m0, s0 = kind[:, 0, 1], move_id[:, 0, 1], sw_idx[:, 0, 1]
+    ok = (pk == k0) & ((k0 == 0) | ((k0 == 1) & (ml[:, 0, 1].argmax(-1) == m0))
+                       | ((k0 == 2) & sw_ok[:, 0, 1] & (sl[:, 0, 1].argmax(-1) == s0)))  # fmt: skip
+    return loss, ok[o].float().sum().item(), o.sum().item()
 
 
 def value_logit(model, v, ev):
@@ -154,13 +213,21 @@ def evaluate(model, d, idx, device, batch=16384) -> dict:
     model.eval()
     sums = dict(ce=0.0, top1=0.0, top3=0.0, bce=0.0, vacc=0.0, uniform_ce=0.0,
                 n_sw=0.0, top1_sw=0.0, ce_sw=0.0)  # fmt: skip
+    mtp = getattr(model, "mtp", 0) and "fsp" in d
+    m_sum = dict(loss=0.0, acc=0.0, n=0.0, b=0)
     probs, wons, turns = [], [], []
     for i in range(0, len(idx), batch):
         b = idx[i : i + batch]
-        sp, de, gl, ma, act, won, ev, hs, hd = to_torch(d, b, device)
+        sp, de, gl, ma, act, won, ev, hs, hd, fs, fd = to_torch(d, b, device)
         with torch.autocast(device.type, dtype=torch.bfloat16, enabled=device.type == "cuda"):
-            logits, v = model(sp, de, gl, ma, hs, hd)
-        logits, v = logits.float(), value_logit(model, v.float(), ev)
+            out = model(sp, de, gl, ma, hs, hd, aux=True) if mtp else model(sp, de, gl, ma, hs, hd)
+        logits, v = out[0].float(), value_logit(model, out[1].float(), ev)
+        if mtp:
+            ml, acc, cnt = mtp_loss(out[2], mtp_targets(sp, fs, fd, model.mtp))
+            m_sum["loss"] += ml.item()
+            m_sum["acc"] += acc
+            m_sum["n"] += cnt
+            m_sum["b"] += 1
         ce = F.cross_entropy(logits, act, reduction="none")
         sums["ce"] += ce.sum().item()
         top = logits.topk(3, dim=-1).indices
@@ -182,6 +249,8 @@ def evaluate(model, d, idx, device, batch=16384) -> dict:
     top1_sw, ce_sw = sums.pop("top1_sw") / n_sw, sums.pop("ce_sw") / n_sw
     out = {k: v / n for k, v in sums.items()}
     out |= {"top1_switch": top1_sw, "ce_switch": ce_sw, "switch_frac": n_sw / n}
+    if mtp:
+        out |= {"mtp_loss": m_sum["loss"] / m_sum["b"], "opp_act_acc": m_sum["acc"] / m_sum["n"]}
     p, w, t = np.concatenate(probs), np.concatenate(wons), np.concatenate(turns)
     bins = np.minimum((p * 10).astype(int), 9)
     out["value_ece"] = float(
@@ -205,6 +274,9 @@ def main() -> None:
     ap.add_argument("--size", choices=sorted(SIZES), default="medium")
     ap.add_argument("--arch", choices=["mlp", "transformer"], default="mlp")
     ap.add_argument("--history", action="store_true", help="feed the decision-step history")
+    ap.add_argument("--hist-len", type=int, default=8, help="most recent steps the model reads")
+    ap.add_argument("--mtp", type=int, default=0, help="future steps to predict (auxiliary)")
+    ap.add_argument("--mtp-weight", type=float, default=0.5)
     ap.add_argument("--value-per-game", type=float, default=0,
                     help="value loss weight min(1, N / game's positions); 0 = off")  # fmt: skip
     ap.add_argument("--epochs", type=float, default=6)
@@ -263,10 +335,13 @@ def main() -> None:
               eff_train=float(w[train_idx].sum() ** 2 / (w[train_idx] ** 2).sum())))  # fmt: skip
 
     size = (T_SIZES if a.arch == "transformer" else SIZES)[a.size]
+    assert a.hist_len <= DIMS["hist"], f"--hist-len > the {DIMS['hist']} featurized steps"
+    dims = DIMS | {"hist": a.hist_len}
+    assert not a.mtp or (a.arch == "transformer" and "fsp" in d), "--mtp: transformer + future data"
     if a.arch == "transformer":
-        model = TransformerPV(DIMS, **size, history=a.history)
+        model = TransformerPV(dims, **size, history=a.history, mtp=a.mtp)
     else:
-        model = PolicyValueNet(DIMS, **size, history=a.history)
+        model = PolicyValueNet(dims, **size, history=a.history)
     model.residual = None
     if a.value_residual:  # start exactly at the fitted handcrafted baseline
         model.residual = torch.nn.Parameter(torch.tensor([0.714, 0.078]))
@@ -291,14 +366,17 @@ def main() -> None:
         if (step - 1) % 1000 == 0:  # time-weighted sampling, drawn 1000 steps at a time
             block = train_idx[rng.choice(len(train_idx), (1000, a.batch), p=probs)]
         b = block[(step - 1) % 1000]
-        sp, de, gl, ma, act, won, ev, hs, hd = to_torch(d, b, device)
+        sp, de, gl, ma, act, won, ev, hs, hd, fs, fd = to_torch(d, b, device)
         with torch.autocast(device.type, dtype=torch.bfloat16, enabled=device.type == "cuda"):
-            logits, v = model(sp, de, gl, ma, hs, hd)
+            out = model(sp, de, gl, ma, hs, hd, aux=bool(a.mtp))
+        logits, v = out[0], out[1]
         ce = F.cross_entropy(logits.float(), act)
         bw = torch.from_numpy(vw[b]).to(device)
         vl = value_logit(model, v.float(), ev)
         bce = (F.binary_cross_entropy_with_logits(vl, won, reduction="none") * bw).sum() / bw.sum()
         loss = ce + a.value_weight * bce
+        if a.mtp:
+            loss = loss + a.mtp_weight * mtp_loss(out[2], mtp_targets(sp, fs, fd, a.mtp))[0]
         opt.zero_grad(set_to_none=True)
         loss.backward()
         gn = torch.nn.utils.clip_grad_norm_(model.parameters(), 5.0).item()
@@ -321,8 +399,8 @@ def main() -> None:
             m = evaluate(model, d, val_idx, device)
             emit(dict(event="val", step=step, **{k: float(v) for k, v in m.items()}))
             val_loss = m["ce"] + a.value_weight * m["bce"]
-            ckpt = {"model": model.state_dict(), "dims": DIMS, "size": size, "arch": a.arch,
-                    "history": a.history,
+            ckpt = {"model": model.state_dict(), "dims": dims, "size": size, "arch": a.arch,
+                    "history": a.history, "mtp": a.mtp,
                     "step": step, "val": m, "value_residual": a.value_residual}  # fmt: skip
             torch.save(ckpt, out_dir / "last.pt")
             if val_loss < best:
@@ -335,7 +413,7 @@ def main() -> None:
     save_file({k.removeprefix("emb."): v.float().contiguous()
                for k, v in best_ckpt["model"].items()}, out_dir / "best.safetensors")  # fmt: skip
     (out_dir / "config.json").write_text(json.dumps(
-        {"dims": DIMS, "size": size, "arch": a.arch, "history": a.history,
+        {"dims": dims, "size": size, "arch": a.arch, "history": a.history,
          "step": best_ckpt["step"], "val": best_ckpt["val"]}, indent=2))  # fmt: skip
     emit(dict(event="done", best_val_loss=best, minutes=round((time.time() - t0) / 60, 1)))
 

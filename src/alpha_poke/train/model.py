@@ -14,7 +14,10 @@ each step's own / opponent actor species, move and switch-in species (embeddings
 entity encoder) + flags -> a step encoding; the steps, in recency order, -> one vector for the
 trunk. ``TransformerPV``: the same inputs as tokens (12 entities, 1 global, the history steps)
 through a small pre-norm Transformer; value and policy read the global token, switch slots the
-own entity tokens.
+own entity tokens. ``mtp`` > 0 adds multi-step action prediction heads (training-time auxiliary
+targets, design D14-8): for each future decision step k < mtp and side (own / opponent; own step
+0 is the policy label itself and is skipped), the kind of action (none / move / switch), the move
+(tied to the move embedding table) and the switch-in (a pointer over that side's entity tokens).
 """
 
 import torch
@@ -92,6 +95,7 @@ class PolicyValueNet(nn.Module):
         self.entity = nn.Sequential(mlp(self.emb.d_entity, d_ent, d_ent), nn.ReLU())
         self.glob = nn.Sequential(nn.Linear(dims["global"], d_global), nn.ReLU())
         self.history = history
+        self.hist_len = dims.get("hist", 8)  # most recent steps used (the data may hold more)
         d_h = 0
         if history:
             self.step = nn.Sequential(mlp(self.emb.d_step, 64, 48), nn.ReLU())
@@ -102,7 +106,7 @@ class PolicyValueNet(nn.Module):
         self.move_head = mlp(d_trunk + 32 + 1, 64, 2)  # (move, move + tera) per slot
         self.switch_head = mlp(d_trunk + d_ent, 64, 1)
 
-    def forward(self, sparse, dense, glob, mask, hsparse=None, hdense=None):
+    def forward(self, sparse, dense, glob, mask, hsparse=None, hdense=None, aux=False):
         """sparse long [B,12,10], dense float [B,12,23], glob float [B,G], mask bool [B,14]
         (+ history hsparse long [B,S,6], hdense float [B,S,7]) -> (policy logits [B,14] with
         -inf on illegal slots, value logit [B])."""
@@ -117,7 +121,8 @@ class PolicyValueNet(nn.Module):
             pooled.append((hs * bench[..., None]).sum(1) / bench.sum(1, keepdim=True).clamp(min=1))
             pooled.append(hs.masked_fill(bench[..., None] == 0, -1e4).amax(1).clamp(min=0))
         if self.history:
-            st = self.step(self.emb.steps(hsparse, hdense))  # [B,S,48]
+            k = self.hist_len
+            st = self.step(self.emb.steps(hsparse[:, :k], hdense[:, :k]))  # [B,S,48]
             pooled.append(self.hist(st.flatten(1)))
         t = self.trunk(torch.cat(pooled + [self.glob(glob)], dim=-1))  # [B,T]
         value = self.value(t).squeeze(-1)
@@ -143,10 +148,19 @@ class TransformerPV(nn.Module):
         n_heads: int = 4,
         d_ff: int = 256,
         history: bool = True,
+        mtp: int = 0,
     ):
         super().__init__()
         self.emb = Embeddings(dims)
         self.history = history
+        self.hist_len = dims.get("hist", 8)
+        self.mtp = mtp
+        if mtp:
+            self.mtp_query = nn.Embedding(2 * mtp, d_model)  # (step, side)
+            self.mtp_body = nn.Sequential(nn.Linear(d_model, d_model), nn.ReLU())
+            self.mtp_kind = nn.Linear(d_model, 3)
+            self.mtp_move = nn.Linear(d_model, 32)  # dot with the move embeddings
+            self.mtp_switch = nn.Linear(d_model, d_model)  # dot with the entity tokens
         self.ent_in = nn.Linear(self.emb.d_entity, d_model)
         self.glob_in = nn.Linear(dims["global"], d_model)
         self.step_in = nn.Linear(self.emb.d_step, d_model) if history else None
@@ -160,14 +174,15 @@ class TransformerPV(nn.Module):
         self.move_head = mlp(d_model + 32 + 1, 64, 2)
         self.switch_head = mlp(2 * d_model, 64, 1)
 
-    def forward(self, sparse, dense, glob, mask, hsparse=None, hdense=None):
+    def forward(self, sparse, dense, glob, mask, hsparse=None, hdense=None, aux=False):
         x, moves = self.emb.entities(sparse, dense)
         b = x.shape[0]
         types = torch.tensor([0] * 6 + [1] * 6 + [2], device=x.device)
         toks = [self.ent_in(x), self.glob_in(glob)[:, None]]
         pad = torch.zeros(b, 13, dtype=torch.bool, device=x.device)
         if self.history:
-            s = hsparse.shape[1]
+            s = self.hist_len
+            hsparse, hdense = hsparse[:, :s], hdense[:, :s]
             toks.append(self.step_in(self.emb.steps(hsparse, hdense)))
             types = torch.cat([types, 3 + torch.arange(s, device=x.device)])
             pad = torch.cat([pad, hdense[..., 0] == 0], dim=1)  # missing steps
@@ -182,4 +197,17 @@ class TransformerPV(nn.Module):
         mh = self.move_head(torch.cat([tt, am, usable[..., None]], dim=-1))
         sw = self.switch_head(torch.cat([t[:, None, :].expand(-1, 6, -1), h[:, :6]], dim=-1))
         logits = torch.cat([mh[..., 0], mh[..., 1], sw.squeeze(-1)], dim=-1)
-        return logits.masked_fill(~mask, float("-inf")), value
+        logits = logits.masked_fill(~mask, float("-inf"))
+        if not aux:
+            return logits, value
+        return logits, value, self.mtp_heads(t, h)
+
+    def mtp_heads(self, t, h):
+        """-> kind [B,K,2,3], move [B,K,2,V_move], switch [B,K,2,6] (side 0 own, 1 opponent)"""
+        b, k = t.shape[0], self.mtp
+        q = self.mtp_body(t[:, None, :] + self.mtp_query.weight[None])  # [B,2K,d]
+        q = q.view(b, k, 2, -1)
+        move = self.mtp_move(q) @ self.emb.move.weight.T
+        sides = torch.stack([h[:, :6], h[:, 6:12]], dim=1)  # [B,2,6,d]
+        switch = torch.einsum("bksd,bsed->bkse", self.mtp_switch(q), sides)
+        return self.mtp_kind(q), move, switch
