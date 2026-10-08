@@ -123,6 +123,20 @@ def cmd_convert(a) -> None:
     record(a.gen, "convert", stats)
 
 
+def cmd_stats(a) -> None:
+    """Game statistics of the generation (design D15-7, selfplay.stats): lengths and moves
+    played, by how defensive the two teams are, and the length change against the previous
+    generation with the team mix held fixed."""
+    import json
+
+    from alpha_poke.selfplay.stats import game_stats
+
+    prev = SELFPLAY_DIR / f"gen{a.gen - 1}"
+    out = game_stats(SELFPLAY_DIR / f"gen{a.gen}", prev if prev.exists() else None)
+    record(a.gen, "game_stats", out)
+    print(json.dumps(out, indent=1))
+
+
 def cmd_value(a) -> None:
     """Value check on this generation's fresh games (design D15-7): the generation's games are
     unseen by every network up to the current one (which played them), so its decisions are an
@@ -477,6 +491,12 @@ def cmd_loop(a) -> None:
             return
         g = state()["generations"][str(gen)]
         ev, tr = g.get("eval", {}), g.get("train", {})
+        gs = g.get("game_stats", {})
+        vp = gs.get("vs_previous", {})
+        say(f"gen {gen}: games: turns mean {gs.get('turns_mean')} / p99 {gs.get('turns_p99')}, "
+            f">200 {gs.get('over_200')}, capped {gs.get('capped')}, status moves "
+            f"{gs.get('status_share')}; vs previous at the same team mix "
+            f"{vp.get('turns_mean_diff_same_teams')} turns {vp.get('ci95')}")  # fmt: skip
         vc = g.get("value_check", {}).get("networks", {})
         say(f"gen {gen}: value on its fresh games (BCE minus the generator's): "
             + ", ".join(f"{Path(k).name} {v['bce']} ({v['minus_current']:+.4f} +- {v['ci95']})"
@@ -537,6 +557,7 @@ def cmd_cycle(a) -> None:
         steps.append(("teams", ["teams", "--gen", str(a.gen), "--n", str(a.games)]))
     steps += [("run", ["run", "--gen", str(a.gen), "--procs", str(a.procs),
                        "--lanes", str(a.lanes), "--threads", str(a.threads)]),
+              ("stats", ["stats", "--gen", str(a.gen)]),
               ("value", ["value", "--gen", str(a.gen)]),
               ("convert", ["convert", "--gen", str(a.gen)]),
               ("train", ["train", "--gen", str(a.gen)]),
@@ -604,6 +625,9 @@ def main() -> None:
     p.add_argument("--gen", type=int, required=True)
     p.add_argument("--force", action="store_true")
     p.set_defaults(fn=cmd_convert)
+    p = sub.add_parser("stats", help="game statistics of the generation")
+    p.add_argument("--gen", type=int, required=True)
+    p.set_defaults(fn=cmd_stats)
     p = sub.add_parser("value", help="value check on the generation's fresh games")
     p.add_argument("--gen", type=int, required=True)
     p.add_argument("--n", type=int, default=30000, help="decisions sampled")
