@@ -590,10 +590,10 @@ def sprt_args(p) -> None:
     p.add_argument("--elo1", type=float, default=0.0, help="H1: this (not worse)")
     p.add_argument("--alpha", type=float, default=0.05)
     p.add_argument("--beta", type=float, default=0.05)
-    # 2026-10-08: 500 ms at the evaluation's load (24 games on 10 cores) gave 1,500-1,800
-    # iterations, varying with the load; networks of the same architecture compare at a fixed
-    # number (a larger network: compare at equal time too)
-    p.add_argument("--iterations", type=int, default=1600,
+    # 2026-10-08: networks of the same architecture compare at a fixed number of iterations
+    # (time varies with the load: 500 ms gave 1,500-1,800); 3,000 = the self-play full search
+    # (a larger network: compare at equal time too)
+    p.add_argument("--iterations", type=int, default=3000,
                    help="search iterations per decision (0: --search-ms of time)")  # fmt: skip
 
 
