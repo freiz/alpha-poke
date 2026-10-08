@@ -1,0 +1,171 @@
+"""Self-play games (design D15). Local servers only.
+
+Processes x lanes: a lane is two ``SelfPlayPlayer``s playing their share of the generation's
+team pairs one game at a time (``update_team`` before each game, the challenger alternates);
+the lanes of a process run concurrently and share one GPU batcher (cross-game batching,
+``selfplay.batcher``). After each game the lane writes
+  games-w<k>.jsonl      one row per game: pair index, battle, teams (sources), winner, turns,
+                        decisions, fallbacks, seconds
+  decisions-w<k>.jsonl  one row per decision of either side (SelfPlayPlayer.records) plus
+                        "game", "won" (that side's outcome; None if capped) and "model"
+  logs-w<k>.jsonl       the game's protocol log (labels for training: selfplay.convert)
+  progress-w<k>.log     every minute: games, decisions, leaves / s, fallbacks, batcher counters
+  errors-w<k>.log       warnings and errors (failed searches, fallbacks)
+in ``data/selfplay/gen<g>/``. Pairs already in a games file are skipped (resume).
+
+"""
+
+import asyncio
+import json
+import logging
+import multiprocessing as mp
+import time
+import zlib
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+
+from alpha_poke.servers import account, local_server
+
+MODEL = "data/train/v5/runs/v5-glu"
+
+
+def done_pairs(gen_dir: Path) -> set[int]:
+    done = set()
+    for f in gen_dir.glob("games-w*.jsonl"):
+        for line in f.read_text().splitlines():
+            done.add(json.loads(line)["pair"])
+    return done
+
+
+async def _lane(lane: str, jobs: list, port: int, gen_dir: Path, settings: dict, batcher,
+                belief, library, wid: int, counters: dict) -> int:  # fmt: skip
+    from alpha_poke.selfplay.player import SelfPlayPlayer
+
+    def player(tag: str, seed: int):
+        return SelfPlayPlayer(
+            belief, library=library,
+            account_configuration=account(f"s{settings['run_tag']}{lane}{tag}"),
+            battle_format="gen9ou", server_configuration=local_server(port),
+            max_concurrent_battles=1, team=jobs[0][1].p1.text, backend="ismcts", worlds=32,
+            net_policy="both", model=settings["model"], batcher=batcher, seed=seed,
+            full_frac=settings["full_frac"], full_iters=settings["full_iters"],
+            fast_iters=settings["fast_iters"], fast_worlds=settings["fast_worlds"],
+            noise=tuple(settings["noise"]), turn_cap=settings["turn_cap"],
+        )  # fmt: skip
+
+    seed = zlib.crc32(lane.encode())
+    a, b = player("a", 2 * seed), player("b", 2 * seed + 1)
+    n = 0
+    for idx, pair in jobs:
+        a.update_team(pair.p1.text)
+        b.update_team(pair.p2.text)
+        t0 = time.time()
+        before = set(a.battles)
+        fb0 = (a.search_fallbacks, b.search_fallbacks)
+        if idx % 2 == 0:
+            await a.battle_against(b, n_battles=1)
+        else:
+            await b.battle_against(a, n_battles=1)
+        new = [k for k in a.battles if k not in before]
+        if not new:
+            continue
+        tag = new[0]
+        battle = a.battles[tag]
+        recs = {"a": a.records.pop(tag, []), "b": b.records.pop(tag, [])}
+        capped = battle.turn >= settings["turn_cap"]
+        won_a = None if capped else battle.won
+        game = {
+            "pair": idx, "battle": tag, "p1": pair.p1.ref, "p1_kind": pair.p1.kind,
+            "p2": pair.p2.ref, "p2_kind": pair.p2.kind, "source_game": pair.game,
+            "a_side": battle.player_role, "a_won": won_a, "turns": battle.turn,
+            "capped": capped,
+            "decisions": len(recs["a"]) + len(recs["b"]),
+            "fallbacks": [a.search_fallbacks - fb0[0], b.search_fallbacks - fb0[1]],
+            "seconds": round(time.time() - t0, 1), "model": settings["model"], "lane": lane,
+        }  # fmt: skip
+        with open(gen_dir / f"decisions-w{wid}.jsonl", "a") as f:
+            for who, rs in recs.items():
+                won = won_a if who == "a" or won_a is None else not won_a
+                for r in rs:
+                    f.write(json.dumps(r | {"game": idx, "won": won, "model": settings["model"]})
+                            + "\n")  # fmt: skip
+        with open(gen_dir / f"games-w{wid}.jsonl", "a") as f:
+            f.write(json.dumps(game) + "\n")
+        # the protocol log (player a's view): the labels only the whole game knows are built
+        # from it with the replay pipeline (selfplay.convert)
+        from alpha_poke.agents.net_context import battle_log
+
+        log_text = "\n".join("|".join(m) for m in battle_log(battle))
+        with open(gen_dir / f"logs-w{wid}.jsonl", "a") as f:
+            f.write(json.dumps({"pair": idx, "battle": tag, "log": log_text}) + "\n")
+        n += 1
+        counters["games"] += 1
+        counters["decisions"] += game["decisions"]
+        counters["leaves"] += sum(r["iterations"] for rs in recs.values() for r in rs)
+        counters["fallbacks"] += sum(game["fallbacks"])
+        counters["capped"] += capped
+    return n
+
+
+async def _process(wid: int, jobs: list, port: int, gen_dir: Path, settings: dict) -> int:
+    """One process: ``lanes`` concurrent lanes sharing one GPU batcher."""
+    from alpha_poke.agents.belief_state import BeliefModel
+    from alpha_poke.library import load_library
+    from alpha_poke.selfplay.batcher import Batcher
+
+    belief, library = BeliefModel.load(), load_library()
+    batcher = Batcher(settings["model"], leaves=settings["leaves"], threads=settings["threads"])
+    lanes = settings["lanes"]
+    parts = [jobs[i::lanes] for i in range(lanes)]
+    counters = {"games": 0, "decisions": 0, "leaves": 0, "fallbacks": 0, "capped": 0}
+    t0 = time.time()
+
+    async def progress():
+        """Every minute: games, decisions, leaves per second, fallbacks, batcher counters."""
+        while True:
+            await asyncio.sleep(60)
+            dt = time.time() - t0
+            line = {"t": round(dt), "jobs": len(jobs), **counters,
+                    "leaves_per_s": round(batcher.stats["rows"] / 2 / dt),
+                    "games_per_h": round(counters["games"] / dt * 3600),
+                    "batcher": {k: round(v, 1) if isinstance(v, float) else v
+                                for k, v in batcher.stats.items()}}  # fmt: skip
+            with open(gen_dir / f"progress-w{wid}.log", "a") as f:
+                f.write(json.dumps(line) + "\n")
+
+    reporter = asyncio.create_task(progress())
+    counts = await asyncio.gather(*[
+        _lane(f"{wid}x{i}", part, port, gen_dir, settings, batcher, belief, library, wid,
+              counters)
+        for i, part in enumerate(parts) if part
+    ])  # fmt: skip
+    reporter.cancel()
+    (gen_dir / f"batcher-w{wid}.json").write_text(json.dumps(batcher.stats))
+    return sum(counts)
+
+
+def _worker(args) -> int:
+    wid, jobs, port, gen_dir, settings = args
+    # warnings and errors (search failures, engine panics, fallbacks) of this worker
+    logging.basicConfig(level=logging.WARNING, filename=str(Path(gen_dir) / f"errors-w{wid}.log"),
+                        format="%(asctime)s %(name)s %(levelname)s %(message)s")  # fmt: skip
+    return asyncio.run(_process(wid, jobs, port, Path(gen_dir), settings))
+
+
+def run(gen_dir: Path, pairs: list, settings: dict, procs: int = 4,
+        ports: tuple[int, ...] = (8000, 8001), limit: int = 0) -> int:  # fmt: skip
+    """Play the pairs not yet done (at most ``limit`` if > 0); returns the games played."""
+    done = done_pairs(gen_dir)
+    jobs = [(i, p) for i, p in enumerate(pairs) if i not in done]
+    if limit:
+        jobs = jobs[:limit]
+    if not jobs:
+        return 0
+    procs = min(procs, len(jobs))
+    # usernames unique per run: a run must never log in as the players of an earlier one (the
+    # server would hand it that run's unfinished battles)
+    settings = settings | {"run_tag": format(int(time.time() * 1000) % 36**4, "x")[-4:]}
+    parts = [(w, jobs[w::procs], ports[w % len(ports)], str(gen_dir), settings)
+             for w in range(procs)]  # fmt: skip
+    with ProcessPoolExecutor(procs, mp_context=mp.get_context("spawn")) as ex:
+        return sum(ex.map(_worker, parts))

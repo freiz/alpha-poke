@@ -81,7 +81,9 @@ def featurize_shard(path: Path, cache: Path) -> int:
             ok_v4 = ("kind" in names) == ("kind" in z.files) and ("weight" in names) == (
                 "sw" in z.files
             )
-            if fresh and "evalv" in z.files and ok_hist and ok_fut and ok_v3 and ok_hd and ok_v4:
+            ok_sp = ("pi" in names) == ("pi" in z.files)  # self-play (design D15)
+            if (fresh and "evalv" in z.files and ok_hist and ok_fut and ok_v3 and ok_hd and ok_v4
+                    and ok_sp):  # fmt: skip
                 return len(z["action"])
     cols = ["game", "turn", "state", "action", "won", "rating", "uploadtime"]
     extra = (["history"] if has_hist else []) + (["future"] if has_fut else [])
@@ -91,7 +93,8 @@ def featurize_shard(path: Path, cache: Path) -> int:
         extra += ["rating_own", "rating_opp", "kind"]
     if "weight" in names:
         extra += ["weight"]
-    t = pq.read_table(path, columns=cols + extra)
+    sp_cols = ["pi", "pi_w", "q", "value_ok"] if "pi" in names else []
+    t = pq.read_table(path, columns=cols + extra + sp_cols)
     states = t.column("state").to_pylist()
     e, s, d, g, a = DIMS["entities"], DIMS["sparse"], DIMS["dense"], DIMS["global"], DIMS["actions"]
     parts = {"sparse": [], "dense": [], "glob": [], "mask": []}
@@ -133,6 +136,10 @@ def featurize_shard(path: Path, cache: Path) -> int:
         [np.asarray(alpha_search.evaluate(states[i : i + 50_000]), np.float32)
          for i in range(0, len(states), 50_000)]
     )  # fmt: skip
+    if sp_cols:  # self-play: search visit distribution, its weight, root value, outcome known
+        out["pi"] = np.asarray(t.column("pi").to_pylist(), np.float32)
+        for k in ("pi_w", "q", "value_ok"):
+            out[k] = np.asarray(t.column(k).to_pylist(), np.float32)
     out["action"] = np.asarray(t.column("action").to_pylist(), np.int64)
     out["won"] = np.asarray(t.column("won").to_pylist(), np.float32)
     out["turn"] = np.asarray(t.column("turn").to_pylist(), np.int32)
@@ -492,6 +499,47 @@ def policy_loss(logits, act, mask, reduction="mean"):
     return ce.mean() if reduction == "mean" else ce
 
 
+def soft_policy_loss(logits, pi, mask):
+    """Cross-entropy with a target distribution (self-play: the search's visits): -sum pi log p
+    over the legal slots (= KL(pi || p) + the target's entropy), per position."""
+    logp = torch.log_softmax(logits.float().masked_fill(~mask, float("-inf")), -1)
+    return -(pi * logp.masked_fill(~mask, 0.0)).sum(-1)
+
+
+@torch.no_grad()
+def evaluate_sp(model, d, idx, device, vpg: float, batch=8192) -> dict:
+    """Self-play validation: policy CE / KL against the search's visits (full searches),
+    agreement of the net's top choice with the most visited, value BCE (games with an outcome),
+    the root value q as a value baseline."""
+    model.eval()
+    ce = kl = top = n_pi = bce = bce_q = n_v = 0.0
+    for i in range(0, len(idx), batch):
+        b = idx[i : i + batch]
+        sp, de, gl, ma, act, won, ev, hs, hd, fs, fd, x = to_torch(d, b, device)
+        kw = {"x": x} if x is not None else {}
+        with torch.autocast(device.type, dtype=torch.bfloat16, enabled=device.type == "cuda"):
+            out = model(sp, de, gl, ma, hs, hd, **kw)
+        logits, v = out[0], out[1]
+        pi = torch.from_numpy(d["pi"][b]).to(device)
+        pw = torch.from_numpy(d["pi_w"][b]).to(device)
+        c = soft_policy_loss(logits, pi, ma)
+        ent = -(pi * torch.log(pi.clamp_min(1e-12))).sum(-1)
+        ce += (c * pw).sum().item()
+        kl += ((c - ent) * pw).sum().item()
+        top += ((logits.float().argmax(-1) == pi.argmax(-1)).float() * pw).sum().item()
+        n_pi += pw.sum().item()
+        ok = torch.from_numpy(d["value_ok"][b]).to(device)
+        vl = value_logit(model, v.float(), ev)
+        bce += (F.binary_cross_entropy_with_logits(vl, won, reduction="none") * ok).sum().item()
+        q = torch.from_numpy(d["q"][b]).to(device).clamp(1e-4, 1 - 1e-4)
+        bce_q += (F.binary_cross_entropy(q, won, reduction="none") * ok).sum().item()
+        n_v += ok.sum().item()
+    model.train()
+    return {"sp_ce": ce / max(n_pi, 1), "sp_kl": kl / max(n_pi, 1),
+            "sp_top1": top / max(n_pi, 1), "sp_bce": bce / max(n_v, 1),
+            "sp_bce_rootq": bce_q / max(n_v, 1), "sp_val_pi": n_pi, "sp_val_v": n_v}  # fmt: skip
+
+
 def value_logit(model, v, ev):
     """Residual value (--value-residual): a * handcrafted eval / 100 + b + the net's output."""
     if getattr(model, "residual", None) is None:
@@ -672,6 +720,16 @@ def main() -> None:
                     help="validation = games uploaded at / after this unix time (fixed split "
                          "across datasets; v1's 3%% cutoff is 1776921722)")  # fmt: skip
     ap.add_argument("--eval-every", type=int, default=500)
+    # expert iteration (design D15-5): self-play data mixed into every batch, warm start
+    ap.add_argument(
+        "--selfplay", default="", help="self-play datasets (data/train/<x>), comma-sep."
+    )
+    ap.add_argument("--sp-frac", type=float, default=0.5, help="share of each batch from self-play")
+    ap.add_argument("--sp-val-frac", type=float, default=0.05, help="self-play games held out")
+    ap.add_argument("--init", default="", help="warm start: a run directory (its last.pt)")
+    ap.add_argument("--steps", type=int, default=0, help="training steps (default: from --epochs)")
+    ap.add_argument("--export", choices=["best", "last"], default="best",
+                    help="checkpoint exported for inference (self-play: last)")  # fmt: skip
     ap.add_argument("--run", default=None)
     ap.add_argument("--seed", type=int, default=0)
     a = ap.parse_args()
@@ -759,10 +817,34 @@ def main() -> None:
         model.residual = torch.nn.Parameter(torch.tensor([0.714, 0.078]))
         torch.nn.init.zeros_(model.value.weight)
         torch.nn.init.zeros_(model.value.bias)
+    if a.init:  # warm start (same architecture as the run it comes from)
+        init = torch.load(Path(a.init) / "last.pt", weights_only=False, map_location="cpu")
+        state = init["model"]
+        if "residual" in state:
+            model.residual = torch.nn.Parameter(state["residual"].clone())
+        model.load_state_dict(state)
     model = model.to(device)
     n_params = sum(p.numel() for p in model.parameters())
     opt = torch.optim.AdamW(model.parameters(), lr=a.lr, weight_decay=a.wd)
-    steps = int(a.epochs * len(train_idx) / a.batch)
+    # self-play data (in memory): train / validation split by game
+    dsp = None
+    if a.selfplay:
+        parts = [load(x) for x in a.selfplay.split(",")]
+        dsp = {k: np.concatenate([p[k] for p in parts]) for k in parts[0]}
+        val_g = (dsp["game"] % 1000) < a.sp_val_frac * 1000
+        sp_train, sp_val = np.flatnonzero(~val_g), np.flatnonzero(val_g)
+        _, sinv, scnt = np.unique(dsp["game"], return_inverse=True, return_counts=True)
+        sp_vw = (np.minimum(1.0, a.value_per_game / scnt[sinv]) if a.value_per_game > 0
+                 else np.ones(len(sinv))) * dsp["value_ok"]  # fmt: skip
+        sp_vw = sp_vw.astype(np.float32)
+        bsp = int(round(a.batch * a.sp_frac))
+        emit(dict(event="selfplay", positions=len(sinv), games=len(scnt), train=len(sp_train),
+                  val=len(sp_val), policy_targets=int(dsp["pi_w"][sp_train].sum()),
+                  batch_selfplay=bsp,
+                  passes_per_target=round(a.steps * bsp / max(len(sp_train), 1), 2)
+                  if a.steps else None))  # fmt: skip
+    hb = a.batch - (bsp if dsp is not None else 0)  # human rows per batch
+    steps = a.steps or int(a.epochs * len(train_idx) / a.batch)
     warm = max(1, steps // 50)
     sched = torch.optim.lr_scheduler.LambdaLR(
         opt,
@@ -772,15 +854,20 @@ def main() -> None:
               steps=steps, device=str(device), args=json.dumps(vars(a))))  # fmt: skip
     best = float("inf")
     probs = w[train_idx] / w[train_idx].sum()
-    stream = ChunkStream(caches, d, train_idx, probs, a.stream, a.batch, rng) if a.stream else None
+    stream = ChunkStream(caches, d, train_idx, probs, a.stream, hb, rng) if a.stream else None
     agg = dict(ce=0.0, bce=0.0, acc=0.0, gn=0.0, k=0)
+    if a.init:  # the starting point on the same validation sets (the run's own baseline)
+        m = evaluate(model, dv, v_idx, device)
+        if dsp is not None:
+            m |= evaluate_sp(model, dsp, sp_val, device, a.value_per_game)
+        emit(dict(event="val", step=0, **{k: float(v) for k, v in m.items()}))
     t_last = time.time()
     for step in range(1, steps + 1):
         if stream is not None:  # chunk data, its rows, their global ids
             dd, b_loc, b = stream.batch_rows()
         else:
             if (step - 1) % 1000 == 0:  # time-weighted sampling, drawn 1000 steps at a time
-                block = train_idx[rng.choice(len(train_idx), (1000, a.batch), p=probs)]
+                block = train_idx[rng.choice(len(train_idx), (1000, hb), p=probs)]
             dd, b = d, block[(step - 1) % 1000]
             b_loc = b
         sp, de, gl, ma, act, won, ev, hs, hd, fs, fd, x = to_torch(dd, b_loc, device)
@@ -802,6 +889,34 @@ def main() -> None:
             loss = loss + a.mtp_weight * mtp_loss(out[2], tg, a.mtp_decay)[0]
         if heads:
             loss = loss + a.aux_weight * aux_loss(out[3], x, sp, x["turn"], bw, heads)
+        if dsp is not None:  # self-play sub-batch: soft policy targets, outcome, same aux heads
+            bs = sp_train[rng.integers(0, len(sp_train), bsp)]
+            s_sp, s_de, s_gl, s_ma, s_act, s_won, s_ev, s_hs, s_hd, s_fs, s_fd, s_x = to_torch(
+                dsp, bs, device
+            )
+            s_kw = {"x": s_x} if a.arch == "transformer" and s_x is not None else {}
+            with torch.autocast(device.type, dtype=torch.bfloat16, enabled=device.type == "cuda"):
+                s_out = model(s_sp, s_de, s_gl, s_ma, s_hs, s_hd, aux=bool(a.mtp or heads), **s_kw)
+            pi = torch.from_numpy(dsp["pi"][bs]).to(device)
+            pw_s = torch.from_numpy(dsp["pi_w"][bs]).to(device)
+            s_ce = (soft_policy_loss(s_out[0], pi, s_ma) * pw_s).sum() / pw_s.sum().clamp_min(1)
+            bw_s = torch.from_numpy(sp_vw[bs]).to(device)
+            s_vl = value_logit(model, s_out[1].float(), s_ev)
+            s_bce = (F.binary_cross_entropy_with_logits(s_vl, s_won, reduction="none")
+                     * bw_s).sum() / bw_s.sum().clamp_min(1e-6)  # fmt: skip
+            s_loss = s_ce + a.value_weight * s_bce
+            if a.mtp:
+                s_loss = (
+                    s_loss
+                    + a.mtp_weight
+                    * mtp_loss(s_out[2], mtp_targets(s_sp, s_fs, s_fd, a.mtp), a.mtp_decay)[0]
+                )
+            if heads:
+                s_loss = s_loss + a.aux_weight * aux_loss(s_out[3], s_x, s_sp, s_x["turn"], bw_s,
+                                                          heads)  # fmt: skip
+            loss = (1 - a.sp_frac) * loss + a.sp_frac * s_loss
+            agg["sp_ce"] = agg.get("sp_ce", 0.0) + s_ce.item()
+            agg["sp_bce"] = agg.get("sp_bce", 0.0) + s_bce.item()
         opt.zero_grad(set_to_none=True)
         loss.backward()
         gn = torch.nn.utils.clip_grad_norm_(model.parameters(), 5.0).item()
@@ -814,14 +929,18 @@ def main() -> None:
         agg["k"] += 1
         if step % 100 == 0:
             k = agg.pop("k")
-            emit(dict(event="train", step=step, epoch=round(step * a.batch / len(train_idx), 3),
+            sp_part = ({"sp_policy_ce": agg["sp_ce"] / k, "sp_value_bce": agg["sp_bce"] / k}
+                       if "sp_ce" in agg else {})  # fmt: skip
+            emit(dict(event="train", step=step, epoch=round(step * hb / len(train_idx), 3),
                       policy_ce=agg["ce"] / k, value_bce=agg["bce"] / k, policy_acc=agg["acc"] / k,
-                      grad_norm=agg["gn"] / k, lr=sched.get_last_lr()[0],
+                      **sp_part, grad_norm=agg["gn"] / k, lr=sched.get_last_lr()[0],
                       samples_per_s=round(100 * a.batch / (time.time() - t_last))))  # fmt: skip
             agg = dict(ce=0.0, bce=0.0, acc=0.0, gn=0.0, k=0)
             t_last = time.time()
         if step % a.eval_every == 0 or step == steps:
             m = evaluate(model, dv, v_idx, device)
+            if dsp is not None:
+                m |= evaluate_sp(model, dsp, sp_val, device, a.value_per_game)
             emit(dict(event="val", step=step, **{k: float(v) for k, v in m.items()}))
             # selection: all turn starts + all positions when the data has them (the visible
             # turn starts alone are a biased sample), weighted when it has sampling weights
@@ -839,7 +958,7 @@ def main() -> None:
                 torch.save(ckpt, out_dir / "best.pt")
     from safetensors.torch import save_file
 
-    best_ckpt = torch.load(out_dir / "best.pt", weights_only=False)
+    best_ckpt = torch.load(out_dir / f"{a.export}.pt", weights_only=False)
     # the shared embedding tables keep their v1 names (emb.species -> species) for the Rust loader
     save_file({k.removeprefix("emb."): v.float().contiguous()
                for k, v in best_ckpt["model"].items()}, out_dir / "best.safetensors")  # fmt: skip

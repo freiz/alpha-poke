@@ -715,6 +715,13 @@ pub fn our_choice(state: &State, l: Label) -> Option<MoveChoice> {
     o1.into_iter().find(|mc| label(&state.side_one, mc) == l)
 }
 
+/// The opponent's move choice for a label in this world (its moves differ between worlds:
+/// None if this world's opponent does not have the move).
+pub fn their_choice(state: &State, l: Label) -> Option<MoveChoice> {
+    let (_, o2) = state.root_get_all_options();
+    o2.into_iter().find(|mc| label(&state.side_two, mc) == l)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

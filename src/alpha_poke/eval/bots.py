@@ -1,5 +1,7 @@
 """Bot factory for local evaluations (all bots connect to local servers only)."""
 
+import os
+
 from poke_env.player import MaxBasePowerPlayer, Player, RandomPlayer, SimpleHeuristicsPlayer
 
 from alpha_poke.servers import account, local_server
@@ -107,6 +109,23 @@ VARIANTS: dict[str, tuple[bool, bool, bool, dict]] = {
             },
         )
         for suffix, extra in (("", {}), ("g", {"device": "cuda"}))
+    },  # fmt: skip
+    # CPU ISMCTS with the model given at run time (ALPHA_MODEL_A / ALPHA_MODEL_B): comparisons
+    # of any two networks, e.g. self-play generations (scripts/selfplay.py eval)
+    **{
+        f"s_ismcts_m{x}": (
+            True,
+            True,
+            True,
+            {
+                "search": True,
+                "backend": "ismcts",
+                "worlds": 32,
+                "net_policy": "both",
+                "model": os.environ.get(f"ALPHA_MODEL_{x.upper()}", "data/train/v5/runs/v5-glu"),
+            },
+        )
+        for x in ("a", "b")
     },  # fmt: skip
     # the same on the GPU (batched search, agents.gpu_search)
     "s_ismcts_tfg": (

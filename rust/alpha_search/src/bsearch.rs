@@ -27,7 +27,7 @@
 //!   (`chance_depth` 0).
 
 use crate::extra::{ENT_EXTRA, GLOBAL_EXTRA};
-use crate::features::{HIST, HIST_DENSE, HIST_SPARSE, N_ACTIONS, N_ENTITIES, SPARSE};
+use crate::features::{slot, HIST, HIST_DENSE, HIST_SPARSE, N_ACTIONS, N_ENTITIES, SPARSE};
 use crate::ismcts::{
     add_root_noise, arm_index, label, sample, select_puct, set_priors, Config, Label, Node,
     PathCtx, Tree,
@@ -42,6 +42,18 @@ use rand::rngs::StdRng;
 use rand::SeedableRng;
 use std::sync::Arc;
 use std::sync::Mutex;
+
+/// `BatchSearch::record`: the root's search result per action slot.
+#[derive(Debug, Default, Clone)]
+pub struct Record {
+    pub visits: [u32; N_ACTIONS],
+    pub mean: [f32; N_ACTIONS],
+    pub prior: [f32; N_ACTIONS],
+    pub legal: [bool; N_ACTIONS],
+    pub q: f32,
+    pub opp_visits: [u32; N_ACTIONS],
+    pub opp_unmapped: u32,
+}
 
 pub struct Pending {
     /// (node, our arm, their arm) from the root; empty for the root itself
@@ -111,6 +123,23 @@ pub struct Batch {
 }
 
 impl Batch {
+    /// Append another batch's rows (cross-search batching, `collect_many`).
+    pub fn extend(&mut self, o: Batch) {
+        self.rows += o.rows;
+        self.sparse.extend(o.sparse);
+        self.dense.extend(o.dense);
+        self.global.extend(o.global);
+        self.mask.extend(o.mask);
+        self.hsparse.extend(o.hsparse);
+        self.hdense.extend(o.hdense);
+        self.ent2.extend(o.ent2);
+        self.glob2.extend(o.glob2);
+        self.reveal.extend(o.reveal);
+        self.turn.extend(o.turn);
+        self.rating.extend(o.rating);
+        self.eval.extend(o.eval);
+    }
+
     fn push(&mut self, x: &Input) {
         self.rows += 1;
         self.sparse.extend_from_slice(&x.f.sparse);
@@ -493,6 +522,37 @@ impl BatchSearch {
             .iter()
             .map(|a| (a.label, a.visits, a.mean()))
             .collect()
+    }
+
+    /// The search result at the root as training targets (design D15-3), in the network's
+    /// action slots (`features::slot`; side one = us, side two = the opponent, each relative
+    /// to itself): visits, mean value (our win probability), network prior (< 0 = none), legal
+    /// options; our root value q (visit-weighted mean). The opponent's labels are mapped
+    /// through world 0 (its moves differ between worlds): visits of moves world 0's opponent
+    /// does not have are counted in `opp_unmapped`.
+    pub fn record(&mut self) -> Record {
+        let w0 = self.worlds[0][0].clone();
+        let root = &self.shared.get_mut().unwrap().tree.nodes[0];
+        let mut r = Record::default();
+        let (mut tv, mut tt) = (0u64, 0.0f64);
+        for a in &root.s1 {
+            if let Some(i) = crate::ismcts::our_choice(&w0, a.label).and_then(|mc| slot(&mc)) {
+                r.visits[i] = a.visits;
+                r.mean[i] = a.mean();
+                r.prior[i] = a.prior;
+                r.legal[i] = true;
+            }
+            tv += a.visits as u64;
+            tt += a.total as f64;
+        }
+        r.q = if tv > 0 { (tt / tv as f64) as f32 } else { 0.5 };
+        for a in &root.s2 {
+            match crate::ismcts::their_choice(&w0, a.label).and_then(|mc| slot(&mc)) {
+                Some(i) => r.opp_visits[i] += a.visits,
+                None => r.opp_unmapped += a.visits,
+            }
+        }
+        r
     }
 
     /// (iterations, collisions, nodes)

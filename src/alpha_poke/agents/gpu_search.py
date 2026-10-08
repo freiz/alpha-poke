@@ -32,11 +32,15 @@ class GpuSearch:
         self.pool = ThreadPoolExecutor(trees)
 
     def run(self, states: list[str], contexts: list, seconds: float, seed: int = 0,
-            iterations: int = 0) -> tuple[list, int, dict]:  # fmt: skip
+            iterations: int = 0, root_noise: tuple[float, float] = (0.0, 10.0),
+            ) -> tuple[list, int, dict]:  # fmt: skip
         """([(our option, visits, mean value)], iterations, stats) after ``seconds`` (or, if
-        > 0, at least ``iterations`` leaves in total)."""
+        > 0, at least ``iterations`` leaves in total). ``root_noise``: Dirichlet (eps, total
+        concentration) at the root, both sides. With one tree, stats["record"] is the root's
+        result in the network's action slots (``BatchSearch.record``, design D15-3)."""
         searches = [alpha_search.BatchSearch(states, contexts, seed=seed * 1009 + k,
-                                             threads=self.threads, vl=self.vl)
+                                             threads=self.threads, vl=self.vl,
+                                             root_noise=root_noise)
                     for k in range(self.trees)]  # fmt: skip
         t0 = time.time()
         calls = 0
@@ -84,6 +88,8 @@ class GpuSearch:
         ours = [(name, v, m) for name, (v, m) in merged.items()]
         info = {"iterations": int(stats[0]), "collisions": int(stats[1]), "nodes": int(stats[2]),
                 "gpu_calls": calls}  # fmt: skip
+        if self.trees == 1:
+            info["record"] = searches[0].record()
         return ours, int(stats[0]), info
 
     def close(self) -> None:

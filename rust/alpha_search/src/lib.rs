@@ -427,6 +427,55 @@ struct PyBatchSearch {
     inner: bsearch::BatchSearch,
 }
 
+/// A collected batch as the dict GpuNet takes (raw little-endian buffers).
+fn batch_dict(py: Python<'_>, b: bsearch::Batch) -> PyResult<Bound<'_, PyDict>> {
+    let d = PyDict::new(py);
+    d.set_item("rows", b.rows)?;
+    d.set_item(
+        "sparse",
+        PyBytes::new(py, &le_bytes(&b.sparse, i32::to_le_bytes)),
+    )?;
+    d.set_item(
+        "dense",
+        PyBytes::new(py, &le_bytes(&b.dense, f32::to_le_bytes)),
+    )?;
+    d.set_item(
+        "global",
+        PyBytes::new(py, &le_bytes(&b.global, f32::to_le_bytes)),
+    )?;
+    d.set_item("mask", PyBytes::new(py, &b.mask))?;
+    d.set_item(
+        "hsparse",
+        PyBytes::new(py, &le_bytes(&b.hsparse, i32::to_le_bytes)),
+    )?;
+    d.set_item(
+        "hdense",
+        PyBytes::new(py, &le_bytes(&b.hdense, f32::to_le_bytes)),
+    )?;
+    d.set_item(
+        "ent2",
+        PyBytes::new(py, &le_bytes(&b.ent2, f32::to_le_bytes)),
+    )?;
+    d.set_item(
+        "glob2",
+        PyBytes::new(py, &le_bytes(&b.glob2, f32::to_le_bytes)),
+    )?;
+    d.set_item("reveal", PyBytes::new(py, &b.reveal))?;
+    d.set_item(
+        "turn",
+        PyBytes::new(py, &le_bytes(&b.turn, i32::to_le_bytes)),
+    )?;
+    d.set_item(
+        "rating",
+        PyBytes::new(py, &le_bytes(&b.rating, i32::to_le_bytes)),
+    )?;
+    d.set_item(
+        "eval",
+        PyBytes::new(py, &le_bytes(&b.eval, f32::to_le_bytes)),
+    )?;
+    Ok(d)
+}
+
 #[pymethods]
 impl PyBatchSearch {
     #[new]
@@ -473,51 +522,7 @@ impl PyBatchSearch {
     fn collect<'py>(&mut self, py: Python<'py>, n: usize) -> PyResult<Bound<'py, PyDict>> {
         let inner = &mut self.inner;
         let b = py.detach(|| inner.collect(n));
-        let d = PyDict::new(py);
-        d.set_item("rows", b.rows)?;
-        d.set_item(
-            "sparse",
-            PyBytes::new(py, &le_bytes(&b.sparse, i32::to_le_bytes)),
-        )?;
-        d.set_item(
-            "dense",
-            PyBytes::new(py, &le_bytes(&b.dense, f32::to_le_bytes)),
-        )?;
-        d.set_item(
-            "global",
-            PyBytes::new(py, &le_bytes(&b.global, f32::to_le_bytes)),
-        )?;
-        d.set_item("mask", PyBytes::new(py, &b.mask))?;
-        d.set_item(
-            "hsparse",
-            PyBytes::new(py, &le_bytes(&b.hsparse, i32::to_le_bytes)),
-        )?;
-        d.set_item(
-            "hdense",
-            PyBytes::new(py, &le_bytes(&b.hdense, f32::to_le_bytes)),
-        )?;
-        d.set_item(
-            "ent2",
-            PyBytes::new(py, &le_bytes(&b.ent2, f32::to_le_bytes)),
-        )?;
-        d.set_item(
-            "glob2",
-            PyBytes::new(py, &le_bytes(&b.glob2, f32::to_le_bytes)),
-        )?;
-        d.set_item("reveal", PyBytes::new(py, &b.reveal))?;
-        d.set_item(
-            "turn",
-            PyBytes::new(py, &le_bytes(&b.turn, i32::to_le_bytes)),
-        )?;
-        d.set_item(
-            "rating",
-            PyBytes::new(py, &le_bytes(&b.rating, i32::to_le_bytes)),
-        )?;
-        d.set_item(
-            "eval",
-            PyBytes::new(py, &le_bytes(&b.eval, f32::to_le_bytes)),
-        )?;
-        Ok(d)
+        batch_dict(py, b)
     }
 
     fn apply(&mut self, values: Vec<f32>, logits: Vec<f32>) -> PyResult<()> {
@@ -554,6 +559,34 @@ impl PyBatchSearch {
                 (name, v, m)
             })
             .collect()
+    }
+
+    /// The root's search result in the network's action slots (design D15-3): dict of
+    /// "visits", "mean", "prior" (< 0 = none), "legal", "names" (our option per slot, as in
+    /// `root()`), "opp_visits" (lists of 14), "q" (our visit-weighted root value),
+    /// "opp_unmapped" (opponent visits on moves world 0 lacks).
+    fn record<'py>(&mut self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
+        let r = self.inner.record();
+        // our option of each slot, as `root()` names it ("" = no option)
+        let w0 = self.inner.world0().clone();
+        let mut names = vec![String::new(); features::N_ACTIONS];
+        for (l, _, _) in self.inner.root() {
+            if let Some(mc) = ismcts::our_choice(&w0, l) {
+                if let Some(i) = features::slot(&mc) {
+                    names[i] = choice_str(&w0.side_one, &mc);
+                }
+            }
+        }
+        let d = PyDict::new(py);
+        d.set_item("names", names)?;
+        d.set_item("visits", r.visits.to_vec())?;
+        d.set_item("mean", r.mean.to_vec())?;
+        d.set_item("prior", r.prior.to_vec())?;
+        d.set_item("legal", r.legal.to_vec())?;
+        d.set_item("q", r.q)?;
+        d.set_item("opp_visits", r.opp_visits.to_vec())?;
+        d.set_item("opp_unmapped", r.opp_unmapped)?;
+        Ok(d)
     }
 
     fn stats(&mut self) -> (u32, u32, usize) {
@@ -609,6 +642,146 @@ fn root_priors(
         .collect())
 }
 
+/// Cross-search batching (self-play, design D15-2): collect up to `n` new leaves from each
+/// search in parallel (searches split over up to `threads` threads), as one batch; returns
+/// (batch dict, network rows per search, failed per search). A search whose collect panics (an
+/// engine panic on a rare state) is marked failed and contributes nothing; the others go on (the
+/// caller drops the failed ones). `apply_many` hands each search its rows of the outputs.
+#[pyfunction]
+#[pyo3(signature = (searches, n, threads=8))]
+fn collect_many<'py>(
+    py: Python<'py>,
+    mut searches: Vec<PyRefMut<'py, PyBatchSearch>>,
+    n: usize,
+    threads: usize,
+) -> PyResult<(Bound<'py, PyDict>, Vec<usize>, Vec<bool>)> {
+    use std::panic::{catch_unwind, AssertUnwindSafe};
+    let mut inners: Vec<&mut bsearch::BatchSearch> =
+        searches.iter_mut().map(|s| &mut s.inner).collect();
+    let batches: Vec<Option<bsearch::Batch>> = py.detach(|| {
+        let per = inners.len().div_ceil(threads.max(1)).max(1);
+        std::thread::scope(|sc| {
+            let handles: Vec<_> = inners
+                .chunks_mut(per)
+                .map(|chunk| {
+                    sc.spawn(move || {
+                        chunk
+                            .iter_mut()
+                            .map(|s| catch_unwind(AssertUnwindSafe(|| s.collect(n))).ok())
+                            .collect::<Vec<_>>()
+                    })
+                })
+                .collect();
+            handles
+                .into_iter()
+                .flat_map(|h| h.join().unwrap())
+                .collect()
+        })
+    });
+    let failed: Vec<bool> = batches.iter().map(|b| b.is_none()).collect();
+    let rows: Vec<usize> = batches
+        .iter()
+        .map(|b| b.as_ref().map_or(0, |b| b.rows))
+        .collect();
+    let mut all = bsearch::Batch::default();
+    for b in batches.into_iter().flatten() {
+        all.extend(b);
+    }
+    Ok((batch_dict(py, all)?, rows, failed))
+}
+
+/// `values` [rows] and `logits` [rows * 14] as raw little-endian float32 bytes (numpy
+/// `tobytes()`: no Python lists for the large outputs). Returns failed per search (a panic
+/// while backing up: the caller drops it).
+#[pyfunction]
+#[pyo3(signature = (searches, values, logits, rows, threads=8))]
+fn apply_many(
+    py: Python<'_>,
+    mut searches: Vec<PyRefMut<'_, PyBatchSearch>>,
+    values: &[u8],
+    logits: &[u8],
+    rows: Vec<usize>,
+    threads: usize,
+) -> PyResult<Vec<bool>> {
+    use std::panic::{catch_unwind, AssertUnwindSafe};
+    let f32s = |b: &[u8]| -> Vec<f32> {
+        b.chunks_exact(4)
+            .map(|c| f32::from_le_bytes([c[0], c[1], c[2], c[3]]))
+            .collect()
+    };
+    let (values, logits) = (f32s(values), f32s(logits));
+    let na = features::N_ACTIONS;
+    if rows.len() != searches.len()
+        || rows.iter().sum::<usize>() != values.len()
+        || logits.len() != values.len() * na
+    {
+        return Err(PyValueError::new_err("outputs do not match the batches"));
+    }
+    let mut jobs = Vec::new();
+    let mut r = 0;
+    for (i, (s, &k)) in searches.iter_mut().zip(&rows).enumerate() {
+        if k > 0 {
+            if k != 2 * s.inner.n_pending() {
+                return Err(PyValueError::new_err(
+                    "rows do not match a search's oldest batch",
+                ));
+            }
+            jobs.push((&mut s.inner, r, k, i));
+        }
+        r += k;
+    }
+    let (values, logits) = (&values, &logits);
+    let bad: Vec<usize> = py.detach(|| {
+        let per = jobs.len().div_ceil(threads.max(1)).max(1);
+        std::thread::scope(|sc| {
+            let handles: Vec<_> = jobs
+                .chunks_mut(per)
+                .map(|chunk| {
+                    sc.spawn(move || {
+                        let mut bad = Vec::new();
+                        for (s, r, k, i) in chunk.iter_mut() {
+                            let (v, l) = (&values[*r..*r + *k], &logits[*r * na..(*r + *k) * na]);
+                            if catch_unwind(AssertUnwindSafe(|| s.apply(v, l))).is_err() {
+                                bad.push(*i);
+                            }
+                        }
+                        bad
+                    })
+                })
+                .collect();
+            handles
+                .into_iter()
+                .flat_map(|h| h.join().unwrap())
+                .collect()
+        })
+    });
+    let mut failed = vec![false; rows.len()];
+    for i in bad {
+        failed[i] = true;
+    }
+    Ok(failed)
+}
+
+/// Side one's option name of each of the 14 action slots of each state ("" = none), as the
+/// search names options (`choice_str`): compares actions across differently built states.
+#[pyfunction]
+fn slot_names(states: Vec<String>) -> Vec<Vec<String>> {
+    states
+        .iter()
+        .map(|s| {
+            let st = State::deserialize(s);
+            let mut names = vec![String::new(); features::N_ACTIONS];
+            let (o1, _) = st.root_get_all_options();
+            for mc in o1 {
+                if let Some(i) = features::slot(&mc) {
+                    names[i] = choice_str(&st.side_one, &mc);
+                }
+            }
+            names
+        })
+        .collect()
+}
+
 /// Feature shapes and embedding table sizes.
 #[pyfunction]
 fn feature_dims(py: Python<'_>) -> PyResult<Bound<'_, PyDict>> {
@@ -641,6 +814,9 @@ fn alpha_search(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(encode_ids, m)?)?;
     m.add_function(wrap_pyfunction!(tnet_forward, m)?)?;
     m.add_class::<PyBatchSearch>()?;
+    m.add_function(wrap_pyfunction!(collect_many, m)?)?;
+    m.add_function(wrap_pyfunction!(apply_many, m)?)?;
+    m.add_function(wrap_pyfunction!(slot_names, m)?)?;
     m.add_function(wrap_pyfunction!(root_priors, m)?)?;
     m.add_function(wrap_pyfunction!(evaluate, m)?)?;
     m.add_function(wrap_pyfunction!(net_forward, m)?)?;
