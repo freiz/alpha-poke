@@ -279,38 +279,52 @@ def cmd_eval(a) -> None:
     res |= {"candidate": cand, "against": base, "promoted": promote,
             "significantly_better": p - ci > 0.5}  # fmt: skip
     record(a.gen, "eval", res)
+    st = state()
     if promote:
-        st = state()
         st["current"] = cand
-        save_state(st)
+    # the network each generation ended with (the anchor of later checks)
+    st.setdefault("lineage", {})[str(a.gen)] = st["current"]
+    save_state(st)
     print(json.dumps(res, indent=1))
 
 
+def anchor_of(st: dict, gen: int, back: int) -> str:
+    """The network generation ``gen - back`` ended with (v5-glu before the lineage starts)."""
+    lineage = st.get("lineage", {})
+    for k in range(gen - back, -1, -1):
+        if str(k) in lineage:
+            return lineage[str(k)]
+    return BASE_RUN
+
+
 def cmd_baseline(a) -> int:
-    """The current network vs the fixed baseline (v5-glu), equal time, paired (each generation
-    is only compared with the previous one: slow decline would go unseen). Keeps the best
-    network by this comparison; if the current one is significantly worse than the baseline,
-    the current network reverts to the best one (or the baseline) and this returns 2."""
+    """Progress check (design D15-6): the current network vs the one --back generations ago
+    (--against: any network, e.g. v5-glu), equal time, sequential test. Worse (H0) -> the
+    current network reverts to that one, returns 2. No significant progress -> one more
+    "stagnant" check in a row (state.json); returns 3 at --max-stagnant in a row (the loop stops
+    for a look: most likely the network needs to grow)."""
     import json
 
     st = state()
     cur = st["current"]
-    if cur == BASE_RUN:
-        print("the current network is the baseline itself")
-        return 0
-    res = sequential_match(a, cur, BASE_RUN, 1000 + a.gen, str(SELFPLAY_DIR / f"gen{a.gen}"))
-    p, ci = res["paired_mean"], res["ci95_paired"]
-    res |= {"network": cur, "baseline": BASE_RUN}
+    against = a.against or anchor_of(st, a.gen, a.back)
+    if cur == against:  # nothing promoted since: no progress by definition
+        res = {"network": cur, "anchor": against, "skipped": "same network", "progress": False}
+    else:
+        res = sequential_match(a, cur, against, 1000 + a.gen, str(SELFPLAY_DIR / f"gen{a.gen}"))
+        res |= {"network": cur, "anchor": against,
+                "progress": res["paired_mean"] - res["ci95_paired"] > 0.5}  # fmt: skip
     st = state()
-    best = st.get("best")
-    if best is None or p > best["paired_mean"]:
-        st["best"] = {"run": cur, "paired_mean": p, "ci95": ci, "gen": a.gen}
     code = 0
-    if res["decision"] == "H0":  # worse than the baseline (sequential test): revert
-        back = st["best"]["run"] if st["best"]["run"] != cur else BASE_RUN
-        res["reverted_to"] = back
-        st["current"] = back
+    if res.get("decision") == "H0":  # worse than the anchor: revert
+        res["reverted_to"] = against
+        st["current"] = against
+        st.setdefault("lineage", {})[str(a.gen)] = against
         code = 2
+    st["stagnant"] = 0 if res["progress"] else st.get("stagnant", 0) + 1
+    res["stagnant_in_a_row"] = st["stagnant"]
+    if code == 0 and st["stagnant"] >= a.max_stagnant:
+        code = 3
     st["generations"].setdefault(str(a.gen), {})["baseline"] = res
     save_state(st)
     record(a.gen, "baseline", res)
@@ -318,11 +332,55 @@ def cmd_baseline(a) -> int:
     return code
 
 
+def cmd_foulplay(a) -> int:
+    """External anchor (design D15-6): the current network vs Foul Play at a fixed setting
+    (our CPU ISMCTS --search-ms vs Foul Play --fp-ms x --fp-parallelism, heldout belief), paired.
+    Never decides promotion: returns 3 (the loop stops for a look) when the score is below the
+    best earlier one at the same setting by more than --drop and significantly."""
+    import json
+    import math
+    import os
+
+    from alpha_poke.eval.external import run_vs_foulplay
+
+    st = state()
+    cur = st["current"]
+    os.environ["ALPHA_MODEL_A"] = cur
+    os.environ["ALPHA_SEARCH_MS"] = str(a.search_ms)
+    setting = f"ours {a.search_ms}ms vs foulplay {a.fp_ms}ms x{a.fp_parallelism}"
+    res = run_vs_foulplay("s_ismcts_ma", a.pairs, ports=tuple(a.ports), lanes=a.lanes,
+                          search_ms=a.fp_ms, parallelism=a.fp_parallelism, seed=2000 + a.gen,
+                          log_dir=str(SELFPLAY_DIR / f"gen{a.gen}"), heldout=True)  # fmt: skip
+    res |= {"network": cur, "setting": setting, "gen": a.gen}
+    st = state()
+    earlier = [r for r in st.get("foulplay", []) if r["setting"] == setting
+               and r["games"] >= a.pairs]  # fmt: skip
+    code = 0
+    if earlier and res["games"] >= a.pairs:
+        best = max(earlier, key=lambda r: r["paired_mean"])
+        diff = best["paired_mean"] - res["paired_mean"]
+        se = math.hypot(best["ci95_paired"], res["ci95_paired"]) / 1.96
+        res |= {"best_gen": best["gen"], "drop": round(diff, 4), "drop_z": round(diff / se, 2)}
+        if diff > a.drop and diff / se > 1.96:
+            code = 3
+    elif res["games"] < a.pairs:
+        res["incomplete"] = True
+    st.setdefault("foulplay", []).append({k: res[k] for k in (
+        "gen", "network", "setting", "games", "paired_mean", "ci95_paired", "win_rate",
+        "failed_games", "log")})  # fmt: skip
+    save_state(st)
+    record(a.gen, "foulplay", res)
+    print(json.dumps(res, indent=1))
+    return code
+
+
 def cmd_loop(a) -> None:
     """Generations one after another (design D15): each a full cycle; a failed step is retried
-    once. Every --baseline-every generations the current network plays the fixed baseline. Stops
-    when: --max-rejected consecutive generations were not promoted, the baseline comparison
-    reverted the current network (significantly worse than the baseline), or a step failed twice.
+    once. Every --anchor-every generations: the current network vs the one --anchor-back
+    generations ago (baseline); every --foulplay-every generations (and first when there is no
+    Foul Play result yet): vs Foul Play. Stops when: --max-rejected consecutive generations were
+    not promoted, the progress check reverted (worse) or found no progress --max-stagnant times
+    in a row, the Foul Play score dropped significantly, or a step failed twice.
     Log: data/selfplay/loop.log."""
     import subprocess
 
@@ -361,15 +419,32 @@ def cmd_loop(a) -> None:
         if rejected >= a.max_rejected:
             say(f"{rejected} consecutive generations not promoted: loop stopped")
             return
-        if (gen - a.start + 1) % a.baseline_every == 0:
-            say(f"gen {gen}: baseline comparison of {st['current']}")
-            code = subprocess.run(me + ["baseline", "--gen", str(gen), "--pairs",
-                                        str(a.baseline_pairs)]).returncode  # fmt: skip
+        if gen % a.anchor_every == 0:
+            st = state()
+            say(f"gen {gen}: progress check of {st['current']} vs "
+                f"{anchor_of(st, gen, a.anchor_back)}")  # fmt: skip
+            check = ["baseline", "--gen", str(gen), "--back", str(a.anchor_back), "--pairs",
+                     str(a.baseline_pairs), "--max-stagnant", str(a.max_stagnant)]  # fmt: skip
+            code = subprocess.run(me + check).returncode
             b = state()["generations"][str(gen)].get("baseline", {})
-            say(f"gen {gen}: vs baseline {b.get('paired_mean')} +- {b.get('ci95_paired')}"
+            say(f"gen {gen}: vs {b.get('anchor')} {b.get('paired_mean')} +- "
+                f"{b.get('ci95_paired')}; progress {b.get('progress')} "
+                f"(stagnant {b.get('stagnant_in_a_row')} in a row)"
                 f"{'; REVERTED to ' + str(b.get('reverted_to')) if code == 2 else ''}")  # fmt: skip
             if code == 2:
-                say("significantly worse than the baseline: loop stopped for a look")
+                say("worse than 3 generations ago: reverted; loop stopped for a look")
+                return
+            if code == 3:
+                say("no progress in consecutive checks: loop stopped for a look (network size?)")
+                return
+        if gen % a.foulplay_every == 0 or not state().get("foulplay"):
+            say(f"gen {gen}: Foul Play check of {state()['current']}")
+            code = subprocess.run(me + ["foulplay", "--gen", str(gen)]).returncode
+            f = state()["generations"][str(gen)].get("foulplay", {})
+            say(f"gen {gen}: vs Foul Play {f.get('paired_mean')} +- {f.get('ci95_paired')} "
+                f"({f.get('games')} games; drop {f.get('drop')}, z {f.get('drop_z')})")  # fmt: skip
+            if code == 3:
+                say("significantly worse against Foul Play than before: loop stopped for a look")
                 return
     say("loop: done")
 
@@ -487,8 +562,11 @@ def main() -> None:
     p.add_argument("--ports", type=int, nargs="+", default=[8000, 8001, 8002, 8003])
     p.add_argument("--force", action="store_true")
     p.set_defaults(fn=cmd_eval)
-    p = sub.add_parser("baseline", help="the current network vs v5-glu")
+    p = sub.add_parser("baseline", help="progress: the current network vs --back gens ago")
     p.add_argument("--gen", type=int, required=True, help="where to log it")
+    p.add_argument("--back", type=int, default=3)
+    p.add_argument("--against", default="", help="instead: this network (e.g. v5-glu)")
+    p.add_argument("--max-stagnant", type=int, default=2)
     p.add_argument("--pairs", type=int, default=200)
     p.add_argument("--search-ms", type=int, default=500)
     sprt_args(p)
@@ -496,6 +574,16 @@ def main() -> None:
     p.add_argument("--lanes", type=int, default=6)
     p.add_argument("--ports", type=int, nargs="+", default=[8000, 8001, 8002, 8003])
     p.set_defaults(fn=lambda a: sys.exit(cmd_baseline(a)))
+    p = sub.add_parser("foulplay", help="external anchor: the current network vs Foul Play")
+    p.add_argument("--gen", type=int, required=True, help="where to log it")
+    p.add_argument("--pairs", type=int, default=200)
+    p.add_argument("--search-ms", type=int, default=200, help="ours (CPU ISMCTS, one thread)")
+    p.add_argument("--fp-ms", type=int, default=200)
+    p.add_argument("--fp-parallelism", type=int, default=1)
+    p.add_argument("--lanes", type=int, default=8)
+    p.add_argument("--drop", type=float, default=0.05, help="stop at a significant drop > this")
+    p.add_argument("--ports", type=int, nargs="+", default=[8000, 8001, 8002, 8003])
+    p.set_defaults(fn=lambda a: sys.exit(cmd_foulplay(a)))
     p = sub.add_parser("loop", help="generations one after another")
     p.add_argument("--start", type=int, required=True)
     p.add_argument("--gens", type=int, default=100)
@@ -503,8 +591,11 @@ def main() -> None:
     p.add_argument("--procs", type=int, default=4)
     p.add_argument("--threads", type=int, default=2)
     p.add_argument("--eval-pairs", type=int, default=200)
-    p.add_argument("--baseline-every", type=int, default=3)
+    p.add_argument("--anchor-every", type=int, default=3)
+    p.add_argument("--anchor-back", type=int, default=3)
     p.add_argument("--baseline-pairs", type=int, default=200)
+    p.add_argument("--max-stagnant", type=int, default=2)
+    p.add_argument("--foulplay-every", type=int, default=9)
     p.add_argument("--max-rejected", type=int, default=3)
     p.set_defaults(fn=cmd_loop)
     p = sub.add_parser("cycle", help="one generation end to end")
