@@ -7,7 +7,7 @@
 //         "text" (canonical export without nicknames, "" if nothing parsed), "problems" [validator messages,
 //         empty = legal in <format> today]}
 const readline = require('readline');
-const {Teams, TeamValidator} = require(process.argv[2]);
+const {Dex, Teams, TeamValidator} = require(process.argv[2]);
 
 const validator = TeamValidator.get(process.argv[3] || 'gen9ou');
 const rl = readline.createInterface({input: process.stdin, terminal: false});
@@ -17,7 +17,18 @@ rl.on('line', line => {
 	let out;
 	try {
 		const team = Teams.import(text) || [];
-		for (const set of team) set.name = set.species;  // nicknames carry nothing; dedupe without
+		for (const set of team) {
+			set.name = set.species;  // nicknames carry nothing; dedupe without
+			// ids -> display names (generated teams are written with ids)
+			const name = (table, x) => (x && table.get(x).exists ? table.get(x).name : x);
+			set.species = name(Dex.species, set.species);
+			set.name = set.species;
+			set.item = name(Dex.items, set.item);
+			set.ability = name(Dex.abilities, set.ability);
+			set.moves = set.moves.map(m => name(Dex.moves, m));
+			set.nature = name(Dex.natures, set.nature);
+			if (set.teraType) set.teraType = name(Dex.types, set.teraType);
+		}
 		// export before validating: the validator may modify the sets
 		const canonical = team.length ? Teams.export(team).trim() : '';
 		const species = team.map(s => s.species);

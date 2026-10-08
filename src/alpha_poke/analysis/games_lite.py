@@ -4,11 +4,13 @@ and matchup statistics and for per-player histories (design D5-L / D5-O).
 
 Output: data/parsed/gen9ou_games_lite.parquet, one row per game:
   id, time, p1, p2 (user ids), r1, r2 (ratings, 0 = unknown), team1, team2 (sorted preview
-  species joined by '|'), winner (1 / 2, 0 = tie or unknown), turns."""
+  species joined by '|'), winner (1 / 2, 0 = tie or unknown), turns, shard (source parquet file
+  name) and row (its row there: ``log`` loads the full log of sampled games)."""
 
 import glob
 import re
 from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
 
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -54,11 +56,26 @@ def scan(log: str) -> dict | None:
 def _shard(path: str) -> list[dict]:
     t = pq.read_table(path, columns=["id", "log", "uploadtime"])
     out = []
-    for gid, log, ts in zip(*(t.column(c).to_pylist() for c in ("id", "log", "uploadtime")),
-                            strict=True):  # fmt: skip
+    shard = Path(path).name
+    cols = (t.column(c).to_pylist() for c in ("id", "log", "uploadtime"))
+    for row, (gid, log, ts) in enumerate(zip(*cols, strict=True)):
         r = scan(log)
         if r is not None:
-            out.append({"id": gid, "time": int(ts)} | r)
+            out.append({"id": gid, "time": int(ts)} | r | {"shard": shard, "row": row})
+    return out
+
+
+def logs(rows: list[dict]) -> dict[str, dict]:
+    """game id -> the full Metamon row (id, log, uploadtime, ...) for rows of the lite table
+    (one read per shard involved)."""
+    by_shard: dict[str, list[int]] = {}
+    for r in rows:
+        by_shard.setdefault(r["shard"], []).append(r["row"])
+    out = {}
+    for shard, idx in by_shard.items():
+        t = pq.read_table(Path(SRC).parent / shard).take(sorted(set(idx)))
+        for rec in t.to_pylist():
+            out[rec["id"]] = rec
     return out
 
 

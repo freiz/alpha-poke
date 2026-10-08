@@ -165,9 +165,13 @@ def sample_set(
     rng: random.Random,
     move_beta: float = 0.0,
     known: KnownSet | None = None,
+    temp: float = 1.0,
 ):
     """One plausible full set for an opposing mon, consistent with what it revealed (and with
     ``known``: game-wide facts about the mon, used for side one of replay positions).
+    ``temp`` > 1 flattens every draw (weights ** (1 / temp)): more varied sets than the belief
+    itself, for completing self-play teams (design D5: completion must not be exactly what the
+    search's belief expects). temp = 1 is the belief as is.
     Moves: from the sampled (species-level) archetype; with ``move_beta`` > 0 the archetype's
     move weights are multiplied by the team-conditioned move marginal ** move_beta (the archetype
     ignores the opponent's team; the team prior is much sharper: time-split coverage of later
@@ -184,22 +188,30 @@ def sample_set(
             item = known.item
         if tera is None and known.tera:
             tera = known.tera
+    def flat(w):
+        """weights ** (1 / temp) (identity at temp 1)"""
+        if temp == 1.0:
+            return w
+        if isinstance(w, dict):
+            return {key: v ** (1 / temp) for key, v in w.items()}
+        return np.asarray(w, dtype=float) ** (1 / temp)
+
     k = None
     if ss is not None and ss.params:
         names = {to_id(n): n for n in ss.vocab["move"]}
         item_name = next((n for n in ss.vocab["item"] if to_id(n) == item), None) if item else None
-        post = ss.posterior(item=item_name, moves=[names.get(m, m) for m in revealed])
+        post = flat(ss.posterior(item=item_name, moves=[names.get(m, m) for m in revealed]))
         k = int(np.searchsorted(np.cumsum(post), rng.random() * post.sum()))
         k = min(k, len(post) - 1)
 
     def draw(attr, fallback: dict[str, float]):
         if k is not None and ss.vocab.get(attr):
-            w = ss.params[attr][k]
+            w = flat(ss.params[attr][k])
             if w.sum() > 0:
                 i = int(np.searchsorted(np.cumsum(w), rng.random() * w.sum()))
                 return to_id(ss.vocab[attr][min(i, len(w) - 1)])
         if fallback:
-            keys, ws = zip(*fallback.items(), strict=True)
+            keys, ws = zip(*flat(fallback).items(), strict=True)
             if sum(ws) > 0:
                 return to_id(rng.choices(keys, weights=ws)[0])
         return None
@@ -212,7 +224,7 @@ def sample_set(
     if ability is None and known is not None and known.ability:
         ability = known.ability
     if ability is None:
-        ap = ability_probs(mon)
+        ap = flat(ability_probs(mon))
         ability = (rng.choices(list(ap), weights=list(ap.values()))[0] if ap else None) or "none"
     # moves: revealed + draws (without replacement) from the archetype's move weights
     moves = list(revealed)[:4]
@@ -224,6 +236,7 @@ def sample_set(
             weights = {mid: w * dist.move.get(mid, 1e-4) ** move_beta for mid, w in weights.items()}
     else:
         weights = dict(dist.move)
+    weights = flat(weights)
     for mid in list(weights):
         if mid in moves or mid not in _MOVES:
             weights.pop(mid)
