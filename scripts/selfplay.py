@@ -687,7 +687,7 @@ def main() -> None:
     p = sub.add_parser("eval")
     p.add_argument("--gen", type=int, required=True)
     p.add_argument("--against", default="", help="default: the current network")
-    p.add_argument("--pairs", type=int, default=200)
+    p.add_argument("--pairs", type=int, default=100)
     p.add_argument("--search-ms", type=int, default=500)
     sprt_args(p)
     # a search blocks its process's event loop (the lanes of a process take turns): many
@@ -727,7 +727,7 @@ def main() -> None:
     p.add_argument("--games", type=int, default=5000)
     p.add_argument("--procs", type=int, default=6)  # self-play processes (20 logical CPUs)
     p.add_argument("--threads", type=int, default=2)
-    p.add_argument("--eval-pairs", type=int, default=200)
+    p.add_argument("--eval-pairs", type=int, default=100)
     p.add_argument("--anchor-every", type=int, default=3)
     p.add_argument("--anchor-back", type=int, default=3)
     p.add_argument("--baseline-pairs", type=int, default=200)
@@ -744,7 +744,7 @@ def main() -> None:
     p.add_argument(
         "--eval-pairs",
         type=int,
-        default=200,
+        default=100,
         help="most pairs of the per-generation sequential test (eval)",
     )
     p.set_defaults(fn=cmd_cycle)
