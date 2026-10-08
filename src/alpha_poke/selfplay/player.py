@@ -65,6 +65,12 @@ class SelfPlayPlayer(SearchPlayer):
         if me is None or battle.opponent_active_pokemon is None:
             log.warning("no search (%s turn %d): no active mon", battle.battle_tag, battle.turn)
             return None
+        # a single legal option (must recharge, Struggle, one mon left to switch in): play it,
+        # nothing to search or learn (the engine's state may even disagree, e.g. it lets a
+        # recharging mon switch)
+        moves, switches = battle.available_moves, battle.available_switches
+        if len(moves) + len(switches) == 1 and not battle.can_tera:
+            return self.create_order((moves or switches)[0])
         if battle.force_switch:
             kind = KIND_FORCED if me.fainted else KIND_PIVOT
         else:
