@@ -690,8 +690,10 @@ def main() -> None:
     p.add_argument("--pairs", type=int, default=200)
     p.add_argument("--search-ms", type=int, default=500)
     sprt_args(p)
-    p.add_argument("--procs", type=int, default=4)
-    p.add_argument("--lanes", type=int, default=10)  # 4 x 10 games on 20 logical CPUs
+    # a search blocks its process's event loop (the lanes of a process take turns): many
+    # processes with few lanes each (2026-10-08: 4 x 10 ran only 4 searches at a time)
+    p.add_argument("--procs", type=int, default=18)
+    p.add_argument("--lanes", type=int, default=2)
     p.add_argument("--ports", type=int, nargs="+", default=[8000, 8001, 8002, 8003])
     p.add_argument("--force", action="store_true")
     p.set_defaults(fn=cmd_eval)
@@ -703,8 +705,10 @@ def main() -> None:
     p.add_argument("--pairs", type=int, default=200)
     p.add_argument("--search-ms", type=int, default=500)
     sprt_args(p)
-    p.add_argument("--procs", type=int, default=4)
-    p.add_argument("--lanes", type=int, default=10)  # 4 x 10 games on 20 logical CPUs
+    # a search blocks its process's event loop (the lanes of a process take turns): many
+    # processes with few lanes each (2026-10-08: 4 x 10 ran only 4 searches at a time)
+    p.add_argument("--procs", type=int, default=18)
+    p.add_argument("--lanes", type=int, default=2)
     p.add_argument("--ports", type=int, nargs="+", default=[8000, 8001, 8002, 8003])
     p.set_defaults(fn=lambda a: sys.exit(cmd_baseline(a)))
     p = sub.add_parser("foulplay", help="external anchor: the current network vs Foul Play")
