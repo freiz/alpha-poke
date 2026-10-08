@@ -23,6 +23,7 @@ import argparse
 import collections
 import logging
 import sys
+import time
 from pathlib import Path
 
 from alpha_poke.selfplay import SELFPLAY_DIR
@@ -181,6 +182,31 @@ def cmd_eval(a) -> None:
     print(json.dumps(res, indent=1))
 
 
+def cmd_cycle(a) -> None:
+    """One generation end to end: team pairs (if missing) -> games -> convert -> train -> eval.
+    Each step's output goes to data/selfplay/gen<G>/<step>.log; stops at the first failure."""
+    import subprocess
+
+    gen_dir = SELFPLAY_DIR / f"gen{a.gen}"
+    gen_dir.mkdir(parents=True, exist_ok=True)
+    me = [sys.executable, __file__]
+    steps = []
+    if not (gen_dir / "teams.jsonl").exists():
+        steps.append(("teams", ["teams", "--gen", str(a.gen), "--n", str(a.games)]))
+    steps += [("run", ["run", "--gen", str(a.gen), "--procs", str(a.procs),
+                       "--lanes", str(a.lanes), "--threads", str(a.threads)]),
+              ("convert", ["convert", "--gen", str(a.gen)]),
+              ("train", ["train", "--gen", str(a.gen)]),
+              ("eval", ["eval", "--gen", str(a.gen), "--pairs", str(a.eval_pairs)])]  # fmt: skip
+    for name, args in steps:
+        t0 = time.time()
+        print(f"[{time.strftime('%H:%M:%S')}] gen {a.gen}: {name}", flush=True)
+        with open(gen_dir / f"{name}.log", "a") as f:
+            subprocess.run(me + args, check=True, stdout=f, stderr=subprocess.STDOUT)
+        record(a.gen, f"{name}_minutes", round((time.time() - t0) / 60, 1))
+    print(f"[{time.strftime('%H:%M:%S')}] gen {a.gen} done: {state()['generations'][str(a.gen)]}")
+
+
 def _stop_workers(*_) -> None:
     """On SIGTERM also stop the game worker processes (they would keep playing)."""
     import multiprocessing as mp
@@ -246,6 +272,14 @@ def main() -> None:
     p.add_argument("--lanes", type=int, default=6)
     p.add_argument("--ports", type=int, nargs="+", default=[8000, 8001, 8002, 8003])
     p.set_defaults(fn=cmd_eval)
+    p = sub.add_parser("cycle", help="one generation end to end")
+    p.add_argument("--gen", type=int, required=True)
+    p.add_argument("--games", type=int, default=2000, help="team pairs if not sampled yet")
+    p.add_argument("--procs", type=int, default=2)
+    p.add_argument("--lanes", type=int, default=24)
+    p.add_argument("--threads", type=int, default=8, help="collect threads per process")
+    p.add_argument("--eval-pairs", type=int, default=100)
+    p.set_defaults(fn=cmd_cycle)
     a = ap.parse_args()
     a.fn(a)
 
