@@ -10,7 +10,6 @@ logits, and how often the argmax agrees. Run after every change to the Rust forw
 
 import argparse
 import glob
-import importlib.util
 import time
 from pathlib import Path
 
@@ -19,9 +18,7 @@ import numpy as np
 import pyarrow.parquet as pq
 import torch
 
-_spec = importlib.util.spec_from_file_location("eval_pv", Path(__file__).with_name("eval_pv.py"))
-eval_pv = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(eval_pv)
+from alpha_poke.train.load import load_run
 
 D = alpha_search.feature_dims()
 
@@ -81,7 +78,7 @@ def main() -> None:
     rating = np.stack([np.asarray(tb.column(c).to_pylist(), np.int32)
                        for c in ("rating_own", "rating_opp")], 1)  # fmt: skip
     turn = np.asarray(tb.column("turn").to_pylist(), np.int32)
-    model = eval_pv.load_run(Path(a.run), torch.device("cpu")).float()
+    model = load_run(Path(a.run), torch.device("cpu")).float()
     worst = 0.0
     for flip in (False, True):
         lt, vt = torch_forward(model, states, reveal, rating, turn, hist, flip)

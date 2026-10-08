@@ -10,9 +10,18 @@ EMB = ("species.", "item.", "ability.", "ptype.", "move.")
 
 
 def load_run(run: Path, device) -> torch.nn.Module:
-    """The run's best checkpoint in eval mode (v1 checkpoints: the MLP without history, the
-    embedding tables at the top level)."""
+    """The run's network in eval mode: the weights of ``best.safetensors`` (the exported ones,
+    what the Rust inference loads: with ``--export last`` the last step, not ``best.pt``),
+    sizes and options from ``best.pt``. (v1 checkpoints: the MLP without history, the
+    embedding tables at the top level.)"""
     ck = torch.load(Path(run) / "best.pt", weights_only=False, map_location="cpu")
+    exported = Path(run) / "best.safetensors"
+    if exported.exists():
+        from safetensors.torch import load_file
+
+        names = set(ck["model"])  # the export drops the "emb." prefix of the shared tables
+        ck["model"] = {("emb." + k if "emb." + k in names else k): v
+                       for k, v in load_file(exported).items()}  # fmt: skip
     arch, history = ck.get("arch", "mlp"), ck.get("history", False)
     cls = TransformerPV if arch == "transformer" else PolicyValueNet
     kw = {}
