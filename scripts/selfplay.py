@@ -278,11 +278,17 @@ def main() -> None:
     p.set_defaults(fn=cmd_eval)
     p = sub.add_parser("cycle", help="one generation end to end")
     p.add_argument("--gen", type=int, required=True)
-    p.add_argument("--games", type=int, default=2000, help="team pairs if not sampled yet")
+    p.add_argument("--games", type=int, default=5000, help="team pairs if not sampled yet")
     p.add_argument("--procs", type=int, default=2)
     p.add_argument("--lanes", type=int, default=24)
     p.add_argument("--threads", type=int, default=8, help="collect threads per process")
-    p.add_argument("--eval-pairs", type=int, default=100)
+    p.add_argument(
+        "--eval-pairs",
+        type=int,
+        default=50,
+        help="safety check per generation "
+        "(100 games); a fixed-baseline comparison every few generations",
+    )
     p.set_defaults(fn=cmd_cycle)
     a = ap.parse_args()
     a.fn(a)
