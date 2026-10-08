@@ -52,7 +52,10 @@ def packed(text: str) -> str:
     return Teambuilder.join_team(mons)
 
 
-GAME_TIMEOUT = 1800.0  # seconds: a game that never ends (e.g. a challenge the server refused)
+# seconds: a game that never ends (e.g. a challenge the server refused). Not 30 minutes: a game
+# to the 300-turn cap is ~600 decisions, each waiting for a batched search round (gen 1: such
+# games ran over 30 minutes and were skipped)
+GAME_TIMEOUT = 7200.0
 
 
 async def _lane(lane: str, jobs: list, port: int, gen_dir: Path, settings: dict, batcher,
