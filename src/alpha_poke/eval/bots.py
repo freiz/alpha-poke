@@ -91,6 +91,23 @@ VARIANTS: dict[str, tuple[bool, bool, bool, dict]] = {
             "model": "data/train/v5/runs/v5-final",
         },
     ),  # fmt: skip
+    # v5-glu (SwiGLU + RMSNorm + QK-norm, design D13), CPU / GPU
+    **{
+        f"s_ismcts_glu{suffix}": (
+            True,
+            True,
+            True,
+            {
+                "search": True,
+                "backend": "ismcts",
+                "worlds": 32,
+                "net_policy": "both",
+                "model": "data/train/v5/runs/v5-glu",
+                **extra,
+            },
+        )
+        for suffix, extra in (("", {}), ("g", {"device": "cuda"}))
+    },  # fmt: skip
     # the same on the GPU (batched search, agents.gpu_search)
     "s_ismcts_tfg": (
         True,
