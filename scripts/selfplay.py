@@ -104,6 +104,9 @@ def record(gen: int, key: str, value) -> None:
 def cmd_convert(a) -> None:
     from alpha_poke.selfplay.convert import convert
 
+    if Path(f"data/train/sp{a.gen}/convert.json").exists() and not a.force:
+        print(f"sp{a.gen} is converted already (--force converts again)")
+        return
     logging.disable(logging.WARNING)
     stats = convert(SELFPLAY_DIR / f"gen{a.gen}", Path(f"data/train/sp{a.gen}"), a.gen)
     record(a.gen, "convert", stats)
@@ -131,9 +134,9 @@ def cmd_train(a) -> None:
     n_older = sum(rows(g) for g in older)
     # older generations: a random share of their games, together ~old_share of the recent
     # window (against forgetting / cycling), the same share from every older generation
-    keep = min(1.0, a.old_share * n_recent / n_older) if n_older else 0.0
-    sp = ",".join([f"sp{g}" for g in recent] + [f"sp{g}:{keep:.4f}" for g in older])
-    n_sp = n_recent + round(keep * n_older)
+    old_keep = min(1.0, a.old_share * n_recent / n_older) if n_older else 0.0
+    sp = ",".join([f"sp{g}" for g in recent] + [f"sp{g}:{old_keep:.4f}" for g in older])
+    n_sp = n_recent + round(old_keep * n_older)
     # human share of each batch: lowered over the generations (the human data anchors the play
     # against humans; self-play's search targets are what goes beyond them), never below 20%;
     # held when the previous generation's training drifted on the human validation
@@ -150,11 +153,17 @@ def cmd_train(a) -> None:
            f"--sp-frac {sp_frac} --init {init} --steps {steps} --lr {a.lr} --batch {a.batch} "
            f"--warmup-frac {a.warmup_frac} --eval-every {max(50, steps // 5)} --export last "
            f"--run {run}")  # fmt: skip
-    print("$", cmd, flush=True)
     log_path = SELFPLAY_DIR / f"gen{a.gen}" / "train.log"
-    with open(log_path, "w") as f:
-        subprocess.run(shlex.split(cmd), check=True, stdout=f, stderr=subprocess.STDOUT)
     out = Path("data/train/v5/runs") / run
+    done = (out / "metrics.jsonl").exists() and '"event": "done"' in (
+        out / "metrics.jsonl"
+    ).read_text()
+    if done and not a.force:  # trained already (e.g. the summary failed): summarize only
+        print(f"{run} is trained already; summary only (--force retrains)", flush=True)
+    else:
+        print("$", cmd, flush=True)
+        with open(log_path, "w") as f:
+            subprocess.run(shlex.split(cmd), check=True, stdout=f, stderr=subprocess.STDOUT)
     import json
 
     rows = [json.loads(line) for line in (out / "metrics.jsonl").read_text().splitlines()]
@@ -164,7 +173,7 @@ def cmd_train(a) -> None:
             "kl_ref_unk", "sp_ce", "sp_kl", "sp_top1", "sp_bce", "sp_bce_rootq",
             "sp_kl_ref")  # fmt: skip
     summary = {"run": str(out), "init": init, "selfplay": sp, "sp_positions": n_sp,
-               "recent_gens": recent, "older_gens": older, "older_keep": round(keep, 4),
+               "recent_gens": recent, "older_gens": older, "older_keep": round(old_keep, 4),
                "human_share": round(1 - sp_frac, 4), "human_share_held": held,
                "steps": steps, "lr": a.lr, "warmup_frac": a.warmup_frac,
                "first_val": {k: val[0].get(k) for k in keep} if val else None,
@@ -281,6 +290,7 @@ def main() -> None:
     p.set_defaults(fn=cmd_run)
     p = sub.add_parser("convert")
     p.add_argument("--gen", type=int, required=True)
+    p.add_argument("--force", action="store_true")
     p.set_defaults(fn=cmd_convert)
     p = sub.add_parser("train")
     p.add_argument("--gen", type=int, required=True)
@@ -299,6 +309,7 @@ def main() -> None:
     p.add_argument("--lr", type=float, default=1e-4)
     p.add_argument("--warmup-frac", type=float, default=0.2)
     p.add_argument("--batch", type=int, default=4096)
+    p.add_argument("--force", action="store_true", help="retrain even if the run is complete")
     p.set_defaults(fn=cmd_train)
     p = sub.add_parser("eval")
     p.add_argument("--gen", type=int, required=True)
