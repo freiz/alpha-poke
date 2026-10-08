@@ -11,7 +11,7 @@ from alpha_poke.servers import account, local_server
 # heuristic bot's ablations) were removed on 2026-10-08; their results stay in doc/results.md.
 GLU = "data/train/v5/runs/v5-glu"
 VARIANTS: dict[str, tuple[str, dict]] = {
-    # heuristic bot with the computed plan (design D9; play_public's easy level)
+    # heuristic bot with the computed plan (play_public's easy level)
     "knowledge": ("knowledge", {}),
     # ISMCTS (design D12), one tree over 32 belief worlds, handcrafted evaluation at the leaves
     "s_ismcts": ("search", {"worlds": 32}),

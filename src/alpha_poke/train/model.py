@@ -15,7 +15,7 @@ entity encoder) + flags -> a step encoding; the steps, in recency order, -> one 
 trunk. ``TransformerPV``: the same inputs as tokens (12 entities, 1 global, the history steps)
 through a small pre-norm Transformer; value and policy read the global token, switch slots the
 own entity tokens. ``mtp`` > 0 adds multi-step action prediction heads (training-time auxiliary
-targets, design D14-8): for each future decision step k < mtp and side (own / opponent; own step
+targets, design D13): for each future decision step k < mtp and side (own / opponent; own step
 0 is the policy label itself and is skipped), the kind of action (none / move / switch), the move
 (tied to the move embedding table) and the switch-in (a pointer over that side's entity tokens).
 v3 (design D13, network v3 first batch; TransformerPV only), inputs ``x`` from the data

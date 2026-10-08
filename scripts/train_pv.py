@@ -16,7 +16,7 @@ v2: ``--history`` feeds the decision-step history (data built with a ``history``
 transformer`` the small Transformer; ``--value-per-game N`` scales each position's value loss so
 that every game counts as at most N positions (many positions per game share one outcome).
 ``--mtp K`` (Transformer, data with a ``future`` column): auxiliary multi-step action prediction
-over the first K decision steps from the position (design D14-8), weight ``--mtp-weight``.
+over the first K decision steps from the position (design D13), weight ``--mtp-weight``.
 v3 (design D13, data with a ``reveal`` column): ``--feats`` (reveal, num, movetab, matchup) and
 ``--aux`` (oppset, faint, margin, turns; weight ``--aux-weight`` each) switch the new input groups
 and auxiliary heads on (alpha_poke.train.model); the caches always hold all of them.

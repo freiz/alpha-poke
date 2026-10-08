@@ -1,4 +1,5 @@
-"""KnowledgePlayer: planning layer at team preview + heuristic action layer (D9 prototype).
+"""KnowledgePlayer: planning layer at team preview + heuristic action layer (the first bot;
+the fallback of the search players).
 
 Team preview (planning):
   * belief: likely set (stats / item / moves) of each opponent mon from the team-conditional prior;
