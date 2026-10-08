@@ -832,7 +832,15 @@ def main() -> None:
     # self-play data (in memory): train / validation split by game
     dsp = None
     if a.selfplay:
-        parts = [load(x) for x in a.selfplay.split(",")]
+        parts = []
+        for item in a.selfplay.split(","):  # "name" or "name:keep" (share of its games kept)
+            name, _, keep = item.partition(":")
+            part = load(name)
+            if keep and float(keep) < 1:
+                # by game, with hash digits independent of the validation split (game % 1000)
+                sel = (part["game"] // 1000) % 1000 < float(keep) * 1000
+                part = {k: v[sel] for k, v in part.items()}
+            parts.append(part)
         dsp = {k: np.concatenate([p[k] for p in parts]) for k in parts[0]}
         val_g = (dsp["game"] % 1000) < a.sp_val_frac * 1000
         sp_train, sp_val = np.flatnonzero(~val_g), np.flatnonzero(val_g)

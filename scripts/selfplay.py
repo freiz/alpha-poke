@@ -118,11 +118,22 @@ def cmd_train(a) -> None:
 
     st = state()
     init = a.init or st["current"]
-    gens = [g for g in range(a.gen - a.window + 1, a.gen + 1) if g >= 0
-            and Path(f"data/train/sp{g}").exists()]  # fmt: skip
-    sp = ",".join(f"sp{g}" for g in gens)
-    n_sp = sum(pq.read_metadata(f).num_rows for g in gens
-               for f in Path(f"data/train/sp{g}").glob("*.parquet"))  # fmt: skip
+
+    def rows(g: int) -> int:
+        return sum(
+            pq.read_metadata(f).num_rows for f in Path(f"data/train/sp{g}").glob("*.parquet")
+        )
+
+    have = [g for g in range(a.gen + 1) if Path(f"data/train/sp{g}").exists()]
+    recent = [g for g in have if g > a.gen - a.window]
+    older = [g for g in have if g <= a.gen - a.window]
+    n_recent = sum(rows(g) for g in recent)
+    n_older = sum(rows(g) for g in older)
+    # older generations: a random share of their games, together ~old_share of the recent
+    # window (against forgetting / cycling), the same share from every older generation
+    keep = min(1.0, a.old_share * n_recent / n_older) if n_older else 0.0
+    sp = ",".join([f"sp{g}" for g in recent] + [f"sp{g}:{keep:.4f}" for g in older])
+    n_sp = n_recent + round(keep * n_older)
     bsp = round(a.batch * a.sp_frac)
     steps = a.steps or max(50, math.ceil(a.passes * n_sp / bsp))
     run = f"sp-gen{a.gen}"
@@ -142,6 +153,7 @@ def cmd_train(a) -> None:
     keep = ("ce_turn_w", "bce_all_w", "top1", "top3", "top1_forced", "sp_ce", "sp_kl", "sp_top1",
             "sp_bce", "sp_bce_rootq")  # fmt: skip
     summary = {"run": str(out), "init": init, "selfplay": sp, "sp_positions": n_sp,
+               "recent_gens": recent, "older_gens": older, "older_keep": round(keep, 4),
                "steps": steps, "lr": a.lr, "warmup_frac": a.warmup_frac,
                "first_val": {k: val[0].get(k) for k in keep} if val else None,
                "last_val": {k: val[-1].get(k) for k in keep} if val else None,
@@ -255,7 +267,9 @@ def main() -> None:
     p = sub.add_parser("train")
     p.add_argument("--gen", type=int, required=True)
     p.add_argument("--init", default="", help="warm start run (default: the current network)")
-    p.add_argument("--window", type=int, default=5, help="self-play generations in the mix")
+    p.add_argument("--window", type=int, default=5, help="recent generations, all of their games")
+    p.add_argument("--old-share", type=float, default=0.2,
+                   help="older generations: sampled games, this share of the window")  # fmt: skip
     p.add_argument("--sp-frac", type=float, default=0.5)
     p.add_argument(
         "--passes", type=float, default=2.0, help="times each self-play position is seen"
