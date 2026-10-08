@@ -27,6 +27,11 @@ class GpuNet:
     def __init__(self, run: str, device: str = "cuda", graphs: bool = True):
         torch.backends.cuda.matmul.allow_tf32 = False  # float32, as the CPU reference
         self.device = torch.device(device if torch.cuda.is_available() else "cpu")
+        if self.device.type == "cuda":
+            # the CPU side is only copies: PyTorch's CPU thread pool (one per core, spinning
+            # while idle) took the CPU from the searches (2026-10-08: 6 self-play processes x
+            # 10 spinning threads, a third less throughput on 20 logical CPUs than on 10)
+            torch.set_num_threads(1)
         self.model = load_run(run, self.device).float()
         self.use_graphs = graphs and self.device.type == "cuda"
         self.graphs: dict = {}  # padded size -> (graph, static inputs, static outputs)
