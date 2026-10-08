@@ -788,6 +788,10 @@ def main() -> None:
     ap.add_argument(
         "--selfplay", default="", help="self-play datasets (data/train/<x>), comma-sep."
     )
+    ap.add_argument(
+        "--sp-value-passes", type=int, default=0,
+        help="self-play outcomes train the value only the first k draws of a position (0: all)",
+    )  # fmt: skip
     ap.add_argument("--sp-frac", type=float, default=0.5, help="share of each batch from self-play")
     ap.add_argument("--sp-val-frac", type=float, default=0.05, help="self-play games held out")
     ap.add_argument("--init", default="", help="warm start: a run directory (its last.pt)")
@@ -919,6 +923,7 @@ def main() -> None:
         sp_vw = (np.minimum(1.0, a.value_per_game / scnt[sinv]) if a.value_per_game > 0
                  else np.ones(len(sinv))) * dsp["value_ok"]  # fmt: skip
         sp_vw = sp_vw.astype(np.float32)
+        sp_seen = np.zeros(len(sp_vw), np.int32)  # draws per position (--sp-value-passes)
         bsp = int(round(a.batch * a.sp_frac))
         emit(dict(event="selfplay", positions=len(sinv), games=len(scnt), train=len(sp_train),
                   val=len(sp_val), policy_targets=int(dsp["pi_w"][sp_train].sum()),
@@ -984,9 +989,17 @@ def main() -> None:
             pw_s = torch.from_numpy(dsp["pi_w"][bs]).to(device)
             s_ce = (soft_policy_loss(s_out[0], pi, s_ma) * pw_s).sum() / pw_s.sum().clamp_min(1)
             bw_s = torch.from_numpy(sp_vw[bs]).to(device)
+            # --sp-value-passes: a position's outcome counts only the first k times it is drawn
+            # (the outcome is one noisy bit per game: the value overfits when the policy targets
+            # are trained several passes); same denominator, so fewer rows = a smaller step
+            bv_s = bw_s
+            if a.sp_value_passes > 0:
+                fresh = sp_seen[bs] < a.sp_value_passes
+                np.add.at(sp_seen, bs, 1)
+                bv_s = bw_s * torch.from_numpy(fresh.astype(np.float32)).to(device)
             s_vl = value_logit(model, s_out[1].float(), s_ev)
             s_bce = (F.binary_cross_entropy_with_logits(s_vl, s_won, reduction="none")
-                     * bw_s).sum() / bw_s.sum().clamp_min(1e-6)  # fmt: skip
+                     * bv_s).sum() / bw_s.sum().clamp_min(1e-6)  # fmt: skip
             s_loss = s_ce + a.value_weight * s_bce
             if a.mtp:
                 s_loss = (

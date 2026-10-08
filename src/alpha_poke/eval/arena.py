@@ -14,6 +14,7 @@ Every game is appended to a JSONL log; the summary uses the per-pair mean score 
 
 import asyncio
 import json
+import logging
 import math
 import multiprocessing as mp
 import os
@@ -42,6 +43,10 @@ def _base(species: str) -> str:
 
 def _species(packed: str) -> list[str]:
     return sorted(_base(m.species or m.nickname) for m in Teambuilder.parse_packed_team(packed))
+
+
+# seconds per game (a 300-turn game at 500 ms a move takes ~10 minutes per side)
+GAME_TIMEOUT = 3600.0
 
 
 @dataclass
@@ -83,10 +88,14 @@ async def _lane(bot_a, bot_b, matches, port, pool_dir, heldout, lane_id, log_pat
         before, before_b = set(a.battles), set(b.battles)
         # the counters live on the lane's players: log this game's increase only
         fb0 = [(getattr(me, "fallbacks", 0), getattr(me, "search_fallbacks", 0)) for me in (a, b)]
-        if m.a_challenges:
-            await a.battle_against(b, n_battles=1)
-        else:
-            await b.battle_against(a, n_battles=1)
+        challenger, opponent = (a, b) if m.a_challenges else (b, a)
+        try:
+            await asyncio.wait_for(challenger.battle_against(opponent, n_battles=1), GAME_TIMEOUT)
+        except TimeoutError:
+            # a game that never starts or never ends (2026-10-08: three lanes waited forever on
+            # their first challenge) must not hold the lane: skipped, logged without a result
+            logging.getLogger(__name__).warning("pair %d game %d: no finished game after %ds",
+                                                m.pair, m.game, GAME_TIMEOUT)  # fmt: skip
         new = [a.battles[k] for k in a.battles if k not in before]
         battle = new[0] if new else None
         new_b = [b.battles[k] for k in b.battles if k not in before_b]

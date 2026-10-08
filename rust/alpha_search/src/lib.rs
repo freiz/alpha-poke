@@ -9,6 +9,7 @@ pub mod ismcts;
 pub mod net;
 pub mod tnet;
 
+use poke_engine::engine::generate_instructions::generate_instructions_from_move_pair;
 use poke_engine::engine::state::MoveChoice;
 use poke_engine::mcts::perform_mcts;
 use poke_engine::state::{Side, State};
@@ -808,6 +809,96 @@ fn feature_dims(py: Python<'_>) -> PyResult<Bound<'_, PyDict>> {
     Ok(d)
 }
 
+/// The full-information state of a self-play / evaluation position: side one from `a` (side
+/// one's own view: its side exact), side two = side one of `b` (the other player's own view),
+/// the field from `a`. For luck estimates (each player knows only its own side exactly).
+#[pyfunction]
+fn merge_sides(a: &str, b: &str) -> String {
+    let mut st = State::deserialize(a);
+    st.side_two = State::deserialize(b).side_one;
+    st.serialize()
+}
+
+fn option_of(options: &[MoveChoice], slot: i32) -> Option<MoveChoice> {
+    options.iter().copied().find(|mc| match features::slot(mc) {
+        Some(i) => i as i32 == slot,
+        None => slot < 0,
+    })
+}
+
+/// The chance outcomes of the move pair (slots relative to each side; -1 = no choice) in
+/// `state`: [(probability, resulting state, battle_is_over)] as the search's transition model
+/// generates them (`branch`: also branch on damage rolls).
+#[pyfunction]
+#[pyo3(signature = (state, slot1, slot2, branch=false))]
+fn chance_outcomes(
+    state: &str,
+    slot1: i32,
+    slot2: i32,
+    branch: bool,
+) -> PyResult<Vec<(f32, String, f32)>> {
+    let mut st = State::deserialize(state);
+    let (o1, o2) = st.root_get_all_options();
+    let (Some(m1), Some(m2)) = (option_of(&o1, slot1), option_of(&o2, slot2)) else {
+        return Err(PyValueError::new_err("slot not among the options"));
+    };
+    let outcomes = generate_instructions_from_move_pair(&mut st, &m1, &m2, branch);
+    let total: f32 = outcomes.iter().map(|o| o.percentage.max(0.0)).sum();
+    Ok(outcomes
+        .iter()
+        .map(|o| {
+            st.apply_instructions(&o.instruction_list);
+            let r = (
+                o.percentage.max(0.0) / total,
+                st.serialize(),
+                st.battle_is_over(),
+            );
+            st.reverse_instructions(&o.instruction_list);
+            r
+        })
+        .collect())
+}
+
+/// Per side: (active index, [(species, hp, max hp, status)], boosts [atk, def, spa, spd, spe,
+/// acc, eva]) — what a player sees of a state, to match outcomes with observations.
+type SideInfo = (usize, Vec<(String, i16, i16, String)>, [i8; 7]);
+
+#[pyfunction]
+fn describe(states: Vec<String>) -> Vec<(SideInfo, SideInfo)> {
+    let side = |s: &Side| -> SideInfo {
+        let mons = s
+            .pokemon
+            .pkmn
+            .iter()
+            .map(|p| {
+                (
+                    format!("{:?}", p.id),
+                    p.hp,
+                    p.maxhp,
+                    format!("{:?}", p.status),
+                )
+            })
+            .collect();
+        let b = [
+            s.attack_boost,
+            s.defense_boost,
+            s.special_attack_boost,
+            s.special_defense_boost,
+            s.speed_boost,
+            s.accuracy_boost,
+            s.evasion_boost,
+        ];
+        (s.active_index as usize, mons, b)
+    };
+    states
+        .iter()
+        .map(|x| {
+            let st = State::deserialize(x);
+            (side(&st.side_one), side(&st.side_two))
+        })
+        .collect()
+}
+
 #[pymodule]
 fn alpha_search(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(roundtrip, m)?)?;
@@ -827,5 +918,8 @@ fn alpha_search(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(root_priors, m)?)?;
     m.add_function(wrap_pyfunction!(evaluate, m)?)?;
     m.add_function(wrap_pyfunction!(net_forward, m)?)?;
+    m.add_function(wrap_pyfunction!(merge_sides, m)?)?;
+    m.add_function(wrap_pyfunction!(chance_outcomes, m)?)?;
+    m.add_function(wrap_pyfunction!(describe, m)?)?;
     Ok(())
 }

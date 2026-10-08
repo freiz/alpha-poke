@@ -53,7 +53,15 @@ def cmd_run(a) -> None:
 
     gen_dir = SELFPLAY_DIR / f"gen{a.gen}"
     pairs = teams.load(gen_dir / "teams.jsonl")
-    settings = {"model": a.model, "full_frac": a.full_frac, "full_iters": a.full_iters,
+    # the generation's games are played by the current network (gens 1-2 were played by the
+    # old default, v5-glu, until this was fixed)
+    model = a.model or state()["current"]
+    played = {json.loads(line)["model"] for f in gen_dir.glob("games-w*.jsonl")
+              for line in f.read_text().splitlines()}  # fmt: skip
+    if played - {model}:
+        raise SystemExit(f"{gen_dir} has games of {sorted(played)}, not {model}: move them "
+                         "away or pass that --model")  # fmt: skip
+    settings = {"model": model, "full_frac": a.full_frac, "full_iters": a.full_iters,
                 "fast_iters": a.fast_iters, "fast_worlds": a.fast_worlds,
                 "noise": [a.noise_eps, a.noise_conc], "lanes": a.lanes, "leaves": a.leaves,
                 "threads": a.threads, "turn_cap": a.turn_cap}  # fmt: skip
@@ -173,7 +181,7 @@ def cmd_train(a) -> None:
     cmd = (f"{sys.executable} scripts/train_pv.py {TRAIN_FLAGS} --selfplay {sp} "
            f"--sp-frac {sp_frac} --init {init} --steps {steps} --lr {lr} --batch {a.batch} "
            f"--warmup-frac {a.warmup_frac} --eval-every {max(50, steps // 5)} --export last "
-           f"--run {run}")  # fmt: skip
+           f"--sp-value-passes {a.value_passes} --run {run}")  # fmt: skip
     log_path = SELFPLAY_DIR / f"gen{a.gen}" / "train.log"
     out = Path("data/train/v5/runs") / run
     done = (out / "metrics.jsonl").exists() and '"event": "done"' in (
@@ -393,7 +401,7 @@ def main() -> None:
     p.set_defaults(fn=cmd_teams)
     p = sub.add_parser("run")
     p.add_argument("--gen", type=int, required=True)
-    p.add_argument("--model", default="data/train/v5/runs/v5-glu")
+    p.add_argument("--model", default="", help="default: the current network (state.json)")
     p.add_argument("--procs", type=int, default=2)
     p.add_argument("--ports", type=int, nargs="+", default=[8000, 8001, 8002, 8003])
     p.add_argument("--limit", type=int, default=0, help="at most this many games (test runs)")
@@ -426,8 +434,11 @@ def main() -> None:
     p.add_argument("--steps", type=int, default=0)
     # gen 0 (lr 3e-4, warmup 2 steps): the human validation drifted +0.011 / +0.013 in the
     # first 50 steps (fresh AdamW moments on a converged net), then stayed flat
-    # gen 1 (1e-4, 2 passes) barely moved the net (KL 0.002 to its start): larger from gen 2
-    p.add_argument("--lr", type=float, default=2e-4)
+    # gen 1 (1e-4, 2 passes) barely moved the net (KL 0.002 to its start); retrained with 4e-4,
+    # 3 passes, outcomes once: 56.5% +- 6.6% against it (results.md)
+    p.add_argument("--lr", type=float, default=4e-4)
+    p.add_argument("--value-passes", type=int, default=1,
+                   help="self-play outcomes: value loss on the first k draws only")  # fmt: skip
     p.add_argument("--warmup-frac", type=float, default=0.2)
     p.add_argument("--batch", type=int, default=4096)
     p.add_argument("--force", action="store_true", help="retrain even if the run is complete")
