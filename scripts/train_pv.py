@@ -830,7 +830,7 @@ def main() -> None:
     ap.add_argument("--val-cutoff", type=int, default=None,
                     help="validation = games uploaded at / after this unix time (fixed split "
                          "across datasets; v1's 3%% cutoff is 1776921722)")  # fmt: skip
-    ap.add_argument("--eval-every", type=int, default=500)
+    ap.add_argument("--eval-every", type=int, default=500, help="0: a fifth of the steps")
     # expert iteration (design D15-5): self-play data mixed into every batch, warm start
     ap.add_argument(
         "--selfplay", default="", help="self-play datasets (data/train/<x>), comma-sep."
@@ -847,6 +847,10 @@ def main() -> None:
         "--sp-value-lambda", type=float, default=0.0,
         help="self-play value targets: lambda-returns over the root q's (0: the outcome)",
     )  # fmt: skip
+    ap.add_argument("--sp-per-game", type=int, default=0,
+                    help="self-play: max positions per game, policy targets first")  # fmt: skip
+    ap.add_argument("--sp-passes", type=float, default=0.0,
+                    help="steps = passes over the kept self-play train positions")  # fmt: skip
     ap.add_argument("--sp-frac", type=float, default=0.5, help="share of each batch from self-play")
     ap.add_argument("--sp-val-frac", type=float, default=0.05, help="self-play games held out")
     ap.add_argument("--init", default="", help="warm start: a run directory (its last.pt)")
@@ -976,6 +980,21 @@ def main() -> None:
                 part = {k: v[sel] for k, v in part.items()}
             parts.append(part)
         dsp = {k: np.concatenate([p[k] for p in parts]) for k in parts[0]}
+        if a.sp_per_game > 0:
+            # at most N positions per game (fixed for the run): long games (switch loops of two
+            # stall teams, up to 650 decisions) would otherwise weigh tens of times more than a
+            # typical one (63). The positions with a policy target (full searches) go first, in
+            # random order, then the others: typical games keep all their targets
+            n0 = len(dsp["game"])
+            key = np.random.default_rng(a.seed + 1).random(n0) + (dsp["pi_w"] <= 0)
+            o = np.lexsort((key, dsp["game"]))
+            g = dsp["game"][o]
+            starts = np.r_[0, np.flatnonzero(g[1:] != g[:-1]) + 1]
+            rank = np.arange(n0) - np.repeat(starts, np.diff(np.r_[starts, n0]))
+            kept = np.sort(o[rank < a.sp_per_game])
+            dsp = {k: v[kept] for k, v in dsp.items()}
+            emit(dict(event="sp_per_game", cap=a.sp_per_game, positions=n0, kept=len(kept),
+                      policy_targets_kept=int(dsp["pi_w"].sum())))  # fmt: skip
         val_g = (dsp["game"] % 1000) < a.sp_val_frac * 1000
         sp_train, sp_val = np.flatnonzero(~val_g), np.flatnonzero(val_g)
         _, sinv, scnt = np.unique(dsp["game"], return_inverse=True, return_counts=True)
@@ -999,6 +1018,8 @@ def main() -> None:
             emit(dict(event="sp_value_rows", kept=int(keep.sum()),
                       with_outcome=int(sp_vv[sp_train].sum())))  # fmt: skip
         bsp = int(round(a.batch * a.sp_frac))
+        if not a.steps and a.sp_passes > 0:  # each kept self-play position ~sp_passes times
+            a.steps = max(50, math.ceil(a.sp_passes * len(sp_train) / bsp))
         emit(dict(event="selfplay", positions=len(sinv), games=len(scnt), train=len(sp_train),
                   val=len(sp_val), policy_targets=int(dsp["pi_w"][sp_train].sum()),
                   batch_selfplay=bsp,
@@ -1006,6 +1027,8 @@ def main() -> None:
                   if a.steps else None))  # fmt: skip
     hb = a.batch - (bsp if dsp is not None else 0)  # human rows per batch
     steps = a.steps or int(a.epochs * len(train_idx) / a.batch)
+    if a.eval_every <= 0:
+        a.eval_every = max(50, steps // 5)
     warm = max(1, int(steps * a.warmup_frac))
     sched = torch.optim.lr_scheduler.LambdaLR(
         opt,

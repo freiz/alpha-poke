@@ -239,11 +239,14 @@ def cmd_train(a) -> None:
         held = True
     sp_frac = a.sp_frac if a.sp_frac is not None else round(1 - human, 4)
     bsp = round(a.batch * sp_frac)
-    steps = a.steps or max(50, math.ceil(a.passes * n_sp / bsp))
+    # with --per-game the kept positions are counted by train_pv (--sp-passes)
+    steps = a.steps or (0 if a.per_game > 0 else max(50, math.ceil(a.passes * n_sp / bsp)))
+    size = (f"--steps {steps} --eval-every {max(50, steps // 5)}" if steps else
+            f"--sp-passes {a.passes} --eval-every 0")  # fmt: skip
     run = f"sp-gen{a.gen}"
     cmd = (f"{sys.executable} scripts/train_pv.py {TRAIN_FLAGS} --selfplay {sp} "
-           f"--sp-frac {sp_frac} --init {init} --steps {steps} --lr {lr} --batch {a.batch} "
-           f"--warmup-frac {a.warmup_frac} --eval-every {max(50, steps // 5)} --export last "
+           f"--sp-frac {sp_frac} --init {init} {size} --lr {lr} --batch {a.batch} "
+           f"--warmup-frac {a.warmup_frac} --export last --sp-per-game {a.per_game} "
            f"--sp-value-passes {a.value_passes} --sp-value-per-game {a.value_per_game} "
            f"--sp-value-lambda {a.value_lambda} "
            f"--run {run}")  # fmt: skip
@@ -262,6 +265,8 @@ def cmd_train(a) -> None:
 
     rows = [json.loads(line) for line in (out / "metrics.jsonl").read_text().splitlines()]
     val = [r for r in rows if r.get("event") == "val"]
+    steps = next((r["steps"] for r in rows if r.get("event") == "start" and "steps" in r), steps)
+    kept = next((r for r in rows if r.get("event") == "sp_per_game"), None)
     keep = ("ce_turn_w", "bce_all_w", "top1", "top3", "top1_forced", "opp_act_acc", "value_ece",
             "hce_true", "hce_unk", "hce_lt1300", "hce_1300_1600", "hce_ge1600", "kl_ref_true",
             "kl_ref_unk", "sp_ce", "sp_kl", "sp_top1", "sp_bce", "sp_bce_rootq",
@@ -270,6 +275,7 @@ def cmd_train(a) -> None:
                "recent_gens": recent, "older_gens": older, "older_keep": round(old_keep, 4),
                "human_share": round(1 - sp_frac, 4), "human_share_held": held,
                "steps": steps, "lr": lr, "after_rejections": rejected,
+               "per_game": a.per_game, "sp_positions_kept": kept and kept["kept"],
                "warmup_frac": a.warmup_frac,
                "first_val": {k: val[0].get(k) for k in keep} if val else None,
                "last_val": {k: val[-1].get(k) for k in keep} if val else None,
@@ -617,6 +623,10 @@ def main() -> None:
     p.add_argument(
         "--passes", type=float, default=3.0, help="times each self-play position is seen"
     )
+    # 2026-10-08: a game's positions up to 50 (policy targets first): typical games (63
+    # decisions, 16 targets) keep their targets, the 2% of long games (stall-team switch loops,
+    # up to 650 decisions, 9% of all positions) no longer dominate
+    p.add_argument("--per-game", type=int, default=50, help="self-play positions per game")
     p.add_argument("--steps", type=int, default=0)
     # gen 0 (lr 3e-4, warmup 2 steps): the human validation drifted +0.011 / +0.013 in the
     # first 50 steps (fresh AdamW moments on a converged net), then stayed flat
