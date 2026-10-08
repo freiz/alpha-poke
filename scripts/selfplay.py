@@ -682,7 +682,7 @@ def main() -> None:
     p.add_argument("--search-ms", type=int, default=500)
     sprt_args(p)
     p.add_argument("--procs", type=int, default=4)
-    p.add_argument("--lanes", type=int, default=6)
+    p.add_argument("--lanes", type=int, default=10)  # 4 x 10 games on 20 logical CPUs
     p.add_argument("--ports", type=int, nargs="+", default=[8000, 8001, 8002, 8003])
     p.add_argument("--force", action="store_true")
     p.set_defaults(fn=cmd_eval)
@@ -695,7 +695,7 @@ def main() -> None:
     p.add_argument("--search-ms", type=int, default=500)
     sprt_args(p)
     p.add_argument("--procs", type=int, default=4)
-    p.add_argument("--lanes", type=int, default=6)
+    p.add_argument("--lanes", type=int, default=10)  # 4 x 10 games on 20 logical CPUs
     p.add_argument("--ports", type=int, nargs="+", default=[8000, 8001, 8002, 8003])
     p.set_defaults(fn=lambda a: sys.exit(cmd_baseline(a)))
     p = sub.add_parser("foulplay", help="external anchor: the current network vs Foul Play")
@@ -712,7 +712,7 @@ def main() -> None:
     p.add_argument("--start", type=int, required=True)
     p.add_argument("--gens", type=int, default=100)
     p.add_argument("--games", type=int, default=5000)
-    p.add_argument("--procs", type=int, default=4)
+    p.add_argument("--procs", type=int, default=6)  # self-play processes (20 logical CPUs)
     p.add_argument("--threads", type=int, default=2)
     p.add_argument("--eval-pairs", type=int, default=200)
     p.add_argument("--anchor-every", type=int, default=3)
