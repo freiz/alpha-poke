@@ -1254,6 +1254,91 @@ mod tests {
         });
     }
 
+    /// where the time of building one leaf's inputs goes (base features, damage extras, history,
+    /// the flipped view); single thread
+    #[test]
+    fn input_profile() {
+        let st = State::deserialize(FIXTURE.lines().next().unwrap());
+        let step = "m:GLIMMORA:POWERGEM:35:f/s:GREATTUSK:KINGAMBIT::";
+        let ctx = Context {
+            reveal: [1; N_ENTITIES],
+            rating: [1500, 1500],
+            turn: 10,
+            history: parse_history(&[step; 8].join(";")),
+        };
+        let ev = poke_engine::engine::evaluate::evaluate(&st);
+        let n = 3000;
+        let time = |name: &str, f: &mut dyn FnMut() -> usize| {
+            let t0 = std::time::Instant::now();
+            let mut acc = 0;
+            for _ in 0..n {
+                acc += f();
+            }
+            let us = t0.elapsed().as_secs_f64() * 1e6 / n as f64;
+            eprintln!("{name:32} {us:7.1} us ({acc})");
+        };
+        time("featurize_view", &mut || {
+            featurize_view(&st, false).sparse.len()
+        });
+        time("featurize_extra (damage)", &mut || {
+            featurize_extra(&st, false).0.len()
+        });
+        time("history_features", &mut || {
+            let (mut hs, mut hd) = (Vec::new(), Vec::new());
+            history_features(&ctx.history, false, &mut hs, &mut hd);
+            hs.len()
+        });
+        time("evaluate (handcrafted)", &mut || {
+            poke_engine::engine::evaluate::evaluate(&st) as usize
+        });
+        time("Input::new", &mut || {
+            Input::new(&st, &ctx, false, ev).ent2.len()
+        });
+        time("State::clone", &mut || {
+            st.clone().side_one.pokemon.pkmn[0].hp as usize
+        });
+        eprintln!("size_of State: {} bytes", std::mem::size_of::<State>());
+        let side = poke_engine::state::SideReference::SideOne;
+        let choice = st.side_one.get_active_immutable().moves.m0.choice.clone();
+        time("calculate_damage_rolls (+clone)", &mut || {
+            poke_engine::engine::generate_instructions::calculate_damage_rolls(
+                st.clone(),
+                &side,
+                choice.clone(),
+                &poke_engine::choices::Choice::default(),
+            )
+            .map_or(0, |v| v.len())
+        });
+        let mut light = st.clone();
+        for side in [&mut light.side_one, &mut light.side_two] {
+            for p in side.pokemon.pkmn.iter_mut() {
+                for m in [
+                    &mut p.moves.m0,
+                    &mut p.moves.m1,
+                    &mut p.moves.m2,
+                    &mut p.moves.m3,
+                ] {
+                    m.choice.secondaries = None;
+                }
+            }
+        }
+        time("light State::clone", &mut || {
+            light.clone().side_one.pokemon.pkmn[0].hp as usize
+        });
+        time("Choice::clone", &mut || choice.clone().base_power as usize);
+        time("damage (light clone)", &mut || {
+            poke_engine::engine::generate_instructions::calculate_damage_rolls(
+                light.clone(),
+                &side,
+                choice.clone(),
+                &poke_engine::choices::Choice::default(),
+            )
+            .map_or(0, |v| v.len())
+        });
+        let x = Input::new(&st, &ctx, false, ev);
+        time("Input::flipped", &mut || x.flipped(&st, &ctx).ent2.len());
+    }
+
     /// single-thread speed of one forward pass with a full 8-step history
     #[test]
     fn tnet_speed() {

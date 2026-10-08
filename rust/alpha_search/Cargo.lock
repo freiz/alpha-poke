@@ -303,8 +303,6 @@ dependencies = [
 [[package]]
 name = "poke-engine"
 version = "0.0.48"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c814fba3ad48292fb68a2be8e57dfef9b91f8e74bb7def97c9381b119ba63d76"
 dependencies = [
  "clap",
  "dashmap",

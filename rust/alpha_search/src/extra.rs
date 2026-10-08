@@ -28,13 +28,16 @@
 
 use poke_engine::choices::{Choice, Choices, MoveCategory, MoveTarget, MOVES};
 use poke_engine::engine::abilities::Abilities;
-use poke_engine::engine::damage_calc::type_effectiveness_modifier;
-use poke_engine::engine::generate_instructions::calculate_damage_rolls;
+use poke_engine::engine::damage_calc::{
+    calculate_damage, type_effectiveness_modifier, DamageRolls,
+};
+use poke_engine::engine::generate_instructions::{before_move, calculate_damage_rolls};
 use poke_engine::engine::items::Items;
 use poke_engine::engine::state::{PokemonVolatileStatus, Terrain, Weather};
+use poke_engine::instruction::StateInstructions;
 use poke_engine::state::{
-    LastUsedMove, Pokemon, PokemonBoostableStat, PokemonIndex, PokemonMoveIndex, PokemonStatus,
-    PokemonType, Side, SideReference, State,
+    LastUsedMove, Move, Pokemon, PokemonBoostableStat, PokemonIndex, PokemonMoveIndex,
+    PokemonStatus, PokemonType, Side, SideReference, State,
 };
 
 pub const MOVE_FEAT: usize = 20 + 3 + 3 + 16 + 3 + 1 + 2 + 4 + 1;
@@ -245,24 +248,151 @@ fn max_damage(
         .map(|d| d.max(0) as f32)
 }
 
-/// `max_damage` on the unmodified state, memoized per (attacking side, move slot, defending
-/// slot): the same calls recur (the predicted move, the threats, the actives' moves).
-struct DamageMemo<'a> {
-    state: &'a State,
+/// `max_damage` on the unmodified state (`work`: a copy, restored after every in-place call),
+/// memoized per (attacking side, move slot, defending slot): the same calls recur (the
+/// predicted move, the threats, the actives' moves).
+struct DamageMemo {
+    work: State,
+    inplace: bool,
     refs: [SideReference; 2],
     memo: [[[Option<Option<f32>>; 6]; 4]; 2],
 }
 
-impl DamageMemo<'_> {
+impl DamageMemo {
+    fn damage(&mut self, att: usize, choice: &Choice, def: usize) -> Option<f32> {
+        if self.inplace {
+            max_damage_inplace(&mut self.work, &self.refs[att], choice, def)
+        } else {
+            max_damage(&self.work, &self.refs[att], choice, def)
+        }
+    }
+
     /// `att`: index into `refs` of the attacking side (its active attacks with move `slot`)
     fn get(&mut self, att: usize, slot: usize, choice: &Choice, def: usize) -> Option<f32> {
-        *self.memo[att][slot][def]
-            .get_or_insert_with(|| max_damage(self.state, &self.refs[att], choice, def))
+        if let Some(v) = self.memo[att][slot][def] {
+            return v;
+        }
+        let v = self.damage(att, choice, def);
+        self.memo[att][slot][def] = Some(v);
+        v
+    }
+
+    /// The best max damage of side `att`'s mon `j` (made active) against the other side's mon
+    /// `def` (its active).
+    fn bench_best(&mut self, att: usize, j: usize, moves: &[&Move; 4], def: usize) -> f32 {
+        let side = self.refs[att];
+        let active = self.work.get_side_immutable(&side).active_index;
+        self.work.get_side(&side).active_index = PokemonIndex::deserialize(&j.to_string());
+        let best = moves
+            .iter()
+            .filter_map(|m| self.damage(att, &m.choice, def))
+            .fold(0.0f32, f32::max);
+        self.work.get_side(&side).active_index = active;
+        best
     }
 }
 
 /// (ENT_EXTRA per entity in view order: own 0-5, opponent 0-5; GLOBAL_EXTRA).
+///
+/// Speed: poke-engine's `calculate_damage_rolls` takes the state by value (its `before_move`
+/// changes it), and that copy was ~90% of each of the ~100 damage calls here. This computes the
+/// damage on one working copy instead and undoes `before_move`'s instructions after each call
+/// (`damage_inplace`; `before_move` is made public by rust/patches/poke-engine-0.0.48). Bitwise
+/// the same features as copying (`featurize_extra_reference`; scripts/check_extra.py on real
+/// states, test `inplace_matches_reference`).
 pub fn featurize_extra(state: &State, flip: bool) -> (Vec<f32>, Vec<f32>) {
+    featurize_extra_with(state, flip, true)
+}
+
+/// The same with a copy of the state per damage call (poke-engine's `calculate_damage_rolls`):
+/// the reference for checking `featurize_extra`.
+pub fn featurize_extra_reference(state: &State, flip: bool) -> (Vec<f32>, Vec<f32>) {
+    featurize_extra_with(state, flip, false)
+}
+
+/// `calculate_damage_rolls(state.clone(), side, choice, &Choice::default())`'s first roll (the
+/// max non-crit damage), computed on `state` itself and restored afterwards: the same steps
+/// (special-damage moves, Fake Out's last-move check, `before_move` -> reversed, Future Sight,
+/// `calculate_damage`).
+fn damage_inplace(state: &mut State, side: &SideReference, mut choice: Choice) -> Option<i16> {
+    let default = Choice::default();
+    let mut defending_choice = &default;
+    if choice.flags.charge {
+        choice.flags.charge = false;
+    }
+    let last = state.get_side_immutable(side).last_used_move;
+    if choice.move_id == Choices::FAKEOUT || choice.move_id == Choices::FIRSTIMPRESSION {
+        state.get_side(side).last_used_move = LastUsedMove::Switch(PokemonIndex::P0);
+    }
+    let restore = |state: &mut State| state.get_side(side).last_used_move = last;
+    let attacker = state.get_side_immutable(side).get_active_immutable();
+    let defender = state
+        .get_side_immutable(&side.get_other_side())
+        .get_active_immutable();
+    let immune = |t: &PokemonType| type_effectiveness_modifier(t, defender) == 0.0;
+    let special = match choice.move_id {
+        Choices::SEISMICTOSS => {
+            Some((!immune(&PokemonType::NORMAL)).then_some(attacker.level as i16))
+        }
+        Choices::NIGHTSHADE => {
+            Some((!immune(&PokemonType::GHOST)).then_some(attacker.level as i16))
+        }
+        Choices::FINALGAMBIT => Some((!immune(&PokemonType::GHOST)).then_some(attacker.hp)),
+        Choices::ENDEAVOR => Some(
+            (!immune(&PokemonType::GHOST) && defender.hp > attacker.hp)
+                .then_some(defender.hp - attacker.hp),
+        ),
+        Choices::PAINSPLIT => Some(
+            (!immune(&PokemonType::GHOST) && defender.hp > attacker.hp)
+                .then_some(defender.hp - (attacker.hp + defender.hp) / 2),
+        ),
+        Choices::SUPERFANG if immune(&PokemonType::NORMAL) => Some(None),
+        Choices::SUPERFANG | Choices::NATURESMADNESS | Choices::RUINATION => {
+            Some(Some(defender.hp / 2))
+        }
+        Choices::SUCKERPUNCH | Choices::THUNDERCLAP => {
+            defending_choice = MOVES.get(&Choices::TACKLE).unwrap();
+            None
+        }
+        _ => None,
+    };
+    if let Some(r) = special {
+        restore(state);
+        return r;
+    }
+    let mut incoming = StateInstructions::default();
+    before_move(state, &mut choice, defending_choice, side, &mut incoming);
+    if choice.move_id == Choices::FUTURESIGHT {
+        choice = MOVES.get(&Choices::FUTURESIGHT).unwrap().clone();
+    }
+    let r = calculate_damage(state, side, &choice, DamageRolls::Max).map(|(d, _)| d);
+    state.reverse_instructions(&incoming.instruction_list);
+    restore(state);
+    r
+}
+
+/// `max_damage` on `state` itself (restored afterwards).
+fn max_damage_inplace(
+    state: &mut State,
+    attacker: &SideReference,
+    choice: &Choice,
+    def_idx: usize,
+) -> Option<f32> {
+    if choice.move_id == Choices::NONE || choice.category == MoveCategory::Status {
+        return None;
+    }
+    let other = attacker.get_other_side();
+    let active = state.get_side_immutable(&other).active_index;
+    if active as usize != def_idx {
+        state.get_side(&other).active_index = PokemonIndex::deserialize(&def_idx.to_string());
+    }
+    let r = damage_inplace(state, attacker, choice.clone()).map(|d| d.max(0) as f32);
+    state.get_side(&other).active_index = active;
+    r
+}
+
+/// `inplace`: damage on a working copy restored after each call, else a copy per call.
+fn featurize_extra_with(state: &State, flip: bool, inplace: bool) -> (Vec<f32>, Vec<f32>) {
     let mut ent = vec![0.0f32; 12 * ENT_EXTRA];
     let mut glob = Vec::with_capacity(GLOBAL_EXTRA);
     let refs = [side_ref(true, flip), side_ref(false, flip)];
@@ -275,7 +405,8 @@ pub fn featurize_extra(state: &State, flip: bool) -> (Vec<f32>, Vec<f32>) {
         sides[1].active_index as usize,
     ];
     let mut memo = DamageMemo {
-        state,
+        work: state.clone(),
+        inplace,
         refs,
         memo: [[[None; 6]; 4]; 2],
     };
@@ -320,12 +451,8 @@ pub fn featurize_extra(state: &State, flip: bool) -> (Vec<f32>, Vec<f32>) {
                 }
                 if attacker_alive {
                     // this bench mon's best move vs the opposing active (as if it were in)
-                    let mut st = state.clone();
-                    st.get_side(&refs[s]).active_index = PokemonIndex::deserialize(&j.to_string());
-                    let best = [&p.moves.m0, &p.moves.m1, &p.moves.m2, &p.moves.m3]
-                        .iter()
-                        .filter_map(|m| max_damage(&st, &refs[s], &m.choice, act[1 - s]))
-                        .fold(0.0f32, f32::max);
+                    let moves = [&p.moves.m0, &p.moves.m1, &p.moves.m2, &p.moves.m3];
+                    let best = memo.bench_best(s, j, &moves, act[1 - s]);
                     e[24] = (best / target_hp).min(2.0);
                 }
             }
@@ -424,6 +551,18 @@ mod tests {
         assert_eq!(sr[22], 1.0, "status");
         assert_eq!(sr[MOVE_FEAT - 2], 1.0, "side condition on the opponent");
         assert!(row(Choices::EXTREMESPEED)[25] > 0.0, "priority");
+    }
+
+    /// the in-place damage path gives bitwise the features of the copying one
+    #[test]
+    fn inplace_matches_reference() {
+        let st = fixture();
+        for flip in [false, true] {
+            let (e1, g1) = featurize_extra(&st, flip);
+            let (e2, g2) = featurize_extra_reference(&st, flip);
+            assert!(e1.iter().zip(&e2).all(|(a, b)| a.to_bits() == b.to_bits()));
+            assert!(g1.iter().zip(&g2).all(|(a, b)| a.to_bits() == b.to_bits()));
+        }
     }
 
     #[test]

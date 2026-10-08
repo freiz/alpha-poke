@@ -24,3 +24,7 @@ serde_json = "1.0.151"
 
 [profile.release]
 debug = 1
+
+# poke-engine with one change (`before_move` public), see rust/patches/poke-engine-0.0.48
+[patch.crates-io]
+poke-engine = { path = "../patches/poke-engine-0.0.48" }

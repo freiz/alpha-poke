@@ -261,17 +261,24 @@ fn featurize_history<'py>(
 
 /// v3 features of many state strings (design D13, `extra.rs`): (entity extras float32
 /// [B, 12, ENT_EXTRA], global extras float32 [B, GLOBAL_EXTRA]); `flip` as in `featurize`.
+/// `reference`: the slower path without the light state copy (parity checks).
 #[pyfunction]
-#[pyo3(signature = (states, flip=false))]
+#[pyo3(signature = (states, flip=false, reference=false))]
 fn featurize_extra<'py>(
     py: Python<'py>,
     states: Vec<String>,
     flip: bool,
+    reference: bool,
 ) -> (Bound<'py, PyBytes>, Bound<'py, PyBytes>) {
     let (ent, glob) = py.detach(|| {
         let (mut ent, mut glob) = (vec![], vec![]);
         for (e, g) in par_map(&states, |s| {
-            extra::featurize_extra(&State::deserialize(s), flip)
+            let st = State::deserialize(s);
+            if reference {
+                extra::featurize_extra_reference(&st, flip)
+            } else {
+                extra::featurize_extra(&st, flip)
+            }
         }) {
             ent.extend(e);
             glob.extend(g);
