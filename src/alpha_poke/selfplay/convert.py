@@ -13,6 +13,7 @@ games: no outcome). ``action`` = the slot played (the record's).
 Output: data/train/sp<gen>/shard-<k>.parquet, the human data's columns plus these."""
 
 import json
+import math
 import random
 import time
 from collections import defaultdict
@@ -24,6 +25,31 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 
 from alpha_poke.train.positions import KIND_BLIND, KIND_MAIN, positions_from_replay
+
+C_PUCT = 1.0  # the search's exploration constant (bsearch / ismcts c_puct)
+
+
+def prune_visits(visits: list, mean: list, prior: list, c: float = C_PUCT) -> list:
+    """Policy target pruning (KataGo): the visits a move got only from the exploration bonus are
+    removed. For each move but the most visited one b, the most visits n' it would still be
+    chosen with: Q_i + c P_i sqrt(N) / (1 + n') >= U_b = Q_b + c P_b sqrt(N) / (1 + n_b), i.e.
+    n' = floor(c P_i sqrt(N) / (U_b - Q_i)) - 1, capped at its visits; a move left with one
+    visit gets none. P = the root priors the search used (with the root noise), Q = the mean
+    values (our side). Returns the pruned visits."""
+    n = sum(visits)
+    if n == 0:
+        return list(visits)
+    b = max(range(len(visits)), key=lambda i: visits[i])
+    sq = math.sqrt(n)
+    u_b = mean[b] + c * prior[b] * sq / (1 + visits[b])
+    out = list(visits)
+    for i, v in enumerate(visits):
+        if i == b or v == 0 or mean[i] >= u_b:
+            continue
+        keep = math.floor(c * max(prior[i], 0.0) * sq / (u_b - mean[i])) - 1
+        keep = max(0, min(v, keep))
+        out[i] = 0 if keep <= 1 else keep
+    return out
 
 
 def load_gen(gen_dir: Path) -> tuple[dict, dict, dict]:

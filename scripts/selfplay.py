@@ -175,8 +175,43 @@ def cmd_value(a) -> None:
            [d["history"] for d in rows])  # fmt: skip
     loss, out = {}, {"positions": len(rows), "games": int(len(set(games.tolist()))),
                      "generator": cur, "networks": {}}  # fmt: skip
+    # policy: the search targets of the full searches (raw / pruned visits, design D15-7)
+    from alpha_poke.selfplay.convert import prune_visits
+
+    full = np.array([d["full"] and sum(d["visits"]) > 0 for d in rows])
+    pi = np.array([d["visits"] for d in rows], np.float64)
+    pi_pruned = np.array([prune_visits(d["visits"], d["mean"], d["prior"]) if f else d["visits"]
+                          for d, f in zip(rows, full, strict=True)], np.float64)  # fmt: skip
+
+    def entropy(p):
+        p = p / np.maximum(p.sum(1, keepdims=True), 1e-12)
+        return -(np.where(p > 0, p * np.log(np.maximum(p, 1e-12)), 0.0)).sum(1)
+
+    pf = pi[full] / pi[full].sum(1, keepdims=True)
+    prior = np.array([d["prior"] for d in rows], np.float64)[full]
+    prior = np.maximum(prior, 0) / np.maximum(np.maximum(prior, 0).sum(1, keepdims=True), 1e-12)
+    out["targets"] = {
+        "full_searches": int(full.sum()),
+        "entropy_raw": round(float(entropy(pi[full]).mean()), 4),
+        "entropy_pruned": round(float(entropy(pi_pruned[full]).mean()), 4),
+        "pruned_share": round(float(1 - pi_pruned[full].sum() / pi[full].sum()), 4),
+        # how far the search moved from the priors it searched with (root noise included)
+        "kl_search_prior": round(float((np.where(pf > 0, pf * np.log(pf / np.maximum(
+            prior, 1e-9)), 0.0)).sum(1).mean()), 4),
+    }  # fmt: skip
     for net in nets:
-        z = np.array(alpha_search.tnet_forward(net, *ctx)[1], np.float64)
+        lg, vz = alpha_search.tnet_forward(net, *ctx)
+        z = np.array(vz, np.float64)
+        lg = np.array(lg, np.float64).reshape(len(rows), -1)
+        lg = np.where(np.isfinite(lg), lg, -1e9)
+        p = np.exp(lg - lg.max(1, keepdims=True))
+        p /= p.sum(1, keepdims=True)
+        kl = (np.where(pf > 0, pf * np.log(pf / np.maximum(p[full], 1e-9)), 0.0)).sum(1)
+        policy = {"entropy": round(float(entropy(p).mean()), 4),
+                  "max_prob": round(float(p.max(1).mean()), 4),
+                  "kl_target": round(float(kl.mean()), 4),
+                  "top1_target": round(float((p[full].argmax(1) == pf.argmax(1)).mean()),
+                                       4)}  # fmt: skip
         pr = np.clip(1 / (1 + np.exp(-z)), 1e-6, 1 - 1e-6)
         loss[net] = -(y * np.log(pr) + (1 - y) * np.log(1 - pr))
         b = np.clip((pr * 10).astype(int), 0, 9)
@@ -190,7 +225,7 @@ def cmd_value(a) -> None:
             grad = [(q - y).sum(), ((q - y) * z).sum()]
             c, slope = np.array([c, slope]) - np.linalg.solve(h, grad)
         out["networks"][net] = {"bce": round(float(loss[net].mean()), 4), "ece": round(ece, 4),
-                                "slope": round(float(slope), 3)}  # fmt: skip
+                                "slope": round(float(slope), 3), "policy": policy}  # fmt: skip
     ug, inv = np.unique(games, return_inverse=True)
     for net in nets:
         d = loss[net] - loss[cur]
@@ -510,6 +545,9 @@ def cmd_loop(a) -> None:
             f"{gs.get('status_share')}; vs previous at the same team mix "
             f"{vp.get('turns_mean_diff_same_teams')} turns {vp.get('ci95')}")  # fmt: skip
         vc = g.get("value_check", {}).get("networks", {})
+        pol = {Path(k).name: v.get("policy", {}).get("entropy") for k, v in vc.items()}
+        say(f"gen {gen}: policy entropy on its fresh games {pol}; targets "
+            f"{g.get('value_check', {}).get('targets')}")  # fmt: skip
         say(f"gen {gen}: value on its fresh games (BCE minus the generator's): "
             + ", ".join(f"{Path(k).name} {v['bce']} ({v['minus_current']:+.4f} +- {v['ci95']})"
                         for k, v in vc.items()))  # fmt: skip
