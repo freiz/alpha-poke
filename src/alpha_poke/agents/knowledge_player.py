@@ -47,6 +47,7 @@ from alpha_poke.agents.damage import (
     is_damaging,
     moves_first,
     one_v_one,
+    priority,
 )
 from alpha_poke.agents.plan_exec import ExecPlan, Names, PlanState, plan_terms
 
@@ -905,10 +906,10 @@ class KnowledgePlayer(Player):
         f = moves_first(mv, ov, move, battle)
         if f <= 0:
             return f
-        prio = move.priority if move is not None else 0
+        prio = priority(move) if move is not None else 0
         hp = mv.mon.current_hp_fraction if hp is None else hp
         for m in ov_moves:
-            if m.priority <= prio or not is_damaging(m):
+            if priority(m) <= prio or not is_damaging(m):
                 continue
             if m.id in ("suckerpunch", "thunderclap") and (move is None or not is_damaging(move)):
                 continue

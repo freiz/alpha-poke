@@ -63,6 +63,7 @@ class SelfPlayPlayer(SearchPlayer):
         sync_tera_types(battle)
         me = battle.active_pokemon
         if me is None or battle.opponent_active_pokemon is None:
+            log.warning("no search (%s turn %d): no active mon", battle.battle_tag, battle.turn)
             return None
         if battle.force_switch:
             kind = KIND_FORCED if me.fainted else KIND_PIVOT
@@ -87,6 +88,11 @@ class SelfPlayPlayer(SearchPlayer):
         orders = {i: engine_move_to_order(self, battle, rec["names"][i]) for i, _ in options}
         options = [(i, v) for i, v in options if orders[i] is not None]
         if not options:
+            log.warning("no order for the searched options (%s turn %d): %s; available moves %s, "
+                        "switches %s", battle.battle_tag, battle.turn,
+                        [(rec["names"][i], v) for i, v in enumerate(rec["visits"]) if v],
+                        [m.id for m in battle.available_moves],
+                        [m.species for m in battle.available_switches])  # fmt: skip
             return None
         slot = self.rng.choices([i for i, _ in options], weights=[v for _, v in options])[0]
         reveal, ratings, turn, history = ctxs[0]

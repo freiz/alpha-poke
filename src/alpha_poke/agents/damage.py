@@ -103,7 +103,7 @@ def ability_multiplier(att: "MonView", dfn: "MonView", move: Move, eff: float) -
         p_immune += dfn.ability_p("soundproof")
     if "wind" in flags:
         p_immune += dfn.ability_p("windrider")
-    if move.priority > 0:
+    if priority(move) > 0:
         p_immune += dfn.ability_p(*PRIORITY_BLOCKERS)
     if eff <= 1:
         p_immune += dfn.ability_p("wonderguard")
@@ -148,14 +148,22 @@ def effective_speed(v: MonView, battle=None) -> float:
     return spe  # Choice Scarf is handled as a mixture in moves_first
 
 
+def priority(move: Move) -> int:
+    """The move's priority; 0 for entries without one (poke-env's pseudo-moves, e.g. recharge)."""
+    try:
+        return move.priority
+    except KeyError:
+        return 0
+
+
 def moves_first(a: MonView, b: MonView, move: Move | None, battle=None) -> float:
     """Probability that ``a`` acts before ``b`` with ``move`` (our priority moves always first;
     the opponent's priority moves are checked by the caller). A possible Choice Scarf is a
     mixture of the with / without cases, not a blended speed: a 30% Scarf mon is either 1.5x
     faster or not at all."""
-    if move is not None and move.priority > 0:
+    if move is not None and priority(move) > 0:
         return 1.0
-    if move is not None and move.priority < 0:  # Roar / Dragon Tail / ...: always last
+    if move is not None and priority(move) < 0:  # Roar / Dragon Tail / ...: always last
         return 0.0
     sa, sb = effective_speed(a, battle), effective_speed(b, battle)
     trick_room = battle is not None and any("trickroom" in str(f).lower() for f in battle.fields)
