@@ -137,7 +137,7 @@ def cmd_value(a) -> None:
     import numpy as np
 
     st = state()
-    if "value_check" in st["generations"].get(str(a.gen), {}) and not a.force:
+    if "value_check" in st["generations"].get(str(a.gen), {}) and not (a.force or a.dry):
         print(f"gen {a.gen}: value check done already (--force redoes)")
         return
     rows = []
@@ -152,7 +152,7 @@ def cmd_value(a) -> None:
     games = np.array([d["game"] for d in rows])
     cur = st["current"]
     nets = [cur] + [anchor_of(st, a.gen, k) for k in range(1, a.back + 1)] + [BASE_RUN]
-    nets = list(dict.fromkeys(nets))
+    nets = list(dict.fromkeys(nets + [n for n in a.nets.split(",") if n]))
     ctx = ([d["state"] for d in rows], [d["reveal"] for d in rows],
            [tuple(d["ratings"]) for d in rows], [d["ctx_turn"] for d in rows],
            [d["history"] for d in rows])  # fmt: skip
@@ -181,7 +181,8 @@ def cmd_value(a) -> None:
         ci = 1.96 * per.std() * np.sqrt(len(ug)) / len(d)
         out["networks"][net] |= {"minus_current": round(float(d.mean()), 4),
                                  "ci95": round(float(ci), 4)}  # fmt: skip
-    record(a.gen, "value_check", out)
+    if not a.dry:
+        record(a.gen, "value_check", out)
     print(json.dumps(out, indent=1))
 
 
@@ -244,6 +245,7 @@ def cmd_train(a) -> None:
            f"--sp-frac {sp_frac} --init {init} --steps {steps} --lr {lr} --batch {a.batch} "
            f"--warmup-frac {a.warmup_frac} --eval-every {max(50, steps // 5)} --export last "
            f"--sp-value-passes {a.value_passes} --sp-value-per-game {a.value_per_game} "
+           f"--sp-value-lambda {a.value_lambda} "
            f"--run {run}")  # fmt: skip
     log_path = SELFPLAY_DIR / f"gen{a.gen}" / "train.log"
     out = Path("data/train/v5/runs") / run
@@ -600,6 +602,8 @@ def main() -> None:
     p.add_argument("--gen", type=int, required=True)
     p.add_argument("--n", type=int, default=30000, help="decisions sampled")
     p.add_argument("--back", type=int, default=2, help="also the networks of these gens ago")
+    p.add_argument("--nets", default="", help="more networks (comma-separated run directories)")
+    p.add_argument("--dry", action="store_true", help="print only, no record")
     p.add_argument("--force", action="store_true")
     p.set_defaults(fn=cmd_value)
     p = sub.add_parser("train")
@@ -621,6 +625,8 @@ def main() -> None:
     p.add_argument("--lr", type=float, default=4e-4)
     p.add_argument("--value-passes", type=int, default=1,
                    help="self-play outcomes: value loss on the first k draws only")  # fmt: skip
+    p.add_argument("--value-lambda", type=float, default=0.0,
+                   help="self-play value targets: lambda-returns over root q's")  # fmt: skip
     p.add_argument("--value-per-game", type=int, default=0,
                    help="self-play outcomes: value loss on k positions per game")  # fmt: skip
     p.add_argument("--warmup-frac", type=float, default=0.2)

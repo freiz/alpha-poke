@@ -197,6 +197,53 @@ def v3_arrays(t, states: list[str]) -> dict:
     return out
 
 
+# decision order within a turn (positions.KIND_*): the turn start, a pivot's switch, then the
+# switches after faints (a blind turn start counts as a turn start)
+KIND_ORDER = {0: 0, 3: 0, 2: 1, 1: 2}
+
+
+def lambda_targets(name: str, lam: float) -> np.ndarray:
+    """Self-play value targets (design D15-5): lambda-returns over the game's root search values.
+    The decisions of a game in time order (turn, kind; the two simultaneous turn-start decisions
+    are one step, their q averaged in side one's terms); the step's target is
+    (1 - lam) * q_next_step + lam * target_next_step, the last step's the outcome. Each target is
+    less noisy than the outcome alone (the luck after the next step is averaged out by the
+    searches) and differs between a game's positions. Rows in load()'s order; capped games keep
+    their (unused) outcome."""
+    root = Path("data/train") / name
+    files = [f for f in sorted(glob.glob(str(root / "*.parquet"))) if pq.read_metadata(f).num_rows]
+    cols = {k: [] for k in ("game", "side", "turn", "kind", "q", "won", "value_ok")}
+    for f in files:
+        t = pq.read_table(f, columns=list(cols))
+        for k in cols:
+            cols[k].append(np.asarray(t.column(k).to_pylist()))
+    c = {k: np.concatenate(v) for k, v in cols.items()}
+    one = c["side"] == "p1"
+    u1 = np.where(one, c["q"], 1 - c["q"])  # side one's terms
+    z1 = np.where(one, c["won"], 1 - c["won"])
+    rank = np.vectorize(KIND_ORDER.get)(c["kind"])
+    order = np.lexsort((rank, c["turn"], c["game"]))
+    g, tr, rk = c["game"][order], c["turn"][order], rank[order]
+    new = np.r_[True, (g[1:] != g[:-1]) | (tr[1:] != tr[:-1]) | (rk[1:] != rk[:-1])]
+    starts = np.flatnonzero(new)
+    step_of = np.cumsum(new) - 1  # per sorted row
+    counts = np.diff(np.r_[starts, len(order)])
+    u_step = np.add.reduceat(u1[order], starts) / counts
+    z_step = z1[order][starts]
+    last = np.r_[g[starts][1:] != g[starts][:-1], True]  # a game's last step
+    target = np.empty(len(starts))
+    carry = 0.0
+    for k in range(len(starts) - 1, -1, -1):
+        if last[k]:
+            carry = z_step[k]
+        target[k] = carry
+        carry = (1 - lam) * u_step[k] + lam * carry
+    t1 = np.empty(len(order))
+    t1[order] = target[step_of]
+    out = np.where(one, t1, 1 - t1)
+    return np.where(c["value_ok"] > 0, out, c["won"]).astype(np.float32)
+
+
 V3_KEYS = ("reveal", "ent2", "glob2", "turn", "faint", "margin", "turns", "set_item",
            "set_ability", "set_tera", "set_move", "rating", "kind")  # fmt: skip
 
@@ -796,6 +843,10 @@ def main() -> None:
         "--sp-value-per-game", type=int, default=0,
         help="self-play outcomes train the value on k random positions per game (0: all)",
     )  # fmt: skip
+    ap.add_argument(
+        "--sp-value-lambda", type=float, default=0.0,
+        help="self-play value targets: lambda-returns over the root q's (0: the outcome)",
+    )  # fmt: skip
     ap.add_argument("--sp-frac", type=float, default=0.5, help="share of each batch from self-play")
     ap.add_argument("--sp-val-frac", type=float, default=0.05, help="self-play games held out")
     ap.add_argument("--init", default="", help="warm start: a run directory (its last.pt)")
@@ -915,6 +966,10 @@ def main() -> None:
         for item in a.selfplay.split(","):  # "name" or "name:keep" (share of its games kept)
             name, _, keep = item.partition(":")
             part = load(name)
+            if a.sp_value_lambda > 0:
+                vt = lambda_targets(name, a.sp_value_lambda)
+                assert len(vt) == len(part["won"]), (name, len(vt), len(part["won"]))
+                part["vt"] = vt
             if keep and float(keep) < 1:
                 # by game, with hash digits independent of the validation split (game % 1000)
                 sel = (part["game"] // 1000) % 1000 < float(keep) * 1000
@@ -1001,6 +1056,8 @@ def main() -> None:
             s_sp, s_de, s_gl, s_ma, s_act, s_won, s_ev, s_hs, s_hd, s_fs, s_fd, s_x = to_torch(
                 dsp, bs, device
             )
+            if a.sp_value_lambda > 0:  # lambda-return targets (validation: the outcome)
+                s_won = torch.from_numpy(dsp["vt"][bs]).to(device)
             s_kw = {"x": s_x} if a.arch == "transformer" and s_x is not None else {}
             with torch.autocast(device.type, dtype=torch.bfloat16, enabled=device.type == "cuda"):
                 s_out = model(s_sp, s_de, s_gl, s_ma, s_hs, s_hd, aux=bool(a.mtp or heads), **s_kw)
