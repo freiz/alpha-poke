@@ -16,9 +16,9 @@ import multiprocessing as mp
 import os
 import time
 
-from alpha_poke.teams import TeamPool, load_team_files
+from alpha_poke.teams import DEFAULT_POOL, TeamPool, load_team_files
 
-POOL = "data/teams/pool"
+POOL = str(DEFAULT_POOL)
 # name -> (full belief, use plan, plan lead)
 VARIANTS = {
     "knowledge": (True, True, True),

@@ -4,7 +4,8 @@ Used by alpha_poke.eval.external to pit the current code against an OLDER checko
 executed with PYTHONPATH pointing at the old checkout's src/, so it must only use APIs that
 exist there (eval.bots.make_bot, teams.load_team_files). Local servers only.
 
-  python scripts/serve_bot.py --bot k_llmplan --port 8000 --username old1 --pool data/teams/pool \\
+  python scripts/serve_bot.py --bot k_llmplan --port 8000 --username old1 \\
+      --pool data/teams/pools/replay40 \\
       --teams team_03,team_17 --mode accept --opponent ab123
 """
 

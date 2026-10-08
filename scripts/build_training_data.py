@@ -28,6 +28,8 @@ import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.parquet as pq
 
+from alpha_poke.teams import DEFAULT_POOL
+
 SRC = "data/metamon/gen9ou/*.parquet"
 _belief = None
 
@@ -39,7 +41,7 @@ def _init(heldout: bool):
     from alpha_poke.agents.belief_state import BeliefModel
 
     logging.disable(logging.WARNING)
-    _belief = BeliefModel.load(heldout_pool="data/teams/pool" if heldout else None)
+    _belief = BeliefModel.load(heldout_pool=str(DEFAULT_POOL) if heldout else None)
 
 
 def _work(args):

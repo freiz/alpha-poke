@@ -1,0 +1,59 @@
+Hatterene @ Custap Berry
+Ability: Magic Bounce
+Tera Type: Water
+EVs: 252 HP / 204 Def / 52 Spe
+Bold Nature
+- Nuzzle
+- Draining Kiss
+- Psychic Noise
+- Healing Wish
+
+Kingambit @ Leftovers
+Ability: Supreme Overlord
+Tera Type: Ghost
+EVs: 248 HP / 252 Atk / 8 Def
+Adamant Nature
+- Kowtow Cleave
+- Iron Head
+- Sucker Punch
+- Swords Dance
+
+Landorus-Therian @ Choice Scarf
+Ability: Intimidate
+Tera Type: Ground
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- U-turn
+- Earthquake
+- Stone Edge
+- Stealth Rock
+
+Maushold-Four @ Wide Lens
+Ability: Technician
+Tera Type: Ghost
+EVs: 104 HP / 252 Atk / 40 Def / 112 Spe
+Adamant Nature
+- Population Bomb
+- Tidy Up
+- Bite
+- Encore
+
+Ogerpon @ Choice Band
+Ability: Defiant
+Tera Type: Grass
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- U-turn
+- Ivy Cudgel
+- Knock Off
+- Low Kick
+
+Volcanion @ Leftovers
+Ability: Water Absorb
+Tera Type: Fairy
+EVs: 248 HP / 252 Def / 8 SpD
+Bold Nature
+- Steam Eruption
+- Fire Spin
+- Will-O-Wisp
+- Taunt

@@ -1,0 +1,59 @@
+Alomomola @ Assault Vest
+Ability: Regenerator
+Tera Type: Normal
+EVs: 248 HP / 8 Def / 252 SpD
+Relaxed Nature
+- Flip Turn
+- Body Slam
+- Aqua Jet
+- Mirror Coat
+
+Cinderace @ Heavy-Duty Boots
+Ability: Libero
+Tera Type: Fire
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- U-turn
+- Pyro Ball
+- Court Change
+- Sucker Punch
+
+Hoopa-Unbound @ Choice Band
+Ability: Magician
+Tera Type: Dark
+EVs: 252 Atk / 4 SpD / 252 Spe
+Adamant Nature
+- Hyperspace Fury
+- Knock Off
+- Zen Headbutt
+- Drain Punch
+
+Iron Valiant @ Choice Specs
+Ability: Quark Drive
+Tera Type: Fairy
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Moonblast
+- Shadow Ball
+- Vacuum Wave
+- Thunderbolt
+
+Landorus-Therian @ Choice Scarf
+Ability: Intimidate
+Tera Type: Ground
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- U-turn
+- Earthquake
+- Stone Edge
+- Grass Knot
+
+Pecharunt @ Heavy-Duty Boots
+Ability: Poison Puppeteer
+Tera Type: Ghost
+EVs: 252 HP / 228 Def / 28 Spe
+Bold Nature
+- Parting Shot
+- Malignant Chain
+- Recover
+- Shadow Ball

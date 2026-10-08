@@ -1,0 +1,59 @@
+Deoxys-Speed @ Life Orb
+Ability: Pressure
+Tera Type: Fighting
+EVs: 252 SpA / 4 SpD / 252 Spe
+Modest Nature
+- Psycho Boost
+- Shadow Ball
+- Focus Blast
+- Nasty Plot
+
+Dragonite @ Leftovers
+Ability: Multiscale
+Tera Type: Ground
+EVs: 252 Atk / 4 SpD / 252 Spe
+Adamant Nature
+- Earthquake
+- Dragon Dance
+- Ice Spinner
+- Roost
+
+Gholdengo @ Occa Berry
+Ability: Good as Gold
+Tera Type: Bug
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Shadow Ball
+- Make It Rain
+- Nasty Plot
+- Thunderbolt
+
+Great Tusk @ Booster Energy
+Ability: Protosynthesis
+Tera Type: Ghost
+EVs: 252 Atk / 4 Def / 252 Spe
+Jolly Nature
+- Bulk Up
+- Headlong Rush
+- Head Smash
+- Rapid Spin
+
+Ting-Lu @ Weakness Policy
+Ability: Vessel of Ruin
+Tera Type: Ghost
+EVs: 252 HP / 4 Def / 252 SpD
+Careful Nature
+- Earthquake
+- Payback
+- Stealth Rock
+- Ruination
+
+Walking Wake @ Booster Energy
+Ability: Protosynthesis
+Tera Type: Water
+EVs: 12 Def / 244 SpA / 252 Spe
+Timid Nature
+- Dragon Pulse
+- Agility
+- Hydro Pump
+- Substitute

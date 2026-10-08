@@ -1,0 +1,59 @@
+Iron Treads @ Leftovers
+Ability: Quark Drive
+Tera Type: Ghost
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Stealth Rock
+- Rapid Spin
+- Knock Off
+- Earthquake
+
+Iron Valiant @ Booster Energy
+Ability: Quark Drive
+Tera Type: Steel
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Moonblast
+- Close Combat
+- Knock Off
+- Encore
+
+Kingambit @ leftovers
+Ability: Supreme Overlord
+Tera Type: Dark
+EVs: 248 HP / 252 Atk / 8 Def
+Adamant Nature
+- Sucker Punch
+- Kowtow Cleave
+- Iron Head
+- Swords Dance
+
+Kyurem @ Choice Scarf
+Ability: Pressure
+Tera Type: Ice
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Ice Beam
+- Freeze-Dry
+- Draco Meteor
+- Earth Power
+
+Samurott-Hisui @ Assault Vest
+Ability: Sharpness
+Tera Type: Poison
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- Ceaseless Edge
+- Razor Shell
+- Sucker Punch
+- Swords Dance
+
+Sinistcha-Masterpiece @ Heavy-Duty Boots
+Ability: Heatproof
+Tera Type: Poison
+EVs: 248 HP / 252 Def / 8 SpD
+Bold Nature
+- Shadow Ball
+- Strength Sap
+- Matcha Gotcha
+- Calm Mind

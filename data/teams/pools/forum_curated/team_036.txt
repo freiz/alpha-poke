@@ -1,0 +1,61 @@
+Pelipper @ Damp Rock  
+Ability: Drizzle  
+Tera Type: Fairy  
+EVs: 248 HP / 252 Def / 8 SpD  
+Relaxed Nature  
+IVs: 0 Spe  
+- Hurricane  
+- Weather Ball  
+- U-turn  
+- Roost  
+
+Toxicroak @ Black Sludge  
+Ability: Dry Skin  
+Tera Type: Flying  
+EVs: 248 HP / 204 Def / 56 Spe  
+Impish Nature  
+- Gunk Shot  
+- Drain Punch  
+- Knock Off  
+- Taunt  
+
+Maushold @ Wide Lens  
+Ability: Technician  
+Tera Type: Ghost  
+EVs: 252 Atk / 8 Def / 248 Spe  
+Jolly Nature  
+- Encore  
+- Population Bomb  
+- Bite  
+- Tidy Up  
+
+Ogerpon-Wellspring (F) @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Ivy Cudgel  
+- Swords Dance  
+- Encore  
+- Trailblaze  
+
+Barraskewda @ Choice Band  
+Ability: Swift Swim  
+Tera Type: Water  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- Flip Turn  
+- Close Combat  
+- Liquidation  
+- Psychic Fangs  
+
+Thundurus-Therian @ Heavy-Duty Boots  
+Ability: Volt Absorb  
+Tera Type: Water  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Thunder  
+- Weather Ball  
+- Volt Switch  
+- Nasty Plot

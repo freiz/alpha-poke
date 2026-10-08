@@ -1,20 +1,15 @@
-"""Reconstruct widely copied ladder teams from replays into a validated team pool.
+"""Pools reconstructed from replays: widely copied ladder teams, filled in where unseen.
 
-For each 6-mon team used >= --min-uses times in the parsed replays:
+For each 6-mon team used >= ``min_uses`` times in the parsed replays:
   item / ability / tera = most common revealed value within that exact team (else Smogon);
   moves = most revealed moves within the team, topped up from the species' Smogon moves;
-  EVs / nature = sampled from the species' Smogon spread distribution (``--spread-mode sample``,
-  default) or its most common spread (``top``); never visible in replays.
-Teams are validated with the local Showdown validator; invalid ones are reported and skipped.
-Output: data/teams/pool/<n>.txt (Showdown export format).
-
-Usage: uv run python scripts/build_team_pool.py [--min-uses 50] [--max-teams 40]
+  EVs / nature = never visible in replays: sampled from the species' Smogon spread
+  distribution (``spread_mode="sample"``) or its most common spread (``"top"``).
+Teams failing the local Showdown validator are reported and skipped. These are NOT real
+complete teams (the catalog is); they approximate the most played ones.
 """
 
-import argparse
-import json
 import random
-import subprocess
 from collections import Counter
 from pathlib import Path
 
@@ -24,9 +19,9 @@ from alpha_poke.analysis.roles import to_id
 from alpha_poke.analysis.tables import OUT
 from alpha_poke.data.smogon_stats import DEFAULT_DIR, UsageStats
 from alpha_poke.llm_bench import GEN, MOVE_IDS, _learnset
+from alpha_poke.teams.catalog import write_pool
+from alpha_poke.teams.validate import check
 
-ROOT = Path(__file__).resolve().parents[1]
-SHOWDOWN = ROOT / "vendor" / "pokemon-showdown"
 PREVIEW_FORMS = {
     "Zamazenta-*": "Zamazenta",
     "Greninja-*": "Greninja",
@@ -102,12 +97,7 @@ def build_set(
                 break
             if mid in legal and mid in MOVE_IDS and MOVE_IDS[mid] not in moves:
                 moves.append(MOVE_IDS[mid])
-    spread = (
-        next(iter(smog.spreads))
-        if smog is not None and smog.spreads
-        else "Serious:84/84/84/84/84/84"
-    )
-    nature, evs = spread.split(":")
+    nature, evs = pick_spread(smog, spread_mode, rng or random.Random(0)).split(":")
     ev_text = " / ".join(
         f"{v} {s}" for v, s in zip(evs.split("/"), STAT_NAMES, strict=True) if v != "0"
     )
@@ -133,54 +123,38 @@ def _display_ability(species: str, ability_id: str) -> str:
     return ability_id
 
 
-def validate(text: str) -> str:
-    r = subprocess.run(
-        ["node", "pokemon-showdown", "validate-team", "gen9ou"],
-        input=text,
-        capture_output=True,
-        text=True,
-        cwd=SHOWDOWN,
-        timeout=120,
-    )
-    return "" if r.returncode == 0 else (r.stdout + r.stderr).strip()
-
-
-def main() -> None:
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--min-uses", type=int, default=50)
-    ap.add_argument("--max-teams", type=int, default=40)
-    ap.add_argument("--out", default=str(ROOT / "data" / "teams" / "pool"))
-    ap.add_argument("--spread-mode", choices=["top", "sample"], default="sample")
-    ap.add_argument("--offset", type=int, default=0, help="skip the N most used teams")
-    ap.add_argument("--seed", type=int, default=0)
-    a = ap.parse_args()
+def reconstruct(
+    out: Path,
+    min_uses: int = 50,
+    max_teams: int = 40,
+    offset: int = 0,
+    spread_mode: str = "sample",
+    seed: int = 0,
+    log=print,
+) -> None:
+    """The ``max_teams`` most used teams (after skipping ``offset``) -> pool directory."""
     m = pd.read_parquet(OUT / "gen9ou_mons.parquet")
     months = sorted(p.name for p in Path(DEFAULT_DIR).iterdir() if p.is_dir())
-    stats = UsageStats.load(DEFAULT_DIR / months[-1] / "chaos" / "gen9ou-1825.json")
+    stats_file = DEFAULT_DIR / months[-1] / "chaos" / "gen9ou-1825.json"
+    stats = UsageStats.load(stats_file)
     per_team = m.drop_duplicates(["id", "side"]).team.value_counts()
-    popular = per_team[per_team >= a.min_uses].index[a.offset : a.offset + a.max_teams]
-    out = Path(a.out)
-    out.mkdir(parents=True, exist_ok=True)
-    for f in out.glob("*.txt"):
-        f.unlink()
-    ok = 0
-    rng = random.Random(a.seed)
-    index = {}
-    for i, team in enumerate(popular):
+    popular = per_team[per_team >= min_uses].index[offset : offset + max_teams]
+    rng = random.Random(seed)
+    texts = []
+    for team in popular:
         d = m[(m.team == team) & m.brought]
-        text = "\n\n".join(
-            build_set(sp, d[d.species == sp], stats, a.spread_mode, rng) for sp in team.split("|")
-        )
-        err = validate(text)
-        if err:
-            print(f"[skip] team {i} ({team}): {err.splitlines()[0][:120]}")
+        sets = [build_set(s, d[d.species == s], stats, spread_mode, rng) for s in team.split("|")]
+        texts.append("\n\n".join(sets))
+    teams = []
+    for i, (team, text, r) in enumerate(zip(popular, texts, check(texts), strict=True)):
+        if r["problems"]:
+            log(f"[skip] team {i} ({team}): {r['problems'][0][:120]}")
             continue
-        (out / f"team_{i:02d}.txt").write_text(text + "\n")
-        index[f"team_{i:02d}"] = team
-        ok += 1
-    (out / "index.json").write_text(json.dumps(index, indent=1))
-    print(f"{ok}/{len(popular)} teams valid -> {out}")
-
-
-if __name__ == "__main__":
-    main()
+        teams.append((i, team, text))
+    meta = {
+        "kind": "replay reconstruction", "min_uses": min_uses, "offset": offset,
+        "spread_mode": spread_mode, "seed": seed, "smogon_stats": str(stats_file),
+        "uses": [int(per_team[t]) for _, t, _ in teams],
+    }  # fmt: skip
+    write_pool(out, [(t, x) for _, t, x in teams], meta)
+    log(f"{len(teams)}/{len(popular)} teams valid -> {out}")

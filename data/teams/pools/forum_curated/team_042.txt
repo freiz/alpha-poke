@@ -1,0 +1,60 @@
+Walking Wake @ Choice Scarf  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Flip Turn  
+- Draco Meteor  
+- Hydro Steam  
+- Flamethrower  
+
+Maushold-Four @ Wide Lens  
+Ability: Technician  
+Tera Type: Steel  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Tidy Up  
+- Population Bomb  
+- Bite  
+- Encore  
+
+Dragonite @ Choice Band  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 72 HP / 252 Atk / 184 Spe  
+Adamant Nature  
+- Extreme Speed  
+- Outrage  
+- Ice Spinner  
+- Earthquake  
+
+Weezing-Galar @ Choice Specs  
+Ability: Levitate  
+Tera Type: Fire  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Modest Nature  
+IVs: 0 Atk  
+- Strange Steam  
+- Sludge Bomb  
+- Overheat  
+- Shadow Ball  
+
+Great Tusk @ Rocky Helmet  
+Ability: Protosynthesis  
+Tera Type: Dragon  
+EVs: 248 HP / 252 Def / 8 Spe  
+Impish Nature  
+- Stealth Rock  
+- Rapid Spin  
+- Earthquake  
+- Ice Spinner  
+
+Muk-Alola @ Black Sludge  
+Ability: Poison Touch  
+Tera Type: Fairy  
+EVs: 248 HP / 8 Atk / 252 SpD  
+Careful Nature  
+- Knock Off  
+- Poison Jab  
+- Drain Punch  
+- Protect

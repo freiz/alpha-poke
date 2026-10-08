@@ -1,0 +1,67 @@
+Walking Wake @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Dragon  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Modest Nature  
+IVs: 0 Atk  
+- Agility  
+- Dragon Pulse  
+- Flamethrower  
+- Hydro Steam  
+
+Kingambit @ Lum Berry  
+Ability: Supreme Overlord  
+Shiny: Yes  
+Tera Type: Flying  
+EVs: 112 HP / 252 Atk / 144 Spe  
+Adamant Nature  
+- Swords Dance  
+- Iron Head  
+- Kowtow Cleave  
+- Sucker Punch  
+
+Dragonite @ Heavy-Duty Boots  
+Ability: Multiscale  
+Shiny: Yes  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Dragon Dance  
+- Fire Punch  
+- Dragon Claw  
+- Encore  
+
+Iron Moth @ Booster Energy  
+Ability: Quark Drive  
+Shiny: Yes  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Energy Ball  
+- Dazzling Gleam  
+- Fiery Dance  
+- Psychic  
+
+Glimmora @ Focus Sash  
+Ability: Toxic Debris  
+Shiny: Yes  
+Tera Type: Grass  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Modest Nature  
+IVs: 0 Atk  
+- Stealth Rock  
+- Sludge Wave  
+- Earth Power  
+- Energy Ball  
+
+Azumarill @ Assault Vest  
+Ability: Huge Power  
+Shiny: Yes  
+Tera Type: Water  
+EVs: 252 HP / 252 Atk / 4 Def  
+Adamant Nature  
+- Liquidation  
+- Play Rough  
+- Aqua Jet  
+- Ice Spinner

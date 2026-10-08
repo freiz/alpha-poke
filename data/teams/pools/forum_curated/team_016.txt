@@ -1,0 +1,67 @@
+Walking Wake @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Water  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Hydro Pump  
+- Dragon Pulse  
+- Agility  
+- Flamethrower  
+
+Dragapult (F) @ Choice Specs  
+Ability: Infiltrator  
+Shiny: Yes  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Draco Meteor  
+- Shadow Ball  
+- U-turn  
+- Hex  
+
+Skeledirge (F) @ Heavy-Duty Boots  
+Ability: Unaware  
+Shiny: Yes  
+Tera Type: Fairy  
+EVs: 248 HP / 244 SpD / 16 Spe  
+Calm Nature  
+IVs: 0 Atk  
+- Torch Song  
+- Hex  
+- Will-O-Wisp  
+- Slack Off  
+
+Toxapex (F) @ Covert Cloak  
+Ability: Regenerator  
+Shiny: Yes  
+Tera Type: Fairy  
+EVs: 248 HP / 140 Def / 116 SpD / 4 Spe  
+Bold Nature  
+IVs: 0 Atk  
+- Surf  
+- Haze  
+- Toxic  
+- Recover  
+
+Corviknight (F) @ Leftovers  
+Ability: Pressure  
+Shiny: Yes  
+Tera Type: Dark  
+EVs: 252 HP / 228 SpD / 28 Spe  
+Careful Nature  
+- Brave Bird  
+- Bulk Up  
+- U-turn  
+- Roost  
+
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Shiny: Yes  
+Tera Type: Water  
+EVs: 248 HP / 16 Atk / 164 Def / 80 Spe  
+Impish Nature  
+- Earthquake  
+- Knock Off  
+- Stealth Rock  
+- Rapid Spin

@@ -1,0 +1,61 @@
+Cyclizar @ Assault Vest  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 112 HP / 252 SpA / 144 SpD  
+Timid Nature  
+- Rapid Spin  
+- Knock Off  
+- Draco Meteor  
+- Overheat  
+
+Hatterene @ Leftovers  
+Ability: Magic Bounce  
+Tera Type: Flying  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Rest  
+- Draining Kiss  
+- Psyshock  
+- Nuzzle  
+
+Alomomola @ Leftovers  
+Ability: Regenerator  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Def / 4 SpD  
+Relaxed Nature  
+IVs: 0 Atk / 0 Spe  
+- Wish  
+- Protect  
+- Whirlpool  
+- Chilling Water  
+
+Dondozo @ Leftovers  
+Ability: Unaware  
+Tera Type: Fighting  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Body Press  
+- Liquidation  
+- Rest  
+- Sleep Talk  
+
+Blissey @ Heavy-Duty Boots  
+Ability: Natural Cure  
+Tera Type: Water  
+EVs: 252 HP / 4 Def / 252 SpD  
+Calm Nature  
+IVs: 0 Atk  
+- Stealth Rock  
+- Soft-Boiled  
+- Seismic Toss  
+- Shadow Ball  
+
+Clodsire @ Leftovers  
+Ability: Unaware  
+Tera Type: Psychic  
+EVs: 252 HP / 4 Def / 252 SpD  
+Calm Nature  
+- Toxic  
+- Earthquake  
+- Spikes  
+- Recover

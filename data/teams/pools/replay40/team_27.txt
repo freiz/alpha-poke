@@ -1,0 +1,59 @@
+Blaziken @ Air Balloon
+Ability: Speed Boost
+Tera Type: Fighting
+EVs: 4 Atk / 252 SpA / 252 Spe
+Rash Nature
+- Close Combat
+- Swords Dance
+- Knock Off
+- Stone Edge
+
+Iron Moth @ Booster Energy
+Ability: Quark Drive
+Tera Type: Grass
+EVs: 124 Def / 132 SpA / 252 Spe
+Timid Nature
+- Fiery Dance
+- Sludge Wave
+- Toxic Spikes
+- Light Screen
+
+Iron Valiant @ Booster Energy
+Ability: Quark Drive
+Tera Type: Steel
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Moonblast
+- Knock Off
+- Close Combat
+- Taunt
+
+Kingambit @ Shuca Berry
+Ability: Supreme Overlord
+Tera Type: Ghost
+EVs: 248 HP / 252 Atk / 8 Def
+Adamant Nature
+- Iron Head
+- Sucker Punch
+- Swords Dance
+- Low Kick
+
+Landorus-Therian @ Rocky Helmet
+Ability: Intimidate
+Tera Type: Ghost
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- Stealth Rock
+- Earth Power
+- U-turn
+- Taunt
+
+Samurott-Hisui @ Focus Sash
+Ability: Sharpness
+Tera Type: Ghost
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- Ceaseless Edge
+- Razor Shell
+- Sucker Punch
+- Taunt

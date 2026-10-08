@@ -1,0 +1,59 @@
+Ceruledge @ Life Orb
+Ability: Weak Armor
+Tera Type: Ghost
+EVs: 80 HP / 252 Atk / 176 Spe
+Adamant Nature
+- Bitter Blade
+- Poltergeist
+- Swords Dance
+- Shadow Sneak
+
+Cresselia @ Leftovers
+Ability: Levitate
+Tera Type: Fairy
+EVs: 80 HP / 252 SpA / 176 Spe
+Modest Nature
+- Calm Mind
+- Moonblast
+- Lunar Blessing
+- Stored Power
+
+Glimmora @ Power Herb
+Ability: Toxic Debris
+Tera Type: Ghost
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Meteor Beam
+- Stealth Rock
+- Earth Power
+- Mortal Spin
+
+Kingambit @ Air Balloon
+Ability: Supreme Overlord
+Tera Type: Ghost
+EVs: 248 HP / 252 Atk / 8 Def
+Adamant Nature
+- Kowtow Cleave
+- Sucker Punch
+- Swords Dance
+- Low Kick
+
+Ogerpon-Wellspring @ Wellspring Mask
+Ability: Water Absorb
+Tera Type: Water
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- Ivy Cudgel
+- Swords Dance
+- Horn Leech
+- Play Rough
+
+Zamazenta @ Light Clay
+Ability: Dauntless Shield
+Tera Type: Steel
+EVs: 104 HP / 248 Def / 156 Spe
+Jolly Nature
+- Reflect
+- Light Screen
+- Close Combat
+- Roar

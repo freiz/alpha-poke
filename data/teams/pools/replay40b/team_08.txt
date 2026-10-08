@@ -1,0 +1,59 @@
+Alomomola @ Assault Vest
+Ability: Regenerator
+Tera Type: Normal
+EVs: 248 HP / 8 Def / 252 SpD
+Relaxed Nature
+- Flip Turn
+- Body Slam
+- Mirror Coat
+- Aqua Jet
+
+Cinderace @ Heavy-Duty Boots
+Ability: Blaze
+Tera Type: Ghost
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- U-turn
+- Pyro Ball
+- Will-O-Wisp
+- Court Change
+
+Enamorus @ Choice Scarf
+Ability: Contrary
+Tera Type: Fairy
+EVs: 252 SpA / 4 SpD / 252 Spe
+Modest Nature
+- Moonblast
+- Earth Power
+- Mystical Fire
+- Healing Wish
+
+Great Tusk @ Leftovers
+Ability: Protosynthesis
+Tera Type: Poison
+EVs: 252 Atk / 4 Def / 252 Spe
+Jolly Nature
+- Knock Off
+- Earthquake
+- Rapid Spin
+- Bulk Up
+
+Lokix @ Choice Band
+Ability: Tinted Lens
+Tera Type: Bug
+EVs: 252 Atk / 4 Def / 252 Spe
+Adamant Nature
+- First Impression
+- U-turn
+- Knock Off
+- Leech Life
+
+Slowking-Galar @ Shuca Berry
+Ability: Regenerator
+Tera Type: Grass
+EVs: 248 HP / 252 Def / 8 SpD
+Relaxed Nature
+- Chilly Reception
+- Future Sight
+- Sludge Bomb
+- Ice Beam

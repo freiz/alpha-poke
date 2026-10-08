@@ -1,0 +1,61 @@
+Klefki (F) @ Light Clay  
+Ability: Prankster  
+Tera Type: Ghost  
+EVs: 248 HP / 236 Def / 24 SpD / 2 Spe  
+Bold Nature  
+IVs: 0 Atk  
+- Magic Room  
+- Light Screen  
+- Reflect  
+- Spikes  
+
+Gholdengo @ Choice Scarf  
+Ability: Good as Gold  
+Tera Type: Ghost  
+EVs: 112 HP / 184 SpA / 2 SpD / 212 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Shadow Ball  
+- Make It Rain  
+- Recover  
+- Nasty Plot  
+
+Dragonite (F) @ Choice Band  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 144 HP / 252 Atk / 2 SpD / 112 Spe  
+Adamant Nature  
+- Dragon Dance  
+- Extreme Speed  
+- Thunder Punch  
+- Earthquake  
+
+Pawmot (F) @ Focus Sash  
+Ability: Natural Cure  
+Tera Type: Electric  
+EVs: 2 HP / 192 Atk / 64 SpA / 252 Spe  
+Naive Nature  
+- Close Combat  
+- Double Shock  
+- Grass Knot  
+- Revival Blessing  
+
+Quaquaval (F) @ Choice Band  
+Ability: Moxie  
+Tera Type: Water  
+EVs: 2 HP / 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Aqua Step  
+- Close Combat  
+- Swords Dance  
+- Ice Spinner  
+
+Great Tusk @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Ground  
+EVs: 248 HP / 4 Atk / 2 Def / 4 SpD / 252 Spe  
+Jolly Nature  
+- Headlong Rush  
+- Ice Spinner  
+- Rapid Spin  
+- Stealth Rock

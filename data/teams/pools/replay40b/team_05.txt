@@ -1,0 +1,59 @@
+Araquanid @ Red Card
+Ability: Water Bubble
+Tera Type: Ghost
+EVs: 252 HP / 4 SpA / 252 SpD
+Sassy Nature
+- Sticky Web
+- Surf
+- Endeavor
+- Lunge
+
+Ceruledge @ Focus Sash
+Ability: Weak Armor
+Tera Type: Fairy
+EVs: 80 HP / 252 Atk / 176 Spe
+Adamant Nature
+- Bitter Blade
+- Shadow Sneak
+- Poltergeist
+- Swords Dance
+
+Gholdengo @ Air Balloon
+Ability: Good as Gold
+Tera Type: Fighting
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Shadow Ball
+- Make It Rain
+- Focus Blast
+- Nasty Plot
+
+Great Tusk @ Booster Energy
+Ability: Protosynthesis
+Tera Type: Fire
+EVs: 252 Atk / 4 Def / 252 Spe
+Jolly Nature
+- Ice Spinner
+- Headlong Rush
+- Rapid Spin
+- Smack Down
+
+Iron Valiant @ Booster Energy
+Ability: Quark Drive
+Tera Type: Ghost
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Moonblast
+- Shadow Ball
+- Calm Mind
+- Vacuum Wave
+
+Raging Bolt @ Booster Energy
+Ability: Protosynthesis
+Tera Type: Fairy
+EVs: 112 HP / 252 SpA / 144 Spe
+Modest Nature
+- Dragon Pulse
+- Thunderbolt
+- Thunderclap
+- Calm Mind

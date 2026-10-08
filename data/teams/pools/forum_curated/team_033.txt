@@ -1,0 +1,59 @@
+Clodsire @ Black Sludge  
+Ability: Unaware  
+Tera Type: Poison  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- Earthquake  
+- Toxic  
+- Haze  
+- Recover  
+
+Garganacl @ Leftovers  
+Ability: Purifying Salt  
+Tera Type: Poison  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Salt Cure  
+- Protect  
+- Stealth Rock  
+- Recover  
+
+Dondozo @ Leftovers  
+Ability: Unaware  
+Tera Type: Fairy  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Wave Crash  
+- Rest  
+- Sleep Talk  
+- Curse  
+
+Talonflame @ Heavy-Duty Boots  
+Ability: Flame Body  
+Tera Type: Normal  
+EVs: 248 HP / 184 Def / 76 Spe  
+Impish Nature  
+- Flare Blitz  
+- Will-O-Wisp  
+- Roost  
+- Defog  
+
+Dachsbun @ Leftovers  
+Ability: Well-Baked Body  
+Tera Type: Dark  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- Play Rough  
+- Roar  
+- Wish  
+- Protect  
+
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Earthquake  
+- Knock Off  
+- Body Press  
+- Rapid Spin

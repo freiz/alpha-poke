@@ -1,0 +1,59 @@
+Araquanid @ Red Card
+Ability: Water Bubble
+Tera Type: Steel
+EVs: 252 HP / 4 SpA / 252 SpD
+Sassy Nature
+- Sticky Web
+- Surf
+- Endeavor
+- Lunge
+
+Cresselia @ Leftovers
+Ability: Levitate
+Tera Type: Electric
+EVs: 80 HP / 252 SpA / 176 Spe
+Modest Nature
+- Calm Mind
+- Thunderbolt
+- Ice Beam
+- Moonlight
+
+Dragapult @ Life Orb
+Ability: Clear Body
+Tera Type: Stellar
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Draco Meteor
+- Shadow Ball
+- Will-O-Wisp
+- Flamethrower
+
+Great Tusk @ Booster Energy
+Ability: Protosynthesis
+Tera Type: Ghost
+EVs: 252 Atk / 4 Def / 252 Spe
+Jolly Nature
+- Headlong Rush
+- Ice Spinner
+- Close Combat
+- Rapid Spin
+
+Iron Moth @ Booster Energy
+Ability: Quark Drive
+Tera Type: Ghost
+EVs: 124 Def / 132 SpA / 252 Spe
+Timid Nature
+- Fiery Dance
+- Sludge Wave
+- Substitute
+- Energy Ball
+
+Kingambit @ Air Balloon
+Ability: Supreme Overlord
+Tera Type: Ghost
+EVs: 248 HP / 252 Atk / 8 Def
+Adamant Nature
+- Kowtow Cleave
+- Sucker Punch
+- Low Kick
+- Swords Dance

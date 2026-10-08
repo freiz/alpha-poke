@@ -1,0 +1,59 @@
+Cinderace @ Heavy-Duty Boots
+Ability: Libero
+Tera Type: Bug
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- Pyro Ball
+- U-turn
+- Will-O-Wisp
+- Court Change
+
+Iron Valiant @ Booster Energy
+Ability: Quark Drive
+Tera Type: Ghost
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Moonblast
+- Calm Mind
+- Shadow Ball
+- Encore
+
+Kingambit @ Leftovers
+Ability: Supreme Overlord
+Tera Type: Flying
+EVs: 248 HP / 252 Atk / 8 Def
+Adamant Nature
+- Swords Dance
+- Kowtow Cleave
+- Iron Head
+- Sucker Punch
+
+Kyurem @ Leftovers
+Ability: Pressure
+Tera Type: Ground
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Freeze-Dry
+- Earth Power
+- Substitute
+- Draco Meteor
+
+Landorus-Therian @ Rocky Helmet
+Ability: Intimidate
+Tera Type: Water
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- Earthquake
+- U-turn
+- Stealth Rock
+- Taunt
+
+Slowking-Galar @ Heavy-Duty Boots
+Ability: Regenerator
+Tera Type: Water
+EVs: 248 HP / 252 Def / 8 SpD
+Relaxed Nature
+- Sludge Bomb
+- Chilly Reception
+- Psychic Noise
+- Thunder Wave

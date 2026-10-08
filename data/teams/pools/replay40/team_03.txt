@@ -1,0 +1,59 @@
+Clefable @ Leftovers
+Ability: Magic Guard
+Tera Type: Water
+EVs: 176 HP / 252 Def / 80 Spe
+Bold Nature
+- Stealth Rock
+- Moonblast
+- Knock Off
+- Moonlight
+
+Clodsire @ Heavy-Duty Boots
+Ability: Unaware
+Tera Type: Steel
+EVs: 248 HP / 8 Def / 252 SpD
+Careful Nature
+- Recover
+- Earthquake
+- Spikes
+- Poison Jab
+
+Corviknight @ Leftovers
+Ability: Pressure
+Tera Type: Dragon
+EVs: 248 HP / 228 Def / 32 Spe
+Impish Nature
+- Protect
+- Brave Bird
+- Roost
+- Defog
+
+Dondozo @ Leftovers
+Ability: Unaware
+Tera Type: Dark
+EVs: 248 HP / 252 Def / 8 SpD
+Impish Nature
+- Rest
+- Crunch
+- Curse
+- Sleep Talk
+
+Gliscor @ Toxic Orb
+Ability: Poison Heal
+Tera Type: Dark
+EVs: 244 HP / 36 Def / 228 SpD
+Careful Nature
+- Protect
+- Knock Off
+- Toxic
+- Substitute
+
+Toxapex @ Leftovers
+Ability: Regenerator
+Tera Type: Steel
+EVs: 248 HP / 8 Def / 252 SpD
+Bold Nature
+- Baneful Bunker
+- Infestation
+- Poison Jab
+- Recover

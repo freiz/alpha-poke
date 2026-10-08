@@ -1,0 +1,59 @@
+Cresselia @ Rocky Helmet
+Ability: Levitate
+Tera Type: Steel
+EVs: 80 HP / 252 SpA / 176 Spe
+Modest Nature
+- Thunder Wave
+- Ice Beam
+- Moonlight
+- Lunar Dance
+
+Iron Treads @ Leftovers
+Ability: Quark Drive
+Tera Type: Ghost
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Stealth Rock
+- Knock Off
+- Earthquake
+- Rapid Spin
+
+Kyurem @ Assault Vest
+Ability: Pressure
+Tera Type: Fairy
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Ice Beam
+- Earth Power
+- Freeze-Dry
+- Body Press
+
+Ogerpon-Wellspring @ Wellspring Mask
+Ability: Water Absorb
+Tera Type: Water
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- Ivy Cudgel
+- Swords Dance
+- Trailblaze
+- Synthesis
+
+Wo-Chien @ Leftovers
+Ability: Tablets of Ruin
+Tera Type: Poison
+EVs: 192 HP / 216 Def / 100 Spe
+Impish Nature
+- Foul Play
+- Leech Seed
+- Stun Spore
+- Protect
+
+Zamazenta @ Expert Belt
+Ability: Dauntless Shield
+Tera Type: Steel
+EVs: 104 HP / 248 Def / 156 Spe
+Jolly Nature
+- Crunch
+- Ice Fang
+- Close Combat
+- Heavy Slam

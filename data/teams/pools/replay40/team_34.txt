@@ -1,0 +1,59 @@
+Cresselia @ Leftovers
+Ability: Levitate
+Tera Type: Electric
+EVs: 80 HP / 252 SpA / 176 Spe
+Modest Nature
+- Calm Mind
+- Thunderbolt
+- Ice Beam
+- Moonlight
+
+Dragapult @ Heavy-Duty Boots
+Ability: Infiltrator
+Tera Type: Fairy
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Hex
+- Thunder Wave
+- Will-O-Wisp
+- Draco Meteor
+
+Garchomp @ Rocky Helmet
+Ability: Rough Skin
+Tera Type: Ghost
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- Stealth Rock
+- Earthquake
+- Spikes
+- Dragon Tail
+
+Kingambit @ Leftovers
+Ability: Supreme Overlord
+Tera Type: Fire
+EVs: 248 HP / 252 Atk / 8 Def
+Adamant Nature
+- Sucker Punch
+- Low Kick
+- Iron Head
+- Swords Dance
+
+Ogerpon @ Heavy-Duty Boots
+Ability: Defiant
+Tera Type: Grass
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- Knock Off
+- Ivy Cudgel
+- U-turn
+- Encore
+
+Pecharunt @ Heavy-Duty Boots
+Ability: Poison Puppeteer
+Tera Type: Ghost
+EVs: 252 HP / 228 Def / 28 Spe
+Bold Nature
+- Malignant Chain
+- Shadow Ball
+- Recover
+- Nasty Plot

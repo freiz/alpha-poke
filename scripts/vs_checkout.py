@@ -14,6 +14,7 @@ from pathlib import Path
 
 from alpha_poke.eval.bots import BOT_NAMES
 from alpha_poke.eval.external import ROOT, run_external
+from alpha_poke.teams import DEFAULT_POOL
 
 
 def ensure_worktree(rev: str) -> Path:
@@ -35,7 +36,7 @@ if __name__ == "__main__":
     ap.add_argument("--rev", required=True, help="git revision of the opponent")
     ap.add_argument("--opp-bot", default=None, help="variant in the old checkout (default: same)")
     ap.add_argument("--pairs", type=int, default=20)
-    ap.add_argument("--pool", default="data/teams/pool")
+    ap.add_argument("--pool", default=str(DEFAULT_POOL))
     ap.add_argument("--ports", type=int, nargs="+", default=[8000, 8001, 8002, 8003])
     ap.add_argument("--lanes", type=int, default=4)
     ap.add_argument("--seed", type=int, default=0)

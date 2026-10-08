@@ -1,0 +1,59 @@
+Gliscor @ Toxic Orb
+Ability: Poison Heal
+Tera Type: Normal
+EVs: 244 HP / 36 Def / 228 SpD
+Careful Nature
+- Protect
+- Facade
+- Swords Dance
+- Knock Off
+
+Moltres @ Heavy-Duty Boots
+Ability: Flame Body
+Tera Type: Fairy
+EVs: 248 HP / 248 Def / 12 Spe
+Bold Nature
+- Roost
+- Scorching Sands
+- Burning Jealousy
+- Roar
+
+Ogerpon @ Heavy-Duty Boots
+Ability: Defiant
+Tera Type: Grass
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- Ivy Cudgel
+- U-turn
+- Knock Off
+- Encore
+
+Raging Bolt @ Heavy-Duty Boots
+Ability: Protosynthesis
+Tera Type: Fairy
+EVs: 112 HP / 252 SpA / 144 Spe
+Modest Nature
+- Draco Meteor
+- Volt Switch
+- Thunderclap
+- Thunderbolt
+
+Samurott-Hisui @ Heavy-Duty Boots
+Ability: Sharpness
+Tera Type: Dark
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- Ceaseless Edge
+- Flip Turn
+- Sucker Punch
+- Swords Dance
+
+Tinkaton @ Air Balloon
+Ability: Pickpocket
+Tera Type: Ghost
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- Stealth Rock
+- Gigaton Hammer
+- Encore
+- Ice Hammer

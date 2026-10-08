@@ -1,0 +1,59 @@
+Blissey @ Heavy-Duty Boots
+Ability: Natural Cure
+Tera Type: Poison
+EVs: 212 HP / 252 Def / 44 Spe
+Bold Nature
+- Seismic Toss
+- Soft-Boiled
+- Shadow Ball
+- Calm Mind
+
+Gliscor @ Toxic Orb
+Ability: Poison Heal
+Tera Type: Normal
+EVs: 244 HP / 36 Def / 228 SpD
+Careful Nature
+- Protect
+- Earthquake
+- Swords Dance
+- Facade
+
+Ogerpon @ Heavy-Duty Boots
+Ability: Defiant
+Tera Type: Grass
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- U-turn
+- Knock Off
+- Ivy Cudgel
+- Encore
+
+Pecharunt @ Heavy-Duty Boots
+Ability: Poison Puppeteer
+Tera Type: Ghost
+EVs: 252 HP / 228 Def / 28 Spe
+Bold Nature
+- Parting Shot
+- Toxic
+- Shadow Ball
+- Recover
+
+Samurott-Hisui @ Heavy-Duty Boots
+Ability: Sharpness
+Tera Type: Water
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- Ceaseless Edge
+- Aqua Cutter
+- Knock Off
+- Encore
+
+Skarmory @ Rocky Helmet
+Ability: Sturdy
+Tera Type: Ghost
+EVs: 80 HP / 252 Def / 176 Spe
+Bold Nature
+- Stealth Rock
+- Roost
+- Body Press
+- Whirlwind

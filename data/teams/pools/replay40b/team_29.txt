@@ -1,0 +1,59 @@
+Cresselia @ Leftovers
+Ability: Levitate
+Tera Type: Poison
+EVs: 80 HP / 252 SpA / 176 Spe
+Modest Nature
+- Calm Mind
+- Moonblast
+- Moonlight
+- Stored Power
+
+Dragapult @ Heavy-Duty Boots
+Ability: Infiltrator
+Tera Type: Poison
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Will-O-Wisp
+- Hex
+- Draco Meteor
+- U-turn
+
+Garchomp @ Rocky Helmet
+Ability: Rough Skin
+Tera Type: Ghost
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- Stealth Rock
+- Dragon Tail
+- Spikes
+- Earthquake
+
+Keldeo-Resolute @ Rocky Helmet
+Ability: Justified
+Tera Type: Water
+EVs: 4 Def / 252 SpA / 252 Spe
+Timid Nature
+- Surf
+- Vacuum Wave
+- Secret Sword
+- Icy Wind
+
+Kingambit @ Leftovers
+Ability: Supreme Overlord
+Tera Type: Fire
+EVs: 248 HP / 252 Atk / 8 Def
+Adamant Nature
+- Kowtow Cleave
+- Sucker Punch
+- Iron Head
+- Swords Dance
+
+Primarina @ Assault Vest
+Ability: Liquid Voice
+Tera Type: Fairy
+EVs: 252 SpA / 4 SpD / 252 Spe
+Modest Nature
+- Moonblast
+- Surf
+- Aqua Jet
+- Psychic Noise

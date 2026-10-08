@@ -94,8 +94,11 @@ class BeliefModel:
     @classmethod
     def load(cls, rebuild: bool = False, heldout_pool: str | None = None) -> "BeliefModel":
         """Cached model. ``heldout_pool``: a team-pool directory (with ``index.json``) whose
-        teams are excluded from training -> belief_model_heldout.pkl."""
-        path = CACHE if heldout_pool is None else CACHE.with_name("belief_model_heldout.pkl")
+        teams are excluded from training -> belief_model_heldout_<pool name>.pkl (one cache per
+        pool: a model held out on one pool has seen the teams of every other)."""
+        path = CACHE
+        if heldout_pool is not None:
+            path = CACHE.with_name(f"belief_model_heldout_{Path(heldout_pool).name}.pkl")
         if path.exists() and not rebuild:
             return pickle.loads(path.read_bytes())
         exclude = None

@@ -1,0 +1,59 @@
+Iron Moth @ Booster Energy
+Ability: Quark Drive
+Tera Type: Ghost
+EVs: 124 Def / 132 SpA / 252 Spe
+Timid Nature
+- Fiery Dance
+- Sludge Wave
+- Toxic Spikes
+- Whirlwind
+
+Kingambit @ leftovers
+Ability: Supreme Overlord
+Tera Type: Dark
+EVs: 248 HP / 252 Atk / 8 Def
+Adamant Nature
+- Kowtow Cleave
+- Sucker Punch
+- Low Kick
+- Swords Dance
+
+Kyurem @ Assault Vest
+Ability: Pressure
+Tera Type: Poison
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Ice Beam
+- Earth Power
+- Freeze-Dry
+- Body Press
+
+Landorus-Therian @ Rocky Helmet
+Ability: Intimidate
+Tera Type: Ghost
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- Earth Power
+- Stealth Rock
+- U-turn
+- Rock Tomb
+
+Ogerpon-Wellspring @ Wellspring Mask
+Ability: Water Absorb
+Tera Type: Water
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- Ivy Cudgel
+- Play Rough
+- Swords Dance
+- Encore
+
+Zamazenta @ Chesto Berry
+Ability: Dauntless Shield
+Tera Type: Electric
+EVs: 104 HP / 248 Def / 156 Spe
+Jolly Nature
+- Body Press
+- Iron Defense
+- Rest
+- Crunch

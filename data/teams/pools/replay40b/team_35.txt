@@ -1,0 +1,59 @@
+Glimmora @ Focus Sash
+Ability: Toxic Debris
+Tera Type: Ghost
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Stealth Rock
+- Spikes
+- Mortal Spin
+- Earth Power
+
+Hawlucha @ Grassy Seed
+Ability: Unburden
+Tera Type: Fire
+EVs: 192 HP / 252 Atk / 64 Spe
+Adamant Nature
+- Acrobatics
+- Swords Dance
+- Fire Punch
+- Close Combat
+
+Keldeo-Resolute @ Leftovers
+Ability: Justified
+Tera Type: Steel
+EVs: 4 Def / 252 SpA / 252 Spe
+Timid Nature
+- Calm Mind
+- Surf
+- Secret Sword
+- Vacuum Wave
+
+Kingambit @ Leftovers
+Ability: Supreme Overlord
+Tera Type: Ghost
+EVs: 248 HP / 252 Atk / 8 Def
+Adamant Nature
+- Kowtow Cleave
+- Swords Dance
+- Sucker Punch
+- Iron Head
+
+Raging Bolt @ Booster Energy
+Ability: Protosynthesis
+Tera Type: Ghost
+EVs: 112 HP / 252 SpA / 144 Spe
+Modest Nature
+- Thunderbolt
+- Dragon Pulse
+- Thunderclap
+- Calm Mind
+
+Rillaboom @ Life Orb
+Ability: Grassy Surge
+Tera Type: Steel
+EVs: 252 Atk / 4 Def / 252 Spe
+Adamant Nature
+- Grassy Glide
+- Swords Dance
+- Knock Off
+- Drain Punch

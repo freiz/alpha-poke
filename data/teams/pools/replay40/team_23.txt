@@ -1,0 +1,59 @@
+Araquanid @ Focus Sash
+Ability: Water Bubble
+Tera Type: Ghost
+EVs: 252 HP / 4 SpA / 252 SpD
+Sassy Nature
+- Sticky Web
+- Surf
+- Endeavor
+- Pounce
+
+Gholdengo @ Air Balloon
+Ability: Good as Gold
+Tera Type: Fighting
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Shadow Ball
+- Nasty Plot
+- Focus Blast
+- Make It Rain
+
+Great Tusk @ Booster Energy
+Ability: Protosynthesis
+Tera Type: Fighting
+EVs: 252 Atk / 4 Def / 252 Spe
+Jolly Nature
+- Headlong Rush
+- Close Combat
+- Ice Spinner
+- Rapid Spin
+
+Iron Moth @ Power Herb
+Ability: Quark Drive
+Tera Type: Grass
+EVs: 124 Def / 132 SpA / 252 Spe
+Timid Nature
+- Meteor Beam
+- Fire Blast
+- Sludge Wave
+- Energy Ball
+
+Iron Valiant @ Booster Energy
+Ability: Quark Drive
+Tera Type: Ghost
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Moonblast
+- Calm Mind
+- Vacuum Wave
+- Shadow Ball
+
+Zarude-Dada @ Sitrus Berry
+Ability: Leaf Guard
+Tera Type: Fire
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- Knock Off
+- Swords Dance
+- Power Whip
+- Trailblaze

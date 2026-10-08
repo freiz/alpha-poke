@@ -1,0 +1,59 @@
+Cresselia @ Leftovers
+Ability: Levitate
+Tera Type: Electric
+EVs: 80 HP / 252 SpA / 176 Spe
+Modest Nature
+- Calm Mind
+- Ice Beam
+- Moonlight
+- Thunderbolt
+
+Darkrai @ Roseli Berry
+Ability: Bad Dreams
+Tera Type: Poison
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Dark Pulse
+- Focus Blast
+- Nasty Plot
+- Sludge Bomb
+
+Glimmora @ Red Card
+Ability: Toxic Debris
+Tera Type: Ghost
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Stealth Rock
+- Earth Power
+- Mortal Spin
+- Power Gem
+
+Iron Treads @ Booster Energy
+Ability: Quark Drive
+Tera Type: Electric
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Earthquake
+- Ice Spinner
+- Rapid Spin
+- Supercell Slam
+
+Raging Bolt @ Booster Energy
+Ability: Protosynthesis
+Tera Type: Ghost
+EVs: 112 HP / 252 SpA / 144 Spe
+Modest Nature
+- Dragon Pulse
+- Thunderclap
+- Thunderbolt
+- Calm Mind
+
+Zamazenta @ Leftovers
+Ability: Dauntless Shield
+Tera Type: Steel
+EVs: 104 HP / 248 Def / 156 Spe
+Jolly Nature
+- Body Press
+- Iron Defense
+- Heavy Slam
+- Roar

@@ -1,0 +1,62 @@
+Manaphy @ Leftovers  
+Ability: Hydration  
+Tera Type: Grass  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Tail Glow  
+- Surf  
+- Ice Beam  
+- Energy Ball  
+
+Infernape @ Life Orb  
+Ability: Iron Fist  
+Tera Type: Grass  
+EVs: 252 Atk / 12 SpA / 244 Spe  
+Naive Nature  
+- Swords Dance  
+- Fire Punch  
+- Mach Punch  
+- Grass Knot  
+
+Ribombee @ Focus Sash  
+Ability: Shield Dust  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Sticky Web  
+- Moonblast  
+- Stun Spore  
+- Psychic  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Dark  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Nasty Plot  
+- Shadow Ball  
+- Make It Rain  
+- Recover  
+
+Landorus-Therian @ Leftovers  
+Ability: Intimidate  
+Tera Type: Ghost  
+EVs: 252 Atk / 252 Spe  
+Jolly Nature  
+- Substitute  
+- Earthquake  
+- Smack Down  
+- Bulk Up  
+
+Kommo-o @ Throat Spray  
+Ability: Bulletproof  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Clangorous Soul  
+- Boomburst  
+- Clanging Scales  
+- Flamethrower

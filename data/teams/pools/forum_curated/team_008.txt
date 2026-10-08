@@ -1,0 +1,61 @@
+Iron Valiant @ Choice Specs  
+Ability: Quark Drive  
+Tera Type: Fairy  
+EVs: 248 SpA / 8 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Moonblast  
+- Psyshock  
+- Shadow Ball  
+- Thunderbolt  
+
+Tyranitar @ Leftovers  
+Ability: Sand Stream  
+Tera Type: Flying  
+EVs: 248 HP / 48 Atk / 212 SpD  
+Sassy Nature  
+- Rock Blast  
+- Earthquake  
+- Ice Beam  
+- Stealth Rock  
+
+Corviknight @ Leftovers  
+Ability: Pressure  
+Tera Type: Fighting  
+EVs: 252 HP / 216 Def / 40 Spe  
+Impish Nature  
+- Body Press  
+- U-turn  
+- Iron Defense  
+- Roost  
+
+Toxapex @ Covert Cloak  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 248 HP / 20 Def / 232 SpD / 8 Spe  
+Calm Nature  
+IVs: 0 Atk  
+- Chilling Water  
+- Toxic  
+- Haze  
+- Recover  
+
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Ground  
+EVs: 232 Atk / 24 SpD / 252 Spe  
+Jolly Nature  
+- Earthquake  
+- Close Combat  
+- Knock Off  
+- Rapid Spin  
+
+Cinderace @ Heavy-Duty Boots  
+Ability: Blaze  
+Tera Type: Flying  
+EVs: 224 HP / 32 Atk / 252 Spe  
+Jolly Nature  
+- Pyro Ball  
+- Will-O-Wisp  
+- U-turn  
+- Court Change

@@ -1,0 +1,63 @@
+Scream Tail @ Booster Energy  
+Ability: Protosynthesis  
+Shiny: Yes  
+Tera Type: Steel  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Dazzling Gleam  
+- Calm Mind  
+- Psyshock  
+- Fire Blast  
+
+Glimmora @ Focus Sash  
+Ability: Toxic Debris  
+Tera Type: Flying  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Stealth Rock  
+- Sludge Wave  
+- Power Gem  
+- Energy Ball  
+
+Zoroark-Hisui @ Focus Sash  
+Ability: Illusion  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Nasty Plot  
+- Shadow Ball  
+- Grass Knot  
+- Focus Blast  
+
+Kingambit @ Lum Berry  
+Ability: Supreme Overlord  
+Tera Type: Flying  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Sucker Punch  
+- Iron Head  
+- Kowtow Cleave  
+- Swords Dance  
+
+Ceruledge @ Focus Sash  
+Ability: Weak Armor  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Swords Dance  
+- Shadow Sneak  
+- Bitter Blade  
+- Destiny Bond  
+
+Great Tusk @ Assault Vest  
+Ability: Protosynthesis  
+Tera Type: Water  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Headlong Rush  
+- Ice Spinner  
+- Knock Off  
+- Rapid Spin

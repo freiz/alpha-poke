@@ -1,0 +1,59 @@
+Cetitan @ Sitrus Berry
+Ability: Slush Rush
+Tera Type: Ground
+EVs: 4 HP / 252 Atk / 152 SpD / 100 Spe
+Adamant Nature
+- Earthquake
+- Icicle Crash
+- Belly Drum
+- Ice Shard
+
+Corviknight @ Leftovers
+Ability: Pressure
+Tera Type: Dragon
+EVs: 248 HP / 228 Def / 32 Spe
+Impish Nature
+- U-turn
+- Brave Bird
+- Roost
+- Defog
+
+Great Tusk @ Rocky Helmet
+Ability: Protosynthesis
+Tera Type: Water
+EVs: 252 Atk / 4 Def / 252 Spe
+Jolly Nature
+- Stealth Rock
+- Headlong Rush
+- Ice Spinner
+- Rapid Spin
+
+Ogerpon @ Heavy-Duty Boots
+Ability: Defiant
+Tera Type: Grass
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- Knock Off
+- U-turn
+- Encore
+- Ivy Cudgel
+
+Samurott-Hisui @ Heavy-Duty Boots
+Ability: Sharpness
+Tera Type: Ghost
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- Ceaseless Edge
+- Razor Shell
+- Sucker Punch
+- Taunt
+
+Slowking-Galar @ Icy Rock
+Ability: Regenerator
+Tera Type: Water
+EVs: 248 HP / 252 Def / 8 SpD
+Relaxed Nature
+- Chilly Reception
+- Sludge Bomb
+- Future Sight
+- Slack Off

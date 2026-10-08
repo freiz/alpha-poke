@@ -1,0 +1,59 @@
+Cinderace @ Heavy-Duty Boots
+Ability: Blaze
+Tera Type: Flying
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- U-turn
+- Pyro Ball
+- Court Change
+- Will-O-Wisp
+
+Corviknight @ Rocky Helmet
+Ability: Pressure
+Tera Type: Dragon
+EVs: 248 HP / 228 Def / 32 Spe
+Impish Nature
+- U-turn
+- Roost
+- Brave Bird
+- Defog
+
+Dondozo @ Leftovers
+Ability: Unaware
+Tera Type: Dark
+EVs: 248 HP / 252 Def / 8 SpD
+Impish Nature
+- Waterfall
+- Body Press
+- Curse
+- Rest
+
+Kyurem @ Leftovers
+Ability: Pressure
+Tera Type: Ground
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Freeze-Dry
+- Protect
+- Earth Power
+- Substitute
+
+Slowking-Galar @ Shuca Berry
+Ability: Regenerator
+Tera Type: Water
+EVs: 248 HP / 252 Def / 8 SpD
+Relaxed Nature
+- Chilly Reception
+- Sludge Bomb
+- Future Sight
+- Toxic
+
+Ting-Lu @ Leftovers
+Ability: Vessel of Ruin
+Tera Type: Water
+EVs: 252 HP / 4 Def / 252 SpD
+Careful Nature
+- Earthquake
+- Rest
+- Payback
+- Sleep Talk

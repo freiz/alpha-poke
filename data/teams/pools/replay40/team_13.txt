@@ -1,0 +1,59 @@
+Ceruledge @ Air Balloon
+Ability: Weak Armor
+Tera Type: Ghost
+EVs: 80 HP / 252 Atk / 176 Spe
+Adamant Nature
+- Swords Dance
+- Bitter Blade
+- Shadow Sneak
+- Poltergeist
+
+Darkrai @ Leftovers
+Ability: Bad Dreams
+Tera Type: Ghost
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Dark Pulse
+- Ice Beam
+- Nasty Plot
+- Focus Blast
+
+Glimmora @ Power Herb
+Ability: Toxic Debris
+Tera Type: Fairy
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Stealth Rock
+- Meteor Beam
+- Earth Power
+- Mortal Spin
+
+Iron Valiant @ Booster Energy
+Ability: Quark Drive
+Tera Type: Ghost
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Moonblast
+- Shadow Ball
+- Calm Mind
+- Focus Blast
+
+Ogerpon-Wellspring @ Wellspring Mask
+Ability: Water Absorb
+Tera Type: Water
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- Ivy Cudgel
+- Swords Dance
+- Trailblaze
+- Play Rough
+
+Raging Bolt @ Booster Energy
+Ability: Protosynthesis
+Tera Type: Bug
+EVs: 112 HP / 252 SpA / 144 Spe
+Modest Nature
+- Dragon Pulse
+- Thunderbolt
+- Thunderclap
+- Calm Mind

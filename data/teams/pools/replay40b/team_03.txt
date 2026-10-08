@@ -1,0 +1,59 @@
+Ceruledge @ Air Balloon
+Ability: Weak Armor
+Tera Type: Fighting
+EVs: 80 HP / 252 Atk / 176 Spe
+Adamant Nature
+- Bitter Blade
+- Swords Dance
+- Shadow Sneak
+- Close Combat
+
+Cresselia @ Leftovers
+Ability: Levitate
+Tera Type: Fairy
+EVs: 80 HP / 252 SpA / 176 Spe
+Modest Nature
+- Calm Mind
+- Moonblast
+- Stored Power
+- Lunar Blessing
+
+Hatterene @ Rocky Helmet
+Ability: Magic Bounce
+Tera Type: Steel
+EVs: 252 HP / 204 Def / 52 Spe
+Bold Nature
+- Trick Room
+- Healing Wish
+- Dazzling Gleam
+- Psychic Noise
+
+Raging Bolt @ Booster Energy
+Ability: Protosynthesis
+Tera Type: Fairy
+EVs: 112 HP / 252 SpA / 144 Spe
+Modest Nature
+- Draco Meteor
+- Thunderbolt
+- Volt Switch
+- Thunderclap
+
+Ursaluna @ Flame Orb
+Ability: Guts
+Tera Type: Poison
+EVs: 252 Atk / 4 Def / 252 Spe
+Jolly Nature
+- Facade
+- Headlong Rush
+- Fire Punch
+- Protect
+
+Zamazenta @ Light Clay
+Ability: Dauntless Shield
+Tera Type: Steel
+EVs: 104 HP / 248 Def / 156 Spe
+Jolly Nature
+- Light Screen
+- Reflect
+- Body Press
+- Heavy Slam

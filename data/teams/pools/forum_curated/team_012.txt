@@ -1,0 +1,63 @@
+Glimmora (F) @ Focus Sash  
+Ability: Toxic Debris  
+Tera Type: Grass  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Spikes  
+- Energy Ball  
+- Earth Power  
+- Sludge Wave  
+
+Hydreigon (F) @ Leftovers  
+Ability: Levitate  
+Shiny: Yes  
+Tera Type: Steel  
+EVs: 80 HP / 252 SpA / 176 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Stealth Rock  
+- Taunt  
+- Dark Pulse  
+- Draco Meteor  
+
+Great Tusk @ Heavy-Duty Boots  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 224 Atk / 32 SpD / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Knock Off  
+- Close Combat  
+- Headlong Rush  
+
+Ceruledge (M) @ Heavy-Duty Boots  
+Ability: Flash Fire  
+Tera Type: Bug  
+EVs: 48 HP / 252 Atk / 48 Def / 136 SpD / 24 Spe  
+Adamant Nature  
+- Bulk Up  
+- Taunt  
+- Shadow Sneak  
+- Bitter Blade  
+
+Gholdengo @ Covert Cloak  
+Ability: Good as Gold  
+Tera Type: Dark  
+EVs: 92 HP / 60 Def / 252 SpA / 104 Spe  
+Modest Nature  
+IVs: 0 Atk  
+- Nasty Plot  
+- Recover  
+- Shadow Ball  
+- Make It Rain  
+
+Iron Valiant @ Choice Scarf  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 252 Atk / 116 SpA / 140 Spe  
+Naughty Nature  
+- Trick  
+- Knock Off  
+- Moonblast  
+- Close Combat

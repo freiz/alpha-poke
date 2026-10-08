@@ -1,0 +1,59 @@
+Darkrai @ Heavy-Duty Boots
+Ability: Bad Dreams
+Tera Type: Fairy
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Dark Pulse
+- Will-O-Wisp
+- Ice Beam
+- Knock Off
+
+Dragonite @ Heavy-Duty Boots
+Ability: Multiscale
+Tera Type: Normal
+EVs: 252 Atk / 4 SpD / 252 Spe
+Adamant Nature
+- Extreme Speed
+- Dragon Dance
+- Roost
+- Earthquake
+
+Gholdengo @ Choice Scarf
+Ability: Good as Gold
+Tera Type: Steel
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Shadow Ball
+- Make It Rain
+- Trick
+- Recover
+
+Gliscor @ Toxic Orb
+Ability: Poison Heal
+Tera Type: Fairy
+EVs: 244 HP / 36 Def / 228 SpD
+Careful Nature
+- Toxic
+- Protect
+- Spikes
+- Earthquake
+
+Ting-Lu @ Leftovers
+Ability: Vessel of Ruin
+Tera Type: Water
+EVs: 252 HP / 4 Def / 252 SpD
+Careful Nature
+- Stealth Rock
+- Ruination
+- Earthquake
+- Whirlwind
+
+Zamazenta @ Heavy-Duty Boots
+Ability: Dauntless Shield
+Tera Type: Steel
+EVs: 104 HP / 248 Def / 156 Spe
+Jolly Nature
+- Close Combat
+- Ice Fang
+- Heavy Slam
+- Crunch

@@ -1,0 +1,61 @@
+Blissey @ Heavy-Duty Boots  
+Ability: Natural Cure  
+Tera Type: Dark  
+EVs: 4 HP / 252 Def / 252 SpD  
+Calm Nature  
+IVs: 0 Atk  
+- Soft-Boiled  
+- Stealth Rock  
+- Calm Mind  
+- Shadow Ball  
+
+Ursaluna @ Leftovers  
+Ability: Bulletproof  
+Tera Type: Ghost  
+EVs: 240 HP / 24 Atk / 148 Def / 96 SpD  
+Adamant Nature  
+- Bulk Up  
+- Ice Punch  
+- Stone Edge  
+- Earthquake  
+
+Toxapex @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Grass  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+IVs: 0 Atk  
+- Toxic Spikes  
+- Toxic  
+- Recover  
+- Haze  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Dark  
+EVs: 244 HP / 12 Def / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Protect  
+- Knock Off  
+- Earthquake  
+
+Dondozo @ Heavy-Duty Boots  
+Ability: Unaware  
+Tera Type: Fairy  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Avalanche  
+- Rest  
+- Sleep Talk  
+- Body Press  
+
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Fighting  
+EVs: 248 HP / 140 Def / 120 Spe  
+Impish Nature  
+- Brave Bird  
+- Defog  
+- Body Press  
+- Roost

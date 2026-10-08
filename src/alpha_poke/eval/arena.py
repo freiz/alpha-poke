@@ -27,7 +27,7 @@ from pathlib import Path
 from poke_env.teambuilder import Teambuilder
 
 from alpha_poke.analysis.roles import to_id
-from alpha_poke.teams import load_team_files
+from alpha_poke.teams import DEFAULT_POOL, load_team_files
 
 
 def _base(species: str) -> str:
@@ -149,7 +149,7 @@ def run_arena(
     bot_a: str,
     bot_b: str,
     n_pairs: int,
-    pool_dir: str = "data/teams/pool",
+    pool_dir: str = str(DEFAULT_POOL),
     ports: tuple[int, ...] = (8000,),
     procs: int = 4,
     lanes_per_proc: int = 6,

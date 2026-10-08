@@ -1,0 +1,59 @@
+Blissey @ Heavy-Duty Boots
+Ability: Natural Cure
+Tera Type: Dark
+EVs: 212 HP / 252 Def / 44 Spe
+Bold Nature
+- Stealth Rock
+- Seismic Toss
+- Soft-Boiled
+- Protect
+
+Clodsire @ Heavy-Duty Boots
+Ability: Unaware
+Tera Type: Steel
+EVs: 248 HP / 8 Def / 252 SpD
+Careful Nature
+- Spikes
+- Recover
+- Earthquake
+- Poison Jab
+
+Corviknight @ Rocky Helmet
+Ability: Pressure
+Tera Type: Dragon
+EVs: 248 HP / 228 Def / 32 Spe
+Impish Nature
+- Roost
+- Body Press
+- Defog
+- Iron Defense
+
+Dondozo @ Heavy-Duty Boots
+Ability: Unaware
+Tera Type: Fighting
+EVs: 248 HP / 252 Def / 8 SpD
+Impish Nature
+- Waterfall
+- Rest
+- Sleep Talk
+- Curse
+
+Gliscor @ Toxic Orb
+Ability: Poison Heal
+Tera Type: Normal
+EVs: 244 HP / 36 Def / 228 SpD
+Careful Nature
+- Protect
+- Knock Off
+- Facade
+- Swords Dance
+
+Toxapex @ Heavy-Duty Boots
+Ability: Regenerator
+Tera Type: Steel
+EVs: 248 HP / 8 Def / 252 SpD
+Bold Nature
+- Toxic
+- Toxic Spikes
+- Recover
+- Haze

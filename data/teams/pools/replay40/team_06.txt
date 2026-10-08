@@ -1,0 +1,59 @@
+Clefable @ Leftovers
+Ability: Magic Guard
+Tera Type: Water
+EVs: 176 HP / 252 Def / 80 Spe
+Bold Nature
+- Moonblast
+- Knock Off
+- Moonlight
+- Calm Mind
+
+Dragonite @ Heavy-Duty Boots
+Ability: Multiscale
+Tera Type: Normal
+EVs: 252 Atk / 4 SpD / 252 Spe
+Adamant Nature
+- Extreme Speed
+- Dragon Tail
+- Roost
+- Earthquake
+
+Gholdengo @ Choice Scarf
+Ability: Good as Gold
+Tera Type: Ghost
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Shadow Ball
+- Trick
+- Make It Rain
+- Recover
+
+Iron Moth @ Heavy-Duty Boots
+Ability: Quark Drive
+Tera Type: Fire
+EVs: 124 Def / 132 SpA / 252 Spe
+Timid Nature
+- Fiery Dance
+- Toxic
+- Overheat
+- Morning Sun
+
+Skarmory @ Rocky Helmet
+Ability: Sturdy
+Tera Type: Dragon
+EVs: 80 HP / 252 Def / 176 Spe
+Bold Nature
+- Spikes
+- Brave Bird
+- Roost
+- Whirlwind
+
+Ting-Lu @ Rocky Helmet
+Ability: Vessel of Ruin
+Tera Type: Water
+EVs: 252 HP / 4 Def / 252 SpD
+Careful Nature
+- Stealth Rock
+- Earthquake
+- Ruination
+- Rest

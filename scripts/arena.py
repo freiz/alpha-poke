@@ -14,6 +14,7 @@ import json
 
 from alpha_poke.eval.arena import run_arena
 from alpha_poke.eval.bots import BOT_NAMES
+from alpha_poke.teams import DEFAULT_POOL
 
 
 def main() -> None:
@@ -25,7 +26,7 @@ def main() -> None:
     ap.add_argument("--lanes", type=int, default=6, help="concurrent player pairs per process")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--heldout", action="store_true")
-    ap.add_argument("--pool", default="data/teams/pool")
+    ap.add_argument("--pool", default=str(DEFAULT_POOL))
     ap.add_argument("--trace", action="store_true", help="per-turn decision logs (knowledge bots)")
     ap.add_argument("--replays", action="store_true", help="save Showdown HTML replays")
     a = ap.parse_args()

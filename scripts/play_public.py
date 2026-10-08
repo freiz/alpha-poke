@@ -27,7 +27,7 @@ from poke_env.teambuilder import Teambuilder
 
 from alpha_poke.eval.bots import make_bot
 from alpha_poke.servers import account, local_server, public_account, public_server
-from alpha_poke.teams import load_team_files
+from alpha_poke.teams import DEFAULT_POOL, load_team_files
 
 # Rule-based (computed) plans, no LLM: the LLM plan showed no measurable gain over the computed
 # plan for either the heuristic bot (51.3% +- 4.6%) or the search bot (lead 47.3% +- 6.6%,
@@ -102,7 +102,7 @@ if __name__ == "__main__":
     ap.add_argument("--n", type=int, default=3)
     ap.add_argument("--difficulty", choices=sorted(DIFFICULTY), default="normal")
     ap.add_argument("--team", default=None, help="pool team name or Showdown-export file")
-    ap.add_argument("--pool", default="data/teams/pool")
+    ap.add_argument("--pool", default=str(DEFAULT_POOL))
     ap.add_argument("--llm", action="store_true", help="LLM game plan (off by default, D11)")
     ap.add_argument("--public", action="store_true", help="connect to the OFFICIAL server")
     ap.add_argument("--local-port", type=int, default=8000, help="dry run (without --public)")

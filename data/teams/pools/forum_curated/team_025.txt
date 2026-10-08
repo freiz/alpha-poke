@@ -1,0 +1,61 @@
+Dragonite @ Choice Band  
+Ability: Multiscale  
+Shiny: Yes  
+Tera Type: Normal  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Extreme Speed  
+- Earthquake  
+- Fire Punch  
+- Outrage  
+
+Dragapult @ Choice Specs  
+Ability: Infiltrator  
+Tera Type: Ghost  
+EVs: 12 Def / 244 SpA / 252 Spe  
+Modest Nature  
+- Draco Meteor  
+- Shadow Ball  
+- U-turn  
+- Flamethrower  
+
+Meowscarada @ Choice Band  
+Ability: Protean  
+Tera Type: Grass  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Sucker Punch  
+- U-turn  
+- Flower Trick  
+
+Great Tusk @ Rocky Helmet  
+Ability: Protosynthesis  
+Tera Type: Fire  
+EVs: 248 HP / 12 Atk / 192 Def / 56 Spe  
+Impish Nature  
+- Earthquake  
+- Stealth Rock  
+- Knock Off  
+- Rapid Spin  
+
+Corviknight @ Leftovers  
+Ability: Pressure  
+Tera Type: Water  
+EVs: 248 HP / 164 Def / 96 SpD  
+Sassy Nature  
+IVs: 0 Spe  
+- Brave Bird  
+- Body Press  
+- U-turn  
+- Roost  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Kowtow Cleave  
+- Sucker Punch  
+- Iron Head  
+- Swords Dance

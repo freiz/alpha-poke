@@ -1,0 +1,61 @@
+Slither Wing @ Heavy-Duty Boots  
+Ability: Protosynthesis  
+Tera Type: Water  
+EVs: 252 HP / 248 Def / 8 Spe  
+Impish Nature  
+- U-turn  
+- Morning Sun  
+- Will-O-Wisp  
+- Low Kick  
+
+Garganacl @ Leftovers  
+Ability: Purifying Salt  
+Tera Type: Fairy  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Stealth Rock  
+- Salt Cure  
+- Protect  
+- Recover  
+
+Cyclizar @ Assault Vest  
+Ability: Regenerator  
+Tera Type: Steel  
+EVs: 88 SpA / 252 SpD / 168 Spe  
+Timid Nature  
+- Rapid Spin  
+- Overheat  
+- U-turn  
+- Knock Off  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Fairy  
+EVs: 236 HP / 252 Atk / 20 Spe  
+Adamant Nature  
+- Swords Dance  
+- Kowtow Cleave  
+- Sucker Punch  
+- Iron Head  
+
+Toxapex @ Assault Vest  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 248 HP / 252 SpA / 8 SpD  
+Modest Nature  
+IVs: 0 Atk  
+- Surf  
+- Sludge Bomb  
+- Infestation  
+- Acid Spray  
+
+Skeledirge @ Heavy-Duty Boots  
+Ability: Unaware  
+Tera Type: Dark  
+EVs: 252 HP / 40 Def / 188 SpD / 28 Spe  
+Bold Nature  
+IVs: 0 Atk  
+- Substitute  
+- Torch Song  
+- Earth Power  
+- Slack Off

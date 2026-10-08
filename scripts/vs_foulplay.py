@@ -14,12 +14,13 @@ import json
 
 from alpha_poke.eval.bots import BOT_NAMES
 from alpha_poke.eval.external import run_vs_foulplay
+from alpha_poke.teams import DEFAULT_POOL
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("bot", choices=BOT_NAMES)
     ap.add_argument("--pairs", type=int, default=10)
-    ap.add_argument("--pool", default="data/teams/pool")
+    ap.add_argument("--pool", default=str(DEFAULT_POOL))
     ap.add_argument("--ports", type=int, nargs="+", default=[8000, 8001])
     ap.add_argument("--lanes", type=int, default=2)
     ap.add_argument("--search-ms", type=int, default=1000)

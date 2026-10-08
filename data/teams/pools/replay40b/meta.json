@@ -1,0 +1,7 @@
+{
+ "kind": "replay reconstruction",
+ "min_uses": 50,
+ "offset": 40,
+ "spread_mode": "top",
+ "note": "built 2026-10 by scripts/build_team_pool.py, which ignored --spread-mode and always used the most common Smogon spread; replay tables have grown since, so a rebuild today gives different teams. Frozen as evaluation pools."
+}

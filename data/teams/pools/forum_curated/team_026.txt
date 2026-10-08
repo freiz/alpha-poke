@@ -1,0 +1,60 @@
+Clodsire @ Black Sludge  
+Ability: Unaware  
+Tera Type: Dark  
+EVs: 248 HP / 4 Atk / 252 SpD / 4 Spe  
+Careful Nature  
+- Earthquake  
+- Spikes  
+- Toxic  
+- Recover  
+
+Dondozo @ Leftovers  
+Ability: Unaware  
+Tera Type: Grass  
+EVs: 252 HP / 252 Def  
+Impish Nature  
+- Wave Crash  
+- Earthquake  
+- Rest  
+- Curse  
+
+Iron Boulder @ Choice Band  
+Ability: Quark Drive  
+Tera Type: Rock  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Mighty Cleave  
+- Psycho Cut  
+- Earthquake  
+- Close Combat  
+
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Flying  
+EVs: 248 HP / 252 Def / 8 SpD  
+Impish Nature  
+IVs: 29 Spe  
+- Body Press  
+- U-turn  
+- Roost  
+- Defog  
+
+Garganacl @ Leftovers  
+Ability: Purifying Salt  
+Tera Type: Water  
+EVs: 252 HP / 4 Atk / 252 SpD  
+Careful Nature  
+- Salt Cure  
+- Stealth Rock  
+- Protect  
+- Recover  
+
+Meowscarada @ Choice Band  
+Ability: Protean  
+Tera Type: Grass  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Flower Trick  
+- Thunder Punch  
+- U-turn

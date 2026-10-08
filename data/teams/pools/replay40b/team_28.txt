@@ -1,0 +1,59 @@
+Dragapult @ Heavy-Duty Boots
+Ability: Cursed Body
+Tera Type: Dragon
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- U-turn
+- Dragon Darts
+- Will-O-Wisp
+- Hex
+
+Dragonite @ Heavy-Duty Boots
+Ability: Multiscale
+Tera Type: Normal
+EVs: 252 Atk / 4 SpD / 252 Spe
+Adamant Nature
+- Dragon Dance
+- Extreme Speed
+- Earthquake
+- Roost
+
+Iron Crown @ Choice Specs
+Ability: Quark Drive
+Tera Type: Steel
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Tachyon Cutter
+- Volt Switch
+- Psyshock
+- Focus Blast
+
+Ting-Lu @ Leftovers
+Ability: Vessel of Ruin
+Tera Type: Water
+EVs: 252 HP / 4 Def / 252 SpD
+Careful Nature
+- Stealth Rock
+- Earthquake
+- Ruination
+- Whirlwind
+
+Weezing-Galar @ Heavy-Duty Boots
+Ability: Neutralizing Gas
+Tera Type: Ghost
+EVs: 248 HP / 252 Def / 8 SpD
+Bold Nature
+- Will-O-Wisp
+- Sludge Bomb
+- Pain Split
+- Defog
+
+Zapdos @ Heavy-Duty Boots
+Ability: Static
+Tera Type: Fairy
+EVs: 248 HP / 252 Def / 8 SpD
+Bold Nature
+- Volt Switch
+- Hurricane
+- Heat Wave
+- Roost

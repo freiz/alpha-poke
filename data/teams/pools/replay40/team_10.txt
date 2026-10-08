@@ -1,0 +1,59 @@
+Dragonite @ Heavy-Duty Boots
+Ability: Multiscale
+Tera Type: Ground
+EVs: 252 Atk / 4 SpD / 252 Spe
+Adamant Nature
+- Earthquake
+- Dragon Dance
+- Ice Spinner
+- Roost
+
+Gholdengo @ Rocky Helmet
+Ability: Good as Gold
+Tera Type: Fairy
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Shadow Ball
+- Make It Rain
+- Recover
+- Nasty Plot
+
+Glimmora @ Focus Sash
+Ability: Toxic Debris
+Tera Type: Ghost
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Stealth Rock
+- Sludge Wave
+- Energy Ball
+- Earth Power
+
+Great Tusk @ Heavy-Duty Boots
+Ability: Protosynthesis
+Tera Type: Poison
+EVs: 252 Atk / 4 Def / 252 Spe
+Jolly Nature
+- Knock Off
+- Rapid Spin
+- Headlong Rush
+- Ice Spinner
+
+Kyurem @ Choice Scarf
+Ability: Pressure
+Tera Type: Ice
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Ice Beam
+- Freeze-Dry
+- Draco Meteor
+- Earth Power
+
+Samurott-Hisui @ Assault Vest
+Ability: Sharpness
+Tera Type: Poison
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- Ceaseless Edge
+- Knock Off
+- Sucker Punch
+- Aqua Cutter

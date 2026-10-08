@@ -1,0 +1,61 @@
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Flying  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Kowtow Cleave  
+- Iron Head  
+- Sucker Punch  
+- Swords Dance  
+
+Dragonite @ Heavy-Duty Boots  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Extreme Speed  
+- Dragon Dance  
+- Roost  
+- Earthquake  
+
+Great Tusk @ Eject Pack  
+Ability: Protosynthesis  
+Tera Type: Ground  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Close Combat  
+- Headlong Rush  
+- Rapid Spin  
+
+Magnezone @ Air Balloon  
+Ability: Magnet Pull  
+Tera Type: Water  
+EVs: 248 HP / 84 SpA / 176 Spe  
+Modest Nature  
+IVs: 0 Atk  
+- Thunderbolt  
+- Flash Cannon  
+- Iron Defense  
+- Body Press  
+
+Toxapex @ Assault Vest  
+Ability: Regenerator  
+Tera Type: Dark  
+EVs: 248 HP / 220 SpA / 40 Spe  
+Modest Nature  
+IVs: 0 Atk  
+- Infestation  
+- Sludge Bomb  
+- Surf  
+- Ice Beam  
+
+Dragapult @ Choice Specs  
+Ability: Infiltrator  
+Tera Type: Dragon  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Shadow Ball  
+- Draco Meteor  
+- Fire Blast  
+- U-turn

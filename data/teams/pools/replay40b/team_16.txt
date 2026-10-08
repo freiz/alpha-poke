@@ -1,0 +1,59 @@
+Enamorus @ Choice Scarf
+Ability: Contrary
+Tera Type: Ground
+EVs: 252 SpA / 4 SpD / 252 Spe
+Modest Nature
+- Moonblast
+- Healing Wish
+- Earth Power
+- Mystical Fire
+
+Great Tusk @ Rocky Helmet
+Ability: Protosynthesis
+Tera Type: Ice
+EVs: 252 Atk / 4 Def / 252 Spe
+Jolly Nature
+- Stealth Rock
+- Rapid Spin
+- Headlong Rush
+- Ice Spinner
+
+Raging Bolt @ Choice Specs
+Ability: Protosynthesis
+Tera Type: Dragon
+EVs: 112 HP / 252 SpA / 144 Spe
+Modest Nature
+- Draco Meteor
+- Volt Switch
+- Thunderbolt
+- Thunderclap
+
+Samurott-Hisui @ Black Glasses
+Ability: Sharpness
+Tera Type: Dark
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- Ceaseless Edge
+- Flip Turn
+- Sucker Punch
+- Swords Dance
+
+Scizor @ Choice Band
+Ability: Technician
+Tera Type: Steel
+EVs: 120 HP / 252 Atk / 136 Spe
+Adamant Nature
+- Bullet Punch
+- U-turn
+- Knock Off
+- Close Combat
+
+Slowking-Galar @ Assault Vest
+Ability: Regenerator
+Tera Type: Water
+EVs: 248 HP / 252 Def / 8 SpD
+Relaxed Nature
+- Sludge Bomb
+- Psychic Noise
+- Flamethrower
+- Whirlpool

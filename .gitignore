@@ -24,8 +24,13 @@ wandb/
 *.ckpt
 *.npz
 
-# Data
-/data/
+# Data (except the team catalog and the evaluation pools: small; the crawl is slow to redo and
+# the replay pools cannot be rebuilt as they were)
+/data/*
+!/data/teams/
+/data/teams/*
+!/data/teams/catalog.jsonl
+!/data/teams/pools/
 
 # Editor / OS
 .vscode/

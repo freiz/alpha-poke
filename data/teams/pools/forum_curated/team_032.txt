@@ -1,0 +1,60 @@
+Ogerpon-Wellspring (F) @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Swords Dance  
+- Ivy Cudgel  
+- Horn Leech  
+
+Gliscor (M) @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Fairy  
+EVs: 244 HP / 252 SpD / 12 Spe  
+Careful Nature  
+- Spikes  
+- Earthquake  
+- Protect  
+- Toxic  
+
+Garganacl (M) @ Leftovers  
+Ability: Purifying Salt  
+Tera Type: Water  
+EVs: 252 HP / 156 Def / 100 SpD  
+Impish Nature  
+- Curse  
+- Salt Cure  
+- Recover  
+- Earthquake  
+
+Cinderace (M) @ Heavy-Duty Boots  
+Ability: Libero  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Court Change  
+- Sucker Punch  
+- U-turn  
+- Pyro Ball  
+
+Zapdos @ Heavy-Duty Boots  
+Ability: Static  
+Tera Type: Fairy  
+EVs: 252 HP / 104 Def / 152 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Roost  
+- Volt Switch  
+- Hurricane  
+- Heat Wave  
+
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Tera Type: Poison  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- Stealth Rock  
+- Earthquake  
+- Whirlwind  
+- Ruination

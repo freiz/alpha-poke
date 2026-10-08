@@ -1,0 +1,61 @@
+Grimmsnarl @ Light Clay  
+Ability: Prankster  
+Tera Type: Fairy  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Reflect  
+- Light Screen  
+- Spirit Break  
+- Taunt  
+
+Ursaluna @ Quick Claw  
+Ability: Guts  
+Tera Type: Normal  
+EVs: 248 HP / 252 Atk / 8 SpD  
+Adamant Nature  
+- Facade  
+- Headlong Rush  
+- Crunch  
+- Swords Dance  
+
+Slowbro-Galar (M) @ Quick Claw  
+Ability: Quick Draw  
+Tera Type: Water  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+IVs: 0 Atk  
+- Sludge Bomb  
+- Psyshock  
+- Surf  
+- Nasty Plot  
+
+Iron Hands @ Quick Claw  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 248 HP / 252 Atk / 8 SpD  
+Adamant Nature  
+- Close Combat  
+- Wild Charge  
+- Ice Punch  
+- Swords Dance  
+
+Kingambit @ Quick Claw  
+Ability: Supreme Overlord  
+Tera Type: Flying  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Kowtow Cleave  
+- Swords Dance  
+- Iron Head  
+- Low Kick  
+
+Enamorus-Therian @ Quick Claw  
+Ability: Overcoat  
+Tera Type: Fire  
+EVs: 248 HP / 252 SpA / 8 SpD  
+Modest Nature  
+IVs: 0 Atk  
+- Moonblast  
+- Earth Power  
+- Mystical Fire  
+- Calm Mind

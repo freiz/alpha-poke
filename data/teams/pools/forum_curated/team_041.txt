@@ -1,0 +1,61 @@
+Mandibuzz @ Heavy-Duty Boots  
+Ability: Overcoat  
+Tera Type: Water  
+EVs: 248 HP / 244 Def / 16 Spe  
+Impish Nature  
+IVs: 0 Atk  
+- Iron Defense  
+- Foul Play  
+- Toxic  
+- Roost  
+
+Moltres @ Heavy-Duty Boots  
+Ability: Flame Body  
+Tera Type: Fairy  
+EVs: 248 HP / 116 Def / 132 SpD / 12 Spe  
+Bold Nature  
+- Flamethrower  
+- Will-O-Wisp  
+- U-turn  
+- Roost  
+
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Tera Type: Water  
+EVs: 248 HP / 8 Def / 252 SpD  
+Careful Nature  
+- Earthquake  
+- Spikes  
+- Ruination  
+- Rest  
+
+Dragapult @ Heavy-Duty Boots  
+Ability: Infiltrator  
+Tera Type: Ghost  
+EVs: 80 Atk / 176 SpA / 252 Spe  
+Naive Nature  
+- Will-O-Wisp  
+- Hex  
+- Substitute  
+- Dragon Darts  
+
+Clefable @ Leftovers  
+Ability: Magic Guard  
+Tera Type: Dragon  
+EVs: 252 HP / 252 Def / 4 Spe  
+Bold Nature  
+IVs: 0 Atk  
+- Calm Mind  
+- Moonblast  
+- Moonlight  
+- Stealth Rock  
+
+Kingambit @ Heavy-Duty Boots  
+Ability: Supreme Overlord  
+Tera Type: Fire  
+EVs: 168 HP / 252 Atk / 88 Spe  
+Adamant Nature  
+- Swords Dance  
+- Kowtow Cleave  
+- Iron Head  
+- Sucker Punch

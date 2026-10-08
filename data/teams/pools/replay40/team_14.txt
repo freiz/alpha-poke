@@ -1,0 +1,59 @@
+Alomomola @ Heavy-Duty Boots
+Ability: Regenerator
+Tera Type: Ghost
+EVs: 248 HP / 8 Def / 252 SpD
+Relaxed Nature
+- Flip Turn
+- Wish
+- Tickle
+- Protect
+
+Cinderace @ Heavy-Duty Boots
+Ability: Libero
+Tera Type: Grass
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- U-turn
+- Pyro Ball
+- Court Change
+- Will-O-Wisp
+
+Iron Crown @ Assault Vest
+Ability: Quark Drive
+Tera Type: Fairy
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Volt Switch
+- Tachyon Cutter
+- Psychic Noise
+- Focus Blast
+
+Lokix @ Choice Band
+Ability: Tinted Lens
+Tera Type: Bug
+EVs: 252 Atk / 4 Def / 252 Spe
+Adamant Nature
+- First Impression
+- U-turn
+- Knock Off
+- Leech Life
+
+Ursaluna @ Flame Orb
+Ability: Guts
+Tera Type: Normal
+EVs: 252 Atk / 4 Def / 252 Spe
+Jolly Nature
+- Facade
+- Headlong Rush
+- Fire Punch
+- Swords Dance
+
+Zapdos @ Heavy-Duty Boots
+Ability: Static
+Tera Type: Grass
+EVs: 248 HP / 252 Def / 8 SpD
+Bold Nature
+- U-turn
+- Discharge
+- Hurricane
+- Roost

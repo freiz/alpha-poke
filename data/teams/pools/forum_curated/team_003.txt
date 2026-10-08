@@ -1,0 +1,61 @@
+Slowking @ Assault Vest  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 196 HP / 252 SpA / 60 Spe  
+Modest Nature  
+IVs: 0 Atk  
+- Surf  
+- Psyshock  
+- Ice Beam  
+- Psychic  
+
+Corviknight @ Leftovers  
+Ability: Pressure  
+Tera Type: Flying  
+EVs: 248 HP / 252 Def / 8 SpD  
+Impish Nature  
+- Brave Bird  
+- U-turn  
+- Roost  
+- Defog  
+
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Water  
+EVs: 252 HP / 204 Def / 52 Spe  
+Impish Nature  
+- Earthquake  
+- Knock Off  
+- Stealth Rock  
+- Rapid Spin  
+
+Dragapult @ Choice Specs  
+Ability: Infiltrator  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Draco Meteor  
+- Shadow Ball  
+- Flamethrower  
+- U-turn  
+
+Skeledirge @ Heavy-Duty Boots  
+Ability: Unaware  
+Tera Type: Fairy  
+EVs: 248 HP / 252 Def / 4 SpA / 4 Spe  
+Bold Nature  
+IVs: 0 Atk  
+- Substitute  
+- Torch Song  
+- Shadow Ball  
+- Slack Off  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Flying  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- Swords Dance  
+- Iron Head  
+- Kowtow Cleave  
+- Sucker Punch

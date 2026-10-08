@@ -22,7 +22,7 @@ from dataclasses import asdict
 from pathlib import Path
 
 from alpha_poke.eval.arena import _base, _species, make_schedule, summarize
-from alpha_poke.teams import load_team_files
+from alpha_poke.teams import DEFAULT_POOL, load_team_files
 
 ROOT = Path(__file__).resolve().parents[3]
 FP = ROOT / "external" / "foul-play"
@@ -171,7 +171,7 @@ def run_external(
     bot: str,
     opp: dict,
     n_pairs: int,
-    pool_dir: str = "data/teams/pool",
+    pool_dir: str = str(DEFAULT_POOL),
     ports: tuple[int, ...] = (8000,),
     lanes: int = 2,
     seed: int = 0,
@@ -218,7 +218,7 @@ def run_external(
     }
 
 
-def run_vs_foulplay(bot: str, n_pairs: int, pool_dir="data/teams/pool", ports=(8000,), lanes=2,
+def run_vs_foulplay(bot: str, n_pairs: int, pool_dir=str(DEFAULT_POOL), ports=(8000,), lanes=2,
                     search_ms=1000, parallelism=4, seed=0, trace=False, replays=False,
                     log_dir="data/eval", heldout=False) -> dict:  # fmt: skip
     opp = {"kind": "foulplay", "search_ms": search_ms, "parallelism": parallelism}

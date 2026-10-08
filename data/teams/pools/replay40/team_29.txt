@@ -1,0 +1,59 @@
+Ceruledge @ Focus Sash
+Ability: Weak Armor
+Tera Type: Bug
+EVs: 80 HP / 252 Atk / 176 Spe
+Adamant Nature
+- Bitter Blade
+- Swords Dance
+- Poltergeist
+- Destiny Bond
+
+Great Tusk @ Rocky Helmet
+Ability: Protosynthesis
+Tera Type: Fire
+EVs: 252 Atk / 4 Def / 252 Spe
+Jolly Nature
+- Stealth Rock
+- Headlong Rush
+- Rapid Spin
+- Ice Spinner
+
+Hatterene @ Eject Button
+Ability: Magic Bounce
+Tera Type: Steel
+EVs: 252 HP / 204 Def / 52 Spe
+Bold Nature
+- Dazzling Gleam
+- Nuzzle
+- Psychic Noise
+- Healing Wish
+
+Ninetales @ Heat Rock
+Ability: Drought
+Tera Type: Flying
+EVs: 4 Def / 252 SpA / 252 Spe
+Timid Nature
+- Encore
+- Flamethrower
+- Will-O-Wisp
+- Healing Wish
+
+Venusaur @ Life Orb
+Ability: Chlorophyll
+Tera Type: Fire
+EVs: 4 Atk / 252 SpA / 252 Spe
+Naive Nature
+- Weather Ball
+- Sludge Bomb
+- Giga Drain
+- Growth
+
+Walking Wake @ Choice Specs
+Ability: Protosynthesis
+Tera Type: Water
+EVs: 12 Def / 244 SpA / 252 Spe
+Timid Nature
+- Hydro Steam
+- Draco Meteor
+- Dragon Pulse
+- Flamethrower

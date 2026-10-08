@@ -1,0 +1,59 @@
+Excadrill @ Air Balloon
+Ability: Sand Rush
+Tera Type: Ground
+EVs: 252 Atk / 4 SpD / 252 Spe
+Adamant Nature
+- Earthquake
+- Rapid Spin
+- Iron Head
+- Swords Dance
+
+Garganacl @ Leftovers
+Ability: Purifying Salt
+Tera Type: Water
+EVs: 252 HP / 52 Def / 204 SpD
+Careful Nature
+- Salt Cure
+- Protect
+- Stealth Rock
+- Recover
+
+Moltres @ Heavy-Duty Boots
+Ability: Flame Body
+Tera Type: Grass
+EVs: 248 HP / 248 Def / 12 Spe
+Bold Nature
+- U-turn
+- Flamethrower
+- Roost
+- Roar
+
+Pecharunt @ Heavy-Duty Boots
+Ability: Poison Puppeteer
+Tera Type: Grass
+EVs: 252 HP / 228 Def / 28 Spe
+Bold Nature
+- Parting Shot
+- Recover
+- Malignant Chain
+- Shadow Ball
+
+Tyranitar @ Choice Band
+Ability: Sand Stream
+Tera Type: Dark
+EVs: 252 Atk / 4 Def / 252 Spe
+Adamant Nature
+- Knock Off
+- Stone Edge
+- Ice Punch
+- Low Kick
+
+Zamazenta @ Leftovers
+Ability: Dauntless Shield
+Tera Type: Steel
+EVs: 104 HP / 248 Def / 156 Spe
+Jolly Nature
+- Iron Defense
+- Body Press
+- Crunch
+- Substitute

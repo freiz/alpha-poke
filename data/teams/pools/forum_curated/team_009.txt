@@ -1,0 +1,61 @@
+Landorus-Therian @ Rocky Helmet  
+Ability: Intimidate  
+Tera Type: Water  
+EVs: 252 HP / 232 Def / 24 Spe  
+Impish Nature  
+- Stealth Rock  
+- Earthquake  
+- U-turn  
+- Grass Knot  
+
+Zamazenta @ Heavy-Duty Boots  
+Ability: Dauntless Shield  
+Tera Type: Fighting  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Close Combat  
+- Heavy Slam  
+- Stone Edge  
+- Crunch  
+
+Goodra-Hisui (F) @ Assault Vest  
+Ability: Sap Sipper  
+Tera Type: Fairy  
+EVs: 184 HP / 252 SpA / 72 Spe  
+Modest Nature  
+- Draco Meteor  
+- Ice Beam  
+- Knock Off  
+- Earthquake  
+
+Iron Valiant @ Choice Scarf  
+Ability: Quark Drive  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Moonblast  
+- Focus Blast  
+- Thunderbolt  
+- Trick  
+
+Skeledirge @ Heavy-Duty Boots  
+Ability: Unaware  
+Tera Type: Water  
+EVs: 252 HP / 232 SpD / 24 Spe  
+Calm Nature  
+IVs: 0 Atk  
+- Will-O-Wisp  
+- Torch Song  
+- Hex  
+- Slack Off  
+
+Greninja-Bond (M) @ Choice Specs  
+Ability: Battle Bond  
+Tera Type: Water  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Surf  
+- Dark Pulse  
+- Ice Beam  
+- Water Shuriken

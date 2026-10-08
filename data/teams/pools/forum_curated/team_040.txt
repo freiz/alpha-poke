@@ -1,0 +1,62 @@
+Slowking @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Ground  
+EVs: 252 HP / 4 SpA / 252 SpD  
+Sassy Nature  
+IVs: 0 Atk / 0 Spe  
+- Chilly Reception  
+- Surf  
+- Future Sight  
+- Slack Off  
+
+Garganacl @ Leftovers  
+Ability: Purifying Salt  
+Tera Type: Water  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Salt Cure  
+- Protect  
+- Recover  
+- Stealth Rock  
+
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Poison  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Earthquake  
+- Rapid Spin  
+- Close Combat  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Electric  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Calm Mind  
+- Moonblast  
+- Psyshock  
+- Thunderbolt  
+
+Skeledirge @ Heavy-Duty Boots  
+Ability: Unaware  
+Tera Type: Fairy  
+EVs: 248 HP / 56 Def / 188 SpD / 16 Spe  
+Bold Nature  
+IVs: 0 Atk  
+- Substitute  
+- Hex  
+- Slack Off  
+- Will-O-Wisp  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Flying  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Kowtow Cleave  
+- Iron Head  
+- Swords Dance  
+- Sucker Punch

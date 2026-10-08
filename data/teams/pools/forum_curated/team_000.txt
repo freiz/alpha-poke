@@ -1,0 +1,60 @@
+Dragapult (M) @ Choice Specs  
+Ability: Infiltrator  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Shadow Ball  
+- Draco Meteor  
+- Thunder  
+- U-turn  
+
+Slowking-Galar @ Black Sludge  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 248 HP / 8 Def / 252 SpD  
+Sassy Nature  
+IVs: 0 Atk / 0 Spe  
+- Psyshock  
+- Flamethrower  
+- Trick  
+- Chilly Reception  
+
+Cinderace (F) @ Heavy-Duty Boots  
+Ability: Libero  
+Tera Type: Fairy  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Pyro Ball  
+- Gunk Shot  
+- Sucker Punch  
+- Court Change  
+
+Landorus-Therian @ Earth Plate  
+Ability: Intimidate  
+Tera Type: Water  
+EVs: 220 Atk / 52 SpA / 236 Spe  
+Naive Nature  
+- Earthquake  
+- Smack Down  
+- Weather Ball  
+- U-turn  
+
+Kingambit (F) @ Black Glasses  
+Ability: Supreme Overlord  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Kowtow Cleave  
+- Low Kick  
+- Sucker Punch  
+- Swords Dance  
+
+Dragonite (F) @ Heavy-Duty Boots  
+Ability: Multiscale  
+Tera Type: Ground  
+EVs: 204 Atk / 52 SpA / 252 Spe  
+Naive Nature  
+- Dragon Dance  
+- Earthquake  
+- Hurricane  
+- Stone Edge

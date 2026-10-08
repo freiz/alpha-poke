@@ -1,0 +1,59 @@
+Cinderace @ Heavy-Duty Boots
+Ability: Libero
+Tera Type: Fire
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- U-turn
+- Pyro Ball
+- Court Change
+- Sucker Punch
+
+Great Tusk @ Leftovers
+Ability: Protosynthesis
+Tera Type: Ground
+EVs: 252 Atk / 4 Def / 252 Spe
+Jolly Nature
+- Headlong Rush
+- Close Combat
+- Ice Spinner
+- Rapid Spin
+
+Kyurem @ Choice Specs
+Ability: Pressure
+Tera Type: Ice
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Ice Beam
+- Blizzard
+- Freeze-Dry
+- Earth Power
+
+Mandibuzz @ Heavy-Duty Boots
+Ability: Overcoat
+Tera Type: Ghost
+EVs: 248 HP / 244 Def / 16 Spe
+Impish Nature
+- U-turn
+- Roost
+- Toxic
+- Foul Play
+
+Ogerpon-Wellspring @ Wellspring Mask
+Ability: Water Absorb
+Tera Type: Water
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- Ivy Cudgel
+- Power Whip
+- Synthesis
+- Play Rough
+
+Slowking-Galar @ Rocky Helmet
+Ability: Regenerator
+Tera Type: Fairy
+EVs: 248 HP / 252 Def / 8 SpD
+Relaxed Nature
+- Chilly Reception
+- Future Sight
+- Ice Beam
+- Flamethrower

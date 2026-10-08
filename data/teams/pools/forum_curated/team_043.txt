@@ -1,0 +1,65 @@
+Tyranitar (M) @ Smooth Rock  
+Ability: Sand Stream  
+Shiny: Yes  
+Tera Type: Poison  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Knock Off  
+- Ice Punch  
+- Low Kick  
+
+Excadrill (M) @ Leftovers  
+Ability: Sand Rush  
+Shiny: Yes  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Earthquake  
+- Iron Head  
+- Rapid Spin  
+- Swords Dance  
+
+Skarmory (M) @ Rocky Helmet  
+Ability: Sturdy  
+Shiny: Yes  
+Tera Type: Dragon  
+EVs: 80 HP / 252 Def / 176 Spe  
+Bold Nature  
+IVs: 0 Atk  
+- Spikes  
+- Roost  
+- Body Press  
+- Iron Defense  
+
+Dragapult (M) @ Choice Specs  
+Ability: Infiltrator  
+Shiny: Yes  
+Tera Type: Dragon  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Shadow Ball  
+- Draco Meteor  
+- Flamethrower  
+- U-turn  
+
+Ogerpon-Wellspring (F) @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Ivy Cudgel  
+- U-turn  
+- Power Whip  
+- Knock Off  
+
+Primarina (M) @ Assault Vest  
+Ability: Torrent  
+Shiny: Yes  
+Tera Type: Poison  
+EVs: 248 HP / 252 SpA / 8 SpD  
+Modest Nature  
+- Surf  
+- Moonblast  
+- Flip Turn  
+- Psychic Noise

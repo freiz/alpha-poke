@@ -1,0 +1,59 @@
+Blissey @ Leftovers
+Ability: Natural Cure
+Tera Type: Poison
+EVs: 212 HP / 252 Def / 44 Spe
+Bold Nature
+- Stealth Rock
+- Soft-Boiled
+- Calm Mind
+- Seismic Toss
+
+Corviknight @ Leftovers
+Ability: Pressure
+Tera Type: Fighting
+EVs: 248 HP / 228 Def / 32 Spe
+Impish Nature
+- Roost
+- Body Press
+- Defog
+- Iron Defense
+
+Dondozo @ Leftovers
+Ability: Unaware
+Tera Type: Dark
+EVs: 248 HP / 252 Def / 8 SpD
+Impish Nature
+- Waterfall
+- Rest
+- Sleep Talk
+- Curse
+
+Gliscor @ Toxic Orb
+Ability: Poison Heal
+Tera Type: Dark
+EVs: 244 HP / 36 Def / 228 SpD
+Careful Nature
+- Protect
+- Knock Off
+- Earthquake
+- Swords Dance
+
+Toxapex @ Leftovers
+Ability: Regenerator
+Tera Type: Steel
+EVs: 248 HP / 8 Def / 252 SpD
+Bold Nature
+- Toxic
+- Recover
+- Poison Jab
+- Haze
+
+Weezing-Galar @ Heavy-Duty Boots
+Ability: Neutralizing Gas
+Tera Type: Ghost
+EVs: 248 HP / 252 Def / 8 SpD
+Bold Nature
+- Will-O-Wisp
+- Defog
+- Pain Split
+- Toxic Spikes

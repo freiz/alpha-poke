@@ -1,0 +1,61 @@
+Samurott-Hisui (M) @ Black Glasses  
+Ability: Sharpness  
+Shiny: Yes  
+Tera Type: Electric  
+EVs: 120 HP / 252 Atk / 136 Spe  
+Adamant Nature  
+- Swords Dance  
+- Ceaseless Edge  
+- Aqua Cutter  
+- Sucker Punch  
+
+Gholdengo @ Choice Scarf  
+Ability: Good as Gold  
+Tera Type: Fighting  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Shadow Ball  
+- Make It Rain  
+- Focus Blast  
+- Trick  
+
+Ceruledge @ Focus Sash  
+Ability: Weak Armor  
+Tera Type: Fairy  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Bitter Blade  
+- Shadow Sneak  
+- Destiny Bond  
+
+Rillaboom @ Life Orb  
+Ability: Grassy Surge  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Grassy Glide  
+- Knock Off  
+- Drain Punch  
+
+Zamazenta @ Leftovers  
+Ability: Dauntless Shield  
+Tera Type: Fire  
+EVs: 4 Atk / 252 Def / 252 Spe  
+Jolly Nature  
+- Body Press  
+- Crunch  
+- Heavy Slam  
+- Iron Defense  
+
+Great Tusk @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Poison  
+EVs: 252 HP / 4 Def / 252 Spe  
+Jolly Nature  
+- Bulk Up  
+- High Horsepower  
+- Ice Spinner  
+- Rapid Spin

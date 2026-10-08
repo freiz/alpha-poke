@@ -1,0 +1,59 @@
+Great Tusk @ Rocky Helmet
+Ability: Protosynthesis
+Tera Type: Poison
+EVs: 252 Atk / 4 Def / 252 Spe
+Jolly Nature
+- Stealth Rock
+- Headlong Rush
+- Ice Spinner
+- Rapid Spin
+
+Hatterene @ Eject Button
+Ability: Magic Bounce
+Tera Type: Flying
+EVs: 252 HP / 204 Def / 52 Spe
+Bold Nature
+- Psychic Noise
+- Mystical Fire
+- Pain Split
+- Healing Wish
+
+Kingambit @ Leftovers
+Ability: Supreme Overlord
+Tera Type: Bug
+EVs: 248 HP / 252 Atk / 8 Def
+Adamant Nature
+- Iron Head
+- Swords Dance
+- Sucker Punch
+- Low Kick
+
+Ninetales @ Heat Rock
+Ability: Drought
+Tera Type: Ghost
+EVs: 4 Def / 252 SpA / 252 Spe
+Timid Nature
+- Overheat
+- Scorching Sands
+- Encore
+- Healing Wish
+
+Raging Bolt @ Choice Specs
+Ability: Protosynthesis
+Tera Type: Fairy
+EVs: 112 HP / 252 SpA / 144 Spe
+Modest Nature
+- Volt Switch
+- Weather Ball
+- Draco Meteor
+- Thunderclap
+
+Walking Wake @ Life Orb
+Ability: Protosynthesis
+Tera Type: Dragon
+EVs: 12 Def / 244 SpA / 252 Spe
+Timid Nature
+- Hydro Steam
+- Draco Meteor
+- Weather Ball
+- Outrage

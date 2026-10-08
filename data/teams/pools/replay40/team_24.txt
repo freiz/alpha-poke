@@ -1,0 +1,59 @@
+Glimmora @ Focus Sash
+Ability: Toxic Debris
+Tera Type: Ground
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Power Gem
+- Earth Power
+- Sludge Wave
+- Mortal Spin
+
+Iron Valiant @ Booster Energy
+Ability: Quark Drive
+Tera Type: Steel
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Knock Off
+- Close Combat
+- Moonblast
+- Swords Dance
+
+Kyurem @ Leftovers
+Ability: Pressure
+Tera Type: Ground
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Freeze-Dry
+- Earth Power
+- Protect
+- Substitute
+
+Moltres @ Heavy-Duty Boots
+Ability: Flame Body
+Tera Type: Fairy
+EVs: 248 HP / 248 Def / 12 Spe
+Bold Nature
+- Flamethrower
+- U-turn
+- Roar
+- Roost
+
+Raging Bolt @ Booster Energy
+Ability: Protosynthesis
+Tera Type: Flying
+EVs: 112 HP / 252 SpA / 144 Spe
+Modest Nature
+- Dragon Pulse
+- Thunderbolt
+- Thunderclap
+- Calm Mind
+
+Ting-Lu @ Leftovers
+Ability: Vessel of Ruin
+Tera Type: Ghost
+EVs: 252 HP / 4 Def / 252 SpD
+Careful Nature
+- Earthquake
+- Stealth Rock
+- Spikes
+- Whirlwind

@@ -1,0 +1,60 @@
+Enamorus-Therian @ Leftovers  
+Ability: Overcoat  
+Tera Type: Ground  
+EVs: 252 HP / 144 Def / 112 SpD  
+Calm Nature  
+IVs: 0 Atk  
+- Earth Power  
+- Iron Defense  
+- Draining Kiss  
+- Calm Mind  
+
+Cinderace @ Heavy-Duty Boots  
+Ability: Libero  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Pyro Ball  
+- Sucker Punch  
+- U-turn  
+- Court Change  
+
+Dragapult @ Leftovers  
+Ability: Infiltrator  
+Tera Type: Fairy  
+EVs: 76 Atk / 180 SpA / 252 Spe  
+Hasty Nature  
+- Dragon Darts  
+- Will-O-Wisp  
+- Hex  
+- Substitute  
+
+Slowking-Galar @ Assault Vest  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 248 HP / 252 SpA / 8 Spe  
+Modest Nature  
+- Grass Knot  
+- Future Sight  
+- Earthquake  
+- Sludge Bomb  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Flying  
+EVs: 80 HP / 252 Atk / 8 SpD / 168 Spe  
+Adamant Nature  
+- Kowtow Cleave  
+- Sucker Punch  
+- Swords Dance  
+- Iron Head  
+
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Water  
+EVs: 252 HP / 160 Def / 96 Spe  
+Impish Nature  
+- Earthquake  
+- Stealth Rock  
+- Knock Off  
+- Rapid Spin

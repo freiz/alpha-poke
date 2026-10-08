@@ -1,0 +1,60 @@
+Cyclizar (F) @ Assault Vest  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 112 HP / 144 SpD / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Overheat  
+- Knock Off  
+- U-turn  
+
+Corviknight (F) @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Flying  
+EVs: 248 HP / 8 Atk / 252 Def  
+Impish Nature  
+- Brave Bird  
+- U-turn  
+- Defog  
+- Roost  
+
+Toxapex (F) @ Leftovers  
+Ability: Regenerator  
+Tera Type: Flying  
+EVs: 252 HP / 4 Def / 252 SpD  
+Calm Nature  
+IVs: 0 Atk  
+- Toxic  
+- Infestation  
+- Baneful Bunker  
+- Recover  
+
+Dondozo (F) @ Leftovers  
+Ability: Unaware  
+Tera Type: Dark  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- Liquidation  
+- Curse  
+- Sleep Talk  
+- Rest  
+
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Tera Type: Poison  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- Earthquake  
+- Rock Slide  
+- Stealth Rock  
+- Rest  
+
+Wo-Chien @ Leftovers  
+Ability: Tablets of Ruin  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Def / 4 SpD  
+Relaxed Nature  
+- Giga Drain  
+- Knock Off  
+- Leech Seed  
+- Protect

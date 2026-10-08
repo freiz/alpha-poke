@@ -1,0 +1,59 @@
+Frosmoth @ Heavy-Duty Boots
+Ability: Ice Scales
+Tera Type: Electric
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Ice Beam
+- Defog
+- Quiver Dance
+- Bug Buzz
+
+Iron Hands @ Quick Claw
+Ability: Quark Drive
+Tera Type: Flying
+EVs: 252 Atk / 172 SpD / 84 Spe
+Adamant Nature
+- Supercell Slam
+- Ice Punch
+- Drain Punch
+- Swords Dance
+
+Pawmot @ Leppa Berry
+Ability: Volt Absorb
+Tera Type: Ghost
+EVs: 248 HP / 8 Atk / 252 Spe
+Jolly Nature
+- Revival Blessing
+- Nuzzle
+- Encore
+- Mach Punch
+
+Pincurchin @ Terrain Extender
+Ability: Electric Surge
+Tera Type: Dark
+EVs: 252 HP / 252 Def / 4 SpD
+Bold Nature
+- Sucker Punch
+- Supercell Slam
+- Thunder Wave
+- Memento
+
+Raichu-Alola @ Choice Specs
+Ability: Surge Surfer
+Tera Type: Fairy
+EVs: 4 Def / 252 SpA / 252 Spe
+Modest Nature
+- Volt Switch
+- Psychic Noise
+- Focus Blast
+- Alluring Voice
+
+Rotom-Wash @ Light Clay
+Ability: Levitate
+Tera Type: Poison
+EVs: 252 HP / 212 Def / 44 Spe
+Bold Nature
+- Volt Switch
+- Light Screen
+- Reflect
+- Hydro Pump

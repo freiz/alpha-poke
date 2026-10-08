@@ -1,0 +1,62 @@
+Pawmot @ Leppa Berry  
+Ability: Iron Fist  
+Tera Type: Fighting  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Thunder Punch  
+- Close Combat  
+- Mach Punch  
+- Revival Blessing  
+
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Grass  
+EVs: 252 HP / 184 Def / 72 Spe  
+Impish Nature  
+- Earthquake  
+- Knock Off  
+- Stealth Rock  
+- Rapid Spin  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Fire  
+EVs: 48 HP / 252 Atk / 12 SpD / 196 Spe  
+Adamant Nature  
+- Kowtow Cleave  
+- Iron Head  
+- Sucker Punch  
+- Swords Dance  
+
+Greninja @ Choice Specs  
+Ability: Protean  
+Tera Type: Dark  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Hydro Pump  
+- Dark Pulse  
+- Ice Beam  
+- Grass Knot  
+
+Skeledirge @ Heavy-Duty Boots  
+Ability: Unaware  
+Tera Type: Fairy  
+EVs: 248 HP / 96 SpA / 128 SpD / 36 Spe  
+Modest Nature  
+IVs: 0 Atk  
+- Substitute  
+- Torch Song  
+- Shadow Ball  
+- Slack Off  
+
+Rotom-Wash @ Leftovers  
+Ability: Levitate  
+Tera Type: Steel  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+IVs: 0 Atk / 30 Spe  
+- Volt Switch  
+- Hydro Pump  
+- Protect  
+- Will-O-Wisp

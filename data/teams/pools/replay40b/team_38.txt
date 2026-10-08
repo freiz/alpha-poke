@@ -1,0 +1,59 @@
+Cinderace @ Choice Band
+Ability: Libero
+Tera Type: Fire
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- Pyro Ball
+- U-turn
+- High Jump Kick
+- Sucker Punch
+
+Dragonite @ Heavy-Duty Boots
+Ability: Multiscale
+Tera Type: Normal
+EVs: 252 Atk / 4 SpD / 252 Spe
+Adamant Nature
+- Extreme Speed
+- Dragon Dance
+- Earthquake
+- Roost
+
+Gholdengo @ Leftovers
+Ability: Good as Gold
+Tera Type: Ghost
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Shadow Ball
+- Trick
+- Make It Rain
+- Recover
+
+Great Tusk @ Rocky Helmet
+Ability: Protosynthesis
+Tera Type: Steel
+EVs: 252 Atk / 4 Def / 252 Spe
+Jolly Nature
+- Headlong Rush
+- Rapid Spin
+- Ice Spinner
+- Stone Edge
+
+Hatterene @ Covert Cloak
+Ability: Magic Bounce
+Tera Type: Flying
+EVs: 252 HP / 204 Def / 52 Spe
+Bold Nature
+- Nuzzle
+- Psychic Noise
+- Pain Split
+- Draining Kiss
+
+Kyurem @ Assault Vest
+Ability: Pressure
+Tera Type: Poison
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Ice Beam
+- Earth Power
+- Freeze-Dry
+- Body Press

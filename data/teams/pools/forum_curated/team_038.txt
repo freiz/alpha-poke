@@ -1,0 +1,61 @@
+Samurott-Hisui (F) @ Black Glasses  
+Ability: Sharpness  
+Tera Type: Dark  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Aqua Cutter  
+- Encore  
+- Ceaseless Edge  
+- Sucker Punch  
+
+Dragapult @ Choice Specs  
+Ability: Clear Body  
+Tera Type: Dragon  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Draco Meteor  
+- Shadow Ball  
+- Surf  
+- U-turn  
+
+Zapdos @ Heavy-Duty Boots  
+Ability: Pressure  
+Tera Type: Steel  
+EVs: 248 HP / 76 Def / 184 Spe  
+Timid Nature  
+- Discharge  
+- Hurricane  
+- U-turn  
+- Roost  
+
+Slowking-Galar @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Grass  
+EVs: 252 HP / 4 Def / 252 SpD  
+Sassy Nature  
+IVs: 0 Atk / 0 Spe  
+- Sludge Bomb  
+- Grass Knot  
+- Chilly Reception  
+- Psyshock  
+
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Fairy  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Headlong Rush  
+- Ice Spinner  
+- Close Combat  
+- Rapid Spin  
+
+Heatran @ Leftovers  
+Ability: Flash Fire  
+Tera Type: Grass  
+EVs: 248 HP / 144 SpD / 116 Spe  
+Calm Nature  
+IVs: 0 Atk  
+- Magma Storm  
+- Earth Power  
+- Taunt  
+- Will-O-Wisp

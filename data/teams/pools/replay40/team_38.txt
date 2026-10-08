@@ -1,0 +1,59 @@
+Clefable @ Rocky Helmet
+Ability: Magic Guard
+Tera Type: Water
+EVs: 176 HP / 252 Def / 80 Spe
+Bold Nature
+- Stealth Rock
+- Moonblast
+- Moonlight
+- Knock Off
+
+Dragonite @ Heavy-Duty Boots
+Ability: Multiscale
+Tera Type: Normal
+EVs: 252 Atk / 4 SpD / 252 Spe
+Adamant Nature
+- Extreme Speed
+- Earthquake
+- Dragon Tail
+- Roost
+
+Gholdengo @ Choice Scarf
+Ability: Good as Gold
+Tera Type: Ghost
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Shadow Ball
+- Make It Rain
+- Trick
+- Recover
+
+Gliscor @ Toxic Orb
+Ability: Poison Heal
+Tera Type: Normal
+EVs: 244 HP / 36 Def / 228 SpD
+Careful Nature
+- Protect
+- Facade
+- Swords Dance
+- Earthquake
+
+Samurott-Hisui @ Assault Vest
+Ability: Sharpness
+Tera Type: Poison
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- Ceaseless Edge
+- Knock Off
+- Razor Shell
+- Sucker Punch
+
+Zamazenta @ Leftovers
+Ability: Dauntless Shield
+Tera Type: Steel
+EVs: 104 HP / 248 Def / 156 Spe
+Jolly Nature
+- Body Press
+- Crunch
+- Iron Defense
+- Substitute

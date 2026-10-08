@@ -1,0 +1,59 @@
+Cresselia @ Leftovers
+Ability: Levitate
+Tera Type: Poison
+EVs: 80 HP / 252 SpA / 176 Spe
+Modest Nature
+- Calm Mind
+- Moonblast
+- Stored Power
+- Moonlight
+
+Dragonite @ Heavy-Duty Boots
+Ability: Multiscale
+Tera Type: Normal
+EVs: 252 Atk / 4 SpD / 252 Spe
+Adamant Nature
+- Extreme Speed
+- Earthquake
+- Roost
+- Dragon Dance
+
+Gholdengo @ Air Balloon
+Ability: Good as Gold
+Tera Type: Fairy
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Thunder Wave
+- Make It Rain
+- Hex
+- Recover
+
+Great Tusk @ Rocky Helmet
+Ability: Protosynthesis
+Tera Type: Steel
+EVs: 252 Atk / 4 Def / 252 Spe
+Jolly Nature
+- Stealth Rock
+- Headlong Rush
+- Ice Spinner
+- Rapid Spin
+
+Kyurem @ Choice Scarf
+Ability: Pressure
+Tera Type: Ice
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Ice Beam
+- Freeze-Dry
+- Earth Power
+- Draco Meteor
+
+Samurott-Hisui @ Assault Vest
+Ability: Sharpness
+Tera Type: Poison
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- Ceaseless Edge
+- Knock Off
+- Razor Shell
+- Sucker Punch

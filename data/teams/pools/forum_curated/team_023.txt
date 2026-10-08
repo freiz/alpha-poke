@@ -1,0 +1,65 @@
+Hatterene @ Focus Sash  
+Ability: Magic Bounce  
+Tera Type: Water  
+EVs: 248 HP / 148 Def / 100 SpA / 12 Spe  
+Quiet Nature  
+IVs: 0 Atk / 0 Spe  
+- Misty Explosion  
+- Mystical Fire  
+- Healing Wish  
+- Trick Room  
+
+Ursaluna (F) @ Flame Orb  
+Ability: Guts  
+Tera Type: Normal  
+EVs: 240 HP / 252 Atk / 16 SpD  
+Adamant Nature  
+IVs: 0 Spe  
+- Earthquake  
+- Facade  
+- Fire Punch  
+- Swords Dance  
+
+Crawdaunt @ Life Orb  
+Ability: Adaptability  
+Tera Type: Poison  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+IVs: 0 Spe  
+- Knock Off  
+- Crabhammer  
+- Aqua Jet  
+- Swords Dance  
+
+Rabsca (F) @ Colbur Berry  
+Ability: Synchronize  
+Tera Type: Fairy  
+EVs: 248 HP / 224 Def / 36 SpD  
+Relaxed Nature  
+IVs: 0 Atk / 0 Spe  
+- Memento  
+- Trick Room  
+- Revival Blessing  
+- Earth Power  
+
+Iron Moth @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Grass  
+EVs: 124 Def / 132 SpA / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Fiery Dance  
+- Energy Ball  
+- Sludge Wave  
+- Substitute  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpA / 252 Spe  
+Naive Nature  
+IVs: 0 SpD  
+- Close Combat  
+- Knock Off  
+- Moonblast  
+- Destiny Bond
