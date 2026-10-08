@@ -320,6 +320,9 @@ def sequential_match(a, net_a: str, net_b: str, seed: int, log_dir: str) -> dict
 
     os.environ["ALPHA_MODEL_A"], os.environ["ALPHA_MODEL_B"] = net_a, net_b
     os.environ["ALPHA_SEARCH_MS"] = str(a.search_ms)
+    # a fixed number of iterations per decision (both networks have the same cost per leaf):
+    # no noise from the machine's load; time only bounds a decision when it is 0
+    os.environ["ALPHA_SEARCH_ITERATIONS"] = str(a.iterations)
     from alpha_poke.eval.arena import pair_scores, run_arena, sprt_llr
 
     lo, hi = math.log(a.beta / (1 - a.alpha)), math.log((1 - a.beta) / a.alpha)
@@ -344,7 +347,7 @@ def sequential_match(a, net_a: str, net_b: str, seed: int, log_dir: str) -> dict
     res |= {"llr": round(llr, 3), "llr_bounds": [round(lo, 3), round(hi, 3)],
             "elo0": a.elo0, "elo1": a.elo1, "llr_trace": trace,
             "decision": "H1" if llr >= hi or (lo < llr and llr >= 0) else "H0",
-            "search_ms": a.search_ms}  # fmt: skip
+            "search_ms": a.search_ms, "search_iterations": a.iterations}  # fmt: skip
     return res
 
 
@@ -587,6 +590,11 @@ def sprt_args(p) -> None:
     p.add_argument("--elo1", type=float, default=0.0, help="H1: this (not worse)")
     p.add_argument("--alpha", type=float, default=0.05)
     p.add_argument("--beta", type=float, default=0.05)
+    # 2026-10-08: 500 ms at the evaluation's load (24 games on 10 cores) gave 1,500-1,800
+    # iterations, varying with the load; networks of the same architecture compare at a fixed
+    # number (a larger network: compare at equal time too)
+    p.add_argument("--iterations", type=int, default=1600,
+                   help="search iterations per decision (0: --search-ms of time)")  # fmt: skip
 
 
 def main() -> None:
