@@ -479,7 +479,7 @@ def main() -> None:
     p = sub.add_parser("eval")
     p.add_argument("--gen", type=int, required=True)
     p.add_argument("--against", default="", help="default: the current network")
-    p.add_argument("--pairs", type=int, default=100)
+    p.add_argument("--pairs", type=int, default=200)
     p.add_argument("--search-ms", type=int, default=500)
     sprt_args(p)
     p.add_argument("--procs", type=int, default=4)
@@ -489,7 +489,7 @@ def main() -> None:
     p.set_defaults(fn=cmd_eval)
     p = sub.add_parser("baseline", help="the current network vs v5-glu")
     p.add_argument("--gen", type=int, required=True, help="where to log it")
-    p.add_argument("--pairs", type=int, default=100)
+    p.add_argument("--pairs", type=int, default=200)
     p.add_argument("--search-ms", type=int, default=500)
     sprt_args(p)
     p.add_argument("--procs", type=int, default=4)
@@ -502,9 +502,9 @@ def main() -> None:
     p.add_argument("--games", type=int, default=5000)
     p.add_argument("--procs", type=int, default=4)
     p.add_argument("--threads", type=int, default=2)
-    p.add_argument("--eval-pairs", type=int, default=50)
+    p.add_argument("--eval-pairs", type=int, default=200)
     p.add_argument("--baseline-every", type=int, default=3)
-    p.add_argument("--baseline-pairs", type=int, default=100)
+    p.add_argument("--baseline-pairs", type=int, default=200)
     p.add_argument("--max-rejected", type=int, default=3)
     p.set_defaults(fn=cmd_loop)
     p = sub.add_parser("cycle", help="one generation end to end")
@@ -516,9 +516,8 @@ def main() -> None:
     p.add_argument(
         "--eval-pairs",
         type=int,
-        default=50,
-        help="safety check per generation "
-        "(100 games); a fixed-baseline comparison every few generations",
+        default=200,
+        help="most pairs of the per-generation sequential test (eval)",
     )
     p.set_defaults(fn=cmd_cycle)
     a = ap.parse_args()
