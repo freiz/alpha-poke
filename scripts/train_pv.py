@@ -728,6 +728,9 @@ def main() -> None:
     ap.add_argument("--sp-val-frac", type=float, default=0.05, help="self-play games held out")
     ap.add_argument("--init", default="", help="warm start: a run directory (its last.pt)")
     ap.add_argument("--steps", type=int, default=0, help="training steps (default: from --epochs)")
+    ap.add_argument("--warmup-frac", type=float, default=0.02,
+                    help="learning-rate warmup share of the steps (warm starts: longer, the "
+                         "optimizer's moments start empty)")  # fmt: skip
     ap.add_argument("--export", choices=["best", "last"], default="best",
                     help="checkpoint exported for inference (self-play: last)")  # fmt: skip
     ap.add_argument("--run", default=None)
@@ -845,7 +848,7 @@ def main() -> None:
                   if a.steps else None))  # fmt: skip
     hb = a.batch - (bsp if dsp is not None else 0)  # human rows per batch
     steps = a.steps or int(a.epochs * len(train_idx) / a.batch)
-    warm = max(1, steps // 50)
+    warm = max(1, int(steps * a.warmup_frac))
     sched = torch.optim.lr_scheduler.LambdaLR(
         opt,
         lambda s: min(1, (s + 1) / warm) * 0.5 * (1 + math.cos(math.pi * min(s, steps) / steps)),

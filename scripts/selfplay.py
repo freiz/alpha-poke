@@ -128,7 +128,8 @@ def cmd_train(a) -> None:
     run = f"sp-gen{a.gen}"
     cmd = (f"{sys.executable} scripts/train_pv.py {TRAIN_FLAGS} --selfplay {sp} "
            f"--sp-frac {a.sp_frac} --init {init} --steps {steps} --lr {a.lr} --batch {a.batch} "
-           f"--eval-every {max(50, steps // 5)} --export last --run {run}")  # fmt: skip
+           f"--warmup-frac {a.warmup_frac} --eval-every {max(50, steps // 5)} --export last "
+           f"--run {run}")  # fmt: skip
     print("$", cmd, flush=True)
     log_path = SELFPLAY_DIR / f"gen{a.gen}" / "train.log"
     with open(log_path, "w") as f:
@@ -141,7 +142,7 @@ def cmd_train(a) -> None:
     keep = ("ce_turn_w", "bce_all_w", "top1", "top3", "top1_forced", "sp_ce", "sp_kl", "sp_top1",
             "sp_bce", "sp_bce_rootq")  # fmt: skip
     summary = {"run": str(out), "init": init, "selfplay": sp, "sp_positions": n_sp,
-               "steps": steps, "lr": a.lr,
+               "steps": steps, "lr": a.lr, "warmup_frac": a.warmup_frac,
                "first_val": {k: val[0].get(k) for k in keep} if val else None,
                "last_val": {k: val[-1].get(k) for k in keep} if val else None,
                "log": str(log_path)}  # fmt: skip
@@ -260,7 +261,10 @@ def main() -> None:
         "--passes", type=float, default=2.0, help="times each self-play position is seen"
     )
     p.add_argument("--steps", type=int, default=0)
-    p.add_argument("--lr", type=float, default=3e-4)
+    # gen 0 (lr 3e-4, warmup 2 steps): the human validation drifted +0.011 / +0.013 in the
+    # first 50 steps (fresh AdamW moments on a converged net), then stayed flat
+    p.add_argument("--lr", type=float, default=1e-4)
+    p.add_argument("--warmup-frac", type=float, default=0.2)
     p.add_argument("--batch", type=int, default=4096)
     p.set_defaults(fn=cmd_train)
     p = sub.add_parser("eval")
