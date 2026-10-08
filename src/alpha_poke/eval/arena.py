@@ -200,6 +200,22 @@ def run_arena(
     return res
 
 
+def run_schedule(bot_a: str, bot_b: str, schedule: list[Match], pool_dir: str, log_path: str,
+                 ports: tuple[int, ...] = (8000,), procs: int = 4, lanes_per_proc: int = 2,
+                 heldout: bool = False) -> list[dict]:  # fmt: skip
+    """Play any list of matches (teams from ``pool_dir``), spread over procs x lanes; one JSONL
+    row per game appended to ``log_path``. ``run_arena`` is this with the paired schedule."""
+    n_lanes = procs * lanes_per_proc
+    lanes = [schedule[i::n_lanes] for i in range(n_lanes)]
+    jobs = [
+        (bot_a, bot_b, lanes[w * lanes_per_proc : (w + 1) * lanes_per_proc], ports[w % len(ports)],
+         pool_dir, pool_dir if heldout else None, log_path, w, {})
+        for w in range(procs)
+    ]  # fmt: skip
+    with ProcessPoolExecutor(procs, mp_context=mp.get_context("spawn")) as pool:
+        return [r for part in pool.map(_worker, jobs) for r in part]
+
+
 def run_meta(bot_a: str, bot_b: str, **args) -> dict:
     """Everything needed to compare runs later: code version, settings, bot definitions."""
     from alpha_poke.eval.bots import VARIANTS

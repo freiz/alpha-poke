@@ -105,6 +105,10 @@ VARIANTS: dict[str, tuple[bool, bool, bool, dict]] = {
             "device": "cuda",
         },
     ),  # fmt: skip
+    # no search: the network's policy sampled with a temperature and a rating input, the
+    # model of a specific human (design D5-O step 2); rating / tau via ALPHA_POLICY_RATING /
+    # ALPHA_POLICY_TAU (scripts/counter_team.py sets them from the player's fit)
+    "pol": (True, True, True, {"policy": True, "model": "data/train/v5/runs/v5-final"}),
     "s_ismcts_cl2": (
         True,
         True,
@@ -164,6 +168,10 @@ def make_bot(
             from alpha_poke.agents.search_player import SearchPlayer
 
             cls = SearchPlayer
+        if extra.pop("policy", False):
+            from alpha_poke.agents.policy_player import PolicyPlayer
+
+            cls = PolicyPlayer
         return cls(
             belief,
             library=load_library(),
