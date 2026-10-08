@@ -37,6 +37,24 @@ def done_pairs(gen_dir: Path) -> set[int]:
     return done
 
 
+def packed(text: str) -> str:
+    """A team export as poke-env's packed team: the species line goes into the species field
+    with no nickname (poke-env reads "Species @ Item" as a nickname; a species name longer than
+    18 characters, e.g. Tauros-Paldea-Combat, is then an illegal nickname and the server rejects
+    the challenge)."""
+    from poke_env.teambuilder import Teambuilder
+
+    clean = "\n".join(line.strip() for line in text.strip().splitlines()) + "\n\n"
+    mons = Teambuilder.parse_showdown_team(clean)
+    for m in mons:
+        m.species = m.species or m.nickname
+        m.nickname = ""
+    return Teambuilder.join_team(mons)
+
+
+GAME_TIMEOUT = 1800.0  # seconds: a game that never ends (e.g. a challenge the server refused)
+
+
 async def _lane(lane: str, jobs: list, port: int, gen_dir: Path, settings: dict, batcher,
                 belief, library, wid: int, counters: dict) -> int:  # fmt: skip
     from alpha_poke.selfplay.player import SelfPlayPlayer
@@ -57,15 +75,18 @@ async def _lane(lane: str, jobs: list, port: int, gen_dir: Path, settings: dict,
     a, b = player("a", 2 * seed), player("b", 2 * seed + 1)
     n = 0
     for idx, pair in jobs:
-        a.update_team(pair.p1.text)
-        b.update_team(pair.p2.text)
+        a.update_team(packed(pair.p1.text))
+        b.update_team(packed(pair.p2.text))
         t0 = time.time()
         before = set(a.battles)
         fb0 = (a.search_fallbacks, b.search_fallbacks)
-        if idx % 2 == 0:
-            await a.battle_against(b, n_battles=1)
-        else:
-            await b.battle_against(a, n_battles=1)
+        first, second = (a, b) if idx % 2 == 0 else (b, a)
+        try:
+            await asyncio.wait_for(first.battle_against(second, n_battles=1), GAME_TIMEOUT)
+        except TimeoutError:
+            logging.getLogger(__name__).warning("pair %d: no finished game after %ds, skipped",
+                                                idx, GAME_TIMEOUT)  # fmt: skip
+            continue
         new = [k for k in a.battles if k not in before]
         if not new:
             continue
