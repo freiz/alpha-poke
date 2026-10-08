@@ -145,12 +145,24 @@ def cmd_train(a) -> None:
     held = bool(prev.get("human_drift_flag")) and prev.get("human_share") is not None
     if held:
         human = max(human, prev["human_share"])
+    # after rejected generations (the candidate was significantly worse): the learning rate is
+    # halved per consecutive rejection and the human share is not lowered
+    rejected = 0
+    for g in range(a.gen - 1, -1, -1):
+        ev = st["generations"].get(str(g), {}).get("eval")
+        if ev is None or ev.get("promoted"):
+            break
+        rejected += 1
+    lr = a.lr * 0.5 ** min(rejected, 3)
+    if rejected and prev.get("human_share") is not None:
+        human = max(human, prev["human_share"])
+        held = True
     sp_frac = a.sp_frac if a.sp_frac is not None else round(1 - human, 4)
     bsp = round(a.batch * sp_frac)
     steps = a.steps or max(50, math.ceil(a.passes * n_sp / bsp))
     run = f"sp-gen{a.gen}"
     cmd = (f"{sys.executable} scripts/train_pv.py {TRAIN_FLAGS} --selfplay {sp} "
-           f"--sp-frac {sp_frac} --init {init} --steps {steps} --lr {a.lr} --batch {a.batch} "
+           f"--sp-frac {sp_frac} --init {init} --steps {steps} --lr {lr} --batch {a.batch} "
            f"--warmup-frac {a.warmup_frac} --eval-every {max(50, steps // 5)} --export last "
            f"--run {run}")  # fmt: skip
     log_path = SELFPLAY_DIR / f"gen{a.gen}" / "train.log"
@@ -175,7 +187,8 @@ def cmd_train(a) -> None:
     summary = {"run": str(out), "init": init, "selfplay": sp, "sp_positions": n_sp,
                "recent_gens": recent, "older_gens": older, "older_keep": round(old_keep, 4),
                "human_share": round(1 - sp_frac, 4), "human_share_held": held,
-               "steps": steps, "lr": a.lr, "warmup_frac": a.warmup_frac,
+               "steps": steps, "lr": lr, "after_rejections": rejected,
+               "warmup_frac": a.warmup_frac,
                "first_val": {k: val[0].get(k) for k in keep} if val else None,
                "last_val": {k: val[-1].get(k) for k in keep} if val else None,
                "log": str(log_path)}  # fmt: skip
@@ -199,6 +212,9 @@ def cmd_eval(a) -> None:
     import os
 
     st = state()
+    if "eval" in st["generations"].get(str(a.gen), {}) and not a.force:
+        print(f"gen {a.gen} is evaluated already (--force evaluates again)")
+        return
     cand = st["generations"][str(a.gen)]["train"]["run"]
     base = a.against or st["current"]
     os.environ["ALPHA_MODEL_A"], os.environ["ALPHA_MODEL_B"] = cand, base
@@ -220,6 +236,101 @@ def cmd_eval(a) -> None:
         st["current"] = cand
         save_state(st)
     print(json.dumps(res, indent=1))
+
+
+def cmd_baseline(a) -> int:
+    """The current network vs the fixed baseline (v5-glu), equal time, paired (each generation
+    is only compared with the previous one: slow decline would go unseen). Keeps the best
+    network by this comparison; if the current one is significantly worse than the baseline,
+    the current network reverts to the best one (or the baseline) and this returns 2."""
+    import json
+    import os
+
+    st = state()
+    cur = st["current"]
+    if cur == BASE_RUN:
+        print("the current network is the baseline itself")
+        return 0
+    os.environ["ALPHA_MODEL_A"], os.environ["ALPHA_MODEL_B"] = cur, BASE_RUN
+    os.environ["ALPHA_SEARCH_MS"] = str(a.search_ms)
+    from alpha_poke.eval.arena import run_arena
+
+    log_dir = str(SELFPLAY_DIR / f"gen{a.gen}")
+    res = run_arena("s_ismcts_ma", "s_ismcts_mb", a.pairs, ports=tuple(a.ports), procs=a.procs,
+                    lanes_per_proc=a.lanes, seed=1000 + a.gen, log_dir=log_dir)  # fmt: skip
+    p, ci = res["paired_mean"], res["ci95_paired"]
+    res |= {"network": cur, "baseline": BASE_RUN, "search_ms": a.search_ms}
+    st = state()
+    best = st.get("best")
+    if best is None or p > best["paired_mean"]:
+        st["best"] = {"run": cur, "paired_mean": p, "ci95": ci, "gen": a.gen}
+    code = 0
+    if p + ci < 0.5:  # significantly worse than the baseline: revert
+        back = st["best"]["run"] if st["best"]["run"] != cur else BASE_RUN
+        res["reverted_to"] = back
+        st["current"] = back
+        code = 2
+    st["generations"].setdefault(str(a.gen), {})["baseline"] = res
+    save_state(st)
+    record(a.gen, "baseline", res)
+    print(json.dumps(res, indent=1))
+    return code
+
+
+def cmd_loop(a) -> None:
+    """Generations one after another (design D15): each a full cycle; a failed step is retried
+    once. Every --baseline-every generations the current network plays the fixed baseline. Stops
+    when: --max-rejected consecutive generations were not promoted, the baseline comparison
+    reverted the current network (significantly worse than the baseline), or a step failed twice.
+    Log: data/selfplay/loop.log."""
+    import subprocess
+
+    log = SELFPLAY_DIR / "loop.log"
+
+    def say(msg: str) -> None:
+        line = f"[{time.strftime('%m-%d %H:%M:%S')}] {msg}"
+        print(line, flush=True)
+        with open(log, "a") as f:
+            f.write(line + "\n")
+
+    me = [sys.executable, __file__]
+    say(f"loop: generations {a.start}..{a.start + a.gens - 1}")
+    for gen in range(a.start, a.start + a.gens):
+        args = ["cycle", "--gen", str(gen), "--games", str(a.games), "--procs", str(a.procs),
+                "--threads", str(a.threads), "--eval-pairs", str(a.eval_pairs)]  # fmt: skip
+        for attempt in (1, 2):
+            say(f"gen {gen}: cycle (attempt {attempt})")
+            if subprocess.run(me + args).returncode == 0:
+                break
+        else:
+            say(f"gen {gen}: the cycle failed twice; loop stopped (see gen{gen}/cycle.log)")
+            return
+        g = state()["generations"][str(gen)]
+        ev, tr = g.get("eval", {}), g.get("train", {})
+        say(f"gen {gen}: {'promoted' if ev.get('promoted') else 'NOT promoted'} "
+            f"({ev.get('paired_mean')} +- {ev.get('ci95_paired')} vs {ev.get('against')}); "
+            f"human drift flag {tr.get('human_drift_flag')}; "
+            f"current {state()['current']}")  # fmt: skip
+        st = state()
+        rejected = 0
+        for k in range(gen, -1, -1):
+            if st["generations"].get(str(k), {}).get("eval", {}).get("promoted", True):
+                break
+            rejected += 1
+        if rejected >= a.max_rejected:
+            say(f"{rejected} consecutive generations not promoted: loop stopped")
+            return
+        if (gen - a.start + 1) % a.baseline_every == 0:
+            say(f"gen {gen}: baseline comparison of {st['current']}")
+            code = subprocess.run(me + ["baseline", "--gen", str(gen), "--pairs",
+                                        str(a.baseline_pairs)]).returncode  # fmt: skip
+            b = state()["generations"][str(gen)].get("baseline", {})
+            say(f"gen {gen}: vs baseline {b.get('paired_mean')} +- {b.get('ci95_paired')}"
+                f"{'; REVERTED to ' + str(b.get('reverted_to')) if code == 2 else ''}")  # fmt: skip
+            if code == 2:
+                say("significantly worse than the baseline: loop stopped for a look")
+                return
+    say("loop: done")
 
 
 def cmd_cycle(a) -> None:
@@ -319,7 +430,27 @@ def main() -> None:
     p.add_argument("--procs", type=int, default=4)
     p.add_argument("--lanes", type=int, default=6)
     p.add_argument("--ports", type=int, nargs="+", default=[8000, 8001, 8002, 8003])
+    p.add_argument("--force", action="store_true")
     p.set_defaults(fn=cmd_eval)
+    p = sub.add_parser("baseline", help="the current network vs v5-glu")
+    p.add_argument("--gen", type=int, required=True, help="where to log it")
+    p.add_argument("--pairs", type=int, default=100)
+    p.add_argument("--search-ms", type=int, default=500)
+    p.add_argument("--procs", type=int, default=4)
+    p.add_argument("--lanes", type=int, default=6)
+    p.add_argument("--ports", type=int, nargs="+", default=[8000, 8001, 8002, 8003])
+    p.set_defaults(fn=lambda a: sys.exit(cmd_baseline(a)))
+    p = sub.add_parser("loop", help="generations one after another")
+    p.add_argument("--start", type=int, required=True)
+    p.add_argument("--gens", type=int, default=100)
+    p.add_argument("--games", type=int, default=5000)
+    p.add_argument("--procs", type=int, default=4)
+    p.add_argument("--threads", type=int, default=2)
+    p.add_argument("--eval-pairs", type=int, default=50)
+    p.add_argument("--baseline-every", type=int, default=3)
+    p.add_argument("--baseline-pairs", type=int, default=100)
+    p.add_argument("--max-rejected", type=int, default=3)
+    p.set_defaults(fn=cmd_loop)
     p = sub.add_parser("cycle", help="one generation end to end")
     p.add_argument("--gen", type=int, required=True)
     p.add_argument("--games", type=int, default=5000, help="team pairs if not sampled yet")
