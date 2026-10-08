@@ -159,8 +159,10 @@ def cmd_train(a) -> None:
 
     rows = [json.loads(line) for line in (out / "metrics.jsonl").read_text().splitlines()]
     val = [r for r in rows if r.get("event") == "val"]
-    keep = ("ce_turn_w", "bce_all_w", "top1", "top3", "top1_forced", "sp_ce", "sp_kl", "sp_top1",
-            "sp_bce", "sp_bce_rootq")  # fmt: skip
+    keep = ("ce_turn_w", "bce_all_w", "top1", "top3", "top1_forced", "opp_act_acc", "value_ece",
+            "hce_true", "hce_unk", "hce_lt1300", "hce_1300_1600", "hce_ge1600", "kl_ref_true",
+            "kl_ref_unk", "sp_ce", "sp_kl", "sp_top1", "sp_bce", "sp_bce_rootq",
+            "sp_kl_ref")  # fmt: skip
     summary = {"run": str(out), "init": init, "selfplay": sp, "sp_positions": n_sp,
                "recent_gens": recent, "older_gens": older, "older_keep": round(keep, 4),
                "human_share": round(1 - sp_frac, 4), "human_share_held": held,
@@ -168,11 +170,17 @@ def cmd_train(a) -> None:
                "first_val": {k: val[0].get(k) for k in keep} if val else None,
                "last_val": {k: val[-1].get(k) for k in keep} if val else None,
                "log": str(log_path)}  # fmt: skip
-    # guard (design D15-6): the human validation must not drift much (the opponents are human)
+    # guard (design D15-6): the net must keep modelling human opponents. Worse cross-entropy on
+    # the humans' moves is expected as it outgrows them (raw ce_turn_w / bce_all_w: reference);
+    # the flag: the moves of a human *with their rating as input* predicted worse (hce_true),
+    # or the opponent's next move predicted worse (opp_act_acc, what the search's opponent
+    # prior needs)
     if val and val[0].get("ce_turn_w") is not None:
-        keys = [k for k in ("ce_turn_w", "bce_all_w") if val[-1].get(k) is not None]
-        summary["human_drift"] = {k: round(val[-1][k] - val[0][k], 4) for k in keys}
-        summary["human_drift_flag"] = any(v > 0.01 for v in summary["human_drift"].values())
+        keys = [k for k in keep if val[-1].get(k) is not None and val[0].get(k) is not None]
+        drift = {k: round(val[-1][k] - val[0][k], 4) for k in keys}
+        summary["human_drift"] = drift
+        summary["human_drift_flag"] = (drift.get("hce_true", 0) > 0.01
+                                       or drift.get("opp_act_acc", 0) < -0.01)  # fmt: skip
     record(a.gen, "train", summary)
     print(json.dumps(summary, indent=1))
 

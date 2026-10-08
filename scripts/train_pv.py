@@ -507,12 +507,12 @@ def soft_policy_loss(logits, pi, mask):
 
 
 @torch.no_grad()
-def evaluate_sp(model, d, idx, device, vpg: float, batch=8192) -> dict:
+def evaluate_sp(model, d, idx, device, vpg: float, batch=8192, ref=None) -> dict:
     """Self-play validation: policy CE / KL against the search's visits (full searches),
     agreement of the net's top choice with the most visited, value BCE (games with an outcome),
     the root value q as a value baseline."""
     model.eval()
-    ce = kl = top = n_pi = bce = bce_q = n_v = 0.0
+    ce = kl = top = n_pi = bce = bce_q = n_v = kl_ref = 0.0
     for i in range(0, len(idx), batch):
         b = idx[i : i + batch]
         sp, de, gl, ma, act, won, ev, hs, hd, fs, fd, x = to_torch(d, b, device)
@@ -523,6 +523,10 @@ def evaluate_sp(model, d, idx, device, vpg: float, batch=8192) -> dict:
         pi = torch.from_numpy(d["pi"][b]).to(device)
         pw = torch.from_numpy(d["pi_w"][b]).to(device)
         c = soft_policy_loss(logits, pi, ma)
+        if ref is not None:
+            with torch.autocast(device.type, dtype=torch.bfloat16, enabled=device.type == "cuda"):
+                rlp = _logp(ref(sp, de, gl, ma, hs, hd, **kw)[0], ma)
+            kl_ref += _kl(rlp, _logp(logits, ma), ma).sum().item()
         ent = -(pi * torch.log(pi.clamp_min(1e-12))).sum(-1)
         ce += (c * pw).sum().item()
         kl += ((c - ent) * pw).sum().item()
@@ -537,7 +541,8 @@ def evaluate_sp(model, d, idx, device, vpg: float, batch=8192) -> dict:
     model.train()
     return {"sp_ce": ce / max(n_pi, 1), "sp_kl": kl / max(n_pi, 1),
             "sp_top1": top / max(n_pi, 1), "sp_bce": bce / max(n_v, 1),
-            "sp_bce_rootq": bce_q / max(n_v, 1), "sp_val_pi": n_pi, "sp_val_v": n_v}  # fmt: skip
+            "sp_bce_rootq": bce_q / max(n_v, 1), "sp_val_pi": n_pi, "sp_val_v": n_v,
+            "sp_kl_ref": kl_ref / max(len(idx), 1)}  # fmt: skip
 
 
 def value_logit(model, v, ev):
@@ -545,6 +550,65 @@ def value_logit(model, v, ev):
     if getattr(model, "residual", None) is None:
         return v
     return model.residual[0] * ev + model.residual[1] + v
+
+
+def _logp(logits, mask):
+    return torch.log_softmax(logits.float().masked_fill(~mask, float("-inf")), -1)
+
+
+def _kl(ref_logp, logp, mask):
+    """KL(ref || cur) per position over the legal slots."""
+    p = ref_logp.exp()
+    return (p * (ref_logp - logp)).masked_fill(~mask, 0.0).sum(-1)
+
+
+@torch.no_grad()
+def evaluate_drift(model, ref, d, idx, device, n_max=100_000, batch=8192) -> dict:
+    """How the policy moved on human positions (design D15-6), on turn starts with a visible
+    action (at most ``n_max``): cross-entropy of the human's move with the player's real rating
+    as input (``hce_true``; the net should still imitate a rating-r human) and with the rating
+    unknown (``hce_unk``, the input self-play uses), by rating band (true rating); with ``ref``
+    (the run's starting point, frozen) KL(start || now) of the policies with each rating input."""
+    if "kind" in d:
+        idx = idx[d["kind"][idx] == 0]
+    idx = idx[d["action"][idx] >= 0][:n_max]
+    sums: dict = {}
+    amp = dict(dtype=torch.bfloat16, enabled=device.type == "cuda")
+    model.eval()
+
+    def add(k, v):
+        sums[k] = sums.get(k, 0.0) + float(v)
+
+    for i in range(0, len(idx), batch):
+        b = idx[i : i + batch]
+        sp, de, gl, ma, act, won, ev, hs, hd, fs, fd, x = to_torch(d, b, device)
+        own = x["rating"][:, 0]
+        bands = {"lt1300": (own > 0) & (own < 1300), "1300_1600": (own >= 1300) & (own < 1600),
+                 "ge1600": own >= 1600}  # fmt: skip
+        for mode in ("true", "unk"):
+            xx = dict(x)
+            if mode == "unk":
+                xx["rating"] = torch.zeros_like(x["rating"])
+            with torch.autocast(device.type, **amp):
+                lp = _logp(model(sp, de, gl, ma, hs, hd, x=xx)[0], ma)
+            ce = -lp.gather(1, act[:, None])[:, 0]
+            add(f"hce_{mode}", ce.sum())
+            if mode == "true":
+                for name, sel in bands.items():
+                    add(f"hce_{name}", ce[sel].sum())
+                    add(f"n_{name}", sel.sum())
+            if ref is not None:
+                with torch.autocast(device.type, **amp):
+                    rlp = _logp(ref(sp, de, gl, ma, hs, hd, x=xx)[0], ma)
+                add(f"kl_ref_{mode}", _kl(rlp, lp, ma).sum())
+    model.train()
+    n = max(len(idx), 1)
+    out = {k: v / n for k, v in sums.items() if k in ("hce_true", "hce_unk")
+           or k.startswith("kl_ref")}  # fmt: skip
+    for name in ("lt1300", "1300_1600", "ge1600"):
+        if sums.get(f"n_{name}"):
+            out[f"hce_{name}"] = sums[f"hce_{name}"] / sums[f"n_{name}"]
+    return out
 
 
 @torch.no_grad()
@@ -827,6 +891,13 @@ def main() -> None:
             model.residual = torch.nn.Parameter(state["residual"].clone())
         model.load_state_dict(state)
     model = model.to(device)
+    ref_model = None
+    if a.init:  # the starting point, frozen: how far the policy moves (KL, design D15-6)
+        import copy
+
+        ref_model = copy.deepcopy(model).eval()
+        for p_ in ref_model.parameters():
+            p_.requires_grad_(False)
     n_params = sum(p.numel() for p in model.parameters())
     opt = torch.optim.AdamW(model.parameters(), lr=a.lr, weight_decay=a.wd)
     # self-play data (in memory): train / validation split by game
@@ -869,8 +940,9 @@ def main() -> None:
     agg = dict(ce=0.0, bce=0.0, acc=0.0, gn=0.0, k=0)
     if a.init:  # the starting point on the same validation sets (the run's own baseline)
         m = evaluate(model, dv, v_idx, device)
+        m |= evaluate_drift(model, ref_model, dv, v_idx, device)
         if dsp is not None:
-            m |= evaluate_sp(model, dsp, sp_val, device, a.value_per_game)
+            m |= evaluate_sp(model, dsp, sp_val, device, a.value_per_game, ref=ref_model)
         emit(dict(event="val", step=0, **{k: float(v) for k, v in m.items()}))
     t_last = time.time()
     for step in range(1, steps + 1):
@@ -950,8 +1022,10 @@ def main() -> None:
             t_last = time.time()
         if step % a.eval_every == 0 or step == steps:
             m = evaluate(model, dv, v_idx, device)
+            if ref_model is not None:
+                m |= evaluate_drift(model, ref_model, dv, v_idx, device)
             if dsp is not None:
-                m |= evaluate_sp(model, dsp, sp_val, device, a.value_per_game)
+                m |= evaluate_sp(model, dsp, sp_val, device, a.value_per_game, ref=ref_model)
             emit(dict(event="val", step=step, **{k: float(v) for k, v in m.items()}))
             # selection: all turn starts + all positions when the data has them (the visible
             # turn starts alone are a biased sample), weighted when it has sampling weights
