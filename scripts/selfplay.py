@@ -53,6 +53,9 @@ def cmd_run(a) -> None:
 
     gen_dir = SELFPLAY_DIR / f"gen{a.gen}"
     pairs = teams.load(gen_dir / "teams.jsonl")
+    if len(runner.done_pairs(gen_dir)) >= len(pairs):  # finished (a resumed cycle)
+        print(f"{gen_dir}: all {len(pairs)} games played already")
+        return
     # the generation's games are played by the current network (gens 1-2 were played by the
     # old default, v5-glu, until this was fixed)
     model = a.model or state()["current"]
@@ -343,7 +346,13 @@ def sequential_match(a, net_a: str, net_b: str, seed: int, log_dir: str) -> dict
                     lanes_per_proc=a.lanes, seed=seed, log_dir=log_dir, stop=stop)  # fmt: skip
     from alpha_poke.eval.arena import read_log
 
-    llr = sprt_llr(pair_scores(read_log(res["log"])), a.elo0, a.elo1)
+    scores = pair_scores(read_log(res["log"]))
+    if not res["stopped_early"] and len(scores) < a.pairs:
+        # the workers ended before the test decided and before the maximum (killed, crashed):
+        # no decision (2026-10-08: an evaluation killed with no game finished promoted)
+        raise RuntimeError(f"evaluation incomplete: {len(scores)} of {a.pairs} pairs, no "
+                           f"decision ({res['log']})")  # fmt: skip
+    llr = sprt_llr(scores, a.elo0, a.elo1)
     res |= {"llr": round(llr, 3), "llr_bounds": [round(lo, 3), round(hi, 3)],
             "elo0": a.elo0, "elo1": a.elo1, "llr_trace": trace,
             "decision": "H1" if llr >= hi or (lo < llr and llr >= 0) else "H0",
