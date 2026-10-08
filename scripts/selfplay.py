@@ -134,11 +134,20 @@ def cmd_train(a) -> None:
     keep = min(1.0, a.old_share * n_recent / n_older) if n_older else 0.0
     sp = ",".join([f"sp{g}" for g in recent] + [f"sp{g}:{keep:.4f}" for g in older])
     n_sp = n_recent + round(keep * n_older)
-    bsp = round(a.batch * a.sp_frac)
+    # human share of each batch: lowered over the generations (the human data anchors the play
+    # against humans; self-play's search targets are what goes beyond them), never below 20%;
+    # held when the previous generation's training drifted on the human validation
+    human = max(0.2, 0.5 - 0.05 * a.gen)
+    prev = st["generations"].get(str(a.gen - 1), {}).get("train", {})
+    held = bool(prev.get("human_drift_flag")) and prev.get("human_share") is not None
+    if held:
+        human = max(human, prev["human_share"])
+    sp_frac = a.sp_frac if a.sp_frac is not None else round(1 - human, 4)
+    bsp = round(a.batch * sp_frac)
     steps = a.steps or max(50, math.ceil(a.passes * n_sp / bsp))
     run = f"sp-gen{a.gen}"
     cmd = (f"{sys.executable} scripts/train_pv.py {TRAIN_FLAGS} --selfplay {sp} "
-           f"--sp-frac {a.sp_frac} --init {init} --steps {steps} --lr {a.lr} --batch {a.batch} "
+           f"--sp-frac {sp_frac} --init {init} --steps {steps} --lr {a.lr} --batch {a.batch} "
            f"--warmup-frac {a.warmup_frac} --eval-every {max(50, steps // 5)} --export last "
            f"--run {run}")  # fmt: skip
     print("$", cmd, flush=True)
@@ -154,6 +163,7 @@ def cmd_train(a) -> None:
             "sp_bce", "sp_bce_rootq")  # fmt: skip
     summary = {"run": str(out), "init": init, "selfplay": sp, "sp_positions": n_sp,
                "recent_gens": recent, "older_gens": older, "older_keep": round(keep, 4),
+               "human_share": round(1 - sp_frac, 4), "human_share_held": held,
                "steps": steps, "lr": a.lr, "warmup_frac": a.warmup_frac,
                "first_val": {k: val[0].get(k) for k in keep} if val else None,
                "last_val": {k: val[-1].get(k) for k in keep} if val else None,
@@ -270,7 +280,8 @@ def main() -> None:
     p.add_argument("--window", type=int, default=5, help="recent generations, all of their games")
     p.add_argument("--old-share", type=float, default=0.2,
                    help="older generations: sampled games, this share of the window")  # fmt: skip
-    p.add_argument("--sp-frac", type=float, default=0.5)
+    p.add_argument("--sp-frac", type=float, default=None,
+                   help="self-play share of a batch (default: the schedule, D15-5)")  # fmt: skip
     p.add_argument(
         "--passes", type=float, default=2.0, help="times each self-play position is seen"
     )
