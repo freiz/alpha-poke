@@ -66,6 +66,9 @@ def cmd_run(a) -> None:
 
 STATE = SELFPLAY_DIR / "state.json"  # the current network and every generation's summary
 BASE_RUN = "data/train/v5/runs/v5-glu"
+# a candidate that moved this much (KL to its starting point, self-play positions) and was
+# rejected counts as an over-update (gen 1: 0.0023, lr 1e-4, 2 passes)
+KL_BIG = 0.01
 # the training setup of the current network (v5-glu): same flags, plus self-play
 TRAIN_FLAGS = ("--data v5 --stream 4 --val-cutoff 1776921722 --eval-every 500 --arch transformer "
                "--history --mtp 3 --mtp-weight 0.5 --mtp-decay 0.5 --value-residual "
@@ -145,12 +148,18 @@ def cmd_train(a) -> None:
     held = bool(prev.get("human_drift_flag")) and prev.get("human_share") is not None
     if held:
         human = max(human, prev["human_share"])
-    # after rejected generations (the candidate was significantly worse): the learning rate is
-    # halved per consecutive rejection and the human share is not lowered
+    # after rejected generations whose candidate MOVED a lot (KL to its starting point on
+    # self-play positions >= KL_BIG: an over-update), the learning rate is halved per such
+    # consecutive rejection and the human share is not lowered; a rejection of a candidate that
+    # barely moved is evaluation noise: the settings stay
     rejected = 0
     for g in range(a.gen - 1, -1, -1):
-        ev = st["generations"].get(str(g), {}).get("eval")
+        gg = st["generations"].get(str(g), {})
+        ev = gg.get("eval")
         if ev is None or ev.get("promoted"):
+            break
+        moved = ((gg.get("train") or {}).get("last_val") or {}).get("sp_kl_ref")
+        if moved is not None and moved < KL_BIG:
             break
         rejected += 1
     lr = a.lr * 0.5 ** min(rejected, 3)
@@ -412,12 +421,13 @@ def main() -> None:
     p.add_argument("--sp-frac", type=float, default=None,
                    help="self-play share of a batch (default: the schedule, D15-5)")  # fmt: skip
     p.add_argument(
-        "--passes", type=float, default=2.0, help="times each self-play position is seen"
+        "--passes", type=float, default=3.0, help="times each self-play position is seen"
     )
     p.add_argument("--steps", type=int, default=0)
     # gen 0 (lr 3e-4, warmup 2 steps): the human validation drifted +0.011 / +0.013 in the
     # first 50 steps (fresh AdamW moments on a converged net), then stayed flat
-    p.add_argument("--lr", type=float, default=1e-4)
+    # gen 1 (1e-4, 2 passes) barely moved the net (KL 0.002 to its start): larger from gen 2
+    p.add_argument("--lr", type=float, default=2e-4)
     p.add_argument("--warmup-frac", type=float, default=0.2)
     p.add_argument("--batch", type=int, default=4096)
     p.add_argument("--force", action="store_true", help="retrain even if the run is complete")
