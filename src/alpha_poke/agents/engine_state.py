@@ -188,6 +188,7 @@ def sample_set(
             item = known.item
         if tera is None and known.tera:
             tera = known.tera
+
     def flat(w):
         """weights ** (1 / temp) (identity at temp 1)"""
         if temp == 1.0:
