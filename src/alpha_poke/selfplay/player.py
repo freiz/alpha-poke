@@ -32,7 +32,7 @@ class SelfPlayPlayer(SearchPlayer):
                  noise: tuple[float, float] = (0.1, 10.0), turn_cap: int = 300, seed: int = 0,
                  **kwargs):  # fmt: skip
         super().__init__(*args, **kwargs)
-        assert self.model_transformer and self.backend == "ismcts" and batcher is not None
+        assert self.model_transformer and batcher is not None
         self.batcher = batcher
         self.full_frac, self.full_iters, self.fast_iters = full_frac, full_iters, fast_iters
         self.fast_worlds, self.noise, self.turn_cap = fast_worlds, noise, turn_cap
@@ -79,7 +79,7 @@ class SelfPlayPlayer(SearchPlayer):
         full = self.rng.random() < self.full_frac
         n_worlds = self.worlds if full else self.fast_worlds
         names = self._opp_team_names(battle)
-        states = [build_state(battle, self.belief, names, self.rng, None, None, self.move_beta)
+        states = [build_state(battle, self.belief, names, self.rng, move_beta=self.move_beta)
                   for _ in range(n_worlds)]  # fmt: skip
         t1 = time.time()
         ctxs = net_context.contexts(battle, states)

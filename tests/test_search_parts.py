@@ -1,66 +1,6 @@
-"""Search-player helpers: oracle sets (D11 B upper bound) and plan-prior option keys (D11 A1)."""
+"""Search-player helpers: engine states built from battles."""
 
 from types import SimpleNamespace
-
-from poke_env.player.battle_order import SingleBattleOrder
-
-from alpha_poke.agents.engine_state import _oracle_set, oracle_sets
-from alpha_poke.agents.search_player import _option_key, _order_key
-
-TEAM = """Cinderace @ Heavy-Duty Boots
-Ability: Libero
-Tera Type: Fire
-EVs: 252 Atk / 4 SpD / 252 Spe
-Jolly Nature
-- Pyro Ball
-- U-turn
-
-Landorus-Therian @ Rocky Helmet
-Ability: Intimidate
-- Earthquake
-"""
-
-
-def _mon(species, item="unknown_item", ability=None, tera=False):
-    return SimpleNamespace(
-        species=species,
-        item=item,
-        ability=ability,
-        is_terastallized=tera,
-        tera_type=None,
-        level=100,
-        base_stats={"hp": 80, "atk": 116, "def": 75, "spa": 65, "spd": 75, "spe": 119},
-    )
-
-
-def test_oracle_sets_parse():
-    o = oracle_sets(TEAM)
-    assert sorted(o) == ["cinderace", "landorustherian"]
-    c = o["cinderace"]
-    assert c.moves == ["pyroball", "uturn"] and c.item == "heavydutyboots"
-    assert c.tera == "fire" and c.spread.nature == "jolly"
-    assert c.spread.evs == (0, 252, 0, 0, 4, 252)
-    assert o["landorustherian"].spread.evs == (0,) * 6  # no EVs line
-
-
-def test_oracle_set_keeps_battle_knowledge():
-    o = oracle_sets(TEAM)
-    s = _oracle_set(_mon("cinderace"), o)
-    assert s.item == "heavydutyboots" and s.ability == "libero"
-    assert s.stats["spe"] == 370  # 119 base, 252 EVs, Jolly
-    s = _oracle_set(_mon("cinderace", item=""), o)  # knocked off
-    assert s.item == "none"
-    assert _oracle_set(_mon("greattusk"), o) is None  # not in the team: caller samples
-
-
-def test_option_and_order_keys_match():
-    move = SimpleNamespace(id="earthquake")
-    mon = SimpleNamespace(species="greattusk")
-    assert _option_key((move, True)) == ("move", "earthquake", True)
-    assert _option_key(mon) == ("switch", "greattusk")
-    order = SingleBattleOrder(move, terastallize=True)
-    assert _order_key(order) == _option_key((move, True))
-
 
 # ---- Encore: the engine panics on Encore without a last used move (hung games, 2026-10-05)
 
@@ -101,24 +41,16 @@ def _poke_env_mon(last=None, encored=False):
     return SimpleNamespace(moves=moves, effects={Effect.ENCORE: 1} if encored else {})
 
 
-def test_engine_panic_becomes_runtime_error():
-    import pytest
-
-    from alpha_poke.agents import mcts_worker
-
-    with pytest.raises(RuntimeError, match="poke-engine"):
-        mcts_worker.search(_encore_state(({"encore"}, {})), 50)
-
-
 def test_last_move_sets_encore_move_or_drops_encore():
-    from alpha_poke.agents import mcts_worker
+    import alpha_search
+
     from alpha_poke.agents.engine_state import _last_move
 
     em = _engine_mon("dragonite", ["roost", "dragondance", "extremespeed"])
     kw, vol = _last_move(_poke_env_mon("dragondance", encored=True), em)
     assert kw == {"last_used_move": "move:1"} and "encore" in vol
-    visits, n = mcts_worker.search(_encore_state((vol, kw)), 50)
-    assert n > 0 and {c for c, _ in visits} <= {"dragondance", "dragondance-tera"}
+    ours, n, _, _ = alpha_search.ismcts([_encore_state((vol, kw)).to_string()], 50)
+    assert n > 0 and {c for c, v, _ in ours if v} <= {"dragondance", "dragondance-tera"}
     # encored, poke-env lost the last move, but the request offers only the encored move
     kw, vol = _last_move(_poke_env_mon(encored=True), em, avail={"extremespeed"})
     assert kw == {"last_used_move": "move:2"}

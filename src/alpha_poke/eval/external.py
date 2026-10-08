@@ -41,42 +41,30 @@ def _install_teams(pool_dir: str) -> dict[str, str]:
 
 
 def _opponent_cmd(opp, port, opp_name, our_name, we_challenge, matches, pool_dir, run_dir, lane):
-    """(command, cwd, env, label) of the opponent process for one lane.
-    opp = {"kind": "foulplay", "search_ms", "parallelism"} or
-          {"kind": "checkout", "path": <git worktree of an older commit>, "bot": <variant>}."""
-    if opp["kind"] == "foulplay":
-        fp_names = _install_teams(pool_dir)
-        list_file = FP_TEAMS / "lists" / f"{run_dir.name}_lane{lane}.txt"
-        list_file.parent.mkdir(parents=True, exist_ok=True)
-        list_file.write_text("\n".join(fp_names[m.team_b] for m in matches) + "\n")
-        cmd = [
-            str(FP / ".venv" / "bin" / "python"), "run.py",
-            "--websocket-uri", f"ws://localhost:{port}/showdown/websocket",
-            "--ps-username", opp_name, "--pokemon-format", "gen9ou",
-            "--team-list", str(list_file.relative_to(FP / "fp" / "teams" / "teams")),
-            "--run-count", str(len(matches)),
-            "--search-time-ms", str(opp["search_ms"]),
-            "--search-parallelism", str(opp["parallelism"]),
-            "--save-replay", "never", "--log-level", "INFO",
-        ]  # fmt: skip
-        cmd += (
-            ["--bot-mode", "accept_challenge"]
-            if we_challenge
-            else ["--bot-mode", "challenge_user", "--user-to-challenge", our_name]
-        )
-        label = f"foulplay({opp['search_ms']}ms x{opp['parallelism']})"
-        return cmd, FP, dict(os.environ, FP_OFFLINE="1"), label
-    path = Path(opp["path"]).resolve()
+    """(command, cwd, env, label) of the Foul Play process for one lane.
+    opp = {"kind": "foulplay", "search_ms", "parallelism"}."""
+    assert opp["kind"] == "foulplay", opp
+    fp_names = _install_teams(pool_dir)
+    list_file = FP_TEAMS / "lists" / f"{run_dir.name}_lane{lane}.txt"
+    list_file.parent.mkdir(parents=True, exist_ok=True)
+    list_file.write_text("\n".join(fp_names[m.team_b] for m in matches) + "\n")
     cmd = [
-        str(ROOT / ".venv" / "bin" / "python"), str(ROOT / "scripts" / "serve_bot.py"),
-        "--bot", opp["bot"], "--port", str(port), "--username", opp_name,
-        "--pool", str(Path(pool_dir).resolve()),
-        "--teams", ",".join(m.team_b for m in matches),
-        "--mode", "accept" if we_challenge else "challenge", "--opponent", our_name,
+        str(FP / ".venv" / "bin" / "python"), "run.py",
+        "--websocket-uri", f"ws://localhost:{port}/showdown/websocket",
+        "--ps-username", opp_name, "--pokemon-format", "gen9ou",
+        "--team-list", str(list_file.relative_to(FP / "fp" / "teams" / "teams")),
+        "--run-count", str(len(matches)),
+        "--search-time-ms", str(opp["search_ms"]),
+        "--search-parallelism", str(opp["parallelism"]),
+        "--save-replay", "never", "--log-level", "INFO",
     ]  # fmt: skip
-    # the old checkout's code wins over the editable install of the current one
-    env = dict(os.environ, PYTHONPATH=str(path / "src"))
-    return cmd, path, env, f"{opp['bot']}@{opp.get('rev', path.name)}"
+    cmd += (
+        ["--bot-mode", "accept_challenge"]
+        if we_challenge
+        else ["--bot-mode", "challenge_user", "--user-to-challenge", our_name]
+    )
+    label = f"foulplay({opp['search_ms']}ms x{opp['parallelism']})"
+    return cmd, FP, dict(os.environ, FP_OFFLINE="1"), label
 
 
 async def _lane(bot, matches, port, pool_dir, lane, log_path, opp, extras, run_dir):
@@ -85,7 +73,7 @@ async def _lane(bot, matches, port, pool_dir, lane, log_path, opp, extras, run_d
     teams = load_team_files(pool_dir)
     expected = {k: _species(v) for k, v in teams.items()}
     tag = f"{os.getpid() % 10000}l{lane}"
-    our_name, opp_name = f"ab{tag}", ("fp" if opp["kind"] == "foulplay" else "old") + tag
+    our_name, opp_name = f"ab{tag}", f"fp{tag}"
     we_challenge = lane % 2 == 0
     cmd, cwd, env, label = _opponent_cmd(
         opp, port, opp_name, our_name, we_challenge, matches, pool_dir, run_dir, lane
@@ -98,12 +86,10 @@ async def _lane(bot, matches, port, pool_dir, lane, log_path, opp, extras, run_d
     proc = subprocess.Popen(cmd, cwd=cwd, stdout=fp_log, stderr=subprocess.STDOUT, env=env)
     rows = []
     try:
-        # opponent login + data loading (our older bots load the belief model: slower)
-        await asyncio.sleep(6 if opp["kind"] == "foulplay" else 20)
+        # opponent login + data loading
+        await asyncio.sleep(6)
         for m in matches:
             me.update_team(teams[m.team_a])
-            if getattr(me, "use_oracle", False):
-                me.set_oracle((Path(pool_dir) / f"{m.team_b}.txt").read_text())
             before = set(me.battles)
             fb0 = (getattr(me, "fallbacks", 0), getattr(me, "search_fallbacks", 0))
             if we_challenge:
@@ -187,10 +173,7 @@ def run_external(
     pairs = [schedule[i : i + 2] for i in range(0, len(schedule), 2)]
     lanes = min(lanes, len(pairs))  # an empty lane would still start an opponent process
     lane_matches = [[m for pr in pairs[i::lanes] for m in pr] for i in range(lanes)]
-    if opp["kind"] == "foulplay":
-        tag = f"foulplay{opp['search_ms']}x{opp['parallelism']}"
-    else:
-        tag = f"{opp['bot']}@{opp.get('rev', Path(opp['path']).name)}"
+    tag = f"foulplay{opp['search_ms']}x{opp['parallelism']}"
     run_id = f"{time.strftime('%Y%m%d-%H%M%S')}_{bot}_vs_{tag}" + ("_heldout" if heldout else "")
     run_dir = Path(log_dir) / "external" / run_id
     run_dir.mkdir(parents=True, exist_ok=True)

@@ -10,7 +10,7 @@ Steps (each one is the corresponding script, run as a subprocess with the same o
                                       sides the policy model ("pol", fitted rating / tau),
                                       successive halving (cheap: no search)
   4. scripts/counter_team.py, stage 2 the --finalists best of stage 1, both sides the search bot
-                                      (s_ismcts_tf, --search-ms per move), dropping candidates
+                                      (s_ismcts_glu, --search-ms per move), dropping candidates
                                       significantly worse than the leader each round
   5. export                           the --export best -> data/players/<user id>/counter/
                                       (scripts/play_public.py --pool / --team, see there)
@@ -79,7 +79,7 @@ def main() -> None:
     finalists = sorted(res, key=lambda c: (-res[c][1], -res[c][0]))[: a.finalists]
     print("stage 1 finalists:", ", ".join(f"{c} {res[c][0]:.1%} ({res[c][1]})" for c in finalists))
     # stage 2: the search bot on both sides; ends with the export
-    run([*common, "--bot", "s_ismcts_tf", "--opp-bot", "s_ismcts_tf", "--keep", "significant",
+    run([*common, "--bot", "s_ismcts_glu", "--opp-bot", "s_ismcts_glu", "--keep", "significant",
          "--only", ",".join(finalists), "--first", str(a.stage2_games),
          "--rounds", str(a.stage2_rounds), "--lanes", "1"],
         env={"ALPHA_SEARCH_MS": str(a.search_ms)})  # fmt: skip

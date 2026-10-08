@@ -82,9 +82,6 @@ async def _lane(bot_a, bot_b, matches, port, pool_dir, heldout, lane_id, log_pat
     for m in matches:
         a.update_team(teams[m.team_a])
         b.update_team(teams[m.team_b])
-        for me, other in ((a, m.team_b), (b, m.team_a)):  # oracle bots see the true team
-            if getattr(me, "use_oracle", False):
-                me.set_oracle((Path(pool_dir) / f"{other}.txt").read_text())
         before, before_b = set(a.battles), set(b.battles)
         # the counters live on the lane's players: log this game's increase only
         fb0 = [(getattr(me, "fallbacks", 0), getattr(me, "search_fallbacks", 0)) for me in (a, b)]
@@ -271,11 +268,7 @@ def run_meta(bot_a: str, bot_b: str, **args) -> dict:
     return {
         "commit": git("rev-parse", "--short", "HEAD"),
         "dirty": bool(git("status", "--porcelain", "--untracked-files=no")),
-        "env": {
-            k: v
-            for k, v in sorted(os.environ.items())
-            if k.startswith("ALPHA_") or k == "LLM_BUDGET_USD"
-        },  # fmt: skip
+        "env": {k: v for k, v in sorted(os.environ.items()) if k.startswith("ALPHA_")},  # fmt: skip
         "args": args,
         "bots": {b: repr(VARIANTS.get(b, "baseline")) for b in (bot_a, bot_b)},
     }

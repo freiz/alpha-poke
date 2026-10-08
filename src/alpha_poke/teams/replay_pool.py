@@ -18,7 +18,7 @@ import pandas as pd
 from alpha_poke.analysis.roles import to_id
 from alpha_poke.analysis.tables import OUT
 from alpha_poke.data.smogon_stats import DEFAULT_DIR, UsageStats
-from alpha_poke.llm_bench import GEN, MOVE_IDS, _learnset
+from alpha_poke.dex import GEN, MOVE_IDS, learnset
 from alpha_poke.teams.catalog import write_pool
 from alpha_poke.teams.validate import check
 
@@ -88,7 +88,7 @@ def build_set(
     if ability is None:  # last resort: the species' first listed ability
         abilities = (GEN.pokedex.get(to_id(name), {}).get("abilities") or {}).values()
         ability = next(iter(abilities), None)
-    legal = _learnset(name) or set()
+    legal = learnset(name) or set()
     counts = Counter(m for v in rows.moves for m in v.split("|") if m)
     moves = [m for m, _ in counts.most_common() if to_id(m) in legal][:4]
     if smog is not None:

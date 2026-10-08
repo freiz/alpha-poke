@@ -1,24 +1,13 @@
-"""Search-based player: belief-sampled determinizations + poke-engine MCTS (root parallel).
+"""Search player: ISMCTS over belief-sampled worlds (design D12, rust/alpha_search).
 
-Team preview (LLM plan, lead) is the KnowledgePlayer's. Every decision:
-  1. draw ``samples`` full opponent sets from the belief model (engine_state.build_state),
-  2. run poke-engine's MCTS on each determinization: with ``workers`` > 1 the samples run in
-     parallel single-threaded processes for the full search_ms each (poke-engine's mcts holds
-     the GIL; one multi-threaded shared-tree search gets ~40% of the iterations), otherwise
-     sequentially for search_ms / samples each,
-  3. average the root visit shares of our options across the samples, play the best one that
-     maps to a legal order.
-ISMCTS backend (``backend="ismcts"``, design D12): ``worlds`` determinizations go to ONE
-information-set tree (rust/alpha_search); the time spent building them is taken out of the
-search budget so that the decision time matches the determinized backend. With a transformer
-model the per-world contexts (history, public-information bits, ratings, turn) come from
-``net_context`` and their time is taken out of the budget too.
-Plan prior (design D11, A1; ``plan_prior`` > 0, env ALPHA_PLAN_PRIOR): the KnowledgePlayer's
-plan terms of each option (goals, assignments, rules, ...; the same trust checks as the
-heuristic) are added to the visit shares as ``plan_prior * plan_total``, and tera options the
-plan's tera directive forbids are dropped. It only moves the choice between close options.
-Without it the plan only picks the lead.
-Any failure falls back to the KnowledgePlayer's heuristic decision (counted in ``fallbacks``).
+Team preview (computed plan, lead) is the KnowledgePlayer's. Every decision: ``worlds``
+determinizations from the belief model (engine_state.build_state) go to ONE information-set
+tree; the time spent building them is taken out of the search budget. With a transformer model
+(design D13) the per-world contexts (history, public-information bits, ratings, turn) come from
+``net_context`` (their time is taken out of the budget too), the network gives the leaf values
+and, with ``net_policy``, the PUCT priors; on the GPU (``device="cuda"``) one batched tree
+(agents.gpu_search). The most visited option that maps to a legal order is played. Any failure
+falls back to the KnowledgePlayer's heuristic decision (counted in ``search_fallbacks``).
 """
 
 import asyncio
@@ -27,20 +16,15 @@ import logging
 import os
 import random
 import time
-from collections import defaultdict
-from concurrent.futures import ProcessPoolExecutor
-from multiprocessing import get_context
 from pathlib import Path
 
 import alpha_search
-from poke_env.battle import Pokemon
 
-from alpha_poke.agents import mcts_worker, net_context
-from alpha_poke.agents.engine_state import build_state, engine_move_to_order, oracle_sets
+from alpha_poke.agents import net_context
+from alpha_poke.agents.engine_state import build_state, engine_move_to_order
 from alpha_poke.agents.knowledge_player import KnowledgePlayer, sync_tera_types
 
 log = logging.getLogger("alpha_poke.search")
-ORACLE_FIELDS = frozenset({"item", "moves", "tera", "ability", "spread"})
 
 
 def _env_int(name: str, default: int) -> int:
@@ -65,71 +49,33 @@ def _is_transformer(model_dir: str) -> bool:
         return False
 
 
-def _option_key(choice) -> tuple:
-    """Same key for a KnowledgePlayer row choice ((move, tera) or a Pokemon) and an order."""
-    if isinstance(choice, tuple):
-        return ("move", choice[0].id, bool(choice[1]))
-    return ("switch", choice.species)
-
-
-def _order_key(order) -> tuple:
-    o = order.order
-    if isinstance(o, Pokemon):
-        return ("switch", o.species)
-    return ("move", o.id, bool(order.terastallize))
-
-
 class SearchPlayer(KnowledgePlayer):
     def __init__(
         self,
         *args,
         search_ms=None,
-        samples=None,
         threads=None,
-        plan_prior=None,
-        oracle=False,
         move_beta=None,
-        backend=None,
         worlds=None,
-        chance_depth=None,
         model=None,
         net_policy=None,
-        net_value=None,
         device=None,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
-        # oracle (local evaluation only, design D11 B): the evaluator hands us the opponent's
-        # true team with set_oracle() before every game; the search then samples nothing.
-        # oracle="item,moves" (subset of item / moves / tera / ability / spread): only those
-        # fields are true, the rest is sampled from the belief as usual.
-        self.use_oracle = bool(oracle)
-        self.oracle_fields = None if oracle is True or not oracle else frozenset(oracle.split(","))
-        assert self.oracle_fields is None or self.oracle_fields <= ORACLE_FIELDS, oracle
-        self.oracle = None
-        self.plan_prior = (
-            plan_prior if plan_prior is not None else _env_float("ALPHA_PLAN_PRIOR", 0.0)
-        )
         self.search_ms = search_ms or _env_int("ALPHA_SEARCH_MS", 1000)
-        self.samples = samples or _env_int("ALPHA_SEARCH_SAMPLES", 4)
-        self.threads = threads or _env_int("ALPHA_SEARCH_THREADS", 1)  # = worker processes
+        self.threads = threads or _env_int("ALPHA_SEARCH_THREADS", 1)  # Rust threads
         self.search_fallbacks = 0
         # sampled moves x team-conditioned move marginal ** move_beta (0 = archetype only; default
         # 1 since 2026-10-06: coverage of later revealed moves 61.7% -> 77.3%, design D11)
         self.move_beta = move_beta if move_beta is not None else _env_float("ALPHA_MOVE_BETA", 1.0)
-        self._row_choice: dict = {}
-        self._pool = None
-        # "determinized" (K independent poke-engine trees) or "ismcts" (one tree, design D12)
-        self.backend = backend or os.environ.get("ALPHA_SEARCH_BACKEND", "determinized")
         self.worlds = worlds or _env_int("ALPHA_ISMCTS_WORLDS", 32)
-        # ISMCTS leaf value from a trained network (model directory, design D13); None =
+        # leaf values (and priors) from a trained network (run directory, design D13); None =
         # poke-engine's handcrafted evaluation
         self.model = model or os.environ.get("ALPHA_SEARCH_MODEL") or None
-        # a transformer run (design D13 v3 / v4) also reads the history, the public-information
-        # bits, the ratings and the turn: built per decision by net_context
         self.model_transformer = bool(self.model) and _is_transformer(self.model)
-        # transformer on the GPU: one batched tree, `gpu_threads` threads descending it,
-        # `gpu_batch` leaves per network call (agents.gpu_search); "cpu" = Rust CPU inference
+        # the GPU: one batched tree, `gpu_threads` threads descending it, `gpu_batch` leaves per
+        # network call (agents.gpu_search); "cpu" = Rust CPU inference
         self.device = device or os.environ.get("ALPHA_SEARCH_DEVICE", "cpu")
         self.gpu_threads = _env_int("ALPHA_GPU_THREADS", 8)
         self.gpu_batch = _env_int("ALPHA_GPU_BATCH", 32)
@@ -141,29 +87,8 @@ class SearchPlayer(KnowledgePlayer):
         # only (the opponent keeps UCB1)
         self.net_policy = net_policy or os.environ.get("ALPHA_NET_POLICY") or None
         assert self.net_policy in (None, "both", "ours"), self.net_policy
-        # leaf values from the network (default) or the handcrafted evaluation (priors only)
-        self.net_value = (
-            net_value if net_value is not None else os.environ.get("ALPHA_NET_VALUE", "1") != "0"
-        )
-        # ISMCTS: split shallow children by the observable outcome below this depth (0 = open-loop)
-        self.chance_depth = (
-            chance_depth if chance_depth is not None else _env_int("ALPHA_ISMCTS_CHANCE_DEPTH", 0)
-        )
-        assert self.backend in ("determinized", "ismcts"), self.backend
-
-    def _workers(self):
-        if self.threads > 1 and self._pool is None:
-            self._pool = ProcessPoolExecutor(self.threads, mp_context=get_context("spawn"))
-        return self._pool
-
-    def set_oracle(self, team_text: str) -> None:
-        self.oracle = oracle_sets(team_text)
 
     def close(self) -> None:
-        """Stop the worker processes (a live pool keeps its parent from exiting)."""
-        if self._pool is not None:
-            self._pool.shutdown(wait=False, cancel_futures=True)
-            self._pool = None
         if self._gpu is not None:
             self._gpu.close()
             self._gpu = None
@@ -189,73 +114,35 @@ class SearchPlayer(KnowledgePlayer):
             return None
         names = self._opp_team_names(battle)
         rng = random.Random(f"{battle.battle_tag}:{battle.turn}:{len(battle.available_moves)}")
-        share: dict[str, float] = defaultdict(float)
         t0 = time.time()
-        iters = 0
-        oracle = self.oracle if self.use_oracle else None
-        n_states = self.worlds if self.backend == "ismcts" else self.samples
-        states = [
-            build_state(battle, self.belief, names, rng, oracle, self.oracle_fields, self.move_beta)
-            for _ in range(n_states)
-        ]
-        pool = None if self.backend == "ismcts" else self._workers()
-        if self.backend == "ismcts":
-            ctxs = net_context.contexts(battle, states) if self.model_transformer else None
-            budget = max(20, self.search_ms - int((time.time() - t0) * 1000))
-            if self.model_transformer and self.device == "cuda":
-                ours, n = self._gpu_search(states, ctxs, budget, rng)
-            else:
-                ours, n, _, _ = alpha_search.ismcts(
-                    [s.to_string() for s in states],
-                    budget,
-                    iterations=self.search_iterations,
-                    chance_depth=self.chance_depth,
-                    threads=self.threads,  # Rust threads (root parallel), no process pool
-                    model_dir=self.model,
-                    use_policy=self.net_policy is not None,
-                    policy_opponent=self.net_policy == "both",
-                    net_value=self.net_value,
-                    contexts=ctxs,
-                )
-            results = [([(c, v) for c, v, _ in ours], n)]
-        elif pool is not None:  # parallel: each sample gets the full budget on its own core
-            futs = [pool.submit(mcts_worker.run, s.to_string(), self.search_ms) for s in states]
-            results = [f.result() for f in futs]
+        states = [build_state(battle, self.belief, names, rng, move_beta=self.move_beta)
+                  for _ in range(self.worlds)]  # fmt: skip
+        ctxs = net_context.contexts(battle, states) if self.model_transformer else None
+        budget = max(20, self.search_ms - int((time.time() - t0) * 1000))
+        if self.model_transformer and self.device == "cuda":
+            ours, n = self._gpu_search(states, ctxs, budget, rng)
         else:
-            per = max(20, self.search_ms // self.samples)
-            results = [mcts_worker.search(s, per) for s in states]
-        for visits, n in results:
-            iters += n
-            total = sum(v for _, v in visits) or 1
-            for choice, v in visits:
-                share[choice] += v / total / len(results)
-        ranked = sorted(share.items(), key=lambda kv: -kv[1])
+            ours, n, _, _ = alpha_search.ismcts(
+                [s.to_string() for s in states],
+                budget,
+                iterations=self.search_iterations,
+                threads=self.threads,
+                model_dir=self.model,
+                use_policy=self.net_policy is not None,
+                policy_opponent=self.net_policy == "both",
+                contexts=ctxs,
+            )
+        total = sum(v for _, v, _ in ours) or 1
+        ranked = sorted(((c, v / total) for c, v, _ in ours), key=lambda kv: -kv[1])
         orders = [(c, s, engine_move_to_order(self, battle, c)) for c, s in ranked]
         orders = [(c, s, o) for c, s, o in orders if o is not None]
         if not orders:
             self._trace_fallback(battle, f"no legal order among {[c for c, _ in ranked[:6]]}")
             return None
-        prior = self._plan_prior(battle) if self.plan_prior > 0 else None
-        scored = []
-        for c, s, o in orders:
-            p = 0.0
-            if prior is not None:
-                p = prior.get(_order_key(o))
-                if p is None:  # an option the plan rules out (tera against its directive)
-                    continue
-            scored.append((s + self.plan_prior * p, c, s, p, o))
-        if not scored:  # the plan forbids everything the search found: trust the search
-            scored = [(s, c, s, 0.0, o) for c, s, o in orders]
-        best = max(scored, key=lambda x: x[0])
-        if prior is not None and (rc := self._row_choice.get(_order_key(best[4]))) is not None:
-            self.memory[battle.battle_tag].record(battle, rc)
+        chosen, _, order = orders[0]
         if self.trace_dir:
-            self._trace_search(
-                battle, ranked, best[1], iters, time.time() - t0,
-                prior={c: round(p, 3) for _, c, _, p, _ in scored if p} if prior else None,
-                changed=prior is not None and best[1] != orders[0][0],
-            )  # fmt: skip
-        return best[4]
+            self._trace_search(battle, ranked, chosen, n, time.time() - t0)
+        return order
 
     def _gpu_search(self, states, ctxs, budget_ms: int, rng) -> tuple[list, int]:
         """The batched search with the network on the GPU (agents.gpu_search)."""
@@ -273,16 +160,6 @@ class SearchPlayer(KnowledgePlayer):
         )
         return ours, n
 
-    def _plan_prior(self, battle) -> dict | None:
-        """Plan total of every option the heuristic scores (forbidden tera options are absent).
-        Also keeps the battle memory and the plan state up to date."""
-        scored = self._score_options(battle)
-        if scored is None:
-            return None
-        rows = scored[0]
-        self._row_choice = {_option_key(r["choice"]): r["choice"] for r in rows}
-        return {_option_key(r["choice"]): r["plan_total"] for r in rows}
-
     def _trace_fallback(self, battle, reason: str) -> None:
         """Why the search gave no order (the heuristic decides instead)."""
         if not self.trace_dir:
@@ -299,9 +176,7 @@ class SearchPlayer(KnowledgePlayer):
         with open(d / f"{battle.battle_tag}_{self.username}.jsonl", "a") as f:
             f.write(json.dumps(row) + "\n")
 
-    def _trace_search(
-        self, battle, ranked, chosen, iters, seconds, prior=None, changed=False
-    ) -> None:
+    def _trace_search(self, battle, ranked, chosen, iters, seconds) -> None:
         me, opp = battle.active_pokemon, battle.opponent_active_pokemon
         row = {
             "turn": battle.turn,
@@ -316,11 +191,6 @@ class SearchPlayer(KnowledgePlayer):
             "iterations": iters,
             "seconds": round(seconds, 2),
         }
-        if self.use_oracle:
-            row["oracle"] = self.oracle is not None
-        if prior is not None:
-            row["plan_prior"] = prior
-            row["plan_changed"] = changed
         d = Path(self.trace_dir)
         d.mkdir(parents=True, exist_ok=True)
         with open(d / f"{battle.battle_tag}_{self.username}.jsonl", "a") as f:

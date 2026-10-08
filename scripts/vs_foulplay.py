@@ -1,7 +1,7 @@
 """Paired evaluation of one of our bots against Foul Play (see alpha_poke.eval.external).
 
 Usage:
-  uv run python scripts/vs_foulplay.py k_llmplan --pairs 10 --lanes 2 --search-ms 1000 \\
+  uv run python scripts/vs_foulplay.py s_ismcts_glu --pairs 10 --lanes 2 --search-ms 1000 \\
       --parallelism 4 --trace --replays
 
 Requires: scripts/setup_foul_play.py install / patch / cache. Local servers only.

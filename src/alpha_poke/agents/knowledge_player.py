@@ -5,8 +5,7 @@ Team preview (planning):
   * 6x6 one-vs-one matchup matrix (our mon i vs their mon j) with the damage model;
   * threats (their mons that beat many of ours), our answers to each threat, our win conditions
     (mons that beat many of theirs), mons to preserve (win conditions + sole answers);
-  * lead: best expected matchup against their likely leads (lead rates from replays);
-  * the opponent's matching cores from the archetype library (names, for the log / later use).
+  * lead: best expected matchup against their likely leads (lead rates from replays).
 
 Each turn (heuristic actions, scored in "HP-fraction swing" units):
   * attacks: expected damage, KO bonus, zero if we get KO'd before moving;
@@ -20,7 +19,6 @@ Any exception falls back to poke-env's SimpleHeuristicsPlayer decision.
 
 import json
 import logging
-import random
 from collections import deque
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -37,7 +35,7 @@ from poke_env.data.normalize import to_id_str
 from poke_env.player import Player, SimpleHeuristicsPlayer
 
 from alpha_poke.agents import status_moves as sm
-from alpha_poke.agents.belief_state import BeliefModel, ability_probs, own_view
+from alpha_poke.agents.belief_state import BeliefModel, own_view
 from alpha_poke.agents.damage import (
     MonView,
     _recovers,  # noqa: F401 (recovery-aware chip value)
@@ -80,11 +78,6 @@ def sync_tera_types(battle) -> None:
             req = getattr(mon, "_last_request", None) or {}
             if req.get("teraType"):
                 mon._terastallized_type = PokemonType.from_name(req["teraType"])
-
-
-def top(d: dict[str, float], k: int) -> list[list]:
-    """Top-k (name, probability rounded to 2 decimals) of a distribution."""
-    return [[n, round(p, 2)] for n, p in sorted(d.items(), key=lambda kv: -kv[1])[:k]]
 
 
 def _display_species(species_id: str) -> str:
@@ -311,27 +304,21 @@ class Plan:
     win_conditions: list[str] = field(default_factory=list)
     preserve: set[str] = field(default_factory=set)
     lead: str | None = None
-    opp_cores: list[str] = field(default_factory=list)
     tera_target: str | None = None  # None = no restriction (computed plans)
     pace: str = "balanced"  # aggressive | balanced | defensive
     hazards_priority: str = "normal"  # high | normal | low
-    source: str = "computed"  # computed | llm | computed(llm-failed)
-    llm: dict = field(default_factory=dict)  # key, cached, cost, problems, game_plan, ...
-    llm_raw: dict = field(default_factory=dict)  # the validated LLM plan (executable part)
     exec_state: object = None  # plan_exec.PlanState for this battle
 
     def summary(self) -> str:
         return (
-            f"[{self.source}] lead={self.lead} wincons={self.win_conditions} "
+            f"lead={self.lead} wincons={self.win_conditions} "
             f"preserve={sorted(self.preserve)} threats={self.threats[:3]} "
             f"answers={ {t: self.answers.get(t, []) for t in self.threats[:3]} } "
-            f"tera={self.tera_target} pace={self.pace} hazards={self.hazards_priority} "
-            f"opp_cores={self.opp_cores[:1]}"
+            f"tera={self.tera_target} pace={self.pace} hazards={self.hazards_priority}"
         )
 
     def to_log(self) -> dict:
         return {
-            "source": self.source,
             "lead": self.lead,
             "win_conditions": self.win_conditions,
             "preserve": sorted(self.preserve),
@@ -340,8 +327,6 @@ class Plan:
             "tera_target": self.tera_target,
             "pace": self.pace,
             "hazards_priority": self.hazards_priority,
-            "opp_cores": self.opp_cores[:1],
-            "llm": self.llm,
             "exec": None
             if self.exec_state is None
             else {
@@ -369,34 +354,17 @@ class KnowledgePlayer(Player):
     def __init__(
         self,
         belief: BeliefModel,
-        library: dict | None = None,
-        use_plan: bool = True,
-        plan_lead: bool = True,
-        lead_prior: str = "human",
-        random_lead: bool = False,
-        anti_loop: bool = True,
         trace_dir: str | None = None,
-        plan_mode: str = "computed",
-        llm_model: str | None = None,
         **kwargs,
     ):
         super().__init__(**kwargs)
         self.belief = belief
-        self.use_plan = use_plan  # ablation: no threats / answers / win conditions / preserve
-        self.plan_lead = plan_lead and use_plan  # ablation: lead = first slot of the team file
-        self.lead_prior = lead_prior  # "human": replay lead rates; "uniform": any of the six
-        self.random_lead = random_lead  # ablation: uniformly random lead
-        self.library = library
         self.plans: dict[str, Plan] = {}
         self.fallbacks = 0
-        self.anti_loop = anti_loop
         self.trace_dir = Path(trace_dir) if trace_dir else None
         if self.trace_dir:
             self.trace_dir.mkdir(parents=True, exist_ok=True)
         self.memory: dict[str, BattleMemory] = {}
-        self.plan_mode = plan_mode  # "computed" (rules) or "llm" (one cached LLM call per pair)
-        self.llm_model = llm_model
-        self._planner = None
 
     # ---- helpers ------------------------------------------------------------------------
     def _opp_team_names(self, battle: AbstractBattle) -> tuple[str, ...]:
@@ -441,14 +409,10 @@ class KnowledgePlayer(Player):
             if len(plan.answers[t]) == 1:
                 plan.preserve.add(plan.answers[t][0])
         # lead: expected matchup vs their likely leads
-        rates = (
-            {t: 1.0 for t in their_keys}
-            if self.lead_prior == "uniform"
-            else {
-                t: self.belief.lead_rate.get(n, 1 / 6)
-                for t, n in zip(their_keys, plan.opp_species, strict=False)
-            }
-        )
+        rates = {
+            t: self.belief.lead_rate.get(n, 1 / 6)
+            for t, n in zip(their_keys, plan.opp_species, strict=False)
+        }
         total = sum(rates.values()) or 1.0
 
         def lead_value(o: str) -> float:
@@ -461,22 +425,12 @@ class KnowledgePlayer(Player):
                 v -= 0.15
             return v
 
-        if self.random_lead:
-            plan.lead = random.choice(our_keys)
-        else:
-            plan.lead = max(our_keys, key=lead_value) if self.plan_lead else our_keys[0]
-        if not self.use_plan:  # keep the matchup cache (pure knowledge), drop the strategy
-            plan.threats, plan.answers, plan.win_conditions, plan.preserve = [], {}, [], set()
-        if self.library:
-            names = set(plan.opp_species)
-            hits = [c for c in self.library.get("cores", []) if set(c["members"]) <= names]
-            hits.sort(key=lambda c: (-c["size"], -c["support"]))
-            plan.opp_cores = [f"{c['name']} ({' + '.join(c['members'])})" for c in hits]
+        plan.lead = max(our_keys, key=lead_value)
         return plan
 
     # ---- executable plans ------------------------------------------------------------------
     def _name_maps(self, battle) -> tuple[dict[str, str], dict[str, str]]:
-        """(our key -> display name, their key -> display name) as used in plans/prompts."""
+        """(our key -> display name, their key -> display name) as used in plans."""
         our = {self._key(m): _display_species(m.species) for m in battle.team.values()}
         theirs_raw = battle.teampreview_opponent_team or list(battle.opponent_team.values())
         names = self._opp_team_names(battle)
@@ -484,8 +438,7 @@ class KnowledgePlayer(Player):
         return our, their
 
     def _computed_exec(self, battle, plan: Plan, our: dict, their: dict) -> dict:
-        """Rule-generated executable plan with the same structure as the LLM's (so that
-        LLM vs rules compares plan *content*, not execution machinery)."""
+        """Rule-generated executable plan (plan_exec's format: roles, assignments, phases)."""
         ours = list(battle.team.values())
         roles = {}
         for m in ours:
@@ -536,121 +489,17 @@ class KnowledgePlayer(Player):
     def _init_exec(self, battle, plan: Plan) -> PlanState:
         our, their = self._name_maps(battle)
         names = Names({v: k for k, v in our.items()}, {v: k for k, v in their.items()})
-        d = plan.llm_raw if plan.source == "llm" and plan.llm_raw.get("phases") else None
-        if d is None:
-            d = self._computed_exec(battle, plan, our, their)
+        d = self._computed_exec(battle, plan, our, their)
         state = PlanState(ExecPlan.from_dict(d, names), matchup=plan.matchup)
         plan.exec_state = state
         return state
-
-    # ---- LLM plan --------------------------------------------------------------------------
-    def _llm_inputs(self, battle, plan: Plan):
-        """Prompt inputs + name maps. Opponent: species and *belief* estimates only."""
-        from alpha_poke.agents.llm_plan import display_ability, display_item, display_move
-
-        ours_raw = list(battle.team.values())
-        our_name = {self._key(m): _display_species(m.species) for m in ours_raw}
-        ours = [
-            {
-                "species": our_name[self._key(m)],
-                "item": display_item(m.item),
-                "ability": display_ability(m.ability, m.species),
-                "tera": m.tera_type.name.title() if m.tera_type else "",
-                "moves": [display_move(x) for x in m.moves],
-                "speed": (m.stats or {}).get("spe") or 0,
-            }
-            for m in ours_raw
-        ]
-        theirs_raw = battle.teampreview_opponent_team or list(battle.opponent_team.values())
-        team_names = self._opp_team_names(battle)
-        their_name = {}
-        their_info = []
-        for t, tname in zip(theirs_raw, team_names, strict=False):
-            dist = self.belief.prior.predict(tname, team_names)
-            name = tname.replace("-*", "")
-            their_name[self._key(t)] = name
-            tv, _ = self._opp(battle, t)
-            their_info.append(
-                {
-                    "species": name,
-                    "items": [[display_item(i), p] for i, p in top(dist.item, 3)],
-                    "tera": [[x.title(), p] for x, p in top(dist.tera, 2)],
-                    "moves": [[display_move(x), p] for x, p in top(dist.move, 8) if p >= 0.04],
-                    "abilities": [
-                        [display_ability(a, t.species), round(p, 2)]
-                        for a, p in sorted(ability_probs(t).items(), key=lambda x: -x[1])[:2]
-                        if p >= 0.05
-                    ],
-                    "speed": int(tv.stats.get("spe", 0)),
-                    "scarf": round(tv.item_p("choicescarf"), 2),
-                    "lead": round(self.belief.lead_rate.get(tname, 1 / 6), 2),
-                }
-            )
-        their_info.sort(key=lambda x: x["species"])
-        matchups = []
-        for o in sorted(our_name, key=our_name.get):
-            row = [
-                (their_name[t], round(plan.matchup.get((o, t), 0.0), 1))
-                for t in sorted(their_name, key=their_name.get)
-            ]
-            matchups.append([our_name[o], row])
-        return ours, their_info, plan.opp_cores[:2], matchups, our_name, their_name
-
-    def _apply_llm(self, plan: Plan, llm, our_name: dict, their_name: dict) -> None:
-        our_key = {v: k for k, v in our_name.items()}
-        their_key = {v: k for k, v in their_name.items()}
-        p = llm.raw
-        if p.get("lead") in our_key:
-            plan.lead = our_key[p["lead"]]
-        plan.win_conditions = [our_key[x] for x in p.get("win_conditions", []) if x in our_key]
-        plan.preserve = {our_key[x] for x in p.get("preserve", []) if x in our_key}
-        plan.preserve |= set(plan.win_conditions)
-        plan.threats = [their_key[x] for x in p.get("threats", []) if x in their_key]
-        plan.answers = {
-            their_key[t]: [our_key[a] for a in v if a in our_key]
-            for t, v in (p.get("answers") or {}).items()
-            if t in their_key
-        }
-        tt = p.get("tera_target")
-        plan.tera_target = our_key.get(tt) if tt else None
-        plan.pace = p.get("pace", "balanced")
-        plan.hazards_priority = p.get("hazards_priority", "normal")
-        plan.source = "llm"
-        plan.llm_raw = p
-        plan.llm = {
-            "key": llm.key[:16],
-            "cached": llm.cached,
-            "cost_usd": round(llm.cost_usd, 5),
-            "latency_s": round(llm.latency_s, 2),
-            "problems": llm.problems,
-            "game_plan": p.get("game_plan", ""),
-            "their_win_route": p.get("their_win_route", ""),
-        }
 
     async def teampreview(self, battle: AbstractBattle) -> str:
         try:
             sync_tera_types(battle)
             plan = self.make_plan(battle)
-            if self.plan_mode == "llm":
-                import asyncio
-
-                from alpha_poke.agents.llm_plan import LLMPlanner
-
-                try:
-                    if self._planner is None:
-                        self._planner = LLMPlanner(model=self.llm_model)
-                    ours, info, cores, matchups, our_name, their_name = self._llm_inputs(
-                        battle, plan
-                    )
-                    llm = await asyncio.to_thread(self._planner.plan, ours, info, cores, matchups)
-                    self._apply_llm(plan, llm, our_name, their_name)
-                except Exception as e:  # noqa: BLE001 - keep playing with the computed plan
-                    log.exception("LLM plan failed; using the computed plan")
-                    plan.source = "computed(llm-failed)"
-                    plan.llm = {"error": f"{type(e).__name__}: {e}"[:200]}
             self.plans[battle.battle_tag] = plan
-            if self.use_plan:
-                self._init_exec(battle, plan)
+            self._init_exec(battle, plan)
             ours = list(battle.team.values())
             order = sorted(range(len(ours)), key=lambda i: self._key(ours[i]) != plan.lead)
             for mon in ours:
@@ -698,7 +547,7 @@ class KnowledgePlayer(Player):
         if plan is None:
             plan = self.plans[battle.battle_tag] = self.make_plan(battle)
         state = plan.exec_state
-        if state is None and self.use_plan:
+        if state is None:
             state = self._init_exec(battle, plan)
         if state is not None:
             state.update(battle)
@@ -773,7 +622,7 @@ class KnowledgePlayer(Player):
                         if not state.tera_allowed(battle, me.species, tera_ctx):
                             continue
                 terms = plan_terms(state, battle, c, ctx)
-            loop = self._loop_adjust(battle, mem, c, v) if self.anti_loop else 0.0
+            loop = self._loop_adjust(battle, mem, c, v)
             # damage we take by staying in; switches already pay it on the switch-in. Kept out
             # of `tactical` so the plan layer's usefulness / trust checks see the action itself.
             stay = (

@@ -150,10 +150,10 @@ class TeamSampler:
 
     def _top_up(self, species: str, have: list[str], n: int) -> list[str]:
         """Up to ``n`` more moves (ids) from the species' Smogon move usage, legal for it."""
-        from alpha_poke.llm_bench import MOVE_IDS, _learnset
+        from alpha_poke.dex import MOVE_IDS, learnset
 
         smog = smogon_entry(self.stats, species)
-        legal = _learnset(species) or set()
+        legal = learnset(species) or set()
         if smog is None:
             return []
         skip = set(have) | self.banned_moves

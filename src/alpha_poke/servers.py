@@ -6,7 +6,11 @@ scripts/play_public.py (explicit --public, registered bot account, whitelisted o
 ladder) for friendly games the user arranges.
 """
 
+from pathlib import Path
+
 from poke_env import AccountConfiguration, ServerConfiguration
+
+ROOT = Path(__file__).resolve().parents[2]
 
 LOOPBACK_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
 
@@ -32,10 +36,20 @@ def public_server(confirm: bool = False):
     return ShowdownServerConfiguration
 
 
+def load_env(path: Path = ROOT / ".env") -> dict[str, str]:
+    """The KEY=value lines of .env (secrets: never printed or logged)."""
+    env = {}
+    if path.exists():
+        for line in path.read_text().splitlines():
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                k, v = line.split("=", 1)
+                env[k.strip()] = v.strip().strip('"').strip("'")
+    return env
+
+
 def public_account() -> AccountConfiguration:
     """The registered bot account from .env (PS_BOT_USERNAME / PS_BOT_PASSWORD)."""
-    from alpha_poke.llm import load_env
-
     env = load_env()
     user, password = env.get("PS_BOT_USERNAME"), env.get("PS_BOT_PASSWORD")
     if not user or not password:

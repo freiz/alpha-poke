@@ -19,7 +19,7 @@ from poke_env.battle.move import Move
 from poke_env.data import GenData
 
 from alpha_poke.agents.belief_state import BeliefModel, _preview_name, ability_probs
-from alpha_poke.agents.damage import Spread, calc_stats
+from alpha_poke.agents.damage import calc_stats
 from alpha_poke.analysis.roles import to_id
 
 GEN = GenData.from_gen(9)
@@ -110,52 +110,6 @@ class SpectatorSide:
     team: list
     known: dict[str, KnownSet]
     names: tuple[str, ...]  # belief team names of this side
-
-
-@dataclass
-class OracleSet:
-    moves: list[str]
-    item: str
-    ability: str
-    tera: str
-    spread: Spread
-
-
-def oracle_sets(team_text: str) -> dict[str, OracleSet]:
-    """species id -> the opponent's TRUE set, from its Showdown export (local evaluation only:
-    the oracle upper bound of design D11, direction B)."""
-    from poke_env.teambuilder import Teambuilder
-
-    out = {}
-    for m in Teambuilder.parse_showdown_team(team_text + "\n\n"):
-        if not (m.species or m.nickname):
-            continue
-        evs = tuple(int(x or 0) for x in (m.evs or [0] * 6))  # no EVs line = all 0
-        out[to_id(m.species or m.nickname)] = OracleSet(
-            moves=[to_id(x) for x in m.moves],
-            item=to_id(m.item) if m.item else "none",
-            ability=to_id(m.ability) if m.ability else "none",
-            tera=(m.tera_type or "").lower() or "typeless",
-            spread=Spread((m.nature or "serious").lower(), evs),
-        )
-    return out
-
-
-def _oracle_set(mon, oracle: dict[str, OracleSet]) -> "SampledSet | None":
-    sid = to_id(mon.species)
-    o = oracle.get(sid) or next(
-        (v for k, v in oracle.items() if sid.startswith(k) or k.startswith(sid)), None
-    )
-    if o is None:
-        return None
-    item = mon.item if mon.item not in (None, "unknown_item") else o.item
-    return SampledSet(
-        moves=o.moves or ["tackle"],
-        item=item or "none",  # "" = known to have no item (knocked off / consumed)
-        ability=to_id(mon.ability) if mon.ability else o.ability,
-        tera=_tera(mon) if mon.is_terastallized else o.tera,
-        stats=calc_stats(mon.base_stats, o.spread, level=mon.level or 100),
-    )
 
 
 def sample_set(
@@ -388,16 +342,12 @@ def build_state(
     belief: BeliefModel,
     team_names: tuple[str, ...],
     rng: random.Random,
-    oracle: dict[str, OracleSet] | None = None,
-    oracle_fields: frozenset[str] | None = None,
     move_beta: float = 0.0,
     spectator: SpectatorSide | None = None,
     force_switch: bool | None = None,
 ) -> pe.State:
-    """One determinization of the current battle (side_one = us). With ``oracle`` (the
-    opponent's true sets, local evaluation only) nothing is sampled; with ``oracle_fields`` too
-    (subset of item / moves / tera / ability / spread) only those fields are true, the rest is
-    sampled as usual (decomposing the oracle advantage, design D11 B). With ``spectator`` side
+    """One determinization of the current battle (side_one = us): the opponent's sets sampled
+    from the belief, consistent with what they revealed. With ``spectator`` side
     one comes from a spectator log (no request): built like the opponent, from the known parts
     of each set plus belief samples (training positions, design D13). ``force_switch`` overrides
     side one's switch request (training positions of forced / pivot switches; a spectator log
@@ -432,20 +382,7 @@ def build_state(
                 theirs.append(m)
     opp_active = battle.opponent_active_pokemon
 
-    def their_set(m) -> SampledSet:
-        truth = _oracle_set(m, oracle) if oracle else None
-        if truth is None:
-            return sample_set(belief, m, team_names, rng, move_beta)
-        if oracle_fields is None:
-            return truth
-        s = sample_set(belief, m, team_names, rng, move_beta)
-        for f in oracle_fields:
-            setattr(
-                s, "stats" if f == "spread" else f, getattr(truth, "stats" if f == "spread" else f)
-            )
-        return s
-
-    their_mons = [_their_mon(m, their_set(m)) for m in theirs]
+    their_mons = [_their_mon(m, sample_set(belief, m, team_names, rng, move_beta)) for m in theirs]
     their_idx = next((i for i, m in enumerate(theirs) if m is opp_active), 0)
     our_active_idx = next((i for i, m in enumerate(ours) if m is active), None)
     our_last, our_vol = _last_move(
@@ -527,4 +464,4 @@ def engine_move_to_order(player, battle, choice: str):
     return None
 
 
-__all__ = ["build_state", "sample_set", "oracle_sets", "engine_move_to_order", "Move"]
+__all__ = ["build_state", "sample_set", "engine_move_to_order", "Move"]

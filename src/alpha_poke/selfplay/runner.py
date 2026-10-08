@@ -59,15 +59,15 @@ GAME_TIMEOUT = 7200.0
 
 
 async def _lane(lane: str, jobs: list, port: int, gen_dir: Path, settings: dict, batcher,
-                belief, library, wid: int, counters: dict) -> int:  # fmt: skip
+                belief, wid: int, counters: dict) -> int:  # fmt: skip
     from alpha_poke.selfplay.player import SelfPlayPlayer
 
     def player(tag: str, seed: int):
         return SelfPlayPlayer(
-            belief, library=library,
+            belief,
             account_configuration=account(f"s{settings['run_tag']}{lane}{tag}"),
             battle_format="gen9ou", server_configuration=local_server(port),
-            max_concurrent_battles=1, team=jobs[0][1].p1.text, backend="ismcts", worlds=32,
+            max_concurrent_battles=1, team=jobs[0][1].p1.text, worlds=32,
             net_policy="both", model=settings["model"], batcher=batcher, seed=seed,
             full_frac=settings["full_frac"], full_iters=settings["full_iters"],
             fast_iters=settings["fast_iters"], fast_worlds=settings["fast_worlds"],
@@ -134,10 +134,9 @@ async def _lane(lane: str, jobs: list, port: int, gen_dir: Path, settings: dict,
 async def _process(wid: int, jobs: list, port: int, gen_dir: Path, settings: dict) -> int:
     """One process: ``lanes`` concurrent lanes sharing one GPU batcher."""
     from alpha_poke.agents.belief_state import BeliefModel
-    from alpha_poke.library import load_library
     from alpha_poke.selfplay.batcher import Batcher
 
-    belief, library = BeliefModel.load(), load_library()
+    belief = BeliefModel.load()
     batcher = Batcher(settings["model"], leaves=settings["leaves"], threads=settings["threads"])
     lanes = settings["lanes"]
     parts = [jobs[i::lanes] for i in range(lanes)]
@@ -159,8 +158,7 @@ async def _process(wid: int, jobs: list, port: int, gen_dir: Path, settings: dic
 
     reporter = asyncio.create_task(progress())
     counts = await asyncio.gather(*[
-        _lane(f"{wid}x{i}", part, port, gen_dir, settings, batcher, belief, library, wid,
-              counters)
+        _lane(f"{wid}x{i}", part, port, gen_dir, settings, batcher, belief, wid, counters)
         for i, part in enumerate(parts) if part
     ])  # fmt: skip
     reporter.cancel()

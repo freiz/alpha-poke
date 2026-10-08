@@ -1,6 +1,6 @@
 """Executable game plans: condition language, plan state machine, plan score terms.
 
-A plan (from the LLM or from rules) is turned into *directives* the action layer can execute:
+A plan (rules, at team preview) is turned into *directives* the action layer can execute:
 
   roles         our mon -> lead | hazard_setter | hazard_removal | pivot | wallbreaker |
                 win_condition | sacrifice_ok | check | utility
