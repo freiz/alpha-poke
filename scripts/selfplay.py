@@ -181,7 +181,8 @@ def cmd_train(a) -> None:
     cmd = (f"{sys.executable} scripts/train_pv.py {TRAIN_FLAGS} --selfplay {sp} "
            f"--sp-frac {sp_frac} --init {init} --steps {steps} --lr {lr} --batch {a.batch} "
            f"--warmup-frac {a.warmup_frac} --eval-every {max(50, steps // 5)} --export last "
-           f"--sp-value-passes {a.value_passes} --run {run}")  # fmt: skip
+           f"--sp-value-passes {a.value_passes} --sp-value-per-game {a.value_per_game} "
+           f"--run {run}")  # fmt: skip
     log_path = SELFPLAY_DIR / f"gen{a.gen}" / "train.log"
     out = Path("data/train/v5/runs") / run
     done = (out / "metrics.jsonl").exists() and '"event": "done"' in (
@@ -547,6 +548,8 @@ def main() -> None:
     p.add_argument("--lr", type=float, default=4e-4)
     p.add_argument("--value-passes", type=int, default=1,
                    help="self-play outcomes: value loss on the first k draws only")  # fmt: skip
+    p.add_argument("--value-per-game", type=int, default=0,
+                   help="self-play outcomes: value loss on k positions per game")  # fmt: skip
     p.add_argument("--warmup-frac", type=float, default=0.2)
     p.add_argument("--batch", type=int, default=4096)
     p.add_argument("--force", action="store_true", help="retrain even if the run is complete")

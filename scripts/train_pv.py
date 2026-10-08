@@ -792,6 +792,10 @@ def main() -> None:
         "--sp-value-passes", type=int, default=0,
         help="self-play outcomes train the value only the first k draws of a position (0: all)",
     )  # fmt: skip
+    ap.add_argument(
+        "--sp-value-per-game", type=int, default=0,
+        help="self-play outcomes train the value on k random positions per game (0: all)",
+    )  # fmt: skip
     ap.add_argument("--sp-frac", type=float, default=0.5, help="share of each batch from self-play")
     ap.add_argument("--sp-val-frac", type=float, default=0.05, help="self-play games held out")
     ap.add_argument("--init", default="", help="warm start: a run directory (its last.pt)")
@@ -924,6 +928,21 @@ def main() -> None:
                  else np.ones(len(sinv))) * dsp["value_ok"]  # fmt: skip
         sp_vw = sp_vw.astype(np.float32)
         sp_seen = np.zeros(len(sp_vw), np.int32)  # draws per position (--sp-value-passes)
+        # value weights of the self-play rows: --sp-value-per-game k keeps k random positions of
+        # each game (fixed for the run, as AlphaGo's one position per game: a game's positions
+        # share one outcome, so all of them = the same label tens of times); others: 0
+        sp_vv = sp_vw
+        if a.sp_value_per_game > 0:
+            perm = np.random.default_rng(a.seed).permutation(len(sinv))
+            g = sinv[perm]
+            o = np.argsort(g, kind="stable")
+            starts = np.r_[0, np.flatnonzero(np.diff(g[o])) + 1]
+            rank = np.arange(len(g)) - np.repeat(starts, np.diff(np.r_[starts, len(g)]))
+            keep = np.zeros(len(sinv), bool)
+            keep[perm[o[rank < a.sp_value_per_game]]] = True
+            sp_vv = (keep * dsp["value_ok"]).astype(np.float32)
+            emit(dict(event="sp_value_rows", kept=int(keep.sum()),
+                      with_outcome=int(sp_vv[sp_train].sum())))  # fmt: skip
         bsp = int(round(a.batch * a.sp_frac))
         emit(dict(event="selfplay", positions=len(sinv), games=len(scnt), train=len(sp_train),
                   val=len(sp_val), policy_targets=int(dsp["pi_w"][sp_train].sum()),
@@ -992,14 +1011,15 @@ def main() -> None:
             # --sp-value-passes: a position's outcome counts only the first k times it is drawn
             # (the outcome is one noisy bit per game: the value overfits when the policy targets
             # are trained several passes); same denominator, so fewer rows = a smaller step
-            bv_s = bw_s
+            vv_s = torch.from_numpy(sp_vv[bs]).to(device)  # = bw_s unless --sp-value-per-game
+            bv_s = vv_s
             if a.sp_value_passes > 0:
                 fresh = sp_seen[bs] < a.sp_value_passes
                 np.add.at(sp_seen, bs, 1)
-                bv_s = bw_s * torch.from_numpy(fresh.astype(np.float32)).to(device)
+                bv_s = vv_s * torch.from_numpy(fresh.astype(np.float32)).to(device)
             s_vl = value_logit(model, s_out[1].float(), s_ev)
             s_bce = (F.binary_cross_entropy_with_logits(s_vl, s_won, reduction="none")
-                     * bv_s).sum() / bw_s.sum().clamp_min(1e-6)  # fmt: skip
+                     * bv_s).sum() / vv_s.sum().clamp_min(1e-6)  # fmt: skip
             s_loss = s_ce + a.value_weight * s_bce
             if a.mtp:
                 s_loss = (
