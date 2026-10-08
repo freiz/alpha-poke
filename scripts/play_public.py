@@ -13,6 +13,16 @@ team name or a Showdown-export file), default a random pool team each game.
 Difficulty: easy = heuristic bot, normal = search 200 ms, hard = search 1 s x 4 threads; all
 with the rule-based game plan (no LLM call) unless --llm.
 Replays and decision traces go to data/public_games/<date>/.
+
+With a team chosen against this opponent (scripts/counter_pipeline.py <user> writes
+data/players/<user id>/counter/, team_00 = the best):
+  # always the best team
+  uv run python scripts/play_public.py --public --opponent <user> --n 3 \\
+      --team data/players/<user id>/counter/team_00.txt
+  # a random one of the chosen teams each game
+  uv run python scripts/play_public.py --public --opponent <user> --n 3 \\
+      --pool data/players/<user id>/counter
+(<user id>: the username lowercased, letters and digits only.)
 """
 
 import argparse

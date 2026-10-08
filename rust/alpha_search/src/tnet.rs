@@ -271,6 +271,8 @@ impl Lin {
     }
 }
 
+/// LayerNorm (eps 1e-5, weight and bias) or, with an empty bias, RMSNorm (PyTorch's default
+/// eps: the f32 machine epsilon; weight only).
 struct Norm {
     w: Vec<f32>,
     b: Vec<f32>,
@@ -279,6 +281,14 @@ struct Norm {
 impl Norm {
     fn apply(&self, x: &[f32], y: &mut [f32]) {
         let n = x.len() as f32;
+        if self.b.is_empty() {
+            let ms = x.iter().map(|v| v * v).sum::<f32>() / n;
+            let inv = 1.0 / (ms + f32::EPSILON).sqrt();
+            for i in 0..x.len() {
+                y[i] = x[i] * inv * self.w[i];
+            }
+            return;
+        }
         let mean = x.iter().sum::<f32>() / n;
         let var = x.iter().map(|v| (v - mean) * (v - mean)).sum::<f32>() / n;
         let inv = 1.0 / (var + 1e-5).sqrt();
@@ -286,15 +296,151 @@ impl Norm {
             y[i] = (x[i] - mean) * inv * self.w[i] + self.b[i];
         }
     }
+
+    /// In place (the per-head QK-norm).
+    fn apply_inplace(&self, x: &mut [f32]) {
+        let n = x.len() as f32;
+        let ms = x.iter().map(|v| v * v).sum::<f32>() / n;
+        let inv = 1.0 / (ms + f32::EPSILON).sqrt();
+        for (v, w) in x.iter_mut().zip(&self.w) {
+            *v *= inv * w;
+        }
+    }
+}
+
+/// The feed-forward part of a block: ReLU (the PyTorch encoder layer) or SwiGLU (``w12``: the
+/// two halves gate | value, each zero-padded from the model's width ``f`` to ``hidden``, a
+/// multiple of 16, so that the two together are whole 32-wide blocks of the matrix kernel (no
+/// scalar tail); ``w3`` reads the padded width; the padding stays 0 and meets zero weights:
+/// the result is unchanged).
+enum Ffn {
+    Relu {
+        ff1: Lin,
+        ff2: Lin,
+    },
+    SwiGlu {
+        w12: Lin,
+        w3: Lin,
+        f: usize,
+        hidden: usize,
+    },
+}
+
+/// g <- silu(g) * v = g / (1 + exp(-g)) * v; AVX-512 for blocks of 16 (the same operations in
+/// the same order as `fast_exp`: bitwise the scalar result, test `silu_mul_avx512_is_scalar`).
+fn silu_mul(g: &mut [f32], v: &[f32]) {
+    #[cfg(all(target_arch = "x86_64", target_feature = "avx512f"))]
+    let done = unsafe { silu_mul_avx512(g, v) };
+    #[cfg(not(all(target_arch = "x86_64", target_feature = "avx512f")))]
+    let done = 0;
+    for (gi, vi) in g[done..].iter_mut().zip(&v[done..]) {
+        *gi = *gi / (1.0 + fast_exp(-*gi)) * vi;
+    }
+}
+
+#[cfg(all(target_arch = "x86_64", target_feature = "avx512f"))]
+unsafe fn silu_mul_avx512(g: &mut [f32], v: &[f32]) -> usize {
+    use std::arch::x86_64::*;
+    let c = |x: f32| _mm512_set1_ps(x);
+    let mut i = 0;
+    while i + 16 <= g.len() {
+        let gv = _mm512_loadu_ps(g.as_ptr().add(i));
+        // x = clamp(-g, -87, 88)
+        let x = _mm512_min_ps(_mm512_max_ps(_mm512_sub_ps(c(0.0), gv), c(-87.0)), c(88.0));
+        let n = _mm512_roundscale_ps::<{ _MM_FROUND_TO_NEG_INF | _MM_FROUND_NO_EXC }>(
+            _mm512_add_ps(_mm512_mul_ps(x, c(std::f32::consts::LOG2_E)), c(0.5)),
+        );
+        let r = _mm512_add_ps(
+            _mm512_sub_ps(x, _mm512_mul_ps(n, c(0.693_359_4))),
+            _mm512_mul_ps(n, c(2.121_944_4e-4)),
+        );
+        let mut p = c(1.987_569_1e-4);
+        for k in [
+            1.398_199_9e-3,
+            8.333_452e-3,
+            4.166_579_6e-2,
+            1.666_666_5e-1,
+            0.5,
+        ] {
+            p = _mm512_add_ps(_mm512_mul_ps(p, r), c(k));
+        }
+        let e = _mm512_add_ps(
+            _mm512_add_ps(_mm512_mul_ps(_mm512_mul_ps(p, r), r), r),
+            c(1.0),
+        );
+        let pow2 = _mm512_castsi512_ps(_mm512_slli_epi32::<23>(_mm512_add_epi32(
+            _mm512_cvtps_epi32(n),
+            _mm512_set1_epi32(127),
+        )));
+        let ex = _mm512_mul_ps(e, pow2);
+        let s = _mm512_div_ps(gv, _mm512_add_ps(c(1.0), ex));
+        let out = _mm512_mul_ps(s, _mm512_loadu_ps(v.as_ptr().add(i)));
+        _mm512_storeu_ps(g.as_mut_ptr().add(i), out);
+        i += 16;
+    }
+    i
+}
+
+/// exp(x) for f32 without branches (vectorizable): x = n ln2 + r, |r| <= ln2 / 2, a degree-6
+/// polynomial for e^r (Cephes expf coefficients), times 2^n from the exponent bits; relative
+/// error ~1e-7 (test `fast_exp_accuracy`); inputs clamped to [-87, 88].
+#[inline(always)]
+fn fast_exp(x: f32) -> f32 {
+    let x = x.clamp(-87.0, 88.0);
+    let n = (x * std::f32::consts::LOG2_E + 0.5).floor();
+    let r = x - n * 0.693_359_4 + n * 2.121_944_4e-4;
+    let p = 1.987_569_1e-4;
+    let p = p * r + 1.398_199_9e-3;
+    let p = p * r + 8.333_452e-3;
+    let p = p * r + 4.166_579_6e-2;
+    let p = p * r + 1.666_666_5e-1;
+    let p = p * r + 0.5;
+    let e = p * r * r + r + 1.0;
+    e * f32::from_bits(((n as i32 + 127) as u32) << 23)
+}
+
+impl Ffn {
+    /// Width of the hidden buffer (per token).
+    fn width(&self) -> usize {
+        match self {
+            Ffn::Relu { ff1, .. } => ff1.n_out,
+            Ffn::SwiGlu { w12, .. } => w12.n_out,
+        }
+    }
+
+    /// `y` [n, d] -> `out` [n, d]; `h` scratch [n, width].
+    fn apply_rows(&self, y: &[f32], n: usize, h: &mut [f32], out: &mut [f32]) {
+        match self {
+            Ffn::Relu { ff1, ff2 } => {
+                ff1.apply_rows(y, n, h, true);
+                ff2.apply_rows(h, n, out, false);
+            }
+            Ffn::SwiGlu { w12, w3, f, hidden } => {
+                let (f, fp) = (*f, *hidden);
+                w12.apply_rows(y, n, h, false);
+                // per token [g | v] (2 fp) -> silu(g) * v in place of g (the padding stays 0)
+                for t in 0..n {
+                    let (g, v) = h[t * 2 * fp..(t + 1) * 2 * fp].split_at_mut(fp);
+                    silu_mul(&mut g[..f], &v[..f]);
+                }
+                // pack the gated halves to [n, fp] at the front (token 0 is in place already)
+                for t in 1..n {
+                    h.copy_within(t * 2 * fp..t * 2 * fp + fp, t * fp);
+                }
+                w3.apply_rows(&h[..n * fp], n, out, false);
+            }
+        }
+    }
 }
 
 struct Layer {
     norm1: Norm,
     qkv: Lin,
+    /// RMS norms of each head's queries and keys (QK-norm), if the model has them
+    qk_norm: Option<(Norm, Norm)>,
     out: Lin,
     norm2: Norm,
-    ff1: Lin,
-    ff2: Lin,
+    ffn: Ffn,
 }
 
 struct Table {
@@ -437,10 +583,69 @@ impl TNet {
                 n_out: shape[0],
             })
         };
+        // architecture options (model.TransformerPV ``arch``): none = PyTorch encoder layers
+        let opts = &cfg["arch_opts"];
+        let blocks = opts.as_object().is_some_and(|o| !o.is_empty());
+        let rms = opts["norm"] == "rms";
+        let swiglu = opts["ffn"] == "swiglu";
+        let qk = opts["qk_norm"].as_bool() == Some(true);
+        if opts["smolgen"].as_u64().unwrap_or(0) > 0 {
+            return Err("smolgen models are not supported".into());
+        }
         let norm = |name: &str| -> Result<Norm, String> {
             Ok(Norm {
                 w: tensor(&st, &format!("{name}.weight"))?.0,
-                b: tensor(&st, &format!("{name}.bias"))?.0,
+                b: if rms {
+                    Vec::new()
+                } else {
+                    tensor(&st, &format!("{name}.bias"))?.0
+                },
+            })
+        };
+        let rms_norm = |name: &str| -> Result<Norm, String> {
+            Ok(Norm {
+                w: tensor(&st, &format!("{name}.weight"))?.0,
+                b: Vec::new(),
+            })
+        };
+        // SwiGLU with each half zero-padded to a multiple of 32 (see Ffn)
+        let swiglu_ffn = |p: &str| -> Result<Ffn, String> {
+            let (w, shape) = tensor(&st, &format!("{p}.w12.weight"))?;
+            let (bias, _) = tensor(&st, &format!("{p}.w12.bias"))?;
+            let (f, din) = (shape[0] / 2, shape[1]);
+            let fp = f.div_ceil(16) * 16;
+            let mut w12 = vec![0.0f32; 2 * fp * din];
+            let mut b12 = vec![0.0f32; 2 * fp];
+            for half in 0..2 {
+                for i in 0..f {
+                    let (src, dst) = (half * f + i, half * fp + i);
+                    w12[dst * din..(dst + 1) * din].copy_from_slice(&w[src * din..(src + 1) * din]);
+                    b12[dst] = bias[src];
+                }
+            }
+            let (w3, s3) = tensor(&st, &format!("{p}.w3.weight"))?;
+            let dout = s3[0];
+            let mut w3p = vec![0.0f32; dout * fp];
+            for o in 0..dout {
+                w3p[o * fp..o * fp + f].copy_from_slice(&w3[o * f..(o + 1) * f]);
+            }
+            Ok(Ffn::SwiGlu {
+                w12: Lin {
+                    wt: transpose(&w12, 2 * fp, din),
+                    w: w12,
+                    b: b12,
+                    n_in: din,
+                    n_out: 2 * fp,
+                },
+                w3: Lin {
+                    wt: transpose(&w3p, dout, fp),
+                    w: w3p,
+                    b: tensor(&st, &format!("{p}.w3.bias"))?.0,
+                    n_in: fp,
+                    n_out: dout,
+                },
+                f,
+                hidden: fp,
             })
         };
         let mut moves = table("move")?;
@@ -460,6 +665,33 @@ impl TNet {
         }
         let mut layers = Vec::new();
         for i in 0..n_layers {
+            if blocks {
+                // model.Block
+                let p = format!("blocks.{i}");
+                layers.push(Layer {
+                    norm1: norm(&format!("{p}.norm1"))?,
+                    qkv: lin(&format!("{p}.qkv"))?,
+                    qk_norm: if qk {
+                        Some((
+                            rms_norm(&format!("{p}.q_norm"))?,
+                            rms_norm(&format!("{p}.k_norm"))?,
+                        ))
+                    } else {
+                        None
+                    },
+                    out: lin(&format!("{p}.out"))?,
+                    norm2: norm(&format!("{p}.norm2"))?,
+                    ffn: if swiglu {
+                        swiglu_ffn(&p)?
+                    } else {
+                        Ffn::Relu {
+                            ff1: lin(&format!("{p}.ff1"))?,
+                            ff2: lin(&format!("{p}.ff2"))?,
+                        }
+                    },
+                });
+                continue;
+            }
             let p = format!("encoder.layers.{i}");
             layers.push(Layer {
                 norm1: norm(&format!("{p}.norm1"))?,
@@ -473,10 +705,13 @@ impl TNet {
                         n_out: 3 * d,
                     }
                 },
+                qk_norm: None,
                 out: lin(&format!("{p}.self_attn.out_proj"))?,
                 norm2: norm(&format!("{p}.norm2"))?,
-                ff1: lin(&format!("{p}.linear1"))?,
-                ff2: lin(&format!("{p}.linear2"))?,
+                ffn: Ffn::Relu {
+                    ff1: lin(&format!("{p}.linear1"))?,
+                    ff2: lin(&format!("{p}.linear2"))?,
+                },
             });
         }
         let residual = tensor(&st, "residual").ok().map(|(r, _)| (r[0], r[1]));
@@ -652,17 +887,28 @@ impl TNet {
         // encoder
         let mut qkv = vec![0.0f32; n_tok * 3 * d];
         let mut att = vec![0.0f32; n_tok * d];
-        let f1 = vec![0.0f32; self.layers.first().map_or(0, |l| l.ff1.n_out)];
+        let width = self.layers.first().map_or(0, |l| l.ffn.width());
         let mut sc = vec![0.0f32; n_tok];
         let mut yn = vec![0.0f32; n_tok * d];
         let mut ob = vec![0.0f32; n_tok * d];
-        let mut fb = vec![0.0f32; n_tok * f1.len()];
+        let mut fb = vec![0.0f32; n_tok * width];
+        let hd = d / self.heads;
         for l in &self.layers {
             for t in 0..n_tok {
                 l.norm1
                     .apply(&z[t * d..(t + 1) * d], &mut yn[t * d..(t + 1) * d]);
             }
             l.qkv.apply_rows(&yn, n_tok, &mut qkv, false);
+            if let Some((qn, kn)) = &l.qk_norm {
+                // per token and head: RMS-normalize the query and the key
+                for t in 0..n_tok {
+                    for h in 0..self.heads {
+                        let q = t * 3 * d + h * hd;
+                        qn.apply_inplace(&mut qkv[q..q + hd]);
+                        kn.apply_inplace(&mut qkv[q + d..q + d + hd]);
+                    }
+                }
+            }
             attention(&qkv, n_tok, d, self.heads, &mut att, &mut sc);
             l.out.apply_rows(&att, n_tok, &mut ob, false);
             z.iter_mut().zip(&ob).for_each(|(a, b)| *a += b);
@@ -670,8 +916,7 @@ impl TNet {
                 l.norm2
                     .apply(&z[t * d..(t + 1) * d], &mut yn[t * d..(t + 1) * d]);
             }
-            l.ff1.apply_rows(&yn, n_tok, &mut fb, true);
-            l.ff2.apply_rows(&fb, n_tok, &mut ob, false);
+            l.ffn.apply_rows(&yn, n_tok, &mut fb, &mut ob);
             z.iter_mut().zip(&ob).for_each(|(a, b)| *a += b);
         }
         let mut out = vec![0.0f32; (N_ENTITIES + 1) * d];
@@ -774,7 +1019,125 @@ mod tests {
     use crate::features::parse_history;
 
     const FIXTURE: &str = include_str!("../../../tests/fixtures/engine_state_6v6.txt");
-    const MODEL: &str = "../../data/train/v5/runs/v5-final";
+    /// the trained model the tests load (ALPHA_TNET_MODEL, relative to this crate)
+    fn model() -> String {
+        std::env::var("ALPHA_TNET_MODEL")
+            .unwrap_or_else(|_| "../../data/train/v5/runs/v5-final".into())
+    }
+
+    /// SwiGLU with the zero-padded halves = the plain computation on the unpadded weights
+    #[test]
+    fn swiglu_padding_is_exact() {
+        let (din, f, dout, n) = (8, 5, 6, 3);
+        let val = |i: usize| ((i * 7919 % 97) as f32 - 48.0) / 50.0;
+        let w12: Vec<f32> = (0..2 * f * din).map(val).collect();
+        let b12: Vec<f32> = (0..2 * f).map(|i| val(i + 3)).collect();
+        let w3: Vec<f32> = (0..dout * f).map(|i| val(i + 11)).collect();
+        let b3: Vec<f32> = (0..dout).map(|i| val(i + 17)).collect();
+        let x: Vec<f32> = (0..n * din).map(|i| val(i + 23)).collect();
+        // padded as TNet::load does
+        let fp = f.div_ceil(16) * 16;
+        let mut w12p = vec![0.0f32; 2 * fp * din];
+        let mut b12p = vec![0.0f32; 2 * fp];
+        for half in 0..2 {
+            for i in 0..f {
+                let (src, dst) = (half * f + i, half * fp + i);
+                w12p[dst * din..(dst + 1) * din].copy_from_slice(&w12[src * din..(src + 1) * din]);
+                b12p[dst] = b12[src];
+            }
+        }
+        let mut w3p = vec![0.0f32; dout * fp];
+        for o in 0..dout {
+            w3p[o * fp..o * fp + f].copy_from_slice(&w3[o * f..(o + 1) * f]);
+        }
+        let ffn = Ffn::SwiGlu {
+            w12: Lin {
+                wt: transpose(&w12p, 2 * fp, din),
+                w: w12p,
+                b: b12p,
+                n_in: din,
+                n_out: 2 * fp,
+            },
+            w3: Lin {
+                wt: transpose(&w3p, dout, fp),
+                w: w3p,
+                b: b3.clone(),
+                n_in: fp,
+                n_out: dout,
+            },
+            f,
+            hidden: fp,
+        };
+        let mut h = vec![0.0f32; n * ffn.width()];
+        let mut out = vec![0.0f32; n * dout];
+        ffn.apply_rows(&x, n, &mut h, &mut out);
+        for t in 0..n {
+            let xt = &x[t * din..(t + 1) * din];
+            let lin = |r: usize| b12[r] + (0..din).map(|k| w12[r * din + k] * xt[k]).sum::<f32>();
+            let hid: Vec<f32> = (0..f)
+                .map(|i| {
+                    let g = lin(i);
+                    g / (1.0 + (-g).exp()) * lin(f + i)
+                })
+                .collect();
+            for o in 0..dout {
+                let want = b3[o] + (0..f).map(|i| w3[o * f + i] * hid[i]).sum::<f32>();
+                assert!(
+                    (out[t * dout + o] - want).abs() < 1e-5,
+                    "{t} {o}: {} vs {want}",
+                    out[t * dout + o]
+                );
+            }
+        }
+    }
+
+    /// fast_exp against f32::exp over the range silu sees (and beyond)
+    #[test]
+    fn fast_exp_accuracy() {
+        let mut worst = 0.0f32;
+        let mut x = -80.0f32;
+        while x < 80.0 {
+            let (a, b) = (fast_exp(x), x.exp());
+            worst = worst.max(((a - b) / b).abs());
+            x += 0.001_37;
+        }
+        assert!(worst < 3e-7, "max relative error {worst}");
+        assert!(fast_exp(-200.0) >= 0.0 && fast_exp(-200.0) < 1e-37);
+        assert!(fast_exp(200.0).is_finite());
+    }
+
+    /// the AVX-512 silu * v is bitwise the scalar formula with fast_exp
+    #[test]
+    fn silu_mul_avx512_is_scalar() {
+        let g0: Vec<f32> = (0..171).map(|i| (i as f32 - 85.0) * 0.37).collect();
+        let v: Vec<f32> = (0..171).map(|i| 1.0 - i as f32 * 0.011).collect();
+        let mut g = g0.clone();
+        silu_mul(&mut g, &v);
+        for i in 0..g0.len() {
+            let want = g0[i] / (1.0 + fast_exp(-g0[i])) * v[i];
+            assert_eq!(g[i].to_bits(), want.to_bits(), "{i}: {} vs {want}", g[i]);
+        }
+    }
+
+    /// RMSNorm (empty bias) = x / sqrt(mean(x^2) + eps) * w
+    #[test]
+    fn rms_norm_matches_formula() {
+        let x = [0.5f32, -1.25, 2.0, 0.0];
+        let w = vec![1.0f32, 2.0, 0.5, 3.0];
+        let norm = Norm {
+            w: w.clone(),
+            b: Vec::new(),
+        };
+        let mut y = [0.0f32; 4];
+        norm.apply(&x, &mut y);
+        let inv = 1.0 / ((x.iter().map(|v| v * v).sum::<f32>() / 4.0) + f32::EPSILON).sqrt();
+        for i in 0..4 {
+            assert!((y[i] - x[i] * inv * w[i]).abs() < 1e-6);
+        }
+        let mut z = x;
+        norm.apply_inplace(&mut z);
+        assert_eq!(z, y);
+    }
 
     /// Input::flipped (derived from side one's input) = Input::new(flip = true)
     #[test]
@@ -827,7 +1190,7 @@ mod tests {
     /// where the time goes (single thread)
     #[test]
     fn tnet_profile() {
-        let Ok(net) = TNet::load(Path::new(MODEL)) else {
+        let Ok(net) = TNet::load(Path::new(&model())) else {
             return;
         };
         let time = |name: &str, n: usize, f: &mut dyn FnMut() -> f32| {
@@ -856,12 +1219,10 @@ mod tests {
             }
             y[7]
         });
-        time("ff1 rows (21x128->256)", 2000, &mut || {
-            l.ff1.apply_rows(&x[..21 * 128], 21, &mut y, true);
-            y[7]
-        });
-        time("ff2 rows (21x256->128)", 2000, &mut || {
-            l.ff2.apply_rows(&x[..21 * 256], 21, &mut y, false);
+        let mut h = vec![0.0f32; 21 * l.ffn.width()];
+        time("feed-forward rows (21 tokens)", 2000, &mut || {
+            l.ffn
+                .apply_rows(&x[..21 * 128], 21, &mut h, &mut y[..21 * 128]);
             y[7]
         });
         let qkv = vec![0.013f32; 21 * 384];
@@ -896,7 +1257,7 @@ mod tests {
     /// single-thread speed of one forward pass with a full 8-step history
     #[test]
     fn tnet_speed() {
-        let Ok(net) = TNet::load(Path::new(MODEL)) else {
+        let Ok(net) = TNet::load(Path::new(&model())) else {
             return; // no trained model in this checkout
         };
         let st = State::deserialize(FIXTURE.lines().next().unwrap());

@@ -22,7 +22,6 @@ import json
 import math
 import multiprocessing as mp
 import os
-import pickle
 import random
 import signal
 from collections import defaultdict
@@ -31,6 +30,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from alpha_poke.analysis.matchups import load_or_fit
 from alpha_poke.analysis.roles import to_id
 from alpha_poke.data.smogon_stats import DEFAULT_DIR, UsageStats
 from alpha_poke.eval.arena import Match, run_schedule
@@ -154,7 +154,7 @@ def main() -> None:
     tau = a.tau if a.tau is not None else float(fit[1])
     os.environ["ALPHA_POLICY_RATING"], os.environ["ALPHA_POLICY_TAU"] = str(rating), str(tau)
     print(f"opponent model: {a.opp_bot}, rating input {rating}, tau {tau}")
-    model = pickle.loads((PLAYERS_DIR / "matchup_model.pkl").read_bytes())
+    model = load_or_fit(PLAYERS_DIR / "matchup_model.pkl")
 
     # 1. candidates
     by_key: dict[str, catalog.Entry] = {}

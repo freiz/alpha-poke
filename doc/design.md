@@ -357,7 +357,8 @@ Gen9 OU 单打。随机对战不需要组队，人类水平被拉低，不足以
 - 网络：`data/train/v5/runs/v5-glu`（`best.safetensors` sha256 前缀 `1bdb84317007011a`；权重不入库）。
 - 全量数据、最终检查点，对 v5-final（`results.md`）：策略 ce_turn_w 1.1429 → **1.1345**（−0.008），价值 bce_all_w 0.5466 → **0.5439**（−0.003），top-1 55.6% → 55.9%，强制换人 top-1 57.7% → 57.9%；训练全程领先。训练慢 8%。
 - 结构实验的结论（10% 数据，各 3 个种子）：只有 glu 稳定变好；去掉 QK-norm 提升变小、训练不稳定；深而窄无差别；smolgen 更差（价值更早过拟合）。
-- 推理成本：计算量相同；PyTorch 里融合后（`torch.compile` + CUDA graph）比同样优化的旧结构贵 7–11%（只算注意力块），多出来的是 QK-norm 的小算子；Rust CPU 里 QK-norm 约占 0.3% 的乘加。
+- 推理成本：计算量相同；PyTorch 里融合后（`torch.compile` + CUDA graph）比同样优化的旧结构贵 7–11%（只算注意力块），多出来的是 QK-norm 的小算子。
+- **Rust 推理（`tnet.rs`）**：`Norm` 支持 RMSNorm（PyTorch 默认 eps = f32 机器精度），`Ffn` 支持 SwiGLU，层里可选 QK-norm；配置的 `arch_opts` 决定结构（有选项的模型参数名是 `blocks.{i}.*`）。SwiGLU 两半各补零到 16 的倍数（171 → 176，合起来 352 = 11 个 32 宽的块，矩阵核没有标量尾巴，结果不变）；silu 的 exp 用无分支多项式（Cephes 系数，相对误差约 1e-7），AVX-512 每次 16 个，与标量公式逐位相同。单线程前向 207 µs（旧 202 µs），**CPU 搜索的叶子速度相同**；一致性 1e-5 量级（`results.md`）。测试：`swiglu_padding_is_exact`、`fast_exp_accuracy`、`silu_mul_avx512_is_scalar`、`rms_norm_matches_formula`；`ALPHA_TNET_MODEL` 选测速用的模型。
 - 原则：**推理不能系统性变慢**，否则等于浪费了"原结构 + 更多参数"的机会。所以进搜索之前要实测每步的搜索量。
 - 只有一个种子的全量结果；10% 数据上种子间的策略标准差约 0.002，全量的差距（0.008）远大于此。
 
@@ -480,8 +481,7 @@ Gen9 OU 单打。随机对战不需要组队，人类水平被拉低，不足以
   - 离线指标：模型首选的换人对对手当回合实际招式抵抗或免疫的比例，与人类玩家的比例对照。
 - [ ] P1 网络 v3 第二批：历史步加**结果**（谁先出手、伤害比例、会心 / 未命中 / 击倒）。
 - [ ] P0 **`v5-glu` 进搜索**（网络结构已更换，见 D13）：
-  - Rust 推理实现 SwiGLU / RMSNorm / QK-norm（`tnet.rs`），`check_tnet` 一致性（1e-5 量级）和测速；
-  - GPU 搜索直接用 PyTorch 模型（`load_run` 已支持新结构），确认 CUDA graph 录制和与 Rust 的一致性；
+  - ~~Rust 推理~~：已完成（2026-10-08，`results.md`）；一致性 1e-5 量级，GPU 与 Rust 一致，CPU 搜索速度与 v5-final 相同；
   - 同等时间对战 v5-final（CPU 和 GPU 各一组），通过后才替换线上配置和 `baseline`；
   - `GpuNet` 加 `torch.compile`：GPU 上快 25–32%（需要一致性检查），新旧结构都适用。
 - [ ] P2 网络结构的后续：smolgen 等数据量大了（自对弈）再试；静态成对偏置（属性克制、速度比较，见下面的两两对阵矩阵）没有 smolgen 那样的容量，可以单独试。参考：Chessformer（arXiv 2605.19091）、Lc0 结构（arXiv 2406.00877）、GLU 变体（arXiv 2002.05202）、Representation Matters（arXiv 2304.14918：改进特征胜过换结构）。

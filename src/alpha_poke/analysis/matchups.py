@@ -95,3 +95,24 @@ def fit(g: pd.DataFrame, l2_a: float = 1e-4, l2_m: float = 1e-3, min_games: int 
     model = MatchupModel(species, float(beta.detach()), a.detach().numpy(), M)
     log(val)
     return model, val
+
+
+def load_or_fit(path, since: int = 1746057600, log=print) -> MatchupModel:
+    """The cached model at ``path``, else fit on the games since ``since`` (default 2025-05-01,
+    the current metagame; the lite scan is built first if missing) and cache it."""
+    import pickle
+    from pathlib import Path
+
+    from alpha_poke.analysis import games_lite
+
+    path = Path(path)
+    if path.exists():
+        return pickle.loads(path.read_bytes())
+    if not GAMES.exists():
+        log("scanning the replay logs (games_lite) ...")
+        games_lite.build()
+    torch.set_num_threads(4)
+    model, val = fit(load_games(since=since), l2_a=1e-4, l2_m=1e-3, iters=150, log=log)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(pickle.dumps(model))
+    return model
