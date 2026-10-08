@@ -140,8 +140,16 @@ async def _lane(bot_a, bot_b, matches, port, pool_dir, heldout, lane_id, log_pat
 def _worker(args):
     bot_a, bot_b, lanes, port, pool_dir, heldout, log_path, wid, extras = args
     import logging
+    import signal
 
     logging.basicConfig(level=logging.WARNING)
+
+    def stop(*_):  # an early stop (sequential test): this worker's own processes go too
+        for c in mp.active_children():
+            c.terminate()
+        os._exit(1)
+
+    signal.signal(signal.SIGTERM, stop)
 
     async def run():
         return await asyncio.gather(
@@ -167,7 +175,11 @@ def run_arena(
     log_dir: str = "data/eval",
     trace: bool = False,
     replays: bool = False,
+    stop=None,
+    poll: float = 20.0,
 ) -> dict:
+    """``stop``: called with the logged rows every ``poll`` seconds; True ends the run early
+    (the workers are terminated; the summary covers the games logged so far)."""
     names = sorted(load_team_files(pool_dir))
     schedule = make_schedule(names, n_pairs, seed)
     # keep both games of a pair in the same lane (not required, but keeps logs readable)
@@ -201,10 +213,31 @@ def run_arena(
                     heldout=heldout, pool=pool_dir)  # fmt: skip
     meta_path = Path(log_path).with_suffix(".meta.json")
     meta_path.write_text(json.dumps(meta, indent=1))
-    # non-daemonic workers: a search bot starts its own MCTS process pool
-    with ProcessPoolExecutor(procs, mp_context=mp.get_context("spawn")) as pool:
-        rows = [r for part in pool.map(_worker, jobs) for r in part]
-    res = summarize(rows) | {"log": log_path, "seconds": round(time.time() - t0, 1)}
+    stopped = False
+    if stop is None:
+        # non-daemonic workers: a search bot starts its own MCTS process pool
+        with ProcessPoolExecutor(procs, mp_context=mp.get_context("spawn")) as pool:
+            rows = [r for part in pool.map(_worker, jobs) for r in part]
+    else:
+        ctx = mp.get_context("spawn")
+        workers = [ctx.Process(target=_worker, args=(j,)) for j in jobs]
+        for w in workers:
+            w.start()
+        try:
+            while any(w.is_alive() for w in workers):
+                time.sleep(poll)
+                if stop(read_log(log_path)):
+                    stopped = True
+                    break
+        finally:
+            for w in workers:
+                if w.is_alive():
+                    w.terminate()
+            for w in workers:
+                w.join()
+        rows = read_log(log_path)
+    res = summarize(rows) | {"log": log_path, "seconds": round(time.time() - t0, 1),
+                             "stopped_early": stopped}  # fmt: skip
     meta_path.write_text(json.dumps(meta | {"result": res}, indent=1))
     return res
 
@@ -255,6 +288,40 @@ def _score(r: dict) -> float | None:
     if r.get("battle") and r.get("turns") is not None:
         return 0.5
     return None
+
+
+def read_log(path: str) -> list[dict]:
+    p = Path(path)
+    if not p.exists():
+        return []
+    return [json.loads(line) for line in p.read_text().splitlines() if line.strip()]
+
+
+def pair_scores(rows: list[dict]) -> list[float]:
+    """A's mean score of every pair with both games finished."""
+    by_pair: dict[int, list[float]] = {}
+    for r in rows:
+        s = _score(r)
+        if s is not None:
+            by_pair.setdefault(r["pair"], []).append(s)
+    return [sum(v) / len(v) for v in by_pair.values() if len(v) == 2]
+
+
+def elo_score(elo: float) -> float:
+    return 1 / (1 + 10 ** (-elo / 400))
+
+
+def sprt_llr(scores: list[float], elo0: float, elo1: float) -> float:
+    """Log-likelihood ratio of H1 (A is elo1 stronger) against H0 (elo0) from paired scores:
+    the normal approximation of the generalized SPRT on the pair means (pentanomial: each
+    pair's score is 0, 1/4, ..., 1), as fishtest's GSPRT."""
+    n = len(scores)
+    if n < 2:
+        return 0.0
+    s0, s1 = elo_score(elo0), elo_score(elo1)
+    mean = sum(scores) / n
+    var = max(sum((x - mean) ** 2 for x in scores) / n, 1e-3)
+    return (s1 - s0) * (2 * mean - s0 - s1) * n / (2 * var)
 
 
 def summarize(rows: list[dict]) -> dict:

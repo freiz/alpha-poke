@@ -224,9 +224,47 @@ def cmd_train(a) -> None:
     print(json.dumps(summary, indent=1))
 
 
+def sequential_match(a, net_a: str, net_b: str, seed: int, log_dir: str) -> dict:
+    """net_a vs net_b, equal time, paired, as a sequential test (design D15-6; fishtest-style
+    SPRT on the pair scores): H0 = net_a is --elo0 weaker, H1 = --elo1; checked every
+    --batch-pairs finished pairs, stops when the log-likelihood ratio leaves
+    [log(beta / (1 - alpha)), log((1 - beta) / alpha)], at most --pairs pairs (then: the sign
+    of the ratio). "decision": "H1" (not worse) or "H0" (worse)."""
+    import math
+    import os
+
+    os.environ["ALPHA_MODEL_A"], os.environ["ALPHA_MODEL_B"] = net_a, net_b
+    os.environ["ALPHA_SEARCH_MS"] = str(a.search_ms)
+    from alpha_poke.eval.arena import pair_scores, run_arena, sprt_llr
+
+    lo, hi = math.log(a.beta / (1 - a.alpha)), math.log((1 - a.beta) / a.alpha)
+    trace = []
+
+    def stop(rows) -> bool:
+        scores = pair_scores(rows)
+        n = len(scores) // a.batch_pairs * a.batch_pairs
+        if n == 0 or (trace and trace[-1][0] >= n):
+            return False
+        llr = sprt_llr(scores, a.elo0, a.elo1)
+        trace.append((len(scores), round(llr, 3)))
+        print(f"{len(scores)} pairs: score {sum(scores) / len(scores):.3f}, LLR {llr:.2f} "
+              f"[{lo:.2f}, {hi:.2f}]", flush=True)  # fmt: skip
+        return not lo < llr < hi
+
+    res = run_arena("s_ismcts_ma", "s_ismcts_mb", a.pairs, ports=tuple(a.ports), procs=a.procs,
+                    lanes_per_proc=a.lanes, seed=seed, log_dir=log_dir, stop=stop)  # fmt: skip
+    from alpha_poke.eval.arena import read_log
+
+    llr = sprt_llr(pair_scores(read_log(res["log"])), a.elo0, a.elo1)
+    res |= {"llr": round(llr, 3), "llr_bounds": [round(lo, 3), round(hi, 3)],
+            "elo0": a.elo0, "elo1": a.elo1, "llr_trace": trace,
+            "decision": "H1" if llr >= hi or (lo < llr and llr >= 0) else "H0",
+            "search_ms": a.search_ms}  # fmt: skip
+    return res
+
+
 def cmd_eval(a) -> None:
     import json
-    import os
 
     st = state()
     if "eval" in st["generations"].get(str(a.gen), {}) and not a.force:
@@ -234,19 +272,12 @@ def cmd_eval(a) -> None:
         return
     cand = st["generations"][str(a.gen)]["train"]["run"]
     base = a.against or st["current"]
-    os.environ["ALPHA_MODEL_A"], os.environ["ALPHA_MODEL_B"] = cand, base
-    os.environ["ALPHA_SEARCH_MS"] = str(a.search_ms)
-    from alpha_poke.eval.arena import run_arena
-
-    log_dir = str(SELFPLAY_DIR / f"gen{a.gen}")
-    res = run_arena("s_ismcts_ma", "s_ismcts_mb", a.pairs, ports=tuple(a.ports), procs=a.procs,
-                    lanes_per_proc=a.lanes, seed=a.gen, log_dir=log_dir)  # fmt: skip
+    res = sequential_match(a, cand, base, a.gen, str(SELFPLAY_DIR / f"gen{a.gen}"))
     p, ci = res["paired_mean"], res["ci95_paired"]
-    # promotion (design D15-6): unless significantly worse than the current network
-    promote = p + ci >= 0.5
-    better = p - ci > 0.5
-    res |= {"candidate": cand, "against": base, "search_ms": a.search_ms, "promoted": promote,
-            "significantly_better": better}  # fmt: skip
+    # promotion (design D15-6): unless the sequential test says worse than the current network
+    promote = res["decision"] == "H1"
+    res |= {"candidate": cand, "against": base, "promoted": promote,
+            "significantly_better": p - ci > 0.5}  # fmt: skip
     record(a.gen, "eval", res)
     if promote:
         st = state()
@@ -261,28 +292,21 @@ def cmd_baseline(a) -> int:
     network by this comparison; if the current one is significantly worse than the baseline,
     the current network reverts to the best one (or the baseline) and this returns 2."""
     import json
-    import os
 
     st = state()
     cur = st["current"]
     if cur == BASE_RUN:
         print("the current network is the baseline itself")
         return 0
-    os.environ["ALPHA_MODEL_A"], os.environ["ALPHA_MODEL_B"] = cur, BASE_RUN
-    os.environ["ALPHA_SEARCH_MS"] = str(a.search_ms)
-    from alpha_poke.eval.arena import run_arena
-
-    log_dir = str(SELFPLAY_DIR / f"gen{a.gen}")
-    res = run_arena("s_ismcts_ma", "s_ismcts_mb", a.pairs, ports=tuple(a.ports), procs=a.procs,
-                    lanes_per_proc=a.lanes, seed=1000 + a.gen, log_dir=log_dir)  # fmt: skip
+    res = sequential_match(a, cur, BASE_RUN, 1000 + a.gen, str(SELFPLAY_DIR / f"gen{a.gen}"))
     p, ci = res["paired_mean"], res["ci95_paired"]
-    res |= {"network": cur, "baseline": BASE_RUN, "search_ms": a.search_ms}
+    res |= {"network": cur, "baseline": BASE_RUN}
     st = state()
     best = st.get("best")
     if best is None or p > best["paired_mean"]:
         st["best"] = {"run": cur, "paired_mean": p, "ci95": ci, "gen": a.gen}
     code = 0
-    if p + ci < 0.5:  # significantly worse than the baseline: revert
+    if res["decision"] == "H0":  # worse than the baseline (sequential test): revert
         back = st["best"]["run"] if st["best"]["run"] != cur else BASE_RUN
         res["reverted_to"] = back
         st["current"] = back
@@ -384,6 +408,15 @@ def _stop_workers(*_) -> None:
     raise SystemExit(1)
 
 
+def sprt_args(p) -> None:
+    """The sequential test of eval / baseline (sequential_match); --pairs is the maximum."""
+    p.add_argument("--batch-pairs", type=int, default=12, help="test every this many pairs")
+    p.add_argument("--elo0", type=float, default=-20.0, help="H0: the new network this weaker")
+    p.add_argument("--elo1", type=float, default=0.0, help="H1: this (not worse)")
+    p.add_argument("--alpha", type=float, default=0.05)
+    p.add_argument("--beta", type=float, default=0.05)
+
+
 def main() -> None:
     import signal
 
@@ -448,6 +481,7 @@ def main() -> None:
     p.add_argument("--against", default="", help="default: the current network")
     p.add_argument("--pairs", type=int, default=100)
     p.add_argument("--search-ms", type=int, default=500)
+    sprt_args(p)
     p.add_argument("--procs", type=int, default=4)
     p.add_argument("--lanes", type=int, default=6)
     p.add_argument("--ports", type=int, nargs="+", default=[8000, 8001, 8002, 8003])
@@ -457,6 +491,7 @@ def main() -> None:
     p.add_argument("--gen", type=int, required=True, help="where to log it")
     p.add_argument("--pairs", type=int, default=100)
     p.add_argument("--search-ms", type=int, default=500)
+    sprt_args(p)
     p.add_argument("--procs", type=int, default=4)
     p.add_argument("--lanes", type=int, default=6)
     p.add_argument("--ports", type=int, nargs="+", default=[8000, 8001, 8002, 8003])
