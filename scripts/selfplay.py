@@ -123,6 +123,68 @@ def cmd_convert(a) -> None:
     record(a.gen, "convert", stats)
 
 
+def cmd_value(a) -> None:
+    """Value check on this generation's fresh games (design D15-7): the generation's games are
+    unseen by every network up to the current one (which played them), so its decisions are an
+    out-of-sample test of the value on the bots' own play: BCE, ECE, calibration slope (> 1:
+    underconfident, e.g. pulled to 0.5 by human outcomes), and each network's BCE minus the
+    current one's (game-clustered 95% CI). Networks: the current one, the ones earlier
+    generations ended with (--back), v5-glu (value from human games only)."""
+    import json
+    import random
+
+    import alpha_search
+    import numpy as np
+
+    st = state()
+    if "value_check" in st["generations"].get(str(a.gen), {}) and not a.force:
+        print(f"gen {a.gen}: value check done already (--force redoes)")
+        return
+    rows = []
+    for f in sorted((SELFPLAY_DIR / f"gen{a.gen}").glob("decisions-w*.jsonl")):
+        for line in f.read_text().splitlines():
+            d = json.loads(line)
+            if d["won"] is not None:
+                rows.append(d)
+    random.Random(a.gen).shuffle(rows)
+    rows = rows[: a.n]
+    y = np.array([float(d["won"]) for d in rows])
+    games = np.array([d["game"] for d in rows])
+    cur = st["current"]
+    nets = [cur] + [anchor_of(st, a.gen, k) for k in range(1, a.back + 1)] + [BASE_RUN]
+    nets = list(dict.fromkeys(nets))
+    ctx = ([d["state"] for d in rows], [d["reveal"] for d in rows],
+           [tuple(d["ratings"]) for d in rows], [d["ctx_turn"] for d in rows],
+           [d["history"] for d in rows])  # fmt: skip
+    loss, out = {}, {"positions": len(rows), "games": int(len(set(games.tolist()))),
+                     "generator": cur, "networks": {}}  # fmt: skip
+    for net in nets:
+        z = np.array(alpha_search.tnet_forward(net, *ctx)[1], np.float64)
+        pr = np.clip(1 / (1 + np.exp(-z)), 1e-6, 1 - 1e-6)
+        loss[net] = -(y * np.log(pr) + (1 - y) * np.log(1 - pr))
+        b = np.clip((pr * 10).astype(int), 0, 9)
+        ece = sum(abs(pr[b == k].mean() - y[b == k].mean()) * (b == k).mean()
+                  for k in range(10) if (b == k).any())  # fmt: skip
+        c, slope = 0.0, 1.0  # y ~ sigmoid(c + slope * z), Newton
+        for _ in range(50):
+            q = 1 / (1 + np.exp(-(c + slope * z)))
+            w = q * (1 - q)
+            h = np.array([[w.sum(), (w * z).sum()], [(w * z).sum(), (w * z * z).sum()]])
+            grad = [(q - y).sum(), ((q - y) * z).sum()]
+            c, slope = np.array([c, slope]) - np.linalg.solve(h, grad)
+        out["networks"][net] = {"bce": round(float(loss[net].mean()), 4), "ece": round(ece, 4),
+                                "slope": round(float(slope), 3)}  # fmt: skip
+    ug, inv = np.unique(games, return_inverse=True)
+    for net in nets:
+        d = loss[net] - loss[cur]
+        per = np.bincount(inv, weights=d, minlength=len(ug))
+        ci = 1.96 * per.std() * np.sqrt(len(ug)) / len(d)
+        out["networks"][net] |= {"minus_current": round(float(d.mean()), 4),
+                                 "ci95": round(float(ci), 4)}  # fmt: skip
+    record(a.gen, "value_check", out)
+    print(json.dumps(out, indent=1))
+
+
 def cmd_train(a) -> None:
     import math
     import shlex
@@ -407,6 +469,10 @@ def cmd_loop(a) -> None:
             return
         g = state()["generations"][str(gen)]
         ev, tr = g.get("eval", {}), g.get("train", {})
+        vc = g.get("value_check", {}).get("networks", {})
+        say(f"gen {gen}: value on its fresh games (BCE minus the generator's): "
+            + ", ".join(f"{Path(k).name} {v['bce']} ({v['minus_current']:+.4f} +- {v['ci95']})"
+                        for k, v in vc.items()))  # fmt: skip
         say(f"gen {gen}: {'promoted' if ev.get('promoted') else 'NOT promoted'} "
             f"({ev.get('paired_mean')} +- {ev.get('ci95_paired')} vs {ev.get('against')}); "
             f"human drift flag {tr.get('human_drift_flag')}; "
@@ -463,6 +529,7 @@ def cmd_cycle(a) -> None:
         steps.append(("teams", ["teams", "--gen", str(a.gen), "--n", str(a.games)]))
     steps += [("run", ["run", "--gen", str(a.gen), "--procs", str(a.procs),
                        "--lanes", str(a.lanes), "--threads", str(a.threads)]),
+              ("value", ["value", "--gen", str(a.gen)]),
               ("convert", ["convert", "--gen", str(a.gen)]),
               ("train", ["train", "--gen", str(a.gen)]),
               ("eval", ["eval", "--gen", str(a.gen), "--pairs", str(a.eval_pairs)])]  # fmt: skip
@@ -529,6 +596,12 @@ def main() -> None:
     p.add_argument("--gen", type=int, required=True)
     p.add_argument("--force", action="store_true")
     p.set_defaults(fn=cmd_convert)
+    p = sub.add_parser("value", help="value check on the generation's fresh games")
+    p.add_argument("--gen", type=int, required=True)
+    p.add_argument("--n", type=int, default=30000, help="decisions sampled")
+    p.add_argument("--back", type=int, default=2, help="also the networks of these gens ago")
+    p.add_argument("--force", action="store_true")
+    p.set_defaults(fn=cmd_value)
     p = sub.add_parser("train")
     p.add_argument("--gen", type=int, required=True)
     p.add_argument("--init", default="", help="warm start run (default: the current network)")
