@@ -31,6 +31,8 @@ wandb/
 /data/teams/*
 !/data/teams/catalog.jsonl
 !/data/teams/pools/
+# diagnostic pools sampled from a seed (data/selfplay/diag): reproducible, not kept in git
+/data/teams/pools/wide*/
 
 # Editor / OS
 .vscode/
