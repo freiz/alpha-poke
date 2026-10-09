@@ -3,7 +3,7 @@
   "model": "sp-gen0",
   "elo": 1500.0
  },
- "built": "2026-10-08 21:37",
+ "built": "2026-10-08 22:07",
  "current": "sp-gen2",
  "models": [
   {
@@ -100,8 +100,7 @@
    "role": "generation (retrained)",
    "promoted": true,
    "played_generations": [
-    2,
-    3
+    2
    ],
    "training": {
     "init": "data/train/v5/runs/sp-gen0",
@@ -134,7 +133,7 @@
     "gen1-retrain-eval",
     "gen2-eval-40pool",
     "gen2-eval",
-    "gen3-eval",
+    "gen3old-eval",
     "diag-gen2-1600",
     "diag-AB-40pool",
     "diag-policy-replay40-20261008-193049",
@@ -142,7 +141,9 @@
     "diag-policy-wide200-sp-gen2",
     "diag-policy-wide200-sp-gen3",
     "diag-policy-wide1000-sp-gen3",
-    "diag-policy-wide1000-sp-gen2"
+    "diag-policy-wide1000-sp-gen2",
+    "diag-AB-wide200-3000",
+    "diag-AB-policy-wide1000"
    ],
    "elo": 1545.4,
    "elo_ci95": 81.9
@@ -206,12 +207,12 @@
    "current": true
   },
   {
-   "name": "sp-gen3",
-   "run": "data/train/v5/runs/sp-gen3",
+   "name": "sp-gen3-old",
+   "run": "data/train/v5/runs/sp-gen3-old",
    "sha256": "3321723221719a0d",
-   "generation": 3,
-   "role": "generation",
-   "promoted": false,
+   "generation": null,
+   "role": "variant",
+   "promoted": null,
    "played_generations": [],
    "training": {
     "init": "data/train/v5/runs/sp-gen1-lr4e-4-p3-v1",
@@ -227,16 +228,7 @@
     "seed": 0,
     "epochs": 6,
     "steps": 874,
-    "params": 736875,
-    "human_share": 0.35,
-    "sp_positions": 1262612,
-    "sp_positions_kept": 817322,
-    "recent_gens": [
-     0,
-     1,
-     2,
-     3
-    ]
+    "params": 736875
    },
    "parent": "sp-gen1-lr4e-4-p3-v1",
    "validation_last": {
@@ -253,7 +245,7 @@
    },
    "created": "2026-10-08 19:11",
    "matches": [
-    "gen3-eval",
+    "gen3old-eval",
     "diag-policy-replay40-20261008-193252",
     "diag-policy-wide200-sp-gen3",
     "diag-policy-wide1000-sp-gen3"
