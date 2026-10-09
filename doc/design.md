@@ -372,7 +372,9 @@ Gen9 OU 单打。随机对战不需要组队，人类水平被拉低，不足以
 - [ ] P2 Metamon checkpoint 作为外部对手（独立 venv）。
 
 **数据**
-- [ ] P1 自爬补新数据：Metamon 数据只到 2026-05，自对弈组队与 Smogon 最新统计有差距；保持礼貌速率，只补最新对局；Smogon 统计每月更新。
+- [ ] P1 补新数据：Metamon 数据只到 2026-05-19，自对弈组队与 Smogon 最新统计有差距；Smogon 统计每月更新。
+  - 2026-10-09：HF 数据集 `HolidayOugi/pokemon-showdown-replays`（公开 replay 的整包，与 Metamon 同样的字段，数据集未写许可，与 Metamon 相同）的 Gen 9 OU 分片 11–13，按对局 id 与 Metamon 去重后 **31.0 万局新对局**（其中 29.9 万在 Metamon 截止之后，到 2026-10-05；约 1.1 万是 Metamon 缺的旧对局），存 `data/replays_hf/gen9ou/`（Metamon 格式，分数为字符串）。我们自爬的 5 万局（2026-07 到 10-04）有 49,251 局已在其中，自爬改为只补 HF 之后的最新对局（`crawl_replays.py list --mode new` + `download`，间隔 2 秒）。
+  - 待做：管线（`games_lite`、`build_training_data.py` 的 `SRC`）读入新目录，重建对局表和训练数据（按时间切验证集，验证集截止时间要跟着改）；抽队的时间窗口和信念模型 / 匹配模型也用新数据重建；HF 分片 1–10 里可能还有约 10 万局 Metamon 缺的旧对局（价值较低）。
 - [ ] P2 数据偏差：自我暴露型道具（Life Orb、剩饭）偏多；天梯上的 bot 账号和少数活跃账号未过滤。
 
 **组队（M5，D5-L / D5-O）**
