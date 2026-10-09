@@ -3,8 +3,8 @@
   "model": "sp-gen0",
   "elo": 1500.0
  },
- "built": "2026-10-08 22:07",
- "current": "sp-gen2",
+ "built": "2026-10-09 04:06",
+ "current": "sp-gen0",
  "models": [
   {
    "name": "sp-gen0",
@@ -40,10 +40,12 @@
    "created": "2026-10-08 02:02",
    "matches": [
     "gen0-eval",
-    "gen1-eval"
+    "gen1-eval",
+    "gen3-baseline"
    ],
    "elo": 1500.0,
-   "elo_ci95": 0.0
+   "elo_ci95": 0.0,
+   "current": true
   },
   {
    "name": "sp-gen1",
@@ -89,8 +91,8 @@
     "gen1-eval",
     "gen1-retrain-eval"
    ],
-   "elo": 1500.0,
-   "elo_ci95": 67.4
+   "elo": 1447.7,
+   "elo_ci95": 45.7
   },
   {
    "name": "sp-gen1-lr4e-4-p3-v1",
@@ -145,8 +147,8 @@
     "diag-AB-wide200-3000",
     "diag-AB-policy-wide1000"
    ],
-   "elo": 1545.4,
-   "elo_ci95": 81.9
+   "elo": 1468.1,
+   "elo_ci95": 36.8
   },
   {
    "name": "sp-gen2",
@@ -155,7 +157,9 @@
    "generation": 2,
    "role": "generation",
    "promoted": true,
-   "played_generations": [],
+   "played_generations": [
+    3
+   ],
    "training": {
     "init": "data/train/v5/runs/sp-gen1-lr4e-4-p3-v1",
     "selfplay": "sp0,sp1,sp2",
@@ -200,11 +204,65 @@
     "diag-gen2-1600",
     "diag-policy-replay40-20261008-193049",
     "diag-policy-wide200-sp-gen2",
-    "diag-policy-wide1000-sp-gen2"
+    "diag-policy-wide1000-sp-gen2",
+    "gen3-eval"
    ],
-   "elo": 1570.7,
-   "elo_ci95": 86.0,
-   "current": true
+   "elo": 1485.4,
+   "elo_ci95": 29.7
+  },
+  {
+   "name": "sp-gen3",
+   "run": "data/train/v5/runs/sp-gen3",
+   "sha256": "4e24ec65b9d09da7",
+   "generation": 3,
+   "role": "generation",
+   "promoted": true,
+   "played_generations": [],
+   "training": {
+    "init": "data/train/v5/runs/sp-gen2",
+    "selfplay": "sp0,sp1,sp2,sp3",
+    "sp_frac": 0.65,
+    "lr": 0.0004,
+    "batch": 4096,
+    "warmup_frac": 0.2,
+    "sp_per_game": 50,
+    "sp_value_passes": 1,
+    "sp_value_per_game": 0,
+    "sp_value_lambda": 0.0,
+    "seed": 3,
+    "epochs": 6,
+    "steps": 873,
+    "params": 736875,
+    "human_share": 0.35,
+    "sp_positions": 1267283,
+    "sp_positions_kept": 815381,
+    "recent_gens": [
+     0,
+     1,
+     2,
+     3
+    ]
+   },
+   "parent": "sp-gen2",
+   "validation_last": {
+    "ce_turn_w": 1.1552,
+    "bce_all_w": 0.5484,
+    "top1": 0.5527,
+    "value_ece": 0.0148,
+    "hce_true": 1.2406,
+    "opp_act_acc": 0.4165,
+    "sp_kl": 0.2602,
+    "sp_top1": 0.7025,
+    "sp_bce": 0.4597,
+    "sp_kl_ref": 0.0045
+   },
+   "created": "2026-10-09 00:04",
+   "matches": [
+    "gen3-eval",
+    "gen3-baseline"
+   ],
+   "elo": 1491.8,
+   "elo_ci95": 19.9
   },
   {
    "name": "sp-gen3-old",
@@ -250,8 +308,8 @@
     "diag-policy-wide200-sp-gen3",
     "diag-policy-wide1000-sp-gen3"
    ],
-   "elo": 1528.0,
-   "elo_ci95": 93.4
+   "elo": 1450.7,
+   "elo_ci95": 58.0
   },
   {
    "name": "v5-glu",

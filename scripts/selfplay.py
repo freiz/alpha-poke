@@ -516,7 +516,11 @@ def cmd_baseline(a) -> int:
                 "progress": res["paired_mean"] - res["ci95_paired"] > 0.5}  # fmt: skip
     st = state()
     code = 0
-    if res.get("decision") == "H0":  # worse than the anchor: revert
+    # revert only on a significant result: the ratio past its lower bound (2026-10-09: a check
+    # that ended undecided at the cap, 48.1% +- 2.9%, reverted to gen 0 by the ratio's sign);
+    # an undecided result counts as no progress (below)
+    lo = (res.get("llr_bounds") or [float("-inf")])[0]
+    if res.get("llr") is not None and res["llr"] <= lo:  # worse than the anchor: revert
         res["reverted_to"] = against
         st["current"] = against
         st.setdefault("lineage", {})[str(a.gen)] = against
@@ -640,7 +644,7 @@ def cmd_loop(a) -> None:
         if rejected >= a.max_rejected:
             say(f"{rejected} consecutive generations not promoted: loop stopped")
             return
-        if gen % a.anchor_every == 0:
+        if gen % a.anchor_every == 0 and gen >= a.anchor_back:  # gen 0: nothing 3 gens before
             st = state()
             say(f"gen {gen}: progress check of {st['current']} vs "
                 f"{anchor_of(st, gen, a.anchor_back)}")  # fmt: skip

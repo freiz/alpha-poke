@@ -10,10 +10,10 @@
                      estimated Elo (95% CI) and its matches
 
 Elo: weighted least squares over the fitted matches. Each match gives an Elo difference
-400 log10(p / (1 - p)) with the variance of its paired mean (delta method). sp-gen0 is fixed at
-ANCHOR_ELO; a model connected to it by no fitted match has no Elo. Rebuilt from state.json, the
-run directories and matches.jsonl by ``write()`` (scripts/selfplay.py registry, and after every
-evaluation)."""
+400 log10(p / (1 - p)) with the variance of its paired mean (delta method). The anchor (v5-glu)
+is fixed at ANCHOR_ELO; a model connected to it by no fitted match has no Elo. Rebuilt from
+state.json, the run directories and matches.jsonl by ``write()`` (scripts/selfplay.py
+registry, and after every evaluation)."""
 
 import hashlib
 import json
@@ -28,7 +28,9 @@ EXP = ROOT / "exp"
 MATCHES = EXP / "matches.jsonl"
 MODELS = EXP / "models.json"
 RUNS = ROOT / "data" / "train" / "v5" / "runs"
-ANCHOR, ANCHOR_ELO = "sp-gen0", 1500.0
+# 2026-10-09: self-play restarted from v5-glu (the human-data network); the earlier run is in
+# exp/archive-2026-10-08/
+ANCHOR, ANCHOR_ELO = "v5-glu", 1500.0
 
 
 def name_of(run: str | None) -> str | None:

@@ -215,6 +215,8 @@ Gen9 OU 单打。随机对战不需要组队，人类水平被拉低，不足以
 
 目标：搜索 + 网络自对弈产生训练目标（根节点访问分布、胜负），训练出更强的网络，循环。入口：`scripts/selfplay.py`（`teams` / `run` / `value` / `convert` / `train` / `eval` / `baseline` / `foulplay` / `cycle` / `loop`），代码在 `alpha_poke/selfplay/`。
 
+**重新开始（2026-10-09）**：第一轮（gen0–3，2026-10-08）有几处数据和评估问题：各代组队种子相同（对阵约 5,000 组反复出现）、训练种子相同（人类锚数据每代是同几个分片）、前几次晋升在 40 队池 + CPU 500 ms 下判定（该池会误判）。在新标准（宽池新队伍对、3,000 次迭代）下，sp-gen3 对 sp-gen0 是 48.1% ± 2.9%，四代没有可测的进步。所以从 v5-glu 重新开始，Elo 锚点改为 v5-glu = 1500；旧数据、模型、状态归档在 `data/archive-2026-10-08/`，旧登记在 `exp/archive-2026-10-08/`。累计检查的回滚只在显著更弱（LLR 越过下界）时发生，打满未决算停滞；第 0 代不做累计检查。
+
 **1. 对局在本地 Showdown（poke-env）上跑**，不用 poke-engine 直接对打：poke-engine 只是搜索里的近似模型，用它当真值会把它的误差学进网络；Showdown 的吞吐不是瓶颈。
 
 **2. 搜索和推理**（`selfplay/runner.py`、`batcher.py`、`player.py`）：
