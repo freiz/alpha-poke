@@ -251,6 +251,7 @@ def cmd_value(a) -> None:
         "kl_search_prior": round(float((np.where(pf > 0, pf * np.log(pf / np.maximum(
             prior, 1e-9)), 0.0)).sum(1).mean()), 4),
     }  # fmt: skip
+    kl_net, top1_net = {}, {}
     for net in nets:
         lg, vz = alpha_search.tnet_forward(net, *ctx)
         z = np.array(vz, np.float64)
@@ -259,6 +260,7 @@ def cmd_value(a) -> None:
         p = np.exp(lg - lg.max(1, keepdims=True))
         p /= p.sum(1, keepdims=True)
         kl = (np.where(pf > 0, pf * np.log(pf / np.maximum(p[full], 1e-9)), 0.0)).sum(1)
+        kl_net[net], top1_net[net] = kl, p[full].argmax(1) == pf.argmax(1)
         policy = {"entropy": round(float(entropy(p).mean()), 4),
                   "max_prob": round(float(p.max(1).mean()), 4),
                   "kl_target": round(float(kl.mean()), 4),
@@ -285,9 +287,70 @@ def cmd_value(a) -> None:
         ci = 1.96 * per.std() * np.sqrt(len(ug)) / len(d)
         out["networks"][net] |= {"minus_current": round(float(d.mean()), 4),
                                  "ci95": round(float(ci), 4)}  # fmt: skip
+    out["by_team"] = team_groups(a, rows, y, nets, loss, kl_net, top1_net, full)
     if not a.dry:
         record(a.gen, "value_check", out)
     print(json.dumps(out, indent=1))
+
+
+def team_groups(a, rows: list, y, nets: list, loss: dict, kl_net: dict, top1_net: dict,
+                full) -> dict:  # fmt: skip
+    """The value check per group of the deciding player's own team (overfitting to the teams
+    self-play sees most, design TODO 2026-10-09): ``catalog`` (complete catalog teams, fixed
+    sets, reused across games), ``popular`` (a completed replay team whose six species came
+    up >= --popular times in the teams of generations 0..gen, both sides), ``rare`` (<= --rare
+    times), ``mid`` (the rest). Per network: BCE, policy KL / top-1 against the full searches;
+    ``gain_vs_base``: the base network's (v5-glu) BCE minus this one's, so a gain that grows on
+    popular / catalog teams but not on rare ones over the generations is the overfitting sign."""
+    import json
+    from collections import Counter
+
+    import numpy as np
+
+    from alpha_poke.selfplay import teams
+
+    def comp(text: str) -> frozenset:
+        return frozenset(teams.species_names(text))
+
+    counts: Counter = Counter()
+    for g in range(a.gen + 1):
+        f = SELFPLAY_DIR / f"gen{g}" / "teams.jsonl"
+        if f.exists():
+            for pr in teams.load(f):
+                counts.update([comp(pr.p1.text), comp(pr.p2.text)])
+    gen_dir = SELFPLAY_DIR / f"gen{a.gen}"
+    pairs = teams.load(gen_dir / "teams.jsonl")
+    a_side = {}  # pair -> the side player a (team p1 of the pair) played
+    for f in gen_dir.glob("games-w*.jsonl"):
+        for line in f.read_text().splitlines():
+            gm = json.loads(line)
+            a_side[gm["pair"]] = gm["a_side"]
+
+    def group(d: dict) -> str:
+        pr = pairs[d["game"]]
+        side = pr.p1 if d["side"] == a_side.get(d["game"]) else pr.p2
+        if side.kind == "catalog":
+            return "catalog"
+        n = counts[comp(side.text)]
+        return "popular" if n >= a.popular else "rare" if n <= a.rare else "mid"
+
+    labels = np.array([group(d) for d in rows])
+    out = {}
+    for lab in ("catalog", "popular", "mid", "rare"):
+        m = labels == lab
+        if not m.any():
+            continue
+        mf = m[full]
+        res = {"positions": int(m.sum()), "nets": {}}
+        for net in nets:
+            res["nets"][Path(net).name] = {
+                "bce": round(float(loss[net][m].mean()), 4),
+                "gain_vs_base": round(float(loss[BASE_RUN][m].mean() - loss[net][m].mean()), 4),
+                "kl_target": round(float(kl_net[net][mf].mean()), 4) if mf.any() else None,
+                "top1_target": round(float(top1_net[net][mf].mean()), 4) if mf.any() else None,
+            }
+        out[lab] = res
+    return out
 
 
 def cmd_train(a) -> None:
@@ -787,6 +850,8 @@ def main() -> None:
     p.add_argument("--nets", default="", help="more networks (comma-separated run directories)")
     p.add_argument("--dry", action="store_true", help="print only, no record")
     p.add_argument("--force", action="store_true")
+    p.add_argument("--popular", type=int, default=10, help="team groups: seen this often")
+    p.add_argument("--rare", type=int, default=1, help="team groups: seen at most this often")
     p.set_defaults(fn=cmd_value)
     p = sub.add_parser("train")
     p.add_argument("--gen", type=int, required=True)
