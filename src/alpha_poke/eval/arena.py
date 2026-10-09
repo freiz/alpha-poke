@@ -45,6 +45,11 @@ def _species(packed: str) -> list[str]:
     return sorted(_base(m.species or m.nickname) for m in Teambuilder.parse_packed_team(packed))
 
 
+# evaluation games end at this turn as a draw (stalling loops of two searches or two policies
+# otherwise run to Showdown's 1000-turn tie): the bot to move forfeits to end the game
+# (agents.search_player / selfplay.player), the result is scored 0.5 whoever forfeited
+TURN_CAP = int(os.environ.get("ALPHA_TURN_CAP", 300))
+
 # seconds per game (a 300-turn game at 500 ms a move takes ~10 minutes per side)
 GAME_TIMEOUT = 3600.0
 
@@ -115,6 +120,7 @@ async def _lane(bot_a, bot_b, matches, port, pool_dir, heldout, lane_id, log_pat
             "battle": battle.battle_tag if battle else None,
             "a_won": None if battle is None else battle.won,
             "turns": battle.turn if battle else None,
+            "capped": bool(battle and battle.turn >= TURN_CAP),
             "team_ok": team_ok,
             "lead_a": plan.lead if plan else None,
             "lead_b": plan_b.lead if plan_b else None,
@@ -275,7 +281,10 @@ def run_meta(bot_a: str, bot_b: str, **args) -> dict:
 
 
 def _score(r: dict) -> float | None:
-    """1 / 0 for a win / loss of A, 0.5 for a tie (e.g. the 1000-turn limit), None if missing."""
+    """1 / 0 for a win / loss of A, 0.5 for a tie (or a game ended at the turn cap), None if
+    missing."""
+    if r.get("capped"):
+        return 0.5
     if r["a_won"] is not None:
         return float(r["a_won"])
     if r.get("battle") and r.get("turns") is not None:

@@ -43,6 +43,16 @@ VARIANTS: dict[str, tuple[str, dict]] = {
         f"g_m{x}": ("batched", {"model": os.environ.get(f"ALPHA_MODEL_{x.upper()}", GLU)})
         for x in ("a", "b")
     },  # fmt: skip
+    # no search: the network's own policy (argmax-like, tau 0.05; rating input unknown, as the
+    # bots in self-play), the model given at run time — comparisons of two networks without
+    # the search making up for the prior
+    **{
+        f"p_m{x}": (
+            "policy",
+            {"model": os.environ.get(f"ALPHA_MODEL_{x.upper()}", GLU), "tau": 0.05, "rating": 0},
+        )
+        for x in ("a", "b")
+    },  # fmt: skip
     # no search: the network's policy sampled with a temperature and a rating input, the model
     # of a specific human (design D5-O step 2); rating / tau via ALPHA_POLICY_RATING /
     # ALPHA_POLICY_TAU (scripts/counter_team.py sets them from the player's fit to v5-final)
@@ -112,6 +122,7 @@ def _batched_bot(model: str, heldout_pool, trace_dir, kw) -> Player:
     return SelfPlayPlayer(
         BeliefModel.load(heldout_pool=heldout_pool), trace_dir=trace_dir, worlds=32,
         net_policy="both", model=model, batcher=_BATCHERS[model], full_frac=1.0,
-        full_iters=iters, noise=(0.0, 10.0), turn_cap=10_000, greedy=True, record=False,
+        full_iters=iters, noise=(0.0, 10.0), greedy=True, record=False,
+        turn_cap=int(os.environ.get("ALPHA_TURN_CAP", 300)),
         seed=random.randrange(1 << 30), **kw,
     )  # fmt: skip

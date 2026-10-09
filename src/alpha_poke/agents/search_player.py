@@ -19,12 +19,14 @@ import time
 from pathlib import Path
 
 import alpha_search
+from poke_env.player.battle_order import ForfeitBattleOrder
 
 from alpha_poke.agents import net_context
 from alpha_poke.agents.engine_state import build_state, engine_move_to_order
 from alpha_poke.agents.knowledge_player import KnowledgePlayer, sync_tera_types
 
 log = logging.getLogger("alpha_poke.search")
+TURN_CAP = int(os.environ.get("ALPHA_TURN_CAP", 300))  # = eval.arena.TURN_CAP
 
 
 def _env_int(name: str, default: int) -> int:
@@ -94,6 +96,8 @@ class SearchPlayer(KnowledgePlayer):
             self._gpu = None
 
     def choose_move(self, battle):
+        if battle.turn >= TURN_CAP:  # evaluation: a draw at the cap (eval.arena scores it 0.5)
+            return ForfeitBattleOrder()
         try:
             order = self._search(battle)
             if order is not None:
