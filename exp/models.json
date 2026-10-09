@@ -1,0 +1,94 @@
+{
+ "anchor": {
+  "model": "v5-glu",
+  "elo": 1500.0
+ },
+ "built": "2026-10-09 07:41",
+ "current": "sp-gen0",
+ "models": [
+  {
+   "name": "sp-gen0",
+   "run": "data/train/v5/runs/sp-gen0",
+   "sha256": "172e1280798916ca",
+   "generation": 0,
+   "role": "generation",
+   "promoted": true,
+   "played_generations": [],
+   "training": {
+    "init": "data/train/v5/runs/v5-glu",
+    "selfplay": "sp0",
+    "sp_frac": 0.5,
+    "lr": 0.0004,
+    "batch": 4096,
+    "warmup_frac": 0.2,
+    "sp_per_game": 50,
+    "sp_value_passes": 1,
+    "sp_value_per_game": 0,
+    "sp_value_lambda": 0.0,
+    "seed": 0,
+    "epochs": 6,
+    "steps": 330,
+    "params": 736875,
+    "human_share": 0.5,
+    "sp_positions": 377726,
+    "sp_positions_kept": 238138,
+    "recent_gens": [
+     0
+    ]
+   },
+   "parent": "v5-glu",
+   "validation_last": {
+    "ce_turn_w": 1.1461,
+    "bce_all_w": 0.5457,
+    "top1": 0.556,
+    "value_ece": 0.0142,
+    "hce_true": 1.2301,
+    "opp_act_acc": 0.4203,
+    "sp_kl": 0.3072,
+    "sp_top1": 0.696,
+    "sp_bce": 0.4809,
+    "sp_kl_ref": 0.0222
+   },
+   "created": "2026-10-09 06:08",
+   "matches": [
+    "gen0-eval"
+   ],
+   "elo": 1493.5,
+   "elo_ci95": 21.5,
+   "current": true
+  },
+  {
+   "name": "v5-glu",
+   "run": "data/train/v5/runs/v5-glu",
+   "sha256": "1bdb84317007011a",
+   "generation": null,
+   "role": "human-data baseline (self-play start)",
+   "promoted": null,
+   "played_generations": [
+    0
+   ],
+   "training": {
+    "lr": 0.002,
+    "batch": 4096,
+    "seed": 0,
+    "epochs": 6.0,
+    "steps": 56924,
+    "params": 736875
+   },
+   "parent": null,
+   "validation_last": {
+    "ce_turn_w": 1.1345,
+    "bce_all_w": 0.5439,
+    "top1": 0.5592,
+    "value_ece": 0.0134,
+    "opp_act_acc": 0.422
+   },
+   "created": "2026-10-07 22:38",
+   "matches": [
+    "gen0-eval"
+   ],
+   "elo": 1500.0,
+   "elo_ci95": 0.0
+  }
+ ]
+}

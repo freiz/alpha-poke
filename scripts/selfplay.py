@@ -447,11 +447,13 @@ def sequential_match(a, net_a: str, net_b: str, seed: int, log_dir: str) -> dict
                     pairs=True)  # fmt: skip
     from alpha_poke.eval.arena import read_log
 
-    scores = pair_scores(read_log(res["log"]))
-    if not res["stopped_early"] and len(scores) < a.pairs:
-        # the workers ended before the test decided and before the maximum (killed, crashed):
-        # no decision (2026-10-08: an evaluation killed with no game finished promoted)
-        raise RuntimeError(f"evaluation incomplete: {len(scores)} of {a.pairs} pairs, no "
+    rows = read_log(res["log"])
+    scores = pair_scores(rows)
+    if not res["stopped_early"] and len(rows) < 2 * a.pairs:
+        # the workers ended before the schedule was played (killed, crashed): no decision
+        # (2026-10-08: an evaluation killed with no game finished promoted). A played schedule
+        # with failed or timed-out games decides on its complete pairs
+        raise RuntimeError(f"evaluation incomplete: {len(rows)} of {2 * a.pairs} games, no "
                            f"decision ({res['log']})")  # fmt: skip
     llr = sprt_llr(scores, a.elo0, a.elo1)
     res |= {"llr": round(llr, 3), "llr_bounds": [round(lo, 3), round(hi, 3)],

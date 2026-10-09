@@ -51,8 +51,9 @@ def _species(packed: str) -> list[str]:
 # (agents.search_player / selfplay.player), the result is scored 0.5 whoever forfeited
 TURN_CAP = int(os.environ.get("ALPHA_TURN_CAP", 300))
 
-# seconds per game (a 300-turn game at 500 ms a move takes ~10 minutes per side)
-GAME_TIMEOUT = 3600.0
+# seconds per game: a game that never starts or never ends (2026-10-09: the last games of an
+# evaluation hung for 20+ minutes with no search running); a 300-turn game takes ~10 minutes
+GAME_TIMEOUT = 1200.0
 
 
 @dataclass
