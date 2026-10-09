@@ -300,7 +300,7 @@ def cmd_train(a) -> None:
            f"--sp-frac {sp_frac} --init {init} {size} --lr {lr} --batch {a.batch} "
            f"--warmup-frac {a.warmup_frac} --export last --sp-per-game {a.per_game} "
            f"--sp-value-passes {a.value_passes} --sp-value-per-game {a.value_per_game} "
-           f"--sp-value-lambda {a.value_lambda} "
+           f"--sp-value-lambda {a.value_lambda} --seed {a.gen} "
            f"--run {run}")  # fmt: skip
     log_path = SELFPLAY_DIR / f"gen{a.gen}" / "train.log"
     out = Path("data/train/v5/runs") / run

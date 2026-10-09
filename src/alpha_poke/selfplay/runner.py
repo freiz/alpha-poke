@@ -74,7 +74,9 @@ async def _lane(lane: str, jobs: list, port: int, gen_dir: Path, settings: dict,
             noise=tuple(settings["noise"]), turn_cap=settings["turn_cap"],
         )  # fmt: skip
 
-    seed = zlib.crc32(lane.encode())
+    # per run (run_tag) and lane: a lane named alike in every generation must not replay the same
+    # random choices (full / fast searches, root noise, move sampling)
+    seed = zlib.crc32(f"{settings['run_tag']}:{lane}".encode())
     a, b = player("a", 2 * seed), player("b", 2 * seed + 1)
     n = 0
     for idx, pair in jobs:

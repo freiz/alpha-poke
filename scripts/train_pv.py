@@ -914,7 +914,9 @@ def main() -> None:
         with np.load(caches[0]) as z:
             keys = set(z.files)
         if len(val_idx) > a.val_max:
-            val_idx = np.sort(rng.choice(val_idx, a.val_max, replace=False))
+            # the same human validation subset whatever --seed (= what seed 0 drew: generations
+            # compare on the same positions)
+            val_idx = np.sort(np.random.default_rng(0).choice(val_idx, a.val_max, replace=False))
         dv, v_idx = gather(caches, d, val_idx), np.arange(len(val_idx))
     else:
         keys, dv, v_idx = set(d), d, val_idx
