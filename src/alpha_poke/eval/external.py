@@ -21,7 +21,14 @@ from concurrent.futures import ProcessPoolExecutor
 from dataclasses import asdict
 from pathlib import Path
 
-from alpha_poke.eval.arena import _base, _species, make_schedule, summarize
+from alpha_poke.eval.arena import (
+    TURN_CAP,
+    _base,
+    _species,
+    make_schedule,
+    pair_schedule,
+    summarize,
+)
 from alpha_poke.teams import DEFAULT_POOL, load_team_files
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -114,6 +121,8 @@ async def _lane(bot, matches, port, pool_dir, lane, log_path, opp, extras, run_d
                 "battle": battle.battle_tag if battle else None,
                 "a_won": None if battle is None else battle.won,
                 "turns": battle.turn if battle else None,
+                # our bot ends a game at the turn cap (agents.search_player): a draw, not a loss
+                "capped": bool(battle and battle.turn >= TURN_CAP),
                 "team_ok": team_ok,
                 "lead_a": plan.lead if plan else None,
                 "plan_a": plan.to_log() if plan else None,
@@ -165,11 +174,14 @@ def run_external(
     replays: bool = False,
     log_dir: str = "data/eval",
     heldout: bool = False,
+    pairs: bool = False,
 ) -> dict:
     """Paired run of our ``bot`` against an opponent process (see ``_opponent_cmd``).
     ``heldout``: our belief model without the pool's teams (as arena --heldout)."""
-    names = sorted(load_team_files(pool_dir))
-    schedule = make_schedule(names, n_pairs, seed)
+    if pairs:  # a pool of fixed real-game pairs (eval.arena.pair_schedule): the same every run
+        schedule = pair_schedule(pool_dir, n_pairs)
+    else:
+        schedule = make_schedule(sorted(load_team_files(pool_dir)), n_pairs, seed)
     pairs = [schedule[i : i + 2] for i in range(0, len(schedule), 2)]
     lanes = min(lanes, len(pairs))  # an empty lane would still start an opponent process
     lane_matches = [[m for pr in pairs[i::lanes] for m in pr] for i in range(lanes)]
@@ -203,7 +215,7 @@ def run_external(
 
 def run_vs_foulplay(bot: str, n_pairs: int, pool_dir=str(DEFAULT_POOL), ports=(8000,), lanes=2,
                     search_ms=1000, parallelism=4, seed=0, trace=False, replays=False,
-                    log_dir="data/eval", heldout=False) -> dict:  # fmt: skip
+                    log_dir="data/eval", heldout=False, pairs=False) -> dict:  # fmt: skip
     opp = {"kind": "foulplay", "search_ms": search_ms, "parallelism": parallelism}
     return run_external(bot, opp, n_pairs, pool_dir, ports, lanes, seed, trace, replays, log_dir,
-                        heldout)  # fmt: skip
+                        heldout, pairs)  # fmt: skip

@@ -380,8 +380,8 @@ def sequential_match(a, net_a: str, net_b: str, seed: int, log_dir: str) -> dict
     # 2026-10-08: the teams are fresh real-game pairs drawn like self-play's (seed: ``seed`` +
     # 100,000), not the 40 copied teams of replay40: on those, gen 2 scored 46.5% against gen 1
     # while on 200 real-game pairs it scored 53.6% (the small pool misjudged)
-    """net_a vs net_b, equal time, paired, as a sequential test (design D15-6; fishtest-style
-    SPRT on the pair scores): H0 = net_a is --elo0 weaker, H1 = --elo1; checked every
+    """net_a vs net_b at a fixed number of search iterations, paired, as a sequential test
+    (design D15-6; fishtest-style SPRT on the pair scores): H0 = net_a is --elo0 weaker, H1 = --elo1; checked every
     --batch-pairs finished pairs, stops when the log-likelihood ratio leaves
     [log(beta / (1 - alpha)), log((1 - beta) / alpha)], at most --pairs pairs (then: the sign
     of the ratio). "decision": "H1" (not worse) or "H0" (worse)."""
@@ -509,7 +509,9 @@ def cmd_baseline(a) -> int:
 
 def cmd_foulplay(a) -> int:
     """External anchor (design D15-6): the current network vs Foul Play at a fixed setting
-    (our CPU ISMCTS --search-ms vs Foul Play --fp-ms x --fp-parallelism, heldout belief), paired.
+    (our CPU ISMCTS --search-ms vs Foul Play --fp-ms x --fp-parallelism) on the SAME 200 real-game
+    team pairs every time (data/teams/pools/wide200, sampled like self-play's with seed 9001;
+    re-sampled if missing), each played twice with the teams exchanged.
     Never decides promotion: returns 3 (the loop stops for a look) when the score is below the
     best earlier one at the same setting by more than --drop and significantly."""
     import json
@@ -522,10 +524,12 @@ def cmd_foulplay(a) -> int:
     cur = st["current"]
     os.environ["ALPHA_MODEL_A"] = cur
     os.environ["ALPHA_SEARCH_MS"] = str(a.search_ms)
-    setting = f"ours {a.search_ms}ms vs foulplay {a.fp_ms}ms x{a.fp_parallelism}"
-    res = run_vs_foulplay("s_ismcts_ma", a.pairs, ports=tuple(a.ports), lanes=a.lanes,
-                          search_ms=a.fp_ms, parallelism=a.fp_parallelism, seed=2000 + a.gen,
-                          log_dir=str(SELFPLAY_DIR / f"gen{a.gen}"), heldout=True)  # fmt: skip
+    pool = eval_pool(Path("data/teams/pools"), "wide200", 200, 9001)
+    setting = (f"ours {a.search_ms}ms vs foulplay {a.fp_ms}ms x{a.fp_parallelism}, "
+               f"{Path(pool).name} pairs")  # fmt: skip
+    res = run_vs_foulplay("s_ismcts_ma", a.pairs, pool_dir=pool, ports=tuple(a.ports),
+                          lanes=a.lanes, search_ms=a.fp_ms, parallelism=a.fp_parallelism,
+                          log_dir=str(SELFPLAY_DIR / f"gen{a.gen}"), pairs=True)  # fmt: skip
     res |= {"network": cur, "setting": setting, "gen": a.gen}
     st = state()
     earlier = [r for r in st.get("foulplay", []) if r["setting"] == setting
