@@ -3,7 +3,7 @@
   "model": "v5-glu",
   "elo": 1500.0
  },
- "built": "2026-10-09 07:41",
+ "built": "2026-10-09 08:13",
  "current": "sp-gen0",
  "models": [
   {
@@ -51,11 +51,26 @@
    },
    "created": "2026-10-09 06:08",
    "matches": [
-    "gen0-eval"
+    "gen0-eval",
+    "gen0-foulplay"
    ],
    "elo": 1493.5,
    "elo_ci95": 21.5,
    "current": true
+  },
+  {
+   "name": "foulplay-200ms",
+   "run": "data/train/v5/runs/foulplay-200ms",
+   "sha256": null,
+   "generation": null,
+   "role": "variant",
+   "promoted": null,
+   "played_generations": [],
+   "matches": [
+    "gen0-foulplay"
+   ],
+   "elo": null,
+   "elo_ci95": null
   },
   {
    "name": "v5-glu",

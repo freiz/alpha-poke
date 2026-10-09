@@ -859,7 +859,9 @@ def main() -> None:
     p = sub.add_parser("loop", help="generations one after another")
     p.add_argument("--start", type=int, required=True)
     p.add_argument("--gens", type=int, default=100)
-    p.add_argument("--games", type=int, default=5000)
+    # 2026-10-09: 10,000 (was 5,000): per-generation gains were near the evaluation's resolution
+    # (+-23 Elo), the evaluation was 35-40% of the time, and value labels (one per game) scarce
+    p.add_argument("--games", type=int, default=10000)
     p.add_argument("--procs", type=int, default=6)  # self-play processes (20 logical CPUs)
     p.add_argument("--threads", type=int, default=2)
     p.add_argument("--eval-pairs", type=int, default=400)
@@ -872,7 +874,7 @@ def main() -> None:
     p.set_defaults(fn=cmd_loop)
     p = sub.add_parser("cycle", help="one generation end to end")
     p.add_argument("--gen", type=int, required=True)
-    p.add_argument("--games", type=int, default=5000, help="team pairs if not sampled yet")
+    p.add_argument("--games", type=int, default=10000, help="team pairs if not sampled yet")
     p.add_argument("--procs", type=int, default=2)
     p.add_argument("--lanes", type=int, default=24)
     p.add_argument("--threads", type=int, default=8, help="collect threads per process")
