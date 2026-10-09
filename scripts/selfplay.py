@@ -111,11 +111,25 @@ BASE_RUN = "data/train/v5/runs/v5-glu"
 # rejected counts as an over-update (gen 1: 0.0023, lr 1e-4, 2 passes)
 KL_BIG = 0.01
 # the training setup of the current network (v5-glu): same flags, plus self-play
-TRAIN_FLAGS = ("--data v5 --stream 4 --val-cutoff 1776921722 --eval-every 500 --arch transformer "
+TRAIN_FLAGS = ("--data v5 --stream 4 --val-cutoff 1776921722 --train-only hf- --eval-every 500 "
+               "--arch transformer "
                "--history --mtp 3 --mtp-weight 0.5 --mtp-decay 0.5 --value-residual "
                "--value-per-game 4 --kinds main,forced,pivot,blind --aux oppset "
                "--feats reveal,num,movetab,matchup,elo,counter "
                "--d-ff 171 --ffn swiglu --norm rms --qk-norm")  # fmt: skip
+
+
+def capped(cmd: list[str], gb: float) -> list[str]:
+    """``cmd`` under a cgroup memory cap (a systemd user scope): a step that outgrows it is
+    killed alone, by the OOM killer of its own cgroup, with all its child processes; without a
+    cap a step can exhaust the machine's memory and take WSL down with it (2026-10-09: a 41.5 GB
+    featurization of an oversized shard did). No cap without systemd-run or with gb <= 0."""
+    import shutil
+
+    if gb <= 0 or not shutil.which("systemd-run"):
+        return cmd
+    return ["systemd-run", "--user", "--scope", "--quiet", "-p", f"MemoryMax={gb:g}G",
+            "-p", "MemorySwapMax=0", *cmd]  # fmt: skip
 
 
 def state() -> dict:
@@ -673,7 +687,8 @@ def cmd_loop(a) -> None:
     say(f"loop: generations {a.start}..{a.start + a.gens - 1}")
     for gen in range(a.start, a.start + a.gens):
         args = ["cycle", "--gen", str(gen), "--games", str(a.games), "--procs", str(a.procs),
-                "--threads", str(a.threads), "--eval-pairs", str(a.eval_pairs)]  # fmt: skip
+                "--threads", str(a.threads), "--eval-pairs", str(a.eval_pairs),
+                "--mem-cap-gb", str(a.mem_cap_gb)]  # fmt: skip
         for attempt in (1, 2):
             say(f"gen {gen}: cycle (attempt {attempt})")
             if subprocess.run(me + args).returncode == 0:
@@ -715,7 +730,7 @@ def cmd_loop(a) -> None:
                 f"{anchor_of(st, gen, a.anchor_back)}")  # fmt: skip
             check = ["baseline", "--gen", str(gen), "--back", str(a.anchor_back), "--pairs",
                      str(a.baseline_pairs), "--max-stagnant", str(a.max_stagnant)]  # fmt: skip
-            code = subprocess.run(me + check).returncode
+            code = subprocess.run(capped(me + check, a.mem_cap_gb)).returncode
             b = state()["generations"][str(gen)].get("baseline", {})
             say(f"gen {gen}: vs {b.get('anchor')} {b.get('paired_mean')} +- "
                 f"{b.get('ci95_paired')}; progress {b.get('progress')} "
@@ -729,7 +744,9 @@ def cmd_loop(a) -> None:
                 return
         if gen % a.foulplay_every == 0 or not state().get("foulplay"):
             say(f"gen {gen}: Foul Play check of {state()['current']}")
-            code = subprocess.run(me + ["foulplay", "--gen", str(gen)]).returncode
+            code = subprocess.run(
+                capped(me + ["foulplay", "--gen", str(gen)], a.mem_cap_gb)
+            ).returncode
             f = state()["generations"][str(gen)].get("foulplay", {})
             say(f"gen {gen}: vs Foul Play {f.get('paired_mean')} +- {f.get('ci95_paired')} "
                 f"({f.get('games')} games; drop {f.get('drop')}, z {f.get('drop_z')})")  # fmt: skip
@@ -764,7 +781,8 @@ def cmd_cycle(a) -> None:
         t0 = time.time()
         print(f"[{time.strftime('%H:%M:%S')}] gen {a.gen}: {name}", flush=True)
         with open(gen_dir / f"{name}.log", "a") as f:
-            subprocess.run(me + args, check=True, stdout=f, stderr=subprocess.STDOUT)
+            subprocess.run(capped(me + args, a.mem_cap_gb), check=True, stdout=f,
+                           stderr=subprocess.STDOUT)  # fmt: skip
         record(a.gen, f"{name}_minutes", round((time.time() - t0) / 60, 1))
     print(f"[{time.strftime('%H:%M:%S')}] gen {a.gen} done: {state()['generations'][str(a.gen)]}")
 
@@ -936,6 +954,8 @@ def main() -> None:
     p.add_argument("--max-stagnant", type=int, default=2)
     p.add_argument("--foulplay-every", type=int, default=9)
     p.add_argument("--max-rejected", type=int, default=3)
+    p.add_argument("--mem-cap-gb", type=float, default=40,
+                   help="memory cap of every step (cgroup; WSL has 48 GB; 0 = none)")  # fmt: skip
     p.set_defaults(fn=cmd_loop)
     p = sub.add_parser("cycle", help="one generation end to end")
     p.add_argument("--gen", type=int, required=True)
@@ -949,6 +969,7 @@ def main() -> None:
         default=400,
         help="most pairs of the per-generation sequential test (eval)",
     )
+    p.add_argument("--mem-cap-gb", type=float, default=40, help="memory cap of every step")
     p.set_defaults(fn=cmd_cycle)
     a = ap.parse_args()
     a.fn(a)

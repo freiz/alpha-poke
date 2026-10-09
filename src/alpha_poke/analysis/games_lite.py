@@ -18,7 +18,26 @@ import pyarrow.parquet as pq
 from alpha_poke.analysis.roles import to_id
 from alpha_poke.analysis.tables import OUT
 
-SRC = "data/metamon/gen9ou/*.parquet"
+# replay sources, same columns (id, log, uploadtime, rating, ...): Metamon's Gen9 OU (to
+# 2026-05-19) and the HolidayOugi HF dump's games after it (deduplicated by id; 2026-10-09).
+# Shard file names are unique across the sources
+SOURCES = ("data/metamon/gen9ou/*.parquet", "data/replays_hf/gen9ou/*.parquet")
+
+
+def source_files() -> list[str]:
+    """Every source shard, Metamon's first (their order, and so their seeds, unchanged)."""
+    return [f for g in SOURCES for f in sorted(glob.glob(g))]
+
+
+def source_path(shard: str) -> Path:
+    """A shard's file from its name (the lite table's ``shard``)."""
+    for g in SOURCES:
+        f = Path(g).parent / shard
+        if f.exists():
+            return f
+    raise FileNotFoundError(shard)
+
+
 DEST = OUT / "gen9ou_games_lite.parquet"
 _POKE = re.compile(r"^\|poke\|(p[12])\|([^,|]+)", re.M)
 _PLAYER = re.compile(r"^\|player\|(p[12])\|([^|\n]*)\|[^|\n]*\|?(\d*)", re.M)
@@ -73,14 +92,14 @@ def logs(rows: list[dict]) -> dict[str, dict]:
         by_shard.setdefault(r["shard"], []).append(r["row"])
     out = {}
     for shard, idx in by_shard.items():
-        t = pq.read_table(Path(SRC).parent / shard).take(sorted(set(idx)))
+        t = pq.read_table(source_path(shard)).take(sorted(set(idx)))
         for rec in t.to_pylist():
             out[rec["id"]] = rec
     return out
 
 
 def build(workers: int = 8) -> pa.Table:
-    files = sorted(glob.glob(SRC))
+    files = source_files()
     with ProcessPoolExecutor(workers) as ex:
         rows = [r for part in ex.map(_shard, files) for r in part]
     table = pa.Table.from_pylist(rows)

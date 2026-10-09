@@ -63,9 +63,21 @@ DIMS = alpha_search.feature_dims()
 HDMG = [8, 15]  # history dense: own / opponent damage dealt (features.rs history_features)
 
 
+# the most positions of one shard: featurization holds a whole shard in memory (~21 KB per
+# position at its peak, 18.4 GB for 0.87M; 3.7M took 41.5 GB before the kill and, with the
+# evaluation running, exhausted WSL's 48 GB: 2026-10-09), and the training reads a shard's columns
+# whole from its cache. Metamon's shards hold <= 1.15M; bigger ones are split first
+# (scripts/split_shards.py)
+MAX_SHARD_ROWS = 1_200_000
+
+
 def featurize_shard(path: Path, cache: Path) -> int:
     """Write the shard's feature cache (if missing); returns its number of positions."""
     names = pq.read_schema(path).names
+    rows = pq.read_metadata(path).num_rows
+    if rows > MAX_SHARD_ROWS:
+        raise ValueError(f"{path}: {rows} positions > {MAX_SHARD_ROWS} (memory): split it with "
+                         "scripts/split_shards.py")  # fmt: skip
     has_hist, has_fut, has_v3 = "history" in names, "future" in names, "reveal" in names
     if cache.exists():
         with np.load(cache) as z:
@@ -827,6 +839,9 @@ def main() -> None:
     )
     ap.add_argument("--half-life", type=float, default=180.0, help="days; 0 = no time weighting")
     ap.add_argument("--val-frac", type=float, default=0.03)
+    ap.add_argument("--train-only", default="",
+                    help="shard name prefixes never in validation (comma-separated), e.g. hf-: "
+                         "the replays after Metamon's; v5's validation stays")  # fmt: skip
     ap.add_argument("--val-cutoff", type=int, default=None,
                     help="validation = games uploaded at / after this unix time (fixed split "
                          "across datasets; v1's 3%% cutoff is 1776921722)")  # fmt: skip
@@ -886,11 +901,22 @@ def main() -> None:
         d = load(a.data)
         n = len(d["action"])
     # validation: the most recent games (whole games)
+    # --train-only: shards whose games always train (newer data: the validation set stays as it
+    # was). Their games are left out of the game times too: a game id (crc32) they share with an
+    # older game would move that one into validation (11 shared ids moved 159 positions, which
+    # changes the whole drawn validation subset: 2026-10-09)
+    fixed = np.zeros(n, bool)
+    if a.train_only:
+        assert a.stream, "--train-only needs --stream"
+        prefixes = tuple(a.train_only.split(","))
+        fixed = np.array([c.stem.startswith(prefixes) for c in caches])[d["shard"]]
     game_time = {}
-    for g, ut in zip(d["game"], d["uploadtime"], strict=True):
-        game_time[g] = max(game_time.get(g, 0), ut)
+    for g, ut, f in zip(d["game"], d["uploadtime"], fixed, strict=True):
+        if not f:
+            game_time[g] = max(game_time.get(g, 0), ut)
     cutoff = a.val_cutoff or np.quantile(np.fromiter(game_time.values(), np.int64), 1 - a.val_frac)
-    is_val = np.array([game_time[g] >= cutoff for g in d["game"]])
+    is_val = np.array([not f and game_time[g] >= cutoff for g, f in zip(d["game"], fixed,
+                                                                         strict=True)])  # fmt: skip
     train_idx, val_idx = np.flatnonzero(~is_val), np.flatnonzero(is_val)
     if "kind" in d:  # v4: the decision points to train on
         names = ("main", "forced", "pivot", "blind")

@@ -2,7 +2,8 @@
 
 Usage: uv run python scripts/build_training_data.py --name v1 --per-game 4 --workers 8
 
-Source: Metamon's Gen9 OU replays (data/metamon/gen9ou, scripts/fetch_metamon.py), all of them
+Source: the Gen9 OU replays of analysis.games_lite.SOURCES (Metamon's, scripts/fetch_metamon.py,
+and the newer HF dump's, data/replays_hf), all of them
 by default. Every game gives ``--per-game`` positions drawn at random among its turn-start
 decision points (+ ``--extra-per-game`` of its forced / pivot switches and unseen choices, v4)
 (many games x few positions: positions of one game are strongly correlated and share one
@@ -16,7 +17,6 @@ shards, and memory stays bounded (the logs of all games do not fit at once).
 """
 
 import argparse
-import glob
 import json
 import random
 import time
@@ -28,9 +28,9 @@ import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.parquet as pq
 
+from alpha_poke.analysis.games_lite import source_files
 from alpha_poke.teams import DEFAULT_POOL
 
-SRC = "data/metamon/gen9ou/*.parquet"
 _belief = None
 
 
@@ -90,6 +90,8 @@ def main() -> None:
     ap.add_argument("--move-beta", type=float, default=1.0)
     ap.add_argument("--heldout", action="store_true", help="belief without the eval team pool")
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--max-games", type=int, default=60_000,
+                    help="per source shard (Metamon's: <= 58k; split bigger ones)")  # fmt: skip
     a = ap.parse_args()
     out = Path("data/train") / a.name
     out.mkdir(parents=True, exist_ok=True)
@@ -98,10 +100,14 @@ def main() -> None:
     t0 = time.time()
     n_games = n_pos = n_failed = 0
     with ProcessPoolExecutor(a.workers, initializer=_init, initargs=(a.heldout,)) as pool:
-        for k, src in enumerate(sorted(glob.glob(SRC))):
+        for k, src in enumerate(source_files()):
             dst = out / Path(src).name
             if dst.exists():
                 continue
+            n_src = pq.read_metadata(src).num_rows
+            if n_src > a.max_games:  # its positions would not fit featurization (train_pv)
+                raise SystemExit(f"{src}: {n_src} games > --max-games {a.max_games}: split it "
+                                 "with scripts/split_shards.py")  # fmt: skip
             rows = load_games(src, a.min_rating, since, a.fraction, a.seed + k)
             tasks = [
                 (
