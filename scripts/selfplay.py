@@ -377,14 +377,15 @@ def cmd_train(a) -> None:
 
 
 def sequential_match(a, net_a: str, net_b: str, seed: int, log_dir: str) -> dict:
-    # 2026-10-08: the teams are fresh real-game pairs drawn like self-play's (seed: ``seed`` +
-    # 100,000), not the 40 copied teams of replay40: on those, gen 2 scored 46.5% against gen 1
-    # while on 200 real-game pairs it scored 53.6% (the small pool misjudged)
     """net_a vs net_b at a fixed number of search iterations, paired, as a sequential test
     (design D15-6; fishtest-style SPRT on the pair scores): H0 = net_a is --elo0 weaker,
-    H1 = --elo1; checked every --batch-pairs finished pairs, stops when the log-likelihood ratio leaves
-    [log(beta / (1 - alpha)), log((1 - beta) / alpha)], at most --pairs pairs (then: the sign
-    of the ratio). "decision": "H1" (not worse) or "H0" (worse)."""
+    H1 = --elo1; checked every --batch-pairs finished pairs, stops when the log-likelihood
+    ratio leaves [log(beta / (1 - alpha)), log((1 - beta) / alpha)], at most --pairs pairs
+    (then: the sign of the ratio). "decision": "H1" (not worse) or "H0" (worse).
+
+    The teams: fresh real-game pairs drawn like self-play's (seed ``seed`` + 100,000), not the
+    40 copied teams of replay40 (2026-10-08: on those gen 2 scored 46.5% against gen 1, on 200
+    real-game pairs 53.6%: the small pool misjudged)."""
     import math
     import os
 
