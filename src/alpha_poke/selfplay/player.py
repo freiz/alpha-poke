@@ -30,7 +30,8 @@ class SelfPlayPlayer(SearchPlayer):
     def __init__(self, *args, batcher=None, full_frac: float = 0.25, full_iters: int = 3000,
                  fast_iters: int = 600, fast_worlds: int = 16,
                  noise: tuple[float, float] = (0.1, 10.0), turn_cap: int = 300, seed: int = 0,
-                 greedy: bool = False, record: bool = True, **kwargs):  # fmt: skip
+                 greedy: bool = False, record: bool = True, temp_turns: int = 8,
+                 temp_late: float = 0.25, **kwargs):  # fmt: skip
         super().__init__(*args, **kwargs)
         assert self.model_transformer and batcher is not None
         self.batcher = batcher
@@ -41,6 +42,11 @@ class SelfPlayPlayer(SearchPlayer):
         self.records: dict[str, list[dict]] = {}
         # evaluation (eval.bots g_ma / g_mb): the most visited option, nothing recorded
         self.greedy, self.record = greedy, record
+        # the move: sampled from the visits ** (1 / tau), tau = 1 for the first ``temp_turns``
+        # turns (variety), then ``temp_late`` (AlphaZero / KataGo: later blunders would make
+        # the outcome a noisy label of the position: in gen 2 only 58% of the moves played were
+        # the most visited)
+        self.temp_turns, self.temp_late = temp_turns, temp_late
 
     def choose_move(self, battle):
         return self._choose_selfplay(battle)
@@ -102,10 +108,13 @@ class SelfPlayPlayer(SearchPlayer):
                         [m.id for m in battle.available_moves],
                         [m.species for m in battle.available_switches])  # fmt: skip
             return None
+        tau = 1.0 if battle.turn <= self.temp_turns else self.temp_late
         if self.greedy:
+            tau = 0.0
             slot = max(options, key=lambda o: o[1])[0]
         else:
-            slot = self.rng.choices([i for i, _ in options], weights=[v for _, v in options])[0]
+            weights = [v ** (1 / tau) for _, v in options]
+            slot = self.rng.choices([i for i, _ in options], weights=weights)[0]
         if not self.record:
             return orders[slot]
         reveal, ratings, turn, history = ctxs[0]
@@ -113,7 +122,7 @@ class SelfPlayPlayer(SearchPlayer):
             "side": battle.player_role, "turn": battle.turn, "kind": kind, "full": full,
             "worlds": n_worlds, "iterations": n, "seconds": round(time.time() - t0, 3),
             "t_worlds": round(t1 - t0, 4), "t_ctx": round(t2 - t1, 4),
-            "t_search": round(time.time() - t2, 4),
+            "t_search": round(time.time() - t2, 4), "tau": tau,
             "state": states[0].to_string(), "reveal": list(reveal), "ratings": list(ratings),
             "ctx_turn": turn, "history": history, "slot": slot,
             **{k: rec[k] for k in ("visits", "mean", "prior", "legal", "names", "q",

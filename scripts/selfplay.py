@@ -96,7 +96,8 @@ def cmd_run(a) -> None:
     settings = {"model": model, "full_frac": a.full_frac, "full_iters": a.full_iters,
                 "fast_iters": a.fast_iters, "fast_worlds": a.fast_worlds,
                 "noise": [a.noise_eps, a.noise_conc], "lanes": a.lanes, "leaves": a.leaves,
-                "threads": a.threads, "turn_cap": a.turn_cap}  # fmt: skip
+                "threads": a.threads, "turn_cap": a.turn_cap, "temp_turns": a.temp_turns,
+                "temp_late": a.temp_late}  # fmt: skip
     (gen_dir / "settings.json").write_text(json.dumps(settings, indent=1))
     t0 = time.time()
     n = runner.run(gen_dir, pairs, settings, a.procs, tuple(a.ports), a.limit)
@@ -761,6 +762,8 @@ def main() -> None:
     p.add_argument("--leaves", type=int, default=8, help="leaves per search per GPU round")
     p.add_argument("--threads", type=int, default=8, help="collect threads per process")
     p.add_argument("--turn-cap", type=int, default=300, help="forfeit at this turn (capped)")
+    p.add_argument("--temp-turns", type=int, default=8, help="moves sampled at tau 1 until")
+    p.add_argument("--temp-late", type=float, default=0.25, help="tau after --temp-turns")
     p.set_defaults(fn=cmd_run)
     p = sub.add_parser("convert")
     p.add_argument("--gen", type=int, required=True)
