@@ -79,7 +79,7 @@ async def _lane(lane: str, jobs: list, port: int, gen_dir: Path, settings: dict,
     # random choices (full / fast searches, root noise, move sampling)
     seed = zlib.crc32(f"{settings['run_tag']}:{lane}".encode())
     a, b = player("a", 2 * seed), player("b", 2 * seed + 1)
-    n = 0
+    n = resets = 0
     for idx, pair in jobs:
         a.update_team(packed(pair.p1.text))
         b.update_team(packed(pair.p2.text))
@@ -92,6 +92,11 @@ async def _lane(lane: str, jobs: list, port: int, gen_dir: Path, settings: dict,
         except TimeoutError:
             logging.getLogger(__name__).warning("pair %d: no finished game after %ds, skipped",
                                                 idx, GAME_TIMEOUT)  # fmt: skip
+            # the players still hold the unfinished battle (max_concurrent_battles=1): every
+            # later challenge of theirs would wait for it too. New players (accounts) instead.
+            resets += 1
+            a = player(f"a{resets}", 2 * seed + 2 * resets)
+            b = player(f"b{resets}", 2 * seed + 2 * resets + 1)
             continue
         new = [k for k in a.battles if k not in before]
         if not new:
@@ -184,8 +189,14 @@ def _worker(args) -> int:
 def run(gen_dir: Path, pairs: list, settings: dict, procs: int = 4,
         ports: tuple[int, ...] = (8000, 8001), limit: int = 0) -> int:  # fmt: skip
     """Play the pairs not yet done (at most ``limit`` if > 0); returns the games played."""
+    from alpha_poke.selfplay.teams import poke_env_clash
+
     done = done_pairs(gen_dir)
     jobs = [(i, p) for i, p in enumerate(pairs) if i not in done]
+    bad = [i for i, p in jobs if poke_env_clash(p.p1.text) or poke_env_clash(p.p2.text)]
+    if bad:  # pairs drawn before teams.sample rejected them
+        print(f"pairs {bad}: a team poke-env cannot track, skipped")
+        jobs = [(i, p) for i, p in jobs if i not in bad]
     if limit:
         jobs = jobs[:limit]
     if not jobs:

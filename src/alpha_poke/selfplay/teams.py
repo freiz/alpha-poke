@@ -215,7 +215,7 @@ class TeamSampler:
                 todo = left
             for r in games:
                 p1, p2 = sides.get((r["id"], "p1")), sides.get((r["id"], "p2"))
-                if p1 is None or p2 is None:
+                if p1 is None or p2 is None or poke_env_clash(p1.text) or poke_env_clash(p2.text):
                     stats["skipped"] += 1
                     continue
                 if len(out) < n:
@@ -223,6 +223,28 @@ class TeamSampler:
                                         (int(r["r1"]), int(r["r2"]))))  # fmt: skip
         log(f"{len(out)} pairs from {stats['games']} games: {stats}")
         return out
+
+
+def species_names(text: str) -> list[str]:
+    """The species of a Showdown export (nicknames and gender dropped)."""
+    out = []
+    for block in text.strip().split("\n\n"):
+        head = block.strip().splitlines()[0].split(" @ ")[0].strip()
+        head = re.sub(r" \([MF]\)$", "", head)
+        m = re.search(r"\(([^()]+)\)$", head)
+        out.append(m.group(1) if m else head)
+    return out
+
+
+def poke_env_clash(text: str) -> bool:
+    """A team poke-env cannot track: it matches a request's Pokemon to a team member by base
+    species or by any "-" part of the name (``Pokemon.identifies_as``), so Porygon and Porygon-Z
+    become one member, the team-preview request raises KeyError and the game never starts (gen 1,
+    2026-10-09: a lane stuck for good)."""
+    names = species_names(text)
+    mons = [Pokemon(gen=9, species=to_id(n)) for n in names]
+    return any(p.identifies_as(q) for i, p in enumerate(mons)
+               for j, q in enumerate(names) if i != j)  # fmt: skip
 
 
 def save(pairs: list[TeamPair], path: Path) -> None:
