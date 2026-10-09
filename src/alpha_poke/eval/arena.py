@@ -19,6 +19,7 @@ import math
 import multiprocessing as mp
 import os
 import random
+import re
 import subprocess
 import time
 from concurrent.futures import ProcessPoolExecutor
@@ -61,6 +62,19 @@ class Match:
     team_a: str
     team_b: str
     a_challenges: bool
+
+
+def pair_schedule(pool_dir: str, n_pairs: int = 0) -> list[Match]:
+    """A pool of fixed team pairs (``pair<k>_a.txt`` / ``pair<k>_b.txt``: real-game pairs, e.g.
+    sampled like self-play's): each pair played twice with the teams exchanged and the
+    challenger alternating; the first ``n_pairs`` (0: all)."""
+    ks = sorted({int(m.group(1)) for f in Path(pool_dir).glob("pair*_a.txt")
+                 if (m := re.match(r"pair(\d+)_a", f.stem))})  # fmt: skip
+    out = []
+    for k in ks[:n_pairs] if n_pairs else ks:
+        x, y = f"pair{k:03d}_a", f"pair{k:03d}_b"
+        out += [Match(k, 0, x, y, k % 2 == 0), Match(k, 1, y, x, k % 2 == 1)]
+    return out
 
 
 def make_schedule(team_names: list[str], n_pairs: int, seed: int = 0) -> list[Match]:
@@ -180,11 +194,14 @@ def run_arena(
     replays: bool = False,
     stop=None,
     poll: float = 20.0,
+    pairs: bool = False,
 ) -> dict:
     """``stop``: called with the logged rows every ``poll`` seconds; True ends the run early
     (the workers are terminated; the summary covers the games logged so far)."""
-    names = sorted(load_team_files(pool_dir))
-    schedule = make_schedule(names, n_pairs, seed)
+    if pairs:  # a pool of fixed real-game pairs (pair_schedule)
+        schedule = pair_schedule(pool_dir, n_pairs)
+    else:
+        schedule = make_schedule(sorted(load_team_files(pool_dir)), n_pairs, seed)
     # keep both games of a pair in the same lane (not required, but keeps logs readable)
     pairs = [schedule[i : i + 2] for i in range(0, len(schedule), 2)]
     n_lanes = procs * lanes_per_proc

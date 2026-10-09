@@ -31,14 +31,43 @@ from alpha_poke.selfplay import SELFPLAY_DIR
 SINCE_DEFAULT = 1746057600  # 2025-05-01: the current metagame (the matchup model's window too)
 
 
-def cmd_teams(a) -> None:
+def sample_pairs(n: int, seed: int, since: int = 0, half_life: float = 120.0,
+                 catalog_frac: float = 0.3, temp: float = 1.3) -> tuple[list, object]:  # fmt: skip
+    """``n`` validated real-game team pairs, drawn like self-play's (selfplay.teams)."""
     from alpha_poke.agents.belief_state import BeliefModel
     from alpha_poke.selfplay import teams
 
     logging.disable(logging.WARNING)
-    ts = teams.TeamSampler(BeliefModel.load(), since=a.since, half_life_days=a.half_life,
-                           catalog_frac=a.catalog_frac, temp=a.temp, seed=a.seed)  # fmt: skip
-    pairs = ts.sample(a.n)
+    ts = teams.TeamSampler(BeliefModel.load(), since=since or SINCE_DEFAULT,
+                           half_life_days=half_life, catalog_frac=catalog_frac, temp=temp,
+                           seed=seed)  # fmt: skip
+    pairs = ts.sample(n)
+    logging.disable(logging.NOTSET)
+    return pairs, ts
+
+
+def eval_pool(gen_dir: Path, name: str, n: int, seed: int) -> str:
+    """An evaluation pool of ``n`` fresh real-game pairs (``gen_dir/<name>``, pair files for
+    eval.arena.pair_schedule), drawn like self-play's with a seed of its own; kept if present."""
+    import json
+
+    d = gen_dir / name
+    if len(list(d.glob("pair*_a.txt"))) >= n:
+        return str(d)
+    pairs, _ = sample_pairs(n, seed)
+    d.mkdir(parents=True, exist_ok=True)
+    for i, p in enumerate(pairs):
+        (d / f"pair{i:03d}_a.txt").write_text(p.p1.text)
+        (d / f"pair{i:03d}_b.txt").write_text(p.p2.text)
+    meta = {"seed": seed, "pairs": len(pairs), "games": [p.game for p in pairs]}
+    (d / "meta.json").write_text(json.dumps(meta, indent=1))
+    return str(d)
+
+
+def cmd_teams(a) -> None:
+    from alpha_poke.selfplay import teams
+
+    pairs, ts = sample_pairs(a.n, a.seed, a.since, a.half_life, a.catalog_frac, a.temp)
     path = SELFPLAY_DIR / f"gen{a.gen}" / "teams.jsonl"
     teams.save(pairs, path)
     kinds = collections.Counter(s.kind for p in pairs for s in (p.p1, p.p2))
@@ -348,6 +377,9 @@ def cmd_train(a) -> None:
 
 
 def sequential_match(a, net_a: str, net_b: str, seed: int, log_dir: str) -> dict:
+    # 2026-10-08: the teams are fresh real-game pairs drawn like self-play's (seed: ``seed`` +
+    # 100,000), not the 40 copied teams of replay40: on those, gen 2 scored 46.5% against gen 1
+    # while on 200 real-game pairs it scored 53.6% (the small pool misjudged)
     """net_a vs net_b, equal time, paired, as a sequential test (design D15-6; fishtest-style
     SPRT on the pair scores): H0 = net_a is --elo0 weaker, H1 = --elo1; checked every
     --batch-pairs finished pairs, stops when the log-likelihood ratio leaves
@@ -385,8 +417,10 @@ def sequential_match(a, net_a: str, net_b: str, seed: int, log_dir: str) -> dict
         bots, procs, lanes = ("g_ma", "g_mb"), a.gpu_procs, a.gpu_lanes
     else:
         bots, procs, lanes = ("s_ismcts_ma", "s_ismcts_mb"), a.procs, a.lanes
-    res = run_arena(*bots, a.pairs, ports=tuple(a.ports), procs=procs, lanes_per_proc=lanes,
-                    seed=seed, log_dir=log_dir, stop=stop)  # fmt: skip
+    pool = eval_pool(Path(log_dir), f"eval_pool_{seed}", a.pairs, 100_000 + seed)
+    res = run_arena(*bots, a.pairs, pool_dir=pool, ports=tuple(a.ports), procs=procs,
+                    lanes_per_proc=lanes, seed=seed, log_dir=log_dir, stop=stop,
+                    pairs=True)  # fmt: skip
     from alpha_poke.eval.arena import read_log
 
     scores = pair_scores(read_log(res["log"]))
@@ -399,7 +433,7 @@ def sequential_match(a, net_a: str, net_b: str, seed: int, log_dir: str) -> dict
     res |= {"llr": round(llr, 3), "llr_bounds": [round(lo, 3), round(hi, 3)],
             "elo0": a.elo0, "elo1": a.elo1, "llr_trace": trace,
             "decision": "H1" if llr >= hi or (lo < llr and llr >= 0) else "H0",
-            "search_ms": a.search_ms, "search_iterations": a.iterations,
+            "search_ms": a.search_ms, "search_iterations": a.iterations, "pool": pool,
             "search": "gpu" if a.gpu else "cpu"}  # fmt: skip
     return res
 
