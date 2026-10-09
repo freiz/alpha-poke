@@ -155,6 +155,28 @@ def cmd_convert(a) -> None:
     record(a.gen, "convert", stats)
 
 
+def registry_match(mid: str, a_run: str, b_run: str, res: dict, kind: str, elo: bool,
+                   **extra) -> None:  # fmt: skip
+    """Add the match to the model registry (exp/) and rebuild exp/models.json."""
+    from alpha_poke.selfplay import registry
+
+    registry.add_match(registry.match_row(mid, a_run, b_run, res, kind=kind, elo=elo, **extra))
+    registry.write(state())
+
+
+def cmd_registry(a) -> None:
+    """Rebuild exp/models.json (Elo fit, model entries) from state.json, the runs and
+    exp/matches.jsonl."""
+    from alpha_poke.selfplay import registry
+
+    out = registry.write(state())
+    for m in out["models"]:
+        print(
+            f"{m['name']:28s} gen {m['generation']!s:4s} promoted {m['promoted']!s:5s} "
+            f"Elo {m['elo']} +- {m['elo_ci95']}"
+        )
+
+
 def cmd_stats(a) -> None:
     """Game statistics of the generation (design D15-7, selfplay.stats): lengths and moves
     played, by how defensive the two teams are, and the length change against the previous
@@ -455,6 +477,7 @@ def cmd_eval(a) -> None:
     res |= {"candidate": cand, "against": base, "promoted": promote,
             "significantly_better": p - ci > 0.5}  # fmt: skip
     record(a.gen, "eval", res)
+    registry_match(f"gen{a.gen}-eval", cand, base, res, "promotion", True)
     st = state()
     if promote:
         st["current"] = cand
@@ -504,6 +527,8 @@ def cmd_baseline(a) -> int:
     st["generations"].setdefault(str(a.gen), {})["baseline"] = res
     save_state(st)
     record(a.gen, "baseline", res)
+    if "skipped" not in res:
+        registry_match(f"gen{a.gen}-baseline", cur, against, res, "progress check", True)
     print(json.dumps(res, indent=1))
     return code
 
@@ -550,6 +575,8 @@ def cmd_foulplay(a) -> int:
         "failed_games", "log")})  # fmt: skip
     save_state(st)
     record(a.gen, "foulplay", res)
+    registry_match(f"gen{a.gen}-foulplay", cur, f"foulplay-{a.fp_ms}ms", res, "external", False,
+                   search_ms=a.search_ms)  # fmt: skip
     print(json.dumps(res, indent=1))
     return code
 
@@ -739,6 +766,8 @@ def main() -> None:
     p.add_argument("--gen", type=int, required=True)
     p.add_argument("--force", action="store_true")
     p.set_defaults(fn=cmd_convert)
+    p = sub.add_parser("registry", help="rebuild the model registry exp/models.json")
+    p.set_defaults(fn=cmd_registry)
     p = sub.add_parser("stats", help="game statistics of the generation")
     p.add_argument("--gen", type=int, required=True)
     p.set_defaults(fn=cmd_stats)
