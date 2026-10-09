@@ -14,6 +14,7 @@ Output: data/train/sp<gen>/shard-<k>.parquet, the human data's columns plus thes
 
 import json
 import math
+import os
 import random
 import time
 from collections import defaultdict
@@ -109,28 +110,50 @@ def convert_game(pair: int, game: dict, log: str, decisions: list, belief, gen: 
     return rows
 
 
-def convert(gen_dir: Path, out_dir: Path, gen: int, shard_games: int = 500, log=print) -> dict:
+def _convert_shard(args) -> dict:
+    """One shard (its own process): the games' rows written to ``path``; returns the counts."""
     from alpha_poke.agents.belief_state import BeliefModel
 
-    games, logs, decs = load_gen(gen_dir)
+    path, items, gen, stamp = args
     belief = BeliefModel.load()
-    stamp = int(time.time())
     stats: dict = defaultdict(int)
+    rows = []
+    for pair, game, log_text, decisions in items:
+        try:
+            rows += convert_game(pair, game, log_text, decisions, belief, gen, stamp, stats)
+            stats["games"] += 1
+        except Exception:  # noqa: BLE001 - a broken log must not stop the conversion
+            stats["failed_games"] += 1
+    if rows:
+        pq.write_table(pa.Table.from_pylist(rows), path, compression="zstd")
+    stats["positions"] += len(rows)
+    return dict(stats)
+
+
+def convert(gen_dir: Path, out_dir: Path, gen: int, shard_games: int = 500, log=print,
+            procs: int = 10) -> dict:  # fmt: skip
+    """The generation's games in shards of ``shard_games``, ``procs`` shards at a time (each
+    game has its own random seed: the same rows in any order)."""
+    import multiprocessing as mp
+    from concurrent.futures import ProcessPoolExecutor
+
+    games, logs, decs = load_gen(gen_dir)
+    stamp = int(time.time())
     out_dir.mkdir(parents=True, exist_ok=True)
     pairs = sorted(p for p in games if p in logs)
-    for k in range(0, len(pairs), shard_games):
-        rows = []
-        for pair in pairs[k : k + shard_games]:
-            try:
-                rows += convert_game(pair, games[pair], logs[pair], decs.get(pair, []), belief,
-                                     gen, stamp, stats)  # fmt: skip
-                stats["games"] += 1
-            except Exception:  # noqa: BLE001 - a broken log must not stop the conversion
-                stats["failed_games"] += 1
-        if rows:
-            path = out_dir / f"shard-{k // shard_games:04d}.parquet"
-            pq.write_table(pa.Table.from_pylist(rows), path, compression="zstd")
-        stats["positions"] += len(rows)
+    jobs = [(out_dir / f"shard-{k // shard_games:04d}.parquet",
+             [(p, games[p], logs[p], decs.get(p, [])) for p in pairs[k : k + shard_games]],
+             gen, stamp)
+            for k in range(0, len(pairs), shard_games)]  # fmt: skip
+    stats: dict = defaultdict(int)
+    # reproducible rows: the replay pipeline's results depend on set order (string hashing);
+    # the spawned workers read the seed at start-up
+    os.environ["PYTHONHASHSEED"] = "0"
+    with ProcessPoolExecutor(max(1, min(procs, len(jobs))),
+                             mp_context=mp.get_context("spawn")) as ex:  # fmt: skip
+        for part in ex.map(_convert_shard, jobs):
+            for k, v in part.items():
+                stats[k] += v
     stats = dict(stats)
     if stats.get("action_checked"):
         stats["action_agree_frac"] = round(stats["action_agree"] / stats["action_checked"], 4)
