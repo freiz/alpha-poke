@@ -613,7 +613,10 @@ def cmd_cycle(a) -> None:
     me = [sys.executable, __file__]
     steps = []
     if not (gen_dir / "teams.jsonl").exists():
-        steps.append(("teams", ["teams", "--gen", str(a.gen), "--n", str(a.games)]))
+        # a seed per generation: with the default (0) every generation drew the same ~5,000 real
+        # games (gens 1-3: 99% of their source games shared, 2026-10-08)
+        steps.append(("teams", ["teams", "--gen", str(a.gen), "--n", str(a.games), "--seed",
+                                str(a.gen)]))  # fmt: skip
     steps += [("run", ["run", "--gen", str(a.gen), "--procs", str(a.procs),
                        "--lanes", str(a.lanes), "--threads", str(a.threads)]),
               ("stats", ["stats", "--gen", str(a.gen)]),
