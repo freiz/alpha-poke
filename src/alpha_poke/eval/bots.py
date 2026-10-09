@@ -36,6 +36,13 @@ VARIANTS: dict[str, tuple[str, dict]] = {
         )  # fmt: skip
         for x in ("a", "b")
     },
+    # the same search, the networks on the GPU: every game of a process shares one batcher per
+    # network (selfplay.batcher, as in self-play) — no root noise, the most visited option,
+    # ALPHA_SEARCH_ITERATIONS (default 3,000) iterations and 32 worlds per decision
+    **{
+        f"g_m{x}": ("batched", {"model": os.environ.get(f"ALPHA_MODEL_{x.upper()}", GLU)})
+        for x in ("a", "b")
+    },  # fmt: skip
     # no search: the network's policy sampled with a temperature and a rating input, the model
     # of a specific human (design D5-O step 2); rating / tau via ALPHA_POLICY_RATING /
     # ALPHA_POLICY_TAU (scripts/counter_team.py sets them from the player's fit to v5-final)
@@ -76,6 +83,8 @@ def make_bot(
         from alpha_poke.agents.belief_state import BeliefModel
 
         cls_name, extra = VARIANTS[kind]
+        if cls_name == "batched":
+            return _batched_bot(extra["model"], heldout_pool, trace_dir, kw)
         if cls_name == "search":
             from alpha_poke.agents.search_player import SearchPlayer as cls
         elif cls_name == "policy":
@@ -85,3 +94,24 @@ def make_bot(
         belief = BeliefModel.load(heldout_pool=heldout_pool)
         return cls(belief, trace_dir=trace_dir, **extra, **kw)
     return BASELINES[kind](**kw)
+
+
+_BATCHERS: dict = {}  # model -> Batcher, one per network in each (worker) process
+
+
+def _batched_bot(model: str, heldout_pool, trace_dir, kw) -> Player:
+    import random
+
+    from alpha_poke.agents.belief_state import BeliefModel
+    from alpha_poke.selfplay.batcher import Batcher
+    from alpha_poke.selfplay.player import SelfPlayPlayer
+
+    if model not in _BATCHERS:
+        _BATCHERS[model] = Batcher(model, leaves=8, threads=2)
+    iters = int(os.environ.get("ALPHA_SEARCH_ITERATIONS") or 3000)
+    return SelfPlayPlayer(
+        BeliefModel.load(heldout_pool=heldout_pool), trace_dir=trace_dir, worlds=32,
+        net_policy="both", model=model, batcher=_BATCHERS[model], full_frac=1.0,
+        full_iters=iters, noise=(0.0, 10.0), turn_cap=10_000, greedy=True, record=False,
+        seed=random.randrange(1 << 30), **kw,
+    )  # fmt: skip

@@ -377,8 +377,16 @@ def sequential_match(a, net_a: str, net_b: str, seed: int, log_dir: str) -> dict
               f"[{lo:.2f}, {hi:.2f}]", flush=True)  # fmt: skip
         return not lo < llr < hi
 
-    res = run_arena("s_ismcts_ma", "s_ismcts_mb", a.pairs, ports=tuple(a.ports), procs=a.procs,
-                    lanes_per_proc=a.lanes, seed=seed, log_dir=log_dir, stop=stop)  # fmt: skip
+    # --gpu: the same search with the networks batched on the GPU across games (eval.bots
+    # g_ma / g_mb, as in self-play; top move agrees with the CPU search as often as two CPU
+    # searches do: 88.8% vs 90.0%), compiled (ALPHA_GPU_COMPILE); else one CPU search per game
+    if a.gpu:
+        os.environ["ALPHA_GPU_COMPILE"] = "1"
+        bots, procs, lanes = ("g_ma", "g_mb"), a.gpu_procs, a.gpu_lanes
+    else:
+        bots, procs, lanes = ("s_ismcts_ma", "s_ismcts_mb"), a.procs, a.lanes
+    res = run_arena(*bots, a.pairs, ports=tuple(a.ports), procs=procs, lanes_per_proc=lanes,
+                    seed=seed, log_dir=log_dir, stop=stop)  # fmt: skip
     from alpha_poke.eval.arena import read_log
 
     scores = pair_scores(read_log(res["log"]))
@@ -391,7 +399,8 @@ def sequential_match(a, net_a: str, net_b: str, seed: int, log_dir: str) -> dict
     res |= {"llr": round(llr, 3), "llr_bounds": [round(lo, 3), round(hi, 3)],
             "elo0": a.elo0, "elo1": a.elo1, "llr_trace": trace,
             "decision": "H1" if llr >= hi or (lo < llr and llr >= 0) else "H0",
-            "search_ms": a.search_ms, "search_iterations": a.iterations}  # fmt: skip
+            "search_ms": a.search_ms, "search_iterations": a.iterations,
+            "search": "gpu" if a.gpu else "cpu"}  # fmt: skip
     return res
 
 
@@ -632,6 +641,14 @@ def _stop_workers(*_) -> None:
 
 def sprt_args(p) -> None:
     """The sequential test of eval / baseline (sequential_match); --pairs is the maximum."""
+    p.add_argument(
+        "--gpu",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="GPU batched search (--no-gpu: one CPU search per game)",
+    )
+    p.add_argument("--gpu-procs", type=int, default=4)
+    p.add_argument("--gpu-lanes", type=int, default=12, help="games per process (GPU search)")
     p.add_argument("--batch-pairs", type=int, default=12, help="test every this many pairs")
     p.add_argument("--elo0", type=float, default=-20.0, help="H0: the new network this weaker")
     p.add_argument("--elo1", type=float, default=0.0, help="H1: this (not worse)")

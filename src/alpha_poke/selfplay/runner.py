@@ -168,6 +168,10 @@ async def _process(wid: int, jobs: list, port: int, gen_dir: Path, settings: dic
 
 def _worker(args) -> int:
     wid, jobs, port, gen_dir, settings = args
+    import os
+
+    # the batcher's network compiled (agents.gpu_net; GPU-bound since the CPU fixes)
+    os.environ["ALPHA_GPU_COMPILE"] = "1" if settings.get("compile", True) else "0"
     # warnings and errors (search failures, engine panics, fallbacks) of this worker
     logging.basicConfig(level=logging.WARNING, filename=str(Path(gen_dir) / f"errors-w{wid}.log"),
                         format="%(asctime)s %(name)s %(levelname)s %(message)s")  # fmt: skip

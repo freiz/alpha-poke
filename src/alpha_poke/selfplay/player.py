@@ -30,7 +30,7 @@ class SelfPlayPlayer(SearchPlayer):
     def __init__(self, *args, batcher=None, full_frac: float = 0.25, full_iters: int = 3000,
                  fast_iters: int = 600, fast_worlds: int = 16,
                  noise: tuple[float, float] = (0.1, 10.0), turn_cap: int = 300, seed: int = 0,
-                 **kwargs):  # fmt: skip
+                 greedy: bool = False, record: bool = True, **kwargs):  # fmt: skip
         super().__init__(*args, **kwargs)
         assert self.model_transformer and batcher is not None
         self.batcher = batcher
@@ -39,6 +39,8 @@ class SelfPlayPlayer(SearchPlayer):
         self.search_timeout = 120.0
         self.rng = random.Random(seed)
         self.records: dict[str, list[dict]] = {}
+        # evaluation (eval.bots g_ma / g_mb): the most visited option, nothing recorded
+        self.greedy, self.record = greedy, record
 
     def choose_move(self, battle):
         return self._choose_selfplay(battle)
@@ -100,7 +102,12 @@ class SelfPlayPlayer(SearchPlayer):
                         [m.id for m in battle.available_moves],
                         [m.species for m in battle.available_switches])  # fmt: skip
             return None
-        slot = self.rng.choices([i for i, _ in options], weights=[v for _, v in options])[0]
+        if self.greedy:
+            slot = max(options, key=lambda o: o[1])[0]
+        else:
+            slot = self.rng.choices([i for i, _ in options], weights=[v for _, v in options])[0]
+        if not self.record:
+            return orders[slot]
         reveal, ratings, turn, history = ctxs[0]
         self.records.setdefault(battle.battle_tag, []).append({
             "side": battle.player_role, "turn": battle.turn, "kind": kind, "full": full,

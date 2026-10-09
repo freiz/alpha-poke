@@ -11,6 +11,9 @@ buffers, outputs copied back to pinned memory, an event to wait on), so that the
 can be collected on the CPU meanwhile. One launch in flight at a time.
 """
 
+import os
+import threading
+
 import alpha_search
 import numpy as np
 import torch
@@ -21,10 +24,14 @@ D = alpha_search.feature_dims()
 
 
 SIZES = (32, 64, 128, 256, 512, 1024)
+# several GpuNets in one process (an evaluation: one per network, each driven by its own batcher
+# thread) must not capture graphs at the same time: one capture at a time, thread-local mode
+_CAPTURE = threading.Lock()
 
 
 class GpuNet:
-    def __init__(self, run: str, device: str = "cuda", graphs: bool = True):
+    def __init__(self, run: str, device: str = "cuda", graphs: bool = True,
+                 compile: bool | None = None):  # fmt: skip
         torch.backends.cuda.matmul.allow_tf32 = False  # float32, as the CPU reference
         self.device = torch.device(device if torch.cuda.is_available() else "cpu")
         if self.device.type == "cuda":
@@ -33,6 +40,12 @@ class GpuNet:
             # 10 spinning threads, a third less throughput on 20 logical CPUs than on 10)
             torch.set_num_threads(1)
         self.model = load_run(run, self.device).float()
+        # torch.compile (fused kernels; one compile per padded batch size at its first use, then
+        # captured in the CUDA graph): ALPHA_GPU_COMPILE=1 or compile=True
+        if compile is None:
+            compile = os.environ.get("ALPHA_GPU_COMPILE", "0") == "1"
+        self.net = (torch.compile(self.model, dynamic=False)
+                    if compile and self.device.type == "cuda" else self.model)  # fmt: skip
         self.use_graphs = graphs and self.device.type == "cuda"
         self.graphs: dict = {}  # padded size -> (graph, static inputs, static outputs)
 
@@ -62,7 +75,7 @@ class GpuNet:
         return args, x, t("eval", np.float32, (n,))
 
     def forward(self, args, x, ev):
-        logits, v = self.model(*args, x=x)
+        logits, v = self.net(*args, x=x)
         if self.model.residual is not None:
             v = self.model.residual[0] * ev / 100 + self.model.residual[1] + v
         return v, logits
@@ -79,15 +92,16 @@ class GpuNet:
         sa = [self.pad(a, size).clone() for a in args]
         sx = {k: self.pad(v, size).clone() for k, v in x.items()}
         static = (sa, sx, self.pad(ev, size).clone())
-        stream = torch.cuda.Stream()
-        stream.wait_stream(torch.cuda.current_stream())
-        with torch.cuda.stream(stream):
-            for _ in range(3):  # warm-up before the capture
-                self.forward(*static)
-        torch.cuda.current_stream().wait_stream(stream)
-        g = torch.cuda.CUDAGraph()
-        with torch.cuda.graph(g):
-            out = self.forward(*static)
+        with _CAPTURE:
+            stream = torch.cuda.Stream()
+            stream.wait_stream(torch.cuda.current_stream())
+            with torch.cuda.stream(stream):
+                for _ in range(3):  # warm-up before the capture
+                    self.forward(*static)
+            torch.cuda.current_stream().wait_stream(stream)
+            g = torch.cuda.CUDAGraph()
+            with torch.cuda.graph(g, capture_error_mode="thread_local"):
+                out = self.forward(*static)
         return g, static, out
 
     KEYS = (("sparse", np.int32, np.int64), ("dense", np.float32, None),
