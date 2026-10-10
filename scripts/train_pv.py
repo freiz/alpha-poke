@@ -295,6 +295,55 @@ def shard_caches(data: str) -> tuple[list[Path], list[int]]:
     return [c for c, n in zip(caches, sizes, strict=True) if n], [n for n in sizes if n]
 
 
+def load_selfplay(items: list[tuple[str, float]], per_game: int, seed: int,
+                  lam: float) -> tuple[dict, int]:  # fmt: skip
+    """Self-play datasets ``(name, share of games kept)`` in one set of arrays, at most
+    ``per_game`` positions per game (those with a policy target first, in random order), the
+    cap applied shard by shard (a game is in one shard) on the small columns, then the kept rows
+    filled shard by shard into preallocated arrays: peak memory = the kept rows + one shard
+    (2026-10-10: ~6.3M positions after gen 4 no longer fit in memory twice). ``lam`` > 0: the
+    lambda-return value targets as "vt". Returns (arrays, positions before the cap)."""
+    plan, n_before = [], 0
+    for d_i, (name, keep) in enumerate(items):
+        caches, sizes = shard_caches(name)
+        vt = lambda_targets(name, lam) if lam > 0 else None
+        off = 0
+        for s_i, (c, n) in enumerate(zip(caches, sizes, strict=True)):
+            with np.load(c) as z:
+                game, pi_w = z["game"], z["pi_w"]
+            idx = np.arange(n)
+            if keep < 1:  # by game, hash digits independent of the validation split (% 1000)
+                idx = idx[(game // 1000) % 1000 < keep * 1000]
+            n_before += len(idx)
+            if per_game > 0 and len(idx):
+                key = np.random.default_rng([seed + 1, d_i, s_i]).random(len(idx))
+                key += pi_w[idx] <= 0
+                o = np.lexsort((key, game[idx]))
+                g = game[idx][o]
+                starts = np.r_[0, np.flatnonzero(g[1:] != g[:-1]) + 1]
+                rank = np.arange(len(idx)) - np.repeat(starts, np.diff(np.r_[starts, len(idx)]))
+                idx = np.sort(idx[o[rank < per_game]])
+            plan.append((c, idx, None if vt is None else vt[off + idx]))
+            off += n
+        assert vt is None or off == len(vt), (name, off, len(vt))
+    total = sum(len(i) for _, i, _ in plan)
+    out: dict = {}
+    pos = 0
+    for c, idx, vts in plan:
+        if not len(idx):
+            continue
+        with np.load(c) as z:
+            for k in z.files:
+                v = z[k]
+                if k not in out:
+                    out[k] = np.empty((total, *v.shape[1:]), v.dtype)
+                out[k][pos : pos + len(idx)] = v[idx]
+        if vts is not None:
+            out.setdefault("vt", np.empty(total, np.float32))[pos : pos + len(idx)] = vts
+        pos += len(idx)
+    return out, n_before
+
+
 def load_small(caches: list[Path], sizes: list[int]) -> dict:
     """The small columns (SMALL) of all shards + each row's shard and row number."""
     out: dict = {"shard": np.repeat(np.arange(len(sizes)), sizes),
@@ -993,35 +1042,16 @@ def main() -> None:
     opt = torch.optim.AdamW(model.parameters(), lr=a.lr, weight_decay=a.wd)
     # self-play data (in memory): train / validation split by game
     dsp = None
-    if a.selfplay:
-        parts = []
-        for item in a.selfplay.split(","):  # "name" or "name:keep" (share of its games kept)
-            name, _, keep = item.partition(":")
-            part = load(name)
-            if a.sp_value_lambda > 0:
-                vt = lambda_targets(name, a.sp_value_lambda)
-                assert len(vt) == len(part["won"]), (name, len(vt), len(part["won"]))
-                part["vt"] = vt
-            if keep and float(keep) < 1:
-                # by game, with hash digits independent of the validation split (game % 1000)
-                sel = (part["game"] // 1000) % 1000 < float(keep) * 1000
-                part = {k: v[sel] for k, v in part.items()}
-            parts.append(part)
-        dsp = {k: np.concatenate([p[k] for p in parts]) for k in parts[0]}
+    if a.selfplay:  # "name" or "name:keep" (share of its games kept)
+        items = [(n, float(k) if k else 1.0)
+                 for n, _, k in (x.partition(":") for x in a.selfplay.split(","))]  # fmt: skip
+        dsp, sp_n0 = load_selfplay(items, a.sp_per_game, a.seed, a.sp_value_lambda)
         if a.sp_per_game > 0:
             # at most N positions per game (fixed for the run): long games (switch loops of two
             # stall teams, up to 650 decisions) would otherwise weigh tens of times more than a
-            # typical one (63). The positions with a policy target (full searches) go first, in
-            # random order, then the others: typical games keep all their targets
-            n0 = len(dsp["game"])
-            key = np.random.default_rng(a.seed + 1).random(n0) + (dsp["pi_w"] <= 0)
-            o = np.lexsort((key, dsp["game"]))
-            g = dsp["game"][o]
-            starts = np.r_[0, np.flatnonzero(g[1:] != g[:-1]) + 1]
-            rank = np.arange(n0) - np.repeat(starts, np.diff(np.r_[starts, n0]))
-            kept = np.sort(o[rank < a.sp_per_game])
-            dsp = {k: v[kept] for k, v in dsp.items()}
-            emit(dict(event="sp_per_game", cap=a.sp_per_game, positions=n0, kept=len(kept),
+            # typical one (63); typical games keep all their policy targets
+            emit(dict(event="sp_per_game", cap=a.sp_per_game, positions=sp_n0,
+                      kept=len(dsp["game"]),
                       policy_targets_kept=int(dsp["pi_w"].sum())))  # fmt: skip
         val_g = (dsp["game"] % 1000) < a.sp_val_frac * 1000
         sp_train, sp_val = np.flatnonzero(~val_g), np.flatnonzero(val_g)

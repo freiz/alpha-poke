@@ -16,6 +16,7 @@ import json
 import math
 import os
 import random
+import shutil
 import time
 from collections import defaultdict
 from dataclasses import asdict
@@ -53,22 +54,42 @@ def prune_visits(visits: list, mean: list, prior: list, c: float = C_PUCT) -> li
     return out
 
 
-def load_gen(gen_dir: Path) -> tuple[dict, dict, dict]:
-    """(games by pair, logs by pair, decisions by pair) of a generation directory."""
-    games, logs, decs = {}, {}, defaultdict(list)
+def load_gen(gen_dir: Path) -> tuple[dict, dict]:
+    """(games by pair, logs by pair) of a generation directory (the decisions are streamed by
+    ``split_decisions``: a 50,000-game generation's ~14 GB do not fit in memory)."""
+    games, logs = {}, {}
     for f in gen_dir.glob("games-w*.jsonl"):
         for line in f.read_text().splitlines():
             g = json.loads(line)
             games[g["pair"]] = g
     for f in gen_dir.glob("logs-w*.jsonl"):
-        for line in f.read_text().splitlines():
-            x = json.loads(line)
-            logs[x["pair"]] = x["log"]
-    for f in gen_dir.glob("decisions-w*.jsonl"):
-        for line in f.read_text().splitlines():
-            d = json.loads(line)
-            decs[d["game"]].append(d)
-    return games, logs, decs
+        with open(f) as fh:
+            for line in fh:
+                x = json.loads(line)
+                logs[x["pair"]] = x["log"]
+    return games, logs
+
+
+def split_decisions(gen_dir: Path, shard_of: dict, tmp: Path) -> None:
+    """The decisions, line by line, into ``tmp/<shard>.jsonl`` by their game's shard (the
+    game id is read from the record's tail, ``"game": N``, without parsing the line)."""
+    tmp.mkdir(parents=True, exist_ok=True)
+    out: dict = {}
+    try:
+        for f in sorted(gen_dir.glob("decisions-w*.jsonl")):
+            with open(f) as fh:
+                for line in fh:
+                    i = line.rfind('"game": ')
+                    game = int(line[i + 8 : line.index(",", i)])
+                    k = shard_of.get(game)
+                    if k is None:
+                        continue
+                    if k not in out:
+                        out[k] = open(tmp / f"{k:04d}.jsonl", "w")
+                    out[k].write(line)
+    finally:
+        for fh in out.values():
+            fh.close()
 
 
 def convert_game(pair: int, game: dict, log: str, decisions: list, belief, gen: int,
@@ -114,11 +135,18 @@ def _convert_shard(args) -> dict:
     """One shard (its own process): the games' rows written to ``path``; returns the counts."""
     from alpha_poke.agents.belief_state import BeliefModel
 
-    path, items, gen, stamp = args
+    path, items, dec_file, gen, stamp = args
     belief = BeliefModel.load()
     stats: dict = defaultdict(int)
+    decs = defaultdict(list)
+    if dec_file.exists():
+        with open(dec_file) as fh:
+            for line in fh:
+                d = json.loads(line)
+                decs[d["game"]].append(d)
     rows = []
-    for pair, game, log_text, decisions in items:
+    for pair, game, log_text in items:
+        decisions = decs.pop(pair, [])
         try:
             rows += convert_game(pair, game, log_text, decisions, belief, gen, stamp, stats)
             stats["games"] += 1
@@ -137,14 +165,18 @@ def convert(gen_dir: Path, out_dir: Path, gen: int, shard_games: int = 500, log=
     import multiprocessing as mp
     from concurrent.futures import ProcessPoolExecutor
 
-    games, logs, decs = load_gen(gen_dir)
+    games, logs = load_gen(gen_dir)
     stamp = int(time.time())
     out_dir.mkdir(parents=True, exist_ok=True)
     pairs = sorted(p for p in games if p in logs)
+    shard_of = {p: i // shard_games for i, p in enumerate(pairs)}
+    tmp = out_dir / "decisions_tmp"
+    split_decisions(gen_dir, shard_of, tmp)
     jobs = [(out_dir / f"shard-{k // shard_games:04d}.parquet",
-             [(p, games[p], logs[p], decs.get(p, [])) for p in pairs[k : k + shard_games]],
-             gen, stamp)
+             [(p, games[p], logs[p]) for p in pairs[k : k + shard_games]],
+             tmp / f"{k // shard_games:04d}.jsonl", gen, stamp)
             for k in range(0, len(pairs), shard_games)]  # fmt: skip
+    del logs
     stats: dict = defaultdict(int)
     # reproducible rows: the replay pipeline's results depend on set order (string hashing);
     # the spawned workers read the seed at start-up
@@ -154,6 +186,7 @@ def convert(gen_dir: Path, out_dir: Path, gen: int, shard_games: int = 500, log=
         for part in ex.map(_convert_shard, jobs):
             for k, v in part.items():
                 stats[k] += v
+    shutil.rmtree(tmp)
     stats = dict(stats)
     if stats.get("action_checked"):
         stats["action_agree_frac"] = round(stats["action_agree"] / stats["action_checked"], 4)

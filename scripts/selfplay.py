@@ -228,12 +228,25 @@ def cmd_value(a) -> None:
     if "value_check" in st["generations"].get(str(a.gen), {}) and not (a.force or a.dry):
         print(f"gen {a.gen}: value check done already (--force redoes)")
         return
-    rows = []
-    for f in sorted((SELFPLAY_DIR / f"gen{a.gen}").glob("decisions-w*.jsonl")):
-        for line in f.read_text().splitlines():
-            d = json.loads(line)
-            if d["won"] is not None:
-                rows.append(d)
+    # a random sample of the decisions, streamed: a 50,000-game generation's decisions (~14 GB
+    # of JSON) do not fit in memory. Line numbers first, then only those lines are parsed (with
+    # room for the ones without an outcome)
+    files = sorted((SELFPLAY_DIR / f"gen{a.gen}").glob("decisions-w*.jsonl"))
+    counts = []
+    for f in files:
+        with open(f, "rb") as fh:
+            counts.append(sum(chunk.count(b"\n") for chunk in iter(lambda: fh.read(1 << 24), b"")))
+    total = sum(counts)
+    pick = set(random.Random(a.gen).sample(range(total), min(total, int(a.n * 1.2) + 100)))
+    rows, base = [], 0
+    for f, c in zip(files, counts, strict=True):
+        with open(f) as fh:
+            for i, line in enumerate(fh):
+                if base + i in pick:
+                    d = json.loads(line)
+                    if d["won"] is not None:
+                        rows.append(d)
+        base += c
     random.Random(a.gen).shuffle(rows)
     rows = rows[: a.n]
     y = np.array([float(d["won"]) for d in rows])
