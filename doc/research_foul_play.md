@@ -385,6 +385,11 @@ python run.py \
 5. Showdown 本地对战以 `--run-count` 循环；每局结束后 `leave_battle`。
 6. 绝不要把它接到公共服务器/天梯做测试（任务约束）。
 
+**本地修复（2026-10-09，只改 `external/foul-play` 里的代码，不进本仓库；补丁在 `external/foul-play-local-fixes.patch`，上游 8f541f8 时尚未修复）**：
+- 场地解析：`fp/battle/protocol.py` 的 `fieldstart` / `fieldend` 把戏法空间、重力以外的所有场地效果都当成 terrain 存下，局面交给 poke-engine 时 `get_terrain_string` 遇到 `magicroom`（奇妙空间等同理）就抛 `ValueError`，进程退出。改为：只有四种真正的场地才存成 terrain，其余场地效果记日志后忽略（poke-engine 本来也不模拟它们，与我们 `engine_state.py` 的处理相同）；其结束同样忽略，不会清掉同时存在的场地。
+- `fp/search/main.py` 打印搜索结果时，被选中的选项访问数为 0 会除零（`ZeroDivisionError`），改为除以 max(访问数, 1)。
+- 只影响原先会崩溃的对局，其余对局里 Foul Play 的行为不变，修复前后的成绩可比。第一次暴露：偏门池（`offmeta200`）的 Foul Play 评估，8 条线里 2 条因此崩溃。
+
 ### 6.4 能否作为库调用
 
 **不是为库设计的**：`FoulPlayConfig` 是全局单例并由 `argparse` 从 `sys.argv` 填充（`config.py: configure`），数据集在模式对象里是进程级单例（`BattleMode.__deepcopy__` 返回 self，`modes/base.py`），`apply_mods` 会就地改写全局 `pokedex`/`all_move_json`（`main.py: check_dictionaries_are_unmodified` 会在被改动时 `exit(1)`）。技术上可以手工设置 `FoulPlayConfig.*` 后直接调用 `fp.search.main.find_best_move(battle)`（测试里的 `conftest.py` 就这么干），并把 poke-env 的原始消息喂给 `fp.battle.protocol.async_update_battle`，但：(a) 这是**GPL 代码的 import**（见 8 节）；(b) 全局状态使多局并行困难。**推荐用"独立进程 + websocket"**。

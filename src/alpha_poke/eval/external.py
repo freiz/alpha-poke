@@ -215,21 +215,32 @@ def run_external(
     log_dir: str = "data/eval",
     heldout: bool = False,
     pairs: bool = False,
+    resume: str = "",
 ) -> dict:
     """Paired run of our ``bot`` against an opponent process (see ``_opponent_cmd``).
-    ``heldout``: our belief model without the pool's teams (as arena --heldout)."""
+    ``heldout``: our belief model without the pool's teams (as arena --heldout).
+    ``resume``: the log of an interrupted run of the same schedule: its finished games are kept,
+    its failed ones dropped (kept in <log>.bak), the rest is played and appended to it."""
     if pairs:  # a pool of fixed real-game pairs (eval.arena.pair_schedule): the same every run
         schedule = pair_schedule(pool_dir, n_pairs)
     else:
         schedule = make_schedule(sorted(load_team_files(pool_dir)), n_pairs, seed)
-    pairs = [schedule[i : i + 2] for i in range(0, len(schedule), 2)]
+    done: set = set()
+    if resume:
+        old = [json.loads(line) for line in Path(resume).read_text().splitlines() if line]
+        shutil.copy(resume, resume + ".bak")
+        kept = [r for r in old if r.get("battle") and not r.get("failed")]
+        Path(resume).write_text("".join(json.dumps(r) + "\n" for r in kept))
+        done = {(r["pair"], r["game"]) for r in kept}
+    left = [m for m in schedule if (m.pair, m.game) not in done]
+    pairs = [[m for m in left if m.pair == k] for k in dict.fromkeys(m.pair for m in left)]
     lanes = min(lanes, len(pairs))  # an empty lane would still start an opponent process
     lane_matches = [[m for pr in pairs[i::lanes] for m in pr] for i in range(lanes)]
     tag = f"foulplay{opp['search_ms']}x{opp['parallelism']}"
     run_id = f"{time.strftime('%Y%m%d-%H%M%S')}_{bot}_vs_{tag}" + ("_heldout" if heldout else "")
     run_dir = Path(log_dir) / "external" / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
-    log_path = str(Path(log_dir) / f"{run_id}.jsonl")
+    log_path = resume or str(Path(log_dir) / f"{run_id}.jsonl")
     extras = {}
     if heldout:
         extras["heldout_pool"] = pool_dir
@@ -246,6 +257,8 @@ def run_external(
     # non-daemonic workers: a search bot starts its own MCTS process pool
     with ProcessPoolExecutor(lanes, mp_context=mp.get_context("spawn")) as pool:
         rows = [r for part in pool.map(_worker, jobs) for r in part]
+    if resume:  # the whole run: the games kept from the interrupted one too
+        rows = [json.loads(line) for line in Path(log_path).read_text().splitlines() if line]
     return summarize(rows) | {
         "log": log_path,
         "seconds": round(time.time() - t0, 1),
@@ -255,7 +268,8 @@ def run_external(
 
 def run_vs_foulplay(bot: str, n_pairs: int, pool_dir=str(DEFAULT_POOL), ports=(8000,), lanes=2,
                     search_ms=1000, parallelism=4, seed=0, trace=False, replays=False,
-                    log_dir="data/eval", heldout=False, pairs=False) -> dict:  # fmt: skip
+                    log_dir="data/eval", heldout=False, pairs=False,
+                    resume="") -> dict:  # fmt: skip
     opp = {"kind": "foulplay", "search_ms": search_ms, "parallelism": parallelism}
     return run_external(bot, opp, n_pairs, pool_dir, ports, lanes, seed, trace, replays, log_dir,
-                        heldout, pairs)  # fmt: skip
+                        heldout, pairs, resume)  # fmt: skip
