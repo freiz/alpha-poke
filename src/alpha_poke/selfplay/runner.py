@@ -56,6 +56,11 @@ def packed(text: str) -> str:
 # to the 300-turn cap is ~600 decisions, each waiting for a batched search round (gen 1: such
 # games ran over 30 minutes and were skipped)
 GAME_TIMEOUT = 7200.0
+# seconds without a new turn in a started game: stalled. A decision's search takes seconds; a
+# lost choice leaves the game waiting for good (gens 3-4, ~1 in 7,000 games, all long games: the
+# server answered "/choose - must be used in a chat room" and the turn never came), which cost
+# a lane the whole GAME_TIMEOUT
+STALL_TIMEOUT = 600.0
 
 
 async def _lane(lane: str, jobs: list, port: int, gen_dir: Path, settings: dict, batcher,
@@ -87,11 +92,31 @@ async def _lane(lane: str, jobs: list, port: int, gen_dir: Path, settings: dict,
         before = set(a.battles)
         fb0 = (a.search_fallbacks, b.search_fallbacks)
         first, second = (a, b) if idx % 2 == 0 else (b, a)
-        try:
-            await asyncio.wait_for(first.battle_against(second, n_battles=1), GAME_TIMEOUT)
-        except TimeoutError:
-            logging.getLogger(__name__).warning("pair %d: no finished game after %ds, skipped",
-                                                idx, GAME_TIMEOUT)  # fmt: skip
+        task = asyncio.ensure_future(first.battle_against(second, n_battles=1))
+        last_turn, last_change, why = -1, time.time(), None
+        while why is None:
+            done, _ = await asyncio.wait({task}, timeout=60)
+            if task in done:
+                task.result()
+                break
+            cur = [a.battles[k] for k in a.battles if k not in before]
+            turn = cur[0].turn if cur else -1
+            if turn != last_turn:
+                last_turn, last_change = turn, time.time()
+            if cur and time.time() - last_change > STALL_TIMEOUT:
+                why = f"no new turn for {STALL_TIMEOUT:.0f}s at turn {turn}"
+            elif time.time() - t0 > GAME_TIMEOUT:
+                why = f"no finished game after {GAME_TIMEOUT:.0f}s"
+        if why is not None:
+            task.cancel()
+            log = logging.getLogger(__name__)
+            log.warning("pair %d: %s, skipped", idx, why)
+            if cur:  # the protocol's last messages, for the cause
+                from alpha_poke.agents.net_context import battle_log
+
+                tail = ["|".join(m) for m in battle_log(cur[0])][-40:]
+                log.warning("pair %d (%s) last messages:\n%s", idx, cur[0].battle_tag,
+                            "\n".join(tail))  # fmt: skip
             # the players still hold the unfinished battle (max_concurrent_battles=1): every
             # later challenge of theirs would wait for it too. New players (accounts) instead.
             resets += 1
