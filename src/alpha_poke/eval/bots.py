@@ -40,7 +40,13 @@ VARIANTS: dict[str, tuple[str, dict]] = {
     # network (selfplay.batcher, as in self-play) — no root noise, the most visited option,
     # ALPHA_SEARCH_ITERATIONS (default 3,000) iterations and 32 worlds per decision
     **{
-        f"g_m{x}": ("batched", {"model": os.environ.get(f"ALPHA_MODEL_{x.upper()}", GLU)})
+        f"g_m{x}": (
+            "batched",
+            {
+                "model": os.environ.get(f"ALPHA_MODEL_{x.upper()}", GLU),
+                "dtype": os.environ.get(f"ALPHA_GPU_DTYPE_{x.upper()}"),
+            },
+        )
         for x in ("a", "b")
     },  # fmt: skip
     # no search: the network's own policy (argmax-like, tau 0.05; rating input unknown, as the
@@ -94,7 +100,7 @@ def make_bot(
 
         cls_name, extra = VARIANTS[kind]
         if cls_name == "batched":
-            return _batched_bot(extra["model"], heldout_pool, trace_dir, kw)
+            return _batched_bot(extra["model"], heldout_pool, trace_dir, kw, extra.get("dtype"))
         if cls_name == "search":
             from alpha_poke.agents.search_player import SearchPlayer as cls
         elif cls_name == "policy":
@@ -106,22 +112,22 @@ def make_bot(
     return BASELINES[kind](**kw)
 
 
-_BATCHERS: dict = {}  # model -> Batcher, one per network in each (worker) process
+_BATCHERS: dict = {}  # (model, dtype) -> Batcher, one per network in each (worker) process
 
 
-def _batched_bot(model: str, heldout_pool, trace_dir, kw) -> Player:
+def _batched_bot(model: str, heldout_pool, trace_dir, kw, dtype: str | None = None) -> Player:
     import random
 
     from alpha_poke.agents.belief_state import BeliefModel
     from alpha_poke.selfplay.batcher import Batcher
     from alpha_poke.selfplay.player import SelfPlayPlayer
 
-    if model not in _BATCHERS:
-        _BATCHERS[model] = Batcher(model, leaves=8, threads=2)
+    if (model, dtype) not in _BATCHERS:
+        _BATCHERS[model, dtype] = Batcher(model, leaves=8, threads=2, dtype=dtype)
     iters = int(os.environ.get("ALPHA_SEARCH_ITERATIONS") or 3000)
     return SelfPlayPlayer(
         BeliefModel.load(heldout_pool=heldout_pool), trace_dir=trace_dir, worlds=32,
-        net_policy="both", model=model, batcher=_BATCHERS[model], full_frac=1.0,
+        net_policy="both", model=model, batcher=_BATCHERS[model, dtype], full_frac=1.0,
         full_iters=iters, noise=(0.0, 10.0), greedy=True, record=False,
         turn_cap=int(os.environ.get("ALPHA_TURN_CAP", 300)),
         seed=random.randrange(1 << 30), **kw,

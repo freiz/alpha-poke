@@ -31,8 +31,13 @@ _CAPTURE = threading.Lock()
 
 class GpuNet:
     def __init__(self, run: str, device: str = "cuda", graphs: bool = True,
-                 compile: bool | None = None):  # fmt: skip
+                 compile: bool | None = None, dtype: str | None = None):  # fmt: skip
+        """``dtype``: "fp32" (default; as the CPU reference) or "bf16" (autocast: matmuls and
+        attention in bfloat16, the reductions autocast keeps in float32; the outputs float32);
+        ALPHA_GPU_DTYPE if not given."""
         torch.backends.cuda.matmul.allow_tf32 = False  # float32, as the CPU reference
+        self.dtype = dtype or os.environ.get("ALPHA_GPU_DTYPE", "fp32")
+        assert self.dtype in ("fp32", "bf16"), self.dtype
         self.device = torch.device(device if torch.cuda.is_available() else "cpu")
         if self.device.type == "cuda":
             # the CPU side is only copies: PyTorch's CPU thread pool (one per core, spinning
@@ -75,7 +80,12 @@ class GpuNet:
         return args, x, t("eval", np.float32, (n,))
 
     def forward(self, args, x, ev):
-        logits, v = self.net(*args, x=x)
+        if self.dtype == "bf16":
+            with torch.autocast(self.device.type, dtype=torch.bfloat16):
+                logits, v = self.net(*args, x=x)
+            logits, v = logits.float(), v.float()
+        else:
+            logits, v = self.net(*args, x=x)
         if self.model.residual is not None:
             v = self.model.residual[0] * ev / 100 + self.model.residual[1] + v
         return v, logits
