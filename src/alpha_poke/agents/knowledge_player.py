@@ -376,6 +376,13 @@ class KnowledgePlayer(Player):
             self.trace_dir.mkdir(parents=True, exist_ok=True)
         self.memory: dict[str, BattleMemory] = {}
 
+    def forget(self, tag: str) -> None:
+        """Drop a finished battle's state (the battle, its plan, memory, request count): a
+        long-lived player (a self-play lane: thousands of games) would otherwise keep them all
+        (2026-10-10: the self-play workers grew ~0.2 GB per hour)."""
+        for d in (self._battles, self.plans, self.memory, self._n_requests):
+            d.pop(tag, None)
+
     # ---- rejected choices -----------------------------------------------------------------
     async def _handle_battle_request(self, battle, maybe_default_order: bool = False):
         self._n_requests[battle.battle_tag] = self._n_requests.get(battle.battle_tag, 0) + 1

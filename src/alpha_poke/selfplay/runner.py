@@ -88,6 +88,7 @@ async def _lane(lane: str, jobs: list, port: int, gen_dir: Path, settings: dict,
     seed = zlib.crc32(f"{settings['run_tag']}:{lane}".encode())
     a, b = player("a", 2 * seed), player("b", 2 * seed + 1)
     n = resets = 0
+    prev_tag = None
     for idx, pair in jobs:
         a.update_team(packed(pair.p1.text))
         b.update_team(packed(pair.p2.text))
@@ -158,6 +159,13 @@ async def _lane(lane: str, jobs: list, port: int, gen_dir: Path, settings: dict,
         log_text = "\n".join("|".join(m) for m in battle_log(battle))
         with open(gen_dir / f"logs-w{wid}.jsonl", "a") as f:
             f.write(json.dumps({"pair": idx, "battle": tag, "log": log_text}) + "\n")
+        # the previous game's state, no longer needed: one game late, so that no message of it
+        # (e.g. |deinit| after /leave) can still come (poke-env would wait for that battle
+        # forever, and wake every such waiter at each new battle)
+        if prev_tag is not None:
+            for pl in (a, b):
+                pl.forget(prev_tag)
+        prev_tag = tag
         n += 1
         counters["games"] += 1
         counters["decisions"] += game["decisions"]
