@@ -72,6 +72,8 @@ def cmd_teams(a) -> None:
     pairs, ts = sample_pairs(a.n, a.seed, a.since, a.half_life, a.catalog_frac, a.temp,
                              a.popularity_beta)  # fmt: skip
     path = SELFPLAY_DIR / f"gen{a.gen}" / "teams.jsonl"
+    if a.append and path.exists():  # more pairs for a grown generation; the drawn ones stay
+        pairs = teams.load(path) + pairs
     teams.save(pairs, path)
     kinds = collections.Counter(s.kind for p in pairs for s in (p.p1, p.p2))
     print(f"{len(pairs)} pairs -> {path}; sides {dict(kinds)}; bans learned {ts.banned_moves}")
@@ -723,6 +725,7 @@ def cmd_loop(a) -> None:
     for gen in range(a.start, a.start + a.gens):
         args = ["cycle", "--gen", str(gen), "--games", str(a.games), "--procs", str(a.procs),
                 "--threads", str(a.threads), "--eval-pairs", str(a.eval_pairs),
+                "--eval-iterations", str(a.eval_iterations),
                 "--mem-cap-gb", str(a.mem_cap_gb)]  # fmt: skip
         for attempt in (1, 2):
             say(f"gen {gen}: cycle (attempt {attempt})")
@@ -800,18 +803,25 @@ def cmd_cycle(a) -> None:
     gen_dir.mkdir(parents=True, exist_ok=True)
     me = [sys.executable, __file__]
     steps = []
-    if not (gen_dir / "teams.jsonl").exists():
+    from alpha_poke.selfplay import teams as teams_mod
+
+    have = len(teams_mod.load(gen_dir / "teams.jsonl")) if (gen_dir / "teams.jsonl").exists() else 0
+    if have == 0:
         # a seed per generation: with the default (0) every generation drew the same ~5,000 real
         # games (gens 1-3: 99% of their source games shared, 2026-10-08)
         steps.append(("teams", ["teams", "--gen", str(a.gen), "--n", str(a.games), "--seed",
                                 str(a.gen)]))  # fmt: skip
+    elif have < a.games:  # a generation grown after its pairs were drawn (gen 4: 10k -> 50k)
+        steps.append(("teams", ["teams", "--gen", str(a.gen), "--n", str(a.games - have),
+                                "--seed", str(1000 * a.gen + have), "--append"]))  # fmt: skip
     steps += [("run", ["run", "--gen", str(a.gen), "--procs", str(a.procs),
                        "--lanes", str(a.lanes), "--threads", str(a.threads)]),
               ("stats", ["stats", "--gen", str(a.gen)]),
               ("value", ["value", "--gen", str(a.gen)]),
               ("convert", ["convert", "--gen", str(a.gen)]),
               ("train", ["train", "--gen", str(a.gen)]),
-              ("eval", ["eval", "--gen", str(a.gen), "--pairs", str(a.eval_pairs)])]  # fmt: skip
+              ("eval", ["eval", "--gen", str(a.gen), "--pairs", str(a.eval_pairs),
+                        "--iterations", str(a.eval_iterations)])]  # fmt: skip
     for name, args in steps:
         t0 = time.time()
         print(f"[{time.strftime('%H:%M:%S')}] gen {a.gen}: {name}", flush=True)
@@ -870,6 +880,7 @@ def main() -> None:
                    help="flatten the compositions' popularity (0 = as on the ladder)")  # fmt: skip
     p.add_argument("--temp", type=float, default=1.3, help="completion temperature")
     p.add_argument("--seed", type=int, default=0)
+    p.add_argument("--append", action="store_true", help="add to the generation's pairs")
     p.set_defaults(fn=cmd_teams)
     p = sub.add_parser("run")
     p.add_argument("--gen", type=int, required=True)
@@ -878,8 +889,11 @@ def main() -> None:
     p.add_argument("--ports", type=int, nargs="+", default=[8000, 8001, 8002, 8003])
     p.add_argument("--limit", type=int, default=0, help="at most this many games (test runs)")
     p.add_argument("--full-frac", type=float, default=0.25)
-    p.add_argument("--full-iters", type=int, default=3000)
-    p.add_argument("--fast-iters", type=int, default=600)
+    # 2026-10-10 (from gen 4): 1,600 / 400 (was 3,000 / 600): ~700 iterations per decision
+    # instead of ~1,200, ~1.7x the games (value, the bottleneck, needs independent games); a
+    # 1,600-iteration target keeps ~80% of a 3,000 one's gain over the prior (results.md)
+    p.add_argument("--full-iters", type=int, default=1600)
+    p.add_argument("--fast-iters", type=int, default=400)
     p.add_argument("--noise-eps", type=float, default=0.1)
     p.add_argument("--noise-conc", type=float, default=10.0)
     p.add_argument("--fast-worlds", type=int, default=16, help="belief worlds, fast searches")
@@ -992,10 +1006,13 @@ def main() -> None:
     p.add_argument("--gens", type=int, default=100)
     # 2026-10-09: 10,000 (was 5,000): per-generation gains were near the evaluation's resolution
     # (+-23 Elo), the evaluation was 35-40% of the time, and value labels (one per game) scarce
-    p.add_argument("--games", type=int, default=10000)
+    p.add_argument("--games", type=int, default=50000)  # 2026-10-10, from gen 4 (was 10,000)
     p.add_argument("--procs", type=int, default=6)  # self-play processes (20 logical CPUs)
     p.add_argument("--threads", type=int, default=2)
-    p.add_argument("--eval-pairs", type=int, default=400)
+    # promotion at 1,600 iterations, up to 600 pairs (2026-10-10; was 3,000 / 400); the progress
+    # check every 3 generations stays at 3,000 / 400 (deep search, the strength that matters)
+    p.add_argument("--eval-pairs", type=int, default=600)
+    p.add_argument("--eval-iterations", type=int, default=1600)
     p.add_argument("--anchor-every", type=int, default=3)
     p.add_argument("--anchor-back", type=int, default=3)
     p.add_argument("--baseline-pairs", type=int, default=400)
@@ -1007,14 +1024,15 @@ def main() -> None:
     p.set_defaults(fn=cmd_loop)
     p = sub.add_parser("cycle", help="one generation end to end")
     p.add_argument("--gen", type=int, required=True)
-    p.add_argument("--games", type=int, default=10000, help="team pairs if not sampled yet")
+    p.add_argument("--games", type=int, default=50000, help="team pairs (drawn / topped up)")
+    p.add_argument("--eval-iterations", type=int, default=1600)
     p.add_argument("--procs", type=int, default=2)
     p.add_argument("--lanes", type=int, default=24)
     p.add_argument("--threads", type=int, default=8, help="collect threads per process")
     p.add_argument(
         "--eval-pairs",
         type=int,
-        default=400,
+        default=600,
         help="most pairs of the per-generation sequential test (eval)",
     )
     p.add_argument("--mem-cap-gb", type=float, default=40, help="memory cap of every step")
