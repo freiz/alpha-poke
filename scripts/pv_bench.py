@@ -6,7 +6,8 @@ them? The same positions for every network and generation.
              training holds out (train_pv's self-play validation: crc32 of the game id % 1000 <
              50), and --human positions of the human validation games (uploaded at / after
              --cutoff, the v5 split; rated >= --min-rating; turn-start decisions); one position
-             per game, at least two options
+             per game, at least two options; a fixed third of them (by id) is "dev" (to choose
+             on), the rest "test" (to report on: choosing on the same positions biases them)
   reference  per network of --nets: a deep search of every position (--iterations, no noise,
              the network's prior and value) -> ref_<net>.jsonl (visits / mean per action slot)
   score      per network of --nets:
@@ -120,6 +121,8 @@ def build(a) -> None:
                     "won": r["won"],
                 }
             )
+    for p in out:  # a fixed split: choose on "dev", report on "test" (selection bias)
+        p["split"] = "dev" if zlib.crc32(p["id"].encode()) % 3 == 0 else "test"
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / "positions.jsonl").write_text("".join(json.dumps(p) + "\n" for p in out))
     meta = {"gen": a.gen, "seed": a.seed, "selfplay": n_sp, "human": len(out) - n_sp,
@@ -150,10 +153,30 @@ def search_all(net: str, pos: list[dict], iterations: int, prior: bool, seed: in
     return out
 
 
+def _search_chunk(args) -> list:
+    net, pos, iterations, prior, seed = args
+    return search_all(net, pos, iterations, prior, seed)
+
+
+def search_par(net: str, pos: list[dict], iterations: int, prior: bool, seed: int,
+               procs: int) -> list:  # fmt: skip
+    """``search_all`` split over ``procs`` processes (a batcher each: the CPU side of the search
+    is the bottleneck); seeds by position as in one process."""
+    import multiprocessing as mp
+    from concurrent.futures import ProcessPoolExecutor
+
+    if procs <= 1:
+        return search_all(net, pos, iterations, prior, seed)
+    k = -(-len(pos) // procs)
+    jobs = [(net, pos[i : i + k], iterations, prior, seed + i) for i in range(0, len(pos), k)]
+    with ProcessPoolExecutor(len(jobs), mp_context=mp.get_context("spawn")) as ex:
+        return [r for part in ex.map(_search_chunk, jobs) for r in part]
+
+
 def reference(a) -> None:
     pos = load_positions()
     for net in a.nets.split(","):
-        recs = search_all(net, pos, a.iterations, True, a.seed)
+        recs = search_par(net, pos, a.iterations, True, a.seed, a.procs)
         name = Path(net).name
         (OUT / f"ref_{name}.jsonl").write_text("".join(json.dumps(r) + "\n" for r in recs))
         print(name, sum("error" in r for r in recs), "errors")
@@ -259,12 +282,12 @@ def score(a) -> None:
     res = json.loads(path.read_text()) if path.exists() else {}
     for net in a.nets.split(","):
         name = Path(net).name
-        value_only = search_all(net, pos, a.iterations, False, a.seed + 1_000_000)
-        with_prior = search_all(net, pos, a.iterations, True, a.seed + 2_000_000)
+        value_only = search_par(net, pos, a.iterations, False, a.seed + 1_000_000, a.procs)
+        with_prior = search_par(net, pos, a.iterations, True, a.seed + 2_000_000, a.procs)
         entry = {}
-        for src in ("selfplay", "human"):
-            idx = [i for i, p in enumerate(pos) if p["source"] == src]
-            entry[src] = {"outcome": outcome_metrics(net, [pos[i] for i in idx]),
+        for src, split in [(s, sp) for s in ("selfplay", "human") for sp in ("dev", "test")]:
+            idx = [i for i, p in enumerate(pos) if p["source"] == src and p["split"] == split]
+            entry[f"{src}/{split}"] = {"outcome": outcome_metrics(net, [pos[i] for i in idx]),
                           "prior_only": decision_metrics(with_prior, cons, idx, prior=True),
                           "value_only": decision_metrics(value_only, cons, idx),
                           "with_prior": decision_metrics(with_prior, cons, idx)}  # fmt: skip
@@ -279,8 +302,8 @@ if __name__ == "__main__":
     sub = ap.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser("build")
     p.add_argument("--gen", type=int, required=True, help="self-play positions from this gen")
-    p.add_argument("--sp", type=int, default=500)
-    p.add_argument("--human", type=int, default=500)
+    p.add_argument("--sp", type=int, default=1500)
+    p.add_argument("--human", type=int, default=1500)
     p.add_argument("--cutoff", type=int, default=1776921722, help="the v5 validation split")
     p.add_argument("--min-rating", type=int, default=1500)
     p.add_argument("--seed", type=int, default=0)
@@ -297,6 +320,7 @@ if __name__ == "__main__":
     p.set_defaults(fn=score)
     for q in sub.choices.values():
         q.add_argument("--out", default=str(OUT), help="benchmark directory")
+        q.add_argument("--procs", type=int, default=4, help="search processes")
     args = ap.parse_args()
     OUT = Path(args.out)
     args.fn(args)
