@@ -34,11 +34,13 @@ class _Job:
 
 
 class Batcher:
-    def __init__(self, model: str, leaves: int = 8, threads: int = 8):
+    def __init__(self, model: str, leaves: int = 8, threads: int = 8, prior: bool = True):
+        """``prior=False``: the network's policy is not used (uniform priors for both sides, the
+        logits zeroed): a search that only the value guides (scripts/value_bench.py)."""
         from alpha_poke.agents.gpu_net import GpuNet
 
         self.net = GpuNet(model)
-        self.leaves, self.threads = leaves, threads
+        self.leaves, self.threads, self.prior = leaves, threads, prior
         self.queue: queue.SimpleQueue = queue.SimpleQueue()
         self.stats = {"rounds": 0, "rows": 0, "searches": 0, "gpu_s": 0.0, "collect_s": 0.0}
         threading.Thread(target=self._loop, daemon=True).start()
@@ -109,6 +111,8 @@ class Batcher:
             jobs, rows_i, h = inflight
             t = time.time()
             values, logits = self.net.result(h)
+            if not self.prior:
+                logits = np.zeros_like(logits)
             self.stats["gpu_s"] += time.time() - t
             bad = alpha_search.apply_many(
                 [j.search for j in jobs], np.ascontiguousarray(values, np.float32).tobytes(),
