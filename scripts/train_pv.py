@@ -869,6 +869,7 @@ def main() -> None:
     ap.add_argument("--smolgen", type=int, default=0, help="dynamic attention bias hidden size")
     ap.add_argument("--value-hidden", type=int, default=0,
                     help="value hidden layer size (a warm start adds it, zero)")  # fmt: skip
+    ap.add_argument("--value-dropout", type=float, default=0.0, help="on the value hidden layer")
     ap.add_argument("--elo-dropout", type=float, default=0.25)
     ap.add_argument("--stream", type=int, default=0, help="shards per chunk (0 = all in memory)")
     ap.add_argument("--val-max", type=int, default=500_000, help="--stream: validation positions")
@@ -1014,7 +1015,7 @@ def main() -> None:
         if v:
             size[k] = v
     arch_opts = {"ffn": a.ffn, "norm": a.norm, "qk_norm": a.qk_norm, "smolgen": a.smolgen,
-                 "value_hidden": a.value_hidden}  # fmt: skip
+                 "value_hidden": a.value_hidden, "value_dropout": a.value_dropout}  # fmt: skip
     assert a.hist_len <= DIMS["hist"], f"--hist-len > the {DIMS['hist']} featurized steps"
     dims = DIMS | {"hist": a.hist_len}
     assert not a.mtp or (a.arch == "transformer" and "fsp" in keys), "--mtp: transformer + future"

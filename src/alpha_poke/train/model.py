@@ -353,9 +353,13 @@ class TransformerPV(nn.Module):
         # layer zero-initialized (adding it to a trained network keeps its outputs at first)
         vh = self.arch.get("value_hidden", 0)
         if vh:
-            self.value_mlp = nn.Sequential(nn.Linear(d_model, vh), nn.SiLU(), nn.Linear(vh, 1))
-            nn.init.zeros_(self.value_mlp[2].weight)
-            nn.init.zeros_(self.value_mlp[2].bias)
+            # value_dropout (arch): dropout on the hidden layer (training only), against the value
+            # overfitting (one outcome per game for all its positions)
+            self.value_mlp = nn.Sequential(nn.Linear(d_model, vh), nn.SiLU(),
+                                           nn.Dropout(self.arch.get("value_dropout", 0.0)),
+                                           nn.Linear(vh, 1))  # fmt: skip
+            nn.init.zeros_(self.value_mlp[3].weight)
+            nn.init.zeros_(self.value_mlp[3].bias)
         self.move_head = mlp(d_model + 32 + 1 + (4 if feats else 0), 64, 2)
         self.switch_head = mlp(2 * d_model, 64, 1)
 
