@@ -18,6 +18,7 @@ Each turn (heuristic actions, scored in "HP-fraction swing" units):
 Any exception falls back to poke-env's SimpleHeuristicsPlayer decision.
 """
 
+import asyncio
 import json
 import logging
 from collections import deque
@@ -352,6 +353,12 @@ class Plan:
 
 
 class KnowledgePlayer(Player):
+    # a choice the server rejected ([Invalid choice] / [Unavailable choice]) and no new request
+    # for the battle within this many seconds: "/choose default" (the server picks a legal
+    # option). poke-env answers [Unavailable choice] only by waiting for the next request; when
+    # none came the game waited for good (self-play gens 3-4, ~1 in 7,000 games)
+    CHOICE_RETRY_S = 20.0
+
     def __init__(
         self,
         belief: BeliefModel,
@@ -359,6 +366,8 @@ class KnowledgePlayer(Player):
         **kwargs,
     ):
         super().__init__(**kwargs)
+        self._n_requests: dict[str, int] = {}  # requests handled per battle (the choice guard)
+        self._guards: set = set()  # the guard tasks (kept referenced until done)
         self.belief = belief
         self.plans: dict[str, Plan] = {}
         self.fallbacks = 0
@@ -366,6 +375,32 @@ class KnowledgePlayer(Player):
         if self.trace_dir:
             self.trace_dir.mkdir(parents=True, exist_ok=True)
         self.memory: dict[str, BattleMemory] = {}
+
+    # ---- rejected choices -----------------------------------------------------------------
+    async def _handle_battle_request(self, battle, maybe_default_order: bool = False):
+        self._n_requests[battle.battle_tag] = self._n_requests.get(battle.battle_tag, 0) + 1
+        await super()._handle_battle_request(battle, maybe_default_order)
+
+    async def _handle_battle_message(self, split_messages):
+        await super()._handle_battle_message(split_messages)
+        rejected = any(len(m) > 2 and m[1] == "error"
+                       and m[2].startswith(("[Invalid choice]", "[Unavailable choice]"))
+                       for m in split_messages[1:])  # fmt: skip
+        if rejected:
+            tag = split_messages[0][0].lstrip(">")
+            task = asyncio.ensure_future(self._choice_guard(tag, self._n_requests.get(tag, 0)))
+            self._guards.add(task)
+            task.add_done_callback(self._guards.discard)
+
+    async def _choice_guard(self, tag: str, n: int) -> None:
+        await asyncio.sleep(self.CHOICE_RETRY_S)
+        battle = self.battles.get(tag)
+        if battle is None or battle.finished or self._n_requests.get(tag, 0) != n:
+            return  # a new request came (and was answered), or the game is over
+        logging.getLogger(__name__).warning(
+            "%s turn %d: choice rejected and no new request in %.0fs: /choose default",
+            tag, battle.turn, self.CHOICE_RETRY_S)  # fmt: skip
+        await self.ps_client.send_message("/choose default", tag)
 
     # ---- helpers ------------------------------------------------------------------------
     def _opp_team_names(self, battle: AbstractBattle) -> tuple[str, ...]:
