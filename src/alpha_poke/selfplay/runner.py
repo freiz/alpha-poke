@@ -73,6 +73,9 @@ async def _lane(lane: str, jobs: list, port: int, gen_dir: Path, settings: dict,
             account_configuration=account(f"s{settings['run_tag']}{lane}{tag}"),
             battle_format="gen9ou", server_configuration=local_server(port),
             max_concurrent_battles=1, team=jobs[0][1].p1.text, worlds=32,
+            # poke-env logs the server's |error| messages ([Invalid choice], [Unavailable
+            # choice]) at level 25: kept, for the stalled games' causes
+            log_level=25,
             net_policy="both", model=settings["model"], batcher=batcher, seed=seed,
             full_frac=settings["full_frac"], full_iters=settings["full_iters"],
             fast_iters=settings["fast_iters"], fast_worlds=settings["fast_worlds"],
