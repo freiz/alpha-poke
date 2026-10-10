@@ -12,6 +12,7 @@ Per-game rows go to the usual arena JSONL; Foul Play's own logs are kept per lan
 
 import asyncio
 import json
+import logging
 import multiprocessing as mp
 import os
 import shutil
@@ -22,6 +23,7 @@ from dataclasses import asdict
 from pathlib import Path
 
 from alpha_poke.eval.arena import (
+    GAME_TIMEOUT,
     TURN_CAP,
     _base,
     _species,
@@ -47,12 +49,13 @@ def _install_teams(pool_dir: str) -> dict[str, str]:
     return names
 
 
-def _opponent_cmd(opp, port, opp_name, our_name, we_challenge, matches, pool_dir, run_dir, lane):
+def _opponent_cmd(opp, port, opp_name, our_name, we_challenge, matches, pool_dir, run_dir, lane,
+                  restart: int = 0):  # fmt: skip
     """(command, cwd, env, label) of the Foul Play process for one lane.
     opp = {"kind": "foulplay", "search_ms", "parallelism"}."""
     assert opp["kind"] == "foulplay", opp
     fp_names = _install_teams(pool_dir)
-    list_file = FP_TEAMS / "lists" / f"{run_dir.name}_lane{lane}.txt"
+    list_file = FP_TEAMS / "lists" / f"{run_dir.name}_lane{lane}_r{restart}.txt"
     list_file.parent.mkdir(parents=True, exist_ok=True)
     list_file.write_text("\n".join(fp_names[m.team_b] for m in matches) + "\n")
     cmd = [
@@ -74,74 +77,111 @@ def _opponent_cmd(opp, port, opp_name, our_name, we_challenge, matches, pool_dir
     return cmd, FP, dict(os.environ, FP_OFFLINE="1"), label
 
 
+class OpponentDied(RuntimeError):
+    pass
+
+
 async def _lane(bot, matches, port, pool_dir, lane, log_path, opp, extras, run_dir):
+    """One lane's matches. A game that does not end within GAME_TIMEOUT, or whose opponent
+    process exits, is recorded as failed (``a_won`` None, ``failed``); the lane then starts over
+    with new players (fresh accounts: the old ones may still hold the unfinished battle or an
+    unanswered challenge) and a new opponent process for the matches left (2026-10-09: Foul Play
+    crashed on Magic Room / a division by zero in the middle of games, and two lanes waited for
+    challenges that never came: the evaluation hung for good)."""
     from alpha_poke.eval.bots import make_bot
 
     teams = load_team_files(pool_dir)
     expected = {k: _species(v) for k, v in teams.items()}
-    tag = f"{os.getpid() % 10000}l{lane}"
-    our_name, opp_name = f"ab{tag}", f"fp{tag}"
     we_challenge = lane % 2 == 0
-    cmd, cwd, env, label = _opponent_cmd(
-        opp, port, opp_name, our_name, we_challenge, matches, pool_dir, run_dir, lane
-    )
-    fp_log = open(run_dir / f"opponent_lane{lane}.log", "w")
     first = next(iter(teams.values()))
-    me = make_bot(bot, our_name, port, first, **extras)
-    if not we_challenge:  # we must be logged in before the opponent starts challenging us
-        await asyncio.sleep(3)
-    proc = subprocess.Popen(cmd, cwd=cwd, stdout=fp_log, stderr=subprocess.STDOUT, env=env)
-    rows = []
-    try:
-        # opponent login + data loading
-        await asyncio.sleep(6)
-        for m in matches:
-            me.update_team(teams[m.team_a])
-            before = set(me.battles)
-            fb0 = (getattr(me, "fallbacks", 0), getattr(me, "search_fallbacks", 0))
-            if we_challenge:
-                await me.send_challenges(opp_name, n_challenges=1)
-            else:
-                await me.accept_challenges(opp_name, n_challenges=1)
-            new = [me.battles[k] for k in me.battles if k not in before]
-            battle = new[0] if new else None
-            plan = getattr(me, "plans", {}).get(battle.battle_tag) if battle else None
-            if plan is not None and plan.exec_state is not None:
-                plan.exec_state.observe(battle)
-            team_ok = bool(
-                battle
-                and sorted(_base(p.species) for p in battle.team.values()) == expected[m.team_a]
-                and sorted(_base(p.species) for p in battle.teampreview_opponent_team)
-                == expected[m.team_b]
-            )
-            row = asdict(m) | {
-                "a_challenges": we_challenge,
-                "bot_a": bot,
-                "bot_b": label,
-                "battle": battle.battle_tag if battle else None,
-                "a_won": None if battle is None else battle.won,
-                "turns": battle.turn if battle else None,
-                # our bot ends a game at the turn cap (agents.search_player): a draw, not a loss
-                "capped": bool(battle and battle.turn >= TURN_CAP),
-                "team_ok": team_ok,
-                "lead_a": plan.lead if plan else None,
-                "plan_a": plan.to_log() if plan else None,
-                "plan_b": None,
-                "fallbacks_a": getattr(me, "fallbacks", 0) - fb0[0],  # this game only
-                "search_fallbacks_a": getattr(me, "search_fallbacks", 0) - fb0[1],
-                "fallbacks_b": 0,
-            }
-            rows.append(row)
-            with open(log_path, "a") as f:
-                f.write(json.dumps(row) + "\n")
-            if proc.poll() is not None and m is not matches[-1]:
-                raise RuntimeError(f"opponent of lane {lane} exited early (see its log)")
-    finally:
-        if proc.poll() is None:
-            proc.terminate()
-        fp_log.close()
-        if hasattr(me, "close"):
-            me.close()
+    rows: list = []
+    restarts = 0
+    k = 0  # the next match
+    while k < len(matches):
+        tag = f"{os.getpid() % 10000}l{lane}" + (f"r{restarts}" if restarts else "")
+        our_name, opp_name = f"ab{tag}", f"fp{tag}"
+        left = matches[k:]
+        cmd, cwd, env, label = _opponent_cmd(opp, port, opp_name, our_name, we_challenge, left,
+                                             pool_dir, run_dir, lane, restarts)  # fmt: skip
+        suffix = f"_r{restarts}" if restarts else ""
+        fp_log = open(run_dir / f"opponent_lane{lane}{suffix}.log", "w")
+        me = make_bot(bot, our_name, port, first, **extras)
+        if not we_challenge:  # we must be logged in before the opponent starts challenging us
+            await asyncio.sleep(3)
+        proc = subprocess.Popen(cmd, cwd=cwd, stdout=fp_log, stderr=subprocess.STDOUT, env=env)
+
+        async def watch(proc=proc):
+            while proc.poll() is None:
+                await asyncio.sleep(5)
+            raise OpponentDied(f"opponent of lane {lane} exited ({proc.returncode})")
+
+        try:
+            await asyncio.sleep(6)  # opponent login + data loading
+            for m in left:
+                me.update_team(teams[m.team_a])
+                before = set(me.battles)
+                fb0 = (getattr(me, "fallbacks", 0), getattr(me, "search_fallbacks", 0))
+                if we_challenge:
+                    play = me.send_challenges(opp_name, n_challenges=1)
+                else:
+                    play = me.accept_challenges(opp_name, n_challenges=1)
+                task, watcher = asyncio.ensure_future(play), asyncio.ensure_future(watch())
+                done, _ = await asyncio.wait({task, watcher}, timeout=GAME_TIMEOUT,
+                                             return_when=asyncio.FIRST_COMPLETED)  # fmt: skip
+                failed = None
+                if task not in done:
+                    failed = (str(watcher.exception()) if watcher in done
+                              else f"no finished game after {GAME_TIMEOUT:.0f}s")  # fmt: skip
+                    task.cancel()
+                watcher.cancel()
+                new = [me.battles[t] for t in me.battles if t not in before]
+                battle = new[0] if new and not failed else None
+                plan = getattr(me, "plans", {}).get(battle.battle_tag) if battle else None
+                if plan is not None and plan.exec_state is not None:
+                    plan.exec_state.observe(battle)
+                team_ok = bool(
+                    battle
+                    and sorted(_base(p.species) for p in battle.team.values()) == expected[m.team_a]
+                    and sorted(_base(p.species) for p in battle.teampreview_opponent_team)
+                    == expected[m.team_b]
+                )
+                row = (
+                    asdict(m)
+                    | {
+                        "a_challenges": we_challenge,
+                        "bot_a": bot,
+                        "bot_b": label,
+                        "battle": battle.battle_tag if battle else None,
+                        "a_won": None if battle is None else battle.won,
+                        "turns": battle.turn if battle else None,
+                        # our bot ends a game at the turn cap (agents.search_player): a draw
+                        "capped": bool(battle and battle.turn >= TURN_CAP),
+                        "team_ok": team_ok,
+                        "lead_a": plan.lead if plan else None,
+                        "plan_a": plan.to_log() if plan else None,
+                        "plan_b": None,
+                        "fallbacks_a": getattr(me, "fallbacks", 0) - fb0[0],  # this game only
+                        "search_fallbacks_a": getattr(me, "search_fallbacks", 0) - fb0[1],
+                        "fallbacks_b": 0,
+                    }
+                    | ({"failed": failed} if failed else {})
+                )
+                rows.append(row)
+                with open(log_path, "a") as f:
+                    f.write(json.dumps(row) + "\n")
+                k += 1
+                if failed:
+                    log = logging.getLogger(__name__)
+                    log.warning("lane %d, pair %d game %d: %s; the lane restarts", lane, m.pair,
+                                m.game, failed)  # fmt: skip
+                    restarts += 1
+                    break
+        finally:
+            if proc.poll() is None:
+                proc.terminate()
+            fp_log.close()
+            if hasattr(me, "close"):
+                me.close()
     return rows
 
 
