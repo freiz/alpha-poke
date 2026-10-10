@@ -723,6 +723,9 @@ def cmd_loop(a) -> None:
     me = [sys.executable, __file__]
     say(f"loop: generations {a.start}..{a.start + a.gens - 1}")
     for gen in range(a.start, a.start + a.gens):
+        if gen > a.start and (SELFPLAY_DIR / "STOP").exists():  # stop between generations
+            say(f"loop: {SELFPLAY_DIR / 'STOP'} found; stopped before gen {gen}")
+            return
         args = ["cycle", "--gen", str(gen), "--games", str(a.games), "--procs", str(a.procs),
                 "--threads", str(a.threads), "--eval-pairs", str(a.eval_pairs),
                 "--eval-iterations", str(a.eval_iterations),
