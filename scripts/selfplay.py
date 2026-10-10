@@ -777,16 +777,6 @@ def cmd_loop(a) -> None:
             if code == 3:
                 say("no progress in consecutive checks: loop stopped for a look (network size?)")
                 return
-        if a.diag_every and gen % a.diag_every == 0:  # the diagnostic team pools (D16)
-            say(f"gen {gen}: diagnostic pools, {state()['current']} vs v5-glu")
-            subprocess.run(capped(me + ["diag", "--gen", str(gen)], a.mem_cap_gb))
-            d = state()["generations"][str(gen)].get("diag_pools", {})
-            say(
-                f"gen {gen}: diagnostic pools "
-                + ", ".join(
-                    f"{k} {v.get('paired_mean')} +- {v.get('ci95_paired')}" for k, v in d.items()
-                )
-            )
         if gen % a.foulplay_every == 0 or not state().get("foulplay"):
             say(f"gen {gen}: Foul Play check of {state()['current']}")
             code = subprocess.run(
@@ -963,7 +953,7 @@ def main() -> None:
     p.add_argument("--ports", type=int, nargs="+", default=[8000, 8001, 8002, 8003])
     p.add_argument("--force", action="store_true")
     p.set_defaults(fn=cmd_eval)
-    p = sub.add_parser("diag", help="diagnostic team pools: current vs v5-glu (D16)")
+    p = sub.add_parser("diag", help="diagnostic team pools: current vs v5-glu (D16; by hand)")
     p.add_argument("--gen", type=int, required=True, help="where to log it")
     p.add_argument("--against", default=BASE_RUN)
     p.add_argument("--pools", default="wide200,offmeta200,random200")
@@ -1012,7 +1002,6 @@ def main() -> None:
     p.add_argument("--max-stagnant", type=int, default=2)
     p.add_argument("--foulplay-every", type=int, default=9)
     p.add_argument("--max-rejected", type=int, default=3)
-    p.add_argument("--diag-every", type=int, default=3, help="diagnostic team pools (0: never)")
     p.add_argument("--mem-cap-gb", type=float, default=40,
                    help="memory cap of every step (cgroup; WSL has 48 GB; 0 = none)")  # fmt: skip
     p.set_defaults(fn=cmd_loop)
