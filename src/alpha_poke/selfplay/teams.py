@@ -89,14 +89,23 @@ class TeamSampler:
     def __init__(self, belief, since: int | None = None, half_life_days: float = 120.0,
                  catalog_frac: float = 0.3, temp: float = 1.3, spread_temp: float = 1.0,
                  move_beta: float = 1.0, seed: int = 0, retries: int = 3,
-                 stats_cutoff: str = "1500"):  # fmt: skip
-        g = pd.read_parquet(GAMES, columns=["id", "time", "r1", "r2", "winner", "shard", "row"])
+                 stats_cutoff: str = "1500", popularity_beta: float = 0.0):  # fmt: skip
+        g = pd.read_parquet(GAMES, columns=["id", "time", "r1", "r2", "winner", "shard", "row",
+                                            "team1", "team2"])  # fmt: skip
         g = g[g.winner > 0]
         if since is not None:
             g = g[g.time >= since]
         age = (g.time.max() - g.time) / DAY
         self.games = g.reset_index(drop=True)
         self.weights = np.array(0.5 ** (age / half_life_days), dtype=float)
+        if popularity_beta > 0:
+            # flattened popularity (design D16): a game's weight / (n1 n2) ** (beta / 2), n = how
+            # many games in the window had that side's six species; beta 0 = the ladder's own
+            # distribution, 1 = every composition alike
+            comps = pd.concat([self.games.team1, self.games.team2]).value_counts()
+            n1 = self.games.team1.map(comps).to_numpy(float)
+            n2 = self.games.team2.map(comps).to_numpy(float)
+            self.weights = self.weights / (n1 * n2) ** (popularity_beta / 2)
         self.weights /= self.weights.sum()
         self.catalog = [e for e in catalog.load() if e.complete]
         months = sorted(p.name for p in Path(DEFAULT_DIR).iterdir() if p.is_dir())

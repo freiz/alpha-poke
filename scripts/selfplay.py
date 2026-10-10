@@ -32,7 +32,8 @@ SINCE_DEFAULT = 1746057600  # 2025-05-01: the current metagame (the matchup mode
 
 
 def sample_pairs(n: int, seed: int, since: int = 0, half_life: float = 120.0,
-                 catalog_frac: float = 0.3, temp: float = 1.3) -> tuple[list, object]:  # fmt: skip
+                 catalog_frac: float = 0.3, temp: float = 1.3,
+                 popularity_beta: float = 0.0) -> tuple[list, object]:  # fmt: skip
     """``n`` validated real-game team pairs, drawn like self-play's (selfplay.teams)."""
     from alpha_poke.agents.belief_state import BeliefModel
     from alpha_poke.selfplay import teams
@@ -40,6 +41,7 @@ def sample_pairs(n: int, seed: int, since: int = 0, half_life: float = 120.0,
     logging.disable(logging.WARNING)
     ts = teams.TeamSampler(BeliefModel.load(), since=since or SINCE_DEFAULT,
                            half_life_days=half_life, catalog_frac=catalog_frac, temp=temp,
+                           popularity_beta=popularity_beta,
                            seed=seed)  # fmt: skip
     pairs = ts.sample(n)
     logging.disable(logging.NOTSET)
@@ -67,7 +69,8 @@ def eval_pool(gen_dir: Path, name: str, n: int, seed: int) -> str:
 def cmd_teams(a) -> None:
     from alpha_poke.selfplay import teams
 
-    pairs, ts = sample_pairs(a.n, a.seed, a.since, a.half_life, a.catalog_frac, a.temp)
+    pairs, ts = sample_pairs(a.n, a.seed, a.since, a.half_life, a.catalog_frac, a.temp,
+                             a.popularity_beta)  # fmt: skip
     path = SELFPLAY_DIR / f"gen{a.gen}" / "teams.jsonl"
     teams.save(pairs, path)
     kinds = collections.Counter(s.kind for p in pairs for s in (p.p1, p.p2))
@@ -829,7 +832,10 @@ def main() -> None:
     p.add_argument("--n", type=int, default=2000)
     p.add_argument("--since", type=int, default=SINCE_DEFAULT, help="real games from (unix time)")
     p.add_argument("--half-life", type=float, default=120.0, help="recency weight, days")
-    p.add_argument("--catalog-frac", type=float, default=0.3)
+    # self-play's team mix (design D16, from gen 3; evaluation pools keep the ladder's: 0.3 / 0)
+    p.add_argument("--catalog-frac", type=float, default=0.15)
+    p.add_argument("--popularity-beta", type=float, default=0.3,
+                   help="flatten the compositions' popularity (0 = as on the ladder)")  # fmt: skip
     p.add_argument("--temp", type=float, default=1.3, help="completion temperature")
     p.add_argument("--seed", type=int, default=0)
     p.set_defaults(fn=cmd_teams)
