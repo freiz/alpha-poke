@@ -34,7 +34,12 @@ def load_team_files(team_dir: Path | str = DEFAULT_TEAM_DIR) -> dict[str, str]:
     """Return {team name: packed team} for every ``*.txt`` file in ``team_dir``."""
     teams = {}
     for path in sorted(Path(team_dir).glob("*.txt")):
-        mons = Teambuilder.parse_showdown_team(path.read_text().strip() + "\n\n")
+        # lines stripped: an export's lines end in two spaces, and on a set line without an item
+        # poke-env keeps them in the nickname; a long species name ("Vivillon-Pokeball  ") then
+        # exceeds 18 characters, the server rejects the team and the game never starts
+        # (2026-10-09: two pairs of the offmeta200 pool hung every time)
+        text = "\n".join(line.rstrip() for line in path.read_text().strip().splitlines())
+        mons = Teambuilder.parse_showdown_team(text + "\n\n")
         teams[path.stem] = Teambuilder.join_team(mons)
     if not teams:
         raise FileNotFoundError(f"no team files found in {team_dir}")
