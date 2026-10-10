@@ -3,7 +3,7 @@
   "model": "v5-glu",
   "elo": 1500.0
  },
- "built": "2026-10-09 08:13",
+ "built": "2026-10-09 13:30",
  "current": "sp-gen0",
  "models": [
   {
@@ -13,7 +13,9 @@
    "generation": 0,
    "role": "generation",
    "promoted": true,
-   "played_generations": [],
+   "played_generations": [
+    1
+   ],
    "training": {
     "init": "data/train/v5/runs/v5-glu",
     "selfplay": "sp0",
@@ -52,11 +54,63 @@
    "created": "2026-10-09 06:08",
    "matches": [
     "gen0-eval",
-    "gen0-foulplay"
+    "gen0-foulplay",
+    "gen1-eval"
    ],
    "elo": 1493.5,
    "elo_ci95": 21.5,
    "current": true
+  },
+  {
+   "name": "sp-gen1",
+   "run": "data/train/v5/runs/sp-gen1",
+   "sha256": "49e687e8edfacf35",
+   "generation": 1,
+   "role": "generation",
+   "promoted": true,
+   "played_generations": [],
+   "training": {
+    "init": "data/train/v5/runs/sp-gen0",
+    "selfplay": "sp0,sp1",
+    "sp_frac": 0.5,
+    "lr": 0.0004,
+    "batch": 4096,
+    "warmup_frac": 0.2,
+    "sp_per_game": 50,
+    "sp_value_passes": 1,
+    "sp_value_per_game": 0,
+    "sp_value_lambda": 0.0,
+    "seed": 1,
+    "epochs": 6,
+    "steps": 993,
+    "params": 736875,
+    "human_share": 0.5,
+    "sp_positions": 1134871,
+    "sp_positions_kept": 713783,
+    "recent_gens": [
+     0,
+     1
+    ]
+   },
+   "parent": "sp-gen0",
+   "validation_last": {
+    "ce_turn_w": 1.1487,
+    "bce_all_w": 0.5471,
+    "top1": 0.5554,
+    "value_ece": 0.015,
+    "hce_true": 1.2331,
+    "opp_act_acc": 0.42,
+    "sp_kl": 0.276,
+    "sp_top1": 0.7077,
+    "sp_bce": 0.4731,
+    "sp_kl_ref": 0.0085
+   },
+   "created": "2026-10-09 12:37",
+   "matches": [
+    "gen1-eval"
+   ],
+   "elo": 1504.7,
+   "elo_ci95": 31.6
   },
   {
    "name": "foulplay-200ms",

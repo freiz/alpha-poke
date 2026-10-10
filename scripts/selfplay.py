@@ -620,6 +620,38 @@ def cmd_baseline(a) -> int:
     return code
 
 
+def cmd_diag(a) -> None:
+    """Diagnostic team pools (design D16): the current network vs --against (v5-glu) on fixed
+    pools beyond the ladder distribution (data/teams/pools: wide200 = the ladder's, offmeta200,
+    random200; scripts/team_pools.py), --pairs each, GPU search at --iterations, no early stop.
+    Never decides anything: whether self-play's gain on the ladder pool and on the others drift
+    apart over the generations (overfitting to the common teams). Recorded in state.json
+    (generation's ``diag_pools``) and the registry (not in the Elo fit)."""
+    import json
+    import os
+
+    from alpha_poke.eval.arena import run_arena
+
+    st = state()
+    cur, against = st["current"], a.against
+    os.environ["ALPHA_MODEL_A"], os.environ["ALPHA_MODEL_B"] = cur, against
+    os.environ["ALPHA_SEARCH_ITERATIONS"] = str(a.iterations)
+    os.environ["ALPHA_GPU_COMPILE"] = "1"
+    out = {}
+    for pool in a.pools.split(","):
+        pdir = f"data/teams/pools/{pool}"
+        res = run_arena("g_ma", "g_mb", a.pairs, pool_dir=pdir, ports=tuple(a.ports),
+                        procs=a.gpu_procs, lanes_per_proc=a.gpu_lanes, seed=0,
+                        log_dir=str(SELFPLAY_DIR / f"gen{a.gen}"), pairs=True)  # fmt: skip
+        res |= {"network": cur, "against": against, "pool": pdir, "search": "gpu",
+                "search_iterations": a.iterations}  # fmt: skip
+        out[pool] = {k: res.get(k) for k in ("games", "pairs", "paired_mean", "ci95_paired",
+                                             "failed_games", "log")}  # fmt: skip
+        print(pool, json.dumps(out[pool]), flush=True)
+        registry_match(f"gen{a.gen}-diag-{pool}", cur, against, res, "diagnostic pool", False)
+    record(a.gen, "diag_pools", out)
+
+
 def cmd_foulplay(a) -> int:
     """External anchor (design D15-6): the current network vs Foul Play at a fixed setting
     (our CPU ISMCTS --search-ms vs Foul Play --fp-ms x --fp-parallelism) on the SAME 200 real-game
@@ -745,6 +777,16 @@ def cmd_loop(a) -> None:
             if code == 3:
                 say("no progress in consecutive checks: loop stopped for a look (network size?)")
                 return
+        if a.diag_every and gen % a.diag_every == 0:  # the diagnostic team pools (D16)
+            say(f"gen {gen}: diagnostic pools, {state()['current']} vs v5-glu")
+            subprocess.run(capped(me + ["diag", "--gen", str(gen)], a.mem_cap_gb))
+            d = state()["generations"][str(gen)].get("diag_pools", {})
+            say(
+                f"gen {gen}: diagnostic pools "
+                + ", ".join(
+                    f"{k} {v.get('paired_mean')} +- {v.get('ci95_paired')}" for k, v in d.items()
+                )
+            )
         if gen % a.foulplay_every == 0 or not state().get("foulplay"):
             say(f"gen {gen}: Foul Play check of {state()['current']}")
             code = subprocess.run(
@@ -921,6 +963,16 @@ def main() -> None:
     p.add_argument("--ports", type=int, nargs="+", default=[8000, 8001, 8002, 8003])
     p.add_argument("--force", action="store_true")
     p.set_defaults(fn=cmd_eval)
+    p = sub.add_parser("diag", help="diagnostic team pools: current vs v5-glu (D16)")
+    p.add_argument("--gen", type=int, required=True, help="where to log it")
+    p.add_argument("--against", default=BASE_RUN)
+    p.add_argument("--pools", default="wide200,offmeta200,random200")
+    p.add_argument("--pairs", type=int, default=200)
+    p.add_argument("--iterations", type=int, default=3000)
+    p.add_argument("--gpu-procs", type=int, default=4)
+    p.add_argument("--gpu-lanes", type=int, default=12)
+    p.add_argument("--ports", type=int, nargs="+", default=[8000, 8001, 8002, 8003])
+    p.set_defaults(fn=cmd_diag)
     p = sub.add_parser("baseline", help="progress: the current network vs --back gens ago")
     p.add_argument("--gen", type=int, required=True, help="where to log it")
     p.add_argument("--back", type=int, default=3)
@@ -960,6 +1012,7 @@ def main() -> None:
     p.add_argument("--max-stagnant", type=int, default=2)
     p.add_argument("--foulplay-every", type=int, default=9)
     p.add_argument("--max-rejected", type=int, default=3)
+    p.add_argument("--diag-every", type=int, default=3, help="diagnostic team pools (0: never)")
     p.add_argument("--mem-cap-gb", type=float, default=40,
                    help="memory cap of every step (cgroup; WSL has 48 GB; 0 = none)")  # fmt: skip
     p.set_defaults(fn=cmd_loop)
