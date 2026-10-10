@@ -890,6 +890,8 @@ def main() -> None:
     )
     ap.add_argument("--half-life", type=float, default=180.0, help="days; 0 = no time weighting")
     ap.add_argument("--val-frac", type=float, default=0.03)
+    ap.add_argument("--skip-shards", default="",
+                    help="shard name prefixes left out of the data (comma-separated)")  # fmt: skip
     ap.add_argument("--train-only", default="",
                     help="shard name prefixes never in validation (comma-separated), e.g. hf-: "
                          "the replays after Metamon's; v5's validation stays")  # fmt: skip
@@ -946,6 +948,10 @@ def main() -> None:
     t0 = time.time()
     if a.stream:
         caches, sizes = shard_caches(a.data)
+        if a.skip_shards:  # e.g. hf-: the data a run without the newer replays had (v5-glu)
+            keep = [not c.stem.startswith(tuple(a.skip_shards.split(","))) for c in caches]
+            caches = [c for c, k in zip(caches, keep, strict=True) if k]
+            sizes = [n for n, k in zip(sizes, keep, strict=True) if k]
         d = load_small(caches, sizes)  # small columns only; the rest is read chunk by chunk
         n = len(d["game"])
     else:
