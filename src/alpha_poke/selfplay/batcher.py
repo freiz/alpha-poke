@@ -36,7 +36,7 @@ class _Job:
 class Batcher:
     def __init__(self, model: str, leaves: int = 8, threads: int = 8, prior: bool = True):
         """``prior=False``: the network's policy is not used (uniform priors for both sides, the
-        logits zeroed): a search that only the value guides (scripts/value_bench.py)."""
+        logits zeroed): a search that only the value guides (scripts/pv_bench.py)."""
         from alpha_poke.agents.gpu_net import GpuNet
 
         self.net = GpuNet(model)

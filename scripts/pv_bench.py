@@ -1,5 +1,6 @@
-"""A fixed value benchmark (2026-10-10): does a network's value judge the positions, and does it
-choose the right options? The same positions for every network and generation.
+"""A fixed policy / value benchmark (2026-10-10): does a network's value judge the positions, does
+its prior point at the right options, and do its searches (value only; prior and value) choose
+them? The same positions for every network and generation.
 
   build      positions.jsonl: --sp self-play positions of generation --gen, from the games every
              training holds out (train_pv's self-play validation: crc32 of the game id % 1000 <
@@ -16,15 +17,17 @@ choose the right options? The same positions for every network and generation.
                  single network's own judgement is the yardstick): top-1 agreement with the
                  reference's most visited option, and the rank correlation of the options' mean
                  values (Spearman, options both searched);
-               * the same with the network's prior (the search as played)
+               * the same with the network's prior (the search as played);
+               * the prior alone (no search): its top option against the reference's, and its
+                 rank correlation with the reference's visit shares
              -> score.json, one entry per network and position source
 
 The positions are single worlds (the recorded world 0 / the training row's state): the searches
 are determinized, the same for every network.
 
-  uv run python scripts/value_bench.py build --gen 4
-  uv run python scripts/value_bench.py reference --nets v5-glu,sp-gen0,sp-gen2
-  uv run python scripts/value_bench.py score --nets v5-glu,sp-gen0,sp-gen2,...
+  uv run python scripts/pv_bench.py build --gen 4
+  uv run python scripts/pv_bench.py reference --nets v5-glu,sp-gen0,sp-gen2
+  uv run python scripts/pv_bench.py score --nets v5-glu,sp-gen0,sp-gen2,...
 """
 
 import argparse
@@ -36,7 +39,7 @@ from pathlib import Path
 
 import numpy as np
 
-OUT = Path("data/eval/value_bench")
+OUT = Path("data/eval/pv_bench")
 RUNS = Path("data/train/v5/runs")
 SELFPLAY = Path("data/selfplay")
 
@@ -141,7 +144,7 @@ def search_all(net: str, pos: list[dict], iterations: int, prior: bool, seed: in
     for f in futs:
         try:
             rec, _ = f.result()
-            out.append({k: rec[k] for k in ("visits", "mean", "legal", "q")})
+            out.append({k: rec[k] for k in ("visits", "mean", "legal", "q", "prior")})
         except Exception as e:  # noqa: BLE001 - an engine failure: the position is skipped
             out.append({"error": str(e)})
     return out
@@ -222,7 +225,10 @@ def outcome_metrics(net: str, pos: list[dict]) -> dict:
     }
 
 
-def decision_metrics(recs: list, cons: list, idx: list[int]) -> dict:
+def decision_metrics(recs: list, cons: list, idx: list[int], prior: bool = False) -> dict:
+    """Top-1 agreement with the reference and rank correlation: of a search's visits / option
+    means with the reference's (options both searched), or (``prior``) of the network's prior
+    with the reference's visit shares (options the reference searched)."""
     top, rho = [], []
     for i in idx:
         r, c = recs[i], cons[i]
@@ -231,12 +237,15 @@ def decision_metrics(recs: list, cons: list, idx: list[int]) -> dict:
         legal = np.asarray(r["legal"], bool) & (c["share"] > 0)
         if legal.sum() < 2:
             continue
-        v = np.asarray(r["visits"], float)
+        v = np.asarray(r["prior" if prior else "visits"], float)
         top.append(
             int(np.argmax(np.where(legal, v, -1)) == np.argmax(np.where(legal, c["share"], -1)))
         )
-        both = legal & (v > 0)
-        rho.append(spearman(np.asarray(r["mean"], float)[both], c["mean"][both]))
+        if prior:
+            rho.append(spearman(v[legal], c["share"][legal]))
+        else:
+            both = legal & (v > 0)
+            rho.append(spearman(np.asarray(r["mean"], float)[both], c["mean"][both]))
     rho = [x for x in rho if x == x]
     return {"positions": len(top), "top1": round(float(np.mean(top)), 4) if top else None,
             "top1_se": round(float(np.std(top) / len(top) ** 0.5), 4) if top else None,
@@ -256,6 +265,7 @@ def score(a) -> None:
         for src in ("selfplay", "human"):
             idx = [i for i, p in enumerate(pos) if p["source"] == src]
             entry[src] = {"outcome": outcome_metrics(net, [pos[i] for i in idx]),
+                          "prior_only": decision_metrics(with_prior, cons, idx, prior=True),
                           "value_only": decision_metrics(value_only, cons, idx),
                           "with_prior": decision_metrics(with_prior, cons, idx)}  # fmt: skip
         entry["iterations"] = a.iterations
