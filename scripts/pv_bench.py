@@ -212,17 +212,31 @@ def spearman(x: np.ndarray, y: np.ndarray) -> float:
     return float(np.corrcoef(rx, ry)[0, 1])
 
 
-def outcome_metrics(net: str, pos: list[dict]) -> dict:
+def root_values(net: str, pos: list[dict], chunk: int = 512) -> np.ndarray:
+    """The network's value logit of each position (the player to act's view) on the GPU
+    (GpuNet: any architecture the training has, e.g. --value-hidden, which the Rust CPU
+    inference does not know). One leaf per position: its two rows are the two views, the
+    first is the root's."""
     import alpha_search
 
-    _, vz = alpha_search.tnet_forward(
-        run_dir(net),
-        [p["state"] for p in pos],
-        [p["reveal"] for p in pos],
-        [tuple(p["ratings"]) for p in pos],
-        [p["turn"] for p in pos],
-        [p["history"] for p in pos],
-    )
+    from alpha_poke.agents.gpu_net import GpuNet
+
+    g = GpuNet(run_dir(net), graphs=False)
+    out = []
+    for k in range(0, len(pos), chunk):
+        part = pos[k : k + chunk]
+        searches = [alpha_search.BatchSearch(
+            [p["state"]], [(p["reveal"], tuple(p["ratings"]), p["turn"], p["history"])],
+            seed=0, threads=1, vl=1) for p in part]  # fmt: skip
+        b, rows, failed = alpha_search.collect_many(searches, 1, 8)
+        assert not any(failed) and all(r == 2 for r in rows), "one leaf (two rows) per position"
+        v, _ = g(b)
+        out.append(v[0::2])
+    return np.concatenate(out)
+
+
+def outcome_metrics(net: str, pos: list[dict]) -> dict:
+    vz = root_values(net, pos)
     z = np.asarray(vz, float)
     y = np.asarray([p["won"] for p in pos], float)
     pr = np.clip(1 / (1 + np.exp(-z)), 1e-6, 1 - 1e-6)

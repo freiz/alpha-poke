@@ -286,7 +286,8 @@ class TransformerPV(nn.Module):
         arch: dict | None = None,
     ):
         """``arch`` (architecture experiments, design D13): ffn "relu" / "swiglu", norm "ln" /
-        "rms", qk_norm, smolgen (hidden size, 0 = off); empty / None = PyTorch's encoder layer
+        "rms", qk_norm, smolgen (hidden size, 0 = off), value_hidden (a hidden layer for the
+        value, 0 = off); empty / None = PyTorch's encoder layer
         (the checkpoints before the experiments)."""
         super().__init__()
         assert not mask_hidden or feats, "mask_hidden needs the v3 inputs (reveal bits)"
@@ -348,6 +349,13 @@ class TransformerPV(nn.Module):
             self.encoder = nn.TransformerEncoder(layer, n_layers, enable_nested_tensor=False)
             self.norm = nn.LayerNorm(d_model)
         self.value = nn.Linear(d_model, 1)
+        # value_hidden > 0 (arch): a hidden layer on top of the linear value readout, its output
+        # layer zero-initialized (adding it to a trained network keeps its outputs at first)
+        vh = self.arch.get("value_hidden", 0)
+        if vh:
+            self.value_mlp = nn.Sequential(nn.Linear(d_model, vh), nn.SiLU(), nn.Linear(vh, 1))
+            nn.init.zeros_(self.value_mlp[2].weight)
+            nn.init.zeros_(self.value_mlp[2].bias)
         self.move_head = mlp(d_model + 32 + 1 + (4 if feats else 0), 64, 2)
         self.switch_head = mlp(2 * d_model, 64, 1)
 
@@ -384,6 +392,8 @@ class TransformerPV(nn.Module):
             z = self.norm(self.encoder(z, src_key_padding_mask=pad))
         h, t = z[:, :12], z[:, 12]
         value = self.value(t).squeeze(-1)
+        if self.arch.get("value_hidden", 0):
+            value = value + self.value_mlp(t).squeeze(-1)
         own_active = dense[:, :6, D_ACTIVE]
         am = (moves[:, :6] * own_active[..., None, None]).sum(1)
         usable = (dense[:, :6, D_USABLE] * own_active[..., None]).sum(1)

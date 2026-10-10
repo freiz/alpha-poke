@@ -867,6 +867,8 @@ def main() -> None:
     ap.add_argument("--norm", choices=["ln", "rms"], default="ln")
     ap.add_argument("--qk-norm", action="store_true")
     ap.add_argument("--smolgen", type=int, default=0, help="dynamic attention bias hidden size")
+    ap.add_argument("--value-hidden", type=int, default=0,
+                    help="value hidden layer size (a warm start adds it, zero)")  # fmt: skip
     ap.add_argument("--elo-dropout", type=float, default=0.25)
     ap.add_argument("--stream", type=int, default=0, help="shards per chunk (0 = all in memory)")
     ap.add_argument("--val-max", type=int, default=500_000, help="--stream: validation positions")
@@ -1005,7 +1007,8 @@ def main() -> None:
                  ("d_ff", a.d_ff)):  # fmt: skip
         if v:
             size[k] = v
-    arch_opts = {"ffn": a.ffn, "norm": a.norm, "qk_norm": a.qk_norm, "smolgen": a.smolgen}
+    arch_opts = {"ffn": a.ffn, "norm": a.norm, "qk_norm": a.qk_norm, "smolgen": a.smolgen,
+                 "value_hidden": a.value_hidden}  # fmt: skip
     assert a.hist_len <= DIMS["hist"], f"--hist-len > the {DIMS['hist']} featurized steps"
     dims = DIMS | {"hist": a.hist_len}
     assert not a.mtp or (a.arch == "transformer" and "fsp" in keys), "--mtp: transformer + future"
@@ -1029,7 +1032,10 @@ def main() -> None:
         state = init["model"]
         if "residual" in state:
             model.residual = torch.nn.Parameter(state["residual"].clone())
-        model.load_state_dict(state)
+        # a new value hidden layer (--value-hidden) is the only part allowed to be missing
+        missing, unexpected = model.load_state_dict(state, strict=False)
+        assert not unexpected and all(k.startswith("value_mlp.") for k in missing), (
+            missing, unexpected)  # fmt: skip
     model = model.to(device)
     ref_model = None
     if a.init:  # the starting point, frozen: how far the policy moves (KL, design D15-6)
