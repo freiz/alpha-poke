@@ -152,8 +152,13 @@ def run_g(a, py: str, base: str, g_pre: str, g_run: str, bench: Path) -> None:
     gf = args_of(base) | {"run": g_run, "init": str(RUNS / g_pre), "size": "large", "d_ff": 256,
                           "value_hidden": a.value_hidden}  # fmt: skip
     train(gf, f"data/selfplay/diag/{g_run}.log")
+    # 5b. G with the child-node value regression (design TODO 方案乙; weight 1), pv_bench only
+    gc = gf | {"run": g_run + "-child", "child_data": f"data/train/children/gen{a.gen}",
+               "child_loss": "reg", "child_weight": 1.0}  # fmt: skip
+    train(gc, f"data/selfplay/diag/{g_run}-child.log")
     # 6. G: score, equal iterations, equal cost
-    run([py, "scripts/pv_bench.py", "score", "--nets", g_run], str(bench) + ".log")
+    run([py, "scripts/pv_bench.py", "score", "--nets", f"{g_run},{g_run}-child"],
+        str(bench) + ".log")  # fmt: skip
     match("G_vs_A_iters", g_run, base, a.pairs, a.iterations, a.iterations, a.pool)
     match("G_vs_A_cost", g_run, base, a.pairs, round(a.iterations / a.cost_ratio), a.iterations,
           a.pool)  # fmt: skip
