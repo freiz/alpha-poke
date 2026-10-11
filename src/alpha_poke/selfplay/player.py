@@ -31,7 +31,7 @@ class SelfPlayPlayer(SearchPlayer):
                  fast_iters: int = 600, fast_worlds: int = 16,
                  noise: tuple[float, float] = (0.1, 10.0), turn_cap: int = 300, seed: int = 0,
                  greedy: bool = False, record: bool = True, temp_turns: int = 8,
-                 temp_late: float = 0.25, **kwargs):  # fmt: skip
+                 temp_late: float = 0.25, children: int = 0, **kwargs):  # fmt: skip
         super().__init__(*args, **kwargs)
         assert self.model_transformer and batcher is not None
         self.batcher = batcher
@@ -47,6 +47,11 @@ class SelfPlayPlayer(SearchPlayer):
         # the outcome a noisy label of the position: in gen 2 only 58% of the moves played were
         # the most visited)
         self.temp_turns, self.temp_late = temp_turns, temp_late
+        # > 0: each full search's root children with at least this many visits are exported as
+        # value targets (design TODO "方案乙"; selfplay.children), kept per battle as the
+        # records: [(batch of their inputs, their (our, their, visits, value), root q)]
+        self.children = children
+        self.child_records: dict[str, list] = {}
 
     def choose_move(self, battle):
         return self._choose_selfplay(battle)
@@ -92,11 +97,17 @@ class SelfPlayPlayer(SearchPlayer):
         t1 = time.time()
         ctxs = net_context.contexts(battle, states)
         t2 = time.time()
+        export = self.children if full and self.record else 0
         fut = self.batcher.submit([s.to_string() for s in states], ctxs,
                                   self.full_iters if full else self.fast_iters,
-                                  self.rng.randrange(1 << 30), self.noise)  # fmt: skip
+                                  self.rng.randrange(1 << 30), self.noise,
+                                  children=export)  # fmt: skip
         # safety net: a search must never hold a game forever
-        rec, n = await asyncio.wait_for(asyncio.wrap_future(fut), timeout=self.search_timeout)
+        res = await asyncio.wait_for(asyncio.wrap_future(fut), timeout=self.search_timeout)
+        rec, n = res[0], res[1]
+        if export:
+            batch, kids = res[2]
+            self.child_records.setdefault(battle.battle_tag, []).append((batch, kids, rec["q"]))
         # the move: sampled from the visits (tau = 1), over options that have an order
         options = [(i, v) for i, v in enumerate(rec["visits"]) if v > 0 and rec["names"][i]]
         orders = {i: engine_move_to_order(self, battle, rec["names"][i]) for i, _ in options}
