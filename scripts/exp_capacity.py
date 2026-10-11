@@ -49,8 +49,11 @@ def run(cmd: list[str], log: str, env: dict | None = None) -> None:
 
 
 def args_of(run_name: str) -> dict:
+    """The run's training arguments: of its LAST start (a run killed and run again logs two;
+    2026-10-10: the first one's, --stream 4 of sp-gen4's killed attempt, went into every variant
+    until this was fixed)."""
     rows = [json.loads(x) for x in (RUNS / run_name / "metrics.jsonl").read_text().splitlines()]
-    return json.loads(next(r for r in rows if r.get("event") == "start")["args"])
+    return json.loads([r for r in rows if r.get("event") == "start"][-1]["args"])
 
 
 def to_flags(args: dict) -> list[str]:
