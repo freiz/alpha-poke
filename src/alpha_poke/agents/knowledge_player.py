@@ -352,6 +352,25 @@ class Plan:
         }
 
 
+def switch_by_slot(message: str, request: dict | None) -> str:
+    """``/choose switch <name>`` (poke-env's switch order) as ``/choose switch <slot>``.
+    Showdown resolves a name to the first party member whose name OR current species matches:
+    a Ditto transformed into a species its side also has on the bench takes that name, so the
+    switch to the benched one went to the active Ditto ("can't switch to an active Pokémon"),
+    poke-env asked again and the same order was sent forever (gen 5 self-play, 2026-10-11).
+    The slot is the benched party member whose ident names it in the latest request."""
+    head = "/choose switch "
+    if not message.startswith(head) or not request:
+        return message
+    name = message[len(head) :].strip()
+    if name.isdigit():
+        return message
+    for i, mon in enumerate((request.get("side") or {}).get("pokemon") or []):
+        if not mon.get("active") and mon["ident"].split(": ", 1)[-1].lower() == name.lower():
+            return f"{head}{i + 1}"
+    return message
+
+
 class KnowledgePlayer(Player):
     # a choice the server rejected ([Invalid choice] / [Unavailable choice]) and no new request
     # for the battle within this many seconds: "/choose default" (the server picks a legal
@@ -366,6 +385,16 @@ class KnowledgePlayer(Player):
         **kwargs,
     ):
         super().__init__(**kwargs)
+        # switches are sent by slot number, not by name (switch_by_slot)
+        send = self.ps_client.send_message
+
+        async def send_by_slot(message: str, room: str = "", message_2: str | None = None):
+            battle = self._battles.get(room)
+            if battle is not None:
+                message = switch_by_slot(message, battle.last_request)
+            return await send(message, room, message_2)
+
+        self.ps_client.send_message = send_by_slot
         self._n_requests: dict[str, int] = {}  # requests handled per battle (the choice guard)
         self._guards: set = set()  # the guard tasks (kept referenced until done)
         self.belief = belief
