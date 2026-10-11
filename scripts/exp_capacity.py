@@ -8,8 +8,8 @@ skipped when its output exists (resumable):
      hidden layer (--value-hidden), another run name
   3. pv_bench scores of v5-glu, every sp-gen up to --gen, and F; F vs A at --iterations (fixed
      pool pairs)
-  4. G pretraining: v5-glu's arguments with the large trunk and the value hidden layer, on the
-     data v5-glu had (--skip-shards hf-)
+  4. G pretraining: v5-glu's arguments with the large trunk and the value hidden layer, on all
+     the human data (the newer games training only: v5-glu's validation set)
   5. G fine-tuning: A's training from G's pretraining, the large architecture
   6. pv_bench score of G; G vs A at equal iterations and at equal cost
 
@@ -143,9 +143,10 @@ def main() -> None:
 
 
 def run_g(a, py: str, base: str, g_pre: str, g_run: str, bench: Path) -> None:
-    # 4. G pretraining: v5-glu's recipe, larger
+    # 4. G pretraining: v5-glu's recipe, larger, on all the human data (the HF dump's later games
+    # too, training only: the validation set is v5-glu's; v5-glu had 15% less data)
     ga = args_of("v5-glu") | {"run": g_pre, "size": "large", "d_ff": 256,
-                              "value_hidden": a.value_hidden, "skip_shards": "hf-"}  # fmt: skip
+                              "value_hidden": a.value_hidden, "train_only": "hf-"}  # fmt: skip
     train(ga, f"data/selfplay/diag/{g_pre}.log")
     # 5. G fine-tuning: A's training from G's pretraining
     gf = args_of(base) | {"run": g_run, "init": str(RUNS / g_pre), "size": "large", "d_ff": 256,
