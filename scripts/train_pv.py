@@ -653,6 +653,78 @@ def evaluate_sp(model, d, idx, device, vpg: float, batch=8192, ref=None) -> dict
             "sp_kl_ref": kl_ref / max(len(idx), 1)}  # fmt: skip
 
 
+def load_children(dirs: str, min_visits: int, tau: float) -> dict:
+    """Child-node value targets (scripts/child_targets.py: a root's children with their search
+    values and network inputs) in one set of arrays, and the sibling pairs for the ranking loss:
+    two children of the same root that share the opponent's action (ours differs) or ours (the
+    opponent's differs), with a soft label sigmoid((value_a - value_b) / tau)."""
+    files = [f for d in dirs.split(",") for f in sorted(Path(d).glob("chunk-*.npz"))]
+    parts = []
+    for f in files:
+        with np.load(f) as z:
+            keep = z["visits"] >= min_visits
+            parts.append({k: z[k][keep] for k in z.files})
+    c = {k: np.concatenate([p[k] for p in parts]) for k in parts[0]}
+    root, our, their = c["root"], c["our"].astype(np.int64), c["their"].astype(np.int64)
+    pairs = []
+    for key in (root * 64 + their, root * 64 + 32 + our):  # same opponent action / same ours
+        o = np.argsort(key, kind="stable")
+        k = key[o]
+        starts = np.r_[0, np.flatnonzero(k[1:] != k[:-1]) + 1, len(k)]
+        for s0, s1 in zip(starts[:-1], starts[1:], strict=True):
+            g = o[s0:s1]
+            if len(g) > 1:
+                i, j = np.triu_indices(len(g), 1)
+                pairs.append(np.stack([g[i], g[j]], 1))
+    c["pairs"] = np.concatenate(pairs) if pairs else np.zeros((0, 2), np.int64)
+    va, vb = c["value"][c["pairs"][:, 0]], c["value"][c["pairs"][:, 1]]
+    c["pair_label"] = (1 / (1 + np.exp(-(va - vb) / tau))).astype(np.float32)
+    vis = np.minimum(c["visits"][c["pairs"][:, 0]], c["visits"][c["pairs"][:, 1]])
+    c["pair_w"] = np.minimum(1.0, vis / 200).astype(np.float32)
+    c["row_w"] = np.minimum(1.0, c["visits"] / 200).astype(np.float32)
+    return c
+
+
+def child_tensors(c: dict, idx: np.ndarray, device) -> tuple:
+    """Model inputs of child rows (the search's leaf inputs, as GpuNet feeds them)."""
+
+    def t(k, dt):
+        return torch.from_numpy(c[k][idx].astype(dt)).to(device, non_blocking=True)
+
+    args = (t("sparse", np.int64), t("dense", np.float32), t("global", np.float32),
+            t("mask", bool), t("hsparse", np.int64), t("hdense", np.float32))  # fmt: skip
+    x = {"reveal": t("reveal", np.int64), "ent2": t("ent2", np.float32),
+         "glob2": t("glob2", np.float32), "turn": t("turn", np.int64),
+         "rating": t("rating", np.int64)}  # fmt: skip
+    return args, x, t("eval", np.float32) / 100
+
+
+def child_loss(model, c: dict, n_pairs: int, mode: str, rng, device) -> tuple:
+    """(loss, regression BCE, ranking BCE) on ``n_pairs`` sibling pairs drawn uniformly: the
+    regression of the children's value logits on their search values (weighted by visits)
+    and / or the Bradley-Terry ranking of each pair (P(a > b) = sigmoid(z_a - z_b), soft label
+    from the search values, weighted by the fewer visits). ``mode``: reg / rank / both."""
+    pid = rng.integers(0, len(c["pairs"]), n_pairs)
+    pr = c["pairs"][pid]
+    rows, inv = np.unique(pr, return_inverse=True)
+    inv = inv.reshape(pr.shape)
+    args, x, ev = child_tensors(c, rows, device)
+    with torch.autocast(device.type, dtype=torch.bfloat16, enabled=device.type == "cuda"):
+        out = model(*args, x=x)
+    z = value_logit(model, out[1].float(), ev)
+    tgt = torch.from_numpy(c["value"][rows]).to(device)
+    rw = torch.from_numpy(c["row_w"][rows]).to(device)
+    reg = (F.binary_cross_entropy_with_logits(z, tgt, reduction="none") * rw).sum() / rw.sum()
+    ia = torch.from_numpy(inv[:, 0]).to(device)
+    ib = torch.from_numpy(inv[:, 1]).to(device)
+    lab = torch.from_numpy(c["pair_label"][pid]).to(device)
+    pw = torch.from_numpy(c["pair_w"][pid]).to(device)
+    rank = (F.binary_cross_entropy_with_logits(z[ia] - z[ib], lab, reduction="none")
+            * pw).sum() / pw.sum()  # fmt: skip
+    loss = {"reg": reg, "rank": rank, "both": reg + rank}[mode]
+    return loss, reg.item(), rank.item()
+
+
 def value_logit(model, v, ev):
     """Residual value (--value-residual): a * handcrafted eval / 100 + b + the net's output."""
     if getattr(model, "residual", None) is None:
@@ -870,6 +942,13 @@ def main() -> None:
     ap.add_argument("--value-hidden", type=int, default=0,
                     help="value hidden layer size (a warm start adds it, zero)")  # fmt: skip
     ap.add_argument("--value-dropout", type=float, default=0.0, help="on the value hidden layer")
+    ap.add_argument("--child-data", default="",
+                    help="child-node value targets: scripts/child_targets.py dirs")  # fmt: skip
+    ap.add_argument("--child-loss", choices=["reg", "rank", "both"], default="both")
+    ap.add_argument("--child-weight", type=float, default=1.0)
+    ap.add_argument("--child-pairs", type=int, default=256, help="sibling pairs per step")
+    ap.add_argument("--child-tau", type=float, default=0.05, help="ranking soft-label scale")
+    ap.add_argument("--child-min-visits", type=int, default=50)
     ap.add_argument("--elo-dropout", type=float, default=0.25)
     ap.add_argument("--stream", type=int, default=0, help="shards per chunk (0 = all in memory)")
     ap.add_argument("--val-max", type=int, default=500_000, help="--stream: validation positions")
@@ -1054,6 +1133,12 @@ def main() -> None:
     n_params = sum(p.numel() for p in model.parameters())
     opt = torch.optim.AdamW(model.parameters(), lr=a.lr, weight_decay=a.wd)
     # self-play data (in memory): train / validation split by game
+    dch = None
+    if a.child_data:  # child-node value targets (design TODO "方案乙")
+        dch = load_children(a.child_data, a.child_min_visits, a.child_tau)
+        emit(dict(event="children", rows=len(dch["value"]), pairs=len(dch["pairs"]),
+                  roots=int(len(np.unique(dch["root"]))), loss=a.child_loss,
+                  weight=a.child_weight))  # fmt: skip
     dsp = None
     if a.selfplay:  # "name" or "name:keep" (share of its games kept)
         items = [(n, float(k) if k else 1.0)
@@ -1184,6 +1269,12 @@ def main() -> None:
             loss = (1 - a.sp_frac) * loss + a.sp_frac * s_loss
             agg["sp_ce"] = agg.get("sp_ce", 0.0) + s_ce.item()
             agg["sp_bce"] = agg.get("sp_bce", 0.0) + s_bce.item()
+        if dch is not None:  # child-node value targets: regression / sibling ranking
+            c_loss, c_reg, c_rank = child_loss(model, dch, a.child_pairs, a.child_loss, rng,
+                                               device)  # fmt: skip
+            loss = loss + a.child_weight * c_loss
+            agg["ch_reg"] = agg.get("ch_reg", 0.0) + c_reg
+            agg["ch_rank"] = agg.get("ch_rank", 0.0) + c_rank
         opt.zero_grad(set_to_none=True)
         loss.backward()
         gn = torch.nn.utils.clip_grad_norm_(model.parameters(), 5.0).item()
@@ -1198,6 +1289,11 @@ def main() -> None:
             k = agg.pop("k")
             sp_part = ({"sp_policy_ce": agg["sp_ce"] / k, "sp_value_bce": agg["sp_bce"] / k}
                        if "sp_ce" in agg else {})  # fmt: skip
+            if "ch_reg" in agg:
+                sp_part |= {
+                    "child_reg": agg.pop("ch_reg") / k,
+                    "child_rank": agg.pop("ch_rank") / k,
+                }
             emit(dict(event="train", step=step, epoch=round(step * hb / len(train_idx), 3),
                       policy_ce=agg["ce"] / k, value_bce=agg["bce"] / k, policy_acc=agg["acc"] / k,
                       **sp_part, grad_norm=agg["gn"] / k, lr=sched.get_last_lr()[0],

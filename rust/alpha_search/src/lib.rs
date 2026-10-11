@@ -597,6 +597,24 @@ impl PyBatchSearch {
         Ok(d)
     }
 
+    /// The root's children with at least `min_visits` as value targets (`bsearch::children`):
+    /// (batch of their network inputs, side one's view, one row each; [(our slot, their slot,
+    /// visits, value)]).
+    #[pyo3(signature = (min_visits=50, seed=0))]
+    fn children<'py>(
+        &mut self,
+        py: Python<'py>,
+        min_visits: u32,
+        seed: u64,
+    ) -> PyResult<(Bound<'py, PyDict>, Vec<(usize, usize, u32, f32)>)> {
+        let (b, kids) = self.inner.children(min_visits, seed);
+        let meta = kids
+            .into_iter()
+            .map(|c| (c.our, c.their, c.visits, c.value))
+            .collect();
+        Ok((batch_dict(py, b)?, meta))
+    }
+
     fn stats(&mut self) -> (u32, u32, usize) {
         self.inner.stats()
     }

@@ -31,6 +31,10 @@ class _Job:
     future: Future
     inflight: int = 0
     t0: float = field(default_factory=time.time)
+    # > 0: the root's children with at least this many visits are exported when the search is
+    # done (BatchSearch.children: value targets, scripts/child_targets.py)
+    children: int = 0
+    seed: int = 0
 
 
 class Batcher:
@@ -47,10 +51,11 @@ class Batcher:
         threading.Thread(target=self._loop, daemon=True).start()
 
     def submit(self, states: list[str], contexts: list, iterations: int, seed: int,
-               root_noise: tuple[float, float]) -> Future:  # fmt: skip
-        """A search of ``iterations`` leaves; the future's result: (record, iterations)."""
+               root_noise: tuple[float, float], children: int = 0) -> Future:  # fmt: skip
+        """A search of ``iterations`` leaves; the future's result: (record, iterations), or with
+        ``children`` > 0 (record, iterations, (children's input batch, their meta))."""
         f: Future = Future()
-        self.queue.put((states, contexts, iterations, seed, root_noise, f))
+        self.queue.put((states, contexts, iterations, seed, root_noise, f, children))
         return f
 
     def _intake(self, active: list, block: bool) -> None:
@@ -59,11 +64,11 @@ class Batcher:
                 item = self.queue.get(block=block and not active)
             except queue.Empty:
                 return
-            states, ctxs, iters, seed, noise, f = item
+            states, ctxs, iters, seed, noise, f, children = item
             try:
                 bs = alpha_search.BatchSearch(states, ctxs, seed=seed, threads=1, vl=1,
                                               root_noise=noise)  # fmt: skip
-                active.append(_Job(bs, iters, f))
+                active.append(_Job(bs, iters, f, children=children, seed=seed))
             except Exception as e:  # noqa: BLE001 - the game falls back, the batcher goes on
                 f.set_exception(e)
             block = False
@@ -148,4 +153,7 @@ class Batcher:
     def _finish(self, j: _Job) -> None:
         self.stats["searches"] += 1
         if not j.future.done():
-            j.future.set_result((j.search.record(), j.search.stats()[0]))
+            out = (j.search.record(), j.search.stats()[0])
+            if j.children:
+                out += (j.search.children(j.children, j.seed),)
+            j.future.set_result(out)
