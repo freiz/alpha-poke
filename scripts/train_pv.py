@@ -1007,6 +1007,13 @@ def main() -> None:
     ap.add_argument("--sp-frac", type=float, default=0.5, help="share of each batch from self-play")
     ap.add_argument("--sp-val-frac", type=float, default=0.05, help="self-play games held out")
     ap.add_argument("--init", default="", help="warm start: a run directory (its last.pt)")
+    ap.add_argument(
+        "--init-ckpt",
+        choices=["last", "best"],
+        default="last",
+        help="--init's checkpoint: last, or best (the lowest validation loss: early "
+        "stopping, for a run whose value overfits late)",
+    )
     ap.add_argument("--steps", type=int, default=0, help="training steps (default: from --epochs)")
     ap.add_argument("--warmup-frac", type=float, default=0.02,
                     help="learning-rate warmup share of the steps (warm starts: longer, the "
@@ -1119,7 +1126,9 @@ def main() -> None:
         torch.nn.init.zeros_(model.value.weight)
         torch.nn.init.zeros_(model.value.bias)
     if a.init:  # warm start (same architecture as the run it comes from)
-        init = torch.load(Path(a.init) / "last.pt", weights_only=False, map_location="cpu")
+        init = torch.load(
+            Path(a.init) / f"{a.init_ckpt}.pt", weights_only=False, map_location="cpu"
+        )
         state = init["model"]
         if "residual" in state:
             model.residual = torch.nn.Parameter(state["residual"].clone())

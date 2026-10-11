@@ -105,6 +105,21 @@ def main() -> None:
     ap.add_argument("--pool", default="data/teams/pools/wide1000")
     ap.add_argument("--skip-wait", action="store_true")
     ap.add_argument("--no-matches", action="store_true", help="stop after the pv_bench scores")
+    ap.add_argument(
+        "--g-init",
+        choices=["last", "best"],
+        default="best",
+        help="G fine-tuning's start: the pretraining's best checkpoint (2026-10-11: "
+        "G's value overfits the human data late, validation BCE 0.556 -> 0.63)",
+    )
+    ap.add_argument(
+        "--g-ft-steps",
+        default="lineage",
+        help="G fine-tuning's steps: 'lineage' (the sum of A's lineage fine-tunings, "
+        "sp-gen0..<gen>: the self-play training A had; 2026-10-11: one "
+        "fine-tuning of A's length left G's self-play top1 2.8 points under "
+        "A's), 'base' (A's own) or a number",
+    )
     ap.add_argument("--g-only", action="store_true", help="G only (F done: no F match)")
     a = ap.parse_args()
     py = sys.executable
@@ -142,6 +157,17 @@ def main() -> None:
     run_g(a, py, base, g_pre, g_run, bench)
 
 
+def steps_of(run_name: str) -> int:
+    rows = [json.loads(x) for x in (RUNS / run_name / "metrics.jsonl").read_text().splitlines()]
+    return [r for r in rows if r.get("event") == "start"][-1]["steps"]
+
+
+def ft_steps(spec: str, gen: int) -> int:
+    if spec == "lineage":
+        return sum(steps_of(f"sp-gen{g}") for g in range(gen + 1))
+    return steps_of(f"sp-gen{gen}") if spec == "base" else int(spec)
+
+
 def run_g(a, py: str, base: str, g_pre: str, g_run: str, bench: Path) -> None:
     # 4. G pretraining: v5-glu's recipe, larger, on all the human data (the HF dump's later games
     # too, training only: the validation set is v5-glu's; v5-glu had 15% less data)
@@ -149,15 +175,20 @@ def run_g(a, py: str, base: str, g_pre: str, g_run: str, bench: Path) -> None:
                               "value_hidden": a.value_hidden, "train_only": "hf-"}  # fmt: skip
     train(ga, f"data/selfplay/diag/{g_pre}.log")
     # 5. G fine-tuning: A's training from G's pretraining
-    gf = args_of(base) | {"run": g_run, "init": str(RUNS / g_pre), "size": "large", "d_ff": 256,
-                          "value_hidden": a.value_hidden}  # fmt: skip
+    steps = ft_steps(a.g_ft_steps, a.gen)
+    g_run += "" if a.g_ft_steps == "base" else f"-ft{steps}"
+    gf = args_of(base) | {"run": g_run, "init": str(RUNS / g_pre), "init_ckpt": a.g_init,
+                          "size": "large", "d_ff": 256, "value_hidden": a.value_hidden,
+                          "steps": steps}  # fmt: skip
     train(gf, f"data/selfplay/diag/{g_run}.log")
     # 5b. G with the child-node value regression (design TODO 方案乙; weight 1), pv_bench only
     gc = gf | {"run": g_run + "-child", "child_data": f"data/train/children/gen{a.gen}",
                "child_loss": "reg", "child_weight": 1.0}  # fmt: skip
     train(gc, f"data/selfplay/diag/{g_run}-child.log")
     # 6. G: score, equal iterations, equal cost
-    run([py, "scripts/pv_bench.py", "score", "--nets", f"{g_run},{g_run}-child"],
+    nets = [g_run, g_run + "-child"] + (["exp-G-large"] if g_run != "exp-G-large"
+                                        and trained("exp-G-large") else [])  # fmt: skip
+    run([py, "scripts/pv_bench.py", "score", "--nets", ",".join(nets)],
         str(bench) + ".log")  # fmt: skip
     match("G_vs_A_iters", g_run, base, a.pairs, a.iterations, a.iterations, a.pool)
     match("G_vs_A_cost", g_run, base, a.pairs, round(a.iterations / a.cost_ratio), a.iterations,
