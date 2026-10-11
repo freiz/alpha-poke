@@ -11,7 +11,7 @@ skipped when its output exists (resumable):
   4. G pretraining: v5-glu's arguments with the large trunk and the value hidden layer, on all
      the human data (the newer games training only: v5-glu's validation set)
   5. G fine-tuning: A's training from G's pretraining, the large architecture
-  6. pv_bench score of G; G vs A at equal iterations and at equal cost
+  6. pv_bench score of G; G vs A at equal iterations (--cost-match: also at equal cost)
 
 Every training and match runs under a memory cap (systemd-run scope).
 
@@ -120,6 +120,12 @@ def main() -> None:
         "fine-tuning of A's length left G's self-play top1 2.8 points under "
         "A's), 'base' (A's own) or a number",
     )
+    ap.add_argument(
+        "--cost-match",
+        action="store_true",
+        help="also G vs A at equal cost (G's iterations / --cost-ratio; off: equal "
+        "iterations only)",
+    )
     ap.add_argument("--g-only", action="store_true", help="G only (F done: no F match)")
     a = ap.parse_args()
     py = sys.executable
@@ -185,14 +191,15 @@ def run_g(a, py: str, base: str, g_pre: str, g_run: str, bench: Path) -> None:
     gc = gf | {"run": g_run + "-child", "child_data": f"data/train/children/gen{a.gen}",
                "child_loss": "reg", "child_weight": 1.0}  # fmt: skip
     train(gc, f"data/selfplay/diag/{g_run}-child.log")
-    # 6. G: score, equal iterations, equal cost
+    # 6. G: score, equal iterations (equal cost: --cost-match)
     nets = [g_run, g_run + "-child"] + (["exp-G-large"] if g_run != "exp-G-large"
                                         and trained("exp-G-large") else [])  # fmt: skip
     run([py, "scripts/pv_bench.py", "score", "--nets", ",".join(nets)],
         str(bench) + ".log")  # fmt: skip
     match("G_vs_A_iters", g_run, base, a.pairs, a.iterations, a.iterations, a.pool)
-    match("G_vs_A_cost", g_run, base, a.pairs, round(a.iterations / a.cost_ratio), a.iterations,
-          a.pool)  # fmt: skip
+    if a.cost_match:
+        match("G_vs_A_cost", g_run, base, a.pairs, round(a.iterations / a.cost_ratio), a.iterations,
+              a.pool)  # fmt: skip
     say("done")
 
 
