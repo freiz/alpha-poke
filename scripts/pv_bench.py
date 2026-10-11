@@ -199,7 +199,10 @@ def consensus() -> list:
             continue
         share = np.mean([np.asarray(r["visits"], float) / max(sum(r["visits"]), 1) for r in rs], 0)
         mean = np.mean([np.asarray(r["mean"], float) for r in rs], 0)
-        out.append({"share": share, "mean": mean})
+        # the options' values, visit-weighted over the reference networks (the regret's yardstick)
+        v = np.array([r["visits"] for r in rs], float)
+        q = (v * np.array([r["mean"] for r in rs], float)).sum(0) / np.maximum(v.sum(0), 1)
+        out.append({"share": share, "mean": mean, "q": q})
     return out
 
 
@@ -262,11 +265,26 @@ def outcome_metrics(net: str, pos: list[dict]) -> dict:
     }
 
 
+# options the reference searched at least this share of its visits: their values are reliable
+REGRET_SHARE = 0.02
+
+
+def regret(chosen: int, c: dict) -> tuple[float, bool]:
+    """(the reference's best value - the chosen option's value, chosen outside the reliable
+    options): an option the reference barely searched counts as the worst reliable one (the
+    deep search found it not worth visiting; conservative)."""
+    ok = c["share"] >= REGRET_SHARE
+    best = c["q"][ok].max()
+    if ok[chosen]:
+        return float(best - c["q"][chosen]), False
+    return float(best - c["q"][ok].min()), True
+
+
 def decision_metrics(recs: list, cons: list, idx: list[int], prior: bool = False) -> dict:
     """Top-1 agreement with the reference and rank correlation: of a search's visits / option
     means with the reference's (options both searched), or (``prior``) of the network's prior
     with the reference's visit shares (options the reference searched)."""
-    top, rho = [], []
+    top, rho, reg, outside = [], [], [], []
     for i in idx:
         r, c = recs[i], cons[i]
         if c is None or "error" in r:
@@ -275,6 +293,10 @@ def decision_metrics(recs: list, cons: list, idx: list[int], prior: bool = False
         if legal.sum() < 2:
             continue
         v = np.asarray(r["prior" if prior else "visits"], float)
+        mine = np.asarray(r["legal"], bool)  # the network chooses among all its legal options
+        g, out = regret(int(np.argmax(np.where(mine, v, -np.inf))), c)
+        reg.append(g)
+        outside.append(out)
         top.append(
             int(np.argmax(np.where(legal, v, -1)) == np.argmax(np.where(legal, c["share"], -1)))
         )
@@ -284,9 +306,15 @@ def decision_metrics(recs: list, cons: list, idx: list[int], prior: bool = False
             both = legal & (v > 0)
             rho.append(spearman(np.asarray(r["mean"], float)[both], c["mean"][both]))
     rho = [x for x in rho if x == x]
-    return {"positions": len(top), "top1": round(float(np.mean(top)), 4) if top else None,
-            "top1_se": round(float(np.std(top) / len(top) ** 0.5), 4) if top else None,
-            "spearman": round(float(np.mean(rho)), 4) if rho else None}  # fmt: skip
+    reg_part = ({"regret": round(100 * float(np.mean(reg)), 3),
+                 "regret_se": round(100 * float(np.std(reg) / len(reg) ** 0.5), 3),
+                 "outside": round(float(np.mean(outside)), 4)} if reg else {})  # fmt: skip
+    return reg_part | {
+        "positions": len(top),
+        "top1": round(float(np.mean(top)), 4) if top else None,
+        "top1_se": round(float(np.std(top) / len(top) ** 0.5), 4) if top else None,
+        "spearman": round(float(np.mean(rho)), 4) if rho else None,
+    }
 
 
 def score(a) -> None:
@@ -309,6 +337,12 @@ def score(a) -> None:
                           "value_only": decision_metrics(value_only, cons, idx),
                           "with_prior": decision_metrics(with_prior, cons, idx)}  # fmt: skip
         entry["iterations"] = a.iterations
+        # each position's search results (visits, means, priors, legal), for later metrics
+        np.savez_compressed(OUT / f"choices_{name}.npz", **{
+            f"{kind}_{k}": np.array([r.get(k, [0] * 14) if "error" not in r else [0] * 14
+                                     for r in recs], float)
+            for kind, recs in (("value_only", value_only), ("with_prior", with_prior))
+            for k in ("visits", "mean", "prior", "legal")})  # fmt: skip
         res[name] = entry
         print(name, json.dumps(entry), flush=True)
         path.write_text(json.dumps(res, indent=1))
