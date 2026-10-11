@@ -958,8 +958,12 @@ def main() -> None:
     p = sub.add_parser("train")
     p.add_argument("--gen", type=int, required=True)
     p.add_argument("--init", default="", help="warm start run (default: the current network)")
-    p.add_argument("--window", type=int, default=5, help="recent generations, all of their games")
-    p.add_argument("--old-share", type=float, default=0.2,
+    # 2026-10-11 (from gen 5; was 5 / 0.2): the newest generation in full (the current
+    # network's games: on-policy outcomes, the strongest search targets) and the older ones
+    # sampled to half its size (against forgetting). A window of 5 generations kept everything
+    # once the generations grew from 10,000 to 50,000 games (gens 0-3: 35,000 games together)
+    p.add_argument("--window", type=int, default=1, help="recent generations, all of their games")
+    p.add_argument("--old-share", type=float, default=0.5,
                    help="older generations: sampled games, this share of the window")  # fmt: skip
     p.add_argument("--sp-frac", type=float, default=None,
                    help="self-play share of a batch (default: the schedule, D15-5)")  # fmt: skip
