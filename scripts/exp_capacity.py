@@ -6,7 +6,8 @@ skipped when its output exists (resumable):
      sp-gen2, the human-data and the self-play ends; deep searches)
   2. F = A's training (sp-gen<gen>: its own arguments, from its metrics.jsonl) with a value
      hidden layer (--value-hidden), another run name
-  3. pv_bench scores of A and F; F vs A at --iterations (fixed pool pairs)
+  3. pv_bench scores of v5-glu, every sp-gen up to --gen, and F; F vs A at --iterations (fixed
+     pool pairs)
   4. G pretraining: v5-glu's arguments with the large trunk and the value hidden layer, on the
      data v5-glu had (--skip-shards hf-)
   5. G fine-tuning: A's training from G's pretraining, the large architecture
@@ -100,6 +101,7 @@ def main() -> None:
     ap.add_argument("--cost-ratio", type=float, default=2.3, help="G's cost per leaf vs A's")
     ap.add_argument("--pool", default="data/teams/pools/wide1000")
     ap.add_argument("--skip-wait", action="store_true")
+    ap.add_argument("--no-matches", action="store_true", help="stop after the pv_bench scores")
     a = ap.parse_args()
     py = sys.executable
     base = f"sp-gen{a.gen}"
@@ -123,8 +125,13 @@ def main() -> None:
     fa = args_of(base) | {"run": f_run, "value_hidden": a.value_hidden}
     train(fa, f"data/selfplay/diag/{f_run}.log")
     # 3. scores and F vs A
-    run([py, "scripts/pv_bench.py", "score", "--nets", f"v5-glu,sp-gen2,{base},{f_run}"],
+    lineage = ",".join(["v5-glu"] + [f"sp-gen{g}" for g in range(a.gen + 1)
+                                     if (RUNS / f"sp-gen{g}").exists()])  # fmt: skip
+    run([py, "scripts/pv_bench.py", "score", "--nets", f"{lineage},{f_run}"],
         str(bench) + ".log")  # fmt: skip
+    if a.no_matches:
+        say("scores done (--no-matches: no matches, no G)")
+        return
     match("F_vs_A", f_run, base, a.pairs, a.iterations, a.iterations, a.pool)
     # 4. G pretraining: v5-glu's recipe, larger
     ga = args_of("v5-glu") | {"run": g_pre, "size": "large", "d_ff": 256,
