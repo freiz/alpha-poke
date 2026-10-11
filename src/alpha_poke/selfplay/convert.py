@@ -99,13 +99,16 @@ def convert_game(pair: int, game: dict, log: str, decisions: list, belief, gen: 
     row = {"id": f"sp{gen}-{pair}-{game['battle']}", "log": log, "rating": None,
            "uploadtime": stamp}  # fmt: skip
     positions = positions_from_replay(row, belief, random.Random(pair), per_game=0, pool="all")
-    by_key = {}
+    # a key can hold several decisions in order (two forced switches in one turn: the first
+    # switch-in fainted to hazards); matched to the positions in order
+    by_key: dict = defaultdict(list)
     for d in decisions:
-        by_key.setdefault((d["side"], d["turn"], d["kind"]), d)
+        by_key[(d["side"], d["turn"], d["kind"])].append(d)
     capped = bool(game.get("capped"))
     for p in positions:
         kind = KIND_MAIN if p.kind == KIND_BLIND else p.kind
-        d = by_key.pop((p.side, p.turn, kind), None)
+        ds = by_key.get((p.side, p.turn, kind))
+        d = ds.pop(0) if ds else None
         if d is None:
             stats["unmatched_positions"] += 1
             continue
@@ -127,7 +130,7 @@ def convert_game(pair: int, game: dict, log: str, decisions: list, belief, gen: 
             "pi_w": 1.0 if d["full"] else 0.0, "q": d["q"], "weight": 1.0,
         })  # fmt: skip
         rows.append(x)
-    stats["unmatched_decisions"] += len(by_key)
+    stats["unmatched_decisions"] += sum(len(ds) for ds in by_key.values())
     return rows
 
 

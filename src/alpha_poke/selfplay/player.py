@@ -22,6 +22,16 @@ from alpha_poke.train.positions import KIND_FORCED, KIND_MAIN, KIND_PIVOT
 log = logging.getLogger(__name__)
 
 
+def order_is(order, name: str) -> bool:
+    """Is the poke-env ``order`` the searched option ``name`` ('earthquake', 'earthquake-tera',
+    'switch greattusk')?"""
+    o = order.order
+    if name.startswith("switch "):
+        return getattr(o, "species", None) == name.split(" ", 1)[1]
+    tera = name.endswith("-tera")
+    return getattr(o, "id", None) == name.removesuffix("-tera") and bool(order.terastallize) == tera
+
+
 class SelfPlayPlayer(SearchPlayer):
     """``batcher``: the process's ``selfplay.batcher.Batcher`` (shared by all its games);
     ``choose_move`` is asynchronous (poke-env awaits it), so other games go on while this one
@@ -52,6 +62,9 @@ class SelfPlayPlayer(SearchPlayer):
         # records: [(batch of their inputs, their (our, their, visits, value), root q)]
         self.children = children
         self.child_records: dict[str, list] = {}
+        # the request each battle's last record answered (a refused choice drops its record)
+        self._record_request: dict[str, int] = {}
+        self.dropped_records = 0
 
     def choose_move(self, battle):
         return self._choose_selfplay(battle)
@@ -126,7 +139,9 @@ class SelfPlayPlayer(SearchPlayer):
         else:
             weights = [v ** (1 / tau) for _, v in options]
             slot = self.rng.choices([i for i, _ in options], weights=weights)[0]
-        if not self.record:
+        if not self.record or not order_is(orders[slot], rec["names"][slot]):
+            # (an order other than the option searched: a single available move -- Struggle,
+            # a locked move -- the engine did not see; the record would name a move not played)
             return orders[slot]
         reveal, ratings, turn, history = ctxs[0]
         self.records.setdefault(battle.battle_tag, []).append({
@@ -139,4 +154,20 @@ class SelfPlayPlayer(SearchPlayer):
             **{k: rec[k] for k in ("visits", "mean", "prior", "legal", "names", "q",
                                    "opp_visits", "opp_unmapped")},
         })  # fmt: skip
+        self._record_request[battle.battle_tag] = self._n_requests.get(battle.battle_tag, 0)
         return orders[slot]
+
+    def forget(self, tag: str) -> None:
+        super().forget(tag)
+        self._record_request.pop(tag, None)
+
+    def _on_choice_rejected(self, tag: str) -> None:
+        # the refused choice was not played: its record goes (the re-request makes a new one);
+        # only if the last record answered the latest request (else the refused order was one
+        # not recorded: a single option, a fallback). 2026-10-11: a switch out of an unseen
+        # trap (Magnet Pull) was refused and the first record was the one converted
+        recs = self.records.get(tag)
+        if recs and self._record_request.get(tag) == self._n_requests.get(tag, 0):
+            recs.pop()
+            self._record_request.pop(tag, None)
+            self.dropped_records += 1

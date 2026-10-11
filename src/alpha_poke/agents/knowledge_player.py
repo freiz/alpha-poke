@@ -424,9 +424,13 @@ class KnowledgePlayer(Player):
                        for m in split_messages[1:])  # fmt: skip
         if rejected:
             tag = split_messages[0][0].lstrip(">")
+            self._on_choice_rejected(tag)
             task = asyncio.ensure_future(self._choice_guard(tag, self._n_requests.get(tag, 0)))
             self._guards.add(task)
             task.add_done_callback(self._guards.discard)
+
+    def _on_choice_rejected(self, tag: str) -> None:
+        """The server refused the last choice of battle ``tag`` (a new request follows)."""
 
     async def _choice_guard(self, tag: str, n: int) -> None:
         await asyncio.sleep(self.CHOICE_RETRY_S)
