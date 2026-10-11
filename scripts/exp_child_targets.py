@@ -19,7 +19,7 @@ def main() -> None:
     ap.add_argument("--gen", type=int, required=True, help="A = sp-gen<gen>, its games")
     ap.add_argument("--roots", type=int, default=100_000)
     ap.add_argument("--modes", default="both,rank,reg")
-    ap.add_argument("--weight", type=float, default=1.0)
+    ap.add_argument("--weights", default="1", help="child loss weights (comma-separated)")
     ap.add_argument("--wait", default="exp_value_targets.py", help="a script to wait for")
     a = ap.parse_args()
     py = sys.executable
@@ -32,12 +32,13 @@ def main() -> None:
     run([py, "scripts/child_targets.py", "--gen", str(a.gen), "--roots", str(a.roots)],
         "data/selfplay/diag/child_targets.log")  # fmt: skip
     for mode in a.modes.split(","):
-        name = f"exp-child-{mode}"
-        args = args_of(base) | {"run": name, "child_data": out, "child_loss": mode,
-                                "child_weight": a.weight}  # fmt: skip
-        train(args, f"data/selfplay/diag/{name}.log")
-        run([py, "scripts/pv_bench.py", "score", "--nets", name], "data/eval/pv_bench.log")
-        say(f"child targets, {mode}: trained and scored")
+        for w in (float(x) for x in a.weights.split(",")):
+            name = f"exp-child-{mode}" + (f"-w{w:g}" if w != 1 else "")
+            args = args_of(base) | {"run": name, "child_data": out, "child_loss": mode,
+                                    "child_weight": w}  # fmt: skip
+            train(args, f"data/selfplay/diag/{name}.log")
+            run([py, "scripts/pv_bench.py", "score", "--nets", name], "data/eval/pv_bench.log")
+            say(f"child targets, {mode}, weight {w:g}: trained and scored")
     say("child-target experiment done")
 
 
