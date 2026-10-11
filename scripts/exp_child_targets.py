@@ -1,7 +1,8 @@
 """Child-node value targets, the experiment (design TODO "方案乙", 2026-10-10): generate the
 targets (scripts/child_targets.py), train A's recipe (sp-gen<gen>'s own arguments) with the
-child loss added (regression / sibling ranking / both; the outcome loss kept), score them on
-pv_bench. Resumable (the targets' chunks, trained runs and scored networks are skipped).
+child-node value regression added (the outcome loss kept), score them on pv_bench. (A sibling
+ranking loss was tried too and removed, 2026-10-11: results.md.) Resumable (the targets' chunks,
+trained runs and scored networks are skipped).
 
   uv run python scripts/exp_child_targets.py --gen 4
 """
@@ -18,7 +19,6 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--gen", type=int, required=True, help="A = sp-gen<gen>, its games")
     ap.add_argument("--roots", type=int, default=100_000)
-    ap.add_argument("--modes", default="both,rank,reg")
     ap.add_argument("--weights", default="1", help="child loss weights (comma-separated)")
     ap.add_argument("--wait", default="exp_value_targets.py", help="a script to wait for")
     a = ap.parse_args()
@@ -31,14 +31,12 @@ def main() -> None:
     say(f"child targets: {a.roots} roots of gen {a.gen}")
     run([py, "scripts/child_targets.py", "--gen", str(a.gen), "--roots", str(a.roots)],
         "data/selfplay/diag/child_targets.log")  # fmt: skip
-    for mode in a.modes.split(","):
-        for w in (float(x) for x in a.weights.split(",")):
-            name = f"exp-child-{mode}" + (f"-w{w:g}" if w != 1 else "")
-            args = args_of(base) | {"run": name, "child_data": out, "child_loss": mode,
-                                    "child_weight": w}  # fmt: skip
-            train(args, f"data/selfplay/diag/{name}.log")
-            run([py, "scripts/pv_bench.py", "score", "--nets", name], "data/eval/pv_bench.log")
-            say(f"child targets, {mode}, weight {w:g}: trained and scored")
+    for w in (float(x) for x in a.weights.split(",")):
+        name = "exp-child-reg" + (f"-w{w:g}" if w != 1 else "")
+        args = args_of(base) | {"run": name, "child_data": out, "child_weight": w}
+        train(args, f"data/selfplay/diag/{name}.log")
+        run([py, "scripts/pv_bench.py", "score", "--nets", name], "data/eval/pv_bench.log")
+        say(f"child targets, weight {w:g}: trained and scored")
     say("child-target experiment done")
 
 

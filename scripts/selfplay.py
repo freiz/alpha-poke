@@ -458,8 +458,7 @@ def cmd_train(a) -> None:
         dirs = [str(CHILD_DIR / f"gen{g}") for g in range(a.gen - a.child_window + 1, a.gen + 1)
                 if g >= 0 and any((CHILD_DIR / f"gen{g}").glob("chunk-*.npz"))]  # fmt: skip
         if dirs:
-            cmd += (f" --child-data {','.join(dirs)} --child-loss {a.child_loss} "
-                    f"--child-weight {a.child_weight}")  # fmt: skip
+            cmd += f" --child-data {','.join(dirs)} --child-weight {a.child_weight}"
     log_path = SELFPLAY_DIR / f"gen{a.gen}" / "train.log"
     out = Path("data/train/v5/runs") / run
     done = (out / "metrics.jsonl").exists() and '"event": "done"' in (
@@ -985,7 +984,6 @@ def main() -> None:
                    help="self-play outcomes: value loss on k positions per game")  # fmt: skip
     p.add_argument("--child-window", type=int, default=0,
                    help="child-node value targets of the last k generations (0: off)")  # fmt: skip
-    p.add_argument("--child-loss", choices=["reg", "rank", "both"], default="both")
     p.add_argument("--child-weight", type=float, default=1.0)
     p.add_argument("--warmup-frac", type=float, default=0.2)
     p.add_argument("--batch", type=int, default=4096)

@@ -116,7 +116,7 @@ def main() -> None:
         "--g-ft-steps",
         default="lineage",
         help="G fine-tuning's steps: 'lineage' (the sum of A's lineage fine-tunings, "
-        "sp-gen0..<gen>: the self-play training A had; 2026-10-11: one "
+        "along its warm starts: the self-play training A had; 2026-10-11: one "
         "fine-tuning of A's length left G's self-play top1 2.8 points under "
         "A's), 'base' (A's own) or a number",
     )
@@ -168,9 +168,19 @@ def steps_of(run_name: str) -> int:
     return [r for r in rows if r.get("event") == "start"][-1]["steps"]
 
 
+def lineage(run_name: str) -> list[str]:
+    """The self-play runs ``run_name`` descends from (itself first), along the warm starts (a
+    rejected generation is not on it: sp-gen4 started from sp-gen2)."""
+    out = []
+    while run_name.startswith("sp-gen"):
+        out.append(run_name)
+        run_name = Path(args_of(run_name).get("init") or "").name
+    return out
+
+
 def ft_steps(spec: str, gen: int) -> int:
     if spec == "lineage":
-        return sum(steps_of(f"sp-gen{g}") for g in range(gen + 1))
+        return sum(steps_of(r) for r in lineage(f"sp-gen{gen}"))
     return steps_of(f"sp-gen{gen}") if spec == "base" else int(spec)
 
 
@@ -189,7 +199,7 @@ def run_g(a, py: str, base: str, g_pre: str, g_run: str, bench: Path) -> None:
     train(gf, f"data/selfplay/diag/{g_run}.log")
     # 5b. G with the child-node value regression (design TODO 方案乙; weight 1), pv_bench only
     gc = gf | {"run": g_run + "-child", "child_data": f"data/train/children/gen{a.gen}",
-               "child_loss": "reg", "child_weight": 1.0}  # fmt: skip
+               "child_weight": 1.0}  # fmt: skip
     train(gc, f"data/selfplay/diag/{g_run}-child.log")
     # 6. G: score, equal iterations (equal cost: --cost-match)
     nets = [g_run, g_run + "-child"] + (["exp-G-large"] if g_run != "exp-G-large"
