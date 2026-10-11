@@ -59,7 +59,7 @@ def main() -> None:
     cols = ["state", "history", "reveal", "rating_own", "rating_opp", "turn", "kind"]
     rows = [r for r in pq.read_table(f, columns=cols).slice(0, 5000).to_pylist() if r["kind"] == 0]
     rows = rows[:: max(1, len(rows) // a.positions)][: a.positions]
-    net = GpuNet(a.run)
+    net = GpuNet(a.run, dtype="fp32")  # parity with the CPU reference
     dv = dl = 0.0
     agree_b = agree_n = 0
     tv_b, tv_n, tv_g = [], [], []

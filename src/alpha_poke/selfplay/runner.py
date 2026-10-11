@@ -182,7 +182,7 @@ async def _process(wid: int, jobs: list, port: int, gen_dir: Path, settings: dic
 
     belief = BeliefModel.load()
     batcher = Batcher(settings["model"], leaves=settings["leaves"], threads=settings["threads"],
-                      dtype=settings.get("dtype", "fp32"))  # fmt: skip
+                      dtype=settings.get("dtype", "bf16"))  # fmt: skip
     lanes = settings["lanes"]
     parts = [jobs[i::lanes] for i in range(lanes)]
     counters = {"games": 0, "decisions": 0, "leaves": 0, "fallbacks": 0, "capped": 0}

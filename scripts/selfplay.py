@@ -919,7 +919,7 @@ def main() -> None:
     p.add_argument("--turn-cap", type=int, default=300, help="forfeit at this turn (capped)")
     p.add_argument("--temp-turns", type=int, default=8, help="moves sampled at tau 1 until")
     p.add_argument("--temp-late", type=float, default=0.25, help="tau after --temp-turns")
-    p.add_argument("--dtype", choices=["fp32", "bf16"], default="fp32", help="GPU inference")
+    p.add_argument("--dtype", choices=["fp32", "bf16"], default="bf16", help="GPU inference")
     p.set_defaults(fn=cmd_run)
     p = sub.add_parser("convert")
     p.add_argument("--gen", type=int, required=True)
