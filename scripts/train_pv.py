@@ -657,7 +657,10 @@ def load_children(dirs: str, min_visits: int, tau: float) -> dict:
     """Child-node value targets (scripts/child_targets.py: a root's children with their search
     values and network inputs) in one set of arrays, and the sibling pairs for the ranking loss:
     two children of the same root that share the opponent's action (ours differs) or ours (the
-    opponent's differs), with a soft label sigmoid((value_a - value_b) / tau)."""
+    opponent's differs), with the soft label sigmoid((logit value_a - logit value_b) / tau): the
+    Bradley-Terry probability the targets themselves imply on the network's logit scale (tau 1),
+    so a value calibrated to the targets is optimal for both losses (2026-10-10: a label of
+    sigmoid((value_a - value_b) / 0.05) asked for differences ~5x larger than calibrated ones)."""
     files = [f for d in dirs.split(",") for f in sorted(Path(d).glob("chunk-*.npz"))]
     parts = []
     for f in files:
@@ -677,8 +680,9 @@ def load_children(dirs: str, min_visits: int, tau: float) -> dict:
                 i, j = np.triu_indices(len(g), 1)
                 pairs.append(np.stack([g[i], g[j]], 1))
     c["pairs"] = np.concatenate(pairs) if pairs else np.zeros((0, 2), np.int64)
-    va, vb = c["value"][c["pairs"][:, 0]], c["value"][c["pairs"][:, 1]]
-    c["pair_label"] = (1 / (1 + np.exp(-(va - vb) / tau))).astype(np.float32)
+    lv = np.log(np.clip(c["value"], 1e-3, 1 - 1e-3) / np.clip(1 - c["value"], 1e-3, 1 - 1e-3))
+    d = lv[c["pairs"][:, 0]] - lv[c["pairs"][:, 1]]
+    c["pair_label"] = (1 / (1 + np.exp(-d / tau))).astype(np.float32)
     vis = np.minimum(c["visits"][c["pairs"][:, 0]], c["visits"][c["pairs"][:, 1]])
     c["pair_w"] = np.minimum(1.0, vis / 200).astype(np.float32)
     c["row_w"] = np.minimum(1.0, c["visits"] / 200).astype(np.float32)
@@ -947,7 +951,8 @@ def main() -> None:
     ap.add_argument("--child-loss", choices=["reg", "rank", "both"], default="both")
     ap.add_argument("--child-weight", type=float, default=1.0)
     ap.add_argument("--child-pairs", type=int, default=256, help="sibling pairs per step")
-    ap.add_argument("--child-tau", type=float, default=0.05, help="ranking soft-label scale")
+    ap.add_argument("--child-tau", type=float, default=1.0,
+                    help="ranking labels sigmoid(logit diff / tau); 1 = calibrated")  # fmt: skip
     ap.add_argument("--child-min-visits", type=int, default=50)
     ap.add_argument("--elo-dropout", type=float, default=0.25)
     ap.add_argument("--stream", type=int, default=0, help="shards per chunk (0 = all in memory)")
