@@ -116,7 +116,10 @@ BASE_RUN = "data/train/v5/runs/v5-glu"
 # rejected counts as an over-update (gen 1: 0.0023, lr 1e-4, 2 passes)
 KL_BIG = 0.01
 # the training setup of the current network (v5-glu): same flags, plus self-play
-TRAIN_FLAGS = ("--data v5 --stream 4 --val-cutoff 1776921722 --train-only hf- --eval-every 500 "
+# --stream 2 (2026-10-10, was 4): two human shards per chunk; a chunk in use and the next one
+# loading are in memory together (4 + 4 shards with the 50,000-game generations' self-play data:
+# over the 40 GB cap). A generation's training reads ~0.02 epoch of the human data either way
+TRAIN_FLAGS = ("--data v5 --stream 2 --val-cutoff 1776921722 --train-only hf- --eval-every 500 "
                "--arch transformer "
                "--history --mtp 3 --mtp-weight 0.5 --mtp-decay 0.5 --value-residual "
                "--value-per-game 4 --kinds main,forced,pivot,blind --aux oppset "
