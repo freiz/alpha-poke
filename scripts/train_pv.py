@@ -1097,9 +1097,11 @@ def main() -> None:
         state = init["model"]
         if "residual" in state:
             model.residual = torch.nn.Parameter(state["residual"].clone())
-        # a new value hidden layer (--value-hidden) is the only part allowed to be missing
+        # new heads (a value hidden layer --value-hidden, auxiliary heads --aux) are the only
+        # parts allowed to be missing: they start from their initialization
         missing, unexpected = model.load_state_dict(state, strict=False)
-        assert not unexpected and all(k.startswith("value_mlp.") for k in missing), (
+        new = ("value_mlp.", "faint_head.", "margin_head.", "turns_head.")
+        assert not unexpected and all(k.startswith(new) for k in missing), (
             missing, unexpected)  # fmt: skip
     model = model.to(device)
     ref_model = None
