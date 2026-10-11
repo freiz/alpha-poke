@@ -296,6 +296,9 @@ def score(a) -> None:
     res = json.loads(path.read_text()) if path.exists() else {}
     for net in a.nets.split(","):
         name = Path(net).name
+        if name in res and res[name].get("iterations") == a.iterations and not a.force:
+            print(f"{name}: scored already (--force rescores)", flush=True)
+            continue
         value_only = search_par(net, pos, a.iterations, False, a.seed + 1_000_000, a.procs)
         with_prior = search_par(net, pos, a.iterations, True, a.seed + 2_000_000, a.procs)
         entry = {}
@@ -331,6 +334,7 @@ if __name__ == "__main__":
     p.add_argument("--nets", required=True)
     p.add_argument("--iterations", type=int, default=800)
     p.add_argument("--seed", type=int, default=0)
+    p.add_argument("--force", action="store_true", help="rescore networks scored already")
     p.set_defaults(fn=score)
     for q in sub.choices.values():
         q.add_argument("--out", default=str(OUT), help="benchmark directory")
