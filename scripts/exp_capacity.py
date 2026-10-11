@@ -105,6 +105,7 @@ def main() -> None:
     ap.add_argument("--pool", default="data/teams/pools/wide1000")
     ap.add_argument("--skip-wait", action="store_true")
     ap.add_argument("--no-matches", action="store_true", help="stop after the pv_bench scores")
+    ap.add_argument("--g-only", action="store_true", help="G only (F done: no F match)")
     a = ap.parse_args()
     py = sys.executable
     base = f"sp-gen{a.gen}"
@@ -124,6 +125,8 @@ def main() -> None:
     if not (bench / "reference.json").exists():
         run([py, "scripts/pv_bench.py", "reference", "--nets", "v5-glu,sp-gen2"],
             str(bench) + ".log")  # fmt: skip
+    if a.g_only:
+        return run_g(a, py, base, g_pre, g_run, bench)
     # 2. F
     fa = args_of(base) | {"run": f_run, "value_hidden": a.value_hidden}
     train(fa, f"data/selfplay/diag/{f_run}.log")
@@ -136,6 +139,10 @@ def main() -> None:
         say("scores done (--no-matches: no matches, no G)")
         return
     match("F_vs_A", f_run, base, a.pairs, a.iterations, a.iterations, a.pool)
+    run_g(a, py, base, g_pre, g_run, bench)
+
+
+def run_g(a, py: str, base: str, g_pre: str, g_run: str, bench: Path) -> None:
     # 4. G pretraining: v5-glu's recipe, larger
     ga = args_of("v5-glu") | {"run": g_pre, "size": "large", "d_ff": 256,
                               "value_hidden": a.value_hidden, "skip_shards": "hf-"}  # fmt: skip
