@@ -45,6 +45,14 @@ poke-env（协议、局面跟踪）──► SearchPlayer（Python 薄适配层�
 - **对战配置**：`s_ismcts_glu`（CPU，Rust 推理）/ `s_ismcts_glug`（GPU 树并行）；`s_ismcts_ma` / `mb` 用运行时指定的网络（自对弈的代际比较）。`play_public.py`：easy = 启发式，normal = ISMCTS + v5-glu 200 ms，hard = 1 s × 4 线程。
 - **自对弈**：`scripts/selfplay.py loop` 连续多代运行（D15）。
 
+### 当前最好配置（git 标签 `best-2026-10-11`）
+
+- **网络**：`data/train/v5/runs/sp-gen5`（第 5 代，晋升对 sp-gen4 50.6% ± 2.7%；registry `exp/models.json`）。
+- **引擎状态**：`build_state` 修复档位 2（默认，D17 已修 #1–#14：计时、消失的道具、能力提升等持续状态、预知未来、复活祈祷、请求 PP、逃脱按钮 / 红牌、对手速度推断、换人按编号）；poke-engine 补丁（混乱持续时间、逃脱按钮 / 红牌）与同源 Python 绑定（`rust/patches`，`uv sync --all-groups`）。
+- **搜索**：GPU 批量 ISMCTS，32 个世界；评估取访问最多（`g_ma` / `g_mb`），晋升 1,600 次迭代、实验 3,000 次；CPU 版 `s_ismcts_ma`（Foul Play 对战每步 200 ms）；BF16 推理。
+- **自对弈**（第 6 代起）：每代 10 万局，完整搜索 25% × 1,600 次、快速 400 次，根节点噪声 0.1 / 10，前 8 回合温度 1、之后 0.25；导出子节点（`--children 50`，不训练）；训练：最新一代全部 + 更早各代按其 50%（`--window 1 --old-share 0.5`），lr 4e-4，每个局面约 3 遍、价值只计一次。
+- **强度参照**：对 Foul Play（各 200 ms，wide200）sp-gen5 修复前 61.7% ± 4.2%（sp-gen1 59.1%）；引擎状态修复：第一批对修复前 56.2% ± 2.5%，全部对第一批 51.96% ± 2.43%（`results.md`）。
+
 ## 4. 设计决策
 
 ### D1. 目标赛制 —— 已定
