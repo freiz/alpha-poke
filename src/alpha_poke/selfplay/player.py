@@ -15,7 +15,7 @@ from poke_env.player.battle_order import ForfeitBattleOrder
 
 from alpha_poke.agents import net_context
 from alpha_poke.agents.consistency import request_mismatch
-from alpha_poke.agents.engine_state import build_state, engine_move_to_order
+from alpha_poke.agents.engine_state import build_state, engine_move_to_order, fix_level
 from alpha_poke.agents.knowledge_player import KnowledgePlayer, sync_tera_types
 from alpha_poke.agents.search_player import SearchPlayer
 from alpha_poke.train.positions import KIND_FORCED, KIND_MAIN, KIND_PIVOT
@@ -42,7 +42,7 @@ class SelfPlayPlayer(SearchPlayer):
                  fast_iters: int = 600, fast_worlds: int = 16,
                  noise: tuple[float, float] = (0.1, 10.0), turn_cap: int = 300, seed: int = 0,
                  greedy: bool = False, record: bool = True, temp_turns: int = 8,
-                 temp_late: float = 0.25, children: int = 0, state_fixes: bool = True,
+                 temp_late: float = 0.25, children: int = 0, state_fixes: int = 2,
                  **kwargs):  # fmt: skip
         super().__init__(*args, **kwargs)
         assert self.model_transformer and batcher is not None
@@ -117,7 +117,7 @@ class SelfPlayPlayer(SearchPlayer):
 
     async def _search_async(self, battle):
         sync_tera_types(battle)
-        if battle.reviving and self.state_fixes:
+        if battle.reviving and fix_level(self.state_fixes) >= 2:
             return await self._revive_async(battle)
         me = battle.active_pokemon
         if me is None or battle.opponent_active_pokemon is None:

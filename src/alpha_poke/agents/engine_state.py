@@ -314,6 +314,13 @@ def _volatiles(mon) -> set[str]:
 PATCHED_ITEMS = {"ejectbutton", "redcard"}
 
 
+def fix_level(fixes) -> int:
+    """build_state's ``fixes`` as a level (design D17): 0 none; 1 the first batch (turn counters,
+    gone items, boosts / volatiles, Future Sight); 2 every fix (+ the request's PP, Eject Button /
+    Red Card, the opponent's speed, Revival Blessing's choice). True = 2, False = 0."""
+    return 2 if fixes is True else 0 if fixes is False else int(fixes)
+
+
 def _item(item: str, fixes: bool) -> str:
     return "unknownitem" if not fixes and item in PATCHED_ITEMS else item
 
@@ -480,7 +487,8 @@ def build_state(
     one comes from a spectator log (no request): built like the opponent, from the known parts
     of each set plus belief samples (training positions, design D13). ``force_switch`` overrides
     side one's switch request (training positions of forced / pivot switches; a spectator log
-    has no request). ``fixes`` (2026-10-11; False: the state as before, for A/B tests): the turn
+    has no request). ``fixes`` (2026-10-11; a level, fix_level; False: the state as before, for
+    A/B tests): the turn
     counters (agents/timers.py), gone items staying gone, the Protosynthesis / Quark Drive boosts
     and other volatiles, the request's PP, Eject Button / Red Card (the patched engine), the
     opponent's spread sampled consistent with the move order (agents/speed.py); design D17.
@@ -489,8 +497,10 @@ def build_state(
     turn = battle.turn
     active = battle.active_pokemon
     role = battle.player_role or "p1"
+    lvl = fix_level(fixes)
+    f1, f2 = lvl >= 1, lvl >= 2
     # turn counters from the log (timers.py); off: every counter 0, as before 2026-10-11 (A/B)
-    tms = battle_timers(battle) if fixes else {"p1": SideTimers(), "p2": SideTimers()}
+    tms = battle_timers(battle) if f1 else {"p1": SideTimers(), "p2": SideTimers()}
     tm_us, tm_them = tms[role], tms["p2" if role == "p1" else "p1"]
     if spectator is None:
         ours = list(battle.team.values())
@@ -498,10 +508,10 @@ def build_state(
         req = battle.last_request or {}
         act = (req.get("active") or [{}])[0]
         req_pp = {to_id(m["id"]): m.get("pp") for m in act.get("moves", []) if "id" in m}
-        req_pp = req_pp if fixes else None
+        req_pp = req_pp if f2 else None
         our_mons = [
             _our_mon(m, avail if m is active else None, tm_us,
-                     req_pp if m is active else None, revived == to_id(m.species), fixes)
+                     req_pp if m is active else None, revived == to_id(m.species), f2)
             for m in ours
         ]  # fmt: skip
     else:
@@ -515,12 +525,12 @@ def build_state(
                 rng,
                 move_beta,
                 spectator.known.get(to_id(m.species)),
-                gone_items=fixes,
+                gone_items=f1,
             )
             # known moves come first in sample_set; in a real battle our moves are in moveset
             # order, unrelated to use: shuffle so the slot does not leak which move gets used
             rng.shuffle(s.moves)
-            our_mons.append(_their_mon(m, s, tm_us, fixes))
+            our_mons.append(_their_mon(m, s, tm_us, f2))
     our_idx = next((i for i, m in enumerate(ours) if m is active), 0)
     if battle.force_switch or (active is not None and active.fainted):
         our_idx = next((i for i, m in enumerate(ours) if m.active), our_idx)
@@ -535,14 +545,14 @@ def build_state(
     opp_active = battle.opponent_active_pokemon
 
     # the opponent's speed: usage spreads consistent with the observed move order (with fixes)
-    obs = battle_observations(battle) if fixes and spectator is None else None
+    obs = battle_observations(battle) if f2 and spectator is None else None
     their_mons = [
         _their_mon(
             m,
-            sample_set(belief, m, team_names, rng, move_beta, gone_items=fixes,
+            sample_set(belief, m, team_names, rng, move_beta, gone_items=f1,
                        speed_obs=None if obs is None else obs.get(to_id(m.species), [])),
             tm_them,
-            fixes,
+            f2,
         )
         for m in theirs
     ]  # fmt: skip
@@ -552,7 +562,7 @@ def build_state(
         active, our_mons[our_active_idx] if our_active_idx is not None else None, avail
     )
     their_last, their_vol = _last_move(opp_active, their_mons[their_idx] if their_mons else None)
-    if fixes:  # the actives' Protosynthesis / Quark Drive boosts and other volatiles (BOOSTS)
+    if f1:  # the actives' Protosynthesis / Quark Drive boosts and other volatiles (BOOSTS)
         for mon, vol in ((active, our_vol), (opp_active, their_vol)):
             vol |= {BOOSTS[e] for e in (mon.effects if mon is not None else ()) if e in BOOSTS}
 

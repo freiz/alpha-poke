@@ -301,7 +301,7 @@ Gen9 OU 单打。随机对战不需要组队，人类水平被拉低，不足以
 
 ### D17. 引擎状态与规则模拟：问题总表（2026-10-11 起；最终都要修）
 
-搜索的强度取决于引擎推演对不对。引擎 = `rust/patches/poke-engine-0.0.48`（poke-engine 0.0.48，MIT，带 alpha-poke 补丁，注释"alpha-poke patch"）；Python 端构造状态用同一份补丁源码编译的绑定（`rust/patches/poke-engine-py-0.0.48`，`uv sync --all-groups` 重建）；状态由 `agents/engine_state.py::build_state` 从 poke-env 的对局构造，回合计数来自 `agents/timers.py`。每次搜索前 `agents/consistency.py` 检查服务器请求与引擎状态是否一致。验证工具：`scripts/check_actions.py`（记录的选择 vs 服务器执行）、`scripts/check_timers.py`（计数 vs 下一回合实际发生）、`tests/test_engine_patches.py`、`tests/test_timers.py`。对战 A/B 开关 `ALPHA_STATE_FIXES_A/B=0`。
+搜索的强度取决于引擎推演对不对。引擎 = `rust/patches/poke-engine-0.0.48`（poke-engine 0.0.48，MIT，带 alpha-poke 补丁，注释"alpha-poke patch"）；Python 端构造状态用同一份补丁源码编译的绑定（`rust/patches/poke-engine-py-0.0.48`，`uv sync --all-groups` 重建）；状态由 `agents/engine_state.py::build_state` 从 poke-env 的对局构造，回合计数来自 `agents/timers.py`。每次搜索前 `agents/consistency.py` 检查服务器请求与引擎状态是否一致。验证工具：`scripts/check_actions.py`（记录的选择 vs 服务器执行）、`scripts/check_timers.py`（计数 vs 下一回合实际发生）、`tests/test_engine_patches.py`、`tests/test_timers.py`。对战 A/B 开关 `ALPHA_STATE_FIXES_A/B`（档位 0 全关、1 第一批 #2–#9、2 全部，`engine_state.fix_level`）。
 
 **已修**（2026-10-11）
 
