@@ -175,8 +175,10 @@ def cmd_convert(a) -> None:
         print(f"sp{a.gen} is converted already (--force converts again)")
         return
     logging.disable(logging.WARNING)
-    stats = convert(SELFPLAY_DIR / f"gen{a.gen}", Path(f"data/train/sp{a.gen}"), a.gen)
-    record(a.gen, "convert", stats)
+    stats = convert(SELFPLAY_DIR / f"gen{a.gen}", Path(f"data/train/sp{a.gen}"), a.gen,
+                    per_game=a.per_game)  # fmt: skip
+    if not a.no_record:  # (experiment data: not a generation of the loop's state.json)
+        record(a.gen, "convert", stats)
 
 
 def registry_match(mid: str, a_run: str, b_run: str, res: dict, kind: str, elo: bool,
@@ -945,6 +947,13 @@ def main() -> None:
     p = sub.add_parser("convert")
     p.add_argument("--gen", type=int, required=True)
     p.add_argument("--force", action="store_true")
+    p.add_argument(
+        "--per-game",
+        type=int,
+        default=0,
+        help="only this many decision points per game (value data; 0 = all)",
+    )
+    p.add_argument("--no-record", action="store_true", help="no state.json entry (experiments)")
     p.set_defaults(fn=cmd_convert)
     p = sub.add_parser("registry", help="rebuild the model registry exp/models.json")
     p.set_defaults(fn=cmd_registry)

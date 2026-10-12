@@ -93,12 +93,15 @@ def split_decisions(gen_dir: Path, shard_of: dict, tmp: Path) -> None:
 
 
 def convert_game(pair: int, game: dict, log: str, decisions: list, belief, gen: int,
-                 stamp: int, stats: dict) -> list[dict]:  # fmt: skip
+                 stamp: int, stats: dict, per_game: int = 0) -> list[dict]:  # fmt: skip
     rows = []
     # battle tags repeat across servers (each numbers its own battles): the pair makes it unique
     row = {"id": f"sp{gen}-{pair}-{game['battle']}", "log": log, "rating": None,
            "uploadtime": stamp}  # fmt: skip
-    positions = positions_from_replay(row, belief, random.Random(pair), per_game=0, pool="all")
+    # per_game > 0: that many decision points drawn per game (value data from many games, as
+    # AlphaGo's value net; only those states are built: 2026-10-11, policy-only games)
+    positions = positions_from_replay(row, belief, random.Random(pair), per_game=per_game,
+                                      pool="all")  # fmt: skip
     # a key can hold several decisions in order (two forced switches in one turn: the first
     # switch-in fainted to hazards); matched to the positions in order
     by_key: dict = defaultdict(list)
@@ -138,7 +141,7 @@ def _convert_shard(args) -> dict:
     """One shard (its own process): the games' rows written to ``path``; returns the counts."""
     from alpha_poke.agents.belief_state import BeliefModel
 
-    path, items, dec_file, gen, stamp = args
+    path, items, dec_file, gen, stamp, per_game = args
     belief = BeliefModel.load()
     stats: dict = defaultdict(int)
     decs = defaultdict(list)
@@ -151,7 +154,8 @@ def _convert_shard(args) -> dict:
     for pair, game, log_text in items:
         decisions = decs.pop(pair, [])
         try:
-            rows += convert_game(pair, game, log_text, decisions, belief, gen, stamp, stats)
+            rows += convert_game(pair, game, log_text, decisions, belief, gen, stamp, stats,
+                                 per_game)  # fmt: skip
             stats["games"] += 1
         except Exception:  # noqa: BLE001 - a broken log must not stop the conversion
             stats["failed_games"] += 1
@@ -162,7 +166,7 @@ def _convert_shard(args) -> dict:
 
 
 def convert(gen_dir: Path, out_dir: Path, gen: int, shard_games: int = 500, log=print,
-            procs: int = 10) -> dict:  # fmt: skip
+            procs: int = 10, per_game: int = 0) -> dict:  # fmt: skip
     """The generation's games in shards of ``shard_games``, ``procs`` shards at a time (each
     game has its own random seed: the same rows in any order)."""
     import multiprocessing as mp
@@ -177,7 +181,7 @@ def convert(gen_dir: Path, out_dir: Path, gen: int, shard_games: int = 500, log=
     split_decisions(gen_dir, shard_of, tmp)
     jobs = [(out_dir / f"shard-{k // shard_games:04d}.parquet",
              [(p, games[p], logs[p]) for p in pairs[k : k + shard_games]],
-             tmp / f"{k // shard_games:04d}.jsonl", gen, stamp)
+             tmp / f"{k // shard_games:04d}.jsonl", gen, stamp, per_game)
             for k in range(0, len(pairs), shard_games)]  # fmt: skip
     del logs
     stats: dict = defaultdict(int)
