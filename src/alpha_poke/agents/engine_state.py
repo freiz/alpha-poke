@@ -135,11 +135,15 @@ def sample_set(
     dist = belief.prior.predict(species, team_names)
     revealed = [m for m in mon.moves if m in _MOVES]
     ss = belief.sets.get(species)
+    # poke-env: "unknown_item" = not seen yet; None = gone (eaten, knocked off, used up: its
+    # end_item) -- no item now (2026-10-11: a gone item was sampled again, so an eaten berry or
+    # knocked-off Boots came back in every search)
+    gone = mon.item is None
     item = mon.item if mon.item not in (None, "unknown_item") else None
     tera = _tera(mon) if mon.is_terastallized else None
     if known is not None:
         revealed += [m for m in known.moves if m in _MOVES and m not in revealed]
-        if item is None and known.item:
+        if item is None and known.item and not gone:
             item = known.item
         if tera is None and known.tera:
             tera = known.tera
@@ -172,7 +176,9 @@ def sample_set(
                 return to_id(rng.choices(keys, weights=ws)[0])
         return None
 
-    if item is None:
+    if gone:
+        item = "none"
+    elif item is None:
         item = draw("item", dist.item) or "none"
     if tera is None:
         tera = draw("tera", dist.tera) or _tera(mon)

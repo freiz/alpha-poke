@@ -106,7 +106,9 @@ def timers(lines: list[list[str]]) -> dict[str, SideTimers]:
             if p[3] == "slp":
                 st.sleep[sp] = [0, any("move: Rest" in x for x in p[4:])]
             if p[3] == "tox" and sp == st.active:
-                st.toxic = 0
+                # Toxic Orb poisons at the end of the turn, after the poison damage: that turn's
+                # upkeep is not a tick
+                st.toxic = -1 if any("Toxic Orb" in x for x in p[4:]) else 0
         elif tag == "-curestatus" and len(p) > 3:
             st.status.pop(sp, None)
             st.sleep.pop(sp, None)

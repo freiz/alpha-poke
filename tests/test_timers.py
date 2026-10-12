@@ -154,3 +154,12 @@ def test_confusion_taunt_encore_yawn():
 |turn|3
 """)
     assert t["p1"].confusion is None  # gone with the switch
+
+
+def test_toxic_orb_poisons_after_the_damage():
+    t = run(START + """
+|-status|p2a: Bob|tox|[from] item: Toxic Orb
+|upkeep
+|turn|2
+""")
+    assert t["p2"].toxic == 0  # the first tick comes at the end of turn 2

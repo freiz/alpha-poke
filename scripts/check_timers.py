@@ -91,7 +91,7 @@ def check_game(log: str, out: Counter, rates: dict) -> None:
                 healed = any(len(p) > 2 and p[1] == "-heal" and p[2].startswith(side + "a")
                              and any("Wish" in x for x in p[4:]) for p in block)  # fmt: skip
                 full = False
-                for p in reversed(block):  # active at full HP at the end: no heal expected
+                for p in reversed(lines[:end]):  # at full HP at the end: no heal (no message)
                     if len(p) > 3 and p[1] in ("-damage", "-heal", "switch", "drag") \
                             and p[2].startswith(side + "a"):  # fmt: skip
                         full = hp_frac(p[3] if p[1] in ("-damage", "-heal") else p[4]) == 1
