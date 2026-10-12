@@ -127,6 +127,21 @@ class SpectatorSide:
     names: tuple[str, ...]  # belief team names of this side
 
 
+_PRIORS: dict = {}  # (belief, species, team) -> Dist
+
+
+def _prior(belief: BeliefModel, species: str, team_names: tuple[str, ...]):
+    """``belief.prior.predict``, cached: deterministic, and the same mon and team at every world
+    of every decision (2026-10-11: 14% of a policy-only worker). Read-only for the callers."""
+    key = (id(belief), species, team_names)
+    dist = _PRIORS.get(key)
+    if dist is None:
+        if len(_PRIORS) > 100_000:
+            _PRIORS.clear()
+        dist = _PRIORS[key] = belief.prior.predict(species, team_names)
+    return dist
+
+
 def sample_set(
     belief: BeliefModel,
     mon,
@@ -148,7 +163,7 @@ def sample_set(
     ignores the opponent's team; the team prior is much sharper: time-split coverage of later
     revealed moves 61.7% -> 77.3% / 81.1% / 82.6% at beta 1 / 2 / 3, design D11)."""
     species = _preview_name(mon, team_names)
-    dist = belief.prior.predict(species, team_names)
+    dist = _prior(belief, species, team_names)
     revealed = [m for m in mon.moves if m in _MOVES]
     ss = belief.sets.get(species)
     # poke-env: "unknown_item" = not seen yet; None = gone (eaten, knocked off, used up: its

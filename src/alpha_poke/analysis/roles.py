@@ -12,13 +12,21 @@ replay we combine two sources:
 The result is a probability per role, so a team's role profile is the sum over its six mons.
 """
 
+import functools
 from collections.abc import Iterable
 
 from alpha_poke.data.smogon_stats import SpeciesStats, UsageStats
 
 
+@functools.lru_cache(maxsize=1 << 16)
+def _to_id(name: str) -> str:
+    return "".join(c for c in name.lower() if c.isalnum())
+
+
 def to_id(name: str | None) -> str:
-    return "".join(c for c in name.lower() if c.isalnum()) if isinstance(name, str) else ""
+    """Showdown's id (lowercase letters and digits). Cached: names repeat (species, moves,
+    items), and self-play called it ~1,000 times per decision (2026-10-11: 22% of a worker)."""
+    return _to_id(name) if isinstance(name, str) else ""
 
 
 def _ids(*names: str) -> frozenset[str]:

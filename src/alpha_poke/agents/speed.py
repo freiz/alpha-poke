@@ -109,33 +109,42 @@ def _risky_priority(move: str, abils: set[str], grassy: bool) -> bool:
     return to_id(move) == "grassyglide" and grassy
 
 
-def observations(lines: list[list[str]], our_side: str, our_speed) -> list[Obs]:
-    """``our_speed(species) -> (speed stat, item id, ability id)`` of our mons."""
-    opp_side = "p2" if our_side == "p1" else "p1"
-    sides = {"p1": _Side(), "p2": _Side()}
-    weather, terrain, trick_room = "", "", False
-    out = []
-    block: list[list[str]] = []
-    turn = 0
-    snap: dict | None = None  # the state at the turn's first move (end-of-turn switches, boosts
-    # from the moves themselves must not count: 2026-10-11, 11% of the observations broke the
-    # opponent's true speed until this)
+class ObsTracker:
+    """``observations`` fed one protocol message at a time (a live battle feeds the messages
+    added since the last decision: 2026-10-11, re-reading the whole log at every decision was 14%
+    of a policy-only worker). ``our_speed(species) -> (speed stat, item id, ability id)``."""
 
-    def capture() -> dict:
+    def __init__(self, our_side: str, our_speed):
+        self.our_side, self.our_speed = our_side, our_speed
+        self.opp_side = "p2" if our_side == "p1" else "p1"
+        self.sides = {"p1": _Side(), "p2": _Side()}
+        self.weather, self.terrain, self.trick_room = "", "", False
+        self.out: list[Obs] = []
+        self.block: list[list[str]] = []
+        self.turn = 0
+        # the state at the turn's first move (end-of-turn switches, boosts from the moves
+        # themselves must not count: 2026-10-11, 11% of the observations broke the opponent's
+        # true speed until this)
+        self.snap: dict | None = None
+
+    def _capture(self) -> dict:
         def one(st: _Side) -> tuple:
             m = boost_mult(st.spe) * (2.0 if st.tailwind else 1.0) * (1.5 if st.proto else 1.0)
             return st.active, m * (0.5 if st.status.get(st.active) == "par" else 1.0)
 
-        return {"sides": {k: one(v) for k, v in sides.items()}, "trick_room": trick_room,
-                "weather": weather, "terrain": terrain}  # fmt: skip
+        return {"sides": {k: one(v) for k, v in self.sides.items()},
+                "trick_room": self.trick_room, "weather": self.weather,
+                "terrain": self.terrain}  # fmt: skip
 
-    def flush():
-        """The finished turn's observation, if any."""
-        if turn == 0 or snap is None:
+    def _flush(self, out: list) -> None:
+        """The current turn's observation, if any, into ``out``."""
+        block, snap, our_side, opp_side = self.block, self.snap, self.our_side, self.opp_side
+        if self.turn == 0 or snap is None:
             return
         mains = {}  # side -> (index, move) of its own (not called) first move in the turn
         for i, p in enumerate(block):
-            if len(p) > 3 and p[1] == "move" and p[2][:2] in sides and p[2][:2] not in mains \
+            if len(p) > 3 and p[1] == "move" and p[2][:2] in self.sides \
+                    and p[2][:2] not in mains \
                     and not any(x.startswith("[from]") for x in p[4:]):  # fmt: skip
                 mains[p[2][:2]] = (i, p[3])
         if our_side not in mains or opp_side not in mains:
@@ -149,7 +158,7 @@ def observations(lines: list[list[str]], our_side: str, our_speed) -> list[Obs]:
             return
         our_move, opp_move = mains[our_side][1], mains[opp_side][1]
         (us, us_mult), (them, them_mult) = snap["sides"][our_side], snap["sides"][opp_side]
-        stat, item, ability = our_speed(us)
+        stat, item, ability = self.our_speed(us)
         if not stat:
             return
         opp_abils = abilities(them)
@@ -165,40 +174,47 @@ def observations(lines: list[list[str]], our_side: str, our_speed) -> list[Obs]:
             return
         ours = stat * us_mult * (1.5 if item == "choicescarf" else 1.0)
         opp_first = mains[opp_side][0] < mains[our_side][0]
-        out.append(Obs(turn, them, ours, them_mult, snap["trick_room"], opp_first))
+        out.append(Obs(self.turn, them, ours, them_mult, snap["trick_room"], opp_first))
 
-    for p in lines:
+    def result(self) -> list[Obs]:
+        """The observations so far, the current turn's included (if it has both moves)."""
+        out = list(self.out)
+        self._flush(out)
+        return out
+
+    def feed(self, p: list[str]) -> None:
         if len(p) < 2:
-            continue
+            return
         tag = p[1]
         if tag == "turn":
-            flush()
-            turn, block, snap = int(p[2]), [], None
-            continue
-        if snap is None and tag == "move" and not any(x.startswith("[from]") for x in p[4:]):
-            snap = capture()
-        block.append(p)
+            self._flush(self.out)
+            self.turn, self.block, self.snap = int(p[2]), [], None
+            return
+        if self.snap is None and tag == "move" and not any(x.startswith("[from]") for x in p[4:]):
+            self.snap = self._capture()
+        self.block.append(p)
+        sides = self.sides
         if tag == "-clearallboost":  # Haze
             for st in sides.values():
                 st.spe = 0
         if tag == "-weather" and len(p) > 2:
-            weather = "" if p[2] == "none" else to_id(p[2])
+            self.weather = "" if p[2] == "none" else to_id(p[2])
         elif tag == "-fieldstart" and len(p) > 2:
             f = to_id(p[2].replace("move: ", ""))
             if f == "trickroom":
-                trick_room = True
+                self.trick_room = True
             elif f.endswith("terrain"):
-                terrain = f
+                self.terrain = f
         elif tag == "-fieldend" and len(p) > 2:
             f = to_id(p[2].replace("move: ", ""))
             if f == "trickroom":
-                trick_room = False
-            elif f == terrain:
-                terrain = ""
+                self.trick_room = False
+            elif f == self.terrain:
+                self.terrain = ""
         elif tag in ("-sidestart", "-sideend") and len(p) > 3 and "Tailwind" in p[3]:
             sides[p[2][:2]].tailwind = tag == "-sidestart"
         if len(p) < 3 or p[2][:2] not in sides:
-            continue
+            return
         st = sides[p[2][:2]]
         nick = p[2].split(": ", 1)[-1]
         sp = st.names.get(nick, to_id(nick))
@@ -229,8 +245,14 @@ def observations(lines: list[list[str]], our_side: str, our_speed) -> list[Obs]:
             st.proto = True
         elif tag == "-end" and len(p) > 3 and to_id(p[3]) in ("protosynthesis", "quarkdrive"):
             st.proto = False
-    flush()
-    return out
+
+
+def observations(lines: list[list[str]], our_side: str, our_speed) -> list[Obs]:
+    """``our_speed(species) -> (speed stat, item id, ability id)`` of our mons."""
+    tr = ObsTracker(our_side, our_speed)
+    for p in lines:
+        tr.feed(p)
+    return tr.result()
 
 
 def opp_eff(o: Obs, speed_stat: int, item: str) -> float:
@@ -252,20 +274,26 @@ def consistent(obs: list[Obs], speed_stat: int, item: str) -> bool:
 
 
 def battle_observations(battle) -> dict[str, list[Obs]]:
-    """``observations`` of a live poke-env battle (our view: our mons' real speeds), by the
-    opponent's species, cached on the battle."""
+    """``observations`` of a live poke-env battle (our view: our mons' real speeds, items and
+    abilities at each turn's end), by the opponent's species; the tracker kept on the battle and
+    fed the messages added since the last call."""
     data = battle._replay_data
-    cached = getattr(battle, "_alpha_speed_obs", None)
-    if cached is not None and cached[0] == len(data):
-        return cached[1]
-    ours = {}
-    for m in battle.team.values():
-        spe = (m.stats or {}).get("spe")
-        ours[to_id(m.species)] = (spe or 0, m.item or "", to_id(m.ability or ""))
-    role = battle.player_role or "p1"
-    by: dict[str, list[Obs]] = {}
-    for o in observations([m for m in data if len(m) > 1], role,
-                          lambda sp: ours.get(sp, (0, "", ""))):  # fmt: skip
+    n, tr, by = getattr(battle, "_alpha_speed_obs", (0, None, None))
+    if tr is not None and n == len(data):
+        return by
+    if tr is None or n > len(data):
+
+        def our_speed(sp: str) -> tuple:
+            for m in battle.team.values():
+                if to_id(m.species) == sp:
+                    return (m.stats or {}).get("spe") or 0, m.item or "", to_id(m.ability or "")
+            return 0, "", ""
+
+        n, tr = 0, ObsTracker(battle.player_role or "p1", our_speed)
+    for m in data[n:]:
+        tr.feed(m)
+    by = {}
+    for o in tr.result():
         by.setdefault(o.species, []).append(o)
-    battle._alpha_speed_obs = (len(data), by)
+    battle._alpha_speed_obs = (len(data), tr, by)
     return by

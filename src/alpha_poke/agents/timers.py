@@ -68,111 +68,120 @@ def _who(p: list[str], sides: dict) -> tuple[SideTimers | None, str]:
     return st, st.names.get(nick, to_id(nick))
 
 
+def _feed(sides: dict, p: list[str]) -> None:
+    """One protocol message into the counters (``timers`` / ``TimerTracker``)."""
+    if len(p) < 2:
+        return
+    tag = p[1]
+    if tag == "upkeep":  # end of turn
+        for st in sides.values():
+            if st.status.get(st.active) == "tox":
+                st.toxic += 1
+            st.protect = st.protect + 1 if st.protected else 0
+            st.protected = False
+            if st.wish is not None:
+                st.wish = (st.wish[0] - 1, st.wish[1]) if st.wish[0] > 1 else None
+            if st.future is not None:
+                st.future = (st.future[0] - 1, st.future[1]) if st.future[0] > 1 else None
+            if st.yawn is not None:
+                st.yawn += 1
+        return
+    st, sp = _who(p, sides)
+    if st is None:
+        return
+    if tag in ("switch", "drag", "replace", "detailschange") and len(p) > 3:
+        new = to_id(p[3].split(",")[0])
+        st.names[p[2].split(": ", 1)[-1]] = new
+        if tag in ("detailschange", "replace"):  # same mon, new form / Illusion broken
+            for d in (st.status, st.sleep):
+                if sp in d:
+                    d[new] = d.pop(sp)
+            st.active = new
+            return
+        st.came_in(new)
+        hp = p[4] if len(p) > 4 else ""
+        if " " in hp:
+            st.status[new] = hp.split(" ", 1)[1]
+        elif hp:
+            st.status.pop(new, None)
+    elif tag == "-status" and len(p) > 3:
+        st.status[sp] = p[3]
+        if p[3] == "slp":
+            st.sleep[sp] = [0, any("move: Rest" in x for x in p[4:])]
+        if p[3] == "tox" and sp == st.active:
+            # Toxic Orb poisons at the end of the turn, after the poison damage: that turn's
+            # upkeep is not a tick
+            st.toxic = -1 if any("Toxic Orb" in x for x in p[4:]) else 0
+    elif tag == "-curestatus" and len(p) > 3:
+        st.status.pop(sp, None)
+        st.sleep.pop(sp, None)
+    elif tag == "-cureteam":  # (older Heal Bell / Aromatherapy message: the whole side)
+        st.status.clear()
+        st.sleep.clear()
+    elif tag == "faint":
+        st.status.pop(sp, None)
+        st.sleep.pop(sp, None)
+    elif tag == "cant" and len(p) > 3:
+        if p[3] == "slp" and sp in st.sleep:
+            st.sleep[sp][0] += 1
+        if st.taunt is not None:
+            st.taunt += 1
+    elif tag == "move" and len(p) > 3:
+        mv = to_id(p[3])
+        called = any(x.startswith("[from]") for x in p[4:])
+        if not called:
+            if st.taunt is not None:
+                st.taunt += 1
+            if st.encore is not None:
+                st.encore += 1
+        if mv == "wish" and st.wish is None and "[still]" not in p:
+            st.wish = (2, sp)
+    elif tag == "-fail" and len(p) > 3 and to_id(p[3].replace("move: ", "")) == "wish":
+        st.wish = None
+    elif tag == "-singleturn" and len(p) > 3:
+        if to_id(p[3].replace("move: ", "")) in PROTECTS:
+            st.protected = True
+    elif tag == "-start" and len(p) > 3:
+        what = to_id(p[3].replace("move: ", ""))
+        if what == "confusion":
+            st.confusion = 0
+        elif what == "taunt":
+            st.taunt = 0
+        elif what == "encore":
+            st.encore = 0
+        elif what == "yawn":
+            st.yawn = 0
+        elif what == "futuresight":  # by the user: its side's attack is pending
+            st.future = (3, sp)
+    elif tag == "-activate" and len(p) > 3 and to_id(p[3]) == "confusion":
+        if st.confusion is not None:
+            st.confusion += 1
+    elif tag == "-end" and len(p) > 3:
+        what = to_id(p[3].replace("move: ", ""))
+        if what in ("confusion", "taunt", "encore", "yawn"):
+            setattr(st, what, None)
+        elif what == "futuresight":  # on the target: the other side's attack landed
+            sides["p2" if p[2][:2] == "p1" else "p1"].future = None
+
+
 def timers(lines: list[list[str]]) -> dict[str, SideTimers]:
     """The counters at the end of ``lines`` (split protocol messages), per side ('p1', 'p2')."""
     sides = {"p1": SideTimers(), "p2": SideTimers()}
     for p in lines:
-        if len(p) < 2:
-            continue
-        tag = p[1]
-        if tag == "upkeep":  # end of turn
-            for st in sides.values():
-                if st.status.get(st.active) == "tox":
-                    st.toxic += 1
-                st.protect = st.protect + 1 if st.protected else 0
-                st.protected = False
-                if st.wish is not None:
-                    st.wish = (st.wish[0] - 1, st.wish[1]) if st.wish[0] > 1 else None
-                if st.future is not None:
-                    st.future = (st.future[0] - 1, st.future[1]) if st.future[0] > 1 else None
-                if st.yawn is not None:
-                    st.yawn += 1
-            continue
-        st, sp = _who(p, sides)
-        if st is None:
-            continue
-        if tag in ("switch", "drag", "replace", "detailschange") and len(p) > 3:
-            new = to_id(p[3].split(",")[0])
-            st.names[p[2].split(": ", 1)[-1]] = new
-            if tag in ("detailschange", "replace"):  # same mon, new form / Illusion broken
-                for d in (st.status, st.sleep):
-                    if sp in d:
-                        d[new] = d.pop(sp)
-                st.active = new
-                continue
-            st.came_in(new)
-            hp = p[4] if len(p) > 4 else ""
-            if " " in hp:
-                st.status[new] = hp.split(" ", 1)[1]
-            elif hp:
-                st.status.pop(new, None)
-        elif tag == "-status" and len(p) > 3:
-            st.status[sp] = p[3]
-            if p[3] == "slp":
-                st.sleep[sp] = [0, any("move: Rest" in x for x in p[4:])]
-            if p[3] == "tox" and sp == st.active:
-                # Toxic Orb poisons at the end of the turn, after the poison damage: that turn's
-                # upkeep is not a tick
-                st.toxic = -1 if any("Toxic Orb" in x for x in p[4:]) else 0
-        elif tag == "-curestatus" and len(p) > 3:
-            st.status.pop(sp, None)
-            st.sleep.pop(sp, None)
-        elif tag == "-cureteam":  # (older Heal Bell / Aromatherapy message: the whole side)
-            st.status.clear()
-            st.sleep.clear()
-        elif tag == "faint":
-            st.status.pop(sp, None)
-            st.sleep.pop(sp, None)
-        elif tag == "cant" and len(p) > 3:
-            if p[3] == "slp" and sp in st.sleep:
-                st.sleep[sp][0] += 1
-            if st.taunt is not None:
-                st.taunt += 1
-        elif tag == "move" and len(p) > 3:
-            mv = to_id(p[3])
-            called = any(x.startswith("[from]") for x in p[4:])
-            if not called:
-                if st.taunt is not None:
-                    st.taunt += 1
-                if st.encore is not None:
-                    st.encore += 1
-            if mv == "wish" and st.wish is None and "[still]" not in p:
-                st.wish = (2, sp)
-        elif tag == "-fail" and len(p) > 3 and to_id(p[3].replace("move: ", "")) == "wish":
-            st.wish = None
-        elif tag == "-singleturn" and len(p) > 3:
-            if to_id(p[3].replace("move: ", "")) in PROTECTS:
-                st.protected = True
-        elif tag == "-start" and len(p) > 3:
-            what = to_id(p[3].replace("move: ", ""))
-            if what == "confusion":
-                st.confusion = 0
-            elif what == "taunt":
-                st.taunt = 0
-            elif what == "encore":
-                st.encore = 0
-            elif what == "yawn":
-                st.yawn = 0
-            elif what == "futuresight":  # by the user: its side's attack is pending
-                st.future = (3, sp)
-        elif tag == "-activate" and len(p) > 3 and to_id(p[3]) == "confusion":
-            if st.confusion is not None:
-                st.confusion += 1
-        elif tag == "-end" and len(p) > 3:
-            what = to_id(p[3].replace("move: ", ""))
-            if what in ("confusion", "taunt", "encore", "yawn"):
-                setattr(st, what, None)
-            elif what == "futuresight":  # on the target: the other side's attack landed
-                sides["p2" if p[2][:2] == "p1" else "p1"].future = None
+        _feed(sides, p)
     return sides
 
 
 def battle_timers(battle) -> dict[str, SideTimers]:
-    """``timers`` of a poke-env battle's log so far, cached on the battle (build_state runs once
-    per world of a decision)."""
+    """``timers`` of a poke-env battle's log so far, kept on the battle and fed the messages
+    added since the last call."""
     data = battle._replay_data
-    cached = getattr(battle, "_alpha_timers", None)
-    if cached is None or cached[0] != len(data):
-        cached = (len(data), timers([m for m in data if len(m) > 1]))
-        battle._alpha_timers = cached
-    return cached[1]
+    n, sides = getattr(battle, "_alpha_timers", (0, None))
+    if sides is None or n > len(data):
+        n, sides = 0, {"p1": SideTimers(), "p2": SideTimers()}
+    for m in data[n:]:  # incremental: only the new messages (2026-10-11: re-reading the whole
+        # log at every decision was 9% of a policy-only worker)
+        if len(m) > 1:
+            _feed(sides, m)
+    battle._alpha_timers = (len(data), sides)
+    return sides

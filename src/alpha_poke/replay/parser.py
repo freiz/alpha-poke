@@ -272,7 +272,14 @@ class ReplayParser:
 
     # ---- main loop -------------------------------------------------------------------
     def parse(self) -> Replay:
-        for line in self.raw["log"].split("\n"):
+        self.feed(self.raw["log"].split("\n"))
+        return self.replay()
+
+    def feed(self, lines) -> None:
+        """Protocol lines into the parser's state (a live battle feeds the lines added since the
+        last call: net_context; 2026-10-11, re-parsing the whole log at every decision was a
+        third of a policy-only worker's search step)."""
+        for line in lines:
             if not line.startswith("|"):
                 continue
             parts = line.split("|")[1:]
@@ -284,6 +291,9 @@ class ReplayParser:
                 handler(args)
             if cmd not in _OWN_TAG_HANDLING:
                 self._reveal_from_tags(args, cmd)
+
+    def replay(self) -> Replay:
+        """The parsed state as a Replay (its lists / dicts are the parser's: read them only)."""
         return Replay(
             id=self.raw.get("id", ""),
             format=self.raw.get("formatid") or self.tier,

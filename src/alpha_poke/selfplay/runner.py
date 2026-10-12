@@ -253,7 +253,18 @@ def _worker(args) -> int:
     # warnings and errors (search failures, engine panics, fallbacks) of this worker
     logging.basicConfig(level=logging.WARNING, filename=str(Path(gen_dir) / f"errors-w{wid}.log"),
                         format="%(asctime)s %(name)s %(levelname)s %(message)s")  # fmt: skip
-    return asyncio.run(_process(wid, jobs, port, Path(gen_dir), settings))
+    prof_dir = os.environ.get("ALPHA_PROFILE")  # a directory: cProfile each worker (throughput)
+    if not prof_dir:
+        return asyncio.run(_process(wid, jobs, port, Path(gen_dir), settings))
+    import cProfile
+
+    prof = cProfile.Profile()
+    prof.enable()
+    try:
+        return asyncio.run(_process(wid, jobs, port, Path(gen_dir), settings))
+    finally:
+        prof.disable()
+        prof.dump_stats(str(Path(prof_dir) / f"worker-{wid}.prof"))
 
 
 def run(gen_dir: Path, pairs: list, settings: dict, procs: int = 4,
