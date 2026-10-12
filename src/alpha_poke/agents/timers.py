@@ -7,6 +7,8 @@ sides, in poke-engine's own units (rust/patches/poke-engine-0.0.48, generate_ins
   protect     side_conditions.protect: consecutive turns the active protected (the next one
               succeeds with (1/3) ** protect)
   wish        Side.wish turns: 1 at the start of the turn after Wish (heals at its end)
+  future      Side.future_sight turns: 2 at the start of the turn after Future Sight, 1 before
+              the turn it hits (at the end)
   sleep       per mon: move attempts while asleep (``cant slp``: logged before a Sleep Talk
               too); Rest sleep
               is rest_turns = 3 - attempts (wakes on the third), other sleep sleep_turns =
@@ -36,6 +38,7 @@ class SideTimers:
     protect: int = 0
     protected: bool = False  # this turn
     wish: tuple[int, str] | None = None  # (turns left, the wisher's species id)
+    future: tuple[int, str] | None = None  # Future Sight pending (turns, the user's species id)
     confusion: int | None = None
     taunt: int | None = None
     encore: int | None = None
@@ -80,6 +83,8 @@ def timers(lines: list[list[str]]) -> dict[str, SideTimers]:
                 st.protected = False
                 if st.wish is not None:
                     st.wish = (st.wish[0] - 1, st.wish[1]) if st.wish[0] > 1 else None
+                if st.future is not None:
+                    st.future = (st.future[0] - 1, st.future[1]) if st.future[0] > 1 else None
                 if st.yawn is not None:
                     st.yawn += 1
             continue
@@ -148,6 +153,8 @@ def timers(lines: list[list[str]]) -> dict[str, SideTimers]:
                 st.encore = 0
             elif what == "yawn":
                 st.yawn = 0
+            elif what == "futuresight":  # by the user: its side's attack is pending
+                st.future = (3, sp)
         elif tag == "-activate" and len(p) > 3 and to_id(p[3]) == "confusion":
             if st.confusion is not None:
                 st.confusion += 1
@@ -155,6 +162,8 @@ def timers(lines: list[list[str]]) -> dict[str, SideTimers]:
             what = to_id(p[3].replace("move: ", ""))
             if what in ("confusion", "taunt", "encore", "yawn"):
                 setattr(st, what, None)
+            elif what == "futuresight":  # on the target: the other side's attack landed
+                sides["p2" if p[2][:2] == "p1" else "p1"].future = None
     return sides
 
 

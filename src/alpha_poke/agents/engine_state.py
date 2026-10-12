@@ -57,6 +57,19 @@ VOLATILE = {
     Effect.YAWN: "yawn",
     Effect.SALT_CURE: "saltcure",
 }
+# Protosynthesis / Quark Drive boosts (Booster Energy, sun, Electric Terrain): carried over
+# with the fixes (2026-10-11: never passed; while a gone Booster Energy was sampled again the
+# engine re-applied the boost by accident, so the gone-item fix alone took it away)
+BOOSTS = {e: e.name.lower() for e in Effect
+          if e.name.startswith(("PROTOSYNTHESIS", "QUARKDRIVE"))
+          and e.name not in ("PROTOSYNTHESIS",)}  # fmt: skip
+# more volatiles the engine models, carried over with the fixes (2026-10-11; most common in gen 5:
+# typechange (Protean / Libero) and healblock (Psychic Noise)); the engine has no durations for
+# most of them (they last until a switch in the search: a few turns at most matter)
+BOOSTS |= {getattr(Effect, n): n.replace("_", "").lower() for n in (
+    "TYPECHANGE", "HEAL_BLOCK", "CHARGE", "FLASH_FIRE", "CURSE", "MAGNET_RISE", "THROAT_CHOP",
+    "FOCUS_ENERGY", "SMACK_DOWN", "ATTRACT", "NO_RETREAT", "TAR_SHOT", "AQUA_RING", "INGRAIN",
+    "GLAIVE_RUSH", "OCTOLOCK", "TORMENT", "GASTRO_ACID", "SYRUP_BOMB")}  # fmt: skip
 _MOVES = GEN.moves
 
 
@@ -361,7 +374,8 @@ def _counts(tm: SideTimers, active) -> tuple[int, int]:
 
 
 def _timed(tm: SideTimers, active, mons: list, engine_mons: list, vol: set[str]) -> dict:
-    """pe.Side kwargs: the pending Wish (turns, half the wisher's max HP) and the active's
+    """pe.Side kwargs: the pending Wish (turns, half the wisher's max HP), the pending Future
+    Sight (turns, its user's slot) and the active's
     volatile durations (only of volatiles it has; clamped to what the engine accepts)."""
     out = {}
     if tm.wish is not None:
@@ -369,6 +383,10 @@ def _timed(tm: SideTimers, active, mons: list, engine_mons: list, vol: set[str])
                    next((i for i, m in enumerate(mons) if m is active), None))  # fmt: skip
         if idx is not None and idx < len(engine_mons):
             out["wish"] = (tm.wish[0], engine_mons[idx].maxhp // 2)
+    if tm.future is not None:
+        idx = next((i for i, m in enumerate(mons) if to_id(m.species) == tm.future[1]), None)
+        if idx is not None:
+            out["future_sight"] = (tm.future[0], pe.PokemonIndex(str(idx)))
     dur = {}
     for name, top in (("confusion", 4), ("taunt", 2), ("encore", 2), ("yawn", 1)):
         n = getattr(tm, name)
@@ -400,7 +418,8 @@ def build_state(
     side one's switch request (training positions of forced / pivot switches; a spectator log
     has no request). ``fixes`` (2026-10-11; False: the state as before, for A/B tests): the turn
     counters the engine needs (sleep / Rest, toxic, consecutive Protect, Wish, confusion /
-    taunt / encore / yawn: agents/timers.py) and the opponent's gone items staying gone."""
+    taunt / encore / yawn: agents/timers.py), the opponent's gone items staying gone and the
+    Protosynthesis / Quark Drive boosts."""
     turn = battle.turn
     active = battle.active_pokemon
     role = battle.player_role or "p1"
@@ -451,6 +470,9 @@ def build_state(
         active, our_mons[our_active_idx] if our_active_idx is not None else None, avail
     )
     their_last, their_vol = _last_move(opp_active, their_mons[their_idx] if their_mons else None)
+    if fixes:  # the actives' Protosynthesis / Quark Drive boosts and other volatiles (BOOSTS)
+        for mon, vol in ((active, our_vol), (opp_active, their_vol)):
+            vol |= {BOOSTS[e] for e in (mon.effects if mon is not None else ()) if e in BOOSTS}
 
     side_one = pe.Side(
         pokemon=_pad(our_mons),

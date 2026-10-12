@@ -7,6 +7,7 @@ turn start the counters are computed from the log so far, then the turn's events
            within the HP display's rounding)
   protect  a protect move after n consecutive ones succeeds at (1/3) ** n
   wish     a pending Wish with 1 turn heals at the end of the turn (if the active is hurt)
+  future   a pending Future Sight with 1 turn lands at the end of the turn
   confusion  the snap-out rate per confused attempts so far (engine patch: 0, 1/4, 1/3, 1/2, 1)
 
   uv run python scripts/check_timers.py --gen 5 --games 3000
@@ -99,6 +100,14 @@ def check_game(log: str, out: Counter, rates: dict) -> None:
                 fainted = any(mine(p, "faint") for p in block)
                 if not full and not fainted:
                     out[f"wish due: {'healed' if healed else 'NOT healed'}"] += 1
+            # Future Sight due at the end of this turn: it lands on the other side
+            if st.future is not None and st.future[0] == 1:
+                other = "p2" if side == "p1" else "p1"
+                landed = any(len(p) > 3 and p[1] == "-end" and p[2].startswith(other)
+                             and "Future Sight" in p[3] for p in block)  # fmt: skip
+                ended = any(len(p) > 1 and p[1] in ("win", "tie") for p in block)
+                if not ended:
+                    out[f"future sight due: {'landed' if landed else 'NOT landed'}"] += 1
             # confusion: snapped out at this attempt?
             if st.confusion is not None:
                 tried = [p for p in block if mine(p, "move") or mine(p, "cant")
