@@ -48,8 +48,9 @@ VARIANTS: dict[str, tuple[str, dict]] = {
                 # per side (equal-cost comparisons of networks of different sizes); else
                 # ALPHA_SEARCH_ITERATIONS
                 "iters": os.environ.get(f"ALPHA_SEARCH_ITERATIONS_{x.upper()}"),
-                # ALPHA_TIMERS_A / _B = 0: no turn counters in the engine state (A/B test)
-                "timers": os.environ.get(f"ALPHA_TIMERS_{x.upper()}", "1") != "0",
+                # ALPHA_STATE_FIXES_A / _B = 0: the engine state as before 2026-10-11 (no turn
+                # counters, gone items sampled again; A/B test)
+                "fixes": os.environ.get(f"ALPHA_STATE_FIXES_{x.upper()}", "1") != "0",
             },
         )
         for x in ("a", "b")
@@ -106,7 +107,7 @@ def make_bot(
         cls_name, extra = VARIANTS[kind]
         if cls_name == "batched":
             return _batched_bot(extra["model"], heldout_pool, trace_dir, kw, extra.get("dtype"),
-                                extra.get("iters"), extra.get("timers", True))  # fmt: skip
+                                extra.get("iters"), extra.get("fixes", True))  # fmt: skip
         if cls_name == "search":
             from alpha_poke.agents.search_player import SearchPlayer as cls
         elif cls_name == "policy":
@@ -122,7 +123,7 @@ _BATCHERS: dict = {}  # (model, dtype) -> Batcher, one per network in each (work
 
 
 def _batched_bot(model: str, heldout_pool, trace_dir, kw, dtype: str | None = None,
-                 iters: str | None = None, timers: bool = True) -> Player:  # fmt: skip
+                 iters: str | None = None, fixes: bool = True) -> Player:  # fmt: skip
     import random
 
     from alpha_poke.agents.belief_state import BeliefModel
@@ -137,5 +138,5 @@ def _batched_bot(model: str, heldout_pool, trace_dir, kw, dtype: str | None = No
         net_policy="both", model=model, batcher=_BATCHERS[model, dtype], full_frac=1.0,
         full_iters=iters, noise=(0.0, 10.0), greedy=True, record=False,
         turn_cap=int(os.environ.get("ALPHA_TURN_CAP", 300)),
-        seed=random.randrange(1 << 30), timers=timers, **kw,
+        seed=random.randrange(1 << 30), state_fixes=fixes, **kw,
     )  # fmt: skip

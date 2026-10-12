@@ -121,6 +121,7 @@ def sample_set(
     move_beta: float = 0.0,
     known: KnownSet | None = None,
     temp: float = 1.0,
+    gone_items: bool = True,
 ):
     """One plausible full set for an opposing mon, consistent with what it revealed (and with
     ``known``: game-wide facts about the mon, used for side one of replay positions).
@@ -138,7 +139,7 @@ def sample_set(
     # poke-env: "unknown_item" = not seen yet; None = gone (eaten, knocked off, used up: its
     # end_item) -- no item now (2026-10-11: a gone item was sampled again, so an eaten berry or
     # knocked-off Boots came back in every search)
-    gone = mon.item is None
+    gone = gone_items and mon.item is None
     item = mon.item if mon.item not in (None, "unknown_item") else None
     tera = _tera(mon) if mon.is_terastallized else None
     if known is not None:
@@ -390,20 +391,21 @@ def build_state(
     move_beta: float = 0.0,
     spectator: SpectatorSide | None = None,
     force_switch: bool | None = None,
-    timers: bool = True,
+    fixes: bool = True,
 ) -> pe.State:
     """One determinization of the current battle (side_one = us): the opponent's sets sampled
     from the belief, consistent with what they revealed. With ``spectator`` side
     one comes from a spectator log (no request): built like the opponent, from the known parts
     of each set plus belief samples (training positions, design D13). ``force_switch`` overrides
     side one's switch request (training positions of forced / pivot switches; a spectator log
-    has no request). ``timers``: the turn counters the engine needs (sleep / Rest, toxic,
-    consecutive Protect, Wish, confusion / taunt / encore / yawn: agents/timers.py)."""
+    has no request). ``fixes`` (2026-10-11; False: the state as before, for A/B tests): the turn
+    counters the engine needs (sleep / Rest, toxic, consecutive Protect, Wish, confusion /
+    taunt / encore / yawn: agents/timers.py) and the opponent's gone items staying gone."""
     turn = battle.turn
     active = battle.active_pokemon
     role = battle.player_role or "p1"
     # turn counters from the log (timers.py); off: every counter 0, as before 2026-10-11 (A/B)
-    tms = battle_timers(battle) if timers else {"p1": SideTimers(), "p2": SideTimers()}
+    tms = battle_timers(battle) if fixes else {"p1": SideTimers(), "p2": SideTimers()}
     tm_us, tm_them = tms[role], tms["p2" if role == "p1" else "p1"]
     if spectator is None:
         ours = list(battle.team.values())
@@ -414,7 +416,13 @@ def build_state(
         our_mons = []
         for m in ours:
             s = sample_set(
-                belief, m, spectator.names, rng, move_beta, spectator.known.get(to_id(m.species))
+                belief,
+                m,
+                spectator.names,
+                rng,
+                move_beta,
+                spectator.known.get(to_id(m.species)),
+                gone_items=fixes,
             )
             # known moves come first in sample_set; in a real battle our moves are in moveset
             # order, unrelated to use: shuffle so the slot does not leak which move gets used
@@ -434,7 +442,8 @@ def build_state(
     opp_active = battle.opponent_active_pokemon
 
     their_mons = [
-        _their_mon(m, sample_set(belief, m, team_names, rng, move_beta), tm_them) for m in theirs
+        _their_mon(m, sample_set(belief, m, team_names, rng, move_beta, gone_items=fixes), tm_them)
+        for m in theirs
     ]
     their_idx = next((i for i, m in enumerate(theirs) if m is opp_active), 0)
     our_active_idx = next((i for i, m in enumerate(ours) if m is active), None)
