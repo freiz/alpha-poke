@@ -14,6 +14,7 @@ import time
 from poke_env.player.battle_order import ForfeitBattleOrder
 
 from alpha_poke.agents import net_context
+from alpha_poke.agents.consistency import request_mismatch
 from alpha_poke.agents.engine_state import build_state, engine_move_to_order
 from alpha_poke.agents.knowledge_player import KnowledgePlayer, sync_tera_types
 from alpha_poke.agents.search_player import SearchPlayer
@@ -88,8 +89,36 @@ class SelfPlayPlayer(SearchPlayer):
         self.search_fallbacks += 1
         return KnowledgePlayer.choose_move(self, battle)
 
+    async def _revive_async(self, battle):
+        """Revival Blessing's choice (SearchPlayer._revive): each candidate's state after it,
+        a fast search each (in parallel on the batcher), the best root value; not recorded (no
+        such action in the network's slots)."""
+        cands = list(battle.available_switches)
+        if len(cands) <= 1:
+            return self.create_order(cands[0]) if cands else None
+        names = self._opp_team_names(battle)
+        futs = []
+        for m in cands:
+            states = [build_state(battle, self.belief, names, self.rng, move_beta=self.move_beta,
+                                  fixes=self.state_fixes, force_switch=False, revived=m.species)
+                      for _ in range(self.fast_worlds)]  # fmt: skip
+            ctxs = net_context.contexts(battle, states)
+            futs.append((m, self.batcher.submit([s.to_string() for s in states], ctxs,
+                                                self.fast_iters, self.rng.randrange(1 << 30),
+                                                (0.0, 10.0))))  # fmt: skip
+        vals = {}
+        for m, fut in futs:
+            res = await asyncio.wait_for(asyncio.wrap_future(fut), timeout=self.search_timeout)
+            vals[m.species] = res[0]["q"]
+        self.revives += 1
+        best = max(cands, key=lambda m: vals[m.species])
+        log.info("revive (%s turn %d): %s", battle.battle_tag, battle.turn, vals)
+        return self.create_order(best)
+
     async def _search_async(self, battle):
         sync_tera_types(battle)
+        if battle.reviving:
+            return await self._revive_async(battle)
         me = battle.active_pokemon
         if me is None or battle.opponent_active_pokemon is None:
             log.warning("no search (%s turn %d): no active mon", battle.battle_tag, battle.turn)
@@ -110,6 +139,11 @@ class SelfPlayPlayer(SearchPlayer):
         names = self._opp_team_names(battle)
         states = [build_state(battle, self.belief, names, self.rng, move_beta=self.move_beta,
                               fixes=self.state_fixes) for _ in range(n_worlds)]  # fmt: skip
+        issues = request_mismatch(battle, states[0])
+        if issues:
+            self.mismatches += 1
+            log.warning("request / engine state mismatch (%s turn %d): %s", battle.battle_tag,
+                        battle.turn, issues)  # fmt: skip
         t1 = time.time()
         ctxs = net_context.contexts(battle, states)
         t2 = time.time()

@@ -96,6 +96,7 @@ async def _lane(lane: str, jobs: list, port: int, gen_dir: Path, settings: dict,
         t0 = time.time()
         before = set(a.battles)
         fb0 = (a.search_fallbacks, b.search_fallbacks)
+        rv0 = (a.revives + b.revives, a.mismatches + b.mismatches)
         first, second = (a, b) if idx % 2 == 0 else (b, a)
         task = asyncio.ensure_future(first.battle_against(second, n_battles=1))
         last_turn, last_change, why = -1, time.time(), None
@@ -143,6 +144,10 @@ async def _lane(lane: str, jobs: list, port: int, gen_dir: Path, settings: dict,
             "capped": capped,
             "decisions": len(recs["a"]) + len(recs["b"]),
             "fallbacks": [a.search_fallbacks - fb0[0], b.search_fallbacks - fb0[1]],
+            # Revival Blessing choices; decisions whose request offered options the engine
+            # state lacked (agents/consistency.py)
+            "revives": a.revives + b.revives - rv0[0],
+            "mismatches": a.mismatches + b.mismatches - rv0[1],
             "seconds": round(time.time() - t0, 1), "model": settings["model"], "lane": lane,
         }  # fmt: skip
         with open(gen_dir / f"decisions-w{wid}.jsonl", "a") as f:
@@ -179,6 +184,8 @@ async def _lane(lane: str, jobs: list, port: int, gen_dir: Path, settings: dict,
         counters["decisions"] += game["decisions"]
         counters["leaves"] += sum(r["iterations"] for rs in recs.values() for r in rs)
         counters["fallbacks"] += sum(game["fallbacks"])
+        counters["revives"] += game["revives"]
+        counters["mismatches"] += game["mismatches"]
         counters["capped"] += capped
     return n
 
@@ -201,7 +208,8 @@ async def _process(wid: int, jobs: list, port: int, gen_dir: Path, settings: dic
                       dtype=settings.get("dtype", "bf16"))  # fmt: skip
     lanes = settings["lanes"]
     parts = [jobs[i::lanes] for i in range(lanes)]
-    counters = {"games": 0, "decisions": 0, "leaves": 0, "fallbacks": 0, "capped": 0}
+    counters = {"games": 0, "decisions": 0, "leaves": 0, "fallbacks": 0, "capped": 0,
+                "revives": 0, "mismatches": 0}  # fmt: skip
     t0 = time.time()
 
     async def progress():

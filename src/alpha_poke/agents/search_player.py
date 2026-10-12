@@ -22,6 +22,7 @@ import alpha_search
 from poke_env.player.battle_order import ForfeitBattleOrder
 
 from alpha_poke.agents import net_context
+from alpha_poke.agents.consistency import request_mismatch
 from alpha_poke.agents.engine_state import build_state, engine_move_to_order
 from alpha_poke.agents.knowledge_player import KnowledgePlayer, sync_tera_types
 
@@ -68,6 +69,8 @@ class SearchPlayer(KnowledgePlayer):
         self.search_ms = search_ms or _env_int("ALPHA_SEARCH_MS", 1000)
         self.threads = threads or _env_int("ALPHA_SEARCH_THREADS", 1)  # Rust threads
         self.search_fallbacks = 0
+        self.revives = 0  # Revival Blessing choices (searched per candidate)
+        self.mismatches = 0  # decisions whose request offered options the engine state lacked
         # sampled moves x team-conditioned move marginal ** move_beta (0 = archetype only; default
         # 1 since 2026-10-06: coverage of later revealed moves 61.7% -> 77.3%, design D11)
         self.move_beta = move_beta if move_beta is not None else _env_float("ALPHA_MOVE_BETA", 1.0)
@@ -111,8 +114,51 @@ class SearchPlayer(KnowledgePlayer):
         self.search_fallbacks += 1
         return super().choose_move(battle)
 
+    def _run(self, states, ctxs, budget: int, rng) -> tuple[list, int]:
+        """A search of ``states`` (``budget`` ms): ([(option, visits, mean value)], iterations)."""
+        if self.model_transformer and self.device == "cuda":
+            return self._gpu_search(states, ctxs, budget, rng)
+        ours, n, _, _ = alpha_search.ismcts(
+            [s.to_string() for s in states],
+            budget,
+            iterations=self.search_iterations,
+            threads=self.threads,
+            model_dir=self.model,
+            use_policy=self.net_policy is not None,
+            policy_opponent=self.net_policy == "both",
+            contexts=ctxs,
+        )
+        return ours, n
+
+    def _revive(self, battle):
+        """Revival Blessing's choice (a fainted mon back at half HP; the engine has no such step):
+        each candidate's state after it, searched (the time split between them), the best root
+        value. (2026-10-11: the search ran as for a switch, its options -- live benched mons --
+        had no order, and the heuristic chose.)"""
+        cands = list(battle.available_switches)
+        if len(cands) <= 1:
+            return self.create_order(cands[0]) if cands else None
+        names = self._opp_team_names(battle)
+        rng = random.Random(f"{battle.battle_tag}:{battle.turn}:revive")
+        budget = max(20, self.search_ms // len(cands))
+        vals = {}
+        for m in cands:
+            states = [build_state(battle, self.belief, names, rng, move_beta=self.move_beta,
+                                  force_switch=False, revived=m.species)
+                      for _ in range(self.worlds)]  # fmt: skip
+            ctxs = net_context.contexts(battle, states) if self.model_transformer else None
+            ours, _ = self._run(states, ctxs, budget, rng)
+            total = sum(v for _, v, _ in ours) or 1
+            vals[m.species] = sum(v * q for _, v, q in ours) / total
+        self.revives += 1
+        best = max(cands, key=lambda m: vals[m.species])
+        log.info("revive (%s turn %d): %s", battle.battle_tag, battle.turn, vals)
+        return self.create_order(best)
+
     def _search(self, battle):
         sync_tera_types(battle)
+        if battle.reviving:
+            return self._revive(battle)
         if battle.active_pokemon is None or battle.opponent_active_pokemon is None:
             self._trace_fallback(battle, "no active pokemon")
             return None
@@ -121,21 +167,14 @@ class SearchPlayer(KnowledgePlayer):
         t0 = time.time()
         states = [build_state(battle, self.belief, names, rng, move_beta=self.move_beta)
                   for _ in range(self.worlds)]  # fmt: skip
+        issues = request_mismatch(battle, states[0])
+        if issues:
+            self.mismatches += 1
+            log.warning("request / engine state mismatch (%s turn %d): %s", battle.battle_tag,
+                        battle.turn, issues)  # fmt: skip
         ctxs = net_context.contexts(battle, states) if self.model_transformer else None
         budget = max(20, self.search_ms - int((time.time() - t0) * 1000))
-        if self.model_transformer and self.device == "cuda":
-            ours, n = self._gpu_search(states, ctxs, budget, rng)
-        else:
-            ours, n, _, _ = alpha_search.ismcts(
-                [s.to_string() for s in states],
-                budget,
-                iterations=self.search_iterations,
-                threads=self.threads,
-                model_dir=self.model,
-                use_policy=self.net_policy is not None,
-                policy_opponent=self.net_policy == "both",
-                contexts=ctxs,
-            )
+        ours, n = self._run(states, ctxs, budget, rng)
         total = sum(v for _, v, _ in ours) or 1
         ranked = sorted(((c, v / total) for c, v, _ in ours), key=lambda kv: -kv[1])
         orders = [(c, s, engine_move_to_order(self, battle, c)) for c, s in ranked]

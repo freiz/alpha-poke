@@ -282,18 +282,36 @@ def _sleep(mon, tm: SideTimers | None) -> dict:
     return {"rest_turns": rest, "sleep_turns": sleep}
 
 
-def _our_mon(mon, available_moves: set[str] | None, tm: SideTimers | None = None) -> pe.Pokemon:
+def _our_mon(
+    mon,
+    available_moves: set[str] | None,
+    tm: SideTimers | None = None,
+    req_pp: dict | None = None,
+    revived: bool = False,
+) -> pe.Pokemon:
+    """``req_pp``: the request's PP of the active's moves (exact; poke-env counts uses itself and
+    drifts low over long games: 2026-10-11, a move with PP left was 0 in the engine, no legal
+    option); a move the request offers has PP. ``revived``: a fainted mon brought back at half
+    HP (Revival Blessing's choice)."""
     stats = mon.stats or {}
     moves = []
     for mid, mv in list(mon.moves.items())[:4]:
         disabled = available_moves is not None and mid not in available_moves
-        moves.append(pe.Move(id=mid, pp=max(0, mv.current_pp), disabled=disabled))
+        pp = max(0, mv.current_pp)
+        if req_pp and req_pp.get(mid) is not None:
+            pp = int(req_pp[mid])
+        if available_moves is not None and mid in available_moves:
+            pp = max(pp, 1)
+        moves.append(pe.Move(id=mid, pp=pp, disabled=disabled))
+    hp = 0 if mon.fainted else int(mon.current_hp or 0)
+    if revived:
+        hp = max(1, int(mon.max_hp or 2) // 2)
     return pe.Pokemon(
         id=mon.species,
         level=mon.level or 100,
         types=_types(mon),
         base_types=_base_types(mon.species),
-        hp=0 if mon.fainted else int(mon.current_hp or 0),
+        hp=hp,
         maxhp=int(mon.max_hp or 1),
         ability=to_id(mon.ability) if mon.ability else "none",
         base_ability=to_id(mon.ability) if mon.ability else "none",
@@ -303,7 +321,7 @@ def _our_mon(mon, available_moves: set[str] | None, tm: SideTimers | None = None
         special_attack=int(stats.get("spa") or 100),
         special_defense=int(stats.get("spd") or 100),
         speed=int(stats.get("spe") or 100),
-        status=STATUS.get(mon.status, "none"),
+        status="none" if revived else STATUS.get(mon.status, "none"),
         weight_kg=float(mon.weight or 0.0),
         moves=moves,
         terastallized=mon.is_terastallized,
@@ -410,6 +428,7 @@ def build_state(
     spectator: SpectatorSide | None = None,
     force_switch: bool | None = None,
     fixes: bool = True,
+    revived: str | None = None,
 ) -> pe.State:
     """One determinization of the current battle (side_one = us): the opponent's sets sampled
     from the belief, consistent with what they revealed. With ``spectator`` side
@@ -419,7 +438,8 @@ def build_state(
     has no request). ``fixes`` (2026-10-11; False: the state as before, for A/B tests): the turn
     counters the engine needs (sleep / Rest, toxic, consecutive Protect, Wish, confusion /
     taunt / encore / yawn: agents/timers.py), the opponent's gone items staying gone and the
-    Protosynthesis / Quark Drive boosts."""
+    Protosynthesis / Quark Drive boosts. ``revived``: our mon of this species back at half HP
+    (the states of a Revival Blessing choice)."""
     turn = battle.turn
     active = battle.active_pokemon
     role = battle.player_role or "p1"
@@ -429,7 +449,14 @@ def build_state(
     if spectator is None:
         ours = list(battle.team.values())
         avail = {m.id for m in battle.available_moves} if battle.available_moves else None
-        our_mons = [_our_mon(m, avail if m is active else None, tm_us) for m in ours]
+        req = battle.last_request or {}
+        act = (req.get("active") or [{}])[0]
+        req_pp = {to_id(m["id"]): m.get("pp") for m in act.get("moves", []) if "id" in m}
+        our_mons = [
+            _our_mon(m, avail if m is active else None, tm_us,
+                     req_pp if m is active else None, revived == to_id(m.species))
+            for m in ours
+        ]  # fmt: skip
     else:
         ours, avail = spectator.team, None
         our_mons = []
