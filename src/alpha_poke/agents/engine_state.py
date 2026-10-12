@@ -136,7 +136,7 @@ def _prior(belief: BeliefModel, species: str, team_names: tuple[str, ...]):
     key = (id(belief), species, team_names)
     dist = _PRIORS.get(key)
     if dist is None:
-        if len(_PRIORS) > 100_000:
+        if len(_PRIORS) > 20_000:  # (a few KB each: bounded)
             _PRIORS.clear()
         dist = _PRIORS[key] = belief.prior.predict(species, team_names)
     return dist
