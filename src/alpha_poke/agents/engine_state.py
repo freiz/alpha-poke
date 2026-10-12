@@ -272,8 +272,9 @@ def _sample_spread(mon, item: str, item_seen: bool, obs: list, dist, rng) -> tup
             if it == "choicescarf" and it != item and dist.item.get("choicescarf", 0) <= 0:
                 continue
             ok = [i for i, sp in enumerate(speeds) if consistent(obs, sp, it)]
-            if ok:
-                i = rng.choices(ok, weights=[ws[j] for j in ok])[0]
+            if ok:  # by usage; uniform if the fitting spreads all have zero usage weight
+                w = [ws[j] for j in ok]
+                i = rng.choices(ok, weights=w if sum(w) > 0 else None)[0]
                 return spreads[i], it
     return rng.choices(spreads, weights=ws)[0], item
 

@@ -59,3 +59,19 @@ def test_sample_spread_respects_the_order():
     for _ in range(30):
         spread, item = _sample_spread(mon, "", True, [slow], dist, rng)
         assert calc_stats(mon.base_stats, spread)["spe"] <= 250 * 1.005  # a bulky spread
+
+
+def test_sample_spread_zero_weight_fits(monkeypatch):
+    # 2026-10-12, gen 6: the spreads fitting the order all had usage weight 0 -> ValueError
+    import alpha_poke.agents.engine_state as es
+
+    fast = {"evs": {"spe": 252}, "nature": "jolly"}
+    slow = {"evs": {"hp": 252}, "nature": "relaxed"}
+    monkeypatch.setattr(es, "spread_dist", lambda sp: ([slow, fast], [1.0, 0.0]))
+    monkeypatch.setattr(es, "calc_stats", lambda base, sp, level=100: {
+        "spe": 300 if sp is fast else 200})  # fmt: skip
+    es._SPREAD_SPEEDS.clear()
+    mon = SimpleNamespace(species="testmon", level=100, base_stats={})
+    o = Obs(1, "testmon", ours=250.0, mult=1.0, trick_room=False, opp_first=True)
+    spread, item = _sample_spread(mon, "", True, [o], SimpleNamespace(item={}), random.Random(0))
+    assert spread is fast and item == ""
