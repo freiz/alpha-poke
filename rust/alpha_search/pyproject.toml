@@ -19,5 +19,7 @@ cache-keys = [
     { file = "Cargo.toml" },
     { file = "Cargo.lock" },
     { file = "src/**/*.rs" },
+    # the vendored poke-engine (patched: rust/patches): an engine change must rebuild us too
+    { file = "../patches/poke-engine-0.0.48/src/**/*.rs" },
     { file = ".cargo/config.toml" },
 ]

@@ -159,6 +159,16 @@ const PROTECT_VOLATILES: [PokemonVolatileStatus; 6] = [
     PokemonVolatileStatus::ENDURE,
 ];
 
+/// alpha-poke patch: the chance a confusion with ``confused_attempts`` confused move attempts
+/// so far has ended at this attempt (1-4 confused attempts, uniform: 0, 1/4, 1/3, 1/2, 1).
+fn confusion_end_chance(confused_attempts: i8) -> f32 {
+    match confused_attempts {
+        0 => 0.0,
+        1..=3 => 1.0 / (5 - confused_attempts) as f32,
+        _ => 1.0,
+    }
+}
+
 #[cfg(not(feature = "champions"))]
 fn chance_to_wake_up(turns_asleep: i8) -> f32 {
     if turns_asleep == 0 {
@@ -1965,12 +1975,61 @@ fn generate_instructions_from_existing_status_conditions(
         _ => {}
     }
 
+    // alpha-poke patch (2026-10-11): confusion ends. Gen 9: 1-4 confused move attempts (uniform),
+    // then the next attempt snaps out and acts normally; ``volatile_status_durations.confusion``
+    // = confused attempts so far (the engine never counted it: confusion lasted until a switch).
+    // One continuing branch per attempt (before_move's structure): the attempt counts, and the
+    // self-hit chance is 1/3 of the chance the confusion has not ended yet at this attempt
+    // (exact for the first attempt of a search, approximate later); after 4 it ends for sure.
+    let mut confusion_self_hit = HIT_SELF_IN_CONFUSION_CHANCE;
     if attacking_side
         .volatile_statuses
         .contains(&PokemonVolatileStatus::CONFUSION)
     {
+        let confused_attempts = attacking_side.volatile_status_durations.confusion;
+        if confused_attempts >= 4 {
+            attacking_side
+                .volatile_statuses
+                .remove(&PokemonVolatileStatus::CONFUSION);
+            incoming_instructions
+                .instruction_list
+                .push(Instruction::RemoveVolatileStatus(
+                    RemoveVolatileStatusInstruction {
+                        side_ref: *attacking_side_ref,
+                        volatile_status: PokemonVolatileStatus::CONFUSION,
+                    },
+                ));
+            incoming_instructions
+                .instruction_list
+                .push(Instruction::ChangeVolatileStatusDuration(
+                    ChangeVolatileStatusDurationInstruction {
+                        side_ref: *attacking_side_ref,
+                        volatile_status: PokemonVolatileStatus::CONFUSION,
+                        amount: -confused_attempts,
+                    },
+                ));
+            attacking_side.volatile_status_durations.confusion = 0;
+        } else {
+            confusion_self_hit *= 1.0 - confusion_end_chance(confused_attempts);
+            incoming_instructions
+                .instruction_list
+                .push(Instruction::ChangeVolatileStatusDuration(
+                    ChangeVolatileStatusDurationInstruction {
+                        side_ref: *attacking_side_ref,
+                        volatile_status: PokemonVolatileStatus::CONFUSION,
+                        amount: 1,
+                    },
+                ));
+            attacking_side.volatile_status_durations.confusion += 1;
+        }
+    }
+    if attacking_side
+        .volatile_statuses
+        .contains(&PokemonVolatileStatus::CONFUSION)
+        && confusion_self_hit > 0.0
+    {
         let mut hit_yourself_instruction = incoming_instructions.clone();
-        hit_yourself_instruction.update_percentage(HIT_SELF_IN_CONFUSION_CHANCE);
+        hit_yourself_instruction.update_percentage(confusion_self_hit);
 
         let attacking_stat = attacking_side.calculate_boosted_stat(PokemonBoostableStat::Attack);
         let defending_stat = attacking_side.calculate_boosted_stat(PokemonBoostableStat::Defense);
@@ -1998,7 +2057,7 @@ fn generate_instructions_from_existing_status_conditions(
 
         final_instructions.push(hit_yourself_instruction);
 
-        incoming_instructions.update_percentage(1.0 - HIT_SELF_IN_CONFUSION_CHANCE);
+        incoming_instructions.update_percentage(1.0 - confusion_self_hit);
     }
 
     if attacking_side.side_conditions.protect > 0 {
@@ -8752,15 +8811,26 @@ mod tests {
 
         let expected_instructions = StateInstructions {
             percentage: 100.0 * (1.0 - HIT_SELF_IN_CONFUSION_CHANCE),
-            instruction_list: vec![],
+            instruction_list: vec![Instruction::ChangeVolatileStatusDuration(ChangeVolatileStatusDurationInstruction {
+                    side_ref: SideReference::SideOne,
+                    volatile_status: PokemonVolatileStatus::CONFUSION,
+                    amount: 1,
+                }),],
         };
 
         let expected_frozen_instructions = &mut vec![StateInstructions {
             percentage: 100.0 * (HIT_SELF_IN_CONFUSION_CHANCE),
-            instruction_list: vec![Instruction::Damage(DamageInstruction {
-                side_ref: SideReference::SideOne,
-                damage_amount: 35,
-            })],
+            instruction_list: vec![
+                Instruction::ChangeVolatileStatusDuration(ChangeVolatileStatusDurationInstruction {
+                    side_ref: SideReference::SideOne,
+                    volatile_status: PokemonVolatileStatus::CONFUSION,
+                    amount: 1,
+                }),
+                Instruction::Damage(DamageInstruction {
+                    side_ref: SideReference::SideOne,
+                    damage_amount: 35,
+                }),
+            ],
         }];
 
         let frozen_instructions = &mut vec![];
@@ -8792,10 +8862,17 @@ mod tests {
 
         let expected_instructions = StateInstructions {
             percentage: 100.0 * (1.0 - HIT_SELF_IN_CONFUSION_CHANCE),
-            instruction_list: vec![Instruction::Damage(DamageInstruction {
-                side_ref: SideReference::SideOne,
-                damage_amount: 1,
-            })],
+            instruction_list: vec![
+                Instruction::Damage(DamageInstruction {
+                    side_ref: SideReference::SideOne,
+                    damage_amount: 1,
+                }),
+                Instruction::ChangeVolatileStatusDuration(ChangeVolatileStatusDurationInstruction {
+                    side_ref: SideReference::SideOne,
+                    volatile_status: PokemonVolatileStatus::CONFUSION,
+                    amount: 1,
+                }),
+            ],
         };
 
         let expected_frozen_instructions = &mut vec![StateInstructions {
@@ -8804,6 +8881,11 @@ mod tests {
                 Instruction::Damage(DamageInstruction {
                     side_ref: SideReference::SideOne,
                     damage_amount: 1,
+                }),
+                Instruction::ChangeVolatileStatusDuration(ChangeVolatileStatusDurationInstruction {
+                    side_ref: SideReference::SideOne,
+                    volatile_status: PokemonVolatileStatus::CONFUSION,
+                    amount: 1,
                 }),
                 Instruction::Damage(DamageInstruction {
                     side_ref: SideReference::SideOne,
@@ -8842,10 +8924,17 @@ mod tests {
 
         let expected_instructions = StateInstructions {
             percentage: 100.0 * (1.0 - HIT_SELF_IN_CONFUSION_CHANCE),
-            instruction_list: vec![Instruction::Damage(DamageInstruction {
-                side_ref: SideReference::SideOne,
-                damage_amount: 1,
-            })],
+            instruction_list: vec![
+                Instruction::Damage(DamageInstruction {
+                    side_ref: SideReference::SideOne,
+                    damage_amount: 1,
+                }),
+                Instruction::ChangeVolatileStatusDuration(ChangeVolatileStatusDurationInstruction {
+                    side_ref: SideReference::SideOne,
+                    volatile_status: PokemonVolatileStatus::CONFUSION,
+                    amount: 1,
+                }),
+            ],
         };
 
         let expected_frozen_instructions = &mut vec![StateInstructions {
@@ -8854,6 +8943,11 @@ mod tests {
                 Instruction::Damage(DamageInstruction {
                     side_ref: SideReference::SideOne,
                     damage_amount: 1,
+                }),
+                Instruction::ChangeVolatileStatusDuration(ChangeVolatileStatusDurationInstruction {
+                    side_ref: SideReference::SideOne,
+                    volatile_status: PokemonVolatileStatus::CONFUSION,
+                    amount: 1,
                 }),
                 Instruction::Damage(DamageInstruction {
                     side_ref: SideReference::SideOne,
@@ -8874,6 +8968,87 @@ mod tests {
 
         assert_eq!(expected_instructions, incoming_instructions);
         assert_eq!(expected_frozen_instructions, frozen_instructions);
+    }
+
+    #[test]
+    // alpha-poke patch: confusion ends after 1-4 confused attempts
+    fn test_confusion_after_two_confused_attempts_may_have_ended() {
+        let mut state = State::default();
+        state
+            .side_one
+            .volatile_statuses
+            .insert(PokemonVolatileStatus::CONFUSION);
+        state.side_one.volatile_status_durations.confusion = 2;
+        let mut incoming_instructions = StateInstructions::default();
+        let self_hit = HIT_SELF_IN_CONFUSION_CHANCE * (1.0 - 1.0 / 3.0);
+        let inc = Instruction::ChangeVolatileStatusDuration(ChangeVolatileStatusDurationInstruction {
+            side_ref: SideReference::SideOne,
+            volatile_status: PokemonVolatileStatus::CONFUSION,
+            amount: 1,
+        });
+        let frozen_instructions = &mut vec![];
+        generate_instructions_from_existing_status_conditions(
+            &mut state,
+            &SideReference::SideOne,
+            &Choice::default(),
+            &mut incoming_instructions,
+            frozen_instructions,
+        );
+        assert_eq!(
+            StateInstructions {
+                percentage: 100.0 * (1.0 - self_hit),
+                instruction_list: vec![inc.clone()],
+            },
+            incoming_instructions
+        );
+        assert_eq!(frozen_instructions.len(), 1);
+        assert!((frozen_instructions[0].percentage - 100.0 * self_hit).abs() < 1e-3);
+        assert_eq!(frozen_instructions[0].instruction_list[0], inc);
+        assert_eq!(state.side_one.volatile_status_durations.confusion, 3);
+    }
+
+    #[test]
+    fn test_confusion_ends_after_four_confused_attempts() {
+        let mut state = State::default();
+        state
+            .side_one
+            .volatile_statuses
+            .insert(PokemonVolatileStatus::CONFUSION);
+        state.side_one.volatile_status_durations.confusion = 4;
+        let mut incoming_instructions = StateInstructions::default();
+        let frozen_instructions = &mut vec![];
+        generate_instructions_from_existing_status_conditions(
+            &mut state,
+            &SideReference::SideOne,
+            &Choice::default(),
+            &mut incoming_instructions,
+            frozen_instructions,
+        );
+        assert_eq!(
+            StateInstructions {
+                percentage: 100.0,
+                instruction_list: vec![
+                    Instruction::RemoveVolatileStatus(RemoveVolatileStatusInstruction {
+                        side_ref: SideReference::SideOne,
+                        volatile_status: PokemonVolatileStatus::CONFUSION,
+                    }),
+                    Instruction::ChangeVolatileStatusDuration(
+                        ChangeVolatileStatusDurationInstruction {
+                            side_ref: SideReference::SideOne,
+                            volatile_status: PokemonVolatileStatus::CONFUSION,
+                            amount: -4,
+                        }
+                    ),
+                ],
+            },
+            incoming_instructions
+        );
+        assert!(frozen_instructions.is_empty());
+        assert!(!state
+            .side_one
+            .volatile_statuses
+            .contains(&PokemonVolatileStatus::CONFUSION));
+        assert_eq!(state.side_one.volatile_status_durations.confusion, 0);
     }
 
     #[test]
@@ -8978,6 +9153,11 @@ mod tests {
                     new_turns: 0,
                     previous_turns: MAX_SLEEP_TURNS,
                 }),
+                Instruction::ChangeVolatileStatusDuration(ChangeVolatileStatusDurationInstruction {
+                    side_ref: SideReference::SideOne,
+                    volatile_status: PokemonVolatileStatus::CONFUSION,
+                    amount: 1,
+                }),
             ],
         };
 
@@ -8995,6 +9175,11 @@ mod tests {
                     pokemon_index: PokemonIndex::P0,
                     new_turns: 0,
                     previous_turns: MAX_SLEEP_TURNS,
+                }),
+                Instruction::ChangeVolatileStatusDuration(ChangeVolatileStatusDurationInstruction {
+                    side_ref: SideReference::SideOne,
+                    volatile_status: PokemonVolatileStatus::CONFUSION,
+                    amount: 1,
                 }),
                 Instruction::Damage(DamageInstruction {
                     side_ref: SideReference::SideOne,

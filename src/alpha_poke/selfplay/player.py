@@ -41,7 +41,8 @@ class SelfPlayPlayer(SearchPlayer):
                  fast_iters: int = 600, fast_worlds: int = 16,
                  noise: tuple[float, float] = (0.1, 10.0), turn_cap: int = 300, seed: int = 0,
                  greedy: bool = False, record: bool = True, temp_turns: int = 8,
-                 temp_late: float = 0.25, children: int = 0, **kwargs):  # fmt: skip
+                 temp_late: float = 0.25, children: int = 0, timers: bool = True,
+                 **kwargs):  # fmt: skip
         super().__init__(*args, **kwargs)
         assert self.model_transformer and batcher is not None
         self.batcher = batcher
@@ -61,6 +62,7 @@ class SelfPlayPlayer(SearchPlayer):
         # value targets (design TODO "方案乙"; selfplay.children), kept per battle as the
         # records: [(batch of their inputs, their (our, their, visits, value), root q)]
         self.children = children
+        self.timers = timers  # turn counters into the engine state (False: the A/B baseline)
         self.child_records: dict[str, list] = {}
         # the request each battle's last record answered (a refused choice drops its record)
         self._record_request: dict[str, int] = {}
@@ -105,8 +107,8 @@ class SelfPlayPlayer(SearchPlayer):
         full = self.rng.random() < self.full_frac
         n_worlds = self.worlds if full else self.fast_worlds
         names = self._opp_team_names(battle)
-        states = [build_state(battle, self.belief, names, self.rng, move_beta=self.move_beta)
-                  for _ in range(n_worlds)]  # fmt: skip
+        states = [build_state(battle, self.belief, names, self.rng, move_beta=self.move_beta,
+                              timers=self.timers) for _ in range(n_worlds)]  # fmt: skip
         t1 = time.time()
         ctxs = net_context.contexts(battle, states)
         t2 = time.time()

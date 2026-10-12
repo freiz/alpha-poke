@@ -1409,6 +1409,18 @@ impl State {
                     side.volatile_status_durations.yawn = 0;
                     false
                 }
+                // alpha-poke patch: confusion's attempt count (generate_instructions::before_move)
+                PokemonVolatileStatus::CONFUSION => {
+                    instructions.push(Instruction::ChangeVolatileStatusDuration(
+                        ChangeVolatileStatusDurationInstruction {
+                            side_ref: *side_ref,
+                            volatile_status: *pkmn_volatile_status,
+                            amount: -1 * side.volatile_status_durations.confusion,
+                        },
+                    ));
+                    side.volatile_status_durations.confusion = 0;
+                    false
+                }
                 PokemonVolatileStatus::TAUNT => {
                     instructions.push(Instruction::ChangeVolatileStatusDuration(
                         ChangeVolatileStatusDurationInstruction {

@@ -20,6 +20,7 @@ from poke_env.data import GenData
 
 from alpha_poke.agents.belief_state import BeliefModel, _preview_name, ability_probs
 from alpha_poke.agents.damage import calc_stats
+from alpha_poke.agents.timers import SideTimers, battle_timers
 from alpha_poke.analysis.roles import to_id
 
 GEN = GenData.from_gen(9)
@@ -220,8 +221,10 @@ def _boosts(mon) -> dict:
     }
 
 
-def _side_conditions(sc: dict, turn: int) -> pe.SideConditions:
+def _side_conditions(sc: dict, turn: int, toxic: int = 0, protect: int = 0) -> pe.SideConditions:
     return pe.SideConditions(
+        toxic_count=toxic,
+        protect=protect,
         spikes=sc.get(SideCondition.SPIKES, 0),
         toxic_spikes=sc.get(SideCondition.TOXIC_SPIKES, 0),
         stealth_rock=int(SideCondition.STEALTH_ROCK in sc),
@@ -251,7 +254,15 @@ def _volatiles(mon) -> set[str]:
     return {name for eff, name in VOLATILE.items() if eff in mon.effects}
 
 
-def _our_mon(mon, available_moves: set[str] | None) -> pe.Pokemon:
+def _sleep(mon, tm: SideTimers | None) -> dict:
+    """rest_turns / sleep_turns of an asleep mon (timers), else nothing."""
+    if tm is None or STATUS.get(mon.status) != "sleep":
+        return {}
+    rest, sleep = tm.rest_sleep(to_id(mon.species))
+    return {"rest_turns": rest, "sleep_turns": sleep}
+
+
+def _our_mon(mon, available_moves: set[str] | None, tm: SideTimers | None = None) -> pe.Pokemon:
     stats = mon.stats or {}
     moves = []
     for mid, mv in list(mon.moves.items())[:4]:
@@ -277,10 +288,11 @@ def _our_mon(mon, available_moves: set[str] | None) -> pe.Pokemon:
         moves=moves,
         terastallized=mon.is_terastallized,
         tera_type=_tera(mon),
+        **_sleep(mon, tm),
     )
 
 
-def _their_mon(mon, s: SampledSet) -> pe.Pokemon:
+def _their_mon(mon, s: SampledSet, tm: SideTimers | None = None) -> pe.Pokemon:
     maxhp = s.stats["hp"]
     if mon.fainted:
         hp = 0
@@ -310,6 +322,7 @@ def _their_mon(mon, s: SampledSet) -> pe.Pokemon:
         moves=[pe.Move(id=m, pp=16) for m in s.moves[:4]],
         terastallized=mon.is_terastallized,
         tera_type=s.tera,
+        **_sleep(mon, tm),
     )
 
 
@@ -333,6 +346,32 @@ def _last_move(mon, engine_mon, avail: set[str] | None = None) -> tuple[dict, se
     return {"last_used_move": f"move:{idx}"}, vol
 
 
+def _counts(tm: SideTimers, active) -> tuple[int, int]:
+    """(toxic_count, protect) of a side's active (timers)."""
+    # Showdown's toxic stage stops at 15: the engine's damage is (count + 1) / 16
+    toxic = min(tm.toxic, 14) if active is not None and STATUS.get(active.status) == "toxic" else 0
+    return toxic, tm.protect
+
+
+def _timed(tm: SideTimers, active, mons: list, engine_mons: list, vol: set[str]) -> dict:
+    """pe.Side kwargs: the pending Wish (turns, half the wisher's max HP) and the active's
+    volatile durations (only of volatiles it has; clamped to what the engine accepts)."""
+    out = {}
+    if tm.wish is not None:
+        idx = next((i for i, m in enumerate(mons) if to_id(m.species) == tm.wish[1]),
+                   next((i for i, m in enumerate(mons) if m is active), None))  # fmt: skip
+        if idx is not None and idx < len(engine_mons):
+            out["wish"] = (tm.wish[0], engine_mons[idx].maxhp // 2)
+    dur = {}
+    for name, top in (("confusion", 4), ("taunt", 2), ("encore", 2), ("yawn", 1)):
+        n = getattr(tm, name)
+        if name in vol and n:
+            dur[name] = min(n, top)
+    if dur:
+        out["volatile_status_durations"] = pe.VolatileStatusDurations(**dur)
+    return out
+
+
 def _pad(mons: list) -> list:
     return (mons + [pe.Pokemon.create_fainted() for _ in range(6)])[:6]
 
@@ -345,19 +384,25 @@ def build_state(
     move_beta: float = 0.0,
     spectator: SpectatorSide | None = None,
     force_switch: bool | None = None,
+    timers: bool = True,
 ) -> pe.State:
     """One determinization of the current battle (side_one = us): the opponent's sets sampled
     from the belief, consistent with what they revealed. With ``spectator`` side
     one comes from a spectator log (no request): built like the opponent, from the known parts
     of each set plus belief samples (training positions, design D13). ``force_switch`` overrides
     side one's switch request (training positions of forced / pivot switches; a spectator log
-    has no request)."""
+    has no request). ``timers``: the turn counters the engine needs (sleep / Rest, toxic,
+    consecutive Protect, Wish, confusion / taunt / encore / yawn: agents/timers.py)."""
     turn = battle.turn
     active = battle.active_pokemon
+    role = battle.player_role or "p1"
+    # turn counters from the log (timers.py); off: every counter 0, as before 2026-10-11 (A/B)
+    tms = battle_timers(battle) if timers else {"p1": SideTimers(), "p2": SideTimers()}
+    tm_us, tm_them = tms[role], tms["p2" if role == "p1" else "p1"]
     if spectator is None:
         ours = list(battle.team.values())
         avail = {m.id for m in battle.available_moves} if battle.available_moves else None
-        our_mons = [_our_mon(m, avail if m is active else None) for m in ours]
+        our_mons = [_our_mon(m, avail if m is active else None, tm_us) for m in ours]
     else:
         ours, avail = spectator.team, None
         our_mons = []
@@ -368,7 +413,7 @@ def build_state(
             # known moves come first in sample_set; in a real battle our moves are in moveset
             # order, unrelated to use: shuffle so the slot does not leak which move gets used
             rng.shuffle(s.moves)
-            our_mons.append(_their_mon(m, s))
+            our_mons.append(_their_mon(m, s, tm_us))
     our_idx = next((i for i, m in enumerate(ours) if m is active), 0)
     if battle.force_switch or (active is not None and active.fainted):
         our_idx = next((i for i, m in enumerate(ours) if m.active), our_idx)
@@ -382,7 +427,9 @@ def build_state(
                 theirs.append(m)
     opp_active = battle.opponent_active_pokemon
 
-    their_mons = [_their_mon(m, sample_set(belief, m, team_names, rng, move_beta)) for m in theirs]
+    their_mons = [
+        _their_mon(m, sample_set(belief, m, team_names, rng, move_beta), tm_them) for m in theirs
+    ]
     their_idx = next((i for i, m in enumerate(theirs) if m is opp_active), 0)
     our_active_idx = next((i for i, m in enumerate(ours) if m is active), None)
     our_last, our_vol = _last_move(
@@ -393,8 +440,9 @@ def build_state(
     side_one = pe.Side(
         pokemon=_pad(our_mons),
         active_index=pe.PokemonIndex(str(our_idx)),
-        side_conditions=_side_conditions(battle.side_conditions, turn),
+        side_conditions=_side_conditions(battle.side_conditions, turn, *_counts(tm_us, active)),
         volatile_statuses=our_vol,
+        **_timed(tm_us, active, ours, our_mons, our_vol),
         substitute_health=(
             (
                 int((active.max_hp or 4) // 4)
@@ -413,8 +461,11 @@ def build_state(
     side_two = pe.Side(
         pokemon=_pad(their_mons),
         active_index=pe.PokemonIndex(str(their_idx)),
-        side_conditions=_side_conditions(battle.opponent_side_conditions, turn),
+        side_conditions=_side_conditions(
+            battle.opponent_side_conditions, turn, *_counts(tm_them, opp_active)
+        ),
         volatile_statuses=their_vol,
+        **_timed(tm_them, opp_active, theirs, their_mons, their_vol),
         substitute_health=(
             their_mons[their_idx].maxhp // 4
             if opp_active is not None and Effect.SUBSTITUTE in opp_active.effects
