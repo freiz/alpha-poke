@@ -295,14 +295,22 @@ def shard_caches(data: str) -> tuple[list[Path], list[int]]:
     return [c for c, n in zip(caches, sizes, strict=True) if n], [n for n in sizes if n]
 
 
+# self-play arrays of at least this many bytes per row go to a memory-mapped file (--sp-memmap)
+MEMMAP_ROW_BYTES = 32
+
+
 def load_selfplay(items: list[tuple[str, float]], per_game: int, seed: int,
-                  lam: float) -> tuple[dict, int]:  # fmt: skip
+                  lam: float, memmap_dir: Path | None = None) -> tuple[dict, int]:  # fmt: skip
     """Self-play datasets ``(name, share of games kept)`` in one set of arrays, at most
     ``per_game`` positions per game (those with a policy target first, in random order), the
     cap applied shard by shard (a game is in one shard) on the small columns, then the kept rows
     filled shard by shard into preallocated arrays: peak memory = the kept rows + one shard
     (2026-10-10: ~6.3M positions after gen 4 no longer fit in memory twice). ``lam`` > 0: the
-    lambda-return value targets as "vt". Returns (arrays, positions before the cap)."""
+    lambda-return value targets as "vt". ``memmap_dir``: the large arrays (the network inputs)
+    in memory-mapped .npy files there instead of memory (2026-10-11: a generation of 100,000
+    games would be ~19 GB of arrays; mapped, they live in the page cache, which the kernel can
+    reclaim under the memory cap; same rows, same order: training is unchanged). Returns
+    (arrays, positions before the cap)."""
     plan, n_before = [], 0
     for d_i, (name, keep) in enumerate(items):
         caches, sizes = shard_caches(name)
@@ -336,11 +344,19 @@ def load_selfplay(items: list[tuple[str, float]], per_game: int, seed: int,
             for k in z.files:
                 v = z[k]
                 if k not in out:
-                    out[k] = np.empty((total, *v.shape[1:]), v.dtype)
+                    shape = (total, *v.shape[1:])
+                    if memmap_dir is not None and v[:1].nbytes >= MEMMAP_ROW_BYTES:
+                        out[k] = np.lib.format.open_memmap(memmap_dir / f"{k}.npy", mode="w+",
+                                                           dtype=v.dtype, shape=shape)  # fmt: skip
+                    else:
+                        out[k] = np.empty(shape, v.dtype)
                 out[k][pos : pos + len(idx)] = v[idx]
         if vts is not None:
             out.setdefault("vt", np.empty(total, np.float32))[pos : pos + len(idx)] = vts
         pos += len(idx)
+    for v in out.values():  # written back: clean pages the kernel can drop and re-read
+        if isinstance(v, np.memmap):
+            v.flush()
     return out, n_before
 
 
@@ -965,6 +981,11 @@ def main() -> None:
         "--sp-value-lambda", type=float, default=0.0,
         help="self-play value targets: lambda-returns over the root q's (0: the outcome)",
     )  # fmt: skip
+    ap.add_argument(
+        "--sp-memmap",
+        default="data/tmp/sp_memmap",
+        help="self-play inputs memory-mapped under this directory ('' = in memory)",
+    )
     ap.add_argument("--sp-per-game", type=int, default=0,
                     help="self-play: max positions per game, policy targets first")  # fmt: skip
     ap.add_argument("--sp-passes", type=float, default=0.0,
@@ -1123,7 +1144,16 @@ def main() -> None:
     if a.selfplay:  # "name" or "name:keep" (share of its games kept)
         items = [(n, float(k) if k else 1.0)
                  for n, _, k in (x.partition(":") for x in a.selfplay.split(","))]  # fmt: skip
-        dsp, sp_n0 = load_selfplay(items, a.sp_per_game, a.seed, a.sp_value_lambda)
+        mdir = None
+        if a.sp_memmap:
+            import atexit
+            import os
+            import shutil
+
+            mdir = Path(a.sp_memmap) / f"{a.run}-{os.getpid()}"
+            mdir.mkdir(parents=True, exist_ok=True)
+            atexit.register(shutil.rmtree, mdir, ignore_errors=True)
+        dsp, sp_n0 = load_selfplay(items, a.sp_per_game, a.seed, a.sp_value_lambda, mdir)
         if a.sp_per_game > 0:
             # at most N positions per game (fixed for the run): long games (switch loops of two
             # stall teams, up to 650 decisions) would otherwise weigh tens of times more than a
