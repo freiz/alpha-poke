@@ -112,6 +112,9 @@ def timers(lines: list[list[str]]) -> dict[str, SideTimers]:
         elif tag == "-curestatus" and len(p) > 3:
             st.status.pop(sp, None)
             st.sleep.pop(sp, None)
+        elif tag == "-cureteam":  # (older Heal Bell / Aromatherapy message: the whole side)
+            st.status.clear()
+            st.sleep.clear()
         elif tag == "faint":
             st.status.pop(sp, None)
             st.sleep.pop(sp, None)
