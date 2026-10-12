@@ -1038,6 +1038,9 @@ def main() -> None:
     ap.add_argument("--warmup-frac", type=float, default=0.02,
                     help="learning-rate warmup share of the steps (warm starts: longer, the "
                          "optimizer's moments start empty)")  # fmt: skip
+    ap.add_argument("--select", choices=["human", "sp_value"], default="human",
+                    help="best.pt by: the human validation loss, or the held-out self-play value "
+                         "BCE (a value-only run on self-play data)")  # fmt: skip
     ap.add_argument("--export", choices=["best", "last"], default="best",
                     help="checkpoint exported for inference (self-play: last)")  # fmt: skip
     ap.add_argument("--run", default=None)
@@ -1260,7 +1263,8 @@ def main() -> None:
               steps=steps, device=str(device), args=json.dumps(vars(a))))  # fmt: skip
     best = float("inf")
     probs = w[train_idx] / w[train_idx].sum()
-    stream = ChunkStream(caches, d, train_idx, probs, a.stream, hb, rng) if a.stream else None
+    stream = (ChunkStream(caches, d, train_idx, probs, a.stream, hb, rng)
+              if a.stream and hb > 0 else None)  # fmt: skip
     agg = dict(ce=0.0, bce=0.0, acc=0.0, gn=0.0, k=0)
     if a.init:  # the starting point on the same validation sets (the run's own baseline)
         m = evaluate(model, dv, v_idx, device)
@@ -1270,38 +1274,44 @@ def main() -> None:
         emit(dict(event="val", step=0, **{k: float(v) for k, v in m.items()}))
     t_last = time.time()
     for step in range(1, steps + 1):
-        if stream is not None:  # chunk data, its rows, their global ids
-            dd, b_loc, b = stream.batch_rows()
+        if hb > 0:  # the human sub-batch (none with --sp-frac 1: the self-play data alone)
+            if stream is not None:  # chunk data, its rows, their global ids
+                dd, b_loc, b = stream.batch_rows()
+            else:
+                if (step - 1) % 1000 == 0:  # time-weighted sampling, drawn 1000 steps at a time
+                    block = train_idx[rng.choice(len(train_idx), (1000, hb), p=probs)]
+                dd, b = d, block[(step - 1) % 1000]
+                b_loc = b
+            sp, de, gl, ma, act, won, ev, hs, hd, fs, fd, x = to_torch(dd, b_loc, device)
+            kw = {"x": x} if a.arch == "transformer" and x is not None else {}
+            if x is not None and "rating" in x and a.elo_dropout > 0:  # unknown ratings, as in play
+                drop = torch.rand(x["rating"].shape, device=device) < a.elo_dropout
+                x["rating"] = x["rating"].masked_fill(drop, 0)
+            with torch.autocast(device.type, dtype=torch.bfloat16, enabled=device.type == "cuda"):
+                out = model(sp, de, gl, ma, hs, hd, aux=bool(a.mtp or heads), **kw)
+            logits, v = out[0], out[1]
+            anchor = 0.0
+            if a.policy_anchor > 0 and ref_model is not None:
+                with torch.no_grad(), torch.autocast(device.type, dtype=torch.bfloat16,
+                                                     enabled=device.type == "cuda"):  # fmt: skip
+                    ref_logits = ref_model(sp, de, gl, ma, hs, hd, **kw)[0]
+                anchor = anchor_kl(logits, ref_logits, ma)
+            pwb = torch.from_numpy(pw[b]).to(device)
+            ce = (policy_loss(logits, act, ma, reduction="none") * pwb).sum() / pwb.sum()
+            bw = torch.from_numpy(vw[b]).to(device)
+            vl = value_logit(model, v.float(), ev)
+            bce = (
+                F.binary_cross_entropy_with_logits(vl, won, reduction="none") * bw
+            ).sum() / bw.sum()
+            loss = ce + a.value_weight * bce + a.policy_anchor * anchor
+            if a.mtp:
+                tg = mtp_targets(sp, fs, fd, a.mtp)
+                loss = loss + a.mtp_weight * mtp_loss(out[2], tg, a.mtp_decay)[0]
+            if heads:
+                loss = loss + a.aux_weight * aux_loss(out[3], x, sp, x["turn"], bw, heads)
         else:
-            if (step - 1) % 1000 == 0:  # time-weighted sampling, drawn 1000 steps at a time
-                block = train_idx[rng.choice(len(train_idx), (1000, hb), p=probs)]
-            dd, b = d, block[(step - 1) % 1000]
-            b_loc = b
-        sp, de, gl, ma, act, won, ev, hs, hd, fs, fd, x = to_torch(dd, b_loc, device)
-        kw = {"x": x} if a.arch == "transformer" and x is not None else {}
-        if x is not None and "rating" in x and a.elo_dropout > 0:  # unknown ratings, as in play
-            drop = torch.rand(x["rating"].shape, device=device) < a.elo_dropout
-            x["rating"] = x["rating"].masked_fill(drop, 0)
-        with torch.autocast(device.type, dtype=torch.bfloat16, enabled=device.type == "cuda"):
-            out = model(sp, de, gl, ma, hs, hd, aux=bool(a.mtp or heads), **kw)
-        logits, v = out[0], out[1]
-        anchor = 0.0
-        if a.policy_anchor > 0 and ref_model is not None:
-            with torch.no_grad(), torch.autocast(device.type, dtype=torch.bfloat16,
-                                                 enabled=device.type == "cuda"):  # fmt: skip
-                ref_logits = ref_model(sp, de, gl, ma, hs, hd, **kw)[0]
-            anchor = anchor_kl(logits, ref_logits, ma)
-        pwb = torch.from_numpy(pw[b]).to(device)
-        ce = (policy_loss(logits, act, ma, reduction="none") * pwb).sum() / pwb.sum()
-        bw = torch.from_numpy(vw[b]).to(device)
-        vl = value_logit(model, v.float(), ev)
-        bce = (F.binary_cross_entropy_with_logits(vl, won, reduction="none") * bw).sum() / bw.sum()
-        loss = ce + a.value_weight * bce + a.policy_anchor * anchor
-        if a.mtp:
-            tg = mtp_targets(sp, fs, fd, a.mtp)
-            loss = loss + a.mtp_weight * mtp_loss(out[2], tg, a.mtp_decay)[0]
-        if heads:
-            loss = loss + a.aux_weight * aux_loss(out[3], x, sp, x["turn"], bw, heads)
+            ce = bce = loss = torch.zeros((), device=device)
+            logits = act = None
         if dsp is not None:  # self-play sub-batch: soft policy targets, outcome, same aux heads
             bs = sp_train[rng.integers(0, len(sp_train), bsp)]
             s_sp, s_de, s_gl, s_ma, s_act, s_won, s_ev, s_hs, s_hd, s_fs, s_fd, s_x = to_torch(
@@ -1359,7 +1369,8 @@ def main() -> None:
         sched.step()
         agg["ce"] += ce.item()
         agg["bce"] += bce.item()
-        agg["acc"] += (logits.argmax(-1) == act).float().mean().item()
+        if logits is not None:
+            agg["acc"] += (logits.argmax(-1) == act).float().mean().item()
         agg["gn"] += gn
         agg["k"] += 1
         if step % 100 == 0:
@@ -1388,6 +1399,8 @@ def main() -> None:
             sel = ("ce_turn_w", "bce_all_w") if "ce_turn_w" in m else (
                 ("ce_turn", "bce_all") if "ce_turn" in m else ("ce", "bce"))  # fmt: skip
             val_loss = m[sel[0]] + a.value_weight * m[sel[1]]
+            if a.select == "sp_value":
+                val_loss = m["sp_bce"]
             ckpt = {"model": model.state_dict(), "dims": dims, "size": size, "arch": a.arch,
                     "history": a.history, "mtp": a.mtp, "feats": feats, "aux_heads": heads,
                     "mask_hidden": a.mask_hidden, "arch_opts": getattr(model, "arch", {}),
