@@ -930,6 +930,18 @@ def main() -> None:
     ap.add_argument("--value-hidden", type=int, default=0,
                     help="value hidden layer size (a warm start adds it, zero)")  # fmt: skip
     ap.add_argument("--value-dropout", type=float, default=0.0, help="on the value hidden layer")
+    ap.add_argument("--value-layers", type=int, default=1, help="hidden layers of the value MLP")
+    ap.add_argument(
+        "--value-blocks",
+        type=int,
+        default=0,
+        help="the value's own Transformer blocks before its MLP (0 = none)",
+    )
+    ap.add_argument(
+        "--freeze-trunk",
+        action="store_true",
+        help="train the value head only (readout, MLP, value blocks)",
+    )
     ap.add_argument("--child-data", default="",
                     help="child-node value targets: scripts/child_targets.py dirs")  # fmt: skip
     ap.add_argument("--child-weight", type=float, default=1.0)
@@ -1092,7 +1104,9 @@ def main() -> None:
         if v:
             size[k] = v
     arch_opts = {"ffn": a.ffn, "norm": a.norm, "qk_norm": a.qk_norm, "smolgen": a.smolgen,
-                 "value_hidden": a.value_hidden, "value_dropout": a.value_dropout}  # fmt: skip
+                 "value_hidden": a.value_hidden, "value_dropout": a.value_dropout,
+                 "value_layers": a.value_layers if a.value_layers > 1 else 0,
+                 "value_blocks": a.value_blocks}  # fmt: skip
     assert a.hist_len <= DIMS["hist"], f"--hist-len > the {DIMS['hist']} featurized steps"
     dims = DIMS | {"hist": a.hist_len}
     assert not a.mtp or (a.arch == "transformer" and "fsp" in keys), "--mtp: transformer + future"
@@ -1121,7 +1135,14 @@ def main() -> None:
         # new heads (a value hidden layer --value-hidden, auxiliary heads --aux) are the only
         # parts allowed to be missing: they start from their initialization
         missing, unexpected = model.load_state_dict(state, strict=False)
-        new = ("value_mlp.", "faint_head.", "margin_head.", "turns_head.")
+        new = (
+            "value_mlp.",
+            "value_blocks.",
+            "value_norm.",
+            "faint_head.",
+            "margin_head.",
+            "turns_head.",
+        )
         assert not unexpected and all(k.startswith(new) for k in missing), (
             missing, unexpected)  # fmt: skip
     model = model.to(device)
@@ -1133,7 +1154,15 @@ def main() -> None:
         for p_ in ref_model.parameters():
             p_.requires_grad_(False)
     n_params = sum(p.numel() for p in model.parameters())
-    opt = torch.optim.AdamW(model.parameters(), lr=a.lr, weight_decay=a.wd)
+    if a.freeze_trunk:  # only the value head learns (2026-10-11: value data of its own, the
+        # policy untouched): the linear readout, the value MLP / blocks, the evaluation residual
+        value_part = ("value.", "value_mlp.", "value_blocks.", "value_norm.", "residual")
+        for name, p_ in model.named_parameters():
+            p_.requires_grad_(name.startswith(value_part))
+        emit(dict(event="freeze_trunk", trainable=sum(p.numel() for p in model.parameters()
+                                                      if p.requires_grad)))  # fmt: skip
+    opt = torch.optim.AdamW([p for p in model.parameters() if p.requires_grad], lr=a.lr,
+                            weight_decay=a.wd)  # fmt: skip
     # self-play data (in memory): train / validation split by game
     dch = None
     if a.child_data:  # child-node value targets (design TODO "方案乙")

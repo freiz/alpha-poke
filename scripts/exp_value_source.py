@@ -6,8 +6,12 @@ its policy network, without search): are they good enough to be bought in quanti
      targets)
   2. two trainings with sp-gen<gen>'s recipe and start (sp-gen<gen-1>), only the self-play data
      differing: S = gen <gen>'s searched games, P = the policy-only games
-  3. pv_bench scores of both (outcome BCE / ECE on held-out positions neither saw, value-only
-     decision regret); the human validation BCE is in the training logs
+  3. the value head alone on sp-gen<gen>'s frozen trunk (train_pv --freeze-trunk; the policy
+     untouched): A = a 2-layer MLP (value_hidden 256), B = A + one value block on the trunk's
+     tokens; A on either data, B on the policy-only games
+  4. pv_bench scores of all (outcome BCE / ECE on held-out positions none saw, value-only
+     decision regret); the human validation BCE is in the training logs; the best head-only
+     variant vs sp-gen<gen> at 1,600 iterations (--pairs)
 
 Resumable (games, conversion, runs and scores are skipped when done). Waits for --wait.
 
@@ -19,7 +23,7 @@ import sys
 import time
 from pathlib import Path
 
-from exp_capacity import args_of, run, say, train
+from exp_capacity import RUNS, args_of, match, run, say, train
 
 
 def main() -> None:
@@ -30,6 +34,7 @@ def main() -> None:
     ap.add_argument("--procs", type=int, default=6)
     ap.add_argument("--lanes", type=int, default=48)
     ap.add_argument("--wait", default="DONE iters", help="a line in policy_vs_search.log")
+    ap.add_argument("--pairs", type=int, default=400)
     a = ap.parse_args()
     py = sys.executable
     log = Path("data/selfplay/diag/policy_vs_search.log")
@@ -53,8 +58,30 @@ def main() -> None:
         name = f"exp-VS-{tag}-gen{a.gen}"
         train(base | {"run": name, "selfplay": data}, f"data/selfplay/diag/{name}.log")
         names.append(name)
-    run([py, "scripts/pv_bench.py", "score", "--nets", ",".join(names)], "data/eval/pv_bench.log")
+    head = {"init": str(RUNS / f"sp-gen{a.gen}"), "freeze_trunk": True, "value_hidden": 256,
+            "value_layers": 2}  # fmt: skip
+    heads = []
+    for tag, data, extra in (("A-S", f"sp{a.gen}", {}), ("A-P", f"sp{a.src}", {}),
+                             ("B-P", f"sp{a.src}", {"value_blocks": 1})):  # fmt: skip
+        name = f"exp-VH-{tag}-gen{a.gen}"
+        train(base | head | extra | {"run": name, "selfplay": data},
+              f"data/selfplay/diag/{name}.log")  # fmt: skip
+        heads.append(name)
+    run([py, "scripts/pv_bench.py", "score", "--nets", ",".join(names + heads)],
+        "data/eval/pv_bench.log")  # fmt: skip
+    best = min(heads, key=lambda n: bench_regret(n))
+    say(f"value sources: the best head-only variant by value-only regret: {best}")
+    match(f"VH_vs_gen{a.gen}", best, f"sp-gen{a.gen}", a.pairs, 1600, 1600,
+          "data/teams/pools/wide1000")  # fmt: skip
     say("value sources done")
+
+
+def bench_regret(net: str) -> float:
+    """pv_bench's value-only decision regret of ``net`` (self-play and human test sets)."""
+    import json
+
+    s = json.loads(Path("data/eval/pv_bench/score.json").read_text())[net]
+    return sum(s[k]["value_only"]["regret"] for k in ("selfplay/test", "human/test"))
 
 
 if __name__ == "__main__":

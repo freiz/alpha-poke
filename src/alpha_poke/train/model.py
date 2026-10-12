@@ -287,7 +287,10 @@ class TransformerPV(nn.Module):
     ):
         """``arch`` (architecture experiments, design D13): ffn "relu" / "swiglu", norm "ln" /
         "rms", qk_norm, smolgen (hidden size, 0 = off), value_hidden (a hidden layer for the
-        value, 0 = off); empty / None = PyTorch's encoder layer
+        value, 0 = off), value_layers (hidden layers of that MLP, default 1), value_blocks
+        (Transformer blocks of the value's own on the trunk's tokens before that MLP, 0 = off;
+        2026-10-11, trained alone on a frozen trunk: train_pv --freeze-trunk); empty / None =
+        PyTorch's encoder layer
         (the checkpoints before the experiments)."""
         super().__init__()
         assert not mask_hidden or feats, "mask_hidden needs the v3 inputs (reveal bits)"
@@ -355,11 +358,24 @@ class TransformerPV(nn.Module):
         if vh:
             # value_dropout (arch): dropout on the hidden layer (training only), against the value
             # overfitting (one outcome per game for all its positions)
-            self.value_mlp = nn.Sequential(nn.Linear(d_model, vh), nn.SiLU(),
-                                           nn.Dropout(self.arch.get("value_dropout", 0.0)),
-                                           nn.Linear(vh, 1))  # fmt: skip
-            nn.init.zeros_(self.value_mlp[3].weight)
-            nn.init.zeros_(self.value_mlp[3].bias)
+            drop = self.arch.get("value_dropout", 0.0)
+            layers = [nn.Linear(d_model, vh), nn.SiLU(), nn.Dropout(drop)]
+            for _ in range(self.arch.get("value_layers", 1) - 1):
+                layers += [nn.Linear(vh, vh), nn.SiLU(), nn.Dropout(drop)]
+            self.value_mlp = nn.Sequential(*layers, nn.Linear(vh, 1))
+            nn.init.zeros_(self.value_mlp[-1].weight)
+            nn.init.zeros_(self.value_mlp[-1].bias)
+        # value_blocks > 0 (arch): the value's own blocks on the trunk's (normed) tokens, read at
+        # the global token by the value MLP (whose zero output layer keeps a warm start's value)
+        nvb = self.arch.get("value_blocks", 0)
+        if nvb:
+            assert vh and self.arch, "value_blocks needs value_hidden and the arch blocks"
+            opts = {k: v for k, v in self.arch.items() if k != "smolgen"}
+            self.value_blocks = nn.ModuleList(
+                [Block(d_model, n_heads, d_ff, n_tok, opts) for _ in range(nvb)]
+            )
+            self.value_norm = nn.RMSNorm(d_model) if opts.get("norm") == "rms" else nn.LayerNorm(
+                d_model)  # fmt: skip
         self.move_head = mlp(d_model + 32 + 1 + (4 if feats else 0), 64, 2)
         self.switch_head = mlp(2 * d_model, 64, 1)
 
@@ -397,7 +413,13 @@ class TransformerPV(nn.Module):
         h, t = z[:, :12], z[:, 12]
         value = self.value(t).squeeze(-1)
         if self.arch.get("value_hidden", 0):
-            value = value + self.value_mlp(t).squeeze(-1)
+            tv = t
+            if self.arch.get("value_blocks", 0):
+                zv = z
+                for blk in self.value_blocks:
+                    zv = blk(zv, pad)
+                tv = self.value_norm(zv)[:, 12]
+            value = value + self.value_mlp(tv).squeeze(-1)
         own_active = dense[:, :6, D_ACTIVE]
         am = (moves[:, :6] * own_active[..., None, None]).sum(1)
         usable = (dense[:, :6, D_USABLE] * own_active[..., None]).sum(1)
