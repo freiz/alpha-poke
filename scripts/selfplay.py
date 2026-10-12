@@ -1060,7 +1060,7 @@ def main() -> None:
     p.add_argument("--gens", type=int, default=100)
     # 2026-10-09: 10,000 (was 5,000): per-generation gains were near the evaluation's resolution
     # (+-23 Elo), the evaluation was 35-40% of the time, and value labels (one per game) scarce
-    p.add_argument("--games", type=int, default=50000)  # 2026-10-10, from gen 4 (was 10,000)
+    p.add_argument("--games", type=int, default=100000)  # 2026-10-12, from gen 6 (was 50,000)
     p.add_argument("--procs", type=int, default=6)  # self-play processes (20 logical CPUs)
     p.add_argument("--threads", type=int, default=2)
     # promotion at 1,600 iterations, up to 600 pairs (2026-10-10; was 3,000 / 400); the progress
@@ -1082,7 +1082,7 @@ def main() -> None:
     p.set_defaults(fn=cmd_loop)
     p = sub.add_parser("cycle", help="one generation end to end")
     p.add_argument("--gen", type=int, required=True)
-    p.add_argument("--games", type=int, default=50000, help="team pairs (drawn / topped up)")
+    p.add_argument("--games", type=int, default=100000, help="team pairs (drawn / topped up)")
     p.add_argument("--eval-iterations", type=int, default=1600)
     p.add_argument("--procs", type=int, default=2)
     p.add_argument("--lanes", type=int, default=24)
