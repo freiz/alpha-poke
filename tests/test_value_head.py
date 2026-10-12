@@ -52,3 +52,18 @@ def test_value_options_keep_a_warm_start(extra):
     trainable = [n for n, _ in model.named_parameters() if n.startswith(VALUE_PART)]
     assert any(n.startswith("value_mlp.") for n in trainable)
     assert not any(n.startswith(("blocks.", "emb.", "move_head", "switch_head")) for n in trainable)
+
+
+def test_anchor_kl():
+    sys.path.insert(0, "scripts")
+    from train_pv import anchor_kl
+
+    mask = torch.tensor([[True, True, False], [True, False, False]])
+    a = torch.tensor([[1.0, 2.0, 9.0], [0.5, 3.0, 3.0]])
+    assert anchor_kl(a, a, mask).item() == pytest.approx(0.0, abs=1e-6)  # same legal policy
+    b = torch.tensor([[2.0, 1.0, -9.0], [0.0, 0.0, 0.0]])
+    kl = anchor_kl(a, b, mask).item()
+    p = torch.softmax(torch.tensor([2.0, 1.0]), 0)
+    q = torch.softmax(torch.tensor([1.0, 2.0]), 0)
+    want = (p * (p.log() - q.log())).sum().item() / 2  # the one-legal-slot row adds 0
+    assert kl == pytest.approx(want, rel=1e-4)

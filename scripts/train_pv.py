@@ -623,6 +623,16 @@ def policy_loss(logits, act, mask, reduction="mean"):
     return ce.mean() if reduction == "mean" else ce
 
 
+def anchor_kl(logits, ref_logits, mask) -> torch.Tensor:
+    """Mean KL(ref policy || policy) over the legal slots (--policy-anchor: the policy kept where
+    it was while the shared trunk learns the value)."""
+    neg = torch.finfo(torch.float32).min
+    lp = logits.float().masked_fill(~mask, neg).log_softmax(-1)
+    lq = ref_logits.float().masked_fill(~mask, neg).log_softmax(-1)
+    kl = torch.where(mask, lq.exp() * (lq - lp), torch.zeros_like(lp)).sum(-1)
+    return kl[mask.any(-1)].mean()
+
+
 def soft_policy_loss(logits, pi, mask):
     """Cross-entropy with a target distribution (self-play: the search's visits): -sum pi log p
     over the legal slots (= KL(pi || p) + the target's entropy), per position."""
@@ -942,6 +952,18 @@ def main() -> None:
         action="store_true",
         help="train the value head only (readout, MLP, value blocks)",
     )
+    ap.add_argument(
+        "--unfreeze-top",
+        type=int,
+        default=0,
+        help="with --freeze-trunk: the trunk's top N blocks learn too",
+    )
+    ap.add_argument(
+        "--policy-anchor",
+        type=float,
+        default=0.0,
+        help="weight of KL(the --init policy || the policy) (keeps the policy)",
+    )
     ap.add_argument("--child-data", default="",
                     help="child-node value targets: scripts/child_targets.py dirs")  # fmt: skip
     ap.add_argument("--child-weight", type=float, default=1.0)
@@ -1157,8 +1179,13 @@ def main() -> None:
     if a.freeze_trunk:  # only the value head learns (2026-10-11: value data of its own, the
         # policy untouched): the linear readout, the value MLP / blocks, the evaluation residual
         value_part = ("value.", "value_mlp.", "value_blocks.", "value_norm.", "residual")
+        # --unfreeze-top N: the shared trunk's top N blocks (and its final norm) learn too, the
+        # value's gradients reaching the features (with --policy-anchor keeping the policy)
+        n_blocks = len(getattr(model, "blocks", []))
+        top = tuple(f"blocks.{i}." for i in range(n_blocks - a.unfreeze_top, n_blocks))
+        top += ("norm.",) if a.unfreeze_top else ()
         for name, p_ in model.named_parameters():
-            p_.requires_grad_(name.startswith(value_part))
+            p_.requires_grad_(name.startswith(value_part + top))
         emit(dict(event="freeze_trunk", trainable=sum(p.numel() for p in model.parameters()
                                                       if p.requires_grad)))  # fmt: skip
     opt = torch.optim.AdamW([p for p in model.parameters() if p.requires_grad], lr=a.lr,
@@ -1258,12 +1285,18 @@ def main() -> None:
         with torch.autocast(device.type, dtype=torch.bfloat16, enabled=device.type == "cuda"):
             out = model(sp, de, gl, ma, hs, hd, aux=bool(a.mtp or heads), **kw)
         logits, v = out[0], out[1]
+        anchor = 0.0
+        if a.policy_anchor > 0 and ref_model is not None:
+            with torch.no_grad(), torch.autocast(device.type, dtype=torch.bfloat16,
+                                                 enabled=device.type == "cuda"):  # fmt: skip
+                ref_logits = ref_model(sp, de, gl, ma, hs, hd, **kw)[0]
+            anchor = anchor_kl(logits, ref_logits, ma)
         pwb = torch.from_numpy(pw[b]).to(device)
         ce = (policy_loss(logits, act, ma, reduction="none") * pwb).sum() / pwb.sum()
         bw = torch.from_numpy(vw[b]).to(device)
         vl = value_logit(model, v.float(), ev)
         bce = (F.binary_cross_entropy_with_logits(vl, won, reduction="none") * bw).sum() / bw.sum()
-        loss = ce + a.value_weight * bce
+        loss = ce + a.value_weight * bce + a.policy_anchor * anchor
         if a.mtp:
             tg = mtp_targets(sp, fs, fd, a.mtp)
             loss = loss + a.mtp_weight * mtp_loss(out[2], tg, a.mtp_decay)[0]
@@ -1296,6 +1329,13 @@ def main() -> None:
             s_bce = (F.binary_cross_entropy_with_logits(s_vl, s_won, reduction="none")
                      * bv_s).sum() / vv_s.sum().clamp_min(1e-6)  # fmt: skip
             s_loss = s_ce + a.value_weight * s_bce
+            if a.policy_anchor > 0 and ref_model is not None:
+                with torch.no_grad(), torch.autocast(device.type, dtype=torch.bfloat16,
+                                                     enabled=device.type == "cuda"):  # fmt: skip
+                    s_ref = ref_model(s_sp, s_de, s_gl, s_ma, s_hs, s_hd, **s_kw)[0]
+                s_anchor = anchor_kl(s_out[0], s_ref, s_ma)
+                s_loss = s_loss + a.policy_anchor * s_anchor
+                agg["anchor"] = agg.get("anchor", 0.0) + s_anchor.item()
             if a.mtp:
                 s_loss = (
                     s_loss
@@ -1328,6 +1368,8 @@ def main() -> None:
                        if "sp_ce" in agg else {})  # fmt: skip
             if "ch_reg" in agg:
                 sp_part |= {"child_reg": agg.pop("ch_reg") / k}
+            if "anchor" in agg:
+                sp_part |= {"policy_anchor_kl": agg.pop("anchor") / k}
             emit(dict(event="train", step=step, epoch=round(step * hb / len(train_idx), 3),
                       policy_ce=agg["ce"] / k, value_bce=agg["bce"] / k, policy_acc=agg["acc"] / k,
                       **sp_part, grad_norm=agg["gn"] / k, lr=sched.get_last_lr()[0],
