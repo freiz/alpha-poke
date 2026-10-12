@@ -20,6 +20,7 @@ from poke_env.data import GenData
 
 from alpha_poke.agents.belief_state import BeliefModel, _preview_name, ability_probs
 from alpha_poke.agents.damage import calc_stats
+from alpha_poke.agents.speed import battle_observations, consistent, spread_dist
 from alpha_poke.agents.timers import SideTimers, battle_timers
 from alpha_poke.analysis.roles import to_id
 
@@ -135,6 +136,7 @@ def sample_set(
     known: KnownSet | None = None,
     temp: float = 1.0,
     gone_items: bool = True,
+    speed_obs: list | None = None,
 ):
     """One plausible full set for an opposing mon, consistent with what it revealed (and with
     ``known``: game-wide facts about the mon, used for side one of replay positions).
@@ -190,6 +192,7 @@ def sample_set(
                 return to_id(rng.choices(keys, weights=ws)[0])
         return None
 
+    item_seen = gone or item is not None
     if gone:
         item = "none"
     elif item is None:
@@ -223,9 +226,41 @@ def sample_set(
         pick = rng.choices(keys, weights=ws)[0]
         moves.append(pick)
         weights.pop(pick)
-    spread = belief.spread_for(mon.species)
+    spread = None
+    if speed_obs is not None:  # with the fixes: the spread sampled, consistent with the order
+        spread, item = _sample_spread(mon, item, item_seen, speed_obs, dist, rng)
+    if spread is None:
+        spread = belief.spread_for(mon.species)
     stats = calc_stats(mon.base_stats, spread, level=mon.level or 100)
     return SampledSet(moves or ["tackle"], item, ability, tera, stats)
+
+
+_SPREAD_SPEEDS: dict = {}  # (species, level) -> the speed stat of each usage spread
+
+
+def _sample_spread(mon, item: str, item_seen: bool, obs: list, dist, rng) -> tuple:
+    """(spread, item): a usage spread (agents/speed.py) consistent with the turns this mon moved
+    before or after ours; if none is with the sampled item and the item is not known, with a
+    Choice Scarf (if the species may hold one). (None, item) without usage spreads; the
+    unconstrained draw if nothing fits (an effect the observations miss)."""
+    spreads, ws = spread_dist(mon.species)
+    if not spreads:
+        return None, item
+    level = mon.level or 100
+    if obs:
+        key = (to_id(mon.species), level)
+        speeds = _SPREAD_SPEEDS.get(key)
+        if speeds is None:
+            speeds = [calc_stats(mon.base_stats, s, level=level)["spe"] for s in spreads]
+            _SPREAD_SPEEDS[key] = speeds
+        for it in (item,) if item_seen else (item, "choicescarf"):
+            if it == "choicescarf" and it != item and dist.item.get("choicescarf", 0) <= 0:
+                continue
+            ok = [i for i, sp in enumerate(speeds) if consistent(obs, sp, it)]
+            if ok:
+                i = rng.choices(ok, weights=[ws[j] for j in ok])[0]
+                return spreads[i], it
+    return rng.choices(spreads, weights=ws)[0], item
 
 
 def _boosts(mon) -> dict:
@@ -274,6 +309,15 @@ def _volatiles(mon) -> set[str]:
     return {name for eff, name in VOLATILE.items() if eff in mon.effects}
 
 
+# items the patched engine models that the original one parsed as unknown (the A/B baseline,
+# fixes off, sees them as before)
+PATCHED_ITEMS = {"ejectbutton", "redcard"}
+
+
+def _item(item: str, fixes: bool) -> str:
+    return "unknownitem" if not fixes and item in PATCHED_ITEMS else item
+
+
 def _sleep(mon, tm: SideTimers | None) -> dict:
     """rest_turns / sleep_turns of an asleep mon (timers), else nothing."""
     if tm is None or STATUS.get(mon.status) != "sleep":
@@ -288,6 +332,7 @@ def _our_mon(
     tm: SideTimers | None = None,
     req_pp: dict | None = None,
     revived: bool = False,
+    fixes: bool = True,
 ) -> pe.Pokemon:
     """``req_pp``: the request's PP of the active's moves (exact; poke-env counts uses itself and
     drifts low over long games: 2026-10-11, a move with PP left was 0 in the engine, no legal
@@ -300,7 +345,7 @@ def _our_mon(
         pp = max(0, mv.current_pp)
         if req_pp and req_pp.get(mid) is not None:
             pp = int(req_pp[mid])
-        if available_moves is not None and mid in available_moves:
+        if fixes and available_moves is not None and mid in available_moves:
             pp = max(pp, 1)
         moves.append(pe.Move(id=mid, pp=pp, disabled=disabled))
     hp = 0 if mon.fainted else int(mon.current_hp or 0)
@@ -315,7 +360,7 @@ def _our_mon(
         maxhp=int(mon.max_hp or 1),
         ability=to_id(mon.ability) if mon.ability else "none",
         base_ability=to_id(mon.ability) if mon.ability else "none",
-        item=mon.item or "none",
+        item=_item(mon.item or "none", fixes),
         attack=int(stats.get("atk") or 100),
         defense=int(stats.get("def") or 100),
         special_attack=int(stats.get("spa") or 100),
@@ -330,7 +375,7 @@ def _our_mon(
     )
 
 
-def _their_mon(mon, s: SampledSet, tm: SideTimers | None = None) -> pe.Pokemon:
+def _their_mon(mon, s: SampledSet, tm: SideTimers | None = None, fixes: bool = True) -> pe.Pokemon:
     maxhp = s.stats["hp"]
     if mon.fainted:
         hp = 0
@@ -349,7 +394,7 @@ def _their_mon(mon, s: SampledSet, tm: SideTimers | None = None) -> pe.Pokemon:
         maxhp=maxhp,
         ability=s.ability,
         base_ability=s.ability,
-        item=s.item,
+        item=_item(s.item, fixes),
         attack=s.stats["atk"],
         defense=s.stats["def"],
         special_attack=s.stats["spa"],
@@ -436,10 +481,11 @@ def build_state(
     of each set plus belief samples (training positions, design D13). ``force_switch`` overrides
     side one's switch request (training positions of forced / pivot switches; a spectator log
     has no request). ``fixes`` (2026-10-11; False: the state as before, for A/B tests): the turn
-    counters the engine needs (sleep / Rest, toxic, consecutive Protect, Wish, confusion /
-    taunt / encore / yawn: agents/timers.py), the opponent's gone items staying gone and the
-    Protosynthesis / Quark Drive boosts. ``revived``: our mon of this species back at half HP
-    (the states of a Revival Blessing choice)."""
+    counters (agents/timers.py), gone items staying gone, the Protosynthesis / Quark Drive boosts
+    and other volatiles, the request's PP, Eject Button / Red Card (the patched engine), the
+    opponent's spread sampled consistent with the move order (agents/speed.py); design D17.
+    ``revived``: our mon of this species back at half HP (the states of a Revival Blessing
+    choice)."""
     turn = battle.turn
     active = battle.active_pokemon
     role = battle.player_role or "p1"
@@ -452,9 +498,10 @@ def build_state(
         req = battle.last_request or {}
         act = (req.get("active") or [{}])[0]
         req_pp = {to_id(m["id"]): m.get("pp") for m in act.get("moves", []) if "id" in m}
+        req_pp = req_pp if fixes else None
         our_mons = [
             _our_mon(m, avail if m is active else None, tm_us,
-                     req_pp if m is active else None, revived == to_id(m.species))
+                     req_pp if m is active else None, revived == to_id(m.species), fixes)
             for m in ours
         ]  # fmt: skip
     else:
@@ -473,7 +520,7 @@ def build_state(
             # known moves come first in sample_set; in a real battle our moves are in moveset
             # order, unrelated to use: shuffle so the slot does not leak which move gets used
             rng.shuffle(s.moves)
-            our_mons.append(_their_mon(m, s, tm_us))
+            our_mons.append(_their_mon(m, s, tm_us, fixes))
     our_idx = next((i for i, m in enumerate(ours) if m is active), 0)
     if battle.force_switch or (active is not None and active.fainted):
         our_idx = next((i for i, m in enumerate(ours) if m.active), our_idx)
@@ -487,10 +534,18 @@ def build_state(
                 theirs.append(m)
     opp_active = battle.opponent_active_pokemon
 
+    # the opponent's speed: usage spreads consistent with the observed move order (with fixes)
+    obs = battle_observations(battle) if fixes and spectator is None else None
     their_mons = [
-        _their_mon(m, sample_set(belief, m, team_names, rng, move_beta, gone_items=fixes), tm_them)
+        _their_mon(
+            m,
+            sample_set(belief, m, team_names, rng, move_beta, gone_items=fixes,
+                       speed_obs=None if obs is None else obs.get(to_id(m.species), [])),
+            tm_them,
+            fixes,
+        )
         for m in theirs
-    ]
+    ]  # fmt: skip
     their_idx = next((i for i, m in enumerate(theirs) if m is opp_active), 0)
     our_active_idx = next((i for i, m in enumerate(ours) if m is active), None)
     our_last, our_vol = _last_move(

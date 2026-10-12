@@ -1,0 +1,271 @@
+"""The opponent's speed (design D17 A, 2026-10-11): its nature / EVs were fixed to the species'
+most common spread in every world (belief.spread_for), only the item (Choice Scarf) sampled, so a
+fast spread was never considered and "it moved first" was never learned from.
+
+  spread_dist(species)   the usage statistics' spreads (top ones, weights)
+  observations(lines, our_side, our_speed)
+                         from the protocol log: each turn both actives used a move of the same
+                         priority, who moved first, our effective speed and the opponent's speed
+                         multiplier then (boosts, paralysis, Tailwind, Protosynthesis / Quark
+                         Drive, Trick Room); turns where an unseen effect could decide the order
+                         (speed abilities in weather / terrain, Quick Claw, Prankster-like
+                         priority, ...) are left out
+  consistent(obs, speed_stat, item)
+                         a candidate (speed stat, item) of the opponent's mon against them
+"""
+
+import functools
+from dataclasses import dataclass
+from pathlib import Path
+
+from poke_env.data import GenData
+
+from alpha_poke.analysis.roles import to_id
+
+GEN = GenData.from_gen(9)
+TOP_SPREADS = 30
+# abilities that change speed or priority without a message before the move
+WEATHER_SPEED = {"raindance": "swiftswim", "sunnyday": "chlorophyll", "sandstorm": "sandrush",
+                 "snowscape": "slushrush", "snow": "slushrush"}  # fmt: skip
+PRIORITY_ABILITIES = {"prankster", "triage", "galewings"}
+ORDER_ITEMS = ("Quick Claw", "Custap Berry", "Quick Draw")
+TIE = 0.005  # relative speed difference treated as a tie (rounding)
+
+
+@functools.cache
+def _stats():
+    from alpha_poke.data.smogon_stats import DEFAULT_DIR, UsageStats
+
+    months = sorted(p.name for p in Path(DEFAULT_DIR).iterdir() if p.is_dir())
+    return UsageStats.load(DEFAULT_DIR / months[-1] / "chaos" / "gen9ou-1825.json")
+
+
+@functools.cache
+def _by_id() -> dict:
+    return {to_id(name): s for name, s in _stats().species.items()}
+
+
+@functools.cache
+def spread_dist(species: str) -> tuple[tuple, tuple]:
+    """(spreads as Spread, weights) of the species' most used spreads (empty if unknown)."""
+    from alpha_poke.agents.damage import Spread
+
+    sid = to_id(species)
+    s = _by_id().get(sid)
+    if s is None:  # forms: the longest table name it starts with
+        keys = [k for k in _by_id() if sid.startswith(k) or k.startswith(sid)]
+        s = _by_id()[max(keys, key=len)] if keys else None
+    if s is None or not s.spreads:
+        return (), ()
+    top = sorted(s.spreads.items(), key=lambda kv: -kv[1])[:TOP_SPREADS]
+    return tuple(Spread.parse(t) for t, _ in top), tuple(w for _, w in top)
+
+
+def boost_mult(stage: int) -> float:
+    return (2 + stage) / 2 if stage >= 0 else 2 / (2 - stage)
+
+
+def abilities(species: str) -> set[str]:
+    entry = GEN.pokedex.get(to_id(species)) or {}
+    return {to_id(a) for a in (entry.get("abilities") or {}).values()}
+
+
+@dataclass
+class Obs:
+    turn: int
+    species: str  # the opponent's active (species id)
+    ours: float  # our active's effective speed
+    mult: float  # the opponent's multiplier besides its stat and item
+    trick_room: bool
+    opp_first: bool
+
+
+@dataclass
+class _Side:
+    active: str = ""
+    names: dict = None
+    spe: int = 0  # speed boost stage of the active
+    status: dict = None
+    tailwind: bool = False
+    proto: bool = False  # Protosynthesis / Quark Drive on speed
+
+    def __post_init__(self):
+        self.names, self.status = {}, {}
+
+
+def _move_priority(move: str) -> int:
+    return int((GEN.moves.get(to_id(move)) or {}).get("priority", 0))
+
+
+def _risky_priority(move: str, abils: set[str], grassy: bool) -> bool:
+    """Could an unseen ability / terrain change the move's priority?"""
+    m = GEN.moves.get(to_id(move)) or {}
+    if "prankster" in abils and m.get("category") == "Status":
+        return True
+    if "triage" in abils and (m.get("flags") or {}).get("heal"):
+        return True
+    if "galewings" in abils and m.get("type") == "Flying":
+        return True
+    return to_id(move) == "grassyglide" and grassy
+
+
+def observations(lines: list[list[str]], our_side: str, our_speed) -> list[Obs]:
+    """``our_speed(species) -> (speed stat, item id, ability id)`` of our mons."""
+    opp_side = "p2" if our_side == "p1" else "p1"
+    sides = {"p1": _Side(), "p2": _Side()}
+    weather, terrain, trick_room = "", "", False
+    out = []
+    block: list[list[str]] = []
+    turn = 0
+    snap: dict | None = None  # the state at the turn's first move (end-of-turn switches, boosts
+    # from the moves themselves must not count: 2026-10-11, 11% of the observations broke the
+    # opponent's true speed until this)
+
+    def capture() -> dict:
+        def one(st: _Side) -> tuple:
+            m = boost_mult(st.spe) * (2.0 if st.tailwind else 1.0) * (1.5 if st.proto else 1.0)
+            return st.active, m * (0.5 if st.status.get(st.active) == "par" else 1.0)
+
+        return {"sides": {k: one(v) for k, v in sides.items()}, "trick_room": trick_room,
+                "weather": weather, "terrain": terrain}  # fmt: skip
+
+    def flush():
+        """The finished turn's observation, if any."""
+        if turn == 0 or snap is None:
+            return
+        mains = {}  # side -> (index, move) of its own (not called) first move in the turn
+        for i, p in enumerate(block):
+            if len(p) > 3 and p[1] == "move" and p[2][:2] in sides and p[2][:2] not in mains \
+                    and not any(x.startswith("[from]") for x in p[4:]):  # fmt: skip
+                mains[p[2][:2]] = (i, p[3])
+        if our_side not in mains or opp_side not in mains:
+            return
+        last = max(mains[our_side][0], mains[opp_side][0])
+        for p in block[:last]:  # a switch as a turn's action (not a pivot's) comes first
+            if len(p) > 2 and p[1] in ("switch", "drag") and not any(
+                    x.startswith("[from]") for x in p[4:]):  # fmt: skip
+                return
+        if any(any(it in x for it in ORDER_ITEMS) for p in block[:last] for x in p):
+            return
+        our_move, opp_move = mains[our_side][1], mains[opp_side][1]
+        (us, us_mult), (them, them_mult) = snap["sides"][our_side], snap["sides"][opp_side]
+        stat, item, ability = our_speed(us)
+        if not stat:
+            return
+        opp_abils = abilities(them)
+        grassy = snap["terrain"] == "grassyterrain"
+        if _move_priority(our_move) != _move_priority(opp_move) \
+                or _risky_priority(our_move, {ability}, grassy) \
+                or _risky_priority(opp_move, opp_abils, grassy):  # fmt: skip
+            return
+        speedy = {WEATHER_SPEED.get(snap["weather"], "-"), "quickfeet", "unburden", "slowstart"}
+        if snap["terrain"] == "electricterrain":
+            speedy.add("surgesurfer")
+        if (opp_abils | {ability}) & speedy:
+            return
+        ours = stat * us_mult * (1.5 if item == "choicescarf" else 1.0)
+        opp_first = mains[opp_side][0] < mains[our_side][0]
+        out.append(Obs(turn, them, ours, them_mult, snap["trick_room"], opp_first))
+
+    for p in lines:
+        if len(p) < 2:
+            continue
+        tag = p[1]
+        if tag == "turn":
+            flush()
+            turn, block, snap = int(p[2]), [], None
+            continue
+        if snap is None and tag == "move" and not any(x.startswith("[from]") for x in p[4:]):
+            snap = capture()
+        block.append(p)
+        if tag == "-clearallboost":  # Haze
+            for st in sides.values():
+                st.spe = 0
+        if tag == "-weather" and len(p) > 2:
+            weather = "" if p[2] == "none" else to_id(p[2])
+        elif tag == "-fieldstart" and len(p) > 2:
+            f = to_id(p[2].replace("move: ", ""))
+            if f == "trickroom":
+                trick_room = True
+            elif f.endswith("terrain"):
+                terrain = f
+        elif tag == "-fieldend" and len(p) > 2:
+            f = to_id(p[2].replace("move: ", ""))
+            if f == "trickroom":
+                trick_room = False
+            elif f == terrain:
+                terrain = ""
+        elif tag in ("-sidestart", "-sideend") and len(p) > 3 and "Tailwind" in p[3]:
+            sides[p[2][:2]].tailwind = tag == "-sidestart"
+        if len(p) < 3 or p[2][:2] not in sides:
+            continue
+        st = sides[p[2][:2]]
+        nick = p[2].split(": ", 1)[-1]
+        sp = st.names.get(nick, to_id(nick))
+        if tag in ("switch", "drag", "replace", "detailschange") and len(p) > 3:
+            new = to_id(p[3].split(",")[0])
+            st.names[nick] = new
+            if tag in ("switch", "drag"):
+                st.active, st.spe, st.proto = new, 0, False
+                hp = p[4] if len(p) > 4 else ""
+                if " " in hp:
+                    st.status[new] = hp.split(" ", 1)[1]
+                else:
+                    st.status.pop(new, None)
+            else:
+                st.active = new
+        elif tag in ("-boost", "-unboost") and len(p) > 4 and p[3] == "spe":
+            st.spe = max(-6, min(6, st.spe + int(p[4]) * (1 if tag == "-boost" else -1)))
+        elif tag == "-setboost" and len(p) > 4 and p[3] == "spe":
+            st.spe = int(p[4])
+        elif tag == "-clearboost" or (tag == "-clearnegativeboost" and st.spe < 0):
+            st.spe = 0
+        elif tag == "-status" and len(p) > 3:
+            st.status[sp] = p[3]
+        elif tag == "-curestatus":
+            st.status.pop(sp, None)
+        elif tag == "-start" and len(p) > 3 and to_id(p[3]) in ("protosynthesisspe",
+                                                                 "quarkdrivespe"):  # fmt: skip
+            st.proto = True
+        elif tag == "-end" and len(p) > 3 and to_id(p[3]) in ("protosynthesis", "quarkdrive"):
+            st.proto = False
+    flush()
+    return out
+
+
+def opp_eff(o: Obs, speed_stat: int, item: str) -> float:
+    return speed_stat * o.mult * (1.5 if item == "choicescarf" else 1.0)
+
+
+def consistent(obs: list[Obs], speed_stat: int, item: str) -> bool:
+    """Can an opponent mon with ``speed_stat`` and ``item`` have moved as observed? (ties: either
+    order)"""
+    for o in obs:
+        e = opp_eff(o, speed_stat, item)
+        if abs(e - o.ours) <= TIE * o.ours:  # Showdown rounds each step: near-ties are ties
+            continue
+        faster = e > o.ours if not o.trick_room else e < o.ours
+        slower = e < o.ours if not o.trick_room else e > o.ours
+        if (o.opp_first and slower) or (not o.opp_first and faster):
+            return False
+    return True
+
+
+def battle_observations(battle) -> dict[str, list[Obs]]:
+    """``observations`` of a live poke-env battle (our view: our mons' real speeds), by the
+    opponent's species, cached on the battle."""
+    data = battle._replay_data
+    cached = getattr(battle, "_alpha_speed_obs", None)
+    if cached is not None and cached[0] == len(data):
+        return cached[1]
+    ours = {}
+    for m in battle.team.values():
+        spe = (m.stats or {}).get("spe")
+        ours[to_id(m.species)] = (spe or 0, m.item or "", to_id(m.ability or ""))
+    role = battle.player_role or "p1"
+    by: dict[str, list[Obs]] = {}
+    for o in observations([m for m in data if len(m) > 1], role,
+                          lambda sp: ours.get(sp, (0, "", ""))):  # fmt: skip
+        by.setdefault(o.species, []).append(o)
+    battle._alpha_speed_obs = (len(data), by)
+    return by

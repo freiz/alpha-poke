@@ -117,7 +117,7 @@ class SelfPlayPlayer(SearchPlayer):
 
     async def _search_async(self, battle):
         sync_tera_types(battle)
-        if battle.reviving:
+        if battle.reviving and self.state_fixes:
             return await self._revive_async(battle)
         me = battle.active_pokemon
         if me is None or battle.opponent_active_pokemon is None:
