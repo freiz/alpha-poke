@@ -82,6 +82,7 @@ async def _lane(lane: str, jobs: list, port: int, gen_dir: Path, settings: dict,
             noise=tuple(settings["noise"]), turn_cap=settings["turn_cap"],
             temp_turns=settings.get("temp_turns", 8), temp_late=settings.get("temp_late", 0.25),
             children=settings.get("children", 0),
+            policy_only=settings.get("policy_only", False),
         )  # fmt: skip
 
     # per run (run_tag) and lane: a lane named alike in every generation must not replay the same

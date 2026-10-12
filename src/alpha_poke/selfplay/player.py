@@ -43,7 +43,7 @@ class SelfPlayPlayer(SearchPlayer):
                  noise: tuple[float, float] = (0.1, 10.0), turn_cap: int = 300, seed: int = 0,
                  greedy: bool = False, record: bool = True, temp_turns: int = 8,
                  temp_late: float = 0.25, children: int = 0, state_fixes: int = 2,
-                 **kwargs):  # fmt: skip
+                 policy_only: bool = False, **kwargs):  # fmt: skip
         super().__init__(*args, **kwargs)
         assert self.model_transformer and batcher is not None
         self.batcher = batcher
@@ -65,6 +65,9 @@ class SelfPlayPlayer(SearchPlayer):
         self.children = children
         # build_state's fixes of 2026-10-11 (turn counters, gone items; False: the A/B baseline)
         self.state_fixes = state_fixes
+        # policy-only games (value labels without search, AlphaGo's value-net data; 2026-10-11):
+        # one world, a one-iteration search for the network's prior, the move sampled from it
+        self.policy_only = policy_only
         self.child_records: dict[str, list] = {}
         # the request each battle's last record answered (a refused choice drops its record)
         self._record_request: dict[str, int] = {}
@@ -134,8 +137,8 @@ class SelfPlayPlayer(SearchPlayer):
         else:
             kind = KIND_MAIN
         t0 = time.time()
-        full = self.rng.random() < self.full_frac
-        n_worlds = self.worlds if full else self.fast_worlds
+        full = not self.policy_only and self.rng.random() < self.full_frac
+        n_worlds = 1 if self.policy_only else self.worlds if full else self.fast_worlds
         names = self._opp_team_names(battle)
         states = [build_state(battle, self.belief, names, self.rng, move_beta=self.move_beta,
                               fixes=self.state_fixes) for _ in range(n_worlds)]  # fmt: skip
@@ -148,9 +151,10 @@ class SelfPlayPlayer(SearchPlayer):
         ctxs = net_context.contexts(battle, states)
         t2 = time.time()
         export = self.children if full and self.record else 0
-        fut = self.batcher.submit([s.to_string() for s in states], ctxs,
-                                  self.full_iters if full else self.fast_iters,
-                                  self.rng.randrange(1 << 30), self.noise,
+        iters = 1 if self.policy_only else self.full_iters if full else self.fast_iters
+        fut = self.batcher.submit([s.to_string() for s in states], ctxs, iters,
+                                  self.rng.randrange(1 << 30),
+                                  (0.0, 10.0) if self.policy_only else self.noise,
                                   children=export)  # fmt: skip
         # safety net: a search must never hold a game forever
         res = await asyncio.wait_for(asyncio.wrap_future(fut), timeout=self.search_timeout)
@@ -158,8 +162,10 @@ class SelfPlayPlayer(SearchPlayer):
         if export:
             batch, kids = res[2]
             self.child_records.setdefault(battle.battle_tag, []).append((batch, kids, rec["q"]))
-        # the move: sampled from the visits (tau = 1), over options that have an order
-        options = [(i, v) for i, v in enumerate(rec["visits"]) if v > 0 and rec["names"][i]]
+        # the move: sampled from the visits (tau = 1), over options that have an order (policy
+        # only: from the network's prior)
+        weights = rec["prior"] if self.policy_only else rec["visits"]
+        options = [(i, v) for i, v in enumerate(weights) if v > 0 and rec["names"][i]]
         orders = {i: engine_move_to_order(self, battle, rec["names"][i]) for i, _ in options}
         options = [(i, v) for i, v in options if orders[i] is not None]
         if not options:

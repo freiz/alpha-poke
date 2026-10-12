@@ -102,7 +102,8 @@ def cmd_run(a) -> None:
                 "fast_iters": a.fast_iters, "fast_worlds": a.fast_worlds,
                 "noise": [a.noise_eps, a.noise_conc], "lanes": a.lanes, "leaves": a.leaves,
                 "threads": a.threads, "turn_cap": a.turn_cap, "temp_turns": a.temp_turns,
-                "temp_late": a.temp_late, "dtype": a.dtype, "children": a.children}  # fmt: skip
+                "temp_late": a.temp_late, "dtype": a.dtype, "children": a.children,
+                "policy_only": a.policy_only}  # fmt: skip
     (gen_dir / "settings.json").write_text(json.dumps(settings, indent=1))
     t0 = time.time()
     n = runner.run(gen_dir, pairs, settings, a.procs, tuple(a.ports), a.limit)
@@ -935,6 +936,11 @@ def main() -> None:
     p.add_argument("--dtype", choices=["fp32", "bf16"], default="bf16", help="GPU inference")
     p.add_argument("--children", type=int, default=0,
                    help="export full searches' children of >= N visits (0: off)")  # fmt: skip
+    p.add_argument(
+        "--policy-only",
+        action="store_true",
+        help="no search: moves sampled from the network's prior (value labels only)",
+    )
     p.set_defaults(fn=cmd_run)
     p = sub.add_parser("convert")
     p.add_argument("--gen", type=int, required=True)
