@@ -27,6 +27,7 @@
 
 use poke_engine::choices::Choices;
 use poke_engine::engine::state::MoveChoice;
+use poke_engine::engine::items::Items;
 use poke_engine::pokemon::PokemonName;
 use poke_engine::state::{Pokemon, Side, State};
 use std::str::FromStr;
@@ -206,11 +207,21 @@ pub struct Features {
     pub mask: Vec<u8>,    // [N_ACTIONS]
 }
 
+/// An item's id for the networks: items the engine learned after the networks' vocabularies
+/// (the alpha-poke patch's Eject Button / Red Card, 2026-10-11) keep the id they had before,
+/// unknown item
+pub fn item_id(item: Items) -> i32 {
+    match item {
+        Items::EJECTBUTTON | Items::REDCARD => Items::UNKNOWNITEM as i32,
+        x => x as i32,
+    }
+}
+
 fn entity(p: &Pokemon, active: bool, own: bool, sparse: &mut Vec<i32>, dense: &mut Vec<f32>) {
     let m = [&p.moves.m0, &p.moves.m1, &p.moves.m2, &p.moves.m3];
     sparse.extend_from_slice(&[
         p.id as i32,
-        p.item as i32,
+        item_id(p.item),
         p.ability as i32,
         p.tera_type as i32,
         p.types.0 as i32,

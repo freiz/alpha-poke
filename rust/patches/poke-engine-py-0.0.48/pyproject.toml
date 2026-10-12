@@ -1,0 +1,24 @@
+# poke-engine's Python binding (MIT, pmariglia/poke-engine 0.0.48), vendored 2026-10-11 so it is
+# built from our patched engine (../poke-engine-0.0.48): states built in Python must know the
+# patched items (Eject Button, Red Card), the same engine as alpha_search's
+[tool.maturin]
+python-source = "python"
+module-name = "poke_engine.poke_engine"
+manifest-path = "binding/Cargo.toml"
+
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "poke-engine"
+version = "0.0.48"
+readme = "readme.md"
+
+[tool.uv]
+cache-keys = [
+    { file = "pyproject.toml" },
+    { file = "binding/Cargo.toml" },
+    { file = "binding/src/**/*.rs" },
+    { file = "../poke-engine-0.0.48/src/**/*.rs" },
+]

@@ -36,7 +36,7 @@ train = [
 requires-dist = [
     { name = "alpha-search", directory = "rust/alpha_search" },
     { name = "pandas", specifier = ">=3.0.6" },
-    { name = "poke-engine", specifier = "==0.0.48" },
+    { name = "poke-engine", directory = "rust/patches/poke-engine-py-0.0.48" },
     { name = "poke-env", specifier = ">=0.16.1" },
     { name = "pyarrow", specifier = ">=25.0.1" },
 ]
@@ -866,8 +866,7 @@ wheels = [
 [[package]]
 name = "poke-engine"
 version = "0.0.48"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/cf/69/47d572f526943c519927acff95685bffa1aba7024f8433bc1924d7941ae2/poke_engine-0.0.48.tar.gz", hash = "sha256:070010686f2aedff11e25137e696e301ccd80fd57c805d255464067fc905ca12", size = 393495, upload-time = "2026-07-19T14:33:50.814Z" }
+source = { directory = "rust/patches/poke-engine-py-0.0.48" }
 
 [[package]]
 name = "poke-env"

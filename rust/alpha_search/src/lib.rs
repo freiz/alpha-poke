@@ -311,7 +311,7 @@ fn encode_ids(kind: &str, names: Vec<String>) -> PyResult<Vec<i32>> {
     use std::str::FromStr;
     let f: fn(&str) -> i32 = match kind {
         "species" => |x| PokemonName::from_str(x).map_or(0, |v| v as i32),
-        "item" => |x| Items::from_str(x).map_or(0, |v| v as i32),
+        "item" => |x| Items::from_str(x).map_or(0, features::item_id),
         "ability" => |x| Abilities::from_str(x).map_or(0, |v| v as i32),
         "type" => |x| PokemonType::from_str(x).map_or(0, |v| v as i32),
         "move" => |x| Choices::from_str(x).map_or(0, |v| v as i32),

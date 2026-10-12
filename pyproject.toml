@@ -45,3 +45,5 @@ poke-engine = { "build-args" = "--features poke-engine/terastallization --no-def
 [tool.uv.sources]
 # our Rust search crate (design D12), built with maturin; poke-engine comes from crates.io
 alpha-search = { path = "rust/alpha_search" }
+# poke-engine's Python binding, built from our patched engine (rust/patches)
+poke-engine = { path = "rust/patches/poke-engine-py-0.0.48" }

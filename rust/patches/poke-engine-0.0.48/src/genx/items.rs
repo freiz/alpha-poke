@@ -264,6 +264,11 @@ define_enum_with_from_str! {
         FALINKSITE,
         RAICHUNITEX,
         RAICHUNITEY,
+        // alpha-poke patch (2026-10-11), appended (alpha_search encodes items by their index for
+        // the networks: earlier indices must not move): Eject Button, Red Card
+        // (generate_instructions::run_move); before, both parsed as UNKNOWNITEM
+        EJECTBUTTON,
+        REDCARD,
     },
     default = UNKNOWNITEM
 }

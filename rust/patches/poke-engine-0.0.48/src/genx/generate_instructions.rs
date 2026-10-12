@@ -2246,6 +2246,14 @@ pub fn generate_instructions_from_move(
         }
     }
 
+    // alpha-poke patch (2026-10-11): ejected (Eject Button) by the first move before moving: the
+    // holder switches out instead of moving
+    if !choice.first_move && state.get_side(&attacking_side).force_switch {
+        state.reverse_instructions(&incoming_instructions.instruction_list);
+        final_instructions.push(incoming_instructions);
+        return;
+    }
+
     if !choice.first_move
         && state
             .get_side(&attacking_side.get_other_side())
@@ -3685,7 +3693,58 @@ fn run_move(
         get_instructions_from_boosts(state, boost, &attacking_side, &mut instructions);
     }
 
+    // alpha-poke patch (2026-10-11): the defender's Eject Button / Red Card, after a damaging
+    // move hits it (not its substitute) and it survives. Eject Button: the holder switches out
+    // (its choice, as a pivot; the attacker's own pivot does not happen; a holder that had not
+    // moved does not move: generate_instructions_from_move). Red Card: the attacker is dragged
+    // out (a random benched mon).
+    let defender_ref = attacking_side.get_other_side();
+    let mut ejected = false;
+    if does_damage && !hit_sub && choice.category != MoveCategory::Status {
+        let defender_side = state.get_side_immutable(&defender_ref);
+        let holder = defender_side.get_active_immutable();
+        let (item, holder_hp) = (holder.item, holder.hp);
+        let can_switch = defender_side.visible_alive_pkmn() > 1 && !defender_side.force_switch;
+        let attacker_alive = state.get_side_immutable(&attacking_side).get_active_immutable().hp > 0;
+        if holder_hp > 0 && (item == Items::EJECTBUTTON && can_switch
+            || item == Items::REDCARD && attacker_alive)
+        {
+            instructions
+                .instruction_list
+                .push(Instruction::ChangeItem(ChangeItemInstruction {
+                    side_ref: defender_ref,
+                    current_item: item,
+                    new_item: Items::NONE,
+                }));
+            state.get_side(&defender_ref).get_active().item = Items::NONE;
+            if item == Items::REDCARD {
+                get_instructions_from_drag(state, &defender_ref, instructions, final_instructions);
+                return;
+            }
+            ejected = true;
+            let defender_side = state.get_side(&defender_ref);
+            defender_side.force_switch = true;
+            instructions.instruction_list.push(match defender_ref {
+                SideReference::SideOne => Instruction::ToggleSideOneForceSwitch,
+                SideReference::SideTwo => Instruction::ToggleSideTwoForceSwitch,
+            });
+            // the attacker has nothing left to do in this turn
+            let attacker_side = state.get_side(&attacking_side);
+            let previous_choice = attacker_side.switch_out_move_second_saved_move;
+            attacker_side.switch_out_move_second_saved_move = Choices::NONE;
+            let set = SetSecondMoveSwitchOutMoveInstruction {
+                new_choice: Choices::NONE,
+                previous_choice,
+            };
+            instructions.instruction_list.push(match attacking_side {
+                SideReference::SideOne => Instruction::SetSideOneMoveSecondSwitchOutMove(set),
+                SideReference::SideTwo => Instruction::SetSideTwoMoveSecondSwitchOutMove(set),
+            });
+        }
+    }
+
     if choice.flags.drag
+        && !ejected
         && state
             .get_side_immutable(&attacking_side.get_other_side())
             .get_active_immutable()
@@ -3699,7 +3758,7 @@ fn run_move(
     // Only entered if the move causes a switch-out
     // U-turn, Volt Switch, Baton Pass, etc.
     // This deals with a bunch of flags that are required for the next turn to run properly
-    if choice.flags.pivot {
+    if choice.flags.pivot && !ejected {
         match attacking_side {
             SideReference::SideOne => {
                 if state.side_one.visible_alive_pkmn() > 1 {
