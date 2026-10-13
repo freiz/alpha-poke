@@ -106,3 +106,70 @@ def test_charge_ends_with_the_electric_move():
     plain, _ = hit(set())
     charged, vols = hit({"charge"})
     assert charged > 1.8 * plain and "CHARGE" not in vols
+
+
+NEW_ITEMS = ["pechaberry", "cheriberry", "rawstberry", "aspearberry", "persimberry", "mentalherb",
+             "safetygoggles"]  # fmt: skip
+
+
+def test_new_items_parse_and_stay_unknown_to_the_network():
+    for i in NEW_ITEMS:  # through the engine's parser (not the unknown item)
+        st = pe.State(side_one=pe.Side(pokemon=[mon("tinglu", item=i)],
+                                       active_index=pe.PokemonIndex("0")))  # fmt: skip
+        assert pe.State.from_string(st.to_string()).side_one.pokemon[0].item == i.upper()
+    ids = alpha_search.encode_ids("item", [*NEW_ITEMS, "unknownitem"])
+    assert set(ids) == {1}
+
+
+def turn(item="none", status="none", volatiles=(), ability="none", moves2=("splash",), dur=None,
+         move1="splash"):  # fmt: skip
+    """The outcomes (probability, side one) of one turn: side one's active (``item``,
+    ``status``, ``volatiles``) uses Splash, side two ``moves2[0]``."""
+    p1 = pe.Pokemon(id="garchomp", hp=300, maxhp=300, item=item, status=status, ability=ability,
+                    speed=200, moves=[pe.Move(id=move1, pp=10)])  # fmt: skip
+    s1 = pe.Side(pokemon=[p1, mon("dondozo")], active_index=pe.PokemonIndex("0"),
+                 volatile_statuses=set(volatiles),
+                 volatile_status_durations=dur or pe.VolatileStatusDurations())  # fmt: skip
+    s2 = pe.Side(pokemon=[mon("tinglu", moves=moves2), mon("gholdengo")],
+                 active_index=pe.PokemonIndex("0"))  # fmt: skip
+    outs = alpha_search.chance_outcomes(pe.State(side_one=s1, side_two=s2).to_string(), 0, 0)
+    return [(o[0], pe.State.from_string(o[1]).side_one) for o in outs]
+
+
+def test_status_berries_cure_their_status():
+    for item, status in (("pechaberry", "poison"), ("cheriberry", "paralyze"),
+                         ("rawstberry", "burn"), ("pechaberry", "toxic")):  # fmt: skip
+        for _, s in turn(item, status):
+            assert s.pokemon[0].status == "NONE" and s.pokemon[0].item == "NONE", (item, status)
+    for _, s in turn("cheriberry", "burn"):  # the wrong berry stays
+        assert s.pokemon[0].item == "CHERIBERRY"
+
+
+def test_persim_berry_and_mental_herb():
+    for _, s in turn("persimberry", volatiles=("confusion",)):
+        assert "CONFUSION" not in s.volatile_statuses and s.pokemon[0].item == "NONE"
+    dur = pe.VolatileStatusDurations(taunt=1)
+    for _, s in turn("mentalherb", volatiles=("taunt",), dur=dur, move1="tackle"):
+        assert "TAUNT" not in s.volatile_statuses and s.volatile_status_durations.taunt == 0
+        assert s.pokemon[0].item == "NONE"
+
+
+def test_safety_goggles_block_spore():
+    assert all(s.pokemon[0].status == "SLEEP" for _, s in turn(moves2=("spore",)))
+    assert all(s.pokemon[0].status == "NONE" for _, s in turn("safetygoggles", moves2=("spore",)))
+
+
+def test_early_bird_wakes_sooner():
+    def woke(ability, turns):
+        p1 = pe.Pokemon(id="garchomp", hp=300, maxhp=300, status="sleep", ability=ability,
+                        sleep_turns=turns, speed=200,
+                        moves=[pe.Move(id="tackle", pp=10)])  # fmt: skip
+        s1 = pe.Side(pokemon=[p1, mon("dondozo")], active_index=pe.PokemonIndex("0"))
+        s2 = pe.Side(pokemon=[mon("tinglu", moves=("splash",)), mon("gholdengo")],
+                     active_index=pe.PokemonIndex("0"))  # fmt: skip
+        outs = alpha_search.chance_outcomes(pe.State(side_one=s1, side_two=s2).to_string(), 0, 0)
+        return sum(o[0] for o in outs if pe.State.from_string(o[1]).side_one.pokemon[0].status
+                   == "NONE")  # fmt: skip
+
+    assert woke("none", 0) == 0 and abs(woke("earlybird", 0) - 1 / 3) < 0.01
+    assert abs(woke("none", 1) - 1 / 3) < 0.01 and woke("earlybird", 1) > 0.99

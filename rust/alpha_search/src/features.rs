@@ -212,7 +212,17 @@ pub struct Features {
 /// unknown item
 pub fn item_id(item: Items) -> i32 {
     match item {
-        Items::EJECTBUTTON | Items::REDCARD => Items::UNKNOWNITEM as i32,
+        // items the patched engine models (appended to its list), as the networks were trained
+        // on them: unknown (2026-10-11: Eject Button, Red Card; 2026-10-13: the rest)
+        Items::EJECTBUTTON
+        | Items::REDCARD
+        | Items::PECHABERRY
+        | Items::CHERIBERRY
+        | Items::RAWSTBERRY
+        | Items::ASPEARBERRY
+        | Items::PERSIMBERRY
+        | Items::MENTALHERB
+        | Items::SAFETYGOGGLES => Items::UNKNOWNITEM as i32,
         x => x as i32,
     }
 }

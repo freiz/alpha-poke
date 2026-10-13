@@ -336,6 +336,9 @@ def _volatiles(mon) -> set[str]:
 # items the patched engine models that the original one parsed as unknown (the A/B baseline,
 # fixes off, sees them as before)
 PATCHED_ITEMS = {"ejectbutton", "redcard"}
+# 2026-10-13 (level 3): status berries, Persim Berry, Mental Herb, Safety Goggles
+PATCHED_ITEMS_3 = {"pechaberry", "cheriberry", "rawstberry", "aspearberry", "persimberry",
+                   "mentalherb", "safetygoggles"}  # fmt: skip
 
 
 FIX_MAX = 3  # the current level (True)
@@ -351,8 +354,10 @@ def fix_level(fixes) -> int:
     return FIX_MAX if fixes is True else 0 if fixes is False else int(fixes)
 
 
-def _item(item: str, fixes: bool) -> str:
-    return "unknownitem" if not fixes and item in PATCHED_ITEMS else item
+def _item(item: str, fixes: bool, fix3: bool = True) -> str:
+    if (not fixes and item in PATCHED_ITEMS) or (not fix3 and item in PATCHED_ITEMS_3):
+        return "unknownitem"
+    return item
 
 
 def _sleep(mon, tm: SideTimers | None) -> dict:
@@ -370,6 +375,7 @@ def _our_mon(
     req_pp: dict | None = None,
     revived: bool = False,
     fixes: bool = True,
+    fix3: bool = True,
 ) -> pe.Pokemon:
     """``req_pp``: the request's PP of the active's moves (exact; poke-env counts uses itself and
     drifts low over long games: 2026-10-11, a move with PP left was 0 in the engine, no legal
@@ -397,7 +403,7 @@ def _our_mon(
         maxhp=int(mon.max_hp or 1),
         ability=to_id(mon.ability) if mon.ability else "none",
         base_ability=to_id(mon.ability) if mon.ability else "none",
-        item=_item(mon.item or "none", fixes),
+        item=_item(mon.item or "none", fixes, fix3),
         attack=int(stats.get("atk") or 100),
         defense=int(stats.get("def") or 100),
         special_attack=int(stats.get("spa") or 100),
@@ -443,7 +449,7 @@ def _their_mon(mon, s: SampledSet, tm: SideTimers | None = None, fixes: bool = T
         maxhp=maxhp,
         ability=s.ability,
         base_ability=s.ability,
-        item=_item(s.item, fixes),
+        item=_item(s.item, fixes, fix3),
         attack=s.stats["atk"],
         defense=s.stats["def"],
         special_attack=s.stats["spa"],
@@ -589,7 +595,7 @@ def build_state(
         req_pp = req_pp if f2 else None
         our_mons = [
             _our_mon(m, avail if m is active else None, tm_us,
-                     req_pp if m is active else None, revived == to_id(m.species), f2)
+                     req_pp if m is active else None, revived == to_id(m.species), f2, f3)
             for m in ours
         ]  # fmt: skip
     else:
@@ -608,7 +614,7 @@ def build_state(
             # known moves come first in sample_set; in a real battle our moves are in moveset
             # order, unrelated to use: shuffle so the slot does not leak which move gets used
             rng.shuffle(s.moves)
-            our_mons.append(_their_mon(m, s, tm_us, f2))
+            our_mons.append(_their_mon(m, s, tm_us, f2, f3))
     our_idx = next((i for i, m in enumerate(ours) if m is active), 0)
     if battle.force_switch or (active is not None and active.fainted):
         our_idx = next((i for i, m in enumerate(ours) if m.active), our_idx)

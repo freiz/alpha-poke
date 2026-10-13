@@ -1586,6 +1586,14 @@ fn move_has_no_effect(state: &State, choice: &Choice, attacking_side_ref: &SideR
         return true;
     }
 
+    // alpha-poke patch (2026-10-13): Safety Goggles block powder moves
+    if choice.flags.powder
+        && choice.target == MoveTarget::Opponent
+        && defender.item == Items::SAFETYGOGGLES
+    {
+        return true;
+    }
+
     if choice.move_type == PokemonType::ELECTRIC
         && choice.target == MoveTarget::Opponent
         && defender.has_type(&PokemonType::GROUND)
@@ -1823,7 +1831,13 @@ fn generate_instructions_from_existing_status_conditions(
                 // Pokemon is not asleep because of Rest.
                 0 => {
                     let current_sleep_turns = attacker_active.sleep_turns;
-                    let chance_to_wake = chance_to_wake_up(current_sleep_turns);
+                    // alpha-poke patch (2026-10-13): Early Bird's counter runs twice as fast
+                    // (wakes on the first attempt 1/3, else on the second)
+                    let chance_to_wake = if attacker_active.ability == Abilities::EARLYBIRD {
+                        chance_to_wake_up(cmp::min(3, 2 * current_sleep_turns + 1))
+                    } else {
+                        chance_to_wake_up(current_sleep_turns)
+                    };
                     if chance_to_wake == 1.0 {
                         attacker_active.status = PokemonStatus::NONE;
                         attacker_active.sleep_turns = 0;
@@ -3059,6 +3073,7 @@ fn add_end_of_turn_instructions(
             if active_pkmn.hp == 0
                 || active_pkmn.ability == Abilities::MAGICGUARD
                 || active_pkmn.ability == Abilities::OVERCOAT
+                || active_pkmn.item == Items::SAFETYGOGGLES // alpha-poke patch (2026-10-13)
                 || active_pkmn.ability == Abilities::ICEBODY
                 || active_pkmn.has_type(&PokemonType::ICE)
             {
@@ -3081,6 +3096,7 @@ fn add_end_of_turn_instructions(
             if active_pkmn.hp == 0
                 || active_pkmn.ability == Abilities::MAGICGUARD
                 || active_pkmn.ability == Abilities::OVERCOAT
+                || active_pkmn.item == Items::SAFETYGOGGLES // alpha-poke patch (2026-10-13)
                 || active_pkmn.has_type(&PokemonType::GROUND)
                 || active_pkmn.has_type(&PokemonType::STEEL)
                 || active_pkmn.has_type(&PokemonType::ROCK)

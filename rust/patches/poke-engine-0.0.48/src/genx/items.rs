@@ -7,8 +7,9 @@ use crate::choices::{Choice, Choices, Effect, MoveCategory, MoveTarget, Secondar
 use crate::define_enum_with_from_str;
 use crate::engine::generate_instructions::add_remove_status_instructions;
 use crate::instruction::{
-    ChangeItemInstruction, ChangeStatusInstruction, DamageInstruction, DisableMoveInstruction,
-    HealInstruction, Instruction, StateInstructions,
+    ChangeItemInstruction, ChangeStatusInstruction, ChangeVolatileStatusDurationInstruction,
+    DamageInstruction, DisableMoveInstruction, HealInstruction, Instruction,
+    RemoveVolatileStatusInstruction, StateInstructions,
 };
 use crate::pokemon::PokemonName;
 use crate::state::{
@@ -16,7 +17,7 @@ use crate::state::{
 };
 use std::cmp;
 
-#[cfg(feature = "gen4")]
+// alpha-poke patch (2026-10-13): every generation (Persim Berry, Mental Herb)
 use super::state::PokemonVolatileStatus;
 
 define_enum_with_from_str! {
@@ -269,6 +270,16 @@ define_enum_with_from_str! {
         // (generate_instructions::run_move); before, both parsed as UNKNOWNITEM
         EJECTBUTTON,
         REDCARD,
+        // alpha-poke patch (2026-10-13), appended likewise: status berries, Persim Berry, Mental
+        // Herb (item_before_move / item_end_of_turn, like Lum Berry), Safety Goggles (powder
+        // moves, weather damage)
+        PECHABERRY,
+        CHERIBERRY,
+        RAWSTBERRY,
+        ASPEARBERRY,
+        PERSIMBERRY,
+        MENTALHERB,
+        SAFETYGOGGLES,
     },
     default = UNKNOWNITEM
 }
@@ -402,6 +413,82 @@ fn sitrus_berry(
     active_pkmn.item = Items::NONE;
 }
 
+// alpha-poke patch (2026-10-13): a berry curing one status (Lum Berry's effect)
+fn status_berry(
+    side_ref: &SideReference,
+    attacking_side: &mut Side,
+    item: Items,
+    instructions: &mut StateInstructions,
+) {
+    lum_berry(side_ref, attacking_side, instructions);
+    if let Some(Instruction::ChangeItem(ins)) = instructions.instruction_list.last_mut() {
+        ins.current_item = item;
+    }
+}
+
+// alpha-poke patch (2026-10-13): volatiles cured by Persim Berry / Mental Herb, with their
+// durations
+const MENTAL_HERB_CURES: [PokemonVolatileStatus; 6] = [
+    PokemonVolatileStatus::TAUNT,
+    PokemonVolatileStatus::ENCORE,
+    PokemonVolatileStatus::DISABLE,
+    PokemonVolatileStatus::TORMENT,
+    PokemonVolatileStatus::HEALBLOCK,
+    PokemonVolatileStatus::ATTRACT,
+];
+
+fn has_any(side: &Side, volatiles: &[PokemonVolatileStatus]) -> bool {
+    volatiles.iter().any(|v| side.volatile_statuses.contains(v))
+}
+
+fn cure_volatiles_item(
+    side_ref: &SideReference,
+    side: &mut Side,
+    item: Items,
+    volatiles: &[PokemonVolatileStatus],
+    instructions: &mut StateInstructions,
+) {
+    for v in volatiles {
+        if !side.volatile_statuses.contains(v) {
+            continue;
+        }
+        side.volatile_statuses.remove(v);
+        instructions
+            .instruction_list
+            .push(Instruction::RemoveVolatileStatus(
+                RemoveVolatileStatusInstruction {
+                    side_ref: *side_ref,
+                    volatile_status: *v,
+                },
+            ));
+        let duration = match v {
+            PokemonVolatileStatus::TAUNT => &mut side.volatile_status_durations.taunt,
+            PokemonVolatileStatus::ENCORE => &mut side.volatile_status_durations.encore,
+            PokemonVolatileStatus::HEALBLOCK => &mut side.volatile_status_durations.healblock,
+            PokemonVolatileStatus::CONFUSION => &mut side.volatile_status_durations.confusion,
+            _ => continue,
+        };
+        if *duration != 0 {
+            instructions.instruction_list.push(Instruction::ChangeVolatileStatusDuration(
+                ChangeVolatileStatusDurationInstruction {
+                    side_ref: *side_ref,
+                    volatile_status: *v,
+                    amount: -*duration,
+                },
+            ));
+            *duration = 0;
+        }
+    }
+    instructions
+        .instruction_list
+        .push(Instruction::ChangeItem(ChangeItemInstruction {
+            side_ref: *side_ref,
+            current_item: item,
+            new_item: Items::NONE,
+        }));
+    side.get_active().item = Items::NONE;
+}
+
 fn chesto_berry(
     side_ref: &SideReference,
     attacking_side: &mut Side,
@@ -452,6 +539,11 @@ pub fn item_before_move(
     instructions: &mut StateInstructions,
 ) {
     let (attacking_side, defending_side) = state.get_both_sides(side_ref);
+    // alpha-poke patch (2026-10-13): read before the active is borrowed
+    let confused = attacking_side
+        .volatile_statuses
+        .contains(&PokemonVolatileStatus::CONFUSION);
+    let mental_herb_cures = has_any(attacking_side, &MENTAL_HERB_CURES);
     let active_pkmn = attacking_side.get_active();
     let defending_pkmn = defending_side.get_active();
     match defending_pkmn.item {
@@ -737,6 +829,38 @@ pub fn item_before_move(
         Items::LUMBERRY if active_pkmn.status != PokemonStatus::NONE => {
             lum_berry(side_ref, attacking_side, instructions)
         }
+        // alpha-poke patch (2026-10-13)
+        Items::PECHABERRY
+            if active_pkmn.status == PokemonStatus::POISON
+                || active_pkmn.status == PokemonStatus::TOXIC =>
+        {
+            status_berry(side_ref, attacking_side, Items::PECHABERRY, instructions)
+        }
+        Items::CHERIBERRY if active_pkmn.status == PokemonStatus::PARALYZE => {
+            status_berry(side_ref, attacking_side, Items::CHERIBERRY, instructions)
+        }
+        Items::RAWSTBERRY if active_pkmn.status == PokemonStatus::BURN => {
+            status_berry(side_ref, attacking_side, Items::RAWSTBERRY, instructions)
+        }
+        Items::ASPEARBERRY if active_pkmn.status == PokemonStatus::FREEZE => {
+            status_berry(side_ref, attacking_side, Items::ASPEARBERRY, instructions)
+        }
+        Items::PERSIMBERRY if confused => {
+            cure_volatiles_item(
+                side_ref,
+                attacking_side,
+                Items::PERSIMBERRY,
+                &[PokemonVolatileStatus::CONFUSION],
+                instructions,
+            )
+        }
+        Items::MENTALHERB if mental_herb_cures => cure_volatiles_item(
+            side_ref,
+            attacking_side,
+            Items::MENTALHERB,
+            &MENTAL_HERB_CURES,
+            instructions,
+        ),
         Items::SITRUSBERRY
             if active_pkmn.ability == Abilities::GLUTTONY
                 && active_pkmn.hp <= active_pkmn.maxhp / 2 =>
@@ -878,11 +1002,48 @@ pub fn item_end_of_turn(
     instructions: &mut StateInstructions,
 ) {
     let attacking_side = state.get_side(side_ref);
+    // alpha-poke patch (2026-10-13): read before the active is borrowed
+    let confused = attacking_side
+        .volatile_statuses
+        .contains(&PokemonVolatileStatus::CONFUSION);
+    let mental_herb_cures = has_any(attacking_side, &MENTAL_HERB_CURES);
     let active_pkmn = attacking_side.get_active();
     match active_pkmn.item {
         Items::LUMBERRY if active_pkmn.status != PokemonStatus::NONE => {
             lum_berry(side_ref, attacking_side, instructions)
         }
+        // alpha-poke patch (2026-10-13)
+        Items::PECHABERRY
+            if active_pkmn.status == PokemonStatus::POISON
+                || active_pkmn.status == PokemonStatus::TOXIC =>
+        {
+            status_berry(side_ref, attacking_side, Items::PECHABERRY, instructions)
+        }
+        Items::CHERIBERRY if active_pkmn.status == PokemonStatus::PARALYZE => {
+            status_berry(side_ref, attacking_side, Items::CHERIBERRY, instructions)
+        }
+        Items::RAWSTBERRY if active_pkmn.status == PokemonStatus::BURN => {
+            status_berry(side_ref, attacking_side, Items::RAWSTBERRY, instructions)
+        }
+        Items::ASPEARBERRY if active_pkmn.status == PokemonStatus::FREEZE => {
+            status_berry(side_ref, attacking_side, Items::ASPEARBERRY, instructions)
+        }
+        Items::PERSIMBERRY if confused => {
+            cure_volatiles_item(
+                side_ref,
+                attacking_side,
+                Items::PERSIMBERRY,
+                &[PokemonVolatileStatus::CONFUSION],
+                instructions,
+            )
+        }
+        Items::MENTALHERB if mental_herb_cures => cure_volatiles_item(
+            side_ref,
+            attacking_side,
+            Items::MENTALHERB,
+            &MENTAL_HERB_CURES,
+            instructions,
+        ),
         Items::SITRUSBERRY if active_pkmn.hp <= active_pkmn.maxhp / 2 => {
             sitrus_berry(side_ref, attacking_side, instructions)
         }
