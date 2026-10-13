@@ -432,6 +432,35 @@ def _their_mon(mon, s: SampledSet, tm: SideTimers | None = None, fixes: bool = T
     )
 
 
+def _transform_target(battle, team: dict, mon, other: dict) -> int | None:
+    """The index in ``other`` (the opposing team's mons, a list of keys) of the mon ``mon`` (a
+    value of ``team``) last transformed into (|-transform|; Imposter or the move), if
+    ``mon.transformed``."""
+    if mon is None or not mon.transformed:
+        return None
+    key = next((k for k, m in team.items() if m is mon), None)
+    for ev in reversed(battle._replay_data):
+        if len(ev) > 3 and ev[1] == "-transform":
+            src, into = (x[:2] + x[3:] if len(x) > 3 and x[3] != " " else x for x in ev[2:4])
+            if src == key:
+                return other.index(into) if into in other else None
+    return None
+
+
+def _as_transformed(p: pe.Pokemon, target: pe.Pokemon, moves: list) -> pe.Pokemon:
+    """``p`` transformed into ``target`` (Showdown's transformInto): the target's species, types,
+    ability, stats except HP, weight and ``moves``; its own HP, level, item, status, tera and
+    base types / ability (what a switch restores in the engine)."""
+    return pe.Pokemon(
+        id=target.id, level=p.level, types=target.types, base_types=p.base_types, hp=p.hp,
+        maxhp=p.maxhp, ability=target.ability, base_ability=p.base_ability, item=p.item,
+        attack=target.attack, defense=target.defense, special_attack=target.special_attack,
+        special_defense=target.special_defense, speed=target.speed, status=p.status,
+        weight_kg=target.weight_kg, moves=moves, terastallized=p.terastallized,
+        tera_type=p.tera_type, rest_turns=p.rest_turns, sleep_turns=p.sleep_turns,
+    )  # fmt: skip
+
+
 def _last_move(mon, engine_mon, avail: set[str] | None = None) -> tuple[dict, set[str]]:
     """(``last_used_move`` Side kwarg, volatiles) for an active mon. The engine panics on an
     Encore without a last used move, so Encore is dropped when we cannot tell the move."""
@@ -574,6 +603,24 @@ def build_state(
     ]  # fmt: skip
     their_idx = next((i for i, m in enumerate(theirs) if m is opp_active), 0)
     our_active_idx = next((i for i, m in enumerate(ours) if m is active), None)
+    transformed = any(m is not None and m.transformed for m in (active, opp_active))
+    if f2 and spectator is None and transformed:  # a transformed active (D17 J; 2026-10-13)
+        their_keys = [next((k for k, v in battle.opponent_team.items() if v is m), None)
+                      for m in theirs]  # fmt: skip
+        our_keys = list(battle.team)
+        t = _transform_target(battle, battle.team, active, their_keys)
+        if t is not None and our_active_idx is not None and t < len(their_mons):
+            # our moves are the request's (the target's real moves, 5 PP each)
+            moves = [pe.Move(id=to_id(m["id"]), pp=int(m.get("pp") or 0),
+                             disabled=avail is not None and to_id(m["id"]) not in avail)
+                     for m in act.get("moves", [])[:4] if "id" in m]  # fmt: skip
+            our_mons[our_active_idx] = _as_transformed(
+                our_mons[our_active_idx], their_mons[t], moves or their_mons[t].moves
+            )
+        t = _transform_target(battle, battle.opponent_team, opp_active, our_keys)
+        if t is not None and their_mons and t < len(our_mons):
+            moves = [pe.Move(id=m.id, pp=5) for m in our_mons[t].moves]
+            their_mons[their_idx] = _as_transformed(their_mons[their_idx], our_mons[t], moves)
     our_last, our_vol = _last_move(
         active, our_mons[our_active_idx] if our_active_idx is not None else None, avail
     )
