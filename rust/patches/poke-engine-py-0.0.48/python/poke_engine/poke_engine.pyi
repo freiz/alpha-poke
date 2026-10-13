@@ -22,6 +22,8 @@ class VolatileStatusDurations:
     :type healblock: int
     :param magnetrise: Magnet Rise: ends of turn since it started (alpha-poke patch; ends at 5)
     :type magnetrise: int
+    :param throatchop: Throat Chop: ends of turn since it started (alpha-poke patch; ends at 2)
+    :type throatchop: int
     """
 
     confusion: int
@@ -32,6 +34,7 @@ class VolatileStatusDurations:
     yawn: int
     healblock: int
     magnetrise: int
+    throatchop: int
 
     def __init__(
         self,
@@ -43,6 +46,7 @@ class VolatileStatusDurations:
         yawn: int = 0,
         healblock: int = 0,
         magnetrise: int = 0,
+        throatchop: int = 0,
     ) -> None: ...
 
 class SideConditions:

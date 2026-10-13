@@ -78,3 +78,31 @@ def test_magnet_rise_ends_after_five_turns():
     assert "MAGNETRISE" in s.volatile_statuses and s.volatile_status_durations.magnetrise == 4
     s = end_of_turn("magnetrise", magnetrise=4)
     assert "MAGNETRISE" not in s.volatile_statuses
+
+
+def test_throat_chop_blocks_sound_moves_for_two_turns():
+    s1 = pe.Side(pokemon=[mon("primarina", moves=("boomburst", "moonblast"), spe=200),
+                          mon("dondozo")],
+                 active_index=pe.PokemonIndex("0"), volatile_statuses={"throatchop"})  # fmt: skip
+    s2 = pe.Side(pokemon=[mon("tinglu", moves=("splash",)), mon("gholdengo")],
+                 active_index=pe.PokemonIndex("0"))  # fmt: skip
+    ours, *_ = alpha_search.ismcts([pe.State(side_one=s1, side_two=s2).to_string()], 20,
+                                   iterations=64)  # fmt: skip
+    assert "boomburst" not in {c for c, _, _ in ours} and "moonblast" in {c for c, _, _ in ours}
+    s = end_of_turn("throatchop", throatchop=1)
+    assert "THROATCHOP" not in s.volatile_statuses
+
+
+def test_charge_ends_with_the_electric_move():
+    def hit(volatiles):
+        s1 = pe.Side(pokemon=[mon("raichu", moves=("thunderbolt",), spe=200), mon("dondozo")],
+                     active_index=pe.PokemonIndex("0"), volatile_statuses=volatiles)  # fmt: skip
+        s2 = pe.Side(pokemon=[mon("tinglu", moves=("splash",)), mon("gholdengo")],
+                     active_index=pe.PokemonIndex("0"))  # fmt: skip
+        outs = alpha_search.chance_outcomes(pe.State(side_one=s1, side_two=s2).to_string(), 0, 0)
+        st = pe.State.from_string(max(outs, key=lambda o: o[0])[1])
+        return 300 - st.side_two.pokemon[0].hp, st.side_one.volatile_statuses
+
+    plain, _ = hit(set())
+    charged, vols = hit({"charge"})
+    assert charged > 1.8 * plain and "CHARGE" not in vols

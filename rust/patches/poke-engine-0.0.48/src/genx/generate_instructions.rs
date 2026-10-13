@@ -2320,6 +2320,31 @@ pub fn generate_instructions_from_move(
         return;
     }
 
+    // alpha-poke patch (2026-10-13): Charge ends with the Electric move it powers (Gen 9); before,
+    // it lasted until a switch. Its doubling goes into the base power here (damage_calc doubles
+    // only while the volatile is on)
+    if choice.move_type == PokemonType::ELECTRIC
+        && choice.category != MoveCategory::Status
+        && state
+            .get_side_immutable(&attacking_side)
+            .volatile_statuses
+            .contains(&PokemonVolatileStatus::CHARGE)
+    {
+        choice.base_power *= 2.0;
+        state
+            .get_side(&attacking_side)
+            .volatile_statuses
+            .remove(&PokemonVolatileStatus::CHARGE);
+        incoming_instructions
+            .instruction_list
+            .push(Instruction::RemoveVolatileStatus(
+                RemoveVolatileStatusInstruction {
+                    side_ref: attacking_side,
+                    volatile_status: PokemonVolatileStatus::CHARGE,
+                },
+            ));
+    }
+
     // most of the time pp decrement doesn't matter and just adds another instruction
     // so we only decrement pp if the move is at 10 or less pp since that is when it starts
     // to matter
@@ -3429,17 +3454,21 @@ fn add_end_of_turn_instructions(
             }
         }
 
-        // alpha-poke patch (2026-10-13): Heal Block (Psychic Noise: 2 turns) and Magnet Rise (5)
-        // end; before, they lasted until a switch
+        // alpha-poke patch (2026-10-13): Heal Block (Psychic Noise: 2 turns), Magnet Rise (5) and
+        // Throat Chop (2) end; before, they lasted until a switch
         for (volatile, limit) in [
             (PokemonVolatileStatus::HEALBLOCK, 2),
             (PokemonVolatileStatus::MAGNETRISE, 5),
+            (PokemonVolatileStatus::THROATCHOP, 2),
         ] {
             if !side.volatile_statuses.contains(&volatile) {
                 continue;
             }
             let duration = match volatile {
                 PokemonVolatileStatus::HEALBLOCK => &mut side.volatile_status_durations.healblock,
+                PokemonVolatileStatus::THROATCHOP => {
+                    &mut side.volatile_status_durations.throatchop
+                }
                 _ => &mut side.volatile_status_durations.magnetrise,
             };
             if *duration + 1 >= limit {

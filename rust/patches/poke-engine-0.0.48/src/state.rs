@@ -792,9 +792,11 @@ pub struct VolatileStatusDurations {
     pub taunt: i8,
     pub yawn: i8,
     // alpha-poke patch (2026-10-13): ends of turn since the start (Heal Block: Psychic Noise's
-    // 2 turns; Magnet Rise: 5); the volatile ends at the limit (generate_instructions)
+    // 2 turns; Magnet Rise: 5; Throat Chop: 2); the volatile ends at the limit
+    // (generate_instructions)
     pub healblock: i8,
     pub magnetrise: i8,
+    pub throatchop: i8,
 }
 
 impl Default for VolatileStatusDurations {
@@ -808,6 +810,7 @@ impl Default for VolatileStatusDurations {
             yawn: 0,
             healblock: 0,
             magnetrise: 0,
+            throatchop: 0,
         }
     }
 }
@@ -823,6 +826,7 @@ impl VolatileStatusDurations {
             ("yawn", self.yawn),
             ("healblock", self.healblock),
             ("magnetrise", self.magnetrise),
+            ("throatchop", self.throatchop),
         ];
 
         let mut output = String::new();
@@ -839,7 +843,7 @@ impl VolatileStatusDurations {
 
     pub fn serialize(&self) -> String {
         format!(
-            "{};{};{};{};{};{};{};{}",
+            "{};{};{};{};{};{};{};{};{}",
             self.confusion,
             self.encore,
             self.lockedmove,
@@ -847,7 +851,8 @@ impl VolatileStatusDurations {
             self.taunt,
             self.yawn,
             self.healblock,
-            self.magnetrise
+            self.magnetrise,
+            self.throatchop
         )
     }
     pub fn deserialize(serialized: &str) -> VolatileStatusDurations {
@@ -862,6 +867,7 @@ impl VolatileStatusDurations {
             // alpha-poke patch: older strings have six fields
             healblock: split.get(6).map_or(0, |x| x.parse::<i8>().unwrap()),
             magnetrise: split.get(7).map_or(0, |x| x.parse::<i8>().unwrap()),
+            throatchop: split.get(8).map_or(0, |x| x.parse::<i8>().unwrap()),
         }
     }
 }
@@ -1655,6 +1661,9 @@ impl State {
             }
             PokemonVolatileStatus::MAGNETRISE => {
                 side.volatile_status_durations.magnetrise += amount;
+            }
+            PokemonVolatileStatus::THROATCHOP => {
+                side.volatile_status_durations.throatchop += amount;
             }
             _ => panic!(
                 "Invalid volatile status for increment_volatile_status_duration: {:?}",

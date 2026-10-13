@@ -486,6 +486,7 @@ impl Pokemon {
         last_used_move: &LastUsedMove,
         encored: bool,
         taunted: bool,
+        throat_chopped: bool,
         can_tera: bool,
         side_can_mega: bool,
     ) {
@@ -512,6 +513,10 @@ impl Pokemon {
                 if (self.item == Items::ASSAULTVEST || taunted)
                     && self.moves[&iter.pokemon_move_index].choice.category == MoveCategory::Status
                 {
+                    continue;
+                }
+                // alpha-poke patch (2026-10-13): Throat Chop blocks sound moves
+                if throat_chopped && self.moves[&iter.pokemon_move_index].choice.flags.sound {
                     continue;
                 }
                 vec.push(MoveChoice::Move(iter.pokemon_move_index));
@@ -1174,6 +1179,9 @@ impl State {
                 &self.side_one.last_used_move,
                 encored,
                 taunted,
+                self.side_one
+                    .volatile_statuses
+                    .contains(&PokemonVolatileStatus::THROATCHOP),
                 self.side_one.can_use_tera(),
                 self.side_one.can_use_mega(),
             );
@@ -1202,6 +1210,9 @@ impl State {
                 &self.side_two.last_used_move,
                 encored,
                 taunted,
+                self.side_two
+                    .volatile_statuses
+                    .contains(&PokemonVolatileStatus::THROATCHOP),
                 self.side_two.can_use_tera(),
                 self.side_two.can_use_mega(),
             );
@@ -1291,6 +1302,9 @@ impl State {
                 &self.side_one.last_used_move,
                 encored,
                 taunted,
+                self.side_one
+                    .volatile_statuses
+                    .contains(&PokemonVolatileStatus::THROATCHOP),
                 self.side_one.can_use_tera(),
                 self.side_one.can_use_mega(),
             );
@@ -1321,6 +1335,9 @@ impl State {
                 &self.side_two.last_used_move,
                 encored,
                 taunted,
+                self.side_two
+                    .volatile_statuses
+                    .contains(&PokemonVolatileStatus::THROATCHOP),
                 self.side_two.can_use_tera(),
                 self.side_two.can_use_mega(),
             );
@@ -1453,6 +1470,17 @@ impl State {
                         },
                     ));
                     side.volatile_status_durations.magnetrise = 0;
+                    false
+                }
+                PokemonVolatileStatus::THROATCHOP => {
+                    instructions.push(Instruction::ChangeVolatileStatusDuration(
+                        ChangeVolatileStatusDurationInstruction {
+                            side_ref: *side_ref,
+                            volatile_status: *pkmn_volatile_status,
+                            amount: -1 * side.volatile_status_durations.throatchop,
+                        },
+                    ));
+                    side.volatile_status_durations.throatchop = 0;
                     false
                 }
                 _ => false,

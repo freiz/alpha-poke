@@ -535,7 +535,7 @@ def _timed(tm: SideTimers, active, mons: list, engine_mons: list, vol: set[str],
     dur = {}
     tops = [("confusion", 4), ("taunt", 2), ("encore", 2), ("yawn", 1)]
     if fix3:  # the patched engine ends them (2026-10-13)
-        tops += [("healblock", 1), ("magnetrise", 4)]
+        tops += [("healblock", 1), ("magnetrise", 4), ("throatchop", 1)]
     for name, top in tops:
         n = getattr(tm, name)
         if name in vol and n:
