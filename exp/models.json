@@ -3,8 +3,8 @@
   "model": "v5-glu",
   "elo": 1500.0
  },
- "built": "2026-10-11 21:15",
- "current": "sp-gen5",
+ "built": "2026-10-13 09:48",
+ "current": "sp-gen6",
  "models": [
   {
    "name": "sp-gen0",
@@ -168,7 +168,8 @@
     "gen2-eval",
     "gen3-eval",
     "gen3-baseline",
-    "gen4-eval"
+    "gen4-eval",
+    "gen6-baseline"
    ],
    "elo": 1496.2,
    "elo_ci95": 27.6
@@ -280,8 +281,8 @@
     "gen4-eval",
     "gen5-eval"
    ],
-   "elo": 1498.3,
-   "elo_ci95": 32.5
+   "elo": 1495.5,
+   "elo_ci95": 31.8
   },
   {
    "name": "sp-gen5",
@@ -290,7 +291,9 @@
    "generation": 5,
    "role": "generation",
    "promoted": true,
-   "played_generations": [],
+   "played_generations": [
+    6
+   ],
    "training": {
     "init": "data/train/v5/runs/sp-gen4",
     "selfplay": "sp5,sp0:0.2875,sp1:0.2875,sp2:0.2875,sp3:0.2875,sp4:0.2875",
@@ -328,10 +331,62 @@
    },
    "created": "2026-10-11 16:06",
    "matches": [
-    "gen5-eval"
+    "gen5-eval",
+    "gen6-eval"
    ],
-   "elo": 1502.4,
-   "elo_ci95": 37.4,
+   "elo": 1496.3,
+   "elo_ci95": 34.6
+  },
+  {
+   "name": "sp-gen6",
+   "run": "data/train/v5/runs/sp-gen6",
+   "sha256": "8ff198cc7ba3657a",
+   "generation": 6,
+   "role": "generation",
+   "promoted": true,
+   "played_generations": [],
+   "training": {
+    "init": "data/train/v5/runs/sp-gen5",
+    "selfplay": "sp6,sp0:0.3590,sp1:0.3590,sp2:0.3590,sp3:0.3590,sp4:0.3590,sp5:0.3590",
+    "sp_frac": 0.8,
+    "lr": 0.0004,
+    "batch": 4096,
+    "warmup_frac": 0.2,
+    "sp_per_game": 50,
+    "sp_value_passes": 1,
+    "sp_value_per_game": 0,
+    "sp_value_lambda": 0.0,
+    "seed": 6,
+    "epochs": 6,
+    "steps": 6124,
+    "params": 736875,
+    "human_share": 0.2,
+    "sp_positions": 10500030,
+    "sp_positions_kept": 7037778,
+    "recent_gens": [
+     6
+    ]
+   },
+   "parent": "sp-gen5",
+   "validation_last": {
+    "ce_turn_w": 1.1678,
+    "bce_all_w": 0.5481,
+    "top1": 0.548,
+    "value_ece": 0.0134,
+    "hce_true": 1.254,
+    "opp_act_acc": 0.4144,
+    "sp_kl": 0.187,
+    "sp_top1": 0.7607,
+    "sp_bce": 0.4403,
+    "sp_kl_ref": 0.0066
+   },
+   "created": "2026-10-13 08:49",
+   "matches": [
+    "gen6-eval",
+    "gen6-baseline"
+   ],
+   "elo": 1514.7,
+   "elo_ci95": 33.9,
    "current": true
   },
   {
