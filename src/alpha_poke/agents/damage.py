@@ -70,6 +70,15 @@ class MonView:
         return min(1.0, sum(self.ability_probs.get(i, 0.0) for i in ids))
 
 
+def move_flags(move: Move) -> set[str]:
+    """A move's flags; none for a move without a dex entry's flags (poke-env raises KeyError:
+    2026-10-13, two heuristic fallbacks vs Foul Play)."""
+    try:
+        return move.flags or set()
+    except KeyError:
+        return set()
+
+
 def _norm_id(x: str | None) -> str:
     return "".join(c for c in (x or "").lower() if c.isalnum())
 
@@ -93,7 +102,7 @@ def ability_multiplier(att: "MonView", dfn: "MonView", move: Move, eff: float) -
     if att.ability_p(*IGNORE_ABILITY) >= 0.5:
         return 1.0
     t = move.type
-    flags = move.flags or set()
+    flags = move_flags(move)
     p_immune = dfn.ability_p(*IMMUNE_ABILITIES.get(t, ()))
     if t == PokemonType.GROUND and move.id != "thousandarrows":
         p_immune += dfn.item_p("airballoon")

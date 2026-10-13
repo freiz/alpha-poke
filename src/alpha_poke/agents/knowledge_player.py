@@ -45,6 +45,7 @@ from alpha_poke.agents.damage import (
     damage_fraction,
     entry_hazard_cost,
     is_damaging,
+    move_flags,
     moves_first,
     one_v_one,
     priority,
@@ -149,7 +150,7 @@ def status_block_p(move: Move, ov) -> float:
     Magic Bounce reflects it, Good as Gold blocks status moves aimed at it, and status
     immunities (Purifying Salt, Comatose, move-specific ones)."""
     p = 0.0
-    if "reflectable" in (move.flags or set()):
+    if "reflectable" in move_flags(move):
         p += ov.ability_p("magicbounce")
     target = getattr(move.target, "name", "")
     if target in FOE_TARGETS:
