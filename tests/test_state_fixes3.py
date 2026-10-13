@@ -119,3 +119,25 @@ def test_must_recharge_searches_to_the_recharge_order(belief):
     ours, *_ = alpha_search.ismcts([state(b, belief).to_string()], 50, iterations=64)
     player = type("P", (), {"create_order": staticmethod(lambda m, **k: m.id)})()
     assert [engine_move_to_order(player, b, c) for c, _, _ in ours] == ["recharge"]
+
+
+def test_illusion_worlds(belief):
+    b = Battle("battle-gen9ou-2", "us", logging.getLogger("t"), gen=9)
+    b.player_role = "p1"
+    side = [mon("p1: Garchomp", "Garchomp", ["earthquake"], active=True),
+            mon("p1: Dondozo", "Dondozo", ["wavecrash"])]  # fmt: skip
+    b.parse_request({"active": [{"moves": [{"move": "Earthquake", "id": "earthquake", "pp": 8,
+                                            "maxpp": 8, "disabled": False}]}],
+                     "side": {"name": "us", "id": "p1", "pokemon": side}, "rqid": 1})  # fmt: skip
+    for line in ["|poke|p2|Gholdengo, L100|", "|poke|p2|Zoroark-Hisui, L100|",
+                 "|poke|p2|Great Tusk, L100|", "|switch|p1a: Garchomp|Garchomp|400/400",
+                 "|switch|p2a: Gholdengo|Gholdengo|60/100", "|turn|1"]:  # fmt: skip
+        b.parse_message(line.split("|"))
+    ids = [build_state(b, belief, ("Garchomp", "Dondozo"), random.Random(k), fixes=3)
+           for k in range(300)]  # fmt: skip
+    act = [s.side_two.pokemon[int(s.side_two.active_index)] for s in ids]
+    z = [p for p in act if p.id.startswith("zoroark")]
+    assert 0.2 < len(z) / len(act) < 0.47  # one in three alive
+    assert all(abs(p.hp / p.maxhp - 0.6) < 0.02 for p in z)
+    s2 = build_state(b, belief, ("Garchomp", "Dondozo"), random.Random(0), fixes=2)
+    assert s2.side_two.pokemon[int(s2.side_two.active_index)].id == "gholdengo"

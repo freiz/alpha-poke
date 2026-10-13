@@ -482,6 +482,32 @@ def _transform_target(battle, team: dict, mon, other: dict) -> int | None:
     return None
 
 
+def _with(p: pe.Pokemon, **kw) -> pe.Pokemon:
+    """A copy of ``p`` with ``kw`` changed (pe.Pokemon is immutable)."""
+    keys = ("id", "level", "types", "base_types", "hp", "maxhp", "ability", "base_ability",
+            "item", "attack", "defense", "special_attack", "special_defense", "speed", "status",
+            "weight_kg", "moves", "terastallized", "tera_type", "rest_turns",
+            "sleep_turns")  # fmt: skip
+    return pe.Pokemon(**({k: getattr(p, k) for k in keys} | kw))
+
+
+def _illusion(theirs: list, opp_active, revealed: dict, rng: random.Random) -> int | None:
+    """The index in ``theirs`` of an opponent's Zoroark that may be the active in disguise
+    (Illusion; design D17 G, 2026-10-13): in the team (preview), never seen (not among the
+    revealed mons), alive, the active not a Zoroark; this world draws it with probability one
+    over the alive mons (each switch-in as likely). None otherwise (no random draw: the worlds
+    of battles without one are as before)."""
+    if opp_active is None or to_id(opp_active.species).startswith("zoroark"):
+        return None
+    shown = set(revealed.values())
+    zi = next((i for i, m in enumerate(theirs) if to_id(m.species).startswith("zoroark")
+               and m not in shown and not m.fainted), None)  # fmt: skip
+    if zi is None:
+        return None
+    alive = sum(1 for m in theirs if not m.fainted)
+    return zi if rng.random() < 1 / max(alive, 1) else None
+
+
 def _as_transformed(p: pe.Pokemon, target: pe.Pokemon, moves: list) -> pe.Pokemon:
     """``p`` transformed into ``target`` (Showdown's transformInto): the target's species, types,
     ability, stats except HP, weight and ``moves``; its own HP, level, item, status, tera and
@@ -638,6 +664,12 @@ def build_state(
                   for m, st in zip(theirs, their_sets, strict=True)]  # fmt: skip
     their_idx = next((i for i, m in enumerate(theirs) if m is opp_active), 0)
     our_active_idx = next((i for i, m in enumerate(ours) if m is active), None)
+    zi = _illusion(theirs, opp_active, battle.opponent_team, rng) if f3 else None
+    if zi is not None:  # the active is the Zoroark: what is shown (HP fraction, status) is its
+        z = their_mons[zi]
+        their_mons[zi] = _with(z, hp=max(1, round(opp_active.current_hp_fraction * z.maxhp)),
+                               status=STATUS.get(opp_active.status, "none"))  # fmt: skip
+        their_idx = zi
     transformed = any(m is not None and m.transformed for m in (active, opp_active))
     if f2 and spectator is None and transformed:  # a transformed active (D17 J; 2026-10-13)
         their_keys = [next((k for k, v in battle.opponent_team.items() if v is m), None)
