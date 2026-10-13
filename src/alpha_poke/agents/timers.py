@@ -19,6 +19,8 @@ sides, in poke-engine's own units (rust/patches/poke-engine-0.0.48, generate_ins
   encore      encored moves used; ends after the third
   yawn        ends of turn since the Yawn (sleep at the second)
   disabled    the active's move Disable blocks (-start Disable <move>; until -end)
+  recharge    the active must recharge this turn (-mustrecharge; cleared by its "cant recharge",
+              a move or a switch: poke-env keeps its flag until the next move)
   healblock / throatchop / magnetrise
               ends of turn since the start (2026-10-13; the patched engine ends them: Psychic
               Noise's Heal Block 2, Throat Chop 2, Magnet Rise 5)
@@ -55,6 +57,7 @@ class SideTimers:
     throatchop: int | None = None
     magnetrise: int | None = None
     sub_hit: bool = False
+    recharge: bool = False
     just_moved: str = ""  # species id of this side's mon that made the last move
     # what this side set: "weather" / "terrain" -> (its id, the setter's species id); a screen
     # id (reflect, lightscreen, auroraveil) -> the setter's species id
@@ -69,7 +72,7 @@ class SideTimers:
         self.protected = False
         self.confusion = self.taunt = self.encore = self.yawn = None
         self.disabled = self.healblock = self.throatchop = self.magnetrise = None
-        self.sub_hit = False
+        self.sub_hit = self.recharge = False
 
     def rest_sleep(self, species: str) -> tuple[int, int]:
         """(rest_turns, sleep_turns) of an asleep mon."""
@@ -147,7 +150,11 @@ def _feed(sides: dict, p: list[str]) -> None:
     elif tag == "faint":
         st.status.pop(sp, None)
         st.sleep.pop(sp, None)
+    elif tag == "-mustrecharge":
+        st.recharge = True
     elif tag == "cant" and len(p) > 3:
+        if p[3] == "recharge":
+            st.recharge = False
         if p[3] == "slp" and sp in st.sleep:
             st.sleep[sp][0] += 1
         if st.taunt is not None:
@@ -155,6 +162,7 @@ def _feed(sides: dict, p: list[str]) -> None:
     elif tag == "move" and len(p) > 3:
         mv = to_id(p[3])
         st.just_moved = sp
+        st.recharge = False
         sides["p2" if p[2][:2] == "p1" else "p1"].just_moved = ""
         called = any(x.startswith("[from]") for x in p[4:])
         if not called:
@@ -197,16 +205,8 @@ def _feed(sides: dict, p: list[str]) -> None:
         st.setters[to_id(p[3].replace("move: ", ""))] = st.just_moved
     elif tag == "-end" and len(p) > 3:
         what = to_id(p[3].replace("move: ", ""))
-        if what in (
-            "confusion",
-            "taunt",
-            "encore",
-            "yawn",
-            "disabled",
-            "healblock",
-            "throatchop",
-            "magnetrise",
-        ):
+        if what in ("confusion", "taunt", "encore", "yawn", "healblock", "throatchop",
+                    "magnetrise"):  # fmt: skip
             setattr(st, what, None)
         elif what == "disable":
             st.disabled = None

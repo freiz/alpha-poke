@@ -72,7 +72,7 @@ BOOSTS |= {getattr(Effect, n): n.replace("_", "").lower() for n in (
     "FOCUS_ENERGY", "SMACK_DOWN", "ATTRACT", "NO_RETREAT", "TAR_SHOT", "AQUA_RING", "INGRAIN",
     "GLAIVE_RUSH", "OCTOLOCK", "TORMENT", "GASTRO_ACID", "SYRUP_BOMB")}  # fmt: skip
 _MOVES = GEN.moves
-PERISH = {getattr(Effect, f"PERISH{n}"): f"perish{n}" for n in (1, 2, 3)}
+PERISH = {getattr(Effect, f"PERISH{n}"): n for n in (1, 2, 3)}
 SCREENS = {"reflect", "lightscreen", "auroraveil"}
 # the weather (its -weather id) / terrain an item extends to 8 turns
 EXTENDERS = {"sunnyday": "heatrock", "raindance": "damprock", "sandstorm": "smoothrock",
@@ -419,11 +419,13 @@ def _our_mon(
 
 
 def _pp(mon, mid: str) -> int:
-    """The PP of an opponent's move: poke-env counts its uses (Pressure included) of a revealed
-    move; an unrevealed one has its maximum (PP Ups)."""
+    """The PP of an opponent's move: poke-env counts its uses (Pressure included; not the turns
+    of a locked move) of a revealed move; an unrevealed one has its maximum (PP Ups)."""
     mv = mon.moves.get(mid)
     if mv is not None:
-        return max(0, mv.current_pp)
+        # poke-env also counts a move Sleep Talk calls (it costs no PP): a Sleep Talk user's
+        # moves keep at least 1
+        return max(1 if "sleeptalk" in mon.moves else 0, mv.current_pp)
     return Move(mid, gen=9).max_pp if mid in _MOVES else 16
 
 
@@ -696,12 +698,16 @@ def build_state(
         for mon, vol in ((active, our_vol), (opp_active, their_vol)):
             vol |= {BOOSTS[e] for e in (mon.effects if mon is not None else ()) if e in BOOSTS}
     if f3:  # must recharge (the engine offers no move), Perish Song's count
-        for mon, vol in ((active, our_vol), (opp_active, their_vol)):
+        for mon, vol, tm in ((active, our_vol, tm_us), (opp_active, their_vol, tm_them)):
             if mon is None:
                 continue
-            if mon.must_recharge:
+            if tm.recharge:  # (not poke-env's must_recharge: it outlives the recharge turn)
                 vol.add("mustrecharge")
-            vol |= {PERISH[e] for e in mon.effects if e in PERISH}
+            # Showdown starts perish3, perish2, ... without ending the previous count: poke-env
+            # keeps them all, the lowest is current
+            counts = [n for e, n in PERISH.items() if e in mon.effects]
+            if counts:
+                vol.add(f"perish{min(counts)}")
     # the items of the mons that set a screen / the weather / the terrain (ours known, theirs
     # this world's sample): an extending item makes it 8 turns
     items = {("us", to_id(m.species)): (m.item or "") for m in ours} if spectator is None else {}

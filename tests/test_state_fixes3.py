@@ -141,3 +141,21 @@ def test_illusion_worlds(belief):
     assert all(abs(p.hp / p.maxhp - 0.6) < 0.02 for p in z)
     s2 = build_state(b, belief, ("Garchomp", "Dondozo"), random.Random(0), fixes=2)
     assert s2.side_two.pokemon[int(s2.side_two.active_index)].id == "gholdengo"
+
+
+def test_recharge_ends_after_the_recharge_turn(belief):
+    # poke-env keeps must_recharge until the next move: the turn after recharging is free
+    b = battle(["|move|p2a: Gholdengo|Hyper Beam|p1a: Garchomp", "|-mustrecharge|p2a: Gholdengo",
+                "|turn|2", "|cant|p2a: Gholdengo|recharge", "|turn|3"])  # fmt: skip
+    assert b.opponent_active_pokemon.must_recharge  # (poke-env's stale flag)
+    assert "mustrecharge" not in state(b, belief).side_two.volatile_statuses
+    b = battle(["|move|p2a: Gholdengo|Hyper Beam|p1a: Garchomp", "|-mustrecharge|p2a: Gholdengo",
+                "|turn|2"])  # fmt: skip
+    assert "mustrecharge" in state(b, belief).side_two.volatile_statuses
+
+
+def test_perish_count_is_the_latest(belief):
+    b = battle(["|-start|p2a: Gholdengo|perish3", "|turn|2", "|-start|p2a: Gholdengo|perish2",
+                "|turn|3"])  # fmt: skip
+    vol = state(b, belief).side_two.volatile_statuses
+    assert "perish2" in vol and "perish3" not in vol
