@@ -72,6 +72,11 @@ BOOSTS |= {getattr(Effect, n): n.replace("_", "").lower() for n in (
     "FOCUS_ENERGY", "SMACK_DOWN", "ATTRACT", "NO_RETREAT", "TAR_SHOT", "AQUA_RING", "INGRAIN",
     "GLAIVE_RUSH", "OCTOLOCK", "TORMENT", "GASTRO_ACID", "SYRUP_BOMB")}  # fmt: skip
 _MOVES = GEN.moves
+PERISH = {getattr(Effect, f"PERISH{n}"): f"perish{n}" for n in (1, 2, 3)}
+SCREENS = {"reflect", "lightscreen", "auroraveil"}
+# the weather (its -weather id) / terrain an item extends to 8 turns
+EXTENDERS = {"sunnyday": "heatrock", "raindance": "damprock", "sandstorm": "smoothrock",
+             "snow": "icyrock", "snowscape": "icyrock", "hail": "icyrock"}  # fmt: skip
 
 
 def _types(mon) -> tuple[str, str]:
@@ -292,7 +297,10 @@ def _boosts(mon) -> dict:
     }
 
 
-def _side_conditions(sc: dict, turn: int, toxic: int = 0, protect: int = 0) -> pe.SideConditions:
+def _side_conditions(sc: dict, turn: int, toxic: int = 0, protect: int = 0,
+                     clay: frozenset = frozenset()) -> pe.SideConditions:  # fmt: skip
+    """``clay``: the screens (reflect, lightscreen, auroraveil) set by a Light Clay holder: 8
+    turns."""
     return pe.SideConditions(
         toxic_count=toxic,
         protect=protect,
@@ -300,16 +308,16 @@ def _side_conditions(sc: dict, turn: int, toxic: int = 0, protect: int = 0) -> p
         toxic_spikes=sc.get(SideCondition.TOXIC_SPIKES, 0),
         stealth_rock=int(SideCondition.STEALTH_ROCK in sc),
         sticky_web=int(SideCondition.STICKY_WEB in sc),
-        reflect=_remaining(sc.get(SideCondition.REFLECT), turn)
+        reflect=_remaining(sc.get(SideCondition.REFLECT), turn, 8 if "reflect" in clay else 5)
         if SideCondition.REFLECT in sc
         else 0,
         light_screen=(
-            _remaining(sc.get(SideCondition.LIGHT_SCREEN), turn)
+            _remaining(sc.get(SideCondition.LIGHT_SCREEN), turn, 8 if "lightscreen" in clay else 5)
             if SideCondition.LIGHT_SCREEN in sc
             else 0
         ),
         aurora_veil=(
-            _remaining(sc.get(SideCondition.AURORA_VEIL), turn)
+            _remaining(sc.get(SideCondition.AURORA_VEIL), turn, 8 if "auroraveil" in clay else 5)
             if SideCondition.AURORA_VEIL in sc
             else 0
         ),
@@ -330,11 +338,17 @@ def _volatiles(mon) -> set[str]:
 PATCHED_ITEMS = {"ejectbutton", "redcard"}
 
 
+FIX_MAX = 3  # the current level (True)
+
+
 def fix_level(fixes) -> int:
     """build_state's ``fixes`` as a level (design D17): 0 none; 1 the first batch (turn counters,
-    gone items, boosts / volatiles, Future Sight); 2 every fix (+ the request's PP, Eject Button /
-    Red Card, the opponent's speed, Revival Blessing's choice). True = 2, False = 0."""
-    return 2 if fixes is True else 0 if fixes is False else int(fixes)
+    gone items, boosts / volatiles, Future Sight); 2 (+ the request's PP, Eject Button / Red Card,
+    the opponent's speed, Revival Blessing's choice, Transform); 3 (2026-10-13: + must recharge,
+    the opponent's PP from its uses, Perish Song, the move Disable blocks, Heal Block / Throat
+    Chop / Magnet Rise durations, a hit Substitute's HP, screens / weather / terrain extended
+    by their items). True = FIX_MAX, False = 0."""
+    return FIX_MAX if fixes is True else 0 if fixes is False else int(fixes)
 
 
 def _item(item: str, fixes: bool) -> str:
@@ -398,7 +412,19 @@ def _our_mon(
     )
 
 
-def _their_mon(mon, s: SampledSet, tm: SideTimers | None = None, fixes: bool = True) -> pe.Pokemon:
+def _pp(mon, mid: str) -> int:
+    """The PP of an opponent's move: poke-env counts its uses (Pressure included) of a revealed
+    move; an unrevealed one has its maximum (PP Ups)."""
+    mv = mon.moves.get(mid)
+    if mv is not None:
+        return max(0, mv.current_pp)
+    return Move(mid, gen=9).max_pp if mid in _MOVES else 16
+
+
+def _their_mon(mon, s: SampledSet, tm: SideTimers | None = None, fixes: bool = True,
+               fix3: bool = False, disabled: str | None = None) -> pe.Pokemon:  # fmt: skip
+    """``fix3``: the moves' PP from their uses (else 16 each); ``disabled``: the move Disable
+    blocks."""
     maxhp = s.stats["hp"]
     if mon.fainted:
         hp = 0
@@ -425,7 +451,10 @@ def _their_mon(mon, s: SampledSet, tm: SideTimers | None = None, fixes: bool = T
         speed=s.stats["spe"],
         status=STATUS.get(mon.status, "none"),
         weight_kg=float(mon.weight or 0.0),
-        moves=[pe.Move(id=m, pp=16) for m in s.moves[:4]],
+        moves=[
+            pe.Move(id=m, pp=_pp(mon, m) if fix3 else 16, disabled=m == disabled)
+            for m in s.moves[:4]
+        ],
         terastallized=mon.is_terastallized,
         tera_type=s.tera,
         **_sleep(mon, tm),
@@ -543,7 +572,7 @@ def build_state(
     active = battle.active_pokemon
     role = battle.player_role or "p1"
     lvl = fix_level(fixes)
-    f1, f2 = lvl >= 1, lvl >= 2
+    f1, f2, f3 = lvl >= 1, lvl >= 2, lvl >= 3
     # turn counters from the log (timers.py); off: every counter 0, as before 2026-10-11 (A/B)
     tms = battle_timers(battle) if f1 else {"p1": SideTimers(), "p2": SideTimers()}
     tm_us, tm_them = tms[role], tms["p2" if role == "p1" else "p1"]
@@ -591,16 +620,12 @@ def build_state(
 
     # the opponent's speed: usage spreads consistent with the observed move order (with fixes)
     obs = battle_observations(battle) if f2 and spectator is None else None
-    their_mons = [
-        _their_mon(
-            m,
-            sample_set(belief, m, team_names, rng, move_beta, gone_items=f1,
-                       speed_obs=None if obs is None else obs.get(to_id(m.species), [])),
-            tm_them,
-            f2,
-        )
-        for m in theirs
-    ]  # fmt: skip
+    their_sets = [sample_set(belief, m, team_names, rng, move_beta, gone_items=f1,
+                             speed_obs=None if obs is None else obs.get(to_id(m.species), []))
+                  for m in theirs]  # fmt: skip
+    their_mons = [_their_mon(m, st, tm_them, f2, f3,
+                             tm_them.disabled if f3 and m is opp_active else None)
+                  for m, st in zip(theirs, their_sets, strict=True)]  # fmt: skip
     their_idx = next((i for i, m in enumerate(theirs) if m is opp_active), 0)
     our_active_idx = next((i for i, m in enumerate(ours) if m is active), None)
     transformed = any(m is not None and m.transformed for m in (active, opp_active))
@@ -628,11 +653,40 @@ def build_state(
     if f1:  # the actives' Protosynthesis / Quark Drive boosts and other volatiles (BOOSTS)
         for mon, vol in ((active, our_vol), (opp_active, their_vol)):
             vol |= {BOOSTS[e] for e in (mon.effects if mon is not None else ()) if e in BOOSTS}
+    if f3:  # must recharge (the engine offers no move), Perish Song's count
+        for mon, vol in ((active, our_vol), (opp_active, their_vol)):
+            if mon is None:
+                continue
+            if mon.must_recharge:
+                vol.add("mustrecharge")
+            vol |= {PERISH[e] for e in mon.effects if e in PERISH}
+    # the items of the mons that set a screen / the weather / the terrain (ours known, theirs
+    # this world's sample): an extending item makes it 8 turns
+    items = {("us", to_id(m.species)): (m.item or "") for m in ours} if spectator is None else {}
+    items |= {("them", to_id(m.species)): st.item for m, st in zip(theirs, their_sets, strict=True)}
+    clay_us, clay_them, ext = frozenset(), frozenset(), {}
+    if f3:
+        clay_us, clay_them = (
+            frozenset(k for k, sp in tm.setters.items()
+                      if k in SCREENS and items.get((who, sp)) == "lightclay")
+            for who, tm in (("us", tm_us), ("them", tm_them))
+        )  # fmt: skip
+        for who, tm in (("us", tm_us), ("them", tm_them)):
+            for kind in ("weather", "terrain"):
+                if kind in tm.setters:
+                    what, sp = tm.setters[kind]
+                    item = items.get((who, sp), "")
+                    if EXTENDERS.get(what) == item or (
+                        kind == "terrain" and item == "terrainextender"
+                    ):
+                        ext[kind] = 8
 
     side_one = pe.Side(
         pokemon=_pad(our_mons),
         active_index=pe.PokemonIndex(str(our_idx)),
-        side_conditions=_side_conditions(battle.side_conditions, turn, *_counts(tm_us, active)),
+        side_conditions=_side_conditions(
+            battle.side_conditions, turn, *_counts(tm_us, active), clay_us
+        ),
         volatile_statuses=our_vol,
         **_timed(tm_us, active, ours, our_mons, our_vol),
         substitute_health=(
@@ -641,6 +695,7 @@ def build_state(
                 if spectator is None
                 else our_mons[our_active_idx].maxhp // 4
             )
+            // (2 if f3 and tm_us.sub_hit else 1)  # a hit Substitute: about half left
             if active is not None
             and Effect.SUBSTITUTE in active.effects
             and our_active_idx is not None
@@ -654,12 +709,12 @@ def build_state(
         pokemon=_pad(their_mons),
         active_index=pe.PokemonIndex(str(their_idx)),
         side_conditions=_side_conditions(
-            battle.opponent_side_conditions, turn, *_counts(tm_them, opp_active)
+            battle.opponent_side_conditions, turn, *_counts(tm_them, opp_active), clay_them
         ),
         volatile_statuses=their_vol,
         **_timed(tm_them, opp_active, theirs, their_mons, their_vol),
         substitute_health=(
-            their_mons[their_idx].maxhp // 4
+            their_mons[their_idx].maxhp // 4 // (2 if f3 and tm_them.sub_hit else 1)
             if opp_active is not None and Effect.SUBSTITUTE in opp_active.effects
             else 0
         ),
@@ -669,12 +724,12 @@ def build_state(
     weather, wturns = "none", 0
     if battle.weather:
         w, start = next(iter(battle.weather.items()))
-        weather, wturns = WEATHER.get(w, "none"), _remaining(start, turn)
+        weather, wturns = WEATHER.get(w, "none"), _remaining(start, turn, ext.get("weather", 5))
     terrain, tturns = "none", 0
     trick_room, trturns = False, 0
     for f, start in battle.fields.items():
         if f in TERRAIN:
-            terrain, tturns = TERRAIN[f], _remaining(start, turn)
+            terrain, tturns = TERRAIN[f], _remaining(start, turn, ext.get("terrain", 5))
         if f == Field.TRICK_ROOM:
             trick_room, trturns = True, _remaining(start, turn)
     return pe.State(

@@ -49,8 +49,8 @@ VARIANTS: dict[str, tuple[str, dict]] = {
                 # ALPHA_SEARCH_ITERATIONS
                 "iters": os.environ.get(f"ALPHA_SEARCH_ITERATIONS_{x.upper()}"),
                 # ALPHA_STATE_FIXES_A / _B: the engine-state fix level (engine_state.fix_level:
-                # 0 as before 2026-10-11, 1 the first batch, 2 all; A/B tests)
-                "fixes": int(os.environ.get(f"ALPHA_STATE_FIXES_{x.upper()}", "2")),
+                # 0 as before 2026-10-11, 1 the first batch, 2 the second, 3 all; A/B tests)
+                "fixes": int(os.environ.get(f"ALPHA_STATE_FIXES_{x.upper()}", "3")),
             },
         )
         for x in ("a", "b")

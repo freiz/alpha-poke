@@ -18,6 +18,13 @@ sides, in poke-engine's own units (rust/patches/poke-engine-0.0.48, generate_ins
   taunt       move attempts (move / cant) since the Taunt; ends at the third
   encore      encored moves used; ends after the third
   yawn        ends of turn since the Yawn (sleep at the second)
+  disabled    the active's move Disable blocks (-start Disable <move>; until -end)
+  healblock / throatchop / magnetrise
+              ends of turn since the start (2026-10-13; the patched engine ends them: Psychic
+              Noise's Heal Block 2, Throat Chop 2, Magnet Rise 5)
+  sub_hit     the active's Substitute took a hit and stands (its HP below a quarter)
+  setters     who set the weather / terrain / a side's screens: (side, species id), for an
+              extending item (Light Clay, Heat Rock, ...: 8 turns)
 
 Without them every search started from "just happened": a Rest sleeper about to wake stayed
 asleep, toxic did 1/16 at any stage, a second Protect always worked, a pending Wish never
@@ -43,6 +50,15 @@ class SideTimers:
     taunt: int | None = None
     encore: int | None = None
     yawn: int | None = None
+    disabled: str | None = None  # move id
+    healblock: int | None = None
+    throatchop: int | None = None
+    magnetrise: int | None = None
+    sub_hit: bool = False
+    just_moved: str = ""  # species id of this side's mon that made the last move
+    # what this side set: "weather" / "terrain" -> (its id, the setter's species id); a screen
+    # id (reflect, lightscreen, auroraveil) -> the setter's species id
+    setters: dict = field(default_factory=dict)
     status: dict = field(default_factory=dict)  # species id -> status ('tox', 'slp', ...)
     sleep: dict = field(default_factory=dict)  # species id -> [attempts, rest]
     names: dict = field(default_factory=dict)  # nickname -> species id
@@ -52,6 +68,8 @@ class SideTimers:
         self.toxic = self.protect = 0
         self.protected = False
         self.confusion = self.taunt = self.encore = self.yawn = None
+        self.disabled = self.healblock = self.throatchop = self.magnetrise = None
+        self.sub_hit = False
 
     def rest_sleep(self, species: str) -> tuple[int, int]:
         """(rest_turns, sleep_turns) of an asleep mon."""
@@ -85,6 +103,14 @@ def _feed(sides: dict, p: list[str]) -> None:
                 st.future = (st.future[0] - 1, st.future[1]) if st.future[0] > 1 else None
             if st.yawn is not None:
                 st.yawn += 1
+            for k in ("healblock", "throatchop", "magnetrise"):
+                if getattr(st, k) is not None:
+                    setattr(st, k, getattr(st, k) + 1)
+        return
+    if tag in ("-weather", "-fieldstart") and len(p) > 2 and "[upkeep]" not in p:
+        what = to_id(p[2].replace("move: ", ""))
+        if tag == "-weather" or what.endswith("terrain"):
+            _set_by(sides, p, "weather" if tag == "-weather" else "terrain", what)
         return
     st, sp = _who(p, sides)
     if st is None:
@@ -128,6 +154,8 @@ def _feed(sides: dict, p: list[str]) -> None:
             st.taunt += 1
     elif tag == "move" and len(p) > 3:
         mv = to_id(p[3])
+        st.just_moved = sp
+        sides["p2" if p[2][:2] == "p1" else "p1"].just_moved = ""
         called = any(x.startswith("[from]") for x in p[4:])
         if not called:
             if st.taunt is not None:
@@ -153,15 +181,54 @@ def _feed(sides: dict, p: list[str]) -> None:
             st.yawn = 0
         elif what == "futuresight":  # by the user: its side's attack is pending
             st.future = (3, sp)
+        elif what == "disable" and len(p) > 4:
+            st.disabled = to_id(p[4].replace("move: ", ""))
+        elif what in ("healblock", "throatchop", "magnetrise"):
+            setattr(st, what, 0)
+        elif what == "substitute":
+            st.sub_hit = False
     elif tag == "-activate" and len(p) > 3 and to_id(p[3]) == "confusion":
         if st.confusion is not None:
             st.confusion += 1
+    elif tag == "-activate" and len(p) > 4 and to_id(p[3].replace("move: ", "")) == "substitute":
+        if p[4] == "[damage]":
+            st.sub_hit = True
+    elif tag == "-sidestart" and len(p) > 3:
+        st.setters[to_id(p[3].replace("move: ", ""))] = st.just_moved
     elif tag == "-end" and len(p) > 3:
         what = to_id(p[3].replace("move: ", ""))
-        if what in ("confusion", "taunt", "encore", "yawn"):
+        if what in (
+            "confusion",
+            "taunt",
+            "encore",
+            "yawn",
+            "disabled",
+            "healblock",
+            "throatchop",
+            "magnetrise",
+        ):
             setattr(st, what, None)
+        elif what == "disable":
+            st.disabled = None
+        elif what == "substitute":
+            st.sub_hit = False
         elif what == "futuresight":  # on the target: the other side's attack landed
             sides["p2" if p[2][:2] == "p1" else "p1"].future = None
+
+
+def _set_by(sides: dict, p: list[str], kind: str, what: str) -> None:
+    """The setter of a weather / terrain (``kind``): the mon of ``[of] <ident>`` (an ability),
+    else the mon that just moved; kept in its side's ``setters`` (the other side's dropped)."""
+    of = next((x[5:] for x in p[3:] if x.startswith("[of] ")), None)
+    for st in sides.values():
+        st.setters.pop(kind, None)
+    if of is not None:
+        st, sp = _who(["", "", of], sides)
+    else:
+        st, sp = next(((st, st.just_moved) for st in sides.values() if st.just_moved),
+                      (None, ""))  # fmt: skip
+    if st is not None and what != "none":
+        st.setters[kind] = (what, sp)
 
 
 def timers(lines: list[list[str]]) -> dict[str, SideTimers]:

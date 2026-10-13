@@ -42,7 +42,7 @@ class SelfPlayPlayer(SearchPlayer):
                  fast_iters: int = 600, fast_worlds: int = 16,
                  noise: tuple[float, float] = (0.1, 10.0), turn_cap: int = 300, seed: int = 0,
                  greedy: bool = False, record: bool = True, temp_turns: int = 8,
-                 temp_late: float = 0.25, children: int = 0, state_fixes: int = 2,
+                 temp_late: float = 0.25, children: int = 0, state_fixes: int = 3,
                  policy_only: bool = False, **kwargs):  # fmt: skip
         super().__init__(*args, **kwargs)
         assert self.model_transformer and batcher is not None
