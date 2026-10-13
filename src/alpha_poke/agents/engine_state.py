@@ -517,7 +517,8 @@ def _counts(tm: SideTimers, active) -> tuple[int, int]:
     return toxic, tm.protect
 
 
-def _timed(tm: SideTimers, active, mons: list, engine_mons: list, vol: set[str]) -> dict:
+def _timed(tm: SideTimers, active, mons: list, engine_mons: list, vol: set[str],
+           fix3: bool = False) -> dict:  # fmt: skip
     """pe.Side kwargs: the pending Wish (turns, half the wisher's max HP), the pending Future
     Sight (turns, its user's slot) and the active's
     volatile durations (only of volatiles it has; clamped to what the engine accepts)."""
@@ -532,7 +533,10 @@ def _timed(tm: SideTimers, active, mons: list, engine_mons: list, vol: set[str])
         if idx is not None:
             out["future_sight"] = (tm.future[0], pe.PokemonIndex(str(idx)))
     dur = {}
-    for name, top in (("confusion", 4), ("taunt", 2), ("encore", 2), ("yawn", 1)):
+    tops = [("confusion", 4), ("taunt", 2), ("encore", 2), ("yawn", 1)]
+    if fix3:  # the patched engine ends them (2026-10-13)
+        tops += [("healblock", 1), ("magnetrise", 4)]
+    for name, top in tops:
         n = getattr(tm, name)
         if name in vol and n:
             dur[name] = min(n, top)
@@ -688,7 +692,7 @@ def build_state(
             battle.side_conditions, turn, *_counts(tm_us, active), clay_us
         ),
         volatile_statuses=our_vol,
-        **_timed(tm_us, active, ours, our_mons, our_vol),
+        **_timed(tm_us, active, ours, our_mons, our_vol, f3),
         substitute_health=(
             (
                 int((active.max_hp or 4) // 4)
@@ -712,7 +716,7 @@ def build_state(
             battle.opponent_side_conditions, turn, *_counts(tm_them, opp_active), clay_them
         ),
         volatile_statuses=their_vol,
-        **_timed(tm_them, opp_active, theirs, their_mons, their_vol),
+        **_timed(tm_them, opp_active, theirs, their_mons, their_vol, f3),
         substitute_health=(
             their_mons[their_idx].maxhp // 4 // (2 if f3 and tm_them.sub_hit else 1)
             if opp_active is not None and Effect.SUBSTITUTE in opp_active.effects

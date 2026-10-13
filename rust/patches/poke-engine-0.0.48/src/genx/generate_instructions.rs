@@ -3429,6 +3429,56 @@ fn add_end_of_turn_instructions(
             }
         }
 
+        // alpha-poke patch (2026-10-13): Heal Block (Psychic Noise: 2 turns) and Magnet Rise (5)
+        // end; before, they lasted until a switch
+        for (volatile, limit) in [
+            (PokemonVolatileStatus::HEALBLOCK, 2),
+            (PokemonVolatileStatus::MAGNETRISE, 5),
+        ] {
+            if !side.volatile_statuses.contains(&volatile) {
+                continue;
+            }
+            let duration = match volatile {
+                PokemonVolatileStatus::HEALBLOCK => &mut side.volatile_status_durations.healblock,
+                _ => &mut side.volatile_status_durations.magnetrise,
+            };
+            if *duration + 1 >= limit {
+                let amount = -*duration;
+                *duration = 0;
+                side.volatile_statuses.remove(&volatile);
+                incoming_instructions
+                    .instruction_list
+                    .push(Instruction::RemoveVolatileStatus(
+                        RemoveVolatileStatusInstruction {
+                            side_ref: *side_ref,
+                            volatile_status: volatile,
+                        },
+                    ));
+                if amount != 0 {
+                    incoming_instructions.instruction_list.push(
+                        Instruction::ChangeVolatileStatusDuration(
+                            ChangeVolatileStatusDurationInstruction {
+                                side_ref: *side_ref,
+                                volatile_status: volatile,
+                                amount,
+                            },
+                        ),
+                    );
+                }
+            } else {
+                *duration += 1;
+                incoming_instructions.instruction_list.push(
+                    Instruction::ChangeVolatileStatusDuration(
+                        ChangeVolatileStatusDurationInstruction {
+                            side_ref: *side_ref,
+                            volatile_status: volatile,
+                            amount: 1,
+                        },
+                    ),
+                );
+            }
+        }
+
         if side
             .volatile_statuses
             .contains(&PokemonVolatileStatus::PERISH1)

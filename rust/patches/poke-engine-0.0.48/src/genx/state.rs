@@ -1432,6 +1432,29 @@ impl State {
                     side.volatile_status_durations.taunt = 0;
                     false
                 }
+                // alpha-poke patch (2026-10-13): their turn counts end with them
+                PokemonVolatileStatus::HEALBLOCK => {
+                    instructions.push(Instruction::ChangeVolatileStatusDuration(
+                        ChangeVolatileStatusDurationInstruction {
+                            side_ref: *side_ref,
+                            volatile_status: *pkmn_volatile_status,
+                            amount: -1 * side.volatile_status_durations.healblock,
+                        },
+                    ));
+                    side.volatile_status_durations.healblock = 0;
+                    false
+                }
+                PokemonVolatileStatus::MAGNETRISE => {
+                    instructions.push(Instruction::ChangeVolatileStatusDuration(
+                        ChangeVolatileStatusDurationInstruction {
+                            side_ref: *side_ref,
+                            volatile_status: *pkmn_volatile_status,
+                            amount: -1 * side.volatile_status_durations.magnetrise,
+                        },
+                    ));
+                    side.volatile_status_durations.magnetrise = 0;
+                    false
+                }
                 _ => false,
             };
 

@@ -18,6 +18,10 @@ class VolatileStatusDurations:
     :type taunt: int
     :param yawn: Yawn turns remaining
     :type yawn: int
+    :param healblock: Heal Block: ends of turn since it started (alpha-poke patch; ends at 2)
+    :type healblock: int
+    :param magnetrise: Magnet Rise: ends of turn since it started (alpha-poke patch; ends at 5)
+    :type magnetrise: int
     """
 
     confusion: int
@@ -26,6 +30,8 @@ class VolatileStatusDurations:
     slowstart: int
     taunt: int
     yawn: int
+    healblock: int
+    magnetrise: int
 
     def __init__(
         self,
@@ -35,6 +41,8 @@ class VolatileStatusDurations:
         slowstart: int = 0,
         taunt: int = 0,
         yawn: int = 0,
+        healblock: int = 0,
+        magnetrise: int = 0,
     ) -> None: ...
 
 class SideConditions:

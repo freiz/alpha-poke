@@ -791,6 +791,10 @@ pub struct VolatileStatusDurations {
     pub slowstart: i8,
     pub taunt: i8,
     pub yawn: i8,
+    // alpha-poke patch (2026-10-13): ends of turn since the start (Heal Block: Psychic Noise's
+    // 2 turns; Magnet Rise: 5); the volatile ends at the limit (generate_instructions)
+    pub healblock: i8,
+    pub magnetrise: i8,
 }
 
 impl Default for VolatileStatusDurations {
@@ -802,6 +806,8 @@ impl Default for VolatileStatusDurations {
             slowstart: 0,
             taunt: 0,
             yawn: 0,
+            healblock: 0,
+            magnetrise: 0,
         }
     }
 }
@@ -815,6 +821,8 @@ impl VolatileStatusDurations {
             ("slowstart", self.slowstart),
             ("taunt", self.taunt),
             ("yawn", self.yawn),
+            ("healblock", self.healblock),
+            ("magnetrise", self.magnetrise),
         ];
 
         let mut output = String::new();
@@ -831,8 +839,15 @@ impl VolatileStatusDurations {
 
     pub fn serialize(&self) -> String {
         format!(
-            "{};{};{};{};{};{}",
-            self.confusion, self.encore, self.lockedmove, self.slowstart, self.taunt, self.yawn
+            "{};{};{};{};{};{};{};{}",
+            self.confusion,
+            self.encore,
+            self.lockedmove,
+            self.slowstart,
+            self.taunt,
+            self.yawn,
+            self.healblock,
+            self.magnetrise
         )
     }
     pub fn deserialize(serialized: &str) -> VolatileStatusDurations {
@@ -844,6 +859,9 @@ impl VolatileStatusDurations {
             slowstart: split[3].parse::<i8>().unwrap(),
             taunt: split[4].parse::<i8>().unwrap(),
             yawn: split[5].parse::<i8>().unwrap(),
+            // alpha-poke patch: older strings have six fields
+            healblock: split.get(6).map_or(0, |x| x.parse::<i8>().unwrap()),
+            magnetrise: split.get(7).map_or(0, |x| x.parse::<i8>().unwrap()),
         }
     }
 }
@@ -1631,6 +1649,12 @@ impl State {
             }
             PokemonVolatileStatus::YAWN => {
                 side.volatile_status_durations.yawn += amount;
+            }
+            PokemonVolatileStatus::HEALBLOCK => {
+                side.volatile_status_durations.healblock += amount;
+            }
+            PokemonVolatileStatus::MAGNETRISE => {
+                side.volatile_status_durations.magnetrise += amount;
             }
             _ => panic!(
                 "Invalid volatile status for increment_volatile_status_duration: {:?}",

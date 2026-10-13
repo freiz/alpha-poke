@@ -51,3 +51,30 @@ def test_network_item_ids_unchanged():
     # the patched items keep the id they had before (unknown item); the others keep theirs
     ids = alpha_search.encode_ids("item", ["ejectbutton", "redcard", "unknownitem", "leftovers"])
     assert ids[0] == ids[1] == ids[2] == 1 and ids[3] > 1
+
+
+def end_of_turn(volatile: str, **dur):
+    """The state after one turn (both use Splash) of a side-one active with ``volatile`` and
+    the given durations."""
+    s1 = pe.Side(pokemon=[mon("garchomp", moves=("splash",), spe=200), mon("dondozo")],
+                 active_index=pe.PokemonIndex("0"), volatile_statuses={volatile},
+                 volatile_status_durations=pe.VolatileStatusDurations(**dur))  # fmt: skip
+    s2 = pe.Side(pokemon=[mon("tinglu", moves=("splash",)), mon("gholdengo")],
+                 active_index=pe.PokemonIndex("0"))  # fmt: skip
+    outs = alpha_search.chance_outcomes(pe.State(side_one=s1, side_two=s2).to_string(), 0, 0)
+    assert len(outs) == 1
+    return pe.State.from_string(outs[0][1]).side_one
+
+
+def test_heal_block_ends_after_two_turns():
+    s = end_of_turn("healblock")  # applied this turn: one turn left
+    assert "HEALBLOCK" in s.volatile_statuses and s.volatile_status_durations.healblock == 1
+    s = end_of_turn("healblock", healblock=1)
+    assert "HEALBLOCK" not in s.volatile_statuses and s.volatile_status_durations.healblock == 0
+
+
+def test_magnet_rise_ends_after_five_turns():
+    s = end_of_turn("magnetrise", magnetrise=3)
+    assert "MAGNETRISE" in s.volatile_statuses and s.volatile_status_durations.magnetrise == 4
+    s = end_of_turn("magnetrise", magnetrise=4)
+    assert "MAGNETRISE" not in s.volatile_statuses
