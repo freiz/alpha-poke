@@ -222,7 +222,8 @@ pub fn item_id(item: Items) -> i32 {
         | Items::ASPEARBERRY
         | Items::PERSIMBERRY
         | Items::MENTALHERB
-        | Items::SAFETYGOGGLES => Items::UNKNOWNITEM as i32,
+        | Items::SAFETYGOGGLES
+        | Items::EJECTPACK => Items::UNKNOWNITEM as i32,
         x => x as i32,
     }
 }

@@ -338,7 +338,7 @@ def _volatiles(mon) -> set[str]:
 PATCHED_ITEMS = {"ejectbutton", "redcard"}
 # 2026-10-13 (level 3): status berries, Persim Berry, Mental Herb, Safety Goggles
 PATCHED_ITEMS_3 = {"pechaberry", "cheriberry", "rawstberry", "aspearberry", "persimberry",
-                   "mentalherb", "safetygoggles"}  # fmt: skip
+                   "mentalherb", "safetygoggles", "ejectpack"}  # fmt: skip
 
 
 FIX_MAX = 3  # the current level (True)

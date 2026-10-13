@@ -3726,6 +3726,23 @@ fn add_end_of_turn_instructions(
     } // end volatile statuses
 }
 
+// alpha-poke patch (2026-10-13): a side's stat stages (Eject Pack: lowered by a move)
+fn boosts_of(side: &Side) -> [i8; 7] {
+    [
+        side.attack_boost,
+        side.defense_boost,
+        side.special_attack_boost,
+        side.special_defense_boost,
+        side.speed_boost,
+        side.accuracy_boost,
+        side.evasion_boost,
+    ]
+}
+
+fn lowered(before: &[i8; 7], after: &[i8; 7]) -> bool {
+    before.iter().zip(after.iter()).any(|(b, a)| a < b)
+}
+
 fn run_move(
     state: &mut State,
     attacking_side: SideReference,
@@ -3738,6 +3755,14 @@ fn run_move(
     final_instructions: &mut Vec<StateInstructions>,
 ) {
     let mut hit_sub = false;
+    // alpha-poke patch (2026-10-13): before the move (Emergency Exit / Wimp Out, Eject Pack)
+    let defender_hp_before = state
+        .get_side_immutable(&attacking_side.get_other_side())
+        .get_active_immutable()
+        .hp;
+    let attacker_boosts_before = boosts_of(state.get_side_immutable(&attacking_side));
+    let defender_boosts_before =
+        boosts_of(state.get_side_immutable(&attacking_side.get_other_side()));
     for _ in 0..hit_count {
         if does_damage {
             hit_sub = generate_instructions_from_damage(
@@ -3793,26 +3818,55 @@ fn run_move(
     // (its choice, as a pivot; the attacker's own pivot does not happen; a holder that had not
     // moved does not move: generate_instructions_from_move). Red Card: the attacker is dragged
     // out (a random benched mon).
+    // alpha-poke patch (2026-10-13): Emergency Exit / Wimp Out (the defender dropped to half HP
+    // or below by this damaging move, alive) and Eject Pack (the defender's stats lowered by this
+    // move; secondary effects and Intimidate are not modeled) switch the defender out like an
+    // Eject Button, without an item for the abilities
     let defender_ref = attacking_side.get_other_side();
     let mut ejected = false;
-    if does_damage && !hit_sub && choice.category != MoveCategory::Status {
+    let damaging = does_damage && !hit_sub && choice.category != MoveCategory::Status;
+    let (emergency_exit, eject_pack) = {
+        let defender_side = state.get_side_immutable(&defender_ref);
+        let holder = defender_side.get_active_immutable();
+        let can_switch = defender_side.visible_alive_pkmn() > 1 && !defender_side.force_switch;
+        (
+            damaging
+                && can_switch
+                && (holder.ability == Abilities::EMERGENCYEXIT
+                    || holder.ability == Abilities::WIMPOUT)
+                && defender_hp_before > holder.maxhp / 2
+                && holder.hp > 0
+                && holder.hp <= holder.maxhp / 2,
+            can_switch
+                && holder.item == Items::EJECTPACK
+                && holder.hp > 0
+                && lowered(&defender_boosts_before, &boosts_of(defender_side)),
+        )
+    };
+    if damaging || emergency_exit || eject_pack {
         let defender_side = state.get_side_immutable(&defender_ref);
         let holder = defender_side.get_active_immutable();
         let (item, holder_hp) = (holder.item, holder.hp);
         let can_switch = defender_side.visible_alive_pkmn() > 1 && !defender_side.force_switch;
         let attacker_alive = state.get_side_immutable(&attacking_side).get_active_immutable().hp > 0;
-        if holder_hp > 0 && (item == Items::EJECTBUTTON && can_switch
-            || item == Items::REDCARD && attacker_alive)
+        if emergency_exit
+            || eject_pack
+            || damaging
+                && holder_hp > 0
+                && (item == Items::EJECTBUTTON && can_switch
+                    || item == Items::REDCARD && attacker_alive)
         {
-            instructions
-                .instruction_list
-                .push(Instruction::ChangeItem(ChangeItemInstruction {
-                    side_ref: defender_ref,
-                    current_item: item,
-                    new_item: Items::NONE,
-                }));
-            state.get_side(&defender_ref).get_active().item = Items::NONE;
-            if item == Items::REDCARD {
+            if !emergency_exit {
+                instructions
+                    .instruction_list
+                    .push(Instruction::ChangeItem(ChangeItemInstruction {
+                        side_ref: defender_ref,
+                        current_item: item,
+                        new_item: Items::NONE,
+                    }));
+                state.get_side(&defender_ref).get_active().item = Items::NONE;
+            }
+            if !emergency_exit && !eject_pack && item == Items::REDCARD {
                 get_instructions_from_drag(state, &defender_ref, instructions, final_instructions);
                 return;
             }
@@ -3850,10 +3904,32 @@ fn run_move(
         return;
     }
 
+    // alpha-poke patch (2026-10-13): the attacker's Eject Pack, its stats lowered by its own move
+    // (Draco Meteor, Overheat, Close Combat, ...): it switches out as after a pivot move
+    let self_eject = !ejected && {
+        let side = state.get_side_immutable(&attacking_side);
+        let holder = side.get_active_immutable();
+        holder.item == Items::EJECTPACK
+            && holder.hp > 0
+            && side.visible_alive_pkmn() > 1
+            && !side.force_switch
+            && lowered(&attacker_boosts_before, &boosts_of(side))
+    };
+    if self_eject {
+        instructions
+            .instruction_list
+            .push(Instruction::ChangeItem(ChangeItemInstruction {
+                side_ref: attacking_side,
+                current_item: Items::EJECTPACK,
+                new_item: Items::NONE,
+            }));
+        state.get_side(&attacking_side).get_active().item = Items::NONE;
+    }
+
     // Only entered if the move causes a switch-out
     // U-turn, Volt Switch, Baton Pass, etc.
     // This deals with a bunch of flags that are required for the next turn to run properly
-    if choice.flags.pivot && !ejected {
+    if (choice.flags.pivot || self_eject) && !ejected {
         match attacking_side {
             SideReference::SideOne => {
                 if state.side_one.visible_alive_pkmn() > 1 {

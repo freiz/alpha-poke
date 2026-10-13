@@ -280,6 +280,8 @@ define_enum_with_from_str! {
         PERSIMBERRY,
         MENTALHERB,
         SAFETYGOGGLES,
+        // alpha-poke patch (2026-10-13): generate_instructions::run_move
+        EJECTPACK,
     },
     default = UNKNOWNITEM
 }

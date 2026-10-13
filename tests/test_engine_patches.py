@@ -109,7 +109,7 @@ def test_charge_ends_with_the_electric_move():
 
 
 NEW_ITEMS = ["pechaberry", "cheriberry", "rawstberry", "aspearberry", "persimberry", "mentalherb",
-             "safetygoggles"]  # fmt: skip
+             "safetygoggles", "ejectpack"]  # fmt: skip
 
 
 def test_new_items_parse_and_stay_unknown_to_the_network():
@@ -173,3 +173,42 @@ def test_early_bird_wakes_sooner():
 
     assert woke("none", 0) == 0 and abs(woke("earlybird", 0) - 1 / 3) < 0.01
     assert abs(woke("none", 1) - 1 / 3) < 0.01 and woke("earlybird", 1) > 0.99
+
+
+def duel(move1, p2_item="none", p2_ability="none", p1_item="none", atk=200):
+    """Outcomes (probability, state) of side one (faster) using ``move1`` on side two (Splash)."""
+    p1 = pe.Pokemon(id="dragapult", hp=300, maxhp=300, item=p1_item, speed=300, attack=atk,
+                    special_attack=atk, moves=[pe.Move(id=move1, pp=10)])  # fmt: skip
+    p2 = pe.Pokemon(id="golisopod", hp=300, maxhp=300, item=p2_item, ability=p2_ability,
+                    speed=100, defense=150, special_defense=150,
+                    moves=[pe.Move(id="splash", pp=10)])  # fmt: skip
+    s1 = pe.Side(pokemon=[p1, mon("dondozo")], active_index=pe.PokemonIndex("0"))
+    s2 = pe.Side(pokemon=[p2, mon("gholdengo")], active_index=pe.PokemonIndex("0"))
+    outs = alpha_search.chance_outcomes(pe.State(side_one=s1, side_two=s2).to_string(), 0, 0)
+    return [(o[0], pe.State.from_string(o[1])) for o in outs]
+
+
+def test_wimp_out_switches_out_below_half():
+    outs = duel("bodyslam", p2_ability="wimpout", atk=520)
+    hit = [st for _, st in outs if 0 < st.side_two.pokemon[0].hp <= 150]
+    assert hit and all(st.side_two.force_switch for st in hit)
+    above = [st for _, st in outs if st.side_two.pokemon[0].hp > 150]
+    assert all(not st.side_two.force_switch for st in above)
+    assert all(not st.side_two.force_switch for _, st in duel("bodyslam", atk=520))
+
+
+def test_eject_pack_on_a_lowered_defender():
+    outs = duel("charm", p2_item="ejectpack")
+    assert all(st.side_two.force_switch and st.side_two.pokemon[0].item == "NONE"
+               for _, st in outs)  # fmt: skip
+
+
+def test_eject_pack_after_draco_meteor():
+    outs = duel("dracometeor", p1_item="ejectpack")
+    hit = [st for _, st in outs if st.side_one.special_attack_boost < 0]
+    assert hit and all(st.side_one.force_switch and st.side_one.pokemon[0].item == "NONE"
+                       for st in hit)  # fmt: skip
+    assert all(
+        not st.side_one.force_switch for _, st in outs if st.side_one.special_attack_boost == 0
+    )
+    assert all(not st.side_one.force_switch for _, st in duel("dracometeor"))
