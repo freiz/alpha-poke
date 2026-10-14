@@ -65,6 +65,7 @@ STALL_TIMEOUT = 600.0
 
 async def _lane(lane: str, jobs: list, port: int, gen_dir: Path, settings: dict, batcher,
                 belief, wid: int, counters: dict, kids: dict | None = None) -> int:  # fmt: skip
+    from alpha_poke.agents.tiebreak import TieBreak
     from alpha_poke.selfplay.player import SelfPlayPlayer
 
     def player(tag: str, seed: int):
@@ -84,6 +85,7 @@ async def _lane(lane: str, jobs: list, port: int, gen_dir: Path, settings: dict,
             children=settings.get("children", 0),
             policy_only=settings.get("policy_only", False),
             loop=tuple(settings["loop"]) if settings.get("loop") else None,
+            tiebreak=TieBreak(*settings["tiebreak"]) if settings.get("tiebreak") else None,
         )  # fmt: skip
 
     # per run (run_tag) and lane: a lane named alike in every generation must not replay the same

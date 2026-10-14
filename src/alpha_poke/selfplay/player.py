@@ -43,7 +43,8 @@ class SelfPlayPlayer(SearchPlayer):
                  noise: tuple[float, float] = (0.1, 10.0), turn_cap: int = 300, seed: int = 0,
                  greedy: bool = False, record: bool = True, temp_turns: int = 8,
                  temp_late: float = 0.25, children: int = 0, state_fixes: int = 3,
-                 policy_only: bool = False, loop: tuple | None = None, **kwargs):  # fmt: skip
+                 policy_only: bool = False, loop: tuple | None = None, tiebreak=None,
+                 **kwargs):  # fmt: skip
         super().__init__(*args, **kwargs)
         assert self.model_transformer and batcher is not None
         self.batcher = batcher
@@ -73,6 +74,9 @@ class SelfPlayPlayer(SearchPlayer):
         # its last ``window`` turns, its moves are sampled at ``tau`` with root noise ``eps``
         # (the loop broken and played out, its states get outcomes); None: off
         self.loop = loop
+        # the root tie-break (agents.tiebreak.TieBreak; 2026-10-14): None = off
+        self.tiebreak = tiebreak
+        self.tiebreaks = 0
         self.child_records: dict[str, list] = {}
         # the request each battle's last record answered (a refused choice drops its record)
         self._record_request: dict[str, int] = {}
@@ -210,7 +214,18 @@ class SelfPlayPlayer(SearchPlayer):
         tau = 1.0 if battle.turn <= self.temp_turns else self.temp_late
         if looping:
             tau = self.loop[3]
-        if self.greedy:
+        broke = None
+        if self.tiebreak is not None and not self.policy_only:
+            from alpha_poke.agents import tiebreak
+
+            ov = rec["opp_visits"]
+            opp = max(range(len(ov)), key=ov.__getitem__) if any(ov) else -1
+            broke = tiebreak.choose(states[0].to_string(), [i for i, _ in options], rec["visits"],
+                                    rec["mean"], rec["q"], opp, self.tiebreak)  # fmt: skip
+            self.tiebreaks += broke is not None
+        if broke is not None:
+            slot = broke
+        elif self.greedy:
             tau = 0.0
             slot = max(options, key=lambda o: o[1])[0]
         else:
@@ -226,6 +241,7 @@ class SelfPlayPlayer(SearchPlayer):
             "worlds": n_worlds, "iterations": n, "seconds": round(time.time() - t0, 3),
             "t_worlds": round(t1 - t0, 4), "t_ctx": round(t2 - t1, 4),
             "t_search": round(time.time() - t2, 4), "tau": tau, "loop": looping,
+            "tiebreak": broke is not None,
             "state": states[0].to_string(), "reveal": list(reveal), "ratings": list(ratings),
             "ctx_turn": turn, "history": history, "slot": slot,
             **{k: rec[k] for k in ("visits", "mean", "prior", "legal", "names", "q",

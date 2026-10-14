@@ -79,6 +79,18 @@ def cmd_teams(a) -> None:
     print(f"{len(pairs)} pairs -> {path}; sides {dict(kinds)}; bans learned {ts.banned_moves}")
 
 
+def tiebreak_values(spec: str) -> list | None:
+    """--tiebreak as TieBreak's fields (settings.json), or None (off)."""
+    if spec in ("", "0"):
+        return None
+    from dataclasses import astuple
+
+    from alpha_poke.agents.tiebreak import TieBreak
+
+    tb = TieBreak(*map(float, spec.split(","))) if "," in spec else TieBreak()
+    return list(astuple(tb))
+
+
 def cmd_run(a) -> None:
     import json
     import time
@@ -105,7 +117,8 @@ def cmd_run(a) -> None:
                 "temp_late": a.temp_late, "dtype": a.dtype, "children": a.children,
                 "policy_only": a.policy_only,
                 "loop": [a.loop_quiet, a.loop_switches, a.loop_window, a.loop_tau, a.loop_noise]
-                if a.loop_quiet > 0 and not a.policy_only else None}  # fmt: skip
+                if a.loop_quiet > 0 and not a.policy_only else None,
+                "tiebreak": tiebreak_values(a.tiebreak)}  # fmt: skip
     (gen_dir / "settings.json").write_text(json.dumps(settings, indent=1))
     t0 = time.time()
     n = runner.run(gen_dir, pairs, settings, a.procs, tuple(a.ports), a.limit)
@@ -951,6 +964,9 @@ def main() -> None:
     p.add_argument("--loop-window", type=int, default=8, help="... of its last turns")
     p.add_argument("--loop-tau", type=float, default=1.0, help="tau in a loop")
     p.add_argument("--loop-noise", type=float, default=0.25, help="root noise eps in a loop")
+    p.add_argument("--tiebreak", default="",
+                   help="the root tie-break (agents.tiebreak; 2026-10-14): '1' (defaults) or "
+                        "'delta,q_min,min_share,min_gain'; '' = off")  # fmt: skip
     p.add_argument("--dtype", choices=["fp32", "bf16"], default="bf16", help="GPU inference")
     p.add_argument("--children", type=int, default=0,
                    help="export full searches' children of >= N visits (0: off)")  # fmt: skip
