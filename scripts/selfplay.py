@@ -176,7 +176,8 @@ def cmd_convert(a) -> None:
         return
     logging.disable(logging.WARNING)
     stats = convert(SELFPLAY_DIR / f"gen{a.gen}", Path(f"data/train/sp{a.gen}"), a.gen,
-                    per_game=a.per_game)  # fmt: skip
+                    per_game=a.per_game, capped_draw=a.capped_value == "draw",
+                    loop_margin=a.loop_margin)  # fmt: skip
     if not a.no_record:  # (experiment data: not a generation of the loop's state.json)
         record(a.gen, "convert", stats)
 
@@ -954,6 +955,16 @@ def main() -> None:
         help="only this many decision points per game (value data; 0 = all)",
     )
     p.add_argument("--no-record", action="store_true", help="no state.json entry (experiments)")
+    # 2026-10-14 (design "防拖延循环"): capped games (stalling loops)
+    p.add_argument(
+        "--capped-value",
+        choices=["draw", "none"],
+        default="draw",
+        help="a capped game's value label: 0.5, or none (before 2026-10-14)",
+    )
+    p.add_argument("--loop-margin", type=int, default=10,
+                   help="capped games: no policy target from this many turns after the last "
+                        "faint (-1: all kept, before 2026-10-14)")  # fmt: skip
     p.set_defaults(fn=cmd_convert)
     p = sub.add_parser("registry", help="rebuild the model registry exp/models.json")
     p.set_defaults(fn=cmd_registry)

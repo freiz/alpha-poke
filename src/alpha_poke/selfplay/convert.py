@@ -7,8 +7,13 @@ matched to the player's record by (side, turn, kind) (a turn start whose action 
 not show, KIND_BLIND, is a turn start here: the record knows the action) and its INPUT is
 replaced by the record's: world 0 and its context, what the root network saw during the search.
 Added columns: ``pi`` (visit distribution over the 14 slots, full searches; zeros otherwise),
-``pi_w`` (1 = full search: policy target), ``q`` (root value), ``value_ok`` (0 for capped
-games: no outcome). ``action`` = the slot played (the record's).
+``pi_w`` (1 = full search: policy target), ``q`` (root value), ``value_ok`` (1 with an
+outcome). ``action`` = the slot played (the record's).
+
+Capped games (the turn cap; 2026-10-14, design "防拖延循环"): their decisions have the value
+0.5 (a draw: the stalling loop's states learn that looping gives the win away; before, no value
+label), and no policy target ``loop_margin`` turns after the last faint (in the loop the
+search's visits only echo the prior: training on them taught "switch" in stall positions).
 
 Output: data/train/sp<gen>/shard-<k>.parquet, the human data's columns plus these."""
 
@@ -92,8 +97,23 @@ def split_decisions(gen_dir: Path, shard_of: dict, tmp: Path) -> None:
             fh.close()
 
 
+def last_faint_turn(log: str) -> int:
+    """The turn of the game's last faint (0 if none)."""
+    turn = last = 0
+    for line in log.split("\n"):
+        if line.startswith("|turn|"):
+            turn = int(line.split("|")[2])
+        elif line.startswith("|faint|"):
+            last = turn
+    return last
+
+
 def convert_game(pair: int, game: dict, log: str, decisions: list, belief, gen: int,
-                 stamp: int, stats: dict, per_game: int = 0) -> list[dict]:  # fmt: skip
+                 stamp: int, stats: dict, per_game: int = 0, capped_draw: bool = True,
+                 loop_margin: int = 10) -> list[dict]:  # fmt: skip
+    """``capped_draw``: a capped game's decisions valued 0.5 (else no value label);
+    ``loop_margin`` >= 0: no policy target in a capped game from that many turns after its last
+    faint (the stalling loop; < 0: kept)."""
     rows = []
     # battle tags repeat across servers (each numbers its own battles): the pair makes it unique
     row = {"id": f"sp{gen}-{pair}-{game['battle']}", "log": log, "rating": None,
@@ -108,6 +128,8 @@ def convert_game(pair: int, game: dict, log: str, decisions: list, belief, gen: 
     for d in decisions:
         by_key[(d["side"], d["turn"], d["kind"])].append(d)
     capped = bool(game.get("capped"))
+    loop_from = (last_faint_turn(log) + loop_margin if capped and loop_margin >= 0
+                 else math.inf)  # fmt: skip
     for p in positions:
         kind = KIND_MAIN if p.kind == KIND_BLIND else p.kind
         ds = by_key.get((p.side, p.turn, kind))
@@ -123,14 +145,17 @@ def convert_game(pair: int, game: dict, log: str, decisions: list, belief, gen: 
             stats["action_agree"] += logged == d["names"][d["slot"]]
         x = asdict(p)
         total = sum(d["visits"]) or 1
+        target = d["full"] and p.turn < loop_from
+        stats["capped_rows"] += capped
+        stats["loop_policy_dropped"] += bool(d["full"]) and not target
         x.update({
             "state": d["state"], "history": d["history"], "reveal": d["reveal"],
             "rating_own": d["ratings"][0], "rating_opp": d["ratings"][1], "turn": d["ctx_turn"],
             "kind": kind, "action": d["slot"],
             "won": 0.5 if capped or d["won"] is None else float(d["won"]),
-            "value_ok": 0.0 if capped or d["won"] is None else 1.0,
-            "pi": [v / total for v in d["visits"]] if d["full"] else [0.0] * 14,
-            "pi_w": 1.0 if d["full"] else 0.0, "q": d["q"], "weight": 1.0,
+            "value_ok": float(capped_draw) if capped else 0.0 if d["won"] is None else 1.0,
+            "pi": [v / total for v in d["visits"]] if target else [0.0] * 14,
+            "pi_w": 1.0 if target else 0.0, "q": d["q"], "weight": 1.0,
         })  # fmt: skip
         rows.append(x)
     stats["unmatched_decisions"] += sum(len(ds) for ds in by_key.values())
@@ -141,7 +166,7 @@ def _convert_shard(args) -> dict:
     """One shard (its own process): the games' rows written to ``path``; returns the counts."""
     from alpha_poke.agents.belief_state import BeliefModel
 
-    path, items, dec_file, gen, stamp, per_game = args
+    path, items, dec_file, gen, stamp, per_game, capped_draw, loop_margin = args
     belief = BeliefModel.load()
     stats: dict = defaultdict(int)
     decs = defaultdict(list)
@@ -155,7 +180,7 @@ def _convert_shard(args) -> dict:
         decisions = decs.pop(pair, [])
         try:
             rows += convert_game(pair, game, log_text, decisions, belief, gen, stamp, stats,
-                                 per_game)  # fmt: skip
+                                 per_game, capped_draw, loop_margin)  # fmt: skip
             stats["games"] += 1
         except Exception:  # noqa: BLE001 - a broken log must not stop the conversion
             stats["failed_games"] += 1
@@ -166,7 +191,8 @@ def _convert_shard(args) -> dict:
 
 
 def convert(gen_dir: Path, out_dir: Path, gen: int, shard_games: int = 500, log=print,
-            procs: int = 10, per_game: int = 0) -> dict:  # fmt: skip
+            procs: int = 10, per_game: int = 0, capped_draw: bool = True,
+            loop_margin: int = 10) -> dict:  # fmt: skip
     """The generation's games in shards of ``shard_games``, ``procs`` shards at a time (each
     game has its own random seed: the same rows in any order)."""
     import multiprocessing as mp
@@ -181,7 +207,7 @@ def convert(gen_dir: Path, out_dir: Path, gen: int, shard_games: int = 500, log=
     split_decisions(gen_dir, shard_of, tmp)
     jobs = [(out_dir / f"shard-{k // shard_games:04d}.parquet",
              [(p, games[p], logs[p]) for p in pairs[k : k + shard_games]],
-             tmp / f"{k // shard_games:04d}.jsonl", gen, stamp, per_game)
+             tmp / f"{k // shard_games:04d}.jsonl", gen, stamp, per_game, capped_draw, loop_margin)
             for k in range(0, len(pairs), shard_games)]  # fmt: skip
     del logs
     stats: dict = defaultdict(int)
