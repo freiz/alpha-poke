@@ -9,7 +9,7 @@ build/
 .ruff_cache/
 
 # Rust build output
-/rust/*/target/
+/rust/**/target/
 
 # Local Showdown server
 vendor/
