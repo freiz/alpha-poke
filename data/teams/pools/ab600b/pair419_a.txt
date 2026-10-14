@@ -1,0 +1,61 @@
+Tornadus-Therian (M) @ Life Orb  
+Ability: Regenerator  
+Tera Type: Steel  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Nasty Plot  
+- Bleakwind Storm  
+- Heat Wave  
+- Grass Knot  
+
+Iron Valiant @ Choice Scarf  
+Ability: Quark Drive  
+Tera Type: Steel  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Naive Nature  
+- Trick  
+- Moonblast  
+- Close Combat  
+- Psychic  
+
+Alomomola @ Assault Vest  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 4 HP / 252 Def / 252 SpD  
+Sassy Nature  
+IVs: 0 Spe  
+- Flip Turn  
+- Scald  
+- Mirror Coat  
+- Play Rough  
+
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Tera Type: Water  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- Stealth Rock  
+- Earthquake  
+- Payback  
+- Whirlwind  
+
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Dragon  
+EVs: 248 HP / 252 Def / 8 SpD  
+Impish Nature  
+- Brave Bird  
+- Defog  
+- U-turn  
+- Roost  
+
+Ogerpon-Cornerstone (F) @ Cornerstone Mask  
+Ability: Sturdy  
+Tera Type: Rock  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Ivy Cudgel  
+- Power Whip  
+- Low Kick

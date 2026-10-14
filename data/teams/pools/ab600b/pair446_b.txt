@@ -1,0 +1,59 @@
+Tyranitar @ Leftovers  
+Ability: Sand Stream  
+Tera Type: Fighting  
+EVs: 252 HP / 4 Def / 252 SpD  
+Sassy Nature  
+- Knock Off  
+- Low Kick  
+- Stealth Rock  
+- Ice Beam  
+
+Excadrill @ Life Orb  
+Ability: Sand Rush  
+Tera Type: Ground  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- Rapid Spin  
+- Earthquake  
+- Rock Slide  
+- Iron Head  
+
+Kingambit @ Air Balloon  
+Ability: Supreme Overlord  
+Tera Type: Ground  
+EVs: 112 HP / 252 Atk / 144 Spe  
+Adamant Nature  
+- Sucker Punch  
+- Iron Head  
+- Kowtow Cleave  
+- Swords Dance  
+
+Garchomp @ Rocky Helmet  
+Ability: Rough Skin  
+Tera Type: Ghost  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Naive Nature  
+- Earthquake  
+- Swords Dance  
+- Stealth Rock  
+- Spikes  
+
+Pecharunt @ Air Balloon  
+Ability: Poison Puppeteer  
+Tera Type: Grass  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Malignant Chain  
+- Shadow Ball  
+- Recover  
+- Parting Shot  
+
+Rotom-Wash @ Leftovers  
+Ability: Levitate  
+Tera Type: Steel  
+EVs: 216 HP / 40 SpA / 252 SpD  
+Calm Nature  
+- Volt Switch  
+- Will-O-Wisp  
+- Hydro Pump  
+- Pain Split

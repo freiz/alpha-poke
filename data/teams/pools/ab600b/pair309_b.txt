@@ -1,0 +1,59 @@
+Hydrapple @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 252 HP / 252 Def / 4 SpA  
+Bold Nature  
+- Leaf Storm  
+- Earth Power  
+- Fickle Beam  
+- Giga Drain  
+
+Tyranitar @ Weakness Policy  
+Ability: Sand Stream  
+Tera Type: Flying  
+EVs: 252 HP / 4 Atk / 252 SpD  
+Sassy Nature  
+- Knock Off  
+- Stealth Rock  
+- Ice Beam  
+- Thunder Wave  
+
+Moltres @ Heavy-Duty Boots  
+Ability: Flame Body  
+Tera Type: Fairy  
+EVs: 252 HP / 240 Def / 16 SpA  
+Modest Nature  
+- Flamethrower  
+- U-turn  
+- Roar  
+- Roost  
+
+Zamazenta @ Leftovers  
+Ability: Dauntless Shield  
+Tera Type: Fire  
+EVs: 216 HP / 40 Atk / 252 Spe  
+Jolly Nature  
+- Iron Defense  
+- Crunch  
+- Body Press  
+- Roar  
+
+Slowking-Galar @ Black Sludge  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 252 HP / 4 Def / 252 SpD  
+Sassy Nature  
+- Sludge Bomb  
+- Future Sight  
+- Flamethrower  
+- Chilly Reception  
+
+Excadrill @ Air Balloon  
+Ability: Sand Rush  
+Tera Type: Ghost  
+EVs: 8 HP / 252 Atk / 244 Spe  
+Jolly Nature  
+- Earthquake  
+- Rapid Spin  
+- Swords Dance  
+- Iron Head

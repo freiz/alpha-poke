@@ -1,0 +1,59 @@
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Ivy Cudgel  
+- Swords Dance  
+- Play Rough  
+
+Dragonite @ Life Orb  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Dragon Dance  
+- Dragon Claw  
+- Extreme Speed  
+- Earthquake  
+
+Pelipper @ Choice Scarf  
+Ability: Drizzle  
+Tera Type: Water  
+EVs: 248 HP / 252 Def / 8 SpA  
+Relaxed Nature  
+- Tailwind  
+- Hurricane  
+- Weather Ball  
+- U-turn  
+
+Basculegion @ Life Orb  
+Ability: Adaptability  
+Tera Type: Water  
+EVs: 252 Atk / 252 Spe  
+Adamant Nature  
+- Flip Turn  
+- Bite  
+- Wave Crash  
+- Aqua Jet  
+
+Iron Treads @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ground  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Earthquake  
+- Stealth Rock  
+- Rapid Spin  
+- Ice Spinner  
+
+Hatterene @ Assault Vest  
+Ability: Magic Bounce  
+Tera Type: Poison  
+EVs: 248 HP / 204 Def / 56 Spe  
+Bold Nature  
+- Psyshock  
+- Draining Kiss  
+- Calm Mind  
+- Mystical Fire

@@ -1,0 +1,59 @@
+Zapdos @ Rocky Helmet  
+Ability: Static  
+Tera Type: Fairy  
+EVs: 248 HP / 252 Def / 8 SpA  
+Bold Nature  
+- Roost  
+- Volt Switch  
+- Thunder Wave  
+- Hurricane  
+
+Okidogi @ Leftovers  
+Ability: Toxic Chain  
+Tera Type: Normal  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Drain Punch  
+- Bulk Up  
+- Gunk Shot  
+
+Darkrai @ Leftovers  
+Ability: Bad Dreams  
+Tera Type: Poison  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Modest Nature  
+- Nasty Plot  
+- Sludge Bomb  
+- Dark Pulse  
+- Focus Blast  
+
+Maushold @ Wide Lens  
+Ability: Technician  
+Tera Type: Ghost  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Tidy Up  
+- Population Bomb  
+- Encore  
+- Bite  
+
+Scizor @ Clear Amulet  
+Ability: Technician  
+Tera Type: Normal  
+EVs: 248 HP / 252 Def / 8 SpD  
+Impish Nature  
+- Swords Dance  
+- Bullet Punch  
+- U-turn  
+- Knock Off  
+
+Latios @ Leftovers  
+Ability: Levitate  
+Tera Type: Steel  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Aura Sphere  
+- Luster Purge  
+- Draco Meteor  
+- Agility

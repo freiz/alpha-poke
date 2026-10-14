@@ -1,0 +1,59 @@
+Pincurchin @ Terrain Extender  
+Ability: Electric Surge  
+Tera Type: Dark  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Supercell Slam  
+- Sucker Punch  
+- Thunder Wave  
+- Memento  
+
+Iron Crown @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Fighting  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Tachyon Cutter  
+- Focus Blast  
+- Calm Mind  
+- Psyshock  
+
+Iron Hands @ Quick Claw  
+Ability: Quark Drive  
+Tera Type: Flying  
+EVs: 248 HP / 252 Atk / 8 SpD  
+Adamant Nature  
+- Swords Dance  
+- Ice Punch  
+- Drain Punch  
+- Supercell Slam  
+
+Raichu-Alola @ Choice Specs  
+Ability: Surge Surfer  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Modest Nature  
+- Volt Switch  
+- Focus Blast  
+- Psychic Noise  
+- Alluring Voice  
+
+Iron Moth @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Grass  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Energy Ball  
+- Sludge Wave  
+- Substitute  
+- Dazzling Gleam  
+
+Iron Valiant @ Life Orb  
+Ability: Quark Drive  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Moonblast  
+- Thunderbolt  
+- Calm Mind  
+- Shadow Ball

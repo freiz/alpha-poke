@@ -1,0 +1,59 @@
+Hoopa-Unbound @ Assault Vest  
+Ability: Magician  
+Tera Type: Dark  
+EVs: 248 HP / 252 Atk / 8 SpA  
+Brave Nature  
+- Knock Off  
+- Psychic Noise  
+- Thunderbolt  
+- Drain Punch  
+
+Moltres @ Heavy-Duty Boots  
+Ability: Flame Body  
+Tera Type: Fairy  
+EVs: 248 HP / 248 Def / 12 Spe  
+Bold Nature  
+- Hurricane  
+- Flamethrower  
+- Roost  
+- U-turn  
+
+Slowking-Galar @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 252 HP / 8 Def / 152 SpA / 96 SpD  
+Calm Nature  
+- Future Sight  
+- Chilly Reception  
+- Ice Beam  
+- Sludge Bomb  
+
+Zapdos @ Rocky Helmet  
+Ability: Static  
+Tera Type: Grass  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Discharge  
+- Hurricane  
+- Volt Switch  
+- U-turn  
+
+Scizor @ Sitrus Berry  
+Ability: Technician  
+Tera Type: Steel  
+EVs: 248 HP / 252 Atk / 8 SpD  
+Adamant Nature  
+- Bullet Punch  
+- U-turn  
+- Knock Off  
+- Swords Dance  
+
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Fire  
+EVs: 252 HP / 4 Atk / 252 Def  
+Impish Nature  
+- Stealth Rock  
+- Ice Spinner  
+- Headlong Rush  
+- Bulk Up

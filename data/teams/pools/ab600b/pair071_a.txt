@@ -1,0 +1,59 @@
+Latios @ Soul Dew  
+Ability: Levitate  
+Tera Type: Steel  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Draco Meteor  
+- Psychic Noise  
+- Calm Mind  
+- Recover  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Shadow Ball  
+- Make It Rain  
+- Nasty Plot  
+- Trick  
+
+Clodsire @ Leftovers  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 HP / 244 Def / 12 SpD  
+Impish Nature  
+- Stealth Rock  
+- Recover  
+- Earthquake  
+- Spikes  
+
+Slowking @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 248 HP / 8 Def / 252 SpD  
+Sassy Nature  
+- Scald  
+- Future Sight  
+- Chilly Reception  
+- Thunder Wave  
+
+Meowscarada @ Life Orb  
+Ability: Protean  
+Tera Type: Dark  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Flower Trick  
+- Spikes  
+- Triple Axel  
+
+Skarmory @ Rocky Helmet  
+Ability: Sturdy  
+Tera Type: Dragon  
+EVs: 248 HP / 252 Def / 8 Spe  
+Bold Nature  
+- Roost  
+- Spikes  
+- Body Press  
+- Stealth Rock

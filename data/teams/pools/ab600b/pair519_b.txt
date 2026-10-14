@@ -1,0 +1,59 @@
+Quagsire @ Leftovers  
+Ability: Water Absorb  
+Tera Type: Steel  
+EVs: 252 HP / 252 Def / 4 Spe  
+Impish Nature  
+- Toxic  
+- Curse  
+- Recover  
+- Earthquake  
+
+Alomomola @ Eject Button  
+Ability: Regenerator  
+Tera Type: Poison  
+EVs: 252 HP / 252 Def / 4 SpD  
+Relaxed Nature  
+- Flip Turn  
+- Mirror Coat  
+- Play Rough  
+- Body Slam  
+
+Iron Treads @ Leftovers  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 240 HP / 52 Def / 24 SpD / 192 Spe  
+Jolly Nature  
+- Iron Head  
+- Stealth Rock  
+- Rapid Spin  
+- Supercell Slam  
+
+Greninja @ Life Orb  
+Ability: Protean  
+Tera Type: Water  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Ice Beam  
+- Sludge Wave  
+- U-turn  
+- Grass Knot  
+
+Corviknight @ Leftovers  
+Ability: Pressure  
+Tera Type: Fighting  
+EVs: 120 HP / 68 Atk / 224 Def / 96 SpD  
+Impish Nature  
+- U-turn  
+- Roost  
+- Defog  
+- Brave Bird  
+
+Meowscarada @ Heavy-Duty Boots  
+Ability: Protean  
+Tera Type: Grass  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Triple Axel  
+- Flower Trick  
+- Knock Off

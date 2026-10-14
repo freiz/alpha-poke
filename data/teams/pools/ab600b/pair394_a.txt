@@ -1,0 +1,58 @@
+Hatterene @ Life Orb  
+Ability: Magic Bounce  
+Tera Type: Water  
+EVs: 240 HP / 80 Def / 12 SpA / 112 SpD / 64 Spe  
+Calm Nature  
+- Psyshock  
+- Future Sight  
+- Draining Kiss  
+- Expanding Force  
+
+Meganium @ Leftovers  
+Ability: Overgrow  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Encore  
+- Ancient Power  
+- Protect  
+- Trailblaze  
+
+Cobalion @ Leftovers  
+Ability: Justified  
+Tera Type: Water  
+EVs: 208 HP / 40 Def / 180 SpA / 80 SpD  
+Modest Nature  
+- Calm Mind  
+- Volt Switch  
+- Vacuum Wave  
+- Focus Blast  
+
+Salazzle @ Leftovers  
+Ability: Oblivious  
+Tera Type: Poison  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Protect  
+- Substitute  
+- Toxic  
+- Knock Off  
+
+Meowscarada @ Heavy-Duty Boots  
+Ability: Protean  
+Tera Type: Grass  
+EVs: 100 HP / 100 Atk / 148 Def / 100 SpA / 48 SpD / 8 Spe  
+Gentle Nature  
+- U-turn  
+- Flower Trick  
+- Spikes  
+- Knock Off  
+
+Klawf @ Focus Sash  
+Ability: Anger Shell  
+Tera Type: Bug  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Rock Blast  
+- Stealth Rock  
+- Knock Off  
+- Crabhammer

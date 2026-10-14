@@ -1,0 +1,59 @@
+Alomomola @ Assault Vest  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 252 HP / 220 Def / 36 SpD  
+Relaxed Nature  
+- Flip Turn  
+- Scald  
+- Body Slam  
+- Mirror Coat  
+
+Darkrai @ Black Glasses  
+Ability: Bad Dreams  
+Tera Type: Poison  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Sludge Bomb  
+- Dark Pulse  
+- Focus Blast  
+- Knock Off  
+
+Scizor @ Leftovers  
+Ability: Technician  
+Tera Type: Steel  
+EVs: 172 HP / 84 Atk / 252 SpD  
+Careful Nature  
+- U-turn  
+- Bullet Punch  
+- Knock Off  
+- Defog  
+
+Dragapult @ Choice Band  
+Ability: Infiltrator  
+Tera Type: Normal  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Sucker Punch  
+- Dragon Darts  
+- U-turn  
+- Will-O-Wisp  
+
+Slowking-Galar @ Life Orb  
+Ability: Regenerator  
+Tera Type: Grass  
+EVs: 248 HP / 208 Def / 52 SpD  
+Relaxed Nature  
+- Flamethrower  
+- Ice Beam  
+- Sludge Bomb  
+- Psyshock  
+
+Dragonite @ Heavy-Duty Boots  
+Ability: Inner Focus  
+Tera Type: Normal  
+EVs: 196 HP / 204 Atk / 108 Spe  
+Adamant Nature  
+- Extreme Speed  
+- Dragon Dance  
+- Earthquake  
+- Roost

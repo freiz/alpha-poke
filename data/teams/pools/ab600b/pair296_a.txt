@@ -1,0 +1,60 @@
+Dragapult @ Choice Specs  
+Ability: Infiltrator  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Draco Meteor  
+- Shadow Ball  
+- Flamethrower  
+- U-turn  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Dark  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Sucker Punch  
+- Kowtow Cleave  
+- Low Kick  
+
+Landorus-Therian (M) @ Rocky Helmet  
+Ability: Intimidate  
+Tera Type: Water  
+EVs: 252 HP / 32 Def / 224 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Earthquake  
+- U-turn  
+- Taunt  
+
+Slowking-Galar @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 252 HP / 16 Def / 240 SpD  
+Sassy Nature  
+IVs: 0 Atk / 0 Spe  
+- Psyshock  
+- Chilly Reception  
+- Sludge Bomb  
+- Ice Beam  
+
+Primarina @ Heavy-Duty Boots  
+Ability: Torrent  
+Tera Type: Steel  
+EVs: 80 HP / 252 SpA / 176 Spe  
+Modest Nature  
+- Surf  
+- Moonblast  
+- Flip Turn  
+- Encore  
+
+Ogerpon (F) @ Heavy-Duty Boots  
+Ability: Defiant  
+Tera Type: Grass  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Ivy Cudgel  
+- Knock Off  
+- Encore

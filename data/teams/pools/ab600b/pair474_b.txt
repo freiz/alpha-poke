@@ -1,0 +1,59 @@
+Torkoal @ Heat Rock  
+Ability: Drought  
+Tera Type: Flying  
+EVs: 248 HP / 248 Def / 12 SpD  
+Relaxed Nature  
+- Stealth Rock  
+- Flamethrower  
+- Overheat  
+- Lava Plume  
+
+Scovillain @ Life Orb  
+Ability: Chlorophyll  
+Tera Type: Fire  
+EVs: 152 HP / 252 SpA / 4 SpD / 100 Spe  
+Modest Nature  
+- Flamethrower  
+- Growth  
+- Overheat  
+- Stomping Tantrum  
+
+Walking Wake @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Dragon  
+EVs: 12 HP / 244 SpA / 252 Spe  
+Timid Nature  
+- Draco Meteor  
+- Hydro Steam  
+- Flip Turn  
+- Dragon Pulse  
+
+Hatterene @ Eject Button  
+Ability: Magic Bounce  
+Tera Type: Bug  
+EVs: 252 HP / 100 SpA / 104 SpD / 52 Spe  
+Modest Nature  
+- Mystical Fire  
+- Draining Kiss  
+- Healing Wish  
+- Nuzzle  
+
+Great Tusk @ Rocky Helmet  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Ice Spinner  
+- Headlong Rush  
+- Stealth Rock  
+- Rapid Spin  
+
+Ceruledge @ Life Orb  
+Ability: Weak Armor  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Bitter Blade  
+- Shadow Sneak  
+- Swords Dance  
+- Poltergeist

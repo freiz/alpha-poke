@@ -1,0 +1,59 @@
+Jolteon @ Flame Orb  
+Ability: Volt Absorb  
+Tera Type: Ice  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Protect  
+- Volt Switch  
+- Electro Ball  
+- Alluring Voice  
+
+Lokix @ Choice Band  
+Ability: Tinted Lens  
+Tera Type: Bug  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- U-turn  
+- First Impression  
+- Knock Off  
+- Leech Life  
+
+Hawlucha @ Rocky Helmet  
+Ability: Mold Breaker  
+Tera Type: Steel  
+EVs: 128 HP / 252 Atk / 4 Def / 124 Spe  
+Adamant Nature  
+- Defog  
+- Roost  
+- Encore  
+- Swords Dance  
+
+Slowking-Galar @ Black Sludge  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 252 HP / 4 Def / 252 SpD  
+Sassy Nature  
+- Chilly Reception  
+- Psychic Noise  
+- Sludge Bomb  
+- Future Sight  
+
+Alomomola @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Poison  
+EVs: 252 HP / 4 Atk / 252 SpD  
+Sassy Nature  
+- Flip Turn  
+- Wish  
+- Scald  
+- Tickle  
+
+Maushold @ Wide Lens  
+Ability: Technician  
+Tera Type: Ghost  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Tidy Up  
+- Population Bomb  
+- Bite  
+- Encore

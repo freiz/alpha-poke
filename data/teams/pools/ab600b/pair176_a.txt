@@ -1,0 +1,59 @@
+Landorus-Therian @ Rocky Helmet  
+Ability: Intimidate  
+Tera Type: Ground  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Stone Edge  
+- U-turn  
+- Earthquake  
+
+Dondozo @ Leftovers  
+Ability: Unaware  
+Tera Type: Fighting  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Wave Crash  
+- Avalanche  
+- Rest  
+- Sleep Talk  
+
+Volcanion @ Choice Specs  
+Ability: Water Absorb  
+Tera Type: Ground  
+EVs: 248 HP / 252 SpA / 8 SpD  
+Modest Nature  
+- Steam Eruption  
+- Earth Power  
+- Sludge Bomb  
+- Flamethrower  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Bug  
+EVs: 236 HP / 96 Atk / 176 SpD  
+Impish Nature  
+- Sucker Punch  
+- Swords Dance  
+- Iron Head  
+- Kowtow Cleave  
+
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Fighting  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Earthquake  
+- Supercell Slam  
+- Rapid Spin  
+- Stealth Rock  
+
+Dragapult @ Life Orb  
+Ability: Infiltrator  
+Tera Type: Ghost  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Modest Nature  
+- Shadow Ball  
+- Dragon Darts  
+- Will-O-Wisp  
+- Draco Meteor

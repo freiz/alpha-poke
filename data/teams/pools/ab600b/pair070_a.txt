@@ -1,0 +1,60 @@
+Scream Tail @ Heavy-Duty Boots  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 252 HP / 84 Def / 172 Spe  
+Bold Nature  
+IVs: 0 Atk  
+- Thunder Wave  
+- Stealth Rock  
+- Dazzling Gleam  
+- Wish  
+
+Clodsire @ Black Sludge  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 HP / 4 Atk / 252 SpD  
+Careful Nature  
+- Spikes  
+- Earthquake  
+- Gunk Shot  
+- Recover  
+
+Skeledirge @ Heavy-Duty Boots  
+Ability: Unaware  
+EVs: 244 HP / 252 Def / 12 Spe  
+Bold Nature  
+IVs: 0 Atk  
+- Will-O-Wisp  
+- Hex  
+- Torch Song  
+- Slack Off  
+
+Meowscarada @ Choice Band  
+Ability: Protean  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Flower Trick  
+- Sucker Punch  
+- U-turn  
+- Knock Off  
+
+Gholdengo @ Choice Scarf  
+Ability: Good as Gold  
+Tera Type: Electric  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Make It Rain  
+- Shadow Ball  
+- Thunderbolt  
+- Trick  
+
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Ground  
+EVs: 248 HP / 252 Def / 8 SpD  
+Impish Nature  
+- Body Press  
+- Defog  
+- U-turn  
+- Roost

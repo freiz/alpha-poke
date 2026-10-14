@@ -1,0 +1,59 @@
+Scizor @ Life Orb  
+Ability: Technician  
+Tera Type: Steel  
+EVs: 120 HP / 252 Atk / 136 Spe  
+Adamant Nature  
+- U-turn  
+- Dual Wingbeat  
+- Knock Off  
+- Bullet Punch  
+
+Garganacl @ Leftovers  
+Ability: Clear Body  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Def / 252 SpD  
+Hardy Nature  
+- Salt Cure  
+- Recover  
+- Curse  
+- Protect  
+
+Great Tusk @ Rocky Helmet  
+Ability: Protosynthesis  
+Tera Type: Fighting  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Ice Spinner  
+- Headlong Rush  
+- Knock Off  
+
+Raging Bolt @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Ghost  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Modest Nature  
+- Thunderclap  
+- Volt Switch  
+- Dragon Pulse  
+- Thunderbolt  
+
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Tera Type: Water  
+EVs: 252 HP / 252 SpD / 4 Spe  
+Careful Nature  
+- Whirlwind  
+- Stealth Rock  
+- Spikes  
+- Earthquake  
+
+Gholdengo @ Grassy Seed  
+Ability: Good as Gold  
+Tera Type: Ghost  
+EVs: 252 HP / 16 SpA / 240 SpD  
+Calm Nature  
+- Shadow Ball  
+- Trick  
+- Make It Rain  
+- Recover

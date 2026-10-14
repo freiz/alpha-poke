@@ -1,0 +1,60 @@
+Great Tusk @ Heavy-Duty Boots  
+Ability: Protosynthesis  
+Tera Type: Fighting  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Headlong Rush  
+- Close Combat  
+- Knock Off  
+- Rapid Spin  
+
+Armarouge @ Weakness Policy  
+Ability: Weak Armor  
+Tera Type: Grass  
+EVs: 252 HP / 4 SpA / 252 SpD  
+Bold Nature  
+IVs: 0 Atk  
+- Stored Power  
+- Flamethrower  
+- Protect  
+- Calm Mind  
+
+Maushold @ Wide Lens  
+Ability: Technician  
+Tera Type: Normal  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Population Bomb  
+- Bite  
+- Tidy Up  
+
+Garganacl @ Leftovers  
+Ability: Purifying Salt  
+Tera Type: Water  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- Iron Defense  
+- Body Press  
+- Salt Cure  
+- Recover  
+
+Glimmora @ Focus Sash  
+Ability: Toxic Debris  
+Tera Type: Grass  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Stealth Rock  
+- Mortal Spin  
+- Earth Power  
+- Sludge Wave  
+
+Kingambit @ Heavy-Duty Boots  
+Ability: Supreme Overlord  
+Tera Type: Flying  
+EVs: 112 HP / 252 Atk / 144 Spe  
+Adamant Nature  
+- Swords Dance  
+- Iron Head  
+- Kowtow Cleave  
+- Sucker Punch

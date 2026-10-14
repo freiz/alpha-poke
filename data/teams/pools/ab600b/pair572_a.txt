@@ -1,0 +1,59 @@
+Dragonite @ Life Orb  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Dragon Claw  
+- Dragon Dance  
+- Extreme Speed  
+- Outrage  
+
+Sableye @ Light Clay  
+Ability: Prankster  
+Tera Type: Fairy  
+EVs: 248 HP / 8 Atk / 252 Def  
+Impish Nature  
+- Reflect  
+- Encore  
+- Protect  
+- Light Screen  
+
+Blastoise @ White Herb  
+Ability: Rain Dish  
+Tera Type: Grass  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Dark Pulse  
+- Hydro Pump  
+- Earthquake  
+- Aura Sphere  
+
+Blaziken @ Grassy Seed  
+Ability: Speed Boost  
+Tera Type: Flying  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- Swords Dance  
+- Flare Blitz  
+- Protect  
+- Close Combat  
+
+Gyarados @ Leftovers  
+Ability: Intimidate  
+Tera Type: Dragon  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Earthquake  
+- Dragon Dance  
+- Substitute  
+- Whirlpool  
+
+Serperior @ Leftovers  
+Ability: Contrary  
+Tera Type: Poison  
+EVs: 252 HP / 4 SpA / 252 Spe  
+Timid Nature  
+- Substitute  
+- Leaf Storm  
+- Glare  
+- Leech Seed

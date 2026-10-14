@@ -1,0 +1,61 @@
+Ceruledge @ Focus Sash  
+Ability: Weak Armor  
+Tera Type: Bug  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Shadow Sneak  
+- Bitter Blade  
+- Close Combat  
+- Swords Dance  
+
+Great Tusk @ Heavy-Duty Boots  
+Ability: Protosynthesis  
+Tera Type: Fighting  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Headlong Rush  
+- Close Combat  
+- Knock Off  
+- Rapid Spin  
+
+Torkoal @ Heat Rock  
+Ability: Drought  
+Tera Type: Water  
+EVs: 248 HP / 252 Def / 8 SpA  
+Bold Nature  
+- Lava Plume  
+- Rapid Spin  
+- Stealth Rock  
+- Will-O-Wisp  
+
+Rotom-Wash @ Sticky Barb  
+Ability: Levitate  
+Tera Type: Water  
+EVs: 252 HP / 200 SpD / 56 Spe  
+Calm Nature  
+IVs: 0 Atk  
+- Trick  
+- Volt Switch  
+- Hydro Pump  
+- Sunny Day  
+
+Walking Wake @ Choice Specs  
+Ability: Protosynthesis  
+Tera Type: Water  
+EVs: 12 HP / 244 SpA / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Hydro Steam  
+- Draco Meteor  
+- Flamethrower  
+- Dragon Pulse  
+
+Pawmot @ Choice Scarf  
+Ability: Natural Cure  
+Tera Type: Electric  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Double Shock  
+- Close Combat  
+- Ice Punch  
+- Revival Blessing

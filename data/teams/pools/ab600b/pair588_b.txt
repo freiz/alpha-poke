@@ -1,0 +1,59 @@
+Munkidori @ Leftovers  
+Ability: Toxic Chain  
+Tera Type: Fighting  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Modest Nature  
+- Fake Out  
+- Psychic Noise  
+- Sludge Bomb  
+- Hex  
+
+Kyurem @ Leftovers  
+Ability: Pressure  
+Tera Type: Ground  
+EVs: 120 HP / 216 SpA / 76 SpD / 96 Spe  
+Modest Nature  
+- Ice Beam  
+- Freeze-Dry  
+- Earth Power  
+- Substitute  
+
+Corviknight @ Leftovers  
+Ability: Mirror Armor  
+Tera Type: Fighting  
+EVs: 4 HP / 252 Def / 252 SpD  
+Hardy Nature  
+- Roost  
+- U-turn  
+- Brave Bird  
+- Defog  
+
+Iron Moth @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Grass  
+EVs: 124 Def / 132 SpA / 252 Spe  
+Timid Nature  
+- Fiery Dance  
+- Sludge Wave  
+- Substitute  
+- Energy Ball  
+
+Garganacl @ Leftovers  
+Ability: Purifying Salt  
+Tera Type: Water  
+EVs: 232 HP / 20 Def / 240 SpD / 16 Spe  
+Careful Nature  
+- Recover  
+- Salt Cure  
+- Curse  
+- Protect  
+
+Dragonite @ Heavy-Duty Boots  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Dragon Dance  
+- Extreme Speed  
+- Earthquake  
+- Roost

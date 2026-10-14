@@ -1,0 +1,60 @@
+Tornadus-Therian @ Assault Vest  
+Ability: Regenerator  
+Tera Type: Fighting  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Bleakwind Storm  
+- Focus Blast  
+- Heat Wave  
+- U-turn  
+
+Kyurem @ Choice Specs  
+Ability: Pressure  
+Tera Type: Ice  
+EVs: 4 HP / 252 Def / 252 SpA  
+Modest Nature  
+IVs: 0 Atk  
+- Draco Meteor  
+- Blizzard  
+- Freeze-Dry  
+- Earth Power  
+
+Slowking-Galar @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Dark  
+EVs: 212 HP / 252 Def / 44 SpA  
+Relaxed Nature  
+IVs: 0 Atk / 0 Spe  
+- Sludge Bomb  
+- Future Sight  
+- Flamethrower  
+- Chilly Reception  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+EVs: 252 Atk / 4 SpA / 252 Spe  
+Naive Nature  
+- Moonblast  
+- Close Combat  
+- Knock Off  
+- Calm Mind  
+
+Ceruledge @ Heavy-Duty Boots  
+Ability: Flash Fire  
+Tera Type: Fairy  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Bitter Blade  
+- Poltergeist  
+- Shadow Sneak  
+- Swords Dance  
+
+Great Tusk @ Heavy-Duty Boots  
+Ability: Protosynthesis  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Headlong Rush  
+- Ice Spinner  
+- Rapid Spin  
+- Stealth Rock

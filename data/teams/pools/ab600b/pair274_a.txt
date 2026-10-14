@@ -1,0 +1,59 @@
+Iron Crown @ Assault Vest  
+Ability: Quark Drive  
+Tera Type: Steel  
+EVs: 80 HP / 4 Def / 172 SpA / 252 Spe  
+Timid Nature  
+- Volt Switch  
+- Focus Blast  
+- Tachyon Cutter  
+- Psychic Noise  
+
+Samurott-Hisui @ Assault Vest  
+Ability: Sharpness  
+Tera Type: Poison  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- Flip Turn  
+- Ceaseless Edge  
+- Sucker Punch  
+- Aqua Jet  
+
+Zapdos @ Heavy-Duty Boots  
+Ability: Pressure  
+Tera Type: Grass  
+EVs: 248 HP / 252 SpA / 8 SpD  
+Modest Nature  
+- Hurricane  
+- Discharge  
+- Thunder Wave  
+- Roost  
+
+Dragapult @ Choice Specs  
+Ability: Infiltrator  
+Tera Type: Ghost  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Naive Nature  
+- Draco Meteor  
+- Hex  
+- Dragon Darts  
+- Shadow Ball  
+
+Great Tusk @ Rocky Helmet  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Ice Spinner  
+- Stealth Rock  
+- Headlong Rush  
+- Rapid Spin  
+
+Iron Boulder @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Fighting  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Zen Headbutt  
+- Mighty Cleave  
+- Close Combat

@@ -1,0 +1,59 @@
+Yanmega @ Throat Spray  
+Ability: Speed Boost  
+Tera Type: Bug  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Modest Nature  
+- Protect  
+- Bug Buzz  
+- Air Slash  
+- Shadow Ball  
+
+Corviknight @ Covert Cloak  
+Ability: Mirror Armor  
+Tera Type: Dragon  
+EVs: 200 HP / 72 Def / 236 Spe  
+Impish Nature  
+- Brave Bird  
+- Roost  
+- U-turn  
+- Defog  
+
+Hatterene @ Air Balloon  
+Ability: Magic Bounce  
+Tera Type: Psychic  
+EVs: 248 HP / 8 SpA / 200 SpD / 52 Spe  
+Modest Nature  
+- Trick Room  
+- Mystical Fire  
+- Expanding Force  
+- Healing Wish  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ground  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Calm Mind  
+- Moonblast  
+- Psychic  
+- Thunderbolt  
+
+Darkrai @ Life Orb  
+Ability: Bad Dreams  
+Tera Type: Dark  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Focus Blast  
+- Dark Pulse  
+- Ice Beam  
+- Sludge Bomb  
+
+Dragonite @ Weakness Policy  
+Ability: Multiscale  
+Tera Type: Fire  
+EVs: 252 HP / 240 Atk / 16 Spe  
+Adamant Nature  
+- Dragon Dance  
+- Outrage  
+- Dragon Claw  
+- Scale Shot

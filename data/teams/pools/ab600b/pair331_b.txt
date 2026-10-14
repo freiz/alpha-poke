@@ -1,0 +1,59 @@
+Dragonite @ Leftovers  
+Ability: Inner Focus  
+Tera Type: Flying  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Dragon Dance  
+- Ice Spinner  
+- Earthquake  
+- Roost  
+
+Keldeo @ Leftovers  
+Ability: Justified  
+Tera Type: Steel  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Surf  
+- Aura Sphere  
+- Calm Mind  
+- Vacuum Wave  
+
+Meowscarada @ Rocky Helmet  
+Ability: Protean  
+Tera Type: Ghost  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Triple Axel  
+- U-turn  
+- Flower Trick  
+
+Iron Crown @ Choice Specs  
+Ability: Quark Drive  
+Tera Type: Steel  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Psyshock  
+- Volt Switch  
+- Psychic Noise  
+- Tachyon Cutter  
+
+Raging Bolt @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Flying  
+EVs: 188 HP / 252 SpA / 68 Spe  
+Hardy Nature  
+- Dragon Pulse  
+- Thunderclap  
+- Thunderbolt  
+- Calm Mind  
+
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Earthquake  
+- Knock Off  
+- Headlong Rush

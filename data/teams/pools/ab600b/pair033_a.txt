@@ -1,0 +1,59 @@
+Slither Wing @ Life Orb  
+Ability: Protosynthesis  
+Tera Type: Electric  
+EVs: 252 HP / 28 Atk / 220 Def / 8 Spe  
+Impish Nature  
+- U-turn  
+- Close Combat  
+- Wild Charge  
+- Flare Blitz  
+
+Torkoal @ Heat Rock  
+Ability: Drought  
+Tera Type: Flying  
+EVs: 252 HP / 4 Def / 252 SpD  
+Relaxed Nature  
+- Stealth Rock  
+- Rapid Spin  
+- Will-O-Wisp  
+- Lava Plume  
+
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 252 HP / 204 Def / 52 Spe  
+Impish Nature  
+- Headlong Rush  
+- Rapid Spin  
+- Ice Spinner  
+- Bulk Up  
+
+Walking Wake @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Stellar  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Hydro Steam  
+- Flamethrower  
+- Dragon Pulse  
+- Draco Meteor  
+
+Scream Tail @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 252 HP / 4 SpA / 252 Spe  
+Timid Nature  
+- Dazzling Gleam  
+- Encore  
+- Protect  
+- Wish  
+
+Leavanny @ Eject Pack  
+Ability: Swarm  
+Tera Type: Ghost  
+EVs: 100 Atk / 176 SpA / 232 Spe  
+Naughty Nature  
+- Leaf Storm  
+- Triple Axel  
+- Sticky Web  
+- Knock Off

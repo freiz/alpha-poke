@@ -1,0 +1,59 @@
+Dragonite @ Life Orb  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 148 HP / 252 Atk / 4 Def / 104 Spe  
+Adamant Nature  
+- Dragon Dance  
+- Fire Punch  
+- Outrage  
+- Extreme Speed  
+
+Great Tusk @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Ghost  
+EVs: 248 HP / 4 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Bulk Up  
+- Headlong Rush  
+- Ice Spinner  
+- Taunt  
+
+Deoxys-Speed @ Life Orb  
+Ability: Pressure  
+Tera Type: Fighting  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Modest Nature  
+- Stealth Rock  
+- Psycho Boost  
+- Taunt  
+- Pain Split  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Fighting  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Shadow Ball  
+- Nasty Plot  
+- Recover  
+- Make It Rain  
+
+Zamazenta @ Life Orb  
+Ability: Dauntless Shield  
+Tera Type: Steel  
+EVs: 4 HP / 252 Def / 252 SpD  
+Careful Nature  
+- Crunch  
+- Close Combat  
+- Stone Edge  
+- Ice Fang  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Steel  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Shadow Ball  
+- Moonblast  
+- Knock Off  
+- Calm Mind

@@ -1,0 +1,59 @@
+Magnezone @ Choice Specs  
+Ability: Analytic  
+Tera Type: Flying  
+EVs: 240 HP / 84 SpA / 4 SpD / 180 Spe  
+Modest Nature  
+- Flash Cannon  
+- Discharge  
+- Iron Defense  
+- Volt Switch  
+
+Cinderace @ Life Orb  
+Ability: Libero  
+Tera Type: Fire  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Court Change  
+- Pyro Ball  
+- Will-O-Wisp  
+
+Zapdos @ Life Orb  
+Ability: Static  
+Tera Type: Steel  
+EVs: 248 HP / 244 Def / 16 Spe  
+Bold Nature  
+- Hurricane  
+- Volt Switch  
+- Roost  
+- U-turn  
+
+Great Tusk @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Fire  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Jolly Nature  
+- Ice Spinner  
+- Rapid Spin  
+- Bulk Up  
+- Headlong Rush  
+
+Darkrai @ Life Orb  
+Ability: Bad Dreams  
+Tera Type: Dark  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Taunt  
+- Dark Pulse  
+- Nasty Plot  
+- Ice Beam  
+
+Kyurem @ Loaded Dice  
+Ability: Pressure  
+Tera Type: Ice  
+EVs: 184 HP / 252 Def / 72 SpA  
+Bold Nature  
+- Freeze-Dry  
+- Earth Power  
+- Icicle Spear  
+- Dragon Dance

@@ -1,0 +1,59 @@
+Samurott-Hisui @ Rocky Helmet  
+Ability: Sharpness  
+Tera Type: Poison  
+EVs: 248 HP / 84 Atk / 124 SpD / 52 Spe  
+Adamant Nature  
+- Ceaseless Edge  
+- Sucker Punch  
+- Aqua Cutter  
+- Flip Turn  
+
+Dragapult @ Focus Sash  
+Ability: Infiltrator  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Hex  
+- Draco Meteor  
+- U-turn  
+- Will-O-Wisp  
+
+Iron Treads @ Leftovers  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 252 HP / 252 SpD / 4 Spe  
+Careful Nature  
+- Rapid Spin  
+- Stealth Rock  
+- Earthquake  
+- Ice Spinner  
+
+Enamorus @ Life Orb  
+Ability: Contrary  
+Tera Type: Fairy  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Moonblast  
+- Mystical Fire  
+- Earth Power  
+- Healing Wish  
+
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 76 HP / 180 Atk / 252 Spe  
+Jolly Nature  
+- Ivy Cudgel  
+- Spikes  
+- Power Whip  
+- Knock Off  
+
+Scizor @ Leftovers  
+Ability: Technician  
+Tera Type: Steel  
+EVs: 248 HP / 252 Atk / 8 SpD  
+Adamant Nature  
+- Bullet Punch  
+- U-turn  
+- Knock Off  
+- Brick Break

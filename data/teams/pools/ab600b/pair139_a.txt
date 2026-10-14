@@ -1,0 +1,63 @@
+Rabsca @ Leppa Berry  
+Ability: Synchronize  
+Shiny: Yes  
+Tera Type: Water  
+EVs: 248 HP / 60 Def / 200 SpD  
+Calm Nature  
+IVs: 0 Atk  
+- Gravity  
+- Revival Blessing  
+- Psychic Noise  
+- Recover  
+
+Landorus-Therian @ Rocky Helmet  
+Ability: Intimidate  
+Tera Type: Grass  
+EVs: 168 HP / 88 SpA / 252 Spe  
+Timid Nature  
+- Sandsear Storm  
+- Grass Knot  
+- U-turn  
+- Gravity  
+
+Excadrill @ Soft Sand  
+Ability: Sand Rush  
+Tera Type: Ground  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Earthquake  
+- Rapid Spin  
+- Iron Head  
+- Swords Dance  
+
+Darkrai @ Expert Belt  
+Ability: Bad Dreams  
+Tera Type: Fighting  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Focus Blast  
+- Ice Beam  
+- Thunder  
+- Dark Pulse  
+
+Tyranitar @ Smooth Rock  
+Ability: Sand Stream  
+Tera Type: Water  
+EVs: 252 HP / 24 Atk / 232 SpD  
+Careful Nature  
+- Stealth Rock  
+- Knock Off  
+- Ice Punch  
+- Low Kick  
+
+Zapdos @ Heavy-Duty Boots  
+Ability: Static  
+Tera Type: Water  
+EVs: 252 HP / 252 Def / 4 SpA  
+Modest Nature  
+IVs: 30 Spe  
+- Hurricane  
+- Zap Cannon  
+- U-turn  
+- Roost

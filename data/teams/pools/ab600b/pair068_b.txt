@@ -1,0 +1,63 @@
+Scizor @ Choice Band  
+Ability: Technician  
+Tera Type: Steel  
+EVs: 248 HP / 252 Atk / 8 SpD  
+Adamant Nature  
+- Bullet Punch  
+- Dual Wingbeat  
+- U-turn  
+- Knock Off  
+
+Kyurem @ Choice Specs  
+Ability: Pressure  
+Tera Type: Ground  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Draco Meteor  
+- Freeze-Dry  
+- Ice Beam  
+- Earth Power  
+
+Weezing-Galar @ Heavy-Duty Boots  
+Ability: Neutralizing Gas  
+Tera Type: Fire  
+EVs: 252 HP / 240 Def / 16 SpA  
+Bold Nature  
+IVs: 0 Atk  
+- Strange Steam  
+- Defog  
+- Sludge Bomb  
+- Will-O-Wisp  
+
+Alomomola @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Ghost  
+EVs: 4 HP / 252 Def / 252 SpD  
+Relaxed Nature  
+IVs: 0 Spe  
+- Scald  
+- Flip Turn  
+- Wish  
+- Protect  
+
+Slowking-Galar @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 248 HP / 8 SpA / 252 SpD  
+Calm Nature  
+IVs: 0 Atk  
+- Chilly Reception  
+- Sludge Bomb  
+- Psychic Noise  
+- Thunder Wave  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Normal  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Facade  
+- Substitute  
+- Earthquake

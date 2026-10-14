@@ -1,0 +1,59 @@
+Tyranitar @ Leftovers  
+Ability: Sand Stream  
+Tera Type: Flying  
+EVs: 88 HP / 252 Atk / 168 Spe  
+Adamant Nature  
+- Stealth Rock  
+- Stone Edge  
+- Knock Off  
+- Ice Punch  
+
+Scizor @ Life Orb  
+Ability: Technician  
+Tera Type: Bug  
+EVs: 108 HP / 252 Atk / 92 Def / 52 SpD / 4 Spe  
+Adamant Nature  
+- Bullet Punch  
+- Close Combat  
+- Swords Dance  
+- Knock Off  
+
+Espeon @ Focus Sash  
+Ability: Magic Bounce  
+Tera Type: Fairy  
+EVs: 252 HP / 228 Def / 28 SpA  
+Bold Nature  
+- Shadow Ball  
+- Expanding Force  
+- Alluring Voice  
+- Reflect  
+
+Typhlosion @ Choice Scarf  
+Ability: Flash Fire  
+Tera Type: Fire  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Modest Nature  
+- Focus Blast  
+- Will-O-Wisp  
+- Flamethrower  
+- Fire Blast  
+
+Raikou @ Light Clay  
+Ability: Inner Focus  
+Tera Type: Water  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Modest Nature  
+- Thunderbolt  
+- Protect  
+- Light Screen  
+- Scald  
+
+Azumarill @ Sitrus Berry  
+Ability: Huge Power  
+Tera Type: Water  
+EVs: 128 HP / 252 Atk / 40 Def / 52 SpA / 36 SpD  
+Adamant Nature  
+- Play Rough  
+- Aqua Jet  
+- Liquidation  
+- Belly Drum

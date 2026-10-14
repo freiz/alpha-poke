@@ -1,0 +1,59 @@
+Walking Wake @ Life Orb  
+Ability: Protosynthesis  
+Tera Type: Water  
+EVs: 244 SpA / 12 SpD / 252 Spe  
+Timid Nature  
+- Weather Ball  
+- Draco Meteor  
+- Hydro Steam  
+- Dragon Pulse  
+
+Raging Bolt @ Life Orb  
+Ability: Protosynthesis  
+Tera Type: Fairy  
+EVs: 200 HP / 252 SpA / 56 Spe  
+Modest Nature  
+- Weather Ball  
+- Volt Switch  
+- Draco Meteor  
+- Thunderclap  
+
+Hatterene @ Eject Button  
+Ability: Magic Bounce  
+Tera Type: Water  
+EVs: 252 HP / 252 Def / 4 SpA  
+Bold Nature  
+- Nuzzle  
+- Psychic Noise  
+- Draining Kiss  
+- Mystical Fire  
+
+Ninetales @ Heat Rock  
+Ability: Drought  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Def / 252 Spe  
+Timid Nature  
+- Flamethrower  
+- Encore  
+- Overheat  
+- Healing Wish  
+
+Landorus-Therian @ Choice Scarf  
+Ability: Intimidate  
+Tera Type: Water  
+EVs: 128 HP / 132 Def / 248 Spe  
+Jolly Nature  
+- U-turn  
+- Earthquake  
+- Grass Knot  
+- Stealth Rock  
+
+Iron Moth @ Choice Specs  
+Ability: Quark Drive  
+Tera Type: Fire  
+EVs: 124 Def / 132 SpA / 252 Spe  
+Timid Nature  
+- Overheat  
+- Fiery Dance  
+- Toxic  
+- Sludge Wave

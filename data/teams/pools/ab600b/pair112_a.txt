@@ -1,0 +1,57 @@
+Houndstone @ Rocky Helmet  
+Ability: Fluffy  
+Tera Type: Ghost  
+EVs: 252 Atk / 252 Spe  
+Jolly Nature  
+- Will-O-Wisp  
+- Pain Split  
+- Night Shade  
+- Poltergeist  
+
+Hoopa @ Aguav Berry  
+Ability: Magician  
+Tera Type: Fighting  
+EVs: 252 HP / 4 Atk / 252 SpA  
+Rash Nature  
+- Focus Blast  
+- Thunderbolt  
+- Shadow Ball  
+- Substitute  
+
+Heracross @ Flame Orb  
+Ability: Moxie  
+Tera Type: Rock  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Lunge  
+- Close Combat  
+- Knock Off  
+- Earthquake  
+
+Hypno  
+Ability: Inner Focus  
+EVs: 84 HP / 84 Atk / 84 Def / 84 SpA / 84 SpD / 84 Spe  
+Serious Nature  
+- Thunder Wave  
+- Hex  
+- Endeavor  
+
+Haxorus @ Lum Berry  
+Ability: Mold Breaker  
+Tera Type: Poison  
+EVs: 252 Atk / 252 Spe  
+Adamant Nature  
+- Iron Head  
+- Outrage  
+- Close Combat  
+- Earthquake  
+
+Hitmonlee @ Liechi Berry  
+Ability: Unburden  
+Tera Type: Dark  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Fake Out  
+- Rapid Spin  
+- Endeavor  
+- Knock Off

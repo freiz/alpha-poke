@@ -1,0 +1,59 @@
+Dragapult @ Life Orb  
+Ability: Clear Body  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Shadow Ball  
+- Dragon Darts  
+- U-turn  
+- Draco Meteor  
+
+Serperior @ Room Service  
+Ability: Contrary  
+Tera Type: Ground  
+EVs: 108 HP / 100 Def / 188 SpA / 112 SpD  
+Hardy Nature  
+- Leaf Storm  
+- Leech Seed  
+- Glare  
+- Substitute  
+
+Dragonite @ Heavy-Duty Boots  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 248 HP / 240 Atk / 20 Spe  
+Adamant Nature  
+- Earthquake  
+- Roost  
+- Extreme Speed  
+- Dragon Tail  
+
+Hatterene @ Focus Sash  
+Ability: Magic Bounce  
+Tera Type: Steel  
+EVs: 252 HP / 128 SpA / 104 SpD / 24 Spe  
+Modest Nature  
+- Trick Room  
+- Psychic Noise  
+- Mystical Fire  
+- Dazzling Gleam  
+
+Torkoal @ Heat Rock  
+Ability: Drought  
+Tera Type: Flying  
+EVs: 248 HP / 252 SpA / 8 SpD  
+Quiet Nature  
+- Will-O-Wisp  
+- Stealth Rock  
+- Rapid Spin  
+- Lava Plume  
+
+Okidogi @ Blunder Policy  
+Ability: Guard Dog  
+Tera Type: Water  
+EVs: 252 HP / 160 SpD / 96 Spe  
+Careful Nature  
+- Drain Punch  
+- Knock Off  
+- Ice Punch  
+- Gunk Shot

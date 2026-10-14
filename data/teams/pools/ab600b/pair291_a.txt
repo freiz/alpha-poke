@@ -1,0 +1,59 @@
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Normal  
+EVs: 244 HP / 12 Atk / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Taunt  
+- Earthquake  
+- Protect  
+
+Garchomp @ Rocky Helmet  
+Ability: Rough Skin  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Spikes  
+- Earthquake  
+- Dragon Tail  
+
+Blaziken @ Life Orb  
+Ability: Speed Boost  
+Tera Type: Fire  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- Protect  
+- Close Combat  
+- Focus Energy  
+- Knock Off  
+
+Darkrai @ Leftovers  
+Ability: Bad Dreams  
+Tera Type: Poison  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Nasty Plot  
+- Dark Pulse  
+- Sludge Bomb  
+- Ice Beam  
+
+Gengar @ Leftovers  
+Ability: Cursed Body  
+Tera Type: Ghost  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Trick  
+- Destiny Bond  
+- Shadow Ball  
+- Sludge Bomb  
+
+Dragonite @ Lum Berry  
+Ability: Multiscale  
+Tera Type: Ground  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Dragon Dance  
+- Extreme Speed  
+- Ice Spinner  
+- Earthquake

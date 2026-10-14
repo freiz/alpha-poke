@@ -1,0 +1,58 @@
+Houndoom @ Focus Sash  
+Ability: Flash Fire  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Flamethrower  
+- Dark Pulse  
+- Counter  
+- Protect  
+
+Lucario @ Air Balloon  
+Ability: Steadfast  
+Tera Type: Normal  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Close Combat  
+- Meteor Mash  
+- Final Gambit  
+- Swords Dance  
+
+Gardevoir @ Life Orb  
+Ability: Trace  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Thunderbolt  
+- Moonblast  
+- Psyshock  
+- Trick  
+
+Garchomp @ Life Orb  
+Ability: Rough Skin  
+Tera Type: Water  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- Earthquake  
+- Liquidation  
+- Stealth Rock  
+- Scale Shot  
+
+Leavanny @ Life Orb  
+Ability: Chlorophyll  
+Tera Type: Ghost  
+EVs: 252 Atk / 40 SpA / 196 Spe  
+Naughty Nature  
+- Leaf Blade  
+- Swords Dance  
+- Leaf Storm  
+- Triple Axel  
+
+Gengar @ Focus Sash  
+Ability: Cursed Body  
+Tera Type: Ghost  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Modest Nature  
+- Thunderbolt  
+- Shadow Ball  
+- Encore  
+- Sludge Bomb

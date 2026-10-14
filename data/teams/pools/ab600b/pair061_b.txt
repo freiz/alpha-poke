@@ -1,0 +1,62 @@
+Dragapult @ Choice Specs  
+Ability: Infiltrator  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Draco Meteor  
+- Shadow Ball  
+- Hydro Pump  
+- Flamethrower  
+
+Landorus-Therian @ Rocky Helmet  
+Ability: Intimidate  
+Tera Type: Water  
+EVs: 248 HP / 8 Def / 252 Spe  
+Jolly Nature  
+- Earthquake  
+- U-turn  
+- Stealth Rock  
+- Smack Down  
+
+Hoopa-Unbound @ Assault Vest  
+Ability: Magician  
+Tera Type: Fighting  
+EVs: 80 HP / 120 Atk / 216 SpA / 92 Spe  
+Mild Nature  
+- Knock Off  
+- Drain Punch  
+- Psychic  
+- Thunderbolt  
+
+Zamazenta @ Leftovers  
+Ability: Dauntless Shield  
+Tera Type: Fire  
+EVs: 248 HP / 8 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Iron Defense  
+- Body Press  
+- Protect  
+- Substitute  
+
+Garganacl @ Covert Cloak  
+Ability: Purifying Salt  
+Tera Type: Water  
+EVs: 248 HP / 16 Def / 244 SpD  
+Impish Nature  
+- Salt Cure  
+- Earthquake  
+- Curse  
+- Recover  
+
+Weezing-Galar @ Heavy-Duty Boots  
+Ability: Levitate  
+Tera Type: Steel  
+EVs: 236 HP / 96 Def / 176 Spe  
+Bold Nature  
+IVs: 0 Atk  
+- Will-O-Wisp  
+- Defog  
+- Pain Split  
+- Strange Steam

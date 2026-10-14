@@ -1,0 +1,59 @@
+Probopass (F) @ Rocky Helmet  
+Ability: Magnet Pull  
+Tera Type: Fighting  
+EVs: 248 HP / 252 Def / 8 SpD  
+Bold Nature  
+IVs: 0 Atk  
+- Body Press  
+- Thunder Wave  
+- Flash Cannon  
+- Stealth Rock  
+
+Grimmsnarl @ Light Clay  
+Ability: Prankster  
+Tera Type: Steel  
+EVs: 248 HP / 252 Def / 8 SpD  
+Impish Nature  
+- Reflect  
+- Light Screen  
+- Parting Shot  
+- Spirit Break  
+
+Dragapult (F) @ Leftovers  
+Ability: Clear Body  
+Tera Type: Dragon  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Dragon Dance  
+- Dragon Darts  
+- Phantom Force  
+- Substitute  
+
+Mimikyu (F) @ Red Card  
+Ability: Disguise  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Shadow Claw  
+- Play Rough  
+- Shadow Sneak  
+
+Maushold @ Wide Lens  
+Ability: Technician  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Tidy Up  
+- Population Bomb  
+- Bite  
+- Encore  
+
+Ogerpon-Wellspring (F) @ Wellspring Mask  
+Ability: Water Absorb  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Ivy Cudgel  
+- Horn Leech  
+- Substitute

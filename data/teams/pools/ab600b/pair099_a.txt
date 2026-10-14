@@ -1,0 +1,60 @@
+Cinderace @ Heavy-Duty Boots  
+Ability: Libero  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Pyro Ball  
+- Sucker Punch  
+- Smack Down  
+- U-turn  
+
+Ogerpon-Wellspring (F) @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Ivy Cudgel  
+- Power Whip  
+- Knock Off  
+- U-turn  
+
+Landorus-Therian @ Rocky Helmet  
+Ability: Intimidate  
+Tera Type: Water  
+EVs: 248 HP / 132 Def / 128 Spe  
+Impish Nature  
+- Earthquake  
+- Grass Knot  
+- U-turn  
+- Stealth Rock  
+
+Zamazenta @ Heavy-Duty Boots  
+Ability: Dauntless Shield  
+Tera Type: Steel  
+EVs: 84 HP / 252 Atk / 172 Spe  
+Jolly Nature  
+- Close Combat  
+- Crunch  
+- Heavy Slam  
+- Ice Fang  
+
+Kingambit (M) @ Black Glasses  
+Ability: Supreme Overlord  
+Tera Type: Dark  
+EVs: 172 HP / 252 Atk / 84 Spe  
+Adamant Nature  
+- Kowtow Cleave  
+- Sucker Punch  
+- Iron Head  
+- Swords Dance  
+
+Dragapult (F) @ Heavy-Duty Boots  
+Ability: Infiltrator  
+Shiny: Yes  
+Tera Type: Fairy  
+EVs: 60 Atk / 196 SpA / 252 Spe  
+Naive Nature  
+- Dragon Darts  
+- Hex  
+- U-turn  
+- Will-O-Wisp

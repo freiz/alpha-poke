@@ -1,0 +1,59 @@
+Tyranitar @ Leftovers  
+Ability: Sand Stream  
+Tera Type: Fighting  
+EVs: 252 HP / 4 Atk / 252 SpD  
+Careful Nature  
+- Knock Off  
+- Stone Edge  
+- Stealth Rock  
+- Low Kick  
+
+Excadrill @ Life Orb  
+Ability: Mold Breaker  
+Tera Type: Ground  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- Earthquake  
+- Swords Dance  
+- Iron Head  
+- Rapid Spin  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Fighting  
+EVs: 248 HP / 196 Def / 64 Spe  
+Bold Nature  
+- Dazzling Gleam  
+- Shadow Ball  
+- Nasty Plot  
+- Trick  
+
+Tinkaton @ Air Balloon  
+Ability: Mold Breaker  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Thunder Wave  
+- Stealth Rock  
+- Gigaton Hammer  
+- Knock Off  
+
+Raging Bolt @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Grass  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Modest Nature  
+- Dragon Pulse  
+- Calm Mind  
+- Draco Meteor  
+- Thunderclap  
+
+Great Tusk @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Ice  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Ice Spinner  
+- Rapid Spin  
+- Close Combat  
+- Headlong Rush

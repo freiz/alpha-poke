@@ -1,0 +1,61 @@
+Glimmora @ Heavy-Duty Boots  
+Ability: Toxic Debris  
+Tera Type: Rock  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Stealth Rock  
+- Earth Power  
+- Power Gem  
+- Mortal Spin  
+
+Ogerpon-Wellspring (F) @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Ivy Cudgel  
+- Power Whip  
+- Knock Off  
+- Taunt  
+
+Moltres @ Heavy-Duty Boots  
+Ability: Flame Body  
+Tera Type: Fairy  
+EVs: 248 HP / 80 Def / 164 SpD / 16 Spe  
+Calm Nature  
+- Flamethrower  
+- U-turn  
+- Will-O-Wisp  
+- Roost  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Steel  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Moonblast  
+- Psyshock  
+- Thunderbolt  
+- Encore  
+
+Zamazenta @ Leftovers  
+Ability: Dauntless Shield  
+Shiny: Yes  
+Tera Type: Steel  
+EVs: 248 HP / 108 Def / 152 Spe  
+Jolly Nature  
+- Body Press  
+- Heavy Slam  
+- Substitute  
+- Iron Defense  
+
+Kingambit @ Black Glasses  
+Ability: Supreme Overlord  
+Tera Type: Flying  
+EVs: 236 HP / 252 Atk / 20 Spe  
+Adamant Nature  
+- Kowtow Cleave  
+- Iron Head  
+- Sucker Punch  
+- Swords Dance

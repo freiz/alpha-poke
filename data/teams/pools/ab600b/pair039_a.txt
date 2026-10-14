@@ -1,0 +1,59 @@
+Hatterene @ Leftovers  
+Ability: Magic Bounce  
+Tera Type: Water  
+EVs: 252 HP / 204 Def / 52 Spe  
+Bold Nature  
+- Calm Mind  
+- Draining Kiss  
+- Nuzzle  
+- Mystical Fire  
+
+Primarina @ Leftovers  
+Ability: Torrent  
+Tera Type: Steel  
+EVs: 248 HP / 240 Def / 20 Spe  
+Bold Nature  
+- Psychic Noise  
+- Moonblast  
+- Surf  
+- Flip Turn  
+
+Meowscarada @ Leftovers  
+Ability: Protean  
+Tera Type: Dark  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Flower Trick  
+- Triple Axel  
+- Knock Off  
+
+Pecharunt @ Rocky Helmet  
+Ability: Poison Puppeteer  
+Tera Type: Flying  
+EVs: 252 HP / 4 SpD / 252 Spe  
+Timid Nature  
+- Recover  
+- Shadow Ball  
+- Toxic  
+- Malignant Chain  
+
+Tsareena @ Big Nugget  
+Ability: Queenly Majesty  
+Tera Type: Poison  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Low Kick  
+- Triple Axel  
+- Power Whip  
+- Rapid Spin  
+
+Whimsicott @ Life Orb  
+Ability: Prankster  
+Tera Type: Ghost  
+EVs: 248 HP / 8 Def / 252 SpD  
+Sassy Nature  
+- Growth  
+- Giga Drain  
+- Moonblast  
+- Shadow Ball

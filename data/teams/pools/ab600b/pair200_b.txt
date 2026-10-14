@@ -1,0 +1,61 @@
+Zamazenta @ Leftovers  
+Ability: Dauntless Shield  
+Shiny: Yes  
+Tera Type: Dark  
+EVs: 168 Atk / 88 Def / 252 Spe  
+Jolly Nature  
+- Body Press  
+- Iron Defense  
+- Heavy Slam  
+- Crunch  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Nasty Plot  
+- Shadow Ball  
+- Make It Rain  
+- Recover  
+
+Hatterene (F) @ Eject Button  
+Ability: Magic Bounce  
+Tera Type: Steel  
+EVs: 252 HP / 124 Def / 132 Spe  
+Bold Nature  
+- Healing Wish  
+- Psychic Noise  
+- Dazzling Gleam  
+- Nuzzle  
+
+Great Tusk @ Rocky Helmet  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Headlong Rush  
+- Ice Spinner  
+- Rapid Spin  
+- Stealth Rock  
+
+Samurott-Hisui @ Choice Scarf  
+Ability: Sharpness  
+Tera Type: Dark  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Ceaseless Edge  
+- Razor Shell  
+- Knock Off  
+- Flip Turn  
+
+Rillaboom @ Choice Band  
+Ability: Grassy Surge  
+Tera Type: Grass  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Grassy Glide  
+- Wood Hammer  
+- U-turn  
+- Knock Off

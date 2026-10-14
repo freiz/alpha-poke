@@ -1,0 +1,59 @@
+Cinderace @ Normal Gem  
+Ability: Libero  
+Tera Type: Fire  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Pyro Ball  
+- Will-O-Wisp  
+- U-turn  
+- Court Change  
+
+Slowking-Galar @ Black Sludge  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 252 HP / 4 SpA / 252 SpD  
+Calm Nature  
+- Psychic  
+- Sludge Bomb  
+- Chilly Reception  
+- Future Sight  
+
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Grass  
+EVs: 248 HP / 252 Def / 8 SpD  
+Impish Nature  
+- Brave Bird  
+- Roost  
+- U-turn  
+- Iron Defense  
+
+Rotom-Wash @ Leftovers  
+Ability: Levitate  
+Tera Type: Steel  
+EVs: 252 HP / 212 Def / 44 Spe  
+Bold Nature  
+- Hydro Pump  
+- Will-O-Wisp  
+- Pain Split  
+- Discharge  
+
+Darkrai @ Life Orb  
+Ability: Bad Dreams  
+Tera Type: Dark  
+EVs: 4 Atk / 248 SpA / 4 SpD / 252 Spe  
+Hasty Nature  
+- Dark Pulse  
+- Sludge Bomb  
+- Ice Beam  
+- Focus Blast  
+
+Dragonite @ Heavy-Duty Boots  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 196 HP / 204 Atk / 108 Spe  
+Adamant Nature  
+- Earthquake  
+- Extreme Speed  
+- Roost  
+- Dragon Dance

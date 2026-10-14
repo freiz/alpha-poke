@@ -1,0 +1,59 @@
+Landorus-Therian @ Leftovers  
+Ability: Intimidate  
+Tera Type: Ground  
+EVs: 252 HP / 4 Def / 252 Spe  
+Timid Nature  
+- U-turn  
+- Stone Edge  
+- Stealth Rock  
+- Earth Power  
+
+Incineroar @ Leftovers  
+Ability: Intimidate  
+Tera Type: Dragon  
+EVs: 252 HP / 4 Atk / 252 SpD  
+Careful Nature  
+- Knock Off  
+- Parting Shot  
+- Temper Flare  
+- Will-O-Wisp  
+
+Alomomola @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Scald  
+- Wish  
+- Flip Turn  
+- Tickle  
+
+Weezing-Galar @ Rocky Helmet  
+Ability: Neutralizing Gas  
+Tera Type: Water  
+EVs: 248 HP / 252 Def / 8 Spe  
+Bold Nature  
+- Will-O-Wisp  
+- Sludge Bomb  
+- Defog  
+- Pain Split  
+
+Dragapult @ Life Orb  
+Ability: Infiltrator  
+Tera Type: Dragon  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- U-turn  
+- Astonish  
+- Dragon Darts  
+- Draco Meteor  
+
+Gholdengo @ Leftovers  
+Ability: Good as Gold  
+Tera Type: Fighting  
+EVs: 160 HP / 252 SpA / 96 Spe  
+Modest Nature  
+- Shadow Ball  
+- Trick  
+- Nasty Plot  
+- Make It Rain

@@ -1,0 +1,62 @@
+Dragapult (F) @ Choice Band  
+Ability: Clear Body  
+Shiny: Yes  
+Tera Type: Flying  
+EVs: 252 Atk / 4 SpA / 252 Spe  
+Hasty Nature  
+- Dragon Darts  
+- Shadow Ball  
+- Acrobatics  
+- Sucker Punch  
+
+Weezing (M) @ Assault Vest  
+Ability: Levitate  
+Tera Type: Dark  
+EVs: 252 HP / 4 Atk / 252 SpA  
+Quiet Nature  
+- Gunk Shot  
+- Clear Smog  
+- Dark Pulse  
+- Flamethrower  
+
+Garganacl (M) @ Leftovers  
+Ability: Purifying Salt  
+Shiny: Yes  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Atk / 252 Def  
+Impish Nature  
+- Body Press  
+- Salt Cure  
+- Curse  
+- Recover  
+
+Alomomola (F) @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Ice  
+EVs: 252 HP / 252 Def / 4 SpA  
+Bold Nature  
+- Flip Turn  
+- Scald  
+- Wish  
+- Ice Beam  
+
+Reuniclus (M) @ Life Orb  
+Ability: Magic Guard  
+Shiny: Yes  
+Tera Type: Fighting  
+EVs: 252 HP / 212 SpA / 44 Spe  
+Modest Nature  
+- Psychic Noise  
+- Knock Off  
+- Focus Blast  
+- Recover  
+
+Cyclizar @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Knock Off  
+- U-turn  
+- Taunt

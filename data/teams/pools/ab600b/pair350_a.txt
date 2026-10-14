@@ -1,0 +1,59 @@
+Vikavolt @ Focus Sash  
+Ability: Levitate  
+Tera Type: Fairy  
+EVs: 232 HP / 252 SpA / 24 Spe  
+Modest Nature  
+- Volt Switch  
+- Thunderbolt  
+- Energy Ball  
+- Bug Buzz  
+
+Arcanine @ Choice Band  
+Ability: Intimidate  
+Tera Type: Fairy  
+EVs: 4 HP / 200 Atk / 48 Def / 252 SpD  
+Sassy Nature  
+- Close Combat  
+- Extreme Speed  
+- Flare Blitz  
+- Snarl  
+
+Glimmora @ Red Card  
+Ability: Corrosion  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Naive Nature  
+- Earth Power  
+- Stealth Rock  
+- Mortal Spin  
+- Meteor Beam  
+
+Garchomp @ Rocky Helmet  
+Ability: Rough Skin  
+Tera Type: Fire  
+EVs: 252 HP / 16 Def / 240 Spe  
+Jolly Nature  
+- Dragon Tail  
+- Swords Dance  
+- Stealth Rock  
+- Scale Shot  
+
+Quaquaval @ Lum Berry  
+Ability: Moxie  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Aqua Step  
+- U-turn  
+- Close Combat  
+- Wave Crash  
+
+Wo-Chien @ Leftovers  
+Ability: Tablets of Ruin  
+Tera Type: Poison  
+EVs: 252 HP / 4 Atk / 252 Def  
+Relaxed Nature  
+- Knock Off  
+- Leech Seed  
+- Foul Play  
+- Stun Spore

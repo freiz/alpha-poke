@@ -1,0 +1,58 @@
+Glimmora @ Black Sludge  
+Ability: Toxic Debris  
+Tera Type: Grass  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Venoshock  
+- Power Gem  
+- Earth Power  
+- Meteor Beam  
+
+Mienshao @ Focus Sash  
+Ability: Reckless  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Fake Out  
+- Knock Off  
+- Close Combat  
+- U-turn  
+
+Houndoom @ Focus Sash  
+Ability: Unnerve  
+EVs: 4 HP / 252 Atk / 252 SpA  
+Gentle Nature  
+- Super Fang  
+- Flamethrower  
+- Counter  
+- Destiny Bond  
+
+Vespiquen @ Heavy-Duty Boots  
+Ability: Unnerve  
+Tera Type: Ghost  
+EVs: 84 HP / 84 Atk / 84 Def / 84 SpA / 84 SpD / 84 Spe  
+Serious Nature  
+- Attack Order  
+- Spikes  
+- U-turn  
+- Toxic  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Fairy  
+EVs: 244 HP / 12 Def / 252 SpD  
+Careful Nature  
+- Earthquake  
+- Knock Off  
+- Toxic Spikes  
+- Substitute  
+
+Iron Crown @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Steel  
+EVs: 80 HP / 4 Def / 172 SpA / 252 Spe  
+Timid Nature  
+- Psychic Noise  
+- Tachyon Cutter  
+- Volt Switch  
+- Focus Blast

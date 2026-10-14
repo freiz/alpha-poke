@@ -1,0 +1,59 @@
+Alomomola @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Def / 4 SpD  
+Relaxed Nature  
+- Wish  
+- Flip Turn  
+- Scald  
+- Body Slam  
+
+Blissey @ Leftovers  
+Ability: Natural Cure  
+Tera Type: Poison  
+EVs: 4 HP / 252 Def / 252 SpD  
+Calm Nature  
+- Stealth Rock  
+- Soft-Boiled  
+- Seismic Toss  
+- Calm Mind  
+
+Clodsire @ Leftovers  
+Ability: Unaware  
+Tera Type: Dark  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- Counter  
+- Toxic  
+- Recover  
+- Earthquake  
+
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Iron Defense  
+- Brave Bird  
+- Defog  
+- Roost  
+
+Avalugg @ Rocky Helmet  
+Ability: Sturdy  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Atk / 252 Def  
+Impish Nature  
+- Rapid Spin  
+- Avalanche  
+- Iron Defense  
+- Body Press  
+
+Slowking-Galar @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 252 HP / 4 Def / 252 SpD  
+Calm Nature  
+- Chilly Reception  
+- Future Sight  
+- Sludge Bomb  
+- Ice Beam

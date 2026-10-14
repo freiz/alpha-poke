@@ -1,0 +1,59 @@
+Kyurem @ Assault Vest  
+Ability: Pressure  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Dragon Tail  
+- Ice Beam  
+- Earth Power  
+- Freeze-Dry  
+
+Cinderace @ Heavy-Duty Boots  
+Ability: Blaze  
+Tera Type: Fire  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Will-O-Wisp  
+- High Jump Kick  
+- Court Change  
+- U-turn  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Steel  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Moonblast  
+- Calm Mind  
+- Focus Blast  
+- Thunderbolt  
+
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Ghost  
+EVs: 92 HP / 164 Def / 252 SpD  
+Careful Nature  
+- Roost  
+- U-turn  
+- Brave Bird  
+- Agility  
+
+Zamazenta @ Life Orb  
+Ability: Dauntless Shield  
+Tera Type: Dark  
+EVs: 4 Atk / 252 Def / 252 Spe  
+Jolly Nature  
+- Close Combat  
+- Ice Fang  
+- Crunch  
+- Heavy Slam  
+
+Landorus-Therian @ Rocky Helmet  
+Ability: Intimidate  
+Tera Type: Ground  
+EVs: 252 HP / 4 Def / 252 Spe  
+Jolly Nature  
+- Stealth Rock  
+- U-turn  
+- Earthquake  
+- Earth Power

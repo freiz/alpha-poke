@@ -1,0 +1,59 @@
+Pelipper @ Choice Specs  
+Ability: Drizzle  
+Tera Type: Flying  
+EVs: 252 HP / 252 Def / 4 SpD  
+Relaxed Nature  
+- Weather Ball  
+- U-turn  
+- Hurricane  
+- Surf  
+
+Hatterene @ Eject Button  
+Ability: Magic Bounce  
+Tera Type: Steel  
+EVs: 248 HP / 252 Def / 8 SpD  
+Bold Nature  
+- Psychic Noise  
+- Nuzzle  
+- Mystical Fire  
+- Draining Kiss  
+
+Landorus-Therian @ Leftovers  
+Ability: Intimidate  
+Tera Type: Dragon  
+EVs: 240 HP / 252 Def / 16 SpD  
+Impish Nature  
+- U-turn  
+- Earthquake  
+- Taunt  
+- Stealth Rock  
+
+Barraskewda @ Choice Band  
+Ability: Swift Swim  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Close Combat  
+- Aqua Jet  
+- Flip Turn  
+- Liquidation  
+
+Zapdos @ Heavy-Duty Boots  
+Ability: Static  
+Tera Type: Electric  
+EVs: 248 HP / 252 Def / 8 SpA  
+Bold Nature  
+- Hurricane  
+- Roost  
+- Volt Switch  
+- Discharge  
+
+Overqwil @ Life Orb  
+Ability: Swift Swim  
+Tera Type: Dragon  
+EVs: 48 HP / 252 Atk / 208 Spe  
+Jolly Nature  
+- Gunk Shot  
+- Crunch  
+- Swords Dance  
+- Liquidation

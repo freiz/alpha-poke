@@ -1,0 +1,59 @@
+Araquanid @ Red Card  
+Ability: Water Bubble  
+Tera Type: Ghost  
+EVs: 116 HP / 252 Atk / 100 Def / 40 SpD  
+Adamant Nature  
+- Sticky Web  
+- Surf  
+- Endeavor  
+- Endure  
+
+Hoopa-Unbound @ Salac Berry  
+Ability: Magician  
+Tera Type: Steel  
+EVs: 252 Atk / 180 Def / 76 SpA  
+Brave Nature  
+- Psychic  
+- Dark Pulse  
+- Drain Punch  
+- Focus Blast  
+
+Serperior @ Leftovers  
+Ability: Contrary  
+Tera Type: Fire  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Modest Nature  
+- Substitute  
+- Glare  
+- Leech Seed  
+- Leaf Storm  
+
+Cinderace @ Heavy-Duty Boots  
+Ability: Libero  
+Tera Type: Grass  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Pyro Ball  
+- Court Change  
+- Will-O-Wisp  
+
+Tornadus-Therian @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Dark  
+EVs: 52 HP / 36 Def / 252 SpA / 168 Spe  
+Timid Nature  
+- U-turn  
+- Knock Off  
+- Nasty Plot  
+- Bleakwind Storm  
+
+Pecharunt @ Red Card  
+Ability: Poison Puppeteer  
+Tera Type: Ghost  
+EVs: 248 HP / 8 SpA / 252 Spe  
+Timid Nature  
+- Malignant Chain  
+- Parting Shot  
+- Recover  
+- Foul Play

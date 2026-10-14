@@ -1,0 +1,58 @@
+Overqwil @ Life Orb  
+Ability: Intimidate  
+Tera Type: Water  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Swords Dance  
+- Liquidation  
+- Poison Jab  
+- Crunch  
+
+Hitmontop @ Leftovers  
+Ability: Intimidate  
+Tera Type: Ghost  
+EVs: 248 HP / 252 Atk / 8 SpD  
+Adamant Nature  
+- Agility  
+- Rapid Spin  
+- Mach Punch  
+- Thief  
+
+Wyrdeer @ Toxic Orb  
+Ability: Intimidate  
+EVs: 252 HP / 252 Atk / 4 SpA  
+Brave Nature  
+- Energy Ball  
+- Psychic  
+- Hyper Beam  
+- Skill Swap  
+
+Gyarados @ Leftovers  
+Ability: Intimidate  
+Tera Type: Ground  
+EVs: 172 HP / 40 Def / 200 SpA / 84 SpD / 12 Spe  
+Timid Nature  
+- Whirlpool  
+- Protect  
+- Thunder Wave  
+- Waterfall  
+
+Scrafty @ Leftovers  
+Ability: Intimidate  
+Tera Type: Dark  
+EVs: 144 HP / 252 Atk / 112 Def  
+Adamant Nature  
+- Dragon Dance  
+- Knock Off  
+- Foul Play  
+- Rest  
+
+Salamence @ Leftovers  
+Ability: Intimidate  
+Tera Type: Steel  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Flamethrower  
+- Air Slash  
+- Dragon Pulse  
+- Dragon Dance

@@ -1,0 +1,58 @@
+Snorlax @ Leftovers  
+Ability: Immunity  
+Tera Type: Fairy  
+EVs: 252 Def / 252 SpD  
+Careful Nature  
+- Double-Edge  
+- Curse  
+- Heat Crash  
+- Thunderbolt  
+
+Arcanine @ Heavy-Duty Boots  
+Ability: Intimidate  
+Tera Type: Fairy  
+EVs: 248 HP / 8 Atk / 252 Def  
+Impish Nature  
+- Flare Blitz  
+- Extreme Speed  
+- Close Combat  
+- Morning Sun  
+
+Lanturn @ Leftovers  
+Ability: Volt Absorb  
+EVs: 248 HP / 252 SpA / 8 SpD  
+Modest Nature  
+- Thunderbolt  
+- Ice Beam  
+- Volt Switch  
+- Scald  
+
+Rillaboom @ Life Orb  
+Ability: Grassy Surge  
+Tera Type: Grass  
+EVs: 252 HP / 4 Atk / 252 Def  
+Impish Nature  
+- Wood Hammer  
+- Swords Dance  
+- Grassy Glide  
+- Knock Off  
+
+Lapras @ Leftovers  
+Ability: Water Absorb  
+Tera Type: Bug  
+EVs: 248 HP / 80 Def / 180 SpD  
+Calm Nature  
+- Liquidation  
+- Earthquake  
+- Freeze-Dry  
+- Dragon Dance  
+
+Golurk @ Assault Vest  
+Ability: No Guard  
+Tera Type: Fighting  
+EVs: 116 Atk / 228 Def / 100 SpA / 64 SpD  
+Hardy Nature  
+- Poltergeist  
+- Earthquake  
+- Trick  
+- Stealth Rock

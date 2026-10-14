@@ -1,0 +1,59 @@
+Klawf @ Focus Sash  
+Ability: Anger Shell  
+Tera Type: Ghost  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Crabhammer  
+- Rest  
+- Rock Blast  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Dark  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Iron Head  
+- Swords Dance  
+- Kowtow Cleave  
+- Sucker Punch  
+
+Raging Bolt @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Fairy  
+EVs: 248 HP / 8 Def / 252 SpA  
+Modest Nature  
+- Calm Mind  
+- Weather Ball  
+- Dragon Pulse  
+- Thunderbolt  
+
+Wo-Chien @ Leftovers  
+Ability: Tablets of Ruin  
+Tera Type: Poison  
+EVs: 252 HP / 252 SpD  
+Calm Nature  
+- Light Screen  
+- Leech Seed  
+- Ruination  
+- Protect  
+
+Volcanion @ Choice Specs  
+Ability: Water Absorb  
+Tera Type: Fairy  
+EVs: 84 HP / 252 SpA / 172 Spe  
+Modest Nature  
+- Scald  
+- Flamethrower  
+- Earth Power  
+- Steam Eruption  
+
+Cramorant @ Power Herb  
+Ability: Gulp Missile  
+Tera Type: Flying  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Dive  
+- Endeavor  
+- Defog  
+- Tailwind

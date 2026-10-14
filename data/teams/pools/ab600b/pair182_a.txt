@@ -1,0 +1,59 @@
+Skeledirge @ Heavy-Duty Boots  
+Ability: Unaware  
+Tera Type: Dark  
+EVs: 252 HP / 76 Def / 180 SpD  
+Bold Nature  
+- Slack Off  
+- Will-O-Wisp  
+- Torch Song  
+- Hex  
+
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Ivy Cudgel  
+- U-turn  
+- Encore  
+
+Dragapult @ Life Orb  
+Ability: Cursed Body  
+Tera Type: Ghost  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Draco Meteor  
+- Shadow Ball  
+- Will-O-Wisp  
+- U-turn  
+
+Weezing-Galar @ Rocky Helmet  
+Ability: Neutralizing Gas  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Defog  
+- Sludge Bomb  
+- Pain Split  
+- Will-O-Wisp  
+
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Tera Type: Poison  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- Stealth Rock  
+- Earthquake  
+- Throat Chop  
+- Whirlwind  
+
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Dark  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Roost  
+- Protect  
+- U-turn  
+- Brave Bird

@@ -1,0 +1,60 @@
+Tyranitar (M) @ Assault Vest  
+Ability: Sand Stream  
+Tera Type: Grass  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Knock Off  
+- Stone Edge  
+- Ice Beam  
+- Low Kick  
+
+Excadrill (M) @ Leftovers  
+Ability: Sand Rush  
+Tera Type: Ground  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Earthquake  
+- Iron Head  
+- Rapid Spin  
+
+Rotom-Wash @ Leftovers  
+Ability: Levitate  
+Tera Type: Ghost  
+EVs: 252 HP / 244 Def / 12 Spe  
+Bold Nature  
+IVs: 0 Atk  
+- Hydro Pump  
+- Volt Switch  
+- Will-O-Wisp  
+- Pain Split  
+
+Tornadus-Therian @ Assault Vest  
+Ability: Regenerator  
+Tera Type: Steel  
+EVs: 252 HP / 16 SpD / 240 Spe  
+Timid Nature  
+- Knock Off  
+- U-turn  
+- Bleakwind Storm  
+- Heat Wave  
+
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Dragon  
+EVs: 244 HP / 12 Atk / 252 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Headlong Rush  
+- Ice Spinner  
+- Rapid Spin  
+
+Kingambit (M) @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Dark  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Swords Dance  
+- Sucker Punch  
+- Kowtow Cleave  
+- Iron Head

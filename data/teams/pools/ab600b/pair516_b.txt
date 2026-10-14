@@ -1,0 +1,59 @@
+Ninetales @ Heat Rock  
+Ability: Drought  
+Tera Type: Ghost  
+EVs: 248 HP / 20 Def / 240 Spe  
+Timid Nature  
+- Will-O-Wisp  
+- Encore  
+- Overheat  
+- Healing Wish  
+
+Walking Wake @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Fairy  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Modest Nature  
+- Hydro Steam  
+- Dragon Pulse  
+- Draco Meteor  
+- Flamethrower  
+
+Hatterene @ Eject Button  
+Ability: Magic Bounce  
+Tera Type: Psychic  
+EVs: 248 HP / 252 SpA  
+Modest Nature  
+- Mystical Fire  
+- Trick Room  
+- Dazzling Gleam  
+- Psychic Noise  
+
+Venusaur @ Life Orb  
+Ability: Chlorophyll  
+Tera Type: Fire  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Sludge Bomb  
+- Giga Drain  
+- Weather Ball  
+- Growth  
+
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Dragon  
+EVs: 248 HP / 252 Def / 8 Spe  
+Impish Nature  
+- Brave Bird  
+- U-turn  
+- Defog  
+- Roost  
+
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Fairy  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Headlong Rush  
+- Ice Spinner  
+- Close Combat

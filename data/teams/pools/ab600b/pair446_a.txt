@@ -1,0 +1,62 @@
+Blissey @ Heavy-Duty Boots  
+Ability: Natural Cure  
+Tera Type: Fairy  
+EVs: 4 HP / 252 Def / 252 SpD  
+Calm Nature  
+IVs: 0 Atk  
+- Stealth Rock  
+- Soft-Boiled  
+- Protect  
+- Seismic Toss  
+
+Cyclizar @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 252 HP / 4 Def / 252 SpD  
+Timid Nature  
+- Knock Off  
+- Rapid Spin  
+- U-turn  
+- Overheat  
+
+Alomomola @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+IVs: 0 Atk  
+- Wish  
+- Protect  
+- Whirlpool  
+- Chilling Water  
+
+Dondozo @ Heavy-Duty Boots  
+Ability: Unaware  
+Tera Type: Fighting  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Body Press  
+- Rest  
+- Sleep Talk  
+- Avalanche  
+
+Clodsire @ Heavy-Duty Boots  
+Ability: Unaware  
+Tera Type: Steel  
+EVs: 248 HP / 92 Def / 168 SpD  
+Calm Nature  
+IVs: 0 Atk  
+- Amnesia  
+- Recover  
+- Spikes  
+- Toxic  
+
+Corviknight @ Heavy-Duty Boots  
+Ability: Pressure  
+Tera Type: Fairy  
+EVs: 232 HP / 252 Def / 24 Spe  
+Impish Nature  
+- Body Press  
+- Iron Defense  
+- Iron Head  
+- Roost

@@ -1,0 +1,61 @@
+Pelipper @ Damp Rock  
+Ability: Drizzle  
+Tera Type: Ground  
+EVs: 248 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Hurricane  
+- Weather Ball  
+- U-turn  
+- Roost  
+
+Manaphy @ Mystic Water  
+Ability: Hydration  
+Tera Type: Grass  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Surf  
+- Energy Ball  
+- Ice Beam  
+- Tail Glow  
+
+Bruxish @ Choice Scarf  
+Ability: Dazzling  
+Tera Type: Water  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Wave Crash  
+- Psychic Fangs  
+- Flip Turn  
+- Aqua Jet  
+
+Overqwil @ Life Orb  
+Ability: Swift Swim  
+Tera Type: Water  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Gunk Shot  
+- Crunch  
+- Liquidation  
+- Swords Dance  
+
+Iron Treads @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 252 HP / 152 SpD / 104 Spe  
+Jolly Nature  
+- Earthquake  
+- Knock Off  
+- Rapid Spin  
+- Stealth Rock  
+
+Raging Bolt @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Fairy  
+EVs: 120 HP / 252 SpA / 136 Spe  
+Modest Nature  
+IVs: 20 Atk  
+- Thunderbolt  
+- Dragon Pulse  
+- Weather Ball  
+- Thunderclap

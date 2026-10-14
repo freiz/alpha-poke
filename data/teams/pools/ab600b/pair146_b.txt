@@ -1,0 +1,59 @@
+Moltres @ Heavy-Duty Boots  
+Ability: Flame Body  
+Tera Type: Fairy  
+EVs: 252 HP / 252 Def / 4 SpA  
+Bold Nature  
+- U-turn  
+- Roar  
+- Flamethrower  
+- Will-O-Wisp  
+
+Zamazenta @ Life Orb  
+Ability: Dauntless Shield  
+Tera Type: Dark  
+EVs: 252 Def / 252 Spe  
+Jolly Nature  
+- Heavy Slam  
+- Reflect  
+- Ice Fang  
+- Crunch  
+
+Darkrai @ Leftovers  
+Ability: Bad Dreams  
+Tera Type: Dark  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Knock Off  
+- Dark Pulse  
+- Ice Beam  
+- Sludge Bomb  
+
+Hydrapple @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Poison  
+EVs: 252 HP / 240 Def / 16 Spe  
+Bold Nature  
+- Nasty Plot  
+- Earth Power  
+- Fickle Beam  
+- Giga Drain  
+
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Tera Type: Steel  
+EVs: 244 HP / 248 SpD / 16 Spe  
+Careful Nature  
+- Earthquake  
+- Stealth Rock  
+- Ruination  
+- Spikes  
+
+Tinkaton @ Air Balloon  
+Ability: Mold Breaker  
+Tera Type: Ghost  
+EVs: 248 HP / 24 SpD / 236 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Thunder Wave  
+- Gigaton Hammer  
+- Encore

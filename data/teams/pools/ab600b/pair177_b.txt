@@ -1,0 +1,60 @@
+Iron Hands @ Assault Vest  
+Ability: Quark Drive  
+Tera Type: Grass  
+EVs: 12 HP / 236 Atk / 148 Def / 108 SpD / 4 Spe  
+Adamant Nature  
+- Fake Out  
+- Drain Punch  
+- Wild Charge  
+- Ice Punch  
+
+Great Tusk @ Heavy-Duty Boots  
+Ability: Protosynthesis  
+Tera Type: Ground  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Rapid Spin  
+- Headlong Rush  
+- Close Combat  
+
+Dragonite @ Choice Band  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 252 HP / 252 Atk / 4 Def  
+Adamant Nature  
+- Extreme Speed  
+- Dragon Claw  
+- Ice Spinner  
+- Fire Punch  
+
+Moltres @ Heavy-Duty Boots  
+Ability: Flame Body  
+Tera Type: Fairy  
+EVs: 248 HP / 248 Def / 12 Spe  
+Bold Nature  
+- Flamethrower  
+- Will-O-Wisp  
+- U-turn  
+- Roost  
+
+Gholdengo @ Choice Scarf  
+Ability: Good as Gold  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Trick  
+- Make It Rain  
+- Shadow Ball  
+- Recover  
+
+Rillaboom @ Choice Band  
+Ability: Grassy Surge  
+Tera Type: Grass  
+EVs: 112 HP / 252 Atk / 4 SpD / 140 Spe  
+Adamant Nature  
+- Wood Hammer  
+- Grassy Glide  
+- Knock Off  
+- U-turn

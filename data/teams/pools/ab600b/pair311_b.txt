@@ -1,0 +1,59 @@
+Jirachi @ Leftovers  
+Ability: Serene Grace  
+Tera Type: Steel  
+EVs: 224 HP / 252 Atk / 32 Spe  
+Adamant Nature  
+- Body Slam  
+- Iron Head  
+- Protect  
+- Wish  
+
+Hydrapple @ Eject Button  
+Ability: Regenerator  
+Tera Type: Poison  
+EVs: 244 HP / 172 Def / 88 SpA / 4 Spe  
+Bold Nature  
+- Nasty Plot  
+- Giga Drain  
+- Fickle Beam  
+- Earth Power  
+
+Hoopa-Unbound @ Life Orb  
+Ability: Magician  
+Tera Type: Dark  
+EVs: 252 HP / 128 Atk / 128 SpA  
+Quiet Nature  
+- Future Sight  
+- Drain Punch  
+- Hyperspace Fury  
+- Psychic Noise  
+
+Mandibuzz @ Rocky Helmet  
+Ability: Big Pecks  
+Tera Type: Water  
+EVs: 248 HP / 244 Def / 16 Spe  
+Bold Nature  
+- Toxic  
+- Foul Play  
+- Defog  
+- U-turn  
+
+Slither Wing @ Rocky Helmet  
+Ability: Protosynthesis  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- First Impression  
+- U-turn  
+- Will-O-Wisp  
+- Morning Sun  
+
+Rotom-Heat @ Heavy-Duty Boots  
+Ability: Levitate  
+Tera Type: Steel  
+EVs: 252 HP / 100 Def / 68 SpD / 88 Spe  
+Bold Nature  
+- Discharge  
+- Thunderbolt  
+- Overheat  
+- Volt Switch

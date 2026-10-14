@@ -1,0 +1,59 @@
+Pelipper @ Heavy-Duty Boots  
+Ability: Drizzle  
+Tera Type: Steel  
+EVs: 248 HP / 252 Def / 8 SpD  
+Relaxed Nature  
+- U-turn  
+- Weather Ball  
+- Hurricane  
+- Surf  
+
+Iron Treads @ Red Card  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 248 HP / 252 SpD / 8 Spe  
+Careful Nature  
+- Earthquake  
+- Stealth Rock  
+- Rapid Spin  
+- Knock Off  
+
+Raging Bolt @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Bug  
+EVs: 248 HP / 8 Def / 252 SpA  
+Modest Nature  
+- Thunder  
+- Weather Ball  
+- Thunderclap  
+- Dragon Pulse  
+
+Overqwil @ Life Orb  
+Ability: Swift Swim  
+Tera Type: Water  
+EVs: 48 HP / 252 Atk / 208 Spe  
+Jolly Nature  
+- Gunk Shot  
+- Liquidation  
+- Swords Dance  
+- Crunch  
+
+Greninja @ Focus Sash  
+Ability: Protean  
+Tera Type: Water  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Ice Beam  
+- Sludge Wave  
+- Dark Pulse  
+- Surf  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Ghost  
+EVs: 160 HP / 252 Atk / 96 Spe  
+Adamant Nature  
+- Sucker Punch  
+- Swords Dance  
+- Kowtow Cleave  
+- Iron Head

@@ -1,0 +1,61 @@
+Toxapex @ Black Sludge  
+Ability: Regenerator  
+Tera Type: Flying  
+EVs: 252 HP / 36 Def / 220 SpD  
+Calm Nature  
+IVs: 0 Atk  
+- Sludge Bomb  
+- Recover  
+- Surf  
+- Toxic Spikes  
+
+Skeledirge @ Leftovers  
+Ability: Unaware  
+Tera Type: Water  
+EVs: 252 HP / 40 Def / 188 SpD / 28 Spe  
+Bold Nature  
+IVs: 0 Atk  
+- Substitute  
+- Torch Song  
+- Hex  
+- Slack Off  
+
+Hatterene @ Leftovers  
+Ability: Magic Bounce  
+Tera Type: Water  
+EVs: 252 HP / 224 Def / 32 SpD  
+Bold Nature  
+- Nuzzle  
+- Draining Kiss  
+- Psychic  
+- Calm Mind  
+
+Great Tusk @ Rocky Helmet  
+Ability: Protosynthesis  
+Tera Type: Water  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Earthquake  
+- Stealth Rock  
+- Knock Off  
+- Rapid Spin  
+
+Corviknight @ Leftovers  
+Ability: Pressure  
+Tera Type: Dragon  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- U-turn  
+- Roost  
+- Brave Bird  
+- Defog  
+
+Dragapult @ Choice Specs  
+Ability: Infiltrator  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Draco Meteor  
+- Flamethrower  
+- Hex  
+- U-turn

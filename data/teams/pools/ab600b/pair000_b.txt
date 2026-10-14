@@ -1,0 +1,59 @@
+Kingambit @ Air Balloon  
+Ability: Supreme Overlord  
+Tera Type: Flying  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Sucker Punch  
+- Kowtow Cleave  
+- Low Kick  
+- Swords Dance  
+
+Walking Wake @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Water  
+EVs: 12 HP / 244 SpA / 252 Spe  
+Timid Nature  
+- Draco Meteor  
+- Hydro Pump  
+- Flamethrower  
+- Hydro Steam  
+
+Iron Crown @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Fighting  
+EVs: 84 HP / 172 SpA / 252 Spe  
+Timid Nature  
+- Focus Blast  
+- Tachyon Cutter  
+- Calm Mind  
+- Psychic Noise  
+
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Tera Type: Ground  
+EVs: 252 HP / 252 SpD / 4 Spe  
+Careful Nature  
+- Stealth Rock  
+- Spikes  
+- Earthquake  
+- Stone Edge  
+
+Cinderace @ Heavy-Duty Boots  
+Ability: Libero  
+Tera Type: Fire  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Flare Blitz  
+- Sucker Punch  
+- Pyro Ball  
+- U-turn  
+
+Grimmsnarl @ Light Clay  
+Ability: Prankster  
+Tera Type: Dark  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- Reflect  
+- Light Screen  
+- Parting Shot  
+- Dazzling Gleam

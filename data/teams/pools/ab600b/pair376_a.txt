@@ -1,0 +1,60 @@
+Meowscarada (F) @ Heavy-Duty Boots  
+Ability: Protean  
+Tera Type: Dark  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Sucker Punch  
+- U-turn  
+- Flower Trick  
+
+Dragapult (M) @ Choice Specs  
+Ability: Infiltrator  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Draco Meteor  
+- Shadow Ball  
+- Flamethrower  
+- U-turn  
+
+Gholdengo @ Choice Scarf  
+Ability: Good as Gold  
+Tera Type: Fighting  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Shadow Ball  
+- Make It Rain  
+- Trick  
+- Focus Blast  
+
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Water  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Earthquake  
+- Stealth Rock  
+- Knock Off  
+- Rapid Spin  
+
+Zapdos @ Heavy-Duty Boots  
+Ability: Static  
+Tera Type: Steel  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Roost  
+- Hurricane  
+- Thunderbolt  
+- Volt Switch  
+
+Slowking-Galar (M) @ Assault Vest  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 252 HP / 16 Def / 120 SpA / 120 SpD  
+Calm Nature  
+- Future Sight  
+- Sludge Bomb  
+- Flamethrower  
+- Surf

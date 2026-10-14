@@ -1,0 +1,59 @@
+Enamorus @ Focus Sash  
+Ability: Contrary  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Modest Nature  
+- Superpower  
+- Moonblast  
+- Calm Mind  
+- Earth Power  
+
+Azumarill @ Sitrus Berry  
+Ability: Sap Sipper  
+Tera Type: Ground  
+EVs: 252 Atk / 252 Spe  
+Jolly Nature  
+- Play Rough  
+- Aqua Jet  
+- Knock Off  
+- Liquidation  
+
+Clefable @ Life Orb  
+Ability: Unaware  
+Tera Type: Steel  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Calm Mind  
+- Moonblast  
+- Moonlight  
+- Knock Off  
+
+Mimikyu @ Life Orb  
+Ability: Disguise  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Atk / 252 Def  
+Impish Nature  
+- Play Rough  
+- Shadow Claw  
+- Shadow Sneak  
+- Swords Dance  
+
+Weezing-Galar @ Leftovers  
+Ability: Neutralizing Gas  
+Tera Type: Grass  
+EVs: 252 HP / 244 Def / 12 Spe  
+Bold Nature  
+- Defog  
+- Sludge Bomb  
+- Will-O-Wisp  
+- Toxic  
+
+Grimmsnarl @ Light Clay  
+Ability: Prankster  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Atk / 252 SpD  
+Careful Nature  
+- Light Screen  
+- Reflect  
+- Spirit Break  
+- Parting Shot

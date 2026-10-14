@@ -1,0 +1,59 @@
+Probopass @ Leftovers  
+Ability: Magnet Pull  
+Tera Type: Fighting  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Earth Power  
+- Flash Cannon  
+- Stealth Rock  
+- Volt Switch  
+
+Weezing-Galar @ Leftovers  
+Ability: Neutralizing Gas  
+Tera Type: Grass  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Will-O-Wisp  
+- Sludge Bomb  
+- Defog  
+- Strange Steam  
+
+Weavile @ Choice Band  
+Ability: Pressure  
+Tera Type: Dark  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Swords Dance  
+- Triple Axel  
+- Ice Shard  
+
+Meloetta @ Assault Vest  
+Ability: Serene Grace  
+Tera Type: Fairy  
+EVs: 252 HP / 220 SpA / 36 SpD  
+Modest Nature  
+- Dazzling Gleam  
+- Alluring Voice  
+- U-turn  
+- Thunder  
+
+Thundurus @ Focus Sash  
+Ability: Prankster  
+Tera Type: Dark  
+EVs: 220 HP / 216 SpA / 72 Spe  
+Modest Nature  
+- Thunder Wave  
+- Thunderbolt  
+- Focus Blast  
+- Nasty Plot  
+
+Slither Wing @ Rocky Helmet  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Morning Sun  
+- Earthquake  
+- First Impression  
+- Will-O-Wisp

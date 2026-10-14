@@ -1,0 +1,60 @@
+Deoxys-Speed @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Fairy  
+EVs: 248 HP / 8 Def / 252 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Thunder Wave  
+- Extreme Speed  
+- Knock Off  
+
+Dondozo @ Life Orb  
+Ability: Unaware  
+Tera Type: Electric  
+EVs: 248 HP / 252 Atk / 8 SpD  
+Adamant Nature  
+- Earthquake  
+- Waterfall  
+- Zen Headbutt  
+- Body Press  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Steel  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Toxic Spikes  
+- Spikes  
+- U-turn  
+- Facade  
+
+Kyurem @ Assault Vest  
+Ability: Pressure  
+Tera Type: Dragon  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Draco Meteor  
+- Freeze-Dry  
+- Flash Cannon  
+- Shadow Ball  
+
+Garganacl @ Leftovers  
+Ability: Purifying Salt  
+Tera Type: Steel  
+EVs: 252 HP / 4 Atk / 252 SpD  
+Impish Nature  
+- Recover  
+- Salt Cure  
+- Protect  
+- Fire Punch  
+
+Scizor @ Heavy-Duty Boots  
+Ability: Swarm  
+Tera Type: Water  
+EVs: 248 HP / 8 SpD / 252 Spe  
+Jolly Nature  
+- Defog  
+- Bullet Punch  
+- U-turn  
+- Brick Break

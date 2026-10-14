@@ -1,0 +1,61 @@
+Dragapult @ Light Clay  
+Ability: Cursed Body  
+Tera Type: Steel  
+EVs: 252 HP / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Reflect  
+- Light Screen  
+- Curse  
+- Will-O-Wisp  
+
+Pelipper @ Damp Rock  
+Ability: Drizzle  
+Tera Type: Ground  
+EVs: 248 HP / 252 SpA / 8 SpD  
+Modest Nature  
+- Ice Beam  
+- U-turn  
+- Hydro Pump  
+- Hurricane  
+
+Basculegion-F @ Choice Specs  
+Ability: Swift Swim  
+Shiny: Yes  
+Tera Type: Water  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Modest Nature  
+IVs: 0 Atk  
+- Hydro Pump  
+- Shadow Ball  
+- Ice Beam  
+- Surf  
+
+Zapdos @ Heavy-Duty Boots  
+Ability: Static  
+Tera Type: Electric  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Thunder  
+- Hurricane  
+- Roost  
+- U-turn  
+
+Kingambit @ Black Glasses  
+Ability: Supreme Overlord  
+Tera Type: Flying  
+EVs: 112 HP / 252 Atk / 144 Spe  
+Adamant Nature  
+- Kowtow Cleave  
+- Sucker Punch  
+- Swords Dance  
+- Iron Head  
+
+Great Tusk @ Rocky Helmet  
+Ability: Protosynthesis  
+Tera Type: Water  
+EVs: 228 HP / 240 Def / 40 Spe  
+- Stealth Rock  
+- Earthquake  
+- Rapid Spin  
+- Knock Off

@@ -1,0 +1,59 @@
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Close Combat  
+- Stealth Rock  
+- Ice Spinner  
+- Headlong Rush  
+
+Thundurus-Therian @ Leftovers  
+Ability: Volt Absorb  
+Tera Type: Fairy  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Modest Nature  
+- Nasty Plot  
+- Thunderbolt  
+- Focus Blast  
+- Agility  
+
+Gastrodon @ Covert Cloak  
+Ability: Storm Drain  
+Tera Type: Fairy  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+- Stealth Rock  
+- Ice Beam  
+- Earth Power  
+- Clear Smog  
+
+Skeledirge @ Covert Cloak  
+Ability: Unaware  
+Tera Type: Grass  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Modest Nature  
+- Torch Song  
+- Earth Power  
+- Slack Off  
+- Shadow Ball  
+
+Dragonite @ Expert Belt  
+Ability: Multiscale  
+Tera Type: Ground  
+EVs: 252 HP / 240 Atk / 16 Spe  
+Adamant Nature  
+- Roost  
+- Hurricane  
+- Extreme Speed  
+- Dragon Dance  
+
+Umbreon @ Leftovers  
+Ability: Synchronize  
+Tera Type: Water  
+EVs: 156 HP / 140 Def / 96 SpD / 116 Spe  
+Bold Nature  
+- Curse  
+- Wish  
+- Foul Play  
+- Protect

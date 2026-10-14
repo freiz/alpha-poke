@@ -1,0 +1,58 @@
+Tropius  
+Ability: Harvest  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Leech Seed  
+- Substitute  
+- Dual Wingbeat  
+- Air Slash  
+
+Reuniclus @ Life Orb  
+Ability: Regenerator  
+Tera Type: Fighting  
+EVs: 252 HP / 212 Def / 44 Spe  
+Bold Nature  
+- Future Sight  
+- Focus Blast  
+- Psychic Noise  
+- Trick  
+
+Espeon @ Focus Sash  
+Ability: Magic Bounce  
+Tera Type: Fairy  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Alluring Voice  
+- Reflect  
+- Shadow Ball  
+- Expanding Force  
+
+Sylveon @ Leftovers  
+Ability: Pixilate  
+Tera Type: Fairy  
+EVs: 4 HP / 252 Def / 252 SpA  
+Bold Nature  
+- Calm Mind  
+- Hyper Voice  
+- Wish  
+- Shadow Ball  
+
+Incineroar @ Rocky Helmet  
+Ability: Intimidate  
+Tera Type: Dark  
+EVs: 248 HP / 212 SpD / 48 Spe  
+Careful Nature  
+- Knock Off  
+- Flare Blitz  
+- Parting Shot  
+- U-turn  
+
+Dragonite @ Choice Band  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 248 HP / 224 Atk / 16 Def / 20 Spe  
+Adamant Nature  
+- Earthquake  
+- Extreme Speed  
+- Roost  
+- Dragon Dance

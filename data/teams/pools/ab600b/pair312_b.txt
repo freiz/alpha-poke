@@ -1,0 +1,59 @@
+Frosmoth @ Leftovers  
+Ability: Ice Scales  
+Tera Type: Steel  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Quiver Dance  
+- Substitute  
+- Ice Beam  
+- Bug Buzz  
+
+Mandibuzz @ Rocky Helmet  
+Ability: Overcoat  
+Tera Type: Steel  
+EVs: 248 HP / 252 Def / 8 SpD  
+Impish Nature  
+- Toxic  
+- Defog  
+- Foul Play  
+- Iron Defense  
+
+Heatran @ Air Balloon  
+Ability: Flash Fire  
+Tera Type: Flying  
+EVs: 252 HP / 216 SpD / 40 Spe  
+Calm Nature  
+- Magma Storm  
+- Earth Power  
+- Will-O-Wisp  
+- Stealth Rock  
+
+Sinistcha @ Heavy-Duty Boots  
+Ability: Heatproof  
+Tera Type: Normal  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Calm Mind  
+- Matcha Gotcha  
+- Strength Sap  
+- Shadow Ball  
+
+Alomomola @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Flying  
+EVs: 252 HP / 252 Def / 4 SpD  
+Relaxed Nature  
+- Flip Turn  
+- Wish  
+- Protect  
+- Scald  
+
+Hatterene @ Leftovers  
+Ability: Healer  
+Tera Type: Water  
+EVs: 252 HP / 128 SpA / 104 SpD / 24 Spe  
+Modest Nature  
+- Calm Mind  
+- Psychic Noise  
+- Draining Kiss  
+- Nuzzle

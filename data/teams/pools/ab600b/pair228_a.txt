@@ -1,0 +1,59 @@
+Ceruledge @ Leftovers  
+Ability: Weak Armor  
+Tera Type: Water  
+EVs: 112 HP / 252 Atk / 32 Def / 112 Spe  
+Adamant Nature  
+- Poltergeist  
+- Bitter Blade  
+- Shadow Sneak  
+- Swords Dance  
+
+Tinkaton @ Air Balloon  
+Ability: Pickpocket  
+Tera Type: Ghost  
+EVs: 248 HP / 28 Def / 232 Spe  
+Jolly Nature  
+- Knock Off  
+- Stealth Rock  
+- Encore  
+- Gigaton Hammer  
+
+Serperior @ Leftovers  
+Ability: Contrary  
+Tera Type: Water  
+EVs: 120 HP / 136 SpA / 252 Spe  
+Timid Nature  
+- Glare  
+- Leaf Storm  
+- Leech Seed  
+- Dragon Pulse  
+
+Ting-Lu @ Rocky Helmet  
+Ability: Vessel of Ruin  
+Tera Type: Ghost  
+EVs: 240 HP / 16 Def / 248 SpD / 4 Spe  
+Careful Nature  
+- Spikes  
+- Whirlwind  
+- Earthquake  
+- Ruination  
+
+Alomomola @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Dragon  
+EVs: 252 HP / 252 Def / 4 SpD  
+Relaxed Nature  
+- Flip Turn  
+- Wish  
+- Protect  
+- Scald  
+
+Kleavor @ Salac Berry  
+Ability: Sharpness  
+Tera Type: Flying  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Stone Axe  
+- U-turn  
+- Close Combat  
+- Swords Dance

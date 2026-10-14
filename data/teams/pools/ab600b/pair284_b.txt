@@ -1,0 +1,59 @@
+Venusaur @ Leftovers  
+Ability: Chlorophyll  
+Tera Type: Ground  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Leech Seed  
+- Giga Drain  
+- Earth Power  
+- Acid Spray  
+
+Heatran @ Air Balloon  
+Ability: Flash Fire  
+Tera Type: Bug  
+EVs: 252 HP / 76 Def / 136 SpA / 44 Spe  
+Modest Nature  
+- Magma Storm  
+- Stealth Rock  
+- Taunt  
+- Earth Power  
+
+Zapdos @ Rocky Helmet  
+Ability: Static  
+Tera Type: Grass  
+EVs: 104 HP / 188 SpA / 216 Spe  
+Timid Nature  
+- Hurricane  
+- U-turn  
+- Volt Switch  
+- Roost  
+
+Great Tusk @ Rocky Helmet  
+Ability: Protosynthesis  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Headlong Rush  
+- Rapid Spin  
+- Ice Spinner  
+
+Samurott-Hisui @ Heavy-Duty Boots  
+Ability: Sharpness  
+Tera Type: Dark  
+EVs: 248 HP / 84 Atk / 124 SpD / 52 Spe  
+Adamant Nature  
+- Sucker Punch  
+- Knock Off  
+- Ceaseless Edge  
+- Aqua Cutter  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Moonblast  
+- Calm Mind  
+- Vacuum Wave  
+- Encore

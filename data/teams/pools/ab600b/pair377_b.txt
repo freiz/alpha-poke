@@ -1,0 +1,59 @@
+Ogerpon @ Rocky Helmet  
+Ability: Defiant  
+Tera Type: Grass  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Ivy Cudgel  
+- Knock Off  
+- Rock Tomb  
+
+Great Tusk @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Water  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Ice Spinner  
+- Headlong Rush  
+- Rapid Spin  
+- Close Combat  
+
+Pecharunt @ Rocky Helmet  
+Ability: Poison Puppeteer  
+Tera Type: Ghost  
+EVs: 248 HP / 8 SpA / 252 Spe  
+Timid Nature  
+- Malignant Chain  
+- Recover  
+- Parting Shot  
+- Toxic  
+
+Alomomola @ Assault Vest  
+Ability: Regenerator  
+Tera Type: Poison  
+EVs: 248 HP / 8 Def / 252 SpD  
+Relaxed Nature  
+- Flip Turn  
+- Mirror Coat  
+- Aqua Jet  
+- Play Rough  
+
+Hydreigon @ Leftovers  
+Ability: Levitate  
+Tera Type: Steel  
+EVs: 128 HP / 128 SpA / 252 Spe  
+Timid Nature  
+- Earth Power  
+- Draco Meteor  
+- Dark Pulse  
+- Flamethrower  
+
+Tinkaton @ Air Balloon  
+Ability: Pickpocket  
+Tera Type: Ghost  
+EVs: 248 HP / 28 Def / 232 Spe  
+Jolly Nature  
+- Encore  
+- Gigaton Hammer  
+- Stealth Rock  
+- Thunder Wave

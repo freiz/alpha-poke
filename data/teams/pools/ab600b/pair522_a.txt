@@ -1,0 +1,59 @@
+Ursaluna @ Leftovers  
+Ability: Guts  
+Tera Type: Normal  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Facade  
+- Earthquake  
+- Fire Punch  
+- Swords Dance  
+
+Great Tusk @ Rocky Helmet  
+Ability: Protosynthesis  
+Tera Type: Poison  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Headlong Rush  
+- Ice Spinner  
+- Close Combat  
+
+Corviknight @ Leftovers  
+Ability: Mirror Armor  
+Tera Type: Dark  
+EVs: 160 HP / 176 Atk / 92 Def / 80 SpD  
+Sassy Nature  
+- Defog  
+- Iron Defense  
+- U-turn  
+- Roost  
+
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Tera Type: Water  
+EVs: 252 HP / 252 SpD / 4 Spe  
+Careful Nature  
+- Stealth Rock  
+- Body Press  
+- Earthquake  
+- Whirlwind  
+
+Venusaur @ Leftovers  
+Ability: Chlorophyll  
+Tera Type: Ghost  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Naive Nature  
+- Leech Seed  
+- Sludge Bomb  
+- Giga Drain  
+- Growth  
+
+Dragonite @ Heavy-Duty Boots  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 16 HP / 252 Atk / 240 Spe  
+Adamant Nature  
+- Extreme Speed  
+- Earthquake  
+- Roost  
+- Dragon Dance

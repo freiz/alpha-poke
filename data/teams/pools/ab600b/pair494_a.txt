@@ -1,0 +1,59 @@
+Dragapult @ Life Orb  
+Ability: Clear Body  
+Tera Type: Dragon  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Dragon Darts  
+- U-turn  
+- Thunder Wave  
+- Will-O-Wisp  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpA / 252 Spe  
+Naive Nature  
+- Shadow Ball  
+- Moonblast  
+- Calm Mind  
+- Encore  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Dark  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Toxic  
+- Earthquake  
+- Protect  
+
+Corviknight @ Leftovers  
+Ability: Pressure  
+Tera Type: Dark  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Defog  
+- Brave Bird  
+- U-turn  
+- Body Press  
+
+Alomomola @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Poison  
+EVs: 248 HP / 8 Def / 252 SpD  
+Relaxed Nature  
+- Flip Turn  
+- Wish  
+- Mirror Coat  
+- Protect  
+
+Slowking-Galar @ Black Sludge  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 248 HP / 8 SpA / 252 SpD  
+Sassy Nature  
+- Chilly Reception  
+- Future Sight  
+- Sludge Bomb  
+- Psychic Noise

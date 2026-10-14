@@ -1,0 +1,59 @@
+Ogerpon-Cornerstone @ Cornerstone Mask  
+Ability: Sturdy  
+Tera Type: Rock  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Power Whip  
+- Ivy Cudgel  
+- Knock Off  
+- Swords Dance  
+
+Hatterene @ Eject Button  
+Ability: Magic Bounce  
+Tera Type: Fairy  
+EVs: 252 HP / 204 Def / 52 Spe  
+Bold Nature  
+- Psychic Noise  
+- Nuzzle  
+- Healing Wish  
+- Draining Kiss  
+
+Pecharunt @ Heavy-Duty Boots  
+Ability: Poison Puppeteer  
+Tera Type: Dark  
+EVs: 252 HP / 8 Def / 248 Spe  
+Timid Nature  
+- Malignant Chain  
+- Recover  
+- Parting Shot  
+- Shadow Ball  
+
+Landorus-Therian @ Rocky Helmet  
+Ability: Intimidate  
+Tera Type: Water  
+EVs: 4 HP / 252 Atk / 252 Def  
+Impish Nature  
+- Taunt  
+- Stealth Rock  
+- Earthquake  
+- Stone Edge  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Swords Dance  
+- Sucker Punch  
+- Kowtow Cleave  
+- Iron Head  
+
+Latios @ Soul Dew  
+Ability: Levitate  
+Tera Type: Steel  
+EVs: 252 HP / 160 Def / 16 SpA / 80 Spe  
+Modest Nature  
+- Calm Mind  
+- Psychic Noise  
+- Recover  
+- Draco Meteor

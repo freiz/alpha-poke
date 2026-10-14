@@ -1,0 +1,59 @@
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Tera Type: Poison  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- Earthquake  
+- Rest  
+- Sleep Talk  
+- Payback  
+
+Slowking-Galar @ Rocky Helmet  
+Ability: Curious Medicine  
+Tera Type: Fairy  
+EVs: 248 HP / 252 SpA / 8 SpD  
+Modest Nature  
+- Sludge Bomb  
+- Ice Beam  
+- Chilly Reception  
+- Future Sight  
+
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Fire  
+EVs: 248 HP / 252 Def / 8 SpD  
+Impish Nature  
+- U-turn  
+- Body Press  
+- Roost  
+- Defog  
+
+Cinderace @ Heavy-Duty Boots  
+Ability: Libero  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Pyro Ball  
+- U-turn  
+- Court Change  
+- Sucker Punch  
+
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Ivy Cudgel  
+- Encore  
+- U-turn  
+- Knock Off  
+
+Raging Bolt @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Grass  
+EVs: 112 HP / 252 SpA / 144 Spe  
+Modest Nature  
+- Draco Meteor  
+- Thunderclap  
+- Thunderbolt  
+- Volt Switch

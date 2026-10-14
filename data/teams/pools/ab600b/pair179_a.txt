@@ -1,0 +1,59 @@
+Haxorus @ Loaded Dice  
+Ability: Mold Breaker  
+Tera Type: Poison  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- Scale Shot  
+- Swords Dance  
+- Close Combat  
+- Earthquake  
+
+Samurott-Hisui @ Leftovers  
+Ability: Sharpness  
+Tera Type: Dark  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Ceaseless Edge  
+- Knock Off  
+- Flip Turn  
+- Sucker Punch  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Steel  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Thunderbolt  
+- Moonblast  
+- Calm Mind  
+- Shadow Ball  
+
+Glimmora @ Focus Sash  
+Ability: Toxic Debris  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Earth Power  
+- Stealth Rock  
+- Power Gem  
+- Spikes  
+
+Zamazenta @ Leftovers  
+Ability: Dauntless Shield  
+Tera Type: Steel  
+EVs: 252 Def / 252 Spe  
+Impish Nature  
+- Iron Defense  
+- Body Press  
+- Crunch  
+- Heavy Slam  
+
+Iron Moth @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Grass  
+EVs: 32 HP / 92 Def / 132 SpA / 252 Spe  
+Timid Nature  
+- Fiery Dance  
+- Sludge Wave  
+- Substitute  
+- Energy Ball

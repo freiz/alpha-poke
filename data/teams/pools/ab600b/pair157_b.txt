@@ -1,0 +1,59 @@
+Lokix @ Choice Band  
+Ability: Swarm  
+Tera Type: Bug  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- First Impression  
+- U-turn  
+- Leech Life  
+- Knock Off  
+
+Meowscarada @ Choice Scarf  
+Ability: Protean  
+Tera Type: Grass  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- U-turn  
+- Flower Trick  
+- Triple Axel  
+
+Hatterene @ Eject Button  
+Ability: Magic Bounce  
+Tera Type: Water  
+EVs: 248 HP / 120 Def / 140 Spe  
+Bold Nature  
+- Nuzzle  
+- Draining Kiss  
+- Psychic Noise  
+- Pain Split  
+
+Glimmora @ Rocky Helmet  
+Ability: Toxic Debris  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Stealth Rock  
+- Earth Power  
+- Mortal Spin  
+- Power Gem  
+
+Moltres @ Heavy-Duty Boots  
+Ability: Flame Body  
+Tera Type: Ground  
+EVs: 248 HP / 252 Def / 8 SpA  
+Bold Nature  
+- U-turn  
+- Flamethrower  
+- Roar  
+- Roost  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Make It Rain  
+- Shadow Ball  
+- Nasty Plot  
+- Recover

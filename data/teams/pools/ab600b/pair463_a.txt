@@ -1,0 +1,59 @@
+Dragonite @ Leftovers  
+Ability: Multiscale  
+Tera Type: Ground  
+EVs: 248 HP / 104 Atk / 52 Def / 104 Spe  
+Adamant Nature  
+- Earthquake  
+- Dragon Dance  
+- Encore  
+- Ice Spinner  
+
+Landorus-Therian @ Light Ball  
+Ability: Intimidate  
+Tera Type: Ground  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Stealth Rock  
+- Earth Power  
+- Earthquake  
+
+Corviknight @ Leftovers  
+Ability: Pressure  
+Tera Type: Water  
+EVs: 252 HP / 4 Atk / 252 Def  
+Impish Nature  
+- Defog  
+- Brave Bird  
+- U-turn  
+- Body Press  
+
+Blaziken @ Life Orb  
+Ability: Speed Boost  
+Tera Type: Ghost  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Modest Nature  
+- Protect  
+- Flare Blitz  
+- Swords Dance  
+- Close Combat  
+
+Dragapult @ Life Orb  
+Ability: Clear Body  
+Tera Type: Ghost  
+EVs: 252 Atk / 76 Def / 180 Spe  
+Adamant Nature  
+- Thunder Wave  
+- Hex  
+- U-turn  
+- Will-O-Wisp  
+
+Raging Bolt @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Flying  
+EVs: 252 HP / 4 Atk / 252 SpA  
+Quiet Nature  
+- Calm Mind  
+- Thunderbolt  
+- Dragon Pulse  
+- Weather Ball

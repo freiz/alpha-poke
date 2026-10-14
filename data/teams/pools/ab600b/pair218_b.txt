@@ -1,0 +1,59 @@
+Cinccino @ Loaded Dice  
+Ability: Technician  
+Tera Type: Normal  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Tidy Up  
+- Bullet Seed  
+- Tail Slap  
+- Knock Off  
+
+Dondozo @ Leftovers  
+Ability: Unaware  
+Tera Type: Dark  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Rest  
+- Curse  
+- Sleep Talk  
+- Body Press  
+
+Ceruledge @ Weakness Policy  
+Ability: Weak Armor  
+Tera Type: Bug  
+EVs: 248 HP / 164 SpD / 96 Spe  
+Careful Nature  
+- Shadow Sneak  
+- Bitter Blade  
+- Poltergeist  
+- Bulk Up  
+
+Glimmora @ Leftovers  
+Ability: Toxic Debris  
+Tera Type: Ghost  
+EVs: 248 HP / 252 Def / 8 Spe  
+Bold Nature  
+- Stealth Rock  
+- Mortal Spin  
+- Earth Power  
+- Meteor Beam  
+
+Walking Wake @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Water  
+EVs: 12 HP / 244 SpA / 252 Spe  
+Timid Nature  
+- Hydro Steam  
+- Surf  
+- Flamethrower  
+- Draco Meteor  
+
+Iron Jugulis @ Power Herb  
+Ability: Quark Drive  
+Tera Type: Ground  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Meteor Beam  
+- Flash Cannon  
+- Earth Power  
+- Knock Off

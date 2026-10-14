@@ -1,0 +1,59 @@
+Ceruledge @ Weakness Policy  
+Ability: Flash Fire  
+Tera Type: Fire  
+EVs: 80 HP / 252 Atk / 176 Spe  
+Adamant Nature  
+- Shadow Sneak  
+- Bitter Blade  
+- Poltergeist  
+- Swords Dance  
+
+Meowscarada @ Life Orb  
+Ability: Protean  
+Tera Type: Grass  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- U-turn  
+- Flower Trick  
+- Triple Axel  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Thunderbolt  
+- Moonblast  
+- Shadow Ball  
+- Calm Mind  
+
+Empoleon @ Leftovers  
+Ability: Competitive  
+Tera Type: Flying  
+EVs: 252 HP / 4 SpA / 252 SpD  
+Calm Nature  
+- Ice Beam  
+- Hydro Pump  
+- Flip Turn  
+- Stealth Rock  
+
+Iron Thorns @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Bug  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Thunder Wave  
+- Supercell Slam  
+- Spikes  
+- Stealth Rock  
+
+Dragonite @ Leftovers  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Air Slash  
+- Roost  
+- Earthquake  
+- Dragon Dance

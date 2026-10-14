@@ -1,0 +1,59 @@
+Rillaboom (F) @ Terrain Extender  
+Ability: Grassy Surge  
+Tera Type: Grass  
+EVs: 204 HP / 252 Atk / 52 Spe  
+Adamant Nature  
+- Grassy Glide  
+- U-turn  
+- Knock Off  
+- Wood Hammer  
+
+Ogerpon-Cornerstone (F) @ Cornerstone Mask  
+Ability: Sturdy  
+EVs: 12 HP / 244 Atk / 252 Spe  
+Jolly Nature  
+- Ivy Cudgel  
+- Power Whip  
+- Grassy Glide  
+- Swords Dance  
+
+Moltres @ Heavy-Duty Boots  
+Ability: Flame Body  
+Tera Type: Fairy  
+EVs: 248 HP / 248 Def / 12 Spe  
+Bold Nature  
+- Flamethrower  
+- Roost  
+- U-turn  
+- Scorching Sands  
+
+Samurott-Hisui (F) @ Choice Scarf  
+Ability: Sharpness  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Ceaseless Edge  
+- Razor Shell  
+- Sacred Sword  
+- Flip Turn  
+
+Gholdengo @ Covert Cloak  
+Ability: Good as Gold  
+Tera Type: Fairy  
+EVs: 248 HP / 76 Def / 184 SpD  
+Calm Nature  
+IVs: 0 Atk  
+- Shadow Ball  
+- Make It Rain  
+- Nasty Plot  
+- Recover  
+
+Great Tusk @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Fighting  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Headlong Rush  
+- Close Combat  
+- Ice Spinner  
+- Rapid Spin

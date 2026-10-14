@@ -1,0 +1,59 @@
+Pincurchin @ Terrain Extender  
+Ability: Electric Surge  
+Tera Type: Dark  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+- Supercell Slam  
+- Sucker Punch  
+- Thunder Wave  
+- Memento  
+
+Iron Treads @ Leftovers  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Earth Power  
+- Rapid Spin  
+- Earthquake  
+- Stealth Rock  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Dark  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Knock Off  
+- Close Combat  
+- Trick  
+- Moonblast  
+
+Iron Moth @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Fire  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Fiery Dance  
+- Overheat  
+- Sludge Wave  
+- Morning Sun  
+
+Iron Leaves @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Fighting  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Leaf Blade  
+- Wild Charge  
+- Close Combat  
+- Trailblaze  
+
+Raging Bolt @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Fairy  
+EVs: 64 HP / 24 Def / 252 SpA / 168 Spe  
+Modest Nature  
+- Calm Mind  
+- Dragon Pulse  
+- Thunderbolt  
+- Thunder

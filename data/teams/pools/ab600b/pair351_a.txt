@@ -1,0 +1,62 @@
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Steel  
+EVs: 72 HP / 252 SpA / 184 Spe  
+Modest Nature  
+IVs: 0 Atk  
+- Make It Rain  
+- Nasty Plot  
+- Recover  
+- Psyshock  
+
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Ivy Cudgel  
+- Swords Dance  
+- Horn Leech  
+
+Slowking-Galar @ Heavy-Duty Boots  
+Ability: Regenerator  
+Shiny: Yes  
+Tera Type: Dark  
+EVs: 236 HP / 32 SpA / 240 SpD  
+Modest Nature  
+IVs: 0 Atk  
+- Future Sight  
+- Chilly Reception  
+- Psychic Noise  
+- Slack Off  
+
+Kingambit @ Black Glasses  
+Ability: Supreme Overlord  
+Tera Type: Flying  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Sucker Punch  
+- Kowtow Cleave  
+- Swords Dance  
+- Iron Head  
+
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 252 HP / 8 Atk / 248 Def  
+Impish Nature  
+- Stealth Rock  
+- Earthquake  
+- Knock Off  
+- Rapid Spin  
+
+Moltres @ Heavy-Duty Boots  
+Ability: Flame Body  
+Tera Type: Fairy  
+EVs: 248 HP / 8 SpA / 252 SpD  
+Bold Nature  
+- Will-O-Wisp  
+- U-turn  
+- Roost  
+- Flamethrower

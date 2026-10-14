@@ -1,0 +1,59 @@
+Decidueye @ Leftovers  
+Ability: Long Reach  
+Tera Type: Steel  
+EVs: 68 HP / 252 Atk / 4 SpD / 184 Spe  
+Adamant Nature  
+- Spirit Shackle  
+- Leaf Blade  
+- Knock Off  
+- Roost  
+
+Darkrai @ Life Orb  
+Ability: Bad Dreams  
+Tera Type: Poison  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Dark Pulse  
+- Ice Beam  
+- Focus Blast  
+- Knock Off  
+
+Tinkaton @ Air Balloon  
+Ability: Mold Breaker  
+Tera Type: Water  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Play Rough  
+- Stealth Rock  
+- Gigaton Hammer  
+
+Great Tusk @ Heavy-Duty Boots  
+Ability: Protosynthesis  
+Tera Type: Fire  
+EVs: 64 HP / 4 Def / 188 SpD / 252 Spe  
+Jolly Nature  
+- Ice Spinner  
+- Headlong Rush  
+- Stealth Rock  
+- Close Combat  
+
+Volcanion @ Air Balloon  
+Ability: Water Absorb  
+Tera Type: Ground  
+EVs: 248 HP / 144 Def / 8 SpA / 108 Spe  
+Bold Nature  
+- Earth Power  
+- Sludge Bomb  
+- Steam Eruption  
+- Flamethrower  
+
+Thundurus-Therian @ Assault Vest  
+Ability: Volt Absorb  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Volt Switch  
+- Thunderbolt  
+- Grass Knot  
+- Nasty Plot

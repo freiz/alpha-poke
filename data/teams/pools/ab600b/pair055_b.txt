@@ -1,0 +1,59 @@
+Deoxys-Speed @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Grass  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Rash Nature  
+- Stealth Rock  
+- Pain Split  
+- Taunt  
+- Psycho Boost  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Steel  
+EVs: 252 HP / 252 SpA / 4 Spe  
+Modest Nature  
+- Nasty Plot  
+- Shadow Ball  
+- Recover  
+- Make It Rain  
+
+Raging Bolt @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Flying  
+EVs: 64 HP / 28 Def / 252 SpA / 164 Spe  
+Modest Nature  
+- Thunderclap  
+- Thunderbolt  
+- Dragon Pulse  
+- Draco Meteor  
+
+Kingambit @ Rocky Helmet  
+Ability: Supreme Overlord  
+Tera Type: Fighting  
+EVs: 240 HP / 252 Atk / 16 Spe  
+Adamant Nature  
+- Sucker Punch  
+- Swords Dance  
+- Kowtow Cleave  
+- Iron Head  
+
+Great Tusk @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Bulk Up  
+- Ice Spinner  
+- Headlong Rush  
+- Rapid Spin  
+
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Ivy Cudgel  
+- Power Whip  
+- Horn Leech  
+- Knock Off

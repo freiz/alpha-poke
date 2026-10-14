@@ -1,0 +1,62 @@
+Manaphy @ Leftovers  
+Ability: Hydration  
+Tera Type: Steel  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Tail Glow  
+- Surf  
+- Alluring Voice  
+- Substitute  
+
+Araquanid @ Custap Berry  
+Ability: Water Bubble  
+Tera Type: Ghost  
+EVs: 252 HP / 40 Def / 216 SpA  
+Modest Nature  
+IVs: 0 Atk  
+- Sticky Web  
+- Surf  
+- Endeavor  
+- Endure  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Fairy  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Nasty Plot  
+- Shadow Ball  
+- Recover  
+- Make It Rain  
+
+Great Tusk @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Ice  
+EVs: 4 Atk / 252 SpD / 252 Spe  
+Jolly Nature  
+- Bulk Up  
+- Headlong Rush  
+- Ice Spinner  
+- Rapid Spin  
+
+Weavile @ Choice Band  
+Ability: Pickpocket  
+Tera Type: Ghost  
+EVs: 212 Atk / 44 SpD / 252 Spe  
+Jolly Nature  
+- Triple Axel  
+- Knock Off  
+- Ice Shard  
+- Low Kick  
+
+Ogerpon-Wellspring (F) @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Ivy Cudgel  
+- U-turn  
+- Power Whip  
+- Swords Dance

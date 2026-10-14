@@ -1,0 +1,59 @@
+Clefable @ Leftovers  
+Ability: Cute Charm  
+Tera Type: Dark  
+EVs: 252 HP / 4 Def / 252 SpD  
+Calm Nature  
+- Flamethrower  
+- Moonblast  
+- Stealth Rock  
+- Knock Off  
+
+Mamoswine @ Choice Band  
+Ability: Oblivious  
+Tera Type: Ice  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Icicle Spear  
+- Ice Shard  
+- Icicle Crash  
+- Earthquake  
+
+Iron Leaves @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Fighting  
+EVs: 72 HP / 160 Atk / 24 Def / 252 Spe  
+Jolly Nature  
+- Close Combat  
+- Psyblade  
+- Swords Dance  
+- Leaf Blade  
+
+Zapdos @ Rocky Helmet  
+Ability: Static  
+Tera Type: Fairy  
+EVs: 248 HP / 252 Def / 8 SpA  
+Bold Nature  
+- Discharge  
+- Volt Switch  
+- Hurricane  
+- Roost  
+
+Muk-Alola @ Leftovers  
+Ability: Poison Touch  
+Tera Type: Ice  
+EVs: 36 HP / 128 Atk / 100 Def / 244 SpD  
+Careful Nature  
+- Knock Off  
+- Poison Jab  
+- Sleep Talk  
+- Poison Fang  
+
+Quaquaval @ Lum Berry  
+Ability: Moxie  
+Tera Type: Water  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Aqua Step  
+- Wave Crash  
+- Close Combat  
+- Knock Off

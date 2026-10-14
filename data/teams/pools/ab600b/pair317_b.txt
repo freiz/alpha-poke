@@ -1,0 +1,59 @@
+Dondozo @ Leftovers  
+Ability: Unaware  
+Tera Type: Dark  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Rest  
+- Body Press  
+- Curse  
+- Sleep Talk  
+
+Kyurem @ Never-Melt Ice  
+Ability: Pressure  
+Tera Type: Water  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Icicle Spear  
+- Freeze-Dry  
+- Earth Power  
+- Dragon Dance  
+
+Pecharunt @ Air Balloon  
+Ability: Poison Puppeteer  
+Tera Type: Ghost  
+EVs: 252 HP / 228 Def / 28 Spe  
+Bold Nature  
+- Malignant Chain  
+- Nasty Plot  
+- Recover  
+- Hex  
+
+Raging Bolt @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Fairy  
+EVs: 252 HP / 4 Def / 252 SpA  
+Hardy Nature  
+- Thunderbolt  
+- Dragon Pulse  
+- Draco Meteor  
+- Calm Mind  
+
+Cinderace @ Heavy-Duty Boots  
+Ability: Libero  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpA / 252 Spe  
+Hasty Nature  
+- Sucker Punch  
+- U-turn  
+- Pyro Ball  
+- Court Change  
+
+Blissey @ Leftovers  
+Ability: Natural Cure  
+Tera Type: Dark  
+EVs: 4 HP / 252 Def / 252 SpD  
+Calm Nature  
+- Thunder Wave  
+- Shadow Ball  
+- Seismic Toss  
+- Soft-Boiled

@@ -1,0 +1,59 @@
+Dragonite @ Life Orb  
+Ability: Multiscale  
+Tera Type: Water  
+EVs: 240 Atk / 252 Spe  
+Hasty Nature  
+- Extreme Speed  
+- Dragon Dance  
+- Fire Punch  
+- Outrage  
+
+Tyranitar @ Leftovers  
+Ability: Sand Stream  
+Tera Type: Fighting  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Knock Off  
+- Ice Punch  
+- Ice Beam  
+- Low Kick  
+
+Abomasnow @ Assault Vest  
+Ability: Snow Warning  
+Tera Type: Water  
+EVs: 248 HP / 8 Atk / 252 SpA  
+Quiet Nature  
+- Blizzard  
+- Aurora Veil  
+- Wood Hammer  
+- Leech Seed  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Electric  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Make It Rain  
+- Nasty Plot  
+- Shadow Ball  
+- Trick  
+
+Great Tusk @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Fire  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Jolly Nature  
+- Headlong Rush  
+- Rapid Spin  
+- Ice Spinner  
+- Knock Off  
+
+Slowking @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 252 HP / 4 SpA / 252 SpD  
+Calm Nature  
+- Chilly Reception  
+- Scald  
+- Future Sight  
+- Thunder Wave

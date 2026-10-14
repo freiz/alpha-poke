@@ -1,0 +1,59 @@
+Raging Bolt @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Ghost  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+- Draco Meteor  
+- Volt Switch  
+- Dragon Pulse  
+- Thunderbolt  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Fighting  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Make It Rain  
+- Trick  
+- Shadow Ball  
+- Thunder Wave  
+
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Headlong Rush  
+- Ice Spinner  
+- Rapid Spin  
+- Knock Off  
+
+Alomomola @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Ghost  
+EVs: 236 HP / 132 Def / 136 SpD  
+Relaxed Nature  
+- Flip Turn  
+- Wish  
+- Protect  
+- Tickle  
+
+Dragonite @ Leftovers  
+Ability: Multiscale  
+Tera Type: Poison  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Earthquake  
+- Encore  
+- Roost  
+- Dragon Dance  
+
+Garganacl @ Leftovers  
+Ability: Purifying Salt  
+Tera Type: Fairy  
+EVs: 248 HP / 76 Def / 184 SpD  
+Careful Nature  
+- Salt Cure  
+- Protect  
+- Recover  
+- Stealth Rock

@@ -1,0 +1,58 @@
+Tyranitar @ Leftovers  
+Ability: Sand Stream  
+Tera Type: Steel  
+EVs: 252 HP / 4 Atk / 172 SpD / 80 Spe  
+Careful Nature  
+- Knock Off  
+- Rest  
+- Sleep Talk  
+- Thunder Wave  
+
+Pelipper @ Red Card  
+Ability: Drizzle  
+Tera Type: Ground  
+EVs: 248 HP / 252 Def / 8 SpA  
+Bold Nature  
+- Weather Ball  
+- Roost  
+- Hurricane  
+- U-turn  
+
+Hippowdon @ Leftovers  
+Ability: Sand Stream  
+Tera Type: Rock  
+EVs: 252 HP / 252 Def / 4 SpA  
+Bold Nature  
+- Sand Tomb  
+- Slack Off  
+- Whirlwind  
+- Stealth Rock  
+
+Politoed @ Damp Rock  
+Ability: Drizzle  
+EVs: 252 HP / 252 Spe  
+Timid Nature  
+- Weather Ball  
+- Earth Power  
+- Encore  
+- Endeavor  
+
+Abomasnow @ Light Clay  
+Ability: Snow Warning  
+Tera Type: Poison  
+EVs: 252 HP / 80 Def / 176 SpD  
+Sassy Nature  
+- Aurora Veil  
+- Blizzard  
+- Wood Hammer  
+- Giga Drain  
+
+Torkoal @ Heat Rock  
+Ability: Drought  
+Tera Type: Flying  
+EVs: 248 HP / 252 SpA / 8 SpD  
+Modest Nature  
+- Stealth Rock  
+- Lava Plume  
+- Rapid Spin  
+- Overheat

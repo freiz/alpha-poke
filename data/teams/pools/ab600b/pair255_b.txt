@@ -1,0 +1,59 @@
+Kyurem @ Leftovers  
+Ability: Pressure  
+Tera Type: Ground  
+EVs: 220 Atk / 36 SpA / 252 Spe  
+Naive Nature  
+- Protect  
+- Earth Power  
+- Freeze-Dry  
+- Icicle Spear  
+
+Slowking-Galar @ Black Sludge  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 252 HP / 4 SpA / 252 SpD  
+Calm Nature  
+- Psychic Noise  
+- Sludge Bomb  
+- Chilly Reception  
+- Future Sight  
+
+Hoopa-Unbound @ Life Orb  
+Ability: Magician  
+Tera Type: Psychic  
+EVs: 40 HP / 252 Atk / 216 Spe  
+Adamant Nature  
+- Psychic Noise  
+- Hyperspace Fury  
+- Psychic  
+- Trick Room  
+
+Indeedee @ Terrain Extender  
+Ability: Psychic Surge  
+Tera Type: Water  
+EVs: 248 HP / 252 Def / 4 SpD / 4 Spe  
+Bold Nature  
+- Expanding Force  
+- Encore  
+- Trick Room  
+- Dazzling Gleam  
+
+Serperior @ Leftovers  
+Ability: Contrary  
+Tera Type: Water  
+EVs: 252 HP / 4 SpA / 252 Spe  
+Timid Nature  
+- Glare  
+- Dragon Pulse  
+- Leaf Storm  
+- Substitute  
+
+Maushold-Four @ Wide Lens  
+Ability: Technician  
+Tera Type: Normal  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Population Bomb  
+- Bite  
+- Tidy Up  
+- Encore

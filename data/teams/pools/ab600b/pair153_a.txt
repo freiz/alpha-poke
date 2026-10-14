@@ -1,0 +1,59 @@
+Indeedee @ Life Orb  
+Ability: Psychic Surge  
+Tera Type: Fairy  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Dazzling Gleam  
+- Expanding Force  
+- Encore  
+- Healing Wish  
+
+Hoopa-Unbound @ Eject Pack  
+Ability: Magician  
+Tera Type: Psychic  
+EVs: 248 HP / 56 Atk / 80 Def / 52 SpA / 52 SpD / 20 Spe  
+Hardy Nature  
+- Expanding Force  
+- Hyperspace Fury  
+- Trick Room  
+- Psychic Noise  
+
+Ceruledge @ Focus Sash  
+Ability: Weak Armor  
+Tera Type: Fairy  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Bitter Blade  
+- Poltergeist  
+- Close Combat  
+
+Polteageist-Antique @ White Herb  
+Ability: Weak Armor  
+Tera Type: Dark  
+EVs: 216 HP / 228 Def / 64 Spe  
+Timid Nature  
+- Shell Smash  
+- Stored Power  
+- Giga Drain  
+- Shadow Ball  
+
+Cinderace @ Heavy-Duty Boots  
+Ability: Libero  
+Tera Type: Fire  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Court Change  
+- Will-O-Wisp  
+- Pyro Ball  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Fairy  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Naive Nature  
+- Moonblast  
+- Destiny Bond  
+- Close Combat  
+- Taunt

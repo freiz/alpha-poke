@@ -1,0 +1,60 @@
+Garganacl @ Heavy-Duty Boots  
+Ability: Purifying Salt  
+Tera Type: Water  
+EVs: 248 HP / 56 Def / 204 SpD  
+Careful Nature  
+- Salt Cure  
+- Earthquake  
+- Curse  
+- Recover  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Water  
+EVs: 244 HP / 252 Def  
+Impish Nature  
+- Earthquake  
+- Swords Dance  
+- Protect  
+- Knock Off  
+
+Zamazenta @ Heavy-Duty Boots  
+Ability: Dauntless Shield  
+Tera Type: Fire  
+EVs: 80 HP / 252 Atk / 176 Spe  
+Jolly Nature  
+- Close Combat  
+- Crunch  
+- Heavy Slam  
+- Roar  
+
+Clefable @ Leftovers  
+Ability: Magic Guard  
+Tera Type: Steel  
+EVs: 252 HP / 4 Def / 252 SpD  
+Calm Nature  
+- Moonblast  
+- Knock Off  
+- Stealth Rock  
+- Moonlight  
+
+Sinistcha @ Heavy-Duty Boots  
+Ability: Heatproof  
+Tera Type: Poison  
+EVs: 248 HP / 252 Def / 8 SpD  
+Bold Nature  
+IVs: 0 Atk  
+- Matcha Gotcha  
+- Shadow Ball  
+- Calm Mind  
+- Strength Sap  
+
+Samurott-Hisui @ Heavy-Duty Boots  
+Ability: Sharpness  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Ceaseless Edge  
+- Razor Shell  
+- Sucker Punch  
+- Encore

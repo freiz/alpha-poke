@@ -1,0 +1,62 @@
+Comfey @ Life Orb  
+Ability: Triage  
+Tera Type: Steel  
+EVs: 248 HP / 240 SpA / 20 SpD  
+Modest Nature  
+IVs: 0 Atk  
+- Draining Kiss  
+- Stored Power  
+- Growth  
+- Synthesis  
+
+Whimsicott @ Life Orb  
+Ability: Chlorophyll  
+Tera Type: Ghost  
+EVs: 112 HP / 252 SpA / 144 Spe  
+Modest Nature  
+IVs: 0 Atk  
+- Moonblast  
+- Shadow Ball  
+- Giga Drain  
+- Growth  
+
+Ceruledge @ Choice Band  
+Ability: Flash Fire  
+Tera Type: Grass  
+EVs: 40 HP / 252 Atk / 84 Spe  
+Adamant Nature  
+- Bitter Blade  
+- Solar Blade  
+- Poltergeist  
+- Shadow Sneak  
+
+Walking Wake @ Assault Vest  
+Ability: Protosynthesis  
+Tera Type: Poison  
+EVs: 228 HP / 132 SpA / 148 Spe  
+Timid Nature  
+- Hydro Steam  
+- Draco Meteor  
+- Knock Off  
+- Flip Turn  
+
+Great Tusk @ Rocky Helmet  
+Ability: Protosynthesis  
+Tera Type: Fire  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Jolly Nature  
+- Headlong Rush  
+- Ice Spinner  
+- Rapid Spin  
+- Stealth Rock  
+
+Ninetales @ Heat Rock  
+Ability: Drought  
+Tera Type: Ghost  
+EVs: 248 HP / 20 Def / 240 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Weather Ball  
+- Will-O-Wisp  
+- Encore  
+- Healing Wish

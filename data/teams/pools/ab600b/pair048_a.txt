@@ -1,0 +1,59 @@
+Moltres-Galar @ Sitrus Berry  
+Ability: Berserk  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Def / 164 SpA / 44 SpD / 44 Spe  
+Modest Nature  
+- Fiery Wrath  
+- Air Slash  
+- Agility  
+- Nasty Plot  
+
+Gholdengo @ Leftovers  
+Ability: Good as Gold  
+Tera Type: Fairy  
+EVs: 248 HP / 8 Def / 252 SpD  
+Calm Nature  
+- Trick  
+- Shadow Ball  
+- Make It Rain  
+- Recover  
+
+Samurott-Hisui @ Choice Scarf  
+Ability: Sharpness  
+Tera Type: Poison  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Ceaseless Edge  
+- Razor Shell  
+- Sucker Punch  
+- Knock Off  
+
+Smeargle @ Focus Sash  
+Ability: Technician  
+Tera Type: Flying  
+EVs: 248 HP / 252 Def / 8 SpD  
+Bold Nature  
+- Jaw Lock  
+- No Retreat  
+- Population Bomb  
+- Encore  
+
+Zamazenta @ Leftovers  
+Ability: Dauntless Shield  
+Tera Type: Steel  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Body Press  
+- Crunch  
+- Iron Defense  
+- Heavy Slam  
+
+Heatran @ Leftovers  
+Ability: Flame Body  
+Tera Type: Grass  
+EVs: 248 HP / 44 Def / 168 SpD / 48 Spe  
+Calm Nature  
+- Magma Storm  
+- Earth Power  
+- Stealth Rock  
+- Will-O-Wisp

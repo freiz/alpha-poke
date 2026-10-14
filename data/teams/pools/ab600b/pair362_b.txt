@@ -1,0 +1,59 @@
+Samurott-Hisui @ Assault Vest  
+Ability: Sharpness  
+Tera Type: Poison  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Sucker Punch  
+- Ceaseless Edge  
+- Razor Shell  
+- Taunt  
+
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Fighting  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Close Combat  
+- Headlong Rush  
+- Ice Spinner  
+
+Rotom-Wash @ Light Clay  
+Ability: Levitate  
+Tera Type: Poison  
+EVs: 252 HP / 212 Def / 44 Spe  
+Bold Nature  
+- Volt Switch  
+- Pain Split  
+- Hydro Pump  
+- Light Screen  
+
+Tyranitar @ Rocky Helmet  
+Ability: Sand Stream  
+Tera Type: Bug  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Knock Off  
+- Earthquake  
+- Stone Edge  
+- Stealth Rock  
+
+Gholdengo @ Choice Scarf  
+Ability: Good as Gold  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Dazzling Gleam  
+- Make It Rain  
+- Shadow Ball  
+- Trick  
+
+Pecharunt @ Rocky Helmet  
+Ability: Poison Puppeteer  
+Tera Type: Grass  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Malignant Chain  
+- Recover  
+- Parting Shot  
+- Shadow Ball

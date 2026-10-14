@@ -1,0 +1,59 @@
+Iron Treads @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Knock Off  
+- Rapid Spin  
+- Earthquake  
+
+Deoxys-Speed @ Colbur Berry  
+Ability: Pressure  
+Tera Type: Ghost  
+EVs: 248 HP / 200 SpA / 60 Spe  
+Timid Nature  
+- Stealth Rock  
+- Psycho Boost  
+- Taunt  
+- Spikes  
+
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Trailblaze  
+- U-turn  
+- Horn Leech  
+
+Raging Bolt @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Fairy  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+- Calm Mind  
+- Dragon Pulse  
+- Thunderbolt  
+- Thunderclap  
+
+Grimmsnarl @ Light Clay  
+Ability: Prankster  
+Tera Type: Steel  
+EVs: 252 HP / 160 Def / 96 SpD  
+Adamant Nature  
+- Taunt  
+- Light Screen  
+- Reflect  
+- Spirit Break  
+
+Ceruledge @ Life Orb  
+Ability: Flash Fire  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Bitter Blade  
+- Shadow Sneak  
+- Swords Dance  
+- Poltergeist

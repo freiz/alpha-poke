@@ -1,0 +1,59 @@
+Kingambit @ Black Glasses  
+Ability: Supreme Overlord  
+Tera Type: Fire  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Sucker Punch  
+- Kowtow Cleave  
+- Iron Head  
+
+Kyurem @ Choice Specs  
+Ability: Pressure  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Ice Beam  
+- Freeze-Dry  
+- Draco Meteor  
+- Earth Power  
+
+Iron Treads @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Earthquake  
+- Stealth Rock  
+- Ice Spinner  
+
+Skeledirge @ Heavy-Duty Boots  
+Ability: Unaware  
+Tera Type: Fairy  
+EVs: 252 HP / 4 Def / 252 SpD  
+Calm Nature  
+- Torch Song  
+- Will-O-Wisp  
+- Hex  
+- Slack Off  
+
+Zamazenta @ Leftovers  
+Ability: Dauntless Shield  
+Tera Type: Steel  
+EVs: 88 Def / 168 Spe  
+Jolly Nature  
+- Iron Defense  
+- Body Press  
+- Crunch  
+- Heavy Slam  
+
+Ogerpon-Cornerstone (F) @ Cornerstone Mask  
+Ability: Sturdy  
+Tera Type: Rock  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Ivy Cudgel  
+- Horn Leech  
+- Spiky Shield

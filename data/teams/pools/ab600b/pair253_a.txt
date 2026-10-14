@@ -1,0 +1,58 @@
+Galvantula @ Focus Sash  
+Ability: Compound Eyes  
+Tera Type: Ghost  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Bug Buzz  
+- Sticky Web  
+- Thunder Wave  
+- Volt Switch  
+
+Cinderace @ Charcoal  
+Ability: Libero  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Court Change  
+- U-turn  
+- Fire Fang  
+- Pyro Ball  
+
+Cinccino @ Loaded Dice  
+Ability: Skill Link  
+Tera Type: Normal  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- Encore  
+- Triple Axel  
+- Bullet Seed  
+- Tail Slap  
+
+Minior-Orange @ White Herb  
+Ability: Shields Down  
+Tera Type: Flying  
+EVs: 252 Atk / 252 SpD  
+Hardy Nature  
+- Shell Smash  
+- Acrobatics  
+- Substitute  
+- Stealth Rock  
+
+Malamar @ Leftovers  
+Ability: Contrary  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Switcheroo  
+- Psycho Cut  
+- Knock Off  
+- Superpower  
+
+Bisharp @ Eviolite  
+Ability: Inner Focus  
+Tera Type: Flying  
+EVs: 4 HP / 252 Def / 252 SpD  
+Impish Nature  
+- Iron Head  
+- Protect  
+- Sucker Punch  
+- Throat Chop

@@ -1,0 +1,58 @@
+Swalot @ Aguav Berry  
+Ability: Sticky Hold  
+Tera Type: Dark  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- Acid Armor  
+- Body Press  
+- Thunder Wave  
+- Knock Off  
+
+Dusclops @ Eviolite  
+Ability: Frisk  
+EVs: 4 HP / 252 Def / 252 SpD  
+Relaxed Nature  
+- Shadow Sneak  
+- Will-O-Wisp  
+- Pain Split  
+- Calm Mind  
+
+Azelf @ Focus Sash  
+Ability: Levitate  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Hasty Nature  
+- Psychic  
+- Stealth Rock  
+- U-turn  
+- Dazzling Gleam  
+
+Salamence @ Heavy-Duty Boots  
+Ability: Moxie  
+Tera Type: Ground  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Dragon Dance  
+- Dual Wingbeat  
+- Earthquake  
+- Outrage  
+
+Gengar @ Leftovers  
+Ability: Cursed Body  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Def / 252 Spe  
+Timid Nature  
+- Shadow Ball  
+- Destiny Bond  
+- Trick  
+- Sludge Bomb  
+
+Skarmory @ Leftovers  
+Ability: Weak Armor  
+Tera Type: Dragon  
+EVs: 252 HP / 140 Def / 116 Spe  
+Hardy Nature  
+- Spikes  
+- Brave Bird  
+- Roost  
+- Whirlwind

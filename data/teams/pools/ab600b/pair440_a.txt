@@ -1,0 +1,61 @@
+Slowking-Galar @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 252 HP / 4 SpA / 252 SpD  
+Sassy Nature  
+IVs: 0 Atk / 0 Spe  
+- Chilly Reception  
+- Future Sight  
+- Ice Beam  
+- Thunder Wave  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Fairy  
+EVs: 252 SpA / 252 Spe  
+Naive Nature  
+- Moonblast  
+- Knock Off  
+- Thunderbolt  
+- Close Combat  
+
+Raging Bolt @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Fairy  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+IVs: 20 Atk  
+- Thunderbolt  
+- Thunderclap  
+- Dragon Pulse  
+- Calm Mind  
+
+Moltres @ Heavy-Duty Boots  
+Ability: Flame Body  
+EVs: 248 HP / 252 Def / 8 SpA  
+Bold Nature  
+IVs: 0 Atk  
+- Flamethrower  
+- Will-O-Wisp  
+- Roost  
+- Roar  
+
+Samurott-Hisui @ Choice Band  
+Ability: Sharpness  
+Tera Type: Ghost  
+EVs: 248 HP / 252 Atk / 8 Spe  
+Adamant Nature  
+- Ceaseless Edge  
+- Aqua Jet  
+- Flip Turn  
+- Sacred Sword  
+
+Great Tusk @ Heavy-Duty Boots  
+Ability: Protosynthesis  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Headlong Rush  
+- Ice Spinner  
+- Stealth Rock  
+- Rapid Spin

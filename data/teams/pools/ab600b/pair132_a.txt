@@ -1,0 +1,59 @@
+Ribombee @ Focus Sash  
+Ability: Shield Dust  
+Tera Type: Ghost  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Sticky Web  
+- Stun Spore  
+- Moonblast  
+- Skill Swap  
+
+Gholdengo @ Shuca Berry  
+Ability: Good as Gold  
+Tera Type: Fighting  
+EVs: 252 HP / 164 SpD / 92 Spe  
+Modest Nature  
+- Shadow Ball  
+- Nasty Plot  
+- Trick  
+- Dazzling Gleam  
+
+Iron Moth @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Fairy  
+EVs: 252 HP / 4 Def / 252 SpA  
+Modest Nature  
+- Fiery Dance  
+- Sludge Wave  
+- Substitute  
+- Morning Sun  
+
+Ceruledge @ Focus Sash  
+Ability: Weak Armor  
+Tera Type: Fairy  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Bitter Blade  
+- Swords Dance  
+- Close Combat  
+- Poltergeist  
+
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Ivy Cudgel  
+- Swords Dance  
+- Knock Off  
+- U-turn  
+
+Great Tusk @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Fighting  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Headlong Rush  
+- Ice Spinner  
+- Stealth Rock  
+- Rapid Spin

@@ -1,0 +1,59 @@
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Ghost  
+EVs: 240 HP / 252 Atk / 16 Spe  
+Adamant Nature  
+- Swords Dance  
+- Iron Head  
+- Sucker Punch  
+- Kowtow Cleave  
+
+Skeledirge @ Rocky Helmet  
+Ability: Unaware  
+Tera Type: Dark  
+EVs: 248 HP / 8 Def / 252 SpD  
+Calm Nature  
+- Torch Song  
+- Slack Off  
+- Shadow Ball  
+- Earth Power  
+
+Samurott-Hisui @ Focus Sash  
+Ability: Sharpness  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Ceaseless Edge  
+- Razor Shell  
+- Sucker Punch  
+- Aqua Cutter  
+
+Meowscarada @ Focus Sash  
+Ability: Protean  
+Tera Type: Dark  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- U-turn  
+- Flower Trick  
+- Triple Axel  
+
+Clefable @ Leftovers  
+Ability: Unaware  
+Tera Type: Fire  
+EVs: 252 HP / 252 Def / 4 Spe  
+Bold Nature  
+- Stealth Rock  
+- Calm Mind  
+- Thunderbolt  
+- Knock Off  
+
+Alomomola @ Red Card  
+Ability: Regenerator  
+Tera Type: Ghost  
+EVs: 4 Atk / 252 Def / 252 SpD  
+Sassy Nature  
+- Flip Turn  
+- Scald  
+- Wish  
+- Protect

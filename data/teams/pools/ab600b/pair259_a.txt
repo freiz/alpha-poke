@@ -1,0 +1,62 @@
+Samurott-Hisui @ Choice Scarf  
+Ability: Sharpness  
+Shiny: Yes  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Aqua Cutter  
+- Ceaseless Edge  
+- Sacred Sword  
+- Knock Off  
+
+Landorus-Therian (M) @ Rocky Helmet  
+Ability: Intimidate  
+Tera Type: Water  
+EVs: 252 HP / 32 Def / 224 Spe  
+Timid Nature  
+- Stealth Rock  
+- Earth Power  
+- U-turn  
+- Taunt  
+
+Pecharunt @ Heavy-Duty Boots  
+Ability: Poison Puppeteer  
+Tera Type: Fairy  
+EVs: 252 HP / 104 Def / 120 SpD / 32 Spe  
+Bold Nature  
+IVs: 0 Atk  
+- Parting Shot  
+- Recover  
+- Toxic  
+- Hex  
+
+Raging Bolt @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Fairy  
+EVs: 64 HP / 28 Def / 252 SpA / 164 Spe  
+Modest Nature  
+IVs: 20 Atk  
+- Calm Mind  
+- Thunderclap  
+- Dragon Pulse  
+- Thunderbolt  
+
+Great Tusk @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Poison  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Jolly Nature  
+- Headlong Rush  
+- Ice Spinner  
+- Bulk Up  
+- Rapid Spin  
+
+Kingambit @ Black Glasses  
+Ability: Supreme Overlord  
+Tera Type: Dark  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Swords Dance  
+- Iron Head  
+- Kowtow Cleave  
+- Sucker Punch

@@ -1,0 +1,59 @@
+Drifblim @ Ganlon Berry  
+Ability: Aftermath  
+Tera Type: Electric  
+EVs: 176 Def / 80 SpA / 252 Spe  
+Modest Nature  
+- Trick  
+- Will-O-Wisp  
+- Explosion  
+- Calm Mind  
+
+Azelf @ Focus Sash  
+Ability: Levitate  
+Tera Type: Fairy  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Trick  
+- Flamethrower  
+- Dazzling Gleam  
+- Mystical Power  
+
+Metagross @ Weakness Policy  
+Ability: Clear Body  
+Tera Type: Steel  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- Bullet Punch  
+- Heavy Slam  
+- Psychic Fangs  
+- Agility  
+
+Kingambit @ Air Balloon  
+Ability: Supreme Overlord  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Kowtow Cleave  
+- Swords Dance  
+- Iron Head  
+- Sucker Punch  
+
+Iron Crown @ Leftovers  
+Ability: Quark Drive  
+Tera Type: Fighting  
+EVs: 32 HP / 252 SpA / 224 Spe  
+Modest Nature  
+- Calm Mind  
+- Iron Defense  
+- Stored Power  
+- Tachyon Cutter  
+
+Manaphy @ Leftovers  
+Ability: Hydration  
+Tera Type: Fairy  
+EVs: 252 HP / 252 Spe  
+Timid Nature  
+- Take Heart  
+- Acid Armor  
+- Stored Power  
+- Ice Beam

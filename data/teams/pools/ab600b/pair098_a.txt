@@ -1,0 +1,59 @@
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Steel  
+EVs: 244 HP / 168 SpD / 96 Spe  
+Careful Nature  
+- Protect  
+- Knock Off  
+- Stealth Rock  
+- Toxic  
+
+Hitmontop @ Expert Belt  
+Ability: Intimidate  
+Tera Type: Ghost  
+EVs: 248 HP / 252 Atk / 8 SpD  
+Adamant Nature  
+- Triple Axel  
+- Thief  
+- Mach Punch  
+- Fake Out  
+
+Toxapex @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Ghost  
+EVs: 248 Def / 204 SpD  
+Sassy Nature  
+- Infestation  
+- Toxic Spikes  
+- Recover  
+- Haze  
+
+Whimsicott @ Leftovers  
+Ability: Prankster  
+Tera Type: Ghost  
+EVs: 252 HP / 4 SpA / 252 Spe  
+Timid Nature  
+- Protect  
+- Encore  
+- Moonblast  
+- U-turn  
+
+Samurott-Hisui @ Choice Scarf  
+Ability: Sharpness  
+Tera Type: Fire  
+EVs: 252 Atk / 52 Def / 204 Spe  
+Jolly Nature  
+- Ceaseless Edge  
+- Aqua Jet  
+- Razor Shell  
+- Sucker Punch  
+
+Scizor @ Choice Band  
+Ability: Technician  
+Tera Type: Steel  
+EVs: 120 HP / 252 Atk / 136 Spe  
+Adamant Nature  
+- U-turn  
+- Bullet Punch  
+- Defog  
+- Close Combat

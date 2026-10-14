@@ -1,0 +1,62 @@
+Porygon-Z @ Life Orb  
+Ability: Download  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Psyshock  
+- Tri Attack  
+- Thunder Wave  
+- Shadow Ball  
+
+Ogerpon-Wellspring (F) @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Ivy Cudgel  
+- Power Whip  
+- U-turn  
+- Spiky Shield  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Flying  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+IVs: 0 Atk  
+- Make It Rain  
+- Nasty Plot  
+- Recover  
+- Shadow Ball  
+
+Arcanine-Hisui @ Life Orb  
+Ability: Rock Head  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Extreme Speed  
+- Flare Blitz  
+- Head Smash  
+- Double-Edge  
+
+Garchomp @ Rocky Helmet  
+Ability: Rough Skin  
+Tera Type: Fairy  
+EVs: 252 HP / 128 Def / 128 SpD  
+Impish Nature  
+- Dragon Tail  
+- Rest  
+- Swords Dance  
+- Sleep Talk  
+
+Gardevoir @ Leftovers  
+Ability: Trace  
+Tera Type: Steel  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Moonblast  
+- Energy Ball  
+- Focus Blast  
+- Calm Mind

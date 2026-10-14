@@ -1,0 +1,59 @@
+Ninetales-Alola @ Light Clay  
+Ability: Snow Warning  
+Tera Type: Water  
+EVs: 252 HP / 4 Def / 252 Spe  
+Timid Nature  
+- Aurora Veil  
+- Blizzard  
+- Encore  
+- Freeze-Dry  
+
+Frosmoth @ Heavy-Duty Boots  
+Ability: Ice Scales  
+Tera Type: Ground  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Modest Nature  
+- Quiver Dance  
+- Ice Beam  
+- Bug Buzz  
+- Defog  
+
+Great Tusk @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Close Combat  
+- Knock Off  
+- Ice Spinner  
+
+Dragapult @ Choice Scarf  
+Ability: Infiltrator  
+Tera Type: Ghost  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- Shadow Ball  
+- U-turn  
+- Draco Meteor  
+- Dragon Darts  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Fairy  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- Swords Dance  
+- Kowtow Cleave  
+- Sucker Punch  
+- Iron Head  
+
+Slowking-Galar @ Black Sludge  
+Ability: Curious Medicine  
+Tera Type: Fairy  
+EVs: 248 HP / 8 Def / 252 SpA  
+Modest Nature  
+- Sludge Bomb  
+- Future Sight  
+- Thunder Wave  
+- Chilly Reception

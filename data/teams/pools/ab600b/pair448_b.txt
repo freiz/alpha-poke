@@ -1,0 +1,59 @@
+Necrozma @ Leftovers  
+Ability: Prism Armor  
+Tera Type: Steel  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Calm Mind  
+- Moonlight  
+- Photon Geyser  
+- Dragon Dance  
+
+Keldeo-Resolute @ Leftovers  
+Ability: Justified  
+Tera Type: Steel  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Calm Mind  
+- Surf  
+- Vacuum Wave  
+- Secret Sword  
+
+Iron Treads @ Leftovers  
+Ability: Quark Drive  
+Tera Type: Water  
+EVs: 192 HP / 60 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Earthquake  
+- Stealth Rock  
+- Rapid Spin  
+
+Ribombee @ Focus Sash  
+Ability: Shield Dust  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Moonblast  
+- Sticky Web  
+- Stun Spore  
+- Psychic Noise  
+
+Dragapult @ Heavy-Duty Boots  
+Ability: Cursed Body  
+Tera Type: Dragon  
+EVs: 248 HP / 8 Def / 252 Spe  
+Timid Nature  
+- Hex  
+- U-turn  
+- Draco Meteor  
+- Thunder Wave  
+
+Grimmsnarl @ Light Clay  
+Ability: Prankster  
+Tera Type: Steel  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- Reflect  
+- Thunder Wave  
+- Spirit Break  
+- Light Screen

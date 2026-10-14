@@ -1,0 +1,59 @@
+Pelipper @ Damp Rock  
+Ability: Drizzle  
+Tera Type: Ground  
+EVs: 248 HP / 252 Def / 8 SpD  
+Relaxed Nature  
+- U-turn  
+- Weather Ball  
+- Hurricane  
+- Roost  
+
+Raging Bolt @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Flying  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Weather Ball  
+- Thunderclap  
+- Thunder  
+- Dragon Pulse  
+
+Overqwil @ Life Orb  
+Ability: Poison Point  
+Tera Type: Water  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Swords Dance  
+- Crunch  
+- Gunk Shot  
+- Liquidation  
+
+Barraskewda @ Life Orb  
+Ability: Swift Swim  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Close Combat  
+- Flip Turn  
+- Liquidation  
+- Aqua Jet  
+
+Iron Treads @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Electric  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Steel Beam  
+- Earth Power  
+- Rapid Spin  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Kowtow Cleave  
+- Sucker Punch  
+- Iron Head  
+- Swords Dance

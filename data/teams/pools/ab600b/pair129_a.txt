@@ -1,0 +1,59 @@
+Zapdos-Galar @ Leftovers  
+Ability: Defiant  
+Tera Type: Flying  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Trailblaze  
+- U-turn  
+- Knock Off  
+- Thunderous Kick  
+
+Clodsire @ Leftovers  
+Ability: Unaware  
+Tera Type: Steel  
+EVs: 248 HP / 8 Def / 252 SpD  
+Careful Nature  
+- Toxic  
+- Counter  
+- Earthquake  
+- Recover  
+
+Rotom-Wash @ Leftovers  
+Ability: Levitate  
+Tera Type: Poison  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Trick  
+- Hydro Pump  
+- Volt Switch  
+- Will-O-Wisp  
+
+Slowking-Galar @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Dark  
+EVs: 252 HP / 200 Def / 56 SpD  
+Relaxed Nature  
+- Future Sight  
+- Chilly Reception  
+- Thunder Wave  
+- Sludge Bomb  
+
+Arcanine-Hisui @ Choice Band  
+Ability: Rock Head  
+Tera Type: Normal  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Flare Blitz  
+- Head Smash  
+- Extreme Speed  
+- Flame Charge  
+
+Klefki @ Choice Scarf  
+Ability: Magician  
+Tera Type: Ghost  
+EVs: 4 HP / 252 Def / 252 SpD  
+Bold Nature  
+- Reflect  
+- Thunder Wave  
+- Spikes  
+- Light Screen

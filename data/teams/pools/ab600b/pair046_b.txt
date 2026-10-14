@@ -1,0 +1,59 @@
+Goodra-Hisui @ Assault Vest  
+Ability: Gooey  
+Tera Type: Fairy  
+EVs: 248 HP / 252 SpA / 8 SpD  
+Modest Nature  
+- Knock Off  
+- Dragon Tail  
+- Draco Meteor  
+- Flash Cannon  
+
+Pecharunt @ Rocky Helmet  
+Ability: Poison Puppeteer  
+Tera Type: Fairy  
+EVs: 252 HP / 228 Def / 28 Spe  
+Bold Nature  
+- Nasty Plot  
+- Shadow Ball  
+- Malignant Chain  
+- Recover  
+
+Landorus-Therian @ Rocky Helmet  
+Ability: Intimidate  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Def / 252 Spe  
+Timid Nature  
+- U-turn  
+- Stealth Rock  
+- Earthquake  
+- Taunt  
+
+Zamazenta @ Life Orb  
+Ability: Dauntless Shield  
+Tera Type: Dark  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Jolly Nature  
+- Close Combat  
+- Ice Fang  
+- Crunch  
+- Reflect  
+
+Dragonite @ Heavy-Duty Boots  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Earthquake  
+- Dragon Dance  
+- Roost  
+- Extreme Speed  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Fighting  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Kowtow Cleave  
+- Sucker Punch  
+- Iron Head  
+- Swords Dance

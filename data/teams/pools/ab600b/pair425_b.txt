@@ -1,0 +1,59 @@
+Clefable @ Life Orb  
+Ability: Unaware  
+Tera Type: Water  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+- Moonlight  
+- Moonblast  
+- Knock Off  
+- Thunder Wave  
+
+Incineroar @ Leftovers  
+Ability: Intimidate  
+Tera Type: Dragon  
+EVs: 252 HP / 12 Atk / 124 Def / 120 SpD  
+Hardy Nature  
+- Knock Off  
+- Will-O-Wisp  
+- U-turn  
+- Fake Out  
+
+Clodsire @ Black Sludge  
+Ability: Water Absorb  
+Tera Type: Steel  
+EVs: 4 HP / 252 Atk / 252 SpD  
+Adamant Nature  
+- Earthquake  
+- Stealth Rock  
+- Recover  
+- Gunk Shot  
+
+Zapdos-Galar @ Leftovers  
+Ability: Defiant  
+Tera Type: Flying  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Thunderous Kick  
+- Knock Off  
+- Brave Bird  
+- Drill Peck  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Ghost  
+EVs: 248 HP / 176 Def / 72 SpA / 12 Spe  
+Modest Nature  
+- Make It Rain  
+- Shadow Ball  
+- Nasty Plot  
+- Trick  
+
+Dragapult @ Focus Sash  
+Ability: Infiltrator  
+Tera Type: Normal  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- U-turn  
+- Will-O-Wisp  
+- Draco Meteor  
+- Dragon Darts

@@ -1,0 +1,59 @@
+Rillaboom @ Choice Band  
+Ability: Grassy Surge  
+Tera Type: Steel  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Knock Off  
+- Grassy Glide  
+- High Horsepower  
+
+Blaziken @ Focus Sash  
+Ability: Speed Boost  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Hardy Nature  
+- Flare Blitz  
+- Protect  
+- Will-O-Wisp  
+- Swords Dance  
+
+Primarina @ Heavy-Duty Boots  
+Ability: Torrent  
+Tera Type: Poison  
+EVs: 248 HP / 208 SpA / 16 SpD / 36 Spe  
+Modest Nature  
+- Moonblast  
+- Psychic Noise  
+- Flip Turn  
+- Sparkling Aria  
+
+Garchomp @ Rocky Helmet  
+Ability: Rough Skin  
+Tera Type: Fairy  
+EVs: 248 HP / 216 Def / 44 Spe  
+Impish Nature  
+- Spikes  
+- Dragon Tail  
+- Earthquake  
+- Stealth Rock  
+
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Fairy  
+EVs: 248 HP / 252 Def / 8 SpD  
+Impish Nature  
+- U-turn  
+- Body Press  
+- Defog  
+- Roost  
+
+Hawlucha @ Grassy Seed  
+Ability: Unburden  
+Tera Type: Electric  
+EVs: 144 HP / 232 Atk / 12 SpD / 120 Spe  
+Adamant Nature  
+- Close Combat  
+- Acrobatics  
+- Swords Dance  
+- Sky Attack

@@ -1,0 +1,62 @@
+Indeedee-F @ Eject Button  
+Ability: Psychic Surge  
+Tera Type: Fairy  
+EVs: 252 HP / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Reflect  
+- Healing Wish  
+- Light Screen  
+- Alluring Voice  
+
+Polteageist-Antique @ Focus Sash  
+Ability: Weak Armor  
+Tera Type: Ghost  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Shadow Ball  
+- Shell Smash  
+- Giga Drain  
+- Stored Power  
+
+Iron Crown @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Steel  
+EVs: 112 HP / 144 SpA / 252 Spe  
+Timid Nature  
+IVs: 20 Atk  
+- Expanding Force  
+- Tachyon Cutter  
+- Volt Switch  
+- Calm Mind  
+
+Dragonite @ Choice Band  
+Ability: Multiscale  
+Tera Type: Fire  
+EVs: 252 Atk / 252 Spe  
+Jolly Nature  
+- Extreme Speed  
+- Outrage  
+- Earthquake  
+- Stone Edge  
+
+Iron Valiant @ Choice Specs  
+Ability: Quark Drive  
+Tera Type: Psychic  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Naive Nature  
+- Close Combat  
+- Expanding Force  
+- Moonblast  
+- Poison Jab  
+
+Great Tusk @ Assault Vest  
+Ability: Protosynthesis  
+Tera Type: Ground  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Close Combat  
+- Earthquake  
+- Knock Off

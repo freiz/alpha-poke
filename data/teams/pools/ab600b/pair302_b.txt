@@ -1,0 +1,59 @@
+Primarina @ Leftovers  
+Ability: Torrent  
+Tera Type: Ground  
+EVs: 248 HP / 64 Def / 156 SpA / 36 SpD / 4 Spe  
+Modest Nature  
+- Draining Kiss  
+- Calm Mind  
+- Whirlpool  
+- Psychic Noise  
+
+Slowking-Galar @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 252 HP / 4 Def / 252 SpD  
+Calm Nature  
+- Chilly Reception  
+- Sludge Bomb  
+- Future Sight  
+- Ice Beam  
+
+Rotom-Wash @ Leftovers  
+Ability: Levitate  
+Tera Type: Steel  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Hydro Pump  
+- Thunder Wave  
+- Volt Switch  
+- Will-O-Wisp  
+
+Iron Crown @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Volt Switch  
+- Tachyon Cutter  
+- Future Sight  
+- Focus Blast  
+
+Kleavor @ Focus Sash  
+Ability: Sharpness  
+Tera Type: Flying  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- U-turn  
+- X-Scissor  
+- Close Combat  
+- Stone Axe  
+
+Gardevoir @ Custap Berry  
+Ability: Trace  
+Tera Type: Fire  
+EVs: 100 HP / 156 SpA / 252 Spe  
+Timid Nature  
+- Moonblast  
+- Destiny Bond  
+- Mystical Fire  
+- Thunderbolt

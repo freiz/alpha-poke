@@ -1,0 +1,59 @@
+Garchomp @ Rocky Helmet  
+Ability: Rough Skin  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Spikes  
+- Dragon Tail  
+- Earthquake  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Fighting  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Make It Rain  
+- Shadow Ball  
+- Trick  
+- Recover  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ground  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Moonblast  
+- Calm Mind  
+- Thunderbolt  
+- Vacuum Wave  
+
+Cinderace @ Heavy-Duty Boots  
+Ability: Libero  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpA / 252 Spe  
+Hasty Nature  
+- Pyro Ball  
+- Court Change  
+- Gunk Shot  
+- Will-O-Wisp  
+
+Rotom-Wash @ Leftovers  
+Ability: Levitate  
+Tera Type: Steel  
+EVs: 48 HP / 40 Def / 140 SpA / 40 SpD / 128 Spe  
+Modest Nature  
+- Hydro Pump  
+- Volt Switch  
+- Will-O-Wisp  
+- Hex  
+
+Zamazenta @ Leftovers  
+Ability: Dauntless Shield  
+Tera Type: Fire  
+EVs: 4 HP / 252 Def / 252 Spe  
+Impish Nature  
+- Body Press  
+- Iron Defense  
+- Roar  
+- Crunch

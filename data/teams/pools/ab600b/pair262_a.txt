@@ -1,0 +1,59 @@
+Ursaluna @ Flame Orb  
+Ability: Guts  
+Tera Type: Normal  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Brave Nature  
+- Facade  
+- Swords Dance  
+- Fire Punch  
+- Ice Punch  
+
+Cresselia @ Choice Scarf  
+Ability: Levitate  
+Tera Type: Steel  
+EVs: 248 HP / 8 Def / 252 SpA  
+Modest Nature  
+- Trick Room  
+- Lunar Dance  
+- Psychic  
+- Ice Beam  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ground  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Encore  
+- Moonblast  
+- Close Combat  
+- Knock Off  
+
+Hatterene @ Eject Button  
+Ability: Magic Bounce  
+Tera Type: Poison  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Quiet Nature  
+- Dazzling Gleam  
+- Healing Wish  
+- Mystical Fire  
+- Psychic Noise  
+
+Keldeo-Resolute @ Rocky Helmet  
+Ability: Justified  
+Tera Type: Water  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Vacuum Wave  
+- Surf  
+- Flip Turn  
+- Secret Sword  
+
+Ogerpon @ Choice Band  
+Ability: Defiant  
+Tera Type: Grass  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Superpower  
+- U-turn  
+- Knock Off  
+- Ivy Cudgel

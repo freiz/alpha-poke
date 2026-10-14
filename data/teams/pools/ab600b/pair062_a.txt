@@ -1,0 +1,61 @@
+Blissey @ Heavy-Duty Boots  
+Ability: Natural Cure  
+Tera Type: Dark  
+EVs: 4 HP / 252 Def / 252 SpD  
+Calm Nature  
+IVs: 0 Atk  
+- Soft-Boiled  
+- Calm Mind  
+- Stealth Rock  
+- Shadow Ball  
+
+Clefable @ Heavy-Duty Boots  
+Ability: Unaware  
+Tera Type: Steel  
+EVs: 252 HP / 4 Def / 252 SpD  
+Calm Nature  
+IVs: 0 Atk  
+- Wish  
+- Protect  
+- Calm Mind  
+- Moonblast  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Ghost  
+EVs: 244 HP / 252 Def / 12 SpD  
+Impish Nature  
+- Protect  
+- Knock Off  
+- Spikes  
+- Toxic  
+
+Dondozo @ Heavy-Duty Boots  
+Ability: Unaware  
+Tera Type: Fighting  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Body Press  
+- Rest  
+- Sleep Talk  
+- Avalanche  
+
+Talonflame @ Heavy-Duty Boots  
+Ability: Flame Body  
+Tera Type: Grass  
+EVs: 204 HP / 252 Def / 52 Spe  
+Bold Nature  
+- Will-O-Wisp  
+- Roost  
+- Defog  
+- U-turn  
+
+Toxapex @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Steel  
+EVs: 248 HP / 252 SpD / 8 Spe  
+Calm Nature  
+- Poison Jab  
+- Baneful Bunker  
+- Recover  
+- Haze

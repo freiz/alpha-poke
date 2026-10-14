@@ -1,0 +1,59 @@
+Great Tusk @ Life Orb  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Ice Spinner  
+- Headlong Rush  
+- Rapid Spin  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Ghost  
+EVs: 160 HP / 252 Atk / 96 Spe  
+Adamant Nature  
+- Low Kick  
+- Kowtow Cleave  
+- Iron Head  
+- Swords Dance  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Ghost  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Thunder Wave  
+- Nasty Plot  
+- Make It Rain  
+- Shadow Ball  
+
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Ivy Cudgel  
+- Horn Leech  
+- Power Whip  
+- Swords Dance  
+
+Dragonite @ Leftovers  
+Ability: Multiscale  
+Tera Type: Ground  
+EVs: 252 HP / 240 Def / 16 Spe  
+Impish Nature  
+- Earthquake  
+- Ice Spinner  
+- Dragon Dance  
+- Roost  
+
+Toxapex @ Leftovers  
+Ability: Regenerator  
+Tera Type: Grass  
+EVs: 252 HP / 244 Def / 12 Spe  
+Impish Nature  
+- Toxic Spikes  
+- Baneful Bunker  
+- Haze  
+- Chilling Water

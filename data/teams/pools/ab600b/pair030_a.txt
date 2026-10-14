@@ -1,0 +1,58 @@
+Metagross @ Assault Vest  
+Ability: Clear Body  
+Tera Type: Steel  
+EVs: 252 HP / 252 Spe  
+Hardy Nature  
+- Psychic Fangs  
+- Bullet Punch  
+- Earthquake  
+- Meteor Mash  
+
+Ceruledge @ Life Orb  
+Ability: Weak Armor  
+Tera Type: Fairy  
+EVs: 248 HP / 252 Atk / 8 Def  
+Adamant Nature  
+- Shadow Sneak  
+- Swords Dance  
+- Poltergeist  
+- Bitter Blade  
+
+Florges-Blue @ Sitrus Berry  
+Ability: Symbiosis  
+EVs: 252 HP / 16 SpA / 240 SpD  
+Calm Nature  
+- Moonblast  
+- Wish  
+- Calm Mind  
+- Psychic Noise  
+
+Milotic @ Leftovers  
+Ability: Competitive  
+Tera Type: Steel  
+EVs: 108 HP / 148 SpA / 252 SpD  
+Modest Nature  
+- Scald  
+- Ice Beam  
+- Haze  
+- Draining Kiss  
+
+Hydrapple @ Rocky Helmet  
+Ability: Supersweet Syrup  
+Tera Type: Grass  
+EVs: 252 HP / 176 SpA / 80 SpD  
+Quiet Nature  
+- Fickle Beam  
+- Earth Power  
+- Nasty Plot  
+- Giga Drain  
+
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Ground  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Ice Spinner  
+- Headlong Rush  
+- Knock Off

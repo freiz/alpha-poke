@@ -1,0 +1,59 @@
+Goodra-Hisui @ Leftovers  
+Ability: Shell Armor  
+Tera Type: Fairy  
+EVs: 252 HP / 72 Atk / 20 SpA / 164 SpD  
+Sassy Nature  
+- Curse  
+- Life Dew  
+- Dragon Tail  
+- Knock Off  
+
+Enamorus @ Choice Scarf  
+Ability: Contrary  
+Tera Type: Steel  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Superpower  
+- Iron Head  
+- Mystical Fire  
+- Earth Power  
+
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Poison  
+EVs: 248 HP / 4 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Headlong Rush  
+- Body Press  
+- Ice Spinner  
+
+Iron Moth @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Grass  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Modest Nature  
+- Fiery Dance  
+- Substitute  
+- Energy Ball  
+- Sludge Wave  
+
+Meowscarada @ Choice Scarf  
+Ability: Protean  
+Tera Type: Dark  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Flower Trick  
+- Knock Off  
+- Triple Axel  
+- U-turn  
+
+Rotom-Wash @ Light Clay  
+Ability: Levitate  
+Tera Type: Poison  
+EVs: 252 HP / 252 SpD / 4 Spe  
+Calm Nature  
+- Volt Switch  
+- Reflect  
+- Hydro Pump  
+- Light Screen

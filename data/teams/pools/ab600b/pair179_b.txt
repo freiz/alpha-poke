@@ -1,0 +1,58 @@
+Charizard @ Choice Specs  
+Ability: Blaze  
+Tera Type: Flying  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Flame Charge  
+- Overheat  
+- Earthquake  
+- Substitute  
+
+Torkoal @ Eject Pack  
+Ability: Drought  
+Tera Type: Flying  
+EVs: 248 HP / 252 Def / 8 SpD  
+Bold Nature  
+- Overheat  
+- Rapid Spin  
+- Stealth Rock  
+- Will-O-Wisp  
+
+Clodsire @ Black Sludge  
+Ability: Unaware  
+Tera Type: Steel  
+EVs: 252 HP / 4 Atk / 252 SpD  
+Careful Nature  
+- Toxic  
+- Recover  
+- Earthquake  
+- Poison Jab  
+
+Spiritomb @ Life Orb  
+Ability: Infiltrator  
+EVs: 136 Atk / 120 Def / 252 SpD  
+Careful Nature  
+- Trick  
+- Pain Split  
+- Destiny Bond  
+- Curse  
+
+Crabominable @ Assault Vest  
+Ability: Iron Fist  
+Tera Type: Ice  
+EVs: 136 HP / 252 Atk / 120 SpD  
+Adamant Nature  
+- Ice Hammer  
+- Knock Off  
+- Drain Punch  
+- Close Combat  
+
+Cinderace @ Normal Gem  
+Ability: Libero  
+Tera Type: Fire  
+EVs: 248 HP / 8 Atk / 252 Spe  
+Jolly Nature  
+- Court Change  
+- Sucker Punch  
+- Will-O-Wisp  
+- Pyro Ball

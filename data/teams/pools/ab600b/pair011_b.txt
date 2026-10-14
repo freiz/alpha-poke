@@ -1,0 +1,59 @@
+Morpeko @ Focus Sash  
+Ability: Hunger Switch  
+Tera Type: Ghost  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Aura Wheel  
+- Parting Shot  
+- Rapid Spin  
+- Knock Off  
+
+Toxapex @ Leftovers  
+Ability: Regenerator  
+Tera Type: Grass  
+EVs: 252 HP / 252 Def / 4 SpD  
+Careful Nature  
+- Pin Missile  
+- Baneful Bunker  
+- Poison Jab  
+- Recover  
+
+Glimmora @ Mental Herb  
+Ability: Toxic Debris  
+Tera Type: Ghost  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Spikes  
+- Stealth Rock  
+- Mortal Spin  
+- Meteor Beam  
+
+Weezing-Galar @ Rocky Helmet  
+Ability: Neutralizing Gas  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Def / 252 Spe  
+Bold Nature  
+- Gyro Ball  
+- Will-O-Wisp  
+- Defog  
+- Pain Split  
+
+Kommo-o @ Throat Spray  
+Ability: Bulletproof  
+Tera Type: Normal  
+EVs: 252 SpA / 252 Spe  
+Timid Nature  
+- Clangorous Soul  
+- Earthquake  
+- Clanging Scales  
+- Boomburst  
+
+Blaziken @ Leftovers  
+Ability: Speed Boost  
+Tera Type: Fire  
+EVs: 4 HP / 252 Atk / 72 Def / 68 SpD / 112 Spe  
+Jolly Nature  
+- Protect  
+- Blaze Kick  
+- Close Combat  
+- Flare Blitz

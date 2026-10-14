@@ -1,0 +1,59 @@
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Ghost  
+EVs: 220 HP / 252 Atk / 36 Spe  
+Adamant Nature  
+- Iron Head  
+- Sucker Punch  
+- Swords Dance  
+- Kowtow Cleave  
+
+Iron Moth @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Grass  
+EVs: 124 Def / 132 SpA / 252 Spe  
+Timid Nature  
+- Fiery Dance  
+- Sludge Wave  
+- Substitute  
+- Dazzling Gleam  
+
+Great Tusk @ Assault Vest  
+Ability: Protosynthesis  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Close Combat  
+- Headlong Rush  
+- Stealth Rock  
+
+Kyurem @ Assault Vest  
+Ability: Pressure  
+Tera Type: Poison  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Freeze-Dry  
+- Ice Beam  
+- Draco Meteor  
+- Earth Power  
+
+Darkrai @ Heavy-Duty Boots  
+Ability: Bad Dreams  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Dark Pulse  
+- Nasty Plot  
+- Sucker Punch  
+- Focus Blast  
+
+Dondozo @ Leftovers  
+Ability: Unaware  
+Tera Type: Dragon  
+EVs: 248 HP / 252 Def / 8 SpD  
+Impish Nature  
+- Rest  
+- Curse  
+- Liquidation  
+- Sleep Talk

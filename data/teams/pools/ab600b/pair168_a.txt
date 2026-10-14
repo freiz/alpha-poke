@@ -1,0 +1,59 @@
+Corviknight @ Rocky Helmet  
+Ability: Mirror Armor  
+Tera Type: Ghost  
+EVs: 248 HP / 252 Def / 8 Spe  
+Impish Nature  
+- Defog  
+- Body Press  
+- Brave Bird  
+- Protect  
+
+Tyranitar @ Smooth Rock  
+Ability: Sand Stream  
+Tera Type: Flying  
+EVs: 248 HP / 8 Def / 252 SpD  
+Sassy Nature  
+- Knock Off  
+- Ice Punch  
+- Stone Edge  
+- Stealth Rock  
+
+Mimikyu @ Leftovers  
+Ability: Disguise  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Shadow Sneak  
+- Swords Dance  
+- Drain Punch  
+- Play Rough  
+
+Latios @ Leftovers  
+Ability: Levitate  
+Tera Type: Electric  
+EVs: 252 SpA / 252 Spe  
+Timid Nature  
+- Thunderbolt  
+- Psyshock  
+- Draco Meteor  
+- Calm Mind  
+
+Sandy Shocks @ Choice Scarf  
+Ability: Protosynthesis  
+Tera Type: Water  
+EVs: 252 SpA / 252 Spe  
+Timid Nature  
+- Earth Power  
+- Thunderbolt  
+- Stealth Rock  
+- Spikes  
+
+Vaporeon @ Covert Cloak  
+Ability: Water Absorb  
+Tera Type: Poison  
+EVs: 248 HP / 8 Def / 252 SpD  
+Careful Nature  
+- Alluring Voice  
+- Scald  
+- Ice Beam  
+- Wish

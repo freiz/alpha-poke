@@ -1,0 +1,59 @@
+Raging Bolt @ Choice Specs  
+Ability: Protosynthesis  
+Tera Type: Bug  
+EVs: 120 HP / 176 Def / 212 SpA  
+Modest Nature  
+- Draco Meteor  
+- Thunderclap  
+- Thunderbolt  
+- Calm Mind  
+
+Great Tusk @ Rocky Helmet  
+Ability: Protosynthesis  
+Tera Type: Fire  
+EVs: 252 HP / 4 Atk / 252 Def  
+Impish Nature  
+- Ice Spinner  
+- Earthquake  
+- Rapid Spin  
+- Headlong Rush  
+
+Samurott-Hisui @ Life Orb  
+Ability: Sharpness  
+Tera Type: Poison  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Aqua Cutter  
+- Ceaseless Edge  
+- Flip Turn  
+- Razor Shell  
+
+Gholdengo @ Choice Specs  
+Ability: Good as Gold  
+Tera Type: Fairy  
+EVs: 248 HP / 196 Def / 64 Spe  
+Bold Nature  
+- Make It Rain  
+- Shadow Ball  
+- Trick  
+- Nasty Plot  
+
+Slowking-Galar @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 248 HP / 252 Def / 8 SpD  
+Relaxed Nature  
+- Future Sight  
+- Sludge Bomb  
+- Chilly Reception  
+- Flamethrower  
+
+Tornadus-Therian @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Steel  
+EVs: 4 HP / 252 SpD / 252 Spe  
+Timid Nature  
+- U-turn  
+- Knock Off  
+- Taunt  
+- Heat Wave

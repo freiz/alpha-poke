@@ -1,0 +1,59 @@
+Zapdos @ Rocky Helmet  
+Ability: Static  
+Tera Type: Grass  
+EVs: 88 HP / 168 SpA / 252 Spe  
+Timid Nature  
+- Discharge  
+- U-turn  
+- Hurricane  
+- Volt Switch  
+
+Raging Bolt @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Fairy  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+- Draco Meteor  
+- Thunderclap  
+- Dragon Pulse  
+- Thunderbolt  
+
+Magnezone @ Choice Specs  
+Ability: Analytic  
+Tera Type: Flying  
+EVs: 212 HP / 44 Def / 200 SpA / 52 SpD  
+Quiet Nature  
+- Flash Cannon  
+- Volt Switch  
+- Body Press  
+- Iron Defense  
+
+Rotom-Wash @ Leftovers  
+Ability: Levitate  
+Tera Type: Steel  
+EVs: 248 HP / 196 Def / 64 Spe  
+Bold Nature  
+- Hydro Pump  
+- Pain Split  
+- Volt Switch  
+- Will-O-Wisp  
+
+Jolteon @ Life Orb  
+Ability: Volt Absorb  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Volt Switch  
+- Thunderbolt  
+- Calm Mind  
+- Alluring Voice  
+
+Great Tusk @ Rocky Helmet  
+Ability: Protosynthesis  
+Tera Type: Fire  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Jolly Nature  
+- Headlong Rush  
+- Stealth Rock  
+- Rapid Spin  
+- Ice Spinner

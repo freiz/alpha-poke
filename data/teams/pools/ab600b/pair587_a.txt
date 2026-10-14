@@ -1,0 +1,59 @@
+Torterra @ Loaded Dice  
+Ability: Overgrow  
+Tera Type: Rock  
+EVs: 252 HP / 4 Atk / 252 SpD  
+Careful Nature  
+- Shell Smash  
+- Bullet Seed  
+- Rock Blast  
+- Headlong Rush  
+
+Lokix @ Choice Band  
+Ability: Tinted Lens  
+Tera Type: Bug  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- U-turn  
+- Leech Life  
+- First Impression  
+- Knock Off  
+
+Goodra-Hisui @ Rocky Helmet  
+Ability: Gooey  
+Tera Type: Ghost  
+EVs: 252 HP / 196 SpA / 60 Spe  
+Modest Nature  
+- Flamethrower  
+- Flash Cannon  
+- Knock Off  
+- Draco Meteor  
+
+Samurott-Hisui @ Black Glasses  
+Ability: Sharpness  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Flip Turn  
+- Ceaseless Edge  
+- Razor Shell  
+- Knock Off  
+
+Pecharunt @ Leftovers  
+Ability: Poison Puppeteer  
+Tera Type: Flying  
+EVs: 228 HP / 252 Def / 28 SpA  
+Bold Nature  
+- Shadow Ball  
+- Malignant Chain  
+- Recover  
+- Parting Shot  
+
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Ground  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Ice Spinner  
+- Rapid Spin  
+- Headlong Rush

@@ -1,0 +1,59 @@
+Landorus-Therian @ Rocky Helmet  
+Ability: Intimidate  
+Tera Type: Ground  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Earthquake  
+- Stealth Rock  
+- Grass Knot  
+
+Samurott-Hisui @ Black Glasses  
+Ability: Sharpness  
+Tera Type: Dark  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Careful Nature  
+- Ceaseless Edge  
+- Razor Shell  
+- Aqua Cutter  
+- Sucker Punch  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Fairy  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Shadow Ball  
+- Make It Rain  
+- Trick  
+- Recover  
+
+Darkrai @ Leftovers  
+Ability: Bad Dreams  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Ice Beam  
+- Dark Pulse  
+- Will-O-Wisp  
+- Focus Blast  
+
+Latios @ Leftovers  
+Ability: Levitate  
+Tera Type: Steel  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Substitute  
+- Draco Meteor  
+- Aura Sphere  
+- Shadow Ball  
+
+Zamazenta @ Leftovers  
+Ability: Dauntless Shield  
+Tera Type: Fire  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Iron Defense  
+- Crunch  
+- Body Press  
+- Roar

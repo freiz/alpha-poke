@@ -1,0 +1,64 @@
+Hoopa-Unbound @ Choice Band  
+Ability: Magician  
+Tera Type: Dark  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Hyperspace Fury  
+- Knock Off  
+- Gunk Shot  
+- Drain Punch  
+
+Kyurem @ Choice Specs  
+Ability: Pressure  
+Shiny: Yes  
+Tera Type: Ice  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Ice Beam  
+- Freeze-Dry  
+- Draco Meteor  
+- Earth Power  
+
+Raging Bolt @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Fairy  
+EVs: 64 HP / 28 Def / 252 SpA / 164 Spe  
+Modest Nature  
+IVs: 20 Atk  
+- Calm Mind  
+- Thunderclap  
+- Dragon Pulse  
+- Thunderbolt  
+
+Slowking-Galar @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 252 HP / 16 Def / 240 SpD  
+Sassy Nature  
+IVs: 0 Atk / 0 Spe  
+- Future Sight  
+- Chilly Reception  
+- Sludge Bomb  
+- Thunder Wave  
+
+Corviknight @ Rocky Helmet  
+Ability: Mirror Armor  
+Shiny: Yes  
+Tera Type: Water  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Defog  
+- U-turn  
+- Roost  
+- Brave Bird  
+
+Dragapult @ Heavy-Duty Boots  
+Ability: Infiltrator  
+Tera Type: Fairy  
+EVs: 76 Atk / 180 SpA / 252 Spe  
+Naive Nature  
+- Dragon Darts  
+- Hex  
+- Will-O-Wisp  
+- U-turn

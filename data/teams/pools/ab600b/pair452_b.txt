@@ -1,0 +1,56 @@
+Goodra-Hisui @ Choice Specs  
+Ability: Sap Sipper  
+Tera Type: Ghost  
+EVs: 248 HP / 252 SpA / 8 SpD  
+Modest Nature  
+- Dragon Tail  
+- Heavy Slam  
+- Knock Off  
+- Flash Cannon  
+
+Okidogi @ Leftovers  
+Ability: Guard Dog  
+Tera Type: Dark  
+EVs: 240 HP / 252 Atk / 16 Spe  
+Adamant Nature  
+- Bulk Up  
+- Knock Off  
+- Drain Punch  
+- Gunk Shot  
+
+Illumise  
+Ability: Prankster  
+EVs: 4 HP / 252 Def / 252 SpD  
+Calm Nature  
+- Thunder Wave  
+- Bug Buzz  
+- Encore  
+- Roost  
+
+Dedenne @ Focus Sash  
+Ability: Cheek Pouch  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Hasty Nature  
+- Nuzzle  
+- Dazzling Gleam  
+- Thunderbolt  
+- Grass Knot  
+
+Azelf @ Focus Sash  
+Ability: Levitate  
+Tera Type: Fairy  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Encore  
+- U-turn  
+- Stealth Rock  
+- Psychic  
+
+Vivillon  
+Ability: Shield Dust  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Stun Spore  
+- Bug Buzz  
+- Draining Kiss  
+- Hurricane

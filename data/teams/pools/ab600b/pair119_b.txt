@@ -1,0 +1,59 @@
+Hoopa-Unbound @ Assault Vest  
+Ability: Magician  
+Tera Type: Poison  
+EVs: 136 HP / 204 Atk / 168 SpA  
+Mild Nature  
+- Gunk Shot  
+- Psychic Noise  
+- Knock Off  
+- Drain Punch  
+
+Hydrapple @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 252 HP / 240 Def / 16 Spe  
+Bold Nature  
+- Fickle Beam  
+- Giga Drain  
+- Earth Power  
+- Nasty Plot  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Water  
+EVs: 244 HP / 36 Def / 228 SpD  
+Careful Nature  
+- Toxic  
+- Protect  
+- Knock Off  
+- Earthquake  
+
+Cinderace @ Normal Gem  
+Ability: Libero  
+Tera Type: Grass  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- High Jump Kick  
+- U-turn  
+- Court Change  
+- Pyro Ball  
+
+Alomomola @ Assault Vest  
+Ability: Regenerator  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Def / 4 SpD  
+Relaxed Nature  
+- Flip Turn  
+- Mirror Coat  
+- Aqua Jet  
+- Body Slam  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Fairy  
+EVs: 252 HP / 252 Def / 4 SpA  
+Bold Nature  
+- Hex  
+- Thunder Wave  
+- Make It Rain  
+- Shadow Ball

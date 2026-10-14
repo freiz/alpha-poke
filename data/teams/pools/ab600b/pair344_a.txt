@@ -1,0 +1,59 @@
+Pelipper @ Damp Rock  
+Ability: Drizzle  
+Tera Type: Flying  
+EVs: 248 HP / 252 Def / 8 SpA  
+Bold Nature  
+- Roost  
+- Hurricane  
+- Weather Ball  
+- U-turn  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Dark  
+EVs: 248 HP / 252 Atk / 8 Def  
+Adamant Nature  
+- Sucker Punch  
+- Iron Head  
+- Kowtow Cleave  
+- Swords Dance  
+
+Zapdos @ Heavy-Duty Boots  
+Ability: Static  
+Tera Type: Dragon  
+EVs: 248 HP / 252 Def / 8 SpA  
+Bold Nature  
+- Thunder  
+- Weather Ball  
+- U-turn  
+- Roost  
+
+Scizor @ Life Orb  
+Ability: Technician  
+Tera Type: Fire  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Bullet Punch  
+- Swords Dance  
+- Knock Off  
+- Close Combat  
+
+Barraskewda @ Choice Band  
+Ability: Swift Swim  
+Tera Type: Water  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Liquidation  
+- Close Combat  
+- Flip Turn  
+- Aqua Jet  
+
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Ground  
+EVs: 124 HP / 252 Atk / 8 Def / 124 SpD  
+Adamant Nature  
+- Stealth Rock  
+- Rapid Spin  
+- Ice Spinner  
+- Headlong Rush

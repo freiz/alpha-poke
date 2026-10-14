@@ -1,0 +1,59 @@
+Serperior @ Leftovers  
+Ability: Contrary  
+Tera Type: Grass  
+EVs: 252 HP / 24 SpA / 232 Spe  
+Timid Nature  
+- Leaf Storm  
+- Dragon Pulse  
+- Glare  
+- Synthesis  
+
+Ribombee @ Focus Sash  
+Ability: Shield Dust  
+Tera Type: Steel  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Sticky Web  
+- U-turn  
+- Moonblast  
+- Reflect  
+
+Cinderace @ Life Orb  
+Ability: Libero  
+Tera Type: Fire  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Court Change  
+- Gunk Shot  
+- Pyro Ball  
+- U-turn  
+
+Hatterene @ Leftovers  
+Ability: Magic Bounce  
+Tera Type: Psychic  
+EVs: 252 HP / 152 Def / 32 SpA / 72 SpD  
+Bold Nature  
+- Psyshock  
+- Draining Kiss  
+- Trick Room  
+- Mystical Fire  
+
+Alomomola @ Leftovers  
+Ability: Regenerator  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Def / 4 SpD  
+Relaxed Nature  
+- Scald  
+- Wish  
+- Flip Turn  
+- Healing Wish  
+
+Kingambit @ Leftovers  
+Ability: Defiant  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Atk / 4 Def  
+Adamant Nature  
+- Kowtow Cleave  
+- Shadow Claw  
+- Sucker Punch  
+- Swords Dance

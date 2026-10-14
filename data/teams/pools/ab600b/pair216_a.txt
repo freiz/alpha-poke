@@ -1,0 +1,55 @@
+Pyroar  
+Ability: Unnerve  
+EVs: 84 HP / 84 Atk / 84 Def / 84 SpA / 84 SpD / 84 Spe  
+Serious Nature  
+- Overheat  
+
+Ninetales @ Heat Rock  
+Ability: Drought  
+Tera Type: Ghost  
+EVs: 248 HP / 20 Def / 240 Spe  
+Timid Nature  
+- Weather Ball  
+- Overheat  
+- Healing Wish  
+- Encore  
+
+Hatterene @ Rocky Helmet  
+Ability: Anticipation  
+Tera Type: Fire  
+EVs: 220 HP / 120 Def / 168 SpA  
+Quiet Nature  
+- Psychic  
+- Psychic Noise  
+- Nuzzle  
+- Draining Kiss  
+
+Great Tusk @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Fire  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Ice Spinner  
+- Stealth Rock  
+- Headlong Rush  
+- Rapid Spin  
+
+Walking Wake @ Life Orb  
+Ability: Protosynthesis  
+Tera Type: Water  
+EVs: 12 HP / 244 SpA / 252 Spe  
+Timid Nature  
+- Hydro Steam  
+- Flip Turn  
+- Weather Ball  
+- Draco Meteor  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Ghost  
+EVs: 160 HP / 252 Atk / 96 Spe  
+Adamant Nature  
+- Kowtow Cleave  
+- Iron Head  
+- Swords Dance  
+- Sucker Punch

@@ -1,0 +1,59 @@
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Dark  
+EVs: 252 HP / 184 Def / 72 Spe  
+Impish Nature  
+- Protect  
+- Knock Off  
+- Substitute  
+- Toxic  
+
+Clefable @ Heavy-Duty Boots  
+Ability: Unaware  
+Tera Type: Water  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Knock Off  
+- Moonlight  
+- Stealth Rock  
+- Moonblast  
+
+Corviknight @ Leftovers  
+Ability: Pressure  
+Tera Type: Dark  
+EVs: 248 HP / 8 Atk / 252 Def  
+Impish Nature  
+- Protect  
+- Brave Bird  
+- Roost  
+- Substitute  
+
+Dondozo @ Leftovers  
+Ability: Water Veil  
+Tera Type: Dark  
+EVs: 252 HP / 4 Atk / 252 Def  
+Careful Nature  
+- Crunch  
+- Curse  
+- Sleep Talk  
+- Rest  
+
+Clodsire @ Heavy-Duty Boots  
+Ability: Water Absorb  
+Tera Type: Steel  
+EVs: 248 HP / 252 Def / 8 SpD  
+Impish Nature  
+- Toxic  
+- Earthquake  
+- Poison Jab  
+- Recover  
+
+Toxapex @ Leftovers  
+Ability: Merciless  
+Tera Type: Steel  
+EVs: 248 HP / 252 Def / 8 SpD  
+Careful Nature  
+- Infestation  
+- Poison Jab  
+- Baneful Bunker  
+- Recover

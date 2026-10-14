@@ -1,0 +1,59 @@
+Rotom-Heat @ Leftovers  
+Ability: Levitate  
+Tera Type: Ghost  
+EVs: 156 HP / 100 Def / 140 SpA / 112 SpD  
+Modest Nature  
+- Pain Split  
+- Overheat  
+- Nasty Plot  
+- Will-O-Wisp  
+
+Dragonite @ Heavy-Duty Boots  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Dragon Tail  
+- Dragon Dance  
+- Extreme Speed  
+- Earthquake  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Recover  
+- Trick  
+- Make It Rain  
+- Shadow Ball  
+
+Quaquaval @ Life Orb  
+Ability: Moxie  
+Tera Type: Water  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- Aqua Step  
+- Wave Crash  
+- Close Combat  
+- Aqua Jet  
+
+Clefable @ Sticky Barb  
+Ability: Unaware  
+Tera Type: Water  
+EVs: 248 HP / 248 Def / 12 Spe  
+Bold Nature  
+- Moonblast  
+- Stealth Rock  
+- Trick  
+- Knock Off  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Fairy  
+EVs: 244 HP / 168 SpD / 96 Spe  
+Careful Nature  
+- Knock Off  
+- Spikes  
+- Earthquake  
+- Protect

@@ -1,0 +1,59 @@
+Skarmory @ Rocky Helmet  
+Ability: Sturdy  
+Tera Type: Ghost  
+EVs: 20 HP / 252 Atk / 236 Spe  
+Adamant Nature  
+- Stealth Rock  
+- Brave Bird  
+- Roost  
+- Whirlwind  
+
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Tera Type: Water  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- Earthquake  
+- Spikes  
+- Ruination  
+- Rest  
+
+Zamazenta @ Life Orb  
+Ability: Dauntless Shield  
+Tera Type: Rock  
+EVs: 248 HP / 252 Atk / 8 SpD  
+Adamant Nature  
+- Close Combat  
+- Crunch  
+- Body Press  
+- Light Screen  
+
+Weavile @ Heavy-Duty Boots  
+Ability: Pressure  
+Tera Type: Ice  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Low Kick  
+- Knock Off  
+- Triple Axel  
+- Ice Shard  
+
+Kyurem @ Life Orb  
+Ability: Pressure  
+Tera Type: Ground  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Scale Shot  
+- Earth Power  
+- Freeze-Dry  
+- Icicle Spear  
+
+Slowking-Galar @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 248 HP / 252 Def / 8 SpD  
+Relaxed Nature  
+- Future Sight  
+- Chilly Reception  
+- Sludge Bomb  
+- Psychic Noise

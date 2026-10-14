@@ -1,0 +1,61 @@
+Tyranitar (M) @ Assault Vest  
+Ability: Sand Stream  
+Tera Type: Grass  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Knock Off  
+- Stone Edge  
+- Ice Beam  
+- Low Kick  
+
+Great Tusk @ Heavy-Duty Boots  
+Ability: Protosynthesis  
+Tera Type: Poison  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Jolly Nature  
+- Headlong Rush  
+- Stealth Rock  
+- Ice Spinner  
+- Rapid Spin  
+
+Alomomola (F) @ Red Card  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 4 HP / 252 Def / 252 SpD  
+Relaxed Nature  
+IVs: 0 Spe  
+- Wish  
+- Protect  
+- Flip Turn  
+- Scald  
+
+Tornadus-Therian @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Steel  
+EVs: 248 HP / 20 Def / 240 Spe  
+Timid Nature  
+- U-turn  
+- Knock Off  
+- Bleakwind Storm  
+- Heat Wave  
+
+Slowking-Galar (M) @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Dark  
+EVs: 252 HP / 4 Def / 252 SpD  
+Sassy Nature  
+IVs: 0 Atk / 0 Spe  
+- Future Sight  
+- Chilly Reception  
+- Sludge Bomb  
+- Flamethrower  
+
+Rillaboom (M) @ Choice Band  
+Ability: Grassy Surge  
+Tera Type: Grass  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Wood Hammer  
+- Knock Off  
+- Grassy Glide  
+- U-turn

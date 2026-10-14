@@ -1,0 +1,67 @@
+Landorus-Therian @ Choice Scarf  
+Ability: Intimidate  
+Shiny: Yes  
+Tera Type: Ground  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Earthquake  
+- Stone Edge  
+- Rock Slide  
+
+Heatran @ Leftovers  
+Ability: Flash Fire  
+Shiny: Yes  
+Tera Type: Steel  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+IVs: 0 Atk  
+- Lava Plume  
+- Earth Power  
+- Stealth Rock  
+- Protect  
+
+Toxapex @ Black Sludge  
+Ability: Regenerator  
+Shiny: Yes  
+Tera Type: Poison  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+IVs: 0 Atk  
+- Baneful Bunker  
+- Toxic  
+- Recover  
+- Haze  
+
+Garchomp @ Choice Scarf  
+Ability: Rough Skin  
+Tera Type: Dragon  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Earthquake  
+- Dragon Claw  
+- Stone Edge  
+- Fire Fang  
+
+Clefable @ Leftovers  
+Ability: Magic Guard  
+Shiny: Yes  
+Tera Type: Fairy  
+EVs: 252 HP / 4 Def / 252 SpD  
+IVs: 0 Atk  
+- Moonblast  
+- Wish  
+- Protect  
+- Thunder Wave  
+
+Rotom-Wash @ Leftovers  
+Ability: Levitate  
+Shiny: Yes  
+Tera Type: Electric  
+EVs: 248 HP / 252 SpA / 8 SpD  
+Modest Nature  
+IVs: 0 Atk  
+- Hydro Pump  
+- Will-O-Wisp  
+- Volt Switch  
+- Protect

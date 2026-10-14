@@ -1,0 +1,59 @@
+Iron Crown @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Steel  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Tachyon Cutter  
+- Volt Switch  
+- Psychic Noise  
+- Focus Blast  
+
+Tornadus-Therian @ Life Orb  
+Ability: Regenerator  
+Tera Type: Fire  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Bleakwind Storm  
+- Heat Wave  
+- Grass Knot  
+- Nasty Plot  
+
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Tera Type: Water  
+EVs: 252 HP / 252 SpD / 4 Spe  
+Careful Nature  
+- Earthquake  
+- Ruination  
+- Stealth Rock  
+- Whirlwind  
+
+Great Tusk @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Headlong Rush  
+- Ice Spinner  
+- Rapid Spin  
+- Knock Off  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Bug  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Swords Dance  
+- Sucker Punch  
+- Kowtow Cleave  
+- Iron Head  
+
+Zamazenta @ Leftovers  
+Ability: Dauntless Shield  
+Tera Type: Steel  
+EVs: 252 Atk / 252 Spe  
+Jolly Nature  
+- Substitute  
+- Iron Defense  
+- Body Press  
+- Heavy Slam

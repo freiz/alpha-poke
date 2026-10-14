@@ -1,0 +1,59 @@
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Normal  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Protect  
+- Swords Dance  
+- Earthquake  
+- Knock Off  
+
+Toxapex @ Leftovers  
+Ability: Regenerator  
+Tera Type: Ghost  
+EVs: 252 HP / 244 Def / 12 Spe  
+Impish Nature  
+- Toxic  
+- Toxic Spikes  
+- Haze  
+- Recover  
+
+Wo-Chien @ Leftovers  
+Ability: Tablets of Ruin  
+Tera Type: Poison  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Leech Seed  
+- Protect  
+- Foul Play  
+- Stun Spore  
+
+Hatterene @ Air Balloon  
+Ability: Magic Bounce  
+Tera Type: Fire  
+EVs: 252 HP / 100 SpA / 104 SpD / 52 Spe  
+Modest Nature  
+- Trick  
+- Draining Kiss  
+- Nuzzle  
+- Psychic Noise  
+
+Corviknight @ Rocky Helmet  
+Ability: Unnerve  
+Tera Type: Dragon  
+EVs: 248 HP / 44 Atk / 212 Def / 4 Spe  
+Impish Nature  
+- Body Press  
+- Defog  
+- U-turn  
+- Roost  
+
+Dondozo @ Leftovers  
+Ability: Unaware  
+Tera Type: Dragon  
+EVs: 248 HP / 252 Def / 8 SpD  
+Impish Nature  
+- Wave Crash  
+- Curse  
+- Rest  
+- Sleep Talk

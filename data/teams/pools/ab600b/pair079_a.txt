@@ -1,0 +1,59 @@
+Walking Wake @ Life Orb  
+Ability: Protosynthesis  
+Tera Type: Water  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Draco Meteor  
+- Hydro Steam  
+- Flip Turn  
+- Dragon Pulse  
+
+Raging Bolt @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Bug  
+EVs: 80 HP / 252 SpA / 176 Spe  
+Modest Nature  
+- Thunderbolt  
+- Volt Switch  
+- Dragon Pulse  
+- Thunderclap  
+
+Torkoal @ Heavy-Duty Boots  
+Ability: Drought  
+Tera Type: Fairy  
+EVs: 252 HP / 4 Def / 252 SpA  
+Quiet Nature  
+- Stealth Rock  
+- Earth Power  
+- Lava Plume  
+- Rapid Spin  
+
+Ceruledge @ Focus Sash  
+Ability: Weak Armor  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Bitter Blade  
+- Poltergeist  
+- Swords Dance  
+- Shadow Sneak  
+
+Hatterene @ Eject Button  
+Ability: Magic Bounce  
+Tera Type: Steel  
+EVs: 248 HP / 200 Def / 60 SpD  
+Relaxed Nature  
+- Psychic Noise  
+- Dazzling Gleam  
+- Healing Wish  
+- Trick Room  
+
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Dark  
+EVs: 252 HP / 136 Def / 120 Spe  
+Impish Nature  
+- Brave Bird  
+- Roost  
+- Defog  
+- Body Press

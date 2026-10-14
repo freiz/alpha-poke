@@ -1,0 +1,59 @@
+Dragapult @ Life Orb  
+Ability: Infiltrator  
+Tera Type: Ghost  
+EVs: 84 HP / 172 SpA / 252 Spe  
+Naive Nature  
+- Draco Meteor  
+- Shadow Ball  
+- U-turn  
+- Dragon Darts  
+
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Fighting  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Headlong Rush  
+- Stealth Rock  
+- Ice Spinner  
+
+Primarina @ Leftovers  
+Ability: Torrent  
+Tera Type: Ghost  
+EVs: 252 Def / 252 SpA / 4 Spe  
+Modest Nature  
+- Draining Kiss  
+- Substitute  
+- Psychic Noise  
+- Moonblast  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Water  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Nasty Plot  
+- Make It Rain  
+- Shadow Ball  
+- Trick  
+
+Tornadus-Therian @ Assault Vest  
+Ability: Regenerator  
+Tera Type: Normal  
+EVs: 248 HP / 20 SpD / 240 Spe  
+Timid Nature  
+- Knock Off  
+- U-turn  
+- Bleakwind Storm  
+- Heat Wave  
+
+Ogerpon-Cornerstone @ Cornerstone Mask  
+Ability: Sturdy  
+Tera Type: Rock  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Ivy Cudgel  
+- Power Whip  
+- Swords Dance  
+- Horn Leech

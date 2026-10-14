@@ -1,0 +1,64 @@
+Lokix @ Choice Band  
+Ability: Tinted Lens  
+Shiny: Yes  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- First Impression  
+- U-turn  
+- Knock Off  
+- Leech Life  
+
+Iron Valiant @ Choice Specs  
+Ability: Quark Drive  
+Shiny: Yes  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Moonblast  
+- Shadow Ball  
+- Thunderbolt  
+- Trick  
+
+Alomomola @ Assault Vest  
+Ability: Regenerator  
+Level: 99  
+Tera Type: Fairy  
+EVs: 20 HP / 236 Def / 252 SpD  
+Sassy Nature  
+IVs: 0 Spe  
+- Flip Turn  
+- Scald  
+- Mirror Coat  
+- Play Rough  
+
+Mandibuzz @ Heavy-Duty Boots  
+Ability: Big Pecks  
+Tera Type: Fairy  
+EVs: 248 HP / 244 Def / 16 Spe  
+Impish Nature  
+- Foul Play  
+- U-turn  
+- Roost  
+- Defog  
+
+Great Tusk @ Heavy-Duty Boots  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Headlong Rush  
+- Ice Spinner  
+- Rapid Spin  
+- Stealth Rock  
+
+Gholdengo @ Choice Scarf  
+Ability: Good as Gold  
+Tera Type: Steel  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Shadow Ball  
+- Make It Rain  
+- Trick  
+- Nasty Plot

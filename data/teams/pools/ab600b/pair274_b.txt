@@ -1,0 +1,59 @@
+Tyranitar @ Leftovers  
+Ability: Unnerve  
+Tera Type: Flying  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Knock Off  
+- Low Kick  
+- Ice Punch  
+- Stealth Rock  
+
+Excadrill @ Focus Sash  
+Ability: Sand Rush  
+Tera Type: Flying  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Rapid Spin  
+- Earthquake  
+- Stealth Rock  
+- Rock Blast  
+
+Gallade @ Life Orb  
+Ability: Justified  
+Tera Type: Fighting  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Psycho Cut  
+- Night Slash  
+- Sacred Sword  
+- Leaf Blade  
+
+Dondozo @ Leftovers  
+Ability: Unaware  
+Tera Type: Fairy  
+EVs: 252 HP / 4 Atk / 252 Def  
+Impish Nature  
+- Body Press  
+- Rest  
+- Waterfall  
+- Curse  
+
+Tropius @ Sitrus Berry  
+Ability: Harvest  
+Tera Type: Ghost  
+EVs: 92 HP / 252 Def / 164 SpD  
+Bold Nature  
+- Curse  
+- Leech Seed  
+- Protect  
+- Substitute  
+
+Garganacl @ Leftovers  
+Ability: Purifying Salt  
+Tera Type: Water  
+EVs: 248 HP / 72 Def / 184 SpD / 4 Spe  
+Impish Nature  
+- Protect  
+- Stealth Rock  
+- Salt Cure  
+- Recover

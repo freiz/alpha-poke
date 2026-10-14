@@ -1,0 +1,59 @@
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Normal  
+EVs: 252 HP / 48 Def / 208 SpD  
+Careful Nature  
+- Knock Off  
+- Protect  
+- Swords Dance  
+- Facade  
+
+Gholdengo @ Leftovers  
+Ability: Good as Gold  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Shadow Ball  
+- Trick  
+- Focus Blast  
+- Make It Rain  
+
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- Ruination  
+- Spikes  
+- Whirlwind  
+- Earthquake  
+
+Clefable @ Rocky Helmet  
+Ability: Magic Guard  
+Tera Type: Poison  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Moonblast  
+- Stealth Rock  
+- Thunder Wave  
+- Moonlight  
+
+Zamazenta @ Life Orb  
+Ability: Dauntless Shield  
+Tera Type: Steel  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Heavy Slam  
+- Close Combat  
+- Crunch  
+- Ice Fang  
+
+Rotom-Wash @ Leftovers  
+Ability: Levitate  
+Tera Type: Fairy  
+EVs: 164 Def / 180 SpA / 164 SpD  
+Hardy Nature  
+- Will-O-Wisp  
+- Volt Switch  
+- Pain Split  
+- Hydro Pump

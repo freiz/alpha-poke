@@ -1,0 +1,59 @@
+Thundurus @ Mirror Herb  
+Ability: Prankster  
+Tera Type: Ghost  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Knock Off  
+- Swagger  
+- Thunder Wave  
+- Acrobatics  
+
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Water  
+EVs: 8 HP / 252 Atk / 64 SpD / 184 Spe  
+Adamant Nature  
+- Ice Spinner  
+- Stealth Rock  
+- Headlong Rush  
+- Close Combat  
+
+Hatterene @ Rocky Helmet  
+Ability: Healer  
+Tera Type: Flying  
+EVs: 252 HP / 252 Def / 4 Spe  
+Bold Nature  
+- Draining Kiss  
+- Psychic Noise  
+- Nuzzle  
+- Pain Split  
+
+Primarina @ Assault Vest  
+Ability: Torrent  
+Tera Type: Steel  
+EVs: 252 HP / 208 SpA / 48 SpD  
+Modest Nature  
+- Flip Turn  
+- Surf  
+- Moonblast  
+- Psychic Noise  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Kowtow Cleave  
+- Swords Dance  
+- Sucker Punch  
+- Iron Head  
+
+Slowking-Galar @ Colbur Berry  
+Ability: Regenerator  
+Tera Type: Dark  
+EVs: 252 HP / 4 SpA / 252 SpD  
+Sassy Nature  
+- Future Sight  
+- Chilly Reception  
+- Sludge Bomb  
+- Psychic Noise

@@ -1,0 +1,59 @@
+Landorus-Therian @ Rocky Helmet  
+Ability: Intimidate  
+Tera Type: Water  
+EVs: 252 HP / 4 Def / 252 Spe  
+Timid Nature  
+- Smack Down  
+- U-turn  
+- Stealth Rock  
+- Earthquake  
+
+Samurott-Hisui @ Assault Vest  
+Ability: Sharpness  
+Tera Type: Dark  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Razor Shell  
+- Ceaseless Edge  
+- Knock Off  
+- Flip Turn  
+
+Pecharunt @ Rocky Helmet  
+Ability: Poison Puppeteer  
+Tera Type: Water  
+EVs: 252 HP / 228 Def / 28 Spe  
+Bold Nature  
+- Shadow Ball  
+- Recover  
+- Malignant Chain  
+- Parting Shot  
+
+Scizor @ Life Orb  
+Ability: Technician  
+Tera Type: Steel  
+EVs: 248 HP / 252 Atk / 8 SpD  
+Adamant Nature  
+- Swords Dance  
+- Bullet Punch  
+- U-turn  
+- Close Combat  
+
+Latios @ Choice Scarf  
+Ability: Levitate  
+Tera Type: Steel  
+EVs: 188 Atk / 128 SpA / 192 Spe  
+Modest Nature  
+- Psychic Noise  
+- Draco Meteor  
+- Trick  
+- Flip Turn  
+
+Zamazenta @ Leftovers  
+Ability: Dauntless Shield  
+Tera Type: Steel  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Crunch  
+- Iron Defense  
+- Body Press  
+- Roar

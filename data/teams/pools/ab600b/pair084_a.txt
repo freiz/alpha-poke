@@ -1,0 +1,60 @@
+Umbreon @ Leftovers  
+Ability: Synchronize  
+Tera Type: Water  
+EVs: 252 HP / 4 Def / 252 SpD  
+Calm Nature  
+IVs: 0 Atk  
+- Foul Play  
+- Wish  
+- Protect  
+- Thunder Wave  
+
+Enamorus @ Heavy-Duty Boots  
+Ability: Contrary  
+Tera Type: Fighting  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Superpower  
+- Play Rough  
+- Zen Headbutt  
+- Taunt  
+
+Arcanine-Hisui @ Choice Scarf  
+Ability: Rock Head  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Flare Blitz  
+- Head Smash  
+- Extreme Speed  
+- Wild Charge  
+
+Lilligant-Hisui (F) @ Wide Lens  
+Ability: Hustle  
+Tera Type: Grass  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Victory Dance  
+- Leaf Blade  
+- Close Combat  
+- Ice Spinner  
+
+Rotom-Wash @ Leftovers  
+Ability: Levitate  
+Tera Type: Steel  
+EVs: 252 HP / 244 Def / 12 Spe  
+Bold Nature  
+- Volt Switch  
+- Hydro Pump  
+- Protect  
+- Thunder Wave  
+
+Iron Treads @ Leftovers  
+Ability: Quark Drive  
+Tera Type: Flying  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Earthquake  
+- Rapid Spin  
+- Knock Off  
+- Stealth Rock

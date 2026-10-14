@@ -1,0 +1,64 @@
+Komala @ Heavy-Duty Boots  
+Ability: Comatose  
+Tera Type: Dark  
+EVs: 252 HP / 176 Def / 80 SpD  
+Impish Nature  
+- Knock Off  
+- Rapid Spin  
+- Wish  
+- Protect  
+
+Blissey @ Heavy-Duty Boots  
+Ability: Natural Cure  
+Tera Type: Dark  
+EVs: 136 HP / 120 Def / 252 SpD  
+Calm Nature  
+IVs: 0 Atk  
+- Soft-Boiled  
+- Seismic Toss  
+- Calm Mind  
+- Shadow Ball  
+
+Dondozo @ Heavy-Duty Boots  
+Ability: Unaware  
+Tera Type: Fighting  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+IVs: 0 Atk / 18 Spe  
+- Rest  
+- Sleep Talk  
+- Body Press  
+- Curse  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Dragon  
+EVs: 244 HP / 252 Def / 12 SpD  
+Impish Nature  
+IVs: 24 Spe  
+- Protect  
+- Toxic  
+- Spikes  
+- Knock Off  
+
+Clefable @ Sticky Barb  
+Ability: Magic Guard  
+Tera Type: Dark  
+EVs: 252 HP / 228 Def / 28 SpD  
+Bold Nature  
+IVs: 0 Atk  
+- Moonblast  
+- Wish  
+- Protect  
+- Stealth Rock  
+
+Toxapex @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Ghost  
+EVs: 248 HP / 136 Def / 124 SpD  
+Impish Nature  
+IVs: 0 Atk  
+- Recover  
+- Toxic  
+- Haze  
+- Baneful Bunker

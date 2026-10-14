@@ -1,0 +1,59 @@
+Pelipper @ Damp Rock  
+Ability: Drizzle  
+Tera Type: Water  
+EVs: 248 HP / 252 SpA / 8 SpD  
+Quiet Nature  
+- U-turn  
+- Hurricane  
+- Roost  
+- Weather Ball  
+
+Scizor @ Life Orb  
+Ability: Technician  
+Tera Type: Fire  
+EVs: 116 HP / 252 Atk / 140 Spe  
+Adamant Nature  
+- Knock Off  
+- Bullet Punch  
+- Close Combat  
+- Swords Dance  
+
+Poliwrath @ Sitrus Berry  
+Ability: Swift Swim  
+Tera Type: Poison  
+EVs: 248 HP / 252 Atk / 8 Spe  
+Adamant Nature  
+- Drain Punch  
+- Poison Jab  
+- Waterfall  
+- Liquidation  
+
+Goodra @ Assault Vest  
+Ability: Sap Sipper  
+Tera Type: Electric  
+EVs: 248 HP / 252 SpA  
+Modest Nature  
+- Scald  
+- Sludge Bomb  
+- Thunder  
+- Ice Beam  
+
+Ludicolo @ Life Orb  
+Ability: Own Tempo  
+Tera Type: Ice  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Mild Nature  
+- Weather Ball  
+- Ice Beam  
+- Giga Drain  
+- Hydro Pump  
+
+Iron Treads @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 252 HP / 232 SpD / 24 Spe  
+Careful Nature  
+- Earthquake  
+- Rapid Spin  
+- Stealth Rock  
+- Knock Off

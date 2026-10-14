@@ -1,0 +1,61 @@
+Dragapult @ Choice Specs  
+Ability: Infiltrator  
+Tera Type: Ghost  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Draco Meteor  
+- Shadow Ball  
+- Flamethrower  
+- U-turn  
+
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Shiny: Yes  
+Tera Type: Dragon  
+EVs: 248 HP / 252 Def / 8 SpD  
+Impish Nature  
+- Body Press  
+- U-turn  
+- Defog  
+- Roost  
+
+Iron Valiant @ Choice Scarf  
+Ability: Quark Drive  
+Shiny: Yes  
+Tera Type: Steel  
+EVs: 252 Atk / 4 SpA / 252 Spe  
+Naive Nature  
+- Close Combat  
+- Knock Off  
+- Trick  
+- Moonblast  
+
+Clodsire @ Leftovers  
+Ability: Unaware  
+Tera Type: Water  
+EVs: 252 HP / 4 Atk / 252 SpD  
+Careful Nature  
+- Stealth Rock  
+- Toxic  
+- Recover  
+- Earthquake  
+
+Weavile @ Heavy-Duty Boots  
+Ability: Pressure  
+Tera Type: Ice  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Ice Shard  
+- Triple Axel  
+- Knock Off  
+- Swords Dance  
+
+Alomomola @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Grass  
+EVs: 252 HP / 252 Def / 4 SpA  
+Bold Nature  
+- Scald  
+- Flip Turn  
+- Wish  
+- Protect

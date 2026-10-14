@@ -1,0 +1,59 @@
+Cinderace @ Heavy-Duty Boots  
+Ability: Libero  
+Tera Type: Fire  
+EVs: 248 HP / 8 Atk / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Pyro Ball  
+- Sucker Punch  
+- Court Change  
+
+Landorus-Therian @ Leftovers  
+Ability: Intimidate  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpA / 252 Spe  
+Naive Nature  
+- Earthquake  
+- Taunt  
+- Stealth Rock  
+- U-turn  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Shadow Ball  
+- Recover  
+- Make It Rain  
+- Trick  
+
+Clefable @ Life Orb  
+Ability: Magic Guard  
+Tera Type: Dark  
+EVs: 252 HP / 252 Def / 4 Spe  
+Bold Nature  
+- Thunderbolt  
+- Moonblast  
+- Flamethrower  
+- Protect  
+
+Mimikyu @ Life Orb  
+Ability: Disguise  
+Tera Type: Fighting  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Play Rough  
+- Shadow Sneak  
+- Shadow Claw  
+
+Toxapex @ Leftovers  
+Ability: Regenerator  
+Tera Type: Grass  
+EVs: 248 HP / 200 Def / 60 SpD  
+Impish Nature  
+- Toxic  
+- Surf  
+- Baneful Bunker  
+- Toxic Spikes

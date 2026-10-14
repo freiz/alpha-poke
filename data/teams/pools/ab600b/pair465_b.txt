@@ -1,0 +1,60 @@
+Ogerpon-Cornerstone @ Cornerstone Mask  
+Ability: Sturdy  
+Tera Type: Rock  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Power Whip  
+- Ivy Cudgel  
+- Low Kick  
+
+Zamazenta @ Leftovers  
+Ability: Dauntless Shield  
+Tera Type: Fire  
+EVs: 252 HP / 88 Def / 168 Spe  
+Jolly Nature  
+- Iron Defense  
+- Body Press  
+- Crunch  
+- Heavy Slam  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Swords Dance  
+- Kowtow Cleave  
+- Sucker Punch  
+- Iron Head  
+
+Great Tusk @ Choice Scarf  
+Ability: Protosynthesis  
+Tera Type: Fighting  
+EVs: 52 HP / 252 Atk / 4 SpD / 200 Spe  
+Adamant Nature  
+- Close Combat  
+- Headlong Rush  
+- Rapid Spin  
+- Ice Spinner  
+
+Tyranitar @ Leftovers  
+Ability: Sand Stream  
+Tera Type: Ghost  
+EVs: 252 HP / 16 Def / 240 SpD  
+Sassy Nature  
+- Knock Off  
+- Ice Beam  
+- Thunder Wave  
+- Stealth Rock  
+
+Gholdengo @ Leftovers  
+Ability: Good as Gold  
+Tera Type: Fairy  
+EVs: 252 HP / 196 Def / 60 Spe  
+Bold Nature  
+IVs: 0 Atk  
+- Thunder Wave  
+- Make It Rain  
+- Hex  
+- Recover

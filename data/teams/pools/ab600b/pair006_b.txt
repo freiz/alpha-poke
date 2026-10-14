@@ -1,0 +1,65 @@
+Ceruledge (M) @ Life Orb  
+Ability: Weak Armor  
+Shiny: Yes  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Bitter Blade  
+- Shadow Sneak  
+- Poltergeist  
+
+Kyurem @ Choice Specs  
+Ability: Pressure  
+Shiny: Yes  
+Tera Type: Ice  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Ice Beam  
+- Freeze-Dry  
+- Draco Meteor  
+- Earth Power  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Steel  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Naive Nature  
+- Moonblast  
+- Close Combat  
+- Knock Off  
+- Encore  
+
+Rillaboom (M) @ Life Orb  
+Ability: Grassy Surge  
+Tera Type: Grass  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Swords Dance  
+- Grassy Glide  
+- Knock Off  
+- Wood Hammer  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Shiny: Yes  
+Tera Type: Steel  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Shadow Ball  
+- Nasty Plot  
+- Make It Rain  
+- Recover  
+
+Primarina (F) @ Assault Vest  
+Ability: Torrent  
+Shiny: Yes  
+Tera Type: Poison  
+EVs: 80 HP / 252 SpA / 176 Spe  
+Modest Nature  
+- Moonblast  
+- Psychic Noise  
+- Surf  
+- Flip Turn

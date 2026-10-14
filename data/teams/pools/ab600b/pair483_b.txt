@@ -1,0 +1,64 @@
+Clefable (F) @ Life Orb  
+Ability: Magic Guard  
+Shiny: Yes  
+Tera Type: Fire  
+EVs: 248 HP / 252 SpA / 8 SpD  
+Modest Nature  
+IVs: 0 Atk  
+- Ice Beam  
+- Moonblast  
+- Thunderbolt  
+- Fire Blast  
+
+Tornadus-Therian @ Heavy-Duty Boots  
+Ability: Regenerator  
+Shiny: Yes  
+Tera Type: Steel  
+EVs: 252 HP / 4 SpD / 252 Spe  
+Timid Nature  
+- Bleakwind Storm  
+- Knock Off  
+- Sludge Bomb  
+- Nasty Plot  
+
+Garganacl (F) @ Leftovers  
+Ability: Purifying Salt  
+Tera Type: Water  
+EVs: 252 HP / 52 Def / 204 SpD  
+Careful Nature  
+- Stealth Rock  
+- Salt Cure  
+- Recover  
+- Protect  
+
+Gholdengo @ Choice Specs  
+Ability: Good as Gold  
+Tera Type: Fairy  
+EVs: 252 HP / 196 Def / 60 Spe  
+Bold Nature  
+IVs: 0 Atk  
+- Psyshock  
+- Shadow Ball  
+- Thunderbolt  
+- Make It Rain  
+
+Pecharunt @ Rocky Helmet  
+Ability: Poison Puppeteer  
+Tera Type: Ghost  
+EVs: 252 HP / 228 Def / 28 Spe  
+Bold Nature  
+IVs: 0 Atk  
+- Malignant Chain  
+- Recover  
+- Parting Shot  
+- Shadow Ball  
+
+Ogerpon-Wellspring (F) @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Encore  
+- Power Whip  
+- Ivy Cudgel

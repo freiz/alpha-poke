@@ -1,0 +1,59 @@
+Gyarados @ Leftovers  
+Ability: Moxie  
+Tera Type: Dragon  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Dragon Dance  
+- Earthquake  
+- Waterfall  
+- Taunt  
+
+Zapdos @ Heavy-Duty Boots  
+Ability: Static  
+Tera Type: Steel  
+EVs: 240 HP / 52 Def / 216 Spe  
+Timid Nature  
+- Volt Switch  
+- Air Cutter  
+- Roost  
+- Hurricane  
+
+Walking Wake @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Water  
+EVs: 12 HP / 244 SpA / 252 Spe  
+Timid Nature  
+- Flamethrower  
+- Agility  
+- Surf  
+- Dragon Pulse  
+
+Gliscor @ Toxic Orb  
+Ability: Hyper Cutter  
+Tera Type: Water  
+EVs: 244 HP / 248 SpD / 16 Spe  
+Careful Nature  
+- Protect  
+- Knock Off  
+- Toxic  
+- Substitute  
+
+Scizor @ Heavy-Duty Boots  
+Ability: Technician  
+Tera Type: Steel  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- U-turn  
+- Bullet Punch  
+- Knock Off  
+- Defog  
+
+Arcanine-Hisui @ Focus Sash  
+Ability: Rock Head  
+Tera Type: Fairy  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Wild Charge  
+- Head Smash  
+- Flare Blitz  
+- Extreme Speed

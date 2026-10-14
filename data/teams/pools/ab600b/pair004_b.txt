@@ -1,0 +1,59 @@
+Tyranitar @ Eject Button  
+Ability: Sand Stream  
+Tera Type: Rock  
+EVs: 252 Atk / 4 Def / 252 SpD  
+Adamant Nature  
+- Low Kick  
+- Stone Edge  
+- Knock Off  
+- Ice Beam  
+
+Scizor @ Leftovers  
+Ability: Technician  
+Tera Type: Steel  
+EVs: 248 HP / 252 Atk / 8 SpD  
+Adamant Nature  
+- Bullet Punch  
+- Defog  
+- U-turn  
+- Knock Off  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Normal  
+EVs: 244 HP / 36 Def / 228 SpD  
+Careful Nature  
+- Ice Fang  
+- Facade  
+- Protect  
+- Earthquake  
+
+Muk-Alola @ Black Sludge  
+Ability: Poison Touch  
+Tera Type: Water  
+EVs: 248 HP / 8 Atk / 252 SpD  
+Careful Nature  
+- Shadow Sneak  
+- Knock Off  
+- Poison Fang  
+- Snarl  
+
+Blissey @ Rocky Helmet  
+Ability: Natural Cure  
+Tera Type: Dark  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Thunder Wave  
+- Seismic Toss  
+- Calm Mind  
+- Stealth Rock  
+
+Regice @ Leftovers  
+Ability: Clear Body  
+Tera Type: Water  
+EVs: 248 HP / 8 SpA / 252 SpD  
+Calm Nature  
+- Focus Blast  
+- Charge Beam  
+- Ice Beam  
+- Thunderbolt

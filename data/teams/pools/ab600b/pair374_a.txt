@@ -1,0 +1,59 @@
+Hatterene @ Leftovers  
+Ability: Magic Bounce  
+Tera Type: Water  
+EVs: 184 HP / 252 SpA / 72 Spe  
+Modest Nature  
+- Light Screen  
+- Reflect  
+- Nuzzle  
+- Protect  
+
+Iron Moth @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Grass  
+EVs: 124 Def / 132 SpA / 252 Spe  
+Timid Nature  
+- Sludge Wave  
+- Fiery Dance  
+- Psychic  
+- Substitute  
+
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Ivy Cudgel  
+- Protect  
+- Zen Headbutt  
+- U-turn  
+
+Clefable @ Leftovers  
+Ability: Unaware  
+Tera Type: Water  
+EVs: 252 HP / 252 Def / 4 SpA  
+Bold Nature  
+- Night Shade  
+- Thunder Wave  
+- Moonblast  
+- Calm Mind  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Water  
+EVs: 244 HP / 12 Def / 252 Spe  
+Jolly Nature  
+- Toxic  
+- Knock Off  
+- Tailwind  
+- Lunge  
+
+Raging Bolt @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Fire  
+EVs: 112 HP / 252 SpA / 144 Spe  
+Modest Nature  
+- Sunny Day  
+- Solar Beam  
+- Thunderbolt  
+- Calm Mind

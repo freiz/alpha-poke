@@ -1,0 +1,62 @@
+Corviknight @ Leftovers  
+Ability: Mirror Armor  
+Shiny: Yes  
+Tera Type: Fighting  
+EVs: 224 HP / 60 Def / 224 SpD  
+Impish Nature  
+- Defog  
+- Body Press  
+- Iron Defense  
+- U-turn  
+
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Ground  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Headlong Rush  
+- Close Combat  
+- Stealth Rock  
+
+Gholdengo @ Choice Scarf  
+Ability: Good as Gold  
+Tera Type: Fairy  
+EVs: 34 HP / 252 SpA / 224 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Make It Rain  
+- Shadow Ball  
+- Trick  
+- Dazzling Gleam  
+
+Kyurem @ Icicle Plate  
+Ability: Pressure  
+Tera Type: Ground  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Freeze-Dry  
+- Earth Power  
+- Protect  
+- Ice Beam  
+
+Ceruledge @ Heavy-Duty Boots  
+Ability: Flash Fire  
+Tera Type: Fighting  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Bitter Blade  
+- Shadow Sneak  
+- Protect  
+- Close Combat  
+
+Meowscarada @ Heavy-Duty Boots  
+Ability: Protean  
+Tera Type: Poison  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Flower Trick  
+- Knock Off  
+- Sucker Punch  
+- U-turn

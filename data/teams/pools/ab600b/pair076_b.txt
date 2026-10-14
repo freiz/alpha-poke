@@ -1,0 +1,59 @@
+Galvantula @ Focus Sash  
+Ability: Compound Eyes  
+Tera Type: Ghost  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Sticky Web  
+- Energy Ball  
+- Thunder  
+- Light Screen  
+
+Ninetales-Alola @ Light Clay  
+Ability: Snow Warning  
+Tera Type: Steel  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Moonblast  
+- Aurora Veil  
+- Freeze-Dry  
+- Encore  
+
+Iron Crown @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Water  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Focus Blast  
+- Tachyon Cutter  
+- Psyshock  
+- Calm Mind  
+
+Samurott-Hisui @ Focus Sash  
+Ability: Sharpness  
+Tera Type: Fire  
+EVs: 240 HP / 36 Atk / 164 SpD / 68 Spe  
+Adamant Nature  
+- Sacred Sword  
+- Ceaseless Edge  
+- Sucker Punch  
+- Razor Shell  
+
+Great Tusk @ Rocky Helmet  
+Ability: Protosynthesis  
+Tera Type: Fairy  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Jolly Nature  
+- Headlong Rush  
+- Rapid Spin  
+- Knock Off  
+- Ice Spinner  
+
+Moltres-Galar @ Sitrus Berry  
+Ability: Berserk  
+Tera Type: Dark  
+EVs: 248 HP / 4 Def / 168 SpA / 44 SpD / 44 Spe  
+Modest Nature  
+- Nasty Plot  
+- Fiery Wrath  
+- Air Slash  
+- Agility

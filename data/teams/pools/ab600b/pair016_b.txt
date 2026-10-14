@@ -1,0 +1,56 @@
+Deoxys-Speed @ Leftovers  
+Ability: Pressure  
+Tera Type: Steel  
+EVs: 252 HP / 148 Def / 108 SpD  
+Calm Nature  
+IVs: 0 Atk  
+- Spikes  
+- Stealth Rock  
+- Taunt  
+- Psychic Noise  
+
+Ceruledge @ Focus Sash  
+Ability: Weak Armor  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Bitter Blade  
+- Swords Dance  
+- Destiny Bond  
+- Close Combat  
+
+Gholdengo @ Focus Sash  
+Ability: Good as Gold  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Modest Nature  
+IVs: 0 Atk  
+- Shadow Ball  
+- Nasty Plot  
+- Make It Rain  
+- Focus Blast  
+
+Ninetales-Alola @ Loaded Dice  
+Ability: Snow Warning  
+EVs: 168 HP / 148 Atk / 192 Def  
+- Blizzard  
+- Icicle Spear  
+- Nasty Plot  
+- Ice Shard  
+
+Zamazenta @ Rocky Helmet  
+Ability: Dauntless Shield  
+EVs: 252 HP / 128 Def / 60 SpD / 68 Spe  
+Impish Nature  
+IVs: 0 Atk  
+- Body Press  
+- Iron Defense  
+- Roar  
+- Substitute  
+
+Breloom @ Toxic Orb  
+Ability: Poison Heal  
+EVs: 148 HP / 148 Def / 212 SpD  
+Careful Nature  
+- Protect  
+- Drain Punch  
+- Leech Seed  
+- Toxic

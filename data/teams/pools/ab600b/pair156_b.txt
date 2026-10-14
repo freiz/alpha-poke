@@ -1,0 +1,59 @@
+Tyranitar @ Leftovers  
+Ability: Sand Stream  
+Tera Type: Ghost  
+EVs: 252 HP / 16 Def / 240 SpD  
+Sassy Nature  
+- Earthquake  
+- Thunder Wave  
+- Knock Off  
+- Stealth Rock  
+
+Excadrill @ Leftovers  
+Ability: Mold Breaker  
+Tera Type: Ground  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Rock Slide  
+- Iron Head  
+- Earthquake  
+- Rock Blast  
+
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Fighting  
+EVs: 252 Def / 252 SpD  
+Careful Nature  
+- Brave Bird  
+- Roost  
+- U-turn  
+- Defog  
+
+Hydrapple @ Leftovers  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 248 HP / 248 Def / 12 Spe  
+Bold Nature  
+- Earth Power  
+- Fickle Beam  
+- Nasty Plot  
+- Giga Drain  
+
+Garganacl @ Leftovers  
+Ability: Sturdy  
+Tera Type: Fairy  
+EVs: 252 HP / 52 Def / 204 SpD  
+Careful Nature  
+- Salt Cure  
+- Stealth Rock  
+- Protect  
+- Recover  
+
+Salazzle @ Leftovers  
+Ability: Corrosion  
+Tera Type: Normal  
+EVs: 252 HP / 4 Def / 252 Spe  
+Timid Nature  
+- Sludge Bomb  
+- Substitute  
+- Toxic  
+- Encore

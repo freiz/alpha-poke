@@ -1,0 +1,59 @@
+Moltres @ Heavy-Duty Boots  
+Ability: Flame Body  
+Tera Type: Ground  
+EVs: 248 HP / 248 Def / 12 Spe  
+Bold Nature  
+- Flamethrower  
+- U-turn  
+- Hurricane  
+- Roost  
+
+Landorus-Therian @ Rocky Helmet  
+Ability: Intimidate  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Stealth Rock  
+- U-turn  
+- Taunt  
+- Stone Edge  
+
+Samurott-Hisui @ Focus Sash  
+Ability: Sharpness  
+Tera Type: Dark  
+EVs: 252 Atk / 252 Spe  
+Jolly Nature  
+- Razor Shell  
+- Sucker Punch  
+- Ceaseless Edge  
+- Swords Dance  
+
+Iron Crown @ Black Sludge  
+Ability: Quark Drive  
+Tera Type: Steel  
+EVs: 80 HP / 4 Def / 172 SpA / 252 Spe  
+Timid Nature  
+- Focus Blast  
+- Future Sight  
+- Tachyon Cutter  
+- Volt Switch  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Ghost  
+EVs: 160 HP / 252 Atk / 96 Spe  
+Adamant Nature  
+- Sucker Punch  
+- Low Kick  
+- Kowtow Cleave  
+- Swords Dance  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Steel  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Thunder Wave  
+- Shadow Ball  
+- Trick  
+- Nasty Plot

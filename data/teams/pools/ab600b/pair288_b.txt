@@ -1,0 +1,61 @@
+Quaquaval @ Life Orb  
+Ability: Moxie  
+Tera Type: Ice  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Aqua Step  
+- Swords Dance  
+- Close Combat  
+- Ice Spinner  
+
+Iron Moth @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Grass  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Fiery Dance  
+- Sludge Wave  
+- Dazzling Gleam  
+- Energy Ball  
+
+Glimmora @ Focus Sash  
+Ability: Toxic Debris  
+Tera Type: Ghost  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Naive Nature  
+- Stealth Rock  
+- Mortal Spin  
+- Power Gem  
+- Earth Power  
+
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Water  
+EVs: 248 HP / 8 Atk / 252 Def  
+Impish Nature  
+- Body Press  
+- U-turn  
+- Roost  
+- Brave Bird  
+
+Great Tusk @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Poison  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Jolly Nature  
+- Bulk Up  
+- Headlong Rush  
+- Ice Spinner  
+- Rapid Spin  
+
+Raging Bolt @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Fairy  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Modest Nature  
+IVs: 20 Atk  
+- Calm Mind  
+- Thunderclap  
+- Dragon Pulse  
+- Thunderbolt

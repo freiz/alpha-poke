@@ -1,0 +1,58 @@
+Ursaring @ Flame Orb  
+Ability: Guts  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Body Slam  
+- Thunder Punch  
+- Swords Dance  
+- Fire Punch  
+
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Grass  
+EVs: 248 HP / 252 Def / 8 SpD  
+Impish Nature  
+- Defog  
+- U-turn  
+- Brave Bird  
+- Roost  
+
+Pecharunt @ Leftovers  
+Ability: Poison Puppeteer  
+Tera Type: Water  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Parting Shot  
+- Shadow Ball  
+- Malignant Chain  
+- Toxic  
+
+Araquanid @ Custap Berry  
+Ability: Water Bubble  
+Tera Type: Ghost  
+EVs: 248 HP / 252 SpA / 8 SpD  
+Modest Nature  
+- Liquidation  
+- Lunge  
+- Sticky Web  
+- Surf  
+
+Darkrai @ Mirror Herb  
+Ability: Bad Dreams  
+Tera Type: Poison  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Dark Pulse  
+- Sludge Bomb  
+- Ice Beam  
+- Trick  
+
+Raging Bolt @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Fire  
+EVs: 248 HP / 252 SpA / 8 Spe  
+Modest Nature  
+- Calm Mind  
+- Thunderbolt  
+- Thunderclap  
+- Dragon Pulse

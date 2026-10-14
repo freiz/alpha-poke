@@ -1,0 +1,59 @@
+Darkrai @ Leftovers  
+Ability: Bad Dreams  
+Tera Type: Dark  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Nasty Plot  
+- Sludge Bomb  
+- Focus Blast  
+- Trick  
+
+Manaphy @ Sitrus Berry  
+Ability: Hydration  
+Tera Type: Grass  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Tail Glow  
+- Ice Beam  
+- Surf  
+- Alluring Voice  
+
+Landorus-Therian @ Rocky Helmet  
+Ability: Intimidate  
+Tera Type: Water  
+EVs: 252 HP / 252 Def / 4 Spe  
+Impish Nature  
+- Stealth Rock  
+- Earth Power  
+- U-turn  
+- Stone Edge  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Make It Rain  
+- Shadow Ball  
+- Nasty Plot  
+- Recover  
+
+Raging Bolt @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Bug  
+EVs: 196 HP / 252 SpA / 60 Spe  
+Modest Nature  
+- Calm Mind  
+- Thunderbolt  
+- Dragon Pulse  
+- Thunderclap  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Moonblast  
+- Calm Mind  
+- Close Combat  
+- Shadow Ball

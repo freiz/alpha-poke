@@ -1,0 +1,59 @@
+Ogerpon @ Choice Band  
+Ability: Defiant  
+Tera Type: Grass  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Ivy Cudgel  
+- Knock Off  
+- U-turn  
+- Encore  
+
+Samurott-Hisui @ Heavy-Duty Boots  
+Ability: Sharpness  
+Tera Type: Poison  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Ceaseless Edge  
+- Aqua Cutter  
+- Knock Off  
+- Encore  
+
+Blissey @ Black Sludge  
+Ability: Natural Cure  
+Tera Type: Dark  
+EVs: 252 HP / 4 Def / 252 SpD  
+Calm Nature  
+- Shadow Ball  
+- Seismic Toss  
+- Soft-Boiled  
+- Calm Mind  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Normal  
+EVs: 252 HP / 4 Def / 252 SpD  
+Impish Nature  
+- Earthquake  
+- Protect  
+- Facade  
+- Swords Dance  
+
+Skarmory @ Rocky Helmet  
+Ability: Sturdy  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Def / 4 Spe  
+Impish Nature  
+- Whirlwind  
+- Roost  
+- Stealth Rock  
+- Body Press  
+
+Pecharunt @ Air Balloon  
+Ability: Poison Puppeteer  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Def / 252 Spe  
+Timid Nature  
+- Toxic  
+- Recover  
+- Parting Shot  
+- Shadow Ball

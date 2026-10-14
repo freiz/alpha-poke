@@ -1,0 +1,59 @@
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Tera Type: Poison  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- Stealth Rock  
+- Spikes  
+- Whirlwind  
+- Earthquake  
+
+Sinistcha-Masterpiece @ Leftovers  
+Ability: Hospitality  
+Tera Type: Poison  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Nasty Plot  
+- Shadow Ball  
+- Matcha Gotcha  
+- Strength Sap  
+
+Iron Treads @ Air Balloon  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 72 HP / 184 Atk / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Knock Off  
+- Stealth Rock  
+- Earthquake  
+
+Zamazenta @ Life Orb  
+Ability: Dauntless Shield  
+Tera Type: Steel  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Jolly Nature  
+- Close Combat  
+- Light Screen  
+- Reflect  
+- Body Press  
+
+Dragonite @ Heavy-Duty Boots  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- Extreme Speed  
+- Earthquake  
+- Dragon Dance  
+- Roost  
+
+Alomomola @ Leftovers  
+Ability: Regenerator  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Def / 4 SpD  
+Relaxed Nature  
+- Wish  
+- Flip Turn  
+- Scald  
+- Protect

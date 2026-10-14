@@ -1,0 +1,59 @@
+Azumarill @ Sitrus Berry  
+Ability: Sap Sipper  
+Tera Type: Ground  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- Play Rough  
+- Belly Drum  
+- Aqua Jet  
+- Liquidation  
+
+Tyranitar @ Leftovers  
+Ability: Sand Stream  
+Tera Type: Dark  
+EVs: 252 HP / 16 Def / 240 SpD  
+Sassy Nature  
+- Knock Off  
+- Stone Edge  
+- Low Kick  
+- Ice Punch  
+
+Ursaluna @ Flame Orb  
+Ability: Guts  
+Tera Type: Normal  
+EVs: 248 HP / 252 Atk / 8 Def  
+Adamant Nature  
+- Substitute  
+- Facade  
+- Headlong Rush  
+- Earthquake  
+
+Talonflame @ Heavy-Duty Boots  
+Ability: Flame Body  
+Tera Type: Flying  
+EVs: 252 HP / 192 Def / 64 Spe  
+Impish Nature  
+- Roost  
+- Flare Blitz  
+- Defog  
+- Brave Bird  
+
+Samurott-Hisui @ Assault Vest  
+Ability: Torrent  
+Tera Type: Dark  
+EVs: 252 Atk / 252 Spe  
+Jolly Nature  
+- Flip Turn  
+- Ceaseless Edge  
+- Sucker Punch  
+- Razor Shell  
+
+Rillaboom @ Life Orb  
+Ability: Grassy Surge  
+Tera Type: Grass  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Grassy Glide  
+- Wood Hammer  
+- Knock Off  
+- U-turn

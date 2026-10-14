@@ -1,0 +1,58 @@
+Clodsire @ Heavy-Duty Boots  
+Ability: Unaware  
+Tera Type: Steel  
+EVs: 252 HP / 4 Def / 252 SpD  
+Sassy Nature  
+- Recover  
+- Earthquake  
+- Toxic  
+- Poison Jab  
+
+Toxtricity-Low-Key @ Throat Spray  
+Ability: Technician  
+Tera Type: Normal  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Volt Switch  
+- Boomburst  
+- Discharge  
+- Sludge Bomb  
+
+Skuntank @ Black Sludge  
+Ability: Stench  
+EVs: 252 Atk / 252 Spe  
+Adamant Nature  
+- Crunch  
+- Rest  
+- Sleep Talk  
+- Toxic  
+
+Vileplume @ Rocky Helmet  
+Ability: Effect Spore  
+Tera Type: Fire  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Giga Drain  
+- Moonblast  
+- Leech Seed  
+- Sunny Day  
+
+Salazzle @ Leftovers  
+Ability: Corrosion  
+Tera Type: Normal  
+EVs: 4 HP / 252 Def / 252 SpD  
+Bold Nature  
+- Flamethrower  
+- Sludge Bomb  
+- Substitute  
+- Toxic  
+
+Arbok @ Black Sludge  
+Ability: Intimidate  
+Tera Type: Dragon  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Jolly Nature  
+- Rock Slide  
+- Coil  
+- Scale Shot  
+- Gunk Shot

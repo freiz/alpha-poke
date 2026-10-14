@@ -1,0 +1,62 @@
+Kyurem @ Choice Specs  
+Ability: Pressure  
+Tera Type: Ground  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Ice Beam  
+- Freeze-Dry  
+- Draco Meteor  
+- Earth Power  
+
+Volcanion @ Heavy-Duty Boots  
+Ability: Water Absorb  
+Tera Type: Ghost  
+EVs: 52 HP / 252 SpA / 204 Spe  
+Modest Nature  
+IVs: 0 Atk  
+- Steam Eruption  
+- Fire Spin  
+- Sludge Bomb  
+- Taunt  
+
+Clefable @ Leftovers  
+Ability: Magic Guard  
+Tera Type: Water  
+EVs: 252 HP / 4 SpA / 252 SpD  
+Sassy Nature  
+- Moonblast  
+- Knock Off  
+- Stealth Rock  
+- Moonlight  
+
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Ground  
+EVs: 248 HP / 252 Def / 8 SpD  
+Impish Nature  
+IVs: 0 Atk  
+- Body Press  
+- Iron Defense  
+- Roost  
+- Defog  
+
+Weavile @ Heavy-Duty Boots  
+Ability: Pressure  
+Tera Type: Ice  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Triple Axel  
+- Ice Shard  
+- Swords Dance  
+
+Dondozo @ Leftovers  
+Ability: Unaware  
+Tera Type: Dark  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- Liquidation  
+- Curse  
+- Rest  
+- Sleep Talk

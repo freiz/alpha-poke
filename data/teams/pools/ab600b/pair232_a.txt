@@ -1,0 +1,59 @@
+Scizor @ Heavy-Duty Boots  
+Ability: Technician  
+Tera Type: Steel  
+EVs: 120 HP / 252 Atk / 136 Spe  
+Adamant Nature  
+- Bullet Punch  
+- Knock Off  
+- Close Combat  
+- Swords Dance  
+
+Darkrai @ Air Balloon  
+Ability: Bad Dreams  
+Tera Type: Dark  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Dark Pulse  
+- Ice Beam  
+- Will-O-Wisp  
+- Focus Blast  
+
+Latios @ Choice Specs  
+Ability: Levitate  
+Tera Type: Dragon  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Trick  
+- Luster Purge  
+- Draco Meteor  
+- Flip Turn  
+
+Great Tusk @ Rocky Helmet  
+Ability: Protosynthesis  
+Tera Type: Ice  
+EVs: 252 Atk / 252 Spe  
+Jolly Nature  
+- Headlong Rush  
+- Rapid Spin  
+- Knock Off  
+- Stealth Rock  
+
+Heatran @ Air Balloon  
+Ability: Flash Fire  
+Tera Type: Normal  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+- Magma Storm  
+- Will-O-Wisp  
+- Earth Power  
+- Stealth Rock  
+
+Dragapult @ Life Orb  
+Ability: Infiltrator  
+Tera Type: Ghost  
+EVs: 76 Atk / 180 SpA / 252 Spe  
+Naive Nature  
+- Sucker Punch  
+- U-turn  
+- Dragon Darts  
+- Shadow Ball

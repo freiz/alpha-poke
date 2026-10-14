@@ -1,0 +1,59 @@
+Dragapult @ Choice Band  
+Ability: Clear Body  
+Tera Type: Dragon  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Dragon Darts  
+- Psychic Fangs  
+- Will-O-Wisp  
+
+Gholdengo @ Rocky Helmet  
+Ability: Good as Gold  
+Tera Type: Fairy  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Nasty Plot  
+- Make It Rain  
+- Shadow Ball  
+- Recover  
+
+Clefable @ Leftovers  
+Ability: Magic Guard  
+Tera Type: Poison  
+EVs: 252 HP / 136 Def / 4 SpA / 116 SpD  
+Calm Nature  
+- Moonblast  
+- Moonlight  
+- Calm Mind  
+- Knock Off  
+
+Rillaboom @ Lum Berry  
+Ability: Grassy Surge  
+Tera Type: Grass  
+EVs: 252 HP / 252 Atk / 4 Spe  
+Adamant Nature  
+- Grassy Glide  
+- Knock Off  
+- Swords Dance  
+- Drain Punch  
+
+Alomomola @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Poison  
+EVs: 252 HP / 252 Def / 4 SpD  
+Relaxed Nature  
+- Protect  
+- Wish  
+- Scald  
+- Flip Turn  
+
+Heatran @ Leftovers  
+Ability: Flash Fire  
+Tera Type: Grass  
+EVs: 252 HP / 140 SpD / 116 Spe  
+Calm Nature  
+- Earth Power  
+- Stealth Rock  
+- Magma Storm  
+- Lava Plume

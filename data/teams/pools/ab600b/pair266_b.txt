@@ -1,0 +1,59 @@
+Dragonite @ Life Orb  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Extreme Speed  
+- Dragon Dance  
+- Earthquake  
+- Roost  
+
+Samurott-Hisui @ Assault Vest  
+Ability: Sharpness  
+Tera Type: Poison  
+EVs: 248 HP / 84 Atk / 124 SpD / 52 Spe  
+Adamant Nature  
+- Ceaseless Edge  
+- Razor Shell  
+- Knock Off  
+- Sucker Punch  
+
+Clefable @ Sticky Barb  
+Ability: Magic Guard  
+Tera Type: Water  
+EVs: 252 HP / 252 SpD  
+Calm Nature  
+- Stealth Rock  
+- Moonblast  
+- Knock Off  
+- Thunder Wave  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Normal  
+EVs: 244 HP / 36 Def / 228 SpD  
+Careful Nature  
+- Protect  
+- Facade  
+- Swords Dance  
+- Earthquake  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Steel  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Make It Rain  
+- Shadow Ball  
+- Trick  
+- Nasty Plot  
+
+Zamazenta @ Leftovers  
+Ability: Dauntless Shield  
+Tera Type: Fire  
+EVs: 104 HP / 252 Def / 152 Spe  
+Jolly Nature  
+- Iron Defense  
+- Body Press  
+- Crunch  
+- Roar

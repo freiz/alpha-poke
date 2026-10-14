@@ -1,0 +1,61 @@
+Iron Moth @ Choice Specs  
+Ability: Quark Drive  
+Tera Type: Fire  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Overheat  
+- Fiery Dance  
+- Sludge Wave  
+- Energy Ball  
+
+Slowking-Galar @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 252 HP / 16 Def / 240 SpD  
+Sassy Nature  
+IVs: 0 Atk / 0 Spe  
+- Future Sight  
+- Chilly Reception  
+- Psychic Noise  
+- Sludge Bomb  
+
+Dragonite @ Heavy-Duty Boots  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Dragon Dance  
+- Earthquake  
+- Extreme Speed  
+- Ice Spinner  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Swords Dance  
+- Sucker Punch  
+- Kowtow Cleave  
+- Iron Head  
+
+Quaquaval @ Assault Vest  
+Ability: Moxie  
+Tera Type: Electric  
+EVs: 248 Atk / 8 SpD / 252 Spe  
+Jolly Nature  
+- Aqua Step  
+- Close Combat  
+- Knock Off  
+- Rapid Spin  
+
+Landorus-Therian @ Rocky Helmet  
+Ability: Intimidate  
+Tera Type: Ghost  
+EVs: 252 HP / 220 Def / 36 Spe  
+Bold Nature  
+- Stealth Rock  
+- Earth Power  
+- U-turn  
+- Taunt

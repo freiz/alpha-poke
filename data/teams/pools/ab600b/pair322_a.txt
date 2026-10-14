@@ -1,0 +1,61 @@
+Gliscor (F) @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Water  
+EVs: 244 HP / 36 Def / 228 SpD  
+Careful Nature  
+- Spikes  
+- Knock Off  
+- Earthquake  
+- Protect  
+
+Scizor (M) @ Sitrus Berry  
+Ability: Technician  
+Tera Type: Steel  
+EVs: 248 HP / 252 Atk / 8 SpD  
+Adamant Nature  
+- Bullet Punch  
+- U-turn  
+- Knock Off  
+- Defog  
+
+Skeledirge (M) @ Heavy-Duty Boots  
+Ability: Unaware  
+Tera Type: Fairy  
+EVs: 248 HP / 8 Def / 252 SpD  
+Calm Nature  
+IVs: 0 Atk  
+- Torch Song  
+- Hex  
+- Will-O-Wisp  
+- Slack Off  
+
+Tornadus-Therian (M) @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Steel  
+EVs: 252 HP / 4 SpD / 252 Spe  
+Timid Nature  
+- Bleakwind Storm  
+- U-turn  
+- Knock Off  
+- Heat Wave  
+
+Meowscarada (F) @ Choice Scarf  
+Ability: Protean  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- U-turn  
+- Triple Axel  
+- Flower Trick  
+
+Iron Valiant @ Choice Specs  
+Ability: Quark Drive  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Moonblast  
+- Shadow Ball  
+- Psyshock  
+- Vacuum Wave

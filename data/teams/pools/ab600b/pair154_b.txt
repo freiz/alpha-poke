@@ -1,0 +1,59 @@
+Metagross @ Choice Band  
+Ability: Clear Body  
+Tera Type: Steel  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Agility  
+- Earthquake  
+- Bullet Punch  
+- Knock Off  
+
+Snorlax @ Leftovers  
+Ability: Thick Fat  
+Tera Type: Poison  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Heavy Slam  
+- Rest  
+- Ice Punch  
+- Curse  
+
+Bronzong @ Leftovers  
+Ability: Levitate  
+Tera Type: Fairy  
+EVs: 252 HP / 252 Def / 4 SpA  
+Bold Nature  
+- Trick Room  
+- Earthquake  
+- Stealth Rock  
+- Gyro Ball  
+
+Tyranitar @ Leftovers  
+Ability: Sand Stream  
+Tera Type: Flying  
+EVs: 52 HP / 204 Atk / 252 Spe  
+Jolly Nature  
+- Crunch  
+- Rock Blast  
+- Dragon Dance  
+- Stone Edge  
+
+Slowking @ Leftovers  
+Ability: Oblivious  
+Tera Type: Fairy  
+EVs: 248 HP / 8 Def / 252 SpD  
+Sassy Nature  
+- Trick Room  
+- Fire Blast  
+- Scald  
+- Future Sight  
+
+Reuniclus @ Colbur Berry  
+Ability: Magic Guard  
+Tera Type: Ice  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Quiet Nature  
+- Focus Blast  
+- Recover  
+- Trick Room  
+- Knock Off

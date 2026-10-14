@@ -1,0 +1,59 @@
+Ninetales-Alola @ Light Clay  
+Ability: Snow Warning  
+Tera Type: Water  
+EVs: 252 HP / 4 SpD / 252 Spe  
+Timid Nature  
+- Aurora Veil  
+- Encore  
+- Freeze-Dry  
+- Moonblast  
+
+Darkrai @ Life Orb  
+Ability: Bad Dreams  
+Tera Type: Dark  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Swords Dance  
+- Knock Off  
+- Sucker Punch  
+- Dark Pulse  
+
+Slowbro-Galar @ Quick Claw  
+Ability: Quick Draw  
+Tera Type: Water  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Nasty Plot  
+- Psyshock  
+- Surf  
+- Sludge Bomb  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Fairy  
+EVs: 252 HP / 252 Atk / 4 Spe  
+Adamant Nature  
+- Kowtow Cleave  
+- Iron Head  
+- Sucker Punch  
+- Swords Dance  
+
+Latias @ Lum Berry  
+Ability: Levitate  
+Tera Type: Steel  
+EVs: 252 HP / 4 Def / 252 Spe  
+Timid Nature  
+- Aura Sphere  
+- Trick  
+- Psychic  
+- Recover  
+
+Okidogi @ Leftovers  
+Ability: Toxic Chain  
+Tera Type: Dark  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Bulk Up  
+- Drain Punch  
+- Knock Off  
+- Poison Jab

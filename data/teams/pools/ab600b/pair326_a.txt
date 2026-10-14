@@ -1,0 +1,59 @@
+Alomomola @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Poison  
+EVs: 252 HP / 4 Atk / 252 Def  
+Relaxed Nature  
+- Flip Turn  
+- Wish  
+- Protect  
+- Scald  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Fairy  
+EVs: 252 HP / 192 Def / 64 Spe  
+Bold Nature  
+- Make It Rain  
+- Focus Blast  
+- Shadow Ball  
+- Trick  
+
+Gardevoir @ Leftovers  
+Ability: Trace  
+Tera Type: Fire  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Mystical Fire  
+- Moonblast  
+- Trick  
+- Future Sight  
+
+Dragonite @ Heavy-Duty Boots  
+Ability: Inner Focus  
+Tera Type: Normal  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Thunder Wave  
+- Roost  
+- Dragon Claw  
+- Dragon Tail  
+
+Great Tusk @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Poison  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Headlong Rush  
+- Head Smash  
+- Close Combat  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Fairy  
+EVs: 248 HP / 64 Def / 152 SpD / 44 Spe  
+Jolly Nature  
+- Dual Wingbeat  
+- Substitute  
+- Protect  
+- Knock Off

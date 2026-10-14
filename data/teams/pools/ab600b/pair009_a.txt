@@ -1,0 +1,59 @@
+Porygon2 @ Eviolite  
+Ability: Trace  
+Tera Type: Ghost  
+EVs: 248 HP / 8 Def / 252 SpA  
+Quiet Nature  
+- Ice Beam  
+- Trick Room  
+- Tri Attack  
+- Shadow Ball  
+
+Hatterene @ Focus Sash  
+Ability: Magic Bounce  
+Tera Type: Steel  
+EVs: 240 HP / 80 Def / 12 SpA / 112 SpD / 64 Spe  
+Calm Nature  
+- Trick Room  
+- Healing Wish  
+- Dazzling Gleam  
+- Mystical Fire  
+
+Slowking-Galar @ Leftovers  
+Ability: Regenerator  
+Tera Type: Dark  
+EVs: 252 HP / 4 SpA / 252 SpD  
+Calm Nature  
+- Trick Room  
+- Chilly Reception  
+- Psychic Noise  
+- Sludge Bomb  
+
+Dragalge @ Life Orb  
+Ability: Adaptability  
+Tera Type: Poison  
+EVs: 252 HP / 252 SpD  
+Modest Nature  
+- Scald  
+- Shadow Ball  
+- Dragon Tail  
+- Draco Meteor  
+
+Ursaluna @ Flame Orb  
+Ability: Guts  
+Tera Type: Normal  
+EVs: 248 HP / 252 Atk / 8 SpD  
+Brave Nature  
+- Headlong Rush  
+- Earthquake  
+- Protect  
+- Facade  
+
+Crabominable @ Life Orb  
+Ability: Iron Fist  
+Tera Type: Fighting  
+EVs: 128 HP / 204 Atk / 176 SpD  
+Adamant Nature  
+- Drain Punch  
+- Close Combat  
+- Thunder Punch  
+- Ice Hammer

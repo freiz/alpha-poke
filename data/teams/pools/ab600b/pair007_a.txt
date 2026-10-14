@@ -1,0 +1,58 @@
+Illumise  
+Ability: Prankster  
+EVs: 252 HP / 4 SpD / 252 Spe  
+Timid Nature  
+- Attract  
+- Confuse Ray  
+- Infestation  
+- Encore  
+
+Moltres-Galar @ Sitrus Berry  
+Ability: Berserk  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Modest Nature  
+- Fiery Wrath  
+- Sucker Punch  
+- Nasty Plot  
+- Agility  
+
+Cinderace @ Focus Sash  
+Ability: Libero  
+Tera Type: Bug  
+EVs: 248 HP / 8 Atk / 252 Spe  
+Jolly Nature  
+- Pyro Ball  
+- Will-O-Wisp  
+- Court Change  
+- U-turn  
+
+Magnezone @ Choice Specs  
+Ability: Analytic  
+Tera Type: Flying  
+EVs: 240 HP / 204 Def / 64 Spe  
+Bold Nature  
+- Flash Cannon  
+- Body Press  
+- Thunderbolt  
+- Volt Switch  
+
+Azumarill @ Leftovers  
+Ability: Huge Power  
+Tera Type: Water  
+EVs: 160 HP / 252 Atk / 96 Spe  
+Adamant Nature  
+- Play Rough  
+- Aqua Jet  
+- Liquidation  
+- Knock Off  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Water  
+EVs: 240 HP / 208 Def / 60 SpD  
+Impish Nature  
+- Toxic  
+- Protect  
+- Earthquake  
+- Knock Off

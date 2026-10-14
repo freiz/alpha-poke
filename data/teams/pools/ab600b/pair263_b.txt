@@ -1,0 +1,59 @@
+Dragapult @ Rocky Helmet  
+Ability: Clear Body  
+Tera Type: Dragon  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- U-turn  
+- Dragon Darts  
+- Draco Meteor  
+- Hex  
+
+Weezing-Galar @ Leftovers  
+Ability: Neutralizing Gas  
+Tera Type: Dragon  
+EVs: 252 HP / 244 Def / 12 Spe  
+Bold Nature  
+- Toxic  
+- Dark Pulse  
+- Clear Smog  
+- Will-O-Wisp  
+
+Landorus-Therian @ Choice Scarf  
+Ability: Intimidate  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Def / 252 Spe  
+Timid Nature  
+- Stealth Rock  
+- Earth Power  
+- Taunt  
+- U-turn  
+
+Pelipper @ Damp Rock  
+Ability: Drizzle  
+Tera Type: Grass  
+EVs: 248 HP / 252 Def / 8 SpA  
+Relaxed Nature  
+- Hurricane  
+- Weather Ball  
+- U-turn  
+- Surf  
+
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Fighting  
+EVs: 252 HP / 252 Def / 4 SpD  
+Relaxed Nature  
+- Iron Defense  
+- Brave Bird  
+- Roost  
+- Protect  
+
+Dragonite @ Heavy-Duty Boots  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Dragon Dance  
+- Extreme Speed  
+- Dragon Tail  
+- Roost

@@ -1,0 +1,59 @@
+Noivern @ Heavy-Duty Boots  
+Ability: Infiltrator  
+Tera Type: Normal  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Flamethrower  
+- Super Fang  
+- Boomburst  
+- U-turn  
+
+Excadrill @ Life Orb  
+Ability: Sand Rush  
+Tera Type: Ground  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Earthquake  
+- Iron Head  
+- Rock Slide  
+- Stealth Rock  
+
+Slowbro @ Eject Button  
+Ability: Regenerator  
+Tera Type: Ground  
+EVs: 252 HP / 252 Def / 4 Spe  
+Bold Nature  
+- Thunder Wave  
+- Scald  
+- Future Sight  
+- Trick Room  
+
+Mismagius @ Life Orb  
+Ability: Levitate  
+Tera Type: Electric  
+EVs: 252 Def / 252 SpA  
+Hardy Nature  
+- Shadow Ball  
+- Mystical Fire  
+- Calm Mind  
+- Hex  
+
+Jirachi @ Leftovers  
+Ability: Serene Grace  
+Tera Type: Steel  
+EVs: 252 HP / 48 Def / 56 SpA / 48 SpD / 100 Spe  
+Hardy Nature  
+- Zen Headbutt  
+- U-turn  
+- Psychic  
+- Wish  
+
+Tyranitar @ Leftovers  
+Ability: Sand Stream  
+Tera Type: Steel  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Low Kick  
+- Ice Beam  
+- Knock Off  
+- Stone Edge

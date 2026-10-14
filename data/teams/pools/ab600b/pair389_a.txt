@@ -1,0 +1,59 @@
+Ribombee @ Focus Sash  
+Ability: Shield Dust  
+Tera Type: Steel  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Sticky Web  
+- Stun Spore  
+- Reflect  
+- Skill Swap  
+
+Cloyster @ Life Orb  
+Ability: Skill Link  
+Tera Type: Ghost  
+EVs: 248 HP / 252 Atk / 8 SpD  
+Adamant Nature  
+- Shell Smash  
+- Rock Blast  
+- Icicle Spear  
+- Ice Shard  
+
+Dragonite @ Heavy-Duty Boots  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 248 HP / 16 Atk / 228 Def / 16 Spe  
+Adamant Nature  
+- Dragon Dance  
+- Earthquake  
+- Ice Spinner  
+- Roost  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Fighting  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Sucker Punch  
+- Kowtow Cleave  
+- Iron Head  
+
+Raging Bolt @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Ghost  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Modest Nature  
+- Calm Mind  
+- Thunderbolt  
+- Dragon Pulse  
+- Volt Switch  
+
+Gholdengo @ Leftovers  
+Ability: Good as Gold  
+Tera Type: Fighting  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Make It Rain  
+- Shadow Ball  
+- Hex  
+- Nasty Plot

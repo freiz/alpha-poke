@@ -1,0 +1,63 @@
+Ceruledge (F) @ Flame Plate  
+Ability: Flash Fire  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpA / 252 Spe  
+Hasty Nature  
+- Bitter Blade  
+- Swords Dance  
+- Close Combat  
+- Clear Smog  
+
+Heatran @ Air Balloon  
+Ability: Flash Fire  
+Tera Type: Ghost  
+EVs: 126 HP / 4 Def / 124 SpA / 2 SpD / 252 Spe  
+Modest Nature  
+IVs: 0 Atk  
+- Stealth Rock  
+- Magma Storm  
+- Earth Power  
+- Taunt  
+
+Araquanid @ Splash Plate  
+Ability: Water Bubble  
+Shiny: Yes  
+Tera Type: Poison  
+EVs: 248 HP / 252 Atk / 8 SpA  
+Brave Nature  
+- Waterfall  
+- Water Pulse  
+- Poison Jab  
+- Protect  
+
+Primarina @ Leftovers  
+Ability: Liquid Voice  
+Tera Type: Water  
+EVs: 252 HP / 4 SpA / 252 SpD  
+Calm Nature  
+IVs: 0 Atk  
+- Perish Song  
+- Protect  
+- Hyper Voice  
+- Icy Wind  
+
+Armarouge @ Flame Plate  
+Ability: Flash Fire  
+Tera Type: Fire  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Naive Nature  
+- Armor Cannon  
+- Flame Charge  
+- Psyshock  
+- Confuse Ray  
+
+Dragonite @ Loaded Dice  
+Ability: Inner Focus  
+Shiny: Yes  
+Tera Type: Dragon  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Dragon Dance  
+- Scale Shot  
+- Extreme Speed  
+- Thunder Wave

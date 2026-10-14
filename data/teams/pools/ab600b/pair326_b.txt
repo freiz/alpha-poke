@@ -1,0 +1,59 @@
+Alcremie-Rainbow-Swirl @ Leftovers  
+Ability: Sweet Veil  
+Tera Type: Poison  
+EVs: 252 HP / 240 Def / 16 SpA  
+Modest Nature  
+- Acid Armor  
+- Draining Kiss  
+- Calm Mind  
+- Recover  
+
+Clodsire @ Leftovers  
+Ability: Water Absorb  
+Tera Type: Steel  
+EVs: 252 Atk / 4 Def / 252 SpD  
+Adamant Nature  
+- Stealth Rock  
+- Recover  
+- Toxic  
+- Earthquake  
+
+Cinderace @ Heavy-Duty Boots  
+Ability: Blaze  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Pyro Ball  
+- Will-O-Wisp  
+- Court Change  
+- U-turn  
+
+Rillaboom @ Life Orb  
+Ability: Grassy Surge  
+Tera Type: Dark  
+EVs: 160 HP / 252 Atk / 96 Spe  
+Adamant Nature  
+- Grassy Glide  
+- Wood Hammer  
+- Knock Off  
+- High Horsepower  
+
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Grass  
+EVs: 248 HP / 252 Def / 8 Spe  
+Impish Nature  
+- Iron Defense  
+- Brave Bird  
+- U-turn  
+- Roost  
+
+Raging Bolt @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Bug  
+EVs: 176 HP / 4 Def / 252 SpA / 76 Spe  
+Modest Nature  
+- Dragon Pulse  
+- Thunderclap  
+- Thunderbolt  
+- Volt Switch

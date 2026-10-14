@@ -1,0 +1,59 @@
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Horn Leech  
+- Ivy Cudgel  
+- Swords Dance  
+
+Heatran @ Leftovers  
+Ability: Flash Fire  
+Tera Type: Flying  
+EVs: 252 HP / 4 Def / 212 SpD / 40 Spe  
+Calm Nature  
+- Magma Storm  
+- Protect  
+- Stealth Rock  
+- Earth Power  
+
+Goodra-Hisui @ Choice Specs  
+Ability: Gooey  
+Tera Type: Fairy  
+EVs: 248 HP / 252 SpA / 8 SpD  
+Modest Nature  
+- Dragon Pulse  
+- Earthquake  
+- Flash Cannon  
+- Ice Beam  
+
+Thundurus-Therian @ Rocky Helmet  
+Ability: Volt Absorb  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Volt Switch  
+- Nasty Plot  
+- Dark Pulse  
+- Thunderbolt  
+
+Orthworm @ Leftovers  
+Ability: Earth Eater  
+Tera Type: Ghost  
+EVs: 252 HP / 16 Def / 240 SpD  
+Impish Nature  
+- Body Press  
+- Iron Tail  
+- Iron Defense  
+- Spikes  
+
+Grimmsnarl @ Light Clay  
+Ability: Prankster  
+Tera Type: Steel  
+EVs: 252 HP / 136 Def / 120 SpD  
+Calm Nature  
+- Reflect  
+- Light Screen  
+- Parting Shot  
+- Taunt

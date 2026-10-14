@@ -1,0 +1,59 @@
+Haxorus @ Focus Sash  
+Ability: Mold Breaker  
+Tera Type: Steel  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- Earthquake  
+- Dragon Dance  
+- Scale Shot  
+- Poison Jab  
+
+Primarina @ Assault Vest  
+Ability: Liquid Voice  
+Tera Type: Ghost  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+- Ice Beam  
+- Hydro Pump  
+- Draining Kiss  
+- Surf  
+
+Landorus-Therian @ Leftovers  
+Ability: Intimidate  
+Tera Type: Ground  
+EVs: 252 Atk / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Stealth Rock  
+- Protect  
+- Substitute  
+
+Iron Moth @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Grass  
+EVs: 120 HP / 132 SpA / 252 Spe  
+Timid Nature  
+- Sludge Wave  
+- Fiery Dance  
+- Substitute  
+- Energy Ball  
+
+Scizor @ Heavy-Duty Boots  
+Ability: Technician  
+Tera Type: Steel  
+EVs: 248 HP / 252 Atk / 8 SpD  
+Adamant Nature  
+- Bullet Punch  
+- U-turn  
+- Defog  
+- Knock Off  
+
+Hydrapple @ Life Orb  
+Ability: Regenerator  
+Tera Type: Dragon  
+EVs: 248 HP / 248 Def / 12 Spe  
+Bold Nature  
+- Fickle Beam  
+- Giga Drain  
+- Nasty Plot  
+- Earth Power

@@ -1,0 +1,59 @@
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Normal  
+EVs: 244 HP / 168 SpD / 96 Spe  
+Careful Nature  
+- Knock Off  
+- Swords Dance  
+- Facade  
+- Protect  
+
+Pecharunt @ Air Balloon  
+Ability: Poison Puppeteer  
+Tera Type: Dark  
+EVs: 252 HP / 248 Def / 8 SpA  
+Bold Nature  
+- Parting Shot  
+- Malignant Chain  
+- Shadow Ball  
+- Recover  
+
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Tera Type: Water  
+EVs: 252 HP / 196 SpD / 60 Spe  
+Careful Nature  
+- Spikes  
+- Ruination  
+- Earthquake  
+- Stealth Rock  
+
+Zamazenta @ Leftovers  
+Ability: Dauntless Shield  
+Tera Type: Electric  
+EVs: 104 HP / 248 Def / 156 Spe  
+Jolly Nature  
+- Crunch  
+- Substitute  
+- Body Press  
+- Iron Defense  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Iron Head  
+- Swords Dance  
+- Sucker Punch  
+- Kowtow Cleave  
+
+Raging Bolt @ Heavy-Duty Boots  
+Ability: Protosynthesis  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Draco Meteor  
+- Thunderclap  
+- Dragon Pulse  
+- Volt Switch

@@ -1,0 +1,56 @@
+Dondozo @ Leftovers  
+Ability: Unaware  
+Tera Type: Fighting  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Curse  
+- Body Press  
+- Aqua Tail  
+- Rest  
+
+Dragapult @ Life Orb  
+Ability: Infiltrator  
+Tera Type: Dragon  
+EVs: 252 Atk / 4 SpA / 252 Spe  
+Hasty Nature  
+- Shadow Ball  
+- Draco Meteor  
+- Fire Blast  
+- Dragon Darts  
+
+Ditto @ Choice Scarf  
+Ability: Imposter  
+Tera Type: Ghost  
+EVs: 252 HP / 4 SpA / 252 Spe  
+Timid Nature  
+- Transform  
+
+Hatterene @ Grassy Seed  
+Ability: Magic Bounce  
+Tera Type: Water  
+EVs: 252 HP / 100 SpA / 104 SpD / 52 Spe  
+Modest Nature  
+- Calm Mind  
+- Psychic Noise  
+- Protect  
+- Draining Kiss  
+
+Great Tusk @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Ground  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Jolly Nature  
+- Close Combat  
+- Rapid Spin  
+- Earthquake  
+- Headlong Rush  
+
+Cinderace @ Heavy-Duty Boots  
+Ability: Libero  
+Tera Type: Fire  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Jolly Nature  
+- Zen Headbutt  
+- Pyro Ball  
+- U-turn  
+- Court Change

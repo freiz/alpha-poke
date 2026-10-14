@@ -1,0 +1,61 @@
+Cinderace @ Life Orb  
+Ability: Libero  
+Tera Type: Normal  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Double-Edge  
+- Sucker Punch  
+- Pyro Ball  
+
+Kingambit @ Black Glasses  
+Ability: Supreme Overlord  
+Tera Type: Dark  
+EVs: 252 Atk / 16 SpD / 240 Spe  
+Adamant Nature  
+- Swords Dance  
+- Kowtow Cleave  
+- Sucker Punch  
+- Iron Head  
+
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Fire  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Jolly Nature  
+- Headlong Rush  
+- Ice Spinner  
+- Bulk Up  
+- Rapid Spin  
+
+Hatterene @ Focus Sash  
+Ability: Magic Bounce  
+Tera Type: Flying  
+EVs: 252 HP / 252 SpA / 4 Spe  
+Modest Nature  
+IVs: 0 Atk  
+- Draining Kiss  
+- Psychic Noise  
+- Mystical Fire  
+- Nuzzle  
+
+Pecharunt @ Heavy-Duty Boots  
+Ability: Poison Puppeteer  
+Tera Type: Fairy  
+EVs: 252 HP / 104 SpA / 152 Spe  
+Modest Nature  
+IVs: 0 Atk  
+- Parting Shot  
+- Malignant Chain  
+- Hex  
+- Recover  
+
+Garchomp @ Rocky Helmet  
+Ability: Rough Skin  
+Tera Type: Fire  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Stone Edge  
+- Earthquake  
+- Outrage  
+- Stealth Rock

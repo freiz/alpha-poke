@@ -1,0 +1,62 @@
+Skeledirge @ Heavy-Duty Boots  
+Ability: Unaware  
+Tera Type: Fairy  
+EVs: 252 HP / 252 Def / 4 SpA  
+Bold Nature  
+IVs: 0 Atk  
+- Will-O-Wisp  
+- Slack Off  
+- Torch Song  
+- Hex  
+
+Clodsire @ Covert Cloak  
+Ability: Unaware  
+Tera Type: Steel  
+EVs: 252 HP / 4 Def / 252 SpD  
+Calm Nature  
+- Recover  
+- Spikes  
+- Stealth Rock  
+- Earthquake  
+
+Dondozo @ Heavy-Duty Boots  
+Ability: Unaware  
+Tera Type: Grass  
+EVs: 252 HP / 4 Atk / 252 Def  
+Impish Nature  
+- Rest  
+- Sleep Talk  
+- Liquidation  
+- Curse  
+
+Gholdengo @ Heavy-Duty Boots  
+Ability: Good as Gold  
+Tera Type: Normal  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Make It Rain  
+- Recover  
+- Nasty Plot  
+- Shadow Ball  
+
+Corviknight @ Leftovers  
+Ability: Pressure  
+Tera Type: Dragon  
+EVs: 248 HP / 252 Def / 8 SpD  
+Relaxed Nature  
+IVs: 0 Spe  
+- Brave Bird  
+- U-turn  
+- Roost  
+- Defog  
+
+Garganacl @ Leftovers  
+Ability: Purifying Salt  
+Tera Type: Ground  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- Salt Cure  
+- Block  
+- Recover  
+- Stealth Rock

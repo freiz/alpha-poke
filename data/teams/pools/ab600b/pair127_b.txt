@@ -1,0 +1,59 @@
+Hatterene @ Focus Sash  
+Ability: Magic Bounce  
+Tera Type: Steel  
+EVs: 252 HP / 204 Def / 52 Spe  
+Bold Nature  
+- Psychic Noise  
+- Dazzling Gleam  
+- Trick Room  
+- Healing Wish  
+
+Ursaluna @ Flame Orb  
+Ability: Guts  
+Tera Type: Fairy  
+EVs: 248 HP / 252 Atk / 8 SpD  
+Adamant Nature  
+- Fire Punch  
+- Protect  
+- Headlong Rush  
+- Facade  
+
+Porygon2 @ Eviolite  
+Ability: Download  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Def / 4 SpD  
+Relaxed Nature  
+- Trick Room  
+- Ice Beam  
+- Recover  
+- Thunderbolt  
+
+Cresselia @ Red Card  
+Ability: Levitate  
+Tera Type: Poison  
+EVs: 252 HP / 4 Def / 252 SpD  
+Calm Nature  
+- Trick Room  
+- Psychic  
+- Lunar Dance  
+- Moonblast  
+
+Iron Hands @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Flying  
+EVs: 248 HP / 252 Atk / 8 SpD  
+Adamant Nature  
+- Ice Punch  
+- Supercell Slam  
+- Swords Dance  
+- Drain Punch  
+
+Volcanion @ Assault Vest  
+Ability: Water Absorb  
+Tera Type: Ground  
+EVs: 4 HP / 252 SpA / 24 SpD / 228 Spe  
+Timid Nature  
+- Flamethrower  
+- Steam Eruption  
+- Earth Power  
+- Sludge Bomb

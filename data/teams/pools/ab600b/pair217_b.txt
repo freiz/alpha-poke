@@ -1,0 +1,59 @@
+Tyranitar @ Choice Band  
+Ability: Sand Stream  
+Tera Type: Flying  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Knock Off  
+- Low Kick  
+- Ice Beam  
+- Stone Edge  
+
+Excadrill @ Air Balloon  
+Ability: Sand Rush  
+Tera Type: Ground  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Earthquake  
+- Iron Head  
+- Swords Dance  
+- Rapid Spin  
+
+Zapdos @ Rocky Helmet  
+Ability: Static  
+Tera Type: Fire  
+EVs: 240 HP / 52 Def / 216 Spe  
+Timid Nature  
+- U-turn  
+- Roost  
+- Hurricane  
+- Thunder Wave  
+
+Clefable @ Leftovers  
+Ability: Magic Guard  
+Tera Type: Dark  
+EVs: 252 HP / 244 SpD / 12 Spe  
+Calm Nature  
+- Moonblast  
+- Knock Off  
+- Stealth Rock  
+- Protect  
+
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Ivy Cudgel  
+- Swords Dance  
+- U-turn  
+- Knock Off  
+
+Slowking-Galar @ Colbur Berry  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 4 HP / 252 Def / 252 SpD  
+Bold Nature  
+- Thunder Wave  
+- Psyshock  
+- Chilly Reception  
+- Sludge Bomb

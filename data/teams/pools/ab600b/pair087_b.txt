@@ -1,0 +1,59 @@
+Dragapult @ Heavy-Duty Boots  
+Ability: Clear Body  
+Tera Type: Ghost  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- U-turn  
+- Will-O-Wisp  
+- Draco Meteor  
+- Hex  
+
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Play Rough  
+- Ivy Cudgel  
+- Knock Off  
+- U-turn  
+
+Zamazenta @ Life Orb  
+Ability: Dauntless Shield  
+Tera Type: Ice  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Heavy Slam  
+- Close Combat  
+- Roar  
+- Crunch  
+
+Clefable @ Rocky Helmet  
+Ability: Magic Guard  
+Tera Type: Ice  
+EVs: 252 HP / 240 Def / 16 Spe  
+Bold Nature  
+- Thunder Wave  
+- Moonblast  
+- Moonlight  
+- Calm Mind  
+
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Water  
+EVs: 248 HP / 252 Def / 8 SpD  
+Impish Nature  
+- Roost  
+- Iron Defense  
+- Body Press  
+- U-turn  
+
+Ting-Lu @ Heavy-Duty Boots  
+Ability: Vessel of Ruin  
+Tera Type: Poison  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- Ruination  
+- Earthquake  
+- Heavy Slam  
+- Stealth Rock

@@ -1,0 +1,59 @@
+Araquanid @ Custap Berry  
+Ability: Water Bubble  
+Tera Type: Water  
+EVs: 128 Def / 252 SpA / 128 SpD  
+Quiet Nature  
+- Sticky Web  
+- Endeavor  
+- Surf  
+- Lunge  
+
+Ampharos @ Power Herb  
+Ability: Static  
+Tera Type: Fairy  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+- Agility  
+- Meteor Beam  
+- Dazzling Gleam  
+- Focus Blast  
+
+Dragonite @ Chesto Berry  
+Ability: Inner Focus  
+Tera Type: Normal  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- Extreme Speed  
+- Earthquake  
+- Dragon Dance  
+- Roost  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Fighting  
+EVs: 120 HP / 188 SpA / 200 Spe  
+Modest Nature  
+- Thunder Wave  
+- Nasty Plot  
+- Shadow Ball  
+- Make It Rain  
+
+Kyurem @ Choice Specs  
+Ability: Pressure  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Freeze-Dry  
+- Earth Power  
+- Ice Beam  
+- Endeavor  
+
+Great Tusk @ Eject Pack  
+Ability: Protosynthesis  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Headlong Rush  
+- Rapid Spin  
+- Stealth Rock  
+- Ice Spinner

@@ -1,0 +1,59 @@
+Tyranitar @ Leftovers  
+Ability: Sand Stream  
+Tera Type: Ghost  
+EVs: 252 HP / 16 Def / 240 SpD  
+Sassy Nature  
+- Knock Off  
+- Stealth Rock  
+- Ice Beam  
+- Roar  
+
+Excadrill @ Life Orb  
+Ability: Sand Rush  
+Tera Type: Flying  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Earthquake  
+- Rapid Spin  
+- Iron Head  
+- Rock Slide  
+
+Abomasnow @ Assault Vest  
+Ability: Snow Warning  
+Tera Type: Water  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Hardy Nature  
+- Aurora Veil  
+- Blizzard  
+- Leech Seed  
+- Body Press  
+
+Keldeo @ Life Orb  
+Ability: Justified  
+Tera Type: Water  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Vacuum Wave  
+- Hydro Pump  
+- Surf  
+- Flip Turn  
+
+Hippowdon @ Leftovers  
+Ability: Sand Stream  
+Tera Type: Dragon  
+EVs: 252 HP / 4 Atk / 252 Def  
+Impish Nature  
+- Stealth Rock  
+- Slack Off  
+- Body Press  
+- Earthquake  
+
+Toxtricity @ Throat Spray  
+Ability: Punk Rock  
+Tera Type: Normal  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+- Sludge Wave  
+- Boomburst  
+- Overdrive  
+- Shift Gear

@@ -1,0 +1,60 @@
+Meloetta @ Assault Vest  
+Ability: Serene Grace  
+Tera Type: Water  
+EVs: 84 HP / 120 Atk / 32 SpA / 40 SpD / 232 Spe  
+Hasty Nature  
+- Close Combat  
+- Hyper Voice  
+- Shadow Ball  
+- Psyshock  
+
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Tera Type: Water  
+EVs: 252 HP / 4 Atk / 252 SpD  
+Impish Nature  
+- Stealth Rock  
+- Spikes  
+- Whirlwind  
+- Earthquake  
+
+Alomomola @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 252 HP / 4 Atk / 252 Def  
+Impish Nature  
+- Wish  
+- Flip Turn  
+- Scald  
+- Play Rough  
+
+Sinistcha @ Heavy-Duty Boots  
+Ability: Heatproof  
+Tera Type: Fairy  
+EVs: 252 HP / 252 Def / 4 SpA  
+Bold Nature  
+IVs: 0 Atk  
+- Strength Sap  
+- Calm Mind  
+- Shadow Ball  
+- Matcha Gotcha  
+
+Great Tusk @ Heavy-Duty Boots  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Headlong Rush  
+- Knock Off  
+- Rapid Spin  
+- Ice Spinner  
+
+Zamazenta @ Choice Band  
+Ability: Dauntless Shield  
+Tera Type: Fighting  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Close Combat  
+- Ice Fang  
+- Stone Edge  
+- Crunch

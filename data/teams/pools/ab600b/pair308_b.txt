@@ -1,0 +1,59 @@
+Blaziken @ Life Orb  
+Ability: Speed Boost  
+Tera Type: Fire  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Stone Edge  
+- Close Combat  
+- Knock Off  
+- Overheat  
+
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Ivy Cudgel  
+- Swords Dance  
+- Play Rough  
+- Knock Off  
+
+Raging Bolt @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Bug  
+EVs: 112 HP / 252 SpA / 144 Spe  
+Modest Nature  
+- Thunderbolt  
+- Dragon Pulse  
+- Thunderclap  
+- Calm Mind  
+
+Tinkaton @ Air Balloon  
+Ability: Pickpocket  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Atk / 252 SpD  
+Careful Nature  
+- Stealth Rock  
+- Gigaton Hammer  
+- Thunder Wave  
+- Encore  
+
+Mandibuzz @ Rocky Helmet  
+Ability: Overcoat  
+Tera Type: Fairy  
+EVs: 4 HP / 252 Def / 252 SpD  
+Timid Nature  
+- Foul Play  
+- Roost  
+- Toxic  
+- Nasty Plot  
+
+Lilligant-Hisui @ Life Orb  
+Ability: Chlorophyll  
+Tera Type: Ghost  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- Triple Axel  
+- Solar Blade  
+- Victory Dance  
+- Swords Dance

@@ -1,0 +1,59 @@
+Pelipper @ Damp Rock  
+Ability: Drizzle  
+Tera Type: Ground  
+EVs: 248 HP / 252 Def / 8 SpA  
+Bold Nature  
+- Hurricane  
+- U-turn  
+- Chilling Water  
+- Roost  
+
+Floatzel @ Choice Band  
+Ability: Swift Swim  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Liquidation  
+- Ice Spinner  
+- Wave Crash  
+- Aqua Jet  
+
+Dragonite @ Heavy-Duty Boots  
+Ability: Multiscale  
+Tera Type: Electric  
+EVs: 8 Atk / 248 SpA / 252 Spe  
+Mild Nature  
+- Earthquake  
+- Extreme Speed  
+- Thunder  
+- Hurricane  
+
+Corviknight @ Leftovers  
+Ability: Pressure  
+Tera Type: Water  
+EVs: 248 HP / 8 Def / 252 SpD  
+Careful Nature  
+- Roost  
+- U-turn  
+- Defog  
+- Brave Bird  
+
+Iron Treads @ Heavy-Duty Boots  
+Ability: Quark Drive  
+Tera Type: Flying  
+EVs: 252 HP / 4 Def / 252 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Iron Head  
+- Volt Switch  
+- Earthquake  
+
+Azumarill @ Sitrus Berry  
+Ability: Huge Power  
+Tera Type: Water  
+EVs: 252 HP / 252 Atk / 4 Spe  
+Adamant Nature  
+- Belly Drum  
+- Liquidation  
+- Play Rough  
+- Aqua Jet

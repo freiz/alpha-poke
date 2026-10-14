@@ -1,0 +1,59 @@
+Torkoal @ Eject Pack  
+Ability: Drought  
+Tera Type: Fairy  
+EVs: 248 HP / 252 Def / 8 SpD  
+Bold Nature  
+- Eruption  
+- Rapid Spin  
+- Earthquake  
+- Overheat  
+
+Brute Bonnet @ Loaded Dice  
+Ability: Protosynthesis  
+Tera Type: Dark  
+EVs: 252 HP / 252 Atk / 4 SpA  
+Brave Nature  
+- Growth  
+- Bullet Seed  
+- Sucker Punch  
+- Seed Bomb  
+
+Walking Wake @ Life Orb  
+Ability: Protosynthesis  
+Tera Type: Water  
+EVs: 252 SpA / 252 Spe  
+Timid Nature  
+- Draco Meteor  
+- Flip Turn  
+- Flamethrower  
+- Hydro Steam  
+
+Hatterene @ Eject Button  
+Ability: Magic Bounce  
+Tera Type: Dragon  
+EVs: 248 HP / 252 Def / 8 SpA  
+Bold Nature  
+- Dazzling Gleam  
+- Nuzzle  
+- Draining Kiss  
+- Healing Wish  
+
+Thundurus-Therian @ Leftovers  
+Ability: Volt Absorb  
+Tera Type: Fairy  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Nasty Plot  
+- Thunderbolt  
+- Agility  
+- Focus Blast  
+
+Ceruledge @ Focus Sash  
+Ability: Weak Armor  
+Tera Type: Fairy  
+EVs: 252 Atk / 252 Spe  
+Naive Nature  
+- Bitter Blade  
+- Poltergeist  
+- Swords Dance  
+- Shadow Sneak

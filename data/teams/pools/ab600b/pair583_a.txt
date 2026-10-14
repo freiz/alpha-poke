@@ -1,0 +1,61 @@
+Alomomola @ Assault Vest  
+Ability: Regenerator  
+Tera Type: Normal  
+EVs: 252 HP / 4 Def / 252 SpD  
+Sassy Nature  
+IVs: 0 Spe  
+- Flip Turn  
+- Mirror Coat  
+- Aqua Jet  
+- Whirlpool  
+
+Great Tusk @ Heavy-Duty Boots  
+Ability: Protosynthesis  
+Tera Type: Fighting  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Headlong Rush  
+- Ice Spinner  
+- Rapid Spin  
+- Close Combat  
+
+Kyurem @ Choice Specs  
+Ability: Pressure  
+Tera Type: Ice  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Modest Nature  
+IVs: 0 Atk  
+- Blizzard  
+- Freeze-Dry  
+- Earth Power  
+- Draco Meteor  
+
+Ogerpon (F) @ Choice Band  
+Ability: Defiant  
+Tera Type: Grass  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Ivy Cudgel  
+- Knock Off  
+- U-turn  
+- Low Kick  
+
+Hatterene (F) @ Leftovers  
+Ability: Magic Bounce  
+Tera Type: Water  
+EVs: 252 HP / 204 Def / 52 Spe  
+Bold Nature  
+- Psychic Noise  
+- Draining Kiss  
+- Pain Split  
+- Nuzzle  
+
+Kingambit @ Black Glasses  
+Ability: Supreme Overlord  
+Tera Type: Dark  
+EVs: 252 HP / 252 Atk / 4 Def  
+Adamant Nature  
+- Swords Dance  
+- Sucker Punch  
+- Kowtow Cleave  
+- Iron Head

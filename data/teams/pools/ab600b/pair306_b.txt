@@ -1,0 +1,59 @@
+Empoleon @ Life Orb  
+Ability: Competitive  
+Tera Type: Fighting  
+EVs: 232 HP / 28 SpA / 248 SpD  
+Sassy Nature  
+- Vacuum Wave  
+- Ice Beam  
+- Surf  
+- Roost  
+
+Serperior @ Leftovers  
+Ability: Contrary  
+Tera Type: Fire  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Glare  
+- Leech Seed  
+- Leaf Storm  
+- Substitute  
+
+Kingambit @ Air Balloon  
+Ability: Defiant  
+Tera Type: Fairy  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Kowtow Cleave  
+- Iron Head  
+- Low Kick  
+- Swords Dance  
+
+Dragapult @ Choice Band  
+Ability: Infiltrator  
+Tera Type: Dragon  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Modest Nature  
+- Dragon Darts  
+- U-turn  
+- Will-O-Wisp  
+- Shadow Ball  
+
+Ribombee @ Focus Sash  
+Ability: Shield Dust  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Sticky Web  
+- Stun Spore  
+- Skill Swap  
+- Moonblast  
+
+Cinderace @ Heavy-Duty Boots  
+Ability: Libero  
+Tera Type: Fire  
+EVs: 232 HP / 24 Atk / 252 Spe  
+Jolly Nature  
+- Court Change  
+- U-turn  
+- Pyro Ball  
+- Will-O-Wisp

@@ -1,0 +1,59 @@
+Slither Wing @ Choice Band  
+Ability: Protosynthesis  
+Tera Type: Electric  
+EVs: 248 HP / 176 Def / 84 Spe  
+Impish Nature  
+- First Impression  
+- U-turn  
+- Earthquake  
+- Flare Blitz  
+
+Pecharunt @ Covert Cloak  
+Ability: Poison Puppeteer  
+Tera Type: Dark  
+EVs: 248 HP / 252 Def / 8 SpD  
+Bold Nature  
+- Shadow Ball  
+- Parting Shot  
+- Malignant Chain  
+- Recover  
+
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Tera Type: Poison  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- Stealth Rock  
+- Whirlwind  
+- Earthquake  
+- Spikes  
+
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Play Rough  
+- Ivy Cudgel  
+- Knock Off  
+- Swords Dance  
+
+Raging Bolt @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Flying  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+- Thunderbolt  
+- Dragon Pulse  
+- Calm Mind  
+- Thunderclap  
+
+Cinderace @ Heavy-Duty Boots  
+Ability: Libero  
+Tera Type: Ghost  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Will-O-Wisp  
+- Pyro Ball  
+- Court Change

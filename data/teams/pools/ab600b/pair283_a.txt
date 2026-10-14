@@ -1,0 +1,59 @@
+Ninetales @ Heat Rock  
+Ability: Drought  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Overheat  
+- Encore  
+- Healing Wish  
+- Will-O-Wisp  
+
+Cresselia @ Light Clay  
+Ability: Levitate  
+Tera Type: Fairy  
+EVs: 172 HP / 252 SpA / 84 Spe  
+Modest Nature  
+- Lunar Dance  
+- Moonlight  
+- Ice Beam  
+- Moonblast  
+
+Raging Bolt @ Life Orb  
+Ability: Protosynthesis  
+Tera Type: Fairy  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Modest Nature  
+- Thunderbolt  
+- Thunderclap  
+- Dragon Pulse  
+- Calm Mind  
+
+Iron Moth @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Fire  
+EVs: 252 Def / 4 SpD / 252 Spe  
+Timid Nature  
+- Fiery Dance  
+- Solar Beam  
+- Dazzling Gleam  
+- Sludge Wave  
+
+Great Tusk @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Headlong Rush  
+- Stealth Rock  
+- Close Combat  
+
+Walking Wake @ Life Orb  
+Ability: Protosynthesis  
+Tera Type: Water  
+EVs: 12 HP / 244 SpA / 252 Spe  
+Timid Nature  
+- Dragon Pulse  
+- Flamethrower  
+- Hydro Steam  
+- Draco Meteor

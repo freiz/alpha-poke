@@ -1,0 +1,59 @@
+Tyranitar @ Smooth Rock  
+Ability: Sand Stream  
+Tera Type: Ghost  
+EVs: 252 HP / 16 Def / 240 SpD  
+Sassy Nature  
+- Thunder Wave  
+- Ice Beam  
+- Stealth Rock  
+- Knock Off  
+
+Excadrill @ Air Balloon  
+Ability: Sand Rush  
+Tera Type: Ground  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- Earthquake  
+- Swords Dance  
+- Iron Head  
+- Rapid Spin  
+
+Rotom-Wash @ Leftovers  
+Ability: Levitate  
+Tera Type: Steel  
+EVs: 36 HP / 12 Def / 220 SpA / 240 Spe  
+Timid Nature  
+- Hydro Pump  
+- Volt Switch  
+- Will-O-Wisp  
+- Pain Split  
+
+Heracross @ Flame Orb  
+Ability: Moxie  
+Tera Type: Ground  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Trailblaze  
+- Stone Edge  
+- Close Combat  
+- Facade  
+
+Metagross @ Air Balloon  
+Ability: Clear Body  
+Tera Type: Steel  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Meteor Mash  
+- Psychic Fangs  
+- Earthquake  
+- Heavy Slam  
+
+Dragonite @ Leftovers  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Extreme Speed  
+- Dragon Dance  
+- Ice Spinner  
+- Earthquake

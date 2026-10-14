@@ -1,0 +1,59 @@
+Great Tusk @ Rocky Helmet  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Headlong Rush  
+- Rapid Spin  
+- Stealth Rock  
+- Ice Spinner  
+
+Kyurem @ Loaded Dice  
+Ability: Pressure  
+Tera Type: Ground  
+EVs: 24 HP / 252 SpA / 232 Spe  
+Modest Nature  
+- Freeze-Dry  
+- Dragon Dance  
+- Icicle Spear  
+- Earth Power  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Kowtow Cleave  
+- Sucker Punch  
+- Swords Dance  
+- Iron Head  
+
+Landorus-Therian @ Choice Band  
+Ability: Intimidate  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- U-turn  
+- Earthquake  
+- Stealth Rock  
+- Taunt  
+
+Slowking-Galar @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 252 HP / 76 Def / 180 SpD  
+Careful Nature  
+- Chilly Reception  
+- Toxic  
+- Flamethrower  
+- Sludge Bomb  
+
+Enamorus @ Leftovers  
+Ability: Contrary  
+Tera Type: Stellar  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Modest Nature  
+- Earth Power  
+- Moonblast  
+- Substitute  
+- Superpower

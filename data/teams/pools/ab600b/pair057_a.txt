@@ -1,0 +1,59 @@
+Lokix @ Choice Band  
+Ability: Tinted Lens  
+Tera Type: Bug  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- First Impression  
+- U-turn  
+- Leech Life  
+- Knock Off  
+
+Weezing-Galar @ Air Balloon  
+Ability: Neutralizing Gas  
+Tera Type: Grass  
+EVs: 248 HP / 252 Def / 8 SpD  
+Bold Nature  
+- Defog  
+- Sludge Bomb  
+- Will-O-Wisp  
+- Pain Split  
+
+Primarina @ Leftovers  
+Ability: Liquid Voice  
+Tera Type: Steel  
+EVs: 248 HP / 8 Def / 252 SpA  
+Modest Nature  
+- Psychic Noise  
+- Moonblast  
+- Draining Kiss  
+- Calm Mind  
+
+Heatran @ Leftovers  
+Ability: Flash Fire  
+Tera Type: Ghost  
+EVs: 252 HP / 4 SpA / 252 SpD  
+Calm Nature  
+- Magma Storm  
+- Earth Power  
+- Stealth Rock  
+- Will-O-Wisp  
+
+Garganacl @ Leftovers  
+Ability: Purifying Salt  
+Tera Type: Water  
+EVs: 252 HP / 52 Def / 204 SpD  
+Careful Nature  
+- Stealth Rock  
+- Salt Cure  
+- Recover  
+- Protect  
+
+Salazzle @ Leftovers  
+Ability: Corrosion  
+Tera Type: Normal  
+EVs: 252 SpA / 252 Spe  
+Timid Nature  
+- Overheat  
+- Toxic  
+- Flamethrower  
+- Substitute

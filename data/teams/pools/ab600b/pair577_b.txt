@@ -1,0 +1,62 @@
+Ninetales-Alola @ Light Clay  
+Ability: Snow Warning  
+Tera Type: Water  
+EVs: 248 HP / 8 SpA / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Aurora Veil  
+- Encore  
+- Freeze-Dry  
+- Moonblast  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Water  
+EVs: 244 HP / 248 Def / 16 SpD  
+Impish Nature  
+- Earthquake  
+- Stealth Rock  
+- Protect  
+- Knock Off  
+
+Dragapult @ Mirror Herb  
+Ability: Infiltrator  
+Tera Type: Dragon  
+EVs: 76 Atk / 180 SpA / 252 Spe  
+Naive Nature  
+- Dragon Darts  
+- Hex  
+- Thunder Wave  
+- U-turn  
+
+Cinderace @ Heavy-Duty Boots  
+Ability: Blaze  
+Tera Type: Fire  
+EVs: 224 HP / 32 Atk / 252 Spe  
+Jolly Nature  
+- Pyro Ball  
+- U-turn  
+- Will-O-Wisp  
+- Court Change  
+
+Dragonite @ Heavy-Duty Boots  
+Ability: Multiscale  
+Shiny: Yes  
+Tera Type: Normal  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Dragon Dance  
+- Extreme Speed  
+- Earthquake  
+- Ice Spinner  
+
+Primarina @ Custap Berry  
+Ability: Torrent  
+Tera Type: Steel  
+EVs: 80 HP / 252 SpA / 176 Spe  
+Modest Nature  
+IVs: 0 Atk  
+- Surf  
+- Moonblast  
+- Perish Song  
+- Calm Mind

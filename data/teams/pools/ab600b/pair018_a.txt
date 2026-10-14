@@ -1,0 +1,59 @@
+Slowking @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Poison  
+EVs: 252 HP / 252 Def / 4 SpD  
+Relaxed Nature  
+- Future Sight  
+- Chilly Reception  
+- Scald  
+- Thunder Wave  
+
+Sandslash-Alola @ Air Balloon  
+Ability: Slush Rush  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Knock Off  
+- Earthquake  
+- Icicle Crash  
+- Triple Axel  
+
+Kyurem @ Assault Vest  
+Ability: Pressure  
+Tera Type: Poison  
+EVs: 252 Atk / 4 SpA / 252 Spe  
+Lonely Nature  
+- Earth Power  
+- Freeze-Dry  
+- Body Press  
+- Ice Beam  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Steel  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Naive Nature  
+- Moonblast  
+- Aura Sphere  
+- Shadow Ball  
+- Encore  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Nasty Plot  
+- Shadow Ball  
+- Make It Rain  
+- Thunderbolt  
+
+Lokix @ Life Orb  
+Ability: Tinted Lens  
+Tera Type: Bug  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Knock Off  
+- First Impression  
+- Leech Life

@@ -1,0 +1,59 @@
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Water  
+EVs: 244 HP / 36 Def / 228 SpD  
+Careful Nature  
+- Earthquake  
+- Spikes  
+- Protect  
+- Toxic  
+
+Ogerpon-Wellspring (F) @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Ivy Cudgel  
+- Horn Leech  
+- U-turn  
+- Knock Off  
+
+Kingambit @ Black Glasses  
+Ability: Supreme Overlord  
+Tera Type: Dark  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Kowtow Cleave  
+- Sucker Punch  
+- Iron Head  
+
+Zapdos @ Heavy-Duty Boots  
+Ability: Static  
+Tera Type: Grass  
+EVs: 248 HP / 244 Def / 16 Spe  
+Bold Nature  
+- U-turn  
+- Discharge  
+- Hurricane  
+- Roost  
+
+Gholdengo @ Rocky Helmet  
+Ability: Good as Gold  
+Tera Type: Fairy  
+EVs: 252 HP / 196 Def / 60 Spe  
+Bold Nature  
+- Hex  
+- Thunder Wave  
+- Recover  
+- Make It Rain  
+
+Cinderace @ Heavy-Duty Boots  
+Ability: Blaze  
+Tera Type: Fire  
+EVs: 224 HP / 32 Atk / 252 Spe  
+Jolly Nature  
+- Pyro Ball  
+- U-turn  
+- Will-O-Wisp  
+- Court Change

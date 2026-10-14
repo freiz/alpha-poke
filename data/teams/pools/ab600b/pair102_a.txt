@@ -1,0 +1,59 @@
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Close Combat  
+- Headlong Rush  
+- Ice Spinner  
+
+Cinderace @ Heavy-Duty Boots  
+Ability: Libero  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Gunk Shot  
+- U-turn  
+- Pyro Ball  
+- Court Change  
+
+Slowking-Galar @ Black Sludge  
+Ability: Regenerator  
+Tera Type: Flying  
+EVs: 252 HP / 252 SpD  
+Sassy Nature  
+- Future Sight  
+- Chilly Reception  
+- Ice Beam  
+- Sludge Bomb  
+
+Kingambit @ Leftovers  
+Ability: Defiant  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Sucker Punch  
+- Kowtow Cleave  
+- Swords Dance  
+- Iron Head  
+
+Raging Bolt @ Life Orb  
+Ability: Protosynthesis  
+Tera Type: Fairy  
+EVs: 64 HP / 24 Def / 252 SpA / 168 Spe  
+Modest Nature  
+- Thunder  
+- Thunderclap  
+- Draco Meteor  
+- Dragon Pulse  
+
+Sinistcha-Masterpiece @ Rocky Helmet  
+Ability: Heatproof  
+Tera Type: Steel  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Calm Mind  
+- Shadow Ball  
+- Strength Sap  
+- Matcha Gotcha

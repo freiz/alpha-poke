@@ -1,0 +1,59 @@
+Alomomola @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 4 HP / 252 Def / 252 SpD  
+Relaxed Nature  
+- Wish  
+- Flip Turn  
+- Scald  
+- Mirror Coat  
+
+Slowking-Galar @ Heavy-Duty Boots  
+Ability: Curious Medicine  
+Tera Type: Water  
+EVs: 252 HP / 16 Def / 68 SpA / 172 SpD  
+Modest Nature  
+- Sludge Bomb  
+- Chilly Reception  
+- Future Sight  
+- Thunder Wave  
+
+Jirachi @ Leftovers  
+Ability: Serene Grace  
+Tera Type: Steel  
+EVs: 224 HP / 32 Atk / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Psychic  
+- Doom Desire  
+- Iron Head  
+
+Dragapult @ Life Orb  
+Ability: Infiltrator  
+Tera Type: Dragon  
+EVs: 112 Atk / 144 SpA / 252 Spe  
+Naughty Nature  
+- U-turn  
+- Dragon Darts  
+- Will-O-Wisp  
+- Shadow Ball  
+
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Low Kick  
+- Swords Dance  
+- Ivy Cudgel  
+- Trailblaze  
+
+Thundurus-Therian @ Rocky Helmet  
+Ability: Volt Absorb  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Thunderbolt  
+- Agility  
+- Focus Blast  
+- Nasty Plot

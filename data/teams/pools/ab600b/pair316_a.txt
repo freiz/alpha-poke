@@ -1,0 +1,59 @@
+Torkoal @ Heat Rock  
+Ability: Drought  
+Tera Type: Flying  
+EVs: 252 HP / 4 Def / 252 SpD  
+Sassy Nature  
+- Overheat  
+- Rapid Spin  
+- Stealth Rock  
+- Will-O-Wisp  
+
+Scovillain @ Life Orb  
+Ability: Chlorophyll  
+Tera Type: Ground  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Naive Nature  
+- Flamethrower  
+- Giga Drain  
+- Growth  
+- Will-O-Wisp  
+
+Walking Wake @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Ghost  
+EVs: 8 HP / 244 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Hydro Steam  
+- Draco Meteor  
+- Flamethrower  
+- Dragon Pulse  
+
+Hatterene @ Custap Berry  
+Ability: Magic Bounce  
+Tera Type: Flying  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Healing Wish  
+- Draining Kiss  
+- Nuzzle  
+- Mystical Fire  
+
+Great Tusk @ Rocky Helmet  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 248 HP / 188 Def / 72 Spe  
+Jolly Nature  
+- Ice Spinner  
+- Headlong Rush  
+- Stealth Rock  
+- Rapid Spin  
+
+Ceruledge @ Focus Sash  
+Ability: Weak Armor  
+Tera Type: Fighting  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Bitter Blade  
+- Solar Blade  
+- Poltergeist  
+- Shadow Sneak

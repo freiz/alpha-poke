@@ -1,0 +1,62 @@
+Ceruledge @ Life Orb  
+Ability: Weak Armor  
+Shiny: Yes  
+Tera Type: Fighting  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Bitter Blade  
+- Poltergeist  
+- Shadow Sneak  
+
+Grimmsnarl @ Light Clay  
+Ability: Prankster  
+Shiny: Yes  
+Tera Type: Steel  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Reflect  
+- Light Screen  
+- Parting Shot  
+- Low Kick  
+
+Ogerpon (F) @ Choice Band  
+Ability: Defiant  
+Tera Type: Grass  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Ivy Cudgel  
+- Knock Off  
+- U-turn  
+- Low Kick  
+
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Dragon  
+EVs: 248 HP / 252 Def / 8 SpD  
+Impish Nature  
+IVs: 0 Atk  
+- Body Press  
+- Iron Defense  
+- Defog  
+- Roost  
+
+Clodsire @ Heavy-Duty Boots  
+Ability: Unaware  
+Tera Type: Steel  
+EVs: 248 HP / 8 Def / 252 SpD  
+Careful Nature  
+- Earthquake  
+- Recover  
+- Toxic  
+- Stealth Rock  
+
+Deoxys-Speed @ Eject Pack  
+Ability: Pressure  
+Tera Type: Fighting  
+EVs: 200 Atk / 252 SpA / 56 Spe  
+Naive Nature  
+- Psycho Boost  
+- Superpower  
+- Knock Off  
+- Ice Beam

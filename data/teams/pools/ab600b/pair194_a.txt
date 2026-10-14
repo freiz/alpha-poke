@@ -1,0 +1,59 @@
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- Close Combat  
+- Ice Spinner  
+- Knock Off  
+- Headlong Rush  
+
+Slowking-Galar @ Assault Vest  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 248 HP / 8 Def / 252 SpD  
+Sassy Nature  
+- Sludge Bomb  
+- Ice Beam  
+- Psyshock  
+- Flamethrower  
+
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Fire  
+EVs: 248 HP / 200 Def / 60 SpD  
+Impish Nature  
+- Brave Bird  
+- Iron Defense  
+- Roost  
+- U-turn  
+
+Clefable @ Leftovers  
+Ability: Magic Guard  
+Tera Type: Dark  
+EVs: 252 HP / 236 Def / 16 SpD / 4 Spe  
+Bold Nature  
+- Stealth Rock  
+- Moonblast  
+- Knock Off  
+- Protect  
+
+Samurott-Hisui @ Assault Vest  
+Ability: Sharpness  
+Tera Type: Dark  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Ceaseless Edge  
+- Knock Off  
+- Aqua Cutter  
+- Sucker Punch  
+
+Dragapult @ Choice Specs  
+Ability: Infiltrator  
+Tera Type: Ghost  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Naive Nature  
+- Thunderbolt  
+- Shadow Ball  
+- Draco Meteor  
+- U-turn

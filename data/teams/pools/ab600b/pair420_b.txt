@@ -1,0 +1,57 @@
+Quaquaval @ Assault Vest  
+Ability: Moxie  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Aqua Step  
+- Close Combat  
+- Ice Spinner  
+- U-turn  
+
+Ogerpon-Cornerstone (F) @ Cornerstone Mask  
+Ability: Sturdy  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Ivy Cudgel  
+- Horn Leech  
+- Knock Off  
+
+Iron Moth @ Assault Vest  
+Ability: Quark Drive  
+Tera Type: Grass  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Fiery Dance  
+- Sludge Wave  
+- U-turn  
+- Energy Ball  
+
+Corviknight @ Leftovers  
+Ability: Mirror Armor  
+Tera Type: Dragon  
+EVs: 252 HP / 4 Atk / 252 Def  
+Impish Nature  
+- Roost  
+- Defog  
+- Brave Bird  
+- Body Press  
+
+Dragapult @ Life Orb  
+Ability: Infiltrator  
+Tera Type: Fire  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Draco Meteor  
+- Flamethrower  
+- Shadow Ball  
+- U-turn  
+
+Deoxys-Speed @ Focus Sash  
+Ability: Pressure  
+Tera Type: Dark  
+EVs: 252 HP / 128 Def / 128 SpD  
+Timid Nature  
+- Spikes  
+- Stealth Rock  
+- Knock Off  
+- Psycho Boost

@@ -1,0 +1,59 @@
+Armarouge @ Weakness Policy  
+Ability: Weak Armor  
+Tera Type: Psychic  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Expanding Force  
+- Armor Cannon  
+- Endure  
+- Aura Sphere  
+
+Indeedee @ Terrain Extender  
+Ability: Psychic Surge  
+Tera Type: Fighting  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Expanding Force  
+- Shadow Ball  
+- Dazzling Gleam  
+- Trick Room  
+
+Weezing-Galar @ Leftovers  
+Ability: Neutralizing Gas  
+Tera Type: Ghost  
+EVs: 236 HP / 96 Def / 176 Spe  
+Bold Nature  
+- Toxic  
+- Will-O-Wisp  
+- Sludge Bomb  
+- Defog  
+
+Deoxys-Speed @ Focus Sash  
+Ability: Pressure  
+Tera Type: Electric  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Hasty Nature  
+- Nasty Plot  
+- Psyshock  
+- Ice Beam  
+- Psycho Boost  
+
+Iron Treads @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Bug  
+EVs: 80 HP / 120 Atk / 116 SpD / 192 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Earthquake  
+- Rapid Spin  
+- Ice Spinner  
+
+Great Tusk @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Fire  
+EVs: 248 HP / 4 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Ice Spinner  
+- Headlong Rush  
+- Rapid Spin  
+- Stealth Rock

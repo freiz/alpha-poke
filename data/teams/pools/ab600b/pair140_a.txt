@@ -1,0 +1,59 @@
+Ninetales @ Heat Rock  
+Ability: Drought  
+Tera Type: Ghost  
+EVs: 248 HP / 20 Def / 240 Spe  
+Timid Nature  
+- Foul Play  
+- Will-O-Wisp  
+- Overheat  
+- Encore  
+
+Heatran @ Air Balloon  
+Ability: Flash Fire  
+Tera Type: Fairy  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+- Stealth Rock  
+- Earth Power  
+- Magma Storm  
+- Will-O-Wisp  
+
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Ghost  
+EVs: 248 HP / 4 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Ice Spinner  
+- Stealth Rock  
+- Rapid Spin  
+- Close Combat  
+
+Delphox @ Air Balloon  
+Ability: Magician  
+Tera Type: Steel  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Psyshock  
+- Dazzling Gleam  
+- Focus Blast  
+- Nasty Plot  
+
+Lilligant-Hisui @ Life Orb  
+Ability: Chlorophyll  
+Tera Type: Ghost  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Solar Blade  
+- Swords Dance  
+- Close Combat  
+- Victory Dance  
+
+Walking Wake @ Life Orb  
+Ability: Protosynthesis  
+Tera Type: Water  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Hydro Steam  
+- Draco Meteor  
+- Flamethrower  
+- Weather Ball

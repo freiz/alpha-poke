@@ -1,0 +1,62 @@
+Cyclizar @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Dragon  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Rapid Spin  
+- U-turn  
+- Dragon Claw  
+
+Toxapex @ Assault Vest  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 248 HP / 252 SpA / 8 SpD  
+Modest Nature  
+IVs: 0 Atk  
+- Surf  
+- Sludge Bomb  
+- Infestation  
+- Acid Spray  
+
+Hydreigon @ Leftovers  
+Ability: Levitate  
+Tera Type: Poison  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Nasty Plot  
+- Substitute  
+- Dark Pulse  
+- Earth Power  
+
+Gholdengo @ Covert Cloak  
+Ability: Good as Gold  
+Tera Type: Fighting  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Nasty Plot  
+- Shadow Ball  
+- Make It Rain  
+- Recover  
+
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Tera Type: Poison  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- Stealth Rock  
+- Spikes  
+- Whirlwind  
+- Earthquake  
+
+Great Tusk @ Rocky Helmet  
+Ability: Protosynthesis  
+Tera Type: Fighting  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Earthquake  
+- Body Press  
+- Knock Off  
+- Rapid Spin

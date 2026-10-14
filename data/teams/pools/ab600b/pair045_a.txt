@@ -1,0 +1,59 @@
+Alcremie @ Leftovers  
+Ability: Sweet Veil  
+Tera Type: Steel  
+EVs: 252 HP / 164 Def / 92 SpA  
+Modest Nature  
+- Acid Armor  
+- Stored Power  
+- Calm Mind  
+- Alluring Voice  
+
+Dragapult @ Life Orb  
+Ability: Clear Body  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Shadow Ball  
+- Will-O-Wisp  
+- U-turn  
+- Dragon Darts  
+
+Gholdengo @ Custap Berry  
+Ability: Good as Gold  
+Tera Type: Fairy  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Shadow Ball  
+- Make It Rain  
+- Recover  
+- Nasty Plot  
+
+Landorus-Therian @ Focus Sash  
+Ability: Intimidate  
+Tera Type: Ground  
+EVs: 248 HP / 8 Def / 252 Spe  
+Timid Nature  
+- Earthquake  
+- Stealth Rock  
+- U-turn  
+- Earth Power  
+
+Okidogi @ Leftovers  
+Ability: Guard Dog  
+Tera Type: Ice  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Bulk Up  
+- Drain Punch  
+- Ice Punch  
+- Gunk Shot  
+
+Primarina @ Assault Vest  
+Ability: Torrent  
+Tera Type: Poison  
+EVs: 80 HP / 252 SpA / 176 Spe  
+Modest Nature  
+- Surf  
+- Moonblast  
+- Flip Turn  
+- Psychic Noise

@@ -1,0 +1,59 @@
+Slowking-Galar @ Black Sludge  
+Ability: Regenerator  
+Tera Type: Steel  
+EVs: 248 HP / 8 Def / 252 SpD  
+Sassy Nature  
+- Psychic Noise  
+- Trick  
+- Chilly Reception  
+- Sludge Bomb  
+
+Scizor @ Choice Band  
+Ability: Technician  
+Tera Type: Steel  
+EVs: 248 HP / 252 Atk / 8 SpD  
+Adamant Nature  
+- Knock Off  
+- U-turn  
+- Close Combat  
+- Bullet Punch  
+
+Hydrapple @ Choice Specs  
+Ability: Sticky Hold  
+Tera Type: Fairy  
+EVs: 252 HP / 252 SpA / 4 Spe  
+Modest Nature  
+- Hydro Pump  
+- Leaf Storm  
+- Earth Power  
+- Draco Meteor  
+
+Cinderace @ Heavy-Duty Boots  
+Ability: Libero  
+Tera Type: Fire  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Pyro Ball  
+- Court Change  
+- Will-O-Wisp  
+
+Sandy Shocks @ Choice Scarf  
+Ability: Protosynthesis  
+Tera Type: Ice  
+EVs: 48 HP / 208 SpA / 252 Spe  
+Timid Nature  
+- Volt Switch  
+- Earth Power  
+- Thunder Wave  
+- Stealth Rock  
+
+Alomomola @ Leftovers  
+Ability: Regenerator  
+Tera Type: Ghost  
+EVs: 20 HP / 236 Def / 252 SpD  
+Sassy Nature  
+- Flip Turn  
+- Wish  
+- Scald  
+- Protect

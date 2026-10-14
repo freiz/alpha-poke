@@ -1,0 +1,59 @@
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Water  
+EVs: 244 HP / 12 Atk / 252 Spe  
+Jolly Nature  
+- Protect  
+- Knock Off  
+- Earthquake  
+- Spikes  
+
+Blissey @ Leftovers  
+Ability: Natural Cure  
+Tera Type: Dark  
+EVs: 212 HP / 252 Def / 44 Spe  
+Bold Nature  
+- Stealth Rock  
+- Seismic Toss  
+- Soft-Boiled  
+- Calm Mind  
+
+Weezing-Galar @ Shuca Berry  
+Ability: Neutralizing Gas  
+Tera Type: Dragon  
+EVs: 252 HP / 244 Def / 12 Spe  
+Bold Nature  
+- Will-O-Wisp  
+- Defog  
+- Pain Split  
+- Sludge Bomb  
+
+Toxapex @ Leftovers  
+Ability: Regenerator  
+Tera Type: Grass  
+EVs: 252 HP / 124 Def / 132 SpD  
+Calm Nature  
+- Toxic  
+- Baneful Bunker  
+- Infestation  
+- Poison Jab  
+
+Talonflame @ Heavy-Duty Boots  
+Ability: Gale Wings  
+Tera Type: Dragon  
+EVs: 252 HP / 4 Def / 252 Spe  
+Bold Nature  
+- Will-O-Wisp  
+- Defog  
+- Roost  
+- Flamethrower  
+
+Dondozo @ Leftovers  
+Ability: Unaware  
+Tera Type: Dark  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Crunch  
+- Sleep Talk  
+- Curse  
+- Rest

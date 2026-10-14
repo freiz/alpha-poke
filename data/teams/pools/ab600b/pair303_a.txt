@@ -1,0 +1,59 @@
+Dragapult @ Life Orb  
+Ability: Infiltrator  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpA / 252 Spe  
+Naive Nature  
+- Flamethrower  
+- Shadow Ball  
+- U-turn  
+- Draco Meteor  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Electric  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Calm Mind  
+- Psyshock  
+- Thunderbolt  
+- Moonblast  
+
+Corviknight @ Leftovers  
+Ability: Pressure  
+Tera Type: Dark  
+EVs: 136 HP / 252 Def / 120 Spe  
+Bold Nature  
+- Defog  
+- U-turn  
+- Brave Bird  
+- Roost  
+
+Samurott-Hisui @ Focus Sash  
+Ability: Sharpness  
+Tera Type: Poison  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Razor Shell  
+- Ceaseless Edge  
+- Aqua Cutter  
+- Sucker Punch  
+
+Iron Treads @ Leftovers  
+Ability: Quark Drive  
+Tera Type: Ice  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Ice Spinner  
+- Stealth Rock  
+- Earthquake  
+
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Ivy Cudgel  
+- U-turn  
+- Play Rough

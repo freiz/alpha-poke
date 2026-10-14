@@ -1,0 +1,59 @@
+Araquanid @ Red Card  
+Ability: Water Bubble  
+Tera Type: Ghost  
+EVs: 224 HP / 252 Atk / 32 Spe  
+Adamant Nature  
+- Surf  
+- Sticky Web  
+- Endure  
+- Endeavor  
+
+Kingambit @ Air Balloon  
+Ability: Supreme Overlord  
+Tera Type: Flying  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Sucker Punch  
+- Iron Head  
+- Kowtow Cleave  
+- Swords Dance  
+
+Iron Treads @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ground  
+EVs: 156 HP / 64 Atk / 96 SpD / 192 Spe  
+Jolly Nature  
+- Earthquake  
+- Stealth Rock  
+- Knock Off  
+- Rapid Spin  
+
+Enamorus @ Focus Sash  
+Ability: Contrary  
+Tera Type: Steel  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Earth Power  
+- Moonblast  
+- Mystical Fire  
+- Substitute  
+
+Gholdengo @ Focus Sash  
+Ability: Good as Gold  
+Tera Type: Ghost  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Shadow Ball  
+- Make It Rain  
+- Nasty Plot  
+- Recover  
+
+Blaziken @ Air Balloon  
+Ability: Speed Boost  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Protect  
+- Flare Blitz  
+- Swords Dance  
+- Close Combat

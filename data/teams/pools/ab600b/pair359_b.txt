@@ -1,0 +1,59 @@
+Gholdengo @ Rocky Helmet  
+Ability: Good as Gold  
+Tera Type: Ghost  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Shadow Ball  
+- Dazzling Gleam  
+- Make It Rain  
+- Recover  
+
+Scrafty @ Leftovers  
+Ability: Shed Skin  
+Tera Type: Poison  
+EVs: 144 HP / 252 Atk / 112 Def  
+Adamant Nature  
+- Drain Punch  
+- Bulk Up  
+- Knock Off  
+- High Jump Kick  
+
+Alomomola @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Flying  
+EVs: 252 HP / 24 Def / 232 SpD  
+Sassy Nature  
+- Wish  
+- Flip Turn  
+- Protect  
+- Scald  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Steel  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Moonblast  
+- Destiny Bond  
+- Shadow Ball  
+- Thunderbolt  
+
+Raging Bolt @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Flying  
+EVs: 252 SpA / 252 Spe  
+Modest Nature  
+- Thunderclap  
+- Thunderbolt  
+- Calm Mind  
+- Draco Meteor  
+
+Iron Treads @ Leftovers  
+Ability: Quark Drive  
+Tera Type: Dragon  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Modest Nature  
+- Earthquake  
+- Rapid Spin  
+- Knock Off  
+- Stealth Rock

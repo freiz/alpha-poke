@@ -1,0 +1,59 @@
+Kingambit @ Leftovers  
+Ability: Defiant  
+Tera Type: Dark  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Sucker Punch  
+- Iron Head  
+- Low Kick  
+- Kowtow Cleave  
+
+Araquanid @ Custap Berry  
+Ability: Water Bubble  
+Tera Type: Ghost  
+EVs: 252 HP / 168 Atk / 56 Spe  
+Brave Nature  
+- Chilling Water  
+- Sticky Web  
+- Surf  
+- Liquidation  
+
+Great Tusk @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Fire  
+EVs: 176 HP / 40 Atk / 104 Def / 188 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Stealth Rock  
+- Ice Spinner  
+- Headlong Rush  
+
+Iron Moth @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Grass  
+EVs: 120 HP / 4 Def / 132 SpA / 252 Spe  
+Timid Nature  
+- Sludge Wave  
+- Fiery Dance  
+- Energy Ball  
+- Toxic Spikes  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Flying  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Trick  
+- Shadow Ball  
+- Recover  
+- Make It Rain  
+
+Kyurem @ Leftovers  
+Ability: Pressure  
+Tera Type: Ground  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Freeze-Dry  
+- Earth Power  
+- Protect  
+- Substitute

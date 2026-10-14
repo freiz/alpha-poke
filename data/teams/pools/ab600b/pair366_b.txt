@@ -1,0 +1,59 @@
+Ambipom @ Choice Band  
+Ability: Technician  
+Tera Type: Normal  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Fake Out  
+- Triple Axel  
+- Double-Edge  
+- U-turn  
+
+Pecharunt @ Leftovers  
+Ability: Poison Puppeteer  
+Tera Type: Dark  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Shadow Ball  
+- Malignant Chain  
+- Protect  
+- Recover  
+
+Araquanid @ Red Card  
+Ability: Water Bubble  
+Tera Type: Ghost  
+EVs: 252 HP / 40 Def / 216 SpA  
+Modest Nature  
+- Liquidation  
+- Endeavor  
+- Sticky Web  
+- Lunge  
+
+Arcanine-Hisui @ Life Orb  
+Ability: Rock Head  
+Tera Type: Normal  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Extreme Speed  
+- Flare Blitz  
+- Head Smash  
+- Wild Charge  
+
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Spiky Shield  
+- Knock Off  
+- Ivy Cudgel  
+- Horn Leech  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Dark  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Naive Nature  
+- Spirit Break  
+- Destiny Bond  
+- Knock Off  
+- Swords Dance

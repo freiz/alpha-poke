@@ -1,0 +1,59 @@
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Water  
+EVs: 244 HP / 36 Def / 228 SpD  
+Careful Nature  
+- Knock Off  
+- U-turn  
+- Toxic  
+- Earthquake  
+
+Heatran @ Leftovers  
+Ability: Flash Fire  
+Tera Type: Fire  
+EVs: 252 HP / 4 Def / 212 SpD / 40 Spe  
+Calm Nature  
+- Magma Storm  
+- Taunt  
+- Protect  
+- Stealth Rock  
+
+Pecharunt @ Rocky Helmet  
+Ability: Poison Puppeteer  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Spe  
+Timid Nature  
+- Toxic  
+- Nasty Plot  
+- Malignant Chain  
+- Parting Shot  
+
+Garganacl @ Leftovers  
+Ability: Purifying Salt  
+Tera Type: Water  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- Salt Cure  
+- Stealth Rock  
+- Recover  
+- Protect  
+
+Torkoal @ Heat Rock  
+Ability: Drought  
+Tera Type: Grass  
+EVs: 252 HP / 4 Def / 252 SpD  
+Sassy Nature  
+- Lava Plume  
+- Will-O-Wisp  
+- Body Press  
+- Rapid Spin  
+
+Lilligant-Hisui @ Leftovers  
+Ability: Hustle  
+Tera Type: Ice  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- Leaf Blade  
+- Ice Spinner  
+- Victory Dance  
+- Close Combat

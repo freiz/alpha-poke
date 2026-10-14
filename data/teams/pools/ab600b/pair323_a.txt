@@ -1,0 +1,59 @@
+Greninja @ Life Orb  
+Ability: Protean  
+Tera Type: Ghost  
+EVs: 48 HP / 252 SpA / 208 Spe  
+Modest Nature  
+- Sludge Wave  
+- Ice Beam  
+- Hydro Pump  
+- Dark Pulse  
+
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Tera Type: Water  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- Stealth Rock  
+- Earthquake  
+- Ruination  
+- Whirlwind  
+
+Ogerpon @ Heavy-Duty Boots  
+Ability: Defiant  
+Tera Type: Grass  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Ivy Cudgel  
+- U-turn  
+- Encore  
+
+Great Tusk @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Fire  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Ice Spinner  
+- Rapid Spin  
+- Headlong Rush  
+- Bulk Up  
+
+Dragapult @ Leftovers  
+Ability: Infiltrator  
+Tera Type: Ghost  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Hex  
+- Dragon Darts  
+- U-turn  
+- Draco Meteor  
+
+Kingambit @ Air Balloon  
+Ability: Supreme Overlord  
+Tera Type: Ghost  
+EVs: 244 HP / 252 Atk / 12 Spe  
+Adamant Nature  
+- Iron Head  
+- Sucker Punch  
+- Swords Dance  
+- Kowtow Cleave

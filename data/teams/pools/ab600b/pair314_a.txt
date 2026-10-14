@@ -1,0 +1,59 @@
+Tyranitar @ Weakness Policy  
+Ability: Sand Stream  
+Tera Type: Rock  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- Stone Edge  
+- Low Kick  
+- Knock Off  
+- Ice Punch  
+
+Excadrill @ Leftovers  
+Ability: Sand Rush  
+Tera Type: Fairy  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Earthquake  
+- Iron Head  
+- Rapid Spin  
+- Rock Slide  
+
+Enamorus @ Choice Specs  
+Ability: Cute Charm  
+Tera Type: Fairy  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Moonblast  
+- Earth Power  
+- Healing Wish  
+- Mystical Fire  
+
+Garganacl @ Leftovers  
+Ability: Purifying Salt  
+Tera Type: Water  
+EVs: 248 HP / 8 Def / 252 SpD  
+Careful Nature  
+- Stealth Rock  
+- Salt Cure  
+- Protect  
+- Recover  
+
+Alomomola @ Assault Vest  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 60 HP / 60 Atk / 32 Def / 28 SpA / 28 SpD / 24 Spe  
+Lax Nature  
+- Body Slam  
+- Mirror Coat  
+- Flip Turn  
+- Scald  
+
+Hydrapple @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 148 HP / 172 Def / 188 SpA  
+Quiet Nature  
+- Giga Drain  
+- Fickle Beam  
+- Earth Power  
+- Nasty Plot

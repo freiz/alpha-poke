@@ -1,0 +1,58 @@
+Ribombee @ Focus Sash  
+Ability: Shield Dust  
+Tera Type: Steel  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Sticky Web  
+- Moonblast  
+- Stun Spore  
+- Skill Swap  
+
+Eelektross @ Leftovers  
+Ability: Levitate  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Naive Nature  
+- Coil  
+- Knock Off  
+- Drain Punch  
+- Giga Drain  
+
+Milotic @ Flame Orb  
+Ability: Competitive  
+Tera Type: Fairy  
+EVs: 128 Def / 252 SpA / 120 SpD / 8 Spe  
+Modest Nature  
+- Dragon Tail  
+- Haze  
+- Scald  
+- Flip Turn  
+
+Krookodile @ Leftovers  
+Ability: Intimidate  
+Tera Type: Poison  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Gunk Shot  
+- Earthquake  
+- Knock Off  
+- Taunt  
+
+Ninetales-Alola @ Light Clay  
+Ability: Snow Warning  
+Tera Type: Water  
+EVs: 252 HP / 4 Def / 252 Spe  
+Timid Nature  
+- Aurora Veil  
+- Encore  
+- Moonblast  
+- Freeze-Dry  
+
+Dragalge @ Assault Vest  
+Ability: Adaptability  
+Tera Type: Poison  
+EVs: 252 HP / 84 Def / 172 SpA  
+Modest Nature  
+- Draco Meteor  
+- Sludge Wave  
+- Flip Turn  
+- Shadow Ball

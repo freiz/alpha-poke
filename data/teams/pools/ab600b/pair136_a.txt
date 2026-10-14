@@ -1,0 +1,59 @@
+Samurott-Hisui @ Focus Sash  
+Ability: Sharpness  
+Tera Type: Poison  
+EVs: 160 HP / 32 Atk / 248 SpD / 68 Spe  
+Adamant Nature  
+- Ceaseless Edge  
+- Razor Shell  
+- Sucker Punch  
+- Knock Off  
+
+Deoxys-Speed @ Life Orb  
+Ability: Pressure  
+Tera Type: Fighting  
+EVs: 132 Atk / 252 SpA / 104 Spe  
+Rash Nature  
+- Knock Off  
+- Stealth Rock  
+- Psychic Noise  
+- Psycho Boost  
+
+Serperior @ Leftovers  
+Ability: Contrary  
+Tera Type: Fire  
+EVs: 252 HP / 4 SpA / 252 Spe  
+Timid Nature  
+- Scale Shot  
+- Leaf Storm  
+- Glare  
+- Giga Drain  
+
+Hatterene @ Leftovers  
+Ability: Magic Bounce  
+Tera Type: Flying  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Pain Split  
+- Draining Kiss  
+- Psychic Noise  
+- Nuzzle  
+
+Garganacl @ Leftovers  
+Ability: Purifying Salt  
+Tera Type: Ghost  
+EVs: 252 HP / 52 Def / 204 SpD  
+Careful Nature  
+- Salt Cure  
+- Recover  
+- Stealth Rock  
+- Protect  
+
+Weezing-Galar @ Leftovers  
+Ability: Neutralizing Gas  
+Tera Type: Ghost  
+EVs: 248 HP / 252 Def / 8 SpD  
+Relaxed Nature  
+- Clear Smog  
+- Will-O-Wisp  
+- Defog  
+- Sludge Bomb

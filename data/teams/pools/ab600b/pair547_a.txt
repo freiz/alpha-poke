@@ -1,0 +1,59 @@
+Araquanid @ Mystic Water  
+Ability: Water Bubble  
+Tera Type: Ghost  
+EVs: 68 HP / 252 Atk / 188 Spe  
+Adamant Nature  
+- Endure  
+- Sticky Web  
+- Surf  
+- Endeavor  
+
+Landorus-Therian @ Life Orb  
+Ability: Intimidate  
+Tera Type: Water  
+EVs: 168 HP / 88 SpA / 252 Spe  
+Timid Nature  
+- U-turn  
+- Stealth Rock  
+- Earth Power  
+- Taunt  
+
+Raging Bolt @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Bug  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Modest Nature  
+- Thunderclap  
+- Dragon Pulse  
+- Calm Mind  
+- Thunderbolt  
+
+Pecharunt @ Rocky Helmet  
+Ability: Poison Puppeteer  
+Tera Type: Ghost  
+EVs: 252 HP / 228 Def / 28 Spe  
+Bold Nature  
+- Malignant Chain  
+- Shadow Ball  
+- Recover  
+- Parting Shot  
+
+Kingambit @ Life Orb  
+Ability: Supreme Overlord  
+Tera Type: Flying  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Iron Head  
+- Sucker Punch  
+- Low Kick  
+- Kowtow Cleave  
+
+Sinistcha @ Heavy-Duty Boots  
+Ability: Heatproof  
+Tera Type: Poison  
+EVs: 252 HP / 240 Def / 16 SpD  
+Bold Nature  
+- Matcha Gotcha  
+- Strength Sap  
+- Shadow Ball  
+- Calm Mind

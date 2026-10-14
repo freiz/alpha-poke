@@ -1,0 +1,59 @@
+Ninetales-Alola @ Light Clay  
+Ability: Snow Warning  
+Tera Type: Water  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Encore  
+- Aurora Veil  
+- Freeze-Dry  
+- Blizzard  
+
+Cloyster @ Focus Sash  
+Ability: Skill Link  
+Tera Type: Ground  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Shell Smash  
+- Icicle Spear  
+- Ice Shard  
+- Drill Run  
+
+Ursaluna @ Flame Orb  
+Ability: Guts  
+Tera Type: Normal  
+EVs: 40 Atk / 216 Def / 252 SpD  
+Adamant Nature  
+- Headlong Rush  
+- Facade  
+- Swords Dance  
+- Fire Punch  
+
+Diancie @ Power Herb  
+Ability: Clear Body  
+Tera Type: Ground  
+EVs: 248 HP / 252 SpA / 8 SpD  
+Quiet Nature  
+- Trick Room  
+- Meteor Beam  
+- Earth Power  
+- Moonblast  
+
+Hatterene @ Eject Button  
+Ability: Magic Bounce  
+Tera Type: Flying  
+EVs: 248 HP / 252 Def / 8 SpD  
+Bold Nature  
+- Psychic Noise  
+- Healing Wish  
+- Dazzling Gleam  
+- Draining Kiss  
+
+Cresselia @ Mental Herb  
+Ability: Levitate  
+Tera Type: Dark  
+EVs: 172 HP / 252 SpA / 84 Spe  
+Modest Nature  
+- Trick Room  
+- Psychic  
+- Lunar Dance  
+- Moonblast

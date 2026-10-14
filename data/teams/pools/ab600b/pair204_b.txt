@@ -1,0 +1,59 @@
+Serperior @ Leftovers  
+Ability: Contrary  
+Tera Type: Electric  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Leaf Storm  
+- Glare  
+- Substitute  
+- Dragon Pulse  
+
+Farigiraf @ Leftovers  
+Ability: Armor Tail  
+Tera Type: Fairy  
+EVs: 236 HP / 252 SpA / 20 SpD  
+Quiet Nature  
+- Agility  
+- Nasty Plot  
+- Trick Room  
+- Hyper Voice  
+
+Garganacl @ Rocky Helmet  
+Ability: Purifying Salt  
+Tera Type: Ghost  
+EVs: 248 HP / 8 Def / 252 SpD  
+Impish Nature  
+- Iron Defense  
+- Salt Cure  
+- Recover  
+- Body Press  
+
+Sableye @ Focus Sash  
+Ability: Prankster  
+Tera Type: Fire  
+EVs: 244 HP / 144 Def / 120 SpD  
+Calm Nature  
+- Fake Out  
+- Metal Burst  
+- Reflect  
+- Recover  
+
+Zamazenta @ Leftovers  
+Ability: Dauntless Shield  
+Tera Type: Dark  
+EVs: 216 HP / 40 Atk / 252 Spe  
+Jolly Nature  
+- Iron Defense  
+- Snarl  
+- Crunch  
+- Body Press  
+
+Bellossom @ Grassy Seed  
+Ability: Chlorophyll  
+Tera Type: Fire  
+EVs: 128 HP / 4 Def / 252 SpA / 124 Spe  
+Modest Nature  
+- Ingrain  
+- Quiver Dance  
+- Giga Drain  
+- Sludge Bomb

@@ -1,0 +1,58 @@
+Scyther  
+Ability: Technician  
+Tera Type: Grass  
+EVs: 252 Atk / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Close Combat  
+- Tailwind  
+- Aerial Ace  
+
+Scizor @ Heavy-Duty Boots  
+Ability: Technician  
+Tera Type: Steel  
+EVs: 248 HP / 252 Atk / 8 SpD  
+Adamant Nature  
+- Swords Dance  
+- Bullet Punch  
+- Knock Off  
+- U-turn  
+
+Kleavor @ Focus Sash  
+Ability: Sharpness  
+Tera Type: Flying  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Stone Axe  
+- Close Combat  
+- Night Slash  
+- X-Scissor  
+
+Garganacl @ Leftovers  
+Ability: Purifying Salt  
+Tera Type: Water  
+EVs: 252 HP / 52 Def / 204 SpD  
+Careful Nature  
+- Salt Cure  
+- Protect  
+- Recover  
+- Stealth Rock  
+
+Gyarados @ Life Orb  
+Ability: Intimidate  
+Tera Type: Ground  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Dragon Dance  
+- Earthquake  
+- Scale Shot  
+- Waterfall  
+
+Furret @ Choice Scarf  
+Ability: Frisk  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Trick  
+- U-turn  
+- Knock Off  
+- Tidy Up

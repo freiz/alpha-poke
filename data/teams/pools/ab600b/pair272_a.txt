@@ -1,0 +1,62 @@
+Kyurem @ Heavy-Duty Boots  
+Ability: Pressure  
+Tera Type: Ice  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Blizzard  
+- Freeze-Dry  
+- Earth Power  
+- Substitute  
+
+Ogerpon-Wellspring (F) @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Power Whip  
+- Ivy Cudgel  
+- Synthesis  
+- U-turn  
+
+Slowking-Galar @ Heavy-Duty Boots  
+Ability: Regenerator  
+Level: 99  
+Tera Type: Dark  
+EVs: 252 HP / 16 Def / 240 SpD  
+Sassy Nature  
+IVs: 0 Atk / 0 Spe  
+- Future Sight  
+- Chilly Reception  
+- Sludge Bomb  
+- Psychic Noise  
+
+Moltres @ Heavy-Duty Boots  
+Ability: Flame Body  
+Tera Type: Fairy  
+EVs: 248 HP / 248 Def / 12 Spe  
+Bold Nature  
+- U-turn  
+- Will-O-Wisp  
+- Roar  
+- Roost  
+
+Iron Valiant @ Choice Scarf  
+Ability: Quark Drive  
+Tera Type: Steel  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Naive Nature  
+- Moonblast  
+- Close Combat  
+- Encore  
+- Destiny Bond  
+
+Cinderace @ Heavy-Duty Boots  
+Ability: Libero  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Pyro Ball  
+- Court Change  
+- U-turn  
+- Sucker Punch

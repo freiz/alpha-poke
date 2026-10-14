@@ -1,0 +1,59 @@
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Fairy  
+EVs: 252 HP / 36 Def / 220 SpD  
+Careful Nature  
+- Toxic  
+- Knock Off  
+- Protect  
+- Stealth Rock  
+
+Rillaboom @ Life Orb  
+Ability: Grassy Surge  
+Tera Type: Fire  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Wood Hammer  
+- Knock Off  
+- Grassy Glide  
+
+Tyranitar @ Leftovers  
+Ability: Sand Stream  
+Tera Type: Steel  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- Stealth Rock  
+- Knock Off  
+- Roar  
+- Stone Edge  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Fighting  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Shadow Ball  
+- Make It Rain  
+- Trick  
+- Thunderbolt  
+
+Rotom-Wash @ Leftovers  
+Ability: Levitate  
+Tera Type: Poison  
+EVs: 252 HP / 212 Def / 44 Spe  
+Bold Nature  
+- Volt Switch  
+- Hydro Pump  
+- Pain Split  
+- Will-O-Wisp  
+
+Blaziken @ Life Orb  
+Ability: Speed Boost  
+Tera Type: Flying  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Protect  
+- Blaze Kick  
+- Close Combat  
+- Swords Dance

@@ -1,0 +1,59 @@
+Torkoal @ Heat Rock  
+Ability: Drought  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Def / 252 SpD  
+Sassy Nature  
+- Will-O-Wisp  
+- Overheat  
+- Stealth Rock  
+- Rapid Spin  
+
+Delphox @ Air Balloon  
+Ability: Magician  
+Tera Type: Fire  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Modest Nature  
+- Dazzling Gleam  
+- Psyshock  
+- Agility  
+- Expanding Force  
+
+Indeedee @ Terrain Extender  
+Ability: Psychic Surge  
+Tera Type: Psychic  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Expanding Force  
+- Healing Wish  
+- Trick Room  
+- Encore  
+
+Walking Wake @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 120 HP / 200 SpA / 188 Spe  
+Timid Nature  
+- Surf  
+- Draco Meteor  
+- Hydro Steam  
+- Flip Turn  
+
+Venusaur @ Life Orb  
+Ability: Chlorophyll  
+Tera Type: Dark  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Modest Nature  
+- Growth  
+- Giga Drain  
+- Sludge Bomb  
+- Weather Ball  
+
+Great Tusk @ Rocky Helmet  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Ice Spinner  
+- Headlong Rush  
+- Bulk Up

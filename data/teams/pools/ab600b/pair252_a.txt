@@ -1,0 +1,60 @@
+Lokix @ Choice Band  
+Ability: Tinted Lens  
+Tera Type: Bug  
+EVs: 248 Atk / 8 Def / 252 Spe  
+Adamant Nature  
+- First Impression  
+- U-turn  
+- Leech Life  
+- Knock Off  
+
+Heatran @ Leftovers  
+Ability: Flash Fire  
+Tera Type: Grass  
+EVs: 248 HP / 4 Def / 140 SpD / 116 Spe  
+Calm Nature  
+IVs: 0 Atk  
+- Magma Storm  
+- Earth Power  
+- Taunt  
+- Stealth Rock  
+
+Hatterene @ Leftovers  
+Ability: Magic Bounce  
+Tera Type: Water  
+EVs: 248 HP / 236 Def / 24 Spe  
+Bold Nature  
+- Draining Kiss  
+- Psychic Noise  
+- Calm Mind  
+- Nuzzle  
+
+Great Tusk @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Ghost  
+EVs: 240 HP / 16 Def / 252 Spe  
+Jolly Nature  
+- Headlong Rush  
+- Ice Spinner  
+- Rapid Spin  
+- Bulk Up  
+
+Tornadus-Therian @ Assault Vest  
+Ability: Regenerator  
+Tera Type: Steel  
+EVs: 248 HP / 8 Def / 36 SpD / 216 Spe  
+Timid Nature  
+- Bleakwind Storm  
+- Knock Off  
+- U-turn  
+- Heat Wave  
+
+Walking Wake @ Choice Specs  
+Ability: Protosynthesis  
+Tera Type: Fairy  
+EVs: 8 HP / 4 Def / 244 SpA / 252 Spe  
+Timid Nature  
+- Draco Meteor  
+- Surf  
+- Flamethrower  
+- Flip Turn

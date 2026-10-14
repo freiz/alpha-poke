@@ -1,0 +1,61 @@
+Sinistcha @ Heavy-Duty Boots  
+Ability: Heatproof  
+Tera Type: Poison  
+EVs: 252 HP / 160 Def / 96 Spe  
+Bold Nature  
+IVs: 0 Atk  
+- Calm Mind  
+- Matcha Gotcha  
+- Shadow Ball  
+- Strength Sap  
+
+Samurott-Hisui @ Choice Scarf  
+Ability: Sharpness  
+Tera Type: Water  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Ceaseless Edge  
+- Razor Shell  
+- Knock Off  
+- Flip Turn  
+
+Landorus-Therian @ Rocky Helmet  
+Ability: Intimidate  
+Tera Type: Water  
+EVs: 252 HP / 4 Def / 252 Spe  
+- Stealth Rock  
+- Earth Power  
+- U-turn  
+- Taunt  
+
+Iron Crown @ Assault Vest  
+Ability: Quark Drive  
+Tera Type: Fighting  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 20 Atk  
+- Future Sight  
+- Tachyon Cutter  
+- Volt Switch  
+- Focus Blast  
+
+Raging Bolt @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Fairy  
+EVs: 64 HP / 28 Def / 252 SpA / 164 Spe  
+Modest Nature  
+IVs: 20 Atk  
+- Calm Mind  
+- Thunderclap  
+- Dragon Pulse  
+- Thunderbolt  
+
+Cinderace @ Heavy-Duty Boots  
+Ability: Blaze  
+Tera Type: Fire  
+EVs: 224 HP / 32 Atk / 252 Spe  
+Jolly Nature  
+- Pyro Ball  
+- U-turn  
+- Will-O-Wisp  
+- Court Change

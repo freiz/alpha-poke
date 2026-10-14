@@ -1,0 +1,59 @@
+Clefable @ Leftovers  
+Ability: Magic Guard  
+Tera Type: Water  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+- Moonblast  
+- Moonlight  
+- Stealth Rock  
+- Thunder Wave  
+
+Zamazenta @ Life Orb  
+Ability: Dauntless Shield  
+Tera Type: Steel  
+EVs: 252 Def / 4 SpD / 252 Spe  
+Jolly Nature  
+- Reflect  
+- Ice Fang  
+- Crunch  
+- Heavy Slam  
+
+Iron Moth @ Power Herb  
+Ability: Quark Drive  
+Tera Type: Fire  
+EVs: 124 Def / 132 SpA / 252 Spe  
+Timid Nature  
+- Fiery Dance  
+- Toxic  
+- Sludge Wave  
+- Meteor Beam  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Water  
+EVs: 252 HP / 160 SpD / 96 Spe  
+Careful Nature  
+- Protect  
+- Toxic  
+- Knock Off  
+- Earthquake  
+
+Cinderace @ Heavy-Duty Boots  
+Ability: Libero  
+Tera Type: Fire  
+EVs: 248 HP / 8 Atk / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Pyro Ball  
+- Will-O-Wisp  
+- Court Change  
+
+Kyurem @ Leftovers  
+Ability: Pressure  
+Tera Type: Ground  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Freeze-Dry  
+- Earth Power  
+- Substitute  
+- Protect

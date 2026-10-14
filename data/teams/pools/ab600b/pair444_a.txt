@@ -1,0 +1,62 @@
+Garchomp @ Rocky Helmet  
+Ability: Rough Skin  
+Tera Type: Fairy  
+EVs: 252 HP / 136 Def / 120 Spe  
+Impish Nature  
+- Earthquake  
+- Dragon Tail  
+- Endure  
+- Stealth Rock  
+
+Darkrai @ Choice Specs  
+Ability: Bad Dreams  
+Tera Type: Dark  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Dark Pulse  
+- Sludge Bomb  
+- Ice Beam  
+- Trick  
+
+Deoxys-Speed @ Life Orb  
+Ability: Pressure  
+Shiny: Yes  
+Tera Type: Psychic  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Naive Nature  
+- Psycho Boost  
+- Ice Beam  
+- Superpower  
+- Substitute  
+
+Clodsire @ Leftovers  
+Ability: Water Absorb  
+Tera Type: Dark  
+EVs: 252 HP / 4 Atk / 252 SpD  
+Careful Nature  
+- Earthquake  
+- Poison Jab  
+- Toxic  
+- Recover  
+
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Flying  
+EVs: 248 HP / 8 Atk / 252 Def  
+Relaxed Nature  
+IVs: 0 Spe  
+- Brave Bird  
+- Body Press  
+- Roost  
+- U-turn  
+
+Cinderace @ Heavy-Duty Boots  
+Ability: Libero  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Pyro Ball  
+- Sucker Punch  
+- Court Change  
+- U-turn

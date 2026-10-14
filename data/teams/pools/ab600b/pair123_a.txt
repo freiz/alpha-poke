@@ -1,0 +1,62 @@
+Weavile (F) @ Choice Band  
+Ability: Pressure  
+Tera Type: Ice  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Triple Axel  
+- Knock Off  
+- Ice Shard  
+- Low Kick  
+
+Primarina (F) @ Assault Vest  
+Ability: Liquid Voice  
+Tera Type: Ground  
+EVs: 248 HP / 208 SpA / 52 SpD  
+Modest Nature  
+- Psychic Noise  
+- Whirlpool  
+- Moonblast  
+- Flip Turn  
+
+Ogerpon @ Choice Band  
+Ability: Defiant  
+Tera Type: Grass  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Ivy Cudgel  
+- Knock Off  
+- U-turn  
+- Rock Tomb  
+
+Pecharunt @ Rocky Helmet  
+Ability: Poison Puppeteer  
+Tera Type: Ghost  
+EVs: 248 HP / 252 Def / 8 SpD  
+Bold Nature  
+IVs: 0 Atk  
+- Shadow Ball  
+- Malignant Chain  
+- Recover  
+- Parting Shot  
+
+Enamorus @ Choice Specs  
+Ability: Cute Charm  
+Tera Type: Ground  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Modest Nature  
+IVs: 0 Atk  
+- Moonblast  
+- Sludge Bomb  
+- Mystical Fire  
+- Earth Power  
+
+Weezing-Galar @ Heavy-Duty Boots  
+Ability: Neutralizing Gas  
+Tera Type: Flying  
+EVs: 252 HP / 240 Def / 16 SpA  
+Bold Nature  
+IVs: 0 Atk  
+- Sludge Bomb  
+- Defog  
+- Pain Split  
+- Will-O-Wisp

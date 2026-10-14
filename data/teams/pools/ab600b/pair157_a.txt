@@ -1,0 +1,59 @@
+Sandy Shocks @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Ice  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Volt Switch  
+- Flash Cannon  
+- Stealth Rock  
+- Earth Power  
+
+Mamoswine @ Life Orb  
+Ability: Thick Fat  
+Tera Type: Ice  
+EVs: 252 Atk / 252 Spe  
+Jolly Nature  
+- Earthquake  
+- Ice Shard  
+- Icicle Crash  
+- Trailblaze  
+
+Talonflame @ Heavy-Duty Boots  
+Ability: Flame Body  
+Tera Type: Dragon  
+EVs: 248 HP / 228 Def / 32 Spe  
+Bold Nature  
+- Flare Blitz  
+- Defog  
+- U-turn  
+- Roost  
+
+Okidogi @ Heavy-Duty Boots  
+Ability: Guard Dog  
+Tera Type: Ice  
+EVs: 240 HP / 252 Atk / 16 Spe  
+Adamant Nature  
+- Poison Jab  
+- Knock Off  
+- Bulk Up  
+- Drain Punch  
+
+Blissey @ Heavy-Duty Boots  
+Ability: Natural Cure  
+Tera Type: Dark  
+EVs: 4 HP / 252 Def / 252 SpD  
+Calm Nature  
+- Stealth Rock  
+- Seismic Toss  
+- Heal Bell  
+- Calm Mind  
+
+Vaporeon @ Leftovers  
+Ability: Water Absorb  
+Tera Type: Poison  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Flip Turn  
+- Haze  
+- Scald  
+- Calm Mind

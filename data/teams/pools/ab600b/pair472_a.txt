@@ -1,0 +1,59 @@
+Samurott @ Life Orb  
+Ability: Torrent  
+Tera Type: Dark  
+EVs: 84 HP / 84 Atk / 84 Def / 84 SpA / 84 SpD / 84 Spe  
+Serious Nature  
+- Ice Beam  
+- Knock Off  
+- Sacred Sword  
+- Flip Turn  
+
+Garganacl @ Rocky Helmet  
+Ability: Purifying Salt  
+Tera Type: Flying  
+EVs: 252 HP / 4 Atk / 252 SpD  
+Sassy Nature  
+- Salt Cure  
+- Heavy Slam  
+- Earthquake  
+- Recover  
+
+Oricorio @ Kee Berry  
+Ability: Dancer  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Modest Nature  
+- Hurricane  
+- Quiver Dance  
+- Revelation Dance  
+- Taunt  
+
+Ampharos @ Leftovers  
+Ability: Static  
+Tera Type: Fairy  
+EVs: 252 HP / 4 Def / 252 SpA  
+Quiet Nature  
+- Cotton Guard  
+- Dazzling Gleam  
+- Volt Switch  
+- Magnetic Flux  
+
+Lokix @ Choice Band  
+Ability: Tinted Lens  
+Tera Type: Bug  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Knock Off  
+- First Impression  
+- Leech Life  
+- U-turn  
+
+Gallade @ Leftovers  
+Ability: Steadfast  
+Tera Type: Fighting  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Night Slash  
+- Sacred Sword  
+- Psycho Cut  
+- Triple Axel

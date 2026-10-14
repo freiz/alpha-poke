@@ -1,0 +1,59 @@
+Torkoal @ Heat Rock  
+Ability: Drought  
+Tera Type: Fire  
+EVs: 248 HP / 252 Def / 8 SpA  
+Relaxed Nature  
+- Weather Ball  
+- Body Press  
+- Eruption  
+- Solar Beam  
+
+Lilligant-Hisui @ Life Orb  
+Ability: Chlorophyll  
+Tera Type: Ghost  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- Triple Axel  
+- Solar Blade  
+- Close Combat  
+- Ice Spinner  
+
+Volcanion @ Heavy-Duty Boots  
+Ability: Water Absorb  
+Tera Type: Ground  
+EVs: 248 HP / 252 Def / 8 SpD  
+Bold Nature  
+- Weather Ball  
+- Sludge Bomb  
+- Steam Eruption  
+- Fire Spin  
+
+Pelipper @ Damp Rock  
+Ability: Drizzle  
+Tera Type: Flying  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Modest Nature  
+- Weather Ball  
+- U-turn  
+- Roost  
+- Hurricane  
+
+Barraskewda @ Life Orb  
+Ability: Swift Swim  
+Tera Type: Water  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- Crunch  
+- Poison Jab  
+- Liquidation  
+- Flip Turn  
+
+Goodra-Hisui @ Leftovers  
+Ability: Gooey  
+Tera Type: Fairy  
+EVs: 252 HP / 252 Def / 4 SpD  
+Careful Nature  
+- Flash Cannon  
+- Flamethrower  
+- Draco Meteor  
+- Protect

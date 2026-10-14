@@ -1,0 +1,59 @@
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Leech Seed  
+- Knock Off  
+- Swords Dance  
+- Ivy Cudgel  
+
+Slaking @ Choice Band  
+Ability: Truant  
+Tera Type: Ghost  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Substitute  
+- Focus Punch  
+- Ice Punch  
+- Earthquake  
+
+Deoxys-Speed @ Leftovers  
+Ability: Pressure  
+Tera Type: Fighting  
+EVs: 248 HP / 8 Def / 252 Spe  
+Timid Nature  
+- Iron Defense  
+- Extreme Speed  
+- Dark Pulse  
+- Stealth Rock  
+
+Cinderace @ Power Herb  
+Ability: Blaze  
+Tera Type: Fairy  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Shadow Ball  
+- Bounce  
+- Court Change  
+- Pyro Ball  
+
+Reuniclus @ Rocky Helmet  
+Ability: Magic Guard  
+Tera Type: Ice  
+EVs: 252 HP / 212 SpA / 44 Spe  
+Modest Nature  
+- Future Sight  
+- Protect  
+- Psychic Noise  
+- Trick  
+
+Glimmora @ Red Card  
+Ability: Toxic Debris  
+Tera Type: Ghost  
+EVs: 248 HP / 252 Def / 8 Spe  
+Bold Nature  
+- Spikes  
+- Mortal Spin  
+- Power Gem  
+- Stealth Rock

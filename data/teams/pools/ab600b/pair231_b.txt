@@ -1,0 +1,59 @@
+Gallade @ Life Orb  
+Ability: Sharpness  
+Tera Type: Steel  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Sacred Sword  
+- Triple Axel  
+- Psycho Cut  
+- Night Slash  
+
+Ninetales-Alola @ Icy Rock  
+Ability: Snow Warning  
+Tera Type: Water  
+EVs: 252 HP / 4 SpA / 252 Spe  
+Timid Nature  
+- Aurora Veil  
+- Moonblast  
+- Ice Beam  
+- Blizzard  
+
+Feraligatr @ Life Orb  
+Ability: Sheer Force  
+Tera Type: Ground  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Dragon Dance  
+- Crunch  
+- Ice Punch  
+- Aqua Jet  
+
+Lilligant-Hisui @ Life Orb  
+Ability: Chlorophyll  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Close Combat  
+- Solar Blade  
+- Victory Dance  
+- Swords Dance  
+
+Torkoal @ Heat Rock  
+Ability: Drought  
+Tera Type: Grass  
+EVs: 252 HP / 4 Def / 252 SpD  
+Sassy Nature  
+- Stealth Rock  
+- Lava Plume  
+- Rapid Spin  
+- Flamethrower  
+
+Reuniclus @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Fighting  
+EVs: 248 HP / 212 Def / 48 SpA  
+Quiet Nature  
+- Calm Mind  
+- Focus Blast  
+- Shadow Ball  
+- Trick

@@ -1,0 +1,59 @@
+Darkrai @ Life Orb  
+Ability: Bad Dreams  
+Tera Type: Poison  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Dark Pulse  
+- Sludge Bomb  
+- Nasty Plot  
+- Ice Beam  
+
+Clodsire @ Leftovers  
+Ability: Unaware  
+Tera Type: Steel  
+EVs: 248 HP / 8 Atk / 252 SpD  
+Careful Nature  
+- Toxic Spikes  
+- Recover  
+- Earthquake  
+- Toxic  
+
+Corviknight @ Leftovers  
+Ability: Pressure  
+Tera Type: Dark  
+EVs: 120 HP / 68 Atk / 224 Def / 96 SpD  
+Impish Nature  
+- Body Press  
+- Brave Bird  
+- Roost  
+- Defog  
+
+Okidogi @ Leftovers  
+Ability: Toxic Chain  
+Tera Type: Dark  
+EVs: 240 HP / 252 Atk / 16 Spe  
+Adamant Nature  
+- Knock Off  
+- Drain Punch  
+- Bulk Up  
+- Ice Punch  
+
+Primarina @ Leftovers  
+Ability: Liquid Voice  
+Tera Type: Poison  
+EVs: 248 HP / 84 Def / 48 SpA / 128 SpD  
+Quiet Nature  
+- Moonblast  
+- Flip Turn  
+- Psychic Noise  
+- Surf  
+
+Iron Moth @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Grass  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Sludge Wave  
+- Toxic Spikes  
+- Fiery Dance  
+- Energy Ball

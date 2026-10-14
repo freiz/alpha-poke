@@ -1,0 +1,59 @@
+Zamazenta @ Leftovers  
+Ability: Dauntless Shield  
+Tera Type: Fire  
+EVs: 216 HP / 40 Atk / 252 Spe  
+Jolly Nature  
+- Iron Defense  
+- Body Press  
+- Crunch  
+- Roar  
+
+Ninetales-Alola @ Light Clay  
+Ability: Snow Warning  
+Tera Type: Water  
+EVs: 252 HP / 252 SpA  
+Hardy Nature  
+- Freeze-Dry  
+- Aurora Veil  
+- Encore  
+- Blizzard  
+
+Darkrai @ Leftovers  
+Ability: Bad Dreams  
+Tera Type: Poison  
+EVs: 252 HP / 252 SpA  
+Hardy Nature  
+- Nasty Plot  
+- Focus Blast  
+- Dark Pulse  
+- Ice Beam  
+
+Ceruledge @ Life Orb  
+Ability: Flash Fire  
+Tera Type: Bug  
+EVs: 252 HP / 252 Atk / 4 Def  
+Adamant Nature  
+- Bulk Up  
+- Taunt  
+- Bitter Blade  
+- Shadow Sneak  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Normal  
+EVs: 252 HP / 252 Atk / 4 Def  
+Adamant Nature  
+- Swords Dance  
+- Earthquake  
+- Agility  
+- Facade  
+
+Hatterene @ Leftovers  
+Ability: Magic Bounce  
+Tera Type: Water  
+EVs: 32 HP / 20 Def / 4 Spe  
+Bold Nature  
+- Calm Mind  
+- Draining Kiss  
+- Psyshock  
+- Mystical Fire

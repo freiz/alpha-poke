@@ -1,0 +1,59 @@
+Iron Moth @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Fire  
+EVs: 124 Def / 132 SpA / 252 Spe  
+Timid Nature  
+- Sludge Wave  
+- Fiery Dance  
+- Energy Ball  
+- Dazzling Gleam  
+
+Kingambit @ Lum Berry  
+Ability: Supreme Overlord  
+Tera Type: Ghost  
+EVs: 236 HP / 252 Atk / 20 Spe  
+Adamant Nature  
+- Kowtow Cleave  
+- Iron Head  
+- Sucker Punch  
+- Swords Dance  
+
+Dragonite @ Loaded Dice  
+Ability: Multiscale  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Scale Shot  
+- Dragon Dance  
+- Extreme Speed  
+- Earthquake  
+
+Ogerpon-Cornerstone @ Cornerstone Mask  
+Ability: Sturdy  
+Tera Type: Rock  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Ivy Cudgel  
+- Knock Off  
+- Power Whip  
+- Swords Dance  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Steel  
+EVs: 252 SpA / 252 Spe  
+Timid Nature  
+- Moonblast  
+- Knock Off  
+- Close Combat  
+- Swords Dance  
+
+Raging Bolt @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Dragon  
+EVs: 32 HP / 128 Def / 208 SpA / 80 SpD / 60 Spe  
+Modest Nature  
+- Thunderbolt  
+- Calm Mind  
+- Thunderclap  
+- Dragon Pulse

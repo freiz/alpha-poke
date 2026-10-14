@@ -1,0 +1,59 @@
+Kingambit @ Life Orb  
+Ability: Supreme Overlord  
+Tera Type: Bug  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Sucker Punch  
+- Kowtow Cleave  
+- Iron Head  
+- Swords Dance  
+
+Corviknight @ Leftovers  
+Ability: Pressure  
+Tera Type: Dragon  
+EVs: 248 HP / 252 Def / 8 SpD  
+Impish Nature  
+- Iron Defense  
+- Body Press  
+- Defog  
+- Roost  
+
+Glimmora @ Power Herb  
+Ability: Toxic Debris  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Stealth Rock  
+- Earth Power  
+- Sludge Wave  
+- Power Gem  
+
+Alomomola @ Leftovers  
+Ability: Regenerator  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Def / 252 SpD  
+Sassy Nature  
+- Protect  
+- Wish  
+- Scald  
+- Flip Turn  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Fairy  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Moonblast  
+- Close Combat  
+- Encore  
+- Knock Off  
+
+Ceruledge @ Focus Sash  
+Ability: Flash Fire  
+Tera Type: Fairy  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Bitter Blade  
+- Poltergeist  
+- Destiny Bond

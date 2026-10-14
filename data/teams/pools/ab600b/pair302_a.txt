@@ -1,0 +1,62 @@
+Dragapult @ Choice Band  
+Ability: Clear Body  
+Tera Type: Dragon  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Dragon Darts  
+- Phantom Force  
+- U-turn  
+- Quick Attack  
+
+Lokix @ Choice Band  
+Ability: Tinted Lens  
+Tera Type: Bug  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- First Impression  
+- U-turn  
+- Knock Off  
+- Leech Life  
+
+Alomomola @ Assault Vest  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 4 Atk / 252 Def / 252 SpD  
+Sassy Nature  
+IVs: 0 Spe  
+- Scald  
+- Flip Turn  
+- Mirror Coat  
+- Play Rough  
+
+Great Tusk @ Heavy-Duty Boots  
+Ability: Protosynthesis  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Headlong Rush  
+- Ice Spinner  
+- Rapid Spin  
+- Stealth Rock  
+
+Enamorus @ Choice Scarf  
+Ability: Contrary  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Moonblast  
+- Earth Power  
+- Mystical Fire  
+- Healing Wish  
+
+Iron Crown @ Choice Specs  
+Ability: Quark Drive  
+Tera Type: Steel  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 20 Atk  
+- Tachyon Cutter  
+- Psychic Noise  
+- Volt Switch  
+- Focus Blast

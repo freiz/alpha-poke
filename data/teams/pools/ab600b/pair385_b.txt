@@ -1,0 +1,59 @@
+Greninja @ Life Orb  
+Ability: Battle Bond  
+Tera Type: Water  
+EVs: 108 HP / 172 SpA / 100 SpD / 128 Spe  
+Hardy Nature  
+- Dark Pulse  
+- Surf  
+- U-turn  
+- Hydro Pump  
+
+Great Tusk @ Rocky Helmet  
+Ability: Protosynthesis  
+Tera Type: Fighting  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Jolly Nature  
+- Headlong Rush  
+- Close Combat  
+- Ice Spinner  
+- Rapid Spin  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Fairy  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Shadow Ball  
+- Make It Rain  
+- Recover  
+- Psyshock  
+
+Moltres @ Heavy-Duty Boots  
+Ability: Flame Body  
+Tera Type: Fire  
+EVs: 252 HP / 240 SpD / 16 Spe  
+Calm Nature  
+- U-turn  
+- Roost  
+- Will-O-Wisp  
+- Scorching Sands  
+
+Meloetta @ Assault Vest  
+Ability: Serene Grace  
+Tera Type: Fairy  
+EVs: 84 HP / 252 SpA / 172 SpD  
+Modest Nature  
+- Shadow Ball  
+- Thunderbolt  
+- U-turn  
+- Focus Blast  
+
+Zamazenta @ Assault Vest  
+Ability: Dauntless Shield  
+Tera Type: Stellar  
+EVs: 216 HP / 40 Atk / 252 Spe  
+Jolly Nature  
+- Heavy Slam  
+- Close Combat  
+- Crunch  
+- Body Press

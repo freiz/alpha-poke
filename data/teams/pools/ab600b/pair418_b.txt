@@ -1,0 +1,59 @@
+Frosmoth @ Heavy-Duty Boots  
+Ability: Ice Scales  
+Tera Type: Electric  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Ice Beam  
+- Quiver Dance  
+- Bug Buzz  
+- Defog  
+
+Cetitan @ Sitrus Berry  
+Ability: Slush Rush  
+Tera Type: Water  
+EVs: 4 HP / 252 Atk / 76 Def / 176 Spe  
+Adamant Nature  
+- Liquidation  
+- Belly Drum  
+- Ice Shard  
+- Earthquake  
+
+Ninetales-Alola @ Light Clay  
+Ability: Snow Warning  
+Tera Type: Water  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Aurora Veil  
+- Blizzard  
+- Freeze-Dry  
+- Encore  
+
+Abomasnow @ Icy Rock  
+Ability: Snow Warning  
+Tera Type: Poison  
+EVs: 248 HP / 252 Atk / 8 Def  
+Adamant Nature  
+- Aurora Veil  
+- Blizzard  
+- Giga Drain  
+- Ice Shard  
+
+Slowking @ Heavy-Duty Boots  
+Ability: Oblivious  
+Tera Type: Steel  
+EVs: 252 HP / 4 SpA / 252 SpD  
+Quiet Nature  
+- Chilly Reception  
+- Future Sight  
+- Thunder Wave  
+- Scald  
+
+Sandslash-Alola @ Air Balloon  
+Ability: Slush Rush  
+Tera Type: Grass  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Icicle Crash  
+- Rapid Spin  
+- Iron Head  
+- Earthquake

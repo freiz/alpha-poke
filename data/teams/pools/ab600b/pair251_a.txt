@@ -1,0 +1,59 @@
+Dragapult @ Life Orb  
+Ability: Infiltrator  
+Tera Type: Dragon  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Dragon Darts  
+- Will-O-Wisp  
+- U-turn  
+- Shadow Ball  
+
+Ninetales-Alola @ Light Clay  
+Ability: Snow Warning  
+Tera Type: Water  
+EVs: 252 HP / 4 SpD / 252 Spe  
+Timid Nature  
+- Encore  
+- Aurora Veil  
+- Moonblast  
+- Freeze-Dry  
+
+Slowking @ Rocky Helmet  
+Ability: Oblivious  
+Tera Type: Fairy  
+EVs: 252 HP / 4 SpA / 252 SpD  
+Calm Nature  
+- Thunder Wave  
+- Scald  
+- Chilly Reception  
+- Future Sight  
+
+Cetitan @ Sitrus Berry  
+Ability: Slush Rush  
+Tera Type: Water  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Ice Spinner  
+- Earthquake  
+- Liquidation  
+- Ice Shard  
+
+Sandslash-Alola @ Life Orb  
+Ability: Slush Rush  
+Tera Type: Ghost  
+EVs: 76 HP / 252 Atk / 180 Spe  
+Adamant Nature  
+- Iron Head  
+- Knock Off  
+- Triple Axel  
+- Stealth Rock  
+
+Kyurem @ Chople Berry  
+Ability: Pressure  
+Tera Type: Fighting  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Hasty Nature  
+- Earth Power  
+- Blizzard  
+- Freeze-Dry  
+- Ice Beam

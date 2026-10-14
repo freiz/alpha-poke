@@ -1,0 +1,59 @@
+Hydrapple @ Leftovers  
+Ability: Regenerator  
+Tera Type: Poison  
+EVs: 248 HP / 248 Def / 12 Spe  
+Bold Nature  
+- Giga Drain  
+- Earth Power  
+- Fickle Beam  
+- Nasty Plot  
+
+Tyranitar @ Leftovers  
+Ability: Sand Stream  
+Tera Type: Rock  
+EVs: 248 HP / 16 Def / 24 SpA / 216 SpD / 4 Spe  
+Sassy Nature  
+- Knock Off  
+- Ice Punch  
+- Low Kick  
+- Stealth Rock  
+
+Moltres @ Heavy-Duty Boots  
+Ability: Flame Body  
+Tera Type: Grass  
+EVs: 248 HP / 248 Def / 12 Spe  
+Bold Nature  
+- Flamethrower  
+- U-turn  
+- Roar  
+- Roost  
+
+Zamazenta @ Leftovers  
+Ability: Dauntless Shield  
+Tera Type: Fire  
+EVs: 104 HP / 152 SpD / 252 Spe  
+Jolly Nature  
+- Roar  
+- Body Press  
+- Iron Defense  
+- Substitute  
+
+Slowking-Galar @ Assault Vest  
+Ability: Regenerator  
+Tera Type: Fighting  
+EVs: 252 HP / 8 Def / 152 SpA / 96 SpD  
+Modest Nature  
+- Ice Beam  
+- Sludge Bomb  
+- Psychic Noise  
+- Flamethrower  
+
+Excadrill @ Air Balloon  
+Ability: Mold Breaker  
+Tera Type: Ground  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- Rapid Spin  
+- Earthquake  
+- Iron Head  
+- Rock Slide

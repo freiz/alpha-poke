@@ -1,0 +1,65 @@
+Deoxys-Defense @ Mental Herb  
+Ability: Pressure  
+Tera Type: Fairy  
+EVs: 248 HP / 8 Def / 252 SpD  
+Sassy Nature  
+IVs: 0 Atk / 0 Spe  
+- Trick Room  
+- Stealth Rock  
+- Teleport  
+- Spikes  
+
+Conkeldurr @ Flame Orb  
+Ability: Guts  
+Tera Type: Fighting  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+IVs: 13 Spe  
+- Mach Punch  
+- Knock Off  
+- Facade  
+- Close Combat  
+
+Hatterene @ Focus Sash  
+Ability: Magic Bounce  
+Tera Type: Steel  
+EVs: 248 HP / 252 Def / 8 SpD  
+Relaxed Nature  
+IVs: 0 Atk / 0 Spe  
+- Draining Kiss  
+- Mystical Fire  
+- Trick Room  
+- Healing Wish  
+
+Hoopa-Unbound @ Room Service  
+Ability: Magician  
+Tera Type: Dark  
+EVs: 252 HP / 4 Atk / 252 SpA  
+Quiet Nature  
+IVs: 0 Spe  
+- Dark Pulse  
+- Psychic Noise  
+- Brick Break  
+- Trick Room  
+
+Mimikyu @ Life Orb  
+Ability: Disguise  
+Tera Type: Fairy  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Brave Nature  
+IVs: 0 Spe  
+- Trick Room  
+- Shadow Claw  
+- Play Rough  
+- Destiny Bond  
+
+Ursaluna @ Flame Orb  
+Ability: Guts  
+Tera Type: Normal  
+EVs: 248 HP / 252 Atk / 8 SpD  
+Adamant Nature  
+IVs: 3 Spe  
+- Facade  
+- Headlong Rush  
+- Fire Punch  
+- Swords Dance

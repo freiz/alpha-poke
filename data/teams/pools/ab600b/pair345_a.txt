@@ -1,0 +1,59 @@
+Quagsire @ Leftovers  
+Ability: Unaware  
+Tera Type: Fairy  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Stealth Rock  
+- Toxic  
+- Counter  
+- Avalanche  
+
+Glimmora @ Leftovers  
+Ability: Corrosion  
+Tera Type: Ghost  
+EVs: 72 HP / 56 Def / 252 SpA / 128 SpD  
+Timid Nature  
+- Spiky Shield  
+- Toxic  
+- Mortal Spin  
+- Sludge Wave  
+
+Fezandipiti @ Leftovers  
+Ability: Toxic Chain  
+Tera Type: Dark  
+EVs: 84 HP / 24 SpA / 216 SpD / 184 Spe  
+Modest Nature  
+- Beat Up  
+- U-turn  
+- Roost  
+- Nasty Plot  
+
+Decidueye @ Rocky Helmet  
+Ability: Overgrow  
+Tera Type: Grass  
+EVs: 248 HP / 252 Atk / 8 SpD  
+Adamant Nature  
+- U-turn  
+- Swords Dance  
+- Shadow Sneak  
+- Roost  
+
+Iron Moth @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Fairy  
+EVs: 124 Def / 132 SpA / 252 Spe  
+Timid Nature  
+- Fiery Dance  
+- Energy Ball  
+- Dazzling Gleam  
+- Sludge Wave  
+
+Hydrapple @ Life Orb  
+Ability: Regenerator  
+Tera Type: Fighting  
+EVs: 248 HP / 252 SpA / 8 SpD  
+Modest Nature  
+- Leaf Storm  
+- Earth Power  
+- Draco Meteor  
+- Fickle Beam

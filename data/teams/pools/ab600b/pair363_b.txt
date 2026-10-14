@@ -1,0 +1,59 @@
+Charizard @ Heavy-Duty Boots  
+Ability: Blaze  
+Tera Type: Fire  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Fire Blast  
+- Air Slash  
+- Flame Charge  
+- Hurricane  
+
+Inteleon @ Choice Scarf  
+Ability: Sniper  
+Tera Type: Water  
+EVs: 248 HP / 8 SpA / 252 Spe  
+Timid Nature  
+- Ice Beam  
+- Hydro Pump  
+- Surf  
+- Snipe Shot  
+
+Rhyperior @ Leftovers  
+Ability: Reckless  
+Tera Type: Fire  
+EVs: 252 HP / 252 Atk  
+Hardy Nature  
+- Earthquake  
+- Fire Punch  
+- Avalanche  
+- Stone Edge  
+
+Rillaboom @ Life Orb  
+Ability: Grassy Surge  
+Tera Type: Dark  
+EVs: 160 HP / 252 Atk / 96 Spe  
+Adamant Nature  
+- Drain Punch  
+- Earthquake  
+- Grassy Glide  
+- U-turn  
+
+Cinderace @ Choice Band  
+Ability: Libero  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Court Change  
+- Fire Punch  
+- High Jump Kick  
+- U-turn  
+
+Dragapult @ Life Orb  
+Ability: Clear Body  
+Tera Type: Dragon  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Shadow Ball  
+- Dragon Pulse  
+- Draco Meteor  
+- U-turn

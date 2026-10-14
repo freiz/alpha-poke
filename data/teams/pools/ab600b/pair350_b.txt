@@ -1,0 +1,66 @@
+Reuniclus @ Life Orb  
+Ability: Magic Guard  
+Shiny: Yes  
+Tera Type: Psychic  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Quiet Nature  
+IVs: 0 Atk  
+- Expanding Force  
+- Trick Room  
+- Shadow Ball  
+- Focus Blast  
+
+Hatterene @ Focus Sash  
+Ability: Magic Bounce  
+Shiny: Yes  
+Tera Type: Water  
+EVs: 252 HP / 4 Def / 252 SpA  
+Quiet Nature  
+IVs: 0 Atk / 0 Spe  
+- Trick Room  
+- Expanding Force  
+- Dazzling Gleam  
+- Mystical Fire  
+
+Indeedee-F @ Terrain Extender  
+Ability: Psychic Surge  
+Shiny: Yes  
+Tera Type: Psychic  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Psyshock  
+- Trick Room  
+- Healing Wish  
+- Protect  
+
+Ursaluna @ Flame Orb  
+Ability: Guts  
+Tera Type: Normal  
+EVs: 248 HP / 252 Atk / 8 SpD  
+Adamant Nature  
+- Swords Dance  
+- Facade  
+- Headlong Rush  
+- Fire Punch  
+
+Conkeldurr @ Flame Orb  
+Ability: Guts  
+Shiny: Yes  
+Tera Type: Fighting  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Close Combat  
+- Mach Punch  
+- Knock Off  
+- Facade  
+
+Kingambit @ Assault Vest  
+Ability: Supreme Overlord  
+Tera Type: Dark  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Kowtow Cleave  
+- Sucker Punch  
+- Iron Head  
+- Zen Headbutt

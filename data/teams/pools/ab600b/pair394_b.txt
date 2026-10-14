@@ -1,0 +1,59 @@
+Pelipper @ Damp Rock  
+Ability: Drizzle  
+Tera Type: Water  
+EVs: 248 HP / 252 Def / 8 SpA  
+Relaxed Nature  
+- Weather Ball  
+- U-turn  
+- Hurricane  
+- Surf  
+
+Scizor @ Leftovers  
+Ability: Technician  
+Tera Type: Steel  
+EVs: 248 HP / 252 Atk / 8 SpD  
+Adamant Nature  
+- Swords Dance  
+- Bullet Punch  
+- Knock Off  
+- Close Combat  
+
+Kingdra @ Life Orb  
+Ability: Swift Swim  
+Tera Type: Fairy  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Surf  
+- Draco Meteor  
+- Focus Energy  
+- Hurricane  
+
+Raging Bolt @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Fairy  
+EVs: 252 SpA / 252 Spe  
+Timid Nature  
+- Dragon Pulse  
+- Thunderbolt  
+- Volt Switch  
+- Calm Mind  
+
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Power Whip  
+- Ivy Cudgel  
+- Trailblaze  
+- Spikes  
+
+Landorus-Therian @ Rocky Helmet  
+Ability: Intimidate  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Stealth Rock  
+- Earth Power  
+- Stone Edge

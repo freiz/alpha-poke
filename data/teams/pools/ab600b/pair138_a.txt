@@ -1,0 +1,62 @@
+Amoonguss @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Dragon  
+EVs: 252 HP / 196 Def / 60 SpD  
+Bold Nature  
+IVs: 0 Atk  
+- Grass Knot  
+- Clear Smog  
+- Synthesis  
+- Stun Spore  
+
+Darkrai @ Heavy-Duty Boots  
+Ability: Bad Dreams  
+Tera Type: Fairy  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Timid Nature  
+- Dark Pulse  
+- Ice Beam  
+- Knock Off  
+- Will-O-Wisp  
+
+Ting-Lu @ Heavy-Duty Boots  
+Ability: Vessel of Ruin  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- Spikes  
+- Earthquake  
+- Whirlwind  
+- Stealth Rock  
+
+Alomomola @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Fighting  
+EVs: 252 HP / 252 Def / 4 SpD  
+Relaxed Nature  
+IVs: 0 Spe  
+- Scald  
+- Flip Turn  
+- Wish  
+- Protect  
+
+Skeledirge @ Heavy-Duty Boots  
+Ability: Unaware  
+Tera Type: Fairy  
+EVs: 248 HP / 136 Def / 108 SpD / 16 Spe  
+Bold Nature  
+IVs: 0 Atk  
+- Will-O-Wisp  
+- Torch Song  
+- Hex  
+- Slack Off  
+
+Weavile @ Heavy-Duty Boots  
+Ability: Pressure  
+Tera Type: Ice  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Triple Axel  
+- Knock Off  
+- Ice Shard  
+- Low Kick

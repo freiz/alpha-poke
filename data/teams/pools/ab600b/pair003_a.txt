@@ -1,0 +1,59 @@
+Zamazenta @ Life Orb  
+Ability: Dauntless Shield  
+Tera Type: Steel  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Ice Fang  
+- Close Combat  
+- Crunch  
+- Body Press  
+
+Ninetales-Alola @ Light Clay  
+Ability: Snow Warning  
+Tera Type: Steel  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Aurora Veil  
+- Roar  
+- Freeze-Dry  
+- Encore  
+
+Darkrai @ Life Orb  
+Ability: Bad Dreams  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Dark Pulse  
+- Nasty Plot  
+- Focus Blast  
+- Ice Beam  
+
+Ceruledge @ Air Balloon  
+Ability: Flash Fire  
+Tera Type: Flying  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Bitter Blade  
+- Shadow Sneak  
+- Swords Dance  
+- Poltergeist  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Water  
+EVs: 188 HP / 224 SpD / 96 Spe  
+Careful Nature  
+- Toxic  
+- Earthquake  
+- Protect  
+- Spikes  
+
+Hatterene @ Leftovers  
+Ability: Healer  
+Tera Type: Water  
+EVs: 252 HP / 252 Def / 4 Spe  
+Bold Nature  
+- Calm Mind  
+- Draining Kiss  
+- Psyshock  
+- Mystical Fire

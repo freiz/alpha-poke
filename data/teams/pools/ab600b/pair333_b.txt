@@ -1,0 +1,59 @@
+Blaziken @ Air Balloon  
+Ability: Blaze  
+Tera Type: Fighting  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Naive Nature  
+- Close Combat  
+- Knock Off  
+- Swords Dance  
+- Flare Blitz  
+
+Gardevoir @ Leftovers  
+Ability: Trace  
+Tera Type: Fairy  
+EVs: 252 HP / 252 Def / 4 SpA  
+Relaxed Nature  
+- Trick  
+- Psychic Noise  
+- Moonblast  
+- Thunderbolt  
+
+Garchomp @ Loaded Dice  
+Ability: Rough Skin  
+Tera Type: Steel  
+EVs: 252 HP / 252 Def / 4 Spe  
+Impish Nature  
+- Earthquake  
+- Scale Shot  
+- Swords Dance  
+- Stealth Rock  
+
+Pecharunt @ Rocky Helmet  
+Ability: Poison Puppeteer  
+Tera Type: Ghost  
+EVs: 248 HP / 232 Def / 28 Spe  
+Bold Nature  
+- Malignant Chain  
+- Parting Shot  
+- Shadow Ball  
+- Recover  
+
+Samurott-Hisui @ Heavy-Duty Boots  
+Ability: Sharpness  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Ceaseless Edge  
+- Razor Shell  
+- Knock Off  
+- Sucker Punch  
+
+Corviknight @ Rocky Helmet  
+Ability: Mirror Armor  
+Tera Type: Dark  
+EVs: 252 HP / 8 Atk / 248 Def  
+Impish Nature  
+- Roost  
+- U-turn  
+- Defog  
+- Brave Bird

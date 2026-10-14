@@ -1,0 +1,59 @@
+Deoxys-Speed @ Life Orb  
+Ability: Pressure  
+Tera Type: Dark  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Hasty Nature  
+- Knock Off  
+- Psycho Boost  
+- Stealth Rock  
+- Spikes  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Steel  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Shadow Ball  
+- Make It Rain  
+- Dazzling Gleam  
+- Focus Blast  
+
+Iron Treads @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ice  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Knock Off  
+- Rapid Spin  
+- High Horsepower  
+
+Dragonite @ Silk Scarf  
+Ability: Inner Focus  
+Tera Type: Normal  
+EVs: 248 HP / 108 Atk / 152 Spe  
+Adamant Nature  
+- Extreme Speed  
+- Earthquake  
+- Dragon Dance  
+- Fire Punch  
+
+Iron Moth @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Grass  
+EVs: 124 Def / 132 SpA / 252 Spe  
+Timid Nature  
+- Sludge Wave  
+- Fiery Dance  
+- Dazzling Gleam  
+- Whirlwind  
+
+Samurott-Hisui @ Focus Sash  
+Ability: Sharpness  
+Tera Type: Poison  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Ceaseless Edge  
+- Razor Shell  
+- Sucker Punch  
+- Flip Turn

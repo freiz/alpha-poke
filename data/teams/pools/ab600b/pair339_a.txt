@@ -1,0 +1,59 @@
+Meowscarada @ Life Orb  
+Ability: Protean  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- U-turn  
+- Triple Axel  
+- Spikes  
+
+Dragapult @ Heavy-Duty Boots  
+Ability: Infiltrator  
+Tera Type: Dragon  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Draco Meteor  
+- Will-O-Wisp  
+- U-turn  
+- Hex  
+
+Slowking-Galar @ Leftovers  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 252 HP / 4 Def / 252 SpD  
+Sassy Nature  
+- Chilly Reception  
+- Toxic  
+- Sludge Bomb  
+- Trick  
+
+Primarina @ Leftovers  
+Ability: Liquid Voice  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Def / 252 SpA  
+Quiet Nature  
+- Moonblast  
+- Surf  
+- Substitute  
+- Calm Mind  
+
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Ghost  
+EVs: 248 HP / 252 Def / 8 SpD  
+Impish Nature  
+- Defog  
+- Roost  
+- Brave Bird  
+- U-turn  
+
+Great Tusk @ Rocky Helmet  
+Ability: Protosynthesis  
+Tera Type: Fighting  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Ice Spinner  
+- Stone Edge  
+- Headlong Rush

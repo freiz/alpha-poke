@@ -1,0 +1,61 @@
+Zamazenta @ Leftovers  
+Ability: Dauntless Shield  
+Tera Type: Steel  
+EVs: 252 HP / 88 Def / 168 Spe  
+Jolly Nature  
+- Iron Defense  
+- Body Press  
+- Crunch  
+- Substitute  
+
+Cresselia (F) @ Leftovers  
+Ability: Levitate  
+Tera Type: Poison  
+EVs: 252 HP / 248 Def / 8 SpD  
+Bold Nature  
+IVs: 0 Atk  
+- Calm Mind  
+- Stored Power  
+- Moonblast  
+- Moonlight  
+
+Hoopa-Unbound @ Assault Vest  
+Ability: Magician  
+Tera Type: Fairy  
+EVs: 76 HP / 120 Atk / 252 SpA / 60 Spe  
+Mild Nature  
+- Knock Off  
+- Drain Punch  
+- Psychic  
+- Thunderbolt  
+
+Goodra-Hisui @ Leftovers  
+Ability: Sap Sipper  
+Tera Type: Flying  
+EVs: 244 HP / 12 SpA / 252 SpD  
+Calm Nature  
+IVs: 0 Atk  
+- Draco Meteor  
+- Flash Cannon  
+- Body Press  
+- Acid Armor  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Fairy  
+EVs: 252 HP / 252 Atk / 4 Spe  
+Adamant Nature  
+- Swords Dance  
+- Kowtow Cleave  
+- Sucker Punch  
+- Iron Head  
+
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Water  
+EVs: 252 HP / 252 Def / 4 Spe  
+Impish Nature  
+- Earthquake  
+- Stealth Rock  
+- Knock Off  
+- Rapid Spin

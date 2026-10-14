@@ -1,0 +1,62 @@
+Weavile (F) @ Heavy-Duty Boots  
+Ability: Pressure  
+Tera Type: Dark  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Triple Axel  
+- Knock Off  
+- Ice Shard  
+- Swords Dance  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Fairy  
+EVs: 252 HP / 196 Def / 60 Spe  
+Bold Nature  
+IVs: 0 Atk  
+- Nasty Plot  
+- Shadow Ball  
+- Recover  
+- Dazzling Gleam  
+
+Samurott-Hisui (F) @ Choice Scarf  
+Ability: Sharpness  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Ceaseless Edge  
+- Aqua Cutter  
+- Flip Turn  
+- Sacred Sword  
+
+Clodsire (F) @ Heavy-Duty Boots  
+Ability: Unaware  
+Tera Type: Steel  
+EVs: 248 HP / 8 Def / 252 SpD  
+Careful Nature  
+- Earthquake  
+- Recover  
+- Toxic  
+- Rock Tomb  
+
+Skarmory (F) @ Rocky Helmet  
+Ability: Sturdy  
+Tera Type: Dragon  
+EVs: 252 HP / 160 Def / 96 Spe  
+Bold Nature  
+IVs: 0 Atk  
+- Body Press  
+- Iron Defense  
+- Roost  
+- Stealth Rock  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Calm Mind  
+- Moonblast  
+- Shadow Ball  
+- Encore

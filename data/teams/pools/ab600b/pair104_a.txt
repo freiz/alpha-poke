@@ -1,0 +1,59 @@
+Darkrai @ Leftovers  
+Ability: Bad Dreams  
+Tera Type: Fairy  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Dark Pulse  
+- Ice Beam  
+- Sludge Bomb  
+- Nasty Plot  
+
+Clefable @ Leftovers  
+Ability: Unaware  
+Tera Type: Water  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Moonblast  
+- Psychic  
+- Moonlight  
+- Stealth Rock  
+
+Entei @ Life Orb  
+Ability: Inner Focus  
+Tera Type: Grass  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Extreme Speed  
+- Sacred Fire  
+- Substitute  
+- Stone Edge  
+
+Goodra-Hisui @ Aguav Berry  
+Ability: Gooey  
+Tera Type: Fairy  
+EVs: 120 HP / 136 SpA / 252 SpD  
+Calm Nature  
+- Body Press  
+- Shelter  
+- Flash Cannon  
+- Earthquake  
+
+Ursaluna @ Flame Orb  
+Ability: Guts  
+Tera Type: Water  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Facade  
+- Headlong Rush  
+- Earthquake  
+- Fire Punch  
+
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Horn Leech  
+- Ivy Cudgel  
+- Encore

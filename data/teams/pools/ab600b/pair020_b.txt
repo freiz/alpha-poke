@@ -1,0 +1,59 @@
+Dragonite @ Leftovers  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Ice Spinner  
+- Dragon Dance  
+- Body Slam  
+- Roost  
+
+Snorlax @ Leftovers  
+Ability: Thick Fat  
+Tera Type: Poison  
+EVs: 252 HP / 252 Atk  
+Adamant Nature  
+- Earthquake  
+- Curse  
+- Heat Crash  
+- Heavy Slam  
+
+Sceptile @ Focus Sash  
+Ability: Overgrow  
+Tera Type: Dragon  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Giga Drain  
+- Acrobatics  
+- Vacuum Wave  
+- Drain Punch  
+
+Gengar @ Air Balloon  
+Ability: Cursed Body  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Def / 252 Spe  
+Timid Nature  
+- Shadow Ball  
+- Sludge Bomb  
+- Will-O-Wisp  
+- Trick  
+
+Tyranitar @ Air Balloon  
+Ability: Unnerve  
+Tera Type: Ghost  
+EVs: 88 HP / 252 Atk / 168 Spe  
+Adamant Nature  
+- Iron Defense  
+- Body Press  
+- Knock Off  
+- Stealth Rock  
+
+Metagross @ Leftovers  
+Ability: Clear Body  
+Tera Type: Steel  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Hone Claws  
+- Earthquake  
+- Agility  
+- Meteor Mash

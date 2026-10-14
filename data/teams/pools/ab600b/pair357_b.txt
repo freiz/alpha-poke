@@ -1,0 +1,59 @@
+Mienshao @ Heavy-Duty Boots  
+Ability: Reckless  
+Tera Type: Ghost  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Fake Out  
+- Knock Off  
+- Triple Axel  
+- Close Combat  
+
+Moltres @ Heavy-Duty Boots  
+Ability: Pressure  
+Tera Type: Fairy  
+EVs: 248 HP / 248 Def / 12 Spe  
+Bold Nature  
+- Will-O-Wisp  
+- Substitute  
+- U-turn  
+- Roost  
+
+Dragonite @ Leftovers  
+Ability: Multiscale  
+Tera Type: Electric  
+EVs: 152 HP / 100 Atk / 4 SpD / 180 Spe  
+Adamant Nature  
+- Thunder Wave  
+- Roost  
+- Ice Beam  
+- Extreme Speed  
+
+Alomomola @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 252 HP / 252 SpD  
+Sassy Nature  
+- Flip Turn  
+- Wish  
+- Protect  
+- Scald  
+
+Blissey @ Leftovers  
+Ability: Serene Grace  
+Tera Type: Dark  
+EVs: 252 HP / 252 Def / 4 SpA  
+Bold Nature  
+- Seismic Toss  
+- Protect  
+- Soft-Boiled  
+- Stealth Rock  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Dark  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Earthquake  
+- Protect  
+- Facade

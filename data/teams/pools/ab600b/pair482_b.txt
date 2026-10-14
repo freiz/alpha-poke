@@ -1,0 +1,59 @@
+Umbreon @ Leftovers  
+Ability: Inner Focus  
+Tera Type: Water  
+EVs: 252 HP / 176 Def / 80 SpD  
+Calm Nature  
+- Foul Play  
+- Toxic  
+- Wish  
+- Protect  
+
+Serperior @ Leftovers  
+Ability: Overgrow  
+Tera Type: Electric  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Leaf Storm  
+- Glare  
+- Synthesis  
+- Giga Drain  
+
+Cresselia @ Leftovers  
+Ability: Levitate  
+Tera Type: Fairy  
+EVs: 252 HP / 204 Def / 52 Spe  
+Bold Nature  
+- Calm Mind  
+- Stored Power  
+- Moonblast  
+- Moonlight  
+
+Revavroom @ Air Balloon  
+Ability: Filter  
+Tera Type: Fire  
+EVs: 80 HP / 252 Atk / 176 Spe  
+Adamant Nature  
+- Shift Gear  
+- Gunk Shot  
+- Iron Head  
+- High Horsepower  
+
+Skeledirge @ Leftovers  
+Ability: Unaware  
+Tera Type: Fairy  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Will-O-Wisp  
+- Torch Song  
+- Slack Off  
+- Hex  
+
+Manaphy @ Leftovers  
+Ability: Hydration  
+Tera Type: Poison  
+EVs: 252 HP / 252 SpA / 4 Spe  
+Modest Nature  
+- Take Heart  
+- Scald  
+- Acid Armor  
+- Stored Power

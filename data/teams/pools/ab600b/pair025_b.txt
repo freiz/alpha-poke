@@ -1,0 +1,61 @@
+Garganacl @ Leftovers  
+Ability: Purifying Salt  
+Tera Type: Water  
+EVs: 252 HP / 156 Def / 100 SpD  
+Impish Nature  
+- Curse  
+- Salt Cure  
+- Recover  
+- Earthquake  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Dragon  
+EVs: 244 HP / 252 Def / 12 SpD  
+Impish Nature  
+- Earthquake  
+- Toxic  
+- Stealth Rock  
+- Protect  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Fairy  
+EVs: 224 HP / 252 Def / 32 Spe  
+Bold Nature  
+IVs: 0 Atk  
+- Make It Rain  
+- Shadow Ball  
+- Nasty Plot  
+- Recover  
+
+Iron Valiant @ Heavy-Duty Boots  
+Ability: Quark Drive  
+Tera Type: Fairy  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Naive Nature  
+- Moonblast  
+- Thunderbolt  
+- Knock Off  
+- Close Combat  
+
+Dragonite @ Heavy-Duty Boots  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Dragon Dance  
+- Extreme Speed  
+- Earthquake  
+- Ice Spinner  
+
+Zapdos @ Heavy-Duty Boots  
+Ability: Static  
+Tera Type: Dragon  
+EVs: 252 HP / 4 Def / 252 SpD  
+Calm Nature  
+IVs: 0 Atk  
+- Roost  
+- Discharge  
+- Hurricane  
+- Heat Wave

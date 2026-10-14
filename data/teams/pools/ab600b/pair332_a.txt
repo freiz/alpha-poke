@@ -1,0 +1,59 @@
+Primarina @ Leftovers  
+Ability: Torrent  
+Tera Type: Ghost  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Draining Kiss  
+- Calm Mind  
+- Sparkling Aria  
+- Substitute  
+
+Raging Bolt @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Fairy  
+EVs: 252 HP / 4 Def / 252 SpA  
+Modest Nature  
+- Calm Mind  
+- Dragon Pulse  
+- Thunderclap  
+- Thunderbolt  
+
+Heatran @ Leftovers  
+Ability: Flash Fire  
+Tera Type: Bug  
+EVs: 252 HP / 140 SpD / 116 Spe  
+Calm Nature  
+- Earth Power  
+- Will-O-Wisp  
+- Taunt  
+- Stealth Rock  
+
+Weezing-Galar @ Black Sludge  
+Ability: Neutralizing Gas  
+Tera Type: Grass  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Defog  
+- Strange Steam  
+- Will-O-Wisp  
+- Toxic  
+
+Garchomp @ Rocky Helmet  
+Ability: Rough Skin  
+Tera Type: Ghost  
+EVs: 252 HP / 216 Def / 40 Spe  
+Impish Nature  
+- Earthquake  
+- Outrage  
+- Stealth Rock  
+- Dragon Tail  
+
+Weavile @ Life Orb  
+Ability: Pressure  
+Tera Type: Ice  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Triple Axel  
+- Ice Shard  
+- Low Kick  
+- Knock Off

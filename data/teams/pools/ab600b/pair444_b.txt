@@ -1,0 +1,59 @@
+Chesnaught @ Rocky Helmet  
+Ability: Bulletproof  
+Tera Type: Fire  
+EVs: 252 HP / 252 Def / 4 Spe  
+Impish Nature  
+- Spikes  
+- Knock Off  
+- Synthesis  
+- Leech Seed  
+
+Alomomola @ Assault Vest  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Flip Turn  
+- Mirror Coat  
+- Aqua Jet  
+- Scald  
+
+Iron Treads @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Water  
+EVs: 252 HP / 4 Atk / 252 SpD  
+Careful Nature  
+- Ice Spinner  
+- Earthquake  
+- Rapid Spin  
+- Knock Off  
+
+Iron Crown @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Steel  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Volt Switch  
+- Focus Blast  
+- Tachyon Cutter  
+- Psychic Noise  
+
+Zamazenta @ Life Orb  
+Ability: Dauntless Shield  
+Tera Type: Steel  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Jolly Nature  
+- Stone Edge  
+- Close Combat  
+- Crunch  
+- Body Press  
+
+Garganacl @ Leftovers  
+Ability: Purifying Salt  
+Tera Type: Ghost  
+EVs: 248 HP / 4 Def / 252 SpD / 4 Spe  
+Careful Nature  
+- Stealth Rock  
+- Recover  
+- Salt Cure  
+- Protect

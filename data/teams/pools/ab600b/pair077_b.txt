@@ -1,0 +1,59 @@
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Grass  
+EVs: 56 HP / 252 Def / 4 SpD / 196 Spe  
+Impish Nature  
+- U-turn  
+- Brave Bird  
+- Roost  
+- Defog  
+
+Great Tusk @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Ice  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Ice Spinner  
+- Rapid Spin  
+- Stealth Rock  
+- Taunt  
+
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Power Whip  
+- Ivy Cudgel  
+- Taunt  
+- Knock Off  
+
+Slowking-Galar @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Fighting  
+EVs: 252 HP / 16 Def / 240 SpD  
+Sassy Nature  
+- Chilly Reception  
+- Sludge Bomb  
+- Ice Beam  
+- Future Sight  
+
+Kyurem @ Choice Scarf  
+Ability: Pressure  
+Tera Type: Fairy  
+EVs: 252 Def / 144 SpA / 112 Spe  
+Modest Nature  
+- Blizzard  
+- Freeze-Dry  
+- Earth Power  
+- Ice Beam  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Calm Mind  
+- Moonblast  
+- Shadow Ball  
+- Focus Blast

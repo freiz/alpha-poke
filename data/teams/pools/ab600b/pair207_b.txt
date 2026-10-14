@@ -1,0 +1,59 @@
+Gholdengo @ Leftovers  
+Ability: Good as Gold  
+Tera Type: Flying  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Trick  
+- Make It Rain  
+- Nasty Plot  
+- Shadow Ball  
+
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 248 HP / 8 Atk / 252 Def  
+Impish Nature  
+- Knock Off  
+- Swords Dance  
+- Ivy Cudgel  
+- U-turn  
+
+Glimmora @ Passho Berry  
+Ability: Toxic Debris  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Stealth Rock  
+- Meteor Beam  
+- Mortal Spin  
+- Earth Power  
+
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Dragon  
+EVs: 136 HP / 252 Def / 120 Spe  
+Bold Nature  
+- U-turn  
+- Roost  
+- Defog  
+- Iron Defense  
+
+Dragonite @ Leftovers  
+Ability: Multiscale  
+Tera Type: Ground  
+EVs: 248 HP / 16 Atk / 228 Def / 16 Spe  
+Adamant Nature  
+- Ice Spinner  
+- Extreme Speed  
+- Earthquake  
+- Dragon Dance  
+
+Ting-Lu @ Heavy-Duty Boots  
+Ability: Vessel of Ruin  
+Tera Type: Fairy  
+EVs: 252 HP / 4 Def / 252 SpD  
+Relaxed Nature  
+- Ruination  
+- Spikes  
+- Earthquake  
+- Whirlwind

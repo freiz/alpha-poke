@@ -1,0 +1,59 @@
+Latios @ Choice Scarf  
+Ability: Levitate  
+Tera Type: Dragon  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Draco Meteor  
+- Luster Purge  
+- Flip Turn  
+- Dragon Pulse  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Fairy  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Spirit Break  
+- Close Combat  
+- Moonblast  
+
+Gholdengo @ Shuca Berry  
+Ability: Good as Gold  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Trick  
+- Make It Rain  
+- Shadow Ball  
+- Thunder Wave  
+
+Samurott-Hisui @ Focus Sash  
+Ability: Sharpness  
+Tera Type: Poison  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Razor Shell  
+- Aqua Jet  
+- Ceaseless Edge  
+- Knock Off  
+
+Corviknight @ Leftovers  
+Ability: Pressure  
+Tera Type: Dragon  
+EVs: 248 HP / 252 Def / 8 SpD  
+Impish Nature  
+- U-turn  
+- Defog  
+- Roost  
+- Brave Bird  
+
+Clefable @ Leftovers  
+Ability: Magic Guard  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Stealth Rock  
+- Moonblast  
+- Moonlight  
+- Thunder Wave

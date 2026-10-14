@@ -1,0 +1,61 @@
+Zamazenta @ Life Orb  
+Ability: Dauntless Shield  
+Tera Type: Electric  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Close Combat  
+- Crunch  
+- Heavy Slam  
+- Stone Edge  
+
+Volcanion @ Assault Vest  
+Ability: Water Absorb  
+Tera Type: Fairy  
+EVs: 160 Def / 80 SpA / 64 SpD / 204 Spe  
+Modest Nature  
+IVs: 0 Atk  
+- Steam Eruption  
+- Fire Spin  
+- Sludge Bomb  
+- Body Press  
+
+Iron Treads @ Air Balloon  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Earthquake  
+- Knock Off  
+- Rapid Spin  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Moonblast  
+- Shadow Ball  
+- Taunt  
+- Calm Mind  
+
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Dragon  
+EVs: 248 HP / 252 Def / 8 SpD  
+Impish Nature  
+- Brave Bird  
+- U-turn  
+- Roost  
+- Defog  
+
+Kyurem @ Never-Melt Ice  
+Ability: Pressure  
+Tera Type: Ground  
+EVs: 168 Atk / 88 SpA / 252 Spe  
+Hasty Nature  
+- Icicle Spear  
+- Freeze-Dry  
+- Earth Power  
+- Dragon Dance

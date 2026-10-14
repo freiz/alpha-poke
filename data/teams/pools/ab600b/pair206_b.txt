@@ -1,0 +1,59 @@
+Keldeo-Resolute @ Leftovers  
+Ability: Justified  
+Tera Type: Steel  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Air Slash  
+- Surf  
+- Secret Sword  
+- Calm Mind  
+
+Cresselia @ Mental Herb  
+Ability: Levitate  
+Tera Type: Fairy  
+EVs: 248 HP / 200 Def / 60 SpD  
+Relaxed Nature  
+- Trick Room  
+- Moonblast  
+- Lunar Dance  
+- Ice Beam  
+
+Uxie @ Colbur Berry  
+Ability: Levitate  
+Tera Type: Steel  
+EVs: 4 HP / 252 SpA / 252 SpD  
+Calm Nature  
+- Trick Room  
+- Memento  
+- Stealth Rock  
+- Nasty Plot  
+
+Ursaluna @ Flame Orb  
+Ability: Guts  
+Tera Type: Normal  
+EVs: 248 HP / 252 Atk / 8 Def  
+Adamant Nature  
+- Swords Dance  
+- Headlong Rush  
+- Facade  
+- Fire Punch  
+
+Conkeldurr @ Flame Orb  
+Ability: Guts  
+Tera Type: Steel  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Brave Nature  
+- Ice Punch  
+- Mach Punch  
+- Drain Punch  
+- Knock Off  
+
+Iron Hands @ Quick Claw  
+Ability: Quark Drive  
+Tera Type: Flying  
+EVs: 248 HP / 252 Atk / 8 SpD  
+Adamant Nature  
+- Swords Dance  
+- Wild Charge  
+- Drain Punch  
+- Ice Punch

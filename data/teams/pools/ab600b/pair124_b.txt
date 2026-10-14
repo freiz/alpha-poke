@@ -1,0 +1,61 @@
+Dachsbun @ Heavy-Duty Boots  
+Ability: Well-Baked Body  
+Tera Type: Grass  
+EVs: 252 HP / 4 Atk / 252 Def  
+Impish Nature  
+- Wish  
+- Lick  
+- Body Press  
+- Protect  
+
+Skarmory @ Rocky Helmet  
+Ability: Sturdy  
+Tera Type: Dragon  
+EVs: 252 HP / 24 Def / 232 SpD  
+Bold Nature  
+IVs: 0 Atk  
+- Spikes  
+- Iron Defense  
+- Roost  
+- Body Press  
+
+Blissey @ Heavy-Duty Boots  
+Ability: Natural Cure  
+Tera Type: Dark  
+EVs: 252 HP / 4 Def / 252 SpD  
+Bold Nature  
+IVs: 0 Atk  
+- Shadow Ball  
+- Calm Mind  
+- Soft-Boiled  
+- Seismic Toss  
+
+Dondozo @ Heavy-Duty Boots  
+Ability: Unaware  
+Tera Type: Fighting  
+EVs: 248 HP / 8 Atk / 252 Def  
+Impish Nature  
+- Rest  
+- Sleep Talk  
+- Waterfall  
+- Curse  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Water  
+EVs: 252 HP / 184 Def / 72 SpD  
+Impish Nature  
+- Protect  
+- Bulldoze  
+- Knock Off  
+- Poison Jab  
+
+Clefable @ Leftovers  
+Ability: Magic Guard  
+Tera Type: Fire  
+EVs: 252 HP / 4 SpA / 252 SpD  
+Calm Nature  
+- Moonblast  
+- Stealth Rock  
+- Wish  
+- Knock Off

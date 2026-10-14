@@ -1,0 +1,59 @@
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- Whirlwind  
+- Ruination  
+- Stealth Rock  
+- Earthquake  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Ghost  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Nasty Plot  
+- Shadow Ball  
+- Thunderbolt  
+- Trick  
+
+Zamazenta @ Life Orb  
+Ability: Dauntless Shield  
+Tera Type: Dark  
+EVs: 252 HP / 204 Atk / 16 SpD / 36 Spe  
+Jolly Nature  
+- Close Combat  
+- Crunch  
+- Light Screen  
+- Body Press  
+
+Meowscarada @ Choice Band  
+Ability: Protean  
+Tera Type: Dark  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- U-turn  
+- Flower Trick  
+- Triple Axel  
+
+Alomomola @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Steel  
+EVs: 252 HP / 252 Def / 4 SpD  
+Relaxed Nature  
+- Wish  
+- Flip Turn  
+- Protect  
+- Mirror Coat  
+
+Bronzong @ Leftovers  
+Ability: Levitate  
+Tera Type: Ghost  
+EVs: 248 HP / 8 Def / 252 SpD  
+Calm Nature  
+- Stealth Rock  
+- Psychic Noise  
+- Earthquake  
+- Trick

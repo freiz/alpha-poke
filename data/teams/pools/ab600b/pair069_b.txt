@@ -1,0 +1,62 @@
+Kyurem @ Choice Specs  
+Ability: Pressure  
+Tera Type: Ice  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Blizzard  
+- Draco Meteor  
+- Freeze-Dry  
+- Earth Power  
+
+Slowking-Galar @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 252 HP / 16 Def / 240 SpD  
+Sassy Nature  
+IVs: 0 Spe  
+- Future Sight  
+- Chilly Reception  
+- Sludge Bomb  
+- Thunder Wave  
+
+Dondozo @ Heavy-Duty Boots  
+Ability: Unaware  
+Tera Type: Dark  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Liquidation  
+- Body Press  
+- Rest  
+- Sleep Talk  
+
+Iron Treads @ Leftovers  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 156 HP / 100 SpD / 252 Spe  
+Jolly Nature  
+- Earthquake  
+- Rapid Spin  
+- Volt Switch  
+- Stealth Rock  
+
+Dragonite @ Heavy-Duty Boots  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Dragon Dance  
+- Extreme Speed  
+- Earthquake  
+- Fire Punch  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Calm Mind  
+- Moonblast  
+- Shadow Ball  
+- Encore

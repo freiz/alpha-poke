@@ -1,0 +1,59 @@
+Landorus-Therian @ Rocky Helmet  
+Ability: Intimidate  
+Tera Type: Ground  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Stealth Rock  
+- U-turn  
+- Earthquake  
+- Stone Edge  
+
+Mandibuzz @ Rocky Helmet  
+Ability: Overcoat  
+Tera Type: Water  
+EVs: 248 HP / 244 Def / 16 Spe  
+Bold Nature  
+- U-turn  
+- Roost  
+- Foul Play  
+- Defog  
+
+Slowking-Galar @ Assault Vest  
+Ability: Regenerator  
+Tera Type: Grass  
+EVs: 252 HP / 4 Def / 252 SpD  
+Sassy Nature  
+- Sludge Bomb  
+- Psyshock  
+- Ice Beam  
+- Flamethrower  
+
+Crawdaunt @ Focus Sash  
+Ability: Adaptability  
+Tera Type: Water  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Knock Off  
+- Crabhammer  
+- Aqua Jet  
+- Liquidation  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Electric  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Moonblast  
+- Calm Mind  
+- Shadow Ball  
+- Thunderbolt  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Fighting  
+EVs: 252 HP / 4 Def / 252 SpA  
+Modest Nature  
+- Make It Rain  
+- Nasty Plot  
+- Shadow Ball  
+- Trick

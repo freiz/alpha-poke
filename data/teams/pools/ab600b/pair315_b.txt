@@ -1,0 +1,59 @@
+Pelipper @ Damp Rock  
+Ability: Drizzle  
+Tera Type: Ground  
+EVs: 252 HP / 252 Def / 4 SpA  
+Bold Nature  
+- Surf  
+- U-turn  
+- Roost  
+- Hurricane  
+
+Iron Treads @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Hasty Nature  
+- Stealth Rock  
+- Steel Beam  
+- Earthquake  
+- Rapid Spin  
+
+Kingdra @ Choice Specs  
+Ability: Swift Swim  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Weather Ball  
+- Draco Meteor  
+- Hurricane  
+- Flip Turn  
+
+Poliwrath @ Choice Band  
+Ability: Swift Swim  
+Tera Type: Poison  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Close Combat  
+- Liquidation  
+- Earthquake  
+- Knock Off  
+
+Toxicroak @ Rocky Helmet  
+Ability: Dry Skin  
+Tera Type: Fairy  
+EVs: 248 HP / 208 Def / 52 Spe  
+Impish Nature  
+- Encore  
+- Knock Off  
+- Toxic  
+- Drain Punch  
+
+Raging Bolt @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Bug  
+EVs: 80 HP / 252 SpA / 176 Spe  
+Modest Nature  
+IVs: 20 Atk  
+- Thunderclap  
+- Dragon Pulse  
+- Weather Ball  
+- Thunder

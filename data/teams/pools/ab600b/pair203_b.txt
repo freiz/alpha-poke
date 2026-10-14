@@ -1,0 +1,59 @@
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Fire  
+EVs: 248 HP / 252 Def / 8 SpD  
+Impish Nature  
+- Iron Defense  
+- Body Press  
+- U-turn  
+- Brave Bird  
+
+Zamazenta @ Leftovers  
+Ability: Dauntless Shield  
+Tera Type: Fire  
+EVs: 252 HP / 88 Def / 168 Spe  
+Jolly Nature  
+- Body Press  
+- Crunch  
+- Heavy Slam  
+- Iron Defense  
+
+Tyranitar @ Leftovers  
+Ability: Sand Stream  
+Tera Type: Dark  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Knock Off  
+- Stealth Rock  
+- Stone Edge  
+- Ice Punch  
+
+Excadrill @ Air Balloon  
+Ability: Mold Breaker  
+Tera Type: Ghost  
+EVs: 48 HP / 252 Atk / 208 Spe  
+Jolly Nature  
+- Swords Dance  
+- Iron Head  
+- Rapid Spin  
+- Earthquake  
+
+Alomomola @ Covert Cloak  
+Ability: Regenerator  
+Tera Type: Normal  
+EVs: 12 HP / 244 Def / 252 SpD  
+Relaxed Nature  
+- Flip Turn  
+- Aqua Jet  
+- Mirror Coat  
+- Scald  
+
+Cinderace @ Heavy-Duty Boots  
+Ability: Libero  
+Tera Type: Flying  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- U-turn  
+- Pyro Ball  
+- Court Change  
+- Will-O-Wisp

@@ -1,0 +1,59 @@
+Dragonite @ Heavy-Duty Boots  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- Dragon Dance  
+- Extreme Speed  
+- Earthquake  
+- Dragon Claw  
+
+Gengar @ Focus Sash  
+Ability: Cursed Body  
+Tera Type: Ghost  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Hasty Nature  
+- Shadow Ball  
+- Dazzling Gleam  
+- Trick  
+- Sludge Wave  
+
+Keldeo-Resolute @ Choice Specs  
+Ability: Justified  
+Tera Type: Water  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Surf  
+- Vacuum Wave  
+- Flip Turn  
+- Secret Sword  
+
+Zapdos @ Rocky Helmet  
+Ability: Static  
+Tera Type: Water  
+EVs: 248 HP / 252 Def / 8 SpA  
+Bold Nature  
+- Hurricane  
+- Roost  
+- Volt Switch  
+- Heat Wave  
+
+Tyranitar @ Leftovers  
+Ability: Sand Stream  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Atk / 252 SpD  
+Careful Nature  
+- Stealth Rock  
+- Knock Off  
+- Ice Beam  
+- Roar  
+
+Scizor @ Choice Band  
+Ability: Technician  
+Tera Type: Steel  
+EVs: 156 HP / 252 Atk / 100 Spe  
+Adamant Nature  
+- Swords Dance  
+- Knock Off  
+- U-turn  
+- Bullet Punch

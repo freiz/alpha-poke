@@ -1,0 +1,59 @@
+Dragapult @ Life Orb  
+Ability: Infiltrator  
+Tera Type: Dragon  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Shadow Ball  
+- U-turn  
+- Draco Meteor  
+- Dragon Darts  
+
+Glimmora @ Red Card  
+Ability: Toxic Debris  
+Tera Type: Ground  
+EVs: 248 HP / 252 Def / 8 SpD  
+Bold Nature  
+- Stealth Rock  
+- Mortal Spin  
+- Meteor Beam  
+- Earth Power  
+
+Comfey @ Life Orb  
+Ability: Triage  
+Tera Type: Steel  
+EVs: 252 HP / 252 SpA  
+Modest Nature  
+- Growth  
+- Stored Power  
+- Draining Kiss  
+- Synthesis  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Fairy  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Sucker Punch  
+- Kowtow Cleave  
+- Swords Dance  
+- Iron Head  
+
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Spikes  
+- Ivy Cudgel  
+- U-turn  
+- Taunt  
+
+Blaziken @ Life Orb  
+Ability: Speed Boost  
+Tera Type: Fire  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- Knock Off  
+- Close Combat  
+- Flare Blitz  
+- Stone Edge

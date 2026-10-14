@@ -1,0 +1,59 @@
+Dragonite @ Leftovers  
+Ability: Multiscale  
+Tera Type: Ground  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Dragon Dance  
+- Earthquake  
+- Ice Spinner  
+- Roost  
+
+Iron Moth @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Flying  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Fiery Dance  
+- Bug Buzz  
+- Sludge Wave  
+- Substitute  
+
+Landorus-Therian @ Rocky Helmet  
+Ability: Intimidate  
+Tera Type: Water  
+EVs: 252 HP / 4 SpA / 252 Spe  
+Timid Nature  
+- Stealth Rock  
+- U-turn  
+- Earthquake  
+- Stone Edge  
+
+Rotom-Wash @ Leftovers  
+Ability: Levitate  
+Tera Type: Poison  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Light Screen  
+- Reflect  
+- Volt Switch  
+- Hydro Pump  
+
+Scizor @ Choice Band  
+Ability: Technician  
+Tera Type: Steel  
+EVs: 32 HP / 244 Atk / 8 SpD / 224 Spe  
+Adamant Nature  
+- U-turn  
+- Bullet Punch  
+- Defog  
+- Knock Off  
+
+Darkrai @ Leftovers  
+Ability: Bad Dreams  
+Tera Type: Dark  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Rash Nature  
+- Psychic  
+- Nasty Plot  
+- Ice Beam  
+- Will-O-Wisp

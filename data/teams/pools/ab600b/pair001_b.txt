@@ -1,0 +1,59 @@
+Ogerpon @ Choice Band  
+Ability: Defiant  
+Tera Type: Grass  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Knock Off  
+- Ivy Cudgel  
+- Synthesis  
+
+Rillaboom @ Life Orb  
+Ability: Grassy Surge  
+Tera Type: Grass  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Grassy Glide  
+- Knock Off  
+- Swords Dance  
+
+Slowking-Galar @ Black Sludge  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 252 HP / 16 Def / 144 SpA / 96 SpD  
+Modest Nature  
+- Future Sight  
+- Chilly Reception  
+- Sludge Bomb  
+- Thunder Wave  
+
+Great Tusk @ Rocky Helmet  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Stealth Rock  
+- Headlong Rush  
+- Ice Spinner  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Sucker Punch  
+- Iron Head  
+- Kowtow Cleave  
+- Low Kick  
+
+Moltres @ Heavy-Duty Boots  
+Ability: Flame Body  
+Tera Type: Grass  
+EVs: 248 HP / 252 Def / 8 SpD  
+Bold Nature  
+- U-turn  
+- Flamethrower  
+- Roost  
+- Hurricane

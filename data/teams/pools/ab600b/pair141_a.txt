@@ -1,0 +1,61 @@
+Cobalion @ Assault Vest  
+Ability: Justified  
+Tera Type: Bug  
+EVs: 108 HP / 100 Def / 220 SpA / 80 SpD  
+Bold Nature  
+IVs: 0 Atk  
+- Body Press  
+- Flash Cannon  
+- Vacuum Wave  
+- Volt Switch  
+
+Alomomola @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Grass  
+EVs: 252 HP / 176 Def / 80 SpD  
+Careful Nature  
+- Wish  
+- Protect  
+- Flip Turn  
+- Tickle  
+
+Fezandipiti @ Heavy-Duty Boots  
+Ability: Toxic Chain  
+Tera Type: Water  
+EVs: 248 HP / 196 SpD / 64 Spe  
+Calm Nature  
+IVs: 0 Atk  
+- Calm Mind  
+- Sludge Bomb  
+- Moonblast  
+- Roost  
+
+Landorus-Therian @ Rocky Helmet  
+Ability: Intimidate  
+Tera Type: Water  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Stealth Rock  
+- Earthquake  
+- Taunt  
+
+Ogerpon-Wellspring (F) @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Ivy Cudgel  
+- Horn Leech  
+- Play Rough  
+
+Darkrai @ Choice Scarf  
+Ability: Bad Dreams  
+Tera Type: Poison  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Modest Nature  
+- Trick  
+- Dark Pulse  
+- Sludge Bomb  
+- Knock Off

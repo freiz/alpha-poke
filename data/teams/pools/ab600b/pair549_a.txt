@@ -1,0 +1,59 @@
+Torterra @ Loaded Dice  
+Ability: Shell Armor  
+Tera Type: Rock  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Shell Smash  
+- Earthquake  
+- Bullet Seed  
+- Rock Blast  
+
+Weavile @ Life Orb  
+Ability: Pressure  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Trailblaze  
+- Ice Shard  
+- Ice Spinner  
+
+Brambleghast @ Heavy-Duty Boots  
+Ability: Wind Rider  
+Tera Type: Fairy  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Poltergeist  
+- Spikes  
+- Seed Bomb  
+
+Cresselia @ Leftovers  
+Ability: Levitate  
+Tera Type: Poison  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+- Future Sight  
+- Thunder Wave  
+- Grass Knot  
+- Moonlight  
+
+Manaphy @ Life Orb  
+Ability: Hydration  
+Tera Type: Water  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Tail Glow  
+- Surf  
+- Ice Beam  
+- Energy Ball  
+
+Politoed @ Damp Rock  
+Ability: Drizzle  
+Tera Type: Fighting  
+EVs: 248 HP / 252 SpA / 8 SpD  
+Modest Nature  
+- Encore  
+- Focus Blast  
+- Perish Song  
+- Weather Ball

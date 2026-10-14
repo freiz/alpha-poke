@@ -1,0 +1,59 @@
+Greninja @ Life Orb  
+Ability: Battle Bond  
+Tera Type: Water  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Sludge Wave  
+- Hydro Pump  
+- U-turn  
+- Ice Beam  
+
+Hydrapple @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Poison  
+EVs: 248 HP / 252 Def / 8 SpD  
+Bold Nature  
+- Giga Drain  
+- Nasty Plot  
+- Earth Power  
+- Fickle Beam  
+
+Incineroar @ Leftovers  
+Ability: Intimidate  
+Tera Type: Ground  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- U-turn  
+- Will-O-Wisp  
+- Knock Off  
+- Flare Blitz  
+
+Cobalion @ Rocky Helmet  
+Ability: Justified  
+Tera Type: Steel  
+EVs: 252 Atk / 252 Spe  
+Jolly Nature  
+- Thunder Wave  
+- Stealth Rock  
+- Flash Cannon  
+- Volt Switch  
+
+Alomomola @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Flip Turn  
+- Protect  
+- Scald  
+- Wish  
+
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Dragon  
+EVs: 60 HP / 252 Def / 196 SpD  
+Relaxed Nature  
+- Defog  
+- Brave Bird  
+- U-turn  
+- Roost

@@ -1,0 +1,59 @@
+Clodsire @ Black Sludge  
+Ability: Water Absorb  
+Tera Type: Steel  
+EVs: 248 HP / 8 Def / 252 SpD  
+Careful Nature  
+- Earthquake  
+- Toxic  
+- Protect  
+- Recover  
+
+Grafaiai @ Black Sludge  
+Ability: Prankster  
+Tera Type: Flying  
+EVs: 4 HP / 252 SpD / 252 Spe  
+Careful Nature  
+- Switcheroo  
+- U-turn  
+- Parting Shot  
+- Encore  
+
+Weezing-Galar @ Leftovers  
+Ability: Levitate  
+Tera Type: Grass  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Defog  
+- Will-O-Wisp  
+- Protect  
+- Strange Steam  
+
+Muk-Alola @ Black Sludge  
+Ability: Poison Touch  
+Tera Type: Ice  
+EVs: 252 HP / 168 Def / 4 SpA / 72 SpD  
+Bold Nature  
+- Protect  
+- Knock Off  
+- Poison Jab  
+- Taunt  
+
+Toxapex @ Leftovers  
+Ability: Regenerator  
+Tera Type: Flying  
+EVs: 248 HP / 136 Def / 124 SpD  
+Impish Nature  
+- Poison Jab  
+- Infestation  
+- Baneful Bunker  
+- Recover  
+
+Iron Moth @ Focus Sash  
+Ability: Quark Drive  
+Tera Type: Ice  
+EVs: 124 Def / 132 SpA / 252 Spe  
+Timid Nature  
+- Fiery Dance  
+- Energy Ball  
+- Sludge Wave  
+- Overheat

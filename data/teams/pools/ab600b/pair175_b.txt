@@ -1,0 +1,59 @@
+Suicune @ Leftovers  
+Ability: Pressure  
+Tera Type: Water  
+EVs: 252 HP / 4 Def / 252 SpD  
+Calm Nature  
+- Calm Mind  
+- Scald  
+- Substitute  
+- Protect  
+
+Dragonite @ Heavy-Duty Boots  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 252 HP / 156 Def / 100 SpD  
+Impish Nature  
+- Dragon Tail  
+- Dragon Dance  
+- Extreme Speed  
+- Earthquake  
+
+Cinderace @ Normal Gem  
+Ability: Libero  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- High Jump Kick  
+- Pyro Ball  
+- U-turn  
+- Will-O-Wisp  
+
+Zamazenta @ Leftovers  
+Ability: Dauntless Shield  
+Tera Type: Electric  
+EVs: 252 HP / 88 Def / 168 Spe  
+Jolly Nature  
+- Iron Defense  
+- Body Press  
+- Crunch  
+- Heavy Slam  
+
+Latias @ Grassy Seed  
+Ability: Levitate  
+Tera Type: Electric  
+EVs: 160 HP / 252 SpA / 96 Spe  
+Modest Nature  
+- Calm Mind  
+- Stored Power  
+- Aura Sphere  
+- Recover  
+
+Iron Crown @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Steel  
+EVs: 96 HP / 160 SpA / 252 Spe  
+Timid Nature  
+- Tachyon Cutter  
+- Psychic Noise  
+- Volt Switch  
+- Focus Blast

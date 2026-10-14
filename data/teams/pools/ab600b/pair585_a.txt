@@ -1,0 +1,59 @@
+Tyranitar @ Leftovers  
+Ability: Sand Stream  
+Tera Type: Rock  
+EVs: 252 HP / 16 Def / 240 SpD  
+Sassy Nature  
+- Low Kick  
+- Stone Edge  
+- Knock Off  
+- Stealth Rock  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Dark  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Thunder Wave  
+- Hex  
+- Make It Rain  
+- Recover  
+
+Zamazenta @ Leftovers  
+Ability: Dauntless Shield  
+Tera Type: Fire  
+EVs: 4 HP / 252 Def / 252 Spe  
+Jolly Nature  
+- Crunch  
+- Heavy Slam  
+- Close Combat  
+- Iron Defense  
+
+Rillaboom @ Life Orb  
+Ability: Grassy Surge  
+Tera Type: Grass  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Grassy Glide  
+- Wood Hammer  
+- U-turn  
+
+Garchomp @ Rocky Helmet  
+Ability: Rough Skin  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Spikes  
+- Earthquake  
+- Dragon Tail  
+
+Zapdos @ Heavy-Duty Boots  
+Ability: Static  
+Tera Type: Fire  
+EVs: 248 HP / 252 Def / 8 SpA  
+Bold Nature  
+- Hurricane  
+- Heat Wave  
+- Volt Switch  
+- Roost

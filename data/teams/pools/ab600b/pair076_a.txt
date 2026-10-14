@@ -1,0 +1,59 @@
+Samurott-Hisui @ Focus Sash  
+Ability: Sharpness  
+Tera Type: Poison  
+EVs: 248 HP / 84 Atk / 124 SpD / 52 Spe  
+Adamant Nature  
+- Sucker Punch  
+- Aqua Cutter  
+- Ceaseless Edge  
+- Flip Turn  
+
+Dragapult @ Life Orb  
+Ability: Clear Body  
+Tera Type: Ghost  
+EVs: 4 HP / 108 Atk / 144 SpA / 252 Spe  
+Hasty Nature  
+- Fire Blast  
+- U-turn  
+- Flamethrower  
+- Draco Meteor  
+
+Scizor @ Life Orb  
+Ability: Technician  
+Tera Type: Flying  
+EVs: 84 HP / 252 Atk / 172 Spe  
+Adamant Nature  
+- Swords Dance  
+- Bullet Punch  
+- Knock Off  
+- U-turn  
+
+Kyurem @ Leftovers  
+Ability: Pressure  
+Tera Type: Ground  
+EVs: 32 HP / 252 Atk / 224 Spe  
+Naughty Nature  
+- Freeze-Dry  
+- Protect  
+- Earth Power  
+- Substitute  
+
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Tera Type: Water  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- Stealth Rock  
+- Ruination  
+- Whirlwind  
+- Spikes  
+
+Garchomp @ Life Orb  
+Ability: Rough Skin  
+Tera Type: Poison  
+EVs: 252 Atk / 168 Def / 88 Spe  
+Jolly Nature  
+- Scale Shot  
+- Earthquake  
+- Draco Meteor  
+- Swords Dance

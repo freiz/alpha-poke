@@ -1,0 +1,59 @@
+Great Tusk @ Assault Vest  
+Ability: Protosynthesis  
+Tera Type: Fighting  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Ice Spinner  
+- Headlong Rush  
+- Close Combat  
+
+Kingambit @ Air Balloon  
+Ability: Supreme Overlord  
+Tera Type: Ghost  
+EVs: 48 HP / 252 Atk / 64 Def / 144 Spe  
+Adamant Nature  
+- Kowtow Cleave  
+- Sucker Punch  
+- Iron Head  
+- Swords Dance  
+
+Raging Bolt @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Fairy  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+- Thunderclap  
+- Thunderbolt  
+- Draco Meteor  
+- Dragon Pulse  
+
+Walking Wake @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Fairy  
+EVs: 12 HP / 244 SpA / 252 Spe  
+Timid Nature  
+- Flip Turn  
+- Hydro Steam  
+- Dragon Pulse  
+- Draco Meteor  
+
+Ninetales @ Heat Rock  
+Ability: Drought  
+Tera Type: Ghost  
+EVs: 248 HP / 20 SpA / 240 Spe  
+Timid Nature  
+- Encore  
+- Overheat  
+- Will-O-Wisp  
+- Healing Wish  
+
+Ceruledge @ Air Balloon  
+Ability: Weak Armor  
+Tera Type: Fairy  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Shadow Sneak  
+- Bitter Blade  
+- Poltergeist

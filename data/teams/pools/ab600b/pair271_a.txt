@@ -1,0 +1,60 @@
+Gallade @ Life Orb  
+Ability: Sharpness  
+Tera Type: Fighting  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Sacred Sword  
+- Psycho Cut  
+- Night Slash  
+- Agility  
+
+Meowscarada @ Focus Sash  
+Ability: Overgrow  
+Tera Type: Ghost  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Naive Nature  
+- Leaf Storm  
+- Knock Off  
+- Spikes  
+- Taunt  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Shiny: Yes  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Close Combat  
+- Zen Headbutt  
+- Fire Punch  
+- Swords Dance  
+
+Kingambit @ Lum Berry  
+Ability: Supreme Overlord  
+Tera Type: Flying  
+EVs: 80 HP / 248 Atk / 8 SpD / 172 Spe  
+Adamant Nature  
+- Kowtow Cleave  
+- Sucker Punch  
+- Iron Head  
+- Swords Dance  
+
+Zoroark-Hisui @ Expert Belt  
+Ability: Illusion  
+Tera Type: Fighting  
+EVs: 84 Atk / 172 SpA / 252 Spe  
+Naive Nature  
+- Shadow Ball  
+- Low Kick  
+- Grass Knot  
+- Swords Dance  
+
+Dragonite @ Heavy-Duty Boots  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Extreme Speed  
+- Earthquake  
+- Encore  
+- Dragon Dance

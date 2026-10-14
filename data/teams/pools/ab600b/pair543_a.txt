@@ -1,0 +1,59 @@
+Krookodile @ Life Orb  
+Ability: Moxie  
+Tera Type: Ground  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Earthquake  
+- Gunk Shot  
+- Stealth Rock  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Fairy  
+EVs: 248 HP / 176 Def / 72 SpA / 12 Spe  
+Modest Nature  
+- Nasty Plot  
+- Shadow Ball  
+- Trick  
+- Make It Rain  
+
+Araquanid @ Custap Berry  
+Ability: Water Bubble  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Atk / 40 Def / 212 SpA  
+Quiet Nature  
+- Leech Life  
+- Surf  
+- Sticky Web  
+- Endeavor  
+
+Hydrapple @ Assault Vest  
+Ability: Regenerator  
+Tera Type: Poison  
+EVs: 244 HP / 172 Def / 88 SpA / 4 Spe  
+Bold Nature  
+- Nasty Plot  
+- Fickle Beam  
+- Earth Power  
+- Giga Drain  
+
+Moltres @ Heavy-Duty Boots  
+Ability: Flame Body  
+Tera Type: Fairy  
+EVs: 248 HP / 252 Def / 8 SpD  
+Bold Nature  
+- U-turn  
+- Roost  
+- Flamethrower  
+- Scorching Sands  
+
+Scizor @ Choice Band  
+Ability: Technician  
+Tera Type: Steel  
+EVs: 32 HP / 244 Atk / 8 SpD / 224 Spe  
+Adamant Nature  
+- U-turn  
+- Bullet Punch  
+- Knock Off  
+- Swords Dance

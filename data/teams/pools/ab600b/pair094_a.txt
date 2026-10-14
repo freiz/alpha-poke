@@ -1,0 +1,60 @@
+Zamazenta @ Choice Band  
+Ability: Dauntless Shield  
+Tera Type: Fighting  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Close Combat  
+- Crunch  
+- Heavy Slam  
+- Stone Edge  
+
+Hoopa-Unbound @ Assault Vest  
+Ability: Magician  
+Tera Type: Fighting  
+EVs: 120 Atk / 252 SpA / 136 Spe  
+Mild Nature  
+- Knock Off  
+- Drain Punch  
+- Psychic  
+- Thunderbolt  
+
+Cinderace @ Heavy-Duty Boots  
+Ability: Blaze  
+Tera Type: Fire  
+EVs: 224 HP / 32 Atk / 252 Spe  
+Jolly Nature  
+- Pyro Ball  
+- U-turn  
+- Will-O-Wisp  
+- Court Change  
+
+Garchomp @ Rocky Helmet  
+Ability: Rough Skin  
+Tera Type: Ghost  
+EVs: 252 HP / 4 SpD / 252 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Earthquake  
+- Spikes  
+- Dragon Tail  
+
+Slowking-Galar @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Grass  
+EVs: 252 HP / 252 Def / 4 SpD  
+Relaxed Nature  
+IVs: 0 Spe  
+- Future Sight  
+- Chilly Reception  
+- Sludge Bomb  
+- Thunder Wave  
+
+Scizor @ Heavy-Duty Boots  
+Ability: Technician  
+Tera Type: Steel  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Bullet Punch  
+- U-turn  
+- Close Combat  
+- Thief

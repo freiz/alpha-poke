@@ -1,0 +1,58 @@
+Garchomp @ Life Orb  
+Ability: Rough Skin  
+Tera Type: Steel  
+EVs: 252 HP / 216 Def / 40 Spe  
+Impish Nature  
+- Earthquake  
+- Scale Shot  
+- Fire Fang  
+- Swords Dance  
+
+Hippowdon @ Rocky Helmet  
+Ability: Sand Stream  
+Tera Type: Rock  
+EVs: 252 HP / 4 Atk / 252 Def  
+Impish Nature  
+- Slack Off  
+- Earthquake  
+- Whirlwind  
+- Stealth Rock  
+
+Tentacruel @ Black Sludge  
+Ability: Clear Body  
+Tera Type: Flying  
+EVs: 252 HP / 252 SpD  
+Sassy Nature  
+- Toxic Spikes  
+- Rapid Spin  
+- Knock Off  
+- Sludge Bomb  
+
+Alomomola @ Choice Band  
+Ability: Regenerator  
+Tera Type: Normal  
+EVs: 252 HP / 4 Def / 252 SpD  
+Sassy Nature  
+- Flip Turn  
+- Body Slam  
+- Mirror Coat  
+- Scald  
+
+Tropius @ Sitrus Berry  
+Ability: Harvest  
+EVs: 252 HP / 128 Def / 128 SpD  
+Calm Nature  
+- Substitute  
+- Protect  
+- Whirlwind  
+- Curse  
+
+Swalot @ Sitrus Berry  
+Ability: Sticky Hold  
+Tera Type: Dark  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Toxic Spikes  
+- Knock Off  
+- Brick Break  
+- Gunk Shot

@@ -1,0 +1,59 @@
+Quaquaval @ Leftovers  
+Ability: Moxie  
+Tera Type: Steel  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Triple Axel  
+- Aqua Step  
+- Ice Spinner  
+- Rapid Spin  
+
+Cinderace @ Choice Scarf  
+Ability: Libero  
+Tera Type: Fire  
+EVs: 224 HP / 32 Atk / 252 Spe  
+Jolly Nature  
+- High Jump Kick  
+- Pyro Ball  
+- Will-O-Wisp  
+- U-turn  
+
+Slowking-Galar @ Assault Vest  
+Ability: Regenerator  
+Tera Type: Psychic  
+EVs: 216 HP / 40 Def / 252 SpD  
+Sassy Nature  
+- Sludge Wave  
+- Psychic Noise  
+- Flamethrower  
+- Sludge Bomb  
+
+Inteleon @ Scope Lens  
+Ability: Torrent  
+Tera Type: Water  
+EVs: 248 HP / 8 Atk / 252 Spe  
+Jolly Nature  
+- Ice Beam  
+- Snipe Shot  
+- Shadow Ball  
+- Hydro Pump  
+
+Serperior @ Choice Scarf  
+Ability: Contrary  
+Tera Type: Grass  
+EVs: 252 HP / 16 SpA / 4 SpD / 236 Spe  
+Timid Nature  
+- Leaf Storm  
+- Glare  
+- Dragon Pulse  
+- Substitute  
+
+Clodsire @ Black Sludge  
+Ability: Water Absorb  
+Tera Type: Dark  
+EVs: 248 HP / 8 Def / 252 SpD  
+Careful Nature  
+- Toxic Spikes  
+- Waterfall  
+- Stealth Rock  
+- Recover

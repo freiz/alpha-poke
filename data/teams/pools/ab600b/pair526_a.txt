@@ -1,0 +1,61 @@
+Vileplume (F) @ Leftovers  
+Ability: Effect Spore  
+Tera Type: Water  
+EVs: 248 HP / 252 Def / 8 SpD  
+Bold Nature  
+IVs: 0 Atk  
+- Giga Drain  
+- Sludge Bomb  
+- Moonlight  
+- Strength Sap  
+
+Kingambit (F) @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Dark  
+EVs: 208 HP / 252 Atk / 48 Spe  
+Adamant Nature  
+- Swords Dance  
+- Sucker Punch  
+- Kowtow Cleave  
+- Iron Head  
+
+Moltres @ Heavy-Duty Boots  
+Ability: Flame Body  
+Tera Type: Ghost  
+EVs: 248 HP / 8 Def / 252 SpD  
+Calm Nature  
+- Roar  
+- Roost  
+- U-turn  
+- Flamethrower  
+
+Weavile (F) @ Heavy-Duty Boots  
+Ability: Pressure  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Ice Shard  
+- Icicle Crash  
+- Knock Off  
+
+Great Tusk @ Heavy-Duty Boots  
+Ability: Protosynthesis  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Ice Spinner  
+- Rapid Spin  
+- Stealth Rock  
+- Headlong Rush  
+
+Iron Valiant @ Choice Scarf  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Moonblast  
+- Shadow Ball  
+- Trick  
+- Destiny Bond

@@ -1,0 +1,59 @@
+Espeon @ Sitrus Berry  
+Ability: Magic Bounce  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Psychic  
+- Trick  
+- Alluring Voice  
+- Thunder Wave  
+
+Goodra @ Damp Rock  
+Ability: Hydration  
+Tera Type: Poison  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+- Rain Dance  
+- Rest  
+- Thunder  
+- Sludge Bomb  
+
+Weezing-Galar @ Rocky Helmet  
+Ability: Levitate  
+Tera Type: Grass  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Flamethrower  
+- Toxic Spikes  
+- Clear Smog  
+- Will-O-Wisp  
+
+Orthworm @ Leftovers  
+Ability: Earth Eater  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Atk / 252 Def  
+Impish Nature  
+- Stealth Rock  
+- Body Press  
+- Iron Defense  
+- Earthquake  
+
+Suicune @ Leftovers  
+Ability: Pressure  
+Tera Type: Steel  
+EVs: 252 HP / 4 Def / 252 SpD  
+Calm Nature  
+- Roar  
+- Ice Beam  
+- Substitute  
+- Scald  
+
+Munkidori @ Eject Button  
+Ability: Toxic Chain  
+Tera Type: Poison  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Modest Nature  
+- Trick  
+- Parting Shot  
+- Sludge Bomb  
+- Sludge Wave

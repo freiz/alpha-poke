@@ -1,0 +1,58 @@
+Raging Bolt @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Ghost  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Modest Nature  
+- Dragon Pulse  
+- Calm Mind  
+- Thunderbolt  
+- Thunderclap  
+
+Hatterene @ Custap Berry  
+Ability: Magic Bounce  
+Tera Type: Flying  
+EVs: 248 HP / 184 Def / 76 Spe  
+Bold Nature  
+- Psychic Noise  
+- Mystical Fire  
+- Draining Kiss  
+- Nuzzle  
+
+Magmortar  
+Ability: Flame Body  
+EVs: 96 HP / 160 Def / 252 SpD  
+Relaxed Nature  
+- Acid Spray  
+- Lava Plume  
+- Overheat  
+- Fire Blast  
+
+Okidogi @ Black Sludge  
+Ability: Guard Dog  
+Tera Type: Water  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Taunt  
+- Bulk Up  
+- Drain Punch  
+- Gunk Shot  
+
+Scizor @ Leftovers  
+Ability: Swarm  
+Tera Type: Steel  
+EVs: 248 HP / 252 Atk / 8 SpD  
+Adamant Nature  
+- U-turn  
+- Bullet Punch  
+- Knock Off  
+- Swords Dance  
+
+Tyranitar @ Weakness Policy  
+Ability: Sand Stream  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Atk / 252 SpD  
+Careful Nature  
+- Knock Off  
+- Roar  
+- Stealth Rock  
+- Stone Edge

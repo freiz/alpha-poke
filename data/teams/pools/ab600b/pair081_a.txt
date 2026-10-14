@@ -1,0 +1,59 @@
+Mew @ Weakness Policy  
+Ability: Synchronize  
+Tera Type: Grass  
+EVs: 252 HP / 4 SpA / 252 Spe  
+Timid Nature  
+- Dragon Dance  
+- Icicle Spear  
+- Triple Axel  
+- Agility  
+
+Iron Moth @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Grass  
+EVs: 124 Def / 132 SpA / 252 Spe  
+Timid Nature  
+- Fiery Dance  
+- Sludge Wave  
+- Energy Ball  
+- Psychic  
+
+Pecharunt @ Air Balloon  
+Ability: Poison Puppeteer  
+Tera Type: Dark  
+EVs: 252 HP / 228 Def / 28 Spe  
+Bold Nature  
+- Malignant Chain  
+- Shadow Ball  
+- Recover  
+- Parting Shot  
+
+Incineroar @ Leftovers  
+Ability: Intimidate  
+Tera Type: Fairy  
+EVs: 252 HP / 4 Atk / 252 Def  
+Impish Nature  
+- Knock Off  
+- Parting Shot  
+- Will-O-Wisp  
+- Flare Blitz  
+
+Weezing-Galar @ Leftovers  
+Ability: Levitate  
+Tera Type: Steel  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Strange Steam  
+- Defog  
+- Will-O-Wisp  
+- Pain Split  
+
+Articuno-Galar @ Iron Ball  
+Ability: Competitive  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Def / 252 SpA  
+Modest Nature  
+- Agility  
+- Calm Mind  
+- Recover  
+- Trick Room

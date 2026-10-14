@@ -1,0 +1,59 @@
+Zamazenta @ Lum Berry  
+Ability: Dauntless Shield  
+Tera Type: Dark  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Heavy Slam  
+- Stone Edge  
+- Close Combat  
+- Light Screen  
+
+Clefable @ Leftovers  
+Ability: Unaware  
+Tera Type: Steel  
+EVs: 176 HP / 252 Def / 80 Spe  
+Bold Nature  
+- Stealth Rock  
+- Moonblast  
+- Thunder Wave  
+- Moonlight  
+
+Darkrai @ Choice Scarf  
+Ability: Bad Dreams  
+Tera Type: Fairy  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Timid Nature  
+- Knock Off  
+- Dark Pulse  
+- Ice Beam  
+- Will-O-Wisp  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Normal  
+EVs: 252 HP / 4 Def / 252 Spe  
+Jolly Nature  
+- Facade  
+- Protect  
+- Swords Dance  
+- Earthquake  
+
+Dragonite @ Heavy-Duty Boots  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 248 HP / 108 Atk / 152 Spe  
+Adamant Nature  
+- Extreme Speed  
+- Roost  
+- Earthquake  
+- Dragon Tail  
+
+Slowking-Galar @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Dark  
+EVs: 252 HP / 4 Def / 252 SpD  
+Sassy Nature  
+- Toxic Spikes  
+- Chilly Reception  
+- Toxic  
+- Psychic Noise

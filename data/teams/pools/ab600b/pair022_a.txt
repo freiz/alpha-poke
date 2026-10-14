@@ -1,0 +1,59 @@
+Skarmory @ Rocky Helmet  
+Ability: Sturdy  
+Tera Type: Fighting  
+EVs: 252 HP / 160 Def / 96 Spe  
+Bold Nature  
+- Body Press  
+- Spikes  
+- Roost  
+- Whirlwind  
+
+Slowking-Galar @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Bold Nature  
+- Future Sight  
+- Ice Beam  
+- Sludge Bomb  
+- Focus Blast  
+
+Dragonite @ Soft Sand  
+Ability: Multiscale  
+Tera Type: Fire  
+EVs: 248 HP / 108 Atk / 152 Spe  
+Adamant Nature  
+- Dragon Dance  
+- Earthquake  
+- Scale Shot  
+- Fire Punch  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Nasty Plot  
+- Shadow Ball  
+- Make It Rain  
+- Dazzling Gleam  
+
+Zamazenta @ Life Orb  
+Ability: Dauntless Shield  
+Tera Type: Dark  
+EVs: 104 HP / 152 SpD / 252 Spe  
+Jolly Nature  
+- Close Combat  
+- Crunch  
+- Stone Edge  
+- Heavy Slam  
+
+Dragapult @ Leftovers  
+Ability: Infiltrator  
+Tera Type: Dragon  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- U-turn  
+- Dragon Darts  
+- Hex  
+- Will-O-Wisp

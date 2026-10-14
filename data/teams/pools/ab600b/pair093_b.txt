@@ -1,0 +1,60 @@
+Garganacl @ Leftovers  
+Ability: Purifying Salt  
+Tera Type: Water  
+EVs: 252 HP / 56 Def / 200 SpD  
+Careful Nature  
+- Salt Cure  
+- Protect  
+- Recover  
+- Stealth Rock  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Modest Nature  
+IVs: 0 Atk  
+- Moonblast  
+- Psyshock  
+- Vacuum Wave  
+- Calm Mind  
+
+Cinderace @ Heavy-Duty Boots  
+Ability: Libero  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Pyro Ball  
+- Sucker Punch  
+- Court Change  
+- U-turn  
+
+Tornadus-Therian (M) @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Flying  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Bleakwind Storm  
+- Knock Off  
+- Heat Wave  
+- U-turn  
+
+Clodsire @ Leftovers  
+Ability: Water Absorb  
+Tera Type: Dark  
+EVs: 252 HP / 4 Atk / 252 SpD  
+Careful Nature  
+- Earthquake  
+- Poison Jab  
+- Recover  
+- Toxic  
+
+Zamazenta @ Leftovers  
+Ability: Dauntless Shield  
+Tera Type: Fire  
+EVs: 248 HP / 88 Def / 172 Spe  
+Jolly Nature  
+- Body Press  
+- Crunch  
+- Iron Defense  
+- Substitute

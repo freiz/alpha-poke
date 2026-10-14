@@ -1,0 +1,59 @@
+Weezing-Galar @ Leftovers  
+Ability: Neutralizing Gas  
+Tera Type: Grass  
+EVs: 248 HP / 252 Def / 8 SpD  
+Bold Nature  
+- Toxic  
+- Defog  
+- Strange Steam  
+- Will-O-Wisp  
+
+Chandelure @ Leftovers  
+Ability: Flash Fire  
+Tera Type: Fire  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Shadow Ball  
+- Fire Blast  
+- Trailblaze  
+- Energy Ball  
+
+Blissey @ Leftovers  
+Ability: Natural Cure  
+Tera Type: Dark  
+EVs: 20 HP / 252 Def / 236 SpD  
+Calm Nature  
+- Thunder Wave  
+- Stealth Rock  
+- Seismic Toss  
+- Soft-Boiled  
+
+Dragonite @ Soft Sand  
+Ability: Multiscale  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Dragon Dance  
+- Ice Spinner  
+- Earthquake  
+- Encore  
+
+Basculin-Blue-Striped  
+Ability: Rock Head  
+Tera Type: Water  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Wave Crash  
+- Psychic Fangs  
+- Liquidation  
+- Head Smash  
+
+Iron Crown @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Electric  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Focus Blast  
+- Calm Mind  
+- Tachyon Cutter  
+- Agility

@@ -1,0 +1,59 @@
+Dondozo @ Rocky Helmet  
+Ability: Unaware  
+Tera Type: Fighting  
+EVs: 248 HP / 252 Def / 8 SpD  
+Impish Nature  
+- Rest  
+- Curse  
+- Sleep Talk  
+- Waterfall  
+
+Garganacl @ Leftovers  
+Ability: Clear Body  
+Tera Type: Ghost  
+EVs: 248 HP / 16 Def / 244 SpD  
+Impish Nature  
+- Salt Cure  
+- Body Press  
+- Recover  
+- Protect  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Flying  
+EVs: 156 HP / 252 Atk / 100 Spe  
+Adamant Nature  
+- Sucker Punch  
+- Low Kick  
+- Kowtow Cleave  
+- Swords Dance  
+
+Gallade @ Life Orb  
+Ability: Sharpness  
+Tera Type: Fighting  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Sacred Sword  
+- Psycho Cut  
+- Night Slash  
+- Swords Dance  
+
+Ceruledge @ Life Orb  
+Ability: Flash Fire  
+Tera Type: Ghost  
+EVs: 240 Atk / 16 SpD / 252 Spe  
+Jolly Nature  
+- Shadow Claw  
+- Bitter Blade  
+- Shadow Sneak  
+- Poltergeist  
+
+Clefable @ Leftovers  
+Ability: Magic Guard  
+Tera Type: Dark  
+EVs: 176 HP / 252 Def / 80 Spe  
+Bold Nature  
+- Calm Mind  
+- Wish  
+- Moonblast  
+- Stealth Rock

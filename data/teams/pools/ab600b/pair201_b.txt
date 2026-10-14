@@ -1,0 +1,59 @@
+Samurott-Hisui @ Focus Sash  
+Ability: Sharpness  
+Tera Type: Poison  
+EVs: 160 HP / 32 Atk / 248 SpD / 68 Spe  
+Adamant Nature  
+- Ceaseless Edge  
+- Sacred Sword  
+- Sucker Punch  
+- Flip Turn  
+
+Ribombee @ Focus Sash  
+Ability: Shield Dust  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Sticky Web  
+- Moonblast  
+- Switcheroo  
+- Stun Spore  
+
+Ceruledge @ Covert Cloak  
+Ability: Weak Armor  
+Tera Type: Bug  
+EVs: 104 HP / 252 Atk / 40 Def / 112 Spe  
+Adamant Nature  
+- Bitter Blade  
+- Shadow Sneak  
+- Bulk Up  
+- Poltergeist  
+
+Excadrill @ Focus Sash  
+Ability: Mold Breaker  
+Tera Type: Ground  
+EVs: 248 HP / 8 Atk / 252 SpD  
+Careful Nature  
+- Iron Head  
+- Rapid Spin  
+- Earthquake  
+- Rock Slide  
+
+Hatterene @ Leftovers  
+Ability: Magic Bounce  
+Tera Type: Bug  
+EVs: 248 HP / 252 Def / 8 SpD  
+Bold Nature  
+- Psychic Noise  
+- Pain Split  
+- Nuzzle  
+- Healing Wish  
+
+Lokix @ Choice Band  
+Ability: Tinted Lens  
+Tera Type: Bug  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- First Impression  
+- Knock Off  
+- U-turn  
+- Leech Life

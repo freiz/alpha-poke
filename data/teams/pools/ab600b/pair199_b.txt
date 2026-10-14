@@ -1,0 +1,61 @@
+Pecharunt @ Colbur Berry  
+Ability: Poison Puppeteer  
+Tera Type: Dark  
+EVs: 252 HP / 224 Def / 32 Spe  
+Bold Nature  
+IVs: 0 Atk  
+- Malignant Chain  
+- Hex  
+- Parting Shot  
+- Recover  
+
+Chansey @ Eviolite  
+Ability: Natural Cure  
+Tera Type: Steel  
+EVs: 248 HP / 252 Def / 8 SpD  
+Bold Nature  
+IVs: 0 Atk  
+- Seismic Toss  
+- Thunder Wave  
+- Soft-Boiled  
+- Stealth Rock  
+
+Enamorus @ Expert Belt  
+Ability: Contrary  
+Tera Type: Ground  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Rash Nature  
+- Moonblast  
+- Earth Power  
+- Mystical Fire  
+- Superpower  
+
+Ogerpon-Wellspring (F) @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Ivy Cudgel  
+- Knock Off  
+- U-turn  
+- Encore  
+
+Great Tusk @ Heavy-Duty Boots  
+Ability: Protosynthesis  
+Tera Type: Ice  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Headlong Rush  
+- Close Combat  
+- Ice Spinner  
+- Rapid Spin  
+
+Kingambit @ Shuca Berry  
+Ability: Supreme Overlord  
+Tera Type: Fire  
+EVs: 160 HP / 252 Atk / 96 Spe  
+Adamant Nature  
+- Low Kick  
+- Iron Head  
+- Sucker Punch  
+- Swords Dance

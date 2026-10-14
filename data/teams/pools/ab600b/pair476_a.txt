@@ -1,0 +1,59 @@
+Sableye @ Rocky Helmet  
+Ability: Prankster  
+Tera Type: Fairy  
+EVs: 252 HP / 4 Atk / 252 Def  
+Impish Nature  
+- Encore  
+- Reflect  
+- Light Screen  
+- Disable  
+
+Victreebel @ Life Orb  
+Ability: Chlorophyll  
+Tera Type: Dark  
+EVs: 36 Atk / 148 Def / 128 SpD / 196 Spe  
+Hardy Nature  
+- Swords Dance  
+- Poison Jab  
+- Strength Sap  
+- Sucker Punch  
+
+Torkoal @ Choice Specs  
+Ability: Drought  
+Tera Type: Fire  
+EVs: 252 HP / 4 Def / 252 SpD  
+Sassy Nature  
+- Stealth Rock  
+- Will-O-Wisp  
+- Overheat  
+- Eruption  
+
+Blastoise @ Life Orb  
+Ability: Torrent  
+Tera Type: Dark  
+EVs: 212 SpA / 44 SpD / 252 Spe  
+Modest Nature  
+- Surf  
+- Rapid Spin  
+- Ice Beam  
+- Shell Smash  
+
+Ursaluna @ Flame Orb  
+Ability: Guts  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Atk  
+Brave Nature  
+- Facade  
+- Headlong Rush  
+- Swords Dance  
+- Fire Punch  
+
+Jirachi @ Leftovers  
+Ability: Serene Grace  
+Tera Type: Steel  
+EVs: 252 HP / 48 Def / 56 SpA / 48 SpD / 100 Spe  
+Hardy Nature  
+- Future Sight  
+- Doom Desire  
+- Wish  
+- Iron Head

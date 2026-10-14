@@ -1,0 +1,59 @@
+Iron Treads @ Air Balloon  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Atk / 4 Spe  
+Naive Nature  
+- Rapid Spin  
+- Earthquake  
+- Knock Off  
+- Stealth Rock  
+
+Darkrai @ Leftovers  
+Ability: Bad Dreams  
+Tera Type: Dark  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Will-O-Wisp  
+- Focus Blast  
+- Dark Pulse  
+- Sludge Bomb  
+
+Sylveon @ Leftovers  
+Ability: Pixilate  
+Tera Type: Steel  
+EVs: 136 HP / 252 SpA / 116 SpD / 4 Spe  
+Hardy Nature  
+- Hyper Voice  
+- Calm Mind  
+- Substitute  
+- Protect  
+
+Slowking @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Poison  
+EVs: 252 HP / 200 Def / 56 SpD  
+Sassy Nature  
+- Ice Beam  
+- Future Sight  
+- Chilly Reception  
+- Scald  
+
+Meowscarada @ Rocky Helmet  
+Ability: Protean  
+Tera Type: Grass  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Knock Off  
+- Flower Trick  
+- Triple Axel  
+
+Garchomp @ Rocky Helmet  
+Ability: Rough Skin  
+Tera Type: Ghost  
+EVs: 248 HP / 216 Def / 44 Spe  
+Impish Nature  
+- Stealth Rock  
+- Spikes  
+- Earthquake  
+- Dragon Tail

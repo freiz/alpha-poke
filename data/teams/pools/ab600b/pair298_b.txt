@@ -1,0 +1,59 @@
+Alomomola @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Ghost  
+EVs: 252 HP / 224 Def / 32 SpD  
+Relaxed Nature  
+- Wish  
+- Flip Turn  
+- Scald  
+- Protect  
+
+Slowking-Galar @ Colbur Berry  
+Ability: Regenerator  
+Tera Type: Grass  
+EVs: 252 HP / 8 Def / 248 SpD  
+Sassy Nature  
+- Sludge Bomb  
+- Thunder Wave  
+- Chilly Reception  
+- Future Sight  
+
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Fire  
+EVs: 220 HP / 252 Atk / 36 Spe  
+Adamant Nature  
+- Knock Off  
+- Stealth Rock  
+- Rapid Spin  
+- Headlong Rush  
+
+Iron Moth @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Fire  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Overheat  
+- Fiery Dance  
+- Substitute  
+- Meteor Beam  
+
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Horn Leech  
+- Ivy Cudgel  
+- Knock Off  
+
+Dragonite @ Leftovers  
+Ability: Multiscale  
+Tera Type: Ground  
+EVs: 252 HP / 252 Atk / 4 Def  
+Adamant Nature  
+- Ice Spinner  
+- Roost  
+- Dragon Dance  
+- Earthquake

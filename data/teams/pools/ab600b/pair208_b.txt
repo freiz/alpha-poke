@@ -1,0 +1,59 @@
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Ivy Cudgel  
+- U-turn  
+- Knock Off  
+- Play Rough  
+
+Landorus-Therian @ Rocky Helmet  
+Ability: Intimidate  
+Tera Type: Water  
+EVs: 252 HP / 252 Def  
+Relaxed Nature  
+- Earthquake  
+- Stealth Rock  
+- U-turn  
+- Taunt  
+
+Skeledirge @ Leftovers  
+Ability: Unaware  
+Tera Type: Dragon  
+EVs: 4 HP / 252 Def / 252 SpA  
+Timid Nature  
+- Slack Off  
+- Torch Song  
+- Hex  
+- Will-O-Wisp  
+
+Gholdengo @ Leftovers  
+Ability: Good as Gold  
+Tera Type: Water  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Shadow Ball  
+- Make It Rain  
+- Recover  
+- Trick  
+
+Regieleki @ Air Balloon  
+Ability: Transistor  
+Tera Type: Electric  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Volt Switch  
+- Thunderbolt  
+- Explosion  
+- Electro Ball  
+
+Dragonite @ Lum Berry  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 196 HP / 204 Atk / 108 Spe  
+Adamant Nature  
+- Dragon Dance  
+- Extreme Speed  
+- Earthquake  
+- Roost

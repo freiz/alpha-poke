@@ -1,0 +1,59 @@
+Rillaboom @ Assault Vest  
+Ability: Grassy Surge  
+Tera Type: Grass  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Wood Hammer  
+- Swords Dance  
+- U-turn  
+- Grassy Glide  
+
+Zamazenta @ Leftovers  
+Ability: Dauntless Shield  
+Tera Type: Fire  
+EVs: 104 HP / 248 Def / 156 Spe  
+Jolly Nature  
+- Body Press  
+- Roar  
+- Iron Defense  
+- Crunch  
+
+Tornadus-Therian @ Assault Vest  
+Ability: Regenerator  
+Tera Type: Normal  
+EVs: 252 HP / 16 Def / 240 Spe  
+Timid Nature  
+- Bleakwind Storm  
+- U-turn  
+- Knock Off  
+- Heat Wave  
+
+Skeledirge @ Heavy-Duty Boots  
+Ability: Unaware  
+Tera Type: Fairy  
+EVs: 252 HP / 252 SpD  
+Calm Nature  
+- Torch Song  
+- Will-O-Wisp  
+- Hex  
+- Slack Off  
+
+Iron Crown @ Choice Specs  
+Ability: Quark Drive  
+Tera Type: Steel  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Psychic Noise  
+- Volt Switch  
+- Future Sight  
+- Tachyon Cutter  
+
+Samurott-Hisui @ Focus Sash  
+Ability: Sharpness  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Razor Shell  
+- Aqua Jet  
+- Ceaseless Edge  
+- Sucker Punch

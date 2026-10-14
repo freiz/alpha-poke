@@ -1,0 +1,59 @@
+Slither Wing @ Heavy-Duty Boots  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 252 HP / 28 Atk / 220 Def / 8 Spe  
+Impish Nature  
+- U-turn  
+- First Impression  
+- Morning Sun  
+- Close Combat  
+
+Kyurem @ Loaded Dice  
+Ability: Pressure  
+Tera Type: Fire  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Dragon Dance  
+- Scale Shot  
+- Icicle Spear  
+- Freeze-Dry  
+
+Darkrai @ Mirror Herb  
+Ability: Bad Dreams  
+Tera Type: Dark  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Will-O-Wisp  
+- Psyshock  
+- Dark Pulse  
+- Sludge Bomb  
+
+Slowking-Galar @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 248 HP / 184 Def / 28 SpA / 48 Spe  
+Bold Nature  
+- Flamethrower  
+- Psychic Noise  
+- Sludge Bomb  
+- Chilly Reception  
+
+Great Tusk @ Life Orb  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Headlong Rush  
+- Rapid Spin  
+- Close Combat  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Encore  
+- Knock Off  
+- Close Combat  
+- Swords Dance

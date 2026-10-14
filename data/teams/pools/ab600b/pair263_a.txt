@@ -1,0 +1,59 @@
+Torkoal @ Heat Rock  
+Ability: Drought  
+Tera Type: Flying  
+EVs: 248 HP / 248 Def / 12 SpD  
+Bold Nature  
+- Lava Plume  
+- Stealth Rock  
+- Overheat  
+- Rapid Spin  
+
+Venusaur @ Life Orb  
+Ability: Overgrow  
+Tera Type: Dark  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Weather Ball  
+- Giga Drain  
+- Sludge Bomb  
+- Growth  
+
+Walking Wake @ Life Orb  
+Ability: Protosynthesis  
+Tera Type: Water  
+EVs: 12 HP / 244 SpA / 252 Spe  
+Timid Nature  
+- Hydro Steam  
+- Draco Meteor  
+- Dragon Pulse  
+- Weather Ball  
+
+Lilligant-Hisui @ Leftovers  
+Ability: Leaf Guard  
+Tera Type: Electric  
+EVs: 188 HP / 252 Atk / 68 Spe  
+Adamant Nature  
+- Triple Axel  
+- Close Combat  
+- Victory Dance  
+- Ice Spinner  
+
+Iron Moth @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Fairy  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Discharge  
+- Fiery Dance  
+- Sludge Wave  
+- Energy Ball  
+
+Minior-Blue @ White Herb  
+Ability: Shields Down  
+Tera Type: Ground  
+EVs: 252 Atk / 252 SpD  
+Hardy Nature  
+- Shell Smash  
+- Substitute  
+- Earthquake  
+- Acrobatics

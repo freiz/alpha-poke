@@ -1,0 +1,59 @@
+Sinistcha @ Heavy-Duty Boots  
+Ability: Heatproof  
+Tera Type: Normal  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Leaf Storm  
+- Shadow Ball  
+- Strength Sap  
+- Matcha Gotcha  
+
+Iron Moth @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Fairy  
+EVs: 120 HP / 132 SpA / 252 Spe  
+Timid Nature  
+- Fiery Dance  
+- Sludge Wave  
+- Dazzling Gleam  
+- Substitute  
+
+Raging Bolt @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Bug  
+EVs: 248 HP / 8 Def / 252 SpA  
+Modest Nature  
+- Thunderbolt  
+- Calm Mind  
+- Dragon Pulse  
+- Thunderclap  
+
+Greninja @ Life Orb  
+Ability: Protean  
+Tera Type: Water  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Hasty Nature  
+- Surf  
+- Dark Pulse  
+- Hydro Pump  
+- Ice Beam  
+
+Iron Treads @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Dark  
+EVs: 252 HP / 252 SpD / 4 Spe  
+Careful Nature  
+- Rapid Spin  
+- Earthquake  
+- Steel Beam  
+- Stealth Rock  
+
+Dragonite @ Covert Cloak  
+Ability: Multiscale  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Dragon Dance  
+- Scale Shot  
+- Encore  
+- Fire Punch

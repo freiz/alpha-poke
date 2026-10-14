@@ -1,0 +1,63 @@
+Ribombee (F) @ Focus Sash  
+Ability: Shield Dust  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Sticky Web  
+- Stun Spore  
+- Moonblast  
+- Psychic  
+
+Empoleon @ Leftovers  
+Ability: Competitive  
+Tera Type: Flying  
+EVs: 252 HP / 4 Def / 252 SpD  
+Calm Nature  
+IVs: 29 Spe  
+- Stealth Rock  
+- Flip Turn  
+- Roar  
+- Ice Beam  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Fairy  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Nasty Plot  
+- Shadow Ball  
+- Make It Rain  
+- Psyshock  
+
+Great Tusk @ Heavy-Duty Boots  
+Ability: Protosynthesis  
+Tera Type: Dragon  
+EVs: 128 HP / 128 Atk / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Headlong Rush  
+- Bulk Up  
+- Ice Spinner  
+
+Greninja-Bond @ Life Orb  
+Ability: Battle Bond  
+Tera Type: Ghost  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Spikes  
+- Ice Beam  
+- Hydro Pump  
+- Dark Pulse  
+
+Iron Moth @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Grass  
+EVs: 124 Def / 132 SpA / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Energy Ball  
+- Fiery Dance  
+- Dazzling Gleam  
+- Substitute

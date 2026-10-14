@@ -1,0 +1,59 @@
+Tyranitar @ Red Card  
+Ability: Sand Stream  
+Tera Type: Ghost  
+EVs: 100 HP / 252 Atk / 156 Def  
+Adamant Nature  
+- Thunder Wave  
+- Ice Beam  
+- Knock Off  
+- Stealth Rock  
+
+Excadrill @ Life Orb  
+Ability: Sand Rush  
+Tera Type: Ground  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Swords Dance  
+- Rock Slide  
+- Earthquake  
+- Rapid Spin  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Ghost  
+EVs: 180 HP / 252 Atk / 72 SpD / 4 Spe  
+Adamant Nature  
+- Sucker Punch  
+- Iron Head  
+- Kowtow Cleave  
+- Swords Dance  
+
+Garchomp @ Life Orb  
+Ability: Rough Skin  
+Tera Type: Dragon  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Naive Nature  
+- Earthquake  
+- Swords Dance  
+- Scale Shot  
+- Fire Fang  
+
+Pecharunt @ Air Balloon  
+Ability: Poison Puppeteer  
+Tera Type: Ghost  
+EVs: 252 HP / 224 Def / 32 Spe  
+Bold Nature  
+- Shadow Ball  
+- Parting Shot  
+- Recover  
+- Toxic  
+
+Rotom-Wash @ Leftovers  
+Ability: Levitate  
+Tera Type: Steel  
+EVs: 252 HP / 4 Def / 252 Spe  
+Timid Nature  
+- Pain Split  
+- Volt Switch  
+- Hydro Pump  
+- Will-O-Wisp

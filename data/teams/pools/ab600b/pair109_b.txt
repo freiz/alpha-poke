@@ -1,0 +1,59 @@
+Dragapult @ Life Orb  
+Ability: Infiltrator  
+Tera Type: Dragon  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Dragon Darts  
+- Sucker Punch  
+- Dragon Dance  
+- Shadow Ball  
+
+Iron Moth @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Fire  
+EVs: 124 Def / 132 SpA / 252 Spe  
+Timid Nature  
+- Fiery Dance  
+- Energy Ball  
+- Sludge Wave  
+- U-turn  
+
+Meowscarada @ Life Orb  
+Ability: Protean  
+Tera Type: Grass  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Flower Trick  
+- Knock Off  
+- Triple Axel  
+- U-turn  
+
+Iron Treads @ Leftovers  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Atk / 252 SpD  
+Careful Nature  
+- Stealth Rock  
+- Rapid Spin  
+- Earthquake  
+- Ice Spinner  
+
+Primarina @ Leftovers  
+Ability: Torrent  
+Tera Type: Poison  
+EVs: 252 HP / 100 Def / 92 SpD / 64 Spe  
+Bold Nature  
+- Psychic Noise  
+- Calm Mind  
+- Draining Kiss  
+- Moonblast  
+
+Conkeldurr @ Flame Orb  
+Ability: Guts  
+Tera Type: Fairy  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Knock Off  
+- Ice Punch  
+- Drain Punch  
+- Mach Punch

@@ -1,0 +1,59 @@
+Hydreigon @ Life Orb  
+Ability: Levitate  
+Tera Type: Steel  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Draco Meteor  
+- Dark Pulse  
+- Earth Power  
+- Flash Cannon  
+
+Landorus-Therian @ Rocky Helmet  
+Ability: Intimidate  
+Tera Type: Ground  
+EVs: 252 Atk / 4 SpA / 252 Spe  
+Naive Nature  
+- U-turn  
+- Taunt  
+- Earth Power  
+- Earthquake  
+
+Samurott-Hisui @ Assault Vest  
+Ability: Sharpness  
+Tera Type: Dark  
+EVs: 248 HP / 144 Atk / 56 SpD / 60 Spe  
+Adamant Nature  
+- Knock Off  
+- Razor Shell  
+- Ceaseless Edge  
+- Aqua Cutter  
+
+Pecharunt @ Rocky Helmet  
+Ability: Poison Puppeteer  
+Tera Type: Ghost  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Hardy Nature  
+- Recover  
+- Parting Shot  
+- Malignant Chain  
+- Shadow Ball  
+
+Scizor @ Sitrus Berry  
+Ability: Technician  
+Tera Type: Electric  
+EVs: 116 HP / 252 Atk / 140 Spe  
+Adamant Nature  
+- U-turn  
+- Defog  
+- Knock Off  
+- Bullet Punch  
+
+Zamazenta @ Life Orb  
+Ability: Dauntless Shield  
+Tera Type: Steel  
+EVs: 252 HP / 88 Def / 168 Spe  
+Jolly Nature  
+- Close Combat  
+- Light Screen  
+- Body Press  
+- Ice Fang

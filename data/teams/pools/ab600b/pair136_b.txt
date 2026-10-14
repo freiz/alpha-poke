@@ -1,0 +1,63 @@
+Blissey @ Leftovers  
+Ability: Natural Cure  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+IVs: 0 Atk  
+- Seismic Toss  
+- Soft-Boiled  
+- Heal Bell  
+- Stealth Rock  
+
+Mandibuzz @ Heavy-Duty Boots  
+Ability: Overcoat  
+Tera Type: Steel  
+EVs: 252 HP / 252 Def / 4 Spe  
+Impish Nature  
+IVs: 0 Atk  
+- Defog  
+- Roost  
+- Iron Defense  
+- Foul Play  
+
+Rillaboom @ Choice Band  
+Ability: Grassy Surge  
+Tera Type: Grass  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- U-turn  
+- Grassy Glide  
+- Wood Hammer  
+
+Glimmora @ Focus Sash  
+Ability: Toxic Debris  
+Tera Type: Grass  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Toxic  
+- Spikes  
+- Sludge Bomb  
+- Power Gem  
+
+Heatran @ Leftovers  
+Ability: Flash Fire  
+Tera Type: Flying  
+EVs: 252 HP / 4 SpA / 252 SpD  
+Calm Nature  
+IVs: 0 Atk  
+- Taunt  
+- Earth Power  
+- Magma Storm  
+- Protect  
+
+Alomomola @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Dragon  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Wish  
+- Protect  
+- Flip Turn  
+- Scald

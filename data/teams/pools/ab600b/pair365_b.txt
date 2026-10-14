@@ -1,0 +1,59 @@
+Tornadus-Therian @ Assault Vest  
+Ability: Regenerator  
+Tera Type: Steel  
+EVs: 252 HP / 4 SpA / 252 Spe  
+Timid Nature  
+- U-turn  
+- Heat Wave  
+- Bleakwind Storm  
+- Knock Off  
+
+Zamazenta @ Life Orb  
+Ability: Dauntless Shield  
+Tera Type: Steel  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Stone Edge  
+- Crunch  
+- Light Screen  
+- Close Combat  
+
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Tera Type: Water  
+EVs: 252 HP / 172 Atk / 84 Spe  
+Adamant Nature  
+- Stealth Rock  
+- Earthquake  
+- Ruination  
+- Whirlwind  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Shadow Ball  
+- Recover  
+- Make It Rain  
+- Nasty Plot  
+
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Swords Dance  
+- Play Rough  
+- Ivy Cudgel  
+
+Weezing-Galar @ Rocky Helmet  
+Ability: Neutralizing Gas  
+Tera Type: Grass  
+EVs: 248 HP / 252 Def / 8 Spe  
+Bold Nature  
+- Will-O-Wisp  
+- Sludge Bomb  
+- Pain Split  
+- Defog

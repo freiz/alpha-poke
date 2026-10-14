@@ -1,0 +1,59 @@
+Araquanid @ Custap Berry  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 HP / 4 Atk / 40 Def / 212 SpA  
+Quiet Nature  
+- Sticky Web  
+- Surf  
+- Endeavor  
+- Lunge  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Flying  
+EVs: 252 HP / 196 Def / 60 Spe  
+Bold Nature  
+- Psyshock  
+- Make It Rain  
+- Shadow Ball  
+- Nasty Plot  
+
+Iron Moth @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Grass  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Substitute  
+- Fiery Dance  
+- Sludge Wave  
+- Energy Ball  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Naive Nature  
+- Moonblast  
+- Shadow Ball  
+- Calm Mind  
+- Vacuum Wave  
+
+Raging Bolt @ Grassy Seed  
+Ability: Protosynthesis  
+Tera Type: Fire  
+EVs: 64 HP / 252 SpA / 192 Spe  
+Modest Nature  
+- Dragon Pulse  
+- Thunderclap  
+- Thunderbolt  
+- Calm Mind  
+
+Kingambit @ Air Balloon  
+Ability: Supreme Overlord  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Sucker Punch  
+- Swords Dance  
+- Kowtow Cleave  
+- Iron Head

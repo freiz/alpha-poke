@@ -1,0 +1,59 @@
+Kyurem @ Choice Specs  
+Ability: Pressure  
+Tera Type: Ice  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Ice Beam  
+- Freeze-Dry  
+- Earth Power  
+- Draco Meteor  
+
+Moltres @ Heavy-Duty Boots  
+Ability: Flame Body  
+Tera Type: Fairy  
+EVs: 248 HP / 252 Def / 8 SpA  
+Bold Nature  
+- Roar  
+- U-turn  
+- Roost  
+- Flamethrower  
+
+Sandslash-Alola @ Heavy-Duty Boots  
+Ability: Slush Rush  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Triple Axel  
+- Knock Off  
+- Stealth Rock  
+- Rapid Spin  
+
+Slowking-Galar @ Leftovers  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 252 HP / 4 Def / 252 SpD  
+Sassy Nature  
+- Chilly Reception  
+- Future Sight  
+- Sludge Bomb  
+- Thunder Wave  
+
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Tera Type: Water  
+EVs: 252 HP / 4 Def / 252 SpD  
+Relaxed Nature  
+- Earthquake  
+- Stealth Rock  
+- Whirlwind  
+- Ruination  
+
+Zamazenta @ Heavy-Duty Boots  
+Ability: Dauntless Shield  
+Tera Type: Dark  
+EVs: 252 HP / 88 Def / 168 Spe  
+Jolly Nature  
+- Close Combat  
+- Light Screen  
+- Body Press  
+- Ice Fang

@@ -1,0 +1,59 @@
+Hydreigon @ Life Orb  
+Ability: Levitate  
+Tera Type: Steel  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Flash Cannon  
+- Nasty Plot  
+- Dark Pulse  
+- Draco Meteor  
+
+Arbok @ Leftovers  
+Ability: Intimidate  
+Tera Type: Dark  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Jolly Nature  
+- Coil  
+- Switcheroo  
+- Gunk Shot  
+- Glare  
+
+Haxorus @ Focus Sash  
+Ability: Mold Breaker  
+Tera Type: Steel  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Iron Head  
+- Scale Shot  
+- Swords Dance  
+- Close Combat  
+
+Lapras @ Sitrus Berry  
+Ability: Water Absorb  
+Tera Type: Bug  
+EVs: 188 HP / 68 Def / 252 SpD  
+Careful Nature  
+- Freeze-Dry  
+- Liquidation  
+- Rest  
+- Earthquake  
+
+Tyranitar @ Leftovers  
+Ability: Sand Stream  
+Tera Type: Flying  
+EVs: 4 HP / 252 Atk / 252 SpD  
+Adamant Nature  
+- Earthquake  
+- Knock Off  
+- Low Kick  
+- Stealth Rock  
+
+Dragonite @ Silk Scarf  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 228 HP / 216 Def / 64 Spe  
+Bold Nature  
+- Dragon Dance  
+- Extreme Speed  
+- Roost  
+- Earthquake

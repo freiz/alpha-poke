@@ -1,0 +1,60 @@
+Carbink @ Power Herb  
+Ability: Sturdy  
+Tera Type: Grass  
+EVs: 28 HP / 252 SpA / 228 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Meteor Beam  
+- Earth Power  
+- Moonblast  
+- Rock Polish  
+
+Pelipper @ Damp Rock  
+Ability: Drizzle  
+Tera Type: Ground  
+EVs: 252 HP / 252 Def / 4 SpA  
+Bold Nature  
+- Surf  
+- Hurricane  
+- Roost  
+- U-turn  
+
+Talonflame @ Choice Specs  
+Ability: Gale Wings  
+Tera Type: Flying  
+EVs: 8 Atk / 252 SpA / 248 Spe  
+Hasty Nature  
+- Hurricane  
+- Overheat  
+- Hyper Beam  
+- Dual Wingbeat  
+
+Barraskewda @ Choice Band  
+Ability: Swift Swim  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Liquidation  
+- Flip Turn  
+- Close Combat  
+- Aqua Jet  
+
+Iron Treads @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Hasty Nature  
+- Stealth Rock  
+- Earthquake  
+- Steel Beam  
+- Rapid Spin  
+
+Regieleki @ Choice Specs  
+Ability: Transistor  
+Shiny: Yes  
+Tera Type: Ghost  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Naive Nature  
+- Thunder  
+- Ancient Power  
+- Explosion  
+- Volt Switch

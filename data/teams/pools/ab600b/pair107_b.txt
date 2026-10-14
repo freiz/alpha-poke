@@ -1,0 +1,59 @@
+Iron Moth @ Heavy-Duty Boots  
+Ability: Quark Drive  
+Tera Type: Fairy  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Fiery Dance  
+- Dazzling Gleam  
+- Sludge Wave  
+- Overheat  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Sucker Punch  
+- Swords Dance  
+- Iron Head  
+- Kowtow Cleave  
+
+Glimmora @ Focus Sash  
+Ability: Toxic Debris  
+Tera Type: Ghost  
+EVs: 248 HP / 252 Def / 8 SpD  
+Bold Nature  
+- Earth Power  
+- Mortal Spin  
+- Stealth Rock  
+- Sludge Wave  
+
+Landorus-Therian @ Rocky Helmet  
+Ability: Intimidate  
+Tera Type: Ghost  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Stealth Rock  
+- U-turn  
+- Taunt  
+- Earthquake  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Steel  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Moonblast  
+- Calm Mind  
+- Thunderbolt  
+- Shadow Ball  
+
+Corviknight @ Leftovers  
+Ability: Pressure  
+Tera Type: Fighting  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- Roost  
+- Iron Defense  
+- Body Press  
+- Brave Bird

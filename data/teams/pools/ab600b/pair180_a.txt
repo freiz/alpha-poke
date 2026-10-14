@@ -1,0 +1,59 @@
+Heatran @ Leftovers  
+Ability: Flame Body  
+Tera Type: Bug  
+EVs: 248 HP / 16 Atk / 208 SpD / 36 Spe  
+Sassy Nature  
+- Magma Storm  
+- Stealth Rock  
+- Earth Power  
+- Will-O-Wisp  
+
+Bisharp @ Eviolite  
+Ability: Defiant  
+Tera Type: Ghost  
+EVs: 252 Atk / 252 Def / 4 SpD  
+Adamant Nature  
+- Iron Head  
+- Sucker Punch  
+- Throat Chop  
+- Low Kick  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Fairy  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Moonblast  
+- Close Combat  
+- Calm Mind  
+- Shadow Ball  
+
+Serperior @ Leftovers  
+Ability: Contrary  
+Tera Type: Poison  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Leaf Storm  
+- Synthesis  
+- Dragon Pulse  
+- Substitute  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Water  
+EVs: 244 HP / 168 SpD / 96 Spe  
+Careful Nature  
+- Earthquake  
+- Toxic  
+- Protect  
+- Knock Off  
+
+Great Tusk @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Fighting  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Headlong Rush  
+- Bulk Up  
+- Ice Spinner  
+- Close Combat

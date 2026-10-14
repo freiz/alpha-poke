@@ -1,0 +1,63 @@
+Iron Crown @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Fighting  
+EVs: 84 HP / 172 SpA / 252 Spe  
+Timid Nature  
+IVs: 20 Atk  
+- Calm Mind  
+- Psyshock  
+- Tachyon Cutter  
+- Focus Blast  
+
+Ogerpon-Wellspring (F) @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Horn Leech  
+- Ivy Cudgel  
+- Play Rough  
+
+Great Tusk @ Assault Vest  
+Ability: Protosynthesis  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Ice Spinner  
+- Close Combat  
+- Headlong Rush  
+- Rapid Spin  
+
+Primarina (F) @ Leftovers  
+Ability: Liquid Voice  
+Tera Type: Steel  
+EVs: 252 HP / 244 Def / 8 SpD / 4 Spe  
+Bold Nature  
+IVs: 0 Atk  
+- Alluring Voice  
+- Draining Kiss  
+- Substitute  
+- Calm Mind  
+
+Heatran @ Leftovers  
+Ability: Flash Fire  
+Tera Type: Grass  
+EVs: 252 HP / 4 SpA / 252 SpD  
+Calm Nature  
+IVs: 0 Atk  
+- Stealth Rock  
+- Will-O-Wisp  
+- Magma Storm  
+- Earth Power  
+
+Meowscarada @ Choice Band  
+Ability: Protean  
+Shiny: Yes  
+Tera Type: Ice  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Triple Axel  
+- Knock Off  
+- Flower Trick

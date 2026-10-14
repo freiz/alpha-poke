@@ -1,0 +1,59 @@
+Dragapult @ Life Orb  
+Ability: Infiltrator  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Shadow Ball  
+- Draco Meteor  
+- U-turn  
+- Will-O-Wisp  
+
+Garchomp @ Rocky Helmet  
+Ability: Rough Skin  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Dragon Tail  
+- Fire Fang  
+- Earthquake  
+
+Kommo-o @ Sitrus Berry  
+Ability: Soundproof  
+Tera Type: Normal  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Clangorous Soul  
+- Substitute  
+- Stealth Rock  
+- Boomburst  
+
+Kyurem @ Loaded Dice  
+Ability: Pressure  
+Tera Type: Fire  
+EVs: 56 HP / 200 SpA / 252 Spe  
+Timid Nature  
+- Dragon Dance  
+- Icicle Spear  
+- Scale Shot  
+- Freeze-Dry  
+
+Forretress @ Leftovers  
+Ability: Sturdy  
+Tera Type: Water  
+EVs: 252 HP / 4 Atk / 252 Def  
+Impish Nature  
+- Thunder Wave  
+- Spikes  
+- Gyro Ball  
+- Stealth Rock  
+
+Goodra-Hisui @ Assault Vest  
+Ability: Sap Sipper  
+Tera Type: Fairy  
+EVs: 252 HP / 4 Def / 252 SpA  
+Quiet Nature  
+- Ice Beam  
+- Flamethrower  
+- Draco Meteor  
+- Earthquake

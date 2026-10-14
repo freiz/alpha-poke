@@ -1,0 +1,59 @@
+Ninetales-Alola @ Light Clay  
+Ability: Snow Warning  
+Tera Type: Water  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Moonblast  
+- Aurora Veil  
+- Blizzard  
+- Encore  
+
+Deoxys-Speed @ Life Orb  
+Ability: Pressure  
+Tera Type: Fighting  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Hasty Nature  
+- Nasty Plot  
+- Thunderbolt  
+- Psycho Boost  
+- Stealth Rock  
+
+Garganacl @ Leftovers  
+Ability: Purifying Salt  
+Tera Type: Ghost  
+EVs: 236 HP / 252 Atk / 16 Def / 4 SpD  
+Adamant Nature  
+- Salt Cure  
+- Recover  
+- Protect  
+- Stealth Rock  
+
+Kingambit @ Sitrus Berry  
+Ability: Supreme Overlord  
+Tera Type: Dark  
+EVs: 252 Atk / 252 Spe  
+Adamant Nature  
+- Kowtow Cleave  
+- Swords Dance  
+- Sucker Punch  
+- Iron Head  
+
+Kommo-o @ Throat Spray  
+Ability: Bulletproof  
+Tera Type: Steel  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Iron Head  
+- Flamethrower  
+- Clanging Scales  
+- Boomburst  
+
+Cetitan @ Sitrus Berry  
+Ability: Sheer Force  
+Tera Type: Water  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Belly Drum  
+- Play Rough  
+- Ice Shard

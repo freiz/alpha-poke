@@ -1,0 +1,62 @@
+Glimmora @ Focus Sash  
+Ability: Toxic Debris  
+Tera Type: Grass  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Stealth Rock  
+- Mortal Spin  
+- Earth Power  
+- Sludge Wave  
+
+Walking Wake @ Choice Specs  
+Ability: Protosynthesis  
+Tera Type: Water  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Surf  
+- Flamethrower  
+- Draco Meteor  
+- Dragon Pulse  
+
+Gholdengo @ Choice Scarf  
+Ability: Good as Gold  
+Tera Type: Fighting  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Shadow Ball  
+- Make It Rain  
+- Trick  
+- Focus Blast  
+
+Dragonite @ Heavy-Duty Boots  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Dragon Dance  
+- Extreme Speed  
+- Earthquake  
+- Ice Spinner  
+
+Zapdos @ Heavy-Duty Boots  
+Ability: Static  
+Tera Type: Steel  
+EVs: 248 HP / 240 Def / 20 Spe  
+Bold Nature  
+IVs: 0 Atk  
+- Hurricane  
+- Discharge  
+- Roost  
+- Volt Switch  
+
+Great Tusk @ Assault Vest  
+Ability: Protosynthesis  
+Tera Type: Ground  
+EVs: 132 HP / 120 Atk / 252 SpD / 4 Spe  
+Careful Nature  
+- Knock Off  
+- Rapid Spin  
+- Earthquake  
+- Close Combat

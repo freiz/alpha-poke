@@ -1,0 +1,60 @@
+Ninetales-Alola @ Light Clay  
+Ability: Snow Warning  
+Tera Type: Water  
+EVs: 252 HP / 4 SpD / 252 Spe  
+Timid Nature  
+- Aurora Veil  
+- Encore  
+- Freeze-Dry  
+- Moonblast  
+
+Sinistcha @ Leftovers  
+Ability: Heatproof  
+Tera Type: Ice  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+IVs: 0 Atk  
+- Shadow Ball  
+- Calm Mind  
+- Matcha Gotcha  
+- Strength Sap  
+
+Corviknight @ Leftovers  
+Ability: Pressure  
+Tera Type: Water  
+EVs: 252 HP / 4 Atk / 252 SpD  
+Careful Nature  
+- Power Trip  
+- Bulk Up  
+- Body Press  
+- Roost  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Dark  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Close Combat  
+- Knock Off  
+- Encore  
+
+Dragonite @ Heavy-Duty Boots  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 144 HP / 252 Atk / 112 Spe  
+Adamant Nature  
+- Dragon Dance  
+- Extreme Speed  
+- Earthquake  
+- Roost  
+
+Kingambit @ Lum Berry  
+Ability: Supreme Overlord  
+Tera Type: Dark  
+EVs: 248 HP / 252 Atk / 8 Spe  
+Adamant Nature  
+- Swords Dance  
+- Sucker Punch  
+- Kowtow Cleave  
+- Iron Head

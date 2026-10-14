@@ -1,0 +1,58 @@
+Regirock @ Rocky Helmet  
+Ability: Clear Body  
+EVs: 164 HP / 152 Atk / 192 Spe  
+Adamant Nature  
+- Stealth Rock  
+- Body Press  
+- Iron Defense  
+- Rock Blast  
+
+Regice @ Leftovers  
+Ability: Clear Body  
+Tera Type: Steel  
+EVs: 252 SpA / 252 Spe  
+Modest Nature  
+- Bulldoze  
+- Focus Punch  
+- Thunderbolt  
+- Ice Beam  
+
+Registeel @ Leftovers  
+Ability: Clear Body  
+Tera Type: Ghost  
+EVs: 236 HP / 252 Def / 20 SpD  
+Bold Nature  
+- Amnesia  
+- Meteor Beam  
+- Iron Defense  
+- Rest  
+
+Toxapex @ Leftovers  
+Ability: Regenerator  
+Tera Type: Grass  
+EVs: 252 HP / 244 Def / 12 Spe  
+Impish Nature  
+- Infestation  
+- Baneful Bunker  
+- Poison Jab  
+- Toxic  
+
+Alomomola @ Assault Vest  
+Ability: Regenerator  
+Tera Type: Grass  
+EVs: 252 HP / 252 Def / 4 SpD  
+Relaxed Nature  
+- Flip Turn  
+- Mirror Coat  
+- Scald  
+- Body Slam  
+
+Blissey @ Leftovers  
+Ability: Natural Cure  
+Tera Type: Dark  
+EVs: 20 HP / 252 Def / 236 SpD  
+Calm Nature  
+- Stealth Rock  
+- Seismic Toss  
+- Soft-Boiled  
+- Shadow Ball

@@ -1,0 +1,59 @@
+Ursaluna @ Flame Orb  
+Ability: Guts  
+Tera Type: Water  
+EVs: 248 HP / 252 Atk / 8 SpD  
+Adamant Nature  
+- Facade  
+- Drain Punch  
+- Headlong Rush  
+- Earthquake  
+
+Latios @ Leftovers  
+Ability: Levitate  
+Tera Type: Electric  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Calm Mind  
+- Aura Sphere  
+- Luster Purge  
+- Thunderbolt  
+
+Tinkaton @ Air Balloon  
+Ability: Mold Breaker  
+Tera Type: Ghost  
+EVs: 248 HP / 28 Def / 232 Spe  
+Jolly Nature  
+- Play Rough  
+- Thunder Wave  
+- Knock Off  
+- Gigaton Hammer  
+
+Ninetales-Alola @ Light Clay  
+Ability: Snow Warning  
+Tera Type: Steel  
+EVs: 252 HP / 4 Def / 252 Spe  
+Timid Nature  
+- Aurora Veil  
+- Blizzard  
+- Encore  
+- Moonblast  
+
+Quaquaval @ Leftovers  
+Ability: Moxie  
+Tera Type: Dark  
+EVs: 144 HP / 252 Atk / 112 Spe  
+Adamant Nature  
+- Rapid Spin  
+- Triple Axel  
+- Close Combat  
+- Aqua Step  
+
+Comfey @ Grassy Seed  
+Ability: Triage  
+Tera Type: Dark  
+EVs: 248 HP / 240 SpA / 20 SpD  
+Modest Nature  
+- Calm Mind  
+- Encore  
+- Draining Kiss  
+- Stored Power

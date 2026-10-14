@@ -1,0 +1,59 @@
+Zangoose @ Toxic Orb  
+Ability: Toxic Boost  
+Tera Type: Ghost  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Facade  
+- Close Combat  
+- Shadow Claw  
+
+Meowscarada @ Life Orb  
+Ability: Protean  
+Tera Type: Grass  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Flower Trick  
+- Thunder Punch  
+- Triple Axel  
+- U-turn  
+
+Clefable @ Leftovers  
+Ability: Unaware  
+Tera Type: Fire  
+EVs: 252 HP / 236 Def / 16 SpD / 4 Spe  
+Bold Nature  
+- Flamethrower  
+- Moonblast  
+- Wish  
+- Knock Off  
+
+Deoxys-Speed @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Fighting  
+EVs: 248 HP / 8 Def / 252 Spe  
+Timid Nature  
+- Stealth Rock  
+- Light Screen  
+- Reflect  
+- Shadow Ball  
+
+Heatran @ Leftovers  
+Ability: Flame Body  
+Tera Type: Dragon  
+EVs: 248 HP / 44 Def / 168 SpD / 48 Spe  
+Calm Nature  
+- Will-O-Wisp  
+- Magma Storm  
+- Earth Power  
+- Stealth Rock  
+
+Manaphy @ Leftovers  
+Ability: Hydration  
+Tera Type: Fairy  
+EVs: 252 HP / 40 Def / 216 Spe  
+Timid Nature  
+- Tail Glow  
+- Protect  
+- Hydro Pump  
+- Alluring Voice

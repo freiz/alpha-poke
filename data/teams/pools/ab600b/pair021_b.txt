@@ -1,0 +1,59 @@
+Pelipper @ Heavy-Duty Boots  
+Ability: Drizzle  
+Tera Type: Ground  
+EVs: 252 HP / 4 SpA / 252 SpD  
+Calm Nature  
+- Hurricane  
+- Knock Off  
+- U-turn  
+- Roost  
+
+Hatterene @ Eject Button  
+Ability: Magic Bounce  
+Tera Type: Water  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Quiet Nature  
+- Psychic Noise  
+- Nuzzle  
+- Draining Kiss  
+- Reflect  
+
+Iron Treads @ Leftovers  
+Ability: Quark Drive  
+Tera Type: Normal  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Volt Switch  
+- Stealth Rock  
+- Earthquake  
+- Rapid Spin  
+
+Toxicroak @ Rocky Helmet  
+Ability: Dry Skin  
+Tera Type: Ghost  
+EVs: 248 HP / 204 Def / 56 Spe  
+Impish Nature  
+- Drain Punch  
+- Encore  
+- Knock Off  
+- Toxic  
+
+Barraskewda @ Life Orb  
+Ability: Swift Swim  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Flip Turn  
+- Liquidation  
+- Close Combat  
+- Aqua Jet  
+
+Zapdos @ Heavy-Duty Boots  
+Ability: Static  
+Tera Type: Fire  
+EVs: 252 HP / 204 SpA / 52 SpD  
+Modest Nature  
+- Weather Ball  
+- Hurricane  
+- Volt Switch  
+- Thunder Wave

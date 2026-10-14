@@ -1,0 +1,60 @@
+Ogerpon-Cornerstone (F) @ Cornerstone Mask  
+Ability: Sturdy  
+Tera Type: Rock  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Ivy Cudgel  
+- Power Whip  
+- Swords Dance  
+- Knock Off  
+
+Latios @ Soul Dew  
+Ability: Levitate  
+Tera Type: Steel  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Draco Meteor  
+- Luster Purge  
+- Ice Beam  
+- Flip Turn  
+
+Cinderace (F) @ Heavy-Duty Boots  
+Ability: Libero  
+Tera Type: Fire  
+EVs: 80 HP / 164 Atk / 48 SpD / 216 Spe  
+Jolly Nature  
+- Pyro Ball  
+- U-turn  
+- Court Change  
+- Sucker Punch  
+
+Dragapult @ Heavy-Duty Boots  
+Ability: Infiltrator  
+Tera Type: Fairy  
+EVs: 76 Atk / 180 SpA / 252 Spe  
+Hasty Nature  
+- Dragon Darts  
+- Hex  
+- Will-O-Wisp  
+- U-turn  
+
+Skarmory @ Rocky Helmet  
+Ability: Sturdy  
+Tera Type: Dragon  
+EVs: 252 HP / 160 Def / 96 Spe  
+Bold Nature  
+IVs: 0 Atk  
+- Iron Defense  
+- Body Press  
+- Roost  
+- Spikes  
+
+Zapdos @ Rocky Helmet  
+Ability: Static  
+Tera Type: Electric  
+EVs: 252 HP / 168 Def / 84 SpA / 4 SpD  
+Modest Nature  
+- Discharge  
+- Hurricane  
+- Roost  
+- U-turn

@@ -1,0 +1,59 @@
+Ogerpon-Cornerstone @ Cornerstone Mask  
+Ability: Sturdy  
+Tera Type: Rock  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Ivy Cudgel  
+- Power Whip  
+- Superpower  
+
+Hatterene (F) @ Rocky Helmet  
+Ability: Magic Bounce  
+Tera Type: Water  
+EVs: 252 HP / 204 Def / 52 Spe  
+Bold Nature  
+- Psychic Noise  
+- Draining Kiss  
+- Pain Split  
+- Nuzzle  
+
+Zapdos @ Heavy-Duty Boots  
+Ability: Static  
+Tera Type: Fairy  
+EVs: 248 HP / 252 Def / 8 SpA  
+Bold Nature  
+- Hurricane  
+- U-turn  
+- Discharge  
+- Roost  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Ghost  
+EVs: 112 HP / 252 Atk / 144 Spe  
+Adamant Nature  
+- Swords Dance  
+- Sucker Punch  
+- Kowtow Cleave  
+- Iron Head  
+
+Iron Treads @ Air Balloon  
+Ability: Quark Drive  
+Tera Type: Ice  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Earthquake  
+- Ice Spinner  
+- Rapid Spin  
+
+Okidogi @ Assault Vest  
+Ability: Toxic Chain  
+Tera Type: Water  
+EVs: 232 HP / 252 Atk / 24 Spe  
+Adamant Nature  
+- Drain Punch  
+- Gunk Shot  
+- Knock Off  
+- Ice Punch

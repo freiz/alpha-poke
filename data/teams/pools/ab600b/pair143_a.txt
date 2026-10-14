@@ -1,0 +1,59 @@
+Ninetales-Alola @ Icy Rock  
+Ability: Snow Warning  
+Tera Type: Water  
+EVs: 248 HP / 8 Def / 252 Spe  
+Timid Nature  
+- Freeze-Dry  
+- Moonblast  
+- Encore  
+- Aurora Veil  
+
+Sandslash-Alola @ Air Balloon  
+Ability: Slush Rush  
+Tera Type: Ghost  
+EVs: 76 HP / 252 Atk / 180 Spe  
+Adamant Nature  
+- Triple Axel  
+- Knock Off  
+- Stealth Rock  
+- Rapid Spin  
+
+Rotom-Wash @ Leftovers  
+Ability: Levitate  
+Tera Type: Fairy  
+EVs: 252 HP / 212 Def / 44 Spe  
+Bold Nature  
+- Nasty Plot  
+- Will-O-Wisp  
+- Hydro Pump  
+- Volt Switch  
+
+Typhlosion-Hisui @ Choice Scarf  
+Ability: Frisk  
+Tera Type: Fire  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Focus Blast  
+- Eruption  
+- Overheat  
+- Shadow Ball  
+
+Slowking-Galar @ Lagging Tail  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 252 HP / 16 Def / 68 SpA / 172 SpD  
+Modest Nature  
+- Thunder Wave  
+- Chilly Reception  
+- Future Sight  
+- Sludge Bomb  
+
+Frosmoth @ Sitrus Berry  
+Ability: Ice Scales  
+Tera Type: Ice  
+EVs: 252 SpA / 252 Spe  
+Timid Nature  
+- Quiver Dance  
+- Blizzard  
+- Ice Beam  
+- Defog

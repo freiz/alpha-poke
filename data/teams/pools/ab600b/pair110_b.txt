@@ -1,0 +1,58 @@
+Cinderace @ Heavy-Duty Boots  
+Ability: Libero  
+Tera Type: Grass  
+EVs: 252 Atk / 252 Spe  
+Jolly Nature  
+- Court Change  
+- U-turn  
+- Pyro Ball  
+- Sucker Punch  
+
+Lokix @ Choice Band  
+Ability: Tinted Lens  
+Tera Type: Bug  
+EVs: 252 Atk / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- First Impression  
+- U-turn  
+- Leech Life  
+
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Dragon  
+EVs: 252 HP / 252 Def  
+- Defog  
+- U-turn  
+- Roost  
+- Brave Bird  
+
+Garganacl @ Leftovers  
+Ability: Purifying Salt  
+Tera Type: Fairy  
+EVs: 252 HP / 252 SpD  
+- Curse  
+- Salt Cure  
+- Earthquake  
+- Recover  
+
+Dragapult @ Heavy-Duty Boots  
+Ability: Infiltrator  
+Tera Type: Ghost  
+EVs: 252 SpA / 252 Spe  
+Naive Nature  
+- Will-O-Wisp  
+- Hex  
+- Dragon Darts  
+- Thunder Wave  
+
+Iron Crown @ Choice Specs  
+Ability: Quark Drive  
+Tera Type: Fighting  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+IVs: 20 Atk  
+- Volt Switch  
+- Tachyon Cutter  
+- Psychic Noise  
+- Focus Blast

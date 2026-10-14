@@ -1,0 +1,59 @@
+Iron Treads @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Electric  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Knock Off  
+- Earthquake  
+- Rapid Spin  
+
+Weavile @ Life Orb  
+Ability: Pickpocket  
+Tera Type: Ice  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Triple Axel  
+- Knock Off  
+- Low Kick  
+- Ice Shard  
+
+Polteageist-Antique @ Focus Sash  
+Ability: Weak Armor  
+Tera Type: Grass  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Modest Nature  
+- Shell Smash  
+- Stored Power  
+- Shadow Ball  
+- Will-O-Wisp  
+
+Iron Moth @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Grass  
+EVs: 124 Def / 132 SpA / 252 Spe  
+Timid Nature  
+- Fiery Dance  
+- Sludge Wave  
+- Dazzling Gleam  
+- Light Screen  
+
+Azumarill @ Sitrus Berry  
+Ability: Huge Power  
+Tera Type: Grass  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- Play Rough  
+- Knock Off  
+- Aqua Jet  
+- Liquidation  
+
+Serperior @ Leftovers  
+Ability: Contrary  
+Tera Type: Ground  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Leaf Storm  
+- Glare  
+- Synthesis  
+- Substitute

@@ -1,0 +1,61 @@
+Beartic @ Heavy-Duty Boots  
+Ability: Slush Rush  
+Tera Type: Fighting  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Close Combat  
+- Icicle Crash  
+- Earthquake  
+- Swords Dance  
+
+Landorus-Therian (M) @ Leftovers  
+Ability: Intimidate  
+Tera Type: Ground  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Earthquake  
+- U-turn  
+- Taunt  
+
+Slowking-Galar @ Leftovers  
+Ability: Regenerator  
+Shiny: Yes  
+Tera Type: Water  
+EVs: 252 HP / 4 SpA / 252 SpD  
+Calm Nature  
+IVs: 0 Atk  
+- Sludge Bomb  
+- Flamethrower  
+- Chilly Reception  
+- Slack Off  
+
+Great Tusk @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Water  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Knock Off  
+- Earthquake  
+- Ice Spinner  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Fairy  
+EVs: 252 Atk / 4 SpA / 252 Spe  
+Naive Nature  
+- Encore  
+- Moonblast  
+- Close Combat  
+- Knock Off  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Dark  
+EVs: 100 HP / 252 Atk / 156 Spe  
+Adamant Nature  
+- Swords Dance  
+- Kowtow Cleave  
+- Iron Head  
+- Sucker Punch

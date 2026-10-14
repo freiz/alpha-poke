@@ -1,0 +1,58 @@
+Lurantis  
+Ability: Contrary  
+EVs: 4 HP / 252 Def / 252 SpD  
+Hardy Nature  
+- Knock Off  
+- Leaf Blade  
+- Leaf Storm  
+- Synthesis  
+
+Ceruledge @ Leftovers  
+Ability: Flash Fire  
+Tera Type: Bug  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Bulk Up  
+- Shadow Sneak  
+- Bitter Blade  
+- Taunt  
+
+Torkoal @ Heat Rock  
+Ability: Drought  
+Tera Type: Grass  
+EVs: 252 HP / 252 Def  
+Relaxed Nature  
+- Stealth Rock  
+- Rapid Spin  
+- Body Press  
+- Lava Plume  
+
+Flygon @ Life Orb  
+Ability: Levitate  
+Tera Type: Normal  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Earthquake  
+- Dragon Pulse  
+- Dragon Dance  
+- Boomburst  
+
+Clefable @ Leftovers  
+Ability: Unaware  
+Tera Type: Fire  
+EVs: 252 HP / 4 SpA / 252 SpD  
+Calm Nature  
+- Moonblast  
+- Moonlight  
+- Knock Off  
+- Calm Mind  
+
+Heatran @ Air Balloon  
+Ability: Flame Body  
+Tera Type: Fire  
+EVs: 248 HP / 44 Def / 168 SpD / 48 Spe  
+Calm Nature  
+- Stealth Rock  
+- Magma Storm  
+- Earth Power  
+- Taunt

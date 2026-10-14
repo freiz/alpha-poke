@@ -1,0 +1,59 @@
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 248 HP / 120 Def / 140 Spe  
+Jolly Nature  
+- U-turn  
+- Ivy Cudgel  
+- Swords Dance  
+- Horn Leech  
+
+Dondozo @ Covert Cloak  
+Ability: Unaware  
+Tera Type: Dark  
+EVs: 248 HP / 252 Def / 8 Spe  
+Impish Nature  
+- Curse  
+- Rest  
+- Body Press  
+- Waterfall  
+
+Cinderace @ Heavy-Duty Boots  
+Ability: Libero  
+Tera Type: Fire  
+EVs: 148 HP / 252 Atk / 108 Spe  
+Adamant Nature  
+- Pyro Ball  
+- U-turn  
+- Court Change  
+- High Jump Kick  
+
+Landorus-Therian @ Rocky Helmet  
+Ability: Intimidate  
+Tera Type: Ground  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Earthquake  
+- U-turn  
+- Stone Edge  
+- Stealth Rock  
+
+Slowking-Galar @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 248 HP / 8 Def / 252 SpD  
+Sassy Nature  
+- Chilly Reception  
+- Ice Beam  
+- Focus Blast  
+- Sludge Bomb  
+
+Tyranitar @ Red Card  
+Ability: Sand Stream  
+Tera Type: Flying  
+EVs: 252 HP / 16 Def / 240 SpD  
+Sassy Nature  
+- Knock Off  
+- Ice Beam  
+- Stealth Rock  
+- Roar

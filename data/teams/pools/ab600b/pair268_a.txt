@@ -1,0 +1,59 @@
+Scizor @ Clear Amulet  
+Ability: Swarm  
+Tera Type: Steel  
+EVs: 120 HP / 252 Atk / 136 Spe  
+Adamant Nature  
+- Bullet Punch  
+- Close Combat  
+- Knock Off  
+- U-turn  
+
+Electivire @ Air Balloon  
+Ability: Motor Drive  
+Tera Type: Flying  
+EVs: 128 HP / 120 Atk / 96 Def / 72 SpA / 52 SpD / 40 Spe  
+Hardy Nature  
+- Supercell Slam  
+- Ice Punch  
+- Bulk Up  
+- Knock Off  
+
+Umbreon @ Leftovers  
+Ability: Synchronize  
+Tera Type: Poison  
+EVs: 248 HP / 8 Def / 252 SpD  
+Calm Nature  
+- Protect  
+- Foul Play  
+- Thunder Wave  
+- Wish  
+
+Dragonite @ Heavy-Duty Boots  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Extreme Speed  
+- Earthquake  
+- Dragon Tail  
+- Roost  
+
+Volcanion @ Choice Scarf  
+Ability: Water Absorb  
+Tera Type: Ground  
+EVs: 248 HP / 252 SpA / 8 SpD  
+Modest Nature  
+- Steam Eruption  
+- Earth Power  
+- Flamethrower  
+- Sludge Bomb  
+
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Ice  
+EVs: 252 HP / 252 Def / 4 Spe  
+Hardy Nature  
+- Brave Bird  
+- Defog  
+- Roost  
+- U-turn

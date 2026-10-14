@@ -1,0 +1,59 @@
+Weezing-Galar @ Heavy-Duty Boots  
+Ability: Neutralizing Gas  
+Tera Type: Flying  
+EVs: 252 HP / 252 Def / 4 SpA  
+Modest Nature  
+- Defog  
+- Pain Split  
+- Sludge Bomb  
+- Will-O-Wisp  
+
+Ogerpon @ Heavy-Duty Boots  
+Ability: Defiant  
+Tera Type: Grass  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Ivy Cudgel  
+- Rock Tomb  
+- U-turn  
+- Knock Off  
+
+Skarmory @ Rocky Helmet  
+Ability: Sturdy  
+Tera Type: Ghost  
+EVs: 4 HP / 252 Atk / 252 Def  
+Impish Nature  
+- Body Press  
+- Spikes  
+- Taunt  
+- Whirlwind  
+
+Alomomola @ Assault Vest  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 252 HP / 176 Def / 80 SpD  
+Relaxed Nature  
+- Play Rough  
+- Mirror Coat  
+- Flip Turn  
+- Aqua Jet  
+
+Clodsire @ Leftovers  
+Ability: Unaware  
+Tera Type: Water  
+EVs: 240 HP / 124 Atk / 144 Def  
+Relaxed Nature  
+- Stealth Rock  
+- Toxic  
+- Recover  
+- Earthquake  
+
+Hydreigon @ Choice Specs  
+Ability: Levitate  
+Tera Type: Steel  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Flash Cannon  
+- Dark Pulse  
+- Draco Meteor  
+- Earth Power

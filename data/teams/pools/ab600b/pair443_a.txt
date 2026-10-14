@@ -1,0 +1,62 @@
+Venusaur @ Heavy-Duty Boots  
+Ability: Chlorophyll  
+Tera Type: Dark  
+EVs: 240 HP / 252 Def / 16 Spe  
+Calm Nature  
+- Leech Seed  
+- Protect  
+- Knock Off  
+- Sludge Bomb  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Steel  
+EVs: 244 HP / 252 Def / 12 SpD  
+Impish Nature  
+- Protect  
+- Knock Off  
+- Spikes  
+- Toxic  
+
+Dondozo @ Heavy-Duty Boots  
+Ability: Unaware  
+Tera Type: Fighting  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Curse  
+- Waterfall  
+- Rest  
+- Sleep Talk  
+
+Blissey @ Heavy-Duty Boots  
+Ability: Natural Cure  
+Tera Type: Dark  
+EVs: 4 HP / 252 Def / 252 SpD  
+Calm Nature  
+IVs: 0 Atk  
+- Soft-Boiled  
+- Calm Mind  
+- Shadow Ball  
+- Seismic Toss  
+
+Latias @ Leftovers  
+Ability: Levitate  
+Tera Type: Fairy  
+EVs: 252 HP / 4 SpA / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Wish  
+- Protect  
+- Ice Beam  
+- Aura Sphere  
+
+Bronzong @ Leftovers  
+Ability: Levitate  
+Tera Type: Fairy  
+EVs: 252 HP / 252 Def / 4 SpD  
+Relaxed Nature  
+IVs: 0 Atk  
+- Protect  
+- Stealth Rock  
+- Body Press  
+- Psychic Noise

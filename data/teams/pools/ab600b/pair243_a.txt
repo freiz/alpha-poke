@@ -1,0 +1,59 @@
+Ogerpon @ Heavy-Duty Boots  
+Ability: Defiant  
+Tera Type: Grass  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Ivy Cudgel  
+- Knock Off  
+- U-turn  
+- Synthesis  
+
+Raging Bolt @ Life Orb  
+Ability: Protosynthesis  
+Tera Type: Ghost  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+- Volt Switch  
+- Thunderclap  
+- Thunderbolt  
+- Dragon Pulse  
+
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Tera Type: Water  
+EVs: 252 HP / 252 SpD / 4 Spe  
+Careful Nature  
+- Stealth Rock  
+- Earthquake  
+- Whirlwind  
+- Ruination  
+
+Pecharunt @ Air Balloon  
+Ability: Poison Puppeteer  
+Tera Type: Dark  
+EVs: 252 HP / 252 Def / 4 SpA  
+Bold Nature  
+- Shadow Ball  
+- Parting Shot  
+- Toxic  
+- Malignant Chain  
+
+Moltres @ Heavy-Duty Boots  
+Ability: Flame Body  
+Tera Type: Fairy  
+EVs: 248 HP / 248 Def / 12 Spe  
+Bold Nature  
+- Hurricane  
+- Roost  
+- Flamethrower  
+- Will-O-Wisp  
+
+Iron Treads @ Leftovers  
+Ability: Quark Drive  
+Tera Type: Dragon  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Volt Switch  
+- Rapid Spin  
+- Earthquake  
+- Stealth Rock

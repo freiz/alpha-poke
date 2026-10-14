@@ -1,0 +1,59 @@
+Zamazenta @ Heavy-Duty Boots  
+Ability: Dauntless Shield  
+Tera Type: Steel  
+EVs: 252 HP / 88 Def / 160 Spe  
+Jolly Nature  
+- Close Combat  
+- Body Press  
+- Reflect  
+- Crunch  
+
+Rillaboom @ Life Orb  
+Ability: Grassy Surge  
+Tera Type: Dark  
+EVs: 120 HP / 144 Atk / 120 Def / 120 Spe  
+Adamant Nature  
+- Low Kick  
+- U-turn  
+- Knock Off  
+- Grassy Glide  
+
+Glimmora @ Focus Sash  
+Ability: Toxic Debris  
+Tera Type: Ghost  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Naive Nature  
+- Earth Power  
+- Stealth Rock  
+- Mortal Spin  
+- Sludge Wave  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Fighting  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Shadow Ball  
+- Focus Blast  
+- Nasty Plot  
+- Make It Rain  
+
+Raging Bolt @ Grassy Seed  
+Ability: Protosynthesis  
+Tera Type: Bug  
+EVs: 104 HP / 252 SpA / 136 Spe  
+Modest Nature  
+- Calm Mind  
+- Thunderclap  
+- Dragon Pulse  
+- Thunder  
+
+Moltres-Galar @ Sitrus Berry  
+Ability: Berserk  
+Tera Type: Fairy  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Modest Nature  
+- Nasty Plot  
+- Fiery Wrath  
+- Agility  
+- Air Slash

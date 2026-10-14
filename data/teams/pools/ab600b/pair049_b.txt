@@ -1,0 +1,59 @@
+Serperior @ Leftovers  
+Ability: Contrary  
+Tera Type: Dragon  
+EVs: 32 HP / 252 SpA / 224 Spe  
+Modest Nature  
+- Glare  
+- Leaf Storm  
+- Dragon Pulse  
+- Substitute  
+
+Clefable @ Leftovers  
+Ability: Magic Guard  
+Tera Type: Steel  
+EVs: 252 HP / 236 Def / 16 SpD / 4 Spe  
+Bold Nature  
+- Cosmic Power  
+- Moonblast  
+- Moonlight  
+- Calm Mind  
+
+Thundurus-Therian @ Heavy-Duty Boots  
+Ability: Volt Absorb  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Nasty Plot  
+- Dark Pulse  
+- Thunderbolt  
+- Agility  
+
+Okidogi @ Leftovers  
+Ability: Toxic Chain  
+Tera Type: Dark  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Bulk Up  
+- Drain Punch  
+- Knock Off  
+- Gunk Shot  
+
+Ursaluna @ Flame Orb  
+Ability: Guts  
+Tera Type: Fairy  
+EVs: 248 HP / 252 Atk / 8 SpD  
+Adamant Nature  
+- Earthquake  
+- Facade  
+- Fire Punch  
+- Protect  
+
+Mew @ Life Orb  
+Ability: Synchronize  
+Tera Type: Grass  
+EVs: 252 HP / 4 Def / 252 Spe  
+Jolly Nature  
+- Stored Power  
+- Dragon Dance  
+- Knock Off  
+- Agility

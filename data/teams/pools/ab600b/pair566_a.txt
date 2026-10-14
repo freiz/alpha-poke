@@ -1,0 +1,59 @@
+Hydrapple @ Life Orb  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 248 HP / 248 Def  
+Relaxed Nature  
+- Giga Drain  
+- Fickle Beam  
+- Nasty Plot  
+- Earth Power  
+
+Tyranitar @ Heavy-Duty Boots  
+Ability: Sand Stream  
+Tera Type: Ghost  
+EVs: 172 HP / 84 Atk / 252 Spe  
+Adamant Nature  
+- Ice Beam  
+- Stealth Rock  
+- Thunder Wave  
+- Knock Off  
+
+Moltres @ Heavy-Duty Boots  
+Ability: Flame Body  
+Tera Type: Fairy  
+EVs: 244 HP / 252 Def / 12 Spe  
+Bold Nature  
+- Flamethrower  
+- Roost  
+- U-turn  
+- Roar  
+
+Zamazenta @ Leftovers  
+Ability: Dauntless Shield  
+Tera Type: Steel  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Body Press  
+- Crunch  
+- Iron Defense  
+- Roar  
+
+Slowking-Galar @ Sticky Barb  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 248 HP / 16 Def / 244 SpD  
+Sassy Nature  
+- Ice Beam  
+- Sludge Bomb  
+- Flamethrower  
+- Psyshock  
+
+Excadrill @ Air Balloon  
+Ability: Sand Rush  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Earthquake  
+- Rapid Spin  
+- Rock Slide  
+- Swords Dance

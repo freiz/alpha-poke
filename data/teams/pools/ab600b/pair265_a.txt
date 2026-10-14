@@ -1,0 +1,59 @@
+Zamazenta @ Heavy-Duty Boots  
+Ability: Dauntless Shield  
+Tera Type: Dark  
+EVs: 100 HP / 152 Def / 4 SpD / 252 Spe  
+Impish Nature  
+- Crunch  
+- Heavy Slam  
+- Light Screen  
+- Body Press  
+
+Kyurem @ Assault Vest  
+Ability: Pressure  
+Tera Type: Fairy  
+EVs: 120 HP / 216 SpA / 76 SpD / 96 Spe  
+Modest Nature  
+- Freeze-Dry  
+- Earth Power  
+- Ice Beam  
+- Body Press  
+
+Iron Treads @ Heavy-Duty Boots  
+Ability: Quark Drive  
+Tera Type: Flying  
+EVs: 240 HP / 52 Def / 24 SpD / 192 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Ice Spinner  
+- Earthquake  
+- Rapid Spin  
+
+Tornadus-Therian @ Choice Scarf  
+Ability: Regenerator  
+Tera Type: Dark  
+EVs: 252 HP / 4 SpD / 252 Spe  
+Timid Nature  
+- Bleakwind Storm  
+- U-turn  
+- Knock Off  
+- Heat Wave  
+
+Pecharunt @ Heavy-Duty Boots  
+Ability: Poison Puppeteer  
+Tera Type: Water  
+EVs: 248 HP / 252 Def / 8 SpD  
+Bold Nature  
+- Nasty Plot  
+- Malignant Chain  
+- Recover  
+- Shadow Ball  
+
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Tera Type: Water  
+EVs: 248 HP / 244 Def / 16 Spe  
+Impish Nature  
+- Spikes  
+- Ruination  
+- Whirlwind  
+- Earthquake

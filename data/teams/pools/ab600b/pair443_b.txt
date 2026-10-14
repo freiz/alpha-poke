@@ -1,0 +1,59 @@
+Pelipper @ Damp Rock  
+Ability: Drizzle  
+Tera Type: Ground  
+EVs: 248 HP / 8 Def / 252 SpD  
+Sassy Nature  
+- Hurricane  
+- Surf  
+- U-turn  
+- Weather Ball  
+
+Great Tusk @ Rocky Helmet  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Headlong Rush  
+- Ice Spinner  
+- Rapid Spin  
+
+Slowking-Galar @ Leftovers  
+Ability: Regenerator  
+Tera Type: Grass  
+EVs: 252 HP / 16 Def / 240 SpD  
+Sassy Nature  
+- Sludge Bomb  
+- Chilly Reception  
+- Future Sight  
+- Toxic  
+
+Dragonite @ Heavy-Duty Boots  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 252 HP / 240 Atk / 16 Spe  
+Adamant Nature  
+- Dragon Tail  
+- Earthquake  
+- Roost  
+- Extreme Speed  
+
+Zamazenta @ Leftovers  
+Ability: Dauntless Shield  
+Tera Type: Fire  
+EVs: 104 HP / 152 SpD / 252 Spe  
+Jolly Nature  
+- Iron Defense  
+- Body Press  
+- Crunch  
+- Heavy Slam  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Fairy  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Moonblast  
+- Destiny Bond  
+- Close Combat  
+- Knock Off

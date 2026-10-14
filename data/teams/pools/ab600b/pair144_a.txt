@@ -1,0 +1,59 @@
+Dondozo @ Leftovers  
+Ability: Unaware  
+Tera Type: Dark  
+EVs: 252 HP / 4 Atk / 252 Def  
+Impish Nature  
+- Body Press  
+- Avalanche  
+- Rest  
+- Liquidation  
+
+Chansey @ Eviolite  
+Ability: Natural Cure  
+Tera Type: Ghost  
+EVs: 248 HP / 252 Def / 8 SpD  
+Bold Nature  
+- Thunder Wave  
+- Seismic Toss  
+- Stealth Rock  
+- Soft-Boiled  
+
+Toxapex @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Steel  
+EVs: 248 HP / 252 Def / 8 SpD  
+Bold Nature  
+- Toxic  
+- Toxic Spikes  
+- Recover  
+- Baneful Bunker  
+
+Blaziken @ Air Balloon  
+Ability: Speed Boost  
+Tera Type: Fighting  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Shadow Claw  
+- Stone Edge  
+- Close Combat  
+
+Ursaluna @ Flame Orb  
+Ability: Guts  
+Tera Type: Normal  
+EVs: 248 HP / 252 Atk / 8 Def  
+Adamant Nature  
+- Facade  
+- Fire Punch  
+- Swords Dance  
+- Headlong Rush  
+
+Fezandipiti @ Leftovers  
+Ability: Toxic Chain  
+Tera Type: Water  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- Beat Up  
+- U-turn  
+- Roost  
+- Moonblast

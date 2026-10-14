@@ -1,0 +1,59 @@
+Thundurus-Therian @ Heavy-Duty Boots  
+Ability: Volt Absorb  
+Tera Type: Fairy  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Hasty Nature  
+- Volt Switch  
+- Nasty Plot  
+- Thunderbolt  
+- Focus Blast  
+
+Moltres @ Heavy-Duty Boots  
+Ability: Flame Body  
+Tera Type: Water  
+EVs: 200 HP / 108 Atk / 200 SpD  
+Impish Nature  
+- Flamethrower  
+- Will-O-Wisp  
+- Air Slash  
+- Roar  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Close Combat  
+- Encore  
+- Swords Dance  
+- Moonblast  
+
+Goodra-Hisui @ Leftovers  
+Ability: Gooey  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Atk / 252 SpA  
+Quiet Nature  
+- Flash Cannon  
+- Flamethrower  
+- Draco Meteor  
+- Knock Off  
+
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Tera Type: Ghost  
+EVs: 252 HP / 24 Def / 232 SpD  
+Careful Nature  
+- Whirlwind  
+- Stealth Rock  
+- Spikes  
+- Earthquake  
+
+Great Tusk @ Rocky Helmet  
+Ability: Protosynthesis  
+Tera Type: Fire  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Knock Off  
+- Ice Spinner  
+- Headlong Rush

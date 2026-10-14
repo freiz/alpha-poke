@@ -1,0 +1,59 @@
+Cinderace @ Heavy-Duty Boots  
+Ability: Libero  
+Tera Type: Ghost  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Pyro Ball  
+- Bounce  
+- U-turn  
+- Court Change  
+
+Manaphy @ Grassy Seed  
+Ability: Hydration  
+Tera Type: Fairy  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Heart Swap  
+- Surf  
+- Alluring Voice  
+- Scald  
+
+Ursaluna @ Flame Orb  
+Ability: Guts  
+Tera Type: Fairy  
+EVs: 216 HP / 16 Atk / 76 Def / 176 SpD / 24 Spe  
+Adamant Nature  
+- Facade  
+- Body Slam  
+- Headlong Rush  
+- Swords Dance  
+
+Luxray @ Flame Orb  
+Ability: Intimidate  
+Tera Type: Normal  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Discharge  
+- Ice Fang  
+- Supercell Slam  
+- Volt Switch  
+
+Cetitan @ Sitrus Berry  
+Ability: Thick Fat  
+Tera Type: Water  
+EVs: 4 HP / 252 Atk / 76 Def / 60 SpD / 116 Spe  
+Adamant Nature  
+- Ice Shard  
+- Curse  
+- Belly Drum  
+- Liquidation  
+
+Corviknight @ Rocky Helmet  
+Ability: Unnerve  
+Tera Type: Flying  
+EVs: 248 HP / 252 Def / 8 SpD  
+Impish Nature  
+- Brave Bird  
+- Steel Beam  
+- U-turn  
+- Defog

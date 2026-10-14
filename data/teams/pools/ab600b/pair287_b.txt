@@ -1,0 +1,59 @@
+Rillaboom @ Heavy-Duty Boots  
+Ability: Grassy Surge  
+Tera Type: Steel  
+EVs: 4 HP / 252 Atk / 252 Def  
+Brave Nature  
+- Wood Hammer  
+- Knock Off  
+- U-turn  
+- Grassy Glide  
+
+Zapdos @ Heavy-Duty Boots  
+Ability: Pressure  
+Tera Type: Flying  
+EVs: 248 HP / 252 SpA / 8 SpD  
+Modest Nature  
+- Heat Wave  
+- Volt Switch  
+- Roost  
+- Hurricane  
+
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Def / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Ice Spinner  
+- Bulk Up  
+- Headlong Rush  
+
+Garganacl @ Leftovers  
+Ability: Sturdy  
+Tera Type: Water  
+EVs: 160 HP / 96 Def / 252 SpD  
+Careful Nature  
+- Protect  
+- Salt Cure  
+- Stealth Rock  
+- Recover  
+
+Skarmory @ Rocky Helmet  
+Ability: Sturdy  
+Tera Type: Ghost  
+EVs: 252 HP / 16 Def / 240 SpD  
+Impish Nature  
+- Spikes  
+- Roost  
+- Brave Bird  
+- Whirlwind  
+
+Slowking-Galar @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Psychic  
+EVs: 252 HP / 8 SpA / 248 SpD  
+Calm Nature  
+- Chilly Reception  
+- Thunder Wave  
+- Future Sight  
+- Sludge Bomb

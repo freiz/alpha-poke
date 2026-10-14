@@ -1,0 +1,59 @@
+Dragonite @ Heavy-Duty Boots  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Dragon Dance  
+- Extreme Speed  
+- Roost  
+- Earthquake  
+
+Samurott-Hisui @ Assault Vest  
+Ability: Sharpness  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Ceaseless Edge  
+- Razor Shell  
+- Knock Off  
+- Sucker Punch  
+
+Clefable @ Leftovers  
+Ability: Magic Guard  
+Tera Type: Water  
+EVs: 248 HP / 8 Def / 252 SpD  
+Calm Nature  
+- Moonblast  
+- Moonlight  
+- Thunder Wave  
+- Stealth Rock  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Normal  
+EVs: 244 HP / 36 Def / 228 SpD  
+Careful Nature  
+- Swords Dance  
+- Facade  
+- Knock Off  
+- Protect  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Make It Rain  
+- Shadow Ball  
+- Recover  
+- Trick  
+
+Zamazenta @ Leftovers  
+Ability: Dauntless Shield  
+Tera Type: Fire  
+EVs: 108 HP / 248 Def / 152 Spe  
+Jolly Nature  
+- Iron Defense  
+- Body Press  
+- Crunch  
+- Roar

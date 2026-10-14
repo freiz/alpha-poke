@@ -1,0 +1,59 @@
+Enamorus @ Life Orb  
+Ability: Cute Charm  
+Tera Type: Fairy  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Earth Power  
+- Moonblast  
+- Superpower  
+- Draining Kiss  
+
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Ghost  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Ice Spinner  
+- Rapid Spin  
+- Headlong Rush  
+
+Darkrai @ Leftovers  
+Ability: Bad Dreams  
+Tera Type: Poison  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Dark Pulse  
+- Ice Beam  
+- Nasty Plot  
+- Sludge Bomb  
+
+Dragonite @ Weakness Policy  
+Ability: Multiscale  
+Tera Type: Flying  
+EVs: 240 HP / 252 Atk / 16 Spe  
+Adamant Nature  
+- Dragon Dance  
+- Earthquake  
+- Roost  
+- Extreme Speed  
+
+Alomomola @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Grass  
+EVs: 244 HP / 12 Def / 252 SpD  
+Sassy Nature  
+- Flip Turn  
+- Scald  
+- Wish  
+- Tickle  
+
+Slowking-Galar @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Grass  
+EVs: 252 HP / 16 Def / 68 SpA / 172 SpD  
+Modest Nature  
+- Future Sight  
+- Sludge Bomb  
+- Chilly Reception  
+- Thunder Wave

@@ -1,0 +1,65 @@
+Garganacl @ Leftovers  
+Ability: Purifying Salt  
+Shiny: Yes  
+Tera Type: Water  
+EVs: 252 HP / 4 Atk / 252 SpD  
+Careful Nature  
+- Salt Cure  
+- Iron Defense  
+- Body Press  
+- Recover  
+
+Clodsire @ Leftovers  
+Ability: Unaware  
+Shiny: Yes  
+Tera Type: Dark  
+EVs: 252 HP / 4 Atk / 252 SpD  
+Careful Nature  
+- Earthquake  
+- Toxic  
+- Stealth Rock  
+- Recover  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Shiny: Yes  
+Tera Type: Flying  
+EVs: 252 HP / 252 Atk / 4 Spe  
+Adamant Nature  
+- Iron Head  
+- Kowtow Cleave  
+- Sucker Punch  
+- Swords Dance  
+
+Great Tusk @ Heavy-Duty Boots  
+Ability: Protosynthesis  
+Shiny: Yes  
+Tera Type: Steel  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Earthquake  
+- Knock Off  
+- Close Combat  
+- Rapid Spin  
+
+Hatterene @ Leftovers  
+Ability: Magic Bounce  
+Shiny: Yes  
+Tera Type: Water  
+EVs: 252 HP / 204 Def / 52 Spe  
+Bold Nature  
+- Calm Mind  
+- Draining Kiss  
+- Mystical Fire  
+- Nuzzle  
+
+Dragapult @ Choice Specs  
+Ability: Infiltrator  
+Shiny: Yes  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Hasty Nature  
+- Draco Meteor  
+- Thunderbolt  
+- Shadow Ball  
+- U-turn

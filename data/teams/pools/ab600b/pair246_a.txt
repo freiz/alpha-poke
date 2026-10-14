@@ -1,0 +1,59 @@
+Meowscarada @ Life Orb  
+Ability: Protean  
+Tera Type: Grass  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Flower Trick  
+- Knock Off  
+- U-turn  
+- Triple Axel  
+
+Iron Treads @ Leftovers  
+Ability: Quark Drive  
+Tera Type: Ground  
+EVs: 240 HP / 52 Def / 24 SpD / 192 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Stealth Rock  
+- Earthquake  
+- Ice Spinner  
+
+Iron Moth @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Fairy  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Dazzling Gleam  
+- Substitute  
+- Sludge Wave  
+- Fiery Dance  
+
+Okidogi @ Leftovers  
+Ability: Guard Dog  
+Tera Type: Ghost  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Drain Punch  
+- Bulk Up  
+- Knock Off  
+- Ice Punch  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Dark  
+EVs: 244 HP / 36 Def / 228 SpD  
+Careful Nature  
+- Protect  
+- Knock Off  
+- Toxic  
+- Earthquake  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Shadow Ball  
+- Moonblast  
+- Thunderbolt  
+- Vacuum Wave

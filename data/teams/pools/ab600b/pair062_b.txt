@@ -1,0 +1,59 @@
+Ting-Lu @ Weakness Policy  
+Ability: Vessel of Ruin  
+Tera Type: Water  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- Ruination  
+- Earthquake  
+- Stealth Rock  
+- Whirlwind  
+
+Weezing-Galar @ Shuca Berry  
+Ability: Neutralizing Gas  
+Tera Type: Grass  
+EVs: 252 HP / 244 Def / 12 Spe  
+Bold Nature  
+- Sludge Bomb  
+- Defog  
+- Will-O-Wisp  
+- Toxic Spikes  
+
+Alomomola @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Steel  
+EVs: 252 HP / 4 Atk / 252 SpD  
+Careful Nature  
+- Wish  
+- Tickle  
+- Flip Turn  
+- Mirror Coat  
+
+Tornadus-Therian @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Flying  
+EVs: 252 HP / 4 SpD / 252 Spe  
+Timid Nature  
+- Knock Off  
+- U-turn  
+- Bleakwind Storm  
+- Heat Wave  
+
+Zamazenta @ Life Orb  
+Ability: Dauntless Shield  
+Tera Type: Steel  
+EVs: 104 HP / 248 Def / 156 Spe  
+Jolly Nature  
+- Close Combat  
+- Ice Fang  
+- Crunch  
+- Body Press  
+
+Gholdengo @ Leftovers  
+Ability: Good as Gold  
+Tera Type: Steel  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Trick  
+- Shadow Ball  
+- Make It Rain  
+- Dazzling Gleam

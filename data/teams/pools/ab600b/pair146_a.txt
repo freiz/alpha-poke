@@ -1,0 +1,59 @@
+Raging Bolt @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Fairy  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+- Dragon Pulse  
+- Calm Mind  
+- Thunderclap  
+- Thunderbolt  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Fairy  
+EVs: 248 SpA / 8 SpD / 252 Spe  
+Timid Nature  
+- Moonblast  
+- Calm Mind  
+- Thunderbolt  
+- Destiny Bond  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Trick  
+- Make It Rain  
+- Recover  
+- Shadow Ball  
+
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Fire  
+EVs: 248 HP / 4 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Knock Off  
+- Stealth Rock  
+- Headlong Rush  
+
+Zarude @ Leftovers  
+Ability: Leaf Guard  
+Tera Type: Poison  
+EVs: 208 HP / 88 Atk / 212 SpD  
+Careful Nature  
+- Crunch  
+- Jungle Healing  
+- Trailblaze  
+- Bulk Up  
+
+Slowking-Galar @ Leftovers  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 252 HP / 8 Def / 152 SpA / 96 SpD  
+Calm Nature  
+- Toxic Spikes  
+- Chilling Water  
+- Future Sight  
+- Flamethrower

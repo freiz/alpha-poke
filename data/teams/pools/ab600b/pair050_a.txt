@@ -1,0 +1,62 @@
+Hatterene @ Leftovers  
+Ability: Magic Bounce  
+Tera Type: Fire  
+EVs: 244 Def / 248 SpA / 16 Spe  
+Modest Nature  
+IVs: 0 Atk  
+- Draining Kiss  
+- Mystical Fire  
+- Calm Mind  
+- Psyshock  
+
+Garchomp (F) @ Rocky Helmet  
+Ability: Rough Skin  
+Tera Type: Steel  
+EVs: 252 Atk / 12 SpD / 244 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Earthquake  
+- Iron Head  
+- Outrage  
+
+Pawmot @ Choice Scarf  
+Ability: Volt Absorb  
+Tera Type: Flying  
+EVs: 252 Atk / 9 Def / 248 Spe  
+Jolly Nature  
+- Revival Blessing  
+- Play Rough  
+- Thunder Punch  
+- Close Combat  
+
+Greninja @ Choice Specs  
+Ability: Protean  
+Tera Type: Poison  
+EVs: 252 SpA / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Ice Beam  
+- Dark Pulse  
+- Water Shuriken  
+- Grass Knot  
+
+Toxapex @ Grip Claw  
+Ability: Regenerator  
+Tera Type: Ground  
+EVs: 244 HP / 12 Def / 252 SpD  
+Calm Nature  
+IVs: 0 Atk  
+- Haze  
+- Recover  
+- Toxic  
+- Infestation  
+
+Hawlucha @ Mirror Herb  
+Ability: Unburden  
+Tera Type: Fighting  
+EVs: 252 Atk / 4 Def / 248 Spe  
+Adamant Nature  
+- Acrobatics  
+- Drain Punch  
+- Swords Dance  
+- Defog

@@ -1,0 +1,61 @@
+Dragonite (F) @ Choice Band  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Outrage  
+- Extreme Speed  
+- Earthquake  
+- Fire Punch  
+
+Kingambit (F) @ Heavy-Duty Boots  
+Ability: Supreme Overlord  
+Tera Type: Flying  
+EVs: 112 HP / 252 Atk / 144 Spe  
+Adamant Nature  
+- Swords Dance  
+- Iron Head  
+- Kowtow Cleave  
+- Sucker Punch  
+
+Enamorus @ Choice Scarf  
+Ability: Contrary  
+Tera Type: Ground  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Moonblast  
+- Earth Power  
+- Mystical Fire  
+- Healing Wish  
+
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 252 HP / 204 Def / 52 Spe  
+Impish Nature  
+- Ice Spinner  
+- Earthquake  
+- Knock Off  
+- Rapid Spin  
+
+Heatran (F) @ Leftovers  
+Ability: Flash Fire  
+Tera Type: Water  
+EVs: 252 HP / 216 SpD / 40 Spe  
+Calm Nature  
+IVs: 0 Atk  
+- Magma Storm  
+- Taunt  
+- Earth Power  
+- Stealth Rock  
+
+Samurott-Hisui (F) @ Focus Sash  
+Ability: Sharpness  
+Shiny: Yes  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Ceaseless Edge  
+- Razor Shell  
+- Aqua Jet  
+- Taunt

@@ -1,0 +1,59 @@
+Smeargle @ Focus Sash  
+Ability: Own Tempo  
+Tera Type: Ghost  
+EVs: 252 HP / 4 SpD / 252 Spe  
+Timid Nature  
+- Nuzzle  
+- Sticky Web  
+- Encore  
+- Stone Axe  
+
+Cinderace @ Heavy-Duty Boots  
+Ability: Libero  
+Tera Type: Fire  
+EVs: 148 HP / 252 Atk / 108 Spe  
+Adamant Nature  
+- Pyro Ball  
+- U-turn  
+- Court Change  
+- Sucker Punch  
+
+Serperior @ Leftovers  
+Ability: Contrary  
+Tera Type: Dragon  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Substitute  
+- Leaf Storm  
+- Glare  
+- Leech Seed  
+
+Ogerpon @ Life Orb  
+Ability: Defiant  
+Tera Type: Grass  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Ivy Cudgel  
+- Knock Off  
+- Encore  
+
+Rillaboom @ Life Orb  
+Ability: Grassy Surge  
+Tera Type: Grass  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- U-turn  
+- High Horsepower  
+- Swords Dance  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Ghost  
+EVs: 248 HP / 252 Atk / 8 Def  
+Adamant Nature  
+- Kowtow Cleave  
+- Iron Head  
+- Swords Dance  
+- Low Kick

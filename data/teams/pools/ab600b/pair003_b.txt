@@ -1,0 +1,56 @@
+Polteageist @ White Herb  
+Ability: Cursed Body  
+Tera Type: Poison  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Modest Nature  
+- Shadow Ball  
+- Shell Smash  
+- Strength Sap  
+- Giga Drain  
+
+Grimmsnarl @ Light Clay  
+Ability: Prankster  
+Tera Type: Dark  
+EVs: 252 HP / 4 Def / 252 SpD  
+Calm Nature  
+- Light Screen  
+- Reflect  
+- Parting Shot  
+- Spirit Break  
+
+Garganacl @ Leftovers  
+Ability: Clear Body  
+Tera Type: Fairy  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- Salt Cure  
+- Stealth Rock  
+- Curse  
+- Recover  
+
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Tera Type: Poison  
+EVs: 248 HP / 16 SpD / 244 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Earthquake  
+- Payback  
+- Ruination  
+
+Necrozma @ Leftovers  
+Ability: Prism Armor  
+Tera Type: Steel  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Naughty Nature  
+- Heat Wave  
+- Calm Mind  
+- Photon Geyser  
+- Morning Sun  
+
+Ditto @ Focus Sash  
+Ability: Imposter  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Spe  
+Hardy Nature  
+- Transform

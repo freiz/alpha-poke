@@ -1,0 +1,61 @@
+Samurott-Hisui @ Choice Scarf  
+Ability: Sharpness  
+Tera Type: Water  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Ceaseless Edge  
+- Flip Turn  
+- Razor Shell  
+- Knock Off  
+
+Sinistcha @ Colbur Berry  
+Ability: Heatproof  
+Tera Type: Steel  
+EVs: 252 HP / 252 Def / 4 SpA  
+Bold Nature  
+IVs: 0 Atk  
+- Strength Sap  
+- Matcha Gotcha  
+- Scald  
+- Calm Mind  
+
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Tera Type: Steel  
+EVs: 252 HP / 4 Atk / 236 Def / 16 SpD  
+Impish Nature  
+- Ruination  
+- Stealth Rock  
+- Whirlwind  
+- Earthquake  
+
+Great Tusk @ Heavy-Duty Boots  
+Ability: Protosynthesis  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Earthquake  
+- Knock Off  
+- Ice Spinner  
+
+Scizor @ Choice Band  
+Ability: Technician  
+Tera Type: Steel  
+EVs: 120 HP / 252 Atk / 136 Spe  
+Adamant Nature  
+- U-turn  
+- Bullet Punch  
+- Knock Off  
+- Dual Wingbeat  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Psychic  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Vacuum Wave  
+- Moonblast  
+- Psyshock  
+- Thunderbolt

@@ -1,0 +1,59 @@
+Garchomp @ Life Orb  
+Ability: Rough Skin  
+Tera Type: Fire  
+EVs: 252 HP / 216 Def / 40 Spe  
+Impish Nature  
+- Poison Jab  
+- Iron Head  
+- Scale Shot  
+- Earthquake  
+
+Polteageist-Antique @ White Herb  
+Ability: Weak Armor  
+Tera Type: Fighting  
+EVs: 140 Atk / 116 SpA / 252 Spe  
+Hasty Nature  
+- Shell Smash  
+- Stored Power  
+- Will-O-Wisp  
+- Giga Drain  
+
+Hatterene @ Leftovers  
+Ability: Magic Bounce  
+Tera Type: Water  
+EVs: 248 HP / 184 Def / 76 Spe  
+Bold Nature  
+- Reflect  
+- Psychic Noise  
+- Draining Kiss  
+- Nuzzle  
+
+Barraskewda @ Life Orb  
+Ability: Swift Swim  
+Tera Type: Water  
+EVs: 252 Atk / 252 Spe  
+Adamant Nature  
+- Psychic Fangs  
+- Flip Turn  
+- Close Combat  
+- Liquidation  
+
+Torterra @ Loaded Dice  
+Ability: Overgrow  
+Tera Type: Grass  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- Earthquake  
+- Shell Smash  
+- Rock Blast  
+- Wood Hammer  
+
+Bastiodon @ Leftovers  
+Ability: Sturdy  
+Tera Type: Bug  
+EVs: 252 HP / 4 Def / 252 SpD  
+Calm Nature  
+- Iron Defense  
+- Block  
+- Curse  
+- Rock Slide

@@ -1,0 +1,58 @@
+Mimikyu @ Life Orb  
+Ability: Disguise  
+Tera Type: Ghost  
+EVs: 96 Atk / 160 Def / 252 SpD  
+Adamant Nature  
+- Swords Dance  
+- Shadow Sneak  
+- Play Rough  
+- Trick Room  
+
+Tropius  
+Ability: Harvest  
+EVs: 252 HP / 4 Atk / 252 SpD  
+Careful Nature  
+- Leech Seed  
+- U-turn  
+- Dual Wingbeat  
+- Substitute  
+
+Swampert @ Leftovers  
+Ability: Torrent  
+Tera Type: Water  
+EVs: 252 HP / 104 Atk / 92 SpA / 60 SpD  
+Adamant Nature  
+- Double-Edge  
+- Stealth Rock  
+- Surf  
+- Knock Off  
+
+Garganacl @ Leftovers  
+Ability: Purifying Salt  
+Tera Type: Water  
+EVs: 240 HP / 16 Def / 252 SpD  
+Careful Nature  
+- Salt Cure  
+- Stealth Rock  
+- Recover  
+- Protect  
+
+Kingambit @ Air Balloon  
+Ability: Supreme Overlord  
+Tera Type: Ghost  
+EVs: 160 HP / 252 Atk / 96 Spe  
+Adamant Nature  
+- Swords Dance  
+- Iron Head  
+- Low Kick  
+- Sucker Punch  
+
+Kyurem @ Choice Specs  
+Ability: Pressure  
+Tera Type: Ice  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Naughty Nature  
+- Ice Beam  
+- Blizzard  
+- Freeze-Dry  
+- Earth Power

@@ -1,0 +1,59 @@
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Steel  
+EVs: 252 Atk / 4 SpA / 252 Spe  
+Naive Nature  
+- Moonblast  
+- Close Combat  
+- Knock Off  
+- Taunt  
+
+Clefable @ Sticky Barb  
+Ability: Magic Guard  
+Tera Type: Water  
+EVs: 252 HP / 4 Def / 252 SpD  
+Calm Nature  
+- Moonlight  
+- Moonblast  
+- Stealth Rock  
+- Knock Off  
+
+Heatran @ Air Balloon  
+Ability: Flash Fire  
+Tera Type: Ghost  
+EVs: 248 HP / 44 Def / 168 SpD / 48 Spe  
+Calm Nature  
+- Earth Power  
+- Taunt  
+- Magma Storm  
+- Stealth Rock  
+
+Landorus-Therian @ Rocky Helmet  
+Ability: Intimidate  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Def / 252 Spe  
+Timid Nature  
+- Taunt  
+- U-turn  
+- Stealth Rock  
+- Earthquake  
+
+Walking Wake @ Wise Glasses  
+Ability: Protosynthesis  
+Tera Type: Stellar  
+EVs: 12 Def / 244 SpA / 252 Spe  
+Timid Nature  
+- Draco Meteor  
+- Hydro Steam  
+- Flamethrower  
+- Flip Turn  
+
+Darkrai @ Life Orb  
+Ability: Bad Dreams  
+Tera Type: Poison  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Nasty Plot  
+- Dark Pulse  
+- Ice Beam  
+- Sludge Bomb

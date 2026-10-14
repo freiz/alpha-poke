@@ -1,0 +1,57 @@
+Vivillon  
+Ability: Compound Eyes  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Air Slash  
+- Bug Buzz  
+- Hurricane  
+- Draining Kiss  
+
+Wigglytuff @ Shell Bell  
+Ability: Cute Charm  
+EVs: 4 Def / 252 SpA / 252 SpD  
+Quiet Nature  
+- Body Slam  
+- Perish Song  
+- Ice Beam  
+- Wish  
+
+Scrafty @ Leftovers  
+Ability: Moxie  
+Tera Type: Poison  
+EVs: 252 HP / 4 Atk / 252 SpD  
+Careful Nature  
+- Rock Slide  
+- Knock Off  
+- Bulk Up  
+- Drain Punch  
+
+Scizor @ Leftovers  
+Ability: Technician  
+Tera Type: Steel  
+EVs: 248 HP / 252 Atk / 8 SpD  
+Adamant Nature  
+- Close Combat  
+- Bullet Punch  
+- Knock Off  
+- Swords Dance  
+
+Toedscruel @ Leftovers  
+Ability: Mycelium Might  
+Tera Type: Steel  
+EVs: 72 HP / 252 SpA / 184 Spe  
+Modest Nature  
+- Earth Power  
+- Toxic  
+- Giga Drain  
+- Rapid Spin  
+
+Slowbro-Galar @ Quick Claw  
+Ability: Quick Draw  
+Tera Type: Water  
+EVs: 248 HP / 236 Def / 24 Spe  
+Bold Nature  
+- Poison Jab  
+- Foul Play  
+- Sludge Bomb  
+- Flamethrower

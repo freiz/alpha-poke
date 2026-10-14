@@ -1,0 +1,59 @@
+Dondozo @ Leftovers  
+Ability: Unaware  
+Tera Type: Dragon  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- Curse  
+- Wave Crash  
+- Sleep Talk  
+- Waterfall  
+
+Clefable @ Leftovers  
+Ability: Magic Guard  
+Tera Type: Fire  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Moonlight  
+- Moonblast  
+- Knock Off  
+- Calm Mind  
+
+Tyranitar @ Assault Vest  
+Ability: Sand Stream  
+Tera Type: Rock  
+EVs: 252 Atk / 252 Spe  
+Jolly Nature  
+- Stone Edge  
+- Knock Off  
+- Low Kick  
+- Ice Beam  
+
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Dragon  
+EVs: 252 HP / 4 Atk / 252 SpD  
+Careful Nature  
+- Brave Bird  
+- U-turn  
+- Roost  
+- Defog  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Dark  
+EVs: 244 HP / 12 Def / 252 SpD  
+Careful Nature  
+- Toxic  
+- Protect  
+- Knock Off  
+- Earthquake  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpA / 252 Spe  
+Naive Nature  
+- Taunt  
+- Moonblast  
+- Close Combat  
+- Knock Off

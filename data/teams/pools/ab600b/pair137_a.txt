@@ -1,0 +1,59 @@
+Cinderace @ Heavy-Duty Boots  
+Ability: Libero  
+Tera Type: Grass  
+EVs: 224 HP / 32 Atk / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Pyro Ball  
+- Sucker Punch  
+- U-turn  
+
+Landorus-Therian @ Rocky Helmet  
+Ability: Intimidate  
+Tera Type: Ground  
+EVs: 252 HP / 4 Def / 252 Spe  
+Timid Nature  
+- Stealth Rock  
+- U-turn  
+- Earth Power  
+- Taunt  
+
+Hatterene @ Rocky Helmet  
+Ability: Magic Bounce  
+Tera Type: Stellar  
+EVs: 248 HP / 8 SpA / 200 SpD / 52 Spe  
+Modest Nature  
+- Psychic Noise  
+- Healing Wish  
+- Nuzzle  
+- Dazzling Gleam  
+
+Darkrai @ Leftovers  
+Ability: Bad Dreams  
+Tera Type: Poison  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Dark Pulse  
+- Nasty Plot  
+- Ice Beam  
+- Knock Off  
+
+Kyurem @ Loaded Dice  
+Ability: Pressure  
+Tera Type: Electric  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+- Dragon Dance  
+- Icicle Spear  
+- Freeze-Dry  
+- Scale Shot  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Steel  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Naive Nature  
+- Knock Off  
+- Moonblast  
+- Close Combat  
+- Encore

@@ -1,0 +1,59 @@
+Cinderace @ Choice Scarf  
+Ability: Libero  
+Tera Type: Fire  
+EVs: 148 HP / 252 Atk / 108 Spe  
+Adamant Nature  
+- Court Change  
+- U-turn  
+- Will-O-Wisp  
+- Pyro Ball  
+
+Ribombee @ Focus Sash  
+Ability: Shield Dust  
+Tera Type: Ghost  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Sticky Web  
+- Moonblast  
+- Stun Spore  
+- Skill Swap  
+
+Serperior @ Leftovers  
+Ability: Contrary  
+Tera Type: Grass  
+EVs: 4 SpA / 252 Spe  
+Timid Nature  
+- Leaf Storm  
+- Glare  
+- Substitute  
+- Knock Off  
+
+Empoleon @ Leftovers  
+Ability: Competitive  
+Tera Type: Fighting  
+EVs: 248 HP / 84 Def / 176 SpD  
+Sassy Nature  
+- Surf  
+- Flip Turn  
+- Stealth Rock  
+- Roost  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Fire  
+EVs: 160 HP / 252 Atk / 96 Spe  
+Adamant Nature  
+- Kowtow Cleave  
+- Iron Head  
+- Swords Dance  
+- Low Kick  
+
+Articuno-Galar @ Iron Ball  
+Ability: Competitive  
+Tera Type: Ghost  
+EVs: 248 HP / 252 SpA / 4 SpD  
+Modest Nature  
+- Trick Room  
+- Calm Mind  
+- Psychic Noise  
+- Freezing Glare

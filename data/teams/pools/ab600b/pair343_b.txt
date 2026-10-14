@@ -1,0 +1,59 @@
+Thundurus @ Mirror Herb  
+Ability: Defiant  
+Tera Type: Ice  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Swagger  
+- Acrobatics  
+- Knock Off  
+- Supercell Slam  
+
+Great Tusk @ Heavy-Duty Boots  
+Ability: Protosynthesis  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Atk / 4 Def  
+Adamant Nature  
+- Stealth Rock  
+- Ice Spinner  
+- Headlong Rush  
+- Rapid Spin  
+
+Hatterene @ Rocky Helmet  
+Ability: Magic Bounce  
+Tera Type: Water  
+EVs: 248 HP / 204 Def / 56 Spe  
+Bold Nature  
+- Pain Split  
+- Nuzzle  
+- Psychic Noise  
+- Draining Kiss  
+
+Primarina @ Heavy-Duty Boots  
+Ability: Liquid Voice  
+Tera Type: Steel  
+EVs: 252 HP / 208 SpA / 48 SpD  
+Modest Nature  
+- Surf  
+- Psychic Noise  
+- Moonblast  
+- Flip Turn  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Ghost  
+EVs: 240 HP / 252 Atk / 16 Spe  
+Adamant Nature  
+- Iron Head  
+- Swords Dance  
+- Kowtow Cleave  
+- Low Kick  
+
+Slowking-Galar @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Steel  
+EVs: 248 HP / 8 Atk / 252 SpD  
+Hardy Nature  
+- Future Sight  
+- Thunder Wave  
+- Psychic Noise  
+- Chilly Reception

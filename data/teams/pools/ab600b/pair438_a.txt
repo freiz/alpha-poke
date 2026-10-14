@@ -1,0 +1,59 @@
+Ninetales @ Heat Rock  
+Ability: Drought  
+Tera Type: Flying  
+EVs: 248 HP / 20 Def / 240 Spe  
+Timid Nature  
+- Encore  
+- Weather Ball  
+- Will-O-Wisp  
+- Overheat  
+
+Dragapult @ Life Orb  
+Ability: Infiltrator  
+Tera Type: Fairy  
+EVs: 16 Atk / 240 SpA / 252 Spe  
+Naive Nature  
+- Dragon Dance  
+- Dragon Darts  
+- U-turn  
+- Will-O-Wisp  
+
+Iron Hands @ Sitrus Berry  
+Ability: Quark Drive  
+Tera Type: Flying  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Belly Drum  
+- Supercell Slam  
+- Drain Punch  
+- Ice Punch  
+
+Walking Wake @ Eject Pack  
+Ability: Protosynthesis  
+Tera Type: Water  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Weather Ball  
+- Draco Meteor  
+- Hydro Steam  
+- Dragon Pulse  
+
+Gyarados @ Leftovers  
+Ability: Moxie  
+Tera Type: Dragon  
+EVs: 108 HP / 252 Atk / 4 SpD / 144 Spe  
+Adamant Nature  
+- Dragon Dance  
+- Double-Edge  
+- Ice Fang  
+- Earthquake  
+
+Meowscarada @ Life Orb  
+Ability: Protean  
+Tera Type: Grass  
+EVs: 8 HP / 248 Atk / 252 Spe  
+Jolly Nature  
+- Triple Axel  
+- Thunder Punch  
+- Flower Trick  
+- Knock Off

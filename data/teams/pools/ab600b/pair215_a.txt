@@ -1,0 +1,59 @@
+Manaphy @ Leftovers  
+Ability: Hydration  
+Tera Type: Fairy  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+- Take Heart  
+- Tail Glow  
+- Scald  
+- Surf  
+
+Ribombee @ Focus Sash  
+Ability: Honey Gather  
+Tera Type: Steel  
+EVs: 252 HP / 4 Def / 252 Spe  
+Jolly Nature  
+- Moonblast  
+- Sticky Web  
+- Psychic Noise  
+- Skill Swap  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Steel  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Close Combat  
+- Knock Off  
+- Moonblast  
+
+Ceruledge @ Focus Sash  
+Ability: Weak Armor  
+Tera Type: Fighting  
+EVs: 80 HP / 252 Atk / 176 Spe  
+Adamant Nature  
+- Shadow Sneak  
+- Poltergeist  
+- Bitter Blade  
+- Swords Dance  
+
+Thundurus-Therian @ Leftovers  
+Ability: Volt Absorb  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Nasty Plot  
+- Thunderbolt  
+- Grass Knot  
+- Volt Switch  
+
+Ninetales-Alola @ Light Clay  
+Ability: Snow Warning  
+Tera Type: Water  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Aurora Veil  
+- Encore  
+- Moonblast  
+- Freeze-Dry

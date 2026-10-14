@@ -1,0 +1,59 @@
+Garganacl @ Leftovers  
+Ability: Purifying Salt  
+Tera Type: Fairy  
+EVs: 252 HP / 4 Atk / 252 Def  
+Hardy Nature  
+- Salt Cure  
+- Protect  
+- Recover  
+- Stealth Rock  
+
+Dragonite @ Leftovers  
+Ability: Multiscale  
+Tera Type: Ground  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Encore  
+- Air Slash  
+- Dragon Dance  
+- Earthquake  
+
+Landorus-Therian @ Leftovers  
+Ability: Intimidate  
+Tera Type: Ground  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Grass Knot  
+- Stealth Rock  
+- Earth Power  
+
+Sableye @ Rocky Helmet  
+Ability: Prankster  
+Tera Type: Fire  
+EVs: 252 Def / 252 SpD  
+Sassy Nature  
+- Encore  
+- Disable  
+- Protect  
+- Metronome  
+
+Cinderace @ Heavy-Duty Boots  
+Ability: Libero  
+Tera Type: Fire  
+EVs: 224 HP / 32 Atk / 252 Spe  
+Jolly Nature  
+- Gunk Shot  
+- Pyro Ball  
+- Court Change  
+- Will-O-Wisp  
+
+Alomomola @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Steel  
+EVs: 20 HP / 236 Def / 252 SpD  
+Sassy Nature  
+- Scald  
+- Flip Turn  
+- Wish  
+- Mirror Coat

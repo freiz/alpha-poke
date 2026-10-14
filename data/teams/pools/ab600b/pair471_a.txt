@@ -1,0 +1,59 @@
+Great Tusk @ Rocky Helmet  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Headlong Rush  
+- Ice Spinner  
+- Rapid Spin  
+- Knock Off  
+
+Walking Wake @ Life Orb  
+Ability: Protosynthesis  
+Tera Type: Water  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Hydro Steam  
+- Draco Meteor  
+- Flip Turn  
+- Flamethrower  
+
+Kingambit @ Air Balloon  
+Ability: Supreme Overlord  
+Tera Type: Ghost  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- Kowtow Cleave  
+- Iron Head  
+- Swords Dance  
+- Sucker Punch  
+
+Venusaur @ Life Orb  
+Ability: Chlorophyll  
+Tera Type: Fire  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Sludge Bomb  
+- Giga Drain  
+- Growth  
+- Weather Ball  
+
+Ninetales @ Heat Rock  
+Ability: Drought  
+Tera Type: Ghost  
+EVs: 192 HP / 72 SpA / 244 Spe  
+Timid Nature  
+- Will-O-Wisp  
+- Healing Wish  
+- Encore  
+- Weather Ball  
+
+Raging Bolt @ Air Balloon  
+Ability: Protosynthesis  
+Tera Type: Ghost  
+EVs: 112 HP / 252 SpA / 144 Spe  
+Modest Nature  
+- Dragon Pulse  
+- Thunderbolt  
+- Thunderclap  
+- Calm Mind

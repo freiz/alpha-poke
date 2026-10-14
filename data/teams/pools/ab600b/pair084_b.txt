@@ -1,0 +1,59 @@
+Zapdos @ Heavy-Duty Boots  
+Ability: Pressure  
+Tera Type: Grass  
+EVs: 248 HP / 252 SpA / 8 SpD  
+Modest Nature  
+- U-turn  
+- Roost  
+- Hurricane  
+- Volt Switch  
+
+Quaquaval @ Leftovers  
+Ability: Moxie  
+Tera Type: Steel  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Aqua Step  
+- Close Combat  
+- Swords Dance  
+- Ice Spinner  
+
+Tyranitar @ Leftovers  
+Ability: Sand Stream  
+Tera Type: Bug  
+EVs: 252 HP / 16 Def / 240 SpD  
+Sassy Nature  
+- Roar  
+- Knock Off  
+- Stone Edge  
+- Stealth Rock  
+
+Okidogi @ Leftovers  
+Ability: Toxic Chain  
+Tera Type: Water  
+EVs: 252 HP / 252 Atk / 4 Def  
+Adamant Nature  
+- Gunk Shot  
+- Drain Punch  
+- Knock Off  
+- Facade  
+
+Latias @ Leftovers  
+Ability: Levitate  
+Tera Type: Poison  
+EVs: 252 HP / 4 Def / 252 Spe  
+Timid Nature  
+- Aura Sphere  
+- Recover  
+- Stored Power  
+- Calm Mind  
+
+Cinderace @ Choice Band  
+Ability: Libero  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Pyro Ball  
+- Court Change  
+- U-turn  
+- High Jump Kick

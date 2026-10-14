@@ -1,0 +1,60 @@
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Ground  
+EVs: 252 HP / 4 Atk / 252 Def  
+Impish Nature  
+- Stealth Rock  
+- Earthquake  
+- U-turn  
+- Protect  
+
+Empoleon @ Leftovers  
+Ability: Competitive  
+Tera Type: Water  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- Flip Turn  
+- Stealth Rock  
+- Roost  
+- Roar  
+
+Enamorus @ Choice Specs  
+Ability: Contrary  
+Tera Type: Ground  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Moonblast  
+- Earth Power  
+- Mystical Fire  
+- Psychic  
+
+Dragapult @ Light Clay  
+Ability: Cursed Body  
+Tera Type: Steel  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Reflect  
+- Light Screen  
+- U-turn  
+- Dragon Darts  
+
+Corviknight @ Leftovers  
+Ability: Pressure  
+Tera Type: Flying  
+EVs: 252 HP / 4 Atk / 252 Def  
+Impish Nature  
+- Defog  
+- Brave Bird  
+- U-turn  
+- Roost  
+
+Jirachi @ Choice Band  
+Ability: Serene Grace  
+Tera Type: Steel  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Iron Head  
+- U-turn  
+- Zen Headbutt  
+- Ice Punch

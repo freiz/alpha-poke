@@ -1,0 +1,59 @@
+Metagross @ Leftovers  
+Ability: Clear Body  
+Tera Type: Steel  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Knock Off  
+- Heavy Slam  
+- Earthquake  
+- Brick Break  
+
+Garganacl @ Leftovers  
+Ability: Purifying Salt  
+Tera Type: Water  
+EVs: 236 HP / 252 Atk / 16 Def / 4 SpD  
+Adamant Nature  
+- Stealth Rock  
+- Salt Cure  
+- Recover  
+- Protect  
+
+Zapdos @ Leftovers  
+Ability: Static  
+Tera Type: Flying  
+EVs: 252 HP / 216 Def / 40 SpD  
+Modest Nature  
+- Volt Switch  
+- Thunder Wave  
+- Hurricane  
+- U-turn  
+
+Dragapult @ Choice Specs  
+Ability: Infiltrator  
+Tera Type: Fairy  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Draco Meteor  
+- U-turn  
+- Shadow Ball  
+- Dragon Darts  
+
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Ivy Cudgel  
+- Knock Off  
+- Swords Dance  
+- Power Whip  
+
+Iron Treads @ Leftovers  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 4 HP / 252 Atk / 76 Def / 176 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Earthquake  
+- Stealth Rock  
+- Knock Off

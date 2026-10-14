@@ -1,0 +1,59 @@
+Pelipper @ Choice Specs  
+Ability: Drizzle  
+Tera Type: Grass  
+EVs: 252 HP / 4 Def / 252 Spe  
+Timid Nature  
+- Surf  
+- U-turn  
+- Hurricane  
+- Weather Ball  
+
+Barraskewda @ Choice Band  
+Ability: Swift Swim  
+Tera Type: Water  
+EVs: 252 Atk / 252 Spe  
+Adamant Nature  
+- Flip Turn  
+- Liquidation  
+- Close Combat  
+- Aqua Jet  
+
+Thundurus-Therian @ Leftovers  
+Ability: Volt Absorb  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Thunderbolt  
+- Focus Blast  
+- Nasty Plot  
+- Agility  
+
+Raging Bolt @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Fairy  
+EVs: 116 HP / 252 SpA / 140 Spe  
+Modest Nature  
+- Thunderclap  
+- Thunder  
+- Dragon Pulse  
+- Draco Meteor  
+
+Drednaw @ White Herb  
+Ability: Strong Jaw  
+Tera Type: Bug  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Shell Smash  
+- Liquidation  
+- Ice Spinner  
+- Jaw Lock  
+
+Kingambit @ Life Orb  
+Ability: Supreme Overlord  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Iron Head  
+- Kowtow Cleave  
+- Swords Dance  
+- Sucker Punch

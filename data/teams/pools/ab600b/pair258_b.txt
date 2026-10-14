@@ -1,0 +1,59 @@
+Thundurus-Therian @ Rocky Helmet  
+Ability: Volt Absorb  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Modest Nature  
+- Nasty Plot  
+- Thunderbolt  
+- Focus Blast  
+- Dark Pulse  
+
+Kommo-o @ Leftovers  
+Ability: Bulletproof  
+Tera Type: Ghost  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Clangorous Soul  
+- Substitute  
+- Shadow Claw  
+- Drain Punch  
+
+Latias @ Leftovers  
+Ability: Levitate  
+Tera Type: Electric  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Agility  
+- Calm Mind  
+- Thunderbolt  
+- Stored Power  
+
+Heatran @ Air Balloon  
+Ability: Flash Fire  
+Tera Type: Ghost  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Modest Nature  
+- Magma Storm  
+- Stealth Rock  
+- Earth Power  
+- Protect  
+
+Meowscarada @ Heavy-Duty Boots  
+Ability: Protean  
+Tera Type: Grass  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Triple Axel  
+- U-turn  
+- Flower Trick  
+- Knock Off  
+
+Volcanion @ Leftovers  
+Ability: Water Absorb  
+Tera Type: Fairy  
+EVs: 248 HP / 8 Def / 252 SpA  
+Quiet Nature  
+- Steam Eruption  
+- Will-O-Wisp  
+- Sludge Bomb  
+- Fire Spin

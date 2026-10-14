@@ -1,0 +1,59 @@
+Articuno @ Leftovers  
+Ability: Pressure  
+Tera Type: Steel  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- U-turn  
+- Freeze-Dry  
+- Blizzard  
+- Hurricane  
+
+Slowking-Galar @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 248 HP / 8 Def / 252 SpD  
+Sassy Nature  
+- Thunder Wave  
+- Chilly Reception  
+- Sludge Bomb  
+- Future Sight  
+
+Dragapult @ Life Orb  
+Ability: Infiltrator  
+Tera Type: Ghost  
+EVs: 76 Atk / 180 SpA / 252 Spe  
+Naive Nature  
+- U-turn  
+- Draco Meteor  
+- Hex  
+- Shadow Ball  
+
+Great Tusk @ Rocky Helmet  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Ice Spinner  
+- Headlong Rush  
+- Close Combat  
+
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Dragon  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- U-turn  
+- Brave Bird  
+- Roost  
+- Defog  
+
+Samurott-Hisui @ Heavy-Duty Boots  
+Ability: Sharpness  
+Tera Type: Ghost  
+EVs: 160 HP / 32 Atk / 248 SpD / 68 Spe  
+Adamant Nature  
+- Ceaseless Edge  
+- Razor Shell  
+- Sucker Punch  
+- Knock Off

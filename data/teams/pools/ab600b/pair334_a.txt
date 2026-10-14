@@ -1,0 +1,59 @@
+Regidrago @ Choice Specs  
+Ability: Dragon's Maw  
+Tera Type: Dragon  
+EVs: 252 SpA / 252 Spe  
+Modest Nature  
+- Dragon Energy  
+- Draco Meteor  
+- Dragon Dance  
+- Scale Shot  
+
+Weezing-Galar @ Heavy-Duty Boots  
+Ability: Neutralizing Gas  
+Tera Type: Dragon  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Will-O-Wisp  
+- Pain Split  
+- Sludge Bomb  
+- Toxic Spikes  
+
+Slowking-Galar @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 248 HP / 252 Def / 8 SpD  
+Relaxed Nature  
+- Chilly Reception  
+- Psychic Noise  
+- Future Sight  
+- Sludge Bomb  
+
+Dragonite @ Heavy-Duty Boots  
+Ability: Inner Focus  
+Tera Type: Normal  
+EVs: 104 HP / 252 Atk / 152 Spe  
+Adamant Nature  
+- Dragon Dance  
+- Earthquake  
+- Extreme Speed  
+- Dragon Tail  
+
+Gholdengo @ Rocky Helmet  
+Ability: Good as Gold  
+Tera Type: Bug  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Shadow Ball  
+- Nasty Plot  
+- Make It Rain  
+- Recover  
+
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Tera Type: Water  
+EVs: 196 HP / 80 Def / 232 SpD  
+Adamant Nature  
+- Stealth Rock  
+- Earthquake  
+- Whirlwind  
+- Ruination

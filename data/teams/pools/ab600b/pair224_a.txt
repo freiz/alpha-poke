@@ -1,0 +1,59 @@
+Araquanid @ Custap Berry  
+Ability: Water Bubble  
+Tera Type: Ghost  
+EVs: 252 HP / 40 Def / 216 SpA  
+Modest Nature  
+- Liquidation  
+- Lunge  
+- Sticky Web  
+- Surf  
+
+Dragonite @ Rocky Helmet  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 104 HP / 252 Atk / 152 Spe  
+Adamant Nature  
+- Dragon Tail  
+- Roost  
+- Earthquake  
+- Extreme Speed  
+
+Magnezone @ Custap Berry  
+Ability: Analytic  
+Tera Type: Flying  
+EVs: 248 HP / 252 SpA / 8 SpD  
+Modest Nature  
+- Flash Cannon  
+- Volt Switch  
+- Thunderbolt  
+- Body Press  
+
+Landorus-Therian @ Rocky Helmet  
+Ability: Intimidate  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Stealth Rock  
+- Earthquake  
+- Taunt  
+
+Iron Treads @ Assault Vest  
+Ability: Quark Drive  
+Tera Type: Water  
+EVs: 252 HP / 4 Def / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Earthquake  
+- Rapid Spin  
+- Stealth Rock  
+
+Gengar @ Air Balloon  
+Ability: Cursed Body  
+Tera Type: Ghost  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Shadow Ball  
+- Nasty Plot  
+- Focus Blast  
+- Icy Wind

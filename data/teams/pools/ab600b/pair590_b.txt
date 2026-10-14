@@ -1,0 +1,59 @@
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Tera Type: Water  
+EVs: 24 HP / 4 Atk / 252 SpD / 228 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Earthquake  
+- Spikes  
+- Ruination  
+
+Dragapult @ Choice Specs  
+Ability: Clear Body  
+Tera Type: Ghost  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- U-turn  
+- Draco Meteor  
+- Shadow Ball  
+- Hex  
+
+Cinderace @ Heavy-Duty Boots  
+Ability: Libero  
+Tera Type: Fire  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- High Jump Kick  
+- U-turn  
+- Pyro Ball  
+- Court Change  
+
+Meowscarada @ Choice Band  
+Ability: Protean  
+Tera Type: Ghost  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Flower Trick  
+- Knock Off  
+- Triple Axel  
+
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Dragon  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- U-turn  
+- Roost  
+- Body Press  
+- Iron Defense  
+
+Raging Bolt @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Ghost  
+EVs: 200 HP / 252 SpA / 56 Spe  
+Modest Nature  
+- Thunderbolt  
+- Thunderclap  
+- Dragon Pulse  
+- Volt Switch

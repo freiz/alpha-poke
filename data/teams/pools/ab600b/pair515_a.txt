@@ -1,0 +1,58 @@
+Ribombee @ Focus Sash  
+Ability: Shield Dust  
+Tera Type: Steel  
+EVs: 248 HP / 8 SpA / 252 Spe  
+Timid Nature  
+- Sticky Web  
+- Moonblast  
+- Stun Spore  
+- Psychic Noise  
+
+Cinderace @ Heavy-Duty Boots  
+Ability: Blaze  
+Tera Type: Ghost  
+EVs: 248 HP / 8 Atk / 252 Spe  
+Jolly Nature  
+- Court Change  
+- Super Fang  
+- Flare Blitz  
+- U-turn  
+
+Serperior @ Leftovers  
+Ability: Contrary  
+Tera Type: Grass  
+EVs: 252 HP / 24 Def / 232 Spe  
+Timid Nature  
+- Leaf Storm  
+- Glare  
+- Substitute  
+- Leech Seed  
+
+Malamar @ Red Card  
+Ability: Contrary  
+EVs: 252 Atk / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Superpower  
+- Liquidation  
+- Topsy-Turvy  
+
+Milotic @ Leftovers  
+Ability: Competitive  
+Tera Type: Grass  
+EVs: 252 HP / 252 Def / 4 SpA  
+Bold Nature  
+- Surf  
+- Ice Beam  
+- Scald  
+- Flip Turn  
+
+Kingambit @ Air Balloon  
+Ability: Supreme Overlord  
+Tera Type: Dark  
+EVs: 248 HP / 252 Atk / 8 Def  
+Adamant Nature  
+- Swords Dance  
+- Iron Head  
+- Sucker Punch  
+- Low Kick

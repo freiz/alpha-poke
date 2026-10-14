@@ -1,0 +1,58 @@
+Tyranitar @ Leftovers  
+Ability: Sand Stream  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Stealth Rock  
+- Knock Off  
+- Ice Beam  
+- Roar  
+
+Cloyster @ Focus Sash  
+Ability: Skill Link  
+Tera Type: Ice  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Shell Smash  
+- Icicle Spear  
+- Rock Blast  
+- Ice Shard  
+
+Maushold-Four @ Wide Lens  
+Ability: Friend Guard  
+Tera Type: Ghost  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Taunt  
+- Bite  
+- Tidy Up  
+- Population Bomb  
+
+Masquerain @ Focus Sash  
+Ability: Intimidate  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Sticky Web  
+- Air Slash  
+- Stun Spore  
+- Bug Buzz  
+
+Zoroark-Hisui @ Air Balloon  
+Ability: Illusion  
+Tera Type: Ghost  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Modest Nature  
+- Taunt  
+- Shadow Ball  
+- Bitter Malice  
+- Trick  
+
+Garganacl @ Leftovers  
+Ability: Purifying Salt  
+Tera Type: Ghost  
+EVs: 252 HP / 16 Def / 216 SpD / 24 Spe  
+Careful Nature  
+- Iron Defense  
+- Salt Cure  
+- Recover  
+- Stealth Rock

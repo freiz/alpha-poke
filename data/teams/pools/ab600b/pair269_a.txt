@@ -1,0 +1,58 @@
+Weezing @ Leftovers  
+Ability: Levitate  
+Tera Type: Water  
+EVs: 252 HP / 56 Def / 200 SpA  
+Bold Nature  
+- Toxic Spikes  
+- Toxic  
+- Pain Split  
+- Gunk Shot  
+
+Cacturne @ Focus Sash  
+Ability: Water Absorb  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Sucker Punch  
+- Knock Off  
+- Swords Dance  
+- Counter  
+
+Dusclops @ Eviolite  
+Ability: Frisk  
+EVs: 252 HP / 252 SpA  
+Modest Nature  
+- Calm Mind  
+- Pain Split  
+- Will-O-Wisp  
+- Dark Pulse  
+
+Noivern @ Throat Spray  
+Ability: Infiltrator  
+Tera Type: Fairy  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Boomburst  
+- Air Slash  
+- Flamethrower  
+- Tailwind  
+
+Bastiodon @ Leftovers  
+Ability: Sturdy  
+Tera Type: Ghost  
+EVs: 252 HP / 128 Def / 128 SpD  
+Impish Nature  
+- Block  
+- Curse  
+- Trailblaze  
+- Rock Slide  
+
+Cryogonal @ Heavy-Duty Boots  
+Ability: Levitate  
+Tera Type: Fairy  
+EVs: 136 HP / 120 SpA / 252 Spe  
+Timid Nature  
+- Ice Beam  
+- Freeze-Dry  
+- Chilling Water  
+- Haze

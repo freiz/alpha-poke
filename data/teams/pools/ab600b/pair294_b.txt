@@ -1,0 +1,62 @@
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Dark  
+EVs: 252 HP / 196 Def / 60 Spe  
+Bold Nature  
+IVs: 0 Atk  
+- Hex  
+- Thunder Wave  
+- Recover  
+- Make It Rain  
+
+Toxapex @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Steel  
+EVs: 248 HP / 252 Def / 8 SpD  
+Bold Nature  
+IVs: 0 Atk  
+- Toxic  
+- Recover  
+- Toxic Spikes  
+- Haze  
+
+Dondozo @ Heavy-Duty Boots  
+Ability: Unaware  
+Tera Type: Fighting  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+IVs: 0 Atk  
+- Body Press  
+- Curse  
+- Rest  
+- Sleep Talk  
+
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Tera Type: Poison  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- Spikes  
+- Earthquake  
+- Whirlwind  
+- Ruination  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Water  
+EVs: 244 HP / 36 Def / 228 SpD  
+Careful Nature  
+- Knock Off  
+- Earthquake  
+- Toxic  
+- Protect  
+
+Clefable @ Leftovers  
+Ability: Magic Guard  
+Tera Type: Water  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Stealth Rock  
+- Moonblast  
+- Moonlight  
+- Knock Off

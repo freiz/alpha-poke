@@ -1,0 +1,61 @@
+Meowscarada @ Choice Scarf  
+Ability: Protean  
+Tera Type: Grass  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Flower Trick  
+- U-turn  
+- Low Kick  
+
+Great Tusk @ Heavy-Duty Boots  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Headlong Rush  
+- Ice Spinner  
+- Knock Off  
+- Rapid Spin  
+
+Slowking-Galar @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Ice  
+EVs: 252 HP / 240 Def / 16 SpD  
+Sassy Nature  
+IVs: 0 Atk / 0 Spe  
+- Future Sight  
+- Chilly Reception  
+- Sludge Bomb  
+- Ice Beam  
+
+Dragapult @ Choice Specs  
+Ability: Infiltrator  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Draco Meteor  
+- Shadow Ball  
+- Flamethrower  
+- U-turn  
+
+Alomomola @ Assault Vest  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 12 HP / 252 Def / 244 SpD  
+Relaxed Nature  
+IVs: 0 Spe  
+- Flip Turn  
+- Play Rough  
+- Ice Beam  
+- Mirror Coat  
+
+Garchomp @ Rocky Helmet  
+Ability: Rough Skin  
+Tera Type: Steel  
+EVs: 252 HP / 216 Def / 40 Spe  
+Impish Nature  
+- Earthquake  
+- Dragon Tail  
+- Stealth Rock  
+- Spikes

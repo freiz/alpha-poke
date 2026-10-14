@@ -1,0 +1,58 @@
+Delphox @ White Herb  
+Ability: Blaze  
+Tera Type: Poison  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Scorching Sands  
+- Grass Knot  
+- Copycat  
+- Nasty Plot  
+
+Garchomp @ Life Orb  
+Ability: Rough Skin  
+Tera Type: Water  
+EVs: 252 HP / 216 Def / 40 Spe  
+Impish Nature  
+- Earthquake  
+- Scale Shot  
+- Swords Dance  
+- Dragon Tail  
+
+Medicham @ Choice Scarf  
+Ability: Pure Power  
+Tera Type: Steel  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Close Combat  
+- Bullet Punch  
+- Trick  
+- Ice Punch  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Ghost  
+EVs: 248 HP / 252 Atk / 8 Def  
+Adamant Nature  
+- Iron Head  
+- Poison Jab  
+- Protect  
+- Sucker Punch  
+
+Walking Wake @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 12 HP / 244 SpA / 252 Spe  
+Timid Nature  
+- Surf  
+- Dragon Pulse  
+- Draco Meteor  
+- Hydro Steam  
+
+Dusclops @ Eviolite  
+Ability: Frisk  
+EVs: 252 HP / 252 Def  
+Bold Nature  
+- Calm Mind  
+- Will-O-Wisp  
+- Dark Pulse  
+- Pain Split

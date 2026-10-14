@@ -1,0 +1,59 @@
+Dondozo @ Leftovers  
+Ability: Unaware  
+Tera Type: Dark  
+EVs: 248 HP / 252 Def / 8 SpD  
+Impish Nature  
+- Wave Crash  
+- Sleep Talk  
+- Rest  
+- Curse  
+
+Blissey @ Choice Scarf  
+Ability: Natural Cure  
+Tera Type: Dark  
+EVs: 20 HP / 252 Def / 236 SpD  
+Calm Nature  
+- Trick  
+- Seismic Toss  
+- Soft-Boiled  
+- Calm Mind  
+
+Corviknight @ Leftovers  
+Ability: Pressure  
+Tera Type: Poison  
+EVs: 252 HP / 252 Def / 4 Spe  
+Impish Nature  
+- Bulk Up  
+- Roost  
+- Power Trip  
+- Defog  
+
+Weezing-Galar @ Rocky Helmet  
+Ability: Levitate  
+Tera Type: Ghost  
+EVs: 252 HP / 4 SpA / 252 SpD  
+Calm Nature  
+- Strange Steam  
+- Pain Split  
+- Defog  
+- Toxic Spikes  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Dark  
+EVs: 172 HP / 228 Atk / 108 Spe  
+Adamant Nature  
+- Swords Dance  
+- Protect  
+- Knock Off  
+- Earthquake  
+
+Toxapex @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Grass  
+EVs: 248 HP / 136 Def / 124 SpD  
+Impish Nature  
+- Gunk Shot  
+- Toxic  
+- Recover  
+- Toxic Spikes

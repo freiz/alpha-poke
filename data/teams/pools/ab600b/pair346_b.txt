@@ -1,0 +1,59 @@
+Ogerpon @ Choice Band  
+Ability: Defiant  
+Tera Type: Grass  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Ivy Cudgel  
+- Knock Off  
+- Encore  
+
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Ground  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- Close Combat  
+- Ice Spinner  
+- Headlong Rush  
+- Stealth Rock  
+
+Alomomola @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Ghost  
+EVs: 20 HP / 236 Def / 252 SpD  
+Sassy Nature  
+- Flip Turn  
+- Protect  
+- Wish  
+- Scald  
+
+Weezing-Galar @ Leftovers  
+Ability: Neutralizing Gas  
+Tera Type: Grass  
+EVs: 248 HP / 252 Def / 8 SpD  
+Bold Nature  
+- Will-O-Wisp  
+- Sludge Bomb  
+- Pain Split  
+- Defog  
+
+Tyranitar @ Leftovers  
+Ability: Sand Stream  
+Tera Type: Steel  
+EVs: 248 HP / 8 Def / 252 SpD  
+Sassy Nature  
+- Knock Off  
+- Ice Beam  
+- Thunder Wave  
+- Stealth Rock  
+
+Magnezone @ Rocky Helmet  
+Ability: Analytic  
+Tera Type: Flying  
+EVs: 148 HP / 240 Def / 120 SpD  
+Relaxed Nature  
+- Volt Switch  
+- Flash Cannon  
+- Thunderbolt  
+- Body Press

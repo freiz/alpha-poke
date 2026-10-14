@@ -1,0 +1,59 @@
+Cinderace @ Heavy-Duty Boots  
+Ability: Libero  
+Tera Type: Ghost  
+EVs: 148 HP / 252 Atk / 108 Spe  
+Adamant Nature  
+- U-turn  
+- Pyro Ball  
+- Court Change  
+- Will-O-Wisp  
+
+Toxapex @ Leftovers  
+Ability: Regenerator  
+Tera Type: Steel  
+EVs: 252 HP / 124 Def / 132 SpD  
+Calm Nature  
+- Toxic  
+- Haze  
+- Ice Beam  
+- Poison Jab  
+
+Alomomola @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Normal  
+EVs: 252 HP / 252 Def / 4 SpD  
+Relaxed Nature  
+- Scald  
+- Flip Turn  
+- Protect  
+- Wish  
+
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Tera Type: Water  
+EVs: 248 HP / 8 Def / 252 SpD  
+Careful Nature  
+- Stealth Rock  
+- Spikes  
+- Earthquake  
+- Ruination  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Normal  
+EVs: 244 HP / 12 Def / 252 Spe  
+Jolly Nature  
+- Protect  
+- Toxic  
+- Knock Off  
+- Swords Dance  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Dark  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Shadow Ball  
+- Make It Rain  
+- Nasty Plot  
+- Trick

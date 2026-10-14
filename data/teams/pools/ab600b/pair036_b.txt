@@ -1,0 +1,57 @@
+Kleavor @ Focus Sash  
+Ability: Sharpness  
+Tera Type: Flying  
+EVs: 252 HP / 252 Atk  
+Adamant Nature  
+- Stone Axe  
+- Close Combat  
+- Quick Attack  
+- Night Slash  
+
+Bisharp @ Eviolite  
+Ability: Defiant  
+Tera Type: Flying  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Metal Burst  
+- Low Kick  
+- Sucker Punch  
+- Iron Head  
+
+Milotic @ Leftovers  
+Ability: Competitive  
+Tera Type: Fairy  
+EVs: 128 HP / 116 Def / 252 SpA / 12 Spe  
+Modest Nature  
+- Recover  
+- Haze  
+- Draining Kiss  
+- Dragon Dance  
+
+Ceruledge @ Focus Sash  
+Ability: Weak Armor  
+Tera Type: Fairy  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Bitter Blade  
+- Swords Dance  
+- Shadow Sneak  
+- Poltergeist  
+
+Dusclops @ Eviolite  
+Ability: Pressure  
+EVs: 252 HP / 64 Def / 192 SpD  
+Relaxed Nature  
+- Will-O-Wisp  
+- Pain Split  
+- Night Shade  
+- Dark Pulse  
+
+Lurantis @ Leftovers  
+Ability: Contrary  
+EVs: 168 Atk / 92 Def / 248 Spe  
+Adamant Nature  
+- Leaf Storm  
+- Synthesis  
+- Substitute  
+- Night Slash

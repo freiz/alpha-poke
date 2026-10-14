@@ -1,0 +1,64 @@
+Iron Moth @ Booster Energy  
+Ability: Quark Drive  
+Shiny: Yes  
+Tera Type: Fairy  
+EVs: 4 HP / 116 Def / 136 SpA / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Fiery Dance  
+- Sludge Wave  
+- Dazzling Gleam  
+- Sunny Day  
+
+Great Tusk @ Earth Plate  
+Ability: Protosynthesis  
+Tera Type: Flying  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Rapid Spin  
+- Earthquake  
+- Bulk Up  
+- Smack Down  
+
+Landorus-Therian @ Rocky Helmet  
+Ability: Intimidate  
+Shiny: Yes  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Def / 4 SpA  
+Bold Nature  
+- Stealth Rock  
+- Earth Power  
+- U-turn  
+- Taunt  
+
+Tinkaton @ Air Balloon  
+Ability: Pickpocket  
+Tera Type: Steel  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Jolly Nature  
+- Light Screen  
+- Draining Kiss  
+- Encore  
+- Gigaton Hammer  
+
+Haxorus @ Draco Plate  
+Ability: Mold Breaker  
+Shiny: Yes  
+Tera Type: Water  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+IVs: 0 SpA  
+- Swords Dance  
+- Outrage  
+- Earthquake  
+- Poison Jab  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Fire  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Swords Dance  
+- Sucker Punch  
+- Iron Head  
+- Substitute

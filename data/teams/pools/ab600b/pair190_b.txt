@@ -1,0 +1,59 @@
+Great Tusk @ Rocky Helmet  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 248 HP / 4 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Headlong Rush  
+- Stealth Rock  
+- Rapid Spin  
+- Ice Spinner  
+
+Pecharunt @ Rocky Helmet  
+Ability: Poison Puppeteer  
+Tera Type: Ghost  
+EVs: 216 HP / 252 Def / 40 Spe  
+Bold Nature  
+- Malignant Chain  
+- Recover  
+- Shadow Ball  
+- Parting Shot  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Steel  
+EVs: 252 Atk / 4 SpA / 252 Spe  
+Naive Nature  
+- Shadow Ball  
+- Vacuum Wave  
+- Moonblast  
+- Thunderbolt  
+
+Iron Crown @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Water  
+EVs: 84 HP / 172 SpA / 252 Spe  
+Timid Nature  
+- Tachyon Cutter  
+- Psyshock  
+- Psychic Noise  
+- Volt Switch  
+
+Samurott-Hisui @ Assault Vest  
+Ability: Sharpness  
+Tera Type: Water  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Flip Turn  
+- Knock Off  
+- Ceaseless Edge  
+- Sucker Punch  
+
+Dragonite @ Heavy-Duty Boots  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Dragon Dance  
+- Earthquake  
+- Extreme Speed  
+- Ice Spinner

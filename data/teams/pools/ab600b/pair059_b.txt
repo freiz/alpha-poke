@@ -1,0 +1,60 @@
+Toucannon @ Assault Vest  
+Ability: Skill Link  
+Tera Type: Dark  
+EVs: 248 HP / 252 Atk / 8 SpD  
+Adamant Nature  
+- Rock Blast  
+- Knock Off  
+- Brick Break  
+- Beak Blast  
+
+Dragonite @ Loaded Dice  
+Ability: Multiscale  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Fire Punch  
+- Dragon Dance  
+- Scale Shot  
+- Extreme Speed  
+
+Zamazenta @ Choice Band  
+Ability: Dauntless Shield  
+Tera Type: Fire  
+EVs: 252 Atk / 84 Def / 4 SpD / 168 Spe  
+Jolly Nature  
+- Close Combat  
+- Stone Edge  
+- Crunch  
+- Ice Fang  
+
+Iron Treads @ Air Balloon  
+Ability: Quark Drive  
+Tera Type: Flying  
+EVs: 80 HP / 172 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Ice Spinner  
+- Earthquake  
+- Knock Off  
+
+Zapdos @ Choice Specs  
+Ability: Static  
+Tera Type: Steel  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Volt Switch  
+- Hurricane  
+- Thunderbolt  
+- Heat Wave  
+
+Primarina @ Assault Vest  
+Ability: Liquid Voice  
+Tera Type: Poison  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+- Psychic Noise  
+- Moonblast  
+- Flip Turn  
+- Shadow Ball

@@ -1,0 +1,59 @@
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Dark  
+EVs: 248 HP / 252 Atk / 8 Spe  
+Adamant Nature  
+- Swords Dance  
+- Kowtow Cleave  
+- Sucker Punch  
+- Iron Head  
+
+Gholdengo @ Choice Scarf  
+Ability: Good as Gold  
+Tera Type: Dark  
+EVs: 248 HP / 32 SpA / 156 SpD / 72 Spe  
+Modest Nature  
+- Make It Rain  
+- Shadow Ball  
+- Recover  
+- Hex  
+
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Tera Type: Water  
+EVs: 4 HP / 252 Atk / 252 Def  
+Impish Nature  
+- Stealth Rock  
+- Whirlwind  
+- Spikes  
+- Earthquake  
+
+Ogerpon @ White Herb  
+Ability: Defiant  
+Tera Type: Grass  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- U-turn  
+- Ivy Cudgel  
+- Encore  
+
+Great Tusk @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Fighting  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Ice Spinner  
+- Headlong Rush  
+- Earthquake  
+
+Glimmora @ Power Herb  
+Ability: Toxic Debris  
+Tera Type: Fairy  
+EVs: 248 HP / 216 SpD / 44 Spe  
+Calm Nature  
+- Meteor Beam  
+- Mortal Spin  
+- Earth Power  
+- Stealth Rock

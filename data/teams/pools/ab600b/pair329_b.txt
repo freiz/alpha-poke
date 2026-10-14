@@ -1,0 +1,59 @@
+Tyranitar @ Leftovers  
+Ability: Sand Stream  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Low Kick  
+- Knock Off  
+- Stealth Rock  
+- Stone Edge  
+
+Excadrill @ Leftovers  
+Ability: Sand Rush  
+Tera Type: Ground  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Rock Slide  
+- Substitute  
+- Earthquake  
+- Rapid Spin  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Fairy  
+EVs: 252 Atk / 4 SpA / 252 Spe  
+Naive Nature  
+- Moonblast  
+- Thunderbolt  
+- Knock Off  
+- Close Combat  
+
+Zapdos @ Heavy-Duty Boots  
+Ability: Static  
+Tera Type: Ice  
+EVs: 248 HP / 252 Def / 8 SpA  
+Bold Nature  
+- U-turn  
+- Hurricane  
+- Discharge  
+- Volt Switch  
+
+Ogerpon @ Heavy-Duty Boots  
+Ability: Defiant  
+Tera Type: Grass  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Knock Off  
+- Ivy Cudgel  
+- Encore  
+
+Toxapex @ Eject Button  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 252 HP / 252 SpD / 4 Spe  
+Calm Nature  
+- Toxic Spikes  
+- Recover  
+- Haze  
+- Toxic

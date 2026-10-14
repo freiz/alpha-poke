@@ -1,0 +1,59 @@
+Kingdra @ Life Orb  
+Ability: Swift Swim  
+Tera Type: Steel  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Focus Energy  
+- Agility  
+- Flash Cannon  
+- Draco Meteor  
+
+Ninetales-Alola @ Light Clay  
+Ability: Snow Warning  
+Tera Type: Steel  
+EVs: 248 HP / 8 Def / 252 Spe  
+Timid Nature  
+- Aurora Veil  
+- Blizzard  
+- Encore  
+- Moonblast  
+
+Garganacl @ Leftovers  
+Ability: Purifying Salt  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Atk / 252 Def  
+Impish Nature  
+- Iron Defense  
+- Salt Cure  
+- Body Press  
+- Curse  
+
+Clodsire @ Black Sludge  
+Ability: Water Absorb  
+Tera Type: Dark  
+EVs: 248 HP / 8 Def / 252 SpD  
+Careful Nature  
+- Amnesia  
+- Spikes  
+- Recover  
+- Earthquake  
+
+Haxorus @ Lum Berry  
+Ability: Mold Breaker  
+Tera Type: Steel  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- First Impression  
+- Dragon Dance  
+- Dragon Claw  
+- Outrage  
+
+Meowscarada @ Choice Scarf  
+Ability: Protean  
+Tera Type: Dark  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- Hone Claws  
+- Trailblaze  
+- Triple Axel  
+- Flower Trick

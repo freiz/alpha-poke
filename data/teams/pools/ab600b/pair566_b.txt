@@ -1,0 +1,59 @@
+Reuniclus @ Sticky Barb  
+Ability: Magic Guard  
+Tera Type: Ice  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Quiet Nature  
+- Psychic Noise  
+- Trick  
+- Recover  
+- Future Sight  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Kowtow Cleave  
+- Sucker Punch  
+- Iron Head  
+- Swords Dance  
+
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Ivy Cudgel  
+- Swords Dance  
+- Play Rough  
+- Knock Off  
+
+Landorus-Therian @ Rocky Helmet  
+Ability: Intimidate  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Jolly Nature  
+- Earthquake  
+- U-turn  
+- Taunt  
+- Earth Power  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Fairy  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Naive Nature  
+- Moonblast  
+- Knock Off  
+- Encore  
+- Close Combat  
+
+Cinderace @ Heavy-Duty Boots  
+Ability: Blaze  
+Tera Type: Ghost  
+EVs: 224 HP / 32 Atk / 252 Spe  
+Jolly Nature  
+- Pyro Ball  
+- Court Change  
+- U-turn  
+- Gunk Shot

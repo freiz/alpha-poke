@@ -1,0 +1,59 @@
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Fire  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Iron Head  
+- Kowtow Cleave  
+- Sucker Punch  
+
+Cinderace @ Heavy-Duty Boots  
+Ability: Libero  
+Tera Type: Bug  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Will-O-Wisp  
+- Pyro Ball  
+- Court Change  
+
+Landorus-Therian @ Rocky Helmet  
+Ability: Intimidate  
+Tera Type: Ground  
+EVs: 248 HP / 12 Def / 248 Spe  
+Timid Nature  
+- U-turn  
+- Stealth Rock  
+- Stone Edge  
+- Earthquake  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Calm Mind  
+- Moonblast  
+- Shadow Ball  
+- Encore  
+
+Kyurem @ Leftovers  
+Ability: Pressure  
+Tera Type: Ground  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Freeze-Dry  
+- Protect  
+- Substitute  
+- Earth Power  
+
+Slowking-Galar @ Life Orb  
+Ability: Curious Medicine  
+Tera Type: Flying  
+EVs: 252 HP / 8 Def / 152 SpA / 96 SpD  
+Modest Nature  
+- Sludge Bomb  
+- Psychic Noise  
+- Future Sight  
+- Ice Beam

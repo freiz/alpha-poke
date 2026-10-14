@@ -1,0 +1,59 @@
+Vikavolt @ Choice Specs  
+Ability: Levitate  
+Tera Type: Electric  
+EVs: 176 Def / 252 SpA / 80 SpD  
+Modest Nature  
+- Sticky Web  
+- Bug Buzz  
+- Air Slash  
+- Energy Ball  
+
+Corviknight @ Leftovers  
+Ability: Pressure  
+Tera Type: Dark  
+EVs: 248 HP / 252 Def / 8 SpD  
+Impish Nature  
+- Bulk Up  
+- Roost  
+- Brave Bird  
+- Defog  
+
+Haxorus @ Loaded Dice  
+Ability: Mold Breaker  
+Tera Type: Poison  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Scale Shot  
+- Swords Dance  
+- Iron Head  
+- Poison Jab  
+
+Mimikyu @ Life Orb  
+Ability: Disguise  
+Tera Type: Ghost  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Trick Room  
+- Shadow Sneak  
+- Curse  
+- Play Rough  
+
+Sinistcha-Masterpiece @ Heavy-Duty Boots  
+Ability: Hospitality  
+Tera Type: Poison  
+EVs: 252 HP / 160 Def / 96 Spe  
+Bold Nature  
+- Strength Sap  
+- Matcha Gotcha  
+- Shadow Ball  
+- Calm Mind  
+
+Darkrai @ Life Orb  
+Ability: Bad Dreams  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Ice Beam  
+- Dark Pulse  
+- Focus Blast  
+- Nasty Plot

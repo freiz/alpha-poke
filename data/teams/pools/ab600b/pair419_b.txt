@@ -1,0 +1,59 @@
+Dragonite @ Red Card  
+Ability: Multiscale  
+Tera Type: Ground  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Ice Spinner  
+- Fire Punch  
+- Dragon Dance  
+- Earthquake  
+
+Kingambit @ Lum Berry  
+Ability: Supreme Overlord  
+Tera Type: Bug  
+EVs: 212 HP / 252 Atk / 44 Spe  
+Adamant Nature  
+- Sucker Punch  
+- Iron Head  
+- Swords Dance  
+- Kowtow Cleave  
+
+Clefable @ Leftovers  
+Ability: Magic Guard  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Moonlight  
+- Thunder Wave  
+- Stealth Rock  
+- Moonblast  
+
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Flying  
+EVs: 252 HP / 4 Atk / 252 Def  
+Impish Nature  
+- U-turn  
+- Roost  
+- Brave Bird  
+- Defog  
+
+Great Tusk @ Heavy-Duty Boots  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 56 HP / 252 Atk / 200 Spe  
+Adamant Nature  
+- Headlong Rush  
+- Ice Spinner  
+- Stealth Rock  
+- Rapid Spin  
+
+Clodsire @ Leftovers  
+Ability: Unaware  
+Tera Type: Water  
+EVs: 248 HP / 8 Def / 252 SpD  
+Careful Nature  
+- Toxic  
+- Amnesia  
+- Recover  
+- Earthquake

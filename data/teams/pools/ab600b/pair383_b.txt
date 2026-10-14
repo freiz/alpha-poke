@@ -1,0 +1,59 @@
+Regieleki @ Magnet  
+Ability: Transistor  
+Tera Type: Electric  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Thunderbolt  
+- Volt Switch  
+- Rapid Spin  
+- Electro Ball  
+
+Klefki @ Rocky Helmet  
+Ability: Prankster  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Def / 4 SpA  
+Bold Nature  
+- Thunder Wave  
+- Switcheroo  
+- Spikes  
+- Dazzling Gleam  
+
+Tentacruel @ Assault Vest  
+Ability: Rain Dish  
+Tera Type: Dark  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Rapid Spin  
+- Hydro Pump  
+- Sludge Bomb  
+- Knock Off  
+
+Corviknight @ Leftovers  
+Ability: Pressure  
+Tera Type: Ice  
+EVs: 252 HP / 136 Def / 120 Spe  
+Impish Nature  
+- U-turn  
+- Iron Defense  
+- Body Press  
+- Protect  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Water  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Make It Rain  
+- Nasty Plot  
+- Recover  
+- Shadow Ball  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Moonblast  
+- Knock Off  
+- Destiny Bond  
+- Shadow Ball

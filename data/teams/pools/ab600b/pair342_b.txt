@@ -1,0 +1,59 @@
+Hatterene @ Focus Sash  
+Ability: Magic Bounce  
+Tera Type: Water  
+EVs: 248 HP / 204 Def / 56 Spe  
+Bold Nature  
+- Psychic Noise  
+- Healing Wish  
+- Trick Room  
+- Draining Kiss  
+
+Gholdengo @ Choice Scarf  
+Ability: Good as Gold  
+Tera Type: Fairy  
+EVs: 4 HP / 252 SpA / 252 SpD  
+Calm Nature  
+- Make It Rain  
+- Trick  
+- Recover  
+- Shadow Ball  
+
+Meowscarada @ Life Orb  
+Ability: Protean  
+Tera Type: Dark  
+EVs: 252 Atk / 252 Spe  
+Jolly Nature  
+- Sucker Punch  
+- U-turn  
+- Knock Off  
+- Flower Trick  
+
+Quaquaval @ Lum Berry  
+Ability: Moxie  
+Tera Type: Steel  
+EVs: 160 HP / 76 Atk / 116 Def / 76 SpD / 80 Spe  
+Adamant Nature  
+- Aqua Step  
+- Endure  
+- Close Combat  
+- Swords Dance  
+
+Kilowattrel @ Life Orb  
+Ability: Volt Absorb  
+Tera Type: Flying  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Air Slash  
+- Volt Switch  
+- Thunder  
+- Hurricane  
+
+Skeledirge @ Throat Spray  
+Ability: Unaware  
+Tera Type: Fire  
+EVs: 252 HP / 124 Def / 124 SpA / 4 SpD  
+Modest Nature  
+- Torch Song  
+- Shadow Ball  
+- Will-O-Wisp  
+- Earth Power

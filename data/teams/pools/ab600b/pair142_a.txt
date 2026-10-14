@@ -1,0 +1,63 @@
+Ribombee (F) @ Focus Sash  
+Ability: Shield Dust  
+Shiny: Yes  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Sticky Web  
+- Moonblast  
+- Psychic  
+- Stun Spore  
+
+Manaphy @ Leftovers  
+Ability: Hydration  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Tail Glow  
+- Surf  
+- Ice Beam  
+- Energy Ball  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Water  
+EVs: 148 HP / 144 SpA / 216 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Nasty Plot  
+- Shadow Ball  
+- Make It Rain  
+- Psyshock  
+
+Tyranitar (F) @ Air Balloon  
+Ability: Sand Stream  
+Tera Type: Poison  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Dragon Dance  
+- Knock Off  
+- Earthquake  
+- Ice Punch  
+
+Ogerpon-Cornerstone (F) @ Cornerstone Mask  
+Ability: Sturdy  
+Tera Type: Rock  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Ivy Cudgel  
+- Horn Leech  
+- Knock Off  
+- Spikes  
+
+Great Tusk @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Bulk Up  
+- Headlong Rush  
+- Ice Spinner  
+- Rapid Spin

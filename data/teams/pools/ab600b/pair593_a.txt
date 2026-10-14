@@ -1,0 +1,63 @@
+Zoroark-Hisui @ Throat Spray  
+Ability: Illusion  
+Shiny: Yes  
+Tera Type: Normal  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Hyper Voice  
+- Flamethrower  
+- Shadow Ball  
+- Will-O-Wisp  
+
+Gholdengo @ Choice Specs  
+Ability: Good as Gold  
+Tera Type: Steel  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Make It Rain  
+- Shadow Ball  
+- Power Gem  
+- Focus Blast  
+
+Dragonite @ Heavy-Duty Boots  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Extreme Speed  
+- Dragon Claw  
+- Thunder Wave  
+- Protect  
+
+Grimmsnarl @ Light Clay  
+Ability: Prankster  
+Tera Type: Electric  
+EVs: 252 HP / 4 Atk / 252 SpD  
+Careful Nature  
+- Light Screen  
+- Reflect  
+- Thunder Wave  
+- Spirit Break  
+
+Hydreigon @ Expert Belt  
+Ability: Levitate  
+Tera Type: Dark  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Dark Pulse  
+- Flamethrower  
+- Draco Meteor  
+- Earth Power  
+
+Ceruledge @ Focus Sash  
+Ability: Weak Armor  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Bitter Blade  
+- Poison Jab  
+- Shadow Claw

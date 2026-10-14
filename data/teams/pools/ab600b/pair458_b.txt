@@ -1,0 +1,59 @@
+Dragapult @ Choice Band  
+Ability: Cursed Body  
+Tera Type: Fire  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Dragon Dance  
+- Phantom Force  
+- Psychic Fangs  
+- Dragon Darts  
+
+Samurott-Hisui @ Focus Sash  
+Ability: Sharpness  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Ceaseless Edge  
+- Sucker Punch  
+- Razor Shell  
+- Knock Off  
+
+Tornadus-Therian @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Fire  
+EVs: 188 HP / 68 SpA / 252 SpD  
+Modest Nature  
+- Bleakwind Storm  
+- U-turn  
+- Knock Off  
+- Taunt  
+
+Darkrai @ Leftovers  
+Ability: Bad Dreams  
+Tera Type: Poison  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Dark Pulse  
+- Ice Beam  
+- Knock Off  
+- Nasty Plot  
+
+Galvantula @ Focus Sash  
+Ability: Compound Eyes  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Bug Buzz  
+- Thunder  
+- Sticky Web  
+- Thunder Wave  
+
+Gholdengo @ Rocky Helmet  
+Ability: Good as Gold  
+Tera Type: Ghost  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Trick  
+- Shadow Ball  
+- Nasty Plot  
+- Make It Rain

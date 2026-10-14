@@ -1,0 +1,65 @@
+Tinkaton @ Air Balloon  
+Ability: Own Tempo  
+Shiny: Yes  
+Tera Type: Water  
+EVs: 252 Atk / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Gigaton Hammer  
+- Play Rough  
+- Knock Off  
+
+Araquanid (F) @ Custap Berry  
+Ability: Water Bubble  
+Shiny: Yes  
+Tera Type: Ghost  
+EVs: 252 HP / 40 Def / 216 SpA  
+Modest Nature  
+- Sticky Web  
+- Surf  
+- Endeavor  
+- Endure  
+
+Meowscarada (F) @ Choice Scarf  
+Ability: Protean  
+Shiny: Yes  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- U-turn  
+- Triple Axel  
+- Flower Trick  
+
+Gliscor (F) @ Toxic Orb  
+Ability: Poison Heal  
+Shiny: Yes  
+Tera Type: Normal  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Facade  
+- Knock Off  
+- Protect  
+
+Ceruledge (F) @ Life Orb  
+Ability: Flash Fire  
+Shiny: Yes  
+Tera Type: Flying  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Bitter Blade  
+- Shadow Sneak  
+- Poltergeist  
+
+Raging Bolt @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Fairy  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Modest Nature  
+IVs: 20 Atk  
+- Calm Mind  
+- Thunderclap  
+- Dragon Pulse  
+- Thunderbolt

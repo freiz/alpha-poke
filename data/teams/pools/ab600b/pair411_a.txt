@@ -1,0 +1,59 @@
+Hatterene @ Assault Vest  
+Ability: Magic Bounce  
+Tera Type: Electric  
+EVs: 252 HP / 252 Def / 4 SpA  
+Bold Nature  
+- Draining Kiss  
+- Mystical Fire  
+- Psyshock  
+- Psychic Noise  
+
+Weezing-Galar @ Rocky Helmet  
+Ability: Neutralizing Gas  
+Tera Type: Ghost  
+EVs: 252 HP / 56 Def / 96 SpD / 104 Spe  
+Timid Nature  
+- Will-O-Wisp  
+- Pain Split  
+- Defog  
+- Strange Steam  
+
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Tera Type: Fairy  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- Dark Pulse  
+- Stone Edge  
+- Earthquake  
+- Protect  
+
+Garganacl @ Leftovers  
+Ability: Purifying Salt  
+Tera Type: Electric  
+EVs: 248 HP / 48 Def / 212 SpD  
+Impish Nature  
+- Salt Cure  
+- Recover  
+- Stealth Rock  
+- Protect  
+
+Gengar @ Air Balloon  
+Ability: Cursed Body  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Destiny Bond  
+- Trick  
+- Shadow Ball  
+- Sludge Bomb  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Ghost  
+EVs: 156 HP / 252 Atk / 100 Spe  
+Adamant Nature  
+- Sucker Punch  
+- Kowtow Cleave  
+- Iron Head  
+- Low Kick

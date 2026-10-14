@@ -1,0 +1,61 @@
+Rotom-Wash @ Leftovers  
+Ability: Levitate  
+Tera Type: Electric  
+EVs: 252 HP / 184 Def / 72 SpA  
+Bold Nature  
+IVs: 0 Atk  
+- Protect  
+- Hydro Pump  
+- Volt Switch  
+- Will-O-Wisp  
+
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Tera Type: Dark  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- Earthquake  
+- Ruination  
+- Stealth Rock  
+- Whirlwind  
+
+Dragonite @ Choice Band  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 4 Atk / 252 Def / 252 SpD  
+Adamant Nature  
+- Extreme Speed  
+- Fire Punch  
+- Earthquake  
+- Brick Break  
+
+Iron Moth @ Choice Scarf  
+Ability: Quark Drive  
+Tera Type: Poison  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Sludge Wave  
+- Energy Ball  
+- Fiery Dance  
+- Psychic  
+
+Torkoal @ Heat Rock  
+Ability: Drought  
+Tera Type: Flying  
+EVs: 248 HP / 252 Def / 8 SpA  
+Relaxed Nature  
+- Rapid Spin  
+- Body Press  
+- Lava Plume  
+- Will-O-Wisp  
+
+Breloom @ Choice Band  
+Ability: Technician  
+Tera Type: Ground  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- Bullet Seed  
+- Mach Punch  
+- Close Combat  
+- Bulldoze

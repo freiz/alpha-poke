@@ -1,0 +1,59 @@
+Kyurem @ Loaded Dice  
+Ability: Pressure  
+Tera Type: Electric  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Dragon Dance  
+- Icicle Spear  
+- Earth Power  
+- Freeze-Dry  
+
+Samurott-Hisui @ Assault Vest  
+Ability: Sharpness  
+Tera Type: Poison  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Ceaseless Edge  
+- Knock Off  
+- Sucker Punch  
+- Razor Shell  
+
+Zapdos @ Heavy-Duty Boots  
+Ability: Pressure  
+Tera Type: Dragon  
+EVs: 240 HP / 52 Def / 216 Spe  
+Timid Nature  
+- Heat Wave  
+- Hurricane  
+- Roost  
+- Volt Switch  
+
+Zamazenta @ Leftovers  
+Ability: Dauntless Shield  
+Tera Type: Steel  
+EVs: 104 HP / 248 Def / 156 Spe  
+Jolly Nature  
+- Body Press  
+- Crunch  
+- Iron Head  
+- Iron Defense  
+
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Dragon  
+EVs: 248 HP / 8 Atk / 252 Def  
+Impish Nature  
+- Roost  
+- Brave Bird  
+- U-turn  
+- Defog  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Fighting  
+EVs: 140 HP / 252 Atk / 116 Spe  
+Adamant Nature  
+- Sucker Punch  
+- Iron Head  
+- Kowtow Cleave  
+- Low Kick

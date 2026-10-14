@@ -1,0 +1,59 @@
+Heatran @ Leftovers  
+Ability: Flash Fire  
+Tera Type: Flying  
+EVs: 252 HP / 4 Def / 252 SpD  
+Calm Nature  
+- Magma Storm  
+- Flamethrower  
+- Earth Power  
+- Stealth Rock  
+
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 232 HP / 24 Atk / 252 Spe  
+Jolly Nature  
+- Encore  
+- Ivy Cudgel  
+- Swords Dance  
+- U-turn  
+
+Garganacl @ Leftovers  
+Ability: Purifying Salt  
+Tera Type: Bug  
+EVs: 236 HP / 252 Atk / 16 Def / 4 SpD  
+Adamant Nature  
+- Iron Defense  
+- Salt Cure  
+- Body Press  
+- Recover  
+
+Dragonite @ Life Orb  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 248 HP / 16 Atk / 228 Def / 16 Spe  
+Adamant Nature  
+- Dragon Dance  
+- Dragon Claw  
+- Extreme Speed  
+- Fire Punch  
+
+Azumarill @ Sitrus Berry  
+Ability: Huge Power  
+Tera Type: Ground  
+EVs: 252 HP / 184 Atk / 72 SpD  
+Adamant Nature  
+- Play Rough  
+- Aqua Jet  
+- Knock Off  
+- Liquidation  
+
+Glimmora @ Red Card  
+Ability: Toxic Debris  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Sludge Wave  
+- Stealth Rock  
+- Mortal Spin  
+- Earth Power

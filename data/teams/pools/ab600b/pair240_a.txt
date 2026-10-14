@@ -1,0 +1,59 @@
+Grafaiai @ Leftovers  
+Ability: Prankster  
+Tera Type: Flying  
+EVs: 148 HP / 252 Atk / 108 Spe  
+Adamant Nature  
+- Copycat  
+- Gunk Shot  
+- Switcheroo  
+- Swords Dance  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Steel  
+EVs: 244 HP / 12 Atk / 252 Spe  
+Jolly Nature  
+- Earthquake  
+- Knock Off  
+- Toxic  
+- Spikes  
+
+Clodsire @ Black Sludge  
+Ability: Unaware  
+Tera Type: Steel  
+EVs: 4 HP / 252 Def / 252 SpD  
+Impish Nature  
+- Earthquake  
+- Recover  
+- Spikes  
+- Stealth Rock  
+
+Rotom-Heat @ Heavy-Duty Boots  
+Ability: Levitate  
+Tera Type: Steel  
+EVs: 252 HP / 100 Def / 68 SpD / 88 Spe  
+Bold Nature  
+- Trick  
+- Will-O-Wisp  
+- Overheat  
+- Volt Switch  
+
+Tinkaton @ Leftovers  
+Ability: Mold Breaker  
+Tera Type: Ghost  
+EVs: 252 HP / 68 Def / 188 SpD  
+Sassy Nature  
+- Thunder Wave  
+- Stealth Rock  
+- Knock Off  
+- Gigaton Hammer  
+
+Mienshao @ Life Orb  
+Ability: Regenerator  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Fake Out  
+- Knock Off  
+- Low Kick  
+- Close Combat

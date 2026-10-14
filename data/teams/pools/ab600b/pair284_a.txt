@@ -1,0 +1,59 @@
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Water  
+EVs: 252 HP / 4 Def / 252 Spe  
+Jolly Nature  
+- Toxic Spikes  
+- Earthquake  
+- Toxic  
+- Protect  
+
+Dragapult @ Life Orb  
+Ability: Infiltrator  
+Tera Type: Dragon  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Naive Nature  
+- Will-O-Wisp  
+- Dragon Darts  
+- U-turn  
+- Draco Meteor  
+
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Taunt  
+- Knock Off  
+- Ivy Cudgel  
+
+Iron Crown @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Fighting  
+EVs: 8 HP / 248 SpA / 252 Spe  
+Timid Nature  
+- Calm Mind  
+- Focus Blast  
+- Tachyon Cutter  
+- Psychic  
+
+Kingambit @ Air Balloon  
+Ability: Supreme Overlord  
+Tera Type: Bug  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Sucker Punch  
+- Kowtow Cleave  
+- Swords Dance  
+- Low Kick  
+
+Ting-Lu @ Rocky Helmet  
+Ability: Vessel of Ruin  
+Tera Type: Water  
+EVs: 252 HP / 248 SpD / 8 Spe  
+Careful Nature  
+- Ruination  
+- Stealth Rock  
+- Heavy Slam  
+- Earthquake

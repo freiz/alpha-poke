@@ -1,0 +1,59 @@
+Okidogi @ Leftovers  
+Ability: Guard Dog  
+Tera Type: Water  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Bulk Up  
+- Ice Punch  
+- Drain Punch  
+
+Rillaboom @ Assault Vest  
+Ability: Grassy Surge  
+Tera Type: Grass  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Grassy Glide  
+- Swords Dance  
+- Wood Hammer  
+
+Zapdos @ Heavy-Duty Boots  
+Ability: Static  
+Tera Type: Electric  
+EVs: 248 HP / 252 SpA / 8 SpD  
+Modest Nature  
+- Volt Switch  
+- Hurricane  
+- Thunder Wave  
+- Discharge  
+
+Zamazenta @ Leftovers  
+Ability: Dauntless Shield  
+Tera Type: Steel  
+EVs: 4 Atk / 252 Def / 252 Spe  
+Jolly Nature  
+- Iron Defense  
+- Body Press  
+- Crunch  
+- Substitute  
+
+Heatran @ Leftovers  
+Ability: Flash Fire  
+Tera Type: Ghost  
+EVs: 228 HP / 252 Def / 16 SpA / 8 SpD / 4 Spe  
+Bold Nature  
+- Taunt  
+- Stealth Rock  
+- Earth Power  
+- Magma Storm  
+
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Water  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Jolly Nature  
+- Headlong Rush  
+- Rapid Spin  
+- Close Combat  
+- Ice Spinner

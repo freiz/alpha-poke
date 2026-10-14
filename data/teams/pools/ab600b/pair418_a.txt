@@ -1,0 +1,59 @@
+Landorus-Therian @ Rocky Helmet  
+Ability: Intimidate  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Def / 252 Spe  
+Timid Nature  
+- Earthquake  
+- U-turn  
+- Stealth Rock  
+- Smack Down  
+
+Dragapult @ Choice Specs  
+Ability: Infiltrator  
+Tera Type: Ghost  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Flamethrower  
+- U-turn  
+- Draco Meteor  
+- Dragon Darts  
+
+Slowking-Galar @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 252 HP / 16 Def / 68 SpA / 172 SpD  
+Modest Nature  
+- Ice Beam  
+- Focus Blast  
+- Chilly Reception  
+- Sludge Bomb  
+
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Grass  
+EVs: 248 HP / 252 Def / 8 SpD  
+Impish Nature  
+- U-turn  
+- Iron Defense  
+- Defog  
+- Brave Bird  
+
+Zamazenta @ Life Orb  
+Ability: Dauntless Shield  
+Tera Type: Dark  
+EVs: 4 Atk / 252 Def / 252 Spe  
+Jolly Nature  
+- Close Combat  
+- Roar  
+- Body Press  
+- Reflect  
+
+Iron Moth @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Fairy  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Substitute  
+- Fiery Dance  
+- Sludge Wave  
+- Dazzling Gleam

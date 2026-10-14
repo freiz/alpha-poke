@@ -1,0 +1,59 @@
+Toxtricity @ Throat Spray  
+Ability: Punk Rock  
+Tera Type: Normal  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Modest Nature  
+- Shift Gear  
+- Boomburst  
+- Encore  
+- Overdrive  
+
+Revavroom @ Life Orb  
+Ability: Filter  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Shift Gear  
+- Iron Head  
+- High Horsepower  
+- Temper Flare  
+
+Serperior @ Leftovers  
+Ability: Overgrow  
+Tera Type: Steel  
+EVs: 120 HP / 136 SpA / 252 Spe  
+Timid Nature  
+- Leaf Storm  
+- Glare  
+- Giga Drain  
+- Leech Seed  
+
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Dragon  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Light Screen  
+- Power Trip  
+- Body Press  
+- U-turn  
+
+Polteageist @ Focus Sash  
+Ability: Weak Armor  
+Tera Type: Poison  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Modest Nature  
+- Shell Smash  
+- Shadow Ball  
+- Strength Sap  
+- Giga Drain  
+
+Scyther  
+Ability: Technician  
+Tera Type: Electric  
+EVs: 224 HP / 32 Def / 252 SpD  
+Adamant Nature  
+- Defog  
+- U-turn  
+- Swords Dance  
+- Close Combat

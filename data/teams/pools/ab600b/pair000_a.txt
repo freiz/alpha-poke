@@ -1,0 +1,59 @@
+Lucario @ Air Balloon  
+Ability: Steadfast  
+Tera Type: Fighting  
+EVs: 132 Atk / 124 SpA / 252 Spe  
+Hardy Nature  
+- Nasty Plot  
+- Flash Cannon  
+- Dark Pulse  
+- Vacuum Wave  
+
+Haxorus @ Loaded Dice  
+Ability: Mold Breaker  
+Tera Type: Steel  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Dragon Claw  
+- Swords Dance  
+- Scale Shot  
+- Close Combat  
+
+Grimmsnarl @ Light Clay  
+Ability: Prankster  
+Tera Type: Fairy  
+EVs: 248 HP / 8 Def / 252 SpD  
+Careful Nature  
+- Light Screen  
+- Spirit Break  
+- Reflect  
+- Parting Shot  
+
+Zapdos @ Leftovers  
+Ability: Pressure  
+Tera Type: Dragon  
+EVs: 248 HP / 252 Def / 8 SpA  
+Bold Nature  
+- Hurricane  
+- Roost  
+- Thunderbolt  
+- Heat Wave  
+
+Tyranitar @ Choice Band  
+Ability: Sand Stream  
+Tera Type: Flying  
+EVs: 252 HP / 16 Def / 240 SpD  
+Sassy Nature  
+- Heavy Slam  
+- Knock Off  
+- Stone Edge  
+- Avalanche  
+
+Quagsire @ Rocky Helmet  
+Ability: Unaware  
+Tera Type: Dark  
+EVs: 252 HP / 4 Atk / 252 Def  
+Impish Nature  
+- Waterfall  
+- Recover  
+- Earthquake  
+- Encore

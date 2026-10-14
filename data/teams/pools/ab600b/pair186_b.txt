@@ -1,0 +1,59 @@
+Dragapult @ Light Clay  
+Ability: Infiltrator  
+Tera Type: Normal  
+EVs: 252 HP / 4 SpA / 252 Spe  
+Timid Nature  
+- U-turn  
+- Dragon Darts  
+- Hex  
+- Will-O-Wisp  
+
+Clefable @ Leftovers  
+Ability: Magic Guard  
+Tera Type: Water  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+- Moonblast  
+- Stealth Rock  
+- Thunder Wave  
+- Moonlight  
+
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Fighting  
+EVs: 56 HP / 252 Def / 200 Spe  
+Impish Nature  
+- Brave Bird  
+- Roost  
+- Iron Defense  
+- U-turn  
+
+Slowking-Galar @ Assault Vest  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 248 HP / 252 Def / 8 SpD  
+Relaxed Nature  
+- Ice Beam  
+- Psyshock  
+- Sludge Bomb  
+- Flamethrower  
+
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Poison  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Ice Spinner  
+- Headlong Rush  
+- Knock Off  
+- Rapid Spin  
+
+Samurott-Hisui @ Assault Vest  
+Ability: Sharpness  
+Tera Type: Poison  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Ceaseless Edge  
+- Aqua Cutter  
+- Encore  
+- Sucker Punch

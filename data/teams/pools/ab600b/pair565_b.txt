@@ -1,0 +1,59 @@
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Moonblast  
+- Encore  
+- Thunderbolt  
+- Calm Mind  
+
+Sinistcha @ Heavy-Duty Boots  
+Ability: Heatproof  
+Tera Type: Poison  
+EVs: 248 HP / 244 Def / 16 SpD  
+Bold Nature  
+- Calm Mind  
+- Matcha Gotcha  
+- Strength Sap  
+- Shadow Ball  
+
+Tyranitar @ Leftovers  
+Ability: Sand Stream  
+Tera Type: Ghost  
+EVs: 252 HP / 16 Def / 240 SpD  
+Sassy Nature  
+- Ice Beam  
+- Stealth Rock  
+- Knock Off  
+- Roar  
+
+Iron Treads @ Leftovers  
+Ability: Quark Drive  
+Tera Type: Fairy  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Ice Spinner  
+- Stealth Rock  
+- Rapid Spin  
+
+Klefki @ Rocky Helmet  
+Ability: Prankster  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Spikes  
+- Thunder Wave  
+- Dazzling Gleam  
+- Magnet Rise  
+
+Swampert @ Leftovers  
+Ability: Damp  
+Tera Type: Ground  
+EVs: 132 HP / 252 Atk / 124 Def  
+Impish Nature  
+- Stealth Rock  
+- Knock Off  
+- Flip Turn  
+- Earthquake

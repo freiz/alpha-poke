@@ -1,0 +1,59 @@
+Garchomp @ Loaded Dice  
+Ability: Rough Skin  
+Tera Type: Steel  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Naive Nature  
+- Poison Jab  
+- Scale Shot  
+- Earthquake  
+- Swords Dance  
+
+Slowking-Galar @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Grass  
+EVs: 248 HP / 152 Def / 104 SpA / 4 SpD  
+Bold Nature  
+- Trick  
+- Chilly Reception  
+- Future Sight  
+- Sludge Bomb  
+
+Keldeo-Resolute @ Leftovers  
+Ability: Justified  
+Tera Type: Steel  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Calm Mind  
+- Vacuum Wave  
+- Surf  
+- Secret Sword  
+
+Grimmsnarl @ Light Clay  
+Ability: Prankster  
+Tera Type: Fighting  
+EVs: 68 HP / 252 Atk / 96 Def / 92 Spe  
+Jolly Nature  
+- Light Screen  
+- Reflect  
+- Foul Play  
+- Taunt  
+
+Iron Crown @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Fighting  
+EVs: 84 HP / 172 SpA / 252 Spe  
+Timid Nature  
+- Agility  
+- Tachyon Cutter  
+- Stored Power  
+- Calm Mind  
+
+Primeape @ Eviolite  
+Ability: Defiant  
+Tera Type: Ghost  
+EVs: 248 HP / 164 SpD / 96 Spe  
+Careful Nature  
+- Bulk Up  
+- Rage Fist  
+- Rock Slide  
+- Drain Punch

@@ -1,0 +1,59 @@
+Pawmot @ Focus Sash  
+Ability: Volt Absorb  
+Tera Type: Electric  
+EVs: 8 HP / 252 Atk / 248 Def  
+Adamant Nature  
+- Double Shock  
+- Mach Punch  
+- Close Combat  
+- Ice Punch  
+
+Azumarill @ Sitrus Berry  
+Ability: Thick Fat  
+Tera Type: Water  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Liquidation  
+- Aqua Jet  
+- Play Rough  
+- Knock Off  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Dark  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Iron Head  
+- Kowtow Cleave  
+- Sucker Punch  
+- Swords Dance  
+
+Dragapult @ Leftovers  
+Ability: Clear Body  
+Tera Type: Dragon  
+EVs: 252 SpA / 252 Spe  
+Naive Nature  
+- Shadow Ball  
+- Dragon Darts  
+- U-turn  
+- Draco Meteor  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Fairy  
+EVs: 244 HP / 236 Def / 12 SpD / 16 Spe  
+Impish Nature  
+- Stealth Rock  
+- Toxic Spikes  
+- Toxic  
+- Knock Off  
+
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Ivy Cudgel  
+- Swords Dance  
+- Horn Leech  
+- Synthesis

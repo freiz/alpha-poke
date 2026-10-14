@@ -1,0 +1,59 @@
+Snorlax @ Figy Berry  
+Ability: Thick Fat  
+Tera Type: Poison  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Belly Drum  
+- Body Slam  
+- Curse  
+- Ice Beam  
+
+Emboar @ Shell Bell  
+Ability: Reckless  
+Tera Type: Grass  
+EVs: 252 Atk / 8 SpD / 248 Spe  
+Adamant Nature  
+- Drain Punch  
+- Head Smash  
+- Sucker Punch  
+- Flare Blitz  
+
+Quaquaval @ Leftovers  
+Ability: Moxie  
+Tera Type: Water  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Low Kick  
+- Aqua Jet  
+- Aqua Step  
+- Knock Off  
+
+Maushold-Four @ Wide Lens  
+Ability: Cheek Pouch  
+Tera Type: Ghost  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Tidy Up  
+- Population Bomb  
+- Encore  
+- Bite  
+
+Serperior @ Leftovers  
+Ability: Contrary  
+Tera Type: Fire  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Leaf Storm  
+- Dragon Pulse  
+- Glare  
+- Knock Off  
+
+Cyclizar @ Assault Vest  
+Ability: Regenerator  
+Tera Type: Ghost  
+EVs: 128 Def / 128 SpD / 252 Spe  
+Timid Nature  
+- Body Slam  
+- Rapid Spin  
+- U-turn  
+- Overheat

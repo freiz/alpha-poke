@@ -1,0 +1,58 @@
+Oinkologne @ Apicot Berry  
+Ability: Lingering Aroma  
+EVs: 84 HP / 84 Atk / 84 Def / 84 SpA / 84 SpD / 84 Spe  
+Serious Nature  
+- Stuff Cheeks  
+- High Horsepower  
+- Covet  
+- Curse  
+
+Pawmot @ Life Orb  
+Ability: Iron Fist  
+Tera Type: Electric  
+EVs: 248 HP / 8 Atk / 252 Spe  
+Jolly Nature  
+- Revival Blessing  
+- Double Shock  
+- Mach Punch  
+- Knock Off  
+
+Enamorus @ Choice Specs  
+Ability: Cute Charm  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Modest Nature  
+- Moonblast  
+- Earth Power  
+- Mystical Fire  
+- Healing Wish  
+
+Clodsire @ Leftovers  
+Ability: Water Absorb  
+Tera Type: Dark  
+EVs: 252 HP / 4 Atk / 252 SpD  
+Careful Nature  
+- Earthquake  
+- Recover  
+- Spikes  
+- Poison Jab  
+
+Iron Treads @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Water  
+EVs: 248 HP / 252 SpD / 8 Spe  
+Careful Nature  
+- Earthquake  
+- Rapid Spin  
+- Knock Off  
+- Stealth Rock  
+
+Lokix @ Life Orb  
+Ability: Tinted Lens  
+Tera Type: Bug  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- First Impression  
+- U-turn  
+- Leech Life  
+- Knock Off

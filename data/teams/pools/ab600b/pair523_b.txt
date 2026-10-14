@@ -1,0 +1,59 @@
+Clefable @ Leftovers  
+Ability: Unaware  
+Tera Type: Poison  
+EVs: 252 HP / 4 Atk / 252 SpD  
+Sassy Nature  
+- Calm Mind  
+- Moonblast  
+- Knock Off  
+- Moonlight  
+
+Zapdos @ Rocky Helmet  
+Ability: Static  
+Tera Type: Steel  
+EVs: 248 HP / 252 Def / 8 SpA  
+Bold Nature  
+- Volt Switch  
+- Hurricane  
+- Roost  
+- U-turn  
+
+Iron Leaves @ Life Orb  
+Ability: Quark Drive  
+Tera Type: Electric  
+EVs: 252 Atk / 252 Spe  
+Adamant Nature  
+- Electric Terrain  
+- Psyblade  
+- Close Combat  
+- Swords Dance  
+
+Mamoswine @ Focus Sash  
+Ability: Thick Fat  
+Tera Type: Ice  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Ice Shard  
+- Stealth Rock  
+- Icicle Spear  
+- Earthquake  
+
+Muk-Alola @ Assault Vest  
+Ability: Poison Touch  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Knock Off  
+- Drain Punch  
+- Protect  
+- Poison Jab  
+
+Quaquaval @ Leftovers  
+Ability: Moxie  
+Tera Type: Steel  
+EVs: 252 Atk / 252 Spe  
+Adamant Nature  
+- Close Combat  
+- Aqua Step  
+- Roost  
+- Rapid Spin

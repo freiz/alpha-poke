@@ -1,0 +1,59 @@
+Cryogonal @ Leftovers  
+Ability: Levitate  
+Tera Type: Steel  
+EVs: 252 HP / 4 Def / 252 SpD  
+Calm Nature  
+- Haze  
+- Freeze-Dry  
+- Recover  
+- Rapid Spin  
+
+Dragapult @ Leftovers  
+Ability: Infiltrator  
+Tera Type: Dragon  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Dragon Darts  
+- Substitute  
+- Will-O-Wisp  
+- Hex  
+
+Cacturne @ Rocky Helmet  
+Ability: Water Absorb  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Dark Pulse  
+- Sucker Punch  
+- Spiky Shield  
+- Spikes  
+
+Iron Moth @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Fairy  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Hardy Nature  
+- Fiery Dance  
+- Dazzling Gleam  
+- Sludge Wave  
+- Substitute  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Dragon  
+EVs: 252 HP / 184 Def / 72 Spe  
+Bold Nature  
+- Earthquake  
+- Toxic  
+- Substitute  
+- Knock Off  
+
+Krookodile @ Rocky Helmet  
+Ability: Moxie  
+Tera Type: Fairy  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Earthquake  
+- Stealth Rock  
+- Scale Shot

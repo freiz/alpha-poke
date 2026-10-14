@@ -1,0 +1,61 @@
+Garchomp @ Rocky Helmet  
+Ability: Rough Skin  
+Tera Type: Ghost  
+EVs: 252 HP / 216 Def / 40 Spe  
+Impish Nature  
+- Earthquake  
+- Dragon Tail  
+- Stealth Rock  
+- Spikes  
+
+Slowking-Galar @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 248 HP / 8 Def / 252 SpD  
+Sassy Nature  
+IVs: 0 Atk  
+- Sludge Bomb  
+- Psychic Noise  
+- Chilly Reception  
+- Ice Beam  
+
+Gholdengo @ Heavy-Duty Boots  
+Ability: Good as Gold  
+Tera Type: Fairy  
+EVs: 252 HP / 196 Def / 60 Spe  
+Bold Nature  
+IVs: 0 Atk  
+- Hex  
+- Thunder Wave  
+- Recover  
+- Make It Rain  
+
+Moltres @ Heavy-Duty Boots  
+Ability: Flame Body  
+Tera Type: Fairy  
+EVs: 248 HP / 216 SpD / 12 Spe  
+Calm Nature  
+- Roar  
+- Flamethrower  
+- U-turn  
+- Roost  
+
+Iron Valiant @ Heavy-Duty Boots  
+Ability: Quark Drive  
+Tera Type: Dark  
+EVs: 252 Atk / 4 SpA / 252 Spe  
+Naive Nature  
+- Moonblast  
+- Close Combat  
+- Knock Off  
+- Encore  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Swords Dance  
+- Sucker Punch  
+- Kowtow Cleave  
+- Iron Head

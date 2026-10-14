@@ -1,0 +1,59 @@
+Great Tusk @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Headlong Rush  
+- Ice Spinner  
+- Stealth Rock  
+- Rapid Spin  
+
+Rillaboom @ Grassy Seed  
+Ability: Grassy Surge  
+Tera Type: Grass  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Wood Hammer  
+- Grassy Glide  
+- High Horsepower  
+- Swords Dance  
+
+Heatran @ Leftovers  
+Ability: Flash Fire  
+Tera Type: Ghost  
+EVs: 216 HP / 240 Def / 12 SpA / 40 Spe  
+Modest Nature  
+- Magma Storm  
+- Flash Cannon  
+- Earth Power  
+- Taunt  
+
+Dragapult @ Leftovers  
+Ability: Clear Body  
+Tera Type: Ghost  
+EVs: 60 Atk / 196 SpA / 252 Spe  
+Naive Nature  
+- Substitute  
+- Phantom Force  
+- Dragon Dance  
+- Will-O-Wisp  
+
+Clawitzer @ Assault Vest  
+Ability: Mega Launcher  
+Tera Type: Ground  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+- Water Pulse  
+- Dragon Pulse  
+- Dark Pulse  
+- Aura Sphere  
+
+Thundurus-Therian @ Rocky Helmet  
+Ability: Volt Absorb  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Psychic  
+- Thunderbolt  
+- Nasty Plot  
+- Volt Switch

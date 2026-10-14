@@ -1,0 +1,59 @@
+Slowking-Galar @ Shuca Berry  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 252 HP / 64 Def / 8 SpA / 184 SpD  
+Sassy Nature  
+- Sludge Bomb  
+- Chilly Reception  
+- Ice Beam  
+- Future Sight  
+
+Cinderace @ Heavy-Duty Boots  
+Ability: Libero  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Court Change  
+- U-turn  
+- Will-O-Wisp  
+- Pyro Ball  
+
+Kyurem @ Choice Specs  
+Ability: Pressure  
+Tera Type: Ice  
+EVs: 8 HP / 148 Def / 252 SpA / 100 Spe  
+Modest Nature  
+- Ice Beam  
+- Freeze-Dry  
+- Earth Power  
+- Blizzard  
+
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Dragon  
+EVs: 248 HP / 252 Def / 8 SpD  
+Impish Nature  
+- Roost  
+- Body Press  
+- Brave Bird  
+- U-turn  
+
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Tera Type: Fairy  
+EVs: 252 HP / 4 Atk / 252 SpD  
+Careful Nature  
+- Earthquake  
+- Rest  
+- Payback  
+- Stealth Rock  
+
+Dondozo @ Leftovers  
+Ability: Unaware  
+Tera Type: Fighting  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- Waterfall  
+- Rest  
+- Curse  
+- Body Press

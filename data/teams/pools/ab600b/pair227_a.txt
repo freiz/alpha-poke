@@ -1,0 +1,59 @@
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Dark  
+EVs: 244 HP / 236 Def / 12 SpD / 16 Spe  
+Impish Nature  
+- Toxic  
+- Earthquake  
+- Protect  
+- Swords Dance  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Steel  
+EVs: 252 HP / 196 Def / 60 Spe  
+Bold Nature  
+- Make It Rain  
+- Recover  
+- Shadow Ball  
+- Trick  
+
+Raging Bolt @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Ghost  
+EVs: 112 HP / 252 SpA / 144 Spe  
+Modest Nature  
+- Weather Ball  
+- Thunderbolt  
+- Dragon Pulse  
+- Draco Meteor  
+
+Samurott-Hisui @ Rocky Helmet  
+Ability: Sharpness  
+Tera Type: Dark  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Encore  
+- Ceaseless Edge  
+- Razor Shell  
+- Flip Turn  
+
+Great Tusk @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Fighting  
+EVs: 196 HP / 60 Atk / 252 Spe  
+Jolly Nature  
+- Headlong Rush  
+- Rapid Spin  
+- Stealth Rock  
+- Ice Spinner  
+
+Slowking-Galar @ Shuca Berry  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 252 HP / 4 SpA / 252 SpD  
+Sassy Nature  
+- Future Sight  
+- Chilly Reception  
+- Ice Beam  
+- Sludge Bomb

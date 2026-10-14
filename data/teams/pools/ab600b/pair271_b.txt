@@ -1,0 +1,59 @@
+Clodsire @ Black Sludge  
+Ability: Unaware  
+Tera Type: Steel  
+EVs: 248 HP / 8 Def / 252 SpD  
+Careful Nature  
+- Toxic  
+- Recover  
+- Poison Jab  
+- Earthquake  
+
+Dondozo @ Leftovers  
+Ability: Unaware  
+Tera Type: Grass  
+EVs: 248 HP / 252 Def / 8 SpD  
+Impish Nature  
+- Body Press  
+- Rest  
+- Sleep Talk  
+- Liquidation  
+
+Alomomola @ Assault Vest  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 252 HP / 4 Def / 252 SpD  
+Sassy Nature  
+- Flip Turn  
+- Scald  
+- Mirror Coat  
+- Body Slam  
+
+Talonflame @ Heavy-Duty Boots  
+Ability: Gale Wings  
+Tera Type: Grass  
+EVs: 252 HP / 192 Def / 64 Spe  
+Impish Nature  
+- Flamethrower  
+- Defog  
+- Will-O-Wisp  
+- Roost  
+
+Toxapex @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Ghost  
+EVs: 248 HP / 136 Def / 124 SpD  
+Impish Nature  
+- Toxic  
+- Infestation  
+- Recover  
+- Baneful Bunker  
+
+Blissey @ Leftovers  
+Ability: Natural Cure  
+Tera Type: Dark  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+- Shadow Ball  
+- Flamethrower  
+- Soft-Boiled  
+- Seismic Toss

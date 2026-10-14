@@ -1,0 +1,59 @@
+Torkoal @ Eject Pack  
+Ability: Drought  
+Tera Type: Ghost  
+EVs: 240 HP / 252 SpD / 16 Spe  
+Calm Nature  
+- Overheat  
+- Earth Power  
+- Rapid Spin  
+- Stealth Rock  
+
+Lilligant-Hisui @ Focus Sash  
+Ability: Hustle  
+Tera Type: Ghost  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Triple Axel  
+- Close Combat  
+- Ice Spinner  
+- Swords Dance  
+
+Walking Wake @ Heavy-Duty Boots  
+Ability: Protosynthesis  
+Tera Type: Water  
+EVs: 12 HP / 244 SpA / 252 Spe  
+Timid Nature  
+- Flamethrower  
+- Draco Meteor  
+- Flip Turn  
+- Surf  
+
+Mimikyu @ Life Orb  
+Ability: Disguise  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Atk / 4 SpA  
+Brave Nature  
+- Shadow Claw  
+- Play Rough  
+- Shadow Sneak  
+- Swords Dance  
+
+Rotom-Heat @ Leftovers  
+Ability: Levitate  
+Tera Type: Ghost  
+EVs: 252 HP / 104 Def / 152 Spe  
+Timid Nature  
+- Trick  
+- Volt Switch  
+- Overheat  
+- Discharge  
+
+Dragonite @ Leftovers  
+Ability: Multiscale  
+Tera Type: Ground  
+EVs: 64 HP / 144 Atk / 80 SpA / 220 Spe  
+Naughty Nature  
+- Dragon Dance  
+- Ice Spinner  
+- Earthquake  
+- Roost

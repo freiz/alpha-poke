@@ -1,0 +1,58 @@
+Exeggutor @ Sitrus Berry  
+Ability: Harvest  
+Tera Type: Fairy  
+EVs: 252 HP / 112 Def / 144 SpD  
+Bold Nature  
+- Substitute  
+- Giga Drain  
+- Leaf Storm  
+- Solar Beam  
+
+Poliwrath @ Blunder Policy  
+Ability: Water Absorb  
+Tera Type: Steel  
+EVs: 112 HP / 252 Atk / 140 Spe  
+Adamant Nature  
+- Dynamic Punch  
+- Belly Drum  
+- Drain Punch  
+- Liquidation  
+
+Sandslash @ Assault Vest  
+Ability: Sand Rush  
+Tera Type: Poison  
+EVs: 76 HP / 252 Atk / 180 Spe  
+Adamant Nature  
+- Bulldoze  
+- Rapid Spin  
+- Knock Off  
+- Super Fang  
+
+Arcanine @ Rocky Helmet  
+Ability: Intimidate  
+Tera Type: Grass  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Will-O-Wisp  
+- Flamethrower  
+- Morning Sun  
+- Extreme Speed  
+
+Gengar @ Heavy-Duty Boots  
+Ability: Cursed Body  
+Tera Type: Ghost  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Hasty Nature  
+- Trick  
+- Shadow Ball  
+- Destiny Bond  
+- Sludge Bomb  
+
+Dodrio @ Liechi Berry  
+Ability: Tangled Feet  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Endure  
+- Acrobatics  
+- Thrash  
+- Drill Run

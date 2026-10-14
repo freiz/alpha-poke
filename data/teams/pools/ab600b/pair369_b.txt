@@ -1,0 +1,59 @@
+Volcanion @ Leftovers  
+Ability: Water Absorb  
+Tera Type: Fairy  
+EVs: 252 HP / 112 Def / 48 SpA / 96 Spe  
+Modest Nature  
+- Flamethrower  
+- Steam Eruption  
+- Will-O-Wisp  
+- Fire Spin  
+
+Weezing-Galar @ Leftovers  
+Ability: Neutralizing Gas  
+Tera Type: Grass  
+EVs: 248 HP / 236 Def / 16 SpA / 8 Spe  
+Bold Nature  
+- Will-O-Wisp  
+- Strange Steam  
+- Defog  
+- Toxic  
+
+Meowscarada @ Leftovers  
+Ability: Protean  
+Tera Type: Grass  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Flower Trick  
+- U-turn  
+- Knock Off  
+- Triple Axel  
+
+Latios @ Leftovers  
+Ability: Levitate  
+Tera Type: Steel  
+EVs: 252 HP / 160 Def / 16 SpA / 80 Spe  
+Modest Nature  
+- Aura Sphere  
+- Luster Purge  
+- Calm Mind  
+- Shadow Ball  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Ghost  
+EVs: 244 HP / 252 Def / 12 Spe  
+Impish Nature  
+- Stealth Rock  
+- Protect  
+- Earthquake  
+- Knock Off  
+
+Iron Hands @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Flying  
+EVs: 252 Atk / 168 Def / 88 Spe  
+Adamant Nature  
+- Drain Punch  
+- Ice Punch  
+- Swords Dance  
+- Wild Charge

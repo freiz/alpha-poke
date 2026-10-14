@@ -1,0 +1,61 @@
+Ceruledge @ Focus Sash  
+Ability: Weak Armor  
+Tera Type: Fairy  
+EVs: 40 HP / 252 Atk / 216 Spe  
+Adamant Nature  
+- Destiny Bond  
+- Shadow Sneak  
+- Bitter Blade  
+- Swords Dance  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Steel  
+EVs: 252 Atk / 4 SpA / 252 Spe  
+Naive Nature  
+- Destiny Bond  
+- Close Combat  
+- Knock Off  
+- Moonblast  
+
+Pecharunt @ Air Balloon  
+Ability: Poison Puppeteer  
+Tera Type: Normal  
+EVs: 252 HP / 4 SpA / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Destiny Bond  
+- Nasty Plot  
+- Malignant Chain  
+- Shadow Ball  
+
+Iron Treads @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Stealth Rock  
+- Rapid Spin  
+- Rock Tomb  
+- Earthquake  
+
+Enamorus @ Metronome  
+Ability: Contrary  
+Tera Type: Ground  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Mild Nature  
+- Moonblast  
+- Earth Power  
+- Substitute  
+- Superpower  
+
+Araquanid @ Red Card  
+Ability: Water Bubble  
+Tera Type: Ghost  
+EVs: 248 HP / 8 Atk / 200 Def / 52 SpA  
+Sassy Nature  
+IVs: 0 Spe  
+- Surf  
+- Lunge  
+- Mirror Coat  
+- Sticky Web

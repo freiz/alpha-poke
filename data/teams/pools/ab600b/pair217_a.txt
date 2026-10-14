@@ -1,0 +1,59 @@
+Pelipper @ Damp Rock  
+Ability: Drizzle  
+Tera Type: Flying  
+EVs: 248 HP / 8 Def / 252 SpD  
+Sassy Nature  
+- U-turn  
+- Roost  
+- Surf  
+- Hurricane  
+
+Barraskewda @ Life Orb  
+Ability: Swift Swim  
+Tera Type: Water  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Flip Turn  
+- Poison Jab  
+- Liquidation  
+- Close Combat  
+
+Raging Bolt @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Fairy  
+EVs: 96 HP / 252 SpA / 160 Spe  
+Modest Nature  
+- Thunder  
+- Weather Ball  
+- Draco Meteor  
+- Thunderclap  
+
+Golduck @ Life Orb  
+Ability: Swift Swim  
+Tera Type: Ghost  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Modest Nature  
+- Nasty Plot  
+- Surf  
+- Grass Knot  
+- Ice Beam  
+
+Pawmot @ Leppa Berry  
+Ability: Volt Absorb  
+Tera Type: Grass  
+EVs: 24 HP / 252 Atk / 232 Spe  
+Jolly Nature  
+- Revival Blessing  
+- Nuzzle  
+- Encore  
+- Close Combat  
+
+Tentacruel @ Leftovers  
+Ability: Liquid Ooze  
+Tera Type: Dark  
+EVs: 252 HP / 240 SpD / 16 Spe  
+Careful Nature  
+- Flip Turn  
+- Rapid Spin  
+- Poison Jab  
+- Mirror Coat

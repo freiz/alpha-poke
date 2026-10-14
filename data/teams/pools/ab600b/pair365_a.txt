@@ -1,0 +1,59 @@
+Azelf @ Expert Belt  
+Ability: Levitate  
+Tera Type: Fairy  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Thunderbolt  
+- Dazzling Gleam  
+- Psychic  
+- Flamethrower  
+
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Horn Leech  
+- Ivy Cudgel  
+- Play Rough  
+- Swords Dance  
+
+Scizor @ Leftovers  
+Ability: Technician  
+Tera Type: Steel  
+EVs: 116 HP / 252 Atk / 140 Spe  
+Adamant Nature  
+- Swords Dance  
+- Bullet Punch  
+- Knock Off  
+- U-turn  
+
+Gengar @ Choice Scarf  
+Ability: Cursed Body  
+Tera Type: Ghost  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Thunder Wave  
+- Shadow Ball  
+- Trick  
+- Sludge Bomb  
+
+Raging Bolt @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Fairy  
+EVs: 248 HP / 200 SpA / 60 Spe  
+Modest Nature  
+- Dragon Pulse  
+- Thunderclap  
+- Draco Meteor  
+- Calm Mind  
+
+Cinderace @ Heavy-Duty Boots  
+Ability: Libero  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Pyro Ball  
+- Court Change  
+- Sucker Punch  
+- Will-O-Wisp

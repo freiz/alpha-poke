@@ -1,0 +1,58 @@
+Pikachu  
+Ability: Static  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Modest Nature  
+- Fake Out  
+- Surf  
+- Thunderbolt  
+- Volt Switch  
+
+Charizard @ Sitrus Berry  
+Ability: Blaze  
+Tera Type: Fire  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Solar Beam  
+- Weather Ball  
+- Hurricane  
+- Fire Blast  
+
+Venusaur @ Life Orb  
+Ability: Chlorophyll  
+Tera Type: Fire  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Giga Drain  
+- Weather Ball  
+- Growth  
+- Sludge Bomb  
+
+Blastoise @ Petaya Berry  
+Ability: Rain Dish  
+Tera Type: Ground  
+EVs: 4 HP / 172 Def / 252 SpA / 80 Spe  
+Modest Nature  
+- Shell Smash  
+- Surf  
+- Ice Beam  
+- Rapid Spin  
+
+Snorlax @ Chople Berry  
+Ability: Thick Fat  
+Tera Type: Poison  
+EVs: 252 HP / 4 Def / 252 SpD  
+Hardy Nature  
+- Earthquake  
+- Curse  
+- Body Slam  
+- Rest  
+
+Espeon @ Focus Sash  
+Ability: Magic Bounce  
+Tera Type: Psychic  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Psychic  
+- Expanding Force  
+- Thunder Wave  
+- Alluring Voice

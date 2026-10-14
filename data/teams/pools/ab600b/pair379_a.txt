@@ -1,0 +1,59 @@
+Ursaluna @ Flame Orb  
+Ability: Guts  
+Tera Type: Normal  
+EVs: 248 HP / 252 Atk / 8 SpD  
+Brave Nature  
+- Facade  
+- Fire Punch  
+- Swords Dance  
+- Headlong Rush  
+
+Mimikyu @ Life Orb  
+Ability: Disguise  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Taunt  
+- Curse  
+- Trick Room  
+- Play Rough  
+
+Cresselia @ Leftovers  
+Ability: Levitate  
+Tera Type: Electric  
+EVs: 252 HP / 248 Def / 8 Spe  
+Bold Nature  
+- Lunar Dance  
+- Calm Mind  
+- Ice Beam  
+- Thunderbolt  
+
+Enamorus-Therian @ Heavy-Duty Boots  
+Ability: Overcoat  
+Tera Type: Poison  
+EVs: 248 HP / 8 Def / 252 SpA  
+Quiet Nature  
+- Moonblast  
+- Calm Mind  
+- Mystical Fire  
+- Earth Power  
+
+Hatterene @ Focus Sash  
+Ability: Magic Bounce  
+Tera Type: Steel  
+EVs: 248 HP / 204 Def / 56 Spe  
+Bold Nature  
+- Psychic  
+- Trick Room  
+- Healing Wish  
+- Psychic Noise  
+
+Hoopa-Unbound @ Eject Pack  
+Ability: Magician  
+Tera Type: Steel  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Hasty Nature  
+- Hyperspace Fury  
+- Psychic  
+- Drain Punch  
+- Knock Off

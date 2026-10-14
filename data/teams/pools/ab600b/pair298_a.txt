@@ -1,0 +1,60 @@
+Goodra-Hisui @ Assault Vest  
+Ability: Sap Sipper  
+Tera Type: Flying  
+EVs: 248 HP / 252 SpA / 8 SpD  
+Modest Nature  
+- Flash Cannon  
+- Dragon Tail  
+- Thunder  
+- Ice Beam  
+
+Pelipper @ Damp Rock  
+Ability: Drizzle  
+Tera Type: Ground  
+EVs: 248 HP / 252 Def / 8 SpA  
+Relaxed Nature  
+IVs: 0 Spe  
+- Hurricane  
+- U-turn  
+- Roost  
+- Surf  
+
+Kingdra @ Choice Specs  
+Ability: Swift Swim  
+Tera Type: Water  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Modest Nature  
+- Weather Ball  
+- Draco Meteor  
+- Flip Turn  
+- Hurricane  
+
+Ogerpon-Wellspring (F) @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Ivy Cudgel  
+- Power Whip  
+- Play Rough  
+
+Scizor @ Leftovers  
+Ability: Technician  
+Tera Type: Steel  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Swords Dance  
+- Defog  
+- U-turn  
+- Bullet Punch  
+
+Landorus-Therian (M) @ Soft Sand  
+Ability: Intimidate  
+Tera Type: Ground  
+EVs: 8 HP / 240 Atk / 8 SpD / 252 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Earthquake  
+- Stone Edge  
+- U-turn

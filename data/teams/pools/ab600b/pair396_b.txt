@@ -1,0 +1,59 @@
+Excadrill @ Air Balloon  
+Ability: Sand Rush  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Iron Head  
+- Earthquake  
+- Rapid Spin  
+
+Tyranitar @ Eject Button  
+Ability: Sand Stream  
+Tera Type: Bug  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Knock Off  
+- Stealth Rock  
+- Low Kick  
+- Ice Punch  
+
+Garganacl @ Leftovers  
+Ability: Purifying Salt  
+Tera Type: Water  
+EVs: 252 HP / 4 Atk / 252 SpD  
+Careful Nature  
+- Salt Cure  
+- Protect  
+- Recover  
+- Stealth Rock  
+
+Skarmory @ Rocky Helmet  
+Ability: Sturdy  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Def / 4 Spe  
+Impish Nature  
+- Spikes  
+- Roost  
+- Body Press  
+- Brave Bird  
+
+Dragapult @ Air Balloon  
+Ability: Infiltrator  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- U-turn  
+- Hex  
+- Will-O-Wisp  
+- Draco Meteor  
+
+Alomomola @ Eject Button  
+Ability: Regenerator  
+Tera Type: Poison  
+EVs: 252 HP / 252 Def / 4 SpD  
+Relaxed Nature  
+- Flip Turn  
+- Wish  
+- Scald  
+- Protect

@@ -1,0 +1,59 @@
+Weavile @ Heavy-Duty Boots  
+Ability: Pickpocket  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Swords Dance  
+- Triple Axel  
+- Ice Shard  
+
+Zamazenta @ Leftovers  
+Ability: Dauntless Shield  
+Tera Type: Fire  
+EVs: 4 Atk / 252 Def / 252 Spe  
+Jolly Nature  
+- Crunch  
+- Iron Defense  
+- Body Press  
+- Substitute  
+
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Tera Type: Poison  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- Stealth Rock  
+- Whirlwind  
+- Earthquake  
+- Ruination  
+
+Sinistcha @ Rocky Helmet  
+Ability: Heatproof  
+Tera Type: Normal  
+EVs: 248 HP / 252 Def / 8 SpA  
+Bold Nature  
+- Matcha Gotcha  
+- Strength Sap  
+- Calm Mind  
+- Shadow Ball  
+
+Slowking-Galar @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 252 HP / 4 Def / 252 SpD  
+Calm Nature  
+- Sludge Bomb  
+- Ice Beam  
+- Chilly Reception  
+- Future Sight  
+
+Skarmory @ Leftovers  
+Ability: Sturdy  
+Tera Type: Ghost  
+EVs: 248 HP / 252 Def / 8 SpD  
+Impish Nature  
+- Roost  
+- Whirlwind  
+- Brave Bird  
+- Spikes

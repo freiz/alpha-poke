@@ -1,0 +1,59 @@
+Weezing-Galar @ Rocky Helmet  
+Ability: Neutralizing Gas  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Def / 4 SpA  
+Bold Nature  
+- Sludge Bomb  
+- Will-O-Wisp  
+- Strange Steam  
+- Pain Split  
+
+Ogerpon @ Scope Lens  
+Ability: Defiant  
+Tera Type: Grass  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Ivy Cudgel  
+- U-turn  
+- Knock Off  
+- Swords Dance  
+
+Skarmory @ Rocky Helmet  
+Ability: Sturdy  
+Tera Type: Ghost  
+EVs: 252 HP / 232 Def / 24 Spe  
+Impish Nature  
+- Body Press  
+- Roost  
+- Taunt  
+- Spikes  
+
+Alomomola @ Assault Vest  
+Ability: Regenerator  
+Tera Type: Normal  
+EVs: 252 HP / 252 Def / 4 SpD  
+Relaxed Nature  
+- Flip Turn  
+- Mirror Coat  
+- Body Slam  
+- Aqua Jet  
+
+Clodsire @ Leftovers  
+Ability: Unaware  
+Tera Type: Steel  
+EVs: 248 HP / 8 Def / 252 SpD  
+Careful Nature  
+- Recover  
+- Earthquake  
+- Toxic  
+- Spikes  
+
+Hydreigon @ Life Orb  
+Ability: Levitate  
+Tera Type: Steel  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Earth Power  
+- Flash Cannon  
+- Dark Pulse  
+- Draco Meteor

@@ -1,0 +1,59 @@
+Dragapult @ Life Orb  
+Ability: Infiltrator  
+Tera Type: Dragon  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Shadow Ball  
+- Flamethrower  
+- Will-O-Wisp  
+- Dragon Darts  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Dark  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Sucker Punch  
+- Kowtow Cleave  
+- Swords Dance  
+- Iron Head  
+
+Primarina @ Assault Vest  
+Ability: Liquid Voice  
+Tera Type: Ghost  
+EVs: 252 HP / 208 SpA / 48 SpD  
+Modest Nature  
+- Moonblast  
+- Surf  
+- Psychic Noise  
+- Flip Turn  
+
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 252 HP / 4 Atk / 252 Def  
+Impish Nature  
+- Close Combat  
+- Ice Spinner  
+- Taunt  
+- Rapid Spin  
+
+Moltres @ Heavy-Duty Boots  
+Ability: Flame Body  
+Tera Type: Ground  
+EVs: 248 HP / 248 Def / 12 Spe  
+Bold Nature  
+- Roar  
+- Roost  
+- Flamethrower  
+- Scorching Sands  
+
+Slowking-Galar @ Kasib Berry  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 252 HP / 4 SpA / 252 SpD  
+Sassy Nature  
+- Future Sight  
+- Sludge Bomb  
+- Chilly Reception  
+- Ice Beam

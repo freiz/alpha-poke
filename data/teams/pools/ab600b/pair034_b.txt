@@ -1,0 +1,58 @@
+Dudunsparce-Three-Segment @ Weakness Policy  
+Ability: Rattled  
+Tera Type: Ghost  
+EVs: 192 HP / 252 SpA / 64 SpD  
+Modest Nature  
+- Calm Mind  
+- Roost  
+- Stored Power  
+- Boomburst  
+
+Cacturne @ Life Orb  
+Ability: Water Absorb  
+Tera Type: Fighting  
+EVs: 252 Atk / 252 SpA / 4 Spe  
+Naughty Nature  
+- Drain Punch  
+- Swords Dance  
+- Sucker Punch  
+- Counter  
+
+Chandelure @ Leftovers  
+Ability: Flash Fire  
+Tera Type: Fire  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Trick  
+- Shadow Ball  
+- Fire Blast  
+- Taunt  
+
+Goodra-Hisui @ Assault Vest  
+Ability: Gooey  
+Tera Type: Fairy  
+EVs: 252 HP / 4 Def / 252 SpA  
+Quiet Nature  
+- Dragon Tail  
+- Flash Cannon  
+- Draco Meteor  
+- Ice Beam  
+
+Orthworm @ Leftovers  
+Ability: Earth Eater  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Stealth Rock  
+- Coil  
+- Iron Tail  
+- Spikes  
+
+Lanturn @ Leftovers  
+Ability: Volt Absorb  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+- Thunder Wave  
+- Volt Switch  
+- Scald  
+- Discharge

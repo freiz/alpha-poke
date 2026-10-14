@@ -1,0 +1,59 @@
+Tornadus @ Eject Button  
+Ability: Defiant  
+Tera Type: Ghost  
+EVs: 252 HP / 68 Def / 188 Spe  
+Impish Nature  
+- Tailwind  
+- Focus Blast  
+- Hurricane  
+- Acrobatics  
+
+Toxtricity @ Throat Spray  
+Ability: Punk Rock  
+Tera Type: Normal  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Shift Gear  
+- Overdrive  
+- Boomburst  
+- Encore  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Modest Nature  
+- Moonblast  
+- Calm Mind  
+- Shadow Ball  
+- Vacuum Wave  
+
+Arcanine-Hisui @ Focus Sash  
+Ability: Rock Head  
+Tera Type: Rock  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Head Smash  
+- Flare Blitz  
+- Agility  
+- Extreme Speed  
+
+Brambleghast @ Life Orb  
+Ability: Wind Rider  
+Tera Type: Ghost  
+EVs: 248 HP / 252 Def / 8 SpA  
+Bold Nature  
+- Poltergeist  
+- Power Whip  
+- Shadow Sneak  
+- Rapid Spin  
+
+Hydreigon @ Life Orb  
+Ability: Levitate  
+Tera Type: Steel  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Flash Cannon  
+- Earth Power  
+- Dark Pulse  
+- Nasty Plot

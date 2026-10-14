@@ -1,0 +1,59 @@
+Garganacl @ Air Balloon  
+Ability: Purifying Salt  
+Tera Type: Flying  
+EVs: 252 HP / 4 Atk / 252 Def  
+Impish Nature  
+- Body Press  
+- Salt Cure  
+- Curse  
+- Recover  
+
+Primarina @ Leftovers  
+Ability: Torrent  
+Tera Type: Bug  
+EVs: 140 HP / 4 Atk / 216 SpA / 148 SpD  
+Quiet Nature  
+- Moonblast  
+- Psychic Noise  
+- Flip Turn  
+- Surf  
+
+Weezing-Galar @ Leftovers  
+Ability: Neutralizing Gas  
+Tera Type: Grass  
+EVs: 252 HP / 252 Def  
+Bold Nature  
+- Will-O-Wisp  
+- Pain Split  
+- Defog  
+- Sludge Bomb  
+
+Conkeldurr @ Flame Orb  
+Ability: Guts  
+Tera Type: Steel  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Brave Nature  
+- Drain Punch  
+- Mach Punch  
+- Poison Jab  
+- Knock Off  
+
+Maushold-Four @ Wide Lens  
+Ability: Friend Guard  
+Tera Type: Ghost  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Population Bomb  
+- Tidy Up  
+- Beat Up  
+- Encore  
+
+Lokix @ Choice Band  
+Ability: Tinted Lens  
+Tera Type: Bug  
+EVs: 40 HP / 252 Atk / 216 Spe  
+Adamant Nature  
+- Throat Chop  
+- Knock Off  
+- U-turn  
+- First Impression

@@ -1,0 +1,57 @@
+Goodra-Hisui @ Leftovers  
+Ability: Shell Armor  
+Tera Type: Poison  
+EVs: 252 HP / 4 Def / 252 SpD  
+Sassy Nature  
+- Curse  
+- Earthquake  
+- Body Press  
+- Draco Meteor  
+
+Azelf @ Life Orb  
+Ability: Levitate  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Flamethrower  
+- Nasty Plot  
+- Thunderbolt  
+- Psychic  
+
+Illumise @ Light Clay  
+Ability: Prankster  
+EVs: 252 HP / 4 Def / 252 SpD  
+Calm Nature  
+- Thunder Wave  
+- Light Screen  
+- U-turn  
+- Tailwind  
+
+Dedenne @ Focus Sash  
+Ability: Cheek Pouch  
+EVs: 248 HP / 8 SpA / 252 Spe  
+Timid Nature  
+- Volt Switch  
+- Nuzzle  
+- Grass Knot  
+- Endeavor  
+
+Vivillon @ Focus Sash  
+Ability: Friend Guard  
+Tera Type: Bug  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Quiver Dance  
+- Bug Buzz  
+- U-turn  
+- Hurricane  
+
+Okidogi @ Life Orb  
+Ability: Guard Dog  
+Tera Type: Ice  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Substitute  
+- Gunk Shot  
+- Ice Punch  
+- Knock Off

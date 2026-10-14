@@ -1,0 +1,55 @@
+Volcanion @ Air Balloon  
+Ability: Water Absorb  
+Tera Type: Grass  
+EVs: 248 HP / 84 SpA / 176 Spe  
+Modest Nature  
+- Steam Eruption  
+- Sludge Bomb  
+- Flamethrower  
+- Will-O-Wisp  
+
+Garganacl @ Air Balloon  
+Ability: Purifying Salt  
+Tera Type: Water  
+EVs: 252 HP / 52 Def / 204 SpD  
+Careful Nature  
+- Salt Cure  
+- Protect  
+- Recover  
+- Stealth Rock  
+
+Serperior @ Leftovers  
+Ability: Contrary  
+Tera Type: Water  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Substitute  
+- Leech Seed  
+- Glare  
+- Leaf Storm  
+
+Ditto @ Choice Scarf  
+Ability: Imposter  
+Tera Type: Fairy  
+EVs: 252 HP  
+Relaxed Nature  
+- Transform  
+
+Corviknight @ Leftovers  
+Ability: Pressure  
+Tera Type: Ghost  
+EVs: 248 HP / 8 Atk / 252 Def  
+Impish Nature  
+- Bulk Up  
+- Power Trip  
+- Roost  
+- Defog  
+
+Jumpluff @ Light Clay  
+Ability: Infiltrator  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Modest Nature  
+- Energy Ball  
+- Reflect  
+- Giga Drain  
+- Light Screen

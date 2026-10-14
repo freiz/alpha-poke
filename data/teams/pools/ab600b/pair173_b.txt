@@ -1,0 +1,59 @@
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Poison  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Moonblast  
+- Calm Mind  
+- Thunderbolt  
+- Psyshock  
+
+Dragapult @ Black Sludge  
+Ability: Clear Body  
+Tera Type: Ghost  
+EVs: 132 HP / 252 Atk / 124 Spe  
+Adamant Nature  
+- U-turn  
+- Psychic Fangs  
+- Dragon Darts  
+- Draco Meteor  
+
+Iron Moth @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Grass  
+EVs: 120 HP / 4 Def / 132 SpA / 252 Spe  
+Timid Nature  
+- Fiery Dance  
+- Sludge Wave  
+- Morning Sun  
+- Energy Ball  
+
+Great Tusk @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Electric  
+EVs: 248 HP / 4 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Close Combat  
+- Ice Spinner  
+- Headlong Rush  
+
+Grimmsnarl @ Choice Band  
+Ability: Pickpocket  
+Tera Type: Fairy  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Play Rough  
+- Sucker Punch  
+- Spirit Break  
+- Parting Shot  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Dark  
+EVs: 252 HP / 196 Def / 60 Spe  
+Bold Nature  
+- Shadow Ball  
+- Recover  
+- Make It Rain  
+- Trick

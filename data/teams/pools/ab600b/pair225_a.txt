@@ -1,0 +1,59 @@
+Ogerpon-Cornerstone @ Cornerstone Mask  
+Ability: Sturdy  
+Tera Type: Rock  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Ivy Cudgel  
+- Horn Leech  
+- Power Whip  
+
+Rillaboom @ Terrain Extender  
+Ability: Grassy Surge  
+Tera Type: Dark  
+EVs: 76 HP / 252 Atk / 180 Spe  
+Adamant Nature  
+- Knock Off  
+- Wood Hammer  
+- Swords Dance  
+- Grassy Glide  
+
+Hawlucha @ Grassy Seed  
+Ability: Unburden  
+Tera Type: Electric  
+EVs: 184 HP / 252 Atk / 8 SpD / 64 Spe  
+Adamant Nature  
+- Acrobatics  
+- Swords Dance  
+- Drain Punch  
+- Close Combat  
+
+Iron Treads @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ground  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Earthquake  
+- Stealth Rock  
+- Earth Power  
+- Knock Off  
+
+Moltres @ Heavy-Duty Boots  
+Ability: Flame Body  
+Tera Type: Grass  
+EVs: 248 HP / 248 Def / 12 Spe  
+Bold Nature  
+- U-turn  
+- Roost  
+- Will-O-Wisp  
+- Roar  
+
+Latias @ Grassy Seed  
+Ability: Levitate  
+Tera Type: Poison  
+EVs: 248 HP / 236 Def / 24 Spe  
+Bold Nature  
+- Calm Mind  
+- Stored Power  
+- Recover  
+- Aura Sphere

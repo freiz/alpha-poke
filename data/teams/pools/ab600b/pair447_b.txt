@@ -1,0 +1,61 @@
+Araquanid (F) @ Custap Berry  
+Ability: Water Bubble  
+Tera Type: Ghost  
+EVs: 248 HP / 40 Def / 216 SpA / 4 Spe  
+Modest Nature  
+IVs: 0 Atk  
+- Surf  
+- Sticky Web  
+- Endeavor  
+- Endure  
+
+Ogerpon-Cornerstone (F) @ Cornerstone Mask  
+Ability: Sturdy  
+Tera Type: Rock  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Power Whip  
+- Ivy Cudgel  
+- Knock Off  
+
+Pecharunt @ Heavy-Duty Boots  
+Ability: Poison Puppeteer  
+Tera Type: Ghost  
+EVs: 248 HP / 8 Def / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Parting Shot  
+- Malignant Chain  
+- Shadow Ball  
+- Recover  
+
+Great Tusk @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Ice  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Bulk Up  
+- Headlong Rush  
+- Ice Spinner  
+- Rapid Spin  
+
+Kingambit (F) @ Air Balloon  
+Ability: Supreme Overlord  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Swords Dance  
+- Sucker Punch  
+- Iron Head  
+- Low Kick  
+
+Dragonite (F) @ Loaded Dice  
+Ability: Multiscale  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Dragon Dance  
+- Scale Shot  
+- Fire Punch  
+- Encore

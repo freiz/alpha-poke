@@ -1,0 +1,59 @@
+Tyranitar @ Salac Berry  
+Ability: Sand Stream  
+Tera Type: Water  
+EVs: 116 HP / 224 Atk / 168 Spe  
+Hasty Nature  
+- Stone Edge  
+- Knock Off  
+- Stealth Rock  
+- Ice Beam  
+
+Latias @ Weakness Policy  
+Ability: Levitate  
+Tera Type: Fairy  
+EVs: 252 SpA / 252 Spe  
+Timid Nature  
+- Agility  
+- Calm Mind  
+- Stored Power  
+- Recover  
+
+Scyther  
+Ability: Technician  
+Tera Type: Electric  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Bug Bite  
+- Swords Dance  
+- Aerial Ace  
+- U-turn  
+
+Rotom-Wash @ Rocky Helmet  
+Ability: Levitate  
+Tera Type: Steel  
+EVs: 252 HP / 212 Def / 44 Spe  
+Bold Nature  
+- Volt Switch  
+- Hydro Pump  
+- Will-O-Wisp  
+- Thunder Wave  
+
+Chesnaught @ Rocky Helmet  
+Ability: Bulletproof  
+Tera Type: Fire  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Seed Bomb  
+- Body Press  
+- Knock Off  
+- Leech Seed  
+
+Camerupt  
+Ability: Solid Rock  
+Tera Type: Grass  
+EVs: 248 HP / 84 Def / 176 SpD  
+Sassy Nature  
+- Earthquake  
+- Stealth Rock  
+- Fire Blast  
+- Smack Down

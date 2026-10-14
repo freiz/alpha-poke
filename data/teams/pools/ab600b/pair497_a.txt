@@ -1,0 +1,59 @@
+Weezing-Galar @ Leftovers  
+Ability: Neutralizing Gas  
+Tera Type: Grass  
+EVs: 252 HP / 240 Def / 16 Spe  
+Bold Nature  
+- Strange Steam  
+- Defog  
+- Will-O-Wisp  
+- Pain Split  
+
+Thundurus-Therian @ Heavy-Duty Boots  
+Ability: Volt Absorb  
+Tera Type: Fairy  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Grass Knot  
+- Nasty Plot  
+- Weather Ball  
+- Thunderbolt  
+
+Alomomola @ Leftovers  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 252 HP / 252 Atk  
+Brave Nature  
+- Wish  
+- Mirror Coat  
+- Flip Turn  
+- Protect  
+
+Grimmsnarl @ Light Clay  
+Ability: Prankster  
+Tera Type: Ghost  
+EVs: 252 HP / 200 Def / 56 SpD  
+Sassy Nature  
+- Parting Shot  
+- Taunt  
+- Reflect  
+- Light Screen  
+
+Skeledirge @ Throat Spray  
+Ability: Unaware  
+Tera Type: Water  
+EVs: 248 HP / 56 Def / 204 Spe  
+Bold Nature  
+- Substitute  
+- Shadow Ball  
+- Torch Song  
+- Slack Off  
+
+Ursaluna @ Flame Orb  
+Ability: Guts  
+Tera Type: Normal  
+EVs: 252 HP / 252 Atk / 4 Def  
+Adamant Nature  
+- Facade  
+- Headlong Rush  
+- Fire Punch  
+- Swords Dance

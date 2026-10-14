@@ -1,0 +1,59 @@
+Maushold @ Wide Lens  
+Ability: Technician  
+Tera Type: Ghost  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Tidy Up  
+- Encore  
+- Bite  
+- Population Bomb  
+
+Cinccino @ Loaded Dice  
+Ability: Skill Link  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Tidy Up  
+- Bullet Seed  
+- Tail Slap  
+- Rock Blast  
+
+Infernape @ Life Orb  
+Ability: Iron Fist  
+Tera Type: Flying  
+EVs: 252 Atk / 252 Spe  
+Hardy Nature  
+- Stealth Rock  
+- Close Combat  
+- Thunder Punch  
+- Vacuum Wave  
+
+Rillaboom @ Leftovers  
+Ability: Grassy Surge  
+Tera Type: Steel  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- U-turn  
+- Grassy Glide  
+- Knock Off  
+- Swords Dance  
+
+Slowbro-Galar @ Quick Claw  
+Ability: Quick Draw  
+Tera Type: Fighting  
+EVs: 252 HP / 228 Def / 28 Spe  
+Bold Nature  
+- Drain Punch  
+- Belly Drum  
+- Poison Jab  
+- Sludge Bomb  
+
+Typhlosion-Hisui @ Choice Scarf  
+Ability: Frisk  
+Tera Type: Fire  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Modest Nature  
+- Eruption  
+- Overheat  
+- Shadow Ball  
+- Infernal Parade

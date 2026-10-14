@@ -1,0 +1,59 @@
+Iron Moth @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Fire  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Modest Nature  
+- Fiery Dance  
+- Morning Sun  
+- Dazzling Gleam  
+- Discharge  
+
+Umbreon @ Leftovers  
+Ability: Synchronize  
+Tera Type: Water  
+EVs: 248 HP / 8 Def / 252 SpD  
+Calm Nature  
+- Thunder Wave  
+- Protect  
+- Foul Play  
+- Wish  
+
+Garchomp @ Life Orb  
+Ability: Rough Skin  
+Tera Type: Water  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Earthquake  
+- Swords Dance  
+- Scale Shot  
+- Poison Jab  
+
+Glimmora @ Passho Berry  
+Ability: Toxic Debris  
+Tera Type: Ghost  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Naive Nature  
+- Mortal Spin  
+- Stealth Rock  
+- Earth Power  
+- Sludge Wave  
+
+Gholdengo @ Grassy Seed  
+Ability: Good as Gold  
+Tera Type: Fighting  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Trick  
+- Shadow Ball  
+- Make It Rain  
+- Psyshock  
+
+Dragonite @ Silk Scarf  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 248 HP / 108 Atk / 152 Spe  
+Adamant Nature  
+- Extreme Speed  
+- Ice Spinner  
+- Earthquake  
+- Dragon Dance

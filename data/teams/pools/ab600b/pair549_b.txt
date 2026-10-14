@@ -1,0 +1,59 @@
+Samurott-Hisui @ Focus Sash  
+Ability: Sharpness  
+Tera Type: Fire  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Ceaseless Edge  
+- Knock Off  
+- Taunt  
+- Flip Turn  
+
+Greninja @ Life Orb  
+Ability: Battle Bond  
+Tera Type: Water  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Water Shuriken  
+- Dark Pulse  
+- Sludge Wave  
+- Hydro Pump  
+
+Crawdaunt @ Focus Sash  
+Ability: Adaptability  
+Tera Type: Water  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- Knock Off  
+- Endeavor  
+- Crabhammer  
+- Aqua Jet  
+
+Iron Moth @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Fairy  
+EVs: 124 Def / 132 SpA / 252 Spe  
+Timid Nature  
+- Sludge Wave  
+- Fiery Dance  
+- Substitute  
+- Energy Ball  
+
+Landorus-Therian @ Rocky Helmet  
+Ability: Intimidate  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- U-turn  
+- Stealth Rock  
+- Taunt  
+- Earthquake  
+
+Sinistcha @ Leftovers  
+Ability: Heatproof  
+Tera Type: Poison  
+EVs: 248 HP / 252 Def / 8 SpD  
+Bold Nature  
+- Matcha Gotcha  
+- Shadow Ball  
+- Strength Sap  
+- Calm Mind

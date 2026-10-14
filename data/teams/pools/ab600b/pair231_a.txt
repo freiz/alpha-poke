@@ -1,0 +1,62 @@
+Samurott-Hisui (F) @ Covert Cloak  
+Ability: Sharpness  
+Tera Type: Water  
+EVs: 248 HP / 176 Atk / 84 Spe  
+Adamant Nature  
+- Ceaseless Edge  
+- Swords Dance  
+- Aqua Cutter  
+- Aqua Jet  
+
+Iron Treads @ Leftovers  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 252 Atk / 64 SpD / 192 Spe  
+Adamant Nature  
+- Knock Off  
+- Earthquake  
+- Stealth Rock  
+- Rapid Spin  
+
+Alomomola (F) @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Flying  
+EVs: 4 Atk / 252 Def / 252 SpD  
+Relaxed Nature  
+IVs: 0 Spe  
+- Scald  
+- Flip Turn  
+- Wish  
+- Protect  
+
+Kyurem @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Fighting  
+EVs: 64 HP / 252 Def / 192 SpA  
+Bold Nature  
+IVs: 0 Atk  
+- Draco Meteor  
+- Freeze-Dry  
+- Earth Power  
+- Body Press  
+
+Dragapult (F) @ Heavy-Duty Boots  
+Ability: Infiltrator  
+Tera Type: Fairy  
+EVs: 224 HP / 60 Atk / 224 Spe  
+Jolly Nature  
+- Will-O-Wisp  
+- Dragon Darts  
+- Thunder Wave  
+- U-turn  
+
+Iron Crown @ Choice Specs  
+Ability: Quark Drive  
+Tera Type: Steel  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 20 Atk  
+- Tachyon Cutter  
+- Psyshock  
+- Volt Switch  
+- Focus Blast

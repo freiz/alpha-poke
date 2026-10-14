@@ -1,0 +1,59 @@
+Grimmsnarl @ Light Clay  
+Ability: Prankster  
+Tera Type: Ghost  
+EVs: 252 HP / 136 Def / 120 SpD  
+Impish Nature  
+- Reflect  
+- Light Screen  
+- Parting Shot  
+- Taunt  
+
+Feraligatr @ Leftovers  
+Ability: Sheer Force  
+Tera Type: Dark  
+EVs: 208 HP / 96 Def / 204 SpD  
+Impish Nature  
+- Liquidation  
+- Crunch  
+- Aqua Jet  
+- Dragon Dance  
+
+Tornadus-Therian @ Choice Specs  
+Ability: Regenerator  
+Tera Type: Fighting  
+EVs: 248 HP / 8 Def / 252 Spe  
+Timid Nature  
+- Bleakwind Storm  
+- Nasty Plot  
+- U-turn  
+- Focus Blast  
+
+Glimmora @ Red Card  
+Ability: Toxic Debris  
+Tera Type: Fairy  
+EVs: 248 HP / 132 Def / 128 SpD  
+Calm Nature  
+- Dazzling Gleam  
+- Earth Power  
+- Stealth Rock  
+- Sludge Wave  
+
+Zamazenta @ Leftovers  
+Ability: Dauntless Shield  
+Tera Type: Dark  
+EVs: 252 HP / 88 Def / 168 Spe  
+Jolly Nature  
+- Crunch  
+- Body Press  
+- Iron Defense  
+- Rest  
+
+Iron Crown @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Flying  
+EVs: 108 HP / 160 SpA / 240 Spe  
+Timid Nature  
+- Iron Defense  
+- Focus Blast  
+- Calm Mind  
+- Tachyon Cutter

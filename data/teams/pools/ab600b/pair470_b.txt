@@ -1,0 +1,61 @@
+Kingambit @ Life Orb  
+Ability: Supreme Overlord  
+Tera Type: Fire  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Kowtow Cleave  
+- Zen Headbutt  
+- Low Kick  
+- Swords Dance  
+
+Primeape @ Focus Sash  
+Ability: Anger Point  
+Tera Type: Normal  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Bulk Up  
+- Rage Fist  
+- Drain Punch  
+- Seed Bomb  
+
+Serperior @ Focus Sash  
+Ability: Contrary  
+Tera Type: Ground  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Leaf Storm  
+- Gastro Acid  
+- Dragon Pulse  
+- Giga Drain  
+
+Toxapex @ Black Sludge  
+Ability: Regenerator  
+Tera Type: Psychic  
+EVs: 4 Atk / 252 Def / 252 SpD  
+Relaxed Nature  
+- Pin Missile  
+- Sludge Bomb  
+- Toxic Spikes  
+- Recover  
+
+Raging Bolt @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Flying  
+EVs: 252 SpA / 252 Spe  
+Rash Nature  
+IVs: 20 Atk  
+- Thunderclap  
+- Volt Switch  
+- Dragon Pulse  
+- Protect  
+
+Azumarill @ Rocky Helmet  
+Ability: Huge Power  
+Tera Type: Fairy  
+EVs: 248 HP / 252 Atk / 8 SpD  
+Adamant Nature  
+- Belly Drum  
+- Aqua Jet  
+- Play Rough  
+- Superpower

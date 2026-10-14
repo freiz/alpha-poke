@@ -1,0 +1,59 @@
+Great Tusk @ Rocky Helmet  
+Ability: Protosynthesis  
+Tera Type: Fairy  
+EVs: 188 HP / 108 Atk / 108 Def / 32 SpD / 72 Spe  
+Adamant Nature  
+- Rapid Spin  
+- Close Combat  
+- Stealth Rock  
+- Ice Spinner  
+
+Alomomola @ Leftovers  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 252 HP / 4 Atk / 12 SpA / 240 SpD  
+Sassy Nature  
+- Mirror Coat  
+- Protect  
+- Flip Turn  
+- Wish  
+
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Dragon  
+EVs: 248 HP / 252 Def / 8 SpD  
+Relaxed Nature  
+- Iron Defense  
+- Roost  
+- U-turn  
+- Brave Bird  
+
+Hoopa-Unbound @ Eject Pack  
+Ability: Magician  
+Tera Type: Dark  
+EVs: 40 HP / 252 Atk / 216 Spe  
+Adamant Nature  
+- Psychic Noise  
+- Knock Off  
+- Hyperspace Fury  
+- Drain Punch  
+
+Iron Treads @ Leftovers  
+Ability: Quark Drive  
+Tera Type: Electric  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Volt Switch  
+- Stealth Rock  
+- Ice Spinner  
+
+Dragapult @ Choice Specs  
+Ability: Infiltrator  
+Tera Type: Fairy  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Shadow Ball  
+- Draco Meteor  
+- Dragon Darts  
+- Will-O-Wisp

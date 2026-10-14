@@ -1,0 +1,59 @@
+Clawitzer @ Rocky Helmet  
+Ability: Mega Launcher  
+Tera Type: Dark  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+- Protect  
+- Dark Pulse  
+- Aura Sphere  
+- Dragon Pulse  
+
+Garchomp @ Rocky Helmet  
+Ability: Rough Skin  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Def  
+Impish Nature  
+- Dragon Tail  
+- Stealth Rock  
+- Spikes  
+- Earthquake  
+
+Gholdengo @ Leftovers  
+Ability: Good as Gold  
+Tera Type: Steel  
+EVs: 72 HP / 252 SpA / 184 Spe  
+Modest Nature  
+- Shadow Ball  
+- Nasty Plot  
+- Make It Rain  
+- Hex  
+
+Toxapex @ Black Sludge  
+Ability: Regenerator  
+Tera Type: Steel  
+EVs: 248 HP / 8 Def / 252 SpD  
+Careful Nature  
+- Toxic  
+- Haze  
+- Recover  
+- Poison Jab  
+
+Dragapult @ Life Orb  
+Ability: Infiltrator  
+Tera Type: Dragon  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Naive Nature  
+- U-turn  
+- Shadow Ball  
+- Dragon Darts  
+- Will-O-Wisp  
+
+Kingambit @ Black Glasses  
+Ability: Supreme Overlord  
+Tera Type: Dark  
+EVs: 92 HP / 252 Atk / 164 Spe  
+Adamant Nature  
+- Kowtow Cleave  
+- Swords Dance  
+- Sucker Punch  
+- Low Kick

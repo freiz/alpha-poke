@@ -1,0 +1,59 @@
+Quaquaval @ Leftovers  
+Ability: Moxie  
+Tera Type: Water  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Aqua Step  
+- Swords Dance  
+- Close Combat  
+- Rapid Spin  
+
+Iron Crown @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Fighting  
+EVs: 80 HP / 4 Def / 172 SpA / 252 Spe  
+Timid Nature  
+- Calm Mind  
+- Tachyon Cutter  
+- Psychic  
+- Focus Blast  
+
+Iron Moth @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 124 Def / 132 SpA / 252 Spe  
+Timid Nature  
+- Dazzling Gleam  
+- Fiery Dance  
+- Sludge Wave  
+- Energy Ball  
+
+Dragonite @ Life Orb  
+Ability: Multiscale  
+Tera Type: Steel  
+EVs: 156 HP / 252 Atk / 48 Def / 48 SpD / 4 Spe  
+Adamant Nature  
+- Extreme Speed  
+- Thunder Punch  
+- Outrage  
+- Fire Punch  
+
+Garganacl @ Leftovers  
+Ability: Purifying Salt  
+Tera Type: Water  
+EVs: 252 HP / 24 Def / 232 SpD  
+Careful Nature  
+- Salt Cure  
+- Protect  
+- Stealth Rock  
+- Recover  
+
+Glimmora @ Focus Sash  
+Ability: Corrosion  
+Tera Type: Ghost  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Naive Nature  
+- Mortal Spin  
+- Power Gem  
+- Stealth Rock  
+- Spikes

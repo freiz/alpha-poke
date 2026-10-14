@@ -1,0 +1,59 @@
+Slither Wing @ Choice Band  
+Ability: Protosynthesis  
+Tera Type: Water  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- First Impression  
+- Superpower  
+- Acrobatics  
+- Flare Blitz  
+
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Water  
+EVs: 252 HP / 252 Spe  
+Jolly Nature  
+- Brave Bird  
+- Defog  
+- Iron Head  
+- Roost  
+
+Dondozo @ Chesto Berry  
+Ability: Water Veil  
+Tera Type: Ground  
+EVs: 252 HP / 252 Def  
+Impish Nature  
+- Earthquake  
+- Wave Crash  
+- Avalanche  
+- Rest  
+
+Dragapult @ Heavy-Duty Boots  
+Ability: Infiltrator  
+Tera Type: Steel  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Modest Nature  
+- Shadow Ball  
+- Draco Meteor  
+- U-turn  
+- Thunderbolt  
+
+Grimmsnarl (M) @ Light Clay  
+Ability: Prankster  
+Tera Type: Dark  
+EVs: 252 HP / 132 Def / 124 SpD  
+Careful Nature  
+- Reflect  
+- Light Screen  
+- Spirit Break  
+- Parting Shot  
+
+Grafaiai @ Heavy-Duty Boots  
+Ability: Poison Touch  
+Tera Type: Bug  
+EVs: 252 HP / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Toxic  
+- Encore  
+- U-turn

@@ -1,0 +1,63 @@
+Ogerpon (F) @ Choice Band  
+Ability: Defiant  
+Tera Type: Grass  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Play Rough  
+- Knock Off  
+- U-turn  
+- Ivy Cudgel  
+
+Ribombee @ Focus Sash  
+Ability: Shield Dust  
+Shiny: Yes  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Sticky Web  
+- Moonblast  
+- Stun Spore  
+- Psychic  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Fighting  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Nasty Plot  
+- Shadow Ball  
+- Make It Rain  
+- Focus Blast  
+
+Samurott-Hisui @ Lum Berry  
+Ability: Sharpness  
+Shiny: Yes  
+Tera Type: Dark  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Swords Dance  
+- Razor Shell  
+- Ceaseless Edge  
+- Sucker Punch  
+
+Great Tusk @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Headlong Rush  
+- Ice Spinner  
+- Close Combat  
+
+Iron Moth @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Fairy  
+EVs: 252 SpA / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Substitute  
+- Fiery Dance  
+- Sludge Wave  
+- Dazzling Gleam

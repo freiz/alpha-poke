@@ -1,0 +1,59 @@
+Incineroar @ Leftovers  
+Ability: Intimidate  
+Tera Type: Fairy  
+EVs: 252 HP / 156 Def / 100 SpD  
+Relaxed Nature  
+- Fake Out  
+- Flare Blitz  
+- Knock Off  
+- U-turn  
+
+Bellibolt @ Leftovers  
+Ability: Electromorphosis  
+Tera Type: Flying  
+EVs: 252 HP / 252 Def / 4 SpA  
+Bold Nature  
+- Parabolic Charge  
+- Volt Switch  
+- Sucker Punch  
+- Toxic  
+
+Breloom @ Focus Sash  
+Ability: Poison Heal  
+Tera Type: Fighting  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- Bullet Seed  
+- Bulldoze  
+- Mach Punch  
+- Close Combat  
+
+Staraptor @ Choice Band  
+Ability: Intimidate  
+Tera Type: Flying  
+EVs: 252 HP / 252 Atk / 4 Spe  
+Hardy Nature  
+- Close Combat  
+- U-turn  
+- Brave Bird  
+- Final Gambit  
+
+Meloetta @ Leftovers  
+Ability: Serene Grace  
+Tera Type: Fairy  
+EVs: 68 HP / 80 SpA / 248 SpD / 112 Spe  
+Calm Nature  
+- Relic Song  
+- Psychic  
+- Shadow Ball  
+- Zen Headbutt  
+
+Scream Tail @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 252 HP / 4 SpA / 252 Spe  
+Timid Nature  
+- Dazzling Gleam  
+- Calm Mind  
+- Psyshock  
+- Flamethrower

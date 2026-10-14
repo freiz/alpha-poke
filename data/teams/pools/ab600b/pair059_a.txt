@@ -1,0 +1,59 @@
+Decidueye-Hisui @ Life Orb  
+Ability: Overgrow  
+Tera Type: Grass  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Careful Nature  
+- Close Combat  
+- Leaf Blade  
+- Shadow Sneak  
+- Knock Off  
+
+Alomomola @ Assault Vest  
+Ability: Regenerator  
+Tera Type: Normal  
+EVs: 252 HP / 4 Def / 252 SpD  
+Sassy Nature  
+- Flip Turn  
+- Aqua Jet  
+- Body Slam  
+- Mirror Coat  
+
+Pecharunt @ Rocky Helmet  
+Ability: Poison Puppeteer  
+Tera Type: Water  
+EVs: 216 HP / 252 Def / 40 Spe  
+Bold Nature  
+- Malignant Chain  
+- Parting Shot  
+- Shadow Ball  
+- Recover  
+
+Dragonite @ Red Card  
+Ability: Multiscale  
+Tera Type: Fairy  
+EVs: 240 HP / 252 Atk / 16 Spe  
+Adamant Nature  
+- Dragon Dance  
+- Earthquake  
+- Ice Spinner  
+- Extreme Speed  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Encore  
+- Calm Mind  
+- Shadow Ball  
+- Moonblast  
+
+Cinderace @ Heavy-Duty Boots  
+Ability: Libero  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Court Change  
+- Will-O-Wisp  
+- U-turn  
+- Pyro Ball

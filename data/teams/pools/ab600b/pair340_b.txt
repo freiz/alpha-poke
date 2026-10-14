@@ -1,0 +1,64 @@
+Hoopa @ Aguav Berry  
+Ability: Magician  
+Tera Type: Fairy  
+EVs: 112 HP / 224 SpA / 172 Spe  
+Modest Nature  
+IVs: 0 Atk  
+- Shadow Ball  
+- Calm Mind  
+- Substitute  
+- Focus Blast  
+
+Cinderace @ Charcoal  
+Ability: Libero  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Pyro Ball  
+- High Jump Kick  
+- U-turn  
+- Court Change  
+
+Mandibuzz @ Rocky Helmet  
+Ability: Overcoat  
+Shiny: Yes  
+Tera Type: Fairy  
+EVs: 212 HP / 240 Def / 8 SpD / 48 Spe  
+Bold Nature  
+IVs: 0 Atk  
+- Toxic  
+- Foul Play  
+- Roost  
+- Defog  
+
+Kyurem @ Choice Scarf  
+Ability: Pressure  
+Tera Type: Ground  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Draco Meteor  
+- Ice Beam  
+- Freeze-Dry  
+- Earth Power  
+
+Ting-Lu @ Weakness Policy  
+Ability: Vessel of Ruin  
+Tera Type: Steel  
+EVs: 140 HP / 252 Atk / 112 SpD / 4 Spe  
+Adamant Nature  
+- Stealth Rock  
+- Heavy Slam  
+- Stone Edge  
+- Earthquake  
+
+Manaphy @ Leftovers  
+Ability: Hydration  
+Tera Type: Poison  
+EVs: 252 HP / 28 Def / 40 SpA / 188 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Tail Glow  
+- Take Heart  
+- Scald  
+- Alluring Voice

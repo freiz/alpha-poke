@@ -1,0 +1,59 @@
+Rotom-Wash @ Rocky Helmet  
+Ability: Levitate  
+Tera Type: Steel  
+EVs: 252 HP / 4 SpA / 252 SpD  
+Calm Nature  
+- Trick  
+- Volt Switch  
+- Hydro Pump  
+- Will-O-Wisp  
+
+Torkoal @ Heat Rock  
+Ability: Drought  
+Tera Type: Ghost  
+EVs: 104 HP / 236 SpA / 168 SpD  
+Quiet Nature  
+- Stealth Rock  
+- Rapid Spin  
+- Lava Plume  
+- Body Press  
+
+Garganacl @ Leftovers  
+Ability: Purifying Salt  
+Tera Type: Water  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Salt Cure  
+- Protect  
+- Curse  
+- Recover  
+
+Arboliva @ Custap Berry  
+Ability: Harvest  
+Tera Type: Ground  
+EVs: 252 HP / 184 Def / 72 SpD  
+Modest Nature  
+- Giga Drain  
+- Endure  
+- Energy Ball  
+- Weather Ball  
+
+Ceruledge @ Life Orb  
+Ability: Weak Armor  
+Tera Type: Fighting  
+EVs: 240 Atk / 16 SpD / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Shadow Sneak  
+- Bitter Blade  
+- Poltergeist  
+
+Dragonite @ Loaded Dice  
+Ability: Multiscale  
+Tera Type: Fire  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- Dragon Dance  
+- Dragon Claw  
+- Earthquake  
+- Outrage

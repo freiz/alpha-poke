@@ -1,0 +1,61 @@
+Scizor @ Choice Band  
+Ability: Technician  
+Tera Type: Steel  
+EVs: 184 HP / 252 Atk / 8 SpD / 64 Spe  
+Jolly Nature  
+- Bullet Punch  
+- U-turn  
+- Close Combat  
+- Knock Off  
+
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Atk / 252 SpD  
+Impish Nature  
+- Earthquake  
+- Whirlwind  
+- Stealth Rock  
+- Spikes  
+
+Lokix @ Choice Band  
+Ability: Tinted Lens  
+Tera Type: Bug  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- First Impression  
+- Knock Off  
+- U-turn  
+- Leech Life  
+
+Keldeo @ Choice Specs  
+Ability: Justified  
+Tera Type: Water  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Surf  
+- Flip Turn  
+- Secret Sword  
+- Vacuum Wave  
+
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Fighting  
+EVs: 252 HP / 132 Def / 4 SpD / 120 Spe  
+Impish Nature  
+IVs: 0 Atk  
+- Iron Defense  
+- Body Press  
+- Roost  
+- Defog  
+
+Sinistcha @ Heavy-Duty Boots  
+Ability: Heatproof  
+Tera Type: Fairy  
+EVs: 252 HP / 252 Def / 4 SpA  
+Bold Nature  
+IVs: 0 Atk  
+- Strength Sap  
+- Calm Mind  
+- Shadow Ball  
+- Matcha Gotcha

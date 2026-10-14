@@ -1,0 +1,59 @@
+Ogerpon-Cornerstone @ Cornerstone Mask  
+Ability: Sturdy  
+Tera Type: Rock  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Power Whip  
+- Ivy Cudgel  
+- Knock Off  
+- Swords Dance  
+
+Great Tusk @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Close Combat  
+- Rapid Spin  
+- Ice Spinner  
+- Headlong Rush  
+
+Darkrai @ Heavy-Duty Boots  
+Ability: Bad Dreams  
+Tera Type: Poison  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Sludge Bomb  
+- Dark Pulse  
+- Focus Blast  
+- Ice Beam  
+
+Fezandipiti @ Leftovers  
+Ability: Toxic Chain  
+Tera Type: Water  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- U-turn  
+- Roost  
+- Play Rough  
+- Beat Up  
+
+Corviknight @ Rocky Helmet  
+Ability: Mirror Armor  
+Tera Type: Ghost  
+EVs: 248 HP / 8 Def / 252 SpD  
+Calm Nature  
+- Brave Bird  
+- Roost  
+- Defog  
+- U-turn  
+
+Raging Bolt @ Sitrus Berry  
+Ability: Protosynthesis  
+Tera Type: Ghost  
+EVs: 32 HP / 240 SpA / 236 Spe  
+Modest Nature  
+- Draco Meteor  
+- Volt Switch  
+- Dragon Pulse  
+- Thunderclap

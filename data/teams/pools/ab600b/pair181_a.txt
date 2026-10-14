@@ -1,0 +1,59 @@
+Zamazenta @ Leftovers  
+Ability: Dauntless Shield  
+Tera Type: Poison  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Body Press  
+- Iron Defense  
+- Crunch  
+- Heavy Slam  
+
+Kyurem @ Leftovers  
+Ability: Pressure  
+Tera Type: Poison  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Earth Power  
+- Ice Beam  
+- Freeze-Dry  
+- Substitute  
+
+Iron Treads @ Leftovers  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Earthquake  
+- Stealth Rock  
+- Rapid Spin  
+- Ice Spinner  
+
+Tornadus-Therian @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Steel  
+EVs: 252 HP / 12 Atk / 244 Spe  
+Timid Nature  
+- Bleakwind Storm  
+- Nasty Plot  
+- Knock Off  
+- Taunt  
+
+Pecharunt @ Rocky Helmet  
+Ability: Poison Puppeteer  
+Tera Type: Ghost  
+EVs: 252 HP / 4 SpA / 252 Spe  
+Timid Nature  
+- Shadow Ball  
+- Malignant Chain  
+- Recover  
+- Parting Shot  
+
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Tera Type: Water  
+EVs: 252 HP / 252 SpD / 4 Spe  
+Careful Nature  
+- Whirlwind  
+- Spikes  
+- Earthquake  
+- Ruination

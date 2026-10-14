@@ -1,0 +1,59 @@
+Garchomp @ Rocky Helmet  
+Ability: Rough Skin  
+Tera Type: Ghost  
+EVs: 252 HP / 216 Def / 40 Spe  
+Hardy Nature  
+- Dragon Tail  
+- Stealth Rock  
+- Earthquake  
+- Spikes  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Water  
+EVs: 172 HP / 228 Atk / 108 Spe  
+Adamant Nature  
+- Protect  
+- Toxic  
+- Spikes  
+- Earthquake  
+
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Tera Type: Ghost  
+EVs: 252 HP / 92 Def / 164 SpD  
+Careful Nature  
+- Stealth Rock  
+- Ruination  
+- Earthquake  
+- Whirlwind  
+
+Clefable @ Leftovers  
+Ability: Unaware  
+Tera Type: Poison  
+EVs: 252 HP / 4 SpA / 252 SpD  
+Calm Nature  
+- Thunder Wave  
+- Moonlight  
+- Moonblast  
+- Cosmic Power  
+
+Glimmora @ Red Card  
+Ability: Toxic Debris  
+Tera Type: Ghost  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Earth Power  
+- Power Gem  
+- Stealth Rock  
+- Sludge Wave  
+
+Hatterene @ Leftovers  
+Ability: Magic Bounce  
+Tera Type: Dragon  
+EVs: 248 HP / 252 Def  
+Bold Nature  
+- Pain Split  
+- Draining Kiss  
+- Mystical Fire  
+- Psychic Noise

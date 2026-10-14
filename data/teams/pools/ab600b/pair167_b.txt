@@ -1,0 +1,59 @@
+Cresselia @ Leftovers  
+Ability: Levitate  
+Tera Type: Poison  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Calm Mind  
+- Stored Power  
+- Moonblast  
+- Moonlight  
+
+Garchomp @ Life Orb  
+Ability: Rough Skin  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Def / 4 Spe  
+Impish Nature  
+- Swords Dance  
+- Fire Fang  
+- Scale Shot  
+- Earthquake  
+
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Flying  
+EVs: 248 HP / 252 Def / 8 SpD  
+Impish Nature  
+- Brave Bird  
+- Roost  
+- U-turn  
+- Body Press  
+
+Dragapult @ Choice Scarf  
+Ability: Cursed Body  
+Tera Type: Dragon  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Draco Meteor  
+- Flamethrower  
+- Will-O-Wisp  
+- Shadow Ball  
+
+Iron Moth @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Fairy  
+EVs: 124 Def / 132 SpA / 252 Spe  
+Timid Nature  
+- Fiery Dance  
+- Toxic Spikes  
+- Sludge Wave  
+- Substitute  
+
+Clefable @ Leftovers  
+Ability: Magic Guard  
+Tera Type: Ice  
+EVs: 252 HP / 236 Def / 16 SpD / 4 Spe  
+Bold Nature  
+- Knock Off  
+- Moonblast  
+- Moonlight  
+- Calm Mind

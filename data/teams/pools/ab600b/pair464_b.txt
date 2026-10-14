@@ -1,0 +1,64 @@
+Gliscor (M) @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Water  
+EVs: 252 HP / 184 Def / 72 Spe  
+Impish Nature  
+- Protect  
+- Toxic  
+- Earthquake  
+- Knock Off  
+
+Kyurem @ Heavy-Duty Boots  
+Ability: Pressure  
+Shiny: Yes  
+Tera Type: Ground  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Freeze-Dry  
+- Draco Meteor  
+- Earth Power  
+- Flash Cannon  
+
+Greninja (M) @ Focus Sash  
+Ability: Protean  
+Tera Type: Water  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Hydro Pump  
+- Dark Pulse  
+- Ice Beam  
+- Sludge Wave  
+
+Weavile (M) @ Focus Sash  
+Ability: Pressure  
+Tera Type: Dark  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Fake Out  
+- Ice Shard  
+- Triple Axel  
+- Knock Off  
+
+Weezing-Galar (M) @ Rocky Helmet  
+Ability: Levitate  
+Tera Type: Fire  
+EVs: 252 HP / 252 Def / 4 SpA  
+Bold Nature  
+IVs: 0 Atk  
+- Defog  
+- Clear Smog  
+- Strange Steam  
+- Shadow Ball  
+
+Araquanid (M) @ Heavy-Duty Boots  
+Ability: Water Bubble  
+Shiny: Yes  
+Tera Type: Water  
+EVs: 252 HP / 180 Atk / 76 SpD  
+Careful Nature  
+- Sticky Web  
+- Leech Life  
+- Liquidation  
+- Infestation

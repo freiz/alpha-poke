@@ -1,0 +1,62 @@
+Duraludon @ Eviolite  
+Ability: Light Metal  
+Tera Type: Fairy  
+EVs: 72 HP / 252 SpA / 4 SpD / 180 Spe  
+Modest Nature  
+IVs: 0 Atk  
+- Stealth Rock  
+- Draco Meteor  
+- Flash Cannon  
+- Thunder Wave  
+
+Manaphy @ Leftovers  
+Ability: Hydration  
+Tera Type: Steel  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Tail Glow  
+- Scald  
+- Alluring Voice  
+- Substitute  
+
+Rillaboom @ Life Orb  
+Ability: Grassy Surge  
+Tera Type: Grass  
+EVs: 72 HP / 252 Atk / 4 Def / 180 Spe  
+Adamant Nature  
+- Wood Hammer  
+- Grassy Glide  
+- Knock Off  
+- Swords Dance  
+
+Hatterene @ Assault Vest  
+Ability: Magic Bounce  
+Tera Type: Water  
+EVs: 252 HP / 136 SpA / 68 SpD / 52 Spe  
+Modest Nature  
+- Psyshock  
+- Draining Kiss  
+- Mystical Fire  
+- Nuzzle  
+
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Water  
+EVs: 252 HP / 220 Def / 36 Spe  
+Impish Nature  
+- High Horsepower  
+- Bulk Up  
+- Knock Off  
+- Rapid Spin  
+
+Iron Moth @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 120 HP / 132 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Fiery Dance  
+- Dazzling Gleam  
+- Substitute  
+- Sludge Wave

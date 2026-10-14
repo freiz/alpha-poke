@@ -1,0 +1,59 @@
+Dragonite @ Leftovers  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 248 HP / 108 Atk / 152 Spe  
+Adamant Nature  
+- Dragon Dance  
+- Earthquake  
+- Extreme Speed  
+- Ice Spinner  
+
+Rotom-Wash @ Leftovers  
+Ability: Levitate  
+Tera Type: Steel  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Volt Switch  
+- Will-O-Wisp  
+- Hydro Pump  
+- Thunder Wave  
+
+Empoleon @ Leftovers  
+Ability: Competitive  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Def / 252 SpA  
+Quiet Nature  
+- Surf  
+- Roost  
+- Stealth Rock  
+- Knock Off  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Electric  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Naive Nature  
+- Moonblast  
+- Close Combat  
+- Destiny Bond  
+- Knock Off  
+
+Deoxys-Speed @ Life Orb  
+Ability: Pressure  
+Tera Type: Fighting  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Shadow Ball  
+- Thunderbolt  
+- Psycho Boost  
+- Focus Blast  
+
+Blaziken @ Life Orb  
+Ability: Speed Boost  
+Tera Type: Fighting  
+EVs: 96 Atk / 160 SpA / 252 Spe  
+Naughty Nature  
+- Protect  
+- Close Combat  
+- Overheat  
+- Knock Off

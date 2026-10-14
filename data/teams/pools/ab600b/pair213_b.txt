@@ -1,0 +1,57 @@
+Zapdos @ Black Sludge  
+Ability: Static  
+Tera Type: Ice  
+EVs: 248 HP / 252 Def / 8 SpA  
+Bold Nature  
+- Agility  
+- Discharge  
+- Hurricane  
+- U-turn  
+
+Clefable @ Leftovers  
+Ability: Magic Guard  
+Tera Type: Water  
+EVs: 252 HP / 252 Def / 4 SpA  
+Bold Nature  
+- Moonblast  
+- Knock Off  
+- Moonlight  
+- Calm Mind  
+
+Blastoise @ Petaya Berry  
+Ability: Rain Dish  
+Tera Type: Grass  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Surf  
+- Dark Pulse  
+- Shell Smash  
+- Hydro Pump  
+
+Magmar @ Life Orb  
+Ability: Flame Body  
+EVs: 84 HP / 84 Atk / 84 Def / 84 SpA / 84 SpD / 84 Spe  
+Serious Nature  
+- Knock Off  
+- Flame Charge  
+- Psychic  
+
+Hitmonlee @ Psychic Seed  
+Ability: Unburden  
+Tera Type: Fighting  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Reversal  
+- Close Combat  
+- Mach Punch  
+
+Gengar @ Life Orb  
+Ability: Cursed Body  
+Tera Type: Ghost  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Hardy Nature  
+- Shadow Ball  
+- Trick  
+- Encore  
+- Dazzling Gleam

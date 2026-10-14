@@ -1,0 +1,59 @@
+Typhlosion-Hisui @ Petaya Berry  
+Ability: Frisk  
+Tera Type: Fighting  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Eruption  
+- Overheat  
+- Flamethrower  
+- Shadow Ball  
+
+Ninetales @ Heat Rock  
+Ability: Drought  
+Tera Type: Flying  
+EVs: 248 HP / 20 Def / 240 Spe  
+Timid Nature  
+- Overheat  
+- Encore  
+- Will-O-Wisp  
+- Healing Wish  
+
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Poison  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Jolly Nature  
+- Headlong Rush  
+- Stealth Rock  
+- Rapid Spin  
+- Close Combat  
+
+Walking Wake @ Wise Glasses  
+Ability: Protosynthesis  
+Tera Type: Water  
+EVs: 12 HP / 244 SpA / 252 Spe  
+Timid Nature  
+- Draco Meteor  
+- Hydro Steam  
+- Dragon Pulse  
+- Flamethrower  
+
+Hatterene @ Eject Button  
+Ability: Magic Bounce  
+Tera Type: Normal  
+EVs: 248 HP / 204 Def / 56 SpD  
+Bold Nature  
+- Draining Kiss  
+- Mystical Fire  
+- Psychic Noise  
+- Nuzzle  
+
+Slither Wing @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Fire  
+EVs: 248 HP / 176 Def / 84 Spe  
+Impish Nature  
+- Close Combat  
+- U-turn  
+- First Impression  
+- Flare Blitz

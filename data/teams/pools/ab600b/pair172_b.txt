@@ -1,0 +1,59 @@
+Tyranitar @ Air Balloon  
+Ability: Sand Stream  
+Tera Type: Flying  
+EVs: 84 HP / 252 Atk / 4 SpD / 168 Spe  
+Adamant Nature  
+- Dragon Dance  
+- Knock Off  
+- Stealth Rock  
+- Stone Edge  
+
+Ogerpon @ White Herb  
+Ability: Defiant  
+Tera Type: Grass  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Ivy Cudgel  
+- Encore  
+- U-turn  
+- Knock Off  
+
+Iron Treads @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ground  
+EVs: 252 Atk / 32 SpD / 224 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Ice Spinner  
+- Rapid Spin  
+- Earthquake  
+
+Moltres @ Heavy-Duty Boots  
+Ability: Flame Body  
+Tera Type: Fairy  
+EVs: 248 HP / 248 Def / 12 Spe  
+Bold Nature  
+- Scorching Sands  
+- Roost  
+- Flamethrower  
+- Will-O-Wisp  
+
+Iron Crown @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Fighting  
+EVs: 84 HP / 172 SpA / 252 Spe  
+Timid Nature  
+- Volt Switch  
+- Tachyon Cutter  
+- Psychic Noise  
+- Focus Blast  
+
+Volcanion @ Heavy-Duty Boots  
+Ability: Water Absorb  
+Tera Type: Grass  
+EVs: 248 HP / 144 Def / 8 SpA / 108 Spe  
+Bold Nature  
+- Flamethrower  
+- Overheat  
+- Earth Power  
+- Steam Eruption

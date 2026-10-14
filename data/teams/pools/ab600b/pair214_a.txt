@@ -1,0 +1,59 @@
+Raging Bolt @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Fairy  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Modest Nature  
+- Electric Terrain  
+- Thunderbolt  
+- Dragon Pulse  
+- Calm Mind  
+
+Iron Treads @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Flying  
+EVs: 120 HP / 128 Def / 144 SpD / 116 Spe  
+Careful Nature  
+- Ice Spinner  
+- Earthquake  
+- Rapid Spin  
+- Stealth Rock  
+
+Dragonite @ Life Orb  
+Ability: Inner Focus  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Dragon Dance  
+- Dragon Claw  
+- Extreme Speed  
+- Earthquake  
+
+Ceruledge @ Air Balloon  
+Ability: Weak Armor  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Bitter Blade  
+- Shadow Sneak  
+- Poltergeist  
+
+Iron Moth @ Power Herb  
+Ability: Quark Drive  
+Tera Type: Water  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Meteor Beam  
+- Fiery Dance  
+- Sludge Wave  
+- Energy Ball  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Moonblast  
+- Calm Mind  
+- Vacuum Wave  
+- Shadow Ball

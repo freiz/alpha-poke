@@ -1,0 +1,56 @@
+Falinks @ Leftovers  
+Ability: Defiant  
+EVs: 216 HP / 252 Atk / 16 Def / 24 SpD  
+Adamant Nature  
+- First Impression  
+- Brick Break  
+- Knock Off  
+- Agility  
+
+Chimecho  
+Ability: Levitate  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Dazzling Gleam  
+- Charge Beam  
+- Cosmic Power  
+- Heal Bell  
+
+Snorlax @ Leftovers  
+Ability: Thick Fat  
+Tera Type: Poison  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- Curse  
+- Body Slam  
+- Double-Edge  
+- Thunderbolt  
+
+Qwilfish @ Life Orb  
+Ability: Intimidate  
+EVs: 36 HP / 44 Atk / 252 Def / 176 Spe  
+Impish Nature  
+- Liquidation  
+- Swords Dance  
+- Scale Shot  
+- Thunder Wave  
+
+Sceptile @ Psychic Seed  
+Ability: Overgrow  
+Tera Type: Dragon  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Hasty Nature  
+- Leaf Blade  
+- Giga Drain  
+- Acrobatics  
+- Swords Dance  
+
+Venomoth @ Leftovers  
+Ability: Tinted Lens  
+Tera Type: Ground  
+EVs: 156 HP / 252 Def / 96 SpD  
+Bold Nature  
+- Quiver Dance  
+- Sludge Wave  
+- Bug Buzz  
+- Sludge Bomb

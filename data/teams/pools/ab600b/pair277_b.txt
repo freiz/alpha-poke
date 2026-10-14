@@ -1,0 +1,61 @@
+Pikachu-Partner (M) @ Light Ball  
+Ability: Lightning Rod  
+Tera Type: Electric  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Grass Knot  
+- Surf  
+- Volt Switch  
+- Thunderbolt  
+
+Greninja-Bond (M) @ Life Orb  
+Ability: Battle Bond  
+Tera Type: Water  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Dark Pulse  
+- Grass Knot  
+- Ice Beam  
+- Water Shuriken  
+
+Rillaboom @ Leftovers  
+Ability: Grassy Surge  
+Tera Type: Grass  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Drain Punch  
+- Drum Beating  
+- Earthquake  
+- Knock Off  
+
+Talonflame @ Heavy-Duty Boots  
+Ability: Gale Wings  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Brave Bird  
+- Flare Blitz  
+- Roost  
+- U-turn  
+
+Tinkaton (F) @ Leftovers  
+Ability: Mold Breaker  
+Tera Type: Fairy  
+EVs: 252 Atk / 4 SpA / 252 Spe  
+Hasty Nature  
+- Draining Kiss  
+- Ice Hammer  
+- Gigaton Hammer  
+- Knock Off  
+
+Goodra-Hisui @ Leftovers  
+Ability: Sap Sipper  
+Tera Type: Fairy  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+IVs: 0 Atk  
+- Draco Meteor  
+- Fire Blast  
+- Thunderbolt  
+- Sludge Bomb

@@ -1,0 +1,59 @@
+Registeel @ Leftovers  
+Ability: Clear Body  
+Tera Type: Fighting  
+EVs: 252 HP / 180 Def / 76 SpD  
+Impish Nature  
+- Thunder Wave  
+- Heavy Slam  
+- Body Press  
+- Curse  
+
+Lapras @ Leftovers  
+Ability: Water Absorb  
+Tera Type: Bug  
+EVs: 188 HP / 68 Def / 252 SpD  
+Careful Nature  
+- Whirlpool  
+- Perish Song  
+- Protect  
+- Liquidation  
+
+Landorus-Therian @ Rocky Helmet  
+Ability: Intimidate  
+Tera Type: Ground  
+EVs: 248 HP / 12 Def / 248 Spe  
+Timid Nature  
+- Stealth Rock  
+- U-turn  
+- Earth Power  
+- Earthquake  
+
+Gengar @ Air Balloon  
+Ability: Cursed Body  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Def / 252 Spe  
+Timid Nature  
+- Encore  
+- Shadow Ball  
+- Focus Blast  
+- Nasty Plot  
+
+Weezing-Galar @ Custap Berry  
+Ability: Neutralizing Gas  
+Tera Type: Steel  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Toxic  
+- Will-O-Wisp  
+- Defog  
+- Pain Split  
+
+Hydreigon @ Life Orb  
+Ability: Levitate  
+Tera Type: Steel  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Fire Blast  
+- Draco Meteor  
+- Dark Pulse  
+- Flash Cannon

@@ -1,0 +1,59 @@
+Ninetales-Alola @ Icy Rock  
+Ability: Snow Warning  
+Tera Type: Steel  
+EVs: 248 HP / 8 Def / 252 Spe  
+Timid Nature  
+- Aurora Veil  
+- Encore  
+- Blizzard  
+- Freeze-Dry  
+
+Cetitan @ Sitrus Berry  
+Ability: Thick Fat  
+Tera Type: Water  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- Belly Drum  
+- Ice Shard  
+- Liquidation  
+- Earthquake  
+
+Kyurem @ Choice Specs  
+Ability: Pressure  
+Tera Type: Ice  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Blizzard  
+- Earth Power  
+- Freeze-Dry  
+- Draco Meteor  
+
+Sandslash-Alola @ Heavy-Duty Boots  
+Ability: Slush Rush  
+Tera Type: Ghost  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Knock Off  
+- Triple Axel  
+- Rapid Spin  
+
+Moltres @ Black Sludge  
+Ability: Flame Body  
+Tera Type: Fairy  
+EVs: 252 HP / 252 SpA / 4 Spe  
+Modest Nature  
+- Hurricane  
+- Flamethrower  
+- U-turn  
+- Roost  
+
+Zamazenta @ Leftovers  
+Ability: Dauntless Shield  
+Tera Type: Steel  
+EVs: 104 HP / 152 SpD / 252 Spe  
+Jolly Nature  
+- Crunch  
+- Body Press  
+- Iron Defense  
+- Heavy Slam

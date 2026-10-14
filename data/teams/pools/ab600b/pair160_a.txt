@@ -1,0 +1,59 @@
+Kyurem @ Leftovers  
+Ability: Pressure  
+Tera Type: Ground  
+EVs: 168 Atk / 88 SpA / 252 Spe  
+Hasty Nature  
+- Protect  
+- Freeze-Dry  
+- Earth Power  
+- Icicle Spear  
+
+Rillaboom @ Life Orb  
+Ability: Grassy Surge  
+Tera Type: Grass  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Grassy Glide  
+- Wood Hammer  
+- Knock Off  
+- U-turn  
+
+Garganacl @ Leftovers  
+Ability: Purifying Salt  
+Tera Type: Water  
+EVs: 248 HP / 8 Def / 252 SpD  
+Impish Nature  
+- Stealth Rock  
+- Protect  
+- Salt Cure  
+- Recover  
+
+Slowking-Galar @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 252 HP / 4 Def / 252 SpD  
+Sassy Nature  
+- Chilly Reception  
+- Toxic  
+- Sludge Bomb  
+- Trick  
+
+Iron Treads @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Normal  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Earthquake  
+- Ice Spinner  
+- Rapid Spin  
+
+Zamazenta @ Leftovers  
+Ability: Dauntless Shield  
+Tera Type: Electric  
+EVs: 4 Atk / 252 Def / 252 Spe  
+Jolly Nature  
+- Roar  
+- Crunch  
+- Body Press  
+- Iron Defense

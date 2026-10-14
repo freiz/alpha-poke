@@ -1,0 +1,59 @@
+Lokix @ Life Orb  
+Ability: Tinted Lens  
+Tera Type: Bug  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Knock Off  
+- Swords Dance  
+- Leech Life  
+- U-turn  
+
+Galvantula @ Focus Sash  
+Ability: Compound Eyes  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Thunder  
+- Volt Switch  
+- Sticky Web  
+- Energy Ball  
+
+Kleavor @ Grassy Seed  
+Ability: Sharpness  
+Tera Type: Flying  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Night Slash  
+- Stone Axe  
+- U-turn  
+- Swords Dance  
+
+Scizor @ Sitrus Berry  
+Ability: Technician  
+Tera Type: Steel  
+EVs: 120 HP / 252 Atk / 136 Spe  
+Adamant Nature  
+- U-turn  
+- Bullet Punch  
+- Swords Dance  
+- Knock Off  
+
+Forretress @ Rocky Helmet  
+Ability: Sturdy  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Def / 4 SpD  
+Relaxed Nature  
+- Spikes  
+- Volt Switch  
+- Body Press  
+- Rapid Spin  
+
+Ribombee @ Focus Sash  
+Ability: Honey Gather  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Psychic Noise  
+- Sticky Web  
+- Moonblast  
+- Stun Spore

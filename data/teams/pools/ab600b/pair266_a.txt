@@ -1,0 +1,63 @@
+Hoopa-Unbound @ Assault Vest  
+Ability: Magician  
+Tera Type: Fighting  
+EVs: 248 HP / 60 Atk / 200 SpA  
+Quiet Nature  
+- Knock Off  
+- Psychic Noise  
+- Thunderbolt  
+- Drain Punch  
+
+Garchomp (M) @ Rocky Helmet  
+Ability: Rough Skin  
+Shiny: Yes  
+Tera Type: Water  
+EVs: 252 HP / 216 Def / 40 Spe  
+Impish Nature  
+- Earthquake  
+- Dragon Tail  
+- Stealth Rock  
+- Spikes  
+
+Iron Treads @ Assault Vest  
+Ability: Quark Drive  
+Shiny: Yes  
+Tera Type: Fairy  
+EVs: 252 HP / 80 Atk / 176 SpD  
+Adamant Nature  
+- Iron Head  
+- Rapid Spin  
+- Ice Spinner  
+- Earthquake  
+
+Slowking-Galar (M) @ Heavy-Duty Boots  
+Ability: Regenerator  
+Shiny: Yes  
+Tera Type: Water  
+EVs: 252 HP / 16 Def / 240 SpD  
+Sassy Nature  
+IVs: 0 Atk / 0 Spe  
+- Ice Beam  
+- Chilly Reception  
+- Sludge Bomb  
+- Future Sight  
+
+Corviknight (M) @ Leftovers  
+Ability: Pressure  
+Tera Type: Dragon  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Body Press  
+- U-turn  
+- Roost  
+- Iron Defense  
+
+Dragapult @ Heavy-Duty Boots  
+Ability: Infiltrator  
+Tera Type: Fairy  
+EVs: 76 Atk / 180 SpA / 252 Spe  
+Hasty Nature  
+- Dragon Darts  
+- Hex  
+- Will-O-Wisp  
+- Sucker Punch

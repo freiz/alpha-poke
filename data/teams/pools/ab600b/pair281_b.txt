@@ -1,0 +1,59 @@
+Ceruledge @ Air Balloon  
+Ability: Flash Fire  
+Tera Type: Grass  
+EVs: 152 HP / 252 Atk / 104 Spe  
+Adamant Nature  
+- Shadow Sneak  
+- Bitter Blade  
+- Night Slash  
+- Swords Dance  
+
+Bellibolt @ Heavy-Duty Boots  
+Ability: Electromorphosis  
+Tera Type: Flying  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Parabolic Charge  
+- Slack Off  
+- Toxic  
+- Thunderbolt  
+
+Landorus-Therian @ Choice Scarf  
+Ability: Intimidate  
+Tera Type: Water  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Crunch  
+- Stealth Rock  
+- U-turn  
+- Stone Edge  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Dark  
+EVs: 244 HP / 12 Def / 252 SpD  
+Careful Nature  
+- Protect  
+- Spikes  
+- Toxic  
+- Knock Off  
+
+Mamoswine @ Leftovers  
+Ability: Thick Fat  
+Tera Type: Ice  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Earthquake  
+- Ice Shard  
+- Icicle Crash  
+- Freeze-Dry  
+
+Ninetales-Alola @ Light Clay  
+Ability: Snow Warning  
+Tera Type: Water  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Encore  
+- Aurora Veil  
+- Snowscape  
+- Freeze-Dry

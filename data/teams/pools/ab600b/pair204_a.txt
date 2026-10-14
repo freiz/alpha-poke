@@ -1,0 +1,59 @@
+Hydreigon @ Chople Berry  
+Ability: Levitate  
+Tera Type: Dragon  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Nasty Plot  
+- Flash Cannon  
+- Dark Pulse  
+- Earth Power  
+
+Gholdengo @ Covert Cloak  
+Ability: Good as Gold  
+Tera Type: Water  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Trick  
+- Make It Rain  
+- Shadow Ball  
+- Thunder Wave  
+
+Dragapult @ Heavy-Duty Boots  
+Ability: Cursed Body  
+Tera Type: Dragon  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Naive Nature  
+- Dragon Darts  
+- Thunder Wave  
+- Hex  
+- U-turn  
+
+Cresselia @ Eject Button  
+Ability: Levitate  
+Tera Type: Fairy  
+EVs: 248 HP / 252 Def / 8 SpD  
+Bold Nature  
+- Psychic  
+- Moonblast  
+- Calm Mind  
+- Moonlight  
+
+Garchomp @ Life Orb  
+Ability: Rough Skin  
+Tera Type: Fire  
+EVs: 252 HP / 216 Def / 40 Spe  
+Impish Nature  
+- Scale Shot  
+- Spikes  
+- Swords Dance  
+- Earthquake  
+
+Great Tusk @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Ground  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Ice Spinner  
+- Headlong Rush  
+- Stealth Rock  
+- Knock Off

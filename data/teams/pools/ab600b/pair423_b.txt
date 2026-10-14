@@ -1,0 +1,65 @@
+Magmortar @ Choice Specs  
+Ability: Flame Body  
+Shiny: Yes  
+Tera Type: Grass  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Thunderbolt  
+- Scorching Sands  
+- Flamethrower  
+- Focus Blast  
+
+Alomomola @ Heavy-Duty Boots  
+Ability: Regenerator  
+Shiny: Yes  
+Tera Type: Fairy  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Wish  
+- Play Rough  
+- Scald  
+- Flip Turn  
+
+Slowking-Galar @ Heavy-Duty Boots  
+Ability: Regenerator  
+Shiny: Yes  
+Tera Type: Water  
+EVs: 252 HP / 4 SpA / 252 SpD  
+Sassy Nature  
+IVs: 0 Atk / 0 Spe  
+- Future Sight  
+- Chilly Reception  
+- Sludge Bomb  
+- Ice Beam  
+
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Shiny: Yes  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Def / 252 SpD  
+Impish Nature  
+- Stealth Rock  
+- Spikes  
+- Earthquake  
+- Whirlwind  
+
+Great Tusk @ Heavy-Duty Boots  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Knock Off  
+- Ice Spinner  
+- Headlong Rush  
+
+Zamazenta @ Choice Band  
+Ability: Dauntless Shield  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Close Combat  
+- Crunch  
+- Ice Fang  
+- Stone Edge

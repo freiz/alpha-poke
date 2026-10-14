@@ -1,0 +1,59 @@
+Serperior @ Leftovers  
+Ability: Contrary  
+Tera Type: Ground  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Modest Nature  
+- Leaf Storm  
+- Dragon Pulse  
+- Glare  
+- Giga Drain  
+
+Corviknight @ Leftovers  
+Ability: Pressure  
+Tera Type: Dark  
+EVs: 248 HP / 8 Def / 252 SpD  
+Careful Nature  
+- Brave Bird  
+- Iron Defense  
+- Body Press  
+- Roost  
+
+Pelipper @ Damp Rock  
+Ability: Drizzle  
+Tera Type: Ground  
+EVs: 248 HP / 252 Def / 8 SpA  
+Relaxed Nature  
+- U-turn  
+- Ice Beam  
+- Hurricane  
+- Weather Ball  
+
+Overqwil @ Life Orb  
+Ability: Swift Swim  
+Tera Type: Water  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Barb Barrage  
+- Toxic  
+- Liquidation  
+- Crunch  
+
+Gastrodon-East @ Leftovers  
+Ability: Storm Drain  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Def / 252 SpA  
+Modest Nature  
+- Muddy Water  
+- Sludge Bomb  
+- Recover  
+- Earth Power  
+
+Electivire @ Air Balloon  
+Ability: Motor Drive  
+Tera Type: Flying  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Ice Punch  
+- Supercell Slam  
+- Knock Off  
+- Bulk Up

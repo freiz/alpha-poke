@@ -1,0 +1,62 @@
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Flying  
+EVs: 236 HP / 252 Atk / 20 Spe  
+Adamant Nature  
+- Swords Dance  
+- Kowtow Cleave  
+- Sucker Punch  
+- Low Kick  
+
+Ogerpon-Wellspring (F) @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Spikes  
+- Encore  
+- Ivy Cudgel  
+- Wood Hammer  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Fairy  
+EVs: 252 HP / 196 Def / 60 Spe  
+Bold Nature  
+IVs: 0 Atk  
+- Shadow Ball  
+- Dazzling Gleam  
+- Nasty Plot  
+- Recover  
+
+Great Tusk @ Heavy-Duty Boots  
+Ability: Protosynthesis  
+Tera Type: Water  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Headlong Rush  
+- Stealth Rock  
+- Knock Off  
+- Rapid Spin  
+
+Toxapex @ Leftovers  
+Ability: Regenerator  
+Tera Type: Steel  
+EVs: 252 HP / 84 Def / 172 SpD  
+Calm Nature  
+IVs: 0 Atk  
+- Surf  
+- Recover  
+- Toxic  
+- Haze  
+
+Zapdos @ Heavy-Duty Boots  
+Ability: Static  
+Tera Type: Steel  
+EVs: 104 HP / 252 SpA / 152 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Roost  
+- Hurricane  
+- Discharge  
+- Volt Switch

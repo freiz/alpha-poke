@@ -1,0 +1,59 @@
+Sableye @ Eject Button  
+Ability: Prankster  
+Tera Type: Fairy  
+EVs: 252 HP / 252 Def / 4 Spe  
+Bold Nature  
+- Knock Off  
+- Recover  
+- Will-O-Wisp  
+- Foul Play  
+
+Heatran @ Leftovers  
+Ability: Flash Fire  
+Tera Type: Flying  
+EVs: 252 HP / 4 Def / 212 SpD / 40 Spe  
+Calm Nature  
+- Stealth Rock  
+- Earth Power  
+- Magma Storm  
+- Will-O-Wisp  
+
+Chesnaught @ Rocky Helmet  
+Ability: Bulletproof  
+Tera Type: Fire  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Knock Off  
+- Iron Defense  
+- Spikes  
+- Body Press  
+
+Dragonite @ Heavy-Duty Boots  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Roost  
+- Extreme Speed  
+- Dragon Dance  
+- Earthquake  
+
+Slowking-Galar @ Black Sludge  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 248 HP / 124 Def / 136 SpD  
+Sassy Nature  
+- Chilly Reception  
+- Psychic Noise  
+- Sludge Bomb  
+- Future Sight  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Water  
+EVs: 244 HP / 12 Def / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Earthquake  
+- Knock Off  
+- Protect

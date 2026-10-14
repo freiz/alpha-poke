@@ -1,0 +1,59 @@
+Glastrier @ Leftovers  
+Ability: Chilling Neigh  
+Tera Type: Dragon  
+EVs: 248 HP / 252 Atk / 8 SpD  
+Brave Nature  
+- High Horsepower  
+- Avalanche  
+- Close Combat  
+- Icicle Crash  
+
+Tornadus-Therian @ Life Orb  
+Ability: Regenerator  
+Tera Type: Steel  
+EVs: 28 HP / 4 Atk / 132 SpA / 92 SpD / 252 Spe  
+Timid Nature  
+- Hurricane  
+- Nasty Plot  
+- U-turn  
+- Heat Wave  
+
+Corviknight @ Rocky Helmet  
+Ability: Mirror Armor  
+Tera Type: Dragon  
+EVs: 136 HP / 252 Def / 120 Spe  
+Bold Nature  
+- U-turn  
+- Roost  
+- Defog  
+- Brave Bird  
+
+Cinderace @ Focus Sash  
+Ability: Libero  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Pyro Ball  
+- Court Change  
+- Will-O-Wisp  
+
+Darkrai @ Roseli Berry  
+Ability: Bad Dreams  
+Tera Type: Poison  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Focus Blast  
+- Nasty Plot  
+- Will-O-Wisp  
+- Ice Beam  
+
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Jolly Nature  
+- Headlong Rush  
+- Ice Spinner  
+- Rapid Spin  
+- Taunt

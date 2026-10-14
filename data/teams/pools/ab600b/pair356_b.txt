@@ -1,0 +1,58 @@
+Toxicroak @ Rocky Helmet  
+Ability: Anticipation  
+Tera Type: Ground  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Drain Punch  
+- Earthquake  
+- Encore  
+- Knock Off  
+
+Slowking-Galar @ Black Sludge  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Thunder Wave  
+- Ice Beam  
+- Trick  
+- Future Sight  
+
+Iron Treads @ Earth Plate  
+Ability: Quark Drive  
+Tera Type: Water  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Ice Spinner  
+- Stealth Rock  
+- Earthquake  
+
+Alomomola @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Poison  
+EVs: 12 HP / 244 Def / 252 SpD  
+Relaxed Nature  
+- Wish  
+- Flip Turn  
+- Scald  
+- Protect  
+
+Moltres-Galar @ Sitrus Berry  
+Ability: Berserk  
+Tera Type: Ghost  
+EVs: 248 HP / 152 SpA / 108 SpD  
+Modest Nature  
+- Agility  
+- Fiery Wrath  
+- Air Slash  
+- Nasty Plot  
+
+Altaria @ Leftovers  
+Ability: Cloud Nine  
+EVs: 252 HP / 164 Def / 92 Spe  
+Impish Nature  
+- Roost  
+- Cotton Guard  
+- Flamethrower  
+- Earthquake

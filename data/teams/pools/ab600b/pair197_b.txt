@@ -1,0 +1,59 @@
+Salamence @ Choice Scarf  
+Ability: Moxie  
+Tera Type: Dragon  
+EVs: 232 HP / 132 Atk / 72 Def / 72 SpD  
+Adamant Nature  
+- Dual Wingbeat  
+- Outrage  
+- Dragon Claw  
+- Earthquake  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Fairy  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Moonblast  
+- Close Combat  
+- Vacuum Wave  
+
+Garchomp @ Rocky Helmet  
+Ability: Rough Skin  
+Tera Type: Ghost  
+EVs: 252 HP / 216 Def / 40 Spe  
+Impish Nature  
+- Spikes  
+- Earthquake  
+- Dragon Tail  
+- Stealth Rock  
+
+Rotom-Wash @ Leftovers  
+Ability: Levitate  
+Tera Type: Fairy  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+- Will-O-Wisp  
+- Volt Switch  
+- Hydro Pump  
+- Pain Split  
+
+Great Tusk @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Ice  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Headlong Rush  
+- Close Combat  
+- Knock Off  
+
+Lokix @ Choice Band  
+Ability: Tinted Lens  
+Tera Type: Bug  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- First Impression  
+- Knock Off  
+- U-turn  
+- Leech Life

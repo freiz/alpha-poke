@@ -1,0 +1,59 @@
+Heatran @ Leftovers  
+Ability: Flash Fire  
+Tera Type: Bug  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Magma Storm  
+- Earth Power  
+- Taunt  
+- Protect  
+
+Garganacl @ Leftovers  
+Ability: Purifying Salt  
+Tera Type: Water  
+EVs: 252 HP / 52 Def / 204 SpD  
+Careful Nature  
+- Salt Cure  
+- Protect  
+- Recover  
+- Stealth Rock  
+
+Quagsire @ Leftovers  
+Ability: Unaware  
+Tera Type: Fairy  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Spikes  
+- Earthquake  
+- Recover  
+- Toxic  
+
+Gholdengo @ Rocky Helmet  
+Ability: Good as Gold  
+Tera Type: Fighting  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Make It Rain  
+- Thunder Wave  
+- Hex  
+- Shadow Ball  
+
+Meowscarada @ Choice Scarf  
+Ability: Protean  
+Tera Type: Ghost  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Flower Trick  
+- Triple Axel  
+- Knock Off  
+
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Dragon  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- Iron Defense  
+- U-turn  
+- Roost  
+- Body Press

@@ -1,0 +1,59 @@
+Iron Crown @ Choice Scarf  
+Ability: Quark Drive  
+Tera Type: Steel  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Tachyon Cutter  
+- Future Sight  
+- Volt Switch  
+- Focus Blast  
+
+Meowscarada @ Choice Scarf  
+Ability: Protean  
+Tera Type: Ghost  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Flower Trick  
+- Triple Axel  
+- Knock Off  
+- U-turn  
+
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Poison  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Ice Spinner  
+- Headlong Rush  
+- Knock Off  
+- Rapid Spin  
+
+Pecharunt @ Heavy-Duty Boots  
+Ability: Poison Puppeteer  
+Tera Type: Fairy  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Malignant Chain  
+- Shadow Ball  
+- Toxic  
+- Parting Shot  
+
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Tera Type: Poison  
+EVs: 252 HP / 4 Atk / 252 Def  
+Relaxed Nature  
+- Stealth Rock  
+- Ruination  
+- Whirlwind  
+- Earthquake  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Moonblast  
+- Close Combat  
+- Knock Off  
+- Thunderbolt

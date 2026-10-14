@@ -1,0 +1,59 @@
+Slowking-Galar @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 252 HP / 252 SpD  
+Calm Nature  
+- Chilly Reception  
+- Sludge Bomb  
+- Future Sight  
+- Psychic Noise  
+
+Tornadus-Therian @ Assault Vest  
+Ability: Regenerator  
+Tera Type: Normal  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Knock Off  
+- U-turn  
+- Bleakwind Storm  
+- Heat Wave  
+
+Cinderace @ Life Orb  
+Ability: Blaze  
+Tera Type: Ghost  
+EVs: 224 HP / 36 Atk / 248 Spe  
+Jolly Nature  
+- U-turn  
+- Will-O-Wisp  
+- Pyro Ball  
+- Court Change  
+
+Lokix @ Silver Powder  
+Ability: Tinted Lens  
+Tera Type: Bug  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- U-turn  
+- First Impression  
+- Knock Off  
+- Leech Life  
+
+Hydrapple @ Life Orb  
+Ability: Regenerator  
+Tera Type: Poison  
+EVs: 252 HP / 240 Def / 16 Spe  
+Bold Nature  
+- Leaf Storm  
+- Nasty Plot  
+- Fickle Beam  
+- Draco Meteor  
+
+Great Tusk @ Rocky Helmet  
+Ability: Protosynthesis  
+Tera Type: Fire  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Stealth Rock  
+- Headlong Rush  
+- Ice Spinner

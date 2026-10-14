@@ -1,0 +1,59 @@
+Skeledirge @ Leftovers  
+Ability: Unaware  
+Tera Type: Grass  
+EVs: 252 HP / 252 Def / 4 Spe  
+Bold Nature  
+- Torch Song  
+- Shadow Ball  
+- Slack Off  
+- Hex  
+
+Mamoswine @ Choice Band  
+Ability: Thick Fat  
+Tera Type: Ice  
+EVs: 252 Atk / 4 SpA / 252 Spe  
+Lonely Nature  
+- Trailblaze  
+- Ice Shard  
+- Earthquake  
+- Icicle Crash  
+
+Jirachi @ Leftovers  
+Ability: Serene Grace  
+Tera Type: Steel  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Wish  
+- Iron Head  
+- Stealth Rock  
+- U-turn  
+
+Hatterene @ Leftovers  
+Ability: Magic Bounce  
+Tera Type: Electric  
+EVs: 248 HP / 204 Def / 56 Spe  
+Bold Nature  
+- Psychic Noise  
+- Draining Kiss  
+- Psyshock  
+- Calm Mind  
+
+Electrode-Hisui @ Expert Belt  
+Ability: Aftermath  
+Tera Type: Grass  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Thunder Wave  
+- Taunt  
+- Leaf Storm  
+- Volt Switch  
+
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Ivy Cudgel  
+- Swords Dance  
+- Knock Off  
+- U-turn

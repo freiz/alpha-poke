@@ -1,0 +1,59 @@
+Garchomp @ Loaded Dice  
+Ability: Rough Skin  
+Tera Type: Poison  
+EVs: 248 HP / 216 Def / 44 Spe  
+Impish Nature  
+- Scale Shot  
+- Swords Dance  
+- Earthquake  
+- Poison Jab  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Moonblast  
+- Knock Off  
+- Thunderbolt  
+- Close Combat  
+
+Iron Treads @ Leftovers  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Ice Spinner  
+- Stealth Rock  
+- Earthquake  
+- Rapid Spin  
+
+Moltres @ Heavy-Duty Boots  
+Ability: Flame Body  
+Tera Type: Water  
+EVs: 248 HP / 248 Def / 12 Spe  
+Bold Nature  
+- Roost  
+- U-turn  
+- Flamethrower  
+- Roar  
+
+Slowking-Galar @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 252 HP / 4 Def / 252 SpD  
+Calm Nature  
+- Chilly Reception  
+- Future Sight  
+- Sludge Bomb  
+- Ice Beam  
+
+Raging Bolt @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Fairy  
+EVs: 248 HP / 252 SpA / 8 Spe  
+Modest Nature  
+- Dragon Pulse  
+- Thunderbolt  
+- Thunderclap  
+- Draco Meteor

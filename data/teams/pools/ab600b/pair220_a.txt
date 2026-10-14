@@ -1,0 +1,59 @@
+Glimmora @ Focus Sash  
+Ability: Toxic Debris  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Def / 4 Spe  
+Bold Nature  
+- Stealth Rock  
+- Spikes  
+- Power Gem  
+- Earth Power  
+
+Dragapult @ Heavy-Duty Boots  
+Ability: Infiltrator  
+Tera Type: Fairy  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Hex  
+- Draco Meteor  
+- Will-O-Wisp  
+- Dragon Darts  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Water  
+EVs: 252 HP / 4 Atk / 252 Def  
+Impish Nature  
+- Toxic  
+- Spikes  
+- Protect  
+- Earthquake  
+
+Zapdos @ Heavy-Duty Boots  
+Ability: Static  
+Tera Type: Steel  
+EVs: 248 HP / 252 Def / 8 SpA  
+Bold Nature  
+- Discharge  
+- Heat Wave  
+- Hurricane  
+- Roost  
+
+Meowscarada @ Choice Scarf  
+Ability: Protean  
+Tera Type: Dark  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Triple Axel  
+- Knock Off  
+- U-turn  
+- Flower Trick  
+
+Swampert @ Leftovers  
+Ability: Torrent  
+Tera Type: Fairy  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Earthquake  
+- Brick Break  
+- Bulk Up  
+- Flip Turn

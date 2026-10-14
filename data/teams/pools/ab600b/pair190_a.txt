@@ -1,0 +1,59 @@
+Meloetta @ Assault Vest  
+Ability: Serene Grace  
+Tera Type: Fairy  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+- Swords Dance  
+- Triple Axel  
+- Relic Song  
+- U-turn  
+
+Meowscarada @ Life Orb  
+Ability: Protean  
+Tera Type: Grass  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Flower Trick  
+- Triple Axel  
+- U-turn  
+
+Corviknight @ Leftovers  
+Ability: Mirror Armor  
+Tera Type: Fighting  
+EVs: 248 HP / 252 Def / 8 SpD  
+Bold Nature  
+- U-turn  
+- Drill Peck  
+- Iron Defense  
+- Brave Bird  
+
+Slowking @ Leftovers  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 252 HP / 252 SpD  
+Sassy Nature  
+- Psychic  
+- Chilly Reception  
+- Scald  
+- Future Sight  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Moonblast  
+- Destiny Bond  
+- Knock Off  
+- Encore  
+
+Infernape @ Life Orb  
+Ability: Blaze  
+Tera Type: Fire  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Hasty Nature  
+- Mach Punch  
+- Stealth Rock  
+- Fire Punch  
+- Vacuum Wave

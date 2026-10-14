@@ -1,0 +1,59 @@
+Hatterene @ Assault Vest  
+Ability: Magic Bounce  
+Tera Type: Fairy  
+EVs: 252 HP / 100 SpA / 156 SpD  
+Modest Nature  
+- Psychic Noise  
+- Mystical Fire  
+- Draining Kiss  
+- Nuzzle  
+
+Slowking-Galar @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 252 HP / 8 Def / 152 SpA / 96 SpD  
+Modest Nature  
+- Future Sight  
+- Sludge Bomb  
+- Chilly Reception  
+- Ice Beam  
+
+Raging Bolt @ Life Orb  
+Ability: Protosynthesis  
+Tera Type: Bug  
+EVs: 148 HP / 252 SpA / 104 Spe  
+Modest Nature  
+- Volt Switch  
+- Draco Meteor  
+- Thunderbolt  
+- Dragon Pulse  
+
+Great Tusk @ Assault Vest  
+Ability: Protosynthesis  
+Tera Type: Fighting  
+EVs: 96 HP / 92 Atk / 160 SpD / 160 Spe  
+Adamant Nature  
+- Rapid Spin  
+- Stealth Rock  
+- Headlong Rush  
+- Ice Spinner  
+
+Zapdos @ Rocky Helmet  
+Ability: Static  
+Tera Type: Grass  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Heat Wave  
+- Roost  
+- Volt Switch  
+- Hurricane  
+
+Meowscarada @ Life Orb  
+Ability: Protean  
+Tera Type: Grass  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- U-turn  
+- Flower Trick  
+- Triple Axel

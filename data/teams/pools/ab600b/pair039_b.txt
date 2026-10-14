@@ -1,0 +1,59 @@
+Iron Hands @ Quick Claw  
+Ability: Quark Drive  
+Tera Type: Flying  
+EVs: 4 HP / 252 Atk / 252 SpD  
+Adamant Nature  
+- Supercell Slam  
+- Ice Punch  
+- Swords Dance  
+- Drain Punch  
+
+Mamoswine @ Choice Band  
+Ability: Thick Fat  
+Tera Type: Ice  
+EVs: 252 Atk / 4 SpA / 252 Spe  
+Lonely Nature  
+- Icicle Crash  
+- Earthquake  
+- Ice Shard  
+- Icicle Spear  
+
+Hatterene @ Focus Sash  
+Ability: Magic Bounce  
+Tera Type: Steel  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+- Psychic Noise  
+- Healing Wish  
+- Trick Room  
+- Nuzzle  
+
+Rotom-Wash @ Light Clay  
+Ability: Levitate  
+Tera Type: Poison  
+EVs: 252 HP / 212 Def / 44 Spe  
+Bold Nature  
+- Volt Switch  
+- Light Screen  
+- Hydro Pump  
+- Reflect  
+
+Blaziken @ Leftovers  
+Ability: Speed Boost  
+Tera Type: Fighting  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Protect  
+- Blaze Kick  
+- Swords Dance  
+- Close Combat  
+
+Ceruledge @ Focus Sash  
+Ability: Weak Armor  
+Tera Type: Fairy  
+EVs: 252 HP / 200 Def / 56 Spe  
+Adamant Nature  
+- Bitter Blade  
+- Poltergeist  
+- Swords Dance  
+- Shadow Sneak

@@ -1,0 +1,59 @@
+Rillaboom @ Life Orb  
+Ability: Grassy Surge  
+Tera Type: Grass  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Knock Off  
+- Grassy Glide  
+- Swords Dance  
+- U-turn  
+
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Ivy Cudgel  
+- Play Rough  
+- U-turn  
+
+Tauros-Paldea-Blaze @ Leftovers  
+Ability: Intimidate  
+Tera Type: Poison  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Earthquake  
+- Will-O-Wisp  
+- Raging Bull  
+- Bulk Up  
+
+Muk-Alola @ Leftovers  
+Ability: Poison Touch  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Atk / 252 SpD  
+Careful Nature  
+- Shadow Sneak  
+- Ice Punch  
+- Poison Jab  
+- Drain Punch  
+
+Raging Bolt @ Grassy Seed  
+Ability: Protosynthesis  
+Tera Type: Ghost  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Modest Nature  
+- Calm Mind  
+- Dragon Pulse  
+- Thunderclap  
+- Draco Meteor  
+
+Iron Treads @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Steel Beam  
+- Earth Power  
+- Stealth Rock  
+- Earthquake

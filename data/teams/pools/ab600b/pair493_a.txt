@@ -1,0 +1,59 @@
+Meowscarada @ Choice Scarf  
+Ability: Protean  
+Tera Type: Dark  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Knock Off  
+- Triple Axel  
+- Flower Trick  
+
+Iron Treads @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 156 HP / 64 Atk / 96 SpD / 192 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Knock Off  
+- Earthquake  
+- Stealth Rock  
+
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Tera Type: Water  
+EVs: 252 HP / 4 Atk / 252 SpD  
+Sassy Nature  
+- Ruination  
+- Earthquake  
+- Whirlwind  
+- Stealth Rock  
+
+Dragapult @ Choice Specs  
+Ability: Infiltrator  
+Tera Type: Ghost  
+EVs: 108 Atk / 160 SpA / 240 Spe  
+Hasty Nature  
+- Surf  
+- Shadow Ball  
+- Draco Meteor  
+- Dragon Darts  
+
+Clodsire @ Leftovers  
+Ability: Unaware  
+Tera Type: Steel  
+EVs: 252 HP / 252 SpD / 4 Spe  
+Careful Nature  
+- Stealth Rock  
+- Toxic  
+- Earthquake  
+- Poison Jab  
+
+Alomomola @ Assault Vest  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Aqua Jet  
+- Flip Turn  
+- Play Rough  
+- Scald

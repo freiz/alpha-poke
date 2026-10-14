@@ -1,0 +1,59 @@
+Iron Moth @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 124 Def / 132 SpA / 252 Spe  
+Timid Nature  
+- Substitute  
+- Fiery Dance  
+- Sludge Wave  
+- Energy Ball  
+
+Great Tusk @ Rocky Helmet  
+Ability: Protosynthesis  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Headlong Rush  
+- Ice Spinner  
+- Rapid Spin  
+
+Primarina @ Leftovers  
+Ability: Torrent  
+Tera Type: Poison  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+- Substitute  
+- Calm Mind  
+- Psychic Noise  
+- Draining Kiss  
+
+Iron Crown @ Assault Vest  
+Ability: Quark Drive  
+Tera Type: Steel  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Psychic Noise  
+- Focus Blast  
+- Tachyon Cutter  
+- Future Sight  
+
+Meowscarada @ Choice Band  
+Ability: Protean  
+Tera Type: Grass  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Knock Off  
+- Flower Trick  
+- Triple Axel  
+
+Dragonite @ Heavy-Duty Boots  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Earthquake  
+- Ice Spinner  
+- Roost  
+- Dragon Dance

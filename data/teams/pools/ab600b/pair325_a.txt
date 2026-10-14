@@ -1,0 +1,59 @@
+Walking Wake @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Water  
+EVs: 12 HP / 244 SpA / 252 Spe  
+Timid Nature  
+- Hydro Steam  
+- Draco Meteor  
+- Flamethrower  
+- Substitute  
+
+Rillaboom @ Leftovers  
+Ability: Grassy Surge  
+Tera Type: Steel  
+EVs: 176 HP / 252 Atk / 80 Spe  
+Adamant Nature  
+- Drum Beating  
+- Protect  
+- Swords Dance  
+- Wood Hammer  
+
+Skeledirge @ Leftovers  
+Ability: Unaware  
+Tera Type: Fairy  
+EVs: 248 HP / 8 Def / 252 SpD  
+Calm Nature  
+- Will-O-Wisp  
+- Torch Song  
+- Slack Off  
+- Shadow Ball  
+
+Azelf @ Focus Sash  
+Ability: Levitate  
+Tera Type: Fairy  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Nasty Plot  
+- Psychic  
+- Thunderbolt  
+- Dazzling Gleam  
+
+Iron Treads @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ground  
+EVs: 156 HP / 64 Atk / 96 SpD / 192 Spe  
+Jolly Nature  
+- High Horsepower  
+- Iron Head  
+- Rapid Spin  
+- Stealth Rock  
+
+Iron Hands @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ice  
+EVs: 64 Atk / 192 Def / 252 SpD  
+Careful Nature  
+- Fake Out  
+- Drain Punch  
+- Ice Punch  
+- Supercell Slam

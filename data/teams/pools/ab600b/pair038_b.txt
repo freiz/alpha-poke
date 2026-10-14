@@ -1,0 +1,59 @@
+Darkrai @ Life Orb  
+Ability: Bad Dreams  
+Tera Type: Dark  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Sludge Bomb  
+- Dark Pulse  
+- Focus Blast  
+- Will-O-Wisp  
+
+Weezing-Galar @ Leftovers  
+Ability: Neutralizing Gas  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Will-O-Wisp  
+- Pain Split  
+- Strange Steam  
+- Defog  
+
+Lokix @ Life Orb  
+Ability: Tinted Lens  
+Tera Type: Bug  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- First Impression  
+- U-turn  
+- Knock Off  
+- Leech Life  
+
+Slowking-Galar @ Shuca Berry  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 248 HP / 8 Def / 252 SpD  
+Sassy Nature  
+- Psychic Noise  
+- Ice Beam  
+- Sludge Bomb  
+- Chilly Reception  
+
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Tera Type: Water  
+EVs: 248 HP / 252 SpD / 8 Spe  
+Careful Nature  
+- Stealth Rock  
+- Ruination  
+- Earthquake  
+- Whirlwind  
+
+Zapdos @ Leftovers  
+Ability: Static  
+Tera Type: Fairy  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Roost  
+- Heat Wave  
+- Volt Switch  
+- Thunder Wave

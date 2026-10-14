@@ -1,0 +1,59 @@
+Komala @ Heavy-Duty Boots  
+Ability: Comatose  
+Tera Type: Dark  
+EVs: 156 HP / 252 Atk / 84 SpD / 16 Spe  
+Adamant Nature  
+- Knock Off  
+- Wish  
+- Protect  
+- Rapid Spin  
+
+Blissey @ Leftovers  
+Ability: Natural Cure  
+Tera Type: Dark  
+EVs: 252 HP / 4 SpA / 252 SpD  
+Calm Nature  
+- Shadow Ball  
+- Soft-Boiled  
+- Seismic Toss  
+- Calm Mind  
+
+Dondozo @ Leftovers  
+Ability: Unaware  
+Tera Type: Dark  
+EVs: 216 Atk / 252 Def / 40 Spe  
+Impish Nature  
+- Curse  
+- Body Press  
+- Sleep Talk  
+- Rest  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Fairy  
+EVs: 244 HP / 12 Def / 252 SpD  
+Careful Nature  
+- Protect  
+- Knock Off  
+- Toxic  
+- Spikes  
+
+Clefable @ Heavy-Duty Boots  
+Ability: Magic Guard  
+Tera Type: Dark  
+EVs: 252 HP / 248 Def / 8 Spe  
+Bold Nature  
+- Protect  
+- Wish  
+- Moonblast  
+- Stealth Rock  
+
+Toxapex @ Leftovers  
+Ability: Regenerator  
+Tera Type: Flying  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Toxic  
+- Baneful Bunker  
+- Recover  
+- Haze

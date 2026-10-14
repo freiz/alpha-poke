@@ -1,0 +1,59 @@
+Charizard @ Sitrus Berry  
+Ability: Solar Power  
+Tera Type: Fire  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Flamethrower  
+- Substitute  
+- Air Slash  
+- Weather Ball  
+
+Sceptile @ Psychic Seed  
+Ability: Overgrow  
+Tera Type: Dragon  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Swords Dance  
+- Dragon Pulse  
+- Leaf Blade  
+- Leech Seed  
+
+Greninja @ Life Orb  
+Ability: Protean  
+Tera Type: Ghost  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Surf  
+- Dark Pulse  
+- Hydro Pump  
+- Water Shuriken  
+
+Electivire @ Air Balloon  
+Ability: Motor Drive  
+Tera Type: Flying  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- Supercell Slam  
+- Knock Off  
+- Thunder Punch  
+- Ice Punch  
+
+Dragapult @ Air Balloon  
+Ability: Infiltrator  
+Tera Type: Ghost  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Draco Meteor  
+- Hex  
+- U-turn  
+- Dragon Darts  
+
+Espeon @ Leftovers  
+Ability: Magic Bounce  
+Tera Type: Fairy  
+EVs: 252 HP / 200 Def / 56 Spe  
+Bold Nature  
+- Thunder Wave  
+- Trick  
+- Shadow Ball  
+- Alluring Voice

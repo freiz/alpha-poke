@@ -1,0 +1,59 @@
+Cinderace @ Heavy-Duty Boots  
+Ability: Libero  
+Tera Type: Fire  
+EVs: 224 HP / 32 Atk / 252 Spe  
+Jolly Nature  
+- Pyro Ball  
+- Court Change  
+- U-turn  
+- Will-O-Wisp  
+
+Latios @ Soul Dew  
+Ability: Levitate  
+Tera Type: Steel  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Psychic Noise  
+- Draco Meteor  
+- Calm Mind  
+- Luster Purge  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Normal  
+EVs: 252 HP / 252 SpD / 4 Spe  
+Careful Nature  
+- Knock Off  
+- Swords Dance  
+- Protect  
+- Facade  
+
+Pecharunt @ Rocky Helmet  
+Ability: Poison Puppeteer  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Def / 4 SpA  
+Bold Nature  
+- Parting Shot  
+- Malignant Chain  
+- Foul Play  
+- Shadow Ball  
+
+Blissey @ Leftovers  
+Ability: Natural Cure  
+Tera Type: Poison  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Stealth Rock  
+- Seismic Toss  
+- Calm Mind  
+- Shadow Ball  
+
+Skarmory @ Rocky Helmet  
+Ability: Sturdy  
+Tera Type: Ghost  
+EVs: 252 HP / 160 Def / 96 Spe  
+Bold Nature  
+- Spikes  
+- Roost  
+- Whirlwind  
+- Brave Bird

@@ -1,0 +1,59 @@
+Slowking-Galar @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 248 HP / 252 Def / 8 SpD  
+Relaxed Nature  
+- Thunder Wave  
+- Chilly Reception  
+- Sludge Bomb  
+- Psychic Noise  
+
+Crawdaunt @ Life Orb  
+Ability: Adaptability  
+Tera Type: Dark  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Knock Off  
+- Crabhammer  
+- Aqua Jet  
+- Liquidation  
+
+Deoxys-Speed @ Heavy-Duty Boots  
+Ability: Pressure  
+Tera Type: Electric  
+EVs: 108 Atk / 252 SpA / 148 Spe  
+Naive Nature  
+- Thunderbolt  
+- Psycho Boost  
+- Nasty Plot  
+- Focus Blast  
+
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Dragon  
+EVs: 248 HP / 252 Def / 8 SpD  
+Impish Nature  
+- Brave Bird  
+- Roost  
+- Defog  
+- U-turn  
+
+Great Tusk @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Fighting  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Ice Spinner  
+- Rapid Spin  
+- Headlong Rush  
+- Stealth Rock  
+
+Glimmora @ Red Card  
+Ability: Toxic Debris  
+Tera Type: Ghost  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Stealth Rock  
+- Mortal Spin  
+- Earth Power  
+- Power Gem

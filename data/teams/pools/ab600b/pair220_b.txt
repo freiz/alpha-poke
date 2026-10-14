@@ -1,0 +1,55 @@
+Zapdos @ Heavy-Duty Boots  
+Ability: Static  
+Tera Type: Water  
+EVs: 252 HP / 252 Def / 4 Spe  
+Bold Nature  
+- U-turn  
+- Hurricane  
+- Volt Switch  
+- Roost  
+
+Raichu @ Focus Sash  
+Ability: Static  
+Tera Type: Electric  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Impish Nature  
+- Nasty Plot  
+- Surf  
+- Substitute  
+- Electro Ball  
+
+Magneton  
+Ability: Sturdy  
+EVs: 84 HP / 84 Atk / 84 Def / 84 SpA / 84 SpD / 84 Spe  
+Serious Nature  
+- Electric Terrain  
+- Flash Cannon  
+
+Jolteon @ Heavy-Duty Boots  
+Ability: Volt Absorb  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Thunderbolt  
+- Volt Switch  
+- Calm Mind  
+- Alluring Voice  
+
+Electrode  
+Ability: Static  
+Tera Type: Dark  
+EVs: 252 HP / 4 SpA / 252 Spe  
+Naive Nature  
+- Volt Switch  
+- Foul Play  
+- Explosion  
+- Thunderbolt  
+
+Pikachu-Original  
+Ability: Static  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Naive Nature  
+- Thunderbolt  
+- Nasty Plot  
+- Discharge  
+- Encore

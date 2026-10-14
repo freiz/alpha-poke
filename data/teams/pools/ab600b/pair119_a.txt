@@ -1,0 +1,59 @@
+Pecharunt @ Rocky Helmet  
+Ability: Poison Puppeteer  
+Tera Type: Fairy  
+EVs: 248 HP / 228 Def / 32 Spe  
+Bold Nature  
+- Parting Shot  
+- Malignant Chain  
+- Recover  
+- Shadow Ball  
+
+Primarina @ Assault Vest  
+Ability: Torrent  
+Tera Type: Steel  
+EVs: 252 HP / 244 Def / 8 SpD / 4 Spe  
+Bold Nature  
+- Surf  
+- Moonblast  
+- Flip Turn  
+- Psychic Noise  
+
+Garganacl @ Leftovers  
+Ability: Purifying Salt  
+Tera Type: Water  
+EVs: 252 HP / 4 Atk / 252 Def  
+Impish Nature  
+- Salt Cure  
+- Recover  
+- Protect  
+- Stealth Rock  
+
+Cinderace @ Heavy-Duty Boots  
+Ability: Libero  
+Tera Type: Fire  
+EVs: 248 HP / 8 Atk / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Pyro Ball  
+- Court Change  
+- Sucker Punch  
+
+Latios @ Choice Specs  
+Ability: Levitate  
+Tera Type: Steel  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Aura Sphere  
+- Luster Purge  
+- Calm Mind  
+- Psychic Noise  
+
+Dragapult @ Choice Band  
+Ability: Infiltrator  
+Tera Type: Dragon  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Dragon Dance  
+- Flamethrower  
+- U-turn  
+- Dragon Darts

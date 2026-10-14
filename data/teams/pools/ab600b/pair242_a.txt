@@ -1,0 +1,58 @@
+Mimikyu @ Red Card  
+Ability: Disguise  
+Tera Type: Fighting  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Phantom Force  
+- Play Rough  
+- Trick Room  
+
+Malamar @ Leftovers  
+Ability: Contrary  
+EVs: 152 Atk / 80 SpA / 252 Spe  
+Adamant Nature  
+- Knock Off  
+- Night Slash  
+- Superpower  
+- Liquidation  
+
+Heatran @ Leftovers  
+Ability: Flash Fire  
+Tera Type: Fairy  
+EVs: 248 HP / 44 Def / 168 SpD / 48 Spe  
+Calm Nature  
+- Will-O-Wisp  
+- Magma Storm  
+- Earth Power  
+- Stealth Rock  
+
+Volcanion @ Leftovers  
+Ability: Water Absorb  
+Tera Type: Fairy  
+EVs: 248 HP / 144 Def / 8 SpA / 108 Spe  
+Bold Nature  
+- Sludge Bomb  
+- Steam Eruption  
+- Will-O-Wisp  
+- Flamethrower  
+
+Overqwil @ Life Orb  
+Ability: Intimidate  
+Tera Type: Water  
+EVs: 28 HP / 252 Atk / 228 Spe  
+Adamant Nature  
+- Barb Barrage  
+- Crunch  
+- Liquidation  
+- Gunk Shot  
+
+Staraptor @ Choice Band  
+Ability: Reckless  
+Tera Type: Flying  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Whirlwind  
+- Close Combat  
+- U-turn  
+- Final Gambit

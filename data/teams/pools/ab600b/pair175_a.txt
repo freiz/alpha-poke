@@ -1,0 +1,59 @@
+Kleavor @ Grassy Seed  
+Ability: Sharpness  
+Tera Type: Flying  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- U-turn  
+- X-Scissor  
+- Stone Axe  
+- Quick Attack  
+
+Forretress @ Sticky Barb  
+Ability: Sturdy  
+Tera Type: Water  
+EVs: 252 HP / 4 Atk / 252 Def  
+Impish Nature  
+- Iron Defense  
+- Thunder Wave  
+- Stealth Rock  
+- Volt Switch  
+
+Lokix @ Life Orb  
+Ability: Tinted Lens  
+Tera Type: Bug  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- First Impression  
+- Sucker Punch  
+- U-turn  
+- Knock Off  
+
+Scizor @ Rocky Helmet  
+Ability: Technician  
+Tera Type: Steel  
+EVs: 116 HP / 252 Atk / 140 Spe  
+Adamant Nature  
+- Dual Wingbeat  
+- U-turn  
+- Bullet Punch  
+- Close Combat  
+
+Slither Wing @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Bug  
+EVs: 248 HP / 176 Def / 84 Spe  
+Impish Nature  
+- First Impression  
+- Will-O-Wisp  
+- Close Combat  
+- U-turn  
+
+Galvantula @ Focus Sash  
+Ability: Compound Eyes  
+Tera Type: Ghost  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Thunder  
+- Sticky Web  
+- Energy Ball  
+- Light Screen

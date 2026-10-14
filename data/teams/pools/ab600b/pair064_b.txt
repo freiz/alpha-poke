@@ -1,0 +1,59 @@
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Water  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- Protect  
+- Stealth Rock  
+- Knock Off  
+- Toxic  
+
+Rotom-Wash @ Leftovers  
+Ability: Levitate  
+Tera Type: Poison  
+EVs: 252 HP / 252 Def / 4 SpA  
+Relaxed Nature  
+- Volt Switch  
+- Will-O-Wisp  
+- Hydro Pump  
+- Pain Split  
+
+Kingambit @ Air Balloon  
+Ability: Supreme Overlord  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Kowtow Cleave  
+- Iron Head  
+- Sucker Punch  
+- Swords Dance  
+
+Cinderace @ Heavy-Duty Boots  
+Ability: Libero  
+Tera Type: Fire  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Pyro Ball  
+- U-turn  
+- Court Change  
+- Will-O-Wisp  
+
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Horn Leech  
+- Ivy Cudgel  
+- U-turn  
+
+Kyurem @ Choice Scarf  
+Ability: Pressure  
+Tera Type: Ice  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Ice Beam  
+- Freeze-Dry  
+- Earth Power  
+- Blizzard

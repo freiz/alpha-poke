@@ -1,0 +1,62 @@
+Raging Bolt @ Choice Scarf  
+Ability: Protosynthesis  
+Tera Type: Dragon  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 20 Atk  
+- Draco Meteor  
+- Thunderbolt  
+- Volt Switch  
+- Thunderclap  
+
+Alomomola (M) @ Eject Button  
+Ability: Regenerator  
+Tera Type: Ghost  
+EVs: 8 HP / 248 Def / 252 SpD  
+Relaxed Nature  
+IVs: 0 Spe  
+- Tickle  
+- Flip Turn  
+- Protect  
+- Wish  
+
+Lokix (F) @ Choice Band  
+Ability: Tinted Lens  
+Tera Type: Bug  
+EVs: 40 HP / 252 Atk / 216 Spe  
+Adamant Nature  
+- First Impression  
+- U-turn  
+- Leech Life  
+- Knock Off  
+
+Hatterene @ Assault Vest  
+Ability: Magic Bounce  
+Shiny: Yes  
+Tera Type: Steel  
+EVs: 96 HP / 160 Def / 252 SpD  
+Calm Nature  
+- Nuzzle  
+- Draining Kiss  
+- Mystical Fire  
+- Psychic Noise  
+
+Iron Treads @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Flying  
+EVs: 252 HP / 4 SpA / 252 Spe  
+Timid Nature  
+- Volt Switch  
+- Stealth Rock  
+- Rapid Spin  
+- Earth Power  
+
+Kyurem @ Loaded Dice  
+Ability: Pressure  
+Tera Type: Ice  
+EVs: 188 Atk / 92 SpA / 228 Spe  
+Naive Nature  
+- Icicle Spear  
+- Dragon Dance  
+- Earth Power  
+- Freeze-Dry

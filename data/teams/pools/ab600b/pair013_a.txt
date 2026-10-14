@@ -1,0 +1,60 @@
+Basculegion @ Heavy-Duty Boots  
+Ability: Swift Swim  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Wave Crash  
+- Flip Turn  
+- Aqua Jet  
+- Psychic Fangs  
+
+Keldeo @ Choice Specs  
+Ability: Justified  
+Tera Type: Fighting  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Surf  
+- Sacred Sword  
+- Vacuum Wave  
+- Hydro Pump  
+
+Latias @ Leftovers  
+Ability: Levitate  
+Shiny: Yes  
+Tera Type: Fairy  
+EVs: 232 HP / 252 SpD / 24 Spe  
+- Mist Ball  
+- Draco Meteor  
+- Draining Kiss  
+- Calm Mind  
+
+Tornadus-Therian @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Electric  
+EVs: 252 HP / 88 SpD / 168 Spe  
+Timid Nature  
+- Hurricane  
+- Focus Blast  
+- U-turn  
+- Knock Off  
+
+Scizor @ Choice Band  
+Ability: Technician  
+Tera Type: Electric  
+EVs: 236 HP / 252 Atk / 20 Spe  
+Adamant Nature  
+- Bullet Punch  
+- U-turn  
+- Close Combat  
+- Thief  
+
+Pelipper @ Damp Rock  
+Ability: Drizzle  
+Tera Type: Dark  
+EVs: 248 HP / 252 Def / 8 SpD  
+Relaxed Nature  
+IVs: 0 Spe  
+- Hurricane  
+- Surf  
+- U-turn  
+- Roost

@@ -1,0 +1,59 @@
+Articuno-Galar @ Heavy-Duty Boots  
+Ability: Competitive  
+Tera Type: Flying  
+EVs: 248 HP / 252 Def / 8 SpA  
+Bold Nature  
+- Freezing Glare  
+- Trick Room  
+- Shadow Ball  
+- Hurricane  
+
+Milotic @ Assault Vest  
+Ability: Competitive  
+Tera Type: Grass  
+EVs: 60 HP / 252 SpA / 196 SpD  
+Calm Nature  
+- Surf  
+- Recover  
+- Flip Turn  
+- Scald  
+
+Kingambit @ Leftovers  
+Ability: Defiant  
+Tera Type: Ghost  
+EVs: 140 HP / 252 Atk / 116 Spe  
+Adamant Nature  
+- Brick Break  
+- Throat Chop  
+- Sucker Punch  
+- Swords Dance  
+
+Smeargle @ Focus Sash  
+Ability: Own Tempo  
+Tera Type: Steel  
+EVs: 252 HP / 4 Def / 252 Spe  
+Naive Nature  
+- Trick Room  
+- Taunt  
+- Burning Bulwark  
+- Ceaseless Edge  
+
+Ribombee @ Focus Sash  
+Ability: Shield Dust  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Sticky Web  
+- Moonblast  
+- Stun Spore  
+- Skill Swap  
+
+Trevenant @ Sitrus Berry  
+Ability: Harvest  
+Tera Type: Dark  
+EVs: 72 HP / 224 Def / 176 SpD / 36 Spe  
+Adamant Nature  
+- Trick Room  
+- Poltergeist  
+- Horn Leech  
+- Curse

@@ -1,0 +1,59 @@
+Zangoose @ Toxic Orb  
+Ability: Toxic Boost  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Agility  
+- Facade  
+- Knock Off  
+- Swords Dance  
+
+Landorus-Therian @ Rocky Helmet  
+Ability: Intimidate  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Stealth Rock  
+- Earthquake  
+- Stone Edge  
+
+Gengar @ Focus Sash  
+Ability: Cursed Body  
+Tera Type: Ghost  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Destiny Bond  
+- Encore  
+- Trick  
+- Shadow Ball  
+
+Weezing-Galar @ Leftovers  
+Ability: Misty Surge  
+Tera Type: Grass  
+EVs: 248 HP / 80 Def / 4 SpD / 176 Spe  
+Bold Nature  
+- Toxic  
+- Defog  
+- Sludge Bomb  
+- Will-O-Wisp  
+
+Meowscarada @ Life Orb  
+Ability: Protean  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Flower Trick  
+- U-turn  
+- Triple Axel  
+
+Dondozo @ Leftovers  
+Ability: Water Veil  
+Tera Type: Fairy  
+EVs: 248 HP / 8 Atk / 252 Def  
+Impish Nature  
+- Curse  
+- Sleep Talk  
+- Body Press  
+- Waterfall

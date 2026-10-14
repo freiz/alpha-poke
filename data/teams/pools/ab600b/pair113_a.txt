@@ -1,0 +1,59 @@
+Slowbro @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 252 HP / 252 Def  
+Bold Nature  
+- Shadow Ball  
+- Scald  
+- Trick Room  
+- Calm Mind  
+
+Chesnaught @ Rocky Helmet  
+Ability: Overgrow  
+Tera Type: Fire  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Spiky Shield  
+- Drain Punch  
+- Leech Seed  
+- Knock Off  
+
+Clodsire @ Black Sludge  
+Ability: Unaware  
+Tera Type: Dark  
+EVs: 252 HP / 4 Atk / 252 SpD  
+Careful Nature  
+- Toxic  
+- Earthquake  
+- Recover  
+- Poison Jab  
+
+Pelipper @ Choice Specs  
+Ability: Drizzle  
+Tera Type: Flying  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- U-turn  
+- Hurricane  
+- Weather Ball  
+- Roost  
+
+Maushold @ Wide Lens  
+Ability: Technician  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Population Bomb  
+- Beat Up  
+- Tidy Up  
+- Encore  
+
+Goodra-Hisui @ Leftovers  
+Ability: Gooey  
+Tera Type: Ghost  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+- Flash Cannon  
+- Draco Meteor  
+- Dragon Pulse  
+- Knock Off

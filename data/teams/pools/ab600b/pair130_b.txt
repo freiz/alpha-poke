@@ -1,0 +1,59 @@
+Staraptor @ Choice Scarf  
+Ability: Reckless  
+Tera Type: Flying  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Brave Bird  
+- Close Combat  
+- U-turn  
+- Final Gambit  
+
+Ceruledge @ Air Balloon  
+Ability: Weak Armor  
+Tera Type: Fighting  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Shadow Sneak  
+- Bitter Blade  
+- Poltergeist  
+
+Alomomola @ Leftovers  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 252 HP / 208 Def / 48 SpD  
+Relaxed Nature  
+- Scald  
+- Wish  
+- Protect  
+- Flip Turn  
+
+Cryogonal @ Heavy-Duty Boots  
+Ability: Levitate  
+Tera Type: Steel  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Modest Nature  
+- Recover  
+- Freeze-Dry  
+- Haze  
+- Ice Beam  
+
+Hydreigon @ Life Orb  
+Ability: Levitate  
+Tera Type: Steel  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Flash Cannon  
+- Earth Power  
+- Draco Meteor  
+- Dark Pulse  
+
+Slowking-Galar @ Covert Cloak  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 252 HP / 8 Def / 152 SpA / 96 SpD  
+Calm Nature  
+- Eerie Spell  
+- Flamethrower  
+- Psyshock  
+- Sludge Bomb

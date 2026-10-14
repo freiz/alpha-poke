@@ -1,0 +1,59 @@
+Indeedee @ Terrain Extender  
+Ability: Psychic Surge  
+Tera Type: Fairy  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Expanding Force  
+- Trick Room  
+- Healing Wish  
+- Encore  
+
+Deoxys-Speed @ Light Clay  
+Ability: Pressure  
+Tera Type: Steel  
+EVs: 200 Atk / 252 SpA / 56 Spe  
+Naive Nature  
+- Light Screen  
+- Reflect  
+- Stealth Rock  
+- Taunt  
+
+Glimmora @ Power Herb  
+Ability: Toxic Debris  
+Tera Type: Ghost  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Meteor Beam  
+- Stealth Rock  
+- Mortal Spin  
+- Earth Power  
+
+Iron Boulder @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Bug  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Mighty Cleave  
+- Zen Headbutt  
+- Close Combat  
+
+Polteageist @ Weakness Policy  
+Ability: Weak Armor  
+Tera Type: Stellar  
+EVs: 252 SpA / 68 SpD / 188 Spe  
+Modest Nature  
+- Shadow Ball  
+- Strength Sap  
+- Shell Smash  
+- Stored Power  
+
+Hawlucha @ Psychic Seed  
+Ability: Unburden  
+Tera Type: Steel  
+EVs: 72 HP / 252 Atk / 60 SpD / 124 Spe  
+Hardy Nature  
+- Encore  
+- Acrobatics  
+- Swords Dance  
+- Drain Punch

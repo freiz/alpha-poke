@@ -1,0 +1,59 @@
+Skarmory @ Leftovers  
+Ability: Sturdy  
+Tera Type: Dragon  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Roar  
+- Brave Bird  
+- Whirlwind  
+- Spikes  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Steel  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Trick  
+- Shadow Ball  
+- Make It Rain  
+- Nasty Plot  
+
+Regieleki @ Heavy-Duty Boots  
+Ability: Transistor  
+Tera Type: Electric  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Hasty Nature  
+- Volt Switch  
+- Thunder Wave  
+- Substitute  
+- Thunderbolt  
+
+Landorus-Therian @ Rocky Helmet  
+Ability: Intimidate  
+Tera Type: Ground  
+EVs: 248 HP / 12 Def / 248 Spe  
+Timid Nature  
+- U-turn  
+- Earthquake  
+- Stone Edge  
+- Stealth Rock  
+
+Alomomola @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Dark  
+EVs: 8 HP / 252 Def / 248 SpD  
+Relaxed Nature  
+- Wish  
+- Flip Turn  
+- Protect  
+- Scald  
+
+Mew @ Leftovers  
+Ability: Synchronize  
+Tera Type: Steel  
+EVs: 252 HP / 4 Def / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Transform  
+- Ice Beam  
+- Taunt

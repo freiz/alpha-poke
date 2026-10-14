@@ -1,0 +1,62 @@
+Meowscarada @ Heavy-Duty Boots  
+Ability: Protean  
+Tera Type: Ice  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Flower Trick  
+- Triple Axel  
+- Low Kick  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Dragon  
+EVs: 248 HP / 252 Def / 8 SpD  
+Impish Nature  
+- Protect  
+- Toxic  
+- Spikes  
+- Earthquake  
+
+Clefable @ Leftovers  
+Ability: Magic Guard  
+Tera Type: Fire  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+IVs: 0 Atk  
+- Stealth Rock  
+- Moonblast  
+- Wish  
+- Protect  
+
+Slowking-Galar @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 252 HP / 4 Def / 252 SpD  
+Sassy Nature  
+IVs: 0 Atk / 0 Spe  
+- Future Sight  
+- Chilly Reception  
+- Slack Off  
+- Sludge Bomb  
+
+Clodsire @ Heavy-Duty Boots  
+Ability: Unaware  
+Tera Type: Steel  
+EVs: 252 HP / 4 Def / 252 SpD  
+Sassy Nature  
+IVs: 0 Spe  
+- Toxic  
+- Amnesia  
+- Recover  
+- Earthquake  
+
+Dondozo @ Heavy-Duty Boots  
+Ability: Unaware  
+Tera Type: Fighting  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Liquidation  
+- Body Press  
+- Sleep Talk  
+- Rest

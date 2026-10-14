@@ -1,0 +1,59 @@
+Lilligant @ Life Orb  
+Ability: Chlorophyll  
+Tera Type: Fire  
+EVs: 104 HP / 8 Def / 156 SpA / 8 SpD / 232 Spe  
+Modest Nature  
+- Quiver Dance  
+- Weather Ball  
+- Giga Drain  
+- Solar Beam  
+
+Ninetales @ Heat Rock  
+Ability: Drought  
+Tera Type: Flying  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Healing Wish  
+- Overheat  
+- Encore  
+- Will-O-Wisp  
+
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Fighting  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Headlong Rush  
+- Rapid Spin  
+- Stealth Rock  
+- Ice Spinner  
+
+Walking Wake @ Life Orb  
+Ability: Protosynthesis  
+Tera Type: Fairy  
+EVs: 244 SpA / 12 SpD / 252 Spe  
+Timid Nature  
+- Hydro Steam  
+- Draco Meteor  
+- Dragon Pulse  
+- Weather Ball  
+
+Hatterene @ Eject Button  
+Ability: Magic Bounce  
+Tera Type: Normal  
+EVs: 4 HP / 252 SpA / 252 SpD  
+Sassy Nature  
+- Nuzzle  
+- Draining Kiss  
+- Psychic Noise  
+- Mystical Fire  
+
+Slither Wing @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Flare Blitz  
+- U-turn  
+- Earthquake  
+- Close Combat

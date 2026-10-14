@@ -1,0 +1,61 @@
+Pelipper @ Damp Rock  
+Ability: Drizzle  
+Tera Type: Steel  
+EVs: 248 HP / 252 Def / 8 SpA  
+Relaxed Nature  
+IVs: 0 Spe  
+- Hurricane  
+- U-turn  
+- Roost  
+- Ice Beam  
+
+Barraskewda @ Choice Band  
+Ability: Swift Swim  
+Tera Type: Water  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Liquidation  
+- Flip Turn  
+- Aqua Jet  
+- Close Combat  
+
+Iron Jugulis @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ground  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Hurricane  
+- Dark Pulse  
+- Earth Power  
+- Taunt  
+
+Raging Bolt @ Heavy-Duty Boots  
+Ability: Protosynthesis  
+Tera Type: Fairy  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Modest Nature  
+IVs: 20 Atk  
+- Thunder  
+- Thunderclap  
+- Volt Switch  
+- Weather Ball  
+
+Tinkaton (F) @ Air Balloon  
+Ability: Mold Breaker  
+Tera Type: Water  
+EVs: 252 HP / 24 SpD / 232 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Gigaton Hammer  
+- Encore  
+- Thunder Wave  
+
+Iron Treads @ Assault Vest  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Volt Switch  
+- Earthquake  
+- Knock Off  
+- Rapid Spin

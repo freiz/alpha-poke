@@ -1,0 +1,59 @@
+Tsareena @ Big Nugget  
+Ability: Queenly Majesty  
+Tera Type: Poison  
+EVs: 248 HP / 252 Def / 8 Spe  
+Impish Nature  
+- Triple Axel  
+- Rapid Spin  
+- Fling  
+- Power Whip  
+
+Vaporeon @ Leftovers  
+Ability: Water Absorb  
+Tera Type: Poison  
+EVs: 248 HP / 252 SpA / 8 SpD  
+Modest Nature  
+- Scald  
+- Curse  
+- Wish  
+- Ice Beam  
+
+Iron Valiant @ Life Orb  
+Ability: Quark Drive  
+Tera Type: Fairy  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Naive Nature  
+- Close Combat  
+- Calm Mind  
+- Moonblast  
+- Vacuum Wave  
+
+Toxapex @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 252 HP / 252 SpD / 4 Spe  
+Calm Nature  
+- Recover  
+- Toxic Spikes  
+- Surf  
+- Toxic  
+
+Rhydon @ Eviolite  
+Ability: Rock Head  
+Tera Type: Water  
+EVs: 248 HP / 16 Atk / 200 SpD / 44 Spe  
+Adamant Nature  
+- Avalanche  
+- Smack Down  
+- Earthquake  
+- Swords Dance  
+
+Gardevoir @ Leftovers  
+Ability: Trace  
+Tera Type: Ghost  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Mystical Fire  
+- Moonblast  
+- Trick  
+- Psyshock

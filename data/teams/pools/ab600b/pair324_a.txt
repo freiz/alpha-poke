@@ -1,0 +1,59 @@
+Lokix @ Life Orb  
+Ability: Tinted Lens  
+Tera Type: Bug  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- U-turn  
+- First Impression  
+- Knock Off  
+- Leech Life  
+
+Tyranitar @ Leftovers  
+Ability: Sand Stream  
+Tera Type: Fighting  
+EVs: 184 HP / 48 Atk / 108 Def / 56 SpA / 112 SpD  
+Quiet Nature  
+- Stone Edge  
+- Knock Off  
+- Stealth Rock  
+- Thunder Wave  
+
+Garganacl @ Leftovers  
+Ability: Purifying Salt  
+Tera Type: Water  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- Protect  
+- Salt Cure  
+- Stealth Rock  
+- Recover  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Dark  
+EVs: 252 HP / 184 Def / 72 Spe  
+Impish Nature  
+- Earthquake  
+- Knock Off  
+- Protect  
+- Toxic  
+
+Dragapult @ Metronome  
+Ability: Infiltrator  
+Tera Type: Ghost  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Shadow Ball  
+- Will-O-Wisp  
+- Dragon Darts  
+- Dragon Dance  
+
+Rotom-Wash @ Leftovers  
+Ability: Levitate  
+Tera Type: Poison  
+EVs: 8 HP / 252 SpA / 248 Spe  
+Timid Nature  
+- Volt Switch  
+- Will-O-Wisp  
+- Hydro Pump  
+- Thunder Wave

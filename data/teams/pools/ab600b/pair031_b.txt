@@ -1,0 +1,59 @@
+Tyranitar @ Leftovers  
+Ability: Sand Stream  
+Tera Type: Water  
+EVs: 252 HP / 16 Def / 240 SpD  
+Sassy Nature  
+- Knock Off  
+- Stealth Rock  
+- Stone Edge  
+- Rock Blast  
+
+Alomomola @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Normal  
+EVs: 248 HP / 8 Atk / 248 SpD  
+Sassy Nature  
+- Body Slam  
+- Wish  
+- Scald  
+- Flip Turn  
+
+Weezing-Galar @ Eject Button  
+Ability: Neutralizing Gas  
+Tera Type: Grass  
+EVs: 248 HP / 252 Def / 8 Spe  
+Bold Nature  
+- Sludge Bomb  
+- Will-O-Wisp  
+- Pain Split  
+- Defog  
+
+Corviknight @ Leftovers  
+Ability: Pressure  
+Tera Type: Dragon  
+EVs: 248 HP / 8 Atk / 252 Def  
+Impish Nature  
+- U-turn  
+- Roost  
+- Brave Bird  
+- Defog  
+
+Gholdengo @ Leftovers  
+Ability: Good as Gold  
+Tera Type: Fairy  
+EVs: 120 HP / 192 SpA / 196 Spe  
+Modest Nature  
+- Shadow Ball  
+- Make It Rain  
+- Recover  
+- Thunder Wave  
+
+Ting-Lu @ Weakness Policy  
+Ability: Vessel of Ruin  
+Tera Type: Steel  
+EVs: 252 HP / 252 SpD / 4 Spe  
+Careful Nature  
+- Earthquake  
+- Stealth Rock  
+- Ruination  
+- Heavy Slam

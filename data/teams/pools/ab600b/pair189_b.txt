@@ -1,0 +1,66 @@
+Orthworm (F) @ Rocky Helmet  
+Ability: Earth Eater  
+Shiny: Yes  
+Tera Type: Ghost  
+EVs: 248 HP / 252 Def / 8 Spe  
+Impish Nature  
+- Iron Defense  
+- Body Press  
+- Heavy Slam  
+- Spikes  
+
+Clodsire (F) @ Leftovers  
+Ability: Unaware  
+Shiny: Yes  
+Tera Type: Water  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- Stealth Rock  
+- Toxic  
+- Earthquake  
+- Recover  
+
+Pecharunt @ Heavy-Duty Boots  
+Ability: Poison Puppeteer  
+Tera Type: Dark  
+EVs: 248 HP / 232 Def / 28 Spe  
+Bold Nature  
+IVs: 0 Atk  
+- Malignant Chain  
+- Hex  
+- Parting Shot  
+- Recover  
+
+Great Tusk @ Heavy-Duty Boots  
+Ability: Protosynthesis  
+Shiny: Yes  
+Tera Type: Steel  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Knock Off  
+- Ice Spinner  
+- Headlong Rush  
+
+Slowking (F) @ Heavy-Duty Boots  
+Ability: Regenerator  
+Shiny: Yes  
+Tera Type: Fairy  
+EVs: 248 HP / 16 Def / 4 SpA / 240 SpD  
+Sassy Nature  
+IVs: 0 Atk / 0 Spe  
+- Chilly Reception  
+- Future Sight  
+- Scald  
+- Thunder Wave  
+
+Weavile (F) @ Heavy-Duty Boots  
+Ability: Pressure  
+Shiny: Yes  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Triple Axel  
+- Knock Off  
+- Ice Shard

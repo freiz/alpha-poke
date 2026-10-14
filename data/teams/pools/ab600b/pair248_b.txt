@@ -1,0 +1,59 @@
+Scream Tail @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Water  
+EVs: 252 HP / 64 Def / 128 SpD / 64 Spe  
+Timid Nature  
+- Psychic Noise  
+- Wish  
+- Encore  
+- Reflect  
+
+Jolteon @ Heavy-Duty Boots  
+Ability: Quick Feet  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Thunderbolt  
+- Shadow Ball  
+- Alluring Voice  
+- Volt Switch  
+
+Mismagius @ Life Orb  
+Ability: Levitate  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Shadow Ball  
+- Mystical Fire  
+- Taunt  
+- Draining Kiss  
+
+Cinderace @ Heavy-Duty Boots  
+Ability: Libero  
+Tera Type: Fire  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- Court Change  
+- U-turn  
+- Pyro Ball  
+- Will-O-Wisp  
+
+Zamazenta @ Life Orb  
+Ability: Dauntless Shield  
+Tera Type: Dark  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Play Rough  
+- Psychic Fangs  
+- Ice Fang  
+- Crunch  
+
+Staraptor @ Shell Bell  
+Ability: Reckless  
+Tera Type: Normal  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Close Combat  
+- Double-Edge  
+- Brave Bird  
+- Thief

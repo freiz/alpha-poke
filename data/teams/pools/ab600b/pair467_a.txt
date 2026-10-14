@@ -1,0 +1,59 @@
+Primarina @ Leftovers  
+Ability: Torrent  
+Tera Type: Poison  
+EVs: 148 HP / 48 Def / 104 SpA / 20 SpD / 188 Spe  
+Hardy Nature  
+- Substitute  
+- Moonblast  
+- Psychic Noise  
+- Whirlpool  
+
+Great Tusk @ Rocky Helmet  
+Ability: Protosynthesis  
+Tera Type: Ice  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Headlong Rush  
+- Stealth Rock  
+- Rapid Spin  
+- Ice Spinner  
+
+Enamorus @ Focus Sash  
+Ability: Contrary  
+Tera Type: Ground  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Modest Nature  
+- Moonblast  
+- Earth Power  
+- Mystical Fire  
+- Healing Wish  
+
+Slowking-Galar @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 252 HP / 4 Def / 252 SpD  
+Sassy Nature  
+- Sludge Bomb  
+- Flamethrower  
+- Ice Beam  
+- Psychic Noise  
+
+Ogerpon @ Leftovers  
+Ability: Defiant  
+Tera Type: Grass  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Rock Tomb  
+- Ivy Cudgel  
+- U-turn  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Ghost  
+EVs: 140 HP / 252 Atk / 116 Spe  
+Adamant Nature  
+- Kowtow Cleave  
+- Swords Dance  
+- Sucker Punch  
+- Iron Head

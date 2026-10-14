@@ -1,0 +1,59 @@
+Vileplume @ Life Orb  
+Ability: Effect Spore  
+Tera Type: Fairy  
+EVs: 176 HP / 80 Atk / 252 Def  
+Hardy Nature  
+- Weather Ball  
+- Sludge Bomb  
+- Growth  
+- Toxic  
+
+Ninetales @ Heat Rock  
+Ability: Drought  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Weather Ball  
+- Scorching Sands  
+- Will-O-Wisp  
+- Overheat  
+
+Walking Wake @ White Herb  
+Ability: Protosynthesis  
+Tera Type: Water  
+EVs: 12 Def / 244 SpA / 252 Spe  
+Timid Nature  
+- Hydro Steam  
+- Draco Meteor  
+- Flip Turn  
+- Weather Ball  
+
+Great Tusk @ Rocky Helmet  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 252 HP / 4 SpD / 252 Spe  
+Jolly Nature  
+- Headlong Rush  
+- Close Combat  
+- Stealth Rock  
+- Ice Spinner  
+
+Hatterene @ Eject Button  
+Ability: Magic Bounce  
+Tera Type: Poison  
+EVs: 248 HP / 204 Def / 56 Spe  
+Bold Nature  
+- Nuzzle  
+- Mystical Fire  
+- Psychic Noise  
+- Draining Kiss  
+
+Lilligant-Hisui @ Life Orb  
+Ability: Chlorophyll  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Close Combat  
+- Encore  
+- Triple Axel  
+- Solar Blade

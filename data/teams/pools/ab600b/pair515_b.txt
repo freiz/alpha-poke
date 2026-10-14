@@ -1,0 +1,59 @@
+Iron Moth @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Grass  
+EVs: 124 Def / 132 SpA / 252 Spe  
+Timid Nature  
+- Substitute  
+- Fiery Dance  
+- Toxic  
+- Morning Sun  
+
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Atk / 252 SpD  
+Sassy Nature  
+- Earthquake  
+- Ruination  
+- Whirlwind  
+- Stealth Rock  
+
+Gholdengo @ Choice Scarf  
+Ability: Good as Gold  
+Tera Type: Fairy  
+EVs: 252 HP / 172 Def / 84 Spe  
+Bold Nature  
+- Trick  
+- Shadow Ball  
+- Thunder Wave  
+- Nasty Plot  
+
+Clefable @ Leftovers  
+Ability: Magic Guard  
+Tera Type: Steel  
+EVs: 248 HP / 244 Def / 16 SpD  
+Calm Nature  
+- Knock Off  
+- Stealth Rock  
+- Moonblast  
+- Moonlight  
+
+Hydrapple @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Steel  
+EVs: 144 HP / 12 Def / 204 SpA / 148 Spe  
+Modest Nature  
+- Giga Drain  
+- Earth Power  
+- Fickle Beam  
+- Nasty Plot  
+
+Tornadus-Therian @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Dark  
+EVs: 176 HP / 92 SpD / 240 Spe  
+Timid Nature  
+- U-turn  
+- Bleakwind Storm  
+- Knock Off  
+- Heat Wave

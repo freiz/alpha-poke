@@ -1,0 +1,59 @@
+Ninetales @ Heat Rock  
+Ability: Drought  
+Tera Type: Flying  
+EVs: 248 HP / 20 Def / 240 Spe  
+Timid Nature  
+- Fire Blast  
+- Solar Beam  
+- Encore  
+- Will-O-Wisp  
+
+Great Tusk @ Rocky Helmet  
+Ability: Protosynthesis  
+Tera Type: Poison  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Rapid Spin  
+- Ice Spinner  
+- Stealth Rock  
+- Headlong Rush  
+
+Walking Wake @ Life Orb  
+Ability: Protosynthesis  
+Tera Type: Dragon  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Hydro Steam  
+- Knock Off  
+- Flip Turn  
+- Draco Meteor  
+
+Leavanny @ Eject Pack  
+Ability: Chlorophyll  
+Tera Type: Bug  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Sticky Web  
+- Triple Axel  
+- Leaf Storm  
+- Low Kick  
+
+Charizard @ Sitrus Berry  
+Ability: Solar Power  
+Tera Type: Fire  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Naive Nature  
+- Flamethrower  
+- Acrobatics  
+- Flame Charge  
+- Focus Blast  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Water  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Knock Off  
+- Toxic  
+- Earthquake  
+- Protect

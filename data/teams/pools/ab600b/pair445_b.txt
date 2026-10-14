@@ -1,0 +1,59 @@
+Landorus-Therian @ Rocky Helmet  
+Ability: Intimidate  
+Tera Type: Water  
+EVs: 4 HP / 252 Atk / 252 Def  
+Impish Nature  
+- Stealth Rock  
+- Earthquake  
+- U-turn  
+- Earth Power  
+
+Blaziken @ Life Orb  
+Ability: Speed Boost  
+Tera Type: Fire  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- Protect  
+- Close Combat  
+- Overheat  
+- Focus Energy  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Normal  
+EVs: 248 HP / 152 SpA / 108 Spe  
+Modest Nature  
+- Dazzling Gleam  
+- Shadow Ball  
+- Make It Rain  
+- Trick  
+
+Garchomp @ Rocky Helmet  
+Ability: Rough Skin  
+Tera Type: Water  
+EVs: 252 HP / 4 SpD / 252 Spe  
+Jolly Nature  
+- Earthquake  
+- Swords Dance  
+- Poison Jab  
+- Scale Shot  
+
+Great Tusk @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Ghost  
+EVs: 4 HP / 48 Atk / 204 Def / 252 Spe  
+Jolly Nature  
+- Ice Spinner  
+- Rapid Spin  
+- Headlong Rush  
+- Knock Off  
+
+Zapdos @ Heavy-Duty Boots  
+Ability: Static  
+Tera Type: Steel  
+EVs: 248 HP / 244 Def / 16 Spe  
+Bold Nature  
+- Hurricane  
+- Thunder Wave  
+- Volt Switch  
+- U-turn

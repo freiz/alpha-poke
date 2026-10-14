@@ -1,0 +1,59 @@
+Frosmoth @ Leftovers  
+Ability: Ice Scales  
+Tera Type: Electric  
+EVs: 248 HP / 68 SpA / 192 SpD  
+Modest Nature  
+- Quiver Dance  
+- Ice Beam  
+- Bug Buzz  
+- Substitute  
+
+Ninetales-Alola @ Light Clay  
+Ability: Snow Warning  
+Tera Type: Steel  
+EVs: 252 HP / 172 Def / 84 Spe  
+Timid Nature  
+- Aurora Veil  
+- Encore  
+- Freeze-Dry  
+- Snowscape  
+
+Gholdengo @ Metal Coat  
+Ability: Good as Gold  
+Tera Type: Steel  
+EVs: 252 HP / 188 Def / 68 Spe  
+Bold Nature  
+- Shadow Ball  
+- Make It Rain  
+- Nasty Plot  
+- Recover  
+
+Hatterene @ Rocky Helmet  
+Ability: Magic Bounce  
+Tera Type: Flying  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Draining Kiss  
+- Psychic Noise  
+- Nuzzle  
+- Trick Room  
+
+Great Tusk @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Headlong Rush  
+- Rapid Spin  
+- Knock Off  
+
+Ceruledge @ Leftovers  
+Ability: Weak Armor  
+Tera Type: Bug  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Shadow Sneak  
+- Bitter Blade  
+- Close Combat  
+- Bulk Up

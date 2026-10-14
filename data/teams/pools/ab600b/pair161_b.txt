@@ -1,0 +1,59 @@
+Samurott-Hisui @ Focus Sash  
+Ability: Sharpness  
+Tera Type: Fire  
+EVs: 160 HP / 32 Atk / 248 SpD / 68 Spe  
+Adamant Nature  
+- Sacred Sword  
+- Razor Shell  
+- Sucker Punch  
+- Ceaseless Edge  
+
+Tentacruel @ Black Sludge  
+Ability: Rain Dish  
+Tera Type: Flying  
+EVs: 252 HP / 4 Def / 252 SpD  
+Sassy Nature  
+- Toxic  
+- Knock Off  
+- Rapid Spin  
+- Sludge Bomb  
+
+Tinkaton @ Air Balloon  
+Ability: Pickpocket  
+Tera Type: Ghost  
+EVs: 252 HP / 16 SpA / 240 Spe  
+Naive Nature  
+- Thunder Wave  
+- Gigaton Hammer  
+- Ice Hammer  
+- Encore  
+
+Tyranitar @ Choice Band  
+Ability: Sand Stream  
+Tera Type: Ghost  
+EVs: 252 HP / 16 Def / 240 SpD  
+Sassy Nature  
+- Knock Off  
+- Stone Edge  
+- Stealth Rock  
+- Ice Punch  
+
+Skeledirge @ Leftovers  
+Ability: Unaware  
+Tera Type: Water  
+EVs: 252 HP / 68 Def / 176 SpD / 12 Spe  
+Calm Nature  
+- Will-O-Wisp  
+- Torch Song  
+- Slack Off  
+- Hex  
+
+Raging Bolt @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Ghost  
+EVs: 248 HP / 252 SpA / 8 Spe  
+Modest Nature  
+- Thunderbolt  
+- Dragon Pulse  
+- Calm Mind  
+- Thunderclap

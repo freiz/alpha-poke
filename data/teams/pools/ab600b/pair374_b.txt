@@ -1,0 +1,57 @@
+Altaria @ Heavy-Duty Boots  
+Ability: Natural Cure  
+EVs: 252 HP / 4 Atk / 252 Def  
+Impish Nature  
+- Fire Spin  
+- Protect  
+- Roost  
+- Perish Song  
+
+Sandaconda @ Leftovers  
+Ability: Shed Skin  
+EVs: 252 HP / 4 Atk / 252 Def  
+Impish Nature  
+- Earthquake  
+- Glare  
+- Stealth Rock  
+- Endeavor  
+
+Chansey @ Eviolite  
+Ability: Natural Cure  
+Tera Type: Ghost  
+EVs: 248 HP / 252 Def / 8 SpD  
+Bold Nature  
+- Thunder Wave  
+- Seismic Toss  
+- Soft-Boiled  
+- Calm Mind  
+
+Mienshao @ Life Orb  
+Ability: Reckless  
+Tera Type: Dark  
+EVs: 12 HP / 252 Atk / 244 Spe  
+Adamant Nature  
+- Fake Out  
+- U-turn  
+- Triple Axel  
+- Knock Off  
+
+Greninja @ Focus Sash  
+Ability: Battle Bond  
+Tera Type: Water  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- U-turn  
+- Ice Beam  
+- Grass Knot  
+- Dark Pulse  
+
+Clefable @ Leftovers  
+Ability: Magic Guard  
+Tera Type: Dark  
+EVs: 252 HP / 236 Def / 16 SpD / 4 Spe  
+Bold Nature  
+- Wish  
+- Protect  
+- Moonblast  
+- Thunder Wave

@@ -1,0 +1,59 @@
+Gholdengo @ Grassy Seed  
+Ability: Good as Gold  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Shadow Ball  
+- Trick  
+- Make It Rain  
+- Recover  
+
+Landorus-Therian @ Choice Scarf  
+Ability: Intimidate  
+Tera Type: Water  
+EVs: 252 HP / 148 Atk / 108 Def  
+Careful Nature  
+- U-turn  
+- Stone Edge  
+- Outrage  
+- Earthquake  
+
+Samurott-Hisui @ Assault Vest  
+Ability: Torrent  
+Tera Type: Fairy  
+EVs: 248 HP / 8 Def / 252 SpD  
+Careful Nature  
+- Ceaseless Edge  
+- Knock Off  
+- Aqua Cutter  
+- Sucker Punch  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Kowtow Cleave  
+- Sucker Punch  
+- Iron Head  
+- Swords Dance  
+
+Dragapult @ Life Orb  
+Ability: Cursed Body  
+Tera Type: Dragon  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Shadow Ball  
+- Draco Meteor  
+- U-turn  
+- Dragon Darts  
+
+Dragonite @ Choice Scarf  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 248 HP / 176 Atk / 68 SpD / 16 Spe  
+Adamant Nature  
+- Extreme Speed  
+- Dragon Dance  
+- Earthquake  
+- Ice Spinner

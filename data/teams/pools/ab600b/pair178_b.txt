@@ -1,0 +1,59 @@
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Dark  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Modest Nature  
+- Knock Off  
+- Liquidation  
+- Close Combat  
+- Moonblast  
+
+Kingambit @ Life Orb  
+Ability: Supreme Overlord  
+Tera Type: Bug  
+EVs: 248 HP / 252 Atk / 8 Def  
+Adamant Nature  
+- Kowtow Cleave  
+- Zen Headbutt  
+- Sucker Punch  
+- Iron Head  
+
+Hatterene @ Eject Button  
+Ability: Magic Bounce  
+Tera Type: Electric  
+EVs: 252 HP / 4 Def / 252 SpA  
+Quiet Nature  
+- Dazzling Gleam  
+- Psychic  
+- Nuzzle  
+- Mystical Fire  
+
+Zapdos @ Leftovers  
+Ability: Static  
+Tera Type: Grass  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Modest Nature  
+- Volt Switch  
+- Hurricane  
+- Heat Wave  
+- Roost  
+
+Landorus-Therian @ Leftovers  
+Ability: Intimidate  
+Tera Type: Ground  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Stealth Rock  
+- Earthquake  
+- Taunt  
+
+Dragapult @ Choice Specs  
+Ability: Infiltrator  
+Tera Type: Ghost  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Shadow Ball  
+- Flamethrower  
+- U-turn  
+- Draco Meteor

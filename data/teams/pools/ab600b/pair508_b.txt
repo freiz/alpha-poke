@@ -1,0 +1,59 @@
+Glimmora @ Rocky Helmet  
+Ability: Toxic Debris  
+Tera Type: Ghost  
+EVs: 100 HP / 48 Def / 108 SpA / 100 SpD / 148 Spe  
+Modest Nature  
+- Stealth Rock  
+- Power Gem  
+- Earth Power  
+- Mortal Spin  
+
+Corviknight @ Leftovers  
+Ability: Pressure  
+Tera Type: Ghost  
+EVs: 248 HP / 252 Def / 8 SpD  
+Impish Nature  
+- U-turn  
+- Brave Bird  
+- Roost  
+- Defog  
+
+Garchomp @ Leftovers  
+Ability: Rough Skin  
+Tera Type: Fairy  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Earthquake  
+- Thunder Fang  
+- Dragon Claw  
+- Stealth Rock  
+
+Ninetales-Alola @ Light Clay  
+Ability: Snow Warning  
+Tera Type: Water  
+EVs: 252 SpA / 252 Spe  
+Timid Nature  
+- Blizzard  
+- Dig  
+- Encore  
+- Aurora Veil  
+
+Kyurem @ Assault Vest  
+Ability: Pressure  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Earth Power  
+- Freeze-Dry  
+- Ice Beam  
+- Dragon Dance  
+
+Samurott-Hisui @ Black Glasses  
+Ability: Sharpness  
+Tera Type: Water  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Ceaseless Edge  
+- Aqua Jet  
+- Sucker Punch  
+- Razor Shell

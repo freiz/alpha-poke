@@ -1,0 +1,61 @@
+Garganacl @ Leftovers  
+Ability: Purifying Salt  
+Tera Type: Fairy  
+EVs: 252 HP / 52 Def / 204 SpD  
+Careful Nature  
+- Stealth Rock  
+- Salt Cure  
+- Recover  
+- Protect  
+
+Scizor @ Choice Band  
+Ability: Technician  
+Tera Type: Steel  
+EVs: 120 HP / 252 Atk / 136 Spe  
+Adamant Nature  
+- Bullet Punch  
+- U-turn  
+- Knock Off  
+- Dual Wingbeat  
+
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Tera Type: Poison  
+EVs: 252 HP / 88 Def / 168 SpD  
+Careful Nature  
+- Earthquake  
+- Payback  
+- Whirlwind  
+- Spikes  
+
+Great Tusk @ Heavy-Duty Boots  
+Ability: Protosynthesis  
+Tera Type: Water  
+EVs: 244 HP / 12 Atk / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Knock Off  
+- Ice Spinner  
+- Headlong Rush  
+
+Sinistcha @ Heavy-Duty Boots  
+Ability: Heatproof  
+Tera Type: Poison  
+EVs: 252 HP / 160 Def / 96 Spe  
+Bold Nature  
+IVs: 0 Atk  
+- Calm Mind  
+- Matcha Gotcha  
+- Shadow Ball  
+- Strength Sap  
+
+Latias @ Weakness Policy  
+Ability: Levitate  
+Tera Type: Poison  
+EVs: 252 HP / 232 Def / 24 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Calm Mind  
+- Agility  
+- Stored Power  
+- Aura Sphere

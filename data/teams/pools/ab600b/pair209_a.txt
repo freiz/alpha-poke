@@ -1,0 +1,59 @@
+Milotic @ Leftovers  
+Ability: Competitive  
+Tera Type: Fairy  
+EVs: 128 Def / 252 SpA / 124 SpD / 4 Spe  
+Timid Nature  
+- Hydro Pump  
+- Draining Kiss  
+- Ice Beam  
+- Scald  
+
+Flygon @ Leftovers  
+Ability: Levitate  
+Tera Type: Normal  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Earthquake  
+- Boomburst  
+- Dragon Dance  
+- Substitute  
+
+Snorlax @ Leftovers  
+Ability: Immunity  
+Tera Type: Poison  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Heavy Slam  
+- Heat Crash  
+- Earthquake  
+- Rest  
+
+Infernape @ Life Orb  
+Ability: Iron Fist  
+Tera Type: Flying  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Scorching Sands  
+- Drain Punch  
+- Overheat  
+- Close Combat  
+
+Ogerpon @ Sitrus Berry  
+Ability: Defiant  
+Tera Type: Grass  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Horn Leech  
+- Ivy Cudgel  
+- U-turn  
+
+Rotom-Wash @ Leftovers  
+Ability: Levitate  
+Tera Type: Steel  
+EVs: 252 HP / 212 Def / 44 Spe  
+Bold Nature  
+- Hydro Pump  
+- Discharge  
+- Pain Split  
+- Volt Switch

@@ -1,0 +1,59 @@
+Regieleki @ Heavy-Duty Boots  
+Ability: Transistor  
+Tera Type: Electric  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Volt Switch  
+- Rapid Spin  
+- Thunderbolt  
+- Swift  
+
+Pelipper @ Damp Rock  
+Ability: Drizzle  
+Tera Type: Water  
+EVs: 248 HP / 8 Def / 252 SpD  
+Sassy Nature  
+- U-turn  
+- Weather Ball  
+- Hurricane  
+- Knock Off  
+
+Raging Bolt @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Fairy  
+EVs: 252 HP / 252 SpA / 4 Spe  
+Modest Nature  
+- Weather Ball  
+- Dragon Pulse  
+- Draco Meteor  
+- Thunderclap  
+
+Overqwil @ Life Orb  
+Ability: Swift Swim  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Crunch  
+- Swords Dance  
+- Gunk Shot  
+- Liquidation  
+
+Greninja @ Life Orb  
+Ability: Battle Bond  
+Tera Type: Water  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Surf  
+- Dark Pulse  
+- Water Shuriken  
+- Ice Beam  
+
+Iron Treads @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ground  
+EVs: 156 HP / 64 Atk / 96 SpD / 192 Spe  
+Jolly Nature  
+- Steel Beam  
+- Earth Power  
+- Stealth Rock  
+- Rapid Spin

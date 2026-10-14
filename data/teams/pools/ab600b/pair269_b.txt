@@ -1,0 +1,58 @@
+Zamazenta @ Leftovers  
+Ability: Dauntless Shield  
+Tera Type: Fire  
+EVs: 80 HP / 252 Atk / 176 Spe  
+Jolly Nature  
+- Crunch  
+- Iron Defense  
+- Body Press  
+- Roar  
+
+Ceruledge @ Focus Sash  
+Ability: Weak Armor  
+Tera Type: Fighting  
+EVs: 252 Atk / 252 Spe  
+Jolly Nature  
+- Shadow Sneak  
+- Poltergeist  
+- Bitter Blade  
+- Swords Dance  
+
+Scizor @ Heavy-Duty Boots  
+Ability: Technician  
+Tera Type: Steel  
+EVs: 252 HP / 252 Atk / 4 Spe  
+Adamant Nature  
+- Knock Off  
+- Bullet Punch  
+- U-turn  
+- Close Combat  
+
+Donphan @ Heavy-Duty Boots  
+Ability: Sturdy  
+Tera Type: Ground  
+EVs: 248 HP / 252 Atk / 8 SpD  
+Adamant Nature  
+- Stealth Rock  
+- Rapid Spin  
+- Knock Off  
+- Earthquake  
+
+Lycanroc-Dusk @ Focus Sash  
+Ability: Tough Claws  
+Tera Type: Fighting  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Stealth Rock  
+- Crunch  
+- Close Combat  
+
+Florges @ Leftovers  
+Ability: Flower Veil  
+EVs: 212 HP / 44 SpA / 252 SpD  
+Calm Nature  
+- Psychic Noise  
+- Calm Mind  
+- Giga Drain  
+- Moonblast

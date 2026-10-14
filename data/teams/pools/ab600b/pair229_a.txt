@@ -1,0 +1,59 @@
+Dragapult @ Choice Specs  
+Ability: Cursed Body  
+Tera Type: Ghost  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Will-O-Wisp  
+- Draco Meteor  
+- U-turn  
+- Dragon Darts  
+
+Clefable @ Leftovers  
+Ability: Magic Guard  
+Tera Type: Steel  
+EVs: 252 HP / 252 SpA  
+Modest Nature  
+- Moonblast  
+- Icy Wind  
+- Flamethrower  
+- Stealth Rock  
+
+Landorus-Therian @ Rocky Helmet  
+Ability: Intimidate  
+Tera Type: Fighting  
+EVs: 252 HP / 4 SpA / 252 Spe  
+Timid Nature  
+- Stealth Rock  
+- Earthquake  
+- Rock Slide  
+- U-turn  
+
+Iron Hands @ Custap Berry  
+Ability: Quark Drive  
+Tera Type: Flying  
+EVs: 252 Atk / 224 SpD / 32 Spe  
+Adamant Nature  
+- Drain Punch  
+- Ice Punch  
+- Wild Charge  
+- Swords Dance  
+
+Iron Treads @ Leftovers  
+Ability: Quark Drive  
+Tera Type: Ground  
+EVs: 252 HP / 44 Atk / 72 SpD / 140 Spe  
+Jolly Nature  
+- Knock Off  
+- Earthquake  
+- Rapid Spin  
+- Volt Switch  
+
+Conkeldurr @ Leftovers  
+Ability: Guts  
+Tera Type: Fairy  
+EVs: 252 HP / 252 Atk / 4 Def  
+Adamant Nature  
+- Poison Jab  
+- Mach Punch  
+- Knock Off  
+- Drain Punch

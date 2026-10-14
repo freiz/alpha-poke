@@ -1,0 +1,58 @@
+Volcanion @ Throat Spray  
+Ability: Water Absorb  
+Tera Type: Ghost  
+EVs: 248 HP / 8 SpA / 252 SpD  
+Calm Nature  
+- Roar  
+- Earth Power  
+- Steam Eruption  
+- Sludge Bomb  
+
+Dipplin @ Starf Berry  
+Ability: Gluttony  
+Tera Type: Poison  
+EVs: 84 HP / 84 Atk / 84 Def / 84 SpA / 84 SpD / 84 Spe  
+Serious Nature  
+- Sucker Punch  
+- Dragon Tail  
+- Recover  
+- Infestation  
+
+Toucannon @ Leftovers  
+Ability: Sheer Force  
+Tera Type: Steel  
+EVs: 248 HP / 252 Atk / 8 SpD  
+Adamant Nature  
+- Swords Dance  
+- Beak Blast  
+- Rock Blast  
+- Knock Off  
+
+Perrserker @ Air Balloon  
+Ability: Tough Claws  
+EVs: 248 HP / 252 Atk / 8 SpD  
+Adamant Nature  
+- Trailblaze  
+- Nasty Plot  
+- Shadow Ball  
+- Knock Off  
+
+Hitmontop @ Expert Belt  
+Ability: Technician  
+Tera Type: Ghost  
+EVs: 248 HP / 252 Atk / 8 SpD  
+Adamant Nature  
+- Rapid Spin  
+- Bulk Up  
+- Triple Axel  
+- Mach Punch  
+
+Jirachi @ Weakness Policy  
+Ability: Serene Grace  
+Tera Type: Flying  
+EVs: 252 HP / 88 SpA / 168 SpD  
+Calm Nature  
+- Calm Mind  
+- Doom Desire  
+- Stealth Rock  
+- Psychic Noise

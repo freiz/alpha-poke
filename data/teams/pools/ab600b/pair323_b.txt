@@ -1,0 +1,59 @@
+Ninetales @ Choice Specs  
+Ability: Drought  
+Tera Type: Ghost  
+EVs: 192 HP / 72 SpA / 244 Spe  
+Timid Nature  
+- Will-O-Wisp  
+- Encore  
+- Healing Wish  
+- Overheat  
+
+Walking Wake @ White Herb  
+Ability: Protosynthesis  
+Tera Type: Fairy  
+EVs: 12 Def / 244 SpA / 252 Spe  
+Naive Nature  
+- Draco Meteor  
+- Hydro Steam  
+- Dragon Pulse  
+- Weather Ball  
+
+Cinderace @ Focus Sash  
+Ability: Libero  
+Tera Type: Fire  
+EVs: 224 HP / 32 Atk / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Pyro Ball  
+- Court Change  
+- Will-O-Wisp  
+
+Lilligant-Hisui @ Life Orb  
+Ability: Hustle  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Triple Axel  
+- Close Combat  
+- Victory Dance  
+- Ice Spinner  
+
+Iron Moth @ Throat Spray  
+Ability: Quark Drive  
+Tera Type: Fire  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Modest Nature  
+- Dazzling Gleam  
+- Sludge Wave  
+- Fiery Dance  
+- Overheat  
+
+Great Tusk @ Rocky Helmet  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Headlong Rush  
+- Stealth Rock  
+- Ice Spinner  
+- Close Combat

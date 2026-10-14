@@ -1,0 +1,59 @@
+Dondozo @ Leftovers  
+Ability: Unaware  
+Tera Type: Dark  
+EVs: 248 HP / 252 Def / 8 Spe  
+Impish Nature  
+- Sleep Talk  
+- Curse  
+- Rest  
+- Body Press  
+
+Blissey @ Leftovers  
+Ability: Serene Grace  
+Tera Type: Dark  
+EVs: 20 HP / 252 Def / 236 SpD  
+Calm Nature  
+- Stealth Rock  
+- Soft-Boiled  
+- Seismic Toss  
+- Calm Mind  
+
+Corviknight @ Leftovers  
+Ability: Pressure  
+Tera Type: Dark  
+EVs: 136 HP / 252 Def / 120 SpD  
+Impish Nature  
+- Iron Defense  
+- Defog  
+- Body Press  
+- Brave Bird  
+
+Weezing-Galar @ Heavy-Duty Boots  
+Ability: Neutralizing Gas  
+Tera Type: Flying  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Defog  
+- Will-O-Wisp  
+- Sludge Bomb  
+- Pain Split  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Water  
+EVs: 244 HP / 36 Def / 228 SpD  
+Careful Nature  
+- Protect  
+- Earthquake  
+- Knock Off  
+- Spikes  
+
+Toxapex @ Leftovers  
+Ability: Regenerator  
+Tera Type: Ghost  
+EVs: 252 HP / 124 Def / 132 SpD  
+Impish Nature  
+- Poison Jab  
+- Toxic  
+- Recover  
+- Haze

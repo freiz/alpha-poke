@@ -1,0 +1,59 @@
+Grimmsnarl @ Light Clay  
+Ability: Prankster  
+Tera Type: Ghost  
+EVs: 252 HP / 248 SpD / 8 Spe  
+Careful Nature  
+- Light Screen  
+- Spirit Break  
+- Taunt  
+- Reflect  
+
+Iron Hands @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Fire  
+EVs: 204 Atk / 104 SpD / 200 Spe  
+Adamant Nature  
+- Wild Charge  
+- Supercell Slam  
+- Ice Punch  
+- Close Combat  
+
+Kommo-o @ Salac Berry  
+Ability: Soundproof  
+Tera Type: Steel  
+EVs: 88 HP / 56 Def / 148 SpA / 216 Spe  
+Timid Nature  
+- Substitute  
+- Belly Drum  
+- Thunder Punch  
+- Drain Punch  
+
+Latios @ Leftovers  
+Ability: Levitate  
+Tera Type: Dragon  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Trick  
+- Ice Beam  
+- Luster Purge  
+- Surf  
+
+Glimmora @ Focus Sash  
+Ability: Toxic Debris  
+Tera Type: Ghost  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Power Gem  
+- Mortal Spin  
+- Stealth Rock  
+- Earth Power  
+
+Iron Moth @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Water  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Discharge  
+- Meteor Beam  
+- Fiery Dance  
+- Sludge Wave

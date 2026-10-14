@@ -1,0 +1,59 @@
+Rillaboom @ Life Orb  
+Ability: Grassy Surge  
+Tera Type: Fire  
+EVs: 252 HP / 252 Atk / 4 Spe  
+Adamant Nature  
+- Wood Hammer  
+- U-turn  
+- Knock Off  
+- Grassy Glide  
+
+Ogerpon-Cornerstone @ Cornerstone Mask  
+Ability: Sturdy  
+Tera Type: Rock  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Ivy Cudgel  
+- Swords Dance  
+- Horn Leech  
+- Trailblaze  
+
+Maushold-Four @ Wide Lens  
+Ability: Cheek Pouch  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Tidy Up  
+- Population Bomb  
+- Bite  
+- Encore  
+
+Heatran @ Leftovers  
+Ability: Flash Fire  
+Tera Type: Grass  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Stealth Rock  
+- Magma Storm  
+- Taunt  
+- Flash Cannon  
+
+Hawlucha @ Grassy Seed  
+Ability: Limber  
+Tera Type: Steel  
+EVs: 192 HP / 252 Atk / 64 Spe  
+Adamant Nature  
+- Swords Dance  
+- Close Combat  
+- Acrobatics  
+- Encore  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Calm Mind  
+- Shadow Ball  
+- Moonblast  
+- Vacuum Wave

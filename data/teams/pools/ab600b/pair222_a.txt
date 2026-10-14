@@ -1,0 +1,62 @@
+Pawmot @ Life Orb  
+Ability: Iron Fist  
+Tera Type: Electric  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Double Shock  
+- Close Combat  
+- Mach Punch  
+- Revival Blessing  
+
+Salamence @ Heavy-Duty Boots  
+Ability: Intimidate  
+Tera Type: Water  
+EVs: 40 HP / 252 SpA / 216 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Flamethrower  
+- Draco Meteor  
+- Hurricane  
+- Roost  
+
+Hatterene @ Leftovers  
+Ability: Magic Bounce  
+Tera Type: Fire  
+EVs: 252 HP / 216 Def / 40 Spe  
+Bold Nature  
+IVs: 0 Atk  
+- Draining Kiss  
+- Mystical Fire  
+- Psyshock  
+- Calm Mind  
+
+Cinderace @ Heavy-Duty Boots  
+Ability: Blaze  
+Tera Type: Fire  
+EVs: 224 HP / 32 Atk / 252 Spe  
+Jolly Nature  
+- Pyro Ball  
+- U-turn  
+- Will-O-Wisp  
+- Court Change  
+
+Clodsire @ Leftovers  
+Ability: Unaware  
+Tera Type: Fairy  
+EVs: 252 HP / 32 Def / 224 SpD  
+Careful Nature  
+- Earthquake  
+- Stealth Rock  
+- Recover  
+- Toxic  
+
+Rotom-Wash @ Leftovers  
+Ability: Levitate  
+Tera Type: Steel  
+EVs: 252 HP / 244 Def / 12 Spe  
+Bold Nature  
+IVs: 0 Atk  
+- Hydro Pump  
+- Volt Switch  
+- Protect  
+- Thunder Wave

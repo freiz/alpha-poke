@@ -1,0 +1,62 @@
+Raging Bolt @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Fairy  
+EVs: 64 HP / 28 Def / 252 SpA / 164 Spe  
+Modest Nature  
+IVs: 20 Atk  
+- Calm Mind  
+- Thunderclap  
+- Thunderbolt  
+- Dragon Pulse  
+
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Water  
+EVs: 248 HP / 200 Def / 60 SpD  
+Relaxed Nature  
+IVs: 0 Spe  
+- Body Press  
+- Iron Defense  
+- Roost  
+- U-turn  
+
+Rillaboom @ Choice Band  
+Ability: Grassy Surge  
+Tera Type: Grass  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Wood Hammer  
+- Grassy Glide  
+- Knock Off  
+- U-turn  
+
+Slowking-Galar @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 252 HP / 16 Def / 240 SpD  
+Sassy Nature  
+IVs: 0 Atk / 0 Spe  
+- Future Sight  
+- Ice Beam  
+- Toxic  
+- Chilly Reception  
+
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 248 HP / 8 Atk / 252 Spe  
+Jolly Nature  
+- Headlong Rush  
+- Ice Spinner  
+- Bulk Up  
+- Rapid Spin  
+
+Primarina @ Assault Vest  
+Ability: Torrent  
+Tera Type: Steel  
+EVs: 80 HP / 252 SpA / 176 Spe  
+Modest Nature  
+- Surf  
+- Moonblast  
+- Flip Turn  
+- Psychic Noise

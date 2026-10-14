@@ -1,0 +1,59 @@
+Dragonite @ Rocky Helmet  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Thunder Wave  
+- Ice Beam  
+- Roost  
+- Encore  
+
+Cinderace @ Heavy-Duty Boots  
+Ability: Libero  
+Tera Type: Flying  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Court Change  
+- U-turn  
+- Pyro Ball  
+- Will-O-Wisp  
+
+Pecharunt @ Air Balloon  
+Ability: Poison Puppeteer  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Def / 4 Spe  
+Bold Nature  
+- Malignant Chain  
+- Recover  
+- Parting Shot  
+- Shadow Ball  
+
+Deoxys-Speed @ Weakness Policy  
+Ability: Pressure  
+Tera Type: Flying  
+EVs: 252 HP / 4 Def / 252 Spe  
+Timid Nature  
+- Cosmic Power  
+- Stored Power  
+- Ice Beam  
+- Recover  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Grass  
+EVs: 244 HP / 168 SpD / 96 Spe  
+Careful Nature  
+- Protect  
+- Knock Off  
+- Stealth Rock  
+- Toxic  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Bug  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Low Kick  
+- Sucker Punch  
+- Swords Dance  
+- Iron Head

@@ -1,0 +1,59 @@
+Snorlax @ Leftovers  
+Ability: Immunity  
+Tera Type: Fairy  
+EVs: 12 HP / 244 Def / 252 SpD  
+Careful Nature  
+- Curse  
+- Body Slam  
+- Rest  
+- Recycle  
+
+Infernape @ Life Orb  
+Ability: Iron Fist  
+Tera Type: Flying  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Stealth Rock  
+- Fire Blast  
+- Taunt  
+- Thunder Punch  
+
+Garchomp @ Life Orb  
+Ability: Rough Skin  
+Tera Type: Poison  
+EVs: 196 HP / 252 Atk / 60 Spe  
+Careful Nature  
+- Scale Shot  
+- Earthquake  
+- Swords Dance  
+- Spikes  
+
+Gengar @ Focus Sash  
+Ability: Cursed Body  
+Tera Type: Ghost  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Shadow Ball  
+- Sludge Bomb  
+- Hex  
+- Will-O-Wisp  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Water  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Earthquake  
+- Protect  
+- Toxic  
+- Knock Off  
+
+Rotom-Wash @ Light Clay  
+Ability: Levitate  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Light Screen  
+- Volt Switch  
+- Hydro Pump  
+- Reflect

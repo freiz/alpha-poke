@@ -1,0 +1,60 @@
+Dondozo @ Leftovers  
+Ability: Unaware  
+Tera Type: Poison  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- Liquidation  
+- Curse  
+- Rest  
+- Sleep Talk  
+
+Garganacl @ Leftovers  
+Ability: Purifying Salt  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Atk / 252 SpD  
+Careful Nature  
+- Salt Cure  
+- Body Press  
+- Iron Defense  
+- Recover  
+
+Dragapult @ Heavy-Duty Boots  
+Ability: Infiltrator  
+Tera Type: Ghost  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- U-turn  
+- Draco Meteor  
+- Hex  
+- Will-O-Wisp  
+
+Glimmora @ Leftovers  
+Ability: Toxic Debris  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Stealth Rock  
+- Spikes  
+- Mortal Spin  
+- Earth Power  
+
+Iron Treads @ Assault Vest  
+Ability: Quark Drive  
+Tera Type: Ground  
+EVs: 248 HP / 4 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Earthquake  
+- Knock Off  
+- Rapid Spin  
+- Volt Switch  
+
+Skeledirge @ Heavy-Duty Boots  
+Ability: Unaware  
+Tera Type: Fairy  
+EVs: 248 HP / 8 Def / 252 SpD  
+Calm Nature  
+IVs: 0 Atk  
+- Will-O-Wisp  
+- Slack Off  
+- Hex  
+- Torch Song

@@ -1,0 +1,55 @@
+Skiploom  
+Ability: Leaf Guard  
+EVs: 84 HP / 84 Atk / 84 Def / 84 SpA / 84 SpD / 84 Spe  
+Serious Nature  
+- Substitute  
+
+Magcargo @ Focus Sash  
+Ability: Weak Armor  
+Tera Type: Dark  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Modest Nature  
+- Fire Blast  
+- Flamethrower  
+- Shell Smash  
+- Guard Swap  
+
+Electrode  
+Ability: Soundproof  
+Tera Type: Dragon  
+EVs: 252 SpA / 252 Spe  
+Modest Nature  
+- Volt Switch  
+- Explosion  
+- Foul Play  
+- Light Screen  
+
+Whiscash @ Rocky Helmet  
+Ability: Oblivious  
+Tera Type: Ghost  
+EVs: 84 HP / 84 Atk / 84 Def / 84 SpA / 84 SpD / 84 Spe  
+Serious Nature  
+- Dragon Dance  
+- Spikes  
+- Curse  
+- Stealth Rock  
+
+Pelipper @ Heavy-Duty Boots  
+Ability: Drizzle  
+Tera Type: Grass  
+EVs: 248 HP / 252 Def / 8 SpD  
+Relaxed Nature  
+- Weather Ball  
+- U-turn  
+- Hurricane  
+- Surf  
+
+Ninetales @ Heat Rock  
+Ability: Drought  
+Tera Type: Ghost  
+EVs: 4 HP / 252 Def / 252 Spe  
+Timid Nature  
+- Overheat  
+- Will-O-Wisp  
+- Encore  
+- Weather Ball

@@ -1,0 +1,61 @@
+Samurott-Hisui @ Focus Sash  
+Ability: Sharpness  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Ceaseless Edge  
+- Sacred Sword  
+- Flip Turn  
+- Sucker Punch  
+
+Ogerpon (F) @ Heavy-Duty Boots  
+Ability: Defiant  
+Tera Type: Grass  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Ivy Cudgel  
+- Knock Off  
+- Swords Dance  
+- Encore  
+
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 252 HP / 176 Def / 80 Spe  
+Impish Nature  
+- Earthquake  
+- Ice Spinner  
+- Stealth Rock  
+- Rapid Spin  
+
+Zapdos @ Heavy-Duty Boots  
+Ability: Static  
+Tera Type: Dragon  
+EVs: 252 HP / 104 Def / 152 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Hurricane  
+- Volt Switch  
+- Thunder Wave  
+- Roost  
+
+Dragapult @ Choice Specs  
+Ability: Infiltrator  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Draco Meteor  
+- Shadow Ball  
+- Flamethrower  
+- U-turn  
+
+Heatran @ Air Balloon  
+Ability: Flash Fire  
+Tera Type: Grass  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Magma Storm  
+- Earth Power  
+- Will-O-Wisp  
+- Taunt

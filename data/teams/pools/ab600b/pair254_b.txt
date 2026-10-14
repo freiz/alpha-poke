@@ -1,0 +1,59 @@
+Dragapult @ Life Orb  
+Ability: Infiltrator  
+Tera Type: Dragon  
+EVs: 84 HP / 172 SpA / 252 Spe  
+Naive Nature  
+- Phantom Force  
+- Dragon Darts  
+- U-turn  
+- Shadow Ball  
+
+Hoopa-Unbound @ Grassy Seed  
+Ability: Magician  
+Tera Type: Dark  
+EVs: 248 HP / 160 Def / 100 SpA  
+Quiet Nature  
+- Drain Punch  
+- Psyshock  
+- Focus Blast  
+- Psychic  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Water  
+EVs: 248 HP / 8 Def / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Knock Off  
+- Protect  
+- Spikes  
+
+Blaziken @ Life Orb  
+Ability: Speed Boost  
+Tera Type: Fire  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Mild Nature  
+- Flare Blitz  
+- Close Combat  
+- Swords Dance  
+- Protect  
+
+Ribombee @ Focus Sash  
+Ability: Shield Dust  
+Tera Type: Steel  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Sticky Web  
+- Stun Spore  
+- Moonblast  
+- Skill Swap  
+
+Deoxys-Defense @ Light Clay  
+Ability: Pressure  
+Tera Type: Steel  
+EVs: 252 HP / 24 SpA / 232 Spe  
+Timid Nature  
+- Stored Power  
+- Rain Dance  
+- Agility  
+- Cosmic Power

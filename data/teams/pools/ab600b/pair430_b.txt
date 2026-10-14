@@ -1,0 +1,58 @@
+Moltres-Galar @ Leftovers  
+Ability: Berserk  
+Tera Type: Ghost  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Modest Nature  
+- Agility  
+- Air Slash  
+- Nasty Plot  
+- Fiery Wrath  
+
+Skeledirge @ Leftovers  
+Ability: Unaware  
+Tera Type: Fairy  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+- Torch Song  
+- Shadow Ball  
+- Slack Off  
+- Will-O-Wisp  
+
+Glimmora @ Black Sludge  
+Ability: Toxic Debris  
+Tera Type: Ghost  
+EVs: 248 HP / 208 Def / 52 Spe  
+Bold Nature  
+- Sludge Bomb  
+- Spiky Shield  
+- Earth Power  
+- Stealth Rock  
+
+Ursaring @ Flame Orb  
+Ability: Guts  
+EVs: 252 HP / 160 Def / 96 SpD  
+Impish Nature  
+- Bulk Up  
+- Earthquake  
+- Thunder Punch  
+- High Horsepower  
+
+Corviknight @ Leftovers  
+Ability: Mirror Armor  
+Tera Type: Flying  
+EVs: 252 HP / 108 Def / 148 SpD  
+Impish Nature  
+- Bulk Up  
+- Brave Bird  
+- Roost  
+- Substitute  
+
+Comfey @ Leftovers  
+Ability: Triage  
+Tera Type: Steel  
+EVs: 252 HP / 4 Def / 252 SpA  
+Modest Nature  
+- Leech Seed  
+- Calm Mind  
+- Draining Kiss  
+- Synthesis

@@ -1,0 +1,59 @@
+Alcremie-Rainbow-Swirl @ Leftovers  
+Ability: Aroma Veil  
+Tera Type: Poison  
+EVs: 248 HP / 40 SpA / 220 Spe  
+Modest Nature  
+- Draining Kiss  
+- Acid Armor  
+- Calm Mind  
+- Recover  
+
+Tatsugiri @ Eject Pack  
+Ability: Commander  
+Tera Type: Dragon  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Draco Meteor  
+- Water Pulse  
+- Hydro Pump  
+- Icy Wind  
+
+Alomomola @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Def / 252 SpD  
+Sassy Nature  
+- Scald  
+- Wish  
+- Flip Turn  
+- Protect  
+
+Rotom-Heat @ Leftovers  
+Ability: Levitate  
+Tera Type: Steel  
+EVs: 252 HP / 208 Def / 48 Spe  
+Bold Nature  
+- Overheat  
+- Discharge  
+- Hex  
+- Thunder Wave  
+
+Pelipper @ Damp Rock  
+Ability: Drizzle  
+Tera Type: Ground  
+EVs: 252 HP / 252 Def  
+Relaxed Nature  
+- Surf  
+- Ice Beam  
+- Hurricane  
+- U-turn  
+
+Zapdos @ Life Orb  
+Ability: Static  
+Tera Type: Flying  
+EVs: 252 HP / 4 Def / 252 SpA  
+Modest Nature  
+- Thunder Wave  
+- Heat Wave  
+- Thunderbolt  
+- Roost

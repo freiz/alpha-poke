@@ -1,0 +1,59 @@
+Weavile @ Life Orb  
+Ability: Pressure  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Triple Axel  
+- Knock Off  
+- Swords Dance  
+- Icicle Crash  
+
+Salamence @ Leftovers  
+Ability: Intimidate  
+Tera Type: Steel  
+EVs: 252 HP / 16 Atk / 240 Def  
+Adamant Nature  
+- Dragon Dance  
+- Iron Head  
+- Draco Meteor  
+- Hurricane  
+
+Glimmora @ Power Herb  
+Ability: Toxic Debris  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Stealth Rock  
+- Mortal Spin  
+- Earth Power  
+- Power Gem  
+
+Rotom-Wash @ Rocky Helmet  
+Ability: Levitate  
+Tera Type: Fairy  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Hasty Nature  
+- Volt Switch  
+- Hydro Pump  
+- Pain Split  
+- Will-O-Wisp  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Normal  
+EVs: 244 HP / 236 Def / 28 Spe  
+Impish Nature  
+- Swords Dance  
+- Protect  
+- Knock Off  
+- Spikes  
+
+Meowscarada @ Choice Scarf  
+Ability: Protean  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Flower Trick  
+- Knock Off  
+- U-turn  
+- Triple Axel

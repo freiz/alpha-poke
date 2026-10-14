@@ -1,0 +1,59 @@
+Dragapult @ Heavy-Duty Boots  
+Ability: Clear Body  
+Tera Type: Ghost  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Hex  
+- Thunder Wave  
+- U-turn  
+- Draco Meteor  
+
+Samurott-Hisui @ Assault Vest  
+Ability: Sharpness  
+Tera Type: Poison  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Aqua Cutter  
+- Razor Shell  
+- Ceaseless Edge  
+- Sucker Punch  
+
+Slowking-Galar @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 252 HP / 4 Def / 252 SpD  
+Sassy Nature  
+- Thunder Wave  
+- Future Sight  
+- Chilly Reception  
+- Sludge Bomb  
+
+Ursaluna @ Flame Orb  
+Ability: Guts  
+Tera Type: Poison  
+EVs: 252 HP / 252 Atk / 4 Spe  
+Adamant Nature  
+- Swords Dance  
+- Fire Punch  
+- Headlong Rush  
+- Facade  
+
+Zapdos @ Heavy-Duty Boots  
+Ability: Static  
+Tera Type: Steel  
+EVs: 248 HP / 252 SpA / 8 SpD  
+Modest Nature  
+- Discharge  
+- U-turn  
+- Hurricane  
+- Roost  
+
+Iron Treads @ Air Balloon  
+Ability: Quark Drive  
+Tera Type: Ice  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Stealth Rock  
+- Rapid Spin  
+- Earthquake  
+- Ice Spinner

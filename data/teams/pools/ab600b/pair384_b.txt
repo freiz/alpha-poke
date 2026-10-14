@@ -1,0 +1,59 @@
+Gallade @ Life Orb  
+Ability: Sharpness  
+Tera Type: Dark  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Sacred Sword  
+- Psycho Cut  
+- Night Slash  
+- Triple Axel  
+
+Armarouge @ Weakness Policy  
+Ability: Weak Armor  
+Tera Type: Psychic  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Modest Nature  
+- Armor Cannon  
+- Aura Sphere  
+- Expanding Force  
+- Endure  
+
+Indeedee @ Terrain Extender  
+Ability: Psychic Surge  
+Tera Type: Psychic  
+EVs: 252 HP / 240 Def / 16 Spe  
+Bold Nature  
+- Shadow Ball  
+- Dazzling Gleam  
+- Expanding Force  
+- Healing Wish  
+
+Cresselia @ Rocky Helmet  
+Ability: Levitate  
+Tera Type: Steel  
+EVs: 172 HP / 252 SpA / 84 Spe  
+Modest Nature  
+- Lunar Dance  
+- Ice Beam  
+- Thunder Wave  
+- Psychic  
+
+Rabsca @ Leppa Berry  
+Ability: Synchronize  
+Tera Type: Dragon  
+EVs: 252 HP / 140 Def / 116 SpD  
+Relaxed Nature  
+- Speed Swap  
+- Bug Buzz  
+- Revival Blessing  
+- Trick Room  
+
+Espeon @ Focus Sash  
+Ability: Magic Bounce  
+Tera Type: Fairy  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Thunder Wave  
+- Psychic Noise  
+- Expanding Force  
+- Alluring Voice

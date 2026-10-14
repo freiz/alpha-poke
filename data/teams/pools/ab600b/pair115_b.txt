@@ -1,0 +1,59 @@
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Dragon  
+EVs: 244 HP / 36 Def / 228 SpD  
+Careful Nature  
+- Spikes  
+- Earthquake  
+- Knock Off  
+- Protect  
+
+Heatran @ Leftovers  
+Ability: Flash Fire  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Def / 212 SpD / 40 Spe  
+Calm Nature  
+- Magma Storm  
+- Will-O-Wisp  
+- Stealth Rock  
+- Earth Power  
+
+Sinistcha @ Heavy-Duty Boots  
+Ability: Heatproof  
+Tera Type: Poison  
+EVs: 128 Def / 224 SpA / 156 SpD  
+Calm Nature  
+- Strength Sap  
+- Shadow Ball  
+- Calm Mind  
+- Matcha Gotcha  
+
+Corviknight @ Leftovers  
+Ability: Pressure  
+Tera Type: Ghost  
+EVs: 4 HP / 252 Def / 252 SpD  
+Impish Nature  
+- Iron Defense  
+- Brave Bird  
+- Roost  
+- U-turn  
+
+Tentacruel @ Leftovers  
+Ability: Clear Body  
+Tera Type: Grass  
+EVs: 252 HP / 4 Def / 252 SpD  
+Sassy Nature  
+- Knock Off  
+- Surf  
+- Hydro Pump  
+- Sludge Bomb  
+
+Darkrai @ Life Orb  
+Ability: Bad Dreams  
+Tera Type: Dark  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Dark Pulse  
+- Focus Blast  
+- Ice Beam  
+- Sludge Bomb

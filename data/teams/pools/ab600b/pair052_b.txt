@@ -1,0 +1,59 @@
+Ursaluna @ Flame Orb  
+Ability: Guts  
+Tera Type: Poison  
+EVs: 248 HP / 252 Atk / 8 Def  
+Adamant Nature  
+- Headlong Rush  
+- Facade  
+- Swords Dance  
+- Fire Punch  
+
+Goodra @ Leftovers  
+Ability: Sap Sipper  
+Tera Type: Water  
+EVs: 252 HP / 4 SpD / 252 Spe  
+Timid Nature  
+- Flamethrower  
+- Draco Meteor  
+- Toxic  
+- Rest  
+
+Raging Bolt @ Air Balloon  
+Ability: Protosynthesis  
+Tera Type: Fairy  
+EVs: 252 HP / 4 Def / 252 SpA  
+Modest Nature  
+- Thunderbolt  
+- Volt Switch  
+- Dragon Pulse  
+- Calm Mind  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Dark  
+EVs: 252 SpA / 252 Spe  
+Naive Nature  
+- Knock Off  
+- Moonblast  
+- Swords Dance  
+- Spirit Break  
+
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Ivy Cudgel  
+- Swords Dance  
+- Power Whip  
+- Knock Off  
+
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Fighting  
+EVs: 252 HP / 4 Atk / 252 Def  
+Impish Nature  
+- U-turn  
+- Body Press  
+- Brave Bird  
+- Defog

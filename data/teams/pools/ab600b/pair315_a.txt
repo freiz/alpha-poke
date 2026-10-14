@@ -1,0 +1,59 @@
+Pelipper @ Damp Rock  
+Ability: Drizzle  
+Tera Type: Water  
+EVs: 248 HP / 252 Def / 8 SpD  
+Relaxed Nature  
+- Hurricane  
+- U-turn  
+- Roost  
+- Weather Ball  
+
+Kingdra @ Life Orb  
+Ability: Swift Swim  
+Tera Type: Water  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Mild Nature  
+- Hydro Pump  
+- Weather Ball  
+- Hurricane  
+- Draco Meteor  
+
+Chansey @ Eviolite  
+Ability: Natural Cure  
+Tera Type: Psychic  
+EVs: 252 Def / 252 SpD / 4 Spe  
+Bold Nature  
+- Seismic Toss  
+- Soft-Boiled  
+- Thunder Wave  
+- Heal Bell  
+
+Scizor @ Rocky Helmet  
+Ability: Technician  
+Tera Type: Steel  
+EVs: 120 HP / 252 Atk / 136 Spe  
+Adamant Nature  
+- U-turn  
+- Bullet Punch  
+- Knock Off  
+- Defog  
+
+Raichu @ Life Orb  
+Ability: Static  
+Tera Type: Electric  
+EVs: 76 HP / 24 Atk / 8 Def / 80 SpA / 148 SpD / 52 Spe  
+Hardy Nature  
+- Volt Switch  
+- Nasty Plot  
+- Fake Out  
+- Thunderbolt  
+
+Amoonguss @ Leftovers  
+Ability: Regenerator  
+Tera Type: Steel  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Grass Knot  
+- Synthesis  
+- Toxic  
+- Foul Play

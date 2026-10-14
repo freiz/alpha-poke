@@ -1,0 +1,59 @@
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Fire  
+EVs: 248 HP / 252 Def / 8 Spe  
+Impish Nature  
+- Headlong Rush  
+- Earthquake  
+- Ice Spinner  
+- Rapid Spin  
+
+Noivern @ Focus Sash  
+Ability: Frisk  
+Tera Type: Normal  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Draco Meteor  
+- Dragon Pulse  
+- Flamethrower  
+- Air Slash  
+
+Greninja @ Life Orb  
+Ability: Protean  
+Tera Type: Water  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Dark Pulse  
+- Hydro Pump  
+- Ice Beam  
+- Water Shuriken  
+
+Dragapult @ Focus Sash  
+Ability: Clear Body  
+Tera Type: Dragon  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Naive Nature  
+- Hex  
+- U-turn  
+- Shadow Ball  
+- Will-O-Wisp  
+
+Necrozma @ Leftovers  
+Ability: Prism Armor  
+Tera Type: Poison  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Naughty Nature  
+- Reflect  
+- Light Screen  
+- Dragon Dance  
+- Photon Geyser  
+
+Scream Tail @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 252 HP / 64 Def / 128 SpD / 64 Spe  
+Timid Nature  
+- Dazzling Gleam  
+- Boomburst  
+- Flamethrower  
+- Calm Mind

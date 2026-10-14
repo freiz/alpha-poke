@@ -1,0 +1,59 @@
+Tyranitar @ Leftovers  
+Ability: Sand Stream  
+Tera Type: Fighting  
+EVs: 140 HP / 252 Atk / 68 SpD / 40 Spe  
+Adamant Nature  
+- Stone Edge  
+- Knock Off  
+- Stealth Rock  
+- Ice Beam  
+
+Excadrill @ Air Balloon  
+Ability: Sand Rush  
+Tera Type: Ghost  
+EVs: 112 Atk / 64 Def / 80 SpD / 252 Spe  
+Jolly Nature  
+- Earthquake  
+- Rapid Spin  
+- Rock Slide  
+- Iron Head  
+
+Zapdos @ Heavy-Duty Boots  
+Ability: Static  
+Tera Type: Flying  
+EVs: 248 HP / 252 Def / 8 SpA  
+Bold Nature  
+- Volt Switch  
+- Hurricane  
+- Thunder Wave  
+- U-turn  
+
+Gholdengo @ Grassy Seed  
+Ability: Good as Gold  
+Tera Type: Fairy  
+EVs: 252 HP / 196 Def / 60 Spe  
+Bold Nature  
+- Make It Rain  
+- Recover  
+- Hex  
+- Shadow Ball  
+
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Ivy Cudgel  
+- Synthesis  
+- Power Whip  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Ghost  
+EVs: 244 HP / 252 Atk / 12 Spe  
+Adamant Nature  
+- Sucker Punch  
+- Swords Dance  
+- Kowtow Cleave  
+- Iron Head

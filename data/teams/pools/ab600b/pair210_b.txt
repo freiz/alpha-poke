@@ -1,0 +1,59 @@
+Moltres @ Heavy-Duty Boots  
+Ability: Flame Body  
+Tera Type: Ground  
+EVs: 176 HP / 156 Def / 176 SpD  
+Bold Nature  
+- Flamethrower  
+- U-turn  
+- Roost  
+- Roar  
+
+Dragonite @ Heavy-Duty Boots  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 16 HP / 240 Atk / 252 Spe  
+Adamant Nature  
+- Roost  
+- Dragon Tail  
+- Dragon Dance  
+- Earthquake  
+
+Great Tusk @ Life Orb  
+Ability: Protosynthesis  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Close Combat  
+- Ice Spinner  
+- Rapid Spin  
+- Headlong Rush  
+
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Tera Type: Water  
+EVs: 252 HP / 252 SpD  
+Careful Nature  
+- Stealth Rock  
+- Ruination  
+- Whirlwind  
+- Earthquake  
+
+Clodsire @ Black Sludge  
+Ability: Water Absorb  
+Tera Type: Steel  
+EVs: 252 Atk / 252 Spe  
+Hardy Nature  
+- Earthquake  
+- Toxic  
+- Spikes  
+- Recover  
+
+Pecharunt @ Rocky Helmet  
+Ability: Poison Puppeteer  
+Tera Type: Ghost  
+EVs: 252 HP / 212 Def / 44 Spe  
+Bold Nature  
+- Shadow Ball  
+- Malignant Chain  
+- Recover  
+- Toxic

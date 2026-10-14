@@ -1,0 +1,59 @@
+Quagsire @ Leftovers  
+Ability: Unaware  
+Tera Type: Poison  
+EVs: 252 HP / 252 Def / 4 Spe  
+Impish Nature  
+- Toxic  
+- Ice Punch  
+- Counter  
+- Spikes  
+
+Regice @ Leftovers  
+Ability: Clear Body  
+Tera Type: Ice  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+- Blizzard  
+- Ice Beam  
+- Charge Beam  
+- Thunderbolt  
+
+Porygon-Z @ Leftovers  
+Ability: Adaptability  
+Tera Type: Ghost  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Tri Attack  
+- Psyshock  
+- Ice Beam  
+- Shadow Ball  
+
+Skarmory @ White Herb  
+Ability: Weak Armor  
+Tera Type: Dragon  
+EVs: 80 HP / 252 Def / 176 Spe  
+Bold Nature  
+- Swords Dance  
+- X-Scissor  
+- Brave Bird  
+- Spikes  
+
+Dragonite @ Leftovers  
+Ability: Multiscale  
+Tera Type: Fairy  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Dragon Dance  
+- Extreme Speed  
+- Dragon Claw  
+- Earthquake  
+
+Scizor @ Leftovers  
+Ability: Technician  
+Tera Type: Fire  
+EVs: 248 HP / 252 Atk / 8 SpD  
+Adamant Nature  
+- Bullet Punch  
+- Knock Off  
+- Swords Dance  
+- Close Combat

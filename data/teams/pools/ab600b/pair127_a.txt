@@ -1,0 +1,59 @@
+Glimmora @ Focus Sash  
+Ability: Toxic Debris  
+Tera Type: Ghost  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Stealth Rock  
+- Mortal Spin  
+- Power Gem  
+- Earth Power  
+
+Scizor @ Choice Band  
+Ability: Technician  
+Tera Type: Steel  
+EVs: 120 HP / 252 Atk / 136 Spe  
+Adamant Nature  
+- Bullet Punch  
+- U-turn  
+- Knock Off  
+- Close Combat  
+
+Tyranitar @ Smooth Rock  
+Ability: Sand Stream  
+Tera Type: Ghost  
+EVs: 252 HP / 16 Def / 240 SpD  
+Sassy Nature  
+- Knock Off  
+- Stone Edge  
+- Ice Beam  
+- Low Kick  
+
+Excadrill @ Air Balloon  
+Ability: Sand Rush  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Earthquake  
+- Iron Head  
+- Rapid Spin  
+
+Primarina @ Leftovers  
+Ability: Torrent  
+Tera Type: Steel  
+EVs: 252 HP / 248 Def / 8 SpD  
+Bold Nature  
+- Moonblast  
+- Flip Turn  
+- Psychic Noise  
+- Surf  
+
+Dragonite @ Heavy-Duty Boots  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 252 HP / 240 Atk / 16 Spe  
+Adamant Nature  
+- Dragon Tail  
+- Roost  
+- Earthquake  
+- Extreme Speed

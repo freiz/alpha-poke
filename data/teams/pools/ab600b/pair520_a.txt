@@ -1,0 +1,62 @@
+Diancie @ Life Orb  
+Ability: Clear Body  
+Tera Type: Water  
+EVs: 252 Def / 252 SpA / 4 SpD  
+Modest Nature  
+IVs: 0 Atk  
+- Draining Kiss  
+- Calm Mind  
+- Body Press  
+- Encore  
+
+Gholdengo @ Choice Scarf  
+Ability: Good as Gold  
+Tera Type: Flying  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Trick  
+- Shadow Ball  
+- Recover  
+- Make It Rain  
+
+Landorus-Therian @ Rocky Helmet  
+Ability: Intimidate  
+Tera Type: Water  
+EVs: 248 HP / 252 Def / 8 SpD  
+Impish Nature  
+- Earthquake  
+- U-turn  
+- Stealth Rock  
+- Taunt  
+
+Rotom-Wash @ Leftovers  
+Ability: Levitate  
+Tera Type: Fairy  
+EVs: 252 HP / 244 SpD / 12 Spe  
+Calm Nature  
+IVs: 0 Atk  
+- Hydro Pump  
+- Volt Switch  
+- Thunder Wave  
+- Protect  
+
+Dragonite @ Heavy-Duty Boots  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 144 HP / 252 Atk / 112 Spe  
+Adamant Nature  
+- Dragon Dance  
+- Extreme Speed  
+- Earthquake  
+- Roost  
+
+Cinderace @ Heavy-Duty Boots  
+Ability: Blaze  
+Tera Type: Fire  
+EVs: 224 HP / 32 Atk / 252 Spe  
+Jolly Nature  
+- Pyro Ball  
+- U-turn  
+- Will-O-Wisp  
+- Court Change

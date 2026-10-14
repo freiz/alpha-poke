@@ -1,0 +1,58 @@
+Braviary-Hisui @ Choice Specs  
+Ability: Keen Eye  
+Tera Type: Fighting  
+EVs: 64 Atk / 252 SpA / 4 SpD / 188 Spe  
+Timid Nature  
+- Esper Wing  
+- Agility  
+- Hurricane  
+- Roost  
+
+Iron Treads @ Air Balloon  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Ice Spinner  
+- Stealth Rock  
+- Earthquake  
+
+Barraskewda @ Life Orb  
+Ability: Swift Swim  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Liquidation  
+- Flip Turn  
+- Aqua Jet  
+- Close Combat  
+
+Deoxys-Speed @ Light Clay  
+Ability: Pressure  
+Tera Type: Fighting  
+EVs: 252 HP / 4 Def / 252 Spe  
+Timid Nature  
+- Light Screen  
+- Taunt  
+- Reflect  
+- Psycho Boost  
+
+Porygon-Z @ Leftovers  
+Ability: Download  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Tri Attack  
+- Shadow Ball  
+- Dark Pulse  
+- Trick  
+
+Politoed @ Damp Rock  
+Ability: Drizzle  
+EVs: 72 HP / 252 SpA / 8 SpD  
+Modest Nature  
+- Encore  
+- Weather Ball  
+- Earth Power  
+- Icy Wind

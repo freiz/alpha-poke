@@ -1,0 +1,59 @@
+Scizor @ Life Orb  
+Ability: Technician  
+Tera Type: Fire  
+EVs: 120 HP / 252 Atk / 136 Spe  
+Adamant Nature  
+- Knock Off  
+- Swords Dance  
+- Close Combat  
+- Bullet Punch  
+
+Ursaluna @ Flame Orb  
+Ability: Guts  
+Tera Type: Normal  
+EVs: 252 HP / 252 Atk / 4 Def  
+Brave Nature  
+- Facade  
+- Headlong Rush  
+- Swords Dance  
+- Fire Punch  
+
+Corviknight @ Maranga Berry  
+Ability: Pressure  
+Tera Type: Fighting  
+EVs: 248 HP / 4 Atk / 252 Def / 4 SpD  
+Impish Nature  
+- Iron Defense  
+- Body Press  
+- Brave Bird  
+- Roost  
+
+Ting-Lu @ Red Card  
+Ability: Vessel of Ruin  
+Tera Type: Ghost  
+EVs: 248 HP / 124 Atk / 68 Def / 68 SpD  
+Adamant Nature  
+- Earthquake  
+- Stealth Rock  
+- Whirlwind  
+- Ruination  
+
+Dragapult @ Life Orb  
+Ability: Clear Body  
+Tera Type: Dragon  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Draco Meteor  
+- Shadow Ball  
+- Will-O-Wisp  
+- U-turn  
+
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Ivy Cudgel  
+- Spikes  
+- Encore  
+- Play Rough

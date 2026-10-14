@@ -1,0 +1,59 @@
+Jirachi @ Leftovers  
+Ability: Serene Grace  
+Tera Type: Steel  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Thunder  
+- Drain Punch  
+- Psychic Noise  
+- Wish  
+
+Hatterene @ Eject Button  
+Ability: Anticipation  
+Tera Type: Water  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Nuzzle  
+- Mystical Fire  
+- Psychic Noise  
+- Psyshock  
+
+Garchomp @ Rocky Helmet  
+Ability: Rough Skin  
+Tera Type: Water  
+EVs: 248 HP / 216 Def / 44 Spe  
+Impish Nature  
+- Stealth Rock  
+- Earthquake  
+- Spikes  
+- Dragon Tail  
+
+Quaquaval @ Leftovers  
+Ability: Moxie  
+Tera Type: Steel  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Aqua Step  
+- Close Combat  
+- Triple Axel  
+
+Enamorus @ Focus Sash  
+Ability: Cute Charm  
+Tera Type: Steel  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Moonblast  
+- Earth Power  
+- Substitute  
+- Mystical Fire  
+
+Raging Bolt @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Bug  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Modest Nature  
+- Calm Mind  
+- Dragon Pulse  
+- Thunderbolt  
+- Volt Switch

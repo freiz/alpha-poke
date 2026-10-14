@@ -1,0 +1,59 @@
+Tyranitar @ Leftovers  
+Ability: Sand Stream  
+Tera Type: Flying  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Knock Off  
+- Stone Edge  
+- Stealth Rock  
+- Low Kick  
+
+Excadrill @ Air Balloon  
+Ability: Sand Rush  
+Tera Type: Ground  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- Earthquake  
+- Iron Head  
+- Rapid Spin  
+- Swords Dance  
+
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Play Rough  
+- Ivy Cudgel  
+- Encore  
+- Swords Dance  
+
+Rillaboom @ Choice Band  
+Ability: Grassy Surge  
+Tera Type: Steel  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- U-turn  
+- Knock Off  
+- Swords Dance  
+- Grassy Glide  
+
+Zamazenta @ Leftovers  
+Ability: Dauntless Shield  
+Tera Type: Steel  
+EVs: 252 HP / 88 Def / 168 Spe  
+Jolly Nature  
+- Iron Defense  
+- Body Press  
+- Roar  
+- Heavy Slam  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Fairy  
+EVs: 44 HP / 252 SpA / 212 Spe  
+Timid Nature  
+- Shadow Ball  
+- Recover  
+- Nasty Plot  
+- Make It Rain

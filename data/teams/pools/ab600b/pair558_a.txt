@@ -1,0 +1,59 @@
+Pelipper @ Damp Rock  
+Ability: Drizzle  
+Tera Type: Ground  
+EVs: 248 HP / 252 Def / 8 SpD  
+Relaxed Nature  
+- U-turn  
+- Hurricane  
+- Knock Off  
+- Weather Ball  
+
+Beartic @ Life Orb  
+Ability: Swift Swim  
+Tera Type: Ground  
+EVs: 252 Atk / 28 Def / 228 Spe  
+Adamant Nature  
+- Substitute  
+- Icicle Spear  
+- Earthquake  
+- Encore  
+
+Barraskewda @ Life Orb  
+Ability: Swift Swim  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Close Combat  
+- Flip Turn  
+- Liquidation  
+- Aqua Jet  
+
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Ivy Cudgel  
+- Knock Off  
+- Power Whip  
+- Horn Leech  
+
+Zapdos @ Heavy-Duty Boots  
+Ability: Pressure  
+Tera Type: Flying  
+EVs: 248 HP / 108 Def / 144 SpA / 8 SpD  
+Modest Nature  
+- Heat Wave  
+- Hurricane  
+- Volt Switch  
+- Thunder Wave  
+
+Hatterene @ Eject Button  
+Ability: Magic Bounce  
+Tera Type: Psychic  
+EVs: 252 HP / 204 Def / 52 Spe  
+Bold Nature  
+- Psychic Noise  
+- Psyshock  
+- Draining Kiss  
+- Nuzzle

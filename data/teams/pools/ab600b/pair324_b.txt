@@ -1,0 +1,63 @@
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+IVs: 30 Spe  
+- Knock Off  
+- Spikes  
+- Toxic  
+- Protect  
+
+Dondozo @ Heavy-Duty Boots  
+Ability: Unaware  
+Tera Type: Fighting  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Body Press  
+- Rest  
+- Sleep Talk  
+- Liquidation  
+
+Blissey @ Heavy-Duty Boots  
+Ability: Natural Cure  
+Tera Type: Dark  
+EVs: 4 HP / 252 Def / 252 SpD  
+Calm Nature  
+IVs: 0 Atk  
+- Soft-Boiled  
+- Calm Mind  
+- Stealth Rock  
+- Shadow Ball  
+
+Chesnaught @ Heavy-Duty Boots  
+Ability: Bulletproof  
+Tera Type: Steel  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Knock Off  
+- Synthesis  
+- Body Press  
+- Spiky Shield  
+
+Clefable @ Leftovers  
+Ability: Magic Guard  
+Tera Type: Water  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+IVs: 0 Atk  
+- Wish  
+- Protect  
+- Calm Mind  
+- Moonblast  
+
+Skeledirge @ Heavy-Duty Boots  
+Ability: Unaware  
+Tera Type: Grass  
+EVs: 252 HP / 4 Def / 252 SpD  
+Calm Nature  
+IVs: 0 Atk  
+- Shadow Ball  
+- Torch Song  
+- Slack Off  
+- Will-O-Wisp

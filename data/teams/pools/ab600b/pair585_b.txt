@@ -1,0 +1,59 @@
+Dragonite @ Life Orb  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- Earthquake  
+- Extreme Speed  
+- Roost  
+- Dragon Dance  
+
+Gholdengo @ Choice Scarf  
+Ability: Good as Gold  
+Tera Type: Steel  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Make It Rain  
+- Thunderbolt  
+- Nasty Plot  
+- Shadow Ball  
+
+Regidrago @ Choice Specs  
+Ability: Dragon's Maw  
+Tera Type: Dragon  
+EVs: 20 Def / 252 SpA / 16 SpD / 220 Spe  
+Modest Nature  
+- Dragon Energy  
+- Draco Meteor  
+- Dragon Pulse  
+- Earth Power  
+
+Scizor @ Sitrus Berry  
+Ability: Technician  
+Tera Type: Steel  
+EVs: 248 HP / 252 Atk / 8 SpD  
+Adamant Nature  
+- U-turn  
+- Bullet Punch  
+- Defog  
+- Swords Dance  
+
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Tera Type: Water  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- Ruination  
+- Earthquake  
+- Stealth Rock  
+- Whirlwind  
+
+Weezing-Galar @ Leftovers  
+Ability: Neutralizing Gas  
+Tera Type: Water  
+EVs: 248 HP / 4 Def / 252 SpD / 4 Spe  
+Bold Nature  
+- Defog  
+- Will-O-Wisp  
+- Sludge Bomb  
+- Pain Split

@@ -1,0 +1,59 @@
+Farigiraf @ Leftovers  
+Ability: Armor Tail  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Def / 252 SpA  
+Quiet Nature  
+- Agility  
+- Stored Power  
+- Psychic  
+- Trick Room  
+
+Grimmsnarl @ Light Clay  
+Ability: Prankster  
+Tera Type: Steel  
+EVs: 248 HP / 144 Def / 116 SpD  
+Careful Nature  
+- Light Screen  
+- Reflect  
+- Misty Terrain  
+- Taunt  
+
+Hatterene @ Leftovers  
+Ability: Magic Bounce  
+Tera Type: Electric  
+EVs: 252 HP / 4 Def / 252 SpA  
+Quiet Nature  
+- Agility  
+- Draining Kiss  
+- Calm Mind  
+- Mystical Fire  
+
+Conkeldurr @ Flame Orb  
+Ability: Guts  
+Tera Type: Poison  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Brave Nature  
+- Close Combat  
+- Mach Punch  
+- Knock Off  
+- Ice Punch  
+
+Cinderace @ Heavy-Duty Boots  
+Ability: Libero  
+Tera Type: Fire  
+EVs: 252 Atk / 252 Spe  
+Jolly Nature  
+- Court Change  
+- Pyro Ball  
+- U-turn  
+- Gunk Shot  
+
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Ice  
+EVs: 252 HP / 216 Def / 40 Spe  
+Impish Nature  
+- Rapid Spin  
+- Bulk Up  
+- Body Press  
+- Knock Off

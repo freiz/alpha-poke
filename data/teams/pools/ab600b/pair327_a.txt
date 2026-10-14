@@ -1,0 +1,59 @@
+Zapdos @ Heavy-Duty Boots  
+Ability: Static  
+Tera Type: Steel  
+EVs: 252 Atk / 4 SpA / 252 Spe  
+Hasty Nature  
+- Heat Wave  
+- Discharge  
+- Hurricane  
+- U-turn  
+
+Cinderace @ Life Orb  
+Ability: Libero  
+Tera Type: Ghost  
+EVs: 232 HP / 24 Atk / 252 Spe  
+Jolly Nature  
+- Pyro Ball  
+- High Jump Kick  
+- U-turn  
+- Will-O-Wisp  
+
+Slowking @ Colbur Berry  
+Ability: Regenerator  
+Tera Type: Poison  
+EVs: 252 HP / 200 Def / 56 SpD  
+Sassy Nature  
+- Future Sight  
+- Fire Blast  
+- Thunder Wave  
+- Chilly Reception  
+
+Kyurem @ Choice Scarf  
+Ability: Pressure  
+Tera Type: Ice  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Ice Beam  
+- Blizzard  
+- Draco Meteor  
+- Earth Power  
+
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Ice  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- U-turn  
+- Defog  
+- Roost  
+- Brave Bird  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Steel  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Thunderbolt  
+- Vacuum Wave  
+- Moonblast  
+- Calm Mind

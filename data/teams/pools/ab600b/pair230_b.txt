@@ -1,0 +1,59 @@
+Dragonite @ Heavy-Duty Boots  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 200 HP / 252 Atk / 56 Spe  
+Adamant Nature  
+- Earthquake  
+- Extreme Speed  
+- Dragon Dance  
+- Roost  
+
+Great Tusk @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Fighting  
+EVs: 212 Atk / 252 SpD / 44 Spe  
+Adamant Nature  
+- Ice Spinner  
+- Bulk Up  
+- Headlong Rush  
+- Close Combat  
+
+Deoxys-Speed @ Weakness Policy  
+Ability: Pressure  
+Tera Type: Steel  
+EVs: 252 HP / 76 Def / 76 SpD / 104 Spe  
+Bold Nature  
+- Stealth Rock  
+- Taunt  
+- Spikes  
+- Psycho Boost  
+
+Gholdengo @ Grassy Seed  
+Ability: Good as Gold  
+Tera Type: Fighting  
+EVs: 16 Def / 236 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Shadow Ball  
+- Make It Rain  
+- Nasty Plot  
+- Recover  
+
+Zamazenta @ Life Orb  
+Ability: Dauntless Shield  
+Tera Type: Dark  
+EVs: 96 HP / 252 Def / 160 Spe  
+Jolly Nature  
+- Close Combat  
+- Crunch  
+- Body Press  
+- Heavy Slam  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Dark  
+EVs: 248 SpA / 8 SpD / 252 Spe  
+Timid Nature  
+- Knock Off  
+- Destiny Bond  
+- Moonblast  
+- Taunt

@@ -1,0 +1,59 @@
+Deoxys-Speed @ Life Orb  
+Ability: Pressure  
+Tera Type: Fighting  
+EVs: 4 HP / 72 Def / 252 SpA / 44 SpD / 136 Spe  
+Modest Nature  
+- Knock Off  
+- Psycho Boost  
+- Stealth Rock  
+- Shadow Ball  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Fairy  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Shadow Ball  
+- Nasty Plot  
+- Recover  
+- Trick  
+
+Iron Treads @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Earthquake  
+- Stealth Rock  
+- Rapid Spin  
+
+Dragonite @ Leftovers  
+Ability: Multiscale  
+Tera Type: Ground  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Extreme Speed  
+- Earthquake  
+- Dragon Dance  
+- Ice Spinner  
+
+Iron Moth @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ground  
+EVs: 72 HP / 8 Def / 176 SpA / 252 Spe  
+Timid Nature  
+- Substitute  
+- Sludge Wave  
+- Fiery Dance  
+- Toxic Spikes  
+
+Samurott-Hisui @ Focus Sash  
+Ability: Sharpness  
+Tera Type: Poison  
+EVs: 252 Atk / 4 SpA / 252 Spe  
+Naive Nature  
+- Ceaseless Edge  
+- Razor Shell  
+- Knock Off  
+- Sucker Punch

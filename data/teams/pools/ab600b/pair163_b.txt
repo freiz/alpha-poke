@@ -1,0 +1,59 @@
+Garchomp @ Rocky Helmet  
+Ability: Rough Skin  
+Tera Type: Ghost  
+EVs: 252 Atk / 56 SpD / 200 Spe  
+Jolly Nature  
+- Dragon Tail  
+- Stealth Rock  
+- Earthquake  
+- Spikes  
+
+Darkrai @ Tanga Berry  
+Ability: Bad Dreams  
+Tera Type: Electric  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Naive Nature  
+- Sludge Bomb  
+- Dark Pulse  
+- Ice Beam  
+- Focus Blast  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Ghost  
+EVs: 120 HP / 192 SpA / 196 Spe  
+Modest Nature  
+- Recover  
+- Shadow Ball  
+- Thunder Wave  
+- Nasty Plot  
+
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Ivy Cudgel  
+- Swords Dance  
+- Trailblaze  
+- Knock Off  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Fairy  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Moonblast  
+- Thunderbolt  
+- Encore  
+- Calm Mind  
+
+Iron Treads @ Leftovers  
+Ability: Quark Drive  
+Tera Type: Water  
+EVs: 248 HP / 8 Atk / 252 Spe  
+Jolly Nature  
+- Earthquake  
+- Rapid Spin  
+- Knock Off  
+- Stealth Rock

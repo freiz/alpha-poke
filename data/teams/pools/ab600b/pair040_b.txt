@@ -1,0 +1,60 @@
+Darkrai @ Choice Specs  
+Ability: Bad Dreams  
+Tera Type: Dark  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Dark Pulse  
+- Sludge Bomb  
+- Ice Beam  
+- Knock Off  
+
+Slowking-Galar @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 248 HP / 8 Def / 252 SpD  
+Sassy Nature  
+IVs: 0 Atk / 0 Spe  
+- Sludge Bomb  
+- Flamethrower  
+- Future Sight  
+- Chilly Reception  
+
+Tinkaton @ Air Balloon  
+Ability: Pickpocket  
+Tera Type: Water  
+EVs: 252 HP / 24 SpD / 232 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Gigaton Hammer  
+- Encore  
+- Thunder Wave  
+
+Great Tusk @ Heavy-Duty Boots  
+Ability: Protosynthesis  
+Tera Type: Ground  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Headlong Rush  
+- Ice Spinner  
+- Knock Off  
+- Rapid Spin  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Ghost  
+EVs: 244 HP / 252 Def / 12 SpD  
+Impish Nature  
+- Protect  
+- Stealth Rock  
+- Toxic  
+- U-turn  
+
+Deoxys-Speed @ Life Orb  
+Ability: Pressure  
+Tera Type: Normal  
+EVs: 252 Atk / 200 SpA / 56 Spe  
+Naive Nature  
+- Psycho Boost  
+- Ice Beam  
+- Superpower  
+- Extreme Speed

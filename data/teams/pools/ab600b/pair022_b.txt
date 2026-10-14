@@ -1,0 +1,63 @@
+Meloetta @ Heavy-Duty Boots  
+Ability: Serene Grace  
+Tera Type: Dark  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Relic Song  
+- Close Combat  
+- Knock Off  
+- Swords Dance  
+
+Araquanid @ Heavy-Duty Boots  
+Ability: Water Bubble  
+Shiny: Yes  
+Tera Type: Steel  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Sticky Web  
+- Liquidation  
+- Leech Life  
+- Mirror Coat  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Fairy  
+EVs: 252 HP / 152 Def / 104 Spe  
+Bold Nature  
+IVs: 0 Atk  
+- Nasty Plot  
+- Dazzling Gleam  
+- Shadow Ball  
+- Recover  
+
+Kingambit @ Black Glasses  
+Ability: Supreme Overlord  
+Tera Type: Dark  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Kowtow Cleave  
+- Swords Dance  
+- Iron Head  
+- Sucker Punch  
+
+Dragonite @ Choice Band  
+Ability: Multiscale  
+Tera Type: Dragon  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- Outrage  
+- Extreme Speed  
+- Earthquake  
+- Fire Punch  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Shiny: Yes  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Calm Mind  
+- Moonblast  
+- Shadow Ball  
+- Psyshock

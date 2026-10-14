@@ -1,0 +1,59 @@
+Rillaboom @ Life Orb  
+Ability: Grassy Surge  
+Tera Type: Dark  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Grassy Glide  
+- Swords Dance  
+- Knock Off  
+- Wood Hammer  
+
+Hatterene @ Grassy Seed  
+Ability: Magic Bounce  
+Tera Type: Water  
+EVs: 248 HP / 204 Def / 56 Spe  
+Bold Nature  
+- Calm Mind  
+- Mystical Fire  
+- Draining Kiss  
+- Psychic Noise  
+
+Raging Bolt @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Dragon  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+- Dragon Pulse  
+- Volt Switch  
+- Thunderclap  
+- Thunderbolt  
+
+Glimmora @ Focus Sash  
+Ability: Toxic Debris  
+Tera Type: Ghost  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Mortal Spin  
+- Power Gem  
+- Earth Power  
+- Stealth Rock  
+
+Cinderace @ Eject Button  
+Ability: Libero  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Pyro Ball  
+- U-turn  
+- Court Change  
+- Will-O-Wisp  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Ghost  
+EVs: 112 HP / 252 Atk / 144 Spe  
+Adamant Nature  
+- Swords Dance  
+- Kowtow Cleave  
+- Iron Head  
+- Sucker Punch

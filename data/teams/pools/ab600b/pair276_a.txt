@@ -1,0 +1,59 @@
+Kyurem @ Heavy-Duty Boots  
+Ability: Pressure  
+Tera Type: Ice  
+EVs: 252 SpA / 252 Spe  
+Timid Nature  
+- Earth Power  
+- Draco Meteor  
+- Ice Beam  
+- Freeze-Dry  
+
+Great Tusk @ Rocky Helmet  
+Ability: Protosynthesis  
+Tera Type: Poison  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Headlong Rush  
+- Stealth Rock  
+- Close Combat  
+- Rapid Spin  
+
+Cinderace @ Heavy-Duty Boots  
+Ability: Libero  
+Tera Type: Fire  
+EVs: 224 HP / 32 Atk / 252 Spe  
+Jolly Nature  
+- Gunk Shot  
+- U-turn  
+- Pyro Ball  
+- High Jump Kick  
+
+Hatterene @ Leftovers  
+Ability: Magic Bounce  
+Tera Type: Steel  
+EVs: 252 HP / 100 SpA / 104 SpD / 52 Spe  
+Modest Nature  
+- Nuzzle  
+- Draining Kiss  
+- Psychic Noise  
+- Mystical Fire  
+
+Tornadus-Therian @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Heat Wave  
+- Knock Off  
+- Bleakwind Storm  
+- U-turn  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Fairy  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Swords Dance  
+- Kowtow Cleave  
+- Sucker Punch  
+- Iron Head

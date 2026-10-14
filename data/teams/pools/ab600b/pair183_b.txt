@@ -1,0 +1,58 @@
+Oinkologne @ Leftovers  
+Ability: Thick Fat  
+Tera Type: Fairy  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Play Rough  
+- Curse  
+- Double-Edge  
+- High Horsepower  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Water  
+EVs: 156 HP / 164 Def / 188 SpD  
+Impish Nature  
+- Stealth Rock  
+- Earthquake  
+- Knock Off  
+- Protect  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Fighting  
+EVs: 40 HP / 216 SpA / 252 Spe  
+IVs: 0 Atk  
+- Calm Mind  
+- Aura Sphere  
+- Moonblast  
+- Shadow Ball  
+
+Ogerpon-Wellspring (F) @ Wellspring Mask  
+Ability: Water Absorb  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Ivy Cudgel  
+- Horn Leech  
+- Knock Off  
+
+Raging Bolt @ Booster Energy  
+Ability: Protosynthesis  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+IVs: 20 Atk  
+- Thunderclap  
+- Thunderbolt  
+- Draco Meteor  
+- Volt Switch  
+
+Heatran @ Leftovers  
+Ability: Flash Fire  
+Tera Type: Grass  
+EVs: 252 HP / 4 Atk / 252 SpD  
+Sassy Nature  
+- Stealth Rock  
+- Will-O-Wisp  
+- Heavy Slam  
+- Flamethrower

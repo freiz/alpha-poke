@@ -1,0 +1,59 @@
+Ceruledge @ Life Orb  
+Ability: Weak Armor  
+Tera Type: Ghost  
+EVs: 248 HP / 204 SpD / 56 Spe  
+Careful Nature  
+- Poltergeist  
+- Swords Dance  
+- Bitter Blade  
+- Shadow Sneak  
+
+Dragonite @ Leftovers  
+Ability: Multiscale  
+Tera Type: Electric  
+EVs: 248 HP / 224 Atk / 16 Def / 20 Spe  
+Adamant Nature  
+- Dragon Dance  
+- Outrage  
+- Earthquake  
+- Roost  
+
+Hatterene @ Leftovers  
+Ability: Magic Bounce  
+Tera Type: Ghost  
+EVs: 248 HP / 252 Def / 8 SpA  
+Bold Nature  
+- Draining Kiss  
+- Calm Mind  
+- Mystical Fire  
+- Psychic Noise  
+
+Glimmora @ Focus Sash  
+Ability: Toxic Debris  
+Tera Type: Ghost  
+EVs: 248 HP / 252 Def / 8 SpD  
+Bold Nature  
+- Earth Power  
+- Stealth Rock  
+- Mortal Spin  
+- Energy Ball  
+
+Empoleon @ Life Orb  
+Ability: Competitive  
+Tera Type: Fighting  
+EVs: 252 HP / 4 Atk / 252 SpD  
+Sassy Nature  
+- Ice Beam  
+- Vacuum Wave  
+- Surf  
+- Roost  
+
+Samurott-Hisui @ Sticky Barb  
+Ability: Sharpness  
+Tera Type: Ghost  
+EVs: 248 HP / 32 Atk / 92 SpA / 136 SpD  
+Brave Nature  
+- Ceaseless Edge  
+- Sucker Punch  
+- Flip Turn  
+- Razor Shell

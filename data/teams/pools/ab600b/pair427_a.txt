@@ -1,0 +1,59 @@
+Munkidori @ Choice Scarf  
+Ability: Toxic Chain  
+Tera Type: Fighting  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Toxic  
+- Psychic  
+- Focus Blast  
+- Sludge Bomb  
+
+Excadrill @ Leftovers  
+Ability: Mold Breaker  
+Tera Type: Ground  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Earthquake  
+- Swords Dance  
+- Substitute  
+- Rapid Spin  
+
+Scizor @ Leftovers  
+Ability: Technician  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Bullet Punch  
+- U-turn  
+- Knock Off  
+- Swords Dance  
+
+Torkoal @ Eject Pack  
+Ability: Drought  
+Tera Type: Fire  
+EVs: 248 HP / 8 Def / 252 SpD  
+Calm Nature  
+- Fire Blast  
+- Eruption  
+- Lava Plume  
+- Weather Ball  
+
+Typhlosion @ Choice Specs  
+Ability: Blaze  
+Tera Type: Fire  
+EVs: 252 SpA / 252 Spe  
+Modest Nature  
+- Fire Blast  
+- Flamethrower  
+- Lava Plume  
+- Shadow Ball  
+
+Kingambit @ Life Orb  
+Ability: Supreme Overlord  
+Tera Type: Psychic  
+EVs: 240 HP / 252 Atk / 16 Spe  
+Adamant Nature  
+- Sucker Punch  
+- Zen Headbutt  
+- Low Kick  
+- Iron Head

@@ -1,0 +1,59 @@
+Tauros @ Life Orb  
+Ability: Intimidate  
+Tera Type: Dark  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Earthquake  
+- Close Combat  
+- Body Slam  
+- Ice Beam  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Psychic  
+EVs: 252 SpA / 252 Spe  
+Naive Nature  
+- Calm Mind  
+- Thunderbolt  
+- Moonblast  
+- Shadow Ball  
+
+Great Tusk @ Rocky Helmet  
+Ability: Protosynthesis  
+Tera Type: Ghost  
+EVs: 4 HP / 124 Atk / 128 SpD / 252 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Knock Off  
+- Headlong Rush  
+- Ice Spinner  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Flying  
+EVs: 252 HP / 248 SpA / 8 SpD  
+Modest Nature  
+- Shadow Ball  
+- Trick  
+- Recover  
+- Make It Rain  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Ghost  
+EVs: 240 HP / 252 Atk / 16 Spe  
+Adamant Nature  
+- Swords Dance  
+- Sucker Punch  
+- Iron Head  
+- Kowtow Cleave  
+
+Dragapult @ Choice Specs  
+Ability: Clear Body  
+Tera Type: Ghost  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Hardy Nature  
+- Shadow Ball  
+- Dragon Darts  
+- U-turn  
+- Draco Meteor

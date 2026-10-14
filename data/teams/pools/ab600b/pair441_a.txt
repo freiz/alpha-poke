@@ -1,0 +1,59 @@
+Samurott-Hisui @ Life Orb  
+Ability: Sharpness  
+Tera Type: Poison  
+EVs: 248 HP / 84 Atk / 124 SpD / 52 Spe  
+Adamant Nature  
+- Flip Turn  
+- Ceaseless Edge  
+- Knock Off  
+- Razor Shell  
+
+Great Tusk @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Ground  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Ice Spinner  
+- Close Combat  
+- Rapid Spin  
+- Stealth Rock  
+
+Kingambit @ Air Balloon  
+Ability: Supreme Overlord  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Low Kick  
+- Swords Dance  
+- Iron Head  
+- Sucker Punch  
+
+Zapdos @ Rocky Helmet  
+Ability: Static  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Tailwind  
+- Heat Wave  
+- Volt Switch  
+- Roost  
+
+Dragapult @ Life Orb  
+Ability: Infiltrator  
+Tera Type: Steel  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Naive Nature  
+- U-turn  
+- Shadow Ball  
+- Will-O-Wisp  
+- Draco Meteor  
+
+Landorus-Therian @ Rocky Helmet  
+Ability: Intimidate  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpA / 252 Spe  
+Naive Nature  
+- U-turn  
+- Earthquake  
+- Taunt  
+- Stealth Rock

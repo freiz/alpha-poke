@@ -1,0 +1,59 @@
+Alomomola @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Def / 252 SpD  
+Sassy Nature  
+- Whirlpool  
+- Wish  
+- Flip Turn  
+- Protect  
+
+Toxapex @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 248 HP / 252 Def / 8 SpD  
+Bold Nature  
+- Infestation  
+- Toxic  
+- Recover  
+- Baneful Bunker  
+
+Clodsire @ Leftovers  
+Ability: Unaware  
+Tera Type: Steel  
+EVs: 248 HP / 8 Def / 252 SpD  
+Careful Nature  
+- Earthquake  
+- Recover  
+- Toxic  
+- Stealth Rock  
+
+Blissey @ Heavy-Duty Boots  
+Ability: Natural Cure  
+Tera Type: Poison  
+EVs: 4 HP / 252 Def / 252 SpD  
+Calm Nature  
+- Stealth Rock  
+- Shadow Ball  
+- Seismic Toss  
+- Soft-Boiled  
+
+Dondozo @ Leftovers  
+Ability: Unaware  
+Tera Type: Fighting  
+EVs: 248 HP / 8 Atk / 252 Def  
+Impish Nature  
+- Rest  
+- Sleep Talk  
+- Body Press  
+- Liquidation  
+
+Talonflame @ Heavy-Duty Boots  
+Ability: Flame Body  
+Tera Type: Flying  
+EVs: 252 HP / 4 SpA / 252 Spe  
+Hardy Nature  
+- Defog  
+- Roost  
+- Will-O-Wisp  
+- Brave Bird

@@ -1,0 +1,56 @@
+Magcargo @ Focus Sash  
+Ability: Magma Armor  
+Tera Type: Dark  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Modest Nature  
+- Shell Smash  
+- Earth Power  
+- Flamethrower  
+- Power Gem  
+
+Masquerain @ Focus Sash  
+Ability: Intimidate  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Sticky Web  
+- Air Slash  
+- Ice Beam  
+- Bug Buzz  
+
+Flapple  
+Ability: Hustle  
+EVs: 12 HP / 252 Atk / 244 Spe  
+Jolly Nature  
+- Grav Apple  
+- Outrage  
+- Sucker Punch  
+- Dragon Dance  
+
+Sableye @ Lagging Tail  
+Ability: Prankster  
+Tera Type: Poison  
+EVs: 252 HP / 84 Def / 172 SpD  
+Bold Nature  
+- Trick  
+- Gravity  
+- Light Screen  
+- Recover  
+
+Clawitzer @ Assault Vest  
+Ability: Mega Launcher  
+Tera Type: Ground  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+- Aura Sphere  
+- Dragon Pulse  
+- Water Pulse  
+- Dark Pulse  
+
+Dugtrio-Alola  
+Ability: Tangling Hair  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Sucker Punch  
+- Rock Slide  
+- Throat Chop

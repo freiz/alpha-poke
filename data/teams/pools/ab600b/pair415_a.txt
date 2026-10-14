@@ -1,0 +1,68 @@
+Suicune @ Leftovers  
+Ability: Pressure  
+Shiny: Yes  
+Tera Type: Fairy  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+IVs: 0 Atk  
+- Substitute  
+- Protect  
+- Scald  
+- Calm Mind  
+
+Excadrill (M) @ Leftovers  
+Ability: Sand Rush  
+Shiny: Yes  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Swords Dance  
+- Earthquake  
+- Iron Head  
+- Rapid Spin  
+
+Iron Valiant @ Choice Specs  
+Ability: Quark Drive  
+Shiny: Yes  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Moonblast  
+- Aura Sphere  
+- Psyshock  
+- Thunderbolt  
+
+Slowking-Galar (M) @ Assault Vest  
+Ability: Regenerator  
+Shiny: Yes  
+Tera Type: Dragon  
+EVs: 248 HP / 252 SpA / 8 SpD  
+Modest Nature  
+IVs: 0 Atk  
+- Psyshock  
+- Future Sight  
+- Sludge Bomb  
+- Flamethrower  
+
+Hippowdon (M) @ Leftovers  
+Ability: Sand Stream  
+Shiny: Yes  
+Tera Type: Dragon  
+EVs: 248 HP / 8 Def / 252 SpD  
+Impish Nature  
+- Earthquake  
+- Stealth Rock  
+- Rock Slide  
+- Slack Off  
+
+Mandibuzz (F) @ Heavy-Duty Boots  
+Ability: Overcoat  
+Shiny: Yes  
+Tera Type: Dragon  
+EVs: 160 HP / 252 Def / 96 Spe  
+Impish Nature  
+- Knock Off  
+- Roost  
+- Iron Defense  
+- Foul Play

@@ -1,0 +1,59 @@
+Toxapex @ Covert Cloak  
+Ability: Regenerator  
+Tera Type: Ghost  
+EVs: 248 HP / 136 Def / 124 SpD  
+Impish Nature  
+- Toxic  
+- Surf  
+- Haze  
+- Recover  
+
+Slowking-Galar @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Dark  
+EVs: 252 HP / 4 SpA / 252 SpD  
+Calm Nature  
+- Sludge Bomb  
+- Ice Beam  
+- Psyshock  
+- Chilly Reception  
+
+Dondozo @ Leftovers  
+Ability: Unaware  
+Tera Type: Steel  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Curse  
+- Rest  
+- Sleep Talk  
+- Waterfall  
+
+Blissey @ Heavy-Duty Boots  
+Ability: Natural Cure  
+Tera Type: Steel  
+EVs: 4 HP / 252 Def / 252 SpD  
+Calm Nature  
+- Stealth Rock  
+- Seismic Toss  
+- Calm Mind  
+- Soft-Boiled  
+
+Corviknight @ Leftovers  
+Ability: Pressure  
+Tera Type: Dragon  
+EVs: 248 HP / 252 Def / 8 SpD  
+Impish Nature  
+- Brave Bird  
+- Body Press  
+- Roost  
+- U-turn  
+
+Alomomola @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Ghost  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+- Flip Turn  
+- Protect  
+- Wish  
+- Scald

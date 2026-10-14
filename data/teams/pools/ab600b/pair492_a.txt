@@ -1,0 +1,59 @@
+Torkoal (M) @ Heat Rock  
+Ability: Drought  
+Tera Type: Flying  
+EVs: 248 HP / 36 Def / 224 SpD  
+Calm Nature  
+- Rapid Spin  
+- Lava Plume  
+- Stealth Rock  
+- Will-O-Wisp  
+
+Lilligant-Hisui @ Muscle Band  
+Ability: Chlorophyll  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Close Combat  
+- Leaf Blade  
+- Ice Spinner  
+- Victory Dance  
+
+Walking Wake @ Choice Specs  
+Ability: Protosynthesis  
+Tera Type: Fairy  
+EVs: 244 SpA / 12 SpD / 252 Spe  
+Timid Nature  
+- Hydro Steam  
+- Flip Turn  
+- Flamethrower  
+- Draco Meteor  
+
+Tinkaton @ Air Balloon  
+Ability: Pickpocket  
+Tera Type: Water  
+EVs: 252 HP / 24 Atk / 232 Spe  
+Jolly Nature  
+- Gigaton Hammer  
+- Knock Off  
+- Encore  
+- Ice Hammer  
+
+Kilowattrel (M) @ Heavy-Duty Boots  
+Ability: Volt Absorb  
+Tera Type: Electric  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Tailwind  
+- Air Slash  
+- Thunderbolt  
+- U-turn  
+
+Kingambit (M) @ Air Balloon  
+Ability: Supreme Overlord  
+Tera Type: Flying  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Sucker Punch  
+- Iron Head  
+- Low Kick

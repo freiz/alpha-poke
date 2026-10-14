@@ -1,0 +1,63 @@
+Weezing-Galar (M) @ Leftovers  
+Ability: Neutralizing Gas  
+Tera Type: Flying  
+EVs: 252 HP / 240 Def / 16 SpA  
+Bold Nature  
+IVs: 0 Atk  
+- Strange Steam  
+- Defog  
+- Pain Split  
+- Will-O-Wisp  
+
+Hawlucha (F) @ Leftovers  
+Ability: Mold Breaker  
+Tera Type: Steel  
+EVs: 220 HP / 244 Def / 44 Spe  
+Jolly Nature  
+- Drain Punch  
+- Encore  
+- Roost  
+- Defog  
+
+Blissey @ Leftovers  
+Ability: Natural Cure  
+Tera Type: Dark  
+EVs: 180 Def / 76 SpA / 252 SpD  
+Calm Nature  
+IVs: 0 Atk  
+- Shadow Ball  
+- Calm Mind  
+- Soft-Boiled  
+- Stealth Rock  
+
+Dondozo (F) @ Leftovers  
+Ability: Unaware  
+Tera Type: Fighting  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+IVs: 18 Spe  
+- Waterfall  
+- Curse  
+- Rest  
+- Sleep Talk  
+
+Toxapex (M) @ Leftovers  
+Ability: Regenerator  
+Tera Type: Steel  
+EVs: 252 HP / 136 Def / 108 SpD / 12 Spe  
+Bold Nature  
+IVs: 0 Atk  
+- Toxic  
+- Baneful Bunker  
+- Recover  
+- Haze  
+
+Tornadus-Therian @ Assault Vest  
+Ability: Regenerator  
+Tera Type: Dark  
+EVs: 232 HP / 108 SpD / 168 Spe  
+Timid Nature  
+- Bleakwind Storm  
+- Knock Off  
+- Foul Play  
+- U-turn

@@ -1,0 +1,58 @@
+Golduck @ Life Orb  
+Ability: Cloud Nine  
+Tera Type: Dragon  
+EVs: 76 HP / 84 Atk / 72 Def / 92 SpA / 84 SpD / 100 Spe  
+Hardy Nature  
+- Hydro Pump  
+- Surf  
+- Ice Beam  
+- Psyshock  
+
+Morpeko @ Figy Berry  
+Ability: Hunger Switch  
+Tera Type: Ghost  
+EVs: 248 HP / 252 Atk / 8 Def  
+Adamant Nature  
+- Knock Off  
+- Rapid Spin  
+- Aura Wheel  
+- Parting Shot  
+
+Cryogonal @ Life Orb  
+Ability: Levitate  
+Tera Type: Steel  
+EVs: 252 HP / 4 SpD / 252 Spe  
+Timid Nature  
+- Rapid Spin  
+- Freeze-Dry  
+- Recover  
+- Haze  
+
+Piloswine  
+Ability: Thick Fat  
+Tera Type: Grass  
+EVs: 252 HP / 136 Atk / 120 SpD  
+Careful Nature  
+- Curse  
+- Earthquake  
+- Ice Shard  
+- Icicle Crash  
+
+Toxicroak @ Life Orb  
+Ability: Dry Skin  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Atk / 252 Def  
+Impish Nature  
+- Gunk Shot  
+- Sucker Punch  
+- Drain Punch  
+- Swords Dance  
+
+Crocalor @ Eviolite  
+Ability: Unaware  
+EVs: 248 HP / 252 Def / 8 SpD  
+Bold Nature  
+- Will-O-Wisp  
+- Slack Off  
+- Encore  
+- Roar
