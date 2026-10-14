@@ -44,7 +44,7 @@ class SelfPlayPlayer(SearchPlayer):
                  greedy: bool = False, record: bool = True, temp_turns: int = 8,
                  temp_late: float = 0.25, children: int = 0, state_fixes: int = 3,
                  policy_only: bool = False, loop: tuple | None = None, tiebreak=None,
-                 **kwargs):  # fmt: skip
+                 legacy_context: bool = False, **kwargs):  # fmt: skip
         super().__init__(*args, **kwargs)
         assert self.model_transformer and batcher is not None
         self.batcher = batcher
@@ -76,6 +76,8 @@ class SelfPlayPlayer(SearchPlayer):
         self.loop = loop
         # the root tie-break (agents.tiebreak.TieBreak; 2026-10-14): None = off
         self.tiebreak = tiebreak
+        # the search's tree-path context as before 2026-10-14 (A/B tests: eval.bots)
+        self.legacy_context = legacy_context
         self.tiebreaks = 0
         self.child_records: dict[str, list] = {}
         # the request each battle's last record answered (a refused choice drops its record)
@@ -190,8 +192,8 @@ class SelfPlayPlayer(SearchPlayer):
         noise = ((0.0, 10.0) if self.policy_only else
                  (self.loop[4], self.noise[1]) if looping else self.noise)  # fmt: skip
         fut = self.batcher.submit([s.to_string() for s in states], ctxs, iters,
-                                  self.rng.randrange(1 << 30), noise,
-                                  children=export)  # fmt: skip
+                                  self.rng.randrange(1 << 30), noise, children=export,
+                                  legacy_context=self.legacy_context)  # fmt: skip
         # safety net: a search must never hold a game forever
         res = await asyncio.wait_for(asyncio.wrap_future(fut), timeout=self.search_timeout)
         rec, n = res[0], res[1]

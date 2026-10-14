@@ -54,6 +54,9 @@ VARIANTS: dict[str, tuple[str, dict]] = {
                 # ALPHA_TIEBREAK_A / _B: the root tie-break (agents.tiebreak; 2026-10-14): "1"
                 # (defaults) or "delta,q_min,min_share"; unset / "0": off
                 "tiebreak": os.environ.get(f"ALPHA_TIEBREAK_{x.upper()}", ""),
+                # ALPHA_LEGACY_CONTEXT_A / _B = 1: the search's tree-path context as before
+                # 2026-10-14 (A/B tests)
+                "legacy": os.environ.get(f"ALPHA_LEGACY_CONTEXT_{x.upper()}") == "1",
             },
         )
         for x in ("a", "b")
@@ -111,7 +114,7 @@ def make_bot(
         if cls_name == "batched":
             return _batched_bot(extra["model"], heldout_pool, trace_dir, kw, extra.get("dtype"),
                                 extra.get("iters"), extra.get("fixes", 2),
-                                extra.get("tiebreak", ""))  # fmt: skip
+                                extra.get("tiebreak", ""), extra.get("legacy", False))  # fmt: skip
         if cls_name == "search":
             from alpha_poke.agents.search_player import SearchPlayer as cls
         elif cls_name == "policy":
@@ -127,8 +130,8 @@ _BATCHERS: dict = {}  # (model, dtype) -> Batcher, one per network in each (work
 
 
 def _batched_bot(model: str, heldout_pool, trace_dir, kw, dtype: str | None = None,
-                 iters: str | None = None, fixes: int = 2,
-                 tiebreak: str = "") -> Player:  # fmt: skip
+                 iters: str | None = None, fixes: int = 2, tiebreak: str = "",
+                 legacy: bool = False) -> Player:  # fmt: skip
     import random
 
     from alpha_poke.agents.belief_state import BeliefModel
@@ -148,5 +151,6 @@ def _batched_bot(model: str, heldout_pool, trace_dir, kw, dtype: str | None = No
         net_policy="both", model=model, batcher=_BATCHERS[model, dtype], full_frac=1.0,
         full_iters=iters, noise=(0.0, 10.0), greedy=True, record=False,
         turn_cap=int(os.environ.get("ALPHA_TURN_CAP", 300)),
-        seed=random.randrange(1 << 30), state_fixes=fixes, tiebreak=tb, **kw,
+        seed=random.randrange(1 << 30), state_fixes=fixes, tiebreak=tb, legacy_context=legacy,
+        **kw,
     )  # fmt: skip

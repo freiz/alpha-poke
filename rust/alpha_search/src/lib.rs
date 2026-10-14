@@ -137,6 +137,7 @@ fn py_ismcts(
         tnet,
         root_noise_eps: root_noise.0,
         root_noise_conc: root_noise.1,
+        legacy_context: false,
     };
     let res = py.detach(|| {
         if threads > 1 {
@@ -488,7 +489,8 @@ fn batch_dict(py: Python<'_>, b: bsearch::Batch) -> PyResult<Bound<'_, PyDict>> 
 impl PyBatchSearch {
     #[new]
     #[pyo3(signature = (states, contexts, c_puct=1.0, policy_opponent=true, seed=None,
-                        branch_depth=2, threads=1, vl=1, root_noise=(0.0, 10.0)))]
+                        branch_depth=2, threads=1, vl=1, root_noise=(0.0, 10.0),
+                        legacy_context=false))]
     #[allow(clippy::too_many_arguments)]
     fn new(
         states: Vec<String>,
@@ -500,6 +502,7 @@ impl PyBatchSearch {
         threads: usize,
         vl: u32,
         root_noise: (f32, f32),
+        legacy_context: bool,
     ) -> PyResult<Self> {
         if states.is_empty() || states.len() != contexts.len() {
             return Err(PyValueError::new_err(
@@ -520,6 +523,7 @@ impl PyBatchSearch {
             c_puct,
             root_noise_eps: root_noise.0,
             root_noise_conc: root_noise.1,
+            legacy_context,
             ..ismcts::Config::default()
         };
         Ok(PyBatchSearch {

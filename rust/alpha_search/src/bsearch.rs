@@ -216,7 +216,7 @@ fn descend(
     vl: u32,
     rng: &mut StdRng,
 ) {
-    let mut pc = PathCtx::new(Some(ctx));
+    let mut pc = PathCtx::with(Some(ctx), cfg.legacy_context);
     let mut path: Vec<(u32, u16, u16)> = Vec::with_capacity(16);
     let mut applied: Vec<Vec<Instruction>> = Vec::with_capacity(16);
     let mut root_step: Option<(Arc<Vec<StateInstructions>>, usize)> = None;
@@ -299,12 +299,14 @@ fn descend(
             };
             let k = sample(&outcomes, rng);
             state.apply_instructions(&outcomes[k].instruction_list);
+            pc.settle(&outcomes[k].instruction_list, state);
             root_step = Some((outcomes, k));
         } else {
             let mut outcomes = generate_instructions_from_move_pair(state, &m1, &m2, branch);
             let k = sample(&outcomes, rng);
             let instructions = outcomes.swap_remove(k).instruction_list;
             state.apply_instructions(&instructions);
+            pc.settle(&instructions, state);
             applied.push(instructions);
         }
         node = next;
@@ -624,6 +626,7 @@ impl BatchSearch {
             let outcomes = generate_instructions_from_move_pair(&mut state, &m1, &m2, true);
             let k = sample(&outcomes, &mut rng);
             state.apply_instructions(&outcomes[k].instruction_list);
+            pc.settle(&outcomes[k].instruction_list, &state);
             if state.battle_is_over() == 0.0 {
                 let x = inputs(&state, &pc.context(&ctx));
                 batch.push(&x.0);

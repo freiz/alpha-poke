@@ -8,10 +8,25 @@ use crate::state::{
 use std::fmt;
 use std::fmt::Formatter;
 
-#[derive(PartialEq, Clone)]
+#[derive(Clone)]
 pub struct StateInstructions {
     pub percentage: f32,
     pub instruction_list: Vec<Instruction>,
+}
+
+// alpha-poke patch (2026-10-14): equal up to the Acted markers (no state change; the engine's
+// own branch merging compares the lists themselves, markers included)
+impl PartialEq for StateInstructions {
+    fn eq(&self, other: &Self) -> bool {
+        let real = |v: &Vec<Instruction>| -> Vec<Instruction> {
+            v.iter()
+                .filter(|i| !matches!(i, Instruction::Acted(_)))
+                .cloned()
+                .collect()
+        };
+        self.percentage == other.percentage
+            && real(&self.instruction_list) == real(&other.instruction_list)
+    }
 }
 
 impl Default for StateInstructions {
@@ -93,6 +108,10 @@ pub enum Instruction {
     ToggleMegaEvolved(ToggleMegaEvolvedInstruction),
     TeamPreviewFaintIndex(SideReference, PokemonIndex),
     ToggleTeamPreview,
+    // alpha-poke patch (2026-10-14): a marker, no state change: the side's chosen move started
+    // (past sleep, freeze, paralysis, flinch, taunt, fainting first); the search's history
+    // tells a move used from one prevented (training's replays do)
+    Acted(SideReference),
 }
 
 impl fmt::Debug for Instruction {
@@ -349,6 +368,7 @@ impl fmt::Debug for Instruction {
             Instruction::TeamPreviewFaintIndex(side_ref, index) => {
                 write!(f, "TeamPreviewFaintIndex: {:?}, {:?}", side_ref, index)
             }
+            Instruction::Acted(side_ref) => write!(f, "Acted: {:?}", side_ref),
             Instruction::ToggleTeamPreview => {
                 write!(f, "ToggleTeamPreview")
             }
