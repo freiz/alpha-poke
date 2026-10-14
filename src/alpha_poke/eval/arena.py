@@ -371,6 +371,10 @@ def summarize(rows: list[dict]) -> dict:
         "split_pairs": sum(1 for x in scores if x == 0.5),
         "fallbacks_a": sum(r["fallbacks_a"] or 0 for r in rows),  # per-game counts
         "fallbacks_b": sum(r["fallbacks_b"] or 0 for r in rows),
+        # the search's failures (a heuristic decision instead; 2026-10-14: per game only, the
+        # summary showed 0 while gen 4 / 5's evaluations had 5 / 3)
+        "search_fallbacks_a": sum(r.get("search_fallbacks_a") or 0 for r in rows),
+        "search_fallbacks_b": sum(r.get("search_fallbacks_b") or 0 for r in rows),
         "failed_games": len(rows) - n,
         "team_mismatches": sum(1 for r in rows if not r.get("team_ok", True)),
     }

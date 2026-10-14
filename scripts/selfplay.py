@@ -523,6 +523,11 @@ def cmd_train(a) -> None:
     print(json.dumps(summary, indent=1))
 
 
+# a played schedule decides only with at least this share of its pairs complete (both games
+# finished)
+MIN_PAIRS_FRAC = 0.8
+
+
 def sequential_match(a, net_a: str, net_b: str, seed: int, log_dir: str) -> dict:
     """net_a vs net_b at a fixed number of search iterations, paired, as a sequential test
     (design D15-6; fishtest-style SPRT on the pair scores): H0 = net_a is --elo0 weaker,
@@ -579,6 +584,12 @@ def sequential_match(a, net_a: str, net_b: str, seed: int, log_dir: str) -> dict
         # with failed or timed-out games decides on its complete pairs
         raise RuntimeError(f"evaluation incomplete: {len(rows)} of {2 * a.pairs} games, no "
                            f"decision ({res['log']})")  # fmt: skip
+    if len(scores) < MIN_PAIRS_FRAC * a.pairs and not res["stopped_early"]:
+        # (2026-10-14: every game failed -> no pair -> llr 0 -> H1 would promote)
+        raise RuntimeError(f"evaluation: {len(scores)} complete pairs of {a.pairs}, no "
+                           f"decision ({res['log']})")  # fmt: skip
+    if not scores:
+        raise RuntimeError(f"evaluation: no complete pair, no decision ({res['log']})")
     llr = sprt_llr(scores, a.elo0, a.elo1)
     res |= {"llr": round(llr, 3), "llr_bounds": [round(lo, 3), round(hi, 3)],
             "elo0": a.elo0, "elo1": a.elo1, "llr_trace": trace,
