@@ -103,7 +103,9 @@ def cmd_run(a) -> None:
                 "noise": [a.noise_eps, a.noise_conc], "lanes": a.lanes, "leaves": a.leaves,
                 "threads": a.threads, "turn_cap": a.turn_cap, "temp_turns": a.temp_turns,
                 "temp_late": a.temp_late, "dtype": a.dtype, "children": a.children,
-                "policy_only": a.policy_only}  # fmt: skip
+                "policy_only": a.policy_only,
+                "loop": [a.loop_quiet, a.loop_switches, a.loop_window, a.loop_tau, a.loop_noise]
+                if a.loop_quiet > 0 and not a.policy_only else None}  # fmt: skip
     (gen_dir / "settings.json").write_text(json.dumps(settings, indent=1))
     t0 = time.time()
     n = runner.run(gen_dir, pairs, settings, a.procs, tuple(a.ports), a.limit)
@@ -936,6 +938,19 @@ def main() -> None:
     p.add_argument("--turn-cap", type=int, default=300, help="forfeit at this turn (capped)")
     p.add_argument("--temp-turns", type=int, default=8, help="moves sampled at tau 1 until")
     p.add_argument("--temp-late", type=float, default=0.25, help="tau after --temp-turns")
+    # stalling loops (2026-10-14, design "防拖延循环"): exploration once a side loops
+    p.add_argument(
+        "--loop-quiet",
+        type=int,
+        default=20,
+        help="a loop: no faint for this many turns (0: off) ...",
+    )
+    p.add_argument(
+        "--loop-switches", type=int, default=6, help="... and the side switched in this many ..."
+    )
+    p.add_argument("--loop-window", type=int, default=8, help="... of its last turns")
+    p.add_argument("--loop-tau", type=float, default=1.0, help="tau in a loop")
+    p.add_argument("--loop-noise", type=float, default=0.25, help="root noise eps in a loop")
     p.add_argument("--dtype", choices=["fp32", "bf16"], default="bf16", help="GPU inference")
     p.add_argument("--children", type=int, default=0,
                    help="export full searches' children of >= N visits (0: off)")  # fmt: skip

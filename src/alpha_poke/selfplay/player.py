@@ -43,7 +43,7 @@ class SelfPlayPlayer(SearchPlayer):
                  noise: tuple[float, float] = (0.1, 10.0), turn_cap: int = 300, seed: int = 0,
                  greedy: bool = False, record: bool = True, temp_turns: int = 8,
                  temp_late: float = 0.25, children: int = 0, state_fixes: int = 3,
-                 policy_only: bool = False, **kwargs):  # fmt: skip
+                 policy_only: bool = False, loop: tuple | None = None, **kwargs):  # fmt: skip
         super().__init__(*args, **kwargs)
         assert self.model_transformer and batcher is not None
         self.batcher = batcher
@@ -68,6 +68,11 @@ class SelfPlayPlayer(SearchPlayer):
         # policy-only games (value labels without search, AlphaGo's value-net data; 2026-10-11):
         # one world, a one-iteration search for the network's prior, the move sampled from it
         self.policy_only = policy_only
+        # stalling loops (2026-10-14, design "防拖延循环"): (quiet, switches, window, tau, eps):
+        # when no mon has fainted for ``quiet`` turns and this side switched in ``switches`` of
+        # its last ``window`` turns, its moves are sampled at ``tau`` with root noise ``eps``
+        # (the loop broken and played out, its states get outcomes); None: off
+        self.loop = loop
         self.child_records: dict[str, list] = {}
         # the request each battle's last record answered (a refused choice drops its record)
         self._record_request: dict[str, int] = {}
@@ -75,6 +80,31 @@ class SelfPlayPlayer(SearchPlayer):
 
     def choose_move(self, battle):
         return self._choose_selfplay(battle)
+
+    def looping(self, battle) -> bool:
+        """This side in a stalling loop (``loop``), from the battle's log (kept on the battle,
+        fed the new messages)."""
+        if not self.loop:
+            return False
+        quiet, switches, window = self.loop[:3]
+        data = battle._replay_data
+        n, st = getattr(battle, "_alpha_loop", (0, None))
+        if st is None or n > len(data):
+            n, st = 0, {"turn": 0, "faint": 0, "switched": False, "turns": []}
+        me = battle.player_role or "p1"
+        for m in data[n:]:
+            if len(m) < 3:
+                continue
+            if m[1] == "turn":
+                if st["turn"] > 0:
+                    st["turns"] = (st["turns"] + [st["switched"]])[-window:]
+                st["turn"], st["switched"] = int(m[2]), False
+            elif m[1] == "switch" and m[2].startswith(me) and st["turn"] > 0:
+                st["switched"] = True
+            elif m[1] == "faint":
+                st["faint"] = st["turn"]
+        battle._alpha_loop = (len(data), st)
+        return st["turn"] - st["faint"] >= quiet and sum(st["turns"]) >= switches
 
     async def _choose_selfplay(self, battle):
         if battle.turn >= self.turn_cap:
@@ -152,9 +182,11 @@ class SelfPlayPlayer(SearchPlayer):
         t2 = time.time()
         export = self.children if full and self.record else 0
         iters = 1 if self.policy_only else self.full_iters if full else self.fast_iters
+        looping = self.looping(battle)
+        noise = ((0.0, 10.0) if self.policy_only else
+                 (self.loop[4], self.noise[1]) if looping else self.noise)  # fmt: skip
         fut = self.batcher.submit([s.to_string() for s in states], ctxs, iters,
-                                  self.rng.randrange(1 << 30),
-                                  (0.0, 10.0) if self.policy_only else self.noise,
+                                  self.rng.randrange(1 << 30), noise,
                                   children=export)  # fmt: skip
         # safety net: a search must never hold a game forever
         res = await asyncio.wait_for(asyncio.wrap_future(fut), timeout=self.search_timeout)
@@ -176,6 +208,8 @@ class SelfPlayPlayer(SearchPlayer):
                         [m.species for m in battle.available_switches])  # fmt: skip
             return None
         tau = 1.0 if battle.turn <= self.temp_turns else self.temp_late
+        if looping:
+            tau = self.loop[3]
         if self.greedy:
             tau = 0.0
             slot = max(options, key=lambda o: o[1])[0]
@@ -191,7 +225,7 @@ class SelfPlayPlayer(SearchPlayer):
             "side": battle.player_role, "turn": battle.turn, "kind": kind, "full": full,
             "worlds": n_worlds, "iterations": n, "seconds": round(time.time() - t0, 3),
             "t_worlds": round(t1 - t0, 4), "t_ctx": round(t2 - t1, 4),
-            "t_search": round(time.time() - t2, 4), "tau": tau,
+            "t_search": round(time.time() - t2, 4), "tau": tau, "loop": looping,
             "state": states[0].to_string(), "reveal": list(reveal), "ratings": list(ratings),
             "ctx_turn": turn, "history": history, "slot": slot,
             **{k: rec[k] for k in ("visits", "mean", "prior", "legal", "names", "q",
