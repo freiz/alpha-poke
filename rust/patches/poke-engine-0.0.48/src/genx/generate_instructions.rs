@@ -2421,6 +2421,11 @@ pub fn generate_instructions_from_move(
         return;
     }
 
+    // alpha-poke patch (2026-10-14): the move starts (a marker for the search's history)
+    incoming_instructions
+        .instruction_list
+        .push(Instruction::Acted(attacking_side));
+
     if move_has_no_effect(state, &choice, &attacking_side) {
         state.reverse_instructions(&incoming_instructions.instruction_list);
         final_instructions.push(incoming_instructions);

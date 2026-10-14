@@ -26,8 +26,8 @@
 //!   outcomes on the tree path yet).
 
 use poke_engine::choices::Choices;
-use poke_engine::engine::state::MoveChoice;
 use poke_engine::engine::items::Items;
+use poke_engine::engine::state::MoveChoice;
 use poke_engine::pokemon::PokemonName;
 use poke_engine::state::{Pokemon, Side, State};
 use std::str::FromStr;

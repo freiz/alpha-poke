@@ -28,7 +28,7 @@ use poke_engine::engine::evaluate::evaluate;
 use poke_engine::engine::generate_instructions::generate_instructions_from_move_pair;
 use poke_engine::engine::state::MoveChoice;
 use poke_engine::instruction::{Instruction, StateInstructions};
-use poke_engine::state::{PokemonIndex, Side, State};
+use poke_engine::state::{PokemonIndex, Side, SideReference, State};
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 use rustc_hash::{FxHashMap, FxHasher};
@@ -136,6 +136,9 @@ pub struct Config {
     /// eta ~ Dirichlet(conc / n options) (AlphaZero); eps 0 = off
     pub root_noise_eps: f32,
     pub root_noise_conc: f32,
+    /// the tree path's context as before 2026-10-14 (the chosen moves as used, a faint's
+    /// forced switch a new turn): A/B tests only
+    pub legacy_context: bool,
 }
 
 impl Default for Config {
@@ -153,6 +156,7 @@ impl Default for Config {
             tnet: None,
             root_noise_eps: 0.0,
             root_noise_conc: 10.0,
+            legacy_context: false,
         }
     }
 }
@@ -226,6 +230,9 @@ pub(crate) struct PathCtx<'a> {
     steps: Vec<Step>,
     reveal: [u8; 12],
     mains: i32,
+    // the last step's moves, until `settle` (side: the reveal byte and bits a used move adds)
+    pending: [Option<(usize, u8, PokemonIndex)>; 2],
+    legacy: bool,
 }
 
 impl<'a> PathCtx<'a> {
@@ -235,32 +242,100 @@ impl<'a> PathCtx<'a> {
             steps: Vec::new(),
             reveal: base.map_or([0; 12], |c| c.reveal),
             mains: 0,
+            pending: [None; 2],
+            legacy: false,
         }
     }
 
-    /// Record the joint action about to be applied in `state`.
+    /// `new` with Config::legacy_context.
+    pub(crate) fn with(base: Option<&'a Context>, legacy: bool) -> Self {
+        PathCtx {
+            legacy,
+            ..PathCtx::new(base)
+        }
+    }
+
+    /// Record the joint action about to be applied in `state` (its moves as used until
+    /// `settle` sees the outcome).
     pub(crate) fn push(&mut self, state: &State, m1: &MoveChoice, m2: &MoveChoice) {
         if self.base.is_none() {
             return;
         }
-        if !(state.side_one.force_switch || state.side_two.force_switch) {
+        // a forced switch (a pivot, or a faint: the engine switches a side whose active has no
+        // HP even without `force_switch`; 2026-10-14) is not a new turn
+        let forced = |side: &Side| side.force_switch || side.get_active_immutable().hp <= 0;
+        let forced_step = if self.legacy {
+            state.side_one.force_switch || state.side_two.force_switch
+        } else {
+            forced(&state.side_one) || forced(&state.side_two)
+        };
+        if !forced_step {
             self.mains += 1;
         }
         self.steps.push(Step {
             one: Act::of_choice(&state.side_one, m1),
             two: Act::of_choice(&state.side_two, m2),
         });
-        for (off, side, mc) in [(0, &state.side_one, m1), (6, &state.side_two, m2)] {
+        for (k, (off, side, mc)) in [(0, &state.side_one, m1), (6, &state.side_two, m2)]
+            .into_iter()
+            .enumerate()
+        {
+            self.pending[k] = None;
             match mc {
                 MoveChoice::Move(i) | MoveChoice::MoveTera(i) => {
                     let a = off + side.active_index as usize;
-                    self.reveal[a] |= 1 | (1 << (4 + *i as usize));
+                    // seen (and its tera) whether or not the move comes
+                    self.reveal[a] |= 1;
                     if matches!(mc, MoveChoice::MoveTera(_)) {
                         self.reveal[a] |= 1 << 3;
+                    }
+                    self.pending[k] = Some((a, 1 << (4 + *i as usize), side.active_index));
+                    if self.legacy {
+                        self.reveal[a] |= 1 << (4 + *i as usize);
+                        self.pending[k] = None;
                     }
                 }
                 MoveChoice::Switch(p) => self.reveal[off + *p as usize] |= 1,
                 _ => {}
+            }
+        }
+    }
+
+    /// The last step's outcome (`instructions` applied, `state` after them): a move the engine
+    /// never started (`Instruction::Acted` absent: fainted first, asleep, frozen, paralysed,
+    /// flinched, ...) is no action -- "fainted before acting" or "prevented", as the replays
+    /// record it -- and reveals no move (2026-10-14: the chosen move was recorded as used).
+    pub(crate) fn settle(&mut self, instructions: &[Instruction], state: &State) {
+        if self.base.is_none() {
+            return;
+        }
+        let Some(step) = self.steps.last_mut() else {
+            return;
+        };
+        for (k, side_ref, side) in [
+            (0, SideReference::SideOne, &state.side_one),
+            (1, SideReference::SideTwo, &state.side_two),
+        ] {
+            let Some((a, bits, slot)) = self.pending[k].take() else {
+                continue;
+            };
+            let acted = instructions
+                .iter()
+                .any(|i| matches!(i, Instruction::Acted(s) if *s == side_ref));
+            if acted {
+                self.reveal[a] |= bits;
+                continue;
+            }
+            let fainted = side.pokemon[slot].hp <= 0;
+            let act = Act {
+                fainted_first: fainted,
+                prevented: !fainted,
+                ..Act::default()
+            };
+            if k == 0 {
+                step.one = act;
+            } else {
+                step.two = act;
             }
         }
     }
@@ -417,7 +492,7 @@ impl Tree {
         ctx: Option<&Context>,
         rng: &mut impl Rng,
     ) {
-        let mut pc = PathCtx::new(ctx.filter(|_| cfg.tnet.is_some()));
+        let mut pc = PathCtx::with(ctx.filter(|_| cfg.tnet.is_some()), cfg.legacy_context);
         let mut path: Vec<(u32, u16, u16)> = Vec::with_capacity(16);
         let mut applied: Vec<Vec<Instruction>> = Vec::with_capacity(16); // below the root
         let mut root_step: Option<(u16, u16, usize)> = None; // cached root outcome applied
@@ -517,12 +592,14 @@ impl Tree {
                 });
                 let k = sample(outcomes, rng);
                 state.apply_instructions(&outcomes[k].instruction_list);
+                pc.settle(&outcomes[k].instruction_list, state);
                 root_step = Some((i1, i2, k));
             } else {
                 let mut outcomes = generate_instructions_from_move_pair(state, &m1, &m2, branch);
                 let k = sample(&outcomes, rng);
                 let instructions = outcomes.swap_remove(k).instruction_list;
                 state.apply_instructions(&instructions);
+                pc.settle(&instructions, state);
                 applied.push(instructions);
             }
             path.push((node, i1, i2));
@@ -738,6 +815,98 @@ mod tests {
         let mut s = fixture();
         s.side_two.get_active().moves[&PokemonMoveIndex::M0].id = mv;
         s
+    }
+
+    /// side one (fast, Tackle) KOs side two's active (1 HP, its Ice Beam never comes)
+    fn ko_first() -> State {
+        use poke_engine::engine::abilities::Abilities;
+        use poke_engine::engine::items::Items;
+        use poke_engine::state::PokemonType;
+        let mut s = fixture();
+        let a = s.side_one.get_active();
+        a.speed = 999;
+        a.moves[&PokemonMoveIndex::M0].id = Choices::TACKLE;
+        let b = s.side_two.get_active();
+        (b.hp, b.speed, b.ability, b.item) = (1, 1, Abilities::NONE, Items::NONE);
+        b.types = (PokemonType::NORMAL, PokemonType::TYPELESS);
+        b.moves[&PokemonMoveIndex::M0].id = Choices::ICEBEAM;
+        s.side_one.force_switch = false;
+        s.side_two.force_switch = false;
+        s
+    }
+
+    #[test]
+    fn a_move_never_used_is_not_history_or_revealed() {
+        // 2026-10-14 (external review): the chosen move was recorded as used before the turn
+        let base = Context {
+            reveal: [0; 12],
+            rating: [0, 0],
+            turn: 10,
+            history: vec![],
+        };
+        let mut state = ko_first();
+        let mut pc = PathCtx::new(Some(&base));
+        let m = MoveChoice::Move(PokemonMoveIndex::M0);
+        pc.push(&state, &m, &m);
+        let outcomes = generate_instructions_from_move_pair(&mut state, &m, &m, false);
+        assert_eq!(outcomes.len(), 1);
+        state.apply_instructions(&outcomes[0].instruction_list);
+        pc.settle(&outcomes[0].instruction_list, &state);
+        let ctx = pc.context(&base);
+        let step = ctx.history.last().unwrap();
+        assert_eq!(step.one.kind, 1, "our Tackle was used");
+        assert!(
+            step.two.kind == 0 && step.two.fainted_first,
+            "theirs never came: {step:?}"
+        );
+        let theirs = 6 + state.side_two.active_index as usize;
+        assert_eq!(ctx.reveal[theirs] & (1 << 4), 0, "Ice Beam revealed");
+        assert_ne!(
+            ctx.reveal[0 + state.side_one.active_index as usize] & (1 << 4),
+            0
+        );
+        assert_eq!(ctx.turn, 11);
+        // the faint's forced switch: the same turn (the engine switches a side whose active has
+        // no HP although `force_switch` is false)
+        assert!(!state.side_two.force_switch && state.side_two.get_active_immutable().hp <= 0);
+        let (o1, o2) = state.get_all_options();
+        pc.push(&state, &o1[0], &o2[0]);
+        let outcomes = generate_instructions_from_move_pair(&mut state, &o1[0], &o2[0], false);
+        state.apply_instructions(&outcomes[0].instruction_list);
+        pc.settle(&outcomes[0].instruction_list, &state);
+        assert_eq!(pc.context(&base).turn, 11);
+    }
+
+    #[test]
+    fn a_sleeping_mon_is_prevented() {
+        use poke_engine::state::PokemonStatus;
+        let base = Context {
+            reveal: [0; 12],
+            rating: [0, 0],
+            turn: 3,
+            history: vec![],
+        };
+        let mut state = ko_first();
+        let a = state.side_one.get_active();
+        (a.status, a.sleep_turns, a.rest_turns) = (PokemonStatus::SLEEP, 0, 0); // cannot wake yet
+        state.side_two.get_active().hp = 300;
+        let mut pc = PathCtx::new(Some(&base));
+        let m = MoveChoice::Move(PokemonMoveIndex::M0);
+        pc.push(&state, &m, &m);
+        let outcomes = generate_instructions_from_move_pair(&mut state, &m, &m, false);
+        for o in &outcomes {
+            let mut st = state.clone();
+            st.apply_instructions(&o.instruction_list);
+            let mut p = PathCtx {
+                pending: pc.pending,
+                steps: pc.steps.clone(),
+                ..PathCtx::new(Some(&base))
+            };
+            p.settle(&o.instruction_list, &st);
+            let step = p.steps.last().unwrap();
+            assert!(step.one.kind == 0 && step.one.prevented, "asleep: {step:?}");
+            assert!(step.two.kind == 1, "their move came: {step:?}");
+        }
     }
 
     #[test]

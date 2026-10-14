@@ -2014,6 +2014,7 @@ impl State {
             Instruction::TeamPreviewFaintIndex(side_ref, pkmn_index) => {
                 self.get_side(&side_ref).pokemon[*pkmn_index].hp = 0;
             }
+            Instruction::Acted(_) => {}
             Instruction::ToggleTeamPreview => {
                 self.team_preview = !self.team_preview;
             }
@@ -2217,6 +2218,7 @@ impl State {
                 let pkmn = &mut self.get_side(side_ref).pokemon[*pkmn_index];
                 pkmn.hp = pkmn.maxhp;
             }
+            Instruction::Acted(_) => {}
             Instruction::ToggleTeamPreview => {
                 self.team_preview = !self.team_preview;
             }
