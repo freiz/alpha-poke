@@ -24,13 +24,14 @@ log = logging.getLogger(__name__)
 MAX_LEAVES = 512  # GpuNet's largest CUDA graph: 1024 rows = 512 leaves (two views each)
 
 
-def parse_ml(s: str | None) -> tuple[float, float, float]:
-    """The moves-left term's "slope,cap,threshold" (alpha_search MlParams; design v6) -> a
-    tuple; None / "" = off."""
+def parse_ml(s: str | None) -> tuple[float, float, float, bool]:
+    """The moves-left term's "slope,cap,threshold[,loser]" (alpha_search MlParams; design v6)
+    -> a tuple; loser 0 = the winning side only (default 1: both sides); None / "" = off."""
     if not s:
-        return (0.0, 0.0, 0.0)
-    slope, cap, threshold = (float(x) for x in s.split(","))
-    return (slope, cap, threshold)
+        return (0.0, 0.0, 0.0, False)
+    v = s.split(",")
+    slope, cap, threshold = (float(x) for x in v[:3])
+    return (slope, cap, threshold, len(v) > 3 and v[3].strip() == "0")
 
 
 @dataclass
@@ -44,7 +45,7 @@ class _Job:
 
 class Batcher:
     def __init__(self, model: str, leaves: int = 8, threads: int = 8, dtype: str | None = None,
-                 ml: tuple[float, float, float] = (0.0, 0.0, 0.0),
+                 ml: tuple[float, float, float, bool] = (0.0, 0.0, 0.0, False),
                  value_model: str | None = None):  # fmt: skip
         """``ml``: the moves-left term of every search (``parse_ml``; needs a network with the
         remaining-turns head). ``value_model``: the leaves' values from this network, the

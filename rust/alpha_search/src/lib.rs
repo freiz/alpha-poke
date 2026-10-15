@@ -41,7 +41,7 @@ fn roundtrip(state: &str) -> String {
 #[pyo3(signature = (states, duration_ms, iterations=0, seed=None, c=std::f32::consts::SQRT_2,
                     cache_root=true, branch_depth=2, threads=1, model_dir=None,
                     use_policy=false, policy_opponent=true, c_puct=1.0, contexts=None,
-                    root_noise=(0.0, 10.0), ml=(0.0, 0.0, 0.0)))]
+                    root_noise=(0.0, 10.0), ml=(0.0, 0.0, 0.0, false)))]
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 fn py_ismcts(
     py: Python<'_>,
@@ -59,7 +59,7 @@ fn py_ismcts(
     c_puct: f32,
     contexts: Option<Vec<PyContext>>,
     root_noise: (f32, f32),
-    ml: (f32, f32, f32),
+    ml: (f32, f32, f32, bool),
 ) -> PyResult<(Vec<(String, u32, f32)>, u32, usize, u16)> {
     if states.is_empty() {
         return Err(PyValueError::new_err("ismcts needs at least one world"));
@@ -363,12 +363,14 @@ fn tnet_forward(
     }))
 }
 
-/// The moves-left term's (slope, cap, threshold) (`ismcts::MlParams`; slope 0 = off).
-fn ml_params((slope, cap, threshold): (f32, f32, f32)) -> ismcts::MlParams {
+/// The moves-left term's (slope, cap, threshold, winner only) (`ismcts::MlParams`; slope 0 =
+/// off).
+fn ml_params((slope, cap, threshold, winner_only): (f32, f32, f32, bool)) -> ismcts::MlParams {
     ismcts::MlParams {
         slope,
         cap,
         threshold,
+        winner_only,
     }
 }
 
@@ -464,7 +466,7 @@ impl PyBatchSearch {
     #[new]
     #[pyo3(signature = (states, contexts, c_puct=1.0, policy_opponent=true, seed=None,
                         branch_depth=2, threads=1, vl=1, root_noise=(0.0, 10.0),
-                        ml=(0.0, 0.0, 0.0)))]
+                        ml=(0.0, 0.0, 0.0, false)))]
     #[allow(clippy::too_many_arguments)]
     fn new(
         states: Vec<String>,
@@ -476,7 +478,7 @@ impl PyBatchSearch {
         threads: usize,
         vl: u32,
         root_noise: (f32, f32),
-        ml: (f32, f32, f32),
+        ml: (f32, f32, f32, bool),
     ) -> PyResult<Self> {
         if states.is_empty() || states.len() != contexts.len() {
             return Err(PyValueError::new_err(

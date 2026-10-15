@@ -119,12 +119,15 @@ pub(crate) fn arm_index(arms: &mut Vec<Arm>, l: Label) -> usize {
 /// value at a node is clearly decided (|2q - 1| > `threshold`), its arms get
 /// -sign(2q - 1) * clamp(`slope` * (arm's moves left - the node's), +-`cap`) * the excess
 /// (|2q - 1| - threshold) / (1 - threshold): the winner prefers shorter games, the loser longer
-/// ones; the win probability itself stays unchanged. `slope` 0 = off.
+/// ones; the win probability itself stays unchanged. `slope` 0 = off. `winner_only`: the losing
+/// side gets no term (a capped game is a draw, 2026-10-15: preferring long games when losing
+/// meant stalling to the turn cap: 8 capped games in 1,200 vs 2-5 without the term).
 #[derive(Clone, Copy, Debug, Default)]
 pub struct MlParams {
     pub slope: f32,
     pub cap: f32,
     pub threshold: f32,
+    pub winner_only: bool,
 }
 
 #[derive(Clone)]
@@ -432,6 +435,9 @@ fn moves_left_term(
         return None;
     }
     let q = 2.0 * tot / vis as f32 - 1.0;
+    if ml.winner_only && q < 0.0 {
+        return None;
+    }
     let excess = (q.abs() - ml.threshold) / (1.0 - ml.threshold).max(1e-6);
     (excess > 0.0).then(|| (-q.signum() * excess.min(1.0), m_tot / m_n as f32))
 }
@@ -992,6 +998,7 @@ mod tests {
             slope: 0.01,
             cap: 0.05,
             threshold: 0.5,
+            winner_only: false,
         };
         // equal values, arm 1 shorter: winning -> 1, losing -> 0, even / off -> the first
         let win = [arm(9.0, 20.0), arm(9.0, 10.0)];
@@ -999,6 +1006,12 @@ mod tests {
         assert_eq!(select_puct(&win, &avail, 1.0, &MlParams::default()).0, 0);
         let lose = [arm(1.0, 10.0), arm(1.0, 20.0)];
         assert_eq!(select_puct(&lose, &avail, 1.0, &ml).0, 1);
+        let winner_only = MlParams {
+            winner_only: true,
+            ..ml
+        };
+        assert_eq!(select_puct(&lose, &avail, 1.0, &winner_only).0, 0);
+        assert_eq!(select_puct(&win, &avail, 1.0, &winner_only).0, 1);
         let even = [arm(5.0, 20.0), arm(5.0, 10.0)];
         assert_eq!(select_puct(&even, &avail, 1.0, &ml).0, 0);
         // bounded: a large value difference is not overturned
