@@ -118,7 +118,9 @@ STATE = SELFPLAY_DIR / "state.json"  # the current network and every generation'
 # the moves-left term of the searches (self-play and the evaluations; "slope,cap,threshold",
 # selfplay.batcher.parse_ml; "" = off; design v6): used only with networks that have the
 # remaining-turns head
-SEARCH_ML = ""
+# 2026-10-15 (from gen 8, v6): ml3, the winning side only (A/B 50.96% +- 2.42%, wins ~3 turns
+# shorter; both sides stalled to the turn cap: results.md)
+SEARCH_ML = "0.005,0.03,0.5,0"
 
 
 def ml_for(run: str) -> str:
@@ -137,14 +139,18 @@ KL_BIG = 0.01
 # --stream 2 (2026-10-10, was 4): two human shards per chunk; a chunk in use and the next one
 # loading are in memory together (4 + 4 shards with the 50,000-game generations' self-play data:
 # over the 40 GB cap). A generation's training reads ~0.02 epoch of the human data either way
-TRAIN_DATA = "v5"  # the human data (data/train/<x>); the generations' runs go to its runs/
+# 2026-10-15 (from gen 8): v6 (design v6) -- the reconverted human data, the counters ("count"),
+# the remaining-turns head ("turns"), the self-play outcomes spread over the run (A/B 52.38% +-
+# 2.60%), the self-play data streamed in chunks (all generations no longer fit in memory)
+TRAIN_DATA = "v6"  # the human data (data/train/<x>); the generations' runs go to its runs/
 TRAIN_FLAGS = (f"--data {TRAIN_DATA} --stream 2 --val-cutoff 1776921722 --train-only hf- "
                "--eval-every 500 "
                "--arch transformer "
                "--history --mtp 3 --mtp-weight 0.5 --mtp-decay 0.5 --value-residual "
-               "--value-per-game 4 --kinds main,forced,pivot,blind --aux oppset "
-               "--feats reveal,num,movetab,matchup,elo,counter "
-               "--d-ff 171 --ffn swiglu --norm rms --qk-norm")  # fmt: skip
+               "--value-per-game 4 --kinds main,forced,pivot,blind --aux oppset,turns "
+               "--feats reveal,num,movetab,matchup,elo,counter,count "
+               "--d-ff 171 --ffn swiglu --norm rms --qk-norm "
+               "--sp-value-schedule spread --sp-stream 1500000")  # fmt: skip
 
 
 def capped(cmd: list[str], gb: float) -> list[str]:

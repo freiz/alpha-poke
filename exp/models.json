@@ -3,8 +3,8 @@
   "model": "v5-glu",
   "elo": 1500.0
  },
- "built": "2026-10-14 14:00",
- "current": "sp-gen6",
+ "built": "2026-10-15 14:34",
+ "current": "v6-s-spread",
  "models": [
   {
    "name": "sp-gen0",
@@ -389,8 +389,7 @@
     "gen7-eval"
    ],
    "elo": 1514.7,
-   "elo_ci95": 33.9,
-   "current": true
+   "elo_ci95": 33.9
   },
   {
    "name": "sp-gen7",
@@ -437,7 +436,8 @@
    },
    "created": "2026-10-14 13:02",
    "matches": [
-    "gen7-eval"
+    "gen7-eval",
+    "v6-switch-vs-gen7"
    ],
    "elo": 1513.5,
    "elo_ci95": 38.5
@@ -488,6 +488,49 @@
    ],
    "elo": 1500.0,
    "elo_ci95": 0.0
+  },
+  {
+   "name": "v6-s-spread",
+   "run": "data/train/v6/runs/v6-s-spread",
+   "sha256": "569278dcb5219cb7",
+   "generation": null,
+   "role": "variant",
+   "promoted": null,
+   "played_generations": [],
+   "training": {
+    "init": "data/train/v6/runs/v6-h",
+    "selfplay": "sp7,sp6,sp5,sp4,sp3,sp2,sp1,sp0",
+    "sp_frac": 0.8,
+    "lr": 0.0004,
+    "batch": 4096,
+    "warmup_frac": 0.2,
+    "sp_per_game": 50,
+    "sp_value_passes": 1,
+    "seed": 0,
+    "epochs": 6,
+    "steps": 13806,
+    "params": 741868
+   },
+   "parent": "v6-h",
+   "validation_last": {
+    "ce_turn_w": 1.1639,
+    "bce_all_w": 0.5485,
+    "top1": 0.5473,
+    "value_ece": 0.0137,
+    "hce_true": 1.2504,
+    "opp_act_acc": 0.4188,
+    "sp_kl": 0.2176,
+    "sp_top1": 0.7249,
+    "sp_bce": 0.4387,
+    "sp_kl_ref": 0.1391
+   },
+   "created": "2026-10-15 08:51",
+   "matches": [
+    "v6-switch-vs-gen7"
+   ],
+   "elo": 1511.2,
+   "elo_ci95": 42.1,
+   "current": true
   }
  ]
 }
