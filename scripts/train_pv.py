@@ -263,18 +263,10 @@ V3_KEYS = ("reveal", "ent2", "glob2", "ent3", "glob3", "turn", "faint", "turns",
            "set_ability", "set_tera", "set_move", "rating", "kind")  # fmt: skip
 
 
-def load_selfplay(items: list[tuple[str, float]], per_game: int, seed: int,
-                  memmap_dir: Path | None = None) -> tuple[dict, int]:  # fmt: skip
-    """Self-play datasets ``(name, share of games kept)`` in one set of arrays, at most
-    ``per_game`` positions per game (those with a policy target first, in random order), the
-    cap applied shard by shard (a game is in one shard) on the small columns, then the kept rows
-    filled shard by shard into preallocated arrays: peak memory = the kept rows + one shard
-    (2026-10-10: ~6.3M positions after gen 4 no longer fit in memory twice). ``memmap_dir``: the
-    large arrays (the network inputs)
-    in memory-mapped .npy files there instead of memory (2026-10-11: a generation of 100,000
-    games would be ~19 GB of arrays; mapped, they live in the page cache, which the kernel can
-    reclaim under the memory cap; same rows, same order: training is unchanged). Returns
-    (arrays, positions before the cap)."""
+def plan_selfplay(items: list[tuple[str, float]], per_game: int,
+                  seed: int) -> tuple[list[tuple[Path, np.ndarray]], int]:  # fmt: skip
+    """The self-play rows to train on (``load_selfplay``): [(shard cache, its kept rows)] and the
+    positions before the per-game cap."""
     plan, n_before = [], 0
     for d_i, (name, keep) in enumerate(items):
         caches, sizes = shard_caches(name)
@@ -294,6 +286,22 @@ def load_selfplay(items: list[tuple[str, float]], per_game: int, seed: int,
                 rank = np.arange(len(idx)) - np.repeat(starts, np.diff(np.r_[starts, len(idx)]))
                 idx = np.sort(idx[o[rank < per_game]])
             plan.append((c, idx))
+    return plan, n_before
+
+
+def load_selfplay(items: list[tuple[str, float]], per_game: int, seed: int,
+                  memmap_dir: Path | None = None) -> tuple[dict, int]:  # fmt: skip
+    """Self-play datasets ``(name, share of games kept)`` in one set of arrays, at most
+    ``per_game`` positions per game (those with a policy target first, in random order), the
+    cap applied shard by shard (a game is in one shard) on the small columns, then the kept rows
+    filled shard by shard into preallocated arrays: peak memory = the kept rows + one shard
+    (2026-10-10: ~6.3M positions after gen 4 no longer fit in memory twice). ``memmap_dir``: the
+    large arrays (the network inputs)
+    in memory-mapped .npy files there instead of memory (2026-10-11: a generation of 100,000
+    games would be ~19 GB of arrays; mapped, they live in the page cache, which the kernel can
+    reclaim under the memory cap; same rows, same order: training is unchanged). Returns
+    (arrays, positions before the cap)."""
+    plan, n_before = plan_selfplay(items, per_game, seed)
     total = sum(len(i) for _, i in plan)
     out: dict = {}
     pos = 0
@@ -316,6 +324,94 @@ def load_selfplay(items: list[tuple[str, float]], per_game: int, seed: int,
         if isinstance(v, np.memmap):
             v.flush()
     return out, n_before
+
+
+SP_SMALL = ("game", "pi_w", "value_ok")
+
+
+def selfplay_small(plan) -> tuple[list[Path], dict]:
+    """--sp-stream: the kept self-play rows' small columns (SP_SMALL) and each row's shard and row
+    (``gather``), from ``plan_selfplay``'s plan."""
+    plan = [(c, idx) for c, idx in plan if len(idx)]
+    out: dict = {"shard": np.repeat(np.arange(len(plan)), [len(i) for _, i in plan]),
+                 "row": np.concatenate([i for _, i in plan])}  # fmt: skip
+    parts: dict = {k: [] for k in SP_SMALL}
+    for c, idx in plan:
+        with np.load(c) as z:
+            for k in SP_SMALL:
+                parts[k].append(z[k][idx])
+    out |= {k: np.concatenate(v) for k, v in parts.items()}
+    return [c for c, _ in plan], out
+
+
+class SpStream:
+    """--sp-stream R (self-play data larger than memory: 2026-10-15, all 8 generations = 15.9M
+    positions, 42 GB memory-mapped, read randomly from disk at 1/30 of the speed): batches from
+    chunks of about R train rows (whole shards, reshuffled every pass), every train row once per
+    pass in a random order (a short last batch filled with other rows of the chunk); the next
+    chunk loads in a background thread. ``value_rows`` (--sp-value-schedule spread): every one of
+    these rows' outcomes goes to ``value_passes`` random passes, and in that pass's chunk it is
+    spread evenly over the chunk's steps. ``next()``: (chunk data, policy rows local / global,
+    value rows local / global)."""
+
+    def __init__(self, caches, small, train_idx, rows: int, batch: int, passes: int, rng,
+                 value_rows=None, value_passes: int = 1):  # fmt: skip
+        self.caches, self.small, self.batch, self.rng = caches, small, batch, rng
+        shard = small["shard"][train_idx]
+        o = np.argsort(shard, kind="stable")
+        bounds = np.flatnonzero(np.diff(shard[o])) + 1
+        by_shard = np.split(train_idx[o], bounds)
+        self.chunks: list = []  # (pass, global rows)
+        for p in range(passes):
+            cur, n = [], 0
+            for s in rng.permutation(len(by_shard)):
+                cur.append(by_shard[s])
+                n += len(by_shard[s])
+                if n >= rows:
+                    self.chunks.append((p, np.concatenate(cur)))
+                    cur, n = [], 0
+            if cur:
+                self.chunks.append((p, np.concatenate(cur)))
+        self.vpass = None
+        if value_rows is not None:  # each valued row's passes, as a bit mask
+            self.vpass = np.zeros(len(small["shard"]), np.int64)
+            for v in value_rows:
+                pick = rng.choice(passes, min(value_passes, passes), replace=False)
+                self.vpass[v] |= int(sum(1 << int(q) for q in pick))
+        self.steps = sum(-(-len(r) // batch) for _, r in self.chunks)
+        self.pool = ThreadPoolExecutor(1)
+        self.i = 0
+        self.next_chunk = self.pool.submit(self._load, 0)
+        self.left = 0
+
+    def _load(self, i: int):
+        p, glob_rows = self.chunks[i]
+        glob_rows = glob_rows[np.argsort(self.small["shard"][glob_rows], kind="stable")]
+        return p, glob_rows, gather(self.caches, self.small, glob_rows)
+
+    def _advance(self):
+        p, self.glob_rows, self.data = self.next_chunk.result()
+        self.i += 1
+        if self.i < len(self.chunks):
+            self.next_chunk = self.pool.submit(self._load, self.i)
+        n = len(self.glob_rows)
+        self.left = -(-n // self.batch)
+        perm = self.rng.permutation(n)
+        fill = self.rng.choice(n, self.left * self.batch - n)
+        self.order = np.concatenate([perm, fill]).reshape(self.left, self.batch)
+        self.k = 0
+        if self.vpass is not None:
+            v = np.flatnonzero((self.vpass[self.glob_rows] >> p) & 1)
+            self.vsplit = np.array_split(self.rng.permutation(v), self.left)
+
+    def next(self):
+        if self.left == 0:
+            self._advance()
+        b = self.order[self.k]
+        bv = self.vsplit[self.k] if self.vpass is not None else b[:0]
+        self.k += 1
+        self.left -= 1
+        return self.data, b, self.glob_rows[b], bv, self.glob_rows[bv]
 
 
 def load_small(caches: list[Path], sizes: list[int]) -> dict:
@@ -908,6 +1004,9 @@ def main() -> None:
         default="data/tmp/sp_memmap",
         help="self-play inputs memory-mapped under this directory ('' = in memory)",
     )
+    ap.add_argument("--sp-stream", type=int, default=0,
+                    help="self-play read in chunks of about this many train rows (SpStream; "
+                         "0: all in memory / memory-mapped)")  # fmt: skip
     ap.add_argument("--sp-per-game", type=int, default=0,
                     help="self-play: max positions per game, policy targets first")  # fmt: skip
     ap.add_argument("--sp-passes", type=float, default=0.0,
@@ -1038,12 +1137,12 @@ def main() -> None:
     n_params = sum(p.numel() for p in model.parameters())
     opt = torch.optim.AdamW(model.parameters(), lr=a.lr, weight_decay=a.wd)
     # self-play data (in memory): train / validation split by game
-    dsp = None
+    dsp = sp_stream = None
     if a.selfplay:  # "name" or "name:keep" (share of its games kept)
         items = [(n, float(k) if k else 1.0)
                  for n, _, k in (x.partition(":") for x in a.selfplay.split(","))]  # fmt: skip
         mdir = None
-        if a.sp_memmap:
+        if a.sp_memmap and not a.sp_stream:
             import atexit
             import os
             import shutil
@@ -1051,7 +1150,11 @@ def main() -> None:
             mdir = Path(a.sp_memmap) / f"{a.run}-{os.getpid()}"
             mdir.mkdir(parents=True, exist_ok=True)
             atexit.register(shutil.rmtree, mdir, ignore_errors=True)
-        dsp, sp_n0 = load_selfplay(items, a.sp_per_game, a.seed, mdir)
+        if a.sp_stream:  # small columns only; the rest is read chunk by chunk (SpStream)
+            sp_plan, sp_n0 = plan_selfplay(items, a.sp_per_game, a.seed)
+            sp_caches, dsp = selfplay_small(sp_plan)
+        else:
+            dsp, sp_n0 = load_selfplay(items, a.sp_per_game, a.seed, mdir)
         if a.sp_per_game > 0:
             # at most N positions per game (fixed for the run): long games (switch loops of two
             # stall teams, up to 650 decisions) would otherwise weigh tens of times more than a
@@ -1067,6 +1170,15 @@ def main() -> None:
         sp_vw = sp_vw.astype(np.float32)
         sp_seen = np.zeros(len(sp_vw), np.int32)  # draws per position (--sp-value-passes)
         bsp = int(round(a.batch * a.sp_frac))
+        sp_eval = (dsp, sp_val)  # the self-play validation data and its rows
+        if a.sp_stream:
+            assert a.sp_passes == int(a.sp_passes) > 0 and not a.steps, "--sp-stream: --sp-passes"
+            spread = a.sp_value_schedule == "spread"
+            sp_stream = SpStream(sp_caches, dsp, sp_train, a.sp_stream, bsp, int(a.sp_passes), rng,
+                                 sp_train[sp_vw[sp_train] > 0] if spread else None,
+                                 max(1, a.sp_value_passes))  # fmt: skip
+            a.steps = sp_stream.steps
+            sp_eval = (gather(sp_caches, dsp, sp_val), np.arange(len(sp_val)))
         if not a.steps and a.sp_passes > 0:  # each kept self-play position ~sp_passes times
             a.steps = max(50, math.ceil(a.sp_passes * len(sp_train) / bsp))
         emit(dict(event="selfplay", positions=len(sinv), games=len(scnt), train=len(sp_train),
@@ -1077,7 +1189,7 @@ def main() -> None:
     hb = a.batch - (bsp if dsp is not None else 0)  # human rows per batch
     steps = a.steps or int(a.epochs * len(train_idx) / a.batch)
     v_sched = None  # --sp-value-schedule spread: the value rows of each step
-    if dsp is not None and a.sp_value_schedule == "spread":
+    if dsp is not None and a.sp_value_schedule == "spread" and sp_stream is None:
         valued = sp_train[sp_vw[sp_train] > 0]
         order = np.concatenate([rng.permutation(valued)
                                 for _ in range(max(1, a.sp_value_passes))])  # fmt: skip
@@ -1102,7 +1214,7 @@ def main() -> None:
         m = evaluate(model, dv, v_idx, device)
         m |= evaluate_drift(model, ref_model, dv, v_idx, device)
         if dsp is not None:
-            m |= evaluate_sp(model, dsp, sp_val, device, a.value_per_game, ref=ref_model)
+            m |= evaluate_sp(model, *sp_eval, device, a.value_per_game, ref=ref_model)
         emit(dict(event="val", step=0, **{k: float(v) for k, v in m.items()}))
     t_last = time.time()
     for step in range(1, steps + 1):
@@ -1141,25 +1253,35 @@ def main() -> None:
             ce = bce = loss = torch.zeros((), device=device)
             logits = act = None
         if dsp is not None:  # self-play sub-batch: soft policy targets, outcome, same aux heads
-            bs = sp_train[rng.integers(0, len(sp_train), bsp)]
+            # rows: local to the data (s_data), global ids (bs / bv: weights, value draws)
+            if sp_stream is not None:
+                s_data, b_loc, bs, bv_loc, bv = sp_stream.next()
+                spread = sp_stream.vpass is not None
+            else:
+                s_data, bs = dsp, sp_train[rng.integers(0, len(sp_train), bsp)]
+                b_loc = bs
+                spread = v_sched is not None
+                if spread:
+                    bv = bv_loc = v_sched[step - 1]
             s_sp, s_de, s_gl, s_ma, s_act, s_won, s_ev, s_hs, s_hd, s_fs, s_fd, s_x = to_torch(
-                dsp, bs, device
+                s_data, b_loc, device
             )
             s_kw = {"x": s_x} if a.arch == "transformer" and s_x is not None else {}
             with torch.autocast(device.type, dtype=torch.bfloat16, enabled=device.type == "cuda"):
                 s_out = model(s_sp, s_de, s_gl, s_ma, s_hs, s_hd, aux=bool(a.mtp or heads), **s_kw)
-            pi = torch.from_numpy(dsp["pi"][bs]).to(device)
-            pw_s = torch.from_numpy(dsp["pi_w"][bs]).to(device)
+            pi = torch.from_numpy(s_data["pi"][b_loc]).to(device)
+            pw_s = torch.from_numpy(s_data["pi_w"][b_loc]).to(device)
             s_ce = (soft_policy_loss(s_out[0], pi, s_ma) * pw_s).sum() / pw_s.sum().clamp_min(1)
             bw_s = torch.from_numpy(sp_vw[bs]).to(device)
             # --sp-value-passes: a position's outcome counts only the first k times it is drawn
             # (the outcome is one noisy bit per game: the value overfits when the policy targets
             # are trained several passes); same denominator, so fewer rows = a smaller step
             # (known: the value's effective weight shrinks over a run; design v6)
-            if v_sched is not None:  # the step's own value rows (weighted mean)
-                bv = v_sched[step - 1]
+            if spread and not len(bv):  # (a chunk with fewer value rows than steps)
+                s_bce = torch.zeros((), device=device)
+            elif spread:  # the step's own value rows (weighted mean)
                 v_sp, v_de, v_gl, v_ma, _, v_won, v_ev, v_hs, v_hd, _, _, v_x = to_torch(
-                    dsp, bv, device
+                    s_data, bv_loc, device
                 )
                 v_kw = {"x": v_x} if a.arch == "transformer" and v_x is not None else {}
                 with torch.autocast(device.type, dtype=torch.bfloat16,
@@ -1218,7 +1340,7 @@ def main() -> None:
             if ref_model is not None:
                 m |= evaluate_drift(model, ref_model, dv, v_idx, device)
             if dsp is not None:
-                m |= evaluate_sp(model, dsp, sp_val, device, a.value_per_game, ref=ref_model)
+                m |= evaluate_sp(model, *sp_eval, device, a.value_per_game, ref=ref_model)
             emit(dict(event="val", step=step, **{k: float(v) for k, v in m.items()}))
             # selection: all turn starts + all positions when the data has them (the visible
             # turn starts alone are a biased sample), weighted when it has sampling weights
