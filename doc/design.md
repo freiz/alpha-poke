@@ -36,7 +36,7 @@ poke-env（协议、局面跟踪）──► SelfPlayPlayer / SearchPlayer（Pyt
                         SO-ISMCTS：一棵树、每次迭代换一个世界、开环随机（D12）
                         PUCT：双方先验 = 策略网络（对方用翻转视角前向）
                         叶子：价值网络（残差：手写评估的线性项 + 网络）
-                                 │ 我方根访问分布（+ 平手裁决，D12）
+                                 │ 我方根访问分布
                                  ▼
                         指令；任何失败 → KnowledgePlayer 的启发式决策
 开局：KnowledgePlayer 的规则计划只决定首发
