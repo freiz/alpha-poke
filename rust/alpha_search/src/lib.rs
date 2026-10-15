@@ -3,6 +3,7 @@
 //! (`poke_engine.State.to_string()`); see design D12.
 
 pub mod bsearch;
+pub mod counts;
 pub mod extra;
 pub mod features;
 pub mod ismcts;
@@ -215,6 +216,31 @@ fn featurize_history<'py>(
     (PyBytes::new(py, &sparse), PyBytes::new(py, &dense))
 }
 
+/// v6 counters (`counts::featurize_counts`) of many state strings: (entity counters
+/// [B * 12 * ENT_COUNT], side counters [B * GLOBAL_COUNT]) as little-endian f32 bytes.
+#[pyfunction]
+#[pyo3(signature = (states, flip=false))]
+fn featurize_counts<'py>(
+    py: Python<'py>,
+    states: Vec<String>,
+    flip: bool,
+) -> (Bound<'py, PyBytes>, Bound<'py, PyBytes>) {
+    let (ent, glob) = py.detach(|| {
+        let (mut ent, mut glob) = (vec![], vec![]);
+        for (e, g) in par_map(&states, |s| {
+            counts::featurize_counts(&State::deserialize(s), flip)
+        }) {
+            ent.extend(e);
+            glob.extend(g);
+        }
+        (
+            le_bytes(&ent, f32::to_le_bytes),
+            le_bytes(&glob, f32::to_le_bytes),
+        )
+    });
+    (PyBytes::new(py, &ent), PyBytes::new(py, &glob))
+}
+
 /// v3 features of many state strings (design D13, `extra.rs`): (entity extras float32
 /// [B, 12, ENT_EXTRA], global extras float32 [B, GLOBAL_EXTRA]); `flip` as in `featurize`.
 /// `reference`: the slower path without the light state copy (parity checks).
@@ -397,6 +423,14 @@ fn batch_dict(py: Python<'_>, b: bsearch::Batch) -> PyResult<Bound<'_, PyDict>> 
     d.set_item(
         "glob2",
         PyBytes::new(py, &le_bytes(&b.glob2, f32::to_le_bytes)),
+    )?;
+    d.set_item(
+        "ent3",
+        PyBytes::new(py, &le_bytes(&b.ent3, f32::to_le_bytes)),
+    )?;
+    d.set_item(
+        "glob3",
+        PyBytes::new(py, &le_bytes(&b.glob3, f32::to_le_bytes)),
     )?;
     d.set_item("reveal", PyBytes::new(py, &b.reveal))?;
     d.set_item(
@@ -729,6 +763,8 @@ fn feature_dims(py: Python<'_>) -> PyResult<Bound<'_, PyDict>> {
     d.set_item("ent_extra", extra::ENT_EXTRA)?;
     d.set_item("global_extra", extra::GLOBAL_EXTRA)?;
     d.set_item("move_feat", extra::MOVE_FEAT)?;
+    d.set_item("ent_count", counts::ENT_COUNT)?;
+    d.set_item("global_count", counts::GLOBAL_COUNT)?;
     Ok(d)
 }
 
@@ -830,6 +866,7 @@ fn alpha_search(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(featurize_history, m)?)?;
     m.add_function(wrap_pyfunction!(feature_dims, m)?)?;
     m.add_function(wrap_pyfunction!(featurize_extra, m)?)?;
+    m.add_function(wrap_pyfunction!(featurize_counts, m)?)?;
     m.add_function(wrap_pyfunction!(move_table, m)?)?;
     m.add_function(wrap_pyfunction!(encode_ids, m)?)?;
     m.add_function(wrap_pyfunction!(tnet_forward, m)?)?;

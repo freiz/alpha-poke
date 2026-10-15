@@ -79,6 +79,8 @@ class GpuNet:
             "reveal": t("reveal", np.uint8, (n, e), np.int64),
             "ent2": t("ent2", np.float32, (n, e, D["ent_extra"])),
             "glob2": t("glob2", np.float32, (n, D["global_extra"])),
+            "ent3": t("ent3", np.float32, (n, e, D["ent_count"])),
+            "glob3": t("glob3", np.float32, (n, D["global_count"])),
             "turn": t("turn", np.int32, (n,), np.int64),
             "rating": t("rating", np.int32, (n, 2), np.int64),
         }
@@ -123,7 +125,8 @@ class GpuNet:
             ("global", np.float32, None), ("mask", np.uint8, bool), ("hsparse", np.int32, np.int64),
             ("hdense", np.float32, None))  # fmt: skip
     XKEYS = (("reveal", np.uint8, np.int64), ("ent2", np.float32, None),
-             ("glob2", np.float32, None), ("turn", np.int32, np.int64),
+             ("glob2", np.float32, None), ("ent3", np.float32, None),
+             ("glob3", np.float32, None), ("turn", np.int32, np.int64),
              ("rating", np.int32, np.int64))  # fmt: skip
 
     @torch.no_grad()

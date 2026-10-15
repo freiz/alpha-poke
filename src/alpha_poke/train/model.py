@@ -32,7 +32,10 @@ v3 (design D13, network v3 first batch; TransformerPV only), inputs ``x`` from t
   * hres (v4): the history steps' outcomes (damage, crit, miss, KO, acted first, prevented,
     fainted first); without it the step inputs are the v2 ones;
   * counter (v4): per benched entity the damage taken from the opposing active's predicted move
-    and its own best damage against the opposing active.
+    and its own best damage against the opposing active;
+  * count (v6): the state's counters (alpha_search.featurize_counts: PP left, disabled moves,
+    sleep turns per entity -> entity inputs; protects in a row, substitute HP, Wish / Future
+    Sight turns, volatile durations per side -> global token).
 ``mask_hidden`` (needs the reveal bits): the opponent's fields not revealed yet (item, ability,
 tera type, unused moves) are replaced by an "unknown" id (the last of each table) instead of the
 belief sample -- the input without the belief model.
@@ -50,7 +53,7 @@ from torch import nn
 
 # dense feature indices (rust/alpha_search/src/features.rs)
 D_ALIVE, D_ACTIVE, D_USABLE = 1, 2, slice(17, 21)
-FEATS = ("reveal", "num", "movetab", "matchup", "elo", "hres", "counter")
+FEATS = ("reveal", "num", "movetab", "matchup", "elo", "hres", "counter", "count")
 AUX_HEADS = ("oppset", "faint", "turns")
 N_REVEAL = 8
 # global extras (extra.rs): 0-15 per side numbers, 16-17 who moves first / speed ratio
@@ -99,6 +102,8 @@ class Embeddings(nn.Module):
         self.n_ent2 = dims.get("ent_extra", 22) if "counter" in self.feats else 22
         if self.v3:
             self.d_entity += N_REVEAL + self.n_ent2
+        if "count" in self.feats:
+            self.d_entity += dims["ent_count"]
         if "movetab" in self.feats:
             table = np.frombuffer(alpha_search.move_table(), np.float32).reshape(v_move, -1)
             self.register_buffer("move_table", torch.from_numpy(table.copy()), persistent=False)
@@ -126,6 +131,8 @@ class Embeddings(nn.Module):
             bits = bits.float() * float("reveal" in self.feats)
             ent2 = x["ent2"][..., : self.n_ent2] * float("matchup" in self.feats)
             dense = torch.cat([dense, bits, ent2], dim=-1)
+            if "count" in self.feats:
+                dense = torch.cat([dense, x["ent3"]], dim=-1)
         x = torch.cat(
             [
                 self.species(sparse[..., 0]),
@@ -256,6 +263,7 @@ class TransformerPV(nn.Module):
         self.ent_in = nn.Linear(self.emb.d_entity, d_model)
         d_glob = dims["global"] + (dims["global_extra"] + 1 if feats else 0)
         d_glob += N_ELO if "elo" in feats else 0
+        d_glob += dims["global_count"] if "count" in feats else 0
         self.glob_in = nn.Linear(d_glob, d_model)
         self.step_in = nn.Linear(self.emb.d_step, d_model) if history else None
         self.tok_type = nn.Embedding(3 + dims.get("hist", 8), d_model)  # own, opp, global, h_k
@@ -297,6 +305,8 @@ class TransformerPV(nn.Module):
             glob = torch.cat([glob, num * float("num" in self.feats), mu], dim=-1)
             if "elo" in self.feats:
                 glob = torch.cat([glob, elo_features(xin["rating"])], dim=-1)
+            if "count" in self.feats:
+                glob = torch.cat([glob, xin["glob3"]], dim=-1)
         types = self.tok_types[:13]
         toks = [self.ent_in(x), self.glob_in(glob)[:, None]]
         pad = torch.zeros(b, 13, dtype=torch.bool, device=x.device)

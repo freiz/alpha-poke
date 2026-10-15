@@ -14,6 +14,7 @@
 //! Weights: `best.safetensors` of the run, `config.json` for the sizes and the feature groups.
 //! Read-only after loading, shared between search threads.
 
+use crate::counts::{featurize_counts, ENT_COUNT, GLOBAL_COUNT, SIDE_COUNT};
 use crate::extra::{featurize_extra, move_table, ENT_EXTRA, GLOBAL_EXTRA, MOVE_FEAT};
 use crate::features::{
     featurize_view, history_features, Features, Step, DENSE, GLOBAL, HIST, HIST_DENSE, HIST_SPARSE,
@@ -56,6 +57,9 @@ pub struct Input {
     pub f: Features,
     pub ent2: Vec<f32>,
     pub glob2: Vec<f32>,
+    /// v6 counters (`counts.rs`)
+    pub ent3: Vec<f32>,
+    pub glob3: Vec<f32>,
     pub reveal: [u8; N_ENTITIES],
     pub rating: [i32; 2],
     pub turn: i32,
@@ -69,6 +73,7 @@ impl Input {
     pub fn new(state: &State, ctx: &Context, flip: bool, eval_side_one: f32) -> Input {
         let f = featurize_view(state, flip);
         let (ent2, glob2) = featurize_extra(state, flip);
+        let (ent3, glob3) = featurize_counts(state, flip);
         let (mut hs, mut hd) = (Vec::with_capacity(HIST * HIST_SPARSE), Vec::new());
         history_features(&ctx.history, flip, &mut hs, &mut hd);
         let mut reveal = ctx.reveal;
@@ -81,6 +86,8 @@ impl Input {
             f,
             ent2,
             glob2,
+            ent3,
+            glob3,
             reveal,
             rating,
             turn: ctx.turn,
@@ -102,6 +109,10 @@ impl Input {
         glob2[..2 * side].rotate_left(side);
         glob2[2 * side] = -glob2[2 * side];
         glob2[2 * side + 1] = -glob2[2 * side + 1];
+        let mut ent3 = self.ent3.clone();
+        ent3.rotate_left(6 * ENT_COUNT);
+        let mut glob3 = self.glob3.clone();
+        glob3.rotate_left(SIDE_COUNT);
         let (mut hs, mut hd) = (Vec::with_capacity(HIST * HIST_SPARSE), Vec::new());
         history_features(&ctx.history, true, &mut hs, &mut hd);
         let mut reveal = self.reveal;
@@ -110,6 +121,8 @@ impl Input {
             f,
             ent2,
             glob2,
+            ent3,
+            glob3,
             reveal,
             rating: [self.rating[1], self.rating[0]],
             turn: self.turn,
@@ -503,6 +516,8 @@ pub struct TNet {
     num: bool,
     matchup: bool,
     elo: bool,
+    /// v6 counters (`counts.rs`) on the entity and global inputs
+    count: bool,
     species: Table,
     item: Table,
     ability: Table,
@@ -570,6 +585,10 @@ impl TNet {
         }
         if !feats.is_empty() && (ent_extra > ENT_EXTRA || dims["global_extra"] != GLOBAL_EXTRA) {
             return Err("feature sizes differ from this build".into());
+        }
+        if has("count") && (dims["ent_count"] != ENT_COUNT || dims["global_count"] != GLOBAL_COUNT)
+        {
+            return Err("counter sizes differ from this build".into());
         }
 
         let bytes = std::fs::read(dir.join("best.safetensors")).map_err(|e| e.to_string())?;
@@ -735,6 +754,7 @@ impl TNet {
             num: has("num"),
             matchup: has("matchup"),
             elo: has("elo"),
+            count: has("count"),
             species: table("species")?,
             item: table("item")?,
             ability: table("ability")?,
@@ -754,9 +774,19 @@ impl TNet {
             residual,
         };
         let v3 = !feats.is_empty();
-        let d_ent = 32 + 16 + 16 + 3 * 8 + 32 + DENSE + if v3 { N_REVEAL + net.n_ent2 } else { 0 };
-        let d_glob =
-            GLOBAL + if v3 { GLOBAL_EXTRA + 1 } else { 0 } + if net.elo { N_ELO } else { 0 };
+        let n_count = |n: usize| if net.count { n } else { 0 };
+        let d_ent = 32
+            + 16
+            + 16
+            + 3 * 8
+            + 32
+            + DENSE
+            + if v3 { N_REVEAL + net.n_ent2 } else { 0 }
+            + n_count(ENT_COUNT);
+        let d_glob = GLOBAL
+            + if v3 { GLOBAL_EXTRA + 1 } else { 0 }
+            + if net.elo { N_ELO } else { 0 }
+            + n_count(GLOBAL_COUNT);
         if net.ent_in.n_in != d_ent || net.glob_in.n_in != d_glob {
             return Err(format!(
                 "input sizes: entity {} vs {d_ent}, global {} vs {d_glob}",
@@ -824,6 +854,10 @@ impl TNet {
                     0.0
                 };
             }
+            k += self.n_ent2;
+            if self.count {
+                xin[k..k + ENT_COUNT].copy_from_slice(&x.ent3[e * ENT_COUNT..(e + 1) * ENT_COUNT]);
+            }
         }
         self.ent_in
             .apply_rows(&xall, N_ENTITIES, &mut z[..N_ENTITIES * d], false);
@@ -852,6 +886,9 @@ impl TNet {
             g.extend_from_slice(&zs);
             g.push((zs[0] - zs[1]) * known[0] * known[1]);
             g.extend_from_slice(&known);
+        }
+        if self.count {
+            g.extend_from_slice(&x.glob3);
         }
         let gt = &mut z[N_ENTITIES * d..(N_ENTITIES + 1) * d];
         self.glob_in.apply(&g, gt, false);
@@ -1148,7 +1185,9 @@ mod tests {
     /// Input::flipped (derived from side one's input) = Input::new(flip = true)
     #[test]
     fn flipped_input_matches() {
-        let st = State::deserialize(FIXTURE.lines().next().unwrap());
+        let mut st = State::deserialize(FIXTURE.lines().next().unwrap());
+        st.side_one.side_conditions.protect = 1; // v6 counters on both sides
+        st.side_two.substitute_health = 50;
         let ctx = Context {
             reveal: [1, 3, 0, 0, 17, 0, 1, 0, 0, 0, 0, 33],
             rating: [1400, 1600],
@@ -1169,6 +1208,7 @@ mod tests {
         for (x, y) in a.glob2.iter().zip(&b.glob2) {
             assert!((x - y).abs() < 1e-6, "{:?} vs {:?}", a.glob2, b.glob2);
         }
+        assert_eq!((&a.ent3, &a.glob3), (&b.ent3, &b.glob3));
     }
 
     #[test]

@@ -81,6 +81,10 @@ def featurize_shard(path: Path, cache: Path) -> int:
             ok_hist = not has_hist or ("hsp" in z.files and z["hsp"].shape[1] == DIMS["hist"])
             ok_fut = not has_fut or "fsp" in z.files
             ok_v3 = not has_v3 or ("ent2" in z.files and z["ent2"].shape[2] == DIMS["ent_extra"])
+            # v6: the counters (caches from before them are rebuilt)
+            ok_v3 = ok_v3 and (
+                not has_v3 or ("ent3" in z.files and z["ent3"].shape[2] == DIMS["ent_count"])
+            )
             # v4: the damage columns (fractions) are kept apart as percents ("hdmg"); the first
             # v4 caches stored them in the uint8 "hde" and truncated them to 0
             hdmg_ok = DIMS["hist_dense"] == 7 or "hdmg" in z.files
@@ -166,7 +170,8 @@ def featurize_shard(path: Path, cache: Path) -> int:
 
 
 def v3_arrays(t, states: list[str]) -> dict:
-    """v3 inputs (featurize_extra, reveal bits, turn) and auxiliary targets of a shard."""
+    """v3 inputs (featurize_extra, reveal bits, turn), v6 counters (featurize_counts) and
+    auxiliary targets of a shard."""
     e, g = DIMS["ent_extra"], DIMS["global_extra"]
     ent, glob = [], []
     for i in range(0, len(states), 20_000):
@@ -174,6 +179,13 @@ def v3_arrays(t, states: list[str]) -> dict:
         ent.append(np.frombuffer(a, np.float32).reshape(-1, 12, e).astype(np.float16))
         glob.append(np.frombuffer(b, np.float32).reshape(-1, g).astype(np.float16))
     out = {"ent2": np.concatenate(ent), "glob2": np.concatenate(glob)}
+    e3, g3 = DIMS["ent_count"], DIMS["global_count"]
+    ent, glob = [], []
+    for i in range(0, len(states), 50_000):
+        a, b = alpha_search.featurize_counts(states[i : i + 50_000])
+        ent.append(np.frombuffer(a, np.float32).reshape(-1, 12, e3).astype(np.float16))
+        glob.append(np.frombuffer(b, np.float32).reshape(-1, g3).astype(np.float16))
+    out |= {"ent3": np.concatenate(ent), "glob3": np.concatenate(glob)}
     out["reveal"] = np.asarray(t.column("reveal").to_pylist(), np.uint8).reshape(-1, 12)
     out["faint"] = np.asarray(t.column("faint").to_pylist(), np.uint8)
     own, opp = (np.asarray(t.column(c).to_pylist(), np.int8) for c in ("left_own", "left_opp"))
@@ -245,8 +257,8 @@ def shard_caches(data: str) -> tuple[list[Path], list[int]]:
 MEMMAP_ROW_BYTES = 32
 
 
-V3_KEYS = ("reveal", "ent2", "glob2", "turn", "faint", "turns", "set_item", "set_ability",
-           "set_tera", "set_move", "rating", "kind")  # fmt: skip
+V3_KEYS = ("reveal", "ent2", "glob2", "ent3", "glob3", "turn", "faint", "turns", "set_item",
+           "set_ability", "set_tera", "set_move", "rating", "kind")  # fmt: skip
 
 
 def load_selfplay(items: list[tuple[str, float]], per_game: int, seed: int,

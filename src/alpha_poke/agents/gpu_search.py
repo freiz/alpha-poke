@@ -16,8 +16,8 @@ from concurrent.futures import ThreadPoolExecutor
 import alpha_search
 import numpy as np
 
-KEYS = ("sparse", "dense", "global", "mask", "hsparse", "hdense", "ent2", "glob2", "reveal",
-        "turn", "rating", "eval")  # fmt: skip
+KEYS = ("sparse", "dense", "global", "mask", "hsparse", "hdense", "ent2", "glob2", "ent3",
+        "glob3", "reveal", "turn", "rating", "eval")  # fmt: skip
 
 
 def merge(batches: list[dict]) -> dict:

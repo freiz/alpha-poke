@@ -32,6 +32,7 @@ def torch_forward(model, states, reveal, rating, turn, hist, flip):
     sp, de, gl, ma = alpha_search.featurize(states, flip=flip)
     hs, hd = alpha_search.featurize_history([flip_history(h) if flip else h for h in hist])
     ent2, glob2 = alpha_search.featurize_extra(states, flip=flip)
+    ent3, glob3 = alpha_search.featurize_counts(states, flip=flip)
     ev = np.asarray(alpha_search.evaluate(states), np.float32) * (-1 if flip else 1)
 
     def t(buf, dt, shape, cast):
@@ -44,6 +45,8 @@ def torch_forward(model, states, reveal, rating, turn, hist, flip):
         "reveal": torch.from_numpy(reveal.astype(np.int64)),
         "ent2": t(ent2, np.float32, (n, e, D["ent_extra"]), np.float32),
         "glob2": t(glob2, np.float32, (n, D["global_extra"]), np.float32),
+        "ent3": t(ent3, np.float32, (n, e, D["ent_count"]), np.float32),
+        "glob3": t(glob3, np.float32, (n, D["global_count"]), np.float32),
         "turn": torch.from_numpy(turn.astype(np.int64)),
         "rating": torch.from_numpy(rating.astype(np.int64)),
     }
