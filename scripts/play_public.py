@@ -13,7 +13,8 @@ team name or a Showdown-export file), default a random pool team each game.
 Difficulty: easy = heuristic bot, normal = ISMCTS + the current network 200 ms, hard = ISMCTS +
 the current network 1 s x 4 threads (CPU; --model, default the self-play's current network in
 data/selfplay/state.json; with its moves-left term, selfplay.batcher.SEARCH_ML); the lead from
-the rule-based game plan.
+the rule-based game plan. The strength by the search time: --search-ms (and --threads) replace
+the difficulty's (e.g. --difficulty hard --search-ms 50 for a weaker bot, 3000 for a stronger).
 Replays and decision traces go to data/public_games/<date>/.
 
 With a team chosen against this opponent (scripts/counter_pipeline.py <user> writes
@@ -68,6 +69,10 @@ def pick_team(arg: str | None, pool: dict[str, str], rng: random.Random) -> tupl
 async def main(a) -> None:
     variant, env = DIFFICULTY[a.difficulty]
     os.environ.update(env)
+    if a.search_ms is not None:
+        os.environ["ALPHA_SEARCH_MS"] = str(a.search_ms)
+    if a.threads is not None:
+        os.environ["ALPHA_SEARCH_THREADS"] = str(a.threads)
     model = a.model or current_network()
     search = variant != "knowledge"
     if search:
@@ -95,7 +100,9 @@ async def main(a) -> None:
         overrides={"model": model} if search else None,
     )
     where = "OFFICIAL server" if a.public else f"local server :{a.local_port}"
-    net = f", {model}, moves-left {os.environ.get('ALPHA_ML') or 'off'}" if search else ""
+    e = os.environ
+    net = (f", {model}, {e['ALPHA_SEARCH_MS']} ms x {e['ALPHA_SEARCH_THREADS']} threads, "
+           f"moves-left {e.get('ALPHA_ML') or 'off'}") if search else ""  # fmt: skip
     print(f"[{where}] bot {acct.username} ({a.difficulty}: {variant}{net}); only {a.opponent!r}")
     for i in range(a.n):
         if i:
@@ -124,6 +131,8 @@ if __name__ == "__main__":
     ap.add_argument("--team", default=None, help="pool team name or Showdown-export file")
     ap.add_argument("--pool", default=str(DEFAULT_POOL))
     ap.add_argument("--model", default=None, help="network run (default: the current one)")
+    ap.add_argument("--search-ms", type=int, default=None, help="search time per decision")
+    ap.add_argument("--threads", type=int, default=None, help="search threads")
     ap.add_argument("--public", action="store_true", help="connect to the OFFICIAL server")
     ap.add_argument("--local-port", type=int, default=8000, help="dry run (without --public)")
     ap.add_argument("--local-name", default="alphapokebot", help="dry-run bot name")
