@@ -6,12 +6,10 @@ pub mod bsearch;
 pub mod extra;
 pub mod features;
 pub mod ismcts;
-pub mod net;
 pub mod tnet;
 
 use poke_engine::engine::generate_instructions::generate_instructions_from_move_pair;
 use poke_engine::engine::state::MoveChoice;
-use poke_engine::mcts::perform_mcts;
 use poke_engine::state::{Side, State};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -33,48 +31,16 @@ fn roundtrip(state: &str) -> String {
     State::deserialize(state).serialize()
 }
 
-/// poke-engine's own single-threaded MCTS, called from this crate: reference for speed and
-/// strength. Returns ([(our option, visits)], iterations).
-#[pyfunction]
-#[pyo3(signature = (state, duration_ms, iterations=0))]
-fn reference_mcts(
-    py: Python<'_>,
-    state: &str,
-    duration_ms: u64,
-    mut iterations: u32,
-) -> (Vec<(String, u32)>, u32) {
-    let mut st = State::deserialize(state);
-    let (s1, s2) = st.root_get_all_options();
-    if s1.len() <= 1 {
-        iterations = 100; // as the Python binding: one option, quick exit
-    }
-    let res = py.detach(|| {
-        perform_mcts(
-            &mut st,
-            s1,
-            s2,
-            Duration::from_millis(duration_ms),
-            iterations,
-        )
-    });
-    let ours = res
-        .s1
-        .iter()
-        .map(|r| (choice_str(&st.side_one, &r.move_choice), r.visits))
-        .collect();
-    (ours, res.iteration_count)
-}
-
 /// SO-ISMCTS over belief-sampled worlds (state strings sharing our side). Returns
 /// ([(our option, visits, mean value)], iterations, tree nodes, max depth). threads > 1: root
-/// parallel (independent trees, merged root statistics). A transformer model directory (config
-/// arch "transformer") needs `contexts`: per world (public-information bits [12], (own rating,
+/// parallel (independent trees, merged root statistics). A model directory (the transformer)
+/// needs `contexts`: per world (public-information bits [12], (own rating,
 /// opponent rating), turn, history string), side one's view.
 #[pyfunction(name = "ismcts")]
 #[pyo3(signature = (states, duration_ms, iterations=0, seed=None, c=std::f32::consts::SQRT_2,
-                    cache_root=true, branch_depth=2, chance_depth=0, threads=1,
-                    model_dir=None, use_policy=false, policy_opponent=true, c_puct=1.0,
-                    net_value=true, contexts=None, root_noise=(0.0, 10.0)))]
+                    cache_root=true, branch_depth=2, threads=1, model_dir=None,
+                    use_policy=false, policy_opponent=true, c_puct=1.0, contexts=None,
+                    root_noise=(0.0, 10.0)))]
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 fn py_ismcts(
     py: Python<'_>,
@@ -85,13 +51,11 @@ fn py_ismcts(
     c: f32,
     cache_root: bool,
     branch_depth: u16,
-    chance_depth: u16,
     threads: usize,
     model_dir: Option<String>,
     use_policy: bool,
     policy_opponent: bool,
     c_puct: f32,
-    net_value: bool,
     contexts: Option<Vec<PyContext>>,
     root_noise: (f32, f32),
 ) -> PyResult<(Vec<(String, u32, f32)>, u32, usize, u16)> {
@@ -102,15 +66,9 @@ fn py_ismcts(
     if worlds[0].root_get_all_options().0.len() <= 1 {
         iterations = 100; // one option: quick exit
     }
-    // a transformer run (config.json arch) or the v1 MLP
-    let is_transformer = model_dir.as_ref().is_some_and(|d| {
-        std::fs::read_to_string(std::path::Path::new(d).join("config.json"))
-            .is_ok_and(|c| c.contains("\"arch\": \"transformer\""))
-    });
-    let (net, tnet) = match &model_dir {
-        Some(d) if is_transformer => (None, Some(tnet::shared(d).map_err(PyValueError::new_err)?)),
-        Some(d) => (Some(net::shared(d).map_err(PyValueError::new_err)?), None),
-        None => (None, None),
+    let tnet = match &model_dir {
+        Some(d) => Some(tnet::shared(d).map_err(PyValueError::new_err)?),
+        None => None,
     };
     let ctxs: Vec<tnet::Context> = match (&tnet, contexts) {
         (Some(_), Some(cs)) if cs.len() == worlds.len() => cs
@@ -128,16 +86,12 @@ fn py_ismcts(
         c,
         cache_root,
         branch_depth,
-        chance_depth,
-        net,
         use_policy,
         policy_opponent,
         c_puct,
-        net_value,
         tnet,
         root_noise_eps: root_noise.0,
         root_noise_conc: root_noise.1,
-        legacy_context: false,
     };
     let res = py.detach(|| {
         if threads > 1 {
@@ -335,31 +289,6 @@ fn evaluate(py: Python<'_>, states: Vec<String>) -> Vec<f32> {
     })
 }
 
-/// The trained network (model directory with best.safetensors) on many state strings:
-/// (policy logits [B * 14] with -inf on illegal slots, value logits [B]). For checking the Rust
-/// forward pass against PyTorch and for offline use.
-#[pyfunction]
-fn net_forward(
-    py: Python<'_>,
-    model_dir: &str,
-    states: Vec<String>,
-) -> PyResult<(Vec<f32>, Vec<f32>)> {
-    let net = net::shared(model_dir).map_err(PyValueError::new_err)?;
-    Ok(py.detach(|| {
-        let (mut logits, mut values) = (Vec::new(), Vec::new());
-        for s in &states {
-            let st = State::deserialize(s);
-            let out = net.forward(
-                &features::featurize(&st),
-                poke_engine::engine::evaluate::evaluate(&st),
-            );
-            logits.extend_from_slice(&out.logits);
-            values.push(out.value);
-        }
-        (logits, values)
-    }))
-}
-
 /// The transformer network (model directory: best.safetensors + config.json) on many
 /// positions: `states`, per position the public-information bits (12 ints, side one's view),
 /// ratings (own, opponent), turn and history string ("ONE/TWO;..."); `flip` = side two's view.
@@ -489,8 +418,7 @@ fn batch_dict(py: Python<'_>, b: bsearch::Batch) -> PyResult<Bound<'_, PyDict>> 
 impl PyBatchSearch {
     #[new]
     #[pyo3(signature = (states, contexts, c_puct=1.0, policy_opponent=true, seed=None,
-                        branch_depth=2, threads=1, vl=1, root_noise=(0.0, 10.0),
-                        legacy_context=false))]
+                        branch_depth=2, threads=1, vl=1, root_noise=(0.0, 10.0)))]
     #[allow(clippy::too_many_arguments)]
     fn new(
         states: Vec<String>,
@@ -502,7 +430,6 @@ impl PyBatchSearch {
         threads: usize,
         vl: u32,
         root_noise: (f32, f32),
-        legacy_context: bool,
     ) -> PyResult<Self> {
         if states.is_empty() || states.len() != contexts.len() {
             return Err(PyValueError::new_err(
@@ -517,13 +444,11 @@ impl PyBatchSearch {
         let cfg = ismcts::Config {
             cache_root: false,
             branch_depth,
-            chance_depth: 0,
             use_policy: true,
             policy_opponent,
             c_puct,
             root_noise_eps: root_noise.0,
             root_noise_conc: root_noise.1,
-            legacy_context,
             ..ismcts::Config::default()
         };
         Ok(PyBatchSearch {
@@ -601,24 +526,6 @@ impl PyBatchSearch {
         Ok(d)
     }
 
-    /// The root's children with at least `min_visits` as value targets (`bsearch::children`):
-    /// (batch of their network inputs, side one's view, one row each; [(our slot, their slot,
-    /// visits, value)]).
-    #[pyo3(signature = (min_visits=50, seed=0))]
-    fn children<'py>(
-        &mut self,
-        py: Python<'py>,
-        min_visits: u32,
-        seed: u64,
-    ) -> PyResult<(Bound<'py, PyDict>, Vec<(usize, usize, u32, f32)>)> {
-        let (b, kids) = self.inner.children(min_visits, seed);
-        let meta = kids
-            .into_iter()
-            .map(|c| (c.our, c.their, c.visits, c.value))
-            .collect();
-        Ok((batch_dict(py, b)?, meta))
-    }
-
     fn stats(&mut self) -> (u32, u32, usize) {
         self.inner.stats()
     }
@@ -630,33 +537,27 @@ impl PyBatchSearch {
 }
 
 /// The network's policy priors over our root options (as the search uses them, no noise):
-/// [(our option, prior)]. `model_dir` / `contexts` as for `ismcts` (a transformer needs the
-/// contexts).
+/// [(our option, prior)]. `model_dir` / `contexts` as for `ismcts`.
 #[pyfunction]
-#[pyo3(signature = (states, model_dir, contexts=None))]
 fn root_priors(
     py: Python<'_>,
     states: Vec<String>,
     model_dir: String,
-    contexts: Option<Vec<PyContext>>,
+    contexts: Vec<PyContext>,
 ) -> PyResult<Vec<(String, f32)>> {
     let mut worlds: Vec<State> = states.iter().map(|s| State::deserialize(s)).collect();
-    let mut cfg = ismcts::Config {
+    if contexts.len() != worlds.len() {
+        return Err(PyValueError::new_err("one context per world"));
+    }
+    let cfg = ismcts::Config {
         use_policy: true,
+        tnet: Some(tnet::shared(&model_dir).map_err(PyValueError::new_err)?),
         ..ismcts::Config::default()
     };
-    let ctxs = match contexts {
-        Some(cs) => {
-            cfg.tnet = Some(tnet::shared(&model_dir).map_err(PyValueError::new_err)?);
-            cs.into_iter()
-                .map(to_context)
-                .collect::<PyResult<Vec<_>>>()?
-        }
-        None => {
-            cfg.net = Some(net::shared(&model_dir).map_err(PyValueError::new_err)?);
-            Vec::new()
-        }
-    };
+    let ctxs = contexts
+        .into_iter()
+        .map(to_context)
+        .collect::<PyResult<Vec<_>>>()?;
     let res = py.detach(|| ismcts::search(&mut worlds, &ctxs, Duration::ZERO, 1, &cfg, Some(0)));
     let w0 = &worlds[0];
     Ok(res
@@ -924,7 +825,6 @@ fn describe(states: Vec<String>) -> Vec<(SideInfo, SideInfo)> {
 #[pymodule]
 fn alpha_search(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(roundtrip, m)?)?;
-    m.add_function(wrap_pyfunction!(reference_mcts, m)?)?;
     m.add_function(wrap_pyfunction!(py_ismcts, m)?)?;
     m.add_function(wrap_pyfunction!(featurize, m)?)?;
     m.add_function(wrap_pyfunction!(featurize_history, m)?)?;
@@ -939,7 +839,6 @@ fn alpha_search(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(slot_names, m)?)?;
     m.add_function(wrap_pyfunction!(root_priors, m)?)?;
     m.add_function(wrap_pyfunction!(evaluate, m)?)?;
-    m.add_function(wrap_pyfunction!(net_forward, m)?)?;
     m.add_function(wrap_pyfunction!(merge_sides, m)?)?;
     m.add_function(wrap_pyfunction!(chance_outcomes, m)?)?;
     m.add_function(wrap_pyfunction!(describe, m)?)?;

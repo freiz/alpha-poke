@@ -23,8 +23,7 @@
 //!   previous one is being evaluated; its leaves count as pending), `apply` takes the oldest
 //!   batch handed out.
 //! * The root's instruction lists are cached per (joint action, world), shared by the threads
-//!   (the root state of a world is the same in every thread's copy); no outcome-split children
-//!   (`chance_depth` 0).
+//!   (the root state of a world is the same in every thread's copy).
 
 use crate::extra::{ENT_EXTRA, GLOBAL_EXTRA};
 use crate::features::{slot, HIST, HIST_DENSE, HIST_SPARSE, N_ACTIONS, N_ENTITIES, SPARSE};
@@ -191,19 +190,6 @@ impl Shared {
     }
 }
 
-/// A root child exported by `BatchSearch::children` (design TODO "方案乙": the search's values of
-/// the positions it compared, as value targets): the joint action as network slots (ours, the
-/// opponent's, each relative to its side; through world 0), the child's visits and value (side
-/// one's win probability: the mean of its own arms' totals, i.e. the iterations that went on
-/// below it).
-#[derive(Debug, Clone)]
-pub struct Child {
-    pub our: usize,
-    pub their: usize,
-    pub visits: u32,
-    pub value: f32,
-}
-
 /// One descent in `state` (world `w`, this thread's copy) through the shared tree.
 #[allow(clippy::too_many_arguments)]
 fn descend(
@@ -216,7 +202,7 @@ fn descend(
     vl: u32,
     rng: &mut StdRng,
 ) {
-    let mut pc = PathCtx::with(Some(ctx), cfg.legacy_context);
+    let mut pc = PathCtx::new(Some(ctx));
     let mut path: Vec<(u32, u16, u16)> = Vec::with_capacity(16);
     let mut applied: Vec<Vec<Instruction>> = Vec::with_capacity(16);
     let mut root_step: Option<(Arc<Vec<StateInstructions>>, usize)> = None;
@@ -568,78 +554,6 @@ impl BatchSearch {
             }
         }
         r
-    }
-
-    /// The root's children with at least `min_visits` (on their own arms): their values and
-    /// their network inputs (side one's view) in world 0 after the joint action, one chance
-    /// outcome sampled (seed `seed`), the context extended as the descent does (history step,
-    /// revealed bits, turn). Children whose opponent action world 0 lacks, or that end the
-    /// battle, are left out. Rows in the order of the returned children.
-    pub fn children(&mut self, min_visits: u32, seed: u64) -> (Batch, Vec<Child>) {
-        let mut state = self.worlds[0][0].clone();
-        let ctx = self.ctxs[0].clone();
-        let mut rng = StdRng::seed_from_u64(seed);
-        let found: Vec<(Label, Label, u32, f32)> = {
-            let g = self.shared.get_mut().unwrap();
-            let root = &g.tree.nodes[0];
-            let mut v: Vec<_> = g
-                .tree
-                .children
-                .iter()
-                .filter(|(k, _)| k.0 == 0)
-                .filter_map(|(&(_, i1, i2, _), &c)| {
-                    let n = &g.tree.nodes[c as usize];
-                    let (vis, tot) = n.s1.iter().fold((0u32, 0.0f32), |(a, b), arm| {
-                        (a + arm.visits, b + arm.total)
-                    });
-                    (vis >= min_visits).then(|| {
-                        (
-                            root.s1[i1 as usize].label,
-                            root.s2[i2 as usize].label,
-                            vis,
-                            tot / vis as f32,
-                        )
-                    })
-                })
-                .collect();
-            // a fixed order (the map's is arbitrary): by visits, most first
-            v.sort_by(|a, b| {
-                b.2.cmp(&a.2)
-                    .then(format!("{:?}{:?}", a.0, a.1).cmp(&format!("{:?}{:?}", b.0, b.1)))
-            });
-            v
-        };
-        let mut batch = Batch::default();
-        let mut out = Vec::new();
-        for (l1, l2, visits, value) in found {
-            let (Some(m1), Some(m2)) = (
-                crate::ismcts::our_choice(&state, l1),
-                crate::ismcts::their_choice(&state, l2),
-            ) else {
-                continue;
-            };
-            let (Some(our), Some(their)) = (slot(&m1), slot(&m2)) else {
-                continue;
-            };
-            let mut pc = PathCtx::new(Some(&ctx));
-            pc.push(&state, &m1, &m2);
-            let outcomes = generate_instructions_from_move_pair(&mut state, &m1, &m2, true);
-            let k = sample(&outcomes, &mut rng);
-            state.apply_instructions(&outcomes[k].instruction_list);
-            pc.settle(&outcomes[k].instruction_list, &state);
-            if state.battle_is_over() == 0.0 {
-                let x = inputs(&state, &pc.context(&ctx));
-                batch.push(&x.0);
-                out.push(Child {
-                    our,
-                    their,
-                    visits,
-                    value,
-                });
-            }
-            state.reverse_instructions(&outcomes[k].instruction_list);
-        }
-        (batch, out)
     }
 
     /// (iterations, collisions, nodes)

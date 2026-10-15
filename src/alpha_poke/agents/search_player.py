@@ -78,7 +78,9 @@ class SearchPlayer(KnowledgePlayer):
         # leaf values (and priors) from a trained network (run directory, design D13); None =
         # poke-engine's handcrafted evaluation
         self.model = model or os.environ.get("ALPHA_SEARCH_MODEL") or None
-        self.model_transformer = bool(self.model) and _is_transformer(self.model)
+        if self.model and not _is_transformer(self.model):
+            raise ValueError(f"{self.model}: not a transformer run (the only network)")
+        self.model_transformer = bool(self.model)
         # the GPU: one batched tree, `gpu_threads` threads descending it, `gpu_batch` leaves per
         # network call (agents.gpu_search); "cpu" = Rust CPU inference
         self.device = device or os.environ.get("ALPHA_SEARCH_DEVICE", "cpu")

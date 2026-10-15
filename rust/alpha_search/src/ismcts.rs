@@ -8,15 +8,13 @@
 //! * Selection is decoupled UCB1 per side (as poke-engine's MCTS) with availability counts
 //!   (Cowling et al. 2012): an action's exploration term uses ln(times it was available)
 //!   instead of the parent's visits, because a move may exist in only some worlds.
-//! * Chance: the outcome of a joint action is sampled in the current world each time. Below
-//!   ``chance_depth`` (shallow nodes) children are split by an observable outcome signature
-//!   (both actives, HP in eighths, status, faints, main boosts; world-independent), so e.g.
-//!   "they were KO'd" and "they survived" get separate subtrees; deeper it is open-loop. Instruction lists are cached per (joint action, world) at the root
+//! * Chance: the outcome of a joint action is sampled in the current world each time;
+//!   open-loop (one child per joint action). Instruction lists are cached per (joint action, world) at the root
 //!   only: poke-engine instructions carry absolute old / new values, and below the root the
 //!   same node is reached in different states (different sampled outcomes above it), so a
 //!   cached list would apply and reverse the wrong values.
 //! * Leaf value: sigmoid(evaluate(state) - that world's root evaluation), as poke-engine.
-//! * Networks (design D13): the v1 MLP (`net`) or the transformer (`tnet`, with a `Context` per
+//! * Network (design D13): the transformer (`tnet`, with a `Context` per
 //!   world: public-information bits, ratings, turn, real history). Along the descent the path's
 //!   decision steps extend the history, the moves / tera / switch-ins used reveal their bits and
 //!   the main steps advance the turn, so every node is evaluated with its own inputs.
@@ -31,8 +29,7 @@ use poke_engine::instruction::{Instruction, StateInstructions};
 use poke_engine::state::{PokemonIndex, Side, SideReference, State};
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
-use rustc_hash::{FxHashMap, FxHasher};
-use std::hash::{Hash, Hasher};
+use rustc_hash::FxHashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -119,26 +116,18 @@ pub struct Config {
     pub cache_root: bool,
     /// branch on damage rolls for nodes shallower than this (poke-engine: root and its children)
     pub branch_depth: u16,
-    /// split children by the observable outcome for nodes shallower than this (0 = open-loop)
-    pub chance_depth: u16,
-    /// value network for the leaves (design D13); None = poke-engine's handcrafted evaluation
-    pub net: Option<std::sync::Arc<crate::net::Net>>,
-    /// PUCT with the network's policy priors (needs `net`); else decoupled UCB1
+    /// PUCT with the network's policy priors (needs `tnet`); else decoupled UCB1
     pub use_policy: bool,
     /// also the opponent's priors (its view, one more forward pass per node); else UCB1 for it
     pub policy_opponent: bool,
     pub c_puct: f32,
-    /// leaf values from the network; false = handcrafted evaluation even with `net` (priors only)
-    pub net_value: bool,
-    /// the transformer instead of `net` (needs one `Context` per world)
+    /// the network for the leaves and priors (design D13; needs one `Context` per world); None
+    /// = poke-engine's handcrafted evaluation
     pub tnet: Option<Arc<TNet>>,
     /// self-play exploration: the root priors of both sides become (1 - eps) p + eps eta,
     /// eta ~ Dirichlet(conc / n options) (AlphaZero); eps 0 = off
     pub root_noise_eps: f32,
     pub root_noise_conc: f32,
-    /// the tree path's context as before 2026-10-14 (the chosen moves as used, a faint's
-    /// forced switch a new turn): A/B tests only
-    pub legacy_context: bool,
 }
 
 impl Default for Config {
@@ -147,16 +136,12 @@ impl Default for Config {
             c: std::f32::consts::SQRT_2,
             cache_root: true,
             branch_depth: 2,
-            chance_depth: 0,
-            net: None,
             use_policy: false,
             policy_opponent: true,
             c_puct: 1.0,
-            net_value: true,
             tnet: None,
             root_noise_eps: 0.0,
             root_noise_conc: 10.0,
-            legacy_context: false,
         }
     }
 }
@@ -177,48 +162,12 @@ pub struct SearchResult {
     pub max_depth: u16,
 }
 
-/// What both players observe after a turn, independent of the opponent's hidden details:
-/// active slots, HP in eighths of max HP (max HP differs between worlds), status, faints and
-/// the main boosts.
-pub fn outcome_signature(state: &State) -> u64 {
-    let mut h = FxHasher::default();
-    for side in [&state.side_one, &state.side_two] {
-        let a = side.get_active_immutable();
-        (side.active_index as u8).hash(&mut h);
-        let eighths = if a.maxhp > 0 {
-            (a.hp.max(0) as i32 * 8 + a.maxhp as i32 - 1) / a.maxhp as i32
-        } else {
-            0
-        };
-        eighths.hash(&mut h);
-        (a.status as u8).hash(&mut h);
-        side.pokemon
-            .into_iter()
-            .filter(|p| p.hp <= 0)
-            .count()
-            .hash(&mut h);
-        (
-            side.attack_boost,
-            side.special_attack_boost,
-            side.speed_boost,
-        )
-            .hash(&mut h);
-    }
-    h.finish()
-}
-
 /// Value of a non-terminal leaf for side one: the value network if there is one (its residual
 /// uses the handcrafted evaluation), else poke-engine's leaf value relative to the root.
 fn leaf_value(state: &State, root_eval: f32, cfg: &Config, path: &PathCtx) -> f32 {
-    if cfg.net_value {
-        if let (Some(tnet), Some(ctx)) = (&cfg.tnet, path.base) {
-            let x = Input::new(state, &path.context(ctx), false, evaluate(state));
-            return 1.0 / (1.0 + (-tnet.value(&x)).exp());
-        }
-        if let Some(net) = &cfg.net {
-            let logit = net.value(&crate::features::featurize(state), evaluate(state));
-            return 1.0 / (1.0 + (-logit).exp());
-        }
+    if let (Some(tnet), Some(ctx)) = (&cfg.tnet, path.base) {
+        let x = Input::new(state, &path.context(ctx), false, evaluate(state));
+        return 1.0 / (1.0 + (-tnet.value(&x)).exp());
     }
     sigmoid(evaluate(state) - root_eval)
 }
@@ -232,7 +181,6 @@ pub(crate) struct PathCtx<'a> {
     mains: i32,
     // the last step's moves, until `settle` (side: the reveal byte and bits a used move adds)
     pending: [Option<(usize, u8, PokemonIndex)>; 2],
-    legacy: bool,
 }
 
 impl<'a> PathCtx<'a> {
@@ -243,15 +191,6 @@ impl<'a> PathCtx<'a> {
             reveal: base.map_or([0; 12], |c| c.reveal),
             mains: 0,
             pending: [None; 2],
-            legacy: false,
-        }
-    }
-
-    /// `new` with Config::legacy_context.
-    pub(crate) fn with(base: Option<&'a Context>, legacy: bool) -> Self {
-        PathCtx {
-            legacy,
-            ..PathCtx::new(base)
         }
     }
 
@@ -264,12 +203,7 @@ impl<'a> PathCtx<'a> {
         // a forced switch (a pivot, or a faint: the engine switches a side whose active has no
         // HP even without `force_switch`; 2026-10-14) is not a new turn
         let forced = |side: &Side| side.force_switch || side.get_active_immutable().hp <= 0;
-        let forced_step = if self.legacy {
-            state.side_one.force_switch || state.side_two.force_switch
-        } else {
-            forced(&state.side_one) || forced(&state.side_two)
-        };
-        if !forced_step {
+        if !(forced(&state.side_one) || forced(&state.side_two)) {
             self.mains += 1;
         }
         self.steps.push(Step {
@@ -290,10 +224,6 @@ impl<'a> PathCtx<'a> {
                         self.reveal[a] |= 1 << 3;
                     }
                     self.pending[k] = Some((a, 1 << (4 + *i as usize), side.active_index));
-                    if self.legacy {
-                        self.reveal[a] |= 1 << (4 + *i as usize);
-                        self.pending[k] = None;
-                    }
                 }
                 MoveChoice::Switch(p) => self.reveal[off + *p as usize] |= 1,
                 _ => {}
@@ -492,7 +422,7 @@ impl Tree {
         ctx: Option<&Context>,
         rng: &mut impl Rng,
     ) {
-        let mut pc = PathCtx::with(ctx.filter(|_| cfg.tnet.is_some()), cfg.legacy_context);
+        let mut pc = PathCtx::new(ctx.filter(|_| cfg.tnet.is_some()));
         let mut path: Vec<(u32, u16, u16)> = Vec::with_capacity(16);
         let mut applied: Vec<Vec<Instruction>> = Vec::with_capacity(16); // below the root
         let mut root_step: Option<(u16, u16, usize)> = None; // cached root outcome applied
@@ -538,20 +468,6 @@ impl Tree {
                             None => Input::new(state, &lc, true, ev),
                         };
                         set_priors(&mut n.s2, &av2, &tnet.forward(&x2).logits);
-                    }
-                } else if let Some(net) = &cfg.net {
-                    let ev = evaluate(state);
-                    let l1 = match n.logits1.take() {
-                        Some(l) => *l,
-                        None => {
-                            net.forward(&crate::features::featurize_view(state, false), ev)
-                                .logits
-                        }
-                    };
-                    set_priors(&mut n.s1, &av1, &l1);
-                    if cfg.policy_opponent {
-                        let f2 = crate::features::featurize_view(state, true);
-                        set_priors(&mut n.s2, &av2, &net.forward(&f2, -ev).logits);
                     }
                 }
                 if node == 0 && cfg.root_noise_eps > 0.0 {
@@ -603,11 +519,7 @@ impl Tree {
                 applied.push(instructions);
             }
             path.push((node, i1, i2));
-            let sig = if depth < cfg.chance_depth {
-                outcome_signature(state)
-            } else {
-                0
-            };
+            let sig = 0; // open-loop: one child per joint action
             match self.children.get(&(node, i1, i2, sig)) {
                 Some(&child) => node = child,
                 None => {
@@ -623,19 +535,12 @@ impl Tree {
                         1.0
                     } else if over < 0.0 {
                         0.0
-                    } else if let (true, true, Some(tnet), Some(base)) =
-                        (cfg.use_policy, cfg.net_value, &cfg.tnet, pc.base)
+                    } else if let (true, Some(tnet), Some(base)) =
+                        (cfg.use_policy, &cfg.tnet, pc.base)
                     {
                         // one forward pass: the leaf value and the new node's own priors
                         let x = Input::new(state, &pc.context(base), false, evaluate(state));
                         let out = tnet.forward(&x);
-                        self.nodes[child as usize].logits1 = Some(Box::new(out.logits));
-                        1.0 / (1.0 + (-out.value).exp())
-                    } else if let (true, true, Some(net)) =
-                        (cfg.use_policy, cfg.net_value, &cfg.net)
-                    {
-                        // one forward pass: the leaf value and the new node's own priors
-                        let out = net.forward(&crate::features::featurize(state), evaluate(state));
                         self.nodes[child as usize].logits1 = Some(Box::new(out.logits));
                         1.0 / (1.0 + (-out.value).exp())
                     } else {
@@ -951,38 +856,6 @@ mod tests {
     }
 
     #[test]
-    fn shallow_children_are_split_by_observable_outcome() {
-        let run = |chance_depth: u16| {
-            let mut worlds = [fixture()];
-            let cfg = Config {
-                chance_depth,
-                ..Config::default()
-            };
-            let mut tree = Tree::new();
-            let mut rng = StdRng::seed_from_u64(5);
-            let eval = evaluate(&worlds[0]);
-            for _ in 0..5000 {
-                tree.iterate(&mut worlds[0], 0, eval, &cfg, None, &mut rng);
-            }
-            let root_children = tree.children.keys().filter(|k| k.0 == 0).count();
-            let joint_actions: std::collections::HashSet<_> = tree
-                .children
-                .keys()
-                .filter(|k| k.0 == 0)
-                .map(|k| (k.1, k.2))
-                .collect();
-            (root_children, joint_actions.len())
-        };
-        let (open_children, open_joint) = run(0);
-        assert_eq!(open_children, open_joint); // open-loop: one child per joint action
-        let (closed_children, closed_joint) = run(2);
-        assert!(
-            closed_children > closed_joint,
-            "{closed_children} children for {closed_joint} joint actions"
-        );
-    }
-
-    #[test]
     fn parallel_search_merges_threads_and_leaves_worlds_untouched() {
         let worlds = vec![fixture(), variant(Choices::SPLASH)];
         let before: Vec<String> = worlds.iter().map(|w| w.serialize()).collect();
@@ -999,41 +872,6 @@ mod tests {
         // every thread's root visits are merged: our options' visits add up to the iterations
         let visits: u32 = res.s1.iter().map(|x| x.1).sum();
         assert_eq!(visits, res.iterations);
-        let after: Vec<String> = worlds.iter().map(|w| w.serialize()).collect();
-        assert_eq!(before, after);
-    }
-
-    #[test]
-    fn puct_with_network_priors() {
-        let dir = std::path::Path::new("../../data/train/v1/runs/v1-medium-residual");
-        let Ok(net) = crate::net::Net::load(dir) else {
-            return; // no trained model in this checkout
-        };
-        let cfg = Config {
-            net: Some(std::sync::Arc::new(net)),
-            use_policy: true,
-            ..Config::default()
-        };
-        let mut worlds = [fixture(), variant(Choices::SPLASH)];
-        let before: Vec<String> = worlds.iter().map(|w| w.serialize()).collect();
-        let mut tree = Tree::new();
-        let mut rng = StdRng::seed_from_u64(11);
-        let evals: Vec<f32> = worlds.iter().map(evaluate).collect();
-        for it in 0..3000u32 {
-            let w = (it % 2) as usize;
-            tree.iterate(&mut worlds[w], w as u16, evals[w], &cfg, None, &mut rng);
-        }
-        let root = &tree.nodes[0];
-        assert!(root.priors_set);
-        let p1: f32 = root.s1.iter().map(|a| a.prior).sum();
-        assert!((p1 - 1.0).abs() < 1e-3, "our root priors sum to {p1}");
-        assert!(root.s2.iter().any(|a| a.prior > 0.0), "opponent priors set");
-        let top = root
-            .s1
-            .iter()
-            .max_by(|a, b| a.prior.total_cmp(&b.prior))
-            .unwrap();
-        assert!(top.visits > 0, "the highest-prior action is searched");
         let after: Vec<String> = worlds.iter().map(|w| w.serialize()).collect();
         assert_eq!(before, after);
     }

@@ -19,10 +19,16 @@ use crate::features::{
     featurize_view, history_features, Features, Step, DENSE, GLOBAL, HIST, HIST_DENSE, HIST_SPARSE,
     N_ACTIONS, N_ENTITIES, SPARSE, VOCAB,
 };
-use crate::net::Output;
 use poke_engine::state::State;
 use safetensors::SafeTensors;
 use std::path::Path;
+
+/// One position's network outputs.
+pub struct Output {
+    pub logits: [f32; N_ACTIONS],
+    /// logit of P(side one wins)
+    pub value: f32,
+}
 
 const D_ACTIVE: usize = 2;
 const D_USABLE: usize = 17;
