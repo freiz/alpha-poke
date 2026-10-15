@@ -51,7 +51,7 @@ from torch import nn
 # dense feature indices (rust/alpha_search/src/features.rs)
 D_ALIVE, D_ACTIVE, D_USABLE = 1, 2, slice(17, 21)
 FEATS = ("reveal", "num", "movetab", "matchup", "elo", "hres", "counter")
-AUX_HEADS = ("oppset", "faint", "margin", "turns")
+AUX_HEADS = ("oppset", "faint", "turns")
 N_REVEAL = 8
 # global extras (extra.rs): 0-15 per side numbers, 16-17 who moves first / speed ratio
 # ("matchup"), 18-19 weather / terrain turns ("num")
@@ -155,73 +155,14 @@ class Embeddings(nn.Module):
         return torch.cat(e + [hdense[..., : self.n_hdense]], dim=-1)
 
 
-class PolicyValueNet(nn.Module):
-    def __init__(
-        self,
-        dims: dict,
-        d_ent: int = 128,
-        d_trunk: int = 256,
-        d_global: int = 64,
-        history: bool = False,
-        d_hist: int = 64,
-    ):
-        super().__init__()
-        self.emb = Embeddings(dims)
-        self.entity = nn.Sequential(mlp(self.emb.d_entity, d_ent, d_ent), nn.ReLU())
-        self.glob = nn.Sequential(nn.Linear(dims["global"], d_global), nn.ReLU())
-        self.history = history
-        self.hist_len = dims.get("hist", 8)  # most recent steps used (the data may hold more)
-        d_h = 0
-        if history:
-            self.step = nn.Sequential(mlp(self.emb.d_step, 64, 48), nn.ReLU())
-            self.hist = nn.Sequential(nn.Linear(dims["hist"] * 48, d_hist), nn.ReLU())
-            d_h = d_hist
-        self.trunk = nn.Sequential(mlp(6 * d_ent + d_global + d_h, d_trunk, d_trunk), nn.ReLU())
-        self.value = nn.Linear(d_trunk, 1)
-        self.move_head = mlp(d_trunk + 32 + 1, 64, 2)  # (move, move + tera) per slot
-        self.switch_head = mlp(d_trunk + d_ent, 64, 1)
-
-    def forward(self, sparse, dense, glob, mask, hsparse=None, hdense=None, aux=False):
-        """sparse long [B,12,10], dense float [B,12,23], glob float [B,G], mask bool [B,14]
-        (+ history hsparse long [B,S,6], hdense float [B,S,7]) -> (policy logits [B,14] with
-        -inf on illegal slots, value logit [B])."""
-        x, moves = self.emb.entities(sparse, dense)
-        h = self.entity(x)  # [B,12,d]
-        alive, active = dense[..., D_ALIVE], dense[..., D_ACTIVE]
-        pooled = []
-        for side in (slice(0, 6), slice(6, 12)):
-            hs, act = h[:, side], active[:, side]
-            bench = alive[:, side] * (1 - act)
-            pooled.append((hs * act[..., None]).sum(1))
-            pooled.append((hs * bench[..., None]).sum(1) / bench.sum(1, keepdim=True).clamp(min=1))
-            pooled.append(hs.masked_fill(bench[..., None] == 0, -1e4).amax(1).clamp(min=0))
-        if self.history:
-            k = self.hist_len
-            st = self.step(self.emb.steps(hsparse[:, :k], hdense[:, :k]))  # [B,S,48]
-            pooled.append(self.hist(st.flatten(1)))
-        t = self.trunk(torch.cat(pooled + [self.glob(glob)], dim=-1))  # [B,T]
-        value = self.value(t).squeeze(-1)
-        own_active = active[:, :6]
-        am = (moves[:, :6] * own_active[..., None, None]).sum(1)  # [B,4,32]
-        usable = (dense[:, :6, D_USABLE] * own_active[..., None]).sum(1)  # [B,4]
-        tt = t[:, None, :].expand(-1, 4, -1)
-        mh = self.move_head(torch.cat([tt, am, usable[..., None]], dim=-1))  # [B,4,2]
-        sw = self.switch_head(torch.cat([t[:, None, :].expand(-1, 6, -1), h[:, :6]], dim=-1))
-        logits = torch.cat([mh[..., 0], mh[..., 1], sw.squeeze(-1)], dim=-1)  # [B,14]
-        return logits.masked_fill(~mask, float("-inf")), value
-
-
 class Block(nn.Module):
     """Pre-norm Transformer block with the architecture options of ``TransformerPV`` (``opts``):
     ffn "relu" (d_ff hidden) / "swiglu" (gated, d_ff hidden), norm "ln" / "rms", qk_norm
-    (RMS-normalized queries and keys per head), smolgen > 0: a dynamic per-head attention bias
-    over the token pairs generated from the whole position (Leela Chess Zero's smolgen): the
-    normed tokens compressed to 8 dims each -> hidden ``smolgen`` -> per head 32 -> the shared
-    ``gen`` projection to T x T, added to the attention logits."""
+    (RMS-normalized queries and keys per head)."""
 
-    def __init__(self, d: int, heads: int, d_ff: int, n_tok: int, opts: dict, gen=None):
+    def __init__(self, d: int, heads: int, d_ff: int, opts: dict):
         super().__init__()
-        self.heads, self.n_tok = heads, n_tok
+        self.heads = heads
         norm = nn.RMSNorm if opts.get("norm") == "rms" else nn.LayerNorm
         self.norm1, self.norm2 = norm(d), norm(d)
         self.qkv = nn.Linear(d, 3 * d)
@@ -235,13 +176,6 @@ class Block(nn.Module):
             self.w3 = nn.Linear(d_ff, d)
         else:
             self.ff1, self.ff2 = nn.Linear(d, d_ff), nn.Linear(d_ff, d)
-        self.smolgen = opts.get("smolgen", 0)
-        if self.smolgen:
-            self.sg_compress = nn.Linear(d, 8, bias=False)
-            self.sg_hidden = nn.Sequential(nn.Linear(n_tok * 8, self.smolgen), nn.SiLU(),
-                                           nn.LayerNorm(self.smolgen))  # fmt: skip
-            self.sg_heads = nn.Linear(self.smolgen, heads * 32)
-            self.gen = gen  # shared across the blocks (not a submodule of this one)
 
     def forward(self, z, pad):
         b, t, d = z.shape
@@ -252,10 +186,6 @@ class Block(nn.Module):
             q, k = self.q_norm(q), self.k_norm(k)
         mask = torch.zeros(b, 1, 1, t, device=z.device, dtype=q.dtype)
         mask = mask.masked_fill(pad[:, None, None, :], float("-inf"))
-        if self.smolgen:
-            c = self.sg_compress(y).reshape(b, t * 8)
-            g = self.sg_heads(self.sg_hidden(c)).view(b, h, 32)
-            mask = mask + self.gen[0](g).view(b, h, t, t)
         a = F.scaled_dot_product_attention(q, k, v, attn_mask=mask)
         z = z + self.out(a.transpose(1, 2).reshape(b, t, d))
         y = self.norm2(z)
@@ -269,7 +199,8 @@ class Block(nn.Module):
 
 class TransformerPV(nn.Module):
     """Tokens: 12 entities (type own / opponent), 1 global, the history steps (type = recency);
-    pre-norm Transformer encoder; heads as PolicyValueNet's with t = the global token."""
+    pre-norm Transformer encoder; value and policy heads read the global token t (the switch
+    slots also their entity's token)."""
 
     def __init__(
         self,
@@ -285,13 +216,9 @@ class TransformerPV(nn.Module):
         mask_hidden: bool = False,
         arch: dict | None = None,
     ):
-        """``arch`` (architecture experiments, design D13): ffn "relu" / "swiglu", norm "ln" /
-        "rms", qk_norm, smolgen (hidden size, 0 = off), value_hidden (a hidden layer for the
-        value, 0 = off), value_layers (hidden layers of that MLP, default 1), value_blocks
-        (Transformer blocks of the value's own on the trunk's tokens before that MLP, 0 = off;
-        2026-10-11, trained alone on a frozen trunk: train_pv --freeze-trunk); empty / None =
-        PyTorch's encoder layer
-        (the checkpoints before the experiments)."""
+        """``arch`` (design D13): ffn "relu" / "swiglu", norm "ln" / "rms", qk_norm, value_hidden
+        (a hidden layer for the value, 0 = off); empty / None = PyTorch's encoder layer (the
+        checkpoints before the architecture experiments, e.g. v5-final)."""
         super().__init__()
         assert not mask_hidden or feats, "mask_hidden needs the v3 inputs (reveal bits)"
         self.arch = {k: v for k, v in (arch or {}).items() if v not in (None, False, 0, "relu",
@@ -318,8 +245,6 @@ class TransformerPV(nn.Module):
             self.set_move = nn.Linear(d_model, 32)  # dot with the move vectors
         if "faint" in aux_heads:
             self.faint_head = nn.Linear(d_model, 2)
-        if "margin" in aux_heads:
-            self.margin_head = nn.Linear(d_model, 13)
         if "turns" in aux_heads:
             self.turns_head = nn.Linear(d_model, 1)
         # index / token-type tensors on the module's device (no host copies in the forward pass,
@@ -335,13 +260,8 @@ class TransformerPV(nn.Module):
         self.step_in = nn.Linear(self.emb.d_step, d_model) if history else None
         self.tok_type = nn.Embedding(3 + dims.get("hist", 8), d_model)  # own, opp, global, h_k
         if self.arch:
-            n_tok = 13 + (self.hist_len if history else 0)
-            # smolgen's last projection, shared by all blocks (as in Leela Chess Zero)
-            gen = [nn.Linear(32, n_tok * n_tok)] if self.arch.get("smolgen") else None
-            if gen:
-                self.smolgen_gen = gen[0]
             self.blocks = nn.ModuleList(
-                [Block(d_model, n_heads, d_ff, n_tok, self.arch, gen) for _ in range(n_layers)]
+                [Block(d_model, n_heads, d_ff, self.arch) for _ in range(n_layers)]
             )
             self.norm = nn.RMSNorm(d_model) if self.arch.get("norm") == "rms" else nn.LayerNorm(
                 d_model)  # fmt: skip
@@ -356,26 +276,9 @@ class TransformerPV(nn.Module):
         # layer zero-initialized (adding it to a trained network keeps its outputs at first)
         vh = self.arch.get("value_hidden", 0)
         if vh:
-            # value_dropout (arch): dropout on the hidden layer (training only), against the value
-            # overfitting (one outcome per game for all its positions)
-            drop = self.arch.get("value_dropout", 0.0)
-            layers = [nn.Linear(d_model, vh), nn.SiLU(), nn.Dropout(drop)]
-            for _ in range(self.arch.get("value_layers", 1) - 1):
-                layers += [nn.Linear(vh, vh), nn.SiLU(), nn.Dropout(drop)]
-            self.value_mlp = nn.Sequential(*layers, nn.Linear(vh, 1))
+            self.value_mlp = nn.Sequential(nn.Linear(d_model, vh), nn.SiLU(), nn.Linear(vh, 1))
             nn.init.zeros_(self.value_mlp[-1].weight)
             nn.init.zeros_(self.value_mlp[-1].bias)
-        # value_blocks > 0 (arch): the value's own blocks on the trunk's (normed) tokens, read at
-        # the global token by the value MLP (whose zero output layer keeps a warm start's value)
-        nvb = self.arch.get("value_blocks", 0)
-        if nvb:
-            assert vh and self.arch, "value_blocks needs value_hidden and the arch blocks"
-            opts = {k: v for k, v in self.arch.items() if k != "smolgen"}
-            self.value_blocks = nn.ModuleList(
-                [Block(d_model, n_heads, d_ff, n_tok, opts) for _ in range(nvb)]
-            )
-            self.value_norm = nn.RMSNorm(d_model) if opts.get("norm") == "rms" else nn.LayerNorm(
-                d_model)  # fmt: skip
         self.move_head = mlp(d_model + 32 + 1 + (4 if feats else 0), 64, 2)
         self.switch_head = mlp(2 * d_model, 64, 1)
 
@@ -413,13 +316,7 @@ class TransformerPV(nn.Module):
         h, t = z[:, :12], z[:, 12]
         value = self.value(t).squeeze(-1)
         if self.arch.get("value_hidden", 0):
-            tv = t
-            if self.arch.get("value_blocks", 0):
-                zv = z
-                for blk in self.value_blocks:
-                    zv = blk(zv, pad)
-                tv = self.value_norm(zv)[:, 12]
-            value = value + self.value_mlp(tv).squeeze(-1)
+            value = value + self.value_mlp(t).squeeze(-1)
         own_active = dense[:, :6, D_ACTIVE]
         am = (moves[:, :6] * own_active[..., None, None]).sum(1)
         usable = (dense[:, :6, D_USABLE] * own_active[..., None]).sum(1)
@@ -458,8 +355,6 @@ class TransformerPV(nn.Module):
             out["set_move"] = self.set_move(o) @ self.emb.move_matrix().T  # [B,6,V_move]
         if "faint" in self.aux_heads:
             out["faint"] = self.faint_head(t)
-        if "margin" in self.aux_heads:
-            out["margin"] = self.margin_head(t)
         if "turns" in self.aux_heads:
             out["turns"] = self.turns_head(t).squeeze(-1)
         return out

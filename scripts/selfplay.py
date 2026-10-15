@@ -79,18 +79,6 @@ def cmd_teams(a) -> None:
     print(f"{len(pairs)} pairs -> {path}; sides {dict(kinds)}; bans learned {ts.banned_moves}")
 
 
-def tiebreak_values(spec: str) -> list | None:
-    """--tiebreak as TieBreak's fields (settings.json), or None (off)."""
-    if spec in ("", "0"):
-        return None
-    from dataclasses import astuple
-
-    from alpha_poke.agents.tiebreak import TieBreak
-
-    tb = TieBreak(*map(float, spec.split(","))) if "," in spec else TieBreak()
-    return list(astuple(tb))
-
-
 def cmd_run(a) -> None:
     import json
     import time
@@ -114,11 +102,9 @@ def cmd_run(a) -> None:
                 "fast_iters": a.fast_iters, "fast_worlds": a.fast_worlds,
                 "noise": [a.noise_eps, a.noise_conc], "lanes": a.lanes, "leaves": a.leaves,
                 "threads": a.threads, "turn_cap": a.turn_cap, "temp_turns": a.temp_turns,
-                "temp_late": a.temp_late, "dtype": a.dtype, "children": a.children,
-                "policy_only": a.policy_only,
+                "temp_late": a.temp_late, "dtype": a.dtype,
                 "loop": [a.loop_quiet, a.loop_switches, a.loop_window, a.loop_tau, a.loop_noise]
-                if a.loop_quiet > 0 and not a.policy_only else None,
-                "tiebreak": tiebreak_values(a.tiebreak)}  # fmt: skip
+                if a.loop_quiet > 0 else None}  # fmt: skip
     (gen_dir / "settings.json").write_text(json.dumps(settings, indent=1))
     t0 = time.time()
     n = runner.run(gen_dir, pairs, settings, a.procs, tuple(a.ports), a.limit)
@@ -191,10 +177,8 @@ def cmd_convert(a) -> None:
         return
     logging.disable(logging.WARNING)
     stats = convert(SELFPLAY_DIR / f"gen{a.gen}", Path(f"data/train/sp{a.gen}"), a.gen,
-                    per_game=a.per_game, capped_draw=a.capped_value == "draw",
                     loop_margin=a.loop_margin)  # fmt: skip
-    if not a.no_record:  # (experiment data: not a generation of the loop's state.json)
-        record(a.gen, "convert", stats)
+    record(a.gen, "convert", stats)
 
 
 def registry_match(mid: str, a_run: str, b_run: str, res: dict, kind: str, elo: bool,
@@ -468,16 +452,7 @@ def cmd_train(a) -> None:
     cmd = (f"{sys.executable} scripts/train_pv.py {TRAIN_FLAGS} --selfplay {sp} "
            f"--sp-frac {sp_frac} --init {init} {size} --lr {lr} --batch {a.batch} "
            f"--warmup-frac {a.warmup_frac} --export last --sp-per-game {a.per_game} "
-           f"--sp-value-passes {a.value_passes} --sp-value-per-game {a.value_per_game} "
-           f"--sp-value-lambda {a.value_lambda} --seed {a.gen} "
-           f"--run {run}")  # fmt: skip
-    if a.child_window > 0:  # child-node value targets of the recent generations (方案乙)
-        from alpha_poke.selfplay.children import DIR as CHILD_DIR
-
-        dirs = [str(CHILD_DIR / f"gen{g}") for g in range(a.gen - a.child_window + 1, a.gen + 1)
-                if g >= 0 and any((CHILD_DIR / f"gen{g}").glob("chunk-*.npz"))]  # fmt: skip
-        if dirs:
-            cmd += f" --child-data {','.join(dirs)} --child-weight {a.child_weight}"
+           f"--sp-value-passes {a.value_passes} --seed {a.gen} --run {run}")  # fmt: skip
     log_path = SELFPLAY_DIR / f"gen{a.gen}" / "train.log"
     out = Path("data/train/v5/runs") / run
     done = (out / "metrics.jsonl").exists() and '"event": "done"' in (
@@ -779,11 +754,23 @@ def cmd_loop(a) -> None:
         if gen > a.start and (SELFPLAY_DIR / "STOP").exists():  # stop between generations
             say(f"loop: {SELFPLAY_DIR / 'STOP'} found; stopped before gen {gen}")
             return
-        args = ["cycle", "--gen", str(gen), "--games", str(a.games), "--procs", str(a.procs),
-                "--threads", str(a.threads), "--eval-pairs", str(a.eval_pairs),
-                "--eval-iterations", str(a.eval_iterations),
-                "--mem-cap-gb", str(a.mem_cap_gb), "--children", str(a.children),
-                "--child-window", str(a.child_window)]  # fmt: skip
+        args = [
+            "cycle",
+            "--gen",
+            str(gen),
+            "--games",
+            str(a.games),
+            "--procs",
+            str(a.procs),
+            "--threads",
+            str(a.threads),
+            "--eval-pairs",
+            str(a.eval_pairs),
+            "--eval-iterations",
+            str(a.eval_iterations),
+            "--mem-cap-gb",
+            str(a.mem_cap_gb),
+        ]
         for attempt in (1, 2):
             say(f"gen {gen}: cycle (attempt {attempt})")
             if subprocess.run(me + args).returncode == 0:
@@ -872,13 +859,11 @@ def cmd_cycle(a) -> None:
         steps.append(("teams", ["teams", "--gen", str(a.gen), "--n", str(a.games - have),
                                 "--seed", str(1000 * a.gen + have), "--append"]))  # fmt: skip
     steps += [("run", ["run", "--gen", str(a.gen), "--procs", str(a.procs),
-                       "--lanes", str(a.lanes), "--threads", str(a.threads),
-                       "--children", str(a.children)]),
+                       "--lanes", str(a.lanes), "--threads", str(a.threads)]),
               ("stats", ["stats", "--gen", str(a.gen)]),
               ("value", ["value", "--gen", str(a.gen)]),
               ("convert", ["convert", "--gen", str(a.gen)]),
-              ("train", ["train", "--gen", str(a.gen), "--child-window",
-                         str(a.child_window)]),
+              ("train", ["train", "--gen", str(a.gen)]),
               ("eval", ["eval", "--gen", str(a.gen), "--pairs", str(a.eval_pairs),
                         "--iterations", str(a.eval_iterations)])]  # fmt: skip
     for name, args in steps:
@@ -975,38 +960,14 @@ def main() -> None:
     p.add_argument("--loop-window", type=int, default=8, help="... of its last turns")
     p.add_argument("--loop-tau", type=float, default=1.0, help="tau in a loop")
     p.add_argument("--loop-noise", type=float, default=0.25, help="root noise eps in a loop")
-    p.add_argument("--tiebreak", default="",
-                   help="the root tie-break (agents.tiebreak; 2026-10-14): '1' (defaults) or "
-                        "'delta,q_min,min_share,min_gain'; '' = off")  # fmt: skip
     p.add_argument("--dtype", choices=["fp32", "bf16"], default="bf16", help="GPU inference")
-    p.add_argument("--children", type=int, default=0,
-                   help="export full searches' children of >= N visits (0: off)")  # fmt: skip
-    p.add_argument(
-        "--policy-only",
-        action="store_true",
-        help="no search: moves sampled from the network's prior (value labels only)",
-    )
     p.set_defaults(fn=cmd_run)
     p = sub.add_parser("convert")
     p.add_argument("--gen", type=int, required=True)
     p.add_argument("--force", action="store_true")
-    p.add_argument(
-        "--per-game",
-        type=int,
-        default=0,
-        help="only this many decision points per game (value data; 0 = all)",
-    )
-    p.add_argument("--no-record", action="store_true", help="no state.json entry (experiments)")
-    # 2026-10-14 (design "防拖延循环"): capped games (stalling loops)
-    p.add_argument(
-        "--capped-value",
-        choices=["draw", "none"],
-        default="draw",
-        help="a capped game's value label: 0.5, or none (before 2026-10-14)",
-    )
-    p.add_argument("--loop-margin", type=int, default=10,
-                   help="capped games: no policy target from this many turns after the last "
-                        "faint (-1: all kept, before 2026-10-14)")  # fmt: skip
+    # capped games (stalling loops; valued as a draw): no policy target from this many turns
+    # after the last faint
+    p.add_argument("--loop-margin", type=int, default=10)
     p.set_defaults(fn=cmd_convert)
     p = sub.add_parser("registry", help="rebuild the model registry exp/models.json")
     p.set_defaults(fn=cmd_registry)
@@ -1050,13 +1011,6 @@ def main() -> None:
     p.add_argument("--lr", type=float, default=4e-4)
     p.add_argument("--value-passes", type=int, default=1,
                    help="self-play outcomes: value loss on the first k draws only")  # fmt: skip
-    p.add_argument("--value-lambda", type=float, default=0.0,
-                   help="self-play value targets: lambda-returns over root q's")  # fmt: skip
-    p.add_argument("--value-per-game", type=int, default=0,
-                   help="self-play outcomes: value loss on k positions per game")  # fmt: skip
-    p.add_argument("--child-window", type=int, default=0,
-                   help="child-node value targets of the last k generations (0: off)")  # fmt: skip
-    p.add_argument("--child-weight", type=float, default=1.0)
     p.add_argument("--warmup-frac", type=float, default=0.2)
     p.add_argument("--batch", type=int, default=4096)
     p.add_argument("--force", action="store_true", help="retrain even if the run is complete")
@@ -1128,10 +1082,6 @@ def main() -> None:
     p.add_argument("--max-rejected", type=int, default=3)
     p.add_argument("--mem-cap-gb", type=float, default=40,
                    help="memory cap of every step (cgroup; WSL has 48 GB; 0 = none)")  # fmt: skip
-    # child-node value targets (design TODO "方案乙"): exported by the full searches with at least
-    # --children visits, trained on with the last --child-window generations' (0: off)
-    p.add_argument("--children", type=int, default=0)
-    p.add_argument("--child-window", type=int, default=0)
     p.set_defaults(fn=cmd_loop)
     p = sub.add_parser("cycle", help="one generation end to end")
     p.add_argument("--gen", type=int, required=True)
@@ -1147,8 +1097,6 @@ def main() -> None:
         help="most pairs of the per-generation sequential test (eval)",
     )
     p.add_argument("--mem-cap-gb", type=float, default=40, help="memory cap of every step")
-    p.add_argument("--children", type=int, default=0, help="run --children")
-    p.add_argument("--child-window", type=int, default=0, help="train --child-window")
     p.set_defaults(fn=cmd_cycle)
     a = ap.parse_args()
     a.fn(a)

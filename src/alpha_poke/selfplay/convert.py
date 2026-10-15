@@ -109,19 +109,14 @@ def last_faint_turn(log: str) -> int:
 
 
 def convert_game(pair: int, game: dict, log: str, decisions: list, belief, gen: int,
-                 stamp: int, stats: dict, per_game: int = 0, capped_draw: bool = True,
-                 loop_margin: int = 10) -> list[dict]:  # fmt: skip
-    """``capped_draw``: a capped game's decisions valued 0.5 (else no value label);
-    ``loop_margin`` >= 0: no policy target in a capped game from that many turns after its last
-    faint (the stalling loop; < 0: kept)."""
+                 stamp: int, stats: dict, loop_margin: int = 10) -> list[dict]:  # fmt: skip
+    """A capped game's decisions are valued 0.5 (a draw); ``loop_margin`` >= 0: no policy
+    target in a capped game from that many turns after its last faint (the stalling loop)."""
     rows = []
     # battle tags repeat across servers (each numbers its own battles): the pair makes it unique
     row = {"id": f"sp{gen}-{pair}-{game['battle']}", "log": log, "rating": None,
            "uploadtime": stamp}  # fmt: skip
-    # per_game > 0: that many decision points drawn per game (value data from many games, as
-    # AlphaGo's value net; only those states are built: 2026-10-11, policy-only games)
-    positions = positions_from_replay(row, belief, random.Random(pair), per_game=per_game,
-                                      pool="all")  # fmt: skip
+    positions = positions_from_replay(row, belief, random.Random(pair), pool="all")
     # a key can hold several decisions in order (two forced switches in one turn: the first
     # switch-in fainted to hazards); matched to the positions in order
     by_key: dict = defaultdict(list)
@@ -153,7 +148,7 @@ def convert_game(pair: int, game: dict, log: str, decisions: list, belief, gen: 
             "rating_own": d["ratings"][0], "rating_opp": d["ratings"][1], "turn": d["ctx_turn"],
             "kind": kind, "action": d["slot"],
             "won": 0.5 if capped or d["won"] is None else float(d["won"]),
-            "value_ok": float(capped_draw) if capped else 0.0 if d["won"] is None else 1.0,
+            "value_ok": 1.0 if capped else 0.0 if d["won"] is None else 1.0,
             "pi": [v / total for v in d["visits"]] if target else [0.0] * 14,
             "pi_w": 1.0 if target else 0.0, "q": d["q"], "weight": 1.0,
         })  # fmt: skip
@@ -166,7 +161,7 @@ def _convert_shard(args) -> dict:
     """One shard (its own process): the games' rows written to ``path``; returns the counts."""
     from alpha_poke.agents.belief_state import BeliefModel
 
-    path, items, dec_file, gen, stamp, per_game, capped_draw, loop_margin = args
+    path, items, dec_file, gen, stamp, loop_margin = args
     belief = BeliefModel.load()
     stats: dict = defaultdict(int)
     decs = defaultdict(list)
@@ -180,7 +175,7 @@ def _convert_shard(args) -> dict:
         decisions = decs.pop(pair, [])
         try:
             rows += convert_game(pair, game, log_text, decisions, belief, gen, stamp, stats,
-                                 per_game, capped_draw, loop_margin)  # fmt: skip
+                                 loop_margin)  # fmt: skip
             stats["games"] += 1
         except Exception:  # noqa: BLE001 - a broken log must not stop the conversion
             stats["failed_games"] += 1
@@ -191,8 +186,7 @@ def _convert_shard(args) -> dict:
 
 
 def convert(gen_dir: Path, out_dir: Path, gen: int, shard_games: int = 500, log=print,
-            procs: int = 10, per_game: int = 0, capped_draw: bool = True,
-            loop_margin: int = 10) -> dict:  # fmt: skip
+            procs: int = 10, loop_margin: int = 10) -> dict:  # fmt: skip
     """The generation's games in shards of ``shard_games``, ``procs`` shards at a time (each
     game has its own random seed: the same rows in any order)."""
     import multiprocessing as mp
@@ -207,7 +201,7 @@ def convert(gen_dir: Path, out_dir: Path, gen: int, shard_games: int = 500, log=
     split_decisions(gen_dir, shard_of, tmp)
     jobs = [(out_dir / f"shard-{k // shard_games:04d}.parquet",
              [(p, games[p], logs[p]) for p in pairs[k : k + shard_games]],
-             tmp / f"{k // shard_games:04d}.jsonl", gen, stamp, per_game, capped_draw, loop_margin)
+             tmp / f"{k // shard_games:04d}.jsonl", gen, stamp, loop_margin)
             for k in range(0, len(pairs), shard_games)]  # fmt: skip
     del logs
     stats: dict = defaultdict(int)

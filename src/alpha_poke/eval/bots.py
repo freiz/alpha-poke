@@ -48,15 +48,6 @@ VARIANTS: dict[str, tuple[str, dict]] = {
                 # per side (equal-cost comparisons of networks of different sizes); else
                 # ALPHA_SEARCH_ITERATIONS
                 "iters": os.environ.get(f"ALPHA_SEARCH_ITERATIONS_{x.upper()}"),
-                # ALPHA_STATE_FIXES_A / _B: the engine-state fix level (engine_state.fix_level:
-                # 0 as before 2026-10-11, 1 the first batch, 2 the second, 3 all; A/B tests)
-                "fixes": int(os.environ.get(f"ALPHA_STATE_FIXES_{x.upper()}", "3")),
-                # ALPHA_TIEBREAK_A / _B: the root tie-break (agents.tiebreak; 2026-10-14): "1"
-                # (defaults) or "delta,q_min,min_share"; unset / "0": off
-                "tiebreak": os.environ.get(f"ALPHA_TIEBREAK_{x.upper()}", ""),
-                # ALPHA_LEGACY_CONTEXT_A / _B = 1: the search's tree-path context as before
-                # 2026-10-14 (A/B tests)
-                "legacy": os.environ.get(f"ALPHA_LEGACY_CONTEXT_{x.upper()}") == "1",
             },
         )
         for x in ("a", "b")
@@ -113,8 +104,7 @@ def make_bot(
         cls_name, extra = VARIANTS[kind]
         if cls_name == "batched":
             return _batched_bot(extra["model"], heldout_pool, trace_dir, kw, extra.get("dtype"),
-                                extra.get("iters"), extra.get("fixes", 2),
-                                extra.get("tiebreak", ""), extra.get("legacy", False))  # fmt: skip
+                                extra.get("iters"))  # fmt: skip
         if cls_name == "search":
             from alpha_poke.agents.search_player import SearchPlayer as cls
         elif cls_name == "policy":
@@ -130,8 +120,7 @@ _BATCHERS: dict = {}  # (model, dtype) -> Batcher, one per network in each (work
 
 
 def _batched_bot(model: str, heldout_pool, trace_dir, kw, dtype: str | None = None,
-                 iters: str | None = None, fixes: int = 2, tiebreak: str = "",
-                 legacy: bool = False) -> Player:  # fmt: skip
+                 iters: str | None = None) -> Player:  # fmt: skip
     import random
 
     from alpha_poke.agents.belief_state import BeliefModel
@@ -141,16 +130,10 @@ def _batched_bot(model: str, heldout_pool, trace_dir, kw, dtype: str | None = No
     if (model, dtype) not in _BATCHERS:
         _BATCHERS[model, dtype] = Batcher(model, leaves=8, threads=2, dtype=dtype)
     iters = int(iters or os.environ.get("ALPHA_SEARCH_ITERATIONS") or 3000)
-    tb = None
-    if tiebreak not in ("", "0"):
-        from alpha_poke.agents.tiebreak import TieBreak
-
-        tb = TieBreak(*map(float, tiebreak.split(","))) if "," in tiebreak else TieBreak()
     return SelfPlayPlayer(
         BeliefModel.load(heldout_pool=heldout_pool), trace_dir=trace_dir, worlds=32,
         net_policy="both", model=model, batcher=_BATCHERS[model, dtype], full_frac=1.0,
         full_iters=iters, noise=(0.0, 10.0), greedy=True, record=False,
         turn_cap=int(os.environ.get("ALPHA_TURN_CAP", 300)),
-        seed=random.randrange(1 << 30), state_fixes=fixes, tiebreak=tb, legacy_context=legacy,
-        **kw,
+        seed=random.randrange(1 << 30), **kw,
     )  # fmt: skip

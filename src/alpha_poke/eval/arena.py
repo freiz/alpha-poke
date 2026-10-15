@@ -105,7 +105,6 @@ async def _lane(bot_a, bot_b, matches, port, pool_dir, heldout, lane_id, log_pat
         before, before_b = set(a.battles), set(b.battles)
         # the counters live on the lane's players: log this game's increase only
         fb0 = [(getattr(me, "fallbacks", 0), getattr(me, "search_fallbacks", 0)) for me in (a, b)]
-        tb0 = [getattr(me, "tiebreaks", 0) for me in (a, b)]  # (agents.tiebreak; 2026-10-14)
         challenger, opponent = (a, b) if m.a_challenges else (b, a)
         try:
             await asyncio.wait_for(challenger.battle_against(opponent, n_battles=1), GAME_TIMEOUT)
@@ -146,8 +145,6 @@ async def _lane(bot_a, bot_b, matches, port, pool_dir, heldout, lane_id, log_pat
             "fallbacks_b": getattr(b, "fallbacks", 0) - fb0[1][0],
             "search_fallbacks_a": getattr(a, "search_fallbacks", 0) - fb0[0][1],
             "search_fallbacks_b": getattr(b, "search_fallbacks", 0) - fb0[1][1],
-            "tiebreaks_a": getattr(a, "tiebreaks", 0) - tb0[0],
-            "tiebreaks_b": getattr(b, "tiebreaks", 0) - tb0[1],
         }
         rows.append(row)
         with open(log_path, "a") as f:

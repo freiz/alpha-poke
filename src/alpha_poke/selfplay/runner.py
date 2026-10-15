@@ -64,8 +64,7 @@ STALL_TIMEOUT = 600.0
 
 
 async def _lane(lane: str, jobs: list, port: int, gen_dir: Path, settings: dict, batcher,
-                belief, wid: int, counters: dict, kids: dict | None = None) -> int:  # fmt: skip
-    from alpha_poke.agents.tiebreak import TieBreak
+                belief, wid: int, counters: dict) -> int:  # fmt: skip
     from alpha_poke.selfplay.player import SelfPlayPlayer
 
     def player(tag: str, seed: int):
@@ -82,10 +81,7 @@ async def _lane(lane: str, jobs: list, port: int, gen_dir: Path, settings: dict,
             fast_iters=settings["fast_iters"], fast_worlds=settings["fast_worlds"],
             noise=tuple(settings["noise"]), turn_cap=settings["turn_cap"],
             temp_turns=settings.get("temp_turns", 8), temp_late=settings.get("temp_late", 0.25),
-            children=settings.get("children", 0),
-            policy_only=settings.get("policy_only", False),
             loop=tuple(settings["loop"]) if settings.get("loop") else None,
-            tiebreak=TieBreak(*settings["tiebreak"]) if settings.get("tiebreak") else None,
         )  # fmt: skip
 
     # per run (run_tag) and lane: a lane named alike in every generation must not replay the same
@@ -172,13 +168,6 @@ async def _lane(lane: str, jobs: list, port: int, gen_dir: Path, settings: dict,
         # the previous game's state, no longer needed: one game late, so that no message of it
         # (e.g. |deinit| after /leave) can still come (poke-env would wait for that battle
         # forever, and wake every such waiter at each new battle)
-        if kids is not None:  # the full searches' children of this game (value targets)
-            for pl in (a, b):
-                for batch, meta, q in pl.child_records.pop(tag, []):
-                    kids["buf"].add(kids["next_root"], batch, meta, q)
-                    kids["next_root"] += 1
-            if len(kids["buf"]) >= CHILDREN_PER_FILE:
-                _flush_children(kids)
         if prev_tag is not None:
             for pl in (a, b):
                 pl.forget(prev_tag)
@@ -192,14 +181,6 @@ async def _lane(lane: str, jobs: list, port: int, gen_dir: Path, settings: dict,
         counters["mismatches"] += game["mismatches"]
         counters["capped"] += capped
     return n
-
-
-CHILDREN_PER_FILE = 20_000
-
-
-def _flush_children(kids: dict) -> None:
-    path = kids["dir"] / f"chunk-{kids['tag']}-w{kids['wid']:02d}-{kids['k']:04d}.npz"
-    kids["k"] += kids["buf"].save(path) > 0
 
 
 async def _process(wid: int, jobs: list, port: int, gen_dir: Path, settings: dict) -> int:
@@ -229,20 +210,12 @@ async def _process(wid: int, jobs: list, port: int, gen_dir: Path, settings: dic
             with open(gen_dir / f"progress-w{wid}.log", "a") as f:
                 f.write(json.dumps(line) + "\n")
 
-    kids = None
-    if settings.get("children", 0):  # value targets (design TODO "方案乙"; selfplay.children)
-        from alpha_poke.selfplay.children import DIR, Buffer
-
-        kids = {"buf": Buffer(), "dir": DIR / gen_dir.name, "tag": settings["run_tag"],
-                "wid": wid, "k": 0, "next_root": wid * 10**9}  # fmt: skip
     reporter = asyncio.create_task(progress())
     counts = await asyncio.gather(*[
-        _lane(f"{wid}x{i}", part, port, gen_dir, settings, batcher, belief, wid, counters, kids)
+        _lane(f"{wid}x{i}", part, port, gen_dir, settings, batcher, belief, wid, counters)
         for i, part in enumerate(parts) if part
     ])  # fmt: skip
     reporter.cancel()
-    if kids is not None:
-        _flush_children(kids)
     (gen_dir / f"batcher-w{wid}.json").write_text(json.dumps(batcher.stats))
     return sum(counts)
 

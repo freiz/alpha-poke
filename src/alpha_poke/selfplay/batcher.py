@@ -31,34 +31,23 @@ class _Job:
     future: Future
     inflight: int = 0
     t0: float = field(default_factory=time.time)
-    # > 0: the root's children with at least this many visits are exported when the search is
-    # done (BatchSearch.children: value targets, scripts/child_targets.py)
-    children: int = 0
-    seed: int = 0
 
 
 class Batcher:
-    def __init__(self, model: str, leaves: int = 8, threads: int = 8, prior: bool = True,
-                 dtype: str | None = None):  # fmt: skip
-        """``prior=False``: the network's policy is not used (uniform priors for both sides, the
-        logits zeroed): a search that only the value guides (scripts/pv_bench.py)."""
+    def __init__(self, model: str, leaves: int = 8, threads: int = 8, dtype: str | None = None):
         from alpha_poke.agents.gpu_net import GpuNet
 
         self.net = GpuNet(model, dtype=dtype)
-        self.leaves, self.threads, self.prior = leaves, threads, prior
+        self.leaves, self.threads = leaves, threads
         self.queue: queue.SimpleQueue = queue.SimpleQueue()
         self.stats = {"rounds": 0, "rows": 0, "searches": 0, "gpu_s": 0.0, "collect_s": 0.0}
         threading.Thread(target=self._loop, daemon=True).start()
 
     def submit(self, states: list[str], contexts: list, iterations: int, seed: int,
-               root_noise: tuple[float, float], children: int = 0,
-               legacy_context: bool = False) -> Future:  # fmt: skip
-        """A search of ``iterations`` leaves; the future's result: (record, iterations), or with
-        ``children`` > 0 (record, iterations, (children's input batch, their meta)).
-        ``legacy_context``: the tree path's context as before 2026-10-14 (A/B tests)."""
+               root_noise: tuple[float, float]) -> Future:  # fmt: skip
+        """A search of ``iterations`` leaves; the future's result: (record, iterations)."""
         f: Future = Future()
-        self.queue.put((states, contexts, iterations, seed, root_noise, f, children,
-                        legacy_context))  # fmt: skip
+        self.queue.put((states, contexts, iterations, seed, root_noise, f))
         return f
 
     def _intake(self, active: list, block: bool) -> None:
@@ -67,11 +56,11 @@ class Batcher:
                 item = self.queue.get(block=block and not active)
             except queue.Empty:
                 return
-            states, ctxs, iters, seed, noise, f, children, legacy = item
+            states, ctxs, iters, seed, noise, f = item
             try:
                 bs = alpha_search.BatchSearch(states, ctxs, seed=seed, threads=1, vl=1,
-                                              root_noise=noise, legacy_context=legacy)  # fmt: skip
-                active.append(_Job(bs, iters, f, children=children, seed=seed))
+                                              root_noise=noise)  # fmt: skip
+                active.append(_Job(bs, iters, f))
             except Exception as e:  # noqa: BLE001 - the game falls back, the batcher goes on
                 f.set_exception(e)
             block = False
@@ -120,8 +109,6 @@ class Batcher:
             jobs, rows_i, h = inflight
             t = time.time()
             values, logits = self.net.result(h)
-            if not self.prior:
-                logits = np.zeros_like(logits)
             self.stats["gpu_s"] += time.time() - t
             bad = alpha_search.apply_many(
                 [j.search for j in jobs], np.ascontiguousarray(values, np.float32).tobytes(),
@@ -156,7 +143,4 @@ class Batcher:
     def _finish(self, j: _Job) -> None:
         self.stats["searches"] += 1
         if not j.future.done():
-            out = (j.search.record(), j.search.stats()[0])
-            if j.children:
-                out += (j.search.children(j.children, j.seed),)
-            j.future.set_result(out)
+            j.future.set_result((j.search.record(), j.search.stats()[0]))

@@ -15,7 +15,7 @@ from poke_env.player.battle_order import ForfeitBattleOrder
 
 from alpha_poke.agents import net_context
 from alpha_poke.agents.consistency import request_mismatch
-from alpha_poke.agents.engine_state import build_state, engine_move_to_order, fix_level
+from alpha_poke.agents.engine_state import build_state, engine_move_to_order
 from alpha_poke.agents.knowledge_player import KnowledgePlayer, sync_tera_types
 from alpha_poke.agents.search_player import SearchPlayer
 from alpha_poke.train.positions import KIND_FORCED, KIND_MAIN, KIND_PIVOT
@@ -42,9 +42,7 @@ class SelfPlayPlayer(SearchPlayer):
                  fast_iters: int = 600, fast_worlds: int = 16,
                  noise: tuple[float, float] = (0.1, 10.0), turn_cap: int = 300, seed: int = 0,
                  greedy: bool = False, record: bool = True, temp_turns: int = 8,
-                 temp_late: float = 0.25, children: int = 0, state_fixes: int = 3,
-                 policy_only: bool = False, loop: tuple | None = None, tiebreak=None,
-                 legacy_context: bool = False, **kwargs):  # fmt: skip
+                 temp_late: float = 0.25, loop: tuple | None = None, **kwargs):  # fmt: skip
         super().__init__(*args, **kwargs)
         assert self.model_transformer and batcher is not None
         self.batcher = batcher
@@ -60,26 +58,11 @@ class SelfPlayPlayer(SearchPlayer):
         # the outcome a noisy label of the position: in gen 2 only 58% of the moves played were
         # the most visited)
         self.temp_turns, self.temp_late = temp_turns, temp_late
-        # > 0: each full search's root children with at least this many visits are exported as
-        # value targets (design TODO "方案乙"; selfplay.children), kept per battle as the
-        # records: [(batch of their inputs, their (our, their, visits, value), root q)]
-        self.children = children
-        # build_state's fixes of 2026-10-11 (turn counters, gone items; False: the A/B baseline)
-        self.state_fixes = state_fixes
-        # policy-only games (value labels without search, AlphaGo's value-net data; 2026-10-11):
-        # one world, a one-iteration search for the network's prior, the move sampled from it
-        self.policy_only = policy_only
         # stalling loops (2026-10-14, design "防拖延循环"): (quiet, switches, window, tau, eps):
         # when no mon has fainted for ``quiet`` turns and this side switched in ``switches`` of
         # its last ``window`` turns, its moves are sampled at ``tau`` with root noise ``eps``
         # (the loop broken and played out, its states get outcomes); None: off
         self.loop = loop
-        # the root tie-break (agents.tiebreak.TieBreak; 2026-10-14): None = off
-        self.tiebreak = tiebreak
-        # the search's tree-path context as before 2026-10-14 (A/B tests: eval.bots)
-        self.legacy_context = legacy_context
-        self.tiebreaks = 0
-        self.child_records: dict[str, list] = {}
         # the request each battle's last record answered (a refused choice drops its record)
         self._record_request: dict[str, int] = {}
         self.dropped_records = 0
@@ -115,7 +98,7 @@ class SelfPlayPlayer(SearchPlayer):
     async def _choose_selfplay(self, battle):
         if battle.turn >= self.turn_cap:
             # stalling loops (e.g. endless switching): end the game; the runner marks it capped
-            # and its decisions get no outcome
+            # (its decisions valued as a draw: selfplay.convert)
             return ForfeitBattleOrder()
         try:
             order = await self._search_async(battle)
@@ -139,7 +122,7 @@ class SelfPlayPlayer(SearchPlayer):
         futs = []
         for m in cands:
             states = [build_state(battle, self.belief, names, self.rng, move_beta=self.move_beta,
-                                  fixes=self.state_fixes, force_switch=False, revived=m.species)
+                                  force_switch=False, revived=m.species)
                       for _ in range(self.fast_worlds)]  # fmt: skip
             ctxs = net_context.contexts(battle, states)
             futs.append((m, self.batcher.submit([s.to_string() for s in states], ctxs,
@@ -156,7 +139,7 @@ class SelfPlayPlayer(SearchPlayer):
 
     async def _search_async(self, battle):
         sync_tera_types(battle)
-        if battle.reviving and fix_level(self.state_fixes) >= 2:
+        if battle.reviving:
             return await self._revive_async(battle)
         me = battle.active_pokemon
         if me is None or battle.opponent_active_pokemon is None:
@@ -173,11 +156,11 @@ class SelfPlayPlayer(SearchPlayer):
         else:
             kind = KIND_MAIN
         t0 = time.time()
-        full = not self.policy_only and self.rng.random() < self.full_frac
-        n_worlds = 1 if self.policy_only else self.worlds if full else self.fast_worlds
+        full = self.rng.random() < self.full_frac
+        n_worlds = self.worlds if full else self.fast_worlds
         names = self._opp_team_names(battle)
-        states = [build_state(battle, self.belief, names, self.rng, move_beta=self.move_beta,
-                              fixes=self.state_fixes) for _ in range(n_worlds)]  # fmt: skip
+        states = [build_state(battle, self.belief, names, self.rng, move_beta=self.move_beta)
+                  for _ in range(n_worlds)]  # fmt: skip
         issues = request_mismatch(battle, states[0])
         if issues:
             self.mismatches += 1
@@ -186,24 +169,16 @@ class SelfPlayPlayer(SearchPlayer):
         t1 = time.time()
         ctxs = net_context.contexts(battle, states)
         t2 = time.time()
-        export = self.children if full and self.record else 0
-        iters = 1 if self.policy_only else self.full_iters if full else self.fast_iters
+        iters = self.full_iters if full else self.fast_iters
         looping = self.looping(battle)
-        noise = ((0.0, 10.0) if self.policy_only else
-                 (self.loop[4], self.noise[1]) if looping else self.noise)  # fmt: skip
+        noise = (self.loop[4], self.noise[1]) if looping else self.noise
         fut = self.batcher.submit([s.to_string() for s in states], ctxs, iters,
-                                  self.rng.randrange(1 << 30), noise, children=export,
-                                  legacy_context=self.legacy_context)  # fmt: skip
+                                  self.rng.randrange(1 << 30), noise)  # fmt: skip
         # safety net: a search must never hold a game forever
         res = await asyncio.wait_for(asyncio.wrap_future(fut), timeout=self.search_timeout)
         rec, n = res[0], res[1]
-        if export:
-            batch, kids = res[2]
-            self.child_records.setdefault(battle.battle_tag, []).append((batch, kids, rec["q"]))
-        # the move: sampled from the visits (tau = 1), over options that have an order (policy
-        # only: from the network's prior)
-        weights = rec["prior"] if self.policy_only else rec["visits"]
-        options = [(i, v) for i, v in enumerate(weights) if v > 0 and rec["names"][i]]
+        # the move: sampled from the visits, over options that have an order
+        options = [(i, v) for i, v in enumerate(rec["visits"]) if v > 0 and rec["names"][i]]
         orders = {i: engine_move_to_order(self, battle, rec["names"][i]) for i, _ in options}
         options = [(i, v) for i, v in options if orders[i] is not None]
         if not options:
@@ -216,18 +191,7 @@ class SelfPlayPlayer(SearchPlayer):
         tau = 1.0 if battle.turn <= self.temp_turns else self.temp_late
         if looping:
             tau = self.loop[3]
-        broke = None
-        if self.tiebreak is not None and not self.policy_only:
-            from alpha_poke.agents import tiebreak
-
-            ov = rec["opp_visits"]
-            opp = max(range(len(ov)), key=ov.__getitem__) if any(ov) else -1
-            broke = tiebreak.choose(states[0].to_string(), [i for i, _ in options], rec["visits"],
-                                    rec["mean"], rec["q"], opp, self.tiebreak)  # fmt: skip
-            self.tiebreaks += broke is not None
-        if broke is not None:
-            slot = broke
-        elif self.greedy:
+        if self.greedy:
             tau = 0.0
             slot = max(options, key=lambda o: o[1])[0]
         else:
@@ -243,7 +207,6 @@ class SelfPlayPlayer(SearchPlayer):
             "worlds": n_worlds, "iterations": n, "seconds": round(time.time() - t0, 3),
             "t_worlds": round(t1 - t0, 4), "t_ctx": round(t2 - t1, 4),
             "t_search": round(time.time() - t2, 4), "tau": tau, "loop": looping,
-            "tiebreak": broke is not None,
             "state": states[0].to_string(), "reveal": list(reveal), "ratings": list(ratings),
             "ctx_turn": turn, "history": history, "slot": slot,
             **{k: rec[k] for k in ("visits", "mean", "prior", "legal", "names", "q",

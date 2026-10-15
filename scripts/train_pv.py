@@ -18,7 +18,7 @@ that every game counts as at most N positions (many positions per game share one
 ``--mtp K`` (Transformer, data with a ``future`` column): auxiliary multi-step action prediction
 over the first K decision steps from the position (design D13), weight ``--mtp-weight``.
 v3 (design D13, data with a ``reveal`` column): ``--feats`` (reveal, num, movetab, matchup) and
-``--aux`` (oppset, faint, margin, turns; weight ``--aux-weight`` each) switch the new input groups
+``--aux`` (oppset, faint, turns; weight ``--aux-weight`` each) switch the new input groups
 and auxiliary heads on (alpha_poke.train.model); the caches always hold all of them.
 v4 (data with ``kind`` / ratings, design D13): ``--kinds`` picks the decision points to train on
 (main = turn starts; forced / pivot switches; blind = a turn start whose action the log does not
@@ -47,13 +47,8 @@ import pyarrow.parquet as pq
 import torch
 import torch.nn.functional as F
 
-from alpha_poke.train.model import AUX_HEADS, FEATS, PolicyValueNet, TransformerPV
+from alpha_poke.train.model import AUX_HEADS, FEATS, TransformerPV
 
-SIZES = {
-    "small": dict(d_ent=64, d_trunk=128, d_global=32),
-    "medium": dict(d_ent=128, d_trunk=256, d_global=64),
-    "large": dict(d_ent=256, d_trunk=512, d_global=128),
-}
 T_SIZES = {
     "small": dict(d_model=96, n_layers=2, n_heads=4, d_ff=192),
     "medium": dict(d_model=128, n_layers=3, n_heads=4, d_ff=256),
@@ -211,55 +206,6 @@ def v3_arrays(t, states: list[str]) -> dict:
 
 # decision order within a turn (positions.KIND_*): the turn start, a pivot's switch, then the
 # switches after faints (a blind turn start counts as a turn start)
-KIND_ORDER = {0: 0, 3: 0, 2: 1, 1: 2}
-
-
-def lambda_targets(name: str, lam: float) -> np.ndarray:
-    """Self-play value targets (design D15-5): lambda-returns over the game's root search values.
-    The decisions of a game in time order (turn, kind; the two simultaneous turn-start decisions
-    are one step, their q averaged in side one's terms); the step's target is
-    (1 - lam) * q_next_step + lam * target_next_step, the last step's the outcome. Each target is
-    less noisy than the outcome alone (the luck after the next step is averaged out by the
-    searches) and differs between a game's positions. Rows in load()'s order; capped games keep
-    their (unused) outcome."""
-    root = Path("data/train") / name
-    files = [f for f in sorted(glob.glob(str(root / "*.parquet"))) if pq.read_metadata(f).num_rows]
-    cols = {k: [] for k in ("game", "side", "turn", "kind", "q", "won", "value_ok")}
-    for f in files:
-        t = pq.read_table(f, columns=list(cols))
-        for k in cols:
-            cols[k].append(np.asarray(t.column(k).to_pylist()))
-    c = {k: np.concatenate(v) for k, v in cols.items()}
-    one = c["side"] == "p1"
-    u1 = np.where(one, c["q"], 1 - c["q"])  # side one's terms
-    z1 = np.where(one, c["won"], 1 - c["won"])
-    rank = np.vectorize(KIND_ORDER.get)(c["kind"])
-    order = np.lexsort((rank, c["turn"], c["game"]))
-    g, tr, rk = c["game"][order], c["turn"][order], rank[order]
-    new = np.r_[True, (g[1:] != g[:-1]) | (tr[1:] != tr[:-1]) | (rk[1:] != rk[:-1])]
-    starts = np.flatnonzero(new)
-    step_of = np.cumsum(new) - 1  # per sorted row
-    counts = np.diff(np.r_[starts, len(order)])
-    u_step = np.add.reduceat(u1[order], starts) / counts
-    z_step = z1[order][starts]
-    last = np.r_[g[starts][1:] != g[starts][:-1], True]  # a game's last step
-    target = np.empty(len(starts))
-    carry = 0.0
-    for k in range(len(starts) - 1, -1, -1):
-        if last[k]:
-            carry = z_step[k]
-        target[k] = carry
-        carry = (1 - lam) * u_step[k] + lam * carry
-    t1 = np.empty(len(order))
-    t1[order] = target[step_of]
-    out = np.where(one, t1, 1 - t1)
-    return np.where(c["value_ok"] > 0, out, c["won"]).astype(np.float32)
-
-
-V3_KEYS = ("reveal", "ent2", "glob2", "turn", "faint", "margin", "turns", "set_item",
-           "set_ability", "set_tera", "set_move", "rating", "kind")  # fmt: skip
-
-
 def load(data: str) -> dict:
     """All shards in one set of arrays, filled shard by shard into preallocated arrays (peak
     memory = the result + one shard; concatenating would double it: 2026-10-06 OOM)."""
@@ -299,14 +245,18 @@ def shard_caches(data: str) -> tuple[list[Path], list[int]]:
 MEMMAP_ROW_BYTES = 32
 
 
+V3_KEYS = ("reveal", "ent2", "glob2", "turn", "faint", "turns", "set_item", "set_ability",
+           "set_tera", "set_move", "rating", "kind")  # fmt: skip
+
+
 def load_selfplay(items: list[tuple[str, float]], per_game: int, seed: int,
-                  lam: float, memmap_dir: Path | None = None) -> tuple[dict, int]:  # fmt: skip
+                  memmap_dir: Path | None = None) -> tuple[dict, int]:  # fmt: skip
     """Self-play datasets ``(name, share of games kept)`` in one set of arrays, at most
     ``per_game`` positions per game (those with a policy target first, in random order), the
     cap applied shard by shard (a game is in one shard) on the small columns, then the kept rows
     filled shard by shard into preallocated arrays: peak memory = the kept rows + one shard
-    (2026-10-10: ~6.3M positions after gen 4 no longer fit in memory twice). ``lam`` > 0: the
-    lambda-return value targets as "vt". ``memmap_dir``: the large arrays (the network inputs)
+    (2026-10-10: ~6.3M positions after gen 4 no longer fit in memory twice). ``memmap_dir``: the
+    large arrays (the network inputs)
     in memory-mapped .npy files there instead of memory (2026-10-11: a generation of 100,000
     games would be ~19 GB of arrays; mapped, they live in the page cache, which the kernel can
     reclaim under the memory cap; same rows, same order: training is unchanged). Returns
@@ -314,8 +264,6 @@ def load_selfplay(items: list[tuple[str, float]], per_game: int, seed: int,
     plan, n_before = [], 0
     for d_i, (name, keep) in enumerate(items):
         caches, sizes = shard_caches(name)
-        vt = lambda_targets(name, lam) if lam > 0 else None
-        off = 0
         for s_i, (c, n) in enumerate(zip(caches, sizes, strict=True)):
             with np.load(c) as z:
                 game, pi_w = z["game"], z["pi_w"]
@@ -331,13 +279,11 @@ def load_selfplay(items: list[tuple[str, float]], per_game: int, seed: int,
                 starts = np.r_[0, np.flatnonzero(g[1:] != g[:-1]) + 1]
                 rank = np.arange(len(idx)) - np.repeat(starts, np.diff(np.r_[starts, len(idx)]))
                 idx = np.sort(idx[o[rank < per_game]])
-            plan.append((c, idx, None if vt is None else vt[off + idx]))
-            off += n
-        assert vt is None or off == len(vt), (name, off, len(vt))
-    total = sum(len(i) for _, i, _ in plan)
+            plan.append((c, idx))
+    total = sum(len(i) for _, i in plan)
     out: dict = {}
     pos = 0
-    for c, idx, vts in plan:
+    for c, idx in plan:
         if not len(idx):
             continue
         with np.load(c) as z:
@@ -351,8 +297,6 @@ def load_selfplay(items: list[tuple[str, float]], per_game: int, seed: int,
                     else:
                         out[k] = np.empty(shape, v.dtype)
                 out[k][pos : pos + len(idx)] = v[idx]
-        if vts is not None:
-            out.setdefault("vt", np.empty(total, np.float32))[pos : pos + len(idx)] = vts
         pos += len(idx)
     for v in out.values():  # written back: clean pages the kernel can drop and re-read
         if isinstance(v, np.memmap):
@@ -588,13 +532,6 @@ def aux_loss(out: dict, x: dict, sp, turn, bw, heads, stats: dict | None = None)
         if stats is not None:
             add("faint_bce", F.binary_cross_entropy_with_logits(lg, y, reduction="sum").item() / 2)
             add("faint_acc", ((lg > 0) == y.bool()).float().mean(-1).sum().item())
-    if "margin" in heads:
-        lg = out["margin"].float()
-        ce = F.cross_entropy(lg, x["margin"], reduction="none")
-        losses.append((ce * bw).sum() / bw.sum())
-        if stats is not None:
-            add("margin_ce", ce.sum().item())
-            add("margin_acc", (lg.argmax(-1) == x["margin"]).sum().item())
     if "turns" in heads:
         y = torch.log1p((x["turns"] - turn).clamp(min=0).float())
         pred = out["turns"].float()
@@ -621,16 +558,6 @@ def policy_loss(logits, act, mask, reduction="mean"):
         nll = logits[part].logsumexp(-1) - num
         ce[part] = torch.where(allowed.any(-1), nll, torch.zeros_like(nll))
     return ce.mean() if reduction == "mean" else ce
-
-
-def anchor_kl(logits, ref_logits, mask) -> torch.Tensor:
-    """Mean KL(ref policy || policy) over the legal slots (--policy-anchor: the policy kept where
-    it was while the shared trunk learns the value)."""
-    neg = torch.finfo(torch.float32).min
-    lp = logits.float().masked_fill(~mask, neg).log_softmax(-1)
-    lq = ref_logits.float().masked_fill(~mask, neg).log_softmax(-1)
-    kl = torch.where(mask, lq.exp() * (lq - lp), torch.zeros_like(lp)).sum(-1)
-    return kl[mask.any(-1)].mean()
 
 
 def soft_policy_loss(logits, pi, mask):
@@ -677,50 +604,6 @@ def evaluate_sp(model, d, idx, device, vpg: float, batch=8192, ref=None) -> dict
             "sp_top1": top / max(n_pi, 1), "sp_bce": bce / max(n_v, 1),
             "sp_bce_rootq": bce_q / max(n_v, 1), "sp_val_pi": n_pi, "sp_val_v": n_v,
             "sp_kl_ref": kl_ref / max(len(idx), 1)}  # fmt: skip
-
-
-def load_children(dirs: str, min_visits: int) -> dict:
-    """Child-node value targets (scripts/child_targets.py or self-play's export: a root's
-    children with their search values and network inputs) in one set of arrays; a row's weight
-    min(1, visits / 200) (a child's value is noisier the fewer its visits)."""
-    files = [f for d in dirs.split(",") for f in sorted(Path(d).glob("chunk-*.npz"))]
-    parts = []
-    for f in files:
-        with np.load(f) as z:
-            keep = z["visits"] >= min_visits
-            parts.append({k: z[k][keep] for k in z.files})
-    c = {k: np.concatenate([p[k] for p in parts]) for k in parts[0]}
-    c["row_w"] = np.minimum(1.0, c["visits"] / 200).astype(np.float32)
-    return c
-
-
-def child_tensors(c: dict, idx: np.ndarray, device) -> tuple:
-    """Model inputs of child rows (the search's leaf inputs, as GpuNet feeds them)."""
-
-    def t(k, dt):
-        return torch.from_numpy(c[k][idx].astype(dt)).to(device, non_blocking=True)
-
-    args = (t("sparse", np.int64), t("dense", np.float32), t("global", np.float32),
-            t("mask", bool), t("hsparse", np.int64), t("hdense", np.float32))  # fmt: skip
-    x = {"reveal": t("reveal", np.int64), "ent2": t("ent2", np.float32),
-         "glob2": t("glob2", np.float32), "turn": t("turn", np.int64),
-         "rating": t("rating", np.int64)}  # fmt: skip
-    return args, x, t("eval", np.float32) / 100
-
-
-def child_loss(model, c: dict, n_rows: int, rng, device) -> torch.Tensor:
-    """Regression of ``n_rows`` children's value logits (drawn uniformly) on their search
-    values, BCE weighted by visits. (A sibling ranking loss, Bradley-Terry on pairs of children,
-    was tried and removed 2026-10-11: it broke the calibration, slope 1.34, and helped nothing;
-    results.md.)"""
-    rows = np.unique(rng.integers(0, len(c["value"]), n_rows))
-    args, x, ev = child_tensors(c, rows, device)
-    with torch.autocast(device.type, dtype=torch.bfloat16, enabled=device.type == "cuda"):
-        out = model(*args, x=x)
-    z = value_logit(model, out[1].float(), ev)
-    tgt = torch.from_numpy(c["value"][rows]).to(device)
-    rw = torch.from_numpy(c["row_w"][rows]).to(device)
-    return (F.binary_cross_entropy_with_logits(z, tgt, reduction="none") * rw).sum() / rw.sum()
 
 
 def value_logit(model, v, ev):
@@ -891,7 +774,7 @@ def _evaluate(model, d, idx, device, batch=16384) -> dict:
             nk = a_stats[f"n_{k}"]
             out[f"set_{k}_net"] = a_stats[f"net_{k}"] / nk
             out[f"set_{k}_belief"] = a_stats[f"belief_{k}"] / nk
-    for k in ("faint_bce", "faint_acc", "margin_ce", "margin_acc", "turns_mae"):
+    for k in ("faint_bce", "faint_acc", "turns_mae"):
         if k in a_stats:
             out[k] = a_stats[k] / n
     p, w, t = np.concatenate(probs), np.concatenate(wons), np.concatenate(turns)
@@ -917,8 +800,8 @@ def _evaluate(model, d, idx, device, batch=16384) -> dict:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", required=True)
-    ap.add_argument("--size", choices=sorted(SIZES), default="medium")
-    ap.add_argument("--arch", choices=["mlp", "transformer"], default="mlp")
+    ap.add_argument("--size", choices=sorted(T_SIZES), default="medium")
+    ap.add_argument("--arch", choices=["transformer"], default="transformer")
     ap.add_argument("--history", action="store_true", help="feed the decision-step history")
     ap.add_argument("--hist-len", type=int, default=8, help="most recent steps the model reads")
     ap.add_argument("--mtp", type=int, default=0, help="future steps to predict (auxiliary)")
@@ -936,44 +819,11 @@ def main() -> None:
     ap.add_argument("--ffn", choices=["relu", "swiglu"], default="relu")
     ap.add_argument("--norm", choices=["ln", "rms"], default="ln")
     ap.add_argument("--qk-norm", action="store_true")
-    ap.add_argument("--smolgen", type=int, default=0, help="dynamic attention bias hidden size")
     ap.add_argument("--value-hidden", type=int, default=0,
                     help="value hidden layer size (a warm start adds it, zero)")  # fmt: skip
-    ap.add_argument("--value-dropout", type=float, default=0.0, help="on the value hidden layer")
-    ap.add_argument("--value-layers", type=int, default=1, help="hidden layers of the value MLP")
-    ap.add_argument(
-        "--value-blocks",
-        type=int,
-        default=0,
-        help="the value's own Transformer blocks before its MLP (0 = none)",
-    )
-    ap.add_argument(
-        "--freeze-trunk",
-        action="store_true",
-        help="train the value head only (readout, MLP, value blocks)",
-    )
-    ap.add_argument(
-        "--unfreeze-top",
-        type=int,
-        default=0,
-        help="with --freeze-trunk: the trunk's top N blocks learn too",
-    )
-    ap.add_argument(
-        "--policy-anchor",
-        type=float,
-        default=0.0,
-        help="weight of KL(the --init policy || the policy) (keeps the policy)",
-    )
-    ap.add_argument("--child-data", default="",
-                    help="child-node value targets: scripts/child_targets.py dirs")  # fmt: skip
-    ap.add_argument("--child-weight", type=float, default=1.0)
-    ap.add_argument("--child-rows", type=int, default=512, help="children per step")
-    ap.add_argument("--child-min-visits", type=int, default=50)
     ap.add_argument("--elo-dropout", type=float, default=0.25)
     ap.add_argument("--stream", type=int, default=0, help="shards per chunk (0 = all in memory)")
     ap.add_argument("--val-max", type=int, default=500_000, help="--stream: validation positions")
-    ap.add_argument("--sample-weights", action="store_true",
-                    help="weight the losses by the sampling weights (v4 data)")  # fmt: skip
     ap.add_argument("--mask-hidden", action="store_true",
                     help="unrevealed opponent fields -> unknown (no belief sample)")  # fmt: skip
     ap.add_argument("--value-per-game", type=float, default=0,
@@ -1008,14 +858,6 @@ def main() -> None:
         help="self-play outcomes train the value only the first k draws of a position (0: all)",
     )  # fmt: skip
     ap.add_argument(
-        "--sp-value-per-game", type=int, default=0,
-        help="self-play outcomes train the value on k random positions per game (0: all)",
-    )  # fmt: skip
-    ap.add_argument(
-        "--sp-value-lambda", type=float, default=0.0,
-        help="self-play value targets: lambda-returns over the root q's (0: the outcome)",
-    )  # fmt: skip
-    ap.add_argument(
         "--sp-memmap",
         default="data/tmp/sp_memmap",
         help="self-play inputs memory-mapped under this directory ('' = in memory)",
@@ -1027,20 +869,10 @@ def main() -> None:
     ap.add_argument("--sp-frac", type=float, default=0.5, help="share of each batch from self-play")
     ap.add_argument("--sp-val-frac", type=float, default=0.05, help="self-play games held out")
     ap.add_argument("--init", default="", help="warm start: a run directory (its last.pt)")
-    ap.add_argument(
-        "--init-ckpt",
-        choices=["last", "best"],
-        default="last",
-        help="--init's checkpoint: last, or best (the lowest validation loss: early "
-        "stopping, for a run whose value overfits late)",
-    )
     ap.add_argument("--steps", type=int, default=0, help="training steps (default: from --epochs)")
     ap.add_argument("--warmup-frac", type=float, default=0.02,
                     help="learning-rate warmup share of the steps (warm starts: longer, the "
                          "optimizer's moments start empty)")  # fmt: skip
-    ap.add_argument("--select", choices=["human", "sp_value"], default="human",
-                    help="best.pt by: the human validation loss, or the held-out self-play value "
-                         "BCE (a value-only run on self-play data)")  # fmt: skip
     ap.add_argument("--export", choices=["best", "last"], default="best",
                     help="checkpoint exported for inference (self-play: last)")  # fmt: skip
     ap.add_argument("--run", default=None)
@@ -1102,12 +934,6 @@ def main() -> None:
     _, inv, cnt = np.unique(d["game"], return_inverse=True, return_counts=True)
     if a.value_per_game > 0:
         vw = np.minimum(1.0, a.value_per_game / cnt[inv]).astype(np.float32)
-    if a.sample_weights:
-        assert "sw" in d, "--sample-weights needs data with sampling weights"
-        pw = (d["sw"] / d["sw"][train_idx].mean()).astype(np.float32)
-        # value: each game keeps its total weight, spread over its positions by sampling weight
-        game_mean = np.bincount(inv, weights=d["sw"]) / cnt
-        vw = (vw * d["sw"] / game_mean[inv]).astype(np.float32)
     if a.stream:  # the columns the data has (every shard has the same)
         with np.load(caches[0]) as z:
             keys = set(z.files)
@@ -1123,15 +949,13 @@ def main() -> None:
               val=len(val_idx), val_cutoff=int(cutoff), load_s=round(time.time() - t0, 1),
               eff_train=float(w[train_idx].sum() ** 2 / (w[train_idx] ** 2).sum())))  # fmt: skip
 
-    size = dict((T_SIZES if a.arch == "transformer" else SIZES)[a.size])
+    size = dict(T_SIZES[a.size])
     for k, v in (("d_model", a.d_model), ("n_layers", a.layers), ("n_heads", a.heads),
                  ("d_ff", a.d_ff)):  # fmt: skip
         if v:
             size[k] = v
-    arch_opts = {"ffn": a.ffn, "norm": a.norm, "qk_norm": a.qk_norm, "smolgen": a.smolgen,
-                 "value_hidden": a.value_hidden, "value_dropout": a.value_dropout,
-                 "value_layers": a.value_layers if a.value_layers > 1 else 0,
-                 "value_blocks": a.value_blocks}  # fmt: skip
+    arch_opts = {"ffn": a.ffn, "norm": a.norm, "qk_norm": a.qk_norm,
+                 "value_hidden": a.value_hidden}  # fmt: skip
     assert a.hist_len <= DIMS["hist"], f"--hist-len > the {DIMS['hist']} featurized steps"
     dims = DIMS | {"hist": a.hist_len}
     assert not a.mtp or (a.arch == "transformer" and "fsp" in keys), "--mtp: transformer + future"
@@ -1139,35 +963,22 @@ def main() -> None:
     heads = tuple(f for f in a.aux.split(",") if f)
     v3_ok = a.arch == "transformer" and "ent2" in keys
     assert not (feats or heads) or v3_ok, "--feats / --aux: transformer + v3 data"
-    if a.arch == "transformer":
-        model = TransformerPV(dims, **size, history=a.history, mtp=a.mtp, feats=feats,
-                              aux_heads=heads, mask_hidden=a.mask_hidden,
-                              arch=arch_opts)  # fmt: skip
-    else:
-        model = PolicyValueNet(dims, **size, history=a.history)
+    model = TransformerPV(dims, **size, history=a.history, mtp=a.mtp, feats=feats,
+                          aux_heads=heads, mask_hidden=a.mask_hidden, arch=arch_opts)  # fmt: skip
     model.residual = None
     if a.value_residual:  # start exactly at the fitted handcrafted baseline
         model.residual = torch.nn.Parameter(torch.tensor([0.714, 0.078]))
         torch.nn.init.zeros_(model.value.weight)
         torch.nn.init.zeros_(model.value.bias)
     if a.init:  # warm start (same architecture as the run it comes from)
-        init = torch.load(
-            Path(a.init) / f"{a.init_ckpt}.pt", weights_only=False, map_location="cpu"
-        )
+        init = torch.load(Path(a.init) / "last.pt", weights_only=False, map_location="cpu")
         state = init["model"]
         if "residual" in state:
             model.residual = torch.nn.Parameter(state["residual"].clone())
         # new heads (a value hidden layer --value-hidden, auxiliary heads --aux) are the only
         # parts allowed to be missing: they start from their initialization
         missing, unexpected = model.load_state_dict(state, strict=False)
-        new = (
-            "value_mlp.",
-            "value_blocks.",
-            "value_norm.",
-            "faint_head.",
-            "margin_head.",
-            "turns_head.",
-        )
+        new = ("value_mlp.", "faint_head.", "turns_head.")
         assert not unexpected and all(k.startswith(new) for k in missing), (
             missing, unexpected)  # fmt: skip
     model = model.to(device)
@@ -1179,26 +990,8 @@ def main() -> None:
         for p_ in ref_model.parameters():
             p_.requires_grad_(False)
     n_params = sum(p.numel() for p in model.parameters())
-    if a.freeze_trunk:  # only the value head learns (2026-10-11: value data of its own, the
-        # policy untouched): the linear readout, the value MLP / blocks, the evaluation residual
-        value_part = ("value.", "value_mlp.", "value_blocks.", "value_norm.", "residual")
-        # --unfreeze-top N: the shared trunk's top N blocks (and its final norm) learn too, the
-        # value's gradients reaching the features (with --policy-anchor keeping the policy)
-        n_blocks = len(getattr(model, "blocks", []))
-        top = tuple(f"blocks.{i}." for i in range(n_blocks - a.unfreeze_top, n_blocks))
-        top += ("norm.",) if a.unfreeze_top else ()
-        for name, p_ in model.named_parameters():
-            p_.requires_grad_(name.startswith(value_part + top))
-        emit(dict(event="freeze_trunk", trainable=sum(p.numel() for p in model.parameters()
-                                                      if p.requires_grad)))  # fmt: skip
-    opt = torch.optim.AdamW([p for p in model.parameters() if p.requires_grad], lr=a.lr,
-                            weight_decay=a.wd)  # fmt: skip
+    opt = torch.optim.AdamW(model.parameters(), lr=a.lr, weight_decay=a.wd)
     # self-play data (in memory): train / validation split by game
-    dch = None
-    if a.child_data:  # child-node value targets (design TODO "方案乙")
-        dch = load_children(a.child_data, a.child_min_visits)
-        emit(dict(event="children", rows=len(dch["value"]),
-                  roots=int(len(np.unique(dch["root"]))), weight=a.child_weight))  # fmt: skip
     dsp = None
     if a.selfplay:  # "name" or "name:keep" (share of its games kept)
         items = [(n, float(k) if k else 1.0)
@@ -1212,7 +1005,7 @@ def main() -> None:
             mdir = Path(a.sp_memmap) / f"{a.run}-{os.getpid()}"
             mdir.mkdir(parents=True, exist_ok=True)
             atexit.register(shutil.rmtree, mdir, ignore_errors=True)
-        dsp, sp_n0 = load_selfplay(items, a.sp_per_game, a.seed, a.sp_value_lambda, mdir)
+        dsp, sp_n0 = load_selfplay(items, a.sp_per_game, a.seed, mdir)
         if a.sp_per_game > 0:
             # at most N positions per game (fixed for the run): long games (switch loops of two
             # stall teams, up to 650 decisions) would otherwise weigh tens of times more than a
@@ -1227,21 +1020,6 @@ def main() -> None:
                  else np.ones(len(sinv))) * dsp["value_ok"]  # fmt: skip
         sp_vw = sp_vw.astype(np.float32)
         sp_seen = np.zeros(len(sp_vw), np.int32)  # draws per position (--sp-value-passes)
-        # value weights of the self-play rows: --sp-value-per-game k keeps k random positions of
-        # each game (fixed for the run, as AlphaGo's one position per game: a game's positions
-        # share one outcome, so all of them = the same label tens of times); others: 0
-        sp_vv = sp_vw
-        if a.sp_value_per_game > 0:
-            perm = np.random.default_rng(a.seed).permutation(len(sinv))
-            g = sinv[perm]
-            o = np.argsort(g, kind="stable")
-            starts = np.r_[0, np.flatnonzero(np.diff(g[o])) + 1]
-            rank = np.arange(len(g)) - np.repeat(starts, np.diff(np.r_[starts, len(g)]))
-            keep = np.zeros(len(sinv), bool)
-            keep[perm[o[rank < a.sp_value_per_game]]] = True
-            sp_vv = (keep * dsp["value_ok"]).astype(np.float32)
-            emit(dict(event="sp_value_rows", kept=int(keep.sum()),
-                      with_outcome=int(sp_vv[sp_train].sum())))  # fmt: skip
         bsp = int(round(a.batch * a.sp_frac))
         if not a.steps and a.sp_passes > 0:  # each kept self-play position ~sp_passes times
             a.steps = max(50, math.ceil(a.sp_passes * len(sp_train) / bsp))
@@ -1290,12 +1068,6 @@ def main() -> None:
             with torch.autocast(device.type, dtype=torch.bfloat16, enabled=device.type == "cuda"):
                 out = model(sp, de, gl, ma, hs, hd, aux=bool(a.mtp or heads), **kw)
             logits, v = out[0], out[1]
-            anchor = 0.0
-            if a.policy_anchor > 0 and ref_model is not None:
-                with torch.no_grad(), torch.autocast(device.type, dtype=torch.bfloat16,
-                                                     enabled=device.type == "cuda"):  # fmt: skip
-                    ref_logits = ref_model(sp, de, gl, ma, hs, hd, **kw)[0]
-                anchor = anchor_kl(logits, ref_logits, ma)
             pwb = torch.from_numpy(pw[b]).to(device)
             ce = (policy_loss(logits, act, ma, reduction="none") * pwb).sum() / pwb.sum()
             bw = torch.from_numpy(vw[b]).to(device)
@@ -1303,7 +1075,7 @@ def main() -> None:
             bce = (
                 F.binary_cross_entropy_with_logits(vl, won, reduction="none") * bw
             ).sum() / bw.sum()
-            loss = ce + a.value_weight * bce + a.policy_anchor * anchor
+            loss = ce + a.value_weight * bce
             if a.mtp:
                 tg = mtp_targets(sp, fs, fd, a.mtp)
                 loss = loss + a.mtp_weight * mtp_loss(out[2], tg, a.mtp_decay)[0]
@@ -1317,8 +1089,6 @@ def main() -> None:
             s_sp, s_de, s_gl, s_ma, s_act, s_won, s_ev, s_hs, s_hd, s_fs, s_fd, s_x = to_torch(
                 dsp, bs, device
             )
-            if a.sp_value_lambda > 0:  # lambda-return targets (validation: the outcome)
-                s_won = torch.from_numpy(dsp["vt"][bs]).to(device)
             s_kw = {"x": s_x} if a.arch == "transformer" and s_x is not None else {}
             with torch.autocast(device.type, dtype=torch.bfloat16, enabled=device.type == "cuda"):
                 s_out = model(s_sp, s_de, s_gl, s_ma, s_hs, s_hd, aux=bool(a.mtp or heads), **s_kw)
@@ -1329,7 +1099,8 @@ def main() -> None:
             # --sp-value-passes: a position's outcome counts only the first k times it is drawn
             # (the outcome is one noisy bit per game: the value overfits when the policy targets
             # are trained several passes); same denominator, so fewer rows = a smaller step
-            vv_s = torch.from_numpy(sp_vv[bs]).to(device)  # = bw_s unless --sp-value-per-game
+            # (known: the value's effective weight shrinks over a run; design v6)
+            vv_s = bw_s
             bv_s = vv_s
             if a.sp_value_passes > 0:
                 fresh = sp_seen[bs] < a.sp_value_passes
@@ -1339,13 +1110,6 @@ def main() -> None:
             s_bce = (F.binary_cross_entropy_with_logits(s_vl, s_won, reduction="none")
                      * bv_s).sum() / vv_s.sum().clamp_min(1e-6)  # fmt: skip
             s_loss = s_ce + a.value_weight * s_bce
-            if a.policy_anchor > 0 and ref_model is not None:
-                with torch.no_grad(), torch.autocast(device.type, dtype=torch.bfloat16,
-                                                     enabled=device.type == "cuda"):  # fmt: skip
-                    s_ref = ref_model(s_sp, s_de, s_gl, s_ma, s_hs, s_hd, **s_kw)[0]
-                s_anchor = anchor_kl(s_out[0], s_ref, s_ma)
-                s_loss = s_loss + a.policy_anchor * s_anchor
-                agg["anchor"] = agg.get("anchor", 0.0) + s_anchor.item()
             if a.mtp:
                 s_loss = (
                     s_loss
@@ -1358,10 +1122,6 @@ def main() -> None:
             loss = (1 - a.sp_frac) * loss + a.sp_frac * s_loss
             agg["sp_ce"] = agg.get("sp_ce", 0.0) + s_ce.item()
             agg["sp_bce"] = agg.get("sp_bce", 0.0) + s_bce.item()
-        if dch is not None:  # child-node value targets: regression
-            c_loss = child_loss(model, dch, a.child_rows, rng, device)
-            loss = loss + a.child_weight * c_loss
-            agg["ch_reg"] = agg.get("ch_reg", 0.0) + c_loss.item()
         opt.zero_grad(set_to_none=True)
         loss.backward()
         gn = torch.nn.utils.clip_grad_norm_(model.parameters(), 5.0).item()
@@ -1377,10 +1137,6 @@ def main() -> None:
             k = agg.pop("k")
             sp_part = ({"sp_policy_ce": agg["sp_ce"] / k, "sp_value_bce": agg["sp_bce"] / k}
                        if "sp_ce" in agg else {})  # fmt: skip
-            if "ch_reg" in agg:
-                sp_part |= {"child_reg": agg.pop("ch_reg") / k}
-            if "anchor" in agg:
-                sp_part |= {"policy_anchor_kl": agg.pop("anchor") / k}
             emit(dict(event="train", step=step, epoch=round(step * hb / len(train_idx), 3),
                       policy_ce=agg["ce"] / k, value_bce=agg["bce"] / k, policy_acc=agg["acc"] / k,
                       **sp_part, grad_norm=agg["gn"] / k, lr=sched.get_last_lr()[0],
@@ -1399,8 +1155,6 @@ def main() -> None:
             sel = ("ce_turn_w", "bce_all_w") if "ce_turn_w" in m else (
                 ("ce_turn", "bce_all") if "ce_turn" in m else ("ce", "bce"))  # fmt: skip
             val_loss = m[sel[0]] + a.value_weight * m[sel[1]]
-            if a.select == "sp_value":
-                val_loss = m["sp_bce"]
             ckpt = {"model": model.state_dict(), "dims": dims, "size": size, "arch": a.arch,
                     "history": a.history, "mtp": a.mtp, "feats": feats, "aux_heads": heads,
                     "mask_hidden": a.mask_hidden, "arch_opts": getattr(model, "arch", {}),

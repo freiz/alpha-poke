@@ -118,8 +118,8 @@ def main() -> None:
                 continue
             n_games += 1
             pair = teams[g["pair"]]
-            side_team = {meta["a_side"]: pair["p1"]["text"],
-                         ("p2" if meta["a_side"] == "p1" else "p1"): pair["p2"]["text"]}  # fmt: skip
+            other = "p2" if meta["a_side"] == "p1" else "p1"
+            side_team = {meta["a_side"]: pair["p1"]["text"], other: pair["p2"]["text"]}
             lines = [x.split("|") for x in g["log"].split("\n")]
             for us in ("p1", "p2"):
                 ours = parse_team(side_team[us])
