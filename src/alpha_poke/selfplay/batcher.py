@@ -24,6 +24,15 @@ log = logging.getLogger(__name__)
 MAX_LEAVES = 512  # GpuNet's largest CUDA graph: 1024 rows = 512 leaves (two views each)
 
 
+def parse_ml(s: str | None) -> tuple[float, float, float]:
+    """The moves-left term's "slope,cap,threshold" (alpha_search MlParams; design v6) -> a
+    tuple; None / "" = off."""
+    if not s:
+        return (0.0, 0.0, 0.0)
+    slope, cap, threshold = (float(x) for x in s.split(","))
+    return (slope, cap, threshold)
+
+
 @dataclass
 class _Job:
     search: object
@@ -34,11 +43,15 @@ class _Job:
 
 
 class Batcher:
-    def __init__(self, model: str, leaves: int = 8, threads: int = 8, dtype: str | None = None):
+    def __init__(self, model: str, leaves: int = 8, threads: int = 8, dtype: str | None = None,
+                 ml: tuple[float, float, float] = (0.0, 0.0, 0.0)):  # fmt: skip
+        """``ml``: the moves-left term of every search (``parse_ml``; needs a network with the
+        remaining-turns head)."""
         from alpha_poke.agents.gpu_net import GpuNet
 
         self.net = GpuNet(model, dtype=dtype)
-        self.leaves, self.threads = leaves, threads
+        assert ml[0] <= 0 or self.net.has_turns, f"{model}: no remaining-turns head for ml {ml}"
+        self.leaves, self.threads, self.ml = leaves, threads, ml
         self.queue: queue.SimpleQueue = queue.SimpleQueue()
         self.stats = {"rounds": 0, "rows": 0, "searches": 0, "gpu_s": 0.0, "collect_s": 0.0}
         threading.Thread(target=self._loop, daemon=True).start()
@@ -59,7 +72,7 @@ class Batcher:
             states, ctxs, iters, seed, noise, f = item
             try:
                 bs = alpha_search.BatchSearch(states, ctxs, seed=seed, threads=1, vl=1,
-                                              root_noise=noise)  # fmt: skip
+                                              root_noise=noise, ml=self.ml)  # fmt: skip
                 active.append(_Job(bs, iters, f))
             except Exception as e:  # noqa: BLE001 - the game falls back, the batcher goes on
                 f.set_exception(e)
@@ -108,11 +121,12 @@ class Batcher:
         if inflight is not None:
             jobs, rows_i, h = inflight
             t = time.time()
-            values, logits = self.net.result(h)
+            values, logits, turns = self.net.result(h)
             self.stats["gpu_s"] += time.time() - t
             bad = alpha_search.apply_many(
                 [j.search for j in jobs], np.ascontiguousarray(values, np.float32).tobytes(),
                 np.ascontiguousarray(logits, np.float32).tobytes(), rows_i, self.threads,
+                np.ascontiguousarray(turns, np.float32).tobytes() if turns is not None else None,
             )  # fmt: skip
             for j, r in zip(jobs, rows_i, strict=True):
                 j.inflight -= r > 0

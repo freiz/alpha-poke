@@ -48,6 +48,8 @@ VARIANTS: dict[str, tuple[str, dict]] = {
                 # per side (equal-cost comparisons of networks of different sizes); else
                 # ALPHA_SEARCH_ITERATIONS
                 "iters": os.environ.get(f"ALPHA_SEARCH_ITERATIONS_{x.upper()}"),
+                # the moves-left term "slope,cap,threshold" (selfplay.batcher.parse_ml; v6)
+                "ml": os.environ.get(f"ALPHA_ML_{x.upper()}"),
             },
         )
         for x in ("a", "b")
@@ -104,7 +106,7 @@ def make_bot(
         cls_name, extra = VARIANTS[kind]
         if cls_name == "batched":
             return _batched_bot(extra["model"], heldout_pool, trace_dir, kw, extra.get("dtype"),
-                                extra.get("iters"))  # fmt: skip
+                                extra.get("iters"), extra.get("ml"))  # fmt: skip
         if cls_name == "search":
             from alpha_poke.agents.search_player import SearchPlayer as cls
         elif cls_name == "policy":
@@ -116,23 +118,24 @@ def make_bot(
     return BASELINES[kind](**kw)
 
 
-_BATCHERS: dict = {}  # (model, dtype) -> Batcher, one per network in each (worker) process
+_BATCHERS: dict = {}  # (model, dtype, ml) -> Batcher, one per network in each (worker) process
 
 
 def _batched_bot(model: str, heldout_pool, trace_dir, kw, dtype: str | None = None,
-                 iters: str | None = None) -> Player:  # fmt: skip
+                 iters: str | None = None, ml: str | None = None) -> Player:  # fmt: skip
     import random
 
     from alpha_poke.agents.belief_state import BeliefModel
-    from alpha_poke.selfplay.batcher import Batcher
+    from alpha_poke.selfplay.batcher import Batcher, parse_ml
     from alpha_poke.selfplay.player import SelfPlayPlayer
 
-    if (model, dtype) not in _BATCHERS:
-        _BATCHERS[model, dtype] = Batcher(model, leaves=8, threads=2, dtype=dtype)
+    key = (model, dtype, parse_ml(ml))
+    if key not in _BATCHERS:
+        _BATCHERS[key] = Batcher(model, leaves=8, threads=2, dtype=dtype, ml=key[2])
     iters = int(iters or os.environ.get("ALPHA_SEARCH_ITERATIONS") or 3000)
     return SelfPlayPlayer(
         BeliefModel.load(heldout_pool=heldout_pool), trace_dir=trace_dir, worlds=32,
-        net_policy="both", model=model, batcher=_BATCHERS[model, dtype], full_frac=1.0,
+        net_policy="both", model=model, batcher=_BATCHERS[key], full_frac=1.0,
         full_iters=iters, noise=(0.0, 10.0), greedy=True, record=False,
         turn_cap=int(os.environ.get("ALPHA_TURN_CAP", 300)),
         seed=random.randrange(1 << 30), **kw,

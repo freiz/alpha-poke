@@ -29,6 +29,8 @@ pub struct Output {
     pub logits: [f32; N_ACTIONS],
     /// logit of P(side one wins)
     pub value: f32,
+    /// predicted remaining turns (the remaining-turns head, v6), if the network has one
+    pub turns: Option<f32>,
 }
 
 const D_ACTIVE: usize = 2;
@@ -536,6 +538,8 @@ pub struct TNet {
     switch1: Lin,
     switch2: Lin,
     residual: Option<(f32, f32)>,
+    /// remaining-turns head (aux "turns": log1p of the remaining turns), if trained
+    turns: Option<Lin>,
 }
 
 fn tensor(st: &SafeTensors, name: &str) -> Result<(Vec<f32>, Vec<usize>), String> {
@@ -772,6 +776,7 @@ impl TNet {
             switch1: lin("switch_head.0")?,
             switch2: lin("switch_head.2")?,
             residual,
+            turns: lin("turns_head").ok(),
         };
         let v3 = !feats.is_empty();
         let n_count = |n: usize| if net.count { n } else { 0 };
@@ -1037,7 +1042,16 @@ impl TNet {
             self.switch2.apply(&sh, &mut so, false);
             logits[8 + j] = so[0];
         }
-        Output { logits, value }
+        let turns = self.turns.as_ref().map(|h| {
+            let mut o = [0.0f32];
+            h.apply(t, &mut o, false);
+            o[0].min(6.0).exp_m1().max(0.0)
+        });
+        Output {
+            logits,
+            value,
+            turns,
+        }
     }
 }
 

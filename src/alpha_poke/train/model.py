@@ -290,9 +290,11 @@ class TransformerPV(nn.Module):
         self.move_head = mlp(d_model + 32 + 1 + (4 if feats else 0), 64, 2)
         self.switch_head = mlp(2 * d_model, 64, 1)
 
-    def forward(self, sparse, dense, glob, mask, hsparse=None, hdense=None, aux=False, x=None):
+    def forward(self, sparse, dense, glob, mask, hsparse=None, hdense=None, aux=False, x=None,
+                turns=False):  # fmt: skip
         """``x`` (v3): reveal uint8 [B,12], ent2 [B,12,E], glob2 [B,G2], turn [B]. With ``aux``
-        also (MTP heads or None, dict of the auxiliary heads' outputs)."""
+        also (MTP heads or None, dict of the auxiliary heads' outputs); with ``turns`` (and not
+        ``aux``) also the remaining-turns head's output (log1p of the turns; inference)."""
         xin = x
         if self.mask_hidden:
             sparse = self.hide(sparse, xin["reveal"])
@@ -340,6 +342,8 @@ class TransformerPV(nn.Module):
         logits = torch.cat([mh[..., 0], mh[..., 1], sw.squeeze(-1)], dim=-1)
         logits = logits.masked_fill(~mask, float("-inf"))
         if not aux:
+            if turns:
+                return logits, value, self.turns_head(t).squeeze(-1)
             return logits, value
         return logits, value, self.mtp_heads(t, h) if self.mtp else None, self.aux_out(t, h)
 

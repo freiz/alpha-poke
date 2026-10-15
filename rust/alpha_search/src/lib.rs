@@ -41,7 +41,7 @@ fn roundtrip(state: &str) -> String {
 #[pyo3(signature = (states, duration_ms, iterations=0, seed=None, c=std::f32::consts::SQRT_2,
                     cache_root=true, branch_depth=2, threads=1, model_dir=None,
                     use_policy=false, policy_opponent=true, c_puct=1.0, contexts=None,
-                    root_noise=(0.0, 10.0)))]
+                    root_noise=(0.0, 10.0), ml=(0.0, 0.0, 0.0)))]
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 fn py_ismcts(
     py: Python<'_>,
@@ -59,6 +59,7 @@ fn py_ismcts(
     c_puct: f32,
     contexts: Option<Vec<PyContext>>,
     root_noise: (f32, f32),
+    ml: (f32, f32, f32),
 ) -> PyResult<(Vec<(String, u32, f32)>, u32, usize, u16)> {
     if states.is_empty() {
         return Err(PyValueError::new_err("ismcts needs at least one world"));
@@ -93,6 +94,7 @@ fn py_ismcts(
         tnet,
         root_noise_eps: root_noise.0,
         root_noise_conc: root_noise.1,
+        ml: ml_params(ml),
     };
     let res = py.detach(|| {
         if threads > 1 {
@@ -361,6 +363,15 @@ fn tnet_forward(
     }))
 }
 
+/// The moves-left term's (slope, cap, threshold) (`ismcts::MlParams`; slope 0 = off).
+fn ml_params((slope, cap, threshold): (f32, f32, f32)) -> ismcts::MlParams {
+    ismcts::MlParams {
+        slope,
+        cap,
+        threshold,
+    }
+}
+
 /// A search context from Python: (public-information bits [12], (own rating, opponent rating),
 /// turn, history string), side one's view.
 type PyContext = (Vec<u8>, (i32, i32), i32, String);
@@ -452,7 +463,8 @@ fn batch_dict(py: Python<'_>, b: bsearch::Batch) -> PyResult<Bound<'_, PyDict>> 
 impl PyBatchSearch {
     #[new]
     #[pyo3(signature = (states, contexts, c_puct=1.0, policy_opponent=true, seed=None,
-                        branch_depth=2, threads=1, vl=1, root_noise=(0.0, 10.0)))]
+                        branch_depth=2, threads=1, vl=1, root_noise=(0.0, 10.0),
+                        ml=(0.0, 0.0, 0.0)))]
     #[allow(clippy::too_many_arguments)]
     fn new(
         states: Vec<String>,
@@ -464,6 +476,7 @@ impl PyBatchSearch {
         threads: usize,
         vl: u32,
         root_noise: (f32, f32),
+        ml: (f32, f32, f32),
     ) -> PyResult<Self> {
         if states.is_empty() || states.len() != contexts.len() {
             return Err(PyValueError::new_err(
@@ -483,6 +496,7 @@ impl PyBatchSearch {
             c_puct,
             root_noise_eps: root_noise.0,
             root_noise_conc: root_noise.1,
+            ml: ml_params(ml),
             ..ismcts::Config::default()
         };
         Ok(PyBatchSearch {
@@ -496,21 +510,36 @@ impl PyBatchSearch {
         batch_dict(py, b)
     }
 
-    fn apply(&mut self, values: Vec<f32>, logits: Vec<f32>) -> PyResult<()> {
+    /// `turns`: the predicted remaining turns per row (a network with the remaining-turns head;
+    /// the moves-left term)
+    #[pyo3(signature = (values, logits, turns=None))]
+    fn apply(
+        &mut self,
+        values: Vec<f32>,
+        logits: Vec<f32>,
+        turns: Option<Vec<f32>>,
+    ) -> PyResult<()> {
         if values.len() != 2 * self.inner.n_pending()
             || logits.len() != values.len() * features::N_ACTIONS
+            || turns.as_ref().is_some_and(|t| t.len() != values.len())
         {
             return Err(PyValueError::new_err(
                 "outputs do not match the collected batch",
             ));
         }
-        self.inner.apply(&values, &logits);
+        self.inner.apply(&values, &logits, turns.as_deref());
         Ok(())
     }
 
-    /// The pending batch evaluated by the Rust CPU network (`model_dir`): (values, logits) as
-    /// `apply` takes them. For checking the GPU outputs, and a CPU fallback.
-    fn evaluate_cpu(&mut self, py: Python<'_>, model_dir: &str) -> PyResult<(Vec<f32>, Vec<f32>)> {
+    /// The pending batch evaluated by the Rust CPU network (`model_dir`): (values, logits,
+    /// remaining turns or None) as `apply` takes them. For checking the GPU outputs, and a CPU
+    /// fallback.
+    #[allow(clippy::type_complexity)]
+    fn evaluate_cpu(
+        &mut self,
+        py: Python<'_>,
+        model_dir: &str,
+    ) -> PyResult<(Vec<f32>, Vec<f32>, Option<Vec<f32>>)> {
         let net = tnet::shared(model_dir).map_err(PyValueError::new_err)?;
         let inner = &mut self.inner;
         Ok(py.detach(|| inner.evaluate_cpu(&net)))
@@ -659,7 +688,7 @@ fn collect_many<'py>(
 /// `tobytes()`: no Python lists for the large outputs). Returns failed per search (a panic
 /// while backing up: the caller drops it).
 #[pyfunction]
-#[pyo3(signature = (searches, values, logits, rows, threads=8))]
+#[pyo3(signature = (searches, values, logits, rows, threads=8, turns=None))]
 fn apply_many(
     py: Python<'_>,
     mut searches: Vec<PyRefMut<'_, PyBatchSearch>>,
@@ -667,6 +696,7 @@ fn apply_many(
     logits: &[u8],
     rows: Vec<usize>,
     threads: usize,
+    turns: Option<&[u8]>,
 ) -> PyResult<Vec<bool>> {
     use std::panic::{catch_unwind, AssertUnwindSafe};
     let f32s = |b: &[u8]| -> Vec<f32> {
@@ -675,10 +705,12 @@ fn apply_many(
             .collect()
     };
     let (values, logits) = (f32s(values), f32s(logits));
+    let turns = turns.map(f32s);
     let na = features::N_ACTIONS;
     if rows.len() != searches.len()
         || rows.iter().sum::<usize>() != values.len()
         || logits.len() != values.len() * na
+        || turns.as_ref().is_some_and(|t| t.len() != values.len())
     {
         return Err(PyValueError::new_err("outputs do not match the batches"));
     }
@@ -695,7 +727,7 @@ fn apply_many(
         }
         r += k;
     }
-    let (values, logits) = (&values, &logits);
+    let (values, logits, turns) = (&values, &logits, &turns);
     let bad: Vec<usize> = py.detach(|| {
         let per = jobs.len().div_ceil(threads.max(1)).max(1);
         std::thread::scope(|sc| {
@@ -706,7 +738,8 @@ fn apply_many(
                         let mut bad = Vec::new();
                         for (s, r, k, i) in chunk.iter_mut() {
                             let (v, l) = (&values[*r..*r + *k], &logits[*r * na..(*r + *k) * na]);
-                            if catch_unwind(AssertUnwindSafe(|| s.apply(v, l))).is_err() {
+                            let t = turns.as_ref().map(|t| &t[*r..*r + *k]);
+                            if catch_unwind(AssertUnwindSafe(|| s.apply(v, l, t))).is_err() {
                                 bad.push(*i);
                             }
                         }

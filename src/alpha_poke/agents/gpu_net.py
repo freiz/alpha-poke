@@ -1,8 +1,10 @@
 """The transformer network on the GPU for the batched search (design D13; rust bsearch).
 
 ``GpuNet(run)(batch)`` takes the arrays of ``alpha_search.BatchSearch.collect`` and returns
-(value logits, policy logits) as ``BatchSearch.apply`` takes them: the same PyTorch module as in
-training, float32 (TF32 off), the value residual on the handcrafted evaluation included.
+(value logits, policy logits, remaining turns or None) as ``BatchSearch.apply`` takes them: the
+same PyTorch module as in training, float32 (TF32 off), the value residual on the handcrafted
+evaluation included; the remaining turns (expm1 of the head) for a network with the
+remaining-turns head (v6).
 With ``graphs`` (default on CUDA) the forward pass runs as a captured CUDA graph per padded
 batch size (SIZES; the padding rows repeat the first row and are dropped): one launch instead
 of hundreds of small kernels. Falls back to eager execution if a capture fails.
@@ -50,6 +52,7 @@ class GpuNet:
             # 10 spinning threads, a third less throughput on 20 logical CPUs than on 10)
             torch.set_num_threads(1)
         self.model = load_run(run, self.device).float()
+        self.has_turns = "turns" in getattr(self.model, "aux_heads", ())
         # torch.compile (fused kernels; one compile per padded batch size at its first use, then
         # captured in the CUDA graph): ALPHA_GPU_COMPILE=1 or compile=True
         if compile is None:
@@ -87,15 +90,19 @@ class GpuNet:
         return args, x, t("eval", np.float32, (n,))
 
     def forward(self, args, x, ev):
+        """-> (value logits, policy logits, remaining turns or None)"""
+        kw = {"turns": True} if self.has_turns else {}
         if self.dtype == "bf16":
             with torch.autocast(self.device.type, dtype=torch.bfloat16):
-                logits, v = self.net(*args, x=x)
-            logits, v = logits.float(), v.float()
+                out = self.net(*args, x=x, **kw)
+            out = tuple(o.float() for o in out)
         else:
-            logits, v = self.net(*args, x=x)
+            out = self.net(*args, x=x, **kw)
+        logits, v = out[0], out[1]
         if self.model.residual is not None:
             v = self.model.residual[0] * ev / 100 + self.model.residual[1] + v
-        return v, logits
+        turns = torch.expm1(out[2].clamp(max=6)).clamp(min=0) if self.has_turns else None
+        return v, logits, turns
 
     @staticmethod
     def pad(t: torch.Tensor, size: int) -> torch.Tensor:
@@ -139,7 +146,7 @@ class GpuNet:
         if size not in self.graphs:
             args, x, ev = self.tensors(b)
             self.graphs[size] = self.graph(size, args, x, ev)
-        g, (sa, sx, se), (v, logits) = self.graphs[size]
+        g, (sa, sx, se), (v, logits, turns) = self.graphs[size]
         dsts = list(sa) + [sx[k] for k, _, _ in self.XKEYS] + [se]
         specs = list(self.KEYS) + list(self.XKEYS) + [("eval", np.float32, None)]
         for dst, (key, dt, cast) in zip(dsts, specs, strict=True):
@@ -151,20 +158,24 @@ class GpuNet:
             if n < size:  # padding rows: copies of the first row
                 dst[n:].copy_(dst[:1].expand(size - n, *dst.shape[1:]))
         g.replay()
-        hv, hl = self._out(size, v, logits)
+        hv, hl, ht = self._out(size, v, logits)
         hv[:n].copy_(v[:n], non_blocking=True)
         hl[:n].copy_(logits[:n], non_blocking=True)
+        if turns is not None:
+            ht[:n].copy_(turns[:n], non_blocking=True)
         ev = torch.cuda.Event()
         ev.record()
-        return ("async", (ev, n, hv, hl))
+        return ("async", (ev, n, hv, hl, ht if turns is not None else None))
 
-    def result(self, handle) -> tuple[np.ndarray, np.ndarray]:
+    def result(self, handle) -> tuple:
+        """-> (value logits, policy logits, remaining turns or None)"""
         kind, h = handle
         if kind == "sync":
             return h
-        ev, n, hv, hl = h
+        ev, n, hv, hl, ht = h
         ev.synchronize()
-        return hv[:n].numpy().copy(), hl[:n].numpy().reshape(-1).copy()
+        turns = ht[:n].numpy().copy() if ht is not None else None
+        return hv[:n].numpy().copy(), hl[:n].numpy().reshape(-1).copy(), turns
 
     def _stage(self, key: str, like: torch.Tensor, size: int) -> torch.Tensor:
         st = getattr(self, "_stages", None)
@@ -179,11 +190,12 @@ class GpuNet:
         o = getattr(self, "_outs", None)
         if o is None:
             o = self._outs = (torch.empty(SIZES[-1]).pin_memory(),
-                              torch.empty((SIZES[-1], logits.shape[1])).pin_memory())  # fmt: skip
+                              torch.empty((SIZES[-1], logits.shape[1])).pin_memory(),
+                              torch.empty(SIZES[-1]).pin_memory())  # fmt: skip
         return o
 
     @torch.no_grad()
-    def __call__(self, b: dict) -> tuple[np.ndarray, np.ndarray]:
+    def __call__(self, b: dict) -> tuple:
         args, x, ev = self.tensors(b)
         n = b["rows"]
         size = next((s for s in SIZES if s >= n), None)
@@ -191,15 +203,20 @@ class GpuNet:
             try:
                 if size not in self.graphs:
                     self.graphs[size] = self.graph(size, args, x, ev)
-                g, (sa, sx, se), (v, logits) = self.graphs[size]
+                g, (sa, sx, se), out = self.graphs[size]
                 for dst, src in zip(sa, args, strict=True):
                     dst.copy_(self.pad(src, size))
                 for k in sx:
                     sx[k].copy_(self.pad(x[k], size))
                 se.copy_(self.pad(ev, size))
                 g.replay()
-                return v[:n].float().cpu().numpy(), logits[:n].float().cpu().numpy().reshape(-1)
+                return self._numpy(out, n)
             except RuntimeError:  # a capture that does not work: eager from now on
                 self.use_graphs = False
-        v, logits = self.forward(args, x, ev)
-        return v.float().cpu().numpy(), logits.float().cpu().numpy().reshape(-1)
+        return self._numpy(self.forward(args, x, ev), b["rows"])
+
+    @staticmethod
+    def _numpy(out, n: int) -> tuple:
+        v, logits, turns = out
+        return (v[:n].float().cpu().numpy(), logits[:n].float().cpu().numpy().reshape(-1),
+                turns[:n].float().cpu().numpy() if turns is not None else None)  # fmt: skip

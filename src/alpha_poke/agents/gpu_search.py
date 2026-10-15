@@ -58,12 +58,13 @@ class GpuSearch:
             return batches, merge(batches)
 
         def finish(batches: list, handle) -> None:
-            values, logits = self.net.result(handle)
+            values, logits, turns = self.net.result(handle)
             r = 0
             for s, bi in zip(searches, batches, strict=True):
                 n = bi["rows"]
                 if n:
-                    s.apply(values[r : r + n].tolist(), logits[r * 14 : (r + n) * 14].tolist())
+                    t = turns[r : r + n].tolist() if turns is not None else None
+                    s.apply(values[r : r + n].tolist(), logits[r * 14 : (r + n) * 14].tolist(), t)
                 r += n
 
         # pipeline: the next batch is collected while the GPU evaluates the previous one

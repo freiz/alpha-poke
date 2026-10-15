@@ -61,6 +61,8 @@ pub struct Pending {
     state: State,
     /// the network inputs: side one's view, side two's (built by the thread that found it)
     inputs: Box<(Input, Input)>,
+    /// turns from the root to the leaf (the moves-left estimate's offset)
+    turns: i32,
 }
 
 fn inputs(state: &State, ctx: &Context) -> Box<(Input, Input)> {
@@ -168,20 +170,36 @@ impl Batch {
 }
 
 enum Descent {
-    Terminal(f32),
-    Leaf(Box<State>, Box<(Input, Input)>),
+    /// (value, moves-left from the root: None for a cut-off without an outcome)
+    Terminal(f32, Option<f32>),
+    /// (the leaf state, its inputs, turns from the root)
+    Leaf(Box<State>, Box<(Input, Input)>, i32),
     Collision,
 }
 
 impl Shared {
     /// The real visit and value along a path that carries `vl` virtual visits.
-    fn backup(&mut self, path: &[(u32, u16, u16)], leaf: u32, score: f32, vl: u32) {
+    /// `ml`: the moves-left estimate from the root (turns), if known
+    fn backup(
+        &mut self,
+        path: &[(u32, u16, u16)],
+        leaf: u32,
+        score: f32,
+        vl: u32,
+        ml: Option<f32>,
+    ) {
         self.tree.nodes[leaf as usize].visits += 1;
         self.undo(path, vl - 1);
         for &(nd, i1, i2) in path.iter().rev() {
             let n = &mut self.tree.nodes[nd as usize];
             n.s1[i1 as usize].total += score;
             n.s2[i2 as usize].total += 1.0 - score;
+            if let Some(m) = ml {
+                for a in [&mut n.s1[i1 as usize], &mut n.s2[i2 as usize]] {
+                    a.ml_total += m;
+                    a.ml_n += 1;
+                }
+            }
         }
     }
 
@@ -216,7 +234,7 @@ fn descend(
     let result = loop {
         let over = state.battle_is_over();
         if over != 0.0 && node != 0 {
-            break Descent::Terminal(if over > 0.0 { 1.0 } else { 0.0 });
+            break Descent::Terminal(if over > 0.0 { 1.0 } else { 0.0 }, Some(pc.turns() as f32));
         }
         let (o1, o2) = if node == 0 {
             state.root_get_all_options()
@@ -240,16 +258,16 @@ fn descend(
             n.s2[i].avail += 1;
             av2.push((i, mc));
         }
-        let (i1, m1) = select_puct(&n.s1, &av1, cfg.c_puct);
+        let (i1, m1) = select_puct(&n.s1, &av1, cfg.c_puct, &cfg.ml);
         let (i2, m2) = if cfg.policy_opponent {
-            select_puct(&n.s2, &av2, cfg.c_puct)
+            select_puct(&n.s2, &av2, cfg.c_puct, &cfg.ml)
         } else {
             crate::ismcts::select(&n.s2, &av2, cfg.c)
         };
         let depth = n.depth;
         if m1 == MoveChoice::None && m2 == MoveChoice::None {
             // no decision for either side (should not happen): handcrafted leaf value
-            break Descent::Terminal(crate::ismcts::sigmoid(evaluate(state) - root_eval));
+            break Descent::Terminal(crate::ismcts::sigmoid(evaluate(state) - root_eval), None);
         }
         // virtual loss: `vl` visits are counted now, the value when the evaluation is back
         n.visits += vl;
@@ -306,11 +324,12 @@ fn descend(
             let over = state.battle_is_over();
             if over != 0.0 {
                 shared.lock().unwrap().tree.nodes[node as usize].pending = false;
-                break Descent::Terminal(if over > 0.0 { 1.0 } else { 0.0 });
+                let ml = Some(pc.turns() as f32);
+                break Descent::Terminal(if over > 0.0 { 1.0 } else { 0.0 }, ml);
             }
             // the leaf's inputs now, in this thread, outside the lock
             let x = inputs(state, &pc.context(ctx));
-            break Descent::Leaf(Box::new(state.clone()), x);
+            break Descent::Leaf(Box::new(state.clone()), x, pc.turns());
         }
     };
     for ins in applied.iter().rev() {
@@ -321,19 +340,20 @@ fn descend(
     }
     let mut g = shared.lock().unwrap();
     match result {
-        Descent::Terminal(score) => {
-            g.backup(&path, node, score, vl);
+        Descent::Terminal(score, ml) => {
+            g.backup(&path, node, score, vl, ml);
             g.iterations += 1;
         }
         Descent::Collision => {
             g.collided.push(path);
             g.collisions += 1;
         }
-        Descent::Leaf(state, inputs) => g.pending.push(Pending {
+        Descent::Leaf(state, inputs, turns) => g.pending.push(Pending {
             path,
             node,
             state: *state,
             inputs,
+            turns,
         }),
     }
 }
@@ -356,6 +376,7 @@ impl BatchSearch {
             node: 0,
             state: worlds[0].clone(),
             inputs: inputs(&worlds[0], &ctxs[0]),
+            turns: 0,
         }];
         BatchSearch {
             worlds: vec![worlds; threads.max(1)],
@@ -451,8 +472,9 @@ impl BatchSearch {
     }
 
     /// The batch's outputs: value logits [rows] (side one's view rows are used) and policy logits
-    /// [rows * 14] (-inf on illegal slots), in `collect`'s row order.
-    pub fn apply(&mut self, values: &[f32], logits: &[f32]) {
+    /// [rows * 14] (-inf on illegal slots), in `collect`'s row order; `turns`: the predicted
+    /// remaining turns [rows] (a network with the remaining-turns head), for the moves-left term.
+    pub fn apply(&mut self, values: &[f32], logits: &[f32], turns: Option<&[f32]>) {
         let (policy_opponent, vl) = (self.cfg.policy_opponent, self.vl);
         let (noise_eps, noise_conc, seed) =
             (self.cfg.root_noise_eps, self.cfg.root_noise_conc, self.seed);
@@ -465,6 +487,7 @@ impl BatchSearch {
         let pending: Vec<Pending> = g.pending.drain(..k).collect();
         assert_eq!(values.len(), 2 * pending.len());
         assert_eq!(logits.len(), 2 * pending.len() * N_ACTIONS);
+        assert!(turns.is_none_or(|t| t.len() == values.len()));
         for (k, p) in pending.into_iter().enumerate() {
             let l1 = &logits[2 * k * N_ACTIONS..(2 * k + 1) * N_ACTIONS];
             let l2 = &logits[(2 * k + 1) * N_ACTIONS..(2 * k + 2) * N_ACTIONS];
@@ -499,27 +522,36 @@ impl BatchSearch {
             n.pending = false;
             if p.node != 0 {
                 let v = 1.0 / (1.0 + (-values[2 * k]).exp());
-                g.backup(&p.path, p.node, v, vl);
+                let ml = turns.map(|t| p.turns as f32 + t[2 * k]);
+                g.backup(&p.path, p.node, v, vl, ml);
                 g.iterations += 1;
             }
         }
     }
 
-    /// The pending leaves evaluated by the CPU network: (value logits, policy logits) in
-    /// `collect`'s row order.
-    pub fn evaluate_cpu(&mut self, net: &crate::tnet::TNet) -> (Vec<f32>, Vec<f32>) {
+    /// The pending leaves evaluated by the CPU network: (value logits, policy logits, remaining
+    /// turns if the network predicts them) in `collect`'s row order.
+    #[allow(clippy::type_complexity)]
+    pub fn evaluate_cpu(
+        &mut self,
+        net: &crate::tnet::TNet,
+    ) -> (Vec<f32>, Vec<f32>, Option<Vec<f32>>) {
         let k = self.n_pending();
         let g = self.shared.get_mut().unwrap();
         let outs = crate::par_map(&g.pending[..k], |p| {
             (net.forward(&p.inputs.0), net.forward(&p.inputs.1))
         });
-        let (mut values, mut logits) = (Vec::new(), Vec::new());
+        let (mut values, mut logits, mut turns) = (Vec::new(), Vec::new(), Vec::new());
         for (a, b) in outs {
             values.extend([a.value, b.value]);
             logits.extend_from_slice(&a.logits);
             logits.extend_from_slice(&b.logits);
+            if let (Some(x), Some(y)) = (a.turns, b.turns) {
+                turns.extend([x, y]);
+            }
         }
-        (values, logits)
+        let turns = (turns.len() == values.len() && !values.is_empty()).then_some(turns);
+        (values, logits, turns)
     }
 
     /// Our root actions: (label, visits, mean value).

@@ -60,6 +60,10 @@ pub struct Arm {
     pub total: f32,
     /// policy prior (PUCT); < 0 = none (an action first seen in a later world: uniform)
     pub prior: f32,
+    /// moves left (v6 head): the sum and number of the backed-up estimates of the turns from
+    /// the root to the game's end (turns on the path + the leaf's predicted remaining turns)
+    pub ml_total: f32,
+    pub ml_n: u32,
 }
 
 impl Arm {
@@ -103,10 +107,24 @@ pub(crate) fn arm_index(arms: &mut Vec<Arm>, l: Label) -> usize {
                 avail: 0,
                 total: 0.0,
                 prior: -1.0,
+                ml_total: 0.0,
+                ml_n: 0,
             });
             arms.len() - 1
         }
     }
+}
+
+/// The moves-left term of the selection (design v6, Leela's moves-left utility): when a side's
+/// value at a node is clearly decided (|2q - 1| > `threshold`), its arms get
+/// -sign(2q - 1) * clamp(`slope` * (arm's moves left - the node's), +-`cap`) * the excess
+/// (|2q - 1| - threshold) / (1 - threshold): the winner prefers shorter games, the loser longer
+/// ones; the win probability itself stays unchanged. `slope` 0 = off.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct MlParams {
+    pub slope: f32,
+    pub cap: f32,
+    pub threshold: f32,
 }
 
 #[derive(Clone)]
@@ -128,6 +146,8 @@ pub struct Config {
     /// eta ~ Dirichlet(conc / n options) (AlphaZero); eps 0 = off
     pub root_noise_eps: f32,
     pub root_noise_conc: f32,
+    /// moves-left term (needs a network with the remaining-turns head)
+    pub ml: MlParams,
 }
 
 impl Default for Config {
@@ -142,6 +162,7 @@ impl Default for Config {
             tnet: None,
             root_noise_eps: 0.0,
             root_noise_conc: 10.0,
+            ml: MlParams::default(),
         }
     }
 }
@@ -271,6 +292,11 @@ impl<'a> PathCtx<'a> {
     }
 
     /// The world's context at the current node.
+    /// main steps (turns) completed along the path
+    pub(crate) fn turns(&self) -> i32 {
+        self.mains
+    }
+
     pub(crate) fn context(&self, base: &Context) -> Context {
         let mut history: Vec<Step> = base.history.clone();
         history.extend_from_slice(&self.steps);
@@ -349,6 +375,7 @@ pub(crate) fn select_puct(
     arms: &[Arm],
     avail: &[(usize, MoveChoice)],
     c: f32,
+    ml: &MlParams,
 ) -> (usize, MoveChoice) {
     let n: u32 = avail.iter().map(|&(i, _)| arms[i].visits).sum();
     let sq = (n.max(1) as f32).sqrt();
@@ -361,19 +388,52 @@ pub(crate) fn select_puct(
     }
     let fpu = if k > 0 { qs / k as f32 } else { 0.5 };
     let uniform = 1.0 / avail.len() as f32;
+    let ml_term = moves_left_term(arms, avail, ml);
     let mut best = avail[0];
     let mut best_u = f32::MIN;
     for &(i, mc) in avail {
         let a = &arms[i];
         let q = if a.visits > 0 { a.mean() } else { fpu };
         let p = if a.prior >= 0.0 { a.prior } else { uniform };
-        let u = q + c * p * sq / (1.0 + a.visits as f32);
+        let mut u = q + c * p * sq / (1.0 + a.visits as f32);
+        if let Some((sign, m_node)) = ml_term {
+            if a.ml_n > 0 {
+                let d = ml.slope * (a.ml_total / a.ml_n as f32 - m_node);
+                u += sign * d.clamp(-ml.cap, ml.cap);
+            }
+        }
         if u > best_u {
             best_u = u;
             best = (i, mc);
         }
     }
     best
+}
+
+/// The moves-left term's common parts at a node for one side (`MlParams`): (-sign(2q - 1) x the
+/// excess over the threshold, the node's mean moves left); None when off or not decided.
+fn moves_left_term(
+    arms: &[Arm],
+    avail: &[(usize, MoveChoice)],
+    ml: &MlParams,
+) -> Option<(f32, f32)> {
+    if ml.slope <= 0.0 {
+        return None;
+    }
+    let (mut tot, mut vis, mut m_tot, mut m_n) = (0.0f32, 0u32, 0.0f32, 0u32);
+    for &(i, _) in avail {
+        let a = &arms[i];
+        tot += a.total;
+        vis += a.visits;
+        m_tot += a.ml_total;
+        m_n += a.ml_n;
+    }
+    if vis == 0 || m_n == 0 {
+        return None;
+    }
+    let q = 2.0 * tot / vis as f32 - 1.0;
+    let excess = (q.abs() - ml.threshold) / (1.0 - ml.threshold).max(1e-6);
+    (excess > 0.0).then(|| (-q.signum() * excess.min(1.0), m_tot / m_n as f32))
 }
 
 pub(crate) fn select(arms: &[Arm], avail: &[(usize, MoveChoice)], c: f32) -> (usize, MoveChoice) {
@@ -427,10 +487,11 @@ impl Tree {
         let mut applied: Vec<Vec<Instruction>> = Vec::with_capacity(16); // below the root
         let mut root_step: Option<(u16, u16, usize)> = None; // cached root outcome applied
         let mut node: u32 = 0;
-        let score = loop {
+        // (side one's value, the moves-left estimate from the root if known)
+        let (score, ml_leaf) = loop {
             let over = state.battle_is_over();
             if over != 0.0 && node != 0 {
-                break if over > 0.0 { 1.0 } else { 0.0 };
+                break (if over > 0.0 { 1.0 } else { 0.0 }, Some(pc.mains as f32));
             }
             let (o1, o2) = if node == 0 {
                 state.root_get_all_options()
@@ -486,18 +547,18 @@ impl Tree {
                 n.priors_set = true;
             }
             let (i1, m1) = if cfg.use_policy {
-                select_puct(&n.s1, &av1, cfg.c_puct)
+                select_puct(&n.s1, &av1, cfg.c_puct, &cfg.ml)
             } else {
                 select(&n.s1, &av1, cfg.c)
             };
             let (i2, m2) = if cfg.use_policy && cfg.policy_opponent {
-                select_puct(&n.s2, &av2, cfg.c_puct)
+                select_puct(&n.s2, &av2, cfg.c_puct, &cfg.ml)
             } else {
                 select(&n.s2, &av2, cfg.c)
             };
             let depth = n.depth;
             if m1 == MoveChoice::None && m2 == MoveChoice::None {
-                break leaf_value(state, root_eval, cfg, &pc);
+                break (leaf_value(state, root_eval, cfg, &pc), None);
             }
             pc.push(state, &m1, &m2);
             let (i1, i2) = (i1 as u16, i2 as u16);
@@ -531,10 +592,11 @@ impl Tree {
                     self.children.insert((node, i1, i2, sig), child);
                     node = child;
                     let over = state.battle_is_over();
+                    let mains = Some(pc.mains as f32);
                     break if over > 0.0 {
-                        1.0
+                        (1.0, mains)
                     } else if over < 0.0 {
-                        0.0
+                        (0.0, mains)
                     } else if let (true, Some(tnet), Some(base)) =
                         (cfg.use_policy, &cfg.tnet, pc.base)
                     {
@@ -542,9 +604,10 @@ impl Tree {
                         let x = Input::new(state, &pc.context(base), false, evaluate(state));
                         let out = tnet.forward(&x);
                         self.nodes[child as usize].logits1 = Some(Box::new(out.logits));
-                        1.0 / (1.0 + (-out.value).exp())
+                        let ml = out.turns.map(|t| pc.mains as f32 + t);
+                        (1.0 / (1.0 + (-out.value).exp()), ml)
                     } else {
-                        leaf_value(state, root_eval, cfg, &pc)
+                        (leaf_value(state, root_eval, cfg, &pc), None)
                     };
                 }
             }
@@ -556,9 +619,17 @@ impl Tree {
             let a1 = &mut n.s1[i1 as usize];
             a1.visits += 1;
             a1.total += score;
+            if let Some(m) = ml_leaf {
+                a1.ml_total += m;
+                a1.ml_n += 1;
+            }
             let a2 = &mut n.s2[i2 as usize];
             a2.visits += 1;
             a2.total += 1.0 - score;
+            if let Some(m) = ml_leaf {
+                a2.ml_total += m;
+                a2.ml_n += 1;
+            }
         }
         for ins in applied.iter().rev() {
             state.reverse_instructions(ins);
@@ -903,6 +974,38 @@ mod tests {
         );
     }
 
+    /// the moves-left term: off by default; when one side is clearly winning its shorter
+    /// option is preferred, when it is losing the longer one; nothing near an even value
+    #[test]
+    fn moves_left_term_prefers_short_wins_and_long_losses() {
+        let arm = |total: f32, ml: f32| Arm {
+            label: Label::Other(MoveChoice::None),
+            visits: 10,
+            avail: 10,
+            total,
+            prior: 0.5,
+            ml_total: 10.0 * ml,
+            ml_n: 10,
+        };
+        let avail: Vec<(usize, MoveChoice)> = (0..2).map(|i| (i, MoveChoice::None)).collect();
+        let ml = MlParams {
+            slope: 0.01,
+            cap: 0.05,
+            threshold: 0.5,
+        };
+        // equal values, arm 1 shorter: winning -> 1, losing -> 0, even / off -> the first
+        let win = [arm(9.0, 20.0), arm(9.0, 10.0)];
+        assert_eq!(select_puct(&win, &avail, 1.0, &ml).0, 1);
+        assert_eq!(select_puct(&win, &avail, 1.0, &MlParams::default()).0, 0);
+        let lose = [arm(1.0, 10.0), arm(1.0, 20.0)];
+        assert_eq!(select_puct(&lose, &avail, 1.0, &ml).0, 1);
+        let even = [arm(5.0, 20.0), arm(5.0, 10.0)];
+        assert_eq!(select_puct(&even, &avail, 1.0, &ml).0, 0);
+        // bounded: a large value difference is not overturned
+        let big = [arm(9.5, 40.0), arm(8.5, 5.0)];
+        assert_eq!(select_puct(&big, &avail, 1.0, &ml).0, 0);
+    }
+
     #[test]
     fn root_noise_mixes_priors() {
         let mut arms: Vec<Arm> = (0..4)
@@ -912,6 +1015,8 @@ mod tests {
                 avail: 0,
                 total: 0.0,
                 prior: [0.7, 0.2, 0.1, 0.0][k],
+                ml_total: 0.0,
+                ml_n: 0,
             })
             .collect();
         let avail: Vec<(usize, MoveChoice)> = (0..4).map(|i| (i, MoveChoice::None)).collect();

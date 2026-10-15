@@ -93,6 +93,10 @@ class SearchPlayer(KnowledgePlayer):
         # PUCT with the network's policy priors: None = off, "both" = both sides, "ours" = ours
         # only (the opponent keeps UCB1)
         self.net_policy = net_policy or os.environ.get("ALPHA_NET_POLICY") or None
+        # the moves-left term of the CPU search (ALPHA_ML "slope,cap,threshold"; design v6)
+        from alpha_poke.selfplay.batcher import parse_ml
+
+        self.ml = parse_ml(os.environ.get("ALPHA_ML"))
         assert self.net_policy in (None, "both", "ours"), self.net_policy
 
     def close(self) -> None:
@@ -129,6 +133,7 @@ class SearchPlayer(KnowledgePlayer):
             use_policy=self.net_policy is not None,
             policy_opponent=self.net_policy == "both",
             contexts=ctxs,
+            ml=self.ml,
         )
         return ours, n
 

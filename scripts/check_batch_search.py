@@ -60,7 +60,7 @@ def main() -> None:
     rows = [r for r in pq.read_table(f, columns=cols).slice(0, 5000).to_pylist() if r["kind"] == 0]
     rows = rows[:: max(1, len(rows) // a.positions)][: a.positions]
     net = GpuNet(a.run, dtype="fp32")  # parity with the CPU reference
-    dv = dl = 0.0
+    dv = dl = dt = 0.0
     agree_b = agree_n = 0
     tv_b, tv_n, tv_g = [], [], []
     agree_g = 0
@@ -77,15 +77,18 @@ def main() -> None:
             b = bs.collect(a.batch)
             if b["rows"] == 0:
                 continue
-            v, lg = net(b)
+            v, lg, tr = net(b)
             if i < a.check:
-                v2, l2 = bs.evaluate_cpu(a.run)
+                v2, l2, t2 = bs.evaluate_cpu(a.run)
                 v2, l2 = np.asarray(v2, np.float32), np.asarray(l2, np.float32)
                 fin = np.isfinite(lg)
                 assert (fin == np.isfinite(l2)).all(), "legal slots differ"
+                assert (tr is None) == (t2 is None), "remaining-turns head on one side only"
                 dv = max(dv, float(np.abs(v - v2).max()))
                 dl = max(dl, float(np.abs(lg[fin] - l2[fin]).max()))
-            bs.apply(v.tolist(), lg.tolist())
+                if tr is not None:
+                    dt = max(dt, float(np.abs(tr - np.asarray(t2, np.float32)).max()))
+            bs.apply(v.tolist(), lg.tolist(), tr.tolist() if tr is not None else None)
         t_b += time.time() - t0
         n_b += bs.stats()[0]
         sb = shares(bs.root())
@@ -110,7 +113,7 @@ def main() -> None:
         tv_n.append(tv(runs[1], runs[0]))
     n = len(rows)
     print(f"outputs (GPU vs Rust CPU, {min(n, a.check)} positions): max |value diff| {dv:.2e}, "
-          f"max |logit diff| {dl:.2e}")  # fmt: skip
+          f"max |logit diff| {dl:.2e}, max |remaining turns diff| {dt:.2e}")  # fmt: skip
     print(f"search ({n} positions, {a.iterations} iterations, batch {a.batch}): top option "
           f"agrees with the unbatched CPU search {agree_b / n:.0%} (two CPU seeds: "
           f"{agree_n / n:.0%}); visit-share TV distance {np.mean(tv_b):.3f} "
