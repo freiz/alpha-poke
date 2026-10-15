@@ -44,12 +44,15 @@ class _Job:
 
 class Batcher:
     def __init__(self, model: str, leaves: int = 8, threads: int = 8, dtype: str | None = None,
-                 ml: tuple[float, float, float] = (0.0, 0.0, 0.0)):  # fmt: skip
+                 ml: tuple[float, float, float] = (0.0, 0.0, 0.0),
+                 value_model: str | None = None):  # fmt: skip
         """``ml``: the moves-left term of every search (``parse_ml``; needs a network with the
-        remaining-turns head)."""
-        from alpha_poke.agents.gpu_net import GpuNet
+        remaining-turns head). ``value_model``: the leaves' values from this network, the
+        priors from ``model`` (``gpu_net.CrossNet``; evaluation only)."""
+        from alpha_poke.agents.gpu_net import CrossNet, GpuNet
 
-        self.net = GpuNet(model, dtype=dtype)
+        self.net = (CrossNet(model, value_model, dtype=dtype) if value_model
+                    else GpuNet(model, dtype=dtype))  # fmt: skip
         assert ml[0] <= 0 or self.net.has_turns, f"{model}: no remaining-turns head for ml {ml}"
         self.leaves, self.threads, self.ml = leaves, threads, ml
         self.queue: queue.SimpleQueue = queue.SimpleQueue()
