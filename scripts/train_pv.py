@@ -583,16 +583,23 @@ def soft_policy_loss(logits, pi, mask):
 def evaluate_sp(model, d, idx, device, vpg: float, batch=8192, ref=None) -> dict:
     """Self-play validation: policy CE / KL against the search's visits (full searches),
     agreement of the net's top choice with the most visited, value BCE (games with an outcome),
-    the root value q as a value baseline."""
+    the root value q as a value baseline; the remaining-turns head's error (games that ended)."""
     model.eval()
-    ce = kl = top = n_pi = bce = bce_q = n_v = kl_ref = 0.0
+    ce = kl = top = n_pi = bce = bce_q = n_v = kl_ref = t_err = n_t = 0.0
+    turns_head = "turns" in getattr(model, "aux_heads", ())
     for i in range(0, len(idx), batch):
         b = idx[i : i + batch]
         sp, de, gl, ma, act, won, ev, hs, hd, fs, fd, x = to_torch(d, b, device)
         kw = {"x": x} if x is not None else {}
         with torch.autocast(device.type, dtype=torch.bfloat16, enabled=device.type == "cuda"):
-            out = model(sp, de, gl, ma, hs, hd, **kw)
+            out = model(sp, de, gl, ma, hs, hd, aux=turns_head, **kw)
         logits, v = out[0], out[1]
+        if turns_head:
+            ended = torch.from_numpy(d["value_ok"][b]).to(device) * (won != 0.5)
+            left = (x["turns"] - x["turn"]).clamp(min=0).float()
+            pred = torch.expm1(out[3]["turns"].float().clamp(max=6))
+            t_err += ((pred - left).abs() * ended).sum().item()
+            n_t += ended.sum().item()
         pi = torch.from_numpy(d["pi"][b]).to(device)
         pw = torch.from_numpy(d["pi_w"][b]).to(device)
         c = soft_policy_loss(logits, pi, ma)
@@ -615,7 +622,8 @@ def evaluate_sp(model, d, idx, device, vpg: float, batch=8192, ref=None) -> dict
     return {"sp_ce": ce / max(n_pi, 1), "sp_kl": kl / max(n_pi, 1),
             "sp_top1": top / max(n_pi, 1), "sp_bce": bce / max(n_v, 1),
             "sp_bce_rootq": bce_q / max(n_v, 1), "sp_val_pi": n_pi, "sp_val_v": n_v,
-            "sp_kl_ref": kl_ref / max(len(idx), 1)}  # fmt: skip
+            "sp_kl_ref": kl_ref / max(len(idx), 1),
+            **({"sp_turns_mae": t_err / max(n_t, 1)} if turns_head else {})}  # fmt: skip
 
 
 def value_logit(model, v, ev):
@@ -743,7 +751,7 @@ def _evaluate(model, d, idx, device, batch=16384) -> dict:
         with torch.autocast(device.type, dtype=torch.bfloat16, enabled=device.type == "cuda"):
             out = model(sp, de, gl, ma, hs, hd, aux=bool(mtp or heads), **kw)
         if heads:
-            aux_loss(out[3], x, sp, x["turn"], torch.ones_like(won), heads, a_stats)
+            aux_loss(out[3], x, sp, x["turn"], (won != 0.5).float(), heads, a_stats)
         logits, v = out[0].float(), value_logit(model, out[1].float(), ev)
         if mtp:
             tg = mtp_targets(sp, fs, fd, model.mtp)
@@ -867,8 +875,14 @@ def main() -> None:
     )
     ap.add_argument(
         "--sp-value-passes", type=int, default=0,
-        help="self-play outcomes train the value only the first k draws of a position (0: all)",
+        help="self-play outcomes train the value only the first k draws of a position (0: all); "
+             "with --sp-value-schedule spread: k passes of the outcomes over the run",
     )  # fmt: skip
+    # design v6 "价值训练调度": "first" lets a position's outcome train the value the first k
+    # times its row is drawn (fewer fresh rows later, same denominator: the value's weight
+    # shrinks over the run); "spread" draws the value rows on their own, every outcome k times
+    # in a random order spread evenly over the steps, its loss the weighted mean of those rows
+    ap.add_argument("--sp-value-schedule", choices=["first", "spread"], default="first")
     ap.add_argument(
         "--sp-memmap",
         default="data/tmp/sp_memmap",
@@ -1042,6 +1056,14 @@ def main() -> None:
                   if a.steps else None))  # fmt: skip
     hb = a.batch - (bsp if dsp is not None else 0)  # human rows per batch
     steps = a.steps or int(a.epochs * len(train_idx) / a.batch)
+    v_sched = None  # --sp-value-schedule spread: the value rows of each step
+    if dsp is not None and a.sp_value_schedule == "spread":
+        valued = sp_train[sp_vw[sp_train] > 0]
+        order = np.concatenate([rng.permutation(valued)
+                                for _ in range(max(1, a.sp_value_passes))])  # fmt: skip
+        v_sched = np.array_split(order, steps)
+        emit(dict(event="value_schedule", outcomes=len(valued), passes=max(1, a.sp_value_passes),
+                  rows_per_step=round(len(order) / steps, 1)))  # fmt: skip
     if a.eval_every <= 0:
         a.eval_every = max(50, steps // 5)
     warm = max(1, int(steps * a.warmup_frac))
@@ -1092,7 +1114,9 @@ def main() -> None:
                 tg = mtp_targets(sp, fs, fd, a.mtp)
                 loss = loss + a.mtp_weight * mtp_loss(out[2], tg, a.mtp_decay)[0]
             if heads:
-                loss = loss + a.aux_weight * aux_loss(out[3], x, sp, x["turn"], bw, heads)
+                # remaining turns: not from a draw (a self-play game capped: its end unknown)
+                bw_t = bw * (won != 0.5)
+                loss = loss + a.aux_weight * aux_loss(out[3], x, sp, x["turn"], bw_t, heads)
         else:
             ce = bce = loss = torch.zeros((), device=device)
             logits = act = None
@@ -1112,15 +1136,29 @@ def main() -> None:
             # (the outcome is one noisy bit per game: the value overfits when the policy targets
             # are trained several passes); same denominator, so fewer rows = a smaller step
             # (known: the value's effective weight shrinks over a run; design v6)
-            vv_s = bw_s
-            bv_s = vv_s
-            if a.sp_value_passes > 0:
-                fresh = sp_seen[bs] < a.sp_value_passes
-                np.add.at(sp_seen, bs, 1)
-                bv_s = vv_s * torch.from_numpy(fresh.astype(np.float32)).to(device)
-            s_vl = value_logit(model, s_out[1].float(), s_ev)
-            s_bce = (F.binary_cross_entropy_with_logits(s_vl, s_won, reduction="none")
-                     * bv_s).sum() / vv_s.sum().clamp_min(1e-6)  # fmt: skip
+            if v_sched is not None:  # the step's own value rows (weighted mean)
+                bv = v_sched[step - 1]
+                v_sp, v_de, v_gl, v_ma, _, v_won, v_ev, v_hs, v_hd, _, _, v_x = to_torch(
+                    dsp, bv, device
+                )
+                v_kw = {"x": v_x} if a.arch == "transformer" and v_x is not None else {}
+                with torch.autocast(device.type, dtype=torch.bfloat16,
+                                    enabled=device.type == "cuda"):  # fmt: skip
+                    v_v = model(v_sp, v_de, v_gl, v_ma, v_hs, v_hd, **v_kw)[1]
+                v_w = torch.from_numpy(sp_vw[bv]).to(device)
+                s_vl = value_logit(model, v_v.float(), v_ev)
+                s_bce = (F.binary_cross_entropy_with_logits(s_vl, v_won, reduction="none")
+                         * v_w).sum() / v_w.sum().clamp_min(1e-6)  # fmt: skip
+            else:
+                vv_s = bw_s
+                bv_s = vv_s
+                if a.sp_value_passes > 0:
+                    fresh = sp_seen[bs] < a.sp_value_passes
+                    np.add.at(sp_seen, bs, 1)
+                    bv_s = vv_s * torch.from_numpy(fresh.astype(np.float32)).to(device)
+                s_vl = value_logit(model, s_out[1].float(), s_ev)
+                s_bce = (F.binary_cross_entropy_with_logits(s_vl, s_won, reduction="none")
+                         * bv_s).sum() / vv_s.sum().clamp_min(1e-6)  # fmt: skip
             s_loss = s_ce + a.value_weight * s_bce
             if a.mtp:
                 s_loss = (
@@ -1129,8 +1167,8 @@ def main() -> None:
                     * mtp_loss(s_out[2], mtp_targets(s_sp, s_fs, s_fd, a.mtp), a.mtp_decay)[0]
                 )
             if heads:
-                s_loss = s_loss + a.aux_weight * aux_loss(s_out[3], s_x, s_sp, s_x["turn"], bw_s,
-                                                          heads)  # fmt: skip
+                s_loss = s_loss + a.aux_weight * aux_loss(s_out[3], s_x, s_sp, s_x["turn"],
+                                                          bw_s * (s_won != 0.5), heads)  # fmt: skip
             loss = (1 - a.sp_frac) * loss + a.sp_frac * s_loss
             agg["sp_ce"] = agg.get("sp_ce", 0.0) + s_ce.item()
             agg["sp_bce"] = agg.get("sp_bce", 0.0) + s_bce.item()
