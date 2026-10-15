@@ -104,6 +104,7 @@ def cmd_run(a) -> None:
                 "noise": [a.noise_eps, a.noise_conc], "lanes": a.lanes, "leaves": a.leaves,
                 "threads": a.threads, "turn_cap": a.turn_cap, "temp_turns": a.temp_turns,
                 "temp_late": a.temp_late, "dtype": a.dtype,
+                "ml": a.ml if a.ml is not None else ml_for(model),
                 "loop": [a.loop_quiet, a.loop_switches, a.loop_window, a.loop_tau, a.loop_noise]
                 if a.loop_quiet > 0 else None}  # fmt: skip
     (gen_dir / "settings.json").write_text(json.dumps(settings, indent=1))
@@ -114,6 +115,20 @@ def cmd_run(a) -> None:
 
 
 STATE = SELFPLAY_DIR / "state.json"  # the current network and every generation's summary
+# the moves-left term of the searches (self-play and the evaluations; "slope,cap,threshold",
+# selfplay.batcher.parse_ml; "" = off; design v6): used only with networks that have the
+# remaining-turns head
+SEARCH_ML = ""
+
+
+def ml_for(run: str) -> str:
+    """SEARCH_ML if ``run`` has the remaining-turns head, else "" (off)."""
+    import json
+
+    cfg = json.loads((Path(run) / "config.json").read_text())
+    return SEARCH_ML if "turns" in cfg.get("aux_heads", ()) else ""
+
+
 BASE_RUN = "data/train/v5/runs/v5-glu"
 # a candidate that moved this much (KL to its starting point, self-play positions) and was
 # rejected counts as an over-update (gen 1: 0.0023, lr 1e-4, 2 passes)
@@ -520,6 +535,7 @@ def sequential_match(a, net_a: str, net_b: str, seed: int, log_dir: str) -> dict
     import os
 
     os.environ["ALPHA_MODEL_A"], os.environ["ALPHA_MODEL_B"] = net_a, net_b
+    os.environ["ALPHA_ML_A"], os.environ["ALPHA_ML_B"] = ml_for(net_a), ml_for(net_b)
     os.environ["ALPHA_SEARCH_MS"] = str(a.search_ms)
     # a fixed number of iterations per decision (both networks have the same cost per leaf):
     # no noise from the machine's load; time only bounds a decision when it is 0
@@ -668,6 +684,7 @@ def cmd_diag(a) -> None:
     st = state()
     cur, against = st["current"], a.against
     os.environ["ALPHA_MODEL_A"], os.environ["ALPHA_MODEL_B"] = cur, against
+    os.environ["ALPHA_ML_A"], os.environ["ALPHA_ML_B"] = ml_for(cur), ml_for(against)
     os.environ["ALPHA_SEARCH_ITERATIONS"] = str(a.iterations)
     os.environ["ALPHA_GPU_COMPILE"] = "1"
     out = {}
@@ -701,6 +718,7 @@ def cmd_foulplay(a) -> int:
     st = state()
     cur = st["current"]
     os.environ["ALPHA_MODEL_A"] = cur
+    os.environ["ALPHA_ML"] = ml_for(cur)  # the CPU search (s_ismcts_ma)
     os.environ["ALPHA_SEARCH_MS"] = str(a.search_ms)
     pool = eval_pool(Path("data/teams/pools"), "wide200", 200, 9001)
     setting = (f"ours {a.search_ms}ms vs foulplay {a.fp_ms}ms x{a.fp_parallelism}, "
@@ -964,6 +982,8 @@ def main() -> None:
     p.add_argument("--loop-tau", type=float, default=1.0, help="tau in a loop")
     p.add_argument("--loop-noise", type=float, default=0.25, help="root noise eps in a loop")
     p.add_argument("--dtype", choices=["fp32", "bf16"], default="bf16", help="GPU inference")
+    p.add_argument("--ml", default=None,
+                   help="moves-left term 'slope,cap,threshold' (default: SEARCH_ML)")  # fmt: skip
     p.set_defaults(fn=cmd_run)
     p = sub.add_parser("convert")
     p.add_argument("--gen", type=int, required=True)

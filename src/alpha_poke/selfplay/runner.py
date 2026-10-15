@@ -186,11 +186,12 @@ async def _lane(lane: str, jobs: list, port: int, gen_dir: Path, settings: dict,
 async def _process(wid: int, jobs: list, port: int, gen_dir: Path, settings: dict) -> int:
     """One process: ``lanes`` concurrent lanes sharing one GPU batcher."""
     from alpha_poke.agents.belief_state import BeliefModel
-    from alpha_poke.selfplay.batcher import Batcher
+    from alpha_poke.selfplay.batcher import Batcher, parse_ml
 
     belief = BeliefModel.load()
     batcher = Batcher(settings["model"], leaves=settings["leaves"], threads=settings["threads"],
-                      dtype=settings.get("dtype", "bf16"))  # fmt: skip
+                      dtype=settings.get("dtype", "bf16"),
+                      ml=parse_ml(settings.get("ml")))  # fmt: skip
     lanes = settings["lanes"]
     parts = [jobs[i::lanes] for i in range(lanes)]
     counters = {"games": 0, "decisions": 0, "leaves": 0, "fallbacks": 0, "capped": 0,
