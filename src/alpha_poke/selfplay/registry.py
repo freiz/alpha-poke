@@ -27,7 +27,15 @@ ROOT = Path(__file__).resolve().parents[3]
 EXP = ROOT / "exp"
 MATCHES = EXP / "matches.jsonl"
 MODELS = EXP / "models.json"
-RUNS = ROOT / "data" / "train" / "v5" / "runs"
+RUNS = ROOT / "data" / "train"  # <data>/runs/<run>
+
+
+def run_dir(name: str) -> Path:
+    """A run's directory by name (data/train/*/runs/<name>; the v5 one if none exists yet)."""
+    found = sorted(RUNS.glob(f"*/runs/{name}"))
+    return found[0] if found else RUNS / "v5" / "runs" / name
+
+
 # 2026-10-09: self-play restarted from v5-glu (the human-data network); the earlier run is in
 # exp/archive-2026-10-08/
 ANCHOR, ANCHOR_ELO = "v5-glu", 1500.0
@@ -183,7 +191,7 @@ def build(state: dict) -> dict:
 
     def entry(name: str) -> dict:
         if name not in models:
-            run = RUNS / name
+            run = run_dir(name)
             models[name] = {"name": name, "run": str(run.relative_to(ROOT)), "sha256": _sha(run),
                             "generation": None, "role": "variant", "promoted": None,
                             "played_generations": [], **_run_info(run)}  # fmt: skip

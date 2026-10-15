@@ -9,7 +9,8 @@
   convert --gen G        -> data/train/sp<G> (training positions: recorded inputs + targets)
   train  --gen G         warm start from the current network, human data + the last --window
                          generations' self-play (--sp-frac of each batch, each position seen
-                         --passes times) -> data/train/v5/runs/sp-gen<G> (train.log, metrics)
+                         --passes times) -> data/train/<TRAIN_DATA>/runs/sp-gen<G> (train.log,
+                         metrics)
   eval   --gen G         the new network vs the current one, equal time, paired; promoted
                          unless significantly worse (design D15-6)
 Every step writes its summary to data/selfplay/gen<G>/summary.json and data/selfplay/state.json
@@ -121,7 +122,9 @@ KL_BIG = 0.01
 # --stream 2 (2026-10-10, was 4): two human shards per chunk; a chunk in use and the next one
 # loading are in memory together (4 + 4 shards with the 50,000-game generations' self-play data:
 # over the 40 GB cap). A generation's training reads ~0.02 epoch of the human data either way
-TRAIN_FLAGS = ("--data v5 --stream 2 --val-cutoff 1776921722 --train-only hf- --eval-every 500 "
+TRAIN_DATA = "v5"  # the human data (data/train/<x>); the generations' runs go to its runs/
+TRAIN_FLAGS = (f"--data {TRAIN_DATA} --stream 2 --val-cutoff 1776921722 --train-only hf- "
+               "--eval-every 500 "
                "--arch transformer "
                "--history --mtp 3 --mtp-weight 0.5 --mtp-decay 0.5 --value-residual "
                "--value-per-game 4 --kinds main,forced,pivot,blind --aux oppset "
@@ -454,7 +457,7 @@ def cmd_train(a) -> None:
            f"--warmup-frac {a.warmup_frac} --export last --sp-per-game {a.per_game} "
            f"--sp-value-passes {a.value_passes} --seed {a.gen} --run {run}")  # fmt: skip
     log_path = SELFPLAY_DIR / f"gen{a.gen}" / "train.log"
-    out = Path("data/train/v5/runs") / run
+    out = Path("data/train") / TRAIN_DATA / "runs" / run
     done = (out / "metrics.jsonl").exists() and '"event": "done"' in (
         out / "metrics.jsonl"
     ).read_text()
