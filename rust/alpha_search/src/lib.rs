@@ -798,6 +798,7 @@ fn feature_dims(py: Python<'_>) -> PyResult<Bound<'_, PyDict>> {
     d.set_item("move_feat", extra::MOVE_FEAT)?;
     d.set_item("ent_count", counts::ENT_COUNT)?;
     d.set_item("global_count", counts::GLOBAL_COUNT)?;
+    d.set_item("count_version", counts::COUNT_VERSION)?;
     Ok(d)
 }
 

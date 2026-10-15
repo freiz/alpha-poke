@@ -3,8 +3,10 @@
 //! bits say a status is on, not for how long), side-relative like `featurize_view`:
 //!
 //! * per entity (`ENT_COUNT`): each move's PP left, min(pp, 16) / 16 (exact for our side; the
-//!   opponent's as `build_state` estimates it from its uses), each move disabled, and while
-//!   asleep the Rest turns / other sleep turns (/ 3);
+//!   opponent's as `build_state` estimates it from its uses), each move disabled (our active:
+//!   not offered by the request, e.g. a Choice lock; the opponent's: Disable), and while asleep
+//!   the Rest turns / other sleep turns (/ 3); all 0 for an empty move slot and a fainted mon
+//!   (`COUNT_VERSION` 2: version 1 had the empty slots' placeholder PP / disabled flags);
 //! * per side (`SIDE_COUNT`, own then opponent): consecutive protects (/ 4), the substitute's HP
 //!   / the active's max HP, Wish turns (/ 2) and heal / the active's max HP, Future Sight turns
 //!   (/ 3), and the turn counters of confusion, Encore, a locked move, Slow Start, Taunt, Yawn,
@@ -12,9 +14,12 @@
 //!
 //! Cheap (no damage calculation): always computed, read by networks with the "count" group.
 
+use poke_engine::choices::Choices;
 use poke_engine::engine::state::PokemonVolatileStatus;
 use poke_engine::state::{PokemonStatus, Side, State};
 
+/// bumped whenever the features' meaning changes (training caches of another version are rebuilt)
+pub const COUNT_VERSION: usize = 2;
 pub const ENT_COUNT: usize = 4 + 4 + 2;
 pub const SIDE_COUNT: usize = 5 + 9;
 pub const GLOBAL_COUNT: usize = 2 * SIDE_COUNT;
@@ -64,11 +69,16 @@ pub fn featurize_counts(state: &State, flip: bool) -> (Vec<f32>, Vec<f32>) {
     for side in [me, them] {
         for p in side.pokemon.pkmn.iter() {
             let m = [&p.moves.m0, &p.moves.m1, &p.moves.m2, &p.moves.m3];
+            let real = |mv: &&poke_engine::state::Move| p.hp > 0 && mv.id != Choices::NONE;
             for mv in m {
-                ent.push(mv.pp.clamp(0, 16) as f32 / 16.0);
+                ent.push(if real(&mv) {
+                    mv.pp.clamp(0, 16) as f32 / 16.0
+                } else {
+                    0.0
+                });
             }
             for mv in m {
-                ent.push(mv.disabled as u8 as f32);
+                ent.push((real(&mv) && mv.disabled) as u8 as f32);
             }
             let asleep = p.hp > 0 && p.status == PokemonStatus::SLEEP;
             ent.push(if asleep {

@@ -82,9 +82,9 @@ def featurize_shard(path: Path, cache: Path) -> int:
             ok_fut = not has_fut or "fsp" in z.files
             ok_v3 = not has_v3 or ("ent2" in z.files and z["ent2"].shape[2] == DIMS["ent_extra"])
             # v6: the counters (caches from before them are rebuilt)
-            ok_v3 = ok_v3 and (
-                not has_v3 or ("ent3" in z.files and z["ent3"].shape[2] == DIMS["ent_count"])
-            )
+            ok_v3 = ok_v3 and (not has_v3 or (
+                "ent3" in z.files and "count_version" in z.files
+                and (z["count_version"][:1] == DIMS["count_version"]).all()))  # fmt: skip
             # v4: the damage columns (fractions) are kept apart as percents ("hdmg"); the first
             # v4 caches stored them in the uint8 "hde" and truncated them to 0
             hdmg_ok = DIMS["hist_dense"] == 7 or "hdmg" in z.files
@@ -185,7 +185,9 @@ def v3_arrays(t, states: list[str]) -> dict:
         a, b = alpha_search.featurize_counts(states[i : i + 50_000])
         ent.append(np.frombuffer(a, np.float32).reshape(-1, 12, e3).astype(np.float16))
         glob.append(np.frombuffer(b, np.float32).reshape(-1, g3).astype(np.float16))
-    out |= {"ent3": np.concatenate(ent), "glob3": np.concatenate(glob)}
+    # per row (every loader takes rows of every array)
+    out |= {"ent3": np.concatenate(ent), "glob3": np.concatenate(glob),
+            "count_version": np.full(len(states), DIMS["count_version"], np.uint8)}  # fmt: skip
     out["reveal"] = np.asarray(t.column("reveal").to_pylist(), np.uint8).reshape(-1, 12)
     out["faint"] = np.asarray(t.column("faint").to_pylist(), np.uint8)
     own, opp = (np.asarray(t.column(c).to_pylist(), np.int8) for c in ("left_own", "left_opp"))
@@ -731,7 +733,25 @@ def evaluate(model, d, idx, device, batch=16384) -> dict:
                 "bce_all_w": float(np.average(vl, weights=w))}  # fmt: skip
     if blind.any():
         out |= {"ce_blind": float(pl[blind].mean()), "bce_blind": float(vl[blind].mean())}
+    if "ent3" in d:  # v6: the positions where the counters say something (``count_active``)
+        act = count_active(d, idx)
+        if act.any():
+            out |= {"count_frac": float(act.mean()), "bce_count": float(vl[act].mean())}
+            if (act & turn).any():
+                out["ce_count"] = float(pl[act & turn].mean())
     return out
+
+
+def count_active(d: dict, idx: np.ndarray) -> np.ndarray:
+    """Positions whose v6 counters are not all at their default: a side counter (protects,
+    substitute, Wish, Future Sight, volatile turns), a disabled move, sleep turns, or a move of
+    the own active with 4 PP or fewer left."""
+    e3, g3 = d["ent3"][idx], d["glob3"][idx]
+    on = (g3 != 0).any(1) | (e3[:, :, 4:10] != 0).any((1, 2))
+    own_active = d["dense"][idx][:, :6, 2] > 0.5
+    pp = e3[:, :6, 0:4].astype(np.float32)
+    low = ((pp > 0) & (pp <= 0.25) & own_active[..., None]).any((1, 2))
+    return on | low
 
 
 def _evaluate(model, d, idx, device, batch=16384) -> dict:
