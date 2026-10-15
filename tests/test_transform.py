@@ -64,9 +64,6 @@ def test_our_ditto_takes_the_targets_moves_and_stats(belief):
     assert ours.id == "kingambit" and ours.attack == theirs.attack and ours.speed == theirs.speed
     assert ours.hp == 300 and ours.base_ability == "imposter"
     assert request_mismatch(b, s) == []
-    # fix level 1 (before): the moves poke-env copied (the target's revealed ones, none here)
-    s1 = build_state(b, belief, ("Ditto", "Garchomp"), random.Random(0), fixes=1)
-    assert s1.side_one.pokemon[0].id == "ditto" and request_mismatch(b, s1) != []
 
 
 def test_their_ditto_takes_our_moves_and_stats(belief):

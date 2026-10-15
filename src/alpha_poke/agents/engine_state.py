@@ -58,15 +58,13 @@ VOLATILE = {
     Effect.YAWN: "yawn",
     Effect.SALT_CURE: "saltcure",
 }
-# Protosynthesis / Quark Drive boosts (Booster Energy, sun, Electric Terrain): carried over
-# with the fixes (2026-10-11: never passed; while a gone Booster Energy was sampled again the
-# engine re-applied the boost by accident, so the gone-item fix alone took it away)
+# Protosynthesis / Quark Drive boosts (Booster Energy, sun, Electric Terrain)
 BOOSTS = {e: e.name.lower() for e in Effect
           if e.name.startswith(("PROTOSYNTHESIS", "QUARKDRIVE"))
           and e.name not in ("PROTOSYNTHESIS",)}  # fmt: skip
-# more volatiles the engine models, carried over with the fixes (2026-10-11; most common in gen 5:
-# typechange (Protean / Libero) and healblock (Psychic Noise)); the engine has no durations for
-# most of them (they last until a switch in the search: a few turns at most matter)
+# more volatiles the engine models (most common: typechange (Protean / Libero), healblock
+# (Psychic Noise)); the engine ends heal block, magnet rise and throat chop, the others last until
+# a switch in the search
 BOOSTS |= {getattr(Effect, n): n.replace("_", "").lower() for n in (
     "TYPECHANGE", "HEAL_BLOCK", "CHARGE", "FLASH_FIRE", "CURSE", "MAGNET_RISE", "THROAT_CHOP",
     "FOCUS_ENERGY", "SMACK_DOWN", "ATTRACT", "NO_RETREAT", "TAR_SHOT", "AQUA_RING", "INGRAIN",
@@ -155,7 +153,6 @@ def sample_set(
     move_beta: float = 0.0,
     known: KnownSet | None = None,
     temp: float = 1.0,
-    gone_items: bool = True,
     speed_obs: list | None = None,
 ):
     """One plausible full set for an opposing mon, consistent with what it revealed (and with
@@ -174,7 +171,7 @@ def sample_set(
     # poke-env: "unknown_item" = not seen yet; None = gone (eaten, knocked off, used up: its
     # end_item) -- no item now (2026-10-11: a gone item was sampled again, so an eaten berry or
     # knocked-off Boots came back in every search)
-    gone = gone_items and mon.item is None
+    gone = mon.item is None
     item = mon.item if mon.item not in (None, "unknown_item") else None
     tera = _tera(mon) if mon.is_terastallized else None
     if known is not None:
@@ -247,7 +244,7 @@ def sample_set(
         moves.append(pick)
         weights.pop(pick)
     spread = None
-    if speed_obs is not None:  # with the fixes: the spread sampled, consistent with the order
+    if speed_obs is not None:  # the spread sampled, consistent with the order
         spread, item = _sample_spread(mon, item, item_seen, speed_obs, dist, rng)
     if spread is None:
         spread = belief.spread_for(mon.species)
@@ -333,33 +330,6 @@ def _volatiles(mon) -> set[str]:
     return {name for eff, name in VOLATILE.items() if eff in mon.effects}
 
 
-# items the patched engine models that the original one parsed as unknown (the A/B baseline,
-# fixes off, sees them as before)
-PATCHED_ITEMS = {"ejectbutton", "redcard"}
-# 2026-10-13 (level 3): status berries, Persim Berry, Mental Herb, Safety Goggles
-PATCHED_ITEMS_3 = {"pechaberry", "cheriberry", "rawstberry", "aspearberry", "persimberry",
-                   "mentalherb", "safetygoggles", "ejectpack"}  # fmt: skip
-
-
-FIX_MAX = 3  # the current level (True)
-
-
-def fix_level(fixes) -> int:
-    """build_state's ``fixes`` as a level (design D17): 0 none; 1 the first batch (turn counters,
-    gone items, boosts / volatiles, Future Sight); 2 (+ the request's PP, Eject Button / Red Card,
-    the opponent's speed, Revival Blessing's choice, Transform); 3 (2026-10-13: + must recharge,
-    the opponent's PP from its uses, Perish Song, the move Disable blocks, Heal Block / Throat
-    Chop / Magnet Rise durations, a hit Substitute's HP, screens / weather / terrain extended
-    by their items). True = FIX_MAX, False = 0."""
-    return FIX_MAX if fixes is True else 0 if fixes is False else int(fixes)
-
-
-def _item(item: str, fixes: bool, fix3: bool = True) -> str:
-    if (not fixes and item in PATCHED_ITEMS) or (not fix3 and item in PATCHED_ITEMS_3):
-        return "unknownitem"
-    return item
-
-
 def _sleep(mon, tm: SideTimers | None) -> dict:
     """rest_turns / sleep_turns of an asleep mon (timers), else nothing."""
     if tm is None or STATUS.get(mon.status) != "sleep":
@@ -374,8 +344,6 @@ def _our_mon(
     tm: SideTimers | None = None,
     req_pp: dict | None = None,
     revived: bool = False,
-    fixes: bool = True,
-    fix3: bool = True,
 ) -> pe.Pokemon:
     """``req_pp``: the request's PP of the active's moves (exact; poke-env counts uses itself and
     drifts low over long games: 2026-10-11, a move with PP left was 0 in the engine, no legal
@@ -388,7 +356,7 @@ def _our_mon(
         pp = max(0, mv.current_pp)
         if req_pp and req_pp.get(mid) is not None:
             pp = int(req_pp[mid])
-        if fixes and available_moves is not None and mid in available_moves:
+        if available_moves is not None and mid in available_moves:
             pp = max(pp, 1)
         moves.append(pe.Move(id=mid, pp=pp, disabled=disabled))
     hp = 0 if mon.fainted else int(mon.current_hp or 0)
@@ -403,7 +371,7 @@ def _our_mon(
         maxhp=int(mon.max_hp or 1),
         ability=to_id(mon.ability) if mon.ability else "none",
         base_ability=to_id(mon.ability) if mon.ability else "none",
-        item=_item(mon.item or "none", fixes, fix3),
+        item=mon.item or "none",
         attack=int(stats.get("atk") or 100),
         defense=int(stats.get("def") or 100),
         special_attack=int(stats.get("spa") or 100),
@@ -429,10 +397,9 @@ def _pp(mon, mid: str) -> int:
     return Move(mid, gen=9).max_pp if mid in _MOVES else 16
 
 
-def _their_mon(mon, s: SampledSet, tm: SideTimers | None = None, fixes: bool = True,
-               fix3: bool = False, disabled: str | None = None) -> pe.Pokemon:  # fmt: skip
-    """``fix3``: the moves' PP from their uses (else 16 each); ``disabled``: the move Disable
-    blocks."""
+def _their_mon(mon, s: SampledSet, tm: SideTimers | None = None,
+               disabled: str | None = None) -> pe.Pokemon:  # fmt: skip
+    """The moves' PP from their uses; ``disabled``: the move Disable blocks."""
     maxhp = s.stats["hp"]
     if mon.fainted:
         hp = 0
@@ -451,7 +418,7 @@ def _their_mon(mon, s: SampledSet, tm: SideTimers | None = None, fixes: bool = T
         maxhp=maxhp,
         ability=s.ability,
         base_ability=s.ability,
-        item=_item(s.item, fixes, fix3),
+        item=s.item,
         attack=s.stats["atk"],
         defense=s.stats["def"],
         special_attack=s.stats["spa"],
@@ -459,10 +426,7 @@ def _their_mon(mon, s: SampledSet, tm: SideTimers | None = None, fixes: bool = T
         speed=s.stats["spe"],
         status=STATUS.get(mon.status, "none"),
         weight_kg=float(mon.weight or 0.0),
-        moves=[
-            pe.Move(id=m, pp=_pp(mon, m) if fix3 else 16, disabled=m == disabled)
-            for m in s.moves[:4]
-        ],
+        moves=[pe.Move(id=m, pp=_pp(mon, m), disabled=m == disabled) for m in s.moves[:4]],
         terastallized=mon.is_terastallized,
         tera_type=s.tera,
         **_sleep(mon, tm),
@@ -551,8 +515,7 @@ def _counts(tm: SideTimers, active) -> tuple[int, int]:
     return toxic, tm.protect
 
 
-def _timed(tm: SideTimers, active, mons: list, engine_mons: list, vol: set[str],
-           fix3: bool = False) -> dict:  # fmt: skip
+def _timed(tm: SideTimers, active, mons: list, engine_mons: list, vol: set[str]) -> dict:
     """pe.Side kwargs: the pending Wish (turns, half the wisher's max HP), the pending Future
     Sight (turns, its user's slot) and the active's
     volatile durations (only of volatiles it has; clamped to what the engine accepts)."""
@@ -567,9 +530,9 @@ def _timed(tm: SideTimers, active, mons: list, engine_mons: list, vol: set[str],
         if idx is not None:
             out["future_sight"] = (tm.future[0], pe.PokemonIndex(str(idx)))
     dur = {}
-    tops = [("confusion", 4), ("taunt", 2), ("encore", 2), ("yawn", 1)]
-    if fix3:  # the patched engine ends them (2026-10-13)
-        tops += [("healblock", 1), ("magnetrise", 4), ("throatchop", 1)]
+    # (the patched engine ends heal block, magnet rise and throat chop too)
+    tops = [("confusion", 4), ("taunt", 2), ("encore", 2), ("yawn", 1), ("healblock", 1),
+            ("magnetrise", 4), ("throatchop", 1)]  # fmt: skip
     for name, top in tops:
         n = getattr(tm, name)
         if name in vol and n:
@@ -591,7 +554,6 @@ def build_state(
     move_beta: float = 0.0,
     spectator: SpectatorSide | None = None,
     force_switch: bool | None = None,
-    fixes: bool = True,
     revived: str | None = None,
 ) -> pe.State:
     """One determinization of the current battle (side_one = us): the opponent's sets sampled
@@ -599,20 +561,17 @@ def build_state(
     one comes from a spectator log (no request): built like the opponent, from the known parts
     of each set plus belief samples (training positions, design D13). ``force_switch`` overrides
     side one's switch request (training positions of forced / pivot switches; a spectator log
-    has no request). ``fixes`` (2026-10-11; a level, fix_level; False: the state as before, for
-    A/B tests): the turn
-    counters (agents/timers.py), gone items staying gone, the Protosynthesis / Quark Drive boosts
-    and other volatiles, the request's PP, Eject Button / Red Card (the patched engine), the
-    opponent's spread sampled consistent with the move order (agents/speed.py); design D17.
+    has no request). What the engine models of the battle (design D17): the turn counters
+    (agents/timers.py), gone items staying gone, boosts and volatiles, the request's PP, the
+    opponent's PP from its uses, the opponent's spread consistent with the move order
+    (agents/speed.py), Transform, Illusion, extending items, a hit Substitute.
     ``revived``: our mon of this species back at half HP (the states of a Revival Blessing
     choice)."""
     turn = battle.turn
     active = battle.active_pokemon
     role = battle.player_role or "p1"
-    lvl = fix_level(fixes)
-    f1, f2, f3 = lvl >= 1, lvl >= 2, lvl >= 3
     # turn counters from the log (timers.py); off: every counter 0, as before 2026-10-11 (A/B)
-    tms = battle_timers(battle) if f1 else {"p1": SideTimers(), "p2": SideTimers()}
+    tms = battle_timers(battle)
     tm_us, tm_them = tms[role], tms["p2" if role == "p1" else "p1"]
     if spectator is None:
         ours = list(battle.team.values())
@@ -620,10 +579,9 @@ def build_state(
         req = battle.last_request or {}
         act = (req.get("active") or [{}])[0]
         req_pp = {to_id(m["id"]): m.get("pp") for m in act.get("moves", []) if "id" in m}
-        req_pp = req_pp if f2 else None
         our_mons = [
             _our_mon(m, avail if m is active else None, tm_us,
-                     req_pp if m is active else None, revived == to_id(m.species), f2, f3)
+                     req_pp if m is active else None, revived == to_id(m.species))
             for m in ours
         ]  # fmt: skip
     else:
@@ -637,12 +595,11 @@ def build_state(
                 rng,
                 move_beta,
                 spectator.known.get(to_id(m.species)),
-                gone_items=f1,
             )
             # known moves come first in sample_set; in a real battle our moves are in moveset
             # order, unrelated to use: shuffle so the slot does not leak which move gets used
             rng.shuffle(s.moves)
-            our_mons.append(_their_mon(m, s, tm_us, f2, f3))
+            our_mons.append(_their_mon(m, s, tm_us))
     our_idx = next((i for i, m in enumerate(ours) if m is active), 0)
     if battle.force_switch or (active is not None and active.fainted):
         our_idx = next((i for i, m in enumerate(ours) if m.active), our_idx)
@@ -656,24 +613,23 @@ def build_state(
                 theirs.append(m)
     opp_active = battle.opponent_active_pokemon
 
-    # the opponent's speed: usage spreads consistent with the observed move order (with fixes)
-    obs = battle_observations(battle) if f2 and spectator is None else None
-    their_sets = [sample_set(belief, m, team_names, rng, move_beta, gone_items=f1,
+    # the opponent's speed: usage spreads consistent with the observed move order
+    obs = battle_observations(battle) if spectator is None else None
+    their_sets = [sample_set(belief, m, team_names, rng, move_beta,
                              speed_obs=None if obs is None else obs.get(to_id(m.species), []))
                   for m in theirs]  # fmt: skip
-    their_mons = [_their_mon(m, st, tm_them, f2, f3,
-                             tm_them.disabled if f3 and m is opp_active else None)
+    their_mons = [_their_mon(m, st, tm_them, tm_them.disabled if m is opp_active else None)
                   for m, st in zip(theirs, their_sets, strict=True)]  # fmt: skip
     their_idx = next((i for i, m in enumerate(theirs) if m is opp_active), 0)
     our_active_idx = next((i for i, m in enumerate(ours) if m is active), None)
-    zi = _illusion(theirs, opp_active, battle.opponent_team, rng) if f3 else None
+    zi = _illusion(theirs, opp_active, battle.opponent_team, rng)
     if zi is not None:  # the active is the Zoroark: what is shown (HP fraction, status) is its
         z = their_mons[zi]
         their_mons[zi] = _with(z, hp=max(1, round(opp_active.current_hp_fraction * z.maxhp)),
                                status=STATUS.get(opp_active.status, "none"))  # fmt: skip
         their_idx = zi
     transformed = any(m is not None and m.transformed for m in (active, opp_active))
-    if f2 and spectator is None and transformed:  # a transformed active (D17 J; 2026-10-13)
+    if spectator is None and transformed:  # a transformed active (D17 J; 2026-10-13)
         their_keys = [next((k for k, v in battle.opponent_team.items() if v is m), None)
                       for m in theirs]  # fmt: skip
         our_keys = list(battle.team)
@@ -694,40 +650,37 @@ def build_state(
         active, our_mons[our_active_idx] if our_active_idx is not None else None, avail
     )
     their_last, their_vol = _last_move(opp_active, their_mons[their_idx] if their_mons else None)
-    if f1:  # the actives' Protosynthesis / Quark Drive boosts and other volatiles (BOOSTS)
-        for mon, vol in ((active, our_vol), (opp_active, their_vol)):
-            vol |= {BOOSTS[e] for e in (mon.effects if mon is not None else ()) if e in BOOSTS}
-    if f3:  # must recharge (the engine offers no move), Perish Song's count
-        for mon, vol, tm in ((active, our_vol, tm_us), (opp_active, their_vol, tm_them)):
-            if mon is None:
-                continue
-            if tm.recharge:  # (not poke-env's must_recharge: it outlives the recharge turn)
-                vol.add("mustrecharge")
-            # Showdown starts perish3, perish2, ... without ending the previous count: poke-env
-            # keeps them all, the lowest is current
-            counts = [n for e, n in PERISH.items() if e in mon.effects]
-            if counts:
-                vol.add(f"perish{min(counts)}")
+    # the actives' Protosynthesis / Quark Drive boosts and other volatiles (BOOSTS)
+    for mon, vol in ((active, our_vol), (opp_active, their_vol)):
+        vol |= {BOOSTS[e] for e in (mon.effects if mon is not None else ()) if e in BOOSTS}
+    # must recharge (the engine offers no move), Perish Song's count
+    for mon, vol, tm in ((active, our_vol, tm_us), (opp_active, their_vol, tm_them)):
+        if mon is None:
+            continue
+        if tm.recharge:  # (not poke-env's must_recharge: it outlives the recharge turn)
+            vol.add("mustrecharge")
+        # Showdown starts perish3, perish2, ... without ending the previous count: poke-env keeps
+        # them all, the lowest is current
+        counts = [n for e, n in PERISH.items() if e in mon.effects]
+        if counts:
+            vol.add(f"perish{min(counts)}")
     # the items of the mons that set a screen / the weather / the terrain (ours known, theirs
     # this world's sample): an extending item makes it 8 turns
     items = {("us", to_id(m.species)): (m.item or "") for m in ours} if spectator is None else {}
     items |= {("them", to_id(m.species)): st.item for m, st in zip(theirs, their_sets, strict=True)}
-    clay_us, clay_them, ext = frozenset(), frozenset(), {}
-    if f3:
-        clay_us, clay_them = (
-            frozenset(k for k, sp in tm.setters.items()
-                      if k in SCREENS and items.get((who, sp)) == "lightclay")
-            for who, tm in (("us", tm_us), ("them", tm_them))
-        )  # fmt: skip
-        for who, tm in (("us", tm_us), ("them", tm_them)):
-            for kind in ("weather", "terrain"):
-                if kind in tm.setters:
-                    what, sp = tm.setters[kind]
-                    item = items.get((who, sp), "")
-                    if EXTENDERS.get(what) == item or (
-                        kind == "terrain" and item == "terrainextender"
-                    ):
-                        ext[kind] = 8
+    clay_us, clay_them = (
+        frozenset(k for k, sp in tm.setters.items()
+                  if k in SCREENS and items.get((who, sp)) == "lightclay")
+        for who, tm in (("us", tm_us), ("them", tm_them))
+    )  # fmt: skip
+    ext = {}
+    for who, tm in (("us", tm_us), ("them", tm_them)):
+        for kind in ("weather", "terrain"):
+            if kind in tm.setters:
+                what, sp = tm.setters[kind]
+                item = items.get((who, sp), "")
+                if EXTENDERS.get(what) == item or (kind == "terrain" and item == "terrainextender"):
+                    ext[kind] = 8
 
     side_one = pe.Side(
         pokemon=_pad(our_mons),
@@ -736,14 +689,14 @@ def build_state(
             battle.side_conditions, turn, *_counts(tm_us, active), clay_us
         ),
         volatile_statuses=our_vol,
-        **_timed(tm_us, active, ours, our_mons, our_vol, f3),
+        **_timed(tm_us, active, ours, our_mons, our_vol),
         substitute_health=(
             (
                 int((active.max_hp or 4) // 4)
                 if spectator is None
                 else our_mons[our_active_idx].maxhp // 4
             )
-            // (2 if f3 and tm_us.sub_hit else 1)  # a hit Substitute: about half left
+            // (2 if tm_us.sub_hit else 1)  # a hit Substitute: about half left
             if active is not None
             and Effect.SUBSTITUTE in active.effects
             and our_active_idx is not None
@@ -760,9 +713,9 @@ def build_state(
             battle.opponent_side_conditions, turn, *_counts(tm_them, opp_active), clay_them
         ),
         volatile_statuses=their_vol,
-        **_timed(tm_them, opp_active, theirs, their_mons, their_vol, f3),
+        **_timed(tm_them, opp_active, theirs, their_mons, their_vol),
         substitute_health=(
-            their_mons[their_idx].maxhp // 4 // (2 if f3 and tm_them.sub_hit else 1)
+            their_mons[their_idx].maxhp // 4 // (2 if tm_them.sub_hit else 1)
             if opp_active is not None and Effect.SUBSTITUTE in opp_active.effects
             else 0
         ),

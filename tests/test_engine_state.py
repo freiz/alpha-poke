@@ -1,5 +1,5 @@
-"""Engine-state fix level 3 (design D17, 2026-10-13): must recharge, the opponent's PP, Perish
-Song, Disable, a hit Substitute, items extending screens / weather."""
+"""Engine state (design D17): must recharge, the opponent's PP, Perish Song, Disable, a hit
+Substitute, items extending screens / weather, Illusion."""
 
 import logging
 import random
@@ -46,15 +46,14 @@ def belief():
     return BeliefModel.load()
 
 
-def state(b, belief, fixes=3):
-    return build_state(b, belief, ("Garchomp", "Dondozo"), random.Random(0), fixes=fixes)
+def state(b, belief):
+    return build_state(b, belief, ("Garchomp", "Dondozo"), random.Random(0))
 
 
 def test_must_recharge(belief):
     b = battle(["|move|p1a: Garchomp|Hyper Beam|p2a: Gholdengo", "|-mustrecharge|p1a: Garchomp",
                 "|turn|2"])  # fmt: skip
     assert "mustrecharge" in state(b, belief).side_one.volatile_statuses
-    assert "mustrecharge" not in state(b, belief, 2).side_one.volatile_statuses
 
 
 def test_opponent_pp_from_uses(belief):
@@ -62,7 +61,6 @@ def test_opponent_pp_from_uses(belief):
                 "|move|p2a: Gholdengo|Make It Rain|p1a: Garchomp", "|turn|3"])  # fmt: skip
     moves = {m.id: m.pp for m in state(b, belief).side_two.pokemon[0].moves}
     assert moves["makeitrain"] == 8 - 2  # 5 PP, 8 with PP Ups
-    assert all(pp == 16 for pp in (m.pp for m in state(b, belief, 2).side_two.pokemon[0].moves))
 
 
 def test_disable_and_perish(belief):
@@ -80,14 +78,12 @@ def test_hit_substitute(belief):
                 "|-start|p1a: Garchomp|Substitute", "|turn|2",
                 "|-activate|p1a: Garchomp|Substitute|[damage]", "|turn|3"])  # fmt: skip
     assert state(b, belief).side_one.substitute_health == 400 // 4 // 2
-    assert state(b, belief, 2).side_one.substitute_health == 400 // 4
 
 
 def test_light_clay_reflect(belief):
     b = battle(["|move|p1a: Garchomp|Reflect|p1a: Garchomp", "|-sidestart|p1: us|Reflect",
                 "|turn|2"], item="lightclay")  # fmt: skip
     assert state(b, belief).side_one.side_conditions.reflect == 8 - 1
-    assert state(b, belief, 2).side_one.side_conditions.reflect == 5 - 1
     b = battle(["|move|p1a: Garchomp|Reflect|p1a: Garchomp", "|-sidestart|p1: us|Reflect",
                 "|turn|2"])  # fmt: skip
     assert state(b, belief).side_one.side_conditions.reflect == 5 - 1
@@ -99,7 +95,6 @@ def test_heat_rock_drought(belief):
                moves=("lavaplume", "rapidspin", "yawn", "stealthrock"))  # fmt: skip
     b._weather = {next(iter(b.weather)): 1}  # set on turn 1
     assert state(b, belief).weather_turns_remaining == 8 - 1
-    assert state(b, belief, 2).weather_turns_remaining == 5 - 1
 
 
 def test_must_recharge_searches_to_the_recharge_order(belief):
@@ -133,14 +128,11 @@ def test_illusion_worlds(belief):
                  "|poke|p2|Great Tusk, L100|", "|switch|p1a: Garchomp|Garchomp|400/400",
                  "|switch|p2a: Gholdengo|Gholdengo|60/100", "|turn|1"]:  # fmt: skip
         b.parse_message(line.split("|"))
-    ids = [build_state(b, belief, ("Garchomp", "Dondozo"), random.Random(k), fixes=3)
-           for k in range(300)]  # fmt: skip
+    ids = [build_state(b, belief, ("Garchomp", "Dondozo"), random.Random(k)) for k in range(300)]
     act = [s.side_two.pokemon[int(s.side_two.active_index)] for s in ids]
     z = [p for p in act if p.id.startswith("zoroark")]
     assert 0.2 < len(z) / len(act) < 0.47  # one in three alive
     assert all(abs(p.hp / p.maxhp - 0.6) < 0.02 for p in z)
-    s2 = build_state(b, belief, ("Garchomp", "Dondozo"), random.Random(0), fixes=2)
-    assert s2.side_two.pokemon[int(s2.side_two.active_index)].id == "gholdengo"
 
 
 def test_recharge_ends_after_the_recharge_turn(belief):
