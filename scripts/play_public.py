@@ -10,8 +10,10 @@ exits after --n games. Without --public it runs against a local server (dry run)
 
 The opponent challenges the bot in Gen 9 OU with their own team. The bot's team: --team (pool
 team name or a Showdown-export file), default a random pool team each game.
-Difficulty: easy = heuristic bot, normal = ISMCTS + v5-glu 200 ms, hard = ISMCTS + v5-glu 1 s
-x 4 threads (CPU); the lead from the rule-based game plan.
+Difficulty: easy = heuristic bot, normal = ISMCTS + the current network 200 ms, hard = ISMCTS +
+the current network 1 s x 4 threads (CPU; --model, default the self-play's current network in
+data/selfplay/state.json; with its moves-left term, selfplay.batcher.SEARCH_ML); the lead from
+the rule-based game plan.
 Replays and decision traces go to data/public_games/<date>/.
 
 With a team chosen against this opponent (scripts/counter_pipeline.py <user> writes
@@ -39,11 +41,18 @@ from alpha_poke.eval.bots import make_bot
 from alpha_poke.servers import account, local_server, public_account, public_server
 from alpha_poke.teams import DEFAULT_POOL, load_team_files
 
-DIFFICULTY = {  # variant, search env
+DIFFICULTY = {  # variant, search env (the search variants get --model)
     "easy": ("knowledge", {}),
-    "normal": ("s_ismcts_glu", {"ALPHA_SEARCH_MS": "200", "ALPHA_SEARCH_THREADS": "1"}),
-    "hard": ("s_ismcts_glu", {"ALPHA_SEARCH_MS": "1000", "ALPHA_SEARCH_THREADS": "4"}),
+    "normal": ("s_ismcts_ma", {"ALPHA_SEARCH_MS": "200", "ALPHA_SEARCH_THREADS": "1"}),
+    "hard": ("s_ismcts_ma", {"ALPHA_SEARCH_MS": "1000", "ALPHA_SEARCH_THREADS": "4"}),
 }
+
+
+def current_network() -> str:
+    """The self-play loop's current network (data/selfplay/state.json)."""
+    import json
+
+    return json.loads(Path("data/selfplay/state.json").read_text())["current"]
 
 
 def pick_team(arg: str | None, pool: dict[str, str], rng: random.Random) -> tuple[str, str]:
@@ -59,6 +68,12 @@ def pick_team(arg: str | None, pool: dict[str, str], rng: random.Random) -> tupl
 async def main(a) -> None:
     variant, env = DIFFICULTY[a.difficulty]
     os.environ.update(env)
+    model = a.model or current_network()
+    search = variant != "knowledge"
+    if search:
+        from alpha_poke.selfplay.batcher import ml_for
+
+        os.environ["ALPHA_ML"] = ml_for(model)
     pool = load_team_files(a.pool)
     rng = random.Random()
     out = Path("data/public_games") / time.strftime("%Y%m%d")
@@ -77,9 +92,11 @@ async def main(a) -> None:
         replay_dir=str(out / "replays"),
         server_configuration=server,
         account_configuration=acct,
+        overrides={"model": model} if search else None,
     )
     where = "OFFICIAL server" if a.public else f"local server :{a.local_port}"
-    print(f"[{where}] bot {acct.username} ({a.difficulty}: {variant}); only {a.opponent!r}")
+    net = f", {model}, moves-left {os.environ.get('ALPHA_ML') or 'off'}" if search else ""
+    print(f"[{where}] bot {acct.username} ({a.difficulty}: {variant}{net}); only {a.opponent!r}")
     for i in range(a.n):
         if i:
             name, team = pick_team(a.team, pool, rng)
@@ -106,6 +123,7 @@ if __name__ == "__main__":
     ap.add_argument("--difficulty", choices=sorted(DIFFICULTY), default="normal")
     ap.add_argument("--team", default=None, help="pool team name or Showdown-export file")
     ap.add_argument("--pool", default=str(DEFAULT_POOL))
+    ap.add_argument("--model", default=None, help="network run (default: the current one)")
     ap.add_argument("--public", action="store_true", help="connect to the OFFICIAL server")
     ap.add_argument("--local-port", type=int, default=8000, help="dry run (without --public)")
     ap.add_argument("--local-name", default="alphapokebot", help="dry-run bot name")

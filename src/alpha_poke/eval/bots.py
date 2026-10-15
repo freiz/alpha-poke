@@ -91,9 +91,11 @@ def make_bot(
     replay_dir: str | None = None,
     server_configuration=None,
     account_configuration=None,
+    overrides: dict | None = None,
 ) -> Player:
     """``team``: a Showdown-format team (replaced per battle with ``update_team``).
-    ``heldout_pool``: use the belief model trained without that pool's teams."""
+    ``heldout_pool``: use the belief model trained without that pool's teams. ``overrides``:
+    keyword arguments replacing the variant's own (e.g. its ``model``)."""
     kw = dict(
         account_configuration=account_configuration or account(name),
         battle_format="gen9ou",
@@ -107,6 +109,7 @@ def make_bot(
         from alpha_poke.agents.belief_state import BeliefModel
 
         cls_name, extra = VARIANTS[kind]
+        extra = extra | (overrides or {})
         if cls_name == "batched":
             return _batched_bot(extra["model"], heldout_pool, trace_dir, kw, extra.get("dtype"),
                                 extra.get("iters"), extra.get("ml"),

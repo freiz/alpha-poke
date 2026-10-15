@@ -28,6 +28,7 @@ import time
 from pathlib import Path
 
 from alpha_poke.selfplay import SELFPLAY_DIR
+from alpha_poke.selfplay.batcher import ml_for  # SEARCH_ML with a remaining-turns head
 
 SINCE_DEFAULT = 1746057600  # 2025-05-01: the current metagame (the matchup model's window too)
 
@@ -115,22 +116,6 @@ def cmd_run(a) -> None:
 
 
 STATE = SELFPLAY_DIR / "state.json"  # the current network and every generation's summary
-# the moves-left term of the searches (self-play and the evaluations; "slope,cap,threshold",
-# selfplay.batcher.parse_ml; "" = off; design v6): used only with networks that have the
-# remaining-turns head
-# 2026-10-15 (from gen 8, v6): ml3, the winning side only (A/B 50.96% +- 2.42%, wins ~3 turns
-# shorter; both sides stalled to the turn cap: results.md)
-SEARCH_ML = "0.005,0.03,0.5,0"
-
-
-def ml_for(run: str) -> str:
-    """SEARCH_ML if ``run`` has the remaining-turns head, else "" (off)."""
-    import json
-
-    cfg = json.loads((Path(run) / "config.json").read_text())
-    return SEARCH_ML if "turns" in cfg.get("aux_heads", ()) else ""
-
-
 BASE_RUN = "data/train/v5/runs/v5-glu"
 # a candidate that moved this much (KL to its starting point, self-play positions) and was
 # rejected counts as an over-update (gen 1: 0.0023, lr 1e-4, 2 passes)

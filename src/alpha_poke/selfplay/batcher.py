@@ -24,6 +24,21 @@ log = logging.getLogger(__name__)
 MAX_LEAVES = 512  # GpuNet's largest CUDA graph: 1024 rows = 512 leaves (two views each)
 
 
+# the moves-left term of our searches (self-play, the evaluations, play_public; "slope,cap,
+# threshold[,loser]", ``parse_ml``; design v6). 2026-10-15 (from gen 8, v6): ml3, the winning
+# side only (A/B 50.96% +- 2.42%, wins ~3 turns shorter; both sides stalled to the turn cap)
+SEARCH_ML = "0.005,0.03,0.5,0"
+
+
+def ml_for(run: str) -> str:
+    """SEARCH_ML if the network ``run`` has the remaining-turns head, else "" (off)."""
+    import json
+    from pathlib import Path
+
+    cfg = json.loads((Path(run) / "config.json").read_text())
+    return SEARCH_ML if "turns" in cfg.get("aux_heads", ()) else ""
+
+
 def parse_ml(s: str | None) -> tuple[float, float, float, bool]:
     """The moves-left term's "slope,cap,threshold[,loser]" (alpha_search MlParams; design v6)
     -> a tuple; loser 0 = the winning side only (default 1: both sides); None / "" = off."""
