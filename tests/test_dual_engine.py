@@ -194,3 +194,185 @@ def test_l2c_built_state_partial_trap(belief):
     truth, own, opp = built_volatiles(TOXAPEX, "infestation", belief)
     assert truth == {"partiallytrapped"}
     assert own == opp == truth
+
+
+TYRANITAR = """Tyranitar @ Smooth Rock
+Ability: Sand Stream
+Tera Type: Ghost
+EVs: 252 HP / 4 Atk / 252 SpD
+Careful Nature
+- Protect
+- Stealth Rock
+- Rock Slide
+- Earthquake"""
+RILLABOOM = """Rillaboom @ Leftovers
+Ability: Grassy Surge
+Tera Type: Grass
+EVs: 252 HP / 252 Atk / 4 SpD
+Adamant Nature
+- Protect
+- Grassy Glide
+- Wood Hammer
+- U-turn"""
+BLISSEY = """Blissey @ Heavy-Duty Boots
+Ability: Natural Cure
+Tera Type: Ghost
+EVs: 252 HP / 252 Def / 4 SpD
+Bold Nature
+- Protect
+- Soft-Boiled
+- Seismic Toss
+- Calm Mind"""
+
+
+def field_turns(lead: str, kind: str, n: int, belief) -> tuple[list, list, list]:
+    """(Showdown's remaining turns of the weather / terrain set by ``lead`` at each of n turns,
+    poke-engine's next value from Showdown's state, ours built from p2's view)."""
+    states = ec.run_showdown(lead, BLISSEY, [("move protect", "move calmmind")] * n,
+                             fmt="gen9ou")  # fmt: skip
+    sd = [s["field"][f"{kind}_duration"] for s in states]
+    attr = f"{kind}_turns_remaining"
+    eng = []
+    for k in range(n):
+        outs = ec.engine_outcomes(ec.engine_state(states[k]), "protect", "calmmind")
+        eng.append(getattr(max(outs, key=lambda o: o[0])[1], attr))
+    built = [getattr(ec.built_state(states, k, "p2", belief), attr) for k in range(n + 1)]
+    return sd, eng, built
+
+
+def test_control_engine_weather_and_terrain_turns(belief):
+    for lead, kind in ((TYRANITAR, "weather"), (RILLABOOM, "terrain")):
+        sd, eng, _ = field_turns(lead, kind, 6, belief)
+        assert eng == [max(d - 1, 0) for d in sd[:-1]], (kind, sd, eng)
+
+
+@pytest.mark.xfail(strict=True, reason="L3a (doc/engine-diff.md): the built weather's remaining "
+                                       "turns stay at 4 (poke-env restarts the weather at every "
+                                       "upkeep message)")  # fmt: skip
+def test_l3a_built_weather_turns(belief):
+    sd, _, built = field_turns(TYRANITAR, "weather", 9, belief)
+    assert sd[:9] == [8, 7, 6, 5, 4, 3, 2, 1, 0]  # Showdown: Smooth Rock, 8 turns
+    assert built == sd
+
+
+@pytest.mark.xfail(strict=True, reason="L3b (doc/engine-diff.md): a terrain set by a lead is "
+                                       "built one turn short")  # fmt: skip
+def test_l3b_built_terrain_turns(belief):
+    sd, _, built = field_turns(RILLABOOM, "terrain", 6, belief)
+    assert sd == [5, 4, 3, 2, 1, 0, 0]
+    assert built == sd
+
+
+DRAGAPULT_SLUDGE = """Dragapult @ Black Sludge
+Ability: Infiltrator
+Tera Type: Ghost
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Shadow Ball
+- Draco Meteor
+- U-turn
+- Will-O-Wisp"""
+
+
+def test_control_hp_salt_cure_infestation_roost_earthquake():
+    """HP compared too (within the rolls' spread around the engine's damage): L5's leads (HP
+    after Recover / Roost turns) were the differential's tolerance, not the engine."""
+    roost_eq = [("move bravebird", "move ruination"), ("move roost", "move earthquake")]
+    cases = [(GARGANACL, TINGLU, [("move saltcure", "move spikes")], ("saltcure", "spikes")),
+             (TOXAPEX, TINGLU, [("move infestation", "move spikes")], ("infestation", "spikes")),
+             (CORVIKNIGHT, TINGLU, roost_eq, ("roost", "earthquake"))]  # fmt: skip
+    for p1, p2, turns, last in cases:
+        states = ec.run_showdown(p1, p2, turns, seed="gen5,3,3,3,3")
+        outs = ec.engine_outcomes(ec.engine_state(states[-2]), *last)
+        assert ec.closest(states[-1], outs, (1, 1), hp=True)["diff"] == {}, last
+
+
+@pytest.mark.xfail(strict=True, reason="L9 (doc/engine-diff.md): Black Sludge on a non-Poison "
+                                       "holder takes 1/16 (none at full HP) in poke-engine, 1/8 "
+                                       "in Showdown")  # fmt: skip
+def test_l9_black_sludge_non_poison():
+    states = ec.run_showdown(DRAGAPULT_SLUDGE, BLISSEY, [("move willowisp", "move protect")])
+    assert states[1]["sides"][0]["mons"][0]["hp"] == 317 - 317 // 8  # Showdown: 1/8 at full HP
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "willowisp", "protect")
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+ZAPDOS_STATIC = """Zapdos @ Heavy-Duty Boots
+Ability: Static
+Tera Type: Fairy
+EVs: 248 HP / 8 SpA / 252 Def
+Bold Nature
+- Roost
+- Hurricane
+- Discharge
+- U-turn"""
+DRAGONITE_TAIL = """Dragonite @ Leftovers
+Ability: Inner Focus
+Tera Type: Normal
+EVs: 252 HP / 252 Atk / 4 SpD
+Adamant Nature
+- Dragon Tail
+- Extreme Speed
+- Earthquake
+- Roost"""
+CORVIKNIGHT_HELMET = (
+    CORVIKNIGHT.replace("@ Leftovers", "@ Rocky Helmet")
+    + "\n\n"
+    + """Great Tusk @ Booster Energy
+Ability: Protosynthesis
+Tera Type: Ground
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- Headlong Rush
+- Ice Spinner
+- Rapid Spin
+- Stealth Rock"""
+)
+
+
+def contact_case(p1, move: str, **kw):
+    states = ec.run_showdown(p1, DRAGONITE_TAIL, [("move roost", f"move {move}")], **kw)
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "roost", move)
+    n = (len(states[0]["sides"][0]["mons"]), 1)
+    return states, ec.closest(states[1], outs, n, hp=True)
+
+
+def test_control_static_and_rocky_helmet_on_a_contact_move():
+    states, res = contact_case(ZAPDOS_STATIC, "extremespeed", force_random=True)
+    assert states[1]["sides"][1]["mons"][0]["status"] == "par"  # Showdown: Static
+    assert res["diff"] == {}
+    states, res = contact_case(CORVIKNIGHT_HELMET, "extremespeed", seed="gen5,9,9,9,9")
+    assert res["diff"] == {}
+
+
+L7 = "L7 (doc/engine-diff.md): a drag move (Dragon Tail) skips the target's contact effects"
+
+
+@pytest.mark.xfail(strict=True, reason=f"{L7} (Static)")
+def test_l7_static_on_dragon_tail():
+    states, res = contact_case(ZAPDOS_STATIC, "dragontail", force_random=True)
+    assert states[1]["sides"][1]["mons"][0]["status"] == "par"  # Showdown: Static
+    assert res["diff"] == {}
+
+
+@pytest.mark.xfail(strict=True, reason=f"{L7} (Rocky Helmet)")
+def test_l7_rocky_helmet_on_dragon_tail():
+    states, res = contact_case(CORVIKNIGHT_HELMET, "dragontail", seed="gen5,9,9,9,9")
+    assert states[1]["sides"][1]["mons"][0]["hp"] < 386  # Showdown: the helmet hit
+    assert res["diff"] == {}
+
+
+def test_control_faint_stops_at_the_forced_switch():
+    """L6: the engine stops a turn at a faint (the forced switch is the next decision), as
+    Showdown asks for the replacement: those turns are compared at different points by the
+    differential (not an engine issue)."""
+    weak = TINGLU.replace("EVs: 252 HP / 4 Atk / 252 SpD", "EVs: 0 HP / 0 Atk / 0 SpD")
+    weak += "\n\n" + BLISSEY
+    presser = GARGANACL.replace("- Salt Cure", "- Body Press")
+    turns = [("move bodypress", "move spikes")] * 6
+    states = ec.run_showdown(presser, weak, turns, seed="gen5,4,4,4,4")
+    k = next(i for i, s in enumerate(states) if s["sides"][1]["request"] == "switch")
+    assert states[k]["sides"][1]["mons"][0]["hp"] == 0
+    outs = ec.engine_outcomes(ec.engine_state(states[k - 1]), "bodypress", "spikes")
+    fainted = [o for o in outs if o[1].side_two.pokemon[0].hp == 0]
+    assert fainted and all(int(o[1].side_two.active_index) == 0 for o in fainted)

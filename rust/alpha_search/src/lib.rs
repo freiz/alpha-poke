@@ -823,15 +823,19 @@ fn option_of(options: &[MoveChoice], slot: i32) -> Option<MoveChoice> {
 
 /// The chance outcomes of the move pair (slots relative to each side; -1 = no choice) in
 /// `state`: [(probability, resulting state, battle_is_over)] as the search's transition model
-/// generates them (`branch`: also branch on damage rolls).
+/// generates them (`branch`: also branch on damage rolls). With `damage`, each outcome also has
+/// the damage each side took ([side one, side two], the sum of its Damage instructions: the
+/// engine differential's roll tolerance, scripts/check_engine_diff.py).
 #[pyfunction]
-#[pyo3(signature = (state, slot1, slot2, branch=false))]
-fn chance_outcomes(
+#[pyo3(signature = (state, slot1, slot2, branch=false, damage=false))]
+fn chance_outcomes<'py>(
+    py: Python<'py>,
     state: &str,
     slot1: i32,
     slot2: i32,
     branch: bool,
-) -> PyResult<Vec<(f32, String, f32)>> {
+    damage: bool,
+) -> PyResult<Vec<Bound<'py, pyo3::types::PyTuple>>> {
     let mut st = State::deserialize(state);
     let (o1, o2) = st.root_get_all_options();
     let (Some(m1), Some(m2)) = (option_of(&o1, slot1), option_of(&o2, slot2)) else {
@@ -839,19 +843,45 @@ fn chance_outcomes(
     };
     let outcomes = generate_instructions_from_move_pair(&mut st, &m1, &m2, branch);
     let total: f32 = outcomes.iter().map(|o| o.percentage.max(0.0)).sum();
-    Ok(outcomes
-        .iter()
-        .map(|o| {
-            st.apply_instructions(&o.instruction_list);
-            let r = (
-                o.percentage.max(0.0) / total,
-                st.serialize(),
-                st.battle_is_over(),
-            );
-            st.reverse_instructions(&o.instruction_list);
-            r
-        })
-        .collect())
+    let mut out = Vec::with_capacity(outcomes.len());
+    for o in &outcomes {
+        st.apply_instructions(&o.instruction_list);
+        let (p, s, over) = (
+            o.percentage.max(0.0) / total,
+            st.serialize(),
+            st.battle_is_over(),
+        );
+        st.reverse_instructions(&o.instruction_list);
+        let t = if damage {
+            let mut dmg = [0i32; 2];
+            for ins in &o.instruction_list {
+                if let poke_engine::instruction::Instruction::Damage(d) = ins {
+                    let k = (d.side_ref != poke_engine::state::SideReference::SideOne) as usize;
+                    dmg[k] += d.damage_amount as i32;
+                }
+            }
+            pyo3::types::PyTuple::new(
+                py,
+                [
+                    p.into_pyobject(py)?.into_any(),
+                    s.into_pyobject(py)?.into_any(),
+                    over.into_pyobject(py)?.into_any(),
+                    dmg.to_vec().into_pyobject(py)?.into_any(),
+                ],
+            )?
+        } else {
+            pyo3::types::PyTuple::new(
+                py,
+                [
+                    p.into_pyobject(py)?.into_any(),
+                    s.into_pyobject(py)?.into_any(),
+                    over.into_pyobject(py)?.into_any(),
+                ],
+            )?
+        };
+        out.push(t);
+    }
+    Ok(out)
 }
 
 /// Per side: (active index, [(species, hp, max hp, status)], boosts [atk, def, spa, spd, spe,

@@ -14,6 +14,7 @@ volatiles it knows), so a difference is the engine's, not our state construction
 
 import functools
 import json
+import re
 import subprocess
 from pathlib import Path
 
@@ -115,14 +116,33 @@ def engine_state(sd: dict) -> pe.State:
     )  # fmt: skip
 
 
+DAMAGE = re.compile(r"^Damage (SideOne|SideTwo): (-?\d+)$")
+
+
 def engine_outcomes(state: pe.State, c1: str, c2: str) -> list[tuple[float, pe.State]]:
     """Every chance outcome of the move pair in poke-engine (choices as the engine names them:
-    "defog", "earthquake-tera", "switch greattusk"): [(probability, resulting state)]."""
+    "defog", "earthquake-tera", "switch greattusk"): [(probability, resulting state)]; each
+    state carries ``damage`` (``engine_damage``)."""
     out = []
     for si in pe.generate_instructions(state, c1, c2):
         # the binding returns a new state (it does not change ``state``)
-        out.append((si.percentage / 100, state.apply_instructions(si)))
-    return out
+        dmg = [0, 0]
+        for ins in si.instruction_list:
+            m = DAMAGE.match(str(ins))
+            if m:
+                dmg[m.group(1) == "SideTwo"] += int(m.group(2))
+        out.append((si.percentage / 100, state.apply_instructions(si), tuple(dmg)))
+    return [Outcome(p, s, d) for p, s, d in out]
+
+
+class Outcome(tuple):
+    """(probability, state) with the damage each side took (the sum of the outcome's Damage
+    instructions: the roll tolerance of the HP comparison)."""
+
+    def __new__(cls, p: float, state: pe.State, damage: tuple[int, int]):
+        o = super().__new__(cls, (p, state))
+        o.damage = damage
+        return o
 
 
 def view(sd: dict) -> dict:
@@ -141,7 +161,9 @@ def view(sd: dict) -> dict:
             for b in BOOSTS:
                 v[f"{k}.boost.{b}"] = act["boosts"][b]
             for x in act["volatiles"]:
-                if _engine_volatile(x):
+                # (Protect's counter: Showdown's "stall" volatile, the engine's protect side
+                # condition -- not compared as a volatile)
+                if _engine_volatile(x) and x != "stall":
                     v[f"{k}.volatile.{x}"] = True
         c = s["conditions"]
         for name, eng in {**LAYERED}.items():
@@ -187,15 +209,33 @@ def diff(a: dict, b: dict, skip_hp: bool = False) -> dict:
             if a.get(k) != b.get(k) and not (skip_hp and k.endswith(".hp"))}  # fmt: skip
 
 
-def closest(showdown_after: dict, outs: list[tuple[float, pe.State]], n_mons=(6, 6)) -> dict:
-    """The engine outcome nearest to Showdown's next state: its differences (HP left out:
-    the engine deals average damage rolls) and probability."""
+def hp_diff(showdown_after: dict, out, n_mons=(6, 6), tol: int = 2) -> dict:
+    """{"sK.j.hp": (engine, showdown)} where an HP differs by more than the damage rolls'
+    spread: the engine deals the average roll (0.925 x max), so +-8.5% of the damage that side
+    took in this outcome, + ``tol``."""
+    target = view(showdown_after)
+    v = view_engine(out[1], n_mons)
+    dmg = getattr(out, "damage", (0, 0))
+    bad = {}
+    for k, e in v.items():
+        if k.endswith(".hp"):
+            side = 0 if k.startswith("s1.") else 1
+            if abs(e - target[k]) > 0.085 * dmg[side] + tol:
+                bad[k] = (e, target[k])
+    return bad
+
+
+def closest(showdown_after: dict, outs: list, n_mons=(6, 6), hp: bool = False) -> dict:
+    """The engine outcome nearest to Showdown's next state: its differences and probability.
+    HP is left out unless ``hp`` (then compared within the damage rolls' spread, ``hp_diff``)."""
     target = view(showdown_after)
     best = None
-    for p, s in outs:
-        d = diff(view_engine(s, n_mons), target, skip_hp=True)
+    for o in outs:
+        d = diff(view_engine(o[1], n_mons), target, skip_hp=True)
+        if hp:
+            d |= hp_diff(showdown_after, o, n_mons)
         if best is None or len(d) < len(best[1]):
-            best = (p, d)
+            best = (o[0], d)
     return {"p": best[0], "diff": best[1]} if best else {"p": 0.0, "diff": {"no outcome": 1}}
 
 

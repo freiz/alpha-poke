@@ -60,7 +60,8 @@ def snapshot(state_str: str) -> tuple[dict, list[int], list[int]]:
         d[f"{k}.wish"] = side.wish[0] > 0
         d[f"{k}.future_sight"] = side.future_sight[0] > 0
         for v in side.volatile_statuses:
-            d[f"{k}.volatile.{str(v).lower()}"] = True
+            if str(v).lower() != "none":  # a serialization artifact (doc/engine-diff.md L4)
+                d[f"{k}.volatile.{str(v).lower()}"] = True
     return d, hp, mx
 
 
@@ -72,9 +73,11 @@ def kind_of(field: str) -> str:
     return ".".join(parts)
 
 
-def hp_fits(before: int, engine: int, actual: int, tol: float) -> bool:
-    """``actual`` within the damage rolls' spread around the engine's (average-roll) damage."""
-    spread = 0.085 * max(before - engine, 0)  # (1 - 0.925) / 0.925 of an average roll
+def hp_fits(engine: int, actual: int, damage: int, tol: float) -> bool:
+    """``actual`` within the damage rolls' spread around the engine's HP: ``damage`` is the
+    engine's (average-roll) damage to that mon this turn, before any healing (a turn with Recover
+    and a hit: the net change is small, the roll spread is the hit's)."""
+    spread = 0.085 * max(damage, 0)  # (1 - 0.925) / 0.925 of an average roll
     return abs(actual - engine) <= spread + tol
 
 
@@ -83,26 +86,60 @@ def compare(before: str, after: str, slot1: int, slot2: int, hp_tol: float) -> d
     "hp": [(index, engine hp, actual hp, max hp)], "n_outcomes": n}. Chance (misses, crits,
     secondary effects, speed ties) is enumerated by the engine: matching any outcome is a match.
     Damage rolls are not: the engine deals the average roll (0.925 x max; it branches only on a
-    KO and on crits), so an HP is a match within the rolls' spread around each outcome's damage
-    (0.85 / 0.925 .. 1 / 0.925 of it) + ``hp_tol`` x max HP."""
-    outs = alpha_search.chance_outcomes(before, slot1, slot2, True)
-    _, b_hp, _ = snapshot(before)
+    KO and on crits), so an HP is a match within the rolls' spread around the damage the engine
+    dealt that side this turn (0.85 / 0.925 .. 1 / 0.925 of it) + ``hp_tol`` x max HP. (The
+    spread counted the net HP change until 2026-10-16: a turn with healing and a hit was
+    flagged wrongly -- found by the dual-engine test of Roost, doc/engine-diff.md L5.)"""
+    outs = alpha_search.chance_outcomes(before, slot1, slot2, True, True)
+    b_snap = snapshot(before)
     actual, a_hp, a_max = snapshot(after)
-    snaps = [snapshot(s) for _, s, _ in outs]
+    snaps = [(*snapshot(s), dmg) for _, s, _, dmg in outs]
     best = None
-    for d, _, _ in snaps:
+    for d, _, _, _ in snaps:
         keys = set(d) | set(actual)
         diff = {k: (d.get(k), actual.get(k)) for k in keys if d.get(k) != actual.get(k)}
         if best is None or len(diff) < len(best[0]):
             best = (diff, d)
     diff, d_best = best
-    same = [hp for d, hp, _ in snaps if d == d_best] or [hp for _, hp, _ in snaps]
+    same = [(hp, d, dmg) for d, hp, _, dmg in snaps if d == d_best] or [
+        (hp, d, dmg) for d, hp, _, dmg in snaps]  # fmt: skip
     bad_hp = []
     for i, (h, m) in enumerate(zip(a_hp, a_max, strict=True)):
-        if not any(hp_fits(b_hp[i], x[i], h, max(2, hp_tol * m)) for x in same):
-            e = min((x[i] for x in same), key=lambda v: abs(v - h))
+        side, j = divmod(i, 6)
+        k = ("s1", "s2")[side]
+
+        def took(d: dict, dmg: list, side=side, j=j, k=k) -> int:
+            # the side's damage went to its active (before the turn or after a switch)
+            on = j in (b_snap[0][f"{k}.active"], d[f"{k}.active"])
+            return dmg[side] if on else 0
+
+        if not any(hp_fits(x[i], h, took(d, dmg), max(2, hp_tol * m)) for x, d, dmg in same):
+            e = min((x[i] for x, _, _ in same), key=lambda v: abs(v - h))
             bad_hp.append((i, e, h, m))
     return {"discrete": diff, "hp": bad_hp, "n_outcomes": len(outs)}
+
+
+PIVOT = {"uturn", "voltswitch", "flipturn", "teleport", "partingshot", "chillyreception",
+         "shedtail", "batonpass"}  # fmt: skip
+DRAG = {"roar", "whirlwind", "dragontail", "circlethrow"}
+
+
+def not_comparable(before: str, after: str, m1: str, m2: str) -> str | None:
+    """Why a turn cannot be compared (None: it can): a mon fainted (the engine stops at the
+    forced switch; the player's replacement, a decision not recorded when it was the only
+    option, came before the next turn start), a pivot or drag move (a switch decided or drawn
+    mid-turn). doc/engine-diff.md L6: 2026-10-16 these were 6% of all turns, counted as
+    mismatches."""
+    _, b_hp, _ = snapshot(before)
+    _, a_hp, _ = snapshot(after)
+    if any(b > 0 and x <= 0 for b, x in zip(b_hp, a_hp, strict=True)):
+        return "faint"
+    moves = {m.removesuffix("-tera") for m in (m1, m2)}
+    if moves & PIVOT:
+        return "pivot move"
+    if moves & DRAG:
+        return "drag move"
+    return None
 
 
 def clean_turns(records: list[dict]):
@@ -165,6 +202,7 @@ def main() -> None:
     files = sorted(gen_dir.glob("decisions-w*.jsonl"))
     per_file = -(-a.games // len(files))
     n_turns = n_match = n_err = 0
+    skipped: collections.Counter = collections.Counter()
     kinds: collections.Counter = collections.Counter()
     per_move: collections.Counter = collections.Counter()
     kind_moves: dict = collections.defaultdict(collections.Counter)  # kind -> move pairs
@@ -177,6 +215,10 @@ def main() -> None:
             before = alpha_search.merge_sides(a1["state"], a2["state"])
             after = alpha_search.merge_sides(b1["state"], b2["state"])
             m1, m2 = a1["names"][a1["slot"]], a2["names"][a2["slot"]]
+            why = not_comparable(before, after, m1, m2)
+            if why:  # the engine stops at another decision point than the next turn start
+                skipped[why] += 1
+                continue
             n_turns += 1
             moves_seen[m1] += 1
             moves_seen[m2] += 1
@@ -204,7 +246,8 @@ def main() -> None:
                 per_move[m] += 1
     rate = {m: round(per_move[m] / moves_seen[m], 4) for m in per_move if moves_seen[m] >= 30}
     out = {"gen": a.gen, "games": n_games, "clean_turns": n_turns, "match": n_match,
-           "errors": n_err, "mismatch_kinds": kinds.most_common(),
+           "errors": n_err, "not_comparable": dict(skipped),
+           "mismatch_kinds": kinds.most_common(),
            "mismatch_rate_by_move": sorted(rate.items(), key=lambda x: -x[1])[:60],
            "moves_by_kind": {k: c.most_common(15) for k, c in kind_moves.items()},
            "examples": examples}  # fmt: skip
