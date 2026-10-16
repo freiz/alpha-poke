@@ -51,7 +51,8 @@ function sideState(side) {
 	const req = side.activeRequest;
 	const request = !req ? 'none' : req.wait ? 'wait' : req.forceSwitch ? 'switch' :
 		req.teamPreview ? 'teampreview' : 'move';
-	return {id: side.id, active, mons, conditions, request};
+	// the request the player's client gets (for rebuilding the state as we do in play)
+	return {id: side.id, active, mons, conditions, request, request_json: req || null};
 }
 
 function state(battle, logFrom) {

@@ -197,3 +197,46 @@ def closest(showdown_after: dict, outs: list[tuple[float, pe.State]], n_mons=(6,
         if best is None or len(d) < len(best[1]):
             best = (p, d)
     return {"p": best[0], "diff": best[1]} if best else {"p": 0.0, "diff": {"no outcome": 1}}
+
+
+def player_log(lines: list[str], side: str) -> list[str]:
+    """The log as player ``side`` ("p1" / "p2") sees it: after "|split|pX" comes the line for pX
+    (exact HP) and then the one for everyone else."""
+    out, i = [], 0
+    while i < len(lines):
+        if lines[i].startswith("|split|"):
+            who = lines[i].split("|")[2]
+            out.append(lines[i + 1] if who == side else lines[i + 2])
+            i += 3
+        else:
+            out.append(lines[i])
+            i += 1
+    return out
+
+
+def built_state(states: list[dict], k: int, side: str, belief, seed: int = 0) -> pe.State:
+    """Our own state construction (agents.engine_state.build_state, as in play) at Showdown state
+    ``k`` for player ``side``: a poke-env battle fed that player's view of the log up to there
+    and its request (side one = ``side``; the opponent's hidden sets sampled from ``belief``)."""
+    import logging
+    import random
+
+    from poke_env.battle import Battle
+
+    from alpha_poke.agents.engine_state import build_state
+
+    battle = Battle(f"battle-check-{side}", side, logging.getLogger("enginecheck"), gen=9)
+    for st in states[: k + 1]:
+        for line in player_log(st["log"], side):
+            split = line.split("|")
+            if len(split) < 2 or split[1] in ("", "request"):
+                continue
+            try:
+                battle.parse_message(split)
+            except (NotImplementedError, KeyError, ValueError, AttributeError):
+                pass
+    req = states[k]["sides"][0 if side == "p1" else 1]["request_json"]
+    if req:
+        battle.parse_request(req)
+    names = tuple(belief.display(m.species) for m in battle.teampreview_opponent_team)
+    return build_state(battle, belief, names, random.Random(seed))

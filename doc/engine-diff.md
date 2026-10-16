@@ -43,6 +43,8 @@
 - `engine_outcomes(state, c1, c2)`：引擎对同一对动作的全部随机结果；
 - `view` / `view_engine` / `closest`：两边状态转成同一种格式，找最接近 Showdown 结果的引擎分支，列出差别（HP 不比：引擎用平均伤害）。
 - 对照测试（两边应一致的场景）证明框架本身判断正确：`test_start_state_is_the_same`、`test_control_spikes_and_roost_agree`、`test_control_volatile_of_engine_state_string`。
+- 局面构造的测试（`built_state`）：同一场 Showdown 对战（gen9ou，有队伍预览），把某一方玩家实际收到的协议消息（`player_log`：`|split|` 之后自己那一行是精确 HP）和请求喂给 poke-env，跑我们的 `build_state`，和 Showdown 的真实状态比较；自己视角、对方视角都看。
+- 教训（L2）：差分统计里"引擎有、实际没有"的类别，最初一律猜成局面构造漏读；双引擎测试分开之后，三项里两项其实是引擎的问题。差分的类别只能当线索，结论必须来自测试；简单场景复现不出来时，回到差分的例子里找条件（盐腌是"目标有替身"）。
 - 注意：poke-engine 的 Python 绑定 `State.apply_instructions` 返回新的局面，不改原局面（2026-10-16 我先按原地修改用错了一次）。
 
 ### 3. 修复流程（不直接改）
@@ -72,7 +74,7 @@
 | 防御 / 攻击等级等 | 每类 < 1% | | 待看 |
 | 异常状态 | 371 | 0.80% | 部分和换人有关；"Hurricane / Dragon Tail 后目标麻痹"疑似接触类特性（静电） |
 | 道具 | 322 | 0.69% | 待看 |
-| 诅咒 / 部分束缚 / 盐腌 | 266 / 235 / 116 | 0.57% / 0.50% / 0.25% | 引擎里有、我们构造的局面里没有：`build_state` 没从协议读出这些持续状态 |
+| 诅咒 / 部分束缚 / 盐腌 | 266 / 235 / 116 | 0.57% / 0.50% / 0.25% | 当初猜都是局面构造漏读；双引擎测试后只有部分束缚是（L2c）。诅咒是引擎的 L2a / L2b，盐腌是引擎的 L2d（替身挡不住）；盐腌和诅咒的局面构造本身是对的（对照测试） |
 
 ## 线索与问题表
 
@@ -81,7 +83,10 @@
 | 编号 | 描述 | 来源 | 状态 | 测试 | 修复 |
 |---|---|---|---|---|---|
 | L1 | Defog 不降低目标闪避（Showdown −1，poke-engine 0）| 引擎 | 已确认 | `test_l1_defog_lowers_evasion` | |
-| L2 | 部分束缚（Infestation 等）、幽灵系诅咒、盐腌没有进入构造的局面；搜索里因此看不到持续伤害和"被困住不能换人" | 局面构造？ | 线索 | | |
+| L2a | Ghost 系的 Curse 没有实现：poke-engine 只有非 Ghost 系的版本（自己 +1 攻 / +1 防 / −1 速），Ghost 系使用时不付一半 HP、对方不被诅咒；引擎里也没有诅咒的回合末伤害，即使局面里对方带着 `curse` 也不扣血 | 引擎 | 已确认 | `test_l2a_ghost_curse` | |
+| L2b | 非 Ghost 系的 Curse 在使用者身上多挂一个 `curse`（不扣血，只是标记；但网络输入的诅咒位因此被置 1，真实局面不会有） | 引擎 | 已确认 | `test_l2b_non_ghost_curse_no_volatile` | |
+| L2c | 部分束缚（Infestation、Whirlpool、Fire Spin、Sand Tomb、Magma Storm、Bind、Wrap 等）没有进入我们构造的局面（`build_state` 的持续状态映射里没有它）：搜索里看不到"被困住不能换人"和每回合 1/8 的伤害。引擎本身对部分束缚的处理和 Showdown 一致 | 局面构造 | 已确认 | `test_l2c_built_state_partial_trap` | |
+| L2d | Salt Cure 打在替身上时，引擎仍然给目标挂上盐腌（Showdown 被替身挡住） | 引擎 | 已确认 | `test_l2d_salt_cure_blocked_by_substitute` | |
 | L3 | 天气剩余回合数（沙暴特性、碎石延长等） | 局面构造或引擎？ | 线索 | | |
 | L4 | 局面字符串里多出 NONE 持续状态：Python 绑定把持续状态写成 `SALTCURE:`（每个名字后带冒号），解析时多出的空字符串变成 NONE（第 0 位）。真实局面只要有持续状态就带 NONE（gen 8 抽样 2 万个局面中 3,587 个方面），搜索树里持续状态结束后 NONE 还留着；网络输入的第 0 位因此有含义漂移。不是游戏机制问题，影响较小 | 序列化（我们的工具链） | 已确认 | `test_l4_volatile_roundtrip` | |
 | L5 | 回复类招式回合的 HP 不一致 | 待拆分 | 线索 | | |

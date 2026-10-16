@@ -76,3 +76,121 @@ def test_l4_volatile_roundtrip():
     s = pe.State(side_one=pe.Side(pokemon=[pe.Pokemon.create_fainted()] * 6,
                                   volatile_statuses={"saltcure"}))  # fmt: skip
     assert pe.State.from_string(s.to_string()).side_one.volatile_statuses == {"SALTCURE"}
+
+
+TINGLU_SPIKES = ("move spikes", "spikes")
+SKELEDIRGE = """Skeledirge @ Leftovers
+Ability: Unaware
+Tera Type: Fairy
+EVs: 248 HP / 8 SpA / 252 Def
+Bold Nature
+- Curse
+- Slack Off
+- Torch Song
+- Shadow Ball"""
+URSALUNA = """Ursaluna @ Leftovers
+Ability: Bulletproof
+Tera Type: Normal
+EVs: 252 HP / 252 Atk / 4 SpD
+Adamant Nature
+- Curse
+- Facade
+- Headlong Rush
+- Protect"""
+GARGANACL = """Garganacl @ Leftovers
+Ability: Purifying Salt
+Tera Type: Water
+EVs: 252 HP / 4 Atk / 252 Def
+Impish Nature
+- Salt Cure
+- Recover
+- Protect
+- Iron Defense"""
+TOXAPEX = """Toxapex @ Black Sludge
+Ability: Regenerator
+Tera Type: Fairy
+EVs: 252 HP / 4 Def / 252 SpD
+Calm Nature
+- Infestation
+- Recover
+- Haze
+- Toxic"""
+KYUREM = """Kyurem @ Leftovers
+Ability: Pressure
+Tera Type: Ground
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Substitute
+- Freeze-Dry
+- Earth Power
+- Protect"""
+
+
+def test_control_salt_cure_and_infestation_agree():
+    for team, move in ((GARGANACL, "saltcure"), (TOXAPEX, "infestation")):
+        states, outs = first_turn(f"move {move}", "move spikes", move, "spikes", p1=team,
+                                  force_random=True)  # fmt: skip
+        assert ec.closest(states[1], outs, (1, 1))["diff"] == {}, move
+
+
+@pytest.mark.xfail(strict=True, reason="L2a (doc/engine-diff.md): poke-engine has only the "
+                                       "non-Ghost Curse (boosts, no HP cost, no curse on the "
+                                       "target)")  # fmt: skip
+def test_l2a_ghost_curse():
+    states, outs = first_turn("move curse", "move spikes", "curse", "spikes", p1=SKELEDIRGE,
+                              force_random=True)  # fmt: skip
+    assert "curse" in states[1]["sides"][1]["mons"][0]["volatiles"]  # Showdown: the target
+    assert ec.closest(states[1], outs, (1, 1))["diff"] == {}
+
+
+@pytest.mark.xfail(strict=True, reason="L2b (doc/engine-diff.md): poke-engine's non-Ghost Curse "
+                                       "also puts a (harmless) curse on the user")  # fmt: skip
+def test_l2b_non_ghost_curse_no_volatile():
+    states, outs = first_turn("move curse", "move spikes", "curse", "spikes", p1=URSALUNA)
+    assert states[1]["sides"][0]["mons"][0]["volatiles"] == {}  # Showdown
+    assert ec.closest(states[1], outs, (1, 1))["diff"] == {}
+
+
+@pytest.mark.xfail(strict=True, reason="L2d (doc/engine-diff.md): poke-engine applies Salt "
+                                       "Cure's volatile through a Substitute")  # fmt: skip
+def test_l2d_salt_cure_blocked_by_substitute():
+    states, outs = first_turn("move saltcure", "move substitute", "saltcure", "substitute",
+                              p1=GARGANACL, p2=KYUREM, force_random=True)  # fmt: skip
+    assert states[1]["sides"][1]["mons"][0]["volatiles"] == {}  # Showdown: the Sub took it
+    assert ec.closest(states[1], outs, (1, 1))["diff"] == {}
+
+
+@pytest.fixture(scope="module")
+def belief():
+    from alpha_poke.agents.belief_state import BeliefModel
+
+    return BeliefModel.load()
+
+
+def built_volatiles(p1, move, belief) -> tuple[set, set, set]:
+    """(Showdown's volatiles of Ting-Lu after ``move`` hits it, ours from its own view, ours
+    from the attacker's view) -- our state construction (build_state) in gen9ou."""
+    states = ec.run_showdown(p1, TINGLU, [(f"move {move}", "move spikes")], fmt="gen9ou",
+                             force_random=True)  # fmt: skip
+    truth = set(states[1]["sides"][1]["mons"][0]["volatiles"])
+    own = {
+        str(v).lower() for v in ec.built_state(states, 1, "p2", belief).side_one.volatile_statuses
+    }
+    opp = {
+        str(v).lower() for v in ec.built_state(states, 1, "p1", belief).side_two.volatile_statuses
+    }
+    return truth, own - {"none"}, opp - {"none"}
+
+
+def test_control_built_state_salt_cure_and_curse(belief):
+    for team, move in ((GARGANACL, "saltcure"), (SKELEDIRGE, "curse")):
+        truth, own, opp = built_volatiles(team, move, belief)
+        assert truth == own == opp, (move, truth, own, opp)
+
+
+@pytest.mark.xfail(strict=True, reason="L2c (doc/engine-diff.md): build_state leaves out partial "
+                                       "trapping (Infestation, Whirlpool, ...)")  # fmt: skip
+def test_l2c_built_state_partial_trap(belief):
+    truth, own, opp = built_volatiles(TOXAPEX, "infestation", belief)
+    assert truth == {"partiallytrapped"}
+    assert own == opp == truth
