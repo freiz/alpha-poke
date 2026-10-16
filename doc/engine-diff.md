@@ -93,24 +93,35 @@
 
 | 编号 | 描述 | 来源 | 状态 | 测试 | 修复 |
 |---|---|---|---|---|---|
-| L1 | Defog 不降低目标闪避（Showdown −1，poke-engine 0）| 引擎 | 已确认 | `test_l1_defog_lowers_evasion` | |
-| L2a | Ghost 系的 Curse 没有实现：poke-engine 只有非 Ghost 系的版本（自己 +1 攻 / +1 防 / −1 速），Ghost 系使用时不付一半 HP、对方不被诅咒；引擎里也没有诅咒的回合末伤害，即使局面里对方带着 `curse` 也不扣血 | 引擎 | 已确认 | `test_l2a_ghost_curse` | |
-| L2b | 非 Ghost 系的 Curse 在使用者身上多挂一个 `curse`（不扣血，只是标记；但网络输入的诅咒位因此被置 1，真实局面不会有） | 引擎 | 已确认 | `test_l2b_non_ghost_curse_no_volatile` | |
-| L2c | 部分束缚（Infestation、Whirlpool、Fire Spin、Sand Tomb、Magma Storm、Bind、Wrap 等）没有进入我们构造的局面（`build_state` 的持续状态映射里没有它）：搜索里看不到"被困住不能换人"和每回合 1/8 的伤害。引擎本身对部分束缚的处理和 Showdown 一致 | 局面构造 | 已确认 | `test_l2c_built_state_partial_trap` | |
-| L2d | Salt Cure 打在替身上时，引擎仍然给目标挂上盐腌（Showdown 被替身挡住） | 引擎 | 已确认 | `test_l2d_salt_cure_blocked_by_substitute` | |
-| L3a | 构造的天气剩余回合数一直是 4（引擎本身每回合递减、按时结束都和 Showdown 一致）：poke-env 每回合收到天气持续的消息（`|-weather|Sandstorm|[upkeep]`）都把开始回合重置为当前回合；碎石等延长道具也因此失效 | 局面构造 | 已确认 | `test_l3a_built_weather_turns` | |
-| L3b | 开局特性铺的场地，构造的剩余回合数少 1（第 1 回合还没过回合末就扣了一回合） | 局面构造 | 已确认 | `test_l3b_built_terrain_turns` | |
-| L4 | 局面字符串里多出 NONE 持续状态：Python 绑定把持续状态写成 `SALTCURE:`（每个名字后带冒号），解析时多出的空字符串变成 NONE（第 0 位）。真实局面只要有持续状态就带 NONE（gen 8 抽样 2 万个局面中 3,587 个方面），搜索树里持续状态结束后 NONE 还留着；网络输入的第 0 位因此有含义漂移。不是游戏机制问题，影响较小 | 序列化（我们的工具链） | 已确认 | `test_l4_volatile_roundtrip` | |
+| L1 | Defog 不降低目标闪避（Showdown −1，poke-engine 0） | 引擎 | 已修复 | `test_l1_defog_lowers_evasion` | `choice_effects.rs`：Defog 先对没有替身的目标施加闪避 −1（复用 `apply_boost_instruction`，免疫 / 天邪鬼照常）；没有给 `StatBoosts` 加闪避字段（两百多处字面量，风险大） |
+| L2a | Ghost 系的 Curse 没有实现：poke-engine 只有非 Ghost 系的版本（自己 +1 攻 / +1 防 / −1 速），Ghost 系使用时不付一半 HP、对方不被诅咒；引擎里也没有诅咒的回合末伤害，即使局面里对方带着 `curse` 也不扣血 | 引擎 | 已修复 | `test_l2a_ghost_curse` | `choice_effects.rs` `modify_choice`：Ghost 系使用时无能力变化、对方挂诅咒（已被诅咒则失败）、自己扣一半最大 HP；`generate_instructions.rs` 回合末：被诅咒的扣 1/4（至少 1） |
+| L2b | 非 Ghost 系的 Curse 在使用者身上多挂一个 `curse`（不扣血，只是标记；但网络输入的诅咒位因此被置 1，真实局面不会有） | 引擎 | 已修复 | `test_l2b_non_ghost_curse_no_volatile` | 同上：非 Ghost 系只有能力变化，去掉诅咒标记 |
+| L2c | 部分束缚（Infestation、Whirlpool、Fire Spin、Sand Tomb、Magma Storm、Bind、Wrap 等）没有进入我们构造的局面（`build_state` 的持续状态映射里没有它）：搜索里看不到"被困住不能换人"和每回合 1/8 的伤害。引擎本身对部分束缚的处理和 Showdown 一致 | 局面构造 | 已修复 | `test_l2c_built_state_partial_trap` | `engine_state.py`：Bind / Wrap / Fire Spin / Whirlpool / Sand Tomb / Magma Storm / Infestation / Snap Trap / Thunder Cage / Clamp（poke-env 按招式名记）映射为 `partiallytrapped`；引擎已正确处理 Ghost 系与脱壳的例外 |
+| L2d | Salt Cure 打在替身上时，引擎仍然给目标挂上盐腌（Showdown 被替身挡住） | 引擎 | 已修复 | `test_l2d_salt_cure_blocked_by_substitute` | `generate_instructions.rs` `run_move`：攻击招式打在替身上时，不对目标施加招式的持续状态 |
+| L3a | 构造的天气剩余回合数一直是 4（引擎本身每回合递减、按时结束都和 Showdown 一致）：poke-env 每回合收到天气持续的消息（-weather … [upkeep]）都把开始回合重置为当前回合；碎石等延长道具也因此失效 | 局面构造 | 已修复 | `test_l3a_built_weather_turns` | `timers.py` 记录天气 / 场地开始后经过的回合末（upkeep）数，`engine_state.py` 剩余 = 长度（5，延长道具 8）− 已过；对手的延长道具从不暴露，按信念样本 |
+| L3b | 开局特性铺的场地，构造的剩余回合数少 1（第 1 回合还没过回合末就扣了一回合） | 局面构造 | 已修复 | `test_l3b_built_terrain_turns` | 同上（按回合末计数，开局铺的场地不再少 1） |
+| L4 | 局面字符串里多出 NONE 持续状态：Python 绑定把持续状态写成 `SALTCURE:`（每个名字后带冒号），解析时多出的空字符串变成 NONE（第 0 位）。真实局面只要有持续状态就带 NONE（gen 8 抽样 2 万个局面中 3,587 个方面），搜索树里持续状态结束后 NONE 还留着；网络输入的第 0 位因此有含义漂移。不是游戏机制问题，影响较小 | 序列化（我们的工具链） | 已修复 | `test_l4_volatile_roundtrip` | `state.rs` 解析持续状态时跳过空字符串；`features.rs` 持续状态第 0 位定义为"有任何持续状态"（网络训练时它就是这个含义）：真实局面的网络输入逐位不变（第 8 代 36,771 个局面的全局 / 实体特征与旧缓存一致），只有搜索树里持续状态结束后的第 0 位不再残留 |
 | L5 | 回复类招式回合的 HP 不一致：差分脚本的 HP 容差按净变化算造成的误判（Roost + Earthquake 双引擎一致，引擎也正确模拟了 Roost 失去飞行属性） | 方法假象 | 已确认，脚本已修正 | `test_control_hp_salt_cure_infestation_roost_earthquake` | 差分脚本 |
 | L6 | 在场宝可梦不一致（6.3%）：回合中有倒下（1,511 例，包括刚换上来就被击倒）、U-turn 类（158）、拖人（3），引擎都停在下一个决策点，和下一回合开始比较不对；另有逃脱背包等 11 例属 D17 已知近似 | 方法假象 | 已确认，脚本已修正 | `test_control_faint_stops_at_the_forced_switch` | 差分脚本 |
-| L7 | 拖人招式（Dragon Tail、Circle Throw）跳过目标的被接触效果：静电、凸凸头盔都不触发（普通接触招两者都正确） | 引擎 | 已确认 | `test_l7_static_on_dragon_tail`、`test_l7_rocky_helmet_on_dragon_tail` | |
+| L7 | 拖人招式（Dragon Tail、Circle Throw）跳过目标的被接触效果：静电、凸凸头盔都不触发（普通接触招两者都正确） | 引擎 | 已修复 | `test_l7_static_on_dragon_tail`、`test_l7_rocky_helmet_on_dragon_tail` | `generate_instructions.rs` `run_move`：拖人招式先结算追加效果（静电、凸凸头盔等挂在使用者招式上的被接触效果），再在每个结算分支上拖人 |
 | L8 | 数据表比对：poke-engine 的招式 / 宝可梦数据和 Showdown 的 `Dex` 逐项比较（威力、命中、优先度、属性、分类、标志位、追加效果、能力变化、种族值）。已知一例：引擎的能力变化结构没有"闪避"这一项，所以 L1 的 Defog 和所有改闪避的招都表示不了 | 数据 | 待做 | | |
-| L9 | 黑色污泥在非毒系身上：Showdown 每回合扣 1/8（满血也扣），引擎只扣 1/16、满血不扣（非毒系分支是从回血分支照抄的 `min(maxhp/16, maxhp − hp)`） | 引擎 | 已确认 | `test_l9_black_sludge_non_poison` | |
+| L9 | 黑色污泥在非毒系身上：Showdown 每回合扣 1/8（满血也扣），引擎只扣 1/16、满血不扣（非毒系分支是从回血分支照抄的 `min(maxhp/16, maxhp − hp)`） | 引擎 | 已修复 | `test_l9_black_sludge_non_poison` | `items.rs`：非毒系扣 `min(max(maxhp/8, 1), hp)` |
 | L10 | 剩下的 HP 不一致（修正方法后约 8%）里待查的几簇：吸取类招式的回复量（Giga Drain、Draining Kiss）、换上时的入场伤害、Magma Storm、Mirror Coat、Pain Split、Seismic Toss 对 Protect | 待拆分 | 线索 | | |
+
+## 修复与验证（2026-10-16）
+
+修复：L1、L2a–L2d、L3a/L3b、L4、L7、L9（见问题表"修复"一列；引擎修改都在 `rust/patches/poke-engine-0.0.48`，注释 "alpha-poke patch (2026-10-16, doc/engine-diff.md Lx)"）。验证：
+
+- 双引擎测试：原来的 11 个预期失败全部转为通过（作为回归测试保留），对照测试不变；全部测试 139 个通过；poke-engine 自带测试 228 个（其中 4 个原来写死了旧行为——黑色污泥 1/16、Defog 不降闪避——按 Showdown 改了断言）、alpha_search 23 个通过；`check_tnet` 通过。
+- 网络输入：真实局面的特征与修复前逐位相同（第 8 代缓存对比，见 L4）。
+- 确定性搜索（`data/selfplay/diag/regress/search.py`，固定种子，夹具局面）：不用网络的 UCB 结果逐位不变（这两个局面里引擎的转移没有变化）；用网络的 PUCT / 批量搜索访问数有小幅变化（首选不变），来自树内局面第 0 位不再残留 NONE。
+- 差分统计（第 8 代，3,000 局，42,611 个可比较回合）：一致率 86.1% → **88.3%**；闪避 578 → 31、诅咒 262 → 1、盐腌 69 → 15、HP 3,395 → 3,182、攻击 / 防御 / 速度等级 76 / 218 / 103 → 57 / 199 / 84。天气、场地、部分束缚不变：这批数据的局面是修复前的代码构造的，局面构造类的修复要在新对局上才看得到。
+- 还没做：对战 A/B。修复前后的引擎是同一个扩展模块，没法在同一个进程里各跑一边（见下一步）。
 
 ## 下一步
 
-1. ~~双引擎测试框架~~（已完成，见"双引擎单元测试"）。
-2. 按问题表的顺序为其余线索（L2、L3、L5–L7）写测试、确认、归类。局面构造类的线索（L2、L3）要另一种测试：同一场 Showdown 对战，比较它的真实状态和我们从协议日志构造出的局面。
+1. 对战 A/B（修复前后）：需要一个临时开关让同一进程里的两个 bot 分别用旧 / 新行为（引擎修复按搜索设置一个线程局部开关，局面构造修复按 bot 设置），或者用两个独立进程各自对 Foul Play 比较。
+2. L8 数据表比对；L10 剩余 HP 线索。
+3. 局面构造类修复（L2c、L3）会改变网络看到的输入（天气剩余回合不再固定为 4、束缚位会被置 1），下一代训练后才完全对齐。
 3. 差分脚本改进：把"未记录的中途决策"单独分出来，不计入分母；HP 按差值大小和招式拆分。
 4. 人类对局：回放只有旁观者视角（HP 是百分比、对方配置不完整），做不了精确差分；可以只检查可观察的部分（先后手、是否击倒、HP 百分比是否落在范围内），以后再做。
