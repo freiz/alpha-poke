@@ -3487,9 +3487,7 @@ fn add_end_of_turn_instructions(
             }
             let duration = match volatile {
                 PokemonVolatileStatus::HEALBLOCK => &mut side.volatile_status_durations.healblock,
-                PokemonVolatileStatus::THROATCHOP => {
-                    &mut side.volatile_status_durations.throatchop
-                }
+                PokemonVolatileStatus::THROATCHOP => &mut side.volatile_status_durations.throatchop,
                 _ => &mut side.volatile_status_durations.magnetrise,
             };
             if *duration + 1 >= limit {
@@ -3678,6 +3676,24 @@ fn add_end_of_turn_instructions(
                 }));
             active_pkmn.hp -= damage_amount;
         }
+        // alpha-poke patch (2026-10-16, doc/engine-diff.md L2a): a cursed mon loses 1/4 of its
+        // max HP at the end of every turn (Showdown's curse onResidual: baseMaxhp / 4, at least 1)
+        if side
+            .volatile_statuses
+            .contains(&PokemonVolatileStatus::CURSE)
+        {
+            let active_pkmn = side.get_active();
+            if active_pkmn.hp > 0 {
+                let damage_amount = cmp::min(cmp::max(active_pkmn.maxhp / 4, 1), active_pkmn.hp);
+                incoming_instructions
+                    .instruction_list
+                    .push(Instruction::Damage(DamageInstruction {
+                        side_ref: *side_ref,
+                        damage_amount,
+                    }));
+                active_pkmn.hp -= damage_amount;
+            }
+        }
 
         let possible_statuses = [
             PokemonVolatileStatus::PROTECT,
@@ -3787,7 +3803,17 @@ fn run_move(
             );
         }
         choice_hazard_clear(state, &choice, &attacking_side, &mut instructions);
-        if let Some(volatile_status) = &choice.volatile_status {
+        // alpha-poke patch (2026-10-16, doc/engine-diff.md L2d): a damaging move that hit the
+        // target's substitute puts no volatile on the target (Showdown: the hit's effects on a
+        // target behind a substitute are skipped; Salt Cure used to go through)
+        let blocked_by_sub = |v: &VolatileStatus| {
+            hit_sub && v.target == MoveTarget::Opponent && choice.category != MoveCategory::Status
+        };
+        if let Some(volatile_status) = choice
+            .volatile_status
+            .as_ref()
+            .filter(|v| !blocked_by_sub(v))
+        {
             get_instructions_from_volatile_statuses(
                 state,
                 &choice,
@@ -3853,7 +3879,11 @@ fn run_move(
         let holder = defender_side.get_active_immutable();
         let (item, holder_hp) = (holder.item, holder.hp);
         let can_switch = defender_side.visible_alive_pkmn() > 1 && !defender_side.force_switch;
-        let attacker_alive = state.get_side_immutable(&attacking_side).get_active_immutable().hp > 0;
+        let attacker_alive = state
+            .get_side_immutable(&attacking_side)
+            .get_active_immutable()
+            .hp
+            > 0;
         if emergency_exit
             || eject_pack
             || damaging
@@ -3862,13 +3892,13 @@ fn run_move(
                     || item == Items::REDCARD && attacker_alive)
         {
             if !emergency_exit {
-                instructions
-                    .instruction_list
-                    .push(Instruction::ChangeItem(ChangeItemInstruction {
+                instructions.instruction_list.push(Instruction::ChangeItem(
+                    ChangeItemInstruction {
                         side_ref: defender_ref,
                         current_item: item,
                         new_item: Items::NONE,
-                    }));
+                    },
+                ));
                 state.get_side(&defender_ref).get_active().item = Items::NONE;
             }
             if !emergency_exit && !eject_pack && item == Items::REDCARD {
@@ -3905,6 +3935,27 @@ fn run_move(
             .ability
             != Abilities::GUARDDOG
     {
+        // alpha-poke patch (2026-10-16, doc/engine-diff.md L7): the secondaries first (the
+        // target's contact effects -- Static, Rocky Helmet, ... -- are added to the move as
+        // secondaries on its user), then the drag on each of their outcomes; the drag used to
+        // return before them, so they never happened (Showdown: the hit's effects, then the
+        // forced switch)
+        if let Some(secondaries_vec) = &choice.secondaries {
+            state.reverse_instructions(&instructions.instruction_list);
+            let branches = get_instructions_from_secondaries(
+                state,
+                &choice,
+                secondaries_vec,
+                &attacking_side,
+                instructions,
+                hit_sub,
+            );
+            for branch in branches {
+                state.apply_instructions(&branch.instruction_list);
+                get_instructions_from_drag(state, &attacking_side, branch, final_instructions);
+            }
+            return;
+        }
         get_instructions_from_drag(state, &attacking_side, instructions, final_instructions);
         return;
     }
@@ -6638,7 +6689,12 @@ mod tests {
 
         let expected_instructions = vec![StateInstructions {
             percentage: 100.0,
-            instruction_list: vec![],
+            instruction_list: vec![Instruction::Boost(BoostInstruction {
+                // alpha-poke patch (L1): Defog lowers the target's evasion first
+                side_ref: SideReference::SideTwo,
+                stat: PokemonBoostableStat::Evasion,
+                amount: -1,
+            })],
         }];
 
         assert_eq!(instructions, expected_instructions)
@@ -6665,12 +6721,20 @@ mod tests {
 
         let expected_instructions = vec![StateInstructions {
             percentage: 100.0,
-            instruction_list: vec![Instruction::ChangeTerrain(ChangeTerrain {
-                new_terrain: Terrain::NONE,
-                new_terrain_turns_remaining: 0,
-                previous_terrain: Terrain::ELECTRICTERRAIN,
-                previous_terrain_turns_remaining: 1,
-            })],
+            instruction_list: vec![
+                Instruction::Boost(BoostInstruction {
+                    // alpha-poke patch (L1): Defog lowers the target's evasion first
+                    side_ref: SideReference::SideTwo,
+                    stat: PokemonBoostableStat::Evasion,
+                    amount: -1,
+                }),
+                Instruction::ChangeTerrain(ChangeTerrain {
+                    new_terrain: Terrain::NONE,
+                    new_terrain_turns_remaining: 0,
+                    previous_terrain: Terrain::ELECTRICTERRAIN,
+                    previous_terrain_turns_remaining: 1,
+                }),
+            ],
         }];
 
         assert_eq!(instructions, expected_instructions)
@@ -6700,6 +6764,12 @@ mod tests {
         let expected_instructions = vec![StateInstructions {
             percentage: 100.0,
             instruction_list: vec![
+                Instruction::Boost(BoostInstruction {
+                    // alpha-poke patch (L1): Defog lowers the target's evasion first
+                    side_ref: SideReference::SideTwo,
+                    stat: PokemonBoostableStat::Evasion,
+                    amount: -1,
+                }),
                 Instruction::ChangeTerrain(ChangeTerrain {
                     new_terrain: Terrain::NONE,
                     new_terrain_turns_remaining: 0,
@@ -9046,21 +9116,25 @@ mod tests {
 
         let expected_instructions = StateInstructions {
             percentage: 100.0 * (1.0 - HIT_SELF_IN_CONFUSION_CHANCE),
-            instruction_list: vec![Instruction::ChangeVolatileStatusDuration(ChangeVolatileStatusDurationInstruction {
+            instruction_list: vec![Instruction::ChangeVolatileStatusDuration(
+                ChangeVolatileStatusDurationInstruction {
                     side_ref: SideReference::SideOne,
                     volatile_status: PokemonVolatileStatus::CONFUSION,
                     amount: 1,
-                }),],
+                },
+            )],
         };
 
         let expected_frozen_instructions = &mut vec![StateInstructions {
             percentage: 100.0 * (HIT_SELF_IN_CONFUSION_CHANCE),
             instruction_list: vec![
-                Instruction::ChangeVolatileStatusDuration(ChangeVolatileStatusDurationInstruction {
-                    side_ref: SideReference::SideOne,
-                    volatile_status: PokemonVolatileStatus::CONFUSION,
-                    amount: 1,
-                }),
+                Instruction::ChangeVolatileStatusDuration(
+                    ChangeVolatileStatusDurationInstruction {
+                        side_ref: SideReference::SideOne,
+                        volatile_status: PokemonVolatileStatus::CONFUSION,
+                        amount: 1,
+                    },
+                ),
                 Instruction::Damage(DamageInstruction {
                     side_ref: SideReference::SideOne,
                     damage_amount: 35,
@@ -9102,11 +9176,13 @@ mod tests {
                     side_ref: SideReference::SideOne,
                     damage_amount: 1,
                 }),
-                Instruction::ChangeVolatileStatusDuration(ChangeVolatileStatusDurationInstruction {
-                    side_ref: SideReference::SideOne,
-                    volatile_status: PokemonVolatileStatus::CONFUSION,
-                    amount: 1,
-                }),
+                Instruction::ChangeVolatileStatusDuration(
+                    ChangeVolatileStatusDurationInstruction {
+                        side_ref: SideReference::SideOne,
+                        volatile_status: PokemonVolatileStatus::CONFUSION,
+                        amount: 1,
+                    },
+                ),
             ],
         };
 
@@ -9117,11 +9193,13 @@ mod tests {
                     side_ref: SideReference::SideOne,
                     damage_amount: 1,
                 }),
-                Instruction::ChangeVolatileStatusDuration(ChangeVolatileStatusDurationInstruction {
-                    side_ref: SideReference::SideOne,
-                    volatile_status: PokemonVolatileStatus::CONFUSION,
-                    amount: 1,
-                }),
+                Instruction::ChangeVolatileStatusDuration(
+                    ChangeVolatileStatusDurationInstruction {
+                        side_ref: SideReference::SideOne,
+                        volatile_status: PokemonVolatileStatus::CONFUSION,
+                        amount: 1,
+                    },
+                ),
                 Instruction::Damage(DamageInstruction {
                     side_ref: SideReference::SideOne,
                     damage_amount: 35,
@@ -9164,11 +9242,13 @@ mod tests {
                     side_ref: SideReference::SideOne,
                     damage_amount: 1,
                 }),
-                Instruction::ChangeVolatileStatusDuration(ChangeVolatileStatusDurationInstruction {
-                    side_ref: SideReference::SideOne,
-                    volatile_status: PokemonVolatileStatus::CONFUSION,
-                    amount: 1,
-                }),
+                Instruction::ChangeVolatileStatusDuration(
+                    ChangeVolatileStatusDurationInstruction {
+                        side_ref: SideReference::SideOne,
+                        volatile_status: PokemonVolatileStatus::CONFUSION,
+                        amount: 1,
+                    },
+                ),
             ],
         };
 
@@ -9179,11 +9259,13 @@ mod tests {
                     side_ref: SideReference::SideOne,
                     damage_amount: 1,
                 }),
-                Instruction::ChangeVolatileStatusDuration(ChangeVolatileStatusDurationInstruction {
-                    side_ref: SideReference::SideOne,
-                    volatile_status: PokemonVolatileStatus::CONFUSION,
-                    amount: 1,
-                }),
+                Instruction::ChangeVolatileStatusDuration(
+                    ChangeVolatileStatusDurationInstruction {
+                        side_ref: SideReference::SideOne,
+                        volatile_status: PokemonVolatileStatus::CONFUSION,
+                        amount: 1,
+                    },
+                ),
                 Instruction::Damage(DamageInstruction {
                     side_ref: SideReference::SideOne,
                     damage_amount: 2,
@@ -9216,11 +9298,12 @@ mod tests {
         state.side_one.volatile_status_durations.confusion = 2;
         let mut incoming_instructions = StateInstructions::default();
         let self_hit = HIT_SELF_IN_CONFUSION_CHANCE * (1.0 - 1.0 / 3.0);
-        let inc = Instruction::ChangeVolatileStatusDuration(ChangeVolatileStatusDurationInstruction {
-            side_ref: SideReference::SideOne,
-            volatile_status: PokemonVolatileStatus::CONFUSION,
-            amount: 1,
-        });
+        let inc =
+            Instruction::ChangeVolatileStatusDuration(ChangeVolatileStatusDurationInstruction {
+                side_ref: SideReference::SideOne,
+                volatile_status: PokemonVolatileStatus::CONFUSION,
+                amount: 1,
+            });
         let frozen_instructions = &mut vec![];
         generate_instructions_from_existing_status_conditions(
             &mut state,
@@ -9388,11 +9471,13 @@ mod tests {
                     new_turns: 0,
                     previous_turns: MAX_SLEEP_TURNS,
                 }),
-                Instruction::ChangeVolatileStatusDuration(ChangeVolatileStatusDurationInstruction {
-                    side_ref: SideReference::SideOne,
-                    volatile_status: PokemonVolatileStatus::CONFUSION,
-                    amount: 1,
-                }),
+                Instruction::ChangeVolatileStatusDuration(
+                    ChangeVolatileStatusDurationInstruction {
+                        side_ref: SideReference::SideOne,
+                        volatile_status: PokemonVolatileStatus::CONFUSION,
+                        amount: 1,
+                    },
+                ),
             ],
         };
 
@@ -9411,11 +9496,13 @@ mod tests {
                     new_turns: 0,
                     previous_turns: MAX_SLEEP_TURNS,
                 }),
-                Instruction::ChangeVolatileStatusDuration(ChangeVolatileStatusDurationInstruction {
-                    side_ref: SideReference::SideOne,
-                    volatile_status: PokemonVolatileStatus::CONFUSION,
-                    amount: 1,
-                }),
+                Instruction::ChangeVolatileStatusDuration(
+                    ChangeVolatileStatusDurationInstruction {
+                        side_ref: SideReference::SideOne,
+                        volatile_status: PokemonVolatileStatus::CONFUSION,
+                        amount: 1,
+                    },
+                ),
                 Instruction::Damage(DamageInstruction {
                     side_ref: SideReference::SideOne,
                     damage_amount: 35,
@@ -10350,7 +10437,7 @@ mod tests {
             percentage: 100.0,
             instruction_list: vec![Instruction::Damage(DamageInstruction {
                 side_ref: SideReference::SideOne,
-                damage_amount: 6,
+                damage_amount: 12, // alpha-poke patch (L9): 1/8 (was 1/16)
             })],
         };
 

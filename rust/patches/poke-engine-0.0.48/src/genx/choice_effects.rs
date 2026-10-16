@@ -41,6 +41,35 @@ pub fn modify_choice(
 ) {
     let (attacking_side, defending_side) = state.get_both_sides_immutable(attacking_side_ref);
     match attacker_choice.move_id {
+        // alpha-poke patch (2026-10-16, doc/engine-diff.md L2a / L2b): Curse by a Ghost type
+        // curses the target (no boosts; fails on a cursed target) and costs the user half of its
+        // max HP (Showdown's curse onTryHit / onHit); by any other type it only boosts (the data's
+        // "curse" volatile on the user is removed: it has no effect in Showdown)
+        Choices::CURSE => {
+            if attacking_side
+                .get_active_immutable()
+                .has_type(&PokemonType::GHOST)
+            {
+                attacker_choice.boost = None;
+                if defending_side
+                    .volatile_statuses
+                    .contains(&PokemonVolatileStatus::CURSE)
+                {
+                    attacker_choice.volatile_status = None;
+                } else {
+                    attacker_choice.volatile_status = Some(crate::choices::VolatileStatus {
+                        target: MoveTarget::Opponent,
+                        volatile_status: PokemonVolatileStatus::CURSE,
+                    });
+                    attacker_choice.heal = Some(Heal {
+                        target: MoveTarget::User,
+                        amount: -0.5,
+                    });
+                }
+            } else {
+                attacker_choice.volatile_status = None;
+            }
+        }
         Choices::ROOST => {
             let attacker = attacking_side.get_active_immutable();
             if attacker.hp == attacker.maxhp {
@@ -1086,6 +1115,24 @@ pub fn choice_hazard_clear(
         Choices::DEFOG
             if defending_side.get_active_immutable().ability != Abilities::GOODASGOLD =>
         {
+            // alpha-poke patch (2026-10-16, doc/engine-diff.md L1): the target's evasion -1 first,
+            // unless a substitute blocks it (Showdown's defog onHit; the engine's StatBoosts have
+            // no evasion, so the move's data could not say it)
+            let target_ref = attacking_side_ref.get_other_side();
+            let target_side = state.get_side(&target_ref);
+            if !target_side
+                .volatile_statuses
+                .contains(&PokemonVolatileStatus::SUBSTITUTE)
+            {
+                apply_boost_instruction(
+                    target_side,
+                    &PokemonBoostableStat::Evasion,
+                    &-1,
+                    attacking_side_ref,
+                    &target_ref,
+                    instructions,
+                );
+            }
             if state.terrain.terrain_type != Terrain::NONE {
                 instructions
                     .instruction_list

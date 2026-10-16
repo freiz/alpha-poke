@@ -69,6 +69,11 @@ BOOSTS |= {getattr(Effect, n): n.replace("_", "").lower() for n in (
     "TYPECHANGE", "HEAL_BLOCK", "CHARGE", "FLASH_FIRE", "CURSE", "MAGNET_RISE", "THROAT_CHOP",
     "FOCUS_ENERGY", "SMACK_DOWN", "ATTRACT", "NO_RETREAT", "TAR_SHOT", "AQUA_RING", "INGRAIN",
     "GLAIVE_RUSH", "OCTOLOCK", "TORMENT", "GASTRO_ACID", "SYRUP_BOMB")}  # fmt: skip
+# partial trapping (doc/engine-diff.md L2c, 2026-10-16: left out until then -- the search did not
+# see the trapped mon unable to switch nor its 1/8 per turn): poke-env names it after the move
+BOOSTS |= {getattr(Effect, n): "partiallytrapped" for n in (
+    "BIND", "WRAP", "FIRE_SPIN", "WHIRLPOOL", "SAND_TOMB", "MAGMA_STORM", "INFESTATION",
+    "SNAP_TRAP", "THUNDER_CAGE", "CLAMP", "PARTIALLY_TRAPPED") if hasattr(Effect, n)}  # fmt: skip
 _MOVES = GEN.moves
 PERISH = {getattr(Effect, f"PERISH{n}"): n for n in (1, 2, 3)}
 SCREENS = {"reflect", "lightscreen", "auroraveil"}
@@ -722,15 +727,23 @@ def build_state(
         **their_last,
         **(_boosts(opp_active) if opp_active is not None else {}),
     )
+
+    def field_left(kind: str, start: int) -> int:
+        # ends of turn counted by the timers (doc/engine-diff.md L3); poke-env's start turn only
+        # if the log never showed it start
+        length = ext.get(kind, 5)
+        n = tm_us.fields_elapsed.get(kind)
+        return _remaining(start, turn, length) if n is None else max(1, length - n)
+
     weather, wturns = "none", 0
     if battle.weather:
         w, start = next(iter(battle.weather.items()))
-        weather, wturns = WEATHER.get(w, "none"), _remaining(start, turn, ext.get("weather", 5))
+        weather, wturns = WEATHER.get(w, "none"), field_left("weather", start)
     terrain, tturns = "none", 0
     trick_room, trturns = False, 0
     for f, start in battle.fields.items():
         if f in TERRAIN:
-            terrain, tturns = TERRAIN[f], _remaining(start, turn, ext.get("terrain", 5))
+            terrain, tturns = TERRAIN[f], field_left("terrain", start)
         if f == Field.TRICK_ROOM:
             trick_room, trturns = True, _remaining(start, turn)
     return pe.State(

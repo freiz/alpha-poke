@@ -90,10 +90,11 @@ def test_light_clay_reflect(belief):
 
 
 def test_heat_rock_drought(belief):
-    b = battle(["|-weather|SunnyDay|[from] ability: Drought|[of] p1a: Torkoal", "|turn|2"],
-               us="Torkoal", item="heatrock", ability="drought",
+    # set during turn 1, one end of turn since (the timers count the ends of turn:
+    # doc/engine-diff.md L3; a real log has an "|upkeep|" at every end of turn)
+    b = battle(["|-weather|SunnyDay|[from] ability: Drought|[of] p1a: Torkoal", "|upkeep|",
+                "|turn|2"], us="Torkoal", item="heatrock", ability="drought",
                moves=("lavaplume", "rapidspin", "yawn", "stealthrock"))  # fmt: skip
-    b._weather = {next(iter(b.weather)): 1}  # set on turn 1
     assert state(b, belief).weather_turns_remaining == 8 - 1
 
 

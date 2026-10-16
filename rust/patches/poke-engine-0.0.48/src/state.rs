@@ -1215,10 +1215,10 @@ impl Side {
         let split: Vec<&str> = serialized.split("=").collect();
 
         let mut vs_bitset = VolatileStatusBitset::default();
-        if split[8] != "" {
-            for item in split[8].split(":") {
-                vs_bitset.insert(PokemonVolatileStatus::from_str(item).unwrap());
-            }
+        // alpha-poke patch (2026-10-16, doc/engine-diff.md L4): serialize writes "X:" (a ':'
+        // after every volatile), so the last item is empty; it used to parse as NONE (bit 0)
+        for item in split[8].split(":").filter(|x| !x.is_empty()) {
+            vs_bitset.insert(PokemonVolatileStatus::from_str(item).unwrap());
         }
         Side {
             pokemon: SidePokemon {

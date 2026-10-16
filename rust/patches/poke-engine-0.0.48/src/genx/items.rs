@@ -471,13 +471,15 @@ fn cure_volatiles_item(
             _ => continue,
         };
         if *duration != 0 {
-            instructions.instruction_list.push(Instruction::ChangeVolatileStatusDuration(
-                ChangeVolatileStatusDurationInstruction {
-                    side_ref: *side_ref,
-                    volatile_status: *v,
-                    amount: -*duration,
-                },
-            ));
+            instructions
+                .instruction_list
+                .push(Instruction::ChangeVolatileStatusDuration(
+                    ChangeVolatileStatusDurationInstruction {
+                        side_ref: *side_ref,
+                        volatile_status: *v,
+                        amount: -*duration,
+                    },
+                ));
             *duration = 0;
         }
     }
@@ -847,15 +849,13 @@ pub fn item_before_move(
         Items::ASPEARBERRY if active_pkmn.status == PokemonStatus::FREEZE => {
             status_berry(side_ref, attacking_side, Items::ASPEARBERRY, instructions)
         }
-        Items::PERSIMBERRY if confused => {
-            cure_volatiles_item(
-                side_ref,
-                attacking_side,
-                Items::PERSIMBERRY,
-                &[PokemonVolatileStatus::CONFUSION],
-                instructions,
-            )
-        }
+        Items::PERSIMBERRY if confused => cure_volatiles_item(
+            side_ref,
+            attacking_side,
+            Items::PERSIMBERRY,
+            &[PokemonVolatileStatus::CONFUSION],
+            instructions,
+        ),
         Items::MENTALHERB if mental_herb_cures => cure_volatiles_item(
             side_ref,
             attacking_side,
@@ -1030,15 +1030,13 @@ pub fn item_end_of_turn(
         Items::ASPEARBERRY if active_pkmn.status == PokemonStatus::FREEZE => {
             status_berry(side_ref, attacking_side, Items::ASPEARBERRY, instructions)
         }
-        Items::PERSIMBERRY if confused => {
-            cure_volatiles_item(
-                side_ref,
-                attacking_side,
-                Items::PERSIMBERRY,
-                &[PokemonVolatileStatus::CONFUSION],
-                instructions,
-            )
-        }
+        Items::PERSIMBERRY if confused => cure_volatiles_item(
+            side_ref,
+            attacking_side,
+            Items::PERSIMBERRY,
+            &[PokemonVolatileStatus::CONFUSION],
+            instructions,
+        ),
         Items::MENTALHERB if mental_herb_cures => cure_volatiles_item(
             side_ref,
             attacking_side,
@@ -1065,8 +1063,10 @@ pub fn item_end_of_turn(
                     instructions.instruction_list.push(ins);
                 }
             } else {
-                let damage_amount =
-                    cmp::min(active_pkmn.maxhp / 16, active_pkmn.maxhp - active_pkmn.hp);
+                // alpha-poke patch (2026-10-16, doc/engine-diff.md L9): a non-Poison holder loses
+                // 1/8 of its max HP (Showdown: this.damage(baseMaxhp / 8), at least 1), also at
+                // full HP; was min(maxhp / 16, maxhp - hp), the heal's formula
+                let damage_amount = cmp::min(cmp::max(active_pkmn.maxhp / 8, 1), active_pkmn.hp);
                 let ins = Instruction::Damage(DamageInstruction {
                     side_ref: side_ref.clone(),
                     damage_amount: damage_amount,

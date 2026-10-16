@@ -54,8 +54,7 @@ def test_control_spikes_and_roost_agree():
     assert ec.closest(states[1], outs, (1, 1))["diff"] == {}
 
 
-@pytest.mark.xfail(strict=True, reason="L1 (doc/engine-diff.md): poke-engine's Defog does not "
-                                       "lower the target's evasion")  # fmt: skip
+# L1 (doc/engine-diff.md): fixed in rust/patches (2026-10-16); a regression test now
 def test_l1_defog_lowers_evasion():
     states, outs = first_turn("move defog", "move spikes", "defog", "spikes")
     assert states[1]["sides"][1]["mons"][0]["boosts"]["evasion"] == -1  # Showdown
@@ -68,10 +67,7 @@ def test_control_volatile_of_engine_state_string():
     assert pe.State.from_string(s.to_string()).side_one.volatile_statuses == set()
 
 
-L4 = "L4 (doc/engine-diff.md): a volatile serializes as 'SALTCURE:', parses back with a NONE"
-
-
-@pytest.mark.xfail(strict=True, reason=L4)
+# L4 (doc/engine-diff.md): fixed 2026-10-16; a regression test now
 def test_l4_volatile_roundtrip():
     s = pe.State(side_one=pe.Side(pokemon=[pe.Pokemon.create_fainted()] * 6,
                                   volatile_statuses={"saltcure"}))  # fmt: skip
@@ -133,9 +129,7 @@ def test_control_salt_cure_and_infestation_agree():
         assert ec.closest(states[1], outs, (1, 1))["diff"] == {}, move
 
 
-@pytest.mark.xfail(strict=True, reason="L2a (doc/engine-diff.md): poke-engine has only the "
-                                       "non-Ghost Curse (boosts, no HP cost, no curse on the "
-                                       "target)")  # fmt: skip
+# L2a (doc/engine-diff.md): fixed in rust/patches (2026-10-16); a regression test now
 def test_l2a_ghost_curse():
     states, outs = first_turn("move curse", "move spikes", "curse", "spikes", p1=SKELEDIRGE,
                               force_random=True)  # fmt: skip
@@ -143,16 +137,14 @@ def test_l2a_ghost_curse():
     assert ec.closest(states[1], outs, (1, 1))["diff"] == {}
 
 
-@pytest.mark.xfail(strict=True, reason="L2b (doc/engine-diff.md): poke-engine's non-Ghost Curse "
-                                       "also puts a (harmless) curse on the user")  # fmt: skip
+# L2b (doc/engine-diff.md): fixed in rust/patches (2026-10-16); a regression test now
 def test_l2b_non_ghost_curse_no_volatile():
     states, outs = first_turn("move curse", "move spikes", "curse", "spikes", p1=URSALUNA)
     assert states[1]["sides"][0]["mons"][0]["volatiles"] == {}  # Showdown
     assert ec.closest(states[1], outs, (1, 1))["diff"] == {}
 
 
-@pytest.mark.xfail(strict=True, reason="L2d (doc/engine-diff.md): poke-engine applies Salt "
-                                       "Cure's volatile through a Substitute")  # fmt: skip
+# L2d (doc/engine-diff.md): fixed in rust/patches (2026-10-16); a regression test now
 def test_l2d_salt_cure_blocked_by_substitute():
     states, outs = first_turn("move saltcure", "move substitute", "saltcure", "substitute",
                               p1=GARGANACL, p2=KYUREM, force_random=True)  # fmt: skip
@@ -188,8 +180,7 @@ def test_control_built_state_salt_cure_and_curse(belief):
         assert truth == own == opp, (move, truth, own, opp)
 
 
-@pytest.mark.xfail(strict=True, reason="L2c (doc/engine-diff.md): build_state leaves out partial "
-                                       "trapping (Infestation, Whirlpool, ...)")  # fmt: skip
+# L2c (doc/engine-diff.md): fixed 2026-10-16; a regression test now
 def test_l2c_built_state_partial_trap(belief):
     truth, own, opp = built_volatiles(TOXAPEX, "infestation", belief)
     assert truth == {"partiallytrapped"}
@@ -225,9 +216,9 @@ Bold Nature
 - Calm Mind"""
 
 
-def field_turns(lead: str, kind: str, n: int, belief) -> tuple[list, list, list]:
-    """(Showdown's remaining turns of the weather / terrain set by ``lead`` at each of n turns,
-    poke-engine's next value from Showdown's state, ours built from p2's view)."""
+def field_turns(lead: str, kind: str, n: int, belief, view: str = "p2") -> tuple[list, list, list]:
+    """(Showdown's remaining turns of the weather / terrain set by ``lead`` (p1) at each of n
+    turns, poke-engine's next value from Showdown's state, ours built from ``view``'s side)."""
     states = ec.run_showdown(lead, BLISSEY, [("move protect", "move calmmind")] * n,
                              fmt="gen9ou")  # fmt: skip
     sd = [s["field"][f"{kind}_duration"] for s in states]
@@ -236,7 +227,7 @@ def field_turns(lead: str, kind: str, n: int, belief) -> tuple[list, list, list]
     for k in range(n):
         outs = ec.engine_outcomes(ec.engine_state(states[k]), "protect", "calmmind")
         eng.append(getattr(max(outs, key=lambda o: o[0])[1], attr))
-    built = [getattr(ec.built_state(states, k, "p2", belief), attr) for k in range(n + 1)]
+    built = [getattr(ec.built_state(states, k, view, belief), attr) for k in range(n + 1)]
     return sd, eng, built
 
 
@@ -246,17 +237,22 @@ def test_control_engine_weather_and_terrain_turns(belief):
         assert eng == [max(d - 1, 0) for d in sd[:-1]], (kind, sd, eng)
 
 
-@pytest.mark.xfail(strict=True, reason="L3a (doc/engine-diff.md): the built weather's remaining "
-                                       "turns stay at 4 (poke-env restarts the weather at every "
-                                       "upkeep message)")  # fmt: skip
+# L3a (doc/engine-diff.md): fixed 2026-10-16; a regression test now
 def test_l3a_built_weather_turns(belief):
-    sd, _, built = field_turns(TYRANITAR, "weather", 9, belief)
+    # the setter's own side knows its Smooth Rock: exactly Showdown's turns
+    sd, _, built = field_turns(TYRANITAR, "weather", 9, belief, view="p1")
     assert sd[:9] == [8, 7, 6, 5, 4, 3, 2, 1, 0]  # Showdown: Smooth Rock, 8 turns
     assert built == sd
+    # the other side does not (the rock is never revealed): a belief sample, but the weather's
+    # turns count down every turn and it ends when Showdown's does
+    _, _, opp = field_turns(TYRANITAR, "weather", 9, belief, view="p2")
+    seq = opp[:8]
+    assert seq[0] in (5, 8), opp
+    assert all(b == max(a - 1, 1) for a, b in zip(seq, seq[1:], strict=False)), opp
+    assert opp[8:] == [0, 0], opp
 
 
-@pytest.mark.xfail(strict=True, reason="L3b (doc/engine-diff.md): a terrain set by a lead is "
-                                       "built one turn short")  # fmt: skip
+# L3b (doc/engine-diff.md): fixed 2026-10-16; a regression test now
 def test_l3b_built_terrain_turns(belief):
     sd, _, built = field_turns(RILLABOOM, "terrain", 6, belief)
     assert sd == [5, 4, 3, 2, 1, 0, 0]
@@ -287,9 +283,7 @@ def test_control_hp_salt_cure_infestation_roost_earthquake():
         assert ec.closest(states[-1], outs, (1, 1), hp=True)["diff"] == {}, last
 
 
-@pytest.mark.xfail(strict=True, reason="L9 (doc/engine-diff.md): Black Sludge on a non-Poison "
-                                       "holder takes 1/16 (none at full HP) in poke-engine, 1/8 "
-                                       "in Showdown")  # fmt: skip
+# L9 (doc/engine-diff.md): fixed in rust/patches (2026-10-16); a regression test now
 def test_l9_black_sludge_non_poison():
     states = ec.run_showdown(DRAGAPULT_SLUDGE, BLISSEY, [("move willowisp", "move protect")])
     assert states[1]["sides"][0]["mons"][0]["hp"] == 317 - 317 // 8  # Showdown: 1/8 at full HP
@@ -345,17 +339,14 @@ def test_control_static_and_rocky_helmet_on_a_contact_move():
     assert res["diff"] == {}
 
 
-L7 = "L7 (doc/engine-diff.md): a drag move (Dragon Tail) skips the target's contact effects"
-
-
-@pytest.mark.xfail(strict=True, reason=f"{L7} (Static)")
+# L7 (doc/engine-diff.md): fixed in rust/patches (2026-10-16); a regression test now
 def test_l7_static_on_dragon_tail():
     states, res = contact_case(ZAPDOS_STATIC, "dragontail", force_random=True)
     assert states[1]["sides"][1]["mons"][0]["status"] == "par"  # Showdown: Static
     assert res["diff"] == {}
 
 
-@pytest.mark.xfail(strict=True, reason=f"{L7} (Rocky Helmet)")
+# L7 (doc/engine-diff.md): fixed in rust/patches (2026-10-16); a regression test now
 def test_l7_rocky_helmet_on_dragon_tail():
     states, res = contact_case(CORVIKNIGHT_HELMET, "dragontail", seed="gen5,9,9,9,9")
     assert states[1]["sides"][1]["mons"][0]["hp"] < 386  # Showdown: the helmet hit

@@ -96,7 +96,9 @@ def _engine_side(s: dict) -> pe.Side:
     kw: dict = {}
     if act is not None:
         kw = {ENGINE_BOOST[b]: act["boosts"][b] for b in BOOSTS}
-        vol = {v for v in act["volatiles"] if _engine_volatile(v)}
+        names = [x + st["stat"] if x in ("protosynthesis", "quarkdrive") and st.get("stat") else x
+                 for x, st in act["volatiles"].items()]  # fmt: skip
+        vol = {v for v in names if _engine_volatile(v) and v != "stall"}
         kw["volatile_statuses"] = vol
         if act["status"] == "tox":
             sc["toxic_count"] = act["status_state"]["stage"]
@@ -160,7 +162,11 @@ def view(sd: dict) -> dict:
         if act is not None:
             for b in BOOSTS:
                 v[f"{k}.boost.{b}"] = act["boosts"][b]
-            for x in act["volatiles"]:
+            for x, st in act["volatiles"].items():
+                # Protosynthesis / Quark Drive: one volatile in Showdown (the stat in its state),
+                # one per stat in the engine ("protosynthesisatk")
+                if x in ("protosynthesis", "quarkdrive") and st.get("stat"):
+                    x += st["stat"]
                 # (Protect's counter: Showdown's "stall" volatile, the engine's protect side
                 # condition -- not compared as a volatile)
                 if _engine_volatile(x) and x != "stall":

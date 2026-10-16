@@ -27,6 +27,11 @@ sides, in poke-engine's own units (rust/patches/poke-engine-0.0.48, generate_ins
   sub_hit     the active's Substitute took a hit and stands (its HP below a quarter)
   setters     who set the weather / terrain / a side's screens: (side, species id), for an
               extending item (Light Clay, Heat Rock, ...: 8 turns)
+  fields_elapsed
+              "weather" / "terrain" -> ends of turn since it started (both sides keep the same
+              count; 2026-10-16, doc/engine-diff.md L3: the remaining turns were reckoned from
+              poke-env's start turn, which every "[upkeep]" message reset -- weather always 4
+              left -- and a lead's terrain was one turn short)
 
 Without them every search started from "just happened": a Rest sleeper about to wake stayed
 asleep, toxic did 1/16 at any stage, a second Protect always worked, a pending Wish never
@@ -62,6 +67,7 @@ class SideTimers:
     # what this side set: "weather" / "terrain" -> (its id, the setter's species id); a screen
     # id (reflect, lightscreen, auroraveil) -> the setter's species id
     setters: dict = field(default_factory=dict)
+    fields_elapsed: dict = field(default_factory=dict)  # "weather" / "terrain" -> ends of turn
     status: dict = field(default_factory=dict)  # species id -> status ('tox', 'slp', ...)
     sleep: dict = field(default_factory=dict)  # species id -> [attempts, rest]
     names: dict = field(default_factory=dict)  # nickname -> species id
@@ -109,11 +115,23 @@ def _feed(sides: dict, p: list[str]) -> None:
             for k in ("healblock", "throatchop", "magnetrise"):
                 if getattr(st, k) is not None:
                     setattr(st, k, getattr(st, k) + 1)
+            for k in st.fields_elapsed:
+                st.fields_elapsed[k] += 1
         return
     if tag in ("-weather", "-fieldstart") and len(p) > 2 and "[upkeep]" not in p:
         what = to_id(p[2].replace("move: ", ""))
         if tag == "-weather" or what.endswith("terrain"):
-            _set_by(sides, p, "weather" if tag == "-weather" else "terrain", what)
+            kind = "weather" if tag == "-weather" else "terrain"
+            _set_by(sides, p, kind, what)
+            for st in sides.values():
+                if what == "none":
+                    st.fields_elapsed.pop(kind, None)
+                else:
+                    st.fields_elapsed[kind] = 0
+        return
+    if tag == "-fieldend" and len(p) > 2 and to_id(p[2].replace("move: ", "")).endswith("terrain"):
+        for st in sides.values():
+            st.fields_elapsed.pop("terrain", None)
         return
     st, sp = _who(p, sides)
     if st is None:

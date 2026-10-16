@@ -305,7 +305,11 @@ fn side_global(s: &Side, g: &mut Vec<f32>) {
     }
     g.push(s.force_switch as u8 as f32);
     g.push(s.force_trapped as u8 as f32);
-    for bit in 0..104 {
+    // bit 0 (NONE): "any volatile status" -- what it meant in every state parsed from a string
+    // until 2026-10-16 (doc/engine-diff.md L4: a parsing artifact set it whenever another
+    // volatile was there); the networks were trained on it, so it keeps that meaning
+    g.push((s.volatile_statuses.0 != 0) as u8 as f32);
+    for bit in 1..104 {
         g.push(((s.volatile_statuses.0 >> bit) & 1) as f32);
     }
 }
