@@ -367,3 +367,327 @@ def test_control_faint_stops_at_the_forced_switch():
     outs = ec.engine_outcomes(ec.engine_state(states[k - 1]), "bodypress", "spikes")
     fainted = [o for o in outs if o[1].side_two.pokemon[0].hp == 0]
     assert fainted and all(int(o[1].side_two.active_index) == 0 for o in fainted)
+
+
+# L11 (doc/engine-diff.md): fixed in rust/patches (2026-10-16); a regression test now
+def test_l11_spikes_two_layers():
+    p1 = CORVIKNIGHT + "\n\n" + BLISSEY.replace("Heavy-Duty Boots", "Leftovers")
+    turns = [("move roost", "move spikes")] * 2 + [("switch 2", "move spikes")]
+    states = ec.run_showdown(p1, TINGLU, turns)
+    assert states[2]["sides"][0]["conditions"]["spikes"]["layers"] == 2
+    assert "|-damage|p1a: Blissey|595/714|[from] Spikes" in states[3]["log"]  # Showdown: 1/6
+    outs = ec.engine_outcomes(ec.engine_state(states[2]), "blissey", "spikes")
+    assert ec.closest(states[3], outs, (2, 1), hp=True)["diff"] == {}
+
+
+FERROTHORN = """Ferrothorn @ Rocky Helmet
+Ability: Iron Barbs
+Tera Type: Water
+EVs: 252 HP / 4 Atk / 252 SpD
+Careful Nature
+- Leech Seed
+- Protect
+- Gyro Ball
+- Spikes"""
+
+
+# L12 (doc/engine-diff.md): fixed in rust/patches (2026-10-16); a regression test now
+@pytest.mark.parametrize("p1, move", [(CORVIKNIGHT, "roost"), (FERROTHORN, "leechseed")])
+def test_l12_heal_before_status_damage(p1, move):
+    """At full HP, Leftovers / Leech Seed's heal (Showdown's residual orders 5 / 8) come before
+    the burn (10): nothing to heal, then the burn's 1/16."""
+    states = ec.run_showdown(p1, DRAGAPULT_SLUDGE, [(f"move {move}", "move willowisp")],
+                             force_random=True)  # fmt: skip
+    m = states[1]["sides"][0]["mons"][0]
+    assert m["status"] == "brn" and m["hp"] == m["maxhp"] - m["maxhp"] // 16  # Showdown
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), move, "willowisp")
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L13 (doc/engine-diff.md): fixed 2026-10-16 (engine, state construction); a regression test now
+def test_l13_partial_trap_ends(belief):
+    turns = [("move infestation", "move spikes")] + [("move recover", "move spikes")] * 6
+    states = ec.run_showdown(TOXAPEX, TINGLU, turns, seed="gen5,3,3,3,3")
+    trapped = ["partiallytrapped" in s["sides"][1]["mons"][0]["volatiles"] for s in states]
+    assert trapped == [False] + [True] * 4 + [False] * 3  # Showdown: 4 ends of turn (5 or 6)
+    for k in range(1, len(states) - 1):
+        outs = ec.engine_outcomes(ec.engine_state(states[k]), "recover", "spikes")
+        assert ec.closest(states[k + 1], outs, (1, 1), hp=True)["diff"] == {}, k
+    # our state construction counts the trap's ends of turn as the harness does (the engine from
+    # those counts ends it when Showdown does: the loop above), from either side's view
+    # (2026-10-16: a cap of 3 kept it one turn too long, found by the differential on new games)
+    for k in range(1, 5):
+        sd = ec.engine_state(states[k]).side_two.volatile_status_durations.partiallytrapped
+        own = ec.built_state(states, k, "p2", belief).side_one.volatile_status_durations
+        opp = ec.built_state(states, k, "p1", belief).side_two.volatile_status_durations
+        assert own.partiallytrapped == opp.partiallytrapped == sd == k, k
+
+
+CORVIKNIGHT_PROTECT = CORVIKNIGHT.replace("- Roost", "- Protect")
+
+
+# L14 (doc/engine-diff.md): fixed in rust/patches (2026-10-16); a regression test now
+@pytest.mark.parametrize("p1, move, p2, answer, force", [
+    (BLISSEY, "seismictoss", CORVIKNIGHT_PROTECT, "protect", None),
+    (BLISSEY, "seismictoss", KYUREM, "substitute", None),
+    (TINGLU, "ruination", CORVIKNIGHT_PROTECT, "protect", None),
+    (TINGLU, "ruination", KYUREM, "substitute", None),
+    (TINGLU, "ruination", BLISSEY, "calmmind", False),  # Showdown: every chance fails, a miss
+])  # fmt: skip
+def test_l14_fixed_damage_checks(p1, move, p2, answer, force):
+    """Seismic Toss / Night Shade and the halving moves (Ruination, Super Fang, Nature's
+    Madness) miss, are blocked by Protect and hit a Substitute like any damaging move."""
+    states = ec.run_showdown(p1, p2, [(f"move {move}", f"move {answer}")], force_random=force)
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), move, answer)
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+SLOWKING_FUTURE = """Slowking-Galar @ Heavy-Duty Boots
+Ability: Regenerator
+Tera Type: Water
+EVs: 248 HP / 8 Def / 252 SpA
+Modest Nature
+- Future Sight
+- Sludge Bomb
+- Chilly Reception
+- Slack Off"""
+CHANSEY = """Chansey @ Eviolite
+Ability: Natural Cure
+Tera Type: Fairy
+EVs: 248 HP / 252 Def / 8 SpD
+Bold Nature
+- Seismic Toss
+- Soft-Boiled
+- Calm Mind
+- Protect"""
+
+
+def test_control_future_sight():
+    turns = [("move futuresight", "move defog")] + [("move slackoff", "move defog")] * 2
+    states = ec.run_showdown(SLOWKING_FUTURE, CORVIKNIGHT, turns, seed="gen5,5,5,5,5")
+    assert "|-end|p2a: Corviknight|move: Future Sight" in states[3]["log"]  # Showdown: it hit
+    outs = ec.engine_outcomes(ec.engine_state(states[2]), "slackoff", "defog")
+    assert ec.closest(states[3], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L15 (doc/engine-diff.md): fixed in rust/patches (2026-10-16); a regression test now
+@pytest.mark.parametrize("target, answer", [(CHANSEY, "softboiled"), (BLISSEY, "calmmind")])
+def test_l15_future_sight_defender(target, answer):
+    """Future Sight's damage is a special move's at the hit: the target's Special Defense boosts
+    (Calm Mind) and Eviolite count."""
+    turns = [("move futuresight", f"move {answer}")] + [("move slackoff", f"move {answer}")] * 2
+    states = ec.run_showdown(SLOWKING_FUTURE, target, turns, seed="gen5,5,5,5,5")
+    assert any(x.endswith("move: Future Sight") for x in states[3]["log"])  # Showdown: it hit
+    outs = ec.engine_outcomes(ec.engine_state(states[2]), "slackoff", answer)
+    assert ec.closest(states[3], outs, (1, 1), hp=True)["diff"] == {}
+
+
+WEEZING = """Weezing-Galar @ Leftovers
+Ability: Neutralizing Gas
+Tera Type: Steel
+EVs: 252 HP / 252 Def / 4 SpD
+Bold Nature
+- Will-O-Wisp
+- Protect
+- Strange Steam
+- Pain Split"""
+GHOLDENGO_TRICK = """Gholdengo @ Choice Scarf
+Ability: Good as Gold
+Tera Type: Steel
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Trick
+- Shadow Ball
+- Make It Rain
+- Focus Blast"""
+
+
+# L16a (doc/engine-diff.md): fixed in rust/patches (2026-10-16); a regression test now
+def test_l16a_pain_split_max_hp():
+    states = ec.run_showdown(WEEZING, TINGLU, [("move painsplit", "move spikes")])
+    assert states[1]["sides"][0]["mons"][0]["hp"] == 334  # Showdown: at most the max HP
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "painsplit", "spikes")
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L16b (doc/engine-diff.md): fixed in rust/patches (2026-10-16); a regression test now
+@pytest.mark.parametrize("p1, move, pre", [
+    (WEEZING, "painsplit", [("move protect", "move bravebird")]),  # Weezing below its max HP
+    (GHOLDENGO_TRICK, "trick", []),
+])  # fmt: skip
+def test_l16b_special_moves_blocked_by_protect(p1, move, pre):
+    states = ec.run_showdown(p1, CORVIKNIGHT_PROTECT, pre + [(f"move {move}", "move protect")],
+                             seed="gen5,6,6,6,6")  # fmt: skip
+    assert "|-activate|p2a: Corviknight|move: Protect" in states[-1]["log"]  # Showdown: blocked
+    outs = ec.engine_outcomes(ec.engine_state(states[-2]), move, "protect")
+    assert ec.closest(states[-1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+GLIMMORA_SASH = """Glimmora @ Focus Sash
+Ability: Toxic Debris
+Tera Type: Ghost
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Mortal Spin
+- Power Gem
+- Earth Power
+- Spikes"""
+
+
+# L17 (doc/engine-diff.md): fixed in rust/patches (2026-10-16); a regression test now
+def test_l17_focus_sash_used_up():
+    states = ec.run_showdown(GLIMMORA_SASH, TINGLU, [("move spikes", "move earthquake")])
+    m = states[1]["sides"][0]["mons"][0]
+    assert m["hp"] == 1 and m["item"] == ""  # Showdown: survived on the sash, which is gone
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "spikes", "earthquake")
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+ZAMAZENTA = """Zamazenta @ Leftovers
+Ability: Dauntless Shield
+Tera Type: Fire
+EVs: 252 HP / 4 Atk / 252 Spe
+Jolly Nature
+- Body Press
+- Iron Defense
+- Crunch
+- Roar"""
+
+
+def zamazenta_back():
+    p1 = ZAMAZENTA + "\n\n" + CORVIKNIGHT
+    turns = [("switch 2", "move spikes"), ("switch 2", "move spikes")]
+    return ec.run_showdown(p1, TINGLU, turns, fmt="gen9ou")
+
+
+# L18 (doc/engine-diff.md): fixed 2026-10-16 (engine, state construction); a regression test now
+def test_l18_dauntless_shield_once(belief):
+    states = zamazenta_back()
+    assert states[0]["sides"][0]["mons"][0]["boosts"]["def"] == 1  # Showdown: the first time
+    assert states[2]["sides"][0]["mons"][0]["boosts"]["def"] == 0  # ... and not again
+    outs = ec.engine_outcomes(ec.engine_state(states[1]), "zamazenta", "spikes")
+    assert ec.closest(states[2], outs, (2, 1), hp=True)["diff"] == {}
+    # our state construction marks it used, from either side's view
+    own = ec.built_state(states, 1, "p1", belief).side_one.pokemon[0]
+    opp = ec.built_state(states, 1, "p2", belief).side_two
+    opp = next(p for p in opp.pokemon if str(p.id).lower() == "zamazenta")
+    assert str(own.base_ability).lower() == str(opp.base_ability).lower() == "none"
+    assert str(own.ability).lower() == str(opp.ability).lower() == "dauntlessshield"
+
+
+HATTERENE = """Hatterene @ Life Orb
+Ability: Magic Bounce
+Tera Type: Fairy
+EVs: 252 SpA / 4 SpD / 252 Spe
+Modest Nature
+- Psychic Noise
+- Draining Kiss
+- Calm Mind
+- Mystical Fire"""
+
+
+# L1b (doc/engine-diff.md): fixed in rust/patches (2026-10-16); a regression test now
+def test_l1b_defog_magic_bounce():
+    states, outs = first_turn("move calmmind", "move defog", "calmmind", "defog", p1=HATTERENE,
+                              p2=CORVIKNIGHT)  # fmt: skip
+    assert states[1]["sides"][1]["mons"][0]["boosts"]["evasion"] == -1  # Showdown: bounced
+    assert ec.closest(states[1], outs, (1, 1))["diff"] == {}
+
+
+# L19 (doc/engine-diff.md): fixed in rust/patches (2026-10-16); a regression test now
+@pytest.mark.parametrize("p2, move", [
+    (CORVIKNIGHT, "bravebird"),  # Leftovers
+    (TOXAPEX, "haze"),  # Black Sludge (drain moves: Showdown's Heal Block disables them)
+])  # fmt: skip
+def test_l19_heal_block_stops_all_healing(p2, move):
+    """Psychic Noise's Heal Block (2 turns): no healing at all for the target, Leftovers and
+    Black Sludge included (Showdown's onTryHeal)."""
+    first = "defog" if p2 is CORVIKNIGHT else "haze"
+    turns = [("move psychicnoise", f"move {first}"), ("move calmmind", f"move {move}")]
+    states = ec.run_showdown(HATTERENE, p2, turns, seed="gen5,2,2,2,2")
+    assert "healblock" in states[1]["sides"][1]["mons"][0]["volatiles"]
+    outs = ec.engine_outcomes(ec.engine_state(states[1]), "calmmind", move)
+    assert ec.closest(states[2], outs, (1, 1), hp=True)["diff"] == {}
+
+
+GLISCOR = """Gliscor @ Toxic Orb
+Ability: Poison Heal
+Tera Type: Water
+EVs: 244 HP / 12 Def / 252 SpD
+Careful Nature
+- Protect
+- Earthquake
+- Knock Off
+- Spikes"""
+
+
+# L12b (doc/engine-diff.md): fixed in rust/patches (2026-10-16); a regression test now
+def test_l12b_poison_heal_after_the_orb():
+    """Toxic Orb poisons at the very end of the turn (Showdown's residual order 28), after
+    Poison Heal's turn (9): no heal in that turn."""
+    states = ec.run_showdown(GLISCOR, TINGLU, [("move spikes", "move ruination")])
+    m = states[1]["sides"][0]["mons"][0]
+    assert m["status"] == "tox" and m["hp"] == m["maxhp"] - m["maxhp"] // 2  # Showdown
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "spikes", "ruination")
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+ARMAROUGE = """Armarouge @ Heavy-Duty Boots
+Ability: Weak Armor
+Tera Type: Fairy
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Armor Cannon
+- Psyshock
+- Energy Ball
+- Calm Mind"""
+HYDRAPPLE = """Hydrapple @ Leftovers
+Ability: Regenerator
+Tera Type: Steel
+EVs: 252 HP / 252 SpA / 4 SpD
+Modest Nature
+- Fickle Beam
+- Giga Drain
+- Earth Power
+- Nasty Plot"""
+
+
+# L8a (doc/engine-diff.md): fixed in rust/patches (2026-10-16; move table diff); a regression test now
+def test_l8a_armor_cannon_self_drops():
+    states, outs = first_turn("move armorcannon", "move spikes", "armorcannon", "spikes",
+                              p1=ARMAROUGE)  # fmt: skip
+    b = states[1]["sides"][0]["mons"][0]["boosts"]
+    assert (b["def"], b["spd"]) == (-1, -1)  # Showdown
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L8b (doc/engine-diff.md): fixed in rust/patches (2026-10-16; move table diff); a regression test now
+def test_l8b_fickle_beam_no_boost():
+    states, outs = first_turn("move ficklebeam", "move spikes", "ficklebeam", "spikes",
+                              p1=HYDRAPPLE, force_random=True)  # fmt: skip
+    assert "|-activate|p1a: Hydrapple|move: Fickle Beam" in states[1]["log"]  # Showdown: doubled
+    assert states[1]["sides"][0]["mons"][0]["boosts"]["spa"] == 0  # ... and no boost
+    assert {o[1].side_one.special_attack_boost for o in outs} == {0}
+
+
+BAXCALIBUR = """Baxcalibur @ Loaded Dice
+Ability: Thermal Exchange
+Tera Type: Dragon
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- Glaive Rush
+- Icicle Spear
+- Earthquake
+- Swords Dance"""
+
+
+# L8c (doc/engine-diff.md): fixed in rust/patches (2026-10-16; move table diff); a regression test now
+def test_l8c_glaive_rush_drawback():
+    """Glaive Rush: the user takes double damage until it moves again."""
+    turns = [("move glaiverush", "move bravebird"), ("move swordsdance", "move roost")]
+    states = ec.run_showdown(BAXCALIBUR, CORVIKNIGHT, turns, seed="gen5,8,8,8,8")
+    assert "glaiverush" in states[1]["sides"][0]["mons"][0]["volatiles"]  # Showdown
+    assert states[2]["sides"][0]["mons"][0]["volatiles"] == {}  # gone when it moves again
+    for k, (c1, c2) in enumerate((("glaiverush", "bravebird"), ("swordsdance", "roost"))):
+        outs = ec.engine_outcomes(ec.engine_state(states[k]), c1, c2)
+        assert ec.closest(states[k + 1], outs, (1, 1), hp=True)["diff"] == {}, k

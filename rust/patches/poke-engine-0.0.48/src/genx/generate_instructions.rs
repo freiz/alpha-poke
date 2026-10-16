@@ -5,7 +5,7 @@ use super::abilities::{
 };
 use super::choice_effects::{
     charge_choice_to_volatile, choice_after_damage_hit, choice_before_move, choice_hazard_clear,
-    choice_special_effect, modify_choice,
+    choice_special_effect, fixed_damage, modify_choice,
 };
 use crate::choices::{
     Boost, Choices, Effect, Heal, MoveTarget, MultiHitMove, Secondary, SideCondition, StatBoosts,
@@ -367,6 +367,20 @@ fn generate_instructions_from_switch(
         opposite_side
             .volatile_statuses
             .remove(&PokemonVolatileStatus::PARTIALLYTRAPPED);
+        // alpha-poke patch (2026-10-16): its turn count ends with it
+        let elapsed = opposite_side.volatile_status_durations.partiallytrapped;
+        if elapsed != 0 {
+            incoming_instructions
+                .instruction_list
+                .push(Instruction::ChangeVolatileStatusDuration(
+                    ChangeVolatileStatusDurationInstruction {
+                        side_ref: switching_side_ref.get_other_side(),
+                        volatile_status: PokemonVolatileStatus::PARTIALLYTRAPPED,
+                        amount: -elapsed,
+                    },
+                ));
+            opposite_side.volatile_status_durations.partiallytrapped = 0;
+        }
     }
 
     state.re_enable_disabled_moves(
@@ -539,8 +553,14 @@ fn generate_instructions_from_switch(
 
             let switched_in_pkmn = side.get_active_immutable();
             if side.side_conditions.spikes > 0 && switched_in_pkmn.is_grounded() {
+                // alpha-poke patch (2026-10-16): 1/8, 1/6, 1/4 of max HP for 1-3 layers (as
+                // Showdown's 3, 4, 6 24ths); before, layers/8
+                let layers = cmp::min(side.side_conditions.spikes, 3) as usize;
                 let dmg_amount = cmp::min(
-                    switched_in_pkmn.maxhp * side.side_conditions.spikes as i16 / 8,
+                    cmp::max(
+                        (switched_in_pkmn.maxhp as i32 * [0, 3, 4, 6][layers] / 24) as i16,
+                        1,
+                    ),
                     switched_in_pkmn.hp,
                 );
                 let spikes_dmg_instruction = Instruction::Damage(DamageInstruction {
@@ -1476,12 +1496,25 @@ fn generate_instructions_from_damage(
             let mut knocked_out = false;
             damage_dealt = cmp::min(calculated_damage, defending_pokemon.hp);
             if damage_dealt != 0 {
-                if has_endure
-                    || ((defending_pokemon.ability == Abilities::STURDY
-                        || defending_pokemon.item == Items::FOCUSSASH)
-                        && defending_pokemon.maxhp == defending_pokemon.hp)
-                {
+                // alpha-poke patch (2026-10-16, doc/engine-diff.md L17): only a hit that would
+                // knock it out leaves 1 HP, and a Focus Sash that does it is used up (Showdown:
+                // Endure, then Sturdy, then the sash); before, any hit at full HP did 1 less
+                // and the sash stayed
+                let full = defending_pokemon.maxhp == defending_pokemon.hp;
+                let sturdy = defending_pokemon.ability == Abilities::STURDY && full;
+                let sash = defending_pokemon.item == Items::FOCUSSASH && full;
+                if damage_dealt >= defending_pokemon.hp && (has_endure || sturdy || sash) {
                     damage_dealt -= 1;
+                    if !has_endure && !sturdy {
+                        incoming_instructions
+                            .instruction_list
+                            .push(Instruction::ChangeItem(ChangeItemInstruction {
+                                side_ref: attacking_side_ref.get_other_side(),
+                                current_item: Items::FOCUSSASH,
+                                new_item: Items::NONE,
+                            }));
+                        defending_pokemon.item = Items::NONE;
+                    }
                 }
 
                 if damage_dealt >= defending_pokemon.hp {
@@ -2149,6 +2182,25 @@ pub fn generate_instructions_from_move(
 
     state.apply_instructions(&incoming_instructions.instruction_list);
 
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L8c): Glaive Rush's drawback ends when its
+    // user moves again (Showdown: onBeforeMove, before anything else)
+    let side = state.get_side(&attacking_side);
+    if side
+        .volatile_statuses
+        .contains(&PokemonVolatileStatus::GLAIVERUSH)
+    {
+        side.volatile_statuses
+            .remove(&PokemonVolatileStatus::GLAIVERUSH);
+        incoming_instructions
+            .instruction_list
+            .push(Instruction::RemoveVolatileStatus(
+                RemoveVolatileStatusInstruction {
+                    side_ref: attacking_side,
+                    volatile_status: PokemonVolatileStatus::GLAIVERUSH,
+                },
+            ));
+    }
+
     let side = state.get_side(&attacking_side);
     if side
         .volatile_statuses
@@ -2432,7 +2484,13 @@ pub fn generate_instructions_from_move(
         return;
     }
     choice_special_effect(state, choice, &attacking_side, &mut incoming_instructions);
-    let damage = calculate_damage(state, &attacking_side, &choice, DamageRolls::Max);
+    // alpha-poke patch (2026-10-16, L14): a fixed damage (Seismic Toss, Ruination, ...) is dealt
+    // as any damaging move's, without the rolls and the crits
+    let fixed = fixed_damage(state, choice, &attacking_side);
+    let damage = match fixed {
+        Some(amount) => Some((amount, amount)),
+        None => calculate_damage(state, &attacking_side, &choice, DamageRolls::Max),
+    };
     check_move_hit_or_miss(
         state,
         &choice,
@@ -2493,7 +2551,9 @@ pub fn generate_instructions_from_move(
         does_damage = true;
         let avg_damage_dealt = (max_damage_dealt as f32 * 0.925) as i16;
         let min_damage_dealt = (max_damage_dealt as f32 * 0.85) as i16;
-        if branch_on_damage
+        if fixed.is_some() {
+            regular_damage = max_damage_dealt;
+        } else if branch_on_damage
             && max_damage_dealt >= defender_active.hp
             && min_damage_dealt < defender_active.hp
         {
@@ -2978,8 +3038,12 @@ fn add_end_of_turn_instructions(
         if state.terrain.terrain_type == Terrain::GRASSYTERRAIN {
             for side_ref in sides {
                 let side = state.get_side(side_ref);
+                // alpha-poke patch (2026-10-16, doc/engine-diff.md L19): no healing under Heal Block
+                let heal_blocked = side
+                    .volatile_statuses
+                    .contains(&PokemonVolatileStatus::HEALBLOCK);
                 let active_pkmn = side.get_active();
-                if active_pkmn.hp == 0 || !active_pkmn.is_grounded() {
+                if active_pkmn.hp == 0 || !active_pkmn.is_grounded() || heal_blocked {
                     continue;
                 }
                 let heal_amount = cmp::min(
@@ -3157,13 +3221,21 @@ fn add_end_of_turn_instructions(
     for side_ref in sides {
         let side = state.get_side(side_ref);
         let side_wish = side.wish;
+        // alpha-poke patch (2026-10-16, L19): no healing under Heal Block
+        let heal_blocked = side
+            .volatile_statuses
+            .contains(&PokemonVolatileStatus::HEALBLOCK);
         let active_pkmn = side.get_active();
 
         if side_wish.0 > 0 {
             let decrement_wish_instruction = Instruction::DecrementWish(DecrementWishInstruction {
                 side_ref: *side_ref,
             });
-            if side_wish.0 == 1 && 0 < active_pkmn.hp && active_pkmn.hp < active_pkmn.maxhp {
+            if side_wish.0 == 1
+                && 0 < active_pkmn.hp
+                && active_pkmn.hp < active_pkmn.maxhp
+                && !heal_blocked
+            {
                 #[cfg(not(feature = "gen4"))]
                 let heal_amount = cmp::min(active_pkmn.maxhp - active_pkmn.hp, side_wish.1);
 
@@ -3187,14 +3259,95 @@ fn add_end_of_turn_instructions(
         }
     }
 
+    // alpha-poke patch (2026-10-16): Showdown's residual order: the weather abilities (1),
+    // Hydration / Shed Skin (5.3), Leftovers / Black Sludge (5.4) and Leech Seed (8) come before
+    // the status damage (poison 9, burn 10); before, they all came after it
+    for side_ref in sides {
+        let side = state.get_side(side_ref);
+        let active_pkmn = side.get_active();
+        if active_pkmn.hp == 0 {
+            continue;
+        }
+
+        ability_end_of_turn(state, side_ref, &mut incoming_instructions, true);
+        item_end_of_turn(state, side_ref, &mut incoming_instructions, true);
+    }
+
+    // leechseed sap
+    for side_ref in sides {
+        let (leechseed_side, other_side) = state.get_both_sides(side_ref);
+        // alpha-poke patch (2026-10-16, L19): the seeder heals nothing under Heal Block
+        let seeder_heal_blocked = other_side
+            .volatile_statuses
+            .contains(&PokemonVolatileStatus::HEALBLOCK);
+        if leechseed_side
+            .volatile_statuses
+            .contains(&PokemonVolatileStatus::LEECHSEED)
+        {
+            let active_pkmn = leechseed_side.get_active();
+            let other_active_pkmn = other_side.get_active();
+            if active_pkmn.hp == 0
+                || other_active_pkmn.hp == 0
+                || active_pkmn.ability == Abilities::MAGICGUARD
+            {
+                continue;
+            }
+
+            let health_sapped = cmp::min((active_pkmn.maxhp as f32 * 0.125) as i16, active_pkmn.hp);
+            let damage_ins = Instruction::Damage(DamageInstruction {
+                side_ref: *side_ref,
+                damage_amount: health_sapped,
+            });
+            active_pkmn.hp -= health_sapped;
+            incoming_instructions.instruction_list.push(damage_ins);
+
+            let health_recovered = cmp::min(
+                health_sapped,
+                other_active_pkmn.maxhp - other_active_pkmn.hp,
+            );
+            if health_recovered > 0 && !seeder_heal_blocked {
+                let heal_ins = Instruction::Heal(HealInstruction {
+                    side_ref: side_ref.get_other_side(),
+                    heal_amount: health_recovered,
+                });
+                other_active_pkmn.hp += health_recovered;
+                incoming_instructions.instruction_list.push(heal_ins);
+            }
+        }
+    }
+
     // status damage
     for side_ref in sides {
         let (side, other_side) = state.get_both_sides(side_ref);
         let toxic_count = side.side_conditions.toxic_count as f32;
+        let heal_blocked = side
+            .volatile_statuses
+            .contains(&PokemonVolatileStatus::HEALBLOCK);
         let active_pkmn = side.get_active();
         let other_side_active = other_side.get_active();
         if active_pkmn.hp == 0 || active_pkmn.ability == Abilities::MAGICGUARD {
             continue;
+        }
+        // alpha-poke patch (2026-10-16, doc/engine-diff.md L12b): Poison Heal heals 1/8 in place
+        // of the poison damage (Showdown's onDamage, at the poison's residual order 9), so not in
+        // the turn a Toxic Orb poisons (28); before, ability_end_of_turn healed after the orb
+        if active_pkmn.ability == Abilities::POISONHEAL
+            && other_side_active.ability != Abilities::NEUTRALIZINGGAS
+            && matches!(
+                active_pkmn.status,
+                PokemonStatus::POISON | PokemonStatus::TOXIC
+            )
+            && active_pkmn.hp < active_pkmn.maxhp
+            && !heal_blocked
+        {
+            let heal_amount = cmp::min(active_pkmn.maxhp / 8, active_pkmn.maxhp - active_pkmn.hp);
+            incoming_instructions
+                .instruction_list
+                .push(Instruction::Heal(HealInstruction {
+                    side_ref: *side_ref,
+                    heal_amount,
+                }));
+            active_pkmn.hp += heal_amount;
         }
 
         match active_pkmn.status {
@@ -3282,47 +3435,8 @@ fn add_end_of_turn_instructions(
             continue;
         }
 
-        item_end_of_turn(state, side_ref, &mut incoming_instructions);
-        ability_end_of_turn(state, side_ref, &mut incoming_instructions);
-    }
-
-    // leechseed sap
-    for side_ref in sides {
-        let (leechseed_side, other_side) = state.get_both_sides(side_ref);
-        if leechseed_side
-            .volatile_statuses
-            .contains(&PokemonVolatileStatus::LEECHSEED)
-        {
-            let active_pkmn = leechseed_side.get_active();
-            let other_active_pkmn = other_side.get_active();
-            if active_pkmn.hp == 0
-                || other_active_pkmn.hp == 0
-                || active_pkmn.ability == Abilities::MAGICGUARD
-            {
-                continue;
-            }
-
-            let health_sapped = cmp::min((active_pkmn.maxhp as f32 * 0.125) as i16, active_pkmn.hp);
-            let damage_ins = Instruction::Damage(DamageInstruction {
-                side_ref: *side_ref,
-                damage_amount: health_sapped,
-            });
-            active_pkmn.hp -= health_sapped;
-            incoming_instructions.instruction_list.push(damage_ins);
-
-            let health_recovered = cmp::min(
-                health_sapped,
-                other_active_pkmn.maxhp - other_active_pkmn.hp,
-            );
-            if health_recovered > 0 {
-                let heal_ins = Instruction::Heal(HealInstruction {
-                    side_ref: side_ref.get_other_side(),
-                    heal_amount: health_recovered,
-                });
-                other_active_pkmn.hp += health_recovered;
-                incoming_instructions.instruction_list.push(heal_ins);
-            }
-        }
+        item_end_of_turn(state, side_ref, &mut incoming_instructions, false);
+        ability_end_of_turn(state, side_ref, &mut incoming_instructions, false);
     }
 
     // volatile statuses
@@ -3476,11 +3590,14 @@ fn add_end_of_turn_instructions(
         }
 
         // alpha-poke patch (2026-10-13): Heal Block (Psychic Noise: 2 turns), Magnet Rise (5) and
-        // Throat Chop (2) end; before, they lasted until a switch
+        // Throat Chop (2) end; before, they lasted until a switch. 2026-10-16: a partial trap
+        // ends at its fifth end of turn, before its damage (Showdown: the fifth or the sixth,
+        // doc/engine-diff.md L13); before, it lasted until a switch
         for (volatile, limit) in [
             (PokemonVolatileStatus::HEALBLOCK, 2),
             (PokemonVolatileStatus::MAGNETRISE, 5),
             (PokemonVolatileStatus::THROATCHOP, 2),
+            (PokemonVolatileStatus::PARTIALLYTRAPPED, 5),
         ] {
             if !side.volatile_statuses.contains(&volatile) {
                 continue;
@@ -3488,6 +3605,9 @@ fn add_end_of_turn_instructions(
             let duration = match volatile {
                 PokemonVolatileStatus::HEALBLOCK => &mut side.volatile_status_durations.healblock,
                 PokemonVolatileStatus::THROATCHOP => &mut side.volatile_status_durations.throatchop,
+                PokemonVolatileStatus::PARTIALLYTRAPPED => {
+                    &mut side.volatile_status_durations.partiallytrapped
+                }
                 _ => &mut side.volatile_status_durations.magnetrise,
             };
             if *duration + 1 >= limit {
@@ -7291,12 +7411,20 @@ mod tests {
             false,
         );
 
+        // alpha-poke patch (2026-10-16, L17): the sash is used up
         let expected_instructions: StateInstructions = StateInstructions {
             percentage: 100.0,
-            instruction_list: vec![Instruction::Damage(DamageInstruction {
-                side_ref: SideReference::SideTwo,
-                damage_amount: 49,
-            })],
+            instruction_list: vec![
+                Instruction::ChangeItem(ChangeItemInstruction {
+                    side_ref: SideReference::SideTwo,
+                    current_item: Items::FOCUSSASH,
+                    new_item: Items::NONE,
+                }),
+                Instruction::Damage(DamageInstruction {
+                    side_ref: SideReference::SideTwo,
+                    damage_amount: 49,
+                }),
+            ],
         };
 
         assert_eq!(instructions, vec![expected_instructions])
@@ -10601,15 +10729,16 @@ mod tests {
 
         let expected_instructions = StateInstructions {
             percentage: 100.0,
+            // alpha-poke patch (2026-10-16, L12b): the heal comes with the status damage now
             instruction_list: vec![
+                Instruction::Heal(HealInstruction {
+                    side_ref: SideReference::SideOne,
+                    heal_amount: 12,
+                }),
                 Instruction::ChangeSideCondition(ChangeSideConditionInstruction {
                     side_ref: SideReference::SideOne,
                     side_condition: PokemonSideCondition::ToxicCount,
                     amount: 1,
-                }),
-                Instruction::Heal(HealInstruction {
-                    side_ref: SideReference::SideOne,
-                    heal_amount: 12,
                 }),
             ],
         };
@@ -11134,10 +11263,57 @@ mod tests {
         ))]
         let expected_instructions = StateInstructions {
             percentage: 100.0,
-            instruction_list: vec![Instruction::Damage(DamageInstruction {
-                side_ref: SideReference::SideOne,
-                damage_amount: 12,
-            })],
+            instruction_list: vec![
+                // alpha-poke patch (2026-10-16): the trap's end-of-turn count
+                Instruction::ChangeVolatileStatusDuration(
+                    ChangeVolatileStatusDurationInstruction {
+                        side_ref: SideReference::SideOne,
+                        volatile_status: PokemonVolatileStatus::PARTIALLYTRAPPED,
+                        amount: 1,
+                    },
+                ),
+                Instruction::Damage(DamageInstruction {
+                    side_ref: SideReference::SideOne,
+                    damage_amount: 12,
+                }),
+            ],
+        };
+
+        assert_eq!(expected_instructions, incoming_instructions)
+    }
+
+    // alpha-poke patch (2026-10-16): the trap ends at its fifth end of turn, without damage
+    #[test]
+    fn test_partiallytrapped_ends_at_the_fifth_end_of_turn() {
+        let mut state = State::default();
+        state
+            .side_one
+            .volatile_statuses
+            .insert(PokemonVolatileStatus::PARTIALLYTRAPPED);
+        state.side_one.volatile_status_durations.partiallytrapped = 4;
+
+        let mut incoming_instructions = StateInstructions::default();
+        add_end_of_turn_instructions(
+            &mut state,
+            &mut incoming_instructions,
+            &SideReference::SideOne,
+        );
+
+        let expected_instructions = StateInstructions {
+            percentage: 100.0,
+            instruction_list: vec![
+                Instruction::RemoveVolatileStatus(RemoveVolatileStatusInstruction {
+                    side_ref: SideReference::SideOne,
+                    volatile_status: PokemonVolatileStatus::PARTIALLYTRAPPED,
+                }),
+                Instruction::ChangeVolatileStatusDuration(
+                    ChangeVolatileStatusDurationInstruction {
+                        side_ref: SideReference::SideOne,
+                        volatile_status: PokemonVolatileStatus::PARTIALLYTRAPPED,
+                        amount: -4,
+                    },
+                ),
+            ],
         };
 
         assert_eq!(expected_instructions, incoming_instructions)

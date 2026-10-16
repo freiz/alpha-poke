@@ -1,0 +1,38 @@
+// Showdown's Gen 9 data tables (vendor/pokemon-showdown, built) for the data tests against
+// poke-engine and poke-env (tests/test_engine_data.py, doc/engine-diff.md L8).
+//
+// Usage: node showdown_data.js <path to pokemon-showdown/dist/sim>
+// stdout: one JSON object {"moves": [...], "species": [...], "types": [...]}
+const {Dex} = require(process.argv[2]);
+const dex = Dex.mod('gen9');
+const legal = x => !x.isNonstandard || x.isNonstandard === 'Unobtainable';
+
+const moves = dex.moves.all().filter(legal).map(m => ({
+	id: m.id, type: m.type, accuracy: m.accuracy === true ? 'always' : m.accuracy,
+	category: m.category, basePower: m.basePower, priority: m.priority, target: m.target,
+	flags: Object.keys(m.flags).sort(), drain: m.drain || null, recoil: m.recoil || null,
+	heal: m.heal || null, status: m.status || null, volatileStatus: m.volatileStatus || null,
+	sideCondition: m.sideCondition || null, boosts: m.boosts || null,
+	self: m.self ? {chance: m.self.chance || 100, boosts: m.self.boosts || null,
+		volatileStatus: m.self.volatileStatus || null} : null,
+	selfBoost: m.selfBoost ? m.selfBoost.boosts : null,
+	secondaries: (m.secondaries || []).map(s => ({chance: s.chance || 100, status: s.status || null,
+		volatileStatus: s.volatileStatus || null, boosts: s.boosts || null,
+		self: s.self ? {boosts: s.self.boosts || null} : null})),
+	forceSwitch: !!m.forceSwitch, selfSwitch: !!m.selfSwitch,
+}));
+
+const species = dex.species.all().filter(legal).map(s => ({
+	id: s.id, types: s.types, baseStats: s.baseStats, weightkg: s.weightkg,
+	abilities: Object.values(s.abilities).map(a => dex.abilities.get(a).id).sort(),
+}));
+
+const typeNames = dex.types.names().filter(t => t !== 'Stellar');
+const types = [];
+for (const a of typeNames) {
+	for (const d of typeNames) {
+		const mult = !dex.getImmunity(a, d) ? 0 : 2 ** dex.getEffectiveness(a, d);
+		types.push([a, d, mult]);
+	}
+}
+process.stdout.write(JSON.stringify({moves, species, types}));

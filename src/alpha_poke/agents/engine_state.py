@@ -335,6 +335,14 @@ def _volatiles(mon) -> set[str]:
     return {name for eff, name in VOLATILE.items() if eff in mon.effects}
 
 
+def _base_ability(mon, ability: str, tm: SideTimers | None) -> str:
+    """The engine's base ability: none for a once-per-battle switch-in ability already used
+    (Dauntless Shield; the patched engine then raises Defense no more, doc/engine-diff.md L18)."""
+    if tm is not None and ability == "dauntlessshield" and to_id(mon.species) in tm.used_once:
+        return "none"
+    return ability
+
+
 def _sleep(mon, tm: SideTimers | None) -> dict:
     """rest_turns / sleep_turns of an asleep mon (timers), else nothing."""
     if tm is None or STATUS.get(mon.status) != "sleep":
@@ -375,7 +383,7 @@ def _our_mon(
         hp=hp,
         maxhp=int(mon.max_hp or 1),
         ability=to_id(mon.ability) if mon.ability else "none",
-        base_ability=to_id(mon.ability) if mon.ability else "none",
+        base_ability=_base_ability(mon, to_id(mon.ability) if mon.ability else "none", tm),
         item=mon.item or "none",
         attack=int(stats.get("atk") or 100),
         defense=int(stats.get("def") or 100),
@@ -422,7 +430,7 @@ def _their_mon(mon, s: SampledSet, tm: SideTimers | None = None,
         hp=hp,
         maxhp=maxhp,
         ability=s.ability,
-        base_ability=s.ability,
+        base_ability=_base_ability(mon, s.ability, tm),
         item=s.item,
         attack=s.stats["atk"],
         defense=s.stats["def"],
@@ -535,9 +543,10 @@ def _timed(tm: SideTimers, active, mons: list, engine_mons: list, vol: set[str])
         if idx is not None:
             out["future_sight"] = (tm.future[0], pe.PokemonIndex(str(idx)))
     dur = {}
-    # (the patched engine ends heal block, magnet rise and throat chop too)
+    # (the patched engine ends heal block, magnet rise and throat chop too; a partial trap at its
+    # fifth end of turn: at 4 it ends at the next, right for Showdown's 5 and, at 4 or 5, its 6)
     tops = [("confusion", 4), ("taunt", 2), ("encore", 2), ("yawn", 1), ("healblock", 1),
-            ("magnetrise", 4), ("throatchop", 1)]  # fmt: skip
+            ("magnetrise", 4), ("throatchop", 1), ("partiallytrapped", 4)]  # fmt: skip
     for name, top in tops:
         n = getattr(tm, name)
         if name in vol and n:

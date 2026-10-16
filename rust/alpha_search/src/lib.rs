@@ -282,6 +282,119 @@ fn move_table(py: Python<'_>) -> Bound<'_, PyBytes> {
     PyBytes::new(py, &le_bytes(&t, f32::to_le_bytes))
 }
 
+/// poke-engine's data tables for the data tests against Showdown (tests/test_engine_data.py,
+/// doc/engine-diff.md L8): (the moves: per move [id, type, accuracy, category, base power,
+/// priority, target, boost, drain, recoil, heal, status, volatile status, side condition,
+/// secondaries, flags] as Rust Debug text; the type chart: (attacking type, defending type,
+/// multiplier) for single-typed defenders, from the engine's own type_effectiveness_modifier).
+#[pyfunction]
+fn engine_data() -> (Vec<Vec<String>>, Vec<(String, String, f32)>) {
+    use poke_engine::choices::MOVES;
+    use poke_engine::engine::damage_calc::type_effectiveness_modifier;
+    use poke_engine::state::{Pokemon, PokemonType};
+    let mut ids: Vec<_> = MOVES.keys().collect();
+    ids.sort_by_key(|c| format!("{:?}", c));
+    let moves = ids
+        .into_iter()
+        .map(|id| {
+            let c = MOVES.get(id).unwrap();
+            let f = &c.flags;
+            let flags = [
+                ("bite", f.bite),
+                ("bullet", f.bullet),
+                ("charge", f.charge),
+                ("contact", f.contact),
+                ("drag", f.drag),
+                ("heal", f.heal),
+                ("powder", f.powder),
+                ("protect", f.protect),
+                ("pulse", f.pulse),
+                ("punch", f.punch),
+                ("recharge", f.recharge),
+                ("reflectable", f.reflectable),
+                ("slicing", f.slicing),
+                ("sound", f.sound),
+                ("pivot", f.pivot),
+                ("wind", f.wind),
+            ];
+            vec![
+                format!("{:?}", id),
+                format!("{:?}", c.move_type),
+                c.accuracy.to_string(),
+                format!("{:?}", c.category),
+                c.base_power.to_string(),
+                c.priority.to_string(),
+                format!("{:?}", c.target),
+                format!("{:?}", c.boost),
+                format!("{:?}", c.drain),
+                format!("{:?}", c.recoil),
+                format!("{:?}", c.heal),
+                format!("{:?}", c.status),
+                format!("{:?}", c.volatile_status),
+                format!("{:?}", c.side_condition),
+                format!("{:?}", c.secondaries),
+                flags
+                    .iter()
+                    .filter(|x| x.1)
+                    .map(|x| x.0)
+                    .collect::<Vec<_>>()
+                    .join(","),
+            ]
+        })
+        .collect();
+    let types = [
+        PokemonType::NORMAL,
+        PokemonType::FIRE,
+        PokemonType::WATER,
+        PokemonType::ELECTRIC,
+        PokemonType::GRASS,
+        PokemonType::ICE,
+        PokemonType::FIGHTING,
+        PokemonType::POISON,
+        PokemonType::GROUND,
+        PokemonType::FLYING,
+        PokemonType::PSYCHIC,
+        PokemonType::BUG,
+        PokemonType::ROCK,
+        PokemonType::GHOST,
+        PokemonType::DRAGON,
+        PokemonType::DARK,
+        PokemonType::STEEL,
+        PokemonType::FAIRY,
+    ];
+    let mut chart = Vec::new();
+    for a in types {
+        for d in types {
+            let mut p = Pokemon::default();
+            p.types = (d, PokemonType::TYPELESS);
+            p.terastallized = false;
+            let m = type_effectiveness_modifier(&a, &p);
+            chart.push((format!("{:?}", a), format!("{:?}", d), m));
+        }
+    }
+    (moves, chart)
+}
+
+/// poke-engine's base stats of species (the forme-change table, `PokemonName::base_stats`):
+/// None for a species the engine has none of.
+#[pyfunction]
+fn engine_base_stats(names: Vec<String>) -> Vec<Option<(i16, i16, i16, i16, i16, i16)>> {
+    use poke_engine::pokemon::PokemonName;
+    use std::str::FromStr;
+    let hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(|_| {})); // the engine panics on a species it has none of
+    let out = names
+        .iter()
+        .map(|n| {
+            PokemonName::from_str(n)
+                .ok()
+                .and_then(|p| std::panic::catch_unwind(|| p.base_stats()).ok())
+        })
+        .collect();
+    std::panic::set_hook(hook);
+    out
+}
+
 /// Engine ids of names (case-insensitive engine spelling, e.g. "CHOICESCARF"): `kind` is
 /// "species", "item", "ability", "type" or "move"; unknown names give 0.
 #[pyfunction]
@@ -934,6 +1047,8 @@ fn alpha_search(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(featurize_extra, m)?)?;
     m.add_function(wrap_pyfunction!(featurize_counts, m)?)?;
     m.add_function(wrap_pyfunction!(move_table, m)?)?;
+    m.add_function(wrap_pyfunction!(engine_data, m)?)?;
+    m.add_function(wrap_pyfunction!(engine_base_stats, m)?)?;
     m.add_function(wrap_pyfunction!(encode_ids, m)?)?;
     m.add_function(wrap_pyfunction!(tnet_forward, m)?)?;
     m.add_class::<PyBatchSearch>()?;

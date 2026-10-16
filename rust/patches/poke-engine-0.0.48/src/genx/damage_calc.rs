@@ -1,4 +1,5 @@
 use super::abilities::Abilities;
+use super::items::Items;
 use super::state::{PokemonVolatileStatus, Terrain, Weather};
 use crate::choices::{Choice, MoveCategory};
 use crate::choices::{Choices, MOVES};
@@ -654,8 +655,13 @@ pub fn calculate_futuresight_damage(
     attacking_side_pokemon_index: &PokemonIndex,
 ) -> i16 {
     let attacking_stat = attacking_side.pokemon[attacking_side_pokemon_index].special_attack;
-    let defending_stat = defending_side.get_active_immutable().special_defense;
-    let attacker = attacking_side.get_active_immutable();
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L15): a special move's damage at the hit,
+    // as Showdown's: the target's Special Defense boosts, its Eviolite / Assault Vest, Aurora
+    // Veil, and the STAB of the user (not of the side's active); before, the target's unboosted
+    // stat and the active's types
+    let defending_stat =
+        defending_side.calculate_boosted_stat(PokemonBoostableStat::SpecialDefense);
+    let attacker = &attacking_side.pokemon[attacking_side_pokemon_index];
     let (mut damage, _) = common_pkmn_damage_calc(
         attacking_side,
         attacker,
@@ -669,8 +675,16 @@ pub fn calculate_futuresight_damage(
         &Terrain::NONE,
         MOVES.get(&Choices::FUTURESIGHT).unwrap(),
     );
+    if matches!(
+        defending_side.get_active_immutable().item,
+        Items::EVIOLITE | Items::ASSAULTVEST
+    ) {
+        damage /= 1.5;
+    }
     if attacker.ability != Abilities::INFILTRATOR {
-        if defending_side.side_conditions.light_screen > 0 {
+        if defending_side.side_conditions.light_screen > 0
+            || defending_side.side_conditions.aurora_veil > 0
+        {
             damage *= 0.5
         }
     }

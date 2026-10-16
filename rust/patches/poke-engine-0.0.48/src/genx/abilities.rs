@@ -1127,7 +1127,10 @@ pub fn ability_on_switch_out(
 
     // revert ability on switch-out to base_ability if they are not the same
     let active_pkmn = state.get_side(side_ref).get_active();
-    if active_pkmn.ability != active_pkmn.base_ability {
+    // alpha-poke patch (2026-10-16, L18): a used Dauntless Shield (base ability none) stays
+    let used_shield = active_pkmn.ability == Abilities::DAUNTLESSSHIELD
+        && active_pkmn.base_ability == Abilities::NONE;
+    if active_pkmn.ability != active_pkmn.base_ability && !used_shield {
         instructions
             .instruction_list
             .push(Instruction::ChangeAbility(ChangeAbilityInstruction {
@@ -1142,9 +1145,28 @@ pub fn ability_end_of_turn(
     state: &mut State,
     side_ref: &SideReference,
     instructions: &mut StateInstructions,
+    before_status: bool,
 ) {
     let (attacking_side, defending_side) = state.get_both_sides(side_ref);
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L19): no healing under Heal Block
+    let heal_blocked = attacking_side
+        .volatile_statuses
+        .contains(&PokemonVolatileStatus::HEALBLOCK);
     let active_pkmn = attacking_side.get_active();
+    // alpha-poke patch (2026-10-16): the weather abilities (Showdown's weather residual, order 1)
+    // and Hydration / Shed Skin (5) come before the status damage (9-10), the rest after it
+    let early = matches!(
+        active_pkmn.ability,
+        Abilities::SOLARPOWER
+            | Abilities::ICEBODY
+            | Abilities::RAINDISH
+            | Abilities::DRYSKIN
+            | Abilities::HYDRATION
+            | Abilities::SHEDSKIN
+    );
+    if early != before_status {
+        return;
+    }
     if defending_side.get_active_immutable().ability == Abilities::NEUTRALIZINGGAS {
         return;
     }
@@ -1252,7 +1274,7 @@ pub fn ability_end_of_turn(
                 let active_pkmn = state.get_side(side_ref).get_active();
                 let health_recovered =
                     cmp::min(active_pkmn.maxhp / 16, active_pkmn.maxhp - active_pkmn.hp);
-                if health_recovered > 0 {
+                if health_recovered > 0 && !heal_blocked {
                     instructions
                         .instruction_list
                         .push(Instruction::Heal(HealInstruction {
@@ -1263,21 +1285,8 @@ pub fn ability_end_of_turn(
                 }
             }
         }
-        Abilities::POISONHEAL => {
-            if active_pkmn.hp < active_pkmn.maxhp
-                && (active_pkmn.status == PokemonStatus::POISON
-                    || active_pkmn.status == PokemonStatus::TOXIC)
-            {
-                let heal_amount =
-                    cmp::min(active_pkmn.maxhp / 8, active_pkmn.maxhp - active_pkmn.hp);
-                let ins = Instruction::Heal(HealInstruction {
-                    side_ref: side_ref.clone(),
-                    heal_amount: heal_amount,
-                });
-                active_pkmn.hp += heal_amount;
-                instructions.instruction_list.push(ins);
-            }
-        }
+        // alpha-poke patch (2026-10-16, L12b): healed with the status damage now
+        Abilities::POISONHEAL => {}
         Abilities::SPEEDBOOST => {
             if attacking_side.speed_boost < 6 {
                 let ins = Instruction::Boost(BoostInstruction {
@@ -1296,7 +1305,7 @@ pub fn ability_end_of_turn(
                 let active_pkmn = state.get_side(side_ref).get_active();
                 let health_recovered =
                     cmp::min(active_pkmn.maxhp / 16, active_pkmn.maxhp - active_pkmn.hp);
-                if health_recovered > 0 {
+                if health_recovered > 0 && !heal_blocked {
                     instructions
                         .instruction_list
                         .push(Instruction::Heal(HealInstruction {
@@ -1310,7 +1319,7 @@ pub fn ability_end_of_turn(
         Abilities::DRYSKIN => {
             if state.weather_is_active(&Weather::RAIN) {
                 let active_pkmn = state.get_side(side_ref).get_active();
-                if active_pkmn.hp < active_pkmn.maxhp {
+                if active_pkmn.hp < active_pkmn.maxhp && !heal_blocked {
                     let heal_amount =
                         cmp::min(active_pkmn.maxhp / 8, active_pkmn.maxhp - active_pkmn.hp);
                     let ins = Instruction::Heal(HealInstruction {
@@ -1596,7 +1605,9 @@ pub fn ability_on_switch_in(
                 }
             }
         }
-        Abilities::DAUNTLESSSHIELD => {
+        // alpha-poke patch (2026-10-16, doc/engine-diff.md L18): once per battle (Gen 9); a used
+        // one has base ability none (agents/engine_state.py); before, at every switch-in
+        Abilities::DAUNTLESSSHIELD if active_pkmn.base_ability == Abilities::DAUNTLESSSHIELD => {
             // no need to check for boost at +6 because we are switching in
             attacking_side.defense_boost += 1;
             instructions

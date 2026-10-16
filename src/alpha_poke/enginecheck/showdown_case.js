@@ -42,6 +42,8 @@ function monState(p, side) {
 		tera_type: p.teraType || '',
 		weight: p.getWeight() / 10,
 		active: !!p.isActive,
+		// Gen 9: Dauntless Shield / Intrepid Sword once per battle
+		used_once: !!(p.shieldBoost || p.swordBoost),
 	};
 }
 
@@ -50,11 +52,15 @@ function sideState(side) {
 	const active = side.active[0] ? side.team.indexOf(side.active[0].set) : -1;
 	const conditions = Object.fromEntries(Object.entries(side.sideConditions).map(([k, v]) =>
 		[k, {layers: v.layers || 0, duration: v.duration || 0}]));
+	// Future Sight / Doom Desire: a condition of the target's slot, from a mon of the other side
+	const slot = Object.fromEntries(Object.entries(side.slotConditions[0] || {}).map(([k, v]) =>
+		[k, {duration: v.duration || 0, ending_turn: v.endingTurn || 0,
+			source: v.source && v.source.side ? v.source.side.team.indexOf(v.source.set) : -1}]));
 	const req = side.activeRequest;
 	const request = !req ? 'none' : req.wait ? 'wait' : req.forceSwitch ? 'switch' :
 		req.teamPreview ? 'teampreview' : 'move';
 	// the request the player's client gets (for rebuilding the state as we do in play)
-	return {id: side.id, active, mons, conditions, request, request_json: req || null};
+	return {id: side.id, active, mons, conditions, slot, request, request_json: req || null};
 }
 
 function state(battle, logFrom) {

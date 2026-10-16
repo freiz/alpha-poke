@@ -797,6 +797,9 @@ pub struct VolatileStatusDurations {
     pub healblock: i8,
     pub magnetrise: i8,
     pub throatchop: i8,
+    // alpha-poke patch (2026-10-16): ends of turn of a partial trap (Infestation, Whirlpool, ...);
+    // it ends at the fifth (Showdown: the fifth or the sixth)
+    pub partiallytrapped: i8,
 }
 
 impl Default for VolatileStatusDurations {
@@ -811,6 +814,7 @@ impl Default for VolatileStatusDurations {
             healblock: 0,
             magnetrise: 0,
             throatchop: 0,
+            partiallytrapped: 0,
         }
     }
 }
@@ -827,6 +831,7 @@ impl VolatileStatusDurations {
             ("healblock", self.healblock),
             ("magnetrise", self.magnetrise),
             ("throatchop", self.throatchop),
+            ("partiallytrapped", self.partiallytrapped),
         ];
 
         let mut output = String::new();
@@ -843,7 +848,7 @@ impl VolatileStatusDurations {
 
     pub fn serialize(&self) -> String {
         format!(
-            "{};{};{};{};{};{};{};{};{}",
+            "{};{};{};{};{};{};{};{};{};{}",
             self.confusion,
             self.encore,
             self.lockedmove,
@@ -852,7 +857,8 @@ impl VolatileStatusDurations {
             self.yawn,
             self.healblock,
             self.magnetrise,
-            self.throatchop
+            self.throatchop,
+            self.partiallytrapped
         )
     }
     pub fn deserialize(serialized: &str) -> VolatileStatusDurations {
@@ -868,6 +874,7 @@ impl VolatileStatusDurations {
             healblock: split.get(6).map_or(0, |x| x.parse::<i8>().unwrap()),
             magnetrise: split.get(7).map_or(0, |x| x.parse::<i8>().unwrap()),
             throatchop: split.get(8).map_or(0, |x| x.parse::<i8>().unwrap()),
+            partiallytrapped: split.get(9).map_or(0, |x| x.parse::<i8>().unwrap()),
         }
     }
 }
@@ -1664,6 +1671,9 @@ impl State {
             }
             PokemonVolatileStatus::THROATCHOP => {
                 side.volatile_status_durations.throatchop += amount;
+            }
+            PokemonVolatileStatus::PARTIALLYTRAPPED => {
+                side.volatile_status_durations.partiallytrapped += amount;
             }
             _ => panic!(
                 "Invalid volatile status for increment_volatile_status_duration: {:?}",

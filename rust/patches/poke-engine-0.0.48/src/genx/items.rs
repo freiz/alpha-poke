@@ -1002,13 +1002,27 @@ pub fn item_end_of_turn(
     state: &mut State,
     side_ref: &SideReference,
     instructions: &mut StateInstructions,
+    before_status: bool,
 ) {
     let attacking_side = state.get_side(side_ref);
+    // alpha-poke patch (2026-10-16): Leftovers / Black Sludge come before the status damage
+    // (Showdown's residual order 5; burn / poison 9-10), the orbs after it (28)
+    let early = matches!(
+        attacking_side.get_active_immutable().item,
+        Items::LEFTOVERS | Items::BLACKSLUDGE
+    );
+    if early != before_status {
+        return;
+    }
     // alpha-poke patch (2026-10-13): read before the active is borrowed
     let confused = attacking_side
         .volatile_statuses
         .contains(&PokemonVolatileStatus::CONFUSION);
     let mental_herb_cures = has_any(attacking_side, &MENTAL_HERB_CURES);
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L19): no healing under Heal Block
+    let heal_blocked = attacking_side
+        .volatile_statuses
+        .contains(&PokemonVolatileStatus::HEALBLOCK);
     let active_pkmn = attacking_side.get_active();
     match active_pkmn.item {
         Items::LUMBERRY if active_pkmn.status != PokemonStatus::NONE => {
@@ -1052,7 +1066,7 @@ pub fn item_end_of_turn(
         }
         Items::BLACKSLUDGE => {
             if active_pkmn.has_type(&PokemonType::POISON) {
-                if active_pkmn.hp < active_pkmn.maxhp {
+                if active_pkmn.hp < active_pkmn.maxhp && !heal_blocked {
                     let heal_amount =
                         cmp::min(active_pkmn.maxhp / 16, active_pkmn.maxhp - active_pkmn.hp);
                     let ins = Instruction::Heal(HealInstruction {
@@ -1090,7 +1104,7 @@ pub fn item_end_of_turn(
         }
         Items::LEFTOVERS => {
             let attacker = state.get_side(side_ref).get_active();
-            if attacker.hp < attacker.maxhp {
+            if attacker.hp < attacker.maxhp && !heal_blocked {
                 let heal_amount = cmp::min(attacker.maxhp / 16, attacker.maxhp - attacker.hp);
                 let ins = Instruction::Heal(HealInstruction {
                     side_ref: side_ref.clone(),

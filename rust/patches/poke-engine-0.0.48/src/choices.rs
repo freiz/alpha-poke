@@ -301,6 +301,7 @@ pub static MOVES: LazyLock<HashMap<Choices, Choice>> = LazyLock::new(|| {
         moves.insert(
             Choices::AIRCUTTER,
             Choice {
+                // alpha-poke patch (2026-10-16, doc/engine-diff.md L8): slicing, wind (Showdown)
                 move_id: Choices::AIRCUTTER,
                 accuracy: 95.0,
                 base_power: 60.0,
@@ -308,6 +309,8 @@ pub static MOVES: LazyLock<HashMap<Choices, Choice>> = LazyLock::new(|| {
                 move_type: PokemonType::FLYING,
                 flags: Flags {
                     protect: true,
+                    slicing: true,
+                    wind: true,
                     ..Default::default()
                 },
                 ..Default::default()
@@ -580,6 +583,18 @@ pub static MOVES: LazyLock<HashMap<Choices, Choice>> = LazyLock::new(|| {
                 protect: true,
                 ..Default::default()
             },
+            // alpha-poke patch (2026-10-16, doc/engine-diff.md L8a): the user's Defense / Sp. Def -1
+            boost: Some(Boost {
+                target: MoveTarget::User,
+                boosts: StatBoosts {
+                    attack: 0,
+                    defense: -1,
+                    special_attack: 0,
+                    special_defense: -1,
+                    speed: 0,
+                    accuracy: 0,
+                },
+            }),
             ..Default::default()
         },
     );
@@ -613,23 +628,14 @@ pub static MOVES: LazyLock<HashMap<Choices, Choice>> = LazyLock::new(|| {
     moves.insert(
         Choices::AROMATICMIST,
         Choice {
+            // alpha-poke patch (2026-10-16, doc/engine-diff.md L8): it raises an ally's stats, so
+            // nothing in singles (Showdown: it fails); was the user's
             move_id: Choices::AROMATICMIST,
             target: MoveTarget::User,
             move_type: PokemonType::FAIRY,
             flags: Flags {
                 ..Default::default()
             },
-            boost: Some(Boost {
-                target: MoveTarget::User,
-                boosts: StatBoosts {
-                    attack: 0,
-                    defense: 0,
-                    special_attack: 0,
-                    special_defense: 1,
-                    speed: 0,
-                    accuracy: 0,
-                },
-            }),
             ..Default::default()
         },
     );
@@ -1485,6 +1491,7 @@ pub static MOVES: LazyLock<HashMap<Choices, Choice>> = LazyLock::new(|| {
         moves.insert(
             Choices::BLIZZARD,
             Choice {
+                // alpha-poke patch (2026-10-16, doc/engine-diff.md L8): wind (Showdown)
                 move_id: Choices::BLIZZARD,
                 accuracy: 70.0,
                 base_power: 110.0,
@@ -1492,6 +1499,7 @@ pub static MOVES: LazyLock<HashMap<Choices, Choice>> = LazyLock::new(|| {
                 move_type: PokemonType::ICE,
                 flags: Flags {
                     protect: true,
+                    wind: true,
                     ..Default::default()
                 },
                 secondaries: Some(vec![Secondary {
@@ -2634,23 +2642,14 @@ pub static MOVES: LazyLock<HashMap<Choices, Choice>> = LazyLock::new(|| {
     moves.insert(
         Choices::COACHING,
         Choice {
+            // alpha-poke patch (2026-10-16, doc/engine-diff.md L8): it raises an ally's stats, so
+            // nothing in singles (Showdown: it fails); was the user's
             move_id: Choices::COACHING,
             target: MoveTarget::User,
             move_type: PokemonType::FIGHTING,
             flags: Flags {
                 ..Default::default()
             },
-            boost: Some(Boost {
-                target: MoveTarget::User,
-                boosts: StatBoosts {
-                    attack: 1,
-                    defense: 1,
-                    special_attack: 0,
-                    special_defense: 0,
-                    speed: 0,
-                    accuracy: 0,
-                },
-            }),
             ..Default::default()
         },
     );
@@ -4125,8 +4124,9 @@ pub static MOVES: LazyLock<HashMap<Choices, Choice>> = LazyLock::new(|| {
     moves.insert(
         Choices::DRAGONCHEER,
         Choice {
+            // alpha-poke patch (2026-10-16, doc/engine-diff.md L8): a status move (it only helps an ally: nothing in singles)
             move_id: Choices::DRAGONCHEER,
-            base_power: 60.0,
+            base_power: 0.0,
             category: MoveCategory::Status,
             move_type: PokemonType::DRAGON,
             target: MoveTarget::User,
@@ -5244,25 +5244,16 @@ pub static MOVES: LazyLock<HashMap<Choices, Choice>> = LazyLock::new(|| {
         Choices::FICKLEBEAM,
         Choice {
             move_id: Choices::FICKLEBEAM,
-            base_power: 80.0,
+            // alpha-poke patch (2026-10-16, doc/engine-diff.md L8b): Showdown doubles the power with
+            // a 30% chance (no stat change); the expected power 80 x 1.3 (the engine does not branch
+            // on power; as Triple Axel's fixed hits); was 80 with a 50% Sp. Atk +1 of the user
+            base_power: 104.0,
             category: MoveCategory::Special,
             move_type: PokemonType::DRAGON,
             flags: Flags {
                 protect: true,
                 ..Default::default()
             },
-            secondaries: Some(vec![Secondary {
-                chance: 50.0,
-                target: MoveTarget::User,
-                effect: Effect::Boost(StatBoosts {
-                    attack: 0,
-                    defense: 0,
-                    special_attack: 1,
-                    special_defense: 0,
-                    speed: 0,
-                    accuracy: 0,
-                }),
-            }]),
             ..Default::default()
         },
     );
@@ -6345,6 +6336,7 @@ pub static MOVES: LazyLock<HashMap<Choices, Choice>> = LazyLock::new(|| {
         moves.insert(
             Choices::FURYCUTTER,
             Choice {
+                // alpha-poke patch (2026-10-16, doc/engine-diff.md L8): slicing (Showdown)
                 move_id: Choices::FURYCUTTER,
                 accuracy: 95.0,
                 base_power: 40.0,
@@ -6353,6 +6345,7 @@ pub static MOVES: LazyLock<HashMap<Choices, Choice>> = LazyLock::new(|| {
                 flags: Flags {
                     contact: true,
                     protect: true,
+                    slicing: true,
                     ..Default::default()
                 },
                 ..Default::default()
@@ -6661,6 +6654,12 @@ pub static MOVES: LazyLock<HashMap<Choices, Choice>> = LazyLock::new(|| {
                 protect: true,
                 ..Default::default()
             },
+            // alpha-poke patch (2026-10-16, doc/engine-diff.md L8c): the drawback on the user (the
+            // engine had the volatile's double damage but no move put it on)
+            volatile_status: Some(VolatileStatus {
+                target: MoveTarget::User,
+                volatile_status: PokemonVolatileStatus::GLAIVERUSH,
+            }),
             ..Default::default()
         },
     );
@@ -16734,8 +16733,9 @@ pub static MOVES: LazyLock<HashMap<Choices, Choice>> = LazyLock::new(|| {
         moves.insert(
             Choices::SWAGGER,
             Choice {
+                // alpha-poke patch (2026-10-16, doc/engine-diff.md L8): 85% (Showdown; was 90)
                 move_id: Choices::SWAGGER,
-                accuracy: 90.0,
+                accuracy: 85.0,
                 move_type: PokemonType::NORMAL,
                 flags: Flags {
                     protect: true,
@@ -17082,6 +17082,7 @@ pub static MOVES: LazyLock<HashMap<Choices, Choice>> = LazyLock::new(|| {
     moves.insert(
         Choices::TAKEDOWN,
         Choice {
+            // alpha-poke patch (2026-10-16, doc/engine-diff.md L8): recoil 1/4 (Showdown; was 0.33)
             move_id: Choices::TAKEDOWN,
             accuracy: 85.0,
             base_power: 90.0,
@@ -17092,7 +17093,7 @@ pub static MOVES: LazyLock<HashMap<Choices, Choice>> = LazyLock::new(|| {
                 protect: true,
                 ..Default::default()
             },
-            recoil: Some(0.33),
+            recoil: Some(0.25),
             ..Default::default()
         },
     );

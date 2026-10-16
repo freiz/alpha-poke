@@ -278,7 +278,7 @@ impl PySide {
         active_index="0".to_string(),
         baton_passing=false,
         shed_tailing=false,
-        volatile_status_durations=PyVolatileStatusDurations::new(0, 0, 0, 0, 0, 0, 0, 0, 0),
+        volatile_status_durations=PyVolatileStatusDurations::new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
         wish=(0, 0),
         future_sight=(0, "0".to_string()),
         force_switch=false,
@@ -376,6 +376,8 @@ pub struct PyVolatileStatusDurations {
     pub healblock: i8,
     pub magnetrise: i8,
     pub throatchop: i8,
+    // alpha-poke patch (2026-10-16)
+    pub partiallytrapped: i8,
 }
 
 impl From<VolatileStatusDurations> for PyVolatileStatusDurations {
@@ -390,6 +392,7 @@ impl From<VolatileStatusDurations> for PyVolatileStatusDurations {
             healblock: other.healblock,
             magnetrise: other.magnetrise,
             throatchop: other.throatchop,
+            partiallytrapped: other.partiallytrapped,
         }
     }
 }
@@ -406,6 +409,7 @@ impl Into<VolatileStatusDurations> for PyVolatileStatusDurations {
             healblock: self.healblock,
             magnetrise: self.magnetrise,
             throatchop: self.throatchop,
+            partiallytrapped: self.partiallytrapped,
         }
     }
 }
@@ -423,6 +427,7 @@ impl PyVolatileStatusDurations {
         healblock=0,
         magnetrise=0,
         throatchop=0,
+        partiallytrapped=0,
     ))]
     fn new(
         confusion: i8,
@@ -434,6 +439,7 @@ impl PyVolatileStatusDurations {
         healblock: i8,
         magnetrise: i8,
         throatchop: i8,
+        partiallytrapped: i8,
     ) -> PyVolatileStatusDurations {
         PyVolatileStatusDurations {
             confusion,
@@ -445,6 +451,7 @@ impl PyVolatileStatusDurations {
             healblock,
             magnetrise,
             throatchop,
+            partiallytrapped,
         }
     }
 }

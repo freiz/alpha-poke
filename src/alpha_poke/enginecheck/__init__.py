@@ -57,11 +57,15 @@ def run_showdown(p1, p2, turns, seed: str | None = "gen5,1,2,3,4", force_random=
 
 
 @functools.cache
+@functools.cache
 def _engine_volatile(name: str) -> bool:
-    """Whether poke-engine knows the volatile status ``name`` (unknown ones are left out)."""
+    """Whether poke-engine knows the volatile status ``name`` (unknown ones are left out): the
+    binding takes any name and the engine reads an unknown one as NONE (2026-10-16: so a check of
+    ``pe.Side`` alone let Showdown's "choicelock" into the comparison)."""
     try:
-        pe.Side(volatile_statuses={name})
-        return True
+        side = pe.Side(pokemon=[pe.Pokemon.create_fainted()] * 6, volatile_statuses={name})
+        back = pe.State.from_string(pe.State(side_one=side).to_string()).side_one
+        return {str(v).lower() for v in back.volatile_statuses} == {name}
     except BaseException:  # noqa: BLE001 - the binding panics on an unknown name
         return False
 
@@ -76,7 +80,9 @@ def _engine_mon(m: dict) -> pe.Pokemon:
     return pe.Pokemon(
         id=m["species"], level=m["level"], types=_types(m["types"]),
         base_types=_types(m["base_types"]), hp=m["hp"], maxhp=m["maxhp"],
-        ability=m["ability"] or "none", base_ability=m["base_ability"] or m["ability"] or "none",
+        ability=m["ability"] or "none",
+        # a used once-per-battle switch-in ability: base ability none (L18)
+        base_ability="none" if m.get("used_once") else (m["base_ability"] or m["ability"] or "none"),
         item=m["item"] or "none", attack=st["atk"], defense=st["def"],
         special_attack=st["spa"], special_defense=st["spd"], speed=st["spe"],
         status=STATUS[m["status"]], weight_kg=m["weight"],
@@ -85,7 +91,11 @@ def _engine_mon(m: dict) -> pe.Pokemon:
     )  # fmt: skip
 
 
-def _engine_side(s: dict) -> pe.Side:
+# the patched engine's limits of the volatiles it ends (ends of turn)
+LIMITS = {"partiallytrapped": 5, "healblock": 2, "throatchop": 2, "magnetrise": 5}
+
+
+def _engine_side(s: dict, future_sight=None) -> pe.Side:
     mons = [_engine_mon(m) for m in s["mons"]]
     mons += [pe.Pokemon.create_fainted() for _ in range(6 - len(mons))]
     act = s["mons"][s["active"]] if s["active"] >= 0 else None
@@ -93,13 +103,19 @@ def _engine_side(s: dict) -> pe.Side:
     sc = {v: c[k]["layers"] for k, v in LAYERED.items() if k in c}
     sc |= {v: 1 for k, v in PRESENT.items() if k in c}
     sc |= {v: c[k]["duration"] for k, v in TIMED.items() if k in c}
-    kw: dict = {}
+    kw: dict = {"future_sight": future_sight} if future_sight else {}
     if act is not None:
-        kw = {ENGINE_BOOST[b]: act["boosts"][b] for b in BOOSTS}
+        kw |= {ENGINE_BOOST[b]: act["boosts"][b] for b in BOOSTS}
         names = [x + st["stat"] if x in ("protosynthesis", "quarkdrive") and st.get("stat") else x
                  for x, st in act["volatiles"].items()]  # fmt: skip
         vol = {v for v in names if _engine_volatile(v) and v != "stall"}
         kw["volatile_statuses"] = vol
+        # the engine counts ends of turn up to its limit (L13; the 2026-10-13 patch), Showdown
+        # counts the turns left down
+        dur = {k: max(n - act["volatiles"][k]["duration"], 0) for k, n in LIMITS.items()
+               if k in vol and act["volatiles"][k]["duration"]}  # fmt: skip
+        if dur:
+            kw["volatile_status_durations"] = pe.VolatileStatusDurations(**dur)
         if act["status"] == "tox":
             sc["toxic_count"] = act["status_state"]["stage"]
     return pe.Side(pokemon=mons, active_index=str(max(s["active"], 0)),
@@ -110,8 +126,17 @@ def engine_state(sd: dict) -> pe.State:
     """poke-engine's state built from a Showdown state (``run_showdown``)."""
     f = sd["field"]
     tr = "trickroom" in f["pseudo"]
+    # a pending Future Sight is on its target's slot in Showdown (it hits at the end of turn
+    # endingTurn + 1), on its user's side in the engine (turns: 1 before the turn it hits)
+    future = [None, None]
+    for k, s in enumerate(sd["sides"]):
+        fm = s.get("slot", {}).get("futuremove")
+        if fm and fm["source"] >= 0:
+            turns = fm["ending_turn"] - sd["turn"] + 2
+            future[1 - k] = (turns, pe.PokemonIndex(str(fm["source"])))
+    sides = [_engine_side(s, f) for s, f in zip(sd["sides"], future, strict=True)]
     return pe.State(
-        side_one=_engine_side(sd["sides"][0]), side_two=_engine_side(sd["sides"][1]),
+        side_one=sides[0], side_two=sides[1],
         weather=WEATHER[f["weather"]], weather_turns_remaining=f["weather_duration"],
         terrain=TERRAIN[f["terrain"]], terrain_turns_remaining=f["terrain_duration"],
         trick_room=tr, trick_room_turns_remaining=f["pseudo"].get("trickroom", 0),

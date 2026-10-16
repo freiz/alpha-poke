@@ -1118,7 +1118,12 @@ pub fn choice_hazard_clear(
             // alpha-poke patch (2026-10-16, doc/engine-diff.md L1): the target's evasion -1 first,
             // unless a substitute blocks it (Showdown's defog onHit; the engine's StatBoosts have
             // no evasion, so the move's data could not say it)
-            let target_ref = attacking_side_ref.get_other_side();
+            // (L1b: a Defog Magic Bounce reflected targets its user: choice.target is User)
+            let target_ref = if choice.target == MoveTarget::User {
+                *attacking_side_ref
+            } else {
+                attacking_side_ref.get_other_side()
+            };
             let target_side = state.get_side(&target_ref);
             if !target_side
                 .volatile_statuses
@@ -1305,6 +1310,38 @@ pub fn choice_hazard_clear(
     }
 }
 
+// alpha-poke patch (2026-10-16, doc/engine-diff.md L14): the fixed damage of Seismic Toss /
+// Night Shade (the user's level), Super Fang / Nature's Madness / Ruination (half the target's HP,
+// rounded down, at least 1) and Endeavor (the target's HP down to the user's), dealt as a damaging
+// move's (generate_instructions_from_move: the accuracy, Protect, a Substitute, Sturdy / Endure);
+// before, choice_special_effect took it off the target's HP before any of them (a miss, a Protect
+// and a Substitute did not stop it). Some(0): no effect (an immune target, a failed Endeavor);
+// None: not one of them, or blocked (Protect: a Status choice).
+pub fn fixed_damage(
+    state: &State,
+    choice: &Choice,
+    attacking_side_ref: &SideReference,
+) -> Option<i16> {
+    if choice.category == MoveCategory::Status {
+        return None;
+    }
+    let (attacking_side, defending_side) = state.get_both_sides_immutable(attacking_side_ref);
+    let attacker = attacking_side.get_active_immutable();
+    let defender = defending_side.get_active_immutable();
+    let amount = match choice.move_id {
+        Choices::SEISMICTOSS | Choices::NIGHTSHADE => attacker.level as i16,
+        Choices::SUPERFANG | Choices::NATURESMADNESS | Choices::RUINATION => {
+            cmp::max(defender.hp / 2, 1)
+        }
+        Choices::ENDEAVOR => cmp::max(defender.hp - attacker.hp, 0),
+        _ => return None,
+    };
+    if type_effectiveness_modifier(&choice.move_type, defender) == 0.0 {
+        return Some(0);
+    }
+    Some(amount)
+}
+
 pub fn choice_special_effect(
     state: &mut State,
     choice: &mut Choice,
@@ -1312,6 +1349,22 @@ pub fn choice_special_effect(
     instructions: &mut StateInstructions,
 ) {
     let (attacking_side, defending_side) = state.get_both_sides(attacking_side_ref);
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L16b): a move Protect blocks does nothing
+    // here either (Pain Split, Trick / Switcheroo, Counter / Mirror Coat, ...); before, these
+    // effects went through it
+    if choice.flags.protect
+        && [
+            PokemonVolatileStatus::PROTECT,
+            PokemonVolatileStatus::SPIKYSHIELD,
+            PokemonVolatileStatus::BANEFULBUNKER,
+            PokemonVolatileStatus::BURNINGBULWARK,
+            PokemonVolatileStatus::SILKTRAP,
+        ]
+        .iter()
+        .any(|v| defending_side.volatile_statuses.contains(v))
+    {
+        return;
+    }
     match choice.move_id {
         Choices::BELLYDRUM => {
             let boost_amount = 6 - attacking_side.attack_boost;
@@ -1487,79 +1540,6 @@ pub fn choice_special_effect(
                 }));
             state.trick_room.active = !state.trick_room.active;
         }
-        Choices::SUPERFANG | Choices::NATURESMADNESS | Choices::RUINATION => {
-            let target_pkmn = defending_side.get_active();
-            if target_pkmn.hp == 1 {
-                return;
-            }
-            if choice.move_id == Choices::SUPERFANG
-                && type_effectiveness_modifier(&PokemonType::NORMAL, &target_pkmn) == 0.0
-            {
-                return;
-            }
-            let target_hp = target_pkmn.hp / 2;
-            instructions
-                .instruction_list
-                .push(Instruction::Damage(DamageInstruction {
-                    side_ref: attacking_side_ref.get_other_side(),
-                    damage_amount: target_pkmn.hp - target_hp,
-                }));
-            target_pkmn.hp = target_hp;
-        }
-        Choices::NIGHTSHADE => {
-            let (attacking_side, defending_side) = state.get_both_sides(attacking_side_ref);
-            let attacker_level = attacking_side.get_active_immutable().level;
-            let defender_active = defending_side.get_active();
-            if type_effectiveness_modifier(&PokemonType::GHOST, &defender_active) == 0.0 {
-                return;
-            }
-
-            let damage_amount = cmp::min(attacker_level as i16, defender_active.hp);
-            instructions
-                .instruction_list
-                .push(Instruction::Damage(DamageInstruction {
-                    side_ref: attacking_side_ref.get_other_side(),
-                    damage_amount: damage_amount,
-                }));
-            defender_active.hp -= damage_amount;
-        }
-        Choices::SEISMICTOSS => {
-            let (attacking_side, defending_side) = state.get_both_sides(attacking_side_ref);
-            let attacker_level = attacking_side.get_active_immutable().level;
-            let defender_active = defending_side.get_active();
-            if type_effectiveness_modifier(&PokemonType::NORMAL, &defender_active) == 0.0 {
-                return;
-            }
-
-            let damage_amount = cmp::min(attacker_level as i16, defender_active.hp);
-            instructions
-                .instruction_list
-                .push(Instruction::Damage(DamageInstruction {
-                    side_ref: attacking_side_ref.get_other_side(),
-                    damage_amount: damage_amount,
-                }));
-            defender_active.hp -= damage_amount;
-        }
-        Choices::ENDEAVOR => {
-            let (attacking_side, defending_side) = state.get_both_sides(attacking_side_ref);
-            let attacker = attacking_side.get_active();
-            let defender = defending_side.get_active();
-
-            if type_effectiveness_modifier(&PokemonType::NORMAL, &defender) == 0.0
-                || attacker.hp >= defender.hp
-            {
-                return;
-            }
-
-            let damage_amount = defender.hp - attacker.hp;
-            instructions
-                .instruction_list
-                .push(Instruction::Damage(DamageInstruction {
-                    side_ref: attacking_side_ref.get_other_side(),
-                    damage_amount: damage_amount,
-                }));
-            defender.hp -= damage_amount;
-        }
         Choices::FINALGAMBIT => {
             let (attacking_side, defending_side) = state.get_both_sides(attacking_side_ref);
             let attacker = attacking_side.get_active();
@@ -1594,21 +1574,25 @@ pub fn choice_special_effect(
                 let target_hp = (attacking_side.get_active_immutable().hp
                     + defending_side.get_active_immutable().hp)
                     / 2;
+                // alpha-poke patch (2026-10-16, doc/engine-diff.md L16a): each at most its max HP
+                // (Showdown's sethp); before, the user could go above it
+                let user_hp = cmp::min(target_hp, attacking_side.get_active_immutable().maxhp);
+                let foe_hp = cmp::min(target_hp, defending_side.get_active_immutable().maxhp);
                 instructions
                     .instruction_list
                     .push(Instruction::Damage(DamageInstruction {
                         side_ref: *attacking_side_ref,
-                        damage_amount: attacking_side.get_active_immutable().hp - target_hp,
+                        damage_amount: attacking_side.get_active_immutable().hp - user_hp,
                     }));
                 instructions
                     .instruction_list
                     .push(Instruction::Damage(DamageInstruction {
                         side_ref: attacking_side_ref.get_other_side(),
-                        damage_amount: defending_side.get_active_immutable().hp - target_hp,
+                        damage_amount: defending_side.get_active_immutable().hp - foe_hp,
                     }));
 
-                attacking_side.get_active().hp = target_hp;
-                defending_side.get_active().hp = target_hp;
+                attacking_side.get_active().hp = user_hp;
+                defending_side.get_active().hp = foe_hp;
             }
         }
         Choices::SUBSTITUTE | Choices::SHEDTAIL => {

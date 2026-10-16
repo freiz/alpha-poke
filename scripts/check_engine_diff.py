@@ -124,6 +124,24 @@ PIVOT = {"uturn", "voltswitch", "flipturn", "teleport", "partingshot", "chillyre
 DRAG = {"roar", "whirlwind", "dragontail", "circlethrow"}
 
 
+FRACTIONS = {"1/16": 1 / 16, "1/12": 1 / 12, "1/10": 0.1, "1/8": 1 / 8, "1/6": 1 / 6,
+             "3/16": 3 / 16, "1/4": 1 / 4, "1/3": 1 / 3, "1/2": 0.5}  # fmt: skip
+
+
+def hp_gap_tag(frac: float, i: int, before: str) -> str:
+    """A label for an HP gap (actual - engine, share of max HP): the nearest common residual
+    fraction (Leftovers 1/16, poison / Black Sludge 1/8, ...) within 1%, else "small" (< 5%) or
+    "other"; prefixed by where the mon was before the turn (active / bench)."""
+    side, j = divmod(i, 6)
+    where = "active" if j == snapshot(before)[0][f"{('s1', 's2')[side]}.active"] else "bench"
+    name, val = min(FRACTIONS.items(), key=lambda kv: abs(abs(frac) - kv[1]))
+    if abs(abs(frac) - val) < 0.01:
+        tag = ("+" if frac > 0 else "-") + name
+    else:
+        tag = "small" if abs(frac) < 0.05 else "other"
+    return f"{where} {tag}"
+
+
 def not_comparable(before: str, after: str, m1: str, m2: str) -> str | None:
     """Why a turn cannot be compared (None: it can): a mon fainted (the engine stops at the
     forced switch; the player's replacement, a decision not recorded when it was the only
@@ -206,6 +224,9 @@ def main() -> None:
     kinds: collections.Counter = collections.Counter()
     per_move: collections.Counter = collections.Counter()
     kind_moves: dict = collections.defaultdict(collections.Counter)  # kind -> move pairs
+    hp_gaps: collections.Counter = collections.Counter()
+    hp_gap_moves: dict = collections.defaultdict(collections.Counter)
+    hp_gap_examples: dict = collections.defaultdict(list)
     moves_seen: collections.Counter = collections.Counter()
     examples: dict = collections.defaultdict(list)
     n_games = 0
@@ -234,12 +255,22 @@ def main() -> None:
             if not found:
                 n_match += 1
                 continue
+            for i, e, h, m in res["hp"]:  # HP gaps by size (a residual's fraction?)
+                g = hp_gap_tag((h - e) / m, i, before)
+                hp_gaps[g] += 1
+                hp_gap_moves[g][f"{m1} | {m2}"] += 1
+                if len(hp_gap_examples[g]) < a.examples:
+                    hp_gap_examples[g].append({"game": list(key), "turn": t, "p1": m1, "p2": m2,
+                                               "slots": [a1["slot"], a2["slot"]],
+                                               "mon": i, "engine": e, "actual": h, "max": m,
+                                               "before": before, "after": after})  # fmt: skip
             for k in found:
                 kinds[k] += 1
                 kind_moves[k][f"{m1} | {m2}"] += 1
                 if len(examples[k]) < a.examples:
                     examples[k].append({
                         "game": list(key), "turn": t, "p1": m1, "p2": m2,
+                        "slots": [a1["slot"], a2["slot"]],
                         "discrete": {f: v for f, v in res["discrete"].items()},
                         "hp": res["hp"], "before": before, "after": after})  # fmt: skip
             for m in (m1, m2):
@@ -250,6 +281,9 @@ def main() -> None:
            "mismatch_kinds": kinds.most_common(),
            "mismatch_rate_by_move": sorted(rate.items(), key=lambda x: -x[1])[:60],
            "moves_by_kind": {k: c.most_common(15) for k, c in kind_moves.items()},
+           "hp_gaps": hp_gaps.most_common(),
+           "hp_gap_moves": {k: c.most_common(15) for k, c in hp_gap_moves.items()},
+           "hp_gap_examples": hp_gap_examples,
            "examples": examples}  # fmt: skip
     path = Path("data/selfplay/diag") / f"engine_diff_gen{a.gen}.json"
     path.write_text(json.dumps(out, indent=1, default=str))
@@ -259,6 +293,9 @@ def main() -> None:
     )
     for k, c in kinds.most_common(30):
         print(f"  {c:6d} ({c / max(n_turns, 1):.2%})  {k}")
+    print("HP gaps (where, actual - engine as a share of max HP):")
+    for k, c in hp_gaps.most_common(16):
+        print(f"  {c:6d}  {k:16s} {hp_gap_moves[k].most_common(4)}")
 
 
 if __name__ == "__main__":

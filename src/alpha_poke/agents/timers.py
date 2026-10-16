@@ -24,6 +24,12 @@ sides, in poke-engine's own units (rust/patches/poke-engine-0.0.48, generate_ins
   healblock / throatchop / magnetrise
               ends of turn since the start (2026-10-13; the patched engine ends them: Psychic
               Noise's Heal Block 2, Throat Chop 2, Magnet Rise 5)
+  partiallytrapped
+              ends of turn of the active's partial trap (Infestation, Whirlpool, ...; from its
+              -activate to its -end; 2026-10-16, doc/engine-diff.md L13: the patched engine ends
+              it at the fifth, Showdown at the fifth or the sixth)
+  used_once   species ids whose Dauntless Shield has raised Defense (Gen 9: once per battle;
+              2026-10-16, doc/engine-diff.md L18)
   sub_hit     the active's Substitute took a hit and stands (its HP below a quarter)
   setters     who set the weather / terrain / a side's screens: (side, species id), for an
               extending item (Light Clay, Heat Rock, ...: 8 turns)
@@ -41,6 +47,8 @@ from dataclasses import dataclass, field
 
 from alpha_poke.analysis.roles import to_id
 
+TRAPS = {"bind", "wrap", "firespin", "whirlpool", "sandtomb", "magmastorm", "infestation",
+         "snaptrap", "thundercage", "clamp"}  # fmt: skip
 PROTECTS = {"protect", "detect", "spikyshield", "banefulbunker", "silktrap", "burningbulwark",
             "endure", "kingsshield", "obstruct"}  # fmt: skip
 
@@ -61,6 +69,7 @@ class SideTimers:
     healblock: int | None = None
     throatchop: int | None = None
     magnetrise: int | None = None
+    partiallytrapped: int | None = None
     sub_hit: bool = False
     recharge: bool = False
     just_moved: str = ""  # species id of this side's mon that made the last move
@@ -68,6 +77,7 @@ class SideTimers:
     # id (reflect, lightscreen, auroraveil) -> the setter's species id
     setters: dict = field(default_factory=dict)
     fields_elapsed: dict = field(default_factory=dict)  # "weather" / "terrain" -> ends of turn
+    used_once: set = field(default_factory=set)  # species ids (Dauntless Shield used)
     status: dict = field(default_factory=dict)  # species id -> status ('tox', 'slp', ...)
     sleep: dict = field(default_factory=dict)  # species id -> [attempts, rest]
     names: dict = field(default_factory=dict)  # nickname -> species id
@@ -78,6 +88,7 @@ class SideTimers:
         self.protected = False
         self.confusion = self.taunt = self.encore = self.yawn = None
         self.disabled = self.healblock = self.throatchop = self.magnetrise = None
+        self.partiallytrapped = None
         self.sub_hit = self.recharge = False
 
     def rest_sleep(self, species: str) -> tuple[int, int]:
@@ -112,7 +123,7 @@ def _feed(sides: dict, p: list[str]) -> None:
                 st.future = (st.future[0] - 1, st.future[1]) if st.future[0] > 1 else None
             if st.yawn is not None:
                 st.yawn += 1
-            for k in ("healblock", "throatchop", "magnetrise"):
+            for k in ("healblock", "throatchop", "magnetrise", "partiallytrapped"):
                 if getattr(st, k) is not None:
                     setattr(st, k, getattr(st, k) + 1)
             for k in st.fields_elapsed:
@@ -213,6 +224,11 @@ def _feed(sides: dict, p: list[str]) -> None:
             setattr(st, what, 0)
         elif what == "substitute":
             st.sub_hit = False
+    elif tag == "-ability" and len(p) > 3 and to_id(p[3]) == "dauntlessshield":
+        st.used_once.add(sp)
+    elif tag == "-activate" and len(p) > 3 and to_id(p[3].replace("move: ", "")) in TRAPS:
+        if st.partiallytrapped is None:  # a second trap move does not restart it
+            st.partiallytrapped = 0
     elif tag == "-activate" and len(p) > 3 and to_id(p[3]) == "confusion":
         if st.confusion is not None:
             st.confusion += 1
@@ -223,7 +239,9 @@ def _feed(sides: dict, p: list[str]) -> None:
         st.setters[to_id(p[3].replace("move: ", ""))] = st.just_moved
     elif tag == "-end" and len(p) > 3:
         what = to_id(p[3].replace("move: ", ""))
-        if what in ("confusion", "taunt", "encore", "yawn", "healblock", "throatchop",
+        if "[partiallytrapped]" in p:
+            st.partiallytrapped = None
+        elif what in ("confusion", "taunt", "encore", "yawn", "healblock", "throatchop",
                     "magnetrise"):  # fmt: skip
             setattr(st, what, None)
         elif what == "disable":
