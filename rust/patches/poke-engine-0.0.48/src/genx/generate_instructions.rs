@@ -2848,6 +2848,7 @@ pub fn transform_into(
     active.special_attack = target.special_attack;
     active.special_defense = target.special_defense;
     active.speed = target.speed;
+    let ability_changed = active.ability != target.ability;
     if active.ability != target.ability {
         list.push(Instruction::ChangeAbility(ChangeAbilityInstruction {
             side_ref: *side_ref,
@@ -2901,11 +2902,16 @@ pub fn transform_into(
             }
         }
     }
-    // (TYPECHANGE: the types go back on a switch, and the harness compares changed types so)
+    // (TYPECHANGE: the types go back on a switch, and the harness compares changed types so;
+    // L172: only when they changed -- a Ditto into a Normal type keeps its own)
+    let retyped = side.get_active_immutable().types != side.get_active_immutable().base_types;
     for v in [
         PokemonVolatileStatus::TYPECHANGE,
         PokemonVolatileStatus::TRANSFORM,
     ] {
+        if v == PokemonVolatileStatus::TYPECHANGE && !retyped {
+            continue;
+        }
         if !side.volatile_statuses.contains(&v) {
             side.volatile_statuses.insert(v);
             list.push(Instruction::ApplyVolatileStatus(
@@ -2915,6 +2921,12 @@ pub fn transform_into(
                 },
             ));
         }
+    }
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L172): the copied ability starts (Showdown's
+    // setAbility(..., isTransform): its Start when it differs, Gen 5+ -- Intimidate, Sand Stream,
+    // Dauntless Shield, ...); L36 had it not start
+    if ability_changed {
+        super::abilities::ability_on_switch_in(state, side_ref, instructions);
     }
 }
 

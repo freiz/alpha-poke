@@ -286,8 +286,8 @@ def _feed(sides: dict, p: list[str]) -> None:
             st.sub_hit = False
         elif what == "abilityslowstart":
             st.slowstart = [5, False]
-    elif tag == "-ability" and len(p) > 3 and to_id(p[3]) == "dauntlessshield":
-        st.used_once.add(sp)
+    elif tag == "-ability" and len(p) > 3 and to_id(p[3]) in ("dauntlessshield", "supersweetsyrup"):
+        st.used_once.add(sp)  # (L172: Supersweet Syrup's once per battle too)
     elif tag == "-activate" and len(p) > 3 and to_id(p[3]) in ("abilityprotosynthesis",
                                                               "abilityquarkdrive"):  # fmt: skip
         st.frombooster = "[fromitem]" in p

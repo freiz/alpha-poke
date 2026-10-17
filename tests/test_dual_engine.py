@@ -4503,3 +4503,66 @@ def test_l171_positions(teams, i, turn, offset):
     outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2)
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
     assert ec.closest(b["state"], outs, n, hp=True)["diff"] == {}
+
+
+# L172 (doc/engine-diff.md): a transformed mon's copied ability starts (Showdown's setAbility with
+# isTransform: Imposter into an Intimidate; random b53-t11 Sand Stream, wide2 b61-t6 Dauntless
+# Shield), no typechange into its own types (wide b73-t9); Supersweet Syrup (random b160-t23,
+# wide2 b30-t21)
+LANDO = """Landorus-Therian @ Leftovers
+Ability: Intimidate
+EVs: 252 HP / 252 Def / 4 SpD
+Impish Nature
+- Stealth Rock
+- Earthquake
+- U-turn
+- Taunt"""
+DITTO_BACK = """Blissey @ Heavy-Duty Boots
+Ability: Natural Cure
+EVs: 252 HP / 252 Def / 4 SpD
+Bold Nature
+- Soft-Boiled
+- Seismic Toss
+
+Ditto @ Choice Scarf
+Ability: Imposter
+EVs: 252 HP / 4 Def / 252 Spe
+Relaxed Nature
+- Transform"""
+HYDRAPPLE_BACK = DITTO_BACK.split("\n\n")[0] + """
+
+Hydrapple @ Leftovers
+Ability: Supersweet Syrup
+EVs: 252 HP / 252 SpD / 4 SpA
+Calm Nature
+- Draco Meteor
+- Giga Drain"""
+
+
+def test_l172_imposter_copies_intimidate():
+    states = ec.run_showdown(DITTO_BACK, LANDO, [("switch 2", "move stealthrock")])
+    assert states[1]["sides"][1]["mons"][0]["boosts"]["atk"] == -1
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "ditto", "stealthrock")
+    assert ec.closest(states[1], outs, (2, 1), hp=True)["diff"] == {}
+
+
+def test_l172_supersweet_syrup():
+    states = ec.run_showdown(HYDRAPPLE_BACK, LANDO, [("switch 2", "move stealthrock")])
+    assert states[1]["sides"][1]["mons"][0]["boosts"]["evasion"] == -1
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "hydrapple", "stealthrock")
+    assert ec.closest(states[1], outs, (2, 1), hp=True)["diff"] == {}
+
+
+@pytest.mark.parametrize("teams,i,turn,offset", [
+    ("random_battle_teams_random.jsonl", 53, 11, 0),
+    ("random_battle_teams_wide2.jsonl", 61, 6, 30000),
+    ("random_battle_teams_wide.jsonl", 73, 9, 0),
+    ("random_battle_teams_random.jsonl", 160, 23, 0),
+    ("random_battle_teams_wide2.jsonl", 30, 21, 30000),
+])  # fmt: skip
+def test_l172_positions(teams, i, turn, offset):
+    a, b = _random_position(teams, i, turn, offset)
+    c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
+    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2)
+    n = tuple(len(s["mons"]) for s in a["state"]["sides"])
+    assert ec.closest(b["state"], outs, n, hp=True)["diff"] == {}

@@ -1830,8 +1830,8 @@ pub fn ability_on_switch_in(
     side_ref: &SideReference,
     instructions: &mut StateInstructions,
 ) {
-    // alpha-poke patch (2026-10-16, doc/engine-diff.md L36): Imposter transforms into the foe (the
-    // copied ability does not start)
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L36): Imposter transforms into the foe (L172:
+    // the copied ability starts, transform_into)
     {
         let (side, foe) = state.get_both_sides_immutable(side_ref);
         let me = side.get_active_immutable();
@@ -2107,6 +2107,25 @@ pub fn ability_on_switch_in(
                     stat: PokemonBoostableStat::Defense,
                     amount: 1,
                 }));
+        }
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L172): Supersweet Syrup, once per battle
+        // (a used one: base ability none, as Dauntless Shield's): the foe's evasion -1, not through
+        // a Substitute (Showdown's onStart; a foe's drop: Clear Body, Defiant, ...)
+        Abilities::SUPERSWEETSYRUP if active_pkmn.base_ability != Abilities::NONE => {
+            if defending_side.get_active_immutable().hp > 0
+                && !defending_side
+                    .volatile_statuses
+                    .contains(&PokemonVolatileStatus::SUBSTITUTE)
+            {
+                super::generate_instructions::apply_boost_instruction(
+                    defending_side,
+                    &PokemonBoostableStat::Evasion,
+                    &-1,
+                    side_ref,
+                    &side_ref.get_other_side(),
+                    instructions,
+                );
+            }
         }
         Abilities::GRASSYSURGE => {
             if state.terrain.terrain_type != Terrain::GRASSYTERRAIN {

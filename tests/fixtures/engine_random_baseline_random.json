@@ -37,9 +37,6 @@
 "hp",
 "item"
 ],
-"b160-t23": [
-"boost.evasion"
-],
 "b165-t19": [
 "boost.atk"
 ],
@@ -64,10 +61,6 @@
 ],
 "b50-t6": [
 "hp"
-],
-"b53-t11": [
-"hp",
-"weather"
 ],
 "b7-t13": [
 "status"
