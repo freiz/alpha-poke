@@ -264,6 +264,11 @@ define_enum_with_from_str! {
         UNBURDEN,
         UPROAR,
         YAWN,
+        // alpha-poke patch (2026-10-16, doc/engine-diff.md L24), appended (the networks read bits
+        // 1-103): Micle Berry's next accuracy, Metronome's consecutive uses (its count in
+        // volatile_status_durations.metronome; on while it is above 0)
+        MICLEBERRY,
+        METRONOME,
     },
     default = NONE
 }
@@ -1494,6 +1499,29 @@ impl State {
                     side.volatile_status_durations.partiallytrapped = 0;
                     false
                 }
+                // alpha-poke patch (2026-10-16, L24)
+                PokemonVolatileStatus::MICLEBERRY => {
+                    instructions.push(Instruction::ChangeVolatileStatusDuration(
+                        ChangeVolatileStatusDurationInstruction {
+                            side_ref: *side_ref,
+                            volatile_status: *pkmn_volatile_status,
+                            amount: -1 * side.volatile_status_durations.micleberry,
+                        },
+                    ));
+                    side.volatile_status_durations.micleberry = 0;
+                    false
+                }
+                PokemonVolatileStatus::METRONOME => {
+                    instructions.push(Instruction::ChangeVolatileStatusDuration(
+                        ChangeVolatileStatusDurationInstruction {
+                            side_ref: *side_ref,
+                            volatile_status: *pkmn_volatile_status,
+                            amount: -1 * side.volatile_status_durations.metronome,
+                        },
+                    ));
+                    side.volatile_status_durations.metronome = 0;
+                    false
+                }
                 _ => false,
             };
 
@@ -1579,6 +1607,13 @@ impl State {
     }
 
     pub fn set_last_used_move_flag(&mut self) {
+        // alpha-poke patch (2026-10-16, L24): Metronome counts on it
+        let metronome = [&self.side_one, &self.side_two]
+            .iter()
+            .any(|s| s.pokemon.pkmn.iter().any(|p| p.item == Items::METRONOME));
+        if metronome {
+            self.use_last_used_move = true;
+        }
         if self._state_contains_any_move(&[
             Choices::ENCORE,
             Choices::FAKEOUT,

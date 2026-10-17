@@ -133,7 +133,7 @@ def _changed_types(m: dict) -> bool:
 
 
 # the patched engine's limits of the volatiles it ends (ends of turn)
-LIMITS = {"partiallytrapped": 5, "healblock": 2, "throatchop": 2, "magnetrise": 5}
+LIMITS = {"partiallytrapped": 5, "healblock": 2, "throatchop": 2, "magnetrise": 5, "micleberry": 2}
 
 
 def _engine_side(s: dict, future_sight=None) -> pe.Side:
@@ -150,6 +150,10 @@ def _engine_side(s: dict, future_sight=None) -> pe.Side:
         names = [x + st["stat"] if x in ("protosynthesis", "quarkdrive") and st.get("stat") else x
                  for x, st in act["volatiles"].items()]  # fmt: skip
         vol = {v for v in names if _engine_volatile(v) and v != "stall"}
+        # Metronome: Showdown keeps the volatile from the switch-in, the engine while it counts
+        metronome = act["volatiles"].get("metronome", {}).get("num_consecutive", 0)
+        if not metronome:
+            vol.discard("metronome")
         if _changed_types(act):  # Showdown keeps no volatile for a type change (Libero, Soak, ...)
             vol.add("typechange")
         kw["volatile_statuses"] = vol
@@ -175,6 +179,8 @@ def _engine_side(s: dict, future_sight=None) -> pe.Side:
         # Showdown's trueDuration counts the turns left down
         if "lockedmove" in vol and act["volatiles"]["lockedmove"]["true_duration"]:
             dur["lockedmove"] = min(max(3 - act["volatiles"]["lockedmove"]["true_duration"], 0), 2)
+        if metronome:
+            dur["metronome"] = metronome
         if "confusion" in vol and act["volatiles"]["confusion"]["time"]:
             dur["confusion"] = min(max(5 - act["volatiles"]["confusion"]["time"], 0), 4)
         if dur:
@@ -260,6 +266,8 @@ def view(sd: dict) -> dict:
                     x += st["stat"]
                 # (Protect's counter: Showdown's "stall" volatile, the engine's protect side
                 # condition -- not compared as a volatile)
+                if x == "metronome" and not st.get("num_consecutive"):
+                    continue  # (the engine's is on while it counts)
                 if _engine_volatile(x) and x != "stall":
                     v[f"{k}.volatile.{x}"] = True
         c = s["conditions"]

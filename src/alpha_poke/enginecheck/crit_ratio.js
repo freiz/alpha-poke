@@ -17,21 +17,31 @@ process.stdin.on('end', () => {
 	const accuracy = {};
 	let error = null;
 	try {
-		const battle = new Battle({formatid: 'gen9customgame', seed: c.seed || 'gen5,1,2,3,4'});
-		battle.setPlayer('p1', {name: 'p1', team: Teams.pack(teamOf(c.p1))});
-		battle.setPlayer('p2', {name: 'p2', team: Teams.pack(teamOf(c.p2))});
-		if (battle.p1.activeRequest && battle.p1.activeRequest.teamPreview) {
-			battle.makeChoices('default', 'default');
-		}
-		for (const [a, b] of c.turns || []) battle.makeChoices(a, b);
-		const source = battle.p1.active[0];
-		const target = battle.p2.active[0];
-		for (const slot of source.moveSlots) {
+		// a fresh battle per move: the Accuracy event can use something up (Micle Berry)
+		const setup = () => {
+			const battle = new Battle({formatid: 'gen9customgame', seed: c.seed || 'gen5,1,2,3,4'});
+			battle.setPlayer('p1', {name: 'p1', team: Teams.pack(teamOf(c.p1))});
+			battle.setPlayer('p2', {name: 'p2', team: Teams.pack(teamOf(c.p2))});
+			if (battle.p1.activeRequest && battle.p1.activeRequest.teamPreview) {
+				battle.makeChoices('default', 'default');
+			}
+			for (const [a, b] of c.turns || []) battle.makeChoices(a, b);
+			return battle;
+		};
+		const n = setup().p1.active[0].moveSlots.length;
+		for (let k = 0; k < n; k++) {
+			const battle = setup();
+			const source = battle.p1.active[0];
+			const target = battle.p2.active[0];
+			const slot = source.moveSlots[k];
 			const move = battle.dex.getActiveMove(slot.id);
-			let ratio = battle.runEvent('ModifyCritRatio', source, target, move, move.critRatio || 0);
+			const ratio = battle.runEvent('ModifyCritRatio', source, target, move, move.critRatio || 0);
 			stages[slot.id] = Math.max(0, Math.min(4, ratio));
-			const acc = move.accuracy;
-			accuracy[slot.id] = acc === true ? true : battle.runEvent('ModifyAccuracy', target, source, move, acc);
+			// as hitStepAccuracy: ModifyAccuracy, then Accuracy (Micle Berry's onSourceAccuracy)
+			let acc = move.accuracy;
+			if (acc !== true) acc = battle.runEvent('ModifyAccuracy', target, source, move, acc);
+			if (acc !== true) acc = battle.runEvent('Accuracy', target, source, move, acc);
+			accuracy[slot.id] = acc;
 		}
 	} catch (e) {
 		error = String(e && e.stack || e);

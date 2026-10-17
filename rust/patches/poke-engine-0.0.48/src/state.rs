@@ -800,6 +800,10 @@ pub struct VolatileStatusDurations {
     // alpha-poke patch (2026-10-16): ends of turn of a partial trap (Infestation, Whirlpool, ...);
     // it ends at the fifth (Showdown: the fifth or the sixth)
     pub partiallytrapped: i8,
+    // alpha-poke patch (2026-10-16, L24): ends of turn of Micle Berry's boost (ends at 2);
+    // Metronome's consecutive uses of the same move
+    pub micleberry: i8,
+    pub metronome: i8,
 }
 
 impl Default for VolatileStatusDurations {
@@ -815,6 +819,8 @@ impl Default for VolatileStatusDurations {
             magnetrise: 0,
             throatchop: 0,
             partiallytrapped: 0,
+            micleberry: 0,
+            metronome: 0,
         }
     }
 }
@@ -832,6 +838,8 @@ impl VolatileStatusDurations {
             ("magnetrise", self.magnetrise),
             ("throatchop", self.throatchop),
             ("partiallytrapped", self.partiallytrapped),
+            ("micleberry", self.micleberry),
+            ("metronome", self.metronome),
         ];
 
         let mut output = String::new();
@@ -848,7 +856,7 @@ impl VolatileStatusDurations {
 
     pub fn serialize(&self) -> String {
         format!(
-            "{};{};{};{};{};{};{};{};{};{}",
+            "{};{};{};{};{};{};{};{};{};{};{};{}",
             self.confusion,
             self.encore,
             self.lockedmove,
@@ -858,7 +866,9 @@ impl VolatileStatusDurations {
             self.healblock,
             self.magnetrise,
             self.throatchop,
-            self.partiallytrapped
+            self.partiallytrapped,
+            self.micleberry,
+            self.metronome
         )
     }
     pub fn deserialize(serialized: &str) -> VolatileStatusDurations {
@@ -875,6 +885,8 @@ impl VolatileStatusDurations {
             magnetrise: split.get(7).map_or(0, |x| x.parse::<i8>().unwrap()),
             throatchop: split.get(8).map_or(0, |x| x.parse::<i8>().unwrap()),
             partiallytrapped: split.get(9).map_or(0, |x| x.parse::<i8>().unwrap()),
+            micleberry: split.get(10).map_or(0, |x| x.parse::<i8>().unwrap()),
+            metronome: split.get(11).map_or(0, |x| x.parse::<i8>().unwrap()),
         }
     }
 }
@@ -1674,6 +1686,12 @@ impl State {
             }
             PokemonVolatileStatus::PARTIALLYTRAPPED => {
                 side.volatile_status_durations.partiallytrapped += amount;
+            }
+            PokemonVolatileStatus::MICLEBERRY => {
+                side.volatile_status_durations.micleberry += amount;
+            }
+            PokemonVolatileStatus::METRONOME => {
+                side.volatile_status_durations.metronome += amount;
             }
             _ => panic!(
                 "Invalid volatile status for increment_volatile_status_duration: {:?}",

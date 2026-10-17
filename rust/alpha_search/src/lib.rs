@@ -388,6 +388,21 @@ fn always_hit_moves() -> Vec<String> {
     out
 }
 
+/// poke-engine's max PP of the moves where it is below 10 (`Choices::max_pp_below_10`).
+#[pyfunction]
+fn low_max_pp_moves() -> Vec<(String, i8)> {
+    use poke_engine::choices::MOVES;
+    let mut out: Vec<(String, i8)> = MOVES
+        .keys()
+        .filter_map(|c| {
+            c.max_pp_below_10()
+                .map(|pp| (format!("{:?}", c).to_lowercase(), pp))
+        })
+        .collect();
+    out.sort();
+    out
+}
+
 /// poke-engine's base stats of species (the forme-change table, `PokemonName::base_stats`):
 /// None for a species the engine has none of.
 #[pyfunction]
@@ -1074,6 +1089,7 @@ fn alpha_search(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(engine_data, m)?)?;
     m.add_function(wrap_pyfunction!(engine_base_stats, m)?)?;
     m.add_function(wrap_pyfunction!(always_hit_moves, m)?)?;
+    m.add_function(wrap_pyfunction!(low_max_pp_moves, m)?)?;
     m.add_function(wrap_pyfunction!(encode_ids, m)?)?;
     m.add_function(wrap_pyfunction!(tnet_forward, m)?)?;
     m.add_class::<PyBatchSearch>()?;

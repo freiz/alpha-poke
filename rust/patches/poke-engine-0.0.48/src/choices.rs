@@ -20508,6 +20508,146 @@ impl Choices {
         )
     }
 
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L24): the max PP when below 10 (5 PP moves:
+    // 8 with Showdown's PP Ups; a few have 1 and none): Leppa Berry restores 10 up to it.
+    // tests/test_engine_data.py checks the list against Showdown
+    pub fn max_pp_below_10(&self) -> Option<i8> {
+        match self {
+            Choices::REVIVALBLESSING | Choices::SKETCH | Choices::STRUGGLE => Some(1),
+            Choices::AEROBLAST
+            | Choices::ANCIENTPOWER
+            | Choices::ARMORCANNON
+            | Choices::ASTRALBARRAGE
+            | Choices::BEHEMOTHBASH
+            | Choices::BEHEMOTHBLADE
+            | Choices::BLASTBURN
+            | Choices::BLIZZARD
+            | Choices::BLOCK
+            | Choices::BLOODMOON
+            | Choices::BLUEFLARE
+            | Choices::BOLTSTRIKE
+            | Choices::BOUNCE
+            | Choices::BURNINGJEALOUSY
+            | Choices::BURNUP
+            | Choices::CHLOROBLAST
+            | Choices::CLANGINGSCALES
+            | Choices::CLANGOROUSSOUL
+            | Choices::CLOSECOMBAT
+            | Choices::COLLISIONCOURSE
+            | Choices::CROSSCHOP
+            | Choices::CRUSHGRIP
+            | Choices::DESTINYBOND
+            | Choices::DETECT
+            | Choices::DIAMONDSTORM
+            | Choices::DOOMDESIRE
+            | Choices::DOUBLESHOCK
+            | Choices::DRACOMETEOR
+            | Choices::DRAGONASCENT
+            | Choices::DRAGONENERGY
+            | Choices::DYNAMAXCANNON
+            | Choices::DYNAMICPUNCH
+            | Choices::EERIESPELL
+            | Choices::ELECTRODRIFT
+            | Choices::ENCORE
+            | Choices::ENDEAVOR
+            | Choices::ERUPTION
+            | Choices::EXPLOSION
+            | Choices::EXTREMESPEED
+            | Choices::FICKLEBEAM
+            | Choices::FINALGAMBIT
+            | Choices::FIREBLAST
+            | Choices::FISSURE
+            | Choices::FLEURCANNON
+            | Choices::FOCUSBLAST
+            | Choices::FREEZESHOCK
+            | Choices::FRENZYPLANT
+            | Choices::FUSIONBOLT
+            | Choices::FUSIONFLARE
+            | Choices::GIGAIMPACT
+            | Choices::GIGATONHAMMER
+            | Choices::GLACIALLANCE
+            | Choices::GLAIVERUSH
+            | Choices::GRAVITY
+            | Choices::GUILLOTINE
+            | Choices::GUNKSHOT
+            | Choices::GYROBALL
+            | Choices::HEADLONGRUSH
+            | Choices::HEADSMASH
+            | Choices::HEALBELL
+            | Choices::HORNDRILL
+            | Choices::HYDROCANNON
+            | Choices::HYDROPUMP
+            | Choices::HYPERBEAM
+            | Choices::HYPERDRILL
+            | Choices::HYPERSPACEFURY
+            | Choices::HYPERSPACEHOLE
+            | Choices::ICEBURN
+            | Choices::INFERNO
+            | Choices::LASHOUT
+            | Choices::LASTRESORT
+            | Choices::LEAFSTORM
+            | Choices::LOCKON
+            | Choices::LUNARBLESSING
+            | Choices::LUSTERPURGE
+            | Choices::MAGMASTORM
+            | Choices::MAKEITRAIN
+            | Choices::MALIGNANTCHAIN
+            | Choices::MEANLOOK
+            | Choices::MEGAKICK
+            | Choices::MIGHTYCLEAVE
+            | Choices::MILKDRINK
+            | Choices::MISTBALL
+            | Choices::MISTYEXPLOSION
+            | Choices::MOONGEISTBEAM
+            | Choices::MOONLIGHT
+            | Choices::MORNINGSUN
+            | Choices::NORETREAT
+            | Choices::OVERHEAT
+            | Choices::PERISHSONG
+            | Choices::PHOTONGEYSER
+            | Choices::POLTERGEIST
+            | Choices::PSYCHOBOOST
+            | Choices::PYROBALL
+            | Choices::RAINDANCE
+            | Choices::RECOVER
+            | Choices::REST
+            | Choices::RETALIATE
+            | Choices::ROAROFTIME
+            | Choices::ROCKWRECKER
+            | Choices::ROOST
+            | Choices::SACREDFIRE
+            | Choices::SEEDFLARE
+            | Choices::SELFDESTRUCT
+            | Choices::SHADOWFORCE
+            | Choices::SHEERCOLD
+            | Choices::SHOREUP
+            | Choices::SKYATTACK
+            | Choices::SLACKOFF
+            | Choices::SOFTBOILED
+            | Choices::SPACIALREND
+            | Choices::SPINOUT
+            | Choices::SPRINGTIDESTORM
+            | Choices::STEAMERUPTION
+            | Choices::STEELBEAM
+            | Choices::STEELROLLER
+            | Choices::STONEEDGE
+            | Choices::SUCKERPUNCH
+            | Choices::SUNNYDAY
+            | Choices::SUNSTEELSTRIKE
+            | Choices::SUPERPOWER
+            | Choices::SURGINGSTRIKES
+            | Choices::SYNTHESIS
+            | Choices::TERASTARSTORM
+            | Choices::THUNDERCLAP
+            | Choices::TRICKROOM
+            | Choices::VCREATE
+            | Choices::WATERSPOUT
+            | Choices::WICKEDBLOW
+            | Choices::ZAPCANNON => Some(8),
+            _ => None,
+        }
+    }
+
     pub fn increased_crit_ratio(&self) -> bool {
         match self {
             Choices::AEROBLAST

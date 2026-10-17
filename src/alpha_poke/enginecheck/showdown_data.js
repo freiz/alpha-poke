@@ -8,7 +8,8 @@ const dex = Dex.mod('gen9');
 const legal = x => !x.isNonstandard || x.isNonstandard === 'Unobtainable';
 
 const moves = dex.moves.all().filter(legal).map(m => ({
-	id: m.id, type: m.type, accuracy: m.accuracy === true ? 'always' : m.accuracy,
+	id: m.id, type: m.type, accuracy: m.accuracy === true ? 'always' : m.accuracy, pp: m.pp,
+	no_pp_boosts: !!m.noPPBoosts,
 	category: m.category, basePower: m.basePower, priority: m.priority, target: m.target,
 	flags: Object.keys(m.flags).sort(), drain: m.drain || null, recoil: m.recoil || null,
 	heal: m.heal || null, status: m.status || null, volatileStatus: m.volatileStatus || null,

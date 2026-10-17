@@ -344,6 +344,12 @@ define_enum_with_from_str! {
         FOCUSBAND,
         // generate_instructions::starf_berry_branches
         STARFBERRY,
+        // generate_instructions_from_move (PP), item_end_of_turn + check_move_hit_or_miss, the
+        // consecutive-use count (generate_instructions_from_move), get_instructions_from_boosts
+        LEPPABERRY,
+        MICLEBERRY,
+        METRONOME,
+        MIRRORHERB,
     },
     default = UNKNOWNITEM
 }
@@ -1348,6 +1354,38 @@ pub fn item_end_of_turn(
         }
         Items::LANSATBERRY if active_pkmn.hp <= active_pkmn.maxhp / 4 && active_pkmn.hp > 0 => {
             lansat_berry(side_ref, attacking_side, instructions)
+        }
+        // alpha-poke patch (2026-10-16, L24): Micle Berry, eaten at the end of the turn at 1/4 HP
+        Items::MICLEBERRY
+            if active_pkmn.hp > 0
+                && (active_pkmn.hp <= active_pkmn.maxhp / 4
+                    || (active_pkmn.ability == Abilities::GLUTTONY
+                        && active_pkmn.hp <= active_pkmn.maxhp / 2)) =>
+        {
+            instructions
+                .instruction_list
+                .push(Instruction::ChangeItem(ChangeItemInstruction {
+                    side_ref: *side_ref,
+                    current_item: Items::MICLEBERRY,
+                    new_item: Items::NONE,
+                }));
+            active_pkmn.item = Items::NONE;
+            if !attacking_side
+                .volatile_statuses
+                .contains(&PokemonVolatileStatus::MICLEBERRY)
+            {
+                instructions
+                    .instruction_list
+                    .push(Instruction::ApplyVolatileStatus(
+                        ApplyVolatileStatusInstruction {
+                            side_ref: *side_ref,
+                            volatile_status: PokemonVolatileStatus::MICLEBERRY,
+                        },
+                    ));
+                attacking_side
+                    .volatile_statuses
+                    .insert(PokemonVolatileStatus::MICLEBERRY);
+            }
         }
         Items::SITRUSBERRY if active_pkmn.hp <= active_pkmn.maxhp / 2 => {
             sitrus_berry(side_ref, attacking_side, instructions)

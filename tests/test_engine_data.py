@@ -131,3 +131,16 @@ def test_always_hit_moves_match_showdown():
     want = sorted(m["id"] for m in data.showdown()["moves"]
                   if m["accuracy"] == "always" and m["target"] in foe)  # fmt: skip
     assert alpha_search.always_hit_moves() == want
+
+
+def test_low_max_pp_moves_match_showdown():
+    """The moves whose max PP is below 10 (5 PP: 8 with Showdown's PP Ups; a few 1 and none):
+    the engine keeps no max PP and Leppa Berry restores 10 up to it."""
+    import alpha_search
+
+    from alpha_poke.enginecheck import data
+
+    want = sorted((m["id"], m["pp"] if m["no_pp_boosts"] else m["pp"] * 8 // 5)
+                  for m in data.showdown()["moves"]
+                  if (m["pp"] if m["no_pp_boosts"] else m["pp"] * 8 // 5) < 10)  # fmt: skip
+    assert [tuple(x) for x in alpha_search.low_max_pp_moves()] == want

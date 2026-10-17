@@ -1130,6 +1130,36 @@ fn get_instructions_from_boosts(
             incoming_instructions,
         );
     }
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L24): Mirror Herb copies the foe's raises of
+    // its own stats once (used up)
+    let foe_ref = target_side_ref.get_other_side();
+    if target_side_ref == *attacking_side_reference
+        && state
+            .get_side_immutable(&foe_ref)
+            .get_active_immutable()
+            .item
+            == Items::MIRRORHERB
+        && boostable_stats.iter().any(|(_, b)| *b > 0)
+    {
+        for (stat, boost) in boostable_stats.iter().filter(|(_, b)| *b > 0) {
+            apply_boost_instruction(
+                state.get_side(&foe_ref),
+                stat,
+                boost,
+                &foe_ref,
+                &foe_ref,
+                incoming_instructions,
+            );
+        }
+        incoming_instructions
+            .instruction_list
+            .push(Instruction::ChangeItem(ChangeItemInstruction {
+                side_ref: foe_ref,
+                current_item: Items::MIRRORHERB,
+                new_item: Items::NONE,
+            }));
+        state.get_side(&foe_ref).get_active().item = Items::NONE;
+    }
 }
 
 fn compare_health_with_damage_multiples(max_damage: i16, health: i16) -> (i16, i16) {
@@ -1500,6 +1530,41 @@ fn check_move_hit_or_miss(
         .get_side_immutable(&attacking_side_ref.get_other_side())
         .get_active_immutable()
         .item;
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L24): Micle Berry's boost goes with the next
+    // move aimed at the target (x 4915 / 4096 when it can miss)
+    let mut micle = false;
+    if choice.target == MoveTarget::Opponent {
+        let side = state.get_side(attacking_side_ref);
+        if side
+            .volatile_statuses
+            .contains(&PokemonVolatileStatus::MICLEBERRY)
+        {
+            micle = !choice.move_id.always_hits();
+            side.volatile_statuses
+                .remove(&PokemonVolatileStatus::MICLEBERRY);
+            incoming_instructions
+                .instruction_list
+                .push(Instruction::RemoveVolatileStatus(
+                    RemoveVolatileStatusInstruction {
+                        side_ref: *attacking_side_ref,
+                        volatile_status: PokemonVolatileStatus::MICLEBERRY,
+                    },
+                ));
+            let count = side.volatile_status_durations.micleberry;
+            if count != 0 {
+                incoming_instructions.instruction_list.push(
+                    Instruction::ChangeVolatileStatusDuration(
+                        ChangeVolatileStatusDurationInstruction {
+                            side_ref: *attacking_side_ref,
+                            volatile_status: PokemonVolatileStatus::MICLEBERRY,
+                            amount: -count,
+                        },
+                    ),
+                );
+                side.volatile_status_durations.micleberry = 0;
+            }
+        }
+    }
     let attacking_side = state.get_side(attacking_side_ref);
     let attacking_pokemon = attacking_side.get_active_immutable();
 
@@ -1514,6 +1579,9 @@ fn check_move_hit_or_miss(
         }
         if target_item == Items::BRIGHTPOWDER {
             percent_hit *= 3686.0 / 4096.0;
+        }
+        if micle {
+            percent_hit *= 4915.0 / 4096.0;
         }
     }
     let mut percent_hit = percent_hit.min(1.0);
@@ -2669,6 +2737,64 @@ pub fn generate_instructions_from_move(
         return;
     }
 
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L24): Metronome, the same move again counts
+    // (Showdown's numConsecutive: 0 the first time, then 1, 2, ...), its damage x 4915 / 4096 per
+    // count up to 2; another move or a switch starts over
+    if state.use_last_used_move
+        && state
+            .get_side_immutable(&attacking_side)
+            .get_active_immutable()
+            .item
+            == Items::METRONOME
+    {
+        let side = state.get_side(&attacking_side);
+        let same = side.last_used_move == LastUsedMove::Move(choice.move_index);
+        let count = side.volatile_status_durations.metronome;
+        let new = if same { cmp::min(count + 1, 5) } else { 0 };
+        if new != count {
+            incoming_instructions
+                .instruction_list
+                .push(Instruction::ChangeVolatileStatusDuration(
+                    ChangeVolatileStatusDurationInstruction {
+                        side_ref: attacking_side,
+                        volatile_status: PokemonVolatileStatus::METRONOME,
+                        amount: new - count,
+                    },
+                ));
+            side.volatile_status_durations.metronome = new;
+        }
+        let on = side
+            .volatile_statuses
+            .contains(&PokemonVolatileStatus::METRONOME);
+        if new > 0 && !on {
+            incoming_instructions
+                .instruction_list
+                .push(Instruction::ApplyVolatileStatus(
+                    ApplyVolatileStatusInstruction {
+                        side_ref: attacking_side,
+                        volatile_status: PokemonVolatileStatus::METRONOME,
+                    },
+                ));
+            side.volatile_statuses
+                .insert(PokemonVolatileStatus::METRONOME);
+        } else if new == 0 && on {
+            incoming_instructions
+                .instruction_list
+                .push(Instruction::RemoveVolatileStatus(
+                    RemoveVolatileStatusInstruction {
+                        side_ref: attacking_side,
+                        volatile_status: PokemonVolatileStatus::METRONOME,
+                    },
+                ));
+            side.volatile_statuses
+                .remove(&PokemonVolatileStatus::METRONOME);
+        }
+        if choice.category != MoveCategory::Status {
+            choice.base_power *=
+                [4096.0, 4915.0, 5734.0, 6553.0, 7372.0, 8192.0][new as usize] / 4096.0;
+        }
+    }
+
     if state.use_last_used_move {
         set_last_used_move_as_move(
             state.get_side(&attacking_side),
@@ -2730,6 +2856,28 @@ pub fn generate_instructions_from_move(
                 amount: pp_decrement_amount,
             }));
         active.moves[&choice.move_index].pp -= pp_decrement_amount;
+        // alpha-poke patch (2026-10-16, doc/engine-diff.md L24): Leppa Berry, 10 PP back to a move
+        // at 0, at most its max
+        if active.item == Items::LEPPABERRY && active.moves[&choice.move_index].pp <= 0 {
+            let back = cmp::min(10, choice.move_id.max_pp_below_10().unwrap_or(10))
+                - active.moves[&choice.move_index].pp;
+            incoming_instructions
+                .instruction_list
+                .push(Instruction::DecrementPP(DecrementPPInstruction {
+                    side_ref: attacking_side,
+                    move_index: choice.move_index,
+                    amount: -back,
+                }));
+            active.moves[&choice.move_index].pp += back;
+            incoming_instructions
+                .instruction_list
+                .push(Instruction::ChangeItem(ChangeItemInstruction {
+                    side_ref: attacking_side,
+                    current_item: Items::LEPPABERRY,
+                    new_item: Items::NONE,
+                }));
+            active.item = Items::NONE;
+        }
     }
 
     if !choice.sleep_talk_move {
@@ -4076,6 +4224,7 @@ fn add_end_of_turn_instructions(
             (PokemonVolatileStatus::MAGNETRISE, 5),
             (PokemonVolatileStatus::THROATCHOP, 2),
             (PokemonVolatileStatus::PARTIALLYTRAPPED, 5),
+            (PokemonVolatileStatus::MICLEBERRY, 2),
         ] {
             if !side.volatile_statuses.contains(&volatile) {
                 continue;
@@ -4086,6 +4235,7 @@ fn add_end_of_turn_instructions(
                 PokemonVolatileStatus::PARTIALLYTRAPPED => {
                     &mut side.volatile_status_durations.partiallytrapped
                 }
+                PokemonVolatileStatus::MICLEBERRY => &mut side.volatile_status_durations.micleberry,
                 _ => &mut side.volatile_status_durations.magnetrise,
             };
             if *duration + 1 >= limit {

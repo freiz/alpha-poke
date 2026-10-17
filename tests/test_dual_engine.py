@@ -1208,3 +1208,48 @@ def test_l29_speed_tie_branches_do_not_share_choices():
         outs = ec.engine_outcomes(ec.engine_state(states[0]), "bravebird", "roost")
         assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}, seed
     assert orders == {"p1", "p2"}  # Showdown: both tie orders among the seeds
+
+
+def test_l24_leppa_berry():
+    """A move at 0 PP gets 10 back, at most its max (Recover: 5 PP, 8 with Showdown's PP Ups;
+    used 8 times: back to 8)."""
+    p1 = CORVIKNIGHT.replace("@ Leftovers", "@ Leppa Berry").replace("- Roost", "- Recover")
+    states = ec.run_showdown(p1, BLISSEY, [("move recover", "move calmmind")] * 8)
+    pp = {x["id"]: x["pp"] for x in states[8]["sides"][0]["mons"][0]["moves"]}
+    assert pp["recover"] == 8 and states[8]["sides"][0]["mons"][0]["item"] == ""  # Showdown
+    outs = ec.engine_outcomes(ec.engine_state(states[7]), "recover", "calmmind")
+    assert {[m.pp for m in o[1].side_one.pokemon[0].moves if str(m.id).lower() == "recover"][0]
+            for o in outs} == {8}  # fmt: skip
+    assert ec.closest(states[8], outs, (1, 1), hp=True)["diff"] == {}
+
+
+def test_l24_micle_berry():
+    """Eaten at 1/4 HP at the end of the turn: the next move's accuracy x 4915 / 4096."""
+    p1 = _corviknight("Micle Berry").replace("- Brave Bird", "- Stone Edge")
+    turns = [("move defog", "move ruination")] * 2
+    states = ec.run_showdown(p1, TINGLU_HITS, turns, seed="gen5,5,5,5,5")
+    assert "micleberry" in states[2]["sides"][0]["mons"][0]["volatiles"]  # Showdown
+    outs = ec.engine_outcomes(ec.engine_state(states[1]), "defog", "ruination")
+    assert ec.closest(states[2], outs, (1, 1), hp=True)["diff"] == {}
+    acc = ec.accuracies(p1, TINGLU_HITS, turns, seed="gen5,5,5,5,5")["stoneedge"]
+    outs = ec.engine_outcomes(ec.engine_state(states[2]), "stoneedge", "spikes")
+    assert _engine_hit_chance(outs) == pytest.approx(min(acc / 100, 1.0), abs=2e-3), acc
+
+
+def test_l24_metronome_item():
+    """The same move again: x 4915 / 4096, 5734 / 4096, ... up to 2 (the third Iron Head)."""
+    p1 = _kingambit("Supreme Overlord", "Metronome")
+    turns = [("move ironhead", "move softboiled")] * 3
+    states = ec.run_showdown(p1, BLISSEY, turns, seed="gen5,5,5,5,5")
+    outs = ec.engine_outcomes(ec.engine_state(states[2]), "ironhead", "softboiled")
+    assert ec.closest(states[3], outs, (1, 1), hp=True)["diff"] == {}
+
+
+def test_l24_mirror_herb():
+    """The foe's stat raises copied once (Swords Dance: Attack +2), the herb used up."""
+    p2 = _kingambit("Supreme Overlord", "Leftovers").replace("- Focus Energy", "- Swords Dance")
+    states, res = _item_turn(_corviknight("Mirror Herb"), p2, [("move defog", "move swordsdance")],
+                             ("defog", "swordsdance"))  # fmt: skip
+    m = states[1]["sides"][0]["mons"][0]
+    assert m["boosts"]["atk"] == 2 and m["item"] == ""  # Showdown
+    assert res["diff"] == {}

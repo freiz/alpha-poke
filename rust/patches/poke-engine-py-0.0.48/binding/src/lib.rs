@@ -278,7 +278,7 @@ impl PySide {
         active_index="0".to_string(),
         baton_passing=false,
         shed_tailing=false,
-        volatile_status_durations=PyVolatileStatusDurations::new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+        volatile_status_durations=PyVolatileStatusDurations::new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
         wish=(0, 0),
         future_sight=(0, "0".to_string()),
         force_switch=false,
@@ -378,6 +378,8 @@ pub struct PyVolatileStatusDurations {
     pub throatchop: i8,
     // alpha-poke patch (2026-10-16)
     pub partiallytrapped: i8,
+    pub micleberry: i8,
+    pub metronome: i8,
 }
 
 impl From<VolatileStatusDurations> for PyVolatileStatusDurations {
@@ -393,6 +395,8 @@ impl From<VolatileStatusDurations> for PyVolatileStatusDurations {
             magnetrise: other.magnetrise,
             throatchop: other.throatchop,
             partiallytrapped: other.partiallytrapped,
+            micleberry: other.micleberry,
+            metronome: other.metronome,
         }
     }
 }
@@ -410,6 +414,8 @@ impl Into<VolatileStatusDurations> for PyVolatileStatusDurations {
             magnetrise: self.magnetrise,
             throatchop: self.throatchop,
             partiallytrapped: self.partiallytrapped,
+            micleberry: self.micleberry,
+            metronome: self.metronome,
         }
     }
 }
@@ -428,6 +434,8 @@ impl PyVolatileStatusDurations {
         magnetrise=0,
         throatchop=0,
         partiallytrapped=0,
+        micleberry=0,
+        metronome=0,
     ))]
     fn new(
         confusion: i8,
@@ -440,6 +448,8 @@ impl PyVolatileStatusDurations {
         magnetrise: i8,
         throatchop: i8,
         partiallytrapped: i8,
+        micleberry: i8,
+        metronome: i8,
     ) -> PyVolatileStatusDurations {
         PyVolatileStatusDurations {
             confusion,
@@ -452,6 +462,8 @@ impl PyVolatileStatusDurations {
             magnetrise,
             throatchop,
             partiallytrapped,
+            micleberry,
+            metronome,
         }
     }
 }
