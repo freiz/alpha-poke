@@ -5821,6 +5821,41 @@ fn run_move(
             }
         }
     }
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L78): Pickpocket, its holder without an
+    // item takes the item of an attacker that made contact (Showdown's onAfterMoveSecondary:
+    // after Knock Off took the holder's own; not from a pivoting attacker)
+    if damaging && choice.flags.contact && !choice.flags.pivot {
+        let attacker = state
+            .get_side_immutable(&attacking_side)
+            .get_active_immutable();
+        let defender = state
+            .get_side_immutable(&defender_ref)
+            .get_active_immutable();
+        let item = attacker.item;
+        if defender.ability == Abilities::PICKPOCKET
+            && attacker.ability != Abilities::NEUTRALIZINGGAS
+            && defender.item == Items::NONE
+            && defender.hp > 0
+            && item != Items::NONE
+            && attacker.item_can_be_removed()
+        {
+            for ins in [
+                Instruction::ChangeItem(ChangeItemInstruction {
+                    side_ref: attacking_side,
+                    current_item: item,
+                    new_item: Items::NONE,
+                }),
+                Instruction::ChangeItem(ChangeItemInstruction {
+                    side_ref: defender_ref,
+                    current_item: Items::NONE,
+                    new_item: item,
+                }),
+            ] {
+                state.apply_one_instruction(&ins);
+                instructions.instruction_list.push(ins);
+            }
+        }
+    }
     let (emergency_exit, eject_pack) = {
         let defender_side = state.get_side_immutable(&defender_ref);
         let holder = defender_side.get_active_immutable();

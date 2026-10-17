@@ -74,9 +74,6 @@
 "b161-t10": [
 "hp"
 ],
-"b163-t46": [
-"item"
-],
 "b164-t5": [
 "boost.evasion"
 ],
@@ -215,8 +212,7 @@
 "volatile.encore"
 ],
 "b82-t10": [
-"hp",
-"item"
+"hp"
 ],
 "b88-t8": [
 "boost.def"

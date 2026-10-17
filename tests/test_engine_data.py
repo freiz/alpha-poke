@@ -2,6 +2,7 @@
 Showdown's Gen 9 Dex (``alpha_poke.enginecheck.data``). Every difference must be listed below
 with its reason; a new one, or a listed one that no longer differs, fails the test."""
 
+import json
 import shutil
 
 import pytest
@@ -160,3 +161,18 @@ def test_moves_not_aimed_at_the_foe_match_showdown():
     want = sorted(m["id"] for m in data.showdown()["moves"] if m["category"] == "Status"
                   and eng.get(m["id"]) == "opponent" and m["target"] not in foe)  # fmt: skip
     assert alpha_search.not_aimed_at_foe_moves() == want
+
+
+def test_paradox_species_match_showdown():
+    """The species whose Booster Energy cannot be taken (Showdown's "Paradox" tag; L79)."""
+    import alpha_search
+
+    from alpha_poke import enginecheck as ec
+
+    import subprocess
+
+    js = ("const {Dex} = require(process.argv[1]); console.log(JSON.stringify(Dex.species.all()"
+          ".filter(s => s.tags.includes('Paradox') && !s.isNonstandard).map(s => s.id)))")
+    want = sorted(json.loads(subprocess.run(["node", "-e", js, str(ec.SIM)], capture_output=True,
+                                            text=True, check=True).stdout))  # fmt: skip
+    assert alpha_search.paradox_species() == want

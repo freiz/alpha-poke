@@ -700,7 +700,9 @@ pub fn ability_after_damage_hit(
                 );
             }
         }
-        Abilities::MAGICIAN | Abilities::PICKPOCKET => {
+        // alpha-poke patch (2026-10-16, doc/engine-diff.md L78): Pickpocket is the target's
+        // (generate_instructions::run_move), not its user's
+        Abilities::MAGICIAN => {
             let defending_pkmn = defending_side.get_active();
             if damage_dealt > 0
                 && defending_pkmn.item_can_be_removed()

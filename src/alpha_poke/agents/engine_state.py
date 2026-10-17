@@ -553,6 +553,8 @@ def _timed(tm: SideTimers, active, mons: list, engine_mons: list, vol: set[str])
         n = getattr(tm, name)
         if name in vol and n:
             dur[name] = min(n, top)
+    if "slowstart" in vol and tm.slowstart:  # the turns left (the engine counts them down)
+        dur["slowstart"] = tm.slowstart[0]
     if dur:
         out["volatile_status_durations"] = pe.VolatileStatusDurations(**dur)
     return out
@@ -688,6 +690,8 @@ def build_state(
         counts = [n for e, n in PERISH.items() if e in mon.effects]
         if counts:
             vol.add(f"perish{min(counts)}")
+        if tm.slowstart:  # (L77)
+            vol.add("slowstart")
     # the items of the mons that set a screen / the weather / the terrain (ours known, theirs
     # this world's sample): an extending item makes it 8 turns
     items = {("us", to_id(m.species)): (m.item or "") for m in ours} if spectator is None else {}

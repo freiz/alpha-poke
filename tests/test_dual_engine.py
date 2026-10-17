@@ -2344,3 +2344,89 @@ def test_l75_knock_off_takes_the_berry_before_it_is_eaten():
     # (not the crit: its damage + the Sitrus lands on Showdown's HP too)
     res = ec.closest(states[1], outs, (1, 1), hp=True)
     assert res["diff"] == {} and res["p"] > 0.9
+
+
+# L77 (doc/engine-diff.md): Slow Start halves its holder's Attack / Speed for 5 turns after the one
+# it came in on (Showdown: a counter in the ability's state, not a volatile); the harness did not
+# carry it into the engine's state, so a Regigigas already in hit at full power
+def test_l77_slow_start_counts_its_turns():
+    gigas = _attacker("Regigigas", "Slow Start", "Leftovers", "- Earthquake\n- Protect\n- Substitute\n- Thunder Wave")
+    states = ec.run_showdown(gigas, BLISSEY, [("move earthquake", "move softboiled")] * 6)
+    assert any("|-end|p1a: Regigigas|Slow Start" in x for x in states[5]["log"])
+    for k in range(6):
+        outs = ec.engine_outcomes(ec.engine_state(states[k]), "earthquake", "softboiled")
+        res = ec.closest(states[k + 1], outs, (1, 1), hp=True)
+        crit = any(x.startswith("|-crit") for x in states[k + 1]["log"])
+        assert res["diff"] == {} and (crit or res["p"] > 0.9), (k, res)
+
+
+def test_l77_slow_start_from_the_protocol():
+    """Our state construction's count (agents/timers.py, from the log) against Showdown's counter,
+    for a lead and for one that comes in mid-battle."""
+    from alpha_poke.agents.timers import timers
+
+    gigas = _attacker("Regigigas", "Slow Start", "Leftovers", "- Earthquake\n- Protect\n- Substitute\n- Thunder Wave")
+    other = gigas.replace("Regigigas @", "Gigas (Regigigas) @")
+    turns = [("move earthquake", "move softboiled"), ("move earthquake", "move protect"),
+             ("switch 2", "move softboiled")]  # fmt: skip
+    turns += [("move earthquake", f"move {m}") for m in ["protect", "softboiled"] * 3]
+    states = ec.run_showdown(gigas + "\n\n" + other, BLISSEY, turns)
+    lines: list = []
+    for st in states:
+        lines += [x.split("|") for x in st["log"]]
+        p1 = st["sides"][0]
+        sd = p1["mons"][p1["active"]]["volatiles"].get("slowstart", {}).get("duration", 0)
+        ours = timers(lines)["p1"].slowstart
+        assert (ours[0] if ours else 0) == sd, (st["turn"], ours, sd)
+
+
+# L78 (doc/engine-diff.md): Pickpocket takes the attacker's item when a contact move hits its
+# holder and the holder has none (Showdown's onAfterMoveSecondary: after Knock Off took its own);
+# the engine had it as Magician's, its holder taking the target's item when it hit
+WEAVILE_PICKPOCKET = """Weavile @ Heavy-Duty Boots
+Ability: Pickpocket
+Tera Type: Dark
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- Swords Dance
+- Ice Shard
+- Triple Axel
+- Low Kick"""
+
+
+def test_l78_pickpocket_after_knock_off():
+    knock = _attacker("Kingambit", "Supreme Overlord", "Leftovers", "- Knock Off\n- Iron Head\n- Sucker Punch\n- Swords Dance")
+    states = ec.run_showdown(WEAVILE_PICKPOCKET, knock, [("move swordsdance", "move knockoff")])
+    assert states[1]["sides"][0]["mons"][0]["item"] == "leftovers"
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "swordsdance", "knockoff")
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+def test_l78_pickpocket_holder_takes_nothing_when_it_hits():
+    weavile = WEAVILE_PICKPOCKET.replace(" @ Heavy-Duty Boots", "")
+    states = ec.run_showdown(weavile, BLISSEY, [("move iceshard", "move softboiled")])
+    assert states[1]["sides"][0]["mons"][0]["item"] == ""
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "iceshard", "softboiled")
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L79 (doc/engine-diff.md): a Paradox Pokemon's Booster Energy cannot be taken (Showdown's
+# onTakeItem), so Knock Off neither removes it nor gets its 1.5x; the engine did both
+def test_l79_booster_energy_stays_on_a_paradox():
+    tusk = _setter("Great Tusk", "Protosynthesis", "Booster Energy", "- Rapid Spin\n- Headlong Rush\n- Ice Spinner\n- Bulk Up")
+    # (a faster Drought first: the sun activates Protosynthesis, the Booster Energy stays)
+    knock = """Ninetales @ Leftovers
+Ability: Drought
+EVs: 252 Atk / 4 SpD / 252 Spe
+Adamant Nature
+- Knock Off
+- Flare Blitz
+- Protect
+- Will-O-Wisp"""
+    states = ec.run_showdown(tusk, knock, [("move bulkup", "move knockoff")])
+    assert states[0]["sides"][0]["mons"][0]["item"] == "boosterenergy"
+    assert states[1]["sides"][0]["mons"][0]["item"] == "boosterenergy"
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "bulkup", "knockoff")
+    res = ec.closest(states[1], outs, (1, 1), hp=True)
+    crit = any(x.startswith("|-crit") for x in states[1]["log"])
+    assert res["diff"] == {} and (crit or res["p"] > 0.9)

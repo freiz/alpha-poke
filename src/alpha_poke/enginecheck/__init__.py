@@ -203,6 +203,8 @@ def _engine_side(s: dict, future_sight=None, wish=None) -> pe.Side:
             dur["disable"] = ids.index(dis["move"]) * 8 + (4 - dis["duration"]) + 1
         elif dis:
             vol.discard("disable")
+        if "slowstart" in vol:  # (L77: the turns left, as Showdown's counter)
+            dur["slowstart"] = act["volatiles"]["slowstart"]["duration"]
         if "stockpile" in vol:  # (L73: its layers)
             dur["stockpile"] = act["volatiles"]["stockpile"]["layers"]
         if "confusion" in vol and act["volatiles"]["confusion"]["time"]:

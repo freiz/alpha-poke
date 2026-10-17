@@ -28,6 +28,9 @@ sides, in poke-engine's own units (rust/patches/poke-engine-0.0.48, generate_ins
               ends of turn of the active's partial trap (Infestation, Whirlpool, ...; from its
               -activate to its -end; 2026-10-16, doc/engine-diff.md L13: the patched engine ends
               it at the fifth, Showdown at the fifth or the sixth)
+  slowstart   the active's Slow Start: [turns left, counting]; 5 from its -start, one less at each
+              end of turn from the first turn start it is in for (Showdown's counter skips the
+              turn it came in; doc/engine-diff.md L77), gone at its -end
   used_once   species ids whose Dauntless Shield has raised Defense (Gen 9: once per battle;
               2026-10-16, doc/engine-diff.md L18)
   sub_hit     the active's Substitute took a hit and stands (its HP below a quarter)
@@ -70,6 +73,7 @@ class SideTimers:
     throatchop: int | None = None
     magnetrise: int | None = None
     partiallytrapped: int | None = None
+    slowstart: list | None = None  # [turns left, counting]
     sub_hit: bool = False
     recharge: bool = False
     just_moved: str = ""  # species id of this side's mon that made the last move
@@ -88,7 +92,7 @@ class SideTimers:
         self.protected = False
         self.confusion = self.taunt = self.encore = self.yawn = None
         self.disabled = self.healblock = self.throatchop = self.magnetrise = None
-        self.partiallytrapped = None
+        self.partiallytrapped = self.slowstart = None
         self.sub_hit = self.recharge = False
 
     def rest_sleep(self, species: str) -> tuple[int, int]:
@@ -128,6 +132,15 @@ def _feed(sides: dict, p: list[str]) -> None:
                     setattr(st, k, getattr(st, k) + 1)
             for k in st.fields_elapsed:
                 st.fields_elapsed[k] += 1
+            if st.slowstart and st.slowstart[1]:
+                st.slowstart[0] -= 1
+                if st.slowstart[0] <= 0:
+                    st.slowstart = None
+        return
+    if tag == "turn":
+        for st in sides.values():
+            if st.slowstart:
+                st.slowstart[1] = True
         return
     if tag in ("-weather", "-fieldstart") and len(p) > 2 and "[upkeep]" not in p:
         what = to_id(p[2].replace("move: ", ""))
@@ -224,6 +237,8 @@ def _feed(sides: dict, p: list[str]) -> None:
             setattr(st, what, 0)
         elif what == "substitute":
             st.sub_hit = False
+        elif what == "abilityslowstart":
+            st.slowstart = [5, False]
     elif tag == "-ability" and len(p) > 3 and to_id(p[3]) == "dauntlessshield":
         st.used_once.add(sp)
     elif tag == "-activate" and len(p) > 3 and to_id(p[3].replace("move: ", "")) in TRAPS:
@@ -248,6 +263,8 @@ def _feed(sides: dict, p: list[str]) -> None:
             st.disabled = None
         elif what == "substitute":
             st.sub_hit = False
+        elif what == "slowstart":
+            st.slowstart = None
         elif what == "futuresight":  # on the target: the other side's attack landed
             sides["p2" if p[2][:2] == "p1" else "p1"].future = None
 

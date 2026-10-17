@@ -33,7 +33,11 @@ function monState(p, side) {
 		volatiles: Object.fromEntries(Object.entries(p.volatiles).map(([k, v]) =>
 			[k, {duration: v.duration || 0, layers: v.layers || 0, counter: v.counter || 0,
 				stat: v.bestStat || '', time: v.time || 0, true_duration: v.trueDuration || 0,
-				num_consecutive: v.numConsecutive || 0, hp: v.hp || 0, move: v.move || ''}])),
+				num_consecutive: v.numConsecutive || 0, hp: v.hp || 0, move: v.move || ''}])
+			// Slow Start: a counter in the ability's state, the engine's volatile (L77)
+			.concat(p.isActive && p.ability === 'slowstart' && p.abilityState.counter ?
+				[['slowstart', {duration: p.abilityState.counter, layers: 0, counter: 0, stat: '',
+					time: 0, true_duration: 0, num_consecutive: 0, hp: 0, move: ''}]] : [])),
 		moves: p.moveSlots.map(m => ({id: m.id, pp: m.pp, maxpp: m.maxpp, disabled: !!m.disabled})),
 		terastallized: p.terastallized || '',
 		transformed: !!p.transformed, // (L36: the engine's transform volatile)

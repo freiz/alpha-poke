@@ -21,9 +21,6 @@
 "b114-t55": [
 "status"
 ],
-"b122-t10": [
-"hp"
-],
 "b122-t24": [
 "hp",
 "status"
@@ -121,9 +118,6 @@
 ],
 "b212-t25": [
 "volatile.perish3"
-],
-"b213-t2": [
-"item"
 ],
 "b215-t27": [
 "boost.spa",

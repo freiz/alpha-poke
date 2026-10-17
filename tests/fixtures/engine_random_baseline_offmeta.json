@@ -5,63 +5,14 @@
 "teams": "1b2440f0794c7f2a"
 },
 "mismatches": {
-"b101-t21": [
-"hp"
-],
-"b103-t1": [
-"hp"
-],
-"b103-t11": [
-"volatile.slowstart"
-],
 "b103-t15": [
 "toxic_spikes"
-],
-"b103-t18": [
-"volatile.slowstart"
-],
-"b103-t19": [
-"hp"
-],
-"b103-t22": [
-"hp"
-],
-"b103-t23": [
-"hp"
 ],
 "b104-t14": [
 "hp"
 ],
-"b106-t3": [
-"hp"
-],
 "b106-t35": [
 "light_screen"
-],
-"b106-t44": [
-"hp",
-"status"
-],
-"b106-t47": [
-"hp"
-],
-"b106-t48": [
-"hp"
-],
-"b106-t5": [
-"hp"
-],
-"b106-t58": [
-"volatile.slowstart"
-],
-"b107-t22": [
-"item"
-],
-"b117-t35": [
-"volatile.slowstart"
-],
-"b117-t39": [
-"volatile.slowstart"
 ],
 "b13-t5": [
 "volatile.perish3"
@@ -94,12 +45,6 @@
 ],
 "b158-t26": [
 "status"
-],
-"b159-t4": [
-"hp"
-],
-"b159-t5": [
-"hp"
 ],
 "b160-t6": [
 "boost.atk",
@@ -160,14 +105,6 @@
 "b186-t15": [
 "volatile.perish3"
 ],
-"b187-t23": [
-"hp",
-"item"
-],
-"b187-t25": [
-"hp",
-"volatile.protosynthesisatk"
-],
 "b188-t10": [
 "boost.def",
 "boost.spd"
@@ -182,22 +119,6 @@
 "terrain"
 ],
 "b192-t34": [
-"status"
-],
-"b195-t13": [
-"hp"
-],
-"b195-t14": [
-"boost.spa"
-],
-"b195-t29": [
-"volatile.slowstart"
-],
-"b195-t34": [
-"hp"
-],
-"b195-t44": [
-"hp",
 "status"
 ],
 "b29-t1": [

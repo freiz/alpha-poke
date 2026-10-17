@@ -21,6 +21,27 @@ fn common_pkmn_stat_calc(stat: u16, ev: u16, level: u16) -> u16 {
     ((2 * stat + 31 + (ev / 4)) * level) / 100
 }
 
+// alpha-poke patch (2026-10-16, doc/engine-diff.md L79): Showdown's "Paradox" species (their
+// Booster Energy cannot be taken; the data test checks the list against Showdown's tags)
+pub const PARADOX: [PokemonName; 16] = [
+    PokemonName::GREATTUSK,
+    PokemonName::SCREAMTAIL,
+    PokemonName::BRUTEBONNET,
+    PokemonName::FLUTTERMANE,
+    PokemonName::SLITHERWING,
+    PokemonName::SANDYSHOCKS,
+    PokemonName::IRONTREADS,
+    PokemonName::IRONBUNDLE,
+    PokemonName::IRONHANDS,
+    PokemonName::IRONJUGULIS,
+    PokemonName::IRONMOTH,
+    PokemonName::IRONTHORNS,
+    PokemonName::ROARINGMOON,
+    PokemonName::IRONVALIANT,
+    PokemonName::WALKINGWAKE,
+    PokemonName::IRONLEAVES,
+];
+
 #[cfg(feature = "champions")]
 fn stat_points_to_effective_ev(stat_points: u16) -> u16 {
     if stat_points == 0 {
@@ -562,6 +583,7 @@ impl Pokemon {
 
     pub fn item_is_permanent(&self) -> bool {
         match self.item {
+            Items::BOOSTERENERGY => PARADOX.contains(&self.id),
             Items::LUSTROUSGLOBE => self.id == PokemonName::PALKIAORIGIN,
             Items::GRISEOUSCORE => self.id == PokemonName::GIRATINAORIGIN,
             Items::ADAMANTCRYSTAL => self.id == PokemonName::DIALGAORIGIN,
@@ -1416,7 +1438,11 @@ impl State {
                     .iter()
                     .enumerate()
                     {
-                        let own = if k == 0 { Choices::TRANSFORM } else { Choices::NONE };
+                        let own = if k == 0 {
+                            Choices::TRANSFORM
+                        } else {
+                            Choices::NONE
+                        };
                         let m = &mut active.moves[index];
                         if m.id != own {
                             instructions.push(Instruction::ChangeMove(
