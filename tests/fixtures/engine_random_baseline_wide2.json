@@ -6,14 +6,8 @@
 "seed_offset": 30000
 },
 "mismatches": {
-"b100-t6": [
-"base_ability"
-],
 "b111-t18": [
 "ability"
-],
-"b114-t11": [
-"base_ability"
 ],
 "b114-t21": [
 "base_ability"
@@ -23,9 +17,6 @@
 ],
 "b119-t40": [
 "sc.protect"
-],
-"b125-t14": [
-"base_ability"
 ],
 "b127-t11": [
 "hp"
@@ -39,115 +30,17 @@
 "b130-t8": [
 "status"
 ],
-"b131-t10": [
-"base_ability"
-],
-"b135-t1": [
-"base_ability"
-],
-"b146-t25": [
-"base_ability"
-],
 "b147-t9": [
 "status"
 ],
 "b149-t8": [
 "hp"
 ],
-"b153-t1": [
-"base_ability",
-"id"
-],
-"b158-t3": [
-"base_ability"
-],
-"b16-t21": [
-"base_ability"
-],
-"b160-t31": [
-"base_ability"
-],
-"b160-t7": [
-"base_ability",
-"id"
-],
-"b167-t41": [
-"sc.toxic_count"
-],
-"b167-t42": [
-"sc.toxic_count"
-],
-"b167-t43": [
-"sc.toxic_count"
-],
-"b170-t3": [
-"base_ability"
-],
-"b18-t2": [
-"base_ability"
-],
-"b180-t49": [
-"sc.toxic_count"
-],
-"b180-t50": [
-"sc.toxic_count"
-],
-"b180-t51": [
-"sc.toxic_count"
-],
-"b180-t53": [
-"sc.toxic_count"
-],
-"b180-t54": [
-"sc.toxic_count"
-],
-"b180-t55": [
-"sc.toxic_count"
-],
-"b180-t56": [
-"sc.toxic_count"
-],
-"b180-t57": [
-"sc.toxic_count"
-],
-"b180-t58": [
-"sc.toxic_count"
-],
-"b180-t59": [
-"sc.toxic_count"
-],
-"b180-t60": [
-"sc.toxic_count"
-],
 "b183-t27": [
 "status"
 ],
 "b184-t17": [
 "last_used_move"
-],
-"b186-t37": [
-"sc.toxic_count"
-],
-"b186-t38": [
-"sc.toxic_count"
-],
-"b186-t39": [
-"sc.toxic_count"
-],
-"b186-t40": [
-"sc.toxic_count"
-],
-"b186-t41": [
-"sc.toxic_count"
-],
-"b186-t42": [
-"sc.toxic_count"
-],
-"b186-t45": [
-"sc.toxic_count"
-],
-"b186-t49": [
-"sc.toxic_count"
 ],
 "b190-t4": [
 "attack",
@@ -162,25 +55,6 @@
 "b191-t2": [
 "pp"
 ],
-"b191-t39": [
-"sc.toxic_count"
-],
-"b191-t50": [
-"sc.toxic_count"
-],
-"b193-t51": [
-"sc.toxic_count"
-],
-"b199-t11": [
-"base_ability",
-"id"
-],
-"b202-t13": [
-"base_ability"
-],
-"b204-t12": [
-"base_ability"
-],
 "b205-t26": [
 "sc.protect"
 ],
@@ -189,16 +63,6 @@
 ],
 "b206-t3": [
 "last_item"
-],
-"b218-t9": [
-"base_ability",
-"id"
-],
-"b223-t14": [
-"base_ability"
-],
-"b223-t9": [
-"base_ability"
 ],
 "b242-t10": [
 "hp"
@@ -261,9 +125,6 @@
 "hp",
 "status"
 ],
-"b261-t4": [
-"base_ability"
-],
 "b263-t26": [
 "attack",
 "defense",
@@ -283,32 +144,17 @@
 "speed",
 "weight"
 ],
-"b266-t8": [
-"base_ability"
-],
 "b270-t20": [
 "hp"
 ],
 "b275-t28": [
 "pp"
 ],
-"b276-t14": [
-"base_ability"
-],
 "b278-t18": [
 "substitute_hp"
 ],
 "b279-t32": [
 "hp"
-],
-"b285-t18": [
-"base_ability"
-],
-"b29-t22": [
-"sc.toxic_count"
-],
-"b29-t23": [
-"sc.toxic_count"
 ],
 "b297-t23": [
 "boost.def",
@@ -326,78 +172,9 @@
 "b30-t21": [
 "base_ability"
 ],
-"b32-t13": [
-"base_ability"
-],
 "b34-t14": [
 "sleep_turns",
 "status"
-],
-"b37-t1": [
-"base_ability"
-],
-"b37-t16": [
-"sc.toxic_count"
-],
-"b37-t17": [
-"sc.toxic_count"
-],
-"b37-t18": [
-"sc.toxic_count"
-],
-"b37-t19": [
-"sc.toxic_count"
-],
-"b37-t23": [
-"sc.toxic_count"
-],
-"b43-t5": [
-"base_ability"
-],
-"b45-t12": [
-"base_ability"
-],
-"b48-t12": [
-"base_ability"
-],
-"b53-t19": [
-"sc.toxic_count"
-],
-"b53-t20": [
-"sc.toxic_count"
-],
-"b53-t21": [
-"sc.toxic_count"
-],
-"b53-t22": [
-"sc.toxic_count"
-],
-"b53-t23": [
-"sc.toxic_count"
-],
-"b53-t24": [
-"sc.toxic_count"
-],
-"b53-t32": [
-"sc.toxic_count"
-],
-"b53-t34": [
-"sc.toxic_count"
-],
-"b53-t36": [
-"sc.toxic_count"
-],
-"b53-t39": [
-"sc.toxic_count"
-],
-"b53-t40": [
-"sc.toxic_count"
-],
-"b53-t41": [
-"sc.toxic_count"
-],
-"b53-t42": [
-"sc.toxic_count"
 ],
 "b54-t12": [
 "hp",
@@ -413,126 +190,18 @@
 "special_defense",
 "speed"
 ],
-"b59-t2": [
-"base_ability"
-],
 "b61-t18": [
 "ability",
 "types"
 ],
-"b61-t3": [
-"base_ability"
-],
 "b61-t6": [
 "base_ability"
-],
-"b62-t25": [
-"base_ability"
-],
-"b68-t2": [
-"base_ability"
-],
-"b69-t6": [
-"base_ability"
-],
-"b7-t9": [
-"base_ability"
-],
-"b72-t1": [
-"base_ability"
-],
-"b75-t48": [
-"ability",
-"attack",
-"base_ability",
-"base_types",
-"defense",
-"gender",
-"id",
-"last_item",
-"last_used_move",
-"level",
-"maxhp",
-"move",
-"must_switch",
-"nature",
-"options",
-"pp",
-"sc.protect",
-"special_attack",
-"special_defense",
-"speed",
-"status",
-"stellar_boosted",
-"tera_type",
-"terastallized",
-"types",
-"weight"
 ],
 "b75-t55": [
 "sc.protect"
 ],
-"b75-t58": [
-"sc.toxic_count"
-],
-"b75-t59": [
-"sc.toxic_count"
-],
-"b75-t60": [
-"sc.toxic_count"
-],
 "b94-t49": [
 "sc.protect"
-],
-"b95-t11": [
-"base_ability"
-],
-"b95-t12": [
-"base_ability",
-"id"
-],
-"b98-t34": [
-"sc.toxic_count"
-],
-"b98-t35": [
-"sc.toxic_count"
-],
-"b98-t36": [
-"sc.toxic_count"
-],
-"b98-t38": [
-"sc.toxic_count"
-],
-"b98-t43": [
-"ability",
-"attack",
-"base_ability",
-"base_types",
-"defense",
-"gender",
-"id",
-"last_item",
-"last_used_move",
-"level",
-"maxhp",
-"move",
-"must_switch",
-"nature",
-"options",
-"pp",
-"sc.protect",
-"special_attack",
-"special_defense",
-"speed",
-"status",
-"stellar_boosted",
-"tera_type",
-"terastallized",
-"types",
-"weight"
-],
-"b99-t6": [
-"base_ability"
 ]
 }
 }

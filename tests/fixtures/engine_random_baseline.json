@@ -5,77 +5,11 @@
 "teams": "87327e3ee174c1b9"
 },
 "mismatches": {
-"b0-t15": [
-"sc.toxic_count"
-],
-"b0-t16": [
-"sc.toxic_count"
-],
-"b0-t17": [
-"sc.toxic_count"
-],
-"b0-t18": [
-"sc.toxic_count"
-],
-"b0-t23": [
-"sc.toxic_count"
-],
-"b0-t25": [
-"sc.toxic_count"
-],
-"b0-t26": [
-"sc.toxic_count"
-],
-"b0-t27": [
-"sc.toxic_count"
-],
-"b0-t28": [
-"sc.toxic_count"
-],
-"b0-t29": [
-"sc.toxic_count"
-],
-"b0-t30": [
-"sc.toxic_count"
-],
-"b0-t31": [
-"sc.toxic_count"
-],
-"b0-t36": [
-"sc.toxic_count"
-],
-"b0-t37": [
-"sc.toxic_count"
-],
-"b0-t40": [
-"sc.toxic_count"
-],
-"b0-t51": [
-"sc.toxic_count"
-],
 "b10-t54": [
 "sc.protect"
 ],
 "b10-t57": [
 "sc.protect"
-],
-"b105-t18": [
-"base_ability"
-],
-"b108-t12": [
-"base_ability",
-"id"
-],
-"b109-t12": [
-"base_ability",
-"id"
-],
-"b110-t4": [
-"base_ability"
-],
-"b111-t10": [
-"base_ability",
-"id"
 ],
 "b112-t14": [
 "hp"
@@ -85,23 +19,6 @@
 ],
 "b128-t21": [
 "pp"
-],
-"b145-t13": [
-"base_ability"
-],
-"b15-t22": [
-"base_ability",
-"id"
-],
-"b152-t34": [
-"base_ability"
-],
-"b153-t18": [
-"base_ability"
-],
-"b157-t7": [
-"base_ability",
-"id"
 ],
 "b159-t20": [
 "attack",
@@ -123,12 +40,6 @@
 "b164-t1": [
 "last_used_move"
 ],
-"b168-t2": [
-"base_ability"
-],
-"b181-t9": [
-"base_ability"
-],
 "b182-t2": [
 "attack",
 "defense",
@@ -136,9 +47,6 @@
 "special_defense",
 "speed",
 "weight"
-],
-"b182-t21": [
-"base_ability"
 ],
 "b182-t4": [
 "attack",
@@ -194,40 +102,11 @@
 "b191-t49": [
 "hp"
 ],
-"b193-t10": [
-"base_ability",
-"id"
-],
-"b195-t2": [
-"base_ability"
-],
-"b202-t19": [
-"base_ability",
-"id"
-],
-"b207-t26": [
-"sc.toxic_count"
-],
-"b207-t27": [
-"sc.toxic_count"
-],
-"b207-t28": [
-"sc.toxic_count"
-],
-"b207-t8": [
-"base_ability"
-],
 "b208-t18": [
 "sc.protect"
 ],
 "b211-t29": [
 "future_sight"
-],
-"b211-t5": [
-"base_ability"
-],
-"b212-t9": [
-"base_ability"
 ],
 "b213-t9": [
 "sc.protect"
@@ -254,9 +133,6 @@
 ],
 "b232-t5": [
 "last_used_move"
-],
-"b234-t3": [
-"base_ability"
 ],
 "b237-t13": [
 "ability",
@@ -332,32 +208,13 @@
 "b245-t6": [
 "hp"
 ],
-"b249-t16": [
-"base_ability"
-],
-"b268-t8": [
-"base_ability"
-],
 "b269-t19": [
 "hp"
 ],
 "b270-t5": [
 "types"
 ],
-"b273-t13": [
-"base_ability"
-],
-"b274-t9": [
-"base_ability"
-],
-"b28-t8": [
-"base_ability"
-],
-"b281-t11": [
-"base_ability"
-],
 "b289-t3": [
-"base_ability",
 "sc.protect"
 ],
 "b289-t9": [
@@ -365,9 +222,6 @@
 ],
 "b36-t16": [
 "sc.protect"
-],
-"b4-t9": [
-"base_ability"
 ],
 "b42-t24": [
 "last_item"
@@ -378,40 +232,11 @@
 "b50-t46": [
 "last_item"
 ],
-"b50-t58": [
-"sc.toxic_count"
-],
-"b50-t59": [
-"sc.toxic_count"
-],
-"b50-t60": [
-"sc.toxic_count"
-],
-"b6-t13": [
-"base_ability"
-],
 "b69-t16": [
 "sc.protect"
 ],
-"b70-t23": [
-"base_ability"
-],
-"b79-t2": [
-"base_ability",
-"id"
-],
-"b87-t5": [
-"base_ability"
-],
-"b89-t4": [
-"base_ability",
-"id"
-],
 "b91-t6": [
 "pp"
-],
-"b95-t2": [
-"base_ability"
 ]
 }
 }

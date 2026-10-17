@@ -5,63 +5,11 @@
 "teams": "13ebf378999883cc"
 },
 "mismatches": {
-"b0-t18": [
-"base_ability"
-],
 "b1-t28": [
 "hp"
 ],
-"b10-t2": [
-"base_ability"
-],
-"b103-t43": [
-"base_ability"
-],
-"b107-t12": [
-"base_ability"
-],
-"b114-t55": [
-"ability",
-"attack",
-"base_ability",
-"base_types",
-"defense",
-"gender",
-"id",
-"last_item",
-"last_used_move",
-"level",
-"maxhp",
-"move",
-"must_switch",
-"nature",
-"options",
-"pp",
-"sc.protect",
-"special_attack",
-"special_defense",
-"speed",
-"status",
-"stellar_boosted",
-"tera_type",
-"terastallized",
-"types",
-"weight"
-],
-"b115-t32": [
-"base_ability"
-],
 "b122-t6": [
 "count.slowstart"
-],
-"b125-t1": [
-"base_ability"
-],
-"b132-t6": [
-"base_ability"
-],
-"b132-t7": [
-"base_ability"
 ],
 "b139-t1": [
 "attack",
@@ -78,27 +26,8 @@
 "b151-t33": [
 "hp"
 ],
-"b151-t40": [
-"sc.toxic_count"
-],
-"b151-t41": [
-"sc.toxic_count"
-],
-"b151-t42": [
-"sc.toxic_count"
-],
-"b151-t43": [
-"sc.toxic_count"
-],
-"b154-t19": [
-"base_ability",
-"id"
-],
 "b16-t51": [
 "pp"
-],
-"b161-t5": [
-"base_ability"
 ],
 "b171-t28": [
 "hp"
@@ -109,30 +38,11 @@
 "b176-t21": [
 "hp"
 ],
-"b180-t50": [
-"sc.toxic_count"
-],
-"b180-t51": [
-"sc.toxic_count"
-],
-"b180-t52": [
-"sc.toxic_count"
-],
-"b180-t53": [
-"sc.toxic_count"
-],
-"b180-t54": [
-"sc.toxic_count"
-],
 "b19-t9": [
 "types"
 ],
 "b190-t4": [
 "hp"
-],
-"b195-t6": [
-"base_ability",
-"id"
 ],
 "b196-t2": [
 "ability",
@@ -168,9 +78,6 @@
 "b2-t2": [
 "hp"
 ],
-"b208-t16": [
-"base_ability"
-],
 "b208-t21": [
 "ability"
 ],
@@ -186,23 +93,8 @@
 "b217-t50": [
 "sc.protect"
 ],
-"b219-t10": [
-"base_ability",
-"id"
-],
-"b222-t18": [
-"base_ability",
-"id"
-],
-"b223-t1": [
-"base_ability"
-],
 "b224-t48": [
 "hp"
-],
-"b230-t16": [
-"base_ability",
-"id"
 ],
 "b231-t21": [
 "last_item"
@@ -267,12 +159,6 @@
 "b246-t23": [
 "status"
 ],
-"b251-t7": [
-"base_ability"
-],
-"b258-t23": [
-"base_ability"
-],
 "b260-t2": [
 "hp"
 ],
@@ -299,92 +185,27 @@
 "b268-t13": [
 "hp"
 ],
-"b27-t50": [
-"sc.toxic_count"
-],
-"b27-t51": [
-"sc.toxic_count"
-],
-"b27-t53": [
-"sc.toxic_count"
-],
-"b27-t54": [
-"sc.toxic_count"
-],
-"b27-t55": [
-"sc.toxic_count"
-],
-"b27-t56": [
-"sc.toxic_count"
-],
-"b27-t57": [
-"sc.toxic_count"
-],
-"b27-t58": [
-"sc.toxic_count"
-],
-"b27-t59": [
-"sc.toxic_count"
-],
-"b27-t60": [
-"sc.toxic_count"
-],
 "b284-t31": [
 "future_sight"
 ],
 "b285-t22": [
 "sc.protect"
 ],
-"b289-t7": [
-"base_ability"
-],
 "b290-t14": [
 "sc.protect"
-],
-"b292-t4": [
-"base_ability"
-],
-"b294-t19": [
-"base_ability"
 ],
 "b298-t50": [
 "sc.protect"
 ],
-"b299-t21": [
-"base_ability"
-],
 "b299-t40": [
 "hp"
-],
-"b3-t6": [
-"base_ability",
-"id"
 ],
 "b33-t30": [
 "ability",
 "types"
 ],
-"b4-t5": [
-"base_ability",
-"id"
-],
-"b43-t3": [
-"base_ability"
-],
-"b48-t1": [
-"base_ability"
-],
-"b5-t2": [
-"base_ability"
-],
-"b5-t27": [
-"base_ability"
-],
 "b54-t21": [
 "pp"
-],
-"b56-t6": [
-"base_ability"
 ],
 "b59-t31": [
 "hp"
@@ -392,63 +213,17 @@
 "b61-t18": [
 "hp"
 ],
-"b63-t16": [
-"base_ability",
-"id"
-],
-"b71-t3": [
-"base_ability"
-],
 "b74-t7": [
 "sc.protect"
 ],
-"b76-t8": [
-"base_ability"
-],
 "b77-t39": [
 "hp"
-],
-"b82-t28": [
-"base_ability"
-],
-"b91-t17": [
-"ability",
-"attack",
-"base_ability",
-"base_types",
-"defense",
-"gender",
-"id",
-"last_item",
-"level",
-"maxhp",
-"move",
-"must_switch",
-"nature",
-"options",
-"pp",
-"sc.protect",
-"special_attack",
-"special_defense",
-"speed",
-"status",
-"stellar_boosted",
-"tera_type",
-"terastallized",
-"types",
-"weight"
 ],
 "b94-t4": [
 "hp"
 ],
 "b95-t21": [
 "hp"
-],
-"b97-t43": [
-"base_ability"
-],
-"b97-t59": [
-"sc.toxic_count"
 ]
 }
 }

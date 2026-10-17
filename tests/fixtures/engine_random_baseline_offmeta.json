@@ -52,24 +52,6 @@
 "b132-t24": [
 "options"
 ],
-"b132-t27": [
-"sc.toxic_count"
-],
-"b132-t34": [
-"sc.toxic_count"
-],
-"b132-t40": [
-"sc.toxic_count"
-],
-"b132-t41": [
-"sc.toxic_count"
-],
-"b132-t42": [
-"sc.toxic_count"
-],
-"b15-t41": [
-"sc.toxic_count"
-],
 "b157-t6": [
 "ability"
 ],
@@ -160,10 +142,6 @@
 "b25-t8": [
 "volatile.uproar"
 ],
-"b34-t14": [
-"base_ability",
-"id"
-],
 "b36-t19": [
 "hp"
 ],
@@ -185,23 +163,8 @@
 "b41-t17": [
 "status"
 ],
-"b42-t39": [
-"sc.toxic_count"
-],
 "b42-t4": [
 "hp"
-],
-"b42-t40": [
-"sc.toxic_count"
-],
-"b42-t41": [
-"sc.toxic_count"
-],
-"b42-t42": [
-"sc.toxic_count"
-],
-"b42-t43": [
-"sc.toxic_count"
 ],
 "b46-t2": [
 "hp"
@@ -246,10 +209,6 @@
 "b52-t16": [
 "sc.protect"
 ],
-"b59-t23": [
-"base_ability",
-"id"
-],
 "b62-t17": [
 "sleep_turns",
 "status"
@@ -268,10 +227,6 @@
 "b67-t16": [
 "hp",
 "status"
-],
-"b75-t8": [
-"base_ability",
-"id"
 ],
 "b83-t24": [
 "pp"

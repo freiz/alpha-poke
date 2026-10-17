@@ -9,54 +9,8 @@
 "b0-t27": [
 "pp"
 ],
-"b100-t5": [
-"base_ability"
-],
-"b100-t6": [
-"base_ability",
-"id"
-],
-"b101-t17": [
-"sc.toxic_count"
-],
-"b101-t34": [
-"base_ability"
-],
-"b103-t7": [
-"base_ability"
-],
-"b105-t8": [
-"base_ability"
-],
-"b106-t2": [
-"base_ability"
-],
-"b11-t27": [
-"base_ability"
-],
-"b11-t3": [
-"base_ability"
-],
-"b111-t10": [
-"base_ability"
-],
-"b113-t59": [
-"base_ability"
-],
 "b114-t12": [
 "hp"
-],
-"b114-t2": [
-"base_ability"
-],
-"b118-t30": [
-"base_ability"
-],
-"b12-t3": [
-"base_ability"
-],
-"b122-t33": [
-"base_ability"
 ],
 "b124-t22": [
 "sc.protect"
@@ -64,146 +18,20 @@
 "b126-t36": [
 "status"
 ],
-"b13-t23": [
-"base_ability"
-],
-"b130-t19": [
-"base_ability"
-],
-"b138-t9": [
-"base_ability"
-],
-"b139-t10": [
-"base_ability"
-],
-"b141-t37": [
-"sc.toxic_count"
-],
 "b144-t1": [
 "future_sight"
 ],
 "b144-t51": [
 "future_sight"
 ],
-"b145-t8": [
-"base_ability"
-],
-"b146-t8": [
-"base_ability",
-"id"
-],
-"b147-t16": [
-"base_ability"
-],
-"b147-t32": [
-"base_ability"
-],
-"b148-t26": [
-"base_ability"
-],
-"b149-t45": [
-"sc.toxic_count"
-],
-"b15-t2": [
-"base_ability"
-],
-"b15-t8": [
-"base_ability",
-"id"
-],
-"b151-t6": [
-"base_ability"
-],
-"b154-t10": [
-"base_ability"
-],
-"b155-t4": [
-"base_ability"
-],
-"b158-t17": [
-"base_ability"
-],
-"b162-t12": [
-"base_ability"
-],
-"b164-t16": [
-"sc.toxic_count"
-],
-"b164-t47": [
-"sc.toxic_count"
-],
-"b164-t48": [
-"sc.toxic_count"
-],
-"b164-t49": [
-"sc.toxic_count"
-],
-"b164-t50": [
-"sc.toxic_count"
-],
-"b164-t51": [
-"sc.toxic_count"
-],
-"b164-t52": [
-"sc.toxic_count"
-],
-"b164-t53": [
-"sc.toxic_count"
-],
-"b167-t5": [
-"base_ability"
-],
 "b17-t16": [
 "sc.protect"
-],
-"b173-t16": [
-"base_ability"
-],
-"b174-t2": [
-"base_ability"
 ],
 "b178-t35": [
 "pp"
 ],
-"b179-t34": [
-"base_ability"
-],
-"b18-t22": [
-"base_ability"
-],
-"b180-t14": [
-"base_ability"
-],
-"b180-t8": [
-"base_ability"
-],
-"b181-t25": [
-"base_ability"
-],
-"b184-t4": [
-"base_ability"
-],
-"b186-t10": [
-"base_ability"
-],
 "b188-t48": [
 "pp"
-],
-"b190-t2": [
-"base_ability",
-"id"
-],
-"b190-t7": [
-"base_ability"
-],
-"b191-t25": [
-"base_ability"
-],
-"b22-t2": [
-"base_ability"
-],
-"b3-t54": [
-"sc.toxic_count"
 ],
 "b30-t2": [
 "sc.reflect"
@@ -214,86 +42,12 @@
 "b30-t5": [
 "options"
 ],
-"b35-t15": [
-"base_ability"
-],
-"b38-t41": [
-"sc.toxic_count"
-],
-"b38-t42": [
-"sc.toxic_count"
-],
-"b38-t43": [
-"sc.toxic_count"
-],
-"b38-t44": [
-"sc.toxic_count"
-],
-"b38-t45": [
-"sc.toxic_count"
-],
-"b38-t46": [
-"sc.toxic_count"
-],
-"b38-t47": [
-"sc.toxic_count"
-],
-"b38-t48": [
-"sc.toxic_count"
-],
-"b38-t49": [
-"sc.toxic_count"
-],
-"b38-t50": [
-"sc.toxic_count"
-],
-"b38-t51": [
-"sc.toxic_count"
-],
-"b38-t52": [
-"sc.toxic_count"
-],
-"b38-t53": [
-"sc.toxic_count"
-],
-"b44-t4": [
-"base_ability",
-"id"
-],
-"b46-t29": [
-"base_ability"
-],
 "b46-t9": [
 "hp",
 "status"
 ],
-"b49-t37": [
-"base_ability"
-],
-"b5-t10": [
-"base_ability"
-],
-"b52-t16": [
-"base_ability",
-"id"
-],
-"b52-t20": [
-"base_ability"
-],
-"b53-t11": [
-"base_ability"
-],
-"b58-t8": [
-"base_ability"
-],
 "b59-t12": [
 "types"
-],
-"b61-t20": [
-"base_ability"
-],
-"b61-t25": [
-"base_ability"
 ],
 "b62-t8": [
 "pp"
@@ -304,84 +58,12 @@
 "b66-t52": [
 "hp"
 ],
-"b73-t9": [
-"base_ability"
-],
 "b74-t1": [
 "options"
-],
-"b75-t18": [
-"base_ability",
-"id"
 ],
 "b79-t34": [
 "hp",
 "status"
-],
-"b82-t23": [
-"sc.toxic_count"
-],
-"b82-t24": [
-"sc.toxic_count"
-],
-"b82-t25": [
-"sc.toxic_count"
-],
-"b82-t26": [
-"sc.toxic_count"
-],
-"b82-t27": [
-"sc.toxic_count"
-],
-"b82-t28": [
-"sc.toxic_count"
-],
-"b85-t58": [
-"sc.toxic_count"
-],
-"b87-t39": [
-"base_ability"
-],
-"b89-t24": [
-"base_ability",
-"id"
-],
-"b90-t17": [
-"base_ability",
-"id"
-],
-"b93-t33": [
-"sc.toxic_count"
-],
-"b94-t17": [
-"sc.toxic_count"
-],
-"b94-t19": [
-"sc.toxic_count"
-],
-"b94-t20": [
-"sc.toxic_count"
-],
-"b94-t21": [
-"sc.toxic_count"
-],
-"b94-t22": [
-"sc.toxic_count"
-],
-"b94-t23": [
-"sc.toxic_count"
-],
-"b94-t24": [
-"sc.toxic_count"
-],
-"b94-t25": [
-"base_ability"
-],
-"b95-t16": [
-"base_ability"
-],
-"b96-t12": [
-"base_ability"
 ],
 "b99-t10": [
 "future_sight"

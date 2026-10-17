@@ -2115,6 +2115,18 @@ pub fn ability_on_switch_in(
                     stat: PokemonBoostableStat::Defense,
                     amount: 1,
                 }));
+            // alpha-poke patch (2026-10-17, doc/engine-diff.md L181): used now (Showdown's
+            // shieldBoost, once per battle): its base ability none, the harness's encoding too
+            let active_pkmn = attacking_side.get_active();
+            if active_pkmn.base_ability == Abilities::DAUNTLESSSHIELD {
+                instructions
+                    .instruction_list
+                    .push(Instruction::ChangeBaseAbility(ChangeAbilityInstruction {
+                        side_ref: *side_ref,
+                        ability_change: Abilities::NONE as i16 - Abilities::DAUNTLESSSHIELD as i16,
+                    }));
+                active_pkmn.base_ability = Abilities::NONE;
+            }
         }
         // alpha-poke patch (2026-10-17, doc/engine-diff.md L172): Supersweet Syrup, once per battle
         // (a used one: base ability none, as Dauntless Shield's): the foe's evasion -1, not through

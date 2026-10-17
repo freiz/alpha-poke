@@ -6,26 +6,6 @@
 "seed_offset": 40000
 },
 "mismatches": {
-"b0-t8": [
-"base_ability"
-],
-"b1-t13": [
-"base_ability"
-],
-"b102-t4": [
-"base_ability",
-"id"
-],
-"b113-t10": [
-"base_ability"
-],
-"b114-t11": [
-"base_ability"
-],
-"b118-t4": [
-"base_ability",
-"id"
-],
 "b120-t35": [
 "sc.protect"
 ],
@@ -35,59 +15,8 @@
 "b13-t14": [
 "last_item"
 ],
-"b139-t54": [
-"sc.toxic_count"
-],
-"b139-t55": [
-"sc.toxic_count"
-],
-"b139-t56": [
-"sc.toxic_count"
-],
-"b139-t57": [
-"sc.toxic_count"
-],
-"b139-t58": [
-"sc.toxic_count"
-],
-"b139-t59": [
-"sc.toxic_count"
-],
-"b139-t60": [
-"sc.toxic_count"
-],
-"b14-t14": [
-"base_ability"
-],
-"b140-t9": [
-"base_ability"
-],
-"b145-t8": [
-"base_ability"
-],
-"b146-t28": [
-"base_ability"
-],
 "b15-t11": [
 "pp"
-],
-"b151-t20": [
-"base_ability"
-],
-"b151-t54": [
-"sc.toxic_count"
-],
-"b151-t55": [
-"sc.toxic_count"
-],
-"b151-t57": [
-"sc.toxic_count"
-],
-"b151-t58": [
-"sc.toxic_count"
-],
-"b153-t20": [
-"sc.toxic_count"
 ],
 "b159-t13": [
 "ability",
@@ -117,107 +46,14 @@
 "types",
 "weight"
 ],
-"b16-t17": [
-"base_ability"
-],
-"b166-t21": [
-"base_ability",
-"id"
-],
-"b176-t13": [
-"base_ability"
-],
 "b177-t24": [
 "hp"
-],
-"b179-t12": [
-"sc.toxic_count"
-],
-"b179-t13": [
-"sc.toxic_count"
-],
-"b179-t14": [
-"sc.toxic_count"
-],
-"b179-t15": [
-"sc.toxic_count"
-],
-"b179-t16": [
-"sc.toxic_count"
-],
-"b179-t47": [
-"sc.toxic_count"
-],
-"b179-t48": [
-"sc.toxic_count"
-],
-"b179-t49": [
-"sc.toxic_count"
-],
-"b179-t50": [
-"sc.toxic_count"
-],
-"b179-t51": [
-"sc.toxic_count"
-],
-"b179-t53": [
-"sc.toxic_count"
-],
-"b179-t54": [
-"sc.toxic_count"
-],
-"b179-t55": [
-"sc.toxic_count"
-],
-"b179-t56": [
-"sc.toxic_count"
-],
-"b179-t57": [
-"sc.toxic_count"
-],
-"b179-t58": [
-"sc.toxic_count"
-],
-"b185-t8": [
-"base_ability"
-],
-"b186-t3": [
-"base_ability",
-"id"
 ],
 "b186-t34": [
 "sc.protect"
 ],
 "b191-t20": [
 "pp"
-],
-"b195-t6": [
-"base_ability",
-"id"
-],
-"b27-t2": [
-"base_ability"
-],
-"b33-t8": [
-"base_ability"
-],
-"b34-t4": [
-"base_ability"
-],
-"b35-t10": [
-"base_ability"
-],
-"b35-t18": [
-"base_ability"
-],
-"b4-t17": [
-"base_ability"
-],
-"b43-t38": [
-"base_ability"
-],
-"b44-t21": [
-"base_ability"
 ],
 "b44-t34": [
 "hp"
@@ -260,9 +96,6 @@
 ],
 "b54-t9": [
 "hp"
-],
-"b56-t9": [
-"base_ability"
 ],
 "b6-t40": [
 "pp"
@@ -325,24 +158,11 @@
 "b76-t17": [
 "hp"
 ],
-"b80-t3": [
-"base_ability"
-],
-"b80-t6": [
-"base_ability"
-],
 "b82-t20": [
 "hp"
 ],
-"b84-t19": [
-"base_ability",
-"id"
-],
 "b85-t30": [
 "future_sight"
-],
-"b98-t3": [
-"base_ability"
 ]
 }
 }

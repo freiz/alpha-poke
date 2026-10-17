@@ -2212,6 +2212,23 @@ pub fn choice_special_effect(
                 || (active_pkmn.ability == Abilities::LEAFGUARD && sun);
             if active_pkmn.status != PokemonStatus::SLEEP && !blocked {
                 let heal_amount = active_pkmn.maxhp - active_pkmn.hp;
+                // alpha-poke patch (2026-10-17, doc/engine-diff.md L181): a toxic's count goes with
+                // the status it replaces (Showdown's stage is the tox's own state)
+                if active_pkmn.status == PokemonStatus::TOXIC
+                    && attacking_side.side_conditions.toxic_count != 0
+                {
+                    instructions
+                        .instruction_list
+                        .push(Instruction::ChangeSideCondition(
+                            ChangeSideConditionInstruction {
+                                side_ref: *attacking_side_ref,
+                                side_condition: PokemonSideCondition::ToxicCount,
+                                amount: -attacking_side.side_conditions.toxic_count,
+                            },
+                        ));
+                    attacking_side.side_conditions.toxic_count = 0;
+                }
+                let active_pkmn = attacking_side.get_active();
                 instructions
                     .instruction_list
                     .push(Instruction::ChangeStatus(ChangeStatusInstruction {

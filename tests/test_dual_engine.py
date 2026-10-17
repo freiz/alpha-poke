@@ -4949,3 +4949,49 @@ def test_l180_curse_no_pressure():
     curse = BLISSEY.replace("- Calm Mind", "- Curse")
     states = ec.run_showdown(curse, KYUREM, [("move curse", "move protect")])
     assert _keys(_full(states, 0, "curse", "protect"), "pp") == {}
+
+
+# L181 (doc/engine-diff.md): toxic's count as Showdown's stage (up to 15; counted under Magic
+# Guard; gone with a Rest), a used Dauntless Shield (base ability none), Ogerpon's -Tera forme for
+# good (species, base ability)
+def test_l181_toxic_counts_under_magic_guard():
+    blissey = BLISSEY.replace("- Calm Mind", "- Toxic")
+    states = ec.run_showdown(CLEFABLE, blissey, [("move calmmind", "move toxic"), ("move calmmind", "move softboiled")])
+    assert _keys(_full(states, 0, "calmmind", "toxic"), "toxic_count") == {}
+    assert _keys(_full(states, 1, "calmmind", "softboiled"), "toxic_count") == {}
+
+
+def test_l181_rest_ends_the_toxic_count():
+    blissey = BLISSEY.replace("- Calm Mind", "- Toxic")
+    zozo = DONDOZO
+    states = ec.run_showdown(zozo, blissey, [("move curse", "move toxic"), ("move curse", "move seismictoss"),
+                                             ("move rest", "move seismictoss")])  # fmt: skip
+    assert states[3]["sides"][0]["mons"][0]["status"] == "slp"
+    assert _keys(_full(states, 2, "rest", "seismictoss"), "toxic_count") == {}
+
+
+def test_l181_dauntless_shield_used():
+    zama = """Zamazenta @ Leftovers
+Ability: Dauntless Shield
+EVs: 252 HP / 252 Def / 4 Spe
+Impish Nature
+- Body Press
+- Iron Defense
+- Crunch
+- Roar"""
+    states = ec.run_showdown(BLISSEY, CORVIKNIGHT + "\n\n" + zama, [("move calmmind", "switch 2")])
+    assert _keys(_full(states, 0, "calmmind", "zamazenta", (1, 2)), "ability") == {}
+
+
+def test_l181_ogerpon_tera_forme():
+    oger = """Ogerpon-Wellspring @ Wellspring Mask
+Ability: Water Absorb
+Tera Type: Water
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- Ivy Cudgel
+- Horn Leech
+- Knock Off
+- U-turn"""
+    states = ec.run_showdown(oger, BLISSEY, [("move hornleech terastallize", "move calmmind")])
+    assert _keys(_full(states, 0, "hornleech-tera", "calmmind"), "id", "ability") == {}

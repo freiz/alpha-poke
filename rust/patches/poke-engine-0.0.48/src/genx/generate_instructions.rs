@@ -2822,6 +2822,33 @@ fn embody_aspect_on_tera(
             }));
         active.ability = ability;
     }
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L181): the -Tera forme for good (Showdown's
+    // formeChange(..., true): its species and base ability too; was its ability only)
+    let tera_forme = match active.id {
+        PokemonName::OGERPON => PokemonName::OGERPONTEALTERA,
+        PokemonName::OGERPONWELLSPRING => PokemonName::OGERPONWELLSPRINGTERA,
+        PokemonName::OGERPONHEARTHFLAME => PokemonName::OGERPONHEARTHFLAMETERA,
+        PokemonName::OGERPONCORNERSTONE => PokemonName::OGERPONCORNERSTONETERA,
+        other => other,
+    };
+    if tera_forme != active.id {
+        instructions
+            .instruction_list
+            .push(Instruction::FormeChange(FormeChangeInstruction {
+                side_ref,
+                name_change: tera_forme as i16 - active.id as i16,
+            }));
+        active.id = tera_forme;
+    }
+    if active.base_ability != ability {
+        instructions
+            .instruction_list
+            .push(Instruction::ChangeBaseAbility(ChangeAbilityInstruction {
+                side_ref,
+                ability_change: ability as i16 - active.base_ability as i16,
+            }));
+        active.base_ability = ability;
+    }
     let shielded = active.item == Items::ABILITYSHIELD;
     let foe = state
         .get_side_immutable(&side_ref.get_other_side())
@@ -6071,7 +6098,24 @@ fn end_of_turn_instructions(
             .contains(&PokemonVolatileStatus::HEALBLOCK);
         let active_pkmn = side.get_active();
         let other_side_active = other_side.get_active();
-        if active_pkmn.hp == 0 || active_pkmn.ability == Abilities::MAGICGUARD {
+        if active_pkmn.hp == 0 {
+            continue;
+        }
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L181): Magic Guard stops the damage, not
+        // the toxic count (Showdown's tox onResidual counts its stage, the damage is prevented)
+        if active_pkmn.ability == Abilities::MAGICGUARD {
+            if active_pkmn.status == PokemonStatus::TOXIC && side.side_conditions.toxic_count < 15 {
+                side.side_conditions.toxic_count += 1;
+                incoming_instructions
+                    .instruction_list
+                    .push(Instruction::ChangeSideCondition(
+                        ChangeSideConditionInstruction {
+                            side_ref: *side_ref,
+                            side_condition: PokemonSideCondition::ToxicCount,
+                            amount: 1,
+                        },
+                    ));
+            }
             continue;
         }
         // alpha-poke patch (2026-10-16, doc/engine-diff.md L12b): Poison Heal heals 1/8 in place
@@ -6138,12 +6182,11 @@ fn end_of_turn_instructions(
                 if active_pkmn.ability != Abilities::POISONHEAL
                     || other_side_active.ability == Abilities::NEUTRALIZINGGAS
                 {
-                    let toxic_multiplier = (1.0 / 16.0) * toxic_count + (1.0 / 16.0);
+                    // alpha-poke patch (2026-10-17, doc/engine-diff.md L181): Showdown's stage up to
+                    // 15, a 16th of the max HP (at least 1) times it; was maxhp x stage / 16
+                    let stage = cmp::min(toxic_count as i16 + 1, 15);
                     let damage_amount = cmp::max(
-                        cmp::min(
-                            (active_pkmn.maxhp as f32 * toxic_multiplier) as i16,
-                            active_pkmn.hp,
-                        ),
+                        cmp::min(cmp::max(active_pkmn.maxhp / 16, 1) * stage, active_pkmn.hp),
                         1,
                     );
                     let toxic_damage_instruction = Instruction::Damage(DamageInstruction {
@@ -6158,16 +6201,19 @@ fn end_of_turn_instructions(
                 }
 
                 // toxic counter is always incremented, even if the pokemon has poison heal
-                let toxic_counter_increment_instruction =
-                    Instruction::ChangeSideCondition(ChangeSideConditionInstruction {
-                        side_ref: *side_ref,
-                        side_condition: PokemonSideCondition::ToxicCount,
-                        amount: 1,
-                    });
-                side.side_conditions.toxic_count += 1;
-                incoming_instructions
-                    .instruction_list
-                    .push(toxic_counter_increment_instruction);
+                // (L181: up to 15, Showdown's stage)
+                if side.side_conditions.toxic_count < 15 {
+                    let toxic_counter_increment_instruction =
+                        Instruction::ChangeSideCondition(ChangeSideConditionInstruction {
+                            side_ref: *side_ref,
+                            side_condition: PokemonSideCondition::ToxicCount,
+                            amount: 1,
+                        });
+                    side.side_conditions.toxic_count += 1;
+                    incoming_instructions
+                        .instruction_list
+                        .push(toxic_counter_increment_instruction);
+                }
             }
             _ => {}
         }

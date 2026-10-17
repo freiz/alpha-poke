@@ -15,15 +15,8 @@
 "speed",
 "weight"
 ],
-"b10-t4": [
-"base_ability"
-],
 "b100-t37": [
 "last_item"
-],
-"b105-t14": [
-"base_ability",
-"id"
 ],
 "b113-t2": [
 "hp"
@@ -44,24 +37,6 @@
 "b126-t28": [
 "boost.evasion"
 ],
-"b131-t15": [
-"base_ability",
-"id"
-],
-"b131-t2": [
-"base_ability",
-"id"
-],
-"b138-t10": [
-"base_ability",
-"id"
-],
-"b142-t6": [
-"base_ability"
-],
-"b144-t45": [
-"base_ability"
-],
 "b156-t7": [
 "hp",
 "item",
@@ -69,9 +44,6 @@
 "last_used_move",
 "must_switch",
 "pp"
-],
-"b159-t18": [
-"base_ability"
 ],
 "b160-t23": [
 "base_ability"
@@ -90,18 +62,6 @@
 ],
 "b176-t25": [
 "trick_room"
-],
-"b176-t44": [
-"sc.toxic_count"
-],
-"b176-t46": [
-"sc.toxic_count"
-],
-"b176-t47": [
-"sc.toxic_count"
-],
-"b176-t48": [
-"sc.toxic_count"
 ],
 "b184-t5": [
 "hp",
@@ -130,19 +90,8 @@
 "b197-t21": [
 "status"
 ],
-"b199-t30": [
-"base_ability",
-"id"
-],
 "b26-t12": [
 "hp",
-"id"
-],
-"b32-t19": [
-"base_ability"
-],
-"b36-t9": [
-"base_ability",
 "id"
 ],
 "b44-t31": [
@@ -150,9 +99,6 @@
 ],
 "b46-t16": [
 "sc.protect"
-],
-"b47-t17": [
-"base_ability"
 ],
 "b50-t6": [
 "hp"
@@ -162,10 +108,6 @@
 ],
 "b56-t58": [
 "pp"
-],
-"b57-t3": [
-"base_ability",
-"id"
 ],
 "b6-t10": [
 "attack",
@@ -188,88 +130,11 @@
 "b62-t26": [
 "status"
 ],
-"b63-t45": [
-"sc.toxic_count"
-],
-"b63-t46": [
-"sc.toxic_count"
-],
-"b63-t48": [
-"sc.toxic_count"
-],
-"b63-t49": [
-"sc.toxic_count"
-],
-"b63-t50": [
-"sc.toxic_count"
-],
-"b63-t52": [
-"sc.toxic_count"
-],
-"b63-t53": [
-"sc.toxic_count"
-],
-"b63-t54": [
-"sc.toxic_count"
-],
-"b63-t55": [
-"sc.toxic_count"
-],
-"b63-t56": [
-"sc.toxic_count"
-],
-"b63-t57": [
-"sc.toxic_count"
-],
-"b63-t58": [
-"sc.toxic_count"
-],
-"b63-t59": [
-"sc.toxic_count"
-],
-"b63-t60": [
-"sc.toxic_count"
-],
 "b7-t13": [
 "status"
 ],
 "b76-t11": [
 "last_used_move"
-],
-"b79-t23": [
-"base_ability",
-"id"
-],
-"b82-t3": [
-"base_ability",
-"id"
-],
-"b89-t4": [
-"base_ability"
-],
-"b9-t26": [
-"sc.toxic_count"
-],
-"b9-t46": [
-"sc.toxic_count"
-],
-"b9-t47": [
-"sc.toxic_count"
-],
-"b9-t49": [
-"sc.toxic_count"
-],
-"b9-t50": [
-"sc.toxic_count"
-],
-"b9-t52": [
-"sc.toxic_count"
-],
-"b9-t53": [
-"sc.toxic_count"
-],
-"b93-t16": [
-"base_ability"
 ],
 "b99-t20": [
 "ability",
@@ -298,9 +163,6 @@
 "terastallized",
 "types",
 "weight"
-],
-"b99-t31": [
-"sc.toxic_count"
 ]
 }
 }
