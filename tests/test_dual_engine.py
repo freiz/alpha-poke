@@ -4995,3 +4995,19 @@ Jolly Nature
 - U-turn"""
     states = ec.run_showdown(oger, BLISSEY, [("move hornleech terastallize", "move calmmind")])
     assert _keys(_full(states, 0, "hornleech-tera", "calmmind"), "id", "ability") == {}
+
+
+# L182 (doc/engine-diff.md): the Protect count is the mon's (Showdown's stall volatile): up as it
+# protects, gone with its switch-out
+def test_l182_protect_count_ends_with_the_switch():
+    states = ec.run_showdown(BLISSEY + "\n\n" + CORVIKNIGHT, GARCHOMP_SD,
+                             [("move protect", "move swordsdance"), ("switch 2", "move swordsdance")])  # fmt: skip
+    assert _keys(_full(states, 1, "corviknight", "swordsdance", (2, 1)), "sc.protect") == {}
+
+
+def test_l182_protect_count_at_a_pivot():
+    # (Chilly Reception, aimed at its user: a pivot's decision with the Protect up)
+    states = ec.run_showdown(BLISSEY, SLOWKING_FUTURE + "\n\n" + CORVIKNIGHT,
+                             [("move protect", "move chillyreception")])  # fmt: skip
+    assert states[1]["sides"][1]["request"] == "switch"
+    assert _keys(_full(states, 0, "protect", "chillyreception", (1, 2)), "sc.protect") == {}

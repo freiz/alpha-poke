@@ -37,9 +37,6 @@
 "types",
 "weight"
 ],
-"b105-t14": [
-"sc.protect"
-],
 "b111-t1": [
 "attack",
 "defense",
@@ -108,9 +105,6 @@
 ],
 "b172-t12": [
 "hp"
-],
-"b178-t4": [
-"sc.protect"
 ],
 "b179-t2": [
 "active",
@@ -195,12 +189,6 @@
 "b2-t43": [
 "sc.protect"
 ],
-"b214-t15": [
-"sc.protect"
-],
-"b214-t53": [
-"sc.protect"
-],
 "b216-t33": [
 "ability"
 ],
@@ -240,9 +228,6 @@
 "hp",
 "item",
 "last_item"
-],
-"b289-t2": [
-"sc.protect"
 ],
 "b29-t11": [
 "sc.protect"

@@ -6,9 +6,6 @@
 "seed_offset": 40000
 },
 "mismatches": {
-"b120-t35": [
-"sc.protect"
-],
 "b122-t26": [
 "status"
 ],
@@ -49,9 +46,6 @@
 "b177-t24": [
 "hp"
 ],
-"b186-t34": [
-"sc.protect"
-],
 "b191-t20": [
 "pp"
 ],
@@ -60,12 +54,6 @@
 ],
 "b46-t25": [
 "pp"
-],
-"b5-t2": [
-"sc.protect"
-],
-"b50-t19": [
-"sc.protect"
 ],
 "b53-t21": [
 "ability",

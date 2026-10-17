@@ -470,6 +470,22 @@ fn generate_instructions_from_switch(
         .ability
         == Abilities::NEUTRALIZINGGAS;
 
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L181): the Protect count is the mon's
+    // (Showdown's stall volatile): it ends with its switch-out
+    let side = state.get_side(&switching_side_ref);
+    if side.side_conditions.protect != 0 {
+        incoming_instructions
+            .instruction_list
+            .push(Instruction::ChangeSideCondition(
+                ChangeSideConditionInstruction {
+                    side_ref: switching_side_ref,
+                    side_condition: PokemonSideCondition::Protect,
+                    amount: -side.side_conditions.protect,
+                },
+            ));
+        side.side_conditions.protect = 0;
+    }
+
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L158): Meloetta-Pirouette is Meloetta again
     // on the bench (a forme change that is not permanent)
     if state
@@ -1019,6 +1035,23 @@ fn get_instructions_from_volatile_statuses(
         side.volatile_statuses
             .insert(volatile_status.volatile_status);
         incoming_instructions.instruction_list.push(ins);
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L181): a Protect's count goes up as it
+        // protects (Showdown's stall volatile, added on its hit); was at the end of the turn, so a
+        // decision mid-turn (a pivot's) had the old count
+        if PROTECT_VOLATILES.contains(&volatile_status.volatile_status)
+            && target_side == *attacking_side_reference
+        {
+            side.side_conditions.protect += 1;
+            incoming_instructions
+                .instruction_list
+                .push(Instruction::ChangeSideCondition(
+                    ChangeSideConditionInstruction {
+                        side_ref: target_side,
+                        side_condition: PokemonSideCondition::Protect,
+                        amount: 1,
+                    },
+                ));
+        }
         // alpha-poke patch (2026-10-17, doc/engine-diff.md L179): a locking move's (Outrage's)
         // lock starts here, with the move's effect (Showdown's self lockedmove): its other moves
         // disabled (was before the move: also on a confusion's self-hit, an immune target)
@@ -6844,16 +6877,7 @@ fn end_of_turn_instructions(
                     },
                 ));
             side.volatile_statuses.remove(&protect_vs);
-            incoming_instructions
-                .instruction_list
-                .push(Instruction::ChangeSideCondition(
-                    ChangeSideConditionInstruction {
-                        side_ref: *side_ref,
-                        side_condition: PokemonSideCondition::Protect,
-                        amount: 1,
-                    },
-                ));
-            side.side_conditions.protect += 1;
+            // (L181: its count went up as it protected: get_instructions_from_volatile_statuses)
         } else if side.side_conditions.protect > 0 {
             incoming_instructions
                 .instruction_list
@@ -15180,11 +15204,7 @@ mod tests {
                     side_ref: SideReference::SideOne,
                     volatile_status: PokemonVolatileStatus::PROTECT,
                 }),
-                Instruction::ChangeSideCondition(ChangeSideConditionInstruction {
-                    side_ref: SideReference::SideOne,
-                    side_condition: PokemonSideCondition::Protect,
-                    amount: 1,
-                }),
+                // (L181: the count goes up as it protects, not here)
             ],
         };
 

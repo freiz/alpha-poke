@@ -5,12 +5,6 @@
 "teams": "87327e3ee174c1b9"
 },
 "mismatches": {
-"b10-t54": [
-"sc.protect"
-],
-"b10-t57": [
-"sc.protect"
-],
 "b112-t14": [
 "hp"
 ],
@@ -108,9 +102,6 @@
 "b211-t29": [
 "future_sight"
 ],
-"b213-t9": [
-"sc.protect"
-],
 "b216-t18": [
 "options"
 ],
@@ -199,9 +190,6 @@
 "types",
 "weight"
 ],
-"b241-t7": [
-"sc.protect"
-],
 "b244-t6": [
 "status"
 ],
@@ -213,9 +201,6 @@
 ],
 "b270-t5": [
 "types"
-],
-"b289-t3": [
-"sc.protect"
 ],
 "b289-t9": [
 "hp"
@@ -231,9 +216,6 @@
 ],
 "b50-t46": [
 "last_item"
-],
-"b69-t16": [
-"sc.protect"
 ],
 "b91-t6": [
 "pp"
