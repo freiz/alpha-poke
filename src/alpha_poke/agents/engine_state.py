@@ -796,6 +796,7 @@ def build_state(
         terrain_turns_remaining=tturns,
         trick_room=trick_room,
         trick_room_turns_remaining=trturns,
+        last_move=tm_us.last_move or "none",  # (L167: Copycat's; an unknown one reads as none)
     )
 
 

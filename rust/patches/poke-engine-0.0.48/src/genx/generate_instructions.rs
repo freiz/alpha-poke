@@ -21,7 +21,7 @@ use crate::instruction::{
     DecrementWishInstruction, HealInstruction, RemoveVolatileStatusInstruction,
     SetSecondMoveSwitchOutMoveInstruction, SetSleepTurnsInstruction, ToggleBatonPassingInstruction,
     ToggleDamageDealtHitSubstituteInstruction, ToggleMegaEvolvedInstruction,
-    ReviveInstruction, ToggleShedTailingInstruction, ToggleTrickRoomInstruction,
+    ChangeLastMoveInstruction, ReviveInstruction, ToggleShedTailingInstruction, ToggleTrickRoomInstruction,
 };
 use crate::instruction::{ChangeAbilityInstruction, ToggleTerastallizedInstruction};
 use crate::instruction::{ChangeMoveInstruction, ChangeStatInstruction, DisableMoveInstruction};
@@ -3666,9 +3666,11 @@ pub fn generate_instructions_from_move(
         return;
     }
 
-    if attacker_side
-        .volatile_statuses
-        .contains(&PokemonVolatileStatus::TRUANT)
+    // (L167: a called move's caller has loafed or not already)
+    if !choice.called_move
+        && attacker_side
+            .volatile_statuses
+            .contains(&PokemonVolatileStatus::TRUANT)
     {
         incoming_instructions
             .instruction_list
@@ -3842,6 +3844,7 @@ pub fn generate_instructions_from_move(
     // (Showdown's numConsecutive: 0 the first time, then 1, 2, ...), its damage x 4915 / 4096 per
     // count up to 2; another move or a switch starts over
     if state.use_last_used_move
+        && !choice.called_move
         && state
             .get_side_immutable(&attacking_side)
             .get_active_immutable()
@@ -3900,7 +3903,9 @@ pub fn generate_instructions_from_move(
         }
     }
 
-    if state.use_last_used_move {
+    // (L167: a called move's BeforeMove, PP and last used move are its caller's, done already)
+    let called = choice.called_move;
+    if state.use_last_used_move && !called {
         set_last_used_move_as_move(
             state.get_side(&attacking_side),
             choice.move_index,
@@ -3917,11 +3922,11 @@ pub fn generate_instructions_from_move(
             .status,
         PokemonStatus::SLEEP | PokemonStatus::FREEZE
     );
-    if !asleep_or_frozen {
+    if !asleep_or_frozen && !called {
         start_truant(state, &attacking_side, &mut incoming_instructions);
     }
 
-    if cannot_use_move(state, &choice, &attacking_side) {
+    if !called && cannot_use_move(state, &choice, &attacking_side) {
         steadfast(state, &attacking_side, &mut incoming_instructions);
         state.reverse_instructions(&incoming_instructions.instruction_list);
         final_instructions.push(incoming_instructions);
@@ -3959,7 +3964,7 @@ pub fn generate_instructions_from_move(
     let unnerve = super::items::unnerved(state, &attacking_side);
     let (attacker_side, defender_side) = state.get_both_sides(&attacking_side);
     let active = attacker_side.get_active();
-    if active.moves[&choice.move_index].pp < 10 {
+    if !called && active.moves[&choice.move_index].pp < 10 {
         let pp_decrement_amount = if choice.target == MoveTarget::Opponent
             && defender_side.get_active_immutable().ability == Abilities::PRESSURE
         {
@@ -4052,6 +4057,32 @@ pub fn generate_instructions_from_move(
         }
         return;
     }
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L167): Copycat uses the battle's last move
+    // (Showdown's onHit: useMove(battle.lastMove), as Sleep Talk calls its move here), none or
+    // one it cannot copy: it fails. The called move is the last move then (at its Acted)
+    if choice.move_id == Choices::COPYCAT
+        && state.last_move != Choices::NONE
+        && !state.last_move.fails_copycat()
+    {
+        if let Some(m) = MOVES.get(&state.last_move) {
+            let mut new_choice = m.clone();
+            new_choice.move_index = choice.move_index;
+            new_choice.first_move = choice.first_move;
+            new_choice.sleep_talk_move = true;
+            new_choice.called_move = true;
+            state.reverse_instructions(&incoming_instructions.instruction_list);
+            generate_instructions_from_move(
+                state,
+                &mut new_choice,
+                defender_choice,
+                attacking_side,
+                incoming_instructions,
+                &mut final_instructions,
+                branch_on_damage,
+            );
+            return;
+        }
+    }
     if asleep_or_frozen_before {
         start_truant(state, &attacking_side, &mut incoming_instructions);
     }
@@ -4070,6 +4101,16 @@ pub fn generate_instructions_from_move(
     incoming_instructions
         .instruction_list
         .push(Instruction::Acted(attacking_side));
+    // (L167: the battle's last move, for Copycat: one past its BeforeMove)
+    if state.use_last_move && state.last_move != choice.move_id {
+        incoming_instructions
+            .instruction_list
+            .push(Instruction::ChangeLastMove(ChangeLastMoveInstruction {
+                new_move: choice.move_id,
+                previous_move: state.last_move,
+            }));
+        state.last_move = choice.move_id;
+    }
     // (L165: Meteor Beam / Electro Shot's Sp. Atk +1 as it starts, before the hit: the charging
     // turn's, or the move's own boost when it hits at once -- Power Herb, Electro Shot in rain)
     let charging = choice.volatile_status.as_ref().is_some_and(|v| {

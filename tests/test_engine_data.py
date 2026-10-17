@@ -226,3 +226,16 @@ def test_fling_powers_match_showdown():
     assert len(items) > 150
     got = alpha_search.fling_powers([i.upper() for i, _ in items])
     assert {i: g for (i, _), g in zip(items, got)} == dict(items)
+
+
+def test_fail_copycat_moves_match_showdown():
+    """The moves Copycat fails on (Showdown's failcopycat flag; L167), among the engine's moves."""
+    import alpha_search
+
+    from alpha_poke.enginecheck import data
+
+    eng = dict(alpha_search.move_targets())
+    want = sorted(m["id"] for m in data.showdown()["moves"]
+                  if m["id"] in eng and "failcopycat" in m["flags"])  # fmt: skip
+    assert len(want) > 30
+    assert alpha_search.fail_copycat_moves() == want

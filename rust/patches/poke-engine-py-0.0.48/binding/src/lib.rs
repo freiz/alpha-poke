@@ -44,6 +44,8 @@ pub struct PyState {
     pub trick_room: bool,
     pub trick_room_turns_remaining: i8,
     pub team_preview: bool,
+    // alpha-poke patch (L167): the battle's last move (Copycat)
+    pub last_move: String,
 }
 
 impl From<State> for PyState {
@@ -58,6 +60,7 @@ impl From<State> for PyState {
             trick_room: other.trick_room.active,
             trick_room_turns_remaining: other.trick_room.turns_remaining,
             team_preview: other.team_preview,
+            last_move: other.last_move.to_string(),
         }
     }
 }
@@ -83,6 +86,8 @@ impl Into<State> for PyState {
             use_last_used_move: false,
             use_damage_dealt: false,
             use_times_attacked: false,
+            last_move: Choices::from_str(&self.last_move).unwrap_or(Choices::NONE),
+            use_last_move: false,
         };
         state.set_conditional_mechanics();
         state
@@ -102,6 +107,7 @@ impl PyState {
         trick_room=false,
         trick_room_turns_remaining=0,
         team_preview=false,
+        last_move="none".to_string(),
     ))]
     fn new(
         side_one: PySide,
@@ -113,6 +119,7 @@ impl PyState {
         trick_room: bool,
         trick_room_turns_remaining: i8,
         team_preview: bool,
+        last_move: String,
     ) -> Self {
         PyState {
             side_one,
@@ -124,6 +131,7 @@ impl PyState {
             trick_room,
             trick_room_turns_remaining,
             team_preview,
+            last_move,
         }
     }
     fn apply_instructions(&self, instructions: PyStateInstructions) -> PyState {

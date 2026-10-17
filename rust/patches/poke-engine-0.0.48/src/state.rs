@@ -1421,6 +1421,11 @@ pub struct State {
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L163): count the hits (times_attacked) only
     // when a Rage Fist is on the field (set_conditional_mechanics)
     pub use_times_attacked: bool,
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L167): the last move used in the battle by
+    // either side (Showdown's battle.lastMove: the move that ran, past its BeforeMove; a called
+    // move, not its caller), for Copycat; kept only when a Copycat is on the field
+    pub last_move: Choices,
+    pub use_last_move: bool,
 }
 impl Default for State {
     fn default() -> State {
@@ -1442,6 +1447,8 @@ impl Default for State {
             team_preview: false,
             use_damage_dealt: false,
             use_times_attacked: false,
+            last_move: Choices::NONE,
+            use_last_move: false,
             use_last_used_move: false,
         };
 
@@ -2071,6 +2078,7 @@ impl State {
                 SideReference::SideOne => self.side_one.shed_tailing = !self.side_one.shed_tailing,
                 SideReference::SideTwo => self.side_two.shed_tailing = !self.side_two.shed_tailing,
             },
+            Instruction::ChangeLastMove(instruction) => self.last_move = instruction.new_move,
             Instruction::ToggleReviving(instruction) => {
                 let side = self.get_side(&instruction.side_ref);
                 side.reviving = !side.reviving;
@@ -2294,6 +2302,9 @@ impl State {
                 SideReference::SideOne => self.side_one.shed_tailing = !self.side_one.shed_tailing,
                 SideReference::SideTwo => self.side_two.shed_tailing = !self.side_two.shed_tailing,
             },
+            Instruction::ChangeLastMove(instruction) => {
+                self.last_move = instruction.previous_move
+            }
             Instruction::ToggleReviving(instruction) => {
                 let side = self.get_side(&instruction.side_ref);
                 side.reviving = !side.reviving;
@@ -2386,7 +2397,7 @@ impl State {
     }
 
     pub fn serialize(&self) -> String {
-        format!(
+        let out = format!(
             "{}/{}/{}/{}/{}/{}",
             self.side_one.serialize(),
             self.side_two.serialize(),
@@ -2394,7 +2405,13 @@ impl State {
             self.terrain.serialize(),
             self.trick_room.serialize(),
             self.team_preview
-        )
+        );
+        // (L167: only when there is one; older strings have no such field)
+        if self.last_move == Choices::NONE {
+            out
+        } else {
+            format!("{}/{}", out, self.last_move)
+        }
     }
 
     /// ```
@@ -2595,6 +2612,10 @@ impl State {
             team_preview: split[5].parse::<bool>().unwrap(),
             use_damage_dealt: false,
             use_times_attacked: false,
+            last_move: split
+                .get(6)
+                .map_or(Choices::NONE, |x| Choices::from_str(x).unwrap()),
+            use_last_move: false,
             use_last_used_move: false,
         };
         state.set_conditional_mechanics();

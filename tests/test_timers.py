@@ -281,3 +281,16 @@ def test_times_attacked_counts_the_foes_hits():
 |turn|2
 """)  # fmt: skip
     assert t["p2"].times_attacked == {"gliscor": 2}
+
+
+def test_last_move_is_the_battles():
+    """L167: the battle's last move (Copycat's), either side's, a called move after its caller; a
+    move that could not start leaves it."""
+    t = run(START + """
+|move|p1a: Fishy|Copycat|p1a: Fishy
+|move|p1a: Fishy|Stealth Rock|p2a: Bob|[from] move: Copycat
+|cant|p2a: Bob|par
+|upkeep
+|turn|2
+""")  # fmt: skip
+    assert t["p1"].last_move == t["p2"].last_move == "stealthrock"

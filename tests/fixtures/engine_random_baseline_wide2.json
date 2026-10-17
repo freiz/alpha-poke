@@ -6,12 +6,6 @@
 "seed_offset": 30000
 },
 "mismatches": {
-"b110-t3": [
-"boost.spa"
-],
-"b110-t7": [
-"hp"
-],
 "b127-t11": [
 "hp"
 ],

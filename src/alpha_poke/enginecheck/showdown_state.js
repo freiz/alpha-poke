@@ -98,6 +98,8 @@ function state(battle, logFrom) {
 				[k, v.duration || 0])),
 		},
 		sides: [sideState(battle.p1), sideState(battle.p2)],
+		// the last move used in the battle (Copycat's; doc/engine-diff.md L167)
+		last_move: battle.lastMove ? battle.lastMove.id : '',
 		log: battle.log.slice(logFrom),
 	}));
 }

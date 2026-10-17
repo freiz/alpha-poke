@@ -1761,5 +1761,9 @@ impl State {
         if self._state_contains_any_move(&[Choices::RAGEFIST]) {
             self.use_times_attacked = true;
         }
+        // (L167)
+        if self._state_contains_any_move(&[Choices::COPYCAT]) {
+            self.use_last_move = true;
+        }
     }
 }

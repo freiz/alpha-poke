@@ -1023,6 +1023,19 @@ fn bypass_substitute_moves() -> Vec<String> {
     out
 }
 
+/// The moves Copycat cannot copy (`Choices::fails_copycat`, lowercase; doc/engine-diff.md L167).
+#[pyfunction]
+fn fail_copycat_moves() -> Vec<String> {
+    use poke_engine::choices::MOVES;
+    let mut out: Vec<String> = MOVES
+        .keys()
+        .filter(|c| c.fails_copycat())
+        .map(|c| format!("{:?}", c).to_lowercase())
+        .collect();
+    out.sort();
+    out
+}
+
 /// The moves poke-engine aims at the opponent that are not aimed at the foe's Pokemon
 /// (`Choices::not_aimed_at_foe`, lowercase; doc/engine-diff.md L72).
 #[pyfunction]
@@ -1217,6 +1230,7 @@ fn alpha_search(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(move_targets, m)?)?;
     m.add_function(wrap_pyfunction!(not_aimed_at_foe_moves, m)?)?;
     m.add_function(wrap_pyfunction!(bypass_substitute_moves, m)?)?;
+    m.add_function(wrap_pyfunction!(fail_copycat_moves, m)?)?;
     m.add_function(wrap_pyfunction!(fling_powers, m)?)?;
     m.add_function(wrap_pyfunction!(paradox_species, m)?)?;
     m.add_function(wrap_pyfunction!(fail_skill_swap_abilities, m)?)?;

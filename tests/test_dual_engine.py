@@ -4309,3 +4309,60 @@ def test_l166_revival_blessing_fails_without_a_fainted_one():
     assert any(x.startswith("|-fail|") for x in states[2]["log"])
     outs = ec.engine_outcomes(ec.engine_state(states[1]), "revivalblessing", "seismictoss")
     assert ec.closest(states[2], outs, (2, 1), hp=True)["diff"] == {}
+
+
+# L167 (doc/engine-diff.md): Copycat uses the battle's last move (Showdown's battle.lastMove: the
+# move that ran last, either side's; kept in the engine's state, set as each move starts)
+BLISSEY_COPYCAT = BLISSEY.replace("- Calm Mind", "- Copycat")
+DRAGAPULT_COPYCAT = """Dragapult @ Leftovers
+Ability: Infiltrator
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Copycat
+- Dragon Dance
+- Draco Meteor
+- Calm Mind"""
+
+
+def test_l167_copycat_copies_the_foes_move_this_turn():
+    states = ec.run_showdown(BLISSEY_COPYCAT, DRAGAPULT_COPYCAT, [("move copycat", "move dragondance")])
+    assert states[1]["sides"][0]["mons"][0]["boosts"]["atk"] == 1
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "copycat", "dragondance")
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+def test_l167_copycat_copies_the_last_move_of_last_turn():
+    turns = [("move dragondance", "move protect"), ("move dragondance", "move seismictoss"),
+             ("move copycat", "move protect")]  # fmt: skip
+    states = ec.run_showdown(DRAGAPULT_COPYCAT, BLISSEY, turns)
+    assert states[2]["last_move"] == "seismictoss"  # the slower Blissey's, last
+    outs = ec.engine_outcomes(ec.engine_state(states[2]), "copycat", "protect")
+    assert ec.closest(states[3], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L167's control: a move it cannot copy (Counter, last: Showdown's failcopycat), it fails
+def test_l167_copycat_fails_on_counter():
+    states = ec.run_showdown(DRAGAPULT_COPYCAT, BLISSEY.replace("- Calm Mind", "- Counter"),
+                             [("move dragondance", "move counter"), ("move copycat", "move seismictoss")])  # fmt: skip
+    assert states[1]["last_move"] == "counter"
+    outs = ec.engine_outcomes(ec.engine_state(states[1]), "copycat", "seismictoss")
+    assert ec.closest(states[2], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L167 in the random differential: the foe's move this turn (main b259-t6: a Substitute that failed
+# still counts; offmeta b60-t1), the last move of last turn (main b259-t15: a Chilling Water of a mon
+# no longer in; main b9-t12; offmeta b101-t16; wide2 b110-t3: its user's own Nasty Plot)
+@pytest.mark.parametrize("teams,i,turn,offset", [
+    ("random_battle_teams.jsonl", 259, 6, 0),
+    ("random_battle_teams.jsonl", 259, 15, 0),
+    ("random_battle_teams.jsonl", 9, 12, 0),
+    ("random_battle_teams_offmeta.jsonl", 60, 1, 0),
+    ("random_battle_teams_offmeta.jsonl", 101, 16, 0),
+    ("random_battle_teams_wide2.jsonl", 110, 3, 30000),
+])  # fmt: skip
+def test_l167_positions(teams, i, turn, offset):
+    a, b = _random_position(teams, i, turn, offset)
+    c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
+    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2)
+    n = tuple(len(s["mons"]) for s in a["state"]["sides"])
+    assert ec.closest(b["state"], outs, n, hp=True)["diff"] == {}

@@ -39,6 +39,9 @@ sides, in poke-engine's own units (rust/patches/poke-engine-0.0.48, generate_ins
   last_failed the active's move failed last turn (a -fail / -miss of its own, an -immune of the
               target, a cant other than recharge: Showdown's moveLastTurnResult; Temper Flare /
               Stomping Tantrum double; doc/engine-diff.md L115)
+  last_move   the battle's last move, either side's (each |move| line: past its BeforeMove, a
+              called move after its caller; the same on both sides): Copycat's (doc/engine-diff.md
+              L167)
   used_once   species ids whose Dauntless Shield has raised Defense / Battle Bond has activated
               (Gen 9: once per battle;
               2026-10-16, doc/engine-diff.md L18)
@@ -91,6 +94,7 @@ class SideTimers:
     sub_hit: bool = False
     recharge: bool = False
     just_moved: str = ""  # species id of this side's mon that made the last move
+    last_move: str = ""  # the battle's last move id (both sides; L167)
     # what this side set: "weather" / "terrain" -> (its id, the setter's species id); a screen
     # id (reflect, lightscreen, auroraveil) -> the setter's species id
     setters: dict = field(default_factory=dict)
@@ -235,6 +239,8 @@ def _feed(sides: dict, p: list[str]) -> None:
         st.failed_now = False
         st.recharge = False
         sides["p2" if p[2][:2] == "p1" else "p1"].just_moved = ""
+        for s in sides.values():
+            s.last_move = mv
         if mv == "wish" and st.wish is None and "[still]" not in p:
             st.wish = (2, sp)
     elif tag == "-fail" and len(p) > 3 and to_id(p[3].replace("move: ", "")) == "wish":

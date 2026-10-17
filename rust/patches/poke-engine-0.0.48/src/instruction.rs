@@ -109,6 +109,8 @@ pub enum Instruction {
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L166): Revival Blessing: the side picks a
     // fainted Pokemon (its force switch, Side::reviving), revived to the given HP (from 0)
     ToggleReviving(ToggleShedTailingInstruction),
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L167): the battle's last move (State::last_move)
+    ChangeLastMove(ChangeLastMoveInstruction),
     Revive(ReviveInstruction),
     ToggleTrickRoom(ToggleTrickRoomInstruction),
     DecrementTrickRoomTurnsRemaining,
@@ -336,6 +338,9 @@ impl fmt::Debug for Instruction {
             Instruction::ToggleShedTailing(s) => {
                 write!(f, "ToggleShedTailing {:?}", s.side_ref)
             }
+            Instruction::ChangeLastMove(s) => {
+                write!(f, "ChangeLastMove: {:?} -> {:?}", s.previous_move, s.new_move)
+            }
             Instruction::ToggleReviving(s) => {
                 write!(f, "ToggleReviving {:?}", s.side_ref)
             }
@@ -457,6 +462,12 @@ pub struct ToggleBatonPassingInstruction {
 #[derive(Debug, PartialEq, Clone)]
 pub struct ToggleShedTailingInstruction {
     pub side_ref: SideReference,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct ChangeLastMoveInstruction {
+    pub new_move: Choices,
+    pub previous_move: Choices,
 }
 
 #[derive(Debug, PartialEq, Clone)]

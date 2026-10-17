@@ -84,6 +84,15 @@ def _engine_item(name: str) -> bool:
 
 
 @functools.cache
+def _engine_move(name: str) -> bool:
+    """Whether poke-engine knows the move ``name`` (the battle's last move, L167)."""
+    try:
+        return str(pe.State.from_string(pe.State(last_move=name).to_string()).last_move).lower() == name
+    except BaseException:  # noqa: BLE001 - the binding panics on an unknown name
+        return False
+
+
+@functools.cache
 def _engine_volatile(name: str) -> bool:
     """Whether poke-engine knows the volatile status ``name`` (unknown ones are left out): the
     binding takes any name and the engine reads an unknown one as NONE (2026-10-16: so a check of
@@ -248,6 +257,8 @@ def engine_state(sd: dict) -> pe.State:
         weather=WEATHER[f["weather"]], weather_turns_remaining=f["weather_duration"],
         terrain=TERRAIN[f["terrain"]], terrain_turns_remaining=f["terrain_duration"],
         trick_room=tr, trick_room_turns_remaining=f["pseudo"].get("trickroom", 0),
+        # (L167: the battle's last move, for Copycat)
+        last_move=next((m for m in [sd.get("last_move") or "none"] if _engine_move(m)), "none"),
     )  # fmt: skip
 
 

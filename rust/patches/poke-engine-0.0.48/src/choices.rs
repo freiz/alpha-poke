@@ -20578,6 +20578,55 @@ impl Choices {
         )
     }
 
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L167): the moves Copycat cannot copy (it
+    // fails: Showdown's failcopycat flag); tests/test_engine_data.py checks them
+    pub fn fails_copycat(&self) -> bool {
+        matches!(
+            self,
+            Choices::BANEFULBUNKER
+                | Choices::BLAZINGTORQUE
+                | Choices::COMBATTORQUE
+                | Choices::HOLDHANDS
+                | Choices::MAGICALTORQUE
+                | Choices::NOXIOUSTORQUE
+                | Choices::WICKEDTORQUE
+                | Choices::BEAKBLAST
+                | Choices::BEHEMOTHBASH
+                | Choices::BEHEMOTHBLADE
+                | Choices::BELCH
+                | Choices::BURNINGBULWARK
+                | Choices::CELEBRATE
+                | Choices::CIRCLETHROW
+                | Choices::COPYCAT
+                | Choices::COUNTER
+                | Choices::COVET
+                | Choices::DESTINYBOND
+                | Choices::DETECT
+                | Choices::DRAGONTAIL
+                | Choices::DYNAMAXCANNON
+                | Choices::ENDURE
+                | Choices::FEINT
+                | Choices::FOCUSPUNCH
+                | Choices::FOLLOWME
+                | Choices::HELPINGHAND
+                | Choices::METRONOME
+                | Choices::MIMIC
+                | Choices::PROTECT
+                | Choices::RAGEPOWDER
+                | Choices::ROAR
+                | Choices::SKETCH
+                | Choices::SLEEPTALK
+                | Choices::SPIKYSHIELD
+                | Choices::STRUGGLE
+                | Choices::SWITCHEROO
+                | Choices::TERASTARSTORM
+                | Choices::THIEF
+                | Choices::TRANSFORM
+                | Choices::TRICK
+                | Choices::WHIRLWIND
+        )
+    }
+
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L133): the status moves aimed at the foe
     // that go through a Substitute (Showdown's bypasssub flag); any other fails against one.
     // tests/test_engine_data.py checks the list against Showdown's flags
@@ -20836,6 +20885,9 @@ pub struct Choice {
 
     pub first_move: bool,
     pub sleep_talk_move: bool,
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L167): a move another one called (Copycat):
+    // its caller's BeforeMove, PP and last used move stand for it (Showdown's useMove)
+    pub called_move: bool,
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L156): a multi-hit move's first hit Disguise
     // / Ice Face takes (no damage; the hits after it do)
     pub first_hit_blocked: bool,
@@ -20980,6 +21032,7 @@ impl Default for Choice {
             target: MoveTarget::Opponent,
             first_move: true,
             sleep_talk_move: false,
+            called_move: false,
             first_hit_blocked: false,
             charge_boost: false,
         }

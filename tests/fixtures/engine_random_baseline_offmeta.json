@@ -5,15 +5,6 @@
 "teams": "1b2440f0794c7f2a"
 },
 "mismatches": {
-"b101-t16": [
-"hp",
-"item",
-"status"
-],
-"b101-t20": [
-"hp",
-"status"
-],
 "b111-t17": [
 "hp"
 ],
@@ -129,9 +120,6 @@
 "hp",
 "volatile.mustrecharge"
 ],
-"b60-t1": [
-"hp"
-],
 "b62-t17": [
 "status"
 ],
@@ -147,9 +135,6 @@
 ],
 "b90-t1": [
 "status"
-],
-"b92-t22": [
-"hp"
 ],
 "b96-t3": [
 "item"
