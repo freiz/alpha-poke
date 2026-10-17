@@ -4105,3 +4105,37 @@ def test_l160_positions(teams, i, turn, offset):
     outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2)
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
     assert ec.closest(b["state"], outs, n, hp=True)["diff"] == {}
+
+
+# L161 (doc/engine-diff.md): moves whose Showdown callbacks the engine lacked: Venoshock x2 on a
+# poisoned target, Infernal Parade x2 on a status, the storms' sure hit in rain, Shell Side Arm
+# physical (contact: Rocky Helmet) when that deals more
+@pytest.mark.parametrize("move", ["venoshock", "infernalparade"])
+def test_l161_doubled_on_a_status(move):
+    user = _setter("Toxapex", "Regenerator", "Black Sludge", "- Toxic\n- Venoshock\n- Infernal Parade\n- Recover")
+    user = user.replace("Careful", "Modest").replace("4 Atk / 252 SpD", "252 SpA / 4 SpD")
+    foe = _setter("Garchomp", "Rough Skin", "Leftovers", "- Swords Dance\n- Protect\n- Earthquake\n- Roar")
+    states = ec.run_showdown(user, foe, [("move toxic", "move swordsdance"), (f"move {move}", "move swordsdance")])
+    assert states[1]["sides"][1]["mons"][0]["status"] == "tox"
+    outs = ec.engine_outcomes(ec.engine_state(states[1]), move, "swordsdance")
+    assert ec.closest(states[2], outs, (1, 1), hp=True)["diff"] == {}
+
+
+def test_l161_bleakwind_storm_in_rain():
+    torn = _setter("Tornadus-Therian", "Regenerator", "Leftovers", "- Bleakwind Storm\n- Rain Dance\n- U-turn\n- Taunt")
+    # (the misses forced in Showdown: it still hits; the engine has no miss branch)
+    states = ec.run_showdown(torn, CORVIKNIGHT, [("move raindance", "move roost"), ("move bleakwindstorm", "move defog")],
+                             force_random=False)  # fmt: skip
+    hp = states[1]["sides"][1]["mons"][0]["hp"]
+    assert states[2]["sides"][1]["mons"][0]["hp"] < hp
+    outs = ec.engine_outcomes(ec.engine_state(states[1]), "bleakwindstorm", "defog")
+    assert sum(o[0] for o in outs if o[1].side_two.pokemon[0].hp == hp) < 0.01
+
+
+def test_l161_shell_side_arm_physical():
+    user = _attacker("Slowbro-Galar", "Regenerator", "Leftovers", "- Shell Side Arm\n- Psychic\n- Flamethrower\n- Slack Off", "Adamant")
+    blissey = BLISSEY.replace("Heavy-Duty Boots", "Rocky Helmet").replace("252 Def / 4 SpD", "4 Def / 252 SpD")
+    states = ec.run_showdown(user, blissey.replace("Bold", "Calm"), [("move shellsidearm", "move calmmind")])
+    assert any("Rocky Helmet" in x for x in states[1]["log"])  # (physical: contact)
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "shellsidearm", "calmmind")
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}

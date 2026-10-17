@@ -341,6 +341,49 @@ pub fn modify_choice(
                 attacker_choice.base_power *= 2.0;
             }
         }
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L161): moves whose Showdown callbacks
+        // the engine lacked (onBasePower / onModifyMove): Infernal Parade x2 on a status,
+        // Venoshock x2 on poison, the storms' sure hit in rain (the target's effective weather:
+        // not with Utility Umbrella), Shell Side Arm's category (the higher of its two damages,
+        // physical: contact; a tie: special)
+        Choices::INFERNALPARADE => {
+            if defending_side.get_active_immutable().status != PokemonStatus::NONE {
+                attacker_choice.base_power *= 2.0;
+            }
+        }
+        Choices::VENOSHOCK => {
+            if matches!(
+                defending_side.get_active_immutable().status,
+                PokemonStatus::POISON | PokemonStatus::TOXIC
+            ) {
+                attacker_choice.base_power *= 2.0;
+            }
+        }
+        Choices::BLEAKWINDSTORM | Choices::WILDBOLTSTORM | Choices::SANDSEARSTORM => {
+            if (state.weather_is_active(&Weather::RAIN)
+                || state.weather_is_active(&Weather::HEAVYRAIN))
+                && defending_side.get_active_immutable().item != Items::UTILITYUMBRELLA
+            {
+                attacker_choice.accuracy = 100.0;
+            }
+        }
+        Choices::SHELLSIDEARM => {
+            let level = attacking_side.get_active_immutable().level as i64;
+            let base = 2 * level / 5 + 2;
+            let dmg = |a: i16, d: i16| base * 90 * a as i64 / (d as i64).max(1) / 50;
+            let physical = dmg(
+                attacking_side.calculate_boosted_stat(PokemonBoostableStat::Attack),
+                defending_side.calculate_boosted_stat(PokemonBoostableStat::Defense),
+            );
+            let special = dmg(
+                attacking_side.calculate_boosted_stat(PokemonBoostableStat::SpecialAttack),
+                defending_side.calculate_boosted_stat(PokemonBoostableStat::SpecialDefense),
+            );
+            if physical > special {
+                attacker_choice.category = MoveCategory::Physical;
+                attacker_choice.flags.contact = true;
+            }
+        }
         Choices::HYDROSTEAM => {
             if state.weather_is_active(&Weather::SUN) {
                 attacker_choice.base_power *= 3.0; // 1.5x for being in sun, 2x for cancelling out rain debuff
