@@ -16,13 +16,6 @@
 "boost.spa",
 "boost.spe"
 ],
-"b111-t25": [
-"volatile.typechange"
-],
-"b113-t58": [
-"hp",
-"volatile.partiallytrapped"
-],
 "b114-t12": [
 "hp"
 ],
@@ -39,23 +32,11 @@
 "b156-t13": [
 "hp"
 ],
-"b156-t44": [
-"hp",
-"volatile.partiallytrapped"
-],
 "b156-t55": [
 "hp"
 ],
 "b158-t17": [
 "boost.def"
-],
-"b159-t16": [
-"hp",
-"volatile.partiallytrapped"
-],
-"b165-t13": [
-"hp",
-"status"
 ],
 "b167-t3": [
 "hp"
@@ -85,10 +66,6 @@
 "b24-t18": [
 "hp"
 ],
-"b25-t2": [
-"hp",
-"volatile.partiallytrapped"
-],
 "b35-t27": [
 "hp",
 "status"
@@ -100,22 +77,8 @@
 "hp",
 "item"
 ],
-"b5-t42": [
-"hp",
-"volatile.partiallytrapped"
-],
 "b58-t6": [
 "hp"
-],
-"b59-t32": [
-"hp",
-"volatile.partiallytrapped"
-],
-"b59-t46": [
-"volatile.typechange"
-],
-"b6-t27": [
-"volatile.typechange"
 ],
 "b61-t17": [
 "status"
@@ -140,13 +103,6 @@
 "b79-t34": [
 "hp",
 "status"
-],
-"b85-t35": [
-"hp",
-"volatile.partiallytrapped"
-],
-"b91-t11": [
-"hp"
 ]
 }
 }

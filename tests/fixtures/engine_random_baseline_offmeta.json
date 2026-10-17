@@ -32,10 +32,6 @@
 "status",
 "weather"
 ],
-"b126-t5": [
-"hp",
-"volatile.partiallytrapped"
-],
 "b128-t2": [
 "hp",
 "item"
@@ -186,9 +182,6 @@
 "hp",
 "item"
 ],
-"b189-t34": [
-"volatile.trapped"
-],
 "b194-t13": [
 "item"
 ],
@@ -200,10 +193,6 @@
 ],
 "b26-t8": [
 "hp"
-],
-"b30-t25": [
-"hp",
-"status"
 ],
 "b35-t3": [
 "item",
@@ -217,9 +206,6 @@
 ],
 "b36-t47": [
 "hp"
-],
-"b38-t15": [
-"volatile.trapped"
 ],
 "b41-t13": [
 "volatile.truant"
@@ -274,9 +260,6 @@
 "hp",
 "status"
 ],
-"b49-t20": [
-"volatile.trapped"
-],
 "b49-t3": [
 "boost.spa",
 "volatile.meteorbeam"
@@ -325,10 +308,6 @@
 "b68-t11": [
 "hp",
 "status"
-],
-"b71-t26": [
-"hp",
-"volatile.partiallytrapped"
 ],
 "b72-t12": [
 "boost.spe"

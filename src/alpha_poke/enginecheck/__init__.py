@@ -131,10 +131,14 @@ def _engine_mon(m: dict) -> pe.Pokemon:
 
 
 def _changed_types(m: dict) -> bool:
-    """A type change other than Terastallization (the engine's typechange volatile)."""
-    return not m["terastallized"] and [t.lower() for t in m["types"]] != [
-        t.lower() for t in m["base_types"]
-    ]
+    """A type change other than Terastallization (the engine's typechange volatile); not Roost's
+    Flying left out for the turn (Showdown's getTypes; a pure Flying type Normal then: L110)."""
+    types = [t.lower() for t in m["types"]]
+    base = [t.lower() for t in m["base_types"]]
+    if "roost" in m.get("volatiles", {}):
+        base = [t for t in base if t != "flying"]
+        types = [t for t in types if t != "flying" and (t != "normal" or "normal" in base)]
+    return not m["terastallized"] and types != base
 
 
 # the patched engine's limits of the volatiles it ends (ends of turn)

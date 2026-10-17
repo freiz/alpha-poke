@@ -55,10 +55,6 @@
 "boost.spa",
 "boost.spe"
 ],
-"b155-t7": [
-"hp",
-"volatile.partiallytrapped"
-],
 "b155-t8": [
 "item"
 ],
@@ -75,23 +71,11 @@
 "b166-t17": [
 "weather"
 ],
-"b172-t9": [
-"hp",
-"volatile.partiallytrapped"
-],
 "b177-t24": [
 "hp"
 ],
 "b181-t7": [
 "toxic_spikes"
-],
-"b183-t5": [
-"hp",
-"volatile.partiallytrapped"
-],
-"b188-t7": [
-"hp",
-"volatile.partiallytrapped"
 ],
 "b19-t16": [
 "volatile.roost"
@@ -111,17 +95,9 @@
 "hp",
 "status"
 ],
-"b23-t19": [
-"hp",
-"volatile.partiallytrapped"
-],
 "b24-t36": [
 "active",
 "item"
-],
-"b35-t8": [
-"hp",
-"volatile.partiallytrapped"
 ],
 "b36-t18": [
 "item"
@@ -159,9 +135,6 @@
 ],
 "b57-t3": [
 "item"
-],
-"b58-t8": [
-"volatile.typechange"
 ],
 "b59-t48": [
 "item"

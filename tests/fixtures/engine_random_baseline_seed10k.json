@@ -88,9 +88,6 @@
 "b152-t10": [
 "hp"
 ],
-"b154-t16": [
-"hp"
-],
 "b157-t14": [
 "boost.spa"
 ],
@@ -141,20 +138,7 @@
 "b187-t32": [
 "status"
 ],
-"b187-t46": [
-"volatile.trapped"
-],
-"b190-t36": [
-"volatile.trapped"
-],
 "b191-t14": [
-"hp"
-],
-"b194-t12": [
-"hp",
-"volatile.partiallytrapped"
-],
-"b197-t15": [
 "hp"
 ],
 "b198-t19": [
@@ -195,14 +179,6 @@
 "boost.atk",
 "boost.spa"
 ],
-"b231-t23": [
-"hp",
-"status"
-],
-"b232-t14": [
-"hp",
-"volatile.partiallytrapped"
-],
 "b235-t3": [
 "terrain"
 ],
@@ -221,9 +197,6 @@
 ],
 "b242-t1": [
 "status"
-],
-"b244-t16": [
-"volatile.trapped"
 ],
 "b249-t6": [
 "boost.def"
@@ -250,10 +223,6 @@
 "hp",
 "item"
 ],
-"b268-t25": [
-"hp",
-"volatile.partiallytrapped"
-],
 "b269-t40": [
 "hp",
 "status"
@@ -264,10 +233,6 @@
 "b279-t13": [
 "item",
 "volatile.quarkdrivespe"
-],
-"b279-t22": [
-"hp",
-"status"
 ],
 "b279-t6": [
 "boost.def",
@@ -312,9 +277,6 @@
 "b30-t4": [
 "hp"
 ],
-"b34-t31": [
-"volatile.partiallytrapped"
-],
 "b36-t52": [
 "status"
 ],
@@ -341,10 +303,6 @@
 ],
 "b47-t19": [
 "item"
-],
-"b53-t32": [
-"hp",
-"volatile.partiallytrapped"
 ],
 "b57-t25": [
 "item"
@@ -381,13 +339,6 @@
 "hp",
 "item",
 "status"
-],
-"b77-t18": [
-"hp",
-"volatile.partiallytrapped"
-],
-"b8-t56": [
-"volatile.typechange"
 ],
 "b88-t7": [
 "item"

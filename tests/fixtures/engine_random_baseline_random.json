@@ -11,10 +11,6 @@
 "b102-t9": [
 "hp"
 ],
-"b103-t53": [
-"hp",
-"volatile.partiallytrapped"
-],
 "b112-t33": [
 "terrain"
 ],
@@ -37,9 +33,6 @@
 ],
 "b12-t17": [
 "item"
-],
-"b121-t10": [
-"volatile.typechange"
 ],
 "b121-t24": [
 "weather"
@@ -80,18 +73,9 @@
 "b144-t13": [
 "hp"
 ],
-"b145-t26": [
-"volatile.typechange"
-],
-"b145-t54": [
-"volatile.typechange"
-],
 "b146-t27": [
 "hp",
 "item"
-],
-"b151-t25": [
-"volatile.typechange"
 ],
 "b154-t3": [
 "hp",
@@ -137,9 +121,6 @@
 ],
 "b177-t26": [
 "hp"
-],
-"b182-t28": [
-"volatile.typechange"
 ],
 "b184-t5": [
 "hp",

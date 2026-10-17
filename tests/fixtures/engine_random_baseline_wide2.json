@@ -50,9 +50,6 @@
 "b127-t11": [
 "hp"
 ],
-"b128-t20": [
-"status"
-],
 "b13-t7": [
 "hp"
 ],
@@ -112,10 +109,6 @@
 "b174-t2": [
 "volatile.flashfire"
 ],
-"b180-t5": [
-"hp",
-"volatile.partiallytrapped"
-],
 "b183-t27": [
 "status"
 ],
@@ -150,9 +143,6 @@
 "b217-t10": [
 "hp",
 "status"
-],
-"b220-t30": [
-"volatile.typechange"
 ],
 "b230-t15": [
 "item"
@@ -199,9 +189,6 @@
 "hp",
 "terrain"
 ],
-"b25-t28": [
-"volatile.typechange"
-],
 "b251-t12": [
 "hp",
 "item",
@@ -214,11 +201,8 @@
 "b256-t8": [
 "hp"
 ],
-"b258-t12": [
-"hp",
-"volatile.partiallytrapped"
-],
 "b258-t27": [
+"hp",
 "status"
 ],
 "b270-t20": [
@@ -226,10 +210,6 @@
 ],
 "b270-t44": [
 "item"
-],
-"b271-t7": [
-"hp",
-"volatile.partiallytrapped"
 ],
 "b274-t5": [
 "item"
@@ -239,10 +219,6 @@
 ],
 "b279-t32": [
 "hp"
-],
-"b285-t14": [
-"hp",
-"volatile.partiallytrapped"
 ],
 "b289-t20": [
 "spikes",
@@ -302,9 +278,6 @@
 "b75-t48": [
 "status"
 ],
-"b8-t41": [
-"hp"
-],
 "b83-t13": [
 "status"
 ],
@@ -313,10 +286,6 @@
 ],
 "b98-t43": [
 "status"
-],
-"b98-t57": [
-"hp",
-"volatile.partiallytrapped"
 ]
 }
 }

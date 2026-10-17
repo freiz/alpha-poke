@@ -5337,9 +5337,47 @@ fn add_end_of_turn_instructions(
 
     // volatile statuses
     for side_ref in sides {
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L110): the trapper fainted, its partial
+        // trap / Mean Look end (Showdown: the source is not active)
+        let foe_fainted = state
+            .get_side_immutable(&side_ref.get_other_side())
+            .get_active_immutable()
+            .hp
+            == 0;
         let side = state.get_side(side_ref);
         if side.get_active().hp == 0 {
             continue;
+        }
+        if foe_fainted {
+            for v in [
+                PokemonVolatileStatus::PARTIALLYTRAPPED,
+                PokemonVolatileStatus::TRAPPED,
+            ] {
+                if side.volatile_statuses.contains(&v) {
+                    side.volatile_statuses.remove(&v);
+                    incoming_instructions
+                        .instruction_list
+                        .push(Instruction::RemoveVolatileStatus(
+                            RemoveVolatileStatusInstruction {
+                                side_ref: *side_ref,
+                                volatile_status: v,
+                            },
+                        ));
+                }
+            }
+            let elapsed = side.volatile_status_durations.partiallytrapped;
+            if elapsed != 0 {
+                incoming_instructions.instruction_list.push(
+                    Instruction::ChangeVolatileStatusDuration(
+                        ChangeVolatileStatusDurationInstruction {
+                            side_ref: *side_ref,
+                            volatile_status: PokemonVolatileStatus::PARTIALLYTRAPPED,
+                            amount: -elapsed,
+                        },
+                    ),
+                );
+                side.volatile_status_durations.partiallytrapped = 0;
+            }
         }
 
         if side

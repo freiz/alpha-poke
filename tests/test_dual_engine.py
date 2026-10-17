@@ -3018,3 +3018,31 @@ def test_l109_end_of_turn_knockout_by_the_rolls():
     # the fainted active's boosts are compared differently, so only the HP)
     sd_hp = states[3]["sides"][1]["mons"][0]["hp"]
     assert any((ec.view_engine(o, (2, 1))["s2.0.hp"] == 0) == (sd_hp == 0) for _, o in outs)
+
+
+# L110 (doc/engine-diff.md): at a decision point in the turn (a pivot's switch), a roosting mon's
+# types are without Flying in Showdown (getTypes): no type change for the comparison (the engine's
+# roost volatile says it); the trapper's faint ends its partial trap before the end of the turn
+# (Showdown's onResidual: the source is not active), and a fainted seeder's Leech Seed saps nothing
+def test_l110_roost_is_no_type_change():
+    nite = _setter("Dragonite", "Multiscale", "Heavy-Duty Boots", "- Roost\n- Extreme Speed\n- Dragon Dance\n- Earthquake")
+    bolt = _attacker("Raging Bolt", "Protosynthesis", "Leftovers", "- Volt Switch\n- Thunderbolt\n- Draco Meteor\n- Calm Mind", "Modest")
+    states = ec.run_showdown(nite, bolt + "\n\n" + BLISSEY, [("move dragondance", "move dracometeor"),
+                                                               ("move roost", "move voltswitch")])  # fmt: skip
+    assert "roost" in states[2]["sides"][0]["mons"][0]["volatiles"]
+    outs = ec.engine_outcomes(ec.engine_state(states[1]), "roost", "voltswitch")
+    assert ec.closest(states[2], outs, (1, 2), hp=True)["diff"] == {}
+
+
+def test_l110_partial_trap_ends_with_its_fainted_user():
+    pex = _setter("Toxapex", "Regenerator", "Black Sludge", "- Infestation\n- Recover\n- Haze\n- Toxic")
+    gambit = _attacker("Kingambit", "Supreme Overlord", "Leftovers", "- Sucker Punch\n- Iron Head\n- Swords Dance\n- Kowtow Cleave")
+    pex2 = pex.replace("Toxapex @", "Pex (Toxapex) @")
+    turns = [("move infestation", "move swordsdance")] + [("move toxic", "move ironhead")] * 3
+    states = ec.run_showdown(pex + "\n\n" + pex2, gambit, turns)
+    k = next(k for k in range(len(states) - 1) if states[k + 1]["sides"][0]["request"] == "switch")
+    assert "partiallytrapped" in states[k]["sides"][1]["mons"][0]["volatiles"]
+    assert "partiallytrapped" not in states[k + 1]["sides"][1]["mons"][0]["volatiles"]
+    c1 = turns[k][0].split()[1]
+    outs = ec.engine_outcomes(ec.engine_state(states[k]), c1, turns[k][1].split()[1])
+    assert ec.closest(states[k + 1], outs, (2, 1), hp=True)["diff"] == {}

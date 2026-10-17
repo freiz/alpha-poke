@@ -18,9 +18,6 @@
 "b107-t54": [
 "hp"
 ],
-"b110-t15": [
-"volatile.typechange"
-],
 "b112-t14": [
 "hp"
 ],
@@ -50,30 +47,14 @@
 "hp",
 "status"
 ],
-"b140-t7": [
-"volatile.trapped"
-],
 "b144-t16": [
 "item"
-],
-"b144-t34": [
-"volatile.typechange"
 ],
 "b149-t34": [
 "weather"
 ],
 "b152-t17": [
 "spikes"
-],
-"b158-t25": [
-"hp",
-"volatile.partiallytrapped"
-],
-"b158-t8": [
-"volatile.trapped"
-],
-"b163-t13": [
-"hp"
 ],
 "b165-t16": [
 "item"
@@ -86,10 +67,6 @@
 ],
 "b17-t29": [
 "weather"
-],
-"b170-t20": [
-"hp",
-"volatile.partiallytrapped"
 ],
 "b176-t18": [
 "active",
@@ -154,10 +131,6 @@
 "b230-t6": [
 "item"
 ],
-"b234-t5": [
-"hp",
-"volatile.partiallytrapped"
-],
 "b236-t29": [
 "hp"
 ],
@@ -184,9 +157,6 @@
 ],
 "b241-t4": [
 "status"
-],
-"b244-t16": [
-"volatile.trapped"
 ],
 "b244-t6": [
 "status"
@@ -216,10 +186,6 @@
 "b259-t6": [
 "hp",
 "volatile.substitute"
-],
-"b263-t20": [
-"hp",
-"volatile.partiallytrapped"
 ],
 "b263-t8": [
 "volatile.protosynthesisspa",
@@ -256,9 +222,6 @@
 "hp",
 "status"
 ],
-"b285-t52": [
-"volatile.trapped"
-],
 "b289-t9": [
 "hp"
 ],
@@ -266,9 +229,6 @@
 "hp"
 ],
 "b41-t21": [
-"hp"
-],
-"b47-t24": [
 "hp"
 ],
 "b48-t30": [
