@@ -683,6 +683,8 @@ pub fn ability_before_move(
     }
 }
 
+// alpha-poke patch (2026-10-16, L24): Neutralizing Gas does not suppress an Ability Shield
+// holder's ability (the checks below)
 pub fn ability_after_damage_hit(
     state: &mut State,
     choice: &mut Choice,
@@ -692,7 +694,8 @@ pub fn ability_after_damage_hit(
 ) {
     let (attacking_side, defending_side) = state.get_both_sides(side_ref);
     let active_pkmn = attacking_side.get_active();
-    if defending_side.get_active_immutable().ability == Abilities::NEUTRALIZINGGAS
+    if (defending_side.get_active_immutable().ability == Abilities::NEUTRALIZINGGAS
+        && active_pkmn.item != Items::ABILITYSHIELD)
         || active_pkmn.ability == Abilities::NEUTRALIZINGGAS
     {
         return;
@@ -1029,7 +1032,9 @@ pub fn ability_on_switch_out(
 ) {
     let (attacking_side, defending_side) = state.get_both_sides(side_ref);
     let active_pkmn = attacking_side.get_active();
-    if defending_side.get_active_immutable().ability == Abilities::NEUTRALIZINGGAS {
+    if defending_side.get_active_immutable().ability == Abilities::NEUTRALIZINGGAS
+        && active_pkmn.item != Items::ABILITYSHIELD
+    {
         return;
     }
     match active_pkmn.ability {
@@ -1167,7 +1172,9 @@ pub fn ability_end_of_turn(
     if early != before_status {
         return;
     }
-    if defending_side.get_active_immutable().ability == Abilities::NEUTRALIZINGGAS {
+    if defending_side.get_active_immutable().ability == Abilities::NEUTRALIZINGGAS
+        && active_pkmn.item != Items::ABILITYSHIELD
+    {
         return;
     }
     match active_pkmn.ability {
@@ -1376,7 +1383,9 @@ pub fn ability_on_switch_in(
     let (attacking_side, defending_side) = state.get_both_sides(side_ref);
     let active_pkmn = attacking_side.get_active();
     let defending_pkmn = defending_side.get_active_immutable();
-    if defending_pkmn.ability == Abilities::NEUTRALIZINGGAS {
+    if defending_pkmn.ability == Abilities::NEUTRALIZINGGAS
+        && active_pkmn.item != Items::ABILITYSHIELD
+    {
         return;
     }
 
@@ -1832,7 +1841,9 @@ pub fn ability_modify_attack_being_used(
 ) {
     let (attacking_side, defending_side) = state.get_both_sides_immutable(attacking_side_ref);
     let attacking_pkmn = attacking_side.get_active_immutable();
-    if defending_side.get_active_immutable().ability == Abilities::NEUTRALIZINGGAS {
+    if defending_side.get_active_immutable().ability == Abilities::NEUTRALIZINGGAS
+        && attacking_pkmn.item != Items::ABILITYSHIELD
+    {
         return;
     }
     match attacking_pkmn.ability {
@@ -2332,6 +2343,8 @@ pub fn ability_modify_attack_against(
         || attacking_pkmn.ability == Abilities::TERAVOLT
         || attacking_pkmn.ability == Abilities::TURBOBLAZE)
         && mold_breaker_ignores(&target_pkmn.ability)
+        // alpha-poke patch (2026-10-16, doc/engine-diff.md L24): not through an Ability Shield
+        && target_pkmn.item != Items::ABILITYSHIELD
     {
         return;
     }

@@ -776,6 +776,31 @@ fn get_instructions_from_volatile_statuses(
         side.volatile_statuses
             .insert(volatile_status.volatile_status);
         incoming_instructions.instruction_list.push(ins);
+        // alpha-poke patch (2026-10-16, doc/engine-diff.md L24): Destiny Knot, the holder's
+        // infatuation goes to the foe that caused it too
+        if volatile_status.volatile_status == PokemonVolatileStatus::ATTRACT
+            && target_side != *attacking_side_reference
+            && side.get_active_immutable().item == Items::DESTINYKNOT
+        {
+            let source = state.get_side(attacking_side_reference);
+            if !source
+                .volatile_statuses
+                .contains(&PokemonVolatileStatus::ATTRACT)
+                && source.get_active_immutable().ability != Abilities::OBLIVIOUS
+            {
+                source
+                    .volatile_statuses
+                    .insert(PokemonVolatileStatus::ATTRACT);
+                incoming_instructions
+                    .instruction_list
+                    .push(Instruction::ApplyVolatileStatus(
+                        ApplyVolatileStatusInstruction {
+                            side_ref: *attacking_side_reference,
+                            volatile_status: PokemonVolatileStatus::ATTRACT,
+                        },
+                    ));
+            }
+        }
     }
 }
 
@@ -1421,7 +1446,7 @@ fn screen_break_instructions(
         (PokemonSideCondition::LightScreen, sc.light_screen),
         (PokemonSideCondition::AuroraVeil, sc.aurora_veil),
     ]
-    .into_iter()
+    .iter()
     .filter(|(_, turns)| *turns > 0)
     .map(|(side_condition, turns)| {
         Instruction::ChangeSideCondition(ChangeSideConditionInstruction {

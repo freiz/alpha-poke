@@ -350,6 +350,9 @@ define_enum_with_from_str! {
         MICLEBERRY,
         METRONOME,
         MIRRORHERB,
+        // abilities.rs (Mold Breaker, Neutralizing Gas), get_instructions_from_volatile_statuses
+        ABILITYSHIELD,
+        DESTINYKNOT,
     },
     default = UNKNOWNITEM
 }

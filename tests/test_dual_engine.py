@@ -1253,3 +1253,26 @@ def test_l24_mirror_herb():
     m = states[1]["sides"][0]["mons"][0]
     assert m["boosts"]["atk"] == 2 and m["item"] == ""  # Showdown
     assert res["diff"] == {}
+
+
+EXCADRILL_MB = _setter("Excadrill", "Mold Breaker", "Leftovers",
+                       "- Earthquake\n- Iron Head\n- Rapid Spin\n- Swords Dance")  # fmt: skip
+
+
+def test_l24_ability_shield_against_mold_breaker():
+    """Mold Breaker does not ignore the holder's Levitate."""
+    rotom = ROTOM_WASH.replace("@ Leftovers", "@ Ability Shield")
+    states, res = _item_turn(EXCADRILL_MB, rotom, [("move earthquake", "move willowisp")],
+                             ("earthquake", "willowisp"))  # fmt: skip
+    assert "|-immune|p2a: Rotom|[from] ability: Levitate" in states[1]["log"]  # Showdown
+    assert res["diff"] == {}
+
+
+def test_l24_destiny_knot():
+    """The holder infatuated: its foe too."""
+    p1 = "Corviknight (M) @ Destiny Knot\n" + "\n".join(CORVIKNIGHT.split("\n")[1:])
+    p2 = _setter("Gardevoir (F)", "Trace", "Leftovers", "- Attract\n- Moonblast\n- Psychic\n- Calm Mind")
+    # (Roost at full HP: nothing either way, whether the infatuation stops it or not)
+    states, res = _item_turn(p1, p2, [("move roost", "move attract")], ("roost", "attract"))
+    assert "attract" in states[1]["sides"][1]["mons"][0]["volatiles"]  # Showdown: the foe too
+    assert res["diff"] == {}

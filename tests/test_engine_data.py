@@ -108,7 +108,6 @@ def test_pokeenv_moves_match_showdown():
 DURATION_ITEMS = ["damprock", "heatrock", "icyrock", "lightclay", "smoothrock", "terrainextender"]
 
 
-@pytest.mark.xfail(strict=True, reason="L24: items being added to the engine from Showdown")
 def test_engine_knows_every_item_with_an_effect():
     """Every Gen 9 item with a battle effect (an event handler or a stat change in Showdown,
     or a duration item) is one the engine knows; each one's effect has a dual-engine test."""
