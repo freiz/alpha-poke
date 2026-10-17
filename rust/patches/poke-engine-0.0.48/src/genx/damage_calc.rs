@@ -474,8 +474,10 @@ fn get_attacking_and_defending_stats(
             {
                 should_calc_attacker_boost = false;
             }
-            if attacker.ability == Abilities::UNAWARE && defender.ability != Abilities::MOLDBREAKER
-            {
+            // alpha-poke patch (2026-10-17, doc/engine-diff.md L160): the attacker's own Unaware,
+            // whatever the target's ability (Mold Breaker is the attacker's against the target's);
+            // the target's Mold Breaker used to switch it off
+            if attacker.ability == Abilities::UNAWARE {
                 should_calc_defender_boost = false;
             }
             // alpha-poke patch (2026-10-16, doc/engine-diff.md L67): Sacred Sword / Darkest Lariat /
@@ -526,8 +528,10 @@ fn get_attacking_and_defending_stats(
             {
                 should_calc_attacker_boost = false;
             }
-            if attacker.ability == Abilities::UNAWARE && defender.ability != Abilities::MOLDBREAKER
-            {
+            // alpha-poke patch (2026-10-17, doc/engine-diff.md L160): the attacker's own Unaware,
+            // whatever the target's ability (Mold Breaker is the attacker's against the target's);
+            // the target's Mold Breaker used to switch it off
+            if attacker.ability == Abilities::UNAWARE {
                 should_calc_defender_boost = false;
             }
 

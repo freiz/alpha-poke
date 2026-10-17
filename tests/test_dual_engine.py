@@ -4090,3 +4090,18 @@ def test_l159_positions(teams, i, turn, offset):
     outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2)
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
     assert ec.closest(b["state"], outs, n, hp=True)["diff"] == {}
+
+
+# L160 (doc/engine-diff.md): the attacker's Unaware whatever the target's ability (random b49-t4:
+# Dondozo's Body Press into a Mold Breaker Haxorus at -2 Def); no heal under Heal Block, an
+# absorbing ability's too (wide b283-t17: Water Absorb)
+@pytest.mark.parametrize("teams,i,turn,offset", [
+    ("random_battle_teams_random.jsonl", 49, 4, 0),
+    ("random_battle_teams_wide.jsonl", 283, 17, 0),
+])  # fmt: skip
+def test_l160_positions(teams, i, turn, offset):
+    a, b = _random_position(teams, i, turn, offset)
+    c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
+    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2)
+    n = tuple(len(s["mons"]) for s in a["state"]["sides"])
+    assert ec.closest(b["state"], outs, n, hp=True)["diff"] == {}

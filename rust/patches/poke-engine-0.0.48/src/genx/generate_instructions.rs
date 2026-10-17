@@ -1709,6 +1709,16 @@ fn get_instructions_from_heal(
         MoveTarget::User => target_side_ref = *attacking_side_reference,
     }
 
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L160): no heal under Heal Block (Showdown's
+    // heal: TryHeal; an absorbing ability's -- Water Absorb, ... -- too; its HP losses still)
+    if heal.amount > 0.0
+        && state
+            .get_side_immutable(&target_side_ref)
+            .volatile_statuses
+            .contains(&PokemonVolatileStatus::HEALBLOCK)
+    {
+        return;
+    }
     let target_pkmn = state.get_side(&target_side_ref).get_active();
 
     let mut health_recovered = (heal.amount * target_pkmn.maxhp as f32) as i16;
@@ -2446,9 +2456,17 @@ fn generate_instructions_from_damage(
             }
         }
 
-        let attacking_pokemon = state.get_side(attacking_side_ref).get_active();
         // (L156: no drain for a user Destiny Bond took down: it stays fainted)
-        if let Some(drain_fraction) = choice.drain.filter(|_| attacking_pokemon.hp > 0) {
+        // (L160: nor under Heal Block)
+        let heal_blocked = state
+            .get_side_immutable(attacking_side_ref)
+            .volatile_statuses
+            .contains(&PokemonVolatileStatus::HEALBLOCK);
+        let attacking_pokemon = state.get_side(attacking_side_ref).get_active();
+        if let Some(drain_fraction) = choice
+            .drain
+            .filter(|_| attacking_pokemon.hp > 0 && !heal_blocked)
+        {
             let mut drain_amount = (damage_dealt as f32 * drain_fraction) as i16;
             // alpha-poke patch (2026-10-16, L24): Big Root
             if attacking_pokemon.item == Items::BIGROOT {

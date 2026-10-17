@@ -303,6 +303,7 @@ harness 必须把 Showdown 的状态完整映射到引擎，否则不一致来�
 | L157 | 不在场的 Future Sight 使用者，也受己方在场者的 Vessel of Ruin（特攻 ×0.75）/ Beads of Ruin（目标特防 ×0.75）影响（Showdown 的 onAnyModifySpA / SpD 作用于持有者以外的所有宝可梦；对手 Neutralizing Gas 时无效）；引擎只看对手的 Ruin 特性 | 引擎 | 已修复 | `test_l157_future_sight_under_an_allys_vessel_of_ruin`（随机差分 wide b252-t15），对照 `test_l157_vessel_of_ruin_under_neutralizing_gas`（wide b299-t13） | `generate_instructions.rs` 回合末 Future Sight |
 | L158 | Relic Song 命中后 Meloetta 切换形态（Aria ↔ Pirouette：能力值重算，属性一般 / 超能力 ↔ 一般 / 格斗；Showdown 的 onAfterMoveSecondarySelf，Sheer Force、变身时不变）；换下场时恢复 Aria。引擎之前没有这个形态变化 | 引擎 | 已修复 | `test_l158_relic_song`（随机差分 seed10k b111-t1、wide2 b190-t4 / b55-t3、wide200 b75-t27） | `abilities.rs` `relic_song_forme` / `meloetta_forme`；`generate_instructions.rs`（run_move 结束、换下场） |
 | L159 | Cheek Pouch：吃下树果时额外回复 1/3 最大 HP（Showdown 的 onEatItem；Heal Block 下不回；之前没实现）；固定伤害招式（Ruination、Seismic Toss 等）打在 Disguise 上不造成伤害（之前不看威力，伪装挡不住）。未修：Stellar 太晶的 60 威力下限和 1.2 / 2 倍加成取决于已强化过的属性（Showdown 的 stellarBoostedTypes），引擎没有这个记录 | 引擎 | 已修复 | `test_l159_positions`（随机差分 seed10k b200-t22、random b93-t4） | `items.rs` `cheek_pouch`（item_update、附加效果的 RemoveItem）；`generate_instructions.rs` `before_move` |
+| L160 | 攻击方自己的 Unaware 无视目标的防御 / 特防等级，不论目标是什么特性（之前目标是 Mold Breaker 时失效；Mold Breaker 只在它自己出招时无视对方特性）；Heal Block 下一切回复都无效，包括吸收类特性（Water Absorb 等）的回复和吸血（Showdown 的 heal：TryHeal） | 引擎 | 已修复 | `test_l160_positions`（随机差分 random b49-t4、wide b283-t17）；伤害计算差分不变 | `damage_calc.rs`（Unaware）；`generate_instructions.rs` `get_instructions_from_heal`、吸血 |
 
 ## 修复与验证（2026-10-16）
 
