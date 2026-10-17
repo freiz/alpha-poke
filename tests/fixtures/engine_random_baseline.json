@@ -28,24 +28,11 @@
 "item",
 "volatile.protosynthesisspa"
 ],
-"b123-t1": [
-"boost.atk",
-"boost.spa",
-"boost.spe"
-],
-"b123-t3": [
-"hp",
-"status"
-],
 "b123-t5": [
 "hp"
 ],
 "b131-t33": [
 "item"
-],
-"b133-t18": [
-"hp",
-"status"
 ],
 "b149-t34": [
 "weather"
@@ -69,9 +56,6 @@
 "active",
 "hp",
 "item"
-],
-"b181-t3": [
-"hp"
 ],
 "b184-t7": [
 "volatile.protosynthesisspa"
@@ -132,10 +116,6 @@
 "b237-t13": [
 "hp",
 "status"
-],
-"b237-t28": [
-"spikes",
-"stealth_rock"
 ],
 "b24-t13": [
 "item"
@@ -199,14 +179,6 @@
 "item",
 "volatile.quarkdrivespe"
 ],
-"b284-t7": [
-"hp",
-"status"
-],
-"b284-t8": [
-"hp",
-"status"
-],
 "b289-t9": [
 "hp"
 ],
@@ -219,21 +191,11 @@
 "b48-t30": [
 "hp"
 ],
-"b51-t10": [
-"boost.atk",
-"boost.spa",
-"boost.spe"
-],
 "b57-t15": [
 "volatile.confusion"
 ],
 "b71-t28": [
 "boost.atk"
-],
-"b73-t18": [
-"boost.atk",
-"boost.spa",
-"boost.spe"
 ],
 "b86-t16": [
 "item"

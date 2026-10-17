@@ -34,7 +34,8 @@ sides, in poke-engine's own units (rust/patches/poke-engine-0.0.48, generate_ins
               turn it came in; doc/engine-diff.md L77), gone at its -end
   trapped     the active is trapped by Mean Look / Block / Jaw Lock / Spirit Shackle / Anchor Shot
               (-activate trapped) until it or the other side's active leaves (doc/engine-diff.md L107)
-  used_once   species ids whose Dauntless Shield has raised Defense (Gen 9: once per battle;
+  used_once   species ids whose Dauntless Shield has raised Defense / Battle Bond has activated
+              (Gen 9: once per battle;
               2026-10-16, doc/engine-diff.md L18)
   sub_hit     the active's Substitute took a hit and stands (its HP below a quarter)
   setters     who set the weather / terrain / a side's screens: (side, species id), for an
@@ -248,6 +249,8 @@ def _feed(sides: dict, p: list[str]) -> None:
             st.slowstart = [5, False]
     elif tag == "-ability" and len(p) > 3 and to_id(p[3]) == "dauntlessshield":
         st.used_once.add(sp)
+    elif tag == "-activate" and len(p) > 3 and to_id(p[3]) == "abilitybattlebond":
+        st.used_once.add(sp)  # (L111: once per battle too)
     elif tag == "-activate" and len(p) > 3 and to_id(p[3].replace("move: ", "")) in TRAPS:
         if st.partiallytrapped is None:  # a second trap move does not restart it
             st.partiallytrapped = 0

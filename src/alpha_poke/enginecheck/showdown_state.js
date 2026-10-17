@@ -52,7 +52,7 @@ function monState(p, side) {
 		last_move: p.lastMove ? p.lastMove.id : '',
 		move_actions: p.activeMoveActions || 0,
 		// Gen 9: Dauntless Shield / Intrepid Sword once per battle
-		used_once: !!(p.shieldBoost || p.swordBoost),
+		used_once: !!(p.shieldBoost || p.swordBoost || p.bondTriggered), // (L111: Battle Bond too)
 	};
 }
 

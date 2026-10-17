@@ -6,16 +6,6 @@
 "seed_offset": 50000
 },
 "mismatches": {
-"b105-t18": [
-"boost.atk",
-"boost.spa",
-"boost.spe"
-],
-"b105-t19": [
-"boost.atk",
-"boost.spa",
-"boost.spe"
-],
 "b114-t12": [
 "hp"
 ],

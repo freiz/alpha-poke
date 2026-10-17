@@ -5,19 +5,12 @@
 "teams": "1b2440f0794c7f2a"
 },
 "mismatches": {
-"b1-t26": [
-"status"
-],
 "b101-t16": [
 "hp",
 "item",
 "status"
 ],
 "b101-t20": [
-"hp",
-"status"
-],
-"b101-t9": [
 "hp",
 "status"
 ],
@@ -35,14 +28,6 @@
 "b128-t2": [
 "hp",
 "item"
-],
-"b130-t8": [
-"status"
-],
-"b130-t9": [
-"boost.atk",
-"boost.spa",
-"boost.spe"
 ],
 "b131-t11": [
 "item"
@@ -63,11 +48,6 @@
 "hp",
 "item",
 "volatile.curse"
-],
-"b145-t34": [
-"boost.atk",
-"boost.spa",
-"boost.spe"
 ],
 "b147-t10": [
 "item"
@@ -119,10 +99,6 @@
 "hp",
 "volatile.partiallytrapped"
 ],
-"b176-t30": [
-"hp",
-"status"
-],
 "b176-t51": [
 "hp"
 ],
@@ -131,10 +107,6 @@
 ],
 "b178-t2": [
 "hp"
-],
-"b179-t8": [
-"hp",
-"status"
 ],
 "b18-t10": [
 "item"
@@ -145,32 +117,9 @@
 "b180-t13": [
 "boost.def"
 ],
-"b184-t10": [
-"boost.atk",
-"boost.spa",
-"boost.spe"
-],
-"b184-t11": [
-"boost.atk",
-"boost.spa",
-"boost.spe"
-],
-"b184-t13": [
-"boost.atk",
-"boost.spa",
-"boost.spe"
-],
-"b184-t3": [
-"boost.atk",
-"boost.spa",
-"boost.spe"
-],
 "b188-t7": [
 "active",
 "hp",
-"item"
-],
-"b194-t13": [
 "item"
 ],
 "b199-t25": [
@@ -320,15 +269,6 @@
 ],
 "b86-t33": [
 "hp"
-],
-"b89-t14": [
-"hp",
-"status"
-],
-"b89-t9": [
-"boost.atk",
-"boost.spa",
-"boost.spe"
 ],
 "b90-t1": [
 "status"

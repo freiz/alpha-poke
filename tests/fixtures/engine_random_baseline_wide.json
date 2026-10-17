@@ -72,9 +72,6 @@
 "b196-t2": [
 "status"
 ],
-"b196-t40": [
-"spikes"
-],
 "b2-t2": [
 "hp"
 ],
@@ -100,21 +97,12 @@
 "hp"
 ],
 "b221-t58": [
-"boost.atk",
-"spikes",
-"stealth_rock",
-"toxic_spikes"
-],
-"b223-t41": [
-"hp"
+"boost.atk"
 ],
 "b224-t48": [
 "hp"
 ],
 "b225-t7": [
-"hp"
-],
-"b226-t14": [
 "hp"
 ],
 "b234-t38": [
@@ -128,11 +116,6 @@
 ],
 "b242-t5": [
 "hp"
-],
-"b243-t23": [
-"boost.atk",
-"boost.spa",
-"boost.spe"
 ],
 "b243-t27": [
 "hp",
@@ -228,10 +211,6 @@
 ],
 "b87-t2": [
 "hp"
-],
-"b87-t23": [
-"hp",
-"status"
 ],
 "b91-t17": [
 "status"

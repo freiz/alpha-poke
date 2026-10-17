@@ -6,9 +6,6 @@
 "seed_offset": 40000
 },
 "mismatches": {
-"b105-t45": [
-"spikes"
-],
 "b107-t8": [
 "volatile.trapped"
 ],
@@ -19,9 +16,6 @@
 "b122-t26": [
 "hp",
 "status"
-],
-"b123-t30": [
-"hp"
 ],
 "b123-t4": [
 "boost.spe"
@@ -36,24 +30,11 @@
 "b133-t5": [
 "volatile.roost"
 ],
-"b134-t7": [
-"weather"
-],
 "b135-t11": [
 "hp"
 ],
 "b139-t34": [
 "volatile.truant"
-],
-"b14-t26": [
-"boost.atk",
-"boost.spa",
-"boost.spe"
-],
-"b14-t29": [
-"boost.atk",
-"boost.spa",
-"boost.spe"
 ],
 "b155-t8": [
 "item"
@@ -68,17 +49,8 @@
 "b165-t9": [
 "hp"
 ],
-"b166-t17": [
-"weather"
-],
 "b177-t24": [
 "hp"
-],
-"b181-t7": [
-"toxic_spikes"
-],
-"b19-t16": [
-"volatile.roost"
 ],
 "b190-t13": [
 "weather"
@@ -118,18 +90,11 @@
 "b53-t21": [
 "status"
 ],
-"b54-t11": [
-"hp"
-],
 "b54-t9": [
 "hp"
 ],
 "b56-t3": [
 "hp"
-],
-"b6-t24": [
-"hp",
-"status"
 ],
 "b6-t30": [
 "hp"
@@ -171,17 +136,9 @@
 "b86-t1": [
 "item"
 ],
-"b89-t13": [
-"spikes"
-],
 "b90-t4": [
 "hp",
 "status"
-],
-"b95-t4": [
-"boost.atk",
-"boost.spa",
-"boost.spe"
 ]
 }
 }

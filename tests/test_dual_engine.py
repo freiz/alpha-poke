@@ -3046,3 +3046,53 @@ def test_l110_partial_trap_ends_with_its_fainted_user():
     c1 = turns[k][0].split()[1]
     outs = ec.engine_outcomes(ec.engine_state(states[k]), c1, turns[k][1].split()[1])
     assert ec.closest(states[k + 1], outs, (2, 1), hp=True)["diff"] == {}
+
+
+# L111 (doc/engine-diff.md): Battle Bond raises Attack / Sp. Atk / Speed after a knockout only
+# for Greninja-Bond, once per battle (Showdown's species check, bondTriggered); the engine gave it
+# to any holder at every knockout
+@pytest.mark.parametrize("species, boost", [("Greninja-Bond", 1), ("Greninja", 0)])
+def test_l111_battle_bond(species, boost):
+    gren = _attacker(species, "Battle Bond", "Life Orb", "- Dark Pulse\n- Surf\n- Ice Beam\n- U-turn", "Timid")
+    shed = """Shedinja @ Heavy-Duty Boots
+Ability: Wonder Guard
+EVs: 252 Atk / 252 Spe
+Adamant Nature
+- Swords Dance
+- Shadow Sneak
+- Protect
+- X-Scissor"""
+    states = ec.run_showdown(gren, shed + "\n\n" + BLISSEY, [("move darkpulse", "move swordsdance")])
+    assert states[1]["sides"][0]["mons"][0]["boosts"]["spa"] == boost
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "darkpulse", "swordsdance")
+    assert ec.closest(states[1], outs, (1, 2), hp=True)["diff"] == {}
+
+
+# L112 (doc/engine-diff.md): a pivot user that faints from its own move (Rocky Helmet, Rough Skin,
+# recoil) does not switch out (Showdown: no switch request for it, the turn goes on: the foe's move
+# fails without a target, then the end of the turn); the engine stopped for its pivot switch and
+# saved the foe's move for the replacement
+def test_l112_pivot_user_fainting():
+    cinder = _attacker("Cinderace", "Blaze", "Life Orb", "- U-turn\n- Pyro Ball\n- Sucker Punch\n- Court Change", "Jolly")
+    chomp = _setter("Garchomp", "Rough Skin", "Rocky Helmet", "- Earthquake\n- Stealth Rock\n- Swords Dance\n- Dragon Tail")
+    pult = _attacker("Dragapult", "Infiltrator", "Choice Specs", "- Shadow Ball\n- Draco Meteor\n- U-turn\n- Flamethrower", "Timid")
+    turns = [("move pyroball", "move earthquake"), ("move uturn", "move earthquake")]
+    states = ec.run_showdown(cinder + "\n\n" + pult, chomp, turns)
+    assert any(x.startswith("|faint|p1a: Cinderace") for x in states[2]["log"])
+    assert any("[from] brn" in x for x in states[2]["log"])  # (the turn went on: Pyro Ball's burn)
+    outs = ec.engine_outcomes(ec.engine_state(states[1]), "uturn", "earthquake")
+    assert ec.closest(states[2], outs, (2, 1), hp=True)["diff"] == {}
+
+
+def test_l112_status_move_without_a_target():
+    """After the pivot user faints, a status move aimed at it fails (Showdown's [notarget]): Pain
+    Split does nothing; one aimed at the side (Stealth Rock) still goes."""
+    cinder = _attacker("Cinderace", "Blaze", "Life Orb", "- U-turn\n- Pyro Ball\n- Sucker Punch\n- Court Change", "Jolly")
+    pult = _attacker("Dragapult", "Infiltrator", "Choice Specs", "- Shadow Ball\n- Draco Meteor\n- U-turn\n- Flamethrower", "Timid")
+    for move in ("painsplit", "stealthrock", "curse"):
+        chomp = _setter("Garchomp", "Rough Skin", "Rocky Helmet", "- Earthquake\n- Stealth Rock\n- Pain Split\n- Curse")
+        turns = [("move pyroball", "move earthquake"), ("move uturn", f"move {move}")]
+        states = ec.run_showdown(cinder + "\n\n" + pult, chomp, turns)
+        assert any(x.startswith("|faint|p1a: Cinderace") for x in states[2]["log"]), move
+        outs = ec.engine_outcomes(ec.engine_state(states[1]), "uturn", move)
+        assert ec.closest(states[2], outs, (2, 1), hp=True)["diff"] == {}, move

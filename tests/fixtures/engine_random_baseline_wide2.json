@@ -12,11 +12,6 @@
 "b110-t7": [
 "hp"
 ],
-"b111-t31": [
-"boost.atk",
-"boost.spa",
-"boost.spe"
-],
 "b112-t40": [
 "item",
 "volatile.confusion"
@@ -24,21 +19,6 @@
 "b115-t15": [
 "boost.atk",
 "hp"
-],
-"b116-t15": [
-"boost.atk",
-"boost.spa",
-"boost.spe"
-],
-"b116-t16": [
-"boost.atk",
-"boost.spa",
-"boost.spe"
-],
-"b116-t17": [
-"boost.atk",
-"boost.spa",
-"boost.spe"
 ],
 "b123-t12": [
 "boost.atk",
@@ -93,16 +73,6 @@
 "b167-t55": [
 "volatile.roost"
 ],
-"b17-t17": [
-"boost.atk",
-"boost.spa",
-"boost.spe"
-],
-"b17-t19": [
-"boost.atk",
-"boost.spa",
-"boost.spe"
-],
 "b17-t29": [
 "hp"
 ],
@@ -154,15 +124,6 @@
 "hp",
 "status"
 ],
-"b239-t35": [
-"hp",
-"status"
-],
-"b239-t36": [
-"boost.atk",
-"boost.spa",
-"boost.spe"
-],
 "b242-t10": [
 "hp"
 ],
@@ -207,10 +168,6 @@
 ],
 "b279-t32": [
 "hp"
-],
-"b289-t20": [
-"spikes",
-"stealth_rock"
 ],
 "b290-t23": [
 "hp"

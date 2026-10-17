@@ -2671,7 +2671,19 @@ fn cannot_use_move(state: &State, choice: &Choice, attacking_side_ref: &SideRefe
     let (attacking_side, defending_side) = state.get_both_sides_immutable(attacking_side_ref);
 
     // If the opponent has 0 hp, you can't use a non-status move
-    if defending_side.get_active_immutable().hp == 0 && choice.category != MoveCategory::Status {
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L112): nor a status move aimed at it
+    // (Showdown's [notarget]); one aimed at its side / the field still goes
+    // (a non-Ghost Curse is aimed at its user: L72)
+    let self_curse = choice.move_id == Choices::CURSE
+        && !attacking_side
+            .get_active_immutable()
+            .has_type(&PokemonType::GHOST);
+    if defending_side.get_active_immutable().hp == 0
+        && (choice.category != MoveCategory::Status
+            || (choice.target == MoveTarget::Opponent
+                && !choice.move_id.not_aimed_at_foe()
+                && !self_curse))
+    {
         return true;
     }
 
@@ -6489,6 +6501,38 @@ fn run_move(
 fn after_move_finish(state: &mut State, final_instructions: &mut Vec<StateInstructions>) {
     for state_instructions in final_instructions.iter_mut() {
         state.apply_instructions(&state_instructions.instruction_list);
+
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L112): a pivot user that fainted from
+        // its own move (Rocky Helmet, Rough Skin, recoil) does not switch out: the turn goes on
+        // (the foe's move, the end of the turn) and it is replaced after it (Showdown)
+        for side_ref in [SideReference::SideOne, SideReference::SideTwo] {
+            let side = state.get_side_immutable(&side_ref);
+            if side.force_switch
+                && side.get_active_immutable().hp == 0
+                && !side.baton_passing
+                && !side.shed_tailing
+            {
+                let toggle = match side_ref {
+                    SideReference::SideOne => Instruction::ToggleSideOneForceSwitch,
+                    SideReference::SideTwo => Instruction::ToggleSideTwoForceSwitch,
+                };
+                let saved = state
+                    .get_side_immutable(&side_ref.get_other_side())
+                    .switch_out_move_second_saved_move;
+                let set = SetSecondMoveSwitchOutMoveInstruction {
+                    new_choice: Choices::NONE,
+                    previous_choice: saved,
+                };
+                let clear = match side_ref {
+                    SideReference::SideOne => Instruction::SetSideTwoMoveSecondSwitchOutMove(set),
+                    SideReference::SideTwo => Instruction::SetSideOneMoveSecondSwitchOutMove(set),
+                };
+                for ins in [toggle, clear] {
+                    state.apply_one_instruction(&ins);
+                    state_instructions.instruction_list.push(ins);
+                }
+            }
+        }
 
         // check if anybody has negative boosts and a whiteherb
         // if so, consume the item and set the boosts to 0

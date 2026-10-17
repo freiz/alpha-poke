@@ -719,8 +719,15 @@ pub fn ability_after_damage_hit(
         return;
     }
     match active_pkmn.ability {
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L111): Greninja-Bond only, once per
+        // battle (a used one has base ability none: the harness / our state construction)
         Abilities::BATTLEBOND => {
-            if damage_dealt > 0 && defending_side.get_active_immutable().hp == 0 {
+            if damage_dealt > 0
+                && defending_side.get_active_immutable().hp == 0
+                && active_pkmn.id == PokemonName::GRENINJABOND
+                && active_pkmn.hp > 0
+                && active_pkmn.base_ability != Abilities::NONE
+            {
                 apply_boost_instruction(
                     attacking_side,
                     &PokemonBoostableStat::Attack,
