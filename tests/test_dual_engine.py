@@ -3889,3 +3889,49 @@ Careful Nature
     p = {round(o[0], 2) for o in outs}
     assert ec.closest(states[2], outs, (1, 1), hp=True)["diff"] == {}
     assert any(abs(o[0] - 0.5) < 0.01 for o in outs), p
+
+
+# L151 (doc/engine-diff.md): Showdown's DamagingHit after each hit's own effects -- Rough Skin once
+# per hit (the engine also added L50's per-hit extra: twice), Weak Armor / Gooey per hit (the
+# engine's were one secondary per move), Stamina after Clear Smog's clear (onHit before it)
+@pytest.mark.parametrize("case", ["rough skin", "weak armor", "gooey", "stamina"])
+def test_l151_damaging_hit(case):
+    cinccino = _attacker("Cinccino", "Skill Link", "Leftovers", "- Tail Slap\n- U-turn\n- Knock Off\n- Tidy Up", "Jolly")
+    k, turns = 0, [("move tailslap", "move protect")]
+    if case == "rough skin":
+        foe = _setter("Garchomp", "Rough Skin", "Leftovers", "- Swords Dance\n- Earthquake\n- Protect\n- Roar")
+        turns = [("move tailslap", "move swordsdance")]
+    elif case == "weak armor":
+        foe = _setter("Skarmory", "Weak Armor", "Leftovers", "- Roost\n- Spikes\n- Protect\n- Whirlwind")
+        turns = [("move tailslap", "move roost")]
+    elif case == "gooey":
+        foe = _setter("Goodra", "Gooey", "Leftovers", "- Draco Meteor\n- Fire Blast\n- Protect\n- Sludge Bomb")
+        turns = [("move tailslap", "move sludgebomb")]
+    else:
+        cinccino = _setter("Gastrodon", "Storm Drain", "Leftovers", "- Clear Smog\n- Recover\n- Earth Power\n- Scald")
+        foe = _setter("Mudsdale", "Stamina", "Leftovers", "- Earthquake\n- Iron Defense\n- Protect\n- Rest")
+        turns = [("move recover", "move irondefense"), ("move clearsmog", "move irondefense")]
+        k = 1
+    states = ec.run_showdown(cinccino, foe, turns)
+    c = (turns[k][0].split()[1], turns[k][1].split()[1])
+    outs = ec.engine_outcomes(ec.engine_state(states[k]), *c)
+    assert ec.closest(states[k + 1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L151's random-differential positions: Rocky Helmet before Magician takes it (forum b12-t2),
+# Gooey on an attacker behind its Substitute (offmeta b19-t31), Rocky Helmet on a hit Ice Face
+# took (wide b139-t1), Rapid Spin clearing the Toxic Spikes Toxic Debris just set (main b114-t30),
+# Triple Axel's growing hits knocking out at the third (wide2 b261-t2)
+@pytest.mark.parametrize("teams,i,turn,offset", [
+    ("random_battle_teams_forum.jsonl", 12, 2, 50000),
+    ("random_battle_teams_offmeta.jsonl", 19, 31, 0),
+    ("random_battle_teams_wide.jsonl", 139, 1, 0),
+    ("random_battle_teams.jsonl", 114, 30, 0),
+    ("random_battle_teams_wide2.jsonl", 261, 2, 30000),
+])  # fmt: skip
+def test_l151_positions(teams, i, turn, offset):
+    a, b = _random_position(teams, i, turn, offset)
+    c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
+    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2)
+    n = tuple(len(s["mons"]) for s in a["state"]["sides"])
+    assert ec.closest(b["state"], outs, n, hp=True)["diff"] == {}

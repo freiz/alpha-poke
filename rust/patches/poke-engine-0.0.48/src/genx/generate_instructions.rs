@@ -1396,12 +1396,10 @@ pub fn apply_boost_instruction(
             || target_side.side_conditions.mist > 0
             || (target_pkmn_ability == Abilities::FLOWERVEIL
                 && target_pkmn.has_type(&PokemonType::GRASS)));
+    // (L151: no Substitute check here: Showdown's boost() has none -- the Substitute stops the
+    // moves, L133, and their secondaries on it; not Gooey's, a Parting Shot's)
     if boost != &0
-        && !(target_side_ref != attacking_side_ref
-            && (foe_drop_blocked
-                || target_side
-                    .volatile_statuses
-                    .contains(&PokemonVolatileStatus::SUBSTITUTE)))
+        && !(target_side_ref != attacking_side_ref && foe_drop_blocked)
         && target_pkmn.hp != 0
     {
         boost_amount = get_boost_amount(target_side, &stat, boost_amount);
@@ -6171,47 +6169,40 @@ fn run_move(
     let attacker_boosts_before = boosts_of(state.get_side_immutable(&attacking_side));
     let defender_boosts_before =
         boosts_of(state.get_side_immutable(&attacking_side.get_other_side()));
-    // alpha-poke patch (2026-10-17, doc/engine-diff.md L117): a multi-hit move stops at the hit
-    // after which its user faints to the target's contact damage (Showdown's hit loop breaks)
-    let hit_count = if does_damage && hit_count > 1 && choice.flags.contact {
-        let (attacker_side, defender_side) = state.get_both_sides_immutable(&attacking_side);
-        let defender = defender_side.get_active_immutable();
-        let attacker = attacker_side.get_active_immutable();
-        let behind_sub = defender_side
-            .volatile_statuses
-            .contains(&PokemonVolatileStatus::SUBSTITUTE);
-        let mut per_hit = 0;
-        if defender.item == Items::ROCKYHELMET {
-            per_hit += cmp::max(attacker.maxhp / 6, 1);
-        }
-        if matches!(
-            defender.ability,
-            Abilities::ROUGHSKIN | Abilities::IRONBARBS
-        ) {
-            per_hit += cmp::max(attacker.maxhp / 8, 1);
-        }
-        if attacker.ability == Abilities::MAGICGUARD
-            || attacker.item == Items::PROTECTIVEPADS
-            || behind_sub
-            || damage_amount <= 0
-        {
-            per_hit = 0;
-        }
-        if per_hit > 0 {
-            let survives = (attacker.hp + per_hit - 1) / per_hit;
-            cmp::min(hit_count as i16, cmp::max(survives, 1)) as i8
-        } else {
-            hit_count
-        }
-    } else {
-        hit_count
-    };
+    let defender_ref = attacking_side.get_other_side();
+    // (L151: a hit Disguise / Ice Face took -- no damage, the forme changed -- is a hit: its
+    // DamagingHit and onAfterHit still come; L122)
+    let face_hit = !does_damage
+        && MOVES
+            .get(&choice.move_id)
+            .map_or(false, |m| m.category != MoveCategory::Status)
+        && !choice.protected
+        && instructions
+            .instruction_list
+            .iter()
+            .any(|i| matches!(i, Instruction::FormeChange(f) if f.side_ref == defender_ref));
+    let mut dealt_total = 0;
     for hit in 0..hit_count {
+        let hp_before_hit = state
+            .get_side_immutable(&defender_ref)
+            .get_active_immutable()
+            .hp;
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L151): Triple Axel / Triple Kick's hits
+        // grow (20, 40, 60): hit i of k is 2(i + 1) / (k + 1) of the mean the damage is for (L58),
+        // so the target faints at the hit it does in Showdown (the hits after it, and their
+        // Rocky Helmet, do not come)
+        let hit_damage = if matches!(choice.move_id, Choices::TRIPLEAXEL | Choices::TRIPLEKICK)
+            && hit_count > 1
+        {
+            (damage_amount as i32 * 2 * (hit as i32 + 1) / (hit_count as i32 + 1)) as i16
+        } else {
+            damage_amount
+        };
         if does_damage {
             hit_sub = generate_instructions_from_damage(
                 state,
                 choice,
-                damage_amount,
+                hit_damage,
                 &attacking_side,
                 &mut instructions,
             );
@@ -6224,7 +6215,6 @@ fn run_move(
                 &mut instructions,
             );
         }
-        choice_hazard_clear(state, &choice, &attacking_side, &mut instructions);
         // alpha-poke patch (2026-10-16, doc/engine-diff.md L2d): a damaging move that hit the
         // target's substitute puts no volatile on the target (Showdown: the hit's effects on a
         // target behind a substitute are skipped; Salt Cure used to go through)
@@ -6256,43 +6246,57 @@ fn run_move(
         if let Some(heal) = &choice.heal {
             get_instructions_from_heal(state, heal, &attacking_side, &mut instructions);
         }
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L151): the hit's DamagingHit (Rough Skin,
+        // Rocky Helmet, Stamina, Weak Armor, ...: once per hit) and onAfterHit (Knock Off, Thief,
+        // Ice Spinner), after its own effects; the hits stop when the user or the target faints
+        // (Showdown's hit loop; was L117's count ahead of the loop and L50's extra contact damage)
+        if does_damage || face_hit {
+            if !hit_sub {
+                let dealt = hp_before_hit
+                    - state
+                        .get_side_immutable(&defender_ref)
+                        .get_active_immutable()
+                        .hp;
+                dealt_total += dealt;
+                super::abilities::ability_damaging_hit(
+                    state,
+                    choice,
+                    &attacking_side,
+                    dealt,
+                    &mut instructions,
+                );
+            }
+            super::choice_effects::choice_after_hit(
+                state,
+                choice,
+                &attacking_side,
+                &mut instructions,
+                hit_sub,
+            );
+        }
+        // (L151: Rapid Spin / Mortal Spin's clear is their onAfterHit: after a Toxic Debris; the
+        // status moves' -- Defog, Tidy Up, Court Change -- their onHit)
+        choice_hazard_clear(state, &choice, &attacking_side, &mut instructions);
+        let fainted = state
+            .get_side_immutable(&attacking_side)
+            .get_active_immutable()
+            .hp
+            == 0
+            || state
+                .get_side_immutable(&defender_ref)
+                .get_active_immutable()
+                .hp
+                == 0;
         // (L147: Showdown's Update after each hit but the last: that one after the secondaries)
-        if hit + 1 < hit_count {
+        if hit + 1 < hit_count && !fainted {
             update(state, &mut instructions);
         }
+        if fainted {
+            break;
+        }
     } // end multi-hit
+    super::abilities::magician_after_move(state, choice, &attacking_side, dealt_total, &mut instructions);
 
-    // alpha-poke patch (2026-10-16, doc/engine-diff.md L50): Rocky Helmet / Rough Skin / Iron
-    // Barbs hurt the attacker once per contact hit (Showdown's onDamagingHit); the engine applies
-    // them once per move (a secondary, ability_after_damage): the hits after the first here
-    if does_damage && !hit_sub && hit_count > 1 && choice.flags.contact && damage_amount > 0 {
-        let (attacker_side, defender_side) = state.get_both_sides(&attacking_side);
-        let defender = defender_side.get_active_immutable();
-        let attacker = attacker_side.get_active();
-        let mut per_hit = 0;
-        if defender.item == Items::ROCKYHELMET {
-            per_hit += attacker.maxhp / 6;
-        }
-        if matches!(
-            defender.ability,
-            Abilities::ROUGHSKIN | Abilities::IRONBARBS
-        ) {
-            per_hit += attacker.maxhp / 8;
-        }
-        if attacker.ability == Abilities::MAGICGUARD || attacker.item == Items::PROTECTIVEPADS {
-            per_hit = 0;
-        }
-        let extra = cmp::min(per_hit * (hit_count as i16 - 1), attacker.hp);
-        if extra > 0 {
-            attacker.hp -= extra;
-            instructions
-                .instruction_list
-                .push(Instruction::Damage(DamageInstruction {
-                    side_ref: attacking_side,
-                    damage_amount: extra,
-                }));
-        }
-    }
     // this is wrong, but I am deciding it is good enough for this engine (for now)
     // each multi-hit move should trigger a chance for a secondary effect,
     // but the way this engine was structured makes it difficult to implement

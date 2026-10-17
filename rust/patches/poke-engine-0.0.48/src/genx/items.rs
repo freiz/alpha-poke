@@ -1992,18 +1992,7 @@ pub fn item_modify_attack_against(
                 });
             }
         }
-        Items::ROCKYHELMET => {
-            // (L94: not through Magic Guard)
-            if attacking_choice.flags.contact
-                && attacking_side.get_active_immutable().ability != Abilities::MAGICGUARD
-            {
-                attacking_choice.add_or_create_secondaries(Secondary {
-                    chance: 100.0,
-                    effect: Effect::Heal(-0.166),
-                    target: MoveTarget::User,
-                })
-            }
-        }
+        // (L151: Rocky Helmet: abilities::ability_damaging_hit, once per hit)
         Items::WEAKNESSPOLICY => {
             // (L53: not by a fixed damage)
             if attacking_choice.category != MoveCategory::Status

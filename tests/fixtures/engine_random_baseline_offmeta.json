@@ -138,15 +138,6 @@
 "hp",
 "volatile.mustrecharge"
 ],
-"b53-t27": [
-"boost.def"
-],
-"b53-t28": [
-"boost.def"
-],
-"b53-t29": [
-"boost.def"
-],
 "b60-t1": [
 "hp"
 ],
@@ -162,9 +153,6 @@
 "b67-t16": [
 "hp",
 "status"
-],
-"b72-t12": [
-"boost.spe"
 ],
 "b76-t17": [
 "item"

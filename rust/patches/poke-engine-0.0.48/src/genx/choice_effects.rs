@@ -974,32 +974,36 @@ pub fn choice_after_damage_hit(
         }
         // alpha-poke patch (2026-10-16, L27): Raging Bull's screen break is before the hit now
         // (generate_instructions::screen_break_instructions); it was here, after its damage
+        Choices::CLEARSMOG => {
+            state.reset_boosts(
+                &attacking_side_ref.get_other_side(),
+                &mut instructions.instruction_list,
+            );
+        }
+        _ => {}
+    }
+}
+
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L151): Showdown's onAfterHit, once per hit after
+// its DamagingHit (Rough Skin, Rocky Helmet, Stamina, ...: abilities::ability_damaging_hit): Knock
+// Off and Thief take the item, Ice Spinner ends the terrain; were in choice_after_damage_hit, at
+// the damage
+pub fn choice_after_hit(
+    state: &mut State,
+    choice: &Choice,
+    attacking_side_ref: &SideReference,
+    instructions: &mut StateInstructions,
+    hit_sub: bool,
+) {
+    let (attacking_side, defending_side) = state.get_both_sides(attacking_side_ref);
+    match choice.move_id {
         Choices::KNOCKOFF => {
-            // alpha-poke patch (2026-10-17, doc/engine-diff.md L113): nothing taken when the hit's
-            // contact damage (Rocky Helmet, Rough Skin / Iron Barbs: at least 1 each) knocks its
-            // user out (Showdown's onAfterHit needs the user's HP)
+            // alpha-poke patch (2026-10-17, doc/engine-diff.md L113 / L151): nothing taken when the
+            // hit's contact damage (Rocky Helmet, Rough Skin / Iron Barbs: DamagingHit, before
+            // this) knocked its user out (Showdown's onAfterHit needs the user's HP)
             let user = attacking_side.get_active_immutable();
             let defender = defending_side.get_active_immutable();
-            let punished = choice.flags.contact
-                && user.ability != Abilities::MAGICGUARD
-                && user.item != Items::PROTECTIVEPADS;
-            let contact = if punished {
-                (if defender.item == Items::ROCKYHELMET {
-                    cmp::max(user.maxhp / 6, 1)
-                } else {
-                    0
-                }) + (if matches!(
-                    defender.ability,
-                    Abilities::ROUGHSKIN | Abilities::IRONBARBS
-                ) {
-                    cmp::max(user.maxhp / 8, 1)
-                } else {
-                    0
-                })
-            } else {
-                0
-            };
-            let user_faints = user.hp == 0 || contact >= user.hp;
+            let user_faints = user.hp == 0;
             // (L114: a Sticky Barb moves to an attacker without an item first: run_move)
             let barb_moves = defender.item == Items::STICKYBARB
                 && user.item == Items::NONE
@@ -1047,12 +1051,6 @@ pub fn choice_after_damage_hit(
                 instructions.instruction_list.push(instruction);
                 attacker_active.item = defender_item;
             }
-        }
-        Choices::CLEARSMOG => {
-            state.reset_boosts(
-                &attacking_side_ref.get_other_side(),
-                &mut instructions.instruction_list,
-            );
         }
         Choices::ICESPINNER => {
             if state.terrain.terrain_type != Terrain::NONE && state.terrain.turns_remaining > 0 {

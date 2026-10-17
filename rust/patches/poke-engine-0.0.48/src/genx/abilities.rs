@@ -760,131 +760,190 @@ pub fn ability_before_move(
 
 // alpha-poke patch (2026-10-16, L24): Neutralizing Gas does not suppress an Ability Shield
 // holder's ability (the checks below)
-pub fn ability_after_damage_hit(
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L151): Showdown's DamagingHit, once per hit
+// after the hit's own effects (Clear Smog's clear, ...) and before its onAfterHit (Knock Off,
+// Thief: choice_effects::choice_after_hit): the target's abilities (Rough Skin, Stamina, Weak
+// Armor, Gooey, Justified, ...) and Rocky Helmet; not on a hit its Substitute took. Were part of
+// ability_after_damage_hit (at the damage, before the hit's effects) or secondaries the move got
+// before it (once per move)
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L151): Magician takes the target's item after
+// the whole move (Showdown's onAfterMoveSecondarySelf: after the hits' Rocky Helmet, ...; was at
+// the damage); not after its Knock Off (L134), not when its user fainted
+pub fn magician_after_move(
     state: &mut State,
-    choice: &mut Choice,
+    choice: &Choice,
     side_ref: &SideReference,
     damage_dealt: i16,
     instructions: &mut StateInstructions,
 ) {
     let (attacking_side, defending_side) = state.get_both_sides(side_ref);
     let active_pkmn = attacking_side.get_active();
-    // (L146: a holder this hit made faint no longer suppresses: Moxie after the KO)
-    if (defending_side.get_active_immutable().ability == Abilities::NEUTRALIZINGGAS
-        && defending_side.get_active_immutable().hp > 0
-        && active_pkmn.item != Items::ABILITYSHIELD)
-        || active_pkmn.ability == Abilities::NEUTRALIZINGGAS
+    if active_pkmn.ability != Abilities::MAGICIAN
+        || active_pkmn.hp == 0
+        || (defending_side.get_active_immutable().ability == Abilities::NEUTRALIZINGGAS
+            && defending_side.get_active_immutable().hp > 0
+            && active_pkmn.item != Items::ABILITYSHIELD)
     {
         return;
     }
-    match active_pkmn.ability {
-        // alpha-poke patch (2026-10-17, doc/engine-diff.md L111): Greninja-Bond only, once per
-        // battle (a used one has base ability none: the harness / our state construction)
-        Abilities::BATTLEBOND => {
-            if damage_dealt > 0
-                && defending_side.get_active_immutable().hp == 0
-                && active_pkmn.id == PokemonName::GRENINJABOND
-                && active_pkmn.hp > 0
-                && active_pkmn.base_ability != Abilities::NONE
-            {
-                apply_boost_instruction(
-                    attacking_side,
-                    &PokemonBoostableStat::Attack,
-                    &1,
-                    side_ref,
-                    side_ref,
-                    instructions,
-                );
-                apply_boost_instruction(
-                    attacking_side,
-                    &PokemonBoostableStat::SpecialAttack,
-                    &1,
-                    side_ref,
-                    side_ref,
-                    instructions,
-                );
-                apply_boost_instruction(
-                    attacking_side,
-                    &PokemonBoostableStat::Speed,
-                    &1,
-                    side_ref,
-                    side_ref,
-                    instructions,
-                );
-            }
+    let defending_pkmn = defending_side.get_active();
+    if damage_dealt > 0
+        && choice.move_id != Choices::KNOCKOFF
+        && defending_pkmn.item != Items::NONE
+        && defending_pkmn.item_can_be_removed()
+        && active_pkmn.item == Items::NONE
+    {
+        instructions
+            .instruction_list
+            .push(Instruction::ChangeItem(ChangeItemInstruction {
+                side_ref: *side_ref,
+                current_item: active_pkmn.item,
+                new_item: defending_pkmn.item,
+            }));
+        active_pkmn.item = defending_pkmn.item;
+        instructions
+            .instruction_list
+            .push(Instruction::ChangeItem(ChangeItemInstruction {
+                side_ref: side_ref.get_other_side(),
+                current_item: defending_pkmn.item,
+                new_item: Items::NONE,
+            }));
+        defending_pkmn.item = Items::NONE;
+    }
+}
+
+pub fn ability_damaging_hit(
+    state: &mut State,
+    choice: &mut Choice,
+    side_ref: &SideReference,
+    damage_dealt: i16,
+    instructions: &mut StateInstructions,
+) {
+    let holder = side_ref.get_other_side();
+    {
+        let (attacking_side, defending_side) = state.get_both_sides(side_ref);
+        let attacker = attacking_side.get_active();
+        let defender = defending_side.get_active_immutable();
+        // (Rocky Helmet: contact, not through Magic Guard / Protective Pads; L94: at least 1)
+        if defender.item == Items::ROCKYHELMET
+            && choice.flags.contact
+            && attacker.hp > 0
+            && attacker.ability != Abilities::MAGICGUARD
+            && attacker.item != Items::PROTECTIVEPADS
+        {
+            let amount = cmp::min(cmp::max(attacker.maxhp / 6, 1), attacker.hp);
+            attacker.hp -= amount;
+            instructions
+                .instruction_list
+                .push(Instruction::Damage(DamageInstruction {
+                    side_ref: *side_ref,
+                    damage_amount: amount,
+                }));
         }
-        // alpha-poke patch (2026-10-16, doc/engine-diff.md L78): Pickpocket is the target's
-        // (generate_instructions::run_move), not its user's
-        Abilities::MAGICIAN => {
-            let defending_pkmn = defending_side.get_active();
-            // alpha-poke patch (2026-10-17, doc/engine-diff.md L134): nothing left after its Knock
-            // Off (Showdown: Knock Off's onAfterHit first)
-            if damage_dealt > 0
-                && choice.move_id != Choices::KNOCKOFF
-                && defending_pkmn.item_can_be_removed()
-                && active_pkmn.item == Items::NONE
-            {
-                instructions.instruction_list.push(Instruction::ChangeItem(
-                    ChangeItemInstruction {
-                        side_ref: *side_ref,
-                        current_item: active_pkmn.item,
-                        new_item: defending_pkmn.item,
-                    },
-                ));
-                active_pkmn.item = defending_pkmn.item;
-                instructions.instruction_list.push(Instruction::ChangeItem(
-                    ChangeItemInstruction {
-                        side_ref: side_ref.get_other_side(),
-                        current_item: defending_pkmn.item,
-                        new_item: Items::NONE,
-                    },
-                ));
-                defending_pkmn.item = Items::NONE;
-            }
-        }
-        Abilities::MOXIE | Abilities::CHILLINGNEIGH | Abilities::ASONEGLASTRIER => {
-            if damage_dealt > 0 && defending_side.get_active_immutable().hp == 0 {
-                apply_boost_instruction(
-                    attacking_side,
-                    &PokemonBoostableStat::Attack,
-                    &1,
-                    side_ref,
-                    side_ref,
-                    instructions,
-                );
-            }
-        }
-        Abilities::GRIMNEIGH | Abilities::ASONESPECTRIER => {
-            if damage_dealt > 0 && defending_side.get_active_immutable().hp == 0 {
-                apply_boost_instruction(
-                    attacking_side,
-                    &PokemonBoostableStat::SpecialAttack,
-                    &1,
-                    side_ref,
-                    side_ref,
-                    instructions,
-                );
-            }
-        }
-        Abilities::BEASTBOOST | Abilities::EELEVATE => {
-            if damage_dealt > 0 && defending_side.get_active_immutable().hp == 0 {
-                let highest_stat = &attacking_side.calculate_highest_stat();
-                apply_boost_instruction(
-                    attacking_side,
-                    highest_stat,
-                    &1,
-                    side_ref,
-                    side_ref,
-                    instructions,
-                );
-            }
-        }
-        _ => {}
     }
     let (attacking_side, defending_side) = state.get_both_sides(side_ref);
+    if attacking_side.get_active_immutable().ability == Abilities::NEUTRALIZINGGAS
+        && attacking_side.get_active_immutable().hp > 0
+        && defending_side.get_active_immutable().item != Items::ABILITYSHIELD
+    {
+        return;
+    }
+    let charged = defending_side
+        .volatile_statuses
+        .contains(&PokemonVolatileStatus::CHARGE);
     let attacking_pkmn = attacking_side.get_active();
     let defending_pkmn = defending_side.get_active();
     match defending_pkmn.ability {
+        // (L151: were secondaries the move got before it: once per move, through a Substitute
+        // for Gooey's)
+        Abilities::WEAKARMOR if choice.category == MoveCategory::Physical => {
+            for (stat, amount) in [
+                (PokemonBoostableStat::Defense, -1),
+                (PokemonBoostableStat::Speed, 2),
+            ] {
+                apply_boost_instruction(defending_side, &stat, &amount, &holder, &holder, instructions);
+            }
+        }
+        Abilities::GOOEY | Abilities::TANGLINGHAIR if choice.flags.contact => {
+            apply_boost_instruction(
+                attacking_side,
+                &PokemonBoostableStat::Speed,
+                &-1,
+                &holder,
+                side_ref,
+                instructions,
+            );
+        }
+        Abilities::STEAMENGINE
+            if matches!(choice.move_type, PokemonType::WATER | PokemonType::FIRE) =>
+        {
+            apply_boost_instruction(
+                defending_side,
+                &PokemonBoostableStat::Speed,
+                &6,
+                &holder,
+                &holder,
+                instructions,
+            );
+        }
+        Abilities::THERMALEXCHANGE if choice.move_type == PokemonType::FIRE => {
+            apply_boost_instruction(
+                defending_side,
+                &PokemonBoostableStat::Attack,
+                &1,
+                &holder,
+                &holder,
+                instructions,
+            );
+        }
+        Abilities::WATERCOMPACTION if choice.move_type == PokemonType::WATER => {
+            apply_boost_instruction(
+                defending_side,
+                &PokemonBoostableStat::Defense,
+                &2,
+                &holder,
+                &holder,
+                instructions,
+            );
+        }
+        Abilities::JUSTIFIED if choice.move_type == PokemonType::DARK => {
+            apply_boost_instruction(
+                defending_side,
+                &PokemonBoostableStat::Attack,
+                &1,
+                &holder,
+                &holder,
+                instructions,
+            );
+        }
+        Abilities::RATTLED
+            if matches!(
+                choice.move_type,
+                PokemonType::BUG | PokemonType::DARK | PokemonType::GHOST
+            ) =>
+        {
+            apply_boost_instruction(
+                defending_side,
+                &PokemonBoostableStat::Speed,
+                &1,
+                &holder,
+                &holder,
+                instructions,
+            );
+        }
+        Abilities::ELECTROMORPHOSIS if defending_pkmn.hp > 0 && !charged => {
+            defending_side
+                .volatile_statuses
+                .insert(PokemonVolatileStatus::CHARGE);
+            instructions
+                .instruction_list
+                .push(Instruction::ApplyVolatileStatus(
+                    ApplyVolatileStatusInstruction {
+                        side_ref: holder,
+                        volatile_status: PokemonVolatileStatus::CHARGE,
+                    },
+                ));
+        }
         Abilities::MUMMY | Abilities::LINGERINGAROMA | Abilities::WANDERINGSPIRIT => {
             if choice.flags.contact {
                 instructions
@@ -1114,6 +1173,103 @@ pub fn ability_after_damage_hit(
                             .insert(PokemonVolatileStatus::PERISH4);
                     }
                 }
+            }
+        }
+        _ => {}
+    }
+}
+
+pub fn ability_after_damage_hit(
+    state: &mut State,
+    choice: &mut Choice,
+    side_ref: &SideReference,
+    damage_dealt: i16,
+    instructions: &mut StateInstructions,
+) {
+    let (attacking_side, defending_side) = state.get_both_sides(side_ref);
+    let active_pkmn = attacking_side.get_active();
+    // (L146: a holder this hit made faint no longer suppresses: Moxie after the KO)
+    if (defending_side.get_active_immutable().ability == Abilities::NEUTRALIZINGGAS
+        && defending_side.get_active_immutable().hp > 0
+        && active_pkmn.item != Items::ABILITYSHIELD)
+        || active_pkmn.ability == Abilities::NEUTRALIZINGGAS
+    {
+        return;
+    }
+    match active_pkmn.ability {
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L111): Greninja-Bond only, once per
+        // battle (a used one has base ability none: the harness / our state construction)
+        Abilities::BATTLEBOND => {
+            if damage_dealt > 0
+                && defending_side.get_active_immutable().hp == 0
+                && active_pkmn.id == PokemonName::GRENINJABOND
+                && active_pkmn.hp > 0
+                && active_pkmn.base_ability != Abilities::NONE
+            {
+                apply_boost_instruction(
+                    attacking_side,
+                    &PokemonBoostableStat::Attack,
+                    &1,
+                    side_ref,
+                    side_ref,
+                    instructions,
+                );
+                apply_boost_instruction(
+                    attacking_side,
+                    &PokemonBoostableStat::SpecialAttack,
+                    &1,
+                    side_ref,
+                    side_ref,
+                    instructions,
+                );
+                apply_boost_instruction(
+                    attacking_side,
+                    &PokemonBoostableStat::Speed,
+                    &1,
+                    side_ref,
+                    side_ref,
+                    instructions,
+                );
+            }
+        }
+        // alpha-poke patch (2026-10-16, doc/engine-diff.md L78): Pickpocket is the target's
+        // (generate_instructions::run_move), not its user's
+        // (L151: Magician: magician_after_move, Showdown's onAfterMoveSecondarySelf)
+        Abilities::MOXIE | Abilities::CHILLINGNEIGH | Abilities::ASONEGLASTRIER => {
+            if damage_dealt > 0 && defending_side.get_active_immutable().hp == 0 {
+                apply_boost_instruction(
+                    attacking_side,
+                    &PokemonBoostableStat::Attack,
+                    &1,
+                    side_ref,
+                    side_ref,
+                    instructions,
+                );
+            }
+        }
+        Abilities::GRIMNEIGH | Abilities::ASONESPECTRIER => {
+            if damage_dealt > 0 && defending_side.get_active_immutable().hp == 0 {
+                apply_boost_instruction(
+                    attacking_side,
+                    &PokemonBoostableStat::SpecialAttack,
+                    &1,
+                    side_ref,
+                    side_ref,
+                    instructions,
+                );
+            }
+        }
+        Abilities::BEASTBOOST | Abilities::EELEVATE => {
+            if damage_dealt > 0 && defending_side.get_active_immutable().hp == 0 {
+                let highest_stat = &attacking_side.calculate_highest_stat();
+                apply_boost_instruction(
+                    attacking_side,
+                    highest_stat,
+                    &1,
+                    side_ref,
+                    side_ref,
+                    instructions,
+                );
             }
         }
         _ => {}
@@ -2574,62 +2730,6 @@ pub fn ability_modify_attack_against(
                 attacker_choice.category = MoveCategory::Status;
             }
         }
-        Abilities::STEAMENGINE => {
-            if attacker_choice.move_type == PokemonType::WATER
-                || attacker_choice.move_type == PokemonType::FIRE
-            {
-                attacker_choice.add_or_create_secondaries(Secondary {
-                    chance: 100.0,
-                    target: MoveTarget::Opponent,
-                    effect: Effect::Boost(StatBoosts {
-                        attack: 0,
-                        defense: 0,
-                        special_attack: 0,
-                        special_defense: 0,
-                        speed: 6,
-                        accuracy: 0,
-                    }),
-                });
-            }
-        }
-        Abilities::THERMALEXCHANGE => {
-            if attacker_choice.move_type == PokemonType::FIRE {
-                attacker_choice.add_or_create_secondaries(Secondary {
-                    chance: 100.0,
-                    target: MoveTarget::Opponent,
-                    effect: Effect::Boost(StatBoosts {
-                        attack: 1,
-                        defense: 0,
-                        special_attack: 0,
-                        special_defense: 0,
-                        speed: 0,
-                        accuracy: 0,
-                    }),
-                });
-            }
-        }
-        #[cfg(any(
-            feature = "champions",
-            feature = "gen9",
-            feature = "gen8",
-            feature = "gen7"
-        ))]
-        Abilities::WEAKARMOR => {
-            if attacker_choice.category == MoveCategory::Physical {
-                attacker_choice.add_or_create_secondaries(Secondary {
-                    chance: 100.0,
-                    target: MoveTarget::Opponent,
-                    effect: Effect::Boost(StatBoosts {
-                        attack: 0,
-                        defense: -1,
-                        special_attack: 0,
-                        special_defense: 0,
-                        speed: 2,
-                        accuracy: 0,
-                    }),
-                });
-            }
-        }
         #[cfg(any(feature = "gen6", feature = "gen5", feature = "gen4"))]
         Abilities::WEAKARMOR => {
             if attacker_choice.category == MoveCategory::Physical {
@@ -2722,22 +2822,6 @@ pub fn ability_modify_attack_against(
                 effect: Effect::Status(PokemonStatus::BURN),
             });
         }
-        Abilities::GOOEY => {
-            if attacker_choice.flags.contact {
-                attacker_choice.add_or_create_secondaries(Secondary {
-                    chance: 100.0,
-                    target: MoveTarget::User,
-                    effect: Effect::Boost(StatBoosts {
-                        attack: 0,
-                        defense: 0,
-                        special_attack: 0,
-                        special_defense: 0,
-                        speed: -1,
-                        accuracy: 0,
-                    }),
-                })
-            }
-        }
         Abilities::MOTORDRIVE => {
             if attacker_choice.move_type == PokemonType::ELECTRIC {
                 attacker_choice.remove_all_effects();
@@ -2804,15 +2888,6 @@ pub fn ability_modify_attack_against(
         }
         // alpha-poke patch (2026-10-16, doc/engine-diff.md L74): Electromorphosis, a damaging hit
         // charges its holder (a secondary on it: not through a Substitute)
-        Abilities::ELECTROMORPHOSIS => {
-            if attacker_choice.category != MoveCategory::Status {
-                attacker_choice.add_or_create_secondaries(Secondary {
-                    chance: 100.0,
-                    target: MoveTarget::Opponent,
-                    effect: Effect::VolatileStatus(PokemonVolatileStatus::CHARGE),
-                })
-            }
-        }
         // alpha-poke patch (2026-10-16, doc/engine-diff.md L70): Cursed Body, 30% of the time the
         // move that hit its holder is disabled (as a secondary on the user; Disable needs its last
         // move: the one being used)
@@ -2919,22 +2994,6 @@ pub fn ability_modify_attack_against(
                 attacker_choice.defense_modifier *= 2.0;
             }
         }
-        Abilities::TANGLINGHAIR => {
-            if attacker_choice.flags.contact {
-                attacker_choice.add_or_create_secondaries(Secondary {
-                    chance: 100.0,
-                    target: MoveTarget::User,
-                    effect: Effect::Boost(StatBoosts {
-                        attack: 0,
-                        defense: 0,
-                        special_attack: 0,
-                        special_defense: 0,
-                        speed: -1,
-                        accuracy: 0,
-                    }),
-                })
-            }
-        }
         Abilities::MAGICBOUNCE => {
             if attacker_choice.flags.reflectable {
                 attacker_choice.target = MoveTarget::User;
@@ -2981,38 +3040,6 @@ pub fn ability_modify_attack_against(
                     target: MoveTarget::Opponent,
                 });
                 attacker_choice.category = MoveCategory::Status;
-            }
-        }
-        Abilities::WATERCOMPACTION => {
-            if attacker_choice.move_type == PokemonType::WATER {
-                attacker_choice.add_or_create_secondaries(Secondary {
-                    chance: 100.0,
-                    target: MoveTarget::Opponent,
-                    effect: Effect::Boost(StatBoosts {
-                        attack: 0,
-                        defense: 2,
-                        special_attack: 0,
-                        special_defense: 0,
-                        speed: 0,
-                        accuracy: 0,
-                    }),
-                });
-            }
-        }
-        Abilities::JUSTIFIED => {
-            if attacker_choice.move_type == PokemonType::DARK {
-                attacker_choice.add_or_create_secondaries(Secondary {
-                    chance: 100.0,
-                    target: MoveTarget::Opponent,
-                    effect: Effect::Boost(StatBoosts {
-                        attack: 1,
-                        defense: 0,
-                        special_attack: 0,
-                        special_defense: 0,
-                        speed: 0,
-                        accuracy: 0,
-                    }),
-                })
             }
         }
         Abilities::ICESCALES => {
@@ -3115,25 +3142,6 @@ pub fn ability_modify_attack_against(
                 && !self_curse
             {
                 attacker_choice.remove_all_effects();
-            }
-        }
-        Abilities::RATTLED => {
-            if attacker_choice.move_type == PokemonType::BUG
-                || attacker_choice.move_type == PokemonType::DARK
-                || attacker_choice.move_type == PokemonType::GHOST
-            {
-                attacker_choice.add_or_create_secondaries(Secondary {
-                    chance: 100.0,
-                    target: MoveTarget::Opponent,
-                    effect: Effect::Boost(StatBoosts {
-                        attack: 0,
-                        defense: 0,
-                        special_attack: 0,
-                        special_defense: 0,
-                        speed: 1,
-                        accuracy: 0,
-                    }),
-                });
             }
         }
         Abilities::WATERBUBBLE => {

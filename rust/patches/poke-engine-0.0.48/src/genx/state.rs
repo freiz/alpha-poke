@@ -797,7 +797,7 @@ impl Pokemon {
     pub fn immune_to_stats_lowered_by_opponent(
         &self,
         stat: &PokemonBoostableStat,
-        volatiles: &VolatileStatusBitset,
+        _volatiles: &VolatileStatusBitset,
     ) -> bool {
         if [
             Abilities::CLEARBODY,
@@ -810,9 +810,8 @@ impl Pokemon {
             return true;
         }
 
-        if volatiles.contains(&PokemonVolatileStatus::SUBSTITUTE) {
-            return true;
-        }
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L151): no Substitute here (Showdown's
+        // boost() has none: the Substitute stops the moves, L133; a Parting Shot goes through)
 
         if stat == &PokemonBoostableStat::Attack && self.ability == Abilities::HYPERCUTTER {
             return true;
