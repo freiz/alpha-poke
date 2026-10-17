@@ -231,6 +231,7 @@ harness 必须把 Showdown 的状态完整映射到引擎，否则不一致来�
 | L85 | Salt Cure、Psychic Noise 的 volatile 在 Showdown 是 100% 的追加效果，Covert Cloak / Shield Dust 能挡；引擎当作招式本身的 volatile | 引擎 | 已修复 | `test_l85_covert_cloak_stops_the_volatile`（2 个参数） | `choices.rs`：两招改为 100% 追加效果（数据测试照样通过） |
 | L86 | Smack Down 只对浮空的目标加状态（Showdown 的 onStart：飞行系、Levitate、Magnet Rise；Iron Ball / Ingrain 时不加）；引擎对谁都加 | 引擎 | 已修复 | `test_l86_smack_down_only_grounds_the_airborne`（着地 / 飞行两个参数） | `genx/state.rs` `volatile_status_can_be_applied` |
 | L87 | harness 没有把 Perish Song 的计数（Showdown 的 perishsong，剩余回合）带进引擎的 perish<n>：引擎的状态里没有，第二次 Perish Song 又成功 | harness | 已修复 | `test_l87_perish_song_counts_down`（3 回合） | `showdown_state.js`：perishsong 导出成 perish<剩余回合> |
+| L88 | 会心一击只去掉对攻击方不利的能力变化（Showdown 的 getDamage：攻击方的负、防御方的正），而且是招式实际用的那项（Body Press：使用者的防御；Foul Play：目标的攻击），Unaware / Sacred Sword 时本来就不算；引擎的会心对这两招用了不加成的数值（+2 时会心比普通还低），也没管 Unaware | 引擎 | 已修复 | `test_l88_body_press_crit_keeps_the_defense_boost`；`test_l88_foul_play_crit_keeps_the_targets_attack_boost`（Scope Lens + Focus Energy 必定会心） | `damage_calc.rs` `get_attacking_and_defending_stats`：会心的两项按实际用的能力和是否计入加成统一算。forum 的 b128-t16 因此新增（`--force`）：Showdown 的掷骰让 Great Tusk 剩 3 HP，引擎的平均伤害 + Salt Cure 打倒它（已知的近似：回合末残伤的击倒按平均伤害）；之前恰好被错误的会心分支（伤害偏低）对上 |
 
 ## 修复与验证（2026-10-16）
 

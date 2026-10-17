@@ -460,25 +460,12 @@ fn get_attacking_and_defending_stats(
     let (
         attacking_final_stat,
         mut defending_final_stat,
-        mut crit_attacking_stat,
+        crit_attacking_stat,
         mut crit_defending_stat,
     );
 
     match choice.category {
         MoveCategory::Physical => {
-            if attacking_side.attack_boost > 0 {
-                crit_attacking_stat =
-                    attacking_side.calculate_boosted_stat(PokemonBoostableStat::Attack);
-            } else {
-                crit_attacking_stat = attacker.attack;
-            }
-            if defending_side.defense_boost <= 0 {
-                crit_defending_stat =
-                    defending_side.calculate_boosted_stat(PokemonBoostableStat::Defense);
-            } else {
-                crit_defending_stat = defender.defense;
-            }
-
             // Unaware checks
             if defender.ability == Abilities::UNAWARE && attacker.ability != Abilities::MOLDBREAKER
             {
@@ -507,7 +494,6 @@ fn get_attacking_and_defending_stats(
                 } else {
                     attacking_final_stat = defender.attack;
                 }
-                crit_attacking_stat = defending_side.get_active_immutable().attack;
             } else if choice.move_id == Choices::BODYPRESS {
                 if should_calc_attacker_boost {
                     attacking_final_stat =
@@ -515,7 +501,6 @@ fn get_attacking_and_defending_stats(
                 } else {
                     attacking_final_stat = attacker.defense;
                 }
-                crit_attacking_stat = attacking_side.get_active_immutable().defense;
             } else if should_calc_attacker_boost {
                 attacking_final_stat =
                     attacking_side.calculate_boosted_stat(PokemonBoostableStat::Attack);
@@ -533,19 +518,6 @@ fn get_attacking_and_defending_stats(
             }
         }
         MoveCategory::Special => {
-            if attacking_side.special_attack_boost > 0 {
-                crit_attacking_stat =
-                    attacking_side.calculate_boosted_stat(PokemonBoostableStat::SpecialAttack);
-            } else {
-                crit_attacking_stat = attacker.special_attack;
-            }
-            if defending_side.special_defense_boost <= 0 {
-                crit_defending_stat =
-                    defending_side.calculate_boosted_stat(PokemonBoostableStat::SpecialDefense);
-            } else {
-                crit_defending_stat = defender.special_defense;
-            }
-
             // Unaware checks
             if defender.ability == Abilities::UNAWARE && attacker.ability != Abilities::MOLDBREAKER
             {
@@ -570,13 +542,6 @@ fn get_attacking_and_defending_stats(
                 || choice.move_id == Choices::SECRETSWORD
                 || choice.move_id == Choices::PSYSTRIKE
             {
-                if defending_side.defense_boost <= 0 {
-                    crit_defending_stat =
-                        defending_side.calculate_boosted_stat(PokemonBoostableStat::Defense);
-                } else {
-                    crit_defending_stat = defender.defense;
-                }
-
                 defending_stat = PokemonBoostableStat::Defense;
                 if should_calc_defender_boost {
                     defending_final_stat =
@@ -596,6 +561,44 @@ fn get_attacking_and_defending_stats(
         }
         _ => panic!("Can only calculate damage for physical or special moves"),
     }
+
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L88): a crit drops only the stat's boosts
+    // that hurt the attacker (Showdown's getDamage: atkBoosts < 0, defBoosts > 0 -> 0), of the stat
+    // actually used (Body Press: the user's Defense, Foul Play: the target's Attack) and only
+    // where they count at all (Unaware, Sacred Sword); it kept the boosts of the usual stat
+    let boost_of = |side: &Side, stat: PokemonBoostableStat| match stat {
+        PokemonBoostableStat::Attack => side.attack_boost,
+        PokemonBoostableStat::Defense => side.defense_boost,
+        PokemonBoostableStat::SpecialAttack => side.special_attack_boost,
+        _ => side.special_defense_boost,
+    };
+    let (atk_side, atk_stat) = match (choice.category, choice.move_id) {
+        (MoveCategory::Physical, Choices::FOULPLAY) => {
+            (defending_side, PokemonBoostableStat::Attack)
+        }
+        (MoveCategory::Physical, Choices::BODYPRESS) => {
+            (attacking_side, PokemonBoostableStat::Defense)
+        }
+        (MoveCategory::Physical, _) => (attacking_side, PokemonBoostableStat::Attack),
+        _ => (attacking_side, PokemonBoostableStat::SpecialAttack),
+    };
+    let raw = |pkmn: &Pokemon, stat: PokemonBoostableStat| match stat {
+        PokemonBoostableStat::Attack => pkmn.attack,
+        PokemonBoostableStat::Defense => pkmn.defense,
+        PokemonBoostableStat::SpecialAttack => pkmn.special_attack,
+        _ => pkmn.special_defense,
+    };
+    crit_attacking_stat = if should_calc_attacker_boost && boost_of(atk_side, atk_stat) > 0 {
+        atk_side.calculate_boosted_stat(atk_stat)
+    } else {
+        raw(atk_side.get_active_immutable(), atk_stat)
+    };
+    crit_defending_stat =
+        if should_calc_defender_boost && boost_of(defending_side, defending_stat) < 0 {
+            defending_side.calculate_boosted_stat(defending_stat)
+        } else {
+            raw(defender, defending_stat)
+        };
 
     #[cfg(any(
         feature = "gen4",

@@ -2555,3 +2555,29 @@ def test_l87_perish_song_counts_down():
     for k, c1, c2 in ((0, "perishsong", "softboiled"), (1, "perishsong", "protect"), (2, "roost", "softboiled")):
         outs = ec.engine_outcomes(ec.engine_state(states[k]), c1, c2)
         assert ec.closest(states[k + 1], outs, (1, 1), hp=True)["diff"] == {}, k
+
+
+# L88 (doc/engine-diff.md): a crit drops only the boosts that hurt the attacker, of the stat the
+# move uses (Showdown's getDamage); the engine's crit took Body Press's user's Defense and Foul
+# Play's target's Attack unboosted (a crit below the normal hit at +2)
+def test_l88_body_press_crit_keeps_the_defense_boost():
+    corv = _attacker("Corviknight", "Pressure", "Scope Lens", "- Iron Defense\n- Focus Energy\n- Body Press\n- Roost")
+    pex = _setter("Toxapex", "Regenerator", "Leftovers", "- Recover\n- Toxic\n- Haze\n- Scald")
+    turns = [("move irondefense", "move recover"), ("move focusenergy", "move recover"),
+             ("move bodypress", "move toxic")]  # fmt: skip
+    states = ec.run_showdown(corv, pex, turns)
+    assert any(x.startswith("|-crit") for x in states[3]["log"])
+    outs = ec.engine_outcomes(ec.engine_state(states[2]), "bodypress", "toxic")
+    res = ec.closest(states[3], outs, (1, 1), hp=True)
+    assert res["diff"] == {} and res["p"] > 0.9
+
+
+def test_l88_foul_play_crit_keeps_the_targets_attack_boost():
+    grim = _attacker("Grimmsnarl", "Prankster", "Scope Lens", "- Focus Energy\n- Foul Play\n- Reflect\n- Thunder Wave")
+    sd = _attacker("Kingambit", "Supreme Overlord", "Leftovers", "- Swords Dance\n- Iron Head\n- Sucker Punch\n- Protect")
+    turns = [("move focusenergy", "move swordsdance"), ("move foulplay", "move swordsdance")]
+    states = ec.run_showdown(grim, sd, turns)
+    assert any(x.startswith("|-crit") for x in states[2]["log"])
+    outs = ec.engine_outcomes(ec.engine_state(states[1]), "foulplay", "swordsdance")
+    res = ec.closest(states[2], outs, (1, 1), hp=True)
+    assert res["diff"] == {} and res["p"] > 0.9
