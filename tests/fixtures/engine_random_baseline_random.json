@@ -66,9 +66,6 @@
 "b164-t6": [
 "boost.evasion"
 ],
-"b165-t10": [
-"volatile.flashfire"
-],
 "b165-t19": [
 "boost.atk"
 ],
@@ -114,9 +111,6 @@
 "b27-t15": [
 "item",
 "volatile.protosynthesisspe"
-],
-"b29-t11": [
-"volatile.encore"
 ],
 "b29-t4": [
 "item"

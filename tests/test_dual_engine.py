@@ -2581,3 +2581,67 @@ def test_l88_foul_play_crit_keeps_the_targets_attack_boost():
     outs = ec.engine_outcomes(ec.engine_state(states[1]), "foulplay", "swordsdance")
     res = ec.closest(states[2], outs, (1, 1), hp=True)
     assert res["diff"] == {} and res["p"] > 0.9
+
+
+# L89 (doc/engine-diff.md): Encore lasts 3 turns (4 if the target had moved that turn), counted at
+# the ends of turn (Showdown's duration); the engine counted the target's moves and ended it at
+# the start of the third, so a second Encore in that turn worked where Showdown's failed
+@pytest.mark.parametrize("encorer", [
+    _setter("Whimsicott", "Prankster", "Leftovers", "- Encore\n- Moonblast\n- Protect\n- U-turn"),
+    _setter("Clefable", "Unaware", "Leftovers", "- Encore\n- Moonblast\n- Protect\n- Soft-Boiled"),
+], ids=["before-it-moved", "after-it-moved"])  # fmt: skip
+def test_l89_encore_counts_turns(encorer):
+    val = _attacker("Iron Valiant", "Quark Drive", "Leftovers", "- Calm Mind\n- Moonblast\n- Close Combat\n- Knock Off", "Timid")
+    states = ec.run_showdown(val, encorer, [("move calmmind", "move encore")] * 6)
+    assert any("|-end|p1a: Iron Valiant|Encore" in x for x in sum((s["log"] for s in states), []))
+    for k in range(6):
+        outs = ec.engine_outcomes(ec.engine_state(states[k]), "calmmind", "encore")
+        assert ec.closest(states[k + 1], outs, (1, 1), hp=True)["diff"] == {}, k
+    # our state construction's count (agents/timers.py, from the log): 3 - Showdown's turns left
+    from alpha_poke.agents.timers import timers
+
+    lines: list = []
+    for st in states:
+        lines += [x.split("|") for x in st["log"]]
+        sd = st["sides"][0]["mons"][0]["volatiles"].get("encore")
+        ours = timers(lines)["p1"].encore
+        assert ours == (3 - sd["duration"] if sd else None), (st["turn"], ours, sd)
+
+
+# L90 (doc/engine-diff.md): Taunt, as Encore (L89): 3 turns (4 if the target had moved that
+# turn), counted at the ends of turn; the engine counted the target's moves and ended it at the
+# start of the third
+@pytest.mark.parametrize("taunter", [
+    _setter("Whimsicott", "Prankster", "Leftovers", "- Taunt\n- Moonblast\n- Protect\n- U-turn"),
+    _setter("Slowbro", "Oblivious", "Leftovers", "- Taunt\n- Scald\n- Slack Off\n- Teleport"),
+], ids=["before-it-moved", "after-it-moved"])  # fmt: skip
+def test_l90_taunt_counts_turns(taunter):
+    from alpha_poke.agents.timers import timers
+
+    pex = _setter("Toxapex", "Regenerator", "Black Sludge", "- Scald\n- Recover\n- Haze\n- Toxic")
+    states = ec.run_showdown(pex, taunter, [("move scald", "move taunt")] * 6)
+    assert any("|-end|p1a: Toxapex|move: Taunt" in x for x in sum((s["log"] for s in states), []))
+    lines: list = []
+    for k in range(6):
+        outs = ec.engine_outcomes(ec.engine_state(states[k]), "scald", "taunt")
+        assert ec.closest(states[k + 1], outs, (1, 1), hp=True)["diff"] == {}, k
+    for st in states:  # our state construction's count: 3 - Showdown's turns left
+        lines += [x.split("|") for x in st["log"]]
+        sd = st["sides"][0]["mons"][0]["volatiles"].get("taunt")
+        ours = timers(lines)["p1"].taunt
+        assert ours == (3 - sd["duration"] if sd else None), (st["turn"], ours, sd)
+
+
+def test_l90_taunted_attack_into_an_absorbing_ability():
+    """A taunted attack into Water Absorb still goes (the engine's absorbed move is a status move:
+    Taunt's check reads the move's own category)."""
+    lan = _setter("Lanturn", "Water Absorb", "Life Orb", "- Thunderbolt\n- Scald\n- Volt Switch\n- Heal Bell")
+    taunter = _setter("Grimmsnarl", "Prankster", "Leftovers", "- Taunt\n- Spirit Break\n- Reflect\n- Parting Shot")
+    pex = _setter("Toxapex", "Regenerator", "Black Sludge", "- Scald\n- Recover\n- Haze\n- Toxic")
+    turns = [("move thunderbolt", "move recover"), ("switch 2", "move recover"), ("move taunt", "move recover"),
+             ("switch 2", "move scald")]  # fmt: skip
+    states = ec.run_showdown(lan + "\n\n" + taunter, pex, turns)
+    assert "taunt" in states[3]["sides"][1]["mons"][0]["volatiles"]
+    assert any("Water Absorb" in x for x in states[4]["log"])
+    outs = ec.engine_outcomes(ec.engine_state(states[3]), "lanturn", "scald")
+    assert ec.closest(states[4], outs, (2, 1), hp=True)["diff"] == {}

@@ -15,8 +15,9 @@ sides, in poke-engine's own units (rust/patches/poke-engine-0.0.48, generate_ins
               attempts (wake chance 0, 1/3, 1/2, 1); kept across switches (Gen 9)
   confusion   volatile_status_durations: confused attempts (-activate confusion), patched
               engine: ends after 1-4 (uniform)
-  taunt       move attempts (move / cant) since the Taunt; ends at the third
-  encore      encored moves used; ends after the third
+  taunt       as encore (doc/engine-diff.md L90: it was the move attempts since the Taunt)
+  encore      ends of turn since the Encore, from -1 when its target had moved that turn (Showdown's
+              duration 4); ends at the third (doc/engine-diff.md L89: it was the encored moves)
   yawn        ends of turn since the Yawn (sleep at the second)
   disabled    the active's move Disable blocks (-start Disable <move>; until -end)
   recharge    the active must recharge this turn (-mustrecharge; cleared by its "cant recharge",
@@ -67,6 +68,7 @@ class SideTimers:
     confusion: int | None = None
     taunt: int | None = None
     encore: int | None = None
+    acted: bool = False  # the active moved (or could not) this turn
     yawn: int | None = None
     disabled: str | None = None  # move id
     healblock: int | None = None
@@ -88,6 +90,7 @@ class SideTimers:
 
     def came_in(self, species: str) -> None:
         self.active = species
+        self.acted = False
         self.toxic = self.protect = 0
         self.protected = False
         self.confusion = self.taunt = self.encore = self.yawn = None
@@ -127,6 +130,10 @@ def _feed(sides: dict, p: list[str]) -> None:
                 st.future = (st.future[0] - 1, st.future[1]) if st.future[0] > 1 else None
             if st.yawn is not None:
                 st.yawn += 1
+            if st.encore is not None:
+                st.encore += 1
+            if st.taunt is not None:
+                st.taunt += 1
             for k in ("healblock", "throatchop", "magnetrise", "partiallytrapped"):
                 if getattr(st, k) is not None:
                     setattr(st, k, getattr(st, k) + 1)
@@ -139,6 +146,7 @@ def _feed(sides: dict, p: list[str]) -> None:
         return
     if tag == "turn":
         for st in sides.values():
+            st.acted = False
             if st.slowstart:
                 st.slowstart[1] = True
         return
@@ -195,23 +203,17 @@ def _feed(sides: dict, p: list[str]) -> None:
     elif tag == "-mustrecharge":
         st.recharge = True
     elif tag == "cant" and len(p) > 3:
+        st.acted = True
         if p[3] == "recharge":
             st.recharge = False
         if p[3] == "slp" and sp in st.sleep:
             st.sleep[sp][0] += 1
-        if st.taunt is not None:
-            st.taunt += 1
     elif tag == "move" and len(p) > 3:
         mv = to_id(p[3])
         st.just_moved = sp
+        st.acted = True
         st.recharge = False
         sides["p2" if p[2][:2] == "p1" else "p1"].just_moved = ""
-        called = any(x.startswith("[from]") for x in p[4:])
-        if not called:
-            if st.taunt is not None:
-                st.taunt += 1
-            if st.encore is not None:
-                st.encore += 1
         if mv == "wish" and st.wish is None and "[still]" not in p:
             st.wish = (2, sp)
     elif tag == "-fail" and len(p) > 3 and to_id(p[3].replace("move: ", "")) == "wish":
@@ -224,9 +226,9 @@ def _feed(sides: dict, p: list[str]) -> None:
         if what == "confusion":
             st.confusion = 0
         elif what == "taunt":
-            st.taunt = 0
+            st.taunt = -1 if st.acted else 0
         elif what == "encore":
-            st.encore = 0
+            st.encore = -1 if st.acted else 0
         elif what == "yawn":
             st.yawn = 0
         elif what == "futuresight":  # by the user: its side's attack is pending

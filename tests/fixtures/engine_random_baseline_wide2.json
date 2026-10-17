@@ -134,9 +134,6 @@
 "b246-t13": [
 "boost.atk"
 ],
-"b250-t17": [
-"volatile.taunt"
-],
 "b253-t17": [
 "light_screen"
 ],
@@ -152,9 +149,6 @@
 ],
 "b258-t27": [
 "status"
-],
-"b26-t7": [
-"volatile.encore"
 ],
 "b270-t20": [
 "hp"

@@ -174,7 +174,18 @@ def test_confusion_taunt_encore_yawn():
 """
     )
     assert t["p1"].confusion == 1 and t["p1"].yawn == 1
-    assert t["p2"].taunt == 1 and t["p2"].encore == 1
+    assert t["p2"].taunt == 2 and t["p2"].encore == 2  # (ends of turn: L89, L90)
+    t = run(
+        START
+        + """
+|move|p2a: Bob|Earthquake|p1a: Fishy
+|move|p1a: Fishy|Encore|p2a: Bob
+|-start|p2a: Bob|Encore
+|upkeep
+|turn|2
+"""
+    )
+    assert t["p2"].encore == 0  # it had moved: one more turn (Showdown's duration 4)
     t = run(
         START
         + """

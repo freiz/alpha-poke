@@ -66,9 +66,6 @@
 "b161-t42": [
 "hp"
 ],
-"b161-t47": [
-"volatile.encore"
-],
 "b161-t51": [
 "boost.evasion",
 "volatile.minimize"
@@ -95,10 +92,6 @@
 ],
 "b180-t13": [
 "boost.def"
-],
-"b188-t10": [
-"boost.def",
-"boost.spd"
 ],
 "b188-t7": [
 "active",
@@ -252,9 +245,6 @@
 "b98-t51": [
 "hp",
 "item"
-],
-"b99-t20": [
-"volatile.flashfire"
 ]
 }
 }

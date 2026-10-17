@@ -834,6 +834,38 @@ fn get_instructions_from_volatile_statuses(
         side.volatile_statuses
             .insert(volatile_status.volatile_status);
         incoming_instructions.instruction_list.push(ins);
+        // alpha-poke patch (2026-10-16, doc/engine-diff.md L89): Encore ends at its third end of
+        // turn, its fourth if the target had moved (Showdown's duration 3, + 1): the count starts
+        // at 0 / -1
+        // (L90: Taunt too, though not for a target that came in this turn: Showdown's activeTurns)
+        if matches!(
+            volatile_status.volatile_status,
+            PokemonVolatileStatus::ENCORE | PokemonVolatileStatus::TAUNT
+        ) {
+            let v = volatile_status.volatile_status;
+            let came_in = matches!(side.last_used_move, LastUsedMove::Switch(_));
+            let moved = (target_side == *attacking_side_reference || !attacker_choice.first_move)
+                && !(v == PokemonVolatileStatus::TAUNT && came_in);
+            let value: i8 = if moved { -1 } else { 0 };
+            let current = if v == PokemonVolatileStatus::ENCORE {
+                &mut side.volatile_status_durations.encore
+            } else {
+                &mut side.volatile_status_durations.taunt
+            };
+            let amount = value - *current;
+            if amount != 0 {
+                *current = value;
+                incoming_instructions.instruction_list.push(
+                    Instruction::ChangeVolatileStatusDuration(
+                        ChangeVolatileStatusDurationInstruction {
+                            side_ref: target_side,
+                            volatile_status: v,
+                            amount,
+                        },
+                    ),
+                );
+            }
+        }
         // alpha-poke patch (2026-10-16, doc/engine-diff.md L24): Destiny Knot, the holder's
         // infatuation goes to the foe that caused it too
         if volatile_status.volatile_status == PokemonVolatileStatus::ATTRACT
@@ -2584,10 +2616,15 @@ fn cannot_use_move(state: &State, choice: &Choice, attacking_side_ref: &SideRefe
     }
 
     // If you were taunted, you can't use a Physical/Special move
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L90): the move's own category (an attack
+    // into Water Absorb, Volt Absorb, ... is a status move by now)
     if attacking_side
         .volatile_statuses
         .contains(&PokemonVolatileStatus::TAUNT)
-        && matches!(choice.category, MoveCategory::Status)
+        && MOVES
+            .get(&choice.move_id)
+            .map_or(choice.category, |m| m.category)
+            == MoveCategory::Status
     {
         return true;
     } else if attacking_side
@@ -3153,98 +3190,12 @@ pub fn generate_instructions_from_move(
             _ => panic!("Encore should not be active when last used move is not a move"),
         }
 
-        // this value is incremented when an encored move has been used
-        // the value being 2 means we are currently using the 3rd move so we can remove it
-        #[cfg(not(feature = "gen4"))]
-        if side.volatile_status_durations.encore == 2 {
-            incoming_instructions
-                .instruction_list
-                .push(Instruction::RemoveVolatileStatus(
-                    RemoveVolatileStatusInstruction {
-                        side_ref: attacking_side,
-                        volatile_status: PokemonVolatileStatus::ENCORE,
-                    },
-                ));
-            incoming_instructions
-                .instruction_list
-                .push(Instruction::ChangeVolatileStatusDuration(
-                    ChangeVolatileStatusDurationInstruction {
-                        side_ref: attacking_side,
-                        volatile_status: PokemonVolatileStatus::ENCORE,
-                        amount: -2,
-                    },
-                ));
-            side.volatile_status_durations.encore = 0;
-            side.volatile_statuses
-                .remove(&PokemonVolatileStatus::ENCORE);
-        } else {
-            incoming_instructions
-                .instruction_list
-                .push(Instruction::ChangeVolatileStatusDuration(
-                    ChangeVolatileStatusDurationInstruction {
-                        side_ref: attacking_side,
-                        volatile_status: PokemonVolatileStatus::ENCORE,
-                        amount: 1,
-                    },
-                ));
-            side.volatile_status_durations.encore += 1;
-        }
+        // alpha-poke patch (2026-10-16, doc/engine-diff.md L89): Encore's count is its ends of
+        // turn (add_end_of_turn_instructions), not the encored moves
     }
 
-    #[cfg(not(feature = "gen4"))]
-    if side
-        .volatile_statuses
-        .contains(&PokemonVolatileStatus::TAUNT)
-    {
-        match side.volatile_status_durations.taunt {
-            0 | 1 => {
-                incoming_instructions.instruction_list.push(
-                    Instruction::ChangeVolatileStatusDuration(
-                        ChangeVolatileStatusDurationInstruction {
-                            side_ref: attacking_side,
-                            volatile_status: PokemonVolatileStatus::TAUNT,
-                            amount: 1,
-                        },
-                    ),
-                );
-                side.volatile_status_durations.taunt += 1;
-            }
-
-            // Technically taunt is removed at the end of the turn but because we are already
-            // dealing with taunt here we can save a check at the end of the turn
-            // This shouldn't change anything because taunt only affects which move is selected
-            // and by this point a move has been chosen
-            2 => {
-                side.volatile_statuses.remove(&PokemonVolatileStatus::TAUNT);
-                incoming_instructions
-                    .instruction_list
-                    .push(Instruction::RemoveVolatileStatus(
-                        RemoveVolatileStatusInstruction {
-                            side_ref: attacking_side,
-                            volatile_status: PokemonVolatileStatus::TAUNT,
-                        },
-                    ));
-                incoming_instructions.instruction_list.push(
-                    Instruction::ChangeVolatileStatusDuration(
-                        ChangeVolatileStatusDurationInstruction {
-                            side_ref: attacking_side,
-                            volatile_status: PokemonVolatileStatus::TAUNT,
-                            amount: -2,
-                        },
-                    ),
-                );
-                side.volatile_status_durations.taunt = 0;
-                state.re_enable_disabled_moves(
-                    &attacking_side,
-                    &mut incoming_instructions.instruction_list,
-                );
-            }
-            _ => panic!(
-                "Taunt duration cannot be {} when taunt volatile is active",
-                side.volatile_status_durations.taunt
-            ),
-        }
-    }
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L90): Taunt's count is its ends of turn
+    // (add_end_of_turn_instructions), not the taunted moves
 
     // alpha-poke patch (2026-10-11): ejected (Eject Button) by the first move before moving: the
     // holder switches out instead of moving
@@ -5247,6 +5198,48 @@ fn add_end_of_turn_instructions(
                             side_ref: *side_ref,
                             volatile_status: PokemonVolatileStatus::LOCKEDMOVE,
                             amount: 1,
+                        },
+                    ),
+                );
+            }
+        }
+
+        // alpha-poke patch (2026-10-16, doc/engine-diff.md L89 / L90): Encore's and Taunt's ends of
+        // turn; at 3 they end
+        #[cfg(not(feature = "gen4"))]
+        for v in [PokemonVolatileStatus::ENCORE, PokemonVolatileStatus::TAUNT] {
+            if !side.volatile_statuses.contains(&v) {
+                continue;
+            }
+            let count = if v == PokemonVolatileStatus::ENCORE {
+                &mut side.volatile_status_durations.encore
+            } else {
+                &mut side.volatile_status_durations.taunt
+            };
+            let (amount, ends) = if *count + 1 >= 3 {
+                (-*count, true)
+            } else {
+                (1, false)
+            };
+            *count += amount;
+            if ends {
+                side.volatile_statuses.remove(&v);
+                incoming_instructions
+                    .instruction_list
+                    .push(Instruction::RemoveVolatileStatus(
+                        RemoveVolatileStatusInstruction {
+                            side_ref: *side_ref,
+                            volatile_status: v,
+                        },
+                    ));
+            }
+            if amount != 0 {
+                incoming_instructions.instruction_list.push(
+                    Instruction::ChangeVolatileStatusDuration(
+                        ChangeVolatileStatusDurationInstruction {
+                            side_ref: *side_ref,
+                            volatile_status: v,
+                            amount,
                         },
                     ),
                 );
