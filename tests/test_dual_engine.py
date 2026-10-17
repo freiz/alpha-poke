@@ -1128,3 +1128,83 @@ def test_l24_utility_umbrella():
     states, res = _item_turn(p1, _corviknight("Utility Umbrella"), [("move surf", "move defog")],
                              ("surf", "defog"))  # fmt: skip
     assert res["diff"] == {}
+
+
+def _engine_first_chance(state, c1, c2) -> float:
+    """The engine's chance that side one moves first (its first Acted marker)."""
+    total = 0.0
+    for si in pe.generate_instructions(state, c1, c2):
+        first = next((str(i) for i in si.instruction_list if str(i).startswith("Acted")), "")
+        if "SideOne" in first:
+            total += si.percentage / 100
+    return total
+
+
+def test_l24_quick_claw():
+    """A 1/5 chance to move first in its priority bracket (Showdown's rate counted over 1,000
+    seeds): the slower Ferrothorn against Ting-Lu."""
+    p1 = FERROTHORN.replace("@ Rocky Helmet", "@ Quick Claw")
+    turns = [("move gyroball", "move spikes")]
+    rate = ec.showdown_rate(p1, TINGLU, turns, "|-activate|p1a: Ferrothorn|item: Quick Claw", 1000)
+    states = ec.run_showdown(p1, TINGLU, turns)
+    assert _engine_first_chance(ec.engine_state(states[0]), "gyroball", "spikes") == pytest.approx(rate, abs=0.03)
+
+
+PIKACHU_BAND = """Pikachu @ Focus Band
+Ability: Static
+Level: 1
+- Thunder Shock
+- Quick Attack
+- Growl
+- Tail Whip"""
+
+
+def test_l24_focus_band():
+    """A 1/10 chance to survive a knockout hit at 1 HP (Showdown's rate over 1,000 seeds):
+    a level-1 Pikachu takes Blissey's Seismic Toss."""
+    turns = [("move growl", "move seismictoss")]
+    rate = ec.showdown_rate(PIKACHU_BAND, BLISSEY_TOSS_SET, turns, "item: Focus Band", 1000)
+    states = ec.run_showdown(PIKACHU_BAND, BLISSEY_TOSS_SET, turns)
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "growl", "seismictoss")
+    survived = sum(o[0] for o in outs if o[1].side_one.pokemon[0].hp == 1)
+    assert survived == pytest.approx(rate, abs=0.03), rate
+
+
+BLISSEY_TOSS_SET = BLISSEY
+
+
+def test_l24_starf_berry():
+    """At 1/4 HP: a random stat of the five +2 (Showdown's sample), one outcome per stat with a
+    fifth of the chance each; Showdown's own pick is one of them."""
+    turns = [("move defog", "move ruination")] * 2
+    states = ec.run_showdown(_corviknight("Starf Berry"), TINGLU_HITS, turns, seed="gen5,5,5,5,5")
+    m = states[2]["sides"][0]["mons"][0]
+    assert m["item"] == "" and sorted(m["boosts"].values())[-1] == 2  # Showdown: eaten, +2
+    outs = ec.engine_outcomes(ec.engine_state(states[1]), "defog", "ruination")
+    assert ec.closest(states[2], outs, (1, 1), hp=True)["diff"] == {}
+    boosted = {}
+    for p, s in outs:
+        b = {k: getattr(s.side_one, a) for k, a in (("atk", "attack_boost"), ("def", "defense_boost"),
+             ("spa", "special_attack_boost"), ("spd", "special_defense_boost"), ("spe", "speed_boost"))}  # fmt: skip
+        for k, v in b.items():
+            if v == 2:
+                boosted[k] = boosted.get(k, 0) + p
+    hit = sum(boosted.values())
+    assert set(boosted) == {"atk", "def", "spa", "spd", "spe"}
+    assert all(v == pytest.approx(hit / 5, abs=1e-4) for v in boosted.values())
+
+
+# L29 (doc/engine-diff.md): fixed in rust/patches (2026-10-16; exposed by Quick Claw: the random
+# differential's baseline check showed b48-t19, Rocky Helmet twice)
+def test_l29_speed_tie_branches_do_not_share_choices():
+    """Two Corviknight of equal Speed: whichever moves first, Brave Bird into Rocky Helmet hurts
+    the user once (the engine computed the second order with the move the first one had
+    already given the helmet's damage to)."""
+    p2 = CORVIKNIGHT.replace("@ Leftovers", "@ Rocky Helmet")
+    orders = set()
+    for seed in ("gen5,40503,9973,31337,7919", "gen5,55973,29919,28475,23757"):  # p1, p2 first
+        states = ec.run_showdown(CORVIKNIGHT, p2, [("move bravebird", "move roost")], seed=seed)
+        orders.add(_first_mover_showdown(states))
+        outs = ec.engine_outcomes(ec.engine_state(states[0]), "bravebird", "roost")
+        assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}, seed
+    assert orders == {"p1", "p2"}  # Showdown: both tie orders among the seeds

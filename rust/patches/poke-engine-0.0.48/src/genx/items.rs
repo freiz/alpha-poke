@@ -338,6 +338,12 @@ define_enum_with_from_str! {
         RAZORFANG,
         // the holder's foes' sun / rain damage modifiers (damage_calc)
         UTILITYUMBRELLA,
+        // generate_instructions::quick_claw_first_chance
+        QUICKCLAW,
+        // generate_instructions_from_move: a 1/10 survival branch
+        FOCUSBAND,
+        // generate_instructions::starf_berry_branches
+        STARFBERRY,
     },
     default = UNKNOWNITEM
 }

@@ -1409,6 +1409,77 @@ pub fn big_root(amount: i16) -> i16 {
     ((amount as i32 * 5324 + 2047) / 4096) as i16
 }
 
+// alpha-poke patch (2026-10-16, doc/engine-diff.md L24): Starf Berry, eaten when a hit takes its
+// holder to 1/4 HP or less (Showdown's onUpdate; at 1/2 with Gluttony): a random stat of the
+// five not at +6 gets +2, so each outcome from `from` on splits into one per such stat, with an
+// equal share of its chance
+fn starf_berry_branches(
+    state: &mut State,
+    final_instructions: &mut Vec<StateInstructions>,
+    from: usize,
+) {
+    let new: Vec<StateInstructions> = final_instructions.drain(from..).collect();
+    for si in new {
+        state.apply_instructions(&si.instruction_list);
+        let mut branches = vec![si.clone()];
+        for side_ref in [SideReference::SideOne, SideReference::SideTwo] {
+            let side = state.get_side_immutable(&side_ref);
+            let active = side.get_active_immutable();
+            let low = active.hp <= active.maxhp / 4
+                || (active.ability == Abilities::GLUTTONY && active.hp <= active.maxhp / 2);
+            if active.item != Items::STARFBERRY || active.hp == 0 || !low {
+                continue;
+            }
+            let stats: Vec<(PokemonBoostableStat, i8)> = [
+                (PokemonBoostableStat::Attack, side.attack_boost),
+                (PokemonBoostableStat::Defense, side.defense_boost),
+                (
+                    PokemonBoostableStat::SpecialAttack,
+                    side.special_attack_boost,
+                ),
+                (
+                    PokemonBoostableStat::SpecialDefense,
+                    side.special_defense_boost,
+                ),
+                (PokemonBoostableStat::Speed, side.speed_boost),
+            ]
+            .iter()
+            .copied()
+            .filter(|(_, b)| *b < 6)
+            .collect();
+            let eat = Instruction::ChangeItem(ChangeItemInstruction {
+                side_ref,
+                current_item: Items::STARFBERRY,
+                new_item: Items::NONE,
+            });
+            let mut next = vec![];
+            for b in branches {
+                if stats.is_empty() {
+                    let mut c = b.clone();
+                    c.instruction_list.push(eat.clone());
+                    next.push(c);
+                    continue;
+                }
+                for (stat, current) in stats.iter() {
+                    let mut c = b.clone();
+                    c.update_percentage(1.0 / stats.len() as f32);
+                    c.instruction_list
+                        .push(Instruction::Boost(BoostInstruction {
+                            side_ref,
+                            stat: *stat,
+                            amount: cmp::min(2, 6 - current),
+                        }));
+                    c.instruction_list.push(eat.clone());
+                    next.push(c);
+                }
+            }
+            branches = next;
+        }
+        state.reverse_instructions(&si.instruction_list);
+        final_instructions.extend(branches);
+    }
+}
+
 fn check_move_hit_or_miss(
     state: &mut State,
     choice: &Choice,
@@ -2883,6 +2954,41 @@ pub fn generate_instructions_from_move(
         }
     }
 
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L24): Focus Band, a 1/10 chance to survive
+    // a hit that would knock its holder out, at 1 HP (Showdown's onDamage; not through a
+    // Substitute): a knockout path splits into 9/10 and 1/10 with the damage the HP less 1
+    let band_hp = {
+        let side = state.get_side_immutable(&attacking_side.get_other_side());
+        let defender = side.get_active_immutable();
+        let behind_sub = side
+            .volatile_statuses
+            .contains(&PokemonVolatileStatus::SUBSTITUTE)
+            && !choice.flags.sound;
+        if does_damage && defender.item == Items::FOCUSBAND && defender.hp > 0 && !behind_sub {
+            Some(defender.hp)
+        } else {
+            None
+        }
+    };
+    let band_split = |ins: &mut StateInstructions, damage: i16| -> Option<StateInstructions> {
+        let hp = band_hp?;
+        if damage as i32 * hit_count as i32 >= hp as i32 && ins.percentage > 0.0 {
+            let mut survive = ins.clone();
+            survive.update_percentage(0.1);
+            ins.update_percentage(0.9);
+            Some(survive)
+        } else {
+            None
+        }
+    };
+    let regular_band = band_split(&mut incoming_instructions, regular_damage);
+    let mut branch_instructions = branch_instructions;
+    let branch_band = match branch_instructions.as_mut() {
+        Some(b) => band_split(b, branch_damage),
+        None => None,
+    };
+
+    let starf_from = final_instructions.len();
     if incoming_instructions.percentage != 0.0 {
         run_move(
             state,
@@ -2916,6 +3022,26 @@ pub fn generate_instructions_from_move(
             );
         }
     }
+
+    // L24: the Focus Band paths (one hit for the HP less 1)
+    for survive in vec![regular_band, branch_band].into_iter().flatten() {
+        let hp = band_hp.unwrap();
+        state.apply_instructions(&survive.instruction_list);
+        run_move(
+            state,
+            attacking_side,
+            survive,
+            1,
+            does_damage,
+            hp - 1,
+            choice,
+            defender_choice,
+            &mut final_instructions,
+        );
+    }
+
+    // L24: Starf Berry after each hit
+    starf_berry_branches(state, &mut final_instructions, starf_from);
 
     combine_duplicate_instructions(&mut final_instructions);
     return;
@@ -3034,6 +3160,45 @@ fn modify_choice_priority(state: &State, side_reference: &SideReference, choice:
         Abilities::TRIAGE if choice.flags.heal => choice.priority += 3,
         _ => {}
     }
+}
+
+// alpha-poke patch (2026-10-16, doc/engine-diff.md L24): the chance side one moves first, with
+// Quick Claw (Showdown's onFractionalPriority: a 1/5 chance each, at priority 0 or less, of +0.1:
+// one alone that procs goes first, both or neither leave it to the speeds)
+fn quick_claw_first_chance(
+    state: &State,
+    side_one_choice: &Choice,
+    side_two_choice: &Choice,
+    order: &SideMovesFirst,
+    custap: bool,
+) -> f32 {
+    let base = match order {
+        SideMovesFirst::SideOne => 1.0,
+        SideMovesFirst::SideTwo => 0.0,
+        SideMovesFirst::SpeedTie => 0.5,
+    };
+    let either_switches = side_one_choice.category == MoveCategory::Switch
+        || side_two_choice.category == MoveCategory::Switch;
+    if custap || either_switches || side_one_choice.priority != side_two_choice.priority {
+        return base;
+    }
+    let procs = |side: &Side, choice: &Choice| -> f32 {
+        let active = side.get_active_immutable();
+        if active.item == Items::QUICKCLAW
+            && choice.priority <= 0
+            && !(choice.category == MoveCategory::Status
+                && active.ability == Abilities::MYCELIUMMIGHT)
+        {
+            0.2
+        } else {
+            0.0
+        }
+    };
+    let (a1, a2) = (
+        procs(&state.side_one, side_one_choice),
+        procs(&state.side_two, side_two_choice),
+    );
+    a1 * (1.0 - a2) + (a1 * a2 + (1.0 - a1) * (1.0 - a2)) * base
 }
 
 fn moves_first(
@@ -5015,12 +5180,26 @@ pub fn generate_instructions_from_move_pair(
     // reverse instructions because mega-evolving might've added some
     state.reverse_instructions(&incoming_instructions.instruction_list);
 
-    match moves_first(
+    let items_before = incoming_instructions.instruction_list.len();
+    let order = moves_first(
         &state,
         &side_one_choice,
         &side_two_choice,
         &mut incoming_instructions,
-    ) {
+    );
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L24): Quick Claw, a 1/5 chance to move
+    // first in the priority bracket (not after a Custap Berry: moves_first used it, an instruction)
+    let custap = incoming_instructions.instruction_list.len() > items_before;
+    let side_one_first =
+        quick_claw_first_chance(&state, &side_one_choice, &side_two_choice, &order, custap);
+    let order = if side_one_first >= 1.0 {
+        SideMovesFirst::SideOne
+    } else if side_one_first <= 0.0 {
+        SideMovesFirst::SideTwo
+    } else {
+        SideMovesFirst::SpeedTie
+    };
+    match order {
         SideMovesFirst::SideOne => {
             handle_both_moves(
                 state,
@@ -5067,9 +5246,14 @@ pub fn generate_instructions_from_move_pair(
             }
         }
         SideMovesFirst::SpeedTie => {
+            // alpha-poke patch (2026-10-16, doc/engine-diff.md L29): the second order gets the moves
+            // as they were (handle_both_moves changes them: an item's added secondaries, Rocky
+            // Helmet's, came twice); before, both orders used the same ones
+            let (mut side_one_choice_2, mut side_two_choice_2) =
+                (side_one_choice.clone(), side_two_choice.clone());
             let mut side_one_moves_first_instruction = incoming_instructions.clone();
-            incoming_instructions.update_percentage(0.5);
-            side_one_moves_first_instruction.update_percentage(0.5);
+            incoming_instructions.update_percentage(1.0 - side_one_first);
+            side_one_moves_first_instruction.update_percentage(side_one_first);
 
             // side_one moves first
             handle_both_moves(
@@ -5097,8 +5281,8 @@ pub fn generate_instructions_from_move_pair(
             let mut side_two_moves_first_si = Vec::with_capacity(4);
             handle_both_moves(
                 state,
-                &mut side_two_choice,
-                &mut side_one_choice,
+                &mut side_two_choice_2,
+                &mut side_one_choice_2,
                 SideReference::SideTwo,
                 incoming_instructions,
                 &mut side_two_moves_first_si,
