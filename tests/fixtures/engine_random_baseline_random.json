@@ -21,31 +21,10 @@
 "speed",
 "weight"
 ],
-"b1-t1": [
-"last_item"
-],
-"b1-t18": [
-"last_item"
-],
 "b10-t4": [
 "base_ability"
 ],
 "b100-t37": [
-"last_item"
-],
-"b100-t5": [
-"last_item"
-],
-"b101-t1": [
-"last_item"
-],
-"b101-t11": [
-"last_item"
-],
-"b101-t24": [
-"last_item"
-],
-"b103-t2": [
 "last_item"
 ],
 "b103-t20": [
@@ -63,42 +42,15 @@
 "b103-t36": [
 "sc.protect"
 ],
-"b104-t29": [
-"last_item"
-],
 "b105-t14": [
 "base_ability",
 "id"
 ],
-"b106-t12": [
-"last_item"
-],
-"b106-t4": [
-"last_item"
-],
-"b107-t4": [
-"last_item"
-],
-"b108-t20": [
-"last_item"
-],
-"b108-t4": [
-"last_item"
-],
 "b11-t8": [
 "last_used_move"
 ],
-"b11-t9": [
-"last_item"
-],
-"b110-t19": [
-"last_item"
-],
 "b111-t20": [
 "count.disable"
-],
-"b112-t22": [
-"last_item"
 ],
 "b113-t2": [
 "hp"
@@ -106,15 +58,9 @@
 "b113-t3": [
 "hp"
 ],
-"b114-t18": [
-"last_item"
-],
 "b114-t5": [
 "boost.spe",
 "hp"
-],
-"b115-t6": [
-"last_item"
 ],
 "b116-t21": [
 "options"
@@ -141,12 +87,6 @@
 "b125-t16": [
 "hp"
 ],
-"b125-t2": [
-"last_item"
-],
-"b125-t4": [
-"last_item"
-],
 "b126-t28": [
 "boost.evasion"
 ],
@@ -159,23 +99,8 @@
 "b127-t12": [
 "options"
 ],
-"b128-t1": [
-"last_item"
-],
-"b129-t10": [
-"last_item"
-],
-"b13-t11": [
-"last_item"
-],
 "b13-t24": [
 "options"
-],
-"b130-t15": [
-"last_item"
-],
-"b130-t4": [
-"last_item"
 ],
 "b131-t15": [
 "base_ability",
@@ -187,9 +112,6 @@
 ],
 "b131-t4": [
 "options"
-],
-"b132-t20": [
-"last_item"
 ],
 "b132-t25": [
 "last_used_move"
@@ -203,14 +125,8 @@
 "b132-t45": [
 "options"
 ],
-"b133-t25": [
-"last_item"
-],
 "b134-t39": [
 "last_used_move"
-],
-"b134-t4": [
-"last_item"
 ],
 "b135-t2": [
 "pp"
@@ -218,14 +134,8 @@
 "b135-t4": [
 "pp"
 ],
-"b135-t7": [
-"last_item"
-],
 "b136-t33": [
 "last_used_move"
-],
-"b136-t6": [
-"last_item"
 ],
 "b137-t5": [
 "sc.protect"
@@ -234,20 +144,8 @@
 "base_ability",
 "id"
 ],
-"b138-t7": [
-"last_item"
-],
-"b139-t30": [
-"last_item"
-],
 "b14-t18": [
 "pp"
-],
-"b14-t24": [
-"last_item"
-],
-"b14-t3": [
-"last_item"
 ],
 "b140-t16": [
 "weight"
@@ -264,9 +162,6 @@
 "b140-t6": [
 "weight"
 ],
-"b141-t8": [
-"last_item"
-],
 "b142-t6": [
 "base_ability"
 ],
@@ -282,32 +177,17 @@
 "b144-t48": [
 "options"
 ],
-"b144-t8": [
-"last_item"
-],
-"b145-t57": [
-"last_item"
-],
 "b147-t20": [
 "options"
 ],
-"b15-t6": [
-"last_item"
-],
 "b150-t24": [
 "pp"
-],
-"b150-t35": [
-"last_item"
 ],
 "b150-t4": [
 "pp"
 ],
 "b150-t8": [
 "options"
-],
-"b151-t12": [
-"last_item"
 ],
 "b151-t5": [
 "options"
@@ -320,9 +200,6 @@
 ],
 "b153-t7": [
 "last_used_move"
-],
-"b154-t3": [
-"last_item"
 ],
 "b156-t29": [
 "options"
@@ -338,17 +215,11 @@
 "must_switch",
 "pp"
 ],
-"b158-t7": [
-"last_item"
-],
 "b159-t18": [
 "base_ability"
 ],
 "b16-t13": [
 "options"
-],
-"b16-t4": [
-"last_item"
 ],
 "b160-t23": [
 "base_ability"
@@ -365,23 +236,11 @@
 "b162-t17": [
 "options"
 ],
-"b162-t23": [
-"last_item"
-],
-"b163-t11": [
-"last_item"
-],
 "b163-t46": [
 "options"
 ],
 "b164-t10": [
 "options"
-],
-"b164-t13": [
-"last_item"
-],
-"b165-t15": [
-"last_item"
 ],
 "b165-t19": [
 "attack",
@@ -402,31 +261,7 @@
 "speed",
 "weight"
 ],
-"b166-t10": [
-"last_item"
-],
-"b166-t17": [
-"last_item"
-],
-"b166-t2": [
-"last_item"
-],
-"b168-t5": [
-"last_item"
-],
-"b169-t19": [
-"last_item"
-],
-"b169-t2": [
-"last_item"
-],
 "b169-t24": [
-"last_item"
-],
-"b17-t7": [
-"last_item"
-],
-"b17-t9": [
 "last_item"
 ],
 "b170-t10": [
@@ -450,20 +285,11 @@
 "b171-t57": [
 "pp"
 ],
-"b171-t9": [
-"last_item"
-],
-"b175-t24": [
-"last_item"
-],
 "b175-t29": [
 "last_used_move"
 ],
 "b175-t38": [
 "options"
-],
-"b175-t9": [
-"last_item"
 ],
 "b176-t25": [
 "trick_room"
@@ -472,7 +298,6 @@
 "sc.toxic_count"
 ],
 "b176-t46": [
-"last_item",
 "sc.toxic_count"
 ],
 "b176-t47": [
@@ -485,17 +310,8 @@
 "b178-t7": [
 "pp"
 ],
-"b18-t15": [
-"last_item"
-],
 "b18-t30": [
 "last_used_move"
-],
-"b180-t13": [
-"last_item"
-],
-"b181-t18": [
-"last_item"
 ],
 "b181-t22": [
 "options"
@@ -505,12 +321,6 @@
 ],
 "b184-t17": [
 "pp"
-],
-"b184-t20": [
-"last_item"
-],
-"b184-t45": [
-"last_item"
 ],
 "b184-t5": [
 "hp",
@@ -542,26 +352,14 @@
 "b187-t5": [
 "options"
 ],
-"b187-t6": [
-"last_item"
-],
-"b188-t1": [
-"last_item"
-],
 "b188-t15": [
 "options"
 ],
 "b188-t4": [
 "options"
 ],
-"b189-t11": [
-"last_item"
-],
 "b189-t18": [
 "pp"
-],
-"b19-t3": [
-"last_item"
 ],
 "b191-t19": [
 "pp"
@@ -569,26 +367,11 @@
 "b192-t18": [
 "options"
 ],
-"b192-t45": [
-"last_item"
-],
 "b192-t55": [
 "last_used_move"
 ],
 "b192-t56": [
 "last_used_move"
-],
-"b193-t14": [
-"last_item"
-],
-"b193-t8": [
-"last_item"
-],
-"b194-t17": [
-"last_item"
-],
-"b196-t8": [
-"last_item"
 ],
 "b197-t21": [
 "status"
@@ -645,39 +428,18 @@
 "speed",
 "weight"
 ],
-"b21-t8": [
-"last_item"
-],
-"b22-t10": [
-"last_item"
-],
-"b22-t30": [
-"last_item"
-],
 "b22-t5": [
 "last_used_move"
 ],
 "b23-t31": [
 "pp"
 ],
-"b24-t11": [
-"last_item"
-],
-"b24-t2": [
-"last_item"
-],
 "b25-t13": [
 "options"
-],
-"b26-t1": [
-"last_item"
 ],
 "b26-t12": [
 "hp",
 "id"
-],
-"b27-t15": [
-"last_item"
 ],
 "b27-t24": [
 "last_used_move"
@@ -697,17 +459,8 @@
 "b29-t9": [
 "options"
 ],
-"b31-t11": [
-"last_item"
-],
 "b32-t19": [
 "base_ability"
-],
-"b33-t3": [
-"last_item"
-],
-"b34-t15": [
-"last_item"
 ],
 "b34-t33": [
 "pp"
@@ -724,45 +477,18 @@
 "b34-t8": [
 "options"
 ],
-"b35-t15": [
-"last_item"
-],
 "b35-t38": [
 "options"
-],
-"b36-t8": [
-"last_item"
 ],
 "b36-t9": [
 "base_ability",
 "id"
-],
-"b37-t1": [
-"last_item"
-],
-"b38-t10": [
-"last_item"
-],
-"b38-t13": [
-"last_item"
-],
-"b39-t10": [
-"last_item"
-],
-"b4-t18": [
-"last_item"
 ],
 "b4-t38": [
 "options"
 ],
 "b4-t51": [
 "pp"
-],
-"b40-t8": [
-"last_item"
-],
-"b41-t11": [
-"last_item"
 ],
 "b42-t19": [
 "options"
@@ -775,9 +501,6 @@
 ],
 "b42-t27": [
 "options"
-],
-"b44-t2": [
-"last_item"
 ],
 "b44-t31": [
 "status"
@@ -812,29 +535,11 @@
 "b46-t16": [
 "sc.protect"
 ],
-"b46-t31": [
-"last_item"
-],
-"b47-t16": [
-"last_item"
-],
 "b47-t17": [
 "base_ability"
 ],
-"b47-t2": [
-"last_item"
-],
 "b48-t18": [
 "options"
-],
-"b48-t19": [
-"last_item"
-],
-"b49-t11": [
-"last_item"
-],
-"b49-t13": [
-"last_item"
 ],
 "b5-t34": [
 "count.disable"
@@ -846,14 +551,7 @@
 "hp"
 ],
 "b51-t9": [
-"last_item",
 "options"
-],
-"b52-t1": [
-"last_item"
-],
-"b52-t20": [
-"last_item"
 ],
 "b53-t11": [
 "last_used_move",
@@ -870,12 +568,6 @@
 ],
 "b54-t8": [
 "pp"
-],
-"b55-t1": [
-"last_item"
-],
-"b55-t16": [
-"last_item"
 ],
 "b55-t31": [
 "last_used_move"
@@ -917,29 +609,17 @@
 "speed",
 "weight"
 ],
-"b6-t8": [
-"last_item"
-],
 "b60-t1": [
 "options"
 ],
 "b61-t29": [
 "last_used_move"
 ],
-"b61-t36": [
-"last_item"
-],
 "b62-t26": [
 "status"
 ],
 "b62-t3": [
 "weight"
-],
-"b62-t4": [
-"last_item"
-],
-"b63-t18": [
-"last_item"
 ],
 "b63-t45": [
 "sc.toxic_count"
@@ -983,9 +663,6 @@
 "b63-t60": [
 "sc.toxic_count"
 ],
-"b64-t24": [
-"last_item"
-],
 "b68-t1": [
 "last_used_move"
 ],
@@ -1001,12 +678,6 @@
 "b7-t13": [
 "status"
 ],
-"b7-t19": [
-"last_item"
-],
-"b71-t2": [
-"last_item"
-],
 "b71-t22": [
 "count.taunt"
 ],
@@ -1019,12 +690,6 @@
 "b72-t58": [
 "options"
 ],
-"b73-t7": [
-"last_item"
-],
-"b74-t11": [
-"last_item"
-],
 "b74-t7": [
 "last_used_move"
 ],
@@ -1033,9 +698,6 @@
 ],
 "b74-t9": [
 "last_used_move"
-],
-"b75-t7": [
-"last_item"
 ],
 "b76-t11": [
 "last_used_move",
@@ -1054,18 +716,9 @@
 "b76-t4": [
 "last_used_move"
 ],
-"b78-t1": [
-"last_item"
-],
 "b79-t23": [
 "base_ability",
 "id"
-],
-"b79-t9": [
-"last_item"
-],
-"b80-t10": [
-"last_item"
 ],
 "b81-t48": [
 "pp"
@@ -1073,15 +726,9 @@
 "b81-t59": [
 "last_used_move"
 ],
-"b82-t12": [
-"last_item"
-],
 "b82-t3": [
 "base_ability",
 "id"
-],
-"b83-t23": [
-"last_item"
 ],
 "b84-t18": [
 "count.disable"
@@ -1090,33 +737,19 @@
 "count.disable"
 ],
 "b85-t11": [
-"last_item",
 "pp"
-],
-"b85-t15": [
-"last_item"
-],
-"b86-t1": [
-"last_item"
 ],
 "b86-t10": [
 "options"
-],
-"b86-t16": [
-"last_item"
 ],
 "b87-t29": [
 "last_used_move"
 ],
 "b87-t35": [
-"last_item",
 "last_used_move"
 ],
 "b87-t54": [
 "last_used_move"
-],
-"b88-t5": [
-"last_item"
 ],
 "b89-t33": [
 "options"
@@ -1126,9 +759,6 @@
 ],
 "b9-t26": [
 "sc.toxic_count"
-],
-"b9-t3": [
-"last_item"
 ],
 "b9-t46": [
 "sc.toxic_count"
@@ -1151,35 +781,11 @@
 "b9-t53": [
 "sc.toxic_count"
 ],
-"b91-t14": [
-"last_item"
-],
-"b91-t6": [
-"last_item"
-],
 "b93-t16": [
 "base_ability"
 ],
-"b93-t22": [
-"last_item"
-],
-"b93-t4": [
-"last_item"
-],
-"b94-t18": [
-"last_item"
-],
 "b94-t19": [
 "options"
-],
-"b95-t14": [
-"last_item"
-],
-"b95-t24": [
-"last_item"
-],
-"b95-t4": [
-"last_item"
 ],
 "b95-t48": [
 "pp"
@@ -1204,9 +810,6 @@
 ],
 "b97-t33": [
 "last_used_move"
-],
-"b98-t17": [
-"last_item"
 ],
 "b98-t28": [
 "last_used_move"

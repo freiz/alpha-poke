@@ -4772,3 +4772,43 @@ def test_l177_no_second_tera_after_the_tera_mon_fainted():
     assert states[2]["sides"][0]["tera_used"]
     assert not any(o.endswith("-tera") for o in ec.showdown_options(states[2]["sides"][0]))
     assert not any(o.endswith("-tera") for o in pe.options(ec.engine_state(states[2]))[0])
+
+
+# L178 (doc/engine-diff.md): an item used up is its holder's last item (Showdown's useItem: Booster
+# Energy, Focus Sash, White Herb, Eject Button, Weakness Policy, the seeds, ...); a popped Air
+# Balloon is not (its item set to '')
+def _last_items(states, k, c1, c2, n=(1, 1)):
+    return {key: v for key, v in _full(states, k, c1, c2, n).items() if "last_item" in key}
+
+
+def test_l178_booster_energy_used_up():
+    tusk = """Great Tusk @ Booster Energy
+Ability: Protosynthesis
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- Headlong Rush
+- Rapid Spin
+- Ice Spinner
+- Knock Off"""
+    states = ec.run_showdown(BLISSEY, CORVIKNIGHT + "\n\n" + tusk, [("move calmmind", "switch 2")])
+    assert states[1]["sides"][1]["mons"][1]["last_item"] == "boosterenergy"
+    assert _last_items(states, 0, "calmmind", "greattusk", (1, 2)) == {}
+
+
+def test_l178_focus_sash_and_white_herb_used_up():
+    states = ec.run_showdown(MAGIKARP_PAWMOT.replace("Magikarp\n", "Magikarp @ Focus Sash\n"), BLISSEY,
+                             [("move splash", "move seismictoss")])  # fmt: skip
+    assert states[1]["sides"][0]["mons"][0]["last_item"] == "focussash"
+    assert _last_items(states, 0, "splash", "seismictoss", (2, 1)) == {}
+    gar = GARCHOMP_SD.replace("Garchomp @ Leftovers", "Garchomp @ White Herb").replace("- Scale Shot", "- Close Combat")
+    states = ec.run_showdown(gar, BLISSEY, [("move closecombat", "move calmmind")])
+    assert states[1]["sides"][0]["mons"][0]["last_item"] == "whiteherb"
+    assert _last_items(states, 0, "closecombat", "calmmind") == {}
+
+
+# L178's control: a popped Air Balloon is no last item
+def test_l178_air_balloon_is_not_used():
+    gar = GARCHOMP_SD.replace("Garchomp @ Leftovers", "Garchomp @ Air Balloon")
+    states = ec.run_showdown(gar, BLISSEY, [("move swordsdance", "move seismictoss")])
+    assert states[1]["sides"][0]["mons"][0]["item"] == "" and states[1]["sides"][0]["mons"][0]["last_item"] == ""
+    assert _last_items(states, 0, "swordsdance", "seismictoss") == {}

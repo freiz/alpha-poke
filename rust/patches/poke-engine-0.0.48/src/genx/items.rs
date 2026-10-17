@@ -1490,6 +1490,13 @@ pub fn terrain_seed(state: &mut State, side_ref: &SideReference, instructions: &
                             new_item: Items::NONE,
                         },
                     ));
+                    // (L178: used up, its last item: Showdown's useItem)
+                    set_last_item(
+                        state.get_side(side_ref).get_active(),
+                        *side_ref,
+                        Items::ELECTRICSEED,
+                        instructions,
+                    );
                 }
             }
         }
@@ -1511,6 +1518,13 @@ pub fn terrain_seed(state: &mut State, side_ref: &SideReference, instructions: &
                             new_item: Items::NONE,
                         },
                     ));
+                    // (L178: used up, its last item: Showdown's useItem)
+                    set_last_item(
+                        state.get_side(side_ref).get_active(),
+                        *side_ref,
+                        Items::GRASSYSEED,
+                        instructions,
+                    );
                 }
             }
         }
@@ -1532,6 +1546,13 @@ pub fn terrain_seed(state: &mut State, side_ref: &SideReference, instructions: &
                             new_item: Items::NONE,
                         },
                     ));
+                    // (L178: used up, its last item: Showdown's useItem)
+                    set_last_item(
+                        state.get_side(side_ref).get_active(),
+                        *side_ref,
+                        Items::MISTYSEED,
+                        instructions,
+                    );
                 }
             }
         }
@@ -1553,6 +1574,13 @@ pub fn terrain_seed(state: &mut State, side_ref: &SideReference, instructions: &
                             new_item: Items::NONE,
                         },
                     ));
+                    // (L178: used up, its last item: Showdown's useItem)
+                    set_last_item(
+                        state.get_side(side_ref).get_active(),
+                        *side_ref,
+                        Items::PSYCHICSEED,
+                        instructions,
+                    );
                 }
             }
         }

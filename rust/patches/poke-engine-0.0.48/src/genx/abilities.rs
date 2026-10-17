@@ -568,6 +568,13 @@ pub fn paradox_update(
                 new_item: Items::NONE,
             }));
         side.get_active().item = Items::NONE;
+        // (L178: used up, its last item: Showdown's useItem)
+        super::items::set_last_item(
+            side.get_active(),
+            *side_ref,
+            Items::BOOSTERENERGY,
+            instructions,
+        );
     }
     for v in [volatile, PokemonVolatileStatus::FROMBOOSTER] {
         if v == PokemonVolatileStatus::FROMBOOSTER && !booster {
@@ -2081,7 +2088,14 @@ pub fn ability_on_switch_in(
                     state.apply_one_instruction(&adrenaline_orb_item_instruction);
                     instructions
                         .instruction_list
-                        .push(adrenaline_orb_item_instruction)
+                        .push(adrenaline_orb_item_instruction);
+                    // (L178: used up, its last item)
+                    super::items::set_last_item(
+                        state.get_side(&foe_ref).get_active(),
+                        foe_ref,
+                        Items::ADRENALINEORB,
+                        instructions,
+                    );
                 } else if ability == Abilities::RATTLED {
                     apply_boost_instruction(
                         state.get_side(&foe_ref),

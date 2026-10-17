@@ -1271,6 +1271,13 @@ pub fn choice_before_move(
         attacker.item = Items::NONE;
         choice.flags.charge = false;
         instructions.instruction_list.push(instruction);
+        // (L178: used up, its last item)
+        super::items::set_last_item(
+            attacker,
+            *attacking_side_ref,
+            Items::POWERHERB,
+            instructions,
+        );
         if matches!(choice.move_id, Choices::METEORBEAM | Choices::ELECTROSHOT) {
             choice.charge_boost = true;
         }

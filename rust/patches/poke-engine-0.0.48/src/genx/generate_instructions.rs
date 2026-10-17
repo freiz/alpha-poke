@@ -1716,8 +1716,10 @@ fn get_instructions_from_secondaries(
                                 }),
                             );
                             target_pkmn.item = Items::NONE;
-                            // (L164: a gem used up is its last item too)
-                            if super::items::is_gem(item) {
+                            // (L164: a gem used up is its last item too; L178: any item
+                            // used up here -- Weakness Policy, Throat Spray, Snowball, ...; not a
+                            // popped Air Balloon: Showdown sets item '' without useItem)
+                            if item != Items::AIRBALLOON {
                                 super::items::set_last_item(
                                     target_pkmn,
                                     secondary_target_side_ref,
@@ -1964,11 +1966,26 @@ fn starf_berry_branches(
                 current_item: Items::STARFBERRY,
                 new_item: Items::NONE,
             });
+            // (L178: eaten, its last item)
+            let prev_last = state
+                .get_side_immutable(&side_ref)
+                .get_active_immutable()
+                .last_item;
+            let last: Vec<Instruction> = if prev_last != Items::STARFBERRY {
+                vec![Instruction::ChangeLastItem(ChangeItemInstruction {
+                    side_ref,
+                    current_item: prev_last,
+                    new_item: Items::STARFBERRY,
+                })]
+            } else {
+                vec![]
+            };
             let mut next = vec![];
             for b in branches {
                 if stats.is_empty() {
                     let mut c = b.clone();
                     c.instruction_list.push(eat.clone());
+                    c.instruction_list.extend(last.iter().cloned());
                     next.push(c);
                     continue;
                 }
@@ -1982,6 +1999,7 @@ fn starf_berry_branches(
                             amount: cmp::min(2, 6 - current),
                         }));
                     c.instruction_list.push(eat.clone());
+                    c.instruction_list.extend(last.iter().cloned());
                     next.push(c);
                 }
             }
@@ -2203,6 +2221,16 @@ fn check_move_hit_or_miss(
                     current_item: Items::BLUNDERPOLICY,
                     new_item: Items::NONE,
                 }));
+            // (L178: used up, its last item)
+            if attacking_pokemon.last_item != Items::BLUNDERPOLICY {
+                move_missed_instruction
+                    .instruction_list
+                    .push(Instruction::ChangeLastItem(ChangeItemInstruction {
+                        side_ref: *attacking_side_ref,
+                        current_item: attacking_pokemon.last_item,
+                        new_item: Items::BLUNDERPOLICY,
+                    }));
+            }
         }
 
         // L22: the lock ends (the frozen branch's instructions are not applied here, as the
@@ -2463,6 +2491,13 @@ fn generate_instructions_from_damage(
                                 new_item: Items::NONE,
                             }));
                         defending_pokemon.item = Items::NONE;
+                        // (L178: used up, its last item)
+                        super::items::set_last_item(
+                            defending_pokemon,
+                            attacking_side_ref.get_other_side(),
+                            Items::FOCUSSASH,
+                            incoming_instructions,
+                        );
                     }
                 }
 
@@ -7065,6 +7100,13 @@ fn run_move(
                     },
                 ));
                 state.get_side(&defender_ref).get_active().item = Items::NONE;
+                // (L178: used up, its last item: Showdown's useItem)
+                super::items::set_last_item(
+                    state.get_side(&defender_ref).get_active(),
+                    defender_ref,
+                    item,
+                    &mut instructions,
+                );
             }
             if !emergency_exit && !eject_pack && item == Items::REDCARD {
                 // alpha-poke patch (2026-10-16, doc/engine-diff.md L64): the hit's secondaries
@@ -7231,6 +7273,13 @@ fn run_move(
                 new_item: Items::NONE,
             }));
         state.get_side(&attacking_side).get_active().item = Items::NONE;
+        // (L178: used up, its last item)
+        super::items::set_last_item(
+            state.get_side(&attacking_side).get_active(),
+            attacking_side,
+            Items::EJECTPACK,
+            &mut instructions,
+        );
     }
 
     // Only entered if the move causes a switch-out
@@ -7453,6 +7502,13 @@ fn eject_pack_after_secondaries(
             state.apply_one_instruction(&ins);
             branch.instruction_list.push(ins);
         }
+        // (L178: used up, its last item)
+        super::items::set_last_item(
+            state.get_side(&defender_ref).get_active(),
+            defender_ref,
+            Items::EJECTPACK,
+            branch,
+        );
     }
     state.reverse_instructions(&branch.instruction_list);
 }
@@ -7541,6 +7597,13 @@ pub fn foe_raise_copies(state: &mut State, instructions: &mut StateInstructions,
             });
             state.apply_one_instruction(&ins);
             instructions.instruction_list.push(ins);
+            // (L178: used up, its last item)
+            super::items::set_last_item(
+                state.get_side(&side_ref).get_active(),
+                side_ref,
+                Items::MIRRORHERB,
+                instructions,
+            );
         }
     }
 }
@@ -7717,6 +7780,13 @@ fn after_move_finish(
                             current_item: Items::WHITEHERB,
                             new_item: Items::NONE,
                         }));
+                    // (L178: used up, its last item)
+                    super::items::set_last_item(
+                        side.get_active(),
+                        side_ref,
+                        Items::WHITEHERB,
+                        state_instructions,
+                    );
                 }
             }
         }
@@ -11094,6 +11164,12 @@ mod tests {
                     current_item: Items::FOCUSSASH,
                     new_item: Items::NONE,
                 }),
+                // (L178: its last item)
+                Instruction::ChangeLastItem(ChangeItemInstruction {
+                    side_ref: SideReference::SideTwo,
+                    current_item: Items::NONE,
+                    new_item: Items::FOCUSSASH,
+                }),
                 Instruction::Damage(DamageInstruction {
                     side_ref: SideReference::SideTwo,
                     damage_amount: 49,
@@ -11614,6 +11690,12 @@ mod tests {
                         side_ref: SideReference::SideOne,
                         current_item: Items::BLUNDERPOLICY,
                         new_item: Items::NONE,
+                    }),
+                    // (L178: its last item)
+                    Instruction::ChangeLastItem(ChangeItemInstruction {
+                        side_ref: SideReference::SideOne,
+                        current_item: Items::NONE,
+                        new_item: Items::BLUNDERPOLICY,
                     }),
                 ],
             },
