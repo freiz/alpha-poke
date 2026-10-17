@@ -1562,6 +1562,22 @@ pub fn ability_on_switch_in(
                 state.weather.turns_remaining = WEATHER_ABILITY_TURNS;
             }
         }
+        // alpha-poke patch (2026-10-16, doc/engine-diff.md L21): Mirror Armor reflects Intimidate
+        Abilities::INTIMIDATE
+            if defending_side.get_active_immutable().ability == Abilities::MIRRORARMOR
+                && !defending_side
+                    .volatile_statuses
+                    .contains(&PokemonVolatileStatus::SUBSTITUTE) =>
+        {
+            apply_boost_instruction(
+                attacking_side,
+                &PokemonBoostableStat::Attack,
+                &-1,
+                &side_ref.get_other_side(),
+                side_ref,
+                instructions,
+            );
+        }
         Abilities::INTIMIDATE => {
             let defender = defending_side.get_active_immutable();
             if !(defender.ability == Abilities::OWNTEMPO

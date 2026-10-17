@@ -11,6 +11,7 @@ use crate::choices::{
     Boost, Choices, Effect, Heal, MoveTarget, MultiHitMove, Secondary, SideCondition, StatBoosts,
     Status, VolatileStatus, MOVES,
 };
+use crate::instruction::EnableMoveInstruction;
 use crate::instruction::{
     ApplyVolatileStatusInstruction, BoostInstruction, ChangeDamageDealtDamageInstruction,
     ChangeDamageDealtMoveCategoryInstruction, ChangeItemInstruction,
@@ -1030,7 +1031,34 @@ fn get_instructions_from_boosts(
         MoveTarget::User => target_side_ref = *attacking_side_reference,
     }
     let boostable_stats = boosts.boosts.get_as_pokemon_boostable();
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L21): Mirror Armor reflects the opponent's
+    // stat drops back onto it (the holder as their source: Defiant / Competitive answer them)
+    let mirror = boosts.target == MoveTarget::Opponent
+        && state
+            .get_side_immutable(&target_side_ref)
+            .get_active_immutable()
+            .ability
+            == Abilities::MIRRORARMOR
+        && !matches!(
+            state
+                .get_side_immutable(attacking_side_reference)
+                .get_active_immutable()
+                .ability,
+            Abilities::MOLDBREAKER | Abilities::TERAVOLT | Abilities::TURBOBLAZE
+        );
     for (pkmn_boostable_stat, boost) in boostable_stats.iter().filter(|(_, b)| b != &0) {
+        if mirror && *boost < 0 {
+            let side = state.get_side(attacking_side_reference);
+            apply_boost_instruction(
+                side,
+                pkmn_boostable_stat,
+                boost,
+                &target_side_ref,
+                attacking_side_reference,
+                incoming_instructions,
+            );
+            continue;
+        }
         let side = state.get_side(&target_side_ref);
         apply_boost_instruction(
             side,
@@ -1215,6 +1243,71 @@ fn boosted_accuracy(accuracy_boost: i8) -> f32 {
     }
 }
 
+// alpha-poke patch (2026-10-16, doc/engine-diff.md L22 / L23): the instructions that end a locking
+// move's lock (Outrage, Petal Dance, ...): the volatile and its count go, the other moves can be
+// used again (unless a choice item locks them anyway), and with `confuse` the user is confused
+// (the lock ran out). Showdown renews the lock only on a hit, so a locked move that misses, hits
+// an immune target, has no effect or is protected against ends it at once, unconfused (L22);
+// the engine never ended it early, and never gave the other moves back (L23).
+fn lock_end_instructions(
+    state: &State,
+    side_ref: &SideReference,
+    confuse: bool,
+) -> Vec<Instruction> {
+    let side = state.get_side_immutable(side_ref);
+    let mut out = vec![];
+    if !side
+        .volatile_statuses
+        .contains(&PokemonVolatileStatus::LOCKEDMOVE)
+    {
+        return out;
+    }
+    let count = side.volatile_status_durations.lockedmove;
+    if count != 0 {
+        out.push(Instruction::ChangeVolatileStatusDuration(
+            ChangeVolatileStatusDurationInstruction {
+                side_ref: *side_ref,
+                volatile_status: PokemonVolatileStatus::LOCKEDMOVE,
+                amount: -count,
+            },
+        ));
+    }
+    out.push(Instruction::RemoveVolatileStatus(
+        RemoveVolatileStatusInstruction {
+            side_ref: *side_ref,
+            volatile_status: PokemonVolatileStatus::LOCKEDMOVE,
+        },
+    ));
+    let active = side.get_active_immutable();
+    if !matches!(
+        active.item,
+        Items::CHOICEBAND | Items::CHOICESPECS | Items::CHOICESCARF
+    ) {
+        let mut iter = active.moves.into_iter();
+        while let Some(m) = iter.next() {
+            if m.disabled {
+                out.push(Instruction::EnableMove(EnableMoveInstruction {
+                    side_ref: *side_ref,
+                    move_index: iter.pokemon_move_index,
+                }));
+            }
+        }
+    }
+    if confuse
+        && !side
+            .volatile_statuses
+            .contains(&PokemonVolatileStatus::CONFUSION)
+    {
+        out.push(Instruction::ApplyVolatileStatus(
+            ApplyVolatileStatusInstruction {
+                side_ref: *side_ref,
+                volatile_status: PokemonVolatileStatus::CONFUSION,
+            },
+        ));
+    }
+    out
+}
+
 fn check_move_hit_or_miss(
     state: &mut State,
     choice: &Choice,
@@ -1273,6 +1366,11 @@ fn check_move_hit_or_miss(
                 }));
         }
 
+        // L22: the lock ends (the frozen branch's instructions are not applied here, as the
+        // crash's above)
+        move_missed_instruction
+            .instruction_list
+            .extend(lock_end_instructions(state, attacking_side_ref, false));
         frozen_instructions.push(move_missed_instruction);
     }
     incoming_instructions.update_percentage(percent_hit);
@@ -2479,7 +2577,10 @@ pub fn generate_instructions_from_move(
         .push(Instruction::Acted(attacking_side));
 
     if move_has_no_effect(state, &choice, &attacking_side) {
+        // L22: a locked move without effect ends the lock
+        let lock_end = lock_end_instructions(state, &attacking_side, false);
         state.reverse_instructions(&incoming_instructions.instruction_list);
+        incoming_instructions.instruction_list.extend(lock_end);
         final_instructions.push(incoming_instructions);
         return;
     }
@@ -2503,6 +2604,20 @@ pub fn generate_instructions_from_move(
     if incoming_instructions.percentage == 0.0 {
         state.reverse_instructions(&incoming_instructions.instruction_list);
         return;
+    }
+
+    // L22: a locked move Protect blocked (its effects removed by remove_effects_for_protect, the
+    // lock's renewal with them) ends the lock
+    let renews_lock = |c: &Choice| {
+        c.volatile_status
+            .as_ref()
+            .is_some_and(|v| v.volatile_status == PokemonVolatileStatus::LOCKEDMOVE)
+    };
+    if !renews_lock(choice) && MOVES.get(&choice.move_id).is_some_and(|m| renews_lock(m)) {
+        for ins in lock_end_instructions(state, &attacking_side, false) {
+            state.apply_one_instruction(&ins);
+            incoming_instructions.instruction_list.push(ins);
+        }
     }
 
     // start multi-hit
@@ -3516,6 +3631,30 @@ fn add_end_of_turn_instructions(
                         ));
                     side.volatile_statuses
                         .insert(PokemonVolatileStatus::CONFUSION);
+                }
+                // alpha-poke patch (2026-10-16, L23): the other moves can be used again (a choice
+                // item keeps them locked)
+                let active = side.get_active();
+                if !matches!(
+                    active.item,
+                    Items::CHOICEBAND | Items::CHOICESPECS | Items::CHOICESCARF
+                ) {
+                    for move_index in [
+                        PokemonMoveIndex::M0,
+                        PokemonMoveIndex::M1,
+                        PokemonMoveIndex::M2,
+                        PokemonMoveIndex::M3,
+                    ] {
+                        if active.moves[&move_index].disabled {
+                            active.moves[&move_index].disabled = false;
+                            incoming_instructions
+                                .instruction_list
+                                .push(Instruction::EnableMove(EnableMoveInstruction {
+                                    side_ref: *side_ref,
+                                    move_index,
+                                }));
+                        }
+                    }
                 }
             } else {
                 side.volatile_status_durations.lockedmove += 1;

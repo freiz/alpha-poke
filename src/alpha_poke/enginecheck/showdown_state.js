@@ -27,7 +27,7 @@ function monState(p, side) {
 		boosts: p.boosts,
 		volatiles: Object.fromEntries(Object.entries(p.volatiles).map(([k, v]) =>
 			[k, {duration: v.duration || 0, layers: v.layers || 0, counter: v.counter || 0,
-				stat: v.bestStat || '', time: v.time || 0}])),
+				stat: v.bestStat || '', time: v.time || 0, true_duration: v.trueDuration || 0}])),
 		moves: p.moveSlots.map(m => ({id: m.id, pp: m.pp, maxpp: m.maxpp, disabled: !!m.disabled})),
 		terastallized: p.terastallized || '',
 		tera_type: p.teraType || '',

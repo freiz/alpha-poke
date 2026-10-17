@@ -691,3 +691,113 @@ def test_l8c_glaive_rush_drawback():
     for k, (c1, c2) in enumerate((("glaiverush", "bravebird"), ("swordsdance", "roost"))):
         outs = ec.engine_outcomes(ec.engine_state(states[k]), c1, c2)
         assert ec.closest(states[k + 1], outs, (1, 1), hp=True)["diff"] == {}, k
+
+
+# --- found by the full-information random-battle differential (scripts/check_engine_random.py)
+
+GHOLDENGO = """Gholdengo @ Leftovers
+Ability: Good as Gold
+Tera Type: Steel
+EVs: 252 HP / 252 SpA / 4 Spe
+Modest Nature
+- Make It Rain
+- Shadow Ball
+- Recover
+- Nasty Plot"""
+ARAQUANID = """Araquanid @ Leftovers
+Ability: Water Bubble
+Tera Type: Water
+EVs: 252 HP / 252 Atk / 4 SpD
+Adamant Nature
+- Lunge
+- Liquidation
+- Sticky Web
+- Mirror Coat"""
+HAXORUS = """Haxorus @ Lum Berry
+Ability: Mold Breaker
+Tera Type: Dragon
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- Outrage
+- Earthquake
+- Dragon Dance
+- Close Combat"""
+NINETALES = """Ninetales-Alola @ Light Clay
+Ability: Snow Warning
+Tera Type: Ghost
+EVs: 252 HP / 4 SpA / 252 Spe
+Timid Nature
+- Aurora Veil
+- Moonblast
+- Freeze-Dry
+- Encore"""
+
+
+# L20 (doc/engine-diff.md): fixed in rust/patches (2026-10-16); a regression test now
+def test_l20_good_as_gold_blocks_trick():
+    states, outs = first_turn("move trick", "move nastyplot", "trick", "nastyplot",
+                              p1=GHOLDENGO_TRICK, p2=GHOLDENGO)  # fmt: skip
+    assert "|-immune|p2a: Gholdengo|[from] ability: Good as Gold" in states[1]["log"]
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L21 (doc/engine-diff.md): fixed in rust/patches (2026-10-16); a regression test now
+def test_l21_mirror_armor_reflects():
+    p1 = CORVIKNIGHT.replace("Ability: Pressure", "Ability: Mirror Armor")
+    states, outs = first_turn("move roost", "move lunge", "roost", "lunge", p1=p1, p2=ARAQUANID,
+                              seed="gen5,3,3,3,3")  # fmt: skip
+    assert states[1]["sides"][1]["mons"][0]["boosts"]["atk"] == -1  # Showdown: reflected
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L22 (doc/engine-diff.md): fixed in rust/patches (2026-10-16); a regression test now
+def test_l22_outrage_lock_ends_on_immune_target():
+    turns = [("move outrage", "move softboiled"), ("move outrage", "switch 2")]
+    states = ec.run_showdown(HAXORUS, BLISSEY + "\n\n" + NINETALES, turns, seed="gen5,3,3,3,3")
+    assert "|-immune|p2a: Ninetales" in states[2]["log"]
+    assert "lockedmove" not in states[2]["sides"][0]["mons"][0]["volatiles"]  # Showdown
+    outs = ec.engine_outcomes(ec.engine_state(states[1]), "outrage", "ninetalesalola")
+    assert ec.closest(states[2], outs, (1, 2), hp=True)["diff"] == {}
+
+
+INCINEROAR = """Incineroar @ Heavy-Duty Boots
+Ability: Intimidate
+Tera Type: Fairy
+EVs: 252 HP / 4 Atk / 252 SpD
+Careful Nature
+- Knock Off
+- Flare Blitz
+- Parting Shot
+- Will-O-Wisp"""
+
+
+# L21 (doc/engine-diff.md): fixed in rust/patches (2026-10-16); a regression test now
+def test_l21_mirror_armor_reflects_intimidate():
+    p1 = CORVIKNIGHT.replace("Ability: Pressure", "Ability: Mirror Armor")
+    states = ec.run_showdown(p1, TINGLU + "\n\n" + INCINEROAR, [("move roost", "switch 2")])
+    assert states[1]["sides"][1]["mons"][1]["boosts"]["atk"] == -1  # Showdown: reflected
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "roost", "incineroar")
+    assert ec.closest(states[1], outs, (1, 2), hp=True)["diff"] == {}
+
+
+# L23 (doc/engine-diff.md): fixed in rust/patches (2026-10-16); a regression test now
+def test_l23_moves_usable_after_a_lock_ends():
+    p1 = HAXORUS.replace("Lum Berry", "Leftovers")
+    states = ec.run_showdown(p1, BLISSEY, [("move outrage", "move softboiled")] * 2,
+                             seed="gen5,3,3,3,3")  # fmt: skip
+    assert "confusion" in states[2]["sides"][0]["mons"][0]["volatiles"]  # Showdown: lock over
+    usable = [not m.get("disabled") for m in states[2]["sides"][0]["request_json"]["active"][0]["moves"]]
+    assert usable == [True] * 4  # Showdown: every move again
+    for _, s in ec.engine_outcomes(ec.engine_state(states[1]), "outrage", "softboiled"):
+        assert [not m.disabled for m in s.side_one.pokemon[0].moves] == usable
+
+
+def test_control_trick_room_against_good_as_gold():
+    """Good as Gold blocks status moves aimed at its holder, not field moves (the L20 fix first
+    blocked Trick Room too: the engine's field moves target "Opponent"; found by the random
+    differential's regression check)."""
+    hatterene = HATTERENE.replace("- Calm Mind", "- Trick Room")
+    states, outs = first_turn("move trickroom", "move nastyplot", "trickroom", "nastyplot",
+                              p1=hatterene, p2=GHOLDENGO)  # fmt: skip
+    assert states[1]["field"]["pseudo"].get("trickroom")  # Showdown: set
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}

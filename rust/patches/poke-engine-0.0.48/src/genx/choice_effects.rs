@@ -1365,6 +1365,30 @@ pub fn choice_special_effect(
     {
         return;
     }
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L20): nor does a status move Good as Gold
+    // blocks (ability_modify_attack_against removes a move's data effects, not these): the ones
+    // here aimed at the target -- Trick / Switcheroo, Pain Split; not the field moves (Trick
+    // Room, weather, Haze, Perish Song), whose data target is "Opponent" too (the first version
+    // blocked Trick Room: test_control_trick_room_against_good_as_gold). The same conditions as
+    // there: no Mold Breaker-like ability, no Neutralizing Gas
+    let attacker = attacking_side.get_active_immutable();
+    let breaks_ability = matches!(
+        attacker.ability,
+        Abilities::MOLDBREAKER
+            | Abilities::TERAVOLT
+            | Abilities::TURBOBLAZE
+            | Abilities::MYCELIUMMIGHT
+            | Abilities::NEUTRALIZINGGAS
+    );
+    if defending_side.get_active_immutable().ability == Abilities::GOODASGOLD
+        && !breaks_ability
+        && matches!(
+            choice.move_id,
+            Choices::TRICK | Choices::SWITCHEROO | Choices::PAINSPLIT
+        )
+    {
+        return;
+    }
     match choice.move_id {
         Choices::BELLYDRUM => {
             let boost_amount = 6 - attacking_side.attack_boost;

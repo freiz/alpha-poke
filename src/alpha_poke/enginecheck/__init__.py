@@ -171,6 +171,10 @@ def _engine_side(s: dict, future_sight=None) -> pe.Side:
         for k, n, top in (("taunt", 3, 2), ("encore", 3, 2), ("yawn", 2, 1)):
             if k in vol and act["volatiles"][k]["duration"]:
                 dur[k] = min(max(n - act["volatiles"][k]["duration"], 0), top)
+        # a locking move (Outrage): the engine's count of its ends of turn ends it at 2 (3 turns),
+        # Showdown's trueDuration counts the turns left down
+        if "lockedmove" in vol and act["volatiles"]["lockedmove"]["true_duration"]:
+            dur["lockedmove"] = min(max(3 - act["volatiles"]["lockedmove"]["true_duration"], 0), 2)
         if "confusion" in vol and act["volatiles"]["confusion"]["time"]:
             dur["confusion"] = min(max(5 - act["volatiles"]["confusion"]["time"], 0), 4)
         if dur:
