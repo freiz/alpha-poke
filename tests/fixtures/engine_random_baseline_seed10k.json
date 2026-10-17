@@ -56,9 +56,6 @@
 "hp",
 "status"
 ],
-"b130-t36": [
-"item"
-],
 "b133-t6": [
 "hp",
 "status"
@@ -147,7 +144,6 @@
 "b199-t3": [
 "active",
 "hp",
-"item",
 "status",
 "trick_room",
 "volatile.curse"
@@ -161,9 +157,6 @@
 "b201-t25": [
 "hp",
 "status"
-],
-"b206-t11": [
-"item"
 ],
 "b206-t31": [
 "hp",
@@ -201,17 +194,11 @@
 "b249-t6": [
 "boost.def"
 ],
-"b253-t12": [
-"item"
-],
 "b256-t3": [
 "hp"
 ],
 "b258-t39": [
 "status"
-],
-"b26-t16": [
-"item"
 ],
 "b264-t17": [
 "trick_room"
@@ -301,9 +288,6 @@
 "boost.def",
 "hp"
 ],
-"b47-t19": [
-"item"
-],
 "b57-t25": [
 "item"
 ],
@@ -332,16 +316,10 @@
 "b70-t19": [
 "volatile.metronome"
 ],
-"b73-t1": [
-"item"
-],
 "b75-t32": [
 "hp",
 "item",
 "status"
-],
-"b88-t7": [
-"item"
 ],
 "b95-t13": [
 "status"

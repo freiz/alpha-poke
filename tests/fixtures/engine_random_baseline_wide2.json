@@ -134,21 +134,12 @@
 "hp",
 "volatile.partiallytrapped"
 ],
-"b21-t16": [
-"item"
-],
 "b216-t13": [
 "volatile.protosynthesisspa"
 ],
 "b217-t10": [
 "hp",
 "status"
-],
-"b230-t15": [
-"item"
-],
-"b230-t6": [
-"item"
 ],
 "b233-t19": [
 "boost.atk",
@@ -207,9 +198,6 @@
 ],
 "b270-t20": [
 "hp"
-],
-"b270-t44": [
-"item"
 ],
 "b274-t5": [
 "item"

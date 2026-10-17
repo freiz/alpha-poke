@@ -50,9 +50,6 @@
 "b137-t2": [
 "boost.atk"
 ],
-"b139-t40": [
-"item"
-],
 "b14-t33": [
 "hp"
 ],
@@ -77,9 +74,6 @@
 ],
 "b148-t5": [
 "volatile.truant"
-],
-"b150-t13": [
-"item"
 ],
 "b158-t26": [
 "status"
@@ -118,14 +112,8 @@
 "boost.evasion",
 "volatile.minimize"
 ],
-"b166-t35": [
-"item"
-],
 "b169-t3": [
 "hp"
-],
-"b174-t20": [
-"item"
 ],
 "b175-t44": [
 "hp",
@@ -272,8 +260,7 @@
 "volatile.mustrecharge"
 ],
 "b53-t20": [
-"hp",
-"item"
+"hp"
 ],
 "b53-t27": [
 "boost.def"
@@ -298,7 +285,6 @@
 ],
 "b65-t20": [
 "hp",
-"item",
 "status"
 ],
 "b67-t16": [
@@ -315,7 +301,6 @@
 "b74-t14": [
 "boost.atk",
 "hp",
-"item",
 "status"
 ],
 "b76-t17": [

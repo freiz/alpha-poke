@@ -300,7 +300,10 @@ def view(sd: dict) -> dict:
             v[f"{k}.{j}.hp"] = m["hp"]
             v[f"{k}.{j}.status"] = STATUS[m["status"]] if m["hp"] > 0 else "fainted"
             # an item the engine does not know is its unknownitem (tests/test_engine_data.py lists them)
-            v[f"{k}.{j}.item"] = (m["item"] if _engine_item(m["item"]) else "unknownitem") if m["item"] else "none"
+            # (a fainted mon's item is not compared: it has no effect any more, and Showdown does not
+            # use one up on a fainted holder -- Weakness Policy, Knock Off's on a knocked-out target)
+            if m["hp"] > 0:
+                v[f"{k}.{j}.item"] = (m["item"] if _engine_item(m["item"]) else "unknownitem") if m["item"] else "none"
         act = s["mons"][s["active"]] if s["active"] >= 0 else None
         if act is not None:
             for b in BOOSTS:
@@ -341,7 +344,8 @@ def view_engine(s: pe.State, n_mons: tuple[int, int] = (6, 6)) -> dict:
         for j, m in enumerate(side.pokemon[:n]):
             v[f"{k}.{j}.hp"] = m.hp
             v[f"{k}.{j}.status"] = str(m.status).lower() if m.hp > 0 else "fainted"
-            v[f"{k}.{j}.item"] = str(m.item).lower()
+            if m.hp > 0:  # (as view: a fainted mon's item is not compared)
+                v[f"{k}.{j}.item"] = str(m.item).lower()
         for b in BOOSTS:
             v[f"{k}.boost.{b}"] = getattr(side, ENGINE_BOOST[b])
         tera = side.pokemon[a].terastallized
@@ -366,6 +370,8 @@ def diff(a: dict, b: dict, skip_hp: bool = False) -> dict:
     gone = {k[:2] for k in keys if k.endswith(".fainted_active")}  # (_drop_fainted_active)
     keys = {k for k in keys if not (k[:2] in gone and k[3:].startswith(("boost.", "volatile.",
                                                                          "fainted_active")))}  # fmt: skip
+    # (a mon's item is left out of a view where it fainted: not compared then)
+    keys = {k for k in keys if not (k.endswith(".item") and (k not in a or k not in b))}
     return {k: (a.get(k), b.get(k)) for k in sorted(keys)
             if a.get(k) != b.get(k) and not (skip_hp and k.endswith(".hp"))}  # fmt: skip
 

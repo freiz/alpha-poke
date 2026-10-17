@@ -47,9 +47,6 @@
 "hp",
 "status"
 ],
-"b144-t16": [
-"item"
-],
 "b149-t34": [
 "weather"
 ],
@@ -71,9 +68,6 @@
 "b176-t18": [
 "active",
 "hp",
-"item"
-],
-"b179-t8": [
 "item"
 ],
 "b181-t3": [
@@ -128,9 +122,6 @@
 "b230-t31": [
 "status"
 ],
-"b230-t6": [
-"item"
-],
 "b236-t29": [
 "hp"
 ],
@@ -170,9 +161,6 @@
 "b247-t2": [
 "stealth_rock"
 ],
-"b253-t9": [
-"item"
-],
 "b258-t19": [
 "hp"
 ],
@@ -190,9 +178,6 @@
 "b263-t8": [
 "volatile.protosynthesisspa",
 "volatile.protosynthesisspe"
-],
-"b265-t3": [
-"item"
 ],
 "b269-t15": [
 "boost.atk"
