@@ -282,6 +282,8 @@ harness 必须把 Showdown 的状态完整映射到引擎，否则不一致来�
 | L136 | 使用 Substitute 会解除自身的部分束缚（Whirlpool 等；Showdown 的 substitute onStart）；引擎保留束缚，回合末照样扣血 | 引擎 | 已修复 | `test_l136_substitute_ends_partial_trap` | `choice_effects.rs` 的 SUBSTITUTE |
 | L137 | Heal Block 期间 Sitrus Berry 不会被吃（Showdown 的 onTryEatItem：不能回复；之前只有半血树果检查了）；Heal Block 在回合末结束后立刻吃（Showdown 在 residual 之后的 Update） | 引擎 | 已修复 | `test_l137_heal_block_stops_sitrus`、`test_l137_sitrus_after_heal_block_ends`（随机差分 wide2 b274-t4） | `items.rs` `sitrus_berry`；`generate_instructions.rs` 回合末 Heal Block 结束后调用 `berry_on_damage` |
 | L138 | 太晶化后用 Roost 不会得到 roost 状态（Showdown 的 roost onStart 失败：属性不变）；引擎照样加，换人决策点上能看出差别 | 引擎 | 已修复 | `test_l138_roost_after_terastallizing` | `choice_effects.rs` 的 ROOST |
+| L139 | 这一击打破了自己的 Air Balloon 之后，Pickpocket 照样偷走攻击方的道具（Showdown：气球在受到伤害时就破，Pickpocket 在招式结束后）；引擎的 Pickpocket 看到气球还在，没有偷 | 引擎 | 已修复 | `test_l139_pickpocket_after_air_balloon` | `generate_instructions.rs` 的 Pickpocket（气球的 RemoveItem 附加效果不动偷来的道具，L114） |
+| L140 | Fling：威力和附加效果取决于使用者的道具（Toxic Orb 剧毒、Flame Orb 灼伤、Light Ball 麻痹、Poison Barb 中毒、King's Rock / Razor Fang 畏缩；Showdown 的 onPrepareHit），没打中、被 Protect 挡住也会消耗道具，伤害保留道具的加成但没有 Life Orb 反伤；没有能投掷的道具或 Klutz 时失败。引擎的 Fling 没有威力，也不消耗道具。树果被对手吃掉、White / Mental Herb 的效果没有实现 | 引擎 | 已修复 | `test_l140_fling`（6 个参数）；数据测试 `test_fling_powers_match_showdown` | `items.rs` `Items::fling_power`；`choice_effects.rs` 的 FLING（modify_choice、choice_special_effect） |
 
 ## 修复与验证（2026-10-16）
 

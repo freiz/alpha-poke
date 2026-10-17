@@ -636,7 +636,12 @@ fn generate_instructions_from_switch(
 
     // alpha-poke patch (2026-10-17, L129): a mon that fainted to the hazards starts no ability /
     // item (Intimidate, weather, Booster Energy, ...: Showdown skips a fainted switcher)
-    if state.get_side_immutable(&switching_side_ref).get_active_immutable().hp == 0 {
+    if state
+        .get_side_immutable(&switching_side_ref)
+        .get_active_immutable()
+        .hp
+        == 0
+    {
         return;
     }
     let from = incoming_instructions.instruction_list.len();
@@ -1437,10 +1442,10 @@ fn get_instructions_from_boosts(
     // Showdown's onFoeAfterBoost)
     let foe_ref = target_side_ref.get_other_side();
     if state
-            .get_side_immutable(&foe_ref)
-            .get_active_immutable()
-            .item
-            == Items::MIRRORHERB
+        .get_side_immutable(&foe_ref)
+        .get_active_immutable()
+        .item
+        == Items::MIRRORHERB
         && boostable_stats.iter().any(|(_, b)| *b > 0)
     {
         for (stat, boost) in boostable_stats.iter().filter(|(_, b)| *b > 0) {
@@ -6165,7 +6170,7 @@ fn add_end_of_turn_instructions(
     for side_ref in heal_block_ended {
         super::items::berry_on_damage(state, &side_ref, incoming_instructions);
     }
-      // (L62: an item used up at the end of the turn too)
+    // (L62: an item used up at the end of the turn too)
     unburden_check(state, incoming_instructions);
 }
 
@@ -6411,9 +6416,12 @@ fn run_move(
             .get_side_immutable(&defender_ref)
             .get_active_immutable();
         let item = attacker.item;
+        // (L139: an Air Balloon this hit pops is gone by then: Showdown's onDamagingHit; its
+        // secondary leaves the stolen item alone)
+        let own = defender.item;
         if defender.ability == Abilities::PICKPOCKET
             && attacker.ability != Abilities::NEUTRALIZINGGAS
-            && defender.item == Items::NONE
+            && (own == Items::NONE || own == Items::AIRBALLOON)
             && defender.hp > 0
             && item != Items::NONE
             && attacker.item_can_be_removed()
@@ -6426,7 +6434,7 @@ fn run_move(
                 }),
                 Instruction::ChangeItem(ChangeItemInstruction {
                     side_ref: defender_ref,
-                    current_item: Items::NONE,
+                    current_item: own,
                     new_item: item,
                 }),
             ] {

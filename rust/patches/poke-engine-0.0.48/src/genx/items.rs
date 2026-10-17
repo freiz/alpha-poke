@@ -426,6 +426,180 @@ pub fn is_berry(item: Items) -> bool {
 
 // alpha-poke patch (2026-10-17, doc/engine-diff.md L120): a damaging hit outside a move's usual
 // damage (Future Sight, Counter / Mirror Coat / Metal Burst, Final Gambit) pops an Air Balloon too
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L140): Fling's base power with the item
+// (Showdown's item.fling.basePower; None: it cannot be flung, Fling fails). tests/test_engine_data.py
+// checks the table against Showdown's items
+impl Items {
+    pub fn fling_power(&self) -> Option<u8> {
+        match self {
+            Items::AGUAVBERRY
+            | Items::AIRBALLOON
+            | Items::APICOTBERRY
+            | Items::ASPEARBERRY
+            | Items::BABIRIBERRY
+            | Items::BIGROOT
+            | Items::BRIGHTPOWDER
+            | Items::CHARTIBERRY
+            | Items::CHERIBERRY
+            | Items::CHESTOBERRY
+            | Items::CHILANBERRY
+            | Items::CHOICEBAND
+            | Items::CHOICESCARF
+            | Items::CHOICESPECS
+            | Items::CHOPLEBERRY
+            | Items::COBABERRY
+            | Items::COLBURBERRY
+            | Items::CUSTAPBERRY
+            | Items::DESTINYKNOT
+            | Items::ELECTRICSEED
+            | Items::ENIGMABERRY
+            | Items::EXPERTBELT
+            | Items::FAIRYFEATHER
+            | Items::FIGYBERRY
+            | Items::FOCUSBAND
+            | Items::FOCUSSASH
+            | Items::GANLONBERRY
+            | Items::GRASSYSEED
+            | Items::HABANBERRY
+            | Items::IAPAPABERRY
+            | Items::JABOCABERRY
+            | Items::KASIBBERRY
+            | Items::KEBIABERRY
+            | Items::KEEBERRY
+            | Items::LANSATBERRY
+            | Items::LEFTOVERS
+            | Items::LEPPABERRY
+            | Items::LIECHIBERRY
+            | Items::LUMBERRY
+            | Items::MAGOBERRY
+            | Items::MARANGABERRY
+            | Items::MENTALHERB
+            | Items::MICLEBERRY
+            | Items::MISTYSEED
+            | Items::MUSCLEBAND
+            | Items::OCCABERRY
+            | Items::ORANBERRY
+            | Items::PASSHOBERRY
+            | Items::PAYAPABERRY
+            | Items::PECHABERRY
+            | Items::PERSIMBERRY
+            | Items::PETAYABERRY
+            | Items::POWERHERB
+            | Items::PSYCHICSEED
+            | Items::RAWSTBERRY
+            | Items::REDCARD
+            | Items::RINDOBERRY
+            | Items::ROSELIBERRY
+            | Items::ROWAPBERRY
+            | Items::SALACBERRY
+            | Items::SHEDSHELL
+            | Items::SHUCABERRY
+            | Items::SILKSCARF
+            | Items::SILVERPOWDER
+            | Items::SITRUSBERRY
+            | Items::SMOOTHROCK
+            | Items::SOFTSAND
+            | Items::STARFBERRY
+            | Items::TANGABERRY
+            | Items::WACANBERRY
+            | Items::WHITEHERB
+            | Items::WIDELENS
+            | Items::WIKIBERRY
+            | Items::WISEGLASSES
+            | Items::YACHEBERRY
+            | Items::ZOOMLENS => Some(10),
+            Items::ABILITYSHIELD
+            | Items::ABSORBBULB
+            | Items::ADRENALINEORB
+            | Items::BLACKBELT
+            | Items::BLACKGLASSES
+            | Items::BLACKSLUDGE
+            | Items::BOOSTERENERGY
+            | Items::CELLBATTERY
+            | Items::CHARCOAL
+            | Items::CLEARAMULET
+            | Items::COVERTCLOAK
+            | Items::DRAGONSCALE
+            | Items::EJECTBUTTON
+            | Items::FLAMEORB
+            | Items::FLOATSTONE
+            | Items::KINGSROCK
+            | Items::LIFEORB
+            | Items::LIGHTBALL
+            | Items::LIGHTCLAY
+            | Items::LOADEDDICE
+            | Items::LUMINOUSMOSS
+            | Items::MAGNET
+            | Items::METALCOAT
+            | Items::METRONOME
+            | Items::MIRACLESEED
+            | Items::MIRRORHERB
+            | Items::MYSTICWATER
+            | Items::NEVERMELTICE
+            | Items::PROTECTIVEPADS
+            | Items::PUNCHINGGLOVE
+            | Items::RAZORFANG
+            | Items::SCOPELENS
+            | Items::SHELLBELL
+            | Items::SNOWBALL
+            | Items::SOULDEW
+            | Items::SPELLTAG
+            | Items::THROATSPRAY
+            | Items::TOXICORB
+            | Items::TWISTEDSPOON => Some(30),
+            Items::EVIOLITE | Items::ICYROCK => Some(40),
+            Items::EJECTPACK | Items::SHARPBEAK => Some(50),
+            Items::ADAMANTORB
+            | Items::CORNERSTONEMASK
+            | Items::DAMPROCK
+            | Items::GRISEOUSORB
+            | Items::HEARTHFLAMEMASK
+            | Items::HEATROCK
+            | Items::LUSTROUSORB
+            | Items::ROCKYHELMET
+            | Items::TERRAINEXTENDER
+            | Items::UTILITYUMBRELLA
+            | Items::WELLSPRINGMASK => Some(60),
+            Items::DRAGONFANG
+            | Items::POISONBARB
+            | Items::POWERANKLET
+            | Items::POWERBAND
+            | Items::POWERBELT
+            | Items::POWERBRACER
+            | Items::POWERLENS
+            | Items::POWERWEIGHT => Some(70),
+            Items::ASSAULTVEST
+            | Items::BLUNDERPOLICY
+            | Items::HEAVYDUTYBOOTS
+            | Items::QUICKCLAW
+            | Items::RAZORCLAW
+            | Items::SAFETYGOGGLES
+            | Items::STICKYBARB
+            | Items::WEAKNESSPOLICY => Some(80),
+            Items::DRACOPLATE
+            | Items::DREADPLATE
+            | Items::EARTHPLATE
+            | Items::FISTPLATE
+            | Items::FLAMEPLATE
+            | Items::ICICLEPLATE
+            | Items::INSECTPLATE
+            | Items::IRONPLATE
+            | Items::MEADOWPLATE
+            | Items::MINDPLATE
+            | Items::PIXIEPLATE
+            | Items::SKYPLATE
+            | Items::SPLASHPLATE
+            | Items::SPOOKYPLATE
+            | Items::STONEPLATE
+            | Items::TOXICPLATE
+            | Items::ZAPPLATE => Some(90),
+            Items::HARDSTONE | Items::ROOMSERVICE => Some(100),
+            Items::IRONBALL => Some(130),
+            _ => None,
+        }
+    }
+}
+
 pub fn pop_air_balloon(
     side_ref: &SideReference,
     side: &mut Side,

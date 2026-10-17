@@ -3571,3 +3571,31 @@ def test_l137_sitrus_after_heal_block_ends():
     outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2)
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
     assert ec.closest(b["state"], outs, n, hp=True)["diff"] == {}
+
+
+# L139 (doc/engine-diff.md): Pickpocket takes the attacker's item after the hit popped its own Air
+# Balloon (Showdown: the balloon goes on the damaging hit, Pickpocket after the move); the
+# engine's Pickpocket saw the balloon still there
+def test_l139_pickpocket_after_air_balloon():
+    tink = _setter("Tinkaton", "Pickpocket", "Air Balloon", "- Stealth Rock\n- Gigaton Hammer\n- Encore\n- Protect")
+    gambit = _setter("Kingambit", "Supreme Overlord", "Leftovers", "- Iron Head\n- Sucker Punch\n- Swords Dance\n- Protect")
+    states = ec.run_showdown(tink, gambit, [("move stealthrock", "move ironhead")])
+    assert states[1]["sides"][0]["mons"][0]["item"] == "leftovers"
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "stealthrock", "ironhead")
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L140 (doc/engine-diff.md): Fling, its power and effect its user's item's, the item used up even
+# into Protect, no Life Orb recoil after it (Showdown's onPrepareHit and fling volatile); the
+# engine's Fling had no power and kept the item
+@pytest.mark.parametrize("item,foe_move", [
+    ("Toxic Orb", "roost"), ("Rocky Helmet", "roost"), ("Life Orb", "roost"), ("King's Rock", "roost"),
+    ("Iron Ball", "roost"), ("Toxic Orb", "protect"),
+])  # fmt: skip
+def test_l140_fling(item, foe_move):
+    user = _setter("Gliscor", "Hyper Cutter", item, "- Fling\n- Earthquake\n- Protect\n- Toxic")
+    states = ec.run_showdown(user.replace("Careful Nature", "Jolly Nature"), CORVIKNIGHT.replace("- Defog", "- Protect"),
+                             [("move fling", f"move {foe_move}")])  # fmt: skip
+    assert states[1]["sides"][0]["mons"][0]["item"] == ""
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "fling", foe_move)
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}

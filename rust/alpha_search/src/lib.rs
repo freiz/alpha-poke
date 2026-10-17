@@ -997,6 +997,18 @@ fn move_targets() -> Vec<(String, String)> {
     out
 }
 
+/// poke-engine's Fling power with each item (`Items::fling_power`; None: Fling fails with it or
+/// the engine does not know the item; doc/engine-diff.md L140).
+#[pyfunction]
+fn fling_powers(names: Vec<String>) -> Vec<Option<u8>> {
+    use poke_engine::engine::items::Items;
+    use std::str::FromStr;
+    names
+        .iter()
+        .map(|x| Items::from_str(x).ok().and_then(|i| i.fling_power()))
+        .collect()
+}
+
 /// The status moves aimed at the foe that go through a Substitute (`Choices::bypasses_substitute`,
 /// lowercase; doc/engine-diff.md L133).
 #[pyfunction]
@@ -1205,6 +1217,7 @@ fn alpha_search(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(move_targets, m)?)?;
     m.add_function(wrap_pyfunction!(not_aimed_at_foe_moves, m)?)?;
     m.add_function(wrap_pyfunction!(bypass_substitute_moves, m)?)?;
+    m.add_function(wrap_pyfunction!(fling_powers, m)?)?;
     m.add_function(wrap_pyfunction!(paradox_species, m)?)?;
     m.add_function(wrap_pyfunction!(fail_skill_swap_abilities, m)?)?;
     m.add_function(wrap_pyfunction!(chance_outcomes, m)?)?;

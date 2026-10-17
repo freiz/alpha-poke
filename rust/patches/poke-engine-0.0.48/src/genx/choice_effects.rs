@@ -483,6 +483,35 @@ pub fn modify_choice(
                 attacker_choice.base_power = 0.0;
             }
         }
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L140): Fling's power and effect are its
+        // user's item's (Showdown's onPrepareHit: item.fling); it fails without one that can be
+        // flung, or under Klutz. A berry's eating and White / Mental Herb's effects are left out
+        Choices::FLING => {
+            let user = attacking_side.get_active_immutable();
+            match user.item.fling_power() {
+                Some(power) if user.ability != Abilities::KLUTZ && !user.item_is_permanent() => {
+                    attacker_choice.base_power = power as f32;
+                    let effect = match user.item {
+                        Items::FLAMEORB => Some(Effect::Status(PokemonStatus::BURN)),
+                        Items::TOXICORB => Some(Effect::Status(PokemonStatus::TOXIC)),
+                        Items::LIGHTBALL => Some(Effect::Status(PokemonStatus::PARALYZE)),
+                        Items::POISONBARB => Some(Effect::Status(PokemonStatus::POISON)),
+                        Items::KINGSROCK | Items::RAZORFANG => {
+                            Some(Effect::VolatileStatus(PokemonVolatileStatus::FLINCH))
+                        }
+                        _ => None,
+                    };
+                    if let Some(effect) = effect {
+                        attacker_choice.add_or_create_secondaries(Secondary {
+                            chance: 100.0,
+                            target: MoveTarget::Opponent,
+                            effect,
+                        });
+                    }
+                }
+                _ => attacker_choice.remove_all_effects(),
+            }
+        }
         // alpha-poke patch (2026-10-16, doc/engine-diff.md L93): it fails against a Substitute
         // (Showdown: no bypasssub)
         Choices::STRENGTHSAP
@@ -826,8 +855,8 @@ pub fn choice_after_damage_hit(
             .volatile_statuses
             .insert(PokemonVolatileStatus::MUSTRECHARGE);
 
-    // alpha-poke patch (2026-10-17, doc/engine-diff.md L132): Truant's volatile is set as the
-    // move starts (generate_instructions_from_move), not on a hit
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L132): Truant's volatile is set as the
+        // move starts (generate_instructions_from_move), not on a hit
     }
     match choice.move_id {
         Choices::DOUBLESHOCK => {
@@ -1580,6 +1609,35 @@ pub fn choice_special_effect(
     attacking_side_ref: &SideReference,
     instructions: &mut StateInstructions,
 ) {
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L140): a Fling that goes off uses its user's
+    // item up (hit, missed or protected against: Showdown's fling volatile, from onPrepareHit); its
+    // damage keeps the item's boosts (in the choice by now), but no Life Orb recoil after it
+    let user = state.get_side_immutable(attacking_side_ref).get_active_immutable();
+    if choice.move_id == Choices::FLING
+        && user.item.fling_power().is_some()
+        && user.ability != Abilities::KLUTZ
+        && !user.item_is_permanent()
+    {
+        let side = state.get_side(attacking_side_ref);
+        let user = side.get_active();
+        let item = user.item;
+        instructions
+            .instruction_list
+            .push(Instruction::ChangeItem(ChangeItemInstruction {
+                side_ref: *attacking_side_ref,
+                current_item: item,
+                new_item: Items::NONE,
+            }));
+        user.item = Items::NONE;
+        super::items::set_last_item(user, *attacking_side_ref, item, instructions);
+        if item == Items::LIFEORB {
+            if let Some(v) = choice.secondaries.as_mut() {
+                v.retain(|x| {
+                    !(x.target == MoveTarget::User && matches!(x.effect, Effect::Heal(h) if h == -0.1))
+                });
+            }
+        }
+    }
     // alpha-poke patch (2026-10-16, doc/engine-diff.md L73): Stockpile's layer (at most 3) and its
     // Defense / Sp. Def +1; Spit Up / Swallow use the layers up with their boosts
     if matches!(
@@ -2171,15 +2229,15 @@ pub fn choice_special_effect(
                         ));
                     let elapsed = attacking_side.volatile_status_durations.partiallytrapped;
                     if elapsed != 0 {
-                        instructions
-                            .instruction_list
-                            .push(Instruction::ChangeVolatileStatusDuration(
+                        instructions.instruction_list.push(
+                            Instruction::ChangeVolatileStatusDuration(
                                 ChangeVolatileStatusDurationInstruction {
                                     side_ref: *attacking_side_ref,
                                     volatile_status: PokemonVolatileStatus::PARTIALLYTRAPPED,
                                     amount: -elapsed,
                                 },
-                            ));
+                            ),
+                        );
                         attacking_side.volatile_status_durations.partiallytrapped = 0;
                     }
                 }

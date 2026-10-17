@@ -206,3 +206,22 @@ def test_bypass_substitute_moves_match_showdown():
                   and eng.get(m["id"]) == "opponent" and m["target"] in foe
                   and "bypasssub" in m["flags"])  # fmt: skip
     assert alpha_search.bypass_substitute_moves() == want
+
+
+def test_fling_powers_match_showdown():
+    """Fling's power with each Gen 9 item the engine knows (Showdown's item.fling.basePower; none:
+    Fling fails; L140)."""
+    import subprocess
+
+    import alpha_search
+
+    from alpha_poke.enginecheck import _engine_item
+
+    js = ("const {Dex} = require(process.argv[1]); console.log(JSON.stringify(Dex.items.all()"
+          ".filter(i => !i.isNonstandard).map(i => [i.id, i.fling ? i.fling.basePower : null])))")
+    items = json.loads(subprocess.run(["node", "-e", js, str(ec.SIM)], capture_output=True,
+                                      text=True, check=True).stdout)  # fmt: skip
+    items = [(i, p) for i, p in items if _engine_item(i)]
+    assert len(items) > 150
+    got = alpha_search.fling_powers([i.upper() for i, _ in items])
+    assert {i: g for (i, _), g in zip(items, got)} == dict(items)
