@@ -2896,3 +2896,76 @@ def test_l105_terrain_moves(move, item):
     for k, c1 in ((0, move), (1, "calmmind")):
         outs = ec.engine_outcomes(ec.engine_state(states[k]), c1, "softboiled")
         assert ec.closest(states[k + 1], outs, (1, 1), hp=True)["diff"] == {}, k
+
+
+# L106 (doc/engine-diff.md): Skill Swap swaps the two actives' abilities and starts the new ones
+# (Showdown's skillSwap: fails on an ability with failskillswap, through an Ability Shield); it had
+# no effect in the engine
+@pytest.mark.parametrize("target, second", [
+    (_setter("Zamazenta", "Dauntless Shield", "Leftovers", "- Iron Defense\n- Body Press\n- Crunch\n- Roar"), "irondefense"),
+    (_setter("Landorus-Therian", "Intimidate", "Leftovers", "- Stealth Rock\n- Earthquake\n- U-turn\n- Taunt"), "stealthrock"),
+    (_setter("Mimikyu", "Disguise", "Leftovers", "- Swords Dance\n- Shadow Claw\n- Play Rough\n- Substitute"), "swordsdance"),
+], ids=["dauntless-shield", "intimidate", "disguise-fails"])  # fmt: skip
+def test_l106_skill_swap(target, second):
+    bee = _setter("Ribombee", "Shield Dust", "Leftovers", "- Skill Swap\n- Moonblast\n- Sticky Web\n- U-turn")
+    states = ec.run_showdown(bee, target, [("move skillswap", f"move {second}")])
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "skillswap", second)
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L107 (doc/engine-diff.md): Mean Look / Block / Spider Web trap the target until their user
+# leaves the field (Showdown's trapped volatile, linked to the trapper; not a Ghost type, not
+# through a Substitute); they had no effect in the engine
+def _switch_options(state, side_two=True):
+    res = pe.mcts(state, 0, 50, 1)
+    side = res.s2 if side_two else res.s1
+    return [o.move_choice for o in side if o.move_choice.startswith("switch")]
+
+
+def test_l107_mean_look_traps():
+    umb = _setter("Umbreon", "Synchronize", "Leftovers", "- Mean Look\n- Wish\n- Protect\n- Foul Play")
+    chansey = BLISSEY.replace("Blissey @ Heavy-Duty Boots", "Chansey @ Eviolite")
+    states = ec.run_showdown(umb, BLISSEY + "\n\n" + chansey, [("move meanlook", "move softboiled")])
+    assert "trapped" in states[1]["sides"][1]["mons"][0]["volatiles"]
+    assert states[1]["sides"][1]["request_json"]["active"][0].get("trapped")
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "meanlook", "softboiled")
+    assert ec.closest(states[1], outs, (1, 2), hp=True)["diff"] == {}
+    assert _switch_options(ec.engine_state(states[1])) == []
+
+
+def test_l107_trap_ends_when_the_trapper_leaves():
+    umb = _setter("Umbreon", "Synchronize", "Leftovers", "- Mean Look\n- Wish\n- Protect\n- Foul Play")
+    chansey = BLISSEY.replace("Blissey @ Heavy-Duty Boots", "Chansey @ Eviolite")
+    states = ec.run_showdown(umb + "\n\n" + chansey, BLISSEY + "\n\n" + chansey,
+                             [("move meanlook", "move softboiled"), ("switch 2", "move softboiled")])  # fmt: skip
+    assert "trapped" not in states[2]["sides"][1]["mons"][0]["volatiles"]
+    outs = ec.engine_outcomes(ec.engine_state(states[1]), "chansey", "softboiled")
+    assert ec.closest(states[2], outs, (2, 2), hp=True)["diff"] == {}
+    assert _switch_options(ec.engine_state(states[2]))
+
+
+# L108 (doc/engine-diff.md): Spirit Shackle / Anchor Shot trap their target (a 100% secondary:
+# Covert Cloak / Shield Dust stop it), Jaw Lock traps both (its onHit, not through a Substitute);
+# a Prankster's Mean Look fails on a Dark type (the code effects too, not only the data ones)
+@pytest.mark.parametrize("user, move, both", [
+    (_attacker("Decidueye", "Overgrow", "Leftovers", "- Spirit Shackle\n- Leaf Blade\n- Roost\n- Swords Dance"), "spiritshackle", False),
+    (_attacker("Dhelmise", "Steelworker", "Leftovers", "- Anchor Shot\n- Power Whip\n- Rapid Spin\n- Swords Dance"), "anchorshot", False),
+    (_attacker("Dracovish", "Strong Jaw", "Leftovers", "- Jaw Lock\n- Fishious Rend\n- Psychic Fangs\n- Swords Dance"), "jawlock", True),
+], ids=["spirit-shackle", "anchor-shot", "jaw-lock"])  # fmt: skip
+def test_l108_trapping_attacks(user, move, both):
+    pex = _setter("Toxapex", "Regenerator", "Black Sludge", "- Recover\n- Toxic\n- Haze\n- Scald")
+    states = ec.run_showdown(user, pex, [(f"move {move}", "move recover")])
+    assert "trapped" in states[1]["sides"][1]["mons"][0]["volatiles"]
+    assert ("trapped" in states[1]["sides"][0]["mons"][0]["volatiles"]) == both
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), move, "recover")
+    res = ec.closest(states[1], outs, (1, 1), hp=True)
+    assert res["diff"] == {} and res["p"] > 0.9
+
+
+def test_l108_prankster_mean_look_into_a_dark_type():
+    sable = _setter("Sableye", "Prankster", "Leftovers", "- Mean Look\n- Recover\n- Will-O-Wisp\n- Knock Off")
+    gambit = _attacker("Kingambit", "Supreme Overlord", "Leftovers", "- Swords Dance\n- Iron Head\n- Sucker Punch\n- Protect")
+    states = ec.run_showdown(sable, gambit, [("move meanlook", "move swordsdance")])
+    assert "trapped" not in states[1]["sides"][1]["mons"][0]["volatiles"]
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "meanlook", "swordsdance")
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}

@@ -1022,6 +1022,17 @@ fn paradox_species() -> Vec<String> {
     out
 }
 
+/// The abilities Skill Swap fails on (`FAIL_SKILL_SWAP`, lowercase; doc/engine-diff.md L106).
+#[pyfunction]
+fn fail_skill_swap_abilities() -> Vec<String> {
+    let mut out: Vec<String> = poke_engine::engine::abilities::FAIL_SKILL_SWAP
+        .iter()
+        .map(|a| format!("{:?}", a).to_lowercase())
+        .collect();
+    out.sort();
+    out
+}
+
 /// The full-information state of a self-play / evaluation position: side one from `a` (side
 /// one's own view: its side exact), side two = side one of `b` (the other player's own view),
 /// the field from `a`; the weather / terrain from `b` with `weather_from_b` / `terrain_from_b`
@@ -1180,6 +1191,7 @@ fn alpha_search(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(move_targets, m)?)?;
     m.add_function(wrap_pyfunction!(not_aimed_at_foe_moves, m)?)?;
     m.add_function(wrap_pyfunction!(paradox_species, m)?)?;
+    m.add_function(wrap_pyfunction!(fail_skill_swap_abilities, m)?)?;
     m.add_function(wrap_pyfunction!(chance_outcomes, m)?)?;
     m.add_function(wrap_pyfunction!(describe, m)?)?;
     Ok(())

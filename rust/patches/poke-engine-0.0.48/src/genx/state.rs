@@ -292,6 +292,8 @@ define_enum_with_from_str! {
         METRONOME,
         // (L36: transformed by Transform / Imposter; ends on a switch)
         TRANSFORM,
+        // (L107: Mean Look / Block / Spider Web; ends when the trapper leaves)
+        TRAPPED,
     },
     default = NONE
 }
@@ -1138,6 +1140,9 @@ impl Side {
         } else if self
             .volatile_statuses
             .contains(&PokemonVolatileStatus::PARTIALLYTRAPPED)
+            || self
+                .volatile_statuses
+                .contains(&PokemonVolatileStatus::TRAPPED)
         {
             return true;
         } else if opponent_active.ability == Abilities::SHADOWTAG {

@@ -35,9 +35,6 @@
 "b151-t33": [
 "hp"
 ],
-"b151-t4": [
-"status"
-],
 "b152-t19": [
 "volatile.encore"
 ],
@@ -116,10 +113,6 @@
 "boost.def",
 "boost.spe",
 "hp"
-],
-"b275-t17": [
-"hp",
-"status"
 ],
 "b283-t17": [
 "hp"

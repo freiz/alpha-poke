@@ -129,6 +129,9 @@
 "hp",
 "item"
 ],
+"b49-t18": [
+"volatile.trapped"
+],
 "b49-t19": [
 "hp",
 "volatile.leechseed"
@@ -181,12 +184,6 @@
 "b68-t11": [
 "hp",
 "status"
-],
-"b69-t1": [
-"boost.atk"
-],
-"b69-t12": [
-"boost.atk"
 ],
 "b73-t22": [
 "status"

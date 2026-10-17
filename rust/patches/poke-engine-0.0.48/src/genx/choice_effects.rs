@@ -7,12 +7,13 @@ use crate::choices::{
     Boost, Choice, Choices, Effect, Heal, MoveCategory, MoveTarget, Secondary, StatBoosts,
 };
 use crate::instruction::{
-    ApplyVolatileStatusInstruction, BoostInstruction, ChangeItemInstruction,
-    ChangeSideConditionInstruction, ChangeStatusInstruction, ChangeSubsituteHealthInstruction,
-    ChangeTerrain, ChangeType, ChangeVolatileStatusDurationInstruction, ChangeWeather,
-    ChangeWishInstruction, DamageInstruction, HealInstruction, Instruction,
-    RemoveVolatileStatusInstruction, SetFutureSightInstruction, SetSleepTurnsInstruction,
-    StateInstructions, ToggleTrickRoomInstruction,
+    ApplyVolatileStatusInstruction, BoostInstruction, ChangeAbilityInstruction,
+    ChangeItemInstruction, ChangeSideConditionInstruction, ChangeStatusInstruction,
+    ChangeSubsituteHealthInstruction, ChangeTerrain, ChangeType,
+    ChangeVolatileStatusDurationInstruction, ChangeWeather, ChangeWishInstruction,
+    DamageInstruction, HealInstruction, Instruction, RemoveVolatileStatusInstruction,
+    SetFutureSightInstruction, SetSleepTurnsInstruction, StateInstructions,
+    ToggleTrickRoomInstruction,
 };
 use crate::pokemon::PokemonName;
 use crate::state::{
@@ -862,6 +863,43 @@ pub fn choice_after_damage_hit(
                 instructions.instruction_list.push(typechange_instruction);
             }
         }
+        // alpha-poke patch (2026-10-16, doc/engine-diff.md L108): Spirit Shackle / Anchor Shot trap
+        // the target (a 100% secondary: not through Covert Cloak / Shield Dust / Sheer Force), Jaw
+        // Lock both (its onHit); not through a Substitute, not a Ghost type
+        Choices::SPIRITSHACKLE | Choices::ANCHORSHOT | Choices::JAWLOCK if !hit_sub => {
+            let attacker_ability = attacking_side.get_active_immutable().ability;
+            let defender = defending_side.get_active_immutable();
+            let blocked = choice.move_id != Choices::JAWLOCK
+                && (defender.item == Items::COVERTCLOAK
+                    || defender.ability == Abilities::SHIELDDUST
+                    || attacker_ability == Abilities::SHEERFORCE);
+            let mut sides = vec![(defending_side, attacking_side_ref.get_other_side())];
+            if choice.move_id == Choices::JAWLOCK {
+                sides.push((attacking_side, *attacking_side_ref));
+            }
+            for (side, side_ref) in sides {
+                let pkmn = side.get_active_immutable();
+                if blocked
+                    || pkmn.hp == 0
+                    || pkmn.has_type(&PokemonType::GHOST)
+                    || side
+                        .volatile_statuses
+                        .contains(&PokemonVolatileStatus::TRAPPED)
+                {
+                    continue;
+                }
+                side.volatile_statuses
+                    .insert(PokemonVolatileStatus::TRAPPED);
+                instructions
+                    .instruction_list
+                    .push(Instruction::ApplyVolatileStatus(
+                        ApplyVolatileStatusInstruction {
+                            side_ref,
+                            volatile_status: PokemonVolatileStatus::TRAPPED,
+                        },
+                    ));
+            }
+        }
         // alpha-poke patch (2026-10-16, L27): Raging Bull's screen break is before the hit now
         // (generate_instructions::screen_break_instructions); it was here, after its damage
         Choices::KNOCKOFF => {
@@ -1562,16 +1600,109 @@ pub fn choice_special_effect(
             | Abilities::MYCELIUMMIGHT
             | Abilities::NEUTRALIZINGGAS
     );
-    if defending_side.get_active_immutable().ability == Abilities::GOODASGOLD
-        && !breaks_ability
+    // (L108: and a Prankster's status move aimed at a Dark type, as Good as Gold)
+    let prankster_dark = attacker.ability == Abilities::PRANKSTER
+        && choice.category == MoveCategory::Status
+        && choice.target == MoveTarget::Opponent
+        && !choice.move_id.not_aimed_at_foe()
+        && defending_side
+            .get_active_immutable()
+            .has_type(&PokemonType::DARK);
+    if (defending_side.get_active_immutable().ability == Abilities::GOODASGOLD && !breaks_ability
+        || prankster_dark)
         && matches!(
             choice.move_id,
-            Choices::TRICK | Choices::SWITCHEROO | Choices::PAINSPLIT | Choices::SOAK
+            Choices::TRICK
+                | Choices::SWITCHEROO
+                | Choices::PAINSPLIT
+                | Choices::SOAK
+                | Choices::SKILLSWAP
+                | Choices::MEANLOOK
+                | Choices::BLOCK
+                | Choices::SPIDERWEB
         )
     {
         return;
     }
     match choice.move_id {
+        // alpha-poke patch (2026-10-16, doc/engine-diff.md L107): Mean Look / Block / Spider Web
+        // trap the target (not a Ghost type, not through a Substitute; Magic Bounce sends it
+        // back: choice.target is User)
+        Choices::MEANLOOK | Choices::BLOCK | Choices::SPIDERWEB => {
+            let target_ref = if choice.target == MoveTarget::User {
+                *attacking_side_ref
+            } else {
+                attacking_side_ref.get_other_side()
+            };
+            let infiltrator =
+                attacking_side.get_active_immutable().ability == Abilities::INFILTRATOR;
+            let side = state.get_side(&target_ref);
+            let target = side.get_active_immutable();
+            if target.hp > 0
+                && !target.has_type(&PokemonType::GHOST)
+                && !(side
+                    .volatile_statuses
+                    .contains(&PokemonVolatileStatus::SUBSTITUTE)
+                    && !infiltrator)
+                && !side
+                    .volatile_statuses
+                    .contains(&PokemonVolatileStatus::TRAPPED)
+            {
+                side.volatile_statuses
+                    .insert(PokemonVolatileStatus::TRAPPED);
+                instructions
+                    .instruction_list
+                    .push(Instruction::ApplyVolatileStatus(
+                        ApplyVolatileStatusInstruction {
+                            side_ref: target_ref,
+                            volatile_status: PokemonVolatileStatus::TRAPPED,
+                        },
+                    ));
+            }
+            return;
+        }
+        // alpha-poke patch (2026-10-16, doc/engine-diff.md L106): Skill Swap, the actives swap
+        // abilities and the new ones start (Showdown's skillSwap: the source's old ability on the
+        // target first); not with a failskillswap ability, through an Ability Shield
+        Choices::SKILLSWAP => {
+            let (a, d) = (
+                attacking_side.get_active_immutable(),
+                defending_side.get_active_immutable(),
+            );
+            let fails = a.hp == 0
+                || d.hp == 0
+                || super::abilities::FAIL_SKILL_SWAP.contains(&a.ability)
+                || super::abilities::FAIL_SKILL_SWAP.contains(&d.ability)
+                || a.item == Items::ABILITYSHIELD
+                || d.item == Items::ABILITYSHIELD;
+            if !fails {
+                let (mine, theirs) = (a.ability, d.ability);
+                let target_ref = attacking_side_ref.get_other_side();
+                for (side_ref, old, new) in [
+                    (*attacking_side_ref, mine, theirs),
+                    (target_ref, theirs, mine),
+                ] {
+                    instructions
+                        .instruction_list
+                        .push(Instruction::ChangeAbility(ChangeAbilityInstruction {
+                            side_ref,
+                            ability_change: new as i16 - old as i16,
+                        }));
+                    state.get_side(&side_ref).get_active().ability = new;
+                }
+                for side_ref in [target_ref, *attacking_side_ref] {
+                    if state
+                        .get_side_immutable(&side_ref)
+                        .get_active_immutable()
+                        .ability
+                        != Abilities::IMPOSTER
+                    {
+                        super::abilities::ability_on_switch_in(state, &side_ref, instructions);
+                    }
+                }
+            }
+            return;
+        }
         // alpha-poke patch (2026-10-16, doc/engine-diff.md L99): Soak, the target pure Water
         // (Showdown's setType: not a pure Water type, a Terastallized one, through a Substitute)
         Choices::SOAK => {

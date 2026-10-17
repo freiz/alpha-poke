@@ -455,6 +455,40 @@ fn mold_breaker_ignores(ability: &Abilities) -> bool {
     }
 }
 
+// alpha-poke patch (2026-10-16, doc/engine-diff.md L106): the abilities Skill Swap fails on
+// (Showdown's failskillswap; the data test checks the list)
+pub const FAIL_SKILL_SWAP: [Abilities; 29] = [
+    Abilities::ASONEGLASTRIER,
+    Abilities::ASONESPECTRIER,
+    Abilities::BATTLEBOND,
+    Abilities::COMATOSE,
+    Abilities::COMMANDER,
+    Abilities::DISGUISE,
+    Abilities::EMBODYASPECTCORNERSTONE,
+    Abilities::EMBODYASPECTHEARTHFLAME,
+    Abilities::EMBODYASPECTTEAL,
+    Abilities::EMBODYASPECTWELLSPRING,
+    Abilities::HUNGERSWITCH,
+    Abilities::ICEFACE,
+    Abilities::ILLUSION,
+    Abilities::MULTITYPE,
+    Abilities::NEUTRALIZINGGAS,
+    Abilities::POISONPUPPETEER,
+    Abilities::POWERCONSTRUCT,
+    Abilities::PROTOSYNTHESIS,
+    Abilities::QUARKDRIVE,
+    Abilities::RKSSYSTEM,
+    Abilities::SCHOOLING,
+    Abilities::SHIELDSDOWN,
+    Abilities::STANCECHANGE,
+    Abilities::TERAFORMZERO,
+    Abilities::TERASHELL,
+    Abilities::TERASHIFT,
+    Abilities::WONDERGUARD,
+    Abilities::ZENMODE,
+    Abilities::ZEROTOHERO,
+];
+
 fn protosynthesus_or_quarkdrive_on_switch_in(
     thing_is_active: bool,
     volatile: PokemonVolatileStatus,
@@ -1660,7 +1694,8 @@ pub fn ability_on_switch_in(
         }
         // alpha-poke patch (2026-10-16, doc/engine-diff.md L18): once per battle (Gen 9); a used
         // one has base ability none (agents/engine_state.py); before, at every switch-in
-        Abilities::DAUNTLESSSHIELD if active_pkmn.base_ability == Abilities::DAUNTLESSSHIELD => {
+        // (L106: also one Skill Swap gave it, its base ability another)
+        Abilities::DAUNTLESSSHIELD if active_pkmn.base_ability != Abilities::NONE => {
             // no need to check for boost at +6 because we are switching in
             attacking_side.defense_boost += 1;
             instructions

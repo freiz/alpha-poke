@@ -388,6 +388,26 @@ fn generate_instructions_from_switch(
         }
     }
 
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L107): the trapper leaves, its Mean Look
+    // / Block on the opponent ends
+    let opposite_side = state.get_side(&switching_side_ref.get_other_side());
+    if opposite_side
+        .volatile_statuses
+        .contains(&PokemonVolatileStatus::TRAPPED)
+    {
+        opposite_side
+            .volatile_statuses
+            .remove(&PokemonVolatileStatus::TRAPPED);
+        incoming_instructions
+            .instruction_list
+            .push(Instruction::RemoveVolatileStatus(
+                RemoveVolatileStatusInstruction {
+                    side_ref: switching_side_ref.get_other_side(),
+                    volatile_status: PokemonVolatileStatus::TRAPPED,
+                },
+            ));
+    }
+
     state.re_enable_disabled_moves(
         &switching_side_ref,
         &mut incoming_instructions.instruction_list,

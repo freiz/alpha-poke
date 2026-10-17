@@ -175,3 +175,18 @@ def test_paradox_species_match_showdown():
     want = sorted(json.loads(subprocess.run(["node", "-e", js, str(ec.SIM)], capture_output=True,
                                             text=True, check=True).stdout))  # fmt: skip
     assert alpha_search.paradox_species() == want
+
+
+def test_skill_swap_failures_match_showdown():
+    """The abilities Skill Swap fails on (Showdown's failskillswap flag; L106)."""
+    import alpha_search
+
+    from alpha_poke import enginecheck as ec
+
+    import subprocess
+
+    js = ("const {Dex} = require(process.argv[1]); console.log(JSON.stringify(Dex.abilities.all()"
+          ".filter(a => a.flags.failskillswap && !a.isNonstandard).map(a => a.id)))")
+    want = sorted(json.loads(subprocess.run(["node", "-e", js, str(ec.SIM)], capture_output=True,
+                                            text=True, check=True).stdout))  # fmt: skip
+    assert alpha_search.fail_skill_swap_abilities() == want
