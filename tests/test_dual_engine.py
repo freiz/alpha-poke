@@ -4386,8 +4386,38 @@ def test_l168_future_sight_crit():
 def test_l168_future_sight_into_a_substitute():
     turns = [("move futuresight", "move calmmind"), ("move slackoff", "move calmmind"),
              ("move slackoff", "move substitute")]  # fmt: skip
-    states = ec.run_showdown(SLOWKING_FUTURE, BLISSEY_CM_SUB, turns, force_random=False)
-    assert "substitute" in states[3]["sides"][1]["mons"][0]["volatiles"] or any(
-        "-end|p2a: Blissey|Substitute" in x for x in states[3]["log"])
+    states = ec.run_showdown(SLOWKING_FUTURE, BLISSEY_CM_SUB, turns)
+    assert any(x.startswith("|-activate|p2a: Blissey|move: Substitute|[damage]") for x in states[3]["log"])
     outs = ec.engine_outcomes(ec.engine_state(states[2]), "slackoff", "substitute")
     assert ec.closest(states[3], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L169 (doc/engine-diff.md): the screens end after Future Sight's hit (Showdown's residual orders
+# 26 and 3): the hit of a Light Screen's last turn is still halved (wide b176-t38); the target's
+# expected end-of-turn loss counts the hit (a move's surviving rolls split there: forum b61-t17)
+BLISSEY_SCREEN = BLISSEY.replace("- Seismic Toss", "- Light Screen")
+
+
+def test_l169_future_sight_on_a_screens_last_turn():
+    turns = [("move slackoff", "move lightscreen"), ("move slackoff", "move calmmind"),
+             ("move futuresight", "move calmmind"), ("move slackoff", "move calmmind"),
+             ("move slackoff", "move softboiled")]  # fmt: skip
+    states = ec.run_showdown(SLOWKING_FUTURE, BLISSEY_SCREEN, turns)
+    assert "lightscreen" in states[4]["sides"][1]["conditions"]
+    assert "lightscreen" not in states[5]["sides"][1]["conditions"]
+    assert any("move: Future Sight" in x for x in states[5]["log"])
+    assert not any(x.startswith("|-miss|") for x in states[5]["log"])
+    outs = ec.engine_outcomes(ec.engine_state(states[4]), "slackoff", "softboiled")
+    assert ec.closest(states[5], outs, (1, 1), hp=True)["diff"] == {}
+
+
+@pytest.mark.parametrize("teams,i,turn,offset", [
+    ("random_battle_teams_wide.jsonl", 176, 38, 0),
+    ("random_battle_teams_forum.jsonl", 61, 17, 50000),
+])  # fmt: skip
+def test_l169_positions(teams, i, turn, offset):
+    a, b = _random_position(teams, i, turn, offset)
+    c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
+    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2)
+    n = tuple(len(s["mons"]) for s in a["state"]["sides"])
+    assert ec.closest(b["state"], outs, n, hp=True)["diff"] == {}

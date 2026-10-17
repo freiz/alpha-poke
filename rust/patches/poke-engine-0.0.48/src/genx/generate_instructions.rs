@@ -4447,6 +4447,48 @@ pub fn generate_instructions_from_move(
 // turn as far as the state tells it (its status, Salt Cure, Leech Seed, a partial trap, Curse, sand,
 // Sticky Barb / Black Sludge, less Leftovers / Black Sludge / Poison Heal / Grassy Terrain); only
 // where the surviving rolls split (an approximation there is a coarser split, not a wrong one)
+// the hit of `side_ref`'s pending Future Sight / Doom Desire, its modifiers (L35 / L56 / L157;
+// L168: also the target's expected end-of-turn loss)
+fn future_sight_choice(state: &State, side_ref: &SideReference, user_active: bool) -> Choice {
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L56): Doom Desire's hit (Steel, 140) when
+    // its user knows Doom Desire and not Future Sight (the engine keeps only the user's index);
+    // before, always Future Sight's
+    let side = state.get_side_immutable(side_ref);
+    let user = &side.pokemon[side.future_sight.1];
+    let knows = |c: Choices| user.moves.into_iter().any(|m| m.id == c);
+    let id = if knows(Choices::DOOMDESIRE) && !knows(Choices::FUTURESIGHT) {
+        Choices::DOOMDESIRE
+    } else {
+        Choices::FUTURESIGHT
+    };
+    let mut fs_choice = MOVES.get(&id).unwrap().clone();
+    let none = Choice::default();
+    if user_active {
+        ability_modify_attack_being_used(state, &mut fs_choice, &none, side_ref);
+        item_modify_attack_being_used(state, &mut fs_choice, side_ref);
+    } else {
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L157): the active ally's Vessel of
+        // Ruin / Beads of Ruin lower the benched user's Sp. Atk / the target's Sp. Def too
+        // (Showdown's onAnyModifySpA / SpD: every mon but the holder; not under the foe's
+        // Neutralizing Gas)
+        let ally = state.get_side_immutable(side_ref).get_active_immutable();
+        let foe = state
+            .get_side_immutable(&side_ref.get_other_side())
+            .get_active_immutable();
+        let gassed = foe.ability == Abilities::NEUTRALIZINGGAS
+            && foe.hp > 0
+            && ally.item != Items::ABILITYSHIELD;
+        match if gassed { Abilities::NONE } else { ally.ability } {
+            Abilities::VESSELOFRUIN => fs_choice.attack_modifier *= 0.75,
+            Abilities::BEADSOFRUIN => fs_choice.defense_modifier *= 0.75,
+            _ => {}
+        }
+    }
+    ability_modify_attack_against(state, &mut fs_choice, &none, side_ref);
+    item_modify_attack_against(state, &mut fs_choice, side_ref);
+    fs_choice
+}
+
 fn expected_residual(state: &State, side_ref: &SideReference) -> i16 {
     let side = state.get_side_immutable(side_ref);
     let p = side.get_active_immutable();
@@ -4454,6 +4496,19 @@ fn expected_residual(state: &State, side_ref: &SideReference) -> i16 {
     let has = |v: PokemonVolatileStatus| side.volatile_statuses.contains(&v);
     let poison_heal = p.ability == Abilities::POISONHEAL;
     let mut loss = 0;
+    // (L168: the foe's Future Sight / Doom Desire hitting at this end of turn, its average hit)
+    let foe_ref = side_ref.get_other_side();
+    let foe = state.get_side_immutable(&foe_ref);
+    if foe.future_sight.0 == 1 {
+        let user_active = foe.active_index == foe.future_sight.1;
+        let fs_choice = future_sight_choice(state, &foe_ref, user_active);
+        if !side
+            .volatile_statuses
+            .contains(&PokemonVolatileStatus::SUBSTITUTE)
+        {
+            loss += calculate_futuresight_damage(foe, side, &foe.future_sight.1, &fs_choice, false);
+        }
+    }
     if p.ability != Abilities::MAGICGUARD {
         loss += match p.status {
             PokemonStatus::BURN => m / 16,
@@ -5402,59 +5457,6 @@ fn end_of_turn_instructions(
         }
     }
 
-    // Side Condition decrement
-    for side_ref in sides {
-        let side = state.get_side(side_ref);
-        if side.side_conditions.reflect > 0 {
-            incoming_instructions
-                .instruction_list
-                .push(Instruction::ChangeSideCondition(
-                    ChangeSideConditionInstruction {
-                        side_ref: *side_ref,
-                        side_condition: PokemonSideCondition::Reflect,
-                        amount: -1,
-                    },
-                ));
-            side.side_conditions.reflect -= 1;
-        }
-        if side.side_conditions.light_screen > 0 {
-            incoming_instructions
-                .instruction_list
-                .push(Instruction::ChangeSideCondition(
-                    ChangeSideConditionInstruction {
-                        side_ref: *side_ref,
-                        side_condition: PokemonSideCondition::LightScreen,
-                        amount: -1,
-                    },
-                ));
-            side.side_conditions.light_screen -= 1;
-        }
-        if side.side_conditions.aurora_veil > 0 {
-            incoming_instructions
-                .instruction_list
-                .push(Instruction::ChangeSideCondition(
-                    ChangeSideConditionInstruction {
-                        side_ref: *side_ref,
-                        side_condition: PokemonSideCondition::AuroraVeil,
-                        amount: -1,
-                    },
-                ));
-            side.side_conditions.aurora_veil -= 1;
-        }
-        if side.side_conditions.tailwind > 0 {
-            incoming_instructions
-                .instruction_list
-                .push(Instruction::ChangeSideCondition(
-                    ChangeSideConditionInstruction {
-                        side_ref: *side_ref,
-                        side_condition: PokemonSideCondition::Tailwind,
-                        amount: -1,
-                    },
-                ));
-            side.side_conditions.tailwind -= 1;
-        }
-    }
-
     // Weather Damage
     for side_ref in sides {
         if state.weather_is_active(&Weather::HAIL) {
@@ -5521,45 +5523,11 @@ fn end_of_turn_instructions(
         if state.get_side_immutable(side_ref).future_sight.0 == 0 {
             continue;
         }
-        let mut fs_choice = Choice::default();
-        if state.get_side_immutable(side_ref).future_sight.0 == 1 {
-            // alpha-poke patch (2026-10-16, doc/engine-diff.md L56): Doom Desire's hit (Steel,
-            // 140) when its user knows Doom Desire and not Future Sight (the engine keeps only
-            // the user's index); before, always Future Sight's
-            let side = state.get_side_immutable(side_ref);
-            let user = &side.pokemon[side.future_sight.1];
-            let knows = |c: Choices| user.moves.into_iter().any(|m| m.id == c);
-            let id = if knows(Choices::DOOMDESIRE) && !knows(Choices::FUTURESIGHT) {
-                Choices::DOOMDESIRE
-            } else {
-                Choices::FUTURESIGHT
-            };
-            fs_choice = MOVES.get(&id).unwrap().clone();
-            let none = Choice::default();
-            if user_active {
-                ability_modify_attack_being_used(state, &mut fs_choice, &none, side_ref);
-                item_modify_attack_being_used(state, &mut fs_choice, side_ref);
-            } else {
-                // alpha-poke patch (2026-10-17, doc/engine-diff.md L157): the active ally's Vessel
-                // of Ruin / Beads of Ruin lower the benched user's Sp. Atk / the target's Sp. Def
-                // too (Showdown's onAnyModifySpA / SpD: every mon but the holder; not under the
-                // foe's Neutralizing Gas)
-                let ally = state.get_side_immutable(side_ref).get_active_immutable();
-                let foe = state
-                    .get_side_immutable(&side_ref.get_other_side())
-                    .get_active_immutable();
-                let gassed = foe.ability == Abilities::NEUTRALIZINGGAS
-                    && foe.hp > 0
-                    && ally.item != Items::ABILITYSHIELD;
-                match if gassed { Abilities::NONE } else { ally.ability } {
-                    Abilities::VESSELOFRUIN => fs_choice.attack_modifier *= 0.75,
-                    Abilities::BEADSOFRUIN => fs_choice.defense_modifier *= 0.75,
-                    _ => {}
-                }
-            }
-            ability_modify_attack_against(state, &mut fs_choice, &none, side_ref);
-            item_modify_attack_against(state, &mut fs_choice, side_ref);
-        }
+        let fs_choice = if state.get_side_immutable(side_ref).future_sight.0 == 1 {
+            future_sight_choice(state, side_ref, user_active)
+        } else {
+            Choice::default()
+        };
         let (attacking_side, defending_side) = state.get_both_sides(side_ref);
         if attacking_side.future_sight.0 > 0 {
             let decrement_future_sight_instruction =
@@ -5643,6 +5611,62 @@ fn end_of_turn_instructions(
             incoming_instructions
                 .instruction_list
                 .push(decrement_future_sight_instruction);
+        }
+    }
+
+    // Side Condition decrement
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L168): after Future Sight's hit (Showdown's
+    // screens end at residual order 26, the hit is at 3: its last turn's screen still halves it);
+    // before, at the start of the end of the turn
+    for side_ref in sides {
+        let side = state.get_side(side_ref);
+        if side.side_conditions.reflect > 0 {
+            incoming_instructions
+                .instruction_list
+                .push(Instruction::ChangeSideCondition(
+                    ChangeSideConditionInstruction {
+                        side_ref: *side_ref,
+                        side_condition: PokemonSideCondition::Reflect,
+                        amount: -1,
+                    },
+                ));
+            side.side_conditions.reflect -= 1;
+        }
+        if side.side_conditions.light_screen > 0 {
+            incoming_instructions
+                .instruction_list
+                .push(Instruction::ChangeSideCondition(
+                    ChangeSideConditionInstruction {
+                        side_ref: *side_ref,
+                        side_condition: PokemonSideCondition::LightScreen,
+                        amount: -1,
+                    },
+                ));
+            side.side_conditions.light_screen -= 1;
+        }
+        if side.side_conditions.aurora_veil > 0 {
+            incoming_instructions
+                .instruction_list
+                .push(Instruction::ChangeSideCondition(
+                    ChangeSideConditionInstruction {
+                        side_ref: *side_ref,
+                        side_condition: PokemonSideCondition::AuroraVeil,
+                        amount: -1,
+                    },
+                ));
+            side.side_conditions.aurora_veil -= 1;
+        }
+        if side.side_conditions.tailwind > 0 {
+            incoming_instructions
+                .instruction_list
+                .push(Instruction::ChangeSideCondition(
+                    ChangeSideConditionInstruction {
+                        side_ref: *side_ref,
+                        side_condition: PokemonSideCondition::Tailwind,
+                        amount: -1,
+                    },
+                ));
+            side.side_conditions.tailwind -= 1;
         }
     }
 
