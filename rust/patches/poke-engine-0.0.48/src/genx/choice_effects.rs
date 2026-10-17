@@ -56,6 +56,47 @@ pub fn modify_choice(
 ) {
     let (attacking_side, defending_side) = state.get_both_sides_immutable(attacking_side_ref);
     match attacker_choice.move_id {
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L121): Parting Shot that lowers no stat
+        // fails, its user stays (Showdown's onHit: no boost, not into Mirror Armor); a sound move,
+        // through a Substitute
+        Choices::PARTINGSHOT => {
+            let target = defending_side.get_active_immutable();
+            let user = attacking_side.get_active_immutable();
+            let breaker = matches!(
+                user.ability,
+                Abilities::MOLDBREAKER | Abilities::TERAVOLT | Abilities::TURBOBLAZE
+            );
+            let gassed = user.ability == Abilities::NEUTRALIZINGGAS;
+            let mut vol = defending_side.volatile_statuses.clone();
+            vol.remove(&PokemonVolatileStatus::SUBSTITUTE);
+            let stage = |stat: PokemonBoostableStat| match stat {
+                PokemonBoostableStat::Attack => defending_side.attack_boost,
+                _ => defending_side.special_attack_boost,
+            };
+            let contrary = target.ability == Abilities::CONTRARY && !breaker && !gassed;
+            let lowers = [
+                PokemonBoostableStat::Attack,
+                PokemonBoostableStat::SpecialAttack,
+            ]
+            .iter()
+            .any(|stat| {
+                let immune =
+                    target.immune_to_stats_lowered_by_opponent(stat, &vol) && !breaker && !gassed;
+                !immune
+                    && if contrary {
+                        stage(*stat) < 6
+                    } else {
+                        stage(*stat) > -6
+                    }
+            });
+            let gold = target.ability == Abilities::GOODASGOLD && !breaker && !gassed;
+            let mirror = target.ability == Abilities::MIRRORARMOR && !breaker && !gassed;
+            if target.hp > 0
+                && (gold || defending_side.side_conditions.mist > 0 || (!lowers && !mirror))
+            {
+                attacker_choice.flags.pivot = false;
+            }
+        }
         // alpha-poke patch (2026-10-16, doc/engine-diff.md L2a / L2b): Curse by a Ghost type
         // curses the target (no boosts; fails on a cursed target) and costs the user half of its
         // max HP (Showdown's curse onTryHit / onHit); by any other type it only boosts (the data's
@@ -1830,6 +1871,12 @@ pub fn choice_special_effect(
                             damage_amount: damage_amount,
                         }));
                     defending_side.get_active().hp -= damage_amount;
+                    // (L120: a damaging hit pops an Air Balloon)
+                    super::items::pop_air_balloon(
+                        &attacking_side_ref.get_other_side(),
+                        defending_side,
+                        instructions,
+                    );
                 }
             }
         }
@@ -1851,6 +1898,12 @@ pub fn choice_special_effect(
                             damage_amount: damage_amount,
                         }));
                     defending_side.get_active().hp -= damage_amount;
+                    // (L120: a damaging hit pops an Air Balloon)
+                    super::items::pop_air_balloon(
+                        &attacking_side_ref.get_other_side(),
+                        defending_side,
+                        instructions,
+                    );
                 }
             }
         }
@@ -1871,6 +1924,12 @@ pub fn choice_special_effect(
                             damage_amount: damage_amount,
                         }));
                     defending_side.get_active().hp -= damage_amount;
+                    // (L120: a damaging hit pops an Air Balloon)
+                    super::items::pop_air_balloon(
+                        &attacking_side_ref.get_other_side(),
+                        defending_side,
+                        instructions,
+                    );
                 }
             }
         }
@@ -2000,7 +2059,9 @@ pub fn choice_special_effect(
                 return;
             }
 
-            let damage_amount = attacker.hp;
+            // alpha-poke patch (2026-10-17, doc/engine-diff.md L120): at most the target's HP; its
+            // Air Balloon pops
+            let damage_amount = cmp::min(attacker.hp, defender.hp);
             instructions
                 .instruction_list
                 .push(Instruction::Damage(DamageInstruction {
@@ -2008,6 +2069,12 @@ pub fn choice_special_effect(
                     damage_amount: damage_amount,
                 }));
             defender.hp -= damage_amount;
+            super::items::pop_air_balloon(
+                &attacking_side_ref.get_other_side(),
+                defending_side,
+                instructions,
+            );
+            let attacker = attacking_side.get_active();
 
             instructions
                 .instruction_list

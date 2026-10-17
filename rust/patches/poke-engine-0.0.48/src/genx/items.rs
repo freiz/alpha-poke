@@ -424,6 +424,26 @@ pub fn is_berry(item: Items) -> bool {
     format!("{:?}", item).ends_with("BERRY")
 }
 
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L120): a damaging hit outside a move's usual
+// damage (Future Sight, Counter / Mirror Coat / Metal Burst, Final Gambit) pops an Air Balloon too
+pub fn pop_air_balloon(
+    side_ref: &SideReference,
+    side: &mut Side,
+    instructions: &mut StateInstructions,
+) {
+    let holder = side.get_active();
+    if holder.item == Items::AIRBALLOON {
+        instructions
+            .instruction_list
+            .push(Instruction::ChangeItem(ChangeItemInstruction {
+                side_ref: *side_ref,
+                current_item: Items::AIRBALLOON,
+                new_item: Items::NONE,
+            }));
+        holder.item = Items::NONE;
+    }
+}
+
 // alpha-poke patch (2026-10-16, doc/engine-diff.md L102): Unnerve / As One on the foe's active
 // stop a berry being eaten (Showdown's onFoeTryEatItem; not under the holder's Neutralizing Gas)
 pub fn unnerved(state: &State, side_ref: &SideReference) -> bool {

@@ -3240,3 +3240,27 @@ def test_l119_sleeper_wakes_without_a_target():
     assert states[5]["sides"][0]["mons"][0]["status"] == ""
     outs = ec.engine_outcomes(ec.engine_state(states[4]), "ruination", "healingwish")
     assert ec.closest(states[5], outs, (1, 2), hp=True)["diff"] == {}
+
+
+# L120 (doc/engine-diff.md): an Air Balloon pops on any damaging hit: Future Sight's, Counter /
+# Mirror Coat / Metal Burst's, Final Gambit's too (Showdown's onDamagingHit); the engine popped it
+# only on a move's ordinary hit (a secondary)
+def test_l120_balloon_pops_on_mirror_coat():
+    momo = _setter("Alomomola", "Regenerator", "Leftovers", "- Mirror Coat\n- Wish\n- Protect\n- Scald")
+    tran = _setter("Heatran", "Flash Fire", "Air Balloon", "- Earth Power\n- Magma Storm\n- Protect\n- Stealth Rock")
+    states = ec.run_showdown(momo, tran, [("move mirrorcoat", "move earthpower")])
+    assert states[1]["sides"][1]["mons"][0]["hp"] > 0
+    assert states[1]["sides"][1]["mons"][0]["item"] == ""
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "mirrorcoat", "earthpower")
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L121 (doc/engine-diff.md): Parting Shot fails, and its user stays, when it lowers no stat (Clear
+# Body, Mirror Armor, at -6, a Substitute: Showdown's onHit returns false); the engine switched out
+def test_l121_parting_shot_into_clear_body():
+    room = _setter("Revavroom", "Filter", "Leftovers", "- Parting Shot\n- Gunk Shot\n- Shift Gear\n- Iron Head")
+    steel = _setter("Registeel", "Clear Body", "Leftovers", "- Body Press\n- Iron Defense\n- Stealth Rock\n- Protect")
+    states = ec.run_showdown(steel, room + "\n\n" + BLISSEY, [("move irondefense", "move partingshot")])
+    assert states[1]["sides"][1]["active"] == 0 and states[1]["sides"][1]["request"] == "move"
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "irondefense", "partingshot")
+    assert ec.closest(states[1], outs, (1, 2), hp=True)["diff"] == {}

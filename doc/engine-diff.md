@@ -263,6 +263,8 @@ harness 必须把 Showdown 的状态完整映射到引擎，否则不一致来�
 | L117 | 多段招式在使用者被目标的接触伤害（Rocky Helmet、Rough Skin）打倒的那一下之后停止（Showdown 的多段循环中断）；引擎打满所有段数 | 引擎 | 已修复 | `test_l117_multi_hit_stops_when_the_user_faints`（Skill Link Tail Slap 第 4 下停） | `generate_instructions.rs` `run_move` 开头按每段的接触伤害限制段数 |
 | L118 | Flying Press 的属性相克是格斗加飞行（Showdown 的 onEffectiveness 加上飞行的）；引擎只算格斗（对太晶钢系 2 倍而不是 1 倍） | 引擎 | 已修复 | `test_l118_flying_press_is_flying_too` | `damage_calc.rs` 伤害配方和 `move_type_effectiveness`。伤害计算差分（`check_damage_calc.py`）同时把 Libero / Protean 的攻击方排除：引擎在招式开始时变属性（L41，`generate_instructions`），不在 `calculate_damage` 里，探针却跑了 Showdown 的 PrepareHit；排除后超出 2% 的 32 处（之前 38） |
 | L119 | 对方已倒下时，出招方照样经过自己的异常状态（睡眠计数和醒来、解冻：Showdown 的 BeforeMove 在目标检查之前）；引擎先判“没有目标”就停了，到点该醒的 Rest 睡眠没有醒 | 引擎 | 已修复 | `test_l119_sleeper_wakes_without_a_target` | `generate_instructions.rs`：`no_target` 从 `cannot_use_move` 移到睡眠处理之后 |
+| L120 | Air Balloon 在任何伤害性的一击时破（Showdown 的 onDamagingHit）：Future Sight、Counter / Mirror Coat / Metal Burst、Final Gambit 的也算；引擎只在招式通常的命中（追加效果）时破。另外 Final Gambit 的伤害没有以目标 HP 为上限 | 引擎 | 已修复 | `test_l120_balloon_pops_on_mirror_coat` | `items.rs` `pop_air_balloon`，在 `choice_effects.rs` 和 Future Sight 的命中处调用 |
+| L121 | Parting Shot 一项能力都没降低时失败，使用者留在场上（Showdown 的 onHit：没有降低且不是 Mirror Armor；Clear Body / White Smoke / Full Metal Body / Clear Amulet、Mist、已到 −6、Good as Gold）；引擎照样换人 | 引擎 | 已修复 | `test_l121_parting_shot_into_clear_body` | `choice_effects.rs` `modify_choice`：这些情况去掉 pivot（声音招式，替身不挡） |
 
 ## 修复与验证（2026-10-16）
 

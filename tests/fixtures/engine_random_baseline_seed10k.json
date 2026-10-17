@@ -9,9 +9,6 @@
 "b1-t26": [
 "status"
 ],
-"b101-t18": [
-"item"
-],
 "b105-t5": [
 "volatile.confusion"
 ],
@@ -54,9 +51,6 @@
 ],
 "b166-t8": [
 "volatile.typechange"
-],
-"b168-t26": [
-"hp"
 ],
 "b169-t54": [
 "status"
@@ -194,13 +188,6 @@
 "b297-t30": [
 "boost.atk",
 "boost.spa",
-"hp"
-],
-"b30-t1": [
-"hp",
-"item"
-],
-"b30-t4": [
 "hp"
 ],
 "b36-t52": [

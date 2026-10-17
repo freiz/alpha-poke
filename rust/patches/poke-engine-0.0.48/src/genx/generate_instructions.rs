@@ -5083,6 +5083,14 @@ fn add_end_of_turn_instructions(
                     .instruction_list
                     .push(future_sight_damage_instruction);
                 defender.hp -= damage;
+                // (L120: its hit pops an Air Balloon)
+                if damage > 0 {
+                    super::items::pop_air_balloon(
+                        &side_ref.get_other_side(),
+                        defending_side,
+                        &mut incoming_instructions,
+                    );
+                }
                 let user = attacking_side.get_active();
                 if user_active
                     && damage > 0
