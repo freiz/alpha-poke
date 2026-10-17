@@ -962,10 +962,18 @@ fn boost_berry(
     stat: PokemonBoostableStat,
     instructions: &mut StateInstructions,
 ) {
+    // (L149: Ripen doubles a berry's, Showdown's onChangeBoost)
+    let amount = if state.get_side_immutable(side_ref).get_active_immutable().ability
+        == Abilities::RIPEN
+    {
+        2
+    } else {
+        1
+    };
     apply_boost_instruction(
         state.get_side(side_ref),
         &stat,
-        &1,
+        &amount,
         side_ref,
         side_ref,
         instructions,
@@ -1918,10 +1926,18 @@ pub fn item_modify_attack_against(
                     speed: 0,
                     accuracy: 0,
                 };
+                // (L149: Ripen doubles a berry's, Showdown's onChangeBoost)
+                let ripen = if defending_side.get_active_immutable().ability == Abilities::RIPEN
+                    && matches!(item, Items::KEEBERRY | Items::MARANGABERRY)
+                {
+                    2
+                } else {
+                    1
+                };
                 match item {
-                    Items::KEEBERRY => boosts.defense = 1,
+                    Items::KEEBERRY => boosts.defense = ripen,
                     Items::SNOWBALL => boosts.attack = 1,
-                    _ => boosts.special_defense = 1,
+                    _ => boosts.special_defense = ripen,
                 }
                 attacking_choice.add_or_create_secondaries(Secondary {
                     chance: 100.0,

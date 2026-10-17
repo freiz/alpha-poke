@@ -654,6 +654,7 @@ fn generate_instructions_from_switch(
     // / Quark Drive; L147: Showdown's Update after the switch-in)
     field_change_events(state, incoming_instructions, switch_from);
     update(state, incoming_instructions);
+    foe_raise_copies(state, incoming_instructions, switch_from);
 }
 
 fn generate_instructions_from_increment_side_condition(
@@ -1350,22 +1351,40 @@ pub fn apply_boost_instruction(
     // Amulet, ...) is to the foe's drops only, after Contrary (Showdown's onTryBoost: boost < 0);
     // it used to block the foe's raises too (Weakness Policy, Swagger). A Substitute still stops
     // both (the foe's move fails: Memento into a Contrary mon's)
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L149): Showdown's boost() for the target's
+    // own handlers -- ChangeBoost: Contrary, Simple (x2); TryBoost on the foe's drops: Clear Body
+    // and the like, Big Pecks (Defense), Illuminate / Mind's Eye (accuracy, as Keen Eye), Mist,
+    // Flower Veil (a Grass type); AfterEachBoost: Defiant, Competitive. (The source's handlers:
+    // Intimidate's, Mirror Armor -- get_instructions_from_boosts --, Mirror Herb / Opportunist:
+    // foe_raise_copies)
     let contrary = target_pkmn_ability == Abilities::CONTRARY;
-    let drop = if contrary { *boost > 0 } else { *boost < 0 };
+    let mut boost_amount = *boost;
+    if contrary {
+        boost_amount *= -1;
+    }
+    if target_pkmn_ability == Abilities::SIMPLE {
+        boost_amount *= 2;
+    }
+    let drop = boost_amount < 0;
+    let foe_drop_blocked = drop
+        && (target_pkmn.immune_to_stats_lowered_by_opponent(&stat, &target_side.volatile_statuses)
+            || (target_pkmn_ability == Abilities::BIGPECKS
+                && *stat == PokemonBoostableStat::Defense)
+            || (matches!(
+                target_pkmn_ability,
+                Abilities::ILLUMINATE | Abilities::MINDSEYE
+            ) && *stat == PokemonBoostableStat::Accuracy)
+            || target_side.side_conditions.mist > 0
+            || (target_pkmn_ability == Abilities::FLOWERVEIL
+                && target_pkmn.has_type(&PokemonType::GRASS)));
     if boost != &0
         && !(target_side_ref != attacking_side_ref
-            && (drop
-                && target_pkmn
-                    .immune_to_stats_lowered_by_opponent(&stat, &target_side.volatile_statuses)
+            && (foe_drop_blocked
                 || target_side
                     .volatile_statuses
                     .contains(&PokemonVolatileStatus::SUBSTITUTE)))
         && target_pkmn.hp != 0
     {
-        let mut boost_amount = *boost;
-        if contrary {
-            boost_amount *= -1;
-        }
         boost_amount = get_boost_amount(target_side, &stat, boost_amount);
         if boost_amount != 0 {
             boost_was_applied = true;
@@ -1475,36 +1494,7 @@ fn get_instructions_from_boosts(
             incoming_instructions,
         );
     }
-    // alpha-poke patch (2026-10-16, doc/engine-diff.md L24): Mirror Herb copies the foe's raises of
-    // its own stats once (used up); L131: whoever raised them (its holder's Swagger too:
-    // Showdown's onFoeAfterBoost)
-    let foe_ref = target_side_ref.get_other_side();
-    if state
-        .get_side_immutable(&foe_ref)
-        .get_active_immutable()
-        .item
-        == Items::MIRRORHERB
-        && boostable_stats.iter().any(|(_, b)| *b > 0)
-    {
-        for (stat, boost) in boostable_stats.iter().filter(|(_, b)| *b > 0) {
-            apply_boost_instruction(
-                state.get_side(&foe_ref),
-                stat,
-                boost,
-                &foe_ref,
-                &foe_ref,
-                incoming_instructions,
-            );
-        }
-        incoming_instructions
-            .instruction_list
-            .push(Instruction::ChangeItem(ChangeItemInstruction {
-                side_ref: foe_ref,
-                current_item: Items::MIRRORHERB,
-                new_item: Items::NONE,
-            }));
-        state.get_side(&foe_ref).get_active().item = Items::NONE;
-    }
+    // (L24 / L131 / L149: Mirror Herb: foe_raise_copies, after the move)
 }
 
 fn compare_health_with_damage_multiples(max_damage: i16, health: i16) -> (i16, i16) {
@@ -4945,6 +4935,7 @@ fn add_end_of_turn_instructions(
     mut incoming_instructions: &mut StateInstructions,
     first_move_side: &SideReference,
 ) {
+    let end_of_turn_from = incoming_instructions.instruction_list.len();
     if state.side_one.force_switch || state.side_two.force_switch {
         return;
     }
@@ -6093,6 +6084,7 @@ fn add_end_of_turn_instructions(
     // (L147: Showdown's Update after the residual action: Sitrus after the poison, a berry Heal
     // Block kept, a lock's fatigue cured by a Lum)
     update(state, incoming_instructions);
+    foe_raise_copies(state, incoming_instructions, end_of_turn_from);
 
     // (L62: an item used up at the end of the turn too)
     unburden_check(state, incoming_instructions);
@@ -6845,6 +6837,66 @@ pub fn field_change_events(state: &mut State, instructions: &mut StateInstructio
     }
 }
 
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L149): Mirror Herb / Opportunist copy the foe's
+// raises in instructions[from..] (Showdown's onFoeAfterBoost collects them, its onAnyAfterMove /
+// onAnySwitchIn / onResidual uses them: after a move, a switch-in, the end of the turn); both
+// sides' sums first, so neither copies the other's copy (Showdown skips those). Mirror Herb is
+// used up; was Mirror Herb only, at once, for a move's own boosts
+pub fn foe_raise_copies(state: &mut State, instructions: &mut StateInstructions, from: usize) {
+    let mut copies = vec![];
+    for side_ref in [SideReference::SideOne, SideReference::SideTwo] {
+        let me = state.get_side_immutable(&side_ref).get_active_immutable();
+        let herb = me.item == Items::MIRRORHERB;
+        if me.hp == 0 || !(herb || me.ability == Abilities::OPPORTUNIST) {
+            continue;
+        }
+        let foe_ref = side_ref.get_other_side();
+        let mut raised = [0i8; 7];
+        for i in instructions.instruction_list[from..].iter() {
+            if let Instruction::Boost(b) = i {
+                if b.side_ref == foe_ref && b.amount > 0 {
+                    raised[b.stat as usize] += b.amount;
+                }
+            }
+        }
+        if raised.iter().any(|x| *x > 0) {
+            copies.push((side_ref, herb, raised));
+        }
+    }
+    for (side_ref, herb, raised) in copies {
+        for stat in [
+            PokemonBoostableStat::Attack,
+            PokemonBoostableStat::Defense,
+            PokemonBoostableStat::SpecialAttack,
+            PokemonBoostableStat::SpecialDefense,
+            PokemonBoostableStat::Speed,
+            PokemonBoostableStat::Evasion,
+            PokemonBoostableStat::Accuracy,
+        ] {
+            let amount = raised[stat as usize];
+            if amount > 0 {
+                apply_boost_instruction(
+                    state.get_side(&side_ref),
+                    &stat,
+                    &amount,
+                    &side_ref,
+                    &side_ref,
+                    instructions,
+                );
+            }
+        }
+        if herb {
+            let ins = Instruction::ChangeItem(ChangeItemInstruction {
+                side_ref,
+                current_item: Items::MIRRORHERB,
+                new_item: Items::NONE,
+            });
+            state.apply_one_instruction(&ins);
+            instructions.instruction_list.push(ins);
+        }
+    }
+}
+
 pub fn update(state: &mut State, instructions: &mut StateInstructions) {
     for side_ref in [SideReference::SideOne, SideReference::SideTwo] {
         super::items::item_update(state, &side_ref, instructions);
@@ -6890,6 +6942,7 @@ fn after_move_finish(
         // L124 / L141: Protosynthesis / Quark Drive after its weather / terrain)
         field_change_events(state, state_instructions, from);
         update(state, state_instructions);
+        foe_raise_copies(state, state_instructions, from);
 
         // alpha-poke patch (2026-10-17, doc/engine-diff.md L112): a pivot user that fainted from
         // its own move (Rocky Helmet, Rough Skin, recoil) does not switch out: the turn goes on

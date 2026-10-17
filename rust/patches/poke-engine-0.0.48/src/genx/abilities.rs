@@ -1713,46 +1713,81 @@ pub fn ability_on_switch_in(
                 instructions,
             );
         }
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L149): Showdown's Intimidate onStart and
+        // the foe's boost() handlers for it: a Substitute, Own Tempo / Oblivious / Inner Focus /
+        // Scrappy stop it, Guard Dog raises its Attack instead, Mirror Armor reflects it; after a
+        // drop (Contrary's raise too), Adrenaline Orb and Rattled raise the Speed
         Abilities::INTIMIDATE => {
+            let foe_ref = side_ref.get_other_side();
             let defender = defending_side.get_active_immutable();
-            if !(defender.ability == Abilities::OWNTEMPO
-                || defender.ability == Abilities::OBLIVIOUS
-                || defender.ability == Abilities::INNERFOCUS
-                || defender.ability == Abilities::SCRAPPY
-                || defending_side
-                    .volatile_statuses
-                    .contains(&PokemonVolatileStatus::SUBSTITUTE))
+            let ability = defender.ability;
+            if defending_side
+                .volatile_statuses
+                .contains(&PokemonVolatileStatus::SUBSTITUTE)
+                || matches!(
+                    ability,
+                    Abilities::OWNTEMPO
+                        | Abilities::OBLIVIOUS
+                        | Abilities::INNERFOCUS
+                        | Abilities::SCRAPPY
+                )
             {
-                if apply_boost_instruction(
+            } else if ability == Abilities::GUARDDOG {
+                apply_boost_instruction(
                     defending_side,
                     &PokemonBoostableStat::Attack,
-                    &-1,
-                    side_ref,
-                    &side_ref.get_other_side(),
+                    &1,
+                    &foe_ref,
+                    &foe_ref,
                     instructions,
-                ) {
-                    let defender = defending_side.get_active_immutable();
-                    if defender.item == Items::ADRENALINEORB {
-                        if apply_boost_instruction(
-                            defending_side,
-                            &PokemonBoostableStat::Speed,
-                            &1,
-                            &side_ref.get_other_side(),
-                            &side_ref.get_other_side(),
-                            instructions,
-                        ) {
-                            let adrenaline_orb_item_instruction =
-                                Instruction::ChangeItem(ChangeItemInstruction {
-                                    side_ref: side_ref.get_other_side(),
-                                    current_item: Items::ADRENALINEORB,
-                                    new_item: Items::NONE,
-                                });
-                            state.apply_one_instruction(&adrenaline_orb_item_instruction);
-                            instructions
-                                .instruction_list
-                                .push(adrenaline_orb_item_instruction)
-                        }
-                    }
+                );
+            } else if ability == Abilities::MIRRORARMOR {
+                apply_boost_instruction(
+                    attacking_side,
+                    &PokemonBoostableStat::Attack,
+                    &-1,
+                    &foe_ref,
+                    side_ref,
+                    instructions,
+                );
+            } else if apply_boost_instruction(
+                defending_side,
+                &PokemonBoostableStat::Attack,
+                &-1,
+                side_ref,
+                &foe_ref,
+                instructions,
+            ) {
+                let defender = defending_side.get_active_immutable();
+                if defender.item == Items::ADRENALINEORB
+                    && apply_boost_instruction(
+                        defending_side,
+                        &PokemonBoostableStat::Speed,
+                        &1,
+                        &foe_ref,
+                        &foe_ref,
+                        instructions,
+                    )
+                {
+                    let adrenaline_orb_item_instruction =
+                        Instruction::ChangeItem(ChangeItemInstruction {
+                            side_ref: foe_ref,
+                            current_item: Items::ADRENALINEORB,
+                            new_item: Items::NONE,
+                        });
+                    state.apply_one_instruction(&adrenaline_orb_item_instruction);
+                    instructions
+                        .instruction_list
+                        .push(adrenaline_orb_item_instruction)
+                } else if ability == Abilities::RATTLED {
+                    apply_boost_instruction(
+                        state.get_side(&foe_ref),
+                        &PokemonBoostableStat::Speed,
+                        &1,
+                        &foe_ref,
+                        &foe_ref,
+                        instructions,
+                    );
                 }
             }
         }

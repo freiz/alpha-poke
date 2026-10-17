@@ -3798,3 +3798,47 @@ def test_l148_field_change_events(case):
         k, c = 1, ("snowscape", "earthquake")
     outs = ec.engine_outcomes(ec.engine_state(states[k]), *c)
     assert ec.closest(states[k + 1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L149 (doc/engine-diff.md): Showdown's boost() -- ChangeBoost (Simple doubles; Ripen a berry's),
+# TryBoost (the foe's drops: Big Pecks, Mist; Intimidate: Guard Dog's +1 instead), AfterBoost
+# (Rattled after Intimidate), FoeAfterBoost (Opportunist copies the foe's raises after its move);
+# the engine had none of them
+@pytest.mark.parametrize("case", ["simple", "big pecks", "mist", "guard dog", "rattled", "opportunist",
+                                  "ripen"])  # fmt: skip
+def test_l149_boost_handlers(case):
+    foe = _setter("Garchomp", "Rough Skin", "Leftovers", "- Swords Dance\n- Earthquake\n- Protect\n- Roar")
+    k = 0
+    if case == "simple":
+        user = _setter("Swoobat", "Simple", "Leftovers", "- Calm Mind\n- Protect\n- Roost\n- Air Slash")
+        turns = [("move calmmind", "move protect")]
+    elif case == "big pecks":
+        user = _setter("Pidgeot", "Big Pecks", "Leftovers", "- Roost\n- Protect\n- Hurricane\n- U-turn")
+        foe = _setter("Garchomp", "Rough Skin", "Leftovers", "- Swords Dance\n- Leer\n- Protect\n- Roar")
+        turns = [("move protect", "move swordsdance"), ("move roost", "move leer")]
+        k = 1
+    elif case == "mist":
+        user = _setter("Lapras", "Water Absorb", "Leftovers", "- Mist\n- Protect\n- Freeze-Dry\n- Haze")
+        foe = _setter("Garchomp", "Rough Skin", "Leftovers", "- Swords Dance\n- Scary Face\n- Protect\n- Roar")
+        turns = [("move mist", "move swordsdance"), ("move freezedry", "move scaryface")]
+        k = 1
+    elif case in ("guard dog", "rattled"):
+        user = (_setter("Okidogi", "Guard Dog", "Leftovers", "- Bulk Up\n- Drain Punch\n- Protect\n- Knock Off")
+                if case == "guard dog" else
+                _setter("Sudowoodo", "Rattled", "Leftovers", "- Protect\n- Stealth Rock\n- Head Smash\n- Sucker Punch"))  # fmt: skip
+        lando = _setter("Landorus-Therian", "Intimidate", "Leftovers", "- Earthquake\n- U-turn\n- Stealth Rock\n- Protect")
+        states = ec.run_showdown(user, foe + "\n\n" + lando, [("move protect", "switch 2")])
+        outs = ec.engine_outcomes(ec.engine_state(states[0]), "protect", "landorustherian")
+        assert ec.closest(states[1], outs, (1, 2), hp=True)["diff"] == {}
+        return
+    elif case == "opportunist":
+        user = _setter("Espathra", "Opportunist", "Leftovers", "- Calm Mind\n- Protect\n- Roost\n- Lumina Crash")
+        turns = [("move roost", "move swordsdance")]
+    else:  # ripen: a Kee Berry's +2
+        user = _setter("Appletun", "Ripen", "Kee Berry", "- Recover\n- Apple Acid\n- Protect\n- Dragon Pulse")
+        foe = foe.replace("- Swords Dance", "- Tackle")
+        turns = [("move recover", "move tackle")]
+    states = ec.run_showdown(user, foe, turns)
+    c = (turns[k][0].split()[1], turns[k][1].split()[1])
+    outs = ec.engine_outcomes(ec.engine_state(states[k]), *c)
+    assert ec.closest(states[k + 1], outs, (1, 1), hp=True)["diff"] == {}
