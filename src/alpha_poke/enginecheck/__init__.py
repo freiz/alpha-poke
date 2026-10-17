@@ -14,6 +14,7 @@ volatiles it knows), so a difference is the engine's, not our state construction
 
 import functools
 import json
+import math
 import re
 import subprocess
 from pathlib import Path
@@ -56,7 +57,29 @@ def run_showdown(p1, p2, turns, seed: str | None = "gen5,1,2,3,4", force_random=
     return out["states"]
 
 
+def random_battle(p1, p2, seed: str, choice_seed: int, max_turns: int = 100,
+                  switch_p: float = 0.15, tera_p: float = 0.1,
+                  fmt: str = "gen9customgame") -> tuple[list[dict], str | None]:  # fmt: skip
+    """A whole battle with random legal choices (``random_battle.js``): ([{"state", "choices"}]
+    per decision point, the error if the battle broke off). The full-information differential
+    (doc/engine-diff.md): the truth at every step, no player's view, no belief."""
+    case = {"format": fmt, "seed": seed, "choice_seed": choice_seed, "p1": p1, "p2": p2,
+            "max_turns": max_turns, "switch_p": switch_p, "tera_p": tera_p}  # fmt: skip
+    r = subprocess.run(["node", str(RUNNER.with_name("random_battle.js")), str(SIM)],
+                       input=json.dumps(case), capture_output=True, text=True, check=True,
+                       timeout=600)  # fmt: skip
+    out = json.loads(r.stdout)
+    return out["steps"], out["error"]
+
+
 @functools.cache
+def _engine_item(name: str) -> bool:
+    """Whether poke-engine knows the item ``name`` (an unknown one reads back as UNKNOWNITEM)."""
+    p = pe.Pokemon(item=name)
+    s = pe.State(side_one=pe.Side(pokemon=[p] + [pe.Pokemon.create_fainted()] * 5))
+    return str(pe.State.from_string(s.to_string()).side_one.pokemon[0].item).lower() == name
+
+
 @functools.cache
 def _engine_volatile(name: str) -> bool:
     """Whether poke-engine knows the volatile status ``name`` (unknown ones are left out): the
@@ -75,9 +98,20 @@ def _types(types: list[str]) -> tuple[str, str]:
     return t[0], t[1]
 
 
+def _sleep(m: dict) -> dict:
+    """The engine's sleep counters from Showdown's: Rest's remaining turns (rest_turns), or the
+    attempts made asleep (sleep_turns: startTime - time; it wakes at the startTime-th, 2-4)."""
+    if m["status"] != "slp":
+        return {}
+    ss = m["status_state"]
+    if ss.get("source") == "rest":
+        return {"rest_turns": max(ss["time"], 1)}
+    return {"sleep_turns": min(max(ss["startTime"] - ss["time"], 0), 3)}
+
+
 def _engine_mon(m: dict) -> pe.Pokemon:
     st = m["stats"]
-    return pe.Pokemon(
+    return pe.Pokemon(**_sleep(m),
         id=m["species"], level=m["level"], types=_types(m["types"]),
         base_types=_types(m["base_types"]), hp=m["hp"], maxhp=m["maxhp"],
         ability=m["ability"] or "none",
@@ -89,6 +123,13 @@ def _engine_mon(m: dict) -> pe.Pokemon:
         moves=[pe.Move(id=x["id"], pp=x["pp"], disabled=x["disabled"]) for x in m["moves"]],
         terastallized=bool(m["terastallized"]), tera_type=(m["tera_type"] or "typeless").lower(),
     )  # fmt: skip
+
+
+def _changed_types(m: dict) -> bool:
+    """A type change other than Terastallization (the engine's typechange volatile)."""
+    return not m["terastallized"] and [t.lower() for t in m["types"]] != [
+        t.lower() for t in m["base_types"]
+    ]
 
 
 # the patched engine's limits of the volatiles it ends (ends of turn)
@@ -109,11 +150,29 @@ def _engine_side(s: dict, future_sight=None) -> pe.Side:
         names = [x + st["stat"] if x in ("protosynthesis", "quarkdrive") and st.get("stat") else x
                  for x, st in act["volatiles"].items()]  # fmt: skip
         vol = {v for v in names if _engine_volatile(v) and v != "stall"}
+        if _changed_types(act):  # Showdown keeps no volatile for a type change (Libero, Soak, ...)
+            vol.add("typechange")
         kw["volatile_statuses"] = vol
+        stall = act["volatiles"].get("stall")  # Protect's counter: 3 ** (consecutive protects)
+        if stall and stall["counter"]:
+            sc["protect"] = round(math.log(stall["counter"], 3))
+        ids = [x["id"] for x in act["moves"]]
+        if act.get("move_actions") and act.get("last_move") in ids:
+            kw["last_used_move"] = f"move:{ids.index(act['last_move'])}"
+        else:  # not moved since it came in
+            kw["last_used_move"] = f"switch:{s['active']}"
         # the engine counts ends of turn up to its limit (L13; the 2026-10-13 patch), Showdown
         # counts the turns left down
         dur = {k: max(n - act["volatiles"][k]["duration"], 0) for k, n in LIMITS.items()
                if k in vol and act["volatiles"][k]["duration"]}  # fmt: skip
+        # the engine counts what has passed: Taunt / Encore (ends at the third), Yawn (sleep at
+        # the second end of turn), confusion (attempts; ends for sure after 4: Showdown's time
+        # is the attempts left, the last one snapping out)
+        for k, n, top in (("taunt", 3, 2), ("encore", 3, 2), ("yawn", 2, 1)):
+            if k in vol and act["volatiles"][k]["duration"]:
+                dur[k] = min(max(n - act["volatiles"][k]["duration"], 0), top)
+        if "confusion" in vol and act["volatiles"]["confusion"]["time"]:
+            dur["confusion"] = min(max(5 - act["volatiles"]["confusion"]["time"], 0), 4)
         if dur:
             kw["volatile_status_durations"] = pe.VolatileStatusDurations(**dur)
         if act["status"] == "tox":
@@ -182,11 +241,14 @@ def view(sd: dict) -> dict:
         for j, m in enumerate(s["mons"]):
             v[f"{k}.{j}.hp"] = m["hp"]
             v[f"{k}.{j}.status"] = STATUS[m["status"]] if m["hp"] > 0 else "fainted"
-            v[f"{k}.{j}.item"] = m["item"] or "none"
+            # an item the engine does not know is its unknownitem (tests/test_engine_data.py lists them)
+            v[f"{k}.{j}.item"] = (m["item"] if _engine_item(m["item"]) else "unknownitem") if m["item"] else "none"
         act = s["mons"][s["active"]] if s["active"] >= 0 else None
         if act is not None:
             for b in BOOSTS:
                 v[f"{k}.boost.{b}"] = act["boosts"][b]
+            if _changed_types(act):
+                v[f"{k}.volatile.typechange"] = True
             for x, st in act["volatiles"].items():
                 # Protosynthesis / Quark Drive: one volatile in Showdown (the stat in its state),
                 # one per stat in the engine ("protosynthesisatk")
@@ -311,3 +373,29 @@ def built_state(states: list[dict], k: int, side: str, belief, seed: int = 0) ->
         battle.parse_request(req)
     names = tuple(belief.display(m.species) for m in battle.teampreview_opponent_team)
     return build_state(battle, belief, names, random.Random(seed))
+
+
+def field_setters(lines: list[str]) -> dict[int, tuple[str | None, str | None]]:
+    """{turn t: (the side that set the weather, the side that set the terrain)} at the start of
+    turn t ("p1" / "p2" / None), from a battle's protocol lines (public: "[of] pXa: ..." for an
+    ability, else the side that just moved). The full-information state of a turn takes the
+    weather / terrain from the setter's own view: only it knows its extending item (Damp Rock,
+    Terrain Extender, ...); the other view's turns are a belief sample."""
+    out: dict[int, tuple[str | None, str | None]] = {}
+    weather = terrain = mover = None
+    for line in lines:
+        p = line.split("|")
+        if len(p) < 2:
+            continue
+        of = next((x[5:7] for x in p[3:] if x.startswith("[of] p")), None)
+        if p[1] == "move" and len(p) > 2:
+            mover = p[2][:2]
+        elif p[1] == "-weather" and len(p) > 2 and "[upkeep]" not in p:
+            weather = None if p[2] == "none" else (of or mover)
+        elif p[1] == "-fieldstart" and len(p) > 2 and p[2].endswith("Terrain"):
+            terrain = of or mover
+        elif p[1] == "-fieldend" and len(p) > 2 and p[2].endswith("Terrain"):
+            terrain = None
+        elif p[1] == "turn" and len(p) > 2:
+            out[int(p[2])] = (weather, terrain)
+    return out

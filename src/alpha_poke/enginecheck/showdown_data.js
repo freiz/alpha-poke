@@ -2,7 +2,7 @@
 // poke-engine and poke-env (tests/test_engine_data.py, doc/engine-diff.md L8).
 //
 // Usage: node showdown_data.js <path to pokemon-showdown/dist/sim>
-// stdout: one JSON object {"moves": [...], "species": [...], "types": [...]}
+// stdout: one JSON object {"moves": [...], "species": [...], "types": [...], "items": [...]}
 const {Dex} = require(process.argv[2]);
 const dex = Dex.mod('gen9');
 const legal = x => !x.isNonstandard || x.isNonstandard === 'Unobtainable';
@@ -27,6 +27,14 @@ const species = dex.species.all().filter(legal).map(s => ({
 	abilities: Object.values(s.abilities).map(a => dex.abilities.get(a).id).sort(),
 }));
 
+// an item has a battle effect when it handles any event (a function: onResidual, onModifyAtk,
+// ...; not the data fields onPlate, onDrive, ...) or holds a stat change (berries' onEat too)
+const items = dex.items.all().filter(legal).map(i => ({
+	id: i.id,
+	effect: Object.entries(i).some(([k, v]) => /^on[A-Z]/.test(k) && typeof v === 'function') || !!i.boosts,
+	berry: !!i.isBerry,
+}));
+
 const typeNames = dex.types.names().filter(t => t !== 'Stellar');
 const types = [];
 for (const a of typeNames) {
@@ -35,4 +43,4 @@ for (const a of typeNames) {
 		types.push([a, d, mult]);
 	}
 }
-process.stdout.write(JSON.stringify({moves, species, types}));
+process.stdout.write(JSON.stringify({moves, species, types, items}));

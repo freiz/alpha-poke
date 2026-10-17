@@ -919,11 +919,22 @@ fn feature_dims(py: Python<'_>) -> PyResult<Bound<'_, PyDict>> {
 
 /// The full-information state of a self-play / evaluation position: side one from `a` (side
 /// one's own view: its side exact), side two = side one of `b` (the other player's own view),
-/// the field from `a`. For luck estimates (each player knows only its own side exactly).
+/// the field from `a`; the weather / terrain from `b` with `weather_from_b` / `terrain_from_b`
+/// (the view of the side that set it: only the setter knows its extending item, e.g. Damp Rock;
+/// the other view's turns are a belief sample -- doc/engine-diff.md, full information). For luck
+/// estimates and the engine differential.
 #[pyfunction]
-fn merge_sides(a: &str, b: &str) -> String {
+#[pyo3(signature = (a, b, weather_from_b=false, terrain_from_b=false))]
+fn merge_sides(a: &str, b: &str, weather_from_b: bool, terrain_from_b: bool) -> String {
     let mut st = State::deserialize(a);
-    st.side_two = State::deserialize(b).side_one;
+    let sb = State::deserialize(b);
+    if weather_from_b {
+        st.weather = sb.weather.clone();
+    }
+    if terrain_from_b {
+        st.terrain = sb.terrain.clone();
+    }
+    st.side_two = sb.side_one;
     st.serialize()
 }
 

@@ -235,3 +235,11 @@ def pokeenv_move_diffs() -> dict:
         if d:
             out[m["id"]] = d
     return out
+
+
+def items_unknown_to_engine() -> list[str]:
+    """Showdown's Gen 9 items with a battle effect that poke-engine does not know (it reads them
+    as UNKNOWNITEM: no effect in the search)."""
+    from alpha_poke.enginecheck import _engine_item
+
+    return sorted(i["id"] for i in showdown()["items"] if i["effect"] and not _engine_item(i["id"]))
