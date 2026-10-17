@@ -358,6 +358,25 @@ fn generate_instructions_from_switch(
         }
     }
 
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L150): the attraction ends with its source
+    // gone (Showdown's attract onUpdate)
+    if opposite_side
+        .volatile_statuses
+        .contains(&PokemonVolatileStatus::ATTRACT)
+    {
+        opposite_side
+            .volatile_statuses
+            .remove(&PokemonVolatileStatus::ATTRACT);
+        incoming_instructions
+            .instruction_list
+            .push(Instruction::RemoveVolatileStatus(
+                RemoveVolatileStatusInstruction {
+                    side_ref: switching_side_ref.get_other_side(),
+                    volatile_status: PokemonVolatileStatus::ATTRACT,
+                },
+            ));
+    }
+
     if opposite_side
         .volatile_statuses
         .contains(&PokemonVolatileStatus::PARTIALLYTRAPPED)
@@ -3058,17 +3077,12 @@ fn generate_instructions_from_existing_status_conditions(
     let (attacking_side, _defending_side) = state.get_both_sides(attacking_side_ref);
     let current_active_index = attacking_side.active_index;
     let attacker_active = attacking_side.get_active();
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L150): Showdown's BeforeMove order -- sleep
+    // / freeze (priority 10), [Truant 9, flinch 8, Disable 7, Heal Block 6, Taunt 5: before this],
+    // confusion 3, attraction 2, paralysis 1 --, each stopping the ones after it: a sleeping /
+    // frozen mover's confusion does not count down, a fully paralyzed one's does. Before,
+    // paralysis came first and a Rest sleeper's confusion counted down
     match attacker_active.status {
-        PokemonStatus::PARALYZE => {
-            // Fully-Paralyzed Branch
-            let mut fully_paralyzed_instruction = incoming_instructions.clone();
-            fully_paralyzed_instruction.update_percentage(FULLY_PARALYZED_CHANCE);
-            undo_last_used_move(attacking_side_ref, &mut fully_paralyzed_instruction);
-            final_instructions.push(fully_paralyzed_instruction);
-
-            // Non-Paralyzed Branch
-            incoming_instructions.update_percentage(1.0 - FULLY_PARALYZED_CHANCE);
-        }
         PokemonStatus::FREEZE => {
             let mut still_frozen_instruction = incoming_instructions.clone();
             still_frozen_instruction.update_percentage(1.0 - THAW_CHANCE);
@@ -3260,9 +3274,13 @@ fn generate_instructions_from_existing_status_conditions(
     // self-hit chance is 1/3 of the chance the confusion has not ended yet at this attempt
     // (exact for the first attempt of a search, approximate later); after 4 it ends for sure.
     let mut confusion_self_hit = HIT_SELF_IN_CONFUSION_CHANCE;
-    if attacking_side
-        .volatile_statuses
-        .contains(&PokemonVolatileStatus::CONFUSION)
+    let status = attacking_side.get_active_immutable().status;
+    let stopped = status == PokemonStatus::FREEZE
+        || (status == PokemonStatus::SLEEP && attacker_choice.move_id != Choices::SLEEPTALK);
+    if !stopped
+        && attacking_side
+            .volatile_statuses
+            .contains(&PokemonVolatileStatus::CONFUSION)
     {
         let confused_attempts = attacking_side.volatile_status_durations.confusion;
         if confused_attempts >= 4 {
@@ -3301,9 +3319,10 @@ fn generate_instructions_from_existing_status_conditions(
             attacking_side.volatile_status_durations.confusion += 1;
         }
     }
-    if attacking_side
-        .volatile_statuses
-        .contains(&PokemonVolatileStatus::CONFUSION)
+    if !stopped
+        && attacking_side
+            .volatile_statuses
+            .contains(&PokemonVolatileStatus::CONFUSION)
         && confusion_self_hit > 0.0
     {
         let mut hit_yourself_instruction = incoming_instructions.clone();
@@ -3339,6 +3358,31 @@ fn generate_instructions_from_existing_status_conditions(
         final_instructions.push(hit_yourself_instruction);
 
         incoming_instructions.update_percentage(1.0 - confusion_self_hit);
+    }
+
+    // (L150: attraction, 1/2 immobilized -- Showdown's attract onBeforeMove)
+    if !stopped
+        && attacking_side
+            .volatile_statuses
+            .contains(&PokemonVolatileStatus::ATTRACT)
+    {
+        let mut immobilized = incoming_instructions.clone();
+        immobilized.update_percentage(0.5);
+        undo_last_used_move(attacking_side_ref, &mut immobilized);
+        final_instructions.push(immobilized);
+        incoming_instructions.update_percentage(0.5);
+    }
+
+    // (L150: paralysis last)
+    if !stopped && status == PokemonStatus::PARALYZE {
+        // Fully-Paralyzed Branch
+        let mut fully_paralyzed_instruction = incoming_instructions.clone();
+        fully_paralyzed_instruction.update_percentage(FULLY_PARALYZED_CHANCE);
+        undo_last_used_move(attacking_side_ref, &mut fully_paralyzed_instruction);
+        final_instructions.push(fully_paralyzed_instruction);
+
+        // Non-Paralyzed Branch
+        incoming_instructions.update_percentage(1.0 - FULLY_PARALYZED_CHANCE);
     }
 
     if attacking_side.side_conditions.protect > 0 {
@@ -6901,6 +6945,29 @@ pub fn update(state: &mut State, instructions: &mut StateInstructions) {
     for side_ref in [SideReference::SideOne, SideReference::SideTwo] {
         super::items::item_update(state, &side_ref, instructions);
         super::abilities::paradox_update(state, &side_ref, instructions);
+        // (L150: attract's onUpdate, its source fainted; the switch: generate_instructions_from_switch)
+        let foe_fainted = state
+            .get_side_immutable(&side_ref.get_other_side())
+            .get_active_immutable()
+            .hp
+            == 0;
+        let side = state.get_side(&side_ref);
+        if foe_fainted
+            && side
+                .volatile_statuses
+                .contains(&PokemonVolatileStatus::ATTRACT)
+        {
+            side.volatile_statuses
+                .remove(&PokemonVolatileStatus::ATTRACT);
+            instructions
+                .instruction_list
+                .push(Instruction::RemoveVolatileStatus(
+                    RemoveVolatileStatusInstruction {
+                        side_ref,
+                        volatile_status: PokemonVolatileStatus::ATTRACT,
+                    },
+                ));
+        }
     }
 }
 

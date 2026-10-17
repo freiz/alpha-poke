@@ -3842,3 +3842,50 @@ def test_l149_boost_handlers(case):
     c = (turns[k][0].split()[1], turns[k][1].split()[1])
     outs = ec.engine_outcomes(ec.engine_state(states[k]), *c)
     assert ec.closest(states[k + 1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L150 (doc/engine-diff.md): Showdown's BeforeMove order (sleep / freeze 10, ..., confusion 3,
+# attraction 2, paralysis 1): a Rest sleeper's confusion does not count down (the random
+# differential's wide b208-t12), a fully paralyzed one's does (wide2 b184-t19); the attraction
+# ends with its source fainted (wide b14-t4)
+@pytest.mark.parametrize("teams,i,turn,offset", [
+    ("random_battle_teams_wide.jsonl", 208, 12, 0),
+    ("random_battle_teams_wide2.jsonl", 184, 19, 30000),
+    ("random_battle_teams_wide.jsonl", 14, 4, 0),
+])  # fmt: skip
+def test_l150_before_move_order(teams, i, turn, offset):
+    a, b = _random_position(teams, i, turn, offset)
+    c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
+    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2)
+    n = tuple(len(s["mons"]) for s in a["state"]["sides"])
+    assert ec.closest(b["state"], outs, n, hp=True)["diff"] == {}
+
+
+# L150: attraction stops its holder half the time (Showdown's attract onBeforeMove); the engine
+# never did
+def test_l150_attraction_immobilizes():
+    user = """Gardevoir @ Leftovers
+Ability: Synchronize
+Tera Type: Fairy
+EVs: 252 HP / 252 SpA / 4 Spe
+Modest Nature
+- Attract
+- Calm Mind
+- Protect
+- Moonblast"""
+    foe = """Garchomp @ Leftovers
+Ability: Rough Skin
+Tera Type: Dragon
+EVs: 252 HP / 4 Atk / 252 SpD
+Careful Nature
+- Swords Dance
+- Earthquake
+- Protect
+- Roar"""
+    states = ec.run_showdown(user.replace("Gardevoir @", "Gardevoir (F) @"), foe.replace("Garchomp @", "Garchomp (M) @"),
+                             [("move attract", "move swordsdance"), ("move calmmind", "move earthquake")])  # fmt: skip
+    assert "attract" in states[1]["sides"][1]["mons"][0]["volatiles"]
+    outs = ec.engine_outcomes(ec.engine_state(states[1]), "calmmind", "earthquake")
+    p = {round(o[0], 2) for o in outs}
+    assert ec.closest(states[2], outs, (1, 1), hp=True)["diff"] == {}
+    assert any(abs(o[0] - 0.5) < 0.01 for o in outs), p
