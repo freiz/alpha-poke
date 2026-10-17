@@ -189,6 +189,10 @@ harness 必须把 Showdown 的状态完整映射到引擎，否则不一致来�
 | L45 | 减伤果被变化招式（地面系的 Spikes、恶系的 Nasty Plot）和固定伤害（Ruination 等）触发（Showdown 在 onSourceModifyDamage：只对造成伤害、不是固定伤害的招式）；Lum Berry 不治混乱（Showdown 的 onUpdate：异常状态或混乱都吃） | 引擎 | 已修复 | `test_l45_lum_berry_cures_confusion`；`test_l45_resist_berry_only_on_a_damaging_hit`（2 个） | `items.rs` `damage_reduction_berry`、Chilan、`lum_berry` |
 | L46 | Synchronize 没有实现：对方的招式或特性（Static 等，引擎里是作用于使用者的追加效果）造成的中毒 / 灼伤 / 麻痹传回对方 | 引擎 | 已修复 | `test_l46_synchronize`（麻痹、剧毒、灼伤） | `generate_instructions.rs` `get_instructions_from_status_effects` |
 | L47 | harness：Rest 的睡眠被当成普通睡眠（Showdown 的 statusState 只留来源宝可梦、不留来源效果，导出的来源一直是空的），引擎因此按普通睡眠的随机醒来算 | harness | 已修复 | `test_l47_rest_sleep_mapped`（3 个：醒来与否的概率为 1） | `showdown_state.js`：来源是自己 = Rest |
+| L48 | harness：等待中的 Healing Wish / Lunar Dance（第 9 代等到需要治疗的宝可梦换上；Showdown 的槽位条件，引擎的场地条件）没有传给引擎。实战的 `build_state` 也没有（poke-env 不记录这个等待状态）：线索 | harness | 已修复（harness）/ 线索（build_state） | `test_l48_healing_wish_waits_mapped` | `engine_state` 的场地条件 |
+| L49 | Belly Drum 在攻击 +6 时也扣一半 HP（Showdown 失败） | 引擎 | 已修复 | `test_l49_belly_drum_fails_at_plus_six` | `choice_effects.rs` |
+| L50 | 反噬招式（High Jump Kick、Supercell Slam 等）打到免疫的目标时不反噬（Showdown 的 onMoveFail：未命中、免疫、守住都反噬）；连续招式每一段接触都该吃 Rocky Helmet / Rough Skin / Iron Barbs，引擎每个招式只算一次 | 引擎 | 已修复 | `test_l50_crash_into_an_immune_target`；`test_l50_rocky_helmet_per_hit` | `generate_instructions.rs`：`move_has_no_effect` 的路径加反噬；`run_move` 补上第二段起的接触伤害（Magic Guard / Protective Pads 除外） |
+| L51 | 非暴击打不死、暴击可能打死时，暴击按平均伤害算：平均到了 HP 就一律击倒（b110-t32：Showdown 暴击 285 没打死 296 HP） | 引擎 | 已修复 | `test_l51_crit_knockout_rolls`（暴击 16 档中间的 HP：击倒概率 = 暴击率 × 不小于 HP 的档数 / 16；修复后才跑通，临时去掉修复确认会失败） | `generate_instructions.rs` `finish_move`：暴击按精确的 16 档拆成击倒和不击倒两支 |
 
 ## 修复与验证（2026-10-16）
 
@@ -236,6 +240,8 @@ harness 必须把 Showdown 的状态完整映射到引擎，否则不一致来�
 ## 修复与验证，第五轮（2026-10-16 夜）
 
 修复：L43–L47。随机差分 97.8%（203）→ **98.2%**（6,916 / 7,046；172 个），每一步都是子集，新增 0；全部测试 316 个、poke-engine 自带测试 229 个通过。
+
+L48–L51 之后（同一天）：**98.4%**（6,930 / 7,046；157 个），新增 0；全部测试 321 个、poke-engine 自带测试 229 个通过。
 
 单看 HP 的双引擎测试有两个陷阱，这一轮都碰到了：`closest` 只要求有一个分支匹配，不看概率（L47 的确定性醒来要断言概率为 1）；Showdown 的追加效果用 `random(100)`，不受 `force_random` 控制（Strange Steam 的混乱，改用必中的 Confuse Ray）。
 

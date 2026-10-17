@@ -1369,7 +1369,8 @@ pub fn choice_special_effect(
         Choices::BELLYDRUM => {
             let boost_amount = 6 - attacking_side.attack_boost;
             let attacker = attacking_side.get_active();
-            if attacker.hp > attacker.maxhp / 2 {
+            // alpha-poke patch (2026-10-16, doc/engine-diff.md L49): fails at +6 too
+            if attacker.hp > attacker.maxhp / 2 && boost_amount > 0 {
                 instructions
                     .instruction_list
                     .push(Instruction::Damage(DamageInstruction {

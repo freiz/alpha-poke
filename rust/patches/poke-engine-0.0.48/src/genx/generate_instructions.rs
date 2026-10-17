@@ -3167,8 +3167,23 @@ pub fn generate_instructions_from_move(
     if move_has_no_effect(state, &choice, &attacking_side) {
         // L22: a locked move without effect ends the lock
         let lock_end = lock_end_instructions(state, &attacking_side, false);
+        // L50: a crash move into an immune target crashes (Showdown's onMoveFail)
+        let crash = choice.crash.map(|f| {
+            let user = state
+                .get_side_immutable(&attacking_side)
+                .get_active_immutable();
+            cmp::min((user.maxhp as f32 * f) as i16, user.hp)
+        });
         state.reverse_instructions(&incoming_instructions.instruction_list);
         incoming_instructions.instruction_list.extend(lock_end);
+        if let Some(amount) = crash.filter(|a| *a > 0) {
+            incoming_instructions
+                .instruction_list
+                .push(Instruction::Damage(DamageInstruction {
+                    side_ref: attacking_side,
+                    damage_amount: amount,
+                }));
+        }
         final_instructions.push(incoming_instructions);
         return;
     }
@@ -3420,6 +3435,7 @@ fn finish_move(
     let mut does_damage = false;
     let (mut branch_damage, mut regular_damage) = (0, 0);
     let mut branch_instructions: Option<StateInstructions> = None;
+    let mut crit_kill_branch: Option<StateInstructions> = None;
     if let Some((max_damage_dealt, max_crit_damage)) = damage {
         does_damage = true;
         // alpha-poke patch (2026-10-16, doc/engine-diff.md L42): a guaranteed crit's damage is
@@ -3532,8 +3548,29 @@ fn finish_move(
             };
             let mut branch_ins = incoming_instructions.clone();
             branch_ins.update_percentage(crit_rate);
-            branch_instructions = Some(branch_ins);
             branch_damage = (max_crit_damage as f32 * 0.925) as i16;
+            // alpha-poke patch (2026-10-16, doc/engine-diff.md L51): a crit that can knock out
+            // splits by its exact rolls into a knockout and the rest (before: its average,
+            // a knockout whenever that reached the HP)
+            let hp = defender_active.hp;
+            if crit_rate > 0.0 && max_crit_damage >= hp && per_hit.is_none() && fixed.is_none() {
+                if let Some((_, c)) = damage_rolls(state, &attacking_side, choice)
+                    .filter(|(r, c)| r[15] == max_damage_dealt && c[15] == max_crit_damage)
+                {
+                    let alive: Vec<f32> =
+                        c.iter().filter(|d| **d < hp).map(|d| *d as f32).collect();
+                    let kill = (16 - alive.len()) as f32 / 16.0;
+                    if !alive.is_empty() {
+                        let mut kill_ins = incoming_instructions.clone();
+                        kill_ins.update_percentage(crit_rate * kill);
+                        crit_kill_branch = Some(kill_ins);
+                        branch_ins = incoming_instructions.clone();
+                        branch_ins.update_percentage(crit_rate * (1.0 - kill));
+                        branch_damage = (alive.iter().sum::<f32>() / alive.len() as f32) as i16;
+                    }
+                }
+            }
+            branch_instructions = Some(branch_ins);
             incoming_instructions.update_percentage(1.0 - crit_rate);
             regular_damage = (max_damage_dealt as f32 * 0.925) as i16;
         } else if choice.move_id.guaranteed_crit()
@@ -3579,6 +3616,14 @@ fn finish_move(
         Some(b) => band_split(b, branch_damage),
         None => None,
     };
+    let kill_hp = state
+        .get_side_immutable(&attacking_side.get_other_side())
+        .get_active_immutable()
+        .hp;
+    let crit_kill_band = match crit_kill_branch.as_mut() {
+        Some(b) => band_split(b, kill_hp),
+        None => None,
+    };
 
     let starf_from = final_instructions.len();
     if incoming_instructions.percentage != 0.0 {
@@ -3615,8 +3660,29 @@ fn finish_move(
         }
     }
 
+    // L51: a crit's knockout
+    if let Some(kill_ins) = crit_kill_branch {
+        if kill_ins.percentage != 0.0 {
+            state.apply_instructions(&kill_ins.instruction_list);
+            run_move(
+                state,
+                attacking_side,
+                kill_ins,
+                hit_count,
+                does_damage,
+                kill_hp,
+                choice,
+                defender_choice,
+                &mut final_instructions,
+            );
+        }
+    }
+
     // L24: the Focus Band paths (one hit for the HP less 1)
-    for survive in vec![regular_band, branch_band].into_iter().flatten() {
+    for survive in vec![regular_band, branch_band, crit_kill_band]
+        .into_iter()
+        .flatten()
+    {
         let hp = band_hp.unwrap();
         state.apply_instructions(&survive.instruction_list);
         run_move(
@@ -5064,10 +5130,42 @@ fn run_move(
             get_instructions_from_heal(state, heal, &attacking_side, &mut instructions);
         }
     } // end multi-hit
-      // this is wrong, but I am deciding it is good enough for this engine (for now)
-      // each multi-hit move should trigger a chance for a secondary effect,
-      // but the way this engine was structured makes it difficult to implement
-      // without some performance hits.
+
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L50): Rocky Helmet / Rough Skin / Iron
+    // Barbs hurt the attacker once per contact hit (Showdown's onDamagingHit); the engine applies
+    // them once per move (a secondary, ability_after_damage): the hits after the first here
+    if does_damage && !hit_sub && hit_count > 1 && choice.flags.contact && damage_amount > 0 {
+        let (attacker_side, defender_side) = state.get_both_sides(&attacking_side);
+        let defender = defender_side.get_active_immutable();
+        let attacker = attacker_side.get_active();
+        let mut per_hit = 0;
+        if defender.item == Items::ROCKYHELMET {
+            per_hit += attacker.maxhp / 6;
+        }
+        if matches!(
+            defender.ability,
+            Abilities::ROUGHSKIN | Abilities::IRONBARBS
+        ) {
+            per_hit += attacker.maxhp / 8;
+        }
+        if attacker.ability == Abilities::MAGICGUARD || attacker.item == Items::PROTECTIVEPADS {
+            per_hit = 0;
+        }
+        let extra = cmp::min(per_hit * (hit_count as i16 - 1), attacker.hp);
+        if extra > 0 {
+            attacker.hp -= extra;
+            instructions
+                .instruction_list
+                .push(Instruction::Damage(DamageInstruction {
+                    side_ref: attacking_side,
+                    damage_amount: extra,
+                }));
+        }
+    }
+    // this is wrong, but I am deciding it is good enough for this engine (for now)
+    // each multi-hit move should trigger a chance for a secondary effect,
+    // but the way this engine was structured makes it difficult to implement
+    // without some performance hits.
 
     if let Some(boost) = &choice.boost {
         get_instructions_from_boosts(state, boost, &attacking_side, &mut instructions);

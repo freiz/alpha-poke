@@ -1812,3 +1812,68 @@ def test_l47_rest_sleep_mapped(asleep_turns):
     outs = ec.engine_outcomes(ec.engine_state(states[-2]), "rest", "spikes")
     p = sum(o[0] for o in outs if ("SLEEP" in str(o[1].side_one.pokemon[0].status).upper()) == asleep)
     assert p == pytest.approx(1.0, abs=1e-3)  # deterministic: no wake-up roll
+
+
+HEALING_WISHER = _setter("Blissey", "Natural Cure", "Leftovers", "- Healing Wish\n- Soft-Boiled\n- Calm Mind\n- Protect")
+
+
+# harness (doc/engine-diff.md, L48): Healing Wish waiting on its slot (Gen 9: until a mon that
+# needs it comes in) was not mapped (a slot condition in Showdown, a side condition in the engine)
+def test_l48_healing_wish_waits_mapped():
+    team = DONDOZO + "\n\n" + HEALING_WISHER + "\n\n" + CORVIKNIGHT
+    turns = [("move curse", "move earthquake"), ("switch 2", "move spikes"),
+             ("move healingwish", "move spikes"), ("switch 3", ""),  # Corviknight: full HP, it waits
+             ("switch 2", "move spikes")]  # fmt: skip
+    states = ec.run_showdown(team, TINGLU_HITS_EQ, turns)
+    assert "healingwish" in states[-2]["sides"][0]["slot"]
+    assert any("[from] move: Healing Wish" in x for x in states[-1]["log"])
+    outs = ec.engine_outcomes(ec.engine_state(states[-2]), "dondozo", "spikes")
+    assert ec.closest(states[-1], outs, (3, 1), hp=True)["diff"] == {}
+
+
+# L49 (doc/engine-diff.md): Belly Drum fails at +6 Attack (Showdown's onHit); the engine still
+# took half the HP
+def test_l49_belly_drum_fails_at_plus_six():
+    azumarill = _setter("Azumarill", "Huge Power", "Sitrus Berry", "- Belly Drum\n- Aqua Jet\n- Play Rough\n- Protect")
+    turns = [("move bellydrum", "move spikes"), ("move bellydrum", "move spikes")]
+    states = ec.run_showdown(azumarill, TINGLU, turns)
+    assert any("|-fail|p1a: Azumarill" in x for x in states[2]["log"])
+    outs = ec.engine_outcomes(ec.engine_state(states[1]), "bellydrum", "spikes")
+    assert ec.closest(states[2], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L50 (doc/engine-diff.md): a crash move (High Jump Kick, Supercell Slam, ...) into an immune
+# target crashes too (Showdown's onMoveFail: a miss, an immunity, a Protect); and each hit of a
+# multi-hit move into Rocky Helmet hurts (once per hit, Showdown's onDamagingHit)
+def test_l50_crash_into_an_immune_target():
+    hands = _attacker("Iron Hands", "Quark Drive", "Leftovers", "- Supercell Slam\n- Drain Punch\n- Ice Punch\n- Swords Dance")
+    treads = _setter("Iron Treads", "Quark Drive", "Leftovers", "- Stealth Rock\n- Rapid Spin\n- Earthquake\n- Knock Off")
+    states = ec.run_showdown(hands, treads, [("move supercellslam", "move stealthrock")])
+    assert any("[from] supercellslam" in x for x in states[1]["log"])
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "supercellslam", "stealthrock")
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+def test_l50_rocky_helmet_per_hit():
+    cinccino = _attacker("Cinccino", "Skill Link", "Leftovers", "- Tail Slap\n- U-turn\n- Knock Off\n- Tidy Up", "Jolly")
+    lando = _setter("Landorus-Therian", "Intimidate", "Rocky Helmet", "- Stealth Rock\n- Earthquake\n- U-turn\n- Taunt")
+    states = ec.run_showdown(cinccino, lando, [("move tailslap", "move stealthrock")])
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "tailslap", "stealthrock")
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L51 (doc/engine-diff.md): a crit that can knock out (the non-crit max cannot) by its exact
+# rolls (the engine took the crit's average: a sure knockout whenever it reached the HP)
+def test_l51_crit_knockout_rolls():
+    import alpha_search
+
+    states = ec.run_showdown(KINGAMBIT_KNOCK.replace("- Protect", "- Kowtow Cleave"), TINGLU, [])
+    st = states[0]
+    normal, crit = alpha_search.damage_rolls(ec.engine_state(st).to_string(), True,
+                                             "kowtowcleave", "spikes")  # fmt: skip
+    hp = crit[8]
+    assert normal[-1] < hp
+    st["sides"][1]["mons"][0]["hp"] = hp
+    outs = ec.engine_outcomes(ec.engine_state(st), "kowtowcleave", "spikes")
+    kill = sum(o[0] for o in outs if o[1].side_two.pokemon[0].hp == 0)
+    assert kill == pytest.approx(CRIT_CHANCE[1] * sum(d >= hp for d in crit) / 16, abs=1e-4)
