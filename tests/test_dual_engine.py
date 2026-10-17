@@ -2969,3 +2969,19 @@ def test_l108_prankster_mean_look_into_a_dark_type():
     assert "trapped" not in states[1]["sides"][1]["mons"][0]["volatiles"]
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "meanlook", "swordsdance")
     assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+def test_l107_trapped_from_the_protocol():
+    """Our state construction's trap (agents/timers.py, from the log) against Showdown's."""
+    from alpha_poke.agents.timers import timers
+
+    umb = _setter("Umbreon", "Synchronize", "Leftovers", "- Mean Look\n- Wish\n- Protect\n- Foul Play")
+    chansey = BLISSEY.replace("Blissey @ Heavy-Duty Boots", "Chansey @ Eviolite")
+    states = ec.run_showdown(umb + "\n\n" + chansey, BLISSEY + "\n\n" + chansey,
+                             [("move meanlook", "move softboiled"), ("move protect", "move softboiled"),
+                              ("switch 2", "move softboiled")])  # fmt: skip
+    lines: list = []
+    for st in states:
+        lines += [x.split("|") for x in st["log"]]
+        p2 = st["sides"][1]
+        assert timers(lines)["p2"].trapped == ("trapped" in p2["mons"][p2["active"]]["volatiles"]), st["turn"]

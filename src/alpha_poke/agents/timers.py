@@ -32,6 +32,8 @@ sides, in poke-engine's own units (rust/patches/poke-engine-0.0.48, generate_ins
   slowstart   the active's Slow Start: [turns left, counting]; 5 from its -start, one less at each
               end of turn from the first turn start it is in for (Showdown's counter skips the
               turn it came in; doc/engine-diff.md L77), gone at its -end
+  trapped     the active is trapped by Mean Look / Block / Jaw Lock / Spirit Shackle / Anchor Shot
+              (-activate trapped) until it or the other side's active leaves (doc/engine-diff.md L107)
   used_once   species ids whose Dauntless Shield has raised Defense (Gen 9: once per battle;
               2026-10-16, doc/engine-diff.md L18)
   sub_hit     the active's Substitute took a hit and stands (its HP below a quarter)
@@ -76,6 +78,7 @@ class SideTimers:
     magnetrise: int | None = None
     partiallytrapped: int | None = None
     slowstart: list | None = None  # [turns left, counting]
+    trapped: bool = False
     sub_hit: bool = False
     recharge: bool = False
     just_moved: str = ""  # species id of this side's mon that made the last move
@@ -96,6 +99,7 @@ class SideTimers:
         self.confusion = self.taunt = self.encore = self.yawn = None
         self.disabled = self.healblock = self.throatchop = self.magnetrise = None
         self.partiallytrapped = self.slowstart = None
+        self.trapped = False
         self.sub_hit = self.recharge = False
 
     def rest_sleep(self, species: str) -> tuple[int, int]:
@@ -178,6 +182,7 @@ def _feed(sides: dict, p: list[str]) -> None:
             st.active = new
             return
         st.came_in(new)
+        sides["p2" if p[2][:2] == "p1" else "p1"].trapped = False  # (its trapper left)
         hp = p[4] if len(p) > 4 else ""
         if " " in hp:
             st.status[new] = hp.split(" ", 1)[1]
@@ -246,6 +251,8 @@ def _feed(sides: dict, p: list[str]) -> None:
     elif tag == "-activate" and len(p) > 3 and to_id(p[3].replace("move: ", "")) in TRAPS:
         if st.partiallytrapped is None:  # a second trap move does not restart it
             st.partiallytrapped = 0
+    elif tag == "-activate" and len(p) > 3 and to_id(p[3]) == "trapped":
+        st.trapped = True
     elif tag == "-activate" and len(p) > 3 and to_id(p[3]) == "confusion":
         if st.confusion is not None:
             st.confusion += 1

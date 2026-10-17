@@ -692,6 +692,8 @@ def build_state(
             vol.add(f"perish{min(counts)}")
         if tm.slowstart:  # (L77)
             vol.add("slowstart")
+        if tm.trapped:  # (L107)
+            vol.add("trapped")
     # the items of the mons that set a screen / the weather / the terrain (ours known, theirs
     # this world's sample): an extending item makes it 8 turns
     items = {("us", to_id(m.species)): (m.item or "") for m in ours} if spectator is None else {}
