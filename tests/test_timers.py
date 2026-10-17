@@ -266,3 +266,18 @@ def test_protosynthesis_from_booster_energy():
 |turn|1
 """)  # fmt: skip
     assert not t["p1"].frombooster
+
+
+def test_times_attacked_counts_the_foes_hits():
+    """L163: the hits of the foe's moves on a mon (Rage Fist), not the other damage."""
+    t = run(START + """
+|move|p1a: Fishy|Rock Blast|p2a: Bob
+|-damage|p2a: Bob|80/100
+|-damage|p2a: Bob|60/100
+|-hitcount|p2a: Bob|2
+|move|p2a: Bob|Toxic|p1a: Fishy
+|-damage|p2a: Bob|50/100|[from] Stealth Rock
+|upkeep
+|turn|2
+""")  # fmt: skip
+    assert t["p2"].times_attacked == {"gliscor": 2}

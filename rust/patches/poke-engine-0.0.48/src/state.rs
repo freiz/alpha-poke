@@ -932,6 +932,10 @@ pub struct Pokemon {
     // alpha-poke patch (2026-10-16, doc/engine-diff.md L57): the item it used up (Showdown's
     // lastItem: eaten / used, not lost; Harvest gives a berry back)
     pub last_item: Items,
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L163): the times a move hit it (Showdown's
+    // timesAttacked: Rage Fist) and its gender (0 none, 1 male, 2 female: Attract, Cute Charm)
+    pub times_attacked: u8,
+    pub gender: u8,
     pub moves: PokemonMoves,
 }
 
@@ -962,6 +966,8 @@ impl Default for Pokemon {
             terastallized: false,
             tera_type: PokemonType::NORMAL,
             last_item: Items::NONE,
+            times_attacked: 0,
+            gender: 0,
             moves: PokemonMoves {
                 m0: Default::default(),
                 m1: Default::default(),
@@ -1024,7 +1030,7 @@ impl Pokemon {
             self.evs.0, self.evs.1, self.evs.2, self.evs.3, self.evs.4, self.evs.5
         );
         format!(
-            "{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}",
+            "{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}{}",
             self.id,
             self.level,
             self.types.0.to_string(),
@@ -1055,6 +1061,12 @@ impl Pokemon {
             self.terastallized,
             self.tera_type.to_string(),
             self.last_item.to_string(),
+            // (L163: only when either is set; the older strings have neither)
+            if self.times_attacked != 0 || self.gender != 0 {
+                format!(",{},{}", self.times_attacked, self.gender)
+            } else {
+                String::new()
+            },
         )
     }
 
@@ -1113,6 +1125,9 @@ impl Pokemon {
             last_item: split
                 .get(29)
                 .map_or(Items::NONE, |x| Items::from_str(x).unwrap()),
+            // (L163; older strings have neither)
+            times_attacked: split.get(30).map_or(0, |x| x.parse::<u8>().unwrap()),
+            gender: split.get(31).map_or(0, |x| x.parse::<u8>().unwrap()),
         }
     }
 }
@@ -1392,6 +1407,9 @@ pub struct State {
     pub team_preview: bool,
     pub use_last_used_move: bool,
     pub use_damage_dealt: bool,
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L163): count the hits (times_attacked) only
+    // when a Rage Fist is on the field (set_conditional_mechanics)
+    pub use_times_attacked: bool,
 }
 impl Default for State {
     fn default() -> State {
@@ -1412,6 +1430,7 @@ impl Default for State {
             },
             team_preview: false,
             use_damage_dealt: false,
+            use_times_attacked: false,
             use_last_used_move: false,
         };
 
@@ -2073,6 +2092,10 @@ impl State {
             Instruction::ChangeLastItem(instruction) => {
                 self.get_side(&instruction.side_ref).get_active().last_item = instruction.new_item
             }
+            Instruction::ChangeTimesAttacked(instruction) => {
+                let active = self.get_side(&instruction.side_ref).get_active();
+                active.times_attacked = active.times_attacked.saturating_add(instruction.amount);
+            }
             Instruction::DecrementPP(instruction) => self.decrement_pp(
                 &instruction.side_ref,
                 &instruction.move_index,
@@ -2284,6 +2307,10 @@ impl State {
             Instruction::ChangeLastItem(instruction) => {
                 self.get_side(&instruction.side_ref).get_active().last_item =
                     instruction.current_item
+            }
+            Instruction::ChangeTimesAttacked(instruction) => {
+                let active = self.get_side(&instruction.side_ref).get_active();
+                active.times_attacked = active.times_attacked.saturating_sub(instruction.amount);
             }
             Instruction::DecrementPP(instruction) => self.increment_pp(
                 &instruction.side_ref,
@@ -2541,6 +2568,7 @@ impl State {
             trick_room: StateTrickRoom::deserialize(split[4]),
             team_preview: split[5].parse::<bool>().unwrap(),
             use_damage_dealt: false,
+            use_times_attacked: false,
             use_last_used_move: false,
         };
         state.set_conditional_mechanics();

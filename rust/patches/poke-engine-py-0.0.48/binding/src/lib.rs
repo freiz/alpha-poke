@@ -82,6 +82,7 @@ impl Into<State> for PyState {
             team_preview: self.team_preview,
             use_last_used_move: false,
             use_damage_dealt: false,
+            use_times_attacked: false,
         };
         state.set_conditional_mechanics();
         state
@@ -659,6 +660,10 @@ pub struct PyPokemon {
     pub moves: Vec<PyMove>,
     // alpha-poke patch (2026-10-16, doc/engine-diff.md L57)
     pub last_item: String,
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L163): Rage Fist's count, the gender (0 none,
+    // 1 male, 2 female)
+    pub times_attacked: u8,
+    pub gender: u8,
 }
 
 impl From<Pokemon> for PyPokemon {
@@ -698,6 +703,8 @@ impl From<Pokemon> for PyPokemon {
             terastallized: other.terastallized,
             tera_type: other.tera_type.to_string(),
             last_item: other.last_item.to_string(),
+            times_attacked: other.times_attacked,
+            gender: other.gender,
             moves: other
                 .moves
                 .into_iter()
@@ -746,6 +753,8 @@ impl Into<Pokemon> for PyPokemon {
             terastallized: self.terastallized,
             tera_type: PokemonType::from_str(&self.tera_type).unwrap(),
             last_item: Items::from_str(&self.last_item).unwrap(),
+            times_attacked: self.times_attacked,
+            gender: self.gender,
             moves: PokemonMoves {
                 m0: moves_vec[0].clone().into(),
                 m1: moves_vec[1].clone().into(),
@@ -785,6 +794,8 @@ impl PyPokemon {
         terastallized=false,
         tera_type="typeless".to_string(),
         last_item="none".to_string(),
+        times_attacked=0,
+        gender=0,
     ))]
     fn new(
         id: String,
@@ -812,6 +823,8 @@ impl PyPokemon {
         terastallized: bool,
         tera_type: String,
         last_item: String,
+        times_attacked: u8,
+        gender: u8,
     ) -> Self {
         if base_ability == "" {
             base_ability = ability.clone();
@@ -842,6 +855,8 @@ impl PyPokemon {
             tera_type,
             moves,
             last_item,
+            times_attacked,
+            gender,
         }
     }
     #[staticmethod]

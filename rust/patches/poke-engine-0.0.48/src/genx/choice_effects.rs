@@ -346,6 +346,12 @@ pub fn modify_choice(
         // Venoshock x2 on poison, the storms' sure hit in rain (the target's effective weather:
         // not with Utility Umbrella), Shell Side Arm's category (the higher of its two damages,
         // physical: contact; a tie: special)
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L163): Rage Fist, 50 more per time its
+        // user was hit, up to 350 (Showdown's basePowerCallback: timesAttacked)
+        Choices::RAGEFIST => {
+            let times = attacking_side.get_active_immutable().times_attacked as f32;
+            attacker_choice.base_power = (50.0 + 50.0 * times).min(350.0);
+        }
         Choices::INFERNALPARADE => {
             if defending_side.get_active_immutable().status != PokemonStatus::NONE {
                 attacker_choice.base_power *= 2.0;

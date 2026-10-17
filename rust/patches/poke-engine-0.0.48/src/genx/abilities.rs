@@ -997,6 +997,15 @@ pub fn ability_damaging_hit(
                 apply_boost_instruction(defending_side, &stat, &amount, &holder, &holder, instructions);
             }
         }
+        // (L163: Cute Charm, 3/10 an attraction on a contact attacker -- the volatile's gender
+        // check, generate_instructions)
+        Abilities::CUTECHARM if choice.flags.contact && attacking_pkmn.hp > 0 => {
+            choice.add_or_create_secondaries(Secondary {
+                chance: 30.0,
+                target: MoveTarget::User,
+                effect: Effect::VolatileStatus(PokemonVolatileStatus::ATTRACT),
+            });
+        }
         Abilities::GOOEY | Abilities::TANGLINGHAIR if choice.flags.contact => {
             apply_boost_instruction(
                 attacking_side,

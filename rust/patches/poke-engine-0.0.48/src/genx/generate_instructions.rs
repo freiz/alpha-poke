@@ -13,6 +13,7 @@ use crate::choices::{
 };
 use crate::instruction::EnableMoveInstruction;
 use crate::instruction::{
+    ChangeTimesAttackedInstruction,
     ApplyVolatileStatusInstruction, BoostInstruction, ChangeDamageDealtDamageInstruction,
     ChangeDamageDealtMoveCategoryInstruction, ChangeItemInstruction,
     ChangeSideConditionInstruction, ChangeTerrain, ChangeType,
@@ -890,6 +891,19 @@ fn get_instructions_from_volatile_statuses(
     match volatile_status.target {
         MoveTarget::Opponent => target_side = attacking_side_reference.get_other_side(),
         MoveTarget::User => target_side = *attacking_side_reference,
+    }
+
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L163): attraction needs opposite genders
+    // (Showdown's attract onStart: a male and a female; a genderless or unknown one is immune)
+    if volatile_status.volatile_status == PokemonVolatileStatus::ATTRACT {
+        let g = state.get_side_immutable(&target_side).get_active_immutable().gender;
+        let other = state
+            .get_side_immutable(&target_side.get_other_side())
+            .get_active_immutable()
+            .gender;
+        if g == 0 || other == 0 || g == other {
+            return;
+        }
     }
 
     // alpha-poke patch (2026-10-16, doc/engine-diff.md L70): Disable stops the target's last move
@@ -6413,6 +6427,7 @@ fn run_move(
             .iter()
             .any(|i| matches!(i, Instruction::FormeChange(f) if f.side_ref == defender_ref));
     let mut dealt_total = 0;
+    let mut hits_on_target: u8 = 0;
     for hit in 0..hit_count {
         let hp_before_hit = state
             .get_side_immutable(&defender_ref)
@@ -6490,6 +6505,7 @@ fn run_move(
                         .get_active_immutable()
                         .hp;
                 dealt_total += dealt;
+                hits_on_target += 1;
                 super::abilities::ability_damaging_hit(
                     state,
                     choice,
@@ -6527,6 +6543,21 @@ fn run_move(
             break;
         }
     } // end multi-hit
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L163): the target's times attacked, one per
+    // hit not on its Substitute (Showdown's gotAttacked: timesAttacked += hits; Rage Fist)
+    if hits_on_target > 0 && state.use_times_attacked {
+        let target = state.get_side(&defender_ref).get_active();
+        let amount = cmp::min(hits_on_target, u8::MAX - target.times_attacked);
+        if amount > 0 {
+            target.times_attacked += amount;
+            instructions
+                .instruction_list
+                .push(Instruction::ChangeTimesAttacked(ChangeTimesAttackedInstruction {
+                    side_ref: defender_ref,
+                    amount,
+                }));
+        }
+    }
     super::abilities::magician_after_move(state, choice, &attacking_side, dealt_total, &mut instructions);
     super::abilities::relic_song_forme(state, choice, &attacking_side, dealt_total, &mut instructions);
     super::abilities::anger_shell(state, &attacking_side, dealt_total, &mut instructions);
@@ -8627,6 +8658,9 @@ mod tests {
         let mut state: State = State::default();
         let mut choice = MOVES.get(&Choices::ATTRACT).unwrap().to_owned();
 
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L163): attraction needs opposite genders
+        state.side_one.get_active().gender = 1;
+        state.side_two.get_active().gender = 2;
         let mut instructions = vec![];
         generate_instructions_from_move(
             &mut state,

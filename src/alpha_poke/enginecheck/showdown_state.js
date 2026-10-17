@@ -23,6 +23,8 @@ function monState(p, side) {
 			source: p.statusState.source === p ? 'rest' : ''},
 		item: p.item || '',
 		last_item: p.lastItem || '', // (L57: Harvest's berry)
+		times_attacked: p.timesAttacked || 0, // (L163: Rage Fist)
+		gender: p.gender || '', // (L163: 'M' / 'F' / 'N')
 		ability: p.ability || '',
 		base_ability: p.baseAbility || '',
 		types: p.getTypes(),

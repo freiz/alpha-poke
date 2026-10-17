@@ -96,6 +96,8 @@ class SideTimers:
     setters: dict = field(default_factory=dict)
     fields_elapsed: dict = field(default_factory=dict)  # "weather" / "terrain" -> ends of turn
     used_once: set = field(default_factory=set)  # species ids (Dauntless Shield used)
+    # species id -> the hits a foe's move landed on it (Rage Fist; doc/engine-diff.md L163)
+    times_attacked: dict = field(default_factory=dict)
     status: dict = field(default_factory=dict)  # species id -> status ('tox', 'slp', ...)
     sleep: dict = field(default_factory=dict)  # species id -> [attempts, rest]
     names: dict = field(default_factory=dict)  # nickname -> species id
@@ -238,6 +240,10 @@ def _feed(sides: dict, p: list[str]) -> None:
     elif tag == "-fail" and len(p) > 3 and to_id(p[3].replace("move: ", "")) == "wish":
         st.wish = None
         st.failed_now = True
+    elif tag == "-damage" and not any("[from]" in x for x in p[4:]) and (
+        sides["p2" if p[2][:2] == "p1" else "p1"].just_moved
+    ):
+        st.times_attacked[sp] = st.times_attacked.get(sp, 0) + 1  # (L163: a hit of the foe's move)
     elif tag in ("-fail", "-miss") and st.just_moved:
         st.failed_now = True  # (L115: its move failed)
     elif tag == "-immune" and sides["p2" if p[2][:2] == "p1" else "p1"].just_moved:

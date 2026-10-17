@@ -1743,5 +1743,9 @@ impl State {
         */
         self.set_damage_dealt_flag();
         self.set_last_used_move_flag();
+        // (L163)
+        if self._state_contains_any_move(&[Choices::RAGEFIST]) {
+            self.use_times_attacked = true;
+        }
     }
 }

@@ -4196,3 +4196,30 @@ def test_l162_quick_draw_chance():
         first = sum(x.percentage for x in pe.generate_instructions(e, move, "swordsdance")
                     if [str(i) for i in x.instruction_list if str(i).startswith("Acted")][:1] == ["Acted: SideOne"])
         assert first / 100 == pytest.approx(want, abs=1e-3), move
+
+
+# L163 (doc/engine-diff.md): two new Pokemon fields -- the times a move hit it (Rage Fist's 50 more
+# per time: wide200 b192-t36 / b192-t28, main b41-t21) and the gender (Cute Charm's attraction on
+# a contact attacker of the other gender: wide b14-t3; Attract fails between the same genders)
+@pytest.mark.parametrize("teams,i,turn,offset", [
+    ("random_battle_teams_wide200.jsonl", 192, 36, 40000),
+    ("random_battle_teams_wide200.jsonl", 192, 28, 40000),
+    ("random_battle_teams.jsonl", 41, 21, 0),
+    ("random_battle_teams_wide.jsonl", 14, 3, 0),
+])  # fmt: skip
+def test_l163_positions(teams, i, turn, offset):
+    a, b = _random_position(teams, i, turn, offset)
+    c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
+    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2)
+    n = tuple(len(s["mons"]) for s in a["state"]["sides"])
+    assert ec.closest(b["state"], outs, n, hp=True)["diff"] == {}
+
+
+def test_l163_attract_same_gender_fails():
+    user = _setter("Gardevoir", "Synchronize", "Leftovers", "- Attract\n- Calm Mind\n- Protect\n- Moonblast")
+    foe = _setter("Garchomp", "Rough Skin", "Leftovers", "- Swords Dance\n- Earthquake\n- Protect\n- Roar")
+    states = ec.run_showdown(user.replace("Gardevoir @", "Gardevoir (F) @"), foe.replace("Garchomp @", "Garchomp (F) @"),
+                             [("move attract", "move swordsdance")])  # fmt: skip
+    assert "attract" not in states[1]["sides"][1]["mons"][0]["volatiles"]
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "attract", "swordsdance")
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}

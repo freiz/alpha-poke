@@ -104,6 +104,8 @@ pub enum Instruction {
     ChangeMove(ChangeMoveInstruction),
     // (L57: the active's used-up item, Pokemon::last_item)
     ChangeLastItem(ChangeItemInstruction),
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L163): the active's times attacked (Rage Fist)
+    ChangeTimesAttacked(ChangeTimesAttackedInstruction),
     ToggleTrickRoom(ToggleTrickRoomInstruction),
     DecrementTrickRoomTurnsRemaining,
     ToggleSideOneForceSwitch,
@@ -272,6 +274,9 @@ impl fmt::Debug for Instruction {
                     "ChangeLastItem {:?}: {:?} -> {:?}",
                     c.side_ref, c.current_item, c.new_item
                 )
+            }
+            Instruction::ChangeTimesAttacked(c) => {
+                write!(f, "ChangeTimesAttacked {:?}: {}", c.side_ref, c.amount)
             }
             Instruction::ChangeMove(c) => {
                 write!(
@@ -496,6 +501,12 @@ pub struct EnableMoveInstruction {
 pub struct DisableMoveInstruction {
     pub side_ref: SideReference,
     pub move_index: PokemonMoveIndex,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct ChangeTimesAttackedInstruction {
+    pub side_ref: SideReference,
+    pub amount: u8,
 }
 
 #[derive(Debug, PartialEq, Clone)]
