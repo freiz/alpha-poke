@@ -34,6 +34,9 @@ ORDER = {"payback", "boltbeak", "fishiousrend", "avalanche", "revenge", "assuran
 # the probe's empty queue (Analytic: moving last) and a target out of reach (semi-invulnerable:
 # the hit step, not getDamage): left out
 QUEUE_ABILITIES = {"analytic"}
+# the move's start in the engine (generate_instructions: Libero / Protean's type change, L41), not
+# its calculate_damage; the probe runs Showdown's PrepareHit: left out
+MOVE_START_ABILITIES = {"libero", "protean"}
 SEMI_INVULNERABLE = {"phantomforce", "shadowforce", "dig", "dive", "fly", "bounce"}
 # the engine's 0 that Showdown's getDamage does not see (onDamage: Disguise / Ice Face's block,
 # a Substitute's): left out
@@ -69,7 +72,7 @@ def battle(job: tuple) -> list[dict]:
                     continue
                 if other["ability"] in BLOCKERS or "substitute" in other["volatiles"]:
                     continue
-                if mon(st, side)["ability"] in QUEUE_ABILITIES or SEMI_INVULNERABLE & set(
+                if mon(st, side)["ability"] in QUEUE_ABILITIES | MOVE_START_ABILITIES or SEMI_INVULNERABLE & set(
                     other["volatiles"]
                 ):
                     continue

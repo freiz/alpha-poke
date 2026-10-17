@@ -261,6 +261,8 @@ harness 必须把 Showdown 的状态完整映射到引擎，否则不一致来�
 | L115 | Temper Flare / Stomping Tantrum 在使用者上回合招式失败后威力翻倍（Showdown 的 moveLastTurnResult 为 false：没打中、免疫、失败、麻痹不能动 / 睡着 / 畏缩；被 Protect 挡是 null，不算）；引擎没有 | 引擎 + harness + 状态构造 | 已修复 | `test_l115_power_doubles_after_a_failed_move`；`test_l115_failed_move_from_the_protocol`（`timers.py` 对 Showdown） | `genx/state.rs` 新 volatile LASTMOVEFAILED（只来自给定的状态，回合末清掉：搜索里之后的回合假定招式成功）；`choice_effects.rs`；`showdown_state.js` 导出、不参与比较；`timers.py` 从 `-fail` / `-miss` / 目标 `-immune` / `cant` 判断 |
 | L116 | Steel Beam 没打中或被挡时也付出一半 HP（Showdown 的 onMoveFail）；引擎只在命中时 | 引擎 | 已修复 | `test_l116_steel_beam_fails_at_a_cost`（没打中、Protect 两个参数） | `choices.rs` 加 crash 0.5（命中时仍是 heal −0.5） |
 | L117 | 多段招式在使用者被目标的接触伤害（Rocky Helmet、Rough Skin）打倒的那一下之后停止（Showdown 的多段循环中断）；引擎打满所有段数 | 引擎 | 已修复 | `test_l117_multi_hit_stops_when_the_user_faints`（Skill Link Tail Slap 第 4 下停） | `generate_instructions.rs` `run_move` 开头按每段的接触伤害限制段数 |
+| L118 | Flying Press 的属性相克是格斗加飞行（Showdown 的 onEffectiveness 加上飞行的）；引擎只算格斗（对太晶钢系 2 倍而不是 1 倍） | 引擎 | 已修复 | `test_l118_flying_press_is_flying_too` | `damage_calc.rs` 伤害配方和 `move_type_effectiveness`。伤害计算差分（`check_damage_calc.py`）同时把 Libero / Protean 的攻击方排除：引擎在招式开始时变属性（L41，`generate_instructions`），不在 `calculate_damage` 里，探针却跑了 Showdown 的 PrepareHit；排除后超出 2% 的 32 处（之前 38） |
+| L119 | 对方已倒下时，出招方照样经过自己的异常状态（睡眠计数和醒来、解冻：Showdown 的 BeforeMove 在目标检查之前）；引擎先判“没有目标”就停了，到点该醒的 Rest 睡眠没有醒 | 引擎 | 已修复 | `test_l119_sleeper_wakes_without_a_target` | `generate_instructions.rs`：`no_target` 从 `cannot_use_move` 移到睡眠处理之后 |
 
 ## 修复与验证（2026-10-16）
 

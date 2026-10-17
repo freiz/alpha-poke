@@ -3211,3 +3211,32 @@ def test_l117_multi_hit_stops_when_the_user_faints():
     assert any(x.startswith("|-hitcount|") and x.endswith("|4") for x in states[3]["log"])
     outs = ec.engine_outcomes(ec.engine_state(states[2]), "tailslap", "calmmind")
     assert ec.closest(states[3], outs, (2, 1), hp=True)["diff"] == {}
+
+
+# L118 (doc/engine-diff.md): Flying Press is Fighting and Flying for its effectiveness (Showdown's
+# onEffectiveness adds Flying's); the engine took Fighting only (2x on a Tera Steel target, not 1x)
+def test_l118_flying_press_is_flying_too():
+    lucha = _attacker("Hawlucha", "Unburden", "Leftovers", "- Flying Press\n- Swords Dance\n- Roost\n- Acrobatics", "Jolly")
+    latios = _setter("Latios", "Levitate", "Leftovers", "- Calm Mind\n- Draco Meteor\n- Recover\n- Psyshock")
+    latios = latios.replace("Tera Type: Normal", "Tera Type: Steel")
+    states = ec.run_showdown(lucha, latios, [("move flyingpress", "move calmmind terastallize")])
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "flyingpress", "calmmind-tera")
+    res = ec.closest(states[1], outs, (1, 1), hp=True)
+    assert res["diff"] == {}
+
+
+# L119 (doc/engine-diff.md): a mover whose target has fainted still goes through its status (sleep's
+# count and waking, a thaw: Showdown's BeforeMove comes before the target check); the engine stopped
+# it first, so a Rest sleeper due to wake stayed asleep
+def test_l119_sleeper_wakes_without_a_target():
+    lu = _setter("Ting-Lu", "Vessel of Ruin", "Leftovers", "- Rest\n- Stealth Rock\n- Whirlwind\n- Ruination")
+    blis = BLISSEY.replace("- Calm Mind", "- Healing Wish")
+    chansey = BLISSEY.replace("Blissey @ Heavy-Duty Boots", "Chansey @ Eviolite")
+    turns = [("move stealthrock", "move seismictoss"), ("move rest", "move seismictoss"),
+             ("move rest", "move seismictoss"), ("move rest", "move seismictoss"),
+             ("move ruination", "move healingwish")]  # fmt: skip
+    states = ec.run_showdown(lu, blis + "\n\n" + chansey, turns)
+    assert states[4]["sides"][0]["mons"][0]["status"] == "slp"
+    assert states[5]["sides"][0]["mons"][0]["status"] == ""
+    outs = ec.engine_outcomes(ec.engine_state(states[4]), "ruination", "healingwish")
+    assert ec.closest(states[5], outs, (1, 2), hp=True)["diff"] == {}

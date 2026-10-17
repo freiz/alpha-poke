@@ -2691,9 +2691,11 @@ pub fn transform_into(
     }
 }
 
-fn cannot_use_move(state: &State, choice: &Choice, attacking_side_ref: &SideReference) -> bool {
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L119): no target for the move (the opponent
+// fainted), checked after the mover's status (Showdown's BeforeMove -- sleep, a thaw, ... -- comes
+// before the target check); it was in cannot_use_move, before the status
+fn no_target(state: &State, choice: &Choice, attacking_side_ref: &SideReference) -> bool {
     let (attacking_side, defending_side) = state.get_both_sides_immutable(attacking_side_ref);
-
     // If the opponent has 0 hp, you can't use a non-status move
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L112): nor a status move aimed at it
     // (Showdown's [notarget]); one aimed at its side / the field still goes
@@ -2710,6 +2712,13 @@ fn cannot_use_move(state: &State, choice: &Choice, attacking_side_ref: &SideRefe
     {
         return true;
     }
+    false
+}
+
+fn cannot_use_move(state: &State, choice: &Choice, attacking_side_ref: &SideReference) -> bool {
+    let attacking_side = state.get_side_immutable(attacking_side_ref);
+
+    // (L119: a fainted target is checked after the status: no_target)
 
     // If you were taunted, you can't use a Physical/Special move
     // alpha-poke patch (2026-10-16, doc/engine-diff.md L90): the move's own category (an attack
@@ -3577,6 +3586,11 @@ pub fn generate_instructions_from_move(
             undo_last_used_move(&attacking_side, &mut incoming_instructions);
             final_instructions.push(incoming_instructions);
         }
+        return;
+    }
+    if no_target(state, &choice, &attacking_side) {
+        state.reverse_instructions(&incoming_instructions.instruction_list);
+        final_instructions.push(incoming_instructions);
         return;
     }
 

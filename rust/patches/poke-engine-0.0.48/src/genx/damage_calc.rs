@@ -121,6 +121,9 @@ pub fn move_type_effectiveness(choice: &Choice, defender: &Pokemon) -> f32 {
     let e = type_effectiveness_modifier(&choice.move_type, defender);
     if choice.move_id == Choices::FREEZEDRY && defender.has_type(&PokemonType::WATER) {
         e * 4.0
+    } else if choice.move_id == Choices::FLYINGPRESS {
+        // (L118: Flying too)
+        e * type_effectiveness_modifier(&PokemonType::FLYING, defender)
     } else {
         e
     }
@@ -794,6 +797,15 @@ fn common_pkmn_damage_calc(
             + vol.type_stages
             + if choice.move_id == Choices::FREEZEDRY && defender.has_type(&PokemonType::WATER) {
                 2
+            } else {
+                0
+            }
+            // alpha-poke patch (2026-10-17, doc/engine-diff.md L118): Flying Press is Flying too
+            + if choice.move_id == Choices::FLYINGPRESS {
+                type_stages(_type_effectiveness_modifier(
+                    &PokemonType::FLYING,
+                    &get_defending_types(&defending_side, defender, attacker, choice),
+                ))
             } else {
                 0
             },
