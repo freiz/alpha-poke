@@ -928,11 +928,17 @@ pub fn choice_after_damage_hit(
                 0
             };
             let user_faints = user.hp == 0 || contact >= user.hp;
+            // (L114: a Sticky Barb moves to an attacker without an item first: run_move)
+            let barb_moves = defender.item == Items::STICKYBARB
+                && user.item == Items::NONE
+                && choice.flags.contact
+                && !user_faints;
             let defender_active = defending_side.get_active();
             if defender_active.item_can_be_removed()
                 && defender_active.item != Items::NONE
                 && !hit_sub
                 && !user_faints
+                && !barb_moves
             {
                 let instruction = Instruction::ChangeItem(ChangeItemInstruction {
                     side_ref: attacking_side_ref.get_other_side(),

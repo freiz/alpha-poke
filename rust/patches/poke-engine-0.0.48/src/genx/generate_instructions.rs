@@ -1537,14 +1537,33 @@ fn get_instructions_from_secondaries(
                             }
                         }
                         let target_pkmn = state.get_side(&secondary_target_side_ref).get_active();
-                        secondary_hit_instructions
-                            .instruction_list
-                            .push(Instruction::ChangeItem(ChangeItemInstruction {
-                                side_ref: secondary_target_side_ref,
-                                current_item: target_pkmn.item.clone(),
-                                new_item: Items::NONE,
-                            }));
-                        target_pkmn.item = Items::NONE;
+                        // alpha-poke patch (2026-10-17, doc/engine-diff.md L114): only the
+                        // single-use item that set it up (an item taken / swapped in during the
+                        // move stays: Pickpocket's after an Air Balloon popped)
+                        if matches!(
+                            target_pkmn.item,
+                            Items::ABSORBBULB
+                                | Items::AIRBALLOON
+                                | Items::CELLBATTERY
+                                | Items::KEEBERRY
+                                | Items::MARANGABERRY
+                                | Items::SNOWBALL
+                                | Items::LUMINOUSMOSS
+                                | Items::JABOCABERRY
+                                | Items::ROWAPBERRY
+                                | Items::ENIGMABERRY
+                                | Items::WEAKNESSPOLICY
+                                | Items::THROATSPRAY
+                        ) {
+                            secondary_hit_instructions.instruction_list.push(
+                                Instruction::ChangeItem(ChangeItemInstruction {
+                                    side_ref: secondary_target_side_ref,
+                                    current_item: target_pkmn.item.clone(),
+                                    new_item: Items::NONE,
+                                }),
+                            );
+                            target_pkmn.item = Items::NONE;
+                        }
                     }
                 }
                 state.reverse_instructions(&secondary_hit_instructions.instruction_list);
@@ -6180,6 +6199,16 @@ fn run_move(
             ] {
                 state.apply_one_instruction(&ins);
                 instructions.instruction_list.push(ins);
+            }
+            // (L114: a Life Orb taken gives no recoil: Showdown's comes after the move, from the
+            // item its holder has then)
+            if item == Items::LIFEORB {
+                if let Some(v) = choice.secondaries.as_mut() {
+                    v.retain(|x| {
+                        !(x.target == MoveTarget::User
+                            && matches!(x.effect, Effect::Heal(h) if h == -0.1))
+                    });
+                }
             }
         }
     }

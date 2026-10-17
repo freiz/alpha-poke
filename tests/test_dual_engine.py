@@ -3117,3 +3117,37 @@ Adamant Nature
     assert states[1]["sides"][1]["mons"][0]["item"] == "rockyhelmet"
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "knockoff", "spikes")
     assert ec.closest(states[1], outs, (2, 1), hp=True)["diff"] == {}
+
+
+# L114 (doc/engine-diff.md): a Sticky Barb moves to an attacker without an item before Knock Off
+# would take it (Showdown: its onHit during the hit, Knock Off's onAfterHit after); a Life Orb that
+# Pickpocket takes gives its former holder no recoil (Showdown: the recoil after the move, from the
+# item it holds then)
+def test_l114_sticky_barb_before_knock_off():
+    buzz = _setter("Mandibuzz", "Overcoat", "Heavy-Duty Boots", "- Knock Off\n- Roost\n- Defog\n- U-turn")
+    buzz = buzz.replace(" @ Heavy-Duty Boots", "")
+    clef = _setter("Clefable", "Magic Guard", "Sticky Barb", "- Calm Mind\n- Moonblast\n- Protect\n- Trick")
+    states = ec.run_showdown(buzz, clef, [("move knockoff", "move calmmind")])
+    assert states[1]["sides"][0]["mons"][0]["item"] == "stickybarb"
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "knockoff", "calmmind")
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+def test_l114_pickpocket_takes_the_life_orb_before_its_recoil():
+    weavile = WEAVILE_PICKPOCKET.replace("Heavy-Duty Boots", "Leftovers")
+    scizor = _attacker("Scizor", "Technician", "Life Orb", "- Knock Off\n- Bullet Punch\n- Swords Dance\n- U-turn")
+    states = ec.run_showdown(weavile, scizor, [("move swordsdance", "move knockoff")])
+    assert states[1]["sides"][0]["mons"][0]["item"] == "lifeorb"
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "swordsdance", "knockoff")
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+def test_l114_balloon_pop_leaves_the_stolen_item():
+    """Air Balloon pops on the hit; Pickpocket then takes the attacker's item, which the pop must
+    not remove too (the engine's pop is a secondary after the move: it removed the new item)."""
+    treads = _attacker("Iron Treads", "Quark Drive", "Assault Vest", "- Knock Off\n- Earthquake\n- Rapid Spin\n- Iron Head")
+    tink = _setter("Tinkaton", "Pickpocket", "Air Balloon", "- Gigaton Hammer\n- Stealth Rock\n- Encore\n- Thunder Wave")
+    states = ec.run_showdown(treads, tink, [("move knockoff", "move stealthrock")])
+    assert states[1]["sides"][1]["mons"][0]["item"] == "assaultvest"
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "knockoff", "stealthrock")
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
