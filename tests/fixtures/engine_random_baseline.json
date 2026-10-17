@@ -12,9 +12,6 @@
 "hp",
 "volatile.typechange"
 ],
-"b0-t7": [
-"volatile.confusion"
-],
 "b107-t54": [
 "hp"
 ],
@@ -23,9 +20,6 @@
 ],
 "b117-t44": [
 "hp"
-],
-"b118-t18": [
-"volatile.unburden"
 ],
 "b121-t36": [
 "hp"
@@ -81,9 +75,6 @@
 ],
 "b164-t1": [
 "volatile.typechange"
-],
-"b169-t23": [
-"volatile.confusion"
 ],
 "b176-t18": [
 "active",
@@ -199,16 +190,6 @@
 "b258-t25": [
 "boost.spd"
 ],
-"b258-t43": [
-"boost.atk",
-"boost.spa",
-"hp"
-],
-"b258-t44": [
-"boost.atk",
-"boost.spa",
-"hp"
-],
 "b259-t15": [
 "boost.atk",
 "hp"
@@ -287,17 +268,11 @@
 "b57-t15": [
 "volatile.confusion"
 ],
-"b61-t5": [
-"item"
-],
 "b67-t1": [
 "boost.spa"
 ],
 "b75-t26": [
 "hp"
-],
-"b80-t16": [
-"volatile.unburden"
 ],
 "b81-t47": [
 "hp"

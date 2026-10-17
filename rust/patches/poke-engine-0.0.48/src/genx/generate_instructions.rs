@@ -27,7 +27,6 @@ use crate::instruction::{DecrementFutureSightInstruction, FormeChangeInstruction
 use crate::instruction::{DecrementPPInstruction, SetLastUsedMoveInstruction};
 
 use super::damage_calc::calculate_futuresight_damage;
-use crate::pokemon::PokemonName;
 use super::damage_calc::{
     calculate_damage, damage_rolls, type_effectiveness_modifier, DamageRolls,
 };
@@ -40,6 +39,7 @@ use crate::choices::{Choice, MoveCategory};
 use crate::instruction::{
     ChangeStatusInstruction, DamageInstruction, Instruction, StateInstructions, SwitchInstruction,
 };
+use crate::pokemon::PokemonName;
 use crate::state::{
     LastUsedMove, PokemonBoostableStat, PokemonIndex, PokemonMoveIndex, PokemonSideCondition,
     PokemonStatus, PokemonType, Side, SideMovesFirst, SideReference, State,
@@ -1451,6 +1451,9 @@ fn lock_end_instructions(
         return out;
     }
     let count = side.volatile_status_durations.lockedmove;
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L61): on its last turn (the engine's locks
+    // last 3: a count of 2) it confuses however it ends (Showdown's onEnd, by trueDuration)
+    let confuse = confuse || count >= 2;
     if count != 0 {
         out.push(Instruction::ChangeVolatileStatusDuration(
             ChangeVolatileStatusDurationInstruction {
@@ -4194,6 +4197,49 @@ fn on_terrain_end(
     }
 }
 
+// alpha-poke patch (2026-10-16, doc/engine-diff.md L62): Unburden, on when the active lost its
+// item since it came in (Showdown's onAfterUseItem / onTakeItem: at once; here at the end of the
+// turn, from the turn's instructions: its Speed matters from the next turn's order)
+fn unburden_check(state: &mut State, instructions: &mut StateInstructions) {
+    for side_ref in [SideReference::SideOne, SideReference::SideTwo] {
+        let mut lost = false;
+        for ins in instructions.instruction_list.iter() {
+            match ins {
+                Instruction::Switch(s) if s.side_ref == side_ref => lost = false,
+                Instruction::ChangeItem(c)
+                    if c.side_ref == side_ref
+                        && c.new_item == Items::NONE
+                        && c.current_item != Items::NONE =>
+                {
+                    lost = true
+                }
+                _ => {}
+            }
+        }
+        let side = state.get_side(&side_ref);
+        let active = side.get_active_immutable();
+        if lost
+            && active.ability == Abilities::UNBURDEN
+            && active.item == Items::NONE
+            && active.hp > 0
+            && !side
+                .volatile_statuses
+                .contains(&PokemonVolatileStatus::UNBURDEN)
+        {
+            side.volatile_statuses
+                .insert(PokemonVolatileStatus::UNBURDEN);
+            instructions
+                .instruction_list
+                .push(Instruction::ApplyVolatileStatus(
+                    ApplyVolatileStatusInstruction {
+                        side_ref,
+                        volatile_status: PokemonVolatileStatus::UNBURDEN,
+                    },
+                ));
+        }
+    }
+}
+
 fn add_end_of_turn_instructions(
     state: &mut State,
     mut incoming_instructions: &mut StateInstructions,
@@ -4202,6 +4248,7 @@ fn add_end_of_turn_instructions(
     if state.side_one.force_switch || state.side_two.force_switch {
         return;
     }
+    unburden_check(state, incoming_instructions);
 
     let sides = [first_move_side, &first_move_side.get_other_side()];
 
@@ -5156,6 +5203,8 @@ fn add_end_of_turn_instructions(
             side.side_conditions.protect -= side.side_conditions.protect;
         }
     } // end volatile statuses
+      // (L62: an item used up at the end of the turn too)
+    unburden_check(state, incoming_instructions);
 }
 
 // alpha-poke patch (2026-10-13): a side's stat stages (Eject Pack: lowered by a move)
@@ -5284,7 +5333,35 @@ fn run_move(
     // without some performance hits.
 
     if let Some(boost) = &choice.boost {
+        // alpha-poke patch (2026-10-16, doc/engine-diff.md L63): a sound move or an Infiltrator's
+        // goes through the target's Substitute (Showdown's bypasssub): it is off for the boosts
+        // (state only, no instruction)
+        let bypass = boost.target == MoveTarget::Opponent
+            && (choice.flags.sound
+                || state
+                    .get_side_immutable(&attacking_side)
+                    .get_active_immutable()
+                    .ability
+                    == Abilities::INFILTRATOR);
+        let target = attacking_side.get_other_side();
+        let lifted = bypass
+            && state
+                .get_side_immutable(&target)
+                .volatile_statuses
+                .contains(&PokemonVolatileStatus::SUBSTITUTE);
+        if lifted {
+            state
+                .get_side(&target)
+                .volatile_statuses
+                .remove(&PokemonVolatileStatus::SUBSTITUTE);
+        }
         get_instructions_from_boosts(state, boost, &attacking_side, &mut instructions);
+        if lifted {
+            state
+                .get_side(&target)
+                .volatile_statuses
+                .insert(PokemonVolatileStatus::SUBSTITUTE);
+        }
     }
 
     // alpha-poke patch (2026-10-11): the defender's Eject Button / Red Card, after a damaging

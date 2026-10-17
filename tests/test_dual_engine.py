@@ -2020,3 +2020,40 @@ def test_l60_embody_aspect_on_tera(species, ability, item, tera, stat):
     assert states[1]["sides"][0]["mons"][0]["boosts"][stat] == 1
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "ivycudgel-tera", "protect")
     assert ec.closest(states[1], outs, (1, 1))["diff"] == {}
+
+
+# L61 (doc/engine-diff.md): a lock (Outrage) Protect stops on its last turn still confuses
+# (Showdown's lockedmove onEnd: by trueDuration, however it ends); L22 ended it without
+@pytest.mark.parametrize("last", [True, False])
+def test_l61_lock_stopped_on_its_last_turn_confuses(last):
+    chomp = _setter("Garchomp", "Rough Skin", "Leftovers", "- Outrage\n- Earthquake\n- Swords Dance\n- Stealth Rock")
+    corv = _setter("Corviknight", "Pressure", "Leftovers", "- Protect\n- Roost\n- Defog\n- Body Press")
+    turns = [("move outrage", "move roost")] * (2 if last else 1) + [("move outrage", "move protect")]
+    states = ec.run_showdown(chomp, corv, turns)
+    assert ("confusion" in states[-1]["sides"][0]["mons"][0]["volatiles"]) == last
+    outs = ec.engine_outcomes(ec.engine_state(states[-2]), "outrage", "protect")
+    assert ec.closest(states[-1], outs, (1, 1))["diff"] == {}
+
+
+# L62 (doc/engine-diff.md): Unburden was never set off in the engine (its volatile only read for
+# the Speed): an item used or lost while out puts it on (Showdown's onAfterUseItem / onTakeItem)
+@pytest.mark.parametrize("item, foe_move", [("Sitrus Berry", "ruination"), ("Leftovers", "knockoff")])
+def test_l62_unburden(item, foe_move):
+    hawlucha = _setter("Hawlucha", "Unburden", item, "- Swords Dance\n- Acrobatics\n- Close Combat\n- Roost")
+    tinglu = _setter("Ting-Lu", "Vessel of Ruin", "Leftovers", "- Ruination\n- Knock Off\n- Spikes\n- Whirlwind")
+    states = ec.run_showdown(hawlucha, tinglu, [("move swordsdance", f"move {foe_move}")])
+    assert "unburden" in states[1]["sides"][0]["mons"][0]["volatiles"]
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "swordsdance", foe_move)
+    assert ec.closest(states[1], outs, (1, 1))["diff"] == {}
+
+
+# L63 (doc/engine-diff.md): a sound move (Parting Shot) or an Infiltrator's move lowers the stats
+# of a target behind a Substitute (Showdown's bypasssub); the engine's Substitute blocked them
+def test_l63_parting_shot_through_a_substitute():
+    grimm = _setter("Grimmsnarl", "Prankster", "Leftovers", "- Parting Shot\n- Spirit Break\n- Thunder Wave\n- Reflect")
+    prim = _setter("Primarina", "Torrent", "Leftovers", "- Substitute\n- Moonblast\n- Surf\n- Calm Mind")
+    turns = [("move reflect", "move substitute"), ("move partingshot", "move calmmind")]
+    states = ec.run_showdown(grimm, prim, turns)
+    assert states[2]["sides"][1]["mons"][0]["boosts"]["atk"] == -1
+    outs = ec.engine_outcomes(ec.engine_state(states[1]), "partingshot", "calmmind")
+    assert ec.closest(states[2], outs, (1, 1))["diff"] == {}
