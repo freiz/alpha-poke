@@ -25,9 +25,6 @@
 "b12-t14": [
 "volatile.roost"
 ],
-"b121-t38": [
-"item"
-],
 "b130-t2": [
 "boost.atk",
 "boost.spa",
@@ -69,9 +66,6 @@
 ],
 "b179-t2": [
 "active"
-],
-"b18-t31": [
-"item"
 ],
 "b182-t25": [
 "hp"
@@ -115,10 +109,6 @@
 "boost.atk",
 "boost.spa"
 ],
-"b237-t19": [
-"item",
-"volatile.quarkdrivespe"
-],
 "b242-t1": [
 "status"
 ],
@@ -147,10 +137,6 @@
 ],
 "b27-t16": [
 "hp"
-],
-"b279-t13": [
-"item",
-"volatile.quarkdrivespe"
 ],
 "b279-t6": [
 "boost.def",
@@ -210,9 +196,6 @@
 ],
 "b66-t12": [
 "hp"
-],
-"b66-t3": [
-"item"
 ],
 "b68-t11": [
 "hp",

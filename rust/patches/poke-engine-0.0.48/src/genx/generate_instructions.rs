@@ -408,6 +408,21 @@ fn generate_instructions_from_switch(
             ));
     }
 
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L124): a Neutralizing Gas holder leaves:
+    // the foe's Booster Energy goes off (before the replacement comes in)
+    if state
+        .get_side_immutable(&switching_side_ref)
+        .get_active_immutable()
+        .ability
+        == Abilities::NEUTRALIZINGGAS
+    {
+        super::abilities::booster_energy_after_gas(
+            state,
+            &switching_side_ref.get_other_side(),
+            incoming_instructions,
+        );
+    }
+
     state.re_enable_disabled_moves(
         &switching_side_ref,
         &mut incoming_instructions.instruction_list,
@@ -4546,54 +4561,50 @@ fn moves_first(
         };
     }
 
-    let side_one_active = state.side_one.get_active_immutable();
-    let side_two_active = state.side_two.get_active_immutable();
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L123): a Custap Berry is eaten whenever its
+    // holder uses a move at a quarter of its HP or less (half with Gluttony), whatever the
+    // priorities (Showdown's onFractionalPriority: the fractional priority, 0); its +0.1 decides
+    // only between equal priorities. It was eaten only at equal priorities, below a quarter
+    let mut custap = [false, false];
+    for (k, side_ref) in [SideReference::SideOne, SideReference::SideTwo]
+        .iter()
+        .enumerate()
+    {
+        let active = state.get_side_immutable(side_ref).get_active_immutable();
+        let threshold = if active.ability == Abilities::GLUTTONY {
+            2.0
+        } else {
+            4.0
+        };
+        if active.item == Items::CUSTAPBERRY
+            && active.hp as f32 <= active.maxhp as f32 / threshold
+            && !super::items::unnerved(state, side_ref)
+        {
+            custap[k] = true;
+            incoming_instructions
+                .instruction_list
+                .push(Instruction::ChangeItem(ChangeItemInstruction {
+                    side_ref: *side_ref,
+                    new_item: Items::NONE,
+                    current_item: Items::CUSTAPBERRY,
+                }));
+            // (L57: used up; the state follows these instructions when applied)
+            let last = active.last_item;
+            if last != Items::CUSTAPBERRY {
+                incoming_instructions
+                    .instruction_list
+                    .push(Instruction::ChangeLastItem(ChangeItemInstruction {
+                        side_ref: *side_ref,
+                        current_item: last,
+                        new_item: Items::CUSTAPBERRY,
+                    }));
+            }
+        }
+    }
     if side_one_choice.priority == side_two_choice.priority {
-        if side_one_active.item == Items::CUSTAPBERRY
-            && side_one_active.hp < side_one_active.maxhp / 4
-            && !super::items::unnerved(state, &SideReference::SideOne)
-        {
-            incoming_instructions
-                .instruction_list
-                .push(Instruction::ChangeItem(ChangeItemInstruction {
-                    side_ref: SideReference::SideOne,
-                    new_item: Items::NONE,
-                    current_item: Items::CUSTAPBERRY,
-                }));
-            // (L57: used up; the state follows these instructions when applied)
-            let last = side_one_active.last_item;
-            if last != Items::CUSTAPBERRY {
-                incoming_instructions
-                    .instruction_list
-                    .push(Instruction::ChangeLastItem(ChangeItemInstruction {
-                        side_ref: SideReference::SideOne,
-                        current_item: last,
-                        new_item: Items::CUSTAPBERRY,
-                    }));
-            }
+        if custap[0] && !custap[1] {
             return SideMovesFirst::SideOne;
-        } else if side_two_active.item == Items::CUSTAPBERRY
-            && !super::items::unnerved(state, &SideReference::SideTwo)
-            && side_two_active.hp < side_two_active.maxhp / 4
-        {
-            incoming_instructions
-                .instruction_list
-                .push(Instruction::ChangeItem(ChangeItemInstruction {
-                    side_ref: SideReference::SideTwo,
-                    new_item: Items::NONE,
-                    current_item: Items::CUSTAPBERRY,
-                }));
-            // (L57: used up; the state follows these instructions when applied)
-            let last = side_two_active.last_item;
-            if last != Items::CUSTAPBERRY {
-                incoming_instructions
-                    .instruction_list
-                    .push(Instruction::ChangeLastItem(ChangeItemInstruction {
-                        side_ref: SideReference::SideTwo,
-                        current_item: last,
-                        new_item: Items::CUSTAPBERRY,
-                    }));
-            }
+        } else if custap[1] && !custap[0] {
             return SideMovesFirst::SideTwo;
         }
 
@@ -6639,6 +6650,19 @@ fn run_move(
 fn after_move_finish(state: &mut State, final_instructions: &mut Vec<StateInstructions>) {
     for state_instructions in final_instructions.iter_mut() {
         state.apply_instructions(&state_instructions.instruction_list);
+
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L124): a fainted Neutralizing Gas holder:
+        // the foe's Booster Energy goes off
+        for side_ref in [SideReference::SideOne, SideReference::SideTwo] {
+            let active = state.get_side_immutable(&side_ref).get_active_immutable();
+            if active.ability == Abilities::NEUTRALIZINGGAS && active.hp == 0 {
+                super::abilities::booster_energy_after_gas(
+                    state,
+                    &side_ref.get_other_side(),
+                    state_instructions,
+                );
+            }
+        }
 
         // alpha-poke patch (2026-10-17, doc/engine-diff.md L112): a pivot user that fainted from
         // its own move (Rocky Helmet, Rough Skin, recoil) does not switch out: the turn goes on

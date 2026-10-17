@@ -3275,3 +3275,30 @@ def test_l122_red_card_through_disguise():
     assert any(x.startswith("|-enditem|p1a: Mimikyu|Red Card") for x in states[1]["log"])
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "swordsdance", "ironhead")
     assert ec.closest(states[1], outs, (1, 2), hp=True)["diff"] == {}
+
+
+# L123 (doc/engine-diff.md): a Custap Berry is eaten whenever its holder uses a move at a quarter of
+# its HP or less (half with Gluttony), whatever the priorities (Showdown's onFractionalPriority
+# gets the fractional priority, 0); the engine ate it only at equal priorities, below a quarter
+def test_l123_custap_with_endure():
+    quanid = _setter("Araquanid", "Water Bubble", "Custap Berry", "- Endure\n- Belly Drum\n- Substitute\n- Liquidation")
+    turns = [("move bellydrum", "move calmmind"), ("move substitute", "move calmmind"), ("move endure", "move calmmind")]
+    states = ec.run_showdown(quanid, BLISSEY, turns)
+    a = states[2]["sides"][0]["mons"][0]
+    assert a["hp"] * 4 == a["maxhp"] and a["item"] == "custapberry"  # (exactly a quarter)
+    assert states[3]["sides"][0]["mons"][0]["item"] == ""
+    outs = ec.engine_outcomes(ec.engine_state(states[2]), "endure", "calmmind")
+    assert ec.closest(states[3], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L124 (doc/engine-diff.md): when Neutralizing Gas leaves (its holder switches out or faints),
+# a Protosynthesis / Quark Drive holder's Booster Energy goes off at once (Showdown: the abilities
+# start again); the engine never used it
+def test_l124_booster_energy_after_neutralizing_gas():
+    weezing = _setter("Weezing-Galar", "Neutralizing Gas", "Leftovers", "- Will-O-Wisp\n- Pain Split\n- Strange Steam\n- Defog")
+    tusk = _attacker("Great Tusk", "Protosynthesis", "Booster Energy", "- Headlong Rush\n- Ice Spinner\n- Rapid Spin\n- Bulk Up", "Jolly")
+    states = ec.run_showdown(weezing + "\n\n" + BLISSEY, tusk, [("switch 2", "move bulkup")])
+    assert states[0]["sides"][1]["mons"][0]["item"] == "boosterenergy"
+    assert states[1]["sides"][1]["mons"][0]["item"] == ""
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "blissey", "bulkup")
+    assert ec.closest(states[1], outs, (2, 1), hp=True)["diff"] == {}

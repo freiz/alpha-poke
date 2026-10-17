@@ -266,6 +266,8 @@ harness 必须把 Showdown 的状态完整映射到引擎，否则不一致来�
 | L120 | Air Balloon 在任何伤害性的一击时破（Showdown 的 onDamagingHit）：Future Sight、Counter / Mirror Coat / Metal Burst、Final Gambit 的也算；引擎只在招式通常的命中（追加效果）时破。另外 Final Gambit 的伤害没有以目标 HP 为上限 | 引擎 | 已修复 | `test_l120_balloon_pops_on_mirror_coat` | `items.rs` `pop_air_balloon`，在 `choice_effects.rs` 和 Future Sight 的命中处调用 |
 | L121 | Parting Shot 一项能力都没降低时失败，使用者留在场上（Showdown 的 onHit：没有降低且不是 Mirror Armor；Clear Body / White Smoke / Full Metal Body / Clear Amulet、Mist、已到 −6、Good as Gold）；引擎照样换人 | 引擎 | 已修复 | `test_l121_parting_shot_into_clear_body` | `choice_effects.rs` `modify_choice`：这些情况去掉 pivot（声音招式，替身不挡） |
 | L122 | Disguise 挡下的一击也算命中：Red Card / Eject Button 照样触发（Showdown 的 onAfterMoveSecondary 不要求伤害）；引擎把 0 伤害的一击当作没打中 | 引擎 | 已修复 | `test_l122_red_card_through_disguise` | `generate_instructions.rs` `check_move_hit_or_miss`（这一招破了 Disguise 时不算没打中）、`run_move` 的 Red Card / Eject Button 条件 |
+| L123 | Custap Berry 只要持有者在 1/4 HP 及以下（Gluttony：1/2）出招就吃，不管双方优先度（Showdown 的 onFractionalPriority 拿到的是分数优先度 0）；它的 +0.1 只在同优先度时决定先后。引擎只在同优先度、且低于 1/4 时吃 | 引擎 | 已修复 | `test_l123_custap_with_endure`（恰好 1/4 的 Araquanid 用 Endure） | `generate_instructions.rs` 出招顺序 |
+| L124 | Neutralizing Gas 离场（持有者换下或倒下）时，Protosynthesis / Quark Drive 持有者的 Booster Energy 立即生效（Showdown：特性重新开始）；引擎一直不用 | 引擎 | 已修复 | `test_l124_booster_energy_after_neutralizing_gas` | `abilities.rs` `booster_energy_after_gas`，在换人和 `after_move_finish`（倒下）时调用（只做这一项；其他特性的重新开始没有做） |
 
 ## 修复与验证（2026-10-16）
 

@@ -20,9 +20,6 @@
 "b131-t12": [
 "hp"
 ],
-"b138-t20": [
-"item"
-],
 "b14-t3": [
 "volatile.attract"
 ],
@@ -148,10 +145,6 @@
 "b40-t14": [
 "hp",
 "item"
-],
-"b49-t7": [
-"item",
-"volatile.protosynthesisspe"
 ],
 "b52-t27": [
 "boost.atk",

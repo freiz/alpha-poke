@@ -528,6 +528,55 @@ fn protosynthesus_or_quarkdrive_on_switch_in(
     }
 }
 
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L124): Neutralizing Gas left the field: a
+// Protosynthesis / Quark Drive holder's Booster Energy goes off (Showdown: the abilities start
+// again), unless one of their volatiles is on already (or the sun / Electric Terrain does it)
+pub fn booster_energy_after_gas(
+    state: &mut State,
+    side_ref: &SideReference,
+    instructions: &mut StateInstructions,
+) {
+    let side = state.get_side_immutable(side_ref);
+    let active = side.get_active_immutable();
+    if active.hp == 0
+        || active.item != Items::BOOSTERENERGY
+        || !matches!(
+            active.ability,
+            Abilities::PROTOSYNTHESIS | Abilities::QUARKDRIVE
+        )
+    {
+        return;
+    }
+    let on = [
+        PokemonVolatileStatus::PROTOSYNTHESISATK,
+        PokemonVolatileStatus::PROTOSYNTHESISDEF,
+        PokemonVolatileStatus::PROTOSYNTHESISSPA,
+        PokemonVolatileStatus::PROTOSYNTHESISSPD,
+        PokemonVolatileStatus::PROTOSYNTHESISSPE,
+        PokemonVolatileStatus::QUARKDRIVEATK,
+        PokemonVolatileStatus::QUARKDRIVEDEF,
+        PokemonVolatileStatus::QUARKDRIVESPA,
+        PokemonVolatileStatus::QUARKDRIVESPD,
+        PokemonVolatileStatus::QUARKDRIVESPE,
+    ]
+    .iter()
+    .any(|v| side.volatile_statuses.contains(v));
+    if on {
+        return;
+    }
+    if active.ability == Abilities::PROTOSYNTHESIS {
+        let sun = state.weather_is_active(&Weather::SUN);
+        let side = state.get_side(side_ref);
+        let volatile = protosynthesis_volatile_from_side(side);
+        protosynthesus_or_quarkdrive_on_switch_in(sun, volatile, instructions, side, side_ref);
+    } else {
+        let terrain = state.terrain_is_active(&Terrain::ELECTRICTERRAIN);
+        let side = state.get_side(side_ref);
+        let volatile = quarkdrive_volatile_from_side(side);
+        protosynthesus_or_quarkdrive_on_switch_in(terrain, volatile, instructions, side, side_ref);
+    }
+}
+
 fn protosynthesis_volatile_from_side(side: &Side) -> PokemonVolatileStatus {
     match side.calculate_highest_stat() {
         PokemonBoostableStat::Attack => PokemonVolatileStatus::PROTOSYNTHESISATK,
