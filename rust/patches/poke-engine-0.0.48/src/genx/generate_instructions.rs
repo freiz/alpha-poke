@@ -5264,6 +5264,23 @@ fn add_end_of_turn_instructions(
             if user_active {
                 ability_modify_attack_being_used(state, &mut fs_choice, &none, side_ref);
                 item_modify_attack_being_used(state, &mut fs_choice, side_ref);
+            } else {
+                // alpha-poke patch (2026-10-17, doc/engine-diff.md L157): the active ally's Vessel
+                // of Ruin / Beads of Ruin lower the benched user's Sp. Atk / the target's Sp. Def
+                // too (Showdown's onAnyModifySpA / SpD: every mon but the holder; not under the
+                // foe's Neutralizing Gas)
+                let ally = state.get_side_immutable(side_ref).get_active_immutable();
+                let foe = state
+                    .get_side_immutable(&side_ref.get_other_side())
+                    .get_active_immutable();
+                let gassed = foe.ability == Abilities::NEUTRALIZINGGAS
+                    && foe.hp > 0
+                    && ally.item != Items::ABILITYSHIELD;
+                match if gassed { Abilities::NONE } else { ally.ability } {
+                    Abilities::VESSELOFRUIN => fs_choice.attack_modifier *= 0.75,
+                    Abilities::BEADSOFRUIN => fs_choice.defense_modifier *= 0.75,
+                    _ => {}
+                }
             }
             ability_modify_attack_against(state, &mut fs_choice, &none, side_ref);
             item_modify_attack_against(state, &mut fs_choice, side_ref);

@@ -4040,3 +4040,23 @@ def test_l156_ice_face_multi_hit():
     assert states[1]["sides"][1]["mons"][0]["hp"] < states[0]["sides"][1]["mons"][0]["hp"]
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "rockblast", "bellydrum")
     assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L157 (doc/engine-diff.md): the benched Future Sight user's Sp. Atk under its active ally's Vessel
+# of Ruin (the random differential's wide b252-t15: Ting-Lu; Showdown's onAnyModifySpA)
+def test_l157_future_sight_under_an_allys_vessel_of_ruin():
+    a, b = _random_position("random_battle_teams_wide.jsonl", 252, 15)
+    assert any("|-end|p1a: Moltres|move: Future Sight" in x for x in b["state"]["log"])
+    c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
+    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2)
+    n = tuple(len(s["mons"]) for s in a["state"]["sides"])
+    assert ec.closest(b["state"], outs, n, hp=True)["diff"] == {}
+
+
+# L157's control: the ally's Vessel of Ruin under the foe's Neutralizing Gas (wide b299-t13)
+def test_l157_vessel_of_ruin_under_neutralizing_gas():
+    a, b = _random_position("random_battle_teams_wide.jsonl", 299, 13)
+    c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
+    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2)
+    n = tuple(len(s["mons"]) for s in a["state"]["sides"])
+    assert ec.closest(b["state"], outs, n, hp=True)["diff"] == {}
