@@ -1491,11 +1491,29 @@ pub fn choice_special_effect(
             state.reset_boosts(&SideReference::SideTwo, &mut instructions.instruction_list);
         }
         Choices::REST => {
-            let electric_terrain_active = state.terrain_is_active(&Terrain::ELECTRICTERRAIN);
+            // alpha-poke patch (2026-10-16, doc/engine-diff.md L38): Showdown's onTry (fails at
+            // full HP, asleep, Insomnia / Vital Spirit / Comatose) and setStatus (Electric /
+            // Misty Terrain on a grounded user, Purifying Salt, Sweet Veil, Leaf Guard in sun);
+            // before, only asleep and Electric Terrain
+            let sleep_terrain = state.terrain_is_active(&Terrain::ELECTRICTERRAIN)
+                || state.terrain_is_active(&Terrain::MISTYTERRAIN);
+            let sun = state.weather_is_active(&Weather::SUN)
+                || state.weather_is_active(&Weather::HARSHSUN);
             let attacking_side = state.get_side(attacking_side_ref);
             let active_index = attacking_side.active_index;
             let active_pkmn = attacking_side.get_active();
-            if active_pkmn.status != PokemonStatus::SLEEP && !electric_terrain_active {
+            let blocked = active_pkmn.hp >= active_pkmn.maxhp
+                || (sleep_terrain && active_pkmn.is_grounded())
+                || matches!(
+                    active_pkmn.ability,
+                    Abilities::INSOMNIA
+                        | Abilities::VITALSPIRIT
+                        | Abilities::COMATOSE
+                        | Abilities::PURIFYINGSALT
+                        | Abilities::SWEETVEIL
+                )
+                || (active_pkmn.ability == Abilities::LEAFGUARD && sun);
+            if active_pkmn.status != PokemonStatus::SLEEP && !blocked {
                 let heal_amount = active_pkmn.maxhp - active_pkmn.hp;
                 instructions
                     .instruction_list

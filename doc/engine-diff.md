@@ -178,6 +178,12 @@ harness 必须把 Showdown 的状态完整映射到引擎，否则不一致来�
 | L34 | 伤害的取整与 Showdown 不同：引擎把所有修正（道具、特性、本系、天气、属性、灼伤……）乘成一个浮点数作用在伤害上，掷骰取最终伤害的 85–100%；Showdown 分步取整（威力和攻防各自乘修正链后取整；基础伤害 → 天气 → 暴击 → 掷骰 → 本系 → 属性（每级 ×2 / 取半）→ 灼伤 → 最终修正链，每步 4096 进制的 modify）。结果约 24% 的伤害差 1 点以上；击倒附近的掷骰概率因此偏（`test_l30_multi_hit_knockout_rolls`：0.856 对 0.78；b32-t47：Showdown 最低一档 50 没打死 51 HP，引擎最低档算成 51）。同时找到：Freeze-Dry 对水系 ×4 加在威力上（应是属性等级 +2）；Expert Belt / Tinted Lens / Filter 等判断"效果绝佳"时没算 Freeze-Dry；Guts 加成了特殊招式；Grassy Terrain 只减半 Earthquake（Bulldoze、Magnitude 也减半，且只对着地目标）；Eruption 类的分数威力没有向下取整（Showdown 的 runEvent 只修正整数）；Supreme Overlord 是 1 + 0.1n、无上限（Showdown 4096 进制、最多 5）；Adaptability 作用在威力上 | 引擎 | 已修复 | `test_l34_damage_is_a_showdown_roll`（16 个情形：Showdown 实际造成的伤害必须是引擎 16 档掷骰之一，`alpha_search.damage_rolls`）；`test_l34_max_damage_matches_showdown`（同样 16 个：最高档逐点等于 Showdown 自己的 getDamage） | `damage_calc.rs`：`DamageRecipe` 按 Showdown 的顺序和取整算 16 档；`Choice` 新增 `attack_modifier` / `defense_modifier` / `damage_modifier`，道具和特性的修正按 Showdown 的阶段放（Choice Band / Huge Power / Guts 等进攻击，AV / Eviolite / Fur Coat 等进防御，Life Orb 5324/4096、Expert Belt、Multiscale、Filter、Tinted Lens、减伤果等进最终修正），倍率换成 4096 进制（1.3 → 5325/4096 等）；击倒分支和连续招式的卷积用精确的 16 档（`damage_rolls`）；Adaptability 移到本系加成 |
 | L35 | Future Sight 命中时：用使用者的特攻强化（在场时；引擎用未强化的数值），使用者的道具 / 特性也作用（Life Orb 1.3 倍并扣 1/10 反伤，Choice Specs 等）。L31 给了使用者本系加成后，随机差分里两个新增（b69-t7、b100-t50）由此发现：原来没有本系和没有强化两个错误恰好抵消。另外：Neutralizing Gas 在场时，对方的 Protosynthesis / Quark Drive 加成无效（处理函数检查 ignoringAbility()），Neutralizing Gas 一方出招时也无视目标的特性（Vessel of Ruin 等），Guts 也被压制（灼伤减半照常；b83-t5 由此发现） | 引擎 | 已修复 | `test_l35_future_sight_user_boosts`；`test_l35_future_sight_user_life_orb`；`test_l35_neutralizing_gas_suppresses_quark_drive`；`test_l35_neutralizing_gas_attacker_suppresses_target_ability` | `damage_calc.rs` `calculate_futuresight_damage`（使用者在场时用强化后的特攻，招式带修正）；`generate_instructions.rs` 回合末：使用者在场时套用它的特性 / 道具修正，目标的修正总是套用（原来 AV / Eviolite 的特判去掉），Life Orb 反伤；`damage_calc.rs` `volatile_status_modifiers`、`burn_modifier`；`abilities.rs` `ability_modify_attack_against` |
 | L36 | Imposter / Transform 没有实现：Ditto 进场不变身，仍按 Ditto 自己的属性和能力值挨打。L31 修好后随机差分里的新增 b0-t28 由此暴露（Clefable 太晶 Poison 后的 Moonblast 打变身成 Clefable 的 Ditto：原来没有本系加成，碰巧接近 Showdown） | 引擎 | 线索 | | |
+| L37 | Speed Boost 在换上场的那一回合末也加速（Showdown 要求 activeTurns > 0：本回合换上的为 0；倒下后补上的，到下一回合末已是 1） | 引擎 | 已修复 | `test_l37_speed_boost_not_on_the_switch_in_turn`（含对照） | `abilities.rs`：本回合的指令里有这一方的换人就不加速（倒下后的替补是单独的决策，不在同一个列表里） |
+| L38 | Rest 在满 HP 时也能用（Showdown 的 onTry 失败）；Purifying Salt、Sweet Veil、Insomnia / Vital Spirit / Comatose、着地时的 Misty Terrain、晴天的 Leaf Guard 也挡不住；Electric Terrain 不看是否着地 | 引擎 | 已修复 | `test_l38_rest_fails_at_full_hp`（含对照）；`test_l38_rest_fails_with_purifying_salt` | `choice_effects.rs` Rest：按 Showdown 的 onTry 和 setStatus |
+| L39 | 双方同时换人时，引擎总是先换 side one；Showdown 按换下去那只的速度（Trick Room 反过来），所以 Intimidate 打到的对象会错（b117-t16 等 3 个） | 引擎 | 已修复 | `test_l39_double_switch_order`（含对照） | `generate_instructions.rs`：两边都换人时按 `get_effective_speed` 排序（同速仍先 side one，近似） |
+| L40 | Poison Puppeteer 没有实现：Pecharunt 的招式让对方中毒时对方同时混乱（Showdown 的 onAnyAfterSetStatus） | 引擎 | 已修复 | `test_l40_poison_puppeteer`（Malignant Chain、Toxic） | `generate_instructions.rs` `get_instructions_from_status_effects`：中毒 / 剧毒成功（不是被木子果挡掉）后加混乱；Own Tempo、着地时的 Misty Terrain、已混乱不加 |
+| L41 | 第 9 代 Protean / Libero：引擎在出招前（`ability_before_move`）就变属性，冰冻 / 睡眠 / 麻痹不能动、Sucker Punch 失败时也变；且只有不含招式属性时才变（Showdown：当前属性不恰好是招式属性就变，草 / 恶的 Meowscarada 用 Knock Off 变成纯恶）。另外 harness：太晶后的 typechange 不比较（太晶后没有作用；Showdown 一侧本来就不算太晶） | 引擎 + harness | 已修复 | `test_l41_protean`（2 个）；`test_l41_protean_not_when_frozen` | `generate_instructions.rs` `protean_type_change`：在招式真正开始（`Acted`）之后；`enginecheck` `view_engine` |
+| L42 | 必定暴击的招式（Flower Trick 等）的击倒：非暴击的最高档打不死时，引擎直接取暴击的平均伤害，不分击倒分支（L41 修好后的新增 b146-t23：Showdown 剩 5 HP，引擎判击倒） | 引擎 | 已修复 | `test_l42_guaranteed_crit_knockout_rolls`（目标 HP 取暴击 16 档的中间，击倒概率等于不小于 HP 的档数 / 16） | `generate_instructions.rs` `finish_move`：必定暴击时用暴击的最高档和 16 档 |
 
 ## 修复与验证（2026-10-16）
 
@@ -218,10 +224,14 @@ harness 必须把 Showdown 的状态完整映射到引擎，否则不一致来�
 - 网络输入：太晶宝可梦的 type 1 / type 2 变成原属性（L31），和搜索树内引擎自己太晶化后的局面一致；`Choice` 多了三个修正字段，不进网络输入。
 - 速度：不用网络的 UCB 搜索（两个夹具局面各 20,000 次迭代，单线程，各取 3 次最好）0.160 秒 → 0.170 秒，慢约 5%（整数的伤害流水线和更大的 `Choice`；击倒附近才算的精确 16 档几乎不占时间；回合末原来每次都复制一份 Future Sight 招式，改成只在命中那回合）。HEAD 在独立的 worktree / venv 里构建对比。
 
+## 修复与验证，第四轮（2026-10-16 夜）
+
+修复：L37–L42。每条先写双引擎测试（失败；L37 的测试是在修复后才跑通的，临时去掉修复确认它会失败），全部测试 304 个、poke-engine 自带测试 229 个通过。随机差分：97.0%（265）→ **97.8%**（6,889 / 7,046；203 个（编号, 类别）），每一步都是子集；中间出现的新增 b146-t23 查清是 L42 后修好。
+
 ## 下一步
 
 0. 伤害公式剩下的（1c）：Hydro Steam 在晴天、Metronome 道具的加成、Shell Side Arm、Sacred Sword 打有 Light Clay 的一方（引擎 2 倍，未查）、Unaware 的 Body Press / Liquidation 打 Mold Breaker（引擎偏高约 1.5 倍，未查）、Gyro Ball / Electro Ball 的速度没算 Choice Scarf 和麻痹；Imposter / Transform（L36）。随机差分剩下的主要类别：HP 94、异常状态 30、属性变化 29（其中 Ditto 相关 11 个）、替身 18。
-1. 还没做的（2026-10-16 晚）：场地招式没有实现（L25）；改特性的招式（Skill Swap、Worry Seed、Simple Beam、Entrainment、Gastro Acid、Role Play、Doodle）没有实现；Pickpocket、Poison Puppeteer 没有实现；混乱提前解除只是近似；我们的 `build_state` 没有传性格（低血量回复果的混乱用到）；设置天气的宝可梦道具被打掉后，构造按 5 回合算（L3c）；随机对战 runner 用相邻小整数种子，对局之间相关（改了要重建基线）；有倒下 / 中途换人的回合（2,979 个）还不比较。
+1. 还没做的（2026-10-16 晚）：场地招式没有实现（L25）；改特性的招式（Skill Swap、Worry Seed、Simple Beam、Entrainment、Gastro Acid、Role Play、Doodle）没有实现；Pickpocket 没有实现；混乱提前解除只是近似；我们的 `build_state` 没有传性格（低血量回复果的混乱用到）；设置天气的宝可梦道具被打掉后，构造按 5 回合算（L3c）；随机对战 runner 用相邻小整数种子，对局之间相关（改了要重建基线）；有倒下 / 中途换人的回合（2,979 个）还不比较。
 2. 剩下的 HP 不一致（gen901 4.18%）按簇继续拆：吸取招式的回复量依赖对另一方伤害的浮动（容差没算进去，方法问题）、属性变化（Libero / Protean 等）、速度等级。
 3. 线索（L10）：Poison Puppeteer、Pickpocket 未实现；混乱提前解除的精确分支（要像 Sleep Talk 那样递归分支，会增加搜索分支数）。
 4. 差分脚本：合并局面时天气 / 场地剩余回合取设置方的视角；吸取回复的容差。

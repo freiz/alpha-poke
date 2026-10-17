@@ -612,37 +612,8 @@ pub fn ability_before_move(
                 active_pkmn.id = new_forme;
             }
         }
-        #[cfg(any(feature = "gen9", feature = "champions"))]
-        Abilities::PROTEAN | Abilities::LIBERO => {
-            if !attacking_side
-                .volatile_statuses
-                .contains(&PokemonVolatileStatus::TYPECHANGE)
-            {
-                let active_pkmn = attacking_side.get_active();
-                if !active_pkmn.has_type(&choice.move_type) && !active_pkmn.terastallized {
-                    instructions
-                        .instruction_list
-                        .push(Instruction::ChangeType(ChangeType {
-                            side_ref: *side_ref,
-                            new_types: (choice.move_type, PokemonType::TYPELESS),
-                            old_types: active_pkmn.types,
-                        }));
-                    active_pkmn.types = (choice.move_type, PokemonType::TYPELESS);
-
-                    instructions
-                        .instruction_list
-                        .push(Instruction::ApplyVolatileStatus(
-                            ApplyVolatileStatusInstruction {
-                                side_ref: *side_ref,
-                                volatile_status: PokemonVolatileStatus::TYPECHANGE,
-                            },
-                        ));
-                    attacking_side
-                        .volatile_statuses
-                        .insert(PokemonVolatileStatus::TYPECHANGE);
-                }
-            }
-        }
+        // alpha-poke patch (2026-10-16, doc/engine-diff.md L41): Gen 9 Protean / Libero in
+        // generate_instructions (protean_type_change), when the move starts
         #[cfg(any(feature = "gen6", feature = "gen7", feature = "gen8"))]
         Abilities::PROTEAN | Abilities::LIBERO => {
             if !active_pkmn.has_type(&choice.move_type) && !active_pkmn.terastallized {
@@ -1295,7 +1266,14 @@ pub fn ability_end_of_turn(
         // alpha-poke patch (2026-10-16, L12b): healed with the status damage now
         Abilities::POISONHEAL => {}
         Abilities::SPEEDBOOST => {
-            if attacking_side.speed_boost < 6 {
+            // alpha-poke patch (2026-10-16, doc/engine-diff.md L37): not at the end of the turn it
+            // came in (Showdown's activeTurns: a switch of this side among the turn's
+            // instructions; a replacement after a faint is its own decision, a turn before)
+            let came_in = instructions
+                .instruction_list
+                .iter()
+                .any(|i| matches!(i, Instruction::Switch(s) if s.side_ref == *side_ref));
+            if attacking_side.speed_boost < 6 && !came_in {
                 let ins = Instruction::Boost(BoostInstruction {
                     side_ref: side_ref.clone(),
                     stat: PokemonBoostableStat::Speed,

@@ -1600,3 +1600,120 @@ def test_l35_future_sight_user_life_orb():
     assert any("[from] item: Life Orb" in x for x in states[3]["log"])
     outs = ec.engine_outcomes(ec.engine_state(states[2]), "nastyplot", "defog")
     assert ec.closest(states[3], outs, (1, 1), hp=True)["diff"] == {}
+
+
+BLAZIKEN = _setter("Blaziken", "Speed Boost", "Leftovers", "- Protect\n- Flare Blitz\n- Close Combat\n- Swords Dance")
+
+
+# L37 (doc/engine-diff.md): Speed Boost needs a turn on the field (Showdown's activeTurns: 0 at
+# the end of the turn it came in; a replacement after a faint has 1 by the next end of turn)
+@pytest.mark.parametrize("turns, choices, spe", [
+    ([("switch 2", "move spikes")], ("blaziken", "spikes"), 0),
+    ([("switch 2", "move spikes"), ("move protect", "move spikes")], ("protect", "spikes"), 1),
+])  # fmt: skip
+def test_l37_speed_boost_not_on_the_switch_in_turn(turns, choices, spe):
+    states = ec.run_showdown(BLISSEY + "\n\n" + BLAZIKEN, TINGLU, turns)
+    assert states[-1]["sides"][0]["mons"][1]["boosts"]["spe"] == spe
+    outs = ec.engine_outcomes(ec.engine_state(states[-2]), *choices)
+    assert ec.closest(states[-1], outs, (2, 1))["diff"] == {}
+
+
+# L38 (doc/engine-diff.md): Rest fails at full HP (Showdown's onTry), and where sleep cannot be
+# set (setStatus: Misty / Electric Terrain on a grounded user, Purifying Salt, ...)
+@pytest.mark.parametrize("pre, slept", [
+    ([], False),  # full HP
+    ([("move curse", "move earthquake")], True),  # control: damaged
+])  # fmt: skip
+def test_l38_rest_fails_at_full_hp(pre, slept):
+    turns = pre + [("move rest", "move spikes")]
+    states = ec.run_showdown(DONDOZO, TINGLU_HITS_EQ, turns)
+    assert (states[-1]["sides"][0]["mons"][0]["status"] == "slp") == slept
+    outs = ec.engine_outcomes(ec.engine_state(states[-2]), "rest", "spikes")
+    assert ec.closest(states[-1], outs, (1, 1))["diff"] == {}
+
+
+def test_l38_rest_fails_with_purifying_salt():
+    garganacl = _setter("Garganacl", "Purifying Salt", "Leftovers", "- Rest\n- Salt Cure\n- Protect\n- Stealth Rock")
+    turns = [("move protect", "move earthquake"), ("move rest", "move spikes")]
+    states = ec.run_showdown(garganacl, TINGLU_HITS_EQ, turns)
+    assert states[-1]["sides"][0]["mons"][0]["status"] == ""
+    outs = ec.engine_outcomes(ec.engine_state(states[-2]), "rest", "spikes")
+    assert ec.closest(states[-1], outs, (1, 1))["diff"] == {}
+
+
+INCINEROAR = _setter("Incineroar", "Intimidate", "Leftovers", "- Knock Off\n- Parting Shot\n- Flare Blitz\n- Will-O-Wisp")
+DRAGAPULT = _attacker("Dragapult", "Clear Body", "Choice Specs", "- Shadow Ball\n- Draco Meteor\n- U-turn\n- Flamethrower", "Timid")
+
+
+# L39 (doc/engine-diff.md): both sides switching, the faster of the two leaving switches first
+# (Showdown's switch actions by the outgoing mon's speed; Trick Room reverses it): the engine
+# always switched side one first (an Intimidate hit the wrong mon)
+@pytest.mark.parametrize("p1, p2", [
+    (BLISSEY + "\n\n" + CORVIKNIGHT, DRAGAPULT + "\n\n" + INCINEROAR),  # side two leaves faster
+    (DRAGAPULT + "\n\n" + CORVIKNIGHT, BLISSEY + "\n\n" + INCINEROAR),  # control: side one
+])  # fmt: skip
+def test_l39_double_switch_order(p1, p2):
+    states = ec.run_showdown(p1, p2, [("switch 2", "switch 2")])
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "corviknight", "incineroar")
+    assert ec.closest(states[1], outs, (2, 2))["diff"] == {}
+
+
+PECHARUNT = _setter("Pecharunt", "Poison Puppeteer", "Heavy-Duty Boots", "- Malignant Chain\n- Toxic\n- Recover\n- Parting Shot")
+
+
+# L40 (doc/engine-diff.md): Poison Puppeteer, a target Pecharunt's move poisons is confused too
+# (Showdown's onAnyAfterSetStatus); not implemented in the engine
+@pytest.mark.parametrize("move", ["malignantchain", "toxic"])
+def test_l40_poison_puppeteer(move):
+    states = ec.run_showdown(PECHARUNT, BLISSEY, [(f"move {move}", "move calmmind")],
+                             force_random=True)  # fmt: skip
+    assert "confusion" in states[1]["sides"][1]["mons"][0]["volatiles"]
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), move, "calmmind")
+    assert ec.closest(states[1], outs, (1, 1))["diff"] == {}
+
+
+MEOWSCARADA_PROTEAN = _attacker("Meowscarada", "Protean", "Choice Band", "- Knock Off\n- Flower Trick\n- U-turn\n- Sucker Punch", "Jolly")
+
+
+# L41 (doc/engine-diff.md): Gen 9 Protean / Libero, once per entry, when the move starts
+# (onPrepareHit: not when it cannot move, not when its onTry fails), to the move's type unless
+# the user is already exactly that type (a Grass / Dark user of Knock Off becomes pure Dark)
+@pytest.mark.parametrize("move, foe, changed", [
+    ("knockoff", "spikes", True),  # Grass / Dark -> Dark
+    ("suckerpunch", "spikes", False),  # fails (the target uses a status move): no change
+])  # fmt: skip
+def test_l41_protean(move, foe, changed):
+    states = ec.run_showdown(MEOWSCARADA_PROTEAN, TINGLU, [(f"move {move}", f"move {foe}")])
+    m = states[1]["sides"][0]["mons"][0]
+    assert (m["types"] != m["base_types"]) == changed
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), move, foe)
+    assert ec.closest(states[1], outs, (1, 1))["diff"] == {}
+
+
+def test_l41_protean_not_when_frozen():
+    """Frozen (the 80% it stays so), the move does not start: no type change (the engine's
+    Protean was before the freeze check)."""
+    states = ec.run_showdown(MEOWSCARADA_PROTEAN, TINGLU, [])
+    st = states[0]
+    st["sides"][0]["mons"][0]["status"] = "frz"
+    outs = ec.engine_outcomes(ec.engine_state(st), "uturn", "spikes")
+    stuck = [o for o in outs if "FREEZE" in str(o[1].side_one.pokemon[0].status).upper()]
+    assert stuck
+    assert all("GRASS" in str(o[1].side_one.pokemon[0].types[0]).upper() for o in stuck), [
+        o[1].side_one.pokemon[0].types for o in stuck]
+
+
+# L42 (doc/engine-diff.md): a guaranteed crit's knockout by its crit rolls (the engine took the
+# crit's average whenever the non-crit max could not knock out)
+def test_l42_guaranteed_crit_knockout_rolls():
+    import alpha_search
+
+    states = ec.run_showdown(MEOWSCARADA_PROTEAN, TINGLU, [])
+    st = states[0]
+    e = ec.engine_state(st)
+    crit = alpha_search.damage_rolls(e.to_string(), True, "flowertrick", "spikes")[1]
+    hp = crit[8]
+    st["sides"][1]["mons"][0]["hp"] = hp
+    outs = ec.engine_outcomes(ec.engine_state(st), "flowertrick", "spikes")
+    kill = sum(o[0] for o in outs if o[1].side_two.pokemon[0].hp == 0)
+    assert kill == pytest.approx(sum(d >= hp for d in crit) / 16, abs=1e-3), (crit, hp)

@@ -307,8 +307,11 @@ def view_engine(s: pe.State, n_mons: tuple[int, int] = (6, 6)) -> dict:
             v[f"{k}.{j}.item"] = str(m.item).lower()
         for b in BOOSTS:
             v[f"{k}.boost.{b}"] = getattr(side, ENGINE_BOOST[b])
+        tera = side.pokemon[a].terastallized
         for x in side.volatile_statuses:
-            if str(x).lower() != "none":
+            # (a terastallized mon's typechange has no effect: its type is the tera type;
+            # Showdown's side compares the types other than Terastallization, _changed_types)
+            if str(x).lower() != "none" and not (tera and str(x).lower() == "typechange"):
                 v[f"{k}.volatile.{str(x).lower()}"] = True
         sc = side.side_conditions
         for eng in LAYERED.values():

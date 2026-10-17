@@ -1004,7 +1004,39 @@ fn get_instructions_from_status_effects(
             new_status: status.status,
         })
     };
+    let poisoned = matches!(instruction, Instruction::ChangeStatus(_))
+        && matches!(status.status, PokemonStatus::POISON | PokemonStatus::TOXIC);
     incoming_instructions.instruction_list.push(instruction);
+
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L40): Poison Puppeteer, the foe its
+    // holder's move poisons is confused too (Showdown's onAnyAfterSetStatus; Own Tempo, Misty
+    // Terrain on a grounded target and an existing confusion stop it)
+    let misty = state.terrain_is_active(&Terrain::MISTYTERRAIN);
+    let (attacking_side, target_side) = state.get_both_sides(attacking_side_reference);
+    if poisoned
+        && target_side_ref != *attacking_side_reference
+        && attacking_side.get_active_immutable().ability == Abilities::POISONPUPPETEER
+    {
+        let target = target_side.get_active_immutable();
+        if target.ability != Abilities::OWNTEMPO
+            && !(misty && target.is_grounded())
+            && !target_side
+                .volatile_statuses
+                .contains(&PokemonVolatileStatus::CONFUSION)
+        {
+            target_side
+                .volatile_statuses
+                .insert(PokemonVolatileStatus::CONFUSION);
+            incoming_instructions
+                .instruction_list
+                .push(Instruction::ApplyVolatileStatus(
+                    ApplyVolatileStatusInstruction {
+                        side_ref: target_side_ref,
+                        volatile_status: PokemonVolatileStatus::CONFUSION,
+                    },
+                ));
+        }
+    }
 }
 
 pub fn get_boost_amount(side: &Side, boost: &PokemonBoostableStat, amount: i8) -> i8 {
@@ -2120,6 +2152,60 @@ fn move_has_no_effect(state: &State, choice: &Choice, attacking_side_ref: &SideR
     false
 }
 
+// alpha-poke patch (2026-10-16, doc/engine-diff.md L41): Gen 9 Protean / Libero, once per entry
+// (the typechange volatile), when the move starts (Showdown's onPrepareHit: not when it cannot
+// move, not when the move's onTry fails: Sucker Punch, Poltergeist, ...), to the move's type
+// unless the user is exactly that type already (Showdown compares getTypes().join(); before,
+// only a user without the type, in ability_before_move: also when frozen / asleep / paralyzed)
+#[cfg(any(feature = "gen9", feature = "champions"))]
+fn protean_type_change(
+    state: &mut State,
+    choice: &Choice,
+    side_ref: &SideReference,
+    instructions: &mut StateInstructions,
+) {
+    let (side, other) = state.get_both_sides(side_ref);
+    let gassed = other.get_active_immutable().ability == Abilities::NEUTRALIZINGGAS;
+    let used = side
+        .volatile_statuses
+        .contains(&PokemonVolatileStatus::TYPECHANGE);
+    let active = side.get_active();
+    if !matches!(active.ability, Abilities::PROTEAN | Abilities::LIBERO)
+        || (gassed && active.item != Items::ABILITYSHIELD)
+        || used
+        || active.terastallized
+        || choice.move_type == PokemonType::TYPELESS
+    {
+        return;
+    }
+    let failed = matches!(
+        choice.move_id,
+        Choices::SUCKERPUNCH | Choices::THUNDERCLAP | Choices::POLTERGEIST | Choices::UPPERHAND
+    ) && choice.base_power == 0.0;
+    let new_types = (choice.move_type, PokemonType::TYPELESS);
+    if failed || active.types == new_types {
+        return;
+    }
+    instructions
+        .instruction_list
+        .push(Instruction::ChangeType(ChangeType {
+            side_ref: *side_ref,
+            new_types,
+            old_types: active.types,
+        }));
+    active.types = new_types;
+    instructions
+        .instruction_list
+        .push(Instruction::ApplyVolatileStatus(
+            ApplyVolatileStatusInstruction {
+                side_ref: *side_ref,
+                volatile_status: PokemonVolatileStatus::TYPECHANGE,
+            },
+        ));
+    side.volatile_statuses
+        .insert(PokemonVolatileStatus::TYPECHANGE);
+}
+
 fn cannot_use_move(state: &State, choice: &Choice, attacking_side_ref: &SideReference) -> bool {
     let (attacking_side, defending_side) = state.get_both_sides_immutable(attacking_side_ref);
 
@@ -3026,6 +3112,8 @@ pub fn generate_instructions_from_move(
     incoming_instructions
         .instruction_list
         .push(Instruction::Acted(attacking_side));
+    #[cfg(any(feature = "gen9", feature = "champions"))]
+    protean_type_change(state, choice, &attacking_side, &mut incoming_instructions);
 
     if move_has_no_effect(state, &choice, &attacking_side) {
         // L22: a locked move without effect ends the lock
@@ -3285,6 +3373,20 @@ fn finish_move(
     let mut branch_instructions: Option<StateInstructions> = None;
     if let Some((max_damage_dealt, max_crit_damage)) = damage {
         does_damage = true;
+        // alpha-poke patch (2026-10-16, doc/engine-diff.md L42): a guaranteed crit's damage is
+        // its crit's, rolls and knockout included (before: the knockout branch looked at the
+        // non-crit max, a crit's average otherwise)
+        let sure_crit = choice.move_id.guaranteed_crit() && {
+            let d = state
+                .get_side_immutable(&attacking_side.get_other_side())
+                .get_active_immutable();
+            d.ability != Abilities::BATTLEARMOR && d.ability != Abilities::SHELLARMOR
+        };
+        let max_damage_dealt = if sure_crit && per_hit.is_none() && fixed.is_none() {
+            max_crit_damage
+        } else {
+            max_damage_dealt
+        };
         let avg_damage_dealt = (max_damage_dealt as f32 * 0.925) as i16;
         // alpha-poke patch (2026-10-16, doc/engine-diff.md L34): near a knockout, the exact 16
         // rolls (Showdown's rounding) when the state still gives this max (else the rolls of
@@ -3299,6 +3401,7 @@ fn finish_move(
                     .hp;
         let exact = if near_ko {
             damage_rolls(state, &attacking_side, choice)
+                .map(|(r, c)| if sure_crit { (c, c) } else { (r, c) })
                 .filter(|(r, c)| r[15] == max_damage_dealt && c[15] == max_crit_damage)
         } else {
             None
@@ -5614,21 +5717,31 @@ pub fn generate_instructions_from_move_pair(
     }
 
     // run switches
-    if let MoveChoice::Switch(switch_id) = side_one_move {
-        generate_instructions_from_switch(
-            state,
-            *switch_id,
-            SideReference::SideOne,
-            &mut incoming_instructions,
-        );
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L39): both switching, the faster of the
+    // two leaving first (Showdown's switch actions by the outgoing mon's speed, reversed in
+    // Trick Room; a tie: side one first, an approximation); before, always side one first
+    let mut switches = [
+        (side_one_move, SideReference::SideOne),
+        (side_two_move, SideReference::SideTwo),
+    ];
+    if matches!(side_one_move, MoveChoice::Switch(_))
+        && matches!(side_two_move, MoveChoice::Switch(_))
+    {
+        let one = get_effective_speed(state, &SideReference::SideOne);
+        let two = get_effective_speed(state, &SideReference::SideTwo);
+        if (two > one) != state.trick_room.active && one != two {
+            switches.swap(0, 1);
+        }
     }
-    if let MoveChoice::Switch(switch_id) = side_two_move {
-        generate_instructions_from_switch(
-            state,
-            *switch_id,
-            SideReference::SideTwo,
-            &mut incoming_instructions,
-        );
+    for (choice, side_ref) in switches {
+        if let MoveChoice::Switch(switch_id) = choice {
+            generate_instructions_from_switch(
+                state,
+                *switch_id,
+                side_ref,
+                &mut incoming_instructions,
+            );
+        }
     }
     if s1_tera {
         state.side_one.get_active().terastallized = true;
