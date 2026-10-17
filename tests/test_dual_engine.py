@@ -4366,3 +4366,28 @@ def test_l167_positions(teams, i, turn, offset):
     outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2)
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
     assert ec.closest(b["state"], outs, n, hp=True)["diff"] == {}
+
+
+# L168 (doc/engine-diff.md): Future Sight's hit at the end of the turn is a move's hit: it can
+# crit (1 in 24: the target's raised Sp. Def left out; main b211-t11 / b236-t29, seed10k b37-t19,
+# ...) and a Substitute takes it (wide200 b40-t13)
+BLISSEY_CM_SUB = BLISSEY.replace("- Protect", "- Substitute")
+
+
+def test_l168_future_sight_crit():
+    turns = [("move futuresight", "move calmmind"), ("move slackoff", "move calmmind"),
+             ("move slackoff", "move calmmind")]  # fmt: skip
+    states = ec.run_showdown(SLOWKING_FUTURE, BLISSEY_CM_SUB, turns, force_random=True)
+    assert any(x.startswith("|-crit|") for x in states[3]["log"])
+    outs = ec.engine_outcomes(ec.engine_state(states[2]), "slackoff", "calmmind")
+    assert ec.closest(states[3], outs, (1, 1), hp=True)["diff"] == {}
+
+
+def test_l168_future_sight_into_a_substitute():
+    turns = [("move futuresight", "move calmmind"), ("move slackoff", "move calmmind"),
+             ("move slackoff", "move substitute")]  # fmt: skip
+    states = ec.run_showdown(SLOWKING_FUTURE, BLISSEY_CM_SUB, turns, force_random=False)
+    assert "substitute" in states[3]["sides"][1]["mons"][0]["volatiles"] or any(
+        "-end|p2a: Blissey|Substitute" in x for x in states[3]["log"])
+    outs = ec.engine_outcomes(ec.engine_state(states[2]), "slackoff", "substitute")
+    assert ec.closest(states[3], outs, (1, 1), hp=True)["diff"] == {}

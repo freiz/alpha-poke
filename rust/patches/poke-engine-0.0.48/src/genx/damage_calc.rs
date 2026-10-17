@@ -923,11 +923,21 @@ pub fn calculate_futuresight_damage(
     defending_side: &Side,
     attacking_side_pokemon_index: &PokemonIndex,
     choice: &Choice,
+    crit: bool,
 ) -> i16 {
     // L35: the user's Special Attack boosts while it is active (Showdown's getDamage on the
     // source at the hit; a switch resets them)
-    let attacking_stat = if attacking_side.active_index == *attacking_side_pokemon_index {
+    let user_active = attacking_side.active_index == *attacking_side_pokemon_index;
+    let attacking_stat = if user_active {
         attacking_side.calculate_boosted_stat(PokemonBoostableStat::SpecialAttack)
+    } else {
+        attacking_side.pokemon[attacking_side_pokemon_index].special_attack
+    };
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L168): a crit (the end of turn's branch)
+    // leaves out the user's lowered Sp. Atk and the target's raised Sp. Def (and the screens: the
+    // recipe's crit)
+    let crit_attacking_stat = if user_active && attacking_side.special_attack_boost > 0 {
+        attacking_stat
     } else {
         attacking_side.pokemon[attacking_side_pokemon_index].special_attack
     };
@@ -938,22 +948,27 @@ pub fn calculate_futuresight_damage(
     // (Eviolite / Assault Vest, L35: the choice's modifiers, item_modify_attack_against)
     let defending_stat =
         defending_side.calculate_boosted_stat(PokemonBoostableStat::SpecialDefense);
+    let crit_defending_stat = if defending_side.special_defense_boost < 0 {
+        defending_stat
+    } else {
+        defending_side.get_active_immutable().special_defense
+    };
     let attacker = &attacking_side.pokemon[attacking_side_pokemon_index];
     match common_pkmn_damage_calc(
         attacking_side,
         attacker,
         attacking_stat,
-        attacking_stat,
+        crit_attacking_stat,
         defending_side,
         defending_side.get_active_immutable(),
         defending_stat,
-        defending_stat,
+        crit_defending_stat,
         &Weather::NONE,
         &Terrain::NONE,
         choice,
     ) {
         // (Light Screen / Aurora Veil: the recipe's screens)
-        Some(r) => (r.roll(100, false) as f32 * 0.925) as i16,
+        Some(r) => (r.roll(100, crit) as f32 * 0.925) as i16,
         None => 0,
     }
 }

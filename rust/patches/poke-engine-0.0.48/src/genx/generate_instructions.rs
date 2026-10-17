@@ -5276,8 +5276,29 @@ fn end_of_turn_with_harvest(
     state: &mut State,
     si: &mut StateInstructions,
     first_move_side: &SideReference,
+) -> Vec<StateInstructions> {
+    // (L168: a Future Sight crit's branch first, the state back as it was)
+    let mut out = vec![];
+    if let Some((side, p)) = future_sight_crit_chance(state) {
+        let base = si.instruction_list.len();
+        let mut crit = si.clone();
+        crit.update_percentage(p);
+        si.update_percentage(1.0 - p);
+        out.extend(harvest_after_end_of_turn(state, &mut crit, first_move_side, Some(side)));
+        state.reverse_instructions(&crit.instruction_list[base..].to_vec());
+        out.push(crit);
+    }
+    out.extend(harvest_after_end_of_turn(state, si, first_move_side, None));
+    out
+}
+
+fn harvest_after_end_of_turn(
+    state: &mut State,
+    si: &mut StateInstructions,
+    first_move_side: &SideReference,
+    fs_crit: Option<SideReference>,
 ) -> Option<StateInstructions> {
-    add_end_of_turn_instructions(state, si, first_move_side);
+    end_of_turn_instructions(state, si, first_move_side, fs_crit);
     let (h, p) = harvest_chance(state)?;
     if p >= 1.0 {
         harvest_instructions(state, h, si);
@@ -5294,10 +5315,41 @@ fn end_of_turn_with_harvest(
     Some(yes)
 }
 
+#[allow(dead_code)] // (the upstream tests')
 fn add_end_of_turn_instructions(
+    state: &mut State,
+    incoming_instructions: &mut StateInstructions,
+    first_move_side: &SideReference,
+) {
+    end_of_turn_instructions(state, incoming_instructions, first_move_side, None);
+}
+
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L168): Future Sight / Doom Desire's hit at the
+// end of the turn can crit (Showdown's futuremove: a move's hit, 1 in 24), a branch of the whole
+// end of the turn (end_of_turn_with_harvest); `fs_crit`: the side whose hit crits
+fn future_sight_crit_chance(state: &State) -> Option<(SideReference, f32)> {
+    if state.side_one.force_switch || state.side_two.force_switch {
+        return None;
+    }
+    for side_ref in [SideReference::SideOne, SideReference::SideTwo] {
+        let target = state
+            .get_side_immutable(&side_ref.get_other_side())
+            .get_active_immutable();
+        if state.get_side_immutable(&side_ref).future_sight.0 == 1
+            && target.hp > 0
+            && !matches!(target.ability, Abilities::BATTLEARMOR | Abilities::SHELLARMOR)
+        {
+            return Some((side_ref, 1.0 / 24.0));
+        }
+    }
+    None
+}
+
+fn end_of_turn_instructions(
     state: &mut State,
     mut incoming_instructions: &mut StateInstructions,
     first_move_side: &SideReference,
+    fs_crit: Option<SideReference>,
 ) {
     let end_of_turn_from = incoming_instructions.instruction_list.len();
     if state.side_one.force_switch || state.side_two.force_switch {
@@ -5520,7 +5572,38 @@ fn add_end_of_turn_instructions(
                     &defending_side,
                     &attacking_side.future_sight.1,
                     &fs_choice,
+                    fs_crit == Some(*side_ref),
                 );
+                // alpha-poke patch (2026-10-17, doc/engine-diff.md L168): into a Substitute, the
+                // Substitute takes it (Showdown: the hit's onTryPrimaryHit; no bypasssub)
+                if damage > 0
+                    && defending_side
+                        .volatile_statuses
+                        .contains(&PokemonVolatileStatus::SUBSTITUTE)
+                {
+                    let to_sub = cmp::min(damage, defending_side.substitute_health);
+                    incoming_instructions
+                        .instruction_list
+                        .push(Instruction::DamageSubstitute(DamageInstruction {
+                            side_ref: side_ref.get_other_side(),
+                            damage_amount: to_sub,
+                        }));
+                    defending_side.substitute_health -= to_sub;
+                    if defending_side.substitute_health <= 0 {
+                        incoming_instructions
+                            .instruction_list
+                            .push(Instruction::RemoveVolatileStatus(
+                                RemoveVolatileStatusInstruction {
+                                    side_ref: side_ref.get_other_side(),
+                                    volatile_status: PokemonVolatileStatus::SUBSTITUTE,
+                                },
+                            ));
+                        defending_side
+                            .volatile_statuses
+                            .remove(&PokemonVolatileStatus::SUBSTITUTE);
+                    }
+                    damage = 0;
+                }
                 let defender = defending_side.get_active();
                 damage = cmp::min(damage, defender.hp);
                 let future_sight_damage_instruction = Instruction::Damage(DamageInstruction {
