@@ -203,6 +203,8 @@ def _engine_side(s: dict, future_sight=None, wish=None) -> pe.Side:
             dur["disable"] = ids.index(dis["move"]) * 8 + (4 - dis["duration"]) + 1
         elif dis:
             vol.discard("disable")
+        if "stockpile" in vol:  # (L73: its layers)
+            dur["stockpile"] = act["volatiles"]["stockpile"]["layers"]
         if "confusion" in vol and act["volatiles"]["confusion"]["time"]:
             dur["confusion"] = min(max(5 - act["volatiles"]["confusion"]["time"], 0), 4)
         if dur:

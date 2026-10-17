@@ -278,7 +278,7 @@ impl PySide {
         active_index="0".to_string(),
         baton_passing=false,
         shed_tailing=false,
-        volatile_status_durations=PyVolatileStatusDurations::new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+        volatile_status_durations=PyVolatileStatusDurations::new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
         wish=(0, 0),
         future_sight=(0, "0".to_string()),
         force_switch=false,
@@ -381,6 +381,7 @@ pub struct PyVolatileStatusDurations {
     pub micleberry: i8,
     pub metronome: i8,
     pub disable: i8,
+    pub stockpile: i8,
 }
 
 impl From<VolatileStatusDurations> for PyVolatileStatusDurations {
@@ -399,6 +400,7 @@ impl From<VolatileStatusDurations> for PyVolatileStatusDurations {
             micleberry: other.micleberry,
             metronome: other.metronome,
             disable: other.disable,
+            stockpile: other.stockpile,
         }
     }
 }
@@ -419,6 +421,7 @@ impl Into<VolatileStatusDurations> for PyVolatileStatusDurations {
             micleberry: self.micleberry,
             metronome: self.metronome,
             disable: self.disable,
+            stockpile: self.stockpile,
         }
     }
 }
@@ -440,6 +443,7 @@ impl PyVolatileStatusDurations {
         micleberry=0,
         metronome=0,
         disable=0,
+        stockpile=0,
     ))]
     fn new(
         confusion: i8,
@@ -455,6 +459,7 @@ impl PyVolatileStatusDurations {
         micleberry: i8,
         metronome: i8,
         disable: i8,
+        stockpile: i8,
     ) -> PyVolatileStatusDurations {
         PyVolatileStatusDurations {
             confusion,
@@ -470,6 +475,7 @@ impl PyVolatileStatusDurations {
             micleberry,
             metronome,
             disable,
+            stockpile,
         }
     }
 }

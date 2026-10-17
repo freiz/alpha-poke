@@ -8,6 +8,7 @@ use crate::choices::{
 };
 use crate::instruction::{
     ApplyVolatileStatusInstruction, BoostInstruction, ChangeItemInstruction,
+    ChangeVolatileStatusDurationInstruction,
     ChangeSideConditionInstruction, ChangeStatusInstruction, ChangeSubsituteHealthInstruction,
     ChangeTerrain, ChangeType, ChangeWeather, ChangeWishInstruction, DamageInstruction,
     HealInstruction, Instruction, RemoveVolatileStatusInstruction, SetFutureSightInstruction,
@@ -348,6 +349,29 @@ pub fn modify_choice(
                 attacker_choice.heal = None;
                 attacker_choice.side_condition = None;
             }
+        }
+        // alpha-poke patch (2026-10-16, doc/engine-diff.md L73): Spit Up's 100 power a layer,
+        // Swallow's 25 / 50 / 100% (no layers: they fail); the layers end in choice_special_effect
+        Choices::SPITUP => {
+            attacker_choice.base_power =
+                100.0 * attacking_side.volatile_status_durations.stockpile as f32;
+        }
+        Choices::SWALLOW => {
+            attacker_choice.heal = match attacking_side.volatile_status_durations.stockpile {
+                1 => Some(Heal {
+                    target: MoveTarget::User,
+                    amount: 0.25,
+                }),
+                2 => Some(Heal {
+                    target: MoveTarget::User,
+                    amount: 0.5,
+                }),
+                n if n >= 3 => Some(Heal {
+                    target: MoveTarget::User,
+                    amount: 1.0,
+                }),
+                _ => None,
+            };
         }
         // alpha-poke patch (2026-10-16, doc/engine-diff.md L71): Beat Up, a hit for the user and
         // each ally neither fainted nor statused, of 5 + its base Attack / 10: their mean power
@@ -1361,6 +1385,64 @@ pub fn choice_special_effect(
     attacking_side_ref: &SideReference,
     instructions: &mut StateInstructions,
 ) {
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L73): Stockpile's layer (at most 3) and its
+    // Defense / Sp. Def +1; Spit Up / Swallow use the layers up with their boosts
+    if matches!(
+        choice.move_id,
+        Choices::STOCKPILE | Choices::SPITUP | Choices::SWALLOW
+    ) {
+        let side = state.get_side(attacking_side_ref);
+        let layers = side.volatile_status_durations.stockpile;
+        let (change, boost) = match choice.move_id {
+            Choices::STOCKPILE if layers < 3 => (1, 1),
+            Choices::STOCKPILE => (0, 0),
+            _ => (-layers, -layers),
+        };
+        if change != 0 {
+            side.volatile_status_durations.stockpile += change;
+            instructions
+                .instruction_list
+                .push(Instruction::ChangeVolatileStatusDuration(
+                    ChangeVolatileStatusDurationInstruction {
+                        side_ref: *attacking_side_ref,
+                        volatile_status: PokemonVolatileStatus::STOCKPILE,
+                        amount: change,
+                    },
+                ));
+            for stat in [
+                PokemonBoostableStat::Defense,
+                PokemonBoostableStat::SpecialDefense,
+            ] {
+                apply_boost_instruction(
+                    side,
+                    &stat,
+                    &boost,
+                    attacking_side_ref,
+                    attacking_side_ref,
+                    instructions,
+                );
+            }
+            if layers + change == 0
+                && side
+                    .volatile_statuses
+                    .contains(&PokemonVolatileStatus::STOCKPILE)
+            {
+                side.volatile_statuses
+                    .remove(&PokemonVolatileStatus::STOCKPILE);
+                instructions
+                    .instruction_list
+                    .push(Instruction::RemoveVolatileStatus(
+                        RemoveVolatileStatusInstruction {
+                            side_ref: *attacking_side_ref,
+                            volatile_status: PokemonVolatileStatus::STOCKPILE,
+                        },
+                    ));
+            }
+        }
+        if choice.move_id == Choices::STOCKPILE && layers >= 3 {
+            choice.volatile_status = None;
+        }
+    }
     // alpha-poke patch (2026-10-16, doc/engine-diff.md L36): Transform (no effect before)
     if choice.move_id == Choices::TRANSFORM {
         super::generate_instructions::transform_into(state, attacking_side_ref, instructions);

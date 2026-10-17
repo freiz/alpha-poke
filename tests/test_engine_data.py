@@ -145,3 +145,18 @@ def test_low_max_pp_moves_match_showdown():
                   for m in data.showdown()["moves"]
                   if (m["pp"] if m["no_pp_boosts"] else m["pp"] * 8 // 5) < 10)  # fmt: skip
     assert [tuple(x) for x in alpha_search.low_max_pp_moves()] == want
+
+
+def test_moves_not_aimed_at_the_foe_match_showdown():
+    """The status moves the engine aims at the opponent but Showdown not at the foe's Pokemon
+    (weather, terrains, rooms, hazards, Haze, ...: Good as Gold lets them through; L72)."""
+    import alpha_search
+
+    from alpha_poke.enginecheck import data
+
+    eng = dict(alpha_search.move_targets())
+    foe = {"normal", "any", "adjacentFoe", "allAdjacentFoes", "randomNormal", "allAdjacent",
+           "scripted"}  # fmt: skip
+    want = sorted(m["id"] for m in data.showdown()["moves"] if m["category"] == "Status"
+                  and eng.get(m["id"]) == "opponent" and m["target"] not in foe)  # fmt: skip
+    assert alpha_search.not_aimed_at_foe_moves() == want

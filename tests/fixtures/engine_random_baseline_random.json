@@ -62,11 +62,7 @@
 "b144-t13": [
 "hp"
 ],
-"b147-t2": [
-"volatile.charge"
-],
 "b147-t27": [
-"volatile.charge",
 "volatile.typechange"
 ],
 "b156-t14": [
@@ -162,16 +158,6 @@
 "b30-t7": [
 "hp"
 ],
-"b34-t38": [
-"boost.atk",
-"boost.def",
-"boost.spe"
-],
-"b34-t44": [
-"boost.atk",
-"boost.def",
-"boost.spe"
-],
 "b37-t20": [
 "hp"
 ],
@@ -239,15 +225,8 @@
 "hp",
 "status"
 ],
-"b9-t23": [
-"volatile.charge"
-],
 "b9-t31": [
-"volatile.charge",
 "volatile.typechange"
-],
-"b9-t47": [
-"volatile.charge"
 ],
 "b91-t13": [
 "volatile.confusion"

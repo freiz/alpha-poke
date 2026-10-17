@@ -807,6 +807,8 @@ pub struct VolatileStatusDurations {
     // alpha-poke patch (2026-10-16, doc/engine-diff.md L70): Disable, its move slot x 8 + (its ends
     // of turn + 1): it ends at 4 (from -1 when the target had moved that turn: Showdown's 4 + 1)
     pub disable: i8,
+    // (L73: Stockpile's layers)
+    pub stockpile: i8,
 }
 
 impl Default for VolatileStatusDurations {
@@ -825,6 +827,7 @@ impl Default for VolatileStatusDurations {
             micleberry: 0,
             metronome: 0,
             disable: 0,
+            stockpile: 0,
         }
     }
 }
@@ -845,6 +848,7 @@ impl VolatileStatusDurations {
             ("micleberry", self.micleberry),
             ("metronome", self.metronome),
             ("disable", self.disable),
+            ("stockpile", self.stockpile),
         ];
 
         let mut output = String::new();
@@ -861,7 +865,7 @@ impl VolatileStatusDurations {
 
     pub fn serialize(&self) -> String {
         format!(
-            "{};{};{};{};{};{};{};{};{};{};{};{};{}",
+            "{};{};{};{};{};{};{};{};{};{};{};{};{};{}",
             self.confusion,
             self.encore,
             self.lockedmove,
@@ -874,7 +878,8 @@ impl VolatileStatusDurations {
             self.partiallytrapped,
             self.micleberry,
             self.metronome,
-            self.disable
+            self.disable,
+            self.stockpile
         )
     }
     pub fn deserialize(serialized: &str) -> VolatileStatusDurations {
@@ -894,6 +899,7 @@ impl VolatileStatusDurations {
             micleberry: split.get(10).map_or(0, |x| x.parse::<i8>().unwrap()),
             metronome: split.get(11).map_or(0, |x| x.parse::<i8>().unwrap()),
             disable: split.get(12).map_or(0, |x| x.parse::<i8>().unwrap()),
+            stockpile: split.get(13).map_or(0, |x| x.parse::<i8>().unwrap()),
         }
     }
 }
@@ -1711,6 +1717,9 @@ impl State {
             }
             PokemonVolatileStatus::DISABLE => {
                 side.volatile_status_durations.disable += amount;
+            }
+            PokemonVolatileStatus::STOCKPILE => {
+                side.volatile_status_durations.stockpile += amount;
             }
             _ => panic!(
                 "Invalid volatile status for increment_volatile_status_duration: {:?}",

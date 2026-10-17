@@ -978,6 +978,39 @@ fn damage_rolls(
     )
 }
 
+/// poke-engine's move targets ("opponent" / "user"), lowercase move ids (the data test compares
+/// them with Showdown's: Good as Gold / Magic Bounce read them; doc/engine-diff.md L72).
+#[pyfunction]
+fn move_targets() -> Vec<(String, String)> {
+    use poke_engine::choices::{MoveTarget, MOVES};
+    let mut out: Vec<(String, String)> = MOVES
+        .iter()
+        .map(|(id, c)| {
+            let t = match c.target {
+                MoveTarget::User => "user",
+                MoveTarget::Opponent => "opponent",
+            };
+            (format!("{:?}", id).to_lowercase(), t.to_string())
+        })
+        .collect();
+    out.sort();
+    out
+}
+
+/// The moves poke-engine aims at the opponent that are not aimed at the foe's Pokemon
+/// (`Choices::not_aimed_at_foe`, lowercase; doc/engine-diff.md L72).
+#[pyfunction]
+fn not_aimed_at_foe_moves() -> Vec<String> {
+    use poke_engine::choices::MOVES;
+    let mut out: Vec<String> = MOVES
+        .keys()
+        .filter(|c| c.not_aimed_at_foe())
+        .map(|c| format!("{:?}", c).to_lowercase())
+        .collect();
+    out.sort();
+    out
+}
+
 /// The full-information state of a self-play / evaluation position: side one from `a` (side
 /// one's own view: its side exact), side two = side one of `b` (the other player's own view),
 /// the field from `a`; the weather / terrain from `b` with `weather_from_b` / `terrain_from_b`
@@ -1133,6 +1166,8 @@ fn alpha_search(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(evaluate, m)?)?;
     m.add_function(wrap_pyfunction!(merge_sides, m)?)?;
     m.add_function(wrap_pyfunction!(damage_rolls, m)?)?;
+    m.add_function(wrap_pyfunction!(move_targets, m)?)?;
+    m.add_function(wrap_pyfunction!(not_aimed_at_foe_moves, m)?)?;
     m.add_function(wrap_pyfunction!(chance_outcomes, m)?)?;
     m.add_function(wrap_pyfunction!(describe, m)?)?;
     Ok(())

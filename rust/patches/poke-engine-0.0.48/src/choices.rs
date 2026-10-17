@@ -20535,6 +20535,39 @@ impl Choices {
     // alpha-poke patch (2026-10-16, doc/engine-diff.md L24): the max PP when below 10 (5 PP moves:
     // 8 with Showdown's PP Ups; a few have 1 and none): Leppa Berry restores 10 up to it.
     // tests/test_engine_data.py checks the list against Showdown
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L72): the status moves the engine aims at
+    // the opponent (its MoveTarget has no "field" / "foe side") that are not aimed at the foe's
+    // Pokemon in Showdown (Good as Gold does not block them); tests/test_engine_data.py checks
+    // the list against Showdown's targets
+    pub fn not_aimed_at_foe(&self) -> bool {
+        matches!(
+            self,
+            Choices::BURNINGBULWARK
+                | Choices::CHILLYRECEPTION
+                | Choices::COURTCHANGE
+                | Choices::ELECTRICTERRAIN
+                | Choices::FAIRYLOCK
+                | Choices::GRASSYTERRAIN
+                | Choices::GRAVITY
+                | Choices::HAZE
+                | Choices::MAGICROOM
+                | Choices::MISTYTERRAIN
+                | Choices::PERISHSONG
+                | Choices::PSYCHICTERRAIN
+                | Choices::RAINDANCE
+                | Choices::SANDSTORM
+                | Choices::SNOWSCAPE
+                | Choices::SPIKES
+                | Choices::STEALTHROCK
+                | Choices::STICKYWEB
+                | Choices::SUNNYDAY
+                | Choices::TEATIME
+                | Choices::TOXICSPIKES
+                | Choices::TRICKROOM
+                | Choices::WONDERROOM
+        )
+    }
+
     pub fn max_pp_below_10(&self) -> Option<i8> {
         match self {
             Choices::REVIVALBLESSING | Choices::SKETCH | Choices::STRUGGLE => Some(1),

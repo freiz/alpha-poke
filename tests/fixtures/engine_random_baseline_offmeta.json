@@ -57,32 +57,11 @@
 "b107-t22": [
 "item"
 ],
-"b107-t42": [
-"volatile.charge"
-],
-"b107-t48": [
-"volatile.charge"
-],
-"b107-t54": [
-"volatile.charge"
-],
 "b117-t35": [
 "volatile.slowstart"
 ],
 "b117-t39": [
 "volatile.slowstart"
-],
-"b13-t21": [
-"boost.def",
-"boost.spd"
-],
-"b13-t24": [
-"boost.def",
-"boost.spd"
-],
-"b13-t31": [
-"boost.def",
-"boost.spd"
 ],
 "b13-t5": [
 "volatile.perish3"

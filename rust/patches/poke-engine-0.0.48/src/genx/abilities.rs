@@ -2628,6 +2628,17 @@ pub fn ability_modify_attack_against(
                 attacker_choice.base_power = 0.0;
             }
         }
+        // alpha-poke patch (2026-10-16, doc/engine-diff.md L74): Electromorphosis, a damaging hit
+        // charges its holder (a secondary on it: not through a Substitute)
+        Abilities::ELECTROMORPHOSIS => {
+            if attacker_choice.category != MoveCategory::Status {
+                attacker_choice.add_or_create_secondaries(Secondary {
+                    chance: 100.0,
+                    target: MoveTarget::Opponent,
+                    effect: Effect::VolatileStatus(PokemonVolatileStatus::CHARGE),
+                })
+            }
+        }
         // alpha-poke patch (2026-10-16, doc/engine-diff.md L70): Cursed Body, 30% of the time the
         // move that hit its holder is disabled (as a secondary on the user; Disable needs its last
         // move: the one being used)
@@ -2902,15 +2913,14 @@ pub fn ability_modify_attack_against(
         Abilities::GOODASGOLD => {
             // This engine doesn't distinguish "targetting other pkmn" versus "targetting the side"
             // Thankfully it is a short list of moves that target the opponent side
+            // (L72: the moves not aimed at the foe's Pokemon -- hazards, weather, terrains, rooms,
+            // Haze, ... -- and a non-Ghost Curse, aimed at its user, pass)
+            let self_curse = attacker_choice.move_id == Choices::CURSE
+                && !attacking_pkmn.has_type(&PokemonType::GHOST);
             if attacker_choice.category == MoveCategory::Status
                 && attacker_choice.target == MoveTarget::Opponent
-                && ![
-                    Choices::STEALTHROCK,
-                    Choices::STICKYWEB,
-                    Choices::TOXICSPIKES,
-                    Choices::SPIKES,
-                ]
-                .contains(&attacker_choice.move_id)
+                && !attacker_choice.move_id.not_aimed_at_foe()
+                && !self_curse
             {
                 attacker_choice.remove_all_effects();
             }

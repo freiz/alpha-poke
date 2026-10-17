@@ -1490,6 +1490,18 @@ impl State {
                     side.volatile_status_durations.taunt = 0;
                     false
                 }
+                // (L73: Stockpile's layers end with it; its boosts with the switch)
+                PokemonVolatileStatus::STOCKPILE => {
+                    instructions.push(Instruction::ChangeVolatileStatusDuration(
+                        ChangeVolatileStatusDurationInstruction {
+                            side_ref: *side_ref,
+                            volatile_status: *pkmn_volatile_status,
+                            amount: -1 * side.volatile_status_durations.stockpile,
+                        },
+                    ));
+                    side.volatile_status_durations.stockpile = 0;
+                    false
+                }
                 // (L70: Disable's count ends with it; the moves are enabled again on a switch)
                 PokemonVolatileStatus::DISABLE => {
                     instructions.push(Instruction::ChangeVolatileStatusDuration(

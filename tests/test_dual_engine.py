@@ -2270,3 +2270,41 @@ def test_l71_beat_up():
     assert any("|-hitcount|p2a: Blissey|3" in x for x in states[1]["log"])
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "beatup", "calmmind")
     assert ec.closest(states[1], outs, (3, 1), hp=True)["diff"] == {}
+
+
+# L72 (doc/engine-diff.md): Good as Gold blocks only status moves aimed at it: a non-Ghost Curse
+# targets its user (Showdown's onModifyMove), the engine's Curse kept its foe target
+def test_l72_curse_through_good_as_gold():
+    g = _setter("Gholdengo", "Good as Gold", "Leftovers", "- Shadow Ball\n- Make It Rain\n- Recover\n- Nasty Plot")
+    states = ec.run_showdown(DONDOZO, g, [("move curse", "move recover")])
+    assert states[1]["sides"][0]["mons"][0]["boosts"]["atk"] == 1
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "curse", "recover")
+    assert ec.closest(states[1], outs, (1, 1))["diff"] == {}
+
+
+STOCKPILER = _setter("Toxapex", "Regenerator", "Black Sludge", "- Stockpile\n- Spit Up\n- Swallow\n- Toxic")
+
+
+# L73 (doc/engine-diff.md): Stockpile, a layer (at most 3) of Defense / Sp. Def +1 each; Spit Up
+# (100 power a layer) and Swallow (25 / 50 / 100% HP) use them up with their boosts; the engine had
+# a volatile only (no boosts, no layers: Spit Up / Swallow did nothing)
+@pytest.mark.parametrize("pre, move", [
+    ([], "stockpile"),
+    ([("move stockpile", "move spikes")] * 3, "stockpile"),  # fails at 3
+    ([("move stockpile", "move spikes")] * 2, "spitup"),
+    ([("move stockpile", "move earthquake")], "swallow"),
+])  # fmt: skip
+def test_l73_stockpile(pre, move):
+    states = ec.run_showdown(STOCKPILER, TINGLU_HITS_EQ, pre + [(f"move {move}", "move spikes")])
+    outs = ec.engine_outcomes(ec.engine_state(states[-2]), move, "spikes")
+    assert ec.closest(states[-1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L74 (doc/engine-diff.md): Electromorphosis, a damaging hit charges its holder (Showdown's
+# onDamagingHit); not implemented in the engine
+def test_l74_electromorphosis():
+    belli = _setter("Bellibolt", "Electromorphosis", "Leftovers", "- Slack Off\n- Discharge\n- Muddy Water\n- Toxic")
+    states = ec.run_showdown(belli, TINGLU_HITS_EQ, [("move slackoff", "move ruination")])
+    assert "charge" in states[1]["sides"][0]["mons"][0]["volatiles"]
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "slackoff", "ruination")
+    assert ec.closest(states[1], outs, (1, 1))["diff"] == {}
