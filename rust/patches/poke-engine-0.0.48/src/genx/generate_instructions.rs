@@ -3033,6 +3033,7 @@ fn cannot_use_move(state: &State, choice: &Choice, attacking_side_ref: &SideRefe
         .volatile_statuses
         .contains(&PokemonVolatileStatus::DISABLE)
         && choice.category != MoveCategory::Switch
+        && !choice.called_move
         && choice.move_index as i8 == attacking_side.volatile_status_durations.disable / 8
     {
         // alpha-poke patch (L70): disabled after it chose it (Showdown's onBeforeMove)
@@ -3720,9 +3721,11 @@ pub fn generate_instructions_from_move(
     }
 
     let side = state.get_side(&attacking_side);
-    if side
-        .volatile_statuses
-        .contains(&PokemonVolatileStatus::ENCORE)
+    // (L171: not a called move -- a Dancer's dance is not its chosen one)
+    if !choice.called_move
+        && side
+            .volatile_statuses
+            .contains(&PokemonVolatileStatus::ENCORE)
     {
         match side.last_used_move {
             LastUsedMove::Move(last_used_move) => {
@@ -3926,7 +3929,7 @@ pub fn generate_instructions_from_move(
         start_truant(state, &attacking_side, &mut incoming_instructions);
     }
 
-    if !called && cannot_use_move(state, &choice, &attacking_side) {
+    if (!called || choice.dancer_move) && cannot_use_move(state, &choice, &attacking_side) {
         steadfast(state, &attacking_side, &mut incoming_instructions);
         state.reverse_instructions(&incoming_instructions.instruction_list);
         final_instructions.push(incoming_instructions);
@@ -7697,6 +7700,14 @@ fn handle_both_moves(
         branch_on_damage,
     );
     after_move_finish(state, &mut after_first, from);
+    let after_first = dancer_after(
+        state,
+        after_first,
+        from,
+        first_move_side_choice,
+        first_move_side_ref,
+        branch_on_damage,
+    );
 
     second_move_side_choice.first_move = false;
     for state_instruction in after_first {
@@ -7712,8 +7723,101 @@ fn handle_both_moves(
             branch_on_damage,
         );
         after_move_finish(state, &mut after_second, from);
+        let after_second = dancer_after(
+            state,
+            after_second,
+            from,
+            second_move_side_choice,
+            first_move_side_ref.get_other_side(),
+            branch_on_damage,
+        );
         state_instructions_vec.extend(after_second);
     }
+}
+
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L171): Dancer: after a dance move that did
+// something (it started and changed anything), the foe's Dancer uses it too, at once (Showdown's
+// runMove: not semi-invulnerable, not fainted; its own BeforeMove -- sleep, paralysis, Taunt --,
+// no PP, no last move, not locked into Petal Dance); each branch `from` the move's start
+fn dancer_after(
+    state: &mut State,
+    branches: Vec<StateInstructions>,
+    from: usize,
+    mover_choice: &Choice,
+    mover_side: SideReference,
+    branch_on_damage: bool,
+) -> Vec<StateInstructions> {
+    if !mover_choice.move_id.is_dance() || mover_choice.called_move {
+        return branches;
+    }
+    let dancer_side = mover_side.get_other_side();
+    let mut out = Vec::with_capacity(branches.len());
+    for b in branches {
+        let did = b.instruction_list[from..]
+            .iter()
+            .position(|i| matches!(i, Instruction::Acted(s) if *s == mover_side))
+            .is_some_and(|k| {
+                b.instruction_list[from + k + 1..]
+                    .iter()
+                    .any(|i| !matches!(i, Instruction::Acted(_)))
+            });
+        state.apply_instructions(&b.instruction_list);
+        let ok = did && {
+            let (d_side, m_side) = state.get_both_sides_immutable(&dancer_side);
+            let dancer = d_side.get_active_immutable();
+            let mover = m_side.get_active_immutable();
+            let gassed = mover.ability == Abilities::NEUTRALIZINGGAS
+                && mover.hp > 0
+                && dancer.item != Items::ABILITYSHIELD;
+            let semi = [
+                PokemonVolatileStatus::PHANTOMFORCE,
+                PokemonVolatileStatus::SHADOWFORCE,
+                PokemonVolatileStatus::BOUNCE,
+                PokemonVolatileStatus::DIG,
+                PokemonVolatileStatus::DIVE,
+                PokemonVolatileStatus::FLY,
+            ]
+            .iter()
+            .any(|v| d_side.volatile_statuses.contains(v));
+            dancer.ability == Abilities::DANCER
+                && dancer.hp > 0
+                && !gassed
+                && !semi
+                && !d_side.force_switch
+                && !m_side.force_switch
+        };
+        state.reverse_instructions(&b.instruction_list);
+        if !ok {
+            out.push(b);
+            continue;
+        }
+        let mut dance = MOVES.get(&mover_choice.move_id).unwrap().clone();
+        dance.called_move = true;
+        dance.dancer_move = true;
+        dance.first_move = false;
+        dance.move_index = PokemonMoveIndex::M0;
+        if dance
+            .volatile_status
+            .as_ref()
+            .is_some_and(|v| v.volatile_status == PokemonVolatileStatus::LOCKEDMOVE)
+        {
+            dance.volatile_status = None;
+        }
+        let from2 = b.instruction_list.len();
+        let mut after = vec![];
+        generate_instructions_from_move(
+            state,
+            &mut dance,
+            mover_choice,
+            dancer_side,
+            b,
+            &mut after,
+            branch_on_damage,
+        );
+        after_move_finish(state, &mut after, from2);
+        out.extend(after);
+    }
+    out
 }
 
 fn run_mega_evolutions(

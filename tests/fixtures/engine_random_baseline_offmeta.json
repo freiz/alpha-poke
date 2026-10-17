@@ -8,27 +8,8 @@
 "b111-t17": [
 "hp"
 ],
-"b137-t2": [
-"boost.atk"
-],
 "b158-t26": [
 "status"
-],
-"b160-t6": [
-"boost.atk",
-"boost.def",
-"boost.spa",
-"boost.spd",
-"boost.spe",
-"hp"
-],
-"b160-t8": [
-"boost.atk",
-"boost.def",
-"boost.spa",
-"boost.spd",
-"boost.spe",
-"hp"
 ],
 "b161-t1": [
 "boost.def",

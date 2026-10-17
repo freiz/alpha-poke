@@ -4462,3 +4462,44 @@ def test_l170_positions(teams, i, turn, offset):
     outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2)
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
     assert ec.closest(b["state"], outs, n, hp=True)["diff"] == {}
+
+
+# L171 (doc/engine-diff.md): Dancer, after a dance move that did something, the Dancer uses it too
+# at once (Showdown's runMove with externalMove; offmeta b137-t2 / b160-t6 / b160-t8, wide b52-t27)
+ORICORIO = """Oricorio-Pom-Pom @ Heavy-Duty Boots
+Ability: Dancer
+EVs: 252 HP / 4 SpA / 252 Spe
+Timid Nature
+- Revelation Dance
+- Quiver Dance
+- Roost
+- Hurricane"""
+GARCHOMP_SD = """Garchomp @ Leftovers
+Ability: Rough Skin
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- Swords Dance
+- Earthquake
+- Scale Shot
+- Stealth Rock"""
+
+
+def test_l171_dancer_copies_swords_dance():
+    states = ec.run_showdown(ORICORIO, GARCHOMP_SD, [("move roost", "move swordsdance")])
+    assert states[1]["sides"][0]["mons"][0]["boosts"]["atk"] == 2
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "roost", "swordsdance")
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+@pytest.mark.parametrize("teams,i,turn,offset", [
+    ("random_battle_teams_offmeta.jsonl", 137, 2, 0),
+    ("random_battle_teams_offmeta.jsonl", 160, 6, 0),
+    ("random_battle_teams_offmeta.jsonl", 160, 8, 0),
+    ("random_battle_teams_wide.jsonl", 52, 27, 0),
+])  # fmt: skip
+def test_l171_positions(teams, i, turn, offset):
+    a, b = _random_position(teams, i, turn, offset)
+    c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
+    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2)
+    n = tuple(len(s["mons"]) for s in a["state"]["sides"])
+    assert ec.closest(b["state"], outs, n, hp=True)["diff"] == {}

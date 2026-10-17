@@ -239,3 +239,16 @@ def test_fail_copycat_moves_match_showdown():
                   if m["id"] in eng and "failcopycat" in m["flags"])  # fmt: skip
     assert len(want) > 30
     assert alpha_search.fail_copycat_moves() == want
+
+
+def test_dance_moves_match_showdown():
+    """The dance moves (Showdown's dance flag: a Dancer uses them too; L171)."""
+    import alpha_search
+
+    from alpha_poke.enginecheck import data
+
+    eng = dict(alpha_search.move_targets())
+    want = sorted(m["id"] for m in data.showdown()["moves"]
+                  if m["id"] in eng and "dance" in m["flags"])  # fmt: skip
+    assert len(want) >= 12
+    assert alpha_search.dance_moves() == want

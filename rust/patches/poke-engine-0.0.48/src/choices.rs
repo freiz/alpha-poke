@@ -20578,6 +20578,26 @@ impl Choices {
         )
     }
 
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L171): the dance moves (Showdown's dance
+    // flag: a Dancer uses them too); tests/test_engine_data.py checks them
+    pub fn is_dance(&self) -> bool {
+        matches!(
+            self,
+            Choices::AQUASTEP
+                | Choices::CLANGOROUSSOUL
+                | Choices::DRAGONDANCE
+                | Choices::FEATHERDANCE
+                | Choices::FIERYDANCE
+                | Choices::LUNARDANCE
+                | Choices::PETALDANCE
+                | Choices::QUIVERDANCE
+                | Choices::REVELATIONDANCE
+                | Choices::SWORDSDANCE
+                | Choices::TEETERDANCE
+                | Choices::VICTORYDANCE
+        )
+    }
+
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L167): the moves Copycat cannot copy (it
     // fails: Showdown's failcopycat flag); tests/test_engine_data.py checks them
     pub fn fails_copycat(&self) -> bool {
@@ -20891,6 +20911,9 @@ pub struct Choice {
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L170): the damage Counter / Mirror Coat /
     // Metal Burst dealt the target (choice_special_effect): its DamagingHit after it
     pub returned_hit: i16,
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L171): a Dancer's copy of a dance (a
+    // called move that has its own BeforeMove: Showdown's runMove with externalMove)
+    pub dancer_move: bool,
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L156): a multi-hit move's first hit Disguise
     // / Ice Face takes (no damage; the hits after it do)
     pub first_hit_blocked: bool,
@@ -21037,6 +21060,7 @@ impl Default for Choice {
             sleep_talk_move: false,
             called_move: false,
             returned_hit: 0,
+            dancer_move: false,
             first_hit_blocked: false,
             charge_boost: false,
         }
