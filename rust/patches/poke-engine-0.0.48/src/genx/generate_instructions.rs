@@ -1572,6 +1572,11 @@ fn get_instructions_from_heal(
     let target_pkmn = state.get_side(&target_side_ref).get_active();
 
     let mut health_recovered = (heal.amount * target_pkmn.maxhp as f32) as i16;
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L113): a loss of HP is at least 1
+    // (Showdown's damage: Rocky Helmet, Life Orb, ... on a 1-HP Shedinja)
+    if heal.amount < 0.0 && health_recovered == 0 && target_pkmn.hp > 0 {
+        health_recovered = -1;
+    }
     let final_health = target_pkmn.hp + health_recovered;
     if final_health > target_pkmn.maxhp {
         health_recovered -= final_health - target_pkmn.maxhp;

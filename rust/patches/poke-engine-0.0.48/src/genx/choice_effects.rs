@@ -903,10 +903,36 @@ pub fn choice_after_damage_hit(
         // alpha-poke patch (2026-10-16, L27): Raging Bull's screen break is before the hit now
         // (generate_instructions::screen_break_instructions); it was here, after its damage
         Choices::KNOCKOFF => {
+            // alpha-poke patch (2026-10-17, doc/engine-diff.md L113): nothing taken when the hit's
+            // contact damage (Rocky Helmet, Rough Skin / Iron Barbs: at least 1 each) knocks its
+            // user out (Showdown's onAfterHit needs the user's HP)
+            let user = attacking_side.get_active_immutable();
+            let defender = defending_side.get_active_immutable();
+            let punished = choice.flags.contact
+                && user.ability != Abilities::MAGICGUARD
+                && user.item != Items::PROTECTIVEPADS;
+            let contact = if punished {
+                (if defender.item == Items::ROCKYHELMET {
+                    cmp::max(user.maxhp / 6, 1)
+                } else {
+                    0
+                }) + (if matches!(
+                    defender.ability,
+                    Abilities::ROUGHSKIN | Abilities::IRONBARBS
+                ) {
+                    cmp::max(user.maxhp / 8, 1)
+                } else {
+                    0
+                })
+            } else {
+                0
+            };
+            let user_faints = user.hp == 0 || contact >= user.hp;
             let defender_active = defending_side.get_active();
             if defender_active.item_can_be_removed()
                 && defender_active.item != Items::NONE
                 && !hit_sub
+                && !user_faints
             {
                 let instruction = Instruction::ChangeItem(ChangeItemInstruction {
                     side_ref: attacking_side_ref.get_other_side(),

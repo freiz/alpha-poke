@@ -980,7 +980,9 @@ pub fn ability_after_damage_hit(
                 && choice.flags.contact
                 && attacking_pkmn.ability != Abilities::MAGICGUARD
             {
-                let damage_dealt = cmp::min(attacking_pkmn.maxhp / 8, attacking_pkmn.hp);
+                // (L113: at least 1)
+                let damage_dealt =
+                    cmp::min(cmp::max(attacking_pkmn.maxhp / 8, 1), attacking_pkmn.hp);
 
                 instructions
                     .instruction_list

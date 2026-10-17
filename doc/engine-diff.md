@@ -256,6 +256,7 @@ harness 必须把 Showdown 的状态完整映射到引擎，否则不一致来�
 | L110 | 决策点回合暴露的两处：束缚 / Mean Look 的使用者倒下后效果结束（Showdown：来源不在场），引擎回合末仍造成束缚伤害；harness：Roost 当回合 Showdown 的 getTypes 去掉飞行（纯飞行变一般），不当作属性变化（引擎的 roost volatile 另行比较） | 引擎 + harness | 已修复 | `test_l110_roost_is_no_type_change`；`test_l110_partial_trap_ends_with_its_fainted_user` | `generate_instructions.rs` 回合末 volatile 一段开头；`enginecheck._changed_types`。wide2 b258-t27 换了最接近的结果（`--force`）：这一击自己带来的中毒 + 回合末掷骰决定的击倒，L109 的估计看不到这一击的追加效果 |
 | L111 | Battle Bond 只对 Greninja-Bond 有效、每场一次（Showdown 检查物种和 bondTriggered）；引擎对任何持有者每次击倒都加 | 引擎 + harness + 状态构造 | 已修复 | `test_l111_battle_bond`（Greninja-Bond / Greninja 两个参数） | `abilities.rs`；用过的 base ability 为 none（`showdown_state.js` 的 used_once 加上 bondTriggered；`timers.py` 从 `-activate ability: Battle Bond` 记下） |
 | L112 | 换人招式的使用者被自己的招式打倒（Rocky Helmet、Rough Skin、反伤）时不换人（Showdown：没有它的换人请求，回合继续：对方的招式没有目标而失败，然后回合末）；引擎停在换人上，并把对方的招式留给替换上来的宝可梦。另外以对方宝可梦为目标的变化招式在对方倒下后失败（[notarget]；场地 / 一侧的招式、非鬼系 Curse 照样） | 引擎 | 已修复 | `test_l112_pivot_user_fainting`；`test_l112_status_move_without_a_target`（Pain Split / Stealth Rock / Curse） | `generate_instructions.rs` `after_move_finish`、`cannot_use_move` |
+| L113 | Knock Off 的使用者被这一击的接触伤害（Rocky Helmet、Rough Skin / Iron Barbs）打倒时什么也拿不走（Showdown 的 onAfterHit 要求使用者还有 HP）；另外这些伤害、Rocky Helmet / Life Orb 等的负回复至少 1（Showdown 的 damage；1 HP 的 Shedinja） | 引擎 | 已修复 | `test_l113_knock_off_user_fainting_to_rocky_helmet` | `choice_effects.rs` Knock Off；`abilities.rs` Rough Skin；`generate_instructions.rs` `get_instructions_from_heal` |
 
 ## 修复与验证（2026-10-16）
 

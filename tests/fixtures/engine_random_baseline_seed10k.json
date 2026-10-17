@@ -37,9 +37,6 @@
 "hp",
 "status"
 ],
-"b135-t18": [
-"item"
-],
 "b137-t20": [
 "hp"
 ],
@@ -130,7 +127,6 @@
 "boost.spa"
 ],
 "b236-t27": [
-"item",
 "status"
 ],
 "b237-t19": [
@@ -181,9 +177,6 @@
 "item",
 "status",
 "volatile.protosynthesisatk"
-],
-"b288-t27": [
-"item"
 ],
 "b29-t52": [
 "hp",

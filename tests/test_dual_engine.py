@@ -3096,3 +3096,24 @@ def test_l112_status_move_without_a_target():
         assert any(x.startswith("|faint|p1a: Cinderace") for x in states[2]["log"]), move
         outs = ec.engine_outcomes(ec.engine_state(states[1]), "uturn", move)
         assert ec.closest(states[2], outs, (2, 1), hp=True)["diff"] == {}, move
+
+
+# L113 (doc/engine-diff.md): Knock Off takes nothing when its user faints from the hit's contact
+# damage (Rocky Helmet, Rough Skin / Iron Barbs: Showdown's onAfterHit needs the user's HP); the
+# engine took the item
+def test_l113_knock_off_user_fainting_to_rocky_helmet():
+    shed = """Shedinja @ Heavy-Duty Boots
+Ability: Wonder Guard
+EVs: 252 Atk / 252 Spe
+Adamant Nature
+- Knock Off
+- Shadow Sneak
+- Protect
+- X-Scissor"""
+    pult = _attacker("Dragapult", "Infiltrator", "Choice Specs", "- Shadow Ball\n- Draco Meteor\n- U-turn\n- Flamethrower", "Timid")
+    chomp = _setter("Garchomp", "Rough Skin", "Rocky Helmet", "- Earthquake\n- Stealth Rock\n- Swords Dance\n- Spikes")
+    states = ec.run_showdown(shed + "\n\n" + pult, chomp, [("move knockoff", "move spikes")])
+    assert any(x.startswith("|faint|p1a: Shedinja") for x in states[1]["log"])
+    assert states[1]["sides"][1]["mons"][0]["item"] == "rockyhelmet"
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "knockoff", "spikes")
+    assert ec.closest(states[1], outs, (2, 1), hp=True)["diff"] == {}

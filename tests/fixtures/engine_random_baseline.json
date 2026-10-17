@@ -5,9 +5,6 @@
 "teams": "87327e3ee174c1b9"
 },
 "mismatches": {
-"b0-t47": [
-"item"
-],
 "b100-t13": [
 "boost.atk",
 "boost.def",
@@ -31,17 +28,11 @@
 "b123-t5": [
 "hp"
 ],
-"b131-t33": [
-"item"
-],
 "b149-t34": [
 "weather"
 ],
 "b152-t17": [
 "spikes"
-],
-"b165-t16": [
-"item"
 ],
 "b166-t17": [
 "volatile.healblock"
