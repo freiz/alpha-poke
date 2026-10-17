@@ -3072,7 +3072,8 @@ fn terastallized_base_power_floor(
         || matches!(
             choice.move_id,
             Choices::ERUPTION | Choices::WATERSPOUT | Choices::DRAGONENERGY
-        );
+        )
+        || power_from_callback(choice.move_id);
     if attacker.terastallized
         && choice.move_type == attacker.tera_type
         && choice.base_power < 60.0
@@ -3081,6 +3082,38 @@ fn terastallized_base_power_floor(
         && choice.priority <= 0
         && choice.multi_hit() == MultiHitMove::None
         && choice.multi_accuracy() == MultiAccuracyMove::None
+    {
+        choice.base_power = 60.0;
+    }
+}
+
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L174): the moves below 60 whose power is
+// Showdown's basePowerCallback (modify_choice here): the tera floor reads the power it gives
+// (Acrobatics without an item: 110, no floor), after it and before the BasePower modifiers
+fn power_from_callback(move_id: Choices) -> bool {
+    matches!(
+        move_id,
+        Choices::ACROBATICS
+            | Choices::PAYBACK
+            | Choices::PURSUIT
+            | Choices::RAGEFIST
+            | Choices::LASTRESPECTS
+            | Choices::STOREDPOWER
+            | Choices::POWERTRIP
+    )
+}
+
+#[cfg(feature = "terastallization")]
+fn tera_floor_after_callback(state: &State, choice: &mut Choice, attacking_side: &SideReference) {
+    let attacker = state
+        .get_side_immutable(attacking_side)
+        .get_active_immutable();
+    if power_from_callback(choice.move_id)
+        && attacker.terastallized
+        && choice.move_type == attacker.tera_type
+        && choice.base_power < 60.0
+        && choice.base_power > 0.0
+        && choice.priority <= 0
     {
         choice.base_power = 60.0;
     }
@@ -3106,6 +3139,8 @@ pub fn before_move(
     choice_before_move(state, choice, attacking_side, incoming_instructions);
 
     modify_choice(state, choice, defender_choice, attacking_side);
+    #[cfg(feature = "terastallization")]
+    tera_floor_after_callback(state, choice, attacking_side);
 
     ability_modify_attack_being_used(state, choice, defender_choice, attacking_side);
     ability_modify_attack_against(state, choice, defender_choice, attacking_side);
@@ -8463,6 +8498,9 @@ pub fn calculate_damage_rolls(
     mut defending_choice: &Choice,
 ) -> Option<Vec<i16>> {
     let mut incoming_instructions = StateInstructions::default();
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L174): the move's priority as in a turn
+    // (Grassy Glide in Grassy Terrain, Gale Wings, Triage: the tera floor reads it)
+    modify_choice_priority(&state, attacking_side_ref, &mut choice);
 
     if choice.flags.charge {
         choice.flags.charge = false;

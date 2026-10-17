@@ -4589,3 +4589,28 @@ def test_l173_dragon_tail_into_red_card():
     assert states[1]["sides"][0]["mons"][0]["item"] == "redcard"
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "softboiled", "dragontail")
     assert ec.closest(states[1], outs, (2, 2), hp=True)["diff"] == {}
+
+
+# L174 (doc/engine-diff.md): the tera floor of 60 reads a basePowerCallback's power (Acrobatics
+# without an item: 110, no floor; was floored to 60 and then doubled) and the move's priority as
+# modified (Grassy Glide in Grassy Terrain: none)
+TORNADUS_ACRO = """Tornadus-Therian
+Ability: Regenerator
+Tera Type: Flying
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- Acrobatics
+- U-turn
+- Taunt
+- Knock Off"""
+
+
+def test_l174_tera_acrobatics_without_an_item():
+    # the max damage (Showdown's getDamage probe) once terastallized: within the HP comparison's
+    # roll spread the 120 vs 110 power would not show
+    states = ec.run_showdown(TORNADUS_ACRO, BLISSEY, [("move taunt terastallize", "move softboiled")],
+                             damage_probe=True)  # fmt: skip
+    assert states[1]["sides"][0]["mons"][0]["terastallized"]
+    want = states[1]["damage"]["p1"]["acrobatics"]
+    got = pe.calculate_damage(ec.engine_state(states[1]), "acrobatics", "softboiled", True)[0]
+    assert got[0] == want  # (the no-crit max; got[1]: the crit)
