@@ -1117,15 +1117,7 @@ pub fn item_before_move(
     side_ref: &SideReference,
     instructions: &mut StateInstructions,
 ) {
-    if unnerved(state, side_ref) {
-        return;
-    }
     let (attacking_side, defending_side) = state.get_both_sides(side_ref);
-    // alpha-poke patch (2026-10-13): read before the active is borrowed
-    let confused = attacking_side
-        .volatile_statuses
-        .contains(&PokemonVolatileStatus::CONFUSION);
-    let mental_herb_cures = has_any(attacking_side, &MENTAL_HERB_CURES);
     let active_pkmn = attacking_side.get_active();
     let defending_pkmn = defending_side.get_active();
     match defending_pkmn.item {
@@ -1421,87 +1413,7 @@ pub fn item_before_move(
             PokemonType::FAIRY,
             instructions,
         ),
-        Items::LUMBERRY if active_pkmn.status != PokemonStatus::NONE || confused => {
-            lum_berry(side_ref, attacking_side, instructions)
-        }
-        // alpha-poke patch (2026-10-13)
-        Items::PECHABERRY
-            if active_pkmn.status == PokemonStatus::POISON
-                || active_pkmn.status == PokemonStatus::TOXIC =>
-        {
-            status_berry(side_ref, attacking_side, Items::PECHABERRY, instructions)
-        }
-        Items::CHERIBERRY if active_pkmn.status == PokemonStatus::PARALYZE => {
-            status_berry(side_ref, attacking_side, Items::CHERIBERRY, instructions)
-        }
-        Items::RAWSTBERRY if active_pkmn.status == PokemonStatus::BURN => {
-            status_berry(side_ref, attacking_side, Items::RAWSTBERRY, instructions)
-        }
-        Items::ASPEARBERRY if active_pkmn.status == PokemonStatus::FREEZE => {
-            status_berry(side_ref, attacking_side, Items::ASPEARBERRY, instructions)
-        }
-        Items::PERSIMBERRY if confused => cure_volatiles_item(
-            side_ref,
-            attacking_side,
-            Items::PERSIMBERRY,
-            &[PokemonVolatileStatus::CONFUSION],
-            instructions,
-        ),
-        Items::MENTALHERB if mental_herb_cures => cure_volatiles_item(
-            side_ref,
-            attacking_side,
-            Items::MENTALHERB,
-            &MENTAL_HERB_CURES,
-            instructions,
-        ),
-        Items::FIGYBERRY
-        | Items::WIKIBERRY
-        | Items::MAGOBERRY
-        | Items::AGUAVBERRY
-        | Items::IAPAPABERRY
-        | Items::ORANBERRY
-            if pinch_berry_heal(active_pkmn).is_some() =>
-        {
-            pinch_berry(side_ref, attacking_side, instructions)
-        }
-        Items::SITRUSBERRY
-            if active_pkmn.ability == Abilities::GLUTTONY
-                && active_pkmn.hp <= active_pkmn.maxhp / 2 =>
-        {
-            sitrus_berry(side_ref, attacking_side, instructions)
-        }
-        // (L75: at 1/2, as Showdown; was 1/4)
-        Items::SITRUSBERRY if active_pkmn.hp <= active_pkmn.maxhp / 2 => {
-            sitrus_berry(side_ref, attacking_side, instructions)
-        }
-        Items::CHESTOBERRY if active_pkmn.status == PokemonStatus::SLEEP => {
-            chesto_berry(side_ref, attacking_side, instructions)
-        }
-        Items::PETAYABERRY if active_pkmn.hp <= active_pkmn.maxhp / 4 => boost_berry(
-            side_ref,
-            state,
-            PokemonBoostableStat::SpecialAttack,
-            instructions,
-        ),
-        Items::LIECHIBERRY if active_pkmn.hp <= active_pkmn.maxhp / 4 => {
-            boost_berry(side_ref, state, PokemonBoostableStat::Attack, instructions)
-        }
-        Items::SALACBERRY if active_pkmn.hp <= active_pkmn.maxhp / 4 => {
-            boost_berry(side_ref, state, PokemonBoostableStat::Speed, instructions)
-        }
-        // alpha-poke patch (2026-10-16, doc/engine-diff.md L24): Ganlon / Apicot / Lansat Berry
-        Items::GANLONBERRY if active_pkmn.hp <= active_pkmn.maxhp / 4 => {
-            boost_berry(side_ref, state, PokemonBoostableStat::Defense, instructions)
-        }
-        Items::APICOTBERRY if active_pkmn.hp <= active_pkmn.maxhp / 4 => boost_berry(
-            side_ref,
-            state,
-            PokemonBoostableStat::SpecialDefense,
-            instructions,
-        ),
-        Items::LANSATBERRY if active_pkmn.hp <= active_pkmn.maxhp / 4 && active_pkmn.hp > 0 => {
-            lansat_berry(side_ref, attacking_side, instructions)
-        }
+        // (L147: its own berries / Mental Herb: item_update, Showdown's Update)
         Items::CHOICESPECS | Items::CHOICEBAND | Items::CHOICESCARF => {
             let ins = get_choice_move_disable_instructions(active_pkmn, side_ref, &choice.move_id);
             for i in ins {
@@ -1626,41 +1538,46 @@ pub fn item_on_switch_in(
 // alpha-poke patch (2026-10-16, doc/engine-diff.md L75): the HP berries as soon as a hit takes
 // their holder there (Showdown's onUpdate): Sitrus at 1/2, the pinch heal berries / Oran, the stat
 // berries at 1/4 (1/2 with Gluttony); not under Heal Block for the heals
-pub fn berry_on_damage(
-    state: &mut State,
-    side_ref: &SideReference,
-    instructions: &mut StateInstructions,
-) {
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L147): Showdown's Update for one active's item:
+// its onUpdate handlers (the HP, stat and status berries, Mental Herb), the berries through
+// eatItem (alive, not under Unnerve; the HP ones not under Heal Block: TryEatItem). The one place
+// the engine runs them (generate_instructions::update, at Showdown's Update points: after a hit,
+// after an action, after the weather's damage); before, three diverging copies did (at a hit's
+// damage, before the holder's move, at the end of the turn). Starf Berry: its own branches;
+// Leppa Berry: at the PP use; Booster Energy: abilities::paradox_update
+pub fn item_update(state: &mut State, side_ref: &SideReference, instructions: &mut StateInstructions) {
+    let a = state.get_side_immutable(side_ref).get_active_immutable();
+    if a.hp <= 0 || a.item == Items::NONE || a.ability == Abilities::KLUTZ {
+        return;
+    }
     if unnerved(state, side_ref) {
         return;
     }
     let side = state.get_side(side_ref);
-    let heal_blocked = side
+    let confused = side
         .volatile_statuses
-        .contains(&PokemonVolatileStatus::HEALBLOCK);
+        .contains(&PokemonVolatileStatus::CONFUSION);
+    let mental_herb_cures = has_any(side, &MENTAL_HERB_CURES);
     let a = side.get_active_immutable();
-    if a.hp <= 0 {
-        return;
-    }
-    let pinch = if a.ability == Abilities::GLUTTONY {
-        a.maxhp / 2
-    } else {
-        a.maxhp / 4
-    };
-    let low = a.hp <= pinch;
+    let low = a.hp <= a.maxhp / 4 || (a.ability == Abilities::GLUTTONY && a.hp <= a.maxhp / 2);
+    let status = a.status;
     match a.item {
-        Items::SITRUSBERRY if a.hp <= a.maxhp / 2 && !heal_blocked => {
-            sitrus_berry(side_ref, side, instructions)
-        }
+        Items::SITRUSBERRY if a.hp <= a.maxhp / 2 => sitrus_berry(side_ref, side, instructions),
         Items::FIGYBERRY
         | Items::WIKIBERRY
         | Items::MAGOBERRY
         | Items::AGUAVBERRY
         | Items::IAPAPABERRY
         | Items::ORANBERRY
-            if pinch_berry_heal(a).is_some() && !heal_blocked =>
+            if pinch_berry_heal(a).is_some() =>
         {
             pinch_berry(side_ref, side, instructions)
+        }
+        Items::LIECHIBERRY if low => {
+            boost_berry(side_ref, state, PokemonBoostableStat::Attack, instructions)
+        }
+        Items::GANLONBERRY if low => {
+            boost_berry(side_ref, state, PokemonBoostableStat::Defense, instructions)
         }
         Items::PETAYABERRY if low => boost_berry(
             side_ref,
@@ -1668,22 +1585,48 @@ pub fn berry_on_damage(
             PokemonBoostableStat::SpecialAttack,
             instructions,
         ),
-        Items::LIECHIBERRY if low => {
-            boost_berry(side_ref, state, PokemonBoostableStat::Attack, instructions)
-        }
-        Items::SALACBERRY if low => {
-            boost_berry(side_ref, state, PokemonBoostableStat::Speed, instructions)
-        }
-        Items::GANLONBERRY if low => {
-            boost_berry(side_ref, state, PokemonBoostableStat::Defense, instructions)
-        }
         Items::APICOTBERRY if low => boost_berry(
             side_ref,
             state,
             PokemonBoostableStat::SpecialDefense,
             instructions,
         ),
+        Items::SALACBERRY if low => {
+            boost_berry(side_ref, state, PokemonBoostableStat::Speed, instructions)
+        }
         Items::LANSATBERRY if low => lansat_berry(side_ref, side, instructions),
+        Items::LUMBERRY if status != PokemonStatus::NONE || confused => {
+            lum_berry(side_ref, side, instructions)
+        }
+        Items::PECHABERRY if matches!(status, PokemonStatus::POISON | PokemonStatus::TOXIC) => {
+            status_berry(side_ref, side, Items::PECHABERRY, instructions)
+        }
+        Items::CHERIBERRY if status == PokemonStatus::PARALYZE => {
+            status_berry(side_ref, side, Items::CHERIBERRY, instructions)
+        }
+        Items::RAWSTBERRY if status == PokemonStatus::BURN => {
+            status_berry(side_ref, side, Items::RAWSTBERRY, instructions)
+        }
+        Items::ASPEARBERRY if status == PokemonStatus::FREEZE => {
+            status_berry(side_ref, side, Items::ASPEARBERRY, instructions)
+        }
+        Items::CHESTOBERRY if status == PokemonStatus::SLEEP => {
+            chesto_berry(side_ref, side, instructions)
+        }
+        Items::PERSIMBERRY if confused => cure_volatiles_item(
+            side_ref,
+            side,
+            Items::PERSIMBERRY,
+            &[PokemonVolatileStatus::CONFUSION],
+            instructions,
+        ),
+        Items::MENTALHERB if mental_herb_cures => cure_volatiles_item(
+            side_ref,
+            side,
+            Items::MENTALHERB,
+            &MENTAL_HERB_CURES,
+            instructions,
+        ),
         _ => {}
     }
 }
@@ -1718,49 +1661,7 @@ pub fn item_end_of_turn(
         .contains(&PokemonVolatileStatus::HEALBLOCK);
     let active_pkmn = attacking_side.get_active();
     match active_pkmn.item {
-        Items::LUMBERRY if active_pkmn.status != PokemonStatus::NONE || confused => {
-            lum_berry(side_ref, attacking_side, instructions)
-        }
-        // alpha-poke patch (2026-10-13)
-        Items::PECHABERRY
-            if active_pkmn.status == PokemonStatus::POISON
-                || active_pkmn.status == PokemonStatus::TOXIC =>
-        {
-            status_berry(side_ref, attacking_side, Items::PECHABERRY, instructions)
-        }
-        Items::CHERIBERRY if active_pkmn.status == PokemonStatus::PARALYZE => {
-            status_berry(side_ref, attacking_side, Items::CHERIBERRY, instructions)
-        }
-        Items::RAWSTBERRY if active_pkmn.status == PokemonStatus::BURN => {
-            status_berry(side_ref, attacking_side, Items::RAWSTBERRY, instructions)
-        }
-        Items::ASPEARBERRY if active_pkmn.status == PokemonStatus::FREEZE => {
-            status_berry(side_ref, attacking_side, Items::ASPEARBERRY, instructions)
-        }
-        Items::PERSIMBERRY if confused => cure_volatiles_item(
-            side_ref,
-            attacking_side,
-            Items::PERSIMBERRY,
-            &[PokemonVolatileStatus::CONFUSION],
-            instructions,
-        ),
-        Items::MENTALHERB if mental_herb_cures => cure_volatiles_item(
-            side_ref,
-            attacking_side,
-            Items::MENTALHERB,
-            &MENTAL_HERB_CURES,
-            instructions,
-        ),
-        Items::FIGYBERRY
-        | Items::WIKIBERRY
-        | Items::MAGOBERRY
-        | Items::AGUAVBERRY
-        | Items::IAPAPABERRY
-        | Items::ORANBERRY
-            if pinch_berry_heal(active_pkmn).is_some() =>
-        {
-            pinch_berry(side_ref, attacking_side, instructions)
-        }
+        // (L147: the berries / Mental Herb: item_update, Showdown's Update)
         // alpha-poke patch (2026-10-16, L24): Sticky Barb, 1/8 at the end of every turn (Showdown's
         // residual order 28, with the orbs)
         // (L83: not through Magic Guard)
@@ -1773,37 +1674,6 @@ pub fn item_end_of_turn(
                     damage_amount,
                 }));
             active_pkmn.hp -= damage_amount;
-        }
-        // alpha-poke patch (2026-10-16, doc/engine-diff.md L24): the stat pinch berries at the end
-        // of the turn too (Showdown eats them when the hit takes the holder there; before, only at
-        // its next move: item_before_move)
-        Items::LIECHIBERRY if active_pkmn.hp <= active_pkmn.maxhp / 4 && active_pkmn.hp > 0 => {
-            boost_berry(side_ref, state, PokemonBoostableStat::Attack, instructions)
-        }
-        Items::PETAYABERRY if active_pkmn.hp <= active_pkmn.maxhp / 4 && active_pkmn.hp > 0 => {
-            boost_berry(
-                side_ref,
-                state,
-                PokemonBoostableStat::SpecialAttack,
-                instructions,
-            )
-        }
-        Items::SALACBERRY if active_pkmn.hp <= active_pkmn.maxhp / 4 && active_pkmn.hp > 0 => {
-            boost_berry(side_ref, state, PokemonBoostableStat::Speed, instructions)
-        }
-        Items::GANLONBERRY if active_pkmn.hp <= active_pkmn.maxhp / 4 && active_pkmn.hp > 0 => {
-            boost_berry(side_ref, state, PokemonBoostableStat::Defense, instructions)
-        }
-        Items::APICOTBERRY if active_pkmn.hp <= active_pkmn.maxhp / 4 && active_pkmn.hp > 0 => {
-            boost_berry(
-                side_ref,
-                state,
-                PokemonBoostableStat::SpecialDefense,
-                instructions,
-            )
-        }
-        Items::LANSATBERRY if active_pkmn.hp <= active_pkmn.maxhp / 4 && active_pkmn.hp > 0 => {
-            lansat_berry(side_ref, attacking_side, instructions)
         }
         // alpha-poke patch (2026-10-16, L24): Micle Berry, eaten at the end of the turn at 1/4 HP
         Items::MICLEBERRY
@@ -1841,12 +1711,6 @@ pub fn item_end_of_turn(
                     .volatile_statuses
                     .insert(PokemonVolatileStatus::MICLEBERRY);
             }
-        }
-        Items::SITRUSBERRY if active_pkmn.hp <= active_pkmn.maxhp / 2 => {
-            sitrus_berry(side_ref, attacking_side, instructions)
-        }
-        Items::CHESTOBERRY if active_pkmn.status == PokemonStatus::SLEEP => {
-            chesto_berry(side_ref, attacking_side, instructions)
         }
         Items::BLACKSLUDGE => {
             if active_pkmn.has_type(&PokemonType::POISON) {

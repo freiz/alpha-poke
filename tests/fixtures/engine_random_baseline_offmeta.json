@@ -17,10 +17,6 @@
 "b111-t17": [
 "hp"
 ],
-"b128-t2": [
-"hp",
-"item"
-],
 "b137-t2": [
 "boost.atk"
 ],
@@ -163,21 +159,12 @@
 "b62-t19": [
 "status"
 ],
-"b65-t20": [
-"hp",
-"status"
-],
 "b67-t16": [
 "hp",
 "status"
 ],
 "b72-t12": [
 "boost.spe"
-],
-"b74-t14": [
-"boost.atk",
-"hp",
-"status"
 ],
 "b76-t17": [
 "item"

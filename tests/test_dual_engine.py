@@ -3739,3 +3739,36 @@ Jolly Nature
         k, c = 0, ("blissey", "protect")
     outs = ec.engine_outcomes(ec.engine_state(states[k]), *c)
     assert ec.closest(states[k + 1], outs, (2, 1), hp=True)["diff"] == {}
+
+
+# L147 (doc/engine-diff.md): Showdown's Update -- the berries' onUpdate after each hit (after its
+# secondaries), after each action and after the weather's residual -- one place in the engine: a
+# hit's own Heal Block (Psychic Noise) comes before the Sitrus Berry it takes to half (the engine
+# ate the berry at the damage, before the secondaries)
+def test_l147_update_after_the_secondaries():
+    user = _setter("Latios", "Levitate", "Leftovers", "- Psychic Noise\n- Recover\n- Protect\n- Draco Meteor")
+    user = user.replace("Careful", "Modest").replace("4 Atk / 252 SpD", "252 SpA / 4 SpD")
+    foe = """Azumarill @ Sitrus Berry
+Ability: Huge Power
+Tera Type: Water
+EVs: 4 HP / 252 Atk / 252 Spe
+Adamant Nature
+- Belly Drum
+- Aqua Jet
+- Play Rough
+- Protect"""
+    states = ec.run_showdown(user, foe, [("move psychicnoise", "move bellydrum")])
+    assert states[1]["sides"][1]["mons"][0]["item"] == "sitrusberry"
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "psychicnoise", "bellydrum")
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L147: the Update comes before a drag move's drag too (the random differential's wide2 b66-t11:
+# Dragon Tail takes Salazzle under half, its Sitrus Berry is eaten before it is dragged out)
+def test_l147_update_before_the_drag():
+    a, b = _random_position("random_battle_teams_wide2.jsonl", 66, 11, 30000)
+    assert any("|-enditem|p2a: Salazzle|Sitrus Berry|[eat]" in x for x in b["state"]["log"])
+    c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
+    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2)
+    n = tuple(len(s["mons"]) for s in a["state"]["sides"])
+    assert ec.closest(b["state"], outs, n, hp=True)["diff"] == {}

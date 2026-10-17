@@ -649,12 +649,9 @@ fn generate_instructions_from_switch(
     ability_on_switch_in(state, &switching_side_ref, incoming_instructions);
     extend_field_durations(state, &switching_side_ref, incoming_instructions, from);
     item_on_switch_in(state, &switching_side_ref, incoming_instructions);
-    // (L141: the foe's Protosynthesis / Quark Drive after the weather / terrain this one set)
-    super::abilities::paradox_update(
-        state,
-        &switching_side_ref.get_other_side(),
-        incoming_instructions,
-    );
+    // (L141: the foe's Protosynthesis / Quark Drive after the weather / terrain this one set;
+    // L147: Showdown's Update after the switch-in)
+    update(state, incoming_instructions);
 }
 
 fn generate_instructions_from_increment_side_condition(
@@ -1762,32 +1759,13 @@ fn lock_end_instructions(
             .volatile_statuses
             .contains(&PokemonVolatileStatus::CONFUSION)
     {
-        // alpha-poke patch (2026-10-17, doc/engine-diff.md L143): a Lum / Persim Berry cures the
-        // fatigue at once (Showdown's onUpdate); before, the confusion stayed until its holder's
-        // next move
-        if matches!(active.item, Items::LUMBERRY | Items::PERSIMBERRY)
-            && !super::items::unnerved(state, side_ref)
-        {
-            out.push(Instruction::ChangeItem(ChangeItemInstruction {
+        // (L143 / L147: a Lum / Persim Berry cures it at the Update after the move)
+        out.push(Instruction::ApplyVolatileStatus(
+            ApplyVolatileStatusInstruction {
                 side_ref: *side_ref,
-                current_item: active.item,
-                new_item: Items::NONE,
-            }));
-            if active.last_item != active.item {
-                out.push(Instruction::ChangeLastItem(ChangeItemInstruction {
-                    side_ref: *side_ref,
-                    current_item: active.last_item,
-                    new_item: active.item,
-                }));
-            }
-        } else {
-            out.push(Instruction::ApplyVolatileStatus(
-                ApplyVolatileStatusInstruction {
-                    side_ref: *side_ref,
-                    volatile_status: PokemonVolatileStatus::CONFUSION,
-                },
-            ));
-        }
+                volatile_status: PokemonVolatileStatus::CONFUSION,
+            },
+        ));
     }
     out
 }
@@ -2423,31 +2401,7 @@ fn generate_instructions_from_damage(
                     &mut incoming_instructions,
                     from,
                 );
-                // L75: the defender's HP berries at once -- unless Knock Off / Thief take the
-                // berry first (their onAfterHit comes before the berry's onUpdate)
-                let defender = state
-                    .get_side_immutable(&attacking_side_ref.get_other_side())
-                    .get_active_immutable();
-                let removable = defender.item != Items::NONE && defender.item_can_be_removed();
-                let taken = match choice.move_id {
-                    Choices::KNOCKOFF => removable,
-                    Choices::THIEF => {
-                        removable
-                            && state
-                                .get_side_immutable(attacking_side_ref)
-                                .get_active_immutable()
-                                .item
-                                == Items::NONE
-                    }
-                    _ => false,
-                };
-                if !taken {
-                    super::items::berry_on_damage(
-                        &mut state,
-                        &attacking_side_ref.get_other_side(),
-                        &mut incoming_instructions,
-                    );
-                }
+                // (L147: the defender's berries at the Update after the hit: run_move)
             }
         }
 
@@ -4971,7 +4925,7 @@ fn end_of_turn_with_harvest(
     let (h, p) = harvest_chance(state)?;
     if p >= 1.0 {
         harvest_instructions(state, h, si);
-        item_end_of_turn(state, &h, si, false);
+        super::items::item_update(state, &h, si);
         return None;
     }
     let base = si.instruction_list.len();
@@ -4979,7 +4933,7 @@ fn end_of_turn_with_harvest(
     si.update_percentage(1.0 - p);
     yes.update_percentage(p);
     harvest_instructions(state, h, &mut yes);
-    item_end_of_turn(state, &h, &mut yes, false);
+    super::items::item_update(state, &h, &mut yes);
     state.reverse_instructions(&yes.instruction_list[base..].to_vec());
     Some(yes)
 }
@@ -5140,6 +5094,10 @@ fn add_end_of_turn_instructions(
                 .instruction_list
                 .push(sand_damage_instruction);
         }
+    }
+    // (L147: Showdown's Update after the weather's residual -- eachEvent('Weather'), any weather)
+    if state.weather.weather_type != Weather::NONE {
+        update(state, &mut incoming_instructions);
     }
 
     // future sight
@@ -5533,7 +5491,6 @@ fn add_end_of_turn_instructions(
     }
 
     // volatile statuses
-    let mut heal_block_ended = vec![];
     for side_ref in sides {
         // alpha-poke patch (2026-10-17, doc/engine-diff.md L110): the trapper fainted, its partial
         // trap / Mean Look end (Showdown: the source is not active)
@@ -5542,7 +5499,6 @@ fn add_end_of_turn_instructions(
             .get_active_immutable()
             .hp
             == 0;
-        let unnerved = super::items::unnerved(state, side_ref);
         let side = state.get_side(side_ref);
         if side.get_active().hp == 0 {
             continue;
@@ -5635,24 +5591,11 @@ fn add_end_of_turn_instructions(
                             volatile_status: PokemonVolatileStatus::LOCKEDMOVE,
                         },
                     ));
-                let berry = side.get_active_immutable().item;
-                if side
+                // (L143 / L147: a Lum / Persim Berry cures it at the end of the turn's Update)
+                if !side
                     .volatile_statuses
                     .contains(&PokemonVolatileStatus::CONFUSION)
                 {
-                } else if matches!(berry, Items::LUMBERRY | Items::PERSIMBERRY) && !unnerved {
-                    // (L143: the berry cures the fatigue at once)
-                    let active = side.get_active();
-                    incoming_instructions
-                        .instruction_list
-                        .push(Instruction::ChangeItem(ChangeItemInstruction {
-                            side_ref: *side_ref,
-                            current_item: berry,
-                            new_item: Items::NONE,
-                        }));
-                    active.item = Items::NONE;
-                    super::items::set_last_item(active, *side_ref, berry, incoming_instructions);
-                } else {
                     incoming_instructions
                         .instruction_list
                         .push(Instruction::ApplyVolatileStatus(
@@ -5887,9 +5830,6 @@ fn add_end_of_turn_instructions(
                 let amount = -*duration;
                 *duration = 0;
                 side.volatile_statuses.remove(&volatile);
-                if volatile == PokemonVolatileStatus::HEALBLOCK {
-                    heal_block_ended.push(*side_ref);
-                }
                 incoming_instructions
                     .instruction_list
                     .push(Instruction::RemoveVolatileStatus(
@@ -6148,11 +6088,10 @@ fn add_end_of_turn_instructions(
         }
     } // end volatile statuses
 
-    // alpha-poke patch (2026-10-17, doc/engine-diff.md L137): a berry Heal Block kept uneaten goes
-    // once it ends (Showdown's Update after the residual)
-    for side_ref in heal_block_ended {
-        super::items::berry_on_damage(state, &side_ref, incoming_instructions);
-    }
+    // (L147: Showdown's Update after the residual action: Sitrus after the poison, a berry Heal
+    // Block kept, a lock's fatigue cured by a Lum)
+    update(state, incoming_instructions);
+
     // (L62: an item used up at the end of the turn too)
     unburden_check(state, incoming_instructions);
 }
@@ -6229,7 +6168,7 @@ fn run_move(
     } else {
         hit_count
     };
-    for _ in 0..hit_count {
+    for hit in 0..hit_count {
         if does_damage {
             hit_sub = generate_instructions_from_damage(
                 state,
@@ -6278,6 +6217,10 @@ fn run_move(
         }
         if let Some(heal) = &choice.heal {
             get_instructions_from_heal(state, heal, &attacking_side, &mut instructions);
+        }
+        // (L147: Showdown's Update after each hit but the last: that one after the secondaries)
+        if hit + 1 < hit_count {
+            update(state, &mut instructions);
         }
     } // end multi-hit
 
@@ -6525,8 +6468,10 @@ fn run_move(
                         instructions,
                         hit_sub,
                     );
-                    for branch in branches {
+                    for mut branch in branches {
                         state.apply_instructions(&branch.instruction_list);
+                        // (L147: the Update after the hit, before the drag)
+                        update(state, &mut branch);
                         get_instructions_from_drag(
                             state,
                             &defender_ref,
@@ -6536,6 +6481,7 @@ fn run_move(
                     }
                     return;
                 }
+                update(state, &mut instructions);
                 get_instructions_from_drag(state, &defender_ref, instructions, final_instructions);
                 return;
             }
@@ -6630,12 +6576,15 @@ fn run_move(
                 instructions,
                 hit_sub,
             );
-            for branch in branches {
+            for mut branch in branches {
                 state.apply_instructions(&branch.instruction_list);
+                // (L147: the Update after the hit, before the drag)
+                update(state, &mut branch);
                 get_instructions_from_drag(state, &drag_from, branch, final_instructions);
             }
             return;
         }
+        update(state, &mut instructions);
         get_instructions_from_drag(state, &drag_from, instructions, final_instructions);
         return;
     }
@@ -6789,7 +6738,9 @@ fn run_move(
             .cloned()
             .collect()
     });
+    // (L147: Showdown's Update after the hit and its secondaries, before the after-move ones)
     if kept.as_ref().map_or(true, |v| v.is_empty()) {
+        update(state, &mut instructions);
         state.reverse_instructions(&instructions.instruction_list);
         final_instructions.push(instructions);
     } else if let Some(secondaries_vec) = &kept {
@@ -6803,10 +6754,12 @@ fn run_move(
             hit_sub,
         );
         for branch in instructions_vec_after_secondaries.iter_mut() {
+            update_branch(state, branch);
             eject_pack_after_secondaries(state, attacking_side, &defender_boosts_before, branch);
         }
         final_instructions.extend(instructions_vec_after_secondaries);
     } else {
+        update(state, &mut instructions);
         state.reverse_instructions(&instructions.instruction_list);
         final_instructions.push(instructions);
     }
@@ -6862,6 +6815,27 @@ fn eject_pack_after_secondaries(
     state.reverse_instructions(&branch.instruction_list);
 }
 
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L147): Showdown's Update (eachEvent('Update'):
+// both actives' onUpdate handlers -- their items, item_update; Booster Energy, paradox_update),
+// run where Showdown runs it: after each hit of a move and its effects (run_move), after each
+// action (a move: after_move_finish; a switch-in; the end of the turn) and after the weather's
+// residual damage. The state has the instructions so far applied
+pub fn update(state: &mut State, instructions: &mut StateInstructions) {
+    for side_ref in [SideReference::SideOne, SideReference::SideTwo] {
+        super::items::item_update(state, &side_ref, instructions);
+        super::abilities::paradox_update(state, &side_ref, instructions);
+    }
+}
+
+// (update on a branch whose instructions are not applied to the state)
+fn update_branch(state: &mut State, branch: &mut StateInstructions) {
+    state.apply_instructions(&branch.instruction_list);
+    let from = branch.instruction_list.len();
+    update(state, branch);
+    state.reverse_instructions(&branch.instruction_list[from..].to_vec());
+    state.reverse_instructions(&branch.instruction_list[..from].to_vec());
+}
+
 fn after_move_finish(state: &mut State, final_instructions: &mut Vec<StateInstructions>) {
     for state_instructions in final_instructions.iter_mut() {
         state.apply_instructions(&state_instructions.instruction_list);
@@ -6882,11 +6856,9 @@ fn after_move_finish(state: &mut State, final_instructions: &mut Vec<StateInstru
             }
         }
 
-        // alpha-poke patch (2026-10-17, doc/engine-diff.md L124 / L141): Protosynthesis / Quark
-        // Drive after the move's weather / terrain
-        for side_ref in [SideReference::SideOne, SideReference::SideTwo] {
-            super::abilities::paradox_update(state, &side_ref, state_instructions);
-        }
+        // (L147: Showdown's Update after the move's action; L124 / L141: Protosynthesis / Quark
+        // Drive after its weather / terrain)
+        update(state, state_instructions);
 
         // alpha-poke patch (2026-10-17, doc/engine-diff.md L112): a pivot user that fainted from
         // its own move (Rocky Helmet, Rough Skin, recoil) does not switch out: the turn goes on
