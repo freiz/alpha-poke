@@ -645,7 +645,8 @@ pub fn modify_choice(
             }
         }
         Choices::BLIZZARD => {
-            if state.weather_is_active(&Weather::HAIL) {
+            // (L154: in snow too)
+            if state.weather_is_active(&Weather::HAIL) || state.weather_is_active(&Weather::SNOW) {
                 attacker_choice.accuracy = 100.0;
             }
         }
@@ -1601,6 +1602,27 @@ fn effective_weight(pkmn: &Pokemon) -> f32 {
     }
 }
 
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L154): Life Orb's recoil after a damaging move
+// whose damage is its own (Counter, Mirror Coat, Metal Burst: no damage boost, the recoil still --
+// Showdown's onAfterMoveSecondarySelf); the others' is a secondary (items.rs)
+fn life_orb_recoil(
+    side: &mut Side,
+    side_ref: &SideReference,
+    instructions: &mut StateInstructions,
+) {
+    let user = side.get_active();
+    if user.item == Items::LIFEORB && user.ability != Abilities::MAGICGUARD && user.hp > 0 {
+        let amount = cmp::min(cmp::max(user.maxhp / 10, 1), user.hp);
+        user.hp -= amount;
+        instructions
+            .instruction_list
+            .push(Instruction::Damage(DamageInstruction {
+                side_ref: *side_ref,
+                damage_amount: amount,
+            }));
+    }
+}
+
 pub fn choice_special_effect(
     state: &mut State,
     choice: &mut Choice,
@@ -1926,6 +1948,8 @@ pub fn choice_special_effect(
                         defending_side,
                         instructions,
                     );
+                    // (L154: Life Orb's recoil after it, Showdown's onAfterMoveSecondarySelf)
+                    life_orb_recoil(attacking_side, attacking_side_ref, instructions);
                 }
             }
         }
@@ -1953,6 +1977,8 @@ pub fn choice_special_effect(
                         defending_side,
                         instructions,
                     );
+                    // (L154: Life Orb's recoil after it, Showdown's onAfterMoveSecondarySelf)
+                    life_orb_recoil(attacking_side, attacking_side_ref, instructions);
                 }
             }
         }
@@ -1979,6 +2005,8 @@ pub fn choice_special_effect(
                         defending_side,
                         instructions,
                     );
+                    // (L154: Life Orb's recoil after it, Showdown's onAfterMoveSecondarySelf)
+                    life_orb_recoil(attacking_side, attacking_side_ref, instructions);
                 }
             }
         }

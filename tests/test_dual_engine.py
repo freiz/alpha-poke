@@ -3975,3 +3975,26 @@ def test_l153_positions(teams, i, turn, offset):
     outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2)
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
     assert ec.closest(b["state"], outs, n, hp=True)["diff"] == {}
+
+
+# L154 (doc/engine-diff.md): Sniper's crit 1.5 x (random b59-t3), Slush Rush in snow (wide200
+# b90-t4), no tera power floor for Counter (seed10k b39-t11), the order after Terastallization's
+# Embody Aspect Speed (random b128-t11), Embody Aspect whatever Ogerpon's tera type (seed10k
+# b114-t9)
+@pytest.mark.parametrize("teams,i,turn,offset", [
+    ("random_battle_teams_random.jsonl", 59, 3, 0),
+    ("random_battle_teams_wide200.jsonl", 90, 4, 40000),
+    ("random_battle_teams.jsonl", 39, 11, 10000),
+    ("random_battle_teams_random.jsonl", 128, 11, 0),
+    ("random_battle_teams.jsonl", 114, 9, 10000),
+    # (Life Orb's recoil after Counter; Neutralizing Gas stops Sniper and Embody Aspect)
+    ("random_battle_teams.jsonl", 39, 13, 10000),
+    ("random_battle_teams_wide.jsonl", 221, 1, 0),
+    ("random_battle_teams_forum.jsonl", 90, 17, 50000),
+])  # fmt: skip
+def test_l154_positions(teams, i, turn, offset):
+    a, b = _random_position(teams, i, turn, offset)
+    c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
+    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2)
+    n = tuple(len(s["mons"]) for s in a["state"]["sides"])
+    assert ec.closest(b["state"], outs, n, hp=True)["diff"] == {}

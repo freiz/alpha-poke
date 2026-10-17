@@ -2638,9 +2638,10 @@ fn embody_aspect_on_tera(
         ),
         _ => return,
     };
-    if active.tera_type != tera {
-        return;
-    }
+    // (L154: any tera type -- Showdown's terastallize changes Ogerpon to its -Tera forme
+    // whatever the type; was the mask's type only. Not under the foe's Neutralizing Gas: the
+    // ability starts when it ends, L146)
+    let _ = tera;
     if active.ability != ability {
         instructions
             .instruction_list
@@ -2650,6 +2651,14 @@ fn embody_aspect_on_tera(
             }));
         active.ability = ability;
     }
+    let shielded = active.item == Items::ABILITYSHIELD;
+    let foe = state
+        .get_side_immutable(&side_ref.get_other_side())
+        .get_active_immutable();
+    if foe.ability == Abilities::NEUTRALIZINGGAS && foe.hp > 0 && !shielded {
+        return;
+    }
+    let side = state.get_side(&side_ref);
     apply_boost_instruction(side, &stat, &1, &side_ref, &side_ref, instructions);
 }
 
@@ -2912,9 +2921,20 @@ fn terastallized_base_power_floor(
         .get_side_immutable(attacking_side)
         .get_active_immutable();
 
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L154): not a move without power (Counter,
+    // Seismic Toss, ...: Showdown's getDamage returns first) nor one whose power is its own
+    // (data 0 or 150 with a basePowerCallback: Low Kick, Heavy Slam, Gyro Ball, Eruption, ...)
+    let data_power = MOVES.get(&choice.move_id).map_or(choice.base_power, |m| m.base_power);
+    let own_power = data_power == 0.0
+        || matches!(
+            choice.move_id,
+            Choices::ERUPTION | Choices::WATERSPOUT | Choices::DRAGONENERGY
+        );
     if attacker.terastallized
         && choice.move_type == attacker.tera_type
         && choice.base_power < 60.0
+        && choice.base_power > 0.0
+        && !own_power
         && choice.priority <= 0
         && choice.multi_hit() == MultiHitMove::None
         && choice.multi_accuracy() == MultiAccuracyMove::None
@@ -4633,7 +4653,10 @@ fn get_effective_speed(state: &State, side_reference: &SideReference) -> i16 {
             boosted_speed *= 2.0
         }
         Weather::SAND if active_pkmn.ability == Abilities::SANDRUSH => boosted_speed *= 2.0,
-        Weather::HAIL if active_pkmn.ability == Abilities::SLUSHRUSH => boosted_speed *= 2.0,
+        // (L154: in snow too, Showdown's isWeather(['hail', 'snowscape']))
+        Weather::HAIL | Weather::SNOW if active_pkmn.ability == Abilities::SLUSHRUSH => {
+            boosted_speed *= 2.0
+        }
         _ => {}
     }
 
@@ -7528,9 +7551,9 @@ pub fn generate_instructions_from_move_pair(
     modify_choice_priority(&state, &SideReference::SideOne, &mut side_one_choice);
     modify_choice_priority(&state, &SideReference::SideTwo, &mut side_two_choice);
 
-    // reverse instructions because mega-evolving might've added some
-    state.reverse_instructions(&incoming_instructions.instruction_list);
-
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L154): the order with the turn's start
+    // applied -- Terastallization's Embody Aspect Speed, a Mega Evolution's (Showdown, Gen 8+:
+    // the queue resorted by the speeds after each action); it was taken after reversing them
     let items_before = incoming_instructions.instruction_list.len();
     let order = moves_first(
         &state,
@@ -7543,6 +7566,10 @@ pub fn generate_instructions_from_move_pair(
     let custap = incoming_instructions.instruction_list.len() > items_before;
     let side_one_first =
         quick_claw_first_chance(&state, &side_one_choice, &side_two_choice, &order, custap);
+
+    // reverse instructions because mega-evolving might've added some (not moves_first's Custap
+    // Berry ones: never applied)
+    state.reverse_instructions(&incoming_instructions.instruction_list[..items_before].to_vec());
     let order = if side_one_first >= 1.0 {
         SideMovesFirst::SideOne
     } else if side_one_first <= 0.0 {

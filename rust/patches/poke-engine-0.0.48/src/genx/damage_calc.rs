@@ -775,7 +775,18 @@ fn common_pkmn_damage_calc(
         let b = level * base_power * a / d / 50 + 2;
         modify(b, q4096(weather_mod))
     };
-    let crit_base = base(crit_attacking_stat, crit_defending_stat) as f32 * CRIT_MULTIPLIER;
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L154): Sniper, a crit's 1.5 x more
+    // (Showdown's onModifyDamage; here on the crit's base)
+    let gassed = defender.ability == Abilities::NEUTRALIZINGGAS
+        && defender.hp > 0
+        && attacker.item != Items::ABILITYSHIELD;
+    let sniper = if attacker.ability == Abilities::SNIPER && !gassed {
+        1.5
+    } else {
+        1.0
+    };
+    let crit_base =
+        base(crit_attacking_stat, crit_defending_stat) as f32 * CRIT_MULTIPLIER * sniper;
 
     let screen_mod = if attacker.ability != Abilities::INFILTRATOR
         && (defending_side.side_conditions.aurora_veil > 0

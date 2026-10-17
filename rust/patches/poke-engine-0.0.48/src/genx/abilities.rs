@@ -1528,7 +1528,8 @@ pub fn ability_end_of_turn(
             }
         }
         Abilities::ICEBODY => {
-            if state.weather_is_active(&Weather::HAIL) {
+            // (L154: in snow too)
+            if state.weather_is_active(&Weather::HAIL) || state.weather_is_active(&Weather::SNOW) {
                 let active_pkmn = state.get_side(side_ref).get_active();
                 let health_recovered =
                     cmp::min(active_pkmn.maxhp / 16, active_pkmn.maxhp - active_pkmn.hp);
