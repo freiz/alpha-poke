@@ -1729,12 +1729,32 @@ fn lock_end_instructions(
             .volatile_statuses
             .contains(&PokemonVolatileStatus::CONFUSION)
     {
-        out.push(Instruction::ApplyVolatileStatus(
-            ApplyVolatileStatusInstruction {
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L143): a Lum / Persim Berry cures the
+        // fatigue at once (Showdown's onUpdate); before, the confusion stayed until its holder's
+        // next move
+        if matches!(active.item, Items::LUMBERRY | Items::PERSIMBERRY)
+            && !super::items::unnerved(state, side_ref)
+        {
+            out.push(Instruction::ChangeItem(ChangeItemInstruction {
                 side_ref: *side_ref,
-                volatile_status: PokemonVolatileStatus::CONFUSION,
-            },
-        ));
+                current_item: active.item,
+                new_item: Items::NONE,
+            }));
+            if active.last_item != active.item {
+                out.push(Instruction::ChangeLastItem(ChangeItemInstruction {
+                    side_ref: *side_ref,
+                    current_item: active.last_item,
+                    new_item: active.item,
+                }));
+            }
+        } else {
+            out.push(Instruction::ApplyVolatileStatus(
+                ApplyVolatileStatusInstruction {
+                    side_ref: *side_ref,
+                    volatile_status: PokemonVolatileStatus::CONFUSION,
+                },
+            ));
+        }
     }
     out
 }
@@ -3424,8 +3444,16 @@ pub fn generate_instructions_from_move(
         return;
     }
 
-    // TODO: test first-turn dragontail missing - it should not trigger this early return
-    if !choice.first_move && defender_choice.flags.drag {
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L142): only a mon the faster drag move
+    // dragged in loses the move (its side switched this turn); one the drag left in place (an
+    // immune target, a miss, Protect, the last mon) still moves. Before, any drag move did
+    if !choice.first_move
+        && defender_choice.flags.drag
+        && incoming_instructions
+            .instruction_list
+            .iter()
+            .any(|i| matches!(i, Instruction::Switch(s) if s.side_ref == attacking_side))
+    {
         final_instructions.push(incoming_instructions);
         return;
     }
@@ -5444,6 +5472,7 @@ fn add_end_of_turn_instructions(
             .get_active_immutable()
             .hp
             == 0;
+        let unnerved = super::items::unnerved(state, side_ref);
         let side = state.get_side(side_ref);
         if side.get_active().hp == 0 {
             continue;
@@ -5536,10 +5565,24 @@ fn add_end_of_turn_instructions(
                             volatile_status: PokemonVolatileStatus::LOCKEDMOVE,
                         },
                     ));
-                if !side
+                let berry = side.get_active_immutable().item;
+                if side
                     .volatile_statuses
                     .contains(&PokemonVolatileStatus::CONFUSION)
                 {
+                } else if matches!(berry, Items::LUMBERRY | Items::PERSIMBERRY) && !unnerved {
+                    // (L143: the berry cures the fatigue at once)
+                    let active = side.get_active();
+                    incoming_instructions
+                        .instruction_list
+                        .push(Instruction::ChangeItem(ChangeItemInstruction {
+                            side_ref: *side_ref,
+                            current_item: berry,
+                            new_item: Items::NONE,
+                        }));
+                    active.item = Items::NONE;
+                    super::items::set_last_item(active, *side_ref, berry, incoming_instructions);
+                } else {
                     incoming_instructions
                         .instruction_list
                         .push(Instruction::ApplyVolatileStatus(
@@ -7588,9 +7631,19 @@ mod tests {
 
     #[test]
     fn test_drag_move_as_second_move_exits_early_if_opponent_used_drag_move() {
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L142): when the opponent's drag move
+        // dragged this side's mon in (its switch is in the turn's instructions)
         let mut state: State = State::default();
         let mut choice = MOVES.get(&Choices::DRAGONTAIL).unwrap().to_owned();
         choice.first_move = false;
+        let dragged = StateInstructions {
+            percentage: 100.0,
+            instruction_list: vec![Instruction::Switch(SwitchInstruction {
+                side_ref: SideReference::SideOne,
+                previous_index: PokemonIndex::P1,
+                next_index: PokemonIndex::P0,
+            })],
+        };
 
         let mut instructions = vec![];
         generate_instructions_from_move(
@@ -7598,11 +7651,11 @@ mod tests {
             &mut choice,
             &MOVES.get(&Choices::DRAGONTAIL).unwrap(),
             SideReference::SideOne,
-            StateInstructions::default(),
+            dragged.clone(),
             &mut instructions,
             false,
         );
-        assert_eq!(instructions, vec![StateInstructions::default()])
+        assert_eq!(instructions, vec![dragged])
     }
 
     #[test]

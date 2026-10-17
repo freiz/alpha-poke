@@ -3639,3 +3639,34 @@ def test_l141_protosynthesis_follows_the_weather(case):
     c1, c2 = turns[k][0].split()[1], turns[k][1].split()[1]
     outs = ec.engine_outcomes(ec.engine_state(states[k]), c1, c2)
     assert ec.closest(states[k + 1], outs, (1 + (case == "sun ends"), 1), hp=True)["diff"] == {}
+
+
+# L142 (doc/engine-diff.md): a drag move that drags nobody (an immune target, a miss) leaves the
+# target's move for the turn (Showdown); the engine skipped the slower target's move whenever the
+# faster one's move was a drag
+def test_l142_failed_drag_leaves_the_targets_move():
+    chomp = _setter("Garchomp", "Rough Skin", "Leftovers", "- Dragon Tail\n- Earthquake\n- Protect\n- Roar")
+    clef = _setter("Clefable", "Magic Guard", "Leftovers", "- Trick Room\n- Moonblast\n- Protect\n- Moonlight")
+    states = ec.run_showdown(chomp, clef + "\n\n" + BLISSEY, [("move dragontail", "move trickroom")])
+    assert "trickroom" in states[1]["field"]["pseudo"]  # (Trick Room's -7 after Dragon Tail's -6)
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "dragontail", "trickroom")
+    assert ec.closest(states[1], outs, (1, 2), hp=True)["diff"] == {}
+
+
+# L143 (doc/engine-diff.md): a Lum Berry cures the confusion an ended Outrage leaves at once
+# (Showdown's onUpdate); the engine's confusion stayed with the berry until the next move
+def test_l143_lum_berry_cures_the_fatigue():
+    hax = """Haxorus @ Lum Berry
+Ability: Mold Breaker
+Tera Type: Dragon
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- Outrage
+- Earthquake
+- Dragon Dance
+- Close Combat"""
+    states = ec.run_showdown(hax, BLISSEY, [("move outrage", "move softboiled")] * 3)
+    k = next(k for k in range(1, 4) if any("confusion|[fatigue]" in x for x in states[k]["log"]))
+    assert states[k]["sides"][0]["mons"][0]["item"] == ""
+    outs = ec.engine_outcomes(ec.engine_state(states[k - 1]), "outrage", "softboiled")
+    assert ec.closest(states[k], outs, (1, 1), hp=True)["diff"] == {}

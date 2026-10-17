@@ -86,9 +86,6 @@
 "b44-t31": [
 "status"
 ],
-"b45-t30": [
-"trick_room"
-],
 "b49-t4": [
 "hp",
 "status"
@@ -105,10 +102,6 @@
 ],
 "b59-t3": [
 "hp"
-],
-"b60-t2": [
-"item",
-"volatile.confusion"
 ],
 "b7-t13": [
 "status"
