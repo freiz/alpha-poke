@@ -16,6 +16,8 @@
 
 harness 必须把 Showdown 的状态完整映射到引擎，否则不一致来自 harness 而不是引擎。第一次跑（300 场，91.2%）暴露的 harness 缺口：上一次使用的招式（Encore、Fake Out 需要；缺了引擎 panic）、挑衅 / 再来一次 / 哈欠 / 混乱 / 睡眠 / Rest 的计数（Showdown 倒数剩余，引擎正数已过：挑衅 / 再来一次 3 − D，哈欠 2 − D，混乱 5 − time，睡眠 startTime − time，Rest 剩余 time）、守住的连续次数（Showdown stall 计数 3^n）、属性变化（Showdown 不留持续状态，只改属性；比较时统一成"当前属性不同于原属性"）、引擎不认识的道具（按 unknownitem 比较，缺哪些由数据测试列出）、Struggle（引擎没有这个选择，不比较）。补齐后 93.3%。
 
+**每次修复只能是真子集（用户 2026-10-16 要求）**：对局是确定性的（固定的 300 对队伍 `tests/fixtures/random_battle_teams.jsonl`、固定的模拟器种子和出招种子，出招不依赖引擎），所以局面有稳定的编号 `b<场>-t<回合>`。每个不一致记为（编号, 类别），全部存在基线 `tests/fixtures/engine_random_baseline.json`。每次修复后重跑：新的集合必须是基线的子集，出现基线里没有的（编号, 类别）就是 regression，脚本列出编号、差异和那一回合的日志，以失败退出；通过了才用 `--update-baseline` 更新基线（只在是子集时才写；有意的变化，例如 harness 补齐后暴露出更多，要加 `--force` 并在本文档说明）。第一份基线（2026-10-16，L20–L23 之后）：533 个，一致率 93.5%；连跑两次新增 0、修复 0（确定性）。
+
 另外两点：binding 的 panic 是 BaseException，必须接住；多进程要用 spawn（fork 出来的 worker 会继承扩展模块线程持有的锁而死锁）。
 
 ### 1. 差分统计（找线索）

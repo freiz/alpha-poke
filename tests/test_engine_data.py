@@ -101,3 +101,18 @@ def test_pokeenv_moves_match_showdown():
     from alpha_poke.enginecheck import data
 
     assert data.pokeenv_move_diffs() == {}
+
+
+# the duration items: no event of their own in Showdown (the weather / terrain / screen
+# conditions' durationCallback reads them), but they decide how long what their holder sets lasts
+DURATION_ITEMS = ["damprock", "heatrock", "icyrock", "lightclay", "smoothrock", "terrainextender"]
+
+
+@pytest.mark.xfail(strict=True, reason="L24: items being added to the engine from Showdown")
+def test_engine_knows_every_item_with_an_effect():
+    """Every Gen 9 item with a battle effect (an event handler or a stat change in Showdown,
+    or a duration item) is one the engine knows; each one's effect has a dual-engine test."""
+    from alpha_poke.enginecheck import _engine_item, data
+
+    unknown = data.items_unknown_to_engine() + [i for i in DURATION_ITEMS if not _engine_item(i)]
+    assert unknown == []

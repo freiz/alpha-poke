@@ -9,20 +9,29 @@ The engine's state is built from Showdown's own numbers (enginecheck.engine_stat
 outcome must agree on every discrete field and on HP within the rolls' spread (closest(hp=True)).
 
   uv run python scripts/check_engine_random.py --battles 300 --procs 8
+  uv run python scripts/check_engine_random.py --update-baseline   # after a fix that passes
 
-Report: data/selfplay/diag/engine_random.json (counts per kind, per move pair, examples with
-the turn's protocol lines and the engine's outcomes).
+Report: data/selfplay/diag/engine_random.json (counts per kind, per move pair, every mismatch
+with its diff and the turn's protocol lines).
+
+No regression (doc/engine-diff.md): the battles are deterministic (fixed team pairs in
+tests/fixtures/random_battle_teams.jsonl, fixed simulator and choice seeds; the choices do not
+depend on the engine), so a position has a stable id "b<battle>-t<turn>". Each mismatch is
+(id, kind); the set must be a subset of the baseline's (tests/fixtures/engine_random_baseline.json):
+a new (id, kind) is a regression -- listed, exit status 1. --update-baseline writes the new set
+only when it is a subset (--force for a deliberate change, e.g. a harness fix that exposes more).
 """
 
 import argparse
 import collections
+import hashlib
 import json
-import re
 import multiprocessing as mp
+import re
+import sys
 from pathlib import Path
 
 from alpha_poke import enginecheck as ec
-from alpha_poke.selfplay import SELFPLAY_DIR, teams
 
 
 def kind_of(key: str) -> str:
@@ -49,7 +58,7 @@ def comparable(steps: list[dict], k: int) -> str | None:
 def battle(job: tuple) -> dict:
     i, p1, p2, max_turns = job
     out = {"turns": 0, "match": 0, "skipped": collections.Counter(), "kinds": collections.Counter(),
-           "pairs": collections.defaultdict(collections.Counter), "examples": [], "errors": []}  # fmt: skip
+           "pairs": collections.defaultdict(collections.Counter), "mismatches": {}, "errors": []}  # fmt: skip
     try:
         steps, err = ec.random_battle(p1, p2, f"gen5,{i},{i + 1},{i + 2},{i + 3}", i + 1,
                                       max_turns=max_turns)  # fmt: skip
@@ -74,6 +83,9 @@ def battle(job: tuple) -> dict:
             res = ec.closest(b["state"], outs, n, hp=True)
         except BaseException as e:  # noqa: BLE001 - the binding's panics are BaseExceptions
             out["errors"].append(f"engine: {c1} | {c2}: {type(e).__name__}: {str(e)[:120]}")
+            out["mismatches"][f"b{i}-t{a['state']['turn']}"] = {
+                "p1": c1, "p2": c2, "kinds": ["error"], "diff": {"error": [str(e)[:200], None]},
+                "log": []}  # fmt: skip
             continue
         out["turns"] += 1
         found = sorted({kind_of(x) for x in res["diff"]})
@@ -83,31 +95,40 @@ def battle(job: tuple) -> dict:
         for f in found:
             out["kinds"][f] += 1
             out["pairs"][f][f"{c1} | {c2}"] += 1
-        if len(out["examples"]) < 6:
-            log = [x for x in b["state"]["log"] if x.startswith(("|move", "|switch", "|drag",
-                   "|-", "|cant", "|faint", "|upkeep", "|turn"))]  # fmt: skip
-            out["examples"].append({"battle": i, "turn": a["state"]["turn"], "p1": c1, "p2": c2,
-                                    "kinds": found, "diff": {k: list(v) for k, v in res["diff"].items()},
-                                    "log": log})  # fmt: skip
+        log = [x for x in b["state"]["log"] if x.startswith(("|move", "|switch", "|drag", "|-",
+               "|cant", "|faint", "|upkeep", "|turn"))]  # fmt: skip
+        out["mismatches"][f"b{i}-t{a['state']['turn']}"] = {
+            "p1": c1, "p2": c2, "kinds": found,
+            "diff": {k: list(v) for k, v in res["diff"].items()}, "log": log}  # fmt: skip
     return out
+
+
+def pairs_of(mismatches: dict) -> set[tuple[str, str]]:
+    return {(i, k) for i, m in mismatches.items() for k in m["kinds"]}
 
 
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--battles", type=int, default=300)
-    ap.add_argument("--teams", default=str(SELFPLAY_DIR / "gen901" / "teams.jsonl"),
-                    help="team pairs (selfplay.py teams)")  # fmt: skip
+    ap.add_argument("--teams", default="tests/fixtures/random_battle_teams.jsonl",
+                    help='team pairs, one {"p1": text, "p2": text} per line')  # fmt: skip
+    ap.add_argument("--baseline", default="tests/fixtures/engine_random_baseline.json")
+    ap.add_argument("--update-baseline", action="store_true")
+    ap.add_argument("--force", action="store_true", help="update the baseline even with new ones")
     ap.add_argument("--max-turns", type=int, default=60)
     ap.add_argument("--procs", type=int, default=8)
     ap.add_argument("--out", default="data/selfplay/diag/engine_random.json")
     a = ap.parse_args()
-    pairs = teams.load(Path(a.teams))
-    jobs = [(i, pairs[i % len(pairs)].p1.text, pairs[i % len(pairs)].p2.text, a.max_turns)
+    text = Path(a.teams).read_text()
+    pairs = [json.loads(x) for x in text.splitlines()]
+    jobs = [(i, pairs[i % len(pairs)]["p1"], pairs[i % len(pairs)]["p2"], a.max_turns)
             for i in range(a.battles)]  # fmt: skip
+    setup = {"battles": a.battles, "max_turns": a.max_turns,
+             "teams": hashlib.sha256(text.encode()).hexdigest()[:16]}  # fmt: skip
     tot = {"turns": 0, "match": 0}
     skipped, kinds = collections.Counter(), collections.Counter()
     pairs_by_kind: dict = collections.defaultdict(collections.Counter)
-    examples: dict = collections.defaultdict(list)
+    mismatches: dict = {}
     errors: collections.Counter = collections.Counter()
     # spawn, not fork: a forked worker can inherit a held lock of the extension modules' threads
     with mp.get_context("spawn").Pool(a.procs) as pool:
@@ -118,10 +139,7 @@ def main() -> None:
             kinds.update(r["kinds"])
             for k, c in r["pairs"].items():
                 pairs_by_kind[k].update(c)
-            for e in r["examples"]:
-                for k in e["kinds"]:
-                    if len(examples[k]) < 8:
-                        examples[k].append(e)
+            mismatches.update(r["mismatches"])
             errors.update(re.sub(r"\d+", "N", x) for x in r["errors"])
     n = max(tot["turns"], 1)
     print(f"{a.battles} battles, {tot['turns']} compared turns: {tot['match']} match "
@@ -130,11 +148,44 @@ def main() -> None:
         print(f"  {c:6d} ({100 * c / n:.2f}%)  {k:28s} {pairs_by_kind[k].most_common(3)}")
     for e, c in errors.most_common(10):
         print(f"  error x{c}: {e}")
-    rep = {"battles": a.battles, **tot, "skipped": skipped, "kinds": kinds.most_common(),
+    rep = {**setup, **tot, "skipped": skipped, "kinds": kinds.most_common(),
            "pairs": {k: v.most_common(20) for k, v in pairs_by_kind.items()},
-           "examples": examples, "errors": errors.most_common()}  # fmt: skip
+           "mismatches": dict(sorted(mismatches.items())), "errors": errors.most_common()}  # fmt: skip
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
     Path(a.out).write_text(json.dumps(rep, indent=1))
+    sys.exit(check_baseline(a, setup, mismatches))
+
+
+def check_baseline(a, setup: dict, mismatches: dict) -> int:
+    """The no-regression check: every (position, kind) must be in the baseline."""
+    now = pairs_of(mismatches)
+    path = Path(a.baseline)
+    if path.exists():
+        base = json.loads(path.read_text())
+        if base["setup"] != setup:
+            print(f"baseline of another setup {base['setup']} (now {setup}): not compared")
+            return 1
+        before = {(i, k) for i, ks in base["mismatches"].items() for k in ks}
+        new = sorted(now - before)
+        print(f"baseline: {len(before)} (position, kind) -> {len(now)}; fixed {len(before - now)}, "
+              f"new {len(new)}")  # fmt: skip
+        for i, k in new:
+            m = mismatches[i]
+            print(f"  NEW {i} {k}: {m['p1']} | {m['p2']} {m['diff']}")
+            print("      " + " ".join(x for x in m["log"] if "-damage" not in x)[:400])
+    else:
+        new = []
+        print(f"no baseline yet ({path})")
+    if a.update_baseline:
+        if new and not a.force:
+            print("baseline not updated: new mismatches (--force to accept them)")
+            return 1
+        ids = {}
+        for i, k in sorted(now):
+            ids.setdefault(i, []).append(k)
+        path.write_text(json.dumps({"setup": setup, "mismatches": ids}, indent=0) + "\n")
+        print(f"baseline updated: {len(now)} (position, kind)")
+    return 1 if new else 0
 
 
 if __name__ == "__main__":

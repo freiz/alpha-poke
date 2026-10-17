@@ -801,3 +801,46 @@ def test_control_trick_room_against_good_as_gold():
                               p1=hatterene, p2=GHOLDENGO)  # fmt: skip
     assert states[1]["field"]["pseudo"].get("trickroom")  # Showdown: set
     assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L24 (doc/engine-diff.md): items the engine did not know, added from Showdown's source
+
+def _setter(species, ability, item, moves="- Protect\n- Roost\n- Knock Off\n- U-turn"):
+    return f"""{species} @ {item}
+Ability: {ability}
+Tera Type: Normal
+EVs: 252 HP / 4 Atk / 252 SpD
+Careful Nature
+{moves}"""
+
+
+DURATION_SETTERS = [  # (setter, the field's key, the engine's turns attribute)
+    (_setter("Pelipper", "Drizzle", "Damp Rock"), "weather", "weather_turns_remaining"),
+    (_setter("Torkoal", "Drought", "Heat Rock"), "weather", "weather_turns_remaining"),
+    (_setter("Ninetales-Alola", "Snow Warning", "Icy Rock"), "weather", "weather_turns_remaining"),
+    (_setter("Tyranitar", "Sand Stream", "Smooth Rock"), "weather", "weather_turns_remaining"),
+    (_setter("Rillaboom", "Grassy Surge", "Terrain Extender"), "terrain", "terrain_turns_remaining"),
+]
+
+
+@pytest.mark.xfail(strict=True, reason="L24: the engine does not know the duration items")
+@pytest.mark.parametrize("setter, kind, attr", DURATION_SETTERS)
+def test_l24_duration_items_set_on_switch_in(setter, kind, attr):
+    """A weather / terrain set by an ability in the search (the setter switches in) lasts 8
+    turns with its item (Showdown's durationCallback), not 5."""
+    states = ec.run_showdown(BLISSEY + "\n\n" + setter, TINGLU, [("switch 2", "move spikes")])
+    assert states[1]["field"][f"{kind}_duration"] == 7  # Showdown: 8, one end of turn
+    species = setter.split(" @")[0].lower().replace("-", "")
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), species, "spikes")
+    assert {getattr(o[1], attr) for o in outs} == {7}
+
+
+@pytest.mark.xfail(strict=True, reason="L24: the engine does not know Light Clay")
+@pytest.mark.parametrize("screen, cond", [("reflect", "reflect"), ("lightscreen", "light_screen")])
+def test_l24_light_clay(screen, cond):
+    p1 = _setter("Grimmsnarl", "Prankster", "Light Clay",
+                 "- Reflect\n- Light Screen\n- Spirit Break\n- Parting Shot")  # fmt: skip
+    states = ec.run_showdown(p1, TINGLU, [(f"move {screen}", "move spikes")])
+    assert states[1]["sides"][0]["conditions"][screen]["duration"] == 7  # Showdown: 8 turns
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), screen, "spikes")
+    assert {getattr(o[1].side_one.side_conditions, cond) for o in outs} == {7}

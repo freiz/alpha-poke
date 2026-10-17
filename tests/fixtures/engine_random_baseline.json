@@ -1,0 +1,1460 @@
+{
+"setup": {
+"battles": 300,
+"max_turns": 60,
+"teams": "87327e3ee174c1b9"
+},
+"mismatches": {
+"b0-t12": [
+"volatile.typechange"
+],
+"b0-t15": [
+"hp"
+],
+"b0-t19": [
+"hp"
+],
+"b0-t28": [
+"volatile.typechange"
+],
+"b0-t7": [
+"volatile.confusion"
+],
+"b10-t56": [
+"hp"
+],
+"b100-t3": [
+"volatile.typechange"
+],
+"b100-t38": [
+"hp"
+],
+"b100-t50": [
+"hp"
+],
+"b100-t6": [
+"hp"
+],
+"b102-t16": [
+"hp"
+],
+"b104-t11": [
+"hp"
+],
+"b104-t14": [
+"hp"
+],
+"b104-t15": [
+"hp"
+],
+"b104-t30": [
+"hp"
+],
+"b104-t7": [
+"hp"
+],
+"b107-t54": [
+"hp"
+],
+"b108-t12": [
+"boost.spd"
+],
+"b108-t8": [
+"hp"
+],
+"b109-t32": [
+"hp"
+],
+"b109-t35": [
+"hp"
+],
+"b109-t44": [
+"hp"
+],
+"b110-t1": [
+"hp"
+],
+"b110-t17": [
+"hp"
+],
+"b110-t24": [
+"hp"
+],
+"b110-t25": [
+"hp"
+],
+"b110-t32": [
+"hp"
+],
+"b112-t14": [
+"hp"
+],
+"b112-t2": [
+"volatile.typechange"
+],
+"b114-t11": [
+"hp"
+],
+"b114-t13": [
+"hp"
+],
+"b117-t13": [
+"volatile.typechange"
+],
+"b117-t16": [
+"boost.atk"
+],
+"b117-t25": [
+"boost.atk"
+],
+"b117-t29": [
+"hp"
+],
+"b117-t40": [
+"status"
+],
+"b117-t44": [
+"hp"
+],
+"b118-t18": [
+"volatile.unburden"
+],
+"b118-t29": [
+"boost.atk"
+],
+"b118-t35": [
+"hp"
+],
+"b118-t37": [
+"hp"
+],
+"b118-t39": [
+"hp"
+],
+"b121-t10": [
+"hp"
+],
+"b121-t36": [
+"hp"
+],
+"b121-t9": [
+"hp"
+],
+"b122-t13": [
+"hp"
+],
+"b122-t25": [
+"hp"
+],
+"b123-t19": [
+"light_screen"
+],
+"b123-t2": [
+"hp"
+],
+"b123-t34": [
+"hp"
+],
+"b123-t4": [
+"hp"
+],
+"b126-t10": [
+"hp"
+],
+"b126-t13": [
+"hp"
+],
+"b126-t2": [
+"hp"
+],
+"b126-t21": [
+"hp"
+],
+"b126-t23": [
+"hp"
+],
+"b126-t41": [
+"volatile.confusion"
+],
+"b128-t1": [
+"status"
+],
+"b128-t18": [
+"reflect"
+],
+"b128-t21": [
+"hp"
+],
+"b129-t3": [
+"volatile.typechange"
+],
+"b130-t17": [
+"hp"
+],
+"b130-t9": [
+"hp",
+"status"
+],
+"b131-t25": [
+"item"
+],
+"b131-t28": [
+"volatile.confusion"
+],
+"b132-t25": [
+"hp"
+],
+"b132-t8": [
+"hp"
+],
+"b133-t19": [
+"hp"
+],
+"b133-t21": [
+"hp",
+"status"
+],
+"b134-t16": [
+"hp"
+],
+"b135-t14": [
+"hp"
+],
+"b136-t22": [
+"hp",
+"volatile.typechange"
+],
+"b137-t20": [
+"hp"
+],
+"b137-t21": [
+"hp"
+],
+"b137-t23": [
+"hp"
+],
+"b137-t24": [
+"hp"
+],
+"b137-t26": [
+"hp"
+],
+"b137-t29": [
+"hp"
+],
+"b137-t32": [
+"hp"
+],
+"b138-t35": [
+"hp",
+"status"
+],
+"b138-t37": [
+"hp"
+],
+"b138-t39": [
+"hp"
+],
+"b138-t41": [
+"hp"
+],
+"b138-t43": [
+"hp"
+],
+"b138-t7": [
+"hp",
+"volatile.leechseed"
+],
+"b14-t14": [
+"hp"
+],
+"b14-t21": [
+"hp"
+],
+"b14-t27": [
+"hp"
+],
+"b14-t39": [
+"hp"
+],
+"b14-t4": [
+"hp",
+"status"
+],
+"b140-t27": [
+"volatile.substitute"
+],
+"b143-t1": [
+"volatile.typechange"
+],
+"b143-t8": [
+"boost.spe",
+"item"
+],
+"b146-t2": [
+"toxic_spikes"
+],
+"b146-t23": [
+"hp",
+"volatile.typechange"
+],
+"b148-t16": [
+"hp"
+],
+"b148-t19": [
+"volatile.substitute"
+],
+"b149-t29": [
+"hp"
+],
+"b149-t30": [
+"hp"
+],
+"b149-t32": [
+"hp"
+],
+"b15-t22": [
+"boost.spd",
+"hp"
+],
+"b153-t14": [
+"hp"
+],
+"b153-t27": [
+"hp"
+],
+"b153-t31": [
+"hp"
+],
+"b153-t32": [
+"hp"
+],
+"b153-t34": [
+"hp"
+],
+"b153-t37": [
+"hp",
+"status"
+],
+"b153-t39": [
+"hp"
+],
+"b154-t26": [
+"hp"
+],
+"b155-t29": [
+"hp"
+],
+"b157-t24": [
+"hp",
+"item"
+],
+"b157-t25": [
+"hp",
+"item"
+],
+"b157-t7": [
+"boost.spd",
+"hp"
+],
+"b158-t28": [
+"hp",
+"status"
+],
+"b158-t45": [
+"hp"
+],
+"b158-t59": [
+"hp",
+"status"
+],
+"b159-t1": [
+"reflect"
+],
+"b159-t3": [
+"light_screen"
+],
+"b159-t6": [
+"hp"
+],
+"b16-t23": [
+"hp"
+],
+"b16-t9": [
+"hp"
+],
+"b161-t30": [
+"hp"
+],
+"b161-t9": [
+"hp",
+"status"
+],
+"b162-t28": [
+"stealth_rock"
+],
+"b162-t29": [
+"item"
+],
+"b164-t1": [
+"volatile.typechange"
+],
+"b165-t1": [
+"hp"
+],
+"b166-t10": [
+"hp"
+],
+"b167-t2": [
+"boost.atk",
+"boost.spa"
+],
+"b167-t3": [
+"boost.atk",
+"boost.spa"
+],
+"b168-t16": [
+"volatile.confusion"
+],
+"b169-t23": [
+"volatile.confusion"
+],
+"b17-t30": [
+"stealth_rock"
+],
+"b17-t4": [
+"hp"
+],
+"b17-t7": [
+"hp"
+],
+"b170-t16": [
+"hp"
+],
+"b170-t31": [
+"hp"
+],
+"b176-t18": [
+"active",
+"hp",
+"item"
+],
+"b177-t12": [
+"hp"
+],
+"b177-t22": [
+"boost.spe"
+],
+"b178-t6": [
+"volatile.confusion"
+],
+"b179-t32": [
+"hp",
+"volatile.leechseed"
+],
+"b179-t37": [
+"boost.def",
+"hp",
+"item"
+],
+"b18-t41": [
+"hp"
+],
+"b18-t42": [
+"hp"
+],
+"b18-t7": [
+"hp"
+],
+"b180-t18": [
+"hp"
+],
+"b182-t34": [
+"active",
+"hp",
+"status"
+],
+"b183-t27": [
+"volatile.substitute"
+],
+"b184-t3": [
+"hp"
+],
+"b184-t5": [
+"hp"
+],
+"b185-t19": [
+"hp"
+],
+"b186-t26": [
+"hp"
+],
+"b187-t17": [
+"hp"
+],
+"b187-t30": [
+"status"
+],
+"b188-t19": [
+"hp"
+],
+"b188-t6": [
+"hp"
+],
+"b189-t14": [
+"hp"
+],
+"b189-t5": [
+"volatile.encore"
+],
+"b189-t6": [
+"hp"
+],
+"b189-t7": [
+"hp"
+],
+"b189-t8": [
+"hp"
+],
+"b19-t11": [
+"hp"
+],
+"b19-t12": [
+"hp"
+],
+"b19-t13": [
+"hp"
+],
+"b19-t29": [
+"stealth_rock"
+],
+"b19-t4": [
+"boost.atk"
+],
+"b191-t21": [
+"item"
+],
+"b191-t44": [
+"status"
+],
+"b191-t49": [
+"hp"
+],
+"b193-t10": [
+"boost.spd",
+"hp"
+],
+"b194-t18": [
+"hp"
+],
+"b195-t18": [
+"hp"
+],
+"b195-t23": [
+"hp"
+],
+"b195-t3": [
+"volatile.typechange"
+],
+"b196-t28": [
+"volatile.disable"
+],
+"b198-t18": [
+"hp"
+],
+"b198-t3": [
+"hp"
+],
+"b199-t14": [
+"hp"
+],
+"b199-t15": [
+"hp"
+],
+"b199-t16": [
+"hp"
+],
+"b199-t4": [
+"active",
+"hp",
+"item",
+"volatile.curse"
+],
+"b2-t16": [
+"volatile.confusion"
+],
+"b20-t27": [
+"hp"
+],
+"b20-t38": [
+"hp"
+],
+"b202-t19": [
+"boost.spe"
+],
+"b202-t7": [
+"volatile.substitute"
+],
+"b204-t11": [
+"hp",
+"status"
+],
+"b204-t16": [
+"hp"
+],
+"b204-t19": [
+"hp"
+],
+"b204-t25": [
+"hp"
+],
+"b205-t1": [
+"hp"
+],
+"b205-t12": [
+"hp"
+],
+"b207-t8": [
+"hp"
+],
+"b209-t10": [
+"hp"
+],
+"b21-t11": [
+"hp"
+],
+"b210-t21": [
+"hp"
+],
+"b210-t51": [
+"hp"
+],
+"b211-t1": [
+"hp"
+],
+"b211-t11": [
+"hp",
+"item"
+],
+"b211-t5": [
+"hp"
+],
+"b212-t10": [
+"hp"
+],
+"b212-t14": [
+"hp"
+],
+"b212-t22": [
+"hp"
+],
+"b213-t19": [
+"hp"
+],
+"b213-t22": [
+"hp"
+],
+"b214-t1": [
+"hp"
+],
+"b214-t16": [
+"hp"
+],
+"b214-t26": [
+"boost.atk"
+],
+"b214-t4": [
+"hp"
+],
+"b214-t5": [
+"hp"
+],
+"b215-t6": [
+"hp"
+],
+"b216-t18": [
+"volatile.typechange"
+],
+"b216-t46": [
+"hp",
+"volatile.typechange"
+],
+"b219-t15": [
+"hp"
+],
+"b219-t17": [
+"boost.evasion",
+"status"
+],
+"b219-t19": [
+"item"
+],
+"b22-t13": [
+"hp"
+],
+"b220-t11": [
+"hp"
+],
+"b221-t24": [
+"status"
+],
+"b221-t31": [
+"boost.def"
+],
+"b222-t23": [
+"status"
+],
+"b222-t25": [
+"boost.atk",
+"boost.def",
+"hp"
+],
+"b223-t13": [
+"toxic_spikes"
+],
+"b223-t16": [
+"hp"
+],
+"b223-t25": [
+"volatile.typechange"
+],
+"b23-t10": [
+"hp"
+],
+"b230-t31": [
+"hp",
+"status"
+],
+"b230-t34": [
+"hp"
+],
+"b230-t35": [
+"hp"
+],
+"b230-t46": [
+"hp"
+],
+"b231-t35": [
+"hp"
+],
+"b232-t13": [
+"status",
+"volatile.typechange"
+],
+"b232-t5": [
+"hp",
+"volatile.typechange"
+],
+"b232-t9": [
+"volatile.typechange"
+],
+"b233-t20": [
+"hp"
+],
+"b233-t41": [
+"hp",
+"volatile.confusion"
+],
+"b234-t2": [
+"hp",
+"volatile.partiallytrapped"
+],
+"b234-t30": [
+"active",
+"boost.spa",
+"hp"
+],
+"b234-t39": [
+"active",
+"boost.atk",
+"hp"
+],
+"b236-t20": [
+"hp"
+],
+"b236-t29": [
+"hp"
+],
+"b236-t7": [
+"hp"
+],
+"b237-t11": [
+"active",
+"hp"
+],
+"b237-t12": [
+"hp"
+],
+"b237-t13": [
+"hp",
+"status"
+],
+"b237-t41": [
+"boost.evasion"
+],
+"b237-t44": [
+"volatile.substitute"
+],
+"b237-t48": [
+"volatile.substitute"
+],
+"b237-t54": [
+"hp"
+],
+"b238-t6": [
+"hp"
+],
+"b238-t8": [
+"hp"
+],
+"b24-t10": [
+"volatile.typechange"
+],
+"b24-t11": [
+"hp"
+],
+"b24-t2": [
+"hp"
+],
+"b24-t6": [
+"hp"
+],
+"b24-t8": [
+"hp",
+"volatile.typechange"
+],
+"b240-t11": [
+"hp"
+],
+"b241-t12": [
+"hp"
+],
+"b241-t13": [
+"boost.def"
+],
+"b241-t4": [
+"status"
+],
+"b243-t10": [
+"hp"
+],
+"b244-t20": [
+"hp"
+],
+"b245-t17": [
+"hp",
+"status"
+],
+"b245-t20": [
+"hp"
+],
+"b245-t28": [
+"hp"
+],
+"b245-t6": [
+"hp"
+],
+"b246-t41": [
+"volatile.substitute"
+],
+"b246-t57": [
+"status"
+],
+"b247-t2": [
+"stealth_rock"
+],
+"b247-t25": [
+"status"
+],
+"b247-t27": [
+"hp"
+],
+"b247-t41": [
+"hp"
+],
+"b247-t5": [
+"hp"
+],
+"b247-t50": [
+"status"
+],
+"b247-t53": [
+"hp"
+],
+"b247-t55": [
+"hp"
+],
+"b247-t57": [
+"hp",
+"status"
+],
+"b247-t59": [
+"status"
+],
+"b247-t9": [
+"hp"
+],
+"b250-t4": [
+"hp"
+],
+"b251-t2": [
+"hp"
+],
+"b251-t23": [
+"boost.spe"
+],
+"b252-t13": [
+"volatile.typechange"
+],
+"b252-t17": [
+"hp"
+],
+"b253-t4": [
+"hp"
+],
+"b253-t8": [
+"hp"
+],
+"b254-t24": [
+"hp"
+],
+"b257-t10": [
+"hp"
+],
+"b257-t20": [
+"hp"
+],
+"b257-t9": [
+"hp"
+],
+"b258-t13": [
+"hp"
+],
+"b258-t18": [
+"hp"
+],
+"b258-t25": [
+"boost.spd",
+"item"
+],
+"b258-t43": [
+"boost.atk",
+"boost.spa",
+"hp"
+],
+"b258-t44": [
+"boost.atk",
+"boost.spa",
+"hp"
+],
+"b259-t15": [
+"boost.atk",
+"hp"
+],
+"b259-t36": [
+"boost.atk"
+],
+"b259-t5": [
+"volatile.substitute"
+],
+"b259-t6": [
+"hp",
+"volatile.substitute"
+],
+"b259-t9": [
+"hp"
+],
+"b260-t10": [
+"boost.spd",
+"item"
+],
+"b261-t13": [
+"hp"
+],
+"b261-t18": [
+"status"
+],
+"b261-t19": [
+"hp"
+],
+"b262-t28": [
+"hp",
+"status"
+],
+"b262-t5": [
+"volatile.typechange"
+],
+"b263-t8": [
+"volatile.protosynthesisspa",
+"volatile.protosynthesisspe"
+],
+"b264-t10": [
+"hp"
+],
+"b264-t18": [
+"volatile.disable"
+],
+"b264-t22": [
+"volatile.disable"
+],
+"b264-t7": [
+"hp"
+],
+"b265-t14": [
+"item"
+],
+"b265-t5": [
+"volatile.typechange"
+],
+"b266-t13": [
+"volatile.disable"
+],
+"b268-t38": [
+"hp"
+],
+"b27-t16": [
+"volatile.typechange"
+],
+"b27-t23": [
+"hp"
+],
+"b270-t19": [
+"hp"
+],
+"b270-t4": [
+"volatile.typechange"
+],
+"b271-t1": [
+"boost.spe"
+],
+"b271-t6": [
+"hp"
+],
+"b274-t13": [
+"volatile.substitute"
+],
+"b274-t14": [
+"volatile.substitute"
+],
+"b274-t15": [
+"volatile.substitute"
+],
+"b274-t16": [
+"volatile.substitute"
+],
+"b274-t20": [
+"hp"
+],
+"b274-t21": [
+"hp"
+],
+"b274-t23": [
+"volatile.substitute"
+],
+"b274-t32": [
+"volatile.typechange"
+],
+"b274-t6": [
+"hp"
+],
+"b275-t20": [
+"hp"
+],
+"b275-t29": [
+"hp"
+],
+"b276-t9": [
+"hp",
+"item"
+],
+"b277-t2": [
+"hp"
+],
+"b277-t20": [
+"hp"
+],
+"b278-t29": [
+"boost.spa",
+"boost.spd"
+],
+"b278-t32": [
+"hp"
+],
+"b278-t39": [
+"hp"
+],
+"b278-t8": [
+"hp"
+],
+"b279-t2": [
+"hp",
+"terrain"
+],
+"b28-t46": [
+"volatile.confusion"
+],
+"b280-t10": [
+"hp"
+],
+"b280-t2": [
+"hp"
+],
+"b280-t22": [
+"hp"
+],
+"b280-t29": [
+"hp"
+],
+"b280-t31": [
+"hp"
+],
+"b280-t32": [
+"hp"
+],
+"b280-t5": [
+"hp"
+],
+"b281-t15": [
+"boost.spe"
+],
+"b282-t14": [
+"hp"
+],
+"b282-t2": [
+"hp"
+],
+"b284-t17": [
+"active",
+"hp",
+"item",
+"volatile.quarkdrivespe"
+],
+"b285-t25": [
+"hp"
+],
+"b286-t6": [
+"hp"
+],
+"b288-t11": [
+"hp"
+],
+"b288-t25": [
+"hp"
+],
+"b288-t29": [
+"hp"
+],
+"b288-t31": [
+"hp"
+],
+"b289-t17": [
+"hp"
+],
+"b29-t8": [
+"hp"
+],
+"b291-t12": [
+"hp",
+"volatile.substitute"
+],
+"b291-t17": [
+"hp"
+],
+"b291-t6": [
+"hp"
+],
+"b292-t19": [
+"hp"
+],
+"b293-t20": [
+"hp"
+],
+"b294-t14": [
+"volatile.typechange"
+],
+"b295-t17": [
+"volatile.substitute"
+],
+"b295-t38": [
+"boost.spe",
+"item"
+],
+"b295-t53": [
+"status"
+],
+"b298-t12": [
+"hp"
+],
+"b298-t13": [
+"hp"
+],
+"b298-t14": [
+"hp"
+],
+"b298-t33": [
+"boost.spe"
+],
+"b298-t48": [
+"boost.spe"
+],
+"b30-t33": [
+"hp"
+],
+"b32-t11": [
+"hp"
+],
+"b32-t14": [
+"hp"
+],
+"b32-t47": [
+"hp"
+],
+"b32-t9": [
+"hp"
+],
+"b34-t10": [
+"hp"
+],
+"b34-t12": [
+"hp"
+],
+"b34-t24": [
+"hp"
+],
+"b34-t27": [
+"status"
+],
+"b34-t31": [
+"status"
+],
+"b36-t2": [
+"hp"
+],
+"b36-t22": [
+"status"
+],
+"b36-t31": [
+"status"
+],
+"b39-t1": [
+"boost.evasion"
+],
+"b39-t24": [
+"status"
+],
+"b41-t12": [
+"hp"
+],
+"b41-t21": [
+"hp"
+],
+"b42-t21": [
+"hp"
+],
+"b43-t20": [
+"hp"
+],
+"b44-t6": [
+"hp"
+],
+"b44-t8": [
+"volatile.perish3"
+],
+"b45-t21": [
+"hp"
+],
+"b45-t3": [
+"boost.spe"
+],
+"b45-t31": [
+"hp"
+],
+"b45-t5": [
+"boost.spe"
+],
+"b47-t1": [
+"volatile.typechange"
+],
+"b47-t22": [
+"volatile.typechange"
+],
+"b48-t30": [
+"hp"
+],
+"b5-t18": [
+"status"
+],
+"b50-t52": [
+"boost.evasion"
+],
+"b51-t16": [
+"hp"
+],
+"b52-t28": [
+"status"
+],
+"b52-t54": [
+"hp"
+],
+"b53-t14": [
+"hp",
+"volatile.partiallytrapped"
+],
+"b55-t27": [
+"stealth_rock",
+"toxic_spikes"
+],
+"b56-t10": [
+"hp"
+],
+"b57-t15": [
+"volatile.confusion"
+],
+"b58-t18": [
+"boost.spe"
+],
+"b58-t5": [
+"hp"
+],
+"b58-t7": [
+"boost.spe"
+],
+"b61-t14": [
+"hp",
+"status"
+],
+"b61-t5": [
+"item"
+],
+"b62-t15": [
+"hp"
+],
+"b62-t21": [
+"hp"
+],
+"b62-t30": [
+"hp",
+"status",
+"volatile.protect"
+],
+"b63-t4": [
+"hp"
+],
+"b63-t5": [
+"hp"
+],
+"b64-t8": [
+"hp"
+],
+"b67-t1": [
+"boost.spa"
+],
+"b68-t11": [
+"volatile.substitute"
+],
+"b68-t20": [
+"hp"
+],
+"b69-t47": [
+"boost.evasion"
+],
+"b71-t11": [
+"hp"
+],
+"b71-t21": [
+"hp"
+],
+"b71-t6": [
+"boost.spe"
+],
+"b72-t17": [
+"reflect"
+],
+"b75-t26": [
+"hp"
+],
+"b75-t27": [
+"hp"
+],
+"b75-t4": [
+"hp"
+],
+"b76-t17": [
+"volatile.typechange"
+],
+"b77-t12": [
+"hp"
+],
+"b78-t24": [
+"hp"
+],
+"b8-t10": [
+"hp"
+],
+"b8-t11": [
+"hp"
+],
+"b8-t33": [
+"hp"
+],
+"b8-t36": [
+"hp"
+],
+"b8-t4": [
+"hp"
+],
+"b8-t41": [
+"hp"
+],
+"b8-t44": [
+"hp"
+],
+"b80-t16": [
+"volatile.unburden"
+],
+"b81-t32": [
+"hp"
+],
+"b81-t39": [
+"hp"
+],
+"b81-t47": [
+"hp"
+],
+"b85-t13": [
+"boost.spe",
+"hp",
+"status"
+],
+"b87-t10": [
+"volatile.substitute"
+],
+"b88-t9": [
+"hp"
+],
+"b89-t4": [
+"boost.spd"
+],
+"b9-t12": [
+"stealth_rock"
+],
+"b91-t14": [
+"hp"
+],
+"b92-t36": [
+"hp"
+],
+"b95-t10": [
+"hp"
+],
+"b99-t1": [
+"status"
+],
+"b99-t10": [
+"hp"
+],
+"b99-t25": [
+"hp"
+]
+}
+}
