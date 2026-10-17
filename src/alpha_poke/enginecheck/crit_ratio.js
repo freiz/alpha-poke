@@ -4,7 +4,8 @@
 //
 // Usage: node crit_ratio.js <path to pokemon-showdown/dist/sim>
 // stdin: {"p1": team, "p2": team, "turns": [[c1, c2], ...], "seed": "gen5,..."}
-// stdout: {"stages": {move id: stage 0-4}, "error": null}
+// stdout: {"stages": {move id: stage 0-4}, "accuracy": {move id: % or true}, "error": null}
+// (accuracy: after Showdown's ModifyAccuracy event, as if p2 had moved: Zoom Lens counts)
 const {Battle, Teams} = require(process.argv[2]);
 const {teamOf} = require('./showdown_state.js');
 
@@ -13,6 +14,7 @@ process.stdin.on('data', d => { input += d; });
 process.stdin.on('end', () => {
 	const c = JSON.parse(input);
 	const stages = {};
+	const accuracy = {};
 	let error = null;
 	try {
 		const battle = new Battle({formatid: 'gen9customgame', seed: c.seed || 'gen5,1,2,3,4'});
@@ -28,9 +30,11 @@ process.stdin.on('end', () => {
 			const move = battle.dex.getActiveMove(slot.id);
 			let ratio = battle.runEvent('ModifyCritRatio', source, target, move, move.critRatio || 0);
 			stages[slot.id] = Math.max(0, Math.min(4, ratio));
+			const acc = move.accuracy;
+			accuracy[slot.id] = acc === true ? true : battle.runEvent('ModifyAccuracy', target, source, move, acc);
 		}
 	} catch (e) {
 		error = String(e && e.stack || e);
 	}
-	process.stdout.write(JSON.stringify({stages, error}));
+	process.stdout.write(JSON.stringify({stages, accuracy, error}));
 });

@@ -1403,6 +1403,12 @@ fn screen_break_instructions(
     .collect()
 }
 
+// alpha-poke patch (2026-10-16, doc/engine-diff.md L24): Big Root's heal, Showdown's chainModify
+// [5324, 4096] (rounded half down)
+pub fn big_root(amount: i16) -> i16 {
+    ((amount as i32 * 5324 + 2047) / 4096) as i16
+}
+
 fn check_move_hit_or_miss(
     state: &mut State,
     choice: &Choice,
@@ -1419,11 +1425,27 @@ fn check_move_hit_or_miss(
 
     Otherwise, update the incoming instructions' percent_hit to reflect the chance of the move hitting
     */
+    let target_item = state
+        .get_side_immutable(&attacking_side_ref.get_other_side())
+        .get_active_immutable()
+        .item;
     let attacking_side = state.get_side(attacking_side_ref);
     let attacking_pokemon = attacking_side.get_active_immutable();
 
     let mut percent_hit =
-        ((choice.accuracy / 100.0) * boosted_accuracy(attacking_side.accuracy_boost)).min(1.0);
+        (choice.accuracy / 100.0) * boosted_accuracy(attacking_side.accuracy_boost);
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L24): Bright Powder (the target's, x
+    // 3686 / 4096) and Zoom Lens (the user's, moving after the target, x 4915 / 4096) on a move
+    // aimed at the target that can miss
+    if choice.target == MoveTarget::Opponent && !choice.move_id.always_hits() {
+        if attacking_pokemon.item == Items::ZOOMLENS && !choice.first_move {
+            percent_hit *= 4915.0 / 4096.0;
+        }
+        if target_item == Items::BRIGHTPOWDER {
+            percent_hit *= 3686.0 / 4096.0;
+        }
+    }
+    let mut percent_hit = percent_hit.min(1.0);
     if Some((0, 0)) == damage {
         percent_hit = 0.0;
     }
@@ -1769,7 +1791,11 @@ fn generate_instructions_from_damage(
 
         let attacking_pokemon = state.get_side(attacking_side_ref).get_active();
         if let Some(drain_fraction) = choice.drain {
-            let drain_amount = (damage_dealt as f32 * drain_fraction) as i16;
+            let mut drain_amount = (damage_dealt as f32 * drain_fraction) as i16;
+            // alpha-poke patch (2026-10-16, L24): Big Root
+            if attacking_pokemon.item == Items::BIGROOT {
+                drain_amount = big_root(drain_amount);
+            }
             let heal_amount =
                 cmp::min(drain_amount, attacking_pokemon.maxhp - attacking_pokemon.hp);
             if heal_amount != 0 {
@@ -2942,6 +2968,18 @@ fn get_effective_speed(state: &State, side_reference: &SideReference) -> i16 {
         Abilities::QUICKFEET if active_pkmn.status != PokemonStatus::NONE => boosted_speed *= 1.5,
         _ => {}
     }
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L24): the Power items halve the Speed
+    if matches!(
+        active_pkmn.item,
+        Items::POWERANKLET
+            | Items::POWERBAND
+            | Items::POWERBELT
+            | Items::POWERBRACER
+            | Items::POWERLENS
+            | Items::POWERWEIGHT
+    ) {
+        boosted_speed *= 0.5;
+    }
 
     if side
         .volatile_statuses
@@ -3548,10 +3586,14 @@ fn add_end_of_turn_instructions(
             active_pkmn.hp -= health_sapped;
             incoming_instructions.instruction_list.push(damage_ins);
 
-            let health_recovered = cmp::min(
-                health_sapped,
-                other_active_pkmn.maxhp - other_active_pkmn.hp,
-            );
+            // alpha-poke patch (2026-10-16, L24): the seeder's Big Root
+            let sapped_heal = if other_active_pkmn.item == Items::BIGROOT {
+                big_root(health_sapped)
+            } else {
+                health_sapped
+            };
+            let health_recovered =
+                cmp::min(sapped_heal, other_active_pkmn.maxhp - other_active_pkmn.hp);
             if health_recovered > 0 && !seeder_heal_blocked {
                 let heal_ins = Instruction::Heal(HealInstruction {
                     side_ref: side_ref.get_other_side(),

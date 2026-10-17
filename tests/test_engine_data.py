@@ -116,3 +116,18 @@ def test_engine_knows_every_item_with_an_effect():
 
     unknown = data.items_unknown_to_engine() + [i for i in DURATION_ITEMS if not _engine_item(i)]
     assert unknown == []
+
+
+def test_always_hit_moves_match_showdown():
+    """The moves aimed at the target that cannot miss (Showdown's accuracy: true; the engine
+    keeps 100 for them and lists them in Choices::always_hits, so accuracy modifiers -- Bright
+    Powder, Zoom Lens -- leave them alone)."""
+    import alpha_search
+
+    from alpha_poke.enginecheck import data
+
+    foe = {"normal", "any", "adjacentFoe", "allAdjacentFoes", "randomNormal", "allAdjacent",
+           "scripted"}  # fmt: skip
+    want = sorted(m["id"] for m in data.showdown()["moves"]
+                  if m["accuracy"] == "always" and m["target"] in foe)  # fmt: skip
+    assert alpha_search.always_hit_moves() == want

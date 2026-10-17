@@ -375,6 +375,19 @@ fn engine_data() -> (Vec<Vec<String>>, Vec<(String, String, f32)>) {
     (moves, chart)
 }
 
+/// poke-engine's moves aimed at the target that cannot miss (`Choices::always_hits`), lowercase.
+#[pyfunction]
+fn always_hit_moves() -> Vec<String> {
+    use poke_engine::choices::MOVES;
+    let mut out: Vec<String> = MOVES
+        .keys()
+        .filter(|c| c.always_hits())
+        .map(|c| format!("{:?}", c).to_lowercase())
+        .collect();
+    out.sort();
+    out
+}
+
 /// poke-engine's base stats of species (the forme-change table, `PokemonName::base_stats`):
 /// None for a species the engine has none of.
 #[pyfunction]
@@ -1060,6 +1073,7 @@ fn alpha_search(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(move_table, m)?)?;
     m.add_function(wrap_pyfunction!(engine_data, m)?)?;
     m.add_function(wrap_pyfunction!(engine_base_stats, m)?)?;
+    m.add_function(wrap_pyfunction!(always_hit_moves, m)?)?;
     m.add_function(wrap_pyfunction!(encode_ids, m)?)?;
     m.add_function(wrap_pyfunction!(tnet_forward, m)?)?;
     m.add_class::<PyBatchSearch>()?;

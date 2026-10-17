@@ -20450,6 +20450,64 @@ impl Choices {
             _ => false,
         }
     }
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L24): the moves aimed at the target that
+    // cannot miss (Showdown's accuracy: true; the engine's 100): no accuracy modifier applies to
+    // them (Bright Powder, Zoom Lens). tests/test_engine_data.py checks the list against Showdown
+    pub fn always_hits(&self) -> bool {
+        matches!(
+            self,
+            Choices::AERIALACE
+                | Choices::AFTERYOU
+                | Choices::AURASPHERE
+                | Choices::BLOCK
+                | Choices::CLEARSMOG
+                | Choices::CONFIDE
+                | Choices::CONVERSION2
+                | Choices::CURSE
+                | Choices::DECORATE
+                | Choices::DEFOG
+                | Choices::DISARMINGVOICE
+                | Choices::FALSESURRENDER
+                | Choices::FLORALHEALING
+                | Choices::FLOWERTRICK
+                | Choices::GUARDSPLIT
+                | Choices::GUARDSWAP
+                | Choices::HEALPULSE
+                | Choices::HEARTSWAP
+                | Choices::HYPERSPACEFURY
+                | Choices::HYPERSPACEHOLE
+                | Choices::INSTRUCT
+                | Choices::KOWTOWCLEAVE
+                | Choices::LOCKON
+                | Choices::MAGICALLEAF
+                | Choices::MEANLOOK
+                | Choices::MIMIC
+                | Choices::PAINSPLIT
+                | Choices::PLAYNICE
+                | Choices::POWERSPLIT
+                | Choices::POWERSWAP
+                | Choices::PSYCHUP
+                | Choices::REFLECTTYPE
+                | Choices::ROAR
+                | Choices::ROLEPLAY
+                | Choices::SHADOWPUNCH
+                | Choices::SHOCKWAVE
+                | Choices::SKETCH
+                | Choices::SKILLSWAP
+                | Choices::SMARTSTRIKE
+                | Choices::SPEEDSWAP
+                | Choices::SPICYEXTRACT
+                | Choices::STRUGGLE
+                | Choices::SWIFT
+                | Choices::TACHYONCUTTER
+                | Choices::TEARFULLOOK
+                | Choices::TOPSYTURVY
+                | Choices::TRANSFORM
+                | Choices::WHIRLWIND
+                | Choices::YAWN
+        )
+    }
+
     pub fn increased_crit_ratio(&self) -> bool {
         match self {
             Choices::AEROBLAST

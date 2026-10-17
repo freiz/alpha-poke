@@ -1041,3 +1041,90 @@ def test_l24_pinch_boost_berries(berry, check):
     else:
         assert check[1] in m["volatiles"]
     assert res["diff"] == {}
+
+
+def _engine_hit_chance(outs) -> float:
+    return sum(o[0] for o in outs if o.damage[1] > 0)
+
+
+DRAGAPULT_FAST = _setter("Dragapult", "Infiltrator", "Leftovers",
+                         "- Dragon Darts\n- Shadow Ball\n- U-turn\n- Will-O-Wisp")  # fmt: skip
+
+
+@pytest.mark.parametrize("attacker_item, target_item, move", [
+    ("Leftovers", "Bright Powder", "nightslash"),  # 100 x 0.9
+    ("Zoom Lens", "Leftovers", "stoneedge"),  # 80 x 1.2 (it moves after the faster target)
+])  # fmt: skip
+def test_l24_accuracy_items(attacker_item, target_item, move):
+    p1 = _setter("Kingambit", "Supreme Overlord", attacker_item,
+                 "- Kowtow Cleave\n- Night Slash\n- Stone Edge\n- Iron Head")  # fmt: skip
+    p2 = DRAGAPULT_FAST.replace("@ Leftovers", f"@ {target_item}")
+    acc = ec.accuracies(p1, p2)[move]
+    states = ec.run_showdown(p1, p2, [(f"move {move}", "move willowisp")])
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), move, "willowisp")
+    assert _engine_hit_chance(outs) == pytest.approx(min(acc / 100, 1.0), abs=2e-3), acc
+
+
+def _first_mover_showdown(states) -> str:
+    return next(x.split("|")[2][:2] for x in states[1]["log"] if x.startswith("|move|"))
+
+
+def _first_mover_engine(state, c1, c2) -> str:
+    si = max(pe.generate_instructions(state, c1, c2), key=lambda x: x.percentage)
+    first = next(str(i) for i in si.instruction_list if str(i).startswith("Acted"))
+    return "p1" if "SideOne" in first else "p2"
+
+
+@pytest.mark.parametrize("item", ["Power Anklet", "Power Band", "Power Belt", "Power Bracer",
+                                  "Power Lens", "Power Weight"])  # fmt: skip
+def test_l24_power_items_halve_speed(item):
+    """Kingambit outspeeds Ting-Lu, but not at half its Speed."""
+    p1 = _setter("Kingambit", "Supreme Overlord", item,
+                 "- Kowtow Cleave\n- Night Slash\n- Stone Edge\n- Iron Head")  # fmt: skip
+    states = ec.run_showdown(p1, TINGLU, [("move kowtowcleave", "move spikes")])
+    assert _first_mover_showdown(states) == "p2"  # Showdown: Ting-Lu first
+    assert _first_mover_engine(ec.engine_state(states[0]), "kowtowcleave", "spikes") == "p2"
+
+
+def test_l24_float_stone():
+    """Low Kick against a Float Stone holder: half its weight (Corviknight 75 kg -> 37.5: 60
+    power, not 80)."""
+    p1 = _setter("Kingambit", "Supreme Overlord", "Leftovers",
+                 "- Low Kick\n- Night Slash\n- Stone Edge\n- Iron Head")  # fmt: skip
+    states, res = _item_turn(p1, _corviknight("Float Stone"), [("move lowkick", "move defog")],
+                             ("lowkick", "defog"))  # fmt: skip
+    assert res["diff"] == {}
+
+
+def test_l24_big_root():
+    """Leech Seed's heal x 1.3 for a Big Root holder (exact: no roll in it, within the HP
+    tolerance of Ruination's damage otherwise)."""
+    p1 = FERROTHORN.replace("@ Rocky Helmet", "@ Big Root")
+    states, res = _item_turn(p1, TINGLU_HITS, [("move leechseed", "move ruination")],
+                             ("leechseed", "ruination"))  # fmt: skip
+    assert res["diff"] == {}
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "leechseed", "ruination")
+    hp = states[1]["sides"][0]["mons"][0]["hp"]
+    assert {o[1].side_one.pokemon[0].hp for o in outs if o[0] > 0.5} == {hp}
+
+
+@pytest.mark.parametrize("item", ["King's Rock", "Razor Fang"])
+def test_l24_flinch_items(item):
+    """A damaging move without a flinch chance gets 10% (Showdown's rate counted over 1,000 seeds:
+    a secondary's roll is not a randomChance, force_random cannot show it)."""
+    p1 = _kingambit("Supreme Overlord", item)
+    turns = [("move kowtowcleave", "move spikes")]
+    rate = ec.showdown_rate(p1, TINGLU, turns, "|cant|p2a: Ting-Lu|flinch", 1000)
+    states = ec.run_showdown(p1, TINGLU, turns)
+    e = ec.engine_state(states[0])
+    flinch = sum(si.percentage for si in pe.generate_instructions(e, "kowtowcleave", "spikes")
+                 if any("FLINCH" in str(i) for i in si.instruction_list)) / 100  # fmt: skip
+    assert flinch == pytest.approx(rate, abs=0.03), rate
+
+
+def test_l24_utility_umbrella():
+    """Rain does not boost a Water move against an Umbrella holder."""
+    p1 = _setter("Pelipper", "Drizzle", "Damp Rock", "- Surf\n- Roost\n- Hurricane\n- U-turn")
+    states, res = _item_turn(p1, _corviknight("Utility Umbrella"), [("move surf", "move defog")],
+                             ("surf", "defog"))  # fmt: skip
+    assert res["diff"] == {}

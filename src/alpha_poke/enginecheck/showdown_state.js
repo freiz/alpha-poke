@@ -31,7 +31,9 @@ function monState(p, side) {
 		moves: p.moveSlots.map(m => ({id: m.id, pp: m.pp, maxpp: m.maxpp, disabled: !!m.disabled})),
 		terastallized: p.terastallized || '',
 		tera_type: p.teraType || '',
-		weight: p.getWeight() / 10,
+		// the species' weight, as our state construction gives it: the engine applies Float Stone
+		// (getWeight() would hide it)
+		weight: p.weighthg / 10,
 		nature: p.set.nature || 'Serious',
 		active: !!p.isActive,
 		// the engine's last_used_move: the move used since it came in, or none (Fake Out, Encore)

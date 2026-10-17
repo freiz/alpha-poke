@@ -552,7 +552,16 @@ fn common_pkmn_damage_calc(
         && defender.ability != Abilities::CLOUDNINE
         && defender.ability != Abilities::AIRLOCK
     {
-        damage_modifier *= weather_modifier(&choice.move_type, weather);
+        // alpha-poke patch (2026-10-16, doc/engine-diff.md L24): not against a Utility Umbrella
+        // holder in sun / rain (Showdown's onWeatherModifyDamage)
+        if !(defender.item == Items::UTILITYUMBRELLA
+            && matches!(
+                weather,
+                Weather::SUN | Weather::RAIN | Weather::HARSHSUN | Weather::HEAVYRAIN
+            ))
+        {
+            damage_modifier *= weather_modifier(&choice.move_type, weather);
+        }
     }
 
     damage_modifier *= stab_modifier(&choice.move_type, &attacker);

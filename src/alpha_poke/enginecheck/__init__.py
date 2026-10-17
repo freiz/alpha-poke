@@ -417,3 +417,29 @@ def crit_stages(p1, p2, turns=(), seed: str = "gen5,1,2,3,4") -> dict[str, int]:
     if out["error"]:
         raise RuntimeError(out["error"])
     return out["stages"]
+
+
+def accuracies(p1, p2, turns=(), seed: str = "gen5,1,2,3,4") -> dict:
+    """Showdown's accuracy of p1's active's moves against p2's active after ``turns`` (its
+    ModifyAccuracy event: Bright Powder, Zoom Lens as if p2 had moved; True: it cannot miss)."""
+    case = {"p1": p1, "p2": p2, "turns": [list(t) for t in turns], "seed": seed}
+    r = subprocess.run(["node", str(RUNNER.with_name("crit_ratio.js")), str(SIM)],
+                       input=json.dumps(case), capture_output=True, text=True, check=True,
+                       timeout=120)  # fmt: skip
+    out = json.loads(r.stdout)
+    if out["error"]:
+        raise RuntimeError(out["error"])
+    return out["accuracy"]
+
+
+def showdown_rate(p1, p2, turns, line: str, n: int = 400) -> float:
+    """The share of n simulator seeds where ``line`` (a substring) appears in the last turn's
+    protocol (``chance_count.js``): Showdown's chance of an event one battle cannot show."""
+    case = {"p1": p1, "p2": p2, "turns": [list(t) for t in turns], "line": line, "n": n}
+    r = subprocess.run(["node", str(RUNNER.with_name("chance_count.js")), str(SIM)],
+                       input=json.dumps(case), capture_output=True, text=True, check=True,
+                       timeout=600)  # fmt: skip
+    out = json.loads(r.stdout)
+    if out["error"]:
+        raise RuntimeError(out["error"])
+    return out["hits"] / out["n"]

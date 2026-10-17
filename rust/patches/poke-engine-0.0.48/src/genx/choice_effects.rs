@@ -15,8 +15,8 @@ use crate::instruction::{
 };
 use crate::pokemon::PokemonName;
 use crate::state::{
-    pokemon_index_iter, LastUsedMove, PokemonBoostableStat, PokemonSideCondition, PokemonStatus,
-    PokemonType, Side, SideReference, State,
+    pokemon_index_iter, LastUsedMove, Pokemon, PokemonBoostableStat, PokemonSideCondition,
+    PokemonStatus, PokemonType, Side, SideReference, State,
 };
 use std::cmp;
 
@@ -649,16 +649,17 @@ pub fn modify_choice(
             }
         }
         Choices::GRASSKNOT | Choices::LOWKICK => {
-            let defender_active = defending_side.get_active_immutable();
-            if defender_active.weight_kg < 10.0 {
+            // alpha-poke patch (2026-10-16, doc/engine-diff.md L24): Float Stone halves the weight
+            let weight = effective_weight(defending_side.get_active_immutable());
+            if weight < 10.0 {
                 attacker_choice.base_power = 20.0;
-            } else if defender_active.weight_kg < 25.0 {
+            } else if weight < 25.0 {
                 attacker_choice.base_power = 40.0;
-            } else if defender_active.weight_kg < 50.0 {
+            } else if weight < 50.0 {
                 attacker_choice.base_power = 60.0;
-            } else if defender_active.weight_kg < 100.0 {
+            } else if weight < 100.0 {
                 attacker_choice.base_power = 80.0;
-            } else if defender_active.weight_kg < 200.0 {
+            } else if weight < 200.0 {
                 attacker_choice.base_power = 100.0;
             } else {
                 attacker_choice.base_power = 120.0;
@@ -667,7 +668,7 @@ pub fn modify_choice(
         Choices::HEATCRASH | Choices::HEAVYSLAM => {
             let attacker = attacking_side.get_active_immutable();
             let defender = defending_side.get_active_immutable();
-            let weight_ratio = defender.weight_kg / attacker.weight_kg;
+            let weight_ratio = effective_weight(defender) / effective_weight(attacker);
             if weight_ratio > 0.5 {
                 attacker_choice.base_power = 40.0;
             } else if weight_ratio > 0.3335 {
@@ -1299,6 +1300,14 @@ pub fn fixed_damage(
         return Some(0);
     }
     Some(amount)
+}
+
+fn effective_weight(pkmn: &Pokemon) -> f32 {
+    if pkmn.item == Items::FLOATSTONE {
+        pkmn.weight_kg / 2.0
+    } else {
+        pkmn.weight_kg
+    }
 }
 
 pub fn choice_special_effect(

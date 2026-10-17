@@ -319,6 +319,25 @@ define_enum_with_from_str! {
         GANLONBERRY,
         APICOTBERRY,
         LANSATBERRY,
+        // accuracy (check_move_hit_or_miss)
+        BRIGHTPOWDER,
+        ZOOMLENS,
+        // half the Speed (get_effective_speed)
+        POWERANKLET,
+        POWERBAND,
+        POWERBELT,
+        POWERBRACER,
+        POWERLENS,
+        POWERWEIGHT,
+        // half the weight (choice_effects: Low Kick, Grass Knot, Heat Crash, Heavy Slam)
+        FLOATSTONE,
+        // drain / Leech Seed heals x 5324 / 4096
+        BIGROOT,
+        // a 10% flinch (item_modify_attack_being_used)
+        KINGSROCK,
+        RAZORFANG,
+        // the holder's foes' sun / rain damage modifiers (damage_calc)
+        UTILITYUMBRELLA,
     },
     default = UNKNOWNITEM
 }
@@ -1625,6 +1644,21 @@ pub fn item_modify_attack_being_used(
 ) {
     let (attacking_side, defending_side) = state.get_both_sides_immutable(attacking_side_ref);
     match attacking_side.get_active_immutable().item {
+        // alpha-poke patch (2026-10-16, doc/engine-diff.md L24): a 10% flinch for a damaging move
+        // without one
+        Items::KINGSROCK | Items::RAZORFANG => {
+            let has_flinch = attacking_choice.secondaries.as_ref().is_some_and(|s| {
+                s.iter()
+                    .any(|x| x.effect == Effect::VolatileStatus(PokemonVolatileStatus::FLINCH))
+            });
+            if attacking_choice.category != MoveCategory::Status && !has_flinch {
+                attacking_choice.add_or_create_secondaries(Secondary {
+                    chance: 10.0,
+                    effect: Effect::VolatileStatus(PokemonVolatileStatus::FLINCH),
+                    target: MoveTarget::Opponent,
+                });
+            }
+        }
         Items::WELLSPRINGMASK => match attacking_side.get_active_immutable().id {
             PokemonName::OGERPONWELLSPRING | PokemonName::OGERPONWELLSPRINGTERA => {
                 attacking_choice.base_power *= 1.2;
