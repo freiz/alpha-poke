@@ -1,7 +1,7 @@
 use super::abilities::Abilities;
 use super::damage_calc::type_effectiveness_modifier;
 use super::generate_instructions::{add_remove_status_instructions, apply_boost_instruction};
-use super::items::{get_choice_move_disable_instructions, Items};
+use super::items::{get_choice_move_disable_instructions, room_service, Items};
 use super::state::{PokemonVolatileStatus, Terrain, Weather};
 use crate::choices::{
     Boost, Choice, Choices, Effect, Heal, MoveCategory, MoveTarget, Secondary, StatBoosts,
@@ -1522,6 +1522,9 @@ pub fn choice_special_effect(
                     previous_trickroom_turns_remaining: state.trick_room.turns_remaining,
                 }));
             state.trick_room.active = !state.trick_room.active;
+            // alpha-poke patch (2026-10-16, doc/engine-diff.md L24): Room Service on either side
+            room_service(state, attacking_side_ref, instructions);
+            room_service(state, &attacking_side_ref.get_other_side(), instructions);
         }
         Choices::FINALGAMBIT => {
             let (attacking_side, defending_side) = state.get_both_sides(attacking_side_ref);

@@ -119,7 +119,7 @@ def _engine_mon(m: dict) -> pe.Pokemon:
         base_ability="none" if m.get("used_once") else (m["base_ability"] or m["ability"] or "none"),
         item=m["item"] or "none", attack=st["atk"], defense=st["def"],
         special_attack=st["spa"], special_defense=st["spd"], speed=st["spe"],
-        status=STATUS[m["status"]], weight_kg=m["weight"],
+        status=STATUS[m["status"]], weight_kg=m["weight"], nature=m.get("nature", "serious").lower(),
         moves=[pe.Move(id=x["id"], pp=x["pp"], disabled=x["disabled"]) for x in m["moves"]],
         terastallized=bool(m["terastallized"]), tera_type=(m["tera_type"] or "typeless").lower(),
     )  # fmt: skip

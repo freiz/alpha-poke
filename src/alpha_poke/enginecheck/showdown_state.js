@@ -32,6 +32,7 @@ function monState(p, side) {
 		terastallized: p.terastallized || '',
 		tera_type: p.teraType || '',
 		weight: p.getWeight() / 10,
+		nature: p.set.nature || 'Serious',
 		active: !!p.isActive,
 		// the engine's last_used_move: the move used since it came in, or none (Fake Out, Encore)
 		last_move: p.lastMove ? p.lastMove.id : '',

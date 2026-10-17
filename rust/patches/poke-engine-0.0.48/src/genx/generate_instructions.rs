@@ -4231,6 +4231,33 @@ fn run_move(
     let defender_ref = attacking_side.get_other_side();
     let mut ejected = false;
     let damaging = does_damage && !hit_sub && choice.category != MoveCategory::Status;
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L24): Sticky Barb moves to an attacker
+    // without an item that makes contact (Showdown's onHit)
+    if damaging && choice.flags.contact {
+        let attacker = state
+            .get_side_immutable(&attacking_side)
+            .get_active_immutable();
+        let defender = state
+            .get_side_immutable(&defender_ref)
+            .get_active_immutable();
+        if defender.item == Items::STICKYBARB && attacker.item == Items::NONE && attacker.hp > 0 {
+            for ins in [
+                Instruction::ChangeItem(ChangeItemInstruction {
+                    side_ref: defender_ref,
+                    current_item: Items::STICKYBARB,
+                    new_item: Items::NONE,
+                }),
+                Instruction::ChangeItem(ChangeItemInstruction {
+                    side_ref: attacking_side,
+                    current_item: Items::NONE,
+                    new_item: Items::STICKYBARB,
+                }),
+            ] {
+                state.apply_one_instruction(&ins);
+                instructions.instruction_list.push(ins);
+            }
+        }
+    }
     let (emergency_exit, eject_pack) = {
         let defender_side = state.get_side_immutable(&defender_ref);
         let holder = defender_side.get_active_immutable();

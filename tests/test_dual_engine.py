@@ -881,3 +881,109 @@ def test_l27_screen_breakers(move):
     assert "reflect" not in states[1]["sides"][1]["conditions"]  # Showdown: broken
     outs = ec.engine_outcomes(ec.engine_state(states[0]), move, "reflect")
     assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+TINGLU_HITS = _setter("Ting-Lu", "Vessel of Ruin", "Leftovers",
+                      "- Throat Chop\n- Ruination\n- Spikes\n- Whirlwind")  # fmt: skip
+
+
+def _corviknight(item, nature="Careful"):
+    # 400 HP: two Ruinations take it to exactly 1/4 (400 -> 200 -> 100)
+    return CORVIKNIGHT.replace("@ Leftovers", f"@ {item}").replace("Careful Nature", f"{nature} Nature")
+
+
+def _item_turn(p1, p2, turns, choices, n=(1, 1), seed="gen5,5,5,5,5"):
+    """Showdown's last turn and the engine's outcomes of it from the turn before."""
+    states = ec.run_showdown(p1, p2, turns, seed=seed)
+    outs = ec.engine_outcomes(ec.engine_state(states[-2]), *choices)
+    return states, ec.closest(states[-1], outs, n, hp=True)
+
+
+@pytest.mark.parametrize("berry, confused", [("Figy Berry", False), ("Wiki Berry", True),
+                                             ("Aguav Berry", False), ("Mago Berry", False),
+                                             ("Iapapa Berry", False)])  # fmt: skip
+def test_l24_pinch_berries(berry, confused):
+    """At 1/4 HP: heals 1/3; confused when the nature lowers the berry's stat (Careful: Sp. Atk,
+    Wiki Berry's)."""
+    turns = [("move defog", "move ruination")] * 2
+    states, res = _item_turn(_corviknight(berry), TINGLU_HITS, turns, ("defog", "ruination"))
+    m = states[2]["sides"][0]["mons"][0]
+    assert m["item"] == "" and m["hp"] == 100 + 400 // 3  # Showdown: eaten at 100 / 400
+    assert ("confusion" in m["volatiles"]) == confused
+    assert res["diff"] == {}
+
+
+def test_l24_oran_berry():
+    states, res = _item_turn(_corviknight("Oran Berry"), TINGLU_HITS,
+                             [("move defog", "move ruination")], ("defog", "ruination"))  # fmt: skip
+    assert states[1]["sides"][0]["mons"][0]["hp"] == 210  # Showdown: 200 + 10
+    assert res["diff"] == {}
+
+
+KYUREM_ICE = KYUREM.replace("- Earth Power", "- Ice Beam")
+ROTOM_WASH = _setter("Rotom-Wash", "Levitate", "Leftovers",
+                     "- Thunderbolt\n- Hydro Pump\n- Volt Switch\n- Will-O-Wisp")  # fmt: skip
+PELIPPER_SURF = _setter("Pelipper", "Keen Eye", "Leftovers", "- Surf\n- Roost\n- Hurricane\n- U-turn")
+
+
+@pytest.mark.parametrize("item, p2, move, check", [
+    ("Kee Berry", TINGLU_HITS, "throatchop", ("boosts", "def", 1)),
+    ("Maranga Berry", TINGLU_HITS, "ruination", ("boosts", "spd", 1)),
+    ("Snowball", KYUREM_ICE, "icebeam", ("boosts", "atk", 1)),
+    ("Luminous Moss", PELIPPER_SURF, "surf", ("boosts", "spd", 1)),
+    ("Jaboca Berry", TINGLU_HITS, "throatchop", ("foe_lost", 1 / 8)),
+    ("Rowap Berry", TINGLU_HITS, "ruination", ("foe_lost", 1 / 8)),
+    ("Enigma Berry", ROTOM_WASH, "thunderbolt", ("healed", 1 / 4)),
+])  # fmt: skip
+def test_l24_items_on_being_hit(item, p2, move, check):
+    """Items used up by the hit that triggers them: a stat boost (Kee / Maranga Berry: physical /
+    special, Snowball: Ice, Luminous Moss: Water), the attacker's 1/8 (Jaboca / Rowap Berry),
+    a quarter healed after a super-effective hit (Enigma Berry: Electric on Corviknight)."""
+    holder = _corviknight(item)
+    states, res = _item_turn(holder, p2, [("move defog", f"move {move}")], ("defog", move),
+                             seed="gen5,6,6,6,6")  # fmt: skip
+    m = states[1]["sides"][0]["mons"][0]
+    assert m["item"] == ""  # Showdown: used up
+    if check[0] == "boosts":
+        assert m["boosts"][check[1]] == check[2]
+    assert res["diff"] == {}
+
+
+STICKYBARB_FOE = _setter("Ferrothorn", "Iron Barbs", "Sticky Barb",
+                         "- Leech Seed\n- Protect\n- Gyro Ball\n- Spikes")  # fmt: skip
+
+
+def test_l24_sticky_barb():
+    """Its holder loses 1/8 at the end of every turn; a contact move moves it to an attacker
+    without an item."""
+    states, res = _item_turn(STICKYBARB_FOE, TINGLU_HITS, [("move protect", "move spikes")],
+                             ("protect", "spikes"))  # fmt: skip
+    m = states[1]["sides"][0]["mons"][0]
+    assert m["hp"] == m["maxhp"] - m["maxhp"] // 8  # Showdown
+    assert res["diff"] == {}
+    nothing = TINGLU_HITS.replace("@ Leftovers", "")
+    states, res = _item_turn(STICKYBARB_FOE, nothing, [("move spikes", "move throatchop")],
+                             ("spikes", "throatchop"))  # fmt: skip
+    assert states[1]["sides"][1]["mons"][0]["item"] == "stickybarb"  # Showdown: moved
+    assert res["diff"] == {}
+
+
+def test_l24_room_service():
+    """Trick Room starts: the holder's Speed -1, the item used up."""
+    hatterene = HATTERENE.replace("@ Life Orb", "@ Room Service").replace("- Calm Mind", "- Trick Room")
+    states, res = _item_turn(hatterene, TINGLU_HITS, [("move trickroom", "move spikes")],
+                             ("trickroom", "spikes"))  # fmt: skip
+    assert states[1]["sides"][0]["mons"][0]["boosts"]["spe"] == -1  # Showdown
+    assert res["diff"] == {}
+
+
+def test_l24_kee_berry_knocked_off_first():
+    """Knock Off takes a Kee / Maranga Berry before it triggers (Showdown: the move's onAfterHit
+    before the berry's onAfterMoveSecondary); found by the random differential's baseline check
+    (b191-t5) after the first version boosted anyway."""
+    rilla = RILLABOOM.replace("- U-turn", "- Knock Off")
+    states, res = _item_turn(_corviknight("Kee Berry"), rilla, [("move defog", "move knockoff")],
+                             ("defog", "knockoff"))  # fmt: skip
+    m = states[1]["sides"][0]["mons"][0]
+    assert m["item"] == "" and m["boosts"]["def"] == 0  # Showdown: knocked off, no boost
+    assert res["diff"] == {}

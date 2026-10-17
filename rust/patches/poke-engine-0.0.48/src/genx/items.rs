@@ -7,13 +7,14 @@ use crate::choices::{Choice, Choices, Effect, MoveCategory, MoveTarget, Secondar
 use crate::define_enum_with_from_str;
 use crate::engine::generate_instructions::add_remove_status_instructions;
 use crate::instruction::{
-    ChangeItemInstruction, ChangeStatusInstruction, ChangeVolatileStatusDurationInstruction,
-    DamageInstruction, DisableMoveInstruction, HealInstruction, Instruction,
-    RemoveVolatileStatusInstruction, StateInstructions,
+    ApplyVolatileStatusInstruction, ChangeItemInstruction, ChangeStatusInstruction,
+    ChangeVolatileStatusDurationInstruction, DamageInstruction, DisableMoveInstruction,
+    HealInstruction, Instruction, RemoveVolatileStatusInstruction, StateInstructions,
 };
 use crate::pokemon::PokemonName;
 use crate::state::{
-    Pokemon, PokemonBoostableStat, PokemonStatus, PokemonType, Side, SideReference, State,
+    Pokemon, PokemonBoostableStat, PokemonNature, PokemonStatus, PokemonType, Side, SideReference,
+    State,
 };
 use std::cmp;
 
@@ -292,6 +293,25 @@ define_enum_with_from_str! {
         SMOOTHROCK,
         TERRAINEXTENDER,
         LIGHTCLAY,
+        // pinch berries (item_before_move / item_end_of_turn, as Sitrus Berry)
+        FIGYBERRY,
+        WIKIBERRY,
+        MAGOBERRY,
+        AGUAVBERRY,
+        IAPAPABERRY,
+        ORANBERRY,
+        // used up by the hit that triggers them (item_modify_attack_against)
+        KEEBERRY,
+        MARANGABERRY,
+        SNOWBALL,
+        LUMINOUSMOSS,
+        JABOCABERRY,
+        ROWAPBERRY,
+        ENIGMABERRY,
+        // item_end_of_turn; its move to a contact attacker: generate_instructions::run_move
+        STICKYBARB,
+        // choice_effects (Trick Room), item_on_switch_in
+        ROOMSERVICE,
     },
     default = UNKNOWNITEM
 }
@@ -544,6 +564,121 @@ fn boost_berry(
             new_item: Items::NONE,
         }));
     attacker.item = Items::NONE;
+}
+
+// alpha-poke patch (2026-10-16, doc/engine-diff.md L24): the pinch berries (Figy, Wiki, Mago, Aguav,
+// Iapapa: 1/3 of max HP at 1/4 HP or less, confusing a holder whose nature lowers the berry's
+// stat; Oran: 10 HP at half or less), as Sitrus Berry; not eaten under Heal Block (Showdown's
+// onTryEatItem)
+fn pinch_berry_heal(pkmn: &Pokemon) -> Option<(i16, Option<PokemonBoostableStat>)> {
+    let low = pkmn.hp <= pkmn.maxhp / 4
+        || (pkmn.ability == Abilities::GLUTTONY && pkmn.hp <= pkmn.maxhp / 2);
+    let stat = match pkmn.item {
+        Items::FIGYBERRY => PokemonBoostableStat::Attack,
+        Items::WIKIBERRY => PokemonBoostableStat::SpecialAttack,
+        Items::MAGOBERRY => PokemonBoostableStat::Speed,
+        Items::AGUAVBERRY => PokemonBoostableStat::SpecialDefense,
+        Items::IAPAPABERRY => PokemonBoostableStat::Defense,
+        Items::ORANBERRY if pkmn.hp <= pkmn.maxhp / 2 && pkmn.hp > 0 => return Some((10, None)),
+        _ => return None,
+    };
+    if !low || pkmn.hp == 0 {
+        return None;
+    }
+    Some((pkmn.maxhp / 3, Some(stat)))
+}
+
+fn nature_lowers(nature: &PokemonNature, stat: &PokemonBoostableStat) -> bool {
+    use PokemonNature::*;
+    match stat {
+        PokemonBoostableStat::Attack => matches!(nature, BOLD | MODEST | CALM | TIMID),
+        PokemonBoostableStat::Defense => matches!(nature, LONELY | MILD | GENTLE | HASTY),
+        PokemonBoostableStat::SpecialAttack => matches!(nature, ADAMANT | IMPISH | CAREFUL | JOLLY),
+        PokemonBoostableStat::SpecialDefense => matches!(nature, NAUGHTY | LAX | RASH | NAIVE),
+        PokemonBoostableStat::Speed => matches!(nature, BRAVE | RELAXED | QUIET | SASSY),
+        _ => false,
+    }
+}
+
+fn pinch_berry(side_ref: &SideReference, side: &mut Side, instructions: &mut StateInstructions) {
+    if side
+        .volatile_statuses
+        .contains(&PokemonVolatileStatus::HEALBLOCK)
+    {
+        return;
+    }
+    let confused = side
+        .volatile_statuses
+        .contains(&PokemonVolatileStatus::CONFUSION);
+    let active = side.get_active();
+    let Some((amount, stat)) = pinch_berry_heal(active) else {
+        return;
+    };
+    let heal_amount = cmp::min(amount, active.maxhp - active.hp);
+    if heal_amount > 0 {
+        instructions
+            .instruction_list
+            .push(Instruction::Heal(HealInstruction {
+                side_ref: *side_ref,
+                heal_amount,
+            }));
+        active.hp += heal_amount;
+    }
+    instructions
+        .instruction_list
+        .push(Instruction::ChangeItem(ChangeItemInstruction {
+            side_ref: *side_ref,
+            current_item: active.item,
+            new_item: Items::NONE,
+        }));
+    active.item = Items::NONE;
+    if let Some(stat) = stat {
+        if !confused && nature_lowers(&active.nature, &stat) {
+            instructions
+                .instruction_list
+                .push(Instruction::ApplyVolatileStatus(
+                    ApplyVolatileStatusInstruction {
+                        side_ref: *side_ref,
+                        volatile_status: PokemonVolatileStatus::CONFUSION,
+                    },
+                ));
+            side.volatile_statuses
+                .insert(PokemonVolatileStatus::CONFUSION);
+        }
+    }
+}
+
+// alpha-poke patch (2026-10-16, L24): Room Service, when Trick Room is up: the holder's Speed -1,
+// used up (Showdown: on switching in under it, and when Trick Room starts)
+pub fn room_service(
+    state: &mut State,
+    side_ref: &SideReference,
+    instructions: &mut StateInstructions,
+) {
+    if !state.trick_room.active {
+        return;
+    }
+    let side = state.get_side(side_ref);
+    if side.get_active_immutable().item != Items::ROOMSERVICE || side.get_active_immutable().hp == 0
+    {
+        return;
+    }
+    apply_boost_instruction(
+        side,
+        &PokemonBoostableStat::Speed,
+        &-1,
+        side_ref,
+        side_ref,
+        instructions,
+    );
+    instructions
+        .instruction_list
+        .push(Instruction::ChangeItem(ChangeItemInstruction {
+            side_ref: *side_ref,
+            current_item: Items::ROOMSERVICE,
+            new_item: Items::NONE,
+        }));
+    side.get_active().item = Items::NONE;
 }
 
 pub fn item_before_move(
@@ -873,6 +1008,16 @@ pub fn item_before_move(
             &MENTAL_HERB_CURES,
             instructions,
         ),
+        Items::FIGYBERRY
+        | Items::WIKIBERRY
+        | Items::MAGOBERRY
+        | Items::AGUAVBERRY
+        | Items::IAPAPABERRY
+        | Items::ORANBERRY
+            if pinch_berry_heal(active_pkmn).is_some() =>
+        {
+            pinch_berry(side_ref, attacking_side, instructions)
+        }
         Items::SITRUSBERRY
             if active_pkmn.ability == Abilities::GLUTTONY
                 && active_pkmn.hp <= active_pkmn.maxhp / 2 =>
@@ -916,6 +1061,16 @@ pub fn item_on_switch_in(
     side_ref: &SideReference,
     instructions: &mut StateInstructions,
 ) {
+    // alpha-poke patch (2026-10-16, L24)
+    if state
+        .get_side_immutable(side_ref)
+        .get_active_immutable()
+        .item
+        == Items::ROOMSERVICE
+    {
+        room_service(state, side_ref, instructions);
+        return;
+    }
     let active_terrain = state.get_terrain();
     let switching_in_side = state.get_side(side_ref);
     let switching_in_pkmn = switching_in_side.get_active_immutable();
@@ -1068,6 +1223,28 @@ pub fn item_end_of_turn(
             &MENTAL_HERB_CURES,
             instructions,
         ),
+        Items::FIGYBERRY
+        | Items::WIKIBERRY
+        | Items::MAGOBERRY
+        | Items::AGUAVBERRY
+        | Items::IAPAPABERRY
+        | Items::ORANBERRY
+            if pinch_berry_heal(active_pkmn).is_some() =>
+        {
+            pinch_berry(side_ref, attacking_side, instructions)
+        }
+        // alpha-poke patch (2026-10-16, L24): Sticky Barb, 1/8 at the end of every turn (Showdown's
+        // residual order 28, with the orbs)
+        Items::STICKYBARB => {
+            let damage_amount = cmp::min(cmp::max(active_pkmn.maxhp / 8, 1), active_pkmn.hp);
+            instructions
+                .instruction_list
+                .push(Instruction::Damage(DamageInstruction {
+                    side_ref: *side_ref,
+                    damage_amount,
+                }));
+            active_pkmn.hp -= damage_amount;
+        }
         Items::SITRUSBERRY if active_pkmn.hp <= active_pkmn.maxhp / 2 => {
             sitrus_berry(side_ref, attacking_side, instructions)
         }
@@ -1215,6 +1392,103 @@ pub fn item_modify_attack_against(
         }
         Items::EVIOLITE => {
             attacking_choice.base_power /= 1.5;
+        }
+        // alpha-poke patch (2026-10-16, doc/engine-diff.md L24): used up by the hit that triggers
+        // them (Showdown's onAfterMoveSecondary / onDamagingHit / onHit)
+        Items::KEEBERRY | Items::MARANGABERRY | Items::SNOWBALL | Items::LUMINOUSMOSS => {
+            let item = defending_side.get_active_immutable().item;
+            // (Kee / Maranga trigger after the move's own effects: Knock Off, Thief / Covet and
+            // Bug Bite / Pluck take the berry first)
+            let takes_item = matches!(
+                attacking_choice.move_id,
+                Choices::KNOCKOFF
+                    | Choices::THIEF
+                    | Choices::COVET
+                    | Choices::BUGBITE
+                    | Choices::PLUCK
+            );
+            let triggers = match item {
+                Items::KEEBERRY => {
+                    attacking_choice.category == MoveCategory::Physical && !takes_item
+                }
+                Items::MARANGABERRY => {
+                    attacking_choice.category == MoveCategory::Special && !takes_item
+                }
+                Items::SNOWBALL => {
+                    attacking_choice.category != MoveCategory::Status
+                        && attacking_choice.move_type == PokemonType::ICE
+                }
+                _ => {
+                    attacking_choice.category != MoveCategory::Status
+                        && attacking_choice.move_type == PokemonType::WATER
+                }
+            };
+            if triggers {
+                let mut boosts = StatBoosts {
+                    attack: 0,
+                    defense: 0,
+                    special_attack: 0,
+                    special_defense: 0,
+                    speed: 0,
+                    accuracy: 0,
+                };
+                match item {
+                    Items::KEEBERRY => boosts.defense = 1,
+                    Items::SNOWBALL => boosts.attack = 1,
+                    _ => boosts.special_defense = 1,
+                }
+                attacking_choice.add_or_create_secondaries(Secondary {
+                    chance: 100.0,
+                    effect: Effect::Boost(boosts),
+                    target: MoveTarget::Opponent,
+                });
+                attacking_choice.add_or_create_secondaries(Secondary {
+                    chance: 100.0,
+                    effect: Effect::RemoveItem,
+                    target: MoveTarget::Opponent,
+                });
+            }
+        }
+        Items::JABOCABERRY | Items::ROWAPBERRY => {
+            let category = if defending_side.get_active_immutable().item == Items::JABOCABERRY {
+                MoveCategory::Physical
+            } else {
+                MoveCategory::Special
+            };
+            if attacking_choice.category == category
+                && attacking_side.get_active_immutable().ability != Abilities::MAGICGUARD
+            {
+                attacking_choice.add_or_create_secondaries(Secondary {
+                    chance: 100.0,
+                    effect: Effect::Heal(-0.125),
+                    target: MoveTarget::User,
+                });
+                attacking_choice.add_or_create_secondaries(Secondary {
+                    chance: 100.0,
+                    effect: Effect::RemoveItem,
+                    target: MoveTarget::Opponent,
+                });
+            }
+        }
+        Items::ENIGMABERRY => {
+            let defender = defending_side.get_active_immutable();
+            if attacking_choice.category != MoveCategory::Status
+                && type_effectiveness_modifier(&attacking_choice.move_type, defender) > 1.0
+                && !defending_side
+                    .volatile_statuses
+                    .contains(&PokemonVolatileStatus::HEALBLOCK)
+            {
+                attacking_choice.add_or_create_secondaries(Secondary {
+                    chance: 100.0,
+                    effect: Effect::Heal(0.25),
+                    target: MoveTarget::Opponent,
+                });
+                attacking_choice.add_or_create_secondaries(Secondary {
+                    chance: 100.0,
+                    effect: Effect::RemoveItem,
+                    target: MoveTarget::Opponent,
+                });
+            }
         }
         Items::ROCKYHELMET => {
             if attacking_choice.flags.contact {
