@@ -29,6 +29,8 @@ sides, in poke-engine's own units (rust/patches/poke-engine-0.0.48, generate_ins
               ends of turn of the active's partial trap (Infestation, Whirlpool, ...; from its
               -activate to its -end; 2026-10-16, doc/engine-diff.md L13: the patched engine ends
               it at the fifth, Showdown at the fifth or the sixth)
+  frombooster the active's Protosynthesis / Quark Drive came from Booster Energy (-activate ...
+              [fromitem]) until it ends or the mon leaves (doc/engine-diff.md L141)
   slowstart   the active's Slow Start: [turns left, counting]; 5 from its -start, one less at each
               end of turn from the first turn start it is in for (Showdown's counter skips the
               turn it came in; doc/engine-diff.md L77), gone at its -end
@@ -82,6 +84,7 @@ class SideTimers:
     magnetrise: int | None = None
     partiallytrapped: int | None = None
     slowstart: list | None = None  # [turns left, counting]
+    frombooster: bool = False
     trapped: bool = False
     failed_now: bool = False  # this turn (last_failed at the next turn)
     last_failed: bool = False
@@ -105,7 +108,7 @@ class SideTimers:
         self.confusion = self.taunt = self.encore = self.yawn = None
         self.disabled = self.healblock = self.throatchop = self.magnetrise = None
         self.partiallytrapped = self.slowstart = None
-        self.trapped = False
+        self.trapped = self.frombooster = False
         self.failed_now = self.last_failed = False
         self.sub_hit = self.recharge = False
 
@@ -264,6 +267,9 @@ def _feed(sides: dict, p: list[str]) -> None:
             st.slowstart = [5, False]
     elif tag == "-ability" and len(p) > 3 and to_id(p[3]) == "dauntlessshield":
         st.used_once.add(sp)
+    elif tag == "-activate" and len(p) > 3 and to_id(p[3]) in ("abilityprotosynthesis",
+                                                              "abilityquarkdrive"):  # fmt: skip
+        st.frombooster = "[fromitem]" in p
     elif tag == "-activate" and len(p) > 3 and to_id(p[3]) == "abilitybattlebond":
         st.used_once.add(sp)  # (L111: once per battle too)
     elif tag == "-activate" and len(p) > 3 and to_id(p[3].replace("move: ", "")) in TRAPS:
@@ -292,6 +298,8 @@ def _feed(sides: dict, p: list[str]) -> None:
             st.sub_hit = False
         elif what == "slowstart":
             st.slowstart = None
+        elif what in ("protosynthesis", "quarkdrive"):
+            st.frombooster = False
         elif what == "futuresight":  # on the target: the other side's attack landed
             sides["p2" if p[2][:2] == "p1" else "p1"].future = None
 

@@ -69,9 +69,6 @@
 "b199-t58": [
 "volatile.encore"
 ],
-"b216-t13": [
-"volatile.protosynthesisspa"
-],
 "b217-t10": [
 "hp",
 "status"
@@ -153,18 +150,11 @@
 "b61-t6": [
 "boost.def"
 ],
-"b67-t17": [
-"volatile.protosynthesisspa",
-"volatile.protosynthesisspe"
-],
 "b72-t59": [
 "volatile.confusion"
 ],
 "b75-t48": [
 "status"
-],
-"b89-t14": [
-"volatile.protosynthesisdef"
 ],
 "b98-t43": [
 "status"

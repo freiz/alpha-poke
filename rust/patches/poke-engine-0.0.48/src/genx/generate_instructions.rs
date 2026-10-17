@@ -648,6 +648,12 @@ fn generate_instructions_from_switch(
     ability_on_switch_in(state, &switching_side_ref, incoming_instructions);
     extend_field_durations(state, &switching_side_ref, incoming_instructions, from);
     item_on_switch_in(state, &switching_side_ref, incoming_instructions);
+    // (L141: the foe's Protosynthesis / Quark Drive after the weather / terrain this one set)
+    super::abilities::paradox_update(
+        state,
+        &switching_side_ref.get_other_side(),
+        incoming_instructions,
+    );
 }
 
 fn generate_instructions_from_increment_side_condition(
@@ -4764,148 +4770,6 @@ fn moves_first(
     }
 }
 
-fn get_active_protosynthesis(side: &Side) -> Option<PokemonVolatileStatus> {
-    if side
-        .volatile_statuses
-        .contains(&PokemonVolatileStatus::PROTOSYNTHESISATK)
-    {
-        Some(PokemonVolatileStatus::PROTOSYNTHESISATK)
-    } else if side
-        .volatile_statuses
-        .contains(&PokemonVolatileStatus::PROTOSYNTHESISDEF)
-    {
-        Some(PokemonVolatileStatus::PROTOSYNTHESISDEF)
-    } else if side
-        .volatile_statuses
-        .contains(&PokemonVolatileStatus::PROTOSYNTHESISSPA)
-    {
-        Some(PokemonVolatileStatus::PROTOSYNTHESISSPA)
-    } else if side
-        .volatile_statuses
-        .contains(&PokemonVolatileStatus::PROTOSYNTHESISSPD)
-    {
-        Some(PokemonVolatileStatus::PROTOSYNTHESISSPD)
-    } else if side
-        .volatile_statuses
-        .contains(&PokemonVolatileStatus::PROTOSYNTHESISSPE)
-    {
-        Some(PokemonVolatileStatus::PROTOSYNTHESISSPE)
-    } else {
-        None
-    }
-}
-
-fn get_active_quarkdrive(side: &Side) -> Option<PokemonVolatileStatus> {
-    if side
-        .volatile_statuses
-        .contains(&PokemonVolatileStatus::QUARKDRIVEATK)
-    {
-        Some(PokemonVolatileStatus::QUARKDRIVEATK)
-    } else if side
-        .volatile_statuses
-        .contains(&PokemonVolatileStatus::QUARKDRIVEDEF)
-    {
-        Some(PokemonVolatileStatus::QUARKDRIVEDEF)
-    } else if side
-        .volatile_statuses
-        .contains(&PokemonVolatileStatus::QUARKDRIVESPA)
-    {
-        Some(PokemonVolatileStatus::QUARKDRIVESPA)
-    } else if side
-        .volatile_statuses
-        .contains(&PokemonVolatileStatus::QUARKDRIVESPD)
-    {
-        Some(PokemonVolatileStatus::QUARKDRIVESPD)
-    } else if side
-        .volatile_statuses
-        .contains(&PokemonVolatileStatus::QUARKDRIVESPE)
-    {
-        Some(PokemonVolatileStatus::QUARKDRIVESPE)
-    } else {
-        None
-    }
-}
-
-fn on_weather_end(
-    state: &mut State,
-    sides: [&SideReference; 2],
-    incoming_instructions: &mut StateInstructions,
-) {
-    match state.weather.weather_type {
-        Weather::SUN => {
-            for side_ref in sides {
-                let side = state.get_side(side_ref);
-                if side.get_active_immutable().ability == Abilities::PROTOSYNTHESIS {
-                    if let Some(volatile_status) = get_active_protosynthesis(side) {
-                        let active = side.get_active();
-                        if active.item == Items::BOOSTERENERGY {
-                            incoming_instructions
-                                .instruction_list
-                                .push(Instruction::ChangeItem(ChangeItemInstruction {
-                                    side_ref: *side_ref,
-                                    current_item: Items::BOOSTERENERGY,
-                                    new_item: Items::NONE,
-                                }));
-                            active.item = Items::NONE;
-                        } else {
-                            incoming_instructions.instruction_list.push(
-                                Instruction::RemoveVolatileStatus(
-                                    RemoveVolatileStatusInstruction {
-                                        side_ref: *side_ref,
-                                        volatile_status,
-                                    },
-                                ),
-                            );
-                            side.volatile_statuses.remove(&volatile_status);
-                        }
-                    }
-                }
-            }
-        }
-        _ => {}
-    }
-}
-
-fn on_terrain_end(
-    state: &mut State,
-    sides: [&SideReference; 2],
-    incoming_instructions: &mut StateInstructions,
-) {
-    match state.terrain.terrain_type {
-        Terrain::ELECTRICTERRAIN => {
-            for side_ref in sides {
-                let side = state.get_side(side_ref);
-                if side.get_active_immutable().ability == Abilities::QUARKDRIVE {
-                    if let Some(volatile_status) = get_active_quarkdrive(side) {
-                        let active = side.get_active();
-                        if active.item == Items::BOOSTERENERGY {
-                            incoming_instructions
-                                .instruction_list
-                                .push(Instruction::ChangeItem(ChangeItemInstruction {
-                                    side_ref: *side_ref,
-                                    current_item: Items::BOOSTERENERGY,
-                                    new_item: Items::NONE,
-                                }));
-                            active.item = Items::NONE;
-                        } else {
-                            incoming_instructions.instruction_list.push(
-                                Instruction::RemoveVolatileStatus(
-                                    RemoveVolatileStatusInstruction {
-                                        side_ref: *side_ref,
-                                        volatile_status,
-                                    },
-                                ),
-                            );
-                            side.volatile_statuses.remove(&volatile_status);
-                        }
-                    }
-                }
-            }
-        }
-        _ => {}
-    }
-}
-
 // alpha-poke patch (2026-10-16, doc/engine-diff.md L62): Unburden, on when the active lost its
 // item since it came in (Showdown's onAfterUseItem / onTakeItem: at once; here at the end of the
 // turn, from the turn's instructions: its Speed matters from the next turn's order)
@@ -5042,7 +4906,6 @@ fn add_end_of_turn_instructions(
             .push(weather_dissipate_instruction);
         state.weather.turns_remaining -= 1;
         if state.weather.turns_remaining == 0 {
-            on_weather_end(state, sides, &mut incoming_instructions);
             let weather_end_instruction = Instruction::ChangeWeather(ChangeWeather {
                 new_weather: Weather::NONE,
                 new_weather_turns_remaining: 0,
@@ -5053,6 +4916,10 @@ fn add_end_of_turn_instructions(
                 .instruction_list
                 .push(weather_end_instruction);
             state.weather.weather_type = Weather::NONE;
+            // (L141: Protosynthesis after the sun's end; was on_weather_end before it)
+            for side_ref in sides {
+                super::abilities::paradox_update(state, side_ref, &mut incoming_instructions);
+            }
         }
     }
 
@@ -5346,7 +5213,6 @@ fn add_end_of_turn_instructions(
             .push(terrain_dissipate_instruction);
         state.terrain.turns_remaining -= 1;
         if state.terrain.turns_remaining == 0 {
-            on_terrain_end(state, sides, &mut incoming_instructions);
             let terrain_end_instruction = Instruction::ChangeTerrain(ChangeTerrain {
                 new_terrain: Terrain::NONE,
                 new_terrain_turns_remaining: 0,
@@ -5357,6 +5223,10 @@ fn add_end_of_turn_instructions(
                 .instruction_list
                 .push(terrain_end_instruction);
             state.terrain.terrain_type = Terrain::NONE;
+            // (L141: Quark Drive after the Electric Terrain's end; was on_terrain_end before it)
+            for side_ref in sides {
+                super::abilities::paradox_update(state, side_ref, &mut incoming_instructions);
+            }
         }
     }
 
@@ -6830,17 +6700,11 @@ fn after_move_finish(state: &mut State, final_instructions: &mut Vec<StateInstru
     for state_instructions in final_instructions.iter_mut() {
         state.apply_instructions(&state_instructions.instruction_list);
 
-        // alpha-poke patch (2026-10-17, doc/engine-diff.md L124): a fainted Neutralizing Gas holder:
-        // the foe's Booster Energy goes off
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L124 / L141): Protosynthesis / Quark
+        // Drive after the move's weather / terrain (and a fainted Neutralizing Gas holder: the
+        // foe's Booster Energy goes off)
         for side_ref in [SideReference::SideOne, SideReference::SideTwo] {
-            let active = state.get_side_immutable(&side_ref).get_active_immutable();
-            if active.ability == Abilities::NEUTRALIZINGGAS && active.hp == 0 {
-                super::abilities::booster_energy_after_gas(
-                    state,
-                    &side_ref.get_other_side(),
-                    state_instructions,
-                );
-            }
+            super::abilities::paradox_update(state, &side_ref, state_instructions);
         }
 
         // alpha-poke patch (2026-10-17, doc/engine-diff.md L112): a pivot user that fainted from

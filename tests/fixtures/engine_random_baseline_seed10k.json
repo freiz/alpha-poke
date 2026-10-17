@@ -58,9 +58,6 @@
 "b182-t25": [
 "hp"
 ],
-"b184-t25": [
-"volatile.protosynthesisspa"
-],
 "b187-t32": [
 "status"
 ],
@@ -126,6 +123,7 @@
 "hp",
 "item",
 "status",
+"volatile.frombooster",
 "volatile.protosynthesisatk"
 ],
 "b295-t1": [

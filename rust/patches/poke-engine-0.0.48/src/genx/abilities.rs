@@ -12,7 +12,8 @@ use crate::instruction::{
     ApplyVolatileStatusInstruction, BoostInstruction, ChangeAbilityInstruction,
     ChangeItemInstruction, ChangeSideConditionInstruction, ChangeStatusInstruction, ChangeTerrain,
     ChangeType, ChangeVolatileStatusDurationInstruction, ChangeWeather, DamageInstruction,
-    FormeChangeInstruction, HealInstruction, Instruction, StateInstructions,
+    FormeChangeInstruction, HealInstruction, Instruction, RemoveVolatileStatusInstruction,
+    StateInstructions,
 };
 use crate::pokemon::PokemonName;
 use crate::state::{
@@ -489,45 +490,6 @@ pub const FAIL_SKILL_SWAP: [Abilities; 29] = [
     Abilities::ZEROTOHERO,
 ];
 
-fn protosynthesus_or_quarkdrive_on_switch_in(
-    thing_is_active: bool,
-    volatile: PokemonVolatileStatus,
-    instructions: &mut StateInstructions,
-    attacking_side: &mut Side,
-    side_ref: &SideReference,
-) {
-    let active_pkmn = attacking_side.get_active();
-    if thing_is_active {
-        instructions
-            .instruction_list
-            .push(Instruction::ApplyVolatileStatus(
-                ApplyVolatileStatusInstruction {
-                    side_ref: *side_ref,
-                    volatile_status: volatile,
-                },
-            ));
-        attacking_side.volatile_statuses.insert(volatile);
-    } else if active_pkmn.item == Items::BOOSTERENERGY {
-        instructions
-            .instruction_list
-            .push(Instruction::ChangeItem(ChangeItemInstruction {
-                side_ref: *side_ref,
-                current_item: Items::BOOSTERENERGY,
-                new_item: Items::NONE,
-            }));
-        instructions
-            .instruction_list
-            .push(Instruction::ApplyVolatileStatus(
-                ApplyVolatileStatusInstruction {
-                    side_ref: *side_ref,
-                    volatile_status: volatile,
-                },
-            ));
-        active_pkmn.item = Items::NONE;
-        attacking_side.volatile_statuses.insert(volatile);
-    }
-}
-
 // alpha-poke patch (2026-10-17, doc/engine-diff.md L124): Neutralizing Gas left the field: a
 // Protosynthesis / Quark Drive holder's Booster Energy goes off (Showdown: the abilities start
 // again), unless one of their volatiles is on already (or the sun / Electric Terrain does it)
@@ -536,44 +498,101 @@ pub fn booster_energy_after_gas(
     side_ref: &SideReference,
     instructions: &mut StateInstructions,
 ) {
-    let side = state.get_side_immutable(side_ref);
-    let active = side.get_active_immutable();
-    if active.hp == 0
-        || active.item != Items::BOOSTERENERGY
-        || !matches!(
-            active.ability,
-            Abilities::PROTOSYNTHESIS | Abilities::QUARKDRIVE
-        )
+    paradox_update(state, side_ref, instructions);
+}
+
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L141): Protosynthesis / Quark Drive follow the
+// sun / Electric Terrain whenever they change (Showdown's onWeatherChange / onTerrainChange, and
+// Booster Energy's onUpdate): on when it is there, off when it is gone unless it came from Booster
+// Energy (FROMBOOSTER), and then a held Booster Energy goes off (the best stat as it is now). Not
+// under the foe's Neutralizing Gas. Called after a switch-in, a move and the end of the turn's
+// weather / terrain; before, only a switch-in and the sun's / terrain's end of turn did, and a
+// held Booster Energy kept the volatile it had
+pub fn paradox_update(
+    state: &mut State,
+    side_ref: &SideReference,
+    instructions: &mut StateInstructions,
+) {
+    let (proto, field_on) = match state.get_side_immutable(side_ref).get_active_immutable().ability
     {
+        Abilities::PROTOSYNTHESIS => (true, state.weather_is_active(&Weather::SUN)),
+        Abilities::QUARKDRIVE => (false, state.terrain_is_active(&Terrain::ELECTRICTERRAIN)),
+        _ => return,
+    };
+    let (side, foe) = state.get_both_sides(side_ref);
+    let active = side.get_active_immutable();
+    let gas = foe.get_active_immutable().ability == Abilities::NEUTRALIZINGGAS
+        && foe.get_active_immutable().hp > 0;
+    if active.hp == 0 || (gas && active.item != Items::ABILITYSHIELD) {
         return;
     }
-    let on = [
-        PokemonVolatileStatus::PROTOSYNTHESISATK,
-        PokemonVolatileStatus::PROTOSYNTHESISDEF,
-        PokemonVolatileStatus::PROTOSYNTHESISSPA,
-        PokemonVolatileStatus::PROTOSYNTHESISSPD,
-        PokemonVolatileStatus::PROTOSYNTHESISSPE,
-        PokemonVolatileStatus::QUARKDRIVEATK,
-        PokemonVolatileStatus::QUARKDRIVEDEF,
-        PokemonVolatileStatus::QUARKDRIVESPA,
-        PokemonVolatileStatus::QUARKDRIVESPD,
-        PokemonVolatileStatus::QUARKDRIVESPE,
-    ]
-    .iter()
-    .any(|v| side.volatile_statuses.contains(v));
-    if on {
-        return;
-    }
-    if active.ability == Abilities::PROTOSYNTHESIS {
-        let sun = state.weather_is_active(&Weather::SUN);
-        let side = state.get_side(side_ref);
-        let volatile = protosynthesis_volatile_from_side(side);
-        protosynthesus_or_quarkdrive_on_switch_in(sun, volatile, instructions, side, side_ref);
+    let all = if proto {
+        [
+            PokemonVolatileStatus::PROTOSYNTHESISATK,
+            PokemonVolatileStatus::PROTOSYNTHESISDEF,
+            PokemonVolatileStatus::PROTOSYNTHESISSPA,
+            PokemonVolatileStatus::PROTOSYNTHESISSPD,
+            PokemonVolatileStatus::PROTOSYNTHESISSPE,
+        ]
     } else {
-        let terrain = state.terrain_is_active(&Terrain::ELECTRICTERRAIN);
-        let side = state.get_side(side_ref);
-        let volatile = quarkdrive_volatile_from_side(side);
-        protosynthesus_or_quarkdrive_on_switch_in(terrain, volatile, instructions, side, side_ref);
+        [
+            PokemonVolatileStatus::QUARKDRIVEATK,
+            PokemonVolatileStatus::QUARKDRIVEDEF,
+            PokemonVolatileStatus::QUARKDRIVESPA,
+            PokemonVolatileStatus::QUARKDRIVESPD,
+            PokemonVolatileStatus::QUARKDRIVESPE,
+        ]
+    };
+    if let Some(on) = all.iter().find(|v| side.volatile_statuses.contains(v)) {
+        if field_on
+            || side
+                .volatile_statuses
+                .contains(&PokemonVolatileStatus::FROMBOOSTER)
+        {
+            return;
+        }
+        side.volatile_statuses.remove(on);
+        instructions
+            .instruction_list
+            .push(Instruction::RemoveVolatileStatus(
+                RemoveVolatileStatusInstruction {
+                    side_ref: *side_ref,
+                    volatile_status: *on,
+                },
+            ));
+    }
+    let booster = !field_on && side.get_active_immutable().item == Items::BOOSTERENERGY;
+    if !field_on && !booster {
+        return;
+    }
+    let volatile = if proto {
+        protosynthesis_volatile_from_side(side)
+    } else {
+        quarkdrive_volatile_from_side(side)
+    };
+    if booster {
+        instructions
+            .instruction_list
+            .push(Instruction::ChangeItem(ChangeItemInstruction {
+                side_ref: *side_ref,
+                current_item: Items::BOOSTERENERGY,
+                new_item: Items::NONE,
+            }));
+        side.get_active().item = Items::NONE;
+    }
+    for v in [volatile, PokemonVolatileStatus::FROMBOOSTER] {
+        if v == PokemonVolatileStatus::FROMBOOSTER && !booster {
+            continue;
+        }
+        side.volatile_statuses.insert(v);
+        instructions
+            .instruction_list
+            .push(Instruction::ApplyVolatileStatus(
+                ApplyVolatileStatusInstruction {
+                    side_ref: *side_ref,
+                    volatile_status: v,
+                },
+            ));
     }
 }
 
@@ -1540,29 +1559,9 @@ pub fn ability_on_switch_in(
                 active_pkmn.recalculate_stats(side_ref, instructions);
             }
         }
-        Abilities::PROTOSYNTHESIS => {
-            let sun_is_active = state.weather_is_active(&Weather::SUN);
-            let attacking_side = state.get_side(side_ref);
-            let volatile = protosynthesis_volatile_from_side(&attacking_side);
-            protosynthesus_or_quarkdrive_on_switch_in(
-                sun_is_active,
-                volatile,
-                instructions,
-                attacking_side,
-                side_ref,
-            );
-        }
-        Abilities::QUARKDRIVE => {
-            let electric_terrain_is_active = state.terrain_is_active(&Terrain::ELECTRICTERRAIN);
-            let attacking_side = state.get_side(side_ref);
-            let volatile = quarkdrive_volatile_from_side(&attacking_side);
-            protosynthesus_or_quarkdrive_on_switch_in(
-                electric_terrain_is_active,
-                volatile,
-                instructions,
-                attacking_side,
-                side_ref,
-            );
+        // (L141)
+        Abilities::PROTOSYNTHESIS | Abilities::QUARKDRIVE => {
+            paradox_update(state, side_ref, instructions);
         }
         Abilities::EMBODYASPECTTEAL => {
             apply_boost_instruction(

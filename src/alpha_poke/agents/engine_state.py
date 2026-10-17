@@ -695,6 +695,8 @@ def build_state(
             vol.add("slowstart")
         if tm.trapped:  # (L107)
             vol.add("trapped")
+        if tm.frombooster:  # (L141)
+            vol.add("frombooster")
         if tm.last_failed:  # (L115)
             vol.add("lastmovefailed")
     # the items of the mons that set a screen / the weather / the terrain (ours known, theirs

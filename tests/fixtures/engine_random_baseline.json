@@ -30,9 +30,6 @@
 "b176-t18": [
 "hp"
 ],
-"b184-t7": [
-"volatile.protosynthesisspa"
-],
 "b185-t19": [
 "hp"
 ],
@@ -101,10 +98,6 @@
 "b259-t6": [
 "hp",
 "volatile.substitute"
-],
-"b263-t8": [
-"volatile.protosynthesisspa",
-"volatile.protosynthesisspe"
 ],
 "b269-t15": [
 "boost.atk"

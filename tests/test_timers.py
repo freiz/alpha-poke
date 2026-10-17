@@ -237,3 +237,32 @@ def test_future_sight_pending_until_it_lands():
 """
     )
     assert t["p1"].future is None
+
+
+def test_protosynthesis_from_booster_energy():
+    """L141: a Protosynthesis / Quark Drive from Booster Energy (the engine's frombooster), not one
+    from the sun; it ends with the volatile or a switch."""
+    lead = """
+|switch|p1a: Wake|Walking Wake|100/100
+|switch|p2a: Bob|Gliscor, F|100/100
+"""
+    t = run(lead + """
+|-enditem|p1a: Wake|Booster Energy
+|-activate|p1a: Wake|ability: Protosynthesis|[fromitem]
+|-start|p1a: Wake|protosynthesisspa
+|turn|1
+""")  # fmt: skip
+    assert t["p1"].frombooster
+    t = run(lead + """
+|-weather|SunnyDay|[from] ability: Drought|[of] p2a: Bob
+|-activate|p1a: Wake|ability: Protosynthesis
+|-start|p1a: Wake|protosynthesisspa
+|turn|1
+""")  # fmt: skip
+    assert not t["p1"].frombooster
+    t = run(lead + """
+|-activate|p1a: Wake|ability: Protosynthesis|[fromitem]
+|-end|p1a: Wake|Protosynthesis
+|turn|1
+""")  # fmt: skip
+    assert not t["p1"].frombooster

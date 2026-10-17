@@ -297,6 +297,9 @@ define_enum_with_from_str! {
         // (L115: the side's move failed last turn -- Temper Flare / Stomping Tantrum double; from
         // the state given, cleared at the end of the turn)
         LASTMOVEFAILED,
+        // (L141: the Protosynthesis / Quark Drive volatile came from Booster Energy -- Showdown's
+        // fromBooster: the weather / terrain leaving does not end it; ends on a switch)
+        FROMBOOSTER,
     },
     default = NONE
 }

@@ -3599,3 +3599,43 @@ def test_l140_fling(item, foe_move):
     assert states[1]["sides"][0]["mons"][0]["item"] == ""
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "fling", foe_move)
     assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+WALKING_WAKE = """Walking Wake @ Booster Energy
+Ability: Protosynthesis
+Tera Type: Water
+EVs: 4 Atk / 252 SpA / 252 Spe
+Timid Nature
+- Draco Meteor
+- Calm Mind
+- Flamethrower
+- Protect"""
+
+
+# L141 (doc/engine-diff.md): Protosynthesis follows the sun whenever it changes: on with the sun a
+# move or a switch-in sets, off when another weather replaces it, and a held Booster Energy then
+# goes off with the best stat as it is (Showdown's onWeatherChange, Booster Energy's onUpdate);
+# the engine only looked at a switch-in and the sun's end of turn
+@pytest.mark.parametrize("case", ["sunny day", "chilly reception", "sun ends"])
+def test_l141_protosynthesis_follows_the_weather(case):
+    wake = WALKING_WAKE.replace("Booster Energy", "Leftovers") if case == "sunny day" else WALKING_WAKE
+    if case == "sunny day":
+        foe = _setter("Torkoal", "White Smoke", "Leftovers", "- Sunny Day\n- Rapid Spin\n- Lava Plume\n- Protect")
+        turns, k = [("move protect", "move sunnyday")], 0
+    elif case == "chilly reception":
+        foe = _setter("Torkoal", "Drought", "Leftovers", "- Sunny Day\n- Chilly Reception\n- Lava Plume\n- Protect")
+        turns, k = [("move protect", "move chillyreception")], 0
+    else:
+        foe = _setter("Torkoal", "White Smoke", "Leftovers", "- Sunny Day\n- Rapid Spin\n- Lava Plume\n- Protect")
+        # (Blissey first: the Booster Energy stays held under the sun)
+        wake = BLISSEY + "\n\n" + WALKING_WAKE
+        turns = [("move protect", "move sunnyday"), ("switch 2", "move rapidspin"),
+                 ("move dracometeor", "move rapidspin"), ("move calmmind", "move rapidspin"),
+                 ("move protect", "move rapidspin")]  # fmt: skip
+        k = 4
+    states = ec.run_showdown(wake, foe, turns)
+    if case == "sun ends":  # the sun's Protosynthesis (Sp. Atk) ends, the Booster Energy's is Speed
+        assert any("protosynthesisspe" in x for x in states[k + 1]["log"])
+    c1, c2 = turns[k][0].split()[1], turns[k][1].split()[1]
+    outs = ec.engine_outcomes(ec.engine_state(states[k]), c1, c2)
+    assert ec.closest(states[k + 1], outs, (1 + (case == "sun ends"), 1), hp=True)["diff"] == {}
