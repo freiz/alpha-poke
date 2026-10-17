@@ -16,9 +16,6 @@
 "boost.atk",
 "hp"
 ],
-"b117-t57": [
-"volatile.substitute"
-],
 "b119-t30": [
 "item"
 ],
@@ -49,9 +46,6 @@
 ],
 "b149-t8": [
 "hp"
-],
-"b152-t40": [
-"volatile.substitute"
 ],
 "b161-t24": [
 "hp",
@@ -206,9 +200,6 @@
 "b67-t17": [
 "volatile.protosynthesisspa",
 "volatile.protosynthesisspe"
-],
-"b70-t28": [
-"volatile.substitute"
 ],
 "b72-t59": [
 "volatile.confusion"

@@ -235,6 +235,8 @@ harness 必须把 Showdown 的状态完整映射到引擎，否则不一致来�
 | L89 | Encore 持续 3 回合（目标本回合已出过招：4），在回合末计数（Showdown 的 duration）；引擎数的是被 Encore 的招式次数，在第三次出招开始时就去掉，所以那一回合里的第二次 Encore 成功了（Showdown 失败）；目标已出过招时也少算一回合 | 引擎 + 状态构造 | 已修复 | `test_l89_encore_counts_turns`（Prankster 先手 / 慢速后手两个参数，6 回合逐回合比较，并核对 `timers.py` 的计数 = 3 − Showdown 的剩余回合） | `generate_instructions.rs`：施加时计数从 0（目标已出招：−1）开始，回合末 +1，到 3 结束；去掉出招前的计数；`timers.py`：同样按回合末计数（`acted`：本回合已出招 / 不能动） |
 | L90 | Taunt 同 L89（3 回合，目标本回合已出招且不是刚换上：4）；另外被挑衅的攻击打进 Water Absorb / Volt Absorb 等时引擎已经把它改成变化招式，挑衅的检查就挡住了它（Showdown 照样出招） | 引擎 + 状态构造 | 已修复 | `test_l90_taunt_counts_turns`（两个参数，同上）；`test_l90_taunted_attack_into_an_absorbing_ability` | 同 L89；`cannot_use_move` 按招式本来的分类判断；原来挑衅结束时的 `re_enable_disabled_moves` 去掉（它会解开讲究锁定的招式） |
 | L91 | Defog（Showdown 的 onHit）只清目标一侧的屏障、Safeguard、Mist（钉子两侧都清）；Good as Gold 挡它，除非使用者是 Mold Breaker / Neutralizing Gas；Mirror Armor 把降闪避弹回去（Mold Breaker / Neutralizing Gas 时不弹）。引擎把使用者自己的屏障也清了，对 Mold Breaker 也让 Good as Gold 挡住，Mirror Armor 看不到这次下降 | 引擎 | 已修复 | `test_l91_defog_keeps_the_users_screens`；`test_l91_defog_evasion_drop`（2 个参数）；`test_l91_neutralizing_gas_defog_through_mirror_armor` | `choice_effects.rs` `choice_hazard_clear`；poke-engine 自带测试 `test_defog_clears_terrain_and_side_conditions` 原来写死了清两侧的 Reflect，按 Showdown 改了期望 |
+| L92 | 打在替身上、掷骰跨过替身 HP 的一击，引擎用平均伤害（要么都打破、要么都打不破）；现在按精确的 16 个掷骰拆成打破 / 没打破两支，和击倒一样（L34 / L51） | 引擎 | 已修复 | `test_l92_substitute_break_by_the_rolls`（掷骰 70–82 对 81 HP 的替身：打破的总概率 = 23/24 × 2/16 + 1/24） | `generate_instructions.rs` `finish_move`：拆分的门槛 `target_hp` 在打到替身时取替身的 HP（声音招式、Infiltrator 例外） |
+| L93 | Strength Sap 打替身会失败（Showdown：没有 bypasssub）；引擎照样按对方攻击回复 | 引擎 | 已修复 | `test_l93_strength_sap_against_a_substitute` | `choice_effects.rs` |
 
 ## 修复与验证（2026-10-16）
 

@@ -2683,3 +2683,27 @@ def test_l91_neutralizing_gas_defog_through_mirror_armor():
     assert states[1]["sides"][0]["mons"][0]["boosts"]["evasion"] == -1
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "roost", "defog")
     assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L92 (doc/engine-diff.md): a hit on a Substitute whose rolls straddle its HP splits by the exact
+# rolls into a break and the rest, like a knockout (L34 / L51); the engine dealt the average roll
+def test_l92_substitute_break_by_the_rolls():
+    tran = _attacker("Heatran", "Flash Fire", "Choice Specs", "- Earth Power\n- Protect\n- Rest\n- Roar", "Modest")
+    whim = _setter("Whimsicott", "Prankster", "Leftovers", "- Substitute\n- Moonblast\n- Protect\n- Encore")
+    states = ec.run_showdown(tran, whim, [("move earthpower", "move substitute")])
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "earthpower", "substitute")
+    broken = sum(p for p, o in outs if not ec.view_engine(o, (1, 1)).get("s2.volatile.substitute"))
+    # the rolls 70-82 against its 81 HP: 2 of 16 break it, a crit (1/24) always
+    assert broken == pytest.approx(23 / 24 * 2 / 16 + 1 / 24, abs=1e-3)
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L93 (doc/engine-diff.md): Strength Sap fails against a Substitute (Showdown: no bypasssub); the
+# engine healed by the target's Attack anyway
+def test_l93_strength_sap_against_a_substitute():
+    whim = _setter("Whimsicott", "Prankster", "Leftovers", "- Substitute\n- Air Slash\n- Protect\n- Encore")
+    plume = _setter("Vileplume", "Effect Spore", "Black Sludge", "- Strength Sap\n- Giga Drain\n- Sleep Powder\n- Sludge Bomb")
+    states = ec.run_showdown(plume, whim, [("move sleeppowder", "move airslash"), ("move strengthsap", "move substitute")])
+    assert states[1]["sides"][0]["mons"][0]["hp"] < states[1]["sides"][0]["mons"][0]["maxhp"]
+    outs = ec.engine_outcomes(ec.engine_state(states[1]), "strengthsap", "substitute")
+    assert ec.closest(states[2], outs, (1, 1), hp=True)["diff"] == {}

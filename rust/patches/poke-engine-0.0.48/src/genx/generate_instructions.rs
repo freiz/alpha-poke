@@ -3783,6 +3783,22 @@ fn finish_move(
     let (mut branch_damage, mut regular_damage) = (0, 0);
     let mut branch_instructions: Option<StateInstructions> = None;
     let mut crit_kill_branch: Option<StateInstructions> = None;
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L92): what the hit can knock out: the
+    // Substitute's HP when it hits the Substitute (its break splits by the rolls, as a
+    // knockout), else the target's HP
+    let target_hp = {
+        let (att, def) = state.get_both_sides_immutable(&attacking_side);
+        if def
+            .volatile_statuses
+            .contains(&PokemonVolatileStatus::SUBSTITUTE)
+            && !choice.flags.sound
+            && att.get_active_immutable().ability != Abilities::INFILTRATOR
+        {
+            def.substitute_health
+        } else {
+            def.get_active_immutable().hp
+        }
+    };
     if let Some((max_damage_dealt, max_crit_damage)) = damage {
         does_damage = true;
         // alpha-poke patch (2026-10-16, doc/engine-diff.md L42): a guaranteed crit's damage is
@@ -3806,11 +3822,7 @@ fn finish_move(
         let near_ko = branch_on_damage
             && per_hit.is_none()
             && fixed.is_none()
-            && max_damage_dealt
-                >= state
-                    .get_side_immutable(&attacking_side.get_other_side())
-                    .get_active_immutable()
-                    .hp;
+            && max_damage_dealt >= target_hp;
         let exact = if near_ko {
             damage_rolls(state, &attacking_side, choice)
                 .map(|(r, c)| if sure_crit { (c, c) } else { (r, c) })
@@ -3829,9 +3841,7 @@ fn finish_move(
             regular_damage = d;
         } else if fixed.is_some() {
             regular_damage = max_damage_dealt;
-        } else if branch_on_damage
-            && max_damage_dealt >= defender_active.hp
-            && min_damage_dealt < defender_active.hp
+        } else if branch_on_damage && max_damage_dealt >= target_hp && min_damage_dealt < target_hp
         {
             let crit_rate = if defender_active.ability == Abilities::BATTLEARMOR
                 || defender_active.ability == Abilities::SHELLARMOR
@@ -3847,7 +3857,7 @@ fn finish_move(
             // (L34, exact rolls: a crit's own rolls, the non-kill damage averaged over both)
             let (branch_chance, average_non_kill_damage) = match exact {
                 Some((rolls, crit_rolls)) => {
-                    let hp = defender_active.hp;
+                    let hp = target_hp;
                     let part = |rs: &[i16; 16], w: f32| {
                         let alive: Vec<f32> =
                             rs.iter().filter(|d| **d < hp).map(|d| *d as f32).collect();
@@ -3868,7 +3878,7 @@ fn finish_move(
                 }
                 None => {
                     let (average_non_kill_damage, num_kill_rolls) =
-                        compare_health_with_damage_multiples(max_damage_dealt, defender_active.hp);
+                        compare_health_with_damage_multiples(max_damage_dealt, target_hp);
                     (
                         ((1.0 - crit_rate) * (num_kill_rolls as f32 / 16.0)) + crit_rate,
                         average_non_kill_damage,
@@ -3879,11 +3889,11 @@ fn finish_move(
             let mut branch_ins = incoming_instructions.clone();
             branch_ins.update_percentage(branch_chance);
             branch_instructions = Some(branch_ins);
-            branch_damage = defender_active.hp;
+            branch_damage = target_hp;
 
             incoming_instructions.update_percentage(1.0 - branch_chance);
             regular_damage = average_non_kill_damage;
-        } else if branch_on_damage && max_damage_dealt < defender_active.hp {
+        } else if branch_on_damage && max_damage_dealt < target_hp {
             let crit_rate = if defender_active.ability == Abilities::BATTLEARMOR
                 || defender_active.ability == Abilities::SHELLARMOR
             {
@@ -3899,7 +3909,7 @@ fn finish_move(
             // alpha-poke patch (2026-10-16, doc/engine-diff.md L51): a crit that can knock out
             // splits by its exact rolls into a knockout and the rest (before: its average,
             // a knockout whenever that reached the HP)
-            let hp = defender_active.hp;
+            let hp = target_hp;
             if crit_rate > 0.0 && max_crit_damage >= hp && per_hit.is_none() && fixed.is_none() {
                 if let Some((_, c)) = damage_rolls(state, &attacking_side, choice)
                     .filter(|(r, c)| r[15] == max_damage_dealt && c[15] == max_crit_damage)
@@ -3963,10 +3973,8 @@ fn finish_move(
         Some(b) => band_split(b, branch_damage),
         None => None,
     };
-    let kill_hp = state
-        .get_side_immutable(&attacking_side.get_other_side())
-        .get_active_immutable()
-        .hp;
+    // (L92: the Substitute's HP when the hit is on it)
+    let kill_hp = target_hp;
     let crit_kill_band = match crit_kill_branch.as_mut() {
         Some(b) => band_split(b, kill_hp),
         None => None,

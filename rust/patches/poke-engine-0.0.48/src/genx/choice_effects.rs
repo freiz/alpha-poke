@@ -439,6 +439,13 @@ pub fn modify_choice(
                 attacker_choice.base_power = 0.0;
             }
         }
+        // alpha-poke patch (2026-10-16, doc/engine-diff.md L93): it fails against a Substitute
+        // (Showdown: no bypasssub)
+        Choices::STRENGTHSAP
+            if defending_side
+                .volatile_statuses
+                .contains(&PokemonVolatileStatus::SUBSTITUTE)
+                && attacking_side.get_active_immutable().ability != Abilities::INFILTRATOR => {}
         Choices::STRENGTHSAP => {
             attacker_choice.boost = Some(Boost {
                 target: MoveTarget::Opponent,
