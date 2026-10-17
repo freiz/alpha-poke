@@ -2707,3 +2707,24 @@ def test_l93_strength_sap_against_a_substitute():
     assert states[1]["sides"][0]["mons"][0]["hp"] < states[1]["sides"][0]["mons"][0]["maxhp"]
     outs = ec.engine_outcomes(ec.engine_state(states[1]), "strengthsap", "substitute")
     assert ec.closest(states[2], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L94 (doc/engine-diff.md): Magic Guard stops Rough Skin's / Iron Barbs' and Rocky Helmet's damage;
+# an absorbing ability (Earth Eater, Water / Volt Absorb, Dry Skin) does not take a move aimed at
+# its side (Spikes: Showdown's onTryHit is for the moves that hit it). The engine took both
+def test_l94_magic_guard_against_rough_skin_and_rocky_helmet():
+    clef = _setter("Clefable", "Magic Guard", "Leftovers", "- Draining Kiss\n- Moonblast\n- Calm Mind\n- Soft-Boiled")
+    chomp = _setter("Garchomp", "Rough Skin", "Rocky Helmet", "- Stealth Rock\n- Earthquake\n- Dragon Tail\n- Spikes")
+    states = ec.run_showdown(clef, chomp, [("move drainingkiss", "move stealthrock")])
+    assert states[1]["sides"][0]["mons"][0]["hp"] == states[1]["sides"][0]["mons"][0]["maxhp"]
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "drainingkiss", "stealthrock")
+    assert ec.closest(states[1], outs, (1, 1), hp=True, dealt=(True, False))["diff"] == {}
+
+
+def test_l94_spikes_into_earth_eater():
+    glis = _setter("Gliscor", "Poison Heal", "Toxic Orb", "- Spikes\n- Earthquake\n- Protect\n- Toxic")
+    worm = _setter("Orthworm", "Earth Eater", "Leftovers", "- Shed Tail\n- Iron Head\n- Body Press\n- Stealth Rock")
+    states = ec.run_showdown(glis, worm, [("move spikes", "move stealthrock")])
+    assert states[1]["sides"][1]["conditions"].get("spikes")
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "spikes", "stealthrock")
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}

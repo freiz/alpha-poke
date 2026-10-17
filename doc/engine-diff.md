@@ -237,6 +237,7 @@ harness 必须把 Showdown 的状态完整映射到引擎，否则不一致来�
 | L91 | Defog（Showdown 的 onHit）只清目标一侧的屏障、Safeguard、Mist（钉子两侧都清）；Good as Gold 挡它，除非使用者是 Mold Breaker / Neutralizing Gas；Mirror Armor 把降闪避弹回去（Mold Breaker / Neutralizing Gas 时不弹）。引擎把使用者自己的屏障也清了，对 Mold Breaker 也让 Good as Gold 挡住，Mirror Armor 看不到这次下降 | 引擎 | 已修复 | `test_l91_defog_keeps_the_users_screens`；`test_l91_defog_evasion_drop`（2 个参数）；`test_l91_neutralizing_gas_defog_through_mirror_armor` | `choice_effects.rs` `choice_hazard_clear`；poke-engine 自带测试 `test_defog_clears_terrain_and_side_conditions` 原来写死了清两侧的 Reflect，按 Showdown 改了期望 |
 | L92 | 打在替身上、掷骰跨过替身 HP 的一击，引擎用平均伤害（要么都打破、要么都打不破）；现在按精确的 16 个掷骰拆成打破 / 没打破两支，和击倒一样（L34 / L51） | 引擎 | 已修复 | `test_l92_substitute_break_by_the_rolls`（掷骰 70–82 对 81 HP 的替身：打破的总概率 = 23/24 × 2/16 + 1/24） | `generate_instructions.rs` `finish_move`：拆分的门槛 `target_hp` 在打到替身时取替身的 HP（声音招式、Infiltrator 例外） |
 | L93 | Strength Sap 打替身会失败（Showdown：没有 bypasssub）；引擎照样按对方攻击回复 | 引擎 | 已修复 | `test_l93_strength_sap_against_a_substitute` | `choice_effects.rs` |
+| L94 | Magic Guard 挡不住 Rough Skin / Iron Barbs 和 Rocky Helmet 的反伤；吸收类特性（Earth Eater、Water / Volt Absorb、Dry Skin）把打向其一侧的招式（Spikes 等，Showdown 的 onTryHit 只对打中它的招式）也吸收了 | 引擎 | 已修复 | `test_l94_magic_guard_against_rough_skin_and_rocky_helmet`；`test_l94_spikes_into_earth_eater` | `abilities.rs`（Rough Skin；四个吸收特性按 `not_aimed_at_foe` 放过）；`items.rs` Rocky Helmet |
 
 ## 修复与验证（2026-10-16）
 

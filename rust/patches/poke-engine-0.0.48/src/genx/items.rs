@@ -1872,7 +1872,10 @@ pub fn item_modify_attack_against(
             }
         }
         Items::ROCKYHELMET => {
-            if attacking_choice.flags.contact {
+            // (L94: not through Magic Guard)
+            if attacking_choice.flags.contact
+                && attacking_side.get_active_immutable().ability != Abilities::MAGICGUARD
+            {
                 attacking_choice.add_or_create_secondaries(Secondary {
                     chance: 100.0,
                     effect: Effect::Heal(-0.166),

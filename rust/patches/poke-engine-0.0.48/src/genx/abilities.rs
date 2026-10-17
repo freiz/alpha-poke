@@ -921,7 +921,11 @@ pub fn ability_after_damage_hit(
             }
         }
         Abilities::ROUGHSKIN | Abilities::IRONBARBS => {
-            if damage_dealt > 0 && choice.flags.contact {
+            // (L94: not through Magic Guard)
+            if damage_dealt > 0
+                && choice.flags.contact
+                && attacking_pkmn.ability != Abilities::MAGICGUARD
+            {
                 let damage_dealt = cmp::min(attacking_pkmn.maxhp / 8, attacking_pkmn.hp);
 
                 instructions
@@ -2392,7 +2396,10 @@ pub fn ability_modify_attack_against(
             }
         }
         Abilities::EARTHEATER => {
-            if attacker_choice.move_type == PokemonType::GROUND {
+            // (L94: not a move aimed at its side: Spikes, ...)
+            if attacker_choice.move_type == PokemonType::GROUND
+                && !attacker_choice.move_id.not_aimed_at_foe()
+            {
                 attacker_choice.remove_all_effects();
                 attacker_choice.base_power = 0.0;
                 attacker_choice.heal = Some(Heal {
@@ -2840,7 +2847,10 @@ pub fn ability_modify_attack_against(
             }
         }
         Abilities::WATERABSORB => {
-            if attacker_choice.move_type == PokemonType::WATER {
+            // (L94: not a move aimed at its side: Spikes, ...)
+            if attacker_choice.move_type == PokemonType::WATER
+                && !attacker_choice.move_id.not_aimed_at_foe()
+            {
                 attacker_choice.remove_all_effects();
                 attacker_choice.base_power = 0.0;
                 attacker_choice.heal = Some(Heal {
@@ -2851,7 +2861,10 @@ pub fn ability_modify_attack_against(
             }
         }
         Abilities::DRYSKIN => {
-            if attacker_choice.move_type == PokemonType::WATER {
+            // (L94: not a move aimed at its side: Spikes, ...)
+            if attacker_choice.move_type == PokemonType::WATER
+                && !attacker_choice.move_id.not_aimed_at_foe()
+            {
                 attacker_choice.remove_all_effects();
                 attacker_choice.base_power = 0.0;
                 attacker_choice.heal = Some(Heal {
@@ -2890,7 +2903,10 @@ pub fn ability_modify_attack_against(
             }
         }
         Abilities::VOLTABSORB => {
-            if attacker_choice.move_type == PokemonType::ELECTRIC {
+            // (L94: not a move aimed at its side: Spikes, ...)
+            if attacker_choice.move_type == PokemonType::ELECTRIC
+                && !attacker_choice.move_id.not_aimed_at_foe()
+            {
                 attacker_choice.remove_all_effects();
                 attacker_choice.accuracy = 100.0;
                 attacker_choice.base_power = 0.0;
