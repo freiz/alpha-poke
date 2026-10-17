@@ -25,14 +25,8 @@
 "b121-t38": [
 "item"
 ],
-"b132-t25": [
-"status"
-],
 "b137-t20": [
 "hp"
-],
-"b165-t45": [
-"status"
 ],
 "b166-t10": [
 "volatile.typechange"
@@ -67,9 +61,6 @@
 ],
 "b182-t25": [
 "hp"
-],
-"b183-t25": [
-"status"
 ],
 "b187-t32": [
 "status"
@@ -147,9 +138,6 @@
 "b30-t4": [
 "hp"
 ],
-"b36-t22": [
-"status"
-],
 "b36-t52": [
 "status"
 ],
@@ -177,9 +165,6 @@
 "volatile.metronome"
 ],
 "b95-t13": [
-"status"
-],
-"b98-t25": [
 "status"
 ]
 }

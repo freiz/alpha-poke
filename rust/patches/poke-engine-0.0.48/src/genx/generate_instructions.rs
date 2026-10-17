@@ -3862,6 +3862,76 @@ pub fn generate_instructions_from_move(
     }
 }
 
+// alpha-poke patch (2026-10-16, doc/engine-diff.md L109): a side's net end-of-turn HP loss this
+// turn as far as the state tells it (its status, Salt Cure, Leech Seed, a partial trap, Curse, sand,
+// Sticky Barb / Black Sludge, less Leftovers / Black Sludge / Poison Heal / Grassy Terrain); only
+// where the surviving rolls split (an approximation there is a coarser split, not a wrong one)
+fn expected_residual(state: &State, side_ref: &SideReference) -> i16 {
+    let side = state.get_side_immutable(side_ref);
+    let p = side.get_active_immutable();
+    let m = p.maxhp;
+    let has = |v: PokemonVolatileStatus| side.volatile_statuses.contains(&v);
+    let poison_heal = p.ability == Abilities::POISONHEAL;
+    let mut loss = 0;
+    if p.ability != Abilities::MAGICGUARD {
+        loss += match p.status {
+            PokemonStatus::BURN => m / 16,
+            PokemonStatus::POISON if !poison_heal => m / 8,
+            PokemonStatus::TOXIC if !poison_heal => {
+                m * (side.side_conditions.toxic_count as i16 + 1) / 16
+            }
+            _ => 0,
+        };
+        if has(PokemonVolatileStatus::LEECHSEED) || has(PokemonVolatileStatus::PARTIALLYTRAPPED) {
+            loss += m / 8
+                * (has(PokemonVolatileStatus::LEECHSEED) as i16
+                    + has(PokemonVolatileStatus::PARTIALLYTRAPPED) as i16);
+        }
+        if has(PokemonVolatileStatus::SALTCURE) {
+            let hurt = p.has_type(&PokemonType::WATER) || p.has_type(&PokemonType::STEEL);
+            loss += if hurt { m / 4 } else { m / 8 };
+        }
+        if has(PokemonVolatileStatus::CURSE) {
+            loss += m / 4;
+        }
+        if state.weather_is_active(&Weather::SAND)
+            && !p.has_type(&PokemonType::ROCK)
+            && !p.has_type(&PokemonType::GROUND)
+            && !p.has_type(&PokemonType::STEEL)
+            && !matches!(
+                p.ability,
+                Abilities::OVERCOAT
+                    | Abilities::SANDVEIL
+                    | Abilities::SANDRUSH
+                    | Abilities::SANDFORCE
+            )
+            && p.item != Items::SAFETYGOGGLES
+        {
+            loss += m / 16;
+        }
+        if p.item == Items::STICKYBARB
+            || (p.item == Items::BLACKSLUDGE && !p.has_type(&PokemonType::POISON))
+        {
+            loss += m / 8;
+        }
+    }
+    let mut gain = 0;
+    if !has(PokemonVolatileStatus::HEALBLOCK) {
+        if p.item == Items::LEFTOVERS
+            || (p.item == Items::BLACKSLUDGE && p.has_type(&PokemonType::POISON))
+        {
+            gain += m / 16;
+        }
+        if poison_heal && matches!(p.status, PokemonStatus::POISON | PokemonStatus::TOXIC) {
+            gain += m / 8;
+        }
+        if state.terrain_is_active(&Terrain::GRASSYTERRAIN) && p.is_grounded() {
+            gain += m / 16;
+        }
+    }
+    loss - gain
+}
+
 // alpha-poke patch (2026-10-16, doc/engine-diff.md L30): the rest of generate_instructions_from_move
 // after the hit count (the damage branches, run_move), once per hit count
 #[allow(clippy::too_many_arguments)]
@@ -3899,6 +3969,20 @@ fn finish_move(
             def.get_active_immutable().hp
         }
     };
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L109): the HP below which the target falls at
+    // the end of this turn (its predictable end-of-turn loss: expected_residual); the surviving
+    // rolls split there into two branches, like a knockout. Not on a Substitute
+    let residual_thr = {
+        let def = state.get_side_immutable(&attacking_side.get_other_side());
+        let r = expected_residual(state, &attacking_side.get_other_side());
+        if target_hp == def.get_active_immutable().hp && r > 0 && r < target_hp {
+            Some(target_hp - r)
+        } else {
+            None
+        }
+    };
+    // the surviving rolls of the regular branch, (weight, damage), when they are known exactly
+    let mut regular_rolls: Option<Vec<(f32, i16)>> = None;
     if let Some((max_damage_dealt, max_crit_damage)) = damage {
         does_damage = true;
         // alpha-poke patch (2026-10-16, doc/engine-diff.md L42): a guaranteed crit's damage is
@@ -3922,7 +4006,7 @@ fn finish_move(
         let near_ko = branch_on_damage
             && per_hit.is_none()
             && fixed.is_none()
-            && max_damage_dealt >= target_hp;
+            && max_damage_dealt >= residual_thr.unwrap_or(target_hp);
         let exact = if near_ko {
             damage_rolls(state, &attacking_side, choice)
                 .map(|(r, c)| if sure_crit { (c, c) } else { (r, c) })
@@ -3968,6 +4052,19 @@ fn finish_move(
                     };
                     let (kill_n, sum_n) = part(&rolls, 1.0 - crit_rate);
                     let (kill_c, sum_c) = part(&crit_rolls, crit_rate);
+                    regular_rolls = Some(
+                        rolls
+                            .iter()
+                            .filter(|d| **d < hp)
+                            .map(|d| ((1.0 - crit_rate) / 16.0, *d))
+                            .chain(
+                                crit_rolls
+                                    .iter()
+                                    .filter(|d| **d < hp)
+                                    .map(|d| (crit_rate / 16.0, *d)),
+                            )
+                            .collect(),
+                    );
                     let kill = kill_n + kill_c;
                     let avg = if kill < 1.0 {
                         ((sum_n + sum_c) / (1.0 - kill)) as i16
@@ -4030,6 +4127,9 @@ fn finish_move(
             branch_instructions = Some(branch_ins);
             incoming_instructions.update_percentage(1.0 - crit_rate);
             regular_damage = (max_damage_dealt as f32 * 0.925) as i16;
+            if let Some((r, _)) = exact {
+                regular_rolls = Some(r.iter().map(|d| (1.0 / 16.0, *d)).collect());
+            }
         } else if choice.move_id.guaranteed_crit()
             && defender_active.ability != Abilities::BATTLEARMOR
             && defender_active.ability != Abilities::SHELLARMOR
@@ -4037,6 +4137,25 @@ fn finish_move(
             regular_damage = (max_crit_damage as f32 * 0.925) as i16;
         } else {
             regular_damage = avg_damage_dealt;
+        }
+    }
+
+    // L109: the surviving rolls split at the end-of-turn knockout
+    let mut residual_branch: Option<(StateInstructions, i16)> = None;
+    if let (Some(thr), Some(rs)) = (residual_thr, regular_rolls.as_ref()) {
+        let (survive, fall): (Vec<(f32, i16)>, Vec<(f32, i16)>) =
+            rs.iter().partition(|(_, d)| *d < thr);
+        let w = |v: &Vec<(f32, i16)>| v.iter().map(|(w, _)| *w).sum::<f32>();
+        let avg = |v: &Vec<(f32, i16)>| {
+            (v.iter().map(|(w, d)| *w * *d as f32).sum::<f32>() / w(v)) as i16
+        };
+        if !survive.is_empty() && !fall.is_empty() && incoming_instructions.percentage > 0.0 {
+            let share = w(&fall) / (w(&survive) + w(&fall));
+            let mut fall_ins = incoming_instructions.clone();
+            fall_ins.update_percentage(share);
+            incoming_instructions.update_percentage(1.0 - share);
+            regular_damage = avg(&survive);
+            residual_branch = Some((fall_ins, avg(&fall)));
         }
     }
 
@@ -4095,6 +4214,24 @@ fn finish_move(
         );
     } else {
         state.reverse_instructions(&incoming_instructions.instruction_list);
+    }
+
+    // L109: the rolls that leave the target to fall at the end of the turn
+    if let Some((fall_ins, fall_damage)) = residual_branch {
+        if fall_ins.percentage != 0.0 {
+            state.apply_instructions(&fall_ins.instruction_list);
+            run_move(
+                state,
+                attacking_side,
+                fall_ins,
+                hit_count,
+                does_damage,
+                fall_damage,
+                choice,
+                defender_choice,
+                &mut final_instructions,
+            );
+        }
     }
 
     // A branch representing either a roll that kills the opponent or a crit

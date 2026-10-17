@@ -2985,3 +2985,36 @@ def test_l107_trapped_from_the_protocol():
         lines += [x.split("|") for x in st["log"]]
         p2 = st["sides"][1]
         assert timers(lines)["p2"].trapped == ("trapped" in p2["mons"][p2["active"]]["volatiles"]), st["turn"]
+
+
+# L109 (doc/engine-diff.md): a hit whose rolls straddle "survives the end of the turn" (the
+# target's predictable end-of-turn damage: Salt Cure, poison, Leech Seed, ...) splits by the exact
+# rolls there too, like a knockout (L34); the engine dealt the average non-knockout roll, so the
+# end-of-turn knockout was all or nothing
+def test_l109_end_of_turn_knockout_by_the_rolls():
+    import alpha_search
+
+    gar = _setter("Garganacl", "Purifying Salt", "Leftovers", "- Salt Cure\n- Recover\n- Protect\n- Stealth Rock")
+    gam = _attacker("Kingambit", "Supreme Overlord", "Choice Band", "- Kowtow Cleave\n- Protect\n- Swords Dance\n- Low Kick")
+    blis = BLISSEY.replace("Blissey @ Heavy-Duty Boots", "Blissey @ Leftovers").replace("- Protect", "- Belly Drum")
+    turns = [("move saltcure", "move bellydrum"), ("switch 2", "move softboiled"), ("move kowtowcleave", "move seismictoss")]
+    states = ec.run_showdown(gar + "\n\n" + gam, blis, turns)
+    b = states[2]["sides"][1]["mons"][0]
+    assert "saltcure" in b["volatiles"]
+    rolls, crits = alpha_search.damage_rolls(ec.engine_state(states[2]).to_string(), True, "kowtowcleave", "seismictoss")
+    h, m = b["hp"], b["maxhp"]
+
+    def dies(d):
+        left = h - d
+        return left <= 0 or min(m, left + m // 16) - m // 8 <= 0
+
+    c = 1 / 24
+    want = (1 - c) * sum(map(dies, rolls)) / 16 + c * sum(map(dies, crits)) / 16
+    assert 0 < (1 - c) * sum(map(dies, rolls)) / 16 < 1 - c  # (the rolls straddle it)
+    outs = ec.engine_outcomes(ec.engine_state(states[2]), "kowtowcleave", "seismictoss")
+    fainted = sum(p for p, o in outs if ec.view_engine(o, (2, 1))["s2.0.hp"] == 0)
+    assert fainted == pytest.approx(want, abs=1e-3)
+    # (Showdown's own roll: one of the engine's outcomes; a knockout is a decision point, where
+    # the fainted active's boosts are compared differently, so only the HP)
+    sd_hp = states[3]["sides"][1]["mons"][0]["hp"]
+    assert any((ec.view_engine(o, (2, 1))["s2.0.hp"] == 0) == (sd_hp == 0) for _, o in outs)

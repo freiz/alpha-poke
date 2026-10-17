@@ -35,9 +35,6 @@
 "hp",
 "item"
 ],
-"b221-t24": [
-"status"
-],
 "b222-t25": [
 "boost.atk",
 "boost.def",
@@ -100,17 +97,11 @@
 "item",
 "volatile.quarkdrivespe"
 ],
-"b34-t31": [
-"status"
-],
 "b41-t21": [
 "hp"
 ],
 "b48-t30": [
 "hp"
-],
-"b52-t28": [
-"status"
 ],
 "b57-t15": [
 "volatile.confusion"

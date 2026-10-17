@@ -6,9 +6,6 @@
 "seed_offset": 40000
 },
 "mismatches": {
-"b102-t16": [
-"status"
-],
 "b122-t18": [
 "boost.atk",
 "item"
@@ -24,9 +21,6 @@
 "hp",
 "status",
 "volatile.substitute"
-],
-"b127-t19": [
-"status"
 ],
 "b135-t11": [
 "hp"
