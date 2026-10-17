@@ -20,9 +20,6 @@
 "b171-t28": [
 "hp"
 ],
-"b175-t34": [
-"pp"
-],
 "b176-t21": [
 "hp"
 ],
@@ -93,26 +90,6 @@
 "b260-t2": [
 "hp"
 ],
-"b261-t1": [
-"last_used_move",
-"pp"
-],
-"b261-t16": [
-"last_used_move",
-"pp"
-],
-"b261-t17": [
-"last_used_move",
-"pp"
-],
-"b261-t24": [
-"last_used_move",
-"pp"
-],
-"b261-t25": [
-"last_used_move",
-"pp"
-],
 "b268-t13": [
 "hp"
 ],
@@ -125,9 +102,6 @@
 "b33-t30": [
 "ability",
 "types"
-],
-"b54-t21": [
-"pp"
 ],
 "b59-t31": [
 "hp"

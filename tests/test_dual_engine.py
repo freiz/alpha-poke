@@ -5168,3 +5168,38 @@ def test_l185_revived_tera_mon():
     assert not any(o.endswith("-tera") for o in pe.options(ec.engine_state(states[4]))[0])
     assert _full(states, 4, "nuzzle", "calmmind", (2, 1)) == {}
 
+
+
+# L186 (doc/engine-diff.md): the PP as Showdown's: Pressure's after the move's own, down to 0 at
+# most, and a called move's from its caller (Sleep Talk); a lost Focus Punch uses none (its
+# beforeMoveCallback stops runMove before the PP, as a flinch); Eerie Spell, 3 PP off the target's
+# last move (a 100% secondary)
+def test_l186_pressure_stops_at_zero():
+    blissey = BLISSEY + "\n\n" + CORVIKNIGHT
+    turns = [("move dracometeor", "move calmmind"), ("move dracometeor", "switch 2")] + [("move dracometeor", "move roost")] * 3
+    states = ec.run_showdown(DRAGAPULT_COPYCAT, blissey, turns)
+    assert [s["sides"][0]["mons"][0]["moves"][2]["pp"] for s in states] == [8, 7, 5, 3, 1, 0]
+    assert _keys(_full(states, 4, "dracometeor", "roost", (1, 2)), "pp") == {}
+
+
+def test_l186_pressure_on_sleep_talk():
+    zozo = _setter("Dondozo", "Unaware", "Leftovers", "- Sleep Talk\n- Wave Crash\n- Earthquake\n- Body Slam")
+    turns = [("move bodyslam", "move spore"), ("move sleeptalk", "switch 2")]
+    states = ec.run_showdown(zozo, BRELOOM + "\n\n" + CORVIKNIGHT, turns, seed="gen5,36,43,108,180")
+    assert any("[from] move: Sleep Talk" in x for x in states[2]["log"])  # (an Earthquake: immune)
+    assert states[2]["sides"][0]["mons"][0]["moves"][0]["pp"] == 14  # its own 1, Pressure's 1
+    assert _keys(_full(states, 1, "sleeptalk", "corviknight", (1, 2)), "pp") == {}
+
+
+def test_l186_no_pp_for_a_lost_focus_punch():
+    breloom = BRELOOM.replace("- Rock Tomb", "- Focus Punch")
+    states = ec.run_showdown(breloom, BLISSEY, [("move focuspunch", "move seismictoss")])
+    assert any("|cant|p1a: Breloom|Focus Punch" in x for x in states[1]["log"])
+    assert _keys(_full(states, 0, "focuspunch", "seismictoss"), "pp", "last_used_move") == {}
+
+
+def test_l186_eerie_spell():
+    slowking = SLOWKING_FUTURE.replace("- Sludge Bomb", "- Eerie Spell")
+    states = ec.run_showdown(slowking, BLISSEY, [("move eeriespell", "move calmmind")])
+    assert states[1]["sides"][1]["mons"][0]["moves"][3]["pp"] == 28  # 32, its use, Eerie Spell's 3
+    assert _keys(_full(states, 0, "eeriespell", "calmmind"), "pp") == {}

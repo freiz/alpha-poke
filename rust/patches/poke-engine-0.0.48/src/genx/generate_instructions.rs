@@ -3187,6 +3187,22 @@ fn flinched_or_taunted(state: &State, choice: &Choice, attacking_side_ref: &Side
             .contains(&PokemonVolatileStatus::FLINCH)
 }
 
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L186): a Focus Punch hit by an attack this turn
+// (not its Substitute) loses its focus: Showdown's beforeMoveCallback stops runMove past the
+// BeforeMove, before the PP and the last used move (choice_effects had the move do nothing)
+fn lost_focus(state: &State, choice: &Choice, attacking_side_ref: &SideReference) -> bool {
+    let dealt = &state
+        .get_side_immutable(&attacking_side_ref.get_other_side())
+        .damage_dealt;
+    choice.move_id == Choices::FOCUSPUNCH
+        && matches!(
+            dealt.move_category,
+            MoveCategory::Physical | MoveCategory::Special
+        )
+        && !dealt.hit_substitute
+        && dealt.damage > 0
+}
+
 // alpha-poke patch (2026-10-17, doc/engine-diff.md L132): a Truant mover's next turn is its loafing
 // one whatever this move does (Showdown's onBeforeMove, priority 9: after sleep / freeze, before
 // the flinch, Taunt, confusion, paralysis, and an immune target or a miss); not under
@@ -4188,7 +4204,8 @@ pub fn generate_instructions_from_move(
     // stops runMove before them; L177 / L179 had only the last used move)
     let stopped = asleep_or_frozen_before
         && !(asleep_now && choice.move_id != Choices::SLEEPTALK && !choice.sleep_talk_move)
-        && flinched_or_taunted(state, &choice, &attacking_side);
+        && flinched_or_taunted(state, &choice, &attacking_side)
+        || lost_focus(state, &choice, &attacking_side);
     if !stopped && !(asleep_now && choice.move_id != Choices::SLEEPTALK && !choice.sleep_talk_move) {
         // alpha-poke patch (2026-10-17, doc/engine-diff.md L177): the PP as Showdown's runMove /
         // useMoveInner: past the BeforeMove (not when asleep, fully paralyzed, confused into itself,
@@ -4210,12 +4227,37 @@ pub fn generate_instructions_from_move(
                 // (a non-Ghost's Curse is aimed at its user: Showdown's nonGhostTarget)
                 && !(choice.move_id == Choices::CURSE && !active.has_type(&PokemonType::GHOST))
         };
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L186): Pressure's PP as Showdown's
+        // useMoveInner: after the move's own and down to 0 at most (deductPP; was -1 from 1 PP);
+        // for a called move from its caller's (Sleep Talk, Copycat: callerMoveForPressure; not
+        // a Dancer's)
+        if called
+            && !choice.dancer_move
+            && pressure
+            && exact_pp
+            && active.moves[&choice.move_index].pp > 0
+        {
+            incoming_instructions
+                .instruction_list
+                .push(Instruction::DecrementPP(DecrementPPInstruction {
+                    side_ref: attacking_side,
+                    move_index: choice.move_index,
+                    amount: 1,
+                }));
+            active.moves[&choice.move_index].pp -= 1;
+        }
         if !called
             && !locked_move
             && choice.move_id != Choices::NONE
             && (exact_pp || active.moves[&choice.move_index].pp < 10)
+            && (!exact_pp || active.moves[&choice.move_index].pp > 0)
         {
             let pp_decrement_amount = if pressure { 2 } else { 1 };
+            let pp_decrement_amount = if exact_pp {
+                cmp::min(pp_decrement_amount, active.moves[&choice.move_index].pp)
+            } else {
+                pp_decrement_amount
+            };
             incoming_instructions
                 .instruction_list
                 .push(Instruction::DecrementPP(DecrementPPInstruction {
@@ -4277,6 +4319,8 @@ pub fn generate_instructions_from_move(
         let num_choices = new_choices.len() as f32;
         for mut new_choice in new_choices {
             new_choice.sleep_talk_move = true;
+            // (L186: Sleep Talk's slot: Pressure takes the PP from it)
+            new_choice.move_index = choice.move_index;
             // (L177: Sleep Talk's PP and last used move, not the called move's)
             new_choice.called_move = true;
             let mut sleep_talk_instructions = incoming_instructions.clone();

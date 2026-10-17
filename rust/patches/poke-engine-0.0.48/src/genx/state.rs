@@ -1934,6 +1934,8 @@ impl State {
             Choices::DISABLE,
             // (L179: Taunt reads it -- the target came in this turn, Showdown's activeTurns)
             Choices::TAUNT,
+            // (L186: Eerie Spell takes the PP of the target's last move)
+            Choices::EERIESPELL,
         ]) {
             self.use_last_used_move = true
         }

@@ -2899,7 +2899,11 @@ pub fn ability_modify_attack_being_used(
                     sheer_force_volatile_boosted = true;
                 }
             }
-            if attacker_choice.secondaries.is_some() || sheer_force_volatile_boosted {
+            // (L186: Eerie Spell's PP drop is a secondary too)
+            if attacker_choice.secondaries.is_some()
+                || sheer_force_volatile_boosted
+                || attacker_choice.move_id == Choices::EERIESPELL
+            {
                 attacker_choice.base_power *= 5325.0 / 4096.0;
                 attacker_choice.secondaries = None;
                 attacker_choice.volatile_status = None

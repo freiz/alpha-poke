@@ -7,6 +7,7 @@ use crate::choices::{
     Boost, Choice, Choices, Effect, Heal, MoveCategory, MoveTarget, Secondary, StatBoosts,
 };
 use crate::instruction::{
+    DecrementPPInstruction,
     ApplyVolatileStatusInstruction, BoostInstruction,
     ChangeItemInstruction, ChangeSideConditionInstruction, ChangeStatusInstruction,
     ChangeSubsituteHealthInstruction, ChangeTerrain, ChangeType,
@@ -990,6 +991,32 @@ pub fn choice_after_damage_hit(
                 }
                 state.apply_one_instruction(&typechange_instruction);
                 instructions.instruction_list.push(typechange_instruction);
+            }
+        }
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L186): Eerie Spell, 3 PP off the
+        // target's last move, down to 0 (Showdown's 100% secondary, deductPP: not through Covert
+        // Cloak / Shield Dust / Sheer Force; through a Substitute, a sound move); was nothing
+        Choices::EERIESPELL => {
+            let attacker_ability = attacking_side.get_active_immutable().ability;
+            let defender = defending_side.get_active_immutable();
+            let blocked = defender.item == Items::COVERTCLOAK
+                || defender.ability == Abilities::SHIELDDUST
+                || attacker_ability == Abilities::SHEERFORCE;
+            if let (false, true, LastUsedMove::Move(index)) =
+                (blocked, defender.hp > 0, defending_side.last_used_move)
+            {
+                let target = defending_side.get_active();
+                let amount = cmp::min(3, target.moves[&index].pp);
+                if amount > 0 {
+                    target.moves[&index].pp -= amount;
+                    instructions
+                        .instruction_list
+                        .push(Instruction::DecrementPP(DecrementPPInstruction {
+                            side_ref: attacking_side_ref.get_other_side(),
+                            move_index: index,
+                            amount,
+                        }));
+                }
             }
         }
         // alpha-poke patch (2026-10-16, doc/engine-diff.md L108): Spirit Shackle / Anchor Shot trap

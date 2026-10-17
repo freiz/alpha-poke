@@ -5,9 +5,6 @@
 "teams": "1b2440f0794c7f2a"
 },
 "mismatches": {
-"b103-t23": [
-"pp"
-],
 "b110-t58": [
 "sc.protect"
 ],
@@ -72,10 +69,6 @@
 ],
 "b180-t13": [
 "boost.def"
-],
-"b193-t18": [
-"last_used_move",
-"pp"
 ],
 "b20-t26": [
 "boost.spe"
@@ -165,12 +158,6 @@
 "b67-t16": [
 "hp",
 "status"
-],
-"b83-t24": [
-"pp"
-],
-"b89-t28": [
-"pp"
 ],
 "b90-t1": [
 "status"

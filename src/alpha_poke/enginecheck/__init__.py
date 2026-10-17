@@ -437,7 +437,7 @@ def view_engine(s: pe.State, n_mons: tuple[int, int] = (6, 6)) -> dict:
 # the moves / items that make the engine keep a count it otherwise leaves (its conditional
 # mechanics, State::set_conditional_mechanics): compared only then
 LAST_USED_MOVES = {"encore", "fakeout", "firstimpression", "bloodmoon", "gigatonhammer", "disable",
-                   "taunt"}
+                   "taunt", "eeriespell"}
 
 
 def _field_moves(s: pe.State) -> set[str]:
