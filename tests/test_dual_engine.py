@@ -4,6 +4,7 @@ poke-engine from the same state (alpha_poke.enginecheck). A confirmed engine iss
 engines do."""
 
 import shutil
+from pathlib import Path
 
 import poke_engine as pe
 import pytest
@@ -2213,3 +2214,17 @@ def test_l69_encore_bounced_onto_an_encore_user_fails():
     assert "encore" not in states[2]["sides"][1]["mons"][0]["volatiles"]
     outs = ec.engine_outcomes(ec.engine_state(states[1]), "psyshock", "encore")
     assert ec.closest(states[2], outs, (1, 1))["diff"] == {}
+
+
+def test_no_name_defined_twice():
+    """A fixture or test defined twice silently replaces the first module-wide (it happened:
+    HATTERENE, INCINEROAR, KYUREM)."""
+    import ast
+    import collections
+
+    tree = ast.parse(Path(__file__).read_text())
+    names = collections.Counter(
+        t.id for n in tree.body if isinstance(n, ast.Assign) for t in n.targets
+        if isinstance(t, ast.Name)
+    ) + collections.Counter(n.name for n in tree.body if isinstance(n, ast.FunctionDef))
+    assert [k for k, v in names.items() if v > 1] == []
