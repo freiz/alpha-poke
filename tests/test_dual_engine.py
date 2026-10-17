@@ -1641,7 +1641,7 @@ def test_l38_rest_fails_with_purifying_salt():
     assert ec.closest(states[-1], outs, (1, 1))["diff"] == {}
 
 
-INCINEROAR = _setter("Incineroar", "Intimidate", "Leftovers", "- Knock Off\n- Parting Shot\n- Flare Blitz\n- Will-O-Wisp")
+INCINEROAR_INTIM = _setter("Incineroar", "Intimidate", "Leftovers", "- Knock Off\n- Parting Shot\n- Flare Blitz\n- Will-O-Wisp")
 DRAGAPULT = _attacker("Dragapult", "Clear Body", "Choice Specs", "- Shadow Ball\n- Draco Meteor\n- U-turn\n- Flamethrower", "Timid")
 
 
@@ -1649,8 +1649,8 @@ DRAGAPULT = _attacker("Dragapult", "Clear Body", "Choice Specs", "- Shadow Ball\
 # (Showdown's switch actions by the outgoing mon's speed; Trick Room reverses it): the engine
 # always switched side one first (an Intimidate hit the wrong mon)
 @pytest.mark.parametrize("p1, p2", [
-    (BLISSEY + "\n\n" + CORVIKNIGHT, DRAGAPULT + "\n\n" + INCINEROAR),  # side two leaves faster
-    (DRAGAPULT + "\n\n" + CORVIKNIGHT, BLISSEY + "\n\n" + INCINEROAR),  # control: side one
+    (BLISSEY + "\n\n" + CORVIKNIGHT, DRAGAPULT + "\n\n" + INCINEROAR_INTIM),  # side two leaves faster
+    (DRAGAPULT + "\n\n" + CORVIKNIGHT, BLISSEY + "\n\n" + INCINEROAR_INTIM),  # control: side one
 ])  # fmt: skip
 def test_l39_double_switch_order(p1, p2):
     states = ec.run_showdown(p1, p2, [("switch 2", "switch 2")])
@@ -2184,13 +2184,13 @@ def test_l57_harvest(seed):
         assert back / sum(o[0] for o in hit) == pytest.approx(0.5, abs=1e-3)
 
 
-HATTERENE = _setter("Hatterene", "Magic Bounce", "Leftovers", "- Healing Wish\n- Psyshock\n- Calm Mind\n- Mystical Fire")
+HATTERENE_HW = _setter("Hatterene", "Magic Bounce", "Leftovers", "- Healing Wish\n- Psyshock\n- Calm Mind\n- Mystical Fire")
 
 
 # L68 (doc/engine-diff.md): Healing Wish / Lunar Dance fail without a mon to switch in (Showdown's
 # canSwitch: the user does not faint)
 def test_l68_healing_wish_needs_a_replacement():
-    states = ec.run_showdown(HATTERENE, TINGLU, [("move healingwish", "move spikes")])
+    states = ec.run_showdown(HATTERENE_HW, TINGLU, [("move healingwish", "move spikes")])
     assert states[1]["sides"][0]["mons"][0]["hp"] > 0
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "healingwish", "spikes")
     assert ec.closest(states[1], outs, (1, 1))["diff"] == {}
@@ -2200,7 +2200,7 @@ def test_l68_healing_wish_needs_a_replacement():
 # Encore user fails (Encore cannot encore Encore)
 def test_l69_magic_bounce_whirlwind():
     lu = _setter("Ting-Lu", "Vessel of Ruin", "Leftovers", "- Whirlwind\n- Ruination\n- Spikes\n- Earthquake")
-    states = ec.run_showdown(HATTERENE, lu + "\n\n" + BLISSEY, [("move calmmind", "move whirlwind")])
+    states = ec.run_showdown(HATTERENE_HW, lu + "\n\n" + BLISSEY, [("move calmmind", "move whirlwind")])
     assert states[1]["sides"][1]["active"] == 1  # Ting-Lu dragged out
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "calmmind", "whirlwind")
     assert ec.closest(states[1], outs, (1, 2))["diff"] == {}
@@ -2209,7 +2209,7 @@ def test_l69_magic_bounce_whirlwind():
 def test_l69_encore_bounced_onto_an_encore_user_fails():
     encorer = _setter("Clefable", "Magic Guard", "Leftovers", "- Encore\n- Moonblast\n- Moonlight\n- Calm Mind")
     turns = [("move calmmind", "move moonblast"), ("move psyshock", "move encore")]
-    states = ec.run_showdown(HATTERENE, encorer, turns)
+    states = ec.run_showdown(HATTERENE_HW, encorer, turns)
     assert "encore" not in states[2]["sides"][1]["mons"][0]["volatiles"]
     outs = ec.engine_outcomes(ec.engine_state(states[1]), "psyshock", "encore")
     assert ec.closest(states[2], outs, (1, 1))["diff"] == {}
