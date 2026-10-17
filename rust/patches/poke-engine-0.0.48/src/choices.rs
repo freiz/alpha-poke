@@ -16100,6 +16100,9 @@ pub static MOVES: LazyLock<HashMap<Choices, Choice>> = LazyLock::new(|| {
                 target: MoveTarget::User,
                 amount: -0.5,
             }),
+            // alpha-poke patch (2026-10-17, doc/engine-diff.md L116): the half also when it misses
+            // or is blocked (Showdown's onMoveFail): a crash
+            crash: Some(0.5),
             ..Default::default()
         },
     );

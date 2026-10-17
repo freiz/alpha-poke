@@ -3185,3 +3185,29 @@ def test_l115_failed_move_from_the_protocol():
         seen.add(sd)
         assert timers(lines)["p1"].last_failed == sd, st["turn"]
     assert seen == {True, False}
+
+
+# L116 (doc/engine-diff.md): Steel Beam costs its user half its HP when it misses or is blocked too
+# (Showdown's onMoveFail); the engine's cost came with the hit only
+@pytest.mark.parametrize("foe_move, force", [("calmmind", False), ("protect", None)], ids=["miss", "protect"])
+def test_l116_steel_beam_fails_at_a_cost(foe_move, force):
+    treads = _attacker("Iron Treads", "Quark Drive", "Leftovers", "- Steel Beam\n- Earthquake\n- Rapid Spin\n- Iron Head", "Modest")
+    states = ec.run_showdown(treads, BLISSEY, [("move steelbeam", f"move {foe_move}")], force_random=force)
+    assert any("[from] Steel Beam" in x or "[from] steelbeam" in x for x in states[1]["log"])
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "steelbeam", foe_move)
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L117 (doc/engine-diff.md): a multi-hit move stops at the hit after which its user faints to the
+# target's contact damage (Rocky Helmet, Rough Skin: Showdown's hit loop breaks); the engine dealt
+# every hit
+def test_l117_multi_hit_stops_when_the_user_faints():
+    cinc = _attacker("Cinccino", "Skill Link", "Heavy-Duty Boots", "- Tail Slap\n- Belly Drum\n- Substitute\n- U-turn", "Jolly")
+    blis = BLISSEY.replace("Heavy-Duty Boots", "Rocky Helmet")
+    pult = _attacker("Dragapult", "Infiltrator", "Choice Specs", "- Shadow Ball\n- Draco Meteor\n- U-turn\n- Flamethrower", "Timid")
+    turns = [("move substitute", "move seismictoss")] * 2 + [("move tailslap", "move calmmind")]
+    states = ec.run_showdown(cinc + "\n\n" + pult, blis, turns)
+    assert any(x.startswith("|faint|p1a: Cinccino") for x in states[3]["log"])
+    assert any(x.startswith("|-hitcount|") and x.endswith("|4") for x in states[3]["log"])
+    outs = ec.engine_outcomes(ec.engine_state(states[2]), "tailslap", "calmmind")
+    assert ec.closest(states[3], outs, (2, 1), hp=True)["diff"] == {}

@@ -86,10 +86,6 @@
 "b224-t15": [
 "boost.atk"
 ],
-"b224-t4": [
-"hp",
-"status"
-],
 "b227-t27": [
 "hp",
 "status"
@@ -132,9 +128,6 @@
 "b247-t2": [
 "stealth_rock"
 ],
-"b258-t19": [
-"hp"
-],
 "b258-t25": [
 "boost.spd"
 ],
@@ -168,9 +161,6 @@
 "volatile.quarkdrivespe"
 ],
 "b289-t9": [
-"hp"
-],
-"b34-t43": [
 "hp"
 ],
 "b41-t21": [

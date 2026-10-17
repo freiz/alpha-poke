@@ -6028,6 +6028,41 @@ fn run_move(
     let attacker_boosts_before = boosts_of(state.get_side_immutable(&attacking_side));
     let defender_boosts_before =
         boosts_of(state.get_side_immutable(&attacking_side.get_other_side()));
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L117): a multi-hit move stops at the hit
+    // after which its user faints to the target's contact damage (Showdown's hit loop breaks)
+    let hit_count = if does_damage && hit_count > 1 && choice.flags.contact {
+        let (attacker_side, defender_side) = state.get_both_sides_immutable(&attacking_side);
+        let defender = defender_side.get_active_immutable();
+        let attacker = attacker_side.get_active_immutable();
+        let behind_sub = defender_side
+            .volatile_statuses
+            .contains(&PokemonVolatileStatus::SUBSTITUTE);
+        let mut per_hit = 0;
+        if defender.item == Items::ROCKYHELMET {
+            per_hit += cmp::max(attacker.maxhp / 6, 1);
+        }
+        if matches!(
+            defender.ability,
+            Abilities::ROUGHSKIN | Abilities::IRONBARBS
+        ) {
+            per_hit += cmp::max(attacker.maxhp / 8, 1);
+        }
+        if attacker.ability == Abilities::MAGICGUARD
+            || attacker.item == Items::PROTECTIVEPADS
+            || behind_sub
+            || damage_amount <= 0
+        {
+            per_hit = 0;
+        }
+        if per_hit > 0 {
+            let survives = (attacker.hp + per_hit - 1) / per_hit;
+            cmp::min(hit_count as i16, cmp::max(survives, 1)) as i8
+        } else {
+            hit_count
+        }
+    } else {
+        hit_count
+    };
     for _ in 0..hit_count {
         if does_damage {
             hit_sub = generate_instructions_from_damage(
