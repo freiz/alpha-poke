@@ -193,6 +193,24 @@ def test_skill_swap_failures_match_showdown():
     assert alpha_search.fail_skill_swap_abilities() == want
 
 
+@pytest.mark.parametrize("flag, got", [("cantsuppress", "cant_suppress_abilities"),
+                                       ("notrace", "no_trace_abilities")])  # fmt: skip
+def test_ability_flags_match_showdown(flag, got):
+    """The abilities no other one replaces (Showdown's cantsuppress: Mummy, Lingering Aroma, ...)
+    and the ones Trace does not copy (notrace; L184)."""
+    import subprocess
+
+    import alpha_search
+
+    from alpha_poke import enginecheck as ec
+
+    js = ("const {Dex} = require(process.argv[1]); console.log(JSON.stringify(Dex.abilities.all()"
+          ".filter(a => a.flags[process.argv[2]] && !a.isNonstandard).map(a => a.id)))")
+    want = sorted(json.loads(subprocess.run(["node", "-e", js, str(ec.SIM), flag], capture_output=True,
+                                            text=True, check=True).stdout))  # fmt: skip
+    assert getattr(alpha_search, got)() == want
+
+
 def test_bypass_substitute_moves_match_showdown():
     """The status moves aimed at the foe that go through a Substitute (Showdown's bypasssub
     flag; any other fails against one: L133), among the engine's moves aimed at the opponent."""

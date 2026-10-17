@@ -7,7 +7,7 @@ use crate::choices::{
     Boost, Choice, Choices, Effect, Heal, MoveCategory, MoveTarget, Secondary, StatBoosts,
 };
 use crate::instruction::{
-    ApplyVolatileStatusInstruction, BoostInstruction, ChangeAbilityInstruction,
+    ApplyVolatileStatusInstruction, BoostInstruction,
     ChangeItemInstruction, ChangeSideConditionInstruction, ChangeStatusInstruction,
     ChangeSubsituteHealthInstruction, ChangeTerrain, ChangeType,
     ChangeVolatileStatusDurationInstruction, ChangeWeather, ChangeWishInstruction,
@@ -1927,42 +1927,7 @@ pub fn choice_special_effect(
         // abilities and the new ones start (Showdown's skillSwap: the source's old ability on the
         // target first); not with a failskillswap ability, through an Ability Shield
         Choices::SKILLSWAP => {
-            let (a, d) = (
-                attacking_side.get_active_immutable(),
-                defending_side.get_active_immutable(),
-            );
-            let fails = a.hp == 0
-                || d.hp == 0
-                || super::abilities::FAIL_SKILL_SWAP.contains(&a.ability)
-                || super::abilities::FAIL_SKILL_SWAP.contains(&d.ability)
-                || a.item == Items::ABILITYSHIELD
-                || d.item == Items::ABILITYSHIELD;
-            if !fails {
-                let (mine, theirs) = (a.ability, d.ability);
-                let target_ref = attacking_side_ref.get_other_side();
-                for (side_ref, old, new) in [
-                    (*attacking_side_ref, mine, theirs),
-                    (target_ref, theirs, mine),
-                ] {
-                    instructions
-                        .instruction_list
-                        .push(Instruction::ChangeAbility(ChangeAbilityInstruction {
-                            side_ref,
-                            ability_change: new as i16 - old as i16,
-                        }));
-                    state.get_side(&side_ref).get_active().ability = new;
-                }
-                for side_ref in [target_ref, *attacking_side_ref] {
-                    if state
-                        .get_side_immutable(&side_ref)
-                        .get_active_immutable()
-                        .ability
-                        != Abilities::IMPOSTER
-                    {
-                        super::abilities::ability_on_switch_in(state, &side_ref, instructions);
-                    }
-                }
-            }
+            super::abilities::skill_swap(state, attacking_side_ref, instructions);
             return;
         }
         // alpha-poke patch (2026-10-16, doc/engine-diff.md L99): Soak, the target pure Water

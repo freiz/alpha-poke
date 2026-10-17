@@ -98,20 +98,11 @@
 "boost.evasion",
 "volatile.minimize"
 ],
-"b162-t36": [
-"sc.protect"
-],
 "b169-t3": [
 "hp"
 ],
 "b178-t2": [
 "hp"
-],
-"b178-t9": [
-"ability"
-],
-"b179-t59": [
-"pp"
 ],
 "b180-t13": [
 "boost.def"
@@ -189,9 +180,6 @@
 "hp",
 "options",
 "volatile.mustrecharge"
-],
-"b52-t16": [
-"sc.protect"
 ],
 "b62-t17": [
 "sleep_turns",

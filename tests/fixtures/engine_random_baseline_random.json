@@ -45,15 +45,6 @@
 "must_switch",
 "pp"
 ],
-"b160-t23": [
-"base_ability"
-],
-"b160-t25": [
-"ability"
-],
-"b160-t53": [
-"ability"
-],
 "b165-t19": [
 "boost.atk"
 ],
@@ -89,9 +80,6 @@
 ],
 "b56-t58": [
 "pp"
-],
-"b62-t26": [
-"status"
 ],
 "b7-t13": [
 "status"

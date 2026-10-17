@@ -4176,7 +4176,13 @@ pub fn generate_instructions_from_move(
         .get_active_immutable()
         .status
         == PokemonStatus::SLEEP;
-    if !(asleep_now && choice.move_id != Choices::SLEEPTALK && !choice.sleep_talk_move) {
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L184): a mover that woke / thawed and then
+    // flinched (or is taunted) uses no PP and gets no choice lock either (Showdown's BeforeMove
+    // stops runMove before them; L177 / L179 had only the last used move)
+    let stopped = asleep_or_frozen_before
+        && !(asleep_now && choice.move_id != Choices::SLEEPTALK && !choice.sleep_talk_move)
+        && flinched_or_taunted(state, &choice, &attacking_side);
+    if !stopped && !(asleep_now && choice.move_id != Choices::SLEEPTALK && !choice.sleep_talk_move) {
         // alpha-poke patch (2026-10-17, doc/engine-diff.md L177): the PP as Showdown's runMove /
         // useMoveInner: past the BeforeMove (not when asleep, fully paralyzed, confused into itself,
         // ...), every time (was only below 10), not while locked into the move (Outrage's later
@@ -4242,13 +4248,14 @@ pub fn generate_instructions_from_move(
             }
         }
     }
-    if !called && !(asleep_now && choice.move_id != Choices::SLEEPTALK) {
+    if !called && !stopped && !(asleep_now && choice.move_id != Choices::SLEEPTALK) {
         choice_lock(state, choice, &attacking_side, &mut incoming_instructions);
     }
     let attacker = state
         .get_side_immutable(&attacking_side)
         .get_active_immutable();
-    if choice.move_id == Choices::SLEEPTALK && attacker.status == PokemonStatus::SLEEP {
+    // (a flinched Sleep Talk calls nothing: the stopped mover below)
+    if choice.move_id == Choices::SLEEPTALK && attacker.status == PokemonStatus::SLEEP && !stopped {
         let new_choices = attacker.get_sleep_talk_choices();
         // (L179: Sleep Talk is the last used move, not the one it calls)
         if state.use_last_used_move && !called {
@@ -4278,7 +4285,7 @@ pub fn generate_instructions_from_move(
             );
         }
         return;
-    } else if attacker.status == PokemonStatus::SLEEP && !choice.sleep_talk_move {
+    } else if attacker.status == PokemonStatus::SLEEP && !choice.sleep_talk_move && !stopped {
         state.reverse_instructions(&incoming_instructions.instruction_list);
         if incoming_instructions.percentage > 0.0 {
             final_instructions.push(incoming_instructions);
@@ -4329,7 +4336,7 @@ pub fn generate_instructions_from_move(
     // confusion self-hit (to none: a mon that came in this turn) and not after a flinch / Taunt
     if state.use_last_used_move
         && !called
-        && !(asleep_or_frozen_before && flinched_or_taunted(state, &choice, &attacking_side))
+        && !stopped
     {
         set_last_used_move_as_move(
             state.get_side(&attacking_side),
@@ -4338,9 +4345,7 @@ pub fn generate_instructions_from_move(
             &mut incoming_instructions,
         );
     }
-    if no_target(state, &choice, &attacking_side)
-        || (asleep_or_frozen_before && flinched_or_taunted(state, &choice, &attacking_side))
-    {
+    if no_target(state, &choice, &attacking_side) || stopped {
         if asleep_or_frozen_before {
             steadfast(state, &attacking_side, &mut incoming_instructions);
         }
@@ -4381,6 +4386,15 @@ pub fn generate_instructions_from_move(
             let success = CONSECUTIVE_PROTECT_CHANCE.powi(protect as i32);
             let mut fail = incoming_instructions.clone();
             fail.update_percentage(1.0 - success);
+            // alpha-poke patch (2026-10-17, doc/engine-diff.md L184): the failed roll ends the
+            // count at once (Showdown's onStallMove deletes the stall volatile; was at the end
+            // of the turn: a pivot's decision before it had the old count)
+            fail.instruction_list
+                .push(Instruction::ChangeSideCondition(ChangeSideConditionInstruction {
+                    side_ref: attacking_side,
+                    side_condition: PokemonSideCondition::Protect,
+                    amount: -protect,
+                }));
             final_instructions.push(fail);
             incoming_instructions.update_percentage(success);
         }
@@ -7924,6 +7938,7 @@ fn choice_lock_release(state: &mut State, side_ref: &SideReference, instructions
 pub fn update(state: &mut State, instructions: &mut StateInstructions) {
     for side_ref in [SideReference::SideOne, SideReference::SideTwo] {
         choice_lock_release(state, &side_ref, instructions);
+        super::abilities::trace_update(state, &side_ref, instructions);
         super::items::item_update(state, &side_ref, instructions);
         super::abilities::paradox_update(state, &side_ref, instructions);
         // (L150: attract's onUpdate, its source fainted; the switch: generate_instructions_from_switch)

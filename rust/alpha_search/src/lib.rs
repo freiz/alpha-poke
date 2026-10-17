@@ -1119,6 +1119,28 @@ fn fail_skill_swap_abilities() -> Vec<String> {
     out
 }
 
+/// The abilities no other ability replaces (`CANT_SUPPRESS`, lowercase; doc/engine-diff.md L184).
+#[pyfunction]
+fn cant_suppress_abilities() -> Vec<String> {
+    let mut out: Vec<String> = poke_engine::engine::abilities::CANT_SUPPRESS
+        .iter()
+        .map(|a| format!("{:?}", a).to_lowercase())
+        .collect();
+    out.sort();
+    out
+}
+
+/// The abilities Trace does not copy (`NO_TRACE`, lowercase; doc/engine-diff.md L184).
+#[pyfunction]
+fn no_trace_abilities() -> Vec<String> {
+    let mut out: Vec<String> = poke_engine::engine::abilities::NO_TRACE
+        .iter()
+        .map(|a| format!("{:?}", a).to_lowercase())
+        .collect();
+    out.sort();
+    out
+}
+
 /// The full-information state of a self-play / evaluation position: side one from `a` (side
 /// one's own view: its side exact), side two = side one of `b` (the other player's own view),
 /// the field from `a`; the weather / terrain from `b` with `weather_from_b` / `terrain_from_b`
@@ -1284,6 +1306,8 @@ fn alpha_search(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(fling_powers, m)?)?;
     m.add_function(wrap_pyfunction!(paradox_species, m)?)?;
     m.add_function(wrap_pyfunction!(fail_skill_swap_abilities, m)?)?;
+    m.add_function(wrap_pyfunction!(cant_suppress_abilities, m)?)?;
+    m.add_function(wrap_pyfunction!(no_trace_abilities, m)?)?;
     m.add_function(wrap_pyfunction!(chance_outcomes, m)?)?;
     m.add_function(wrap_pyfunction!(describe, m)?)?;
     Ok(())

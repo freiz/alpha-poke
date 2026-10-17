@@ -340,7 +340,8 @@ def _volatiles(mon) -> set[str]:
 def _base_ability(mon, ability: str, tm: SideTimers | None) -> str:
     """The engine's base ability: none for a once-per-battle switch-in ability already used
     (Dauntless Shield; the patched engine then raises Defense no more, doc/engine-diff.md L18)."""
-    if (tm is not None and ability in ("dauntlessshield", "battlebond", "supersweetsyrup")
+    if (tm is not None and ability in ("dauntlessshield", "battlebond", "supersweetsyrup",
+                                                  "intrepidsword")
             and to_id(mon.species) in tm.used_once):  # fmt: skip
         return "none"
     return ability

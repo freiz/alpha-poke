@@ -458,6 +458,128 @@ pub fn mold_breaker_ignores(ability: &Abilities) -> bool {
 
 // alpha-poke patch (2026-10-16, doc/engine-diff.md L106): the abilities Skill Swap fails on
 // (Showdown's failskillswap; the data test checks the list)
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L184): the abilities no other ability can
+// replace (Showdown's cantsuppress: setAbility fails) and the ones Trace does not copy (notrace);
+// the data tests check the lists
+pub const CANT_SUPPRESS: [Abilities; 16] = [
+    Abilities::ASONEGLASTRIER,
+    Abilities::ASONESPECTRIER,
+    Abilities::BATTLEBOND,
+    Abilities::COMATOSE,
+    Abilities::DISGUISE,
+    Abilities::GULPMISSILE,
+    Abilities::ICEFACE,
+    Abilities::MULTITYPE,
+    Abilities::POWERCONSTRUCT,
+    Abilities::RKSSYSTEM,
+    Abilities::SCHOOLING,
+    Abilities::SHIELDSDOWN,
+    Abilities::STANCECHANGE,
+    Abilities::TERASHIFT,
+    Abilities::ZENMODE,
+    Abilities::ZEROTOHERO,
+];
+
+pub const NO_TRACE: [Abilities; 34] = [
+    Abilities::ASONEGLASTRIER,
+    Abilities::ASONESPECTRIER,
+    Abilities::BATTLEBOND,
+    Abilities::COMATOSE,
+    Abilities::COMMANDER,
+    Abilities::DISGUISE,
+    Abilities::EMBODYASPECTCORNERSTONE,
+    Abilities::EMBODYASPECTHEARTHFLAME,
+    Abilities::EMBODYASPECTTEAL,
+    Abilities::EMBODYASPECTWELLSPRING,
+    Abilities::FLOWERGIFT,
+    Abilities::FORECAST,
+    Abilities::HUNGERSWITCH,
+    Abilities::ICEFACE,
+    Abilities::ILLUSION,
+    Abilities::IMPOSTER,
+    Abilities::MULTITYPE,
+    Abilities::NEUTRALIZINGGAS,
+    Abilities::POISONPUPPETEER,
+    Abilities::POWERCONSTRUCT,
+    Abilities::POWEROFALCHEMY,
+    Abilities::PROTOSYNTHESIS,
+    Abilities::QUARKDRIVE,
+    Abilities::RECEIVER,
+    Abilities::RKSSYSTEM,
+    Abilities::SCHOOLING,
+    Abilities::SHIELDSDOWN,
+    Abilities::STANCECHANGE,
+    Abilities::TERAFORMZERO,
+    Abilities::TERASHELL,
+    Abilities::TERASHIFT,
+    Abilities::TRACE,
+    Abilities::ZENMODE,
+    Abilities::ZEROTOHERO,
+];
+
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L184): Showdown's skillSwap, shared by Skill
+// Swap and Wandering Spirit (were Skill Swap's own, L106; Wandering Spirit gave Mummy): the
+// actives swap abilities and the new ones start (the source's old ability on the target first);
+// not with a failskillswap ability, through an Ability Shield. `side_ref` is the source's side
+pub fn skill_swap(state: &mut State, side_ref: &SideReference, instructions: &mut StateInstructions) {
+    let target_ref = side_ref.get_other_side();
+    let (a, d) = (
+        state.get_side_immutable(side_ref).get_active_immutable(),
+        state.get_side_immutable(&target_ref).get_active_immutable(),
+    );
+    if a.hp == 0
+        || d.hp == 0
+        || FAIL_SKILL_SWAP.contains(&a.ability)
+        || FAIL_SKILL_SWAP.contains(&d.ability)
+        || a.item == Items::ABILITYSHIELD
+        || d.item == Items::ABILITYSHIELD
+    {
+        return;
+    }
+    let (mine, theirs) = (a.ability, d.ability);
+    for (side_ref, old, new) in [(*side_ref, mine, theirs), (target_ref, theirs, mine)] {
+        instructions
+            .instruction_list
+            .push(Instruction::ChangeAbility(ChangeAbilityInstruction {
+                side_ref,
+                ability_change: new as i16 - old as i16,
+            }));
+        state.get_side(&side_ref).get_active().ability = new;
+    }
+    for side_ref in [target_ref, *side_ref] {
+        if state.get_side_immutable(&side_ref).get_active_immutable().ability != Abilities::IMPOSTER {
+            ability_on_switch_in(state, &side_ref, instructions);
+        }
+    }
+}
+
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L184): the once-per-battle abilities (Showdown's
+// shieldBoost / swordBoost / syrupTriggered / bondTriggered, Gen 9), as Dauntless Shield's L181:
+// a used one has its base ability none (the harness's and engine_state's encoding) and keeps the
+// ability through a switch-out. Was Dauntless Shield only; Intrepid Sword raised at every entry
+pub const ONCE_PER_BATTLE: [Abilities; 4] = [
+    Abilities::DAUNTLESSSHIELD,
+    Abilities::INTREPIDSWORD,
+    Abilities::SUPERSWEETSYRUP,
+    Abilities::BATTLEBOND,
+];
+
+fn used_once(pkmn: &crate::state::Pokemon) -> bool {
+    ONCE_PER_BATTLE.contains(&pkmn.ability) && pkmn.base_ability == Abilities::NONE
+}
+
+fn use_once(pkmn: &mut crate::state::Pokemon, side_ref: &SideReference, instructions: &mut StateInstructions) {
+    if pkmn.base_ability == pkmn.ability {
+        instructions
+            .instruction_list
+            .push(Instruction::ChangeBaseAbility(ChangeAbilityInstruction {
+                side_ref: *side_ref,
+                ability_change: Abilities::NONE as i16 - pkmn.ability as i16,
+            }));
+        pkmn.base_ability = Abilities::NONE;
+    }
+}
+
 pub const FAIL_SKILL_SWAP: [Abilities; 29] = [
     Abilities::ASONEGLASTRIER,
     Abilities::ASONESPECTRIER,
@@ -1093,15 +1215,29 @@ pub fn ability_damaging_hit(
                     },
                 ));
         }
-        Abilities::MUMMY | Abilities::LINGERINGAROMA | Abilities::WANDERINGSPIRIT => {
-            if choice.flags.contact {
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L184): Mummy / Lingering Aroma give
+        // the attacker their own ability (was Mummy for both), not a cantsuppress one nor through
+        // an Ability Shield (Showdown's setAbility); Wandering Spirit swaps (skill_swap)
+        Abilities::MUMMY | Abilities::LINGERINGAROMA => {
+            let own = defending_pkmn.ability;
+            if choice.flags.contact
+                && attacking_pkmn.hp > 0
+                && attacking_pkmn.ability != own
+                && !CANT_SUPPRESS.contains(&attacking_pkmn.ability)
+                && attacking_pkmn.item != Items::ABILITYSHIELD
+            {
                 instructions
                     .instruction_list
                     .push(Instruction::ChangeAbility(ChangeAbilityInstruction {
                         side_ref: *side_ref,
-                        ability_change: Abilities::MUMMY as i16 - attacking_pkmn.ability as i16,
+                        ability_change: own as i16 - attacking_pkmn.ability as i16,
                     }));
-                attacking_pkmn.ability = Abilities::MUMMY;
+                attacking_pkmn.ability = own;
+            }
+        }
+        Abilities::WANDERINGSPIRIT => {
+            if choice.flags.contact {
+                skill_swap(state, side_ref, instructions);
             }
         }
         Abilities::GULPMISSILE => {
@@ -1379,6 +1515,8 @@ pub fn ability_after_damage_hit(
                     side_ref,
                     instructions,
                 );
+                // (L184: used now)
+                use_once(attacking_side.get_active(), side_ref, instructions);
             }
         }
         // alpha-poke patch (2026-10-16, doc/engine-diff.md L78): Pickpocket is the target's
@@ -1533,10 +1671,9 @@ pub fn ability_on_switch_out(
 
     // revert ability on switch-out to base_ability if they are not the same
     let active_pkmn = state.get_side(side_ref).get_active();
-    // alpha-poke patch (2026-10-16, L18): a used Dauntless Shield (base ability none) stays
-    let used_shield = active_pkmn.ability == Abilities::DAUNTLESSSHIELD
-        && active_pkmn.base_ability == Abilities::NONE;
-    if active_pkmn.ability != active_pkmn.base_ability && !used_shield {
+    // alpha-poke patch (2026-10-16, L18): a used Dauntless Shield (base ability none) stays (L184:
+    // any once-per-battle one)
+    if active_pkmn.ability != active_pkmn.base_ability && !used_once(active_pkmn) {
         instructions
             .instruction_list
             .push(Instruction::ChangeAbility(ChangeAbilityInstruction {
@@ -1834,6 +1971,40 @@ pub fn ice_face_in_snow(
     }
 }
 
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L184): Trace as Showdown's: it copies the
+// foe's ability unless that one is notrace (Protosynthesis, Trace, ...) or the foe has fainted,
+// and then keeps seeking (its onUpdate: trace_update, in the Update pass) -- the next foe's on its
+// entry; nothing with an Ability Shield. Was the foe's ability whatever it was, fainted or notrace
+fn trace_copy(state: &mut State, side_ref: &SideReference, instructions: &mut StateInstructions) -> bool {
+    let (side, foe) = state.get_both_sides(side_ref);
+    let me = side.get_active();
+    let target = foe.get_active_immutable();
+    if me.ability != Abilities::TRACE
+        || me.hp == 0
+        || me.item == Items::ABILITYSHIELD
+        || target.hp == 0
+        || NO_TRACE.contains(&target.ability)
+        || target.ability == Abilities::NONE
+    {
+        return false;
+    }
+    instructions
+        .instruction_list
+        .push(Instruction::ChangeAbility(ChangeAbilityInstruction {
+            side_ref: *side_ref,
+            ability_change: target.ability as i16 - me.ability as i16,
+        }));
+    me.ability = target.ability;
+    true
+}
+
+// (the copied ability starts: Showdown's setAbility)
+pub fn trace_update(state: &mut State, side_ref: &SideReference, instructions: &mut StateInstructions) {
+    if trace_copy(state, side_ref, instructions) {
+        ability_on_switch_in(state, side_ref, instructions);
+    }
+}
+
 pub fn ability_on_switch_in(
     state: &mut State,
     side_ref: &SideReference,
@@ -1863,15 +2034,10 @@ pub fn ability_on_switch_in(
 
     // trace copying an ability needs to happen before the ability check to activate on switch-in
     // e.g. tracing intimidate will activate intimidate
-    if active_pkmn.ability == Abilities::TRACE && active_pkmn.ability != defending_pkmn.ability {
-        instructions
-            .instruction_list
-            .push(Instruction::ChangeAbility(ChangeAbilityInstruction {
-                side_ref: *side_ref,
-                ability_change: defending_pkmn.ability as i16 - active_pkmn.ability as i16,
-            }));
-        active_pkmn.ability = defending_pkmn.ability;
-    }
+    trace_copy(state, side_ref, instructions);
+    let (attacking_side, defending_side) = state.get_both_sides(side_ref);
+    let active_pkmn = attacking_side.get_active();
+    let defending_pkmn = defending_side.get_active_immutable();
 
     match active_pkmn.ability {
         Abilities::ICEFACE => ice_face_in_snow(state, side_ref, instructions),
@@ -1919,7 +2085,8 @@ pub fn ability_on_switch_in(
                 instructions,
             );
         }
-        Abilities::INTREPIDSWORD => {
+        // (L184: once per battle, as Dauntless Shield)
+        Abilities::INTREPIDSWORD if active_pkmn.base_ability != Abilities::NONE => {
             // no need to check for boost at +6 because we are switching in
             attacking_side.attack_boost += 1;
             instructions
@@ -1929,6 +2096,7 @@ pub fn ability_on_switch_in(
                     stat: PokemonBoostableStat::Attack,
                     amount: 1,
                 }));
+            use_once(attacking_side.get_active(), side_ref, instructions);
         }
         Abilities::SLOWSTART => {
             instructions
@@ -2125,16 +2293,7 @@ pub fn ability_on_switch_in(
                 }));
             // alpha-poke patch (2026-10-17, doc/engine-diff.md L181): used now (Showdown's
             // shieldBoost, once per battle): its base ability none, the harness's encoding too
-            let active_pkmn = attacking_side.get_active();
-            if active_pkmn.base_ability == Abilities::DAUNTLESSSHIELD {
-                instructions
-                    .instruction_list
-                    .push(Instruction::ChangeBaseAbility(ChangeAbilityInstruction {
-                        side_ref: *side_ref,
-                        ability_change: Abilities::NONE as i16 - Abilities::DAUNTLESSSHIELD as i16,
-                    }));
-                active_pkmn.base_ability = Abilities::NONE;
-            }
+            use_once(attacking_side.get_active(), side_ref, instructions);
         }
         // alpha-poke patch (2026-10-17, doc/engine-diff.md L172): Supersweet Syrup, once per battle
         // (a used one: base ability none, as Dauntless Shield's): the foe's evasion -1, not through
@@ -2154,6 +2313,8 @@ pub fn ability_on_switch_in(
                     instructions,
                 );
             }
+            // (L184: used now, whatever the foe)
+            use_once(attacking_side.get_active(), side_ref, instructions);
         }
         Abilities::GRASSYSURGE => {
             if state.terrain.terrain_type != Terrain::GRASSYTERRAIN {

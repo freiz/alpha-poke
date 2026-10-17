@@ -17,17 +17,11 @@
 "b164-t1": [
 "last_used_move"
 ],
-"b184-t5": [
-"ability"
-],
 "b187-t17": [
 "last_item"
 ],
 "b191-t49": [
 "hp"
-],
-"b208-t18": [
-"sc.protect"
 ],
 "b211-t29": [
 "future_sight"
@@ -45,9 +39,6 @@
 "boost.atk",
 "boost.def",
 "hp"
-],
-"b230-t31": [
-"pp"
 ],
 "b232-t13": [
 "last_used_move"
@@ -134,9 +125,6 @@
 ],
 "b289-t9": [
 "hp"
-],
-"b36-t16": [
-"sc.protect"
 ],
 "b42-t24": [
 "last_item"

@@ -5033,3 +5033,117 @@ def test_l183_minior_meteor_and_back():
     assert states[1]["sides"][1]["mons"][1]["species"] == "miniormeteor"
     assert _full(states, 0, "calmmind", "miniorviolet", (2, 2)) == {}
     assert _full(states, 1, "calmmind", "corviknight", (2, 2)) == {}
+
+
+# L184 (doc/engine-diff.md): Mummy / Lingering Aroma give their own ability, Wandering Spirit
+# swaps (Showdown's skillSwap); Trace copies no notrace ability and keeps seeking (the next foe's
+# on its entry); a mover that woke and then flinched uses no PP; a failed Protect roll ends the
+# count at once; the once-per-battle abilities (Intrepid Sword, Supersweet Syrup) used for good
+OINKOLOGNE = """Oinkologne @ Leftovers
+Ability: Lingering Aroma
+EVs: 252 HP / 252 Def / 4 SpD
+Impish Nature
+- Body Slam
+- Yawn
+- Protect
+- Curse"""
+
+
+def test_l184_lingering_aroma_gives_itself():
+    states = ec.run_showdown(GARCHOMP_SD.replace("- Scale Shot", "- Dragon Claw"), OINKOLOGNE, [("move dragonclaw", "move curse")])
+    assert states[1]["sides"][0]["mons"][0]["ability"] == "lingeringaroma"
+    assert _keys(_full(states, 0, "dragonclaw", "curse"), "ability") == {}
+
+
+def test_l184_wandering_spirit_swaps():
+    runerigus = OINKOLOGNE.replace("Oinkologne", "Runerigus").replace("Lingering Aroma", "Wandering Spirit")
+    runerigus = runerigus.replace("- Body Slam", "- Shadow Ball").replace("- Yawn", "- Will-O-Wisp")
+    states = ec.run_showdown(GARCHOMP_SD.replace("- Scale Shot", "- Dragon Claw"), runerigus, [("move dragonclaw", "move curse")])
+    assert states[1]["sides"][1]["mons"][0]["ability"] == "roughskin"
+    assert _keys(_full(states, 0, "dragonclaw", "curse"), "ability") == {}
+
+
+PORYGON2 = """Porygon2 @ Eviolite
+Ability: Trace
+EVs: 252 HP / 252 Def / 4 SpD
+Bold Nature
+- Recover
+- Ice Beam
+- Discharge
+- Trick Room"""
+GREAT_TUSK = """Great Tusk @ Leftovers
+Ability: Protosynthesis
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- Headlong Rush
+- Rapid Spin
+- Ice Spinner
+- Knock Off"""
+
+
+def test_l184_trace_seeks_past_a_notrace_ability():
+    states = ec.run_showdown(BLISSEY + "\n\n" + PORYGON2, GREAT_TUSK + "\n\n" + GARCHOMP_SD,
+                             [("switch 2", "move rapidspin"), ("move recover", "switch 2")])  # fmt: skip
+    assert states[1]["sides"][0]["mons"][1]["ability"] == "trace"  # not Protosynthesis
+    assert states[2]["sides"][0]["mons"][1]["ability"] == "roughskin"  # the next foe's
+    assert _keys(_full(states, 0, "porygon2", "rapidspin", (2, 1)), "ability") == {}
+    assert _keys(_full(states, 1, "recover", "garchomp", (2, 2)), "ability") == {}
+
+
+BRELOOM = """Breloom @ Leftovers
+Ability: Technician
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- Spore
+- Mach Punch
+- Bullet Seed
+- Rock Tomb"""
+MEOWSCARADA = """Meowscarada @ Leftovers
+Ability: Overgrow
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- Fake Out
+- Flower Trick
+- Knock Off
+- U-turn"""
+
+
+def test_l184_no_pp_after_waking_into_a_flinch():
+    turns = [("move calmmind", "move spore"), ("move calmmind", "switch 2"), ("move calmmind", "move fakeout")]
+    states = ec.run_showdown(BLISSEY, BRELOOM + "\n\n" + MEOWSCARADA, turns, seed="gen5,35,42,105,175")
+    log = states[3]["log"]
+    assert any("|-curestatus|p1a: Blissey|slp" in x for x in log)
+    assert any("|cant|p1a: Blissey|flinch" in x for x in log)
+    assert _keys(_full(states, 2, "calmmind", "fakeout"), "pp", "last_used_move") == {}
+
+
+def test_l184_failed_protect_ends_the_count():
+    states = ec.run_showdown(BLISSEY, SLOWKING_FUTURE + "\n\n" + CORVIKNIGHT,
+                             [("move protect", "move slackoff"), ("move protect", "move chillyreception")],
+                             seed="gen5,35,42,105,175")  # fmt: skip
+    assert "|-fail|p1a: Blissey" in states[2]["log"] and states[2]["sides"][1]["request"] == "switch"
+    assert _keys(_full(states, 1, "protect", "chillyreception", (1, 2)), "sc.protect") == {}
+
+
+def test_l184_intrepid_sword_once():
+    zacian = """Zacian @ Rusted Sword
+Ability: Intrepid Sword
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- Behemoth Blade
+- Play Rough
+- Swords Dance
+- Close Combat"""
+    turns = [("switch 2", "move spikes"), ("switch 2", "move spikes")]
+    states = ec.run_showdown(zacian + "\n\n" + CORVIKNIGHT, TINGLU, turns, fmt="gen9customgame")
+    assert states[0]["sides"][0]["mons"][0]["boosts"]["atk"] == 1
+    assert states[2]["sides"][0]["mons"][0]["boosts"]["atk"] == 0
+    assert _full(states, 0, "corviknight", "spikes", (2, 1)) == {}
+    assert _full(states, 1, "zaciancrowned", "spikes", (2, 1)) == {}
+
+
+def test_l184_supersweet_syrup_kept_on_the_switch_out():
+    states = ec.run_showdown(BLISSEY, CORVIKNIGHT + "\n\n" + HYDRAPPLE_BACK.split("\n\n")[1],
+                             [("move calmmind", "switch 2"), ("move calmmind", "switch 2")])  # fmt: skip
+    assert _keys(_full(states, 0, "calmmind", "hydrapple", (1, 2)), "ability") == {}
+    assert _keys(_full(states, 1, "calmmind", "corviknight", (1, 2)), "ability") == {}

@@ -6,9 +6,6 @@
 "seed_offset": 30000
 },
 "mismatches": {
-"b111-t18": [
-"ability"
-],
 "b114-t21": [
 "base_ability"
 ],
@@ -120,15 +117,6 @@
 "item",
 "last_item",
 "options"
-],
-"b297-t27": [
-"ability"
-],
-"b297-t28": [
-"ability"
-],
-"b30-t21": [
-"base_ability"
 ],
 "b34-t14": [
 "sleep_turns",

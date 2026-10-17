@@ -337,3 +337,14 @@ def test_stellar_moves_after_the_tera():
 |turn|3
 """)  # fmt: skip
     assert t["p2"].stellar_moves == {"gliscor": {"knockoff"}}
+
+
+def test_used_once_intrepid_sword():
+    """L184: Intrepid Sword is once per battle too (Showdown's swordBoost), as Dauntless Shield."""
+    t = run(START + """
+|-ability|p2a: Bob|Intrepid Sword|boost
+|-boost|p2a: Bob|atk|1
+|upkeep
+|turn|2
+""")  # fmt: skip
+    assert t["p2"].used_once == {"gliscor"}
