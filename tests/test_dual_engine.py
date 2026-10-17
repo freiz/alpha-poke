@@ -4076,3 +4076,17 @@ def test_l158_relic_song(teams, i, turn, offset):
     outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2)
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
     assert ec.closest(b["state"], outs, n, hp=True)["diff"] == {}
+
+
+# L159 (doc/engine-diff.md): Cheek Pouch heals a third with the berry it eats (seed10k b200-t22:
+# Greedent's Sitrus); a fixed damage into Disguise deals nothing (random b93-t4: Ruination)
+@pytest.mark.parametrize("teams,i,turn,offset", [
+    ("random_battle_teams.jsonl", 200, 22, 10000),
+    ("random_battle_teams_random.jsonl", 93, 4, 0),
+])  # fmt: skip
+def test_l159_positions(teams, i, turn, offset):
+    a, b = _random_position(teams, i, turn, offset)
+    c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
+    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2)
+    n = tuple(len(s["mons"]) for s in a["state"]["sides"])
+    assert ec.closest(b["state"], outs, n, hp=True)["diff"] == {}

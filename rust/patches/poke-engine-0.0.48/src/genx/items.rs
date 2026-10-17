@@ -1576,6 +1576,41 @@ pub fn item_update(state: &mut State, side_ref: &SideReference, instructions: &m
     if unnerved(state, side_ref) {
         return;
     }
+    let held = a.item;
+    item_update_handlers(state, side_ref, instructions);
+    let side = state.get_side(side_ref);
+    if is_berry(held) && side.get_active_immutable().item == Items::NONE {
+        cheek_pouch(side, side_ref, instructions);
+    }
+}
+
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L159): Cheek Pouch, a third of its max HP when
+// its holder eats a berry (Showdown's onEatItem; not under Heal Block)
+pub fn cheek_pouch(side: &mut Side, side_ref: &SideReference, instructions: &mut StateInstructions) {
+    let heal_blocked = side
+        .volatile_statuses
+        .contains(&PokemonVolatileStatus::HEALBLOCK);
+    let a = side.get_active();
+    if a.ability != Abilities::CHEEKPOUCH || a.hp == 0 || heal_blocked {
+        return;
+    }
+    let amount = cmp::min(a.maxhp / 3, a.maxhp - a.hp);
+    if amount > 0 {
+        a.hp += amount;
+        instructions
+            .instruction_list
+            .push(Instruction::Heal(HealInstruction {
+                side_ref: *side_ref,
+                heal_amount: amount,
+            }));
+    }
+}
+
+fn item_update_handlers(
+    state: &mut State,
+    side_ref: &SideReference,
+    instructions: &mut StateInstructions,
+) {
     let side = state.get_side(side_ref);
     let confused = side
         .volatile_statuses

@@ -1677,6 +1677,12 @@ fn get_instructions_from_secondaries(
                                     item,
                                     &mut secondary_hit_instructions,
                                 );
+                                // (L159: Cheek Pouch)
+                                super::items::cheek_pouch(
+                                    state.get_side(&secondary_target_side_ref),
+                                    &secondary_target_side_ref,
+                                    &mut secondary_hit_instructions,
+                                );
                             }
                         }
                     }
@@ -3034,6 +3040,8 @@ pub fn before_move(
         == PokemonName::MIMIKYUBUSTED
     {
         choice.base_power = 0.0;
+        // (L159: a fixed damage too -- Ruination, Seismic Toss, ...: run_move's hit skips it)
+        choice.first_hit_blocked = true;
     }
 
     /*
