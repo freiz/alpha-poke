@@ -136,7 +136,7 @@ def _changed_types(m: dict) -> bool:
 LIMITS = {"partiallytrapped": 5, "healblock": 2, "throatchop": 2, "magnetrise": 5, "micleberry": 2}
 
 
-def _engine_side(s: dict, future_sight=None) -> pe.Side:
+def _engine_side(s: dict, future_sight=None, wish=None) -> pe.Side:
     mons = [_engine_mon(m) for m in s["mons"]]
     mons += [pe.Pokemon.create_fainted() for _ in range(6 - len(mons))]
     act = s["mons"][s["active"]] if s["active"] >= 0 else None
@@ -145,6 +145,8 @@ def _engine_side(s: dict, future_sight=None) -> pe.Side:
     sc |= {v: 1 for k, v in PRESENT.items() if k in c}
     sc |= {v: c[k]["duration"] for k, v in TIMED.items() if k in c}
     kw: dict = {"future_sight": future_sight} if future_sight else {}
+    if wish:
+        kw["wish"] = wish
     if act is not None:
         kw |= {ENGINE_BOOST[b]: act["boosts"][b] for b in BOOSTS}
         names = [x + st["stat"] if x in ("protosynthesis", "quarkdrive") and st.get("stat") else x
@@ -203,7 +205,14 @@ def engine_state(sd: dict) -> pe.State:
         if fm and fm["source"] >= 0:
             turns = fm["ending_turn"] - sd["turn"] + 2
             future[1 - k] = (turns, pe.PokemonIndex(str(fm["source"])))
-    sides = [_engine_side(s, f) for s, f in zip(sd["sides"], future, strict=True)]
+    # Wish: a condition of the user's slot (its HP, unrounded maxhp / 2; Showdown heals at the end
+    # of turn startingTurn + 2, the engine at the end of the turn its count is 1)
+    wish = [None, None]
+    for k, s in enumerate(sd["sides"]):
+        w = s.get("slot", {}).get("wish")
+        if w and w.get("hp"):
+            wish[k] = (w["starting_turn"] + 3 - sd["turn"], int(w["hp"]))
+    sides = [_engine_side(s, f, w) for s, f, w in zip(sd["sides"], future, wish, strict=True)]
     return pe.State(
         side_one=sides[0], side_two=sides[1],
         weather=WEATHER[f["weather"]], weather_turns_remaining=f["weather_duration"],
@@ -225,8 +234,8 @@ def engine_outcomes(state: pe.State, c1: str, c2: str) -> list[tuple[float, pe.S
         dmg = [0, 0]
         for ins in si.instruction_list:
             m = DAMAGE.match(str(ins))
-            if m:
-                dmg[m.group(1) == "SideTwo"] += int(m.group(2))
+            if m:  # (a negative one is a heal: Pain Split, not a roll)
+                dmg[m.group(1) == "SideTwo"] += max(int(m.group(2)), 0)
         out.append((si.percentage / 100, state.apply_instructions(si), tuple(dmg)))
     return [Outcome(p, s, d) for p, s, d in out]
 
@@ -314,10 +323,12 @@ def diff(a: dict, b: dict, skip_hp: bool = False) -> dict:
             if a.get(k) != b.get(k) and not (skip_hp and k.endswith(".hp"))}  # fmt: skip
 
 
-def hp_diff(showdown_after: dict, out, n_mons=(6, 6), tol: int = 2) -> dict:
+def hp_diff(showdown_after: dict, out, n_mons=(6, 6), tol: int = 2,
+            dealt=(False, False)) -> dict:  # fmt: skip
     """{"sK.j.hp": (engine, showdown)} where an HP differs by more than the damage rolls'
     spread: the engine deals the average roll (0.925 x max), so +-8.5% of the damage that side
-    took in this outcome, + ``tol``."""
+    took in this outcome, + ``tol``; a side whose HP also follows the damage it dealt (``dealt``:
+    a drain / recoil move, Shell Bell) +-8.5% of 3/4 of that too."""
     target = view(showdown_after)
     v = view_engine(out[1], n_mons)
     dmg = getattr(out, "damage", (0, 0))
@@ -325,12 +336,14 @@ def hp_diff(showdown_after: dict, out, n_mons=(6, 6), tol: int = 2) -> dict:
     for k, e in v.items():
         if k.endswith(".hp"):
             side = 0 if k.startswith("s1.") else 1
-            if abs(e - target[k]) > 0.085 * dmg[side] + tol:
+            spread = 0.085 * dmg[side] + (0.085 * 0.75 * dmg[1 - side] if dealt[side] else 0)
+            if abs(e - target[k]) > spread + tol:
                 bad[k] = (e, target[k])
     return bad
 
 
-def closest(showdown_after: dict, outs: list, n_mons=(6, 6), hp: bool = False) -> dict:
+def closest(showdown_after: dict, outs: list, n_mons=(6, 6), hp: bool = False,
+            dealt=(False, False)) -> dict:  # fmt: skip
     """The engine outcome nearest to Showdown's next state: its differences and probability.
     HP is left out unless ``hp`` (then compared within the damage rolls' spread, ``hp_diff``)."""
     target = view(showdown_after)
@@ -338,7 +351,7 @@ def closest(showdown_after: dict, outs: list, n_mons=(6, 6), hp: bool = False) -
     for o in outs:
         d = diff(view_engine(o[1], n_mons), target, skip_hp=True)
         if hp:
-            d |= hp_diff(showdown_after, o, n_mons)
+            d |= hp_diff(showdown_after, o, n_mons, dealt=dealt)
         if best is None or len(d) < len(best[1]):
             best = (o[0], d)
     return {"p": best[0], "diff": best[1]} if best else {"p": 0.0, "diff": {"no outcome": 1}}

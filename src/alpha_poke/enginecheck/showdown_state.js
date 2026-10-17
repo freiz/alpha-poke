@@ -52,7 +52,8 @@ function sideState(side) {
 		[k, {layers: v.layers || 0, duration: v.duration || 0}]));
 	// Future Sight / Doom Desire: a condition of the target's slot, from a mon of the other side
 	const slot = Object.fromEntries(Object.entries(side.slotConditions[0] || {}).map(([k, v]) =>
-		[k, {duration: v.duration || 0, ending_turn: v.endingTurn || 0,
+		[k, {duration: v.duration || 0, ending_turn: v.endingTurn || 0, hp: v.hp || 0,
+			starting_turn: v.startingTurn || 0,
 			source: v.source && v.source.side ? v.source.side.team.indexOf(v.source.set) : -1}]));
 	const req = side.activeRequest;
 	const request = !req ? 'none' : req.wait ? 'wait' : req.forceSwitch ? 'switch' :

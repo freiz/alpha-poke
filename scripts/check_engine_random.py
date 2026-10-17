@@ -24,6 +24,7 @@ only when it is a subset (--force for a deliberate change, e.g. a harness fix th
 
 import argparse
 import collections
+import functools
 import hashlib
 import json
 import multiprocessing as mp
@@ -37,6 +38,23 @@ from alpha_poke import enginecheck as ec
 def kind_of(key: str) -> str:
     """'s1.0.hp' -> 'hp', 's2.boost.def' -> 'boost.def', 's1.volatile.x' -> 'volatile.x'."""
     return re.sub(r"^s[12]\.(\d+\.)?", "", key)
+
+
+@functools.cache
+def drain_or_recoil() -> frozenset[str]:
+    """The engine's moves whose user's HP follows the damage dealt (drain, recoil)."""
+    import alpha_search
+
+    rows, _ = alpha_search.engine_data()
+    return frozenset(r[0].lower() for r in rows if r[8].startswith("Some") or r[9].startswith("Some"))
+
+
+def follows_dealt(state: dict, side: int, move: str) -> bool:
+    """Whether a side's HP this turn follows the damage it deals (a drain / recoil move, Shell
+    Bell): its HP tolerance includes that damage's rolls."""
+    s = state["sides"][side]
+    item = s["mons"][s["active"]]["item"] if s["active"] >= 0 else ""
+    return move.removesuffix("-tera") in drain_or_recoil() or item == "shellbell"
 
 
 def comparable(steps: list[dict], k: int) -> str | None:
@@ -80,7 +98,8 @@ def battle(job: tuple) -> dict:
         n = tuple(len(s["mons"]) for s in a["state"]["sides"])
         try:
             outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2)
-            res = ec.closest(b["state"], outs, n, hp=True)
+            dealt = (follows_dealt(a["state"], 0, c1), follows_dealt(a["state"], 1, c2))
+            res = ec.closest(b["state"], outs, n, hp=True, dealt=dealt)
         except BaseException as e:  # noqa: BLE001 - the binding's panics are BaseExceptions
             out["errors"].append(f"engine: {c1} | {c2}: {type(e).__name__}: {str(e)[:120]}")
             out["mismatches"][f"b{i}-t{a['state']['turn']}"] = {

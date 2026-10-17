@@ -1276,3 +1276,14 @@ def test_l24_destiny_knot():
     states, res = _item_turn(p1, p2, [("move roost", "move attract")], ("roost", "attract"))
     assert "attract" in states[1]["sides"][1]["mons"][0]["volatiles"]  # Showdown: the foe too
     assert res["diff"] == {}
+
+
+def test_control_wish():
+    """Wish heals half the user's max HP at the end of the next turn (harness: Showdown's
+    startingTurn to the engine's count)."""
+    p1 = _corviknight("Leftovers").replace("- Defog", "- Wish")
+    turns = [("move wish", "move ruination"), ("move roost", "move ruination")]
+    states = ec.run_showdown(p1, TINGLU_HITS, turns, seed="gen5,5,5,5,5")
+    assert any("move: Wish" in x for x in states[2]["log"])  # Showdown: healed
+    outs = ec.engine_outcomes(ec.engine_state(states[1]), "roost", "ruination")
+    assert ec.closest(states[2], outs, (1, 1), hp=True)["diff"] == {}
