@@ -3302,3 +3302,43 @@ def test_l124_booster_energy_after_neutralizing_gas():
     assert states[1]["sides"][1]["mons"][0]["item"] == ""
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "blissey", "bulkup")
     assert ec.closest(states[1], outs, (2, 1), hp=True)["diff"] == {}
+
+
+# L125 (doc/engine-diff.md): Lunar Blessing / Jungle Healing also cure their user's status
+# (Showdown's onHit: cureStatus); the engine only healed
+@pytest.mark.parametrize("user, move", [
+    (_setter("Cresselia", "Levitate", "Flame Orb", "- Lunar Blessing\n- Moonblast\n- Calm Mind\n- Protect"), "lunarblessing"),
+    (_setter("Zarude", "Leaf Guard", "Flame Orb", "- Jungle Healing\n- Power Whip\n- Knock Off\n- U-turn"), "junglehealing"),
+], ids=["lunar-blessing", "jungle-healing"])  # fmt: skip
+def test_l125_healing_moves_cure_status(user, move):
+    states = ec.run_showdown(user, BLISSEY, [("move protect" if move == "lunarblessing" else "move uturn", "move seismictoss"),
+                                             (f"move {move}", "move seismictoss")])  # fmt: skip
+    assert states[1]["sides"][0]["mons"][0]["status"] == "brn"
+    outs = ec.engine_outcomes(ec.engine_state(states[1]), move, "seismictoss")
+    assert ec.closest(states[2], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L126 (doc/engine-diff.md): a sleeper's (or a frozen mon's) status goes before a flinch / Taunt
+# stops it (Showdown's BeforeMove order: sleep 10, flinch 8, Taunt 5): it can wake that turn; the
+# engine stopped it first
+def test_l126_wakes_before_the_flinch():
+    zo = _setter("Dondozo", "Unaware", "Leftovers", "- Rest\n- Curse\n- Waterfall\n- Sleep Talk")
+    gambit = _attacker("Kingambit", "Supreme Overlord", "Leftovers", "- Iron Head\n- Sucker Punch\n- Swords Dance\n- Kowtow Cleave")
+    turns = [("move curse", "move ironhead"), ("move rest", "move swordsdance"), ("move curse", "move swordsdance"),
+             ("move curse", "move swordsdance"), ("move curse", "move ironhead")]  # fmt: skip
+    states = ec.run_showdown(zo, gambit, turns, force_random=True)
+    assert states[4]["sides"][0]["mons"][0]["status"] == "slp"
+    assert any("|cant|p1a: Dondozo|flinch" in x for x in states[5]["log"])
+    outs = ec.engine_outcomes(ec.engine_state(states[4]), "curse", "ironhead")
+    assert ec.closest(states[5], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L127 (doc/engine-diff.md): a Mold Breaker's status move goes through a breakable status-blocking
+# ability (Purifying Salt, Limber, Insomnia, ...); the engine's immunity ignored Mold Breaker
+def test_l127_mold_breaker_through_purifying_salt():
+    tink = _setter("Tinkaton", "Mold Breaker", "Leftovers", "- Thunder Wave\n- Gigaton Hammer\n- Stealth Rock\n- Encore")
+    salt = _setter("Garganacl", "Purifying Salt", "Leftovers", "- Recover\n- Salt Cure\n- Stealth Rock\n- Protect")
+    states = ec.run_showdown(tink, salt, [("move thunderwave", "move recover")], force_random=True)
+    assert states[1]["sides"][1]["mons"][0]["status"] == "par"
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "thunderwave", "recover")
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}

@@ -45,10 +45,6 @@
 "b143-t15": [
 "hp"
 ],
-"b146-t16": [
-"hp",
-"status"
-],
 "b146-t8": [
 "hp",
 "status"
@@ -197,9 +193,6 @@
 "volatile.confusion"
 ],
 "b75-t48": [
-"status"
-],
-"b83-t13": [
 "status"
 ],
 "b89-t14": [

@@ -1947,7 +1947,8 @@ pub fn choice_special_effect(
             }
         }
         // (L66: Take Heart cures its status too)
-        Choices::REFRESH | Choices::TAKEHEART => {
+        // (L125: Lunar Blessing / Jungle Healing cure the user's status too)
+        Choices::REFRESH | Choices::TAKEHEART | Choices::LUNARBLESSING | Choices::JUNGLEHEALING => {
             let active_index = attacking_side.active_index;
             let active_pkmn = attacking_side.get_active();
             if active_pkmn.status != PokemonStatus::NONE {

@@ -364,7 +364,7 @@ define_enum_with_from_str! {
 }
 
 // https://bulbapedia.bulbagarden.net/wiki/Ignoring_Abilities#Ignorable_Abilities
-fn mold_breaker_ignores(ability: &Abilities) -> bool {
+pub fn mold_breaker_ignores(ability: &Abilities) -> bool {
     match ability {
         Abilities::BATTLEARMOR
         | Abilities::CLEARBODY

@@ -268,6 +268,9 @@ harness 必须把 Showdown 的状态完整映射到引擎，否则不一致来�
 | L122 | Disguise 挡下的一击也算命中：Red Card / Eject Button 照样触发（Showdown 的 onAfterMoveSecondary 不要求伤害）；引擎把 0 伤害的一击当作没打中 | 引擎 | 已修复 | `test_l122_red_card_through_disguise` | `generate_instructions.rs` `check_move_hit_or_miss`（这一招破了 Disguise 时不算没打中）、`run_move` 的 Red Card / Eject Button 条件 |
 | L123 | Custap Berry 只要持有者在 1/4 HP 及以下（Gluttony：1/2）出招就吃，不管双方优先度（Showdown 的 onFractionalPriority 拿到的是分数优先度 0）；它的 +0.1 只在同优先度时决定先后。引擎只在同优先度、且低于 1/4 时吃 | 引擎 | 已修复 | `test_l123_custap_with_endure`（恰好 1/4 的 Araquanid 用 Endure） | `generate_instructions.rs` 出招顺序 |
 | L124 | Neutralizing Gas 离场（持有者换下或倒下）时，Protosynthesis / Quark Drive 持有者的 Booster Energy 立即生效（Showdown：特性重新开始）；引擎一直不用 | 引擎 | 已修复 | `test_l124_booster_energy_after_neutralizing_gas` | `abilities.rs` `booster_energy_after_gas`，在换人和 `after_move_finish`（倒下）时调用（只做这一项；其他特性的重新开始没有做） |
+| L125 | Lunar Blessing / Jungle Healing 还治愈使用者的异常状态（Showdown 的 onHit：cureStatus）；引擎只回复 | 引擎 | 已修复 | `test_l125_healing_moves_cure_status`（2 个参数） | `choice_effects.rs`，同 Refresh |
+| L126 | 睡着 / 冰冻的出招方先经过自己的状态，再被畏缩 / Taunt 挡住（Showdown 的 BeforeMove 顺序：睡眠 / 冰冻 10、畏缩 8、Taunt 5）：当回合可以醒来；引擎先挡，睡眠计数没走 | 引擎 | 已修复 | `test_l126_wakes_before_the_flinch` | `generate_instructions.rs`：`flinched_or_taunted` 对睡着 / 冰冻的出招方在状态处理之后检查 |
+| L127 | Mold Breaker 类使用者的变化招式无视可被破格的挡异常特性（Purifying Salt、Limber、Insomnia 等）；引擎的异常免疫没看 Mold Breaker | 引擎 | 已修复 | `test_l127_mold_breaker_through_purifying_salt` | `generate_instructions.rs` `immune_to_status`（`mold_breaker_ignores` 改为 pub） |
 
 ## 修复与验证（2026-10-16）
 

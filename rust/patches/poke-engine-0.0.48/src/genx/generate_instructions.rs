@@ -1024,7 +1024,16 @@ pub fn immune_to_status(
     let gassed = |gas: &crate::state::Pokemon, holder: &crate::state::Pokemon| {
         gas.ability == Abilities::NEUTRALIZINGGAS && holder.item != Items::ABILITYSHIELD
     };
-    let ability = if gassed(attacking_pkmn, target_pkmn) {
+    // (L127: and a Mold Breaker user's status move goes through a breakable one: Purifying Salt,
+    // Limber, Insomnia, ...)
+    let breaker = status_target == &MoveTarget::Opponent
+        && matches!(
+            attacking_pkmn.ability,
+            Abilities::MOLDBREAKER | Abilities::TERAVOLT | Abilities::TURBOBLAZE
+        )
+        && target_pkmn.item != Items::ABILITYSHIELD
+        && super::abilities::mold_breaker_ignores(&target_pkmn.ability);
+    let ability = if gassed(attacking_pkmn, target_pkmn) || breaker {
         Abilities::NONE
     } else {
         target_pkmn.ability
@@ -2743,27 +2752,37 @@ fn no_target(state: &State, choice: &Choice, attacking_side_ref: &SideReference)
     false
 }
 
-fn cannot_use_move(state: &State, choice: &Choice, attacking_side_ref: &SideReference) -> bool {
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L126): a flinch / Taunt stops the move after
+// the mover's sleep / freeze went (Showdown's BeforeMove: sleep / freeze 10, flinch 8, Taunt 5): for
+// an asleep / frozen mover they are checked after its status (generate_instructions_from_move)
+fn flinched_or_taunted(state: &State, choice: &Choice, attacking_side_ref: &SideReference) -> bool {
     let attacking_side = state.get_side_immutable(attacking_side_ref);
-
-    // (L119: a fainted target is checked after the status: no_target)
-
     // If you were taunted, you can't use a Physical/Special move
     // alpha-poke patch (2026-10-16, doc/engine-diff.md L90): the move's own category (an attack
     // into Water Absorb, Volt Absorb, ... is a status move by now)
-    if attacking_side
+    attacking_side
         .volatile_statuses
         .contains(&PokemonVolatileStatus::TAUNT)
         && MOVES
             .get(&choice.move_id)
             .map_or(choice.category, |m| m.category)
             == MoveCategory::Status
-    {
-        return true;
-    } else if attacking_side
-        .volatile_statuses
-        .contains(&PokemonVolatileStatus::FLINCH)
-    {
+        || attacking_side
+            .volatile_statuses
+            .contains(&PokemonVolatileStatus::FLINCH)
+}
+
+fn cannot_use_move(state: &State, choice: &Choice, attacking_side_ref: &SideReference) -> bool {
+    let attacking_side = state.get_side_immutable(attacking_side_ref);
+
+    // (L119: a fainted target is checked after the status: no_target)
+
+    // (L126: an asleep / frozen mover's flinch / Taunt after its status)
+    let asleep_or_frozen = matches!(
+        attacking_side.get_active_immutable().status,
+        PokemonStatus::SLEEP | PokemonStatus::FREEZE
+    );
+    if !asleep_or_frozen && flinched_or_taunted(state, choice, attacking_side_ref) {
         return true;
     } else if choice.flags.heal
         && attacking_side
@@ -3577,6 +3596,13 @@ pub fn generate_instructions_from_move(
         }
     }
 
+    let asleep_or_frozen_before = matches!(
+        state
+            .get_side_immutable(&attacking_side)
+            .get_active_immutable()
+            .status,
+        PokemonStatus::SLEEP | PokemonStatus::FREEZE
+    );
     if !choice.sleep_talk_move {
         generate_instructions_from_existing_status_conditions(
             state,
@@ -3616,7 +3642,9 @@ pub fn generate_instructions_from_move(
         }
         return;
     }
-    if no_target(state, &choice, &attacking_side) {
+    if no_target(state, &choice, &attacking_side)
+        || (asleep_or_frozen_before && flinched_or_taunted(state, &choice, &attacking_side))
+    {
         state.reverse_instructions(&incoming_instructions.instruction_list);
         final_instructions.push(incoming_instructions);
         return;
