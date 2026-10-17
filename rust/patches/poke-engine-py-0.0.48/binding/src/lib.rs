@@ -688,6 +688,8 @@ pub struct PyPokemon {
     pub gender: u8,
     // alpha-poke patch (L175): a Stellar tera's types already boosted (type names)
     pub stellar_boosted: Vec<String>,
+    // alpha-poke patch (L180): its own stats, weight (hg), moves and PP while transformed
+    pub transform_backup: Option<(Vec<i16>, i16, Vec<(String, i8)>)>,
 }
 
 impl From<Pokemon> for PyPokemon {
@@ -736,6 +738,19 @@ impl From<Pokemon> for PyPokemon {
                 })
                 .map(|t| t.to_string())
                 .collect(),
+            transform_backup: other.own.is_set().then(|| {
+                (
+                    other.own.stats.to_vec(),
+                    other.own.weight_hg,
+                    other
+                        .own
+                        .moves
+                        .iter()
+                        .zip(other.own.pp.iter())
+                        .map(|(m, p)| (m.to_string().to_lowercase(), *p))
+                        .collect(),
+                )
+            }),
             moves: other
                 .moves
                 .into_iter()
@@ -789,6 +804,21 @@ impl Into<Pokemon> for PyPokemon {
             stellar_boosted: self.stellar_boosted.iter().fold(0, |m, t| {
                 m | 1 << PokemonType::from_str(t).unwrap() as u32
             }),
+            own: match &self.transform_backup {
+                None => poke_engine::state::OwnSet::default(),
+                Some((stats, weight_hg, moves)) => {
+                    let mut own = poke_engine::state::OwnSet::default();
+                    for (k, x) in stats.iter().take(5).enumerate() {
+                        own.stats[k] = *x;
+                    }
+                    own.weight_hg = *weight_hg;
+                    for (k, (m, p)) in moves.iter().take(4).enumerate() {
+                        own.moves[k] = Choices::from_str(m).unwrap_or(Choices::NONE);
+                        own.pp[k] = *p;
+                    }
+                    own
+                }
+            },
             moves: PokemonMoves {
                 m0: moves_vec[0].clone().into(),
                 m1: moves_vec[1].clone().into(),
@@ -831,6 +861,7 @@ impl PyPokemon {
         times_attacked=0,
         gender=0,
         stellar_boosted=Vec::<String>::new(),
+        transform_backup=None,
     ))]
     fn new(
         id: String,
@@ -861,6 +892,7 @@ impl PyPokemon {
         times_attacked: u8,
         gender: u8,
         stellar_boosted: Vec<String>,
+        transform_backup: Option<(Vec<i16>, i16, Vec<(String, i8)>)>,
     ) -> Self {
         if base_ability == "" {
             base_ability = ability.clone();
@@ -894,6 +926,7 @@ impl PyPokemon {
             times_attacked,
             gender,
             stellar_boosted,
+            transform_backup,
         }
     }
     #[staticmethod]

@@ -12,9 +12,6 @@
 "b1-t13": [
 "base_ability"
 ],
-"b100-t15": [
-"pp"
-],
 "b102-t4": [
 "base_ability",
 "id"
@@ -32,9 +29,6 @@
 "b120-t35": [
 "sc.protect"
 ],
-"b121-t36": [
-"pp"
-],
 "b122-t26": [
 "status"
 ],
@@ -51,7 +45,6 @@
 "sc.toxic_count"
 ],
 "b139-t57": [
-"pp",
 "sc.toxic_count"
 ],
 "b139-t58": [
@@ -61,7 +54,6 @@
 "sc.toxic_count"
 ],
 "b139-t60": [
-"pp",
 "sc.toxic_count"
 ],
 "b14-t14": [
@@ -73,22 +65,10 @@
 "b145-t8": [
 "base_ability"
 ],
-"b146-t22": [
-"pp"
-],
 "b146-t28": [
 "base_ability"
 ],
 "b15-t11": [
-"pp"
-],
-"b15-t7": [
-"pp"
-],
-"b150-t27": [
-"pp"
-],
-"b151-t18": [
 "pp"
 ],
 "b151-t20": [
@@ -108,9 +88,6 @@
 ],
 "b153-t20": [
 "sc.toxic_count"
-],
-"b153-t7": [
-"pp"
 ],
 "b159-t13": [
 "ability",
@@ -147,21 +124,6 @@
 "base_ability",
 "id"
 ],
-"b167-t6": [
-"pp"
-],
-"b169-t14": [
-"pp"
-],
-"b169-t33": [
-"sc.protect"
-],
-"b17-t35": [
-"pp"
-],
-"b172-t43": [
-"pp"
-],
 "b176-t13": [
 "base_ability"
 ],
@@ -182,9 +144,6 @@
 ],
 "b179-t16": [
 "sc.toxic_count"
-],
-"b179-t36": [
-"pp"
 ],
 "b179-t47": [
 "sc.toxic_count"
@@ -222,21 +181,6 @@
 "b185-t8": [
 "base_ability"
 ],
-"b186-t17": [
-"pp"
-],
-"b186-t19": [
-"pp"
-],
-"b186-t20": [
-"pp"
-],
-"b186-t22": [
-"pp"
-],
-"b186-t23": [
-"pp"
-],
 "b186-t3": [
 "base_ability",
 "id"
@@ -244,30 +188,12 @@
 "b186-t34": [
 "sc.protect"
 ],
-"b186-t47": [
-"pp"
-],
-"b186-t51": [
-"pp"
-],
-"b186-t52": [
-"pp"
-],
-"b191-t10": [
-"pp"
-],
 "b191-t20": [
 "pp"
 ],
 "b195-t6": [
 "base_ability",
 "id"
-],
-"b199-t29": [
-"pp"
-],
-"b199-t34": [
-"sc.protect"
 ],
 "b27-t2": [
 "base_ability"
@@ -284,26 +210,11 @@
 "b35-t18": [
 "base_ability"
 ],
-"b39-t11": [
-"pp"
-],
 "b4-t17": [
 "base_ability"
 ],
-"b4-t48": [
-"pp"
-],
-"b43-t13": [
-"pp"
-],
 "b43-t38": [
 "base_ability"
-],
-"b43-t48": [
-"pp"
-],
-"b43-t7": [
-"pp"
 ],
 "b44-t21": [
 "base_ability"
@@ -356,9 +267,6 @@
 "b6-t40": [
 "pp"
 ],
-"b61-t35": [
-"pp"
-],
 "b62-t46": [
 "hp"
 ],
@@ -407,9 +315,6 @@
 "b70-t6": [
 "volatile.gastroacid"
 ],
-"b72-t12": [
-"pp"
-],
 "b75-t27": [
 "attack",
 "defense",
@@ -429,27 +334,12 @@
 "b82-t20": [
 "hp"
 ],
-"b83-t39": [
-"pp"
-],
-"b84-t17": [
-"pp"
-],
 "b84-t19": [
 "base_ability",
 "id"
 ],
 "b85-t30": [
 "future_sight"
-],
-"b89-t41": [
-"pp"
-],
-"b89-t45": [
-"pp"
-],
-"b89-t46": [
-"pp"
 ],
 "b98-t3": [
 "base_ability"

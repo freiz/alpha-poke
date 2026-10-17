@@ -113,6 +113,10 @@ pub enum Instruction {
     ChangeLastMove(ChangeLastMoveInstruction),
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L175): a Stellar tera's type boosted once
     ToggleStellarBoosted(ToggleStellarBoostedInstruction),
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L180): the active's own set while
+    // transformed (Pokemon::own, OwnSet::change's field), its weight (in hg)
+    ChangeOwn(ChangeOwnInstruction),
+    ChangeWeight(ChangeStatInstruction),
     Revive(ReviveInstruction),
     ToggleTrickRoom(ToggleTrickRoomInstruction),
     DecrementTrickRoomTurnsRemaining,
@@ -340,6 +344,12 @@ impl fmt::Debug for Instruction {
             Instruction::ToggleShedTailing(s) => {
                 write!(f, "ToggleShedTailing {:?}", s.side_ref)
             }
+            Instruction::ChangeOwn(s) => {
+                write!(f, "ChangeOwn {:?}: {} {}", s.side_ref, s.field, s.amount)
+            }
+            Instruction::ChangeWeight(s) => {
+                write!(f, "ChangeWeight {:?}: {}", s.side_ref, s.amount)
+            }
             Instruction::ToggleStellarBoosted(s) => {
                 write!(f, "ToggleStellarBoosted {:?}: {:?}", s.side_ref, s.move_type)
             }
@@ -467,6 +477,13 @@ pub struct ToggleBatonPassingInstruction {
 #[derive(Debug, PartialEq, Clone)]
 pub struct ToggleShedTailingInstruction {
     pub side_ref: SideReference,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct ChangeOwnInstruction {
+    pub side_ref: SideReference,
+    pub field: u8,
+    pub amount: i16,
 }
 
 #[derive(Debug, PartialEq, Clone)]

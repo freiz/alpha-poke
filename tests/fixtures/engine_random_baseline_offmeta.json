@@ -8,28 +8,7 @@
 "b103-t23": [
 "pp"
 ],
-"b105-t39": [
-"pp"
-],
-"b106-t15": [
-"pp"
-],
-"b106-t56": [
-"pp"
-],
-"b106-t8": [
-"pp"
-],
-"b110-t54": [
-"pp"
-],
-"b110-t57": [
-"pp"
-],
 "b110-t58": [
-"sc.protect"
-],
-"b110-t59": [
 "sc.protect"
 ],
 "b111-t17": [
@@ -88,29 +67,8 @@
 "b132-t42": [
 "sc.toxic_count"
 ],
-"b143-t6": [
-"pp"
-],
-"b144-t38": [
-"sc.protect"
-],
-"b148-t32": [
-"sc.protect"
-],
 "b15-t41": [
 "sc.toxic_count"
-],
-"b150-t4": [
-"attack",
-"defense",
-"pp",
-"special_attack",
-"special_defense",
-"speed",
-"weight"
-],
-"b154-t38": [
-"pp"
 ],
 "b157-t6": [
 "ability"
@@ -147,12 +105,6 @@
 "boost.def",
 "hp"
 ],
-"b161-t20": [
-"pp"
-],
-"b161-t22": [
-"pp"
-],
 "b161-t42": [
 "hp"
 ],
@@ -165,7 +117,6 @@
 "volatile.minimize"
 ],
 "b162-t36": [
-"pp",
 "sc.protect"
 ],
 "b165-t22": [
@@ -179,24 +130,6 @@
 ],
 "b169-t3": [
 "hp"
-],
-"b17-t14": [
-"sc.protect"
-],
-"b170-t13": [
-"pp"
-],
-"b171-t9": [
-"attack",
-"defense",
-"pp",
-"special_attack",
-"special_defense",
-"speed",
-"weight"
-],
-"b172-t10": [
-"pp"
 ],
 "b178-t2": [
 "hp"
@@ -217,51 +150,15 @@
 "special_defense",
 "speed"
 ],
-"b193-t13": [
-"pp"
-],
 "b193-t18": [
 "last_used_move",
-"pp"
-],
-"b199-t14": [
-"pp"
-],
-"b199-t16": [
-"pp"
-],
-"b199-t19": [
-"pp"
-],
-"b199-t21": [
 "pp"
 ],
 "b20-t26": [
 "boost.spe"
 ],
-"b20-t27": [
-"sc.protect"
-],
-"b20-t4": [
-"pp"
-],
-"b24-t29": [
-"pp"
-],
 "b25-t8": [
 "volatile.uproar"
-],
-"b27-t15": [
-"pp"
-],
-"b31-t19": [
-"pp"
-],
-"b31-t40": [
-"pp"
-],
-"b31-t5": [
-"pp"
 ],
 "b34-t14": [
 "base_ability",
@@ -306,17 +203,8 @@
 "b42-t43": [
 "sc.toxic_count"
 ],
-"b45-t15": [
-"pp"
-],
 "b46-t2": [
 "hp"
-],
-"b46-t30": [
-"pp"
-],
-"b48-t20": [
-"pp"
 ],
 "b49-t1": [
 "hp",
@@ -356,25 +244,11 @@
 "volatile.mustrecharge"
 ],
 "b52-t16": [
-"pp",
 "sc.protect"
 ],
 "b59-t23": [
 "base_ability",
 "id"
-],
-"b6-t23": [
-"sc.protect"
-],
-"b6-t26": [
-"pp"
-],
-"b6-t28": [
-"pp",
-"sc.protect"
-],
-"b61-t18": [
-"pp"
 ],
 "b62-t17": [
 "sleep_turns",
@@ -395,9 +269,6 @@
 "hp",
 "status"
 ],
-"b70-t3": [
-"pp"
-],
 "b75-t8": [
 "base_ability",
 "id"
@@ -405,23 +276,11 @@
 "b83-t24": [
 "pp"
 ],
-"b87-t25": [
-"pp"
-],
 "b89-t28": [
 "pp"
 ],
 "b90-t1": [
 "status"
-],
-"b90-t31": [
-"pp"
-],
-"b90-t32": [
-"pp"
-],
-"b93-t28": [
-"pp"
 ],
 "b96-t3": [
 "item"

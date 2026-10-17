@@ -161,6 +161,11 @@ def _engine_mon(m: dict) -> pe.Pokemon:
         times_attacked=min(m.get("times_attacked", 0), 255),
         gender={"M": 1, "F": 2}.get(m.get("gender", ""), 0),  # (L163)
         stellar_boosted=m.get("stellar_boosted", []),  # (L175)
+        # (L180: its own set while transformed; moves the engine does not know as none)
+        transform_backup=None if not m.get("transform_backup") else (
+            m["transform_backup"][0], m["transform_backup"][1],
+            [(x if _engine_move(x) else "none", p) for x, p in m["transform_backup"][2]][:4]
+            + [("none", 0)] * (4 - len(m["transform_backup"][2]))),
     )  # fmt: skip
 
 

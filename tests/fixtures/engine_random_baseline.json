@@ -5,21 +5,6 @@
 "teams": "87327e3ee174c1b9"
 },
 "mismatches": {
-"b0-t11": [
-"sc.protect"
-],
-"b0-t12": [
-"weight"
-],
-"b0-t14": [
-"attack",
-"defense",
-"pp",
-"special_attack",
-"special_defense",
-"speed",
-"weight"
-],
 "b0-t15": [
 "sc.toxic_count"
 ],
@@ -31,15 +16,6 @@
 ],
 "b0-t18": [
 "sc.toxic_count"
-],
-"b0-t19": [
-"sc.protect"
-],
-"b0-t2": [
-"pp"
-],
-"b0-t22": [
-"sc.protect"
 ],
 "b0-t23": [
 "sc.toxic_count"
@@ -54,27 +30,16 @@
 "sc.toxic_count"
 ],
 "b0-t28": [
-"sc.toxic_count",
-"weight"
+"sc.toxic_count"
 ],
 "b0-t29": [
-"attack",
-"defense",
-"pp",
-"sc.toxic_count",
-"special_attack",
-"special_defense",
-"speed",
-"weight"
+"sc.toxic_count"
 ],
 "b0-t30": [
 "sc.toxic_count"
 ],
 "b0-t31": [
 "sc.toxic_count"
-],
-"b0-t32": [
-"sc.protect"
 ],
 "b0-t36": [
 "sc.toxic_count"
@@ -85,15 +50,6 @@
 "b0-t40": [
 "sc.toxic_count"
 ],
-"b0-t41": [
-"attack",
-"defense",
-"pp",
-"special_attack",
-"special_defense",
-"speed",
-"weight"
-],
 "b0-t51": [
 "sc.toxic_count"
 ],
@@ -102,9 +58,6 @@
 ],
 "b10-t57": [
 "sc.protect"
-],
-"b102-t12": [
-"pp"
 ],
 "b105-t18": [
 "base_ability"
@@ -127,20 +80,8 @@
 "b112-t14": [
 "hp"
 ],
-"b117-t40": [
-"pp"
-],
-"b118-t7": [
-"pp"
-],
-"b123-t29": [
-"pp"
-],
 "b123-t5": [
 "hp"
-],
-"b128-t12": [
-"pp"
 ],
 "b128-t21": [
 "pp"
@@ -148,21 +89,12 @@
 "b145-t13": [
 "base_ability"
 ],
-"b149-t32": [
-"pp"
-],
 "b15-t22": [
 "base_ability",
 "id"
 ],
-"b15-t32": [
-"pp"
-],
 "b152-t34": [
 "base_ability"
-],
-"b153-t14": [
-"pp"
 ],
 "b153-t18": [
 "base_ability"
@@ -170,9 +102,6 @@
 "b157-t7": [
 "base_ability",
 "id"
-],
-"b158-t49": [
-"pp"
 ],
 "b159-t20": [
 "attack",
@@ -191,27 +120,11 @@
 "speed",
 "weight"
 ],
-"b163-t11": [
-"pp"
-],
 "b164-t1": [
-"last_used_move",
-"weight"
+"last_used_move"
 ],
 "b168-t2": [
 "base_ability"
-],
-"b168-t32": [
-"pp"
-],
-"b169-t24": [
-"pp"
-],
-"b169-t46": [
-"pp"
-],
-"b170-t27": [
-"pp"
 ],
 "b181-t9": [
 "base_ability"
@@ -236,20 +149,8 @@
 "speed",
 "weight"
 ],
-"b183-t37": [
-"pp"
-],
-"b183-t44": [
-"pp"
-],
 "b184-t5": [
 "ability"
-],
-"b185-t32": [
-"pp"
-],
-"b185-t39": [
-"pp"
 ],
 "b187-t17": [
 "last_item"
@@ -290,15 +191,6 @@
 "speed",
 "weight"
 ],
-"b188-t34": [
-"sc.protect"
-],
-"b188-t35": [
-"sc.protect"
-],
-"b19-t45": [
-"pp"
-],
 "b191-t49": [
 "hp"
 ],
@@ -307,24 +199,11 @@
 "id"
 ],
 "b195-t2": [
-"attack",
-"base_ability",
-"defense",
-"pp",
-"special_attack",
-"special_defense",
-"speed",
-"weight"
-],
-"b195-t3": [
-"weight"
+"base_ability"
 ],
 "b202-t19": [
 "base_ability",
 "id"
-],
-"b207-t12": [
-"pp"
 ],
 "b207-t26": [
 "sc.toxic_count"
@@ -339,7 +218,6 @@
 "base_ability"
 ],
 "b208-t18": [
-"pp",
 "sc.protect"
 ],
 "b211-t29": [
@@ -355,22 +233,7 @@
 "sc.protect"
 ],
 "b216-t18": [
-"options",
-"pp",
-"weight"
-],
-"b216-t23": [
-"attack",
-"defense",
-"move",
-"pp",
-"special_attack",
-"special_defense",
-"speed",
-"weight"
-],
-"b216-t46": [
-"weight"
+"options"
 ],
 "b217-t11": [
 "status"
@@ -383,41 +246,14 @@
 "boost.def",
 "hp"
 ],
-"b228-t30": [
-"pp"
-],
 "b230-t31": [
 "pp"
 ],
 "b232-t13": [
-"last_used_move",
-"weight"
-],
-"b232-t15": [
-"attack",
-"defense",
-"move",
-"pp",
-"special_defense",
-"speed",
-"weight"
+"last_used_move"
 ],
 "b232-t5": [
-"last_used_move",
-"weight"
-],
-"b232-t8": [
-"attack",
-"defense",
-"move",
-"pp",
-"special_attack",
-"special_defense",
-"speed",
-"weight"
-],
-"b233-t8": [
-"pp"
+"last_used_move"
 ],
 "b234-t3": [
 "base_ability"
@@ -450,9 +286,6 @@
 "terastallized",
 "types",
 "weight"
-],
-"b237-t24": [
-"pp"
 ],
 "b237-t25": [
 "sc.protect"
@@ -499,26 +332,8 @@
 "b245-t6": [
 "hp"
 ],
-"b246-t15": [
-"pp"
-],
-"b246-t32": [
-"pp"
-],
-"b246-t37": [
-"pp"
-],
 "b249-t16": [
 "base_ability"
-],
-"b257-t2": [
-"pp"
-],
-"b258-t28": [
-"pp"
-],
-"b259-t17": [
-"pp"
 ],
 "b268-t8": [
 "base_ability"
@@ -526,17 +341,8 @@
 "b269-t19": [
 "hp"
 ],
-"b269-t35": [
-"pp"
-],
-"b269-t40": [
-"pp"
-],
 "b270-t5": [
 "types"
-],
-"b271-t33": [
-"pp"
 ],
 "b273-t13": [
 "base_ability"
@@ -544,20 +350,11 @@
 "b274-t9": [
 "base_ability"
 ],
-"b278-t37": [
-"pp"
-],
-"b278-t39": [
-"pp"
-],
 "b28-t8": [
 "base_ability"
 ],
 "b281-t11": [
 "base_ability"
-],
-"b282-t38": [
-"pp"
 ],
 "b289-t3": [
 "base_ability",
@@ -566,66 +363,17 @@
 "b289-t9": [
 "hp"
 ],
-"b298-t28": [
-"sc.protect"
-],
-"b298-t35": [
-"sc.protect"
-],
-"b298-t39": [
-"sc.protect"
-],
-"b298-t48": [
-"sc.protect"
-],
-"b298-t49": [
-"sc.protect"
-],
-"b32-t20": [
-"sc.protect"
-],
 "b36-t16": [
-"pp",
 "sc.protect"
-],
-"b39-t44": [
-"pp"
-],
-"b39-t57": [
-"pp"
-],
-"b39-t59": [
-"pp"
 ],
 "b4-t9": [
 "base_ability"
 ],
-"b41-t28": [
-"pp"
-],
 "b42-t24": [
 "last_item"
 ],
-"b47-t1": [
-"weight"
-],
-"b47-t22": [
-"weight"
-],
-"b47-t3": [
-"attack",
-"defense",
-"pp",
-"special_attack",
-"special_defense",
-"speed",
-"weight"
-],
 "b48-t30": [
 "hp"
-],
-"b50-t27": [
-"pp"
 ],
 "b50-t46": [
 "last_item"
@@ -639,23 +387,14 @@
 "b50-t60": [
 "sc.toxic_count"
 ],
-"b53-t14": [
-"pp"
-],
 "b6-t13": [
 "base_ability"
-],
-"b66-t2": [
-"pp"
 ],
 "b69-t16": [
 "sc.protect"
 ],
 "b70-t23": [
 "base_ability"
-],
-"b78-t25": [
-"pp"
 ],
 "b79-t2": [
 "base_ability",
@@ -673,9 +412,6 @@
 ],
 "b95-t2": [
 "base_ability"
-],
-"b99-t4": [
-"pp"
 ]
 }
 }

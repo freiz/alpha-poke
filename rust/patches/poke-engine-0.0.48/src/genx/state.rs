@@ -1524,31 +1524,125 @@ impl State {
                 PokemonVolatileStatus::TRANSFORM => {
                     let side_ref = *side_ref;
                     let active = side.get_active();
-                    for (k, index) in [
-                        PokemonMoveIndex::M0,
-                        PokemonMoveIndex::M1,
-                        PokemonMoveIndex::M2,
-                        PokemonMoveIndex::M3,
-                    ]
-                    .iter()
-                    .enumerate()
-                    {
-                        let own = if k == 0 {
-                            Choices::TRANSFORM
-                        } else {
-                            Choices::NONE
-                        };
-                        let m = &mut active.moves[index];
-                        if m.id != own {
-                            instructions.push(Instruction::ChangeMove(
-                                crate::instruction::ChangeMoveInstruction {
+                    // alpha-poke patch (2026-10-17, doc/engine-diff.md L180): its own stats,
+                    // weight, moves and PP back (Pokemon::own, kept as it transformed)
+                    if active.own.is_set() {
+                        let own = active.own;
+                        let current = [
+                            active.attack,
+                            active.defense,
+                            active.special_attack,
+                            active.special_defense,
+                            active.speed,
+                        ];
+                        for k in 0..5 {
+                            let amount = own.stats[k] - current[k];
+                            if amount == 0 {
+                                continue;
+                            }
+                            let c = crate::instruction::ChangeStatInstruction { side_ref, amount };
+                            instructions.push(match k {
+                                0 => Instruction::ChangeAttack(c),
+                                1 => Instruction::ChangeDefense(c),
+                                2 => Instruction::ChangeSpecialAttack(c),
+                                3 => Instruction::ChangeSpecialDefense(c),
+                                _ => Instruction::ChangeSpeed(c),
+                            });
+                        }
+                        active.attack = own.stats[0];
+                        active.defense = own.stats[1];
+                        active.special_attack = own.stats[2];
+                        active.special_defense = own.stats[3];
+                        active.speed = own.stats[4];
+                        let weight = own.weight_hg - (active.weight_kg * 10.0).round() as i16;
+                        if weight != 0 {
+                            instructions.push(Instruction::ChangeWeight(
+                                crate::instruction::ChangeStatInstruction {
                                     side_ref,
-                                    move_index: *index,
-                                    move_change: own as i16 - m.id as i16,
+                                    amount: weight,
                                 },
                             ));
-                            m.id = own;
-                            m.choice = MOVES.get(&own).unwrap().to_owned();
+                            active.weight_kg = own.weight_hg as f32 / 10.0;
+                        }
+                        for (k, index) in [
+                            PokemonMoveIndex::M0,
+                            PokemonMoveIndex::M1,
+                            PokemonMoveIndex::M2,
+                            PokemonMoveIndex::M3,
+                        ]
+                        .iter()
+                        .enumerate()
+                        {
+                            let m = &mut active.moves[index];
+                            if m.id != own.moves[k] {
+                                instructions.push(Instruction::ChangeMove(
+                                    crate::instruction::ChangeMoveInstruction {
+                                        side_ref,
+                                        move_index: *index,
+                                        move_change: own.moves[k] as i16 - m.id as i16,
+                                    },
+                                ));
+                                m.id = own.moves[k];
+                                m.choice = MOVES.get(&own.moves[k]).unwrap().to_owned();
+                            }
+                            if m.pp != own.pp[k] {
+                                instructions.push(Instruction::DecrementPP(
+                                    crate::instruction::DecrementPPInstruction {
+                                        side_ref,
+                                        move_index: *index,
+                                        amount: m.pp - own.pp[k],
+                                    },
+                                ));
+                                m.pp = own.pp[k];
+                            }
+                        }
+                        // (and the set cleared)
+                        let mut clear: Vec<(u8, i16)> =
+                            (0..5).map(|k| (k as u8, -own.stats[k])).collect();
+                        clear.push((5, -own.weight_hg));
+                        for k in 0..4 {
+                            clear.push((6 + k as u8, Choices::NONE as i16 - own.moves[k] as i16));
+                            clear.push((10 + k as u8, -(own.pp[k] as i16)));
+                        }
+                        for (field, amount) in clear {
+                            if amount != 0 {
+                                instructions.push(Instruction::ChangeOwn(
+                                    crate::instruction::ChangeOwnInstruction {
+                                        side_ref,
+                                        field,
+                                        amount,
+                                    },
+                                ));
+                                active.own.change(field, amount);
+                            }
+                        }
+                    } else {
+                        for (k, index) in [
+                            PokemonMoveIndex::M0,
+                            PokemonMoveIndex::M1,
+                            PokemonMoveIndex::M2,
+                            PokemonMoveIndex::M3,
+                        ]
+                        .iter()
+                        .enumerate()
+                        {
+                            let own = if k == 0 {
+                                Choices::TRANSFORM
+                            } else {
+                                Choices::NONE
+                            };
+                            let m = &mut active.moves[index];
+                            if m.id != own {
+                                instructions.push(Instruction::ChangeMove(
+                                    crate::instruction::ChangeMoveInstruction {
+                                        side_ref,
+                                        move_index: *index,
+                                        move_change: own as i16 - m.id as i16,
+                                    },
+                                ));
+                                m.id = own;
+                                m.choice = MOVES.get(&own).unwrap().to_owned();
+                            }
                         }
                     }
                     false

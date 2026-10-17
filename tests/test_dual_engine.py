@@ -4911,3 +4911,41 @@ Bold Nature
     assert any("move: Imprison" in x for x in states[1]["log"])
     assert ec.showdown_options(states[1]["sides"][1]) == {"protect", "protect-tera"}
     assert _keys(_full(states, 0, "imprison", "calmmind"), "options") == {}
+
+
+# L180 (doc/engine-diff.md): Protect as Showdown's onPrepareHit: its failure past its PP (a
+# consecutive one), it fails as the turn's last action (the foe switched), a protect-breaking
+# move ends its count; Transform keeps its user's own set and gives it back on the switch-out
+# (stats, weight, moves, PP), copies the weight; a non-Ghost's Curse takes no Pressure PP
+def test_l180_protect_last_action_fails():
+    states = ec.run_showdown(BLISSEY, CORVIKNIGHT + "\n\n" + LANDO, [("move protect", "switch 2")])
+    assert any(x.startswith("|-fail|p1a: Blissey") for x in states[1]["log"])
+    assert _full(states, 0, "protect", "landorustherian", (1, 2)) == {}
+
+
+def test_l180_consecutive_protect_failure_uses_its_pp():
+    states = ec.run_showdown(BLISSEY, GARCHOMP_SD, [("move protect", "move swordsdance")] * 2,
+                             force_random=False)  # fmt: skip
+    assert any(x.startswith("|-fail|p1a: Blissey") for x in states[2]["log"])
+    assert _keys(_full(states, 1, "protect", "swordsdance"), "pp", "sc.protect") == {}
+
+
+def test_l180_phantom_force_breaks_the_protect_count():
+    pult = DRAGAPULT_COPYCAT.replace("- Copycat", "- Phantom Force")
+    states = ec.run_showdown(KYUREM, pult, [("move earthpower", "move phantomforce"),
+                                             ("move protect", "move phantomforce")])  # fmt: skip
+    assert any("[broken]" in x for x in states[2]["log"])
+    assert _keys(_full(states, 1, "protect", "phantomforce"), "sc.protect") == {}
+
+
+def test_l180_transform_own_set_back_on_switch_out():
+    states = ec.run_showdown(DITTO_BACK, LANDO, [("switch 2", "move stealthrock"), ("switch 2", "move stealthrock")])
+    assert states[1]["sides"][0]["mons"][1]["weight"] == 68.0  # Landorus-T's
+    assert _full(states, 0, "ditto", "stealthrock", (2, 1)) == {}
+    assert _full(states, 1, "blissey", "stealthrock", (2, 1)) == {}
+
+
+def test_l180_curse_no_pressure():
+    curse = BLISSEY.replace("- Calm Mind", "- Curse")
+    states = ec.run_showdown(curse, KYUREM, [("move curse", "move protect")])
+    assert _keys(_full(states, 0, "curse", "protect"), "pp") == {}

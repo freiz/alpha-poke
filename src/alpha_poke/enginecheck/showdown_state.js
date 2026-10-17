@@ -58,6 +58,12 @@ function monState(p, side) {
 		moves: p.moveSlots.map(m => ({id: m.id, pp: m.pp, maxpp: m.maxpp, disabled: !!m.disabled})),
 		terastallized: p.terastallized || '',
 		transformed: !!p.transformed, // (L36: the engine's transform volatile)
+		// its own stats, weight, moves and PP while transformed (L180: the engine's Pokemon::own)
+		transform_backup: p.transformed ? [
+			['atk', 'def', 'spa', 'spd', 'spe'].map(s => p.baseStoredStats[s]),
+			p.baseSpecies.weighthg,
+			p.baseMoveSlots.map(m => [m.id, m.pp]),
+		] : null,
 		tera_type: p.teraType || '',
 		// the species' weight, as our state construction gives it: the engine applies Float Stone
 		// (getWeight() would hide it)

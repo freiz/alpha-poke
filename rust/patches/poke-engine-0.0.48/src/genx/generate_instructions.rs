@@ -21,7 +21,8 @@ use crate::instruction::{
     DecrementWishInstruction, HealInstruction, RemoveVolatileStatusInstruction,
     SetSecondMoveSwitchOutMoveInstruction, SetSleepTurnsInstruction, ToggleBatonPassingInstruction,
     ToggleDamageDealtHitSubstituteInstruction, ToggleMegaEvolvedInstruction,
-    ChangeLastMoveInstruction, ReviveInstruction, ToggleStellarBoostedInstruction, ToggleShedTailingInstruction, ToggleTrickRoomInstruction,
+    ChangeLastMoveInstruction, ChangeOwnInstruction, ReviveInstruction,
+    ToggleStellarBoostedInstruction, ToggleShedTailingInstruction, ToggleTrickRoomInstruction,
 };
 use crate::instruction::{ChangeAbilityInstruction, ToggleTerastallizedInstruction};
 use crate::instruction::{ChangeMoveInstruction, ChangeStatInstruction, DisableMoveInstruction};
@@ -2872,6 +2873,51 @@ pub fn transform_into(
     ];
     let list = &mut instructions.instruction_list;
     let active = side.get_active();
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L180): its own stats, weight, moves and PP
+    // kept (Showdown's baseStoredStats / baseMoveSlots), its switch-out gives them back; and the
+    // target's weight copied (transformInto's weighthg; was its own)
+    if !active.own.is_set() {
+        let mine = [
+            active.attack,
+            active.defense,
+            active.special_attack,
+            active.special_defense,
+            active.speed,
+        ];
+        let mut changes: Vec<(u8, i16)> = (0..5).map(|i| (i as u8, mine[i])).collect();
+        changes.push((5, (active.weight_kg * 10.0).round() as i16));
+        for (i, index) in [
+            PokemonMoveIndex::M0,
+            PokemonMoveIndex::M1,
+            PokemonMoveIndex::M2,
+            PokemonMoveIndex::M3,
+        ]
+        .iter()
+        .enumerate()
+        {
+            let m = &active.moves[index];
+            changes.push((6 + i as u8, m.id as i16 - Choices::NONE as i16));
+            changes.push((10 + i as u8, m.pp as i16));
+        }
+        for (field, amount) in changes {
+            if amount != 0 {
+                list.push(Instruction::ChangeOwn(ChangeOwnInstruction {
+                    side_ref: *side_ref,
+                    field,
+                    amount,
+                }));
+                active.own.change(field, amount);
+            }
+        }
+    }
+    let weight = (target.weight_kg * 10.0).round() as i16 - (active.weight_kg * 10.0).round() as i16;
+    if weight != 0 {
+        list.push(Instruction::ChangeWeight(ChangeStatInstruction {
+            side_ref: *side_ref,
+            amount: weight,
+        }));
+        active.weight_kg = target.weight_kg;
+    }
     if active.types != target.types {
         list.push(Instruction::ChangeType(ChangeType {
             side_ref: *side_ref,
@@ -3664,18 +3710,8 @@ fn generate_instructions_from_existing_status_conditions(
         incoming_instructions.update_percentage(1.0 - FULLY_PARALYZED_CHANCE);
     }
 
-    if attacking_side.side_conditions.protect > 0 {
-        if let Some(vs) = &attacker_choice.volatile_status {
-            if PROTECT_VOLATILES.contains(&vs.volatile_status) {
-                let protect_success_chance =
-                    CONSECUTIVE_PROTECT_CHANCE.powi(attacking_side.side_conditions.protect as i32);
-                let mut protect_fail_instruction = incoming_instructions.clone();
-                protect_fail_instruction.update_percentage(1.0 - protect_success_chance);
-                final_instructions.push(protect_fail_instruction);
-                incoming_instructions.update_percentage(protect_success_chance);
-            }
-        }
-    }
+    // (L180: a consecutive Protect's failure is the move's: generate_instructions_from_move, past
+    // its PP and last used move)
 }
 
 pub fn generate_instructions_from_move(
@@ -4067,6 +4103,8 @@ pub fn generate_instructions_from_move(
                 && foe.hp > 0
                 && active.ability != Abilities::NEUTRALIZINGGAS
                 && choice.move_id.pressure_applies(&choice.target)
+                // (a non-Ghost's Curse is aimed at its user: Showdown's nonGhostTarget)
+                && !(choice.move_id == Choices::CURSE && !active.has_type(&PokemonType::GHOST))
         };
         if !called
             && !locked_move
@@ -4224,6 +4262,66 @@ pub fn generate_instructions_from_move(
     incoming_instructions
         .instruction_list
         .push(Instruction::Acted(attacking_side));
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L180): a consecutive Protect fails as the
+    // move goes (Showdown's onPrepareHit StallMove: its PP used, its last used move set); was a
+    // branch with the status checks, before them
+    {
+        let protect = state
+            .get_side_immutable(&attacking_side)
+            .side_conditions
+            .protect;
+        let protecting = choice
+            .volatile_status
+            .as_ref()
+            .is_some_and(|vs| PROTECT_VOLATILES.contains(&vs.volatile_status));
+        // (L180: and it fails as the turn's last action -- Showdown's onPrepareHit willAct(): the
+        // foe moved first or switched)
+        // (a foe's recharge is an action to come)
+        let recharging = state
+            .get_side_immutable(&attacking_side.get_other_side())
+            .volatile_statuses
+            .contains(&PokemonVolatileStatus::MUSTRECHARGE);
+        let last = !choice.first_move
+            || defender_choice.category == MoveCategory::Switch
+            || (defender_choice.move_id == Choices::NONE && !recharging);
+        if protecting && last {
+            choice.volatile_status = None;
+        } else if protect > 0 && protecting {
+            let success = CONSECUTIVE_PROTECT_CHANCE.powi(protect as i32);
+            let mut fail = incoming_instructions.clone();
+            fail.update_percentage(1.0 - success);
+            final_instructions.push(fail);
+            incoming_instructions.update_percentage(success);
+        }
+    }
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L180): a protect-breaking move ends the
+    // target's Protect (Showdown's hitStepBreakProtect: its count too, Gen 6+ -- no protect
+    // volatile left for the end of the turn's count); not on its charging turn
+    if matches!(
+        choice.move_id,
+        Choices::FEINT
+            | Choices::PHANTOMFORCE
+            | Choices::SHADOWFORCE
+            | Choices::HYPERSPACEFURY
+            | Choices::HYPERSPACEHOLE
+    ) && !choice.flags.charge
+    {
+        let target_ref = attacking_side.get_other_side();
+        let target = state.get_side(&target_ref);
+        for vs in PROTECT_VOLATILES {
+            if target.volatile_statuses.contains(&vs) {
+                target.volatile_statuses.remove(&vs);
+                incoming_instructions
+                    .instruction_list
+                    .push(Instruction::RemoveVolatileStatus(
+                        RemoveVolatileStatusInstruction {
+                            side_ref: target_ref,
+                            volatile_status: vs,
+                        },
+                    ));
+            }
+        }
+    }
     // (L167: the battle's last move, for Copycat: one past its BeforeMove)
     if state.use_last_move && state.last_move != choice.move_id {
         incoming_instructions

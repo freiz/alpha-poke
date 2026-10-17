@@ -37,9 +37,6 @@
 "b11-t3": [
 "base_ability"
 ],
-"b110-t52": [
-"pp"
-],
 "b111-t10": [
 "base_ability"
 ],
@@ -55,9 +52,6 @@
 "b118-t30": [
 "base_ability"
 ],
-"b119-t17": [
-"pp"
-],
 "b12-t3": [
 "base_ability"
 ],
@@ -67,17 +61,8 @@
 "b124-t22": [
 "sc.protect"
 ],
-"b124-t42": [
-"pp"
-],
-"b125-t27": [
-"pp"
-],
 "b126-t36": [
 "status"
-],
-"b128-t32": [
-"pp"
 ],
 "b13-t23": [
 "base_ability"
@@ -116,9 +101,6 @@
 "b148-t26": [
 "base_ability"
 ],
-"b149-t37": [
-"pp"
-],
 "b149-t45": [
 "sc.toxic_count"
 ],
@@ -131,9 +113,6 @@
 ],
 "b151-t6": [
 "base_ability"
-],
-"b153-t27": [
-"pp"
 ],
 "b154-t10": [
 "base_ability"
@@ -151,7 +130,6 @@
 "sc.toxic_count"
 ],
 "b164-t47": [
-"pp",
 "sc.toxic_count"
 ],
 "b164-t48": [
@@ -178,29 +156,11 @@
 "b17-t16": [
 "sc.protect"
 ],
-"b17-t26": [
-"sc.protect"
-],
-"b17-t38": [
-"pp"
-],
-"b172-t35": [
-"pp"
-],
 "b173-t16": [
 "base_ability"
 ],
 "b174-t2": [
 "base_ability"
-],
-"b176-t36": [
-"pp"
-],
-"b177-t10": [
-"pp"
-],
-"b177-t8": [
-"pp"
 ],
 "b178-t35": [
 "pp"
@@ -239,23 +199,11 @@
 "b191-t25": [
 "base_ability"
 ],
-"b194-t4": [
-"pp"
-],
-"b198-t25": [
-"pp"
-],
 "b22-t2": [
 "base_ability"
 ],
-"b26-t45": [
-"sc.protect"
-],
 "b3-t54": [
 "sc.toxic_count"
-],
-"b3-t57": [
-"pp"
 ],
 "b30-t2": [
 "sc.reflect"
@@ -266,17 +214,8 @@
 "b30-t5": [
 "options"
 ],
-"b32-t24": [
-"pp"
-],
-"b34-t13": [
-"pp"
-],
 "b35-t15": [
 "base_ability"
-],
-"b37-t43": [
-"pp"
 ],
 "b38-t41": [
 "sc.toxic_count"
@@ -317,15 +256,9 @@
 "b38-t53": [
 "sc.toxic_count"
 ],
-"b42-t44": [
-"pp"
-],
 "b44-t4": [
 "base_ability",
 "id"
-],
-"b45-t8": [
-"pp"
 ],
 "b46-t29": [
 "base_ability"
@@ -334,20 +267,11 @@
 "hp",
 "status"
 ],
-"b49-t13": [
-"pp"
-],
 "b49-t37": [
 "base_ability"
 ],
-"b49-t8": [
-"pp"
-],
 "b5-t10": [
 "base_ability"
-],
-"b5-t29": [
-"pp"
 ],
 "b52-t16": [
 "base_ability",
@@ -375,20 +299,10 @@
 "pp"
 ],
 "b66-t33": [
-"pp",
 "sc.protect"
 ],
 "b66-t52": [
 "hp"
-],
-"b70-t42": [
-"pp"
-],
-"b71-t26": [
-"pp"
-],
-"b71-t28": [
-"pp"
 ],
 "b73-t9": [
 "base_ability"
@@ -399,12 +313,6 @@
 "b75-t18": [
 "base_ability",
 "id"
-],
-"b76-t27": [
-"pp"
-],
-"b78-t28": [
-"pp"
 ],
 "b79-t34": [
 "hp",

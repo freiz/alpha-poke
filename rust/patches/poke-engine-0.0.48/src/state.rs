@@ -940,7 +940,71 @@ pub struct Pokemon {
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L175): a Stellar tera's types already
     // boosted once (Showdown's stellarBoostedTypes; bit = the PokemonType's index)
     pub stellar_boosted: u32,
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L180): its own stats, weight, moves and PP
+    // while transformed (Showdown's baseStoredStats / baseMoveSlots / species weight): set as it
+    // transforms, given back as it switches out; empty (moves all NONE) otherwise
+    pub own: OwnSet,
     pub moves: PokemonMoves,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct OwnSet {
+    pub stats: [i16; 5],
+    pub weight_hg: i16,
+    pub moves: [Choices; 4],
+    pub pp: [i8; 4],
+}
+
+impl Default for OwnSet {
+    fn default() -> OwnSet {
+        OwnSet {
+            stats: [0; 5],
+            weight_hg: 0,
+            moves: [Choices::NONE; 4],
+            pp: [0; 4],
+        }
+    }
+}
+
+impl OwnSet {
+    pub fn is_set(&self) -> bool {
+        self.moves.iter().any(|m| *m != Choices::NONE)
+    }
+    // (L180: one field's change, ChangeOwn's: 0-4 the stats, 5 the weight in hg, 6-9 a move's
+    // Choices value, 10-13 a move's PP)
+    pub fn change(&mut self, field: u8, amount: i16) {
+        match field {
+            0..=4 => self.stats[field as usize] += amount,
+            5 => self.weight_hg += amount,
+            6..=9 => {
+                let i = (field - 6) as usize;
+                self.moves[i] = Choices::from((self.moves[i] as i16 + amount) as u16);
+            }
+            _ => self.pp[(field - 10) as usize] += amount as i8,
+        }
+    }
+    pub fn serialize(&self) -> String {
+        let mut parts: Vec<String> = self.stats.iter().map(|x| x.to_string()).collect();
+        parts.push(self.weight_hg.to_string());
+        for (m, p) in self.moves.iter().zip(self.pp.iter()) {
+            parts.push(m.to_string());
+            parts.push(p.to_string());
+        }
+        parts.join(":")
+    }
+    pub fn deserialize(s: &str) -> OwnSet {
+        let x: Vec<&str> = s.split(':').collect();
+        let mut own = OwnSet::default();
+        for i in 0..5 {
+            own.stats[i] = x[i].parse().unwrap();
+        }
+        own.weight_hg = x[5].parse().unwrap();
+        for i in 0..4 {
+            own.moves[i] = Choices::from_str(x[6 + 2 * i]).unwrap();
+            own.pp[i] = x[7 + 2 * i].parse().unwrap();
+        }
+        own
+    }
 }
 
 impl Default for Pokemon {
@@ -972,6 +1036,7 @@ impl Default for Pokemon {
             last_item: Items::NONE,
             times_attacked: 0,
             stellar_boosted: 0,
+            own: OwnSet::default(),
             gender: 0,
             moves: PokemonMoves {
                 m0: Default::default(),
@@ -1067,8 +1132,16 @@ impl Pokemon {
             self.tera_type.to_string(),
             self.last_item.to_string(),
             // (L163: only when either is set; the older strings have neither; L175: the Stellar
-            // boosts after them, only when set)
-            if self.stellar_boosted != 0 {
+            // boosts after them, only when set; L180: then its own set while transformed)
+            if self.own.is_set() {
+                format!(
+                    ",{},{},{},{}",
+                    self.times_attacked,
+                    self.gender,
+                    self.stellar_boosted,
+                    self.own.serialize()
+                )
+            } else if self.stellar_boosted != 0 {
                 format!(
                     ",{},{},{}",
                     self.times_attacked, self.gender, self.stellar_boosted
@@ -1140,6 +1213,7 @@ impl Pokemon {
             times_attacked: split.get(30).map_or(0, |x| x.parse::<u8>().unwrap()),
             gender: split.get(31).map_or(0, |x| x.parse::<u8>().unwrap()),
             stellar_boosted: split.get(32).map_or(0, |x| x.parse::<u32>().unwrap()),
+            own: split.get(33).map_or(OwnSet::default(), |x| OwnSet::deserialize(x)),
         }
     }
 }
@@ -2099,6 +2173,16 @@ impl State {
                 self.get_side(&instruction.side_ref).get_active().stellar_boosted ^=
                     1 << instruction.move_type as u32
             }
+            Instruction::ChangeOwn(instruction) => self
+                .get_side(&instruction.side_ref)
+                .get_active()
+                .own
+                .change(instruction.field, instruction.amount),
+            Instruction::ChangeWeight(instruction) => {
+                let active = self.get_side(&instruction.side_ref).get_active();
+                let hg = (active.weight_kg * 10.0).round() as i16 + instruction.amount;
+                active.weight_kg = hg as f32 / 10.0;
+            }
             Instruction::ToggleReviving(instruction) => {
                 let side = self.get_side(&instruction.side_ref);
                 side.reviving = !side.reviving;
@@ -2328,6 +2412,16 @@ impl State {
             Instruction::ToggleStellarBoosted(instruction) => {
                 self.get_side(&instruction.side_ref).get_active().stellar_boosted ^=
                     1 << instruction.move_type as u32
+            }
+            Instruction::ChangeOwn(instruction) => self
+                .get_side(&instruction.side_ref)
+                .get_active()
+                .own
+                .change(instruction.field, -instruction.amount),
+            Instruction::ChangeWeight(instruction) => {
+                let active = self.get_side(&instruction.side_ref).get_active();
+                let hg = (active.weight_kg * 10.0).round() as i16 - instruction.amount;
+                active.weight_kg = hg as f32 / 10.0;
             }
             Instruction::ToggleReviving(instruction) => {
                 let side = self.get_side(&instruction.side_ref);
