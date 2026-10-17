@@ -18,9 +18,6 @@
 "b103-t12": [
 "terrain"
 ],
-"b111-t20": [
-"volatile.disable"
-],
 "b113-t2": [
 "hp"
 ],
@@ -61,12 +58,6 @@
 "hp",
 "item",
 "toxic_spikes"
-],
-"b127-t1": [
-"volatile.disable"
-],
-"b127-t4": [
-"volatile.disable"
 ],
 "b144-t13": [
 "hp"
@@ -200,9 +191,6 @@
 "b45-t31": [
 "status"
 ],
-"b48-t15": [
-"volatile.disable"
-],
 "b49-t13": [
 "active",
 "item"
@@ -213,12 +201,6 @@
 ],
 "b5-t18": [
 "hp"
-],
-"b5-t34": [
-"volatile.disable"
-],
-"b5-t39": [
-"volatile.disable"
 ],
 "b50-t30": [
 "hp"
@@ -255,12 +237,6 @@
 "b82-t10": [
 "hp",
 "item"
-],
-"b84-t18": [
-"volatile.disable"
-],
-"b84-t4": [
-"volatile.disable"
 ],
 "b88-t8": [
 "boost.def"

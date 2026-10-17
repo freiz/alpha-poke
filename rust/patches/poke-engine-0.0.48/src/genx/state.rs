@@ -1490,6 +1490,18 @@ impl State {
                     side.volatile_status_durations.taunt = 0;
                     false
                 }
+                // (L70: Disable's count ends with it; the moves are enabled again on a switch)
+                PokemonVolatileStatus::DISABLE => {
+                    instructions.push(Instruction::ChangeVolatileStatusDuration(
+                        ChangeVolatileStatusDurationInstruction {
+                            side_ref: *side_ref,
+                            volatile_status: *pkmn_volatile_status,
+                            amount: -1 * side.volatile_status_durations.disable,
+                        },
+                    ));
+                    side.volatile_status_durations.disable = 0;
+                    false
+                }
                 // alpha-poke patch (2026-10-13): their turn counts end with them
                 PokemonVolatileStatus::HEALBLOCK => {
                     instructions.push(Instruction::ChangeVolatileStatusDuration(
@@ -1644,9 +1656,13 @@ impl State {
 
     pub fn set_last_used_move_flag(&mut self) {
         // alpha-poke patch (2026-10-16, L24): Metronome counts on it
-        let metronome = [&self.side_one, &self.side_two]
-            .iter()
-            .any(|s| s.pokemon.pkmn.iter().any(|p| p.item == Items::METRONOME));
+        // (L70: Disable / Cursed Body stop the last move too)
+        let metronome = [&self.side_one, &self.side_two].iter().any(|s| {
+            s.pokemon
+                .pkmn
+                .iter()
+                .any(|p| p.item == Items::METRONOME || p.ability == Abilities::CURSEDBODY)
+        });
         if metronome {
             self.use_last_used_move = true;
         }
@@ -1656,6 +1672,7 @@ impl State {
             Choices::FIRSTIMPRESSION,
             Choices::BLOODMOON,
             Choices::GIGATONHAMMER,
+            Choices::DISABLE,
         ]) {
             self.use_last_used_move = true
         }

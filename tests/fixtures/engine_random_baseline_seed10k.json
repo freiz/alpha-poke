@@ -29,15 +29,6 @@
 "hp",
 "item"
 ],
-"b12-t28": [
-"volatile.disable"
-],
-"b12-t31": [
-"volatile.disable"
-],
-"b121-t28": [
-"volatile.disable"
-],
 "b121-t38": [
 "item"
 ],
@@ -73,12 +64,6 @@
 ],
 "b137-t21": [
 "hp"
-],
-"b163-t9": [
-"volatile.disable"
-],
-"b164-t30": [
-"volatile.disable"
 ],
 "b165-t45": [
 "status"
@@ -125,9 +110,6 @@
 ],
 "b187-t32": [
 "status"
-],
-"b188-t11": [
-"volatile.disable"
 ],
 "b19-t3": [
 "hp"
@@ -177,9 +159,6 @@
 "item",
 "volatile.quarkdrivespe"
 ],
-"b249-t1": [
-"volatile.disable"
-],
 "b249-t6": [
 "boost.def"
 ],
@@ -219,9 +198,6 @@
 ],
 "b280-t29": [
 "hp"
-],
-"b280-t8": [
-"volatile.disable"
 ],
 "b282-t24": [
 "boost.def",
@@ -291,9 +267,6 @@
 "b39-t12": [
 "hp",
 "status"
-],
-"b43-t4": [
-"volatile.disable"
 ],
 "b47-t16": [
 "hp",

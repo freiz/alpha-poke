@@ -213,6 +213,7 @@ harness 必须把 Showdown 的状态完整映射到引擎，否则不一致来�
 | L67 | Sacred Sword / Darkest Lariat / Chip Away 无视目标的防御强化（Showdown 的 ignoreDefensive），引擎照算。另外 harness：Endeavor 的目标最后等于使用者的 HP，而使用者的 HP 取决于目标本回合打出的伤害掷骰，目标的 HP 容差要算上它打出的伤害（同 L7 的吸取招式） | 引擎 + harness | 已修复 | `test_l67_sacred_sword_ignores_defense_boosts`（最高档等于 Showdown） | `damage_calc.rs`；`check_engine_random.py` |
 | L68 | Healing Wish / Lunar Dance 在没有可换上的宝可梦时失败（Showdown 的 canSwitch，使用者不倒下）；引擎照样倒下 | 引擎 | 已修复 | `test_l68_healing_wish_needs_a_replacement` | `choice_effects.rs` `modify_choice` |
 | L69 | Magic Bounce 弹回的 Whirlwind / Roar 应该拖走原使用者一方，引擎拖的还是对方；弹回到 Encore 使用者身上的 Encore 应失败（不能 Encore 一个 Encore），引擎照样施加 | 引擎 | 已修复 | `test_l69_magic_bounce_whirlwind`；`test_l69_encore_bounced_onto_an_encore_user_fails` | `generate_instructions.rs`：拖人按 `choice.target`；`move_has_no_effect` 的 Encore 看它落到的一方，且上一招是 Encore 时失败 |
+| L70 | Disable 在引擎里只加一个状态标记，不封招式也没有持续回合；Cursed Body 没有实现（打中持有者的招式 30% 被封）。验证集里最大的簇（26 处） | 引擎 + harness | 已修复 | `test_l70_disable`（4 个：持续回合对齐 Showdown）；`test_l70_cursed_body`（命中后 30%） | `generate_instructions.rs`：施加 Disable 时封住目标上一次用的招式（没有上一招或已被封时失败），本回合稍后选了它也不能用（`cannot_use_move`），回合末计数，4 回合（目标已出过招：5）后解除；`VolatileStatusDurations.disable` 编码「招式槽 × 8 + 计数 + 1」（状态字符串多一个字段，旧字符串照常解析，夹具按新格式重写）；Cursed Body 作为对使用者施加 DISABLE 的 30% 追加效果；场上有 Disable / Cursed Body 时跟踪上一招；harness 导出被封的招式并按编码映射 |
 
 ## 修复与验证（2026-10-16）
 
@@ -261,7 +262,7 @@ harness 必须把 Showdown 的状态完整映射到引擎，否则不一致来�
 
 修复：L43–L47。随机差分 97.8%（203）→ **98.2%**（6,916 / 7,046；172 个），每一步都是子集，新增 0；全部测试 316 个、poke-engine 自带测试 229 个通过。
 
-L48–L51 之后（同一天）：**98.4%**（6,930 / 7,046；157 个），新增 0；全部测试 321 个、poke-engine 自带测试 229 个通过。L52–L55 之后：**98.5%**（6,938；149 个），新增 0。L56 之后：6,941，145 个，新增 0。L58 之后：6,943，143 个，新增 0。L59、L60 之后：**98.7%**（6,957；125 个），新增 0；全部测试 337 个通过。L61–L63 之后：**98.8%**（6,964；114 个），新增 0；全部测试 342 个通过。L64–L66 之后：**98.9%**（6,972；104 个），新增 0。L67 之后：**99.0%**（6,975；101 个），新增 0。L36 之后：**99.1%**（6,985；88 个），新增 0；全部测试 350 个通过。L57 之后：**99.2%**（6,989；84 个），新增 0。L68、L69 之后：主集合 99.2%（78 个），验证集 98.7% / 97.7% / 98.4% / 98.6%，五个都新增 0。
+L48–L51 之后（同一天）：**98.4%**（6,930 / 7,046；157 个），新增 0；全部测试 321 个、poke-engine 自带测试 229 个通过。L52–L55 之后：**98.5%**（6,938；149 个），新增 0。L56 之后：6,941，145 个，新增 0。L58 之后：6,943，143 个，新增 0。L59、L60 之后：**98.7%**（6,957；125 个），新增 0；全部测试 337 个通过。L61–L63 之后：**98.8%**（6,964；114 个），新增 0；全部测试 342 个通过。L64–L66 之后：**98.9%**（6,972；104 个），新增 0。L67 之后：**99.0%**（6,975；101 个），新增 0。L36 之后：**99.1%**（6,985；88 个），新增 0；全部测试 350 个通过。L57 之后：**99.2%**（6,989；84 个），新增 0。L68、L69 之后：主集合 99.2%（78 个），验证集 98.7% / 97.7% / 98.4% / 98.6%，五个都新增 0。L70 之后：主集合 99.3%（74），验证集 98.8% / 97.9% / 98.6% / 98.7%，新增 0。
 
 单看 HP 的双引擎测试有两个陷阱，这一轮都碰到了：`closest` 只要求有一个分支匹配，不看概率（L47 的确定性醒来要断言概率为 1）；Showdown 的追加效果用 `random(100)`，不受 `force_random` 控制（Strange Steam 的混乱，改用必中的 Confuse Ray）。
 

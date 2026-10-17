@@ -2228,3 +2228,32 @@ def test_no_name_defined_twice():
         if isinstance(t, ast.Name)
     ) + collections.Counter(n.name for n in tree.body if isinstance(n, ast.FunctionDef))
     assert [k for k, v in names.items() if v > 1] == []
+
+
+GENGAR_CB = _setter("Gengar", "Cursed Body", "Leftovers", "- Shadow Ball\n- Sludge Bomb\n- Disable\n- Will-O-Wisp")
+
+
+# L70 (doc/engine-diff.md): Disable stops the target's last move for 4 turns (Showdown's duration
+# 5, counted down at the end of each turn; the engine only put a volatile on), and Cursed Body
+# disables the move that hit its holder 30% of the time (not implemented)
+@pytest.mark.parametrize("extra", [0, 1, 3, 4])
+def test_l70_disable(extra):
+    turns = [("move shadowball", "move earthquake"), ("move disable", "move earthquake")]
+    turns += [("move shadowball", "move ruination")] * extra
+    states = ec.run_showdown(GENGAR_CB.replace("Cursed Body", "Levitate"), TINGLU_HITS_EQ, turns)
+    lu = states[-1]["sides"][1]["mons"][0]
+    assert ("disable" in lu["volatiles"]) == (extra < 3)  # 4 turns with the one used (the target to move)
+    move, foe = ("shadowball", "ruination") if extra else ("disable", "earthquake")
+    outs = ec.engine_outcomes(ec.engine_state(states[-2]), move, foe)
+    assert ec.closest(states[-1], outs, (1, 1))["diff"] == {}
+
+
+def test_l70_cursed_body():
+    states = ec.run_showdown(GENGAR_CB, TINGLU_HITS_EQ, [("move willowisp", "move ruination")],
+                             force_random=True)  # fmt: skip
+    assert "disable" in states[1]["sides"][1]["mons"][0]["volatiles"]
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "willowisp", "ruination")
+    assert ec.closest(states[1], outs, (1, 1))["diff"] == {}
+    hit = [o for o in outs if o.damage[0] > 0]  # (Ruination's 90%)
+    disabled = sum(o[0] for o in hit if "DISABLE" in {str(v).upper() for v in o[1].side_two.volatile_statuses})
+    assert disabled / sum(o[0] for o in hit) == pytest.approx(0.3, abs=1e-3)

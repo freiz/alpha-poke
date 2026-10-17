@@ -93,9 +93,6 @@
 "b196-t2": [
 "status"
 ],
-"b196-t38": [
-"volatile.disable"
-],
 "b2-t37": [
 "volatile.confusion"
 ],
@@ -131,12 +128,6 @@
 "b208-t13": [
 "volatile.confusion"
 ],
-"b208-t34": [
-"volatile.disable"
-],
-"b208-t37": [
-"volatile.disable"
-],
 "b212-t25": [
 "volatile.perish3"
 ],
@@ -150,12 +141,6 @@
 "b215-t30": [
 "boost.spa",
 "item"
-],
-"b216-t5": [
-"volatile.disable"
-],
-"b219-t1": [
-"volatile.disable"
 ],
 "b220-t41": [
 "hp"
@@ -234,9 +219,6 @@
 "boost.def",
 "boost.spe",
 "hp"
-],
-"b270-t12": [
-"volatile.disable"
 ],
 "b275-t17": [
 "hp",
@@ -333,20 +315,11 @@
 "hp",
 "item"
 ],
-"b71-t22": [
-"volatile.disable"
-],
 "b73-t9": [
 "volatile.typechange"
 ],
 "b77-t39": [
 "hp"
-],
-"b9-t1": [
-"volatile.disable"
-],
-"b9-t4": [
-"volatile.disable"
 ],
 "b91-t17": [
 "status"

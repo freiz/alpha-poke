@@ -142,9 +142,6 @@
 "boost.def",
 "hp"
 ],
-"b161-t10": [
-"volatile.disable"
-],
 "b161-t36": [
 "item"
 ],
@@ -157,9 +154,6 @@
 "b161-t51": [
 "boost.evasion",
 "volatile.minimize"
-],
-"b161-t7": [
-"volatile.disable"
 ],
 "b169-t3": [
 "hp"
@@ -217,9 +211,6 @@
 "b19-t3": [
 "hp",
 "terrain"
-],
-"b191-t5": [
-"volatile.disable"
 ],
 "b192-t34": [
 "status"
@@ -363,9 +354,6 @@
 "b80-t1": [
 "hp"
 ],
-"b83-t1": [
-"volatile.disable"
-],
 "b83-t27": [
 "active",
 "boost.evasion",
@@ -381,12 +369,6 @@
 "b88-t7": [
 "hp",
 "status"
-],
-"b93-t9": [
-"volatile.disable"
-],
-"b94-t7": [
-"volatile.disable"
 ],
 "b96-t3": [
 "item"

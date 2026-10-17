@@ -33,7 +33,7 @@ function monState(p, side) {
 		volatiles: Object.fromEntries(Object.entries(p.volatiles).map(([k, v]) =>
 			[k, {duration: v.duration || 0, layers: v.layers || 0, counter: v.counter || 0,
 				stat: v.bestStat || '', time: v.time || 0, true_duration: v.trueDuration || 0,
-				num_consecutive: v.numConsecutive || 0, hp: v.hp || 0}])),
+				num_consecutive: v.numConsecutive || 0, hp: v.hp || 0, move: v.move || ''}])),
 		moves: p.moveSlots.map(m => ({id: m.id, pp: m.pp, maxpp: m.maxpp, disabled: !!m.disabled})),
 		terastallized: p.terastallized || '',
 		transformed: !!p.transformed, // (L36: the engine's transform volatile)

@@ -2628,6 +2628,20 @@ pub fn ability_modify_attack_against(
                 attacker_choice.base_power = 0.0;
             }
         }
+        // alpha-poke patch (2026-10-16, doc/engine-diff.md L70): Cursed Body, 30% of the time the
+        // move that hit its holder is disabled (as a secondary on the user; Disable needs its last
+        // move: the one being used)
+        Abilities::CURSEDBODY => {
+            if attacker_choice.category != MoveCategory::Status
+                && attacker_choice.move_id != Choices::STRUGGLE
+            {
+                attacker_choice.add_or_create_secondaries(Secondary {
+                    chance: 30.0,
+                    target: MoveTarget::User,
+                    effect: Effect::VolatileStatus(PokemonVolatileStatus::DISABLE),
+                })
+            }
+        }
         Abilities::STATIC => {
             if attacker_choice.flags.contact {
                 attacker_choice.add_or_create_secondaries(Secondary {

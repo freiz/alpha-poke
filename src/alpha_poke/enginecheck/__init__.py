@@ -198,6 +198,11 @@ def _engine_side(s: dict, future_sight=None, wish=None) -> pe.Side:
             dur["lockedmove"] = min(max(3 - act["volatiles"]["lockedmove"]["true_duration"], 0), 2)
         if metronome:
             dur["metronome"] = metronome
+        dis = act["volatiles"].get("disable")
+        if dis and dis.get("move") in ids:  # (L70: its slot x 8 + its ends of turn + 1)
+            dur["disable"] = ids.index(dis["move"]) * 8 + (4 - dis["duration"]) + 1
+        elif dis:
+            vol.discard("disable")
         if "confusion" in vol and act["volatiles"]["confusion"]["time"]:
             dur["confusion"] = min(max(5 - act["volatiles"]["confusion"]["time"], 0), 4)
         if dur:

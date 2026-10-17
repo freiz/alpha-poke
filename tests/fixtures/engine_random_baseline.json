@@ -59,9 +59,6 @@
 "b191-t49": [
 "hp"
 ],
-"b196-t28": [
-"volatile.disable"
-],
 "b199-t4": [
 "active",
 "hp",
@@ -133,15 +130,6 @@
 "b263-t8": [
 "volatile.protosynthesisspa",
 "volatile.protosynthesisspe"
-],
-"b264-t18": [
-"volatile.disable"
-],
-"b264-t22": [
-"volatile.disable"
-],
-"b266-t13": [
-"volatile.disable"
 ],
 "b270-t19": [
 "hp"
