@@ -111,6 +111,8 @@ pub enum Instruction {
     ToggleReviving(ToggleShedTailingInstruction),
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L167): the battle's last move (State::last_move)
     ChangeLastMove(ChangeLastMoveInstruction),
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L175): a Stellar tera's type boosted once
+    ToggleStellarBoosted(ToggleStellarBoostedInstruction),
     Revive(ReviveInstruction),
     ToggleTrickRoom(ToggleTrickRoomInstruction),
     DecrementTrickRoomTurnsRemaining,
@@ -338,6 +340,9 @@ impl fmt::Debug for Instruction {
             Instruction::ToggleShedTailing(s) => {
                 write!(f, "ToggleShedTailing {:?}", s.side_ref)
             }
+            Instruction::ToggleStellarBoosted(s) => {
+                write!(f, "ToggleStellarBoosted {:?}: {:?}", s.side_ref, s.move_type)
+            }
             Instruction::ChangeLastMove(s) => {
                 write!(f, "ChangeLastMove: {:?} -> {:?}", s.previous_move, s.new_move)
             }
@@ -462,6 +467,12 @@ pub struct ToggleBatonPassingInstruction {
 #[derive(Debug, PartialEq, Clone)]
 pub struct ToggleShedTailingInstruction {
     pub side_ref: SideReference,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct ToggleStellarBoostedInstruction {
+    pub side_ref: SideReference,
+    pub move_type: PokemonType,
 }
 
 #[derive(Debug, PartialEq, Clone)]

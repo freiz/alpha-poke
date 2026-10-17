@@ -323,3 +323,17 @@ def test_trap_out_when_the_trapper_leaves():
 |faint|p1a: Fishy
 """)  # fmt: skip
     assert t3["p2"].trap_out
+
+
+def test_stellar_moves_after_the_tera():
+    """L175: the moves a Stellar-terastallized mon used (its types boosted once), not before."""
+    t = run(START + """
+|move|p2a: Bob|Earthquake|p1a: Fishy
+|upkeep
+|turn|2
+|-terastallize|p2a: Bob|Stellar
+|move|p2a: Bob|Knock Off|p1a: Fishy
+|upkeep
+|turn|3
+""")  # fmt: skip
+    assert t["p2"].stellar_moves == {"gliscor": {"knockoff"}}

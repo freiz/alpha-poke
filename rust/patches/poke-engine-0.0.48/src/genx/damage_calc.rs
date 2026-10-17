@@ -105,8 +105,10 @@ fn type_enum_to_type_matchup_int(type_enum: &PokemonType) -> usize {
 pub fn type_effectiveness_modifier(attacking_type: &PokemonType, defender: &Pokemon) -> f32 {
     #[cfg(not(feature = "terastallization"))]
     let defending_types = defender.types;
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L175): a Stellar tera keeps its own types
+    // on defense (Showdown's getTypes; as get_defending_types): Stealth Rock, Freeze-Dry, ...
     #[cfg(feature = "terastallization")]
-    let defending_types = if defender.terastallized {
+    let defending_types = if defender.terastallized && defender.tera_type != PokemonType::STELLAR {
         (defender.tera_type, PokemonType::TYPELESS)
     } else {
         defender.types
@@ -170,6 +172,36 @@ fn weather_modifier(attacking_move_type: &PokemonType, weather: &Weather) -> f32
     }
 }
 
+// (L175: Showdown's condition: a tera of the move's type -- a Stellar one: a type not boosted yet
+// --, the move's dex priority 0 or less, not multi-hit, not a power of its own: data 0, or 150
+// with a callback -- Eruption, Water Spout, Dragon Energy)
+#[cfg(feature = "terastallization")]
+fn tera_floor_applies(attacker: &Pokemon, choice: &Choice) -> bool {
+    use crate::choices::MOVES;
+    let data = MOVES.get(&choice.move_id);
+    let data_power = data.map_or(choice.base_power, |m| m.base_power);
+    let own_power = data_power == 0.0
+        || matches!(
+            choice.move_id,
+            Choices::ERUPTION | Choices::WATERSPOUT | Choices::DRAGONENERGY
+        );
+    let typed = if attacker.tera_type == PokemonType::STELLAR {
+        stellar_boost_due(&choice.move_type, attacker)
+    } else {
+        attacker.tera_type == choice.move_type
+    };
+    attacker.terastallized
+        && typed
+        && data.map_or(choice.priority, |m| m.priority) <= 0
+        && !own_power
+        && choice.multi_hit() == crate::choices::MultiHitMove::None
+        && choice.multi_accuracy() == crate::choices::MultiAccuracyMove::None
+}
+
+pub fn stellar_boost_due(move_type: &PokemonType, pkmn: &Pokemon) -> bool {
+    pkmn.id == crate::pokemon::PokemonName::TERAPAGOSSTELLAR || pkmn.stellar_boosted & (1 << *move_type as u32) == 0
+}
+
 fn stab_modifier(attacking_move_type: &PokemonType, active_pkmn: &Pokemon) -> f32 {
     if attacking_move_type == &PokemonType::TYPELESS {
         return 1.0;
@@ -188,6 +220,15 @@ fn stab_without_adaptability(attacking_move_type: &PokemonType, active_pkmn: &Po
     let active_types = active_pkmn.types;
     let move_has_basic_stab =
         attacking_move_type == &active_types.0 || attacking_move_type == &active_types.1;
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L175): a Stellar tera's first move of each
+    // type: 2 with STAB, 4915 / 4096 without (Showdown's modifyDamage; Terapagos-Stellar always),
+    // then the usual; was the usual 1.5 / 1 always
+    if active_pkmn.terastallized && active_pkmn.tera_type == PokemonType::STELLAR {
+        if stellar_boost_due(attacking_move_type, active_pkmn) {
+            return if move_has_basic_stab { 2.0 } else { 4915.0 / 4096.0 };
+        }
+        return if move_has_basic_stab { 1.5 } else { 1.0 };
+    }
     if active_pkmn.terastallized {
         if &active_pkmn.tera_type == attacking_move_type && move_has_basic_stab {
             return 2.0;
@@ -772,6 +813,15 @@ fn common_pkmn_damage_calc(
         choice.base_power * vol.base_power * terrain_modifier(terrain, attacker, defender, &choice);
     // modify's rounding of the chained base power (half down)
     let base_power = ((base_power as f64 + 2047.0 / 4096.0).floor() as i64).max(1);
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L175): the tera floor of 60 where Showdown's
+    // getDamage has it, after the BasePower modifiers (a terrain's, Technician's, a gem's, a
+    // basePowerCallback's: Grassy Glide in Grassy Terrain, Acrobatics without an item are above)
+    #[cfg(feature = "terastallization")]
+    let base_power = if base_power < 60 && tera_floor_applies(attacker, choice) {
+        60
+    } else {
+        base_power
+    };
     let stat = |s: i16, m: f32| modify(s as i64, q4096(m)).max(1);
     let base = |a: i16, d: i16| {
         let a = stat(a, vol.attack * choice.attack_modifier);

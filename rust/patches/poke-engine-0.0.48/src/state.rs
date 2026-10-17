@@ -937,6 +937,9 @@ pub struct Pokemon {
     // timesAttacked: Rage Fist) and its gender (0 none, 1 male, 2 female: Attract, Cute Charm)
     pub times_attacked: u8,
     pub gender: u8,
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L175): a Stellar tera's types already
+    // boosted once (Showdown's stellarBoostedTypes; bit = the PokemonType's index)
+    pub stellar_boosted: u32,
     pub moves: PokemonMoves,
 }
 
@@ -968,6 +971,7 @@ impl Default for Pokemon {
             tera_type: PokemonType::NORMAL,
             last_item: Items::NONE,
             times_attacked: 0,
+            stellar_boosted: 0,
             gender: 0,
             moves: PokemonMoves {
                 m0: Default::default(),
@@ -1062,8 +1066,14 @@ impl Pokemon {
             self.terastallized,
             self.tera_type.to_string(),
             self.last_item.to_string(),
-            // (L163: only when either is set; the older strings have neither)
-            if self.times_attacked != 0 || self.gender != 0 {
+            // (L163: only when either is set; the older strings have neither; L175: the Stellar
+            // boosts after them, only when set)
+            if self.stellar_boosted != 0 {
+                format!(
+                    ",{},{},{}",
+                    self.times_attacked, self.gender, self.stellar_boosted
+                )
+            } else if self.times_attacked != 0 || self.gender != 0 {
                 format!(",{},{}", self.times_attacked, self.gender)
             } else {
                 String::new()
@@ -1129,6 +1139,7 @@ impl Pokemon {
             // (L163; older strings have neither)
             times_attacked: split.get(30).map_or(0, |x| x.parse::<u8>().unwrap()),
             gender: split.get(31).map_or(0, |x| x.parse::<u8>().unwrap()),
+            stellar_boosted: split.get(32).map_or(0, |x| x.parse::<u32>().unwrap()),
         }
     }
 }
@@ -2079,6 +2090,10 @@ impl State {
                 SideReference::SideTwo => self.side_two.shed_tailing = !self.side_two.shed_tailing,
             },
             Instruction::ChangeLastMove(instruction) => self.last_move = instruction.new_move,
+            Instruction::ToggleStellarBoosted(instruction) => {
+                self.get_side(&instruction.side_ref).get_active().stellar_boosted ^=
+                    1 << instruction.move_type as u32
+            }
             Instruction::ToggleReviving(instruction) => {
                 let side = self.get_side(&instruction.side_ref);
                 side.reviving = !side.reviving;
@@ -2304,6 +2319,10 @@ impl State {
             },
             Instruction::ChangeLastMove(instruction) => {
                 self.last_move = instruction.previous_move
+            }
+            Instruction::ToggleStellarBoosted(instruction) => {
+                self.get_side(&instruction.side_ref).get_active().stellar_boosted ^=
+                    1 << instruction.move_type as u32
             }
             Instruction::ToggleReviving(instruction) => {
                 let side = self.get_side(&instruction.side_ref);

@@ -23,6 +23,12 @@ use poke_engine::state::{
 use std::str::FromStr;
 use std::time::Duration;
 
+// (L175: the types a Stellar tera's boosts are kept for, by name)
+const STELLAR_TYPES: [&str; 19] = [
+    "normal", "fire", "water", "electric", "grass", "ice", "fighting", "poison", "ground",
+    "flying", "psychic", "bug", "rock", "ghost", "dragon", "dark", "steel", "fairy", "stellar",
+];
+
 fn movechoice_to_string(side: &Side, move_choice: &MoveChoice) -> String {
     match move_choice {
         MoveChoice::Switch(_) => {
@@ -679,6 +685,8 @@ pub struct PyPokemon {
     // 1 male, 2 female)
     pub times_attacked: u8,
     pub gender: u8,
+    // alpha-poke patch (L175): a Stellar tera's types already boosted (type names)
+    pub stellar_boosted: Vec<String>,
 }
 
 impl From<Pokemon> for PyPokemon {
@@ -720,6 +728,13 @@ impl From<Pokemon> for PyPokemon {
             last_item: other.last_item.to_string(),
             times_attacked: other.times_attacked,
             gender: other.gender,
+            stellar_boosted: STELLAR_TYPES
+                .iter()
+                .filter(|t| {
+                    other.stellar_boosted & (1 << PokemonType::from_str(t).unwrap() as u32) != 0
+                })
+                .map(|t| t.to_string())
+                .collect(),
             moves: other
                 .moves
                 .into_iter()
@@ -770,6 +785,9 @@ impl Into<Pokemon> for PyPokemon {
             last_item: Items::from_str(&self.last_item).unwrap(),
             times_attacked: self.times_attacked,
             gender: self.gender,
+            stellar_boosted: self.stellar_boosted.iter().fold(0, |m, t| {
+                m | 1 << PokemonType::from_str(t).unwrap() as u32
+            }),
             moves: PokemonMoves {
                 m0: moves_vec[0].clone().into(),
                 m1: moves_vec[1].clone().into(),
@@ -811,6 +829,7 @@ impl PyPokemon {
         last_item="none".to_string(),
         times_attacked=0,
         gender=0,
+        stellar_boosted=Vec::<String>::new(),
     ))]
     fn new(
         id: String,
@@ -840,6 +859,7 @@ impl PyPokemon {
         last_item: String,
         times_attacked: u8,
         gender: u8,
+        stellar_boosted: Vec<String>,
     ) -> Self {
         if base_ability == "" {
             base_ability = ability.clone();
@@ -872,6 +892,7 @@ impl PyPokemon {
             last_item,
             times_attacked,
             gender,
+            stellar_boosted,
         }
     }
     #[staticmethod]

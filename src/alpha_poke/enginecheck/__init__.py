@@ -138,6 +138,7 @@ def _engine_mon(m: dict) -> pe.Pokemon:
         last_item=m.get("last_item") if _engine_item(m.get("last_item") or "") else "none",
         times_attacked=min(m.get("times_attacked", 0), 255),
         gender={"M": 1, "F": 2}.get(m.get("gender", ""), 0),  # (L163)
+        stellar_boosted=m.get("stellar_boosted", []),  # (L175)
     )  # fmt: skip
 
 

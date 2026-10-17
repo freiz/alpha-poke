@@ -405,10 +405,16 @@ def _our_mon(
 
 def _counted(mon, tm: SideTimers | None) -> dict:
     """The engine's times attacked (Rage Fist) and gender (0 none, 1 male, 2 female; Attract,
-    Cute Charm) of a mon (doc/engine-diff.md L163)."""
+    Cute Charm) of a mon (doc/engine-diff.md L163), a Stellar tera's boosted types (L175)."""
     gender = {"MALE": 1, "FEMALE": 2}.get(getattr(getattr(mon, "gender", None), "name", ""), 0)
     hits = tm.times_attacked.get(to_id(mon.species), 0) if tm is not None else 0
-    return {"times_attacked": min(hits, 255), "gender": gender}
+    # (L175: a Stellar tera's types already boosted: its damaging moves' since; Tera Blast's Stellar)
+    boosted = set()
+    for m in (tm.stellar_moves.get(to_id(mon.species), ()) if tm is not None else ()):
+        d = _MOVES.get(m)
+        if d and d.get("category") != "Status":
+            boosted.add("stellar" if m == "terablast" else d["type"].lower())
+    return {"times_attacked": min(hits, 255), "gender": gender, "stellar_boosted": sorted(boosted)}
 
 
 def _pp(mon, mid: str) -> int:
@@ -479,7 +485,7 @@ def _with(p: pe.Pokemon, **kw) -> pe.Pokemon:
     keys = ("id", "level", "types", "base_types", "hp", "maxhp", "ability", "base_ability",
             "item", "attack", "defense", "special_attack", "special_defense", "speed", "status",
             "weight_kg", "moves", "terastallized", "tera_type", "rest_turns",
-            "sleep_turns", "times_attacked", "gender")  # fmt: skip
+            "sleep_turns", "times_attacked", "gender", "stellar_boosted")  # fmt: skip
     return pe.Pokemon(**({k: getattr(p, k) for k in keys} | kw))
 
 

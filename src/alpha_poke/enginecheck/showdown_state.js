@@ -25,6 +25,8 @@ function monState(p, side) {
 		last_item: p.lastItem || '', // (L57: Harvest's berry)
 		times_attacked: p.timesAttacked || 0, // (L163: Rage Fist)
 		gender: p.gender || '', // (L163: 'M' / 'F' / 'N')
+		// a Stellar tera's types already boosted once (L175)
+		stellar_boosted: (p.stellarBoostedTypes || []).map(t => t.toLowerCase()),
 		ability: p.ability || '',
 		base_ability: p.baseAbility || '',
 		types: p.getTypes(),

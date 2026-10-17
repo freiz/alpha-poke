@@ -4614,3 +4614,62 @@ def test_l174_tera_acrobatics_without_an_item():
     want = states[1]["damage"]["p1"]["acrobatics"]
     got = pe.calculate_damage(ec.engine_state(states[1]), "acrobatics", "softboiled", True)[0]
     assert got[0] == want  # (the no-crit max; got[1]: the crit)
+
+
+# L175 (doc/engine-diff.md): a Stellar tera's first move of each type: 2 with STAB, 4915 / 4096
+# without, then the usual (Showdown's stellarBoostedTypes; main b185-t19, wide b242-t5); the tera
+# floor of 60 after the BasePower modifiers, for a Stellar tera on a type not boosted yet (random
+# b123-t11: a 20-power Stored Power); a Stellar tera's own types on defense (Stealth Rock: forum
+# b156-t55)
+VALIANT_STELLAR = """Iron Valiant @ Booster Energy
+Ability: Quark Drive
+Tera Type: Stellar
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Moonblast
+- Calm Mind
+- Shadow Ball
+- Thunderbolt"""
+
+
+def test_l175_stellar_boost_once_per_type():
+    turns = [("move calmmind terastallize", "move softboiled"), ("move moonblast", "move softboiled")]
+    states = ec.run_showdown(VALIANT_STELLAR, BLISSEY, turns, damage_probe=True)
+    for k in (1, 2):  # the first Moonblast boosted (2x), the next not (1.5x)
+        want = states[k]["damage"]["p1"]["moonblast"]
+        got = pe.calculate_damage(ec.engine_state(states[k]), "moonblast", "softboiled", True)[0]
+        assert got[0] == want, k
+    assert states[1]["damage"]["p1"]["moonblast"] > states[2]["damage"]["p1"]["moonblast"] * 1.2
+
+
+def test_l175_tera_floor_after_the_terrain():
+    """Grassy Glide's 55 in Grassy Terrain is 71 before the floor (none); out of it, 60."""
+    rilla = """Rillaboom @ Life Orb
+Ability: Grassy Surge
+Tera Type: Grass
+EVs: 252 Atk / 4 SpD / 252 Spe
+Adamant Nature
+- Grassy Glide
+- Wood Hammer
+- U-turn
+- Knock Off"""
+    for ability in ("Grassy Surge", "Overgrow"):
+        states = ec.run_showdown(rilla.replace("Grassy Surge", ability), BLISSEY,
+                                 [("move knockoff terastallize", "move softboiled")], damage_probe=True)  # fmt: skip
+        want = states[1]["damage"]["p1"]["grassyglide"]
+        got = pe.calculate_damage(ec.engine_state(states[1]), "grassyglide", "softboiled", True)[0]
+        assert got[0] == want, ability
+
+
+@pytest.mark.parametrize("teams,i,turn,offset", [
+    ("random_battle_teams.jsonl", 185, 19, 0),
+    ("random_battle_teams_wide.jsonl", 242, 5, 0),
+    ("random_battle_teams_random.jsonl", 123, 11, 0),
+    ("random_battle_teams_forum.jsonl", 156, 55, 50000),
+])  # fmt: skip
+def test_l175_positions(teams, i, turn, offset):
+    a, b = _random_position(teams, i, turn, offset)
+    c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
+    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2)
+    n = tuple(len(s["mons"]) for s in a["state"]["sides"])
+    assert ec.closest(b["state"], outs, n, hp=True)["diff"] == {}

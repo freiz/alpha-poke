@@ -21,7 +21,7 @@ use crate::instruction::{
     DecrementWishInstruction, HealInstruction, RemoveVolatileStatusInstruction,
     SetSecondMoveSwitchOutMoveInstruction, SetSleepTurnsInstruction, ToggleBatonPassingInstruction,
     ToggleDamageDealtHitSubstituteInstruction, ToggleMegaEvolvedInstruction,
-    ChangeLastMoveInstruction, ReviveInstruction, ToggleShedTailingInstruction, ToggleTrickRoomInstruction,
+    ChangeLastMoveInstruction, ReviveInstruction, ToggleStellarBoostedInstruction, ToggleShedTailingInstruction, ToggleTrickRoomInstruction,
 };
 use crate::instruction::{ChangeAbilityInstruction, ToggleTerastallizedInstruction};
 use crate::instruction::{ChangeMoveInstruction, ChangeStatInstruction, DisableMoveInstruction};
@@ -48,8 +48,6 @@ use crate::state::{
 };
 use std::cmp;
 
-#[cfg(feature = "terastallization")]
-use crate::choices::MultiAccuracyMove;
 
 #[cfg(any(feature = "gen4", feature = "gen5", feature = "gen6"))]
 pub const BASE_CRIT_CHANCE: f32 = 1.0 / 16.0;
@@ -3054,70 +3052,6 @@ fn cannot_use_move(state: &State, choice: &Choice, attacking_side_ref: &SideRefe
     false
 }
 
-#[cfg(feature = "terastallization")]
-fn terastallized_base_power_floor(
-    state: &mut State,
-    choice: &mut Choice,
-    attacking_side: &SideReference,
-) {
-    let attacker = state
-        .get_side_immutable(attacking_side)
-        .get_active_immutable();
-
-    // alpha-poke patch (2026-10-17, doc/engine-diff.md L154): not a move without power (Counter,
-    // Seismic Toss, ...: Showdown's getDamage returns first) nor one whose power is its own
-    // (data 0 or 150 with a basePowerCallback: Low Kick, Heavy Slam, Gyro Ball, Eruption, ...)
-    let data_power = MOVES.get(&choice.move_id).map_or(choice.base_power, |m| m.base_power);
-    let own_power = data_power == 0.0
-        || matches!(
-            choice.move_id,
-            Choices::ERUPTION | Choices::WATERSPOUT | Choices::DRAGONENERGY
-        )
-        || power_from_callback(choice.move_id);
-    if attacker.terastallized
-        && choice.move_type == attacker.tera_type
-        && choice.base_power < 60.0
-        && choice.base_power > 0.0
-        && !own_power
-        && choice.priority <= 0
-        && choice.multi_hit() == MultiHitMove::None
-        && choice.multi_accuracy() == MultiAccuracyMove::None
-    {
-        choice.base_power = 60.0;
-    }
-}
-
-// alpha-poke patch (2026-10-17, doc/engine-diff.md L174): the moves below 60 whose power is
-// Showdown's basePowerCallback (modify_choice here): the tera floor reads the power it gives
-// (Acrobatics without an item: 110, no floor), after it and before the BasePower modifiers
-fn power_from_callback(move_id: Choices) -> bool {
-    matches!(
-        move_id,
-        Choices::ACROBATICS
-            | Choices::PAYBACK
-            | Choices::PURSUIT
-            | Choices::RAGEFIST
-            | Choices::LASTRESPECTS
-            | Choices::STOREDPOWER
-            | Choices::POWERTRIP
-    )
-}
-
-#[cfg(feature = "terastallization")]
-fn tera_floor_after_callback(state: &State, choice: &mut Choice, attacking_side: &SideReference) {
-    let attacker = state
-        .get_side_immutable(attacking_side)
-        .get_active_immutable();
-    if power_from_callback(choice.move_id)
-        && attacker.terastallized
-        && choice.move_type == attacker.tera_type
-        && choice.base_power < 60.0
-        && choice.base_power > 0.0
-        && choice.priority <= 0
-    {
-        choice.base_power = 60.0;
-    }
-}
 
 // alpha-poke patch: pub (was private)
 pub fn before_move(
@@ -3127,8 +3061,7 @@ pub fn before_move(
     attacking_side: &SideReference,
     incoming_instructions: &mut StateInstructions,
 ) {
-    #[cfg(feature = "terastallization")]
-    terastallized_base_power_floor(state, choice, attacking_side);
+    // (L175: the tera floor is the damage calculation's now, after the BasePower modifiers)
 
     let defender_id = state
         .get_side_immutable(&attacking_side.get_other_side())
@@ -3139,8 +3072,6 @@ pub fn before_move(
     choice_before_move(state, choice, attacking_side, incoming_instructions);
 
     modify_choice(state, choice, defender_choice, attacking_side);
-    #[cfg(feature = "terastallization")]
-    tera_floor_after_callback(state, choice, attacking_side);
 
     ability_modify_attack_being_used(state, choice, defender_choice, attacking_side);
     ability_modify_attack_against(state, choice, defender_choice, attacking_side);
@@ -6866,6 +6797,27 @@ fn run_move(
                     side_ref: defender_ref,
                     amount,
                 }));
+        }
+    }
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L175): a Stellar tera's type boosted by
+    // this hit, once (Showdown pushes it to stellarBoostedTypes in modifyDamage)
+    if hits_on_target > 0 || hit_sub {
+        let user = state.get_side(&attacking_side).get_active();
+        if user.terastallized
+            && user.tera_type == PokemonType::STELLAR
+            && user.id != PokemonName::TERAPAGOSSTELLAR
+            && choice.category != MoveCategory::Status
+            && user.stellar_boosted & (1 << choice.move_type as u32) == 0
+        {
+            user.stellar_boosted |= 1 << choice.move_type as u32;
+            instructions
+                .instruction_list
+                .push(Instruction::ToggleStellarBoosted(
+                    ToggleStellarBoostedInstruction {
+                        side_ref: attacking_side,
+                        move_type: choice.move_type,
+                    },
+                ));
         }
     }
     super::abilities::magician_after_move(state, choice, &attacking_side, dealt_total, &mut instructions);

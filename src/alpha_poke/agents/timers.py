@@ -44,6 +44,9 @@ sides, in poke-engine's own units (rust/patches/poke-engine-0.0.48, generate_ins
   last_move   the battle's last move, either side's (each |move| line: past its BeforeMove, a
               called move after its caller; the same on both sides): Copycat's (doc/engine-diff.md
               L167)
+  stellar_moves
+              species id -> the moves it used once Stellar-terastallized: the damaging ones' types
+              are boosted no more (Showdown's stellarBoostedTypes; doc/engine-diff.md L175)
   used_once   species ids whose Dauntless Shield has raised Defense / Battle Bond has activated
               (Gen 9: once per battle;
               2026-10-16, doc/engine-diff.md L18)
@@ -105,6 +108,8 @@ class SideTimers:
     used_once: set = field(default_factory=set)  # species ids (Dauntless Shield used)
     # species id -> the hits a foe's move landed on it (Rage Fist; doc/engine-diff.md L163)
     times_attacked: dict = field(default_factory=dict)
+    # species id -> the moves it used once Stellar-terastallized (its types boosted once: L175)
+    stellar_moves: dict = field(default_factory=dict)
     status: dict = field(default_factory=dict)  # species id -> status ('tox', 'slp', ...)
     sleep: dict = field(default_factory=dict)  # species id -> [attempts, rest]
     names: dict = field(default_factory=dict)  # nickname -> species id
@@ -241,8 +246,12 @@ def _feed(sides: dict, p: list[str]) -> None:
             st.recharge = False
         if p[3] == "slp" and sp in st.sleep:
             st.sleep[sp][0] += 1
+    elif tag == "-terastallize" and len(p) > 3 and to_id(p[3]) == "stellar":
+        st.stellar_moves.setdefault(sp, set())
     elif tag == "move" and len(p) > 3:
         mv = to_id(p[3])
+        if sp in st.stellar_moves:
+            st.stellar_moves[sp].add(mv)
         st.just_moved = sp
         st.acted = True
         st.failed_now = False
