@@ -4202,6 +4202,15 @@ fn on_terrain_end(
 // turn, from the turn's instructions: its Speed matters from the next turn's order)
 fn unburden_check(state: &mut State, instructions: &mut StateInstructions) {
     for side_ref in [SideReference::SideOne, SideReference::SideTwo] {
+        // (a scan only when the active has Unburden: this runs at every end of turn)
+        if state
+            .get_side_immutable(&side_ref)
+            .get_active_immutable()
+            .ability
+            != Abilities::UNBURDEN
+        {
+            continue;
+        }
         let mut lost = false;
         for ins in instructions.instruction_list.iter() {
             match ins {
