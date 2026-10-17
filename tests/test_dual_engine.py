@@ -3772,3 +3772,29 @@ def test_l147_update_before_the_drag():
     outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2)
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
     assert ec.closest(b["state"], outs, n, hp=True)["diff"] == {}
+
+
+# L148 (doc/engine-diff.md): Showdown's WeatherChange / TerrainChange events (setWeather /
+# setTerrain): a terrain move sets off the foe's seed at once, Snowscape brings Ice Face back;
+# the engine only looked at them on a switch-in (the seed: also before its holder's move)
+@pytest.mark.parametrize("case", ["electric seed", "ice face"])
+def test_l148_field_change_events(case):
+    if case == "electric seed":
+        user = _setter("Jolteon", "Volt Absorb", "Leftovers", "- Electric Terrain\n- Thunderbolt\n- Protect\n- Wish")
+        user = user.replace("Careful", "Timid")
+        foe = _setter("Corviknight", "Pressure", "Electric Seed", "- Defog\n- Roost\n- Brave Bird\n- U-turn")
+        turns, k, c = [("move electricterrain", "move defog")], 0, ("electricterrain", "defog")
+        states = ec.run_showdown(user, foe, turns)
+        assert states[1]["sides"][1]["mons"][0]["item"] == ""
+    else:
+        # (turn 1: the face takes the Earthquake; turn 2: Snowscape first, the face back takes
+        # the slower Hippowdon's Earthquake again)
+        eiscue = _setter("Eiscue", "Ice Face", "Leftovers", "- Snowscape\n- Belly Drum\n- Protect\n- Icicle Crash")
+        foe = _setter("Hippowdon", "Sand Force", "Leftovers", "- Earthquake\n- Slack Off\n- Protect\n- Roar")
+        turns = [("move iciclecrash", "move earthquake"), ("move snowscape", "move earthquake")]
+        states = ec.run_showdown(eiscue, foe, turns)
+        assert states[1]["sides"][0]["mons"][0]["species"] == "eiscuenoice"
+        assert states[2]["sides"][0]["mons"][0]["hp"] == states[1]["sides"][0]["mons"][0]["hp"]
+        k, c = 1, ("snowscape", "earthquake")
+    outs = ec.engine_outcomes(ec.engine_state(states[k]), *c)
+    assert ec.closest(states[k + 1], outs, (1, 1), hp=True)["diff"] == {}

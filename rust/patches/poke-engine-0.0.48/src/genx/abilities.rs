@@ -1495,6 +1495,33 @@ pub fn ability_end_of_turn(
     }
 }
 
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L148): Ice Face comes back in hail / snow
+// (Showdown's onStart -- the switch-in -- and onWeatherChange: generate_instructions'
+// field_change_events; not while the weather goes on); before, a switch-in in snow changed any
+// Eiscue's forme (the condition's precedence)
+pub fn ice_face_in_snow(
+    state: &mut State,
+    side_ref: &SideReference,
+    instructions: &mut StateInstructions,
+) {
+    let snow = state.weather_is_active(&Weather::HAIL) || state.weather_is_active(&Weather::SNOW);
+    let active_pkmn = state.get_side(side_ref).get_active();
+    if active_pkmn.ability == Abilities::ICEFACE
+        && active_pkmn.id == PokemonName::EISCUENOICE
+        && active_pkmn.hp > 0
+        && snow
+    {
+        instructions
+            .instruction_list
+            .push(Instruction::FormeChange(FormeChangeInstruction {
+                side_ref: *side_ref,
+                name_change: PokemonName::EISCUE as i16 - active_pkmn.id as i16,
+            }));
+        active_pkmn.id = PokemonName::EISCUE;
+        active_pkmn.recalculate_stats(side_ref, instructions);
+    }
+}
+
 pub fn ability_on_switch_in(
     state: &mut State,
     side_ref: &SideReference,
@@ -1535,21 +1562,7 @@ pub fn ability_on_switch_in(
     }
 
     match active_pkmn.ability {
-        Abilities::ICEFACE => {
-            if active_pkmn.id == PokemonName::EISCUENOICE && state.weather_is_active(&Weather::HAIL)
-                || state.weather_is_active(&Weather::SNOW)
-            {
-                let active_pkmn = state.get_side(side_ref).get_active();
-                instructions.instruction_list.push(Instruction::FormeChange(
-                    FormeChangeInstruction {
-                        side_ref: *side_ref,
-                        name_change: PokemonName::EISCUE as i16 - active_pkmn.id as i16,
-                    },
-                ));
-                active_pkmn.id = PokemonName::EISCUE;
-                active_pkmn.recalculate_stats(side_ref, instructions);
-            }
-        }
+        Abilities::ICEFACE => ice_face_in_snow(state, side_ref, instructions),
         // (L141)
         Abilities::PROTOSYNTHESIS | Abilities::QUARKDRIVE => {
             paradox_update(state, side_ref, instructions);

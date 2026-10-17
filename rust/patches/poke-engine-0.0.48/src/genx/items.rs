@@ -1443,6 +1443,16 @@ pub fn item_on_switch_in(
         room_service(state, side_ref, instructions);
         return;
     }
+    terrain_seed(state, side_ref, instructions);
+}
+
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L148): a terrain seed goes off in its terrain
+// (Showdown's onStart -- the switch-in -- and onTerrainChange: generate_instructions'
+// field_change_events)
+pub fn terrain_seed(state: &mut State, side_ref: &SideReference, instructions: &mut StateInstructions) {
+    if state.get_side_immutable(side_ref).get_active_immutable().hp == 0 {
+        return;
+    }
     let active_terrain = state.get_terrain();
     let switching_in_side = state.get_side(side_ref);
     let switching_in_pkmn = switching_in_side.get_active_immutable();

@@ -257,6 +257,7 @@ fn generate_instructions_from_switch(
     switching_side_ref: SideReference,
     incoming_instructions: &mut StateInstructions,
 ) {
+    let switch_from = incoming_instructions.instruction_list.len();
     let should_last_used_move = state.use_last_used_move;
 
     let (side, opposite_side) = state.get_both_sides(&switching_side_ref);
@@ -649,8 +650,9 @@ fn generate_instructions_from_switch(
     ability_on_switch_in(state, &switching_side_ref, incoming_instructions);
     extend_field_durations(state, &switching_side_ref, incoming_instructions, from);
     item_on_switch_in(state, &switching_side_ref, incoming_instructions);
-    // (L141: the foe's Protosynthesis / Quark Drive after the weather / terrain this one set;
-    // L147: Showdown's Update after the switch-in)
+    // (L148: the weather / terrain this one set, for both actives; L141: the foe's Protosynthesis
+    // / Quark Drive; L147: Showdown's Update after the switch-in)
+    field_change_events(state, incoming_instructions, switch_from);
     update(state, incoming_instructions);
 }
 
@@ -6820,6 +6822,29 @@ fn eject_pack_after_secondaries(
 // run where Showdown runs it: after each hit of a move and its effects (run_move), after each
 // action (a move: after_move_finish; a switch-in; the end of the turn) and after the weather's
 // residual damage. The state has the instructions so far applied
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L148): Showdown's WeatherChange / TerrainChange
+// events (setWeather / setTerrain's eachEvent) for a weather / terrain set in instructions[from..]:
+// Ice Face back in snow, a terrain seed in its terrain (Protosynthesis / Quark Drive: update's
+// paradox_update, the same at any point); not Mimicry, Forecast, Flower Gift
+pub fn field_change_events(state: &mut State, instructions: &mut StateInstructions, from: usize) {
+    let (mut weather, mut terrain) = (false, false);
+    for i in instructions.instruction_list[from..].iter() {
+        match i {
+            Instruction::ChangeWeather(w) if w.new_weather != Weather::NONE => weather = true,
+            Instruction::ChangeTerrain(t) if t.new_terrain != Terrain::NONE => terrain = true,
+            _ => {}
+        }
+    }
+    for side_ref in [SideReference::SideOne, SideReference::SideTwo] {
+        if weather {
+            super::abilities::ice_face_in_snow(state, &side_ref, instructions);
+        }
+        if terrain {
+            super::items::terrain_seed(state, &side_ref, instructions);
+        }
+    }
+}
+
 pub fn update(state: &mut State, instructions: &mut StateInstructions) {
     for side_ref in [SideReference::SideOne, SideReference::SideTwo] {
         super::items::item_update(state, &side_ref, instructions);
@@ -6836,7 +6861,12 @@ fn update_branch(state: &mut State, branch: &mut StateInstructions) {
     state.reverse_instructions(&branch.instruction_list[..from].to_vec());
 }
 
-fn after_move_finish(state: &mut State, final_instructions: &mut Vec<StateInstructions>) {
+// (the branches one move made, each beginning with the `from` instructions it started from)
+fn after_move_finish(
+    state: &mut State,
+    final_instructions: &mut Vec<StateInstructions>,
+    from: usize,
+) {
     for state_instructions in final_instructions.iter_mut() {
         state.apply_instructions(&state_instructions.instruction_list);
 
@@ -6856,8 +6886,9 @@ fn after_move_finish(state: &mut State, final_instructions: &mut Vec<StateInstru
             }
         }
 
-        // (L147: Showdown's Update after the move's action; L124 / L141: Protosynthesis / Quark
-        // Drive after its weather / terrain)
+        // (L148: the move's weather / terrain; L147: Showdown's Update after the move's action;
+        // L124 / L141: Protosynthesis / Quark Drive after its weather / terrain)
+        field_change_events(state, state_instructions, from);
         update(state, state_instructions);
 
         // alpha-poke patch (2026-10-17, doc/engine-diff.md L112): a pivot user that fainted from
@@ -6924,33 +6955,36 @@ fn handle_both_moves(
     state_instructions_vec: &mut Vec<StateInstructions>,
     branch_on_damage: bool,
 ) {
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L148): after_move_finish on the branches
+    // each move made only (it used to run again on every branch in the list after each move)
+    let from = incoming_instructions.instruction_list.len();
+    let mut after_first = vec![];
     generate_instructions_from_move(
         state,
         first_move_side_choice,
         second_move_side_choice,
         first_move_side_ref,
         incoming_instructions,
-        state_instructions_vec,
+        &mut after_first,
         branch_on_damage,
     );
-    after_move_finish(state, state_instructions_vec);
+    after_move_finish(state, &mut after_first, from);
 
-    let mut i = 0;
-    let vec_len = state_instructions_vec.len();
     second_move_side_choice.first_move = false;
-    while i < vec_len {
-        let state_instruction = state_instructions_vec.remove(0);
+    for state_instruction in after_first {
+        let from = state_instruction.instruction_list.len();
+        let mut after_second = vec![];
         generate_instructions_from_move(
             state,
             &mut second_move_side_choice.clone(), // this clone is needed because the choice may be modified in this loop
             first_move_side_choice,
             first_move_side_ref.get_other_side(),
             state_instruction,
-            state_instructions_vec,
+            &mut after_second,
             branch_on_damage,
         );
-        after_move_finish(state, state_instructions_vec);
-        i += 1;
+        after_move_finish(state, &mut after_second, from);
+        state_instructions_vec.extend(after_second);
     }
 }
 
@@ -7518,24 +7552,23 @@ fn get_instructions_from_pursuit_hitting_switching_target(
     // reverse instructions because mega/tera might've added some
     state.reverse_instructions(&incoming_instructions.instruction_list);
 
-    // pursuiting move
+    // pursuiting move (L148: after_move_finish on its branches only)
+    let from = incoming_instructions.instruction_list.len();
+    let mut after_pursuit = vec![];
     generate_instructions_from_move(
         state,
         pursuit_choice,
         switching_choice,
         pursuiting_side_ref,
         incoming_instructions,
-        state_instructions_vec,
+        &mut after_pursuit,
         branch_on_damage,
     );
-    after_move_finish(state, state_instructions_vec);
+    after_move_finish(state, &mut after_pursuit, from);
 
     // loop through branches from pursuiting move, and apply the switching move on each of them
-    let mut i = 0;
-    let vec_len = state_instructions_vec.len();
     switching_choice.first_move = false;
-    while i < vec_len {
-        let mut state_instruction = state_instructions_vec.remove(0);
+    for mut state_instruction in after_pursuit {
         state.apply_instructions(&state_instruction.instruction_list);
         if state.get_side(&switching_side_ref).get_active().hp > 0 {
             generate_instructions_from_switch(
@@ -7546,9 +7579,7 @@ fn get_instructions_from_pursuit_hitting_switching_target(
             );
         }
         state.reverse_instructions(&state_instruction.instruction_list);
-        after_move_finish(state, state_instructions_vec);
         state_instructions_vec.push(state_instruction);
-        i += 1;
     }
 
     let mut harvested = vec![];
