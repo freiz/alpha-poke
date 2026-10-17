@@ -4421,3 +4421,44 @@ def test_l169_positions(teams, i, turn, offset):
     outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2)
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
     assert ec.closest(b["state"], outs, n, hp=True)["diff"] == {}
+
+
+# L170 (doc/engine-diff.md): Counter / Mirror Coat / Metal Burst's hit is a damaging hit (Rocky
+# Helmet, Stamina: offmeta b18-t9, random b88-t8); Ceaseless Edge / Stone Axe's hazard after the
+# DamagingHit, not when a Rocky Helmet knocked the user out (seed10k b150-t7); a fainted trapper's
+# Mean Look / Block / Jaw Lock ends at once (offmeta b199-t25, wide200 b107-t8), its partial trap
+# too (random b145-t23: Showdown's is without effect then); a partial trap whose source left does
+# nothing (the harness: wide b156-t5)
+MUDSDALE_STAMINA = """Mudsdale @ Leftovers
+Ability: Stamina
+EVs: 252 HP / 252 Atk / 4 Def
+Adamant Nature
+- Rapid Spin
+- Rest
+- Heavy Slam
+- Body Press"""
+
+
+def test_l170_counter_into_stamina():
+    states = ec.run_showdown(MUDSDALE_STAMINA, BLISSEY.replace("- Calm Mind", "- Counter"),
+                             [("move rapidspin", "move counter")])  # fmt: skip
+    assert states[1]["sides"][0]["mons"][0]["boosts"]["def"] == 1
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "rapidspin", "counter")
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+@pytest.mark.parametrize("teams,i,turn,offset", [
+    ("random_battle_teams_offmeta.jsonl", 18, 9, 0),
+    ("random_battle_teams_random.jsonl", 88, 8, 0),
+    ("random_battle_teams.jsonl", 150, 7, 10000),
+    ("random_battle_teams_offmeta.jsonl", 199, 25, 0),
+    ("random_battle_teams_wide200.jsonl", 107, 8, 40000),
+    ("random_battle_teams_wide.jsonl", 156, 5, 0),
+    ("random_battle_teams_random.jsonl", 145, 23, 0),
+])  # fmt: skip
+def test_l170_positions(teams, i, turn, offset):
+    a, b = _random_position(teams, i, turn, offset)
+    c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
+    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2)
+    n = tuple(len(s["mons"]) for s in a["state"]["sides"])
+    assert ec.closest(b["state"], outs, n, hp=True)["diff"] == {}

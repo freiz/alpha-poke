@@ -4157,6 +4157,19 @@ pub fn generate_instructions_from_move(
     }
     let from = incoming_instructions.instruction_list.len();
     choice_special_effect(state, choice, &attacking_side, &mut incoming_instructions);
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L170): Counter / Mirror Coat / Metal
+    // Burst's hit is a damaging hit (Showdown's onDamagingHit: Rocky Helmet, Rough Skin, Stamina,
+    // ...); before, nothing after their damage
+    if choice.returned_hit > 0 {
+        let dealt = choice.returned_hit;
+        super::abilities::ability_damaging_hit(
+            state,
+            choice,
+            &attacking_side,
+            dealt,
+            &mut incoming_instructions,
+        );
+    }
     extend_field_durations(state, &attacking_side, &mut incoming_instructions, from);
     // alpha-poke patch (2026-10-16, L14): a fixed damage (Seismic Toss, Ruination, ...) is dealt
     // as any damaging move's, without the rolls and the crits
@@ -6674,7 +6687,12 @@ fn run_move(
                 &mut instructions,
             );
         }
-        if let Some(side_condition) = &choice.side_condition {
+        // (L170: a damaging move's -- Ceaseless Edge, Stone Axe -- after the DamagingHit below)
+        if let Some(side_condition) = choice
+            .side_condition
+            .as_ref()
+            .filter(|_| choice.category == MoveCategory::Status)
+        {
             generate_instructions_from_side_conditions(
                 state,
                 side_condition,
@@ -6741,6 +6759,28 @@ fn run_move(
                 &mut instructions,
                 hit_sub,
             );
+        }
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L170): Ceaseless Edge / Stone Axe's
+        // hazard is their onAfterHit: after the DamagingHit, and only while their user is in
+        // (a Rocky Helmet that knocked it out: none; Showdown's `source.hp`)
+        if let Some(side_condition) = choice
+            .side_condition
+            .as_ref()
+            .filter(|_| choice.category != MoveCategory::Status)
+        {
+            if state
+                .get_side_immutable(&attacking_side)
+                .get_active_immutable()
+                .hp
+                > 0
+            {
+                generate_instructions_from_side_conditions(
+                    state,
+                    side_condition,
+                    &attacking_side,
+                    &mut instructions,
+                );
+            }
         }
         // (L151: Rapid Spin / Mortal Spin's clear is their onAfterHit: after a Toxic Debris; the
         // status moves' -- Defog, Tidy Up, Court Change -- their onHit)
@@ -7460,27 +7500,47 @@ pub fn update(state: &mut State, instructions: &mut StateInstructions) {
         super::items::item_update(state, &side_ref, instructions);
         super::abilities::paradox_update(state, &side_ref, instructions);
         // (L150: attract's onUpdate, its source fainted; the switch: generate_instructions_from_switch)
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L170): Mean Look / Block / Jaw Lock's
+        // trap too, at once (Showdown's linked volatiles: the fainted trapper's clearVolatile
+        // removes the target's trapped; was at the end of the turn, L110)
         let foe_fainted = state
             .get_side_immutable(&side_ref.get_other_side())
             .get_active_immutable()
             .hp
             == 0;
+        // (a partial trap: Showdown keeps it, without effect, to its silent end at the residual;
+        // the engine ends it as when its trapper leaves -- generate_instructions_from_switch)
         let side = state.get_side(&side_ref);
-        if foe_fainted
-            && side
-                .volatile_statuses
-                .contains(&PokemonVolatileStatus::ATTRACT)
-        {
-            side.volatile_statuses
-                .remove(&PokemonVolatileStatus::ATTRACT);
-            instructions
-                .instruction_list
-                .push(Instruction::RemoveVolatileStatus(
-                    RemoveVolatileStatusInstruction {
-                        side_ref,
-                        volatile_status: PokemonVolatileStatus::ATTRACT,
-                    },
-                ));
+        for volatile_status in [
+            PokemonVolatileStatus::ATTRACT,
+            PokemonVolatileStatus::TRAPPED,
+            PokemonVolatileStatus::PARTIALLYTRAPPED,
+        ] {
+            if foe_fainted && side.volatile_statuses.contains(&volatile_status) {
+                side.volatile_statuses.remove(&volatile_status);
+                instructions
+                    .instruction_list
+                    .push(Instruction::RemoveVolatileStatus(
+                        RemoveVolatileStatusInstruction {
+                            side_ref,
+                            volatile_status,
+                        },
+                    ));
+                // (its turn count ends with it)
+                let elapsed = side.volatile_status_durations.partiallytrapped;
+                if volatile_status == PokemonVolatileStatus::PARTIALLYTRAPPED && elapsed != 0 {
+                    instructions
+                        .instruction_list
+                        .push(Instruction::ChangeVolatileStatusDuration(
+                            ChangeVolatileStatusDurationInstruction {
+                                side_ref,
+                                volatile_status,
+                                amount: -elapsed,
+                            },
+                        ));
+                    side.volatile_status_durations.partiallytrapped = 0;
+                }
+            }
         }
     }
 }

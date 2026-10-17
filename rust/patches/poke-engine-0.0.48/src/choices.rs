@@ -20888,6 +20888,9 @@ pub struct Choice {
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L167): a move another one called (Copycat):
     // its caller's BeforeMove, PP and last used move stand for it (Showdown's useMove)
     pub called_move: bool,
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L170): the damage Counter / Mirror Coat /
+    // Metal Burst dealt the target (choice_special_effect): its DamagingHit after it
+    pub returned_hit: i16,
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L156): a multi-hit move's first hit Disguise
     // / Ice Face takes (no damage; the hits after it do)
     pub first_hit_blocked: bool,
@@ -21033,6 +21036,7 @@ impl Default for Choice {
             first_move: true,
             sleep_talk_move: false,
             called_move: false,
+            returned_hit: 0,
             first_hit_blocked: false,
             charge_boost: false,
         }

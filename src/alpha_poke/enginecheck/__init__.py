@@ -178,6 +178,10 @@ def _engine_side(s: dict, future_sight=None, wish=None) -> pe.Side:
         names = [x + st["stat"] if x in ("protosynthesis", "quarkdrive") and st.get("stat") else x
                  for x, st in act["volatiles"].items()]  # fmt: skip
         vol = {v for v in names if _engine_volatile(v) and v != "stall"}
+        # (L170: a partial trap whose source is out does nothing more -- Showdown ends it at the
+        # residual, silently; the engine ends it as its trapper leaves)
+        if act["volatiles"].get("partiallytrapped", {}).get("source_out"):
+            vol.discard("partiallytrapped")
         # Metronome: Showdown keeps the volatile from the switch-in, the engine while it counts
         metronome = act["volatiles"].get("metronome", {}).get("num_consecutive", 0)
         if not metronome:
@@ -336,6 +340,9 @@ def view(sd: dict) -> dict:
                     continue  # (the engine's is on while it counts)
                 # (lastmovefailed: Showdown's moveLastTurnResult, for the engine's state only: the
                 # engine ends it at the end of the turn, Showdown sets the next one then)
+                # (L170: a partial trap whose source is out, as in engine_state)
+                if x == "partiallytrapped" and st.get("source_out"):
+                    continue
                 if _engine_volatile(x) and x not in ("stall", "lastmovefailed"):
                     v[f"{k}.volatile.{x}"] = True
         c = s["conditions"]

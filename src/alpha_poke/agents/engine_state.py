@@ -689,8 +689,10 @@ def build_state(
         if tf:
             vol |= {"transform", "typechange"}
     # the actives' Protosynthesis / Quark Drive boosts and other volatiles (BOOSTS)
-    for mon, vol in ((active, our_vol), (opp_active, their_vol)):
+    for mon, vol, tm in ((active, our_vol, tm_us), (opp_active, their_vol, tm_them)):
         vol |= {BOOSTS[e] for e in (mon.effects if mon is not None else ()) if e in BOOSTS}
+        if tm.trap_out:  # (L170: its source left, it does nothing more)
+            vol.discard("partiallytrapped")
     # must recharge (the engine offers no move), Perish Song's count
     for mon, vol, tm in ((active, our_vol, tm_us), (opp_active, their_vol, tm_them)):
         if mon is None:

@@ -36,7 +36,10 @@ function monState(p, side) {
 		volatiles: Object.fromEntries(Object.entries(p.volatiles).map(([k, v]) =>
 			[k === 'perishsong' ? `perish${v.duration}` : k, {duration: v.duration || 0, layers: v.layers || 0, counter: v.counter || 0,
 				stat: v.bestStat || '', time: v.time || 0, true_duration: v.trueDuration || 0,
-				num_consecutive: v.numConsecutive || 0, hp: v.hp || 0, move: v.move || ''}])
+				num_consecutive: v.numConsecutive || 0, hp: v.hp || 0, move: v.move || '',
+				// (a partial trap's source no longer in: it no longer traps and ends silently at
+				// the residual; doc/engine-diff.md L170)
+				source_out: !!(v.source && v.source.side !== p.side && !v.source.isActive)}])
 			// Slow Start: a counter in the ability's state, the engine's volatile (L77)
 			.concat(p.isActive && p.ability === 'slowstart' && p.abilityState.counter ?
 				[['slowstart', {duration: p.abilityState.counter, layers: 0, counter: 0, stat: '',

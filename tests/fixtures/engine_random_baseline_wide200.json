@@ -6,9 +6,6 @@
 "seed_offset": 40000
 },
 "mismatches": {
-"b107-t8": [
-"volatile.trapped"
-],
 "b122-t26": [
 "status"
 ],

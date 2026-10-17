@@ -25,6 +25,8 @@ sides, in poke-engine's own units (rust/patches/poke-engine-0.0.48, generate_ins
   healblock / throatchop / magnetrise
               ends of turn since the start (2026-10-13; the patched engine ends them: Psychic
               Noise's Heal Block 2, Throat Chop 2, Magnet Rise 5)
+  trap_out    the partial trap's source left or fainted (Showdown keeps the volatile, without effect, to its
+              silent -end at the residual: left out of the engine's state; doc/engine-diff.md L170)
   partiallytrapped
               ends of turn of the active's partial trap (Infestation, Whirlpool, ...; from its
               -activate to its -end; 2026-10-16, doc/engine-diff.md L13: the patched engine ends
@@ -86,6 +88,7 @@ class SideTimers:
     throatchop: int | None = None
     magnetrise: int | None = None
     partiallytrapped: int | None = None
+    trap_out: bool = False  # the partial trap's source left (L170: it does nothing more)
     slowstart: list | None = None  # [turns left, counting]
     frombooster: bool = False
     trapped: bool = False
@@ -114,6 +117,7 @@ class SideTimers:
         self.confusion = self.taunt = self.encore = self.yawn = None
         self.disabled = self.healblock = self.throatchop = self.magnetrise = None
         self.partiallytrapped = self.slowstart = None
+        self.trap_out = False
         self.trapped = self.frombooster = False
         self.failed_now = self.last_failed = False
         self.sub_hit = self.recharge = False
@@ -200,7 +204,10 @@ def _feed(sides: dict, p: list[str]) -> None:
             st.active = new
             return
         st.came_in(new)
-        sides["p2" if p[2][:2] == "p1" else "p1"].trapped = False  # (its trapper left)
+        foe = sides["p2" if p[2][:2] == "p1" else "p1"]
+        foe.trapped = False  # (its trapper left)
+        # (L170: a partial trap stays until its silent -end at the residual, without effect)
+        foe.trap_out = foe.partiallytrapped is not None
         hp = p[4] if len(p) > 4 else ""
         if " " in hp:
             st.status[new] = hp.split(" ", 1)[1]
@@ -223,6 +230,8 @@ def _feed(sides: dict, p: list[str]) -> None:
     elif tag == "faint":
         st.status.pop(sp, None)
         st.sleep.pop(sp, None)
+        foe = sides["p2" if p[2][:2] == "p1" else "p1"]
+        foe.trap_out = foe.partiallytrapped is not None  # (L170: its trapper fainted)
     elif tag == "-mustrecharge":
         st.recharge = True
     elif tag == "cant" and len(p) > 3:
@@ -287,6 +296,7 @@ def _feed(sides: dict, p: list[str]) -> None:
     elif tag == "-activate" and len(p) > 3 and to_id(p[3].replace("move: ", "")) in TRAPS:
         if st.partiallytrapped is None:  # a second trap move does not restart it
             st.partiallytrapped = 0
+        st.trap_out = False
     elif tag == "-activate" and len(p) > 3 and to_id(p[3]) == "trapped":
         st.trapped = True
     elif tag == "-activate" and len(p) > 3 and to_id(p[3]) == "confusion":
@@ -301,6 +311,7 @@ def _feed(sides: dict, p: list[str]) -> None:
         what = to_id(p[3].replace("move: ", ""))
         if "[partiallytrapped]" in p:
             st.partiallytrapped = None
+            st.trap_out = False
         elif what in ("confusion", "taunt", "encore", "yawn", "healblock", "throatchop",
                     "magnetrise"):  # fmt: skip
             setattr(st, what, None)

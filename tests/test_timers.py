@@ -294,3 +294,32 @@ def test_last_move_is_the_battles():
 |turn|2
 """)  # fmt: skip
     assert t["p1"].last_move == t["p2"].last_move == "stealthrock"
+
+
+def test_trap_out_when_the_trapper_leaves():
+    """L170: a partial trap whose source switched out does nothing more (Showdown ends it silently
+    at the residual)."""
+    t = run(START + """
+|move|p1a: Fishy|Whirlpool|p2a: Bob
+|-activate|p2a: Bob|move: Whirlpool|[of] p1a: Fishy
+|upkeep
+|turn|2
+|switch|p1a: Other|Toxapex, M|304/304
+|upkeep
+|turn|3
+""")  # fmt: skip
+    assert t["p2"].partiallytrapped is not None and t["p2"].trap_out
+    t2 = run(START + """
+|move|p1a: Fishy|Whirlpool|p2a: Bob
+|-activate|p2a: Bob|move: Whirlpool|[of] p1a: Fishy
+|upkeep
+|turn|2
+""")  # fmt: skip
+    assert not t2["p2"].trap_out
+    t3 = run(START + """
+|move|p1a: Fishy|Whirlpool|p2a: Bob
+|-activate|p2a: Bob|move: Whirlpool|[of] p1a: Fishy
+|move|p2a: Bob|Earthquake|p1a: Fishy
+|faint|p1a: Fishy
+""")  # fmt: skip
+    assert t3["p2"].trap_out
