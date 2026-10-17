@@ -35,13 +35,6 @@
 "b137-t2": [
 "boost.atk"
 ],
-"b14-t33": [
-"hp"
-],
-"b14-t37": [
-"hp",
-"status"
-],
 "b142-t7": [
 "active",
 "boost.atk",
@@ -257,12 +250,6 @@
 "boost.evasion",
 "hp",
 "item"
-],
-"b86-t28": [
-"hp"
-],
-"b86-t33": [
-"hp"
 ],
 "b90-t1": [
 "status"

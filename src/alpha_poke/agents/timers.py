@@ -34,6 +34,9 @@ sides, in poke-engine's own units (rust/patches/poke-engine-0.0.48, generate_ins
               turn it came in; doc/engine-diff.md L77), gone at its -end
   trapped     the active is trapped by Mean Look / Block / Jaw Lock / Spirit Shackle / Anchor Shot
               (-activate trapped) until it or the other side's active leaves (doc/engine-diff.md L107)
+  last_failed the active's move failed last turn (a -fail / -miss of its own, an -immune of the
+              target, a cant other than recharge: Showdown's moveLastTurnResult; Temper Flare /
+              Stomping Tantrum double; doc/engine-diff.md L115)
   used_once   species ids whose Dauntless Shield has raised Defense / Battle Bond has activated
               (Gen 9: once per battle;
               2026-10-16, doc/engine-diff.md L18)
@@ -80,6 +83,8 @@ class SideTimers:
     partiallytrapped: int | None = None
     slowstart: list | None = None  # [turns left, counting]
     trapped: bool = False
+    failed_now: bool = False  # this turn (last_failed at the next turn)
+    last_failed: bool = False
     sub_hit: bool = False
     recharge: bool = False
     just_moved: str = ""  # species id of this side's mon that made the last move
@@ -101,6 +106,7 @@ class SideTimers:
         self.disabled = self.healblock = self.throatchop = self.magnetrise = None
         self.partiallytrapped = self.slowstart = None
         self.trapped = False
+        self.failed_now = self.last_failed = False
         self.sub_hit = self.recharge = False
 
     def rest_sleep(self, species: str) -> tuple[int, int]:
@@ -152,6 +158,8 @@ def _feed(sides: dict, p: list[str]) -> None:
     if tag == "turn":
         for st in sides.values():
             st.acted = False
+            st.last_failed, st.failed_now = st.failed_now, False
+            st.just_moved = ""  # (a new turn: a -fail from now is not its last move's)
             if st.slowstart:
                 st.slowstart[1] = True
         return
@@ -210,6 +218,7 @@ def _feed(sides: dict, p: list[str]) -> None:
         st.recharge = True
     elif tag == "cant" and len(p) > 3:
         st.acted = True
+        st.failed_now = p[3] != "recharge"  # (L115)
         if p[3] == "recharge":
             st.recharge = False
         if p[3] == "slp" and sp in st.sleep:
@@ -218,12 +227,18 @@ def _feed(sides: dict, p: list[str]) -> None:
         mv = to_id(p[3])
         st.just_moved = sp
         st.acted = True
+        st.failed_now = False
         st.recharge = False
         sides["p2" if p[2][:2] == "p1" else "p1"].just_moved = ""
         if mv == "wish" and st.wish is None and "[still]" not in p:
             st.wish = (2, sp)
     elif tag == "-fail" and len(p) > 3 and to_id(p[3].replace("move: ", "")) == "wish":
         st.wish = None
+        st.failed_now = True
+    elif tag in ("-fail", "-miss") and st.just_moved:
+        st.failed_now = True  # (L115: its move failed)
+    elif tag == "-immune" and sides["p2" if p[2][:2] == "p1" else "p1"].just_moved:
+        sides["p2" if p[2][:2] == "p1" else "p1"].failed_now = True
     elif tag == "-singleturn" and len(p) > 3:
         if to_id(p[3].replace("move: ", "")) in PROTECTS:
             st.protected = True

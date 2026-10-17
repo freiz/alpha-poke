@@ -321,7 +321,9 @@ def view(sd: dict) -> dict:
                 # condition -- not compared as a volatile)
                 if x == "metronome" and not st.get("num_consecutive"):
                     continue  # (the engine's is on while it counts)
-                if _engine_volatile(x) and x != "stall":
+                # (lastmovefailed: Showdown's moveLastTurnResult, for the engine's state only: the
+                # engine ends it at the end of the turn, Showdown sets the next one then)
+                if _engine_volatile(x) and x not in ("stall", "lastmovefailed"):
                     v[f"{k}.volatile.{x}"] = True
         c = s["conditions"]
         for name, eng in {**LAYERED}.items():
@@ -352,7 +354,9 @@ def view_engine(s: pe.State, n_mons: tuple[int, int] = (6, 6)) -> dict:
         for x in side.volatile_statuses:
             # (a terastallized mon's typechange has no effect: its type is the tera type;
             # Showdown's side compares the types other than Terastallization, _changed_types)
-            if str(x).lower() != "none" and not (tera and str(x).lower() == "typechange"):
+            if str(x).lower() not in ("none", "lastmovefailed") and not (
+                tera and str(x).lower() == "typechange"
+            ):
                 v[f"{k}.volatile.{str(x).lower()}"] = True
         sc = side.side_conditions
         for eng in LAYERED.values():

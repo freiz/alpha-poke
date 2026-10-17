@@ -294,6 +294,9 @@ define_enum_with_from_str! {
         TRANSFORM,
         // (L107: Mean Look / Block / Spider Web; ends when the trapper leaves)
         TRAPPED,
+        // (L115: the side's move failed last turn -- Temper Flare / Stomping Tantrum double; from
+        // the state given, cleared at the end of the turn)
+        LASTMOVEFAILED,
     },
     default = NONE
 }

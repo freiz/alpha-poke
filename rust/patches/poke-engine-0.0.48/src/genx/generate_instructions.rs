@@ -5371,6 +5371,26 @@ fn add_end_of_turn_instructions(
         ability_end_of_turn(state, side_ref, &mut incoming_instructions, false);
     }
 
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L115): "failed last turn" is for one turn
+    for side_ref in sides {
+        let side = state.get_side(side_ref);
+        if side
+            .volatile_statuses
+            .contains(&PokemonVolatileStatus::LASTMOVEFAILED)
+        {
+            side.volatile_statuses
+                .remove(&PokemonVolatileStatus::LASTMOVEFAILED);
+            incoming_instructions
+                .instruction_list
+                .push(Instruction::RemoveVolatileStatus(
+                    RemoveVolatileStatusInstruction {
+                        side_ref: *side_ref,
+                        volatile_status: PokemonVolatileStatus::LASTMOVEFAILED,
+                    },
+                ));
+        }
+    }
+
     // volatile statuses
     for side_ref in sides {
         // alpha-poke patch (2026-10-17, doc/engine-diff.md L110): the trapper fainted, its partial

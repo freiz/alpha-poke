@@ -3151,3 +3151,37 @@ def test_l114_balloon_pop_leaves_the_stolen_item():
     assert states[1]["sides"][1]["mons"][0]["item"] == "assaultvest"
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "knockoff", "stealthrock")
     assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L115 (doc/engine-diff.md): Temper Flare / Stomping Tantrum double their power when their user's
+# move failed the turn before (Showdown's moveLastTurnResult false: a miss, an immunity, a failure,
+# a full paralysis / sleep / flinch; not a Protect, which gives null); the engine had no doubling
+def test_l115_power_doubles_after_a_failed_move():
+    tusk = _attacker("Great Tusk", "Protosynthesis", "Leftovers", "- Temper Flare\n- Headlong Rush\n- Rapid Spin\n- Bulk Up")
+    corv = _setter("Corviknight", "Pressure", "Leftovers", "- Roost\n- Brave Bird\n- Defog\n- U-turn")
+    states = ec.run_showdown(tusk, corv, [("move headlongrush", "move defog"), ("move temperflare", "move defog")])
+    assert any(x.startswith("|-immune|p2a:") for x in states[1]["log"])
+    outs = ec.engine_outcomes(ec.engine_state(states[1]), "temperflare", "defog")
+    res = ec.closest(states[2], outs, (1, 1), hp=True)
+    crit = any(x.startswith("|-crit") for x in states[2]["log"])
+    ko = states[2]["sides"][1]["mons"][0]["hp"] == 0  # (a knockout by the rolls: its branch's share)
+    assert res["diff"] == {} and (crit or ko or res["p"] > 0.9)
+
+
+def test_l115_failed_move_from_the_protocol():
+    """Our state construction's flag (agents/timers.py, from the log) against Showdown's
+    moveLastTurnResult (the harness's lastmovefailed)."""
+    from alpha_poke.agents.timers import timers
+
+    tusk = _attacker("Great Tusk", "Protosynthesis", "Leftovers", "- Temper Flare\n- Headlong Rush\n- Rapid Spin\n- Bulk Up")
+    corv = _setter("Corviknight", "Pressure", "Leftovers", "- Roost\n- Brave Bird\n- Defog\n- U-turn")
+    turns = [("move headlongrush", "move defog"), ("move bulkup", "move roost"), ("move headlongrush", "move defog")]
+    states = ec.run_showdown(tusk, corv, turns)
+    lines: list = []
+    seen = set()
+    for st in states:
+        lines += [x.split("|") for x in st["log"]]
+        sd = "lastmovefailed" in st["sides"][0]["mons"][0]["volatiles"]
+        seen.add(sd)
+        assert timers(lines)["p1"].last_failed == sd, st["turn"]
+    assert seen == {True, False}

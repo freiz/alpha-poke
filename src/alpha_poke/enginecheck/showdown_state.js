@@ -38,7 +38,11 @@ function monState(p, side) {
 			// Slow Start: a counter in the ability's state, the engine's volatile (L77)
 			.concat(p.isActive && p.ability === 'slowstart' && p.abilityState.counter ?
 				[['slowstart', {duration: p.abilityState.counter, layers: 0, counter: 0, stat: '',
-					time: 0, true_duration: 0, num_consecutive: 0, hp: 0, move: ''}]] : [])),
+					time: 0, true_duration: 0, num_consecutive: 0, hp: 0, move: ''}]] : [])
+			// its move failed last turn (Temper Flare / Stomping Tantrum; L115): the engine's volatile
+			.concat(p.isActive && p.moveLastTurnResult === false ?
+				[['lastmovefailed', {duration: 0, layers: 0, counter: 0, stat: '', time: 0,
+					true_duration: 0, num_consecutive: 0, hp: 0, move: ''}]] : [])),
 		moves: p.moveSlots.map(m => ({id: m.id, pp: m.pp, maxpp: m.maxpp, disabled: !!m.disabled})),
 		terastallized: p.terastallized || '',
 		transformed: !!p.transformed, // (L36: the engine's transform volatile)

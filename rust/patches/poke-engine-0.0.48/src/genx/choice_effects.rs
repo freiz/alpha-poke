@@ -669,6 +669,15 @@ pub fn modify_choice(
             }
         }
 
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L115): double after a failed move
+        Choices::TEMPERFLARE | Choices::STOMPINGTANTRUM => {
+            if attacking_side
+                .volatile_statuses
+                .contains(&PokemonVolatileStatus::LASTMOVEFAILED)
+            {
+                attacker_choice.base_power *= 2.0;
+            }
+        }
         Choices::FACADE => {
             if attacking_side.get_active_immutable().status != PokemonStatus::NONE {
                 attacker_choice.base_power *= 2.0;
