@@ -55,15 +55,6 @@
 "b172-t12": [
 "hp"
 ],
-"b178-t35": [
-"boost.atk",
-"boost.spa"
-],
-"b178-t36": [
-"boost.atk",
-"boost.spa",
-"boost.spd"
-],
 "b179-t2": [
 "active"
 ],
@@ -92,19 +83,12 @@
 "b200-t22": [
 "hp"
 ],
-"b201-t19": [
-"terrain"
-],
 "b201-t25": [
 "hp",
 "status"
 ],
 "b222-t4": [
 "hp"
-],
-"b229-t9": [
-"boost.atk",
-"boost.spa"
 ],
 "b242-t1": [
 "status"
@@ -159,11 +143,6 @@
 "b295-t16": [
 "boost.spa"
 ],
-"b297-t30": [
-"boost.atk",
-"boost.spa",
-"hp"
-],
 "b36-t52": [
 "status"
 ],
@@ -178,9 +157,6 @@
 "hp",
 "status"
 ],
-"b43-t29": [
-"weather"
-],
 "b44-t12": [
 "boost.def",
 "hp"
@@ -190,10 +166,6 @@
 ],
 "b66-t12": [
 "hp"
-],
-"b68-t11": [
-"hp",
-"terrain"
 ],
 "b68-t3": [
 "status"

@@ -271,6 +271,8 @@ harness 必须把 Showdown 的状态完整映射到引擎，否则不一致来�
 | L125 | Lunar Blessing / Jungle Healing 还治愈使用者的异常状态（Showdown 的 onHit：cureStatus）；引擎只回复 | 引擎 | 已修复 | `test_l125_healing_moves_cure_status`（2 个参数） | `choice_effects.rs`，同 Refresh |
 | L126 | 睡着 / 冰冻的出招方先经过自己的状态，再被畏缩 / Taunt 挡住（Showdown 的 BeforeMove 顺序：睡眠 / 冰冻 10、畏缩 8、Taunt 5）：当回合可以醒来；引擎先挡，睡眠计数没走 | 引擎 | 已修复 | `test_l126_wakes_before_the_flinch` | `generate_instructions.rs`：`flinched_or_taunted` 对睡着 / 冰冻的出招方在状态处理之后检查 |
 | L127 | Mold Breaker 类使用者的变化招式无视可被破格的挡异常特性（Purifying Salt、Limber、Insomnia 等）；引擎的异常免疫没看 Mold Breaker | 引擎 | 已修复 | `test_l127_mold_breaker_through_purifying_salt` | `generate_instructions.rs` `immune_to_status`（`mold_breaker_ignores` 改为 pub） |
+| L128 | Magic Bounce 把降能力的变化招式（Parting Shot、Tickle 等）的能力下降也弹回给使用者；被弹回的 Parting Shot 降了能力时，换下场的是反弹者（还没出招的话，它这回合的招式作废），原使用者留在场上。引擎之前只弹回异常 / 状态 / 场地，能力下降仍打在反弹者身上，原使用者照样换人 | 引擎 | 已修复 | `test_l128_magic_bounce_parting_shot`、`test_l128_magic_bounce_parting_shot_switches_the_reflector` | `abilities.rs` 的 MAGICBOUNCE 分支（boost 目标翻转，pivot 取消）；`generate_instructions.rs` 的 finish_move：反弹者照 Eject Button 的方式换人 |
+| L129 | 入场时被钉子打倒的宝可梦不发动入场特性和道具（Intimidate、天气、Booster Energy 等；Showdown 先结算钉子，跳过已倒下的入场者）；引擎照样发动 Intimidate | 引擎 | 已修复 | `test_l129_no_intimidate_after_fainting_to_hazards`（随机差分 main b224-t15 的局面） | `generate_instructions.rs`：入场 hp 为 0 时跳过 `ability_on_switch_in` / `item_on_switch_in` |
 
 ## 修复与验证（2026-10-16）
 

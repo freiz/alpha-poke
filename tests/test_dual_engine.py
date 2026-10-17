@@ -3,6 +3,7 @@ poke-engine from the same state (alpha_poke.enginecheck). A confirmed engine iss
 ``xfail(strict=True)`` test until it is fixed; the controls show the harness agrees where the
 engines do."""
 
+import json
 import shutil
 from pathlib import Path
 
@@ -3342,3 +3343,49 @@ def test_l127_mold_breaker_through_purifying_salt():
     assert states[1]["sides"][1]["mons"][0]["status"] == "par"
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "thunderwave", "recover")
     assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L128 (doc/engine-diff.md): Magic Bounce sends a stat-lowering move's drops back to its user
+# (Parting Shot, Tickle, ...) and the user does not switch out (its Parting Shot was bounced); the
+# engine bounced the side / status / volatile effects only, the boosts stayed on the bouncer
+def test_l128_magic_bounce_parting_shot():
+    pech = _setter("Pecharunt", "Poison Puppeteer", "Leftovers", "- Parting Shot\n- Recover\n- Malignant Chain\n- Nasty Plot")
+    hatt = _setter("Hatterene", "Magic Bounce", "Leftovers", "- Calm Mind\n- Psyshock\n- Draining Kiss\n- Protect")
+    states = ec.run_showdown(pech + "\n\n" + BLISSEY, hatt, [("move partingshot", "move calmmind")])
+    assert states[1]["sides"][0]["mons"][0]["boosts"]["atk"] == -1
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "partingshot", "calmmind")
+    assert ec.closest(states[1], outs, (2, 1), hp=True)["diff"] == {}
+
+
+# L128: a reflector with someone to switch in is the one that switches out (its own move -- Calm
+# Mind, after the faster Pecharunt's -- is lost)
+def test_l128_magic_bounce_parting_shot_switches_the_reflector():
+    pech = _setter("Pecharunt", "Poison Puppeteer", "Leftovers", "- Parting Shot\n- Recover\n- Malignant Chain\n- Nasty Plot")
+    hatt = _setter("Hatterene", "Magic Bounce", "Leftovers", "- Calm Mind\n- Psyshock\n- Draining Kiss\n- Protect")
+    states = ec.run_showdown(pech + "\n\n" + BLISSEY, hatt + "\n\n" + BLISSEY, [("move partingshot", "move calmmind")])
+    assert states[1]["sides"][1]["request"] == "switch"
+    assert states[1]["sides"][1]["mons"][0]["boosts"]["spa"] == 0
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "partingshot", "calmmind")
+    assert ec.closest(states[1], outs, (2, 2), hp=True)["diff"] == {}
+
+
+def _random_position(teams: str, i: int, turn: int, offset: int = 0):
+    """A turn of a random-differential battle (scripts/check_engine_random.py): its start and the
+    step after it."""
+    pairs = [json.loads(x) for x in (Path("tests/fixtures") / teams).read_text().splitlines()]
+    p = pairs[i % len(pairs)]
+    k = i + offset
+    steps, _ = ec.random_battle(p["p1"], p["p2"], f"gen5,{k},{k + 1},{k + 2},{k + 3}", k + 1, max_turns=60)
+    j = next(j for j, s in enumerate(steps) if s["state"]["turn"] == turn and set(s["choices"]) == {"p1", "p2"})
+    return steps[j], steps[j + 1]
+
+
+# L129 (doc/engine-diff.md): a mon that faints to the hazards as it comes in starts no ability
+# (Intimidate: Showdown's hazards come first); the engine's Intimidate went off anyway
+def test_l129_no_intimidate_after_fainting_to_hazards():
+    a, b = _random_position("random_battle_teams.jsonl", 224, 15)
+    assert any(x.startswith("|faint|p2a: Landorus") for x in b["state"]["log"])
+    c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
+    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2)
+    n = tuple(len(s["mons"]) for s in a["state"]["sides"])
+    assert ec.closest(b["state"], outs, n, hp=True)["diff"] == {}

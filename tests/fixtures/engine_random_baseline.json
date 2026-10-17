@@ -21,17 +21,11 @@
 "b123-t5": [
 "hp"
 ],
-"b149-t34": [
-"weather"
-],
 "b152-t17": [
 "spikes"
 ],
 "b169-t12": [
 "boost.atk"
-],
-"b17-t29": [
-"weather"
 ],
 "b176-t18": [
 "hp"
@@ -60,9 +54,6 @@
 "boost.atk",
 "boost.def",
 "hp"
-],
-"b224-t15": [
-"boost.atk"
 ],
 "b227-t27": [
 "hp",
@@ -137,9 +128,6 @@
 ],
 "b57-t15": [
 "volatile.confusion"
-],
-"b71-t28": [
-"boost.atk"
 ],
 "b86-t16": [
 "item"

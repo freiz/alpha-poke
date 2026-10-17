@@ -634,6 +634,11 @@ fn generate_instructions_from_switch(
         }
     }
 
+    // alpha-poke patch (2026-10-17, L129): a mon that fainted to the hazards starts no ability /
+    // item (Intimidate, weather, Booster Energy, ...: Showdown skips a fainted switcher)
+    if state.get_side_immutable(&switching_side_ref).get_active_immutable().hp == 0 {
+        return;
+    }
     let from = incoming_instructions.instruction_list.len();
     ability_on_switch_in(state, &switching_side_ref, incoming_instructions);
     extend_field_durations(state, &switching_side_ref, incoming_instructions, from);
@@ -6452,6 +6457,45 @@ fn run_move(
                 SideReference::SideTwo => Instruction::ToggleSideTwoForceSwitch,
             });
             // the attacker has nothing left to do in this turn
+            let attacker_side = state.get_side(&attacking_side);
+            let previous_choice = attacker_side.switch_out_move_second_saved_move;
+            attacker_side.switch_out_move_second_saved_move = Choices::NONE;
+            let set = SetSecondMoveSwitchOutMoveInstruction {
+                new_choice: Choices::NONE,
+                previous_choice,
+            };
+            instructions.instruction_list.push(match attacking_side {
+                SideReference::SideOne => Instruction::SetSideOneMoveSecondSwitchOutMove(set),
+                SideReference::SideTwo => Instruction::SetSideTwoMoveSecondSwitchOutMove(set),
+            });
+        }
+    }
+
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L128): a Parting Shot Magic Bounce
+    // reflected switches the reflector out when it lowered a stat (Showdown: the reflected move's
+    // user is the one that switches), as an Eject Button: a reflector yet to move does not move
+    if !ejected
+        && choice.move_id == Choices::PARTINGSHOT
+        && choice
+            .boost
+            .as_ref()
+            .is_some_and(|b| b.target == MoveTarget::User)
+        && lowered(
+            &attacker_boosts_before,
+            &boosts_of(state.get_side_immutable(&attacking_side)),
+        )
+    {
+        let defender_side = state.get_side_immutable(&defender_ref);
+        if defender_side.visible_alive_pkmn() > 1
+            && !defender_side.force_switch
+            && defender_side.get_active_immutable().hp > 0
+        {
+            ejected = true;
+            state.get_side(&defender_ref).force_switch = true;
+            instructions.instruction_list.push(match defender_ref {
+                SideReference::SideOne => Instruction::ToggleSideOneForceSwitch,
+                SideReference::SideTwo => Instruction::ToggleSideTwoForceSwitch,
+            });
             let attacker_side = state.get_side(&attacking_side);
             let previous_choice = attacker_side.switch_out_move_second_saved_move;
             attacker_side.switch_out_move_second_saved_move = Choices::NONE;

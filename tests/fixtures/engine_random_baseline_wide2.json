@@ -17,12 +17,7 @@
 "volatile.confusion"
 ],
 "b115-t15": [
-"boost.atk",
 "hp"
-],
-"b123-t12": [
-"boost.atk",
-"boost.spa"
 ],
 "b124-t1": [
 "boost.def"
@@ -115,10 +110,6 @@
 ],
 "b246-t21": [
 "boost.atk"
-],
-"b249-t27": [
-"hp",
-"terrain"
 ],
 "b251-t12": [
 "hp",

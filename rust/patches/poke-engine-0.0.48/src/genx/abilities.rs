@@ -2912,6 +2912,15 @@ pub fn ability_modify_attack_against(
                         volatile_status.target = MoveTarget::User;
                     }
                 }
+                // alpha-poke patch (2026-10-17, doc/engine-diff.md L128): the stat drops come back
+                // too (Parting Shot, Tickle, ...), and its user does not switch out (a reflected
+                // Parting Shot switches the reflector out: finish_move)
+                if let Some(boost) = &mut attacker_choice.boost {
+                    if boost.target == MoveTarget::Opponent {
+                        boost.target = MoveTarget::User;
+                    }
+                }
+                attacker_choice.flags.pivot = false;
             }
         }
         Abilities::STORMDRAIN => {
