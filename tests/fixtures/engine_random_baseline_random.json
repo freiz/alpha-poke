@@ -60,12 +60,6 @@
 "b161-t10": [
 "hp"
 ],
-"b164-t5": [
-"boost.evasion"
-],
-"b164-t6": [
-"boost.evasion"
-],
 "b165-t19": [
 "boost.atk"
 ],
@@ -87,9 +81,6 @@
 "b189-t11": [
 "item",
 "volatile.quarkdrivespa"
-],
-"b189-t22": [
-"boost.evasion"
 ],
 "b192-t22": [
 "hp"

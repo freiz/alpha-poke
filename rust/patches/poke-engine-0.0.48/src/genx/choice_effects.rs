@@ -1141,8 +1141,18 @@ pub fn choice_hazard_clear(
                 instructions.instruction_list.push(i)
             }
         }
+        // alpha-poke patch (2026-10-16, doc/engine-diff.md L91): Good as Gold stops it, unless a
+        // Mold Breaker / Neutralizing Gas user
         Choices::DEFOG
-            if defending_side.get_active_immutable().ability != Abilities::GOODASGOLD =>
+            if defending_side.get_active_immutable().ability != Abilities::GOODASGOLD
+                || matches!(
+                    attacking_side.get_active_immutable().ability,
+                    Abilities::MOLDBREAKER
+                        | Abilities::TERAVOLT
+                        | Abilities::TURBOBLAZE
+                        | Abilities::MYCELIUMMIGHT
+                        | Abilities::NEUTRALIZINGGAS
+                ) =>
         {
             // alpha-poke patch (2026-10-16, doc/engine-diff.md L1): the target's evasion -1 first,
             // unless a substitute blocks it (Showdown's defog onHit; the engine's StatBoosts have
@@ -1153,19 +1163,44 @@ pub fn choice_hazard_clear(
             } else {
                 attacking_side_ref.get_other_side()
             };
+            // (L91: Mirror Armor sends the drop back, unless a Mold Breaker / Neutralizing Gas user)
+            let breaker = matches!(
+                state
+                    .get_side_immutable(attacking_side_ref)
+                    .get_active_immutable()
+                    .ability,
+                Abilities::MOLDBREAKER
+                    | Abilities::TERAVOLT
+                    | Abilities::TURBOBLAZE
+                    | Abilities::NEUTRALIZINGGAS
+            );
             let target_side = state.get_side(&target_ref);
+            let mirrored = target_ref != *attacking_side_ref
+                && target_side.get_active_immutable().ability == Abilities::MIRRORARMOR
+                && !breaker;
             if !target_side
                 .volatile_statuses
                 .contains(&PokemonVolatileStatus::SUBSTITUTE)
             {
-                apply_boost_instruction(
-                    target_side,
-                    &PokemonBoostableStat::Evasion,
-                    &-1,
-                    attacking_side_ref,
-                    &target_ref,
-                    instructions,
-                );
+                if mirrored {
+                    apply_boost_instruction(
+                        state.get_side(attacking_side_ref),
+                        &PokemonBoostableStat::Evasion,
+                        &-1,
+                        &target_ref,
+                        attacking_side_ref,
+                        instructions,
+                    );
+                } else {
+                    apply_boost_instruction(
+                        target_side,
+                        &PokemonBoostableStat::Evasion,
+                        &-1,
+                        attacking_side_ref,
+                        &target_ref,
+                        instructions,
+                    );
+                }
             }
             if state.terrain.terrain_type != Terrain::NONE {
                 instructions
@@ -1179,17 +1214,26 @@ pub fn choice_hazard_clear(
                 state.terrain.terrain_type = Terrain::NONE;
                 state.terrain.turns_remaining = 0;
             }
-            let side_condition_clears = [
+            // (L91: the hazards of both sides; the screens, Safeguard and Mist of the target's)
+            let hazards = [
                 PokemonSideCondition::Stealthrock,
                 PokemonSideCondition::Spikes,
                 PokemonSideCondition::ToxicSpikes,
                 PokemonSideCondition::StickyWeb,
+            ];
+            let screens = [
                 PokemonSideCondition::Reflect,
                 PokemonSideCondition::LightScreen,
                 PokemonSideCondition::AuroraVeil,
+                PokemonSideCondition::Safeguard,
+                PokemonSideCondition::Mist,
             ];
 
             for side in [SideReference::SideOne, SideReference::SideTwo] {
+                let mut side_condition_clears = hazards.to_vec();
+                if side == target_ref {
+                    side_condition_clears.extend(screens);
+                }
                 for side_condition in side_condition_clears {
                     let side_condition_num = state
                         .get_side_immutable(&side)

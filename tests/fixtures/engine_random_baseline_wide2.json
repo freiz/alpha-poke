@@ -134,12 +134,6 @@
 "b246-t13": [
 "boost.atk"
 ],
-"b253-t17": [
-"light_screen"
-],
-"b253-t18": [
-"light_screen"
-],
 "b253-t34": [
 "hp",
 "status"
@@ -228,28 +222,10 @@
 "b83-t13": [
 "status"
 ],
-"b88-t12": [
-"boost.evasion"
-],
 "b88-t18": [
 "boost.spa",
 "hp",
 "volatile.encore"
-],
-"b88-t21": [
-"boost.evasion"
-],
-"b88-t3": [
-"boost.evasion"
-],
-"b88-t5": [
-"boost.evasion"
-],
-"b88-t6": [
-"boost.evasion"
-],
-"b88-t7": [
-"boost.evasion"
 ],
 "b89-t14": [
 "volatile.protosynthesisdef"

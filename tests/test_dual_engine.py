@@ -2645,3 +2645,41 @@ def test_l90_taunted_attack_into_an_absorbing_ability():
     assert any("Water Absorb" in x for x in states[4]["log"])
     outs = ec.engine_outcomes(ec.engine_state(states[3]), "lanturn", "scald")
     assert ec.closest(states[4], outs, (2, 1), hp=True)["diff"] == {}
+
+
+# L91 (doc/engine-diff.md): Defog (Showdown's onHit) clears the screens, Safeguard and Mist of the
+# target's side only (hazards of both); Good as Gold stops it unless a Mold Breaker / Neutralizing
+# Gas user; Mirror Armor sends its evasion drop back. The engine cleared the user's screens too,
+# let Good as Gold stop a Mold Breaker's Defog and Mirror Armor not see it
+CORV_DEFOG = _setter("Corviknight", "Pressure", "Leftovers", "- Reflect\n- Defog\n- Roost\n- U-turn")
+
+
+def test_l91_defog_keeps_the_users_screens():
+    states = ec.run_showdown(CORV_DEFOG, BLISSEY, [("move reflect", "move softboiled"), ("move defog", "move softboiled")])
+    assert "reflect" in states[2]["sides"][0]["conditions"]
+    outs = ec.engine_outcomes(ec.engine_state(states[1]), "defog", "softboiled")
+    assert ec.closest(states[2], outs, (1, 1), hp=True)["diff"] == {}
+
+
+@pytest.mark.parametrize("user, target, drop", [
+    (_setter("Hawlucha", "Mold Breaker", "Leftovers", "- Defog\n- Close Combat\n- Swords Dance\n- Roost"),
+     _setter("Gholdengo", "Good as Gold", "Leftovers", "- Nasty Plot\n- Shadow Ball\n- Recover\n- Trick"), (0, -1)),
+    (_setter("Hawlucha", "Limber", "Leftovers", "- Defog\n- Close Combat\n- Swords Dance\n- Roost"),
+     _setter("Corviknight", "Mirror Armor", "Leftovers", "- Roost\n- Brave Bird\n- Defog\n- U-turn"), (-1, 0)),
+], ids=["mold-breaker-through-good-as-gold", "mirror-armor"])  # fmt: skip
+def test_l91_defog_evasion_drop(user, target, drop):
+    second = target.splitlines()[5][2:].lower().replace(" ", "")
+    states = ec.run_showdown(user, target, [("move defog", f"move {second}")])
+    assert (states[1]["sides"][0]["mons"][0]["boosts"]["evasion"],
+            states[1]["sides"][1]["mons"][0]["boosts"]["evasion"]) == drop  # fmt: skip
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "defog", second)
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+def test_l91_neutralizing_gas_defog_through_mirror_armor():
+    weezing = _setter("Weezing-Galar", "Neutralizing Gas", "Leftovers", "- Defog\n- Pain Split\n- Strange Steam\n- Will-O-Wisp")
+    corv = _setter("Corviknight", "Mirror Armor", "Leftovers", "- Roost\n- Brave Bird\n- Defog\n- U-turn")
+    states = ec.run_showdown(corv, weezing, [("move roost", "move defog")])
+    assert states[1]["sides"][0]["mons"][0]["boosts"]["evasion"] == -1
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "roost", "defog")
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}

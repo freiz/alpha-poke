@@ -8953,11 +8953,8 @@ mod tests {
                     previous_terrain: Terrain::ELECTRICTERRAIN,
                     previous_terrain_turns_remaining: 1,
                 }),
-                Instruction::ChangeSideCondition(ChangeSideConditionInstruction {
-                    side_ref: SideReference::SideOne,
-                    side_condition: PokemonSideCondition::Reflect,
-                    amount: -1,
-                }),
+                // alpha-poke patch (L91): only the target's screens (Showdown's defog onHit);
+                // the user's Reflect stays
                 Instruction::ChangeSideCondition(ChangeSideConditionInstruction {
                     side_ref: SideReference::SideTwo,
                     side_condition: PokemonSideCondition::Reflect,
