@@ -1880,6 +1880,7 @@ pub fn choice_special_effect(
                 | Choices::SWITCHEROO
                 | Choices::PAINSPLIT
                 | Choices::SOAK
+                | Choices::MAGICPOWDER
                 | Choices::SKILLSWAP
                 | Choices::MEANLOOK
                 | Choices::BLOCK
@@ -2007,6 +2008,52 @@ pub fn choice_special_effect(
                         .push(Instruction::ApplyVolatileStatus(
                             ApplyVolatileStatusInstruction {
                                 side_ref: attacking_side_ref.get_other_side(),
+                                volatile_status: PokemonVolatileStatus::TYPECHANGE,
+                            },
+                        ));
+                }
+            }
+        }
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L176): Magic Powder, the target pure
+        // Psychic (Showdown's onHit setType: not already that, not a tera, not through a
+        // Substitute; a powder: Grass / Overcoat / Safety Goggles stop it before; Magic Bounce
+        // sends it back: choice.target is User)
+        Choices::MAGICPOWDER => {
+            let target_ref = if choice.target == MoveTarget::User {
+                *attacking_side_ref
+            } else {
+                attacking_side_ref.get_other_side()
+            };
+            let infiltrator =
+                attacking_side.get_active_immutable().ability == Abilities::INFILTRATOR;
+            let psychic = (PokemonType::PSYCHIC, PokemonType::TYPELESS);
+            let side = state.get_side(&target_ref);
+            let behind_sub = side
+                .volatile_statuses
+                .contains(&PokemonVolatileStatus::SUBSTITUTE)
+                && !infiltrator
+                && target_ref != *attacking_side_ref;
+            let target = side.get_active();
+            if !behind_sub && !target.terastallized && target.types != psychic && target.hp > 0 {
+                instructions
+                    .instruction_list
+                    .push(Instruction::ChangeType(ChangeType {
+                        side_ref: target_ref,
+                        new_types: psychic,
+                        old_types: target.types,
+                    }));
+                target.types = psychic;
+                if !side
+                    .volatile_statuses
+                    .contains(&PokemonVolatileStatus::TYPECHANGE)
+                {
+                    side.volatile_statuses
+                        .insert(PokemonVolatileStatus::TYPECHANGE);
+                    instructions
+                        .instruction_list
+                        .push(Instruction::ApplyVolatileStatus(
+                            ApplyVolatileStatusInstruction {
+                                side_ref: target_ref,
                                 volatile_status: PokemonVolatileStatus::TYPECHANGE,
                             },
                         ));

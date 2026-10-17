@@ -4673,3 +4673,41 @@ def test_l175_positions(teams, i, turn, offset):
     outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2)
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
     assert ec.closest(b["state"], outs, n, hp=True)["diff"] == {}
+
+
+# L176 (doc/engine-diff.md): Magic Powder, the target pure Psychic (seed10k b166-t8 / t10)
+HATTERENE_POWDER = """Hatterene @ Leftovers
+Ability: Magic Bounce
+EVs: 252 HP / 252 SpA / 4 SpD
+Quiet Nature
+- Magic Powder
+- Psychic
+- Draining Kiss
+- Trick Room"""
+
+
+def test_l176_magic_powder():
+    states = ec.run_showdown(HATTERENE_POWDER, GARCHOMP_SD, [("move magicpowder", "move swordsdance")])
+    assert states[1]["sides"][1]["mons"][0]["types"] == ["Psychic"]
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "magicpowder", "swordsdance")
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L176's control: a Grass type is immune to the powder
+def test_l176_magic_powder_on_a_grass_type():
+    rilla = TORNADUS_ACRO.replace("Tornadus-Therian", "Rillaboom").replace("Regenerator", "Overgrow")
+    states = ec.run_showdown(HATTERENE_POWDER, rilla, [("move magicpowder", "move taunt")])
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "magicpowder", "taunt")
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+@pytest.mark.parametrize("teams,i,turn,offset", [
+    ("random_battle_teams.jsonl", 166, 8, 10000),
+    ("random_battle_teams.jsonl", 166, 10, 10000),
+])  # fmt: skip
+def test_l176_positions(teams, i, turn, offset):
+    a, b = _random_position(teams, i, turn, offset)
+    c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
+    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2)
+    n = tuple(len(s["mons"]) for s in a["state"]["sides"])
+    assert ec.closest(b["state"], outs, n, hp=True)["diff"] == {}
