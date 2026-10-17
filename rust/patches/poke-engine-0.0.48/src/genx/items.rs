@@ -646,33 +646,54 @@ fn damage_reduction_berry(
     if &choice.move_type == pkmn_type
         && choice.category != MoveCategory::Status
         && !fixed_damage_move(&choice.move_id)
-        && type_effectiveness_modifier(pkmn_type, &defending_pkmn) > 1.0
+        && (berry == Items::CHILANBERRY
+            || type_effectiveness_modifier(pkmn_type, &defending_pkmn) > 1.0)
     {
-        instructions
-            .instruction_list
-            .push(Instruction::ChangeItem(ChangeItemInstruction {
-                side_ref: attacking_side_ref.get_other_side(),
-                current_item: berry,
-                new_item: Items::NONE,
-            }));
-        // (L57: used up: its last item)
-        {
-            let used = berry;
-            set_last_item(
-                defending_pkmn,
-                attacking_side_ref.get_other_side(),
-                used,
-                instructions,
-            );
-        }
-        defending_pkmn.item = Items::NONE;
-        choice.damage_modifier /= 2.0; // L34: a final modifier (onSourceModifyDamage)
-                                       // alpha-poke patch (2026-10-16, doc/engine-diff.md L33): Knock Off's 1.5 x still (its
-                                       // onBasePower sees the berry, eaten later: onSourceModifyDamage)
-        if choice.move_id == Choices::KNOCKOFF {
-            choice.base_power *= 1.5;
-        }
+        eat_on_hit(choice, defending_pkmn, attacking_side_ref, berry, instructions);
     }
+}
+
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L152): a resist berry halves the damage and is
+// eaten by the hit (Showdown's onSourceModifyDamage, at the damage): a secondary removing it, so
+// a miss, a Protect, a Substitute or its foe's full paralysis leaves it; before, it was eaten as
+// the move started (also Knock Off's 1.5 x: the berry is still held, choice_effects' check)
+fn eat_on_hit(
+    choice: &mut Choice,
+    _defending_pkmn: &mut Pokemon,
+    _attacking_side_ref: &SideReference,
+    _berry: Items,
+    _instructions: &mut StateInstructions,
+) {
+    choice.damage_modifier /= 2.0; // L34: a final modifier (onSourceModifyDamage)
+    choice.add_or_create_secondaries(Secondary {
+        chance: 100.0,
+        effect: Effect::RemoveItem,
+        target: MoveTarget::Opponent,
+    });
+}
+
+pub fn is_resist_berry(item: Items) -> bool {
+    matches!(
+        item,
+        Items::OCCABERRY
+            | Items::PASSHOBERRY
+            | Items::WACANBERRY
+            | Items::RINDOBERRY
+            | Items::YACHEBERRY
+            | Items::CHOPLEBERRY
+            | Items::KEBIABERRY
+            | Items::SHUCABERRY
+            | Items::COBABERRY
+            | Items::PAYAPABERRY
+            | Items::TANGABERRY
+            | Items::CHARTIBERRY
+            | Items::KASIBBERRY
+            | Items::HABANBERRY
+            | Items::COLBURBERRY
+            | Items::BABIRIBERRY
+            | Items::CHILANBERRY
+            | Items::ROSELIBERRY
+    )
 }
 
 /*
@@ -1125,10 +1146,13 @@ pub fn item_before_move(
     side_ref: &SideReference,
     instructions: &mut StateInstructions,
 ) {
+    // (L152: the attacker's Unnerve stops the target's resist berry, Showdown's onFoeTryEatItem)
+    let berry_unnerved = unnerved(state, &side_ref.get_other_side());
     let (attacking_side, defending_side) = state.get_both_sides(side_ref);
     let active_pkmn = attacking_side.get_active();
     let defending_pkmn = defending_side.get_active();
     match defending_pkmn.item {
+        x if is_resist_berry(x) && berry_unnerved => {}
         Items::CHOPLEBERRY => damage_reduction_berry(
             defending_pkmn,
             side_ref,
@@ -1153,33 +1177,14 @@ pub fn item_before_move(
             &PokemonType::ROCK,
             instructions,
         ),
-        Items::CHILANBERRY => {
-            // no type effectiveness check for chilan
-            if &choice.move_type == &PokemonType::NORMAL
-                && choice.category != MoveCategory::Status
-                && !fixed_damage_move(&choice.move_id)
-            {
-                instructions.instruction_list.push(Instruction::ChangeItem(
-                    ChangeItemInstruction {
-                        side_ref: side_ref.get_other_side(),
-                        current_item: Items::CHILANBERRY,
-                        new_item: Items::NONE,
-                    },
-                ));
-                // (L57: used up: its last item)
-                {
-                    let used = Items::CHILANBERRY;
-                    set_last_item(
-                        defending_pkmn,
-                        side_ref.get_other_side(),
-                        used,
-                        instructions,
-                    );
-                }
-                defending_pkmn.item = Items::NONE;
-                choice.damage_modifier /= 2.0; // L34
-            }
-        }
+        Items::CHILANBERRY => damage_reduction_berry(
+            defending_pkmn,
+            side_ref,
+            choice,
+            Items::CHILANBERRY,
+            &PokemonType::NORMAL,
+            instructions,
+        ),
         Items::COBABERRY => damage_reduction_berry(
             defending_pkmn,
             side_ref,

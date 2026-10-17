@@ -3935,3 +3935,43 @@ def test_l151_positions(teams, i, turn, offset):
     outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2)
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
     assert ec.closest(b["state"], outs, n, hp=True)["diff"] == {}
+
+
+# L152 (doc/engine-diff.md): a resist berry is eaten by the hit it halves (Showdown's
+# onSourceModifyDamage): not into Protect, not when its foe is fully paralyzed (the random
+# differential's wide b103-t33); the engine ate it as the move started. A hit: a control
+@pytest.mark.parametrize("case", ["protect", "hit"])
+def test_l152_resist_berry_on_the_hit(case):
+    chomp = _setter("Garchomp", "Rough Skin", "Leftovers", "- Dragon Claw\n- Earthquake\n- Protect\n- Roar")
+    dnite = _setter("Dragonite", "Multiscale", "Haban Berry", "- Roost\n- Protect\n- Extreme Speed\n- Dragon Dance")
+    foe_move = "protect" if case == "protect" else "roost"
+    states = ec.run_showdown(chomp.replace("Careful", "Jolly"), dnite, [("move dragonclaw", f"move {foe_move}")])
+    assert (states[1]["sides"][1]["mons"][0]["item"] == "habanberry") == (case == "protect")
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "dragonclaw", foe_move)
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+def test_l152_resist_berry_kept_through_full_paralysis():
+    a, b = _random_position("random_battle_teams_wide.jsonl", 103, 33)
+    c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
+    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2)
+    n = tuple(len(s["mons"]) for s in a["state"]["sides"])
+    assert ec.closest(b["state"], outs, n, hp=True)["diff"] == {}
+
+
+# L153 (doc/engine-diff.md): a lock its user could not move in ends with the turn (Showdown's
+# lockedmove: only a use renews it; wide b146-t45: fully paralyzed); Pickpocket takes a U-turn
+# user's item (only an Eject Button's switch stops it; wide2 b40-t25); a Custap Berry goes as its
+# holder moves while the foe switches (random b12-t17, seed10k b57-t25)
+@pytest.mark.parametrize("teams,i,turn,offset", [
+    ("random_battle_teams_wide.jsonl", 146, 45, 0),
+    ("random_battle_teams_wide2.jsonl", 40, 25, 30000),
+    ("random_battle_teams_random.jsonl", 12, 17, 0),
+    ("random_battle_teams.jsonl", 57, 25, 10000),
+])  # fmt: skip
+def test_l153_positions(teams, i, turn, offset):
+    a, b = _random_position(teams, i, turn, offset)
+    c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
+    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2)
+    n = tuple(len(s["mons"]) for s in a["state"]["sides"])
+    assert ec.closest(b["state"], outs, n, hp=True)["diff"] == {}

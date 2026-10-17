@@ -1643,15 +1643,26 @@ fn get_instructions_from_secondaries(
                                 | Items::ENIGMABERRY
                                 | Items::WEAKNESSPOLICY
                                 | Items::THROATSPRAY
-                        ) {
+                        ) || super::items::is_resist_berry(target_pkmn.item)
+                        {
+                            let item = target_pkmn.item;
                             secondary_hit_instructions.instruction_list.push(
                                 Instruction::ChangeItem(ChangeItemInstruction {
                                     side_ref: secondary_target_side_ref,
-                                    current_item: target_pkmn.item.clone(),
+                                    current_item: item,
                                     new_item: Items::NONE,
                                 }),
                             );
                             target_pkmn.item = Items::NONE;
+                            // (L152: an eaten berry is its last item: Harvest, Recycle, Belch)
+                            if super::items::is_berry(item) {
+                                super::items::set_last_item(
+                                    target_pkmn,
+                                    secondary_target_side_ref,
+                                    item,
+                                    &mut secondary_hit_instructions,
+                                );
+                            }
                         }
                     }
                 }
@@ -4756,30 +4767,6 @@ fn moves_first(
     let side_one_effective_speed = get_effective_speed(&state, &SideReference::SideOne);
     let side_two_effective_speed = get_effective_speed(&state, &SideReference::SideTwo);
 
-    if side_one_choice.category == MoveCategory::Switch
-        && side_two_choice.category == MoveCategory::Switch
-    {
-        return if side_one_effective_speed > side_two_effective_speed {
-            SideMovesFirst::SideOne
-        } else if side_one_effective_speed == side_two_effective_speed {
-            SideMovesFirst::SpeedTie
-        } else {
-            SideMovesFirst::SideTwo
-        };
-    } else if side_one_choice.category == MoveCategory::Switch {
-        return if side_two_choice.move_id != Choices::PURSUIT {
-            SideMovesFirst::SideOne
-        } else {
-            SideMovesFirst::SideTwo
-        };
-    } else if side_two_choice.category == MoveCategory::Switch {
-        return if side_one_choice.move_id == Choices::PURSUIT {
-            SideMovesFirst::SideOne
-        } else {
-            SideMovesFirst::SideTwo
-        };
-    }
-
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L123): a Custap Berry is eaten whenever its
     // holder uses a move at a quarter of its HP or less (half with Gluttony), whatever the
     // priorities (Showdown's onFractionalPriority: the fractional priority, 0); its +0.1 decides
@@ -4790,6 +4777,16 @@ fn moves_first(
         .enumerate()
     {
         let active = state.get_side_immutable(side_ref).get_active_immutable();
+        // (L153: any move, whatever the foe does -- a switch too; Showdown's onFractionalPriority,
+        // its `priority` the fractional one, 0; not a status move under Mycelium Might)
+        let choice = if k == 0 { &*side_one_choice } else { &*side_two_choice };
+        if choice.category == MoveCategory::Switch
+            || choice.move_id == Choices::NONE
+            || (choice.category == MoveCategory::Status
+                && active.ability == Abilities::MYCELIUMMIGHT)
+        {
+            continue;
+        }
         let threshold = if active.ability == Abilities::GLUTTONY {
             2.0
         } else {
@@ -4820,6 +4817,30 @@ fn moves_first(
             }
         }
     }
+    if side_one_choice.category == MoveCategory::Switch
+        && side_two_choice.category == MoveCategory::Switch
+    {
+        return if side_one_effective_speed > side_two_effective_speed {
+            SideMovesFirst::SideOne
+        } else if side_one_effective_speed == side_two_effective_speed {
+            SideMovesFirst::SpeedTie
+        } else {
+            SideMovesFirst::SideTwo
+        };
+    } else if side_one_choice.category == MoveCategory::Switch {
+        return if side_two_choice.move_id != Choices::PURSUIT {
+            SideMovesFirst::SideOne
+        } else {
+            SideMovesFirst::SideTwo
+        };
+    } else if side_two_choice.category == MoveCategory::Switch {
+        return if side_one_choice.move_id == Choices::PURSUIT {
+            SideMovesFirst::SideOne
+        } else {
+            SideMovesFirst::SideTwo
+        };
+    }
+
     if side_one_choice.priority == side_two_choice.priority {
         if custap[0] && !custap[1] {
             return SideMovesFirst::SideOne;
@@ -5598,6 +5619,14 @@ fn add_end_of_turn_instructions(
             }
         }
 
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L153): a lock its user did not move in
+        // this turn (fully paralyzed, ...) ends at the turn's end, with the confusion (Showdown's
+        // lockedmove: only a use renews it), an asleep user's without (onResidual)
+        let acted = incoming_instructions
+            .instruction_list
+            .iter()
+            .any(|i| matches!(i, Instruction::Acted(x) if x == side_ref));
+        let asleep = side.get_active_immutable().status == PokemonStatus::SLEEP;
         if side
             .volatile_statuses
             .contains(&PokemonVolatileStatus::LOCKEDMOVE)
@@ -5605,19 +5634,23 @@ fn add_end_of_turn_instructions(
             // the number says 2 but this is 3 turns of using a locking move
             // because turn 0 is the first turn the move is used
             // branching is not implemented here so the engine assumes it always lasts 3 turns
-            if side.volatile_status_durations.lockedmove == 2 {
+            if side.volatile_status_durations.lockedmove == 2 || !acted || asleep {
+                let confuse = !asleep;
+                let count = side.volatile_status_durations.lockedmove;
                 side.volatile_status_durations.lockedmove = 0;
                 side.volatile_statuses
                     .remove(&PokemonVolatileStatus::LOCKEDMOVE);
-                incoming_instructions.instruction_list.push(
-                    Instruction::ChangeVolatileStatusDuration(
-                        ChangeVolatileStatusDurationInstruction {
-                            side_ref: *side_ref,
-                            volatile_status: PokemonVolatileStatus::LOCKEDMOVE,
-                            amount: -2,
-                        },
-                    ),
-                );
+                if count != 0 {
+                    incoming_instructions.instruction_list.push(
+                        Instruction::ChangeVolatileStatusDuration(
+                            ChangeVolatileStatusDurationInstruction {
+                                side_ref: *side_ref,
+                                volatile_status: PokemonVolatileStatus::LOCKEDMOVE,
+                                amount: -count,
+                            },
+                        ),
+                    );
+                }
                 incoming_instructions
                     .instruction_list
                     .push(Instruction::RemoveVolatileStatus(
@@ -5627,9 +5660,10 @@ fn add_end_of_turn_instructions(
                         },
                     ));
                 // (L143 / L147: a Lum / Persim Berry cures it at the end of the turn's Update)
-                if !side
-                    .volatile_statuses
-                    .contains(&PokemonVolatileStatus::CONFUSION)
+                if confuse
+                    && !side
+                        .volatile_statuses
+                        .contains(&PokemonVolatileStatus::CONFUSION)
                 {
                     incoming_instructions
                         .instruction_list
@@ -6376,7 +6410,12 @@ fn run_move(
     // alpha-poke patch (2026-10-16, doc/engine-diff.md L78): Pickpocket, its holder without an
     // item takes the item of an attacker that made contact (Showdown's onAfterMoveSecondary:
     // after Knock Off took the holder's own; not from a pivoting attacker)
-    if damaging && choice.flags.contact && !choice.flags.pivot {
+    // (L153: a U-turn's user too -- Showdown skips only a switchFlag of true: Eject Button's --,
+    // not a holder switching out itself)
+    if damaging
+        && choice.flags.contact
+        && !state.get_side_immutable(&defender_ref).force_switch
+    {
         let attacker = state
             .get_side_immutable(&attacking_side)
             .get_active_immutable();
