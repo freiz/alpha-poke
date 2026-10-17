@@ -3815,7 +3815,11 @@ pub fn generate_instructions_from_move(
             == Items::METRONOME
     {
         let side = state.get_side(&attacking_side);
-        let same = side.last_used_move == LastUsedMove::Move(choice.move_index);
+        // (L165: and only after a use that worked -- Showdown's moveLastTurnResult)
+        let same = side.last_used_move == LastUsedMove::Move(choice.move_index)
+            && !side
+                .volatile_statuses
+                .contains(&PokemonVolatileStatus::LASTMOVEFAILED);
         let count = side.volatile_status_durations.metronome;
         let new = if same { cmp::min(count + 1, 5) } else { 0 };
         if new != count {
@@ -4032,6 +4036,24 @@ pub fn generate_instructions_from_move(
     incoming_instructions
         .instruction_list
         .push(Instruction::Acted(attacking_side));
+    // (L165: Meteor Beam / Electro Shot's Sp. Atk +1 as it starts, before the hit: the charging
+    // turn's, or the move's own boost when it hits at once -- Power Herb, Electro Shot in rain)
+    let charging = choice.volatile_status.as_ref().is_some_and(|v| {
+        matches!(
+            v.volatile_status,
+            PokemonVolatileStatus::METEORBEAM | PokemonVolatileStatus::ELECTROSHOT
+        )
+    });
+    if charging || choice.charge_boost {
+        apply_boost_instruction(
+            state.get_side(&attacking_side),
+            &PokemonBoostableStat::SpecialAttack,
+            &1,
+            &attacking_side,
+            &attacking_side,
+            &mut incoming_instructions,
+        );
+    }
     #[cfg(any(feature = "gen9", feature = "champions"))]
     protean_type_change(state, choice, &attacking_side, &mut incoming_instructions);
 
@@ -7292,6 +7314,40 @@ fn after_move_finish(
                 state.apply_one_instruction(&ins);
                 state_instructions.instruction_list.push(ins);
                 restart_ability_after_gas(state, &side_ref.get_other_side(), state_instructions);
+            }
+        }
+
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L165): Sparkling Aria's volatile cures
+        // its holder's burn as the move ends and goes (Showdown's onAfterMove); it stayed
+        for side_ref in [SideReference::SideOne, SideReference::SideTwo] {
+            let side = state.get_side(&side_ref);
+            if side
+                .volatile_statuses
+                .contains(&PokemonVolatileStatus::SPARKLINGARIA)
+            {
+                side.volatile_statuses
+                    .remove(&PokemonVolatileStatus::SPARKLINGARIA);
+                state_instructions
+                    .instruction_list
+                    .push(Instruction::RemoveVolatileStatus(
+                        RemoveVolatileStatusInstruction {
+                            side_ref,
+                            volatile_status: PokemonVolatileStatus::SPARKLINGARIA,
+                        },
+                    ));
+                let index = side.active_index;
+                let active = side.get_active();
+                if active.status == PokemonStatus::BURN && active.hp > 0 {
+                    active.status = PokemonStatus::NONE;
+                    state_instructions
+                        .instruction_list
+                        .push(Instruction::ChangeStatus(ChangeStatusInstruction {
+                            side_ref,
+                            pokemon_index: index,
+                            old_status: PokemonStatus::BURN,
+                            new_status: PokemonStatus::NONE,
+                        }));
+                }
             }
         }
 

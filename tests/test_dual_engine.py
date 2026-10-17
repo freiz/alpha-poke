@@ -4247,3 +4247,23 @@ def test_l164_gem_on_a_hit():
     assert states[1]["sides"][0]["mons"][0]["item"] == ""
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "extremespeed", "roost")
     assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L165 (doc/engine-diff.md): Meteor Beam's charging Sp. Atk +1 after the BeforeMove (none in a full
+# paralysis: wide2 b278-t36; a Power Herb's at once, into a Protect too: main b168-t31); Metronome's count only after a use that worked (seed10k b70-t18 /
+# t19: a failed Sucker Punch); Sparkling Aria's volatile goes as the move ends (wide2 b138-t41 /
+# t53)
+@pytest.mark.parametrize("teams,i,turn,offset", [
+    ("random_battle_teams_wide2.jsonl", 278, 36, 30000),
+    ("random_battle_teams.jsonl", 168, 31, 0),
+    ("random_battle_teams.jsonl", 70, 18, 10000),
+    ("random_battle_teams.jsonl", 70, 19, 10000),
+    ("random_battle_teams_wide2.jsonl", 138, 41, 30000),
+    ("random_battle_teams_wide2.jsonl", 138, 53, 30000),
+])  # fmt: skip
+def test_l165_positions(teams, i, turn, offset):
+    a, b = _random_position(teams, i, turn, offset)
+    c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
+    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2)
+    n = tuple(len(s["mons"]) for s in a["state"]["sides"])
+    assert ec.closest(b["state"], outs, n, hp=True)["diff"] == {}

@@ -20839,6 +20839,9 @@ pub struct Choice {
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L156): a multi-hit move's first hit Disguise
     // / Ice Face takes (no damage; the hits after it do)
     pub first_hit_blocked: bool,
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L165): Meteor Beam / Electro Shot hitting at
+    // once (Power Herb, Electro Shot in rain): their Sp. Atk +1 as the move starts (Protect or not)
+    pub charge_boost: bool,
 }
 
 impl fmt::Debug for Choice {
@@ -20978,6 +20981,7 @@ impl Default for Choice {
             first_move: true,
             sleep_talk_move: false,
             first_hit_blocked: false,
+            charge_boost: false,
         }
     }
 }

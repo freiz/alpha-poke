@@ -137,6 +137,13 @@ pub fn modify_choice(
         Choices::ELECTROSHOT => {
             if state.weather_is_active(&Weather::RAIN) {
                 attacker_choice.flags.charge = false;
+                // (L165: its Sp. Atk +1 with the hit)
+                if !attacking_side
+                    .volatile_statuses
+                    .contains(&PokemonVolatileStatus::ELECTROSHOT)
+                {
+                    attacker_choice.charge_boost = true;
+                }
             }
         }
         #[cfg(not(feature = "champions"))]
@@ -1244,16 +1251,10 @@ pub fn choice_before_move(
                 }));
             attacker.hp -= damage_amount;
         }
-        Choices::METEORBEAM | Choices::ELECTROSHOT if choice.flags.charge => {
-            apply_boost_instruction(
-                attacking_side,
-                &PokemonBoostableStat::SpecialAttack,
-                &1,
-                attacking_side_ref,
-                attacking_side_ref,
-                instructions,
-            );
-        }
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L165): Meteor Beam / Electro Shot's Sp.
+        // Atk +1 is their onTryMove's, after the BeforeMove (a full paralysis has none): the
+        // charging turn's as the move starts (generate_instructions_from_move); the hit at once
+        // (Power Herb, Electro Shot in rain: the move's own boost, below / modify_choice)
         _ => {}
     }
     let attacking_side = state.get_side(attacking_side_ref);
@@ -1270,6 +1271,9 @@ pub fn choice_before_move(
         attacker.item = Items::NONE;
         choice.flags.charge = false;
         instructions.instruction_list.push(instruction);
+        if matches!(choice.move_id, Choices::METEORBEAM | Choices::ELECTROSHOT) {
+            choice.charge_boost = true;
+        }
     }
     if let Some(choice_volatile_status) = &choice.volatile_status {
         if choice_volatile_status.volatile_status == PokemonVolatileStatus::LOCKEDMOVE
