@@ -14,10 +14,6 @@
 "b123-t19": [
 "light_screen"
 ],
-"b130-t9": [
-"hp",
-"status"
-],
 "b138-t7": [
 "hp",
 "volatile.leechseed"
@@ -30,13 +26,6 @@
 ],
 "b153-t14": [
 "hp"
-],
-"b161-t30": [
-"hp"
-],
-"b161-t9": [
-"hp",
-"status"
 ],
 "b176-t18": [
 "active",
@@ -171,9 +160,6 @@
 ],
 "b57-t15": [
 "volatile.confusion"
-],
-"b75-t26": [
-"hp"
 ],
 "b81-t47": [
 "hp"

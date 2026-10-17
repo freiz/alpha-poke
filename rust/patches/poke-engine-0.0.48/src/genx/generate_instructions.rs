@@ -3633,6 +3633,12 @@ pub fn generate_instructions_from_move(
             .filter(|(_, q, _)| *q > 0.0)
             .collect();
     }
+    // L71: Beat Up, a hit per hitter (its power the hitters' mean: modify_choice)
+    if choice.move_id == Choices::BEATUP && fixed.is_none() {
+        let n = super::choice_effects::beat_up_allies(state.get_side_immutable(&attacking_side))
+            .len() as i8;
+        counts = vec![(n.max(1), 1.0, 1.0)];
+    }
     // L8b: Fickle Beam's double power, 30% (Showdown's onBasePower): a power branch
     if choice.move_id == Choices::FICKLEBEAM && fixed.is_none() {
         counts = vec![(1, 0.7, 1.0), (1, 0.3, 2.0)];

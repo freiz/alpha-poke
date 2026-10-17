@@ -111,7 +111,9 @@ impl PokemonName {
             PokemonName::FALINKSMEGA => (65, 135, 135, 70, 65, 100),
             PokemonName::RAICHUMEGAX => (60, 135, 95, 90, 95, 110),
             PokemonName::RAICHUMEGAY => (60, 100, 55, 160, 80, 130),
-            _ => panic!("Base stats not implemented for {}", self),
+            // alpha-poke patch (2026-10-16, doc/engine-diff.md L71): every Gen 9 species
+            _ => super::species_base_stats::species_base_stats(self)
+                .unwrap_or_else(|| panic!("Base stats not implemented for {}", self)),
         }
     }
 

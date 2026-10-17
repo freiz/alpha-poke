@@ -2257,3 +2257,16 @@ def test_l70_cursed_body():
     hit = [o for o in outs if o.damage[0] > 0]  # (Ruination's 90%)
     disabled = sum(o[0] for o in hit if "DISABLE" in {str(v).upper() for v in o[1].side_two.volatile_statuses})
     assert disabled / sum(o[0] for o in hit) == pytest.approx(0.3, abs=1e-3)
+
+
+# L71 (doc/engine-diff.md): Beat Up, a hit for the user and each ally neither fainted nor
+# statused, each of 5 + its species' base Attack / 10 (Showdown's onModifyMove /
+# basePowerCallback); the engine's had no power (the engine has every Gen 9 species' base
+# stats now, generated from Showdown's Dex)
+def test_l71_beat_up():
+    sableye = _attacker("Sableye", "Prankster", "Leftovers", "- Beat Up\n- Recover\n- Will-O-Wisp\n- Knock Off")
+    team = sableye + "\n\n" + KINGAMBIT_KNOCK + "\n\n" + CORVIKNIGHT
+    states = ec.run_showdown(team, BLISSEY, [("move beatup", "move calmmind")])
+    assert any("|-hitcount|p2a: Blissey|3" in x for x in states[1]["log"])
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "beatup", "calmmind")
+    assert ec.closest(states[1], outs, (3, 1), hp=True)["diff"] == {}

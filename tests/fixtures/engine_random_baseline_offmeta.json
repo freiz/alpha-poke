@@ -169,13 +169,6 @@
 "hp",
 "volatile.partiallytrapped"
 ],
-"b176-t13": [
-"hp",
-"status"
-],
-"b176-t32": [
-"hp"
-],
 "b176-t51": [
 "hp"
 ],
@@ -365,10 +358,6 @@
 ],
 "b86-t33": [
 "hp"
-],
-"b88-t7": [
-"hp",
-"status"
 ],
 "b96-t3": [
 "item"

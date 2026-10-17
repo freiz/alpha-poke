@@ -33,6 +33,19 @@ const CHOICE_THAWS_USER: [Choices; 10] = [
     Choices::MATCHAGOTCHA,
 ];
 
+// L71: Beat Up's hitters, in party order (the user, and the allies neither fainted nor statused)
+pub fn beat_up_allies(side: &Side) -> Vec<&Pokemon> {
+    let active = side.active_index;
+    let mut out = vec![];
+    for i in pokemon_index_iter() {
+        let p = &side.pokemon[i];
+        if i == active || (p.hp > 0 && p.status == PokemonStatus::NONE) {
+            out.push(p);
+        }
+    }
+    out
+}
+
 pub fn modify_choice(
     state: &State,
     attacker_choice: &mut Choice,
@@ -335,6 +348,16 @@ pub fn modify_choice(
                 attacker_choice.heal = None;
                 attacker_choice.side_condition = None;
             }
+        }
+        // alpha-poke patch (2026-10-16, doc/engine-diff.md L71): Beat Up, a hit for the user and
+        // each ally neither fainted nor statused, of 5 + its base Attack / 10: their mean power
+        // here, their number of hits in generate_instructions (beat_up_hits)
+        Choices::BEATUP => {
+            let powers: Vec<f32> = beat_up_allies(attacking_side)
+                .iter()
+                .map(|p| 5.0 + (p.id.base_stats().1 / 10) as f32)
+                .collect();
+            attacker_choice.base_power = powers.iter().sum::<f32>() / powers.len().max(1) as f32;
         }
         Choices::NORETREAT => {
             if attacking_side

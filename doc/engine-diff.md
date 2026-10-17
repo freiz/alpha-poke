@@ -214,6 +214,7 @@ harness 必须把 Showdown 的状态完整映射到引擎，否则不一致来�
 | L68 | Healing Wish / Lunar Dance 在没有可换上的宝可梦时失败（Showdown 的 canSwitch，使用者不倒下）；引擎照样倒下 | 引擎 | 已修复 | `test_l68_healing_wish_needs_a_replacement` | `choice_effects.rs` `modify_choice` |
 | L69 | Magic Bounce 弹回的 Whirlwind / Roar 应该拖走原使用者一方，引擎拖的还是对方；弹回到 Encore 使用者身上的 Encore 应失败（不能 Encore 一个 Encore），引擎照样施加 | 引擎 | 已修复 | `test_l69_magic_bounce_whirlwind`；`test_l69_encore_bounced_onto_an_encore_user_fails` | `generate_instructions.rs`：拖人按 `choice.target`；`move_has_no_effect` 的 Encore 看它落到的一方，且上一招是 Encore 时失败 |
 | L70 | Disable 在引擎里只加一个状态标记，不封招式也没有持续回合；Cursed Body 没有实现（打中持有者的招式 30% 被封）。验证集里最大的簇（26 处） | 引擎 + harness | 已修复 | `test_l70_disable`（4 个：持续回合对齐 Showdown）；`test_l70_cursed_body`（命中后 30%） | `generate_instructions.rs`：施加 Disable 时封住目标上一次用的招式（没有上一招或已被封时失败），本回合稍后选了它也不能用（`cannot_use_move`），回合末计数，4 回合（目标已出过招：5）后解除；`VolatileStatusDurations.disable` 编码「招式槽 × 8 + 计数 + 1」（状态字符串多一个字段，旧字符串照常解析，夹具按新格式重写）；Cursed Body 作为对使用者施加 DISABLE 的 30% 追加效果；场上有 Disable / Cursed Body 时跟踪上一招；harness 导出被封的招式并按编码映射 |
+| L71 | Beat Up 在引擎里威力为 0（Showdown：使用者和每只没倒下、没异常的队友各打一段，威力 5 + 该物种攻击种族值 / 10）；引擎的种族值表只有会变形态的物种 | 引擎 | 已修复 | `test_l71_beat_up` | `genx/species_base_stats.rs`：从 Showdown 图鉴生成全部 Gen 9 物种的种族值（`base_stats()` 的兜底；数据测试 `test_engine_base_stats_match_showdown` 核对）；`choice_effects.rs` 威力取打手的平均、段数分支取打手数 |
 
 ## 修复与验证（2026-10-16）
 
