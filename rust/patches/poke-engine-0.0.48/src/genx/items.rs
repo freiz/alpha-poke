@@ -1535,7 +1535,8 @@ pub fn item_end_of_turn(
         }
         // alpha-poke patch (2026-10-16, L24): Sticky Barb, 1/8 at the end of every turn (Showdown's
         // residual order 28, with the orbs)
-        Items::STICKYBARB => {
+        // (L83: not through Magic Guard)
+        Items::STICKYBARB if active_pkmn.ability != Abilities::MAGICGUARD => {
             let damage_amount = cmp::min(cmp::max(active_pkmn.maxhp / 8, 1), active_pkmn.hp);
             instructions
                 .instruction_list
@@ -1634,14 +1635,21 @@ pub fn item_end_of_turn(
             } else {
                 // alpha-poke patch (2026-10-16, doc/engine-diff.md L9): a non-Poison holder loses
                 // 1/8 of its max HP (Showdown: this.damage(baseMaxhp / 8), at least 1), also at
-                // full HP; was min(maxhp / 16, maxhp - hp), the heal's formula
-                let damage_amount = cmp::min(cmp::max(active_pkmn.maxhp / 8, 1), active_pkmn.hp);
-                let ins = Instruction::Damage(DamageInstruction {
-                    side_ref: side_ref.clone(),
-                    damage_amount: damage_amount,
-                });
-                active_pkmn.hp -= damage_amount;
-                instructions.instruction_list.push(ins);
+                // full HP; was min(maxhp / 16, maxhp - hp), the heal's formula (L83: not through
+                // Magic Guard)
+                let damage_amount = if active_pkmn.ability == Abilities::MAGICGUARD {
+                    0
+                } else {
+                    cmp::min(cmp::max(active_pkmn.maxhp / 8, 1), active_pkmn.hp)
+                };
+                if damage_amount > 0 {
+                    let ins = Instruction::Damage(DamageInstruction {
+                        side_ref: side_ref.clone(),
+                        damage_amount: damage_amount,
+                    });
+                    active_pkmn.hp -= damage_amount;
+                    instructions.instruction_list.push(ins);
+                }
             }
         }
         Items::FLAMEORB => {

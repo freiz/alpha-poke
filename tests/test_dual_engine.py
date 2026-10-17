@@ -2480,3 +2480,36 @@ def test_l82_magic_guard_stops_residual_damage(foe, move):
     for k in (0, 1):
         outs = ec.engine_outcomes(ec.engine_state(states[k]), "calmmind", move)
         assert ec.closest(states[k + 1], outs, (1, 1), hp=True)["diff"] == {}, k
+
+
+# L83 (doc/engine-diff.md): Magic Guard stops Sticky Barb's and (on a non-Poison holder) Black
+# Sludge's end-of-turn damage; the engine took it
+@pytest.mark.parametrize("item", ["Sticky Barb", "Black Sludge"])
+def test_l83_magic_guard_stops_item_damage(item):
+    clef = _setter("Clefable", "Magic Guard", item, "- Calm Mind\n- Moonblast\n- Protect\n- Soft-Boiled")
+    states = ec.run_showdown(clef, BLISSEY, [("move calmmind", "move softboiled")])
+    assert states[1]["sides"][0]["mons"][0]["hp"] == states[0]["sides"][0]["mons"][0]["hp"]
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "calmmind", "softboiled")
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L84 (doc/engine-diff.md): Grassy Terrain heals after the weather's damage (Showdown's residual
+# order: weather 1, Future Sight 3, Wish 4, Grassy Terrain 5.2, the terrain's end 27); the engine
+# healed first (nothing at full HP) and ended the terrain before
+def test_l84_grassy_terrain_heals_after_sand():
+    ttar = _setter("Tyranitar", "Sand Stream", "Leftovers", "- Stealth Rock\n- Knock Off\n- Protect\n- Thunder Wave")
+    rilla = _setter("Rillaboom", "Grassy Surge", "Heavy-Duty Boots", "- Swords Dance\n- Wood Hammer\n- U-turn\n- Protect")
+    states = ec.run_showdown(ttar, rilla, [("move stealthrock", "move swordsdance")])
+    assert states[1]["sides"][1]["mons"][0]["hp"] == states[1]["sides"][1]["mons"][0]["maxhp"]
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "stealthrock", "swordsdance")
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+def test_l84_grassy_terrain_heals_on_its_last_turn():
+    rilla = _setter("Rillaboom", "Grassy Surge", "Heavy-Duty Boots", "- Swords Dance\n- Wood Hammer\n- U-turn\n- Protect")
+    tusk = _setter("Great Tusk", "Protosynthesis", "Leftovers", "- Rapid Spin\n- Headlong Rush\n- Bulk Up\n- Ice Spinner")
+    turns = [("move woodhammer", "move bulkup")] + [("move swordsdance", "move bulkup")] * 4
+    states = ec.run_showdown(rilla, tusk, turns)
+    assert any("|-fieldend|move: Grassy Terrain" in x for x in states[5]["log"])
+    outs = ec.engine_outcomes(ec.engine_state(states[4]), "swordsdance", "bulkup")
+    assert ec.closest(states[5], outs, (1, 1), hp=True)["diff"] == {}

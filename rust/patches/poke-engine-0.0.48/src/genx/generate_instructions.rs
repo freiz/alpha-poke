@@ -4675,55 +4675,6 @@ fn add_end_of_turn_instructions(
         }
     }
 
-    // Terrain decrement / dissipation
-    if state.terrain.turns_remaining > 0 && state.terrain.terrain_type != Terrain::NONE {
-        if state.terrain.terrain_type == Terrain::GRASSYTERRAIN {
-            for side_ref in sides {
-                let side = state.get_side(side_ref);
-                // alpha-poke patch (2026-10-16, doc/engine-diff.md L19): no healing under Heal Block
-                let heal_blocked = side
-                    .volatile_statuses
-                    .contains(&PokemonVolatileStatus::HEALBLOCK);
-                let active_pkmn = side.get_active();
-                if active_pkmn.hp == 0 || !active_pkmn.is_grounded() || heal_blocked {
-                    continue;
-                }
-                let heal_amount = cmp::min(
-                    (active_pkmn.maxhp as f32 * 0.0625) as i16,
-                    active_pkmn.maxhp - active_pkmn.hp,
-                );
-                if heal_amount > 0 {
-                    let heal_instruction = Instruction::Heal(HealInstruction {
-                        side_ref: *side_ref,
-                        heal_amount,
-                    });
-                    active_pkmn.hp += heal_amount;
-                    incoming_instructions
-                        .instruction_list
-                        .push(heal_instruction);
-                }
-            }
-        }
-        let terrain_dissipate_instruction = Instruction::DecrementTerrainTurnsRemaining;
-        incoming_instructions
-            .instruction_list
-            .push(terrain_dissipate_instruction);
-        state.terrain.turns_remaining -= 1;
-        if state.terrain.turns_remaining == 0 {
-            on_terrain_end(state, sides, &mut incoming_instructions);
-            let terrain_end_instruction = Instruction::ChangeTerrain(ChangeTerrain {
-                new_terrain: Terrain::NONE,
-                new_terrain_turns_remaining: 0,
-                previous_terrain: state.terrain.terrain_type,
-                previous_terrain_turns_remaining: 0,
-            });
-            incoming_instructions
-                .instruction_list
-                .push(terrain_end_instruction);
-            state.terrain.terrain_type = Terrain::NONE;
-        }
-    }
-
     // Side Condition decrement
     for side_ref in sides {
         let side = state.get_side(side_ref);
@@ -4947,6 +4898,58 @@ fn add_end_of_turn_instructions(
             incoming_instructions
                 .instruction_list
                 .push(decrement_wish_instruction);
+        }
+    }
+
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L84): the terrain after the weather's
+    // damage, Future Sight and Wish (Showdown: Grassy Terrain's heal 5.2, the terrain's end
+    // 27); it was before the weather's damage
+    // Terrain decrement / dissipation
+    if state.terrain.turns_remaining > 0 && state.terrain.terrain_type != Terrain::NONE {
+        if state.terrain.terrain_type == Terrain::GRASSYTERRAIN {
+            for side_ref in sides {
+                let side = state.get_side(side_ref);
+                // alpha-poke patch (2026-10-16, doc/engine-diff.md L19): no healing under Heal Block
+                let heal_blocked = side
+                    .volatile_statuses
+                    .contains(&PokemonVolatileStatus::HEALBLOCK);
+                let active_pkmn = side.get_active();
+                if active_pkmn.hp == 0 || !active_pkmn.is_grounded() || heal_blocked {
+                    continue;
+                }
+                let heal_amount = cmp::min(
+                    (active_pkmn.maxhp as f32 * 0.0625) as i16,
+                    active_pkmn.maxhp - active_pkmn.hp,
+                );
+                if heal_amount > 0 {
+                    let heal_instruction = Instruction::Heal(HealInstruction {
+                        side_ref: *side_ref,
+                        heal_amount,
+                    });
+                    active_pkmn.hp += heal_amount;
+                    incoming_instructions
+                        .instruction_list
+                        .push(heal_instruction);
+                }
+            }
+        }
+        let terrain_dissipate_instruction = Instruction::DecrementTerrainTurnsRemaining;
+        incoming_instructions
+            .instruction_list
+            .push(terrain_dissipate_instruction);
+        state.terrain.turns_remaining -= 1;
+        if state.terrain.turns_remaining == 0 {
+            on_terrain_end(state, sides, &mut incoming_instructions);
+            let terrain_end_instruction = Instruction::ChangeTerrain(ChangeTerrain {
+                new_terrain: Terrain::NONE,
+                new_terrain_turns_remaining: 0,
+                previous_terrain: state.terrain.terrain_type,
+                previous_terrain_turns_remaining: 0,
+            });
+            incoming_instructions
+                .instruction_list
+                .push(terrain_end_instruction);
+            state.terrain.terrain_type = Terrain::NONE;
         }
     }
 

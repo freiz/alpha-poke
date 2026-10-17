@@ -226,6 +226,8 @@ harness 必须把 Showdown 的状态完整映射到引擎，否则不一致来�
 | L80 | Neutralizing Gas 不压制目标挡异常的特性（Purifying Salt、Water Veil、Limber 等；Comatose / Shields Down 压不住）和 Synchronize（引擎把灼伤传回了 Weezing）；目标的 Gas 也压制使用者的 Corrosion | 引擎 | 已修复 | `test_l80_neutralizing_gas_lets_a_burn_through_purifying_salt`；`test_l80_neutralizing_gas_stops_synchronize` | `generate_instructions.rs` `immune_to_status`：按被压制后的特性判断（Ability Shield 例外）；Synchronize 同样检查 |
 | L81 | Rest 的睡眠立即触发 Lum / Chesto（Showdown 的 onUpdate），本回合稍后的异常能上；引擎等到持有者下次出招前或回合末才吃，中间仍是睡着（免疫） | 引擎 | 已修复 | `test_l81_rest_berry_at_once`（Lum、Chesto 两个参数） | `items.rs` `rest_berry`；`choice_effects.rs` Rest 成功后调用 |
 | L82 | Magic Guard 挡不住束缚、Salt Cure、鬼系 Curse 的回合末伤害（Showdown 都是 this.damage，Magic Guard 的 onDamage 挡掉） | 引擎 | 已修复 | `test_l82_magic_guard_stops_residual_damage`（3 个参数，各比较 2 回合） | `generate_instructions.rs` 回合末的 volatile 伤害 |
+| L83 | Magic Guard 挡不住 Sticky Barb 和（非毒系持有者的）Black Sludge 的回合末伤害；验证集 forum 里最大的簇（Magic Guard + Sticky Barb 的 Clefable） | 引擎 | 已修复 | `test_l83_magic_guard_stops_item_damage`（2 个参数） | `items.rs` `item_end_of_turn` |
+| L84 | Grassy Terrain 的回复在天气伤害之前（满血时没有回复，再吃沙暴）；Showdown 的回合末顺序：天气 1、Future Sight 3、Wish 4、Grassy Terrain 5.2、场地结束 27 | 引擎 | 已修复 | `test_l84_grassy_terrain_heals_after_sand`；`test_l84_grassy_terrain_heals_on_its_last_turn`（最后一回合照样回复，回归保护） | `generate_instructions.rs` `add_end_of_turn_instructions`：场地一段（回复、计数、结束）挪到 Wish 之后、特性 / 道具之前 |
 
 ## 修复与验证（2026-10-16）
 
