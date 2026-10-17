@@ -211,21 +211,13 @@ pub struct Features {
 /// (the alpha-poke patch's Eject Button / Red Card, 2026-10-11) keep the id they had before,
 /// unknown item
 pub fn item_id(item: Items) -> i32 {
-    match item {
-        // items the patched engine models (appended to its list), as the networks were trained
-        // on them: unknown (2026-10-11: Eject Button, Red Card; 2026-10-13: the rest)
-        Items::EJECTBUTTON
-        | Items::REDCARD
-        | Items::PECHABERRY
-        | Items::CHERIBERRY
-        | Items::RAWSTBERRY
-        | Items::ASPEARBERRY
-        | Items::PERSIMBERRY
-        | Items::MENTALHERB
-        | Items::SAFETYGOGGLES
-        | Items::EJECTPACK => Items::UNKNOWNITEM as i32,
-        x => x as i32,
+    // items the patched engine models (appended to its list from Eject Button on: 2026-10-11,
+    // 2026-10-13, 2026-10-16 the items from Showdown, doc/engine-diff.md L24), as the networks
+    // were trained on them: unknown
+    if item as i32 >= Items::EJECTBUTTON as i32 {
+        return Items::UNKNOWNITEM as i32;
     }
+    item as i32
 }
 
 fn entity(p: &Pokemon, active: bool, own: bool, sparse: &mut Vec<i32>, dense: &mut Vec<f32>) {

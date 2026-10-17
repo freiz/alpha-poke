@@ -618,7 +618,9 @@ mod test {
     // Make sure that the size of the Instruction enum doesn't change
     #[test]
     fn test_instruction_size() {
-        assert_eq!(size_of::<Instruction>(), 6);
+        // alpha-poke patch (2026-10-16, doc/engine-diff.md L24): 8, Items is a u16 now (the items
+        // from Showdown do not fit in a u8); was 6
+        assert_eq!(size_of::<Instruction>(), 8);
         assert_eq!(align_of::<Instruction>(), 2);
     }
 }

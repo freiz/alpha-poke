@@ -21,7 +21,8 @@ use std::cmp;
 use super::state::PokemonVolatileStatus;
 
 define_enum_with_from_str! {
-    #[repr(u8)]
+    // alpha-poke patch (2026-10-16): u16, the items from Showdown do not fit in a u8
+    #[repr(u16)]
     #[derive(Debug, PartialEq, Clone, Copy)]
     Items {
         NONE,
@@ -282,6 +283,15 @@ define_enum_with_from_str! {
         SAFETYGOGGLES,
         // alpha-poke patch (2026-10-13): generate_instructions::run_move
         EJECTPACK,
+        // alpha-poke patch (2026-10-16, doc/engine-diff.md L24), appended likewise: the items the
+        // engine did not know, from Showdown's source (each with a dual-engine test). The duration
+        // items: generate_instructions::extend_field_durations, the screens' duration
+        DAMPROCK,
+        HEATROCK,
+        ICYROCK,
+        SMOOTHROCK,
+        TERRAINEXTENDER,
+        LIGHTCLAY,
     },
     default = UNKNOWNITEM
 }

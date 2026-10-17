@@ -803,7 +803,8 @@ def test_control_trick_room_against_good_as_gold():
     assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
 
 
-# L24 (doc/engine-diff.md): items the engine did not know, added from Showdown's source
+# L24 (doc/engine-diff.md): items the engine did not know, added from Showdown's source; fixed
+# ones are regression tests
 
 def _setter(species, ability, item, moves="- Protect\n- Roost\n- Knock Off\n- U-turn"):
     return f"""{species} @ {item}
@@ -823,7 +824,6 @@ DURATION_SETTERS = [  # (setter, the field's key, the engine's turns attribute)
 ]
 
 
-@pytest.mark.xfail(strict=True, reason="L24: the engine does not know the duration items")
 @pytest.mark.parametrize("setter, kind, attr", DURATION_SETTERS)
 def test_l24_duration_items_set_on_switch_in(setter, kind, attr):
     """A weather / terrain set by an ability in the search (the setter switches in) lasts 8
@@ -835,12 +835,49 @@ def test_l24_duration_items_set_on_switch_in(setter, kind, attr):
     assert {getattr(o[1], attr) for o in outs} == {7}
 
 
-@pytest.mark.xfail(strict=True, reason="L24: the engine does not know Light Clay")
 @pytest.mark.parametrize("screen, cond", [("reflect", "reflect"), ("lightscreen", "light_screen")])
 def test_l24_light_clay(screen, cond):
-    p1 = _setter("Grimmsnarl", "Prankster", "Light Clay",
+    # (not Prankster: against a Dark type the engine fails it, L26)
+    p1 = _setter("Grimmsnarl", "Pressure", "Light Clay",
                  "- Reflect\n- Light Screen\n- Spirit Break\n- Parting Shot")  # fmt: skip
     states = ec.run_showdown(p1, TINGLU, [(f"move {screen}", "move spikes")])
     assert states[1]["sides"][0]["conditions"][screen]["duration"] == 7  # Showdown: 8 turns
     outs = ec.engine_outcomes(ec.engine_state(states[0]), screen, "spikes")
     assert {getattr(o[1].side_one.side_conditions, cond) for o in outs} == {7}
+
+
+# L26 (doc/engine-diff.md): fixed in rust/patches (2026-10-16); a regression test now
+def test_l26_prankster_self_move_against_dark():
+    """Prankster's status moves fail against a Dark-type target, not the user's own (Reflect):
+    Ting-Lu is Dark."""
+    p1 = _setter("Grimmsnarl", "Prankster", "Leftovers",
+                 "- Reflect\n- Light Screen\n- Spirit Break\n- Parting Shot")  # fmt: skip
+    states, outs = first_turn("move reflect", "move spikes", "reflect", "spikes", p1=p1)
+    assert states[1]["sides"][0]["conditions"]["reflect"]["duration"] == 4  # Showdown: set
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+def test_control_prankster_move_at_a_dark_type_fails():
+    """(L26's other side) a Prankster status move aimed at the Dark-type target still fails."""
+    p1 = _setter("Grimmsnarl", "Prankster", "Leftovers",
+                 "- Reflect\n- Thunder Wave\n- Spirit Break\n- Parting Shot")  # fmt: skip
+    states, outs = first_turn("move thunderwave", "move spikes", "thunderwave", "spikes", p1=p1)
+    assert states[1]["sides"][1]["mons"][0]["status"] == ""  # Showdown: it failed
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L27 (doc/engine-diff.md): fixed in rust/patches (2026-10-16; exposed by the L26 fix: the random
+# differential's baseline check showed a new mismatch, b117-t11 Brick Break | Light Screen)
+@pytest.mark.parametrize("move", ["brickbreak", "psychicfangs", "ragingbull"])
+def test_l27_screen_breakers(move):
+    """Brick Break, Psychic Fangs and Raging Bull remove the target side's screens before they
+    hit (Showdown's onTryHit: the damage is not halved)."""
+    p1 = _setter("Tauros-Paldea-Combat", "Intimidate", "Leftovers",
+                 "- Brick Break\n- Psychic Fangs\n- Raging Bull\n- Bulk Up")  # fmt: skip
+    # (not a Dark type: Psychic Fangs could not hit it)
+    p2 = _setter("Meowstic", "Prankster", "Leftovers",
+                 "- Reflect\n- Light Screen\n- Psychic Noise\n- Thunder Wave")  # fmt: skip
+    states = ec.run_showdown(p1, p2, [(f"move {move}", "move reflect")], seed="gen5,5,5,5,5")
+    assert "reflect" not in states[1]["sides"][1]["conditions"]  # Showdown: broken
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), move, "reflect")
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}

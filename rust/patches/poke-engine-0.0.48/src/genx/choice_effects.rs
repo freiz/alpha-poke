@@ -175,14 +175,9 @@ pub fn modify_choice(
             }
         }
         Choices::RAGINGBULL => {
-            // this gives the correct result even though it's not the "correct" way to implement it
-            // reflect is only removed if the move hits, but I don't have a way to check that
-            // doubling the power ensures the same damage calculation
-            if defending_side.side_conditions.reflect > 0
-                || defending_side.side_conditions.aurora_veil > 0
-            {
-                attacker_choice.base_power *= 2.0;
-            }
+            // alpha-poke patch (2026-10-16, doc/engine-diff.md L27): the screens are broken before
+            // the damage now (generate_instructions::screen_break_instructions); the doubled power
+            // that stood in for it (vs Reflect / Aurora Veil) would count twice
             match attacking_side.get_active_immutable().id {
                 PokemonName::TAUROSPALDEACOMBAT => {
                     attacker_choice.move_type = PokemonType::FIGHTING;
@@ -796,44 +791,8 @@ pub fn choice_after_damage_hit(
                 instructions.instruction_list.push(typechange_instruction);
             }
         }
-        Choices::RAGINGBULL => {
-            if defending_side.side_conditions.reflect > 0 {
-                instructions
-                    .instruction_list
-                    .push(Instruction::ChangeSideCondition(
-                        ChangeSideConditionInstruction {
-                            side_ref: attacking_side_ref.get_other_side(),
-                            side_condition: PokemonSideCondition::Reflect,
-                            amount: -1 * defending_side.side_conditions.reflect,
-                        },
-                    ));
-                defending_side.side_conditions.reflect = 0;
-            }
-            if defending_side.side_conditions.light_screen > 0 {
-                instructions
-                    .instruction_list
-                    .push(Instruction::ChangeSideCondition(
-                        ChangeSideConditionInstruction {
-                            side_ref: attacking_side_ref.get_other_side(),
-                            side_condition: PokemonSideCondition::LightScreen,
-                            amount: -1 * defending_side.side_conditions.light_screen,
-                        },
-                    ));
-                defending_side.side_conditions.light_screen = 0;
-            }
-            if defending_side.side_conditions.aurora_veil > 0 {
-                instructions
-                    .instruction_list
-                    .push(Instruction::ChangeSideCondition(
-                        ChangeSideConditionInstruction {
-                            side_ref: attacking_side_ref.get_other_side(),
-                            side_condition: PokemonSideCondition::AuroraVeil,
-                            amount: -1 * defending_side.side_conditions.aurora_veil,
-                        },
-                    ));
-                defending_side.side_conditions.aurora_veil = 0;
-            }
-        }
+        // alpha-poke patch (2026-10-16, L27): Raging Bull's screen break is before the hit now
+        // (generate_instructions::screen_break_instructions); it was here, after its damage
         Choices::KNOCKOFF => {
             let defender_active = defending_side.get_active();
             if defender_active.item_can_be_removed()

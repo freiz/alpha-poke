@@ -576,7 +576,9 @@ fn generate_instructions_from_switch(
         }
     }
 
+    let from = incoming_instructions.instruction_list.len();
     ability_on_switch_in(state, &switching_side_ref, incoming_instructions);
+    extend_field_durations(state, &switching_side_ref, incoming_instructions, from);
     item_on_switch_in(state, &switching_side_ref, incoming_instructions);
 }
 
@@ -610,6 +612,49 @@ fn generate_instructions_from_increment_side_condition(
     }
 }
 
+// alpha-poke patch (2026-10-16, doc/engine-diff.md L24): the duration items. A weather or terrain
+// its holder sets (a switch-in ability, a move, Sand Spit / Seed Sower) lasts 8 turns with the
+// matching rock or a Terrain Extender (Showdown's durationCallback), else 5: the instructions from
+// `from` on that set one for 5 turns get 8, and the state with them
+pub fn extend_field_durations(
+    state: &mut State,
+    holder: &SideReference,
+    instructions: &mut StateInstructions,
+    from: usize,
+) {
+    let item = state.get_side_immutable(holder).get_active_immutable().item;
+    for ins in instructions.instruction_list[from..].iter_mut() {
+        match ins {
+            Instruction::ChangeWeather(w) if w.new_weather_turns_remaining == 5 => {
+                let rock = match w.new_weather {
+                    Weather::RAIN => Items::DAMPROCK,
+                    Weather::SUN => Items::HEATROCK,
+                    Weather::SAND => Items::SMOOTHROCK,
+                    Weather::SNOW | Weather::HAIL => Items::ICYROCK,
+                    _ => continue,
+                };
+                if item == rock {
+                    w.new_weather_turns_remaining = 8;
+                    if state.weather.weather_type == w.new_weather {
+                        state.weather.turns_remaining = 8;
+                    }
+                }
+            }
+            Instruction::ChangeTerrain(t)
+                if t.new_terrain_turns_remaining == 5
+                    && t.new_terrain != Terrain::NONE
+                    && item == Items::TERRAINEXTENDER =>
+            {
+                t.new_terrain_turns_remaining = 8;
+                if state.terrain.terrain_type == t.new_terrain {
+                    state.terrain.turns_remaining = 8;
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
 fn generate_instructions_from_duration_side_conditions(
     state: &mut State,
     side_condition: &SideCondition,
@@ -626,6 +671,22 @@ fn generate_instructions_from_duration_side_conditions(
         && !state.weather_is_active(&Weather::SNOW)
     {
         return;
+    }
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L24): the user's Light Clay makes a screen
+    // last 8 turns (Showdown's durationCallback)
+    let mut duration = duration;
+    if matches!(
+        side_condition.condition,
+        PokemonSideCondition::Reflect
+            | PokemonSideCondition::LightScreen
+            | PokemonSideCondition::AuroraVeil
+    ) && state
+        .get_side_immutable(attacking_side_reference)
+        .get_active_immutable()
+        .item
+        == Items::LIGHTCLAY
+    {
+        duration = 8;
     }
     let affected_side = state.get_side(&affected_side_ref);
     if affected_side.get_side_condition(side_condition.condition) == 0 {
@@ -1308,6 +1369,40 @@ fn lock_end_instructions(
     out
 }
 
+// alpha-poke patch (2026-10-16, doc/engine-diff.md L27): Brick Break, Psychic Fangs and Raging
+// Bull break the target side's screens before they hit (Showdown's onTryHit: their damage is not
+// halved, a miss leaves them); the instructions that remove them
+fn screen_break_instructions(
+    state: &State,
+    choice: &Choice,
+    attacker: &SideReference,
+) -> Vec<Instruction> {
+    if !matches!(
+        choice.move_id,
+        Choices::BRICKBREAK | Choices::PSYCHICFANGS | Choices::RAGINGBULL
+    ) || choice.category == MoveCategory::Status
+    {
+        return vec![];
+    }
+    let target = attacker.get_other_side();
+    let sc = &state.get_side_immutable(&target).side_conditions;
+    [
+        (PokemonSideCondition::Reflect, sc.reflect),
+        (PokemonSideCondition::LightScreen, sc.light_screen),
+        (PokemonSideCondition::AuroraVeil, sc.aurora_veil),
+    ]
+    .into_iter()
+    .filter(|(_, turns)| *turns > 0)
+    .map(|(side_condition, turns)| {
+        Instruction::ChangeSideCondition(ChangeSideConditionInstruction {
+            side_ref: target,
+            side_condition: *side_condition,
+            amount: -turns,
+        })
+    })
+    .collect()
+}
+
 fn check_move_hit_or_miss(
     state: &mut State,
     choice: &Choice,
@@ -1654,12 +1749,20 @@ fn generate_instructions_from_damage(
                     );
                 }
 
+                let from = incoming_instructions.instruction_list.len();
                 ability_after_damage_hit(
                     &mut state,
                     choice,
                     attacking_side_ref,
                     damage_dealt,
                     &mut incoming_instructions,
+                );
+                // (Sand Spit / Seed Sower: the defender sets it)
+                extend_field_durations(
+                    &mut state,
+                    &attacking_side_ref.get_other_side(),
+                    &mut incoming_instructions,
+                    from,
                 );
             }
         }
@@ -2584,14 +2687,21 @@ pub fn generate_instructions_from_move(
         final_instructions.push(incoming_instructions);
         return;
     }
+    let from = incoming_instructions.instruction_list.len();
     choice_special_effect(state, choice, &attacking_side, &mut incoming_instructions);
+    extend_field_durations(state, &attacking_side, &mut incoming_instructions, from);
     // alpha-poke patch (2026-10-16, L14): a fixed damage (Seismic Toss, Ruination, ...) is dealt
     // as any damaging move's, without the rolls and the crits
     let fixed = fixed_damage(state, choice, &attacking_side);
+    // L27: a screen breaker's damage without the screens it breaks (removed for the
+    // calculation only: a miss keeps them)
+    let screen_break = screen_break_instructions(state, choice, &attacking_side);
+    state.apply_instructions(&screen_break);
     let damage = match fixed {
         Some(amount) => Some((amount, amount)),
         None => calculate_damage(state, &attacking_side, &choice, DamageRolls::Max),
     };
+    state.reverse_instructions(&screen_break);
     check_move_hit_or_miss(
         state,
         &choice,
@@ -2604,6 +2714,12 @@ pub fn generate_instructions_from_move(
     if incoming_instructions.percentage == 0.0 {
         state.reverse_instructions(&incoming_instructions.instruction_list);
         return;
+    }
+
+    // L27: it hit: the screens break
+    for ins in screen_break {
+        state.apply_one_instruction(&ins);
+        incoming_instructions.instruction_list.push(ins);
     }
 
     // L22: a locked move Protect blocked (its effects removed by remove_effects_for_protect, the
@@ -4546,7 +4662,9 @@ fn mega_evolve(state: &mut State, side_ref: SideReference, instructions: &mut St
     active_pkmn.mega_evolved = true;
 
     // ability on switch in
+    let from = instructions.instruction_list.len();
     ability_on_switch_in(state, &side_ref, instructions);
+    extend_field_durations(state, &side_ref, instructions, from);
 }
 
 pub fn generate_instructions_for_bss_team_preview(
@@ -4592,7 +4710,9 @@ pub fn generate_instructions_for_bss_team_preview(
     };
 
     for side_ref in pkmn_speed_order.iter() {
+        let from = state_instructions.instruction_list.len();
         ability_on_switch_in(state, side_ref, &mut state_instructions);
+        extend_field_durations(state, side_ref, &mut state_instructions, from);
         item_on_switch_in(state, side_ref, &mut state_instructions);
     }
     state.reverse_instructions(&state_instructions.instruction_list);

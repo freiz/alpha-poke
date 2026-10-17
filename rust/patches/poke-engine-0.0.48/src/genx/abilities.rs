@@ -1843,7 +1843,35 @@ pub fn ability_modify_attack_being_used(
             feature = "gen7"
         ))]
         Abilities::PRANKSTER => {
+            // alpha-poke patch (2026-10-16, doc/engine-diff.md L26): only a move aimed at the
+            // Dark-type target fails, not one on the user (Reflect) or a side / the field
+            // (hazards, weather, terrain, Trick Room, ...: their data target is "Opponent" too);
+            // before, any status move failed
             if attacker_choice.category == MoveCategory::Status
+                && attacker_choice.target == MoveTarget::Opponent
+                && ![
+                    Choices::STEALTHROCK,
+                    Choices::SPIKES,
+                    Choices::TOXICSPIKES,
+                    Choices::STICKYWEB,
+                    Choices::TRICKROOM,
+                    Choices::RAINDANCE,
+                    Choices::SUNNYDAY,
+                    Choices::SANDSTORM,
+                    Choices::SNOWSCAPE,
+                    Choices::HAIL,
+                    Choices::GRASSYTERRAIN,
+                    Choices::ELECTRICTERRAIN,
+                    Choices::PSYCHICTERRAIN,
+                    Choices::MISTYTERRAIN,
+                    Choices::HAZE,
+                    Choices::PERISHSONG,
+                    Choices::GRAVITY,
+                    Choices::MAGICROOM,
+                    Choices::WONDERROOM,
+                    Choices::COURTCHANGE,
+                ]
+                .contains(&attacker_choice.move_id)
                 && defending_side
                     .get_active_immutable()
                     .has_type(&PokemonType::DARK)

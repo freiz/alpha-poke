@@ -179,9 +179,6 @@
 "b128-t1": [
 "status"
 ],
-"b128-t18": [
-"reflect"
-],
 "b128-t21": [
 "hp"
 ],
@@ -368,12 +365,6 @@
 "hp",
 "status"
 ],
-"b159-t1": [
-"reflect"
-],
-"b159-t3": [
-"light_screen"
-],
 "b159-t6": [
 "hp"
 ],
@@ -404,14 +395,6 @@
 ],
 "b166-t10": [
 "hp"
-],
-"b167-t2": [
-"boost.atk",
-"boost.spa"
-],
-"b167-t3": [
-"boost.atk",
-"boost.spa"
 ],
 "b168-t16": [
 "volatile.confusion"
@@ -1366,9 +1349,6 @@
 ],
 "b71-t6": [
 "boost.spe"
-],
-"b72-t17": [
-"reflect"
 ],
 "b75-t26": [
 "hp"
