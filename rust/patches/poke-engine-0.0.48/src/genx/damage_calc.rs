@@ -488,6 +488,14 @@ fn get_attacking_and_defending_stats(
             {
                 should_calc_defender_boost = false;
             }
+            // alpha-poke patch (2026-10-16, doc/engine-diff.md L67): Sacred Sword / Darkest Lariat /
+            // Chip Away ignore the target's Defense boosts (Showdown's ignoreDefensive)
+            if matches!(
+                choice.move_id,
+                Choices::SACREDSWORD | Choices::DARKESTLARIAT | Choices::CHIPAWAY
+            ) {
+                should_calc_defender_boost = false;
+            }
 
             // Get the attacking stat
 

@@ -2113,3 +2113,17 @@ def test_l64_red_card_stops_life_orb_recoil():
     assert not any("Life Orb" in x for x in states[1]["log"])
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "moonblast", "spikes")
     assert ec.closest(states[1], outs, (2, 1), hp=True)["diff"] == {}
+
+
+# L67 (doc/engine-diff.md): Sacred Sword / Darkest Lariat ignore the target's Defense boosts
+# (Showdown's ignoreDefensive); the engine used them
+def test_l67_sacred_sword_ignores_defense_boosts():
+    gallade = _attacker("Gallade", "Sharpness", "Leftovers", "- Sacred Sword\n- Psycho Cut\n- Night Slash\n- Swords Dance")
+    tusk = _setter("Great Tusk", "Protosynthesis", "Leftovers", "- Close Combat\n- Rapid Spin\n- Ice Spinner\n- Knock Off")
+    turns = [("move swordsdance", "move closecombat"), ("move sacredsword", "move rapidspin")]
+    states = ec.run_showdown(gallade, tusk, turns, damage_probe=True)
+    assert states[1]["sides"][1]["mons"][0]["boosts"]["def"] == -1
+    import alpha_search
+
+    rolls = alpha_search.damage_rolls(ec.engine_state(states[1]).to_string(), True, "sacredsword", "rapidspin")
+    assert rolls[0][-1] == states[1]["damage"]["p1"]["sacredsword"]

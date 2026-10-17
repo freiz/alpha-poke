@@ -208,6 +208,7 @@ harness 必须把 Showdown 的状态完整映射到引擎，否则不一致来�
 | L64 | Red Card 先拖人、追加效果没了（Moonblast 的降特攻）；Showdown 先结算追加效果（onAfterMoveSecondary）。另外被拖走的攻击方不吃 Life Orb 反伤（onAfterMoveSecondarySelf 检查 forceSwitchFlag）：改顺序后由新增 b44-t21 发现 | 引擎 | 已修复 | `test_l64_red_card_after_secondaries`；`test_l64_red_card_stops_life_orb_recoil` | `generate_instructions.rs` `run_move`：同 L7 的拖人招式，先追加效果再在每个分支上拖人，去掉 Life Orb 的反伤 |
 | L65 | Covert Cloak 挡掉所有追加效果（Showdown 只挡对持有者的，保留对使用者的：Rapid Spin 的速度 +1；持有者自己的 Static 等接触特性在引擎里也是对使用者的追加效果，也被误挡） | 引擎 | 已修复 | `test_l65_covert_cloak_keeps_self_secondaries` | `generate_instructions.rs`：只去掉对对手的 |
 | L66 | Take Heart 在引擎里没有效果（Showdown：特攻、特防 +1，治愈异常状态） | 引擎 | 已修复 | `test_l66_take_heart` | `choices.rs` 加能力变化；`choice_effects.rs` 同 Refresh 治愈；数据测试列入已知差异 |
+| L67 | Sacred Sword / Darkest Lariat / Chip Away 无视目标的防御强化（Showdown 的 ignoreDefensive），引擎照算。另外 harness：Endeavor 的目标最后等于使用者的 HP，而使用者的 HP 取决于目标本回合打出的伤害掷骰，目标的 HP 容差要算上它打出的伤害（同 L7 的吸取招式） | 引擎 + harness | 已修复 | `test_l67_sacred_sword_ignores_defense_boosts`（最高档等于 Showdown） | `damage_calc.rs`；`check_engine_random.py` |
 
 ## 修复与验证（2026-10-16）
 
@@ -256,7 +257,7 @@ harness 必须把 Showdown 的状态完整映射到引擎，否则不一致来�
 
 修复：L43–L47。随机差分 97.8%（203）→ **98.2%**（6,916 / 7,046；172 个），每一步都是子集，新增 0；全部测试 316 个、poke-engine 自带测试 229 个通过。
 
-L48–L51 之后（同一天）：**98.4%**（6,930 / 7,046；157 个），新增 0；全部测试 321 个、poke-engine 自带测试 229 个通过。L52–L55 之后：**98.5%**（6,938；149 个），新增 0。L56 之后：6,941，145 个，新增 0。L58 之后：6,943，143 个，新增 0。L59、L60 之后：**98.7%**（6,957；125 个），新增 0；全部测试 337 个通过。L61–L63 之后：**98.8%**（6,964；114 个），新增 0；全部测试 342 个通过。L64–L66 之后：**98.9%**（6,972；104 个），新增 0。
+L48–L51 之后（同一天）：**98.4%**（6,930 / 7,046；157 个），新增 0；全部测试 321 个、poke-engine 自带测试 229 个通过。L52–L55 之后：**98.5%**（6,938；149 个），新增 0。L56 之后：6,941，145 个，新增 0。L58 之后：6,943，143 个，新增 0。L59、L60 之后：**98.7%**（6,957；125 个），新增 0；全部测试 337 个通过。L61–L63 之后：**98.8%**（6,964；114 个），新增 0；全部测试 342 个通过。L64–L66 之后：**98.9%**（6,972；104 个），新增 0。L67 之后：**99.0%**（6,975；101 个），新增 0。
 
 单看 HP 的双引擎测试有两个陷阱，这一轮都碰到了：`closest` 只要求有一个分支匹配，不看概率（L47 的确定性醒来要断言概率为 1）；Showdown 的追加效果用 `random(100)`，不受 `force_random` 控制（Strange Steam 的混乱，改用必中的 Confuse Ray）。
 

@@ -98,7 +98,9 @@ def battle(job: tuple) -> dict:
         n = tuple(len(s["mons"]) for s in a["state"]["sides"])
         try:
             outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2)
-            dealt = (follows_dealt(a["state"], 0, c1), follows_dealt(a["state"], 1, c2))
+            # (an Endeavor's target ends at its user's HP: it follows the damage it dealt itself)
+            dealt = (follows_dealt(a["state"], 0, c1) or c2.startswith("endeavor"),
+                     follows_dealt(a["state"], 1, c2) or c1.startswith("endeavor"))  # fmt: skip
             res = ec.closest(b["state"], outs, n, hp=True, dealt=dealt)
         except BaseException as e:  # noqa: BLE001 - the binding's panics are BaseExceptions
             out["errors"].append(f"engine: {c1} | {c2}: {type(e).__name__}: {str(e)[:120]}")
