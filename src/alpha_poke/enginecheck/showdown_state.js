@@ -22,6 +22,7 @@ function monState(p, side) {
 			// Pokemon, not the effect: the effect's id was always empty)
 			source: p.statusState.source === p ? 'rest' : ''},
 		item: p.item || '',
+		last_item: p.lastItem || '', // (L57: Harvest's berry)
 		ability: p.ability || '',
 		base_ability: p.baseAbility || '',
 		types: p.getTypes(),

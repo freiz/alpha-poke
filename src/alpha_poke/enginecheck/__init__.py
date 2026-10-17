@@ -126,6 +126,7 @@ def _engine_mon(m: dict) -> pe.Pokemon:
         status=STATUS[m["status"]], weight_kg=m["weight"], nature=m.get("nature", "serious").lower(),
         moves=[pe.Move(id=x["id"], pp=x["pp"], disabled=x["disabled"]) for x in m["moves"]],
         terastallized=bool(m["terastallized"]), tera_type=(m["tera_type"] or "typeless").lower(),
+        last_item=m.get("last_item") if _engine_item(m.get("last_item") or "") else "none",
     )  # fmt: skip
 
 

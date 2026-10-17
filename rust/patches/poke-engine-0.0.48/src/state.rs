@@ -916,6 +916,9 @@ pub struct Pokemon {
     pub mega_evolved: bool,
     pub terastallized: bool,
     pub tera_type: PokemonType,
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L57): the item it used up (Showdown's
+    // lastItem: eaten / used, not lost; Harvest gives a berry back)
+    pub last_item: Items,
     pub moves: PokemonMoves,
 }
 
@@ -945,6 +948,7 @@ impl Default for Pokemon {
             mega_evolved: false,
             terastallized: false,
             tera_type: PokemonType::NORMAL,
+            last_item: Items::NONE,
             moves: PokemonMoves {
                 m0: Default::default(),
                 m1: Default::default(),
@@ -1007,7 +1011,7 @@ impl Pokemon {
             self.evs.0, self.evs.1, self.evs.2, self.evs.3, self.evs.4, self.evs.5
         );
         format!(
-            "{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}",
+            "{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}",
             self.id,
             self.level,
             self.types.0.to_string(),
@@ -1037,6 +1041,7 @@ impl Pokemon {
             self.mega_evolved,
             self.terastallized,
             self.tera_type.to_string(),
+            self.last_item.to_string(),
         )
     }
 
@@ -1091,6 +1096,10 @@ impl Pokemon {
             mega_evolved: split[26].parse::<bool>().unwrap(),
             terastallized: split[27].parse::<bool>().unwrap(),
             tera_type: PokemonType::from_str(split[28]).unwrap(),
+            // (L57; older strings have no last item)
+            last_item: split
+                .get(29)
+                .map_or(Items::NONE, |x| Items::from_str(x).unwrap()),
         }
     }
 }
@@ -2042,6 +2051,9 @@ impl State {
                 &instruction.move_index,
                 instruction.move_change,
             ),
+            Instruction::ChangeLastItem(instruction) => {
+                self.get_side(&instruction.side_ref).get_active().last_item = instruction.new_item
+            }
             Instruction::DecrementPP(instruction) => self.decrement_pp(
                 &instruction.side_ref,
                 &instruction.move_index,
@@ -2250,6 +2262,10 @@ impl State {
                 &instruction.move_index,
                 -instruction.move_change,
             ),
+            Instruction::ChangeLastItem(instruction) => {
+                self.get_side(&instruction.side_ref).get_active().last_item =
+                    instruction.current_item
+            }
             Instruction::DecrementPP(instruction) => self.increment_pp(
                 &instruction.side_ref,
                 &instruction.move_index,

@@ -2164,3 +2164,21 @@ def test_l36_transformed_moves_then_switch_back():
     outs = ec.engine_outcomes(ec.engine_state(states[2]), "blissey", "calmmind")
     d = outs[0][1].side_one.pokemon[1]
     assert str(d.moves[0].id).lower() == "transform" and str(d.ability).lower() == "imposter"
+
+
+EXEGGUTOR = _setter("Exeggutor", "Harvest", "Sitrus Berry", "- Leaf Storm\n- Psychic\n- Synthesis\n- Protect")
+
+
+# L57 (doc/engine-diff.md): Harvest, a used-up berry back at the end of the turn, always in sun,
+# else half the time (the engine kept no used-up item: Pokemon::last_item now)
+@pytest.mark.parametrize("seed", ["gen5,1,2,3,4", "gen5,9,9,9,9"])
+def test_l57_harvest(seed):
+    states = ec.run_showdown(EXEGGUTOR, TINGLU_HITS_EQ, [("move synthesis", "move ruination")],
+                             seed=seed)  # fmt: skip
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "synthesis", "ruination")
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+    hit = [o for o in outs if o.damage[0] > 0]  # (Ruination missed: the berry never eaten)
+    back = sum(o[0] for o in hit if str(o[1].side_one.pokemon[0].item).lower() == "sitrusberry")
+    eaten = any("[eat]" in x for x in states[1]["log"])
+    if eaten:  # the berry eaten this turn: back with half the chance (no sun)
+        assert back / sum(o[0] for o in hit) == pytest.approx(0.5, abs=1e-3)

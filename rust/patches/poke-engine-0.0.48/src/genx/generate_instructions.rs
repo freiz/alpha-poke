@@ -32,8 +32,8 @@ use super::damage_calc::{
     calculate_damage, damage_rolls, type_effectiveness_modifier, DamageRolls,
 };
 use super::items::{
-    item_before_move, item_end_of_turn, item_modify_attack_against, item_modify_attack_being_used,
-    item_on_switch_in, Items,
+    is_berry, item_before_move, item_end_of_turn, item_modify_attack_against,
+    item_modify_attack_being_used, item_on_switch_in, set_last_item, Items,
 };
 use super::state::{MoveChoice, PokemonVolatileStatus, Terrain, Weather};
 use crate::choices::{Choice, MoveCategory};
@@ -984,6 +984,13 @@ fn get_instructions_from_status_effects(
 
     let instruction = if target_pkmn.item == Items::LUMBERRY {
         target_pkmn.item = Items::NONE;
+        // (L57: used up)
+        set_last_item(
+            target_pkmn,
+            target_side_ref,
+            Items::LUMBERRY,
+            incoming_instructions,
+        );
         Instruction::ChangeItem(ChangeItemInstruction {
             side_ref: target_side_ref,
             current_item: Items::LUMBERRY,
@@ -991,6 +998,13 @@ fn get_instructions_from_status_effects(
         })
     } else if target_pkmn.item == Items::CHESTOBERRY && status.status == PokemonStatus::SLEEP {
         target_pkmn.item = Items::NONE;
+        // (L57: used up)
+        set_last_item(
+            target_pkmn,
+            target_side_ref,
+            Items::CHESTOBERRY,
+            incoming_instructions,
+        );
         Instruction::ChangeItem(ChangeItemInstruction {
             side_ref: target_side_ref,
             current_item: Items::CHESTOBERRY,
@@ -2334,8 +2348,14 @@ pub fn transform_into(
     let foe_boosts = [
         (PokemonBoostableStat::Attack, foe.attack_boost),
         (PokemonBoostableStat::Defense, foe.defense_boost),
-        (PokemonBoostableStat::SpecialAttack, foe.special_attack_boost),
-        (PokemonBoostableStat::SpecialDefense, foe.special_defense_boost),
+        (
+            PokemonBoostableStat::SpecialAttack,
+            foe.special_attack_boost,
+        ),
+        (
+            PokemonBoostableStat::SpecialDefense,
+            foe.special_defense_boost,
+        ),
         (PokemonBoostableStat::Speed, foe.speed_boost),
         (PokemonBoostableStat::Accuracy, foe.accuracy_boost),
         (PokemonBoostableStat::Evasion, foe.evasion_boost),
@@ -2432,7 +2452,10 @@ pub fn transform_into(
         }
     }
     // (TYPECHANGE: the types go back on a switch, and the harness compares changed types so)
-    for v in [PokemonVolatileStatus::TYPECHANGE, PokemonVolatileStatus::TRANSFORM] {
+    for v in [
+        PokemonVolatileStatus::TYPECHANGE,
+        PokemonVolatileStatus::TRANSFORM,
+    ] {
         if !side.volatile_statuses.contains(&v) {
             side.volatile_statuses.insert(v);
             list.push(Instruction::ApplyVolatileStatus(
@@ -3307,6 +3330,12 @@ pub fn generate_instructions_from_move(
                     new_item: Items::NONE,
                 }));
             active.item = Items::NONE;
+            set_last_item(
+                active,
+                attacking_side,
+                Items::LEPPABERRY,
+                &mut incoming_instructions,
+            );
         }
     }
 
@@ -4150,6 +4179,17 @@ fn moves_first(
                     new_item: Items::NONE,
                     current_item: Items::CUSTAPBERRY,
                 }));
+            // (L57: used up; the state follows these instructions when applied)
+            let last = side_one_active.last_item;
+            if last != Items::CUSTAPBERRY {
+                incoming_instructions
+                    .instruction_list
+                    .push(Instruction::ChangeLastItem(ChangeItemInstruction {
+                        side_ref: SideReference::SideOne,
+                        current_item: last,
+                        new_item: Items::CUSTAPBERRY,
+                    }));
+            }
             return SideMovesFirst::SideOne;
         } else if side_two_active.item == Items::CUSTAPBERRY
             && side_two_active.hp < side_two_active.maxhp / 4
@@ -4161,6 +4201,17 @@ fn moves_first(
                     new_item: Items::NONE,
                     current_item: Items::CUSTAPBERRY,
                 }));
+            // (L57: used up; the state follows these instructions when applied)
+            let last = side_two_active.last_item;
+            if last != Items::CUSTAPBERRY {
+                incoming_instructions
+                    .instruction_list
+                    .push(Instruction::ChangeLastItem(ChangeItemInstruction {
+                        side_ref: SideReference::SideTwo,
+                        current_item: last,
+                        new_item: Items::CUSTAPBERRY,
+                    }));
+            }
             return SideMovesFirst::SideTwo;
         }
 
@@ -4385,6 +4436,70 @@ fn unburden_check(state: &mut State, instructions: &mut StateInstructions) {
                 ));
         }
     }
+}
+
+// alpha-poke patch (2026-10-16, doc/engine-diff.md L57): Harvest at the end of the turn, a
+// used-up berry back (always in sun, else half the time: Showdown's onResidual); the berry is
+// then eaten in the end of the turn as any (Sitrus at half HP)
+fn harvest_chance(state: &State) -> Option<(SideReference, f32)> {
+    for side_ref in [SideReference::SideOne, SideReference::SideTwo] {
+        let a = state.get_side_immutable(&side_ref).get_active_immutable();
+        if a.ability == Abilities::HARVEST
+            && a.hp > 0
+            && a.item == Items::NONE
+            && is_berry(a.last_item)
+        {
+            let sun = state.weather_is_active(&Weather::SUN)
+                || state.weather_is_active(&Weather::HARSHSUN);
+            return Some((side_ref, if sun { 1.0 } else { 0.5 }));
+        }
+    }
+    None
+}
+
+fn harvest_instructions(state: &mut State, side_ref: SideReference, ins: &mut StateInstructions) {
+    let a = state.get_side(&side_ref).get_active();
+    let berry = a.last_item;
+    ins.instruction_list
+        .push(Instruction::ChangeItem(ChangeItemInstruction {
+            side_ref,
+            current_item: Items::NONE,
+            new_item: berry,
+        }));
+    a.item = berry;
+    ins.instruction_list
+        .push(Instruction::ChangeLastItem(ChangeItemInstruction {
+            side_ref,
+            current_item: berry,
+            new_item: Items::NONE,
+        }));
+    a.last_item = Items::NONE;
+}
+
+/// the end of the turn with Harvest (the state has `si` applied, and has it again on return):
+/// after the rest of the end of the turn (the engine eats a Sitrus there, Showdown at once), the
+/// berry back and eaten again if it would be (Showdown's onUpdate); the branch where a chance of
+/// it succeeds, if any
+fn end_of_turn_with_harvest(
+    state: &mut State,
+    si: &mut StateInstructions,
+    first_move_side: &SideReference,
+) -> Option<StateInstructions> {
+    add_end_of_turn_instructions(state, si, first_move_side);
+    let (h, p) = harvest_chance(state)?;
+    if p >= 1.0 {
+        harvest_instructions(state, h, si);
+        item_end_of_turn(state, &h, si, false);
+        return None;
+    }
+    let base = si.instruction_list.len();
+    let mut yes = si.clone();
+    si.update_percentage(1.0 - p);
+    yes.update_percentage(p);
+    harvest_instructions(state, h, &mut yes);
+    item_end_of_turn(state, &h, &mut yes, false);
+    state.reverse_instructions(&yes.instruction_list[base..].to_vec());
+    Some(yes)
 }
 
 fn add_end_of_turn_instructions(
@@ -6340,6 +6455,7 @@ pub fn generate_instructions_from_move_pair(
                 branch_on_damage,
             );
 
+            let mut harvested = vec![];
             for state_instruction in state_instructions_vec.iter_mut() {
                 state.apply_instructions(&state_instruction.instruction_list);
                 if !(s1_replacing_fainted_pkmn
@@ -6347,10 +6463,15 @@ pub fn generate_instructions_from_move_pair(
                     || state.side_one.force_switch
                     || state.side_two.force_switch)
                 {
-                    add_end_of_turn_instructions(state, state_instruction, &SideReference::SideOne);
+                    harvested.extend(end_of_turn_with_harvest(
+                        state,
+                        state_instruction,
+                        &SideReference::SideOne,
+                    ));
                 }
                 state.reverse_instructions(&state_instruction.instruction_list);
             }
+            state_instructions_vec.extend(harvested);
         }
         SideMovesFirst::SideTwo => {
             handle_both_moves(
@@ -6362,6 +6483,7 @@ pub fn generate_instructions_from_move_pair(
                 &mut state_instructions_vec,
                 branch_on_damage,
             );
+            let mut harvested = vec![];
             for state_instruction in state_instructions_vec.iter_mut() {
                 state.apply_instructions(&state_instruction.instruction_list);
                 if !(s1_replacing_fainted_pkmn
@@ -6369,10 +6491,15 @@ pub fn generate_instructions_from_move_pair(
                     || state.side_one.force_switch
                     || state.side_two.force_switch)
                 {
-                    add_end_of_turn_instructions(state, state_instruction, &SideReference::SideTwo);
+                    harvested.extend(end_of_turn_with_harvest(
+                        state,
+                        state_instruction,
+                        &SideReference::SideTwo,
+                    ));
                 }
                 state.reverse_instructions(&state_instruction.instruction_list);
             }
+            state_instructions_vec.extend(harvested);
         }
         SideMovesFirst::SpeedTie => {
             // alpha-poke patch (2026-10-16, doc/engine-diff.md L29): the second order gets the moves
@@ -6394,6 +6521,7 @@ pub fn generate_instructions_from_move_pair(
                 &mut state_instructions_vec,
                 branch_on_damage,
             );
+            let mut harvested = vec![];
             for state_instruction in state_instructions_vec.iter_mut() {
                 state.apply_instructions(&state_instruction.instruction_list);
                 if !(s1_replacing_fainted_pkmn
@@ -6401,10 +6529,15 @@ pub fn generate_instructions_from_move_pair(
                     || state.side_one.force_switch
                     || state.side_two.force_switch)
                 {
-                    add_end_of_turn_instructions(state, state_instruction, &SideReference::SideOne);
+                    harvested.extend(end_of_turn_with_harvest(
+                        state,
+                        state_instruction,
+                        &SideReference::SideOne,
+                    ));
                 }
                 state.reverse_instructions(&state_instruction.instruction_list);
             }
+            state_instructions_vec.extend(harvested);
 
             // side_two moves first
             let mut side_two_moves_first_si = Vec::with_capacity(4);
@@ -6417,6 +6550,7 @@ pub fn generate_instructions_from_move_pair(
                 &mut side_two_moves_first_si,
                 branch_on_damage,
             );
+            let mut harvested = vec![];
             for state_instruction in side_two_moves_first_si.iter_mut() {
                 state.apply_instructions(&state_instruction.instruction_list);
                 if !(s1_replacing_fainted_pkmn
@@ -6424,10 +6558,15 @@ pub fn generate_instructions_from_move_pair(
                     || state.side_one.force_switch
                     || state.side_two.force_switch)
                 {
-                    add_end_of_turn_instructions(state, state_instruction, &SideReference::SideTwo);
+                    harvested.extend(end_of_turn_with_harvest(
+                        state,
+                        state_instruction,
+                        &SideReference::SideTwo,
+                    ));
                 }
                 state.reverse_instructions(&state_instruction.instruction_list);
             }
+            side_two_moves_first_si.extend(harvested);
 
             // combine both vectors into the final vector
             state_instructions_vec.extend(side_two_moves_first_si);
@@ -6502,11 +6641,17 @@ fn get_instructions_from_pursuit_hitting_switching_target(
         i += 1;
     }
 
+    let mut harvested = vec![];
     for state_instruction in state_instructions_vec.iter_mut() {
         state.apply_instructions(&state_instruction.instruction_list);
-        add_end_of_turn_instructions(state, state_instruction, &SideReference::SideOne);
+        harvested.extend(end_of_turn_with_harvest(
+            state,
+            state_instruction,
+            &SideReference::SideOne,
+        ));
         state.reverse_instructions(&state_instruction.instruction_list);
     }
+    state_instructions_vec.extend(harvested);
 }
 
 pub fn calculate_damage_rolls(

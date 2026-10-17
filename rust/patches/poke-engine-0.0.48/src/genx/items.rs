@@ -3,7 +3,9 @@ use super::abilities::Abilities;
 use super::damage_calc::{move_type_effectiveness, type_effectiveness_modifier};
 use super::generate_instructions::{apply_boost_instruction, immune_to_status};
 use super::state::Terrain;
-use crate::choices::{Choice, Choices, Effect, MoveCategory, MoveTarget, Secondary, StatBoosts, MOVES};
+use crate::choices::{
+    Choice, Choices, Effect, MoveCategory, MoveTarget, Secondary, StatBoosts, MOVES,
+};
 use crate::define_enum_with_from_str;
 use crate::engine::generate_instructions::add_remove_status_instructions;
 use crate::instruction::{
@@ -398,6 +400,30 @@ fn fixed_damage_move(m: &Choices) -> bool {
     )
 }
 
+// alpha-poke patch (2026-10-16, doc/engine-diff.md L57): the item a mon used up (eaten / used,
+// not lost), Showdown's lastItem: Harvest gives a berry back
+pub fn set_last_item(
+    pkmn: &mut Pokemon,
+    side_ref: SideReference,
+    item: Items,
+    instructions: &mut StateInstructions,
+) {
+    if pkmn.last_item != item {
+        instructions
+            .instruction_list
+            .push(Instruction::ChangeLastItem(ChangeItemInstruction {
+                side_ref,
+                current_item: pkmn.last_item,
+                new_item: item,
+            }));
+        pkmn.last_item = item;
+    }
+}
+
+pub fn is_berry(item: Items) -> bool {
+    format!("{:?}", item).ends_with("BERRY")
+}
+
 fn damage_reduction_berry(
     defending_pkmn: &mut Pokemon,
     attacking_side_ref: &SideReference,
@@ -419,6 +445,16 @@ fn damage_reduction_berry(
                 current_item: berry,
                 new_item: Items::NONE,
             }));
+        // (L57: used up: its last item)
+        {
+            let used = berry;
+            set_last_item(
+                defending_pkmn,
+                attacking_side_ref.get_other_side(),
+                used,
+                instructions,
+            );
+        }
         defending_pkmn.item = Items::NONE;
         choice.damage_modifier /= 2.0; // L34: a final modifier (onSourceModifyDamage)
                                        // alpha-poke patch (2026-10-16, doc/engine-diff.md L33): Knock Off's 1.5 x still (its
@@ -456,6 +492,11 @@ fn power_up_gem(
                 current_item: attacking_pkmn.item,
                 new_item: Items::NONE,
             }));
+        // (L57: used up: its last item)
+        {
+            let used = attacking_pkmn.item;
+            set_last_item(attacking_pkmn, *attacking_side_ref, used, instructions);
+        }
         attacking_pkmn.item = Items::NONE;
     }
 }
@@ -510,6 +551,11 @@ fn lum_berry(
             current_item: Items::LUMBERRY,
             new_item: Items::NONE,
         }));
+    // (L57: used up: its last item)
+    {
+        let used = Items::LUMBERRY;
+        set_last_item(active_pkmn, *side_ref, used, instructions);
+    }
     active_pkmn.item = Items::NONE;
 }
 
@@ -534,6 +580,11 @@ fn sitrus_berry(
             current_item: Items::SITRUSBERRY,
             new_item: Items::NONE,
         }));
+    // (L57: used up: its last item)
+    {
+        let used = Items::SITRUSBERRY;
+        set_last_item(active_pkmn, *side_ref, used, instructions);
+    }
     active_pkmn.item = Items::NONE;
 }
 
@@ -612,6 +663,11 @@ fn cure_volatiles_item(
             current_item: item,
             new_item: Items::NONE,
         }));
+    // (L57: used up: its last item)
+    {
+        let used = item;
+        set_last_item(side.get_active(), *side_ref, used, instructions);
+    }
     side.get_active().item = Items::NONE;
 }
 
@@ -629,6 +685,11 @@ fn chesto_berry(
             current_item: Items::CHESTOBERRY,
             new_item: Items::NONE,
         }));
+    // (L57: used up: its last item)
+    {
+        let used = Items::CHESTOBERRY;
+        set_last_item(active_pkmn, *side_ref, used, instructions);
+    }
     active_pkmn.item = Items::NONE;
     add_remove_status_instructions(instructions, active_index, *side_ref, attacking_side);
 }
@@ -658,6 +719,11 @@ fn lansat_berry(side_ref: &SideReference, side: &mut Side, instructions: &mut St
             current_item: active.item,
             new_item: Items::NONE,
         }));
+    // (L57: used up: its last item)
+    {
+        let used = active.item;
+        set_last_item(active, *side_ref, used, instructions);
+    }
     active.item = Items::NONE;
 }
 
@@ -683,6 +749,11 @@ fn boost_berry(
             current_item: attacker.item,
             new_item: Items::NONE,
         }));
+    // (L57: used up: its last item)
+    {
+        let used = attacker.item;
+        set_last_item(attacker, *side_ref, used, instructions);
+    }
     attacker.item = Items::NONE;
 }
 
@@ -751,6 +822,11 @@ fn pinch_berry(side_ref: &SideReference, side: &mut Side, instructions: &mut Sta
             current_item: active.item,
             new_item: Items::NONE,
         }));
+    // (L57: used up: its last item)
+    {
+        let used = active.item;
+        set_last_item(active, *side_ref, used, instructions);
+    }
     active.item = Items::NONE;
     if let Some(stat) = stat {
         if !confused && nature_lowers(&active.nature, &stat) {
@@ -798,6 +874,11 @@ pub fn room_service(
             current_item: Items::ROOMSERVICE,
             new_item: Items::NONE,
         }));
+    // (L57: used up: its last item)
+    {
+        let used = Items::ROOMSERVICE;
+        set_last_item(side.get_active(), *side_ref, used, instructions);
+    }
     side.get_active().item = Items::NONE;
 }
 
@@ -853,6 +934,16 @@ pub fn item_before_move(
                         new_item: Items::NONE,
                     },
                 ));
+                // (L57: used up: its last item)
+                {
+                    let used = Items::CHILANBERRY;
+                    set_last_item(
+                        defending_pkmn,
+                        side_ref.get_other_side(),
+                        used,
+                        instructions,
+                    );
+                }
                 defending_pkmn.item = Items::NONE;
                 choice.damage_modifier /= 2.0; // L34
             }
@@ -1426,6 +1517,11 @@ pub fn item_end_of_turn(
                     current_item: Items::MICLEBERRY,
                     new_item: Items::NONE,
                 }));
+            // (L57: used up: its last item)
+            {
+                let used = Items::MICLEBERRY;
+                set_last_item(active_pkmn, *side_ref, used, instructions);
+            }
             active_pkmn.item = Items::NONE;
             if !attacking_side
                 .volatile_statuses

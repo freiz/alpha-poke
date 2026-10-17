@@ -102,6 +102,8 @@ pub enum Instruction {
     DecrementPP(DecrementPPInstruction),
     // alpha-poke patch (2026-10-16, doc/engine-diff.md L36): a move slot's move changes (Transform)
     ChangeMove(ChangeMoveInstruction),
+    // (L57: the active's used-up item, Pokemon::last_item)
+    ChangeLastItem(ChangeItemInstruction),
     ToggleTrickRoom(ToggleTrickRoomInstruction),
     DecrementTrickRoomTurnsRemaining,
     ToggleSideOneForceSwitch,
@@ -262,6 +264,13 @@ impl fmt::Debug for Instruction {
                     f,
                     "DamageSubstitute {:?}: {:?}",
                     d.side_ref, d.damage_amount
+                )
+            }
+            Instruction::ChangeLastItem(c) => {
+                write!(
+                    f,
+                    "ChangeLastItem {:?}: {:?} -> {:?}",
+                    c.side_ref, c.current_item, c.new_item
                 )
             }
             Instruction::ChangeMove(c) => {
