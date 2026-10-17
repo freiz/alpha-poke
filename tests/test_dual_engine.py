@@ -2870,3 +2870,29 @@ def test_l103_throat_spray_not_on_a_failed_clangorous_soul():
     assert states[k + 1]["sides"][0]["mons"][0]["item"] == "throatspray"
     outs = ec.engine_outcomes(ec.engine_state(states[k]), "clangoroussoul", "spikes")
     assert ec.closest(states[k + 1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L104 (doc/engine-diff.md): a Gem powers only a damaging move (Showdown's onSourceTryPrimaryHit:
+# not a status move); the engine used up a Normal Gem on Court Change
+def test_l104_gem_not_on_a_status_move():
+    cinder = _setter("Cinderace", "Blaze", "Normal Gem", "- Court Change\n- Pyro Ball\n- U-turn\n- Sucker Punch")
+    states = ec.run_showdown(cinder, BLISSEY, [("move courtchange", "move softboiled")])
+    assert states[1]["sides"][0]["mons"][0]["item"] == "normalgem"
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "courtchange", "softboiled")
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L105 (doc/engine-diff.md): the terrain moves (Electric / Grassy / Misty / Psychic Terrain) set
+# their terrain for 5 turns (8 with Terrain Extender); they had no effect in the engine (only the
+# Surge abilities set one)
+@pytest.mark.parametrize("move, item", [("electricterrain", "Leftovers"), ("grassyterrain", "Terrain Extender"),
+                                        ("mistyterrain", "Leftovers"), ("psychicterrain", "Leftovers")])  # fmt: skip
+def test_l105_terrain_moves(move, item):
+    names = {"electricterrain": "Electric Terrain", "grassyterrain": "Grassy Terrain",
+             "mistyterrain": "Misty Terrain", "psychicterrain": "Psychic Terrain"}  # fmt: skip
+    setter = _setter("Indeedee", "Inner Focus", item, f"- {names[move]}\n- Psychic\n- Protect\n- Calm Mind")
+    states = ec.run_showdown(setter, BLISSEY, [(f"move {move}", "move softboiled"), ("move calmmind", "move softboiled")])
+    assert states[1]["field"]["terrain"] == move
+    for k, c1 in ((0, move), (1, "calmmind")):
+        outs = ec.engine_outcomes(ec.engine_state(states[k]), c1, "softboiled")
+        assert ec.closest(states[k + 1], outs, (1, 1), hp=True)["diff"] == {}, k

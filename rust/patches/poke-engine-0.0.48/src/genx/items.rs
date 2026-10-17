@@ -491,7 +491,8 @@ fn power_up_gem(
     gem_type: PokemonType,
     instructions: &mut StateInstructions,
 ) {
-    if &choice.move_type == &gem_type {
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L104): damaging moves only
+    if &choice.move_type == &gem_type && choice.category != MoveCategory::Status {
         #[cfg(feature = "gen5")]
         {
             choice.base_power *= 1.5;

@@ -2039,6 +2039,31 @@ pub fn choice_special_effect(
                 state.weather.turns_remaining = 5;
             }
         }
+        // alpha-poke patch (2026-10-16, doc/engine-diff.md L105): the terrain moves (5 turns;
+        // extend_field_durations makes it 8 with Terrain Extender); they had no effect
+        Choices::ELECTRICTERRAIN
+        | Choices::GRASSYTERRAIN
+        | Choices::MISTYTERRAIN
+        | Choices::PSYCHICTERRAIN => {
+            let terrain = match choice.move_id {
+                Choices::ELECTRICTERRAIN => Terrain::ELECTRICTERRAIN,
+                Choices::GRASSYTERRAIN => Terrain::GRASSYTERRAIN,
+                Choices::MISTYTERRAIN => Terrain::MISTYTERRAIN,
+                _ => Terrain::PSYCHICTERRAIN,
+            };
+            if state.terrain.terrain_type != terrain {
+                instructions
+                    .instruction_list
+                    .push(Instruction::ChangeTerrain(ChangeTerrain {
+                        new_terrain: terrain,
+                        new_terrain_turns_remaining: 5,
+                        previous_terrain: state.terrain.terrain_type,
+                        previous_terrain_turns_remaining: state.terrain.turns_remaining,
+                    }));
+                state.terrain.terrain_type = terrain;
+                state.terrain.turns_remaining = 5;
+            }
+        }
         Choices::SNOWSCAPE | Choices::CHILLYRECEPTION => {
             if state.weather.weather_type != Weather::SNOW {
                 instructions

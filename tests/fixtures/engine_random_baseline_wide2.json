@@ -16,12 +16,6 @@
 "boost.atk",
 "hp"
 ],
-"b119-t30": [
-"item"
-],
-"b119-t32": [
-"item"
-],
 "b124-t1": [
 "boost.def"
 ],
@@ -54,23 +48,8 @@
 "b162-t16": [
 "item"
 ],
-"b174-t1": [
-"item"
-],
-"b174-t12": [
-"item"
-],
 "b174-t2": [
 "volatile.flashfire"
-],
-"b174-t3": [
-"item"
-],
-"b174-t9": [
-"item"
-],
-"b179-t11": [
-"item"
 ],
 "b184-t19": [
 "volatile.confusion"
@@ -91,14 +70,8 @@
 "hp",
 "volatile.partiallytrapped"
 ],
-"b214-t3": [
-"terrain"
-],
 "b216-t13": [
 "volatile.protosynthesisspa"
-],
-"b220-t5": [
-"terrain"
 ],
 "b233-t19": [
 "boost.atk",
