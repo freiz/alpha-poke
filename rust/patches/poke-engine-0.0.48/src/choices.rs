@@ -17117,6 +17117,19 @@ pub static MOVES: LazyLock<HashMap<Choices, Choice>> = LazyLock::new(|| {
             flags: Flags {
                 ..Default::default()
             },
+            // alpha-poke patch (2026-10-16, doc/engine-diff.md L66): Sp. Atk / Sp. Def +1 (its
+            // status cured in choice_effects); before, no effect
+            boost: Some(Boost {
+                target: MoveTarget::User,
+                boosts: StatBoosts {
+                    attack: 0,
+                    defense: 0,
+                    special_attack: 1,
+                    special_defense: 1,
+                    speed: 0,
+                    accuracy: 0,
+                },
+            }),
             ..Default::default()
         },
     );

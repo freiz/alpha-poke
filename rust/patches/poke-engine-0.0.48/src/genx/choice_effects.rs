@@ -955,7 +955,9 @@ pub fn choice_before_move(
     let defender = defending_side.get_active_immutable();
 
     match choice.move_id {
-        Choices::FUTURESIGHT => {
+        // alpha-poke patch (2026-10-16, doc/engine-diff.md L56): Doom Desire is a future move too
+        // (it hit at once)
+        Choices::FUTURESIGHT | Choices::DOOMDESIRE => {
             choice.remove_all_effects();
             if attacking_side.future_sight.0 == 0 {
                 instructions
@@ -1467,7 +1469,8 @@ pub fn choice_special_effect(
                 attacking_side.wish = (2, attacking_side.get_active_immutable().maxhp / 2);
             }
         }
-        Choices::REFRESH => {
+        // (L66: Take Heart cures its status too)
+        Choices::REFRESH | Choices::TAKEHEART => {
             let active_index = attacking_side.active_index;
             let active_pkmn = attacking_side.get_active();
             if active_pkmn.status != PokemonStatus::NONE {

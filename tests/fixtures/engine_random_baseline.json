@@ -31,9 +31,6 @@
 "hp",
 "status"
 ],
-"b133-t19": [
-"hp"
-],
 "b137-t20": [
 "hp"
 ],
@@ -44,13 +41,6 @@
 "hp"
 ],
 "b137-t26": [
-"hp"
-],
-"b138-t35": [
-"hp",
-"status"
-],
-"b138-t39": [
 "hp"
 ],
 "b138-t7": [
@@ -217,10 +207,6 @@
 "b271-t6": [
 "hp"
 ],
-"b278-t29": [
-"boost.spa",
-"boost.spd"
-],
 "b279-t2": [
 "hp",
 "terrain"
@@ -243,12 +229,6 @@
 "b44-t8": [
 "volatile.perish3"
 ],
-"b45-t3": [
-"boost.spe"
-],
-"b45-t5": [
-"boost.spe"
-],
 "b47-t1": [
 "volatile.typechange"
 ],
@@ -268,9 +248,6 @@
 "b57-t15": [
 "volatile.confusion"
 ],
-"b67-t1": [
-"boost.spa"
-],
 "b75-t26": [
 "hp"
 ],
@@ -279,9 +256,6 @@
 ],
 "b9-t12": [
 "stealth_rock"
-],
-"b99-t25": [
-"hp"
 ]
 }
 }

@@ -5464,6 +5464,40 @@ fn run_move(
                 state.get_side(&defender_ref).get_active().item = Items::NONE;
             }
             if !emergency_exit && !eject_pack && item == Items::REDCARD {
+                // alpha-poke patch (2026-10-16, doc/engine-diff.md L64): the hit's secondaries
+                // first, then the drag on each of their outcomes (as L7's drag moves; Showdown:
+                // onAfterMoveSecondary), but not Life Orb's recoil (its onAfterMoveSecondarySelf
+                // checks the dragged attacker's forceSwitchFlag)
+                let secondaries: Option<Vec<Secondary>> = choice.secondaries.as_ref().map(|v| {
+                    v.iter()
+                        .filter(|x| {
+                            !(x.target == MoveTarget::User
+                                && matches!(x.effect, Effect::Heal(h) if h == -0.1))
+                        })
+                        .cloned()
+                        .collect()
+                });
+                if let Some(secondaries_vec) = secondaries.as_ref().filter(|v| !v.is_empty()) {
+                    state.reverse_instructions(&instructions.instruction_list);
+                    let branches = get_instructions_from_secondaries(
+                        state,
+                        &choice,
+                        secondaries_vec,
+                        &attacking_side,
+                        instructions,
+                        hit_sub,
+                    );
+                    for branch in branches {
+                        state.apply_instructions(&branch.instruction_list);
+                        get_instructions_from_drag(
+                            state,
+                            &defender_ref,
+                            branch,
+                            final_instructions,
+                        );
+                    }
+                    return;
+                }
                 get_instructions_from_drag(state, &defender_ref, instructions, final_instructions);
                 return;
             }
@@ -5658,15 +5692,23 @@ fn run_move(
         }
     }
 
-    if state
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L65): Covert Cloak blocks the secondaries
+    // on its holder only (Showdown's onModifySecondaries keeps the self ones); before, all
+    let cloaked = state
         .get_side_immutable(&attacking_side.get_other_side())
         .get_active_immutable()
         .item
-        == Items::COVERTCLOAK
-    {
+        == Items::COVERTCLOAK;
+    let kept: Option<Vec<Secondary>> = choice.secondaries.as_ref().map(|v| {
+        v.iter()
+            .filter(|x| !cloaked || x.target == MoveTarget::User)
+            .cloned()
+            .collect()
+    });
+    if kept.as_ref().map_or(true, |v| v.is_empty()) {
         state.reverse_instructions(&instructions.instruction_list);
         final_instructions.push(instructions);
-    } else if let Some(secondaries_vec) = &choice.secondaries {
+    } else if let Some(secondaries_vec) = &kept {
         state.reverse_instructions(&instructions.instruction_list);
         let instructions_vec_after_secondaries = get_instructions_from_secondaries(
             state,
@@ -6410,8 +6452,8 @@ pub fn calculate_damage_rolls(
         &mut incoming_instructions,
     );
 
-    if choice.move_id == Choices::FUTURESIGHT {
-        choice = MOVES.get(&Choices::FUTURESIGHT)?.clone();
+    if matches!(choice.move_id, Choices::FUTURESIGHT | Choices::DOOMDESIRE) {
+        choice = MOVES.get(&choice.move_id)?.clone();
     }
 
     let mut return_vec = Vec::with_capacity(4);

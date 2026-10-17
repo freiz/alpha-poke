@@ -30,6 +30,7 @@ KNOWN_MOVES = {
     "ceaselessedge": ({"side_condition"}, SHOWDOWN_IN_CODE),
     "stoneaxe": ({"side_condition"}, SHOWDOWN_IN_CODE),
     "partingshot": ({"boosts"}, SHOWDOWN_IN_CODE),
+    "takeheart": ({"boosts"}, SHOWDOWN_IN_CODE),
     "tidyup": ({"boosts"}, SHOWDOWN_IN_CODE),
     "junglehealing": ({"heal"}, SHOWDOWN_IN_CODE),
     "lunarblessing": ({"heal"}, SHOWDOWN_IN_CODE),

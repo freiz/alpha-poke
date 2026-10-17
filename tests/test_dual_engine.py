@@ -2057,3 +2057,59 @@ def test_l63_parting_shot_through_a_substitute():
     assert states[2]["sides"][1]["mons"][0]["boosts"]["atk"] == -1
     outs = ec.engine_outcomes(ec.engine_state(states[1]), "partingshot", "calmmind")
     assert ec.closest(states[2], outs, (1, 1))["diff"] == {}
+
+
+def test_l56_doom_desire_hits_later():
+    """Doom Desire is a future move: nothing the turn it is used (the engine hit at once)."""
+    states = ec.run_showdown(JIRACHI, TINGLU, [("move doomdesire", "move spikes")])
+    assert states[1]["sides"][1]["mons"][0]["hp"] == states[0]["sides"][1]["mons"][0]["hp"]
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "doomdesire", "spikes")
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L64 (doc/engine-diff.md): Red Card's drag comes after the hit's secondaries (Showdown's
+# onAfterMoveSecondary); the engine dragged first and the secondaries never happened
+def test_l64_red_card_after_secondaries():
+    red = _setter("Ting-Lu", "Vessel of Ruin", "Red Card", "- Spikes\n- Ruination\n- Earthquake\n- Whirlwind")
+    clef = _attacker("Clefable", "Magic Guard", "Leftovers", "- Moonblast\n- Moonlight\n- Calm Mind\n- Protect", "Modest")
+    states = ec.run_showdown(clef + "\n\n" + BLISSEY, red, [("move moonblast", "move spikes")],
+                             seed="gen5,1,7,13,3")  # (a seed with the 30% drop)
+    assert states[1]["sides"][1]["mons"][0]["boosts"]["spa"] == -1
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "moonblast", "spikes")
+    assert ec.closest(states[1], outs, (2, 1))["diff"] == {}
+
+
+# L65 (doc/engine-diff.md): Covert Cloak blocks the secondaries on its holder only (Showdown keeps
+# the self ones: Rapid Spin's Speed); the engine dropped every secondary (the target's contact
+# abilities too: Static, ..., added to the move as secondaries on its user)
+def test_l65_covert_cloak_keeps_self_secondaries():
+    tusk = _attacker("Great Tusk", "Protosynthesis", "Leftovers", "- Rapid Spin\n- Headlong Rush\n- Ice Spinner\n- Knock Off")
+    cloak = _setter("Blissey", "Natural Cure", "Covert Cloak", "- Soft-Boiled\n- Seismic Toss\n- Calm Mind\n- Protect")
+    states = ec.run_showdown(tusk, cloak, [("move rapidspin", "move calmmind")])
+    assert states[1]["sides"][0]["mons"][0]["boosts"]["spe"] == 1
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "rapidspin", "calmmind")
+    assert ec.closest(states[1], outs, (1, 1))["diff"] == {}
+
+
+# L66 (doc/engine-diff.md): Take Heart had no effect in the engine (Showdown: Sp. Atk and Sp. Def
+# +1 and its status cured, in code)
+def test_l66_take_heart():
+    manaphy = _setter("Manaphy", "Hydration", "Leftovers", "- Take Heart\n- Scald\n- Energy Ball\n- Rest")
+    turns = [("move scald", "move willowisp"), ("move takeheart", "move recover")]
+    states = ec.run_showdown(manaphy, SABLEYE, turns, force_random=True)
+    assert states[1]["sides"][0]["mons"][0]["status"] == "brn"
+    m = states[2]["sides"][0]["mons"][0]
+    assert m["status"] == "" and m["boosts"]["spa"] == 1
+    outs = ec.engine_outcomes(ec.engine_state(states[1]), "takeheart", "recover")
+    assert ec.closest(states[2], outs, (1, 1))["diff"] == {}
+
+
+def test_l64_red_card_stops_life_orb_recoil():
+    """The attacker Red Card drags out takes no Life Orb recoil (its onAfterMoveSecondarySelf
+    checks forceSwitchFlag)."""
+    red = _setter("Ting-Lu", "Vessel of Ruin", "Red Card", "- Spikes\n- Ruination\n- Earthquake\n- Whirlwind")
+    orb = _attacker("Clefable", "Unaware", "Life Orb", "- Moonblast\n- Moonlight\n- Calm Mind\n- Protect", "Modest")
+    states = ec.run_showdown(orb + "\n\n" + BLISSEY, red, [("move moonblast", "move spikes")])
+    assert not any("Life Orb" in x for x in states[1]["log"])
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "moonblast", "spikes")
+    assert ec.closest(states[1], outs, (2, 1), hp=True)["diff"] == {}
