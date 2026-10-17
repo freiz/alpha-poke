@@ -21,9 +21,6 @@
 "b108-t12": [
 "boost.spd"
 ],
-"b109-t35": [
-"hp"
-],
 "b109-t44": [
 "hp"
 ],
@@ -51,9 +48,6 @@
 "b130-t9": [
 "hp",
 "status"
-],
-"b131-t25": [
-"item"
 ],
 "b133-t19": [
 "hp"
@@ -100,23 +94,12 @@
 "b146-t2": [
 "toxic_spikes"
 ],
-"b148-t19": [
-"volatile.substitute"
-],
 "b15-t22": [
 "boost.spd",
 "hp"
 ],
 "b153-t14": [
 "hp"
-],
-"b157-t24": [
-"hp",
-"item"
-],
-"b157-t25": [
-"hp",
-"item"
 ],
 "b157-t7": [
 "boost.spd",
@@ -131,9 +114,6 @@
 ],
 "b162-t28": [
 "stealth_rock"
-],
-"b162-t29": [
-"item"
 ],
 "b164-t1": [
 "volatile.typechange"
@@ -153,14 +133,8 @@
 "hp",
 "volatile.leechseed"
 ],
-"b18-t7": [
-"hp"
-],
 "b180-t18": [
 "hp"
-],
-"b183-t27": [
-"volatile.substitute"
 ],
 "b184-t5": [
 "hp"
@@ -202,9 +176,6 @@
 "b202-t19": [
 "boost.spe"
 ],
-"b202-t7": [
-"volatile.substitute"
-],
 "b204-t11": [
 "hp",
 "status"
@@ -223,9 +194,6 @@
 "hp",
 "volatile.typechange"
 ],
-"b219-t19": [
-"item"
-],
 "b221-t24": [
 "status"
 ],
@@ -241,7 +209,6 @@
 "status"
 ],
 "b232-t13": [
-"status",
 "volatile.typechange"
 ],
 "b232-t5": [
@@ -279,15 +246,6 @@
 "b237-t41": [
 "boost.evasion"
 ],
-"b237-t44": [
-"volatile.substitute"
-],
-"b237-t48": [
-"volatile.substitute"
-],
-"b237-t54": [
-"hp"
-],
 "b241-t12": [
 "hp"
 ],
@@ -300,20 +258,11 @@
 "b244-t20": [
 "hp"
 ],
-"b245-t17": [
-"status"
-],
 "b245-t6": [
 "hp"
 ],
-"b246-t41": [
-"volatile.substitute"
-],
 "b247-t2": [
 "stealth_rock"
-],
-"b247-t25": [
-"status"
 ],
 "b247-t5": [
 "hp"
@@ -347,9 +296,6 @@
 "boost.atk",
 "hp"
 ],
-"b259-t5": [
-"volatile.substitute"
-],
 "b259-t6": [
 "hp",
 "volatile.substitute"
@@ -367,9 +313,6 @@
 "b264-t22": [
 "volatile.disable"
 ],
-"b265-t14": [
-"item"
-],
 "b266-t13": [
 "volatile.disable"
 ],
@@ -378,21 +321,6 @@
 ],
 "b271-t6": [
 "hp"
-],
-"b274-t13": [
-"volatile.substitute"
-],
-"b274-t14": [
-"volatile.substitute"
-],
-"b274-t15": [
-"volatile.substitute"
-],
-"b274-t16": [
-"volatile.substitute"
-],
-"b274-t23": [
-"volatile.substitute"
 ],
 "b278-t29": [
 "boost.spa",
@@ -418,17 +346,13 @@
 "volatile.quarkdrivespe"
 ],
 "b291-t12": [
-"hp",
-"volatile.substitute"
+"hp"
 ],
 "b291-t6": [
 "hp"
 ],
 "b292-t19": [
 "hp"
-],
-"b295-t17": [
-"volatile.substitute"
 ],
 "b34-t31": [
 "status"
@@ -480,12 +404,6 @@
 "b67-t1": [
 "boost.spa"
 ],
-"b68-t11": [
-"volatile.substitute"
-],
-"b68-t20": [
-"hp"
-],
 "b69-t47": [
 "boost.evasion"
 ],
@@ -503,9 +421,6 @@
 ],
 "b81-t47": [
 "hp"
-],
-"b87-t10": [
-"volatile.substitute"
 ],
 "b89-t4": [
 "boost.spd"

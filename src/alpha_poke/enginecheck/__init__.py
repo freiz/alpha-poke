@@ -163,6 +163,8 @@ def _engine_side(s: dict, future_sight=None, wish=None) -> pe.Side:
         if _changed_types(act):  # Showdown keeps no volatile for a type change (Libero, Soak, ...)
             vol.add("typechange")
         kw["volatile_statuses"] = vol
+        if "substitute" in act["volatiles"]:  # its HP (L43: it was 0, any hit broke it)
+            kw["substitute_health"] = act["volatiles"]["substitute"]["hp"]
         stall = act["volatiles"].get("stall")  # Protect's counter: 3 ** (consecutive protects)
         if stall and stall["counter"]:
             sc["protect"] = round(math.log(stall["counter"], 3))

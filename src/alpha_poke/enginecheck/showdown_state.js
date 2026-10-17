@@ -17,7 +17,9 @@ function monState(p, side) {
 		status: p.status || '',
 		status_state: {stage: p.statusState.stage || 0, time: p.statusState.time || 0,
 			startTime: p.statusState.startTime || 0,
-			source: p.statusState.sourceEffect ? p.statusState.sourceEffect.id : ''},
+			// Rest's sleep: the only one set by the sleeper itself (statusState keeps the source
+			// Pokemon, not the effect: the effect's id was always empty)
+			source: p.statusState.source === p ? 'rest' : ''},
 		item: p.item || '',
 		ability: p.ability || '',
 		base_ability: p.baseAbility || '',
@@ -29,7 +31,7 @@ function monState(p, side) {
 		volatiles: Object.fromEntries(Object.entries(p.volatiles).map(([k, v]) =>
 			[k, {duration: v.duration || 0, layers: v.layers || 0, counter: v.counter || 0,
 				stat: v.bestStat || '', time: v.time || 0, true_duration: v.trueDuration || 0,
-				num_consecutive: v.numConsecutive || 0}])),
+				num_consecutive: v.numConsecutive || 0, hp: v.hp || 0}])),
 		moves: p.moveSlots.map(m => ({id: m.id, pp: m.pp, maxpp: m.maxpp, disabled: !!m.disabled})),
 		terastallized: p.terastallized || '',
 		tera_type: p.teraType || '',

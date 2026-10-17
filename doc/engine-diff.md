@@ -184,6 +184,11 @@ harness 必须把 Showdown 的状态完整映射到引擎，否则不一致来�
 | L40 | Poison Puppeteer 没有实现：Pecharunt 的招式让对方中毒时对方同时混乱（Showdown 的 onAnyAfterSetStatus） | 引擎 | 已修复 | `test_l40_poison_puppeteer`（Malignant Chain、Toxic） | `generate_instructions.rs` `get_instructions_from_status_effects`：中毒 / 剧毒成功（不是被木子果挡掉）后加混乱；Own Tempo、着地时的 Misty Terrain、已混乱不加 |
 | L41 | 第 9 代 Protean / Libero：引擎在出招前（`ability_before_move`）就变属性，冰冻 / 睡眠 / 麻痹不能动、Sucker Punch 失败时也变；且只有不含招式属性时才变（Showdown：当前属性不恰好是招式属性就变，草 / 恶的 Meowscarada 用 Knock Off 变成纯恶）。另外 harness：太晶后的 typechange 不比较（太晶后没有作用；Showdown 一侧本来就不算太晶） | 引擎 + harness | 已修复 | `test_l41_protean`（2 个）；`test_l41_protean_not_when_frozen` | `generate_instructions.rs` `protean_type_change`：在招式真正开始（`Acted`）之后；`enginecheck` `view_engine` |
 | L42 | 必定暴击的招式（Flower Trick 等）的击倒：非暴击的最高档打不死时，引擎直接取暴击的平均伤害，不分击倒分支（L41 修好后的新增 b146-t23：Showdown 剩 5 HP，引擎判击倒） | 引擎 | 已修复 | `test_l42_guaranteed_crit_knockout_rolls`（目标 HP 取暴击 16 档的中间，击倒概率等于不小于 HP 的档数 / 16） | `generate_instructions.rs` `finish_move`：必定暴击时用暴击的最高档和 16 档 |
+| L43 | harness：替身的 HP 没有传给引擎（引擎里是 0，任何攻击都打破替身） | harness | 已修复 | `test_l43_substitute_hp_mapped`（Seismic Toss 100 打 101 HP 的替身） | `showdown_state.js` 导出替身 HP，`engine_state` 设 `substitute_health` |
+| L44 | Red Card 在攻击方没有可换的宝可梦时也被消耗（Showdown 的 canSwitch：不触发）；攻击只打在替身上时 Air Balloon 不破（Showdown 的 onAfterSubDamage 会破） | 引擎 | 已修复 | `test_l44_red_card_needs_a_replacement`；`test_l44_air_balloon_pops_on_a_substitute_hit` | `generate_instructions.rs` |
+| L45 | 减伤果被变化招式（地面系的 Spikes、恶系的 Nasty Plot）和固定伤害（Ruination 等）触发（Showdown 在 onSourceModifyDamage：只对造成伤害、不是固定伤害的招式）；Lum Berry 不治混乱（Showdown 的 onUpdate：异常状态或混乱都吃） | 引擎 | 已修复 | `test_l45_lum_berry_cures_confusion`；`test_l45_resist_berry_only_on_a_damaging_hit`（2 个） | `items.rs` `damage_reduction_berry`、Chilan、`lum_berry` |
+| L46 | Synchronize 没有实现：对方的招式或特性（Static 等，引擎里是作用于使用者的追加效果）造成的中毒 / 灼伤 / 麻痹传回对方 | 引擎 | 已修复 | `test_l46_synchronize`（麻痹、剧毒、灼伤） | `generate_instructions.rs` `get_instructions_from_status_effects` |
+| L47 | harness：Rest 的睡眠被当成普通睡眠（Showdown 的 statusState 只留来源宝可梦、不留来源效果，导出的来源一直是空的），引擎因此按普通睡眠的随机醒来算 | harness | 已修复 | `test_l47_rest_sleep_mapped`（3 个：醒来与否的概率为 1） | `showdown_state.js`：来源是自己 = Rest |
 
 ## 修复与验证（2026-10-16）
 
@@ -228,12 +233,18 @@ harness 必须把 Showdown 的状态完整映射到引擎，否则不一致来�
 
 修复：L37–L42。每条先写双引擎测试（失败；L37 的测试是在修复后才跑通的，临时去掉修复确认它会失败），全部测试 304 个、poke-engine 自带测试 229 个通过。随机差分：97.0%（265）→ **97.8%**（6,889 / 7,046；203 个（编号, 类别）），每一步都是子集；中间出现的新增 b146-t23 查清是 L42 后修好。
 
+## 修复与验证，第五轮（2026-10-17）
+
+修复：L43–L47。随机差分 97.8%（203）→ **98.2%**（6,916 / 7,046；172 个），每一步都是子集，新增 0；全部测试 316 个、poke-engine 自带测试 229 个通过。
+
+单看 HP 的双引擎测试有两个陷阱，这一轮都碰到了：`closest` 只要求有一个分支匹配，不看概率（L47 的确定性醒来要断言概率为 1）；Showdown 的追加效果用 `random(100)`，不受 `force_random` 控制（Strange Steam 的混乱，改用必中的 Confuse Ray）。
+
 ## 下一步
 
 0. 伤害公式剩下的（1c）：Hydro Steam 在晴天、Metronome 道具的加成、Shell Side Arm、Sacred Sword 打有 Light Clay 的一方（引擎 2 倍，未查）、Unaware 的 Body Press / Liquidation 打 Mold Breaker（引擎偏高约 1.5 倍，未查）、Gyro Ball / Electro Ball 的速度没算 Choice Scarf 和麻痹；Imposter / Transform（L36）。随机差分剩下的主要类别：HP 94、异常状态 30、属性变化 29（其中 Ditto 相关 11 个）、替身 18。
 1. 还没做的（2026-10-16 晚）：场地招式没有实现（L25）；改特性的招式（Skill Swap、Worry Seed、Simple Beam、Entrainment、Gastro Acid、Role Play、Doodle）没有实现；Pickpocket 没有实现；混乱提前解除只是近似；我们的 `build_state` 没有传性格（低血量回复果的混乱用到）；设置天气的宝可梦道具被打掉后，构造按 5 回合算（L3c）；随机对战 runner 用相邻小整数种子，对局之间相关（改了要重建基线）；有倒下 / 中途换人的回合（2,979 个）还不比较。
 2. 剩下的 HP 不一致（gen901 4.18%）按簇继续拆：吸取招式的回复量依赖对另一方伤害的浮动（容差没算进去，方法问题）、属性变化（Libero / Protean 等）、速度等级。
-3. 线索（L10）：Poison Puppeteer、Pickpocket 未实现；混乱提前解除的精确分支（要像 Sleep Talk 那样递归分支，会增加搜索分支数）。
+3. 线索（L10）：Pickpocket 未实现（Poison Puppeteer 见 L40）；混乱提前解除的精确分支（要像 Sleep Talk 那样递归分支，会增加搜索分支数）。
 4. 差分脚本：合并局面时天气 / 场地剩余回合取设置方的视角；吸取回复的容差。
 5. 局面构造类修复会改变网络看到的输入（天气剩余回合、束缚位、Zamazenta 的状态），下一代训练后才完全对齐。用户 2026-10-16 说不需要做修复前后的对战 A/B。
 6. 人类对局：回放只有旁观者视角（HP 是百分比、对方配置不完整），做不了精确差分；可以只检查可观察的部分（先后手、是否击倒、HP 百分比是否落在范围内），以后再做。

@@ -1004,9 +1004,46 @@ fn get_instructions_from_status_effects(
             new_status: status.status,
         })
     };
-    let poisoned = matches!(instruction, Instruction::ChangeStatus(_))
-        && matches!(status.status, PokemonStatus::POISON | PokemonStatus::TOXIC);
+    let applied = matches!(instruction, Instruction::ChangeStatus(_));
+    let poisoned = applied && matches!(status.status, PokemonStatus::POISON | PokemonStatus::TOXIC);
     incoming_instructions.instruction_list.push(instruction);
+
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L46): Synchronize, a poison / burn /
+    // paralysis from the foe (its move, or its ability through a secondary on the user: Static,
+    // Flame Body, ...) goes back to the foe (Showdown's onAfterSetStatus; the foe's immunities,
+    // not its Substitute)
+    let holder_synchronizes = state
+        .get_side_immutable(&target_side_ref)
+        .get_active_immutable()
+        .ability
+        == Abilities::SYNCHRONIZE;
+    if applied
+        && holder_synchronizes
+        && matches!(
+            status.status,
+            PokemonStatus::POISON
+                | PokemonStatus::TOXIC
+                | PokemonStatus::BURN
+                | PokemonStatus::PARALYZE
+        )
+    {
+        let foe_ref = target_side_ref.get_other_side();
+        if !immune_to_status(state, &MoveTarget::User, &foe_ref, &status.status) {
+            let foe_side = state.get_side(&foe_ref);
+            let index = foe_side.active_index;
+            let foe = foe_side.get_active();
+            let old_status = foe.status;
+            foe.status = status.status;
+            incoming_instructions
+                .instruction_list
+                .push(Instruction::ChangeStatus(ChangeStatusInstruction {
+                    side_ref: foe_ref,
+                    pokemon_index: index,
+                    old_status,
+                    new_status: status.status,
+                }));
+        }
+    }
 
     // alpha-poke patch (2026-10-16, doc/engine-diff.md L40): Poison Puppeteer, the foe its
     // holder's move poisons is confused too (Showdown's onAnyAfterSetStatus; Own Tempo, Misty
@@ -1945,6 +1982,18 @@ fn generate_instructions_from_damage(
             incoming_instructions
                 .instruction_list
                 .push(substitute_instruction);
+            // alpha-poke patch (2026-10-16, doc/engine-diff.md L44): a hit on the Substitute pops
+            // an Air Balloon too (Showdown's onAfterSubDamage)
+            if defending_side.get_active_immutable().item == Items::AIRBALLOON {
+                incoming_instructions
+                    .instruction_list
+                    .push(Instruction::ChangeItem(ChangeItemInstruction {
+                        side_ref: attacking_side_ref.get_other_side(),
+                        current_item: Items::AIRBALLOON,
+                        new_item: Items::NONE,
+                    }));
+                defending_side.get_active().item = Items::NONE;
+            }
 
             if should_use_damage_dealt {
                 set_damage_dealt(
@@ -5086,11 +5135,17 @@ fn run_move(
         let holder = defender_side.get_active_immutable();
         let (item, holder_hp) = (holder.item, holder.hp);
         let can_switch = defender_side.visible_alive_pkmn() > 1 && !defender_side.force_switch;
+        // alpha-poke patch (2026-10-16, doc/engine-diff.md L44): Red Card only when the
+        // attacker's side has someone to switch in (Showdown's canSwitch)
         let attacker_alive = state
             .get_side_immutable(&attacking_side)
             .get_active_immutable()
             .hp
-            > 0;
+            > 0
+            && state
+                .get_side_immutable(&attacking_side)
+                .visible_alive_pkmn()
+                > 1;
         if emergency_exit
             || eject_pack
             || damaging

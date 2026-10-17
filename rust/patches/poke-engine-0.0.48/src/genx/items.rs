@@ -375,6 +375,29 @@ pub fn get_choice_move_disable_instructions(
     moves_to_disable
 }
 
+// alpha-poke patch (L45): the moves whose damage is fixed (Showdown's damageCallback: no
+// modifyDamage, so no resist berry)
+fn fixed_damage_move(m: &Choices) -> bool {
+    matches!(
+        m,
+        Choices::SEISMICTOSS
+            | Choices::NIGHTSHADE
+            | Choices::SUPERFANG
+            | Choices::RUINATION
+            | Choices::NATURESMADNESS
+            | Choices::ENDEAVOR
+            | Choices::FINALGAMBIT
+            | Choices::PSYWAVE
+            | Choices::COUNTER
+            | Choices::MIRRORCOAT
+            | Choices::METALBURST
+            | Choices::COMEUPPANCE
+            | Choices::DRAGONRAGE
+            | Choices::SONICBOOM
+            | Choices::BIDE
+    )
+}
+
 fn damage_reduction_berry(
     defending_pkmn: &mut Pokemon,
     attacking_side_ref: &SideReference,
@@ -383,7 +406,10 @@ fn damage_reduction_berry(
     pkmn_type: &PokemonType,
     instructions: &mut StateInstructions,
 ) {
+    // (L45: a damaging hit only, not a fixed damage: Showdown's onSourceModifyDamage)
     if &choice.move_type == pkmn_type
+        && choice.category != MoveCategory::Status
+        && !fixed_damage_move(&choice.move_id)
         && type_effectiveness_modifier(pkmn_type, &defending_pkmn) > 1.0
     {
         instructions
@@ -446,17 +472,37 @@ fn lum_berry(
     attacking_side: &mut Side,
     instructions: &mut StateInstructions,
 ) {
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L45): confusion too (Showdown's onUpdate:
+    // a status or confusion)
+    if attacking_side
+        .volatile_statuses
+        .contains(&PokemonVolatileStatus::CONFUSION)
+    {
+        attacking_side
+            .volatile_statuses
+            .remove(&PokemonVolatileStatus::CONFUSION);
+        instructions
+            .instruction_list
+            .push(Instruction::RemoveVolatileStatus(
+                RemoveVolatileStatusInstruction {
+                    side_ref: *side_ref,
+                    volatile_status: PokemonVolatileStatus::CONFUSION,
+                },
+            ));
+    }
     let active_index = attacking_side.active_index;
     let active_pkmn = attacking_side.get_active();
-    instructions
-        .instruction_list
-        .push(Instruction::ChangeStatus(ChangeStatusInstruction {
-            side_ref: *side_ref,
-            pokemon_index: active_index,
-            new_status: PokemonStatus::NONE,
-            old_status: active_pkmn.status,
-        }));
-    active_pkmn.status = PokemonStatus::NONE;
+    if active_pkmn.status != PokemonStatus::NONE {
+        instructions
+            .instruction_list
+            .push(Instruction::ChangeStatus(ChangeStatusInstruction {
+                side_ref: *side_ref,
+                pokemon_index: active_index,
+                new_status: PokemonStatus::NONE,
+                old_status: active_pkmn.status,
+            }));
+        active_pkmn.status = PokemonStatus::NONE;
+    }
     instructions
         .instruction_list
         .push(Instruction::ChangeItem(ChangeItemInstruction {
@@ -796,7 +842,10 @@ pub fn item_before_move(
         ),
         Items::CHILANBERRY => {
             // no type effectiveness check for chilan
-            if &choice.move_type == &PokemonType::NORMAL {
+            if &choice.move_type == &PokemonType::NORMAL
+                && choice.category != MoveCategory::Status
+                && !fixed_damage_move(&choice.move_id)
+            {
                 instructions.instruction_list.push(Instruction::ChangeItem(
                     ChangeItemInstruction {
                         side_ref: side_ref.get_other_side(),
@@ -1049,7 +1098,7 @@ pub fn item_before_move(
             PokemonType::FAIRY,
             instructions,
         ),
-        Items::LUMBERRY if active_pkmn.status != PokemonStatus::NONE => {
+        Items::LUMBERRY if active_pkmn.status != PokemonStatus::NONE || confused => {
             lum_berry(side_ref, attacking_side, instructions)
         }
         // alpha-poke patch (2026-10-13)
@@ -1277,7 +1326,7 @@ pub fn item_end_of_turn(
         .contains(&PokemonVolatileStatus::HEALBLOCK);
     let active_pkmn = attacking_side.get_active();
     match active_pkmn.item {
-        Items::LUMBERRY if active_pkmn.status != PokemonStatus::NONE => {
+        Items::LUMBERRY if active_pkmn.status != PokemonStatus::NONE || confused => {
             lum_berry(side_ref, attacking_side, instructions)
         }
         // alpha-poke patch (2026-10-13)

@@ -1717,3 +1717,98 @@ def test_l42_guaranteed_crit_knockout_rolls():
     outs = ec.engine_outcomes(ec.engine_state(st), "flowertrick", "spikes")
     kill = sum(o[0] for o in outs if o[1].side_two.pokemon[0].hp == 0)
     assert kill == pytest.approx(sum(d >= hp for d in crit) / 16, abs=1e-3), (crit, hp)
+
+
+GARGANACL_SUB = _setter("Garganacl", "Purifying Salt", "Leftovers", "- Substitute\n- Salt Cure\n- Protect\n- Recover")
+
+
+# harness (doc/engine-diff.md, L43): the Substitute's HP from Showdown's state (it was 0 in the
+# engine: any hit broke it)
+def test_l43_substitute_hp_mapped():
+    turns = [("move substitute", "move calmmind"), ("move recover", "move seismictoss")]
+    states = ec.run_showdown(GARGANACL_SUB, BLISSEY, turns)
+    assert "substitute" in states[2]["sides"][0]["mons"][0]["volatiles"]  # 101 HP, 100 taken
+    outs = ec.engine_outcomes(ec.engine_state(states[1]), "recover", "seismictoss")
+    assert ec.closest(states[2], outs, (1, 1))["diff"] == {}
+
+
+# L44 (doc/engine-diff.md): Red Card does nothing when the attacker's side has no one to switch
+# in (Showdown's canSwitch); Air Balloon pops when a hit only breaks / damages a Substitute
+# (its onAfterSubDamage)
+def test_l44_red_card_needs_a_replacement():
+    red = _setter("Blissey", "Natural Cure", "Red Card", "- Soft-Boiled\n- Seismic Toss\n- Calm Mind\n- Protect")
+    turns = [("move calmmind", "move earthquake")]
+    # (no crit: force_random False; Ting-Lu alone: no replacement)
+    states = ec.run_showdown(red, TINGLU_HITS_EQ, turns, force_random=False)
+    assert states[1]["sides"][0]["mons"][0]["item"] == "redcard"
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "calmmind", "earthquake")
+    assert ec.closest(states[1], outs, (1, 1))["diff"] == {}
+
+
+def test_l44_air_balloon_pops_on_a_substitute_hit():
+    gliscor = _setter("Gliscor", "Poison Heal", "Air Balloon", "- Substitute\n- Protect\n- Earthquake\n- Toxic")
+    turns = [("move substitute", "move calmmind"), ("move toxic", "move seismictoss")]
+    states = ec.run_showdown(gliscor, BLISSEY, turns)
+    assert states[2]["sides"][0]["mons"][0]["item"] == ""  # Showdown: popped through the Sub
+    outs = ec.engine_outcomes(ec.engine_state(states[1]), "toxic", "seismictoss")
+    assert ec.closest(states[2], outs, (1, 1))["diff"] == {}
+
+
+# L45 (doc/engine-diff.md): Lum Berry cures confusion too (Showdown's onUpdate: a status or
+# confusion), at once; resist berries only on a damaging, non-fixed hit (onSourceModifyDamage:
+# not Ground Spikes, Dark Nasty Plot, Ruination)
+def test_l45_lum_berry_cures_confusion():
+    lum = _setter("Blissey", "Natural Cure", "Lum Berry", "- Soft-Boiled\n- Seismic Toss\n- Calm Mind\n- Protect")
+    sableye = _setter("Sableye", "Prankster", "Leftovers", "- Confuse Ray\n- Recover\n- Knock Off\n- Will-O-Wisp")
+    states = ec.run_showdown(lum, sableye, [("move calmmind", "move confuseray")])
+    b = states[1]["sides"][0]["mons"][0]
+    assert b["item"] == "" and "confusion" not in b["volatiles"] and b["boosts"]["spa"] == 1
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "calmmind", "confuseray")
+    assert ec.closest(states[1], outs, (1, 1))["diff"] == {}
+
+
+@pytest.mark.parametrize("holder, move, foe", [
+    (_setter("Gholdengo", "Good as Gold", "Shuca Berry", "- Shadow Ball\n- Nasty Plot\n- Recover\n- Make It Rain"), "nastyplot", "spikes"),
+    (_setter("Slowking-Galar", "Regenerator", "Colbur Berry", "- Slack Off\n- Sludge Bomb\n- Future Sight\n- Nasty Plot"), "slackoff", "ruination"),
+])  # fmt: skip
+def test_l45_resist_berry_only_on_a_damaging_hit(holder, move, foe):
+    target = TINGLU_HITS_EQ if foe == "ruination" else TINGLU
+    states = ec.run_showdown(holder, target, [(f"move {move}", f"move {foe}")])
+    assert states[1]["sides"][0]["mons"][0]["item"] != ""
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), move, foe)
+    assert ec.closest(states[1], outs, (1, 1))["diff"] == {}
+
+
+UMBREON = _setter("Umbreon", "Synchronize", "Leftovers", "- Foul Play\n- Wish\n- Protect\n- Toxic")
+
+
+# L46 (doc/engine-diff.md): Synchronize, a poison / burn / paralysis from the foe goes back to
+# it (Showdown's onAfterSetStatus; not sleep / freeze); not implemented in the engine
+SYNC_FOE = _setter("Blissey", "Natural Cure", "Heavy-Duty Boots", "- Thunder Wave\n- Toxic\n- Soft-Boiled\n- Will-O-Wisp")
+
+
+@pytest.mark.parametrize("foe, foe_move, status", [
+    (SYNC_FOE, "thunderwave", "par"),
+    (SYNC_FOE, "toxic", "tox"),
+    (SYNC_FOE, "willowisp", "brn"),
+])  # fmt: skip
+def test_l46_synchronize(foe, foe_move, status):
+    states = ec.run_showdown(UMBREON, foe, [("move wish", f"move {foe_move}")])
+    assert states[1]["sides"][1]["mons"][0]["status"] == status
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "wish", foe_move)
+    assert ec.closest(states[1], outs, (1, 1))["diff"] == {}
+
+
+# harness (doc/engine-diff.md, L47): Rest's sleep (Showdown: the statusState's source is the
+# sleeper itself; its sourceEffect is not kept, so the dump's source was always empty and Rest's
+# sleep went to the engine as an ordinary one)
+@pytest.mark.parametrize("asleep_turns", [1, 2, 3])
+def test_l47_rest_sleep_mapped(asleep_turns):
+    turns = [("move curse", "move earthquake"), ("move rest", "move spikes")]
+    turns += [("move rest", "move spikes")] * asleep_turns
+    states = ec.run_showdown(DONDOZO, TINGLU_HITS_EQ, turns)
+    asleep = states[-1]["sides"][0]["mons"][0]["status"] == "slp"  # Rest: 2 turns asleep
+    assert asleep == (asleep_turns < 3)
+    outs = ec.engine_outcomes(ec.engine_state(states[-2]), "rest", "spikes")
+    p = sum(o[0] for o in outs if ("SLEEP" in str(o[1].side_one.pokemon[0].status).upper()) == asleep)
+    assert p == pytest.approx(1.0, abs=1e-3)  # deterministic: no wake-up roll
