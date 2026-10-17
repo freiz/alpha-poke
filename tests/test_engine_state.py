@@ -152,3 +152,18 @@ def test_perish_count_is_the_latest(belief):
                 "|turn|3"])  # fmt: skip
     vol = state(b, belief).side_two.volatile_statuses
     assert "perish2" in vol and "perish3" not in vol
+
+
+@pytest.mark.parametrize("who, line, want", [
+    ("one", "|-terastallize|p1a: Garchomp|Steel", ("dragon", "ground")),
+    ("two", "|-terastallize|p2a: Gholdengo|Fire", ("steel", "ghost")),
+])  # fmt: skip
+def test_terastallized_keeps_original_types(belief, who, line, want):
+    """The engine's types stay the original ones after Terastallization (its STAB on them,
+    Showdown's getTypes(false, true)); the tera type is apart (has_type reads only it)."""
+    s = state(battle([line, "|turn|2"]), belief)
+    side = getattr(s, f"side_{who}")
+    act = side.pokemon[int(side.active_index)]
+    assert act.terastallized
+    assert tuple(act.types) == want
+    assert act.tera_type == line.rsplit("|", 1)[1].lower()

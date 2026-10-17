@@ -198,7 +198,10 @@ pub fn modify_choice(
         }
         Choices::HARDPRESS => {
             let defender = defending_side.get_active_immutable();
-            attacker_choice.base_power = 100.0 * (defender.hp as f32 / defender.maxhp as f32);
+            // L34: Showdown's basePowerCallback, its integer steps
+            let (hp, maxhp) = (defender.hp as i64, defender.maxhp.max(1) as i64);
+            let bp = ((100 * (100 * (hp * 4096 / maxhp)) + 2047) / 4096) / 100;
+            attacker_choice.base_power = bp.max(1) as f32;
         }
         Choices::LASTRESPECTS => {
             // Technically not correct because of reviving moves but good enough
@@ -355,9 +358,17 @@ pub fn modify_choice(
                 attacker_choice.move_type = attacking_side.get_active_immutable().types.0;
             }
         }
+        // alpha-poke patch (2026-10-16, doc/engine-diff.md L33): 2 x against a grounded target
+        // (Showdown's onBasePower; was 1.5 x against any)
         Choices::RISINGVOLTAGE => {
-            if state.terrain.terrain_type == Terrain::ELECTRICTERRAIN {
-                attacker_choice.base_power *= 1.5;
+            if state.terrain.terrain_type == Terrain::ELECTRICTERRAIN
+                && (defending_side.get_active_immutable().is_grounded()
+                    || super::damage_calc::grounded_by_effect(
+                        defending_side,
+                        defending_side.get_active_immutable(),
+                    ))
+            {
+                attacker_choice.base_power *= 2.0;
             }
         }
         Choices::SHOREUP => {
@@ -564,8 +575,9 @@ pub fn modify_choice(
             let attacker_speed = attacking_side.calculate_boosted_stat(PokemonBoostableStat::Speed);
             let defender_speed = defending_side.calculate_boosted_stat(PokemonBoostableStat::Speed);
 
+            // (L34: floored as Showdown's basePowerCallback)
             attacker_choice.base_power =
-                ((25.0 * defender_speed as f32 / attacker_speed as f32) + 1.0).min(150.0);
+                ((25.0 * defender_speed as f32 / attacker_speed as f32).floor() + 1.0).min(150.0);
         }
         Choices::AVALANCHE => {
             if !attacker_choice.first_move && defending_side.damage_dealt.damage > 0 {
@@ -619,18 +631,14 @@ pub fn modify_choice(
                 attacker_choice.base_power *= 2.0;
             }
         }
-        Choices::FREEZEDRY => {
-            if defending_side
-                .get_active_immutable()
-                .has_type(&PokemonType::WATER)
-            {
-                attacker_choice.base_power *= 4.0; // 2x for being super effective, 2x for nullifying water resistance
-            }
-        }
+        // alpha-poke patch (2026-10-16, doc/engine-diff.md L34): Freeze-Dry's Water weakness in
+        // damage_calc's effectiveness stages (was 4 x on the base power)
         Choices::ERUPTION | Choices::WATERSPOUT | Choices::DRAGONENERGY => {
             let attacker = attacking_side.get_active_immutable();
             let hp_ratio = attacker.hp as f32 / attacker.maxhp as f32;
-            attacker_choice.base_power *= hp_ratio;
+            // alpha-poke patch (2026-10-16, doc/engine-diff.md L34): floored, at least 1
+            // (Showdown's clampIntRange of the callback's fraction)
+            attacker_choice.base_power = (attacker_choice.base_power * hp_ratio).floor().max(1.0);
         }
         Choices::SUCKERPUNCH | Choices::THUNDERCLAP => {
             if !attacker_choice.first_move || defender_choice.category == MoveCategory::Status {
@@ -645,7 +653,7 @@ pub fn modify_choice(
         Choices::COLLISIONCOURSE | Choices::ELECTRODRIFT => {
             let defender_active = defending_side.get_active_immutable();
             if type_effectiveness_modifier(&attacker_choice.move_type, &defender_active) > 1.0 {
-                attacker_choice.base_power *= 1.3;
+                attacker_choice.base_power *= 5325.0 / 4096.0;
             }
         }
         Choices::GRASSKNOT | Choices::LOWKICK => {

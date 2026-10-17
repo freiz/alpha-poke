@@ -13,6 +13,7 @@ process.stdin.on('data', d => { input += d; });
 process.stdin.on('end', () => {
 	const c = JSON.parse(input);
 	let hits = 0;
+	const logs = [];
 	let error = null;
 	try {
 		for (let i = 0; i < c.n; i++) {
@@ -30,10 +31,11 @@ process.stdin.on('end', () => {
 				from = battle.log.length;
 				battle.makeChoices(a, b);
 			}
-			if (battle.log.slice(from).some(x => x.includes(c.line))) hits++;
+			if (c.lines) logs.push(battle.log.slice(from));
+			else if (battle.log.slice(from).some(x => x.includes(c.line))) hits++;
 		}
 	} catch (e) {
 		error = String(e && e.stack || e);
 	}
-	process.stdout.write(JSON.stringify({hits, n: c.n, error}));
+	process.stdout.write(JSON.stringify({hits, n: c.n, logs, error}));
 });

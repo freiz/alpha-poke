@@ -27,7 +27,9 @@ use crate::instruction::{DecrementFutureSightInstruction, FormeChangeInstruction
 use crate::instruction::{DecrementPPInstruction, SetLastUsedMoveInstruction};
 
 use super::damage_calc::calculate_futuresight_damage;
-use super::damage_calc::{calculate_damage, type_effectiveness_modifier, DamageRolls};
+use super::damage_calc::{
+    calculate_damage, damage_rolls, type_effectiveness_modifier, DamageRolls,
+};
 use super::items::{
     item_before_move, item_end_of_turn, item_modify_attack_against, item_modify_attack_being_used,
     item_on_switch_in, Items,
@@ -1535,6 +1537,82 @@ fn starf_berry_branches(
     }
 }
 
+// alpha-poke patch (2026-10-16, doc/engine-diff.md L24 / L28): the crit chance of Showdown's crit
+// stage: the move's (+1 for a high-crit one), Scope Lens / Razor Claw +1, Super Luck +1, Focus
+// Energy +2 (1/24, 1/8, 1/2, then sure); before, only the move's
+fn crit_stage_chance(state: &State, attacking_side: &SideReference, choice: &Choice) -> f32 {
+    let side = state.get_side_immutable(attacking_side);
+    let attacker = side.get_active_immutable();
+    let stage = i32::from(choice.move_id.increased_crit_ratio())
+        + i32::from(matches!(attacker.item, Items::SCOPELENS | Items::RAZORCLAW))
+        + i32::from(attacker.ability == Abilities::SUPERLUCK)
+        + 2 * i32::from(
+            side.volatile_statuses
+                .contains(&PokemonVolatileStatus::FOCUSENERGY),
+        );
+    match stage {
+        0 => BASE_CRIT_CHANCE,
+        1 => 1.0 / 8.0,
+        2 => 1.0 / 2.0,
+        _ => 1.0,
+    }
+}
+
+// alpha-poke patch (2026-10-16, L30): a hit's crit chance against the defender (Battle / Shell
+// Armor: none; a guaranteed crit: sure)
+fn hit_crit_chance(state: &State, attacking_side: &SideReference, choice: &Choice) -> f32 {
+    let defender = state
+        .get_side_immutable(&attacking_side.get_other_side())
+        .get_active_immutable();
+    if defender.ability == Abilities::BATTLEARMOR || defender.ability == Abilities::SHELLARMOR {
+        0.0
+    } else if choice.move_id.guaranteed_crit() {
+        1.0
+    } else {
+        crit_stage_chance(state, attacking_side, choice)
+    }
+}
+
+// alpha-poke patch (2026-10-16, doc/engine-diff.md L30): the chance that hits with these rolls
+// knock out a target with `hp`, each hit rolling one of its 16 on its own (L34: the exact rolls),
+// and the average total when they do not: the distribution of the total by convolution, totals
+// of `hp` or more pooled
+fn multi_hit_kill(per_hit_rolls: &[[i16; 16]], hp: i32) -> (f32, f32) {
+    let cap = hp.max(1) as usize;
+    let mut dist = vec![0.0f32; cap + 1];
+    dist[0] = 1.0;
+    for rolls in per_hit_rolls {
+        let mut next = vec![0.0f32; cap + 1];
+        for (total, p) in dist.iter().enumerate() {
+            if *p == 0.0 {
+                continue;
+            }
+            if total == cap {
+                next[cap] += p;
+                continue;
+            }
+            for roll in rolls {
+                let t = cmp::min(total + *roll as usize, cap);
+                next[t] += p / 16.0;
+            }
+        }
+        dist = next;
+    }
+    let kill = dist[cap];
+    let alive: f32 = dist[..cap].iter().sum();
+    let mean = if alive > 0.0 {
+        dist[..cap]
+            .iter()
+            .enumerate()
+            .map(|(t, p)| t as f32 * p)
+            .sum::<f32>()
+            / alive
+    } else {
+        0.0
+    };
+    (kill, mean)
+}
+
 fn check_move_hit_or_miss(
     state: &mut State,
     choice: &Choice,
@@ -3019,13 +3097,13 @@ pub fn generate_instructions_from_move(
             hit_count = 3;
         }
         MultiHitMove::TwoToFiveHits => {
+            // alpha-poke patch (2026-10-16, doc/engine-diff.md L30): a branch per hit count below
+            // (0 here); before, 3 (Loaded Dice 4)
             hit_count =
                 if state.get_side(&attacking_side).get_active().ability == Abilities::SKILLLINK {
                     5
-                } else if state.get_side(&attacking_side).get_active().item == Items::LOADEDDICE {
-                    4
                 } else {
-                    3 // too lazy to implement branching here. Average is 3.2 so this is a fine approximation
+                    0
                 };
         }
         MultiHitMove::PopulationBomb => {
@@ -3043,44 +3121,203 @@ pub fn generate_instructions_from_move(
         }
     }
 
-    // alpha-poke patch (2026-10-16, doc/engine-diff.md L24 / L28): the crit chance of Showdown's
-    // crit stage: the move's (+1 for a high-crit one), Scope Lens / Razor Claw +1, Super Luck +1,
-    // Focus Energy +2 (1/24, 1/8, 1/2, then sure); before, only the move's
-    let crit_stage_chance = {
-        let side = state.get_side_immutable(&attacking_side);
-        let attacker = side.get_active_immutable();
-        let stage = i32::from(choice.move_id.increased_crit_ratio())
-            + i32::from(matches!(attacker.item, Items::SCOPELENS | Items::RAZORCLAW))
-            + i32::from(attacker.ability == Abilities::SUPERLUCK)
-            + 2 * i32::from(
-                side.volatile_statuses
-                    .contains(&PokemonVolatileStatus::FOCUSENERGY),
-            );
-        match stage {
-            0 => BASE_CRIT_CHANCE,
-            1 => 1.0 / 8.0,
-            2 => 1.0 / 2.0,
-            _ => 1.0,
-        }
+    // L30: 2-5 hits, 2 / 3 / 4 / 5 at 35 / 35 / 15 / 15% (Loaded Dice: 4 or 5, half each; Showdown's
+    // sample); each count finishes the move in a branch of its own (finish_move reverses the
+    // state, so a later one applies its instructions again; each gets the move as it was)
+    let mut counts: Vec<(i8, f32, f32)> = if hit_count != 0 {
+        vec![(hit_count, 1.0, 1.0)]
+    } else if state
+        .get_side_immutable(&attacking_side)
+        .get_active_immutable()
+        .item
+        == Items::LOADEDDICE
+    {
+        vec![(4, 0.5, 1.0), (5, 0.5, 1.0)]
+    } else {
+        vec![
+            (2, 0.35, 1.0),
+            (3, 0.35, 1.0),
+            (4, 0.15, 1.0),
+            (5, 0.15, 1.0),
+        ]
     };
-    let (_attacker_side, defender_side) = state.get_both_sides(&attacking_side);
-    let defender_active = defender_side.get_active();
+    // L8b: Fickle Beam's double power, 30% (Showdown's onBasePower): a power branch
+    if choice.move_id == Choices::FICKLEBEAM && fixed.is_none() {
+        counts = vec![(1, 0.7, 1.0), (1, 0.3, 2.0)];
+    }
+    let original_choice = choice.clone();
+    for (k, (n, p, power)) in counts.iter().enumerate() {
+        let mut ins = incoming_instructions.clone();
+        ins.update_percentage(*p);
+        if k > 0 {
+            state.apply_instructions(&ins.instruction_list);
+            *choice = original_choice.clone();
+        }
+        let mut damage = damage;
+        if *power != 1.0 {
+            choice.base_power *= power;
+            damage = calculate_damage(state, &attacking_side, choice, DamageRolls::Max);
+        }
+        // L30: each hit of a multi-hit move crits on its own (Showdown): k of n crits with the
+        // binomial chance, the hits' average damage each (before: all or none)
+        let crit = hit_crit_chance(state, &attacking_side, choice);
+        let split = *n > 1 && fixed.is_none() && damage.is_some();
+        if !split {
+            finish_move(
+                state,
+                choice,
+                defender_choice,
+                attacking_side,
+                ins,
+                final_instructions,
+                branch_on_damage,
+                damage,
+                fixed,
+                *n,
+                None,
+            );
+            continue;
+        }
+        let (max, max_crit) = damage.unwrap();
+        let (normal, critical) = (max as f32 * 0.925, max_crit as f32 * 0.925);
+        // L34: each hit's exact rolls (else 85-100% of its max)
+        let linear = |m: i16| {
+            let mut r = [0i16; 16];
+            for (i, x) in r.iter_mut().enumerate() {
+                *x = (m as f32 * (0.85 + 0.01 * i as f32)) as i16;
+            }
+            r
+        };
+        // (computed once per hit count, only when a total can reach the target's HP)
+        let target_hp = state
+            .get_side_immutable(&attacking_side.get_other_side())
+            .get_active_immutable()
+            .hp as i32;
+        let (normal_rolls, crit_rolls) =
+            if branch_on_damage && *n as i32 * max_crit as i32 >= target_hp {
+                damage_rolls(state, &attacking_side, choice)
+                    .filter(|(r, c)| r[15] == max && c[15] == max_crit)
+                    .unwrap_or((linear(max), linear(max_crit)))
+            } else {
+                (linear(max), linear(max_crit))
+            };
+        let hits = *n as i32;
+        let before = choice.clone();
+        let hp = state
+            .get_side_immutable(&attacking_side.get_other_side())
+            .get_active_immutable()
+            .hp as i32;
+        // the state has `ins` applied until a finish_move reverses it
+        let mut applied = true;
+        for crits in 0..=hits {
+            let ways = (0..crits).fold(1.0, |a, i| a * (hits - i) as f32 / (i + 1) as f32);
+            let chance = ways * crit.powi(crits) * (1.0 - crit).powi(hits - crits);
+            if chance <= 0.0 {
+                continue;
+            }
+            // the hits' total against the HP: its rolls decide a knockout near it (each hit's own
+            // roll: multi_hit_kill)
+            let total_max = (hits - crits) * max as i32 + crits * max_crit as i32;
+            let mut parts = vec![(
+                1.0,
+                ((hits - crits) as f32 * normal + crits as f32 * critical) / hits as f32,
+            )];
+            if branch_on_damage && total_max >= hp && (total_max as f32 * 0.85) < hp as f32 {
+                let mut per_hit = vec![normal_rolls; (hits - crits) as usize];
+                per_hit.extend(vec![crit_rolls; crits as usize]);
+                let (kill, non_kill) = multi_hit_kill(&per_hit, hp);
+                parts = vec![
+                    (1.0 - kill, non_kill / hits as f32),
+                    (kill, (hp as f32 / hits as f32).ceil()),
+                ];
+            }
+            for (share, per_hit) in parts.iter() {
+                if *share <= 0.0 {
+                    continue;
+                }
+                let mut part = ins.clone();
+                part.update_percentage(chance * share);
+                if !applied {
+                    state.apply_instructions(&part.instruction_list);
+                    *choice = before.clone();
+                }
+                finish_move(
+                    state,
+                    choice,
+                    defender_choice,
+                    attacking_side,
+                    part,
+                    final_instructions,
+                    branch_on_damage,
+                    damage,
+                    fixed,
+                    *n,
+                    Some(*per_hit as i16),
+                );
+                applied = false;
+            }
+        }
+        if applied {
+            state.reverse_instructions(&ins.instruction_list);
+        }
+    }
+}
+
+// alpha-poke patch (2026-10-16, doc/engine-diff.md L30): the rest of generate_instructions_from_move
+// after the hit count (the damage branches, run_move), once per hit count
+#[allow(clippy::too_many_arguments)]
+fn finish_move(
+    state: &mut State,
+    choice: &mut Choice,
+    defender_choice: &Choice,
+    attacking_side: SideReference,
+    mut incoming_instructions: StateInstructions,
+    mut final_instructions: &mut Vec<StateInstructions>,
+    branch_on_damage: bool,
+    damage: Option<(i16, i16)>,
+    fixed: Option<i16>,
+    hit_count: i8,
+    per_hit: Option<i16>,
+) {
+    let crit_stage_chance = crit_stage_chance(state, &attacking_side, choice);
     let mut does_damage = false;
     let (mut branch_damage, mut regular_damage) = (0, 0);
     let mut branch_instructions: Option<StateInstructions> = None;
     if let Some((max_damage_dealt, max_crit_damage)) = damage {
         does_damage = true;
         let avg_damage_dealt = (max_damage_dealt as f32 * 0.925) as i16;
-        let min_damage_dealt = (max_damage_dealt as f32 * 0.85) as i16;
-        if fixed.is_some() {
+        // alpha-poke patch (2026-10-16, doc/engine-diff.md L34): near a knockout, the exact 16
+        // rolls (Showdown's rounding) when the state still gives this max (else the rolls of
+        // 85-100% of it); computed only there (a second damage calculation)
+        let near_ko = branch_on_damage
+            && per_hit.is_none()
+            && fixed.is_none()
+            && max_damage_dealt
+                >= state
+                    .get_side_immutable(&attacking_side.get_other_side())
+                    .get_active_immutable()
+                    .hp;
+        let exact = if near_ko {
+            damage_rolls(state, &attacking_side, choice)
+                .filter(|(r, c)| r[15] == max_damage_dealt && c[15] == max_crit_damage)
+        } else {
+            None
+        };
+        let (_attacker_side, defender_side) = state.get_both_sides(&attacking_side);
+        let defender_active = defender_side.get_active();
+        let min_damage_dealt = match exact {
+            Some((r, _)) => r[0],
+            None => (max_damage_dealt as f32 * 0.85) as i16,
+        };
+        if let Some(d) = per_hit {
+            // L30: a multi-hit branch with its number of crits decided (the dispatch)
+            regular_damage = d;
+        } else if fixed.is_some() {
             regular_damage = max_damage_dealt;
         } else if branch_on_damage
             && max_damage_dealt >= defender_active.hp
             && min_damage_dealt < defender_active.hp
         {
-            let (average_non_kill_damage, num_kill_rolls) =
-                compare_health_with_damage_multiples(max_damage_dealt, defender_active.hp);
-
             let crit_rate = if defender_active.ability == Abilities::BATTLEARMOR
                 || defender_active.ability == Abilities::SHELLARMOR
             {
@@ -3092,7 +3329,37 @@ pub fn generate_instructions_from_move(
             };
 
             // the chance of a branch is the chance of the roll killing + the chance of a crit
-            let branch_chance = ((1.0 - crit_rate) * (num_kill_rolls as f32 / 16.0)) + crit_rate;
+            // (L34, exact rolls: a crit's own rolls, the non-kill damage averaged over both)
+            let (branch_chance, average_non_kill_damage) = match exact {
+                Some((rolls, crit_rolls)) => {
+                    let hp = defender_active.hp;
+                    let part = |rs: &[i16; 16], w: f32| {
+                        let alive: Vec<f32> =
+                            rs.iter().filter(|d| **d < hp).map(|d| *d as f32).collect();
+                        (
+                            w * (16 - alive.len()) as f32 / 16.0,
+                            w * alive.iter().sum::<f32>() / 16.0,
+                        )
+                    };
+                    let (kill_n, sum_n) = part(&rolls, 1.0 - crit_rate);
+                    let (kill_c, sum_c) = part(&crit_rolls, crit_rate);
+                    let kill = kill_n + kill_c;
+                    let avg = if kill < 1.0 {
+                        ((sum_n + sum_c) / (1.0 - kill)) as i16
+                    } else {
+                        0
+                    };
+                    (kill, avg)
+                }
+                None => {
+                    let (average_non_kill_damage, num_kill_rolls) =
+                        compare_health_with_damage_multiples(max_damage_dealt, defender_active.hp);
+                    (
+                        ((1.0 - crit_rate) * (num_kill_rolls as f32 / 16.0)) + crit_rate,
+                        average_non_kill_damage,
+                    )
+                }
+            };
 
             let mut branch_ins = incoming_instructions.clone();
             branch_ins.update_percentage(branch_chance);
@@ -3216,8 +3483,7 @@ pub fn generate_instructions_from_move(
     // L24: Starf Berry after each hit
     starf_berry_branches(state, &mut final_instructions, starf_from);
 
-    combine_duplicate_instructions(&mut final_instructions);
-    return;
+    combine_duplicate_instructions(final_instructions);
 }
 
 fn combine_duplicate_instructions(list_of_instructions: &mut Vec<StateInstructions>) {
@@ -3810,6 +4076,27 @@ fn add_end_of_turn_instructions(
 
     // future sight
     for side_ref in sides {
+        // alpha-poke patch (2026-10-16, doc/engine-diff.md L35): the hit is its user's move
+        // while the user is active (its abilities' and items' modifiers: Life Orb, Choice Specs,
+        // ...; Life Orb's recoil below), the target's always (Assault Vest, Multiscale, ...)
+        let user_active = {
+            let side = state.get_side_immutable(side_ref);
+            side.future_sight.0 == 1 && side.active_index == side.future_sight.1
+        };
+        if state.get_side_immutable(side_ref).future_sight.0 == 0 {
+            continue;
+        }
+        let mut fs_choice = Choice::default();
+        if state.get_side_immutable(side_ref).future_sight.0 == 1 {
+            fs_choice = MOVES.get(&Choices::FUTURESIGHT).unwrap().clone();
+            let none = Choice::default();
+            if user_active {
+                ability_modify_attack_being_used(state, &mut fs_choice, &none, side_ref);
+                item_modify_attack_being_used(state, &mut fs_choice, side_ref);
+            }
+            ability_modify_attack_against(state, &mut fs_choice, &none, side_ref);
+            item_modify_attack_against(state, &mut fs_choice, side_ref);
+        }
         let (attacking_side, defending_side) = state.get_both_sides(side_ref);
         if attacking_side.future_sight.0 > 0 {
             let decrement_future_sight_instruction =
@@ -3821,6 +4108,7 @@ fn add_end_of_turn_instructions(
                     &attacking_side,
                     &defending_side,
                     &attacking_side.future_sight.1,
+                    &fs_choice,
                 );
                 let defender = defending_side.get_active();
                 damage = cmp::min(damage, defender.hp);
@@ -3832,6 +4120,22 @@ fn add_end_of_turn_instructions(
                     .instruction_list
                     .push(future_sight_damage_instruction);
                 defender.hp -= damage;
+                let user = attacking_side.get_active();
+                if user_active
+                    && damage > 0
+                    && user.item == Items::LIFEORB
+                    && user.ability != Abilities::MAGICGUARD
+                    && user.hp > 0
+                {
+                    let recoil = cmp::min(user.maxhp / 10, user.hp);
+                    incoming_instructions
+                        .instruction_list
+                        .push(Instruction::Damage(DamageInstruction {
+                            side_ref: *side_ref,
+                            damage_amount: recoil,
+                        }));
+                    user.hp -= recoil;
+                }
             }
             attacking_side.future_sight.0 -= 1;
             incoming_instructions
@@ -5650,6 +5954,38 @@ pub fn calculate_damage_rolls(
     } else {
         None
     }
+}
+
+/// alpha-poke patch (2026-10-16, doc/engine-diff.md L34): the exact 16 rolls of a move's damage
+/// (without, with a crit) as calculate_damage_rolls computes its max: the dual-engine tests
+/// check Showdown's damage is one of them; None for a fixed-damage or no-damage move
+pub fn calculate_damage_roll_sets(
+    mut state: State,
+    attacking_side_ref: &SideReference,
+    mut choice: Choice,
+    mut defending_choice: &Choice,
+) -> Option<([i16; 16], [i16; 16])> {
+    let mut incoming_instructions = StateInstructions::default();
+    if choice.flags.charge {
+        choice.flags.charge = false;
+    }
+    if choice.move_id == Choices::FAKEOUT || choice.move_id == Choices::FIRSTIMPRESSION {
+        state.get_side(attacking_side_ref).last_used_move = LastUsedMove::Switch(PokemonIndex::P0);
+    }
+    if matches!(choice.move_id, Choices::SUCKERPUNCH | Choices::THUNDERCLAP) {
+        defending_choice = MOVES.get(&Choices::TACKLE).unwrap();
+    }
+    if fixed_damage(&state, &choice, attacking_side_ref).is_some() {
+        return None;
+    }
+    before_move(
+        &mut state,
+        &mut choice,
+        defending_choice,
+        attacking_side_ref,
+        &mut incoming_instructions,
+    );
+    damage_rolls(&state, attacking_side_ref, &choice)
 }
 
 pub fn calculate_both_damage_rolls(

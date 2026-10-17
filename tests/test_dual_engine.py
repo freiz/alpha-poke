@@ -1287,3 +1287,316 @@ def test_control_wish():
     assert any("move: Wish" in x for x in states[2]["log"])  # Showdown: healed
     outs = ec.engine_outcomes(ec.engine_state(states[1]), "roost", "ruination")
     assert ec.closest(states[2], outs, (1, 1), hp=True)["diff"] == {}
+
+
+def _engine_hit_counts(state, c1, c2) -> dict[int, float]:
+    """The chance of each number of hits on side two (its Damage instructions) in side one's
+    move, over the engine's outcomes."""
+    out: dict[int, float] = {}
+    for si in pe.generate_instructions(state, c1, c2):
+        n = sum(1 for i in si.instruction_list if str(i).startswith("Damage SideTwo"))
+        out[n] = out.get(n, 0.0) + si.percentage / 100
+    return out
+
+
+# L30 (doc/engine-diff.md): fixed in rust/patches (2026-10-16); a regression test now
+@pytest.mark.parametrize("item, counts", [("Leftovers", (2, 3, 4, 5)), ("Loaded Dice", (4, 5))])
+def test_l30_multi_hit_counts(item, counts):
+    """2-5 hits: 35 / 35 / 15 / 15% (Loaded Dice: 4 or 5), Showdown's rates over 1,000 seeds."""
+    p1 = _setter("Breloom", "Technician", item, "- Bullet Seed\n- Mach Punch\n- Spore\n- Swords Dance")
+    turns = [("move bulletseed", "move softboiled")]
+    states = ec.run_showdown(p1, BLISSEY, turns)
+    engine = _engine_hit_counts(ec.engine_state(states[0]), "bulletseed", "softboiled")
+    for n in counts:
+        rate = ec.showdown_rate(p1, BLISSEY, turns, f"|-hitcount|p2a: Blissey|{n}", 1000)
+        assert engine.get(n, 0.0) == pytest.approx(rate, abs=0.04), (n, rate, engine)
+
+
+# L8b, second step (doc/engine-diff.md): the expected power (80 x 1.3) was an approximation
+def test_l8b_fickle_beam_double_power_branch():
+    """30% of the time double power (Showdown's rate over 1,000 seeds): the engine's outcomes
+    with at least 1.9 x the smallest damage (a crit is 1.5 x) have that chance."""
+    turns = [("move ficklebeam", "move softboiled")]
+    rate = ec.showdown_rate(HYDRAPPLE, BLISSEY, turns, "move: Fickle Beam", 1000)
+    states = ec.run_showdown(HYDRAPPLE, BLISSEY, turns)
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "ficklebeam", "softboiled")
+    low = min(o.damage[1] for o in outs if o.damage[1] > 0)
+    doubled = sum(o[0] for o in outs if o.damage[1] >= 1.9 * low)
+    assert doubled == pytest.approx(rate, abs=0.04), rate
+
+
+def test_l30_multi_hit_crits_per_hit():
+    """Each hit of a multi-hit move crits on its own: of the 2-hit Icicle Spears (Showdown, 2,000
+    seeds), the share with exactly one crit; the engine's 2-hit outcomes with one crit (damage
+    between none and both) in the same share."""
+    p1 = KYUREM.replace("- Earth Power", "- Icicle Spear").replace("- Freeze-Dry", "- Scale Shot")
+    turns = [("move iciclespear", "move softboiled")]
+    logs = ec.showdown_log_counts(p1, BLISSEY, turns, 2000)
+    two = [lg for lg in logs if "|-hitcount|p2a: Blissey|2" in lg]
+    one_crit = sum(1 for lg in two if sum(x.startswith("|-crit|") for x in lg) == 1) / len(two)
+    states = ec.run_showdown(p1, BLISSEY, turns)
+    e = ec.engine_state(states[0])
+    two_hit = [(si.percentage / 100, sum(int(str(i).split(": ")[1]) for i in si.instruction_list
+                                         if str(i).startswith("Damage SideTwo")))
+               for si in pe.generate_instructions(e, "iciclespear", "softboiled")
+               if sum(str(i).startswith("Damage SideTwo") for i in si.instruction_list) == 2]  # fmt: skip
+    total = sum(p for p, _ in two_hit)
+    lo, hi = min(d for _, d in two_hit), max(d for _, d in two_hit)
+    engine_one = sum(p for p, d in two_hit if lo < d < hi) / total
+    assert engine_one == pytest.approx(one_crit, abs=0.025), (one_crit, engine_one)
+
+
+def test_l30_multi_hit_knockout_rolls():
+    """A multi-hit total near the target's HP: its rolls decide the knockout (Bullet Seed into a
+    level-82 Shell Armor Lapras: no crits; 3+ hits always knock it out, 2 some of the time:
+    Showdown's knockout rate over 1,000 seeds); before, the engine's average total decided."""
+    p1 = _setter("Breloom", "Technician", "Leftovers", "- Bullet Seed\n- Mach Punch\n- Spore\n- Swords Dance")
+    p2 = "Lapras @ Leftovers\nAbility: Shell Armor\nLevel: 82\n- Freeze-Dry\n- Surf\n- Haze\n- Protect"
+    turns = [("move bulletseed", "move haze")]
+    rate = ec.showdown_rate(p1, p2, turns, "|faint|p2a: Lapras", 1000)
+    states = ec.run_showdown(p1, p2, turns)
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "bulletseed", "haze")
+    knocked_out = sum(o[0] for o in outs if o[1].side_two.pokemon[0].hp == 0)
+    assert knocked_out == pytest.approx(rate, abs=0.05), (rate, knocked_out)
+
+
+MEOWSCARADA_TERA_FIRE = """Meowscarada @ Life Orb
+Ability: Overgrow
+Tera Type: Fire
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- Knock Off
+- Protect
+- Flower Trick
+- U-turn"""
+
+
+# L31 (doc/engine-diff.md): the state gave the tera type as the types, losing the original STAB
+@pytest.mark.parametrize("move", ["knockoff", "flowertrick"])
+def test_l31_terastallized_keeps_original_stab(move):
+    """A terastallized attacker keeps its original types' STAB (Showdown: getTypes(false, true)):
+    the engine's damage after Tera Fire, Dark Knock Off / Grass Flower Trick, within the rolls."""
+    turns = [("move protect terastallize", "move calmmind"), (f"move {move}", "move calmmind")]
+    states = ec.run_showdown(MEOWSCARADA_TERA_FIRE, BLISSEY, turns)
+    assert states[1]["sides"][0]["mons"][0]["terastallized"] == "Fire"
+    outs = ec.engine_outcomes(ec.engine_state(states[1]), move, "calmmind")
+    assert ec.closest(states[2], outs, (1, 1), hp=True)["diff"] == {}
+
+
+TYRANITAR_GROUNDER = """Tyranitar @ Leftovers
+Ability: Unnerve
+Tera Type: Ghost
+EVs: 252 HP / 252 Atk / 4 SpD
+Adamant Nature
+- Earthquake
+- Smack Down
+- Stealth Rock
+- Protect"""
+
+
+# L32 (doc/engine-diff.md): a Flying type grounded by Iron Ball / Smack Down is hit by Ground
+# moves (Showdown's isGrounded and Iron Ball's onEffectiveness: the Flying type neutral)
+@pytest.mark.parametrize("item, pre", [
+    ("Iron Ball", []),
+    ("Leftovers", [("move smackdown", "move defog")]),
+    ("Leftovers", []),  # control: immune
+])  # fmt: skip
+def test_l32_grounded_flying_hit_by_ground(item, pre):
+    turns = pre + [("move earthquake", "move defog")]
+    states = ec.run_showdown(TYRANITAR_GROUNDER, _corviknight(item), turns)
+    a, b = (s["sides"][1]["mons"][0]["hp"] for s in states[-2:])
+    assert (b < a) == (item == "Iron Ball" or bool(pre))
+    outs = ec.engine_outcomes(ec.engine_state(states[-2]), "earthquake", "defog")
+    assert ec.closest(states[-1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+URSALUNA_FACADE = _setter("Ursaluna", "Bulletproof", "Flame Orb", "- Facade\n- Protect\n- Earthquake\n- Swords Dance")
+KINGAMBIT_KNOCK = _setter("Kingambit", "Supreme Overlord", "Leftovers", "- Knock Off\n- Protect\n- Iron Head\n- Swords Dance")
+SLOWKING_COLBUR = _setter("Slowking-Galar", "Regenerator", "Colbur Berry", "- Chilly Reception\n- Slack Off\n- Sludge Bomb\n- Future Sight")
+PINCURCHIN = _setter("Pincurchin", "Electric Surge", "Leftovers", "- Rising Voltage\n- Spikes\n- Protect\n- Recover")
+
+
+# L33 (doc/engine-diff.md): found by the damage calculation differential
+def test_l33_facade_ignores_burn():
+    """Burned: Facade's 140 power, no burn halving (Showdown's modifyDamage, Gen 6+)."""
+    turns = [("move protect", "move defog"), ("move facade", "move defog")]
+    states = ec.run_showdown(URSALUNA_FACADE, CORVIKNIGHT, turns)
+    assert states[1]["sides"][0]["mons"][0]["status"] == "brn"
+    outs = ec.engine_outcomes(ec.engine_state(states[1]), "facade", "defog")
+    assert ec.closest(states[2], outs, (1, 1), hp=True)["diff"] == {}
+
+
+def test_l33_knock_off_boost_with_a_resist_berry():
+    """Knock Off's 1.5 x on a resist berry's holder (Showdown's onBasePower sees the berry; it
+    is eaten later, onSourceModifyDamage): the engine ate it first (item_before_move)."""
+    turns = [("move knockoff", "move sludgebomb")]
+    states = ec.run_showdown(KINGAMBIT_KNOCK, SLOWKING_COLBUR, turns)
+    assert states[1]["sides"][1]["mons"][0]["item"] == ""
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "knockoff", "sludgebomb")
+    outs = [max(outs, key=lambda o: o[0])]  # no crit (a crit's 1.5 x would match the boost's)
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+@pytest.mark.parametrize("target, foe", [(BLISSEY, "calmmind"), (CORVIKNIGHT, "roost")])
+def test_l33_rising_voltage(target, foe):
+    """In Electric Terrain: 2 x against a grounded target (Showdown's onBasePower), 1 x against
+    a Flying type (the engine: 1.5 x against both)."""
+    turns = [("move spikes", f"move {foe}"), ("move risingvoltage", f"move {foe}")]
+    states = ec.run_showdown(PINCURCHIN, target, turns)
+    assert states[1]["field"]["terrain"] == "electricterrain"
+    outs = ec.engine_outcomes(ec.engine_state(states[1]), "risingvoltage", foe)
+    assert ec.closest(states[2], outs, (1, 1), hp=True)["diff"] == {}
+
+
+SLOWKING_PLOT = SLOWKING_FUTURE.replace("- Chilly Reception", "- Nasty Plot")
+
+
+# L35 (doc/engine-diff.md): found when L31 gave the user its STAB (the two errors had cancelled)
+def test_l35_future_sight_user_boosts():
+    """Future Sight's damage at the hit uses its user's Special Attack boosts while it is active
+    (Showdown's getDamage on the source at the hit); the engine took the unboosted stat."""
+    turns = [("move futuresight", "move defog"), ("move nastyplot", "move defog"),
+             ("move nastyplot", "move defog")]  # fmt: skip
+    states = ec.run_showdown(SLOWKING_PLOT, CORVIKNIGHT, turns, seed="gen5,5,5,5,5")
+    assert "|-end|p2a: Corviknight|move: Future Sight" in states[3]["log"]
+    assert states[3]["sides"][0]["mons"][0]["boosts"]["spa"] == 4
+    outs = ec.engine_outcomes(ec.engine_state(states[2]), "nastyplot", "defog")
+    assert ec.closest(states[3], outs, (1, 1), hp=True)["diff"] == {}
+
+
+IRON_CROWN = """Iron Crown @ Booster Energy
+Ability: Quark Drive
+Tera Type: Fighting
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Psyshock
+- Calm Mind
+- Tachyon Cutter
+- Focus Blast"""
+
+
+def test_l35_neutralizing_gas_suppresses_quark_drive():
+    """With Neutralizing Gas out, a Quark Drive / Protosynthesis boost does nothing (its
+    handlers check ignoringAbility()): Iron Crown's Special Attack, its quarkdrive volatile
+    still on."""
+    turns = [("move calmmind", "switch 2"), ("move psyshock", "move willowisp")]
+    states = ec.run_showdown(IRON_CROWN, BLISSEY + "\n\n" + WEEZING, turns)
+    assert "quarkdrive" in states[1]["sides"][0]["mons"][0]["volatiles"]
+    outs = ec.engine_outcomes(ec.engine_state(states[1]), "psyshock", "willowisp")
+    assert ec.closest(states[2], outs, (1, 2), hp=True)["diff"] == {}
+
+
+def test_l35_neutralizing_gas_attacker_suppresses_target_ability():
+    """A Neutralizing Gas user's hit ignores the target's ability too (Vessel of Ruin's Special
+    Attack drop): the engine only checked a Neutralizing Gas target."""
+    turns = [("move strangesteam", "move spikes")]
+    states = ec.run_showdown(WEEZING, TINGLU, turns)
+    hit = next(x for x in states[1]["log"] if x.startswith("|-damage|p2a") and "[from]" not in x)
+    assert "|-crit" not in "".join(states[1]["log"])
+    dealt = 514 - int(hit.split("|")[3].split("/")[0])  # Showdown's roll of it
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "strangesteam", "spikes")
+    low = min(o.damage[1] for o in outs if o.damage[1] > 0)  # no crit: the engine's average roll
+    assert 0.85 / 0.925 * low - 2 <= dealt <= low / 0.925 + 2, (dealt, low)
+
+
+def _hit(before: dict, after: dict, attacker: str, target: str) -> tuple[int, bool, bool]:
+    """Showdown's damage of the attacker's move this turn on the target (from the log), whether
+    it crit and whether it was capped by the target's HP (a knockout)."""
+    side = before["sides"][1 if target.startswith("p2") else 0]
+    hp = side["mons"][side["active"]]["hp"]
+    log = after["log"]
+    i = next(k for k, x in enumerate(log) if x.startswith(f"|move|{attacker}"))
+    for x in log[:i]:  # HP changes before the move
+        if x.startswith((f"|-damage|{target}", f"|-heal|{target}")):
+            hp = int(x.split("|")[3].split("/")[0].split()[0])
+    crit = False
+    for x in log[i + 1:]:
+        if x.startswith("|move|"):
+            break
+        crit |= x.startswith(f"|-crit|{target}")
+        if x.startswith(f"|-damage|{target}") and "[from]" not in x:
+            left = int(x.split("|")[3].split("/")[0].split()[0])
+            return hp - left, crit, left == 0
+    raise AssertionError("no hit")
+
+
+def _attacker(species, ability, item, moves, nature="Adamant"):
+    return f"""{species} @ {item}
+Ability: {ability}
+Tera Type: Normal
+EVs: 252 Atk / 4 SpD / 252 SpA
+{nature} Nature
+{moves}"""
+
+
+DONDOZO = _setter("Dondozo", "Unaware", "Leftovers", "- Rest\n- Wave Crash\n- Curse\n- Yawn")
+DRAGONITE = _setter("Dragonite", "Multiscale", "Heavy-Duty Boots", "- Roost\n- Earthquake\n- Extreme Speed\n- Dragon Dance")
+TINGLU_AV = _setter("Ting-Lu", "Vessel of Ruin", "Assault Vest", "- Earthquake\n- Ruination\n- Payback\n- Stone Edge")
+TINGLU_HITS_EQ = _setter("Ting-Lu", "Vessel of Ruin", "Leftovers", "- Earthquake\n- Ruination\n- Payback\n- Spikes")
+KYUREM_SPECIAL = _attacker("Kyurem", "Pressure", "Leftovers", "- Ice Beam\n- Earth Power\n- Freeze-Dry\n- Protect", "Modest")
+
+# L34 (doc/engine-diff.md): Showdown's damage step by step with its rounding; each case's hit
+# must be one of the engine's 16 rolls (alpha_search.damage_rolls), not only near them
+ROLL_CASES = [  # (attacker, target, turns, attacker's move, target's move)
+    (_attacker("Great Tusk", "Protosynthesis", "Life Orb", "- Headlong Rush\n- Ice Spinner\n- Rapid Spin\n- Knock Off"), TINGLU, [], "headlongrush", "spikes"),
+    (_attacker("Kingambit", "Supreme Overlord", "Choice Band", "- Iron Head\n- Kowtow Cleave\n- Sucker Punch\n- Knock Off"), TINGLU, [], "ironhead", "spikes"),
+    (_attacker("Gholdengo", "Good as Gold", "Choice Specs", "- Shadow Ball\n- Make It Rain\n- Trick\n- Focus Blast", "Modest"), TINGLU_AV, [], "shadowball", "earthquake"),
+    (_attacker("Great Tusk", "Protosynthesis", "Leftovers", "- Close Combat\n- Ice Spinner\n- Rapid Spin\n- Knock Off"), CHANSEY, [], "closecombat", "calmmind"),
+    (KYUREM_SPECIAL, DRAGONITE, [], "icebeam", "dragondance"),
+    (_attacker("Venomoth", "Tinted Lens", "Life Orb", "- Bug Buzz\n- Sludge Bomb\n- Quiver Dance\n- Sleep Powder", "Modest"), CORVIKNIGHT, [], "bugbuzz", "defog"),
+    (_attacker("Crawdaunt", "Adaptability", "Life Orb", "- Crabhammer\n- Knock Off\n- Aqua Jet\n- Swords Dance"), TINGLU, [], "crabhammer", "spikes"),
+    (_attacker("Scizor", "Technician", "Choice Band", "- Bullet Punch\n- U-turn\n- Knock Off\n- Close Combat"), TINGLU, [], "bulletpunch", "spikes"),
+    (KINGAMBIT_KNOCK, SLOWKING_COLBUR, [], "knockoff", "sludgebomb"),
+    (_attacker("Rillaboom", "Grassy Surge", "Choice Band", "- Grassy Glide\n- Wood Hammer\n- U-turn\n- Knock Off"), TINGLU, [], "grassyglide", "spikes"),
+    (KYUREM_SPECIAL, DONDOZO, [], "freezedry", "curse"),
+    # Expert Belt's "super effective" includes Freeze-Dry on Water
+    (_attacker("Kyurem", "Pressure", "Expert Belt", "- Ice Beam\n- Earth Power\n- Freeze-Dry\n- Protect", "Modest"), DONDOZO, [], "freezedry", "curse"),
+    # Guts boosts the Attack only (the engine: any move's power)
+    (_attacker("Conkeldurr", "Guts", "Flame Orb", "- Focus Blast\n- Drain Punch\n- Mach Punch\n- Protect", "Modest"), TINGLU, [("move protect", "move spikes")], "focusblast", "spikes"),
+    # Grassy Terrain halves Bulldoze too (the engine: Earthquake only)
+    (_attacker("Great Tusk", "Protosynthesis", "Leftovers", "- Bulldoze\n- Ice Spinner\n- Rapid Spin\n- Knock Off"), _setter("Rillaboom", "Grassy Surge", "Leftovers", "- Swords Dance\n- Wood Hammer\n- U-turn\n- Knock Off"), [], "bulldoze", "swordsdance"),
+    # Eruption at 71 / 281 HP: 37.9 power, Showdown's 37 (a fraction is floored, its modifiers
+    # skipped: runEvent modifies integers only); Choice Specs on a frail target, for a difference
+    (_attacker("Torkoal", "Drought", "Choice Specs", "- Eruption\n- Lava Plume\n- Rapid Spin\n- Stealth Rock", "Modest"),
+     TINGLU_HITS_EQ + "\n\n" + _attacker("Kingambit", "Pressure", "Leftovers", "- Iron Head\n- Kowtow Cleave\n- Swords Dance\n- Protect"),
+     [("move eruption", "move earthquake"), ("move eruption", "switch 2")], "eruption", "swordsdance"),
+    (_attacker("Ursaluna", "Guts", "Flame Orb", "- Headlong Rush\n- Facade\n- Protect\n- Trailblaze"), WEEZING, [("move protect", "move protect")], "headlongrush", "willowisp"),
+]  # fmt: skip
+
+
+@pytest.mark.parametrize("attacker, target, pre, move, foe", ROLL_CASES,
+                         ids=[c[3] + "-" + c[0].split(" @")[0] for c in ROLL_CASES])  # fmt: skip
+def test_l34_damage_is_a_showdown_roll(attacker, target, pre, move, foe):
+    import alpha_search
+
+    states = ec.run_showdown(attacker, target, pre + [(f"move {move}", f"move {foe}")])
+    dealt, crit, capped = _hit(states[-2], states[-1], "p1a: ", "p2a: ")
+    rolls = alpha_search.damage_rolls(ec.engine_state(states[-2]).to_string(), True, move, foe)
+    r = rolls[1] if crit else rolls[0]
+    assert dealt in r or (capped and dealt <= r[-1]), (dealt, crit, r)
+
+
+@pytest.mark.parametrize("attacker, target, pre, move, foe", ROLL_CASES,
+                         ids=[c[3] + "-" + c[0].split(" @")[0] for c in ROLL_CASES])  # fmt: skip
+def test_l34_max_damage_matches_showdown(attacker, target, pre, move, foe):
+    """The max roll (no crit) is Showdown's exactly (its getDamage on a copy of the battle at the
+    turn's start: showdown_damage.js)."""
+    import alpha_search
+
+    states = ec.run_showdown(attacker, target, pre + [(f"move {move}", f"move {foe}")],
+                             damage_probe=True)  # fmt: skip
+    want = states[-2]["damage"]["p1"][move]
+    rolls = alpha_search.damage_rolls(ec.engine_state(states[-2]).to_string(), True, move, foe)
+    assert rolls[0][-1] == want
+
+
+def test_l35_future_sight_user_life_orb():
+    """Future Sight's hit is its user's move (while active): its Life Orb's 1.3 x on the damage
+    and 1/10 recoil (Showdown's onModifyDamage / onAfterMoveSecondarySelf on the source)."""
+    turns = [("move futuresight", "move defog"), ("move nastyplot", "move defog"),
+             ("move nastyplot", "move defog")]  # fmt: skip
+    p1 = SLOWKING_PLOT.replace("@ Heavy-Duty Boots", "@ Life Orb")
+    states = ec.run_showdown(p1, CORVIKNIGHT, turns, seed="gen5,5,5,5,5")
+    assert any("[from] item: Life Orb" in x for x in states[3]["log"])
+    outs = ec.engine_outcomes(ec.engine_state(states[2]), "nastyplot", "defog")
+    assert ec.closest(states[3], outs, (1, 1), hp=True)["diff"] == {}

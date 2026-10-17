@@ -54,8 +54,6 @@ KNOWN_MOVES = {
     "shoreup": ({"heal"}, WEATHER_HEAL),
     "leechseed": ({"flags"}, "the engine makes Grass types immune through the powder flag"),
     "tripleaxel": ({"base_power"}, "the engine: 3 hits of 40 (Showdown 20, 40, 60; approximation)"),
-    "ficklebeam": ({"base_power"}, "the engine: the expected power 80 x 1.3 (Showdown: 30% "
-                   "double; L8b)"),
     "uproar": ({"effects"}, "not implemented in the engine (rare in OU)"),
     "revivalblessing": ({"pivot"}, "not implemented in the engine (rare in OU)"),
 }

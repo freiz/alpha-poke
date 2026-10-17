@@ -945,6 +945,39 @@ fn feature_dims(py: Python<'_>) -> PyResult<Bound<'_, PyDict>> {
     Ok(d)
 }
 
+/// poke-engine's exact 16 damage rolls, lowest first, of a side's move against the other side's
+/// move (doc/engine-diff.md L34; the dual-engine tests check Showdown's damage is one of them):
+/// (no crit, crit), None for a fixed-damage or no-damage move.
+#[pyfunction]
+fn damage_rolls(
+    state: &str,
+    side_one: bool,
+    mv: &str,
+    foe_move: &str,
+) -> PyResult<Option<(Vec<i16>, Vec<i16>)>> {
+    use poke_engine::choices::{Choices, MOVES};
+    use poke_engine::engine::generate_instructions::calculate_damage_roll_sets;
+    use poke_engine::state::SideReference;
+    use std::str::FromStr;
+    let get = |m: &str| {
+        Choices::from_str(m)
+            .ok()
+            .and_then(|c| MOVES.get(&c))
+            .cloned()
+            .ok_or_else(|| PyValueError::new_err(format!("unknown move {m}")))
+    };
+    let (choice, foe) = (get(mv)?, get(foe_move)?);
+    let side = if side_one {
+        SideReference::SideOne
+    } else {
+        SideReference::SideTwo
+    };
+    Ok(
+        calculate_damage_roll_sets(State::deserialize(state), &side, choice, &foe)
+            .map(|(a, b)| (a.to_vec(), b.to_vec())),
+    )
+}
+
 /// The full-information state of a self-play / evaluation position: side one from `a` (side
 /// one's own view: its side exact), side two = side one of `b` (the other player's own view),
 /// the field from `a`; the weather / terrain from `b` with `weather_from_b` / `terrain_from_b`
@@ -1099,6 +1132,7 @@ fn alpha_search(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(root_priors, m)?)?;
     m.add_function(wrap_pyfunction!(evaluate, m)?)?;
     m.add_function(wrap_pyfunction!(merge_sides, m)?)?;
+    m.add_function(wrap_pyfunction!(damage_rolls, m)?)?;
     m.add_function(wrap_pyfunction!(chance_outcomes, m)?)?;
     m.add_function(wrap_pyfunction!(describe, m)?)?;
     Ok(())

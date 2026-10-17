@@ -9,6 +9,7 @@
 "volatile.typechange"
 ],
 "b0-t28": [
+"hp",
 "volatile.typechange"
 ],
 "b0-t7": [
@@ -16,21 +17,6 @@
 ],
 "b100-t3": [
 "volatile.typechange"
-],
-"b100-t38": [
-"hp"
-],
-"b100-t50": [
-"hp"
-],
-"b100-t6": [
-"hp"
-],
-"b102-t16": [
-"hp"
-],
-"b104-t14": [
-"hp"
 ],
 "b107-t54": [
 "hp"
@@ -44,15 +30,6 @@
 "b109-t44": [
 "hp"
 ],
-"b110-t17": [
-"hp"
-],
-"b110-t24": [
-"hp"
-],
-"b110-t25": [
-"hp"
-],
 "b110-t32": [
 "hp"
 ],
@@ -61,12 +38,6 @@
 ],
 "b112-t2": [
 "volatile.typechange"
-],
-"b114-t11": [
-"hp"
-],
-"b114-t13": [
-"hp"
 ],
 "b117-t13": [
 "volatile.typechange"
@@ -77,12 +48,6 @@
 "b117-t25": [
 "boost.atk"
 ],
-"b117-t29": [
-"hp"
-],
-"b117-t40": [
-"status"
-],
 "b117-t44": [
 "hp"
 ],
@@ -92,35 +57,11 @@
 "b118-t29": [
 "boost.atk"
 ],
-"b121-t10": [
-"hp"
-],
 "b121-t36": [
-"hp"
-],
-"b121-t9": [
-"hp"
-],
-"b122-t13": [
 "hp"
 ],
 "b123-t19": [
 "light_screen"
-],
-"b123-t2": [
-"hp"
-],
-"b123-t34": [
-"hp"
-],
-"b123-t4": [
-"hp"
-],
-"b126-t10": [
-"hp"
-],
-"b126-t13": [
-"hp"
 ],
 "b126-t41": [
 "volatile.confusion"
@@ -144,12 +85,6 @@
 "b131-t28": [
 "volatile.confusion"
 ],
-"b132-t25": [
-"hp"
-],
-"b132-t8": [
-"hp"
-],
 "b133-t19": [
 "hp"
 ],
@@ -158,9 +93,6 @@
 "status"
 ],
 "b134-t16": [
-"hp"
-],
-"b135-t14": [
 "hp"
 ],
 "b136-t22": [
@@ -176,16 +108,7 @@
 "b137-t23": [
 "hp"
 ],
-"b137-t24": [
-"hp"
-],
 "b137-t26": [
-"hp"
-],
-"b137-t29": [
-"hp"
-],
-"b137-t32": [
 "hp"
 ],
 "b138-t35": [
@@ -205,13 +128,6 @@
 "hp",
 "volatile.leechseed"
 ],
-"b14-t21": [
-"hp"
-],
-"b14-t4": [
-"hp",
-"status"
-],
 "b140-t27": [
 "volatile.substitute"
 ],
@@ -225,39 +141,14 @@
 "hp",
 "volatile.typechange"
 ],
-"b148-t16": [
-"hp"
-],
 "b148-t19": [
 "volatile.substitute"
-],
-"b149-t29": [
-"hp"
-],
-"b149-t30": [
-"hp"
-],
-"b149-t32": [
-"hp"
 ],
 "b15-t22": [
 "boost.spd",
 "hp"
 ],
 "b153-t14": [
-"hp"
-],
-"b153-t32": [
-"hp"
-],
-"b153-t37": [
-"hp",
-"status"
-],
-"b153-t39": [
-"hp"
-],
-"b154-t26": [
 "hp"
 ],
 "b157-t24": [
@@ -270,15 +161,6 @@
 ],
 "b157-t7": [
 "boost.spd",
-"hp"
-],
-"b159-t6": [
-"hp"
-],
-"b16-t23": [
-"hp"
-],
-"b16-t9": [
 "hp"
 ],
 "b161-t30": [
@@ -297,12 +179,6 @@
 "b164-t1": [
 "volatile.typechange"
 ],
-"b165-t1": [
-"hp"
-],
-"b166-t10": [
-"hp"
-],
 "b168-t16": [
 "volatile.confusion"
 ],
@@ -312,22 +188,10 @@
 "b17-t30": [
 "stealth_rock"
 ],
-"b17-t4": [
-"hp"
-],
-"b17-t7": [
-"hp"
-],
-"b170-t16": [
-"hp"
-],
 "b176-t18": [
 "active",
 "hp",
 "item"
-],
-"b177-t12": [
-"hp"
 ],
 "b177-t22": [
 "boost.spe"
@@ -339,28 +203,14 @@
 "hp",
 "volatile.leechseed"
 ],
-"b18-t41": [
-"hp"
-],
-"b18-t42": [
-"hp"
-],
 "b18-t7": [
 "hp"
 ],
 "b180-t18": [
 "hp"
 ],
-"b182-t34": [
-"active",
-"hp",
-"status"
-],
 "b183-t27": [
 "volatile.substitute"
-],
-"b184-t3": [
-"hp"
 ],
 "b184-t5": [
 "hp"
@@ -368,35 +218,11 @@
 "b185-t19": [
 "hp"
 ],
-"b187-t17": [
-"hp"
-],
 "b187-t30": [
 "status"
 ],
-"b189-t14": [
-"hp"
-],
 "b189-t5": [
 "volatile.encore"
-],
-"b189-t6": [
-"hp"
-],
-"b189-t7": [
-"hp"
-],
-"b189-t8": [
-"hp"
-],
-"b19-t11": [
-"hp"
-],
-"b19-t12": [
-"hp"
-],
-"b19-t13": [
-"hp"
 ],
 "b19-t29": [
 "stealth_rock"
@@ -417,12 +243,6 @@
 "boost.spd",
 "hp"
 ],
-"b194-t18": [
-"hp"
-],
-"b195-t23": [
-"hp"
-],
 "b195-t3": [
 "volatile.typechange"
 ],
@@ -430,15 +250,6 @@
 "volatile.disable"
 ],
 "b198-t3": [
-"hp"
-],
-"b199-t14": [
-"hp"
-],
-"b199-t15": [
-"hp"
-],
-"b199-t16": [
 "hp"
 ],
 "b199-t4": [
@@ -449,9 +260,6 @@
 ],
 "b2-t16": [
 "volatile.confusion"
-],
-"b20-t38": [
-"hp"
 ],
 "b202-t19": [
 "boost.spe"
@@ -466,39 +274,9 @@
 "b205-t1": [
 "hp"
 ],
-"b205-t12": [
-"hp"
-],
-"b207-t8": [
-"hp"
-],
-"b21-t11": [
-"hp"
-],
-"b210-t21": [
-"hp"
-],
-"b210-t51": [
-"hp"
-],
-"b211-t1": [
-"hp"
-],
 "b211-t11": [
 "hp",
 "item"
-],
-"b211-t5": [
-"hp"
-],
-"b212-t10": [
-"hp"
-],
-"b212-t14": [
-"hp"
-],
-"b212-t22": [
-"hp"
 ],
 "b214-t26": [
 "boost.atk"
@@ -510,24 +288,11 @@
 "hp",
 "volatile.typechange"
 ],
-"b219-t15": [
-"hp"
-],
-"b219-t17": [
-"boost.evasion",
-"status"
-],
 "b219-t19": [
 "item"
 ],
-"b22-t13": [
-"hp"
-],
 "b221-t24": [
 "status"
-],
-"b221-t31": [
-"boost.def"
 ],
 "b222-t23": [
 "status"
@@ -540,27 +305,11 @@
 "b223-t13": [
 "toxic_spikes"
 ],
-"b223-t16": [
-"hp"
-],
 "b223-t25": [
 "volatile.typechange"
 ],
-"b23-t10": [
-"hp"
-],
 "b230-t31": [
-"hp",
 "status"
-],
-"b230-t34": [
-"hp"
-],
-"b230-t35": [
-"hp"
-],
-"b231-t35": [
-"hp"
 ],
 "b232-t13": [
 "status",
@@ -572,9 +321,6 @@
 ],
 "b232-t9": [
 "volatile.typechange"
-],
-"b233-t20": [
-"hp"
 ],
 "b233-t41": [
 "hp",
@@ -594,9 +340,6 @@
 "boost.atk",
 "hp"
 ],
-"b236-t20": [
-"hp"
-],
 "b236-t29": [
 "hp"
 ],
@@ -605,9 +348,6 @@
 ],
 "b237-t11": [
 "active",
-"hp"
-],
-"b237-t12": [
 "hp"
 ],
 "b237-t13": [
@@ -626,24 +366,12 @@
 "b237-t54": [
 "hp"
 ],
-"b238-t6": [
-"hp"
-],
-"b238-t8": [
-"hp"
-],
 "b24-t10": [
 "volatile.typechange"
-],
-"b24-t11": [
-"hp"
 ],
 "b24-t8": [
 "hp",
 "volatile.typechange"
-],
-"b240-t11": [
-"hp"
 ],
 "b241-t12": [
 "hp"
@@ -687,17 +415,11 @@
 "b247-t59": [
 "status"
 ],
-"b250-t4": [
-"hp"
-],
 "b251-t23": [
 "boost.spe"
 ],
 "b252-t13": [
 "volatile.typechange"
-],
-"b252-t17": [
-"hp"
 ],
 "b253-t4": [
 "hp"
@@ -705,13 +427,7 @@
 "b253-t8": [
 "hp"
 ],
-"b257-t10": [
-"hp"
-],
 "b257-t9": [
-"hp"
-],
-"b258-t13": [
 "hp"
 ],
 "b258-t18": [
@@ -744,17 +460,11 @@
 "hp",
 "volatile.substitute"
 ],
-"b259-t9": [
-"hp"
-],
 "b261-t13": [
 "hp"
 ],
 "b261-t18": [
 "status"
-],
-"b261-t19": [
-"hp"
 ],
 "b262-t28": [
 "hp",
@@ -767,17 +477,11 @@
 "volatile.protosynthesisspa",
 "volatile.protosynthesisspe"
 ],
-"b264-t10": [
-"hp"
-],
 "b264-t18": [
 "volatile.disable"
 ],
 "b264-t22": [
 "volatile.disable"
-],
-"b264-t7": [
-"hp"
 ],
 "b265-t14": [
 "item"
@@ -788,14 +492,8 @@
 "b266-t13": [
 "volatile.disable"
 ],
-"b268-t38": [
-"hp"
-],
 "b27-t16": [
 "volatile.typechange"
-],
-"b27-t23": [
-"hp"
 ],
 "b270-t19": [
 "hp"
@@ -821,46 +519,15 @@
 "b274-t16": [
 "volatile.substitute"
 ],
-"b274-t20": [
-"hp"
-],
-"b274-t21": [
-"hp"
-],
 "b274-t23": [
 "volatile.substitute"
 ],
 "b274-t32": [
 "volatile.typechange"
 ],
-"b274-t6": [
-"hp"
-],
-"b275-t20": [
-"hp"
-],
-"b275-t29": [
-"hp"
-],
-"b276-t9": [
-"hp",
-"item"
-],
-"b277-t2": [
-"hp"
-],
 "b278-t29": [
 "boost.spa",
 "boost.spd"
-],
-"b278-t32": [
-"hp"
-],
-"b278-t39": [
-"hp"
-],
-"b278-t8": [
-"hp"
 ],
 "b279-t2": [
 "hp",
@@ -881,23 +548,11 @@
 "b281-t15": [
 "boost.spe"
 ],
-"b282-t14": [
-"hp"
-],
-"b282-t2": [
-"hp"
-],
 "b284-t17": [
 "active",
 "hp",
 "item",
 "volatile.quarkdrivespe"
-],
-"b288-t11": [
-"hp"
-],
-"b29-t8": [
-"hp"
 ],
 "b291-t12": [
 "hp",
@@ -924,30 +579,6 @@
 "b298-t48": [
 "boost.spe"
 ],
-"b30-t33": [
-"hp"
-],
-"b32-t11": [
-"hp"
-],
-"b32-t14": [
-"hp"
-],
-"b32-t47": [
-"hp"
-],
-"b32-t9": [
-"hp"
-],
-"b34-t10": [
-"hp"
-],
-"b34-t12": [
-"hp"
-],
-"b34-t24": [
-"hp"
-],
 "b34-t27": [
 "status"
 ],
@@ -969,12 +600,6 @@
 "b41-t21": [
 "hp"
 ],
-"b43-t20": [
-"hp"
-],
-"b44-t6": [
-"hp"
-],
 "b44-t8": [
 "volatile.perish3"
 ],
@@ -993,14 +618,8 @@
 "b48-t30": [
 "hp"
 ],
-"b5-t18": [
-"status"
-],
 "b50-t52": [
 "boost.evasion"
-],
-"b51-t16": [
-"hp"
 ],
 "b52-t28": [
 "status"
@@ -1013,39 +632,17 @@
 "stealth_rock",
 "toxic_spikes"
 ],
-"b56-t10": [
-"hp"
-],
 "b57-t15": [
 "volatile.confusion"
 ],
 "b58-t18": [
 "boost.spe"
 ],
-"b58-t5": [
-"hp"
-],
 "b58-t7": [
 "boost.spe"
 ],
-"b61-t14": [
-"hp",
-"status"
-],
 "b61-t5": [
 "item"
-],
-"b62-t21": [
-"hp"
-],
-"b63-t4": [
-"hp"
-],
-"b63-t5": [
-"hp"
-],
-"b64-t8": [
-"hp"
 ],
 "b67-t1": [
 "boost.spa"
@@ -1068,55 +665,20 @@
 "b75-t26": [
 "hp"
 ],
-"b75-t27": [
-"hp"
-],
 "b75-t4": [
 "hp"
 ],
 "b76-t17": [
 "volatile.typechange"
 ],
-"b77-t12": [
-"hp"
-],
-"b8-t10": [
-"hp"
-],
-"b8-t11": [
-"hp"
-],
-"b8-t36": [
-"hp"
-],
-"b8-t4": [
-"hp"
-],
-"b8-t41": [
-"hp"
-],
-"b8-t44": [
-"hp"
-],
 "b80-t16": [
 "volatile.unburden"
-],
-"b81-t32": [
-"hp"
 ],
 "b81-t47": [
 "hp"
 ],
-"b85-t13": [
-"boost.spe",
-"hp",
-"status"
-],
 "b87-t10": [
 "volatile.substitute"
-],
-"b88-t9": [
-"hp"
 ],
 "b89-t4": [
 "boost.spd"
@@ -1130,14 +692,8 @@
 "b92-t36": [
 "hp"
 ],
-"b95-t10": [
-"hp"
-],
 "b99-t1": [
 "status"
-],
-"b99-t10": [
-"hp"
 ],
 "b99-t25": [
 "hp"

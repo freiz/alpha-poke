@@ -12,6 +12,7 @@
 //          last step has the final state and no choices.
 const {Battle, Teams} = require(process.argv[2]);
 const {teamOf, state} = require('./showdown_state.js');
+const {maxDamages} = require('./showdown_damage.js');
 
 function rng(seed) { // mulberry32
 	let a = seed >>> 0;
@@ -79,7 +80,9 @@ process.stdin.on('end', () => {
 				choices[side.id] = choose(side, req, r, c);
 			}
 			if (!Object.keys(choices).length) break;
-			steps.push({state: snap, choices});
+			const step = {state: snap, choices};
+			if (c.damage_probe && choices.p1 && choices.p2 && choices.p1.kind !== 'pass') step.damage = maxDamages(battle);
+			steps.push(step);
 			for (const [sid, ch] of Object.entries(choices)) battle.choose(sid, ch.choice);
 		}
 		steps.push({state: state(battle, from), choices: {}});

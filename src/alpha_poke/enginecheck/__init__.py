@@ -43,12 +43,14 @@ PRESENT = {"stealthrock": "stealth_rock", "stickyweb": "sticky_web"}
 
 
 def run_showdown(p1, p2, turns, seed: str | None = "gen5,1,2,3,4", force_random=None,
-                 fmt: str = "gen9customgame") -> list[dict]:  # fmt: skip
+                 fmt: str = "gen9customgame", damage_probe: bool = False) -> list[dict]:  # fmt: skip
     """Showdown's state after the setup and after every turn (``showdown_case.js``). ``p1`` /
     ``p2``: Showdown export text or a list of sets; ``turns``: [(p1 choice, p2 choice)];
-    ``force_random``: every chance roll succeeds (True) / fails (False)."""
+    ``force_random``: every chance roll succeeds (True) / fails (False); ``damage_probe``: each
+    state also has "damage", {"p1" / "p2": {move: its max damage (no crit) on the other active}}
+    (``showdown_damage.js``)."""
     case = {"format": fmt, "seed": seed, "force_random": force_random, "p1": p1, "p2": p2,
-            "turns": [list(t) for t in turns]}  # fmt: skip
+            "turns": [list(t) for t in turns], "damage_probe": damage_probe}  # fmt: skip
     r = subprocess.run(["node", str(RUNNER), str(SIM)], input=json.dumps(case),
                        capture_output=True, text=True, check=True, timeout=120)  # fmt: skip
     out = json.loads(r.stdout)
@@ -58,13 +60,14 @@ def run_showdown(p1, p2, turns, seed: str | None = "gen5,1,2,3,4", force_random=
 
 
 def random_battle(p1, p2, seed: str, choice_seed: int, max_turns: int = 100,
-                  switch_p: float = 0.15, tera_p: float = 0.1,
-                  fmt: str = "gen9customgame") -> tuple[list[dict], str | None]:  # fmt: skip
+                  switch_p: float = 0.15, tera_p: float = 0.1, fmt: str = "gen9customgame",
+                  damage_probe: bool = False) -> tuple[list[dict], str | None]:  # fmt: skip
     """A whole battle with random legal choices (``random_battle.js``): ([{"state", "choices"}]
     per decision point, the error if the battle broke off). The full-information differential
     (doc/engine-diff.md): the truth at every step, no player's view, no belief."""
     case = {"format": fmt, "seed": seed, "choice_seed": choice_seed, "p1": p1, "p2": p2,
-            "max_turns": max_turns, "switch_p": switch_p, "tera_p": tera_p}  # fmt: skip
+            "max_turns": max_turns, "switch_p": switch_p, "tera_p": tera_p,
+            "damage_probe": damage_probe}  # fmt: skip
     r = subprocess.run(["node", str(RUNNER.with_name("random_battle.js")), str(SIM)],
                        input=json.dumps(case), capture_output=True, text=True, check=True,
                        timeout=600)  # fmt: skip
@@ -112,7 +115,8 @@ def _sleep(m: dict) -> dict:
 def _engine_mon(m: dict) -> pe.Pokemon:
     st = m["stats"]
     return pe.Pokemon(**_sleep(m),
-        id=m["species"], level=m["level"], types=_types(m["types"]),
+        # the engine keeps the original types when terastallized (tera_type apart, L31)
+        id=m["species"], level=m["level"], types=_types(m.get("pre_tera_types") or m["types"]),
         base_types=_types(m["base_types"]), hp=m["hp"], maxhp=m["maxhp"],
         ability=m["ability"] or "none",
         # a used once-per-battle switch-in ability: base ability none (L18)
@@ -464,3 +468,17 @@ def showdown_rate(p1, p2, turns, line: str, n: int = 400) -> float:
     if out["error"]:
         raise RuntimeError(out["error"])
     return out["hits"] / out["n"]
+
+
+def showdown_log_counts(p1, p2, turns, n: int = 1000) -> list[list[str]]:
+    """The last turn's protocol lines of n simulator seeds (``chance_count.js`` with ``lines``):
+    for chances that depend on each other (the crits of a multi-hit move)."""
+    case = {"p1": p1, "p2": p2, "turns": [list(t) for t in turns], "line": "", "n": n,
+            "lines": True}  # fmt: skip
+    r = subprocess.run(["node", str(RUNNER.with_name("chance_count.js")), str(SIM)],
+                       input=json.dumps(case), capture_output=True, text=True, check=True,
+                       timeout=600)  # fmt: skip
+    out = json.loads(r.stdout)
+    if out["error"]:
+        raise RuntimeError(out["error"])
+    return out["logs"]

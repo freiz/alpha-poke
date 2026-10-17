@@ -5245,9 +5245,9 @@ pub static MOVES: LazyLock<HashMap<Choices, Choice>> = LazyLock::new(|| {
         Choice {
             move_id: Choices::FICKLEBEAM,
             // alpha-poke patch (2026-10-16, doc/engine-diff.md L8b): Showdown doubles the power with
-            // a 30% chance (no stat change); the expected power 80 x 1.3 (the engine does not branch
-            // on power; as Triple Axel's fixed hits); was 80 with a 50% Sp. Atk +1 of the user
-            base_power: 104.0,
+            // a 30% chance, a branch (generate_instructions_from_move); was 80 with a 50% Sp. Atk +1
+            // of the user, then 104 (the expected power)
+            base_power: 80.0,
             category: MoveCategory::Special,
             move_type: PokemonType::DRAGON,
             flags: Flags {
@@ -20701,6 +20701,14 @@ pub struct Choice {
     pub accuracy: f32,
     pub category: MoveCategory,
     pub base_power: f32,
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L34): the modifiers Showdown applies to the
+    // attacking stat (onModifyAtk / SpA: Choice Band, Huge Power, ...), the defending stat
+    // (onModifyDef / SpD: Assault Vest, Eviolite, Fur Coat, ...) and the damage (ModifyDamage:
+    // Life Orb, Expert Belt, Multiscale, resist berries, ...), each rounded at its own step
+    // (before: all in the base power)
+    pub attack_modifier: f32,
+    pub defense_modifier: f32,
+    pub damage_modifier: f32,
     pub boost: Option<Boost>,
     pub priority: i8,
     pub flags: Flags,
@@ -20830,6 +20838,9 @@ impl Default for Choice {
             accuracy: 100.0,
             category: MoveCategory::Status,
             base_power: 0.0,
+            attack_modifier: 1.0,
+            defense_modifier: 1.0,
+            damage_modifier: 1.0,
             boost: None,
             priority: 0,
             flags: Flags {

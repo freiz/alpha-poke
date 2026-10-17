@@ -22,6 +22,7 @@ function monState(p, side) {
 		ability: p.ability || '',
 		base_ability: p.baseAbility || '',
 		types: p.getTypes(),
+		pre_tera_types: p.getTypes(false, true), // what the engine keeps as types (STAB on them)
 		base_types: p.baseSpecies.types,
 		stats: p.storedStats,
 		boosts: p.boosts,

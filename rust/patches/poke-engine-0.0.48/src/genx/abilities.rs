@@ -1,5 +1,5 @@
 #![allow(unused_variables)]
-use super::damage_calc::type_effectiveness_modifier;
+use super::damage_calc::move_type_effectiveness;
 use super::generate_instructions::{add_remove_status_instructions, apply_boost_instruction};
 use super::items::{get_choice_move_disable_instructions, Items};
 use super::state::{PokemonVolatileStatus, Terrain, Weather};
@@ -1892,12 +1892,12 @@ pub fn ability_modify_attack_being_used(
         }
         Abilities::BEADSOFRUIN => {
             if attacker_choice.category == MoveCategory::Special {
-                attacker_choice.base_power *= 1.33;
+                attacker_choice.defense_modifier *= 0.75;
             }
         }
         Abilities::SWORDOFRUIN => {
             if attacker_choice.category == MoveCategory::Physical {
-                attacker_choice.base_power *= 1.33;
+                attacker_choice.defense_modifier *= 0.75;
             }
         }
         Abilities::SHARPNESS => {
@@ -1907,32 +1907,32 @@ pub fn ability_modify_attack_being_used(
         }
         Abilities::WATERBUBBLE => {
             if attacker_choice.move_type == PokemonType::WATER {
-                attacker_choice.base_power *= 2.0;
+                attacker_choice.attack_modifier *= 2.0;
             }
         }
         Abilities::DRAGONSMAW => {
             if attacker_choice.move_type == PokemonType::DRAGON {
-                attacker_choice.base_power *= 1.5;
+                attacker_choice.attack_modifier *= 1.5;
             }
         }
         Abilities::HADRONENGINE => {
             if attacker_choice.category == MoveCategory::Special
                 && state.terrain.terrain_type == Terrain::ELECTRICTERRAIN
             {
-                attacker_choice.base_power *= 1.33;
+                attacker_choice.attack_modifier *= 5461.0 / 4096.0;
             }
         }
         Abilities::ORICHALCUMPULSE => {
             if attacker_choice.category == MoveCategory::Physical
                 && state.weather.weather_type == Weather::SUN
             {
-                attacker_choice.base_power *= 1.33;
+                attacker_choice.attack_modifier *= 5461.0 / 4096.0;
             }
         }
         Abilities::GALVANIZE => {
             if attacker_choice.move_type == PokemonType::NORMAL {
                 attacker_choice.move_type = PokemonType::ELECTRIC;
-                attacker_choice.base_power *= 1.2;
+                attacker_choice.base_power *= 4915.0 / 4096.0;
             }
         }
         #[cfg(any(
@@ -1944,28 +1944,26 @@ pub fn ability_modify_attack_being_used(
         Abilities::AERILATE => {
             if attacker_choice.move_type == PokemonType::NORMAL {
                 attacker_choice.move_type = PokemonType::FLYING;
-                attacker_choice.base_power *= 1.2;
+                attacker_choice.base_power *= 4915.0 / 4096.0;
             }
         }
         #[cfg(any(feature = "gen6", feature = "gen5", feature = "gen4"))]
         Abilities::AERILATE => {
             if attacker_choice.move_type == PokemonType::NORMAL {
                 attacker_choice.move_type = PokemonType::FLYING;
-                attacker_choice.base_power *= 1.3;
+                attacker_choice.base_power *= 5325.0 / 4096.0;
             }
         }
         Abilities::NEUROFORCE => {
-            if type_effectiveness_modifier(
-                &attacker_choice.move_type,
-                &defending_side.get_active_immutable(),
-            ) > 1.0
+            if move_type_effectiveness(&attacker_choice, &defending_side.get_active_immutable())
+                > 1.0
             {
-                attacker_choice.base_power *= 1.25;
+                attacker_choice.damage_modifier *= 5120.0 / 4096.0;
             }
         }
         Abilities::STAKEOUT => {
             if defender_choice.category == MoveCategory::Switch {
-                attacker_choice.base_power *= 2.0;
+                attacker_choice.attack_modifier *= 2.0;
             }
         }
         Abilities::TECHNICIAN => {
@@ -1982,49 +1980,37 @@ pub fn ability_modify_attack_being_used(
         Abilities::REFRIGERATE => {
             if attacker_choice.move_type == PokemonType::NORMAL {
                 attacker_choice.move_type = PokemonType::ICE;
-                attacker_choice.base_power *= 1.2;
+                attacker_choice.base_power *= 4915.0 / 4096.0;
             }
         }
         #[cfg(any(feature = "gen6", feature = "gen5", feature = "gen4"))]
         Abilities::REFRIGERATE => {
             if attacker_choice.move_type == PokemonType::NORMAL {
                 attacker_choice.move_type = PokemonType::ICE;
-                attacker_choice.base_power *= 1.3;
+                attacker_choice.base_power *= 5325.0 / 4096.0;
             }
         }
+        // alpha-poke patch (2026-10-16, doc/engine-diff.md L34): Showdown's 4096ths per fainted
+        // ally, up to 5 (was 1 + 0.1 each, no cap)
         Abilities::SUPREMEOVERLORD => {
-            let mut boost_amount = 1.0;
-            boost_amount += 0.1 * attacking_side.num_fainted_pkmn() as f32;
-            attacker_choice.base_power *= boost_amount;
+            const POW: [f32; 6] = [4096.0, 4506.0, 4915.0, 5325.0, 5734.0, 6144.0];
+            let n = (attacking_side.num_fainted_pkmn() as usize).min(5);
+            attacker_choice.base_power *= POW[n] / 4096.0;
         }
-        Abilities::ADAPTABILITY => {
-            if attacking_pkmn.has_type(&attacker_choice.move_type) {
-                if attacking_pkmn.terastallized
-                    && attacker_choice.move_type == attacking_pkmn.tera_type
-                    && (attacking_pkmn.types.0 == attacker_choice.move_type
-                        || attacking_pkmn.types.1 == attacker_choice.move_type)
-                {
-                    attacker_choice.base_power *= 2.25 / 2.0;
-                } else {
-                    attacker_choice.base_power *= 2.0 / 1.5;
-                }
-            }
-        }
+        // alpha-poke patch (L34): Adaptability in damage_calc's stab_modifier (was its ratio here)
         Abilities::LONGREACH => {
             attacker_choice.flags.contact = false;
         }
         Abilities::PUREPOWER => {
             if attacker_choice.category == MoveCategory::Physical {
-                attacker_choice.base_power *= 2.0;
+                attacker_choice.attack_modifier *= 2.0;
             }
         }
         Abilities::TINTEDLENS => {
-            if type_effectiveness_modifier(
-                &attacker_choice.move_type,
-                &defending_side.get_active_immutable(),
-            ) < 1.0
+            if move_type_effectiveness(&attacker_choice, &defending_side.get_active_immutable())
+                < 1.0
             {
-                attacker_choice.base_power *= 2.0;
+                attacker_choice.damage_modifier *= 2.0;
             }
         }
         Abilities::FLAREBOOST => {
@@ -2042,7 +2028,7 @@ pub fn ability_modify_attack_being_used(
             if attacker_choice.move_type == PokemonType::WATER
                 && attacking_pkmn.hp <= attacking_pkmn.maxhp / 3
             {
-                attacker_choice.base_power *= 1.5;
+                attacker_choice.attack_modifier *= 1.5;
             }
         }
         Abilities::SERENEGRACE => {
@@ -2054,12 +2040,12 @@ pub fn ability_modify_attack_being_used(
         }
         Abilities::TOUGHCLAWS => {
             if attacker_choice.flags.contact {
-                attacker_choice.base_power *= 1.3;
+                attacker_choice.base_power *= 5325.0 / 4096.0;
             }
         }
         Abilities::RECKLESS => {
             if attacker_choice.crash.is_some() || attacker_choice.recoil.is_some() {
-                attacker_choice.base_power *= 1.2;
+                attacker_choice.base_power *= 4915.0 / 4096.0;
             }
         }
         Abilities::ROCKHEAD => {
@@ -2067,19 +2053,19 @@ pub fn ability_modify_attack_being_used(
         }
         Abilities::HUGEPOWER => {
             if attacker_choice.category == MoveCategory::Physical {
-                attacker_choice.base_power *= 2.0;
+                attacker_choice.attack_modifier *= 2.0;
             }
         }
         Abilities::SOLARPOWER => {
             if state.weather_is_active(&Weather::SUN) {
-                attacker_choice.base_power *= 1.5;
+                attacker_choice.attack_modifier *= 1.5;
             }
         }
         Abilities::FAIRYAURA => {
             if attacker_choice.move_type == PokemonType::FAIRY
                 && defending_side.get_active_immutable().ability != Abilities::AURABREAK
             {
-                attacker_choice.base_power *= 1.33;
+                attacker_choice.base_power *= 5448.0 / 4096.0;
             }
         }
         Abilities::NORMALIZE => {
@@ -2089,7 +2075,7 @@ pub fn ability_modify_attack_being_used(
             if attacker_choice.move_type == PokemonType::DARK
                 && defending_side.get_active_immutable().ability != Abilities::AURABREAK
             {
-                attacker_choice.base_power *= 1.33;
+                attacker_choice.base_power *= 5448.0 / 4096.0;
             }
         }
         Abilities::VICTORYSTAR => {
@@ -2106,7 +2092,7 @@ pub fn ability_modify_attack_being_used(
         #[cfg(any(feature = "gen9", feature = "champions"))]
         Abilities::TRANSISTOR => {
             if attacker_choice.move_type == PokemonType::ELECTRIC {
-                attacker_choice.base_power *= 1.3;
+                attacker_choice.attack_modifier *= 5325.0 / 4096.0;
             }
         }
         #[cfg(any(
@@ -2118,7 +2104,7 @@ pub fn ability_modify_attack_being_used(
         ))]
         Abilities::TRANSISTOR => {
             if attacker_choice.move_type == PokemonType::ELECTRIC {
-                attacker_choice.base_power *= 1.5;
+                attacker_choice.attack_modifier *= 1.5;
             }
         }
         Abilities::FIREMANE => {
@@ -2147,31 +2133,31 @@ pub fn ability_modify_attack_being_used(
             if attacker_choice.move_type == PokemonType::BUG
                 && attacking_pkmn.hp <= attacking_pkmn.maxhp / 3
             {
-                attacker_choice.base_power *= 1.5;
+                attacker_choice.attack_modifier *= 1.5;
             }
         }
         Abilities::GORILLATACTICS => {
             if attacker_choice.category == MoveCategory::Physical {
-                attacker_choice.base_power *= 1.5;
+                attacker_choice.attack_modifier *= 1.5;
             }
         }
         Abilities::BLAZE => {
             if attacker_choice.move_type == PokemonType::FIRE
                 && attacking_pkmn.hp <= attacking_pkmn.maxhp / 3
             {
-                attacker_choice.base_power *= 1.5;
+                attacker_choice.attack_modifier *= 1.5;
             }
         }
         Abilities::OVERGROW => {
             if attacker_choice.move_type == PokemonType::GRASS
                 && attacking_pkmn.hp <= attacking_pkmn.maxhp / 3
             {
-                attacker_choice.base_power *= 1.5;
+                attacker_choice.attack_modifier *= 1.5;
             }
         }
         Abilities::ANALYTIC => {
             if !attacker_choice.first_move {
-                attacker_choice.base_power *= 1.3;
+                attacker_choice.base_power *= 5325.0 / 4096.0;
             }
         }
         Abilities::MEGALAUNCHER => {
@@ -2188,35 +2174,35 @@ pub fn ability_modify_attack_being_used(
         Abilities::PIXILATE => {
             if attacker_choice.move_type == PokemonType::NORMAL {
                 attacker_choice.move_type = PokemonType::FAIRY;
-                attacker_choice.base_power *= 1.2;
+                attacker_choice.base_power *= 4915.0 / 4096.0;
             }
         }
         #[cfg(any(feature = "gen6", feature = "gen5", feature = "gen4"))]
         Abilities::PIXILATE => {
             if attacker_choice.move_type == PokemonType::NORMAL {
                 attacker_choice.move_type = PokemonType::FAIRY;
-                attacker_choice.base_power *= 1.3;
+                attacker_choice.base_power *= 5325.0 / 4096.0;
             }
         }
         Abilities::DRAGONIZE => {
             if attacker_choice.move_type == PokemonType::NORMAL {
                 attacker_choice.move_type = PokemonType::DRAGON;
-                attacker_choice.base_power *= 1.2;
+                attacker_choice.base_power *= 4915.0 / 4096.0;
             }
         }
         Abilities::DEFEATIST => {
             if attacking_pkmn.hp <= attacking_pkmn.maxhp / 2 {
-                attacker_choice.base_power *= 0.5;
+                attacker_choice.attack_modifier *= 0.5;
             }
         }
         Abilities::ROCKYPAYLOAD => {
             if attacker_choice.move_type == PokemonType::ROCK {
-                attacker_choice.base_power *= 1.5;
+                attacker_choice.attack_modifier *= 1.5;
             }
         }
         Abilities::PUNKROCK => {
             if attacker_choice.flags.sound {
-                attacker_choice.base_power *= 1.3;
+                attacker_choice.base_power *= 5325.0 / 4096.0;
             }
         }
         Abilities::STRONGJAW => {
@@ -2226,7 +2212,7 @@ pub fn ability_modify_attack_being_used(
         }
         Abilities::BATTERY => {
             if attacker_choice.category == MoveCategory::Special {
-                attacker_choice.base_power *= 1.3;
+                attacker_choice.base_power *= 5325.0 / 4096.0;
             }
         }
         Abilities::SHEERFORCE => {
@@ -2241,14 +2227,14 @@ pub fn ability_modify_attack_being_used(
                 }
             }
             if attacker_choice.secondaries.is_some() || sheer_force_volatile_boosted {
-                attacker_choice.base_power *= 1.3;
+                attacker_choice.base_power *= 5325.0 / 4096.0;
                 attacker_choice.secondaries = None;
                 attacker_choice.volatile_status = None
             }
         }
         Abilities::IRONFIST => {
             if attacker_choice.flags.punch {
-                attacker_choice.base_power *= 1.2;
+                attacker_choice.base_power *= 4915.0 / 4096.0;
             }
         }
         #[cfg(feature = "champions")]
@@ -2266,7 +2252,7 @@ pub fn ability_modify_attack_being_used(
         }
         Abilities::HUSTLE => {
             if attacker_choice.category == MoveCategory::Physical {
-                attacker_choice.base_power *= 1.5;
+                attacker_choice.attack_modifier *= 1.5;
                 attacker_choice.accuracy *= 0.80
             }
         }
@@ -2289,15 +2275,13 @@ pub fn ability_modify_attack_being_used(
             }
         }
         Abilities::GUTS => {
-            if attacking_pkmn.status != PokemonStatus::NONE {
-                attacker_choice.base_power *= 1.5;
-
-                // not the right place to put this, but good enough
-                if attacking_pkmn.status == PokemonStatus::BURN
-                    && attacker_choice.category == MoveCategory::Physical
-                {
-                    attacker_choice.base_power *= 2.0;
-                }
+            // (L34: the Attack only, Showdown's onModifyAtk; was any move's power)
+            if attacking_pkmn.status != PokemonStatus::NONE
+                && attacker_choice.category == MoveCategory::Physical
+            {
+                attacker_choice.attack_modifier *= 1.5;
+                // alpha-poke patch (2026-10-16, doc/engine-diff.md L33): no burn halving with
+                // Guts in damage_calc's burn_modifier (was a 2 x here)
             }
         }
         Abilities::SANDFORCE => {
@@ -2306,7 +2290,7 @@ pub fn ability_modify_attack_being_used(
                     || attacker_choice.move_type == PokemonType::GROUND
                     || attacker_choice.move_type == PokemonType::STEEL)
             {
-                attacker_choice.base_power *= 1.3;
+                attacker_choice.base_power *= 5325.0 / 4096.0;
             }
         }
         Abilities::TOXICBOOST => {
@@ -2329,7 +2313,11 @@ pub fn ability_modify_attack_against(
     let (attacking_side, defending_side) = state.get_both_sides_immutable(attacking_side_ref);
     let attacking_pkmn = attacking_side.get_active_immutable();
     let target_pkmn = defending_side.get_active_immutable();
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L35): a Neutralizing Gas user's hit
+    // ignores the target's ability too (unless it holds Ability Shield)
     if target_pkmn.ability == Abilities::NEUTRALIZINGGAS
+        || (attacking_pkmn.ability == Abilities::NEUTRALIZINGGAS
+            && target_pkmn.item != Items::ABILITYSHIELD)
         || attacker_choice.target == MoveTarget::User
     {
         return;
@@ -2352,12 +2340,12 @@ pub fn ability_modify_attack_against(
     match target_pkmn.ability {
         Abilities::TABLETSOFRUIN => {
             if attacker_choice.category == MoveCategory::Physical {
-                attacker_choice.base_power *= 0.75;
+                attacker_choice.attack_modifier *= 0.75;
             }
         }
         Abilities::VESSELOFRUIN => {
             if attacker_choice.category == MoveCategory::Special {
-                attacker_choice.base_power *= 0.75;
+                attacker_choice.attack_modifier *= 0.75;
             }
         }
         Abilities::ARMORTAIL => {
@@ -2388,7 +2376,7 @@ pub fn ability_modify_attack_against(
         }
         Abilities::MULTISCALE => {
             if target_pkmn.hp == target_pkmn.maxhp {
-                attacker_choice.base_power /= 2.0;
+                attacker_choice.damage_modifier /= 2.0;
             }
         }
         Abilities::LIGHTNINGROD => {
@@ -2521,7 +2509,7 @@ pub fn ability_modify_attack_against(
         }
         Abilities::SHADOWSHIELD => {
             if target_pkmn.hp == target_pkmn.maxhp {
-                attacker_choice.base_power /= 2.0;
+                attacker_choice.damage_modifier /= 2.0;
             }
         }
         Abilities::NOGUARD => {
@@ -2531,7 +2519,7 @@ pub fn ability_modify_attack_against(
             if target_pkmn.status != PokemonStatus::NONE
                 && attacker_choice.category == MoveCategory::Physical
             {
-                attacker_choice.base_power /= 1.5;
+                attacker_choice.defense_modifier *= 1.5;
             }
         }
         Abilities::EFFECTSPORE => {
@@ -2628,7 +2616,7 @@ pub fn ability_modify_attack_against(
         }
         Abilities::WONDERGUARD => {
             if attacker_choice.category != MoveCategory::Status
-                && type_effectiveness_modifier(&attacker_choice.move_type, &target_pkmn) <= 1.0
+                && move_type_effectiveness(&attacker_choice, &target_pkmn) <= 1.0
             {
                 attacker_choice.remove_all_effects();
                 attacker_choice.base_power = 0.0;
@@ -2636,13 +2624,15 @@ pub fn ability_modify_attack_against(
         }
         Abilities::FAIRYAURA => {
             if attacker_choice.move_type == PokemonType::FAIRY {
-                attacker_choice.base_power *= 1.33;
+                attacker_choice.base_power *= 5448.0 / 4096.0;
             }
         }
         Abilities::LEVITATE | Abilities::EELEVATE => {
+            // alpha-poke patch (L32): not when grounded by Iron Ball / Smack Down
             if attacker_choice.move_type == PokemonType::GROUND
                 && attacker_choice.target == MoveTarget::Opponent
                 && attacker_choice.move_id != Choices::THOUSANDARROWS
+                && !super::damage_calc::grounded_by_effect(defending_side, target_pkmn)
             {
                 attacker_choice.base_power = 0.0;
             }
@@ -2665,7 +2655,7 @@ pub fn ability_modify_attack_against(
             if attacker_choice.move_type == PokemonType::FIRE
                 || attacker_choice.move_type == PokemonType::ICE
             {
-                attacker_choice.base_power /= 2.0;
+                attacker_choice.attack_modifier /= 2.0;
             }
         }
         Abilities::FLASHFIRE => {
@@ -2704,13 +2694,13 @@ pub fn ability_modify_attack_against(
             }
         }
         Abilities::PRISMARMOR => {
-            if type_effectiveness_modifier(&attacker_choice.move_type, &target_pkmn) > 1.0 {
-                attacker_choice.base_power *= 0.75;
+            if move_type_effectiveness(&attacker_choice, &target_pkmn) > 1.0 {
+                attacker_choice.damage_modifier *= 0.75;
             }
         }
         Abilities::HEATPROOF => {
             if attacker_choice.move_type == PokemonType::FIRE {
-                attacker_choice.base_power *= 0.5;
+                attacker_choice.attack_modifier *= 0.5;
             }
         }
         Abilities::SHIELDDUST => {
@@ -2726,17 +2716,17 @@ pub fn ability_modify_attack_against(
             if state.terrain_is_active(&Terrain::GRASSYTERRAIN)
                 && attacker_choice.category == MoveCategory::Physical
             {
-                attacker_choice.base_power /= 1.5;
+                attacker_choice.defense_modifier *= 1.5;
             }
         }
         Abilities::FILTER => {
-            if type_effectiveness_modifier(&attacker_choice.move_type, &target_pkmn) > 1.0 {
-                attacker_choice.base_power *= 0.75;
+            if move_type_effectiveness(&attacker_choice, &target_pkmn) > 1.0 {
+                attacker_choice.damage_modifier *= 0.75;
             }
         }
         Abilities::FURCOAT => {
             if attacker_choice.category == MoveCategory::Physical {
-                attacker_choice.base_power *= 0.5;
+                attacker_choice.defense_modifier *= 2.0;
             }
         }
         Abilities::TANGLINGHAIR => {
@@ -2828,7 +2818,7 @@ pub fn ability_modify_attack_against(
         }
         Abilities::ICESCALES => {
             if attacker_choice.category == MoveCategory::Special {
-                attacker_choice.base_power *= 0.5;
+                attacker_choice.damage_modifier *= 0.5;
             }
         }
         Abilities::WATERABSORB => {
@@ -2857,15 +2847,15 @@ pub fn ability_modify_attack_against(
         }
         Abilities::FLUFFY => {
             if attacker_choice.flags.contact {
-                attacker_choice.base_power *= 0.5;
+                attacker_choice.damage_modifier *= 0.5;
             }
             if attacker_choice.move_type == PokemonType::FIRE {
-                attacker_choice.base_power *= 2.0;
+                attacker_choice.damage_modifier *= 2.0;
             }
         }
         Abilities::PUNKROCK => {
             if attacker_choice.flags.sound {
-                attacker_choice.base_power /= 2.0;
+                attacker_choice.damage_modifier /= 2.0;
             }
         }
         Abilities::DAMP => {
@@ -2894,8 +2884,8 @@ pub fn ability_modify_attack_against(
             }
         }
         Abilities::SOLIDROCK => {
-            if type_effectiveness_modifier(&attacker_choice.move_type, &target_pkmn) > 1.0 {
-                attacker_choice.base_power *= 0.75;
+            if move_type_effectiveness(&attacker_choice, &target_pkmn) > 1.0 {
+                attacker_choice.damage_modifier *= 0.75;
             }
         }
         Abilities::OVERCOAT => {
@@ -2941,12 +2931,12 @@ pub fn ability_modify_attack_against(
         }
         Abilities::WATERBUBBLE => {
             if attacker_choice.move_type == PokemonType::FIRE {
-                attacker_choice.base_power /= 2.0;
+                attacker_choice.attack_modifier /= 2.0;
             }
         }
         Abilities::PURIFYINGSALT => {
             if attacker_choice.move_type == PokemonType::GHOST {
-                attacker_choice.base_power /= 2.0;
+                attacker_choice.attack_modifier /= 2.0;
             }
         }
         _ => {}

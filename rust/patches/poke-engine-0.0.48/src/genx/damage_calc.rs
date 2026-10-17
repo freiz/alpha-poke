@@ -1,8 +1,8 @@
 use super::abilities::Abilities;
 use super::items::Items;
 use super::state::{PokemonVolatileStatus, Terrain, Weather};
+use crate::choices::Choices;
 use crate::choices::{Choice, MoveCategory};
-use crate::choices::{Choices, MOVES};
 use crate::state::{
     Pokemon, PokemonBoostableStat, PokemonIndex, PokemonStatus, PokemonType, Side, SideReference,
     State,
@@ -114,6 +114,18 @@ pub fn type_effectiveness_modifier(attacking_type: &PokemonType, defender: &Poke
     _type_effectiveness_modifier(attacking_type, &defending_types)
 }
 
+/// alpha-poke patch (2026-10-16, doc/engine-diff.md L34): a move's effectiveness on the
+/// defender, Freeze-Dry's on Water included (what Expert Belt, Tinted Lens, Filter, ... read:
+/// Showdown's typeMod)
+pub fn move_type_effectiveness(choice: &Choice, defender: &Pokemon) -> f32 {
+    let e = type_effectiveness_modifier(&choice.move_type, defender);
+    if choice.move_id == Choices::FREEZEDRY && defender.has_type(&PokemonType::WATER) {
+        e * 4.0
+    } else {
+        e
+    }
+}
+
 fn _type_effectiveness_modifier(
     attacking_type: &PokemonType,
     defending_types: &(PokemonType, PokemonType),
@@ -160,6 +172,16 @@ fn stab_modifier(attacking_move_type: &PokemonType, active_pkmn: &Pokemon) -> f3
         return 1.0;
     }
 
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L34): Adaptability's 2 / 2.25 here
+    // (Showdown's onModifySTAB; before, its ratio on the base power)
+    let s = stab_without_adaptability(attacking_move_type, active_pkmn);
+    if active_pkmn.ability == Abilities::ADAPTABILITY && active_pkmn.has_type(attacking_move_type) {
+        return if s == 2.0 { 2.25 } else { 2.0 };
+    }
+    s
+}
+
+fn stab_without_adaptability(attacking_move_type: &PokemonType, active_pkmn: &Pokemon) -> f32 {
     let active_types = active_pkmn.types;
     let move_has_basic_stab =
         attacking_move_type == &active_types.0 || attacking_move_type == &active_types.1;
@@ -175,12 +197,17 @@ fn stab_modifier(attacking_move_type: &PokemonType, active_pkmn: &Pokemon) -> f3
     1.0
 }
 
-fn burn_modifier(
-    attacking_move_category: &MoveCategory,
-    attacking_pokemon_status: &PokemonStatus,
-) -> f32 {
-    if attacking_pokemon_status == &PokemonStatus::BURN
-        && attacking_move_category == &MoveCategory::Physical
+// alpha-poke patch (2026-10-16, doc/engine-diff.md L33): not with Guts, not for Facade
+// (Showdown's modifyDamage, Gen 6+)
+fn burn_modifier(choice: &Choice, attacker: &Pokemon, defender: &Pokemon) -> f32 {
+    // (L35: Guts suppressed by the target's Neutralizing Gas, unless Ability Shield)
+    let guts = attacker.ability == Abilities::GUTS
+        && !(defender.ability == Abilities::NEUTRALIZINGGAS
+            && attacker.item != Items::ABILITYSHIELD);
+    if attacker.status == PokemonStatus::BURN
+        && choice.category == MoveCategory::Physical
+        && !guts
+        && choice.move_id != Choices::FACADE
     {
         return 0.5;
     }
@@ -195,7 +222,7 @@ fn terrain_modifier(
     choice: &Choice,
 ) -> f32 {
     #[cfg(any(feature = "champions", feature = "gen9", feature = "gen8"))]
-    let terrain_boost = 1.3;
+    let terrain_boost = 5325.0 / 4096.0; // alpha-poke patch (L34): Showdown's 4096ths
 
     #[cfg(not(any(feature = "champions", feature = "gen9", feature = "gen8")))]
     let terrain_boost = 1.5;
@@ -211,7 +238,13 @@ fn terrain_modifier(
         Terrain::GRASSYTERRAIN => {
             if choice.move_type == PokemonType::GRASS && attacker.is_grounded() {
                 terrain_boost
-            } else if choice.move_id == Choices::EARTHQUAKE {
+            } else if matches!(
+                choice.move_id,
+                Choices::EARTHQUAKE | Choices::BULLDOZE | Choices::MAGNITUDE
+            ) && defender.is_grounded()
+            {
+                // alpha-poke patch (L34): Bulldoze / Magnitude too, a grounded target only
+                // (Showdown's grassyterrain onBasePower)
                 0.5
             } else {
                 1.0
@@ -235,41 +268,79 @@ fn terrain_modifier(
     }
 }
 
-fn volatile_status_modifier(choice: &Choice, attacking_side: &Side, defending_side: &Side) -> f32 {
-    let mut modifier = 1.0;
+// alpha-poke patch (2026-10-16, doc/engine-diff.md L34): the volatiles' modifiers at the stage
+// Showdown applies them (before: one product on the damage)
+struct VolatileMods {
+    base_power: f32, // Charge (onBasePower)
+    attack: f32,     // Flash Fire, Slow Start, Protosynthesis / Quark Drive (onModifyAtk / SpA)
+    defense: f32,    // Protosynthesis / Quark Drive (onModifyDef / SpD)
+    damage: f32,     // Glaive Rush (onSourceModifyDamage)
+    type_stages: i8, // Tar Shot (onEffectiveness)
+    immune: bool,    // Magnet Rise against Ground, a semi-invulnerable target
+}
+
+const BOOST_1_3: f32 = 5325.0 / 4096.0;
+
+fn volatile_status_modifiers(
+    choice: &Choice,
+    attacking_side: &Side,
+    defending_side: &Side,
+) -> VolatileMods {
+    let mut m = VolatileMods {
+        base_power: 1.0,
+        attack: 1.0,
+        defense: 1.0,
+        damage: 1.0,
+        type_stages: 0,
+        immune: false,
+    };
+    let physical = choice.category == MoveCategory::Physical;
+    let special = choice.category == MoveCategory::Special;
+    // L35: Neutralizing Gas out, the other's Protosynthesis / Quark Drive does nothing (their
+    // handlers check ignoringAbility(); Ability Shield keeps it)
+    let gassed = |side: &Side, other: &Side| {
+        other.get_active_immutable().ability == Abilities::NEUTRALIZINGGAS
+            && side.get_active_immutable().item != Items::ABILITYSHIELD
+    };
+    let (atk_gassed, def_gassed) = (
+        gassed(attacking_side, defending_side),
+        gassed(defending_side, attacking_side),
+    );
     let atk = &attacking_side.volatile_statuses;
     if atk.contains(&PokemonVolatileStatus::FLASHFIRE) && choice.move_type == PokemonType::FIRE {
-        modifier *= 1.5;
+        m.attack *= 1.5;
     }
-    if atk.contains(&PokemonVolatileStatus::SLOWSTART) && choice.category == MoveCategory::Physical
-    {
-        modifier *= 0.5;
+    if atk.contains(&PokemonVolatileStatus::SLOWSTART) && physical {
+        m.attack *= 0.5;
     }
     if atk.contains(&PokemonVolatileStatus::CHARGE) && choice.move_type == PokemonType::ELECTRIC {
-        modifier *= 2.0;
+        m.base_power *= 2.0;
     }
     if (atk.contains(&PokemonVolatileStatus::PROTOSYNTHESISATK)
         || atk.contains(&PokemonVolatileStatus::QUARKDRIVEATK))
-        && choice.category == MoveCategory::Physical
+        && physical
+        && !atk_gassed
     {
-        modifier *= 1.3;
+        m.attack *= BOOST_1_3;
     }
     if (atk.contains(&PokemonVolatileStatus::PROTOSYNTHESISSPA)
         || atk.contains(&PokemonVolatileStatus::QUARKDRIVESPA))
-        && choice.category == MoveCategory::Special
+        && special
+        && !atk_gassed
     {
-        modifier *= 1.3;
+        m.attack *= BOOST_1_3;
     }
 
     let def = &defending_side.volatile_statuses;
     if def.contains(&PokemonVolatileStatus::MAGNETRISE)
         && choice.move_type == PokemonType::GROUND
         && choice.move_id != Choices::THOUSANDARROWS
+        && !grounded_by_effect(defending_side, defending_side.get_active_immutable())
     {
-        return 0.0;
+        m.immune = true;
     }
     if def.contains(&PokemonVolatileStatus::TARSHOT) && choice.move_type == PokemonType::FIRE {
-        modifier *= 2.0;
+        m.type_stages += 1;
     }
     if def.contains(&PokemonVolatileStatus::PHANTOMFORCE)
         || def.contains(&PokemonVolatileStatus::SHADOWFORCE)
@@ -278,25 +349,35 @@ fn volatile_status_modifier(choice: &Choice, attacking_side: &Side, defending_si
         || def.contains(&PokemonVolatileStatus::DIVE)
         || def.contains(&PokemonVolatileStatus::FLY)
     {
-        return 0.0;
+        m.immune = true;
     }
     if def.contains(&PokemonVolatileStatus::GLAIVERUSH) {
-        modifier *= 2.0;
+        m.damage *= 2.0;
     }
     if (def.contains(&PokemonVolatileStatus::PROTOSYNTHESISDEF)
         || def.contains(&PokemonVolatileStatus::QUARKDRIVEDEF))
-        && choice.category == MoveCategory::Physical
+        && physical
+        && !def_gassed
     {
-        modifier /= 1.3;
+        m.defense *= BOOST_1_3;
     }
     if (def.contains(&PokemonVolatileStatus::PROTOSYNTHESISSPD)
         || def.contains(&PokemonVolatileStatus::QUARKDRIVESPD))
-        && choice.category == MoveCategory::Special
+        && special
+        && !def_gassed
     {
-        modifier /= 1.3;
+        m.defense *= BOOST_1_3;
     }
+    m
+}
 
-    modifier
+/// alpha-poke patch (L32): grounded whatever its type, ability or Air Balloon (Showdown's
+/// isGrounded: Iron Ball, Smack Down)
+pub fn grounded_by_effect(side: &Side, pkmn: &Pokemon) -> bool {
+    pkmn.item == Items::IRONBALL
+        || side
+            .volatile_statuses
+            .contains(&PokemonVolatileStatus::SMACKDOWN)
 }
 
 fn get_defending_types(
@@ -305,10 +386,40 @@ fn get_defending_types(
     attacking_pkmn: &Pokemon,
     attacking_choice: &Choice,
 ) -> (PokemonType, PokemonType) {
-    if defending_pkmn.terastallized && !(defending_pkmn.tera_type == PokemonType::STELLAR) {
-        return (defending_pkmn.tera_type, PokemonType::TYPELESS);
+    let mut defender_types =
+        if defending_pkmn.terastallized && !(defending_pkmn.tera_type == PokemonType::STELLAR) {
+            (defending_pkmn.tera_type, PokemonType::TYPELESS)
+        } else {
+            defending_pkmn.types
+        };
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L32): a Ground move against a grounded
+    // Flying type: a Smack Down target's Flying type neutral (Showdown's isGrounded); an Iron
+    // Ball holder's every type neutral (its onEffectiveness: 0 for each type, unless Smack Down)
+    let flying = defender_types.0 == PokemonType::FLYING || defender_types.1 == PokemonType::FLYING;
+    if attacking_choice.move_type == PokemonType::GROUND
+        && flying
+        && defending_pkmn.item == Items::IRONBALL
+        && !side
+            .volatile_statuses
+            .contains(&PokemonVolatileStatus::SMACKDOWN)
+        && !side
+            .volatile_statuses
+            .contains(&PokemonVolatileStatus::ROOST)
+    {
+        return (PokemonType::TYPELESS, PokemonType::TYPELESS);
     }
-    let mut defender_types = defending_pkmn.types;
+    if attacking_choice.move_type == PokemonType::GROUND && grounded_by_effect(side, defending_pkmn)
+    {
+        if defender_types.0 == PokemonType::FLYING {
+            defender_types.0 = PokemonType::TYPELESS;
+        }
+        if defender_types.1 == PokemonType::FLYING {
+            defender_types.1 = PokemonType::TYPELESS;
+        }
+    }
+    if defending_pkmn.terastallized && !(defending_pkmn.tera_type == PokemonType::STELLAR) {
+        return defender_types;
+    }
     if side
         .volatile_statuses
         .contains(&PokemonVolatileStatus::ROOST)
@@ -509,6 +620,92 @@ fn get_attacking_and_defending_stats(
     )
 }
 
+// alpha-poke patch (2026-10-16, doc/engine-diff.md L34): Showdown's damage step by step with its
+// integer rounding (sim/battle-actions.ts getDamage / modifyDamage, battle.ts modify): the base
+// power and the stats modified once by their chained modifiers, the base damage, weather, crit,
+// the roll (85-100%), STAB, effectiveness (x 2 / halved per stage), burn, the final modifiers
+// (ModifyDamage: screens, ...); before, one float product of every modifier on the damage and
+// rolls of 85-100% of the final number
+#[derive(Clone, Copy, Debug)]
+pub struct DamageRecipe {
+    base: i64,
+    crit_base: i64,
+    stab: i64,
+    type_stages: i8,
+    burn: bool,
+    final_mod: f32,
+    screen_mod: f32,
+}
+
+/// a modifier in 4096ths (Showdown's chain / modify)
+fn q4096(m: f32) -> i64 {
+    if m == 1.0 {
+        4096
+    } else {
+        (m * 4096.0).round() as i64
+    }
+}
+
+/// Showdown's modify(value, modifier): tr((tr(value * modifier) + 2047) / 4096)
+fn modify(value: i64, m4096: i64) -> i64 {
+    if m4096 == 4096 {
+        value
+    } else {
+        (value * m4096 + 2047) / 4096
+    }
+}
+
+impl DamageRecipe {
+    /// the damage of the roll `r` (85-100)
+    pub fn roll(&self, r: i64, crit: bool) -> i16 {
+        let mut d = if crit { self.crit_base } else { self.base };
+        d = d * r / 100;
+        d = modify(d, self.stab);
+        if self.type_stages > 0 {
+            d <<= self.type_stages;
+        } else {
+            for _ in 0..(-self.type_stages) {
+                d /= 2;
+            }
+        }
+        if self.burn {
+            d = modify(d, 2048);
+        }
+        let m = if crit {
+            self.final_mod
+        } else {
+            self.final_mod * self.screen_mod
+        };
+        d = modify(d, q4096(m));
+        d.clamp(1, i16::MAX as i64) as i16
+    }
+
+    /// the 16 rolls, lowest first
+    pub fn rolls(&self, crit: bool) -> [i16; 16] {
+        let mut out = [0; 16];
+        for (i, x) in out.iter_mut().enumerate() {
+            *x = self.roll(85 + i as i64, crit);
+        }
+        out
+    }
+}
+
+fn type_stages(effectiveness: f32) -> i8 {
+    if effectiveness == 1.0 {
+        0
+    } else if effectiveness == 2.0 {
+        1
+    } else if effectiveness == 0.5 {
+        -1
+    } else if effectiveness == 4.0 {
+        2
+    } else if effectiveness == 0.25 {
+        -2
+    } else {
+        effectiveness.log2().round() as i8
+    }
+}
+
 fn common_pkmn_damage_calc(
     attacking_side: &Side,
     attacker: &Pokemon,
@@ -521,32 +718,17 @@ fn common_pkmn_damage_calc(
     weather: &Weather,
     terrain: &Terrain,
     choice: &Choice,
-) -> (f32, f32) {
-    let mut damage: f32;
-    let mut crit_damage: f32;
-    let mut common_damage = 2.0 * attacker.level as f32;
-    common_damage = common_damage.floor() / 5.0;
-    common_damage = common_damage.floor() + 2.0;
-    common_damage = common_damage.floor() * choice.base_power;
-
-    damage = common_damage * attacking_stat as f32 / defending_stat as f32;
-    damage = damage.floor() / 50.0;
-    damage = damage.floor() + 2.0;
-
-    crit_damage = common_damage * crit_attacking_stat as f32 / crit_defending_stat as f32;
-    crit_damage = crit_damage.floor() / 50.0;
-    crit_damage = crit_damage.floor() + 2.0;
-
-    let mut damage_modifier = 1.0;
-    if defender.terastallized && choice.move_type == PokemonType::STELLAR {
-        damage_modifier *= 2.0;
+) -> Option<DamageRecipe> {
+    let vol = volatile_status_modifiers(&choice, attacking_side, defending_side);
+    let effectiveness = if defender.terastallized && choice.move_type == PokemonType::STELLAR {
+        2.0
     } else {
-        damage_modifier *= _type_effectiveness_modifier(
+        _type_effectiveness_modifier(
             &choice.move_type,
             &get_defending_types(&defending_side, defender, attacker, choice),
-        );
-    }
-
+        )
+    };
+    let mut weather_mod = 1.0;
     if attacker.ability != Abilities::CLOUDNINE
         && attacker.ability != Abilities::AIRLOCK
         && defender.ability != Abilities::CLOUDNINE
@@ -560,36 +742,68 @@ fn common_pkmn_damage_calc(
                 Weather::SUN | Weather::RAIN | Weather::HARSHSUN | Weather::HEAVYRAIN
             ))
         {
-            damage_modifier *= weather_modifier(&choice.move_type, weather);
+            weather_mod = weather_modifier(&choice.move_type, weather);
         }
     }
+    if vol.immune || effectiveness == 0.0 || weather_mod == 0.0 {
+        return None;
+    }
 
-    damage_modifier *= stab_modifier(&choice.move_type, &attacker);
-    damage_modifier *= burn_modifier(&choice.category, &attacker.status);
-    damage_modifier *= volatile_status_modifier(&choice, attacking_side, defending_side);
-    damage_modifier *= terrain_modifier(terrain, attacker, defender, &choice);
+    let level = (2 * attacker.level as i64) / 5 + 2;
+    let base_power =
+        choice.base_power * vol.base_power * terrain_modifier(terrain, attacker, defender, &choice);
+    // modify's rounding of the chained base power (half down)
+    let base_power = ((base_power as f64 + 2047.0 / 4096.0).floor() as i64).max(1);
+    let stat = |s: i16, m: f32| modify(s as i64, q4096(m)).max(1);
+    let base = |a: i16, d: i16| {
+        let a = stat(a, vol.attack * choice.attack_modifier);
+        let d = stat(d, vol.defense * choice.defense_modifier);
+        let b = level * base_power * a / d / 50 + 2;
+        modify(b, q4096(weather_mod))
+    };
+    let crit_base = base(crit_attacking_stat, crit_defending_stat) as f32 * CRIT_MULTIPLIER;
 
-    damage = damage * damage_modifier;
-    crit_damage = crit_damage * damage_modifier;
-
-    (damage, crit_damage)
+    let screen_mod = if attacker.ability != Abilities::INFILTRATOR
+        && (defending_side.side_conditions.aurora_veil > 0
+            || (defending_side.side_conditions.reflect > 0
+                && choice.category == MoveCategory::Physical)
+            || (defending_side.side_conditions.light_screen > 0
+                && choice.category == MoveCategory::Special))
+    {
+        0.5
+    } else {
+        1.0
+    };
+    Some(DamageRecipe {
+        base: base(attacking_stat, defending_stat),
+        crit_base: crit_base.floor() as i64,
+        stab: q4096(stab_modifier(&choice.move_type, &attacker)),
+        // Freeze-Dry: super effective on Water (its onEffectiveness: +1 instead of -1)
+        type_stages: type_stages(effectiveness)
+            + vol.type_stages
+            + if choice.move_id == Choices::FREEZEDRY && defender.has_type(&PokemonType::WATER) {
+                2
+            } else {
+                0
+            },
+        burn: burn_modifier(&choice, &attacker, defender) != 1.0,
+        final_mod: vol.damage * choice.damage_modifier,
+        screen_mod,
+    })
 }
 
-// This is a basic damage calculation function that assumes special effects/modifiers
-// are reflected in the `Choice` struct
-//
-// i.e. if an ability would multiply a move's base-power by 1.3x, that should already
-// be reflected in the `Choice`
-pub fn calculate_damage(
+/// alpha-poke patch (L34): the recipe of a move's damage (calculate_damage's), None for no
+/// damage (a status move, an immunity)
+pub fn damage_recipe(
     state: &State,
     attacking_side: &SideReference,
     choice: &Choice,
-    _damage_rolls: DamageRolls,
-) -> Option<(i16, i16)> {
-    if choice.category == MoveCategory::Status || choice.category == MoveCategory::Switch {
+) -> Option<DamageRecipe> {
+    if choice.category == MoveCategory::Status
+        || choice.category == MoveCategory::Switch
+        || choice.base_power <= 0.0
+    {
         return None;
-    } else if choice.base_power == 0.0 {
-        return Some((0, 0));
     }
     let (attacking_side, defending_side) = state.get_both_sides_immutable(attacking_side);
     let attacker = attacking_side.get_active_immutable();
@@ -611,7 +825,7 @@ pub fn calculate_damage(
             effective_weather,
         );
 
-    let (mut damage, mut crit_damage) = common_pkmn_damage_calc(
+    common_pkmn_damage_calc(
         attacking_side,
         attacker,
         attacking_stat,
@@ -623,55 +837,71 @@ pub fn calculate_damage(
         &effective_weather,
         &state.terrain.terrain_type,
         choice,
-    );
-    if attacker.ability != Abilities::INFILTRATOR {
-        if defending_side.side_conditions.aurora_veil > 0 {
-            damage *= 0.5
-        } else if defending_side.side_conditions.reflect > 0
-            && choice.category == MoveCategory::Physical
-        {
-            damage *= 0.5
-        } else if defending_side.side_conditions.light_screen > 0
-            && choice.category == MoveCategory::Special
-        {
-            damage *= 0.5
-        }
+    )
+}
+
+/// alpha-poke patch (L34): the 16 rolls of a move's damage, without and with a crit
+pub fn damage_rolls(
+    state: &State,
+    attacking_side: &SideReference,
+    choice: &Choice,
+) -> Option<([i16; 16], [i16; 16])> {
+    damage_recipe(state, attacking_side, choice).map(|r| (r.rolls(false), r.rolls(true)))
+}
+
+// This is a basic damage calculation function that assumes special effects/modifiers
+// are reflected in the `Choice` struct
+//
+// i.e. if an ability would multiply a move's base-power by 1.3x, that should already
+// be reflected in the `Choice`
+pub fn calculate_damage(
+    state: &State,
+    attacking_side: &SideReference,
+    choice: &Choice,
+    _damage_rolls: DamageRolls,
+) -> Option<(i16, i16)> {
+    if choice.category == MoveCategory::Status || choice.category == MoveCategory::Switch {
+        return None;
+    } else if choice.base_power == 0.0 {
+        return Some((0, 0));
     }
-
-    crit_damage *= CRIT_MULTIPLIER;
-
+    let recipe = match damage_recipe(state, attacking_side, choice) {
+        Some(r) => r,
+        None => return Some((0, 0)),
+    };
+    let (max, max_crit) = (recipe.roll(100, false), recipe.roll(100, true));
     match _damage_rolls {
-        DamageRolls::Average => {
-            damage = damage.floor() * 0.925;
-            crit_damage = crit_damage.floor() * 0.925;
-        }
-        DamageRolls::Min => {
-            damage = damage.floor() * 0.85;
-            crit_damage = crit_damage.floor() * 0.85;
-        }
-        DamageRolls::Max => {
-            damage = damage.floor();
-            crit_damage = crit_damage.floor();
-        }
+        DamageRolls::Average => Some((
+            (max as f32 * 0.925) as i16,
+            (max_crit as f32 * 0.925) as i16,
+        )),
+        DamageRolls::Min => Some((recipe.roll(85, false), recipe.roll(85, true))),
+        DamageRolls::Max => Some((max, max_crit)),
     }
-
-    Some((damage as i16, crit_damage as i16))
 }
 
 pub fn calculate_futuresight_damage(
     attacking_side: &Side,
     defending_side: &Side,
     attacking_side_pokemon_index: &PokemonIndex,
+    choice: &Choice,
 ) -> i16 {
-    let attacking_stat = attacking_side.pokemon[attacking_side_pokemon_index].special_attack;
+    // L35: the user's Special Attack boosts while it is active (Showdown's getDamage on the
+    // source at the hit; a switch resets them)
+    let attacking_stat = if attacking_side.active_index == *attacking_side_pokemon_index {
+        attacking_side.calculate_boosted_stat(PokemonBoostableStat::SpecialAttack)
+    } else {
+        attacking_side.pokemon[attacking_side_pokemon_index].special_attack
+    };
     // alpha-poke patch (2026-10-16, doc/engine-diff.md L15): a special move's damage at the hit,
     // as Showdown's: the target's Special Defense boosts, its Eviolite / Assault Vest, Aurora
     // Veil, and the STAB of the user (not of the side's active); before, the target's unboosted
     // stat and the active's types
+    // (Eviolite / Assault Vest, L35: the choice's modifiers, item_modify_attack_against)
     let defending_stat =
         defending_side.calculate_boosted_stat(PokemonBoostableStat::SpecialDefense);
     let attacker = &attacking_side.pokemon[attacking_side_pokemon_index];
-    let (mut damage, _) = common_pkmn_damage_calc(
+    match common_pkmn_damage_calc(
         attacking_side,
         attacker,
         attacking_stat,
@@ -682,23 +912,12 @@ pub fn calculate_futuresight_damage(
         defending_stat,
         &Weather::NONE,
         &Terrain::NONE,
-        MOVES.get(&Choices::FUTURESIGHT).unwrap(),
-    );
-    if matches!(
-        defending_side.get_active_immutable().item,
-        Items::EVIOLITE | Items::ASSAULTVEST
+        choice,
     ) {
-        damage /= 1.5;
+        // (Light Screen / Aurora Veil: the recipe's screens)
+        Some(r) => (r.roll(100, false) as f32 * 0.925) as i16,
+        None => 0,
     }
-    if attacker.ability != Abilities::INFILTRATOR {
-        if defending_side.side_conditions.light_screen > 0
-            || defending_side.side_conditions.aurora_veil > 0
-        {
-            damage *= 0.5
-        }
-    }
-
-    (damage * 0.925) as i16
 }
 
 #[cfg(test)]
@@ -1085,14 +1304,14 @@ mod tests {
             vec![PokemonVolatileStatus::TARSHOT],
             PokemonType::FIRE,
             Choices::NONE,
-            97
+            96 // alpha-poke patch (L34): Showdown's rounding (STAB 35 -> 52, x 2), was 97
         ),
         test_glaiverush_doubles_damage_against: (
             vec![],
             vec![PokemonVolatileStatus::GLAIVERUSH],
             PokemonType::NORMAL,
             Choices::NONE,
-            97
+            96 // alpha-poke patch (L34): Showdown's rounding (STAB 35 -> 52, x 2), was 97
         ),
         test_phantomforce_on_defender_causes_0_damage: (
             vec![],

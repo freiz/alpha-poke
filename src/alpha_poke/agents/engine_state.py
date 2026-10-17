@@ -83,7 +83,9 @@ EXTENDERS = {"sunnyday": "heatrock", "raindance": "damprock", "sandstorm": "smoo
 
 
 def _types(mon) -> tuple[str, str]:
-    ts = [t.name.lower() for t in (mon.type_1, mon.type_2) if t is not None]
+    # the non-tera types: the engine keeps them when terastallized, STAB on them (tera_type
+    # apart: has_type reads only it), as Showdown's getTypes(false, true) (L31)
+    ts = [t.name.lower() for t in mon.base_types if t is not None]
     return (ts + ["typeless", "typeless"])[0], (ts + ["typeless", "typeless"])[1]
 
 

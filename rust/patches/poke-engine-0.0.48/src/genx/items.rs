@@ -1,6 +1,6 @@
 #![allow(unused_variables)]
 use super::abilities::Abilities;
-use super::damage_calc::type_effectiveness_modifier;
+use super::damage_calc::{move_type_effectiveness, type_effectiveness_modifier};
 use super::generate_instructions::{apply_boost_instruction, immune_to_status};
 use super::state::Terrain;
 use crate::choices::{Choice, Choices, Effect, MoveCategory, MoveTarget, Secondary, StatBoosts};
@@ -394,7 +394,12 @@ fn damage_reduction_berry(
                 new_item: Items::NONE,
             }));
         defending_pkmn.item = Items::NONE;
-        choice.base_power /= 2.0;
+        choice.damage_modifier /= 2.0; // L34: a final modifier (onSourceModifyDamage)
+                                       // alpha-poke patch (2026-10-16, doc/engine-diff.md L33): Knock Off's 1.5 x still (its
+                                       // onBasePower sees the berry, eaten later: onSourceModifyDamage)
+        if choice.move_id == Choices::KNOCKOFF {
+            choice.base_power *= 1.5;
+        }
     }
 }
 
@@ -415,7 +420,7 @@ fn power_up_gem(
         }
         #[cfg(not(feature = "gen5"))]
         {
-            choice.base_power *= 1.3;
+            choice.base_power *= 5325.0 / 4096.0;
         }
 
         instructions
@@ -800,7 +805,7 @@ pub fn item_before_move(
                     },
                 ));
                 defending_pkmn.item = Items::NONE;
-                choice.base_power /= 2.0;
+                choice.damage_modifier /= 2.0; // L34
             }
         }
         Items::COBABERRY => damage_reduction_berry(
@@ -1492,8 +1497,13 @@ pub fn item_modify_attack_against(
             }
         }
         Items::AIRBALLOON => {
+            // alpha-poke patch (L32): not when grounded by Smack Down
             if attacking_choice.move_type == PokemonType::GROUND
                 && attacking_choice.move_id != Choices::THOUSANDARROWS
+                && !super::damage_calc::grounded_by_effect(
+                    defending_side,
+                    defending_side.get_active_immutable(),
+                )
             {
                 attacking_choice.base_power = 0.0;
             } else if attacking_choice.target == MoveTarget::Opponent
@@ -1508,7 +1518,7 @@ pub fn item_modify_attack_against(
         }
         Items::ASSAULTVEST => {
             if attacking_choice.targets_special_defense() {
-                attacking_choice.base_power /= 1.5;
+                attacking_choice.defense_modifier *= 1.5;
             }
         }
         Items::METALPOWDER if attacking_side.get_active_immutable().id == PokemonName::DITTO => {
@@ -1536,7 +1546,7 @@ pub fn item_modify_attack_against(
             }
         }
         Items::EVIOLITE => {
-            attacking_choice.base_power /= 1.5;
+            attacking_choice.defense_modifier *= 1.5;
         }
         // alpha-poke patch (2026-10-16, doc/engine-diff.md L24): used up by the hit that triggers
         // them (Showdown's onAfterMoveSecondary / onDamagingHit / onHit)
@@ -1646,8 +1656,8 @@ pub fn item_modify_attack_against(
         }
         Items::WEAKNESSPOLICY => {
             if attacking_choice.category != MoveCategory::Status
-                && type_effectiveness_modifier(
-                    &attacking_choice.move_type,
+                && move_type_effectiveness(
+                    &attacking_choice,
                     &defending_side.get_active_immutable(),
                 ) > 1.0
             {
@@ -1708,69 +1718,67 @@ pub fn item_modify_attack_being_used(
         }
         Items::WELLSPRINGMASK => match attacking_side.get_active_immutable().id {
             PokemonName::OGERPONWELLSPRING | PokemonName::OGERPONWELLSPRINGTERA => {
-                attacking_choice.base_power *= 1.2;
+                attacking_choice.base_power *= 4915.0 / 4096.0;
             }
             _ => {}
         },
         Items::HEARTHFLAMEMASK => match attacking_side.get_active_immutable().id {
             PokemonName::OGERPONHEARTHFLAME | PokemonName::OGERPONHEARTHFLAMETERA => {
-                attacking_choice.base_power *= 1.2;
+                attacking_choice.base_power *= 4915.0 / 4096.0;
             }
             _ => {}
         },
         Items::CORNERSTONEMASK => match attacking_side.get_active_immutable().id {
             PokemonName::OGERPONCORNERSTONE | PokemonName::OGERPONCORNERSTONETERA => {
-                attacking_choice.base_power *= 1.2;
+                attacking_choice.base_power *= 4915.0 / 4096.0;
             }
             _ => {}
         },
         Items::BLACKBELT => {
             if attacking_choice.move_type == PokemonType::FIGHTING {
-                attacking_choice.base_power *= 1.2;
+                attacking_choice.base_power *= 4915.0 / 4096.0;
             }
         }
         Items::BLACKGLASSES => {
             if attacking_choice.move_type == PokemonType::DARK {
-                attacking_choice.base_power *= 1.2;
+                attacking_choice.base_power *= 4915.0 / 4096.0;
             }
         }
         Items::CHARCOAL => {
             if attacking_choice.move_type == PokemonType::FIRE {
-                attacking_choice.base_power *= 1.2;
+                attacking_choice.base_power *= 4915.0 / 4096.0;
             }
         }
         Items::CHOICEBAND => {
             if attacking_choice.category == MoveCategory::Physical {
-                attacking_choice.base_power *= 1.5;
+                attacking_choice.attack_modifier *= 1.5;
             }
         }
         Items::CHOICESPECS => {
             if attacking_choice.category == MoveCategory::Special {
-                attacking_choice.base_power *= 1.5;
+                attacking_choice.attack_modifier *= 1.5;
             }
         }
         Items::DRAGONFANG | Items::DRAGONSCALE => {
             if attacking_choice.move_type == PokemonType::DRAGON {
-                attacking_choice.base_power *= 1.2;
+                attacking_choice.base_power *= 4915.0 / 4096.0;
             }
         }
         Items::EXPERTBELT => {
-            if type_effectiveness_modifier(
-                &attacking_choice.move_type,
-                &defending_side.get_active_immutable(),
-            ) > 1.0
+            if move_type_effectiveness(&attacking_choice, &defending_side.get_active_immutable())
+                > 1.0
             {
-                attacking_choice.base_power *= 1.2;
+                attacking_choice.damage_modifier *= 4915.0 / 4096.0;
             }
         }
         Items::FAIRYFEATHER => {
             if attacking_choice.move_type == PokemonType::FAIRY {
-                attacking_choice.base_power *= 1.2;
+                attacking_choice.base_power *= 4915.0 / 4096.0;
             }
         }
         Items::LIFEORB => {
             if attacking_choice.category != MoveCategory::Status {
-                attacking_choice.base_power *= 1.3;
+                attacking_choice.damage_modifier *= 5324.0 / 4096.0;
 
                 #[cfg(feature = "gen4")]
                 if !defending_side
@@ -1797,53 +1805,53 @@ pub fn item_modify_attack_being_used(
         }
         Items::METALCOAT => {
             if attacking_choice.move_type == PokemonType::STEEL {
-                attacking_choice.base_power *= 1.2;
+                attacking_choice.base_power *= 4915.0 / 4096.0;
             }
         }
         Items::MUSCLEBAND => {
             if attacking_choice.category == MoveCategory::Physical {
-                attacking_choice.base_power *= 1.1;
+                attacking_choice.base_power *= 4505.0 / 4096.0;
             }
         }
         Items::MYSTICWATER => {
             if attacking_choice.move_type == PokemonType::WATER {
-                attacking_choice.base_power *= 1.2;
+                attacking_choice.base_power *= 4915.0 / 4096.0;
             }
         }
         Items::NEVERMELTICE => {
             if attacking_choice.move_type == PokemonType::ICE {
-                attacking_choice.base_power *= 1.2;
+                attacking_choice.base_power *= 4915.0 / 4096.0;
             }
         }
         Items::PINKBOW | Items::POLKADOTBOW => {
             if attacking_choice.move_type == PokemonType::NORMAL {
-                attacking_choice.base_power *= 1.1;
+                attacking_choice.base_power *= 4505.0 / 4096.0;
             }
         }
         Items::ODDINCENSE => {
             if attacking_choice.move_type == PokemonType::PSYCHIC {
-                attacking_choice.base_power *= 1.2;
+                attacking_choice.base_power *= 4915.0 / 4096.0;
             }
         }
         Items::POISONBARB => {
             if attacking_choice.move_type == PokemonType::POISON {
-                attacking_choice.base_power *= 1.2;
+                attacking_choice.base_power *= 4915.0 / 4096.0;
             }
         }
         Items::PUNCHINGGLOVE => {
             if attacking_choice.flags.punch {
-                attacking_choice.base_power *= 1.1;
+                attacking_choice.base_power *= 4505.0 / 4096.0;
                 attacking_choice.flags.contact = false
             }
         }
         Items::SEAINCENSE => {
             if attacking_choice.move_type == PokemonType::WATER {
-                attacking_choice.base_power *= 1.2;
+                attacking_choice.base_power *= 4915.0 / 4096.0;
             }
         }
         Items::SHARPBEAK => {
             if attacking_choice.move_type == PokemonType::FLYING {
-                attacking_choice.base_power *= 1.2;
+                attacking_choice.base_power *= 4915.0 / 4096.0;
             }
         }
         Items::SHELLBELL => {
@@ -1851,27 +1859,27 @@ pub fn item_modify_attack_being_used(
         }
         Items::SILKSCARF => {
             if attacking_choice.move_type == PokemonType::NORMAL {
-                attacking_choice.base_power *= 1.2;
+                attacking_choice.base_power *= 4915.0 / 4096.0;
             }
         }
         Items::SILVERPOWDER => {
             if attacking_choice.move_type == PokemonType::BUG {
-                attacking_choice.base_power *= 1.2;
+                attacking_choice.base_power *= 4915.0 / 4096.0;
             }
         }
         Items::SOFTSAND => {
             if attacking_choice.move_type == PokemonType::GROUND {
-                attacking_choice.base_power *= 1.2;
+                attacking_choice.base_power *= 4915.0 / 4096.0;
             }
         }
         Items::SPELLTAG => {
             if attacking_choice.move_type == PokemonType::GHOST {
-                attacking_choice.base_power *= 1.2;
+                attacking_choice.base_power *= 4915.0 / 4096.0;
             }
         }
         Items::MIRACLESEED => {
             if attacking_choice.move_type == PokemonType::GRASS {
-                attacking_choice.base_power *= 1.2;
+                attacking_choice.base_power *= 4915.0 / 4096.0;
             }
         }
         Items::SOULDEW => {
@@ -1887,7 +1895,7 @@ pub fn item_modify_attack_being_used(
                 if attacking_choice.move_type == PokemonType::DRAGON
                     || attacking_choice.move_type == PokemonType::PSYCHIC
                 {
-                    attacking_choice.base_power *= 1.2;
+                    attacking_choice.base_power *= 4915.0 / 4096.0;
                 }
             }
         }
@@ -1898,7 +1906,7 @@ pub fn item_modify_attack_being_used(
                 if attacking_choice.move_type == PokemonType::DRAGON
                     || attacking_choice.move_type == PokemonType::GHOST
                 {
-                    attacking_choice.base_power *= 1.2;
+                    attacking_choice.base_power *= 4915.0 / 4096.0;
                 }
             }
         }
@@ -1909,7 +1917,7 @@ pub fn item_modify_attack_being_used(
                 if attacking_choice.move_type == PokemonType::DRAGON
                     || attacking_choice.move_type == PokemonType::WATER
                 {
-                    attacking_choice.base_power *= 1.2;
+                    attacking_choice.base_power *= 4915.0 / 4096.0;
                 }
             }
         }
@@ -1920,7 +1928,7 @@ pub fn item_modify_attack_being_used(
                 if attacking_choice.move_type == PokemonType::DRAGON
                     || attacking_choice.move_type == PokemonType::STEEL
                 {
-                    attacking_choice.base_power *= 1.2;
+                    attacking_choice.base_power *= 4915.0 / 4096.0;
                 }
             }
         }
@@ -1956,27 +1964,27 @@ pub fn item_modify_attack_being_used(
         },
         Items::TWISTEDSPOON => {
             if attacking_choice.move_type == PokemonType::PSYCHIC {
-                attacking_choice.base_power *= 1.2;
+                attacking_choice.base_power *= 4915.0 / 4096.0;
             }
         }
         Items::HARDSTONE => {
             if attacking_choice.move_type == PokemonType::ROCK {
-                attacking_choice.base_power *= 1.2;
+                attacking_choice.base_power *= 4915.0 / 4096.0;
             }
         }
         Items::WAVEINCENSE => {
             if attacking_choice.move_type == PokemonType::WATER {
-                attacking_choice.base_power *= 1.2;
+                attacking_choice.base_power *= 4915.0 / 4096.0;
             }
         }
         Items::MAGNET => {
             if attacking_choice.move_type == PokemonType::ELECTRIC {
-                attacking_choice.base_power *= 1.2;
+                attacking_choice.base_power *= 4915.0 / 4096.0;
             }
         }
         Items::WISEGLASSES => {
             if attacking_choice.category == MoveCategory::Special {
-                attacking_choice.base_power *= 1.1;
+                attacking_choice.base_power *= 4505.0 / 4096.0;
             }
         }
         Items::FISTPLATE => {
@@ -1984,7 +1992,7 @@ pub fn item_modify_attack_being_used(
                 attacking_choice.move_type = PokemonType::FIGHTING;
             }
             if attacking_choice.move_type == PokemonType::FIGHTING {
-                attacking_choice.base_power *= 1.2;
+                attacking_choice.base_power *= 4915.0 / 4096.0;
             }
         }
         Items::SKYPLATE => {
@@ -1992,7 +2000,7 @@ pub fn item_modify_attack_being_used(
                 attacking_choice.move_type = PokemonType::FLYING;
             }
             if attacking_choice.move_type == PokemonType::FLYING {
-                attacking_choice.base_power *= 1.2;
+                attacking_choice.base_power *= 4915.0 / 4096.0;
             }
         }
         Items::TOXICPLATE => {
@@ -2000,7 +2008,7 @@ pub fn item_modify_attack_being_used(
                 attacking_choice.move_type = PokemonType::POISON;
             }
             if attacking_choice.move_type == PokemonType::POISON {
-                attacking_choice.base_power *= 1.2;
+                attacking_choice.base_power *= 4915.0 / 4096.0;
             }
         }
         Items::EARTHPLATE => {
@@ -2008,7 +2016,7 @@ pub fn item_modify_attack_being_used(
                 attacking_choice.move_type = PokemonType::GROUND;
             }
             if attacking_choice.move_type == PokemonType::GROUND {
-                attacking_choice.base_power *= 1.2;
+                attacking_choice.base_power *= 4915.0 / 4096.0;
             }
         }
         Items::STONEPLATE => {
@@ -2016,7 +2024,7 @@ pub fn item_modify_attack_being_used(
                 attacking_choice.move_type = PokemonType::ROCK;
             }
             if attacking_choice.move_type == PokemonType::ROCK {
-                attacking_choice.base_power *= 1.2;
+                attacking_choice.base_power *= 4915.0 / 4096.0;
             }
         }
         Items::INSECTPLATE => {
@@ -2024,7 +2032,7 @@ pub fn item_modify_attack_being_used(
                 attacking_choice.move_type = PokemonType::BUG;
             }
             if attacking_choice.move_type == PokemonType::BUG {
-                attacking_choice.base_power *= 1.2;
+                attacking_choice.base_power *= 4915.0 / 4096.0;
             }
         }
         Items::SPOOKYPLATE => {
@@ -2032,7 +2040,7 @@ pub fn item_modify_attack_being_used(
                 attacking_choice.move_type = PokemonType::GHOST;
             }
             if attacking_choice.move_type == PokemonType::GHOST {
-                attacking_choice.base_power *= 1.2;
+                attacking_choice.base_power *= 4915.0 / 4096.0;
             }
         }
         Items::IRONPLATE => {
@@ -2040,7 +2048,7 @@ pub fn item_modify_attack_being_used(
                 attacking_choice.move_type = PokemonType::STEEL;
             }
             if attacking_choice.move_type == PokemonType::STEEL {
-                attacking_choice.base_power *= 1.2;
+                attacking_choice.base_power *= 4915.0 / 4096.0;
             }
         }
         Items::FLAMEPLATE => {
@@ -2048,7 +2056,7 @@ pub fn item_modify_attack_being_used(
                 attacking_choice.move_type = PokemonType::FIRE;
             }
             if attacking_choice.move_type == PokemonType::FIRE {
-                attacking_choice.base_power *= 1.2;
+                attacking_choice.base_power *= 4915.0 / 4096.0;
             }
         }
         Items::SPLASHPLATE => {
@@ -2056,7 +2064,7 @@ pub fn item_modify_attack_being_used(
                 attacking_choice.move_type = PokemonType::WATER;
             }
             if attacking_choice.move_type == PokemonType::WATER {
-                attacking_choice.base_power *= 1.2;
+                attacking_choice.base_power *= 4915.0 / 4096.0;
             }
         }
         Items::MEADOWPLATE => {
@@ -2064,7 +2072,7 @@ pub fn item_modify_attack_being_used(
                 attacking_choice.move_type = PokemonType::GRASS;
             }
             if attacking_choice.move_type == PokemonType::GRASS {
-                attacking_choice.base_power *= 1.2;
+                attacking_choice.base_power *= 4915.0 / 4096.0;
             }
         }
         Items::ZAPPLATE => {
@@ -2072,7 +2080,7 @@ pub fn item_modify_attack_being_used(
                 attacking_choice.move_type = PokemonType::ELECTRIC;
             }
             if attacking_choice.move_type == PokemonType::ELECTRIC {
-                attacking_choice.base_power *= 1.2;
+                attacking_choice.base_power *= 4915.0 / 4096.0;
             }
         }
         Items::MINDPLATE => {
@@ -2080,7 +2088,7 @@ pub fn item_modify_attack_being_used(
                 attacking_choice.move_type = PokemonType::PSYCHIC;
             }
             if attacking_choice.move_type == PokemonType::PSYCHIC {
-                attacking_choice.base_power *= 1.2;
+                attacking_choice.base_power *= 4915.0 / 4096.0;
             }
         }
         Items::ICICLEPLATE => {
@@ -2088,7 +2096,7 @@ pub fn item_modify_attack_being_used(
                 attacking_choice.move_type = PokemonType::ICE;
             }
             if attacking_choice.move_type == PokemonType::ICE {
-                attacking_choice.base_power *= 1.2;
+                attacking_choice.base_power *= 4915.0 / 4096.0;
             }
         }
         Items::DRACOPLATE => {
@@ -2096,7 +2104,7 @@ pub fn item_modify_attack_being_used(
                 attacking_choice.move_type = PokemonType::DRAGON;
             }
             if attacking_choice.move_type == PokemonType::DRAGON {
-                attacking_choice.base_power *= 1.2;
+                attacking_choice.base_power *= 4915.0 / 4096.0;
             }
         }
         Items::DREADPLATE => {
@@ -2104,7 +2112,7 @@ pub fn item_modify_attack_being_used(
                 attacking_choice.move_type = PokemonType::DARK;
             }
             if attacking_choice.move_type == PokemonType::DARK {
-                attacking_choice.base_power *= 1.2;
+                attacking_choice.base_power *= 4915.0 / 4096.0;
             }
         }
         Items::PIXIEPLATE => {
@@ -2112,7 +2120,7 @@ pub fn item_modify_attack_being_used(
                 attacking_choice.move_type = PokemonType::FAIRY;
             }
             if attacking_choice.move_type == PokemonType::FAIRY {
-                attacking_choice.base_power *= 1.2;
+                attacking_choice.base_power *= 4915.0 / 4096.0;
             }
         }
         Items::LIGHTBALL => {
