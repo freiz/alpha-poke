@@ -611,6 +611,14 @@ fn sitrus_berry(
     attacking_side: &mut Side,
     instructions: &mut StateInstructions,
 ) {
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L137): not eaten under Heal Block
+    // (Showdown's onTryEatItem: no heal), as the pinch berries
+    if attacking_side
+        .volatile_statuses
+        .contains(&PokemonVolatileStatus::HEALBLOCK)
+    {
+        return;
+    }
     let active_pkmn = attacking_side.get_active();
     let heal_amount = cmp::min(active_pkmn.maxhp / 4, active_pkmn.maxhp - active_pkmn.hp);
     instructions

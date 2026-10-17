@@ -807,7 +807,10 @@ pub fn ability_after_damage_hit(
         // (generate_instructions::run_move), not its user's
         Abilities::MAGICIAN => {
             let defending_pkmn = defending_side.get_active();
+            // alpha-poke patch (2026-10-17, doc/engine-diff.md L134): nothing left after its Knock
+            // Off (Showdown: Knock Off's onAfterHit first)
             if damage_dealt > 0
+                && choice.move_id != Choices::KNOCKOFF
                 && defending_pkmn.item_can_be_removed()
                 && active_pkmn.item == Items::NONE
             {

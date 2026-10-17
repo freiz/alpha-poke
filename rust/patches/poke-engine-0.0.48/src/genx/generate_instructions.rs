@@ -2929,6 +2929,8 @@ pub fn before_move(
             .contains(&charge_volatile_status)
         {
             choice.remove_all_effects();
+            // (L135: the charging turn is not stopped by Protect)
+            choice.flags.protect = false;
             choice.volatile_status = Some(VolatileStatus {
                 target: MoveTarget::User,
                 volatile_status: charge_volatile_status,
@@ -5558,6 +5560,7 @@ fn add_end_of_turn_instructions(
     }
 
     // volatile statuses
+    let mut heal_block_ended = vec![];
     for side_ref in sides {
         // alpha-poke patch (2026-10-17, doc/engine-diff.md L110): the trapper fainted, its partial
         // trap / Mean Look end (Showdown: the source is not active)
@@ -5896,6 +5899,9 @@ fn add_end_of_turn_instructions(
                 let amount = -*duration;
                 *duration = 0;
                 side.volatile_statuses.remove(&volatile);
+                if volatile == PokemonVolatileStatus::HEALBLOCK {
+                    heal_block_ended.push(*side_ref);
+                }
                 incoming_instructions
                     .instruction_list
                     .push(Instruction::RemoveVolatileStatus(
@@ -6153,6 +6159,12 @@ fn add_end_of_turn_instructions(
             side.side_conditions.protect -= side.side_conditions.protect;
         }
     } // end volatile statuses
+
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L137): a berry Heal Block kept uneaten goes
+    // once it ends (Showdown's Update after the residual)
+    for side_ref in heal_block_ended {
+        super::items::berry_on_damage(state, &side_ref, incoming_instructions);
+    }
       // (L62: an item used up at the end of the turn too)
     unburden_check(state, incoming_instructions);
 }

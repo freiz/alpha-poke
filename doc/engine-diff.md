@@ -277,6 +277,11 @@ harness 必须把 Showdown 的状态完整映射到引擎，否则不一致来�
 | L131 | Mirror Herb 复制对手的任何能力提升，不论是谁造成的（持有者自己的 Swagger 也算；Showdown 的 onFoeAfterBoost）；引擎只复制对手自己给自己的提升 | 引擎 | 已修复 | `test_l131_mirror_herb_copies_swagger` | `generate_instructions.rs` `get_instructions_from_boosts` |
 | L132 | Truant 的偷懒标记在出招开始时设上（Showdown 的 onBeforeMove，优先级 9：睡眠 / 冰冻之后，畏缩、Taunt、混乱、麻痹之前；招式被免疫、没打中也算），Neutralizing Gas 下不设；硬直回合同时清掉偷懒标记（mustrecharge 的 onBeforeMove）。引擎只在打中后设，硬直回合也不清 | 引擎 | 已修复 | `test_l132_truant_after_any_move`（2 个参数） | `generate_instructions.rs` `start_truant`；`choice_effects.rs` `choice_after_damage_hit` 不再设 |
 | L133 | 针对对手的变化招式打在替身上会失败，除非有 bypasssub 标记（Showdown 的 substitute onTryPrimaryHit；Infiltrator 例外）：例如 Memento 的使用者不会倒下。引擎没有统一的判断，Memento 照样让使用者倒下 | 引擎 | 已修复 | `test_l133_memento_into_contrary_substitute`，对照 `test_l133_status_moves_into_substitute`（Pain Split、Trick）；数据测试 `test_bypass_substitute_moves_match_showdown` | `choices.rs` `Choices::bypasses_substitute`；`generate_instructions.rs` `move_has_no_effect` |
+| L134 | Magician 在自己的 Knock Off 之后什么也偷不到（Showdown：Knock Off 的 onAfterHit 先拿走道具，Magician 的 onAfterMoveSecondarySelf 在后）；引擎的 Magician 在 Knock Off 之前就偷走了道具 | 引擎 | 已修复 | `test_l134_magician_knock_off` | `abilities.rs` `ability_after_damage_hit` 的 MAGICIAN 分支 |
+| L135 | Protect 先于吸收类特性挡住招式（Flash Fire、Well-Baked Body、Water Absorb 等；Showdown 里 Protect 的 onTryHit 先结算）；引擎把招式改成吸收效果时清掉了 protect 标记，于是穿过了 Protect。蓄力招式的蓄力回合照旧不受 Protect 影响 | 引擎 | 已修复 | `test_l135_protect_before_absorbing_abilities`（2 个参数），对照 `test_l135_charge_turn_into_protect` | `choices.rs` `remove_all_effects` 保留 protect 标记；`generate_instructions.rs` 蓄力回合清掉它 |
+| L136 | 使用 Substitute 会解除自身的部分束缚（Whirlpool 等；Showdown 的 substitute onStart）；引擎保留束缚，回合末照样扣血 | 引擎 | 已修复 | `test_l136_substitute_ends_partial_trap` | `choice_effects.rs` 的 SUBSTITUTE |
+| L137 | Heal Block 期间 Sitrus Berry 不会被吃（Showdown 的 onTryEatItem：不能回复；之前只有半血树果检查了）；Heal Block 在回合末结束后立刻吃（Showdown 在 residual 之后的 Update） | 引擎 | 已修复 | `test_l137_heal_block_stops_sitrus`、`test_l137_sitrus_after_heal_block_ends`（随机差分 wide2 b274-t4） | `items.rs` `sitrus_berry`；`generate_instructions.rs` 回合末 Heal Block 结束后调用 `berry_on_damage` |
+| L138 | 太晶化后用 Roost 不会得到 roost 状态（Showdown 的 roost onStart 失败：属性不变）；引擎照样加，换人决策点上能看出差别 | 引擎 | 已修复 | `test_l138_roost_after_terastallizing` | `choice_effects.rs` 的 ROOST |
 
 ## 修复与验证（2026-10-16）
 

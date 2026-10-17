@@ -20924,7 +20924,11 @@ impl Choice {
     }
     pub fn remove_all_effects(&mut self) {
         self.category = MoveCategory::Status;
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L135): Protect still stops it (an
+        // absorbing ability's onTryHit comes after Protect's in Showdown)
+        let protect = self.flags.protect;
         self.flags.clear_all();
+        self.flags.protect = protect;
         self.base_power = 0.0;
         self.accuracy = 100.0;
         self.heal = None;

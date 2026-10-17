@@ -48,9 +48,6 @@
 "hp",
 "item"
 ],
-"b14-t37": [
-"volatile.roost"
-],
 "b144-t13": [
 "hp"
 ],
@@ -74,10 +71,6 @@
 ],
 "b168-t12": [
 "hp"
-],
-"b175-t23": [
-"hp",
-"volatile.partiallytrapped"
 ],
 "b176-t25": [
 "trick_room"
@@ -124,13 +117,6 @@
 ],
 "b7-t13": [
 "status"
-],
-"b78-t4": [
-"item"
-],
-"b78-t5": [
-"hp",
-"item"
 ],
 "b79-t23": [
 "volatile.encore"

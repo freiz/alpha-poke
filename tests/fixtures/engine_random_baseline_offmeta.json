@@ -66,10 +66,6 @@
 "b169-t3": [
 "hp"
 ],
-"b175-t44": [
-"hp",
-"volatile.partiallytrapped"
-],
 "b176-t51": [
 "hp"
 ],
@@ -124,12 +120,6 @@
 ],
 "b46-t2": [
 "hp"
-],
-"b48-t23": [
-"volatile.flashfire"
-],
-"b48-t44": [
-"volatile.flashfire"
 ],
 "b49-t1": [
 "hp",
@@ -212,9 +202,6 @@
 ],
 "b92-t22": [
 "hp"
-],
-"b93-t15": [
-"volatile.roost"
 ],
 "b95-t14": [
 "hp",

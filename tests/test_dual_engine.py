@@ -3480,3 +3480,94 @@ def test_l133_status_moves_into_substitute(move):
     assert any("|-fail|p1a: Drifblim" in x for x in states[2]["log"])
     outs = ec.engine_outcomes(ec.engine_state(states[1]), move, "earthpower")
     assert ec.closest(states[2], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L134 (doc/engine-diff.md): Magician takes nothing after its Knock Off (Showdown: Knock Off's
+# onAfterHit removes the item first, Magician's onAfterMoveSecondarySelf finds none); the engine's
+# Magician took the item before Knock Off
+def test_l134_magician_knock_off():
+    hoopa = """Hoopa-Unbound
+Ability: Magician
+Tera Type: Dark
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- Knock Off
+- Psychic
+- Protect
+- Trick"""
+    states = ec.run_showdown(hoopa, CORVIKNIGHT, [("move knockoff", "move roost")])
+    assert states[1]["sides"][0]["mons"][0]["item"] == ""
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "knockoff", "roost")
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L135 (doc/engine-diff.md): Protect stops a move an absorbing ability would take (Flash Fire,
+# Well-Baked Body, Water Absorb, ...: Showdown's Protect onTryHit comes first); the engine's
+# absorbed move had lost its protect flag
+@pytest.mark.parametrize("target,move", [
+    (_setter("Heatran", "Flash Fire", "Leftovers", "- Protect\n- Magma Storm\n- Earth Power\n- Taunt"), "flamethrower"),
+    (_setter("Dachsbun", "Well-Baked Body", "Leftovers", "- Protect\n- Body Press\n- Wish\n- Roar"), "willowisp"),
+])  # fmt: skip
+def test_l135_protect_before_absorbing_abilities(target, move):
+    user = _setter("Ninetales", "Flash Fire", "Leftovers", "- Flamethrower\n- Will-O-Wisp\n- Thunder Wave\n- Protect")
+    states = ec.run_showdown(user, target, [(f"move {move}", "move protect")])
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), move, "protect")
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L136 (doc/engine-diff.md): a Substitute frees its user from a partial trap (Showdown's
+# substitute onStart); the engine kept the trap
+def test_l136_substitute_ends_partial_trap():
+    user = _setter("Serperior", "Contrary", "Leftovers", "- Substitute\n- Leaf Storm\n- Glare\n- Protect")
+    trapper = _setter("Alomomola", "Regenerator", "Leftovers", "- Whirlpool\n- Protect\n- Wish\n- Scald")
+    states = ec.run_showdown(user, trapper, [("move leafstorm", "move whirlpool"), ("move substitute", "move protect")])
+    assert "partiallytrapped" in states[1]["sides"][0]["mons"][0]["volatiles"]
+    assert "partiallytrapped" not in states[2]["sides"][0]["mons"][0]["volatiles"]
+    outs = ec.engine_outcomes(ec.engine_state(states[1]), "substitute", "protect")
+    assert ec.closest(states[2], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L137 (doc/engine-diff.md): Heal Block keeps a Sitrus Berry uneaten (Showdown's onTryEatItem: no
+# heal); the engine's Sitrus was eaten (pinch berries already checked)
+def test_l137_heal_block_stops_sitrus():
+    noise = _setter("Latios", "Levitate", "Leftovers", "- Psychic Noise\n- Recover\n- Protect\n- Draco Meteor")
+    azu = _setter("Azumarill", "Huge Power", "Sitrus Berry", "- Belly Drum\n- Aqua Jet\n- Play Rough\n- Protect")
+    states = ec.run_showdown(noise, azu, [("move psychicnoise", "move bellydrum")])
+    after = states[1]["sides"][1]["mons"][0]
+    assert after["item"] == "sitrusberry" and after["boosts"]["atk"] == 6
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "psychicnoise", "bellydrum")
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L138 (doc/engine-diff.md): a Terastallized Roost user gets no roost volatile (Showdown's roost
+# onStart fails; its types stay); the engine's did (seen at a pivot's decision, mid-turn)
+def test_l138_roost_after_terastallizing():
+    corv = CORVIKNIGHT.replace("Tera Type: Dragon", "Tera Type: Flying")
+    forre = _setter("Forretress", "Sturdy", "Leftovers", "- U-turn\n- Stone Edge\n- Spikes\n- Rapid Spin")
+    states = ec.run_showdown(corv, forre + "\n\n" + BLISSEY, [("move defog", "move stoneedge"),
+                                                              ("move roost terastallize", "move uturn")])  # fmt: skip
+    assert states[2]["sides"][1]["request"] == "switch"
+    assert "roost" not in states[2]["sides"][0]["mons"][0]["volatiles"]
+    outs = ec.engine_outcomes(ec.engine_state(states[1]), "roost-tera", "uturn")
+    assert ec.closest(states[2], outs, (1, 2), hp=True)["diff"] == {}
+
+
+# L135's control: a charge move's first turn into Protect still charges (Meteor Beam's raise)
+def test_l135_charge_turn_into_protect():
+    glim = _setter("Glimmora", "Toxic Debris", "Leftovers", "- Meteor Beam\n- Earth Power\n- Spikes\n- Protect")
+    states = ec.run_showdown(glim, _setter("Heatran", "Flash Fire", "Leftovers", "- Protect\n- Magma Storm\n- Earth Power\n- Taunt"),
+                             [("move meteorbeam", "move protect")])  # fmt: skip
+    assert "meteorbeam" in states[1]["sides"][0]["mons"][0]["volatiles"]
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "meteorbeam", "protect")
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L137: the Sitrus Berry Heal Block kept is eaten as it ends (the random differential's wide2
+# b274-t4: Showdown's Update after Heal Block's residual)
+def test_l137_sitrus_after_heal_block_ends():
+    a, b = _random_position("random_battle_teams_wide2.jsonl", 274, 4, 30000)
+    assert any("|-enditem|p2a: Tropius|Sitrus Berry|[eat]" in x for x in b["state"]["log"])
+    c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
+    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2)
+    n = tuple(len(s["mons"]) for s in a["state"]["sides"])
+    assert ec.closest(b["state"], outs, n, hp=True)["diff"] == {}

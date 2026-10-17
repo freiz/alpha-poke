@@ -128,7 +128,9 @@ pub fn modify_choice(
         }
         Choices::ROOST => {
             let attacker = attacking_side.get_active_immutable();
-            if attacker.hp == attacker.maxhp {
+            // alpha-poke patch (2026-10-17, doc/engine-diff.md L138): none for a Terastallized
+            // user either (Showdown's roost onStart fails: its types stay)
+            if attacker.hp == attacker.maxhp || attacker.terastallized {
                 attacker_choice.volatile_status = None
             }
         }
@@ -2149,6 +2151,38 @@ pub fn choice_special_effect(
                     .instruction_list
                     .push(set_sub_health_instruction);
                 instructions.instruction_list.push(apply_vs_instruction);
+                // alpha-poke patch (2026-10-17, doc/engine-diff.md L136): a Substitute frees its
+                // user from a partial trap (Showdown's substitute onStart)
+                if choice.move_id == Choices::SUBSTITUTE
+                    && attacking_side
+                        .volatile_statuses
+                        .contains(&PokemonVolatileStatus::PARTIALLYTRAPPED)
+                {
+                    attacking_side
+                        .volatile_statuses
+                        .remove(&PokemonVolatileStatus::PARTIALLYTRAPPED);
+                    instructions
+                        .instruction_list
+                        .push(Instruction::RemoveVolatileStatus(
+                            RemoveVolatileStatusInstruction {
+                                side_ref: *attacking_side_ref,
+                                volatile_status: PokemonVolatileStatus::PARTIALLYTRAPPED,
+                            },
+                        ));
+                    let elapsed = attacking_side.volatile_status_durations.partiallytrapped;
+                    if elapsed != 0 {
+                        instructions
+                            .instruction_list
+                            .push(Instruction::ChangeVolatileStatusDuration(
+                                ChangeVolatileStatusDurationInstruction {
+                                    side_ref: *attacking_side_ref,
+                                    volatile_status: PokemonVolatileStatus::PARTIALLYTRAPPED,
+                                    amount: -elapsed,
+                                },
+                            ));
+                        attacking_side.volatile_status_durations.partiallytrapped = 0;
+                    }
+                }
             }
         }
         Choices::PERISHSONG => {
