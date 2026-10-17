@@ -1037,6 +1037,10 @@ pub fn choice_hazard_clear(
     attacking_side_ref: &SideReference,
     instructions: &mut StateInstructions,
 ) {
+    // L59: a move Protect blocked clears nothing (Rapid Spin, Mortal Spin, Defog)
+    if choice.protected {
+        return;
+    }
     let (attacking_side, defending_side) = state.get_both_sides(attacking_side_ref);
     match choice.move_id {
         Choices::COURTCHANGE => {

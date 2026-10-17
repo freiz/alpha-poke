@@ -27,6 +27,7 @@ use crate::instruction::{DecrementFutureSightInstruction, FormeChangeInstruction
 use crate::instruction::{DecrementPPInstruction, SetLastUsedMoveInstruction};
 
 use super::damage_calc::calculate_futuresight_damage;
+use crate::pokemon::PokemonName;
 use super::damage_calc::{
     calculate_damage, damage_rolls, type_effectiveness_modifier, DamageRolls,
 };
@@ -2253,6 +2254,54 @@ fn protean_type_change(
         ));
     side.volatile_statuses
         .insert(PokemonVolatileStatus::TYPECHANGE);
+}
+
+// alpha-poke patch (2026-10-16, doc/engine-diff.md L60): Ogerpon terastallizing into its mask's
+// type takes the Tera forme's Embody Aspect and its +1 (Showdown: the forme change, the ability's
+// onStart); before, the old ability stayed
+fn embody_aspect_on_tera(
+    state: &mut State,
+    side_ref: SideReference,
+    instructions: &mut StateInstructions,
+) {
+    let side = state.get_side(&side_ref);
+    let active = side.get_active();
+    let (ability, stat, tera) = match active.id {
+        PokemonName::OGERPON | PokemonName::OGERPONTEALTERA => (
+            Abilities::EMBODYASPECTTEAL,
+            PokemonBoostableStat::Speed,
+            PokemonType::GRASS,
+        ),
+        PokemonName::OGERPONWELLSPRING | PokemonName::OGERPONWELLSPRINGTERA => (
+            Abilities::EMBODYASPECTWELLSPRING,
+            PokemonBoostableStat::SpecialDefense,
+            PokemonType::WATER,
+        ),
+        PokemonName::OGERPONHEARTHFLAME | PokemonName::OGERPONHEARTHFLAMETERA => (
+            Abilities::EMBODYASPECTHEARTHFLAME,
+            PokemonBoostableStat::Attack,
+            PokemonType::FIRE,
+        ),
+        PokemonName::OGERPONCORNERSTONE | PokemonName::OGERPONCORNERSTONETERA => (
+            Abilities::EMBODYASPECTCORNERSTONE,
+            PokemonBoostableStat::Defense,
+            PokemonType::ROCK,
+        ),
+        _ => return,
+    };
+    if active.tera_type != tera {
+        return;
+    }
+    if active.ability != ability {
+        instructions
+            .instruction_list
+            .push(Instruction::ChangeAbility(ChangeAbilityInstruction {
+                side_ref,
+                ability_change: ability as i16 - active.ability as i16,
+            }));
+        active.ability = ability;
+    }
+    apply_boost_instruction(side, &stat, &1, &side_ref, &side_ref, instructions);
 }
 
 fn cannot_use_move(state: &State, choice: &Choice, attacking_side_ref: &SideReference) -> bool {
@@ -5972,6 +6021,7 @@ pub fn generate_instructions_from_move_pair(
                     side_ref: SideReference::SideOne,
                 },
             ));
+        embody_aspect_on_tera(state, SideReference::SideOne, &mut incoming_instructions);
     }
     if s2_tera {
         state.side_two.get_active().terastallized = true;
@@ -5982,6 +6032,7 @@ pub fn generate_instructions_from_move_pair(
                     side_ref: SideReference::SideTwo,
                 },
             ));
+        embody_aspect_on_tera(state, SideReference::SideTwo, &mut incoming_instructions);
     }
 
     run_mega_evolutions(state, s1_mega, s2_mega, &mut incoming_instructions);

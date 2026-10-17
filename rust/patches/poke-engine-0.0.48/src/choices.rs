@@ -20720,6 +20720,9 @@ pub struct Choice {
     pub attack_modifier: f32,
     pub defense_modifier: f32,
     pub damage_modifier: f32,
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L59): Protect blocked it (the effects keyed
+    // on the move, not on its fields, check this: hazard clearing, Defog)
+    pub protected: bool,
     pub boost: Option<Boost>,
     pub priority: i8,
     pub flags: Flags,
@@ -20807,6 +20810,7 @@ impl Choice {
     pub fn remove_effects_for_protect(&mut self) {
         // Crash is not removed
 
+        self.protected = true;
         self.base_power = 0.0;
         self.category = MoveCategory::Status;
         self.accuracy = 100.0;
@@ -20852,6 +20856,7 @@ impl Default for Choice {
             attack_modifier: 1.0,
             defense_modifier: 1.0,
             damage_modifier: 1.0,
+            protected: false,
             boost: None,
             priority: 0,
             flags: Flags {

@@ -1987,3 +1987,36 @@ def test_l58_population_bomb_hits(ability, item):
     for mean, band in BANDS.items():
         rate = sum(h in band for h in hits) / len(hits)
         assert engine.get(mean, 0.0) == pytest.approx(rate, abs=0.05), (mean, rate, engine)
+
+
+# L59 (doc/engine-diff.md): a move Protect blocks does nothing (Rapid Spin / Mortal Spin clear no
+# hazards, Defog lowers no evasion and clears nothing): the engine's hazard clearing and Defog
+# were keyed on the move, not on its (removed) effects
+@pytest.mark.parametrize("p1, move", [
+    (_attacker("Great Tusk", "Protosynthesis", "Leftovers", "- Rapid Spin\n- Headlong Rush\n- Ice Spinner\n- Knock Off"), "rapidspin"),
+    (CORVIKNIGHT, "defog"),
+])  # fmt: skip
+def test_l59_protected_move_does_nothing(p1, move):
+    protector = _setter("Gliscor", "Poison Heal", "Toxic Orb", "- Protect\n- Stealth Rock\n- Earthquake\n- Spikes")
+    turns = [("move " + ("headlongrush" if move == "rapidspin" else "roost"), "move stealthrock"),
+             (f"move {move}", "move protect")]  # fmt: skip
+    states = ec.run_showdown(p1, protector, turns)
+    assert "stealthrock" in states[2]["sides"][0]["conditions"]
+    outs = ec.engine_outcomes(ec.engine_state(states[1]), move, "protect")
+    assert ec.closest(states[2], outs, (1, 1))["diff"] == {}
+
+
+# L60 (doc/engine-diff.md): Ogerpon terastallizing takes its Embody Aspect (the Tera forme's
+# ability) and its +1 (Wellspring Sp. Def, Hearthflame Atk, Cornerstone Def, Teal Spe); the
+# engine kept the old ability (and gave the boost on a switch-in without checking tera)
+@pytest.mark.parametrize("species, ability, item, tera, stat", [
+    ("Ogerpon-Wellspring", "Water Absorb", "Wellspring Mask", "Water", "spd"),
+    ("Ogerpon", "Defiant", "Leftovers", "Grass", "spe"),
+])  # fmt: skip
+def test_l60_embody_aspect_on_tera(species, ability, item, tera, stat):
+    ogerpon = _attacker(species, ability, item, "- Ivy Cudgel\n- Horn Leech\n- Spikes\n- U-turn",
+                        "Jolly").replace("Tera Type: Normal", f"Tera Type: {tera}")  # fmt: skip
+    states = ec.run_showdown(ogerpon, BLISSEY, [("move ivycudgel terastallize", "move protect")])
+    assert states[1]["sides"][0]["mons"][0]["boosts"][stat] == 1
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "ivycudgel-tera", "protect")
+    assert ec.closest(states[1], outs, (1, 1))["diff"] == {}

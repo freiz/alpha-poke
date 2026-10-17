@@ -18,9 +18,6 @@
 "b107-t54": [
 "hp"
 ],
-"b108-t12": [
-"boost.spd"
-],
 "b112-t14": [
 "hp"
 ],
@@ -72,15 +69,7 @@
 "b146-t2": [
 "toxic_spikes"
 ],
-"b15-t22": [
-"boost.spd",
-"hp"
-],
 "b153-t14": [
-"hp"
-],
-"b157-t7": [
-"boost.spd",
 "hp"
 ],
 "b161-t30": [
@@ -90,17 +79,11 @@
 "hp",
 "status"
 ],
-"b162-t28": [
-"stealth_rock"
-],
 "b164-t1": [
 "volatile.typechange"
 ],
 "b169-t23": [
 "volatile.confusion"
-],
-"b17-t30": [
-"stealth_rock"
 ],
 "b176-t18": [
 "active",
@@ -117,17 +100,10 @@
 "b189-t5": [
 "volatile.encore"
 ],
-"b19-t29": [
-"stealth_rock"
-],
 "b191-t21": [
 "item"
 ],
 "b191-t49": [
-"hp"
-],
-"b193-t10": [
-"boost.spd",
 "hp"
 ],
 "b195-t3": [
@@ -141,9 +117,6 @@
 "hp",
 "item",
 "volatile.curse"
-],
-"b202-t19": [
-"boost.spe"
 ],
 "b211-t11": [
 "hp",
@@ -204,9 +177,6 @@
 "b237-t13": [
 "hp",
 "status"
-],
-"b237-t41": [
-"boost.evasion"
 ],
 "b241-t12": [
 "hp"
@@ -286,9 +256,6 @@
 "b34-t31": [
 "status"
 ],
-"b39-t1": [
-"boost.evasion"
-],
 "b41-t21": [
 "hp"
 ],
@@ -310,19 +277,12 @@
 "b48-t30": [
 "hp"
 ],
-"b50-t52": [
-"boost.evasion"
-],
 "b52-t28": [
 "status"
 ],
 "b53-t14": [
 "hp",
 "volatile.partiallytrapped"
-],
-"b55-t27": [
-"stealth_rock",
-"toxic_spikes"
 ],
 "b57-t15": [
 "volatile.confusion"
@@ -333,9 +293,6 @@
 "b67-t1": [
 "boost.spa"
 ],
-"b69-t47": [
-"boost.evasion"
-],
 "b75-t26": [
 "hp"
 ],
@@ -344,9 +301,6 @@
 ],
 "b81-t47": [
 "hp"
-],
-"b89-t4": [
-"boost.spd"
 ],
 "b9-t12": [
 "stealth_rock"

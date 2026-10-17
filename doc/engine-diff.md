@@ -200,6 +200,8 @@ harness 必须把 Showdown 的状态完整映射到引擎，否则不一致来�
 | L56 | Doom Desire 命中时按 Future Sight（超能 120）算：钢系 140，打恶系也有伤害 | 引擎 | 已修复 | `test_l56_doom_desire` | `generate_instructions.rs` 回合末：使用者会 Doom Desire 而不会 Future Sight 时用 Doom Desire 的招式数据（引擎只记录使用者的位置） |
 | L57 | **待做（用户 2026-10-16 要求记下）**：引擎不记录被消耗的道具（Showdown 的 `lastItem`），所以 Harvest（Exeggutor / Tropius 的 Sitrus）、Recycle、Belch 都无法实现。随机差分里 b137-t20 / t21 / t23 / t26 四处由此而来 | 引擎 | 线索（计划修） | | 计划：`Pokemon` 加 `last_item`，一条可回溯的指令；所有消耗道具的地方（吃果子、被 Knock Off / Trick / Thief / Bug Bite / Incinerate 等）设置它；状态字符串格式变化（harness、`build_state`、夹具、随机差分基线都要跟着改；网络输入不读它）；然后实现 Harvest（回合末 50%，晴天 100%）、Recycle、Belch |
 | L58 | Triple Axel 每一段各自判定命中（90%）、未命中就停，威力 20 / 40 / 60，引擎是判定一次、3 段各 40；Population Bomb 10 段各自判定（Loaded Dice：判定一次、4–10 段；Skill Link：10 段），引擎固定 6 段 | 引擎 | 已修复 | `test_l58_triple_axel_hits`（含 Skill Link）；`test_l58_population_bomb_hits`（含 Loaded Dice、Skill Link；Showdown 800 个种子的段数分布） | `generate_instructions.rs` 段数分支：Triple Axel k 段按 20, 40, …, 20k 的平均威力；Population Bomb 分成 1–3 / 4–6 / 7–9 / 10 四档，各取档内平均段数（每个段数还要按暴击数分支，不分档分支太多） |
+| L59 | 被 Protect 挡住的 Rapid Spin / Mortal Spin 照样清钉子，Defog 照样降闪避、清场地（这些效果按招式 ID 触发，不看被 `remove_effects_for_protect` 清掉的字段；Defog 的降闪避是 L1 加的，当时没考虑 Protect） | 引擎 | 已修复 | `test_l59_protected_move_does_nothing`（Rapid Spin、Defog） | `choices.rs`：`Choice.protected`（被守住时置位）；`choice_effects.rs` `choice_hazard_clear` 遇到它直接返回 |
+| L60 | Ogerpon 用面具对应的属性太晶化时，变成 -Tera 形态，特性随之变为 Embody Aspect，对应能力 +1（Wellspring 特防、Hearthflame 攻击、Cornerstone 防御、Teal 速度）；引擎只置太晶标记，特性不变 | 引擎 | 已修复 | `test_l60_embody_aspect_on_tera`（Wellspring、Teal） | `generate_instructions.rs` `embody_aspect_on_tera`：太晶时改特性并 +1 |
 
 ## 修复与验证（2026-10-16）
 
@@ -248,7 +250,7 @@ harness 必须把 Showdown 的状态完整映射到引擎，否则不一致来�
 
 修复：L43–L47。随机差分 97.8%（203）→ **98.2%**（6,916 / 7,046；172 个），每一步都是子集，新增 0；全部测试 316 个、poke-engine 自带测试 229 个通过。
 
-L48–L51 之后（同一天）：**98.4%**（6,930 / 7,046；157 个），新增 0；全部测试 321 个、poke-engine 自带测试 229 个通过。L52–L55 之后：**98.5%**（6,938；149 个），新增 0。L56 之后：6,941，145 个，新增 0。L58 之后：6,943，143 个，新增 0。
+L48–L51 之后（同一天）：**98.4%**（6,930 / 7,046；157 个），新增 0；全部测试 321 个、poke-engine 自带测试 229 个通过。L52–L55 之后：**98.5%**（6,938；149 个），新增 0。L56 之后：6,941，145 个，新增 0。L58 之后：6,943，143 个，新增 0。L59、L60 之后：**98.7%**（6,957；125 个），新增 0；全部测试 337 个通过。
 
 单看 HP 的双引擎测试有两个陷阱，这一轮都碰到了：`closest` 只要求有一个分支匹配，不看概率（L47 的确定性醒来要断言概率为 1）；Showdown 的追加效果用 `random(100)`，不受 `force_random` 控制（Strange Steam 的混乱，改用必中的 Confuse Ray）。
 
