@@ -1,0 +1,218 @@
+{
+"setup": {
+"battles": 200,
+"max_turns": 60,
+"teams": "73f791bed69f439f",
+"seed_offset": 40000
+},
+"mismatches": {
+"b102-t16": [
+"status"
+],
+"b117-t5": [
+"terrain"
+],
+"b122-t18": [
+"boost.atk",
+"item"
+],
+"b122-t26": [
+"hp",
+"status"
+],
+"b123-t4": [
+"boost.spe"
+],
+"b124-t10": [
+"hp",
+"status",
+"volatile.substitute"
+],
+"b127-t19": [
+"status"
+],
+"b135-t11": [
+"hp"
+],
+"b139-t34": [
+"volatile.truant"
+],
+"b139-t39": [
+"spikes"
+],
+"b139-t40": [
+"spikes"
+],
+"b139-t45": [
+"hp",
+"spikes"
+],
+"b139-t46": [
+"hp"
+],
+"b139-t48": [
+"hp"
+],
+"b139-t49": [
+"hp"
+],
+"b139-t54": [
+"hp"
+],
+"b139-t58": [
+"hp"
+],
+"b155-t18": [
+"hp"
+],
+"b155-t20": [
+"hp"
+],
+"b155-t21": [
+"hp",
+"status"
+],
+"b159-t13": [
+"status"
+],
+"b165-t9": [
+"hp"
+],
+"b166-t23": [
+"hp"
+],
+"b166-t24": [
+"hp"
+],
+"b166-t5": [
+"hp"
+],
+"b166-t6": [
+"hp"
+],
+"b171-t21": [
+"terrain"
+],
+"b171-t6": [
+"terrain"
+],
+"b177-t24": [
+"hp"
+],
+"b178-t29": [
+"volatile.smackdown"
+],
+"b18-t1": [
+"volatile.smackdown"
+],
+"b188-t14": [
+"hp"
+],
+"b23-t17": [
+"volatile.perish3"
+],
+"b24-t36": [
+"active",
+"item"
+],
+"b24-t7": [
+"hp"
+],
+"b33-t10": [
+"volatile.substitute"
+],
+"b35-t34": [
+"volatile.perish3"
+],
+"b35-t35": [
+"volatile.perish3"
+],
+"b40-t13": [
+"hp"
+],
+"b44-t34": [
+"hp"
+],
+"b50-t37": [
+"hp",
+"item"
+],
+"b51-t1": [
+"hp"
+],
+"b51-t2": [
+"boost.spa"
+],
+"b51-t3": [
+"hp"
+],
+"b51-t4": [
+"hp"
+],
+"b51-t5": [
+"hp"
+],
+"b53-t21": [
+"status"
+],
+"b54-t9": [
+"hp"
+],
+"b6-t30": [
+"hp"
+],
+"b6-t37": [
+"hp"
+],
+"b62-t46": [
+"hp"
+],
+"b65-t26": [
+"volatile.taunt"
+],
+"b67-t10": [
+"volatile.substitute"
+],
+"b67-t2": [
+"hp",
+"volatile.partiallytrapped"
+],
+"b68-t24": [
+"boost.atk",
+"boost.def",
+"boost.spa",
+"boost.spd",
+"boost.spe"
+],
+"b68-t30": [
+"status"
+],
+"b69-t16": [
+"hp"
+],
+"b7-t18": [
+"volatile.protosynthesisspa"
+],
+"b70-t3": [
+"hp"
+],
+"b70-t6": [
+"volatile.gastroacid"
+],
+"b75-t27": [
+"volatile.typechange"
+],
+"b76-t17": [
+"hp"
+],
+"b81-t1": [
+"boost.atk"
+],
+"b81-t23": [
+"boost.atk"
+],
+"b82-t20": [
+"hp"
+]
+}
+}

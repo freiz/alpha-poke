@@ -1,0 +1,393 @@
+{
+"setup": {
+"battles": 300,
+"max_turns": 60,
+"teams": "be6353498c71c21d",
+"seed_offset": 30000
+},
+"mismatches": {
+"b110-t3": [
+"boost.spa"
+],
+"b114-t21": [
+"boost.def"
+],
+"b115-t15": [
+"boost.atk",
+"hp"
+],
+"b117-t57": [
+"volatile.substitute"
+],
+"b119-t30": [
+"item"
+],
+"b119-t32": [
+"item"
+],
+"b124-t1": [
+"boost.def"
+],
+"b127-t11": [
+"hp"
+],
+"b13-t7": [
+"hp"
+],
+"b138-t41": [
+"volatile.sparklingaria"
+],
+"b138-t53": [
+"volatile.sparklingaria"
+],
+"b144-t10": [
+"hp"
+],
+"b146-t16": [
+"hp",
+"status"
+],
+"b147-t9": [
+"status"
+],
+"b149-t8": [
+"hp"
+],
+"b152-t40": [
+"volatile.substitute"
+],
+"b155-t26": [
+"hp"
+],
+"b155-t27": [
+"hp"
+],
+"b155-t28": [
+"hp"
+],
+"b155-t30": [
+"hp"
+],
+"b155-t31": [
+"hp"
+],
+"b155-t43": [
+"hp"
+],
+"b155-t45": [
+"hp"
+],
+"b155-t52": [
+"hp"
+],
+"b161-t24": [
+"hp",
+"item"
+],
+"b162-t16": [
+"item"
+],
+"b174-t1": [
+"item"
+],
+"b174-t12": [
+"item"
+],
+"b174-t2": [
+"volatile.flashfire"
+],
+"b174-t3": [
+"item"
+],
+"b174-t9": [
+"item"
+],
+"b179-t11": [
+"item"
+],
+"b184-t19": [
+"volatile.confusion"
+],
+"b188-t18": [
+"hp",
+"volatile.leechseed"
+],
+"b190-t4": [
+"volatile.typechange"
+],
+"b190-t5": [
+"hp"
+],
+"b193-t5": [
+"volatile.healblock"
+],
+"b199-t58": [
+"volatile.encore"
+],
+"b202-t50": [
+"toxic_spikes"
+],
+"b205-t35": [
+"hp",
+"volatile.partiallytrapped"
+],
+"b214-t3": [
+"terrain"
+],
+"b216-t13": [
+"volatile.protosynthesisspa"
+],
+"b218-t26": [
+"status",
+"volatile.encore"
+],
+"b220-t5": [
+"terrain"
+],
+"b233-t19": [
+"boost.atk",
+"boost.spa"
+],
+"b237-t2": [
+"hp"
+],
+"b242-t10": [
+"hp"
+],
+"b242-t8": [
+"active",
+"item"
+],
+"b246-t13": [
+"boost.atk"
+],
+"b250-t17": [
+"volatile.taunt"
+],
+"b253-t17": [
+"light_screen"
+],
+"b253-t18": [
+"light_screen"
+],
+"b253-t34": [
+"hp",
+"status"
+],
+"b256-t8": [
+"hp"
+],
+"b258-t27": [
+"status"
+],
+"b258-t5": [
+"volatile.perish3"
+],
+"b258-t6": [
+"volatile.perish3"
+],
+"b258-t7": [
+"volatile.perish3"
+],
+"b26-t7": [
+"volatile.encore"
+],
+"b266-t11": [
+"hp"
+],
+"b266-t12": [
+"hp"
+],
+"b266-t26": [
+"hp"
+],
+"b270-t20": [
+"hp"
+],
+"b274-t34": [
+"hp"
+],
+"b274-t5": [
+"item"
+],
+"b278-t36": [
+"boost.spa"
+],
+"b279-t32": [
+"hp"
+],
+"b285-t6": [
+"hp"
+],
+"b290-t23": [
+"hp"
+],
+"b291-t20": [
+"active"
+],
+"b291-t21": [
+"hp"
+],
+"b291-t22": [
+"hp"
+],
+"b291-t23": [
+"hp"
+],
+"b291-t24": [
+"hp"
+],
+"b291-t25": [
+"hp"
+],
+"b291-t26": [
+"hp"
+],
+"b291-t27": [
+"hp"
+],
+"b291-t28": [
+"hp"
+],
+"b291-t29": [
+"hp"
+],
+"b291-t36": [
+"hp"
+],
+"b292-t29": [
+"item"
+],
+"b294-t33": [
+"hp"
+],
+"b297-t23": [
+"boost.def",
+"boost.spd",
+"item"
+],
+"b30-t21": [
+"boost.evasion"
+],
+"b34-t14": [
+"status"
+],
+"b37-t20": [
+"toxic_spikes"
+],
+"b43-t34": [
+"active",
+"hp"
+],
+"b53-t19": [
+"hp"
+],
+"b53-t20": [
+"hp"
+],
+"b53-t21": [
+"hp"
+],
+"b53-t22": [
+"hp"
+],
+"b53-t23": [
+"hp"
+],
+"b53-t24": [
+"hp"
+],
+"b53-t32": [
+"hp"
+],
+"b53-t34": [
+"hp"
+],
+"b53-t36": [
+"hp"
+],
+"b53-t39": [
+"hp"
+],
+"b53-t40": [
+"hp"
+],
+"b53-t41": [
+"hp"
+],
+"b53-t42": [
+"hp"
+],
+"b54-t12": [
+"hp",
+"item"
+],
+"b54-t36": [
+"volatile.noretreat"
+],
+"b55-t3": [
+"volatile.typechange"
+],
+"b57-t16": [
+"item",
+"volatile.quarkdrivespa"
+],
+"b61-t6": [
+"boost.def"
+],
+"b65-t2": [
+"status"
+],
+"b67-t17": [
+"volatile.protosynthesisspa",
+"volatile.protosynthesisspe"
+],
+"b70-t28": [
+"volatile.substitute"
+],
+"b72-t59": [
+"volatile.confusion"
+],
+"b75-t48": [
+"status"
+],
+"b8-t56": [
+"hp"
+],
+"b83-t13": [
+"status"
+],
+"b88-t12": [
+"boost.evasion"
+],
+"b88-t18": [
+"boost.spa",
+"hp",
+"volatile.encore"
+],
+"b88-t21": [
+"boost.evasion"
+],
+"b88-t3": [
+"boost.evasion"
+],
+"b88-t5": [
+"boost.evasion"
+],
+"b88-t6": [
+"boost.evasion"
+],
+"b88-t7": [
+"boost.evasion"
+],
+"b89-t14": [
+"volatile.protosynthesisdef"
+],
+"b91-t6": [
+"volatile.perish3"
+],
+"b98-t43": [
+"status"
+]
+}
+}

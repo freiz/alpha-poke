@@ -20,7 +20,7 @@ harness 必须把 Showdown 的状态完整映射到引擎，否则不一致来�
 
 方法 / harness 的修正（2026-10-16 晚，504 → 419，新增 0，94.9%）：HP 容差的伤害之和只算正的伤害（Pain Split 用"负伤害"表示回复，原来使容差变负，两边相等也判不一致）；吸取 / 反伤招式、Shell Bell 持有者的 HP 跟着它造成的伤害走，容差加上对方伤害的 8.5% × 3/4；Wish 映射到引擎（新版 Showdown 用 startingTurn：在 startingTurn + 2 回合的回合末回复，引擎在计数为 1 的回合末回复；回复量是未取整的 maxhp / 2）。
 
-**验证集（用户 2026-10-16 要求：多起几批新的随机对局验证，不能只对着这 300 场修）**：`scripts/check_engine_random_sets.sh` 跑主集合和四个验证集，各有自己的基线（`tests/fixtures/engine_random_baseline_<集合>.json`），每次修复后五个都必须是子集：`seed10k`（同样的 300 对队伍，种子偏移 10000：`--seed-offset`）、`offmeta`（偏门池 200 对）、`random`（随机池 200 对）、`wide`（天梯池 wide1000 的第 300–599 对）；队伍对在 `tests/fixtures/random_battle_teams_<集合>.jsonl`。第一次跑（L57 之后，主集合 99.2%）：98.6% / 97.6% / 98.3% / 98.5%，比主集合低，说明有主集合没覆盖到的机制（Cursed Body、Magic Bounce、Beat Up、Metronome、Stockpile 等）。
+**验证集（用户 2026-10-16 要求：多起几批新的随机对局验证，不能只对着这 300 场修）**：`scripts/check_engine_random_sets.sh` 跑主集合和四个验证集，各有自己的基线（`tests/fixtures/engine_random_baseline_<集合>.json`），每次修复后五个都必须是子集：`seed10k`（同样的 300 对队伍，种子偏移 10000：`--seed-offset`）、`offmeta`（偏门池 200 对）、`random`（随机池 200 对）、`wide`（天梯池 wide1000 的第 300–599 对）；队伍对在 `tests/fixtures/random_battle_teams_<集合>.jsonl`。L82 之后又加了三个（用户要求多起几批）：`wide2`（wide1000 的第 600–899 对，种子偏移 30000）、`wide200`（wide200 池的第 0–199 对，偏移 40000）、`forum`（论坛精选的 162 支队伍随机配 200 对，偏移 50000）；第一次跑 98.4% / 98.7% / 98.5%（139 / 78 / 111 处），之后每次修复八个集合都必须是子集。第一次跑（L57 之后，主集合 99.2%）：98.6% / 97.6% / 98.3% / 98.5%，比主集合低，说明有主集合没覆盖到的机制（Cursed Body、Magic Bounce、Beat Up、Metronome、Stockpile 等）。
 
 另外两点：binding 的 panic 是 BaseException，必须接住；多进程要用 spawn（fork 出来的 worker 会继承扩展模块线程持有的锁而死锁）。
 
