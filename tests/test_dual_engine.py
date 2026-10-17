@@ -3998,3 +3998,19 @@ def test_l154_positions(teams, i, turn, offset):
     outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2)
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
     assert ec.closest(b["state"], outs, n, hp=True)["diff"] == {}
+
+
+# L155 (doc/engine-diff.md): a hit Disguise took deals nothing even when the move's power is its
+# own (Heavy Slam: offmeta b80-t1); a reflected Strength Sap heals the reflector (wide2
+# b115-t15); Mirror Coat's damage on its target's Substitute (wide b7-t7)
+@pytest.mark.parametrize("teams,i,turn,offset", [
+    ("random_battle_teams_offmeta.jsonl", 80, 1, 0),
+    ("random_battle_teams_wide2.jsonl", 115, 15, 30000),
+    ("random_battle_teams_wide.jsonl", 7, 7, 0),
+])  # fmt: skip
+def test_l155_positions(teams, i, turn, offset):
+    a, b = _random_position(teams, i, turn, offset)
+    c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
+    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2)
+    n = tuple(len(s["mons"]) for s in a["state"]["sides"])
+    assert ec.closest(b["state"], outs, n, hp=True)["diff"] == {}

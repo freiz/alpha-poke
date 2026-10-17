@@ -3022,6 +3022,25 @@ pub fn ability_modify_attack_against(
                     }
                 }
                 attacker_choice.flags.pivot = false;
+                // alpha-poke patch (2026-10-17, doc/engine-diff.md L155): a reflected Strength Sap
+                // heals the reflector by its user's Attack (Liquid Ooze: its user's), the drop on
+                // the user above; it healed its user by the reflector's
+                if attacker_choice.move_id == Choices::STRENGTHSAP {
+                    attacker_choice.heal = if attacking_side.attack_boost != -6 {
+                        let attack = attacking_side.calculate_boosted_stat(PokemonBoostableStat::Attack);
+                        let sign = if attacking_pkmn.ability == Abilities::LIQUIDOOZE {
+                            -1.0
+                        } else {
+                            1.0
+                        };
+                        Some(Heal {
+                            target: MoveTarget::Opponent,
+                            amount: sign * attack as f32 / target_pkmn.maxhp as f32,
+                        })
+                    } else {
+                        None
+                    };
+                }
             }
         }
         Abilities::STORMDRAIN => {

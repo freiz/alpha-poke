@@ -2954,6 +2954,10 @@ pub fn before_move(
     #[cfg(feature = "terastallization")]
     terastallized_base_power_floor(state, choice, attacking_side);
 
+    let defender_id = state
+        .get_side_immutable(&attacking_side.get_other_side())
+        .get_active_immutable()
+        .id;
     ability_before_move(state, choice, attacking_side, incoming_instructions);
     item_before_move(state, choice, attacking_side, incoming_instructions);
     choice_before_move(state, choice, attacking_side, incoming_instructions);
@@ -2965,6 +2969,21 @@ pub fn before_move(
 
     item_modify_attack_being_used(state, choice, attacking_side);
     item_modify_attack_against(state, choice, attacking_side);
+
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L155): the hit Disguise just took deals
+    // nothing, whatever power modify_choice gave the move after it (Heavy Slam, Low Kick, Gyro
+    // Ball, ...: their own power came back; Showdown's onDamage returns 0)
+    if matches!(
+        defender_id,
+        PokemonName::MIMIKYU | PokemonName::MIMIKYUTOTEM
+    ) && state
+        .get_side_immutable(&attacking_side.get_other_side())
+        .get_active_immutable()
+        .id
+        == PokemonName::MIMIKYUBUSTED
+    {
+        choice.base_power = 0.0;
+    }
 
     /*
         TODO: this needs to be here because from_drag is called after the substitute volatilestatus

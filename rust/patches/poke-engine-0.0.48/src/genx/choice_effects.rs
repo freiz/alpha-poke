@@ -1605,6 +1605,63 @@ fn effective_weight(pkmn: &Pokemon) -> f32 {
 // alpha-poke patch (2026-10-17, doc/engine-diff.md L154): Life Orb's recoil after a damaging move
 // whose damage is its own (Counter, Mirror Coat, Metal Burst: no damage boost, the recoil still --
 // Showdown's onAfterMoveSecondarySelf); the others' is a secondary (items.rs)
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L155): Counter / Mirror Coat / Metal Burst's
+// damage, on the target's Substitute when it has one (not through Infiltrator: the break removes
+// it), else on the target (at most its HP; an Air Balloon pops, L120); whether it dealt any
+fn returned_damage_hit(
+    attacking_side: &Side,
+    defending_side: &mut Side,
+    attacking_side_ref: &SideReference,
+    amount: i16,
+    instructions: &mut StateInstructions,
+) -> bool {
+    let target_ref = attacking_side_ref.get_other_side();
+    if defending_side
+        .volatile_statuses
+        .contains(&PokemonVolatileStatus::SUBSTITUTE)
+        && attacking_side.get_active_immutable().ability != Abilities::INFILTRATOR
+    {
+        let dealt = cmp::min(amount, defending_side.substitute_health);
+        if dealt <= 0 {
+            return false;
+        }
+        instructions
+            .instruction_list
+            .push(Instruction::DamageSubstitute(DamageInstruction {
+                side_ref: target_ref,
+                damage_amount: dealt,
+            }));
+        defending_side.substitute_health -= dealt;
+        if defending_side.substitute_health == 0 {
+            defending_side
+                .volatile_statuses
+                .remove(&PokemonVolatileStatus::SUBSTITUTE);
+            instructions
+                .instruction_list
+                .push(Instruction::RemoveVolatileStatus(
+                    RemoveVolatileStatusInstruction {
+                        side_ref: target_ref,
+                        volatile_status: PokemonVolatileStatus::SUBSTITUTE,
+                    },
+                ));
+        }
+        return true;
+    }
+    let dealt = cmp::min(amount, defending_side.get_active_immutable().hp);
+    if dealt <= 0 {
+        return false;
+    }
+    instructions
+        .instruction_list
+        .push(Instruction::Damage(DamageInstruction {
+            side_ref: target_ref,
+            damage_amount: dealt,
+        }));
+    defending_side.get_active().hp -= dealt;
+    super::items::pop_air_balloon(&target_ref, defending_side, instructions);
+    true
+}
+
 fn life_orb_recoil(
     side: &mut Side,
     side_ref: &SideReference,
@@ -1926,28 +1983,19 @@ pub fn choice_special_effect(
         }
         Choices::COUNTER => {
             if defending_side.damage_dealt.move_category == MoveCategory::Physical
+                && !defending_side.damage_dealt.hit_substitute
                 && !defending_side
                     .get_active_immutable()
                     .has_type(&PokemonType::GHOST)
             {
-                let damage_amount = cmp::min(
+                // (L155: on the target's Substitute if it has one)
+                if returned_damage_hit(
+                    attacking_side,
+                    defending_side,
+                    attacking_side_ref,
                     defending_side.damage_dealt.damage * 2,
-                    defending_side.get_active_immutable().hp,
-                );
-                if damage_amount > 0 {
-                    instructions
-                        .instruction_list
-                        .push(Instruction::Damage(DamageInstruction {
-                            side_ref: attacking_side_ref.get_other_side(),
-                            damage_amount: damage_amount,
-                        }));
-                    defending_side.get_active().hp -= damage_amount;
-                    // (L120: a damaging hit pops an Air Balloon)
-                    super::items::pop_air_balloon(
-                        &attacking_side_ref.get_other_side(),
-                        defending_side,
-                        instructions,
-                    );
+                    instructions,
+                ) {
                     // (L154: Life Orb's recoil after it, Showdown's onAfterMoveSecondarySelf)
                     life_orb_recoil(attacking_side, attacking_side_ref, instructions);
                 }
@@ -1955,28 +2003,19 @@ pub fn choice_special_effect(
         }
         Choices::MIRRORCOAT => {
             if defending_side.damage_dealt.move_category == MoveCategory::Special
+                && !defending_side.damage_dealt.hit_substitute
                 && !defending_side
                     .get_active_immutable()
                     .has_type(&PokemonType::DARK)
             {
-                let damage_amount = cmp::min(
+                // (L155: on the target's Substitute if it has one)
+                if returned_damage_hit(
+                    attacking_side,
+                    defending_side,
+                    attacking_side_ref,
                     defending_side.damage_dealt.damage * 2,
-                    defending_side.get_active_immutable().hp,
-                );
-                if damage_amount > 0 {
-                    instructions
-                        .instruction_list
-                        .push(Instruction::Damage(DamageInstruction {
-                            side_ref: attacking_side_ref.get_other_side(),
-                            damage_amount: damage_amount,
-                        }));
-                    defending_side.get_active().hp -= damage_amount;
-                    // (L120: a damaging hit pops an Air Balloon)
-                    super::items::pop_air_balloon(
-                        &attacking_side_ref.get_other_side(),
-                        defending_side,
-                        instructions,
-                    );
+                    instructions,
+                ) {
                     // (L154: Life Orb's recoil after it, Showdown's onAfterMoveSecondarySelf)
                     life_orb_recoil(attacking_side, attacking_side_ref, instructions);
                 }
@@ -1987,24 +2026,14 @@ pub fn choice_special_effect(
                 && !defending_side.damage_dealt.hit_substitute
                 && !choice.first_move
             {
-                let damage_amount = cmp::min(
+                // (L155: on the target's Substitute if it has one)
+                if returned_damage_hit(
+                    attacking_side,
+                    defending_side,
+                    attacking_side_ref,
                     (defending_side.damage_dealt.damage * 3) / 2,
-                    defending_side.get_active_immutable().hp,
-                );
-                if damage_amount > 0 {
-                    instructions
-                        .instruction_list
-                        .push(Instruction::Damage(DamageInstruction {
-                            side_ref: attacking_side_ref.get_other_side(),
-                            damage_amount: damage_amount,
-                        }));
-                    defending_side.get_active().hp -= damage_amount;
-                    // (L120: a damaging hit pops an Air Balloon)
-                    super::items::pop_air_balloon(
-                        &attacking_side_ref.get_other_side(),
-                        defending_side,
-                        instructions,
-                    );
+                    instructions,
+                ) {
                     // (L154: Life Orb's recoil after it, Showdown's onAfterMoveSecondarySelf)
                     life_orb_recoil(attacking_side, attacking_side_ref, instructions);
                 }
