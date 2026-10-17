@@ -3683,3 +3683,59 @@ def test_l144_eject_pack_after_a_secondary_drop():
     assert states[1]["sides"][1]["request"] == "switch"
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "acidspray", "gigadrain")
     assert ec.closest(states[1], outs, (1, 2), hp=True)["diff"] == {}
+
+
+# L145 (doc/engine-diff.md): Alluring Voice confuses / Burning Jealousy burns a target whose stats
+# were raised this turn (Showdown's statsRaisedThisTurn: its Swords Dance before; Dauntless
+# Shield as it came in; Protect: a control); the engine's had no such effect
+@pytest.mark.parametrize("move,foe_move", [
+    ("alluringvoice", "swordsdance"), ("burningjealousy", "swordsdance"), ("alluringvoice", "protect"),
+])  # fmt: skip
+def test_l145_stats_raised_this_turn(move, foe_move):
+    user = _setter("Skeledirge", "Unaware", "Leftovers", "- Alluring Voice\n- Burning Jealousy\n- Slack Off\n- Protect")
+    chomp = _setter("Garchomp", "Rough Skin", "Leftovers", "- Swords Dance\n- Protect\n- Earthquake\n- Roar")
+    states = ec.run_showdown(user, chomp.replace("Careful", "Jolly"), [(f"move {move}", f"move {foe_move}")])
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), move, foe_move)
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+WEEZING_NG = """Weezing-Galar @ Leftovers
+Ability: Neutralizing Gas
+Tera Type: Steel
+EVs: 4 HP / 252 SpA / 252 Spe
+Timid Nature
+- Strange Steam
+- Protect
+- Defog
+- Will-O-Wisp"""
+
+
+# L146 (doc/engine-diff.md): Neutralizing Gas ends as its holder faints or leaves, and the other
+# active's ability starts again (Showdown's onEnd: Moxie after the KO, Drought's sun, Dauntless
+# Shield; Intimidate hits nobody); the engine kept them suppressed by a fainted holder and never
+# restarted them
+@pytest.mark.parametrize("case", ["moxie", "drought", "dauntless shield"])
+def test_l146_abilities_after_neutralizing_gas(case):
+    weez = WEEZING_NG
+    if case == "moxie":
+        foe = """Gyarados @ Leftovers
+Ability: Moxie
+Tera Type: Ground
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- Waterfall
+- Earthquake
+- Dragon Dance
+- Protect"""
+        states = ec.run_showdown(weez.replace("Focus Sash", "Leftovers").replace("4 HP / ", "") + "\n\n" + BLISSEY,
+                                 foe, [("move protect", "move dragondance"), ("move defog", "move earthquake")])  # fmt: skip
+        k, c = 1, ("defog", "earthquake")
+        assert any("|faint|p1a: Weezing" in x for x in states[2]["log"])
+    else:
+        mon = (_setter("Torkoal", "Drought", "Leftovers", "- Rapid Spin\n- Lava Plume\n- Protect\n- Yawn")
+               if case == "drought" else
+               _setter("Zamazenta", "Dauntless Shield", "Leftovers", "- Body Press\n- Iron Defense\n- Protect\n- Roar"))  # fmt: skip
+        states = ec.run_showdown(weez + "\n\n" + BLISSEY, mon, [("switch 2", "move protect")])
+        k, c = 0, ("blissey", "protect")
+    outs = ec.engine_outcomes(ec.engine_state(states[k]), *c)
+    assert ec.closest(states[k + 1], outs, (2, 1), hp=True)["diff"] == {}

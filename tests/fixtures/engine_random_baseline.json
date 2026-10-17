@@ -106,10 +106,6 @@
 "boost.atk",
 "boost.spe"
 ],
-"b279-t2": [
-"hp",
-"terrain"
-],
 "b289-t9": [
 "hp"
 ],
@@ -118,9 +114,6 @@
 ],
 "b48-t30": [
 "hp"
-],
-"b57-t15": [
-"volatile.confusion"
 ],
 "b9-t12": [
 "stealth_rock"

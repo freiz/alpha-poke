@@ -490,17 +490,6 @@ pub const FAIL_SKILL_SWAP: [Abilities; 29] = [
     Abilities::ZEROTOHERO,
 ];
 
-// alpha-poke patch (2026-10-17, doc/engine-diff.md L124): Neutralizing Gas left the field: a
-// Protosynthesis / Quark Drive holder's Booster Energy goes off (Showdown: the abilities start
-// again), unless one of their volatiles is on already (or the sun / Electric Terrain does it)
-pub fn booster_energy_after_gas(
-    state: &mut State,
-    side_ref: &SideReference,
-    instructions: &mut StateInstructions,
-) {
-    paradox_update(state, side_ref, instructions);
-}
-
 // alpha-poke patch (2026-10-17, doc/engine-diff.md L141): Protosynthesis / Quark Drive follow the
 // sun / Electric Terrain whenever they change (Showdown's onWeatherChange / onTerrainChange, and
 // Booster Energy's onUpdate): on when it is there, off when it is gone unless it came from Booster
@@ -780,7 +769,9 @@ pub fn ability_after_damage_hit(
 ) {
     let (attacking_side, defending_side) = state.get_both_sides(side_ref);
     let active_pkmn = attacking_side.get_active();
+    // (L146: a holder this hit made faint no longer suppresses: Moxie after the KO)
     if (defending_side.get_active_immutable().ability == Abilities::NEUTRALIZINGGAS
+        && defending_side.get_active_immutable().hp > 0
         && active_pkmn.item != Items::ABILITYSHIELD)
         || active_pkmn.ability == Abilities::NEUTRALIZINGGAS
     {

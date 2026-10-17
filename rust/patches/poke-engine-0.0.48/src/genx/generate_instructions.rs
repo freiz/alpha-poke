@@ -408,20 +408,13 @@ fn generate_instructions_from_switch(
             ));
     }
 
-    // alpha-poke patch (2026-10-17, doc/engine-diff.md L124): a Neutralizing Gas holder leaves:
-    // the foe's Booster Energy goes off (before the replacement comes in)
-    if state
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L124 / L146): a Neutralizing Gas holder
+    // leaves: the foe's ability starts again (after the switch below)
+    let gas_left = state
         .get_side_immutable(&switching_side_ref)
         .get_active_immutable()
         .ability
-        == Abilities::NEUTRALIZINGGAS
-    {
-        super::abilities::booster_energy_after_gas(
-            state,
-            &switching_side_ref.get_other_side(),
-            incoming_instructions,
-        );
-    }
+        == Abilities::NEUTRALIZINGGAS;
 
     state.re_enable_disabled_moves(
         &switching_side_ref,
@@ -457,6 +450,14 @@ fn generate_instructions_from_switch(
     incoming_instructions
         .instruction_list
         .push(switch_instruction);
+    if gas_left {
+        restart_ability_after_gas(
+            state,
+            &switching_side_ref.get_other_side(),
+            incoming_instructions,
+        );
+    }
+    let side = state.get_side(&switching_side_ref);
 
     if should_last_used_move {
         set_last_used_move_as_switch(
@@ -690,6 +691,38 @@ fn generate_instructions_from_increment_side_condition(
 // its holder sets (a switch-in ability, a move, Sand Spit / Seed Sower) lasts 8 turns with the
 // matching rock or a Terrain Extender (Showdown's durationCallback), else 5: the instructions from
 // `from` on that set one for 5 turns get 8, and the state with them
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L146): Neutralizing Gas ended (its holder left
+// or fainted): the other active's ability starts again (Showdown's onEnd runs its Start: weather /
+// terrain setters, Dauntless Shield, Protosynthesis, ...); not the ones aimed at the foe or for
+// information (Intimidate, Supersweet Syrup: the holder leaving / fainted; Trace, Imposter, Frisk,
+// Anticipation, Forewarn)
+pub fn restart_ability_after_gas(
+    state: &mut State,
+    side_ref: &SideReference,
+    instructions: &mut StateInstructions,
+) {
+    let active = state.get_side_immutable(side_ref).get_active_immutable();
+    if active.hp == 0
+        || matches!(
+            active.ability,
+            Abilities::INTIMIDATE
+                | Abilities::SUPERSWEETSYRUP
+                | Abilities::TRACE
+                | Abilities::IMPOSTER
+                | Abilities::FRISK
+                | Abilities::ANTICIPATION
+                | Abilities::FOREWARN
+        )
+    {
+        super::abilities::paradox_update(state, side_ref, instructions);
+        return;
+    }
+    let from = instructions.instruction_list.len();
+    ability_on_switch_in(state, side_ref, instructions);
+    extend_field_durations(state, side_ref, instructions, from);
+    super::abilities::paradox_update(state, side_ref, instructions);
+}
+
 pub fn extend_field_durations(
     state: &mut State,
     holder: &SideReference,
@@ -3561,6 +3594,43 @@ pub fn generate_instructions_from_move(
     if incoming_instructions.percentage == 0.0 {
         state.reverse_instructions(&incoming_instructions.instruction_list);
         return;
+    }
+
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L145): Alluring Voice confuses / Burning
+    // Jealousy burns a target whose stats were raised this turn (Showdown's statsRaisedThisTurn:
+    // a raise in this turn's instructions since the target came in), a secondary: not under
+    // Sheer Force / Shield Dust (Covert Cloak: with the other secondaries)
+    if matches!(
+        choice.move_id,
+        Choices::ALLURINGVOICE | Choices::BURNINGJEALOUSY
+    ) && choice.category != MoveCategory::Status
+    {
+        let defender_ref = attacking_side.get_other_side();
+        let mut raised = false;
+        for i in incoming_instructions.instruction_list.iter() {
+            match i {
+                Instruction::Switch(x) if x.side_ref == defender_ref => raised = false,
+                Instruction::Boost(b) if b.side_ref == defender_ref && b.amount > 0 => {
+                    raised = true
+                }
+                _ => {}
+            }
+        }
+        let (attacker, defender) = state.get_both_sides_immutable(&attacking_side);
+        if raised
+            && attacker.get_active_immutable().ability != Abilities::SHEERFORCE
+            && defender.get_active_immutable().ability != Abilities::SHIELDDUST
+        {
+            choice.add_or_create_secondaries(Secondary {
+                chance: 100.0,
+                target: MoveTarget::Opponent,
+                effect: if choice.move_id == Choices::ALLURINGVOICE {
+                    Effect::VolatileStatus(PokemonVolatileStatus::CONFUSION)
+                } else {
+                    Effect::Status(PokemonStatus::BURN)
+                },
+            });
+        }
     }
 
     // alpha-poke patch (2026-10-16, doc/engine-diff.md L24): Metronome, the same move again counts
@@ -6796,9 +6866,24 @@ fn after_move_finish(state: &mut State, final_instructions: &mut Vec<StateInstru
     for state_instructions in final_instructions.iter_mut() {
         state.apply_instructions(&state_instructions.instruction_list);
 
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L146): a Neutralizing Gas holder the
+        // move made faint: the gas ends (its ability none from now on) and the foe's ability
+        // starts again
+        for side_ref in [SideReference::SideOne, SideReference::SideTwo] {
+            let active = state.get_side_immutable(&side_ref).get_active_immutable();
+            if active.ability == Abilities::NEUTRALIZINGGAS && active.hp == 0 {
+                let ins = Instruction::ChangeAbility(ChangeAbilityInstruction {
+                    side_ref,
+                    ability_change: Abilities::NONE as i16 - Abilities::NEUTRALIZINGGAS as i16,
+                });
+                state.apply_one_instruction(&ins);
+                state_instructions.instruction_list.push(ins);
+                restart_ability_after_gas(state, &side_ref.get_other_side(), state_instructions);
+            }
+        }
+
         // alpha-poke patch (2026-10-17, doc/engine-diff.md L124 / L141): Protosynthesis / Quark
-        // Drive after the move's weather / terrain (and a fainted Neutralizing Gas holder: the
-        // foe's Booster Energy goes off)
+        // Drive after the move's weather / terrain
         for side_ref in [SideReference::SideOne, SideReference::SideTwo] {
             super::abilities::paradox_update(state, &side_ref, state_instructions);
         }

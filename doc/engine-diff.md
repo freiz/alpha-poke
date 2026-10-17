@@ -288,6 +288,8 @@ harness 必须把 Showdown 的状态完整映射到引擎，否则不一致来�
 | L142 | 吹飞招式（Dragon Tail、Whirlwind 等）没有拖出任何宝可梦时（目标免疫、没打中、被 Protect 挡住、只剩最后一只），后出招的目标照常出招（例如 -7 优先度的 Trick Room）；引擎只要先手用了吹飞招式就跳过后手 | 引擎 | 已修复 | `test_l142_failed_drag_leaves_the_targets_move`；Rust 测试 `test_drag_move_as_second_move_exits_early_if_opponent_used_drag_move` 改成真的被拖换时才跳过 | `generate_instructions.rs` `generate_instructions_from_move`：本回合的指令里有这一方的 Switch 才跳过 |
 | L143 | Outrage 等锁招结束时的疲劳混乱被 Lum / Persim Berry 立刻治好（Showdown 的 onUpdate；Unnerve 下不吃）；引擎让混乱留到下次出招前 | 引擎 | 已修复 | `test_l143_lum_berry_cures_the_fatigue` | `generate_instructions.rs` `lock_end_instructions` 和回合末锁招结束 |
 | L144 | 对手招式的附加效果降了能力（Acid Spray、Earth Power、Shadow Ball 等）也会触发 Eject Pack（Showdown 的 onAfterBoost，招式结束后换下）：持有者换下，还没出的招作废；引擎只看招式本身的降能力。Sticky Web 在入场时触发的 Eject Pack 仍未实现 | 引擎 | 已修复 | `test_l144_eject_pack_after_a_secondary_drop` | `generate_instructions.rs` `eject_pack_after_secondaries`（run_move 结算附加效果之后，逐个分支） |
+| L145 | Alluring Voice 让本回合提升过能力的目标混乱，Burning Jealousy 让其灼伤（Showdown 的 statsRaisedThisTurn，附加效果：Sheer Force / Shield Dust / Covert Cloak 挡）；引擎没有这个效果。“本回合提升过”取自本回合指令里目标方入场以来的正向 Boost | 引擎 | 已修复 | `test_l145_stats_raised_this_turn`（3 个参数，Protect 是对照） | `generate_instructions.rs` `generate_instructions_from_move`（before_move 之后） |
+| L146 | Neutralizing Gas 在持有者倒下或换下时结束，另一方的特性重新发动（Showdown 的 onEnd 调用 Start：天气 / 场地、Dauntless Shield、Protosynthesis 等；Intimidate 等针对对手的特性和 Trace / Imposter / Frisk 等不重新发动）；倒下的持有者不再压制（击倒它的 Moxie 照常）。引擎让倒下的持有者继续压制，也从不重新发动 | 引擎 | 已修复 | `test_l146_abilities_after_neutralizing_gas`（3 个参数） | `generate_instructions.rs` `restart_ability_after_gas`（换下：Switch 之后；倒下：after_move_finish 把它的特性改成 NONE），替换 L124 的 `booster_energy_after_gas`；`abilities.rs` `ability_after_damage_hit` |
 
 ## 修复与验证（2026-10-16）
 
