@@ -1935,6 +1935,19 @@ fn check_move_hit_or_miss(
             }
         }
     }
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L122): a hit Disguise took this move (its
+    // forme change in this move's instructions) is a hit with no damage, not a miss: Red Card /
+    // Eject Button go off
+    let defender_ref = attacking_side_ref.get_other_side();
+    let disguise_hit = state
+        .get_side_immutable(&defender_ref)
+        .get_active_immutable()
+        .id
+        == PokemonName::MIMIKYUBUSTED
+        && incoming_instructions
+            .instruction_list
+            .iter()
+            .any(|i| matches!(i, Instruction::FormeChange(f) if f.side_ref == defender_ref));
     let attacking_side = state.get_side(attacking_side_ref);
     let attacking_pokemon = attacking_side.get_active_immutable();
 
@@ -1955,7 +1968,7 @@ fn check_move_hit_or_miss(
         }
     }
     let mut percent_hit = percent_hit.min(1.0);
-    if Some((0, 0)) == damage {
+    if Some((0, 0)) == damage && !disguise_hit {
         percent_hit = 0.0;
     }
 
@@ -6307,7 +6320,21 @@ fn run_move(
                 && lowered(&defender_boosts_before, &boosts_of(defender_side)),
         )
     };
-    if damaging || emergency_exit || eject_pack {
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L122): a hit Disguise took counts for Red
+    // Card / Eject Button (no damage needed: Showdown's onAfterMoveSecondary)
+    let disguise_hit = choice.category != MoveCategory::Status
+        && !hit_sub
+        && state
+            .get_side_immutable(&defender_ref)
+            .get_active_immutable()
+            .id
+            == PokemonName::MIMIKYUBUSTED
+        && instructions
+            .instruction_list
+            .iter()
+            .any(|i| matches!(i, Instruction::FormeChange(f) if f.side_ref == defender_ref));
+    let item_hit = damaging || disguise_hit;
+    if item_hit || emergency_exit || eject_pack {
         let defender_side = state.get_side_immutable(&defender_ref);
         let holder = defender_side.get_active_immutable();
         let (item, holder_hp) = (holder.item, holder.hp);
@@ -6325,7 +6352,7 @@ fn run_move(
                 > 1;
         if emergency_exit
             || eject_pack
-            || damaging
+            || item_hit
                 && holder_hp > 0
                 && (item == Items::EJECTBUTTON && can_switch
                     || item == Items::REDCARD && attacker_alive)

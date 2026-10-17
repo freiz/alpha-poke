@@ -265,6 +265,7 @@ harness 必须把 Showdown 的状态完整映射到引擎，否则不一致来�
 | L119 | 对方已倒下时，出招方照样经过自己的异常状态（睡眠计数和醒来、解冻：Showdown 的 BeforeMove 在目标检查之前）；引擎先判“没有目标”就停了，到点该醒的 Rest 睡眠没有醒 | 引擎 | 已修复 | `test_l119_sleeper_wakes_without_a_target` | `generate_instructions.rs`：`no_target` 从 `cannot_use_move` 移到睡眠处理之后 |
 | L120 | Air Balloon 在任何伤害性的一击时破（Showdown 的 onDamagingHit）：Future Sight、Counter / Mirror Coat / Metal Burst、Final Gambit 的也算；引擎只在招式通常的命中（追加效果）时破。另外 Final Gambit 的伤害没有以目标 HP 为上限 | 引擎 | 已修复 | `test_l120_balloon_pops_on_mirror_coat` | `items.rs` `pop_air_balloon`，在 `choice_effects.rs` 和 Future Sight 的命中处调用 |
 | L121 | Parting Shot 一项能力都没降低时失败，使用者留在场上（Showdown 的 onHit：没有降低且不是 Mirror Armor；Clear Body / White Smoke / Full Metal Body / Clear Amulet、Mist、已到 −6、Good as Gold）；引擎照样换人 | 引擎 | 已修复 | `test_l121_parting_shot_into_clear_body` | `choice_effects.rs` `modify_choice`：这些情况去掉 pivot（声音招式，替身不挡） |
+| L122 | Disguise 挡下的一击也算命中：Red Card / Eject Button 照样触发（Showdown 的 onAfterMoveSecondary 不要求伤害）；引擎把 0 伤害的一击当作没打中 | 引擎 | 已修复 | `test_l122_red_card_through_disguise` | `generate_instructions.rs` `check_move_hit_or_miss`（这一招破了 Disguise 时不算没打中）、`run_move` 的 Red Card / Eject Button 条件 |
 
 ## 修复与验证（2026-10-16）
 

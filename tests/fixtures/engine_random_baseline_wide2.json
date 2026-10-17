@@ -88,15 +88,8 @@
 "b190-t5": [
 "hp"
 ],
-"b193-t5": [
-"volatile.healblock"
-],
 "b199-t58": [
 "volatile.encore"
-],
-"b205-t35": [
-"hp",
-"volatile.partiallytrapped"
 ],
 "b216-t13": [
 "volatile.protosynthesisspa"
@@ -120,10 +113,6 @@
 ],
 "b242-t10": [
 "hp"
-],
-"b242-t8": [
-"active",
-"item"
 ],
 "b246-t13": [
 "boost.atk"

@@ -29,13 +29,6 @@
 "b137-t2": [
 "boost.atk"
 ],
-"b142-t7": [
-"active",
-"boost.atk",
-"hp",
-"item",
-"volatile.curse"
-],
 "b148-t5": [
 "volatile.truant"
 ],
@@ -95,11 +88,6 @@
 "b180-t13": [
 "boost.def"
 ],
-"b188-t7": [
-"active",
-"hp",
-"item"
-],
 "b199-t25": [
 "volatile.trapped"
 ],
@@ -140,12 +128,6 @@
 ],
 "b42-t4": [
 "hp"
-],
-"b46-t12": [
-"active",
-"boost.atk",
-"item",
-"status"
 ],
 "b46-t2": [
 "hp"
@@ -235,12 +217,6 @@
 ],
 "b80-t1": [
 "hp"
-],
-"b83-t27": [
-"active",
-"boost.evasion",
-"hp",
-"item"
 ],
 "b90-t1": [
 "status"

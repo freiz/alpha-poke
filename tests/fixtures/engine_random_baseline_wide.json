@@ -112,11 +112,6 @@
 "b244-t8": [
 "volatile.taunt"
 ],
-"b246-t11": [
-"active",
-"item",
-"volatile.quarkdrivespe"
-],
 "b246-t23": [
 "status"
 ],
@@ -143,11 +138,6 @@
 ],
 "b285-t44": [
 "volatile.confusion"
-],
-"b29-t1": [
-"active",
-"hp",
-"item"
 ],
 "b299-t40": [
 "hp"

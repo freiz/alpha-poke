@@ -17,9 +17,6 @@
 "hp",
 "status"
 ],
-"b123-t4": [
-"boost.spe"
-],
 "b124-t10": [
 "hp",
 "status"
@@ -63,10 +60,6 @@
 "b192-t36": [
 "hp",
 "status"
-],
-"b24-t36": [
-"active",
-"item"
 ],
 "b38-t16": [
 "boost.atk"

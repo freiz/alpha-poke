@@ -34,9 +34,6 @@
 "b152-t17": [
 "spikes"
 ],
-"b166-t17": [
-"volatile.healblock"
-],
 "b169-t12": [
 "boost.atk"
 ],
@@ -44,9 +41,7 @@
 "weather"
 ],
 "b176-t18": [
-"active",
-"hp",
-"item"
+"hp"
 ],
 "b184-t7": [
 "volatile.protosynthesisspa"
@@ -56,12 +51,6 @@
 ],
 "b191-t49": [
 "hp"
-],
-"b199-t4": [
-"active",
-"hp",
-"item",
-"volatile.curse"
 ],
 "b208-t15": [
 "hp",
@@ -146,12 +135,6 @@
 "b279-t2": [
 "hp",
 "terrain"
-],
-"b284-t17": [
-"active",
-"hp",
-"item",
-"volatile.quarkdrivespe"
 ],
 "b289-t9": [
 "hp"

@@ -3264,3 +3264,14 @@ def test_l121_parting_shot_into_clear_body():
     assert states[1]["sides"][1]["active"] == 0 and states[1]["sides"][1]["request"] == "move"
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "irondefense", "partingshot")
     assert ec.closest(states[1], outs, (1, 2), hp=True)["diff"] == {}
+
+
+# L122 (doc/engine-diff.md): Red Card / Eject Button go off on a hit Disguise takes too (Showdown's
+# onAfterMoveSecondary: a non-status move that hit, no damage needed); the engine needed damage
+def test_l122_red_card_through_disguise():
+    mimi = _setter("Mimikyu", "Disguise", "Red Card", "- Swords Dance\n- Shadow Claw\n- Play Rough\n- Substitute")
+    gambit = _attacker("Kingambit", "Supreme Overlord", "Leftovers", "- Iron Head\n- Sucker Punch\n- Swords Dance\n- Kowtow Cleave")
+    states = ec.run_showdown(mimi, gambit + "\n\n" + BLISSEY, [("move swordsdance", "move ironhead")])
+    assert any(x.startswith("|-enditem|p1a: Mimikyu|Red Card") for x in states[1]["log"])
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "swordsdance", "ironhead")
+    assert ec.closest(states[1], outs, (1, 2), hp=True)["diff"] == {}

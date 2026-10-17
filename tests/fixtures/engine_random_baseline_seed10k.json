@@ -58,11 +58,6 @@
 "b172-t12": [
 "hp"
 ],
-"b176-t11": [
-"active",
-"hp",
-"item"
-],
 "b178-t35": [
 "boost.atk",
 "boost.spa"
@@ -168,10 +163,6 @@
 "item",
 "status",
 "volatile.protosynthesisatk"
-],
-"b29-t52": [
-"hp",
-"trick_room"
 ],
 "b295-t1": [
 "hp"

@@ -86,10 +86,6 @@
 "boost.atk",
 "hp"
 ],
-"b169-t29": [
-"hp",
-"status"
-],
 "b175-t23": [
 "hp",
 "volatile.partiallytrapped"
@@ -111,11 +107,6 @@
 "b191-t23": [
 "terrain"
 ],
-"b192-t45": [
-"active",
-"hp",
-"item"
-],
 "b197-t21": [
 "status"
 ],
@@ -126,18 +117,11 @@
 "item",
 "volatile.protosynthesisspe"
 ],
-"b37-t21": [
-"hp"
-],
 "b44-t31": [
 "status"
 ],
 "b45-t30": [
 "trick_room"
-],
-"b49-t13": [
-"active",
-"item"
 ],
 "b49-t4": [
 "hp",
