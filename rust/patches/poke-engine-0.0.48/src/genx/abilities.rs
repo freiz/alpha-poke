@@ -524,6 +524,12 @@ pub fn ability_before_move(
 ) {
     let (attacking_side, defending_side) = state.get_both_sides(side_ref);
     let active_pkmn = attacking_side.get_active();
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L98): a hit on the target's Substitute
+    let behind_sub = defending_side
+        .volatile_statuses
+        .contains(&PokemonVolatileStatus::SUBSTITUTE)
+        && !choice.flags.sound
+        && active_pkmn.ability != Abilities::INFILTRATOR;
     let defending_pkmn = defending_side.get_active();
 
     match defending_pkmn.ability {
@@ -567,12 +573,19 @@ pub fn ability_before_move(
                 }));
             defending_pkmn.id = PokemonName::MIMIKYUBUSTED;
         }
+        // (L98: only a hit that damages it -- not one it is immune to, nor its Substitute)
         #[cfg(any(feature = "gen8", feature = "gen9", feature = "champions"))]
         Abilities::DISGUISE
             if (choice.category == MoveCategory::Physical
                 || choice.category == MoveCategory::Special)
                 && (defending_pkmn.id == PokemonName::MIMIKYU
-                    || defending_pkmn.id == PokemonName::MIMIKYUTOTEM) =>
+                    || defending_pkmn.id == PokemonName::MIMIKYUTOTEM)
+                && !behind_sub
+                && (move_type_effectiveness(choice, defending_pkmn) > 0.0
+                    || matches!(
+                        active_pkmn.ability,
+                        Abilities::SCRAPPY | Abilities::MINDSEYE
+                    )) =>
         {
             choice.base_power = 0.0;
             instructions
@@ -1308,7 +1321,11 @@ pub fn ability_end_of_turn(
             }
         }
         Abilities::DRYSKIN => {
-            if state.weather_is_active(&Weather::RAIN) {
+            // alpha-poke patch (2026-10-16, doc/engine-diff.md L100): heavy rain heals too, sun /
+            // harsh sun take 1/8 (Showdown's onWeather)
+            if state.weather_is_active(&Weather::RAIN)
+                || state.weather_is_active(&Weather::HEAVYRAIN)
+            {
                 let active_pkmn = state.get_side(side_ref).get_active();
                 if active_pkmn.hp < active_pkmn.maxhp && !heal_blocked {
                     let heal_amount =
@@ -1319,6 +1336,20 @@ pub fn ability_end_of_turn(
                     });
                     active_pkmn.hp += heal_amount;
                     instructions.instruction_list.push(ins);
+                }
+            } else if state.weather_is_active(&Weather::SUN)
+                || state.weather_is_active(&Weather::HARSHSUN)
+            {
+                let active_pkmn = state.get_side(side_ref).get_active();
+                let damage_amount = cmp::min(active_pkmn.maxhp / 8, active_pkmn.hp);
+                if damage_amount > 0 {
+                    active_pkmn.hp -= damage_amount;
+                    instructions
+                        .instruction_list
+                        .push(Instruction::Damage(DamageInstruction {
+                            side_ref: *side_ref,
+                            damage_amount,
+                        }));
                 }
             }
         }

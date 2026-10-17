@@ -25,12 +25,6 @@
 "b12-t17": [
 "item"
 ],
-"b12-t6": [
-"hp"
-],
-"b12-t7": [
-"hp"
-],
 "b123-t11": [
 "hp"
 ],
@@ -47,9 +41,6 @@
 ],
 "b144-t13": [
 "hp"
-],
-"b147-t27": [
-"volatile.typechange"
 ],
 "b156-t14": [
 "item"
@@ -82,12 +73,6 @@
 "item",
 "volatile.quarkdrivespa"
 ],
-"b192-t22": [
-"hp"
-],
-"b192-t26": [
-"hp"
-],
 "b192-t45": [
 "active",
 "hp",
@@ -106,20 +91,10 @@
 "b29-t4": [
 "item"
 ],
-"b37-t20": [
-"hp"
-],
 "b37-t21": [
 "hp"
 ],
-"b45-t27": [
-"hp"
-],
-"b45-t28": [
-"hp"
-],
 "b45-t30": [
-"hp",
 "trick_room"
 ],
 "b45-t31": [
@@ -132,9 +107,6 @@
 "b49-t4": [
 "hp",
 "status"
-],
-"b5-t18": [
-"hp"
 ],
 "b50-t6": [
 "hp"
@@ -171,9 +143,6 @@
 "b89-t40": [
 "hp",
 "status"
-],
-"b9-t31": [
-"volatile.typechange"
 ],
 "b91-t13": [
 "volatile.confusion"

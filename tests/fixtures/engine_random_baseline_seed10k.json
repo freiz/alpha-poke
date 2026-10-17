@@ -114,9 +114,6 @@
 "hp",
 "item"
 ],
-"b269-t1": [
-"hp"
-],
 "b279-t13": [
 "item",
 "volatile.quarkdrivespe"
@@ -124,12 +121,6 @@
 "b279-t6": [
 "boost.def",
 "item"
-],
-"b284-t4": [
-"hp"
-],
-"b284-t5": [
-"hp"
 ],
 "b284-t7": [
 "active",

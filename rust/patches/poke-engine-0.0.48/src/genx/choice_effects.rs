@@ -1566,12 +1566,58 @@ pub fn choice_special_effect(
         && !breaks_ability
         && matches!(
             choice.move_id,
-            Choices::TRICK | Choices::SWITCHEROO | Choices::PAINSPLIT
+            Choices::TRICK | Choices::SWITCHEROO | Choices::PAINSPLIT | Choices::SOAK
         )
     {
         return;
     }
     match choice.move_id {
+        // alpha-poke patch (2026-10-16, doc/engine-diff.md L99): Soak, the target pure Water
+        // (Showdown's setType: not a pure Water type, a Terastallized one, through a Substitute)
+        Choices::SOAK => {
+            let behind_sub = defending_side
+                .volatile_statuses
+                .contains(&PokemonVolatileStatus::SUBSTITUTE)
+                && attacking_side.get_active_immutable().ability != Abilities::INFILTRATOR;
+            let target = defending_side.get_active();
+            let water = (PokemonType::WATER, PokemonType::TYPELESS);
+            // (a Water-absorbing ability takes it: ability_modify_attack_against)
+            let absorbed = matches!(
+                target.ability,
+                Abilities::WATERABSORB | Abilities::STORMDRAIN | Abilities::DRYSKIN
+            ) && !breaks_ability;
+            if !behind_sub
+                && !absorbed
+                && !target.terastallized
+                && target.types != water
+                && target.hp > 0
+            {
+                instructions
+                    .instruction_list
+                    .push(Instruction::ChangeType(ChangeType {
+                        side_ref: attacking_side_ref.get_other_side(),
+                        new_types: water,
+                        old_types: target.types,
+                    }));
+                target.types = water;
+                if !defending_side
+                    .volatile_statuses
+                    .contains(&PokemonVolatileStatus::TYPECHANGE)
+                {
+                    defending_side
+                        .volatile_statuses
+                        .insert(PokemonVolatileStatus::TYPECHANGE);
+                    instructions
+                        .instruction_list
+                        .push(Instruction::ApplyVolatileStatus(
+                            ApplyVolatileStatusInstruction {
+                                side_ref: attacking_side_ref.get_other_side(),
+                                volatile_status: PokemonVolatileStatus::TYPECHANGE,
+                            },
+                        ));
+                }
+            }
+        }
         Choices::BELLYDRUM => {
             let boost_amount = 6 - attacking_side.attack_boost;
             let attacker = attacking_side.get_active();

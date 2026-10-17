@@ -241,6 +241,9 @@ harness 必须把 Showdown 的状态完整映射到引擎，否则不一致来�
 | L95 | Rapid Spin / Mortal Spin 还解除使用者的寄生种子和束缚，打到替身也一样（Showdown 的 onAfterHit / onAfterSubDamage）；引擎只清钉子 | 引擎 | 已修复 | `test_l95_rapid_spin_frees_its_user`（寄生种子、束缚、隔着替身三个参数） | `choice_effects.rs` `choice_hazard_clear` |
 | L96 | 着地的毒系换上时吸收毒菱，带 Heavy-Duty Boots 也一样（Showdown 先看属性再看鞋）；引擎对穿鞋的跳过 | 引擎 | 已修复 | `test_l96_poison_type_with_boots_absorbs_toxic_spikes` | `generate_instructions.rs` 换上时的钉子 |
 | L97 | Leech Seed 不是粉末招式（Overcoat / Safety Goggles 不挡）；引擎为了草系免疫给它加了 powder 标记，而它的 volatile 检查本来就排除草系 | 引擎 | 已修复 | `test_l97_leech_seed_through_overcoat`（Overcoat、Safety Goggles 两个参数）；数据测试的已知差异去掉这一条 | `choices.rs` |
+| L98 | Disguise 只在受到伤害的一击时破（Showdown 的 onDamage）：免疫的招式（Extreme Speed 打 Mimikyu）、打在替身上都不破；引擎对任何攻击都破并扣 1/8 | 引擎 | 已修复 | `test_l98_disguise_needs_a_damaging_hit`（免疫、替身两个参数） | `abilities.rs` `ability_before_move`（Scrappy / Mind's Eye 照样破） |
+| L99 | Soak 在引擎里没有效果（Showdown：目标变成纯水系；纯水系、已太晶化、隔着替身、被 Water Absorb 等吸收时失败） | 引擎 | 已修复 | `test_l99_soak`（2 回合）；`test_l99_soak_into_water_absorb` | `choice_effects.rs` `choice_special_effect`（Good as Gold 也挡） |
+| L100 | Dry Skin 在晴天回合末掉 1/8（Showdown 的 onWeather），大雨也回复；引擎只在下雨时回复 | 引擎 | 已修复 | `test_l100_dry_skin_in_the_sun` | `abilities.rs` `ability_end_of_turn` |
 
 ## 修复与验证（2026-10-16）
 

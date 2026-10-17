@@ -2771,3 +2771,48 @@ def test_l97_leech_seed_through_overcoat(ability, item):
     assert "leechseed" in states[1]["sides"][1]["mons"][0]["volatiles"]
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "leechseed", "defog")
     assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L98 (doc/engine-diff.md): Disguise breaks only on a hit that damages Mimikyu (Showdown's
+# onDamage): not on a move it is immune to, nor on its Substitute; the engine broke it (and took
+# the 1/8) on any attack
+@pytest.mark.parametrize("move, sub", [("extremespeed", False), ("shadowsneak", True)], ids=["immune", "substitute"])
+def test_l98_disguise_needs_a_damaging_hit(move, sub):
+    mimi = _setter("Mimikyu", "Disguise", "Leftovers", "- Substitute\n- Swords Dance\n- Shadow Claw\n- Play Rough")
+    nite = _attacker("Dragonite", "Inner Focus", "Leftovers", "- Extreme Speed\n- Shadow Sneak\n- Roost\n- Dragon Dance")
+    turns = ([("move substitute", "move roost")] if sub else []) + [("move swordsdance", f"move {move}")]
+    states = ec.run_showdown(mimi, nite, turns)
+    assert states[-1]["sides"][0]["mons"][0]["species"].lower() == "mimikyu"
+    outs = ec.engine_outcomes(ec.engine_state(states[-2]), "swordsdance", move)
+    assert ec.closest(states[-1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L99 (doc/engine-diff.md): Soak makes its target pure Water (Showdown's setType; not a pure Water
+# type, a Terastallized one or through a Substitute); it had no effect in the engine
+def test_l99_soak():
+    belli = _setter("Bellibolt", "Electromorphosis", "Leftovers", "- Soak\n- Slack Off\n- Discharge\n- Muddy Water")
+    bolt = _attacker("Raging Bolt", "Protosynthesis", "Leftovers", "- Thunderbolt\n- Calm Mind\n- Draco Meteor\n- Protect", "Modest")
+    states = ec.run_showdown(belli, bolt, [("move soak", "move calmmind"), ("move discharge", "move calmmind")])
+    assert states[1]["sides"][1]["mons"][0]["types"] == ["Water"]
+    for k, c1 in ((0, "soak"), (1, "discharge")):
+        outs = ec.engine_outcomes(ec.engine_state(states[k]), c1, "calmmind")
+        assert ec.closest(states[k + 1], outs, (1, 1), hp=True)["diff"] == {}, k
+
+
+# L100 (doc/engine-diff.md): Dry Skin loses 1/8 in sun (Showdown's onWeather), heals 1/8 in rain
+# and heavy rain; the engine only healed in rain
+def test_l100_dry_skin_in_the_sun():
+    tork = _setter("Torkoal", "Drought", "Leftovers", "- Stealth Rock\n- Lava Plume\n- Rapid Spin\n- Yawn")
+    croak = _setter("Toxicroak", "Dry Skin", "Leftovers", "- Bulk Up\n- Drain Punch\n- Gunk Shot\n- Sucker Punch")
+    states = ec.run_showdown(tork, croak, [("move stealthrock", "move bulkup")])
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "stealthrock", "bulkup")
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+def test_l99_soak_into_water_absorb():
+    belli = _setter("Bellibolt", "Electromorphosis", "Leftovers", "- Soak\n- Slack Off\n- Discharge\n- Muddy Water")
+    lan = _setter("Lanturn", "Water Absorb", "Leftovers", "- Thunderbolt\n- Scald\n- Volt Switch\n- Heal Bell")
+    states = ec.run_showdown(belli, lan, [("move soak", "move healbell")])
+    assert "typechange" not in states[1]["sides"][1]["mons"][0]["volatiles"]
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "soak", "healbell")
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
