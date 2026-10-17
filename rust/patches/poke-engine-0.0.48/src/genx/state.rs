@@ -868,6 +868,45 @@ const ALL_POKEMON_INDICES: [PokemonIndex; 6] = [
 ];
 
 impl Side {
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L188): the active's isGrounded as Showdown's,
+    // with its volatiles (Pokemon::is_grounded has none): Ingrain / Smack Down / an Iron Ball
+    // ground it; Roost takes its Flying type off for the turn (not a terastallized one's: its
+    // tera type); Magnet Rise lifts it; then Levitate, an Air Balloon (Pokemon::is_grounded).
+    // For the terrains (their boosts, Grassy Terrain's healing, the status they stop, Psychic
+    // Terrain's priority block) and Arena Trap
+    pub fn active_grounded(&self) -> bool {
+        let p = self.get_active_immutable();
+        let v = &self.volatile_statuses;
+        if v.contains(&PokemonVolatileStatus::INGRAIN)
+            || v.contains(&PokemonVolatileStatus::SMACKDOWN)
+            || p.item == Items::IRONBALL
+        {
+            return true;
+        }
+        let tera_types = p.terastallized && p.tera_type != PokemonType::STELLAR;
+        let flying = p.has_type(&PokemonType::FLYING)
+            && !(v.contains(&PokemonVolatileStatus::ROOST) && !tera_types);
+        if flying || v.contains(&PokemonVolatileStatus::MAGNETRISE) {
+            return false;
+        }
+        !matches!(p.ability, Abilities::LEVITATE | Abilities::EELEVATE) && p.item != Items::AIRBALLOON
+    }
+
+    // (L188: Showdown's isSemiInvulnerable: a charging Fly / Bounce / Dive / Dig / Phantom Force /
+    // Shadow Force; Grassy Terrain heals no such one)
+    pub fn semi_invulnerable(&self) -> bool {
+        [
+            PokemonVolatileStatus::FLY,
+            PokemonVolatileStatus::BOUNCE,
+            PokemonVolatileStatus::DIVE,
+            PokemonVolatileStatus::DIG,
+            PokemonVolatileStatus::PHANTOMFORCE,
+            PokemonVolatileStatus::SHADOWFORCE,
+        ]
+        .iter()
+        .any(|v| self.volatile_statuses.contains(v))
+    }
+
     // generates BSS team preview options
     // BSS is a 6v6 game at team preview, but only 3v3 in battle.
     // This should generate all 60 options for both sides using MoveChoice::TeamPreview.
@@ -1204,7 +1243,7 @@ impl Side {
             return true;
         } else if opponent_active.ability == Abilities::SHADOWTAG {
             return true;
-        } else if opponent_active.ability == Abilities::ARENATRAP && active_pkmn.is_grounded() {
+        } else if opponent_active.ability == Abilities::ARENATRAP && self.active_grounded() {
             return true;
         } else if opponent_active.ability == Abilities::MAGNETPULL
             && active_pkmn.has_type(&PokemonType::STEEL)

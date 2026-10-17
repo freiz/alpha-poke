@@ -518,11 +518,7 @@ pub fn modify_choice(
         // (Showdown's onBasePower; was 1.5 x against any)
         Choices::RISINGVOLTAGE => {
             if state.terrain.terrain_type == Terrain::ELECTRICTERRAIN
-                && (defending_side.get_active_immutable().is_grounded()
-                    || super::damage_calc::grounded_by_effect(
-                        defending_side,
-                        defending_side.get_active_immutable(),
-                    ))
+                && defending_side.active_grounded()
             {
                 attacker_choice.base_power *= 2.0;
             }
@@ -2193,9 +2189,10 @@ pub fn choice_special_effect(
             let unnerve = super::items::unnerved(state, attacking_side_ref);
             let attacking_side = state.get_side(attacking_side_ref);
             let active_index = attacking_side.active_index;
+            let grounded = attacking_side.active_grounded();
             let active_pkmn = attacking_side.get_active();
             let blocked = active_pkmn.hp >= active_pkmn.maxhp
-                || (sleep_terrain && active_pkmn.is_grounded())
+                || (sleep_terrain && grounded)
                 || matches!(
                     active_pkmn.ability,
                     Abilities::INSOMNIA
@@ -2454,28 +2451,48 @@ pub fn choice_special_effect(
             let defender = defending_side.get_active();
             let attacker_item = attacker.item;
             let defender_item = defender.item;
-            if attacker_item == defender_item || !defender.item_can_be_removed() || defender_has_sub
+            // alpha-poke patch (2026-10-17, doc/engine-diff.md L188): two same items swap too
+            // (Showdown's Trick: both taken, both set -- their onStart: a Choice item's ends the
+            // lock); none at all fails
+            if (attacker_item == Items::NONE && defender_item == Items::NONE)
+                || !defender.item_can_be_removed()
+                || defender_has_sub
             {
                 return;
             }
-            let change_attacker_item_instruction = Instruction::ChangeItem(ChangeItemInstruction {
-                side_ref: *attacking_side_ref,
-                current_item: attacker_item,
-                new_item: defender_item,
-            });
-            let change_defender_item_instruction = Instruction::ChangeItem(ChangeItemInstruction {
-                side_ref: attacking_side_ref.get_other_side(),
-                current_item: defender_item,
-                new_item: attacker_item,
-            });
-            attacker.item = defender_item;
-            defender.item = attacker_item;
-            instructions
-                .instruction_list
-                .push(change_attacker_item_instruction);
-            instructions
-                .instruction_list
-                .push(change_defender_item_instruction);
+            if attacker_item != defender_item {
+                let change_attacker_item_instruction =
+                    Instruction::ChangeItem(ChangeItemInstruction {
+                        side_ref: *attacking_side_ref,
+                        current_item: attacker_item,
+                        new_item: defender_item,
+                    });
+                let change_defender_item_instruction =
+                    Instruction::ChangeItem(ChangeItemInstruction {
+                        side_ref: attacking_side_ref.get_other_side(),
+                        current_item: defender_item,
+                        new_item: attacker_item,
+                    });
+                attacker.item = defender_item;
+                defender.item = attacker_item;
+                instructions
+                    .instruction_list
+                    .push(change_attacker_item_instruction);
+                instructions
+                    .instruction_list
+                    .push(change_defender_item_instruction);
+            }
+            let choice_item = |i: Items| {
+                matches!(i, Items::CHOICEBAND | Items::CHOICESPECS | Items::CHOICESCARF)
+            };
+            for (side_ref, new_item) in [
+                (*attacking_side_ref, defender_item),
+                (attacking_side_ref.get_other_side(), attacker_item),
+            ] {
+                if choice_item(new_item) {
+                    super::generate_instructions::release_choice_lock(state, &side_ref, instructions);
+                }
+            }
         }
         Choices::SUNNYDAY => {
             if state.weather.weather_type != Weather::SUN {

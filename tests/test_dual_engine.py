@@ -5254,3 +5254,43 @@ Timid Nature
     states = ec.run_showdown(greninja + "\n\n" + CORVIKNIGHT, BLISSEY, turns)
     assert states[2]["sides"][0]["mons"][0]["pre_tera_types"] == ["Dark"]
     assert _keys(_full(states, 2, "corviknight", "calmmind", (2, 1)), "types") == {}
+
+
+# L188 (doc/engine-diff.md): the active's grounding with its volatiles (Showdown's isGrounded: Roost
+# takes the Flying type off for the turn, Magnet Rise lifts, Smack Down / Ingrain ground) for the
+# terrains and Arena Trap; Grassy Terrain heals no semi-invulnerable mon (a charging Phantom Force)
+RILLABOOM_KNOCK = """Rillaboom @ Leftovers
+Ability: Grassy Surge
+EVs: 252 Atk / 4 SpD / 252 Spe
+Adamant Nature
+- Grassy Glide
+- Wood Hammer
+- U-turn
+- Knock Off"""
+
+
+def test_l188_roost_grounds_for_grassy_terrain():
+    turns = [("move knockoff", "move uturn"), ("move knockoff", "move uturn"), ("move knockoff", "move roost")]
+    states = ec.run_showdown(RILLABOOM_KNOCK, CORVIKNIGHT, turns)
+    assert any("[from] Grassy Terrain" in x and "Corviknight" in x for x in states[3]["log"])
+    assert _keys(_full(states, 2, "knockoff", "roost"), "hp") == {}
+
+
+def test_l188_no_grassy_heal_while_semi_invulnerable():
+    dragapult = DRAGAPULT_COPYCAT.replace("- Copycat", "- Phantom Force")
+    states = ec.run_showdown(RILLABOOM_KNOCK, dragapult, [("move grassyglide", "move phantomforce")])
+    assert not any("[from] Grassy Terrain" in x and "Dragapult" in x for x in states[1]["log"])
+    assert _keys(_full(states, 0, "grassyglide", "phantomforce"), "hp") == {}
+
+
+# L188: a Choice item a Trick gives starts: its lock ends (Showdown's choice items' onStart), two
+# same items swap too
+DRAGAPULT_SPECS = DRAGAPULT_COPYCAT.replace("@ Leftovers", "@ Choice Specs").replace("- Copycat", "- Shadow Ball")
+
+
+@pytest.mark.parametrize("item", ["Choice Scarf", "Choice Specs"])
+def test_l188_trick_choice_item_ends_the_lock(item):
+    states = ec.run_showdown(DRAGAPULT_SPECS, GHOLDENGO_TRICK.replace("Choice Scarf", item),
+                             [("move dracometeor", "move trick")])  # fmt: skip
+    assert any("|-activate|p2a: Gholdengo|move: Trick" in x for x in states[1]["log"])
+    assert _keys(_full(states, 0, "dracometeor", "trick"), "options") == {}

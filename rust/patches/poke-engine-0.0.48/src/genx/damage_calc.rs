@@ -259,10 +259,11 @@ fn burn_modifier(choice: &Choice, attacker: &Pokemon, defender: &Pokemon) -> f32
     1.0
 }
 
+// (L188: the actives' grounding with their volatiles, Side::active_grounded)
 fn terrain_modifier(
     terrain: &Terrain,
-    attacker: &Pokemon,
-    defender: &Pokemon,
+    attacker_grounded: bool,
+    defender_grounded: bool,
     choice: &Choice,
 ) -> f32 {
     #[cfg(any(feature = "champions", feature = "gen9", feature = "gen8"))]
@@ -273,19 +274,19 @@ fn terrain_modifier(
 
     match terrain {
         Terrain::ELECTRICTERRAIN => {
-            if choice.move_type == PokemonType::ELECTRIC && attacker.is_grounded() {
+            if choice.move_type == PokemonType::ELECTRIC && attacker_grounded {
                 terrain_boost
             } else {
                 1.0
             }
         }
         Terrain::GRASSYTERRAIN => {
-            if choice.move_type == PokemonType::GRASS && attacker.is_grounded() {
+            if choice.move_type == PokemonType::GRASS && attacker_grounded {
                 terrain_boost
             } else if matches!(
                 choice.move_id,
                 Choices::EARTHQUAKE | Choices::BULLDOZE | Choices::MAGNITUDE
-            ) && defender.is_grounded()
+            ) && defender_grounded
             {
                 // alpha-poke patch (L34): Bulldoze / Magnitude too, a grounded target only
                 // (Showdown's grassyterrain onBasePower)
@@ -295,14 +296,14 @@ fn terrain_modifier(
             }
         }
         Terrain::MISTYTERRAIN => {
-            if choice.move_type == PokemonType::DRAGON && defender.is_grounded() {
+            if choice.move_type == PokemonType::DRAGON && defender_grounded {
                 0.5
             } else {
                 1.0
             }
         }
         Terrain::PSYCHICTERRAIN => {
-            if choice.move_type == PokemonType::PSYCHIC && attacker.is_grounded() {
+            if choice.move_type == PokemonType::PSYCHIC && attacker_grounded {
                 terrain_boost
             } else {
                 1.0
@@ -810,7 +811,12 @@ fn common_pkmn_damage_calc(
 
     let level = (2 * attacker.level as i64) / 5 + 2;
     let base_power =
-        choice.base_power * vol.base_power * terrain_modifier(terrain, attacker, defender, &choice);
+        choice.base_power * vol.base_power * terrain_modifier(
+            terrain,
+            attacking_side.active_grounded(),
+            defending_side.active_grounded(),
+            &choice,
+        );
     // modify's rounding of the chained base power (half down)
     let base_power = ((base_power as f64 + 2047.0 / 4096.0).floor() as i64).max(1);
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L175): the tera floor of 60 where Showdown's

@@ -1286,7 +1286,8 @@ pub fn immune_to_status(
 
     if target_pkmn.status != PokemonStatus::NONE || target_pkmn.hp <= 0 {
         true
-    } else if state.terrain.terrain_type == Terrain::MISTYTERRAIN && target_pkmn.is_grounded() {
+    // (L188: grounded with its volatiles: Roost, Magnet Rise, Smack Down, Ingrain)
+    } else if state.terrain.terrain_type == Terrain::MISTYTERRAIN && target_side.active_grounded() {
         true
     } else if (target_side
         .volatile_statuses
@@ -1316,7 +1317,7 @@ pub fn immune_to_status(
             }
             PokemonStatus::SLEEP => {
                 (state.terrain.terrain_type == Terrain::ELECTRICTERRAIN
-                    && target_pkmn.is_grounded())
+                    && target_side.active_grounded())
                     || [
                         Abilities::INSOMNIA,
                         Abilities::SWEETVEIL,
@@ -1475,7 +1476,7 @@ fn get_instructions_from_status_effects(
     {
         let target = target_side.get_active_immutable();
         if target.ability != Abilities::OWNTEMPO
-            && !(misty && target.is_grounded())
+            && !(misty && target_side.active_grounded())
             && !target_side
                 .volatile_statuses
                 .contains(&PokemonVolatileStatus::CONFUSION)
@@ -2784,7 +2785,7 @@ fn move_has_no_effect(state: &State, choice: &Choice, attacking_side_ref: &SideR
             LastUsedMove::Switch(_) => true,
         };
     } else if state.terrain_is_active(&Terrain::PSYCHICTERRAIN)
-        && defender.is_grounded()
+        && defending_side.active_grounded()
         && choice.target == MoveTarget::Opponent
         && choice.priority > 0
     {
@@ -4967,7 +4968,10 @@ fn expected_residual(state: &State, side_ref: &SideReference) -> i16 {
         if poison_heal && matches!(p.status, PokemonStatus::POISON | PokemonStatus::TOXIC) {
             gain += m / 8;
         }
-        if state.terrain_is_active(&Terrain::GRASSYTERRAIN) && p.is_grounded() {
+        if state.terrain_is_active(&Terrain::GRASSYTERRAIN)
+            && side.active_grounded()
+            && !side.semi_invulnerable()
+        {
             gain += m / 16;
         }
     }
@@ -6130,8 +6134,11 @@ fn end_of_turn_instructions(
                 let heal_blocked = side
                     .volatile_statuses
                     .contains(&PokemonVolatileStatus::HEALBLOCK);
+                // (L188: grounded with its volatiles: a Roost user that turn too; not a
+                // semi-invulnerable one)
+                let grounded = side.active_grounded() && !side.semi_invulnerable();
                 let active_pkmn = side.get_active();
-                if active_pkmn.hp == 0 || !active_pkmn.is_grounded() || heal_blocked {
+                if active_pkmn.hp == 0 || !grounded || heal_blocked {
                     continue;
                 }
                 let heal_amount = cmp::min(
@@ -7972,6 +7979,23 @@ fn choice_lock_release(state: &mut State, side_ref: &SideReference, instructions
         || side
             .volatile_statuses
             .contains(&PokemonVolatileStatus::LOCKEDMOVE)
+    {
+        return;
+    }
+    release_choice_lock(state, side_ref, instructions);
+}
+
+// (the moves a lock disabled enabled again, but a Disable's; L188: also a Choice item that starts --
+// Showdown's choice items' onStart removes the choicelock: one Trick gives)
+pub fn release_choice_lock(
+    state: &mut State,
+    side_ref: &SideReference,
+    instructions: &mut StateInstructions,
+) {
+    let side = state.get_side(side_ref);
+    if side
+        .volatile_statuses
+        .contains(&PokemonVolatileStatus::LOCKEDMOVE)
     {
         return;
     }
