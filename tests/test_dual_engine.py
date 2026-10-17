@@ -4267,3 +4267,45 @@ def test_l165_positions(teams, i, turn, offset):
     outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2)
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
     assert ec.closest(b["state"], outs, n, hp=True)["diff"] == {}
+
+
+# L166 (doc/engine-diff.md): Revival Blessing, a pivot's decision: the user picks a fainted
+# Pokemon (Showdown's switch request), back at half its HP on the bench; the foe's move after it
+MAGIKARP_PAWMOT = """Magikarp
+Ability: Swift Swim
+Level: 5
+EVs: 4 HP
+- Splash
+
+Pawmot
+Ability: Volt Absorb
+EVs: 252 Spe
+Jolly Nature
+- Revival Blessing
+- Double Shock
+- Close Combat
+- Nuzzle"""
+
+
+def test_l166_revival_blessing():
+    turns = [("move splash", "move seismictoss"), ("switch 2", ""),
+             ("move revivalblessing", "move seismictoss"), ("switch 2", "")]  # fmt: skip
+    states = ec.run_showdown(MAGIKARP_PAWMOT, BLISSEY, turns)
+    assert states[3]["sides"][0]["request"] == "switch"  # the pick, mid-turn
+    assert states[4]["sides"][0]["mons"][0]["hp"] == 9  # Magikarp's 18 / 2
+    outs = ec.engine_outcomes(ec.engine_state(states[2]), "revivalblessing", "seismictoss")
+    assert ec.closest(states[3], outs, (2, 1), hp=True)["diff"] == {}
+    (_, mid), = outs
+    r = pe.mcts(mid, 10, 0, 1)  # the pick's options: the fainted one; the foe's move saved
+    assert ([x.move_choice for x in r.s1], [x.move_choice for x in r.s2]) == (["switch magikarp"], ["seismictoss"])
+    outs = ec.engine_outcomes(mid, "magikarp", "seismictoss")
+    assert ec.closest(states[4], outs, (2, 1), hp=True)["diff"] == {}
+
+
+# L166's control: no fainted Pokemon, it fails (Showdown's onTryHit) and the turn goes on
+def test_l166_revival_blessing_fails_without_a_fainted_one():
+    states = ec.run_showdown(MAGIKARP_PAWMOT, BLISSEY, [("switch 2", "move calmmind"),
+                                                        ("move revivalblessing", "move seismictoss")])  # fmt: skip
+    assert any(x.startswith("|-fail|") for x in states[2]["log"])
+    outs = ec.engine_outcomes(ec.engine_state(states[1]), "revivalblessing", "seismictoss")
+    assert ec.closest(states[2], outs, (2, 1), hp=True)["diff"] == {}

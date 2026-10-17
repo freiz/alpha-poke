@@ -21,7 +21,7 @@ use crate::instruction::{
     DecrementWishInstruction, HealInstruction, RemoveVolatileStatusInstruction,
     SetSecondMoveSwitchOutMoveInstruction, SetSleepTurnsInstruction, ToggleBatonPassingInstruction,
     ToggleDamageDealtHitSubstituteInstruction, ToggleMegaEvolvedInstruction,
-    ToggleShedTailingInstruction, ToggleTrickRoomInstruction,
+    ReviveInstruction, ToggleShedTailingInstruction, ToggleTrickRoomInstruction,
 };
 use crate::instruction::{ChangeAbilityInstruction, ToggleTerastallizedInstruction};
 use crate::instruction::{ChangeMoveInstruction, ChangeStatInstruction, DisableMoveInstruction};
@@ -276,6 +276,40 @@ fn generate_instructions_from_switch(
                     .push(Instruction::ToggleSideTwoForceSwitch);
             }
         }
+    }
+
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L166): Revival Blessing's pick: the fainted
+    // Pokemon back at half its HP, its status cured, on the bench (Showdown's revivalblessing
+    // action: sethp(maxhp / 2)); the user stays in
+    if side.reviving {
+        side.reviving = false;
+        incoming_instructions
+            .instruction_list
+            .push(Instruction::ToggleReviving(ToggleShedTailingInstruction {
+                side_ref: switching_side_ref,
+            }));
+        let revived = &mut side.pokemon[new_pokemon_index];
+        let hp = cmp::max(revived.maxhp / 2, 1);
+        incoming_instructions
+            .instruction_list
+            .push(Instruction::Revive(ReviveInstruction {
+                side_ref: switching_side_ref,
+                pokemon_index: new_pokemon_index,
+                hp,
+            }));
+        revived.hp = hp;
+        if revived.status != PokemonStatus::NONE {
+            incoming_instructions
+                .instruction_list
+                .push(Instruction::ChangeStatus(ChangeStatusInstruction {
+                    side_ref: switching_side_ref,
+                    pokemon_index: new_pokemon_index,
+                    old_status: revived.status,
+                    new_status: PokemonStatus::NONE,
+                }));
+            revived.status = PokemonStatus::NONE;
+        }
+        return;
     }
 
     let mut baton_passing = false;
@@ -6964,10 +6998,30 @@ fn run_move(
     // Only entered if the move causes a switch-out
     // U-turn, Volt Switch, Baton Pass, etc.
     // This deals with a bunch of flags that are required for the next turn to run properly
-    if (choice.flags.pivot || self_eject) && !ejected {
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L166): Revival Blessing, with a fainted
+    // Pokemon on its side (Showdown's onTryHit fails it otherwise), a pivot's decision (Showdown:
+    // selfSwitch and the revivalblessing slot condition, a switch request for a fainted one)
+    let revival = choice.move_id == Choices::REVIVALBLESSING
+        && !ejected
+        && state
+            .get_side_immutable(&attacking_side)
+            .pokemon
+            .pkmn
+            .iter()
+            .any(|p| p.hp == 0 && p.id != PokemonName::NONE);
+    if revival {
+        let side = state.get_side(&attacking_side);
+        side.reviving = true;
+        instructions
+            .instruction_list
+            .push(Instruction::ToggleReviving(ToggleShedTailingInstruction {
+                side_ref: attacking_side,
+            }));
+    }
+    if (choice.flags.pivot || self_eject || revival) && !ejected {
         match attacking_side {
             SideReference::SideOne => {
-                if state.side_one.visible_alive_pkmn() > 1 {
+                if state.side_one.visible_alive_pkmn() > 1 || revival {
                     if choice.move_id == Choices::BATONPASS {
                         state.side_one.baton_passing = !state.side_one.baton_passing;
                         instructions
@@ -7020,7 +7074,7 @@ fn run_move(
                 }
             }
             SideReference::SideTwo => {
-                if state.side_two.visible_alive_pkmn() > 1 {
+                if state.side_two.visible_alive_pkmn() > 1 || revival {
                     if choice.move_id == Choices::BATONPASS {
                         state.side_two.baton_passing = !state.side_two.baton_passing;
                         instructions
@@ -7742,8 +7796,10 @@ pub fn generate_instructions_from_move_pair(
     //     run switches -> run megas/teras -> run moves
     // however, if pursuit is used against a switching opponent, the order of operations becomes:
     //    run megas/teras -> run pursuit -> run switches
+    // (L166: not a revive -- Revival Blessing's pick is no switch out)
     if side_one_choice.move_id == Choices::PURSUIT
         && side_two_choice.category == MoveCategory::Switch
+        && !state.side_two.reviving
     {
         get_instructions_from_pursuit_hitting_switching_target(
             state,
@@ -7760,6 +7816,7 @@ pub fn generate_instructions_from_move_pair(
         return state_instructions_vec;
     } else if side_two_choice.move_id == Choices::PURSUIT
         && side_one_choice.category == MoveCategory::Switch
+        && !state.side_one.reviving
     {
         get_instructions_from_pursuit_hitting_switching_target(
             state,

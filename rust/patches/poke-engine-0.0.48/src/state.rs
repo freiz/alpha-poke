@@ -502,6 +502,7 @@ impl Default for Side {
             active_index: PokemonIndex::P0,
             baton_passing: false,
             shed_tailing: false,
+            reviving: false,
             pokemon: SidePokemon {
                 pkmn: [
                     Pokemon::default(),
@@ -1137,6 +1138,9 @@ pub struct Side {
     pub active_index: PokemonIndex,
     pub baton_passing: bool,
     pub shed_tailing: bool,
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L166): Revival Blessing's pick (with
+    // force_switch: the switch options are the fainted Pokemon, the "switch" revives one)
+    pub reviving: bool,
     pub pokemon: SidePokemon,
     pub side_conditions: SideConditions,
     pub volatile_status_durations: VolatileStatusDurations,
@@ -1234,7 +1238,7 @@ impl Side {
             vs_string.push_str(":");
             remaining &= remaining - 1;
         }
-        format!(
+        let out = format!(
             "{}={}={}={}={}={}={}={}={}={}={}={}={}={}={}={}={}={}={}={}={}={}={}={}={}={}={}={}={}",
             self.pokemon.pkmn[0].serialize(),
             self.pokemon.pkmn[1].serialize(),
@@ -1265,7 +1269,13 @@ impl Side {
             self.force_trapped,
             self.last_used_move.serialize(),
             self.slow_uturn_move,
-        )
+        );
+        // (L166: only while reviving; older strings have no such field)
+        if self.reviving {
+            format!("{}=true", out)
+        } else {
+            out
+        }
     }
     pub fn deserialize(serialized: &str) -> Side {
         let split: Vec<&str> = serialized.split("=").collect();
@@ -1315,6 +1325,7 @@ impl Side {
             last_used_move: LastUsedMove::deserialize(split[27]),
             damage_dealt: DamageDealt::default(),
             slow_uturn_move: split[28].parse::<bool>().unwrap(),
+            reviving: split.get(29).map_or(false, |x| x.parse::<bool>().unwrap()),
         }
     }
 }
@@ -2060,6 +2071,14 @@ impl State {
                 SideReference::SideOne => self.side_one.shed_tailing = !self.side_one.shed_tailing,
                 SideReference::SideTwo => self.side_two.shed_tailing = !self.side_two.shed_tailing,
             },
+            Instruction::ToggleReviving(instruction) => {
+                let side = self.get_side(&instruction.side_ref);
+                side.reviving = !side.reviving;
+            }
+            Instruction::Revive(instruction) => {
+                self.get_side(&instruction.side_ref).pokemon[instruction.pokemon_index].hp =
+                    instruction.hp;
+            }
             Instruction::ToggleTerastallized(instruction) => match instruction.side_ref {
                 SideReference::SideOne => self.side_one.get_active().terastallized ^= true,
                 SideReference::SideTwo => self.side_two.get_active().terastallized ^= true,
@@ -2275,6 +2294,13 @@ impl State {
                 SideReference::SideOne => self.side_one.shed_tailing = !self.side_one.shed_tailing,
                 SideReference::SideTwo => self.side_two.shed_tailing = !self.side_two.shed_tailing,
             },
+            Instruction::ToggleReviving(instruction) => {
+                let side = self.get_side(&instruction.side_ref);
+                side.reviving = !side.reviving;
+            }
+            Instruction::Revive(instruction) => {
+                self.get_side(&instruction.side_ref).pokemon[instruction.pokemon_index].hp = 0;
+            }
             Instruction::ToggleTerastallized(instruction) => match instruction.side_ref {
                 SideReference::SideOne => self.side_one.get_active().terastallized ^= true,
                 SideReference::SideTwo => self.side_two.get_active().terastallized ^= true,

@@ -164,6 +164,8 @@ pub struct PySide {
     force_switch: bool,
     force_trapped: bool,
     slow_uturn_move: bool,
+    // alpha-poke patch (L166): Revival Blessing's pick
+    reviving: bool,
     volatile_statuses: HashSet<String>,
     substitute_health: i16,
     attack_boost: i8,
@@ -202,6 +204,7 @@ impl From<Side> for PySide {
             force_switch: other.force_switch,
             force_trapped: other.force_trapped,
             slow_uturn_move: other.slow_uturn_move,
+            reviving: other.reviving,
             volatile_statuses,
             substitute_health: other.substitute_health,
             attack_boost: other.attack_boost,
@@ -251,6 +254,7 @@ impl Into<Side> for PySide {
             force_switch: self.force_switch,
             force_trapped: self.force_trapped,
             slow_uturn_move: self.slow_uturn_move,
+            reviving: self.reviving,
             volatile_statuses,
             substitute_health: self.substitute_health,
             attack_boost: self.attack_boost,
@@ -296,6 +300,7 @@ impl PySide {
         evasion_boost=0,
         last_used_move="move:none".to_string(),
         switch_out_move_second_saved_move="none".to_string(),
+        reviving=false,
     ))]
     fn new(
         mut pokemon: Vec<PyPokemon>,
@@ -321,6 +326,7 @@ impl PySide {
         evasion_boost: i8,
         last_used_move: String,
         switch_out_move_second_saved_move: String,
+        reviving: bool,
     ) -> Self {
         while pokemon.len() < 6 {
             pokemon.push(PyPokemon::create_fainted());
@@ -355,6 +361,7 @@ impl PySide {
             evasion_boost,
             last_used_move,
             switch_out_move_second_saved_move,
+            reviving,
         }
     }
 }

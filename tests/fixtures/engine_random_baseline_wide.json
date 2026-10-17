@@ -48,9 +48,6 @@
 "b242-t5": [
 "hp"
 ],
-"b244-t8": [
-"volatile.taunt"
-],
 "b246-t23": [
 "status"
 ],
@@ -67,9 +64,6 @@
 "b299-t40": [
 "hp"
 ],
-"b31-t16": [
-"volatile.encore"
-],
 "b52-t27": [
 "boost.atk",
 "boost.def",
@@ -85,9 +79,6 @@
 "volatile.typechange"
 ],
 "b77-t39": [
-"hp"
-],
-"b8-t4": [
 "hp"
 ],
 "b80-t10": [

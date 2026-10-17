@@ -1118,6 +1118,20 @@ impl Side {
     }
 
     pub fn add_switches(&self, vec: &mut Vec<MoveChoice>) {
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L166): Revival Blessing's pick: the
+        // fainted Pokemon (not an empty slot), as Showdown's switch request then
+        if self.reviving {
+            let mut iter = self.pokemon.into_iter();
+            while let Some(p) = iter.next() {
+                if p.hp == 0 && p.id != PokemonName::NONE {
+                    vec.push(MoveChoice::Switch(iter.pokemon_index));
+                }
+            }
+            if vec.len() == 0 {
+                vec.push(MoveChoice::None);
+            }
+            return;
+        }
         let mut iter = self.pokemon.into_iter();
         while let Some(p) = iter.next() {
             if p.hp > 0 && iter.pokemon_index != self.active_index {

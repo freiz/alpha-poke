@@ -14,19 +14,11 @@
 "b123-t5": [
 "hp"
 ],
-"b152-t17": [
-"spikes"
-],
 "b185-t19": [
 "hp"
 ],
 "b191-t49": [
 "hp"
-],
-"b208-t15": [
-"hp",
-"status",
-"trick_room"
 ],
 "b211-t11": [
 "hp"
@@ -82,13 +74,6 @@
 "b259-t6": [
 "hp",
 "volatile.substitute"
-],
-"b269-t15": [
-"boost.atk"
-],
-"b272-t13": [
-"boost.atk",
-"boost.spe"
 ],
 "b289-t9": [
 "hp"

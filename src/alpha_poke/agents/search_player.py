@@ -138,8 +138,8 @@ class SearchPlayer(KnowledgePlayer):
         return ours, n
 
     def _revive(self, battle):
-        """Revival Blessing's choice (a fainted mon back at half HP; the engine has no such step):
-        each candidate's state after it, searched (the time split between them), the best root
+        """Revival Blessing's choice (a fainted mon back at half HP; the engine's own pick, L166,
+        needs the foe's pending move, unknown here): each candidate's state after it, searched (the time split between them), the best root
         value. (2026-10-11: the search ran as for a switch, its options -- live benched mons --
         had no order, and the heuristic chose.)"""
         cands = list(battle.available_switches)

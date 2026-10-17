@@ -106,6 +106,10 @@ pub enum Instruction {
     ChangeLastItem(ChangeItemInstruction),
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L163): the active's times attacked (Rage Fist)
     ChangeTimesAttacked(ChangeTimesAttackedInstruction),
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L166): Revival Blessing: the side picks a
+    // fainted Pokemon (its force switch, Side::reviving), revived to the given HP (from 0)
+    ToggleReviving(ToggleShedTailingInstruction),
+    Revive(ReviveInstruction),
     ToggleTrickRoom(ToggleTrickRoomInstruction),
     DecrementTrickRoomTurnsRemaining,
     ToggleSideOneForceSwitch,
@@ -332,6 +336,12 @@ impl fmt::Debug for Instruction {
             Instruction::ToggleShedTailing(s) => {
                 write!(f, "ToggleShedTailing {:?}", s.side_ref)
             }
+            Instruction::ToggleReviving(s) => {
+                write!(f, "ToggleReviving {:?}", s.side_ref)
+            }
+            Instruction::Revive(s) => {
+                write!(f, "Revive {:?}: {:?} -> {}", s.side_ref, s.pokemon_index, s.hp)
+            }
             Instruction::ToggleTerastallized(s) => {
                 write!(f, "ToggleTerastallized {:?}", s.side_ref)
             }
@@ -447,6 +457,13 @@ pub struct ToggleBatonPassingInstruction {
 #[derive(Debug, PartialEq, Clone)]
 pub struct ToggleShedTailingInstruction {
     pub side_ref: SideReference,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct ReviveInstruction {
+    pub side_ref: SideReference,
+    pub pokemon_index: PokemonIndex,
+    pub hp: i16,
 }
 
 #[derive(Debug, PartialEq, Clone)]
