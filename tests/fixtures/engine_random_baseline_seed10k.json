@@ -12,9 +12,6 @@
 "b101-t18": [
 "item"
 ],
-"b104-t20": [
-"boost.spe"
-],
 "b105-t5": [
 "volatile.confusion"
 ],
@@ -24,10 +21,6 @@
 ],
 "b111-t1": [
 "volatile.typechange"
-],
-"b117-t23": [
-"hp",
-"item"
 ],
 "b121-t38": [
 "item"
@@ -60,9 +53,6 @@
 "status"
 ],
 "b137-t20": [
-"hp"
-],
-"b137-t21": [
 "hp"
 ],
 "b165-t45": [
@@ -148,10 +138,6 @@
 "boost.def"
 ],
 "b25-t19": [
-"hp"
-],
-"b258-t2": [
-"boost.atk",
 "hp"
 ],
 "b258-t39": [
@@ -253,9 +239,6 @@
 "hp",
 "volatile.partiallytrapped"
 ],
-"b55-t25": [
-"boost.spe"
-],
 "b57-t25": [
 "item"
 ],
@@ -272,9 +255,6 @@
 ],
 "b70-t18": [
 "volatile.metronome"
-],
-"b88-t27": [
-"item"
 ],
 "b95-t13": [
 "status"

@@ -482,11 +482,13 @@ fn generate_instructions_from_switch(
         if side.side_conditions.sticky_web == 1 && switched_in_pkmn.is_grounded() {
             // a pkmn switching in doesn't have any other speed drops,
             // so no need to check for going below -6
+            // alpha-poke patch (2026-10-16, doc/engine-diff.md L76): the foe's drop (Clear Body
+            // stops it, Defiant answers it); was its own
             apply_boost_instruction(
                 side,
                 &PokemonBoostableStat::Speed,
                 &-1,
-                &switching_side_ref,
+                &switching_side_ref.get_other_side(),
                 &switching_side_ref,
                 incoming_instructions,
             );
@@ -2180,6 +2182,31 @@ fn generate_instructions_from_damage(
                     &mut incoming_instructions,
                     from,
                 );
+                // L75: the defender's HP berries at once -- unless Knock Off / Thief take the
+                // berry first (their onAfterHit comes before the berry's onUpdate)
+                let defender = state
+                    .get_side_immutable(&attacking_side_ref.get_other_side())
+                    .get_active_immutable();
+                let removable = defender.item != Items::NONE && defender.item_can_be_removed();
+                let taken = match choice.move_id {
+                    Choices::KNOCKOFF => removable,
+                    Choices::THIEF => {
+                        removable
+                            && state
+                                .get_side_immutable(attacking_side_ref)
+                                .get_active_immutable()
+                                .item
+                                == Items::NONE
+                    }
+                    _ => false,
+                };
+                if !taken {
+                    super::items::berry_on_damage(
+                        &mut state,
+                        &attacking_side_ref.get_other_side(),
+                        &mut incoming_instructions,
+                    );
+                }
             }
         }
 

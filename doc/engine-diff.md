@@ -218,6 +218,8 @@ harness 必须把 Showdown 的状态完整映射到引擎，否则不一致来�
 | L72 | Good as Gold 挡掉了不以对方宝可梦为目标的变化招式：引擎的 MoveTarget 没有「场地」，天气、场地、Trick Room、Haze、Perish Song 等都标成了对手；非鬼系的 Curse 以自己为目标（Showdown 的 onModifyMove） | 引擎 | 已修复 | `test_l72_curse_through_good_as_gold`；数据测试 `test_moves_not_aimed_at_the_foe_match_showdown`（23 个招式，和 Showdown 的 target 比较） | `choices.rs` `Choices::not_aimed_at_foe`；`abilities.rs` Good as Gold；alpha_search 新增 `move_targets` / `not_aimed_at_foe_moves` |
 | L73 | Stockpile 只加一个状态（没有层数，也不加防御 / 特防），Spit Up / Swallow 没有效果 | 引擎 + harness | 已修复 | `test_l73_stockpile`（4 个：一层、3 层时失败、Spit Up、Swallow） | `VolatileStatusDurations.stockpile`（层数；状态字符串又多一个字段）；`choice_effects.rs`：每层防御 / 特防 +1，最多 3 层；Spit Up 100 × 层数、Swallow 25 / 50 / 100%，用掉层数和加成；换下清零 |
 | L74 | Electromorphosis 没有实现（受到攻击伤害后获得 Charge） | 引擎 | 已修复 | `test_l74_electromorphosis` | `abilities.rs`：对持有者施加 CHARGE 的追加效果 |
+| L75 | Sitrus 和半血 / 1/4 血的果子要等到持有者出招（Sitrus 那时按 1/4 判）或回合末才吃（Showdown 的 onUpdate：被打到阈值就吃），中间的回复让果子留了下来；Knock Off / Thief 先拿走果子（它们的 onAfterHit 在果子的 onUpdate 之前） | 引擎 | 已修复 | `test_l75_sitrus_at_once`；`test_l75_knock_off_takes_the_berry_before_it_is_eaten`（断言概率：会心一击的分支也能对上 HP） | `items.rs` `berry_on_damage`（每次伤害后立即判断）；`generate_instructions.rs`：Knock Off / Thief 能拿走道具时跳过；`item_before_move` 的 Sitrus 阈值改为 1/2 |
+| L76 | Sticky Web 的降速在引擎里当作自己造成的；Showdown 的来源是对方的在场宝可梦：Clear Body 等挡住，Defiant / Competitive 会触发 | 引擎 | 已修复 | `test_l76_sticky_web_from_the_foe`（Clear Body、Light Metal 两个参数） | `generate_instructions.rs`：降速的来源取对方一侧 |
 
 ## 修复与验证（2026-10-16）
 

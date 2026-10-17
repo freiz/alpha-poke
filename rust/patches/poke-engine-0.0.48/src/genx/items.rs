@@ -1238,7 +1238,8 @@ pub fn item_before_move(
         {
             sitrus_berry(side_ref, attacking_side, instructions)
         }
-        Items::SITRUSBERRY if active_pkmn.hp <= active_pkmn.maxhp / 4 => {
+        // (L75: at 1/2, as Showdown; was 1/4)
+        Items::SITRUSBERRY if active_pkmn.hp <= active_pkmn.maxhp / 2 => {
             sitrus_berry(side_ref, attacking_side, instructions)
         }
         Items::CHESTOBERRY if active_pkmn.status == PokemonStatus::SLEEP => {
@@ -1386,6 +1387,68 @@ pub fn item_on_switch_in(
                 }
             }
         }
+        _ => {}
+    }
+}
+
+// alpha-poke patch (2026-10-16, doc/engine-diff.md L75): the HP berries as soon as a hit takes
+// their holder there (Showdown's onUpdate): Sitrus at 1/2, the pinch heal berries / Oran, the stat
+// berries at 1/4 (1/2 with Gluttony); not under Heal Block for the heals
+pub fn berry_on_damage(
+    state: &mut State,
+    side_ref: &SideReference,
+    instructions: &mut StateInstructions,
+) {
+    let side = state.get_side(side_ref);
+    let heal_blocked = side
+        .volatile_statuses
+        .contains(&PokemonVolatileStatus::HEALBLOCK);
+    let a = side.get_active_immutable();
+    if a.hp <= 0 {
+        return;
+    }
+    let pinch = if a.ability == Abilities::GLUTTONY {
+        a.maxhp / 2
+    } else {
+        a.maxhp / 4
+    };
+    let low = a.hp <= pinch;
+    match a.item {
+        Items::SITRUSBERRY if a.hp <= a.maxhp / 2 && !heal_blocked => {
+            sitrus_berry(side_ref, side, instructions)
+        }
+        Items::FIGYBERRY
+        | Items::WIKIBERRY
+        | Items::MAGOBERRY
+        | Items::AGUAVBERRY
+        | Items::IAPAPABERRY
+        | Items::ORANBERRY
+            if pinch_berry_heal(a).is_some() && !heal_blocked =>
+        {
+            pinch_berry(side_ref, side, instructions)
+        }
+        Items::PETAYABERRY if low => boost_berry(
+            side_ref,
+            state,
+            PokemonBoostableStat::SpecialAttack,
+            instructions,
+        ),
+        Items::LIECHIBERRY if low => {
+            boost_berry(side_ref, state, PokemonBoostableStat::Attack, instructions)
+        }
+        Items::SALACBERRY if low => {
+            boost_berry(side_ref, state, PokemonBoostableStat::Speed, instructions)
+        }
+        Items::GANLONBERRY if low => {
+            boost_berry(side_ref, state, PokemonBoostableStat::Defense, instructions)
+        }
+        Items::APICOTBERRY if low => boost_berry(
+            side_ref,
+            state,
+            PokemonBoostableStat::SpecialDefense,
+            instructions,
+        ),
+        Items::LANSATBERRY if low => lansat_berry(side_ref, side, instructions),
         _ => {}
     }
 }

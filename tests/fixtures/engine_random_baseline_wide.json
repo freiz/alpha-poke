@@ -72,9 +72,6 @@
 "hp",
 "volatile.saltcure"
 ],
-"b171-t21": [
-"boost.atk"
-],
 "b176-t21": [
 "hp"
 ],
@@ -203,9 +200,6 @@
 "b261-t16": [
 "hp"
 ],
-"b264-t29": [
-"boost.spe"
-],
 "b268-t13": [
 "boost.def",
 "boost.spe",
@@ -270,10 +264,6 @@
 "boost.atk",
 "boost.def",
 "boost.spe"
-],
-"b53-t21": [
-"boost.atk",
-"hp"
 ],
 "b59-t31": [
 "hp"

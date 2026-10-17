@@ -2308,3 +2308,39 @@ def test_l74_electromorphosis():
     assert "charge" in states[1]["sides"][0]["mons"][0]["volatiles"]
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "slackoff", "ruination")
     assert ec.closest(states[1], outs, (1, 1))["diff"] == {}
+
+
+# L75 (doc/engine-diff.md): Sitrus and the pinch berries are eaten as soon as a hit takes their
+# holder there (Showdown's onUpdate); the engine waited for the holder's move (Sitrus at 1/4 then)
+# or the end of the turn, so a heal in between kept the berry
+def test_l75_sitrus_at_once():
+    pex = _setter("Toxapex", "Regenerator", "Sitrus Berry", "- Recover\n- Toxic\n- Haze\n- Scald")
+    states = ec.run_showdown(pex, TINGLU_HITS_EQ, [("move recover", "move ruination")])
+    assert states[1]["sides"][0]["mons"][0]["item"] == ""
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "recover", "ruination")
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L76 (doc/engine-diff.md): Sticky Web's drop comes from the foe (Showdown's boost source: the
+# foe's active): Clear Body stops it, Defiant answers it; the engine applied it as self-inflicted
+@pytest.mark.parametrize("ability, spe, atk", [("Clear Body", 0, 0), ("Light Metal", -1, 0)])
+def test_l76_sticky_web_from_the_foe(ability, spe, atk):
+    webber = _setter("Ribombee", "Shield Dust", "Focus Sash", "- Sticky Web\n- Moonblast\n- U-turn\n- Stun Spore")
+    gross = _setter("Metagross", ability, "Leftovers", "- Meteor Mash\n- Earthquake\n- Bullet Punch\n- Agility")
+    turns = [("move stickyweb", "move softboiled"), ("move moonblast", "switch 2")]
+    states = ec.run_showdown(webber, BLISSEY + "\n\n" + gross, turns)
+    assert states[2]["sides"][1]["mons"][1]["boosts"]["spe"] == spe
+    outs = ec.engine_outcomes(ec.engine_state(states[1]), "moonblast", "metagross")
+    assert ec.closest(states[2], outs, (1, 2))["diff"] == {}
+
+
+def test_l75_knock_off_takes_the_berry_before_it_is_eaten():
+    """Knock Off removes the Sitrus its hit would set off (its onAfterHit comes first)."""
+    pex = _setter("Toxapex", "Regenerator", "Sitrus Berry", "- Recover\n- Toxic\n- Haze\n- Scald")
+    knock = _attacker("Kingambit", "Supreme Overlord", "Life Orb", "- Knock Off\n- Iron Head\n- Sucker Punch\n- Swords Dance")
+    states = ec.run_showdown(pex, knock, [("move haze", "move knockoff")])
+    assert not any("[eat]" in x for x in states[1]["log"])
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "haze", "knockoff")
+    # (not the crit: its damage + the Sitrus lands on Showdown's HP too)
+    res = ec.closest(states[1], outs, (1, 1), hp=True)
+    assert res["diff"] == {} and res["p"] > 0.9
