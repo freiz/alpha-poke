@@ -238,6 +238,9 @@ harness 必须把 Showdown 的状态完整映射到引擎，否则不一致来�
 | L92 | 打在替身上、掷骰跨过替身 HP 的一击，引擎用平均伤害（要么都打破、要么都打不破）；现在按精确的 16 个掷骰拆成打破 / 没打破两支，和击倒一样（L34 / L51） | 引擎 | 已修复 | `test_l92_substitute_break_by_the_rolls`（掷骰 70–82 对 81 HP 的替身：打破的总概率 = 23/24 × 2/16 + 1/24） | `generate_instructions.rs` `finish_move`：拆分的门槛 `target_hp` 在打到替身时取替身的 HP（声音招式、Infiltrator 例外） |
 | L93 | Strength Sap 打替身会失败（Showdown：没有 bypasssub）；引擎照样按对方攻击回复 | 引擎 | 已修复 | `test_l93_strength_sap_against_a_substitute` | `choice_effects.rs` |
 | L94 | Magic Guard 挡不住 Rough Skin / Iron Barbs 和 Rocky Helmet 的反伤；吸收类特性（Earth Eater、Water / Volt Absorb、Dry Skin）把打向其一侧的招式（Spikes 等，Showdown 的 onTryHit 只对打中它的招式）也吸收了 | 引擎 | 已修复 | `test_l94_magic_guard_against_rough_skin_and_rocky_helmet`；`test_l94_spikes_into_earth_eater` | `abilities.rs`（Rough Skin；四个吸收特性按 `not_aimed_at_foe` 放过）；`items.rs` Rocky Helmet |
+| L95 | Rapid Spin / Mortal Spin 还解除使用者的寄生种子和束缚，打到替身也一样（Showdown 的 onAfterHit / onAfterSubDamage）；引擎只清钉子 | 引擎 | 已修复 | `test_l95_rapid_spin_frees_its_user`（寄生种子、束缚、隔着替身三个参数） | `choice_effects.rs` `choice_hazard_clear` |
+| L96 | 着地的毒系换上时吸收毒菱，带 Heavy-Duty Boots 也一样（Showdown 先看属性再看鞋）；引擎对穿鞋的跳过 | 引擎 | 已修复 | `test_l96_poison_type_with_boots_absorbs_toxic_spikes` | `generate_instructions.rs` 换上时的钉子 |
+| L97 | Leech Seed 不是粉末招式（Overcoat / Safety Goggles 不挡）；引擎为了草系免疫给它加了 powder 标记，而它的 volatile 检查本来就排除草系 | 引擎 | 已修复 | `test_l97_leech_seed_through_overcoat`（Overcoat、Safety Goggles 两个参数）；数据测试的已知差异去掉这一条 | `choices.rs` |
 
 ## 修复与验证（2026-10-16）
 

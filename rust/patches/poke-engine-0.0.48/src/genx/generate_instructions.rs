@@ -477,6 +477,23 @@ fn generate_instructions_from_switch(
     }
 
     let active = side.get_active_immutable();
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L96): a grounded Poison type absorbs Toxic
+    // Spikes with Heavy-Duty Boots too (Showdown checks the type before the boots)
+    if active.item == Items::HEAVYDUTYBOOTS
+        && side.side_conditions.toxic_spikes > 0
+        && active.is_grounded()
+        && active.has_type(&PokemonType::POISON)
+    {
+        let i = Instruction::ChangeSideCondition(ChangeSideConditionInstruction {
+            side_ref: switching_side_ref,
+            side_condition: PokemonSideCondition::ToxicSpikes,
+            amount: -1 * side.side_conditions.toxic_spikes,
+        });
+        state.apply_one_instruction(&i);
+        incoming_instructions.instruction_list.push(i);
+    }
+    let side = state.get_side(&switching_side_ref);
+    let active = side.get_active_immutable();
     if active.item != Items::HEAVYDUTYBOOTS {
         let switched_in_pkmn = side.get_active_immutable();
         if side.side_conditions.sticky_web == 1 && switched_in_pkmn.is_grounded() {

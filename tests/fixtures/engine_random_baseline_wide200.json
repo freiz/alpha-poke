@@ -84,10 +84,6 @@
 "b62-t46": [
 "hp"
 ],
-"b67-t2": [
-"hp",
-"volatile.partiallytrapped"
-],
 "b68-t24": [
 "boost.atk",
 "boost.def",

@@ -2728,3 +2728,46 @@ def test_l94_spikes_into_earth_eater():
     assert states[1]["sides"][1]["conditions"].get("spikes")
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "spikes", "stealthrock")
     assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L95 (doc/engine-diff.md): Rapid Spin / Mortal Spin also free their user from Leech Seed and a
+# partial trap, through a Substitute too (Showdown's onAfterHit / onAfterSubDamage); the engine
+# cleared only the hazards
+@pytest.mark.parametrize("foe_move, sub", [("leechseed", False), ("infestation", False), ("leechseed", True)],
+                         ids=["leech-seed", "partial-trap", "through-a-substitute"])  # fmt: skip
+def test_l95_rapid_spin_frees_its_user(foe_move, sub):
+    tusk = _setter("Great Tusk", "Protosynthesis", "Leftovers", "- Rapid Spin\n- Headlong Rush\n- Bulk Up\n- Ice Spinner")
+    foe = _setter("Ferrothorn", "Iron Barbs", "Leftovers", "- Leech Seed\n- Infestation\n- Substitute\n- Iron Defense")
+    turns = [("move bulkup", f"move {foe_move}")] + ([("move bulkup", "move substitute")] if sub else [])
+    turns.append(("move rapidspin", "move irondefense"))
+    states = ec.run_showdown(tusk, foe, turns)
+    k = len(turns) - 1
+    assert {"leechseed", "partiallytrapped"} & set(states[k]["sides"][0]["mons"][0]["volatiles"])
+    assert not {"leechseed", "partiallytrapped"} & set(states[k + 1]["sides"][0]["mons"][0]["volatiles"])
+    outs = ec.engine_outcomes(ec.engine_state(states[k]), "rapidspin", "irondefense")
+    assert ec.closest(states[k + 1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L96 (doc/engine-diff.md): a grounded Poison type absorbs Toxic Spikes when it comes in, Heavy-Duty
+# Boots or not (Showdown's onSwitchIn checks the Poison type before the boots); the engine skipped
+# a boots holder
+def test_l96_poison_type_with_boots_absorbs_toxic_spikes():
+    glim = _setter("Glimmora", "Toxic Debris", "Focus Sash", "- Toxic Spikes\n- Power Gem\n- Mortal Spin\n- Earth Power")
+    pech = _setter("Pecharunt", "Poison Puppeteer", "Heavy-Duty Boots", "- Malignant Chain\n- Recover\n- Parting Shot\n- Nasty Plot")
+    states = ec.run_showdown(glim, BLISSEY + "\n\n" + pech, [("move toxicspikes", "move softboiled"), ("move powergem", "switch 2")])
+    assert states[1]["sides"][1]["conditions"].get("toxicspikes")
+    assert not states[2]["sides"][1]["conditions"].get("toxicspikes")
+    outs = ec.engine_outcomes(ec.engine_state(states[1]), "powergem", "pecharunt")
+    assert ec.closest(states[2], outs, (1, 2), hp=True)["diff"] == {}
+
+
+# L97 (doc/engine-diff.md): Leech Seed is not a powder move (Overcoat / Safety Goggles do not stop
+# it); the engine flagged it powder for the Grass immunity, which its volatile check has anyway
+@pytest.mark.parametrize("ability, item", [("Overcoat", "Leftovers"), ("Pressure", "Safety Goggles")])
+def test_l97_leech_seed_through_overcoat(ability, item):
+    ferro = _setter("Ferrothorn", "Iron Barbs", "Leftovers", "- Leech Seed\n- Spikes\n- Protect\n- Power Whip")
+    buzz = _setter("Mandibuzz", ability, item, "- Roost\n- Foul Play\n- Defog\n- U-turn")
+    states = ec.run_showdown(ferro, buzz, [("move leechseed", "move defog")])
+    assert "leechseed" in states[1]["sides"][1]["mons"][0]["volatiles"]
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "leechseed", "defog")
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}

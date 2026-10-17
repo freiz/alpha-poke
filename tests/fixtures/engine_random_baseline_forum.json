@@ -12,9 +12,6 @@
 "b115-t25": [
 "hp"
 ],
-"b118-t28": [
-"toxic_spikes"
-],
 "b123-t40": [
 "hp"
 ],
@@ -68,13 +65,6 @@
 ],
 "b68-t44": [
 "status"
-],
-"b71-t45": [
-"toxic_spikes"
-],
-"b72-t8": [
-"hp",
-"volatile.partiallytrapped"
 ],
 "b75-t18": [
 "hp"

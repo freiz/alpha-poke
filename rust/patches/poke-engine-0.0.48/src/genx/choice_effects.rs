@@ -1385,6 +1385,37 @@ pub fn choice_hazard_clear(
                     ));
                 attacking_side.side_conditions.sticky_web = 0;
             }
+            // alpha-poke patch (2026-10-16, doc/engine-diff.md L95): Leech Seed and a partial trap
+            // on the user end too (Showdown's onAfterHit / onAfterSubDamage)
+            for v in [
+                PokemonVolatileStatus::LEECHSEED,
+                PokemonVolatileStatus::PARTIALLYTRAPPED,
+            ] {
+                if attacking_side.volatile_statuses.contains(&v) {
+                    attacking_side.volatile_statuses.remove(&v);
+                    instructions
+                        .instruction_list
+                        .push(Instruction::RemoveVolatileStatus(
+                            RemoveVolatileStatusInstruction {
+                                side_ref: *attacking_side_ref,
+                                volatile_status: v,
+                            },
+                        ));
+                }
+            }
+            let elapsed = attacking_side.volatile_status_durations.partiallytrapped;
+            if elapsed != 0 {
+                instructions
+                    .instruction_list
+                    .push(Instruction::ChangeVolatileStatusDuration(
+                        ChangeVolatileStatusDurationInstruction {
+                            side_ref: *attacking_side_ref,
+                            volatile_status: PokemonVolatileStatus::PARTIALLYTRAPPED,
+                            amount: -elapsed,
+                        },
+                    ));
+                attacking_side.volatile_status_durations.partiallytrapped = 0;
+            }
         }
         _ => {}
     }

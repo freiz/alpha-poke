@@ -75,10 +75,6 @@
 "b184-t19": [
 "volatile.confusion"
 ],
-"b188-t18": [
-"hp",
-"volatile.leechseed"
-],
 "b190-t4": [
 "volatile.typechange"
 ],
@@ -90,9 +86,6 @@
 ],
 "b199-t58": [
 "volatile.encore"
-],
-"b202-t50": [
-"toxic_spikes"
 ],
 "b205-t35": [
 "hp",
@@ -166,9 +159,6 @@
 ],
 "b34-t14": [
 "status"
-],
-"b37-t20": [
-"toxic_spikes"
 ],
 "b43-t34": [
 "active",

@@ -9496,8 +9496,9 @@ pub static MOVES: LazyLock<HashMap<Choices, Choice>> = LazyLock::new(|| {
             move_id: Choices::LEECHSEED,
             accuracy: 90.0,
             move_type: PokemonType::GRASS,
+            // alpha-poke patch (2026-10-16, doc/engine-diff.md L97): not a powder move (Overcoat /
+            // Safety Goggles let it through); the Grass immunity is the volatile's own check
             flags: Flags {
-                powder: true,
                 protect: true,
                 reflectable: true,
                 ..Default::default()
