@@ -14,9 +14,6 @@
 "b106-t35": [
 "light_screen"
 ],
-"b13-t5": [
-"volatile.perish3"
-],
 "b130-t19": [
 "hp",
 "volatile.leechseed"
@@ -99,9 +96,6 @@
 "b180-t13": [
 "boost.def"
 ],
-"b186-t15": [
-"volatile.perish3"
-],
 "b188-t10": [
 "boost.def",
 "boost.spd"
@@ -117,9 +111,6 @@
 ],
 "b192-t34": [
 "status"
-],
-"b29-t1": [
-"volatile.perish3"
 ],
 "b36-t19": [
 "hp"

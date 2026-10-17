@@ -73,9 +73,6 @@
 "b172-t12": [
 "hp"
 ],
-"b175-t7": [
-"volatile.smackdown"
-],
 "b176-t11": [
 "active",
 "hp",
@@ -237,11 +234,6 @@
 ],
 "b66-t3": [
 "item"
-],
-"b69-t30": [
-"hp",
-"status",
-"volatile.saltcure"
 ],
 "b70-t18": [
 "volatile.metronome"

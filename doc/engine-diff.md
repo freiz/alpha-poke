@@ -228,6 +228,9 @@ harness 必须把 Showdown 的状态完整映射到引擎，否则不一致来�
 | L82 | Magic Guard 挡不住束缚、Salt Cure、鬼系 Curse 的回合末伤害（Showdown 都是 this.damage，Magic Guard 的 onDamage 挡掉） | 引擎 | 已修复 | `test_l82_magic_guard_stops_residual_damage`（3 个参数，各比较 2 回合） | `generate_instructions.rs` 回合末的 volatile 伤害 |
 | L83 | Magic Guard 挡不住 Sticky Barb 和（非毒系持有者的）Black Sludge 的回合末伤害；验证集 forum 里最大的簇（Magic Guard + Sticky Barb 的 Clefable） | 引擎 | 已修复 | `test_l83_magic_guard_stops_item_damage`（2 个参数） | `items.rs` `item_end_of_turn` |
 | L84 | Grassy Terrain 的回复在天气伤害之前（满血时没有回复，再吃沙暴）；Showdown 的回合末顺序：天气 1、Future Sight 3、Wish 4、Grassy Terrain 5.2、场地结束 27 | 引擎 | 已修复 | `test_l84_grassy_terrain_heals_after_sand`；`test_l84_grassy_terrain_heals_on_its_last_turn`（最后一回合照样回复，回归保护） | `generate_instructions.rs` `add_end_of_turn_instructions`：场地一段（回复、计数、结束）挪到 Wish 之后、特性 / 道具之前 |
+| L85 | Salt Cure、Psychic Noise 的 volatile 在 Showdown 是 100% 的追加效果，Covert Cloak / Shield Dust 能挡；引擎当作招式本身的 volatile | 引擎 | 已修复 | `test_l85_covert_cloak_stops_the_volatile`（2 个参数） | `choices.rs`：两招改为 100% 追加效果（数据测试照样通过） |
+| L86 | Smack Down 只对浮空的目标加状态（Showdown 的 onStart：飞行系、Levitate、Magnet Rise；Iron Ball / Ingrain 时不加）；引擎对谁都加 | 引擎 | 已修复 | `test_l86_smack_down_only_grounds_the_airborne`（着地 / 飞行两个参数） | `genx/state.rs` `volatile_status_can_be_applied` |
+| L87 | harness 没有把 Perish Song 的计数（Showdown 的 perishsong，剩余回合）带进引擎的 perish<n>：引擎的状态里没有，第二次 Perish Song 又成功 | harness | 已修复 | `test_l87_perish_song_counts_down`（3 回合） | `showdown_state.js`：perishsong 导出成 perish<剩余回合> |
 
 ## 修复与验证（2026-10-16）
 

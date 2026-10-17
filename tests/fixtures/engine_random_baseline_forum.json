@@ -9,9 +9,6 @@
 "b101-t16": [
 "hp"
 ],
-"b106-t14": [
-"volatile.smackdown"
-],
 "b11-t21": [
 "hp"
 ],
@@ -33,16 +30,9 @@
 "b131-t13": [
 "hp"
 ],
-"b138-t13": [
-"volatile.smackdown"
-],
 "b14-t3": [
 "hp",
 "item"
-],
-"b143-t8": [
-"hp",
-"volatile.saltcure"
 ],
 "b156-t13": [
 "hp"
@@ -84,20 +74,8 @@
 "b33-t24": [
 "status"
 ],
-"b34-t53": [
-"hp",
-"volatile.saltcure"
-],
-"b44-t58": [
-"hp",
-"status",
-"volatile.saltcure"
-],
 "b46-t9": [
 "status"
-],
-"b48-t19": [
-"volatile.smackdown"
 ],
 "b48-t27": [
 "hp",
@@ -122,24 +100,12 @@
 "b75-t18": [
 "hp"
 ],
-"b77-t37": [
-"volatile.healblock"
-],
 "b79-t34": [
 "hp",
 "status"
 ],
 "b83-t14": [
 "status"
-],
-"b9-t14": [
-"volatile.smackdown"
-],
-"b9-t15": [
-"volatile.smackdown"
-],
-"b9-t40": [
-"volatile.smackdown"
 ]
 }
 }

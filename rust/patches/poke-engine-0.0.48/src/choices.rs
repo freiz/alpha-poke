@@ -12825,10 +12825,13 @@ pub static MOVES: LazyLock<HashMap<Choices, Choice>> = LazyLock::new(|| {
                 sound: true,
                 ..Default::default()
             },
-            volatile_status: Some(VolatileStatus {
+            // alpha-poke patch (2026-10-16, doc/engine-diff.md L85): a secondary (100%), as in
+            // Showdown (Covert Cloak / Shield Dust stop it); was the move's volatile
+            secondaries: Some(vec![Secondary {
+                chance: 100.0,
                 target: MoveTarget::Opponent,
-                volatile_status: PokemonVolatileStatus::HEALBLOCK,
-            }),
+                effect: Effect::VolatileStatus(PokemonVolatileStatus::HEALBLOCK),
+            }]),
             ..Default::default()
         },
     );
@@ -14095,10 +14098,13 @@ pub static MOVES: LazyLock<HashMap<Choices, Choice>> = LazyLock::new(|| {
                 protect: true,
                 ..Default::default()
             },
-            volatile_status: Some(VolatileStatus {
+            // alpha-poke patch (2026-10-16, doc/engine-diff.md L85): a secondary (100%), as in
+            // Showdown (Covert Cloak / Shield Dust stop it); was the move's volatile
+            secondaries: Some(vec![Secondary {
+                chance: 100.0,
                 target: MoveTarget::Opponent,
-                volatile_status: PokemonVolatileStatus::SALTCURE,
-            }),
+                effect: Effect::VolatileStatus(PokemonVolatileStatus::SALTCURE),
+            }]),
             ..Default::default()
         },
     );

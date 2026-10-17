@@ -767,6 +767,15 @@ impl Pokemon {
                 true
             }
             PokemonVolatileStatus::PROTECT => first_move,
+            // alpha-poke patch (2026-10-16, doc/engine-diff.md L86): only an airborne target
+            // (Showdown's smackdown onStart)
+            PokemonVolatileStatus::SMACKDOWN => {
+                (self.has_type(&PokemonType::FLYING)
+                    || self.ability == Abilities::LEVITATE
+                    || active_volatiles.contains(&PokemonVolatileStatus::MAGNETRISE))
+                    && self.item != Items::IRONBALL
+                    && !active_volatiles.contains(&PokemonVolatileStatus::INGRAIN)
+            }
             PokemonVolatileStatus::TAUNT
             | PokemonVolatileStatus::TORMENT
             | PokemonVolatileStatus::ENCORE

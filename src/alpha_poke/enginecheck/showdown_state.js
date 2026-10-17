@@ -30,8 +30,9 @@ function monState(p, side) {
 		base_types: p.baseSpecies.types,
 		stats: p.storedStats,
 		boosts: p.boosts,
+		// (Perish Song: Showdown's perishsong with its turns left, the engine's perish<n>; L87)
 		volatiles: Object.fromEntries(Object.entries(p.volatiles).map(([k, v]) =>
-			[k, {duration: v.duration || 0, layers: v.layers || 0, counter: v.counter || 0,
+			[k === 'perishsong' ? `perish${v.duration}` : k, {duration: v.duration || 0, layers: v.layers || 0, counter: v.counter || 0,
 				stat: v.bestStat || '', time: v.time || 0, true_duration: v.trueDuration || 0,
 				num_consecutive: v.numConsecutive || 0, hp: v.hp || 0, move: v.move || ''}])
 			// Slow Start: a counter in the ability's state, the engine's volatile (L77)

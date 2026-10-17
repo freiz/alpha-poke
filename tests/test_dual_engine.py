@@ -2513,3 +2513,45 @@ def test_l84_grassy_terrain_heals_on_its_last_turn():
     assert any("|-fieldend|move: Grassy Terrain" in x for x in states[5]["log"])
     outs = ec.engine_outcomes(ec.engine_state(states[4]), "swordsdance", "bulkup")
     assert ec.closest(states[5], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L85 (doc/engine-diff.md): Salt Cure's and Psychic Noise's volatiles are secondaries (100%) in
+# Showdown, so Covert Cloak / Shield Dust stop them; the engine applied them as the move's own
+@pytest.mark.parametrize("user, move, volatile", [
+    (_setter("Garganacl", "Purifying Salt", "Leftovers", "- Salt Cure\n- Recover\n- Protect\n- Stealth Rock"), "saltcure", "saltcure"),
+    (_attacker("Hatterene", "Magic Bounce", "Leftovers", "- Psychic Noise\n- Calm Mind\n- Draining Kiss\n- Protect", "Modest"), "psychicnoise", "healblock"),
+], ids=["saltcure", "psychicnoise"])  # fmt: skip
+def test_l85_covert_cloak_stops_the_volatile(user, move, volatile):
+    mana = _setter("Manaphy", "Hydration", "Covert Cloak", "- Tail Glow\n- Surf\n- Rest\n- Energy Ball")
+    states = ec.run_showdown(user, mana, [(f"move {move}", "move tailglow")])
+    assert volatile not in states[1]["sides"][1]["mons"][0]["volatiles"]
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), move, "tailglow")
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L86 (doc/engine-diff.md): Smack Down's volatile only on an airborne target (Showdown's onStart:
+# a Flying type, Levitate, Magnet Rise; not with an Iron Ball or Ingrain); the engine put it on
+# every target
+@pytest.mark.parametrize("target, grounded", [
+    (_setter("Ting-Lu", "Vessel of Ruin", "Leftovers", "- Stealth Rock\n- Ruination\n- Whirlwind\n- Spikes"), True),
+    (_setter("Corviknight", "Pressure", "Leftovers", "- Roost\n- Brave Bird\n- Defog\n- U-turn"), False),
+], ids=["grounded", "flying"])  # fmt: skip
+def test_l86_smack_down_only_grounds_the_airborne(target, grounded):
+    lando = _attacker("Landorus-Therian", "Intimidate", "Leftovers", "- Smack Down\n- Earthquake\n- U-turn\n- Stealth Rock")
+    second = target.splitlines()[5][2:].lower().replace(" ", "")
+    states = ec.run_showdown(lando, target, [("move smackdown", f"move {second}")])
+    assert ("smackdown" in states[1]["sides"][1]["mons"][0]["volatiles"]) != grounded
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "smackdown", second)
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L87 (doc/engine-diff.md): the harness carries Perish Song's count (Showdown's perishsong volatile,
+# its turns left) into the engine's perish<n>; without it the engine's state had none, and a
+# second Perish Song worked again
+def test_l87_perish_song_counts_down():
+    alt = _setter("Altaria", "Natural Cure", "Leftovers", "- Perish Song\n- Roost\n- Protect\n- Defog")
+    states = ec.run_showdown(alt, BLISSEY, [("move perishsong", "move softboiled"), ("move perishsong", "move protect"),
+                                            ("move roost", "move softboiled")])  # fmt: skip
+    for k, c1, c2 in ((0, "perishsong", "softboiled"), (1, "perishsong", "protect"), (2, "roost", "softboiled")):
+        outs = ec.engine_outcomes(ec.engine_state(states[k]), c1, c2)
+        assert ec.closest(states[k + 1], outs, (1, 1), hp=True)["diff"] == {}, k

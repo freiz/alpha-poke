@@ -153,15 +153,6 @@
 "b258-t27": [
 "status"
 ],
-"b258-t5": [
-"volatile.perish3"
-],
-"b258-t6": [
-"volatile.perish3"
-],
-"b258-t7": [
-"volatile.perish3"
-],
 "b26-t7": [
 "volatile.encore"
 ],
@@ -274,9 +265,6 @@
 ],
 "b89-t14": [
 "volatile.protosynthesisdef"
-],
-"b91-t6": [
-"volatile.perish3"
 ],
 "b98-t43": [
 "status"

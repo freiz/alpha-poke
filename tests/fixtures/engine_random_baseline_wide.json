@@ -41,22 +41,12 @@
 "b152-t19": [
 "volatile.encore"
 ],
-"b155-t12": [
-"volatile.smackdown"
-],
-"b156-t1": [
-"volatile.perish3"
-],
 "b156-t5": [
 "hp",
 "volatile.partiallytrapped"
 ],
 "b16-t51": [
 "status"
-],
-"b169-t27": [
-"hp",
-"volatile.saltcure"
 ],
 "b176-t21": [
 "hp"
@@ -73,26 +63,6 @@
 "b2-t37": [
 "volatile.confusion"
 ],
-"b202-t4": [
-"hp",
-"volatile.saltcure"
-],
-"b202-t40": [
-"hp",
-"volatile.saltcure"
-],
-"b202-t42": [
-"hp",
-"volatile.saltcure"
-],
-"b202-t6": [
-"hp",
-"volatile.saltcure"
-],
-"b202-t9": [
-"hp",
-"volatile.saltcure"
-],
 "b205-t9": [
 "boost.spa"
 ],
@@ -104,9 +74,6 @@
 ],
 "b208-t13": [
 "volatile.confusion"
-],
-"b212-t25": [
-"volatile.perish3"
 ],
 "b215-t27": [
 "boost.spa",
@@ -158,12 +125,6 @@
 "boost.def",
 "boost.spe",
 "volatile.encore"
-],
-"b249-t6": [
-"volatile.smackdown"
-],
-"b249-t9": [
-"volatile.smackdown"
 ],
 "b250-t13": [
 "volatile.solarbeam"
@@ -220,12 +181,6 @@
 "b49-t7": [
 "item",
 "volatile.protosynthesisspe"
-],
-"b5-t1": [
-"volatile.smackdown"
-],
-"b5-t15": [
-"volatile.smackdown"
 ],
 "b52-t27": [
 "boost.atk",
