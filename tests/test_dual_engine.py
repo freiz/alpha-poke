@@ -4060,3 +4060,19 @@ def test_l157_vessel_of_ruin_under_neutralizing_gas():
     outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2)
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
     assert ec.closest(b["state"], outs, n, hp=True)["diff"] == {}
+
+
+# L158 (doc/engine-diff.md): Relic Song turns Meloetta into Pirouette after a hit (stats and types;
+# Showdown's onAfterMoveSecondarySelf): seed10k b111-t1, wide2 b190-t4 / b55-t3, wide200 b75-t27
+@pytest.mark.parametrize("teams,i,turn,offset", [
+    ("random_battle_teams.jsonl", 111, 1, 10000),
+    ("random_battle_teams_wide2.jsonl", 190, 4, 30000),
+    ("random_battle_teams_wide2.jsonl", 55, 3, 30000),
+    ("random_battle_teams_wide200.jsonl", 75, 27, 40000),
+])  # fmt: skip
+def test_l158_relic_song(teams, i, turn, offset):
+    a, b = _random_position(teams, i, turn, offset)
+    c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
+    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2)
+    n = tuple(len(s["mons"]) for s in a["state"]["sides"])
+    assert ec.closest(b["state"], outs, n, hp=True)["diff"] == {}

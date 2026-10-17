@@ -37,9 +37,6 @@
 "b183-t27": [
 "status"
 ],
-"b190-t4": [
-"volatile.typechange"
-],
 "b190-t5": [
 "hp"
 ],
@@ -102,9 +99,6 @@
 ],
 "b54-t36": [
 "volatile.noretreat"
-],
-"b55-t3": [
-"volatile.typechange"
 ],
 "b61-t6": [
 "boost.def"

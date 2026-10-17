@@ -822,6 +822,95 @@ pub fn magician_after_move(
     }
 }
 
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L158): Relic Song changes Meloetta's forme after
+// a hit (Aria <-> Pirouette: stats and types; Showdown's onAfterMoveSecondarySelf, not under Sheer
+// Force, not while transformed); the switch-out brings Aria back (generate_instructions_from_switch)
+pub fn relic_song_forme(
+    state: &mut State,
+    choice: &Choice,
+    side_ref: &SideReference,
+    damage_dealt: i16,
+    instructions: &mut StateInstructions,
+) {
+    let side = state.get_side(side_ref);
+    let user = side.get_active_immutable();
+    if choice.move_id != Choices::RELICSONG
+        || damage_dealt <= 0
+        || user.hp == 0
+        || user.ability == Abilities::SHEERFORCE
+        || side
+            .volatile_statuses
+            .contains(&PokemonVolatileStatus::TRANSFORM)
+    {
+        return;
+    }
+    let to = match user.id {
+        PokemonName::MELOETTA => PokemonName::MELOETTAPIROUETTE,
+        PokemonName::MELOETTAPIROUETTE => PokemonName::MELOETTA,
+        _ => return,
+    };
+    meloetta_forme(side, side_ref, to, instructions);
+}
+
+pub fn meloetta_forme(
+    side: &mut Side,
+    side_ref: &SideReference,
+    to: PokemonName,
+    instructions: &mut StateInstructions,
+) {
+    let types = if to == PokemonName::MELOETTAPIROUETTE {
+        (PokemonType::NORMAL, PokemonType::FIGHTING)
+    } else {
+        (PokemonType::NORMAL, PokemonType::PSYCHIC)
+    };
+    let user = side.get_active();
+    instructions
+        .instruction_list
+        .push(Instruction::FormeChange(FormeChangeInstruction {
+            side_ref: *side_ref,
+            name_change: to as i16 - user.id as i16,
+        }));
+    user.id = to;
+    user.recalculate_stats(side_ref, instructions);
+    if user.types != types {
+        instructions
+            .instruction_list
+            .push(Instruction::ChangeType(ChangeType {
+                side_ref: *side_ref,
+                new_types: types,
+                old_types: user.types,
+            }));
+        user.types = types;
+    }
+    let changed = types != user.base_types;
+    let has = side
+        .volatile_statuses
+        .contains(&PokemonVolatileStatus::TYPECHANGE);
+    if changed && !has {
+        side.volatile_statuses
+            .insert(PokemonVolatileStatus::TYPECHANGE);
+        instructions
+            .instruction_list
+            .push(Instruction::ApplyVolatileStatus(
+                ApplyVolatileStatusInstruction {
+                    side_ref: *side_ref,
+                    volatile_status: PokemonVolatileStatus::TYPECHANGE,
+                },
+            ));
+    } else if !changed && has {
+        side.volatile_statuses
+            .remove(&PokemonVolatileStatus::TYPECHANGE);
+        instructions
+            .instruction_list
+            .push(Instruction::RemoveVolatileStatus(
+                RemoveVolatileStatusInstruction {
+                    side_ref: *side_ref,
+                    volatile_status: PokemonVolatileStatus::TYPECHANGE,
+                },
+            ));
+    }
+}
+
 pub fn ability_damaging_hit(
     state: &mut State,
     choice: &mut Choice,

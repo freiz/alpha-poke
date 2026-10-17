@@ -436,6 +436,21 @@ fn generate_instructions_from_switch(
         .ability
         == Abilities::NEUTRALIZINGGAS;
 
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L158): Meloetta-Pirouette is Meloetta again
+    // on the bench (a forme change that is not permanent)
+    if state
+        .get_side_immutable(&switching_side_ref)
+        .get_active_immutable()
+        .id
+        == PokemonName::MELOETTAPIROUETTE
+    {
+        super::abilities::meloetta_forme(
+            state.get_side(&switching_side_ref),
+            &switching_side_ref,
+            PokemonName::MELOETTA,
+            incoming_instructions,
+        );
+    }
     state.re_enable_disabled_moves(
         &switching_side_ref,
         &mut incoming_instructions.instruction_list,
@@ -6426,6 +6441,7 @@ fn run_move(
         }
     } // end multi-hit
     super::abilities::magician_after_move(state, choice, &attacking_side, dealt_total, &mut instructions);
+    super::abilities::relic_song_forme(state, choice, &attacking_side, dealt_total, &mut instructions);
 
     // this is wrong, but I am deciding it is good enough for this engine (for now)
     // each multi-hit move should trigger a chance for a secondary effect,
