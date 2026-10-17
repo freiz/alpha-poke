@@ -6,41 +6,1184 @@
 "seed_offset": 40000
 },
 "mismatches": {
+"b0-t8": [
+"base_ability"
+],
+"b1-t13": [
+"base_ability"
+],
+"b10-t19": [
+"last_item"
+],
+"b10-t4": [
+"options"
+],
+"b100-t15": [
+"pp"
+],
+"b100-t20": [
+"last_item"
+],
+"b101-t15": [
+"last_item"
+],
+"b101-t5": [
+"last_item"
+],
+"b102-t11": [
+"options"
+],
+"b102-t4": [
+"base_ability",
+"id"
+],
+"b102-t7": [
+"last_item"
+],
+"b103-t8": [
+"options"
+],
+"b104-t10": [
+"last_item"
+],
+"b104-t18": [
+"count.disable"
+],
+"b104-t2": [
+"last_used_move"
+],
+"b104-t43": [
+"last_used_move"
+],
+"b105-t10": [
+"last_item"
+],
+"b105-t15": [
+"last_item"
+],
+"b110-t12": [
+"last_used_move"
+],
+"b110-t22": [
+"options"
+],
+"b113-t10": [
+"base_ability"
+],
+"b114-t11": [
+"base_ability"
+],
+"b115-t6": [
+"options"
+],
+"b116-t1": [
+"last_item"
+],
+"b116-t10": [
+"options"
+],
+"b116-t15": [
+"options"
+],
+"b116-t18": [
+"options"
+],
+"b116-t23": [
+"last_used_move"
+],
+"b116-t25": [
+"options"
+],
+"b116-t8": [
+"options"
+],
+"b117-t1": [
+"last_item"
+],
+"b118-t29": [
+"last_used_move"
+],
+"b118-t4": [
+"base_ability",
+"id"
+],
+"b119-t23": [
+"last_item"
+],
+"b119-t8": [
+"last_item"
+],
+"b120-t10": [
+"last_item"
+],
+"b120-t35": [
+"sc.protect"
+],
+"b120-t36": [
+"last_used_move"
+],
+"b120-t44": [
+"last_used_move"
+],
+"b121-t12": [
+"last_item"
+],
+"b121-t36": [
+"pp"
+],
+"b122-t13": [
+"options"
+],
+"b122-t18": [
+"last_item",
+"options"
+],
 "b122-t26": [
 "status"
 ],
+"b124-t18": [
+"last_item"
+],
+"b124-t19": [
+"last_item"
+],
+"b124-t34": [
+"options"
+],
+"b124-t4": [
+"last_used_move"
+],
+"b124-t7": [
+"last_item"
+],
+"b125-t11": [
+"options"
+],
+"b125-t25": [
+"options"
+],
+"b126-t1": [
+"last_item"
+],
+"b127-t17": [
+"last_item"
+],
+"b129-t6": [
+"last_item"
+],
+"b13-t14": [
+"last_item"
+],
+"b13-t17": [
+"last_item"
+],
+"b13-t2": [
+"last_item"
+],
+"b13-t21": [
+"last_item"
+],
+"b13-t6": [
+"last_item"
+],
+"b130-t10": [
+"last_item"
+],
+"b130-t34": [
+"options"
+],
+"b131-t9": [
+"last_item"
+],
+"b133-t1": [
+"last_item"
+],
+"b134-t2": [
+"options"
+],
+"b134-t9": [
+"options"
+],
+"b135-t2": [
+"last_item"
+],
+"b136-t16": [
+"last_item"
+],
+"b136-t7": [
+"last_item"
+],
+"b137-t16": [
+"options"
+],
+"b137-t43": [
+"options"
+],
+"b137-t5": [
+"options"
+],
+"b138-t23": [
+"last_item"
+],
+"b139-t11": [
+"options"
+],
+"b139-t54": [
+"sc.toxic_count"
+],
+"b139-t55": [
+"sc.toxic_count"
+],
+"b139-t56": [
+"sc.toxic_count"
+],
+"b139-t57": [
+"pp",
+"sc.toxic_count"
+],
+"b139-t58": [
+"sc.toxic_count"
+],
+"b139-t59": [
+"sc.toxic_count"
+],
+"b139-t60": [
+"pp",
+"sc.toxic_count"
+],
+"b14-t14": [
+"base_ability"
+],
+"b140-t6": [
+"last_item"
+],
+"b140-t9": [
+"base_ability"
+],
+"b141-t1": [
+"last_item"
+],
+"b144-t1": [
+"last_used_move"
+],
+"b144-t32": [
+"last_item"
+],
+"b144-t43": [
+"options"
+],
+"b145-t24": [
+"last_item"
+],
+"b145-t8": [
+"base_ability"
+],
+"b146-t22": [
+"pp"
+],
+"b146-t28": [
+"base_ability"
+],
+"b148-t24": [
+"options"
+],
+"b148-t8": [
+"last_item"
+],
+"b15-t11": [
+"pp"
+],
+"b15-t7": [
+"pp"
+],
+"b150-t18": [
+"last_item"
+],
+"b150-t27": [
+"pp"
+],
+"b151-t18": [
+"pp"
+],
+"b151-t20": [
+"base_ability"
+],
+"b151-t54": [
+"sc.toxic_count"
+],
+"b151-t55": [
+"sc.toxic_count"
+],
+"b151-t57": [
+"sc.toxic_count"
+],
+"b151-t58": [
+"sc.toxic_count"
+],
+"b152-t26": [
+"last_used_move"
+],
+"b152-t27": [
+"last_used_move"
+],
+"b152-t31": [
+"last_item"
+],
+"b153-t20": [
+"sc.toxic_count"
+],
+"b153-t25": [
+"options"
+],
+"b153-t27": [
+"options"
+],
+"b153-t46": [
+"last_used_move"
+],
+"b153-t7": [
+"pp"
+],
+"b154-t25": [
+"last_used_move"
+],
+"b154-t7": [
+"last_item"
+],
+"b154-t8": [
+"last_used_move"
+],
+"b156-t2": [
+"last_item"
+],
+"b156-t5": [
+"last_item"
+],
+"b157-t14": [
+"last_item"
+],
 "b159-t13": [
-"status"
+"ability",
+"attack",
+"base_ability",
+"base_types",
+"defense",
+"gender",
+"id",
+"last_item",
+"last_used_move",
+"level",
+"maxhp",
+"move",
+"must_switch",
+"nature",
+"options",
+"pp",
+"sc.protect",
+"special_attack",
+"special_defense",
+"speed",
+"status",
+"stellar_boosted",
+"tera_type",
+"terastallized",
+"types",
+"weight"
+],
+"b159-t16": [
+"last_item"
+],
+"b16-t1": [
+"options"
+],
+"b16-t17": [
+"base_ability"
+],
+"b16-t19": [
+"last_item"
+],
+"b16-t3": [
+"options"
+],
+"b160-t13": [
+"last_item"
+],
+"b161-t38": [
+"options"
+],
+"b162-t3": [
+"last_item"
+],
+"b163-t8": [
+"last_item"
+],
+"b165-t41": [
+"last_used_move"
+],
+"b166-t11": [
+"options"
+],
+"b166-t14": [
+"last_used_move"
+],
+"b166-t16": [
+"last_used_move"
+],
+"b166-t21": [
+"base_ability",
+"id",
+"options"
+],
+"b166-t31": [
+"options"
+],
+"b166-t9": [
+"last_used_move"
+],
+"b167-t6": [
+"pp"
+],
+"b169-t14": [
+"pp"
+],
+"b169-t33": [
+"sc.protect"
+],
+"b169-t5": [
+"last_used_move"
+],
+"b169-t6": [
+"last_used_move"
+],
+"b17-t35": [
+"options",
+"pp"
+],
+"b17-t9": [
+"last_item"
+],
+"b171-t16": [
+"last_used_move"
+],
+"b172-t2": [
+"options"
+],
+"b172-t32": [
+"last_used_move"
+],
+"b172-t33": [
+"last_used_move"
+],
+"b172-t37": [
+"last_used_move"
+],
+"b172-t43": [
+"pp"
+],
+"b172-t45": [
+"last_used_move"
+],
+"b173-t1": [
+"last_item"
+],
+"b173-t27": [
+"last_item"
+],
+"b173-t7": [
+"last_item"
+],
+"b174-t19": [
+"last_item"
+],
+"b175-t34": [
+"options"
+],
+"b176-t12": [
+"options"
+],
+"b176-t13": [
+"base_ability"
+],
+"b177-t16": [
+"last_item"
 ],
 "b177-t24": [
 "hp"
 ],
+"b179-t12": [
+"sc.toxic_count"
+],
+"b179-t13": [
+"sc.toxic_count"
+],
+"b179-t14": [
+"sc.toxic_count"
+],
+"b179-t15": [
+"sc.toxic_count"
+],
+"b179-t16": [
+"sc.toxic_count"
+],
+"b179-t36": [
+"pp"
+],
+"b179-t47": [
+"sc.toxic_count"
+],
+"b179-t48": [
+"sc.toxic_count"
+],
+"b179-t49": [
+"sc.toxic_count"
+],
+"b179-t50": [
+"sc.toxic_count"
+],
+"b179-t51": [
+"sc.toxic_count"
+],
+"b179-t53": [
+"sc.toxic_count"
+],
+"b179-t54": [
+"sc.toxic_count"
+],
+"b179-t55": [
+"sc.toxic_count"
+],
+"b179-t56": [
+"options",
+"sc.toxic_count"
+],
+"b179-t57": [
+"sc.toxic_count"
+],
+"b179-t58": [
+"sc.toxic_count"
+],
+"b18-t19": [
+"options"
+],
+"b181-t48": [
+"count.disable",
+"last_item"
+],
+"b181-t5": [
+"last_item"
+],
+"b183-t8": [
+"options"
+],
+"b184-t40": [
+"options"
+],
+"b185-t8": [
+"base_ability"
+],
+"b186-t17": [
+"pp"
+],
+"b186-t19": [
+"pp"
+],
+"b186-t20": [
+"pp"
+],
+"b186-t22": [
+"pp"
+],
+"b186-t23": [
+"pp"
+],
+"b186-t3": [
+"base_ability",
+"id"
+],
+"b186-t34": [
+"sc.protect"
+],
+"b186-t47": [
+"pp"
+],
+"b186-t51": [
+"pp"
+],
+"b186-t52": [
+"pp"
+],
+"b186-t7": [
+"last_item"
+],
+"b188-t23": [
+"last_used_move"
+],
+"b188-t3": [
+"last_used_move"
+],
+"b188-t4": [
+"options"
+],
+"b188-t46": [
+"last_used_move"
+],
+"b188-t57": [
+"last_used_move"
+],
+"b189-t2": [
+"last_item"
+],
+"b189-t25": [
+"last_used_move"
+],
+"b19-t20": [
+"options"
+],
+"b19-t25": [
+"options"
+],
+"b190-t4": [
+"last_item"
+],
+"b191-t10": [
+"pp"
+],
+"b191-t20": [
+"pp"
+],
+"b192-t2": [
+"last_item"
+],
+"b193-t17": [
+"last_item"
+],
+"b194-t11": [
+"last_used_move",
+"options"
+],
+"b195-t6": [
+"base_ability",
+"id"
+],
+"b198-t14": [
+"options"
+],
+"b199-t29": [
+"pp"
+],
+"b199-t34": [
+"sc.protect"
+],
+"b20-t33": [
+"last_item"
+],
+"b21-t1": [
+"last_item"
+],
+"b21-t15": [
+"last_item"
+],
+"b21-t9": [
+"options"
+],
+"b22-t17": [
+"last_item"
+],
+"b22-t22": [
+"last_used_move"
+],
+"b22-t37": [
+"options"
+],
+"b24-t36": [
+"last_item"
+],
+"b26-t10": [
+"last_item"
+],
+"b27-t2": [
+"base_ability"
+],
+"b28-t17": [
+"last_item"
+],
+"b28-t21": [
+"last_item"
+],
+"b29-t4": [
+"last_item"
+],
+"b29-t7": [
+"last_item"
+],
+"b3-t2": [
+"count.taunt"
+],
+"b3-t6": [
+"last_item"
+],
+"b31-t17": [
+"last_item"
+],
+"b31-t20": [
+"options"
+],
+"b32-t31": [
+"last_item"
+],
+"b32-t34": [
+"last_used_move",
+"options"
+],
+"b32-t8": [
+"last_item"
+],
+"b33-t11": [
+"last_item"
+],
+"b33-t12": [
+"count.taunt"
+],
+"b33-t14": [
+"options"
+],
+"b33-t22": [
+"last_item"
+],
+"b33-t23": [
+"last_item"
+],
+"b33-t8": [
+"base_ability",
+"last_item"
+],
+"b34-t4": [
+"base_ability"
+],
+"b35-t10": [
+"base_ability"
+],
+"b35-t18": [
+"base_ability"
+],
+"b35-t52": [
+"last_item"
+],
+"b35-t53": [
+"options"
+],
+"b37-t20": [
+"last_item"
+],
+"b38-t31": [
+"last_used_move"
+],
+"b38-t32": [
+"last_used_move"
+],
+"b39-t11": [
+"pp"
+],
+"b4-t17": [
+"base_ability"
+],
+"b4-t48": [
+"pp"
+],
+"b4-t51": [
+"last_used_move"
+],
+"b4-t7": [
+"last_item"
+],
+"b40-t22": [
+"last_item"
+],
+"b41-t16": [
+"last_item"
+],
+"b41-t9": [
+"last_used_move"
+],
+"b42-t3": [
+"options"
+],
+"b42-t7": [
+"options"
+],
+"b43-t13": [
+"pp"
+],
+"b43-t30": [
+"options"
+],
+"b43-t37": [
+"options"
+],
+"b43-t38": [
+"base_ability"
+],
+"b43-t48": [
+"pp"
+],
+"b43-t60": [
+"options"
+],
+"b43-t7": [
+"pp"
+],
+"b44-t21": [
+"base_ability"
+],
 "b44-t34": [
 "hp"
 ],
+"b45-t6": [
+"last_item"
+],
+"b46-t25": [
+"pp"
+],
+"b47-t21": [
+"last_item"
+],
+"b48-t10": [
+"last_item"
+],
+"b49-t39": [
+"options"
+],
+"b5-t11": [
+"last_item"
+],
+"b5-t2": [
+"sc.protect"
+],
+"b50-t19": [
+"last_item",
+"sc.protect"
+],
+"b50-t2": [
+"last_item"
+],
+"b52-t31": [
+"options"
+],
+"b52-t35": [
+"last_used_move"
+],
+"b52-t41": [
+"last_used_move"
+],
+"b52-t45": [
+"last_used_move"
+],
+"b52-t9": [
+"options"
+],
+"b53-t19": [
+"last_item"
+],
 "b53-t21": [
-"status"
+"ability",
+"attack",
+"base_ability",
+"base_types",
+"defense",
+"gender",
+"id",
+"last_item",
+"level",
+"maxhp",
+"move",
+"must_switch",
+"nature",
+"options",
+"pp",
+"sc.protect",
+"special_attack",
+"special_defense",
+"speed",
+"status",
+"stellar_boosted",
+"tera_type",
+"terastallized",
+"types",
+"weight"
 ],
 "b54-t9": [
 "hp"
 ],
+"b56-t13": [
+"last_item"
+],
+"b56-t28": [
+"options"
+],
+"b56-t9": [
+"base_ability"
+],
+"b57-t16": [
+"last_item"
+],
+"b57-t6": [
+"options"
+],
+"b58-t1": [
+"count.disable"
+],
+"b58-t9": [
+"last_item"
+],
+"b6-t25": [
+"last_used_move"
+],
+"b6-t40": [
+"pp"
+],
+"b61-t2": [
+"last_item"
+],
+"b61-t35": [
+"pp"
+],
+"b62-t21": [
+"last_item"
+],
 "b62-t46": [
 "hp"
 ],
+"b65-t23": [
+"count.taunt"
+],
+"b65-t26": [
+"options"
+],
 "b68-t30": [
-"status"
+"ability",
+"attack",
+"base_ability",
+"base_types",
+"defense",
+"gender",
+"id",
+"last_item",
+"level",
+"maxhp",
+"move",
+"must_switch",
+"nature",
+"options",
+"pp",
+"sc.protect",
+"special_attack",
+"special_defense",
+"speed",
+"status",
+"stellar_boosted",
+"tera_type",
+"terastallized",
+"types",
+"weight"
 ],
 "b69-t16": [
-"hp"
+"hp",
+"options"
+],
+"b69-t23": [
+"options"
+],
+"b69-t5": [
+"options"
+],
+"b70-t2": [
+"last_item"
+],
+"b70-t24": [
+"last_item"
+],
+"b70-t3": [
+"attack",
+"defense",
+"id",
+"special_attack",
+"special_defense",
+"speed",
+"weight"
 ],
 "b70-t6": [
 "volatile.gastroacid"
 ],
+"b72-t12": [
+"pp"
+],
+"b72-t16": [
+"last_used_move"
+],
+"b72-t26": [
+"last_used_move"
+],
+"b74-t16": [
+"last_item"
+],
+"b74-t19": [
+"last_item"
+],
+"b74-t9": [
+"last_item",
+"options"
+],
+"b75-t16": [
+"last_used_move"
+],
+"b75-t17": [
+"last_used_move"
+],
+"b75-t27": [
+"attack",
+"defense",
+"special_attack",
+"special_defense",
+"speed"
+],
+"b76-t10": [
+"options"
+],
 "b76-t17": [
 "hp"
 ],
+"b78-t9": [
+"last_item"
+],
+"b79-t1": [
+"last_item"
+],
+"b79-t11": [
+"last_used_move"
+],
+"b80-t14": [
+"last_item"
+],
+"b80-t3": [
+"base_ability"
+],
+"b80-t6": [
+"base_ability"
+],
 "b82-t20": [
 "hp"
+],
+"b82-t3": [
+"last_item"
+],
+"b83-t37": [
+"options"
+],
+"b83-t39": [
+"pp"
+],
+"b84-t17": [
+"pp"
+],
+"b84-t18": [
+"options"
+],
+"b84-t19": [
+"base_ability",
+"id"
+],
+"b84-t32": [
+"options"
+],
+"b85-t30": [
+"future_sight"
+],
+"b86-t1": [
+"last_item"
+],
+"b88-t3": [
+"last_item"
+],
+"b89-t32": [
+"last_used_move"
+],
+"b89-t33": [
+"last_used_move"
+],
+"b89-t34": [
+"last_item"
+],
+"b89-t37": [
+"options"
+],
+"b89-t41": [
+"pp"
+],
+"b89-t45": [
+"pp"
+],
+"b89-t46": [
+"pp"
+],
+"b9-t16": [
+"last_item"
+],
+"b9-t18": [
+"last_item"
+],
+"b9-t28": [
+"options"
+],
+"b9-t44": [
+"last_item"
+],
+"b9-t47": [
+"options"
+],
+"b9-t57": [
+"options"
+],
+"b9-t60": [
+"options"
+],
+"b9-t9": [
+"last_item"
+],
+"b90-t1": [
+"options"
+],
+"b91-t11": [
+"last_item"
+],
+"b92-t25": [
+"options"
+],
+"b92-t27": [
+"options"
+],
+"b92-t4": [
+"options"
+],
+"b94-t6": [
+"last_item"
+],
+"b95-t14": [
+"last_item"
+],
+"b98-t3": [
+"base_ability"
+],
+"b99-t18": [
+"options"
+],
+"b99-t2": [
+"last_item"
+],
+"b99-t22": [
+"last_item"
+],
+"b99-t30": [
+"options"
 ]
 }
 }

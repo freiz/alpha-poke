@@ -1023,6 +1023,20 @@ fn bypass_substitute_moves() -> Vec<String> {
     out
 }
 
+/// The moves a foe's Pressure takes one more PP of (`Choices::pressure_applies` on their engine
+/// target, lowercase; doc/engine-diff.md L177).
+#[pyfunction]
+fn pressure_moves() -> Vec<String> {
+    use poke_engine::choices::MOVES;
+    let mut out: Vec<String> = MOVES
+        .iter()
+        .filter(|(c, m)| c.pressure_applies(&m.target))
+        .map(|(c, _)| format!("{:?}", c).to_lowercase())
+        .collect();
+    out.sort();
+    out
+}
+
 /// The dance moves (`Choices::is_dance`, lowercase; doc/engine-diff.md L171).
 #[pyfunction]
 fn dance_moves() -> Vec<String> {
@@ -1245,6 +1259,7 @@ fn alpha_search(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(bypass_substitute_moves, m)?)?;
     m.add_function(wrap_pyfunction!(fail_copycat_moves, m)?)?;
     m.add_function(wrap_pyfunction!(dance_moves, m)?)?;
+    m.add_function(wrap_pyfunction!(pressure_moves, m)?)?;
     m.add_function(wrap_pyfunction!(fling_powers, m)?)?;
     m.add_function(wrap_pyfunction!(paradox_species, m)?)?;
     m.add_function(wrap_pyfunction!(fail_skill_swap_abilities, m)?)?;

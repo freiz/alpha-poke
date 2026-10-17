@@ -36,6 +36,12 @@ function choose(side, req, r, c) {
 		if (!p.active && !p.condition.endsWith(' fnt')) switches.push(i);
 	});
 	const toSwitch = i => ({choice: `switch ${i + 1}`, engine: side.pokemon[i].species.id, kind: 'switch'});
+	// Revival Blessing's pick: a fainted one (doc/engine-diff.md L177; the battle used to break off)
+	if (req.forceSwitch && pokes.some(p => p.reviving)) {
+		const fainted = [];
+		pokes.forEach((p, i) => { if (p.condition.endsWith(' fnt')) fainted.push(i); });
+		if (fainted.length) return toSwitch(pick(fainted, r));
+	}
 	if (req.forceSwitch) return switches.length ? toSwitch(pick(switches, r)) : {choice: 'pass', engine: 'none', kind: 'pass'};
 	const act = req.active[0];
 	const moves = [];

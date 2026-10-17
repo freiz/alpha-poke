@@ -64,6 +64,9 @@ function monState(p, side) {
 		weight: p.weighthg / 10,
 		nature: p.set.nature || 'Serious',
 		active: !!p.isActive,
+		// trapped for its request (true, or 'hidden': an ability's -- Shadow Tag, Magnet Pull --
+		// that the request shows only as maybeTrapped; doc/engine-diff.md L177)
+		trapped: !!p.trapped,
 		// the engine's last_used_move: the move used since it came in, or none (Fake Out, Encore)
 		last_move: p.lastMove ? p.lastMove.id : '',
 		move_actions: p.activeMoveActions || 0,
@@ -86,7 +89,10 @@ function sideState(side) {
 	const request = !req ? 'none' : req.wait ? 'wait' : req.forceSwitch ? 'switch' :
 		req.teamPreview ? 'teampreview' : 'move';
 	// the request the player's client gets (for rebuilding the state as we do in play)
-	return {id: side.id, active, mons, conditions, slot, request, request_json: req || null};
+	// the side used its Terastallization (a fainted tera mon loses its terastallized, the side's
+	// canTerastallize stays null: doc/engine-diff.md L177)
+	const tera_used = side.pokemon.some(p => p.terastallized || p.canTerastallize === null);
+	return {id: side.id, active, mons, conditions, slot, request, request_json: req || null, tera_used};
 }
 
 function state(battle, logFrom) {

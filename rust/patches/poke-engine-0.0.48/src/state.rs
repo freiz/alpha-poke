@@ -1437,6 +1437,10 @@ pub struct State {
     // move, not its caller), for Copycat; kept only when a Copycat is on the field
     pub last_move: Choices,
     pub use_last_move: bool,
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L177): every move's PP (was only below 10);
+    // on for every real state (set_conditional_mechanics), off in State::default (the upstream
+    // tests' instruction lists)
+    pub use_exact_pp: bool,
 }
 impl Default for State {
     fn default() -> State {
@@ -1460,6 +1464,7 @@ impl Default for State {
             use_times_attacked: false,
             last_move: Choices::NONE,
             use_last_move: false,
+            use_exact_pp: false,
             use_last_used_move: false,
         };
 
@@ -2635,6 +2640,7 @@ impl State {
                 .get(6)
                 .map_or(Choices::NONE, |x| Choices::from_str(x).unwrap()),
             use_last_move: false,
+            use_exact_pp: false,
             use_last_used_move: false,
         };
         state.set_conditional_mechanics();

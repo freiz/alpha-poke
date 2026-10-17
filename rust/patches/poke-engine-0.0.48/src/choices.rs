@@ -20578,6 +20578,38 @@ impl Choices {
         )
     }
 
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L177): whether a foe's Pressure takes one
+    // more PP (Showdown's pressureTargets: a move aimed at the foe, the field's 'all' moves, the
+    // mustpressure ones); tests/test_engine_data.py checks them
+    pub fn pressure_applies(&self, target: &MoveTarget) -> bool {
+        matches!(
+            self,
+            Choices::STEALTHROCK
+                | Choices::SPIKES
+                | Choices::TOXICSPIKES
+                | Choices::IMPRISON
+                | Choices::TERABLAST
+                | Choices::CHILLYRECEPTION
+                | Choices::COURTCHANGE
+                | Choices::ELECTRICTERRAIN
+                | Choices::FAIRYLOCK
+                | Choices::GRASSYTERRAIN
+                | Choices::GRAVITY
+                | Choices::HAZE
+                | Choices::MAGICROOM
+                | Choices::MISTYTERRAIN
+                | Choices::PERISHSONG
+                | Choices::PSYCHICTERRAIN
+                | Choices::RAINDANCE
+                | Choices::SANDSTORM
+                | Choices::SNOWSCAPE
+                | Choices::SUNNYDAY
+                | Choices::TEATIME
+                | Choices::TRICKROOM
+                | Choices::WONDERROOM
+        ) || (*target == MoveTarget::Opponent && !self.not_aimed_at_foe())
+    }
+
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L171): the dance moves (Showdown's dance
     // flag: a Dancer uses them too); tests/test_engine_data.py checks them
     pub fn is_dance(&self) -> bool {

@@ -525,6 +525,7 @@ impl Pokemon {
         throat_chopped: bool,
         can_tera: bool,
         side_can_mega: bool,
+        heal_blocked: bool,
     ) {
         let mut iter = self.moves.into_iter();
         while let Some(p) = iter.next() {
@@ -553,6 +554,11 @@ impl Pokemon {
                 }
                 // alpha-poke patch (2026-10-13): Throat Chop blocks sound moves
                 if throat_chopped && self.moves[&iter.pokemon_move_index].choice.flags.sound {
+                    continue;
+                }
+                // alpha-poke patch (2026-10-17, doc/engine-diff.md L177): Heal Block, the healing
+                // moves too (Showdown's onDisableMove: not chosen; was a failure as it moved)
+                if heal_blocked && self.moves[&iter.pokemon_move_index].choice.flags.heal {
                     continue;
                 }
                 vec.push(MoveChoice::Move(iter.pokemon_move_index));
@@ -1246,6 +1252,9 @@ impl State {
                     .contains(&PokemonVolatileStatus::THROATCHOP),
                 self.side_one.can_use_tera(),
                 self.side_one.can_use_mega(),
+                self.side_one
+                    .volatile_statuses
+                    .contains(&PokemonVolatileStatus::HEALBLOCK),
             );
         }
 
@@ -1277,6 +1286,9 @@ impl State {
                     .contains(&PokemonVolatileStatus::THROATCHOP),
                 self.side_two.can_use_tera(),
                 self.side_two.can_use_mega(),
+                self.side_two
+                    .volatile_statuses
+                    .contains(&PokemonVolatileStatus::HEALBLOCK),
             );
         }
 
@@ -1369,6 +1381,9 @@ impl State {
                     .contains(&PokemonVolatileStatus::THROATCHOP),
                 self.side_one.can_use_tera(),
                 self.side_one.can_use_mega(),
+                self.side_one
+                    .volatile_statuses
+                    .contains(&PokemonVolatileStatus::HEALBLOCK),
             );
             if !self.side_one.trapped(side_two_active) {
                 self.side_one.add_switches(&mut side_one_options);
@@ -1402,6 +1417,9 @@ impl State {
                     .contains(&PokemonVolatileStatus::THROATCHOP),
                 self.side_two.can_use_tera(),
                 self.side_two.can_use_mega(),
+                self.side_two
+                    .volatile_statuses
+                    .contains(&PokemonVolatileStatus::HEALBLOCK),
             );
             if !self.side_two.trapped(side_one_active) {
                 self.side_two.add_switches(&mut side_two_options);
@@ -1765,5 +1783,7 @@ impl State {
         if self._state_contains_any_move(&[Choices::COPYCAT]) {
             self.use_last_move = true;
         }
+        // (L177)
+        self.use_exact_pp = true;
     }
 }

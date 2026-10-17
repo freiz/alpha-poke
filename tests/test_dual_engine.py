@@ -4711,3 +4711,64 @@ def test_l176_positions(teams, i, turn, offset):
     outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2)
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
     assert ec.closest(b["state"], outs, n, hp=True)["diff"] == {}
+
+
+# L177 (doc/engine-diff.md, the full comparison): the PP as Showdown's runMove / useMoveInner --
+# every use (was only below 10), past the BeforeMove (not in a full paralysis), not while locked
+# (Outrage's later turns), Sleep Talk's own; Pressure one more on a move aimed at its holder (the
+# foe, the field, the hazards), not on a self move
+def _full(states, k, c1, c2, n=(1, 1)):
+    outs = ec.engine_outcomes(ec.engine_state(states[k]), c1, c2)
+    return ec.closest(states[k + 1], outs, n, hp=True, full=True, start=states[k])["diff"]
+
+
+def test_l177_pp_every_use():
+    states = ec.run_showdown(BLISSEY, GARCHOMP_SD, [("move calmmind", "move swordsdance")])
+    assert states[1]["sides"][0]["mons"][0]["moves"][3]["pp"] == 31
+    assert _full(states, 0, "calmmind", "swordsdance") == {}
+
+
+def test_l177_pp_not_in_a_full_paralysis():
+    blissey = BLISSEY.replace("- Protect", "- Thunder Wave")
+    turns = [("move dragondance", "move thunderwave"), ("move dragondance", "move calmmind")]
+    states = ec.run_showdown(DRAGAPULT_COPYCAT, blissey, turns, force_random=True)
+    assert any(x.startswith("|cant|p1a: Dragapult|par") for x in states[2]["log"])
+    assert _full(states, 1, "dragondance", "calmmind") == {}
+
+
+def test_l177_pressure():
+    states = ec.run_showdown(GARCHOMP_SD, KYUREM, [("move stealthrock", "move protect"),
+                                                    ("move swordsdance", "move protect")])  # fmt: skip
+    assert states[1]["sides"][0]["mons"][0]["moves"][3]["pp"] == 30  # 32, Pressure: 2
+    assert states[2]["sides"][0]["mons"][0]["moves"][0]["pp"] == 31  # Swords Dance: 1
+    assert _full(states, 0, "stealthrock", "protect") == {}
+
+
+def test_l177_pp_outrage_locked():
+    garchomp = GARCHOMP_SD.replace("- Scale Shot", "- Outrage")
+    states = ec.run_showdown(garchomp, BLISSEY, [("move outrage", "move softboiled"),
+                                                  ("move outrage", "move softboiled")])  # fmt: skip
+    assert _full(states, 1, "outrage", "softboiled") == {}
+
+
+def test_l177_options_under_heal_block():
+    """Heal Block's moves cannot be chosen (Showdown's onDisableMove)."""
+    slowking = SLOWKING_FUTURE.replace("- Sludge Bomb", "- Psychic Noise")
+    states = ec.run_showdown(slowking, BLISSEY, [("move psychicnoise", "move calmmind")])
+    assert "softboiled" not in ec.showdown_options(states[1]["sides"][1])
+    assert _full(states, 0, "psychicnoise", "calmmind") == {}
+
+
+def test_l177_options_after_imposter():
+    """A transformed Ditto's every copied move can be chosen."""
+    states = ec.run_showdown(DITTO_BACK, LANDO, [("switch 2", "move stealthrock")])
+    assert not [k for k in _full(states, 0, "ditto", "stealthrock", (2, 1)) if "options" in k]
+
+
+def test_l177_no_second_tera_after_the_tera_mon_fainted():
+    p1 = MAGIKARP_PAWMOT.replace("Ability: Swift Swim", "Ability: Swift Swim\nTera Type: Water")
+    turns = [("move splash terastallize", "move seismictoss"), ("switch 2", "")]
+    states = ec.run_showdown(p1, BLISSEY, turns)
+    assert states[2]["sides"][0]["tera_used"]
+    assert not any(o.endswith("-tera") for o in ec.showdown_options(states[2]["sides"][0]))
+    assert not any(o.endswith("-tera") for o in pe.options(ec.engine_state(states[2]))[0])

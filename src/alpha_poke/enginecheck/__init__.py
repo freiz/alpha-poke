@@ -106,8 +106,22 @@ def _engine_volatile(name: str) -> bool:
 
 
 def _types(types: list[str]) -> tuple[str, str]:
-    t = [x.lower() for x in types] + ["typeless"]
+    # (Showdown's "???": Double Shock / Burn Up's lost type, the engine's typeless; L177)
+    t = [("typeless" if x == "???" else x.lower()) for x in types] + ["typeless"]
     return t[0], t[1]
+
+
+def _unroosted(m: dict, types: list[str]) -> list[str]:
+    """The types without Roost's turn (Showdown's getTypes leaves its Flying out, a pure Flying
+    type Normal; the engine keeps the types and a roost volatile: L177)."""
+    if "roost" not in m.get("volatiles", {}):
+        return types
+    base = m["base_types"]
+    if types == ["Normal"] and base == ["Flying"]:
+        return ["Flying"]
+    if "Flying" in base and "Flying" not in types:
+        return [t for t in base if t in types or t == "Flying"] or types
+    return types
 
 
 def _sleep(m: dict) -> dict:
@@ -125,7 +139,8 @@ def _engine_mon(m: dict) -> pe.Pokemon:
     st = m["stats"]
     return pe.Pokemon(**_sleep(m),
         # the engine keeps the original types when terastallized (tera_type apart, L31)
-        id=m["species"], level=m["level"], types=_types(m.get("pre_tera_types") or m["types"]),
+        id=m["species"], level=m["level"],
+        types=_types(_unroosted(m, m.get("pre_tera_types") or m["types"])),
         base_types=_types(m["base_types"]), hp=m["hp"], maxhp=m["maxhp"],
         ability=m["ability"] or "none",
         # a used once-per-battle switch-in ability: base ability none (L18)
@@ -133,7 +148,10 @@ def _engine_mon(m: dict) -> pe.Pokemon:
         item=m["item"] or "none", attack=st["atk"], defense=st["def"],
         special_attack=st["spa"], special_defense=st["spd"], speed=st["spe"],
         status=STATUS[m["status"]], weight_kg=m["weight"], nature=m.get("nature", "serious").lower(),
-        moves=[pe.Move(id=x["id"], pp=x["pp"], disabled=x["disabled"]) for x in m["moves"]],
+        # (a benched mon's disabled flags are its last request's -- a Choice lock --: Showdown
+        # sets them afresh for its next one; L177)
+        moves=[pe.Move(id=x["id"], pp=x["pp"], disabled=x["disabled"] and bool(m.get("active")))
+               for x in m["moves"]],
         terastallized=bool(m["terastallized"]), tera_type=(m["tera_type"] or "typeless").lower(),
         last_item=m.get("last_item") if _engine_item(m.get("last_item") or "") else "none",
         times_attacked=min(m.get("times_attacked", 0), 255),
@@ -159,6 +177,12 @@ LIMITS = {"partiallytrapped": 5, "healblock": 2, "throatchop": 2, "magnetrise": 
 
 def _engine_side(s: dict, future_sight=None, wish=None) -> pe.Side:
     mons = [_engine_mon(m) for m in s["mons"]]
+    # (L177: its Terastallization used, by a mon that fainted since -- Showdown deletes its
+    # terastallized: the engine keeps it on a fainted one, its can_use_tera reads that)
+    if s.get("tera_used") and not any(p.terastallized for p in mons):
+        j = next((j for j, m in enumerate(s["mons"]) if m["hp"] <= 0), None)
+        if j is not None:
+            mons[j] = _engine_mon(s["mons"][j] | {"terastallized": "used"})
     mons += [pe.Pokemon.create_fainted() for _ in range(6 - len(mons))]
     act = s["mons"][s["active"]] if s["active"] >= 0 else None
     c = s["conditions"]
@@ -268,6 +292,7 @@ def engine_state(sd: dict) -> pe.State:
 
 
 DAMAGE = re.compile(r"^Damage (SideOne|SideTwo): (-?\d+)$")
+SUB_DAMAGE = re.compile(r"^DamageSubstitute (SideOne|SideTwo): (-?\d+)$")
 
 
 def engine_outcomes(state: pe.State, c1: str, c2: str) -> list[tuple[float, pe.State]]:
@@ -277,22 +302,27 @@ def engine_outcomes(state: pe.State, c1: str, c2: str) -> list[tuple[float, pe.S
     out = []
     for si in pe.generate_instructions(state, c1, c2):
         # the binding returns a new state (it does not change ``state``)
-        dmg = [0, 0]
+        dmg, sub = [0, 0], [0, 0]
         for ins in si.instruction_list:
             m = DAMAGE.match(str(ins))
             if m:  # (a negative one is a heal: Pain Split, not a roll)
                 dmg[m.group(1) == "SideTwo"] += max(int(m.group(2)), 0)
-        out.append((si.percentage / 100, state.apply_instructions(si), tuple(dmg)))
-    return [Outcome(p, s, d) for p, s, d in out]
+            m = SUB_DAMAGE.match(str(ins))
+            if m:
+                sub[m.group(1) == "SideTwo"] += max(int(m.group(2)), 0)
+        out.append((si.percentage / 100, state.apply_instructions(si), tuple(dmg), tuple(sub)))
+    return [Outcome(p, s, d, b) for p, s, d, b in out]
 
 
 class Outcome(tuple):
     """(probability, state) with the damage each side took (the sum of the outcome's Damage
     instructions: the roll tolerance of the HP comparison)."""
 
-    def __new__(cls, p: float, state: pe.State, damage: tuple[int, int]):
+    def __new__(cls, p: float, state: pe.State, damage: tuple[int, int],
+                sub_damage: tuple[int, int] = (0, 0)):  # fmt: skip
         o = super().__new__(cls, (p, state))
         o.damage = damage
+        o.sub_damage = sub_damage  # (the damage each side's Substitute took)
         return o
 
 
@@ -389,6 +419,188 @@ def view_engine(s: pe.State, n_mons: tuple[int, int] = (6, 6)) -> dict:
     return _drop_fainted_active(v)
 
 
+# the moves / items that make the engine keep a count it otherwise leaves (its conditional
+# mechanics, State::set_conditional_mechanics): compared only then
+LAST_USED_MOVES = {"encore", "fakeout", "firstimpression", "bloodmoon", "gigatonhammer", "disable"}
+
+
+def _field_moves(s: pe.State) -> set[str]:
+    return {str(m.id).lower() for side in (s.side_one, s.side_two) for p in side.pokemon
+            for m in p.moves}  # fmt: skip
+
+
+def extra_view(s: pe.State, n_mons: tuple[int, int] = (6, 6)) -> dict:
+    """The rest of a state a player can refer to, beyond ``view_engine``'s (doc/engine-diff.md,
+    full comparison, 2026-10-17): every mon's species / forme, level, types, stats, max HP,
+    ability, base ability, weight, tera, moves, PP, disabled moves, sleep / Rest turns, last item,
+    Stellar boosts; each side's side conditions with their turns, Protect's and toxic's counts,
+    Wish, Future Sight, the active's Substitute HP, its volatiles' counts, its last used move;
+    the field's turns left. Compared on the engine's own state and on ``engine_state`` of
+    Showdown's (the same units). A fainted mon: its HP only (``view``); a fainted active: none of
+    its side's active-only fields. Kept only when the engine keeps them: times attacked (a Rage
+    Fist on the field), the battle's last move (a Copycat), the last used move (L24 / L70)."""
+    moves = _field_moves(s)
+    items = {str(p.item).lower() for side in (s.side_one, s.side_two) for p in side.pokemon}
+    abilities = {str(p.ability).lower() for side in (s.side_one, s.side_two) for p in side.pokemon}
+    v: dict = {}
+    if str(s.weather).lower() != "none":
+        v["weather.turns"] = s.weather_turns_remaining
+    if str(s.terrain).lower() != "none":
+        v["terrain.turns"] = s.terrain_turns_remaining
+    if s.trick_room:
+        v["trick_room.turns"] = s.trick_room_turns_remaining
+    if "copycat" in moves:
+        v["last_move"] = str(s.last_move).lower()
+    for (k, side), n in zip((("s1", s.side_one), ("s2", s.side_two)), n_mons, strict=True):
+        a = int(side.active_index)
+        for j, m in enumerate(side.pokemon[:n]):
+            if m.hp <= 0:
+                continue
+            p = f"{k}.{j}."
+            v[p + "id"] = str(m.id).lower()
+            v[p + "level"] = m.level
+            v[p + "types"] = tuple(str(t).lower() for t in m.types)
+            v[p + "base_types"] = tuple(str(t).lower() for t in m.base_types)
+            v[p + "gender"] = m.gender
+            v[p + "nature"] = str(m.nature).lower()
+            v[p + "maxhp"] = m.maxhp
+            for st in ("attack", "defense", "special_attack", "special_defense", "speed"):
+                v[p + st] = getattr(m, st)
+            v[p + "ability"] = str(m.ability).lower()
+            v[p + "base_ability"] = str(m.base_ability).lower()
+            v[p + "weight"] = round(m.weight_kg, 1)
+            v[p + "terastallized"] = bool(m.terastallized)
+            v[p + "tera_type"] = str(m.tera_type).lower()
+            v[p + "last_item"] = str(m.last_item).lower()
+            v[p + "stellar_boosted"] = tuple(sorted(m.stellar_boosted))
+            if str(m.status).lower() == "sleep":
+                v[p + "sleep_turns"] = (m.rest_turns, m.sleep_turns)
+            if "ragefist" in moves:
+                v[p + "times_attacked"] = m.times_attacked
+            for i, mv in enumerate(m.moves):
+                if str(mv.id).lower() == "none":
+                    continue
+                v[f"{p}move[{i}]"] = str(mv.id).lower()
+                v[f"{p}pp[{i}]"] = mv.pp
+                # (a move's use: the side's legal options, extra_diff, not the disabled flags --
+                # Showdown sets them for the request, the engine keeps locks in volatiles)
+        sc = side.side_conditions
+        for f in ("reflect", "light_screen", "aurora_veil", "tailwind", "safeguard", "mist",
+                  "lucky_chant", "healing_wish", "lunar_dance", "toxic_count"):  # fmt: skip
+            v[f"{k}.sc.{f}"] = getattr(sc, f)
+        if side.wish[0] > 0:
+            v[f"{k}.wish"] = tuple(side.wish)
+        if side.future_sight[0] > 0:
+            v[f"{k}.future_sight"] = (side.future_sight[0], int(side.future_sight[1]))
+        if side.pokemon[a].hp <= 0:
+            continue
+        v[f"{k}.sc.protect"] = sc.protect
+        vol = {str(x).lower() for x in side.volatile_statuses}
+        if "substitute" in vol:
+            v[f"{k}.substitute_hp"] = side.substitute_health
+        d = side.volatile_status_durations
+        for f in ("confusion", "encore", "lockedmove", "slowstart", "taunt", "yawn", "healblock",
+                  "magnetrise", "throatchop", "partiallytrapped", "metronome", "disable",
+                  "stockpile", "micleberry"):  # fmt: skip
+            if f in vol:
+                v[f"{k}.count.{f}"] = getattr(d, f)
+        if moves & LAST_USED_MOVES or "metronome" in items or "cursedbody" in abilities:
+            v[f"{k}.last_used_move"] = str(side.last_used_move).lower()
+    return v
+
+
+def _id(name: str) -> str:
+    return re.sub(r"[^a-z0-9]", "", name.lower())
+
+
+def showdown_options(side: dict) -> set[str] | None:
+    """A side's legal actions in its Showdown request, in the engine's terms (``pe.options``):
+    each usable move (and with ``-tera`` when it can terastallize), ``switch <species>`` for
+    each mon it may switch to; None when the request is not a move request."""
+    req = side.get("request_json")
+    if not req or not req.get("active") or req.get("wait") or req.get("forceSwitch"):
+        return None
+    act = req["active"][0]
+    out = set()
+    usable = [m for m in act["moves"] if not m.get("disabled")]
+    for m in usable:
+        mid = m["id"]
+        if mid in ("struggle", "recharge"):
+            out.add("none")
+            continue
+        out.add(mid)
+        if act.get("canTerastallize"):
+            out.add(mid + "-tera")
+    # (switches by the state's species ids: the request's details name a forme by its species --
+    # Greninja-Bond's "Greninja")
+    if not act.get("trapped") and not (side["active"] >= 0 and side["mons"][side["active"]].get("trapped")):
+        for j, m in enumerate(side["mons"]):
+            if j != side["active"] and m["hp"] > 0:
+                out.add("switch " + m["species"])
+    return out
+
+
+# the volatiles whose length Showdown draws when they start (hidden): engine_state encodes the
+# drawn length in the engine's count, so a count is compared only once the volatile was there at
+# the start (the turn it starts, the engine's count is its own start)
+HIDDEN_LENGTH = ("confusion", "partiallytrapped", "lockedmove")
+
+
+def extra_diff(showdown_after: dict, out, n_mons=(6, 6), hp: bool = True,
+               start: dict | None = None) -> dict:  # fmt: skip
+    """``extra_view``'s differences, the engine's outcome against Showdown's state (in the
+    engine's units); a Substitute's HP within the rolls' spread of the damage it took; ``start``:
+    Showdown's state the turn started from (HIDDEN_LENGTH)."""
+    try:
+        target = extra_view(engine_state(showdown_after), n_mons)
+    except BaseException:  # noqa: BLE001 - a state the conversion cannot build
+        return {}
+    v = extra_view(out[1], n_mons)
+    for k, i in (("s1", 0), ("s2", 1)):
+        for x in HIDDEN_LENGTH:
+            s = (start or {}).get("sides", [{}, {}])[i] if start else None
+            had = s is not None and s.get("active", -1) >= 0 and x in s["mons"][s["active"]]["volatiles"] \
+                and s["active"] == showdown_after["sides"][i]["active"]
+            if not had:
+                v.pop(f"{k}.count.{x}", None)
+                target.pop(f"{k}.count.{x}", None)
+    sub = getattr(out, "sub_damage", (0, 0))
+    bad = {}
+    for key in sorted(set(v) | set(target)):
+        e, t = v.get(key), target.get(key)
+        if e == t:
+            continue
+        if key.endswith(".substitute_hp"):
+            if not hp:
+                continue
+            side = 0 if key.startswith("s1.") else 1
+            if e is not None and t is not None and abs(e - t) <= 0.085 * sub[side] + 2:
+                continue
+        bad[key] = (e, t)
+    # who must switch at a decision (a faint's replacement, a pivot's switch; Showdown's switch
+    # request, the engine's force_switch or a fainted active)
+    sides = showdown_after["sides"]
+    eng = (out[1].side_one, out[1].side_two)
+    for (k, side), s, other in zip((("s1", eng[0]), ("s2", eng[1])), sides, eng[::-1], strict=True):
+        # (a fainted active's replacement waits for the other side's pivot switch first)
+        must = bool(side.force_switch) or (side.pokemon[int(side.active_index)].hp <= 0
+                                           and not other.force_switch)
+        if s["request"] in ("move", "switch", "wait") and must != (s["request"] == "switch"):
+            # (a side with nobody left to send in: no request -- "wait" -- in Showdown)
+            if not (must and s["request"] == "wait"
+                    and not any(m["hp"] > 0 for j, m in enumerate(s["mons"]) if j != s["active"])):
+                bad[f"{k}.must_switch"] = (must, s["request"] == "switch")
+    # the legal actions (where both sides choose a move next)
+    want = [showdown_options(s) for s in sides]
+    if all(w is not None for w in want):
+        got = pe.options(out[1])
+        for k, g, w in zip(("s1", "s2"), got, want, strict=True):
+            g = {"none" if x == "No Move" else x for x in g}
+            if g != w:
+                bad[f"{k}.options"] = (sorted(g - w), sorted(w - g))
+    return bad
+
+
 def diff(a: dict, b: dict, skip_hp: bool = False) -> dict:
     """{key: (a's, b's)} where two views differ (``skip_hp``: HP left out)."""
     keys = set(a) | set(b)
@@ -421,15 +633,18 @@ def hp_diff(showdown_after: dict, out, n_mons=(6, 6), tol: int = 2,
 
 
 def closest(showdown_after: dict, outs: list, n_mons=(6, 6), hp: bool = False,
-            dealt=(False, False)) -> dict:  # fmt: skip
+            dealt=(False, False), full: bool = False, start: dict | None = None) -> dict:  # fmt: skip
     """The engine outcome nearest to Showdown's next state: its differences and probability.
-    HP is left out unless ``hp`` (then compared within the damage rolls' spread, ``hp_diff``)."""
+    HP is left out unless ``hp`` (then compared within the damage rolls' spread, ``hp_diff``);
+    ``full``: the rest of the state too (``extra_view``)."""
     target = view(showdown_after)
     best = None
     for o in outs:
         d = diff(view_engine(o[1], n_mons), target, skip_hp=True)
         if hp:
             d |= hp_diff(showdown_after, o, n_mons, dealt=dealt)
+        if full:
+            d |= extra_diff(showdown_after, o, n_mons, hp=hp, start=start)
         if best is None or len(d) < len(best[1]):
             best = (o[0], d)
     return {"p": best[0], "diff": best[1]} if best else {"p": 0.0, "diff": {"no outcome": 1}}

@@ -252,3 +252,20 @@ def test_dance_moves_match_showdown():
                   if m["id"] in eng and "dance" in m["flags"])  # fmt: skip
     assert len(want) >= 12
     assert alpha_search.dance_moves() == want
+
+
+def test_pressure_moves_match_showdown():
+    """The moves a foe's Pressure takes one more PP of (Showdown's pressureTargets: aimed at the
+    foe, the field's 'all' moves, mustpressure; L177), among the engine's moves."""
+    import alpha_search
+
+    from alpha_poke.enginecheck import data
+
+    eng = dict(alpha_search.move_targets())
+    foe = {"normal", "any", "adjacentFoe", "allAdjacentFoes", "allAdjacent", "randomNormal",
+           "scripted", "all"}  # fmt: skip
+    want = sorted(m["id"] for m in data.showdown()["moves"] if m["id"] in eng
+                  and (m["target"] in foe or "mustpressure" in m["flags"]))  # fmt: skip
+    ids = {m["id"] for m in data.showdown()["moves"]}
+    got = [m for m in alpha_search.pressure_moves() if m in ids]
+    assert sorted(set(want) - set(got)) == [] and sorted(set(got) - set(want)) == []

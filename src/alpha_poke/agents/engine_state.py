@@ -578,6 +578,17 @@ def _timed(tm: SideTimers, active, mons: list, engine_mons: list, vol: set[str])
     return out
 
 
+def _tera_used(mons: list, used: bool) -> list:
+    """``mons`` with a fainted one terastallized when the side used its Terastallization and no
+    mon shows it (doc/engine-diff.md L177)."""
+    if not used or any(p.terastallized for p in mons):
+        return mons
+    j = next((j for j, p in enumerate(mons) if p.hp <= 0), None)
+    if j is None:
+        return mons
+    return mons[:j] + [_with(mons[j], terastallized=True)] + mons[j + 1:]
+
+
 def _pad(mons: list) -> list:
     return (mons + [pe.Pokemon.create_fainted() for _ in range(6)])[:6]
 
@@ -736,6 +747,10 @@ def build_state(
                 if EXTENDERS.get(what) == item or (kind == "terrain" and item == "terrainextender"):
                     ext[kind] = 8
 
+    # (L177: a side's Terastallization used by a mon that fainted since: the engine reads it off
+    # its mons, can_use_tera)
+    our_mons = _tera_used(our_mons, bool(getattr(battle, "used_tera", False)))
+    their_mons = _tera_used(their_mons, bool(getattr(battle, "opponent_used_tera", False)))
     side_one = pe.Side(
         pokemon=_pad(our_mons),
         active_index=pe.PokemonIndex(str(our_idx)),

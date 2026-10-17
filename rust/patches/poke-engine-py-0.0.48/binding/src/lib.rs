@@ -94,6 +94,7 @@ impl Into<State> for PyState {
             use_times_attacked: false,
             last_move: Choices::from_str(&self.last_move).unwrap_or(Choices::NONE),
             use_last_move: false,
+            use_exact_pp: false,
         };
         state.set_conditional_mechanics();
         state
@@ -1034,6 +1035,22 @@ impl PyIterativeDeepeningResult {
     }
 }
 
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L177): the options each side has at the root
+// (the full comparison's legal actions)
+#[pyfunction]
+fn options(py_state: PyState) -> (Vec<String>, Vec<String>) {
+    let state: State = py_state.into();
+    let (s1, s2) = state.root_get_all_options();
+    (
+        s1.iter()
+            .map(|m| movechoice_to_string(&state.side_one, m))
+            .collect(),
+        s2.iter()
+            .map(|m| movechoice_to_string(&state.side_two, m))
+            .collect(),
+    )
+}
+
 #[pyfunction]
 fn mcts(
     py_state: PyState,
@@ -1238,6 +1255,7 @@ fn py_poke_engine(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(generate_instructions, m)?)?;
     m.add_function(wrap_pyfunction!(id, m)?)?;
     m.add_function(wrap_pyfunction!(mcts, m)?)?;
+    m.add_function(wrap_pyfunction!(options, m)?)?;
     m.add_class::<PyState>()?;
     m.add_class::<PySide>()?;
     m.add_class::<PySideConditions>()?;

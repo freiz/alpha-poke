@@ -37,8 +37,9 @@ from alpha_poke import enginecheck as ec
 
 
 def kind_of(key: str) -> str:
-    """'s1.0.hp' -> 'hp', 's2.boost.def' -> 'boost.def', 's1.volatile.x' -> 'volatile.x'."""
-    return re.sub(r"^s[12]\.(\d+\.)?", "", key)
+    """'s1.0.hp' -> 'hp', 's2.boost.def' -> 'boost.def', 's1.volatile.x' -> 'volatile.x',
+    's1.2.pp[1]' -> 'pp'."""
+    return re.sub(r"\[\d+\]$", "", re.sub(r"^s[12]\.(\d+\.)?", "", key))
 
 
 @functools.cache
@@ -109,7 +110,8 @@ def battle(job: tuple) -> dict:
             # (an Endeavor's target ends at its user's HP: it follows the damage it dealt itself)
             dealt = (follows_dealt(a["state"], 0, c1) or c2.startswith("endeavor"),
                      follows_dealt(a["state"], 1, c2) or c1.startswith("endeavor"))  # fmt: skip
-            res = ec.closest(b["state"], outs, n, hp=True, dealt=dealt)
+            res = ec.closest(b["state"], outs, n, hp=True, dealt=dealt, full=True,
+                             start=a["state"])  # fmt: skip
         except BaseException as e:  # noqa: BLE001 - the binding's panics are BaseExceptions
             out["errors"].append(f"engine: {c1} | {c2}: {type(e).__name__}: {str(e)[:120]}")
             out["mismatches"][f"b{i}-t{a['state']['turn']}"] = {

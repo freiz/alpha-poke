@@ -2871,6 +2871,15 @@ pub fn transform_into(
             m.id = new;
             m.choice = MOVES.get(&new).unwrap().to_owned();
         }
+        // (L177: every copied move can be chosen: a slot the transformed mon had disabled -- an
+        // empty one, a Disable -- is not)
+        if m.disabled && new != Choices::NONE {
+            list.push(Instruction::EnableMove(EnableMoveInstruction {
+                side_ref: *side_ref,
+                move_index: index,
+            }));
+            m.disabled = false;
+        }
         let pp = if new == Choices::NONE { 0 } else { 5 };
         if m.pp != pp {
             list.push(Instruction::DecrementPP(DecrementPPInstruction {
@@ -3757,6 +3766,17 @@ pub fn generate_instructions_from_move(
         return;
     }
 
+    // (L177: locked into the move: no PP -- Showdown's getLockedMove; Outrage's later turns, a
+    // charge move's second)
+    let locked_move = {
+        let side = state.get_side_immutable(&attacking_side);
+        side.volatile_statuses
+            .contains(&PokemonVolatileStatus::LOCKEDMOVE)
+            || (choice.flags.charge
+                && side
+                    .volatile_statuses
+                    .contains(&charge_choice_to_volatile(&choice.move_id)))
+    };
     // If the move is a charge move, remove the volatile status if damage was done
     if choice.flags.charge {
         let side = state.get_side(&attacking_side);
@@ -3939,59 +3959,6 @@ pub fn generate_instructions_from_move(
             ));
     }
 
-    // most of the time pp decrement doesn't matter and just adds another instruction
-    // so we only decrement pp if the move is at 10 or less pp since that is when it starts
-    // to matter
-    let unnerve = super::items::unnerved(state, &attacking_side);
-    let (attacker_side, defender_side) = state.get_both_sides(&attacking_side);
-    let active = attacker_side.get_active();
-    if !called && active.moves[&choice.move_index].pp < 10 {
-        let pp_decrement_amount = if choice.target == MoveTarget::Opponent
-            && defender_side.get_active_immutable().ability == Abilities::PRESSURE
-        {
-            2
-        } else {
-            1
-        };
-        incoming_instructions
-            .instruction_list
-            .push(Instruction::DecrementPP(DecrementPPInstruction {
-                side_ref: attacking_side,
-                move_index: choice.move_index,
-                amount: pp_decrement_amount,
-            }));
-        active.moves[&choice.move_index].pp -= pp_decrement_amount;
-        // alpha-poke patch (2026-10-16, doc/engine-diff.md L24): Leppa Berry, 10 PP back to a move
-        // at 0, at most its max
-        if active.item == Items::LEPPABERRY && active.moves[&choice.move_index].pp <= 0 && !unnerve
-        {
-            let back = cmp::min(10, choice.move_id.max_pp_below_10().unwrap_or(10))
-                - active.moves[&choice.move_index].pp;
-            incoming_instructions
-                .instruction_list
-                .push(Instruction::DecrementPP(DecrementPPInstruction {
-                    side_ref: attacking_side,
-                    move_index: choice.move_index,
-                    amount: -back,
-                }));
-            active.moves[&choice.move_index].pp += back;
-            incoming_instructions
-                .instruction_list
-                .push(Instruction::ChangeItem(ChangeItemInstruction {
-                    side_ref: attacking_side,
-                    current_item: Items::LEPPABERRY,
-                    new_item: Items::NONE,
-                }));
-            active.item = Items::NONE;
-            set_last_item(
-                active,
-                attacking_side,
-                Items::LEPPABERRY,
-                &mut incoming_instructions,
-            );
-        }
-    }
-
     let asleep_or_frozen_before = matches!(
         state
             .get_side_immutable(&attacking_side)
@@ -4008,6 +3975,75 @@ pub fn generate_instructions_from_move(
             &mut final_instructions,
         );
     }
+    let asleep_now = state
+        .get_side_immutable(&attacking_side)
+        .get_active_immutable()
+        .status
+        == PokemonStatus::SLEEP;
+    if !(asleep_now && choice.move_id != Choices::SLEEPTALK && !choice.sleep_talk_move) {
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L177): the PP as Showdown's runMove /
+        // useMoveInner: past the BeforeMove (not when asleep, fully paralyzed, confused into itself,
+        // ...), every time (was only below 10), not while locked into the move (Outrage's later
+        // turns, a charge move's second: getLockedMove), not for a called move (its caller's: Sleep
+        // Talk, Copycat); Pressure 1 more when the move is aimed at its holder (Showdown's
+        // pressureTargets: the foe, the field's 'all', the mustpressure hazards; not under the
+        // mover's Neutralizing Gas)
+        let unnerve = super::items::unnerved(state, &attacking_side);
+        let exact_pp = state.use_exact_pp;
+        let (attacker_side, defender_side) = state.get_both_sides(&attacking_side);
+        let active = attacker_side.get_active();
+        let pressure = {
+            let foe = defender_side.get_active_immutable();
+            foe.ability == Abilities::PRESSURE
+                && foe.hp > 0
+                && active.ability != Abilities::NEUTRALIZINGGAS
+                && choice.move_id.pressure_applies(&choice.target)
+        };
+        if !called
+            && !locked_move
+            && choice.move_id != Choices::NONE
+            && (exact_pp || active.moves[&choice.move_index].pp < 10)
+        {
+            let pp_decrement_amount = if pressure { 2 } else { 1 };
+            incoming_instructions
+                .instruction_list
+                .push(Instruction::DecrementPP(DecrementPPInstruction {
+                    side_ref: attacking_side,
+                    move_index: choice.move_index,
+                    amount: pp_decrement_amount,
+                }));
+            active.moves[&choice.move_index].pp -= pp_decrement_amount;
+            // alpha-poke patch (2026-10-16, doc/engine-diff.md L24): Leppa Berry, 10 PP back to a move
+            // at 0, at most its max
+            if active.item == Items::LEPPABERRY && active.moves[&choice.move_index].pp <= 0 && !unnerve
+            {
+                let back = cmp::min(10, choice.move_id.max_pp_below_10().unwrap_or(10))
+                    - active.moves[&choice.move_index].pp;
+                incoming_instructions
+                    .instruction_list
+                    .push(Instruction::DecrementPP(DecrementPPInstruction {
+                        side_ref: attacking_side,
+                        move_index: choice.move_index,
+                        amount: -back,
+                    }));
+                active.moves[&choice.move_index].pp += back;
+                incoming_instructions
+                    .instruction_list
+                    .push(Instruction::ChangeItem(ChangeItemInstruction {
+                        side_ref: attacking_side,
+                        current_item: Items::LEPPABERRY,
+                        new_item: Items::NONE,
+                    }));
+                active.item = Items::NONE;
+                set_last_item(
+                    active,
+                    attacking_side,
+                    Items::LEPPABERRY,
+                    &mut incoming_instructions,
+                );
+            }
+        }
+    }
     let attacker = state
         .get_side_immutable(&attacking_side)
         .get_active_immutable();
@@ -4017,6 +4053,8 @@ pub fn generate_instructions_from_move(
         let num_choices = new_choices.len() as f32;
         for mut new_choice in new_choices {
             new_choice.sleep_talk_move = true;
+            // (L177: Sleep Talk's PP and last used move, not the called move's)
+            new_choice.called_move = true;
             let mut sleep_talk_instructions = incoming_instructions.clone();
             sleep_talk_instructions.update_percentage(1.0 / num_choices);
             generate_instructions_from_move(
