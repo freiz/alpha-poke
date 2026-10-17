@@ -1250,7 +1250,12 @@ impl State {
                 self.side_one
                     .volatile_statuses
                     .contains(&PokemonVolatileStatus::THROATCHOP),
-                self.side_one.can_use_tera(),
+                // (L179: not while locked into a move -- Showdown's request offers no Terastallization then)
+                self.side_one.can_use_tera()
+                    && !self
+                        .side_one
+                        .volatile_statuses
+                        .contains(&PokemonVolatileStatus::LOCKEDMOVE),
                 self.side_one.can_use_mega(),
                 self.side_one
                     .volatile_statuses
@@ -1284,7 +1289,12 @@ impl State {
                 self.side_two
                     .volatile_statuses
                     .contains(&PokemonVolatileStatus::THROATCHOP),
-                self.side_two.can_use_tera(),
+                // (L179: not while locked into a move -- Showdown's request offers no Terastallization then)
+                self.side_two.can_use_tera()
+                    && !self
+                        .side_two
+                        .volatile_statuses
+                        .contains(&PokemonVolatileStatus::LOCKEDMOVE),
                 self.side_two.can_use_mega(),
                 self.side_two
                     .volatile_statuses
@@ -1379,12 +1389,29 @@ impl State {
                 self.side_one
                     .volatile_statuses
                     .contains(&PokemonVolatileStatus::THROATCHOP),
-                self.side_one.can_use_tera(),
+                // (L179: not while locked into a move -- Showdown's request offers no Terastallization then)
+                self.side_one.can_use_tera()
+                    && !self
+                        .side_one
+                        .volatile_statuses
+                        .contains(&PokemonVolatileStatus::LOCKEDMOVE),
                 self.side_one.can_use_mega(),
                 self.side_one
                     .volatile_statuses
                     .contains(&PokemonVolatileStatus::HEALBLOCK),
             );
+            // (L179: not a move the foe's Imprison holder knows -- Showdown's onFoeDisableMove)
+            let foe = &self.side_two;
+            let active = self.side_one.get_active_immutable();
+            side_one_options.retain(|o| match o {
+                MoveChoice::Move(i) | MoveChoice::MoveTera(i) | MoveChoice::MoveMega(i) => {
+                    !super::generate_instructions::imprisoned(foe, active.moves[i].id)
+                }
+                _ => true,
+            });
+            if side_one_options.is_empty() {
+                side_one_options.push(MoveChoice::None);
+            }
             if !self.side_one.trapped(side_two_active) {
                 self.side_one.add_switches(&mut side_one_options);
             }
@@ -1415,12 +1442,29 @@ impl State {
                 self.side_two
                     .volatile_statuses
                     .contains(&PokemonVolatileStatus::THROATCHOP),
-                self.side_two.can_use_tera(),
+                // (L179: not while locked into a move -- Showdown's request offers no Terastallization then)
+                self.side_two.can_use_tera()
+                    && !self
+                        .side_two
+                        .volatile_statuses
+                        .contains(&PokemonVolatileStatus::LOCKEDMOVE),
                 self.side_two.can_use_mega(),
                 self.side_two
                     .volatile_statuses
                     .contains(&PokemonVolatileStatus::HEALBLOCK),
             );
+            // (L179: not a move the foe's Imprison holder knows -- Showdown's onFoeDisableMove)
+            let foe = &self.side_one;
+            let active = self.side_two.get_active_immutable();
+            side_two_options.retain(|o| match o {
+                MoveChoice::Move(i) | MoveChoice::MoveTera(i) | MoveChoice::MoveMega(i) => {
+                    !super::generate_instructions::imprisoned(foe, active.moves[i].id)
+                }
+                _ => true,
+            });
+            if side_two_options.is_empty() {
+                side_two_options.push(MoveChoice::None);
+            }
             if !self.side_two.trapped(side_one_active) {
                 self.side_two.add_switches(&mut side_two_options);
             }
@@ -1762,6 +1806,8 @@ impl State {
             Choices::BLOODMOON,
             Choices::GIGATONHAMMER,
             Choices::DISABLE,
+            // (L179: Taunt reads it -- the target came in this turn, Showdown's activeTurns)
+            Choices::TAUNT,
         ]) {
             self.use_last_used_move = true
         }

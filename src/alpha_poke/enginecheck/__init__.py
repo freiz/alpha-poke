@@ -150,7 +150,11 @@ def _engine_mon(m: dict) -> pe.Pokemon:
         status=STATUS[m["status"]], weight_kg=m["weight"], nature=m.get("nature", "serious").lower(),
         # (a benched mon's disabled flags are its last request's -- a Choice lock --: Showdown
         # sets them afresh for its next one; L177)
-        moves=[pe.Move(id=x["id"], pp=x["pp"], disabled=x["disabled"] and bool(m.get("active")))
+        # (L179: a locking move's -- Outrage's -- lock: its other moves disabled, as the engine
+        # keeps it; Showdown's request lists only the locked one)
+        moves=[pe.Move(id=x["id"], pp=x["pp"], disabled=bool(m.get("active")) and (
+                   x["disabled"] or ("lockedmove" in m.get("volatiles", {})
+                                     and x["id"] != m["volatiles"]["lockedmove"].get("move"))))
                for x in m["moves"]],
         terastallized=bool(m["terastallized"]), tera_type=(m["tera_type"] or "typeless").lower(),
         last_item=m.get("last_item") if _engine_item(m.get("last_item") or "") else "none",
@@ -421,7 +425,8 @@ def view_engine(s: pe.State, n_mons: tuple[int, int] = (6, 6)) -> dict:
 
 # the moves / items that make the engine keep a count it otherwise leaves (its conditional
 # mechanics, State::set_conditional_mechanics): compared only then
-LAST_USED_MOVES = {"encore", "fakeout", "firstimpression", "bloodmoon", "gigatonhammer", "disable"}
+LAST_USED_MOVES = {"encore", "fakeout", "firstimpression", "bloodmoon", "gigatonhammer", "disable",
+                   "taunt"}
 
 
 def _field_moves(s: pe.State) -> set[str]:
@@ -522,7 +527,10 @@ def showdown_options(side: dict) -> set[str] | None:
         return None
     act = req["active"][0]
     out = set()
-    usable = [m for m in act["moves"] if not m.get("disabled")]
+    # (a hidden disable -- Imprison's -- shows as usable in the request: the move slot's own flag)
+    mon = side["mons"][side["active"]] if side.get("active", -1) >= 0 else {"moves": []}
+    hidden = {x["id"] for x in mon["moves"] if x.get("disabled")}
+    usable = [m for m in act["moves"] if not m.get("disabled") and m["id"] not in hidden]
     for m in usable:
         mid = m["id"]
         if mid in ("struggle", "recharge"):

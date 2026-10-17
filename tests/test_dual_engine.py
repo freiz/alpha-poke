@@ -4812,3 +4812,102 @@ def test_l178_air_balloon_is_not_used():
     states = ec.run_showdown(gar, BLISSEY, [("move swordsdance", "move seismictoss")])
     assert states[1]["sides"][0]["mons"][0]["item"] == "" and states[1]["sides"][0]["mons"][0]["last_item"] == ""
     assert _last_items(states, 0, "swordsdance", "seismictoss") == {}
+
+
+# L179 (doc/engine-diff.md): locks and counts as Showdown's: Outrage's lock with its effect (not
+# into an immune target), no Terastallization while locked; a Choice item's lock past the
+# BeforeMove (not in a full paralysis), gone with the item (Trick); Taunt's turns for a target that
+# came in this turn; Cursed Body's Disable 4 turns; the last used move past the BeforeMove (not a
+# flinched move); Imprison
+def _keys(d: dict, *names) -> dict:
+    return {k: v for k, v in d.items() if any(n in k for n in names)}
+
+
+def test_l179_outrage_into_an_immune_target_does_not_lock():
+    garchomp = GARCHOMP_SD.replace("- Scale Shot", "- Outrage")
+    states = ec.run_showdown(garchomp, CLEFABLE, [("move outrage", "move calmmind")])
+    assert _keys(_full(states, 0, "outrage", "calmmind"), "options", "volatile") == {}
+
+
+def test_l179_no_tera_while_locked():
+    garchomp = GARCHOMP_SD.replace("- Scale Shot", "- Outrage")
+    states = ec.run_showdown(garchomp, BLISSEY, [("move outrage", "move softboiled")])
+    assert _keys(_full(states, 0, "outrage", "softboiled"), "options") == {}
+
+
+def test_l179_choice_lock_not_in_a_full_paralysis_and_gone_with_the_item():
+    pult = DRAGAPULT_COPYCAT.replace("Dragapult @ Leftovers", "Dragapult @ Choice Specs")
+    blissey = BLISSEY.replace("- Protect", "- Thunder Wave")
+    states = ec.run_showdown(pult, blissey, [("move dracometeor", "move thunderwave"),
+                                              ("move dracometeor", "move calmmind")], force_random=True)  # fmt: skip
+    assert _keys(_full(states, 1, "dracometeor", "calmmind"), "options") == {}
+    iv = """Iron Valiant @ Choice Scarf
+Ability: Quark Drive
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Trick
+- Moonblast
+- Shadow Ball
+- Thunderbolt"""
+    states = ec.run_showdown(iv, BLISSEY, [("move trick", "move calmmind")])
+    assert _keys(_full(states, 0, "trick", "calmmind"), "options") == {}
+
+
+def test_l179_taunt_on_a_mon_that_came_in():
+    gren = """Grimmsnarl @ Light Clay
+Ability: Prankster
+EVs: 252 HP / 4 Atk / 252 SpD
+Careful Nature
+- Taunt
+- Spirit Break
+- Reflect
+- Thunder Wave"""
+    # (its side's last used move a move before: the switch-in must count as one that came in)
+    states = ec.run_showdown(gren, CORVIKNIGHT + "\n\n" + BLISSEY, [("move reflect", "move roost"),
+                                                                    ("move taunt", "switch 2")])  # fmt: skip
+    assert _keys(_full(states, 1, "taunt", "blissey", (1, 2)), "count", "options") == {}
+
+
+def test_l179_cursed_body_disable_turns():
+    gengar = """Gengar @ Leftovers
+Ability: Cursed Body
+EVs: 252 HP / 4 SpA / 252 Spe
+Timid Nature
+- Shadow Ball
+- Sludge Bomb
+- Hex
+- Protect"""
+    # (a seed where it goes off: force_random gives Showdown's Disable a turn more)
+    states = ec.run_showdown(GARCHOMP_SD.replace("- Earthquake", "- Crunch"), gengar,
+                             [("move crunch", "move hex")], seed="gen5,23,23,23,23")  # fmt: skip
+    assert any("Cursed Body" in x for x in states[1]["log"])
+    assert _keys(_full(states, 0, "crunch", "hex"), "count", "options") == {}
+
+
+def test_l179_flinched_move_is_not_the_last_used():
+    tusk = """Iron Treads @ Leftovers
+Ability: Quark Drive
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- Iron Head
+- Rapid Spin
+- Knock Off
+- Encore"""
+    states = ec.run_showdown(tusk, BLISSEY, [("move ironhead", "move calmmind")], force_random=True)
+    assert any(x.startswith("|cant|p2a: Blissey|flinch") for x in states[1]["log"])
+    assert _keys(_full(states, 0, "ironhead", "calmmind"), "last_used_move") == {}
+
+
+def test_l179_imprison():
+    mew = """Mew @ Leftovers
+Ability: Synchronize
+EVs: 252 HP / 252 Def / 4 SpD
+Bold Nature
+- Imprison
+- Soft-Boiled
+- Calm Mind
+- Seismic Toss"""
+    states = ec.run_showdown(mew, BLISSEY, [("move imprison", "move calmmind"), ("move calmmind", "move protect")])
+    assert any("move: Imprison" in x for x in states[1]["log"])
+    assert ec.showdown_options(states[1]["sides"][1]) == {"protect", "protect-tera"}
+    assert _keys(_full(states, 0, "imprison", "calmmind"), "options") == {}

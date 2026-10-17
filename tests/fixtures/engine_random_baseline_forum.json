@@ -28,20 +28,8 @@
 "b105-t8": [
 "base_ability"
 ],
-"b106-t19": [
-"options"
-],
 "b106-t2": [
 "base_ability"
-],
-"b106-t20": [
-"options"
-],
-"b108-t11": [
-"options"
-],
-"b109-t23": [
-"options"
 ],
 "b11-t27": [
 "base_ability"
@@ -52,20 +40,8 @@
 "b110-t52": [
 "pp"
 ],
-"b111-t1": [
-"options"
-],
 "b111-t10": [
 "base_ability"
-],
-"b111-t8": [
-"options"
-],
-"b112-t23": [
-"last_used_move"
-],
-"b112-t25": [
-"options"
 ],
 "b113-t59": [
 "base_ability"
@@ -76,14 +52,8 @@
 "b114-t2": [
 "base_ability"
 ],
-"b116-t21": [
-"options"
-],
 "b118-t30": [
 "base_ability"
-],
-"b119-t11": [
-"options"
 ],
 "b119-t17": [
 "pp"
@@ -91,41 +61,17 @@
 "b12-t3": [
 "base_ability"
 ],
-"b121-t12": [
-"options"
-],
 "b122-t33": [
 "base_ability"
 ],
 "b124-t22": [
 "sc.protect"
 ],
-"b124-t39": [
-"last_used_move"
-],
-"b124-t4": [
-"last_used_move"
-],
 "b124-t42": [
 "pp"
 ],
 "b125-t27": [
 "pp"
-],
-"b125-t28": [
-"options"
-],
-"b126-t11": [
-"options"
-],
-"b126-t14": [
-"options"
-],
-"b126-t19": [
-"options"
-],
-"b126-t26": [
-"last_used_move"
 ],
 "b126-t36": [
 "status"
@@ -139,91 +85,20 @@
 "b130-t19": [
 "base_ability"
 ],
-"b131-t19": [
-"options"
-],
-"b131-t28": [
-"options"
-],
-"b131-t31": [
-"options"
-],
-"b133-t11": [
-"last_used_move"
-],
-"b134-t25": [
-"options"
-],
-"b134-t6": [
-"count.taunt"
-],
-"b135-t3": [
-"options"
-],
-"b136-t1": [
-"options"
-],
-"b136-t16": [
-"options"
-],
-"b138-t20": [
-"count.taunt"
-],
-"b138-t21": [
-"count.taunt"
-],
 "b138-t9": [
 "base_ability"
 ],
 "b139-t10": [
 "base_ability"
 ],
-"b139-t18": [
-"last_used_move"
-],
-"b14-t28": [
-"options"
-],
-"b14-t50": [
-"options"
-],
-"b140-t20": [
-"options"
-],
-"b141-t23": [
-"options"
-],
 "b141-t37": [
 "sc.toxic_count"
 ],
-"b141-t50": [
-"options"
-],
-"b142-t11": [
-"options"
-],
-"b142-t25": [
-"options"
-],
-"b142-t5": [
-"count.taunt"
-],
-"b142-t7": [
-"options"
-],
 "b144-t1": [
-"future_sight",
-"last_used_move"
-],
-"b144-t26": [
-"last_used_move"
+"future_sight"
 ],
 "b144-t51": [
-"future_sight",
-"last_used_move"
-],
-"b145-t32": [
-"options"
+"future_sight"
 ],
 "b145-t8": [
 "base_ability"
@@ -234,12 +109,6 @@
 ],
 "b147-t16": [
 "base_ability"
-],
-"b147-t19": [
-"count.disable"
-],
-"b147-t22": [
-"count.disable"
 ],
 "b147-t32": [
 "base_ability"
@@ -260,12 +129,6 @@
 "base_ability",
 "id"
 ],
-"b151-t30": [
-"options"
-],
-"b151-t4": [
-"count.disable"
-],
 "b151-t6": [
 "base_ability"
 ],
@@ -275,36 +138,11 @@
 "b154-t10": [
 "base_ability"
 ],
-"b155-t25": [
-"options"
-],
-"b155-t28": [
-"options"
-],
-"b155-t32": [
-"options"
-],
 "b155-t4": [
 "base_ability"
 ],
-"b156-t25": [
-"last_used_move"
-],
-"b156-t46": [
-"last_used_move"
-],
-"b156-t48": [
-"options"
-],
-"b157-t14": [
-"options"
-],
 "b158-t17": [
-"base_ability",
-"count.disable"
-],
-"b16-t19": [
-"options"
+"base_ability"
 ],
 "b162-t12": [
 "base_ability"
@@ -326,7 +164,6 @@
 "sc.toxic_count"
 ],
 "b164-t51": [
-"options",
 "sc.toxic_count"
 ],
 "b164-t52": [
@@ -334,18 +171,6 @@
 ],
 "b164-t53": [
 "sc.toxic_count"
-],
-"b164-t7": [
-"options"
-],
-"b164-t9": [
-"options"
-],
-"b165-t1": [
-"options"
-],
-"b166-t5": [
-"options"
 ],
 "b167-t5": [
 "base_ability"
@@ -368,17 +193,11 @@
 "b174-t2": [
 "base_ability"
 ],
-"b175-t25": [
-"options"
-],
 "b176-t36": [
 "pp"
 ],
 "b177-t10": [
 "pp"
-],
-"b177-t34": [
-"options"
 ],
 "b177-t8": [
 "pp"
@@ -401,47 +220,14 @@
 "b181-t25": [
 "base_ability"
 ],
-"b182-t12": [
-"options"
-],
-"b182-t13": [
-"options"
-],
-"b182-t6": [
-"options"
-],
-"b183-t32": [
-"last_used_move",
-"options"
-],
-"b183-t45": [
-"last_used_move",
-"options"
-],
-"b183-t46": [
-"last_used_move",
-"options"
-],
-"b183-t48": [
-"last_used_move"
-],
 "b184-t4": [
 "base_ability"
 ],
 "b186-t10": [
 "base_ability"
 ],
-"b187-t32": [
-"options"
-],
-"b188-t39": [
-"options"
-],
 "b188-t48": [
 "pp"
-],
-"b19-t10": [
-"options"
 ],
 "b190-t2": [
 "base_ability",
@@ -450,38 +236,8 @@
 "b190-t7": [
 "base_ability"
 ],
-"b191-t16": [
-"last_used_move"
-],
 "b191-t25": [
 "base_ability"
-],
-"b191-t8": [
-"last_used_move"
-],
-"b192-t17": [
-"options"
-],
-"b192-t21": [
-"options"
-],
-"b192-t22": [
-"options"
-],
-"b192-t41": [
-"last_used_move"
-],
-"b192-t46": [
-"last_used_move"
-],
-"b192-t47": [
-"last_used_move"
-],
-"b193-t1": [
-"options"
-],
-"b193-t10": [
-"options"
 ],
 "b194-t4": [
 "pp"
@@ -492,20 +248,8 @@
 "b22-t2": [
 "base_ability"
 ],
-"b22-t7": [
-"count.taunt"
-],
-"b22-t9": [
-"options"
-],
-"b23-t10": [
-"options"
-],
 "b26-t45": [
 "sc.protect"
-],
-"b3-t45": [
-"options"
 ],
 "b3-t54": [
 "sc.toxic_count"
@@ -522,23 +266,11 @@
 "b30-t5": [
 "options"
 ],
-"b31-t56": [
-"options"
-],
-"b31-t58": [
-"options"
-],
 "b32-t24": [
 "pp"
 ],
 "b34-t13": [
 "pp"
-],
-"b34-t46": [
-"options"
-],
-"b34-t6": [
-"options"
 ],
 "b35-t15": [
 "base_ability"
@@ -585,23 +317,8 @@
 "b38-t53": [
 "sc.toxic_count"
 ],
-"b39-t14": [
-"options"
-],
-"b39-t16": [
-"options"
-],
-"b4-t30": [
-"options"
-],
-"b40-t5": [
-"options"
-],
 "b42-t44": [
 "pp"
-],
-"b43-t38": [
-"options"
 ],
 "b44-t4": [
 "base_ability",
@@ -610,33 +327,12 @@
 "b45-t8": [
 "pp"
 ],
-"b46-t13": [
-"options"
-],
 "b46-t29": [
 "base_ability"
-],
-"b46-t5": [
-"last_used_move"
-],
-"b46-t6": [
-"last_used_move"
 ],
 "b46-t9": [
 "hp",
 "status"
-],
-"b47-t35": [
-"last_used_move"
-],
-"b47-t36": [
-"last_used_move"
-],
-"b47-t50": [
-"options"
-],
-"b49-t11": [
-"options"
 ],
 "b49-t13": [
 "pp"
@@ -653,12 +349,6 @@
 "b5-t29": [
 "pp"
 ],
-"b51-t23": [
-"options"
-],
-"b51-t29": [
-"options"
-],
 "b52-t16": [
 "base_ability",
 "id"
@@ -669,41 +359,11 @@
 "b53-t11": [
 "base_ability"
 ],
-"b53-t5": [
-"last_used_move"
-],
-"b54-t4": [
-"options"
-],
-"b55-t1": [
-"options"
-],
-"b55-t33": [
-"options"
-],
-"b55-t35": [
-"options"
-],
-"b57-t2": [
-"options"
-],
 "b58-t8": [
 "base_ability"
 ],
 "b59-t12": [
 "types"
-],
-"b6-t6": [
-"options"
-],
-"b60-t14": [
-"options"
-],
-"b61-t18": [
-"options"
-],
-"b61-t2": [
-"options"
 ],
 "b61-t20": [
 "base_ability"
@@ -711,68 +371,24 @@
 "b61-t25": [
 "base_ability"
 ],
-"b62-t31": [
-"options"
-],
-"b62-t33": [
-"options"
-],
 "b62-t8": [
 "pp"
-],
-"b63-t12": [
-"options"
-],
-"b64-t32": [
-"options"
-],
-"b64-t48": [
-"last_used_move"
-],
-"b65-t25": [
-"options"
-],
-"b65-t53": [
-"last_used_move"
 ],
 "b66-t33": [
 "pp",
 "sc.protect"
 ],
-"b66-t39": [
-"options"
-],
 "b66-t52": [
 "hp"
 ],
-"b70-t2": [
-"options"
-],
 "b70-t42": [
 "pp"
-],
-"b71-t20": [
-"options"
 ],
 "b71-t26": [
 "pp"
 ],
 "b71-t28": [
-"options",
 "pp"
-],
-"b71-t31": [
-"options"
-],
-"b71-t34": [
-"options"
-],
-"b71-t38": [
-"last_used_move",
-"options"
-],
-"b71-t39": [
-"last_used_move"
 ],
 "b73-t9": [
 "base_ability"
@@ -784,17 +400,8 @@
 "base_ability",
 "id"
 ],
-"b75-t45": [
-"last_used_move"
-],
 "b76-t27": [
 "pp"
-],
-"b76-t35": [
-"last_used_move"
-],
-"b76-t37": [
-"options"
 ],
 "b78-t28": [
 "pp"
@@ -802,15 +409,6 @@
 "b79-t34": [
 "hp",
 "status"
-],
-"b79-t41": [
-"last_used_move"
-],
-"b80-t8": [
-"options"
-],
-"b81-t1": [
-"count.taunt"
 ],
 "b82-t23": [
 "sc.toxic_count"
@@ -830,35 +428,8 @@
 "b82-t28": [
 "sc.toxic_count"
 ],
-"b83-t19": [
-"options"
-],
-"b84-t22": [
-"last_used_move"
-],
-"b84-t29": [
-"last_used_move"
-],
-"b84-t36": [
-"options"
-],
 "b85-t58": [
 "sc.toxic_count"
-],
-"b86-t11": [
-"options"
-],
-"b86-t18": [
-"options"
-],
-"b86-t23": [
-"options"
-],
-"b86-t26": [
-"options"
-],
-"b86-t9": [
-"last_used_move"
 ],
 "b87-t39": [
 "base_ability"
@@ -870,15 +441,6 @@
 "b90-t17": [
 "base_ability",
 "id"
-],
-"b92-t19": [
-"count.taunt"
-],
-"b92-t21": [
-"options"
-],
-"b92-t24": [
-"options"
 ],
 "b93-t33": [
 "sc.toxic_count"
@@ -910,31 +472,14 @@
 "b95-t16": [
 "base_ability"
 ],
-"b95-t19": [
-"last_used_move"
-],
 "b96-t12": [
 "base_ability"
 ],
-"b98-t23": [
-"options"
-],
 "b99-t10": [
-"future_sight",
-"last_used_move"
-],
-"b99-t11": [
-"last_used_move"
-],
-"b99-t12": [
-"last_used_move"
+"future_sight"
 ],
 "b99-t22": [
-"future_sight",
-"last_used_move"
-],
-"b99-t9": [
-"last_used_move"
+"future_sight"
 ]
 }
 }

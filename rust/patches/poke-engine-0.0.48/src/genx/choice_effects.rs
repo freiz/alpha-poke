@@ -1,7 +1,7 @@
 use super::abilities::Abilities;
 use super::damage_calc::type_effectiveness_modifier;
 use super::generate_instructions::{add_remove_status_instructions, apply_boost_instruction};
-use super::items::{get_choice_move_disable_instructions, room_service, Items};
+use super::items::{room_service, Items};
 use super::state::{PokemonVolatileStatus, Terrain, Weather};
 use crate::choices::{
     Boost, Choice, Choices, Effect, Heal, MoveCategory, MoveTarget, Secondary, StatBoosts,
@@ -1282,18 +1282,8 @@ pub fn choice_before_move(
             choice.charge_boost = true;
         }
     }
-    if let Some(choice_volatile_status) = &choice.volatile_status {
-        if choice_volatile_status.volatile_status == PokemonVolatileStatus::LOCKEDMOVE
-            && choice_volatile_status.target == MoveTarget::User
-        {
-            let ins =
-                get_choice_move_disable_instructions(attacker, attacking_side_ref, &choice.move_id);
-            for i in ins {
-                state.apply_one_instruction(&i);
-                instructions.instruction_list.push(i);
-            }
-        }
-    }
+    // (L179: a locking move's -- Outrage's -- other moves are disabled as its lockedmove starts,
+    // get_instructions_from_volatile_statuses: only when the move takes effect)
 }
 
 pub fn choice_hazard_clear(

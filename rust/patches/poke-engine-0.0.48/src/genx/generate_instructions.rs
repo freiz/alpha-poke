@@ -941,7 +941,10 @@ fn get_instructions_from_volatile_statuses(
     // alpha-poke patch (2026-10-16, doc/engine-diff.md L70): Disable stops the target's last move
     // (fails without one, or when it is on already), for 4 turns: 5 if the target had moved
     if volatile_status.volatile_status == PokemonVolatileStatus::DISABLE {
-        let moved = target_side == *attacking_side_reference || !attacker_choice.first_move;
+        // (L179: Cursed Body disabling its user's move -- the target's own move -- is 4 turns too,
+        // as one before the target moved: Showdown's activePokemon case; 5 only when the target
+        // had moved before the Disable)
+        let moved = target_side != *attacking_side_reference && !attacker_choice.first_move;
         let side = state.get_side(&target_side);
         if side
             .volatile_statuses
@@ -1015,6 +1018,24 @@ fn get_instructions_from_volatile_statuses(
         side.volatile_statuses
             .insert(volatile_status.volatile_status);
         incoming_instructions.instruction_list.push(ins);
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L179): a locking move's (Outrage's)
+        // lock starts here, with the move's effect (Showdown's self lockedmove): its other moves
+        // disabled (was before the move: also on a confusion's self-hit, an immune target)
+        if volatile_status.volatile_status == PokemonVolatileStatus::LOCKEDMOVE
+            && target_side == *attacking_side_reference
+        {
+            let side = state.get_side(&target_side);
+            let ins = super::items::get_choice_move_disable_instructions(
+                side.get_active_immutable(),
+                &target_side,
+                &attacker_choice.move_id,
+            );
+            for i in ins {
+                state.apply_one_instruction(&i);
+                incoming_instructions.instruction_list.push(i);
+            }
+        }
+        let side = state.get_side(&target_side);
         // alpha-poke patch (2026-10-16, doc/engine-diff.md L89): Encore ends at its third end of
         // turn, its fourth if the target had moved (Showdown's duration 3, + 1): the count starts
         // at 0 / -1
@@ -1024,7 +1045,13 @@ fn get_instructions_from_volatile_statuses(
             PokemonVolatileStatus::ENCORE | PokemonVolatileStatus::TAUNT
         ) {
             let v = volatile_status.volatile_status;
-            let came_in = matches!(side.last_used_move, LastUsedMove::Switch(_));
+            // (L179: came in this turn -- a Switch of its side so far this turn: Showdown's
+            // activeTurns 0; was its last used move being a switch, which a mon that could not
+            // move since it came in keeps)
+            let came_in = incoming_instructions
+                .instruction_list
+                .iter()
+                .any(|i| matches!(i, Instruction::Switch(s) if s.side_ref == target_side));
             let moved = (target_side == *attacking_side_reference || !attacker_choice.first_move)
                 && !(v == PokemonVolatileStatus::TAUNT && came_in);
             let value: i8 = if moved { -1 } else { 0 };
@@ -3067,6 +3094,11 @@ fn steadfast(state: &mut State, side_ref: &SideReference, instructions: &mut Sta
 
 fn cannot_use_move(state: &State, choice: &Choice, attacking_side_ref: &SideReference) -> bool {
     let attacking_side = state.get_side_immutable(attacking_side_ref);
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L179): the foe's Imprison stops a move it
+    // knows too (Showdown's onFoeBeforeMove)
+    if imprisoned(state.get_side_immutable(&attacking_side_ref.get_other_side()), choice.move_id) {
+        return true;
+    }
 
     // (L119: a fainted target is checked after the status: no_target)
 
@@ -3096,6 +3128,47 @@ fn cannot_use_move(state: &State, choice: &Choice, attacking_side_ref: &SideRefe
     false
 }
 
+
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L179): a Choice item's / Gorilla Tactics' lock,
+// as Showdown's onModifyMove adds choicelock: past the BeforeMove (not in a full paralysis, a
+// confusion's self-hit, sleep), the move missing or blocked or not; was before the BeforeMove
+fn choice_lock(
+    state: &mut State,
+    choice: &Choice,
+    side_ref: &SideReference,
+    instructions: &mut StateInstructions,
+) {
+    let (side, foe) = state.get_both_sides(side_ref);
+    let active = side.get_active_immutable();
+    let gassed = foe.get_active_immutable().ability == Abilities::NEUTRALIZINGGAS
+        && foe.get_active_immutable().hp > 0
+        && active.item != Items::ABILITYSHIELD;
+    let choice_item = matches!(
+        active.item,
+        Items::CHOICEBAND | Items::CHOICESPECS | Items::CHOICESCARF
+    );
+    // (and a locking move's later turns: the lock goes on, its other moves stay disabled)
+    let locked = side
+        .volatile_statuses
+        .contains(&PokemonVolatileStatus::LOCKEDMOVE);
+    if !choice_item && !(active.ability == Abilities::GORILLATACTICS && !gassed) && !locked {
+        return;
+    }
+    let ins = super::items::get_choice_move_disable_instructions(active, side_ref, &choice.move_id);
+    for i in ins {
+        state.apply_one_instruction(&i);
+        instructions.instruction_list.push(i);
+    }
+}
+
+// (L179: a move the foe's Imprison holder knows; Struggle aside)
+pub fn imprisoned(foe: &Side, move_id: Choices) -> bool {
+    move_id != Choices::STRUGGLE
+        && foe
+            .volatile_statuses
+            .contains(&PokemonVolatileStatus::IMPRISON)
+        && foe.get_active_immutable().moves.into_iter().any(|m| m.id == move_id)
+}
 
 // alpha-poke patch: pub (was private)
 pub fn before_move(
@@ -3279,31 +3352,6 @@ pub fn before_move(
 // (asleep, frozen, fully paralyzed, hitting itself in confusion) has not used its move (Showdown
 // sets lastMove only when the move is used): this move's SetLastUsedMove undone in that branch
 // (a Switch becomes None, as for a flinch: Fake Out / First Impression stay off)
-fn undo_last_used_move(side_ref: &SideReference, ins: &mut StateInstructions) {
-    let found = ins.instruction_list.iter().rev().find_map(|i| match i {
-        Instruction::SetLastUsedMove(s) if s.side_ref == *side_ref => {
-            Some((s.last_used_move, s.previous_last_used_move))
-        }
-        _ => None,
-    });
-    if let Some((now, before)) = found {
-        if !matches!(now, LastUsedMove::Move(_)) {
-            return;
-        }
-        let back = match before {
-            LastUsedMove::Switch(_) => LastUsedMove::None,
-            x => x,
-        };
-        if back != now {
-            ins.instruction_list
-                .push(Instruction::SetLastUsedMove(SetLastUsedMoveInstruction {
-                    side_ref: *side_ref,
-                    last_used_move: back,
-                    previous_last_used_move: now,
-                }));
-        }
-    }
-}
 
 fn generate_instructions_from_existing_status_conditions(
     state: &mut State,
@@ -3324,7 +3372,6 @@ fn generate_instructions_from_existing_status_conditions(
         PokemonStatus::FREEZE => {
             let mut still_frozen_instruction = incoming_instructions.clone();
             still_frozen_instruction.update_percentage(1.0 - THAW_CHANCE);
-            undo_last_used_move(attacking_side_ref, &mut still_frozen_instruction);
             final_instructions.push(still_frozen_instruction);
 
             incoming_instructions.update_percentage(THAW_CHANCE);
@@ -3391,7 +3438,6 @@ fn generate_instructions_from_existing_status_conditions(
                                     previous_turns: current_sleep_turns,
                                 }),
                             );
-                            undo_last_used_move(attacking_side_ref, &mut still_asleep_instruction);
                             final_instructions.push(still_asleep_instruction);
                             incoming_instructions.update_percentage(0.0);
                         }
@@ -3463,7 +3509,6 @@ fn generate_instructions_from_existing_status_conditions(
                         do_nothing_instructions.update_percentage(do_nothing_percentage);
                         incoming_instructions.update_percentage(1.0 - do_nothing_percentage);
                         if attacker_choice.move_id != Choices::SLEEPTALK {
-                            undo_last_used_move(attacking_side_ref, &mut do_nothing_instructions);
                         }
                         final_instructions.push(do_nothing_instructions);
                     }
@@ -3591,8 +3636,6 @@ fn generate_instructions_from_existing_status_conditions(
         hit_yourself_instruction
             .instruction_list
             .push(damage_instruction);
-
-        undo_last_used_move(attacking_side_ref, &mut hit_yourself_instruction);
         final_instructions.push(hit_yourself_instruction);
 
         incoming_instructions.update_percentage(1.0 - confusion_self_hit);
@@ -3606,7 +3649,6 @@ fn generate_instructions_from_existing_status_conditions(
     {
         let mut immobilized = incoming_instructions.clone();
         immobilized.update_percentage(0.5);
-        undo_last_used_move(attacking_side_ref, &mut immobilized);
         final_instructions.push(immobilized);
         incoming_instructions.update_percentage(0.5);
     }
@@ -3616,7 +3658,6 @@ fn generate_instructions_from_existing_status_conditions(
         // Fully-Paralyzed Branch
         let mut fully_paralyzed_instruction = incoming_instructions.clone();
         fully_paralyzed_instruction.update_percentage(FULLY_PARALYZED_CHANCE);
-        undo_last_used_move(attacking_side_ref, &mut fully_paralyzed_instruction);
         final_instructions.push(fully_paralyzed_instruction);
 
         // Non-Paralyzed Branch
@@ -3941,14 +3982,7 @@ pub fn generate_instructions_from_move(
 
     // (L167: a called move's BeforeMove, PP and last used move are its caller's, done already)
     let called = choice.called_move;
-    if state.use_last_used_move && !called {
-        set_last_used_move_as_move(
-            state.get_side(&attacking_side),
-            choice.move_index,
-            attacking_side,
-            &mut incoming_instructions,
-        );
-    }
+    // (L179: the last used move is set past the BeforeMove, below: Showdown's moveUsed)
 
     // (L132: an asleep / frozen Truant mover's after its status)
     let asleep_or_frozen = matches!(
@@ -4079,11 +4113,23 @@ pub fn generate_instructions_from_move(
             }
         }
     }
+    if !called && !(asleep_now && choice.move_id != Choices::SLEEPTALK) {
+        choice_lock(state, choice, &attacking_side, &mut incoming_instructions);
+    }
     let attacker = state
         .get_side_immutable(&attacking_side)
         .get_active_immutable();
     if choice.move_id == Choices::SLEEPTALK && attacker.status == PokemonStatus::SLEEP {
         let new_choices = attacker.get_sleep_talk_choices();
+        // (L179: Sleep Talk is the last used move, not the one it calls)
+        if state.use_last_used_move && !called {
+            set_last_used_move_as_move(
+                state.get_side(&attacking_side),
+                choice.move_index,
+                attacking_side,
+                &mut incoming_instructions,
+            );
+        }
         state.reverse_instructions(&incoming_instructions.instruction_list);
         let num_choices = new_choices.len() as f32;
         for mut new_choice in new_choices {
@@ -4106,7 +4152,6 @@ pub fn generate_instructions_from_move(
     } else if attacker.status == PokemonStatus::SLEEP && !choice.sleep_talk_move {
         state.reverse_instructions(&incoming_instructions.instruction_list);
         if incoming_instructions.percentage > 0.0 {
-            undo_last_used_move(&attacking_side, &mut incoming_instructions);
             final_instructions.push(incoming_instructions);
         }
         return;
@@ -4124,6 +4169,15 @@ pub fn generate_instructions_from_move(
             new_choice.first_move = choice.first_move;
             new_choice.sleep_talk_move = true;
             new_choice.called_move = true;
+            // (L179: Copycat is the last used move)
+            if state.use_last_used_move && !called {
+                set_last_used_move_as_move(
+                    state.get_side(&attacking_side),
+                    choice.move_index,
+                    attacking_side,
+                    &mut incoming_instructions,
+                );
+            }
             state.reverse_instructions(&incoming_instructions.instruction_list);
             generate_instructions_from_move(
                 state,
@@ -4139,6 +4193,21 @@ pub fn generate_instructions_from_move(
     }
     if asleep_or_frozen_before {
         start_truant(state, &attacking_side, &mut incoming_instructions);
+    }
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L179): the last used move, once the move goes
+    // past its BeforeMove (Showdown's runMove: moveUsed, also with no target left; not a called
+    // move: its caller's); was before the BeforeMove, undone after sleep / paralysis / a
+    // confusion self-hit (to none: a mon that came in this turn) and not after a flinch / Taunt
+    if state.use_last_used_move
+        && !called
+        && !(asleep_or_frozen_before && flinched_or_taunted(state, &choice, &attacking_side))
+    {
+        set_last_used_move_as_move(
+            state.get_side(&attacking_side),
+            choice.move_index,
+            attacking_side,
+            &mut incoming_instructions,
+        );
     }
     if no_target(state, &choice, &attacking_side)
         || (asleep_or_frozen_before && flinched_or_taunted(state, &choice, &attacking_side))
@@ -7608,8 +7677,54 @@ pub fn foe_raise_copies(state: &mut State, instructions: &mut StateInstructions,
     }
 }
 
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L179): the lock ends with its cause gone (a
+// Choice item tricked / knocked away, Showdown's choicelock onDisableMove): the moves the lock
+// disabled are usable again (Disable's own slot stays)
+fn choice_lock_release(state: &mut State, side_ref: &SideReference, instructions: &mut StateInstructions) {
+    let side = state.get_side(side_ref);
+    let active = side.get_active_immutable();
+    if active.hp <= 0
+        || matches!(
+            active.item,
+            Items::CHOICEBAND | Items::CHOICESPECS | Items::CHOICESCARF
+        )
+        || active.ability == Abilities::GORILLATACTICS
+        || side
+            .volatile_statuses
+            .contains(&PokemonVolatileStatus::LOCKEDMOVE)
+    {
+        return;
+    }
+    let disabled_slot = side
+        .volatile_statuses
+        .contains(&PokemonVolatileStatus::DISABLE)
+        .then(|| side.volatile_status_durations.disable / 8);
+    let active = side.get_active();
+    for (k, index) in [
+        PokemonMoveIndex::M0,
+        PokemonMoveIndex::M1,
+        PokemonMoveIndex::M2,
+        PokemonMoveIndex::M3,
+    ]
+    .iter()
+    .enumerate()
+    {
+        let m = &mut active.moves[index];
+        if m.disabled && m.id != Choices::NONE && disabled_slot != Some(k as i8) {
+            m.disabled = false;
+            instructions
+                .instruction_list
+                .push(Instruction::EnableMove(EnableMoveInstruction {
+                    side_ref: *side_ref,
+                    move_index: *index,
+                }));
+        }
+    }
+}
+
 pub fn update(state: &mut State, instructions: &mut StateInstructions) {
     for side_ref in [SideReference::SideOne, SideReference::SideTwo] {
+        choice_lock_release(state, &side_ref, instructions);
         super::items::item_update(state, &side_ref, instructions);
         super::abilities::paradox_update(state, &side_ref, instructions);
         // (L150: attract's onUpdate, its source fainted; the switch: generate_instructions_from_switch)

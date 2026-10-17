@@ -6,9 +6,6 @@
 "seed_offset": 10000
 },
 "mismatches": {
-"b0-t13": [
-"options"
-],
 "b0-t14": [
 "count.confusion"
 ],
@@ -43,9 +40,6 @@
 "types",
 "weight"
 ],
-"b1-t35": [
-"options"
-],
 "b102-t29": [
 "pp"
 ],
@@ -59,11 +53,7 @@
 "pp"
 ],
 "b105-t42": [
-"options",
 "pp"
-],
-"b105-t48": [
-"options"
 ],
 "b105-t5": [
 "base_ability"
@@ -73,9 +63,6 @@
 ],
 "b107-t9": [
 "pp"
-],
-"b109-t18": [
-"options"
 ],
 "b111-t1": [
 "attack",
@@ -91,14 +78,10 @@
 "pp"
 ],
 "b113-t31": [
-"options",
 "pp"
 ],
 "b113-t7": [
 "sc.protect"
-],
-"b114-t1": [
-"options"
 ],
 "b114-t9": [
 "base_ability",
@@ -110,55 +93,15 @@
 "b115-t6": [
 "base_ability"
 ],
-"b12-t28": [
-"count.disable"
-],
-"b121-t28": [
-"count.disable"
-],
 "b123-t7": [
 "base_ability",
 "id"
 ],
-"b125-t31": [
-"options"
-],
-"b126-t23": [
-"options"
-],
 "b126-t3": [
 "base_ability"
 ],
-"b128-t37": [
-"last_used_move"
-],
-"b13-t13": [
-"options"
-],
-"b130-t20": [
-"options"
-],
-"b135-t6": [
-"options"
-],
 "b137-t20": [
 "hp"
-],
-"b139-t18": [
-"options"
-],
-"b14-t13": [
-"last_used_move",
-"options"
-],
-"b141-t23": [
-"options"
-],
-"b141-t36": [
-"options"
-],
-"b141-t39": [
-"last_used_move"
 ],
 "b142-t18": [
 "pp"
@@ -166,23 +109,8 @@
 "b142-t20": [
 "pp"
 ],
-"b142-t21": [
-"options"
-],
-"b145-t8": [
-"options"
-],
-"b145-t9": [
-"options"
-],
-"b146-t20": [
-"options"
-],
 "b148-t6": [
 "base_ability"
-],
-"b149-t11": [
-"options"
 ],
 "b15-t30": [
 "pp"
@@ -190,9 +118,6 @@
 "b15-t8": [
 "last_used_move",
 "weight"
-],
-"b151-t10": [
-"options"
 ],
 "b151-t5": [
 "weight"
@@ -203,14 +128,7 @@
 "b153-t6": [
 "base_ability"
 ],
-"b153-t9": [
-"options"
-],
-"b154-t12": [
-"options"
-],
 "b158-t24": [
-"count.taunt",
 "weight"
 ],
 "b158-t3": [
@@ -247,18 +165,9 @@
 "base_ability",
 "id"
 ],
-"b163-t23": [
-"last_used_move"
-],
-"b163-t9": [
-"count.disable"
-],
 "b164-t1": [
 "last_used_move",
 "weight"
-],
-"b164-t30": [
-"count.disable"
 ],
 "b166-t29": [
 "pp"
@@ -302,18 +211,8 @@
 "b17-t41": [
 "pp"
 ],
-"b170-t5": [
-"options"
-],
 "b172-t12": [
 "hp"
-],
-"b173-t24": [
-"last_used_move"
-],
-"b176-t5": [
-"count.taunt",
-"options"
 ],
 "b178-t4": [
 "sc.protect"
@@ -323,12 +222,6 @@
 "last_used_move",
 "options"
 ],
-"b179-t52": [
-"options"
-],
-"b179-t60": [
-"last_used_move"
-],
 "b18-t3": [
 "pp"
 ],
@@ -337,9 +230,6 @@
 ],
 "b180-t11": [
 "pp"
-],
-"b180-t13": [
-"options"
 ],
 "b181-t13": [
 "base_ability"
@@ -365,14 +255,10 @@
 "speed",
 "weight"
 ],
-"b182-t6": [
-"options"
-],
 "b184-t2": [
 "ability"
 ],
 "b184-t26": [
-"options",
 "pp"
 ],
 "b185-t20": [
@@ -391,32 +277,17 @@
 "b187-t9": [
 "pp"
 ],
-"b188-t11": [
-"count.disable"
-],
-"b188-t8": [
-"last_used_move"
-],
 "b189-t13": [
 "pp"
 ],
 "b189-t15": [
 "pp"
 ],
-"b189-t16": [
-"options"
-],
 "b189-t17": [
 "pp"
 ],
 "b189-t18": [
 "options"
-],
-"b189-t2": [
-"last_used_move"
-],
-"b189-t25": [
-"last_used_move"
 ],
 "b189-t31": [
 "pp"
@@ -437,28 +308,6 @@
 "b192-t12": [
 "types"
 ],
-"b192-t29": [
-"options"
-],
-"b193-t14": [
-"options"
-],
-"b194-t25": [
-"last_used_move"
-],
-"b194-t26": [
-"last_used_move"
-],
-"b194-t28": [
-"last_used_move"
-],
-"b194-t29": [
-"last_used_move",
-"options"
-],
-"b194-t35": [
-"options"
-],
 "b195-t1": [
 "attack",
 "defense",
@@ -472,29 +321,8 @@
 "base_ability",
 "id"
 ],
-"b195-t20": [
-"options"
-],
-"b195-t21": [
-"options"
-],
 "b195-t4": [
 "weight"
-],
-"b196-t18": [
-"options"
-],
-"b196-t23": [
-"options"
-],
-"b196-t8": [
-"options"
-],
-"b198-t16": [
-"last_used_move"
-],
-"b198-t17": [
-"last_used_move"
 ],
 "b198-t19": [
 "hp"
@@ -544,54 +372,17 @@
 "b200-t24": [
 "pp"
 ],
-"b201-t18": [
-"options"
-],
 "b203-t30": [
 "pp"
 ],
 "b203-t4": [
 "pp"
 ],
-"b204-t1": [
-"options"
-],
-"b204-t18": [
-"options"
-],
-"b204-t2": [
-"options"
-],
 "b204-t9": [
 "pp"
 ],
-"b207-t2": [
-"count.taunt"
-],
 "b207-t20": [
 "pp"
-],
-"b209-t3": [
-"last_used_move"
-],
-"b209-t4": [
-"last_used_move",
-"options"
-],
-"b209-t5": [
-"last_used_move"
-],
-"b209-t6": [
-"last_used_move"
-],
-"b209-t7": [
-"last_used_move"
-],
-"b210-t3": [
-"options"
-],
-"b210-t5": [
-"last_used_move"
 ],
 "b211-t3": [
 "base_ability"
@@ -636,9 +427,6 @@
 "b216-t33": [
 "ability"
 ],
-"b219-t26": [
-"options"
-],
 "b222-t13": [
 "pp"
 ],
@@ -647,9 +435,6 @@
 ],
 "b224-t8": [
 "ability"
-],
-"b227-t8": [
-"options"
 ],
 "b232-t26": [
 "last_used_move",
@@ -661,50 +446,20 @@
 "b234-t1": [
 "base_ability"
 ],
-"b234-t11": [
-"options"
-],
-"b234-t60": [
-"options"
-],
-"b235-t10": [
-"options"
-],
-"b236-t19": [
-"options"
-],
-"b236-t8": [
-"options"
-],
 "b237-t37": [
 "pp"
 ],
 "b242-t1": [
 "status"
 ],
-"b243-t12": [
-"options"
-],
-"b243-t17": [
-"options"
-],
 "b244-t22": [
 "future_sight"
-],
-"b245-t13": [
-"options"
 ],
 "b246-t33": [
 "pp"
 ],
 "b246-t46": [
 "pp"
-],
-"b246-t51": [
-"options"
-],
-"b249-t1": [
-"count.disable"
 ],
 "b249-t22": [
 "ability"
@@ -716,21 +471,6 @@
 "ability",
 "base_ability",
 "boost.def"
-],
-"b250-t19": [
-"options"
-],
-"b251-t4": [
-"options"
-],
-"b256-t50": [
-"last_used_move"
-],
-"b256-t51": [
-"last_used_move"
-],
-"b256-t9": [
-"options"
 ],
 "b257-t24": [
 "pp"
@@ -744,18 +484,6 @@
 "b26-t12": [
 "base_ability"
 ],
-"b26-t9": [
-"options"
-],
-"b260-t24": [
-"last_used_move"
-],
-"b261-t5": [
-"options"
-],
-"b262-t10": [
-"last_used_move"
-],
 "b262-t2": [
 "attack",
 "defense",
@@ -768,12 +496,6 @@
 "b262-t9": [
 "weight"
 ],
-"b264-t2": [
-"options"
-],
-"b264-t8": [
-"options"
-],
 "b265-t15": [
 "base_ability",
 "id"
@@ -783,23 +505,11 @@
 "item",
 "last_item"
 ],
-"b268-t2": [
-"options"
-],
 "b268-t33": [
 "base_ability"
 ],
 "b269-t15": [
 "pp"
-],
-"b269-t38": [
-"last_used_move"
-],
-"b271-t18": [
-"options"
-],
-"b276-t24": [
-"last_used_move"
 ],
 "b277-t21": [
 "pp"
@@ -807,26 +517,11 @@
 "b277-t24": [
 "pp"
 ],
-"b279-t20": [
-"options"
-],
 "b28-t17": [
 "base_ability"
 ],
-"b280-t8": [
-"count.disable"
-],
-"b281-t11": [
-"options"
-],
-"b281-t25": [
-"count.taunt"
-],
 "b281-t36": [
 "pp"
-],
-"b281-t48": [
-"options"
 ],
 "b282-t60": [
 "pp"
@@ -844,9 +539,6 @@
 "b29-t34": [
 "base_ability"
 ],
-"b291-t15": [
-"options"
-],
 "b293-t1": [
 "attack",
 "defense",
@@ -855,12 +547,6 @@
 "special_defense",
 "speed",
 "weight"
-],
-"b293-t12": [
-"options"
-],
-"b293-t13": [
-"options"
 ],
 "b293-t20": [
 "weight"
@@ -872,18 +558,6 @@
 "ability",
 "hp"
 ],
-"b295-t10": [
-"options"
-],
-"b295-t2": [
-"options"
-],
-"b295-t45": [
-"last_used_move"
-],
-"b295-t46": [
-"last_used_move"
-],
 "b296-t4": [
 "base_ability",
 "id"
@@ -894,15 +568,6 @@
 "b297-t12": [
 "pp"
 ],
-"b297-t16": [
-"last_used_move"
-],
-"b297-t17": [
-"options"
-],
-"b297-t38": [
-"last_used_move"
-],
 "b297-t9": [
 "pp"
 ],
@@ -912,24 +577,6 @@
 ],
 "b3-t28": [
 "last_item"
-],
-"b32-t10": [
-"options"
-],
-"b32-t11": [
-"options"
-],
-"b32-t13": [
-"options"
-],
-"b33-t25": [
-"options"
-],
-"b34-t17": [
-"options"
-],
-"b34-t36": [
-"options"
 ],
 "b36-t34": [
 "sc.toxic_count"
@@ -970,36 +617,12 @@
 "b39-t58": [
 "pp"
 ],
-"b41-t41": [
-"options"
-],
 "b41-t54": [
 "pp"
-],
-"b41-t9": [
-"last_used_move"
-],
-"b42-t23": [
-"last_used_move"
-],
-"b42-t24": [
-"last_used_move"
-],
-"b42-t4": [
-"options"
-],
-"b42-t8": [
-"count.disable"
-],
-"b43-t4": [
-"count.disable"
 ],
 "b46-t18": [
 "base_ability",
 "id"
-],
-"b48-t19": [
-"options"
 ],
 "b48-t35": [
 "pp"
@@ -1013,35 +636,14 @@
 "b53-t21": [
 "count.partiallytrapped"
 ],
-"b53-t8": [
-"options"
-],
 "b55-t24": [
 "pp"
 ],
 "b55-t40": [
 "pp"
 ],
-"b58-t1": [
-"last_used_move"
-],
-"b58-t3": [
-"options"
-],
-"b6-t10": [
-"options"
-],
-"b6-t18": [
-"options"
-],
 "b6-t23": [
 "base_ability"
-],
-"b6-t39": [
-"options"
-],
-"b6-t8": [
-"options"
 ],
 "b62-t19": [
 "pp"
@@ -1061,9 +663,6 @@
 ],
 "b62-t52": [
 "pp"
-],
-"b63-t6": [
-"options"
 ],
 "b66-t2": [
 "pp"
@@ -1086,74 +685,8 @@
 "b70-t22": [
 "base_ability"
 ],
-"b72-t10": [
-"options"
-],
-"b72-t5": [
-"options"
-],
-"b72-t8": [
-"options"
-],
-"b75-t21": [
-"options"
-],
-"b75-t47": [
-"last_used_move"
-],
-"b75-t54": [
-"last_used_move"
-],
 "b76-t1": [
 "base_ability"
-],
-"b76-t14": [
-"options"
-],
-"b76-t23": [
-"options"
-],
-"b76-t36": [
-"options"
-],
-"b78-t18": [
-"count.taunt"
-],
-"b78-t20": [
-"options"
-],
-"b78-t3": [
-"options"
-],
-"b8-t60": [
-"options"
-],
-"b80-t5": [
-"last_used_move"
-],
-"b81-t2": [
-"last_used_move"
-],
-"b81-t35": [
-"last_used_move"
-],
-"b81-t36": [
-"last_used_move"
-],
-"b81-t42": [
-"last_used_move"
-],
-"b82-t7": [
-"count.taunt"
-],
-"b82-t9": [
-"options"
-],
-"b88-t29": [
-"options"
-],
-"b88-t38": [
-"options"
 ],
 "b89-t1": [
 "base_ability",
@@ -1186,29 +719,11 @@
 "base_ability",
 "id"
 ],
-"b94-t20": [
-"last_used_move"
-],
 "b94-t3": [
 "base_ability"
 ],
 "b95-t25": [
 "base_ability"
-],
-"b96-t7": [
-"options"
-],
-"b97-t3": [
-"options"
-],
-"b97-t9": [
-"options"
-],
-"b98-t18": [
-"options"
-],
-"b99-t3": [
-"options"
 ]
 }
 }

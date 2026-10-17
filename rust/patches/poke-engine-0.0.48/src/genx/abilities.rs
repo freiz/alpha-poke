@@ -1,7 +1,7 @@
 #![allow(unused_variables)]
 use super::damage_calc::move_type_effectiveness;
 use super::generate_instructions::{add_remove_status_instructions, apply_boost_instruction};
-use super::items::{get_choice_move_disable_instructions, Items};
+use super::items::Items;
 use super::state::{PokemonVolatileStatus, Terrain, Weather};
 use crate::choices::{
     Boost, Choice, Choices, Effect, Heal, MoveCategory, MoveTarget, Secondary, StatBoosts,
@@ -764,13 +764,7 @@ pub fn ability_before_move(
                 }
             }
         }
-        Abilities::GORILLATACTICS => {
-            let ins = get_choice_move_disable_instructions(active_pkmn, side_ref, &choice.move_id);
-            for i in ins {
-                state.apply_one_instruction(&i);
-                instructions.instruction_list.push(i);
-            }
-        }
+        // (L179: Gorilla Tactics' lock: choice_lock, past the BeforeMove)
         _ => {}
     }
 }

@@ -1429,13 +1429,7 @@ pub fn item_before_move(
             instructions,
         ),
         // (L147: its own berries / Mental Herb: item_update, Showdown's Update)
-        Items::CHOICESPECS | Items::CHOICEBAND | Items::CHOICESCARF => {
-            let ins = get_choice_move_disable_instructions(active_pkmn, side_ref, &choice.move_id);
-            for i in ins {
-                state.apply_one_instruction(&i);
-                instructions.instruction_list.push(i);
-            }
-        }
+        // (L179: a Choice item's lock: choice_lock, past the BeforeMove)
         Items::PROTECTIVEPADS => {
             choice.flags.contact = false;
         }
