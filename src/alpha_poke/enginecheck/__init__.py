@@ -148,6 +148,7 @@ def _engine_mon(m: dict) -> pe.Pokemon:
         item=m["item"] or "none", attack=st["atk"], defense=st["def"],
         special_attack=st["spa"], special_defense=st["spd"], speed=st["spe"],
         status=STATUS[m["status"]], weight_kg=m["weight"], nature=m.get("nature", "serious").lower(),
+        **({"evs": tuple(m["evs"])} if m.get("evs") else {}),
         # (a benched mon's disabled flags are its last request's -- a Choice lock --: Showdown
         # sets them afresh for its next one; L177)
         # (L179: a locking move's -- Outrage's -- lock: its other moves disabled, as the engine
@@ -467,7 +468,10 @@ def extra_view(s: pe.State, n_mons: tuple[int, int] = (6, 6)) -> dict:
             if m.hp <= 0:
                 continue
             p = f"{k}.{j}."
-            v[p + "id"] = str(m.id).lower()
+            # (a Minior core's colour is cosmetic -- the cores alike in stats, types, weight -- and
+            # the engine's Shields Down core is Minior's own: L183)
+            mid = str(m.id).lower()
+            v[p + "id"] = "minior" if mid.startswith("minior") and mid != "miniormeteor" else mid
             v[p + "level"] = m.level
             v[p + "types"] = tuple(str(t).lower() for t in m.types)
             v[p + "base_types"] = tuple(str(t).lower() for t in m.base_types)
@@ -607,8 +611,11 @@ def extra_diff(showdown_after: dict, out, n_mons=(6, 6), hp: bool = True,
     want = [showdown_options(s) for s in sides]
     if all(w is not None for w in want):
         got = pe.options(out[1])
+        # (a Minior core's colour, as extra_view's id)
+        core = lambda x: re.sub(r"^switch minior(?!meteor)\w*$", "switch minior", x)  # noqa: E731
         for k, g, w in zip(("s1", "s2"), got, want, strict=True):
-            g = {"none" if x == "No Move" else x for x in g}
+            g = {core("none" if x == "No Move" else x) for x in g}
+            w = {core(x) for x in w}
             if g != w:
                 bad[f"{k}.options"] = (sorted(g - w), sorted(w - g))
     return bad

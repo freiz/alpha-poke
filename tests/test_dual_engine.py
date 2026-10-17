@@ -5011,3 +5011,25 @@ def test_l182_protect_count_at_a_pivot():
                              [("move protect", "move chillyreception")])  # fmt: skip
     assert states[1]["sides"][1]["request"] == "switch"
     assert _keys(_full(states, 0, "protect", "chillyreception", (1, 2)), "sc.protect") == {}
+
+
+# L183 (doc/engine-diff.md): a forme change's stats by each stat's change (the mon's own IVs and
+# EVs kept), its weight (Minior-Meteor 40, Palafin-Hero 97.4, ...), a temporary forme back on the
+# switch-out (Minior-Meteor to its core, Wishiwashi-School, Aegislash-Blade, ...)
+MINIOR = """Minior-Violet @ White Herb
+Ability: Shields Down
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- Shell Smash
+- Acrobatics
+- Earthquake
+- Power Gem"""
+
+
+def test_l183_minior_meteor_and_back():
+    p1 = BLISSEY + "\n\n" + CORVIKNIGHT
+    states = ec.run_showdown(p1, CORVIKNIGHT + "\n\n" + MINIOR, [("move calmmind", "switch 2"),
+                                                                   ("move calmmind", "switch 2")])  # fmt: skip
+    assert states[1]["sides"][1]["mons"][1]["species"] == "miniormeteor"
+    assert _full(states, 0, "calmmind", "miniorviolet", (2, 2)) == {}
+    assert _full(states, 1, "calmmind", "corviknight", (2, 2)) == {}

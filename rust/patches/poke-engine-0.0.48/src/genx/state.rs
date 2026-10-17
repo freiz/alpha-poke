@@ -345,11 +345,40 @@ impl Pokemon {
 
     pub fn recalculate_stats(
         &mut self,
+        from: PokemonName,
         side_ref: &SideReference,
         instructions: &mut StateInstructions,
     ) {
         // recalculate stats from base-stats and push any changes made to the StateInstructions
-        let stats = self.calculate_stats_from_base_stats();
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L183): by the forme's change of each
+        // stat (the new forme's minus the old's, at its EVs / nature): its own IVs and EVs kept
+        // (the state's EVs are not always its real ones: was the new forme's stats from them);
+        // and the forme's weight (Showdown's weighthg: Minior-Meteor 40, Palafin-Hero 97.4, ...)
+        let new_stats = self.calculate_stats_from_base_stats();
+        let to = self.id;
+        self.id = from;
+        let old_stats = self.calculate_stats_from_base_stats();
+        self.id = to;
+        let stats = (
+            new_stats.0,
+            self.attack + new_stats.1 - old_stats.1,
+            self.defense + new_stats.2 - old_stats.2,
+            self.special_attack + new_stats.3 - old_stats.3,
+            self.special_defense + new_stats.4 - old_stats.4,
+            self.speed + new_stats.5 - old_stats.5,
+        );
+        if let Some(w) = to.forme_weight_hg() {
+            let amount = w - (self.weight_kg * 10.0).round() as i16;
+            if amount != 0 {
+                instructions
+                    .instruction_list
+                    .push(Instruction::ChangeWeight(ChangeStatInstruction {
+                        side_ref: *side_ref,
+                        amount,
+                    }));
+                self.weight_kg = w as f32 / 10.0;
+            }
+        }
         if stats.1 != self.attack {
             let ins = Instruction::ChangeAttack(ChangeStatInstruction {
                 side_ref: *side_ref,

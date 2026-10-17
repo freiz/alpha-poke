@@ -501,6 +501,37 @@ fn generate_instructions_from_switch(
             incoming_instructions,
         );
     }
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L183): a temporary forme goes back as its
+    // holder leaves (Showdown's clearVolatile: species = baseSpecies; a non-permanent
+    // formeChange): Minior-Meteor (to its core: Minior, the colours alike), Wishiwashi-School,
+    // Aegislash-Blade, Darmanitan-Zen, Morpeko-Hangry, Cramorant's catches
+    {
+        let side = state.get_side(&switching_side_ref);
+        let active = side.get_active();
+        let back = match active.id {
+            PokemonName::MINIORMETEOR => Some(PokemonName::MINIOR),
+            PokemonName::WISHIWASHISCHOOL => Some(PokemonName::WISHIWASHI),
+            PokemonName::AEGISLASHBLADE => Some(PokemonName::AEGISLASH),
+            PokemonName::DARMANITANZEN => Some(PokemonName::DARMANITAN),
+            PokemonName::DARMANITANGALARZEN => Some(PokemonName::DARMANITANGALAR),
+            PokemonName::MORPEKOHANGRY => Some(PokemonName::MORPEKO),
+            PokemonName::CRAMORANTGULPING | PokemonName::CRAMORANTGORGING => {
+                Some(PokemonName::CRAMORANT)
+            }
+            _ => None,
+        };
+        if let Some(back) = back {
+            incoming_instructions
+                .instruction_list
+                .push(Instruction::FormeChange(FormeChangeInstruction {
+                    side_ref: switching_side_ref,
+                    name_change: back as i16 - active.id as i16,
+                }));
+            let from = active.id;
+            active.id = back;
+            active.recalculate_stats(from, &switching_side_ref, incoming_instructions);
+        }
+    }
     state.re_enable_disabled_moves(
         &switching_side_ref,
         &mut incoming_instructions.instruction_list,
@@ -8273,10 +8304,11 @@ fn mega_evolve(state: &mut State, side_ref: SideReference, instructions: &mut St
             side_ref,
             name_change: mega_evolve_data.id as i16 - active_pkmn.id as i16,
         }));
+    let from = active_pkmn.id;
     active_pkmn.id = mega_evolve_data.id;
 
     // change stats
-    active_pkmn.recalculate_stats(&side_ref, instructions);
+    active_pkmn.recalculate_stats(from, &side_ref, instructions);
 
     // change ability / base_ability
     // base_ability is used to revert a pokemon's ability when it switches out

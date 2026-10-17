@@ -11,6 +11,29 @@ pub struct MegaEvolveData {
 }
 
 impl PokemonName {
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L183): the weight (hg) of the formes whose
+    // weight differs from their other forme's (Showdown's weighthg; tests/test_engine_data.py)
+    pub fn forme_weight_hg(&self) -> Option<i16> {
+        match self {
+            PokemonName::MINIOR
+            | PokemonName::MINIORBLUE
+            | PokemonName::MINIORGREEN
+            | PokemonName::MINIORINDIGO
+            | PokemonName::MINIORORANGE
+            | PokemonName::MINIORVIOLET
+            | PokemonName::MINIORYELLOW => Some(3),
+            PokemonName::MINIORMETEOR => Some(400),
+            PokemonName::WISHIWASHI => Some(3),
+            PokemonName::WISHIWASHISCHOOL => Some(786),
+            PokemonName::PALAFIN => Some(602),
+            PokemonName::PALAFINHERO => Some(974),
+            PokemonName::TERAPAGOS => Some(65),
+            PokemonName::TERAPAGOSTERASTAL => Some(160),
+            PokemonName::TERAPAGOSSTELLAR => Some(770),
+            _ => None,
+        }
+    }
+
     /*
     Base Stats are only required to re-calculate stats when a pokemon changes forme
     so not every pokemon will be here

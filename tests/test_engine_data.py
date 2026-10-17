@@ -269,3 +269,18 @@ def test_pressure_moves_match_showdown():
     ids = {m["id"] for m in data.showdown()["moves"]}
     got = [m for m in alpha_search.pressure_moves() if m in ids]
     assert sorted(set(want) - set(got)) == [] and sorted(set(got) - set(want)) == []
+
+
+def test_forme_weights_match_showdown():
+    """The formes whose weight the engine changes with them (L183) against Showdown's weighthg."""
+    import subprocess
+
+    import alpha_search
+
+    got = dict(alpha_search.forme_weights())
+    assert len(got) == 15
+    js = ("const {Dex} = require(process.argv[1]); console.log(JSON.stringify(process.argv.slice(2)"
+          ".map(n => Dex.species.get(n).weighthg)))")
+    want = json.loads(subprocess.run(["node", "-e", js, str(ec.SIM), *got], capture_output=True,
+                                     text=True, check=True).stdout)  # fmt: skip
+    assert list(got.values()) == want

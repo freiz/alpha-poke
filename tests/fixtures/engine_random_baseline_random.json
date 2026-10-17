@@ -69,23 +69,7 @@
 "status"
 ],
 "b186-t18": [
-"attack",
-"defense",
-"hp",
-"special_attack",
-"special_defense",
-"speed",
-"weight"
-],
-"b186-t19": [
-"attack",
-"defense",
-"id",
-"options",
-"special_attack",
-"special_defense",
-"speed",
-"weight"
+"hp"
 ],
 "b197-t21": [
 "status"
@@ -105,24 +89,6 @@
 ],
 "b56-t58": [
 "pp"
-],
-"b6-t10": [
-"attack",
-"defense",
-"special_attack",
-"special_defense",
-"speed",
-"weight"
-],
-"b6-t5": [
-"attack",
-"defense",
-"id",
-"options",
-"special_attack",
-"special_defense",
-"speed",
-"weight"
 ],
 "b62-t26": [
 "status"

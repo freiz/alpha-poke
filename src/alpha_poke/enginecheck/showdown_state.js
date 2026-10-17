@@ -69,6 +69,8 @@ function monState(p, side) {
 		// (getWeight() would hide it)
 		weight: p.weighthg / 10,
 		nature: p.set.nature || 'Serious',
+		// (L183: the set's EVs -- a forme change's stats are recomputed from them)
+		evs: ['hp', 'atk', 'def', 'spa', 'spd', 'spe'].map(s => (p.set.evs || {})[s] || 0),
 		active: !!p.isActive,
 		// trapped for its request (true, or 'hidden': an ability's -- Shadow Tag, Magnet Pull --
 		// that the request shows only as maybeTrapped; doc/engine-diff.md L177)

@@ -654,8 +654,9 @@ pub fn ability_before_move(
                         name_change: PokemonName::EISCUENOICE as i16 - defending_pkmn.id as i16,
                     },
                 ));
+                let from = defending_pkmn.id;
                 defending_pkmn.id = PokemonName::EISCUENOICE;
-                defending_pkmn.recalculate_stats(&side_ref.get_other_side(), instructions);
+                defending_pkmn.recalculate_stats(from, &side_ref.get_other_side(), instructions);
             }
         }
         // Technically incorrect
@@ -905,8 +906,9 @@ pub fn meloetta_forme(
             side_ref: *side_ref,
             name_change: to as i16 - user.id as i16,
         }));
+    let from = user.id;
     user.id = to;
-    user.recalculate_stats(side_ref, instructions);
+    user.recalculate_stats(from, side_ref, instructions);
     if user.types != types {
         instructions
             .instruction_list
@@ -1455,8 +1457,9 @@ pub fn ability_on_switch_out(
                         name_change: PokemonName::PALAFINHERO as i16 - active_pkmn.id as i16,
                     },
                 ));
+                let from = active_pkmn.id;
                 active_pkmn.id = PokemonName::PALAFINHERO;
-                active_pkmn.recalculate_stats(side_ref, instructions);
+                active_pkmn.recalculate_stats(from, side_ref, instructions);
             }
         }
         Abilities::HUNGERSWITCH => {
@@ -1605,8 +1608,9 @@ pub fn ability_end_of_turn(
                         name_change: PokemonName::MINIOR as i16 - active_pkmn.id as i16,
                     },
                 ));
+                let from = active_pkmn.id;
                 active_pkmn.id = PokemonName::MINIOR;
-                active_pkmn.recalculate_stats(side_ref, instructions);
+                active_pkmn.recalculate_stats(from, side_ref, instructions);
             }
             if active_pkmn.hp > active_pkmn.maxhp / 2 && active_pkmn.id != PokemonName::MINIORMETEOR
             {
@@ -1616,8 +1620,9 @@ pub fn ability_end_of_turn(
                         name_change: PokemonName::MINIORMETEOR as i16 - active_pkmn.id as i16,
                     },
                 ));
+                let from = active_pkmn.id;
                 active_pkmn.id = PokemonName::MINIORMETEOR;
-                active_pkmn.recalculate_stats(side_ref, instructions);
+                active_pkmn.recalculate_stats(from, side_ref, instructions);
             }
         }
         Abilities::SCHOOLING => {
@@ -1630,8 +1635,9 @@ pub fn ability_end_of_turn(
                         name_change: PokemonName::WISHIWASHI as i16 - active_pkmn.id as i16,
                     },
                 ));
+                let from = active_pkmn.id;
                 active_pkmn.id = PokemonName::WISHIWASHI;
-                active_pkmn.recalculate_stats(side_ref, instructions);
+                active_pkmn.recalculate_stats(from, side_ref, instructions);
             }
             if active_pkmn.hp > active_pkmn.maxhp / 4 && active_pkmn.id == PokemonName::WISHIWASHI {
                 instructions.instruction_list.push(Instruction::FormeChange(
@@ -1640,8 +1646,9 @@ pub fn ability_end_of_turn(
                         name_change: PokemonName::WISHIWASHISCHOOL as i16 - active_pkmn.id as i16,
                     },
                 ));
+                let from = active_pkmn.id;
                 active_pkmn.id = PokemonName::WISHIWASHISCHOOL;
-                active_pkmn.recalculate_stats(side_ref, instructions);
+                active_pkmn.recalculate_stats(from, side_ref, instructions);
             }
         }
         Abilities::BADDREAMS => {
@@ -1821,8 +1828,9 @@ pub fn ice_face_in_snow(
                 side_ref: *side_ref,
                 name_change: PokemonName::EISCUE as i16 - active_pkmn.id as i16,
             }));
+        let from = active_pkmn.id;
         active_pkmn.id = PokemonName::EISCUE;
-        active_pkmn.recalculate_stats(side_ref, instructions);
+        active_pkmn.recalculate_stats(from, side_ref, instructions);
     }
 }
 

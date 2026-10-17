@@ -124,24 +124,8 @@
 "b69-t5": [
 "options"
 ],
-"b70-t3": [
-"attack",
-"defense",
-"id",
-"special_attack",
-"special_defense",
-"speed",
-"weight"
-],
 "b70-t6": [
 "volatile.gastroacid"
-],
-"b75-t27": [
-"attack",
-"defense",
-"special_attack",
-"special_defense",
-"speed"
 ],
 "b76-t17": [
 "hp"

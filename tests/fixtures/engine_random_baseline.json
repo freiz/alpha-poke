@@ -14,84 +14,14 @@
 "b128-t21": [
 "pp"
 ],
-"b159-t20": [
-"attack",
-"defense",
-"special_attack",
-"special_defense",
-"speed",
-"weight"
-],
-"b159-t21": [
-"attack",
-"defense",
-"id",
-"special_attack",
-"special_defense",
-"speed",
-"weight"
-],
 "b164-t1": [
 "last_used_move"
-],
-"b182-t2": [
-"attack",
-"defense",
-"special_attack",
-"special_defense",
-"speed",
-"weight"
-],
-"b182-t4": [
-"attack",
-"defense",
-"id",
-"special_attack",
-"special_defense",
-"speed",
-"weight"
 ],
 "b184-t5": [
 "ability"
 ],
 "b187-t17": [
 "last_item"
-],
-"b188-t1": [
-"attack",
-"defense",
-"id",
-"options",
-"special_attack",
-"special_defense",
-"speed",
-"weight"
-],
-"b188-t19": [
-"attack",
-"defense",
-"special_attack",
-"special_defense",
-"speed",
-"weight"
-],
-"b188-t20": [
-"attack",
-"defense",
-"id",
-"special_attack",
-"special_defense",
-"speed",
-"weight"
-],
-"b188-t31": [
-"attack",
-"defense",
-"id",
-"special_attack",
-"special_defense",
-"speed",
-"weight"
 ],
 "b191-t49": [
 "hp"

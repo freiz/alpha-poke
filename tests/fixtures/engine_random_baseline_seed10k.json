@@ -37,13 +37,6 @@
 "types",
 "weight"
 ],
-"b111-t1": [
-"attack",
-"defense",
-"special_attack",
-"special_defense",
-"speed"
-],
 "b112-t13": [
 "ability"
 ],
@@ -55,23 +48,6 @@
 ],
 "b15-t8": [
 "last_used_move"
-],
-"b159-t11": [
-"attack",
-"defense",
-"special_attack",
-"special_defense",
-"speed",
-"weight"
-],
-"b159-t16": [
-"attack",
-"defense",
-"id",
-"special_attack",
-"special_defense",
-"speed",
-"weight"
 ],
 "b164-t1": [
 "last_used_move"
@@ -112,22 +88,7 @@
 "options"
 ],
 "b182-t25": [
-"attack",
-"defense",
-"hp",
-"special_attack",
-"special_defense",
-"speed",
-"weight"
-],
-"b182-t30": [
-"attack",
-"defense",
-"id",
-"special_attack",
-"special_defense",
-"speed",
-"weight"
+"hp"
 ],
 "b184-t2": [
 "ability"

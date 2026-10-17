@@ -1037,6 +1037,26 @@ fn pressure_moves() -> Vec<String> {
     out
 }
 
+/// The weight (hg) of each forme the engine changes weight with (`PokemonName::forme_weight_hg`;
+/// doc/engine-diff.md L183): [(species id, weight)].
+#[pyfunction]
+fn forme_weights() -> Vec<(String, i16)> {
+    use poke_engine::pokemon::PokemonName;
+    use std::str::FromStr;
+    let names = [
+        "minior", "miniorblue", "miniorgreen", "miniorindigo", "miniororange", "miniorviolet",
+        "minioryellow", "miniormeteor", "wishiwashi", "wishiwashischool", "palafin",
+        "palafinhero", "terapagos", "terapagosterastal", "terapagosstellar",
+    ];
+    names
+        .iter()
+        .filter_map(|n| {
+            let p = PokemonName::from_str(n).ok()?;
+            Some((n.to_string(), p.forme_weight_hg()?))
+        })
+        .collect()
+}
+
 /// The dance moves (`Choices::is_dance`, lowercase; doc/engine-diff.md L171).
 #[pyfunction]
 fn dance_moves() -> Vec<String> {
@@ -1259,6 +1279,7 @@ fn alpha_search(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(bypass_substitute_moves, m)?)?;
     m.add_function(wrap_pyfunction!(fail_copycat_moves, m)?)?;
     m.add_function(wrap_pyfunction!(dance_moves, m)?)?;
+    m.add_function(wrap_pyfunction!(forme_weights, m)?)?;
     m.add_function(wrap_pyfunction!(pressure_moves, m)?)?;
     m.add_function(wrap_pyfunction!(fling_powers, m)?)?;
     m.add_function(wrap_pyfunction!(paradox_species, m)?)?;
