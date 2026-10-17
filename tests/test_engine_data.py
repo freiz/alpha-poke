@@ -55,7 +55,8 @@ KNOWN_MOVES = {
     "synthesis": ({"heal"}, WEATHER_HEAL),
     "shoreup": ({"heal"}, WEATHER_HEAL),
     "leechseed": ({"flags"}, "the engine makes Grass types immune through the powder flag"),
-    "tripleaxel": ({"base_power"}, "the engine: 3 hits of 40 (Showdown 20, 40, 60; approximation)"),
+    "tripleaxel": ({"base_power"}, "the engine's data: 40 a hit; its hit-count branches (L58) give "
+                   "k hits of the mean of 20, 40, ..., 20k (Showdown's 20 / 40 / 60)"),
     "uproar": ({"effects"}, "not implemented in the engine (rare in OU)"),
     "revivalblessing": ({"pivot"}, "not implemented in the engine (rare in OU)"),
 }

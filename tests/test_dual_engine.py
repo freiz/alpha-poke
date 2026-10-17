@@ -1953,3 +1953,37 @@ def test_l56_doom_desire():
     assert any(x.endswith("move: Doom Desire") for x in states[3]["log"])
     outs = ec.engine_outcomes(ec.engine_state(states[2]), "wish", "spikes")
     assert ec.closest(states[3], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L58 (doc/engine-diff.md): Triple Axel's hits each check accuracy (90%), stopping at a miss,
+# 20 / 40 / 60 power (the engine: one check, 3 hits of 40); Skill Link: all 3
+@pytest.mark.parametrize("ability", ["Pressure", "Skill Link"])
+def test_l58_triple_axel_hits(ability):
+    p1 = _attacker("Weavile", ability, "Leftovers", "- Triple Axel\n- Knock Off\n- Ice Shard\n- Swords Dance", "Jolly")
+    turns = [("move tripleaxel", "move softboiled")]
+    states = ec.run_showdown(p1, BLISSEY, turns)
+    engine = _engine_hit_counts(ec.engine_state(states[0]), "tripleaxel", "softboiled")
+    for n in (1, 2, 3):
+        rate = ec.showdown_rate(p1, BLISSEY, turns, f"|-hitcount|p2a: Blissey|{n}", 1000)
+        assert engine.get(n, 0.0) == pytest.approx(rate, abs=0.03), (n, rate, engine)
+
+
+# L58: Population Bomb, 10 hits each checking accuracy (90%), stopping at a miss (the engine: 6
+# hits); Loaded Dice: one check, 4-10 hits; Skill Link: 10. The engine's counts in four bands
+# (1-3, 4-6, 7-9, 10), each as its mean count (2, 5, 8, 10): Showdown's rates per band
+BANDS = {2: range(1, 4), 5: range(4, 7), 8: range(7, 10), 10: range(10, 11)}
+
+
+@pytest.mark.parametrize("ability, item", [("Technician", "Leftovers"), ("Technician", "Loaded Dice"),
+                                           ("Skill Link", "Leftovers")])  # fmt: skip
+def test_l58_population_bomb_hits(ability, item):
+    p1 = _attacker("Maushold", ability, item, "- Population Bomb\n- Bite\n- Tidy Up\n- Encore", "Jolly")
+    turns = [("move populationbomb", "move softboiled")]
+    states = ec.run_showdown(p1, BLISSEY, turns)
+    engine = _engine_hit_counts(ec.engine_state(states[0]), "populationbomb", "softboiled")
+    logs = ec.showdown_log_counts(p1, BLISSEY, turns, 800)
+    hits = [next((int(x.rsplit("|", 1)[1]) for x in log if x.startswith("|-hitcount|")), 0)
+            for log in logs]  # fmt: skip
+    for mean, band in BANDS.items():
+        rate = sum(h in band for h in hits) / len(hits)
+        assert engine.get(mean, 0.0) == pytest.approx(rate, abs=0.05), (mean, rate, engine)

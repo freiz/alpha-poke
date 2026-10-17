@@ -3295,6 +3295,60 @@ pub fn generate_instructions_from_move(
             (5, 0.15, 1.0),
         ]
     };
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L58): Triple Axel / Triple Kick, each hit
+    // checks accuracy and the move stops at a miss (the first check is check_move_hit_or_miss's):
+    // k hits of the first hit's power x 1, 2, ..., k, as k hits of its mean (Showdown's 20 / 40
+    // / 60 and 10 / 20 / 30; the engine's data: one power for all); Skill Link: one check
+    if choice.multi_hit() == MultiHitMove::TripleAxel
+        && state.get_side(&attacking_side).get_active().ability != Abilities::SKILLLINK
+        && fixed.is_none()
+    {
+        let first = if choice.move_id == Choices::TRIPLEAXEL {
+            20.0
+        } else {
+            10.0
+        };
+        let data = MOVES.get(&choice.move_id).map_or(first, |m| m.base_power);
+        let a = (choice.accuracy / 100.0).min(1.0);
+        counts = (1..=3)
+            .map(|k| {
+                let p = if k < 3 {
+                    a.powi(k - 1) * (1.0 - a)
+                } else {
+                    a * a
+                };
+                (k as i8, p, first * (k + 1) as f32 / (2.0 * data))
+            })
+            .filter(|(_, p, _)| *p > 0.0)
+            .collect();
+    }
+    // L58: Population Bomb, 10 hits each checking accuracy, stopping at a miss (Loaded Dice: one
+    // check, 4-10 hits; Skill Link: 10); in four bands of counts (1-3, 4-6, 7-9, 10), each as its
+    // mean count, for the branches (each count also splits by its crits); before, 6 hits
+    if choice.multi_hit() == MultiHitMove::PopulationBomb && fixed.is_none() {
+        let active = state.get_side(&attacking_side).get_active();
+        let (ability, item) = (active.ability, active.item);
+        let mut p = [0.0f32; 11];
+        if ability == Abilities::SKILLLINK {
+            p[10] = 1.0;
+        } else if item == Items::LOADEDDICE {
+            for k in 4..=10 {
+                p[k] = 1.0 / 7.0;
+            }
+        } else {
+            let a = (choice.accuracy / 100.0 * if item == Items::WIDELENS { 1.1 } else { 1.0 })
+                .min(1.0);
+            for k in 1..10 {
+                p[k] = a.powi(k as i32 - 1) * (1.0 - a);
+            }
+            p[10] = a.powi(9);
+        }
+        counts = vec![(2i8, 1..4), (5, 4..7), (8, 7..10), (10, 10..11)]
+            .into_iter()
+            .map(|(n, band)| (n, band.map(|k| p[k]).sum::<f32>(), 1.0))
+            .filter(|(_, q, _)| *q > 0.0)
+            .collect();
+    }
     // L8b: Fickle Beam's double power, 30% (Showdown's onBasePower): a power branch
     if choice.move_id == Choices::FICKLEBEAM && fixed.is_none() {
         counts = vec![(1, 0.7, 1.0), (1, 0.3, 2.0)];
