@@ -5147,3 +5147,24 @@ def test_l184_supersweet_syrup_kept_on_the_switch_out():
                              [("move calmmind", "switch 2"), ("move calmmind", "switch 2")])  # fmt: skip
     assert _keys(_full(states, 0, "calmmind", "hydrapple", (1, 2)), "ability") == {}
     assert _keys(_full(states, 1, "calmmind", "corviknight", (1, 2)), "ability") == {}
+
+
+# L185 (doc/engine-diff.md): a terastallized mon that fainted and was revived (Revival Blessing) is
+# no longer terastallized (Showdown deletes it on the faint); its side's Terastallization is used
+# (the side's tera_used: no mon shows it)
+def test_l185_revived_tera_mon():
+    p1 = MAGIKARP_PAWMOT.replace("Ability: Swift Swim", "Ability: Swift Swim\nTera Type: Water")
+    turns = [("move splash terastallize", "move seismictoss"), ("switch 2", ""),
+             ("move revivalblessing", "move seismictoss"), ("switch 2", ""), ("move nuzzle", "move calmmind")]  # fmt: skip
+    states = ec.run_showdown(p1, BLISSEY, turns)
+    after = states[4]["sides"][0]
+    assert after["tera_used"] and not after["mons"][0]["terastallized"] and after["mons"][0]["hp"] > 0
+    assert not any(o.endswith("-tera") for o in ec.showdown_options(after))
+    outs = ec.engine_outcomes(ec.engine_state(states[2]), "revivalblessing", "seismictoss")
+    (_, mid), = outs
+    outs = ec.engine_outcomes(mid, "magikarp", "seismictoss")
+    assert ec.closest(states[4], outs, (2, 1), hp=True, full=True, start=states[3])["diff"] == {}
+    # the state built from Showdown's (no mon terastallized, none fainted) can no longer either
+    assert not any(o.endswith("-tera") for o in pe.options(ec.engine_state(states[4]))[0])
+    assert _full(states, 4, "nuzzle", "calmmind", (2, 1)) == {}
+

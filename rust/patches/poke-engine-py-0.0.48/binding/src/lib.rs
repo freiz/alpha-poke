@@ -181,6 +181,8 @@ pub struct PySide {
     slow_uturn_move: bool,
     // alpha-poke patch (L166): Revival Blessing's pick
     reviving: bool,
+    // alpha-poke patch (L185): its Terastallization used, no mon terastallized
+    tera_used: bool,
     volatile_statuses: HashSet<String>,
     substitute_health: i16,
     attack_boost: i8,
@@ -220,6 +222,7 @@ impl From<Side> for PySide {
             force_trapped: other.force_trapped,
             slow_uturn_move: other.slow_uturn_move,
             reviving: other.reviving,
+            tera_used: other.tera_used,
             volatile_statuses,
             substitute_health: other.substitute_health,
             attack_boost: other.attack_boost,
@@ -270,6 +273,7 @@ impl Into<Side> for PySide {
             force_trapped: self.force_trapped,
             slow_uturn_move: self.slow_uturn_move,
             reviving: self.reviving,
+            tera_used: self.tera_used,
             volatile_statuses,
             substitute_health: self.substitute_health,
             attack_boost: self.attack_boost,
@@ -316,6 +320,7 @@ impl PySide {
         last_used_move="move:none".to_string(),
         switch_out_move_second_saved_move="none".to_string(),
         reviving=false,
+        tera_used=false,
     ))]
     fn new(
         mut pokemon: Vec<PyPokemon>,
@@ -342,6 +347,7 @@ impl PySide {
         last_used_move: String,
         switch_out_move_second_saved_move: String,
         reviving: bool,
+        tera_used: bool,
     ) -> Self {
         while pokemon.len() < 6 {
             pokemon.push(PyPokemon::create_fainted());
@@ -377,6 +383,7 @@ impl PySide {
             last_used_move,
             switch_out_move_second_saved_move,
             reviving,
+            tera_used,
         }
     }
 }

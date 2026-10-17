@@ -287,6 +287,11 @@ fn generate_instructions_from_switch(
             .push(Instruction::ToggleReviving(ToggleShedTailingInstruction {
                 side_ref: switching_side_ref,
             }));
+        // (L185: no longer terastallized, its side's Terastallization used)
+        let tera = side.pokemon[new_pokemon_index].terastallized;
+        if tera {
+            side.tera_used = true;
+        }
         let revived = &mut side.pokemon[new_pokemon_index];
         let hp = cmp::max(revived.maxhp / 2, 1);
         incoming_instructions
@@ -295,8 +300,10 @@ fn generate_instructions_from_switch(
                 side_ref: switching_side_ref,
                 pokemon_index: new_pokemon_index,
                 hp,
+                tera,
             }));
         revived.hp = hp;
+        revived.terastallized = false;
         if revived.status != PokemonStatus::NONE {
             incoming_instructions
                 .instruction_list

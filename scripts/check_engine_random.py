@@ -148,6 +148,9 @@ def main() -> None:
     ap.add_argument("--baseline", default="tests/fixtures/engine_random_baseline.json")
     ap.add_argument("--update-baseline", action="store_true")
     ap.add_argument("--force", action="store_true", help="update the baseline even with new ones")
+    ap.add_argument("--from-report", action="store_true",
+                    help="check / update the baseline from the last run's report (--out), no new "
+                    "battles: after a run with the same arguments")  # fmt: skip
     ap.add_argument("--max-turns", type=int, default=60)
     ap.add_argument("--procs", type=int, default=8)
     ap.add_argument("--seed-offset", type=int, default=0,
@@ -163,6 +166,12 @@ def main() -> None:
              "teams": hashlib.sha256(text.encode()).hexdigest()[:16]}  # fmt: skip
     if a.seed_offset:
         setup["seed_offset"] = a.seed_offset
+    if a.from_report:
+        rep = json.loads(Path(a.out).read_text())
+        if {k: rep.get(k) for k in setup} != setup:
+            print(f"the report {a.out} is of another setup: not used")
+            sys.exit(1)
+        sys.exit(check_baseline(a, setup, rep["mismatches"]))
     tot = {"turns": 0, "match": 0, "decisions": 0}
     skipped, kinds = collections.Counter(), collections.Counter()
     pairs_by_kind: dict = collections.defaultdict(collections.Counter)

@@ -590,6 +590,12 @@ def _tera_used(mons: list, used: bool) -> list:
     return mons[:j] + [_with(mons[j], terastallized=True)] + mons[j + 1:]
 
 
+def _side_tera_used(mons: list, used: bool) -> dict:
+    """The side's own marker when its Terastallization was used and no mon shows it, not even a
+    fainted one (Revival Blessing brought it back; doc/engine-diff.md L185)."""
+    return {"tera_used": True} if used and not any(p.terastallized for p in mons) else {}
+
+
 def _pad(mons: list) -> list:
     return (mons + [pe.Pokemon.create_fainted() for _ in range(6)])[:6]
 
@@ -773,6 +779,7 @@ def build_state(
             else 0
         ),
         force_switch=bool(battle.force_switch) if force_switch is None else force_switch,
+        **_side_tera_used(our_mons, bool(getattr(battle, "used_tera", False))),
         **our_last,
         **(_boosts(active) if active is not None else {}),
     )
@@ -789,6 +796,7 @@ def build_state(
             if opp_active is not None and Effect.SUBSTITUTE in opp_active.effects
             else 0
         ),
+        **_side_tera_used(their_mons, bool(getattr(battle, "opponent_used_tera", False))),
         **their_last,
         **(_boosts(opp_active) if opp_active is not None else {}),
     )

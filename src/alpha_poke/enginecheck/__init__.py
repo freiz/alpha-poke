@@ -193,6 +193,9 @@ def _engine_side(s: dict, future_sight=None, wish=None) -> pe.Side:
         j = next((j for j, m in enumerate(s["mons"]) if m["hp"] <= 0), None)
         if j is not None:
             mons[j] = _engine_mon(s["mons"][j] | {"terastallized": "used"})
+    # (L185: none fainted -- Revival Blessing brought the terastallized one back -- the side's own
+    # marker)
+    tera_used = bool(s.get("tera_used")) and not any(p.terastallized for p in mons)
     mons += [pe.Pokemon.create_fainted() for _ in range(6 - len(mons))]
     act = s["mons"][s["active"]] if s["active"] >= 0 else None
     c = s["conditions"]
@@ -206,6 +209,8 @@ def _engine_side(s: dict, future_sight=None, wish=None) -> pe.Side:
         if name in s.get("slot", {}):
             sc[eng] = 1
     kw: dict = {"future_sight": future_sight} if future_sight else {}
+    if tera_used:
+        kw["tera_used"] = True
     if wish:
         kw["wish"] = wish
     if act is not None:

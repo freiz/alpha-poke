@@ -1135,6 +1135,9 @@ impl Side {
 
     #[cfg(feature = "terastallization")]
     pub fn can_use_tera(&self) -> bool {
+        if self.tera_used {
+            return false;
+        }
         for p in self.pokemon.into_iter() {
             if p.terastallized {
                 return false;

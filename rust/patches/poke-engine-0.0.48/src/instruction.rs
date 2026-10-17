@@ -360,7 +360,7 @@ impl fmt::Debug for Instruction {
                 write!(f, "ToggleReviving {:?}", s.side_ref)
             }
             Instruction::Revive(s) => {
-                write!(f, "Revive {:?}: {:?} -> {}", s.side_ref, s.pokemon_index, s.hp)
+                write!(f, "Revive {:?}: {:?} -> {} (tera {})", s.side_ref, s.pokemon_index, s.hp, s.tera)
             }
             Instruction::ToggleTerastallized(s) => {
                 write!(f, "ToggleTerastallized {:?}", s.side_ref)
@@ -503,6 +503,8 @@ pub struct ReviveInstruction {
     pub side_ref: SideReference,
     pub pokemon_index: PokemonIndex,
     pub hp: i16,
+    // (L185: it fainted terastallized: no longer, its side's Terastallization used -- tera_used)
+    pub tera: bool,
 }
 
 #[derive(Debug, PartialEq, Clone)]

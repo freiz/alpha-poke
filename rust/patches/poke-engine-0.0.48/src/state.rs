@@ -503,6 +503,7 @@ impl Default for Side {
             baton_passing: false,
             shed_tailing: false,
             reviving: false,
+            tera_used: false,
             pokemon: SidePokemon {
                 pkmn: [
                     Pokemon::default(),
@@ -1226,6 +1227,10 @@ pub struct Side {
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L166): Revival Blessing's pick (with
     // force_switch: the switch options are the fainted Pokemon, the "switch" revives one)
     pub reviving: bool,
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L185): its Terastallization used with no
+    // mon terastallized any more (Showdown deletes a fainted mon's terastallized: one Revival
+    // Blessing brought back); a fainted one keeps its terastallized otherwise (can_use_tera)
+    pub tera_used: bool,
     pub pokemon: SidePokemon,
     pub side_conditions: SideConditions,
     pub volatile_status_durations: VolatileStatusDurations,
@@ -1355,8 +1360,10 @@ impl Side {
             self.last_used_move.serialize(),
             self.slow_uturn_move,
         );
-        // (L166: only while reviving; older strings have no such field)
-        if self.reviving {
+        // (L166: only while reviving; L185: tera_used after it; older strings have no such field)
+        if self.tera_used {
+            format!("{}={}=true", out, self.reviving)
+        } else if self.reviving {
             format!("{}=true", out)
         } else {
             out
@@ -1411,6 +1418,7 @@ impl Side {
             damage_dealt: DamageDealt::default(),
             slow_uturn_move: split[28].parse::<bool>().unwrap(),
             reviving: split.get(29).map_or(false, |x| x.parse::<bool>().unwrap()),
+            tera_used: split.get(30).map_or(false, |x| x.parse::<bool>().unwrap()),
         }
     }
 }
@@ -2188,8 +2196,12 @@ impl State {
                 side.reviving = !side.reviving;
             }
             Instruction::Revive(instruction) => {
-                self.get_side(&instruction.side_ref).pokemon[instruction.pokemon_index].hp =
-                    instruction.hp;
+                let side = self.get_side(&instruction.side_ref);
+                side.pokemon[instruction.pokemon_index].hp = instruction.hp;
+                if instruction.tera {
+                    side.pokemon[instruction.pokemon_index].terastallized = false;
+                    side.tera_used = true;
+                }
             }
             Instruction::ToggleTerastallized(instruction) => match instruction.side_ref {
                 SideReference::SideOne => self.side_one.get_active().terastallized ^= true,
@@ -2428,7 +2440,12 @@ impl State {
                 side.reviving = !side.reviving;
             }
             Instruction::Revive(instruction) => {
-                self.get_side(&instruction.side_ref).pokemon[instruction.pokemon_index].hp = 0;
+                let side = self.get_side(&instruction.side_ref);
+                side.pokemon[instruction.pokemon_index].hp = 0;
+                if instruction.tera {
+                    side.pokemon[instruction.pokemon_index].terastallized = true;
+                    side.tera_used = false;
+                }
             }
             Instruction::ToggleTerastallized(instruction) => match instruction.side_ref {
                 SideReference::SideOne => self.side_one.get_active().terastallized ^= true,
