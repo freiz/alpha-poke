@@ -7014,10 +7014,20 @@ fn run_move(
                 .get_side_immutable(&attacking_side)
                 .visible_alive_pkmn()
                 > 1;
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L173): not on a holder the hit drags out
+        // (Dragon Tail, Circle Throw: Showdown's forceSwitchFlag, set by the hit before
+        // onAfterMoveSecondary; not through Suction Cups / Ingrain)
+        let dragged = choice.flags.drag
+            && can_switch
+            && holder.ability != Abilities::SUCTIONCUPS
+            && !defender_side
+                .volatile_statuses
+                .contains(&PokemonVolatileStatus::INGRAIN);
         if emergency_exit
             || eject_pack
             || item_hit
                 && holder_hp > 0
+                && !dragged
                 && (item == Items::EJECTBUTTON && can_switch
                     || item == Items::REDCARD && attacker_alive)
         {

@@ -4566,3 +4566,26 @@ def test_l172_positions(teams, i, turn, offset):
     outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2)
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
     assert ec.closest(b["state"], outs, n, hp=True)["diff"] == {}
+
+
+# L173 (doc/engine-diff.md): Red Card / Eject Button do not go off on a holder the hit drags out
+# (Dragon Tail, Circle Throw: Showdown's forceSwitchFlag; main b237-t11)
+@pytest.mark.parametrize("teams,i,turn,offset", [
+    ("random_battle_teams.jsonl", 237, 11, 0),
+])  # fmt: skip
+def test_l173_positions(teams, i, turn, offset):
+    a, b = _random_position(teams, i, turn, offset)
+    c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
+    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2)
+    n = tuple(len(s["mons"]) for s in a["state"]["sides"])
+    assert ec.closest(b["state"], outs, n, hp=True)["diff"] == {}
+
+
+def test_l173_dragon_tail_into_red_card():
+    p1 = BLISSEY.replace("Heavy-Duty Boots", "Red Card") + "\n\n" + DITTO_BACK.split("\n\n")[1]
+    p2 = GARCHOMP_SD.replace("- Scale Shot", "- Dragon Tail") + "\n\n" + LANDO
+    states = ec.run_showdown(p1, p2, [("move softboiled", "move dragontail")])
+    assert any(x.startswith("|drag|p1a") for x in states[1]["log"])
+    assert states[1]["sides"][0]["mons"][0]["item"] == "redcard"
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "softboiled", "dragontail")
+    assert ec.closest(states[1], outs, (2, 2), hp=True)["diff"] == {}
