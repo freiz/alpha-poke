@@ -6724,7 +6724,7 @@ fn run_move(
         final_instructions.push(instructions);
     } else if let Some(secondaries_vec) = &kept {
         state.reverse_instructions(&instructions.instruction_list);
-        let instructions_vec_after_secondaries = get_instructions_from_secondaries(
+        let mut instructions_vec_after_secondaries = get_instructions_from_secondaries(
             state,
             &choice,
             secondaries_vec,
@@ -6732,11 +6732,64 @@ fn run_move(
             instructions,
             hit_sub,
         );
+        for branch in instructions_vec_after_secondaries.iter_mut() {
+            eject_pack_after_secondaries(state, attacking_side, &defender_boosts_before, branch);
+        }
         final_instructions.extend(instructions_vec_after_secondaries);
     } else {
         state.reverse_instructions(&instructions.instruction_list);
         final_instructions.push(instructions);
     }
+}
+
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L144): the target's Eject Pack after a stat the
+// move's secondary lowered (Earth Power, Shadow Ball, ...: Showdown's onAfterBoost, then the
+// switch after the move), as the Eject Button: a target yet to move does not move. The drops of
+// the move's own effect are run_move's (before its secondaries)
+fn eject_pack_after_secondaries(
+    state: &mut State,
+    attacking_side: SideReference,
+    defender_boosts_before: &[i8; 7],
+    branch: &mut StateInstructions,
+) {
+    let defender_ref = attacking_side.get_other_side();
+    state.apply_instructions(&branch.instruction_list);
+    let side = state.get_side_immutable(&defender_ref);
+    let holder = side.get_active_immutable();
+    if holder.item == Items::EJECTPACK
+        && holder.hp > 0
+        && side.visible_alive_pkmn() > 1
+        && !side.force_switch
+        && !state.get_side_immutable(&attacking_side).force_switch
+        && lowered(defender_boosts_before, &boosts_of(side))
+    {
+        let previous_choice = state
+            .get_side_immutable(&attacking_side)
+            .switch_out_move_second_saved_move;
+        let set = SetSecondMoveSwitchOutMoveInstruction {
+            new_choice: Choices::NONE,
+            previous_choice,
+        };
+        for ins in [
+            Instruction::ChangeItem(ChangeItemInstruction {
+                side_ref: defender_ref,
+                current_item: Items::EJECTPACK,
+                new_item: Items::NONE,
+            }),
+            match defender_ref {
+                SideReference::SideOne => Instruction::ToggleSideOneForceSwitch,
+                SideReference::SideTwo => Instruction::ToggleSideTwoForceSwitch,
+            },
+            match attacking_side {
+                SideReference::SideOne => Instruction::SetSideOneMoveSecondSwitchOutMove(set),
+                SideReference::SideTwo => Instruction::SetSideTwoMoveSecondSwitchOutMove(set),
+            },
+        ] {
+            state.apply_one_instruction(&ins);
+            branch.instruction_list.push(ins);
+        }
+    }
+    state.reverse_instructions(&branch.instruction_list);
 }
 
 fn after_move_finish(state: &mut State, final_instructions: &mut Vec<StateInstructions>) {

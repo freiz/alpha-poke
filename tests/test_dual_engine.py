@@ -3670,3 +3670,16 @@ Jolly Nature
     assert states[k]["sides"][0]["mons"][0]["item"] == ""
     outs = ec.engine_outcomes(ec.engine_state(states[k - 1]), "outrage", "softboiled")
     assert ec.closest(states[k], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L144 (doc/engine-diff.md): an Eject Pack goes off after a stat its foe's move's secondary lowered
+# (Acid Spray's Sp. Def -2; Showdown's onAfterBoost): its holder switches out, its own move lost;
+# the engine checked only the move's own stat drops
+def test_l144_eject_pack_after_a_secondary_drop():
+    user = _setter("Glimmora", "Toxic Debris", "Leftovers", "- Acid Spray\n- Earth Power\n- Spikes\n- Protect")
+    goon = _setter("Amoonguss", "Regenerator", "Eject Pack", "- Spore\n- Giga Drain\n- Clear Smog\n- Protect")
+    states = ec.run_showdown(user.replace("Careful", "Timid"), goon.replace("Careful", "Relaxed") + "\n\n" + BLISSEY,
+                             [("move acidspray", "move gigadrain")])  # fmt: skip
+    assert states[1]["sides"][1]["request"] == "switch"
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "acidspray", "gigadrain")
+    assert ec.closest(states[1], outs, (1, 2), hp=True)["diff"] == {}
