@@ -2426,7 +2426,8 @@ fn generate_instructions_from_damage(
         }
 
         let attacking_pokemon = state.get_side(attacking_side_ref).get_active();
-        if let Some(drain_fraction) = choice.drain {
+        // (L156: no drain for a user Destiny Bond took down: it stays fainted)
+        if let Some(drain_fraction) = choice.drain.filter(|_| attacking_pokemon.hp > 0) {
             let mut drain_amount = (damage_dealt as f32 * drain_fraction) as i16;
             // alpha-poke patch (2026-10-16, L24): Big Root
             if attacking_pokemon.item == Items::BIGROOT {
@@ -2970,13 +2971,48 @@ pub fn before_move(
     item_modify_attack_being_used(state, choice, attacking_side);
     item_modify_attack_against(state, choice, attacking_side);
 
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L156): a crash move an absorbing ability
+    // took crashes too (Volt Absorb, Lightning Rod, Motor Drive into Supercell Slam: Showdown's
+    // onTryHit fails it, onMoveFail); the absorb took its crash away
+    if let Some(crash) = MOVES.get(&choice.move_id).and_then(|m| {
+        (m.category != MoveCategory::Status)
+            .then_some(m.crash)
+            .flatten()
+    }) {
+        let absorbed = matches!(
+            state
+                .get_side_immutable(&attacking_side.get_other_side())
+                .get_active_immutable()
+                .ability,
+            Abilities::VOLTABSORB
+                | Abilities::LIGHTNINGROD
+                | Abilities::MOTORDRIVE
+                | Abilities::WATERABSORB
+                | Abilities::STORMDRAIN
+                | Abilities::DRYSKIN
+                | Abilities::SAPSIPPER
+                | Abilities::FLASHFIRE
+                | Abilities::WELLBAKEDBODY
+                | Abilities::EARTHEATER
+        );
+        if absorbed && choice.category == MoveCategory::Status && choice.crash.is_none() {
+            choice.add_or_create_secondaries(Secondary {
+                chance: 100.0,
+                target: MoveTarget::User,
+                effect: Effect::Heal(-crash),
+            });
+        }
+    }
+
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L155): the hit Disguise just took deals
     // nothing, whatever power modify_choice gave the move after it (Heavy Slam, Low Kick, Gyro
     // Ball, ...: their own power came back; Showdown's onDamage returns 0)
-    if matches!(
-        defender_id,
-        PokemonName::MIMIKYU | PokemonName::MIMIKYUTOTEM
-    ) && state
+    if !choice.first_hit_blocked
+        && matches!(
+            defender_id,
+            PokemonName::MIMIKYU | PokemonName::MIMIKYUTOTEM
+        )
+        && state
         .get_side_immutable(&attacking_side.get_other_side())
         .get_active_immutable()
         .id
@@ -6274,7 +6310,8 @@ fn run_move(
         } else {
             damage_amount
         };
-        if does_damage {
+        // (L156: the first hit Disguise / Ice Face took deals nothing, still a hit)
+        if does_damage && !(choice.first_hit_blocked && hit == 0) {
             hit_sub = generate_instructions_from_damage(
                 state,
                 choice,

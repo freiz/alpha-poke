@@ -4014,3 +4014,29 @@ def test_l155_positions(teams, i, turn, offset):
     outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2)
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
     assert ec.closest(b["state"], outs, n, hp=True)["diff"] == {}
+
+
+# L156 (doc/engine-diff.md): Disguise takes a multi-hit move's first hit only (main b176-t18:
+# Rock Blast); no drain for a user Destiny Bond took down (wide2 b146-t8); Supercell Slam into
+# Volt Absorb crashes (offmeta b95-t14)
+@pytest.mark.parametrize("teams,i,turn,offset", [
+    ("random_battle_teams.jsonl", 176, 18, 0),
+    ("random_battle_teams_wide2.jsonl", 146, 8, 30000),
+    ("random_battle_teams_offmeta.jsonl", 95, 14, 0),
+])  # fmt: skip
+def test_l156_positions(teams, i, turn, offset):
+    a, b = _random_position(teams, i, turn, offset)
+    c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
+    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2)
+    n = tuple(len(s["mons"]) for s in a["state"]["sides"])
+    assert ec.closest(b["state"], outs, n, hp=True)["diff"] == {}
+
+
+# L156: Ice Face takes a multi-hit move's first hit only (Rock Blast's later hits damage)
+def test_l156_ice_face_multi_hit():
+    eiscue = _setter("Eiscue", "Ice Face", "Leftovers", "- Belly Drum\n- Icicle Crash\n- Protect\n- Substitute")
+    cloyster = _attacker("Cloyster", "Skill Link", "Leftovers", "- Icicle Spear\n- Rock Blast\n- Shell Smash\n- Spikes", "Jolly")
+    states = ec.run_showdown(cloyster, eiscue, [("move rockblast", "move bellydrum")])
+    assert states[1]["sides"][1]["mons"][0]["hp"] < states[0]["sides"][1]["mons"][0]["hp"]
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "rockblast", "bellydrum")
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}

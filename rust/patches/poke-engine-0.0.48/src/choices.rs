@@ -20836,6 +20836,9 @@ pub struct Choice {
 
     pub first_move: bool,
     pub sleep_talk_move: bool,
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L156): a multi-hit move's first hit Disguise
+    // / Ice Face takes (no damage; the hits after it do)
+    pub first_hit_blocked: bool,
 }
 
 impl fmt::Debug for Choice {
@@ -20974,6 +20977,7 @@ impl Default for Choice {
             target: MoveTarget::Opponent,
             first_move: true,
             sleep_talk_move: false,
+            first_hit_blocked: false,
         }
     }
 }
