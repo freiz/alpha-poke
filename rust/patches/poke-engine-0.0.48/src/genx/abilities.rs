@@ -825,6 +825,40 @@ pub fn magician_after_move(
 // alpha-poke patch (2026-10-17, doc/engine-diff.md L158): Relic Song changes Meloetta's forme after
 // a hit (Aria <-> Pirouette: stats and types; Showdown's onAfterMoveSecondarySelf, not under Sheer
 // Force, not while transformed); the switch-out brings Aria back (generate_instructions_from_switch)
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L162): Anger Shell, the move took its holder
+// from above half to half or less: Atk / Sp. Atk / Speed +1, Def / Sp. Def -1 (Showdown's
+// onAfterMoveSecondary); not under its foe's Neutralizing Gas
+pub fn anger_shell(
+    state: &mut State,
+    side_ref: &SideReference,
+    damage_dealt: i16,
+    instructions: &mut StateInstructions,
+) {
+    let holder_ref = side_ref.get_other_side();
+    let (attacking_side, side) = state.get_both_sides(side_ref);
+    let gas = attacking_side.get_active_immutable().ability == Abilities::NEUTRALIZINGGAS
+        && attacking_side.get_active_immutable().hp > 0;
+    let holder = side.get_active_immutable();
+    if holder.ability != Abilities::ANGERSHELL
+        || gas
+        || holder.hp == 0
+        || damage_dealt <= 0
+        || holder.hp > holder.maxhp / 2
+        || holder.hp + damage_dealt <= holder.maxhp / 2
+    {
+        return;
+    }
+    for (stat, amount) in [
+        (PokemonBoostableStat::Attack, 1),
+        (PokemonBoostableStat::SpecialAttack, 1),
+        (PokemonBoostableStat::Speed, 1),
+        (PokemonBoostableStat::Defense, -1),
+        (PokemonBoostableStat::SpecialDefense, -1),
+    ] {
+        apply_boost_instruction(side, &stat, &amount, &holder_ref, &holder_ref, instructions);
+    }
+}
+
 pub fn relic_song_forme(
     state: &mut State,
     choice: &Choice,
@@ -1030,7 +1064,11 @@ pub fn ability_damaging_hit(
                 instructions,
             );
         }
-        Abilities::ELECTROMORPHOSIS if defending_pkmn.hp > 0 && !charged => {
+        Abilities::ELECTROMORPHOSIS | Abilities::WINDPOWER
+            if defending_pkmn.hp > 0
+                && !charged
+                && (defending_pkmn.ability == Abilities::ELECTROMORPHOSIS || choice.flags.wind) =>
+        {
             defending_side
                 .volatile_statuses
                 .insert(PokemonVolatileStatus::CHARGE);

@@ -4139,3 +4139,60 @@ def test_l161_shell_side_arm_physical():
     assert any("Rocky Helmet" in x for x in states[1]["log"])  # (physical: contact)
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "shellsidearm", "calmmind")
     assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L162 (doc/engine-diff.md): abilities / items the engine never implemented that the team pools
+# use: Merciless (a sure crit on a poisoned target), Steadfast (Speed +1 when flinched), Lagging
+# Tail (last in its bracket), Anger Shell (main b100-t13), Quick Draw (3/10 first in its bracket)
+def test_l162_merciless():
+    pex = _setter("Toxapex", "Merciless", "Black Sludge", "- Toxic\n- Liquidation\n- Recover\n- Haze")
+    foe = _setter("Garchomp", "Rough Skin", "Leftovers", "- Swords Dance\n- Protect\n- Earthquake\n- Roar")
+    states = ec.run_showdown(pex, foe, [("move toxic", "move swordsdance"), ("move liquidation", "move swordsdance")])
+    assert any("|-crit|" in x for x in states[2]["log"])
+    outs = ec.engine_outcomes(ec.engine_state(states[1]), "liquidation", "swordsdance")
+    res = ec.closest(states[2], outs, (1, 1), hp=True)
+    assert res["diff"] == {} and res["p"] > 0.5
+
+
+def test_l162_steadfast():
+    mach = _attacker("Mienshao", "Steadfast", "Leftovers", "- U-turn\n- Close Combat\n- Fake Out\n- Knock Off", "Jolly")
+    foe = _attacker("Weavile", "Pressure", "Leftovers", "- Fake Out\n- Ice Shard\n- Knock Off\n- Swords Dance", "Jolly")
+    states = ec.run_showdown(mach.replace("Jolly", "Adamant"), foe, [("move knockoff", "move fakeout")])
+    assert states[1]["sides"][0]["mons"][0]["boosts"]["spe"] == 1
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "knockoff", "fakeout")
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+def test_l162_lagging_tail():
+    slow = _setter("Hippowdon", "Sand Stream", "Lagging Tail", "- Slack Off\n- Earthquake\n- Stealth Rock\n- Whirlwind")
+    fast = _attacker("Weavile", "Pressure", "Leftovers", "- Fake Out\n- Ice Shard\n- Knock Off\n- Swords Dance", "Jolly")
+    # (Hippowdon is slower anyway: Lagging Tail on the faster one)
+    states = ec.run_showdown(fast.replace("Leftovers", "Lagging Tail"), slow.replace("Lagging Tail", "Leftovers"),
+                             [("move knockoff", "move earthquake")])  # fmt: skip
+    log = [x for x in states[1]["log"] if x.startswith("|move|")]
+    assert log[0].startswith("|move|p2a")
+    # (the final state is the same either way: the engine's order itself)
+    e = ec.engine_state(states[0])
+    for x in pe.generate_instructions(e, "knockoff", "earthquake"):
+        assert [str(i) for i in x.instruction_list if str(i).startswith("Acted")][:1] == ["Acted: SideTwo"]
+
+
+def test_l162_anger_shell():
+    a, b = _random_position("random_battle_teams.jsonl", 100, 13)
+    c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
+    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2)
+    n = tuple(len(s["mons"]) for s in a["state"]["sides"])
+    assert ec.closest(b["state"], outs, n, hp=True)["diff"] == {}
+
+
+def test_l162_quick_draw_chance():
+    """The engine's chance that the slower Quick Draw holder moves first with a damaging move: 3/10
+    (Showdown's randomChance(3, 10)); with a status move: never."""
+    slow = _setter("Slowbro-Galar", "Quick Draw", "Leftovers", "- Shell Side Arm\n- Psychic\n- Calm Mind\n- Slack Off")
+    fast = _attacker("Weavile", "Pressure", "Leftovers", "- Fake Out\n- Ice Shard\n- Knock Off\n- Swords Dance", "Jolly")
+    states = ec.run_showdown(slow, fast, [])
+    e = ec.engine_state(states[0])
+    for move, want in (("psychic", 0.3), ("calmmind", 0.0)):
+        first = sum(x.percentage for x in pe.generate_instructions(e, move, "swordsdance")
+                    if [str(i) for i in x.instruction_list if str(i).startswith("Acted")][:1] == ["Acted: SideOne"])
+        assert first / 100 == pytest.approx(want, abs=1e-3), move

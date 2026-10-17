@@ -5,13 +5,6 @@
 "teams": "87327e3ee174c1b9"
 },
 "mismatches": {
-"b100-t13": [
-"boost.atk",
-"boost.def",
-"boost.spa",
-"boost.spd",
-"boost.spe"
-],
 "b107-t54": [
 "hp"
 ],

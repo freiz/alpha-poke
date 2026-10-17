@@ -355,6 +355,8 @@ define_enum_with_from_str! {
         // abilities.rs (Mold Breaker, Neutralizing Gas), get_instructions_from_volatile_statuses
         ABILITYSHIELD,
         DESTINYKNOT,
+        // (L162: moves last in its bracket, generate_instructions' fractional priority)
+        LAGGINGTAIL,
     },
     default = UNKNOWNITEM
 }
@@ -507,7 +509,7 @@ impl Items {
             | Items::WIKIBERRY
             | Items::WISEGLASSES
             | Items::YACHEBERRY
-            | Items::ZOOMLENS => Some(10),
+            | Items::ZOOMLENS | Items::LAGGINGTAIL => Some(10),
             Items::ABILITYSHIELD
             | Items::ABSORBBULB
             | Items::ADRENALINEORB

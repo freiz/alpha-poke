@@ -1965,11 +1965,23 @@ fn hit_crit_chance(state: &State, attacking_side: &SideReference, choice: &Choic
         .get_active_immutable();
     if defender.ability == Abilities::BATTLEARMOR || defender.ability == Abilities::SHELLARMOR {
         0.0
-    } else if choice.move_id.guaranteed_crit() {
+    } else if is_sure_crit(state, attacking_side, choice) {
         1.0
     } else {
         crit_stage_chance(state, attacking_side, choice)
     }
+}
+
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L162): a crit for sure -- the move's
+// (willCrit), Merciless against a poisoned target (Showdown's onModifyCritRatio: 5)
+fn is_sure_crit(state: &State, attacking_side: &SideReference, choice: &Choice) -> bool {
+    let (side, foe) = state.get_both_sides_immutable(attacking_side);
+    choice.move_id.guaranteed_crit()
+        || (side.get_active_immutable().ability == Abilities::MERCILESS
+            && matches!(
+                foe.get_active_immutable().status,
+                PokemonStatus::POISON | PokemonStatus::TOXIC
+            ))
 }
 
 // alpha-poke patch (2026-10-16, doc/engine-diff.md L30): the chance that hits with these rolls
@@ -2921,6 +2933,26 @@ fn start_truant(
         ));
 }
 
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L162): Steadfast, Speed +1 when a flinch stops
+// its holder (Showdown's onFlinch); the state has the instructions applied
+fn steadfast(state: &mut State, side_ref: &SideReference, instructions: &mut StateInstructions) {
+    let side = state.get_side(side_ref);
+    if side.get_active_immutable().ability == Abilities::STEADFAST
+        && side
+            .volatile_statuses
+            .contains(&PokemonVolatileStatus::FLINCH)
+    {
+        apply_boost_instruction(
+            side,
+            &PokemonBoostableStat::Speed,
+            &1,
+            side_ref,
+            side_ref,
+            instructions,
+        );
+    }
+}
+
 fn cannot_use_move(state: &State, choice: &Choice, attacking_side_ref: &SideReference) -> bool {
     let attacking_side = state.get_side_immutable(attacking_side_ref);
 
@@ -3828,6 +3860,7 @@ pub fn generate_instructions_from_move(
     }
 
     if cannot_use_move(state, &choice, &attacking_side) {
+        steadfast(state, &attacking_side, &mut incoming_instructions);
         state.reverse_instructions(&incoming_instructions.instruction_list);
         final_instructions.push(incoming_instructions);
         return;
@@ -3963,6 +3996,9 @@ pub fn generate_instructions_from_move(
     if no_target(state, &choice, &attacking_side)
         || (asleep_or_frozen_before && flinched_or_taunted(state, &choice, &attacking_side))
     {
+        if asleep_or_frozen_before {
+            steadfast(state, &attacking_side, &mut incoming_instructions);
+        }
         state.reverse_instructions(&incoming_instructions.instruction_list);
         final_instructions.push(incoming_instructions);
         return;
@@ -4372,6 +4408,8 @@ fn finish_move(
     hit_count: i8,
     per_hit: Option<i16>,
 ) {
+    // (L162: a sure crit -- the move's, Merciless'; read before the sides are borrowed)
+    let sure_crit_hit = is_sure_crit(state, &attacking_side, choice);
     let crit_stage_chance = crit_stage_chance(state, &attacking_side, choice);
     let mut does_damage = false;
     let (mut branch_damage, mut regular_damage) = (0, 0);
@@ -4412,7 +4450,7 @@ fn finish_move(
         // alpha-poke patch (2026-10-16, doc/engine-diff.md L42): a guaranteed crit's damage is
         // its crit's, rolls and knockout included (before: the knockout branch looked at the
         // non-crit max, a crit's average otherwise)
-        let sure_crit = choice.move_id.guaranteed_crit() && {
+        let sure_crit = sure_crit_hit && {
             let d = state
                 .get_side_immutable(&attacking_side.get_other_side())
                 .get_active_immutable();
@@ -4455,7 +4493,7 @@ fn finish_move(
                 || defender_active.ability == Abilities::SHELLARMOR
             {
                 0.0
-            } else if choice.move_id.guaranteed_crit() {
+            } else if sure_crit_hit {
                 1.0
             } else {
                 crit_stage_chance
@@ -4519,7 +4557,7 @@ fn finish_move(
                 || defender_active.ability == Abilities::SHELLARMOR
             {
                 0.0
-            } else if choice.move_id.guaranteed_crit() {
+            } else if sure_crit_hit {
                 1.0
             } else {
                 crit_stage_chance
@@ -4554,7 +4592,7 @@ fn finish_move(
             if let Some((r, _)) = exact {
                 regular_rolls = Some(r.iter().map(|d| (1.0 / 16.0, *d)).collect());
             }
-        } else if choice.move_id.guaranteed_crit()
+        } else if sure_crit_hit
             && defender_active.ability != Abilities::BATTLEARMOR
             && defender_active.ability != Abilities::SHELLARMOR
         {
@@ -4858,23 +4896,46 @@ fn quick_claw_first_chance(
     if custap || either_switches || side_one_choice.priority != side_two_choice.priority {
         return base;
     }
-    let procs = |side: &Side, choice: &Choice| -> f32 {
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L162): the fractional priorities of the
+    // bracket -- Quick Claw +0.1 1/5 of the time, Quick Draw +0.1 3/10 (a damaging move), Lagging
+    // Tail / Stall -0.1 (Showdown's onFractionalPriority; its `priority` the fractional one, 0:
+    // any move's priority); before, Quick Claw only, at a priority of 0 or less
+    let fractional = |side: &Side, choice: &Choice| -> (f32, f32) {
+        // (the +0.1 chance, the fraction otherwise)
         let active = side.get_active_immutable();
+        let mut quick = 0.0;
         if active.item == Items::QUICKCLAW
-            && choice.priority <= 0
             && !(choice.category == MoveCategory::Status
                 && active.ability == Abilities::MYCELIUMMIGHT)
         {
-            0.2
+            quick = 0.2;
+        }
+        if active.ability == Abilities::QUICKDRAW && choice.category != MoveCategory::Status {
+            quick = 1.0 - (1.0 - quick) * 0.7;
+        }
+        let slow = if active.item == Items::LAGGINGTAIL || active.ability == Abilities::STALL {
+            -0.1
         } else {
             0.0
-        }
+        };
+        (quick, slow)
     };
-    let (a1, a2) = (
-        procs(&state.side_one, side_one_choice),
-        procs(&state.side_two, side_two_choice),
-    );
-    a1 * (1.0 - a2) + (a1 * a2 + (1.0 - a1) * (1.0 - a2)) * base
+    let (q1, s1) = fractional(&state.side_one, side_one_choice);
+    let (q2, s2) = fractional(&state.side_two, side_two_choice);
+    let mut first = 0.0;
+    for (p1, f1) in [(q1, 0.1), (1.0 - q1, s1)] {
+        for (p2, f2) in [(q2, 0.1), (1.0 - q2, s2)] {
+            let w = p1 * p2;
+            first += w * if f1 > f2 {
+                1.0
+            } else if f1 < f2 {
+                0.0
+            } else {
+                base
+            };
+        }
+    }
+    first
 }
 
 fn moves_first(
@@ -6468,6 +6529,7 @@ fn run_move(
     } // end multi-hit
     super::abilities::magician_after_move(state, choice, &attacking_side, dealt_total, &mut instructions);
     super::abilities::relic_song_forme(state, choice, &attacking_side, dealt_total, &mut instructions);
+    super::abilities::anger_shell(state, &attacking_side, dealt_total, &mut instructions);
 
     // this is wrong, but I am deciding it is good enough for this engine (for now)
     // each multi-hit move should trigger a chance for a secondary effect,
