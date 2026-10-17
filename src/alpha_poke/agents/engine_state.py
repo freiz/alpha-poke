@@ -645,6 +645,7 @@ def build_state(
                                status=STATUS.get(opp_active.status, "none"))  # fmt: skip
         their_idx = zi
     transformed = any(m is not None and m.transformed for m in (active, opp_active))
+    our_tf = their_tf = False
     if spectator is None and transformed:  # a transformed active (D17 J; 2026-10-13)
         their_keys = [next((k for k, v in battle.opponent_team.items() if v is m), None)
                       for m in theirs]  # fmt: skip
@@ -658,14 +659,21 @@ def build_state(
             our_mons[our_active_idx] = _as_transformed(
                 our_mons[our_active_idx], their_mons[t], moves or their_mons[t].moves
             )
+            our_tf = True
         t = _transform_target(battle, battle.opponent_team, opp_active, our_keys)
         if t is not None and their_mons and t < len(our_mons):
             moves = [pe.Move(id=m.id, pp=5) for m in our_mons[t].moves]
             their_mons[their_idx] = _as_transformed(their_mons[their_idx], our_mons[t], moves)
+            their_tf = True
     our_last, our_vol = _last_move(
         active, our_mons[our_active_idx] if our_active_idx is not None else None, avail
     )
     their_last, their_vol = _last_move(opp_active, their_mons[their_idx] if their_mons else None)
+    # the engine's transform / typechange volatiles (doc/engine-diff.md L36): a switch ends the
+    # transformation, and an Imposter does not transform again while it is on
+    for tf, vol in ((our_tf, our_vol), (their_tf, their_vol)):
+        if tf:
+            vol |= {"transform", "typechange"}
     # the actives' Protosynthesis / Quark Drive boosts and other volatiles (BOOSTS)
     for mon, vol in ((active, our_vol), (opp_active, their_vol)):
         vol |= {BOOSTS[e] for e in (mon.effects if mon is not None else ()) if e in BOOSTS}

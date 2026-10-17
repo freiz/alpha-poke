@@ -168,6 +168,8 @@ def _engine_side(s: dict, future_sight=None, wish=None) -> pe.Side:
             vol.discard("metronome")
         if _changed_types(act):  # Showdown keeps no volatile for a type change (Libero, Soak, ...)
             vol.add("typechange")
+        if act.get("transformed"):  # (L36: Showdown's flag, the engine's volatile)
+            vol.add("transform")
         kw["volatile_statuses"] = vol
         if "substitute" in act["volatiles"]:  # its HP (L43: it was 0, any hit broke it)
             kw["substitute_health"] = act["volatiles"]["substitute"]["hp"]
@@ -280,6 +282,8 @@ def view(sd: dict) -> dict:
                 v[f"{k}.boost.{b}"] = act["boosts"][b]
             if _changed_types(act):
                 v[f"{k}.volatile.typechange"] = True
+            if act.get("transformed"):
+                v[f"{k}.volatile.transform"] = True
             for x, st in act["volatiles"].items():
                 # Protosynthesis / Quark Drive: one volatile in Showdown (the stat in its state),
                 # one per stat in the engine ("protosynthesisatk")

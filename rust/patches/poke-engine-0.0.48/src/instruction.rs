@@ -100,6 +100,8 @@ pub enum Instruction {
     ChangeDamageDealtMoveCatagory(ChangeDamageDealtMoveCategoryInstruction),
     ToggleDamageDealtHitSubstitute(ToggleDamageDealtHitSubstituteInstruction),
     DecrementPP(DecrementPPInstruction),
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L36): a move slot's move changes (Transform)
+    ChangeMove(ChangeMoveInstruction),
     ToggleTrickRoom(ToggleTrickRoomInstruction),
     DecrementTrickRoomTurnsRemaining,
     ToggleSideOneForceSwitch,
@@ -262,6 +264,13 @@ impl fmt::Debug for Instruction {
                     d.side_ref, d.damage_amount
                 )
             }
+            Instruction::ChangeMove(c) => {
+                write!(
+                    f,
+                    "ChangeMove {:?} {:?}: {}",
+                    c.side_ref, c.move_index, c.move_change
+                )
+            }
             Instruction::DecrementRestTurns(d) => {
                 write!(f, "DecrementRestTurns {:?}", d.side_ref)
             }
@@ -392,6 +401,14 @@ pub struct ChangeDamageDealtMoveCategoryInstruction {
 #[derive(Debug, PartialEq, Clone)]
 pub struct ToggleDamageDealtHitSubstituteInstruction {
     pub side_ref: SideReference,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct ChangeMoveInstruction {
+    pub side_ref: SideReference,
+    pub move_index: PokemonMoveIndex,
+    // Choices is a u16: the change of its value
+    pub move_change: i16,
 }
 
 #[derive(Debug, PartialEq, Clone)]

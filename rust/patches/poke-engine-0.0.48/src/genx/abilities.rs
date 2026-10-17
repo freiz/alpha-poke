@@ -1358,6 +1358,19 @@ pub fn ability_on_switch_in(
     side_ref: &SideReference,
     instructions: &mut StateInstructions,
 ) {
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L36): Imposter transforms into the foe (the
+    // copied ability does not start)
+    {
+        let (side, foe) = state.get_both_sides_immutable(side_ref);
+        let me = side.get_active_immutable();
+        if me.ability == Abilities::IMPOSTER
+            && !(foe.get_active_immutable().ability == Abilities::NEUTRALIZINGGAS
+                && me.item != Items::ABILITYSHIELD)
+        {
+            super::generate_instructions::transform_into(state, side_ref, instructions);
+            return;
+        }
+    }
     let (attacking_side, defending_side) = state.get_both_sides(side_ref);
     let active_pkmn = attacking_side.get_active();
     let defending_pkmn = defending_side.get_active_immutable();

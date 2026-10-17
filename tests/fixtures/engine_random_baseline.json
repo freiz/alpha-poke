@@ -5,13 +5,6 @@
 "teams": "87327e3ee174c1b9"
 },
 "mismatches": {
-"b0-t12": [
-"volatile.typechange"
-],
-"b0-t28": [
-"hp",
-"volatile.typechange"
-],
 "b107-t54": [
 "hp"
 ],
@@ -57,9 +50,6 @@
 "hp",
 "status"
 ],
-"b164-t1": [
-"volatile.typechange"
-],
 "b176-t18": [
 "active",
 "hp",
@@ -81,9 +71,6 @@
 "b191-t49": [
 "hp"
 ],
-"b195-t3": [
-"volatile.typechange"
-],
 "b196-t28": [
 "volatile.disable"
 ],
@@ -96,13 +83,6 @@
 "b211-t11": [
 "hp",
 "item"
-],
-"b216-t18": [
-"volatile.typechange"
-],
-"b216-t46": [
-"hp",
-"volatile.typechange"
 ],
 "b221-t24": [
 "status"
@@ -117,13 +97,6 @@
 ],
 "b230-t31": [
 "status"
-],
-"b232-t13": [
-"volatile.typechange"
-],
-"b232-t5": [
-"hp",
-"volatile.typechange"
 ],
 "b234-t2": [
 "hp",
@@ -219,12 +192,6 @@
 ],
 "b44-t8": [
 "volatile.perish3"
-],
-"b47-t1": [
-"volatile.typechange"
-],
-"b47-t22": [
-"volatile.typechange"
 ],
 "b48-t30": [
 "hp"

@@ -1822,6 +1822,13 @@ impl State {
         }
     }
 
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L36): a move slot's move (Transform)
+    fn change_move(&mut self, side_reference: &SideReference, move_index: &PokemonMoveIndex, change: i16) {
+        let m = &mut self.get_side(side_reference).get_active().moves[move_index];
+        m.id = Choices::from((m.id as i16 + change) as u16);
+        m.choice = MOVES.get(&m.id).unwrap().to_owned();
+    }
+
     fn decrement_pp(
         &mut self,
         side_reference: &SideReference,
@@ -2030,6 +2037,11 @@ impl State {
                 let side = self.get_side(&instruction.side_ref);
                 side.damage_dealt.hit_substitute = !side.damage_dealt.hit_substitute;
             }
+            Instruction::ChangeMove(instruction) => self.change_move(
+                &instruction.side_ref,
+                &instruction.move_index,
+                instruction.move_change,
+            ),
             Instruction::DecrementPP(instruction) => self.decrement_pp(
                 &instruction.side_ref,
                 &instruction.move_index,
@@ -2233,6 +2245,11 @@ impl State {
                 let side = self.get_side(&instruction.side_ref);
                 side.damage_dealt.hit_substitute = !side.damage_dealt.hit_substitute;
             }
+            Instruction::ChangeMove(instruction) => self.change_move(
+                &instruction.side_ref,
+                &instruction.move_index,
+                -instruction.move_change,
+            ),
             Instruction::DecrementPP(instruction) => self.increment_pp(
                 &instruction.side_ref,
                 &instruction.move_index,

@@ -9,7 +9,8 @@ function teamOf(x) {
 function monState(p, side) {
 	return {
 		slot: side.team.indexOf(p.set),
-		species: p.species.id,
+		// (a transformed mon: its own species, the engine keeps it; L36)
+		species: p.transformed ? p.baseSpecies.id : p.species.id,
 		level: p.level,
 		hp: p.hp,
 		maxhp: p.maxhp,
@@ -34,6 +35,7 @@ function monState(p, side) {
 				num_consecutive: v.numConsecutive || 0, hp: v.hp || 0}])),
 		moves: p.moveSlots.map(m => ({id: m.id, pp: m.pp, maxpp: m.maxpp, disabled: !!m.disabled})),
 		terastallized: p.terastallized || '',
+		transformed: !!p.transformed, // (L36: the engine's transform volatile)
 		tera_type: p.teraType || '',
 		// the species' weight, as our state construction gives it: the engine applies Float Stone
 		// (getWeight() would hide it)

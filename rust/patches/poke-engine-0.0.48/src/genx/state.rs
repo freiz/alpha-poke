@@ -1,6 +1,6 @@
 use super::abilities::Abilities;
 use super::items::Items;
-use crate::choices::{Choices, MoveCategory};
+use crate::choices::{Choices, MoveCategory, MOVES};
 use crate::define_enum_with_from_str;
 use crate::instruction::BoostInstruction;
 use crate::instruction::{
@@ -269,6 +269,8 @@ define_enum_with_from_str! {
         // volatile_status_durations.metronome; on while it is above 0)
         MICLEBERRY,
         METRONOME,
+        // (L36: transformed by Transform / Imposter; ends on a switch)
+        TRANSFORM,
     },
     default = NONE
 }
@@ -1396,6 +1398,40 @@ impl State {
             let should_retain = match pkmn_volatile_status {
                 PokemonVolatileStatus::SUBSTITUTE => baton_passing || shed_tailing,
                 PokemonVolatileStatus::LEECHSEED => baton_passing,
+                // alpha-poke patch (2026-10-16, doc/engine-diff.md L36): Transform ends: the mon's
+                // own move again (the engine keeps no moves of its own while transformed:
+                // Transform, the move of an Imposter Ditto); its types and ability go back with
+                // TYPECHANGE and the switch-out. Its stats stay the copied ones (the engine has no
+                // base stats of most species to recompute them; an Imposter copies them again
+                // when it comes back in, and on the bench they are not used)
+                PokemonVolatileStatus::TRANSFORM => {
+                    let side_ref = *side_ref;
+                    let active = side.get_active();
+                    for (k, index) in [
+                        PokemonMoveIndex::M0,
+                        PokemonMoveIndex::M1,
+                        PokemonMoveIndex::M2,
+                        PokemonMoveIndex::M3,
+                    ]
+                    .iter()
+                    .enumerate()
+                    {
+                        let own = if k == 0 { Choices::TRANSFORM } else { Choices::NONE };
+                        let m = &mut active.moves[index];
+                        if m.id != own {
+                            instructions.push(Instruction::ChangeMove(
+                                crate::instruction::ChangeMoveInstruction {
+                                    side_ref,
+                                    move_index: *index,
+                                    move_change: own as i16 - m.id as i16,
+                                },
+                            ));
+                            m.id = own;
+                            m.choice = MOVES.get(&own).unwrap().to_owned();
+                        }
+                    }
+                    false
+                }
                 PokemonVolatileStatus::TYPECHANGE => {
                     let active = side.get_active();
                     if active.base_types != active.types {

@@ -2127,3 +2127,40 @@ def test_l67_sacred_sword_ignores_defense_boosts():
 
     rolls = alpha_search.damage_rolls(ec.engine_state(states[1]).to_string(), True, "sacredsword", "rapidspin")
     assert rolls[0][-1] == states[1]["damage"]["p1"]["sacredsword"]
+
+
+DITTO = """Ditto @ Choice Scarf
+Ability: Imposter
+Tera Type: Normal
+EVs: 248 HP / 8 Def / 252 Spe
+Relaxed Nature
+- Transform"""
+CLEFABLE = _setter("Clefable", "Magic Guard", "Leftovers", "- Moonblast\n- Calm Mind\n- Moonlight\n- Protect")
+
+
+# L36 (doc/engine-diff.md): Imposter / Transform, the user takes the target's types (not its tera
+# type), stats but HP, ability, boosts and moves (5 PP); it ends on a switch (Showdown's
+# transformInto); the engine had neither
+def test_l36_imposter_transforms_on_switch_in():
+    states = ec.run_showdown(BLISSEY + "\n\n" + DITTO, CLEFABLE, [("switch 2", "move calmmind")])
+    d = states[1]["sides"][0]["mons"][1]
+    assert d["types"] == ["Fairy"] and [m["id"] for m in d["moves"]][:2] == ["moonblast", "calmmind"]
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "ditto", "calmmind")
+    assert ec.closest(states[1], outs, (2, 1))["diff"] == {}
+    e = outs[0][1].side_one.pokemon[1]
+    assert [str(m.id).lower() for m in e.moves][:4] == ["moonblast", "calmmind", "moonlight", "protect"]
+    sd = states[1]["sides"][0]["mons"][1]["stats"]
+    assert (e.attack, e.defense, e.special_attack, e.special_defense, e.speed) == (
+        sd["atk"], sd["def"], sd["spa"], sd["spd"], sd["spe"])
+    assert str(e.ability).lower() == "magicguard"
+
+
+def test_l36_transformed_moves_then_switch_back():
+    turns = [("switch 2", "move calmmind"), ("move moonblast", "move calmmind")]
+    states = ec.run_showdown(BLISSEY + "\n\n" + DITTO, CLEFABLE, turns)
+    outs = ec.engine_outcomes(ec.engine_state(states[1]), "moonblast", "calmmind")
+    assert ec.closest(states[2], outs, (2, 1), hp=True)["diff"] == {}
+    # switching out ends it: Ditto's own move and stats again
+    outs = ec.engine_outcomes(ec.engine_state(states[2]), "blissey", "calmmind")
+    d = outs[0][1].side_one.pokemon[1]
+    assert str(d.moves[0].id).lower() == "transform" and str(d.ability).lower() == "imposter"

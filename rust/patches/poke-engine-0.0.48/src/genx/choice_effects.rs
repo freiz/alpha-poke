@@ -1330,6 +1330,11 @@ pub fn choice_special_effect(
     attacking_side_ref: &SideReference,
     instructions: &mut StateInstructions,
 ) {
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L36): Transform (no effect before)
+    if choice.move_id == Choices::TRANSFORM {
+        super::generate_instructions::transform_into(state, attacking_side_ref, instructions);
+        return;
+    }
     let (attacking_side, defending_side) = state.get_both_sides(attacking_side_ref);
     // alpha-poke patch (2026-10-16, doc/engine-diff.md L16b): a move Protect blocks does nothing
     // here either (Pain Split, Trick / Switcheroo, Counter / Mirror Coat, ...); before, these

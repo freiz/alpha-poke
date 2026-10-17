@@ -63,6 +63,8 @@ def test_our_ditto_takes_the_targets_moves_and_stats(belief):
     assert sorted(m.id for m in ours.moves) == sorted(AMBIT)
     assert ours.id == "kingambit" and ours.attack == theirs.attack and ours.speed == theirs.speed
     assert ours.hp == 300 and ours.base_ability == "imposter"
+    # (L36: the engine's transform / typechange volatiles: a switch ends them)
+    assert {"transform", "typechange"} <= {str(v).lower() for v in s.side_one.volatile_statuses}
     assert request_mismatch(b, s) == []
 
 
@@ -73,4 +75,5 @@ def test_their_ditto_takes_our_moves_and_stats(belief):
     assert sorted(m.id for m in theirs.moves) == sorted(AMBIT)
     assert all(m.pp == 5 for m in theirs.moves)
     assert theirs.id == "kingambit" and theirs.attack == 369 and theirs.speed == 198
+    assert {"transform", "typechange"} <= {str(v).lower() for v in s.side_two.volatile_statuses}
     assert theirs.maxhp != ours.maxhp or theirs.hp > 0  # its own HP
