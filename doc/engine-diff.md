@@ -20,6 +20,8 @@ harness 必须把 Showdown 的状态完整映射到引擎，否则不一致来�
 
 方法 / harness 的修正（2026-10-16 晚，504 → 419，新增 0，94.9%）：HP 容差的伤害之和只算正的伤害（Pain Split 用"负伤害"表示回复，原来使容差变负，两边相等也判不一致）；吸取 / 反伤招式、Shell Bell 持有者的 HP 跟着它造成的伤害走，容差加上对方伤害的 8.5% × 3/4；Wish 映射到引擎（新版 Showdown 用 startingTurn：在 startingTurn + 2 回合的回合末回复，引擎在计数为 1 的回合末回复；回复量是未取整的 maxhp / 2）。
 
+**验证集（用户 2026-10-16 要求：多起几批新的随机对局验证，不能只对着这 300 场修）**：`scripts/check_engine_random_sets.sh` 跑主集合和四个验证集，各有自己的基线（`tests/fixtures/engine_random_baseline_<集合>.json`），每次修复后五个都必须是子集：`seed10k`（同样的 300 对队伍，种子偏移 10000：`--seed-offset`）、`offmeta`（偏门池 200 对）、`random`（随机池 200 对）、`wide`（天梯池 wide1000 的第 300–599 对）；队伍对在 `tests/fixtures/random_battle_teams_<集合>.jsonl`。第一次跑（L57 之后，主集合 99.2%）：98.6% / 97.6% / 98.3% / 98.5%，比主集合低，说明有主集合没覆盖到的机制（Cursed Body、Magic Bounce、Beat Up、Metronome、Stockpile 等）。
+
 另外两点：binding 的 panic 是 BaseException，必须接住；多进程要用 spawn（fork 出来的 worker 会继承扩展模块线程持有的锁而死锁）。
 
 ### 1. 差分统计（找线索）
@@ -209,6 +211,8 @@ harness 必须把 Showdown 的状态完整映射到引擎，否则不一致来�
 | L65 | Covert Cloak 挡掉所有追加效果（Showdown 只挡对持有者的，保留对使用者的：Rapid Spin 的速度 +1；持有者自己的 Static 等接触特性在引擎里也是对使用者的追加效果，也被误挡） | 引擎 | 已修复 | `test_l65_covert_cloak_keeps_self_secondaries` | `generate_instructions.rs`：只去掉对对手的 |
 | L66 | Take Heart 在引擎里没有效果（Showdown：特攻、特防 +1，治愈异常状态） | 引擎 | 已修复 | `test_l66_take_heart` | `choices.rs` 加能力变化；`choice_effects.rs` 同 Refresh 治愈；数据测试列入已知差异 |
 | L67 | Sacred Sword / Darkest Lariat / Chip Away 无视目标的防御强化（Showdown 的 ignoreDefensive），引擎照算。另外 harness：Endeavor 的目标最后等于使用者的 HP，而使用者的 HP 取决于目标本回合打出的伤害掷骰，目标的 HP 容差要算上它打出的伤害（同 L7 的吸取招式） | 引擎 + harness | 已修复 | `test_l67_sacred_sword_ignores_defense_boosts`（最高档等于 Showdown） | `damage_calc.rs`；`check_engine_random.py` |
+| L68 | Healing Wish / Lunar Dance 在没有可换上的宝可梦时失败（Showdown 的 canSwitch，使用者不倒下）；引擎照样倒下 | 引擎 | 已修复 | `test_l68_healing_wish_needs_a_replacement` | `choice_effects.rs` `modify_choice` |
+| L69 | Magic Bounce 弹回的 Whirlwind / Roar 应该拖走原使用者一方，引擎拖的还是对方；弹回到 Encore 使用者身上的 Encore 应失败（不能 Encore 一个 Encore），引擎照样施加 | 引擎 | 已修复 | `test_l69_magic_bounce_whirlwind`；`test_l69_encore_bounced_onto_an_encore_user_fails` | `generate_instructions.rs`：拖人按 `choice.target`；`move_has_no_effect` 的 Encore 看它落到的一方，且上一招是 Encore 时失败 |
 
 ## 修复与验证（2026-10-16）
 
@@ -257,7 +261,7 @@ harness 必须把 Showdown 的状态完整映射到引擎，否则不一致来�
 
 修复：L43–L47。随机差分 97.8%（203）→ **98.2%**（6,916 / 7,046；172 个），每一步都是子集，新增 0；全部测试 316 个、poke-engine 自带测试 229 个通过。
 
-L48–L51 之后（同一天）：**98.4%**（6,930 / 7,046；157 个），新增 0；全部测试 321 个、poke-engine 自带测试 229 个通过。L52–L55 之后：**98.5%**（6,938；149 个），新增 0。L56 之后：6,941，145 个，新增 0。L58 之后：6,943，143 个，新增 0。L59、L60 之后：**98.7%**（6,957；125 个），新增 0；全部测试 337 个通过。L61–L63 之后：**98.8%**（6,964；114 个），新增 0；全部测试 342 个通过。L64–L66 之后：**98.9%**（6,972；104 个），新增 0。L67 之后：**99.0%**（6,975；101 个），新增 0。L36 之后：**99.1%**（6,985；88 个），新增 0；全部测试 350 个通过。L57 之后：**99.2%**（6,989；84 个），新增 0。
+L48–L51 之后（同一天）：**98.4%**（6,930 / 7,046；157 个），新增 0；全部测试 321 个、poke-engine 自带测试 229 个通过。L52–L55 之后：**98.5%**（6,938；149 个），新增 0。L56 之后：6,941，145 个，新增 0。L58 之后：6,943，143 个，新增 0。L59、L60 之后：**98.7%**（6,957；125 个），新增 0；全部测试 337 个通过。L61–L63 之后：**98.8%**（6,964；114 个），新增 0；全部测试 342 个通过。L64–L66 之后：**98.9%**（6,972；104 个），新增 0。L67 之后：**99.0%**（6,975；101 个），新增 0。L36 之后：**99.1%**（6,985；88 个），新增 0；全部测试 350 个通过。L57 之后：**99.2%**（6,989；84 个），新增 0。L68、L69 之后：主集合 99.2%（78 个），验证集 98.7% / 97.7% / 98.4% / 98.6%，五个都新增 0。
 
 单看 HP 的双引擎测试有两个陷阱，这一轮都碰到了：`closest` 只要求有一个分支匹配，不看概率（L47 的确定性醒来要断言概率为 1）；Showdown 的追加效果用 `random(100)`，不受 `force_random` 控制（Strange Steam 的混乱，改用必中的 Confuse Ray）。
 

@@ -2202,12 +2202,17 @@ fn move_has_no_effect(state: &State, choice: &Choice, attacking_side_ref: &SideR
     {
         return true;
     } else if choice.move_id == Choices::ENCORE {
-        return match state
-            .get_side_immutable(&attacking_side_ref.get_other_side())
-            .last_used_move
-        {
+        // alpha-poke patch (2026-10-16, doc/engine-diff.md L69): the side it lands on (its user's
+        // when Magic Bounce reflects it), and it fails on an Encore (Encore cannot encore Encore)
+        let target = if choice.target == MoveTarget::User {
+            *attacking_side_ref
+        } else {
+            attacking_side_ref.get_other_side()
+        };
+        let side = state.get_side_immutable(&target);
+        return match side.last_used_move {
             LastUsedMove::None => true,
-            LastUsedMove::Move(_) => false,
+            LastUsedMove::Move(i) => side.get_active_immutable().moves[&i].id == Choices::ENCORE,
             LastUsedMove::Switch(_) => true,
         };
     } else if state.terrain_is_active(&Terrain::PSYCHICTERRAIN)
@@ -5776,6 +5781,13 @@ fn run_move(
         }
     }
 
+    // L69: a drag Magic Bounce reflected drags its user's side (get_instructions_from_drag drags
+    // the side opposite the one given)
+    let drag_from = if choice.target == MoveTarget::User {
+        attacking_side.get_other_side()
+    } else {
+        attacking_side
+    };
     if choice.flags.drag
         && !ejected
         && state
@@ -5801,11 +5813,11 @@ fn run_move(
             );
             for branch in branches {
                 state.apply_instructions(&branch.instruction_list);
-                get_instructions_from_drag(state, &attacking_side, branch, final_instructions);
+                get_instructions_from_drag(state, &drag_from, branch, final_instructions);
             }
             return;
         }
-        get_instructions_from_drag(state, &attacking_side, instructions, final_instructions);
+        get_instructions_from_drag(state, &drag_from, instructions, final_instructions);
         return;
     }
 

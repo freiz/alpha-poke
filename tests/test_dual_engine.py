@@ -2182,3 +2182,34 @@ def test_l57_harvest(seed):
     eaten = any("[eat]" in x for x in states[1]["log"])
     if eaten:  # the berry eaten this turn: back with half the chance (no sun)
         assert back / sum(o[0] for o in hit) == pytest.approx(0.5, abs=1e-3)
+
+
+HATTERENE = _setter("Hatterene", "Magic Bounce", "Leftovers", "- Healing Wish\n- Psyshock\n- Calm Mind\n- Mystical Fire")
+
+
+# L68 (doc/engine-diff.md): Healing Wish / Lunar Dance fail without a mon to switch in (Showdown's
+# canSwitch: the user does not faint)
+def test_l68_healing_wish_needs_a_replacement():
+    states = ec.run_showdown(HATTERENE, TINGLU, [("move healingwish", "move spikes")])
+    assert states[1]["sides"][0]["mons"][0]["hp"] > 0
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "healingwish", "spikes")
+    assert ec.closest(states[1], outs, (1, 1))["diff"] == {}
+
+
+# L69: a Whirlwind / Roar Magic Bounce reflects drags its user's side; an Encore reflected onto an
+# Encore user fails (Encore cannot encore Encore)
+def test_l69_magic_bounce_whirlwind():
+    lu = _setter("Ting-Lu", "Vessel of Ruin", "Leftovers", "- Whirlwind\n- Ruination\n- Spikes\n- Earthquake")
+    states = ec.run_showdown(HATTERENE, lu + "\n\n" + BLISSEY, [("move calmmind", "move whirlwind")])
+    assert states[1]["sides"][1]["active"] == 1  # Ting-Lu dragged out
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "calmmind", "whirlwind")
+    assert ec.closest(states[1], outs, (1, 2))["diff"] == {}
+
+
+def test_l69_encore_bounced_onto_an_encore_user_fails():
+    encorer = _setter("Clefable", "Magic Guard", "Leftovers", "- Encore\n- Moonblast\n- Moonlight\n- Calm Mind")
+    turns = [("move calmmind", "move moonblast"), ("move psyshock", "move encore")]
+    states = ec.run_showdown(HATTERENE, encorer, turns)
+    assert "encore" not in states[2]["sides"][1]["mons"][0]["volatiles"]
+    outs = ec.engine_outcomes(ec.engine_state(states[1]), "psyshock", "encore")
+    assert ec.closest(states[2], outs, (1, 1))["diff"] == {}

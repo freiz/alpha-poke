@@ -74,11 +74,13 @@ def comparable(steps: list[dict], k: int) -> str | None:
 
 
 def battle(job: tuple) -> dict:
-    i, p1, p2, max_turns = job
+    i, p1, p2, max_turns = job[:4]
+    off = job[4] if len(job) > 4 else 0  # the seeds' offset (a new set of battles)
     out = {"turns": 0, "match": 0, "skipped": collections.Counter(), "kinds": collections.Counter(),
            "pairs": collections.defaultdict(collections.Counter), "mismatches": {}, "errors": []}  # fmt: skip
     try:
-        steps, err = ec.random_battle(p1, p2, f"gen5,{i},{i + 1},{i + 2},{i + 3}", i + 1,
+        k = i + off
+        steps, err = ec.random_battle(p1, p2, f"gen5,{k},{k + 1},{k + 2},{k + 3}", k + 1,
                                       max_turns=max_turns)  # fmt: skip
     except Exception as e:  # noqa: BLE001
         out["errors"].append(f"runner: {str(e)[:200]}")
@@ -138,14 +140,19 @@ def main() -> None:
     ap.add_argument("--force", action="store_true", help="update the baseline even with new ones")
     ap.add_argument("--max-turns", type=int, default=60)
     ap.add_argument("--procs", type=int, default=8)
+    ap.add_argument("--seed-offset", type=int, default=0,
+                    help="another set of battles: the simulator / choice seeds shifted (0: the "
+                    "baseline's)")  # fmt: skip
     ap.add_argument("--out", default="data/selfplay/diag/engine_random.json")
     a = ap.parse_args()
     text = Path(a.teams).read_text()
     pairs = [json.loads(x) for x in text.splitlines()]
-    jobs = [(i, pairs[i % len(pairs)]["p1"], pairs[i % len(pairs)]["p2"], a.max_turns)
-            for i in range(a.battles)]  # fmt: skip
+    jobs = [(i, pairs[i % len(pairs)]["p1"], pairs[i % len(pairs)]["p2"], a.max_turns,
+             a.seed_offset) for i in range(a.battles)]  # fmt: skip
     setup = {"battles": a.battles, "max_turns": a.max_turns,
              "teams": hashlib.sha256(text.encode()).hexdigest()[:16]}  # fmt: skip
+    if a.seed_offset:
+        setup["seed_offset"] = a.seed_offset
     tot = {"turns": 0, "match": 0}
     skipped, kinds = collections.Counter(), collections.Counter()
     pairs_by_kind: dict = collections.defaultdict(collections.Counter)

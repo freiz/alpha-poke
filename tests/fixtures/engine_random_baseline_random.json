@@ -1,0 +1,292 @@
+{
+"setup": {
+"battles": 200,
+"max_turns": 60,
+"teams": "ec78e233fb2205eb"
+},
+"mismatches": {
+"b0-t16": [
+"hp",
+"status"
+],
+"b0-t17": [
+"hp"
+],
+"b0-t18": [
+"hp"
+],
+"b103-t12": [
+"terrain"
+],
+"b111-t20": [
+"volatile.disable"
+],
+"b113-t2": [
+"hp"
+],
+"b114-t23": [
+"hp"
+],
+"b114-t28": [
+"hp",
+"status"
+],
+"b114-t5": [
+"boost.spe",
+"hp"
+],
+"b12-t17": [
+"item"
+],
+"b12-t6": [
+"hp"
+],
+"b12-t7": [
+"hp"
+],
+"b121-t37": [
+"hp",
+"status"
+],
+"b123-t11": [
+"hp"
+],
+"b123-t17": [
+"hp"
+],
+"b125-t16": [
+"hp"
+],
+"b126-t15": [
+"hp",
+"item",
+"toxic_spikes"
+],
+"b127-t1": [
+"volatile.disable"
+],
+"b127-t4": [
+"volatile.disable"
+],
+"b144-t13": [
+"hp"
+],
+"b147-t2": [
+"volatile.charge"
+],
+"b147-t27": [
+"volatile.charge",
+"volatile.typechange"
+],
+"b156-t14": [
+"item"
+],
+"b160-t23": [
+"boost.evasion"
+],
+"b161-t10": [
+"hp"
+],
+"b163-t46": [
+"item"
+],
+"b164-t5": [
+"boost.evasion"
+],
+"b164-t6": [
+"boost.evasion"
+],
+"b165-t10": [
+"volatile.flashfire"
+],
+"b165-t19": [
+"boost.atk"
+],
+"b168-t12": [
+"boost.atk",
+"hp"
+],
+"b175-t23": [
+"hp",
+"volatile.partiallytrapped"
+],
+"b184-t2": [
+"hp",
+"status"
+],
+"b184-t5": [
+"hp",
+"status"
+],
+"b184-t58": [
+"hp",
+"status"
+],
+"b186-t18": [
+"hp"
+],
+"b188-t16": [
+"hp"
+],
+"b188-t17": [
+"hp"
+],
+"b188-t18": [
+"hp"
+],
+"b189-t11": [
+"item",
+"volatile.quarkdrivespa"
+],
+"b189-t22": [
+"boost.evasion"
+],
+"b192-t22": [
+"hp"
+],
+"b192-t26": [
+"hp"
+],
+"b192-t45": [
+"active",
+"hp",
+"item"
+],
+"b197-t21": [
+"status"
+],
+"b26-t12": [
+"hp"
+],
+"b27-t15": [
+"item",
+"volatile.protosynthesisspe"
+],
+"b29-t11": [
+"volatile.encore"
+],
+"b29-t4": [
+"item"
+],
+"b30-t7": [
+"hp"
+],
+"b34-t38": [
+"boost.atk",
+"boost.def",
+"boost.spe"
+],
+"b34-t44": [
+"boost.atk",
+"boost.def",
+"boost.spe"
+],
+"b37-t20": [
+"hp"
+],
+"b37-t21": [
+"hp"
+],
+"b45-t27": [
+"hp"
+],
+"b45-t28": [
+"hp"
+],
+"b45-t30": [
+"hp",
+"trick_room"
+],
+"b45-t31": [
+"status"
+],
+"b48-t15": [
+"volatile.disable"
+],
+"b49-t13": [
+"active",
+"item"
+],
+"b49-t4": [
+"hp",
+"status"
+],
+"b5-t18": [
+"hp"
+],
+"b5-t34": [
+"volatile.disable"
+],
+"b5-t39": [
+"volatile.disable"
+],
+"b50-t30": [
+"hp"
+],
+"b50-t5": [
+"hp"
+],
+"b50-t6": [
+"hp"
+],
+"b53-t11": [
+"hp",
+"weather"
+],
+"b55-t20": [
+"hp"
+],
+"b57-t11": [
+"status"
+],
+"b59-t3": [
+"hp"
+],
+"b77-t13": [
+"trick_room"
+],
+"b78-t5": [
+"hp",
+"item"
+],
+"b79-t23": [
+"volatile.encore"
+],
+"b82-t10": [
+"hp",
+"item"
+],
+"b84-t18": [
+"volatile.disable"
+],
+"b84-t4": [
+"volatile.disable"
+],
+"b88-t8": [
+"boost.def"
+],
+"b89-t40": [
+"hp",
+"status"
+],
+"b9-t23": [
+"volatile.charge"
+],
+"b9-t31": [
+"volatile.charge",
+"volatile.typechange"
+],
+"b9-t47": [
+"volatile.charge"
+],
+"b91-t13": [
+"volatile.confusion"
+],
+"b93-t4": [
+"hp"
+],
+"b99-t20": [
+"status"
+]
+}
+}

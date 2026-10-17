@@ -1,0 +1,408 @@
+{
+"setup": {
+"battles": 200,
+"max_turns": 60,
+"teams": "1b2440f0794c7f2a"
+},
+"mismatches": {
+"b101-t21": [
+"hp"
+],
+"b103-t1": [
+"hp"
+],
+"b103-t11": [
+"volatile.slowstart"
+],
+"b103-t15": [
+"toxic_spikes"
+],
+"b103-t18": [
+"volatile.slowstart"
+],
+"b103-t19": [
+"hp"
+],
+"b103-t22": [
+"hp"
+],
+"b103-t23": [
+"hp"
+],
+"b104-t14": [
+"hp"
+],
+"b106-t3": [
+"hp"
+],
+"b106-t35": [
+"light_screen"
+],
+"b106-t44": [
+"hp",
+"status"
+],
+"b106-t47": [
+"hp"
+],
+"b106-t48": [
+"hp"
+],
+"b106-t5": [
+"hp"
+],
+"b106-t58": [
+"volatile.slowstart"
+],
+"b107-t22": [
+"item"
+],
+"b107-t42": [
+"volatile.charge"
+],
+"b107-t48": [
+"volatile.charge"
+],
+"b107-t54": [
+"volatile.charge"
+],
+"b117-t35": [
+"volatile.slowstart"
+],
+"b117-t39": [
+"volatile.slowstart"
+],
+"b13-t21": [
+"boost.def",
+"boost.spd"
+],
+"b13-t24": [
+"boost.def",
+"boost.spd"
+],
+"b13-t31": [
+"boost.def",
+"boost.spd"
+],
+"b13-t5": [
+"volatile.perish3"
+],
+"b130-t19": [
+"hp",
+"volatile.leechseed"
+],
+"b131-t11": [
+"item"
+],
+"b137-t2": [
+"boost.atk"
+],
+"b14-t33": [
+"hp"
+],
+"b142-t7": [
+"active",
+"boost.atk",
+"hp",
+"item",
+"volatile.curse"
+],
+"b145-t24": [
+"hp"
+],
+"b148-t5": [
+"volatile.truant"
+],
+"b158-t26": [
+"status"
+],
+"b159-t4": [
+"hp"
+],
+"b159-t5": [
+"hp"
+],
+"b160-t6": [
+"boost.atk",
+"boost.def",
+"boost.spa",
+"boost.spd",
+"boost.spe",
+"hp"
+],
+"b160-t8": [
+"boost.atk",
+"boost.def",
+"boost.spa",
+"boost.spd",
+"boost.spe",
+"hp"
+],
+"b161-t1": [
+"boost.def",
+"hp"
+],
+"b161-t10": [
+"volatile.disable"
+],
+"b161-t36": [
+"item"
+],
+"b161-t42": [
+"hp"
+],
+"b161-t47": [
+"volatile.encore"
+],
+"b161-t51": [
+"boost.evasion",
+"volatile.minimize"
+],
+"b161-t7": [
+"volatile.disable"
+],
+"b169-t3": [
+"hp"
+],
+"b17-t14": [
+"boost.spe"
+],
+"b175-t31": [
+"hp",
+"volatile.leechseed"
+],
+"b175-t44": [
+"hp",
+"volatile.partiallytrapped"
+],
+"b176-t13": [
+"hp",
+"status"
+],
+"b176-t32": [
+"hp"
+],
+"b176-t51": [
+"hp"
+],
+"b177-t6": [
+"volatile.attract"
+],
+"b178-t2": [
+"hp"
+],
+"b180-t13": [
+"boost.def"
+],
+"b186-t15": [
+"volatile.perish3"
+],
+"b187-t23": [
+"hp",
+"item"
+],
+"b187-t25": [
+"hp",
+"volatile.protosynthesisatk"
+],
+"b188-t10": [
+"boost.def",
+"boost.spd"
+],
+"b188-t7": [
+"active",
+"hp",
+"item"
+],
+"b19-t3": [
+"hp",
+"terrain"
+],
+"b191-t5": [
+"volatile.disable"
+],
+"b192-t34": [
+"status"
+],
+"b195-t13": [
+"hp"
+],
+"b195-t14": [
+"boost.spa"
+],
+"b195-t29": [
+"volatile.slowstart"
+],
+"b195-t34": [
+"hp"
+],
+"b195-t44": [
+"hp",
+"status"
+],
+"b29-t1": [
+"volatile.perish3"
+],
+"b36-t19": [
+"hp"
+],
+"b36-t35": [
+"hp"
+],
+"b36-t47": [
+"hp"
+],
+"b41-t14": [
+"hp",
+"volatile.truant"
+],
+"b41-t15": [
+"hp"
+],
+"b41-t16": [
+"hp"
+],
+"b46-t12": [
+"active",
+"boost.atk",
+"item",
+"status"
+],
+"b46-t2": [
+"hp"
+],
+"b48-t23": [
+"volatile.flashfire"
+],
+"b48-t44": [
+"volatile.flashfire"
+],
+"b49-t1": [
+"hp",
+"status"
+],
+"b49-t11": [
+"hp",
+"item"
+],
+"b49-t19": [
+"hp",
+"volatile.leechseed"
+],
+"b49-t2": [
+"hp",
+"status"
+],
+"b49-t3": [
+"boost.spa",
+"volatile.meteorbeam"
+],
+"b49-t4": [
+"error"
+],
+"b49-t9": [
+"hp",
+"volatile.mustrecharge"
+],
+"b53-t27": [
+"boost.def"
+],
+"b53-t28": [
+"boost.def"
+],
+"b53-t29": [
+"boost.def"
+],
+"b60-t1": [
+"hp"
+],
+"b62-t17": [
+"status"
+],
+"b62-t18": [
+"status"
+],
+"b62-t19": [
+"status"
+],
+"b65-t2": [
+"hp",
+"status"
+],
+"b65-t20": [
+"hp",
+"item",
+"status"
+],
+"b67-t16": [
+"hp",
+"status"
+],
+"b68-t11": [
+"hp",
+"status"
+],
+"b69-t1": [
+"boost.atk"
+],
+"b69-t12": [
+"boost.atk"
+],
+"b73-t22": [
+"status"
+],
+"b74-t14": [
+"boost.atk",
+"hp",
+"item",
+"status"
+],
+"b76-t17": [
+"item"
+],
+"b80-t1": [
+"hp"
+],
+"b83-t1": [
+"volatile.disable"
+],
+"b83-t27": [
+"active",
+"boost.evasion",
+"hp",
+"item"
+],
+"b86-t28": [
+"hp"
+],
+"b86-t33": [
+"hp"
+],
+"b88-t7": [
+"hp",
+"status"
+],
+"b93-t9": [
+"volatile.disable"
+],
+"b94-t7": [
+"volatile.disable"
+],
+"b96-t3": [
+"item"
+],
+"b98-t26": [
+"hp"
+],
+"b98-t28": [
+"hp"
+],
+"b98-t51": [
+"hp",
+"item"
+],
+"b99-t20": [
+"volatile.flashfire"
+]
+}
+}

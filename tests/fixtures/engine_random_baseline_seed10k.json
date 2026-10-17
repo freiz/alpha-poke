@@ -1,0 +1,347 @@
+{
+"setup": {
+"battles": 300,
+"max_turns": 60,
+"teams": "87327e3ee174c1b9",
+"seed_offset": 10000
+},
+"mismatches": {
+"b1-t26": [
+"status"
+],
+"b101-t18": [
+"item"
+],
+"b104-t20": [
+"boost.spe"
+],
+"b105-t5": [
+"volatile.confusion"
+],
+"b108-t23": [
+"hp",
+"toxic_spikes"
+],
+"b111-t1": [
+"volatile.typechange"
+],
+"b117-t23": [
+"hp",
+"item"
+],
+"b12-t28": [
+"volatile.disable"
+],
+"b12-t31": [
+"volatile.disable"
+],
+"b121-t28": [
+"volatile.disable"
+],
+"b121-t38": [
+"item"
+],
+"b123-t8": [
+"reflect"
+],
+"b124-t19": [
+"hp"
+],
+"b124-t20": [
+"hp"
+],
+"b128-t15": [
+"hp"
+],
+"b128-t19": [
+"hp"
+],
+"b128-t24": [
+"hp"
+],
+"b13-t13": [
+"volatile.substitute"
+],
+"b130-t5": [
+"hp"
+],
+"b132-t25": [
+"status"
+],
+"b137-t20": [
+"hp"
+],
+"b137-t21": [
+"hp"
+],
+"b163-t9": [
+"volatile.disable"
+],
+"b164-t30": [
+"volatile.disable"
+],
+"b165-t45": [
+"status"
+],
+"b166-t10": [
+"volatile.typechange"
+],
+"b166-t8": [
+"volatile.typechange"
+],
+"b168-t26": [
+"hp"
+],
+"b169-t54": [
+"status"
+],
+"b172-t12": [
+"hp"
+],
+"b175-t7": [
+"volatile.smackdown"
+],
+"b176-t11": [
+"active",
+"hp",
+"item"
+],
+"b178-t36": [
+"boost.atk",
+"boost.spa",
+"boost.spd"
+],
+"b179-t2": [
+"active"
+],
+"b18-t31": [
+"item"
+],
+"b182-t25": [
+"hp"
+],
+"b183-t25": [
+"status"
+],
+"b187-t32": [
+"status"
+],
+"b188-t11": [
+"volatile.disable"
+],
+"b19-t3": [
+"hp"
+],
+"b191-t14": [
+"hp"
+],
+"b196-t18": [
+"volatile.taunt"
+],
+"b198-t19": [
+"hp"
+],
+"b199-t3": [
+"active",
+"hp",
+"item",
+"status",
+"trick_room",
+"volatile.curse"
+],
+"b200-t22": [
+"hp"
+],
+"b220-t5": [
+"hp"
+],
+"b222-t13": [
+"status"
+],
+"b228-t27": [
+"boost.atk",
+"boost.def",
+"boost.spe"
+],
+"b228-t28": [
+"boost.atk",
+"boost.def",
+"boost.spe"
+],
+"b228-t30": [
+"boost.atk",
+"boost.def",
+"boost.spe"
+],
+"b237-t19": [
+"item",
+"volatile.quarkdrivespe"
+],
+"b249-t1": [
+"volatile.disable"
+],
+"b249-t6": [
+"boost.def"
+],
+"b25-t19": [
+"hp"
+],
+"b258-t2": [
+"boost.atk",
+"hp"
+],
+"b258-t39": [
+"status"
+],
+"b264-t17": [
+"trick_room"
+],
+"b264-t18": [
+"trick_room"
+],
+"b268-t10": [
+"hp",
+"item"
+],
+"b269-t1": [
+"hp"
+],
+"b279-t13": [
+"item",
+"volatile.quarkdrivespe"
+],
+"b279-t6": [
+"boost.def",
+"item"
+],
+"b280-t26": [
+"hp"
+],
+"b280-t29": [
+"hp"
+],
+"b280-t8": [
+"volatile.disable"
+],
+"b282-t24": [
+"boost.def",
+"boost.spd"
+],
+"b282-t38": [
+"boost.def",
+"boost.spd"
+],
+"b284-t4": [
+"hp"
+],
+"b284-t5": [
+"hp"
+],
+"b284-t7": [
+"active",
+"boost.atk",
+"boost.def",
+"hp",
+"item",
+"status",
+"volatile.protosynthesisatk"
+],
+"b295-t1": [
+"hp"
+],
+"b295-t12": [
+"boost.spe"
+],
+"b295-t16": [
+"boost.spa"
+],
+"b3-t16": [
+"hp"
+],
+"b30-t1": [
+"hp",
+"item"
+],
+"b30-t4": [
+"hp"
+],
+"b34-t29": [
+"hp"
+],
+"b34-t30": [
+"hp"
+],
+"b36-t22": [
+"status"
+],
+"b36-t24": [
+"hp",
+"status"
+],
+"b36-t52": [
+"status"
+],
+"b37-t19": [
+"hp"
+],
+"b39-t11": [
+"hp",
+"status"
+],
+"b39-t12": [
+"hp",
+"status"
+],
+"b43-t4": [
+"volatile.disable"
+],
+"b47-t16": [
+"hp",
+"item"
+],
+"b53-t21": [
+"hp",
+"volatile.partiallytrapped"
+],
+"b55-t25": [
+"boost.spe"
+],
+"b57-t25": [
+"item"
+],
+"b59-t1": [
+"hp"
+],
+"b6-t42": [
+"status"
+],
+"b66-t3": [
+"item"
+],
+"b69-t30": [
+"hp",
+"status",
+"volatile.saltcure"
+],
+"b69-t39": [
+"boost.atk",
+"boost.def",
+"boost.spe"
+],
+"b70-t18": [
+"volatile.metronome"
+],
+"b75-t45": [
+"hp"
+],
+"b88-t27": [
+"item"
+],
+"b95-t13": [
+"status"
+],
+"b98-t25": [
+"status"
+]
+}
+}

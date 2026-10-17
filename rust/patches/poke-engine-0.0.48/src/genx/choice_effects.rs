@@ -328,6 +328,14 @@ pub fn modify_choice(
                 }
             }
         }
+        // alpha-poke patch (2026-10-16, doc/engine-diff.md L68): Healing Wish / Lunar Dance fail
+        // without a mon to switch in (Showdown's canSwitch: the user does not faint)
+        Choices::HEALINGWISH | Choices::LUNARDANCE => {
+            if attacking_side.visible_alive_pkmn() <= 1 {
+                attacker_choice.heal = None;
+                attacker_choice.side_condition = None;
+            }
+        }
         Choices::NORETREAT => {
             if attacking_side
                 .volatile_statuses
