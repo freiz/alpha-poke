@@ -274,6 +274,17 @@ class Outcome(tuple):
         return o
 
 
+def _drop_fainted_active(v: dict) -> dict:
+    """A fainted active's boosts and volatiles are not compared (Showdown clears them as it faints,
+    the engine at the replacement's switch-in): a decision point after a knockout."""
+    for k in ("s1", "s2"):
+        if v.get(f"{k}.{v.get(f'{k}.active')}.hp") == 0:
+            for key in [x for x in v if x.startswith((f"{k}.boost.", f"{k}.volatile."))]:
+                del v[key]
+            v[f"{k}.fainted_active"] = True  # (diff: not those of the other view either)
+    return v
+
+
 def view(sd: dict) -> dict:
     """A Showdown state in the comparison format (``view_engine``)."""
     v: dict = {"weather": WEATHER[sd["field"]["weather"]],
@@ -312,7 +323,7 @@ def view(sd: dict) -> dict:
             v[f"{k}.{eng}"] = int(name in c)
         for name, eng in TIMED.items():
             v[f"{k}.{eng}"] = name in c
-    return v
+    return _drop_fainted_active(v)
 
 
 def view_engine(s: pe.State, n_mons: tuple[int, int] = (6, 6)) -> dict:
@@ -342,12 +353,15 @@ def view_engine(s: pe.State, n_mons: tuple[int, int] = (6, 6)) -> dict:
             v[f"{k}.{eng}"] = int(getattr(sc, eng) > 0)
         for eng in TIMED.values():
             v[f"{k}.{eng}"] = getattr(sc, eng) > 0
-    return v
+    return _drop_fainted_active(v)
 
 
 def diff(a: dict, b: dict, skip_hp: bool = False) -> dict:
     """{key: (a's, b's)} where two views differ (``skip_hp``: HP left out)."""
     keys = set(a) | set(b)
+    gone = {k[:2] for k in keys if k.endswith(".fainted_active")}  # (_drop_fainted_active)
+    keys = {k for k in keys if not (k[:2] in gone and k[3:].startswith(("boost.", "volatile.",
+                                                                         "fainted_active")))}  # fmt: skip
     return {k: (a.get(k), b.get(k)) for k in sorted(keys)
             if a.get(k) != b.get(k) and not (skip_hp and k.endswith(".hp"))}  # fmt: skip
 

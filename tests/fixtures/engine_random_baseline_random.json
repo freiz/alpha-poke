@@ -5,7 +5,23 @@
 "teams": "ec78e233fb2205eb"
 },
 "mismatches": {
+"b0-t8": [
+"hp"
+],
+"b102-t9": [
+"hp"
+],
+"b103-t53": [
+"hp",
+"volatile.partiallytrapped"
+],
+"b112-t33": [
+"terrain"
+],
 "b113-t2": [
+"hp"
+],
+"b113-t3": [
 "hp"
 ],
 "b114-t23": [
@@ -22,6 +38,15 @@
 "b12-t17": [
 "item"
 ],
+"b121-t10": [
+"volatile.typechange"
+],
+"b121-t24": [
+"weather"
+],
+"b122-t10": [
+"item"
+],
 "b123-t11": [
 "hp"
 ],
@@ -36,14 +61,58 @@
 "item",
 "toxic_spikes"
 ],
+"b126-t28": [
+"boost.evasion"
+],
+"b128-t11": [
+"hp"
+],
+"b134-t29": [
+"item"
+],
+"b136-t24": [
+"hp",
+"item"
+],
+"b14-t37": [
+"volatile.roost"
+],
 "b144-t13": [
 "hp"
+],
+"b145-t26": [
+"volatile.typechange"
+],
+"b145-t54": [
+"volatile.typechange"
+],
+"b146-t27": [
+"hp",
+"item"
+],
+"b151-t25": [
+"volatile.typechange"
+],
+"b154-t3": [
+"hp",
+"item",
+"status"
 ],
 "b156-t14": [
 "item"
 ],
+"b156-t7": [
+"hp",
+"item"
+],
+"b158-t16": [
+"item"
+],
 "b160-t23": [
 "boost.evasion"
+],
+"b160-t29": [
+"item"
 ],
 "b161-t10": [
 "hp"
@@ -55,9 +124,22 @@
 "boost.atk",
 "hp"
 ],
+"b169-t29": [
+"hp",
+"status"
+],
 "b175-t23": [
 "hp",
 "volatile.partiallytrapped"
+],
+"b176-t25": [
+"trick_room"
+],
+"b177-t26": [
+"hp"
+],
+"b182-t28": [
+"volatile.typechange"
 ],
 "b184-t5": [
 "hp",
@@ -69,6 +151,9 @@
 "b189-t11": [
 "item",
 "volatile.quarkdrivespa"
+],
+"b191-t23": [
+"terrain"
 ],
 "b192-t45": [
 "active",
@@ -91,6 +176,12 @@
 "b37-t21": [
 "hp"
 ],
+"b42-t34": [
+"item"
+],
+"b44-t31": [
+"status"
+],
 "b45-t30": [
 "trick_room"
 ],
@@ -101,6 +192,9 @@
 "b49-t4": [
 "hp",
 "status"
+],
+"b50-t37": [
+"item"
 ],
 "b50-t6": [
 "hp"
@@ -115,8 +209,21 @@
 "b59-t3": [
 "hp"
 ],
+"b60-t2": [
+"item",
+"volatile.confusion"
+],
+"b7-t13": [
+"status"
+],
 "b77-t13": [
 "trick_room"
+],
+"b77-t9": [
+"item"
+],
+"b78-t4": [
+"item"
 ],
 "b78-t5": [
 "hp",
@@ -127,6 +234,12 @@
 ],
 "b82-t10": [
 "hp"
+],
+"b87-t16": [
+"hp"
+],
+"b87-t22": [
+"weather"
 ],
 "b88-t8": [
 "boost.def"

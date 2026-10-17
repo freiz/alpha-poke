@@ -5,8 +5,48 @@
 "teams": "1b2440f0794c7f2a"
 },
 "mismatches": {
+"b1-t26": [
+"status"
+],
+"b101-t16": [
+"hp",
+"item",
+"status"
+],
+"b101-t20": [
+"hp",
+"status"
+],
+"b101-t9": [
+"hp",
+"status"
+],
 "b104-t14": [
 "hp"
+],
+"b111-t17": [
+"hp"
+],
+"b116-t24": [
+"hp",
+"status",
+"weather"
+],
+"b126-t5": [
+"hp",
+"volatile.partiallytrapped"
+],
+"b128-t2": [
+"hp",
+"item"
+],
+"b130-t8": [
+"status"
+],
+"b130-t9": [
+"boost.atk",
+"boost.spa",
+"boost.spe"
 ],
 "b131-t11": [
 "item"
@@ -14,8 +54,15 @@
 "b137-t2": [
 "boost.atk"
 ],
+"b139-t40": [
+"item"
+],
 "b14-t33": [
 "hp"
+],
+"b14-t37": [
+"hp",
+"status"
 ],
 "b142-t7": [
 "active",
@@ -24,8 +71,19 @@
 "item",
 "volatile.curse"
 ],
+"b145-t34": [
+"boost.atk",
+"boost.spa",
+"boost.spe"
+],
+"b147-t10": [
+"item"
+],
 "b148-t5": [
 "volatile.truant"
+],
+"b150-t13": [
+"item"
 ],
 "b158-t26": [
 "status"
@@ -56,16 +114,30 @@
 "b161-t42": [
 "hp"
 ],
+"b161-t5": [
+"hp",
+"status"
+],
 "b161-t51": [
 "boost.evasion",
 "volatile.minimize"
 ],
+"b166-t35": [
+"item"
+],
 "b169-t3": [
 "hp"
+],
+"b174-t20": [
+"item"
 ],
 "b175-t44": [
 "hp",
 "volatile.partiallytrapped"
+],
+"b176-t30": [
+"hp",
+"status"
 ],
 "b176-t51": [
 "hp"
@@ -76,13 +148,66 @@
 "b178-t2": [
 "hp"
 ],
+"b179-t8": [
+"hp",
+"status"
+],
+"b18-t10": [
+"item"
+],
+"b18-t9": [
+"status"
+],
 "b180-t13": [
 "boost.def"
+],
+"b184-t10": [
+"boost.atk",
+"boost.spa",
+"boost.spe"
+],
+"b184-t11": [
+"boost.atk",
+"boost.spa",
+"boost.spe"
+],
+"b184-t13": [
+"boost.atk",
+"boost.spa",
+"boost.spe"
+],
+"b184-t3": [
+"boost.atk",
+"boost.spa",
+"boost.spe"
 ],
 "b188-t7": [
 "active",
 "hp",
 "item"
+],
+"b189-t34": [
+"volatile.trapped"
+],
+"b194-t13": [
+"item"
+],
+"b199-t25": [
+"volatile.trapped"
+],
+"b25-t8": [
+"volatile.uproar"
+],
+"b26-t8": [
+"hp"
+],
+"b30-t25": [
+"hp",
+"status"
+],
+"b35-t3": [
+"item",
+"volatile.confusion"
 ],
 "b36-t19": [
 "hp"
@@ -93,6 +218,12 @@
 "b36-t47": [
 "hp"
 ],
+"b38-t15": [
+"volatile.trapped"
+],
+"b41-t13": [
+"volatile.truant"
+],
 "b41-t14": [
 "hp",
 "volatile.truant"
@@ -101,6 +232,12 @@
 "hp"
 ],
 "b41-t16": [
+"hp"
+],
+"b41-t17": [
+"status"
+],
+"b42-t4": [
 "hp"
 ],
 "b46-t12": [
@@ -137,6 +274,9 @@
 "hp",
 "status"
 ],
+"b49-t20": [
+"volatile.trapped"
+],
 "b49-t3": [
 "boost.spa",
 "volatile.meteorbeam"
@@ -147,6 +287,10 @@
 "b49-t9": [
 "hp",
 "volatile.mustrecharge"
+],
+"b53-t20": [
+"hp",
+"item"
 ],
 "b53-t27": [
 "boost.def"
@@ -182,6 +326,13 @@
 "hp",
 "status"
 ],
+"b71-t26": [
+"hp",
+"volatile.partiallytrapped"
+],
+"b72-t12": [
+"boost.spe"
+],
 "b74-t14": [
 "boost.atk",
 "hp",
@@ -205,6 +356,28 @@
 ],
 "b86-t33": [
 "hp"
+],
+"b89-t14": [
+"hp",
+"status"
+],
+"b89-t9": [
+"boost.atk",
+"boost.spa",
+"boost.spe"
+],
+"b90-t1": [
+"status"
+],
+"b92-t22": [
+"hp"
+],
+"b93-t15": [
+"volatile.roost"
+],
+"b95-t14": [
+"hp",
+"status"
 ],
 "b96-t3": [
 "item"

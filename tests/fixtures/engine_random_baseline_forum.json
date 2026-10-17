@@ -6,11 +6,31 @@
 "seed_offset": 50000
 },
 "mismatches": {
+"b105-t18": [
+"boost.atk",
+"boost.spa",
+"boost.spe"
+],
+"b105-t19": [
+"boost.atk",
+"boost.spa",
+"boost.spe"
+],
+"b111-t25": [
+"volatile.typechange"
+],
+"b113-t58": [
+"hp",
+"volatile.partiallytrapped"
+],
 "b114-t12": [
 "hp"
 ],
 "b115-t25": [
 "hp"
+],
+"b126-t36": [
+"status"
 ],
 "b14-t3": [
 "hp",
@@ -19,11 +39,23 @@
 "b156-t13": [
 "hp"
 ],
+"b156-t44": [
+"hp",
+"volatile.partiallytrapped"
+],
 "b156-t55": [
 "hp"
 ],
 "b158-t17": [
 "boost.def"
+],
+"b159-t16": [
+"hp",
+"volatile.partiallytrapped"
+],
+"b165-t13": [
+"hp",
+"status"
 ],
 "b167-t3": [
 "hp"
@@ -37,9 +69,29 @@
 "b178-t35": [
 "status"
 ],
+"b179-t9": [
+"hp"
+],
 "b18-t3": [
 "boost.def",
 "boost.spe"
+],
+"b19-t30": [
+"boost.atk"
+],
+"b22-t33": [
+"status"
+],
+"b24-t18": [
+"hp"
+],
+"b25-t2": [
+"hp",
+"volatile.partiallytrapped"
+],
+"b35-t27": [
+"hp",
+"status"
 ],
 "b46-t9": [
 "status"
@@ -48,11 +100,39 @@
 "hp",
 "item"
 ],
+"b5-t42": [
+"hp",
+"volatile.partiallytrapped"
+],
+"b58-t6": [
+"hp"
+],
+"b59-t32": [
+"hp",
+"volatile.partiallytrapped"
+],
+"b59-t46": [
+"volatile.typechange"
+],
+"b6-t27": [
+"volatile.typechange"
+],
 "b61-t17": [
 "status"
 ],
+"b64-t24": [
+"volatile.protosynthesisatk"
+],
 "b66-t52": [
 "hp"
+],
+"b72-t3": [
+"item",
+"volatile.protosynthesisspe"
+],
+"b73-t48": [
+"hp",
+"weather"
 ],
 "b75-t18": [
 "hp"
@@ -60,6 +140,13 @@
 "b79-t34": [
 "hp",
 "status"
+],
+"b85-t35": [
+"hp",
+"volatile.partiallytrapped"
+],
+"b91-t11": [
+"hp"
 ]
 }
 }

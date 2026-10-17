@@ -5,10 +5,16 @@
 "teams": "13ebf378999883cc"
 },
 "mismatches": {
+"b0-t29": [
+"item"
+],
 "b1-t28": [
 "hp"
 ],
 "b101-t4": [
+"hp"
+],
+"b102-t22": [
 "hp"
 ],
 "b103-t33": [
@@ -17,8 +23,14 @@
 "b114-t55": [
 "status"
 ],
+"b121-t31": [
+"item"
+],
 "b131-t12": [
 "hp"
+],
+"b136-t13": [
+"item"
 ],
 "b138-t20": [
 "item"
@@ -26,11 +38,20 @@
 "b14-t3": [
 "volatile.attract"
 ],
+"b14-t4": [
+"volatile.attract"
+],
+"b144-t19": [
+"status"
+],
 "b144-t3": [
 "hp"
 ],
 "b146-t45": [
 "volatile.lockedmove"
+],
+"b147-t6": [
+"volatile.partiallytrapped"
 ],
 "b151-t33": [
 "hp"
@@ -45,20 +66,62 @@
 "b16-t51": [
 "status"
 ],
+"b166-t11": [
+"volatile.trapped"
+],
+"b171-t28": [
+"hp"
+],
+"b173-t16": [
+"item"
+],
 "b176-t21": [
 "hp"
 ],
 "b176-t38": [
 "hp"
 ],
+"b18-t12": [
+"hp",
+"volatile.partiallytrapped"
+],
+"b185-t22": [
+"item"
+],
 "b186-t47": [
 "item"
+],
+"b190-t4": [
+"hp"
 ],
 "b196-t2": [
 "status"
 ],
+"b196-t40": [
+"spikes"
+],
+"b197-t28": [
+"hp",
+"volatile.partiallytrapped"
+],
+"b2-t2": [
+"hp"
+],
 "b2-t37": [
 "volatile.confusion"
+],
+"b201-t26": [
+"item"
+],
+"b202-t29": [
+"volatile.typechange"
+],
+"b203-t9": [
+"hp",
+"volatile.partiallytrapped"
+],
+"b205-t10": [
+"hp"
 ],
 "b205-t9": [
 "boost.spa"
@@ -72,10 +135,34 @@
 "b221-t3": [
 "hp"
 ],
+"b221-t58": [
+"boost.atk",
+"spikes",
+"stealth_rock",
+"toxic_spikes"
+],
+"b223-t41": [
+"hp"
+],
+"b224-t48": [
+"hp"
+],
 "b225-t7": [
 "hp"
 ],
+"b226-t14": [
+"hp"
+],
+"b227-t1": [
+"item"
+],
 "b234-t38": [
+"item"
+],
+"b237-t42": [
+"boost.atk"
+],
+"b239-t1": [
 "item"
 ],
 "b24-t6": [
@@ -84,10 +171,20 @@
 "b242-t5": [
 "hp"
 ],
+"b243-t23": [
+"boost.atk",
+"boost.spa",
+"boost.spe"
+],
 "b243-t27": [
 "hp",
-"status",
-"volatile.substitute"
+"status"
+],
+"b244-t8": [
+"volatile.taunt"
+],
+"b245-t51": [
+"item"
 ],
 "b246-t11": [
 "active",
@@ -100,16 +197,34 @@
 "b252-t15": [
 "hp"
 ],
+"b26-t15": [
+"item"
+],
 "b260-t2": [
 "hp"
 ],
 "b261-t16": [
 "hp"
 ],
+"b264-t24": [
+"hp",
+"volatile.partiallytrapped"
+],
 "b268-t13": [
 "boost.def",
 "boost.spe",
 "hp"
+],
+"b269-t20": [
+"hp",
+"status"
+],
+"b270-t2": [
+"volatile.typechange"
+],
+"b28-t13": [
+"hp",
+"volatile.partiallytrapped"
 ],
 "b283-t17": [
 "hp"
@@ -117,11 +232,26 @@
 "b285-t44": [
 "volatile.confusion"
 ],
+"b29-t1": [
+"active",
+"hp",
+"item"
+],
+"b290-t9": [
+"hp",
+"volatile.partiallytrapped"
+],
 "b299-t40": [
 "hp"
 ],
+"b31-t16": [
+"volatile.encore"
+],
 "b40-t14": [
 "hp",
+"item"
+],
+"b41-t11": [
 "item"
 ],
 "b49-t7": [
@@ -141,8 +271,7 @@
 ],
 "b7-t7": [
 "hp",
-"status",
-"volatile.substitute"
+"status"
 ],
 "b70-t1": [
 "hp",
@@ -154,6 +283,34 @@
 "b77-t39": [
 "hp"
 ],
+"b8-t4": [
+"hp"
+],
+"b80-t10": [
+"hp"
+],
+"b82-t36": [
+"volatile.typechange"
+],
+"b85-t38": [
+"item"
+],
+"b87-t2": [
+"hp",
+"item"
+],
+"b87-t23": [
+"hp",
+"status"
+],
+"b88-t8": [
+"hp",
+"volatile.partiallytrapped"
+],
+"b90-t16": [
+"hp",
+"volatile.partiallytrapped"
+],
 "b91-t17": [
 "status"
 ],
@@ -162,6 +319,9 @@
 ],
 "b95-t21": [
 "hp"
+],
+"b99-t18": [
+"volatile.typechange"
 ]
 }
 }

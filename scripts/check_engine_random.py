@@ -3,8 +3,9 @@ simulator (real OU team pairs, random legal choices), poke-engine's outcomes of 
 compared with Showdown's truth -- no player's view, no belief (unlike check_engine_diff.py on
 self-play records, where the field came from one player's view).
 
-A turn is compared when it runs from a turn start to the next with no decision in between (a
-faint's replacement or a pivot's switch is a decision point the engine stops at: counted apart).
+A turn is compared from a turn start to the next turn start, or to the decision point it stops at
+(a faint's replacement, a pivot's switch: the engine stops there too; 2026-10-17, they used to be
+left out -- 40% of the turns; a fainted active's boosts / volatiles are not compared there).
 The engine's state is built from Showdown's own numbers (enginecheck.engine_state); the closest
 outcome must agree on every discrete field and on HP within the rolls' spread (closest(hp=True)).
 
@@ -66,18 +67,23 @@ def comparable(steps: list[dict], k: int) -> str | None:
         return "not a turn start"
     if b["state"]["ended"]:
         return "battle ended"
-    if b["state"]["turn"] != a["state"]["turn"] + 1 or any(
-        s["request"] != "move" for s in b["state"]["sides"]
-    ):
-        return "a decision in the turn (faint, pivot)"
     return None
+
+
+def at_decision(steps: list[dict], k: int) -> bool:
+    """Whether turn step k stops at a decision (a faint's replacement, a pivot's switch)."""
+    a, b = steps[k], steps[k + 1]
+    return b["state"]["turn"] != a["state"]["turn"] + 1 or any(
+        s["request"] != "move" for s in b["state"]["sides"]
+    )
 
 
 def battle(job: tuple) -> dict:
     i, p1, p2, max_turns = job[:4]
     off = job[4] if len(job) > 4 else 0  # the seeds' offset (a new set of battles)
-    out = {"turns": 0, "match": 0, "skipped": collections.Counter(), "kinds": collections.Counter(),
-           "pairs": collections.defaultdict(collections.Counter), "mismatches": {}, "errors": []}  # fmt: skip
+    out = {"turns": 0, "match": 0, "decisions": 0, "skipped": collections.Counter(),
+           "kinds": collections.Counter(), "pairs": collections.defaultdict(collections.Counter),
+           "mismatches": {}, "errors": []}  # fmt: skip
     try:
         k = i + off
         steps, err = ec.random_battle(p1, p2, f"gen5,{k},{k + 1},{k + 2},{k + 3}", k + 1,
@@ -111,6 +117,8 @@ def battle(job: tuple) -> dict:
                 "log": []}  # fmt: skip
             continue
         out["turns"] += 1
+        decision = at_decision(steps, k)
+        out["decisions"] += decision
         found = sorted({kind_of(x) for x in res["diff"]})
         if not found:
             out["match"] += 1
@@ -121,7 +129,7 @@ def battle(job: tuple) -> dict:
         log = [x for x in b["state"]["log"] if x.startswith(("|move", "|switch", "|drag", "|-",
                "|cant", "|faint", "|upkeep", "|turn"))]  # fmt: skip
         out["mismatches"][f"b{i}-t{a['state']['turn']}"] = {
-            "p1": c1, "p2": c2, "kinds": found,
+            "p1": c1, "p2": c2, "kinds": found, "decision": decision,
             "diff": {k: list(v) for k, v in res["diff"].items()}, "log": log}  # fmt: skip
     return out
 
@@ -153,7 +161,7 @@ def main() -> None:
              "teams": hashlib.sha256(text.encode()).hexdigest()[:16]}  # fmt: skip
     if a.seed_offset:
         setup["seed_offset"] = a.seed_offset
-    tot = {"turns": 0, "match": 0}
+    tot = {"turns": 0, "match": 0, "decisions": 0}
     skipped, kinds = collections.Counter(), collections.Counter()
     pairs_by_kind: dict = collections.defaultdict(collections.Counter)
     mismatches: dict = {}
@@ -163,6 +171,7 @@ def main() -> None:
         for r in pool.imap_unordered(battle, jobs):
             tot["turns"] += r["turns"]
             tot["match"] += r["match"]
+            tot["decisions"] += r["decisions"]
             skipped.update(r["skipped"])
             kinds.update(r["kinds"])
             for k, c in r["pairs"].items():
@@ -170,7 +179,8 @@ def main() -> None:
             mismatches.update(r["mismatches"])
             errors.update(re.sub(r"\d+", "N", x) for x in r["errors"])
     n = max(tot["turns"], 1)
-    print(f"{a.battles} battles, {tot['turns']} compared turns: {tot['match']} match "
+    print(f"{a.battles} battles, {tot['turns']} compared turns ({tot['decisions']} to a decision): "
+          f"{tot['match']} match "
           f"({100 * tot['match'] / n:.1f}%); skipped {dict(skipped)}")  # fmt: skip
     for k, c in kinds.most_common(30):
         print(f"  {c:6d} ({100 * c / n:.2f}%)  {k:28s} {pairs_by_kind[k].most_common(3)}")
@@ -195,8 +205,9 @@ def check_baseline(a, setup: dict, mismatches: dict) -> int:
             return 1
         before = {(i, k) for i, ks in base["mismatches"].items() for k in ks}
         new = sorted(now - before)
+        plain = [x for x in new if not mismatches[x[0]].get("decision")]
         print(f"baseline: {len(before)} (position, kind) -> {len(now)}; fixed {len(before - now)}, "
-              f"new {len(new)}")  # fmt: skip
+              f"new {len(new)} ({len(plain)} not at a decision)")  # fmt: skip
         for i, k in new:
             m = mismatches[i]
             print(f"  NEW {i} {k}: {m['p1']} | {m['p2']} {m['diff']}")

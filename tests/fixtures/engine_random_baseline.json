@@ -5,16 +5,105 @@
 "teams": "87327e3ee174c1b9"
 },
 "mismatches": {
+"b0-t47": [
+"item"
+],
+"b100-t13": [
+"boost.atk",
+"boost.def",
+"boost.spa",
+"boost.spd",
+"boost.spe"
+],
 "b107-t54": [
 "hp"
 ],
+"b110-t15": [
+"volatile.typechange"
+],
 "b112-t14": [
 "hp"
+],
+"b121-t37": [
+"item"
+],
+"b122-t27": [
+"item",
+"volatile.protosynthesisspa"
+],
+"b123-t1": [
+"boost.atk",
+"boost.spa",
+"boost.spe"
+],
+"b123-t3": [
+"hp",
+"status"
+],
+"b123-t5": [
+"hp"
+],
+"b131-t33": [
+"item"
+],
+"b133-t18": [
+"hp",
+"status"
+],
+"b140-t7": [
+"volatile.trapped"
+],
+"b144-t16": [
+"item"
+],
+"b144-t34": [
+"volatile.typechange"
+],
+"b149-t34": [
+"weather"
+],
+"b152-t17": [
+"spikes"
+],
+"b158-t25": [
+"hp",
+"volatile.partiallytrapped"
+],
+"b158-t8": [
+"volatile.trapped"
+],
+"b163-t13": [
+"hp"
+],
+"b165-t16": [
+"item"
+],
+"b166-t17": [
+"volatile.healblock"
+],
+"b169-t12": [
+"boost.atk"
+],
+"b17-t29": [
+"weather"
+],
+"b170-t20": [
+"hp",
+"volatile.partiallytrapped"
 ],
 "b176-t18": [
 "active",
 "hp",
 "item"
+],
+"b179-t8": [
+"item"
+],
+"b181-t3": [
+"hp"
+],
+"b184-t7": [
+"volatile.protosynthesisspa"
 ],
 "b185-t19": [
 "hp"
@@ -31,17 +120,43 @@
 "item",
 "volatile.curse"
 ],
+"b208-t15": [
+"hp",
+"status",
+"trick_room"
+],
 "b211-t11": [
 "hp",
 "item"
+],
+"b217-t11": [
+"status"
 ],
 "b222-t25": [
 "boost.atk",
 "boost.def",
 "hp"
 ],
+"b224-t15": [
+"boost.atk"
+],
+"b224-t4": [
+"hp",
+"status"
+],
+"b227-t27": [
+"hp",
+"status"
+],
 "b230-t31": [
 "status"
+],
+"b230-t6": [
+"item"
+],
+"b234-t5": [
+"hp",
+"volatile.partiallytrapped"
 ],
 "b236-t29": [
 "hp"
@@ -54,6 +169,13 @@
 "hp",
 "status"
 ],
+"b237-t28": [
+"spikes",
+"stealth_rock"
+],
+"b24-t13": [
+"item"
+],
 "b241-t12": [
 "hp"
 ],
@@ -63,11 +185,26 @@
 "b241-t4": [
 "status"
 ],
+"b244-t16": [
+"volatile.trapped"
+],
+"b244-t6": [
+"status"
+],
+"b244-t9": [
+"status"
+],
 "b245-t6": [
 "hp"
 ],
 "b247-t2": [
 "stealth_rock"
+],
+"b253-t9": [
+"item"
+],
+"b258-t19": [
+"hp"
 ],
 "b258-t25": [
 "boost.spd"
@@ -80,12 +217,26 @@
 "hp",
 "volatile.substitute"
 ],
+"b263-t20": [
+"hp",
+"volatile.partiallytrapped"
+],
 "b263-t8": [
 "volatile.protosynthesisspa",
 "volatile.protosynthesisspe"
 ],
+"b265-t3": [
+"item"
+],
+"b269-t15": [
+"boost.atk"
+],
 "b271-t6": [
 "hp"
+],
+"b272-t13": [
+"boost.atk",
+"boost.spe"
 ],
 "b279-t2": [
 "hp",
@@ -97,14 +248,50 @@
 "item",
 "volatile.quarkdrivespe"
 ],
+"b284-t7": [
+"hp",
+"status"
+],
+"b284-t8": [
+"hp",
+"status"
+],
+"b285-t52": [
+"volatile.trapped"
+],
+"b289-t9": [
+"hp"
+],
+"b34-t43": [
+"hp"
+],
 "b41-t21": [
+"hp"
+],
+"b47-t24": [
 "hp"
 ],
 "b48-t30": [
 "hp"
 ],
+"b51-t10": [
+"boost.atk",
+"boost.spa",
+"boost.spe"
+],
 "b57-t15": [
 "volatile.confusion"
+],
+"b71-t28": [
+"boost.atk"
+],
+"b73-t18": [
+"boost.atk",
+"boost.spa",
+"boost.spe"
+],
+"b86-t16": [
+"item"
 ],
 "b9-t12": [
 "stealth_rock"
