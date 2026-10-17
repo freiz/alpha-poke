@@ -4478,6 +4478,22 @@ pub fn generate_instructions_from_move(
             }
         }
     }
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L187): Future Sight / Doom Desire set as the
+    // move goes (Showdown's onTry: past the BeforeMove and the target check, before Protect and
+    // immunity); was before the mover's status (also when fully paralyzed, frozen, flinched)
+    if matches!(choice.move_id, Choices::FUTURESIGHT | Choices::DOOMDESIRE) {
+        let side = state.get_side(&attacking_side);
+        if side.future_sight.0 == 0 {
+            incoming_instructions
+                .instruction_list
+                .push(Instruction::SetFutureSight(crate::instruction::SetFutureSightInstruction {
+                    side_ref: attacking_side,
+                    pokemon_index: side.active_index,
+                    previous_pokemon_index: side.future_sight.1,
+                }));
+            side.future_sight = (3, side.active_index);
+        }
+    }
     // (L167: the battle's last move, for Copycat: one past its BeforeMove)
     if state.use_last_move && state.last_move != choice.move_id {
         incoming_instructions

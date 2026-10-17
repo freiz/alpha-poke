@@ -9,9 +9,6 @@
 "b114-t21": [
 "base_ability"
 ],
-"b115-t8": [
-"last_item"
-],
 "b127-t11": [
 "hp"
 ],
@@ -36,23 +33,8 @@
 "b206-t24": [
 "pp"
 ],
-"b206-t3": [
-"last_item"
-],
 "b242-t10": [
 "hp"
-],
-"b245-t11": [
-"last_used_move"
-],
-"b245-t5": [
-"types"
-],
-"b251-t37": [
-"future_sight"
-],
-"b251-t38": [
-"future_sight"
 ],
 "b253-t34": [
 "ability",
@@ -118,8 +100,7 @@
 "volatile.noretreat"
 ],
 "b61-t18": [
-"ability",
-"types"
+"ability"
 ],
 "b61-t6": [
 "base_ability"

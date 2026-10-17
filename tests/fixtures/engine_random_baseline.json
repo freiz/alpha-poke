@@ -14,17 +14,8 @@
 "b128-t21": [
 "pp"
 ],
-"b164-t1": [
-"last_used_move"
-],
-"b187-t17": [
-"last_item"
-],
 "b191-t49": [
 "hp"
-],
-"b211-t29": [
-"future_sight"
 ],
 "b216-t18": [
 "options"
@@ -36,12 +27,6 @@
 "boost.atk",
 "boost.def",
 "hp"
-],
-"b232-t13": [
-"last_used_move"
-],
-"b232-t5": [
-"last_used_move"
 ],
 "b237-t13": [
 "ability",
@@ -117,20 +102,11 @@
 "b269-t19": [
 "hp"
 ],
-"b270-t5": [
-"types"
-],
 "b289-t9": [
 "hp"
 ],
-"b42-t24": [
-"last_item"
-],
 "b48-t30": [
 "hp"
-],
-"b50-t46": [
-"last_item"
 ]
 }
 }

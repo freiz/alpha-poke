@@ -13,7 +13,7 @@ use crate::instruction::{
     ChangeSubsituteHealthInstruction, ChangeTerrain, ChangeType,
     ChangeVolatileStatusDurationInstruction, ChangeWeather, ChangeWishInstruction,
     DamageInstruction, HealInstruction, Instruction, RemoveVolatileStatusInstruction,
-    SetFutureSightInstruction, SetSleepTurnsInstruction, StateInstructions,
+    SetSleepTurnsInstruction, StateInstructions,
     ToggleTrickRoomInstruction,
 };
 use crate::pokemon::PokemonName;
@@ -1093,12 +1093,24 @@ pub fn choice_after_hit(
                 && user.item == Items::NONE
                 && choice.flags.contact
                 && !user_faints;
+            // alpha-poke patch (2026-10-17, doc/engine-diff.md L187): nor an item this hit uses
+            // up (a resist berry at the damage, Weakness Policy / Air Balloon / Absorb Bulb, ... at
+            // DamagingHit: before Knock Off's onAfterHit in Showdown -- the item's own
+            // RemoveItem secondary, with its last item); it knocked them off
+            let used_up = choice.secondaries.as_ref().is_some_and(|ss| {
+                ss.iter().any(|s| {
+                    s.effect == Effect::RemoveItem
+                        && s.target == MoveTarget::Opponent
+                        && s.chance > 0.0
+                })
+            });
             let defender_active = defending_side.get_active();
             if defender_active.item_can_be_removed()
                 && defender_active.item != Items::NONE
                 && !hit_sub
                 && !user_faints
                 && !barb_moves
+                && !used_up
             {
                 let instruction = Instruction::ChangeItem(ChangeItemInstruction {
                     side_ref: attacking_side_ref.get_other_side(),
@@ -1243,18 +1255,9 @@ pub fn choice_before_move(
     match choice.move_id {
         // alpha-poke patch (2026-10-16, doc/engine-diff.md L56): Doom Desire is a future move too
         // (it hit at once)
+        // (L187: it is set as the move goes, generate_instructions::set_future_sight)
         Choices::FUTURESIGHT | Choices::DOOMDESIRE => {
             choice.remove_all_effects();
-            if attacking_side.future_sight.0 == 0 {
-                instructions
-                    .instruction_list
-                    .push(Instruction::SetFutureSight(SetFutureSightInstruction {
-                        side_ref: *attacking_side_ref,
-                        pokemon_index: attacking_side.active_index,
-                        previous_pokemon_index: attacking_side.future_sight.1,
-                    }));
-                attacking_side.future_sight = (3, attacking_side.active_index);
-            }
         }
         Choices::EXPLOSION | Choices::SELFDESTRUCT | Choices::MISTYEXPLOSION
             if defender.ability != Abilities::DAMP =>

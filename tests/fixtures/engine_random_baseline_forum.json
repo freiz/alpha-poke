@@ -12,12 +12,6 @@
 "b126-t36": [
 "status"
 ],
-"b144-t1": [
-"future_sight"
-],
-"b144-t51": [
-"future_sight"
-],
 "b30-t2": [
 "sc.reflect"
 ],
@@ -31,9 +25,6 @@
 "hp",
 "status"
 ],
-"b59-t12": [
-"types"
-],
 "b66-t52": [
 "hp"
 ],
@@ -43,12 +34,6 @@
 "b79-t34": [
 "hp",
 "status"
-],
-"b99-t10": [
-"future_sight"
-],
-"b99-t22": [
-"future_sight"
 ]
 }
 }

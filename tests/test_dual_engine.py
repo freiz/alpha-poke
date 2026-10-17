@@ -5203,3 +5203,54 @@ def test_l186_eerie_spell():
     states = ec.run_showdown(slowking, BLISSEY, [("move eeriespell", "move calmmind")])
     assert states[1]["sides"][1]["mons"][0]["moves"][3]["pp"] == 28  # 32, its use, Eerie Spell's 3
     assert _keys(_full(states, 0, "eeriespell", "calmmind"), "pp") == {}
+
+
+# L187 (doc/engine-diff.md): Future Sight set as the move goes (not by a fully paralyzed user);
+# Knock Off takes no item the hit uses up (a resist berry, Weakness Policy: their last item); the
+# harness: a transformed mon's Transform is its last used move (in its own moves), a type change
+# before its Terastallization keeps the typechange volatile (the types back on the switch-out)
+def test_l187_no_future_sight_when_fully_paralyzed():
+    blissey = BLISSEY.replace("- Calm Mind", "- Thunder Wave")
+    states = ec.run_showdown(SLOWKING_FUTURE, blissey, [("move futuresight", "move thunderwave")], force_random=True)
+    assert any(x.startswith("|cant|p1a: Slowking|par") for x in states[1]["log"])
+    assert _keys(_full(states, 0, "futuresight", "thunderwave"), "future_sight") == {}
+
+
+@pytest.mark.parametrize("item", ["Colbur Berry", "Weakness Policy"])
+def test_l187_knock_off_takes_no_used_up_item(item):
+    gar = GARCHOMP_SD.replace("- Scale Shot", "- Knock Off")
+    slowking = SLOWKING_FUTURE.replace("@ Heavy-Duty Boots", f"@ {item}")
+    states = ec.run_showdown(gar, slowking, [("move knockoff", "move slackoff")])
+    assert states[1]["sides"][1]["mons"][0]["last_item"] == item.lower().replace(" ", "")
+    assert _keys(_full(states, 0, "knockoff", "slackoff"), "item") == {}
+
+
+def test_l187_transform_is_the_last_used_move():
+    mew = """Mew @ Leftovers
+Ability: Synchronize
+EVs: 252 HP / 4 Def / 252 Spe
+Timid Nature
+- Calm Mind
+- Transform
+- Soft-Boiled
+- Psychic"""
+    # (Taunt: the comparison has the last used move with a move reading it)
+    states = ec.run_showdown(mew, BLISSEY.replace("- Protect", "- Taunt"), [("move transform", "move calmmind")])
+    assert _keys(_full(states, 0, "transform", "calmmind"), "last_used_move") == {}
+
+
+def test_l187_protean_then_tera_types_back_on_the_switch_out():
+    greninja = """Greninja @ Leftovers
+Ability: Protean
+Tera Type: Water
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Dark Pulse
+- Hydro Pump
+- Ice Beam
+- U-turn"""
+    turns = [("move darkpulse", "move calmmind"), ("move hydropump terastallize", "move calmmind"),
+             ("switch 2", "move calmmind")]  # fmt: skip
+    states = ec.run_showdown(greninja + "\n\n" + CORVIKNIGHT, BLISSEY, turns)
+    assert states[2]["sides"][0]["mons"][0]["pre_tera_types"] == ["Dark"]
+    assert _keys(_full(states, 2, "corviknight", "calmmind", (2, 1)), "types") == {}

@@ -15,9 +15,6 @@
 "speed",
 "weight"
 ],
-"b100-t37": [
-"last_item"
-],
 "b113-t2": [
 "hp"
 ],
@@ -48,9 +45,6 @@
 "b165-t19": [
 "boost.atk"
 ],
-"b169-t24": [
-"last_item"
-],
 "b176-t25": [
 "trick_room"
 ],
@@ -75,14 +69,8 @@
 "b50-t6": [
 "hp"
 ],
-"b53-t11": [
-"last_used_move"
-],
 "b7-t13": [
 "status"
-],
-"b76-t11": [
-"last_used_move"
 ],
 "b99-t20": [
 "ability",

@@ -228,6 +228,11 @@ def _engine_side(s: dict, future_sight=None, wish=None) -> pe.Side:
             vol.discard("metronome")
         if _changed_types(act):  # Showdown keeps no volatile for a type change (Libero, Soak, ...)
             vol.add("typechange")
+        # (L187: one before its Terastallization -- Protean, then the tera: the engine keeps its
+        # pre-tera types and the volatile, which brings the types back on its switch-out)
+        elif act["terastallized"] and _changed_types(act | {"terastallized": "",
+                                                           "types": act.get("pre_tera_types") or act["types"]}):  # fmt: skip
+            vol.add("typechange")
         if act.get("transformed"):  # (L36: Showdown's flag, the engine's volatile)
             vol.add("transform")
         kw["volatile_statuses"] = vol
@@ -237,8 +242,12 @@ def _engine_side(s: dict, future_sight=None, wish=None) -> pe.Side:
         if stall and stall["counter"]:
             sc["protect"] = round(math.log(stall["counter"], 3))
         ids = [x["id"] for x in act["moves"]]
+        # (L187: a transformed mon's Transform is in its own moves, as the engine keeps it)
+        own = [x for x, _ in (act.get("transform_backup") or [None, None, []])[2]]
         if act.get("move_actions") and act.get("last_move") in ids:
             kw["last_used_move"] = f"move:{ids.index(act['last_move'])}"
+        elif act.get("move_actions") and act.get("last_move") in own:
+            kw["last_used_move"] = f"move:{own.index(act['last_move'])}"
         else:  # not moved since it came in
             kw["last_used_move"] = f"switch:{s['active']}"
         # the engine counts ends of turn up to its limit (L13; the 2026-10-13 patch), Showdown

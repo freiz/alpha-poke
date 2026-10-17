@@ -37,17 +37,8 @@
 "types",
 "weight"
 ],
-"b115-t24": [
-"types"
-],
 "b137-t20": [
 "hp"
-],
-"b15-t8": [
-"last_used_move"
-],
-"b164-t1": [
-"last_used_move"
 ],
 "b169-t54": [
 "ability",
@@ -87,9 +78,6 @@
 "b182-t25": [
 "hp"
 ],
-"b186-t1": [
-"future_sight"
-],
 "b187-t32": [
 "hp",
 "status"
@@ -99,9 +87,6 @@
 ],
 "b191-t14": [
 "hp"
-],
-"b192-t12": [
-"types"
 ],
 "b198-t19": [
 "hp"
@@ -138,20 +123,11 @@
 "volatile.curse",
 "weight"
 ],
-"b223-t9": [
-"types"
-],
-"b232-t26": [
-"last_used_move"
-],
 "b232-t27": [
 "types"
 ],
 "b242-t1": [
 "status"
-],
-"b244-t22": [
-"future_sight"
 ],
 "b249-t6": [
 "base_ability"
@@ -164,9 +140,6 @@
 "b295-t1": [
 "ability",
 "hp"
-],
-"b3-t28": [
-"last_item"
 ],
 "b36-t52": [
 "ability",
@@ -197,9 +170,6 @@
 ],
 "b53-t21": [
 "count.partiallytrapped"
-],
-"b67-t38": [
-"future_sight"
 ],
 "b68-t3": [
 "status"
