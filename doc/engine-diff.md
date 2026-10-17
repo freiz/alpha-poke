@@ -245,6 +245,8 @@ harness 必须把 Showdown 的状态完整映射到引擎，否则不一致来�
 | L99 | Soak 在引擎里没有效果（Showdown：目标变成纯水系；纯水系、已太晶化、隔着替身、被 Water Absorb 等吸收时失败） | 引擎 | 已修复 | `test_l99_soak`（2 回合）；`test_l99_soak_into_water_absorb` | `choice_effects.rs` `choice_special_effect`（Good as Gold 也挡） |
 | L100 | Dry Skin 在晴天回合末掉 1/8（Showdown 的 onWeather），大雨也回复；引擎只在下雨时回复 | 引擎 | 已修复 | `test_l100_dry_skin_in_the_sun` | `abilities.rs` `ability_end_of_turn` |
 | L101 | 不能动的宝可梦（睡着、冰冻、麻痹不能动、混乱打自己）没有用出招式（Showdown 只在用出招式时设 lastMove）：引擎在检查前就把它的上一招设成了所选招式，于是本回合之后的 Encore 成功了（刚换上、还没出过招时 Showdown 失败）。另外 Encore 对不能重复的招式（Showdown 的 failencore：Sleep Talk、Encore、Copycat、Metronome、Mimic、Sketch、Struggle、Transform）或 PP 为 0 的招式失败 | 引擎 | 已修复 | `test_l101_asleep_has_not_used_its_move`；`test_l101_encore_fails_on_sleep_talk` | `generate_instructions.rs`：`undo_last_used_move` 在各个不能动的分支里撤销这一步（换上 → None，同畏缩的处理）；`move_has_no_effect` 的 Encore |
+| L102 | Unnerve / As One 让对方吃不了树果（Showdown 的 onFoeTryEatItem；持有者有 Neutralizing Gas 时不算）；引擎没有 Unnerve | 引擎 | 已修复 | `test_l102_unnerve_stops_berries`（Sitrus、Lum 两个参数） | `items.rs` `unnerved`，在各个吃树果的地方检查：`item_before_move`、`berry_on_damage`、`item_end_of_turn`、`item_modify_attack_against`（防御方的树果）、施加异常时的 Lum / Chesto、Rest 后、Custap、Leppa、Starf |
+| L103 | Throat Spray 只在声音招式真正用出后触发（Showdown 的 onAfterMoveSecondarySelf）：HP 不到 1/3 失败的 Clangorous Soul 不触发 | 引擎 | 已修复 | `test_l103_throat_spray_not_on_a_failed_clangorous_soul` | `items.rs` |
 
 ## 修复与验证（2026-10-16）
 

@@ -2843,3 +2843,30 @@ def test_l101_encore_fails_on_sleep_talk():
     assert "encore" not in states[3]["sides"][1]["mons"][0]["volatiles"]
     outs = ec.engine_outcomes(ec.engine_state(states[2]), "encore", "sleeptalk")
     assert ec.closest(states[3], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L102 (doc/engine-diff.md): Unnerve / As One stop the foe eating berries (Showdown's
+# onFoeTryEatItem); the engine had no Unnerve
+@pytest.mark.parametrize("berry, move", [("Sitrus Berry", "ruination"), ("Lum Berry", "willowisp")])
+def test_l102_unnerve_stops_berries(berry, move):
+    pex = _setter("Toxapex", "Regenerator", berry, "- Recover\n- Toxic\n- Haze\n- Scald")
+    lu = _setter("Ting-Lu", "Unnerve", "Leftovers", "- Ruination\n- Will-O-Wisp\n- Stealth Rock\n- Whirlwind")
+    states = ec.run_showdown(pex, lu, [("move haze", f"move {move}")])
+    assert states[1]["sides"][0]["mons"][0]["item"] == berry.lower().replace(" ", "")
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "haze", move)
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L103 (doc/engine-diff.md): Throat Spray only after a sound move that went through (Showdown's
+# onAfterMoveSecondarySelf): not a Clangorous Soul that fails at a third of the HP or below
+def test_l103_throat_spray_not_on_a_failed_clangorous_soul():
+    kommo = _setter("Kommo-o", "Soundproof", "Throat Spray", "- Clangorous Soul\n- Belly Drum\n- Substitute\n- Protect")
+    lu = _setter("Ting-Lu", "Vessel of Ruin", "Leftovers", "- Ruination\n- Stealth Rock\n- Whirlwind\n- Spikes")
+    turns = [("move bellydrum", "move stealthrock"), ("move substitute", "move spikes"),
+             ("move clangoroussoul", "move spikes")]  # fmt: skip
+    states = ec.run_showdown(kommo, lu, turns)
+    k = 2
+    assert states[k]["sides"][0]["mons"][0]["hp"] <= states[k]["sides"][0]["mons"][0]["maxhp"] // 3
+    assert states[k + 1]["sides"][0]["mons"][0]["item"] == "throatspray"
+    outs = ec.engine_outcomes(ec.engine_state(states[k]), "clangoroussoul", "spikes")
+    assert ec.closest(states[k + 1], outs, (1, 1), hp=True)["diff"] == {}

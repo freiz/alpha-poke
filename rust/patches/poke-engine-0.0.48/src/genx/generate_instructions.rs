@@ -1098,11 +1098,13 @@ fn get_instructions_from_status_effects(
         return;
     }
 
+    // (L102: not when the target is unnerved)
+    let unnerve = super::items::unnerved(state, &target_side_ref);
     let target_side = state.get_side(&target_side_ref);
     let target_side_active = target_side.active_index;
     let target_pkmn = target_side.get_active();
 
-    let instruction = if target_pkmn.item == Items::LUMBERRY {
+    let instruction = if target_pkmn.item == Items::LUMBERRY && !unnerve {
         target_pkmn.item = Items::NONE;
         // (L57: used up)
         set_last_item(
@@ -1116,7 +1118,10 @@ fn get_instructions_from_status_effects(
             current_item: Items::LUMBERRY,
             new_item: Items::NONE,
         })
-    } else if target_pkmn.item == Items::CHESTOBERRY && status.status == PokemonStatus::SLEEP {
+    } else if target_pkmn.item == Items::CHESTOBERRY
+        && status.status == PokemonStatus::SLEEP
+        && !unnerve
+    {
         target_pkmn.item = Items::NONE;
         // (L57: used up)
         set_last_item(
@@ -1698,7 +1703,11 @@ fn starf_berry_branches(
             let active = side.get_active_immutable();
             let low = active.hp <= active.maxhp / 4
                 || (active.ability == Abilities::GLUTTONY && active.hp <= active.maxhp / 2);
-            if active.item != Items::STARFBERRY || active.hp == 0 || !low {
+            if active.item != Items::STARFBERRY
+                || active.hp == 0
+                || !low
+                || super::items::unnerved(state, &side_ref)
+            {
                 continue;
             }
             let stats: Vec<(PokemonBoostableStat, i8)> = [
@@ -3425,6 +3434,7 @@ pub fn generate_instructions_from_move(
     // most of the time pp decrement doesn't matter and just adds another instruction
     // so we only decrement pp if the move is at 10 or less pp since that is when it starts
     // to matter
+    let unnerve = super::items::unnerved(state, &attacking_side);
     let (attacker_side, defender_side) = state.get_both_sides(&attacking_side);
     let active = attacker_side.get_active();
     if active.moves[&choice.move_index].pp < 10 {
@@ -3445,7 +3455,8 @@ pub fn generate_instructions_from_move(
         active.moves[&choice.move_index].pp -= pp_decrement_amount;
         // alpha-poke patch (2026-10-16, doc/engine-diff.md L24): Leppa Berry, 10 PP back to a move
         // at 0, at most its max
-        if active.item == Items::LEPPABERRY && active.moves[&choice.move_index].pp <= 0 {
+        if active.item == Items::LEPPABERRY && active.moves[&choice.move_index].pp <= 0 && !unnerve
+        {
             let back = cmp::min(10, choice.move_id.max_pp_below_10().unwrap_or(10))
                 - active.moves[&choice.move_index].pp;
             incoming_instructions
@@ -4320,6 +4331,7 @@ fn moves_first(
     if side_one_choice.priority == side_two_choice.priority {
         if side_one_active.item == Items::CUSTAPBERRY
             && side_one_active.hp < side_one_active.maxhp / 4
+            && !super::items::unnerved(state, &SideReference::SideOne)
         {
             incoming_instructions
                 .instruction_list
@@ -4341,6 +4353,7 @@ fn moves_first(
             }
             return SideMovesFirst::SideOne;
         } else if side_two_active.item == Items::CUSTAPBERRY
+            && !super::items::unnerved(state, &SideReference::SideTwo)
             && side_two_active.hp < side_two_active.maxhp / 4
         {
             incoming_instructions

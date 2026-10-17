@@ -424,6 +424,22 @@ pub fn is_berry(item: Items) -> bool {
     format!("{:?}", item).ends_with("BERRY")
 }
 
+// alpha-poke patch (2026-10-16, doc/engine-diff.md L102): Unnerve / As One on the foe's active
+// stop a berry being eaten (Showdown's onFoeTryEatItem; not under the holder's Neutralizing Gas)
+pub fn unnerved(state: &State, side_ref: &SideReference) -> bool {
+    let holder = state.get_side_immutable(side_ref).get_active_immutable();
+    let foe = state
+        .get_side_immutable(&side_ref.get_other_side())
+        .get_active_immutable();
+    is_berry(holder.item)
+        && foe.hp > 0
+        && holder.ability != Abilities::NEUTRALIZINGGAS
+        && matches!(
+            foe.ability,
+            Abilities::UNNERVE | Abilities::ASONEGLASTRIER | Abilities::ASONESPECTRIER
+        )
+}
+
 fn damage_reduction_berry(
     defending_pkmn: &mut Pokemon,
     attacking_side_ref: &SideReference,
@@ -898,6 +914,9 @@ pub fn item_before_move(
     side_ref: &SideReference,
     instructions: &mut StateInstructions,
 ) {
+    if unnerved(state, side_ref) {
+        return;
+    }
     let (attacking_side, defending_side) = state.get_both_sides(side_ref);
     // alpha-poke patch (2026-10-13): read before the active is borrowed
     let confused = attacking_side
@@ -1409,6 +1428,9 @@ pub fn berry_on_damage(
     side_ref: &SideReference,
     instructions: &mut StateInstructions,
 ) {
+    if unnerved(state, side_ref) {
+        return;
+    }
     let side = state.get_side(side_ref);
     let heal_blocked = side
         .volatile_statuses
@@ -1469,6 +1491,9 @@ pub fn item_end_of_turn(
     instructions: &mut StateInstructions,
     before_status: bool,
 ) {
+    if unnerved(state, side_ref) {
+        return;
+    }
     let attacking_side = state.get_side(side_ref);
     // alpha-poke patch (2026-10-16): Leftovers / Black Sludge come before the status damage
     // (Showdown's residual order 5; burn / poison 9-10), the orbs after it (28)
@@ -1699,6 +1724,9 @@ pub fn item_modify_attack_against(
     attacking_choice: &mut Choice,
     attacking_side_ref: &SideReference,
 ) {
+    if unnerved(state, &attacking_side_ref.get_other_side()) {
+        return;
+    }
     let (attacking_side, defending_side) = state.get_both_sides_immutable(attacking_side_ref);
     match defending_side.get_active_immutable().item {
         Items::ABSORBBULB => {
@@ -2174,7 +2202,12 @@ pub fn item_modify_attack_being_used(
             }
         }
         Items::THROATSPRAY => {
-            if attacking_choice.flags.sound {
+            // alpha-poke patch (2026-10-16, doc/engine-diff.md L103): not after a Clangorous Soul
+            // that fails (a third of the HP or less: Showdown's onTry)
+            let attacker = attacking_side.get_active_immutable();
+            let failed = attacking_choice.move_id == Choices::CLANGOROUSSOUL
+                && attacker.hp <= attacker.maxhp / 3;
+            if attacking_choice.flags.sound && !failed {
                 attacking_choice.add_or_create_secondaries(Secondary {
                     chance: 100.0,
                     effect: Effect::Boost(StatBoosts {

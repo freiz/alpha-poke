@@ -1753,6 +1753,7 @@ pub fn choice_special_effect(
                 || state.terrain_is_active(&Terrain::MISTYTERRAIN);
             let sun = state.weather_is_active(&Weather::SUN)
                 || state.weather_is_active(&Weather::HARSHSUN);
+            let unnerve = super::items::unnerved(state, attacking_side_ref);
             let attacking_side = state.get_side(attacking_side_ref);
             let active_index = attacking_side.active_index;
             let active_pkmn = attacking_side.get_active();
@@ -1794,7 +1795,9 @@ pub fn choice_special_effect(
                 active_pkmn.hp = active_pkmn.maxhp;
                 active_pkmn.status = PokemonStatus::SLEEP;
                 active_pkmn.rest_turns = 3;
-                super::items::rest_berry(attacking_side_ref, attacking_side, instructions);
+                if !unnerve {
+                    super::items::rest_berry(attacking_side_ref, attacking_side, instructions);
+                }
             }
         }
         Choices::TRICKROOM => {

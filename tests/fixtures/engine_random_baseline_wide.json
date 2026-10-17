@@ -72,14 +72,6 @@
 "b208-t13": [
 "volatile.confusion"
 ],
-"b215-t27": [
-"boost.spa",
-"item"
-],
-"b215-t30": [
-"boost.spa",
-"item"
-],
 "b220-t41": [
 "hp"
 ],
@@ -128,15 +120,6 @@
 "b275-t17": [
 "hp",
 "status"
-],
-"b276-t10": [
-"item"
-],
-"b276-t11": [
-"item"
-],
-"b276-t12": [
-"item"
 ],
 "b283-t17": [
 "hp"
