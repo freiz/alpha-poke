@@ -3389,3 +3389,94 @@ def test_l129_no_intimidate_after_fainting_to_hazards():
     outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2)
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
     assert ec.closest(b["state"], outs, n, hp=True)["diff"] == {}
+
+
+# L130 (doc/engine-diff.md): Clear Body / Clear Amulet (and the like) only block the foe's stat
+# drops (Showdown's onTryBoost: boost < 0); the engine's check blocked the foe's raises too (a
+# Weakness Policy's, Swagger's)
+@pytest.mark.parametrize("ability,item,foe_move", [
+    ("Clear Body", "Weakness Policy", "earthquake"),
+    ("Clear Body", "Leftovers", "swagger"),
+    ("Light Metal", "Clear Amulet", "swagger"),
+])  # fmt: skip
+def test_l130_clear_body_lets_foe_raises_through(ability, item, foe_move):
+    meta = _setter("Metagross", ability, item, "- Protect\n- Iron Defense\n- Bullet Punch\n- Agility")
+    chomp = _setter("Garchomp", "Rough Skin", "Leftovers", "- Earthquake\n- Swagger\n- Protect\n- Roar")
+    states = ec.run_showdown(meta, chomp, [("move irondefense", f"move {foe_move}")])
+    assert states[1]["sides"][0]["mons"][0]["boosts"]["atk"] == 2
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "irondefense", foe_move)
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L130's control: a Substitute still stops Swagger (raise and confusion)
+def test_l130_swagger_into_substitute():
+    meta = _setter("Metagross", "Light Metal", "Leftovers", "- Protect\n- Substitute\n- Bullet Punch\n- Agility")
+    chomp = _setter("Garchomp", "Rough Skin", "Leftovers", "- Earthquake\n- Swagger\n- Protect\n- Roar")
+    states = ec.run_showdown(meta, chomp, [("move substitute", "move protect"), ("move agility", "move swagger")])
+    assert states[2]["sides"][0]["mons"][0]["boosts"]["atk"] == 0
+    outs = ec.engine_outcomes(ec.engine_state(states[1]), "agility", "swagger")
+    assert ec.closest(states[2], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L131 (doc/engine-diff.md): Mirror Herb copies the foe's raises whoever caused them (its holder's
+# own Swagger too: Showdown's onFoeAfterBoost); the engine's only the foe's own
+def test_l131_mirror_herb_copies_swagger():
+    meta = _setter("Metagross", "Light Metal", "Leftovers", "- Protect\n- Iron Defense\n- Bullet Punch\n- Agility")
+    chomp = _setter("Garchomp", "Rough Skin", "Mirror Herb", "- Earthquake\n- Swagger\n- Protect\n- Roar")
+    states = ec.run_showdown(meta, chomp, [("move irondefense", "move swagger")])
+    assert states[1]["sides"][1]["mons"][0]["boosts"]["atk"] == 2
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "irondefense", "swagger")
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+SLAKING = """Slaking @ Leftovers
+Ability: Truant
+Tera Type: Normal
+EVs: 252 HP / 252 Atk / 4 SpD
+Adamant Nature
+- Earthquake
+- Hyper Beam
+- Slack Off
+- Body Slam"""
+
+
+# L132 (doc/engine-diff.md): Truant's loafing turn comes after any move it started (Showdown's
+# onBeforeMove: into an immune target too), and a recharge turn ends it (mustrecharge's
+# onBeforeMove); the engine set it only on a hit, and kept it through a recharge
+@pytest.mark.parametrize("turns", [
+    [("move earthquake", "earthquake"), ("move earthquake", "earthquake")],
+    [("move hyperbeam", "hyperbeam"), ("move 1", "none"), ("move bodyslam", "bodyslam"),
+     ("move bodyslam", "bodyslam")],
+])  # fmt: skip
+def test_l132_truant_after_any_move(turns):
+    states = ec.run_showdown(SLAKING, CORVIKNIGHT, [(c, "move roost") for c, _ in turns])
+    if turns[1][1] == "none":
+        assert "mustrecharge" in states[1]["sides"][0]["mons"][0]["volatiles"]
+    for k, (_, c) in enumerate(turns):
+        outs = ec.engine_outcomes(ec.engine_state(states[k]), c, "roost")
+        assert ec.closest(states[k + 1], outs, (1, 1), hp=True)["diff"] == {}, k
+
+
+# L133 (doc/engine-diff.md): a status move aimed at the foe fails against a Substitute unless it
+# bypasses it (Showdown's bypasssub): Memento's user stays (the engine's fainted), and a Contrary
+# target gets no raise (L130's control)
+def test_l133_memento_into_contrary_substitute():
+    drif = _setter("Drifblim", "Aftermath", "Leftovers", "- Memento\n- Protect\n- Shadow Ball\n- Will-O-Wisp")
+    enam = _setter("Enamorus", "Contrary", "Leftovers", "- Substitute\n- Protect\n- Moonblast\n- Earth Power")
+    states = ec.run_showdown(drif + "\n\n" + BLISSEY, enam, [("move protect", "move substitute"), ("move memento", "move moonblast")])
+    assert states[2]["sides"][1]["mons"][0]["boosts"]["atk"] == 0
+    assert any("|-fail|p1a: Drifblim" in x for x in states[2]["log"])
+    outs = ec.engine_outcomes(ec.engine_state(states[1]), "memento", "moonblast")
+    assert ec.closest(states[2], outs, (2, 1), hp=True)["diff"] == {}
+
+
+# L133's controls: Pain Split / Trick into a Substitute fail (no HP shared, no items swapped; the
+# engine's own checks already did)
+@pytest.mark.parametrize("move", ["painsplit", "trick"])
+def test_l133_status_moves_into_substitute(move):
+    drif = _setter("Drifblim", "Aftermath", "Light Clay", "- Pain Split\n- Trick\n- Shadow Ball\n- Protect")
+    enam = _setter("Enamorus", "Contrary", "Leftovers", "- Substitute\n- Protect\n- Moonblast\n- Earth Power")
+    states = ec.run_showdown(drif, enam, [("move protect", "move substitute"), (f"move {move}", "move earthpower")])
+    assert any("|-fail|p1a: Drifblim" in x for x in states[2]["log"])
+    outs = ec.engine_outcomes(ec.engine_state(states[1]), move, "earthpower")
+    assert ec.closest(states[2], outs, (1, 1), hp=True)["diff"] == {}

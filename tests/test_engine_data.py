@@ -190,3 +190,19 @@ def test_skill_swap_failures_match_showdown():
     want = sorted(json.loads(subprocess.run(["node", "-e", js, str(ec.SIM)], capture_output=True,
                                             text=True, check=True).stdout))  # fmt: skip
     assert alpha_search.fail_skill_swap_abilities() == want
+
+
+def test_bypass_substitute_moves_match_showdown():
+    """The status moves aimed at the foe that go through a Substitute (Showdown's bypasssub
+    flag; any other fails against one: L133), among the engine's moves aimed at the opponent."""
+    import alpha_search
+
+    from alpha_poke.enginecheck import data
+
+    eng = dict(alpha_search.move_targets())
+    foe = {"normal", "any", "adjacentFoe", "allAdjacentFoes", "randomNormal", "allAdjacent",
+           "scripted"}  # fmt: skip
+    want = sorted(m["id"] for m in data.showdown()["moves"] if m["category"] == "Status"
+                  and eng.get(m["id"]) == "opponent" and m["target"] in foe
+                  and "bypasssub" in m["flags"])  # fmt: skip
+    assert alpha_search.bypass_substitute_moves() == want

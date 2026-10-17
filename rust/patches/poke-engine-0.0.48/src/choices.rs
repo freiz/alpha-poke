@@ -20578,6 +20578,47 @@ impl Choices {
         )
     }
 
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L133): the status moves aimed at the foe
+    // that go through a Substitute (Showdown's bypasssub flag); any other fails against one.
+    // tests/test_engine_data.py checks the list against Showdown's flags
+    pub fn bypasses_substitute(&self) -> bool {
+        matches!(
+            self,
+            Choices::AFTERYOU
+                | Choices::ATTRACT
+                | Choices::CONFIDE
+                | Choices::CONVERSION2
+                | Choices::CURSE
+                | Choices::DEFOG
+                | Choices::DISABLE
+                | Choices::ENCORE
+                | Choices::GROWL
+                | Choices::GUARDSWAP
+                | Choices::HEARTSWAP
+                | Choices::INSTRUCT
+                | Choices::METALSOUND
+                | Choices::MIMIC
+                | Choices::NOBLEROAR
+                | Choices::PARTINGSHOT
+                | Choices::PLAYNICE
+                | Choices::POWERSWAP
+                | Choices::PSYCHUP
+                | Choices::REFLECTTYPE
+                | Choices::ROAR
+                | Choices::ROLEPLAY
+                | Choices::SCREECH
+                | Choices::SING
+                | Choices::SKETCH
+                | Choices::SKILLSWAP
+                | Choices::SPEEDSWAP
+                | Choices::SPITE
+                | Choices::SUPERSONIC
+                | Choices::TAUNT
+                | Choices::TORMENT
+                | Choices::WHIRLWIND
+        )
+    }
+
     pub fn max_pp_below_10(&self) -> Option<i8> {
         match self {
             Choices::REVIVALBLESSING | Choices::SKETCH | Choices::STRUGGLE => Some(1),

@@ -29,9 +29,6 @@
 "b137-t2": [
 "boost.atk"
 ],
-"b148-t5": [
-"volatile.truant"
-],
 "b158-t26": [
 "status"
 ],
@@ -110,12 +107,8 @@
 "b36-t47": [
 "hp"
 ],
-"b41-t13": [
-"volatile.truant"
-],
 "b41-t14": [
-"hp",
-"volatile.truant"
+"hp"
 ],
 "b41-t15": [
 "hp"

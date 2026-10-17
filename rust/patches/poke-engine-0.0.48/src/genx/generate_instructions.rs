@@ -1303,14 +1303,24 @@ pub fn apply_boost_instruction(
     let target_pkmn = target_side.get_active_immutable();
     let target_pkmn_ability = target_pkmn.ability;
 
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L130): the immunity (Clear Body, Clear
+    // Amulet, ...) is to the foe's drops only, after Contrary (Showdown's onTryBoost: boost < 0);
+    // it used to block the foe's raises too (Weakness Policy, Swagger). A Substitute still stops
+    // both (the foe's move fails: Memento into a Contrary mon's)
+    let contrary = target_pkmn_ability == Abilities::CONTRARY;
+    let drop = if contrary { *boost > 0 } else { *boost < 0 };
     if boost != &0
         && !(target_side_ref != attacking_side_ref
-            && target_pkmn
-                .immune_to_stats_lowered_by_opponent(&stat, &target_side.volatile_statuses))
+            && (drop
+                && target_pkmn
+                    .immune_to_stats_lowered_by_opponent(&stat, &target_side.volatile_statuses)
+                || target_side
+                    .volatile_statuses
+                    .contains(&PokemonVolatileStatus::SUBSTITUTE)))
         && target_pkmn.hp != 0
     {
         let mut boost_amount = *boost;
-        if target_pkmn_ability == Abilities::CONTRARY {
+        if contrary {
             boost_amount *= -1;
         }
         boost_amount = get_boost_amount(target_side, &stat, boost_amount);
@@ -1423,10 +1433,10 @@ fn get_instructions_from_boosts(
         );
     }
     // alpha-poke patch (2026-10-16, doc/engine-diff.md L24): Mirror Herb copies the foe's raises of
-    // its own stats once (used up)
+    // its own stats once (used up); L131: whoever raised them (its holder's Swagger too:
+    // Showdown's onFoeAfterBoost)
     let foe_ref = target_side_ref.get_other_side();
-    if target_side_ref == *attacking_side_reference
-        && state
+    if state
             .get_side_immutable(&foe_ref)
             .get_active_immutable()
             .item
@@ -2426,6 +2436,24 @@ fn move_has_no_effect(state: &State, choice: &Choice, attacking_side_ref: &SideR
     let (_attacking_side, defending_side) = state.get_both_sides_immutable(attacking_side_ref);
     let defender = defending_side.get_active_immutable();
 
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L133): a status move aimed at the foe fails
+    // against its Substitute unless it bypasses it (Showdown's substitute onTryPrimaryHit; the
+    // move's own category: an attack an absorbing ability turned into a status one is absorbed)
+    if choice.target == MoveTarget::Opponent
+        && MOVES
+            .get(&choice.move_id)
+            .map_or(choice.category, |m| m.category)
+            == MoveCategory::Status
+        && !choice.move_id.not_aimed_at_foe()
+        && !choice.move_id.bypasses_substitute()
+        && defending_side
+            .volatile_statuses
+            .contains(&PokemonVolatileStatus::SUBSTITUTE)
+        && _attacking_side.get_active_immutable().ability != Abilities::INFILTRATOR
+    {
+        return true;
+    }
+
     #[cfg(not(any(feature = "gen4", feature = "gen5")))]
     if choice.flags.powder
         && choice.target == MoveTarget::Opponent
@@ -2775,6 +2803,35 @@ fn flinched_or_taunted(state: &State, choice: &Choice, attacking_side_ref: &Side
         || attacking_side
             .volatile_statuses
             .contains(&PokemonVolatileStatus::FLINCH)
+}
+
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L132): a Truant mover's next turn is its loafing
+// one whatever this move does (Showdown's onBeforeMove, priority 9: after sleep / freeze, before
+// the flinch, Taunt, confusion, paralysis, and an immune target or a miss); not under
+// Neutralizing Gas
+fn start_truant(
+    state: &mut State,
+    attacking_side_ref: &SideReference,
+    instructions: &mut StateInstructions,
+) {
+    let (side, foe) = state.get_both_sides(attacking_side_ref);
+    if side.get_active_immutable().ability != Abilities::TRUANT
+        || foe.get_active_immutable().ability == Abilities::NEUTRALIZINGGAS
+        || side
+            .volatile_statuses
+            .contains(&PokemonVolatileStatus::TRUANT)
+    {
+        return;
+    }
+    side.volatile_statuses.insert(PokemonVolatileStatus::TRUANT);
+    instructions
+        .instruction_list
+        .push(Instruction::ApplyVolatileStatus(
+            ApplyVolatileStatusInstruction {
+                side_ref: *attacking_side_ref,
+                volatile_status: PokemonVolatileStatus::TRUANT,
+            },
+        ));
 }
 
 fn cannot_use_move(state: &State, choice: &Choice, attacking_side_ref: &SideReference) -> bool {
@@ -3318,6 +3375,21 @@ pub fn generate_instructions_from_move(
                         volatile_status: PokemonVolatileStatus::MUSTRECHARGE,
                     },
                 ));
+            // alpha-poke patch (2026-10-17, doc/engine-diff.md L132): the recharge turn is the
+            // loafing one too (Showdown's mustrecharge onBeforeMove removes truant)
+            if attacker_side
+                .volatile_statuses
+                .contains(&PokemonVolatileStatus::TRUANT)
+            {
+                incoming_instructions
+                    .instruction_list
+                    .push(Instruction::RemoveVolatileStatus(
+                        RemoveVolatileStatusInstruction {
+                            side_ref: attacking_side,
+                            volatile_status: PokemonVolatileStatus::TRUANT,
+                        },
+                    ));
+            }
         }
         final_instructions.push(incoming_instructions);
         return;
@@ -3517,6 +3589,18 @@ pub fn generate_instructions_from_move(
         );
     }
 
+    // (L132: an asleep / frozen Truant mover's after its status)
+    let asleep_or_frozen = matches!(
+        state
+            .get_side_immutable(&attacking_side)
+            .get_active_immutable()
+            .status,
+        PokemonStatus::SLEEP | PokemonStatus::FREEZE
+    );
+    if !asleep_or_frozen {
+        start_truant(state, &attacking_side, &mut incoming_instructions);
+    }
+
     if cannot_use_move(state, &choice, &attacking_side) {
         state.reverse_instructions(&incoming_instructions.instruction_list);
         final_instructions.push(incoming_instructions);
@@ -3646,6 +3730,9 @@ pub fn generate_instructions_from_move(
             final_instructions.push(incoming_instructions);
         }
         return;
+    }
+    if asleep_or_frozen_before {
+        start_truant(state, &attacking_side, &mut incoming_instructions);
     }
     if no_target(state, &choice, &attacking_side)
         || (asleep_or_frozen_before && flinched_or_taunted(state, &choice, &attacking_side))
