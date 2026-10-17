@@ -4308,7 +4308,18 @@ fn add_end_of_turn_instructions(
         }
         let mut fs_choice = Choice::default();
         if state.get_side_immutable(side_ref).future_sight.0 == 1 {
-            fs_choice = MOVES.get(&Choices::FUTURESIGHT).unwrap().clone();
+            // alpha-poke patch (2026-10-16, doc/engine-diff.md L56): Doom Desire's hit (Steel,
+            // 140) when its user knows Doom Desire and not Future Sight (the engine keeps only
+            // the user's index); before, always Future Sight's
+            let side = state.get_side_immutable(side_ref);
+            let user = &side.pokemon[side.future_sight.1];
+            let knows = |c: Choices| user.moves.into_iter().any(|m| m.id == c);
+            let id = if knows(Choices::DOOMDESIRE) && !knows(Choices::FUTURESIGHT) {
+                Choices::DOOMDESIRE
+            } else {
+                Choices::FUTURESIGHT
+            };
+            fs_choice = MOVES.get(&id).unwrap().clone();
             let none = Choice::default();
             if user_active {
                 ability_modify_attack_being_used(state, &mut fs_choice, &none, side_ref);

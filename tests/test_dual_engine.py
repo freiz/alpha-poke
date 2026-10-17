@@ -1939,3 +1939,17 @@ def test_l55_sheer_force_life_orb(move, recoil):
     assert any("[from] item: Life Orb" in x for x in states[1]["log"]) == recoil
     outs = ec.engine_outcomes(ec.engine_state(states[0]), move, "spikes")
     assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+JIRACHI = _setter("Jirachi", "Serene Grace", "Leftovers", "- Doom Desire\n- Wish\n- Protect\n- Iron Head")
+
+
+# L56 (doc/engine-diff.md): Doom Desire's hit is a Steel move of 140 power (the engine hit with
+# Future Sight's Psychic 120: nothing on a Dark type)
+def test_l56_doom_desire():
+    turns = [("move doomdesire", "move spikes"), ("move protect", "move spikes"),
+             ("move wish", "move spikes")]  # fmt: skip
+    states = ec.run_showdown(JIRACHI, TINGLU, turns, seed="gen5,5,5,5,5")
+    assert any(x.endswith("move: Doom Desire") for x in states[3]["log"])
+    outs = ec.engine_outcomes(ec.engine_state(states[2]), "wish", "spikes")
+    assert ec.closest(states[3], outs, (1, 1), hp=True)["diff"] == {}

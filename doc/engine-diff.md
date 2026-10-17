@@ -197,6 +197,8 @@ harness 必须把 Showdown 的状态完整映射到引擎，否则不一致来�
 | L53 | Weakness Policy 被固定伤害（Ruination 等）触发（Showdown：`!move.damage && !move.damageCallback`） | 引擎 | 已修复 | `test_l53_weakness_policy_not_by_fixed_damage` | `items.rs` |
 | L54 | 混乱自伤：引擎取最高档且灼伤减半；Showdown 的 getConfusionDamage 要掷骰、不因灼伤减半 | 引擎 | 已修复 | `test_l54_confusion_self_hit_burned`（单独比较自伤这一项） | `generate_instructions.rs`：16 档的平均、不减半；poke-engine 自带的 3 个测试按新数值改了期望（35 → 31） |
 | L55 | Sheer Force 加成的招式仍吃 Life Orb 的反伤（Showdown 对这些招式不触发 AfterMoveSecondarySelf） | 引擎 | 已修复 | `test_l55_sheer_force_life_orb`（含对照：没有追加效果的 Earthquake 照样反伤） | `items.rs` |
+| L56 | Doom Desire 命中时按 Future Sight（超能 120）算：钢系 140，打恶系也有伤害 | 引擎 | 已修复 | `test_l56_doom_desire` | `generate_instructions.rs` 回合末：使用者会 Doom Desire 而不会 Future Sight 时用 Doom Desire 的招式数据（引擎只记录使用者的位置） |
+| L57 | **待做（用户 2026-10-16 要求记下）**：引擎不记录被消耗的道具（Showdown 的 `lastItem`），所以 Harvest（Exeggutor / Tropius 的 Sitrus）、Recycle、Belch 都无法实现。随机差分里 b137-t20 / t21 / t23 / t26 四处由此而来 | 引擎 | 线索（计划修） | | 计划：`Pokemon` 加 `last_item`，一条可回溯的指令；所有消耗道具的地方（吃果子、被 Knock Off / Trick / Thief / Bug Bite / Incinerate 等）设置它；状态字符串格式变化（harness、`build_state`、夹具、随机差分基线都要跟着改；网络输入不读它）；然后实现 Harvest（回合末 50%，晴天 100%）、Recycle、Belch |
 
 ## 修复与验证（2026-10-16）
 
@@ -245,12 +247,13 @@ harness 必须把 Showdown 的状态完整映射到引擎，否则不一致来�
 
 修复：L43–L47。随机差分 97.8%（203）→ **98.2%**（6,916 / 7,046；172 个），每一步都是子集，新增 0；全部测试 316 个、poke-engine 自带测试 229 个通过。
 
-L48–L51 之后（同一天）：**98.4%**（6,930 / 7,046；157 个），新增 0；全部测试 321 个、poke-engine 自带测试 229 个通过。L52–L55 之后：**98.5%**（6,938；149 个），新增 0。
+L48–L51 之后（同一天）：**98.4%**（6,930 / 7,046；157 个），新增 0；全部测试 321 个、poke-engine 自带测试 229 个通过。L52–L55 之后：**98.5%**（6,938；149 个），新增 0。L56 之后：6,941，145 个，新增 0。
 
 单看 HP 的双引擎测试有两个陷阱，这一轮都碰到了：`closest` 只要求有一个分支匹配，不看概率（L47 的确定性醒来要断言概率为 1）；Showdown 的追加效果用 `random(100)`，不受 `force_random` 控制（Strange Steam 的混乱，改用必中的 Confuse Ray）。
 
 ## 下一步
 
+0. **L57（用户要求记下）**：给引擎加被消耗的道具（`last_item`），实现 Harvest / Recycle / Belch。
 0. 伤害公式剩下的（1c）：Hydro Steam 在晴天、Metronome 道具的加成、Shell Side Arm、Sacred Sword 打有 Light Clay 的一方（引擎 2 倍，未查）、Unaware 的 Body Press / Liquidation 打 Mold Breaker（引擎偏高约 1.5 倍，未查）、Gyro Ball / Electro Ball 的速度没算 Choice Scarf 和麻痹；Imposter / Transform（L36）。随机差分剩下的主要类别：HP 94、异常状态 30、属性变化 29（其中 Ditto 相关 11 个）、替身 18。
 1. 还没做的（2026-10-16 晚）：场地招式没有实现（L25）；改特性的招式（Skill Swap、Worry Seed、Simple Beam、Entrainment、Gastro Acid、Role Play、Doodle）没有实现；Pickpocket 没有实现；混乱提前解除只是近似；我们的 `build_state` 没有传性格（低血量回复果的混乱用到）；设置天气的宝可梦道具被打掉后，构造按 5 回合算（L3c）；随机对战 runner 用相邻小整数种子，对局之间相关（改了要重建基线）；有倒下 / 中途换人的回合（2,979 个）还不比较。
 2. 剩下的 HP 不一致（gen901 4.18%）按簇继续拆：吸取招式的回复量依赖对另一方伤害的浮动（容差没算进去，方法问题）、属性变化（Libero / Protean 等）、速度等级。
