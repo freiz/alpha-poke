@@ -97,10 +97,6 @@
 "b216-t13": [
 "volatile.protosynthesisspa"
 ],
-"b218-t26": [
-"status",
-"volatile.encore"
-],
 "b220-t5": [
 "terrain"
 ],
@@ -196,11 +192,6 @@
 ],
 "b83-t13": [
 "status"
-],
-"b88-t18": [
-"boost.spa",
-"hp",
-"volatile.encore"
 ],
 "b89-t14": [
 "volatile.protosynthesisdef"

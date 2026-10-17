@@ -89,9 +89,6 @@
 "b225-t7": [
 "hp"
 ],
-"b234-t23": [
-"volatile.encore"
-],
 "b234-t38": [
 "item"
 ],
@@ -113,12 +110,6 @@
 ],
 "b246-t23": [
 "status"
-],
-"b247-t24": [
-"boost.atk",
-"boost.def",
-"boost.spe",
-"volatile.encore"
 ],
 "b252-t15": [
 "hp"
@@ -152,9 +143,6 @@
 ],
 "b285-t44": [
 "volatile.confusion"
-],
-"b290-t45": [
-"volatile.encore"
 ],
 "b299-t40": [
 "hp"

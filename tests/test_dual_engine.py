@@ -2816,3 +2816,30 @@ def test_l99_soak_into_water_absorb():
     assert "typechange" not in states[1]["sides"][1]["mons"][0]["volatiles"]
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "soak", "healbell")
     assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L101 (doc/engine-diff.md): a Pokemon that cannot move (asleep, frozen, fully paralyzed, hitting
+# itself in confusion) has not used its move (Showdown sets lastMove only when the move is used):
+# an Encore after it in the turn fails when it had not moved since it came in; the engine had set
+# its last used move to the chosen one before the check
+def test_l101_asleep_has_not_used_its_move():
+    lax = _setter("Snorlax", "Thick Fat", "Leftovers", "- Spore\n- Encore\n- Body Slam\n- Rest")
+    chansey = BLISSEY.replace("Blissey @ Heavy-Duty Boots", "Chansey @ Eviolite")
+    states = ec.run_showdown(lax, chansey + "\n\n" + BLISSEY, [("move spore", "switch 2"), ("move encore", "move softboiled")])
+    assert any(x.startswith("|cant|p2a: Blissey|slp") for x in states[2]["log"])
+    assert "encore" not in states[2]["sides"][1]["mons"][1]["volatiles"]
+    outs = ec.engine_outcomes(ec.engine_state(states[1]), "encore", "softboiled")
+    assert ec.closest(states[2], outs, (1, 2), hp=True)["diff"] == {}
+
+
+def test_l101_encore_fails_on_sleep_talk():
+    """Encore fails on a move it cannot repeat (Showdown's failencore: Sleep Talk, Encore, Copycat,
+    Metronome, Mimic, Sketch, Struggle, Transform) or one at 0 PP."""
+    lax = _setter("Snorlax", "Thick Fat", "Leftovers", "- Spore\n- Encore\n- Body Slam\n- Rest")
+    zo = _setter("Dondozo", "Unaware", "Leftovers", "- Sleep Talk\n- Curse\n- Rest\n- Waterfall")
+    turns = [("move spore", "move curse"), ("move bodyslam", "move sleeptalk"), ("move encore", "move sleeptalk")]
+    states = ec.run_showdown(lax, zo, turns)
+    assert states[2]["sides"][1]["mons"][0]["last_move"] == "sleeptalk"
+    assert "encore" not in states[3]["sides"][1]["mons"][0]["volatiles"]
+    outs = ec.engine_outcomes(ec.engine_state(states[2]), "encore", "sleeptalk")
+    assert ec.closest(states[3], outs, (1, 1), hp=True)["diff"] == {}

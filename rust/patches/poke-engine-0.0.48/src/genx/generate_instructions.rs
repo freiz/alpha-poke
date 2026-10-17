@@ -2360,10 +2360,24 @@ fn move_has_no_effect(state: &State, choice: &Choice, attacking_side_ref: &SideR
         } else {
             attacking_side_ref.get_other_side()
         };
+        // (L101: nor on the other moves it cannot repeat -- Showdown's failencore -- or at 0 PP)
         let side = state.get_side_immutable(&target);
         return match side.last_used_move {
             LastUsedMove::None => true,
-            LastUsedMove::Move(i) => side.get_active_immutable().moves[&i].id == Choices::ENCORE,
+            LastUsedMove::Move(i) => {
+                let m = &side.get_active_immutable().moves[&i];
+                matches!(
+                    m.id,
+                    Choices::ENCORE
+                        | Choices::SLEEPTALK
+                        | Choices::COPYCAT
+                        | Choices::METRONOME
+                        | Choices::MIMIC
+                        | Choices::SKETCH
+                        | Choices::STRUGGLE
+                        | Choices::TRANSFORM
+                ) || m.pp <= 0
+            }
             LastUsedMove::Switch(_) => true,
         };
     } else if state.terrain_is_active(&Terrain::PSYCHICTERRAIN)
@@ -2809,6 +2823,36 @@ pub fn before_move(
     }
 }
 
+// alpha-poke patch (2026-10-16, doc/engine-diff.md L101): a branch where the mon cannot move
+// (asleep, frozen, fully paralyzed, hitting itself in confusion) has not used its move (Showdown
+// sets lastMove only when the move is used): this move's SetLastUsedMove undone in that branch
+// (a Switch becomes None, as for a flinch: Fake Out / First Impression stay off)
+fn undo_last_used_move(side_ref: &SideReference, ins: &mut StateInstructions) {
+    let found = ins.instruction_list.iter().rev().find_map(|i| match i {
+        Instruction::SetLastUsedMove(s) if s.side_ref == *side_ref => {
+            Some((s.last_used_move, s.previous_last_used_move))
+        }
+        _ => None,
+    });
+    if let Some((now, before)) = found {
+        if !matches!(now, LastUsedMove::Move(_)) {
+            return;
+        }
+        let back = match before {
+            LastUsedMove::Switch(_) => LastUsedMove::None,
+            x => x,
+        };
+        if back != now {
+            ins.instruction_list
+                .push(Instruction::SetLastUsedMove(SetLastUsedMoveInstruction {
+                    side_ref: *side_ref,
+                    last_used_move: back,
+                    previous_last_used_move: now,
+                }));
+        }
+    }
+}
+
 fn generate_instructions_from_existing_status_conditions(
     state: &mut State,
     attacking_side_ref: &SideReference,
@@ -2824,6 +2868,7 @@ fn generate_instructions_from_existing_status_conditions(
             // Fully-Paralyzed Branch
             let mut fully_paralyzed_instruction = incoming_instructions.clone();
             fully_paralyzed_instruction.update_percentage(FULLY_PARALYZED_CHANCE);
+            undo_last_used_move(attacking_side_ref, &mut fully_paralyzed_instruction);
             final_instructions.push(fully_paralyzed_instruction);
 
             // Non-Paralyzed Branch
@@ -2832,6 +2877,7 @@ fn generate_instructions_from_existing_status_conditions(
         PokemonStatus::FREEZE => {
             let mut still_frozen_instruction = incoming_instructions.clone();
             still_frozen_instruction.update_percentage(1.0 - THAW_CHANCE);
+            undo_last_used_move(attacking_side_ref, &mut still_frozen_instruction);
             final_instructions.push(still_frozen_instruction);
 
             incoming_instructions.update_percentage(THAW_CHANCE);
@@ -2898,6 +2944,7 @@ fn generate_instructions_from_existing_status_conditions(
                                     previous_turns: current_sleep_turns,
                                 }),
                             );
+                            undo_last_used_move(attacking_side_ref, &mut still_asleep_instruction);
                             final_instructions.push(still_asleep_instruction);
                             incoming_instructions.update_percentage(0.0);
                         }
@@ -2968,6 +3015,9 @@ fn generate_instructions_from_existing_status_conditions(
                         }
                         do_nothing_instructions.update_percentage(do_nothing_percentage);
                         incoming_instructions.update_percentage(1.0 - do_nothing_percentage);
+                        if attacker_choice.move_id != Choices::SLEEPTALK {
+                            undo_last_used_move(attacking_side_ref, &mut do_nothing_instructions);
+                        }
                         final_instructions.push(do_nothing_instructions);
                     }
                 }
@@ -3090,6 +3140,7 @@ fn generate_instructions_from_existing_status_conditions(
             .instruction_list
             .push(damage_instruction);
 
+        undo_last_used_move(attacking_side_ref, &mut hit_yourself_instruction);
         final_instructions.push(hit_yourself_instruction);
 
         incoming_instructions.update_percentage(1.0 - confusion_self_hit);
@@ -3456,6 +3507,7 @@ pub fn generate_instructions_from_move(
     } else if attacker.status == PokemonStatus::SLEEP && !choice.sleep_talk_move {
         state.reverse_instructions(&incoming_instructions.instruction_list);
         if incoming_instructions.percentage > 0.0 {
+            undo_last_used_move(&attacking_side, &mut incoming_instructions);
             final_instructions.push(incoming_instructions);
         }
         return;
