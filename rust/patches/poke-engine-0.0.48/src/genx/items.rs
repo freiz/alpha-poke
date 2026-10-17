@@ -719,20 +719,20 @@ fn power_up_gem(
             choice.base_power *= 5325.0 / 4096.0;
         }
 
-        instructions
-            .instruction_list
-            .push(Instruction::ChangeItem(ChangeItemInstruction {
-                side_ref: *attacking_side_ref,
-                current_item: attacking_pkmn.item,
-                new_item: Items::NONE,
-            }));
-        // (L57: used up: its last item)
-        {
-            let used = attacking_pkmn.item;
-            set_last_item(attacking_pkmn, *attacking_side_ref, used, instructions);
-        }
-        attacking_pkmn.item = Items::NONE;
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L164): used up by the hit (Showdown's
+        // onSourceTryPrimaryHit: after the accuracy, Protect): a secondary on its user, so a
+        // miss, a Protect or a full paralysis keeps it; before, it went as the move started
+        let _ = (attacking_side_ref, attacking_pkmn, instructions);
+        choice.add_or_create_secondaries(Secondary {
+            chance: 100.0,
+            effect: Effect::RemoveItem,
+            target: MoveTarget::User,
+        });
     }
+}
+
+pub fn is_gem(item: Items) -> bool {
+    format!("{:?}", item).ends_with("GEM")
 }
 
 /*

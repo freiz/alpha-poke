@@ -1673,6 +1673,7 @@ fn get_instructions_from_secondaries(
                                 | Items::WEAKNESSPOLICY
                                 | Items::THROATSPRAY
                         ) || super::items::is_resist_berry(target_pkmn.item)
+                            || super::items::is_gem(target_pkmn.item)
                         {
                             let item = target_pkmn.item;
                             secondary_hit_instructions.instruction_list.push(
@@ -1683,6 +1684,15 @@ fn get_instructions_from_secondaries(
                                 }),
                             );
                             target_pkmn.item = Items::NONE;
+                            // (L164: a gem used up is its last item too)
+                            if super::items::is_gem(item) {
+                                super::items::set_last_item(
+                                    target_pkmn,
+                                    secondary_target_side_ref,
+                                    item,
+                                    &mut secondary_hit_instructions,
+                                );
+                            }
                             // (L152: an eaten berry is its last item: Harvest, Recycle, Belch)
                             if super::items::is_berry(item) {
                                 super::items::set_last_item(
@@ -5932,12 +5942,18 @@ fn add_end_of_turn_instructions(
             if !side.volatile_statuses.contains(&v) {
                 continue;
             }
+            // (L164: Encore also ends with its move out of PP -- Showdown's onResidual)
+            let out_of_pp = v == PokemonVolatileStatus::ENCORE
+                && match side.last_used_move {
+                    LastUsedMove::Move(i) => side.pokemon[side.active_index].moves[&i].pp <= 0,
+                    _ => false,
+                };
             let count = if v == PokemonVolatileStatus::ENCORE {
                 &mut side.volatile_status_durations.encore
             } else {
                 &mut side.volatile_status_durations.taunt
             };
-            let (amount, ends) = if *count + 1 >= 3 {
+            let (amount, ends) = if *count + 1 >= 3 || out_of_pp {
                 (-*count, true)
             } else {
                 (1, false)

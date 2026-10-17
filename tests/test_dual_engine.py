@@ -4223,3 +4223,27 @@ def test_l163_attract_same_gender_fails():
     assert "attract" not in states[1]["sides"][1]["mons"][0]["volatiles"]
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "attract", "swordsdance")
     assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L164 (doc/engine-diff.md): a gem is used up by the hit (Showdown's onSourceTryPrimaryHit: not on
+# a miss -- offmeta b76-t17); Encore ends with its move out of PP (wide b152-t19, wide2 b199-t58)
+@pytest.mark.parametrize("teams,i,turn,offset", [
+    ("random_battle_teams_offmeta.jsonl", 76, 17, 0),
+    ("random_battle_teams_wide.jsonl", 152, 19, 0),
+    ("random_battle_teams_wide2.jsonl", 199, 58, 30000),
+])  # fmt: skip
+def test_l164_positions(teams, i, turn, offset):
+    a, b = _random_position(teams, i, turn, offset)
+    c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
+    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2)
+    n = tuple(len(s["mons"]) for s in a["state"]["sides"])
+    assert ec.closest(b["state"], outs, n, hp=True)["diff"] == {}
+
+
+# L164's control: a gem that hits is used up
+def test_l164_gem_on_a_hit():
+    user = _attacker("Dragonite", "Inner Focus", "Normal Gem", "- Extreme Speed\n- Earthquake\n- Roost\n- Dragon Dance", "Adamant")
+    states = ec.run_showdown(user, CORVIKNIGHT, [("move extremespeed", "move roost")])
+    assert states[1]["sides"][0]["mons"][0]["item"] == ""
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "extremespeed", "roost")
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
