@@ -9875,6 +9875,17 @@ pub static MOVES: LazyLock<HashMap<Choices, Choice>> = LazyLock::new(|| {
                 heal: true,
                 ..Default::default()
             },
+            // alpha-poke patch (2026-10-16, doc/engine-diff.md L52): as Healing Wish (the user
+            // faints, the next mon that needs it is healed; its PP restoring is not modelled);
+            // before, no effect
+            side_condition: Some(SideCondition {
+                target: MoveTarget::User,
+                condition: PokemonSideCondition::HealingWish,
+            }),
+            heal: Some(Heal {
+                target: MoveTarget::User,
+                amount: -1.0,
+            }),
             ..Default::default()
         },
     );

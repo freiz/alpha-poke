@@ -2693,11 +2693,13 @@ fn generate_instructions_from_existing_status_conditions(
         damage_dealt = damage_dealt * attacking_stat as f32 / defending_stat as f32;
         damage_dealt = damage_dealt.floor() / 50.0;
         damage_dealt = damage_dealt.floor() + 2.0;
-        if attacker_active.status == PokemonStatus::BURN {
-            damage_dealt /= 2.0;
-        }
+        // alpha-poke patch (2026-10-16, doc/engine-diff.md L54): Showdown's getConfusionDamage,
+        // a roll (the 16 rolls' mean here) and no burn halving; before, the max roll, halved
+        // when burned
+        let base = damage_dealt as i32;
+        let mean = (85..=100).map(|r| (base * r / 100).max(1)).sum::<i32>() / 16;
 
-        let damage_dealt = cmp::min(damage_dealt as i16, attacker_active.hp);
+        let damage_dealt = cmp::min(mean as i16, attacker_active.hp);
         let damage_instruction = Instruction::Damage(DamageInstruction {
             side_ref: *attacking_side_ref,
             damage_amount: damage_dealt,
@@ -10570,7 +10572,7 @@ mod tests {
                 ),
                 Instruction::Damage(DamageInstruction {
                     side_ref: SideReference::SideOne,
-                    damage_amount: 35,
+                    damage_amount: 31, // alpha-poke patch (L54): the 16 rolls' mean of 35, was 35
                 }),
             ],
         }];
@@ -10635,7 +10637,7 @@ mod tests {
                 ),
                 Instruction::Damage(DamageInstruction {
                     side_ref: SideReference::SideOne,
-                    damage_amount: 35,
+                    damage_amount: 31, // alpha-poke patch (L54): the 16 rolls' mean of 35, was 35
                 }),
             ],
         }];
@@ -10938,7 +10940,7 @@ mod tests {
                 ),
                 Instruction::Damage(DamageInstruction {
                     side_ref: SideReference::SideOne,
-                    damage_amount: 35,
+                    damage_amount: 31, // alpha-poke patch (L54): the 16 rolls' mean of 35, was 35
                 }),
             ],
         }];

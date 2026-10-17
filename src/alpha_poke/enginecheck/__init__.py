@@ -150,7 +150,8 @@ def _engine_side(s: dict, future_sight=None, wish=None) -> pe.Side:
     sc |= {v: c[k]["duration"] for k, v in TIMED.items() if k in c}
     # Healing Wish / Lunar Dance waiting on the slot (Gen 9: until a mon that needs it comes in;
     # Showdown's slot condition, the engine's side condition; L48)
-    for name, eng in (("healingwish", "healing_wish"), ("lunardance", "lunar_dance")):
+    # (Lunar Dance: the engine's Healing Wish, L52)
+    for name, eng in (("healingwish", "healing_wish"), ("lunardance", "healing_wish")):
         if name in s.get("slot", {}):
             sc[eng] = 1
     kw: dict = {"future_sight": future_sight} if future_sight else {}

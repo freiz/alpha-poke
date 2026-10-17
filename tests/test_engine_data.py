@@ -47,6 +47,8 @@ KNOWN_MOVES = {
     "steelbeam": ({"heal"}, SELF_DAMAGE),
     "healingwish": ({"heal", "side_condition"}, "the engine: heal -1 = the user faints, the "
                     "next mon is healed by its side condition (Showdown: in code)"),
+    "lunardance": ({"heal", "side_condition"}, "the engine: as Healing Wish (L52; Showdown: a "
+                   "slot condition in code)"),
     "memento": ({"heal"}, "the engine: heal -1 = the user faints (Showdown: in code)"),
     "moonlight": ({"heal"}, WEATHER_HEAL),
     "morningsun": ({"heal"}, WEATHER_HEAL),

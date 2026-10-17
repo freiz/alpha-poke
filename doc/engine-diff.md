@@ -193,6 +193,10 @@ harness 必须把 Showdown 的状态完整映射到引擎，否则不一致来�
 | L49 | Belly Drum 在攻击 +6 时也扣一半 HP（Showdown 失败） | 引擎 | 已修复 | `test_l49_belly_drum_fails_at_plus_six` | `choice_effects.rs` |
 | L50 | 反噬招式（High Jump Kick、Supercell Slam 等）打到免疫的目标时不反噬（Showdown 的 onMoveFail：未命中、免疫、守住都反噬）；连续招式每一段接触都该吃 Rocky Helmet / Rough Skin / Iron Barbs，引擎每个招式只算一次 | 引擎 | 已修复 | `test_l50_crash_into_an_immune_target`；`test_l50_rocky_helmet_per_hit` | `generate_instructions.rs`：`move_has_no_effect` 的路径加反噬；`run_move` 补上第二段起的接触伤害（Magic Guard / Protective Pads 除外） |
 | L51 | 非暴击打不死、暴击可能打死时，暴击按平均伤害算：平均到了 HP 就一律击倒（b110-t32：Showdown 暴击 285 没打死 296 HP） | 引擎 | 已修复 | `test_l51_crit_knockout_rolls`（暴击 16 档中间的 HP：击倒概率 = 暴击率 × 不小于 HP 的档数 / 16；修复后才跑通，临时去掉修复确认会失败） | `generate_instructions.rs` `finish_move`：暴击按精确的 16 档拆成击倒和不击倒两支 |
+| L52 | Lunar Dance 在引擎里没有任何效果（Showdown：使用者倒下，下一个需要的宝可梦换上时回满） | 引擎 | 已修复 | `test_l52_lunar_dance`（当回合倒下；等待后治疗） | `choices.rs`：同 Healing Wish（回复 PP 的部分没有做）；harness 的 `lunardance` 槽位映射成 healing_wish；数据测试列入已知差异 |
+| L53 | Weakness Policy 被固定伤害（Ruination 等）触发（Showdown：`!move.damage && !move.damageCallback`） | 引擎 | 已修复 | `test_l53_weakness_policy_not_by_fixed_damage` | `items.rs` |
+| L54 | 混乱自伤：引擎取最高档且灼伤减半；Showdown 的 getConfusionDamage 要掷骰、不因灼伤减半 | 引擎 | 已修复 | `test_l54_confusion_self_hit_burned`（单独比较自伤这一项） | `generate_instructions.rs`：16 档的平均、不减半；poke-engine 自带的 3 个测试按新数值改了期望（35 → 31） |
+| L55 | Sheer Force 加成的招式仍吃 Life Orb 的反伤（Showdown 对这些招式不触发 AfterMoveSecondarySelf） | 引擎 | 已修复 | `test_l55_sheer_force_life_orb`（含对照：没有追加效果的 Earthquake 照样反伤） | `items.rs` |
 
 ## 修复与验证（2026-10-16）
 
@@ -241,7 +245,7 @@ harness 必须把 Showdown 的状态完整映射到引擎，否则不一致来�
 
 修复：L43–L47。随机差分 97.8%（203）→ **98.2%**（6,916 / 7,046；172 个），每一步都是子集，新增 0；全部测试 316 个、poke-engine 自带测试 229 个通过。
 
-L48–L51 之后（同一天）：**98.4%**（6,930 / 7,046；157 个），新增 0；全部测试 321 个、poke-engine 自带测试 229 个通过。
+L48–L51 之后（同一天）：**98.4%**（6,930 / 7,046；157 个），新增 0；全部测试 321 个、poke-engine 自带测试 229 个通过。L52–L55 之后：**98.5%**（6,938；149 个），新增 0。
 
 单看 HP 的双引擎测试有两个陷阱，这一轮都碰到了：`closest` 只要求有一个分支匹配，不看概率（L47 的确定性醒来要断言概率为 1）；Showdown 的追加效果用 `random(100)`，不受 `force_random` 控制（Strange Steam 的混乱，改用必中的 Confuse Ray）。
 

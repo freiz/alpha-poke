@@ -3,7 +3,7 @@ use super::abilities::Abilities;
 use super::damage_calc::{move_type_effectiveness, type_effectiveness_modifier};
 use super::generate_instructions::{apply_boost_instruction, immune_to_status};
 use super::state::Terrain;
-use crate::choices::{Choice, Choices, Effect, MoveCategory, MoveTarget, Secondary, StatBoosts};
+use crate::choices::{Choice, Choices, Effect, MoveCategory, MoveTarget, Secondary, StatBoosts, MOVES};
 use crate::define_enum_with_from_str;
 use crate::engine::generate_instructions::add_remove_status_instructions;
 use crate::instruction::{
@@ -1704,7 +1704,9 @@ pub fn item_modify_attack_against(
             }
         }
         Items::WEAKNESSPOLICY => {
+            // (L53: not by a fixed damage)
             if attacking_choice.category != MoveCategory::Status
+                && !fixed_damage_move(&attacking_choice.move_id)
                 && move_type_effectiveness(
                     &attacking_choice,
                     &defending_side.get_active_immutable(),
@@ -1842,8 +1844,18 @@ pub fn item_modify_attack_being_used(
                     });
                 }
 
+                // alpha-poke patch (2026-10-16, doc/engine-diff.md L55): no recoil on a move
+                // Sheer Force boosts (Showdown skips AfterMoveSecondarySelf; the secondaries are
+                // gone by now: the move's own data)
+                let sheer_force = attacking_side.get_active_immutable().ability
+                    == Abilities::SHEERFORCE
+                    && MOVES
+                        .get(&attacking_choice.move_id)
+                        .is_some_and(|m| m.secondaries.is_some());
                 #[cfg(not(feature = "gen4"))]
-                if attacking_side.get_active_immutable().ability != Abilities::MAGICGUARD {
+                if attacking_side.get_active_immutable().ability != Abilities::MAGICGUARD
+                    && !sheer_force
+                {
                     attacking_choice.add_or_create_secondaries(Secondary {
                         chance: 100.0,
                         effect: Effect::Heal(-0.1),

@@ -1877,3 +1877,65 @@ def test_l51_crit_knockout_rolls():
     outs = ec.engine_outcomes(ec.engine_state(st), "kowtowcleave", "spikes")
     kill = sum(o[0] for o in outs if o[1].side_two.pokemon[0].hp == 0)
     assert kill == pytest.approx(CRIT_CHANCE[1] * sum(d >= hp for d in crit) / 16, abs=1e-4)
+
+
+LUNAR_DANCER = _setter("Cresselia", "Levitate", "Leftovers", "- Lunar Dance\n- Moonlight\n- Calm Mind\n- Protect")
+
+
+# L52 (doc/engine-diff.md): Lunar Dance had no effect in the engine (the user faints, the next
+# mon that needs it is healed, as Healing Wish; its PP restoring is not modelled)
+@pytest.mark.parametrize("waits", [False, True])
+def test_l52_lunar_dance(waits):
+    team = DONDOZO + "\n\n" + LUNAR_DANCER + "\n\n" + CORVIKNIGHT
+    turns = [("move curse", "move earthquake"), ("switch 2", "move spikes"),
+             ("move lunardance", "move spikes")]  # fmt: skip
+    if not waits:  # the user faints this turn
+        states = ec.run_showdown(team, TINGLU_HITS_EQ, turns)
+        assert states[-1]["sides"][0]["mons"][1]["hp"] == 0
+        outs = ec.engine_outcomes(ec.engine_state(states[-2]), "lunardance", "spikes")
+        assert ec.closest(states[-1], outs, (3, 1))["diff"] == {}
+        return
+    turns += [("switch 3", ""), ("switch 2", "move spikes")]
+    states = ec.run_showdown(team, TINGLU_HITS_EQ, turns)
+    assert any("[from] move: Lunar Dance" in x for x in states[-1]["log"])
+    outs = ec.engine_outcomes(ec.engine_state(states[-2]), "dondozo", "spikes")
+    assert ec.closest(states[-1], outs, (3, 1), hp=True)["diff"] == {}
+
+
+# L53 (doc/engine-diff.md): Weakness Policy is not set off by a fixed damage (Showdown:
+# !move.damage && !move.damageCallback)
+def test_l53_weakness_policy_not_by_fixed_damage():
+    ceruledge = _setter("Ceruledge", "Weak Armor", "Weakness Policy", "- Bulk Up\n- Bitter Blade\n- Shadow Sneak\n- Protect")
+    states = ec.run_showdown(ceruledge, TINGLU_HITS_EQ, [("move bulkup", "move ruination")])
+    assert states[1]["sides"][0]["mons"][0]["item"] == "weaknesspolicy"
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "bulkup", "ruination")
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+SABLEYE = _setter("Sableye", "Prankster", "Leftovers", "- Confuse Ray\n- Recover\n- Will-O-Wisp\n- Knock Off")
+
+
+# L54 (doc/engine-diff.md): confusion's self-hit, Showdown's getConfusionDamage: 40 power of the
+# mon's own boosted Attack on its Defense, a roll, no burn halving (the engine: the max roll,
+# halved when burned)
+def test_l54_confusion_self_hit_burned():
+    turns = [("move calmmind", "move willowisp"), ("move calmmind", "move confuseray")]
+    states = ec.run_showdown(BLISSEY, SABLEYE, turns, force_random=True)
+    assert states[1]["sides"][0]["mons"][0]["status"] == "brn"
+    hit = next(x for x in states[2]["log"] if x.endswith("[from] confusion"))
+    sd = states[1]["sides"][0]["mons"][0]["hp"] - int(hit.split("|")[3].split("/")[0])
+    outs = ec.engine_outcomes(ec.engine_state(states[1]), "calmmind", "confuseray")
+    burn = 714 // 16
+    self_hit = max(o.damage[0] for o in outs) - burn  # the self-hit branch, less the burn
+    assert abs(self_hit - sd) <= 0.16 * sd + 1, (self_hit, sd)  # within the roll's spread
+
+
+# L55 (doc/engine-diff.md): Sheer Force removes Life Orb's recoil on a move it boosts (Showdown
+# skips AfterMoveSecondarySelf for it); control: a move without secondaries
+@pytest.mark.parametrize("move, recoil", [("icebeam", False), ("earthquake", True)])
+def test_l55_sheer_force_life_orb(move, recoil):
+    gator = _attacker("Feraligatr", "Sheer Force", "Life Orb", "- Ice Beam\n- Earthquake\n- Crunch\n- Dragon Dance")
+    states = ec.run_showdown(gator, TINGLU, [(f"move {move}", "move spikes")])
+    assert any("[from] item: Life Orb" in x for x in states[1]["log"]) == recoil
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), move, "spikes")
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
