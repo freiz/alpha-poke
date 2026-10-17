@@ -403,3 +403,17 @@ def field_setters(lines: list[str]) -> dict[int, tuple[str | None, str | None]]:
         elif p[1] == "turn" and len(p) > 2:
             out[int(p[2])] = (weather, terrain)
     return out
+
+
+def crit_stages(p1, p2, turns=(), seed: str = "gen5,1,2,3,4") -> dict[str, int]:
+    """Showdown's critical-hit stage of p1's active's moves against p2's active after ``turns``
+    (``crit_ratio.js``: its ModifyCritRatio event; Showdown's ratio starts at 1, a move's
+    default: chance 1/24, 1/8, 1/2, 1 for 1, 2, 3, 4)."""
+    case = {"p1": p1, "p2": p2, "turns": [list(t) for t in turns], "seed": seed}
+    r = subprocess.run(["node", str(RUNNER.with_name("crit_ratio.js")), str(SIM)],
+                       input=json.dumps(case), capture_output=True, text=True, check=True,
+                       timeout=120)  # fmt: skip
+    out = json.loads(r.stdout)
+    if out["error"]:
+        raise RuntimeError(out["error"])
+    return out["stages"]

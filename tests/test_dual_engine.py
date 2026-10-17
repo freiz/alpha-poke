@@ -987,3 +987,57 @@ def test_l24_kee_berry_knocked_off_first():
     m = states[1]["sides"][0]["mons"][0]
     assert m["item"] == "" and m["boosts"]["def"] == 0  # Showdown: knocked off, no boost
     assert res["diff"] == {}
+
+
+CRIT_CHANCE = {1: 1 / 24, 2: 1 / 8, 3: 1 / 2, 4: 1.0}
+
+
+def _engine_crit_chance(outs) -> float:
+    """The chance of the outcomes where side two took the most damage (the crit branch; the
+    move always hits and cannot knock the target out)."""
+    top = max(o.damage[1] for o in outs)
+    if len({o.damage[1] for o in outs}) == 1:
+        return 1.0 if top else 0.0
+    return sum(o[0] for o in outs if o.damage[1] == top)
+
+
+def _kingambit(ability, item):
+    return _setter("Kingambit", ability, item, "- Kowtow Cleave\n- Night Slash\n- Focus Energy\n- Iron Head")
+
+
+@pytest.mark.parametrize("ability, item, move, focus", [
+    ("Supreme Overlord", "Leftovers", "kowtowcleave", False),  # control: 1/24
+    ("Supreme Overlord", "Leftovers", "nightslash", False),  # control: a high-crit move, 1/8
+    ("Supreme Overlord", "Scope Lens", "kowtowcleave", False),
+    ("Supreme Overlord", "Razor Claw", "nightslash", False),
+    ("Super Luck", "Leftovers", "kowtowcleave", False),
+    ("Supreme Overlord", "Leftovers", "kowtowcleave", True),
+])  # fmt: skip
+def test_crit_chance(ability, item, move, focus):
+    """The engine's crit chance is Showdown's crit stage's (move, Scope Lens / Razor Claw, Super
+    Luck, Focus Energy -- L24 / L28)."""
+    p1 = _kingambit(ability, item)
+    pre = [("move focusenergy", "move spikes")] if focus else []
+    stage = ec.crit_stages(p1, TINGLU, pre)[move]
+    states = ec.run_showdown(p1, TINGLU, pre + [(f"move {move}", "move spikes")])
+    outs = ec.engine_outcomes(ec.engine_state(states[-2]), move, "spikes")
+    assert _engine_crit_chance(outs) == pytest.approx(CRIT_CHANCE[stage], abs=1e-4), stage
+
+
+@pytest.mark.parametrize("berry, check", [("Ganlon Berry", ("boosts", "def", 1)),
+                                          ("Apicot Berry", ("boosts", "spd", 1)),
+                                          ("Lansat Berry", ("volatile", "focusenergy")),
+                                          ("Salac Berry", ("boosts", "spe", 1))])  # fmt: skip
+def test_l24_pinch_boost_berries(berry, check):
+    """At 1/4 HP: Defense / Sp. Def / Speed +1 (Ganlon / Apicot / Salac), Focus Energy (Lansat);
+    eaten when the hit takes it there (Showdown's onUpdate), not at the holder's next move only
+    (the engine's Salac Berry before: item_before_move)."""
+    turns = [("move defog", "move ruination")] * 2
+    states, res = _item_turn(_corviknight(berry), TINGLU_HITS, turns, ("defog", "ruination"))
+    m = states[2]["sides"][0]["mons"][0]
+    assert m["item"] == ""  # Showdown: eaten at 100 / 400
+    if check[0] == "boosts":
+        assert m["boosts"][check[1]] == check[2]
+    else:
+        assert check[1] in m["volatiles"]
+    assert res["diff"] == {}

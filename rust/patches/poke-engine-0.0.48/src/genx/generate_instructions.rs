@@ -2773,6 +2773,26 @@ pub fn generate_instructions_from_move(
         }
     }
 
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L24 / L28): the crit chance of Showdown's
+    // crit stage: the move's (+1 for a high-crit one), Scope Lens / Razor Claw +1, Super Luck +1,
+    // Focus Energy +2 (1/24, 1/8, 1/2, then sure); before, only the move's
+    let crit_stage_chance = {
+        let side = state.get_side_immutable(&attacking_side);
+        let attacker = side.get_active_immutable();
+        let stage = i32::from(choice.move_id.increased_crit_ratio())
+            + i32::from(matches!(attacker.item, Items::SCOPELENS | Items::RAZORCLAW))
+            + i32::from(attacker.ability == Abilities::SUPERLUCK)
+            + 2 * i32::from(
+                side.volatile_statuses
+                    .contains(&PokemonVolatileStatus::FOCUSENERGY),
+            );
+        match stage {
+            0 => BASE_CRIT_CHANCE,
+            1 => 1.0 / 8.0,
+            2 => 1.0 / 2.0,
+            _ => 1.0,
+        }
+    };
     let (_attacker_side, defender_side) = state.get_both_sides(&attacking_side);
     let defender_active = defender_side.get_active();
     let mut does_damage = false;
@@ -2797,10 +2817,8 @@ pub fn generate_instructions_from_move(
                 0.0
             } else if choice.move_id.guaranteed_crit() {
                 1.0
-            } else if choice.move_id.increased_crit_ratio() {
-                1.0 / 8.0
             } else {
-                BASE_CRIT_CHANCE
+                crit_stage_chance
             };
 
             // the chance of a branch is the chance of the roll killing + the chance of a crit
@@ -2820,10 +2838,8 @@ pub fn generate_instructions_from_move(
                 0.0
             } else if choice.move_id.guaranteed_crit() {
                 1.0
-            } else if choice.move_id.increased_crit_ratio() {
-                1.0 / 8.0
             } else {
-                BASE_CRIT_CHANCE
+                crit_stage_chance
             };
             let mut branch_ins = incoming_instructions.clone();
             branch_ins.update_percentage(crit_rate);

@@ -281,10 +281,6 @@
 "b143-t1": [
 "volatile.typechange"
 ],
-"b143-t8": [
-"boost.spe",
-"item"
-],
 "b146-t2": [
 "toxic_spikes"
 ],
@@ -1123,10 +1119,6 @@
 ],
 "b295-t17": [
 "volatile.substitute"
-],
-"b295-t38": [
-"boost.spe",
-"item"
 ],
 "b295-t53": [
 "status"

@@ -312,6 +312,13 @@ define_enum_with_from_str! {
         STICKYBARB,
         // choice_effects (Trick Room), item_on_switch_in
         ROOMSERVICE,
+        // the crit stage (generate_instructions_from_move)
+        SCOPELENS,
+        RAZORCLAW,
+        // pinch berries: Defense / Sp. Def +1, Focus Energy (item_before_move / item_end_of_turn)
+        GANLONBERRY,
+        APICOTBERRY,
+        LANSATBERRY,
     },
     default = UNKNOWNITEM
 }
@@ -539,6 +546,34 @@ fn chesto_berry(
         }));
     active_pkmn.item = Items::NONE;
     add_remove_status_instructions(instructions, active_index, *side_ref, attacking_side);
+}
+
+// alpha-poke patch (2026-10-16, L24): Lansat Berry, Focus Energy (+2 crit stages)
+fn lansat_berry(side_ref: &SideReference, side: &mut Side, instructions: &mut StateInstructions) {
+    if !side
+        .volatile_statuses
+        .contains(&PokemonVolatileStatus::FOCUSENERGY)
+    {
+        instructions
+            .instruction_list
+            .push(Instruction::ApplyVolatileStatus(
+                ApplyVolatileStatusInstruction {
+                    side_ref: *side_ref,
+                    volatile_status: PokemonVolatileStatus::FOCUSENERGY,
+                },
+            ));
+        side.volatile_statuses
+            .insert(PokemonVolatileStatus::FOCUSENERGY);
+    }
+    let active = side.get_active();
+    instructions
+        .instruction_list
+        .push(Instruction::ChangeItem(ChangeItemInstruction {
+            side_ref: *side_ref,
+            current_item: active.item,
+            new_item: Items::NONE,
+        }));
+    active.item = Items::NONE;
 }
 
 fn boost_berry(
@@ -1042,6 +1077,19 @@ pub fn item_before_move(
         Items::SALACBERRY if active_pkmn.hp <= active_pkmn.maxhp / 4 => {
             boost_berry(side_ref, state, PokemonBoostableStat::Speed, instructions)
         }
+        // alpha-poke patch (2026-10-16, doc/engine-diff.md L24): Ganlon / Apicot / Lansat Berry
+        Items::GANLONBERRY if active_pkmn.hp <= active_pkmn.maxhp / 4 => {
+            boost_berry(side_ref, state, PokemonBoostableStat::Defense, instructions)
+        }
+        Items::APICOTBERRY if active_pkmn.hp <= active_pkmn.maxhp / 4 => boost_berry(
+            side_ref,
+            state,
+            PokemonBoostableStat::SpecialDefense,
+            instructions,
+        ),
+        Items::LANSATBERRY if active_pkmn.hp <= active_pkmn.maxhp / 4 && active_pkmn.hp > 0 => {
+            lansat_berry(side_ref, attacking_side, instructions)
+        }
         Items::CHOICESPECS | Items::CHOICEBAND | Items::CHOICESCARF => {
             let ins = get_choice_move_disable_instructions(active_pkmn, side_ref, &choice.move_id);
             for i in ins {
@@ -1244,6 +1292,37 @@ pub fn item_end_of_turn(
                     damage_amount,
                 }));
             active_pkmn.hp -= damage_amount;
+        }
+        // alpha-poke patch (2026-10-16, doc/engine-diff.md L24): the stat pinch berries at the end
+        // of the turn too (Showdown eats them when the hit takes the holder there; before, only at
+        // its next move: item_before_move)
+        Items::LIECHIBERRY if active_pkmn.hp <= active_pkmn.maxhp / 4 && active_pkmn.hp > 0 => {
+            boost_berry(side_ref, state, PokemonBoostableStat::Attack, instructions)
+        }
+        Items::PETAYABERRY if active_pkmn.hp <= active_pkmn.maxhp / 4 && active_pkmn.hp > 0 => {
+            boost_berry(
+                side_ref,
+                state,
+                PokemonBoostableStat::SpecialAttack,
+                instructions,
+            )
+        }
+        Items::SALACBERRY if active_pkmn.hp <= active_pkmn.maxhp / 4 && active_pkmn.hp > 0 => {
+            boost_berry(side_ref, state, PokemonBoostableStat::Speed, instructions)
+        }
+        Items::GANLONBERRY if active_pkmn.hp <= active_pkmn.maxhp / 4 && active_pkmn.hp > 0 => {
+            boost_berry(side_ref, state, PokemonBoostableStat::Defense, instructions)
+        }
+        Items::APICOTBERRY if active_pkmn.hp <= active_pkmn.maxhp / 4 && active_pkmn.hp > 0 => {
+            boost_berry(
+                side_ref,
+                state,
+                PokemonBoostableStat::SpecialDefense,
+                instructions,
+            )
+        }
+        Items::LANSATBERRY if active_pkmn.hp <= active_pkmn.maxhp / 4 && active_pkmn.hp > 0 => {
+            lansat_berry(side_ref, attacking_side, instructions)
         }
         Items::SITRUSBERRY if active_pkmn.hp <= active_pkmn.maxhp / 2 => {
             sitrus_berry(side_ref, attacking_side, instructions)
