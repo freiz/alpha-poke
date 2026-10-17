@@ -8,11 +8,11 @@ use crate::choices::{
 };
 use crate::instruction::{
     ApplyVolatileStatusInstruction, BoostInstruction, ChangeItemInstruction,
-    ChangeVolatileStatusDurationInstruction,
     ChangeSideConditionInstruction, ChangeStatusInstruction, ChangeSubsituteHealthInstruction,
-    ChangeTerrain, ChangeType, ChangeWeather, ChangeWishInstruction, DamageInstruction,
-    HealInstruction, Instruction, RemoveVolatileStatusInstruction, SetFutureSightInstruction,
-    SetSleepTurnsInstruction, StateInstructions, ToggleTrickRoomInstruction,
+    ChangeTerrain, ChangeType, ChangeVolatileStatusDurationInstruction, ChangeWeather,
+    ChangeWishInstruction, DamageInstruction, HealInstruction, Instruction,
+    RemoveVolatileStatusInstruction, SetFutureSightInstruction, SetSleepTurnsInstruction,
+    StateInstructions, ToggleTrickRoomInstruction,
 };
 use crate::pokemon::PokemonName;
 use crate::state::{
@@ -1666,6 +1666,7 @@ pub fn choice_special_effect(
                 active_pkmn.hp = active_pkmn.maxhp;
                 active_pkmn.status = PokemonStatus::SLEEP;
                 active_pkmn.rest_turns = 3;
+                super::items::rest_berry(attacking_side_ref, attacking_side, instructions);
             }
         }
         Choices::TRICKROOM => {

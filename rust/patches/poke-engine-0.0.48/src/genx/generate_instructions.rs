@@ -935,12 +935,30 @@ pub fn immune_to_status(
     let (target_side, attacking_side) = state.get_both_sides_immutable(target_side_ref);
     let target_pkmn = target_side.get_active_immutable();
     let attacking_pkmn = attacking_side.get_active_immutable();
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L80): the other active's Neutralizing Gas
+    // suppresses an ability (not through an Ability Shield; Comatose / Shields Down it cannot)
+    let gassed = |gas: &crate::state::Pokemon, holder: &crate::state::Pokemon| {
+        gas.ability == Abilities::NEUTRALIZINGGAS && holder.item != Items::ABILITYSHIELD
+    };
+    let ability = if gassed(attacking_pkmn, target_pkmn) {
+        Abilities::NONE
+    } else {
+        target_pkmn.ability
+    };
+    let attacker_ability = if gassed(target_pkmn, attacking_pkmn) {
+        Abilities::NONE
+    } else {
+        attacking_pkmn.ability
+    };
 
     // General Status Immunity
     match target_pkmn.ability {
         Abilities::SHIELDSDOWN => return target_pkmn.hp > target_pkmn.maxhp / 2,
-        Abilities::PURIFYINGSALT => return true,
         Abilities::COMATOSE => return true,
+        _ => {}
+    }
+    match ability {
+        Abilities::PURIFYINGSALT => return true,
         Abilities::LEAFGUARD => return state.weather_is_active(&Weather::SUN),
         _ => {}
     }
@@ -967,11 +985,11 @@ pub fn immune_to_status(
                         Abilities::WATERBUBBLE,
                         Abilities::THERMALEXCHANGE,
                     ]
-                    .contains(&target_pkmn.ability)
+                    .contains(&ability)
             }
             PokemonStatus::FREEZE => {
                 target_pkmn.has_type(&PokemonType::ICE)
-                    || target_pkmn.ability == Abilities::MAGMAARMOR
+                    || ability == Abilities::MAGMAARMOR
                     || state.weather_is_active(&Weather::SUN)
                     || state.weather_is_active(&Weather::HARSHSUN)
             }
@@ -983,7 +1001,7 @@ pub fn immune_to_status(
                         Abilities::SWEETVEIL,
                         Abilities::VITALSPIRIT,
                     ]
-                    .contains(&target_pkmn.ability)
+                    .contains(&ability)
                     || (status_target == &MoveTarget::Opponent
                         && target_side.has_alive_non_rested_sleeping_pkmn())
                 // sleep clause
@@ -997,18 +1015,17 @@ pub fn immune_to_status(
                 feature = "champions"
             ))]
             PokemonStatus::PARALYZE => {
-                target_pkmn.has_type(&PokemonType::ELECTRIC)
-                    || target_pkmn.ability == Abilities::LIMBER
+                target_pkmn.has_type(&PokemonType::ELECTRIC) || ability == Abilities::LIMBER
             }
 
             #[cfg(any(feature = "gen4", feature = "gen5"))]
-            PokemonStatus::PARALYZE => target_pkmn.ability == Abilities::LIMBER,
+            PokemonStatus::PARALYZE => ability == Abilities::LIMBER,
 
             PokemonStatus::POISON | PokemonStatus::TOXIC => {
                 ((target_pkmn.has_type(&PokemonType::POISON)
                     || target_pkmn.has_type(&PokemonType::STEEL))
-                    && attacking_pkmn.ability != Abilities::CORROSION)
-                    || [Abilities::IMMUNITY, Abilities::PASTELVEIL].contains(&target_pkmn.ability)
+                    && attacker_ability != Abilities::CORROSION)
+                    || [Abilities::IMMUNITY, Abilities::PASTELVEIL].contains(&ability)
             }
             _ => false,
         }
@@ -1082,11 +1099,17 @@ fn get_instructions_from_status_effects(
     // paralysis from the foe (its move, or its ability through a secondary on the user: Static,
     // Flame Body, ...) goes back to the foe (Showdown's onAfterSetStatus; the foe's immunities,
     // not its Substitute)
-    let holder_synchronizes = state
-        .get_side_immutable(&target_side_ref)
-        .get_active_immutable()
-        .ability
-        == Abilities::SYNCHRONIZE;
+    // (L80: not under the foe's Neutralizing Gas)
+    let holder_synchronizes = {
+        let holder = state
+            .get_side_immutable(&target_side_ref)
+            .get_active_immutable();
+        let foe = state
+            .get_side_immutable(&target_side_ref.get_other_side())
+            .get_active_immutable();
+        holder.ability == Abilities::SYNCHRONIZE
+            && !(foe.ability == Abilities::NEUTRALIZINGGAS && holder.item != Items::ABILITYSHIELD)
+    };
     if applied
         && holder_synchronizes
         && matches!(
@@ -5514,9 +5537,13 @@ fn add_end_of_turn_instructions(
                 ));
         }
 
+        // alpha-poke patch (2026-10-16, doc/engine-diff.md L82): Magic Guard stops the partial
+        // trap's, Salt Cure's and Curse's damage
+        let guarded = side.get_active_immutable().ability == Abilities::MAGICGUARD;
         if side
             .volatile_statuses
             .contains(&PokemonVolatileStatus::PARTIALLYTRAPPED)
+            && !guarded
         {
             let active_pkmn = side.get_active();
             let damage_amount = cmp::min(
@@ -5534,6 +5561,7 @@ fn add_end_of_turn_instructions(
         if side
             .volatile_statuses
             .contains(&PokemonVolatileStatus::SALTCURE)
+            && !guarded
         {
             let active_pkmn = side.get_active();
             let mut divisor = SALT_CURE_DAMAGE_DIVISOR;
@@ -5557,6 +5585,7 @@ fn add_end_of_turn_instructions(
         if side
             .volatile_statuses
             .contains(&PokemonVolatileStatus::CURSE)
+            && !guarded
         {
             let active_pkmn = side.get_active();
             if active_pkmn.hp > 0 {

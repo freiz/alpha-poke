@@ -37,9 +37,6 @@
 "item",
 "volatile.curse"
 ],
-"b145-t24": [
-"hp"
-],
 "b148-t5": [
 "volatile.truant"
 ],
@@ -204,10 +201,6 @@
 "status"
 ],
 "b62-t19": [
-"status"
-],
-"b65-t2": [
-"hp",
 "status"
 ],
 "b65-t20": [

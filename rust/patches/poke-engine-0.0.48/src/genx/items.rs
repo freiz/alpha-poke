@@ -508,6 +508,16 @@ Regarding berries:
     move AND at the end-of-turn should be accurate enough for a simulation. The item is
     removed after this is triggered so only one will take effect
 */
+// alpha-poke patch (2026-10-16, doc/engine-diff.md L81): the Lum / Chesto Berry the holder's own
+// Rest sets off, at once (Showdown's onUpdate)
+pub fn rest_berry(side_ref: &SideReference, side: &mut Side, instructions: &mut StateInstructions) {
+    match side.get_active_immutable().item {
+        Items::LUMBERRY => lum_berry(side_ref, side, instructions),
+        Items::CHESTOBERRY => chesto_berry(side_ref, side, instructions),
+        _ => {}
+    }
+}
+
 fn lum_berry(
     side_ref: &SideReference,
     attacking_side: &mut Side,

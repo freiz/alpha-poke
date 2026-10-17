@@ -5,10 +5,6 @@
 "teams": "ec78e233fb2205eb"
 },
 "mismatches": {
-"b0-t16": [
-"hp",
-"status"
-],
 "b0-t17": [
 "hp"
 ],
@@ -40,10 +36,6 @@
 ],
 "b12-t7": [
 "hp"
-],
-"b121-t37": [
-"hp",
-"status"
 ],
 "b123-t11": [
 "hp"
@@ -94,28 +86,11 @@
 "hp",
 "volatile.partiallytrapped"
 ],
-"b184-t2": [
-"hp",
-"status"
-],
 "b184-t5": [
 "hp",
 "status"
 ],
-"b184-t58": [
-"hp",
-"status"
-],
 "b186-t18": [
-"hp"
-],
-"b188-t16": [
-"hp"
-],
-"b188-t17": [
-"hp"
-],
-"b188-t18": [
 "hp"
 ],
 "b189-t11": [

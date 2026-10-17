@@ -2430,3 +2430,53 @@ Adamant Nature
     res = ec.closest(states[1], outs, (1, 1), hp=True)
     crit = any(x.startswith("|-crit") for x in states[1]["log"])
     assert res["diff"] == {} and (crit or res["p"] > 0.9)
+
+
+# L80 (doc/engine-diff.md): Neutralizing Gas suppresses the target's status-blocking ability
+# (Purifying Salt, Water Veil, Limber, ...; not Comatose / Shields Down, which it cannot), and the
+# target's Gas the user's Corrosion; the engine's status immunity read the abilities as they are
+def test_l80_neutralizing_gas_lets_a_burn_through_purifying_salt():
+    weezing = _setter("Weezing-Galar", "Neutralizing Gas", "Heavy-Duty Boots", "- Will-O-Wisp\n- Pain Split\n- Strange Steam\n- Defog")
+    salt = _setter("Garganacl", "Purifying Salt", "Leftovers", "- Recover\n- Salt Cure\n- Stealth Rock\n- Protect")
+    states = ec.run_showdown(weezing, salt, [("move willowisp", "move recover")])
+    assert states[1]["sides"][1]["mons"][0]["status"] == "brn"
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "willowisp", "recover")
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+def test_l80_neutralizing_gas_stops_synchronize():
+    weezing = _setter("Weezing-Galar", "Neutralizing Gas", "Heavy-Duty Boots", "- Will-O-Wisp\n- Pain Split\n- Strange Steam\n- Defog")
+    garde = _setter("Gardevoir", "Synchronize", "Leftovers", "- Calm Mind\n- Moonblast\n- Psychic\n- Protect")
+    states = ec.run_showdown(weezing, garde, [("move willowisp", "move calmmind")])
+    assert states[1]["sides"][1]["mons"][0]["status"] == "brn"
+    assert states[1]["sides"][0]["mons"][0]["status"] == ""
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "willowisp", "calmmind")
+    assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L81 (doc/engine-diff.md): Rest's sleep sets off a Lum / Chesto Berry at once (Showdown's
+# onUpdate), so a status later in the turn lands; the engine ate it before the holder's next move
+# or at the end of the turn, the Rest user still asleep (immune) in between
+@pytest.mark.parametrize("berry", ["Lum Berry", "Chesto Berry"])
+def test_l81_rest_berry_at_once(berry):
+    clef = _setter("Clefable", "Unaware", berry, "- Rest\n- Moonblast\n- Calm Mind\n- Protect")
+    tork = _setter("Torkoal", "White Smoke", "Leftovers", "- Will-O-Wisp\n- Flamethrower\n- Rapid Spin\n- Yawn")
+    states = ec.run_showdown(clef, tork, [("move moonblast", "move flamethrower"), ("move rest", "move willowisp")])
+    assert states[2]["sides"][0]["mons"][0]["status"] == "brn"
+    outs = ec.engine_outcomes(ec.engine_state(states[1]), "rest", "willowisp")
+    assert ec.closest(states[2], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L82 (doc/engine-diff.md): Magic Guard stops a partial trap's, Salt Cure's and a Ghost's Curse's
+# end-of-turn damage (Showdown: their this.damage, Magic Guard's onDamage); the engine took it
+@pytest.mark.parametrize("foe, move", [
+    (_setter("Toxapex", "Regenerator", "Black Sludge", "- Infestation\n- Recover\n- Haze\n- Toxic"), "infestation"),
+    (_setter("Garganacl", "Purifying Salt", "Leftovers", "- Salt Cure\n- Recover\n- Protect\n- Stealth Rock"), "saltcure"),
+    (_setter("Gengar", "Cursed Body", "Black Sludge", "- Curse\n- Shadow Ball\n- Protect\n- Toxic"), "curse"),
+], ids=["infestation", "saltcure", "curse"])  # fmt: skip
+def test_l82_magic_guard_stops_residual_damage(foe, move):
+    clef = _setter("Clefable", "Magic Guard", "Leftovers", "- Calm Mind\n- Moonblast\n- Protect\n- Soft-Boiled")
+    states = ec.run_showdown(clef, foe, [("move calmmind", f"move {move}")] * 2)
+    for k in (0, 1):
+        outs = ec.engine_outcomes(ec.engine_state(states[k]), "calmmind", move)
+        assert ec.closest(states[k + 1], outs, (1, 1), hp=True)["diff"] == {}, k
