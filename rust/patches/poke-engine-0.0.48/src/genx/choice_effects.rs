@@ -1773,6 +1773,39 @@ pub fn choice_special_effect(
         Choices::DOUBLETEAM => 1,
         _ => 0,
     };
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L209): Stuff Cheeks, Defense +2 and then its
+    // user's berry eaten (its effect whatever the HP: Showdown's onHit, eatItem(true)); without a berry
+    // (or unnerved) it fails. It did nothing
+    if choice.move_id == Choices::STUFFCHEEKS {
+        let berry = state
+            .get_side_immutable(attacking_side_ref)
+            .get_active_immutable()
+            .item;
+        if super::items::is_berry(berry) && !super::items::unnerved(state, attacking_side_ref) {
+            apply_boost_instruction(
+                state.get_side(attacking_side_ref),
+                &PokemonBoostableStat::Defense,
+                &2,
+                attacking_side_ref,
+                attacking_side_ref,
+                instructions,
+            );
+            let side = state.get_side(attacking_side_ref);
+            instructions
+                .instruction_list
+                .push(Instruction::ChangeItem(ChangeItemInstruction {
+                    side_ref: *attacking_side_ref,
+                    current_item: berry,
+                    new_item: Items::NONE,
+                }));
+            side.get_active().item = Items::NONE;
+            super::items::eat_again(state, attacking_side_ref, berry, instructions);
+            let user = state.get_side(attacking_side_ref).get_active();
+            if user.last_item != berry {
+                super::items::set_last_item(user, *attacking_side_ref, berry, instructions);
+            }
+        }
+    }
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L207): Topsy-Turvy inverts its target's
     // stages (Showdown's onHit: set directly, no Contrary / Clear Body; a Magic Bounce sends it
     // back, the target then its user; a Substitute stops it); it did nothing

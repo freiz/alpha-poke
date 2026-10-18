@@ -658,6 +658,11 @@ impl Pokemon {
                 {
                     continue;
                 }
+                // alpha-poke patch (2026-10-17, doc/engine-diff.md L209): Stuff Cheeks needs a held
+                // berry (Showdown's onDisableMove)
+                if p.id == Choices::STUFFCHEEKS && !super::items::is_berry(self.item) {
+                    continue;
+                }
                 // alpha-poke patch (2026-10-13): Throat Chop blocks sound moves
                 if throat_chopped && self.moves[&iter.pokemon_move_index].choice.flags.sound {
                     continue;
@@ -867,6 +872,12 @@ impl Pokemon {
             return false;
         }
         match volatile_status {
+            // alpha-poke patch (2026-10-17, doc/engine-diff.md L209): Gastro Acid fails on an
+            // ability that cannot be suppressed and through an Ability Shield (Showdown's onTryHit)
+            PokemonVolatileStatus::GASTROACID => {
+                !super::abilities::CANT_SUPPRESS.contains(&self.ability)
+                    && self.item != Items::ABILITYSHIELD
+            }
             PokemonVolatileStatus::LEECHSEED => {
                 if self.has_type(&PokemonType::GRASS)
                     || active_volatiles.contains(&PokemonVolatileStatus::SUBSTITUTE)

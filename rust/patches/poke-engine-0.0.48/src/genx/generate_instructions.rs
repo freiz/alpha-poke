@@ -1171,6 +1171,27 @@ fn get_instructions_from_volatile_statuses(
                     },
                 ));
         }
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L209): Gastro Acid suppresses the
+        // target's ability: none until it switches out (its base ability back then); a suppressed
+        // Neutralizing Gas lets the foe's ability start again. It did nothing
+        if volatile_status.volatile_status == PokemonVolatileStatus::GASTROACID {
+            let ability = state.get_side_immutable(&target_side).get_active_immutable().ability;
+            if ability != Abilities::NONE {
+                let ins = Instruction::ChangeAbility(ChangeAbilityInstruction {
+                    side_ref: target_side,
+                    ability_change: Abilities::NONE as i16 - ability as i16,
+                });
+                state.apply_one_instruction(&ins);
+                incoming_instructions.instruction_list.push(ins);
+                if ability == Abilities::NEUTRALIZINGGAS {
+                    restart_ability_after_gas(
+                        state,
+                        &target_side.get_other_side(),
+                        incoming_instructions,
+                    );
+                }
+            }
+        }
         // alpha-poke patch (2026-10-17, doc/engine-diff.md L179): a locking move's (Outrage's)
         // lock starts here, with the move's effect (Showdown's self lockedmove): its other moves
         // disabled (was before the move: also on a confusion's self-hit, an immune target)
@@ -2848,7 +2869,9 @@ fn generate_instructions_from_damage(
             .drain
             .filter(|_| attacking_pokemon.hp > 0 && !heal_blocked)
         {
-            let mut drain_amount = (damage_dealt as f32 * drain_fraction) as i16;
+            // alpha-poke patch (2026-10-17, doc/engine-diff.md L209): rounded (Showdown's
+            // Math.round; was truncated)
+            let mut drain_amount = (damage_dealt as f32 * drain_fraction).round() as i16;
             // alpha-poke patch (2026-10-16, L24): Big Root
             if attacking_pokemon.item == Items::BIGROOT {
                 drain_amount = big_root(drain_amount);
@@ -2869,7 +2892,8 @@ fn generate_instructions_from_damage(
 
         let attacking_pokemon = state.get_side(attacking_side_ref).get_active();
         if let Some(recoil_fraction) = choice.recoil {
-            let recoil_amount = (damage_dealt as f32 * recoil_fraction) as i16;
+            // (L209: rounded, at least 1 -- Showdown's applyRecoilDamage; was truncated)
+            let recoil_amount = cmp::max((damage_dealt as f32 * recoil_fraction).round() as i16, 1);
             let damage_amount = cmp::min(recoil_amount, attacking_pokemon.hp);
             let recoil_instruction = Instruction::Damage(DamageInstruction {
                 side_ref: *attacking_side_ref,
@@ -2880,6 +2904,30 @@ fn generate_instructions_from_damage(
                 .instruction_list
                 .push(recoil_instruction);
         }
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L209): Shell Bell heals 1/8 of the
+        // damage (truncated, at least 1; Showdown's onAfterMoveSecondarySelf) besides the move's
+        // drain, after the recoil; it replaced the drain (no Drain Punch heal with it)
+        let attacking_pokemon = state.get_side(attacking_side_ref).get_active();
+        if attacking_pokemon.item == Items::SHELLBELL
+            && damage_dealt > 0
+            && attacking_pokemon.hp > 0
+            && !heal_blocked
+        {
+            let heal_amount = cmp::min(
+                cmp::max(damage_dealt / 8, 1),
+                attacking_pokemon.maxhp - attacking_pokemon.hp,
+            );
+            if heal_amount > 0 {
+                attacking_pokemon.hp += heal_amount;
+                incoming_instructions
+                    .instruction_list
+                    .push(Instruction::Heal(HealInstruction {
+                        side_ref: *attacking_side_ref,
+                        heal_amount,
+                    }));
+            }
+        }
+
         choice_after_damage_hit(
             &mut state,
             &choice,
@@ -3458,7 +3506,8 @@ fn self_destruct(
     let attacker = attacking_side.get_active();
     let damage_amount = match choice.move_id {
         Choices::EXPLOSION | Choices::SELFDESTRUCT | Choices::MISTYEXPLOSION => attacker.hp,
-        Choices::MINDBLOWN => cmp::min(attacker.maxhp / 2, attacker.hp),
+        // (L209: Math.round(maxhp / 2))
+        Choices::MINDBLOWN => cmp::min((attacker.maxhp + 1) / 2, attacker.hp),
         _ => return,
     };
     attacker.hp -= damage_amount;
@@ -4622,6 +4671,8 @@ pub fn generate_instructions_from_move(
             new_choice.called_move = true;
             let mut sleep_talk_instructions = incoming_instructions.clone();
             sleep_talk_instructions.update_percentage(1.0 / num_choices);
+            // alpha-poke patch (2026-10-17, doc/engine-diff.md L209): the called move branches on
+            // its damage as any (a knockout by some rolls); it never did
             generate_instructions_from_move(
                 state,
                 &mut new_choice,
@@ -4629,7 +4680,7 @@ pub fn generate_instructions_from_move(
                 attacking_side,
                 sleep_talk_instructions,
                 &mut final_instructions,
-                false,
+                branch_on_damage,
             );
         }
         return;
@@ -6117,20 +6168,39 @@ fn unburden_check(state: &mut State, instructions: &mut StateInstructions) {
 // alpha-poke patch (2026-10-16, doc/engine-diff.md L57): Harvest at the end of the turn, a
 // used-up berry back (always in sun, else half the time: Showdown's onResidual); the berry is
 // then eaten in the end of the turn as any (Sitrus at half HP)
-fn harvest_chance(state: &State) -> Option<(SideReference, f32)> {
-    for side_ref in [SideReference::SideOne, SideReference::SideTwo] {
-        let a = state.get_side_immutable(&side_ref).get_active_immutable();
-        if a.ability == Abilities::HARVEST
-            && a.hp > 0
-            && a.item == Items::NONE
-            && is_berry(a.last_item)
-        {
-            let sun = state.weather_is_active(&Weather::SUN)
-                || state.weather_is_active(&Weather::HARSHSUN);
-            return Some((side_ref, if sun { 1.0 } else { 0.5 }));
-        }
+// (L209: each side's own chance; was the first holder's only)
+fn harvest_chance(state: &State, side_ref: &SideReference) -> Option<f32> {
+    let a = state.get_side_immutable(side_ref).get_active_immutable();
+    if a.ability == Abilities::HARVEST && a.hp > 0 && a.item == Items::NONE && is_berry(a.last_item)
+    {
+        let sun =
+            state.weather_is_active(&Weather::SUN) || state.weather_is_active(&Weather::HARSHSUN);
+        return Some(if sun { 1.0 } else { 0.5 });
     }
     None
+}
+
+// (a side's Harvest on the branch `b`, the state with it applied: in it for sure, or the branch
+// where it succeeds -- the state back to `b` -- and `b` where it does not)
+fn harvest_side(
+    state: &mut State,
+    side_ref: SideReference,
+    b: &mut StateInstructions,
+) -> Option<StateInstructions> {
+    let p = harvest_chance(state, &side_ref)?;
+    if p >= 1.0 {
+        harvest_instructions(state, side_ref, b);
+        super::items::item_update(state, &side_ref, b);
+        return None;
+    }
+    let from = b.instruction_list.len();
+    let mut yes = b.clone();
+    b.update_percentage(1.0 - p);
+    yes.update_percentage(p);
+    harvest_instructions(state, side_ref, &mut yes);
+    super::items::item_update(state, &side_ref, &mut yes);
+    state.reverse_instructions(&yes.instruction_list[from..].to_vec());
+    Some(yes)
 }
 
 fn harvest_instructions(state: &mut State, side_ref: SideReference, ins: &mut StateInstructions) {
@@ -6315,22 +6385,30 @@ fn harvest_after_end_of_turn(
     si: &mut StateInstructions,
     first_move_side: &SideReference,
     rolls: EotRolls,
-) -> Option<StateInstructions> {
+) -> Vec<StateInstructions> {
     end_of_turn_instructions(state, si, first_move_side, rolls);
-    let (h, p) = harvest_chance(state)?;
-    if p >= 1.0 {
-        harvest_instructions(state, h, si);
-        super::items::item_update(state, &h, si);
-        return None;
-    }
+    // (L209: both sides' Harvest, each on every branch; the extra branches with the state as at
+    // `base`)
     let base = si.instruction_list.len();
-    let mut yes = si.clone();
-    si.update_percentage(1.0 - p);
-    yes.update_percentage(p);
-    harvest_instructions(state, h, &mut yes);
-    super::items::item_update(state, &h, &mut yes);
-    state.reverse_instructions(&yes.instruction_list[base..].to_vec());
-    Some(yes)
+    let mut extra: Vec<StateInstructions> = vec![];
+    for side_ref in [SideReference::SideOne, SideReference::SideTwo] {
+        let mut next = vec![];
+        if let Some(y) = harvest_side(state, side_ref, si) {
+            next.push(y);
+        }
+        state.reverse_instructions(&si.instruction_list[base..].to_vec());
+        for mut b in extra {
+            state.apply_instructions(&b.instruction_list[base..].to_vec());
+            if let Some(y) = harvest_side(state, side_ref, &mut b) {
+                next.push(y);
+            }
+            state.reverse_instructions(&b.instruction_list[base..].to_vec());
+            next.push(b);
+        }
+        state.apply_instructions(&si.instruction_list[base..].to_vec());
+        extra = next;
+    }
+    extra
 }
 
 #[allow(dead_code)] // (the upstream tests')

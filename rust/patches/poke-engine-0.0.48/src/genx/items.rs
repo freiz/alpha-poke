@@ -2335,9 +2335,7 @@ pub fn item_modify_attack_being_used(
                 attacking_choice.base_power *= 4915.0 / 4096.0;
             }
         }
-        Items::SHELLBELL => {
-            attacking_choice.drain = Some(0.125);
-        }
+        // (L209: Shell Bell's heal is its own, after the drain: generate_instructions)
         Items::SILKSCARF => {
             if attacking_choice.move_type == PokemonType::NORMAL {
                 attacking_choice.base_power *= 4915.0 / 4096.0;

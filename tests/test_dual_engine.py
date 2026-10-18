@@ -6076,3 +6076,43 @@ def test_l208_flame_body_on_counter():
     states = ec.run_showdown(snorlax, talonflame, [("move counter", "move bravebird")], force_random=True)
     assert states[1]["sides"][0]["mons"][0]["status"] == "brn"
     assert _keys(_full(states, 0, "counter", "bravebird"), "status") == {}
+
+
+
+# L209 (doc/engine-diff.md): the move Sleep Talk calls branches on its damage as any (a knockout
+# by some rolls: randbats3 b257-t7); Harvest's chance for each side (both Harvest holders:
+# randbats b67-t11); a drain on a knockout (seed10k b69-t16); recoil rounded (wide2 b130-t8);
+# Gastro Acid fails on a cantsuppress ability (wide200 b70-t6); Stuff Cheeks (wide2 b297-t23); a
+# partial trap started again (the harness: seed10k b53-t21)
+@pytest.mark.parametrize("teams,i,turn,offset", [
+    ("random_battle_teams_randbats3.jsonl", 257, 7, 80000),
+    ("random_battle_teams_randbats.jsonl", 67, 11, 60000),
+    ("random_battle_teams.jsonl", 69, 16, 10000),
+    ("random_battle_teams_wide2.jsonl", 130, 8, 30000),
+    ("random_battle_teams_wide200.jsonl", 70, 6, 40000),
+    ("random_battle_teams_wide2.jsonl", 297, 23, 30000),
+    ("random_battle_teams.jsonl", 53, 21, 10000),
+])  # fmt: skip
+def test_l209_positions(teams, i, turn, offset):
+    a, b = _random_position(teams, i, turn, offset)
+    c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
+    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"]))
+    n = tuple(len(s["mons"]) for s in a["state"]["sides"])
+    assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}
+
+
+def test_l209_gastro_acid_suppresses():
+    blissey = BLISSEY.replace("- Calm Mind", "- Gastro Acid")
+    excadrill = _attacker("Excadrill", "Sand Rush", "Leftovers", "- Earthquake\n- Iron Head\n- Rapid Spin\n- Swords Dance", "Jolly")
+    rotom = _attacker("Rotom-Wash", "Levitate", "Leftovers", "- Hydro Pump\n- Volt Switch\n- Will-O-Wisp\n- Protect", "Bold")
+    states = ec.run_showdown(blissey + "\n\n" + excadrill, rotom, [("move gastroacid", "move willowisp"), ("switch 2", "move willowisp"),
+                                                               ("move earthquake", "move hydropump")])  # fmt: skip
+    assert not any("ability: Levitate" in x for x in states[3]["log"])
+    assert _keys(_full(states, 0, "gastroacid", "willowisp"), "ability") == {}
+    assert _keys(_full_hinted(states, 2, "earthquake", "hydropump"), "hp", "ability") == {}
+
+
+def test_l209_shell_bell_besides_drain():
+    hariyama = _attacker("Hariyama", "Thick Fat", "Shell Bell", "- Drain Punch\n- Knock Off\n- Bullet Punch\n- Bulk Up")
+    states = ec.run_showdown(hariyama, BLISSEY, [("move bulkup", "move seismictoss"), ("move drainpunch", "move seismictoss")])
+    assert _keys(_full_hinted(states, 1, "drainpunch", "seismictoss"), "hp") == {}

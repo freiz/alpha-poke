@@ -6,9 +6,6 @@
 "seed_offset": 30000
 },
 "mismatches": {
-"b130-t8": [
-"status"
-],
 "b184-t17": [
 "last_used_move"
 ],
@@ -17,13 +14,6 @@
 ],
 "b278-t18": [
 "substitute_hp"
-],
-"b297-t23": [
-"boost.def",
-"boost.spd",
-"item",
-"last_item",
-"options"
 ],
 "b54-t12": [
 "hp",

@@ -151,7 +151,9 @@ def _engine_mon(m: dict) -> pe.Pokemon:
         id=m["species"], level=m["level"],
         types=_types(_unroosted(m, m.get("pre_tera_types") or m["types"])),
         base_types=_types(m["base_types"]), hp=m["hp"], maxhp=m["maxhp"],
-        ability=m["ability"] or "none",
+        # (L209: Gastro Acid's suppressed one is none in the engine; Showdown keeps it, the volatile
+        # marks it)
+        ability="none" if "gastroacid" in m.get("volatiles", {}) else (m["ability"] or "none"),
         # a used once-per-battle switch-in ability: base ability none (L18; L190: its own, not one
         # it copied -- Trace, Skill Swap, Imposter: the engine marks its base ability only)
         base_ability="none" if m.get("used_once") and m["base_ability"] in ONCE_PER_BATTLE
@@ -671,6 +673,8 @@ def showdown_options(side: dict) -> set[str] | None:
 # drawn length in the engine's count, so a count is compared only once the volatile was there at
 # the start (the turn it starts, the engine's count is its own start)
 HIDDEN_LENGTH = ("confusion", "partiallytrapped", "lockedmove")
+TRAP_MOVES = ("Bind", "Wrap", "Fire Spin", "Clamp", "Whirlpool", "Sand Tomb", "Magma Storm",
+              "Infestation", "Snap Trap", "Thunder Cage")  # fmt: skip
 
 
 def extra_diff(showdown_after: dict, out, n_mons=(6, 6), hp: bool = True,
@@ -692,6 +696,13 @@ def extra_diff(showdown_after: dict, out, n_mons=(6, 6), hp: bool = True,
             # lock's fatigue -- drew a new length)
             tag = f"|-start|p{i + 1}a: "
             if any(line.startswith(tag) and f"|{x}" in line for line in showdown_after.get("log", [])):
+                had = False
+            # (L209: a partial trap started again -- Rapid Spin, then Infestation: its -activate)
+            trap = f"|-activate|p{i + 1}a: "
+            if x == "partiallytrapped" and any(
+                    line.startswith(trap) and "[of]" in line
+                    and any(f"|move: {m}|" in line for m in TRAP_MOVES)
+                    for line in showdown_after.get("log", [])):  # fmt: skip
                 had = False
             if not had:
                 v.pop(f"{k}.count.{x}", None)
