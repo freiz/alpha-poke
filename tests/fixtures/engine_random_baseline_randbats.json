@@ -15,47 +15,8 @@
 "b192-t31": [
 "hp"
 ],
-"b42-t1": [
-"ability",
-"attack",
-"base_ability",
-"base_types",
-"defense",
-"gender",
-"id",
-"last_item",
-"last_used_move",
-"level",
-"maxhp",
-"move",
-"must_switch",
-"nature",
-"options",
-"pp",
-"sc.protect",
-"special_attack",
-"special_defense",
-"speed",
-"status",
-"stellar_boosted",
-"tera_type",
-"terastallized",
-"types",
-"weight"
-],
-"b54-t31": [
-"hp",
-"pp",
-"sleep_turns"
-],
 "b67-t11": [
 "hp"
-],
-"b83-t32": [
-"boost.evasion",
-"last_used_move",
-"pp",
-"sleep_turns"
 ]
 }
 }

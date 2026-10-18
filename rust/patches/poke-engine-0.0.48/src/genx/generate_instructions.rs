@@ -824,6 +824,24 @@ fn generate_instructions_from_switch(
 // alpha-poke patch (2026-10-17, doc/engine-diff.md L200): an active's ability with the other
 // active's Neutralizing Gas (Showdown's ignoringAbility: none, but a cantsuppress one or through an
 // Ability Shield) -- for Magic Guard / Overcoat / Ice Body at the hazards and the residuals
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L206): the active's ability off while the foe's
+// Neutralizing Gas suppresses it (for apply_boost_instruction, which sees one side: Clear Body,
+// Contrary, Mirror Armor, Defiant, ...); its ability to put back (restore_gassed)
+pub fn suppress_gassed(state: &mut State, side_ref: &SideReference) -> Option<Abilities> {
+    let ability = state.get_side_immutable(side_ref).get_active_immutable().ability;
+    if effective_ability(state, side_ref) == ability {
+        return None;
+    }
+    state.get_side(side_ref).get_active().ability = Abilities::NONE;
+    Some(ability)
+}
+
+pub fn restore_gassed(state: &mut State, side_ref: &SideReference, ability: Option<Abilities>) {
+    if let Some(a) = ability {
+        state.get_side(side_ref).get_active().ability = a;
+    }
+}
+
 pub fn effective_ability(state: &State, side_ref: &SideReference) -> Abilities {
     let p = state.get_side_immutable(side_ref).get_active_immutable();
     let foe = state
@@ -1710,6 +1728,10 @@ fn get_instructions_from_boosts(
         MoveTarget::User => target_side_ref = *attacking_side_reference,
     }
     let boostable_stats = boosts.boosts.get_as_pokemon_boostable();
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L206): a target under the foe's
+    // Neutralizing Gas has no ability for them (Clear Body, Contrary, Mirror Armor, Defiant, ...:
+    // a Defog's evasion drop); it had
+    let gassed = suppress_gassed(state, &target_side_ref);
     // alpha-poke patch (2026-10-16, doc/engine-diff.md L21): Mirror Armor reflects the opponent's
     // stat drops back onto it (the holder as their source: Defiant / Competitive answer them)
     let mirror = boosts.target == MoveTarget::Opponent
@@ -1748,6 +1770,7 @@ fn get_instructions_from_boosts(
             incoming_instructions,
         );
     }
+    restore_gassed(state, &target_side_ref, gassed);
     // (L24 / L131 / L149: Mirror Herb: foe_raise_copies, after the move)
 }
 
@@ -3361,6 +3384,12 @@ fn flinched_or_taunted(state: &State, choice: &Choice, attacking_side_ref: &Side
         || attacking_side
             .volatile_statuses
             .contains(&PokemonVolatileStatus::FLINCH)
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L206): Throat Chop stops a sound move
+        // chosen before it hit (Showdown's onBeforeMove, priority 6: between the flinch and Taunt)
+        || attacking_side
+            .volatile_statuses
+            .contains(&PokemonVolatileStatus::THROATCHOP)
+            && choice.flags.sound
 }
 
 // alpha-poke patch (2026-10-17, doc/engine-diff.md L186): a Focus Punch hit by an attack this turn
@@ -3377,6 +3406,35 @@ fn lost_focus(state: &State, choice: &Choice, attacking_side_ref: &SideReference
         )
         && !dealt.hit_substitute
         && dealt.damage > 0
+}
+
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L206): Explosion / Self-Destruct / Misty
+// Explosion's user faints, Mind Blown's loses half its HP, as the move starts (Showdown's
+// useMoveInner after TryMove: Damp stops it); was in choice_before_move, before the BeforeMove (a
+// flinched or fully paralyzed user fainted too)
+fn self_destruct(
+    state: &mut State,
+    choice: &Choice,
+    side_ref: &SideReference,
+    instructions: &mut StateInstructions,
+) {
+    let (attacking_side, defending_side) = state.get_both_sides(side_ref);
+    if defending_side.get_active_immutable().ability == Abilities::DAMP {
+        return;
+    }
+    let attacker = attacking_side.get_active();
+    let damage_amount = match choice.move_id {
+        Choices::EXPLOSION | Choices::SELFDESTRUCT | Choices::MISTYEXPLOSION => attacker.hp,
+        Choices::MINDBLOWN => cmp::min(attacker.maxhp / 2, attacker.hp),
+        _ => return,
+    };
+    attacker.hp -= damage_amount;
+    instructions
+        .instruction_list
+        .push(Instruction::Damage(DamageInstruction {
+            side_ref: *side_ref,
+            damage_amount,
+        }));
 }
 
 // alpha-poke patch (2026-10-17, doc/engine-diff.md L132): a Truant mover's next turn is its loafing
@@ -4647,6 +4705,7 @@ pub fn generate_instructions_from_move(
     incoming_instructions
         .instruction_list
         .push(Instruction::Acted(attacking_side));
+    self_destruct(state, &choice, &attacking_side, &mut incoming_instructions);
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L180): a consecutive Protect fails as the
     // move goes (Showdown's onPrepareHit StallMove: its PP used, its last used move set); was a
     // branch with the status checks, before them
@@ -5807,7 +5866,12 @@ fn quick_claw_first_chance(
         if active.ability == Abilities::QUICKDRAW && choice.category != MoveCategory::Status {
             quick = 1.0 - (1.0 - quick) * 0.7;
         }
-        let slow = if active.item == Items::LAGGINGTAIL || active.ability == Abilities::STALL {
+        // (L206: Mycelium Might's status moves, -0.1)
+        let slow = if active.item == Items::LAGGINGTAIL
+            || active.ability == Abilities::STALL
+            || (active.ability == Abilities::MYCELIUMMIGHT
+                && choice.category == MoveCategory::Status)
+        {
             -0.1
         } else {
             0.0
@@ -6639,6 +6703,38 @@ fn end_of_turn_instructions(
         item_end_of_turn(state, side_ref, &mut incoming_instructions, true);
     }
 
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L206): Aqua Ring (6) and Ingrain (7) heal
+    // 1/16 (Showdown's heal: at least 1; Big Root's [5324, 4096]; not under Heal Block); before,
+    // nothing
+    for v in [PokemonVolatileStatus::AQUARING, PokemonVolatileStatus::INGRAIN] {
+        for side_ref in sides {
+            let side = state.get_side(side_ref);
+            if !side.volatile_statuses.contains(&v)
+                || side
+                    .volatile_statuses
+                    .contains(&PokemonVolatileStatus::HEALBLOCK)
+            {
+                continue;
+            }
+            let p = side.get_active();
+            if p.hp == 0 || p.hp >= p.maxhp {
+                continue;
+            }
+            let mut heal_amount = cmp::max(p.maxhp / 16, 1);
+            if p.item == Items::BIGROOT {
+                heal_amount = big_root(heal_amount);
+            }
+            let heal_amount = cmp::min(heal_amount, p.maxhp - p.hp);
+            p.hp += heal_amount;
+            incoming_instructions
+                .instruction_list
+                .push(Instruction::Heal(HealInstruction {
+                    side_ref: *side_ref,
+                    heal_amount,
+                }));
+        }
+    }
+
     // leechseed sap
     for side_ref in sides {
         let ability = effective_ability(state, side_ref);
@@ -6860,8 +6956,18 @@ fn end_of_turn_instructions(
             == 0;
         // (L197: Yawn's sleep as Showdown's trySetStatus: the immunities, the Sleep Clause, a
         // Safeguard; was any mon without a status)
-        let yawn_sleep_blocked =
-            immune_to_status(state, &MoveTarget::Opponent, side_ref, &PokemonStatus::SLEEP);
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L206): as the residual's, no move's: not
+        // stopped by a Substitute, a Safeguard (its onSetStatus skips Yawn) or the foe's Mold
+        // Breaker; the Sleep Clause still
+        let yawn_sleep_blocked = immune_to_status_with(
+            state,
+            &MoveTarget::User,
+            side_ref,
+            &PokemonStatus::SLEEP,
+            false,
+        ) || state
+            .get_side_immutable(side_ref)
+            .has_alive_non_rested_sleeping_pkmn();
         let side = state.get_side(side_ref);
         if side.get_active().hp == 0 {
             continue;

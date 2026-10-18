@@ -11,9 +11,6 @@
 "b113-t3": [
 "hp"
 ],
-"b126-t28": [
-"boost.evasion"
-],
 "b156-t7": [
 "hp",
 "item",
@@ -29,10 +26,6 @@
 "hp",
 "sc.toxic_count",
 "status"
-],
-"b26-t12": [
-"hp",
-"id"
 ],
 "b50-t6": [
 "hp"

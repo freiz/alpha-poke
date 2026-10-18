@@ -2912,13 +2912,20 @@ pub fn ability_modify_attack_being_used(
                 attacker_choice.remove_all_effects();
             }
         }
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L206): not a holder's of the same Ruin
+        // (Showdown's onAnyModifyDef / SpD: `if (target.hasAbility(...)) return`; an Imposter
+        // Ditto's copy)
         Abilities::BEADSOFRUIN => {
-            if attacker_choice.category == MoveCategory::Special {
+            if attacker_choice.category == MoveCategory::Special
+                && defending_side.get_active_immutable().ability != Abilities::BEADSOFRUIN
+            {
                 attacker_choice.defense_modifier *= 0.75;
             }
         }
         Abilities::SWORDOFRUIN => {
-            if attacker_choice.category == MoveCategory::Physical {
+            if attacker_choice.category == MoveCategory::Physical
+                && defending_side.get_active_immutable().ability != Abilities::SWORDOFRUIN
+            {
                 attacker_choice.defense_modifier *= 0.75;
             }
         }
@@ -3351,13 +3358,18 @@ pub fn ability_modify_attack_against(
     }
 
     match target_pkmn.ability {
+        // (L206: not a holder's of the same Ruin)
         Abilities::TABLETSOFRUIN => {
-            if attacker_choice.category == MoveCategory::Physical {
+            if attacker_choice.category == MoveCategory::Physical
+                && attacking_pkmn.ability != Abilities::TABLETSOFRUIN
+            {
                 attacker_choice.attack_modifier *= 0.75;
             }
         }
         Abilities::VESSELOFRUIN => {
-            if attacker_choice.category == MoveCategory::Special {
+            if attacker_choice.category == MoveCategory::Special
+                && attacking_pkmn.ability != Abilities::VESSELOFRUIN
+            {
                 attacker_choice.attack_modifier *= 0.75;
             }
         }

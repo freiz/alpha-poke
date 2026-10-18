@@ -5604,7 +5604,7 @@ def test_l198_lightning_rod_on_a_ground_type():
 
 
 def test_l198_charge_ends_with_a_flinched_electric_move():
-    excadrill = _attacker("Excadrill", "Mold Breaker", "Leftovers", "- Iron Head\n- Earthquake\n- Rock Slide\n- Rapid Spin")
+    excadrill = _attacker("Excadrill", "Sand Rush", "Leftovers", "- Iron Head\n- Earthquake\n- Rock Slide\n- Rapid Spin")
     bellibolt = _attacker("Bellibolt", "Electromorphosis", "Leftovers", "- Thunderbolt\n- Muddy Water\n- Slack Off\n- Toxic", "Modest")
     states = ec.run_showdown(excadrill, bellibolt, [("move ironhead", "move thunderbolt")], force_random=True)
     assert any("|cant|p2a: Bellibolt|flinch" in x for x in states[1]["log"])
@@ -5905,3 +5905,72 @@ def test_l205_fatigue_through_own_tempo():
     states = ec.run_showdown(sala, CORVIKNIGHT, [("move outrage", "move roost")] * 2, seed=SEED_TWO_USES)
     assert "lockedmove" not in states[2]["sides"][0]["mons"][0]["volatiles"]
     assert _keys(_full(states, 1, "outrage", "roost"), "lockedmove", "confusion") == {}
+
+
+# L206 (doc/engine-diff.md): Yawn's sleep at the end of the turn through a Substitute and a
+# Safeguard set after it (Showdown's trySetStatus from the residual: no move hits, Safeguard's
+# onSetStatus skips Yawn); Mycelium Might's status moves last in their bracket (-0.1, Showdown's
+# onFractionalPriority)
+@pytest.mark.parametrize("move", ["substitute", "safeguard"])
+def test_l206_yawn_sleep_through(move):
+    corviknight = CORVIKNIGHT.replace("- Defog", "- Yawn")
+    blissey = BLISSEY.replace("- Calm Mind", "- " + move.capitalize())
+    states = ec.run_showdown(corviknight, blissey, [("move yawn", "move softboiled"), ("move roost", "move " + move)])
+    assert states[2]["sides"][1]["mons"][0]["status"] == "slp"
+    assert _keys(_full(states, 1, "roost", move), "status", "sleep") == {}
+
+
+def test_l206_mycelium_might_status_move_last():
+    toedscruel = _attacker("Toedscruel", "Mycelium Might", "Leftovers", "- Spore\n- Earth Power\n- Giga Drain\n- Rapid Spin", "Timid")
+    states = ec.run_showdown(toedscruel, BLISSEY, [("move spore", "move seismictoss")])
+    log = [x for x in states[1]["log"] if x.startswith("|move|")]
+    assert "Blissey" in log[0]
+    assert _keys(_full(states, 0, "spore", "seismictoss"), "hp", "status") == {}
+
+
+def test_l206_throat_chop_stops_a_sound_move_this_turn():
+    chienpao = _attacker("Chien-Pao", "Sword of Ruin", "Leftovers", "- Throat Chop\n- Icicle Crash\n- Sacred Sword\n- Swords Dance", "Jolly")
+    blissey = BLISSEY.replace("- Calm Mind", "- Hyper Voice")
+    states = ec.run_showdown(chienpao, blissey, [("move throatchop", "move hypervoice")])
+    assert any("|cant|p2a: Blissey|move: Throat Chop" in x for x in states[1]["log"])
+    assert _keys(_full_hinted(states, 0, "throatchop", "hypervoice"), "hp", "pp", "last_used_move") == {}
+
+
+def test_l206_explosion_user_flinched_does_not_faint():
+    golem = _attacker("Golem", "Sturdy", "Leftovers", "- Explosion\n- Earthquake\n- Stone Edge\n- Stealth Rock")
+    excadrill = _attacker("Excadrill", "Sand Rush", "Leftovers", "- Iron Head\n- Earthquake\n- Rapid Spin\n- Swords Dance", "Jolly")
+    states = ec.run_showdown(golem, excadrill, [("move explosion", "move ironhead")], force_random=True)
+    assert any("|cant|p1a: Golem|flinch" in x for x in states[1]["log"])
+    assert _keys(_full(states, 0, "explosion", "ironhead"), "status") == {}
+
+
+@pytest.mark.parametrize("move, item", [("Aqua Ring", "Heavy-Duty Boots"), ("Ingrain", "Heavy-Duty Boots"), ("Aqua Ring", "Big Root")])
+def test_l206_aqua_ring_ingrain_heal(move, item):
+    blissey = BLISSEY.replace("- Calm Mind", "- " + move).replace("@ Heavy-Duty Boots", "@ " + item)
+    mid = ec._id(move)
+    states = ec.run_showdown(blissey, BLISSEY, [("move " + mid, "move seismictoss"), ("move protect", "move seismictoss")])
+    for k, c1 in ((0, mid), (1, "protect")):
+        assert _keys(_full(states, k, c1, "seismictoss"), "hp") == {}
+
+
+def test_l206_failed_sucker_punch_keeps_disguise():
+    mimikyu = _attacker("Mimikyu", "Disguise", "Leftovers", "- Shadow Sneak\n- Play Rough\n- Swords Dance\n- Shadow Claw", "Jolly")
+    kingambit = _attacker("Kingambit", "Supreme Overlord", "Leftovers", "- Sucker Punch\n- Iron Head\n- Kowtow Cleave\n- Swords Dance")
+    states = ec.run_showdown(mimikyu, kingambit, [("move shadowsneak", "move suckerpunch")])
+    assert any("|-fail|p2a: Kingambit" in x for x in states[1]["log"])
+    assert _keys(_full_hinted(states, 0, "shadowsneak", "suckerpunch"), "hp", "id") == {}
+
+
+def test_l206_clear_body_under_neutralizing_gas():
+    weezing = _attacker("Weezing-Galar", "Neutralizing Gas", "Leftovers", "- Defog\n- Strange Steam\n- Will-O-Wisp\n- Pain Split", "Bold")
+    metagross = _attacker("Metagross", "Clear Body", "Leftovers", "- Bullet Punch\n- Meteor Mash\n- Earthquake\n- Agility")
+    states = ec.run_showdown(weezing, metagross, [("move defog", "move agility")])
+    assert _keys(_full(states, 0, "defog", "agility"), "boost") == {}
+
+
+def test_l206_ruin_not_on_a_holder_of_the_same():
+    chienpao = _attacker("Chien-Pao", "Sword of Ruin", "Leftovers", "- Throat Chop\n- Icicle Crash\n- Sacred Sword\n- Swords Dance", "Jolly")
+    tinglu = _attacker("Ting-Lu", "Vessel of Ruin", "Leftovers", "- Earth Power\n- Ruination\n- Whirlwind\n- Stealth Rock", "Modest")
+    for p1, p2, c1, c2 in ((chienpao, chienpao, "throatchop", "swordsdance"), (tinglu, tinglu, "earthpower", "stealthrock")):
+        states = ec.run_showdown(p1, p2, [(f"move {c1}", f"move {c2}")])
+        assert _keys(_full_hinted(states, 0, c1, c2), "hp") == {}

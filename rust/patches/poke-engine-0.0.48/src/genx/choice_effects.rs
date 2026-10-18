@@ -496,6 +496,7 @@ pub fn modify_choice(
         Choices::POLTERGEIST => {
             if defending_side.get_active_immutable().item == Items::NONE {
                 attacker_choice.base_power = 0.0;
+                attacker_choice.face_break = false;
             }
         }
         Choices::PSYBLADE => {
@@ -857,14 +858,18 @@ pub fn modify_choice(
             // (Showdown's clampIntRange of the callback's fraction)
             attacker_choice.base_power = (attacker_choice.base_power * hp_ratio).floor().max(1.0);
         }
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L206): a failed move hits no Disguise /
+        // Ice Face (ability_before_move marked it before the failure was known)
         Choices::SUCKERPUNCH | Choices::THUNDERCLAP => {
             if !attacker_choice.first_move || defender_choice.category == MoveCategory::Status {
                 attacker_choice.base_power = 0.0;
+                attacker_choice.face_break = false;
             }
         }
         Choices::UPPERHAND => {
             if !(attacker_choice.first_move && defender_choice.priority > 0) {
-                attacker_choice.remove_all_effects()
+                attacker_choice.remove_all_effects();
+                attacker_choice.face_break = false;
             }
         }
         Choices::COLLISIONCOURSE | Choices::ELECTRODRIFT => {
@@ -1249,7 +1254,7 @@ pub fn choice_before_move(
     attacking_side_ref: &SideReference,
     instructions: &mut StateInstructions,
 ) {
-    let (attacking_side, defending_side) = state.get_both_sides(attacking_side_ref);
+    let attacking_side = state.get_side(attacking_side_ref);
 
     destinybond_before_move(attacking_side, attacking_side_ref, choice, instructions);
 
@@ -1264,9 +1269,6 @@ pub fn choice_before_move(
         );
     }
 
-    let attacker = attacking_side.get_active();
-    let defender = defending_side.get_active_immutable();
-
     match choice.move_id {
         // alpha-poke patch (2026-10-16, doc/engine-diff.md L56): Doom Desire is a future move too
         // (it hit at once)
@@ -1274,28 +1276,7 @@ pub fn choice_before_move(
         Choices::FUTURESIGHT | Choices::DOOMDESIRE => {
             choice.remove_all_effects();
         }
-        Choices::EXPLOSION | Choices::SELFDESTRUCT | Choices::MISTYEXPLOSION
-            if defender.ability != Abilities::DAMP =>
-        {
-            let damage_amount = attacker.hp;
-            instructions
-                .instruction_list
-                .push(Instruction::Damage(DamageInstruction {
-                    side_ref: *attacking_side_ref,
-                    damage_amount,
-                }));
-            attacker.hp = 0;
-        }
-        Choices::MINDBLOWN if defender.ability != Abilities::DAMP => {
-            let damage_amount = cmp::min(attacker.maxhp / 2, attacker.hp);
-            instructions
-                .instruction_list
-                .push(Instruction::Damage(DamageInstruction {
-                    side_ref: *attacking_side_ref,
-                    damage_amount,
-                }));
-            attacker.hp -= damage_amount;
-        }
+        // (L206: Explosion / Mind Blown's own damage as the move starts: self_destruct)
         // alpha-poke patch (2026-10-17, doc/engine-diff.md L165): Meteor Beam / Electro Shot's Sp.
         // Atk +1 is their onTryMove's, after the BeforeMove (a full paralysis has none): the
         // charging turn's as the move starts (generate_instructions_from_move); the hit at once
@@ -1405,6 +1386,8 @@ pub fn choice_hazard_clear(
                     | Abilities::TURBOBLAZE
                     | Abilities::NEUTRALIZINGGAS
             );
+            // (L206: a target under the foe's Neutralizing Gas: no Clear Body, Mirror Armor, ...)
+            let gassed = super::generate_instructions::suppress_gassed(state, &target_ref);
             let target_side = state.get_side(&target_ref);
             let mirrored = target_ref != *attacking_side_ref
                 && target_side.get_active_immutable().ability == Abilities::MIRRORARMOR
@@ -1433,6 +1416,7 @@ pub fn choice_hazard_clear(
                     );
                 }
             }
+            super::generate_instructions::restore_gassed(state, &target_ref, gassed);
             if state.terrain.terrain_type != Terrain::NONE {
                 instructions
                     .instruction_list
