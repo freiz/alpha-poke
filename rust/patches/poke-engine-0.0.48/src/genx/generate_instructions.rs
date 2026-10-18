@@ -1029,6 +1029,11 @@ fn generate_instructions_from_side_conditions(
             );
         }
         PokemonSideCondition::Tailwind => {
+            let side_ref = match side_condition.target {
+                MoveTarget::Opponent => attacking_side_reference.get_other_side(),
+                MoveTarget::User => *attacking_side_reference,
+            };
+            let before = state.get_side_immutable(&side_ref).side_conditions.tailwind;
             generate_instructions_from_duration_side_conditions(
                 state,
                 side_condition,
@@ -1036,6 +1041,36 @@ fn generate_instructions_from_side_conditions(
                 incoming_instructions,
                 TAILWIND_DURATION,
             );
+            // alpha-poke patch (2026-10-17, doc/engine-diff.md L210): as its side's Tailwind starts,
+            // Wind Rider's Attack +1, Wind Power's charge (Showdown's onSideConditionStart)
+            if before == 0 && state.get_side_immutable(&side_ref).side_conditions.tailwind > 0 {
+                let ability = effective_ability(state, &side_ref);
+                let side = state.get_side(&side_ref);
+                if side.get_active_immutable().hp > 0 {
+                    if ability == Abilities::WINDRIDER {
+                        apply_boost_instruction(
+                            side,
+                            &PokemonBoostableStat::Attack,
+                            &1,
+                            &side_ref,
+                            &side_ref,
+                            incoming_instructions,
+                        );
+                    } else if ability == Abilities::WINDPOWER
+                        && !side
+                            .volatile_statuses
+                            .contains(&PokemonVolatileStatus::CHARGE)
+                    {
+                        side.volatile_statuses.insert(PokemonVolatileStatus::CHARGE);
+                        incoming_instructions.instruction_list.push(
+                            Instruction::ApplyVolatileStatus(ApplyVolatileStatusInstruction {
+                                side_ref,
+                                volatile_status: PokemonVolatileStatus::CHARGE,
+                            }),
+                        );
+                    }
+                }
+            }
         }
         _ => generate_instructions_from_increment_side_condition(
             state,
@@ -2876,8 +2911,11 @@ fn generate_instructions_from_damage(
             if attacking_pokemon.item == Items::BIGROOT {
                 drain_amount = big_root(drain_amount);
             }
-            let heal_amount =
-                cmp::min(drain_amount, attacking_pokemon.maxhp - attacking_pokemon.hp);
+            // (L210: a Liquid Ooze's damage at most the drainer's HP: it went below 0)
+            let heal_amount = cmp::max(
+                cmp::min(drain_amount, attacking_pokemon.maxhp - attacking_pokemon.hp),
+                -attacking_pokemon.hp,
+            );
             if heal_amount != 0 {
                 let drain_instruction = Instruction::Heal(HealInstruction {
                     side_ref: *attacking_side_ref,
@@ -8217,8 +8255,9 @@ fn run_move(
                     );
                     for mut branch in branches {
                         state.apply_instructions(&branch.instruction_list);
-                        // (L147: the Update after the hit, before the drag)
+                        // (L147: the Update after the hit, before the drag; L210: White Herb)
                         update(state, &mut branch);
+                        white_herb(state, &mut branch);
                         get_instructions_from_drag(
                             state,
                             &defender_ref,
@@ -8229,6 +8268,7 @@ fn run_move(
                     return;
                 }
                 update(state, &mut instructions);
+                white_herb(state, &mut instructions);
                 get_instructions_from_drag(state, &defender_ref, instructions, final_instructions);
                 return;
             }
@@ -8944,34 +8984,35 @@ fn after_move_finish(
             }
         }
 
-        // check if anybody has negative boosts and a whiteherb
-        // if so, consume the item and set the boosts to 0
-        for side_ref in [SideReference::SideOne, SideReference::SideTwo] {
-            let side = state.get_side(&side_ref);
-            let active_has_whiteherb = side.get_active_immutable().item == Items::WHITEHERB;
-            if active_has_whiteherb {
-                if side.reset_negative_boosts(side_ref, state_instructions) {
-                    let active = side.get_active();
-                    active.item = Items::NONE;
-                    state_instructions
-                        .instruction_list
-                        .push(Instruction::ChangeItem(ChangeItemInstruction {
-                            side_ref,
-                            current_item: Items::WHITEHERB,
-                            new_item: Items::NONE,
-                        }));
-                    // (L178: used up, its last item)
-                    super::items::set_last_item(
-                        side.get_active(),
-                        side_ref,
-                        Items::WHITEHERB,
-                        state_instructions,
-                    );
-                }
-            }
-        }
+        // (L210: White Herb, Showdown's onAnyAfterMove)
+        white_herb(state, state_instructions);
         state.reverse_instructions(&state_instructions.instruction_list);
     }
+}
+
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L210): White Herb after a move (Showdown's
+// onAnyAfterMove: each holder with a lowered stage), before a Red Card's drag goes; Unburden for
+// it at once (it came after the move's Update). The state has `instructions` applied
+fn white_herb(state: &mut State, instructions: &mut StateInstructions) {
+    for side_ref in [SideReference::SideOne, SideReference::SideTwo] {
+        let side = state.get_side(&side_ref);
+        if side.get_active_immutable().item == Items::WHITEHERB
+            && side.reset_negative_boosts(side_ref, instructions)
+        {
+            let active = side.get_active();
+            active.item = Items::NONE;
+            instructions
+                .instruction_list
+                .push(Instruction::ChangeItem(ChangeItemInstruction {
+                    side_ref,
+                    current_item: Items::WHITEHERB,
+                    new_item: Items::NONE,
+                }));
+            // (L178: used up, its last item)
+            super::items::set_last_item(side.get_active(), side_ref, Items::WHITEHERB, instructions);
+        }
+    }
+    unburden_check(state, instructions);
 }
 
 fn handle_both_moves(

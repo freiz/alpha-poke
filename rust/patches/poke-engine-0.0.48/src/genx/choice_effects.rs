@@ -492,6 +492,14 @@ pub fn modify_choice(
             {
                 attacker_choice.boost = None;
             }
+            // alpha-poke patch (2026-10-17, doc/engine-diff.md L210): a trapped user gets the
+            // boosts, not the volatile (Showdown's onTry deletes move.volatileStatus)
+            if attacking_side
+                .volatile_statuses
+                .contains(&PokemonVolatileStatus::TRAPPED)
+            {
+                attacker_choice.volatile_status = None;
+            }
         }
         Choices::POLTERGEIST => {
             if defending_side.get_active_immutable().item == Items::NONE {

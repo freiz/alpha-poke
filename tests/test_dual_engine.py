@@ -6116,3 +6116,22 @@ def test_l209_shell_bell_besides_drain():
     hariyama = _attacker("Hariyama", "Thick Fat", "Shell Bell", "- Drain Punch\n- Knock Off\n- Bullet Punch\n- Bulk Up")
     states = ec.run_showdown(hariyama, BLISSEY, [("move bulkup", "move seismictoss"), ("move drainpunch", "move seismictoss")])
     assert _keys(_full_hinted(states, 1, "drainpunch", "seismictoss"), "hp") == {}
+
+
+# L210 (doc/engine-diff.md): Liquid Ooze's damage at most the drainer's HP (randbats2 b177-t49);
+# No Retreat on a trapped user, no volatile (wide2 b54-t36); White Herb after the move, before a
+# Red Card's drag (offmeta b132-t16), Unburden after it (randbats3 b47-t28); Wind Rider for its
+# side's Tailwind (randbats3 b130-t9)
+@pytest.mark.parametrize("teams,i,turn,offset", [
+    ("random_battle_teams_randbats2.jsonl", 177, 49, 70000),
+    ("random_battle_teams_wide2.jsonl", 54, 36, 30000),
+    ("random_battle_teams_offmeta.jsonl", 132, 16, 0),
+    ("random_battle_teams_randbats3.jsonl", 47, 28, 80000),
+    ("random_battle_teams_randbats3.jsonl", 130, 9, 80000),
+])  # fmt: skip
+def test_l210_positions(teams, i, turn, offset):
+    a, b = _random_position(teams, i, turn, offset)
+    c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
+    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"]))
+    n = tuple(len(s["mons"]) for s in a["state"]["sides"])
+    assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}

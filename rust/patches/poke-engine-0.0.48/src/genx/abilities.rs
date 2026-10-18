@@ -2461,10 +2461,23 @@ pub fn ability_on_switch_in(
     // e.g. tracing intimidate will activate intimidate
     trace_copy(state, side_ref, instructions);
     let (attacking_side, defending_side) = state.get_both_sides(side_ref);
+    let tailwind = attacking_side.side_conditions.tailwind > 0;
     let active_pkmn = attacking_side.get_active();
     let defending_pkmn = defending_side.get_active_immutable();
 
     match active_pkmn.ability {
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L210): Wind Rider into its side's
+        // Tailwind, Attack +1 (Showdown's onStart)
+        Abilities::WINDRIDER if tailwind => {
+            apply_boost_instruction(
+                attacking_side,
+                &PokemonBoostableStat::Attack,
+                &1,
+                side_ref,
+                side_ref,
+                instructions,
+            );
+        }
         Abilities::ICEFACE => ice_face_in_snow(state, side_ref, instructions),
         // (L200)
         Abilities::SHIELDSDOWN | Abilities::SCHOOLING => {
