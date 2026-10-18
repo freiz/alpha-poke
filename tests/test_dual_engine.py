@@ -6358,3 +6358,31 @@ def test_l217_positions(teams, i, turn, offset):
     outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"]))
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
     assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}
+
+
+# L218 (doc/engine-diff.md): both switching at the same speed, either may leave first (random b165-t19:
+# a Ditto with its target's Speed); Libero on a transformed mon (its own mark, not the type change:
+# seed10k b232-t27); Doom Desire's hit from a user that knows Future Sight too (the side's mark:
+# wide200 b76-t17); the mark goes with the ability (Skill Swap: offmeta b1-t29)
+@pytest.mark.parametrize("teams,i,turn,offset", [
+    ("random_battle_teams_random.jsonl", 165, 19, 0),
+    ("random_battle_teams_offmeta.jsonl", 1, 29, 0),
+    ("random_battle_teams.jsonl", 232, 27, 10000),
+    ("random_battle_teams_wide200.jsonl", 76, 17, 40000),
+])  # fmt: skip
+def test_l218_positions(teams, i, turn, offset):
+    a, b = _random_position(teams, i, turn, offset)
+    c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
+    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"]))
+    n = tuple(len(s["mons"]) for s in a["state"]["sides"])
+    assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}
+
+
+def test_l218_state_string_keeps_doom_desire():
+    from pathlib import Path
+    s = pe.State.from_string(Path("tests/fixtures/engine_state_6v6.txt").read_text().splitlines()[0])
+    s1 = s.side_one
+    side = pe.Side(pokemon=s1.pokemon, active_index=s1.active_index, side_conditions=s1.side_conditions,
+                   future_sight=(2, pe.PokemonIndex("1")), future_doom=True)  # fmt: skip
+    t = pe.State(side_one=side, side_two=s.side_two).to_string()
+    assert pe.State.from_string(t).side_one.future_doom and pe.State.from_string(t).to_string() == t

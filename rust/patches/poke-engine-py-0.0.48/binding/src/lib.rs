@@ -202,6 +202,8 @@ pub struct PySide {
     reviving: bool,
     // alpha-poke patch (L185): its Terastallization used, no mon terastallized
     tera_used: bool,
+    // (L218: the pending future move is Doom Desire)
+    future_doom: bool,
     volatile_statuses: HashSet<String>,
     substitute_health: i16,
     attack_boost: i8,
@@ -242,6 +244,7 @@ impl From<Side> for PySide {
             slow_uturn_move: other.slow_uturn_move,
             reviving: other.reviving,
             tera_used: other.tera_used,
+            future_doom: other.future_doom,
             volatile_statuses,
             substitute_health: other.substitute_health,
             attack_boost: other.attack_boost,
@@ -293,6 +296,7 @@ impl Into<Side> for PySide {
             slow_uturn_move: self.slow_uturn_move,
             reviving: self.reviving,
             tera_used: self.tera_used,
+            future_doom: self.future_doom,
             volatile_statuses,
             substitute_health: self.substitute_health,
             attack_boost: self.attack_boost,
@@ -340,6 +344,7 @@ impl PySide {
         switch_out_move_second_saved_move="none".to_string(),
         reviving=false,
         tera_used=false,
+        future_doom=false,
     ))]
     fn new(
         mut pokemon: Vec<PyPokemon>,
@@ -367,6 +372,7 @@ impl PySide {
         switch_out_move_second_saved_move: String,
         reviving: bool,
         tera_used: bool,
+        future_doom: bool,
     ) -> Self {
         while pokemon.len() < 6 {
             pokemon.push(PyPokemon::create_fainted());
@@ -403,6 +409,7 @@ impl PySide {
             switch_out_move_second_saved_move,
             reviving,
             tera_used,
+            future_doom,
         }
     }
 }

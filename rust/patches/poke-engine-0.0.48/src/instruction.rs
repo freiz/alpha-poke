@@ -561,6 +561,9 @@ pub struct SetFutureSightInstruction {
     pub side_ref: SideReference,
     pub pokemon_index: PokemonIndex,
     pub previous_pokemon_index: PokemonIndex,
+    // (L218: Doom Desire's, and the side's before)
+    pub doom: bool,
+    pub previous_doom: bool,
 }
 
 #[derive(Debug, PartialEq, Clone)]

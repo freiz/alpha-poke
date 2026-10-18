@@ -233,7 +233,7 @@ def _engine_side(s: dict, future_sight=None, wish=None) -> pe.Side:
     for name, eng, v in (("healingwish", "healing_wish", 1), ("lunardance", "healing_wish", 2)):
         if name in s.get("slot", {}):
             sc[eng] = v
-    kw: dict = {"future_sight": future_sight} if future_sight else {}
+    kw: dict = {"future_sight": future_sight[:2], "future_doom": future_sight[2]} if future_sight else {}
     if tera_used:
         kw["tera_used"] = True
     if wish:
@@ -325,7 +325,8 @@ def engine_state(sd: dict) -> pe.State:
         fm = s.get("slot", {}).get("futuremove")
         if fm and fm["source"] >= 0:
             turns = fm["ending_turn"] - sd["turn"] + 2
-            future[1 - k] = (turns, pe.PokemonIndex(str(fm["source"])))
+            # (L218: and whether it is Doom Desire)
+            future[1 - k] = (turns, pe.PokemonIndex(str(fm["source"])), fm.get("move") == "doomdesire")
     # Wish: a condition of the user's slot (its HP, unrounded maxhp / 2; Showdown heals at the end
     # of turn startingTurn + 2, the engine at the end of the turn its count is 1)
     wish = [None, None]

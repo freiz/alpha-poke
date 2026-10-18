@@ -311,6 +311,9 @@ define_enum_with_from_str! {
         // (L204: Cud Chew's berry to eat again: its counter in volatile_status_durations.cudchew,
         // the berry its last item; ends on a switch)
         CUDCHEW,
+        // (L218: Protean / Libero has changed the type since the switch-in -- Showdown's
+        // effectState.protean / libero; a Transform's new ability starts without it)
+        PROTEAN,
     },
     default = NONE
 }

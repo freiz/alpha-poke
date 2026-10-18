@@ -601,6 +601,20 @@ pub const FAIL_ROLE_PLAY: [Abilities; 35] = [
     Abilities::ZEROTOHERO,
 ];
 
+// alpha-poke patch (2026-10-18, doc/engine-diff.md L218): a changed ability starts with a fresh
+// state (Showdown's setAbility / skillSwap: abilityState anew), so Protean / Libero's mark goes
+pub fn reset_ability_state(side: &mut Side, side_ref: &SideReference, instructions: &mut StateInstructions) {
+    if side.volatile_statuses.contains(&PokemonVolatileStatus::PROTEAN) {
+        side.volatile_statuses.remove(&PokemonVolatileStatus::PROTEAN);
+        instructions
+            .instruction_list
+            .push(Instruction::RemoveVolatileStatus(RemoveVolatileStatusInstruction {
+                side_ref: *side_ref,
+                volatile_status: PokemonVolatileStatus::PROTEAN,
+            }));
+    }
+}
+
 // alpha-poke patch (2026-10-17, doc/engine-diff.md L190): Showdown's setAbility for a move (Worry
 // Seed, Simple Beam, Entrainment, Role Play, Doodle): not on a fainted mon, not to or from a
 // cantsuppress ability, not through an Ability Shield (its SetAbility); the old one ends (a
@@ -628,6 +642,7 @@ pub fn set_ability(
             ability_change: ability as i16 - old as i16,
         }));
     p.ability = ability;
+    reset_ability_state(state.get_side(side_ref), side_ref, instructions);
     if old == Abilities::NEUTRALIZINGGAS {
         super::generate_instructions::restart_ability_after_gas(
             state,
@@ -670,6 +685,7 @@ pub fn skill_swap(state: &mut State, side_ref: &SideReference, instructions: &mu
                 ability_change: new as i16 - old as i16,
             }));
         state.get_side(&side_ref).get_active().ability = new;
+        reset_ability_state(state.get_side(&side_ref), &side_ref, instructions);
     }
     for side_ref in [target_ref, *side_ref] {
         if state.get_side_immutable(&side_ref).get_active_immutable().ability != Abilities::IMPOSTER {
@@ -1473,6 +1489,7 @@ pub fn ability_damaging_hit(
                         ability_change: own as i16 - attacking_pkmn.ability as i16,
                     }));
                 attacking_pkmn.ability = own;
+                reset_ability_state(attacking_side, side_ref, instructions);
             }
         }
         Abilities::WANDERINGSPIRIT => {

@@ -504,6 +504,7 @@ impl Default for Side {
             shed_tailing: false,
             reviving: false,
             tera_used: false,
+            future_doom: false,
             pokemon: SidePokemon {
                 pkmn: [
                     Pokemon::default(),
@@ -1238,6 +1239,9 @@ pub struct Side {
     // mon terastallized any more (Showdown deletes a fainted mon's terastallized: one Revival
     // Blessing brought back); a fainted one keeps its terastallized otherwise (can_use_tera)
     pub tera_used: bool,
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L218): the pending future move is Doom
+    // Desire (Steel), not Future Sight
+    pub future_doom: bool,
     pub pokemon: SidePokemon,
     pub side_conditions: SideConditions,
     pub volatile_status_durations: VolatileStatusDurations,
@@ -1367,8 +1371,11 @@ impl Side {
             self.last_used_move.serialize(),
             self.slow_uturn_move,
         );
-        // (L166: only while reviving; L185: tera_used after it; older strings have no such field)
-        if self.tera_used {
+        // (L166: only while reviving; L185: tera_used after it; L218: future_doom after them;
+        // older strings have no such field)
+        if self.future_doom {
+            format!("{}={}={}=true", out, self.reviving, self.tera_used)
+        } else if self.tera_used {
             format!("{}={}=true", out, self.reviving)
         } else if self.reviving {
             format!("{}=true", out)
@@ -1426,6 +1433,7 @@ impl Side {
             slow_uturn_move: split[28].parse::<bool>().unwrap(),
             reviving: split.get(29).map_or(false, |x| x.parse::<bool>().unwrap()),
             tera_used: split.get(30).map_or(false, |x| x.parse::<bool>().unwrap()),
+            future_doom: split.get(31).map_or(false, |x| x.parse::<bool>().unwrap()),
         }
     }
 }
@@ -2159,6 +2167,7 @@ impl State {
             }
             Instruction::SetFutureSight(instruction) => {
                 self.set_future_sight(&instruction.side_ref, instruction.pokemon_index);
+                self.get_side(&instruction.side_ref).future_doom = instruction.doom;
             }
             Instruction::DecrementFutureSight(instruction) => {
                 self.decrement_future_sight(&instruction.side_ref);
@@ -2407,7 +2416,8 @@ impl State {
             }
             Instruction::DecrementWish(instruction) => self.increment_wish(&instruction.side_ref),
             Instruction::SetFutureSight(instruction) => {
-                self.unset_future_sight(&instruction.side_ref, instruction.previous_pokemon_index)
+                self.unset_future_sight(&instruction.side_ref, instruction.previous_pokemon_index);
+                self.get_side(&instruction.side_ref).future_doom = instruction.previous_doom;
             }
             Instruction::DecrementFutureSight(instruction) => {
                 self.increment_future_sight(&instruction.side_ref)

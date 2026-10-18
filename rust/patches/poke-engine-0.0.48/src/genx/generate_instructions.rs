@@ -3147,9 +3147,10 @@ fn protean_type_change(
 ) {
     let (side, other) = state.get_both_sides(side_ref);
     let gassed = other.get_active_immutable().ability == Abilities::NEUTRALIZINGGAS;
+    // (L218: its own mark, not the type change -- a Transform's types are one too)
     let used = side
         .volatile_statuses
-        .contains(&PokemonVolatileStatus::TYPECHANGE);
+        .contains(&PokemonVolatileStatus::PROTEAN);
     let active = side.get_active();
     if !matches!(active.ability, Abilities::PROTEAN | Abilities::LIBERO)
         || (gassed && active.item != Items::ABILITYSHIELD)
@@ -3175,16 +3176,20 @@ fn protean_type_change(
             old_types: active.types,
         }));
     active.types = new_types;
-    instructions
-        .instruction_list
-        .push(Instruction::ApplyVolatileStatus(
-            ApplyVolatileStatusInstruction {
-                side_ref: *side_ref,
-                volatile_status: PokemonVolatileStatus::TYPECHANGE,
-            },
-        ));
-    side.volatile_statuses
-        .insert(PokemonVolatileStatus::TYPECHANGE);
+    // (L218: the type change once -- a transformed mon has it already -- and the ability's mark)
+    for v in [PokemonVolatileStatus::TYPECHANGE, PokemonVolatileStatus::PROTEAN] {
+        if !side.volatile_statuses.contains(&v) {
+            instructions
+                .instruction_list
+                .push(Instruction::ApplyVolatileStatus(
+                    ApplyVolatileStatusInstruction {
+                        side_ref: *side_ref,
+                        volatile_status: v,
+                    },
+                ));
+            side.volatile_statuses.insert(v);
+        }
+    }
 }
 
 // alpha-poke patch (2026-10-16, doc/engine-diff.md L60): Ogerpon terastallizing into its mask's
@@ -3353,6 +3358,20 @@ pub fn transform_into(
         (PokemonBoostableStat::Evasion, foe.evasion_boost),
     ];
     let list = &mut instructions.instruction_list;
+    // (L218: the copied ability starts anew: Protean / Libero's mark goes)
+    if side
+        .volatile_statuses
+        .contains(&PokemonVolatileStatus::PROTEAN)
+    {
+        side.volatile_statuses
+            .remove(&PokemonVolatileStatus::PROTEAN);
+        list.push(Instruction::RemoveVolatileStatus(
+            RemoveVolatileStatusInstruction {
+                side_ref: *side_ref,
+                volatile_status: PokemonVolatileStatus::PROTEAN,
+            },
+        ));
+    }
     let active = side.get_active();
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L180): its own stats, weight, moves and PP
     // kept (Showdown's baseStoredStats / baseMoveSlots), its switch-out gives them back; and the
@@ -5107,8 +5126,11 @@ pub fn generate_instructions_from_move(
                     side_ref: attacking_side,
                     pokemon_index: side.active_index,
                     previous_pokemon_index: side.future_sight.1,
+                    doom: choice.move_id == Choices::DOOMDESIRE,
+                    previous_doom: side.future_doom,
                 }));
             side.future_sight = (3, side.active_index);
+            side.future_doom = choice.move_id == Choices::DOOMDESIRE;
         }
     }
     // (L167: the battle's last move, for Copycat: one past its BeforeMove)
@@ -5514,7 +5536,8 @@ fn future_sight_choice(state: &State, side_ref: &SideReference, user_active: boo
     let side = state.get_side_immutable(side_ref);
     let user = &side.pokemon[side.future_sight.1];
     let knows = |c: Choices| user.moves.into_iter().any(|m| m.id == c);
-    let id = if knows(Choices::DOOMDESIRE) && !knows(Choices::FUTURESIGHT) {
+    // (L218: the side's mark of it; a state without one, by the user's moves)
+    let id = if side.future_doom || knows(Choices::DOOMDESIRE) && !knows(Choices::FUTURESIGHT) {
         Choices::DOOMDESIRE
     } else {
         Choices::FUTURESIGHT
@@ -9749,11 +9772,39 @@ pub fn generate_instructions_for_bss_team_preview(
     vec![state_instructions]
 }
 
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L218): both switching at the same speed, either
+// may leave first, half the time each (Showdown's speed tie: random); it was side one first
 pub fn generate_instructions_from_move_pair(
     state: &mut State,
     side_one_move: &MoveChoice,
     side_two_move: &MoveChoice,
     branch_on_damage: bool,
+) -> Vec<StateInstructions> {
+    let tie = matches!(side_one_move, MoveChoice::Switch(_))
+        && matches!(side_two_move, MoveChoice::Switch(_))
+        && get_effective_speed(state, &SideReference::SideOne)
+            == get_effective_speed(state, &SideReference::SideTwo);
+    if !tie {
+        return move_pair_in_order(state, side_one_move, side_two_move, branch_on_damage, None);
+    }
+    let mut out = vec![];
+    for first in [SideReference::SideOne, SideReference::SideTwo] {
+        let mut branches =
+            move_pair_in_order(state, side_one_move, side_two_move, branch_on_damage, Some(first));
+        for b in branches.iter_mut() {
+            b.percentage *= 0.5;
+        }
+        out.extend(branches);
+    }
+    out
+}
+
+fn move_pair_in_order(
+    state: &mut State,
+    side_one_move: &MoveChoice,
+    side_two_move: &MoveChoice,
+    branch_on_damage: bool,
+    tie_first: Option<SideReference>,
 ) -> Vec<StateInstructions> {
     #[cfg(feature = "bss")]
     if state.team_preview {
@@ -9893,7 +9944,7 @@ pub fn generate_instructions_from_move_pair(
     // run switches
     // alpha-poke patch (2026-10-16, doc/engine-diff.md L39): both switching, the faster of the
     // two leaving first (Showdown's switch actions by the outgoing mon's speed, reversed in
-    // Trick Room; a tie: side one first, an approximation); before, always side one first
+    // Trick Room; L218: a tie by tie_first, both orders); before, always side one first
     let mut switches = [
         (side_one_move, SideReference::SideOne),
         (side_two_move, SideReference::SideTwo),
@@ -9903,7 +9954,9 @@ pub fn generate_instructions_from_move_pair(
     {
         let one = get_effective_speed(state, &SideReference::SideOne);
         let two = get_effective_speed(state, &SideReference::SideTwo);
-        if (two > one) != state.trick_room.active && one != two {
+        if (one != two && (two > one) != state.trick_room.active)
+            || (one == two && tie_first == Some(SideReference::SideTwo))
+        {
             switches.swap(0, 1);
         }
     }

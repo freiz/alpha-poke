@@ -47,6 +47,10 @@ function monState(p, side) {
 			.concat(p.isActive && p.ability === 'slowstart' && p.abilityState.counter ?
 				[['slowstart', {duration: p.abilityState.counter, layers: 0, counter: 0, stat: '',
 					time: 0, true_duration: 0, num_consecutive: 0, hp: 0, move: ''}]] : [])
+			// Protean / Libero has changed the type since the switch-in (L218): the engine's volatile
+			.concat(p.isActive && (p.abilityState.protean || p.abilityState.libero) ?
+				[['protean', {duration: 0, layers: 0, counter: 0, stat: '',
+					time: 0, true_duration: 0, num_consecutive: 0, hp: 0, move: ''}]] : [])
 			// Cud Chew's berry to eat again: its counter in the ability's state (L204)
 			.concat(p.isActive && p.ability === 'cudchew' && p.abilityState.berry && p.abilityState.counter ?
 				[['cudchew', {duration: p.abilityState.counter, layers: 0, counter: 0, stat: '',
@@ -96,7 +100,7 @@ function sideState(side) {
 	// Future Sight / Doom Desire: a condition of the target's slot, from a mon of the other side
 	const slot = Object.fromEntries(Object.entries(side.slotConditions[0] || {}).map(([k, v]) =>
 		[k, {duration: v.duration || 0, ending_turn: v.endingTurn || 0, hp: v.hp || 0,
-			starting_turn: v.startingTurn || 0,
+			starting_turn: v.startingTurn || 0, move: v.move || '',
 			source: v.source && v.source.side ? v.source.side.team.indexOf(v.source.set) : -1}]));
 	const req = side.activeRequest;
 	const request = !req ? 'none' : req.wait ? 'wait' : req.forceSwitch ? 'switch' :

@@ -726,6 +726,10 @@ def build_state(
         vol |= {BOOSTS[e] for e in (mon.effects if mon is not None else ()) if e in BOOSTS}
         if tm.trap_out:  # (L170: its source left, it does nothing more)
             vol.discard("partiallytrapped")
+        # (L218: a Protean / Libero type change marks the ability as used, its own volatile now)
+        if mon is not None and "typechange" in vol and mon.ability in ("protean", "libero") \
+                and not (mon is active and our_tf or mon is opp_active and their_tf):
+            vol.add("protean")
     # must recharge (the engine offers no move), Perish Song's count
     for mon, vol, tm in ((active, our_vol, tm_us), (opp_active, their_vol, tm_them)):
         if mon is None:

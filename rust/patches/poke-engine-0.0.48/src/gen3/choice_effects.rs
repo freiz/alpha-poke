@@ -300,6 +300,8 @@ pub fn choice_before_move(
                         side_ref: *attacking_side_ref,
                         pokemon_index: attacking_side.active_index,
                         previous_pokemon_index: attacking_side.future_sight.1,
+                        doom: false,
+                        previous_doom: false,
                     }));
                 attacking_side.future_sight = (3, attacking_side.active_index);
             }
