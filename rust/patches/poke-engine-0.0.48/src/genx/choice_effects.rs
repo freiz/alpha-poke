@@ -387,18 +387,14 @@ pub fn modify_choice(
             }
         }
         Choices::SHELLSIDEARM => {
-            let level = attacking_side.get_active_immutable().level as i64;
-            let base = 2 * level / 5 + 2;
-            let dmg = |a: i16, d: i16| base * 90 * a as i64 / (d as i64).max(1) / 50;
-            let physical = dmg(
-                attacking_side.calculate_boosted_stat(PokemonBoostableStat::Attack),
-                defending_side.calculate_boosted_stat(PokemonBoostableStat::Defense),
-            );
-            let special = dmg(
-                attacking_side.calculate_boosted_stat(PokemonBoostableStat::SpecialAttack),
-                defending_side.calculate_boosted_stat(PokemonBoostableStat::SpecialDefense),
-            );
-            if physical > special {
+            let (physical, special) = shell_side_arm_damages(attacking_side, defending_side);
+            // (L226: a tie is drawn, either at 1/2: Showdown's random(2); the branch's draw)
+            let pick = match attacker_choice.ssa_draw {
+                1 => true,
+                2 => false,
+                _ => physical > special,
+            };
+            if pick {
                 attacker_choice.category = MoveCategory::Physical;
                 attacker_choice.flags.contact = true;
             }
@@ -900,8 +896,10 @@ pub fn modify_choice(
         }
         Choices::COLLISIONCOURSE | Choices::ELECTRODRIFT => {
             let defender_active = defending_side.get_active_immutable();
+            // alpha-poke patch (2026-10-18, doc/engine-diff.md L226): 5461 / 4096 (Showdown's
+            // onBasePower); it was 5325 / 4096
             if type_effectiveness_modifier(&attacker_choice.move_type, &defender_active) > 1.0 {
-                attacker_choice.base_power *= 5325.0 / 4096.0;
+                attacker_choice.base_power *= 5461.0 / 4096.0;
             }
         }
         Choices::GRASSKNOT | Choices::LOWKICK => {
@@ -1131,6 +1129,23 @@ pub fn choice_after_damage_hit(
 // secondaries and DamagingHit come before its onAfterHit in Showdown, the berry eaten at once
 // (onAfterSetStatus), so it takes the item after them (knock_off_after_secondaries). It took the
 // berry first
+// (L226: Shell Side Arm's physical and special estimates, Showdown's onModifyMove)
+pub fn shell_side_arm_damages(attacking_side: &Side, defending_side: &Side) -> (i64, i64) {
+    let level = attacking_side.get_active_immutable().level as i64;
+    let base = 2 * level / 5 + 2;
+    let dmg = |a: i16, d: i16| base * 90 * a as i64 / (d as i64).max(1) / 50;
+    (
+        dmg(
+            attacking_side.calculate_boosted_stat(PokemonBoostableStat::Attack),
+            defending_side.calculate_boosted_stat(PokemonBoostableStat::Defense),
+        ),
+        dmg(
+            attacking_side.calculate_boosted_stat(PokemonBoostableStat::SpecialAttack),
+            defending_side.calculate_boosted_stat(PokemonBoostableStat::SpecialDefense),
+        ),
+    )
+}
+
 pub fn knock_off_waits(choice: &Choice, defender: &Pokemon) -> bool {
     choice.move_id == Choices::KNOCKOFF
         && choice.secondaries.as_ref().is_some_and(|ss| {
@@ -1426,6 +1441,8 @@ pub fn choice_hazard_clear(
                 PokemonSideCondition::Stealthrock,
                 PokemonSideCondition::Spikes,
                 PokemonSideCondition::ToxicSpikes,
+                // (L226: their order with them)
+                PokemonSideCondition::ToxicSpikesOrder,
                 PokemonSideCondition::StickyWeb,
                 PokemonSideCondition::Reflect,
                 PokemonSideCondition::LightScreen,

@@ -582,6 +582,7 @@ pub struct PySideConditions {
     pub toxic_count: i8,
     pub toxic_spikes: i8,
     pub wide_guard: i8,
+    pub toxic_spikes_order: i8,
 }
 
 impl From<SideConditions> for PySideConditions {
@@ -606,6 +607,7 @@ impl From<SideConditions> for PySideConditions {
             toxic_count: other.toxic_count,
             toxic_spikes: other.toxic_spikes,
             wide_guard: other.wide_guard,
+            toxic_spikes_order: other.toxic_spikes_order,
         }
     }
 }
@@ -632,6 +634,7 @@ impl Into<SideConditions> for PySideConditions {
             toxic_count: self.toxic_count,
             toxic_spikes: self.toxic_spikes,
             wide_guard: self.wide_guard,
+            toxic_spikes_order: self.toxic_spikes_order,
         }
     }
 }
@@ -659,6 +662,7 @@ impl PySideConditions {
         quick_guard=0,
         toxic_count=0,
         wide_guard=0,
+        toxic_spikes_order=0,
     ))]
     fn new(
         spikes: i8,
@@ -680,6 +684,7 @@ impl PySideConditions {
         quick_guard: i8,
         toxic_count: i8,
         wide_guard: i8,
+        toxic_spikes_order: i8,
     ) -> Self {
         PySideConditions {
             spikes,
@@ -701,6 +706,7 @@ impl PySideConditions {
             quick_guard,
             toxic_count,
             wide_guard,
+            toxic_spikes_order,
         }
     }
 }

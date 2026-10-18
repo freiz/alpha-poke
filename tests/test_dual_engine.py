@@ -6562,3 +6562,47 @@ def test_l225_positions(teams, i, turn, offset):
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
     assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}
 
+
+# L226 (doc/engine-diff.md): from randbats26 - 33 -- multi-hit hits on a Substitute by the
+# harness's share / break hints (randbats26 b136-t19, randbats30 b209-t22); Mirror Armor on a
+# holder the hit knocked out (b161-t13); the harness's hint HP by the active slot, not an
+# Illusion's shown name (b182-t18, randbats30 b205-t1); Unburden as a Trick takes its item
+# (randbats27 b1-t10); Collision Course's 5461 / 4096 (randbats31 b170-t1); an asleep Truant mon's
+# sleep before its loafing (randbats32 b159-t17 / t18); Sunsteel Strike through Sturdy (randbats33
+# b111-t4); Shell Side Arm's tie drawn (b18-t6); Heal Block before Sap Sipper takes a Giga Drain
+# (b296-t32); an Infiltrator's Leech Seed through a Substitute (b36-t24); a Poison type the
+# hazards laid first knock out absorbs no Toxic Spikes (b64-t58)
+@pytest.mark.parametrize("teams,i,turn,offset", [
+    ("random_battle_teams_randbats26.jsonl", 136, 19, 310000),
+    ("random_battle_teams_randbats30.jsonl", 209, 22, 350000),
+    ("random_battle_teams_randbats26.jsonl", 161, 13, 310000),
+    ("random_battle_teams_randbats26.jsonl", 182, 18, 310000),
+    ("random_battle_teams_randbats30.jsonl", 205, 1, 350000),
+    ("random_battle_teams_randbats27.jsonl", 1, 10, 320000),
+    ("random_battle_teams_randbats31.jsonl", 170, 1, 360000),
+    ("random_battle_teams_randbats32.jsonl", 159, 17, 370000),
+    ("random_battle_teams_randbats32.jsonl", 159, 18, 370000),
+    ("random_battle_teams_randbats33.jsonl", 111, 4, 380000),
+    ("random_battle_teams_randbats33.jsonl", 18, 6, 380000),
+    ("random_battle_teams_randbats33.jsonl", 296, 32, 380000),
+    ("random_battle_teams_randbats33.jsonl", 36, 24, 380000),
+    ("random_battle_teams_randbats33.jsonl", 64, 58, 380000),
+])  # fmt: skip
+def test_l226_positions(teams, i, turn, offset):
+    a, b = _random_position(teams, i, turn, offset)
+    c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
+    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"]))
+    n = tuple(len(s["mons"]) for s in a["state"]["sides"])
+    assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}
+
+
+def test_l226_state_string_keeps_toxic_spikes_order():
+    from pathlib import Path
+    s = pe.State.from_string(Path("tests/fixtures/engine_state_6v6.txt").read_text().splitlines()[0])
+    s1 = s.side_one
+    side = pe.Side(pokemon=s1.pokemon, active_index=s1.active_index,
+                   side_conditions=pe.SideConditions(spikes=1, toxic_spikes=1, toxic_spikes_order=2))  # fmt: skip
+    t = pe.State(side_one=side, side_two=s.side_two).to_string()
+    assert pe.State.from_string(t).side_one.side_conditions.toxic_spikes_order == 2
+    assert pe.State.from_string(t).to_string() == t
+

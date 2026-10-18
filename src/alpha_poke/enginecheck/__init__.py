@@ -231,6 +231,11 @@ def _engine_side(s: dict, future_sight=None, wish=None) -> pe.Side:
     sc = {v: c[k]["layers"] for k, v in LAYERED.items() if k in c}
     sc |= {v: 1 for k, v in PRESENT.items() if k in c}
     sc |= {v: c[k]["duration"] for k, v in TIMED.items() if k in c}
+    # (L226: the damaging hazards laid before the Toxic Spikes -- Showdown's side conditions in
+    # the order they came: 1 Stealth Rock, 2 Spikes)
+    if "toxicspikes" in c:
+        before = list(c)[: list(c).index("toxicspikes")]
+        sc["toxic_spikes_order"] = ("stealthrock" in before) | ("spikes" in before) << 1
     # Healing Wish / Lunar Dance waiting on the slot (Gen 9: until a mon that needs it comes in;
     # Showdown's slot condition, the engine's side condition; L48)
     # (Lunar Dance: the engine's Healing Wish, L52)
@@ -364,6 +369,7 @@ SUB_DAMAGE = re.compile(r"^DamageSubstitute (SideOne|SideTwo): (-?\d+)$")
 
 CRIT_HINT = 16384  # (generate_instructions::CRIT_HINT)
 KO_HINT = 8192  # (L225: a multi-hit move's knockout hit, generate_instructions.rs KO_HINT)
+SUB_SHARE, SUB_BREAK = 2048, 4096  # (L226: its hits on a Substitute, generate_instructions.rs)
 
 
 def _log_hp(text: str) -> int | None:
@@ -376,16 +382,14 @@ def damage_hints(start: dict, after: dict) -> tuple[int, int]:
     the first hit after its move line, the HP tracked from the turn's start. None for a knockout
     (the HP caps it), a multi-hit move, a hit on a Substitute; the engine takes a hint only when
     it is one of its own rolls (State::damage_hint)."""
-    hp = {f"{s['id']}a: {m.get('name', '')}": m["hp"] for s in start["sides"] for m in s["mons"]}
+    # (L226: by the active slot, "p1a" -- an Illusion's log names the mon it shows)
+    hp = {f"{s['id']}a": s["mons"][s["active"]]["hp"] for s in start["sides"] if s["active"] >= 0}
     hints, pending, prev = [-1, -1], None, None
     crit = [False, False]  # (a -crit line on the pending hit: the hint marked CRIT_HINT)
     hinted = None  # (side, target) of the last hint: a survival effect after it voids it
     sub_hits: dict = {}  # (L224: the hits each active's Substitute took)
-    for line in after.get("log", []):
-        if line == prev:  # (the split's private and public copies)
-            continue
-        prev = line
-        f = line.split("|")
+    for line in _log_lines(after):
+        f = [_slot(x) for x in line.split("|")]  # (L226: "p1a: Name" -> "p1a")
         # (a damage a Focus Sash / Focus Band / Sturdy / Endure capped: no roll -- its message
         # before the damage line or after it)
         capped = len(f) > 3 and (
@@ -440,6 +444,27 @@ def damage_hints(start: dict, after: dict) -> tuple[int, int]:
     return tuple((h + CRIT_HINT if c else h) if h > 0 else -1 for h, c in zip(hints, crit))
 
 
+def _log_lines(state: dict):
+    """(L226) The log's lines, a split's private and public copies once (the line after a |split|
+    one; it skipped any line equal to the one before: two hits on a Substitute log alike)."""
+    skip = False
+    for line in state.get("log", []):
+        if skip:
+            skip = False
+            continue
+        if line.startswith("|split|"):
+            skip = None  # (the next line is the private copy: kept; the public one after it goes)
+            continue
+        if skip is None:
+            skip = True
+        yield line
+
+
+def _slot(x: str) -> str:
+    """(L226) A log identifier "p1a: Name" as its slot "p1a" (an Illusion shows another name)."""
+    return x[:3] if len(x) > 4 and x[:2] in ("p1", "p2") and x[2] == "a" and x[3:5] == ": " else x
+
+
 def _sub_hp(state: dict, ident: str) -> int:
     """The Substitute HP of the active ``ident`` ("p1a: Name") in a Showdown state, -1 for none."""
     s = next((x for x in state["sides"] if ident.startswith(x["id"])), None)
@@ -455,15 +480,14 @@ def roll_hints(start: dict, after: dict) -> tuple:
     each hit of its multi-hit move's (a list; -1 for a hit on a Substitute, a knockout or one a
     Focus Sash / Sturdy capped). The HP tracked from the turn's start; the engine takes a hint only
     when it is one of its own rolls."""
-    hp = {f"{s['id']}a: {m.get('name', '')}": m["hp"] for s in start["sides"] for m in s["mons"]}
+    # (L226: by the active slot, "p1a" -- an Illusion's log names the mon it shows)
+    hp = {f"{s['id']}a": s["mons"][s["active"]]["hp"] for s in start["sides"] if s["active"] >= 0}
     confusion, future, multi = [-1, -1], [-1, -1], [[], []]
     hits, mover, target = [], None, None  # (the current move's hits on its target)
     pending_future, crit, prev = None, False, None
-    for line in after.get("log", []):
-        if line == prev:  # (the split's private and public copies)
-            continue
-        prev = line
-        f = line.split("|")
+    sub_lines: dict = {}  # (L226: the Substitute hits by target, all moves')
+    for line in _log_lines(after):
+        f = [_slot(x) for x in line.split("|")]  # (L226: "p1a: Name" -> "p1a")
         if len(f) < 3:
             continue
         tag = f[1]
@@ -477,16 +501,18 @@ def roll_hints(start: dict, after: dict) -> tuple:
             pending_future, crit = (1 if f[2].startswith("p1") else 0, f[2]), False
         elif (tag == "-activate" and len(f) > 3 and "Substitute" in f[3] and "[damage]" in line
               or tag == "-end" and len(f) > 3 and f[3] == "Substitute"):  # fmt: skip
-            # (a hit on the Substitute, or the one that breaks it)
+            # (a hit on the Substitute, or the one that breaks it: "S" / "B", their hints at the
+            # -hitcount)
             if mover is not None and f[2] == target:
-                hits.append(-1)
+                hits.append("B" if tag == "-end" else "S")
+                sub_lines[f[2]] = sub_lines.get(f[2], 0) + 1
             crit = False
         elif tag in ("-enditem", "-activate") and len(f) > 3 and f[3] in (
                 "Focus Sash", "ability: Sturdy", "move: Endure", "item: Focus Band", "Focus Band"):  # fmt: skip
             if hits and f[2] == target:
                 hits[-1] = -1
         elif tag == "-hitcount" and mover is not None:
-            multi[mover] = hits
+            multi[mover] = _sub_hits(hits, start, after, target, sub_lines)
         elif tag in ("-damage", "-heal", "-sethp") and len(f) > 3:
             new = _log_hp(f[3])
             if new is None:
@@ -506,6 +532,27 @@ def roll_hints(start: dict, after: dict) -> tuple:
             crit = False if tag == "-damage" else crit
             hp[f[2]] = new
     return (*confusion, *future, *multi)
+
+
+def _sub_hits(hits: list, start: dict, after: dict, target: str, sub_lines: dict) -> list:
+    """(L226) A multi-hit move's hits on a Substitute ("S" it took, "B" it broke) as hints: each
+    SUB_SHARE + the HP they took in all (from the turn's start to its end: only these hits on it),
+    the breaking one SUB_BREAK and those before it SUB_SHARE + its HP less 1; -1 when unknown."""
+    if not any(h in ("S", "B") for h in hits):
+        return hits
+    s0 = _sub_hp(start, target)
+    out = [h if isinstance(h, int) else -1 for h in hits]
+    if s0 <= 0 or sub_lines.get(target, 0) != sum(h in ("S", "B") for h in hits):
+        return out
+    if "B" in hits:
+        b = hits.index("B")
+        if any(h != "S" for h in hits[:b]):
+            return out
+        return [SUB_SHARE + s0 - 1] * b + [SUB_BREAK] + out[b + 1:]
+    s1 = _sub_hp(after, target)
+    if s1 < 0 or s1 >= s0 or any(h != "S" for h in hits):
+        return out
+    return [SUB_SHARE + s0 - s1] * len(hits)
 
 
 def move_hints(start: dict, after: dict) -> tuple:

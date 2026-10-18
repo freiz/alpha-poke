@@ -49,6 +49,8 @@ pub enum PokemonSideCondition {
     ToxicCount,
     ToxicSpikes,
     WideGuard,
+    // (L226: the damaging hazards laid before Toxic Spikes, SideConditions::toxic_spikes_order)
+    ToxicSpikesOrder,
 }
 
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
@@ -622,6 +624,10 @@ pub struct SideConditions {
     pub toxic_count: i8,
     pub toxic_spikes: i8,
     pub wide_guard: i8,
+    // alpha-poke patch (2026-10-18, doc/engine-diff.md L226): the damaging hazards laid before the
+    // Toxic Spikes (1 Stealth Rock, 2 Spikes): Showdown runs the hazards in the order they were
+    // laid -- a Poison type they knock out before it absorbs no Toxic Spikes
+    pub toxic_spikes_order: i8,
 }
 impl SideConditions {
     pub fn pprint(&self) -> String {
@@ -645,6 +651,7 @@ impl SideConditions {
             ("toxic_count", self.toxic_count),
             ("toxic_spikes", self.toxic_spikes),
             ("wide_guard", self.wide_guard),
+            ("toxic_spikes_order", self.toxic_spikes_order),
         ];
 
         let mut output = String::new();
@@ -659,8 +666,14 @@ impl SideConditions {
         output
     }
     pub fn serialize(&self) -> String {
+        // (L226: the Toxic Spikes order only when set: older strings have no such field)
+        let order = if self.toxic_spikes_order != 0 {
+            format!(";{}", self.toxic_spikes_order)
+        } else {
+            String::new()
+        };
         format!(
-            "{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{}",
+            "{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{}{}",
             self.aurora_veil,
             self.crafty_shield,
             self.healing_wish,
@@ -680,6 +693,7 @@ impl SideConditions {
             self.toxic_count,
             self.toxic_spikes,
             self.wide_guard,
+            order,
         )
     }
     pub fn deserialize(serialized: &str) -> SideConditions {
@@ -704,6 +718,7 @@ impl SideConditions {
             toxic_count: split[16].parse::<i8>().unwrap(),
             toxic_spikes: split[17].parse::<i8>().unwrap(),
             wide_guard: split[18].parse::<i8>().unwrap(),
+            toxic_spikes_order: split.get(19).map_or(0, |x| x.parse::<i8>().unwrap()),
         }
     }
 }
@@ -729,6 +744,7 @@ impl Default for SideConditions {
             toxic_count: 0,
             toxic_spikes: 0,
             wide_guard: 0,
+            toxic_spikes_order: 0,
         }
     }
 }
@@ -1501,6 +1517,7 @@ impl Side {
             PokemonSideCondition::ToxicCount => self.side_conditions.toxic_count,
             PokemonSideCondition::ToxicSpikes => self.side_conditions.toxic_spikes,
             PokemonSideCondition::WideGuard => self.side_conditions.wide_guard,
+            PokemonSideCondition::ToxicSpikesOrder => self.side_conditions.toxic_spikes_order,
         }
     }
     pub fn update_side_condition(&mut self, side_condition: PokemonSideCondition, amount: i8) {
@@ -1524,6 +1541,9 @@ impl Side {
             PokemonSideCondition::ToxicCount => self.side_conditions.toxic_count += amount,
             PokemonSideCondition::ToxicSpikes => self.side_conditions.toxic_spikes += amount,
             PokemonSideCondition::WideGuard => self.side_conditions.wide_guard += amount,
+            PokemonSideCondition::ToxicSpikesOrder => {
+                self.side_conditions.toxic_spikes_order += amount
+            }
         }
     }
     pub fn get_alive_pkmn_indices(&self) -> Vec<PokemonIndex> {
@@ -1868,6 +1888,9 @@ impl State {
             PokemonSideCondition::ToxicCount => side.side_conditions.toxic_count += amount,
             PokemonSideCondition::ToxicSpikes => side.side_conditions.toxic_spikes += amount,
             PokemonSideCondition::WideGuard => side.side_conditions.wide_guard += amount,
+            PokemonSideCondition::ToxicSpikesOrder => {
+                side.side_conditions.toxic_spikes_order += amount
+            }
         }
     }
 

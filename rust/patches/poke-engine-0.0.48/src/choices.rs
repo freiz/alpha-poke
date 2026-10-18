@@ -21880,6 +21880,9 @@ pub struct Choice {
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L167): a move another one called (Copycat):
     // its caller's BeforeMove, PP and last used move stand for it (Showdown's useMove)
     pub called_move: bool,
+    // alpha-poke patch (2026-10-18, doc/engine-diff.md L226): Shell Side Arm's category drawn on a
+    // tie (0 not drawn, 1 physical, 2 special: generate_instructions_from_move's branches)
+    pub ssa_draw: u8,
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L170): the damage Counter / Mirror Coat /
     // Metal Burst dealt the target (choice_special_effect): its DamagingHit after it
     pub returned_hit: i16,
@@ -22048,6 +22051,7 @@ impl Default for Choice {
             first_move: true,
             sleep_talk_move: false,
             called_move: false,
+            ssa_draw: 0,
             returned_hit: 0,
             dancer_move: false,
             first_hit_blocked: false,

@@ -776,7 +776,7 @@ fn generate_instructions_from_switch(
                             new_status: PokemonStatus::TOXIC,
                         }))
                 }
-            } else if poison_type {
+            } else if poison_type && !knocked_out_first(state, &switching_side_ref) {
                 toxic_spike_instruction = Some(Instruction::ChangeSideCondition(
                     ChangeSideConditionInstruction {
                         side_ref: switching_side_ref,
@@ -914,6 +914,30 @@ pub fn effective_ability(state: &State, side_ref: &SideReference) -> Abilities {
     }
 }
 
+// alpha-poke patch (2026-10-18, doc/engine-diff.md L226): the switch-in fainted to the damaging
+// hazards laid before the Toxic Spikes (toxic_spikes_order: Showdown's order of the side's
+// conditions) -- a Poison type absorbs none then. Not for one Heavy-Duty Boots / Magic Guard keep
+// from them (not under Magic Room: switch_in's own checks)
+fn knocked_out_first(state: &State, side_ref: &SideReference) -> bool {
+    let side = state.get_side_immutable(side_ref);
+    let p = side.get_active_immutable();
+    let sc = &side.side_conditions;
+    if p.item == Items::HEAVYDUTYBOOTS && !super::items::item_ignored(state)
+        || effective_ability(state, side_ref) == Abilities::MAGICGUARD
+    {
+        return false;
+    }
+    let mut dmg = 0;
+    if sc.toxic_spikes_order & 1 != 0 && sc.stealth_rock > 0 {
+        dmg += (p.maxhp as f32 * type_effectiveness_modifier(&PokemonType::ROCK, p) / 8.0) as i16;
+    }
+    if sc.toxic_spikes_order & 2 != 0 && sc.spikes > 0 {
+        let layers = cmp::min(sc.spikes, 3) as usize;
+        dmg += cmp::max((p.maxhp as i32 * [0, 3, 4, 6][layers] / 24) as i16, 1);
+    }
+    dmg >= p.hp
+}
+
 fn generate_instructions_from_increment_side_condition(
     state: &mut State,
     side_condition: &SideCondition,
@@ -933,6 +957,24 @@ fn generate_instructions_from_increment_side_condition(
     };
 
     let affected_side = state.get_side(&affected_side_ref);
+    // (L226: Toxic Spikes' first layer: the damaging hazards already there come before them)
+    if side_condition.condition == PokemonSideCondition::ToxicSpikes
+        && affected_side.side_conditions.toxic_spikes == 0
+    {
+        let sc = &affected_side.side_conditions;
+        let order = (sc.stealth_rock > 0) as i8 | ((sc.spikes > 0) as i8) << 1;
+        let amount = order - sc.toxic_spikes_order;
+        if amount != 0 {
+            affected_side.update_side_condition(PokemonSideCondition::ToxicSpikesOrder, amount);
+            incoming_instructions
+                .instruction_list
+                .push(Instruction::ChangeSideCondition(ChangeSideConditionInstruction {
+                    side_ref: affected_side_ref,
+                    side_condition: PokemonSideCondition::ToxicSpikesOrder,
+                    amount,
+                }));
+        }
+    }
     if affected_side.get_side_condition(side_condition.condition) < max_layers {
         let ins = Instruction::ChangeSideCondition(ChangeSideConditionInstruction {
             side_ref: affected_side_ref,
@@ -1238,11 +1280,23 @@ fn get_instructions_from_volatile_statuses(
     {
         return;
     }
+    // alpha-poke patch (2026-10-18, doc/engine-diff.md L226): an Infiltrator's goes through the
+    // target's Substitute (Leech Seed: Showdown's infiltrates; the volatile's own check had it)
+    let infiltrates = target_side != *attacking_side_reference
+        && state
+            .get_side_immutable(attacking_side_reference)
+            .get_active_immutable()
+            .ability
+            == Abilities::INFILTRATOR;
     let side = state.get_side(&target_side);
     let affected_pkmn = side.get_active_immutable();
+    let mut vols = side.volatile_statuses.clone();
+    if infiltrates {
+        vols.remove(&PokemonVolatileStatus::SUBSTITUTE);
+    }
     if affected_pkmn.volatile_status_can_be_applied(
         &volatile_status.volatile_status,
-        &side.volatile_statuses,
+        &vols,
         attacker_choice.first_move,
     ) {
         let ins = Instruction::ApplyVolatileStatus(ApplyVolatileStatusInstruction {
@@ -1897,12 +1951,19 @@ fn get_instructions_from_boosts(
     });
     // alpha-poke patch (2026-10-16, doc/engine-diff.md L21): Mirror Armor reflects the opponent's
     // stat drops back onto it (the holder as their source: Defiant / Competitive answer them)
+    // (L226: not a holder the hit knocked out -- Mystical Fire's drop: Showdown's secondaries
+    // skip a fainted target)
     let mirror = boosts.target == MoveTarget::Opponent
         && state
             .get_side_immutable(&target_side_ref)
             .get_active_immutable()
             .ability
             == Abilities::MIRRORARMOR
+        && state
+            .get_side_immutable(&target_side_ref)
+            .get_active_immutable()
+            .hp
+            > 0
         && !matches!(
             state
                 .get_side_immutable(attacking_side_reference)
@@ -2949,7 +3010,16 @@ fn generate_instructions_from_damage(
                 // Endure, then Sturdy, then the sash); before, any hit at full HP did 1 less
                 // and the sash stayed
                 let full = defending_pokemon.maxhp == defending_pokemon.hp;
-                let sturdy = defending_pokemon.ability == Abilities::STURDY && full;
+                // (L226: not through a Mold Breaker or an ability-ignoring move -- Sunsteel
+                // Strike, ...: Sturdy is breakable)
+                let ignored = (matches!(
+                    attacking_pokemon.ability,
+                    Abilities::MOLDBREAKER | Abilities::TERAVOLT | Abilities::TURBOBLAZE
+                ) || matches!(
+                    choice.move_id,
+                    Choices::SUNSTEELSTRIKE | Choices::MOONGEISTBEAM | Choices::PHOTONGEYSER
+                )) && defending_pokemon.item != Items::ABILITYSHIELD;
+                let sturdy = defending_pokemon.ability == Abilities::STURDY && full && !ignored;
                 // (L211: no Focus Sash under Magic Room)
                 let sash = defending_pokemon.item == Items::FOCUSSASH && full && !item_ignored;
                 if damage_dealt >= defending_pokemon.hp && (has_endure || sturdy || sash) {
@@ -3847,7 +3917,9 @@ fn flinched_or_taunted(state: &State, choice: &Choice, attacking_side_ref: &Side
         // (priority 6) and a move disabled after it was chosen (L70; priority 7), after an asleep /
         // frozen mover's status too (Showdown's BeforeMove: sleep 10 first -- a Rest chosen
         // asleep under Heal Block still counts its turn); they were checked before the status
-        || choice.flags.heal
+        // (L226: the move's own flag -- an absorbing ability's change, Sap Sipper's on a Giga
+        // Drain, came after it in Showdown)
+        || (choice.flags.heal || MOVES.get(&choice.move_id).is_some_and(|m| m.flags.heal))
             && attacking_side
                 .volatile_statuses
                 .contains(&PokemonVolatileStatus::HEALBLOCK)
@@ -4576,6 +4648,32 @@ pub fn generate_instructions_from_move(
     mut final_instructions: &mut Vec<StateInstructions>,
     branch_on_damage: bool,
 ) {
+    // alpha-poke patch (2026-10-18, doc/engine-diff.md L226): Shell Side Arm's category on a tie,
+    // a branch each (Showdown's random(2)); it was always special
+    if choice.move_id == Choices::SHELLSIDEARM && choice.ssa_draw == 0 {
+        state.apply_instructions(&incoming_instructions.instruction_list);
+        let (a, d) = state.get_both_sides_immutable(&attacking_side);
+        let (physical, special) = super::choice_effects::shell_side_arm_damages(a, d);
+        state.reverse_instructions(&incoming_instructions.instruction_list);
+        if physical == special {
+            for draw in [1, 2] {
+                let mut c = choice.clone();
+                c.ssa_draw = draw;
+                let mut branch = incoming_instructions.clone();
+                branch.update_percentage(0.5);
+                generate_instructions_from_move(
+                    state,
+                    &mut c,
+                    defender_choice,
+                    attacking_side,
+                    branch,
+                    final_instructions,
+                    branch_on_damage,
+                );
+            }
+            return;
+        }
+    }
     if state.use_damage_dealt {
         reset_damage_dealt(
             state.get_side(&attacking_side),
@@ -4639,8 +4737,15 @@ pub fn generate_instructions_from_move(
     }
 
     // (L167: a called move's caller has loafed or not already)
+    // (L226: an asleep / frozen one's sleep comes first -- Showdown's slp / frz onBeforeMove, 10,
+    // before Truant's, 9: still asleep, it keeps the volatile; woken, it loafs then, below)
+    let held = matches!(
+        attacker_side.get_active_immutable().status,
+        PokemonStatus::SLEEP | PokemonStatus::FREEZE
+    );
     if !choice.called_move
         && !deferred
+        && !held
         && attacker_side
             .volatile_statuses
             .contains(&PokemonVolatileStatus::TRUANT)
@@ -5234,6 +5339,37 @@ pub fn generate_instructions_from_move(
             );
             return;
         }
+    }
+    // (L226: woken / thawed with its volatile on: it loafs now)
+    if asleep_or_frozen_before
+        && !called
+        && !matches!(
+            state
+                .get_side_immutable(&attacking_side)
+                .get_active_immutable()
+                .status,
+            PokemonStatus::SLEEP | PokemonStatus::FREEZE
+        )
+        && state
+            .get_side_immutable(&attacking_side)
+            .volatile_statuses
+            .contains(&PokemonVolatileStatus::TRUANT)
+    {
+        state
+            .get_side(&attacking_side)
+            .volatile_statuses
+            .remove(&PokemonVolatileStatus::TRUANT);
+        incoming_instructions
+            .instruction_list
+            .push(Instruction::RemoveVolatileStatus(
+                RemoveVolatileStatusInstruction {
+                    side_ref: attacking_side,
+                    volatile_status: PokemonVolatileStatus::TRUANT,
+                },
+            ));
+        state.reverse_instructions(&incoming_instructions.instruction_list);
+        final_instructions.push(incoming_instructions);
+        return;
     }
     if asleep_or_frozen_before {
         start_truant(state, &attacking_side, &mut incoming_instructions);
@@ -5955,6 +6091,27 @@ pub const CRIT_HINT: i16 = 16384;
 // target out (the log shows no roll then): its damage the HP left, when a roll (a crit's, with
 // CRIT_HINT) can deal it
 pub const KO_HINT: i16 = 8192;
+// alpha-poke patch (2026-10-18, doc/engine-diff.md L226): a multi-hit move's hits on a Substitute
+// (the log shows no HP): SUB_SHARE + the Substitute HP they took in all (each hit's share of it,
+// by its power), SUB_BREAK for the hit that broke it (the HP it had left)
+pub const SUB_SHARE: i16 = 2048;
+pub const SUB_BREAK: i16 = 4096;
+
+// (L226: a hit's share of its move's SUB_SHARE total: its power's -- Triple Axel's 1 : 2 : 3 --,
+// rounded so the shares add up to the total)
+fn sub_share(hints: &[i16; 10], hit: usize, by_power: bool) -> Option<i16> {
+    let h = *hints.get(hit)?;
+    if !(SUB_SHARE..SUB_BREAK).contains(&h) {
+        return None;
+    }
+    let total = (h - SUB_SHARE) as i32;
+    let w = |j: usize| if by_power { j as i32 + 1 } else { 1 };
+    let group: Vec<usize> = (0..10).filter(|j| hints[*j] == h).collect();
+    let all: i32 = group.iter().map(|j| w(*j)).sum();
+    let upto = |i: usize| group.iter().filter(|j| **j <= i).map(|j| w(*j)).sum::<i32>();
+    let before = group.iter().filter(|j| **j < hit).map(|j| w(*j)).sum::<i32>();
+    Some((total * upto(hit) / all - total * before / all) as i16)
+}
 
 // alpha-poke patch (2026-10-16, doc/engine-diff.md L30): the rest of generate_instructions_from_move
 // after the hit count (the damage branches, run_move), once per hit count
@@ -6392,10 +6549,12 @@ fn get_effective_speed(state: &State, side_reference: &SideReference) -> i16 {
         Abilities::SURGESURFER if state.terrain.terrain_type == Terrain::ELECTRICTERRAIN => {
             boosted_speed *= 2.0
         }
+        // (L226: while it holds no item -- Showdown's onModifySpe; a Trick can give it one)
         Abilities::UNBURDEN
             if side
                 .volatile_statuses
-                .contains(&PokemonVolatileStatus::UNBURDEN) =>
+                .contains(&PokemonVolatileStatus::UNBURDEN)
+                && active_pkmn.item == Items::NONE =>
         {
             boosted_speed *= 2.0
         }
@@ -6675,10 +6834,10 @@ fn unburden_check(state: &mut State, instructions: &mut StateInstructions) {
         for ins in instructions.instruction_list.iter() {
             match ins {
                 Instruction::Switch(s) if s.side_ref == side_ref => lost = false,
+                // (L226: any item that left it -- a Trick's too, the new one aside: Showdown's
+                // onTakeItem adds the volatile)
                 Instruction::ChangeItem(c)
-                    if c.side_ref == side_ref
-                        && c.new_item == Items::NONE
-                        && c.current_item != Items::NONE =>
+                    if c.side_ref == side_ref && c.current_item != Items::NONE =>
                 {
                     lost = true
                 }
@@ -6689,7 +6848,6 @@ fn unburden_check(state: &mut State, instructions: &mut StateInstructions) {
         let active = side.get_active_immutable();
         if lost
             && active.ability == Abilities::UNBURDEN
-            && active.item == Items::NONE
             && active.hp > 0
             && !side
                 .volatile_statuses
@@ -8495,7 +8653,25 @@ fn run_move(
         } else {
             -1
         };
-        let hit_damage = if (hit_count > 1 || choice.multi_hit() != MultiHitMove::None)
+        // (L226: a hit on the Substitute by the harness's share / break hint)
+        let sub_hint = {
+            let hints = &state.multi_hint[attacking_side as usize];
+            let triple = matches!(choice.move_id, Choices::TRIPLEAXEL | Choices::TRIPLEKICK);
+            let def = state.get_side_immutable(&defender_ref);
+            if !def
+                .volatile_statuses
+                .contains(&PokemonVolatileStatus::SUBSTITUTE)
+            {
+                None
+            } else if hints.get(hit as usize) == Some(&SUB_BREAK) {
+                Some(def.substitute_health)
+            } else {
+                sub_share(hints, hit as usize, triple)
+            }
+        };
+        let hit_damage = if let Some(d) = sub_hint.filter(|_| does_damage) {
+            d
+        } else if (hit_count > 1 || choice.multi_hit() != MultiHitMove::None)
             && hint >= 0
             && does_damage
             && !halved
