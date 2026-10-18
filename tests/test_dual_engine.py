@@ -6317,3 +6317,28 @@ def test_l215_positions(teams, i, turn, offset):
     outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"]))
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
     assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}
+
+
+# L216 (doc/engine-diff.md), from randbats8 / randbats9: a terastallized Morpeko-Hangry stays
+# Hangry; Yawn on Comatose; a Lum Berry at Yawn's sleep before a lock's residual; Eviolite only on
+# a mon that can evolve; Orichalcum Pulse under Air Lock; Shield Dust against Throat Chop;
+# Moongeist Beam through Disguise; Photon Geyser through Unaware; Meteor Beam with no target;
+# Soul-Heart after the move's own drop
+@pytest.mark.parametrize("teams,i,turn,offset", [
+    ("random_battle_teams_randbats8.jsonl", 190, 3, 130000),
+    ("random_battle_teams_randbats8.jsonl", 2, 20, 130000),
+    ("random_battle_teams_randbats8.jsonl", 244, 3, 130000),
+    ("random_battle_teams_randbats9.jsonl", 147, 19, 140000),
+    ("random_battle_teams_randbats9.jsonl", 247, 11, 140000),
+    ("random_battle_teams_randbats9.jsonl", 261, 7, 140000),
+    ("random_battle_teams_randbats9.jsonl", 296, 15, 140000),
+    ("random_battle_teams_randbats9.jsonl", 88, 41, 140000),
+    ("random_battle_teams_randbats9.jsonl", 184, 5, 140000),
+    ("random_battle_teams_randbats9.jsonl", 226, 45, 140000),
+])  # fmt: skip
+def test_l216_positions(teams, i, turn, offset):
+    a, b = _random_position(teams, i, turn, offset)
+    c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
+    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"]))
+    n = tuple(len(s["mons"]) for s in a["state"]["sides"])
+    assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}

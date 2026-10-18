@@ -523,7 +523,9 @@ fn generate_instructions_from_switch(
             PokemonName::AEGISLASHBLADE => Some(PokemonName::AEGISLASH),
             PokemonName::DARMANITANZEN => Some(PokemonName::DARMANITAN),
             PokemonName::DARMANITANGALARZEN => Some(PokemonName::DARMANITANGALAR),
-            PokemonName::MORPEKOHANGRY => Some(PokemonName::MORPEKO),
+            // (L216: not a terastallized one -- Showdown's terastallize makes its forme its base
+            // species)
+            PokemonName::MORPEKOHANGRY if !active.terastallized => Some(PokemonName::MORPEKO),
             PokemonName::CRAMORANTGULPING | PokemonName::CRAMORANTGORGING => {
                 Some(PokemonName::CRAMORANT)
             }
@@ -1179,8 +1181,14 @@ fn get_instructions_from_volatile_statuses(
         return;
     }
 
-    // (L197: the drowsiness is no sleep yet: not the Sleep Clause's)
+    // (L197: the drowsiness is no sleep yet: not the Sleep Clause's; L216: Comatose takes it --
+    // Showdown's onTryHit checks the status and the type immunity, Comatose stops only the sleep)
     if volatile_status.volatile_status == PokemonVolatileStatus::YAWN
+        && state
+            .get_side_immutable(&target_side)
+            .get_active_immutable()
+            .ability
+            != Abilities::COMATOSE
         && immune_to_status_with(
             state,
             &MoveTarget::Opponent,
@@ -4917,7 +4925,60 @@ pub fn generate_instructions_from_move(
             &mut incoming_instructions,
         );
     }
-    if no_target(state, &choice, &attacking_side) || stopped {
+    let without_target = no_target(state, &choice, &attacking_side);
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L216): Meteor Beam / Electro Shot's onTryMove
+    // comes before the target check (Showdown's useMoveInner): with no target, the Sp. Atk +1 and
+    // the Power Herb used up anyway, or the charging turn begun; it was nothing
+    if without_target
+        && !stopped
+        && matches!(choice.move_id, Choices::METEORBEAM | Choices::ELECTROSHOT)
+    {
+        let charge = choice.volatile_status.as_ref().and_then(|v| {
+            matches!(
+                v.volatile_status,
+                PokemonVolatileStatus::METEORBEAM | PokemonVolatileStatus::ELECTROSHOT
+            )
+            .then_some(v.volatile_status)
+        });
+        if charge.is_some() || choice.charge_boost {
+            apply_boost_instruction(
+                state.get_side(&attacking_side),
+                &PokemonBoostableStat::SpecialAttack,
+                &1,
+                &attacking_side,
+                &attacking_side,
+                &mut incoming_instructions,
+            );
+        }
+        let side = state.get_side(&attacking_side);
+        if choice.power_herb && side.get_active_immutable().item == Items::POWERHERB {
+            incoming_instructions
+                .instruction_list
+                .push(Instruction::ChangeItem(ChangeItemInstruction {
+                    side_ref: attacking_side,
+                    current_item: Items::POWERHERB,
+                    new_item: Items::NONE,
+                }));
+            side.get_active().item = Items::NONE;
+            super::items::set_last_item(
+                side.get_active(),
+                attacking_side,
+                Items::POWERHERB,
+                &mut incoming_instructions,
+            );
+        } else if let Some(v) = charge {
+            if !side.volatile_statuses.contains(&v) {
+                side.volatile_statuses.insert(v);
+                incoming_instructions
+                    .instruction_list
+                    .push(Instruction::ApplyVolatileStatus(ApplyVolatileStatusInstruction {
+                        side_ref: attacking_side,
+                        volatile_status: v,
+                    }));
+            }
+        }
+    }
+    if without_target || stopped {
         if asleep_or_frozen_before {
             steadfast(state, &attacking_side, &mut incoming_instructions);
         }
@@ -7524,7 +7585,15 @@ fn end_of_turn_instructions(
                     side.volatile_status_durations.yawn
                 ),
             }
+            // alpha-poke patch (2026-10-17, doc/engine-diff.md L216): a Lum / Chesto Berry at once
+            // (Showdown's Update after the status: the lock's residual then finds it awake)
+            if state.get_side_immutable(side_ref).get_active_immutable().status
+                == PokemonStatus::SLEEP
+            {
+                super::items::item_update(state, side_ref, incoming_instructions);
+            }
         }
+        let side = state.get_side(side_ref);
 
         // alpha-poke patch (2026-10-13): Heal Block (Psychic Noise: 2 turns), Magnet Rise (5) and
         // Throat Chop (2) end; before, they lasted until a switch. 2026-10-16: a partial trap
@@ -9223,14 +9292,19 @@ fn after_move_finish(
         // alpha-poke patch (2026-10-17, doc/engine-diff.md L214): Soul-Heart for a mover that
         // fainted from its own move (its recoil, Life Orb, a Rocky Helmet: Showdown's onAnyFaint);
         // the foe's knockout is its own hit's (ability_after_damage_hit)
-        if let Some(m) = mover {
+        // (L216: and for a target the move knocked out -- after the move's own drops: a Fleur
+        // Cannon's -2 first; it came at the hit)
+        for (m, holder) in mover
+            .map(|m| [(m, m.get_other_side()), (m.get_other_side(), m)])
+            .into_iter()
+            .flatten()
+        {
             let fainted = state.get_side_immutable(&m).get_active_immutable().hp == 0
                 && state_instructions.instruction_list[from..].iter().any(|i| {
                     matches!(i, Instruction::Damage(d) if d.side_ref == m)
                         // (Life Orb's recoil is a negative heal)
                         || matches!(i, Instruction::Heal(h) if h.side_ref == m && h.heal_amount < 0)
                 });
-            let holder = m.get_other_side();
             let side = state.get_side(&holder);
             let me = side.get_active_immutable();
             if fainted && me.hp > 0 && me.ability == Abilities::SOULHEART {

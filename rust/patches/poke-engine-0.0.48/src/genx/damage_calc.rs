@@ -509,10 +509,21 @@ fn get_attacking_and_defending_stats(
         mut crit_defending_stat,
     );
 
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L216): the target's Unaware is ignored by
+    // every Mold Breaker and an ability-ignoring move (Photon Geyser, ...), not through an Ability
+    // Shield; and suppressed by the attacker's Neutralizing Gas. It was Mold Breaker only
+    let unaware_broken = (matches!(
+        attacker.ability,
+        Abilities::MOLDBREAKER | Abilities::TERAVOLT | Abilities::TURBOBLAZE
+    ) || matches!(
+        choice.move_id,
+        Choices::MOONGEISTBEAM | Choices::SUNSTEELSTRIKE | Choices::PHOTONGEYSER
+    )) && defender.item != Items::ABILITYSHIELD
+        || attacker.ability == Abilities::NEUTRALIZINGGAS && defender.item != Items::ABILITYSHIELD;
     match choice.category {
         MoveCategory::Physical => {
             // Unaware checks
-            if defender.ability == Abilities::UNAWARE && attacker.ability != Abilities::MOLDBREAKER
+            if defender.ability == Abilities::UNAWARE && !unaware_broken
             {
                 should_calc_attacker_boost = false;
             }
@@ -566,7 +577,7 @@ fn get_attacking_and_defending_stats(
         }
         MoveCategory::Special => {
             // Unaware checks
-            if defender.ability == Abilities::UNAWARE && attacker.ability != Abilities::MOLDBREAKER
+            if defender.ability == Abilities::UNAWARE && !unaware_broken
             {
                 should_calc_attacker_boost = false;
             }

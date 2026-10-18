@@ -2044,8 +2044,19 @@ pub fn item_modify_attack_against(
                 });
             }
         }
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L216): Covert Cloak, Throat Chop / Salt
+        // Cure's volatile too (a 100% secondary in Showdown)
+        Items::COVERTCLOAK => {
+            if matches!(attacking_choice.move_id, Choices::THROATCHOP | Choices::SALTCURE) {
+                attacking_choice.volatile_status = None;
+            }
+        }
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L216): only for a mon that can still
+        // evolve (Showdown's species.nfe); it boosted any
         Items::EVIOLITE => {
-            attacking_choice.defense_modifier *= 1.5;
+            if defending_side.get_active_immutable().id.can_evolve() {
+                attacking_choice.defense_modifier *= 1.5;
+            }
         }
         // alpha-poke patch (2026-10-16, doc/engine-diff.md L24): used up by the hit that triggers
         // them (Showdown's onAfterMoveSecondary / onDamagingHit / onHit)

@@ -910,7 +910,17 @@ pub fn face_before_hit(state: &mut State, choice: &mut Choice, side_ref: &SideRe
         Choices::SUCKERPUNCH | Choices::THUNDERCLAP | Choices::POLTERGEIST | Choices::UPPERHAND
     ) && choice.base_power == 0.0;
     let defending_pkmn = defending_side.get_active();
+    // (L216: not against a Mold Breaker or an ability-ignoring move -- Moongeist Beam, ...: both
+    // abilities are breakable; not through an Ability Shield)
+    let breaker = (matches!(
+        active_pkmn.ability,
+        Abilities::MOLDBREAKER | Abilities::TERAVOLT | Abilities::TURBOBLAZE
+    ) || matches!(
+        choice.move_id,
+        Choices::MOONGEISTBEAM | Choices::SUNSTEELSTRIKE | Choices::PHOTONGEYSER
+    )) && defending_pkmn.item != Items::ABILITYSHIELD;
     if failed
+        || breaker
         || active_pkmn.ability == Abilities::NEUTRALIZINGGAS
             && defending_pkmn.item != Items::ABILITYSHIELD
     {
@@ -1769,7 +1779,9 @@ pub fn ability_after_damage_hit(
         // alpha-poke patch (2026-10-17, doc/engine-diff.md L194): Soul-Heart, Sp. Atk +1 for a
         // faint (Showdown's onAnyFaint: here the foe its hit knocked out; a hazard's, the switch-in
         // -- generate_instructions_from_switch); was nothing
-        Abilities::GRIMNEIGH | Abilities::ASONESPECTRIER | Abilities::SOULHEART => {
+        // (L216: Soul-Heart after the move instead -- its faint is Showdown's onAnyFaint, after the
+        // move's own drops: after_move_finish)
+        Abilities::GRIMNEIGH | Abilities::ASONESPECTRIER => {
             if damage_dealt > 0 && defending_side.get_active_immutable().hp == 0 {
                 apply_boost_instruction(
                     attacking_side,
@@ -3101,9 +3113,11 @@ pub fn ability_modify_attack_being_used(
                 attacker_choice.attack_modifier *= 5461.0 / 4096.0;
             }
         }
+        // (L216: the sun as in effect -- not under Air Lock / Cloud Nine; harsh sun too)
         Abilities::ORICHALCUMPULSE => {
             if attacker_choice.category == MoveCategory::Physical
-                && state.weather.weather_type == Weather::SUN
+                && (state.weather_is_active(&Weather::SUN)
+                    || state.weather_is_active(&Weather::HARSHSUN))
             {
                 attacker_choice.attack_modifier *= 5461.0 / 4096.0;
             }
@@ -3904,6 +3918,11 @@ pub fn ability_modify_attack_against(
                         secondary.chance = 0.0;
                     }
                 }
+            }
+            // alpha-poke patch (2026-10-17, doc/engine-diff.md L216): Throat Chop / Salt Cure's
+            // volatile is a 100% secondary in Showdown (the engine's data: the move's own)
+            if matches!(attacker_choice.move_id, Choices::THROATCHOP | Choices::SALTCURE) {
+                attacker_choice.volatile_status = None;
             }
         }
         Abilities::GRASSPELT => {
