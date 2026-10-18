@@ -933,9 +933,21 @@ pub fn ability_before_move(
         _ => {}
     }
     match active_pkmn.ability {
+        // (L198: not a Surf a water-absorbing target takes: Showdown's onSourceTryPrimaryHit comes
+        // after its TryHit)
         Abilities::GULPMISSILE => {
+            let absorbed = choice.move_id == Choices::SURF
+                && matches!(
+                    defending_pkmn.ability,
+                    Abilities::STORMDRAIN | Abilities::WATERABSORB | Abilities::DRYSKIN
+                )
+                && !matches!(
+                    active_pkmn.ability,
+                    Abilities::MOLDBREAKER | Abilities::TERAVOLT | Abilities::TURBOBLAZE
+                );
             if active_pkmn.id == PokemonName::CRAMORANT
                 && (choice.move_id == Choices::SURF || choice.move_id == Choices::DIVE)
+                && !absorbed
             {
                 let new_forme = if active_pkmn.hp > active_pkmn.maxhp / 2 {
                     PokemonName::CRAMORANTGULPING
@@ -1509,10 +1521,11 @@ pub fn ability_damaging_hit(
                 attacking_side.side_conditions.toxic_spikes += 1;
             }
         }
+        // (L198: Showdown's halves -- hp <= maxhp / 2 < hp + damage, not rounded)
         Abilities::BERSERK => {
             if damage_dealt > 0
-                && defending_pkmn.hp < defending_pkmn.maxhp / 2
-                && defending_pkmn.hp + damage_dealt >= defending_pkmn.maxhp / 2
+                && 2 * defending_pkmn.hp <= defending_pkmn.maxhp
+                && 2 * (defending_pkmn.hp + damage_dealt) > defending_pkmn.maxhp
             {
                 apply_boost_instruction(
                     defending_side,

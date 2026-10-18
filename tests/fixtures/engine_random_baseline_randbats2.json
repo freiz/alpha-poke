@@ -48,22 +48,6 @@
 "last_used_move",
 "pp"
 ],
-"b165-t41": [
-"id"
-],
-"b165-t56": [
-"boost.def",
-"hp"
-],
-"b165-t58": [
-"id"
-],
-"b176-t6": [
-"boost.spa"
-],
-"b176-t7": [
-"boost.spa"
-],
 "b177-t49": [
 "hp"
 ],
@@ -135,9 +119,6 @@
 "b212-t5": [
 "boost.spa"
 ],
-"b223-t1": [
-"volatile.unburden"
-],
 "b226-t29": [
 "hp"
 ],
@@ -146,10 +127,6 @@
 ],
 "b237-t16": [
 "hp"
-],
-"b239-t27": [
-"item",
-"last_item"
 ],
 "b242-t5": [
 "attack",
@@ -168,12 +145,6 @@
 ],
 "b260-t23": [
 "hp"
-],
-"b263-t22": [
-"volatile.charge"
-],
-"b263-t23": [
-"volatile.charge"
 ],
 "b274-t19": [
 "ability",
@@ -274,9 +245,6 @@
 "terastallized",
 "types",
 "weight"
-],
-"b45-t44": [
-"boost.spa"
 ],
 "b74-t8": [
 "hp"

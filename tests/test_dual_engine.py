@@ -5589,3 +5589,52 @@ def test_l197_yawn_through_the_sleep_clause():
     assert any("Sleep Clause Mod activated" in x for x in states[3]["log"])
     assert _keys(_full(states, 1, "yawn", "blissey", (1, 2)), "yawn") == {}
     assert _keys(_full(states, 2, "bulletseed", "calmmind", (1, 2)), "status", "yawn") == {}
+
+
+# L198 (doc/engine-diff.md): an absorbing ability takes an Electric move before a Ground type's
+# immunity (Lightning Rod's +1); Charge ends with a stopped Electric move (onMoveAborted); Power
+# Herb is used as the move goes; Unburden as the item goes; a Surf a target absorbs gives Gulp
+# Missile no forme; Berserk's halves unrounded
+def test_l198_lightning_rod_on_a_ground_type():
+    rhydon = _attacker("Rhydon", "Lightning Rod", "Eviolite", "- Megahorn\n- Earthquake\n- Rock Blast\n- Stealth Rock")
+    regice = _attacker("Regice", "Clear Body", "Leftovers", "- Thunderbolt\n- Ice Beam\n- Thunder Wave\n- Rest", "Modest")
+    states = ec.run_showdown(rhydon, regice, [("move stealthrock", "move thunderbolt")])
+    assert states[1]["sides"][0]["mons"][0]["boosts"]["spa"] == 1
+    assert _keys(_full(states, 0, "stealthrock", "thunderbolt"), "boost") == {}
+
+
+def test_l198_charge_ends_with_a_flinched_electric_move():
+    excadrill = _attacker("Excadrill", "Mold Breaker", "Leftovers", "- Iron Head\n- Earthquake\n- Rock Slide\n- Rapid Spin")
+    bellibolt = _attacker("Bellibolt", "Electromorphosis", "Leftovers", "- Thunderbolt\n- Muddy Water\n- Slack Off\n- Toxic", "Modest")
+    states = ec.run_showdown(excadrill, bellibolt, [("move ironhead", "move thunderbolt")], force_random=True)
+    assert any("|cant|p2a: Bellibolt|flinch" in x for x in states[1]["log"])
+    assert _keys(_full(states, 0, "ironhead", "thunderbolt"), "charge", "pp") == {}
+
+
+def test_l198_power_herb_kept_while_asleep():
+    armarouge = """Armarouge @ Power Herb
+Ability: Weak Armor
+EVs: 252 HP / 252 SpA / 4 SpD
+Modest Nature
+- Meteor Beam
+- Armor Cannon
+- Psyshock
+- Will-O-Wisp"""
+    states = ec.run_showdown(armarouge, BRELOOM, [("move meteorbeam", "move spore")])
+    assert states[1]["sides"][0]["mons"][0]["item"] == "powerherb"
+    assert _keys(_full(states, 0, "meteorbeam", "spore"), "item") == {}
+
+
+def test_l198_unburden_as_the_item_goes():
+    hawlucha = _attacker("Hawlucha", "Unburden", "White Herb", "- Close Combat\n- Acrobatics\n- Swords Dance\n- Roost")
+    states = ec.run_showdown(hawlucha, CORVIKNIGHT + "\n\n" + BLISSEY, [("move closecombat", "move uturn")])
+    assert states[1]["sides"][1]["request"] == "switch"
+    assert _keys(_full(states, 0, "closecombat", "uturn", (1, 2)), "unburden") == {}
+
+
+def test_l198_gulp_missile_absorbed_surf():
+    cramorant = _attacker("Cramorant", "Gulp Missile", "Leftovers", "- Surf\n- Brave Bird\n- Roost\n- Defog", "Modest")
+    gastrodon = _attacker("Gastrodon", "Storm Drain", "Leftovers", "- Earth Power\n- Recover\n- Spikes\n- Ice Beam", "Calm")
+    states = ec.run_showdown(cramorant, gastrodon, [("move surf", "move spikes")])
+    assert states[1]["sides"][0]["mons"][0]["species"] == "cramorant"
+    assert _keys(_full(states, 0, "surf", "spikes"), "id") == {}

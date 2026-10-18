@@ -1293,21 +1293,9 @@ pub fn choice_before_move(
         && attacker.item == Items::POWERHERB
         && choice.move_id != Choices::SKYDROP
     {
-        let instruction = Instruction::ChangeItem(ChangeItemInstruction {
-            side_ref: *attacking_side_ref,
-            current_item: Items::POWERHERB,
-            new_item: Items::NONE,
-        });
-        attacker.item = Items::NONE;
+        // (L198: used up as the move goes: generate_instructions_from_move, past the BeforeMove)
         choice.flags.charge = false;
-        instructions.instruction_list.push(instruction);
-        // (L178: used up, its last item)
-        super::items::set_last_item(
-            attacker,
-            *attacking_side_ref,
-            Items::POWERHERB,
-            instructions,
-        );
+        choice.power_herb = true;
         if matches!(choice.move_id, Choices::METEORBEAM | Choices::ELECTROSHOT) {
             choice.charge_boost = true;
         }

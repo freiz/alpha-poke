@@ -2848,9 +2848,19 @@ fn move_has_no_effect(state: &State, choice: &Choice, attacking_side_ref: &SideR
         return true;
     }
 
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L198): an absorbing ability takes it first
+    // (Showdown's hitStepTryHitEvent comes before the type immunity: a Ground Lightning Rod
+    // holder's Sp. Atk +1; the absorbed move is a status one by now)
     if choice.move_type == PokemonType::ELECTRIC
         && choice.target == MoveTarget::Opponent
         && defender.has_type(&PokemonType::GROUND)
+        && !(matches!(
+            defender.ability,
+            Abilities::LIGHTNINGROD | Abilities::VOLTABSORB | Abilities::MOTORDRIVE
+        ) && !matches!(
+            _attacking_side.get_active_immutable().ability,
+            Abilities::MOLDBREAKER | Abilities::TERAVOLT | Abilities::TURBOBLAZE
+        ))
     {
         return true;
     } else if choice.move_id == Choices::ENCORE {
@@ -4287,24 +4297,21 @@ pub fn generate_instructions_from_move(
         start_truant(state, &attacking_side, &mut incoming_instructions);
     }
 
-    if (!called || choice.dancer_move) && cannot_use_move(state, &choice, &attacking_side) {
-        steadfast(state, &attacking_side, &mut incoming_instructions);
-        state.reverse_instructions(&incoming_instructions.instruction_list);
-        final_instructions.push(incoming_instructions);
-        return;
-    }
-
     // alpha-poke patch (2026-10-13): Charge ends with the Electric move it powers (Gen 9); before,
     // it lasted until a switch. Its doubling goes into the base power here (damage_calc doubles
     // only while the volatile is on)
+    // (L198: any Electric move but Charge ends it, a status one too, and one that does not go --
+    // Showdown's onAfterMove / onMoveAborted: a flinch, Taunt, sleep, ...)
     if choice.move_type == PokemonType::ELECTRIC
-        && choice.category != MoveCategory::Status
+        && choice.move_id != Choices::CHARGE
         && state
             .get_side_immutable(&attacking_side)
             .volatile_statuses
             .contains(&PokemonVolatileStatus::CHARGE)
     {
-        choice.base_power *= 2.0;
+        if choice.category != MoveCategory::Status {
+            choice.base_power *= 2.0;
+        }
         state
             .get_side(&attacking_side)
             .volatile_statuses
@@ -4317,6 +4324,12 @@ pub fn generate_instructions_from_move(
                     volatile_status: PokemonVolatileStatus::CHARGE,
                 },
             ));
+    }
+    if (!called || choice.dancer_move) && cannot_use_move(state, &choice, &attacking_side) {
+        steadfast(state, &attacking_side, &mut incoming_instructions);
+        state.reverse_instructions(&incoming_instructions.instruction_list);
+        final_instructions.push(incoming_instructions);
+        return;
     }
 
     let asleep_or_frozen_before = matches!(
@@ -4617,6 +4630,28 @@ pub fn generate_instructions_from_move(
                         },
                     ));
             }
+        }
+    }
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L198): the Power Herb that skipped the
+    // charge is used up now (its last item: L178)
+    if choice.power_herb {
+        let side = state.get_side(&attacking_side);
+        let attacker = side.get_active();
+        if attacker.item == Items::POWERHERB {
+            incoming_instructions
+                .instruction_list
+                .push(Instruction::ChangeItem(ChangeItemInstruction {
+                    side_ref: attacking_side,
+                    current_item: Items::POWERHERB,
+                    new_item: Items::NONE,
+                }));
+            attacker.item = Items::NONE;
+            super::items::set_last_item(
+                attacker,
+                attacking_side,
+                Items::POWERHERB,
+                &mut incoming_instructions,
+            );
         }
     }
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L187): Future Sight / Doom Desire set as the
@@ -8284,6 +8319,9 @@ pub fn release_choice_lock(
 }
 
 pub fn update(state: &mut State, instructions: &mut StateInstructions) {
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L198): Unburden as its item goes (Showdown's
+    // onAfterUseItem / onTakeItem: a pivot's decision mid-turn sees it); was at the end of the turn
+    unburden_check(state, instructions);
     for side_ref in [SideReference::SideOne, SideReference::SideTwo] {
         choice_lock_release(state, &side_ref, instructions);
         super::abilities::trace_update(state, &side_ref, instructions);

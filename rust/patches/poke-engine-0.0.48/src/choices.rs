@@ -21863,6 +21863,9 @@ pub struct Choice {
     // takes this move's hit: its forme changes when the move hits (run_move: not on a miss, a
     // Protect; was as the move started)
     pub face_break: bool,
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L198): its Power Herb skips the charge and
+    // is used up as the move goes (Showdown's onChargeMove, in its onTryMove: past the BeforeMove)
+    pub power_herb: bool,
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L165): Meteor Beam / Electro Shot hitting at
     // once (Power Herb, Electro Shot in rain): their Sp. Atk +1 as the move starts (Protect or not)
     pub charge_boost: bool,
@@ -22017,6 +22020,7 @@ impl Default for Choice {
             charge_boost: false,
             sure_hit: false,
             face_break: false,
+            power_herb: false,
         }
     }
 }
