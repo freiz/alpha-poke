@@ -205,9 +205,10 @@ def _engine_side(s: dict, future_sight=None, wish=None) -> pe.Side:
     # Healing Wish / Lunar Dance waiting on the slot (Gen 9: until a mon that needs it comes in;
     # Showdown's slot condition, the engine's side condition; L48)
     # (Lunar Dance: the engine's Healing Wish, L52)
-    for name, eng in (("healingwish", "healing_wish"), ("lunardance", "healing_wish")):
+    # (L189: Lunar Dance's at 2: it restores the PP too)
+    for name, eng, v in (("healingwish", "healing_wish", 1), ("lunardance", "healing_wish", 2)):
         if name in s.get("slot", {}):
-            sc[eng] = 1
+            sc[eng] = v
     kw: dict = {"future_sight": future_sight} if future_sight else {}
     if tera_used:
         kw["tera_used"] = True

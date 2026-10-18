@@ -388,6 +388,19 @@ fn always_hit_moves() -> Vec<String> {
     out
 }
 
+/// poke-engine's max PP of every move it knows (`Choices::max_pp`, lowercase; doc/engine-diff.md
+/// L189: Lunar Dance's PP restore).
+#[pyfunction]
+fn max_pps() -> Vec<(String, i8)> {
+    use poke_engine::choices::MOVES;
+    let mut out: Vec<(String, i8)> = MOVES
+        .keys()
+        .map(|c| (format!("{:?}", c).to_lowercase(), c.max_pp()))
+        .collect();
+    out.sort();
+    out
+}
+
 /// poke-engine's max PP of the moves where it is below 10 (`Choices::max_pp_below_10`).
 #[pyfunction]
 fn low_max_pp_moves() -> Vec<(String, i8)> {
@@ -1307,6 +1320,7 @@ fn alpha_search(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(paradox_species, m)?)?;
     m.add_function(wrap_pyfunction!(fail_skill_swap_abilities, m)?)?;
     m.add_function(wrap_pyfunction!(cant_suppress_abilities, m)?)?;
+    m.add_function(wrap_pyfunction!(max_pps, m)?)?;
     m.add_function(wrap_pyfunction!(no_trace_abilities, m)?)?;
     m.add_function(wrap_pyfunction!(chance_outcomes, m)?)?;
     m.add_function(wrap_pyfunction!(describe, m)?)?;

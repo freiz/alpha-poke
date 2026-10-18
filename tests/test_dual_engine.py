@@ -5294,3 +5294,25 @@ def test_l188_trick_choice_item_ends_the_lock(item):
                              [("move dracometeor", "move trick")])  # fmt: skip
     assert any("|-activate|p2a: Gholdengo|move: Trick" in x for x in states[1]["log"])
     assert _keys(_full(states, 0, "dracometeor", "trick"), "options") == {}
+
+
+# L189 (doc/engine-diff.md): Lunar Dance restores the PP too (Showdown's lunardance onSwap: a mon
+# missing only PP takes it); the engine's Healing Wish side condition at 2, every move's max PP
+def test_l189_lunar_dance_restores_the_pp():
+    cresselia = """Cresselia @ Leftovers
+Ability: Levitate
+EVs: 252 HP / 252 Def / 4 SpD
+Bold Nature
+- Lunar Dance
+- Moonlight
+- Psychic
+- Thunder Wave"""
+    turns = [("move calmmind", "move swordsdance"), ("switch 2", "move swordsdance"),
+             ("move lunardance", "move swordsdance"), ("switch 2", "")]  # fmt: skip
+    states = ec.run_showdown(BLISSEY + "\n\n" + cresselia, GARCHOMP_SD, turns)
+    assert states[1]["sides"][0]["mons"][0]["moves"][3]["pp"] == 31
+    assert states[4]["sides"][0]["mons"][0]["moves"][3]["pp"] == 32
+    outs = ec.engine_outcomes(ec.engine_state(states[2]), "lunardance", "swordsdance")
+    (_, mid), = outs
+    outs = ec.engine_outcomes(mid, "blissey", "none")  # (the end of the turn's pick)
+    assert _keys(ec.closest(states[4], outs, (2, 1), hp=True, full=True, start=states[3])["diff"], "pp") == {}

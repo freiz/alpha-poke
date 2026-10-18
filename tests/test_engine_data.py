@@ -135,6 +135,25 @@ def test_always_hit_moves_match_showdown():
     assert alpha_search.always_hit_moves() == want
 
 
+def test_max_pps_match_showdown():
+    """Every move's max PP (L189: Lunar Dance restores it): Showdown's pp x 8 / 5 (a set's PP Ups),
+    noPPBoosts its pp; the engine's Hidden Power variants Hidden Power's, Return at 102 Return's."""
+    import re
+    import subprocess
+
+    import alpha_search
+
+    js = ("const {Dex} = require(process.argv[1]); console.log(JSON.stringify(Object.fromEntries("
+          "Dex.moves.all().map(m => [m.id, m.noPPBoosts ? m.pp : Math.floor(m.pp * 8 / 5)]))))")
+    sd = json.loads(subprocess.run(["node", "-e", js, str(ec.SIM)], capture_output=True, text=True,
+                                   check=True).stdout)  # fmt: skip
+    got = dict(alpha_search.max_pps())
+    assert len(got) > 800
+    for move, pp in got.items():
+        base = re.sub(r"^(hiddenpower)[a-z]+[67]0$", r"\1", move).replace("return102", "return")
+        assert pp == sd.get(base, 0), move
+
+
 def test_low_max_pp_moves_match_showdown():
     """The moves whose max PP is below 10 (5 PP: 8 with Showdown's PP Ups; a few 1 and none):
     the engine keeps no max PP and Leppa Berry restores 10 up to it."""

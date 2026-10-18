@@ -620,6 +620,32 @@ fn generate_instructions_from_switch(
             );
             healing_wish_consumed = true;
         }
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L189): Lunar Dance (at 2) restores the
+        // PP too, and a mon missing only PP takes it (Showdown's lunardance onSwap: its moves' maxpp;
+        // Choices::max_pp, 0 unknown)
+        if side.side_conditions.healing_wish == 2 {
+            let switched_in_pkmn = side.get_active();
+            for index in [
+                PokemonMoveIndex::M0,
+                PokemonMoveIndex::M1,
+                PokemonMoveIndex::M2,
+                PokemonMoveIndex::M3,
+            ] {
+                let m = &mut switched_in_pkmn.moves[&index];
+                let max = m.id.max_pp();
+                if m.id != Choices::NONE && max > 0 && m.pp < max {
+                    incoming_instructions
+                        .instruction_list
+                        .push(Instruction::DecrementPP(DecrementPPInstruction {
+                            side_ref: switching_side_ref,
+                            move_index: index,
+                            amount: m.pp - max,
+                        }));
+                    m.pp = max;
+                    healing_wish_consumed = true;
+                }
+            }
+        }
 
         if healing_wish_consumed {
             incoming_instructions
@@ -7109,6 +7135,21 @@ fn run_move(
                 &attacking_side,
                 &mut instructions,
             );
+            // alpha-poke patch (2026-10-17, doc/engine-diff.md L189): Lunar Dance's is the
+            // Healing Wish side condition at 2 (it restores the PP too: the switch-in)
+            let side = state.get_side(&attacking_side);
+            if choice.move_id == Choices::LUNARDANCE && side.side_conditions.healing_wish == 1 {
+                side.side_conditions.healing_wish = 2;
+                instructions
+                    .instruction_list
+                    .push(Instruction::ChangeSideCondition(
+                        ChangeSideConditionInstruction {
+                            side_ref: attacking_side,
+                            side_condition: PokemonSideCondition::HealingWish,
+                            amount: 1,
+                        },
+                    ));
+            }
         }
         // alpha-poke patch (2026-10-16, doc/engine-diff.md L2d): a damaging move that hit the
         // target's substitute puts no volatile on the target (Showdown: the hit's effects on a
