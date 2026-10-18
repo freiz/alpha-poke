@@ -5533,3 +5533,45 @@ def test_l195_terapagos_stellar():
     states = ec.run_showdown(GARCHOMP_SD, TERAPAGOS, [("move swordsdance", "move calmmind terastallize")])
     assert states[1]["sides"][1]["mons"][0]["species"] == "terapagosstellar"
     assert _full(states, 0, "swordsdance", "calmmind-tera") == {}
+
+
+# L196 (doc/engine-diff.md): Disguise / Ice Face break as the move hits (Showdown's onDamage), not
+# as it starts: a miss, a Protect, a charging turn leave them
+EISCUE = """Eiscue @ Leftovers
+Ability: Ice Face
+EVs: 252 HP / 252 Atk / 4 SpD
+Adamant Nature
+- Belly Drum
+- Liquidation
+- Ice Spinner
+- Iron Head"""
+MIMIKYU = """Mimikyu @ Leftovers
+Ability: Disguise
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- Swords Dance
+- Play Rough
+- Shadow Sneak
+- Drain Punch"""
+
+
+def test_l196_ice_face_kept_on_a_miss():
+    gar = GARCHOMP_SD.replace("- Scale Shot", "- Stone Edge")
+    states = ec.run_showdown(EISCUE, gar, [("move bellydrum", "move stoneedge")], force_random=False)
+    assert any("|-miss|p2a: Garchomp" in x for x in states[1]["log"])
+    assert states[1]["sides"][0]["mons"][0]["species"] == "eiscue"
+    assert _keys(_full(states, 0, "bellydrum", "stoneedge"), "id", "defense") == {}
+
+
+def test_l196_disguise_kept_on_a_charging_turn():
+    armarouge = """Armarouge @ Leftovers
+Ability: Weak Armor
+EVs: 252 HP / 252 SpA / 4 SpD
+Modest Nature
+- Meteor Beam
+- Armor Cannon
+- Psyshock
+- Will-O-Wisp"""
+    states = ec.run_showdown(armarouge, MIMIKYU, [("move meteorbeam", "move swordsdance")])
+    assert states[1]["sides"][1]["mons"][0]["species"] == "mimikyu"
+    assert _keys(_full(states, 0, "meteorbeam", "swordsdance"), "id", "hp") == {}

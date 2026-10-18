@@ -2290,15 +2290,15 @@ fn check_move_hit_or_miss(
     // forme change in this move's instructions) is a hit with no damage, not a miss: Red Card /
     // Eject Button go off
     let defender_ref = attacking_side_ref.get_other_side();
-    let disguise_hit = state
-        .get_side_immutable(&defender_ref)
-        .get_active_immutable()
-        .id
-        == PokemonName::MIMIKYUBUSTED
-        && incoming_instructions
-            .instruction_list
-            .iter()
-            .any(|i| matches!(i, Instruction::FormeChange(f) if f.side_ref == defender_ref));
+    // (L196: the hit is to come, run_move)
+    let disguise_hit = choice.face_break
+        && matches!(
+            state
+                .get_side_immutable(&defender_ref)
+                .get_active_immutable()
+                .id,
+            PokemonName::MIMIKYU | PokemonName::MIMIKYUTOTEM
+        );
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L191): Showdown's hitStepAccuracy, the user's
     // accuracy less the target's evasion (-6 to 6; was the accuracy only): the target's Unaware
     // ignores the user's accuracy (not through a Mold Breaker), the user's its evasion, so do Keen
@@ -3519,15 +3519,11 @@ pub fn before_move(
     // nothing, whatever power modify_choice gave the move after it (Heavy Slam, Low Kick, Gyro
     // Ball, ...: their own power came back; Showdown's onDamage returns 0)
     if !choice.first_hit_blocked
+        && choice.face_break
         && matches!(
             defender_id,
             PokemonName::MIMIKYU | PokemonName::MIMIKYUTOTEM
         )
-        && state
-        .get_side_immutable(&attacking_side.get_other_side())
-        .get_active_immutable()
-        .id
-        == PokemonName::MIMIKYUBUSTED
     {
         choice.base_power = 0.0;
         // (L159: a fixed damage too -- Ruination, Seismic Toss, ...: run_move's hit skips it)
@@ -7280,6 +7276,10 @@ fn run_move(
     let defender_boosts_before =
         boosts_of(state.get_side_immutable(&attacking_side.get_other_side()));
     let defender_ref = attacking_side.get_other_side();
+    // (L196: the Disguise / Ice Face the move hits breaks now, not through a Protect)
+    if choice.face_break && !choice.protected {
+        super::abilities::break_face(state, &defender_ref, &mut instructions);
+    }
     // (L151: a hit Disguise / Ice Face took -- no damage, the forme changed -- is a hit: its
     // DamagingHit and onAfterHit still come; L122)
     let face_hit = !does_damage

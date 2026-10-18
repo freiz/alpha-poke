@@ -818,6 +818,37 @@ fn quarkdrive_volatile_from_side(side: &Side) -> PokemonVolatileStatus {
     }
 }
 
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L196): the hit Disguise / Ice Face takes
+// (Showdown's onDamage, at the hit): Mimikyu-Busted and 1/8 of its HP, Eiscue-Noice and its stats
+pub fn break_face(state: &mut State, side_ref: &SideReference, instructions: &mut StateInstructions) {
+    let p = state.get_side(side_ref).get_active();
+    let to = match p.id {
+        PokemonName::MIMIKYU | PokemonName::MIMIKYUTOTEM => PokemonName::MIMIKYUBUSTED,
+        PokemonName::EISCUE => PokemonName::EISCUENOICE,
+        _ => return,
+    };
+    let from = p.id;
+    instructions
+        .instruction_list
+        .push(Instruction::FormeChange(FormeChangeInstruction {
+            side_ref: *side_ref,
+            name_change: to as i16 - from as i16,
+        }));
+    p.id = to;
+    if to == PokemonName::EISCUENOICE {
+        p.recalculate_stats(from, side_ref, instructions);
+    } else {
+        let dmg = cmp::min(p.hp, p.maxhp / 8);
+        instructions
+            .instruction_list
+            .push(Instruction::Damage(DamageInstruction {
+                side_ref: *side_ref,
+                damage_amount: dmg,
+            }));
+        p.hp -= dmg;
+    }
+}
+
 pub fn ability_before_move(
     state: &mut State,
     choice: &mut Choice,
@@ -841,7 +872,10 @@ pub fn ability_before_move(
         // Incomplete: IceFace should not stop secondaries, but setting base_power to 0 makes
         // secondaries not apply in this engine
         Abilities::ICEFACE => {
-            if defending_pkmn.id == PokemonName::EISCUE && choice.category == MoveCategory::Physical
+            // (L196: not its Substitute's hit; the forme changes as the move hits: face_break)
+            if defending_pkmn.id == PokemonName::EISCUE
+                && choice.category == MoveCategory::Physical
+                && !behind_sub
             {
                 // hacky - changing the move to a status move makes it do no
                 // damage but preserve secondary effects
@@ -852,15 +886,7 @@ pub fn ability_before_move(
                 } else {
                     choice.category = MoveCategory::Status;
                 }
-                instructions.instruction_list.push(Instruction::FormeChange(
-                    FormeChangeInstruction {
-                        side_ref: side_ref.get_other_side(),
-                        name_change: PokemonName::EISCUENOICE as i16 - defending_pkmn.id as i16,
-                    },
-                ));
-                let from = defending_pkmn.id;
-                defending_pkmn.id = PokemonName::EISCUENOICE;
-                defending_pkmn.recalculate_stats(from, &side_ref.get_other_side(), instructions);
+                choice.face_break = true;
             }
         }
         // Technically incorrect
@@ -901,21 +927,8 @@ pub fn ability_before_move(
             } else {
                 choice.base_power = 0.0;
             }
-            instructions
-                .instruction_list
-                .push(Instruction::FormeChange(FormeChangeInstruction {
-                    side_ref: side_ref.get_other_side(),
-                    name_change: PokemonName::MIMIKYUBUSTED as i16 - defending_pkmn.id as i16,
-                }));
-            defending_pkmn.id = PokemonName::MIMIKYUBUSTED;
-            let dmg = cmp::min(defending_pkmn.hp, defending_pkmn.maxhp / 8);
-            instructions
-                .instruction_list
-                .push(Instruction::Damage(DamageInstruction {
-                    side_ref: side_ref.get_other_side(),
-                    damage_amount: dmg,
-                }));
-            defending_pkmn.hp -= dmg;
+            // (L196: its forme and 1/8 as the move hits: break_face)
+            choice.face_break = true;
         }
         _ => {}
     }
