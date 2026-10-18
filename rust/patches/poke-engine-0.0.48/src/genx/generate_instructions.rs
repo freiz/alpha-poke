@@ -792,6 +792,21 @@ fn generate_instructions_from_switch(
         .hp
         == 0
     {
+        // (L194: the foe's Soul-Heart, for its faint)
+        let foe_ref = switching_side_ref.get_other_side();
+        let foe = state.get_side(&foe_ref);
+        if foe.get_active_immutable().ability == Abilities::SOULHEART
+            && foe.get_active_immutable().hp > 0
+        {
+            apply_boost_instruction(
+                foe,
+                &PokemonBoostableStat::SpecialAttack,
+                &1,
+                &foe_ref,
+                &foe_ref,
+                incoming_instructions,
+            );
+        }
         return;
     }
     let from = incoming_instructions.instruction_list.len();
@@ -7169,6 +7184,38 @@ fn lowered(before: &[i8; 7], after: &[i8; 7]) -> bool {
     before.iter().zip(after.iter()).any(|(b, a)| a < b)
 }
 
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L194): Beak Blast heats up as the turn starts
+// (Showdown's priorityChargeCallback): a contact hit on its user before it moves burns the
+// attacker (its condition's onHit, trySetStatus: the status immunities); was nothing
+fn beak_blast_heat(
+    state: &mut State,
+    choice: &Choice,
+    defender_choice: &Choice,
+    attacking_side: &SideReference,
+    instructions: &mut StateInstructions,
+) {
+    if defender_choice.move_id != Choices::BEAKBLAST
+        || !choice.first_move
+        || !choice.flags.contact
+        || state.get_side_immutable(attacking_side).get_active_immutable().hp == 0
+        || immune_to_status(state, &MoveTarget::User, attacking_side, &PokemonStatus::BURN)
+    {
+        return;
+    }
+    let side = state.get_side(attacking_side);
+    let index = side.active_index;
+    let active = side.get_active();
+    instructions
+        .instruction_list
+        .push(Instruction::ChangeStatus(ChangeStatusInstruction {
+            side_ref: *attacking_side,
+            pokemon_index: index,
+            old_status: active.status,
+            new_status: PokemonStatus::BURN,
+        }));
+    active.status = PokemonStatus::BURN;
+}
+
 fn run_move(
     state: &mut State,
     attacking_side: SideReference,
@@ -7308,6 +7355,7 @@ fn run_move(
                     dealt,
                     &mut instructions,
                 );
+                beak_blast_heat(state, choice, defender_choice, &attacking_side, &mut instructions);
             }
             super::choice_effects::choice_after_hit(
                 state,

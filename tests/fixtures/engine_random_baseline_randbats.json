@@ -127,9 +127,6 @@
 "special_defense",
 "speed"
 ],
-"b146-t32": [
-"boost.spa"
-],
 "b149-t23": [
 "sleep_turns",
 "status"
@@ -186,9 +183,6 @@
 "status"
 ],
 "b17-t22": [
-"boost.spa"
-],
-"b17-t37": [
 "boost.spa"
 ],
 "b171-t13": [
@@ -303,41 +297,6 @@
 "b239-t7": [
 "hp"
 ],
-"b241-t28": [
-"hp",
-"status"
-],
-"b252-t36": [
-"status"
-],
-"b255-t43": [
-"hp",
-"status"
-],
-"b255-t54": [
-"hp",
-"status"
-],
-"b259-t38": [
-"hp",
-"substitute_hp",
-"volatile.substitute"
-],
-"b259-t47": [
-"hp",
-"substitute_hp",
-"volatile.substitute"
-],
-"b259-t51": [
-"hp",
-"substitute_hp",
-"volatile.substitute"
-],
-"b259-t52": [
-"hp",
-"substitute_hp",
-"volatile.substitute"
-],
 "b263-t53": [
 "hp"
 ],
@@ -350,9 +309,6 @@
 "b283-t31": [
 "hp",
 "status"
-],
-"b29-t1": [
-"boost.spa"
 ],
 "b36-t19": [
 "hp"
@@ -425,9 +381,6 @@
 "b67-t11": [
 "hp"
 ],
-"b68-t12": [
-"boost.spa"
-],
 "b76-t14": [
 "hp"
 ],
@@ -442,9 +395,6 @@
 ],
 "b94-t1": [
 "hp"
-],
-"b98-t18": [
-"boost.spa"
 ]
 }
 }

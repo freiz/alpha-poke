@@ -1665,7 +1665,10 @@ pub fn ability_after_damage_hit(
                 );
             }
         }
-        Abilities::GRIMNEIGH | Abilities::ASONESPECTRIER => {
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L194): Soul-Heart, Sp. Atk +1 for a
+        // faint (Showdown's onAnyFaint: here the foe its hit knocked out; a hazard's, the switch-in
+        // -- generate_instructions_from_switch); was nothing
+        Abilities::GRIMNEIGH | Abilities::ASONESPECTRIER | Abilities::SOULHEART => {
             if damage_dealt > 0 && defending_side.get_active_immutable().hp == 0 {
                 apply_boost_instruction(
                     attacking_side,

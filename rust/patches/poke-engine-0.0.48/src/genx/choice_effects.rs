@@ -2393,14 +2393,20 @@ pub fn choice_special_effect(
                 return;
             }
             let sub_current_health = attacking_side.substitute_health;
+            // alpha-poke patch (2026-10-17, doc/engine-diff.md L194): Shed Tail as Showdown's onTryHit
+            // / onHit: it fails without a mon to switch in (canSwitch) or at half its HP or less
+            // (rounded up, as the HP it costs; was rounded down)
+            let can_switch = attacking_side.visible_alive_pkmn() > 1;
             let active_pkmn = attacking_side.get_active();
             let sub_target_health = active_pkmn.maxhp / 4;
             let pkmn_health_reduction = if choice.move_id == Choices::SHEDTAIL {
-                active_pkmn.maxhp / 2
+                (active_pkmn.maxhp + 1) / 2
             } else {
                 sub_target_health
             };
-            if active_pkmn.hp > pkmn_health_reduction {
+            if active_pkmn.hp > pkmn_health_reduction
+                && (choice.move_id != Choices::SHEDTAIL || can_switch)
+            {
                 if choice.move_id == Choices::SHEDTAIL {
                     choice.flags.pivot = true;
                 }

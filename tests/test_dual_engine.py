@@ -5460,3 +5460,49 @@ Timid Nature
     assert any(x.startswith("|-fail|p1a: Blissey") for x in states[1]["log"])
     assert any(x.startswith("|-fail|p1a: Blissey") for x in states[2]["log"])
     assert _keys(_full(states, 1, "calmmind", "encore"), "protect", "volatile") == {}
+
+
+# L194 (doc/engine-diff.md): Shed Tail fails without a mon to switch in or at half its HP (rounded
+# up); Soul-Heart's Sp. Atk +1 for a faint; Beak Blast burns a contact attacker before it moves
+def test_l194_shed_tail_fails_without_a_switch():
+    cyclizar = """Cyclizar @ Leftovers
+Ability: Regenerator
+EVs: 252 HP / 4 Def / 252 Spe
+Jolly Nature
+- Shed Tail
+- Rapid Spin
+- Knock Off
+- Draco Meteor"""
+    states = ec.run_showdown(cyclizar, BLISSEY, [("move shedtail", "move calmmind")])
+    assert any(x.startswith("|-fail|p1a: Cyclizar") for x in states[1]["log"])
+    assert _full(states, 0, "shedtail", "calmmind") == {}
+
+
+def test_l194_soul_heart():
+    magearna = """Magearna @ Leftovers
+Ability: Soul-Heart
+EVs: 252 HP / 252 SpA / 4 SpD
+Modest Nature
+- Flash Cannon
+- Fleur Cannon
+- Volt Switch
+- Trick Room"""
+    states = ec.run_showdown(magearna, MAGIKARP_PAWMOT.split("\n\n")[0] + "\n\n" + BLISSEY,
+                             [("move flashcannon", "move splash")])  # fmt: skip
+    assert states[1]["sides"][0]["mons"][0]["boosts"]["spa"] == 1
+    assert _keys(_full(states, 0, "flashcannon", "splash", (1, 2)), "boost") == {}
+
+
+def test_l194_beak_blast_burns_a_contact_attacker():
+    toucannon = """Toucannon @ Leftovers
+Ability: Skill Link
+EVs: 252 HP / 252 Atk / 4 SpD
+Adamant Nature
+- Beak Blast
+- Bullet Seed
+- Knock Off
+- Roost"""
+    gar = GARCHOMP_SD.replace("- Scale Shot", "- Dragon Claw")
+    states = ec.run_showdown(toucannon, gar, [("move beakblast", "move dragonclaw")])
+    assert states[1]["sides"][1]["mons"][0]["status"] == "brn"
+    assert _keys(_full(states, 0, "beakblast", "dragonclaw"), "status") == {}
