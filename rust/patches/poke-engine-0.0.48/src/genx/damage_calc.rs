@@ -789,11 +789,10 @@ fn common_pkmn_damage_calc(
         )
     };
     let mut weather_mod = 1.0;
-    if attacker.ability != Abilities::CLOUDNINE
-        && attacker.ability != Abilities::AIRLOCK
-        && defender.ability != Abilities::CLOUDNINE
-        && defender.ability != Abilities::AIRLOCK
-    {
+    // (L208: not by a fainted holder: State::weather_suppressed)
+    let suppresses =
+        |p: &Pokemon| matches!(p.ability, Abilities::AIRLOCK | Abilities::CLOUDNINE) && p.hp > 0;
+    if !suppresses(attacker) && !suppresses(defender) {
         // alpha-poke patch (2026-10-16, doc/engine-diff.md L24): not against a Utility Umbrella
         // holder in sun / rain (Showdown's onWeatherModifyDamage)
         if !(defender.item == Items::UTILITYUMBRELLA

@@ -6033,3 +6033,46 @@ def test_l207_topsy_turvy_on_the_foe():
     states = ec.run_showdown(malamar, hatterene, [("move swordsdance", "move calmmind"), ("move topsyturvy", "move calmmind")])
     assert states[2]["sides"][1]["mons"][0]["boosts"]["spa"] == 0  # (+1, inverted, then +1)
     assert _keys(_full(states, 1, "topsyturvy", "calmmind"), "boost") == {}
+
+
+# L208 (doc/engine-diff.md): a fainted Air Lock holder suppresses no weather; Soul-Heart for a
+# faint at the end of the turn; a status move misses a semi-invulnerable target; Flame Body on
+# Counter's contact
+def test_l208_air_lock_fainted():
+    blissey = BLISSEY.replace("Ability: Natural Cure", "Ability: Sand Stream")
+    rayquaza = _attacker("Rayquaza", "Air Lock", "Leftovers", "- Memento\n- Dragon Dance\n- Outrage\n- Extreme Speed", "Jolly")
+    states = ec.run_showdown(blissey, rayquaza + "\n\n" + BLISSEY, [("move calmmind", "move memento")])
+    assert any("[from] Sandstorm" in x and "p1a" in x for x in states[1]["log"])
+    assert _keys(_full(states, 0, "calmmind", "memento", (1, 2)), "hp") == {}
+
+
+def test_l208_soul_heart_residual_faint():
+    magearna = _attacker("Magearna", "Soul-Heart", "Leftovers", "- Sandstorm\n- Flash Cannon\n- Protect\n- Calm Mind", "Modest")
+    shedinja = _attacker("Shedinja", "Wonder Guard", "Leftovers", "- Swords Dance\n- Shadow Sneak\n- X-Scissor\n- Protect")
+    states = ec.run_showdown(magearna, shedinja + "\n\n" + BLISSEY, [("move sandstorm", "move swordsdance")])
+    assert states[1]["sides"][0]["mons"][0]["boosts"]["spa"] == 1
+    assert _keys(_full(states, 0, "sandstorm", "swordsdance", (1, 2)), "boost") == {}
+
+
+def test_l208_trick_misses_a_semi_invulnerable_target():
+    blissey = BLISSEY.replace("- Calm Mind", "- Trick")
+    dragapult = _attacker("Dragapult", "Clear Body", "Leftovers", "- Phantom Force\n- Dragon Darts\n- U-turn\n- Protect", "Jolly")
+    states = ec.run_showdown(blissey, dragapult, [("move trick", "move phantomforce")])
+    assert any("|-miss|p1a: Blissey" in x for x in states[1]["log"])
+    assert _keys(_full(states, 0, "trick", "phantomforce"), "item") == {}
+
+
+def test_l208_curse_on_its_user_through_a_semi_invulnerable_foe():
+    snorlax = _attacker("Snorlax", "Thick Fat", "Leftovers", "- Curse\n- Body Slam\n- Rest\n- Protect", "Careful")
+    dragapult = _attacker("Dragapult", "Clear Body", "Leftovers", "- Phantom Force\n- Dragon Darts\n- U-turn\n- Protect", "Jolly")
+    states = ec.run_showdown(snorlax, dragapult, [("move curse", "move phantomforce")])
+    assert states[1]["sides"][0]["mons"][0]["boosts"]["atk"] == 1
+    assert _keys(_full(states, 0, "curse", "phantomforce"), "boost") == {}
+
+
+def test_l208_flame_body_on_counter():
+    snorlax = _attacker("Snorlax", "Thick Fat", "Leftovers", "- Counter\n- Body Slam\n- Rest\n- Curse", "Careful")
+    talonflame = _attacker("Talonflame", "Flame Body", "Heavy-Duty Boots", "- Brave Bird\n- Flare Blitz\n- U-turn\n- Roost", "Jolly")
+    states = ec.run_showdown(snorlax, talonflame, [("move counter", "move bravebird")], force_random=True)
+    assert states[1]["sides"][0]["mons"][0]["status"] == "brn"
+    assert _keys(_full(states, 0, "counter", "bravebird"), "status") == {}

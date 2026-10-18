@@ -1993,13 +1993,7 @@ impl State {
         if self.weather.turns_remaining == 0 {
             return Weather::NONE;
         }
-        let s1_active = self.side_one.get_active_immutable();
-        let s2_active = self.side_two.get_active_immutable();
-        if s1_active.ability == Abilities::AIRLOCK
-            || s1_active.ability == Abilities::CLOUDNINE
-            || s2_active.ability == Abilities::AIRLOCK
-            || s2_active.ability == Abilities::CLOUDNINE
-        {
+        if self.weather_suppressed() {
             Weather::NONE
         } else {
             self.weather.weather_type
@@ -2007,13 +2001,17 @@ impl State {
     }
 
     pub fn weather_is_active(&self, weather: &Weather) -> bool {
-        let s1_active = self.side_one.get_active_immutable();
-        let s2_active = self.side_two.get_active_immutable();
-        &self.weather.weather_type == weather
-            && s1_active.ability != Abilities::AIRLOCK
-            && s1_active.ability != Abilities::CLOUDNINE
-            && s2_active.ability != Abilities::AIRLOCK
-            && s2_active.ability != Abilities::CLOUDNINE
+        &self.weather.weather_type == weather && !self.weather_suppressed()
+    }
+
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L208): an active Air Lock / Cloud Nine
+    // that has not fainted (Showdown's suppressingWeather: !pokemon.fainted); a fainted holder
+    // suppressed it until its replacement came in
+    pub fn weather_suppressed(&self) -> bool {
+        [&self.side_one, &self.side_two].iter().any(|s| {
+            let p = s.get_active_immutable();
+            matches!(p.ability, Abilities::AIRLOCK | Abilities::CLOUDNINE) && p.hp > 0
+        })
     }
 
     fn _state_contains_any_move(&self, moves: &[Choices]) -> bool {

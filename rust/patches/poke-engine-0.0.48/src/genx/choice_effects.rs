@@ -1761,6 +1761,10 @@ pub fn choice_special_effect(
     attacking_side_ref: &SideReference,
     instructions: &mut StateInstructions,
 ) {
+    // (L208: none for a status move that misses a semi-invulnerable target)
+    if super::generate_instructions::misses_semi_invulnerable(state, choice, attacking_side_ref) {
+        return;
+    }
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L207): Minimize +2 / Double Team +1 evasion
     // (the engine's StatBoosts have no evasion: Defog's drop is choice_hazard_clear's); they had
     // none

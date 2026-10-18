@@ -365,6 +365,32 @@ define_enum_with_from_str! {
 }
 
 // https://bulbapedia.bulbagarden.net/wiki/Ignoring_Abilities#Ignorable_Abilities
+// (L208: the status moves whose data target is "Opponent" but that aim at a side or the field --
+// hazards, weather, terrain, the rooms, ...: Prankster's Dark-type immunity and a semi-invulnerable
+// target's do not stop them)
+pub const FIELD_OR_SIDE_MOVES: [Choices; 20] = [
+    Choices::STEALTHROCK,
+    Choices::SPIKES,
+    Choices::TOXICSPIKES,
+    Choices::STICKYWEB,
+    Choices::TRICKROOM,
+    Choices::RAINDANCE,
+    Choices::SUNNYDAY,
+    Choices::SANDSTORM,
+    Choices::SNOWSCAPE,
+    Choices::HAIL,
+    Choices::GRASSYTERRAIN,
+    Choices::ELECTRICTERRAIN,
+    Choices::PSYCHICTERRAIN,
+    Choices::MISTYTERRAIN,
+    Choices::HAZE,
+    Choices::PERISHSONG,
+    Choices::GRAVITY,
+    Choices::MAGICROOM,
+    Choices::WONDERROOM,
+    Choices::COURTCHANGE,
+];
+
 pub fn mold_breaker_ignores(ability: &Abilities) -> bool {
     match ability {
         Abilities::BATTLEARMOR
@@ -2952,29 +2978,7 @@ pub fn ability_modify_attack_being_used(
             // before, any status move failed
             if attacker_choice.category == MoveCategory::Status
                 && attacker_choice.target == MoveTarget::Opponent
-                && ![
-                    Choices::STEALTHROCK,
-                    Choices::SPIKES,
-                    Choices::TOXICSPIKES,
-                    Choices::STICKYWEB,
-                    Choices::TRICKROOM,
-                    Choices::RAINDANCE,
-                    Choices::SUNNYDAY,
-                    Choices::SANDSTORM,
-                    Choices::SNOWSCAPE,
-                    Choices::HAIL,
-                    Choices::GRASSYTERRAIN,
-                    Choices::ELECTRICTERRAIN,
-                    Choices::PSYCHICTERRAIN,
-                    Choices::MISTYTERRAIN,
-                    Choices::HAZE,
-                    Choices::PERISHSONG,
-                    Choices::GRAVITY,
-                    Choices::MAGICROOM,
-                    Choices::WONDERROOM,
-                    Choices::COURTCHANGE,
-                ]
-                .contains(&attacker_choice.move_id)
+                && !FIELD_OR_SIDE_MOVES.contains(&attacker_choice.move_id)
                 && defending_side
                     .get_active_immutable()
                     .has_type(&PokemonType::DARK)

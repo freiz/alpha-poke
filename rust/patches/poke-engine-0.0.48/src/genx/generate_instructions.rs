@@ -2297,6 +2297,31 @@ fn multi_hit_kill(per_hit_rolls: &[[i16; 16]], hp: i32) -> (f32, f32) {
     (kill, mean)
 }
 
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L208): a status move aimed at a
+// semi-invulnerable target misses (Showdown's Invulnerability event: Trick into a Phantom Force;
+// No Guard and a Poison type's Toxic still hit, a side / field move is not aimed at it): no hit
+// (check_move_hit_or_miss), no effect before it (choice_special_effect); the damage calculation
+// has the damaging moves'
+pub fn misses_semi_invulnerable(
+    state: &State,
+    choice: &Choice,
+    attacking_side_ref: &SideReference,
+) -> bool {
+    let target_side = state.get_side_immutable(&attacking_side_ref.get_other_side());
+    let attacker = state
+        .get_side_immutable(attacking_side_ref)
+        .get_active_immutable();
+    choice.category == MoveCategory::Status
+        && choice.target == MoveTarget::Opponent
+        && target_side.semi_invulnerable()
+        && !super::abilities::FIELD_OR_SIDE_MOVES.contains(&choice.move_id)
+        && attacker.ability != Abilities::NOGUARD
+        && target_side.get_active_immutable().ability != Abilities::NOGUARD
+        && !(choice.move_id == Choices::TOXIC && attacker.has_type(&PokemonType::POISON))
+        // (a non-Ghost's Curse aims at its user: Showdown's onModifyMove target "self")
+        && !(choice.move_id == Choices::CURSE && !attacker.has_type(&PokemonType::GHOST))
+}
+
 fn check_move_hit_or_miss(
     state: &mut State,
     choice: &Choice,
@@ -2409,6 +2434,8 @@ fn check_move_hit_or_miss(
             0
         }
     };
+    // (L208: a status move aimed at a semi-invulnerable target)
+    let semi_miss = misses_semi_invulnerable(state, choice, attacking_side_ref);
     // (Showdown truncates the boosted accuracy)
     let boosted = match stage {
         b if b > 0 => (choice.accuracy * (3 + b) as f32 / 3.0).floor(),
@@ -2435,6 +2462,9 @@ fn check_move_hit_or_miss(
     }
     let mut percent_hit = percent_hit.min(1.0);
     if Some((0, 0)) == damage && !disguise_hit {
+        percent_hit = 0.0;
+    }
+    if semi_miss {
         percent_hit = 0.0;
     }
 
@@ -4893,9 +4923,23 @@ pub fn generate_instructions_from_move(
     // calculation only: a miss keeps them)
     let screen_break = screen_break_instructions(state, choice, &attacking_side);
     state.apply_instructions(&screen_break);
-    let damage = match fixed {
-        Some(amount) => Some((amount, amount)),
-        None => calculate_damage(state, &attacking_side, &choice, DamageRolls::Max),
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L208): a Counter / Mirror Coat / Metal
+    // Burst that hit (its damage dealt, choice_special_effect) is a hit with no more damage: its
+    // secondaries go on (the target's Flame Body / Static on its contact); its power of 0 made it a
+    // miss
+    let damage = if choice.returned_hit > 0 {
+        // (its Life Orb recoil was its own: choice_special_effect, L154)
+        if let Some(v) = choice.secondaries.as_mut() {
+            v.retain(|x| {
+                !(x.target == MoveTarget::User && matches!(x.effect, Effect::Heal(h) if h == -0.1))
+            });
+        }
+        None
+    } else {
+        match fixed {
+            Some(amount) => Some((amount, amount)),
+            None => calculate_damage(state, &attacking_side, &choice, DamageRolls::Max),
+        }
     };
     state.reverse_instructions(&screen_break);
     check_move_hit_or_miss(
@@ -6331,6 +6375,11 @@ fn end_of_turn_instructions(
         return;
     }
     unburden_check(state, incoming_instructions);
+    // (L208: the actives alive as the residuals start, for Soul-Heart)
+    let alive = [
+        state.side_one.get_active_immutable().hp > 0,
+        state.side_two.get_active_immutable().hp > 0,
+    ];
 
     let sides = [first_move_side, &first_move_side.get_other_side()];
 
@@ -6392,8 +6441,11 @@ fn end_of_turn_instructions(
                 continue;
             }
 
-            let damage_amount =
-                cmp::min((active_pkmn.maxhp as f32 * 0.0625) as i16, active_pkmn.hp);
+            // (L208: at least 1, Showdown's spreadDamage -- a Shedinja's 1 HP)
+            let damage_amount = cmp::min(
+                cmp::max((active_pkmn.maxhp as f32 * 0.0625) as i16, 1),
+                active_pkmn.hp,
+            );
             let hail_damage_instruction = Instruction::Damage(DamageInstruction {
                 side_ref: *side_ref,
                 damage_amount: damage_amount,
@@ -6415,8 +6467,11 @@ fn end_of_turn_instructions(
             {
                 continue;
             }
-            let damage_amount =
-                cmp::min((active_pkmn.maxhp as f32 * 0.0625) as i16, active_pkmn.hp);
+            // (L208: at least 1, Showdown's spreadDamage -- a Shedinja's 1 HP)
+            let damage_amount = cmp::min(
+                cmp::max((active_pkmn.maxhp as f32 * 0.0625) as i16, 1),
+                active_pkmn.hp,
+            );
             let sand_damage_instruction = Instruction::Damage(DamageInstruction {
                 side_ref: *side_ref,
                 damage_amount: damage_amount,
@@ -6652,8 +6707,9 @@ fn end_of_turn_instructions(
                 if active_pkmn.hp == 0 || !grounded || heal_blocked {
                     continue;
                 }
+                // (L208: at least 1, Showdown's heal)
                 let heal_amount = cmp::min(
-                    (active_pkmn.maxhp as f32 * 0.0625) as i16,
+                    cmp::max((active_pkmn.maxhp as f32 * 0.0625) as i16, 1),
                     active_pkmn.maxhp - active_pkmn.hp,
                 );
                 if heal_amount > 0 {
@@ -6757,7 +6813,11 @@ fn end_of_turn_instructions(
                 continue;
             }
 
-            let health_sapped = cmp::min((active_pkmn.maxhp as f32 * 0.125) as i16, active_pkmn.hp);
+            // (L208: at least 1)
+            let health_sapped = cmp::min(
+                cmp::max((active_pkmn.maxhp as f32 * 0.125) as i16, 1),
+                active_pkmn.hp,
+            );
             let damage_ins = Instruction::Damage(DamageInstruction {
                 side_ref: *side_ref,
                 damage_amount: health_sapped,
@@ -7495,6 +7555,28 @@ fn end_of_turn_instructions(
 
     // (L147: Showdown's Update after the residual action: Sitrus after the poison, a berry Heal
     // Block kept, a lock's fatigue cured by a Lum)
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L208): Soul-Heart's Sp. Atk +1 for a foe the
+    // residuals knocked out (Showdown's onAnyFaint: the burn, the poison, the weather, ...); was for
+    // a knockout by its hit or the hazards only
+    for (k, side_ref) in [SideReference::SideOne, SideReference::SideTwo].iter().enumerate() {
+        let foe_ref = side_ref.get_other_side();
+        let foe_fainted = alive[1 - k] && state.get_side_immutable(&foe_ref).get_active_immutable().hp == 0;
+        let side = state.get_side(side_ref);
+        let me = side.get_active_immutable();
+        if foe_fainted
+            && me.hp > 0
+            && matches!(me.ability, Abilities::SOULHEART)
+        {
+            apply_boost_instruction(
+                side,
+                &PokemonBoostableStat::SpecialAttack,
+                &1,
+                side_ref,
+                side_ref,
+                incoming_instructions,
+            );
+        }
+    }
     update_with(state, incoming_instructions, 1);
     foe_raise_copies(state, incoming_instructions, end_of_turn_from);
 
