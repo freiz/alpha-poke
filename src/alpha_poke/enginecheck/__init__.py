@@ -688,6 +688,11 @@ def extra_diff(showdown_after: dict, out, n_mons=(6, 6), hp: bool = True,
             s = (start or {}).get("sides", [{}, {}])[i] if start else None
             had = s is not None and s.get("active", -1) >= 0 and x in s["mons"][s["active"]]["volatiles"] \
                 and s["active"] == showdown_after["sides"][i]["active"]
+            # (L205: one that ended and started again in the turn -- a confusion run out, then a
+            # lock's fatigue -- drew a new length)
+            tag = f"|-start|p{i + 1}a: "
+            if any(line.startswith(tag) and f"|{x}" in line for line in showdown_after.get("log", [])):
+                had = False
             if not had:
                 v.pop(f"{k}.count.{x}", None)
                 target.pop(f"{k}.count.{x}", None)

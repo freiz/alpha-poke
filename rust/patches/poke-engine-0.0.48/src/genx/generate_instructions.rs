@@ -2031,7 +2031,12 @@ fn lock_end_instructions(
             }
         }
     }
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L205): not through Own Tempo or a grounded
+    // user's Misty Terrain (Showdown's onTryAddVolatile)
+    let misty = state.terrain_is_active(&Terrain::MISTYTERRAIN) && side.active_grounded();
     if confuse
+        && effective_ability(state, side_ref) != Abilities::OWNTEMPO
+        && !misty
         && !side
             .volatile_statuses
             .contains(&PokemonVolatileStatus::CONFUSION)
@@ -6076,6 +6081,19 @@ fn end_of_turn_with_harvest(
                 })
                 .collect();
         }
+        if lock_length_drawn(state, side_ref) {
+            branches = branches
+                .into_iter()
+                .flat_map(|(r, q)| {
+                    let mut short = r;
+                    short.short_lock[k] = true;
+                    [
+                        (short, q * LOCK_SHORT_CHANCE),
+                        (r, q * (1.0 - LOCK_SHORT_CHANCE)),
+                    ]
+                })
+                .collect();
+        }
     }
     let mut out = vec![];
     let (last, rest) = branches.split_last().unwrap();
@@ -6092,6 +6110,67 @@ fn end_of_turn_with_harvest(
     out
 }
 
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L205): a locking move's end of the turn
+// (Showdown's lockedmove residual): a lock its user did not move in this turn runs out (its
+// duration first: confused on its drawn last turn only, a count of 2), an asleep user's goes
+// unconfused (onResidual); else its count goes on, on the first turn by the drawn length
+// (`short`: 2 uses, to a count of 2; Showdown's trueDuration random(2, 4)), the last use ending it
+// after the move (after_move_finish). L153 was: confused however it ran out, always 3 uses, ended
+// at the end of the turn, asleep before Yawn's sleep
+fn lock_end_of_turn(
+    state: &mut State,
+    side_ref: &SideReference,
+    short: bool,
+    instructions: &mut StateInstructions,
+) {
+    let side = state.get_side_immutable(side_ref);
+    if !side
+        .volatile_statuses
+        .contains(&PokemonVolatileStatus::LOCKEDMOVE)
+    {
+        return;
+    }
+    let acted = instructions
+        .instruction_list
+        .iter()
+        .any(|i| matches!(i, Instruction::Acted(x) if x == side_ref));
+    let asleep = side.get_active_immutable().status == PokemonStatus::SLEEP;
+    let count = side.volatile_status_durations.lockedmove;
+    if !acted || asleep || count >= 2 {
+        // (lock_end_instructions confuses at a count of 2)
+        let confuse = acted && !asleep;
+        for ins in lock_end_instructions(state, side_ref, confuse) {
+            state.apply_one_instruction(&ins);
+            instructions.instruction_list.push(ins);
+        }
+        return;
+    }
+    let amount = if count == 0 && short { 2 } else { 1 };
+    let ins = Instruction::ChangeVolatileStatusDuration(ChangeVolatileStatusDurationInstruction {
+        side_ref: *side_ref,
+        volatile_status: PokemonVolatileStatus::LOCKEDMOVE,
+        amount,
+    });
+    state.apply_one_instruction(&ins);
+    instructions.instruction_list.push(ins);
+}
+
+// (L205: a lock used for the first time this turn: its length is drawn at its end)
+fn lock_length_drawn(state: &State, side_ref: &SideReference) -> bool {
+    if state.side_one.force_switch || state.side_two.force_switch {
+        return false;
+    }
+    let side = state.get_side_immutable(side_ref);
+    let p = side.get_active_immutable();
+    side.volatile_statuses
+        .contains(&PokemonVolatileStatus::LOCKEDMOVE)
+        && side.volatile_status_durations.lockedmove == 0
+        && p.hp > 0
+        && p.status != PokemonStatus::SLEEP
+}
+
+pub const LOCK_SHORT_CHANCE: f32 = 0.5;
+
 // alpha-poke patch (2026-10-17, doc/engine-diff.md L191): the end of the turn's chance events, a
 // branch each: Future Sight's crit (L168: the side whose hit crits), Shed Skin's cure (Showdown's
 // onResidual, randomChance(33, 100); was every time) by side
@@ -6099,6 +6178,8 @@ fn end_of_turn_with_harvest(
 pub struct EotRolls {
     pub fs_crit: Option<SideReference>,
     pub shed_skin: [bool; 2],
+    // (L205: the lock used for the first time lasts 2 uses, by side)
+    pub short_lock: [bool; 2],
 }
 
 pub const SHED_SKIN_CHANCE: f32 = 0.33;
@@ -6859,101 +6940,6 @@ fn end_of_turn_instructions(
             }
         }
 
-        // alpha-poke patch (2026-10-17, doc/engine-diff.md L153): a lock its user did not move in
-        // this turn (fully paralyzed, ...) ends at the turn's end, with the confusion (Showdown's
-        // lockedmove: only a use renews it), an asleep user's without (onResidual)
-        let acted = incoming_instructions
-            .instruction_list
-            .iter()
-            .any(|i| matches!(i, Instruction::Acted(x) if x == side_ref));
-        let asleep = side.get_active_immutable().status == PokemonStatus::SLEEP;
-        if side
-            .volatile_statuses
-            .contains(&PokemonVolatileStatus::LOCKEDMOVE)
-        {
-            // the number says 2 but this is 3 turns of using a locking move
-            // because turn 0 is the first turn the move is used
-            // branching is not implemented here so the engine assumes it always lasts 3 turns
-            if side.volatile_status_durations.lockedmove == 2 || !acted || asleep {
-                let confuse = !asleep;
-                let count = side.volatile_status_durations.lockedmove;
-                side.volatile_status_durations.lockedmove = 0;
-                side.volatile_statuses
-                    .remove(&PokemonVolatileStatus::LOCKEDMOVE);
-                if count != 0 {
-                    incoming_instructions.instruction_list.push(
-                        Instruction::ChangeVolatileStatusDuration(
-                            ChangeVolatileStatusDurationInstruction {
-                                side_ref: *side_ref,
-                                volatile_status: PokemonVolatileStatus::LOCKEDMOVE,
-                                amount: -count,
-                            },
-                        ),
-                    );
-                }
-                incoming_instructions
-                    .instruction_list
-                    .push(Instruction::RemoveVolatileStatus(
-                        RemoveVolatileStatusInstruction {
-                            side_ref: *side_ref,
-                            volatile_status: PokemonVolatileStatus::LOCKEDMOVE,
-                        },
-                    ));
-                // (L143 / L147: a Lum / Persim Berry cures it at the end of the turn's Update)
-                if confuse
-                    && !side
-                        .volatile_statuses
-                        .contains(&PokemonVolatileStatus::CONFUSION)
-                {
-                    incoming_instructions
-                        .instruction_list
-                        .push(Instruction::ApplyVolatileStatus(
-                            ApplyVolatileStatusInstruction {
-                                side_ref: *side_ref,
-                                volatile_status: PokemonVolatileStatus::CONFUSION,
-                            },
-                        ));
-                    side.volatile_statuses
-                        .insert(PokemonVolatileStatus::CONFUSION);
-                }
-                // alpha-poke patch (2026-10-16, L23): the other moves can be used again (a choice
-                // item keeps them locked)
-                let active = side.get_active();
-                if !matches!(
-                    active.item,
-                    Items::CHOICEBAND | Items::CHOICESPECS | Items::CHOICESCARF
-                ) {
-                    for move_index in [
-                        PokemonMoveIndex::M0,
-                        PokemonMoveIndex::M1,
-                        PokemonMoveIndex::M2,
-                        PokemonMoveIndex::M3,
-                    ] {
-                        if active.moves[&move_index].disabled {
-                            active.moves[&move_index].disabled = false;
-                            incoming_instructions
-                                .instruction_list
-                                .push(Instruction::EnableMove(EnableMoveInstruction {
-                                    side_ref: *side_ref,
-                                    move_index,
-                                }));
-                        }
-                    }
-                }
-            } else {
-                side.volatile_status_durations.lockedmove += 1;
-                incoming_instructions.instruction_list.push(
-                    Instruction::ChangeVolatileStatusDuration(
-                        ChangeVolatileStatusDurationInstruction {
-                            side_ref: *side_ref,
-                            volatile_status: PokemonVolatileStatus::LOCKEDMOVE,
-                            amount: 1,
-                        },
-                    ),
-                );
-            }
-        }
-
         // alpha-poke patch (2026-10-16, doc/engine-diff.md L89 / L90): Encore's and Taunt's ends of
         // turn; at 3 they end
         #[cfg(not(feature = "gen4"))]
@@ -7392,6 +7378,10 @@ fn end_of_turn_instructions(
                 ));
             side.side_conditions.protect -= side.side_conditions.protect;
         }
+
+        // (L205: the lock's residual, the last: after Yawn's sleep)
+        let short = rolls.short_lock[matches!(side_ref, SideReference::SideTwo) as usize];
+        lock_end_of_turn(state, side_ref, short, incoming_instructions);
     } // end volatile statuses
 
     // (L147: Showdown's Update after the residual action: Sitrus after the poison, a berry Heal
@@ -8620,6 +8610,28 @@ fn after_move_finish(
                             old_status: PokemonStatus::BURN,
                             new_status: PokemonStatus::NONE,
                         }));
+                }
+            }
+        }
+
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L205): a locking move's last use (its
+        // drawn length: a count of 2) ends the lock as the move ends, with the confusion
+        // (Showdown's onAfterMove: before the foe's move and a pivot's decision); was at the end
+        // of the turn
+        for side_ref in [SideReference::SideOne, SideReference::SideTwo] {
+            let side = state.get_side_immutable(&side_ref);
+            if side
+                .volatile_statuses
+                .contains(&PokemonVolatileStatus::LOCKEDMOVE)
+                && side.volatile_status_durations.lockedmove >= 2
+                && side.get_active_immutable().hp > 0
+                && state_instructions.instruction_list[from..]
+                    .iter()
+                    .any(|i| matches!(i, Instruction::Acted(x) if *x == side_ref))
+            {
+                for ins in lock_end_instructions(state, &side_ref, true) {
+                    state.apply_one_instruction(&ins);
+                    state_instructions.instruction_list.push(ins);
                 }
             }
         }

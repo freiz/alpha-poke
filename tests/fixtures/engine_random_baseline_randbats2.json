@@ -6,9 +6,6 @@
 "seed_offset": 70000
 },
 "mismatches": {
-"b10-t20": [
-"volatile.confusion"
-],
 "b177-t49": [
 "hp"
 ],
@@ -73,16 +70,6 @@
 "terastallized",
 "types",
 "weight"
-],
-"b25-t30": [
-"count.lockedmove",
-"volatile.confusion",
-"volatile.lockedmove"
-],
-"b76-t2": [
-"count.lockedmove",
-"options",
-"volatile.lockedmove"
 ]
 }
 }

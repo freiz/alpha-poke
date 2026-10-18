@@ -6,9 +6,6 @@
 "seed_offset": 10000
 },
 "mismatches": {
-"b0-t14": [
-"count.confusion"
-],
 "b1-t26": [
 "ability",
 "attack",

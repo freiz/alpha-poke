@@ -5855,3 +5855,53 @@ def test_l204_cud_chew_residual_berry():
     c2 = ("seismictoss", "protect")[k > 1]
     assert _keys(_full(states, k, "bulkup", c2), "hp", "item", "cudchew") == {}
     assert _keys(_full(states, k + 1, "bulkup", "protect"), "hp", "item", "cudchew") == {}
+
+
+# L205 (doc/engine-diff.md): a locking move (Outrage) as Showdown's lockedmove -- 2 or 3 uses
+# (trueDuration random(2, 4)), the last use ending it after the move with the confusion
+# (onAfterMove), an interrupted lock confusing on its drawn last turn only, an asleep user's lock
+# going after Yawn's sleep (its residual is the last), the fatigue's confusion stopped by Own Tempo
+SALAMENCE_OUTRAGE = _attacker("Salamence", "Intimidate", "Leftovers", "- Outrage\n- Roost\n- Protect\n- Earthquake")
+SLOWKING_YAWN = _attacker("Slowking", "Oblivious", "Leftovers", "- Yawn\n- Slack Off\n- Protect\n- Fake Out", "Bold")
+SEED_TWO_USES = "gen5,1234,5678,910,1112"  # (the default seed draws 3)
+
+
+def test_l205_lock_ends_after_its_last_use():
+    states = ec.run_showdown(SALAMENCE_OUTRAGE, CORVIKNIGHT + "\n\n" + BLISSEY,
+                             [("move outrage", "move roost"), ("move outrage", "move uturn")], seed=SEED_TWO_USES)  # fmt: skip
+    assert any("[fatigue]" in x for x in states[2]["log"]) and states[2]["sides"][1]["request"] == "switch"
+    assert _keys(_full(states, 1, "outrage", "uturn", (1, 2)), "lockedmove", "confusion") == {}
+
+
+def test_l205_lock_length_drawn():
+    states = ec.run_showdown(SALAMENCE_OUTRAGE, CORVIKNIGHT, [("move outrage", "move roost")])
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "outrage", "roost")
+    counts = {}
+    for o in outs:
+        n = o[1].side_one.volatile_status_durations.lockedmove
+        counts[n] = counts.get(n, 0) + o[0]
+    assert set(counts) == {1, 2} and abs(counts[1] - counts[2]) < 1e-6
+
+
+def test_l205_lock_asleep_after_yawn():
+    corviknight = CORVIKNIGHT.replace("- Defog", "- Yawn")
+    states = ec.run_showdown(SALAMENCE_OUTRAGE, corviknight, [("move outrage", "move yawn"), ("move outrage", "move roost")])
+    assert states[2]["sides"][0]["mons"][0]["status"] == "slp"
+    assert _keys(_full(states, 1, "outrage", "roost"), "lockedmove", "confusion", "status") == {}
+
+
+@pytest.mark.parametrize("seed, confused", [(None, False), (SEED_TWO_USES, True)])
+def test_l205_lock_interrupted(seed, confused):
+    states = ec.run_showdown(SALAMENCE_OUTRAGE, BLISSEY + "\n\n" + SLOWKING_YAWN,
+                             [("move outrage", "switch 2"), ("move outrage", "move fakeout")],
+                             **({"seed": seed} if seed else {}))  # fmt: skip
+    assert any("flinch" in x for x in states[2]["log"])
+    assert ("confusion" in states[2]["sides"][0]["mons"][0]["volatiles"]) == confused
+    assert _keys(_full(states, 1, "outrage", "fakeout"), "lockedmove", "confusion") == {}
+
+
+def test_l205_fatigue_through_own_tempo():
+    sala = SALAMENCE_OUTRAGE.replace("Ability: Intimidate", "Ability: Own Tempo")
+    states = ec.run_showdown(sala, CORVIKNIGHT, [("move outrage", "move roost")] * 2, seed=SEED_TWO_USES)
+    assert "lockedmove" not in states[2]["sides"][0]["mons"][0]["volatiles"]
+    assert _keys(_full(states, 1, "outrage", "roost"), "lockedmove", "confusion") == {}
