@@ -4011,11 +4011,15 @@ pub fn generate_instructions_from_move(
         match side.last_used_move {
             LastUsedMove::Move(last_used_move) => {
                 if choice.move_index != last_used_move {
+                    // alpha-poke patch (2026-10-17, doc/engine-diff.md L193): the turn's order kept
+                    // (an encored Protect as the turn's last action fails: L180's check)
+                    let first_move = choice.first_move;
                     *choice = MOVES
                         .get(&side.get_active_immutable().moves[&last_used_move].id)
                         .unwrap()
                         .clone();
                     choice.move_index = last_used_move;
+                    choice.first_move = first_move;
                 }
             }
             _ => panic!("Encore should not be active when last used move is not a move"),

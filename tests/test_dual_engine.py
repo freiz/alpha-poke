@@ -5427,3 +5427,36 @@ Timid Nature
                                                  ("move transform", "move swordsdance")])  # fmt: skip
     assert "none" in ec.showdown_options(states[2]["sides"][1])
     assert _keys(_full(states, 1, "transform", "swordsdance"), "options") == {}
+
+
+# L193 (doc/engine-diff.md): a drop an ability causes goes back off Mirror Armor (Gooey); an encored
+# move keeps the turn's order (an encored Protect as the last action fails)
+def test_l193_mirror_armor_reflects_gooey():
+    goodra = """Goodra @ Leftovers
+Ability: Gooey
+EVs: 252 HP / 4 Def / 252 SpD
+Calm Nature
+- Draco Meteor
+- Fire Blast
+- Thunderbolt
+- Sludge Bomb"""
+    corv = CORVIKNIGHT.replace("Ability: Pressure", "Ability: Mirror Armor")
+    states = ec.run_showdown(corv, goodra, [("move bravebird", "move thunderbolt")])
+    assert states[1]["sides"][1]["mons"][0]["boosts"]["spe"] == -1
+    assert _keys(_full(states, 0, "bravebird", "thunderbolt"), "boost") == {}
+
+
+def test_l193_encored_protect_last_fails():
+    valiant = """Iron Valiant @ Leftovers
+Ability: Quark Drive
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Calm Mind
+- Moonblast
+- Protect
+- Encore"""
+    # (its first Protect fails as the last action: no count, Protect its last move)
+    states = ec.run_showdown(BLISSEY, valiant, [("move protect", "move protect"), ("move calmmind", "move encore")])
+    assert any(x.startswith("|-fail|p1a: Blissey") for x in states[1]["log"])
+    assert any(x.startswith("|-fail|p1a: Blissey") for x in states[2]["log"])
+    assert _keys(_full(states, 1, "calmmind", "encore"), "protect", "volatile") == {}

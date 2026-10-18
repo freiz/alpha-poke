@@ -1152,6 +1152,31 @@ pub fn meloetta_forme(
     }
 }
 
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L193): a drop the other mon's ability causes
+// (Gooey, Tangling Hair, Cotton Down) with Showdown's Mirror Armor onTryBoost: the target's Mirror
+// Armor sends it back to the source (if that one is still in; a stat at -6 stays); otherwise
+// apply_boost_instruction
+fn foe_drop(
+    target: &mut Side,
+    target_ref: &SideReference,
+    source: &mut Side,
+    source_ref: &SideReference,
+    stat: &PokemonBoostableStat,
+    amount: i8,
+    instructions: &mut StateInstructions,
+) -> bool {
+    if amount < 0
+        && target.get_active_immutable().ability == Abilities::MIRRORARMOR
+        && target.get_boost_from_boost_enum(stat) > -6
+    {
+        if source.get_active_immutable().hp > 0 {
+            apply_boost_instruction(source, stat, &amount, target_ref, source_ref, instructions);
+        }
+        return false;
+    }
+    apply_boost_instruction(target, stat, &amount, source_ref, target_ref, instructions)
+}
+
 pub fn ability_damaging_hit(
     state: &mut State,
     choice: &mut Choice,
@@ -1234,13 +1259,15 @@ pub fn ability_damaging_hit(
                 effect: Effect::VolatileStatus(PokemonVolatileStatus::ATTRACT),
             });
         }
+        // (L193: a Mirror Armor attacker sends it back: foe_drop)
         Abilities::GOOEY | Abilities::TANGLINGHAIR if choice.flags.contact => {
-            apply_boost_instruction(
+            foe_drop(
                 attacking_side,
-                &PokemonBoostableStat::Speed,
-                &-1,
-                &holder,
                 side_ref,
+                defending_side,
+                &holder,
+                &PokemonBoostableStat::Speed,
+                -1,
                 instructions,
             );
         }
@@ -1412,12 +1439,13 @@ pub fn ability_damaging_hit(
         }
         Abilities::COTTONDOWN => {
             if damage_dealt > 0 {
-                apply_boost_instruction(
+                foe_drop(
                     attacking_side,
-                    &PokemonBoostableStat::Speed,
-                    &-1,
-                    &side_ref.get_other_side(),
                     side_ref,
+                    defending_side,
+                    &side_ref.get_other_side(),
+                    &PokemonBoostableStat::Speed,
+                    -1,
                     instructions,
                 );
             }
