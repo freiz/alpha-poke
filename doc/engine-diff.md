@@ -1,136 +1,108 @@
 # poke-engine 与 Showdown 的差分实验
 
-## 目的
+搜索用 poke-engine（Rust，`rust/patches/poke-engine-0.0.48`，我们打了补丁）当转移模型，对局的裁判是 Showdown 的模拟器（`vendor/pokemon-showdown`）。两者只要有一处不一致，搜索就是在错误的模型上做决策。这项工作的目标：在完全信息下，让引擎对每一回合的预测和 Showdown 的实际结果逐项一致。
 
-搜索用 poke-engine（Rust，速度快、能枚举随机结果、能撤销）作为转移模型；对局由 Showdown 的模拟器（TypeScript，`vendor/pokemon-showdown`）裁决，对我们来说它就是标准答案。两者不一致的地方，会让搜索在错误的模型上做决策；我们自己构造局面（`agents/engine_state.py`、`timers.py`）的遗漏，会让搜索从错误的起点出发。自对弈每代提升变小（2026-10-16），这是要排查的原因之一。
+## 结论（2026-10-18）
 
-差分实验的目标：系统地找出"引擎预测"和"Showdown 实际结果"不一致的地方，按出现频率和影响排序，逐个确认、修复。
+- **完全一致**：71 个随机对战差分数据集，共 **3,459,513** 个可比回合（包括停在决策点的回合），引擎的分支里总有一个和 Showdown 的下一状态完全一致，**不一致数为 0**。每个数据集的基线都是空的，以后出现的任何不一致都会被直接标为新增。
+- 前后修了 228 条（L1–L228，见附录问题表）。引擎改动在 `rust/patches/poke-engine-0.0.48`，每处都有注释 `alpha-poke patch (日期, doc/engine-diff.md Lx)`，指回附录里的条目。
+- 测试：`tests/test_dual_engine.py` 有 1,028 个用例（446 个测试函数）；全部测试 1,180 个；poke-engine 自带测试 229 个。
+- 还没做的见文末“已知限制”。
+
+### 一致率历程
+
+| 日期 | 阶段 | 数据 | 一致率 |
+|---|---|---|---|
+| 10-16 | 自对弈记录差分，第一版判定标准 | 第 8 代 3,000 局，46,654 回合 | 75.6% |
+| 10-16 | 修正判定方法（L4–L6），修复 L1–L9 | 第 8 代，42,611 回合 | 86.1% → 88.3% |
+| 10-16 | 第二轮修复（L11–L19） | 新打的 600 局（gen901） | 93.4% |
+| 10-16 | 改用完全信息随机对战差分（L20 起）；harness 补齐 | 300 局 | 91.2% → 94.9% |
+| 10-16 | 伤害公式改成 Showdown 的整数流水线（L30–L35） | 伤害探针逐点 / 随机差分 | 76.2% → 99.9% / 97.0% |
+| 10-16 | L36–L70；验证集从 1 个扩到 8 个 | 7,046 回合 | 99.3% |
+| 10-17 | L177：比较扩大到玩家能看到的一切（PP、可选招式、上一招、道具……）和停在决策点的回合；L199–L212：用日志里的掷骰提示对齐伤害 | 8 个数据集 | 99.93% → 99.976% |
+| 10-18 | L213–L224：剩下的难例，所有基线清空 | 29 个数据集，29.2 万回合 | **100%** |
+| 10-18 | L225–L226：新增 randbats22–33 | 41 个数据集 | 100% |
+| 10-18 | L227：百万回合（big0–big9）首轮 99.9845%（157 处） | 51 个数据集，143 万回合 | 100% |
+| 10-18 | L228：两百万回合（big10–big29）首轮 99.9966%（69 处），回归又抓到 425 处本轮改动引入的问题 | 71 个数据集，346 万回合 | **100%** |
 
 ## 方法
 
-### 0. 完全信息随机对战差分（主方法，2026-10-16 起）
+### 主方法：完全信息随机对战差分（脚本注释里的“method 0”）
 
-脚本：`scripts/check_engine_random.py`（runner `enginecheck/random_battle.js`）。在 Showdown 的模拟器里用真实 OU 队伍（自对弈的队伍对）对战，双方从合法选项里随机出招（换人约 15%、太晶化约 10%），每个决策点导出模拟器内部的完整真实状态。每个"本回合开始 → 下回合开始、中间没有其它决策"的回合：用 Showdown 自己的数值构造引擎局面（`engine_state`），引擎对同一对选择的全部分支和下一回合的真实状态比较（`closest(hp=True)`）。
+- **怎么比**：`scripts/check_engine_random.py`（runner `enginecheck/random_battle.js`）在 Showdown 模拟器里用固定的队伍对和固定种子对战，双方从合法选项里随机出招。每个决策点导出模拟器内部的完整状态。对每一回合，用 Showdown 自己算出的数值构造引擎局面（`enginecheck.engine_state`），把引擎对同一对选择的全部分支和 Showdown 的下一状态比较（`closest(hp=True, full=True)`）。比较的范围是玩家能看到的一切：HP、异常、能力等级、易变状态、场地 / 天气 / 墙 / 钉子、道具和 last_item、PP、上一招、可选招式、太晶状态、times_attacked 等。
+- **随机性不算不一致**：命中、要害、追加效果、速度相同时的先后，引擎都会枚举成分支，有一个分支对上即可。伤害用 harness 从日志读出的提示对齐（`damage_hints` / `roll_hints` / `move_hints`：单击伤害、连续攻击每一击、替身分摊 / 打破、要害 +16384、击倒 +8192）。引擎只在提示正好是它自己的 16 档掷骰之一时才采用，搜索从不设置提示。
+- **确定性与基线**：对局完全确定，所以每个局面有稳定的编号 `b<场>-t<回合>`。每个数据集都有基线 `tests/fixtures/engine_random_baseline_<集合>.json`，每次修复后各集合的不一致都必须是基线的子集，出现基线外的（编号, 类别）就算回归，脚本以失败退出。确认是子集之后，才用 `--update-baseline --from-report` 更新基线（不重跑对局）。
+- **数据集**：
+  - 常规 41 个，`scripts/check_engine_random_sets.sh`：main、seed10k、offmeta、random、wide、wide2、wide200、forum（OU 队伍池），randbats、randbats2–33（`scripts/randbats_teams.py` 生成的随机对战队伍）。
+  - 大数据集 30 个，`scripts/check_engine_random_big.sh`：big0–big29，每个 2900 对。队伍用固定种子生成在 `data/teams/big/`，不提交；用 `BIG_SETS="..."` 可以只跑其中几个。
+- **局面构造另测**：我们自己的 `build_state`（从玩家收到的协议还原局面）不在这个差分里。它单独测：同一场对战，把玩家实际收到的协议喂给它，再和真实状态比较。
 
-为什么是主方法（用户 2026-10-16 指出）：自对弈记录的差分（下面第 1 节）是两个玩家视角的拼接，场地字段取自一方的视角，对方设置的天气 / 场地的剩余回合是按信念猜的；记录的局面又是当时代码构造的，旧数据带着旧的构造问题。差分要比的是完全信息，不能带任何推测。随机对战的状态直接来自模拟器，没有视角、没有信念；随机出招还覆盖了 bot 很少用的招式和情形。局面构造（`build_state`）单独测：同一场对战里把玩家实际收到的协议和请求喂给它，和真实状态比较（完全信息测试）。
+### 确认：双引擎单元测试
 
-harness 必须把 Showdown 的状态完整映射到引擎，否则不一致来自 harness 而不是引擎。第一次跑（300 场，91.2%）暴露的 harness 缺口：上一次使用的招式（Encore、Fake Out 需要；缺了引擎 panic）、挑衅 / 再来一次 / 哈欠 / 混乱 / 睡眠 / Rest 的计数（Showdown 倒数剩余，引擎正数已过：挑衅 / 再来一次 3 − D，哈欠 2 − D，混乱 5 − time，睡眠 startTime − time，Rest 剩余 time）、守住的连续次数（Showdown stall 计数 3^n）、属性变化（Showdown 不留持续状态，只改属性；比较时统一成"当前属性不同于原属性"）、引擎不认识的道具（按 unknownitem 比较，缺哪些由数据测试列出）、Struggle（引擎没有这个选择，不比较）。补齐后 93.3%。
+差分只给线索，结论必须来自 `tests/test_dual_engine.py`。每个问题先写测试，在旧引擎上确认失败，修好后转为回归测试。测试有三种写法：
 
-**每次修复只能是真子集（用户 2026-10-16 要求）**：对局是确定性的（固定的 300 对队伍 `tests/fixtures/random_battle_teams.jsonl`、固定的模拟器种子和出招种子，出招不依赖引擎），所以局面有稳定的编号 `b<场>-t<回合>`。每个不一致记为（编号, 类别），全部存在基线 `tests/fixtures/engine_random_baseline.json`。每次修复后重跑：新的集合必须是基线的子集，出现基线里没有的（编号, 类别）就是 regression，脚本列出编号、差异和那一回合的日志，以失败退出；通过了才用 `--update-baseline` 更新基线（只在是子集时才写；有意的变化，例如 harness 补齐后暴露出更多，要加 `--force` 并在本文档说明）。第一份基线（2026-10-16，L20–L23 之后）：533 个，一致率 93.5%；连跑两次新增 0、修复 0（确定性）。
+- 用 `run_showdown` 构造具体场景，两边各跑一遍；
+- 直接复现差分里的局面：`_random_position` / `_big_position`，大数据集的队伍对存在 `tests/fixtures/random_battle_pairs_big_l22x.jsonl`；
+- 用 `alpha_search.damage_rolls` 断言 Showdown 的伤害正好是引擎 16 档掷骰中的一档。
 
-方法 / harness 的修正（2026-10-16 晚，504 → 419，新增 0，94.9%）：HP 容差的伤害之和只算正的伤害（Pain Split 用"负伤害"表示回复，原来使容差变负，两边相等也判不一致）；吸取 / 反伤招式、Shell Bell 持有者的 HP 跟着它造成的伤害走，容差加上对方伤害的 8.5% × 3/4；Wish 映射到引擎（新版 Showdown 用 startingTurn：在 startingTurn + 2 回合的回合末回复，引擎在计数为 1 的回合末回复；回复量是未取整的 maxhp / 2）。
+对照测试保证框架本身判断正确。
 
-**验证集（用户 2026-10-16 要求：多起几批新的随机对局验证，不能只对着这 300 场修）**：`scripts/check_engine_random_sets.sh` 跑主集合和四个验证集，各有自己的基线（`tests/fixtures/engine_random_baseline_<集合>.json`），每次修复后五个都必须是子集：`seed10k`（同样的 300 对队伍，种子偏移 10000：`--seed-offset`）、`offmeta`（偏门池 200 对）、`random`（随机池 200 对）、`wide`（天梯池 wide1000 的第 300–599 对）；队伍对在 `tests/fixtures/random_battle_teams_<集合>.jsonl`。L82 之后又加了三个（用户要求多起几批）：`wide2`（wide1000 的第 600–899 对，种子偏移 30000）、`wide200`（wide200 池的第 0–199 对，偏移 40000）、`forum`（论坛精选的 162 支队伍随机配 200 对，偏移 50000）；第一次跑 98.4% / 98.7% / 98.5%（139 / 78 / 111 处），之后每次修复八个集合都必须是子集。2026-10-17 起比较扩大到停在决策点的回合（击倒后的替换、换人招式的换人；原来跳过，约占四成回合）：从回合开始到决策点，引擎也停在那里；倒下的在场宝可梦的能力变化 / volatile 不比较（Showdown 倒下时清掉，引擎在替换时）；倒下的宝可梦的道具也不比较（之后再无作用；Showdown 不让倒下的持有者用掉道具：Weakness Policy、被击倒时的 Knock Off）。基线因此一次性 `--force` 更新（新增的全是决策点回合，普通回合没有新增；wide200 b68-t24 原来就在基线里，只是换了一个最接近的结果）。扩大后八个集合 98.5–99.5%（每个集合约 7,000–10,700 个回合）。第一次跑（L57 之后，主集合 99.2%）：98.6% / 97.6% / 98.3% / 98.5%，比主集合低，说明有主集合没覆盖到的机制（Cursed Body、Magic Bounce、Beat Up、Metronome、Stockpile 等）。
+### 辅助
 
-另外两点：binding 的 panic 是 BaseException，必须接住；多进程要用 spawn（fork 出来的 worker 会继承扩展模块线程持有的锁而死锁）。
+- **伤害公式差分**：`scripts/check_damage_calc.py`，在每个回合开始，用 Showdown 的 `getDamage` 和引擎逐招比较最高档伤害。
+- **数据表测试**：`tests/test_engine_data.py`，比较招式、宝可梦、道具的数据表。
+- **早期方法（已停用）**：自对弈记录差分（`scripts/check_engine_diff.py` / `explain_engine_diff.py`）。它把双方视角拼在一起，对方的天气剩余回合等只能靠猜，局面又是当时的代码构造的。比的不是完全信息，结果里混着引擎、局面构造和方法三种来源的问题。
 
-### 1. 差分统计（找线索）
+### 流程（每一条都这样做）
 
-脚本：`scripts/check_engine_diff.py`。
+1. 从差分里找到局面，读 Showdown 的 `sim/` 和 `data/` 源码，弄清机制。
+2. 写双引擎测试，在旧引擎上确认失败（`git stash push rust src/alpha_poke`，touch 后跑测试，再 `git stash pop`，再 touch）。
+3. 移植 Showdown 的通用机制，不按个例打补丁，并在代码注释里写明条目编号。
+4. 回归：cargo、全部 pytest、41 个常规集和 30 个大数据集，全都必须是各自基线的子集。
+5. 更新基线，在附录问题表里加一行（中文），提交。
 
-- **数据**：自对弈对局（`data/selfplay/gen<G>/decisions-w*.jsonl`）。对局在本地 Showdown 上进行，双方都是我们的 bot，每条决策记录里该方己方的信息是精确的（来自 Showdown 的请求）。
-- **干净回合**：第 t 回合开始和第 t+1 回合开始双方都有决策记录，中间没有任何其它决策（没有倒下后的换人、没有 U-turn 类的中途换人）。
-- **比较**：
-  - S_t = 双方第 t 回合记录的合并（`alpha_search.merge_sides`：一方的精确视角拼另一方的精确视角）；
-  - 引擎：对 S_t 和双方实际选的动作枚举所有随机结果（`alpha_search.chance_outcomes`，含伤害分支）；
-  - 实际：第 t+1 回合双方记录的合并。
-- **一致的标准**：
-  - 随机性不算不一致：命中 / 未命中、要害、追加效果、速度相同时的先后，引擎都会枚举成带概率的分支，实际结果和任何一个分支一致即可；
-  - 离散字段（在场宝可梦、异常状态、能力等级、钉子、墙、持续状态、道具、天气 / 场地）必须和某个分支完全一致；
-  - HP：引擎用平均伤害（最大伤害 × 0.925；只在"能否击倒"和"要害"处分支，2–5 段招式固定 3 段），所以实际 HP 允许落在该分支伤害按浮动比例（0.85 / 0.925 到 1 / 0.925）的范围内，外加 1% 最大 HP 的取整余量。
-- **数据读取**：一代的决策记录约 33 GB，脚本逐个文件流式读取，同一局的记录在文件里是连续的，凑齐一局就处理、处理完就丢；按局号哈希抽样。运行时必须加内存上限（`systemd-run --user --scope -p MemoryMax=6G -p MemorySwapMax=0`）。2026-10-16 第一版一次读入全部记录，占满内存导致 WSL 重启。
+## 经验与教训
 
-- **HP 不一致的拆分**：按差值（实际 − 引擎）占最大 HP 的比例归到 ±1/16、±1/8、±1/12 等常见分数，分在场 / 后备，每簇记招式组合和例子（`hp_gaps`）。分数本身就是线索：1/16 是剩饭 / 灼伤，1/8 是束缚 / 中毒 / 黑色污泥，1/12 = 1/4 − 1/6 是 Spikes 2 层（L11）。
-- **看例子**：`scripts/explain_engine_diff.py --gen G --hp "bench +1/12"`（或 `--kind status`）对每个例子列出那只宝可梦、Showdown 这一回合的协议日志（`logs-w<k>.jsonl`，流式读）、引擎各分支的 HP 变化，基本一眼能看出成因，再去写双引擎测试。
-- **新数据**：局面构造的修复只有在修复后打的对局上才看得到（旧数据记录的局面是旧代码构造的）。诊断用的对局放在 `data/selfplay/gen900`（当前网络、当前代码，600 局；`selfplay.py teams/run --gen 900`），不进训练。
+1. **差分必须是完全信息、确定且可复现的。** 自对弈记录差分卡在 93% 左右，因为视角拼接和局面构造把噪声混进了结果。换成模拟器内部状态加固定种子之后，每个不一致都能精确复现，基线子集规则也才成立。
+2. **差分的类别只是线索。** 一开始把“引擎有、实际没有”一律猜成局面构造漏读，双引擎测试一分开，三项里两项其实是引擎的问题。凡事先写测试、先在旧引擎上看到它失败。
+3. **移植机制，而不是修个例。** 大部分问题归结为 Showdown 少数几个通用规则，引擎没有照搬：
+   - **Update 什么时候跑**：命中循环的每一击之后都跑；一次行动结束后跑；残余阶段之间不跑。由此决定树果的时机、Harvest、换人时撒菱和树果的先后。
+   - **BeforeMove 优先级链**：睡眠 / 冰冻 → Truant → 畏缩 → Disable → Heal Block → 挑衅。由此决定扣不扣 PP、上一招和锁定怎么变。
+   - **onDamagingHit 与 onAfterMoveSecondary 的先后**：Berserk、Anger Shell 在后者，排在追加效果之后。
+   - **残余按持有者速度排序**：slot condition 的持有者是目标，所以 Future Sight 按目标速度结算。
+   - **activeMove 的生命周期**：Mold Breaker 一直持续到拖入，所以拖上场的 Levitate 照样被撒菱扎。
+   - **runMove 改招时沿用原优先度**：Encore 改成的先制招式不被 Psychic Terrain 拦。
 
-### 1b. 数据测试（数据表一致）
+   先读 `sim/battle.ts`、`battle-actions.ts`，再改引擎。一次移植往往同时修好好几个看起来不相关的局面。
+4. **harness 和引擎一样要严格。** 相当一部分“引擎错误”其实是 harness 的映射或比较定义有问题：
+   - typechange 的定义；
+   - 被 Knock Off 打掉的 Focus Sash 被当成挡伤；
+   - Dragon Darts 没有 `-hitcount`，替身提示没生成；
+   - 只用于输入的标记（statsraised、illusion、notera 等）不能拿来比较；
+   - Showdown 和引擎计数方向相反（剩余回合 vs 已过回合）。
 
-`tests/test_engine_data.py`（`alpha_poke.enginecheck.data`，Showdown 侧 `showdown_data.js`，引擎侧 `alpha_search.engine_data` / `engine_base_stats`）：引擎的招式表（类型、命中、分类、威力、优先度、标志、自身 / 目标能力变化、异常 / 持续状态效果（招式本身按 100%、追加效果按概率，两边统一成同一种形式）、吸取、反伤、回复、场地状态、拖人 / 换人）、属性相克表（引擎的 `type_effectiveness_modifier` 逐对调用）、换形态种族值，以及 poke-env 的图鉴 / 招式，和 Showdown 的 Gen 9 `Dex` 比较。所有差异必须列在测试的已知差异表里并写明原因：出现新差异、或列出的差异已经不存在，测试都失败。
+   改 harness 也要走测试和回归。
+5. **回归必须跑全量，哪怕目标局面已经全对。** L228 的 69 个目标局面全部修好之后，全量回归又抓到 425 个本轮自己引入的问题：放宽 Choice 锁定解除时误伤了 Disable 的情况。依赖引擎里“不总是被追踪”的状态时要特别小心：`State::use_last_used_move` 只在需要时才开，上一招不能当作可靠依据，判断锁定改看招式的禁用标志。
+6. **召回靠规模和多样性。** 到 100% 之后，每新增约 100 万回合，仍能找到 70–160 处新的罕见交互（首轮一致率 99.98% 以上，但不是 100%）。随机对战队伍（randbats）比 OU 队伍池覆盖的招式和特性多得多。验证集必须多批、各自有基线，不能只对着一个集合修，否则就是过拟合。
+7. **平均伤害和容差会掩盖小误差。** 8.5% 的 HP 容差测不出 1–3% 的公式差别，暴击分支也会把错误“碰”对。改成 Showdown 的整数取整加精确 16 档掷骰，再用日志提示逐击对齐之后，才真正做到逐点一致。
+8. **工程上踩过的坑**：
+   - 数据必须流式读取，每次运行都用 `systemd-run --user --scope -p MemoryMax=...` 加内存上限（2026-10-16 一次读入全部数据，WSL 崩了）。
+   - 多进程用 spawn，不用 fork（fork 会继承扩展模块的锁而死锁）。
+   - binding 的 panic 是 BaseException，必须接住。
+   - `uv sync` 必须加 `--all-groups`，否则会卸掉 torch。
+   - 从 stash / .bak 恢复后要 touch，否则 uv 会用旧的引擎构建。
+   - 回归运行期间不要改 Rust 或 harness：uv 会中途重建，后面的数据集就用了半新半旧的引擎。
 
-差分统计的结果只是线索，里面混着三种来源：引擎的错误、我们构造局面的错误、方法本身的假象（伤害取平均、没记录到的决策、随机拖人等）。
+## 已知限制与后续
 
-### 1c. 伤害公式差分（2026-10-16 晚）
+- 引擎侧还没实现：Belch（需要“本场吃过树果”这个状态）。实战 `build_state` 还没传入 last_item（自己吃掉的果子可以从协议推出来）。
+- 差分只覆盖第 9 代单打、完全信息。实战里的信息不完全（对方道具、天气延长道具等要靠信念推断）属于局面构造和信念模型的问题，不在这里。
+- harness 的掷骰提示只用于差分。搜索仍用引擎自己的分支：接近击倒时用精确的 16 档，其余取平均伤害。
+- 想进一步提高召回：给 `check_engine_random_big.sh` 加更多 big 集（种子规则 3000000 + 100000k，偏移 1000000 + 10000k），或者生成新的随机队伍集。
 
-脚本：`scripts/check_damage_calc.py`（探针 `enginecheck/showdown_damage.js`）。在随机对战（同上 300 场）的每个回合开始，对双方在场宝可梦的每个攻击招式：Showdown 在对战的副本上调它自己的 `getDamage`（随机数固定取最高档、不暴击；先跑 ModifyType / ModifyMove / PrepareHit、目标的 TryHit 和招式的 Try，免疫和 Libero 之类才算进去），引擎用 `calculate_damage` 从同一个状态算最高档，逐点比较（49,726 个（局面, 招式））。不比较的：伤害取决于出手顺序或本回合事件的招式（Payback、Sucker Punch、Future Sight 等）、引擎自己处理的固定伤害（Endeavor）、探针的随机威力（Fickle Beam）、Analytic（探针的行动队列是空的）、Disguise / Ice Face / 替身 / 半无敌（getDamage 看不到）。报告 `data/selfplay/diag/damage_calc.json`（分档、按招式 / 特性 / 道具 / 天气 / 场地分组、例子），每一行 `damage_calc.rows.jsonl`。
+## 附录：问题表（L1–L228）
 
-| | 逐点一致 | 差 1 | 2% 以内 | 超过 2% |
-|---|---|---|---|---|
-| 第一次（L30 之后） | 76.2% | 11.4% | 2.9% | 9.4% |
-| L31（太晶本系）、L32、L33 之后 | 85.0% | 11.3% | 2.9% | 0.8% |
-| L34 第一步（Showdown 的取整顺序） | 92.7% | 4.3% | 2.2% | 0.9% |
-| L34 全部、L35 | **99.9%** | 0.0% | 0.0% | 0.1% |
-
-剩下的 0.1%（52 个）：Hydro Steam 在晴天（差 1%）、Metronome 道具的连续使用加成不在伤害计算里、Shell Side Arm 的物理 / 特殊判断、Psychic Terrain 挡先制（探针看不到，引擎在别处处理）等，见下一步。
-
-双引擎测试也因此加了更严格的一类：`alpha_search.damage_rolls` 给出引擎精确的 16 档掷骰，Showdown 实际造成的伤害必须是其中之一（暴击时是暴击的 16 档）；最高档还要逐点等于 Showdown 探针的 getDamage（`run_showdown(..., damage_probe=True)`）。HP 容差（8.5%）的比较测不出 1–3% 的差别，也会被 1.5 倍的暴击分支"碰巧"匹配，单看 HP 的测试要排除暴击分支。
-
-### 2. 双引擎单元测试（确认）
-
-每一条线索，都要构造一个具体场景（双方队伍、动作序列、固定种子），分别在 Showdown 的模拟器和 poke-engine 里运行，比较结果。只有单元测试复现了差别，才算"确认"，并据此归类：
-
-- **引擎**：同一个起始局面，两边结果不同；
-- **局面构造**：Showdown 实际状态里有、我们从协议构造的局面里没有（或相反）；
-- **方法假象**：不是真正的不一致，改进差分脚本的判定。
-
-确认用的测试留作回归测试；引擎问题的测试在修复前标记为预期失败（`xfail(strict=True)`），修好后转为正常测试。
-
-框架（`alpha_poke.enginecheck`，测试在 `tests/test_dual_engine.py`）：
-
-- `run_showdown(p1, p2, turns, seed, force_random)`：`showdown_case.js` 用 Showdown 的模拟器（`vendor/pokemon-showdown/dist/sim` 的 `Battle`，格式 `gen9customgame`，固定种子；`force_random` 让所有概率判定都成立 / 都不成立）跑指定的回合，输出设置完成后和每回合后的完整状态：双方每只宝可梦（按队伍原始顺序）的 HP、异常状态（含剧毒计数、睡眠回合）、道具、特性、属性、能力值、能力等级、持续状态、招式 PP，场地条件、天气 / 场地及剩余回合、协议日志；
-- `engine_state(state)`：用 Showdown 自己算出的数值构造 poke-engine 局面（能力值、HP、PP 都直接取 Showdown 的），排除我们构造局面这一环，测的只是引擎；
-- `engine_outcomes(state, c1, c2)`：引擎对同一对动作的全部随机结果；
-- `view` / `view_engine` / `closest`：两边状态转成同一种格式，找最接近 Showdown 结果的引擎分支，列出差别（HP 不比：引擎用平均伤害）。
-- HP 比较（`closest(..., hp=True)`）：容差 = 这一方在该分支里受到的伤害（引擎指令之和）× 8.5% + 2。最初的框架不比 HP，盐腌、部分束缚的"一致"只在离散状态上成立；补上后重新验证。
-- Showdown 等待强制换人（有宝可梦倒下）而给定的动作不是换人时，`showdown_case.js` 就停下，返回到这一步为止的状态。
-- 对照测试（两边应一致的场景）证明框架本身判断正确：`test_start_state_is_the_same`、`test_control_spikes_and_roost_agree`、`test_control_volatile_of_engine_state_string`。
-- 局面构造的测试（`built_state`）：同一场 Showdown 对战（gen9ou，有队伍预览），把某一方玩家实际收到的协议消息（`player_log`：`|split|` 之后自己那一行是精确 HP）和请求喂给 poke-env，跑我们的 `build_state`，和 Showdown 的真实状态比较；自己视角、对方视角都看。
-- 教训（L2）：差分统计里"引擎有、实际没有"的类别，最初一律猜成局面构造漏读；双引擎测试分开之后，三项里两项其实是引擎的问题。差分的类别只能当线索，结论必须来自测试；简单场景复现不出来时，回到差分的例子里找条件（盐腌是"目标有替身"）。
-- 注意：poke-engine 的 Python 绑定 `State.apply_instructions` 返回新的局面，不改原局面（2026-10-16 我先按原地修改用错了一次）。
-- 注意：Python 绑定的 `Side` 接受任意持续状态名，引擎读到不认识的名字时悄悄变成 NONE。框架判断"引擎认不认识"原来只构造了 `Side`，等于全部认识，Showdown 的 `choicelock` 因此进了比较（L16b 的 Trick 测试暴露）；改为写成局面字符串再读回来，名字还在才算。
-- 预知未来：Showdown 新版把它记成目标位置上的 slot condition（`futuremove`，`endingTurn`，第 endingTurn + 1 回合的回合末命中），引擎记在使用方（`future_sight` = (剩余回合, 使用者位置)）；框架做了换算（L15）。
-
-### 3. 修复流程（不直接改）
-
-1. 线索 → 双引擎单元测试确认；
-2. 写进本文档的问题表，和用户确认要不要修、怎么修；
-3. 修复：引擎问题改 `rust/patches/poke-engine-0.0.48`（"alpha-poke patch" 注释），局面构造问题改 `agents/engine_state.py` / `timers.py`；
-4. 回归检查，全部通过才算完成：
-   - 确认测试转为通过，其它测试不变；
-   - 确定性搜索回归（固定种子的搜索结果，前后对比）；
-   - 差分统计重跑，对应类别下降、其它类别不上升；
-   - 可能改变行为的修复，做 A/B 对战（不变差）。
-
-## 结果
-
-### 第 8 代，3,000 局，修正方法后（2026-10-16）
-
-方法的三处修正（都由双引擎测试发现：测试复现不出差分里的类别，说明是脚本的问题）：
-1. HP 容差按这一方本回合实际受到的伤害（引擎的伤害指令之和）计算，不按 HP 净变化：有回复又有伤害的回合原来几乎全部误判（L5）；
-2. 不可比较的回合单独计数、不进分母：回合中有宝可梦倒下（引擎停在要求换人的那一刻，而玩家的换人是下一个决策，只有一个选项时没有记录）、用了 U-turn 类或拖人招式（L6）；
-3. 忽略序列化产生的 NONE 持续状态（L4）。
-
-结果：42,611 个可比较回合（另有 2,694 个回合有倒下、700 个有 U-turn 类招式、649 个有拖人招式），一致率 **86.1%**。主要不一致：HP 7.97%、天气 1.67%（L3a）、闪避 1.36%（L1）、诅咒 0.61%（L2a/b）、部分束缚 0.56%（L2c）、道具 0.55%、防御等级 0.51%、异常状态 0.51%、场地 0.37%（L3b）、混乱 0.31%；在场宝可梦只剩 0.08%。
-
-### 第 8 代，3,000 局，46,654 个干净回合（2026-10-16，第一版判定标准，已过时）
-
-一致率 **75.6%**（35,292 个回合）。不一致的类别（一个回合可能同时属于多类）：
-
-| 类别 | 回合 | 比例 | 初步判断（未确认） |
-|---|---|---|---|
-| HP | 6,982 | 14.97% | 需要按差值拆分：回复类招式（恢复、羽栖）占比最高；回合末残余效果漏算 / 多算（1/16、1/8 等） |
-| 在场宝可梦 | 2,953 | 6.33% | 多数应为没记录到的中途决策（只有一个选项的强制换人、U-turn）和随机拖人，属于方法假象，待从统计中分离 |
-| 持续状态 `none` | 1,617 | 3.47% | 序列化问题 L4（已确认）：对比时应忽略 NONE，属于方法假象 |
-| 天气 | 859 | 1.84% | 多为引擎里天气仍在、实际已结束：天气回合数的追踪 |
-| 闪避等级 | 591 | 1.27% | Defog 没有降低目标闪避（引擎 0，实际 −1） |
-| 防御 / 攻击等级等 | 每类 < 1% | | 待看 |
-| 异常状态 | 371 | 0.80% | 部分和换人有关；"Hurricane / Dragon Tail 后目标麻痹"疑似接触类特性（静电） |
-| 道具 | 322 | 0.69% | 待看 |
-| 诅咒 / 部分束缚 / 盐腌 | 266 / 235 / 116 | 0.57% / 0.50% / 0.25% | 当初猜都是局面构造漏读；双引擎测试后只有部分束缚是（L2c）。诅咒是引擎的 L2a / L2b，盐腌是引擎的 L2d（替身挡不住）；盐腌和诅咒的局面构造本身是对的（对照测试） |
-
-## 线索与问题表
-
-状态：线索（差分统计）→ 已确认（双引擎测试）→ 已同意（和用户）→ 已修复 → 已验证（回归检查通过）。
+每一条都按这个过程走：线索（差分）→ 已确认（双引擎测试）→ 已修复 → 已验证（回归通过）。引擎代码里 `doc/engine-diff.md Lx` 形式的注释，都指向这里的条目。
 
 | 编号 | 描述 | 来源 | 状态 | 测试 | 修复 |
 |---|---|---|---|---|---|
@@ -151,7 +123,7 @@ harness 必须把 Showdown 的状态完整映射到引擎，否则不一致来�
 | L8b | Fickle Beam：Showdown 是 30% 威力翻倍、无能力变化，引擎写成了 50% 使用者特攻 +1 | 引擎（数据） | 已修复 | `test_l8b_fickle_beam_no_boost`；`test_l8b_fickle_beam_double_power_branch` | `choices.rs`：去掉特攻 +1；第二步（L30 一起）：威力 80，`generate_instructions.rs` 分支 70% × 1 / 30% × 2（原来取期望 104） |
 | L8c | Glaive Rush：引擎有这个持续状态（受到伤害翻倍）却没有招式给使用者挂上，所以从不生效 | 引擎（数据、代码） | 已修复 | `test_l8c_glaive_rush_drawback` | `choices.rs`：使用者挂 `glaiverush`；`generate_instructions.rs`：使用者下一次行动开始时移除（Showdown 的 onBeforeMove，优先于其它判定） |
 | L9 | 黑色污泥在非毒系身上：Showdown 每回合扣 1/8（满血也扣），引擎只扣 1/16、满血不扣（非毒系分支是从回血分支照抄的 `min(maxhp/16, maxhp − hp)`） | 引擎 | 已修复 | `test_l9_black_sludge_non_poison` | `items.rs`：非毒系扣 `min(max(maxhp/8, 1), hp)` |
-| L10 | 剩下的 HP 不一致里待查的几簇。已拆出并确认：L11（Spikes 层数）、L12（回合末顺序）、L13（束缚持续时间）、L14（Seismic Toss 等固定伤害对 Protect / 替身 / 未命中）、L15（Future Sight）、L16（Pain Split）。仍是线索（双引擎简单场景两边一致，差分例子的成因未查明）：Knock Off 要害伤害约为非要害 3 倍的例子（Dondozo，疑似防御等级 + 要害忽略正向等级）；Neutralizing Gas 下 Iron Hands 的 Supercell Slam 伤害（同时上场、先激活 Quark Drive 再换上两种顺序都一致）；Alolan Ninetales 的 Pyro Ball 伤害（疑似极光幕）；Pickpocket（被接触时偷走对方道具）引擎没有实现；Poison Puppeteer（Pecharunt 让目标中毒时同时混乱）引擎没有实现。已知近似（不算问题）：2–5 段招式固定 3 段（Water Shuriken 实际 2 段）。另见：引擎的 Shed Skin 每回合必定治愈（Showdown 30%），未测 | 待拆分 | 线索 | | |
+| L10 | 剩下的 HP 不一致里待查的几簇。已拆出并确认：L11（Spikes 层数）、L12（回合末顺序）、L13（束缚持续时间）、L14（Seismic Toss 等固定伤害对 Protect / 替身 / 未命中）、L15（Future Sight）、L16（Pain Split）。仍是线索（双引擎简单场景两边一致，差分例子的成因未查明）：Knock Off 要害伤害约为非要害 3 倍的例子（Dondozo，疑似防御等级 + 要害忽略正向等级）；Neutralizing Gas 下 Iron Hands 的 Supercell Slam 伤害（同时上场、先激活 Quark Drive 再换上两种顺序都一致）；Alolan Ninetales 的 Pyro Ball 伤害（疑似极光幕）；Pickpocket（被接触时偷走对方道具）引擎没有实现；Poison Puppeteer（Pecharunt 让目标中毒时同时混乱）引擎没有实现。已知近似（不算问题）：2–5 段招式固定 3 段（Water Shuriken 实际 2 段）。另见：引擎的 Shed Skin 每回合必定治愈（Showdown 30%），未测 | 待拆分 | 已结束（自对弈差分停用；随机差分已 100%） | | |
 | L11 | Spikes 2 / 3 层的换入伤害：引擎按"层数 / 8"（2 层 1/4、3 层 3/8），Showdown 是 1/8、1/6、1/4（差分里"后备 +1/12"一簇：1/4 − 1/6） | 引擎 | 已修复 | `test_l11_spikes_two_layers` | `generate_instructions.rs`：最大 HP × [0, 3, 4, 6][层数] / 24（至少 1） |
 | L12 | 回合末顺序：引擎先结算异常状态伤害（灼伤 / 中毒），再结算剩饭 / 黑色污泥、寄生种子；Showdown 的顺序是天气类特性（1）、湿润之躯 / 蜕皮（5.3）、剩饭 / 黑色污泥（5.4）、寄生种子（8）、中毒（9）、灼伤（10）。满血被灼伤时，Showdown 剩饭无效、扣 1/16，引擎扣完又回满；血量低时还影响是否倒下 | 引擎 | 已修复 | `test_l12_heal_before_status_damage`（剩饭、寄生种子） | `generate_instructions.rs` 回合末：异常状态伤害之前先结算天气类特性（Solar Power、Ice Body、Rain Dish、Dry Skin）、湿润之躯 / 蜕皮、剩饭 / 黑色污泥、寄生种子；`items.rs` / `abilities.rs` 的回合末函数加阶段参数，其余（宝珠、加速、剧毒治疗等）仍在之后。水流环 / 扎根引擎没有实现，不在此列 |
 | L12b | 毒疗（Poison Heal）在剧毒宝珠生效的那个回合就回血：引擎在回合末的最后先让宝珠中毒、马上又按特性回 1/8；Showdown 的毒疗是在中毒伤害那一步（9）把伤害换成回复，宝珠（28）在它之后，所以那一回合不回 | 引擎 | 已修复 | `test_l12b_poison_heal_after_the_orb` | `generate_instructions.rs` 异常状态伤害那一步：毒疗的宝可梦中毒 / 剧毒时回 1/8（对方化学变化气体时不回，回复封锁时不回）；`abilities.rs` 回合末的毒疗分支去掉。引擎自带测试 `test_poisonheal_while_toxiced_still_increases_toxic_count` 的指令顺序随之改了（先回复、后加剧毒计数，结果相同） |
@@ -168,7 +140,7 @@ harness 必须把 Showdown 的状态完整映射到引擎，否则不一致来�
 | L22 | 锁招（Outrage 等）没打中时不解除：Showdown 只在命中时续期，未命中 / 免疫 / 无效果 / 被守住的那一回合锁定立即解除（不混乱）；引擎一直锁满 3 回合 | 引擎 | 已修复 | `test_l22_outrage_lock_ends_on_immune_target` | `generate_instructions.rs`：`lock_end_instructions`，用在未命中分支（含属性免疫）、无效果、被守住（招式的锁招效果被 `remove_effects_for_protect` 清掉）三处。harness 补上锁招剩余回合（Showdown 的 trueDuration）到引擎计数的换算 |
 | L23 | 锁招自然结束后，引擎让其它招式一直保持禁用（锁招开始时禁用，结束时没恢复；挑衅结束时是恢复的） | 引擎 | 已修复 | `test_l23_moves_usable_after_a_lock_ends`（和 Showdown 下一回合请求里的可用招式比较） | 锁招到期时恢复其它招式（持有讲究系道具时不恢复）。注意：差分的比较原来不看招式可用性，这类问题看不到 |
 | L24 | 引擎不认识的道具（读成 UNKNOWNITEM，没有任何效果）：Showdown Gen 9 有对战效果的道具里缺 42 个，外加 6 个延长道具（Showdown 里没有事件函数，由天气 / 场地 / 墙的 durationCallback 读取）。用户要求从 Showdown 源码补齐 | 引擎 | 已修复（全部 48 个） | `test_engine_knows_every_item_with_an_effect`（数据测试：Showdown Gen 9 有效果的道具全部为引擎所知）；`test_l24_duration_items_set_on_switch_in`（5 个）、`test_l24_light_clay`（2 个） | 道具追加在枚举末尾（`repr` 改为 u16：u8 放不下；指令 6 → 8 字节，引擎自带的大小测试按此改；搜索速度 u8 0.138 秒 / u16 0.137–0.141 秒，无差别），`alpha_search` 的 `item_id` 把追加的一律映射为 UNKNOWNITEM（网络输入不变）。延长道具：`extend_field_durations` 在登场特性、招式特殊效果、受击后特性之后把持有者对应道具的 5 回合天气 / 场地改为 8；Light Clay 在墙的持续回合里处理。第一批效果道具（测试 `test_l24_pinch_berries` 等 16 个）：低血量回复果 Figy / Wiki / Mago / Aguav / Iapapa（1/4 以下回 1/3，性格降低对应能力时混乱；回复封锁下不吃）、Oran（1/2 以下回 10），照 Sitrus Berry 在行动前和回合末检查；受击触发 Kee / Maranga（物理 / 特殊，防御 / 特防 +1；Knock Off、Thief / Covet、Bug Bite / Pluck 先拿走时不触发：第一版没处理，随机差分子集检查发现 b191-t5，加测试 `test_l24_kee_berry_knocked_off_first`）、Snowball / Luminous Moss（冰 / 水，攻击 / 特防 +1）、Jaboca / Rowap（物理 / 特殊，攻击方 −1/8）、Enigma（效果绝佳时回 1/4），照 Absorb Bulb 用追加效果；Sticky Barb（回合末 −1/8，接触时转给没有道具的攻击方）；Room Service（戏法空间下登场或开启时速度 −1）；第二批：Scope Lens / Razor Claw（L28）、Ganlon / Apicot / Lansat Berry；加能力的低血量果（含原有的 Liechi / Petaya / Salac）也在回合末检查（原来只在持有者下一次行动前，被后手打到 1/4 时那一回合对不上，`test_l24_pinch_boost_berries` 含 Salac）；第三批：Bright Powder / Zoom Lens（命中 ×3686/4096、后手 ×4915/4096；只对打向目标、会落空的招式：必中招式表 `Choices::always_hits` 由数据测试和 Showdown 比对）、6 个 Power 系道具（速度减半）、Float Stone（体重减半）、Big Root（吸取 / 寄生种子回复 ×5324/4096）、King's Rock / Razor Fang（10% 畏缩：Showdown 的追加效果不走 randomChance，概率用 `enginecheck.showdown_rate` 在 1,000 个种子上统计，种子要散列，相邻小整数种子开头的随机数相关，第一次测出 28.75%）、Utility Umbrella（持有者受到的攻击不受晴雨修正）；第四批：Quick Claw（同优先度档内 1/5 先手：出手顺序原来只有同速时的 50/50 分支，推广成按概率 p 分支）、Focus Band（会被击倒的分支拆出 1/10 以 1 HP 撑住）、Starf Berry（受击降到 1/4 时按还没 +6 的能力均分成分支，各 +2：在 `run_move` 之后处理，Showdown 的 onUpdate 时机）；第五批：Leppa Berry（PP 到 0 时回 10，不超过最大 PP：引擎不记最大 PP，最大 PP 低于 10 的招式表 `Choices::max_pp_below_10` 由数据测试和 Showdown 比对）、Micle Berry（回合末 1/4 时吃，新持续状态 MICLEBERRY，下一招命中 ×4915/4096，2 个回合末后失效；Showdown 走的是 Accuracy 事件，命中探针补上了）、Metronome（同一招连续使用的计数，伤害 ×4915/4096 起到 2 倍；新持续状态 METRONOME 和计数字段；需要上一次使用的招式，带 Metronome 时打开引擎的这个开关）、Mirror Herb（复制对手提升自身的能力，用掉）。状态字符串的持续回合计数为 12 个字段（旧字符串照常解析）；新的持续状态追加在第 104、105 位，网络只读第 1–103 位；最后：Ability Shield（破格类不能无视、化学变化气体不能抑制持有者的特性；改特性的招式 Skill Swap 等引擎本来就没实现，见下一步）、Destiny Knot（持有者着迷时对手也着迷）。harness 补上性格（之前都按 Serious），体重改传物种体重（原来传 Showdown 的 getWeight()，已经算过 Float Stone，掩盖了引擎没处理）。构造问题（待做）：我们的 `build_state` 没有传性格 |
-| L25 | 场地招式（Grassy / Electric / Psychic / Misty Terrain）在引擎里没有实现（只有天气招式实现了）；数据测试没有比较招式的 weather / terrain 字段，所以没发现 | 引擎 | 线索 | | |
+| L25 | 场地招式（Grassy / Electric / Psychic / Misty Terrain）在引擎里没有实现（只有天气招式实现了）；数据测试没有比较招式的 weather / terrain 字段，所以没发现 | 引擎 | 已修复（L105） | | |
 | L26 | Prankster 的变化招式对恶属性目标无效，引擎把作用于自己 / 己方场地的招式也算进去（Reflect 对 Ting-Lu 失败） | 引擎 | 已修复 | `test_l26_prankster_self_move_against_dark`；对照 `test_control_prankster_move_at_a_dark_type_fails` | `abilities.rs`：只对目标是对方、且不是钉子 / 天气 / 场地 / 全场类的招式生效 |
 | L27 | Brick Break、Psychic Fangs 不破墙；Raging Bull 在伤害之后才破墙（伤害已被减半，上游用有墙时威力翻倍来补偿）。L26 修好后，随机差分的子集检查出现一个新增（b117-t11 Brick Break 对 Light Screen：修复前 Light Screen 被错判失败，碰巧和打碎后的结果一致），由此发现 | 引擎 | 已修复 | `test_l27_screen_breakers`（3 个） | `generate_instructions.rs` `screen_break_instructions`：伤害按去掉墙计算（仅为计算临时去掉），命中分支里真正移除，未命中保留；去掉 Raging Bull 原来伤害后的破墙和威力翻倍 |
 | L28 | 要害只看招式（普通 1/24、高要害 1/8）：聚气（Focus Energy，+2 级）、超幸运（Super Luck，+1）都没算进去；Scope Lens / Razor Claw（+1）引擎不认识 | 引擎 | 已修复 | `test_crit_chance`（6 个；Showdown 的要害等级由 `enginecheck.crit_stages` 调它自己的 ModifyCritRatio 事件取得：一场对战只看得到一次随机结果，看不出概率） | `generate_instructions.rs`：按 Showdown 的要害等级算概率（1/24、1/8、1/2、必定）：高要害招式 +1、Scope Lens / Razor Claw +1、超幸运 +1、聚气 +2 |
@@ -372,65 +344,3 @@ harness 必须把 Showdown 的状态完整映射到引擎，否则不一致来�
 | L226 | 新数据集 randbats26~33 中发现的问题（8 批共 84,712 个回合，首轮 15 个不一致位置；randbats28 / 29 首轮 100%）。一是多段攻击打在替身上：日志不显示替身 HP，差分框架按替身 HP 的变化给出提示——替身没破时给几下合计的伤害（SUB_SHARE，引擎按威力比例分配，Triple Axel 为 1:2:3），破掉时标出破的那一下（SUB_BREAK，之前几下合计为替身 HP 减 1）；同时修正日志去重：只合并 |split| 后的私有 / 公开两份，原先连续两下相同的 "-activate Substitute" 被当成重复合并（randbats26 b136-t19、randbats30 b209-t22）。二是 Mirror Armor 的持有者被这一击打倒后不再反弹追加效果的降能力（b161-t13）。三是差分框架的 HP 跟踪改为按场上位置（p1a / p2a），Illusion 伪装时的显示名原先会查到别的宝可梦（b182-t18、randbats30 b205-t1）。四是 Unburden：道具被拿走（包括 Trick 换来新道具）时就加上 unburden 状态，加速只在不持有道具时生效（Showdown 的 onTakeItem / onModifySpe；randbats27 b1-t10）。五是 Collision Course / Electro Drift 的倍率改为 5461/4096，原先是 5325/4096（randbats31 b170-t1）。六是睡着 / 冰冻的 Truant 宝可梦先判定睡眠（Showdown 的优先级 10 先于 Truant 的 9）：没醒时保留 truant 状态并计入睡眠回合，醒来后才偷懒（randbats32 b159-t17 / t18）。七是 Sturdy 会被 Mold Breaker 及 Sunsteel Strike / Moongeist Beam / Photon Geyser 绕过（randbats33 b111-t4）。八是 Shell Side Arm 物理、特殊估算伤害相等时按 Showdown 的 random(2) 分成两个各 1/2 的分支，原先总选特殊（b18-t6）。九是 Heal Block 按招式原本的 heal 标记判断：Sap Sipper 改写 Giga Drain 时标记被清掉，原先拦不住（b296-t32）。十是 Infiltrator 施加的易变状态（Leech Seed）穿过替身（b36-t24）。十一是 Toxic Spikes 与伤害陷阱的先后：SideConditions 新增 toxic_spikes_order（Toxic Spikes 之前已有的 Stealth Rock / Spikes；状态串可选第 20 个字段，Court Change 一并交换），毒属性宝可梦先被这些陷阱打倒就不吸收 Toxic Spikes（Showdown 按铺设顺序结算：b64-t58）。41 个数据集都是各自基线的子集，总不一致数为 0 |
 | L227 | 百万回合差分（scripts/check_engine_random_big.sh：10 个各 2900 对的大数据集，队伍在 data/teams/big/ 用固定种子生成、不提交，共 1,013,541 个回合）首轮 157 个不一致位置和 2 个报错，全部修复。按机制归类：特性无视——Mold Breaker 穿过 Sticky Hold（Knock Off / Thief / Trick / Magician，Item::item_can_be_taken_by）和 Aroma Veil，Mycelium Might 的变化招式穿过 Purifying Salt 等状态免疫，Sunsteel Strike 类招式绕过 Sturdy（L226）、Mind's Eye 对太晶化的幽灵属性；Mirror Armor——对被 Magic Bounce 弹回的招式（Defog 的降闪避来源是反弹者）、Gulp Missile 和入场 Sticky Web 的降能力；蓄力招式——蓄力回合不被吸收类特性吸收（Solar Beam 对 Sap Sipper），没有目标时照样蓄力，被调用招式发动的蓄力（L224）；Shadow Tag 不困住 Shadow Tag；Clangorous Soul 的门槛是 33/100；Ditto——Shields Down 不切换变身后的形态，对手 Illusion 未破时变身失败（新增 ILLUSION 易变状态，受击解除），不能变身成太晶化的 Ogerpon / Terapagos、Stellar 太晶不能变身，变身成 Ogerpon / Terapagos 后不能太晶化（NOTERA），变身后用过的一次性特性记在 Pokemon::once_used（状态串可选第 35 个字段）；被调用的拖人招式（Sleep Talk 的 Dragon Tail）阻止被拖入者出招；Dancer——持 Choice 道具时，被锁在别的招式上则复制失败，未锁定则锁到舞蹈上（自己的招式失败，回合末解除）；Yawn 对已有异常状态失败；Rapid Spin 的使用者被 Rocky Helmet 打倒后不清陷阱，弹回的 Spikes 不被 Earth Eater 吸收；Shell Side Arm 平局（L226）；times_attacked——有一击打中本体时计入全部命中（包括替身上的），只打中替身不计（Showdown 的 HIT_SUBSTITUTE 变为 true），Counter / Mirror Coat 的反击也计入；Dragon Darts（无 -hitcount）、Power Herb 蓄力招式（目标在 -anim 行）、本回合刚建的替身（HP = 最大 HP/4）的差分框架提示；Clear Smog 不穿替身；Magician 让受击后的树果先在 Update 时被吃掉；Cloud Nine / Air Lock 下 Swift Swim 等加速、Solar Beam 减半、Synthesis / Weather Ball 都按无天气；Psyshock 类按防御结算 Protosynthesis / Quark Drive 和 Fur Coat；Hydro Steam 改为天气修正 1.5 倍；Future Sight 计入 Psychic Terrain；Liquid Ooze、Bad Dreams（也伤 Comatose，排在 Yawn 入睡之后）、Gulp Missile、Aftermath（Damp 阻止）都不伤 Magic Guard；Explosion 没有目标时使用者照样倒下；变身的 Dauntless Shield 不重复加防；Disguise / Ice Face 挡住的一击仍有招式自身的后续效果（Double Shock 的属性、Giga Impact 的硬直）；Toxic Spikes 不覆盖已有异常；Facade 不因睡眠翻倍；回合末残余按当时速度排序（Trick Room 反转）；Berserk / Anger Shell 遇 Sheer Force 不触发；Sound 招式的追加状态和易变状态穿过替身，Infiltrator 的 Trick 穿过替身；Magic Bounce 持有者倒下后不再反弹；Encore 替换掉攻击招式后没有 Prankster 加成；冰冻的 Truant（本回合刚冻住也算）；自解冻招式（Scald）遇混乱自伤 / 着迷时保持冰冻；畏缩等先于混乱计数；对目标的变化招式先判定命中再生效（Trick 被降命中后会未命中）；Sawsbuck-Summer 等外观形态补上种族值。51 个数据集（41 + 10 个大数据集，共约 143 万回合）都是各自基线的子集，总不一致数为 0 |
 | L228 | 两百万回合差分（big10–big29：20 个各 2900 对的大数据集，共 2,026,570 个回合）首轮 69 个不一致位置，全部修复；全量回归时又发现本轮改动引入的 425 个（Choice 锁定与 Disable、Heal Block 结束、Future Sight 后的 Harvest），也已修复并加入测试。按机制归类：Beat Up 只有一个出手者时也用逐击的伤害提示；Mold Breaker 类——不触发可无视的受击特性（Turboblaze 的 Blue Flare 不给 Thermal Exchange 加攻），无视 Inner Focus / Own Tempo / Oblivious 等易变状态免疫，拖人招式（Dragon Tail）拖入时仍无视 Levitate（Showdown 拖入时 activeMove 尚未清除，撒菱照扎）；PP——睡醒后被 Truant 或畏缩挡住时不扣 PP，Sleep Talk 同理；Choice 锁定——Trick 换来的 Choice 道具在出招前不锁定（只有其他招式被禁用时才算锁定），Outrage 被打断时换来的 Choice 道具不锁定，回合末“全部招式不可用”的解除不适用于 Disable 封住被锁招式的情况（只能 Struggle），Heal Block 结束时恢复回复招式（锁定按禁用标志判断，State::use_last_used_move 关闭时不追踪上一招）；Future Sight——命中触发受击特性（Electromorphosis 充电、Berserk 等）并在命中后 Update（文柚果当场吃，Harvest 可再长出），结算顺序按目标速度（目标的 slot condition），倒下的变身使用者用自己的能力值和属性；Ice Face / Disguise 不被失败的 Endeavor 打破；树果时机——回合末残余伤害触发的树果在全部残余之后的 Update 才吃（同回合 Harvest 不再长回），Anger Shell / Berserk 单击后的回复树果在被拖下场前不吃，连续攻击最后一击后先吃树果再判定 Anger Shell，普通换人（非拖入）在入场陷阱前先 Update（半血以下先吃文柚果再扎撒菱）；Berserk 移到追加效果之后（+6 时先降后升，Choice::berserk）；晴天 Dry Skin 等天气特性归入天气残余（序 1，先于 Future Sight 和 Wish）；Synchronize 反弹 Beak Blast 的灼伤；Avalanche 打替身不算受伤；Imposter / Transform 复制的能力提升不算本回合提升（Alluring Voice）；Encore 改招沿用原招优先度（被 Encore 改成的 Vacuum Wave 穿过 Psychic Terrain）；Early Bird 让 Rest 的睡眠减半；Libero / Protean 改回基础属性时去掉 TYPECHANGE；Minior 核心形态继续做其他异常判定（剧毒不再覆盖灼伤）；差分框架——Dragon Darts 打替身的分摊 / 打破提示，被 Knock Off 打掉的 Focus Sash 不算挡伤。71 个数据集（41 + 30 个大数据集，共 3,459,513 个回合）都是各自基线的子集，总不一致数为 0 |
-
-## 修复与验证（2026-10-16）
-
-修复：L1、L2a–L2d、L3a/L3b、L4、L7、L9（见问题表"修复"一列；引擎修改都在 `rust/patches/poke-engine-0.0.48`，注释 "alpha-poke patch (2026-10-16, doc/engine-diff.md Lx)"）。验证：
-
-- 双引擎测试：原来的 11 个预期失败全部转为通过（作为回归测试保留），对照测试不变；全部测试 139 个通过；poke-engine 自带测试 228 个（其中 4 个原来写死了旧行为——黑色污泥 1/16、Defog 不降闪避——按 Showdown 改了断言）、alpha_search 23 个通过；`check_tnet` 通过。
-- 网络输入：真实局面的特征与修复前逐位相同（第 8 代缓存对比，见 L4）。
-- 确定性搜索（`data/selfplay/diag/regress/search.py`，固定种子，夹具局面）：不用网络的 UCB 结果逐位不变（这两个局面里引擎的转移没有变化）；用网络的 PUCT / 批量搜索访问数有小幅变化（首选不变），来自树内局面第 0 位不再残留 NONE。
-- 差分统计（第 8 代，3,000 局，42,611 个可比较回合）：一致率 86.1% → **88.3%**；闪避 578 → 31、诅咒 262 → 1、盐腌 69 → 15、HP 3,395 → 3,182、攻击 / 防御 / 速度等级 76 / 218 / 103 → 57 / 199 / 84。天气、场地、部分束缚不变：这批数据的局面是修复前的代码构造的，局面构造类的修复要在新对局上才看得到。
-- 还没做：对战 A/B。修复前后的引擎是同一个扩展模块，没法在同一个进程里各跑一边（见下一步）。
-
-## 修复与验证，第二轮（2026-10-16 下午）
-
-修复：L1b、L8a–L8c 及数据表的其余问题、L11、L12、L12b、L13、L14、L15、L16a/b、L17、L18、L19（见问题表）。验证：
-
-- 每条先写双引擎测试复现（strict xfail），修好后转为回归测试；全部测试 168 个通过（双引擎 44 个、数据测试 5 个）；poke-engine 自带测试 229 个通过（新增 1 个束缚到期的测试；3 个原来写死了旧行为——束缚计数、气势披带不消耗、毒疗的指令顺序——按 Showdown 改了期望）；alpha_search 23 个通过。
-- 状态字符串的持续回合多了一个字段（束缚），旧字符串照常解析；夹具 `engine_state_6v6.txt` 按新格式重写（只多了一个 `;0`）。
-- 确定性搜索回归：6 个结果里 5 个变了，预期之内（夹具局面有剩饭持有者，回合末顺序变了，树里的随机路径随之改变）。这项检查只能证明"不该变的没变"，这一轮靠差分统计验证。
-- 差分统计：
-
-| 数据 | 可比回合 | 第一轮后 | 第二轮后 |
-|---|---|---|---|
-| 第 8 代（旧代码构造的局面，3,000 局） | 43,702 | 88.3% | **90.2%**（HP 6.44% → 5.34%，道具 236 → 125，替身 60 → 49；其它类别不变或只差一两例） |
-| gen900（L11–L13 后的代码打的 600 局） | 7,976 | — | 92.6% → **93.4%**（HP 5.19% → 4.35%） |
-| gen901（全部修复后的代码打的 600 局） | 7,416 | — | **93.4%**；防御等级 0.59% → 0.07%（L18 的构造），束缚 0.24% → 0.12%（L13 上限的修正） |
-
-新对局上旧数据里的天气（1.70%）、场地（0.36%）、束缚（0.74%）大部分消失：那些是旧代码的局面构造问题（L2c、L3）。被困时选换人的报错：gen901 1 次 / 600 局，gen 8 是 58 次 / 5 万局，比例相当，不是新问题。
-
-剩下的主要不一致（gen901）：HP 4.18%；天气 0.46%：对方的延长道具（湿润岩石等）我们只能按信念猜，差分合并局面时天气剩余回合取的是一方视角，属于信息不对称 / 方法，不是引擎问题；混乱 0.39%：已知近似（2026-10-11 的补丁只用一个继续分支，提前解除只体现在自伤概率上，混乱状态要到第 4 次才真正去掉）；属性变化 0.32%、速度等级 0.26% 待看。
-
-## 修复与验证，第三轮（2026-10-16 晚）
-
-修复：L8b 第二步、L30–L35（见问题表）。验证：
-
-- 每条先写双引擎测试（失败），修好后转为回归测试；全部测试 291 个通过（双引擎 162 个）；poke-engine 自带测试 229 个通过（2 个原来写死了浮点近似的伤害 97，按 Showdown 的取整改成 96：本系 35 → 52，× 2）。
-- 随机差分：94.9%（419 个）→ **97.0%**（7,046 个可比回合中 6,832 一致；265 个（编号, 类别），修复 155 个）。新增 1 个 b0-t28：Imposter 没有实现（L36），太晶本系修好后暴露，用 `--force` 接受。中间出现过的新增 b32-t47（击倒掷骰）、b69-t7 / b100-t50（Future Sight，L35）、b83-t5（Neutralizing Gas，L35）都查清修好了。
-- 伤害公式差分：逐点一致 76.2% → **99.9%**（上面 1c）。
-- 网络输入：太晶宝可梦的 type 1 / type 2 变成原属性（L31），和搜索树内引擎自己太晶化后的局面一致；`Choice` 多了三个修正字段，不进网络输入。
-- 速度：不用网络的 UCB 搜索（两个夹具局面各 20,000 次迭代，单线程，各取 3 次最好）0.160 秒 → 0.170 秒，慢约 5%（整数的伤害流水线和更大的 `Choice`；击倒附近才算的精确 16 档几乎不占时间；回合末原来每次都复制一份 Future Sight 招式，改成只在命中那回合）。HEAD 在独立的 worktree / venv 里构建对比。
-
-## 修复与验证，第四轮（2026-10-16 夜）
-
-修复：L37–L42。每条先写双引擎测试（失败；L37 的测试是在修复后才跑通的，临时去掉修复确认它会失败），全部测试 304 个、poke-engine 自带测试 229 个通过。随机差分：97.0%（265）→ **97.8%**（6,889 / 7,046；203 个（编号, 类别）），每一步都是子集；中间出现的新增 b146-t23 查清是 L42 后修好。
-
-## 修复与验证，第五轮（2026-10-16 夜）
-
-修复：L43–L47。随机差分 97.8%（203）→ **98.2%**（6,916 / 7,046；172 个），每一步都是子集，新增 0；全部测试 316 个、poke-engine 自带测试 229 个通过。
-
-L48–L51 之后（同一天）：**98.4%**（6,930 / 7,046；157 个），新增 0；全部测试 321 个、poke-engine 自带测试 229 个通过。L52–L55 之后：**98.5%**（6,938；149 个），新增 0。L56 之后：6,941，145 个，新增 0。L58 之后：6,943，143 个，新增 0。L59、L60 之后：**98.7%**（6,957；125 个），新增 0；全部测试 337 个通过。L61–L63 之后：**98.8%**（6,964；114 个），新增 0；全部测试 342 个通过。L64–L66 之后：**98.9%**（6,972；104 个），新增 0。L67 之后：**99.0%**（6,975；101 个），新增 0。L36 之后：**99.1%**（6,985；88 个），新增 0；全部测试 350 个通过。L57 之后：**99.2%**（6,989；84 个），新增 0。L68、L69 之后：主集合 99.2%（78 个），验证集 98.7% / 97.7% / 98.4% / 98.6%，五个都新增 0。L70 之后：主集合 99.3%（74），验证集 98.8% / 97.9% / 98.6% / 98.7%，新增 0。L71–L74 之后：主集合 68 个，验证集 112 / 149 / 92 / 120 个，新增 0。
-
-单看 HP 的双引擎测试有两个陷阱，这一轮都碰到了：`closest` 只要求有一个分支匹配，不看概率（L47 的确定性醒来要断言概率为 1）；Showdown 的追加效果用 `random(100)`，不受 `force_random` 控制（Strange Steam 的混乱，改用必中的 Confuse Ray）。
-
-## 下一步
-
-0. L57 的后续：Recycle / Belch；实战 `build_state` 的 last_item（自己的宝可梦吃掉的果子可以从协议推出）。
-0. 伤害公式剩下的（1c）：Hydro Steam 在晴天、Metronome 道具的加成、Shell Side Arm、Sacred Sword 打有 Light Clay 的一方（引擎 2 倍，未查）、Unaware 的 Body Press / Liquidation 打 Mold Breaker（引擎偏高约 1.5 倍，未查）、Gyro Ball / Electro Ball 的速度没算 Choice Scarf 和麻痹；Imposter / Transform（L36）。随机差分剩下的主要类别：HP 94、异常状态 30、属性变化 29（其中 Ditto 相关 11 个）、替身 18。
-1. 还没做的（2026-10-16 晚）：场地招式没有实现（L25）；改特性的招式（Skill Swap、Worry Seed、Simple Beam、Entrainment、Gastro Acid、Role Play、Doodle）没有实现；Pickpocket 没有实现；混乱提前解除只是近似；我们的 `build_state` 没有传性格（低血量回复果的混乱用到）；设置天气的宝可梦道具被打掉后，构造按 5 回合算（L3c）；随机对战 runner 用相邻小整数种子，对局之间相关（改了要重建基线）；有倒下 / 中途换人的回合（2,979 个）还不比较。
-2. 剩下的 HP 不一致（gen901 4.18%）按簇继续拆：吸取招式的回复量依赖对另一方伤害的浮动（容差没算进去，方法问题）、属性变化（Libero / Protean 等）、速度等级。
-3. 线索（L10）：Pickpocket 未实现（Poison Puppeteer 见 L40）；混乱提前解除的精确分支（要像 Sleep Talk 那样递归分支，会增加搜索分支数）。
-4. 差分脚本：合并局面时天气 / 场地剩余回合取设置方的视角；吸取回复的容差。
-5. 局面构造类修复会改变网络看到的输入（天气剩余回合、束缚位、Zamazenta 的状态），下一代训练后才完全对齐。用户 2026-10-16 说不需要做修复前后的对战 A/B。
-6. 人类对局：回放只有旁观者视角（HP 是百分比、对方配置不完整），做不了精确差分；可以只检查可观察的部分（先后手、是否击倒、HP 百分比是否落在范围内），以后再做。
