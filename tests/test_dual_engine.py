@@ -6490,3 +6490,18 @@ def test_l222_positions(teams, i, turn, offset):
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
     assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}
 
+
+# L223 (doc/engine-diff.md): an Infiltrator's Pain Split through a Substitute (randbats21 b120-t27 /
+# t28); a transformed mon's copy of a 1-PP move at 1 PP (Revival Blessing: b294-t9)
+@pytest.mark.parametrize("teams,i,turn,offset", [
+    ("random_battle_teams_randbats21.jsonl", 120, 27, 260000),
+    ("random_battle_teams_randbats21.jsonl", 120, 28, 260000),
+    ("random_battle_teams_randbats21.jsonl", 294, 9, 260000),
+])  # fmt: skip
+def test_l223_positions(teams, i, turn, offset):
+    a, b = _random_position(teams, i, turn, offset)
+    c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
+    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"]))
+    n = tuple(len(s["mons"]) for s in a["state"]["sides"])
+    assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}
+

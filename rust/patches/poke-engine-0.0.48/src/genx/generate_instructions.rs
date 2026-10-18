@@ -3542,7 +3542,15 @@ pub fn transform_into(
             }));
             m.disabled = false;
         }
-        let pp = if new == Choices::NONE { 0 } else { 5 };
+        // alpha-poke patch (2026-10-18, doc/engine-diff.md L223): a 1-PP move stays at 1
+        // (Showdown's transformInto: maxpp === 1 ? 1 : 5; Revival Blessing)
+        let pp = if new == Choices::NONE {
+            0
+        } else if new.max_pp() == 1 {
+            1
+        } else {
+            5
+        };
         if m.pp != pp {
             list.push(Instruction::DecrementPP(DecrementPPInstruction {
                 side_ref: *side_ref,

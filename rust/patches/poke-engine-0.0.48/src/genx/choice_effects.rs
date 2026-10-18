@@ -2653,10 +2653,13 @@ pub fn choice_special_effect(
                 }));
             attacker.hp = 0;
         }
+        // alpha-poke patch (2026-10-18, doc/engine-diff.md L223): through a Substitute for an
+        // Infiltrator user (Showdown's infiltrates; L133's generic check has it)
         Choices::PAINSPLIT => {
             if !defending_side
                 .volatile_statuses
                 .contains(&PokemonVolatileStatus::SUBSTITUTE)
+                || attacking_side.get_active_immutable().ability == Abilities::INFILTRATOR
             {
                 let target_hp = (attacking_side.get_active_immutable().hp
                     + defending_side.get_active_immutable().hp)
