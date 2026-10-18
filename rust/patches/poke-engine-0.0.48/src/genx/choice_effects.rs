@@ -379,6 +379,7 @@ pub fn modify_choice(
                 && defending_side.get_active_immutable().item != Items::UTILITYUMBRELLA
             {
                 attacker_choice.accuracy = 100.0;
+                attacker_choice.sure_hit = true;
             }
         }
         Choices::SHELLSIDEARM => {
@@ -659,6 +660,7 @@ pub fn modify_choice(
                 .has_type(&PokemonType::POISON)
             {
                 attacker_choice.accuracy = 100.0;
+                attacker_choice.sure_hit = true;
             }
         }
         Choices::WEATHERBALL => {
@@ -701,6 +703,7 @@ pub fn modify_choice(
             // (L154: in snow too)
             if state.weather_is_active(&Weather::HAIL) || state.weather_is_active(&Weather::SNOW) {
                 attacker_choice.accuracy = 100.0;
+                attacker_choice.sure_hit = true;
             }
         }
         Choices::HURRICANE | Choices::THUNDER => {
@@ -708,6 +711,7 @@ pub fn modify_choice(
                 || state.weather_is_active(&Weather::HEAVYRAIN)
             {
                 attacker_choice.accuracy = 100.0;
+                attacker_choice.sure_hit = true;
             } else if state.weather_is_active(&Weather::SUN)
                 || state.weather_is_active(&Weather::HARSHSUN)
             {

@@ -12,9 +12,6 @@
 "b130-t8": [
 "status"
 ],
-"b147-t9": [
-"status"
-],
 "b149-t8": [
 "hp"
 ],
@@ -78,10 +75,6 @@
 "item",
 "last_item",
 "options"
-],
-"b34-t14": [
-"sleep_turns",
-"status"
 ],
 "b54-t12": [
 "hp",

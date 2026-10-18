@@ -120,6 +120,21 @@ def test_engine_knows_every_item_with_an_effect():
     assert unknown == []
 
 
+@pytest.mark.parametrize("key, got", [("ignore_evasion", "ignore_evasion_moves"),
+                                      ("thaws_target", "thaw_target_moves")])  # fmt: skip
+def test_move_lists_match_showdown(key, got):
+    """The moves that ignore the target's evasion (Showdown's ignoreEvasion) and the ones that thaw
+    their frozen target (thawsTarget; L191), among the engine's moves."""
+    import alpha_search
+
+    from alpha_poke.enginecheck import data
+
+    eng = dict(alpha_search.move_targets())
+    want = sorted(m["id"] for m in data.showdown()["moves"] if m["id"] in eng and m.get(key))
+    assert len(want) >= 2
+    assert getattr(alpha_search, got)() == want
+
+
 def test_always_hit_moves_match_showdown():
     """The moves aimed at the target that cannot miss (Showdown's accuracy: true; the engine
     keeps 100 for them and lists them in Choices::always_hits, so accuracy modifiers -- Bright

@@ -1928,14 +1928,6 @@ fn get_instructions_from_heal(
     }
 }
 
-fn boosted_accuracy(accuracy_boost: i8) -> f32 {
-    if accuracy_boost < 0 {
-        3.0 / (3.0 - accuracy_boost as f32)
-    } else {
-        (3.0 + accuracy_boost as f32) / 3.0
-    }
-}
-
 // alpha-poke patch (2026-10-16, doc/engine-diff.md L22 / L23): the instructions that end a locking
 // move's lock (Outrage, Petal Dance, ...): the volatile and its count go, the other moves can be
 // used again (unless a choice item locks them anyway), and with `confuse` the user is confused
@@ -2292,11 +2284,60 @@ fn check_move_hit_or_miss(
             .instruction_list
             .iter()
             .any(|i| matches!(i, Instruction::FormeChange(f) if f.side_ref == defender_ref));
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L191): Showdown's hitStepAccuracy, the user's
+    // accuracy less the target's evasion (-6 to 6; was the accuracy only): the target's Unaware
+    // ignores the user's accuracy (not through a Mold Breaker), the user's its evasion, so do Keen
+    // Eye / Mind's Eye and Darkest Lariat / Sacred Sword (ignoreEvasion); a move that cannot miss
+    // and a move aimed at its user have none
+    let stage = {
+        let attacking_side = state.get_side_immutable(attacking_side_ref);
+        let attacking_pokemon = attacking_side.get_active_immutable();
+        let target_side = state.get_side_immutable(&defender_ref);
+        let target = target_side.get_active_immutable();
+        let breaker = matches!(
+            attacking_pokemon.ability,
+            Abilities::MOLDBREAKER | Abilities::TERAVOLT | Abilities::TURBOBLAZE
+        ) && target.item != Items::ABILITYSHIELD;
+        let accuracy = if target.ability == Abilities::UNAWARE && !breaker {
+            0
+        } else {
+            attacking_side.accuracy_boost
+        };
+        let evasion = if attacking_pokemon.ability == Abilities::UNAWARE
+            || matches!(
+                attacking_pokemon.ability,
+                Abilities::KEENEYE | Abilities::MINDSEYE
+            )
+            || choice.move_id.ignores_evasion()
+        {
+            0
+        } else {
+            target_side.evasion_boost
+        };
+        // (Glaive Rush's volatile on the target: Showdown's onAccuracy true)
+        let glaive = target_side
+            .volatile_statuses
+            .contains(&PokemonVolatileStatus::GLAIVERUSH);
+        if choice.target == MoveTarget::Opponent
+            && !choice.move_id.always_hits()
+            && !choice.sure_hit
+            && !glaive
+        {
+            (accuracy - evasion).clamp(-6, 6)
+        } else {
+            0
+        }
+    };
+    // (Showdown truncates the boosted accuracy)
+    let boosted = match stage {
+        b if b > 0 => (choice.accuracy * (3 + b) as f32 / 3.0).floor(),
+        b if b < 0 => (choice.accuracy * 3.0 / (3 - b) as f32).floor(),
+        _ => choice.accuracy,
+    };
     let attacking_side = state.get_side(attacking_side_ref);
     let attacking_pokemon = attacking_side.get_active_immutable();
 
-    let mut percent_hit =
-        (choice.accuracy / 100.0) * boosted_accuracy(attacking_side.accuracy_boost);
+    let mut percent_hit = boosted / 100.0;
     // alpha-poke patch (2026-10-16, doc/engine-diff.md L24): Bright Powder (the target's, x
     // 3686 / 4096) and Zoom Lens (the user's, moving after the target, x 4915 / 4096) on a move
     // aimed at the target that can miss
@@ -5768,28 +5809,86 @@ fn end_of_turn_with_harvest(
     si: &mut StateInstructions,
     first_move_side: &SideReference,
 ) -> Vec<StateInstructions> {
-    // (L168: a Future Sight crit's branch first, the state back as it was)
-    let mut out = vec![];
+    // (L168: a Future Sight crit's branch; L191: each Shed Skin's 1 in 3 -- every combination, the
+    // state back as it was after each but the last)
+    let mut branches: Vec<(EotRolls, f32)> = vec![(EotRolls::default(), 1.0)];
     if let Some((side, p)) = future_sight_crit_chance(state) {
-        let base = si.instruction_list.len();
-        let mut crit = si.clone();
-        crit.update_percentage(p);
-        si.update_percentage(1.0 - p);
-        out.extend(harvest_after_end_of_turn(state, &mut crit, first_move_side, Some(side)));
-        state.reverse_instructions(&crit.instruction_list[base..].to_vec());
-        out.push(crit);
+        branches = branches
+            .into_iter()
+            .flat_map(|(r, q)| {
+                [
+                    (EotRolls { fs_crit: Some(side), ..r }, q * p),
+                    (r, q * (1.0 - p)),
+                ]
+            })
+            .collect();
     }
-    out.extend(harvest_after_end_of_turn(state, si, first_move_side, None));
+    for (k, side_ref) in [SideReference::SideOne, SideReference::SideTwo]
+        .iter()
+        .enumerate()
+    {
+        if shed_skin_can_cure(state, side_ref) {
+            branches = branches
+                .into_iter()
+                .flat_map(|(r, q)| {
+                    let mut cured = r;
+                    cured.shed_skin[k] = true;
+                    [
+                        (cured, q * SHED_SKIN_CHANCE),
+                        (r, q * (1.0 - SHED_SKIN_CHANCE)),
+                    ]
+                })
+                .collect();
+        }
+    }
+    let mut out = vec![];
+    let (last, rest) = branches.split_last().unwrap();
+    let base = si.instruction_list.len();
+    for (rolls, q) in rest {
+        let mut b = si.clone();
+        b.update_percentage(*q);
+        out.extend(harvest_after_end_of_turn(state, &mut b, first_move_side, *rolls));
+        state.reverse_instructions(&b.instruction_list[base..].to_vec());
+        out.push(b);
+    }
+    si.update_percentage(last.1);
+    out.extend(harvest_after_end_of_turn(state, si, first_move_side, last.0));
     out
+}
+
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L191): the end of the turn's chance events, a
+// branch each: Future Sight's crit (L168: the side whose hit crits), Shed Skin's cure (Showdown's
+// onResidual, randomChance(33, 100); was every time) by side
+#[derive(Clone, Copy, Default)]
+pub struct EotRolls {
+    pub fs_crit: Option<SideReference>,
+    pub shed_skin: [bool; 2],
+}
+
+pub const SHED_SKIN_CHANCE: f32 = 0.33;
+
+// (an active Shed Skin with a status, not under the foe's Neutralizing Gas)
+fn shed_skin_can_cure(state: &State, side_ref: &SideReference) -> bool {
+    if state.side_one.force_switch || state.side_two.force_switch {
+        return false;
+    }
+    let p = state.get_side_immutable(side_ref).get_active_immutable();
+    let foe = state
+        .get_side_immutable(&side_ref.get_other_side())
+        .get_active_immutable();
+    p.ability == Abilities::SHEDSKIN
+        && p.hp > 0
+        && p.status != PokemonStatus::NONE
+        && !(foe.ability == Abilities::NEUTRALIZINGGAS && p.item != Items::ABILITYSHIELD)
 }
 
 fn harvest_after_end_of_turn(
     state: &mut State,
     si: &mut StateInstructions,
     first_move_side: &SideReference,
-    fs_crit: Option<SideReference>,
+    rolls: EotRolls,
 ) -> Option<StateInstructions> {
-    end_of_turn_instructions(state, si, first_move_side, fs_crit);
+    end_of_turn_instructions(state, si, first_move_side, rolls);
     let (h, p) = harvest_chance(state)?;
     if p >= 1.0 {
         harvest_instructions(state, h, si);
@@ -5812,7 +5911,7 @@ fn add_end_of_turn_instructions(
     incoming_instructions: &mut StateInstructions,
     first_move_side: &SideReference,
 ) {
-    end_of_turn_instructions(state, incoming_instructions, first_move_side, None);
+    end_of_turn_instructions(state, incoming_instructions, first_move_side, EotRolls::default());
 }
 
 // alpha-poke patch (2026-10-17, doc/engine-diff.md L168): Future Sight / Doom Desire's hit at the
@@ -5840,8 +5939,9 @@ fn end_of_turn_instructions(
     state: &mut State,
     mut incoming_instructions: &mut StateInstructions,
     first_move_side: &SideReference,
-    fs_crit: Option<SideReference>,
+    rolls: EotRolls,
 ) {
+    let fs_crit = rolls.fs_crit;
     let end_of_turn_from = incoming_instructions.instruction_list.len();
     if state.side_one.force_switch || state.side_two.force_switch {
         return;
@@ -6216,7 +6316,8 @@ fn end_of_turn_instructions(
             continue;
         }
 
-        ability_end_of_turn(state, side_ref, &mut incoming_instructions, true);
+        let shed_skin = rolls.shed_skin[(*side_ref == SideReference::SideTwo) as usize];
+        ability_end_of_turn(state, side_ref, &mut incoming_instructions, true, shed_skin);
         item_end_of_turn(state, side_ref, &mut incoming_instructions, true);
     }
 
@@ -6406,7 +6507,8 @@ fn end_of_turn_instructions(
         }
 
         item_end_of_turn(state, side_ref, &mut incoming_instructions, false);
-        ability_end_of_turn(state, side_ref, &mut incoming_instructions, false);
+        let shed_skin = rolls.shed_skin[(*side_ref == SideReference::SideTwo) as usize];
+        ability_end_of_turn(state, side_ref, &mut incoming_instructions, false, shed_skin);
     }
 
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L115): "failed last turn" is for one turn

@@ -20487,6 +20487,24 @@ impl Choices {
     // alpha-poke patch (2026-10-16, doc/engine-diff.md L24): the moves aimed at the target that
     // cannot miss (Showdown's accuracy: true; the engine's 100): no accuracy modifier applies to
     // them (Bright Powder, Zoom Lens). tests/test_engine_data.py checks the list against Showdown
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L191): the moves that thaw their frozen
+    // target (Showdown's thawsTarget) and the ones that ignore the target's evasion
+    // (ignoreEvasion); the data tests check the lists
+    pub fn thaws_target(&self) -> bool {
+        matches!(
+            self,
+            Choices::SCALD
+                | Choices::STEAMERUPTION
+                | Choices::HYDROSTEAM
+                | Choices::SCORCHINGSANDS
+                | Choices::MATCHAGOTCHA
+        )
+    }
+
+    pub fn ignores_evasion(&self) -> bool {
+        matches!(self, Choices::DARKESTLARIAT | Choices::SACREDSWORD)
+    }
+
     pub fn always_hits(&self) -> bool {
         matches!(
             self,
@@ -21844,6 +21862,10 @@ pub struct Choice {
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L165): Meteor Beam / Electro Shot hitting at
     // once (Power Herb, Electro Shot in rain): their Sp. Atk +1 as the move starts (Protect or not)
     pub charge_boost: bool,
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L191): it cannot miss now (Showdown's accuracy
+    // true: No Guard, a Poison type's Toxic, Blizzard in snow, Thunder / Hurricane / the Storms in
+    // rain): no accuracy or evasion stage applies
+    pub sure_hit: bool,
 }
 
 impl fmt::Debug for Choice {
@@ -21987,6 +22009,7 @@ impl Default for Choice {
             dancer_move: false,
             first_hit_blocked: false,
             charge_boost: false,
+            sure_hit: false,
         }
     }
 }

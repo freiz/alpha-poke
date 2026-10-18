@@ -1227,11 +1227,12 @@ def test_l24_leppa_berry():
 
 def test_l24_micle_berry():
     """Eaten at 1/4 HP at the end of the turn: the next move's accuracy x 4915 / 4096."""
-    p1 = _corviknight("Micle Berry").replace("- Brave Bird", "- Stone Edge")
-    turns = [("move defog", "move ruination")] * 2
+    # (L191: Iron Defense, not Defog: Defog's evasion drop is an accuracy stage now)
+    p1 = _corviknight("Micle Berry").replace("- Brave Bird", "- Stone Edge").replace("- Defog", "- Iron Defense")
+    turns = [("move irondefense", "move ruination")] * 2
     states = ec.run_showdown(p1, TINGLU_HITS, turns, seed="gen5,5,5,5,5")
     assert "micleberry" in states[2]["sides"][0]["mons"][0]["volatiles"]  # Showdown
-    outs = ec.engine_outcomes(ec.engine_state(states[1]), "defog", "ruination")
+    outs = ec.engine_outcomes(ec.engine_state(states[1]), "irondefense", "ruination")
     assert ec.closest(states[2], outs, (1, 1), hp=True)["diff"] == {}
     acc = ec.accuracies(p1, TINGLU_HITS, turns, seed="gen5,5,5,5,5")["stoneedge"]
     outs = ec.engine_outcomes(ec.engine_state(states[2]), "stoneedge", "spikes")
@@ -5345,3 +5346,50 @@ def test_l190_copied_dauntless_shield_keeps_the_base_ability():
     states = ec.run_showdown(DITTO_BACK, ZAMAZENTA, [("switch 2", "move irondefense")], fmt="gen9customgame")
     assert any("Dauntless Shield" in x for x in states[1]["log"])
     assert _keys(_full(states, 0, "ditto", "irondefense", (2, 1)), "ability") == {}
+
+
+# L191 (doc/engine-diff.md): the accuracy as Showdown's hitStepAccuracy (the user's accuracy less
+# the target's evasion; Unaware, Keen Eye, ignoreEvasion; no stage for a sure hit); Shed Skin cures
+# 1 in 3 (a branch of the end of the turn); a frozen target thaws to a Fire attack / a thawing move
+SCRAFTY_SHED = """Scrafty @ Leftovers
+Ability: Shed Skin
+EVs: 252 HP / 252 Def / 4 SpD
+Impish Nature
+- Bulk Up
+- Drain Punch
+- Knock Off
+- Rest"""
+
+
+def test_l191_evasion():
+    blissey = BLISSEY.replace("- Calm Mind", "- Double Team")
+    states = ec.run_showdown(GARCHOMP_SD, blissey, [("move swordsdance", "move doubleteam"),
+                                                    ("move earthquake", "move softboiled")], seed="gen5,38,45,114,190")  # fmt: skip
+    assert any("|-miss|p1a: Garchomp" in x for x in states[2]["log"])
+    assert _full(states, 1, "earthquake", "softboiled") == {}
+
+
+def test_l191_unaware_ignores_the_accuracy():
+    gar = GARCHOMP_SD.replace("- Scale Shot", "- Stone Edge").replace("- Stealth Rock", "- Hone Claws")
+    states = ec.run_showdown(gar, DONDOZO, [("move honeclaws", "move curse"), ("move stoneedge", "move curse")],
+                             seed="gen5,41,48,123,205")  # fmt: skip
+    assert any("|-miss|p1a: Garchomp" in x for x in states[2]["log"])
+    assert _full(states, 1, "stoneedge", "curse") == {}
+
+
+def test_l191_shed_skin_one_in_three():
+    blissey = BLISSEY.replace("- Calm Mind", "- Toxic")
+    states = ec.run_showdown(SCRAFTY_SHED, blissey, [("move bulkup", "move toxic")], seed="gen5,1,8,3,5")
+    assert states[1]["sides"][0]["mons"][0]["status"] == "tox"  # not cured this time
+    assert _keys(_full(states, 0, "bulkup", "toxic"), "status", "toxic") == {}
+
+
+def test_l191_fire_thaws_the_target():
+    kyurem = KYUREM_SPECIAL.replace("- Earth Power", "- Flamethrower")
+    turns = [("move icebeam", "move calmmind"), ("move flamethrower", "move calmmind")]
+    states = ec.run_showdown(kyurem, BLISSEY, turns, seed="gen5,42,49,126,210")
+    assert states[1]["sides"][1]["mons"][0]["status"] == "frz"
+    assert _keys(_full(states, 1, "flamethrower", "calmmind"), "status") == {}
+    # (no branch left frozen: the hit thaws it before its own move; was its 1 in 5 thaw only)
+    outs = ec.engine_outcomes(ec.engine_state(states[1]), "flamethrower", "calmmind")
+    assert not any(str(o[1].side_two.pokemon[0].status).lower() == "freeze" for o in outs)

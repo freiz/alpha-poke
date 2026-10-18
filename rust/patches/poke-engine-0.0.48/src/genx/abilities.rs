@@ -1160,6 +1160,27 @@ pub fn ability_damaging_hit(
     instructions: &mut StateInstructions,
 ) {
     let holder = side_ref.get_other_side();
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L191): a frozen target thaws when an attack
+    // of Fire type hits it (Showdown's frz onDamagingHit) or one that thaws it (thawsTarget: Scald,
+    // Steam Eruption, Hydro Steam, Scorching Sands, Matcha Gotcha -- onAfterMoveSecondary); was
+    // never
+    {
+        let target_side = state.get_side(&holder);
+        let thaws = choice.category != MoveCategory::Status
+            && (choice.move_type == PokemonType::FIRE || choice.move_id.thaws_target());
+        if thaws
+            && target_side.get_active_immutable().status == PokemonStatus::FREEZE
+            && target_side.get_active_immutable().hp > 0
+        {
+            let index = target_side.active_index;
+            super::generate_instructions::add_remove_status_instructions(
+                instructions,
+                index,
+                holder,
+                target_side,
+            );
+        }
+    }
     {
         let (attacking_side, defending_side) = state.get_both_sides(side_ref);
         let attacker = attacking_side.get_active();
@@ -1771,6 +1792,8 @@ pub fn ability_end_of_turn(
     side_ref: &SideReference,
     instructions: &mut StateInstructions,
     before_status: bool,
+    // (L191: this branch's Shed Skin cures: generate_instructions::EotRolls)
+    shed_skin: bool,
 ) {
     let (attacking_side, defending_side) = state.get_both_sides(side_ref);
     // alpha-poke patch (2026-10-16, doc/engine-diff.md L19): no healing under Heal Block
@@ -2008,7 +2031,7 @@ pub fn ability_end_of_turn(
         // Shed skin only has a 1/3 chance of activating at the end of the turn
         // but I'm not going to branch on that here
         Abilities::SHEDSKIN => {
-            if active_pkmn.status != PokemonStatus::NONE {
+            if active_pkmn.status != PokemonStatus::NONE && shed_skin {
                 let attacking_side = state.get_side(side_ref);
                 let active_index = attacking_side.active_index;
                 let active_pkmn = attacking_side.get_active();
@@ -2778,7 +2801,10 @@ pub fn ability_modify_attack_being_used(
                 attacker_choice.move_type = PokemonType::WATER;
             }
         }
-        Abilities::NOGUARD => attacker_choice.accuracy = 100.0,
+        Abilities::NOGUARD => {
+            attacker_choice.accuracy = 100.0;
+            attacker_choice.sure_hit = true;
+        }
         Abilities::TORRENT => {
             if attacker_choice.move_type == PokemonType::WATER
                 && attacking_pkmn.hp <= attacking_pkmn.maxhp / 3
@@ -3220,6 +3246,7 @@ pub fn ability_modify_attack_against(
         }
         Abilities::NOGUARD => {
             attacker_choice.accuracy = 100.0;
+            attacker_choice.sure_hit = true;
         }
         Abilities::MARVELSCALE => {
             if target_pkmn.status != PokemonStatus::NONE
