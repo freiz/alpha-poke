@@ -978,6 +978,10 @@ pub struct Pokemon {
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L175): a Stellar tera's types already
     // boosted once (Showdown's stellarBoostedTypes; bit = the PokemonType's index)
     pub stellar_boosted: u32,
+    // alpha-poke patch (2026-10-18, doc/engine-diff.md L227): a once-per-battle ability it used
+    // while transformed (Showdown's shieldBoost / swordBoost, its own: a Ditto's second Dauntless
+    // Shield does nothing); a holder of its own marks it in its base ability (L184)
+    pub once_used: bool,
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L180): its own stats, weight, moves and PP
     // while transformed (Showdown's baseStoredStats / baseMoveSlots / species weight): set as it
     // transforms, given back as it switches out; empty (moves all NONE) otherwise
@@ -1074,6 +1078,7 @@ impl Default for Pokemon {
             last_item: Items::NONE,
             times_attacked: 0,
             stellar_boosted: 0,
+            once_used: false,
             own: OwnSet::default(),
             gender: 0,
             moves: PokemonMoves {
@@ -1171,7 +1176,16 @@ impl Pokemon {
             self.last_item.to_string(),
             // (L163: only when either is set; the older strings have neither; L175: the Stellar
             // boosts after them, only when set; L180: then its own set while transformed)
-            if self.own.is_set() {
+            // (L227: once_used after the own set, only when set)
+            if self.once_used {
+                format!(
+                    ",{},{},{},{},true",
+                    self.times_attacked,
+                    self.gender,
+                    self.stellar_boosted,
+                    self.own.serialize()
+                )
+            } else if self.own.is_set() {
                 format!(
                     ",{},{},{},{}",
                     self.times_attacked,
@@ -1252,6 +1266,7 @@ impl Pokemon {
             gender: split.get(31).map_or(0, |x| x.parse::<u8>().unwrap()),
             stellar_boosted: split.get(32).map_or(0, |x| x.parse::<u32>().unwrap()),
             own: split.get(33).map_or(OwnSet::default(), |x| OwnSet::deserialize(x)),
+            once_used: split.get(34).map_or(false, |x| x.parse::<bool>().unwrap()),
         }
     }
 }

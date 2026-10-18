@@ -399,6 +399,14 @@ fn volatile_status_modifiers(
     if def.contains(&PokemonVolatileStatus::GLAIVERUSH) {
         m.damage *= 2.0;
     }
+    // alpha-poke patch (2026-10-18, doc/engine-diff.md L227): by the stat the hit uses -- a
+    // Psyshock / Psystrike / Secret Sword is special against the Defense (Showdown's
+    // onModifyDef / onModifySpD); the special one's boosted it
+    let on_defense = matches!(
+        choice.move_id,
+        Choices::PSYSHOCK | Choices::PSYSTRIKE | Choices::SECRETSWORD
+    );
+    let (physical, special) = (physical || special && on_defense, special && !on_defense);
     if (def.contains(&PokemonVolatileStatus::PROTOSYNTHESISDEF)
         || def.contains(&PokemonVolatileStatus::QUARKDRIVEDEF))
         && physical
@@ -462,7 +470,21 @@ fn get_defending_types(
             defender_types.1 = PokemonType::TYPELESS;
         }
     }
+    // alpha-poke patch (2026-10-18, doc/engine-diff.md L227): Scrappy / Mind's Eye through a
+    // terastallized Ghost type too (Showdown's ignoreImmunity); it returned before them
+    let scrappy = (attacking_pkmn.ability == Abilities::SCRAPPY
+        || attacking_pkmn.ability == Abilities::MINDSEYE)
+        && (attacking_choice.move_type == PokemonType::NORMAL
+            || attacking_choice.move_type == PokemonType::FIGHTING);
     if defending_pkmn.terastallized && !(defending_pkmn.tera_type == PokemonType::STELLAR) {
+        if scrappy {
+            if defender_types.0 == PokemonType::GHOST {
+                defender_types.0 = PokemonType::TYPELESS;
+            }
+            if defender_types.1 == PokemonType::GHOST {
+                defender_types.1 = PokemonType::TYPELESS;
+            }
+        }
         return defender_types;
     }
     if side
@@ -814,6 +836,15 @@ fn common_pkmn_damage_calc(
         {
             weather_mod = weather_modifier(&choice.move_type, weather);
         }
+        // alpha-poke patch (2026-10-18, doc/engine-diff.md L227): Hydro Steam 1.5x in its user's
+        // sun (Showdown's onWeatherModifyDamage, whatever the target's Utility Umbrella); it was
+        // its power x 3 and the water halving, rounded otherwise
+        if choice.move_id == Choices::HYDROSTEAM
+            && *weather == Weather::SUN
+            && attacker.item != Items::UTILITYUMBRELLA
+        {
+            weather_mod = 1.5;
+        }
     }
     if vol.immune || effectiveness == 0.0 || weather_mod == 0.0 {
         return None;
@@ -1044,7 +1075,21 @@ pub fn calculate_futuresight_damage(
     choice: &Choice,
     crit: bool,
     hint: i16,
+    psychic_terrain: bool,
 ) -> i16 {
+    // alpha-poke patch (2026-10-18, doc/engine-diff.md L227): Psychic Terrain's boost for a grounded
+    // user, active or not (Showdown's onBasePower on the source: isGrounded); it had none
+    let user = &attacking_side.pokemon[attacking_side_pokemon_index];
+    let grounded = if attacking_side.active_index == *attacking_side_pokemon_index {
+        attacking_side.active_grounded()
+    } else {
+        user.is_grounded()
+    };
+    let mut boosted = choice.clone();
+    if psychic_terrain && grounded && choice.move_type == PokemonType::PSYCHIC {
+        boosted.base_power *= 5325.0 / 4096.0;
+    }
+    let choice = &boosted;
     // L35: the user's Special Attack boosts while it is active (Showdown's getDamage on the
     // source at the hit; a switch resets them)
     let user_active = attacking_side.active_index == *attacking_side_pokemon_index;

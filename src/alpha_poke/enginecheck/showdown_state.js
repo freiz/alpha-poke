@@ -68,6 +68,14 @@ function monState(p, side) {
 			.concat(p.isActive && p.battle.turn === 1 && p.statsRaisedThisTurn ?
 				[['statsraised', {duration: 0, layers: 0, counter: 0, stat: '',
 					time: 0, true_duration: 0, num_consecutive: 0, hp: 0, move: ''}]] : [])
+			// (L227: transformed into an Ogerpon / Terapagos: no Terastallization, the engine's volatile)
+			.concat(p.isActive && p.transformed && ['Ogerpon', 'Terapagos'].includes(p.species.baseSpecies) ?
+				[['notera', {duration: 0, layers: 0, counter: 0, stat: '',
+					time: 0, true_duration: 0, num_consecutive: 0, hp: 0, move: ''}]] : [])
+			// (L227: a Zoroark's Illusion still up: the engine's volatile -- a Transform into it fails)
+			.concat(p.isActive && p.illusion ?
+				[['illusion', {duration: 0, layers: 0, counter: 0, stat: '',
+					time: 0, true_duration: 0, num_consecutive: 0, hp: 0, move: ''}]] : [])
 			// (L224: Power Split / Guard Split's stats: the engine's volatile)
 			.concat(splitStats(p) ?
 				[['statsplit', {duration: 0, layers: 0, counter: 0, stat: '',

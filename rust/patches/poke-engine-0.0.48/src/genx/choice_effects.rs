@@ -24,7 +24,7 @@ use crate::state::{
 };
 use std::cmp;
 
-const CHOICE_THAWS_USER: [Choices; 10] = [
+pub const CHOICE_THAWS_USER: [Choices; 10] = [
     Choices::FLAMEWHEEL,
     Choices::SACREDFIRE,
     Choices::FLAREBLITZ,
@@ -278,7 +278,9 @@ pub fn modify_choice(
         }
         Choices::CLANGOROUSSOUL => {
             let attacker = attacking_side.get_active_immutable();
-            if attacker.hp > attacker.maxhp / 3 {
+            // alpha-poke patch (2026-10-18, doc/engine-diff.md L227): more than 33 / 100 of the max
+            // HP (Showdown's onTry; it was a third: 80 of 242 failed)
+            if attacker.hp as i32 * 100 > attacker.maxhp as i32 * 33 {
                 attacker_choice.heal = Some(Heal {
                     target: MoveTarget::User,
                     amount: -0.33,
@@ -399,11 +401,7 @@ pub fn modify_choice(
                 attacker_choice.flags.contact = true;
             }
         }
-        Choices::HYDROSTEAM => {
-            if state.weather_is_active(&Weather::SUN) {
-                attacker_choice.base_power *= 3.0; // 1.5x for being in sun, 2x for cancelling out rain debuff
-            }
-        }
+        // (L227: Hydro Steam's sun boost is damage_calc's weather modifier)
         // alpha-poke patch (2026-10-18, doc/engine-diff.md L220): its user's plate's type, else
         // Normal (Showdown's onModifyType: not an ignored item -- Klutz, Magic Room), not the
         // user's type (a Ditto transformed into an Arceus, its Choice Scarf: a Steel Judgment)
@@ -436,7 +434,8 @@ pub fn modify_choice(
                     amount: 0.667,
                 })
             } else {
-                match state.weather.weather_type {
+                // (L227: the weather in effect, not a suppressed one)
+                match if state.weather_suppressed() { Weather::NONE } else { state.weather.weather_type } {
                     Weather::SUN => {
                         attacker_choice.heal = Some(Heal {
                             target: MoveTarget::User,
@@ -614,10 +613,13 @@ pub fn modify_choice(
                 let attacker_maxhp = attacking_side.get_active_immutable().maxhp;
 
                 if defending_side.get_active_immutable().ability == Abilities::LIQUIDOOZE {
-                    attacker_choice.heal = Some(Heal {
-                        target: MoveTarget::User,
-                        amount: -1.0 * defender_attack as f32 / attacker_maxhp as f32,
-                    });
+                    // (L227: nothing for a Magic Guard user: the ooze is a damage)
+                    attacker_choice.heal = (attacking_side.get_active_immutable().ability
+                        != Abilities::MAGICGUARD)
+                        .then(|| Heal {
+                            target: MoveTarget::User,
+                            amount: -1.0 * defender_attack as f32 / attacker_maxhp as f32,
+                        });
                 } else {
                     attacker_choice.heal = Some(Heal {
                         target: MoveTarget::User,
@@ -706,7 +708,8 @@ pub fn modify_choice(
                 attacker_choice.base_power = 100.0;
                 attacker_choice.move_type = PokemonType::FIRE;
             } else {
-                match state.weather.weather_type {
+                // (L227: the weather in effect, not a suppressed one)
+                match if state.weather_suppressed() { Weather::NONE } else { state.weather.weather_type } {
                     Weather::SUN | Weather::HARSHSUN => {
                         attacker_choice.base_power = 100.0;
                         attacker_choice.move_type = PokemonType::FIRE;
@@ -731,8 +734,11 @@ pub fn modify_choice(
             if state.weather_is_active(&Weather::SUN) || state.weather_is_active(&Weather::HARSHSUN)
             {
                 attacker_choice.flags.charge = false;
-            } else if !state.weather_is_active(&Weather::SUN)
-                && state.weather.weather_type != Weather::NONE
+            // (L227: in an active rain, sand, hail or snow -- not a Cloud Nine's suppressed sun:
+            // Showdown's effectiveWeather)
+            } else if [Weather::RAIN, Weather::HEAVYRAIN, Weather::SAND, Weather::HAIL, Weather::SNOW]
+                .iter()
+                .any(|w| state.weather_is_active(w))
             {
                 attacker_choice.base_power /= 2.0;
             }
@@ -847,7 +853,11 @@ pub fn modify_choice(
             }
         }
         Choices::FACADE => {
-            if attacking_side.get_active_immutable().status != PokemonStatus::NONE {
+            // (L227: not asleep -- Showdown's onBasePower: pokemon.status !== 'slp')
+            if !matches!(
+                attacking_side.get_active_immutable().status,
+                PokemonStatus::NONE | PokemonStatus::SLEEP
+            ) {
                 attacker_choice.base_power *= 2.0;
             }
         }
@@ -1110,7 +1120,9 @@ pub fn choice_after_damage_hit(
         }
         // alpha-poke patch (2026-10-16, L27): Raging Bull's screen break is before the hit now
         // (generate_instructions::screen_break_instructions); it was here, after its damage
-        Choices::CLEARSMOG => {
+        // alpha-poke patch (2026-10-18, doc/engine-diff.md L227): not through a Substitute
+        // (Showdown's onHit: the Substitute took the hit)
+        Choices::CLEARSMOG if !hit_sub => {
             state.reset_boosts(
                 &attacking_side_ref.get_other_side(),
                 &mut instructions.instruction_list,
@@ -1179,7 +1191,7 @@ pub fn choice_after_hit(
         let user = state.get_side_immutable(attacking_side_ref).get_active_immutable();
         let target = state.get_side_immutable(&defender_ref).get_active_immutable();
         let berry = target.item;
-        if user.hp > 0 && super::items::is_berry(berry) && target.item_can_be_removed() {
+        if user.hp > 0 && super::items::is_berry(berry) && target.item_can_be_taken_by(user.ability) {
             let ins = Instruction::ChangeItem(ChangeItemInstruction {
                 side_ref: defender_ref,
                 current_item: berry,
@@ -1246,8 +1258,9 @@ pub fn choice_after_hit(
                 })
             });
             let waits = knock_off_waits(choice, defender);
+            let by = user.ability;
             let defender_active = defending_side.get_active();
-            if defender_active.item_can_be_removed()
+            if defender_active.item_can_be_taken_by(by)
                 && defender_active.item != Items::NONE
                 && !hit_sub
                 && !user_faints
@@ -1267,7 +1280,7 @@ pub fn choice_after_hit(
         Choices::THIEF => {
             let attacker_active = attacking_side.get_active();
             let defender_active = defending_side.get_active();
-            if defender_active.item_can_be_removed()
+            if defender_active.item_can_be_taken_by(attacker_active.ability)
                 && defender_active.item != Items::NONE
                 && attacker_active.item == Items::NONE
                 && !hit_sub
@@ -1513,21 +1526,39 @@ pub fn choice_hazard_clear(
             );
             // (L206: a target under the foe's Neutralizing Gas: no Clear Body, Mirror Armor, ...)
             let gassed = super::generate_instructions::suppress_gassed(state, &target_ref);
+            // alpha-poke patch (2026-10-18, doc/engine-diff.md L227): the drop's source is the
+            // target's foe -- the bouncer for one Magic Bounce sent back: Mirror Armor sends it
+            // there (a reflected Defog into a Mirror Armor user's); it reflected only the user's
+            let source = target_ref.get_other_side();
+            let source_breaks = if target_ref == *attacking_side_ref {
+                matches!(
+                    state.get_side_immutable(&source).get_active_immutable().ability,
+                    Abilities::MOLDBREAKER | Abilities::TERAVOLT | Abilities::TURBOBLAZE
+                )
+            } else {
+                breaker
+            };
+            // (L227: through a Substitute for an Infiltrator user: Showdown's move.infiltrates)
+            let infiltrates = state
+                .get_side_immutable(attacking_side_ref)
+                .get_active_immutable()
+                .ability
+                == Abilities::INFILTRATOR;
             let target_side = state.get_side(&target_ref);
-            let mirrored = target_ref != *attacking_side_ref
-                && target_side.get_active_immutable().ability == Abilities::MIRRORARMOR
-                && !breaker;
-            if !target_side
-                .volatile_statuses
-                .contains(&PokemonVolatileStatus::SUBSTITUTE)
+            let mirrored = target_side.get_active_immutable().ability == Abilities::MIRRORARMOR
+                && !source_breaks;
+            if infiltrates
+                || !target_side
+                    .volatile_statuses
+                    .contains(&PokemonVolatileStatus::SUBSTITUTE)
             {
                 if mirrored {
                     apply_boost_instruction(
-                        state.get_side(attacking_side_ref),
+                        state.get_side(&source),
                         &PokemonBoostableStat::Evasion,
                         &-1,
                         &target_ref,
-                        attacking_side_ref,
+                        &source,
                         instructions,
                     );
                 } else {
@@ -1669,6 +1700,10 @@ pub fn choice_hazard_clear(
                     .remove(&PokemonVolatileStatus::SUBSTITUTE);
             }
         }
+        // alpha-poke patch (2026-10-18, doc/engine-diff.md L227): not when the hit's contact damage
+        // (Rocky Helmet, Rough Skin) knocked its user out (Showdown's onAfterHit: pokemon.hp)
+        Choices::RAPIDSPIN | Choices::MORTALSPIN
+            if attacking_side.get_active_immutable().hp == 0 => {}
         Choices::RAPIDSPIN | Choices::MORTALSPIN => {
             if attacking_side.side_conditions.stealth_rock > 0 {
                 instructions
@@ -2156,6 +2191,7 @@ pub fn choice_special_effect(
     );
     // (L108: and a Prankster's status move aimed at a Dark type, as Good as Gold)
     let prankster_dark = attacker.ability == Abilities::PRANKSTER
+        && !choice.no_prankster
         && choice.category == MoveCategory::Status
         && choice.target == MoveTarget::Opponent
         && !choice.move_id.not_aimed_at_foe()
@@ -2839,9 +2875,10 @@ pub fn choice_special_effect(
             // alpha-poke patch (2026-10-17, doc/engine-diff.md L188): two same items swap too
             // (Showdown's Trick: both taken, both set -- their onStart: a Choice item's ends the
             // lock); none at all fails
+            // (L227: an Infiltrator's through it)
             if (attacker_item == Items::NONE && defender_item == Items::NONE)
-                || !defender.item_can_be_removed()
-                || defender_has_sub
+                || !defender.item_can_be_taken_by(attacker.ability)
+                || defender_has_sub && attacker.ability != Abilities::INFILTRATOR
             {
                 return;
             }
@@ -2976,6 +3013,15 @@ pub fn choice_special_effect(
         }
         _ => {}
     }
+}
+
+// alpha-poke patch (2026-10-18, doc/engine-diff.md L227): a two-turn move's charging turn (its
+// choice turned into the charge volatile on its user: before_move; the move's own flags gone)
+pub fn charging_turn(choice: &Choice) -> bool {
+    crate::choices::MOVES.get(&choice.move_id).is_some_and(|m| m.flags.charge)
+        && choice.volatile_status.as_ref().is_some_and(|v| {
+            v.target == MoveTarget::User && v.volatile_status == charge_choice_to_volatile(&choice.move_id)
+        })
 }
 
 pub fn charge_choice_to_volatile(choice: &Choices) -> PokemonVolatileStatus {

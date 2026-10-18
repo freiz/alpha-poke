@@ -748,6 +748,8 @@ pub struct PyPokemon {
     pub stellar_boosted: Vec<String>,
     // alpha-poke patch (L180): its own stats, weight (hg), moves and PP while transformed
     pub transform_backup: Option<(Vec<i16>, i16, Vec<(String, i8)>)>,
+    // alpha-poke patch (L227): a once-per-battle ability used while transformed
+    pub once_used: bool,
 }
 
 impl From<Pokemon> for PyPokemon {
@@ -796,6 +798,7 @@ impl From<Pokemon> for PyPokemon {
                 })
                 .map(|t| t.to_string())
                 .collect(),
+            once_used: other.once_used,
             transform_backup: other.own.is_set().then(|| {
                 (
                     other.own.stats.to_vec(),
@@ -862,6 +865,7 @@ impl Into<Pokemon> for PyPokemon {
             stellar_boosted: self.stellar_boosted.iter().fold(0, |m, t| {
                 m | 1 << PokemonType::from_str(t).unwrap() as u32
             }),
+            once_used: self.once_used,
             own: match &self.transform_backup {
                 None => poke_engine::state::OwnSet::default(),
                 Some((stats, weight_hg, moves)) => {
@@ -920,6 +924,7 @@ impl PyPokemon {
         gender=0,
         stellar_boosted=Vec::<String>::new(),
         transform_backup=None,
+        once_used=false,
     ))]
     fn new(
         id: String,
@@ -951,6 +956,7 @@ impl PyPokemon {
         gender: u8,
         stellar_boosted: Vec<String>,
         transform_backup: Option<(Vec<i16>, i16, Vec<(String, i8)>)>,
+        once_used: bool,
     ) -> Self {
         if base_ability == "" {
             base_ability = ability.clone();
@@ -985,6 +991,7 @@ impl PyPokemon {
             gender,
             stellar_boosted,
             transform_backup,
+            once_used,
         }
     }
     #[staticmethod]

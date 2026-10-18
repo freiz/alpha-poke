@@ -1156,8 +1156,9 @@ pub fn magician_after_move(
     if damage_dealt > 0
         && choice.move_id != Choices::KNOCKOFF
         && defending_pkmn.item != Items::NONE
-        && defending_pkmn.item_can_be_removed()
+        && defending_pkmn.item_can_be_taken_by(active_pkmn.ability)
         && active_pkmn.item == Items::NONE
+        && !super::items::update_eats_berry(defending_pkmn)
     {
         instructions
             .instruction_list
@@ -1186,6 +1187,7 @@ pub fn magician_after_move(
 // onAfterMoveSecondary); not under its foe's Neutralizing Gas
 pub fn anger_shell(
     state: &mut State,
+    choice: &Choice,
     side_ref: &SideReference,
     damage_dealt: i16,
     instructions: &mut StateInstructions,
@@ -1194,9 +1196,15 @@ pub fn anger_shell(
     let (attacking_side, side) = state.get_both_sides(side_ref);
     let gas = attacking_side.get_active_immutable().ability == Abilities::NEUTRALIZINGGAS
         && attacking_side.get_active_immutable().hp > 0;
+    // (L227: not after a hit Sheer Force boosted: Showdown's onDamage, as Berserk)
+    let sheer = attacking_side.get_active_immutable().ability == Abilities::SHEERFORCE
+        && crate::choices::MOVES
+            .get(&choice.move_id)
+            .is_some_and(|m| sheer_force_applies(m));
     let holder = side.get_active_immutable();
     if holder.ability != Abilities::ANGERSHELL
         || gas
+        || sheer
         || holder.hp == 0
         || damage_dealt <= 0
         || holder.hp > holder.maxhp / 2
@@ -1481,6 +1489,23 @@ pub fn ability_damaging_hit(
                 instructions,
             );
         }
+        // alpha-poke patch (2026-10-18, doc/engine-diff.md L227): a damaging hit breaks the
+        // Illusion (Showdown's onDamagingHit): its mark goes
+        Abilities::ILLUSION if damage_dealt > 0 => {
+            if defending_side
+                .volatile_statuses
+                .remove_with_check(&PokemonVolatileStatus::ILLUSION)
+            {
+                instructions
+                    .instruction_list
+                    .push(Instruction::RemoveVolatileStatus(
+                        RemoveVolatileStatusInstruction {
+                            side_ref: holder,
+                            volatile_status: PokemonVolatileStatus::ILLUSION,
+                        },
+                    ));
+            }
+        }
         Abilities::ELECTROMORPHOSIS | Abilities::WINDPOWER
             if defending_pkmn.hp > 0
                 && !charged
@@ -1536,25 +1561,44 @@ pub fn ability_damaging_hit(
                     },
                 ));
 
-                let damage_dealt = cmp::min(attacking_pkmn.maxhp / 4, attacking_pkmn.hp);
-                instructions
-                    .instruction_list
-                    .push(Instruction::Damage(DamageInstruction {
-                        side_ref: *side_ref,
-                        damage_amount: damage_dealt,
-                    }));
-                attacking_pkmn.hp -= damage_dealt;
+                // (L227: not to a Magic Guard attacker: Showdown's this.damage)
+                if attacking_pkmn.ability != Abilities::MAGICGUARD {
+                    let damage_dealt = cmp::min(attacking_pkmn.maxhp / 4, attacking_pkmn.hp);
+                    instructions
+                        .instruction_list
+                        .push(Instruction::Damage(DamageInstruction {
+                            side_ref: *side_ref,
+                            damage_amount: damage_dealt,
+                        }));
+                    attacking_pkmn.hp -= damage_dealt;
+                }
 
                 if defending_pkmn.id == PokemonName::CRAMORANTGULPING {
                     defending_pkmn.id = PokemonName::CRAMORANT;
-                    apply_boost_instruction(
-                        attacking_side,
-                        &PokemonBoostableStat::Defense,
-                        &-1,
-                        &side_ref.get_other_side(),
-                        side_ref,
-                        instructions,
-                    );
+                    // (L227: a Mirror Armor attacker sends the drop back to the Cramorant)
+                    // (alive at the hit: the engine's recoil came first -- Brave Bird's; Showdown's
+                    // is after the DamagingHit)
+                    if attacking_pkmn.ability == Abilities::MIRRORARMOR
+                        && (attacking_pkmn.hp > 0 || choice.recoil.is_some())
+                    {
+                        apply_boost_instruction(
+                            defending_side,
+                            &PokemonBoostableStat::Defense,
+                            &-1,
+                            side_ref,
+                            &side_ref.get_other_side(),
+                            instructions,
+                        );
+                    } else {
+                        apply_boost_instruction(
+                            attacking_side,
+                            &PokemonBoostableStat::Defense,
+                            &-1,
+                            &side_ref.get_other_side(),
+                            side_ref,
+                            instructions,
+                        );
+                    }
                 } else if defending_pkmn.id == PokemonName::CRAMORANTGORGING {
                     defending_pkmn.id = PokemonName::CRAMORANT;
                     choice.add_or_create_secondaries(Secondary {
@@ -1653,8 +1697,15 @@ pub fn ability_damaging_hit(
             }
         }
         // (L198: Showdown's halves -- hp <= maxhp / 2 < hp + damage, not rounded)
+        // (L227: not after a hit Sheer Force boosted -- Showdown's onDamage: hasSheerForce; its
+        // secondaries gone by now: the move's own)
         Abilities::BERSERK => {
+            let sheer = attacking_pkmn.ability == Abilities::SHEERFORCE
+                && crate::choices::MOVES
+                    .get(&choice.move_id)
+                    .is_some_and(|m| sheer_force_applies(m));
             if damage_dealt > 0
+                && !sheer
                 && 2 * defending_pkmn.hp <= defending_pkmn.maxhp
                 && 2 * (defending_pkmn.hp + damage_dealt) > defending_pkmn.maxhp
             {
@@ -1687,10 +1738,13 @@ pub fn ability_damaging_hit(
                 attacking_pkmn.hp -= damage_dealt;
             }
         }
+        // (L227: not into a Damp attacker -- Showdown's aftermath checks the field's Damp)
         Abilities::AFTERMATH => {
             if damage_dealt > 0
                 && defending_side.get_active_immutable().hp == 0
                 && choice.flags.contact
+                && attacking_pkmn.ability != Abilities::DAMP
+                && attacking_pkmn.ability != Abilities::MAGICGUARD
             {
                 let damage_dealt = cmp::min(attacking_pkmn.maxhp / 4, attacking_pkmn.hp);
                 instructions
@@ -2006,7 +2060,20 @@ pub fn hp_forme(
                 active_pkmn.id = PokemonName::MINIOR;
                 active_pkmn.recalculate_stats(from, side_ref, instructions);
             }
-            if active_pkmn.hp > active_pkmn.maxhp / 2 && active_pkmn.id != PokemonName::MINIORMETEOR
+            // alpha-poke patch (2026-10-18, doc/engine-diff.md L227): a Minior core only, not a
+            // Ditto that transformed into one (its own id; Showdown's onStart / onResidual skip a
+            // transformed mon) -- it became Minior-Meteor
+            if active_pkmn.hp > active_pkmn.maxhp / 2
+                && matches!(
+                    active_pkmn.id,
+                    PokemonName::MINIOR
+                        | PokemonName::MINIORORANGE
+                        | PokemonName::MINIORYELLOW
+                        | PokemonName::MINIORGREEN
+                        | PokemonName::MINIORBLUE
+                        | PokemonName::MINIORINDIGO
+                        | PokemonName::MINIORVIOLET
+                )
             {
                 instructions.instruction_list.push(Instruction::FormeChange(
                     FormeChangeInstruction {
@@ -2057,6 +2124,27 @@ pub fn ability_end_of_turn(
     // (L191: this branch's Shed Skin cures: generate_instructions::EotRolls)
     shed_skin: bool,
 ) {
+    // alpha-poke patch (2026-10-18, doc/engine-diff.md L227): Bad Dreams' residual (order 28) comes
+    // after Yawn's (23): a foe that falls asleep at this end of turn takes it too
+    let foe_yawn_sleeps = {
+        let me = state.get_side_immutable(side_ref).get_active_immutable();
+        let foe_ref = side_ref.get_other_side();
+        let foe = state.get_side_immutable(&foe_ref);
+        me.ability == Abilities::BADDREAMS
+            && foe
+                .volatile_statuses
+                .contains(&PokemonVolatileStatus::YAWN)
+            && foe.volatile_status_durations.yawn == 1
+            && foe.get_active_immutable().status == PokemonStatus::NONE
+            && !super::generate_instructions::immune_to_status_with(
+                state,
+                &MoveTarget::User,
+                &foe_ref,
+                &PokemonStatus::SLEEP,
+                false,
+            )
+            && !foe.has_alive_non_rested_sleeping_pkmn()
+    };
     let (attacking_side, defending_side) = state.get_both_sides(side_ref);
     // alpha-poke patch (2026-10-16, doc/engine-diff.md L19): no healing under Heal Block
     let heal_blocked = attacking_side
@@ -2106,7 +2194,13 @@ pub fn ability_end_of_turn(
         Abilities::SHIELDSDOWN | Abilities::SCHOOLING => hp_forme(active_pkmn, side_ref, instructions),
         Abilities::BADDREAMS => {
             let defender = defending_side.get_active();
-            if defender.status == PokemonStatus::SLEEP {
+            // (L227: a Comatose one too, not a Magic Guard: Showdown's onResidual, this.damage)
+            if (defender.status == PokemonStatus::SLEEP
+                || defender.ability == Abilities::COMATOSE
+                || foe_yawn_sleeps)
+                && defender.ability != Abilities::MAGICGUARD
+                && defender.hp > 0
+            {
                 let damage_dealt = cmp::min(defender.maxhp / 8, defender.hp);
                 instructions
                     .instruction_list
@@ -2643,7 +2737,7 @@ pub fn ability_on_switch_in(
             );
         }
         // (L184: once per battle, as Dauntless Shield)
-        Abilities::INTREPIDSWORD if active_pkmn.base_ability != Abilities::NONE => {
+        Abilities::INTREPIDSWORD if active_pkmn.base_ability != Abilities::NONE && !active_pkmn.once_used => {
             // no need to check for boost at +6 because we are switching in
             attacking_side.attack_boost += 1;
             instructions
@@ -2839,7 +2933,7 @@ pub fn ability_on_switch_in(
         // alpha-poke patch (2026-10-16, doc/engine-diff.md L18): once per battle (Gen 9); a used
         // one has base ability none (agents/engine_state.py); before, at every switch-in
         // (L106: also one Skill Swap gave it, its base ability another)
-        Abilities::DAUNTLESSSHIELD if active_pkmn.base_ability != Abilities::NONE => {
+        Abilities::DAUNTLESSSHIELD if active_pkmn.base_ability != Abilities::NONE && !active_pkmn.once_used => {
             // no need to check for boost at +6 because we are switching in
             attacking_side.defense_boost += 1;
             instructions
@@ -2856,7 +2950,7 @@ pub fn ability_on_switch_in(
         // alpha-poke patch (2026-10-17, doc/engine-diff.md L172): Supersweet Syrup, once per battle
         // (a used one: base ability none, as Dauntless Shield's): the foe's evasion -1, not through
         // a Substitute (Showdown's onStart; a foe's drop: Clear Body, Defiant, ...)
-        Abilities::SUPERSWEETSYRUP if active_pkmn.base_ability != Abilities::NONE => {
+        Abilities::SUPERSWEETSYRUP if active_pkmn.base_ability != Abilities::NONE && !active_pkmn.once_used => {
             if defending_side.get_active_immutable().hp > 0
                 && !defending_side
                     .volatile_statuses
@@ -3104,7 +3198,9 @@ pub fn ability_modify_attack_being_used(
             // Dark-type target fails, not one on the user (Reflect) or a side / the field
             // (hazards, weather, terrain, Trick Room, ...: their data target is "Opponent" too);
             // before, any status move failed
+            // (L227: not an Encore's move in place of an attack: no Prankster boost)
             if attacker_choice.category == MoveCategory::Status
+                && !attacker_choice.no_prankster
                 && attacker_choice.target == MoveTarget::Opponent
                 && !FIELD_OR_SIDE_MOVES.contains(&attacker_choice.move_id)
                 && defending_side
@@ -3643,6 +3739,16 @@ pub fn ability_modify_attack_against(
     {
         return;
     }
+    // (L227: nor a turn it charges -- a Solar Beam into Sap Sipper: it hits nothing yet; not a
+    // Power Herb's, which fires at once; the sun's has no charge flag by now: modify_choice)
+    if attacker_choice.flags.charge
+        && !attacking_side.volatile_statuses.contains(
+            &super::choice_effects::charge_choice_to_volatile(&attacker_choice.move_id),
+        )
+        && attacking_pkmn.item != Items::POWERHERB
+    {
+        return;
+    }
     // (L217: nor a move that failed -- a Thunderclap into a foe's status move, modify_choice's
     // power of 0 -- into Volt Absorb, ...: it hits nothing)
     if matches!(
@@ -4014,12 +4120,21 @@ pub fn ability_modify_attack_against(
             }
         }
         Abilities::FURCOAT => {
-            if attacker_choice.category == MoveCategory::Physical {
+            // (L227: and a special move on the Defense -- Psyshock, Psystrike, Secret Sword:
+            // Showdown's onModifyDef)
+            if attacker_choice.category == MoveCategory::Physical
+                || matches!(
+                    attacker_choice.move_id,
+                    Choices::PSYSHOCK | Choices::PSYSTRIKE | Choices::SECRETSWORD
+                )
+            {
                 attacker_choice.defense_modifier *= 2.0;
             }
         }
+        // (L227: not by a holder that has fainted -- a Spore into a Life Orb-fainted Espeon: no
+        // target, it fails)
         Abilities::MAGICBOUNCE => {
-            if attacker_choice.flags.reflectable {
+            if attacker_choice.flags.reflectable && target_pkmn.hp > 0 {
                 attacker_choice.target = MoveTarget::User;
                 if let Some(side_condition) = &mut attacker_choice.side_condition {
                     if side_condition.target == MoveTarget::Opponent {
@@ -4068,7 +4183,11 @@ pub fn ability_modify_attack_against(
                 // its user's absorbing ability (Showdown: the reflector uses it at the user, whose
                 // onTryHit takes it: a Thunder Wave into Volt Absorb, a Will-O-Wisp into Flash
                 // Fire); it went through
-                bounced_absorb(attacker_choice, attacking_pkmn.ability);
+                // (L227: not a hazard / field move -- a Spikes sent back into Earth Eater: it is
+                // aimed at the side)
+                if !FIELD_OR_SIDE_MOVES.contains(&attacker_choice.move_id) {
+                    bounced_absorb(attacker_choice, attacking_pkmn.ability);
+                }
             }
         }
         Abilities::STORMDRAIN => {

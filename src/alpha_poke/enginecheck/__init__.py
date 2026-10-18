@@ -174,6 +174,8 @@ def _engine_mon(m: dict) -> pe.Pokemon:
         # it copied -- Trace, Skill Swap, Imposter: the engine marks its base ability only)
         base_ability="none" if m.get("used_once") and m["base_ability"] in ONCE_PER_BATTLE
         else (m["base_ability"] or m["ability"] or "none"),
+        # (L227: one used while transformed -- a Ditto's: its own mark)
+        once_used=bool(m.get("used_once")) and m["base_ability"] not in ONCE_PER_BATTLE,
         item=m["item"] or "none", attack=st["atk"], defense=st["def"],
         special_attack=st["spa"], special_defense=st["spd"], speed=st["spe"],
         status=STATUS[m["status"]], weight_kg=m["weight"], nature=m.get("nature", "serious").lower(),
@@ -388,6 +390,7 @@ def damage_hints(start: dict, after: dict) -> tuple[int, int]:
     crit = [False, False]  # (a -crit line on the pending hit: the hint marked CRIT_HINT)
     hinted = None  # (side, target) of the last hint: a survival effect after it voids it
     sub_hits: dict = {}  # (L224: the hits each active's Substitute took)
+    anim_side = None  # (L227: a move line with no target, its -anim line's to come)
     for line in _log_lines(after):
         f = [_slot(x) for x in line.split("|")]  # (L226: "p1a: Name" -> "p1a")
         # (a damage a Focus Sash / Focus Band / Sturdy / Endure capped: no roll -- its message
@@ -412,6 +415,13 @@ def damage_hints(start: dict, after: dict) -> tuple[int, int]:
             foe = f[4].startswith("p2" if side == 0 else "p1")
             pending = (side, f[4]) if hints[side] == -1 and foe else None
             crit[side] = False
+            anim_side = side if not f[4] else None
+        elif tag == "-anim" and len(f) > 4 and pending is None and anim_side is not None:
+            # (L227: a charge move fired at once -- Power Herb's Meteor Beam: its target on the
+            # -anim line, the move line has none)
+            if f[4].startswith("p2" if anim_side == 0 else "p1") and hints[anim_side] == -1:
+                pending = (anim_side, f[4])
+            anim_side = None
         elif tag in ("-damage", "-heal", "-sethp") and len(f) > 3:
             new = _log_hp(f[3])
             if new is None:
@@ -495,6 +505,10 @@ def roll_hints(start: dict, after: dict) -> tuple:
             hp[f[2]] = _log_hp(f[4]) if _log_hp(f[4]) is not None else hp.get(f[2], 0)
         elif tag == "move" and len(f) > 4:
             mover, target, hits, crit = (0 if f[2].startswith("p1") else 1), f[4], [], False
+            # (L227: Dragon Darts logs no -hitcount -- its second hit an -anim line: its hits as
+            # they come)
+            if f[3] == "Dragon Darts":
+                multi[mover] = hits
         elif tag == "-crit":
             crit = True
         elif tag == "-end" and len(f) > 3 and f[3] in ("move: Future Sight", "move: Doom Desire"):
@@ -531,6 +545,8 @@ def roll_hints(start: dict, after: dict) -> tuple:
                 hits.append(mark(KO_HINT if ko else dealt))
             crit = False if tag == "-damage" else crit
             hp[f[2]] = new
+    # (L227: a Dragon Darts' Substitute marks with no -hitcount to turn them into hints)
+    multi = [[h if isinstance(h, int) else -1 for h in m] for m in multi]
     return (*confusion, *future, *multi)
 
 
@@ -541,6 +557,12 @@ def _sub_hits(hits: list, start: dict, after: dict, target: str, sub_lines: dict
     if not any(h in ("S", "B") for h in hits):
         return hits
     s0 = _sub_hp(start, target)
+    # (L227: a Substitute made this turn: a quarter of the max HP, Showdown's)
+    if s0 <= 0 and any(_slot(x.split("|")[2]) == target and "|-start|" in x and x.endswith("|Substitute")
+                       for x in after.get("log", []) if x.count("|") >= 3):  # fmt: skip
+        side = next((x for x in after["sides"] if target.startswith(x["id"])), None)
+        if side is not None and side["active"] >= 0:
+            s0 = side["mons"][side["active"]]["maxhp"] // 4
     out = [h if isinstance(h, int) else -1 for h in hits]
     if s0 <= 0 or sub_lines.get(target, 0) != sum(h in ("S", "B") for h in hits):
         return out
@@ -650,7 +672,8 @@ def view(sd: dict) -> dict:
                 # (L170: a partial trap whose source is out, as in engine_state)
                 if x == "partiallytrapped" and st.get("source_out"):
                     continue
-                if _engine_volatile(x) and x not in ("stall", "lastmovefailed", "statslowered", "statsraised"):
+                if _engine_volatile(x) and x not in ("stall", "lastmovefailed", "statslowered", "statsraised",
+                                                     "illusion", "notera"):
                     v[f"{k}.volatile.{x}"] = True
         c = s["conditions"]
         for name, eng in {**LAYERED}.items():
@@ -682,7 +705,9 @@ def view_engine(s: pe.State, n_mons: tuple[int, int] = (6, 6)) -> dict:
             # (a terastallized mon's typechange has no effect: its type is the tera type;
             # Showdown's side compares the types other than Terastallization, _changed_types)
             # (L222: nor the turn-1 marks, input only)
-            if str(x).lower() not in ("none", "lastmovefailed", "statslowered", "statsraised") and not (
+            # (L227: nor the Illusion / no-tera marks, input only too)
+            if str(x).lower() not in ("none", "lastmovefailed", "statslowered", "statsraised",
+                                      "illusion", "notera") and not (
                 tera and str(x).lower() == "typechange"
             ):
                 v[f"{k}.volatile.{str(x).lower()}"] = True

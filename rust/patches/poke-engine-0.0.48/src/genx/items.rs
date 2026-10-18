@@ -1741,6 +1741,30 @@ pub fn cheek_pouch(side: &mut Side, side_ref: &SideReference, instructions: &mut
     }
 }
 
+// alpha-poke patch (2026-10-18, doc/engine-diff.md L227): a berry the Update after the hit eats
+// (item_update_handlers' HP ones: Sitrus, the pinch and stat berries) -- before Magician's steal
+// in Showdown (onAfterMoveSecondarySelf comes after the hit loop's Update)
+pub fn update_eats_berry(a: &crate::state::Pokemon) -> bool {
+    let low = a.hp <= a.maxhp / 4 || (a.ability == Abilities::GLUTTONY && a.hp <= a.maxhp / 2);
+    a.hp > 0
+        && match a.item {
+            Items::SITRUSBERRY => a.hp <= a.maxhp / 2,
+            Items::FIGYBERRY
+            | Items::WIKIBERRY
+            | Items::MAGOBERRY
+            | Items::AGUAVBERRY
+            | Items::IAPAPABERRY
+            | Items::ORANBERRY => pinch_berry_heal(a).is_some(),
+            Items::LIECHIBERRY
+            | Items::GANLONBERRY
+            | Items::PETAYABERRY
+            | Items::APICOTBERRY
+            | Items::SALACBERRY
+            | Items::LANSATBERRY => low,
+            _ => false,
+        }
+}
+
 fn item_update_handlers(
     state: &mut State,
     side_ref: &SideReference,
@@ -2487,8 +2511,9 @@ pub fn item_modify_attack_being_used(
             // alpha-poke patch (2026-10-16, doc/engine-diff.md L103): not after a Clangorous Soul
             // that fails (a third of the HP or less: Showdown's onTry)
             let attacker = attacking_side.get_active_immutable();
+            // (L227: Showdown's 33 / 100 of the max HP, choice_effects')
             let failed = attacking_choice.move_id == Choices::CLANGOROUSSOUL
-                && attacker.hp <= attacker.maxhp / 3;
+                && attacker.hp as i32 * 100 <= attacker.maxhp as i32 * 33;
             if attacking_choice.flags.sound && !failed {
                 attacking_choice.add_or_create_secondaries(Secondary {
                     chance: 100.0,

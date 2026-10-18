@@ -322,6 +322,12 @@ define_enum_with_from_str! {
         // (L224: Power Split / Guard Split's stats, its own kept in Pokemon::own -- Showdown's
         // storedStats, recomputed from the species as it switches out)
         STATSPLIT,
+        // (L227: a Zoroark's Illusion still up -- Showdown's pokemon.illusion: a Transform /
+        // Imposter into it fails; the harness's)
+        ILLUSION,
+        // (L227: transformed into an Ogerpon / Terapagos -- no Terastallization till it leaves:
+        // Showdown's transformInto sets canTerastallize false)
+        NOTERA,
     },
     default = NONE
 }
@@ -852,6 +858,21 @@ impl Pokemon {
         }
     }
 
+    // alpha-poke patch (2026-10-18, doc/engine-diff.md L227): taken by a holder of `by`: Sticky Hold
+    // is breakable -- a Mold Breaker's Knock Off / Thief / Trick takes the item (not through an
+    // Ability Shield)
+    pub fn item_can_be_taken_by(&self, by: Abilities) -> bool {
+        if self.ability == Abilities::STICKYHOLD
+            && !(matches!(
+                by,
+                Abilities::MOLDBREAKER | Abilities::TERAVOLT | Abilities::TURBOBLAZE
+            ) && self.item != Items::ABILITYSHIELD)
+        {
+            return false;
+        }
+        !self.item_is_permanent()
+    }
+
     pub fn item_can_be_removed(&self) -> bool {
         if self.ability == Abilities::STICKYHOLD {
             return false;
@@ -1305,7 +1326,11 @@ impl Side {
 
     #[cfg(feature = "terastallization")]
     pub fn can_use_tera(&self) -> bool {
-        if self.tera_used {
+        if self.tera_used
+            || self
+                .volatile_statuses
+                .contains(&PokemonVolatileStatus::NOTERA)
+        {
             return false;
         }
         for p in self.pokemon.into_iter() {
@@ -1372,7 +1397,11 @@ impl Side {
                 .contains(&PokemonVolatileStatus::TRAPPED)
         {
             return true;
-        } else if opponent_active.ability == Abilities::SHADOWTAG {
+        // alpha-poke patch (2026-10-18, doc/engine-diff.md L227): not another Shadow Tag holder
+        // (Showdown's onFoeTrapPokemon); two Shadow Tag mons trapped each other
+        } else if opponent_active.ability == Abilities::SHADOWTAG
+            && active_pkmn.ability != Abilities::SHADOWTAG
+        {
             return true;
         } else if opponent_active.ability == Abilities::ARENATRAP && self.active_grounded() {
             return true;

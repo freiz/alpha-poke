@@ -21883,6 +21883,10 @@ pub struct Choice {
     // alpha-poke patch (2026-10-18, doc/engine-diff.md L226): Shell Side Arm's category drawn on a
     // tie (0 not drawn, 1 physical, 2 special: generate_instructions_from_move's branches)
     pub ssa_draw: u8,
+    // alpha-poke patch (2026-10-18, doc/engine-diff.md L227): an Encore's move in place of one with
+    // no Prankster boost (an attack): it has none either (Showdown's pranksterBoosted carried from
+    // the chosen move) -- a Thunder Wave into a Dark type lands
+    pub no_prankster: bool,
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L170): the damage Counter / Mirror Coat /
     // Metal Burst dealt the target (choice_special_effect): its DamagingHit after it
     pub returned_hit: i16,
@@ -22052,6 +22056,7 @@ impl Default for Choice {
             sleep_talk_move: false,
             called_move: false,
             ssa_draw: 0,
+            no_prankster: false,
             returned_hit: 0,
             dancer_move: false,
             first_hit_blocked: false,
