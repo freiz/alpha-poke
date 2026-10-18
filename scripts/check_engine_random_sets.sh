@@ -1,6 +1,6 @@
 #!/bin/bash
 # The random differential on all its sets (doc/engine-diff.md, method 0), each against its own
-# no-regression baseline: the main set and twelve validation sets (other seeds, other team pools:
+# no-regression baseline: the main set and fourteen validation sets (other seeds, other team pools:
 # a fix must not only fit the main set). Extra arguments go to each run (--update-baseline;
 # --from-report: from the last run's reports, no new battles).
 #   scripts/check_engine_random_sets.sh [--update-baseline [--from-report]]
@@ -28,4 +28,6 @@ run randbats2 --battles 300 --seed-offset 70000 --teams tests/fixtures/random_ba
 run randbats3 --battles 300 --seed-offset 80000 --teams tests/fixtures/random_battle_teams_randbats3.jsonl "${@}"
 run randbats4 --battles 300 --seed-offset 90000 --teams tests/fixtures/random_battle_teams_randbats4.jsonl "${@}"
 run randbats5 --battles 300 --seed-offset 100000 --teams tests/fixtures/random_battle_teams_randbats5.jsonl "${@}"
+run randbats6 --battles 300 --seed-offset 110000 --teams tests/fixtures/random_battle_teams_randbats6.jsonl "${@}"
+run randbats7 --battles 300 --seed-offset 120000 --teams tests/fixtures/random_battle_teams_randbats7.jsonl "${@}"
 exit $status
