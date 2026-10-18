@@ -100,12 +100,6 @@
 "b226-t29": [
 "hp"
 ],
-"b231-t28": [
-"hp"
-],
-"b237-t16": [
-"hp"
-],
 "b242-t5": [
 "attack",
 "hp"
@@ -129,35 +123,6 @@
 ],
 "b74-t8": [
 "hp"
-],
-"b75-t15": [
-"ability",
-"attack",
-"base_ability",
-"base_types",
-"defense",
-"gender",
-"hp",
-"id",
-"last_item",
-"last_used_move",
-"level",
-"maxhp",
-"move",
-"must_switch",
-"nature",
-"options",
-"pp",
-"sc.protect",
-"special_attack",
-"special_defense",
-"speed",
-"status",
-"stellar_boosted",
-"tera_type",
-"terastallized",
-"types",
-"weight"
 ],
 "b76-t2": [
 "count.lockedmove",

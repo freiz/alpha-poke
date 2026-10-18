@@ -377,10 +377,8 @@ pub fn mold_breaker_ignores(ability: &Abilities) -> bool {
         | Abilities::MINDSEYE
         | Abilities::PURIFYINGSALT
         | Abilities::TERASHELL
-        | Abilities::TABLETSOFRUIN
         | Abilities::THERMALEXCHANGE
         | Abilities::WELLBAKEDBODY
-        | Abilities::VESSELOFRUIN
         | Abilities::DAMP
         | Abilities::DRYSKIN
         | Abilities::FILTER
@@ -446,12 +444,12 @@ pub fn mold_breaker_ignores(ability: &Abilities) -> bool {
         | Abilities::QUEENLYMAJESTY
         | Abilities::WATERBUBBLE
         | Abilities::ICESCALES
+        // (L200: Grass Pelt too; the auras and the Ruin abilities are not breakable -- the data test)
+        | Abilities::GRASSPELT
         | Abilities::ICEFACE
         | Abilities::MIRRORARMOR
         | Abilities::PASTELVEIL
-        | Abilities::PUNKROCK
-        | Abilities::FAIRYAURA
-        | Abilities::DARKAURA => true,
+        | Abilities::PUNKROCK => true,
         _ => false,
     }
 }
@@ -1844,59 +1842,15 @@ pub fn ability_on_switch_out(
     }
 }
 
-pub fn ability_end_of_turn(
-    state: &mut State,
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L200): Shields Down / Schooling's forme by the
+// HP (Minior-Meteor above half, Wishiwashi-School above a quarter), at the end of the turn and on
+// the switch-in (Showdown's onStart too; was the end of the turn only: a Minior came in as its core)
+pub fn hp_forme(
+    active_pkmn: &mut crate::state::Pokemon,
     side_ref: &SideReference,
     instructions: &mut StateInstructions,
-    before_status: bool,
-    // (L191: this branch's Shed Skin cures: generate_instructions::EotRolls)
-    shed_skin: bool,
 ) {
-    let (attacking_side, defending_side) = state.get_both_sides(side_ref);
-    // alpha-poke patch (2026-10-16, doc/engine-diff.md L19): no healing under Heal Block
-    let heal_blocked = attacking_side
-        .volatile_statuses
-        .contains(&PokemonVolatileStatus::HEALBLOCK);
-    let active_pkmn = attacking_side.get_active();
-    // alpha-poke patch (2026-10-16): the weather abilities (Showdown's weather residual, order 1)
-    // and Hydration / Shed Skin (5) come before the status damage (9-10), the rest after it
-    let early = matches!(
-        active_pkmn.ability,
-        Abilities::SOLARPOWER
-            | Abilities::ICEBODY
-            | Abilities::RAINDISH
-            | Abilities::DRYSKIN
-            | Abilities::HYDRATION
-            | Abilities::SHEDSKIN
-    );
-    if early != before_status {
-        return;
-    }
-    if defending_side.get_active_immutable().ability == Abilities::NEUTRALIZINGGAS
-        && active_pkmn.item != Items::ABILITYSHIELD
-    {
-        return;
-    }
     match active_pkmn.ability {
-        Abilities::HUNGERSWITCH => {
-            if active_pkmn.id == PokemonName::MORPEKO && !active_pkmn.terastallized {
-                instructions.instruction_list.push(Instruction::FormeChange(
-                    FormeChangeInstruction {
-                        side_ref: *side_ref,
-                        name_change: PokemonName::MORPEKOHANGRY as i16 - active_pkmn.id as i16,
-                    },
-                ));
-                active_pkmn.id = PokemonName::MORPEKOHANGRY;
-            } else if active_pkmn.id == PokemonName::MORPEKOHANGRY && !active_pkmn.terastallized {
-                instructions.instruction_list.push(Instruction::FormeChange(
-                    FormeChangeInstruction {
-                        side_ref: *side_ref,
-                        name_change: PokemonName::MORPEKO as i16 - active_pkmn.id as i16,
-                    },
-                ));
-                active_pkmn.id = PokemonName::MORPEKO;
-            }
-        }
         Abilities::SHIELDSDOWN => {
             if active_pkmn.hp <= active_pkmn.maxhp / 2
                 && active_pkmn.id == PokemonName::MINIORMETEOR
@@ -1950,6 +1904,65 @@ pub fn ability_end_of_turn(
                 active_pkmn.recalculate_stats(from, side_ref, instructions);
             }
         }
+        _ => {}
+    }
+}
+
+pub fn ability_end_of_turn(
+    state: &mut State,
+    side_ref: &SideReference,
+    instructions: &mut StateInstructions,
+    before_status: bool,
+    // (L191: this branch's Shed Skin cures: generate_instructions::EotRolls)
+    shed_skin: bool,
+) {
+    let (attacking_side, defending_side) = state.get_both_sides(side_ref);
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L19): no healing under Heal Block
+    let heal_blocked = attacking_side
+        .volatile_statuses
+        .contains(&PokemonVolatileStatus::HEALBLOCK);
+    let active_pkmn = attacking_side.get_active();
+    // alpha-poke patch (2026-10-16): the weather abilities (Showdown's weather residual, order 1)
+    // and Hydration / Shed Skin (5) come before the status damage (9-10), the rest after it
+    let early = matches!(
+        active_pkmn.ability,
+        Abilities::SOLARPOWER
+            | Abilities::ICEBODY
+            | Abilities::RAINDISH
+            | Abilities::DRYSKIN
+            | Abilities::HYDRATION
+            | Abilities::SHEDSKIN
+    );
+    if early != before_status {
+        return;
+    }
+    if defending_side.get_active_immutable().ability == Abilities::NEUTRALIZINGGAS
+        && active_pkmn.item != Items::ABILITYSHIELD
+    {
+        return;
+    }
+    match active_pkmn.ability {
+        Abilities::HUNGERSWITCH => {
+            if active_pkmn.id == PokemonName::MORPEKO && !active_pkmn.terastallized {
+                instructions.instruction_list.push(Instruction::FormeChange(
+                    FormeChangeInstruction {
+                        side_ref: *side_ref,
+                        name_change: PokemonName::MORPEKOHANGRY as i16 - active_pkmn.id as i16,
+                    },
+                ));
+                active_pkmn.id = PokemonName::MORPEKOHANGRY;
+            } else if active_pkmn.id == PokemonName::MORPEKOHANGRY && !active_pkmn.terastallized {
+                instructions.instruction_list.push(Instruction::FormeChange(
+                    FormeChangeInstruction {
+                        side_ref: *side_ref,
+                        name_change: PokemonName::MORPEKO as i16 - active_pkmn.id as i16,
+                    },
+                ));
+                active_pkmn.id = PokemonName::MORPEKO;
+            }
+        }
+        // (L200: hp_forme, at the switch-in too)
+        Abilities::SHIELDSDOWN | Abilities::SCHOOLING => hp_forme(active_pkmn, side_ref, instructions),
         Abilities::BADDREAMS => {
             let defender = defending_side.get_active();
             if defender.status == PokemonStatus::SLEEP {
@@ -2258,6 +2271,10 @@ pub fn ability_on_switch_in(
 
     match active_pkmn.ability {
         Abilities::ICEFACE => ice_face_in_snow(state, side_ref, instructions),
+        // (L200)
+        Abilities::SHIELDSDOWN | Abilities::SCHOOLING => {
+            hp_forme(active_pkmn, side_ref, instructions)
+        }
         // (L141)
         Abilities::PROTOSYNTHESIS | Abilities::QUARKDRIVE => {
             paradox_update(state, side_ref, instructions);

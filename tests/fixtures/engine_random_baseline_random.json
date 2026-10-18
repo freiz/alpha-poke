@@ -5,16 +5,6 @@
 "teams": "ec78e233fb2205eb"
 },
 "mismatches": {
-"b0-t8": [
-"attack",
-"defense",
-"hp",
-"id",
-"special_attack",
-"special_defense",
-"speed",
-"weight"
-],
 "b113-t2": [
 "hp"
 ],
@@ -50,43 +40,12 @@
 "sc.toxic_count",
 "status"
 ],
-"b186-t18": [
-"hp"
-],
 "b26-t12": [
 "hp",
 "id"
 ],
 "b50-t6": [
 "hp"
-],
-"b99-t20": [
-"ability",
-"attack",
-"base_ability",
-"base_types",
-"defense",
-"gender",
-"id",
-"last_item",
-"last_used_move",
-"level",
-"maxhp",
-"move",
-"must_switch",
-"nature",
-"options",
-"pp",
-"sc.protect",
-"special_attack",
-"special_defense",
-"speed",
-"status",
-"stellar_boosted",
-"tera_type",
-"terastallized",
-"types",
-"weight"
 ]
 }
 }

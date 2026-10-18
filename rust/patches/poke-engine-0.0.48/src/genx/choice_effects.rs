@@ -1944,6 +1944,25 @@ pub fn choice_special_effect(
         // alpha-poke patch (2026-10-16, doc/engine-diff.md L106): Skill Swap, the actives swap
         // abilities and the new ones start (Showdown's skillSwap: the source's old ability on the
         // target first); not with a failskillswap ability, through an Ability Shield
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L200): Recycle, its last used-up item
+        // back (Showdown's onHit: none held, a last item; the last item cleared -- a berry eaten
+        // again in the Update pass); was nothing
+        Choices::RECYCLE => {
+            let user = state.get_side(attacking_side_ref).get_active();
+            if user.item == Items::NONE && user.last_item != Items::NONE {
+                let item = user.last_item;
+                instructions
+                    .instruction_list
+                    .push(Instruction::ChangeItem(ChangeItemInstruction {
+                        side_ref: *attacking_side_ref,
+                        current_item: Items::NONE,
+                        new_item: item,
+                    }));
+                user.item = item;
+                super::items::set_last_item(user, *attacking_side_ref, Items::NONE, instructions);
+            }
+            return;
+        }
         Choices::SKILLSWAP => {
             super::abilities::skill_swap(state, attacking_side_ref, instructions);
             return;

@@ -1171,6 +1171,20 @@ fn cant_suppress_abilities() -> Vec<String> {
     out
 }
 
+/// Of `names` (ability ids), the ones a Mold Breaker ignores (`mold_breaker_ignores`; names the
+/// engine does not know are left out; doc/engine-diff.md L200).
+#[pyfunction]
+fn mold_breaker_abilities(names: Vec<String>) -> Vec<String> {
+    use poke_engine::engine::abilities::{mold_breaker_ignores, Abilities};
+    use std::str::FromStr;
+    let mut out: Vec<String> = names
+        .into_iter()
+        .filter(|n| Abilities::from_str(n).is_ok_and(|a| mold_breaker_ignores(&a)))
+        .collect();
+    out.sort();
+    out
+}
+
 /// The abilities Role Play / Doodle do not copy, Entrainment does not give (`FAIL_ROLE_PLAY`,
 /// lowercase; doc/engine-diff.md L190).
 #[pyfunction]
@@ -1365,6 +1379,7 @@ fn alpha_search(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(max_pps, m)?)?;
     m.add_function(wrap_pyfunction!(no_trace_abilities, m)?)?;
     m.add_function(wrap_pyfunction!(fail_role_play_abilities, m)?)?;
+    m.add_function(wrap_pyfunction!(mold_breaker_abilities, m)?)?;
     m.add_function(wrap_pyfunction!(chance_outcomes, m)?)?;
     m.add_function(wrap_pyfunction!(describe, m)?)?;
     Ok(())

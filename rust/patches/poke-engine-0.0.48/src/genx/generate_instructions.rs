@@ -739,9 +739,10 @@ fn generate_instructions_from_switch(
             }
         }
 
+        // (L200: a Magic Guard under the foe's Neutralizing Gas takes them)
+        let ability = effective_ability(state, &switching_side_ref);
         let side = state.get_side(&switching_side_ref);
-        let active = side.get_active_immutable();
-        if active.ability != Abilities::MAGICGUARD {
+        if ability != Abilities::MAGICGUARD {
             if side.side_conditions.stealth_rock == 1 {
                 let switched_in_pkmn = side.get_active();
                 let multiplier = type_effectiveness_modifier(&PokemonType::ROCK, &switched_in_pkmn);
@@ -818,6 +819,25 @@ fn generate_instructions_from_switch(
     field_change_events(state, incoming_instructions, switch_from);
     update(state, incoming_instructions);
     foe_raise_copies(state, incoming_instructions, switch_from);
+}
+
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L200): an active's ability with the other
+// active's Neutralizing Gas (Showdown's ignoringAbility: none, but a cantsuppress one or through an
+// Ability Shield) -- for Magic Guard / Overcoat / Ice Body at the hazards and the residuals
+pub fn effective_ability(state: &State, side_ref: &SideReference) -> Abilities {
+    let p = state.get_side_immutable(side_ref).get_active_immutable();
+    let foe = state
+        .get_side_immutable(&side_ref.get_other_side())
+        .get_active_immutable();
+    if foe.ability == Abilities::NEUTRALIZINGGAS
+        && foe.hp > 0
+        && p.item != Items::ABILITYSHIELD
+        && !super::abilities::CANT_SUPPRESS.contains(&p.ability)
+    {
+        Abilities::NONE
+    } else {
+        p.ability
+    }
 }
 
 fn generate_instructions_from_increment_side_condition(
@@ -6125,13 +6145,14 @@ fn end_of_turn_instructions(
 
     // Weather Damage
     for side_ref in sides {
+        let ability = effective_ability(state, side_ref);
         if state.weather_is_active(&Weather::HAIL) {
             let active_pkmn = state.get_side(side_ref).get_active();
             if active_pkmn.hp == 0
-                || active_pkmn.ability == Abilities::MAGICGUARD
-                || active_pkmn.ability == Abilities::OVERCOAT
+                || ability == Abilities::MAGICGUARD
+                || ability == Abilities::OVERCOAT
                 || active_pkmn.item == Items::SAFETYGOGGLES // alpha-poke patch (2026-10-13)
-                || active_pkmn.ability == Abilities::ICEBODY
+                || ability == Abilities::ICEBODY
                 || active_pkmn.has_type(&PokemonType::ICE)
             {
                 continue;
@@ -6151,8 +6172,8 @@ fn end_of_turn_instructions(
         } else if state.weather_is_active(&Weather::SAND) {
             let active_pkmn = state.get_side(side_ref).get_active();
             if active_pkmn.hp == 0
-                || active_pkmn.ability == Abilities::MAGICGUARD
-                || active_pkmn.ability == Abilities::OVERCOAT
+                || ability == Abilities::MAGICGUARD
+                || ability == Abilities::OVERCOAT
                 || active_pkmn.item == Items::SAFETYGOGGLES // alpha-poke patch (2026-10-13)
                 || active_pkmn.has_type(&PokemonType::GROUND)
                 || active_pkmn.has_type(&PokemonType::STEEL)
@@ -6453,6 +6474,7 @@ fn end_of_turn_instructions(
 
     // leechseed sap
     for side_ref in sides {
+        let ability = effective_ability(state, side_ref);
         let (leechseed_side, other_side) = state.get_both_sides(side_ref);
         // alpha-poke patch (2026-10-16, L19): the seeder heals nothing under Heal Block
         let seeder_heal_blocked = other_side
@@ -6464,9 +6486,7 @@ fn end_of_turn_instructions(
         {
             let active_pkmn = leechseed_side.get_active();
             let other_active_pkmn = other_side.get_active();
-            if active_pkmn.hp == 0
-                || other_active_pkmn.hp == 0
-                || active_pkmn.ability == Abilities::MAGICGUARD
+            if active_pkmn.hp == 0 || other_active_pkmn.hp == 0 || ability == Abilities::MAGICGUARD
             {
                 continue;
             }
@@ -6500,6 +6520,7 @@ fn end_of_turn_instructions(
 
     // status damage
     for side_ref in sides {
+        let ability = effective_ability(state, side_ref);
         let (side, other_side) = state.get_both_sides(side_ref);
         let toxic_count = side.side_conditions.toxic_count as f32;
         let heal_blocked = side
@@ -6512,7 +6533,7 @@ fn end_of_turn_instructions(
         }
         // alpha-poke patch (2026-10-17, doc/engine-diff.md L181): Magic Guard stops the damage, not
         // the toxic count (Showdown's tox onResidual counts its stage, the damage is prevented)
-        if active_pkmn.ability == Abilities::MAGICGUARD {
+        if ability == Abilities::MAGICGUARD {
             if active_pkmn.status == PokemonStatus::TOXIC && side.side_conditions.toxic_count < 15 {
                 side.side_conditions.toxic_count += 1;
                 incoming_instructions

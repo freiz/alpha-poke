@@ -247,6 +247,23 @@ def test_ability_flags_match_showdown(flag, got):
     assert getattr(alpha_search, got)() == want
 
 
+def test_mold_breaker_abilities_match_showdown():
+    """The abilities a Mold Breaker (Sunsteel Strike, ...) ignores: Showdown's breakable flag (L200:
+    not the auras nor the Ruin abilities; Grass Pelt)."""
+    import subprocess
+
+    import alpha_search
+
+    from alpha_poke import enginecheck as ec
+
+    js = ("const {Dex} = require(process.argv[1]); const all = Dex.abilities.all().filter(a => "
+          "!a.isNonstandard); console.log(JSON.stringify([all.map(a => a.id), all.filter(a => "
+          "a.flags.breakable).map(a => a.id)]))")
+    ids, breakable = json.loads(subprocess.run(["node", "-e", js, str(ec.SIM)], capture_output=True,
+                                               text=True, check=True).stdout)  # fmt: skip
+    assert alpha_search.mold_breaker_abilities(ids) == sorted(breakable)
+
+
 def test_bypass_substitute_moves_match_showdown():
     """The status moves aimed at the foe that go through a Substitute (Showdown's bypasssub
     flag; any other fails against one: L133), among the engine's moves aimed at the opponent."""

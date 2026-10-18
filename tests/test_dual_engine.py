@@ -5665,3 +5665,50 @@ def test_l199_life_orb_recoil_on_ice_face():
     assert any("Ice Face" in x for x in states[1]["log"])
     assert any("[from] item: Life Orb" in x for x in states[1]["log"])
     assert _keys(_full(states, 0, "earthquake", "bellydrum"), "hp", "id") == {}
+
+
+# L200 (doc/engine-diff.md): Shields Down / Schooling's forme on the switch-in too; a Magic Guard
+# under the foe's Neutralizing Gas takes the hazards / residuals; Recycle; a Mold Breaker ignores
+# only breakable abilities (not Tablets / Vessel of Ruin, the auras)
+def _full_hinted(states, k, c1, c2, n=(1, 1)):
+    hints = ec.damage_hints(states[k], states[k + 1])
+    outs = ec.engine_outcomes(ec.engine_state(states[k]), c1, c2, hints)
+    return ec.closest(states[k + 1], outs, n, hp=True, full=True, start=states[k])["diff"]
+
+
+def test_l200_minior_meteor_on_the_switch_in():
+    gar = GARCHOMP_SD.replace("- Scale Shot", "- Iron Head")
+    states = ec.run_showdown(gar, CORVIKNIGHT + "\n\n" + MINIOR, [("move ironhead", "switch 2")])
+    assert any("Minior-Meteor" in x for x in states[1]["log"])  # (hit as Minior-Meteor)
+    assert _keys(_full_hinted(states, 0, "ironhead", "miniorviolet", (1, 2)), "hp", "id") == {}
+
+
+def test_l200_magic_guard_under_neutralizing_gas():
+    weezing = _attacker("Weezing-Galar", "Neutralizing Gas", "Black Sludge", "- Stealth Rock\n- Toxic Spikes\n- Strange Steam\n- Will-O-Wisp", "Bold")
+    clefable = CLEFABLE if "Magic Guard" in CLEFABLE else CLEFABLE.replace("Ability: Unaware", "Ability: Magic Guard")
+    states = ec.run_showdown(weezing, BLISSEY + "\n\n" + clefable, [("move stealthrock", "move calmmind"),
+                                                                     ("move toxicspikes", "switch 2")])  # fmt: skip
+    assert any("[from] Stealth Rock" in x for x in states[2]["log"])
+    assert _keys(_full(states, 1, "toxicspikes", "clefable", (1, 2)), "hp") == {}
+
+
+def test_l200_recycle():
+    snorlax = """Snorlax @ Sitrus Berry
+Ability: Thick Fat
+Level: 40
+EVs: 4 HP
+- Recycle
+- Body Slam
+- Curse
+- Rest"""
+    states = ec.run_showdown(snorlax, BLISSEY, [("move curse", "move seismictoss"), ("move recycle", "move calmmind")])
+    assert states[1]["sides"][0]["mons"][0]["last_item"] == "sitrusberry"
+    assert states[2]["sides"][0]["mons"][0]["item"] == "sitrusberry"
+    assert _keys(_full(states, 1, "recycle", "calmmind"), "item") == {}
+
+
+def test_l200_sunsteel_strike_and_tablets_of_ruin():
+    solgaleo = _attacker("Solgaleo", "Full Metal Body", "Leftovers", "- Sunsteel Strike\n- Morning Sun\n- Flare Blitz\n- Knock Off")
+    wochien = _attacker("Wo-Chien", "Tablets of Ruin", "Leftovers", "- Giga Drain\n- Ruination\n- Leech Seed\n- Protect", "Calm")
+    states = ec.run_showdown(solgaleo, wochien, [("move sunsteelstrike", "move leechseed")])
+    assert _keys(_full_hinted(states, 0, "sunsteelstrike", "leechseed"), "hp") == {}

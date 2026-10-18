@@ -15,35 +15,6 @@
 "b190-t5": [
 "hp"
 ],
-"b253-t34": [
-"ability",
-"attack",
-"base_ability",
-"base_types",
-"defense",
-"gender",
-"hp",
-"id",
-"last_item",
-"last_used_move",
-"level",
-"maxhp",
-"move",
-"must_switch",
-"nature",
-"options",
-"pp",
-"sc.protect",
-"special_attack",
-"special_defense",
-"speed",
-"status",
-"stellar_boosted",
-"tera_type",
-"terastallized",
-"types",
-"weight"
-],
 "b278-t18": [
 "substitute_hp"
 ],
