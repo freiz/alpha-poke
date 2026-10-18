@@ -916,7 +916,18 @@ fn common_pkmn_damage_calc(
             }
         },
         burn: burn_modifier(&choice, &attacker, defender) != 1.0,
-        final_mod: vol.damage * choice.damage_modifier,
+        // alpha-poke patch (2026-10-18, doc/engine-diff.md L219): Tinted Lens doubles a hit Tera
+        // Shell made resisted (Showdown's typeMod; its ability hook saw the types only)
+        final_mod: vol.damage
+            * choice.damage_modifier
+            * if tera_shell
+                && attacker.ability == Abilities::TINTEDLENS
+                && move_type_effectiveness(choice, defender) >= 1.0
+            {
+                2.0
+            } else {
+                1.0
+            },
         screen_mod,
     })
 }

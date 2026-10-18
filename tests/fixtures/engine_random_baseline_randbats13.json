@@ -5,21 +5,5 @@
 "teams": "341f39dde6311825",
 "seed_offset": 180000
 },
-"mismatches": {
-"b121-t20": [
-"status"
-],
-"b127-t40": [
-"hp"
-],
-"b127-t43": [
-"hp"
-],
-"b137-t7": [
-"times_attacked"
-],
-"b32-t35": [
-"boost.atk"
-]
-}
+"mismatches": {}
 }

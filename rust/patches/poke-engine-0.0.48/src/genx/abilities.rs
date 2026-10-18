@@ -1539,8 +1539,10 @@ pub fn ability_damaging_hit(
             }
         }
         Abilities::COLORCHANGE => {
+            // (L219: not a terastallized holder's: Showdown's setType fails)
             if damage_dealt > 0
                 && defending_pkmn.hp != 0
+                && !defending_pkmn.terastallized
                 && !defending_pkmn.has_type(&choice.move_type)
             {
                 let change_type_instruction = Instruction::ChangeType(ChangeType {

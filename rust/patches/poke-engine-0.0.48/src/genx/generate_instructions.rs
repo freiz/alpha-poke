@@ -1817,7 +1817,30 @@ fn get_instructions_from_boosts(
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L206): a target under the foe's
     // Neutralizing Gas has no ability for them (Clear Body, Contrary, Mirror Armor, Defiant, ...:
     // a Defog's evasion drop); it had
-    let gassed = suppress_gassed(state, &target_side_ref);
+    // alpha-poke patch (2026-10-18, doc/engine-diff.md L219): so does a target under a Mold
+    // Breaker's move for its breakable ability (Clear Body, White Smoke, Hyper Cutter, Contrary,
+    // Simple, ...; not through an Ability Shield): a Play Rough's Attack drop into Clear Body
+    let gassed = suppress_gassed(state, &target_side_ref).or_else(|| {
+        let breaker = matches!(
+            state
+                .get_side_immutable(attacking_side_reference)
+                .get_active_immutable()
+                .ability,
+            Abilities::MOLDBREAKER | Abilities::TERAVOLT | Abilities::TURBOBLAZE
+        );
+        let target = state.get_side(&target_side_ref).get_active();
+        if boosts.target == MoveTarget::Opponent
+            && breaker
+            && target.item != Items::ABILITYSHIELD
+            && super::abilities::mold_breaker_ignores(&target.ability)
+        {
+            let ability = target.ability;
+            target.ability = Abilities::NONE;
+            Some(ability)
+        } else {
+            None
+        }
+    });
     // alpha-poke patch (2026-10-16, doc/engine-diff.md L21): Mirror Armor reflects the opponent's
     // stat drops back onto it (the holder as their source: Defiant / Competitive answer them)
     let mirror = boosts.target == MoveTarget::Opponent
@@ -4268,15 +4291,32 @@ fn generate_instructions_from_existing_status_conditions(
             mean
         };
 
-        let damage_dealt = cmp::min(mean as i16, attacker_active.hp);
-        let damage_instruction = Instruction::Damage(DamageInstruction {
-            side_ref: *attacking_side_ref,
-            damage_amount: damage_dealt,
-        });
-        hit_yourself_instruction
-            .instruction_list
-            .push(damage_instruction);
-        final_instructions.push(hit_yourself_instruction);
+        // alpha-poke patch (2026-10-18, doc/engine-diff.md L219): with no hint, the rolls that KO
+        // their own branch (the others' mean in the other), as a move's damage; it was the mean's
+        // KO or not
+        let hp = attacker_active.hp as i32;
+        let rolls = (85..=100).map(|r| (base * r / 100).max(1));
+        let kos = rolls.clone().filter(|d| *d >= hp).count() as i32;
+        let hinted = confusion_hint >= 0 && mean == confusion_hint as i32;
+        let mut branches = vec![];
+        if !hinted && kos > 0 && kos < 16 {
+            let rest = rolls.filter(|d| *d < hp).sum::<i32>() / (16 - kos);
+            branches.push((hp, kos as f32 / 16.0));
+            branches.push((rest, (16 - kos) as f32 / 16.0));
+        } else {
+            branches.push((mean, 1.0));
+        }
+        for (damage, chance) in branches {
+            let mut branch = hit_yourself_instruction.clone();
+            branch.update_percentage(chance);
+            branch
+                .instruction_list
+                .push(Instruction::Damage(DamageInstruction {
+                    side_ref: *attacking_side_ref,
+                    damage_amount: cmp::min(damage as i16, attacker_active.hp),
+                }));
+            final_instructions.push(branch);
+        }
 
         incoming_instructions.update_percentage(1.0 - confusion_self_hit);
     }
@@ -4328,7 +4368,14 @@ pub fn generate_instructions_from_move(
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L217): a recharge put off by the foe's pivot
     // switch waits for it (the saved move is none: after the switch it recharges then); it went
     // (the state does not have the instructions so far applied here)
-    let deferred = !choice.first_move && choice.move_id == Choices::NONE && {
+    // (L219: so does a loafing Truant mon's: its volatile stays till then)
+    let deferred = !choice.first_move
+        && (choice.move_id == Choices::NONE
+            || state
+                .get_side_immutable(&attacking_side)
+                .volatile_statuses
+                .contains(&PokemonVolatileStatus::TRUANT))
+        && {
         state.apply_instructions(&incoming_instructions.instruction_list);
         let pending = state
             .get_side_immutable(&attacking_side.get_other_side())
@@ -4374,6 +4421,7 @@ pub fn generate_instructions_from_move(
 
     // (L167: a called move's caller has loafed or not already)
     if !choice.called_move
+        && !deferred
         && attacker_side
             .volatile_statuses
             .contains(&PokemonVolatileStatus::TRUANT)
@@ -6836,6 +6884,7 @@ fn end_of_turn_instructions(
         };
         // (L212: the harness's hint for the hit)
         let future_hint = state.future_hint[*side_ref as usize];
+        let use_times_attacked = state.use_times_attacked;
         let (attacking_side, defending_side) = state.get_both_sides(side_ref);
         if attacking_side.future_sight.0 > 0 {
             let decrement_future_sight_instruction =
@@ -6891,6 +6940,18 @@ fn end_of_turn_instructions(
                     .instruction_list
                     .push(future_sight_damage_instruction);
                 defender.hp -= damage;
+                // alpha-poke patch (2026-10-18, doc/engine-diff.md L219): the hit attacks its
+                // target (Showdown's trySpreadMoveHit: timesAttacked; Rage Fist), not through a
+                // Substitute (L163)
+                if damage > 0 && use_times_attacked && defender.times_attacked < u8::MAX {
+                    defender.times_attacked += 1;
+                    incoming_instructions
+                        .instruction_list
+                        .push(Instruction::ChangeTimesAttacked(ChangeTimesAttackedInstruction {
+                            side_ref: side_ref.get_other_side(),
+                            amount: 1,
+                        }));
+                }
                 // (L120: its hit pops an Air Balloon)
                 if damage > 0 {
                     super::items::pop_air_balloon(

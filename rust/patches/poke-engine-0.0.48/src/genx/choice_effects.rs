@@ -956,7 +956,11 @@ pub fn choice_after_damage_hit(
     match choice.move_id {
         Choices::DOUBLESHOCK => {
             let attacker_active = attacking_side.get_active_immutable();
-            let instruction = if attacker_active.types.0 == PokemonType::ELECTRIC {
+            // alpha-poke patch (2026-10-18, doc/engine-diff.md L219): not a terastallized user's
+            // type (Showdown's setType fails)
+            let instruction = if attacker_active.terastallized {
+                None
+            } else if attacker_active.types.0 == PokemonType::ELECTRIC {
                 Some(Instruction::ChangeType(ChangeType {
                     side_ref: *attacking_side_ref,
                     new_types: (PokemonType::TYPELESS, attacker_active.types.1),
@@ -994,7 +998,11 @@ pub fn choice_after_damage_hit(
         }
         Choices::BURNUP => {
             let attacker_active = attacking_side.get_active_immutable();
-            let instruction = if attacker_active.types.0 == PokemonType::FIRE {
+            // alpha-poke patch (2026-10-18, doc/engine-diff.md L219): not a terastallized user's
+            // type (Showdown's setType fails)
+            let instruction = if attacker_active.terastallized {
+                None
+            } else if attacker_active.types.0 == PokemonType::FIRE {
                 Some(Instruction::ChangeType(ChangeType {
                     side_ref: *attacking_side_ref,
                     new_types: (PokemonType::TYPELESS, attacker_active.types.1),

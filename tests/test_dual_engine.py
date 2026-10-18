@@ -6386,3 +6386,26 @@ def test_l218_state_string_keeps_doom_desire():
                    future_sight=(2, pe.PokemonIndex("1")), future_doom=True)  # fmt: skip
     t = pe.State(side_one=side, side_two=s.side_two).to_string()
     assert pe.State.from_string(t).side_one.future_doom and pe.State.from_string(t).to_string() == t
+
+
+# L219 (doc/engine-diff.md): a loafing Truant mon whose foe pivots first loafs after the switch
+# (randbats12 b170-t16: its volatile stays till then); a terastallized mon's type stays through
+# Double Shock (Showdown's setType fails: randbats12 b63-t6); a confusion self-hit's rolls that KO
+# (randbats13 b121-t20); Tinted Lens through Tera Shell's resistance (randbats13 b127-t40 /
+# b127-t43); Future Sight's hit attacks its target (times attacked: randbats13 b137-t7); a Mold
+# Breaker's drop through Clear Body (randbats13 b32-t35)
+@pytest.mark.parametrize("teams,i,turn,offset", [
+    ("random_battle_teams_randbats12.jsonl", 170, 16, 170000),
+    ("random_battle_teams_randbats12.jsonl", 63, 6, 170000),
+    ("random_battle_teams_randbats13.jsonl", 121, 20, 180000),
+    ("random_battle_teams_randbats13.jsonl", 127, 40, 180000),
+    ("random_battle_teams_randbats13.jsonl", 127, 43, 180000),
+    ("random_battle_teams_randbats13.jsonl", 137, 7, 180000),
+    ("random_battle_teams_randbats13.jsonl", 32, 35, 180000),
+])  # fmt: skip
+def test_l219_positions(teams, i, turn, offset):
+    a, b = _random_position(teams, i, turn, offset)
+    c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
+    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"]))
+    n = tuple(len(s["mons"]) for s in a["state"]["sides"])
+    assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}
