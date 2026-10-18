@@ -42,8 +42,13 @@ LAYERED = {"spikes": "spikes", "toxicspikes": "toxic_spikes"}
 PRESENT = {"stealthrock": "stealth_rock", "stickyweb": "sticky_web"}
 
 
+# (L197: the in-battle rule the engine models -- the ladder's Sleep Clause Mod; a custom game:
+# any set legal)
+FORMAT = "gen9customgame@@@Sleep Clause Mod"
+
+
 def run_showdown(p1, p2, turns, seed: str | None = "gen5,1,2,3,4", force_random=None,
-                 fmt: str = "gen9customgame", damage_probe: bool = False) -> list[dict]:  # fmt: skip
+                 fmt: str = FORMAT, damage_probe: bool = False) -> list[dict]:  # fmt: skip
     """Showdown's state after the setup and after every turn (``showdown_case.js``). ``p1`` /
     ``p2``: Showdown export text or a list of sets; ``turns``: [(p1 choice, p2 choice)];
     ``force_random``: every chance roll succeeds (True) / fails (False); ``damage_probe``: each
@@ -60,7 +65,7 @@ def run_showdown(p1, p2, turns, seed: str | None = "gen5,1,2,3,4", force_random=
 
 
 def random_battle(p1, p2, seed: str, choice_seed: int, max_turns: int = 100,
-                  switch_p: float = 0.15, tera_p: float = 0.1, fmt: str = "gen9customgame",
+                  switch_p: float = 0.15, tera_p: float = 0.1, fmt: str = FORMAT,
                   damage_probe: bool = False) -> tuple[list[dict], str | None]:  # fmt: skip
     """A whole battle with random legal choices (``random_battle.js``): ([{"state", "choices"}]
     per decision point, the error if the battle broke off). The full-information differential
