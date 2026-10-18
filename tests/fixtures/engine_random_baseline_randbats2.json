@@ -1,0 +1,334 @@
+{
+"setup": {
+"battles": 300,
+"max_turns": 60,
+"teams": "986cce5b83278d1b",
+"seed_offset": 70000
+},
+"mismatches": {
+"b10-t20": [
+"volatile.confusion"
+],
+"b101-t17": [
+"status"
+],
+"b103-t3": [
+"status"
+],
+"b104-t7": [
+"attack"
+],
+"b11-t7": [
+"hp"
+],
+"b111-t28": [
+"item",
+"last_item"
+],
+"b128-t12": [
+"hp"
+],
+"b144-t23": [
+"hp"
+],
+"b147-t12": [
+"hp"
+],
+"b147-t13": [
+"hp"
+],
+"b151-t5": [
+"hp"
+],
+"b165-t10": [
+"attack"
+],
+"b165-t15": [
+"hp",
+"last_used_move",
+"pp"
+],
+"b165-t41": [
+"id"
+],
+"b165-t56": [
+"boost.def",
+"hp"
+],
+"b165-t58": [
+"id"
+],
+"b176-t6": [
+"boost.spa"
+],
+"b176-t7": [
+"boost.spa"
+],
+"b177-t49": [
+"hp"
+],
+"b197-t1": [
+"ability",
+"attack",
+"base_ability",
+"base_types",
+"defense",
+"gender",
+"hp",
+"id",
+"last_item",
+"last_used_move",
+"level",
+"maxhp",
+"move",
+"must_switch",
+"nature",
+"options",
+"pp",
+"sc.protect",
+"special_attack",
+"special_defense",
+"speed",
+"status",
+"stellar_boosted",
+"tera_type",
+"terastallized",
+"types",
+"weight"
+],
+"b197-t10": [
+"hp"
+],
+"b197-t8": [
+"hp"
+],
+"b197-t9": [
+"ability",
+"attack",
+"base_ability",
+"base_types",
+"count.throatchop",
+"defense",
+"gender",
+"hp",
+"id",
+"last_item",
+"last_used_move",
+"level",
+"maxhp",
+"move",
+"must_switch",
+"nature",
+"options",
+"pp",
+"sc.protect",
+"special_attack",
+"special_defense",
+"speed",
+"status",
+"stellar_boosted",
+"tera_type",
+"terastallized",
+"types",
+"weight"
+],
+"b212-t5": [
+"boost.spa"
+],
+"b223-t1": [
+"volatile.unburden"
+],
+"b226-t29": [
+"hp"
+],
+"b231-t28": [
+"hp"
+],
+"b237-t16": [
+"hp"
+],
+"b239-t27": [
+"item",
+"last_item"
+],
+"b242-t5": [
+"attack",
+"hp"
+],
+"b245-t5": [
+"count.slowstart"
+],
+"b25-t30": [
+"count.lockedmove",
+"volatile.confusion",
+"volatile.lockedmove"
+],
+"b253-t25": [
+"hp"
+],
+"b260-t23": [
+"hp"
+],
+"b263-t22": [
+"volatile.charge"
+],
+"b263-t23": [
+"volatile.charge"
+],
+"b274-t19": [
+"ability",
+"attack",
+"base_ability",
+"base_types",
+"defense",
+"gender",
+"id",
+"last_item",
+"level",
+"maxhp",
+"move",
+"must_switch",
+"nature",
+"options",
+"pp",
+"sc.protect",
+"special_attack",
+"special_defense",
+"speed",
+"status",
+"stellar_boosted",
+"tera_type",
+"terastallized",
+"types",
+"weight"
+],
+"b274-t20": [
+"hp",
+"item"
+],
+"b274-t43": [
+"hp"
+],
+"b277-t11": [
+"hp"
+],
+"b284-t14": [
+"hp"
+],
+"b287-t6": [
+"status"
+],
+"b3-t21": [
+"ability",
+"attack",
+"base_ability",
+"base_types",
+"defense",
+"gender",
+"id",
+"last_item",
+"last_used_move",
+"level",
+"maxhp",
+"move",
+"must_switch",
+"nature",
+"options",
+"pp",
+"sc.protect",
+"special_attack",
+"special_defense",
+"speed",
+"status",
+"stellar_boosted",
+"tera_type",
+"terastallized",
+"types",
+"weight"
+],
+"b34-t2": [
+"ability",
+"attack",
+"base_ability",
+"base_types",
+"defense",
+"gender",
+"hp",
+"id",
+"last_item",
+"last_used_move",
+"level",
+"maxhp",
+"move",
+"must_switch",
+"nature",
+"options",
+"pp",
+"sc.protect",
+"special_attack",
+"special_defense",
+"speed",
+"status",
+"stellar_boosted",
+"tera_type",
+"terastallized",
+"types",
+"weight"
+],
+"b45-t44": [
+"boost.spa"
+],
+"b74-t8": [
+"hp"
+],
+"b75-t15": [
+"ability",
+"attack",
+"base_ability",
+"base_types",
+"defense",
+"gender",
+"hp",
+"id",
+"last_item",
+"last_used_move",
+"level",
+"maxhp",
+"move",
+"must_switch",
+"nature",
+"options",
+"pp",
+"sc.protect",
+"special_attack",
+"special_defense",
+"speed",
+"status",
+"stellar_boosted",
+"tera_type",
+"terastallized",
+"types",
+"weight"
+],
+"b76-t2": [
+"count.lockedmove",
+"options",
+"volatile.lockedmove"
+],
+"b8-t11": [
+"hp"
+],
+"b89-t34": [
+"hp",
+"substitute_hp",
+"volatile.substitute"
+],
+"b91-t51": [
+"hp",
+"status"
+],
+"b92-t46": [
+"hp"
+]
+}
+}
