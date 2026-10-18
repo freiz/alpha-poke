@@ -401,6 +401,61 @@ def damage_hints(start: dict, after: dict) -> tuple[int, int]:
     return tuple((h + CRIT_HINT if c else h) if h > 0 else -1 for h, c in zip(hints, crit))
 
 
+def roll_hints(start: dict, after: dict) -> tuple:
+    """(L212) The rolls Showdown's log shows that damage_hints does not, by side (-1 none, a crit's
+    +CRIT_HINT): a confusion self-hit's damage, the side's Future Sight / Doom Desire hit's, and
+    each hit of its multi-hit move's (a list; -1 for a hit on a Substitute, a knockout or one a
+    Focus Sash / Sturdy capped). The HP tracked from the turn's start; the engine takes a hint only
+    when it is one of its own rolls."""
+    hp = {f"{s['id']}a: {m.get('name', '')}": m["hp"] for s in start["sides"] for m in s["mons"]}
+    confusion, future, multi = [-1, -1], [-1, -1], [[], []]
+    hits, mover, target = [], None, None  # (the current move's hits on its target)
+    pending_future, crit, prev = None, False, None
+    for line in after.get("log", []):
+        if line == prev:  # (the split's private and public copies)
+            continue
+        prev = line
+        f = line.split("|")
+        if len(f) < 3:
+            continue
+        tag = f[1]
+        if tag in ("switch", "drag", "replace") and len(f) > 4:
+            hp[f[2]] = _log_hp(f[4]) if _log_hp(f[4]) is not None else hp.get(f[2], 0)
+        elif tag == "move" and len(f) > 4:
+            mover, target, hits, crit = (0 if f[2].startswith("p1") else 1), f[4], [], False
+        elif tag == "-crit":
+            crit = True
+        elif tag == "-end" and len(f) > 3 and f[3] in ("move: Future Sight", "move: Doom Desire"):
+            pending_future, crit = (1 if f[2].startswith("p1") else 0, f[2]), False
+        elif tag == "-activate" and len(f) > 3 and "Substitute" in f[3] and "[damage]" in line:
+            if mover is not None and f[2] == target:
+                hits.append(-1)
+            crit = False
+        elif tag in ("-enditem", "-activate") and len(f) > 3 and f[3] in (
+                "Focus Sash", "ability: Sturdy", "move: Endure", "item: Focus Band", "Focus Band"):  # fmt: skip
+            if hits and f[2] == target:
+                hits[-1] = -1
+        elif tag == "-hitcount" and mover is not None:
+            multi[mover] = hits
+        elif tag in ("-damage", "-heal", "-sethp") and len(f) > 3:
+            new = _log_hp(f[3])
+            if new is None:
+                continue
+            before = hp.get(f[2])
+            dealt = before - new if before is not None and new > 0 and before > new else -1
+            mark = (lambda d: d + CRIT_HINT if crit and d >= 0 else d)
+            if tag == "-damage" and "[from] confusion" in line:
+                confusion[0 if f[2].startswith("p1") else 1] = dealt
+            elif tag == "-damage" and len(f) == 4 and pending_future and f[2] == pending_future[1]:
+                future[pending_future[0]] = mark(dealt)
+                pending_future = None
+            elif tag == "-damage" and len(f) == 4 and mover is not None and f[2] == target:
+                hits.append(mark(dealt))
+            crit = False if tag == "-damage" else crit
+            hp[f[2]] = new
+    return (*confusion, *future, *multi)
+
+
 def move_hints(start: dict, after: dict) -> tuple:
     """(L202) damage_hints and, by side, the hits a multi-hit move made (its -hitcount; 0 none)
     and the move its Metronome called (its move line [from] move: Metronome; "" none): the
@@ -412,7 +467,8 @@ def move_hints(start: dict, after: dict) -> tuple:
             hits[0 if f[2].startswith("p2") else 1] = int(f[3])
         elif len(f) > 4 and f[1] == "move" and "[from] move: Metronome" in line:
             called[0 if f[2].startswith("p1") else 1] = re.sub(r"[^a-z0-9]", "", f[3].lower())
-    return (*damage_hints(start, after), *hits, *called)
+    # (L212: and the roll hints)
+    return (*damage_hints(start, after), *hits, *called, *roll_hints(start, after))
 
 
 def engine_outcomes(state: pe.State, c1: str, c2: str,

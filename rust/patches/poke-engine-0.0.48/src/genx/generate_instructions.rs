@@ -3890,6 +3890,8 @@ fn generate_instructions_from_existing_status_conditions(
     incoming_instructions: &mut StateInstructions,
     final_instructions: &mut Vec<StateInstructions>,
 ) {
+    // (L212: the harness's hint for a confusion self-hit)
+    let confusion_hint = state.confusion_hint[*attacking_side_ref as usize];
     let (attacking_side, _defending_side) = state.get_both_sides(attacking_side_ref);
     let current_active_index = attacking_side.active_index;
     let attacker_active = attacking_side.get_active();
@@ -4157,6 +4159,15 @@ fn generate_instructions_from_existing_status_conditions(
         // when burned
         let base = damage_dealt as i32;
         let mean = (85..=100).map(|r| (base * r / 100).max(1)).sum::<i32>() / 16;
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L212): the harness's hint when it is one
+        // of the rolls (the search never sets it)
+        let mean = if confusion_hint >= 0
+            && (85..=100).any(|r| (base * r / 100).max(1) == confusion_hint as i32)
+        {
+            confusion_hint as i32
+        } else {
+            mean
+        };
 
         let damage_dealt = cmp::min(mean as i16, attacker_active.hp);
         let damage_instruction = Instruction::Damage(DamageInstruction {
@@ -5408,7 +5419,7 @@ fn expected_residual(state: &State, side_ref: &SideReference) -> i16 {
             .volatile_statuses
             .contains(&PokemonVolatileStatus::SUBSTITUTE)
         {
-            loss += calculate_futuresight_damage(foe, side, &foe.future_sight.1, &fs_choice, false);
+            loss += calculate_futuresight_damage(foe, side, &foe.future_sight.1, &fs_choice, false, -1);
         }
     }
     if p.ability != Abilities::MAGICGUARD {
@@ -6643,6 +6654,8 @@ fn end_of_turn_instructions(
         } else {
             Choice::default()
         };
+        // (L212: the harness's hint for the hit)
+        let future_hint = state.future_hint[*side_ref as usize];
         let (attacking_side, defending_side) = state.get_both_sides(side_ref);
         if attacking_side.future_sight.0 > 0 {
             let decrement_future_sight_instruction =
@@ -6656,6 +6669,7 @@ fn end_of_turn_instructions(
                     &attacking_side.future_sight.1,
                     &fs_choice,
                     fs_crit == Some(*side_ref),
+                    future_hint,
                 );
                 // alpha-poke patch (2026-10-17, doc/engine-diff.md L168): into a Substitute, the
                 // Substitute takes it (Showdown: the hit's onTryPrimaryHit; no bypasssub)
@@ -7870,11 +7884,35 @@ fn run_move(
             _ => hit_damage,
         };
         // (L202: Multiscale / Shadow Shield halve a hit at full HP only)
-        let hit_damage = if choice.full_hp_halved && {
+        let halved = choice.full_hp_halved && {
             let d = state.get_side_immutable(&defender_ref).get_active_immutable();
             d.hp == d.maxhp
-        } {
-            hit_damage / 2
+        };
+        let hit_damage = if halved { hit_damage / 2 } else { hit_damage };
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L212): the harness's hint for this hit
+        // when it is one of the hit's own rolls (Triple Axel's by its power, 20 / 40 / 60), a crit's
+        // or not; not a halved hit (the search never sets it)
+        let hint = if (hit as usize) < 10 {
+            state.multi_hint[attacking_side as usize][hit as usize]
+        } else {
+            -1
+        };
+        let hit_damage = if choice.multi_hit() != MultiHitMove::None
+            && hint >= 0
+            && does_damage
+            && !halved
+            && !(choice.first_hit_blocked && hit == 0)
+        {
+            let (crit, d) = if hint >= CRIT_HINT { (true, hint - CRIT_HINT) } else { (false, hint) };
+            let mut c = choice.clone();
+            if matches!(choice.move_id, Choices::TRIPLEAXEL | Choices::TRIPLEKICK) {
+                c.base_power =
+                    choice.base_power * 2.0 * (hit as f32 + 1.0) / (hit_count as f32 + 1.0);
+            }
+            match damage_rolls(state, &attacking_side, &c) {
+                Some((r, cr)) if (if crit { cr } else { r }).contains(&d) => d,
+                _ => hit_damage,
+            }
         } else {
             hit_damage
         };

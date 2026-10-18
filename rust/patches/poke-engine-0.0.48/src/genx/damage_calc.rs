@@ -1017,6 +1017,7 @@ pub fn calculate_futuresight_damage(
     attacking_side_pokemon_index: &PokemonIndex,
     choice: &Choice,
     crit: bool,
+    hint: i16,
 ) -> i16 {
     // L35: the user's Special Attack boosts while it is active (Showdown's getDamage on the
     // source at the hit; a switch resets them)
@@ -1060,8 +1061,18 @@ pub fn calculate_futuresight_damage(
         &Terrain::NONE,
         choice,
     ) {
-        // (Light Screen / Aurora Veil: the recipe's screens)
-        Some(r) => (r.roll(100, crit) as f32 * 0.925) as i16,
+        // (Light Screen / Aurora Veil: the recipe's screens; L212: the harness's hint when it is
+        // one of the rolls of this branch, a crit's or not)
+        Some(r) => {
+            let crit_hint = super::generate_instructions::CRIT_HINT;
+            let (hint_crit, d) =
+                if hint >= crit_hint { (true, hint - crit_hint) } else { (false, hint) };
+            if hint >= 0 && hint_crit == crit && r.rolls(crit).contains(&d) {
+                d
+            } else {
+                (r.roll(100, crit) as f32 * 0.925) as i16
+            }
+        }
         None => 0,
     }
 }

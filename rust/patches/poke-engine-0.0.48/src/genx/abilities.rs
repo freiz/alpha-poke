@@ -3024,6 +3024,18 @@ pub fn ability_modify_attack_being_used(
                 attacker_choice.base_power *= 1.5;
             }
         }
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L212): Rivalry, x 1.25 against the same
+        // gender, x 0.75 against the other (Showdown's onBasePower; none when either has none); it
+        // did nothing
+        Abilities::RIVALRY => {
+            let (mine, theirs) = (
+                attacking_side.get_active_immutable().gender,
+                defending_side.get_active_immutable().gender,
+            );
+            if mine != 0 && theirs != 0 {
+                attacker_choice.base_power *= if mine == theirs { 1.25 } else { 0.75 };
+            }
+        }
         Abilities::WATERBUBBLE => {
             if attacker_choice.move_type == PokemonType::WATER {
                 attacker_choice.attack_modifier *= 2.0;

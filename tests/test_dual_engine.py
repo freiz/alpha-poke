@@ -6206,3 +6206,32 @@ def test_l211_gravity_grounds(foe):
     assert not any("|-immune|" in x for x in states[2]["log"])
     assert _keys(_full_hinted(states, 0, "gravity", c2), "gravity") == {}
     assert _keys(_full_hinted(states, 1, "earthquake", c2), "hp", "gravity") == {}
+
+
+# L212 (doc/engine-diff.md): the harness's roll hints (enginecheck.roll_hints; the search never
+# sets them) -- a confusion self-hit (main b245-t6), a Future Sight hit (seed10k b1-t26), each hit
+# of a multi-hit move, a crit's too (main b123-t5, wide b24-t6, wide2 b190-t5: one hit); Rivalry
+# (random b113-t2 / t3)
+@pytest.mark.parametrize("teams,i,turn,offset", [
+    ("random_battle_teams.jsonl", 245, 6, 0),
+    ("random_battle_teams.jsonl", 1, 26, 10000),
+    ("random_battle_teams.jsonl", 123, 5, 0),
+    ("random_battle_teams_wide.jsonl", 24, 6, 0),
+    ("random_battle_teams_wide2.jsonl", 190, 5, 30000),
+    ("random_battle_teams_random.jsonl", 113, 2, 0),
+    ("random_battle_teams_random.jsonl", 113, 3, 0),
+])  # fmt: skip
+def test_l212_positions(teams, i, turn, offset):
+    a, b = _random_position(teams, i, turn, offset)
+    c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
+    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"]))
+    n = tuple(len(s["mons"]) for s in a["state"]["sides"])
+    assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}
+
+
+@pytest.mark.parametrize("foe_gender", ["M", "F"])
+def test_l212_rivalry(foe_gender):
+    haxorus = _attacker("Haxorus (M)", "Rivalry", "Leftovers", "- Dragon Claw\n- Swords Dance\n- Earthquake\n- Iron Tail")
+    garchomp = _attacker(f"Garchomp ({foe_gender})", "Rough Skin", "Leftovers", "- Earthquake\n- Swords Dance\n- Protect\n- Dragon Claw")
+    states = ec.run_showdown(haxorus, garchomp, [("move earthquake", "move swordsdance")])
+    assert _keys(_full_hinted(states, 0, "earthquake", "swordsdance"), "hp") == {}

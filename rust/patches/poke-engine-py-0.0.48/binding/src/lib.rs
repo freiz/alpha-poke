@@ -103,6 +103,9 @@ impl Into<State> for PyState {
             damage_hint: [-1, -1],
             hit_hint: [0, 0],
             called_hint: [Choices::NONE, Choices::NONE],
+            confusion_hint: [-1, -1],
+            future_hint: [-1, -1],
+            multi_hint: [[-1; 10]; 2],
             magic_room: self.magic_room,
             gravity: self.gravity,
         };
@@ -1232,7 +1235,9 @@ impl PyInstruction {
 // damage hints -- State::damage_hint)
 #[pyfunction]
 #[pyo3(signature = (py_state, side_one_move, side_two_move, hint_one=-1, hint_two=-1,
-    hits_one=0, hits_two=0, called_one=String::new(), called_two=String::new()))]
+    hits_one=0, hits_two=0, called_one=String::new(), called_two=String::new(),
+    confusion_one=-1, confusion_two=-1, future_one=-1, future_two=-1,
+    multi_one=Vec::new(), multi_two=Vec::new()))]
 #[allow(clippy::too_many_arguments)]
 fn generate_instructions(
     py_state: PyState,
@@ -1244,6 +1249,12 @@ fn generate_instructions(
     hits_two: i8,
     called_one: String,
     called_two: String,
+    confusion_one: i16,
+    confusion_two: i16,
+    future_one: i16,
+    future_two: i16,
+    multi_one: Vec<i16>,
+    multi_two: Vec<i16>,
 ) -> PyResult<Vec<PyStateInstructions>> {
     let (s1_move, s2_move);
     let mut state: State = py_state.into();
@@ -1252,6 +1263,14 @@ fn generate_instructions(
     state.hit_hint = [hits_one, hits_two];
     let called = |m: &str| Choices::from_str(m).unwrap_or(Choices::NONE);
     state.called_hint = [called(&called_one), called(&called_two)];
+    // (L212: the roll hints -- confusion, Future Sight, each multi-hit hit)
+    state.confusion_hint = [confusion_one, confusion_two];
+    state.future_hint = [future_one, future_two];
+    for (k, hits) in [&multi_one, &multi_two].iter().enumerate() {
+        for (i, h) in hits.iter().take(10).enumerate() {
+            state.multi_hint[k][i] = *h;
+        }
+    }
     match MoveChoice::from_string(&side_one_move, &state.side_one) {
         Some(m) => s1_move = m,
         None => {

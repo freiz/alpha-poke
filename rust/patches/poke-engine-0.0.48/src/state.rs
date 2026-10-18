@@ -1539,6 +1539,11 @@ pub struct State {
     // -- its -hitcount; and the move Metronome called there, NONE none)
     pub hit_hint: [i8; 2],
     pub called_hint: [crate::choices::Choices; 2],
+    // (L212: the harness's roll hints by side, -1 none, a crit's +CRIT_HINT: a confusion self-hit's
+    // damage, the side's Future Sight hit's, and each hit of its multi-hit move's)
+    pub confusion_hint: [i16; 2],
+    pub future_hint: [i16; 2],
+    pub multi_hint: [[i16; 10]; 2],
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L211): Magic Room's and Gravity's turns left
     // (0: none; Showdown's pseudoWeather durations)
     pub magic_room: i8,
@@ -1570,6 +1575,9 @@ impl Default for State {
             damage_hint: [-1, -1],
             hit_hint: [0, 0],
             called_hint: [crate::choices::Choices::NONE, crate::choices::Choices::NONE],
+            confusion_hint: [-1, -1],
+            future_hint: [-1, -1],
+            multi_hint: [[-1; 10]; 2],
             use_last_used_move: false,
             magic_room: 0,
             gravity: 0,
@@ -2800,6 +2808,9 @@ impl State {
             damage_hint: [-1, -1],
             hit_hint: [0, 0],
             called_hint: [crate::choices::Choices::NONE, crate::choices::Choices::NONE],
+            confusion_hint: [-1, -1],
+            future_hint: [-1, -1],
+            multi_hint: [[-1; 10]; 2],
             use_last_used_move: false,
             magic_room: 0,
             gravity: 0,
