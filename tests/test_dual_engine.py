@@ -5755,3 +5755,47 @@ def test_l201_battery_not_its_holder():
 def test_l201_tera_starstorm_stellar():
     states = ec.run_showdown(TERAPAGOS, BLISSEY, [("move terastarstorm terastallize", "move calmmind")])
     assert _keys(_full_hinted(states, 0, "terastarstorm-tera", "calmmind"), "hp") == {}
+
+
+# L202 (doc/engine-diff.md): the differential's move hints -- Metronome's called move, a multi-hit
+# move's hit count -- and Multiscale / Shadow Shield halving a multi-hit move's full-HP hits only
+def _full_moves(states, k, c1, c2, n=(1, 1)):
+    hints = ec.move_hints(states[k], states[k + 1])
+    outs = ec.engine_outcomes(ec.engine_state(states[k]), c1, c2, hints)
+    return ec.closest(states[k + 1], outs, n, hp=True, full=True, start=states[k])["diff"]
+
+
+def test_l202_metronome_hint():
+    clefable = CLEFABLE.replace("- Calm Mind", "- Metronome")
+    states = ec.run_showdown(BLISSEY, clefable, [("move calmmind", "move metronome")])
+    hints = ec.move_hints(states[0], states[1])
+    assert hints[5] != ""
+    assert _full_moves(states, 0, "calmmind", "metronome") == {}
+
+
+def test_l202_population_bomb_into_multiscale():
+    maushold = _attacker("Maushold", "Technician", "Wide Lens", "- Population Bomb\n- Bite\n- Encore\n- Tidy Up")
+    lugia = _attacker("Lugia", "Multiscale", "Leftovers", "- Aeroblast\n- Roost\n- Calm Mind\n- Earthquake", "Bold")
+    states = ec.run_showdown(maushold, lugia, [("move populationbomb", "move calmmind")])
+    hints = ec.move_hints(states[0], states[1])
+    assert hints[2] >= 2
+    assert _keys(_full_moves(states, 0, "populationbomb", "calmmind"), "hp") == {}
+
+
+# L202: a multi-hit move's later hits by the state they hit (a Weak Armor drop after the first),
+# all of them through a Tera Shell that took the first
+def test_l202_triple_axel_after_weak_armor():
+    weavile = _attacker("Weavile", "Pressure", "Choice Band", "- Triple Axel\n- Knock Off\n- Ice Shard\n- Low Kick")
+    skarmory = _attacker("Skarmory", "Weak Armor", "Leftovers", "- Roost\n- Spikes\n- Brave Bird\n- Whirlwind", "Impish")
+    states = ec.run_showdown(weavile, skarmory, [("move tripleaxel", "move roost")], seed="gen5,2,3,4,5")
+    if ec.move_hints(states[0], states[1])[2] < 2:
+        pytest.skip("the seed's Triple Axel missed early")
+    assert _keys(_full_moves(states, 0, "tripleaxel", "roost"), "hp") == {}
+
+
+def test_l202_tera_shell_resists_every_hit():
+    weavile = _attacker("Weavile", "Pressure", "Choice Band", "- Triple Axel\n- Knock Off\n- Ice Shard\n- Low Kick")
+    states = ec.run_showdown(weavile, TERAPAGOS, [("move tripleaxel", "move calmmind")], seed="gen5,2,3,4,5")
+    if ec.move_hints(states[0], states[1])[2] < 2:
+        pytest.skip("the seed's Triple Axel missed early")
+    assert _keys(_full_moves(states, 0, "tripleaxel", "calmmind"), "hp") == {}

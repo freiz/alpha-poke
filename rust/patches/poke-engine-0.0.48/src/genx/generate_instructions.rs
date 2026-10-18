@@ -4544,6 +4544,38 @@ pub fn generate_instructions_from_move(
         }
         return;
     }
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L202): Metronome with the harness's hint (the
+    // move Showdown's Metronome called) uses that move, as Copycat its own (a called move: its
+    // caller's PP and last used move); without one (the search) it does nothing, as before
+    let metronome_call = state.called_hint[attacking_side as usize];
+    if choice.move_id == Choices::METRONOME && metronome_call != Choices::NONE {
+        if let Some(m) = MOVES.get(&metronome_call) {
+            let mut new_choice = m.clone();
+            new_choice.move_index = choice.move_index;
+            new_choice.first_move = choice.first_move;
+            new_choice.sleep_talk_move = true;
+            new_choice.called_move = true;
+            if state.use_last_used_move && !called {
+                set_last_used_move_as_move(
+                    state.get_side(&attacking_side),
+                    choice.move_index,
+                    attacking_side,
+                    &mut incoming_instructions,
+                );
+            }
+            state.reverse_instructions(&incoming_instructions.instruction_list);
+            generate_instructions_from_move(
+                state,
+                &mut new_choice,
+                defender_choice,
+                attacking_side,
+                incoming_instructions,
+                &mut final_instructions,
+                branch_on_damage,
+            );
+            return;
+        }
+    }
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L167): Copycat uses the battle's last move
     // (Showdown's onHit: useMove(battle.lastMove), as Sleep Talk calls its move here), none or
     // one it cannot copy: it fails. The called move is the last move then (at its Acted)
@@ -4943,6 +4975,27 @@ pub fn generate_instructions_from_move(
             .map(|(n, band)| (n, band.map(|k| p[k]).sum::<f32>(), 1.0))
             .filter(|(_, q, _)| *q > 0.0)
             .collect();
+    }
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L202): the harness's hit-count hint (the
+    // hits Showdown's move made): that count only, Triple Axel's power by it
+    let hits = state.hit_hint[attacking_side as usize];
+    if hits > 0
+        && fixed.is_none()
+        && matches!(
+            choice.multi_hit(),
+            MultiHitMove::TwoToFiveHits | MultiHitMove::PopulationBomb | MultiHitMove::TripleAxel
+        )
+    {
+        let power = if choice.multi_hit() == MultiHitMove::TripleAxel
+            && state.get_side(&attacking_side).get_active().ability != Abilities::SKILLLINK
+        {
+            let first = if choice.move_id == Choices::TRIPLEAXEL { 20.0 } else { 10.0 };
+            let data = MOVES.get(&choice.move_id).map_or(first, |m| m.base_power);
+            first * (hits + 1) as f32 / (2.0 * data)
+        } else {
+            1.0
+        };
+        counts = vec![(hits, 1.0, power)];
     }
     // L71: Beat Up, a hit per hitter (its power the hitters' mean: modify_choice)
     if choice.move_id == Choices::BEATUP && fixed.is_none() {
@@ -7423,6 +7476,19 @@ fn run_move(
             .any(|i| matches!(i, Instruction::FormeChange(f) if f.side_ref == defender_ref));
     let mut dealt_total = 0;
     let mut hits_on_target: u8 = 0;
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L203): a multi-hit move's hits after the
+    // first by the state they hit (Showdown computes each hit: a Flame Body burn, Weak Armor /
+    // Stamina's stages after a hit): each hit's damage times the damage now over the first's
+    // (not through a Tera Shell that took the first hit: Showdown's resisted lasts the move)
+    let tera_shell = {
+        let d = state.get_side_immutable(&defender_ref).get_active_immutable();
+        d.id == PokemonName::TERAPAGOSTERASTAL && d.ability == Abilities::TERASHELL && d.hp == d.maxhp
+    };
+    let first_max = if hit_count > 1 && does_damage && !tera_shell {
+        calculate_damage(state, &attacking_side, choice, DamageRolls::Max).map(|d| d.0)
+    } else {
+        None
+    };
     for hit in 0..hit_count {
         let hp_before_hit = state
             .get_side_immutable(&defender_ref)
@@ -7438,6 +7504,26 @@ fn run_move(
             (damage_amount as i32 * 2 * (hit as i32 + 1) / (hit_count as i32 + 1)) as i16
         } else {
             damage_amount
+        };
+        let hit_damage = match first_max {
+            Some(first) if hit > 0 && first > 0 => {
+                match calculate_damage(state, &attacking_side, choice, DamageRolls::Max) {
+                    Some((now, _)) if now != first => {
+                        (hit_damage as i32 * now as i32 / first as i32) as i16
+                    }
+                    _ => hit_damage,
+                }
+            }
+            _ => hit_damage,
+        };
+        // (L202: Multiscale / Shadow Shield halve a hit at full HP only)
+        let hit_damage = if choice.full_hp_halved && {
+            let d = state.get_side_immutable(&defender_ref).get_active_immutable();
+            d.hp == d.maxhp
+        } {
+            hit_damage / 2
+        } else {
+            hit_damage
         };
         // (L156: the first hit Disguise / Ice Face took deals nothing, still a hit)
         if does_damage && !(choice.first_hit_blocked && hit == 0) {

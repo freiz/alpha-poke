@@ -1528,6 +1528,10 @@ pub struct State {
     // engine computes too (a crit's or not) is taken instead of the rolls' branches (finish_move).
     // Not serialized; the search never sets it
     pub damage_hint: [i16; 2],
+    // (L202: the harness's hit-count hint by side, 0 none: the hits Showdown's multi-hit move made
+    // -- its -hitcount; and the move Metronome called there, NONE none)
+    pub hit_hint: [i8; 2],
+    pub called_hint: [crate::choices::Choices; 2],
 }
 impl Default for State {
     fn default() -> State {
@@ -1553,6 +1557,8 @@ impl Default for State {
             use_last_move: false,
             use_exact_pp: false,
             damage_hint: [-1, -1],
+            hit_hint: [0, 0],
+            called_hint: [crate::choices::Choices::NONE, crate::choices::Choices::NONE],
             use_last_used_move: false,
         };
 
@@ -2765,6 +2771,8 @@ impl State {
             use_last_move: false,
             use_exact_pp: false,
             damage_hint: [-1, -1],
+            hit_hint: [0, 0],
+            called_hint: [crate::choices::Choices::NONE, crate::choices::Choices::NONE],
             use_last_used_move: false,
         };
         state.set_conditional_mechanics();

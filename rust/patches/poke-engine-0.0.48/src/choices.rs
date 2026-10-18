@@ -21866,6 +21866,10 @@ pub struct Choice {
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L198): its Power Herb skips the charge and
     // is used up as the move goes (Showdown's onChargeMove, in its onTryMove: past the BeforeMove)
     pub power_herb: bool,
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L202): a multi-hit move into a full-HP
+    // Multiscale / Shadow Shield: only the hits at full HP are halved (run_move; Showdown's
+    // onSourceModifyDamage per hit); a single hit takes the damage_modifier
+    pub full_hp_halved: bool,
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L165): Meteor Beam / Electro Shot hitting at
     // once (Power Herb, Electro Shot in rain): their Sp. Atk +1 as the move starts (Protect or not)
     pub charge_boost: bool,
@@ -22021,6 +22025,7 @@ impl Default for Choice {
             sure_hit: false,
             face_break: false,
             power_herb: false,
+            full_hp_halved: false,
         }
     }
 }

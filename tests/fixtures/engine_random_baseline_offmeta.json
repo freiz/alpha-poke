@@ -12,20 +12,8 @@
 "item",
 "last_item"
 ],
-"b161-t1": [
-"boost.def",
-"hp"
-],
-"b161-t42": [
-"hp"
-],
-"b161-t5": [
-"hp",
-"status"
-],
 "b161-t51": [
-"boost.evasion",
-"volatile.minimize"
+"boost.evasion"
 ],
 "b169-t3": [
 "hp"
@@ -54,45 +42,15 @@
 "b41-t17": [
 "status"
 ],
-"b42-t4": [
-"hp"
-],
-"b49-t1": [
-"hp",
-"status"
-],
-"b49-t11": [
-"hp",
-"item"
-],
 "b49-t15": [
 "attack",
 "special_attack"
 ],
-"b49-t18": [
-"options",
-"volatile.trapped"
-],
-"b49-t19": [
-"hp",
-"volatile.leechseed"
-],
-"b49-t2": [
-"hp",
-"status"
-],
 "b49-t3": [
-"boost.spa",
-"options",
-"volatile.meteorbeam"
+"options"
 ],
 "b49-t4": [
 "error"
-],
-"b49-t9": [
-"hp",
-"options",
-"volatile.mustrecharge"
 ],
 "b67-t16": [
 "hp",

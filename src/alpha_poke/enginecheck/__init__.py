@@ -395,8 +395,22 @@ def damage_hints(start: dict, after: dict) -> tuple[int, int]:
     return tuple((h + CRIT_HINT if c else h) if h > 0 else -1 for h, c in zip(hints, crit))
 
 
+def move_hints(start: dict, after: dict) -> tuple:
+    """(L202) damage_hints and, by side, the hits a multi-hit move made (its -hitcount; 0 none)
+    and the move its Metronome called (its move line [from] move: Metronome; "" none): the
+    hints engine_outcomes passes on (the differential)."""
+    hits, called = [0, 0], ["", ""]
+    for line in after.get("log", []):
+        f = line.split("|")
+        if len(f) > 3 and f[1] == "-hitcount":
+            hits[0 if f[2].startswith("p2") else 1] = int(f[3])
+        elif len(f) > 4 and f[1] == "move" and "[from] move: Metronome" in line:
+            called[0 if f[2].startswith("p1") else 1] = re.sub(r"[^a-z0-9]", "", f[3].lower())
+    return (*damage_hints(start, after), *hits, *called)
+
+
 def engine_outcomes(state: pe.State, c1: str, c2: str,
-                    hints: tuple[int, int] = (-1, -1)) -> list[tuple[float, pe.State]]:  # fmt: skip
+                    hints: tuple = (-1, -1)) -> list[tuple[float, pe.State]]:  # fmt: skip
     """Every chance outcome of the move pair in poke-engine (choices as the engine names them:
     "defog", "earthquake-tera", "switch greattusk"): [(probability, resulting state)]; each
     state carries ``damage`` (``engine_damage``). ``hints``: damage_hints (the differential)."""

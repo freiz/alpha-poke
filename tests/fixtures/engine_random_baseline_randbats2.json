@@ -15,9 +15,6 @@
 "b11-t7": [
 "hp"
 ],
-"b144-t23": [
-"hp"
-],
 "b165-t10": [
 "attack"
 ],
@@ -101,16 +98,10 @@
 "volatile.confusion",
 "volatile.lockedmove"
 ],
-"b253-t25": [
-"hp"
-],
 "b76-t2": [
 "count.lockedmove",
 "options",
 "volatile.lockedmove"
-],
-"b92-t46": [
-"hp"
 ]
 }
 }

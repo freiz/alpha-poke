@@ -107,7 +107,7 @@ def battle(job: tuple) -> dict:
         n = tuple(len(s["mons"]) for s in a["state"]["sides"])
         try:
             # (L199: Showdown's damage rolls as hints: no knockout-or-not roll noise)
-            hints = ec.damage_hints(a["state"], b["state"])
+            hints = ec.move_hints(a["state"], b["state"])  # (L202: hit counts, Metronome's call)
             outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2, hints)
             # (an Endeavor's target ends at its user's HP: it follows the damage it dealt itself)
             dealt = (follows_dealt(a["state"], 0, c1) or c2.startswith("endeavor"),

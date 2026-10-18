@@ -96,6 +96,8 @@ impl Into<State> for PyState {
             use_last_move: false,
             use_exact_pp: false,
             damage_hint: [-1, -1],
+            hit_hint: [0, 0],
+            called_hint: [Choices::NONE, Choices::NONE],
         };
         state.set_conditional_mechanics();
         state
@@ -1210,17 +1212,27 @@ impl PyInstruction {
 // (alpha-poke patch, doc/engine-diff.md L199: `hint_one` / `hint_two`, the differential harness's
 // damage hints -- State::damage_hint)
 #[pyfunction]
-#[pyo3(signature = (py_state, side_one_move, side_two_move, hint_one=-1, hint_two=-1))]
+#[pyo3(signature = (py_state, side_one_move, side_two_move, hint_one=-1, hint_two=-1,
+    hits_one=0, hits_two=0, called_one=String::new(), called_two=String::new()))]
+#[allow(clippy::too_many_arguments)]
 fn generate_instructions(
     py_state: PyState,
     side_one_move: String,
     side_two_move: String,
     hint_one: i16,
     hint_two: i16,
+    hits_one: i8,
+    hits_two: i8,
+    called_one: String,
+    called_two: String,
 ) -> PyResult<Vec<PyStateInstructions>> {
     let (s1_move, s2_move);
     let mut state: State = py_state.into();
     state.damage_hint = [hint_one, hint_two];
+    // (L202: the hit-count and Metronome hints)
+    state.hit_hint = [hits_one, hits_two];
+    let called = |m: &str| Choices::from_str(m).unwrap_or(Choices::NONE);
+    state.called_hint = [called(&called_one), called(&called_two)];
     match MoveChoice::from_string(&side_one_move, &state.side_one) {
         Some(m) => s1_move = m,
         None => {

@@ -3289,7 +3289,14 @@ pub fn ability_modify_attack_against(
         }
         Abilities::MULTISCALE => {
             if target_pkmn.hp == target_pkmn.maxhp {
-                attacker_choice.damage_modifier /= 2.0;
+                // (L202: a multi-hit move's hits at full HP only)
+                if attacker_choice.multi_hit() != crate::choices::MultiHitMove::None
+                    || attacker_choice.move_id == Choices::BEATUP
+                {
+                    attacker_choice.full_hp_halved = true;
+                } else {
+                    attacker_choice.damage_modifier /= 2.0;
+                }
             }
         }
         Abilities::LIGHTNINGROD => {
@@ -3369,7 +3376,14 @@ pub fn ability_modify_attack_against(
         }
         Abilities::SHADOWSHIELD => {
             if target_pkmn.hp == target_pkmn.maxhp {
-                attacker_choice.damage_modifier /= 2.0;
+                // (L202: a multi-hit move's hits at full HP only)
+                if attacker_choice.multi_hit() != crate::choices::MultiHitMove::None
+                    || attacker_choice.move_id == Choices::BEATUP
+                {
+                    attacker_choice.full_hp_halved = true;
+                } else {
+                    attacker_choice.damage_modifier /= 2.0;
+                }
             }
         }
         Abilities::NOGUARD => {
