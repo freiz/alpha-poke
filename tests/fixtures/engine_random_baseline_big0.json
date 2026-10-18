@@ -1,0 +1,50 @@
+{
+"setup": {
+"battles": 2900,
+"max_turns": 60,
+"teams": "ea471fa4b885229e",
+"seed_offset": 1000000
+},
+"mismatches": {
+"b1130-t18": [
+"boost.atk",
+"options",
+"volatile.solarbeam"
+],
+"b1531-t15": [
+"hp"
+],
+"b1867-t27": [
+"hp"
+],
+"b1867-t28": [
+"hp"
+],
+"b1993-t6": [
+"hp"
+],
+"b2031-t17": [
+"boost.atk",
+"options",
+"volatile.solarbeam"
+],
+"b2042-t18": [
+"count.yawn",
+"volatile.yawn"
+],
+"b2287-t40": [
+"hp",
+"last_item"
+],
+"b2633-t40": [
+"item"
+],
+"b2781-t11": [
+"boost.spa",
+"boost.spd"
+],
+"b76-t28": [
+"item"
+]
+}
+}

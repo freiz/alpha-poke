@@ -1,0 +1,92 @@
+{
+"setup": {
+"battles": 2900,
+"max_turns": 60,
+"teams": "8103ecfb392d5253",
+"seed_offset": 1090000
+},
+"mismatches": {
+"b1006-t27": [
+"spikes"
+],
+"b1116-t14": [
+"item"
+],
+"b1253-t12": [
+"ability",
+"attack",
+"defense",
+"move",
+"options",
+"pp",
+"special_attack",
+"special_defense",
+"speed",
+"types",
+"volatile.transform",
+"volatile.typechange",
+"weight"
+],
+"b1383-t7": [
+"boost.evasion"
+],
+"b1506-t37": [
+"hp",
+"status"
+],
+"b1696-t2": [
+"hp",
+"item",
+"last_item"
+],
+"b1934-t26": [
+"hp",
+"spikes"
+],
+"b1968-t18": [
+"boost.spa",
+"boost.spd",
+"count.encore",
+"hp",
+"last_used_move",
+"options",
+"pp",
+"volatile.encore"
+],
+"b2028-t8": [
+"hp"
+],
+"b2251-t4": [
+"boost.atk",
+"boost.def",
+"boost.spa",
+"boost.spd",
+"boost.spe",
+"hp"
+],
+"b2498-t20": [
+"hp",
+"sc.toxic_count",
+"status"
+],
+"b264-t11": [
+"boost.evasion"
+],
+"b515-t11": [
+"boost.def",
+"boost.spd",
+"hp",
+"status"
+],
+"b665-t54": [
+"hp",
+"last_used_move",
+"pp",
+"substitute_hp",
+"volatile.substitute"
+],
+"b866-t15": [
+"item"
+]
+}
+}

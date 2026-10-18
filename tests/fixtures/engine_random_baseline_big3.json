@@ -1,0 +1,74 @@
+{
+"setup": {
+"battles": 2900,
+"max_turns": 60,
+"teams": "d169320f1f1002b6",
+"seed_offset": 1030000
+},
+"mismatches": {
+"b1214-t20": [
+"options"
+],
+"b1350-t24": [
+"hp"
+],
+"b1368-t9": [
+"status"
+],
+"b1591-t9": [
+"hp"
+],
+"b1641-t16": [
+"hp"
+],
+"b1676-t51": [
+"hp",
+"last_used_move",
+"pp"
+],
+"b1757-t11": [
+"boost.def",
+"boost.spd",
+"hp"
+],
+"b1757-t12": [
+"boost.def",
+"boost.spd",
+"hp",
+"status"
+],
+"b2151-t10": [
+"boost.atk",
+"options",
+"volatile.solarbeam"
+],
+"b2311-t11": [
+"options"
+],
+"b2380-t20": [
+"hp",
+"item",
+"options"
+],
+"b2722-t4": [
+"status"
+],
+"b2790-t24": [
+"pp",
+"sleep_turns",
+"status"
+],
+"b334-t27": [
+"hp"
+],
+"b334-t28": [
+"hp"
+],
+"b631-t7": [
+"hp"
+],
+"b872-t7": [
+"boost.spa"
+]
+}
+}

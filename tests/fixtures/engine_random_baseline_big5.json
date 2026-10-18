@@ -1,0 +1,110 @@
+{
+"setup": {
+"battles": 2900,
+"max_turns": 60,
+"teams": "dc051e035cdedcde",
+"seed_offset": 1050000
+},
+"mismatches": {
+"b1111-t2": [
+"ability",
+"attack",
+"base_ability",
+"base_types",
+"defense",
+"gender",
+"hp",
+"id",
+"last_item",
+"level",
+"maxhp",
+"move",
+"must_switch",
+"nature",
+"options",
+"pp",
+"sc.protect",
+"special_attack",
+"special_defense",
+"speed",
+"status",
+"stellar_boosted",
+"tera_type",
+"terastallized",
+"types",
+"weight"
+],
+"b1154-t12": [
+"volatile.truant"
+],
+"b1160-t5": [
+"hp"
+],
+"b1416-t24": [
+"hp"
+],
+"b1501-t28": [
+"attack",
+"defense",
+"id",
+"special_attack",
+"special_defense",
+"speed"
+],
+"b2136-t2": [
+"item"
+],
+"b2229-t30": [
+"boost.spa",
+"boost.spd",
+"boost.spe"
+],
+"b2229-t34": [
+"hp"
+],
+"b2325-t24": [
+"volatile.confusion"
+],
+"b2581-t8": [
+"hp"
+],
+"b2628-t3": [
+"ability",
+"attack",
+"defense",
+"move",
+"options",
+"pp",
+"special_attack",
+"special_defense",
+"speed",
+"types",
+"volatile.transform",
+"volatile.typechange",
+"weight"
+],
+"b2628-t4": [
+"ability",
+"attack",
+"boost.spa",
+"defense",
+"move",
+"options",
+"pp",
+"special_attack",
+"special_defense",
+"speed",
+"types",
+"volatile.transform",
+"volatile.typechange",
+"weight"
+],
+"b275-t6": [
+"item",
+"options"
+],
+"b48-t26": [
+"boost.spe"
+]
+}
+}
