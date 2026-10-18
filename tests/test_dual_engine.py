@@ -6456,3 +6456,18 @@ def test_l220_state_string_keeps_revived_faints():
     t = pe.State(side_one=side, side_two=s.side_two).to_string()
     assert pe.State.from_string(t).side_one.revived_faints == 2 and pe.State.from_string(t).to_string() == t
 
+
+# L221 (doc/engine-diff.md): Knock Off on a Lum Berry the hit's status secondary uses up first
+# (Showdown's secondaries / DamagingHit before onAfterHit): Poison Touch (randbats16 b67-t30),
+# Toxic Chain (randbats7 b219-t14, L215's known gap)
+@pytest.mark.parametrize("teams,i,turn,offset", [
+    ("random_battle_teams_randbats16.jsonl", 67, 30, 210000),
+    ("random_battle_teams_randbats7.jsonl", 219, 14, 120000),
+])  # fmt: skip
+def test_l221_positions(teams, i, turn, offset):
+    a, b = _random_position(teams, i, turn, offset)
+    c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
+    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"]))
+    n = tuple(len(s["mons"]) for s in a["state"]["sides"])
+    assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}
+

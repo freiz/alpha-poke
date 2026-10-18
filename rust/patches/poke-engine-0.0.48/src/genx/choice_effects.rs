@@ -1126,6 +1126,29 @@ pub fn choice_after_damage_hit(
 // its DamagingHit (Rough Skin, Rocky Helmet, Stamina, ...: abilities::ability_damaging_hit): Knock
 // Off and Thief take the item, Ice Spinner ends the terrain; were in choice_after_damage_hit, at
 // the damage
+// alpha-poke patch (2026-10-18, doc/engine-diff.md L221): Knock Off on a Lum Berry (a Chesto
+// Berry: against sleep) a status secondary of the hit can use up (Poison Touch, Toxic Chain): the
+// secondaries and DamagingHit come before its onAfterHit in Showdown, the berry eaten at once
+// (onAfterSetStatus), so it takes the item after them (knock_off_after_secondaries). It took the
+// berry first
+pub fn knock_off_waits(choice: &Choice, defender: &Pokemon) -> bool {
+    choice.move_id == Choices::KNOCKOFF
+        && choice.secondaries.as_ref().is_some_and(|ss| {
+            ss.iter().any(|s| {
+                s.target == MoveTarget::Opponent
+                    && s.chance > 0.0
+                    && match s.effect {
+                        Effect::Status(status) => {
+                            defender.item == Items::LUMBERRY
+                                || (defender.item == Items::CHESTOBERRY
+                                    && status == PokemonStatus::SLEEP)
+                        }
+                        _ => false,
+                    }
+            })
+        })
+}
+
 pub fn choice_after_hit(
     state: &mut State,
     choice: &Choice,
@@ -1207,6 +1230,7 @@ pub fn choice_after_hit(
                         && s.chance > 0.0
                 })
             });
+            let waits = knock_off_waits(choice, defender);
             let defender_active = defending_side.get_active();
             if defender_active.item_can_be_removed()
                 && defender_active.item != Items::NONE
@@ -1214,6 +1238,7 @@ pub fn choice_after_hit(
                 && !user_faints
                 && !barb_moves
                 && !used_up
+                && !waits
             {
                 let instruction = Instruction::ChangeItem(ChangeItemInstruction {
                     side_ref: attacking_side_ref.get_other_side(),

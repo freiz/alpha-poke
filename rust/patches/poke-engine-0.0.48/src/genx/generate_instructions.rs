@@ -9019,6 +9019,7 @@ fn run_move(
             hit_sub,
         );
         for branch in instructions_vec_after_secondaries.iter_mut() {
+            knock_off_after_secondaries(state, &choice, &attacking_side, hit_sub, branch);
             update_branch(state, branch);
             eject_pack_after_secondaries(state, attacking_side, &defender_boosts_before, branch);
         }
@@ -9310,6 +9311,36 @@ pub fn update_with(state: &mut State, instructions: &mut StateInstructions, cud_
 }
 
 // (update on a branch whose instructions are not applied to the state)
+// alpha-poke patch (2026-10-18, doc/engine-diff.md L221): Knock Off's take after the secondaries
+// when a status one could use the berry up (choice_effects::knock_off_waits): the berry still held
+fn knock_off_after_secondaries(
+    state: &mut State,
+    choice: &Choice,
+    attacking_side: &SideReference,
+    hit_sub: bool,
+    branch: &mut StateInstructions,
+) {
+    let defender_ref = attacking_side.get_other_side();
+    state.apply_instructions(&branch.instruction_list);
+    let user_hp = state.get_side_immutable(attacking_side).get_active_immutable().hp;
+    let defender = state.get_side(&defender_ref).get_active();
+    if !hit_sub
+        && user_hp > 0
+        && defender.hp > 0
+        && defender.item_can_be_removed()
+        && super::choice_effects::knock_off_waits(choice, defender)
+    {
+        let ins = Instruction::ChangeItem(ChangeItemInstruction {
+            side_ref: defender_ref,
+            current_item: defender.item,
+            new_item: Items::NONE,
+        });
+        defender.item = Items::NONE;
+        branch.instruction_list.push(ins);
+    }
+    state.reverse_instructions(&branch.instruction_list);
+}
+
 fn update_branch(state: &mut State, branch: &mut StateInstructions) {
     state.apply_instructions(&branch.instruction_list);
     let from = branch.instruction_list.len();
