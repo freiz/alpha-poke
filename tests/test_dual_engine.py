@@ -5316,3 +5316,32 @@ Bold Nature
     (_, mid), = outs
     outs = ec.engine_outcomes(mid, "blissey", "none")  # (the end of the turn's pick)
     assert _keys(ec.closest(states[4], outs, (2, 1), hp=True, full=True, start=states[3])["diff"], "pp") == {}
+
+
+# L190 (doc/engine-diff.md): the moves that set an ability, Showdown's setAbility (Worry Seed's
+# Insomnia wakes its target; Simple Beam; Entrainment gives the user's; Role Play / Doodle take the
+# target's); they were nothing
+def test_l190_worry_seed_wakes():
+    breloom = BRELOOM.replace("- Rock Tomb", "- Worry Seed")
+    states = ec.run_showdown(breloom, GARCHOMP_SD, [("move spore", "move swordsdance"),
+                                                     ("move worryseed", "move swordsdance")])  # fmt: skip
+    assert states[2]["sides"][1]["mons"][0]["ability"] == "insomnia"
+    assert _keys(_full(states, 1, "worryseed", "swordsdance"), "ability", "status", "sleep") == {}
+
+
+@pytest.mark.parametrize("move, side, ability", [("simplebeam", 1, "simple"), ("entrainment", 1, "naturalcure"),
+                                                 ("roleplay", 0, "roughskin"), ("doodle", 0, "roughskin")])  # fmt: skip
+def test_l190_ability_moves(move, side, ability):
+    blissey = BLISSEY.replace("- Calm Mind", "- " + {"simplebeam": "Simple Beam", "entrainment": "Entrainment",
+                                                     "roleplay": "Role Play", "doodle": "Doodle"}[move])  # fmt: skip
+    states = ec.run_showdown(blissey, GARCHOMP_SD, [(f"move {move}", "move swordsdance")])
+    assert states[1]["sides"][side]["mons"][0]["ability"] == ability
+    assert _keys(_full(states, 0, move, "swordsdance"), "ability") == {}
+
+
+# L190 (the harness): a copied once-per-battle ability used (Imposter into Zamazenta) keeps the base
+# ability (the engine marks an own one only)
+def test_l190_copied_dauntless_shield_keeps_the_base_ability():
+    states = ec.run_showdown(DITTO_BACK, ZAMAZENTA, [("switch 2", "move irondefense")], fmt="gen9customgame")
+    assert any("Dauntless Shield" in x for x in states[1]["log"])
+    assert _keys(_full(states, 0, "ditto", "irondefense", (2, 1)), "ability") == {}

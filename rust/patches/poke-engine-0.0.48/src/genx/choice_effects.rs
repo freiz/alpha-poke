@@ -1956,6 +1956,54 @@ pub fn choice_special_effect(
             super::abilities::skill_swap(state, attacking_side_ref, instructions);
             return;
         }
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L190): the moves that set an ability
+        // (Showdown's onTryHit / onHit, abilities::set_ability; were nothing): Worry Seed gives
+        // Insomnia (not to Truant / Insomnia; it wakes the target), Simple Beam Simple (not to
+        // Simple / Truant), Entrainment the user's (not the same, to Truant, a noentrain one),
+        // Role Play / Doodle take the target's (not the same, a failroleplay one). A reflected one
+        // (Magic Bounce: choice.target User) lands on its user
+        Choices::WORRYSEED | Choices::SIMPLEBEAM | Choices::ENTRAINMENT => {
+            let target_ref = if choice.target == MoveTarget::User {
+                *attacking_side_ref
+            } else {
+                attacking_side_ref.get_other_side()
+            };
+            let source = if choice.target == MoveTarget::User {
+                state.get_side_immutable(&attacking_side_ref.get_other_side())
+            } else {
+                state.get_side_immutable(attacking_side_ref)
+            }
+            .get_active_immutable()
+            .ability;
+            let target = state.get_side_immutable(&target_ref).get_active_immutable().ability;
+            let new = match choice.move_id {
+                Choices::WORRYSEED => Abilities::INSOMNIA,
+                Choices::SIMPLEBEAM => Abilities::SIMPLE,
+                _ => source,
+            };
+            let fails = target == new
+                || target == Abilities::TRUANT
+                || (choice.move_id == Choices::ENTRAINMENT
+                    && super::abilities::FAIL_ROLE_PLAY.contains(&source));
+            if !fails && super::abilities::set_ability(state, &target_ref, new, instructions) {
+                let side = state.get_side(&target_ref);
+                if new == Abilities::INSOMNIA
+                    && side.get_active_immutable().status == PokemonStatus::SLEEP
+                {
+                    let index = side.active_index;
+                    add_remove_status_instructions(instructions, index, target_ref, side);
+                }
+            }
+            return;
+        }
+        Choices::ROLEPLAY | Choices::DOODLE => {
+            let target = defending_side.get_active_immutable().ability;
+            let user = attacking_side.get_active_immutable().ability;
+            if target != user && !super::abilities::FAIL_ROLE_PLAY.contains(&target) {
+                super::abilities::set_ability(state, attacking_side_ref, target, instructions);
+            }
+            return;
+        }
         // alpha-poke patch (2026-10-16, doc/engine-diff.md L99): Soak, the target pure Water
         // (Showdown's setType: not a pure Water type, a Terastallized one, through a Substitute)
         Choices::SOAK => {

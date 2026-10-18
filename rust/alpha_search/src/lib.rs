@@ -1143,6 +1143,18 @@ fn cant_suppress_abilities() -> Vec<String> {
     out
 }
 
+/// The abilities Role Play / Doodle do not copy, Entrainment does not give (`FAIL_ROLE_PLAY`,
+/// lowercase; doc/engine-diff.md L190).
+#[pyfunction]
+fn fail_role_play_abilities() -> Vec<String> {
+    let mut out: Vec<String> = poke_engine::engine::abilities::FAIL_ROLE_PLAY
+        .iter()
+        .map(|a| format!("{:?}", a).to_lowercase())
+        .collect();
+    out.sort();
+    out
+}
+
 /// The abilities Trace does not copy (`NO_TRACE`, lowercase; doc/engine-diff.md L184).
 #[pyfunction]
 fn no_trace_abilities() -> Vec<String> {
@@ -1322,6 +1334,7 @@ fn alpha_search(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(cant_suppress_abilities, m)?)?;
     m.add_function(wrap_pyfunction!(max_pps, m)?)?;
     m.add_function(wrap_pyfunction!(no_trace_abilities, m)?)?;
+    m.add_function(wrap_pyfunction!(fail_role_play_abilities, m)?)?;
     m.add_function(wrap_pyfunction!(chance_outcomes, m)?)?;
     m.add_function(wrap_pyfunction!(describe, m)?)?;
     Ok(())

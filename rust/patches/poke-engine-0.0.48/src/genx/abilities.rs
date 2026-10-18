@@ -517,6 +517,88 @@ pub const NO_TRACE: [Abilities; 34] = [
     Abilities::ZEROTOHERO,
 ];
 
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L190): the abilities Role Play / Doodle do not
+// copy and Entrainment does not give (Showdown's failroleplay / noentrain: the same list; the data
+// test checks it)
+pub const FAIL_ROLE_PLAY: [Abilities; 35] = [
+    Abilities::ASONEGLASTRIER,
+    Abilities::ASONESPECTRIER,
+    Abilities::BATTLEBOND,
+    Abilities::COMATOSE,
+    Abilities::COMMANDER,
+    Abilities::DISGUISE,
+    Abilities::EMBODYASPECTCORNERSTONE,
+    Abilities::EMBODYASPECTHEARTHFLAME,
+    Abilities::EMBODYASPECTTEAL,
+    Abilities::EMBODYASPECTWELLSPRING,
+    Abilities::FLOWERGIFT,
+    Abilities::FORECAST,
+    Abilities::HUNGERSWITCH,
+    Abilities::ICEFACE,
+    Abilities::ILLUSION,
+    Abilities::IMPOSTER,
+    Abilities::MULTITYPE,
+    Abilities::NEUTRALIZINGGAS,
+    Abilities::POISONPUPPETEER,
+    Abilities::POWERCONSTRUCT,
+    Abilities::POWEROFALCHEMY,
+    Abilities::PROTOSYNTHESIS,
+    Abilities::QUARKDRIVE,
+    Abilities::RECEIVER,
+    Abilities::RKSSYSTEM,
+    Abilities::SCHOOLING,
+    Abilities::SHIELDSDOWN,
+    Abilities::STANCECHANGE,
+    Abilities::TERAFORMZERO,
+    Abilities::TERASHELL,
+    Abilities::TERASHIFT,
+    Abilities::TRACE,
+    Abilities::WONDERGUARD,
+    Abilities::ZENMODE,
+    Abilities::ZEROTOHERO,
+];
+
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L190): Showdown's setAbility for a move (Worry
+// Seed, Simple Beam, Entrainment, Role Play, Doodle): not on a fainted mon, not to or from a
+// cantsuppress ability, not through an Ability Shield (its SetAbility); the old one ends (a
+// Neutralizing Gas: the other's ability starts again; Protosynthesis / Quark Drive: their boost),
+// the new one starts (not Imposter's transformation: a switch-in's). Whether it was set
+pub fn set_ability(
+    state: &mut State,
+    side_ref: &SideReference,
+    ability: Abilities,
+    instructions: &mut StateInstructions,
+) -> bool {
+    let p = state.get_side(side_ref).get_active();
+    let old = p.ability;
+    if p.hp == 0
+        || CANT_SUPPRESS.contains(&ability)
+        || CANT_SUPPRESS.contains(&old)
+        || p.item == Items::ABILITYSHIELD
+    {
+        return false;
+    }
+    instructions
+        .instruction_list
+        .push(Instruction::ChangeAbility(ChangeAbilityInstruction {
+            side_ref: *side_ref,
+            ability_change: ability as i16 - old as i16,
+        }));
+    p.ability = ability;
+    if old == Abilities::NEUTRALIZINGGAS {
+        super::generate_instructions::restart_ability_after_gas(
+            state,
+            &side_ref.get_other_side(),
+            instructions,
+        );
+    }
+    if ability != Abilities::IMPOSTER {
+        ability_on_switch_in(state, side_ref, instructions);
+    }
+    paradox_update(state, side_ref, instructions);
+    true
+}
+
 // alpha-poke patch (2026-10-17, doc/engine-diff.md L184): Showdown's skillSwap, shared by Skill
 // Swap and Wandering Spirit (were Skill Swap's own, L106; Wandering Spirit gave Mummy): the
 // actives swap abilities and the new ones start (the source's old ability on the target first);

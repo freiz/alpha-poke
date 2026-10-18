@@ -6,9 +6,6 @@
 "seed_offset": 30000
 },
 "mismatches": {
-"b114-t21": [
-"base_ability"
-],
 "b127-t11": [
 "hp"
 ],
@@ -92,12 +89,6 @@
 ],
 "b54-t36": [
 "volatile.noretreat"
-],
-"b61-t18": [
-"ability"
-],
-"b61-t6": [
-"base_ability"
 ]
 }
 }

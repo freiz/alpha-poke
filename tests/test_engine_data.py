@@ -213,10 +213,12 @@ def test_skill_swap_failures_match_showdown():
 
 
 @pytest.mark.parametrize("flag, got", [("cantsuppress", "cant_suppress_abilities"),
-                                       ("notrace", "no_trace_abilities")])  # fmt: skip
+                                       ("notrace", "no_trace_abilities"),
+                                       ("failroleplay", "fail_role_play_abilities"),
+                                       ("noentrain", "fail_role_play_abilities")])  # fmt: skip
 def test_ability_flags_match_showdown(flag, got):
     """The abilities no other one replaces (Showdown's cantsuppress: Mummy, Lingering Aroma, ...)
-    and the ones Trace does not copy (notrace; L184)."""
+    and the ones Trace does not copy (notrace; L184); Role Play / Doodle / Entrainment's (L190)."""
     import subprocess
 
     import alpha_search

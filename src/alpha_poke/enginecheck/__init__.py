@@ -135,6 +135,10 @@ def _sleep(m: dict) -> dict:
     return {"sleep_turns": min(max(ss["startTime"] - ss["time"], 0), 3)}
 
 
+# the once-per-battle abilities (abilities.rs ONCE_PER_BATTLE, L184)
+ONCE_PER_BATTLE = ("dauntlessshield", "intrepidsword", "supersweetsyrup", "battlebond")
+
+
 def _engine_mon(m: dict) -> pe.Pokemon:
     st = m["stats"]
     return pe.Pokemon(**_sleep(m),
@@ -143,8 +147,10 @@ def _engine_mon(m: dict) -> pe.Pokemon:
         types=_types(_unroosted(m, m.get("pre_tera_types") or m["types"])),
         base_types=_types(m["base_types"]), hp=m["hp"], maxhp=m["maxhp"],
         ability=m["ability"] or "none",
-        # a used once-per-battle switch-in ability: base ability none (L18)
-        base_ability="none" if m.get("used_once") else (m["base_ability"] or m["ability"] or "none"),
+        # a used once-per-battle switch-in ability: base ability none (L18; L190: its own, not one
+        # it copied -- Trace, Skill Swap, Imposter: the engine marks its base ability only)
+        base_ability="none" if m.get("used_once") and m["base_ability"] in ONCE_PER_BATTLE
+        else (m["base_ability"] or m["ability"] or "none"),
         item=m["item"] or "none", attack=st["atk"], defense=st["def"],
         special_attack=st["spa"], special_defense=st["spd"], speed=st["spe"],
         status=STATUS[m["status"]], weight_kg=m["weight"], nature=m.get("nature", "serious").lower(),
