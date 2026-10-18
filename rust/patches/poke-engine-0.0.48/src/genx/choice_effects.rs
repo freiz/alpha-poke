@@ -1116,6 +1116,55 @@ pub fn choice_after_hit(
     instructions: &mut StateInstructions,
     hit_sub: bool,
 ) {
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L215): Bug Bite / Pluck take the target's
+    // berry and their user eats it (Showdown's onHit: takeItem -- the target's Unburden, no last
+    // item -- then the berry's Eat on the user, its own item and last item kept); they took nothing
+    if matches!(choice.move_id, Choices::BUGBITE | Choices::PLUCK) && !hit_sub {
+        let defender_ref = attacking_side_ref.get_other_side();
+        let user = state.get_side_immutable(attacking_side_ref).get_active_immutable();
+        let target = state.get_side_immutable(&defender_ref).get_active_immutable();
+        let berry = target.item;
+        if user.hp > 0 && super::items::is_berry(berry) && target.item_can_be_removed() {
+            let ins = Instruction::ChangeItem(ChangeItemInstruction {
+                side_ref: defender_ref,
+                current_item: berry,
+                new_item: Items::NONE,
+            });
+            state.apply_one_instruction(&ins);
+            instructions.instruction_list.push(ins);
+            let user = state.get_side(attacking_side_ref).get_active();
+            let (own_item, own_last) = (user.item, user.last_item);
+            if own_item != Items::NONE {
+                let ins = Instruction::ChangeItem(ChangeItemInstruction {
+                    side_ref: *attacking_side_ref,
+                    current_item: own_item,
+                    new_item: Items::NONE,
+                });
+                state.apply_one_instruction(&ins);
+                instructions.instruction_list.push(ins);
+            }
+            super::items::eat_again(state, attacking_side_ref, berry, instructions);
+            let user = state.get_side(attacking_side_ref).get_active();
+            if user.last_item != own_last {
+                let ins = Instruction::ChangeLastItem(ChangeItemInstruction {
+                    side_ref: *attacking_side_ref,
+                    current_item: user.last_item,
+                    new_item: own_last,
+                });
+                state.apply_one_instruction(&ins);
+                instructions.instruction_list.push(ins);
+            }
+            if own_item != Items::NONE {
+                let ins = Instruction::ChangeItem(ChangeItemInstruction {
+                    side_ref: *attacking_side_ref,
+                    current_item: Items::NONE,
+                    new_item: own_item,
+                });
+                state.apply_one_instruction(&ins);
+                instructions.instruction_list.push(ins);
+            }
+        }
+    }
     let (attacking_side, defending_side) = state.get_both_sides(attacking_side_ref);
     match choice.move_id {
         Choices::KNOCKOFF => {

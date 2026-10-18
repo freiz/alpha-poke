@@ -6297,3 +6297,23 @@ def test_l214_positions(teams, i, turn, offset):
     outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"]))
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
     assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}
+
+
+# L215 (doc/engine-diff.md), from randbats6: Flame Body at each hit of a multi-hit move (its
+# chance compounded; the harness's hints by the burned rolls after it: randbats6 b107-t1, main
+# b162-t2); Psychic Terrain against a Prankster Encore; Bug Bite eats the target's berry; a Choice
+# item Pickpocket takes starts unlocked; a lock's end keeps a Disable's move disabled
+@pytest.mark.parametrize("teams,i,turn,offset", [
+    ("random_battle_teams_randbats6.jsonl", 107, 1, 110000),
+    ("random_battle_teams.jsonl", 162, 2, 0),
+    ("random_battle_teams_randbats6.jsonl", 130, 20, 110000),
+    ("random_battle_teams_randbats6.jsonl", 163, 1, 110000),
+    ("random_battle_teams_randbats6.jsonl", 266, 12, 110000),
+    ("random_battle_teams_randbats6.jsonl", 28, 17, 110000),
+])  # fmt: skip
+def test_l215_positions(teams, i, turn, offset):
+    a, b = _random_position(teams, i, turn, offset)
+    c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
+    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"]))
+    n = tuple(len(s["mons"]) for s in a["state"]["sides"])
+    assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}

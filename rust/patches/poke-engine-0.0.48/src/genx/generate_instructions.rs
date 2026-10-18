@@ -2122,14 +2122,22 @@ fn lock_end_instructions(
         active.item,
         Items::CHOICEBAND | Items::CHOICESPECS | Items::CHOICESCARF
     ) {
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L215): not a Disable's move (Cursed
+        // Body's on the last use: it stays disabled)
+        let disabled_slot = side
+            .volatile_statuses
+            .contains(&PokemonVolatileStatus::DISABLE)
+            .then(|| side.volatile_status_durations.disable / 8);
         let mut iter = active.moves.into_iter();
+        let mut k = 0;
         while let Some(m) = iter.next() {
-            if m.disabled {
+            if m.disabled && disabled_slot != Some(k) {
                 out.push(Instruction::EnableMove(EnableMoveInstruction {
                     side_ref: *side_ref,
                     move_index: iter.pokemon_move_index,
                 }));
             }
+            k += 1;
         }
     }
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L205): not through Own Tempo or a grounded
@@ -3007,6 +3015,17 @@ fn generate_instructions_from_damage(
 fn move_has_no_effect(state: &State, choice: &Choice, attacking_side_ref: &SideReference) -> bool {
     let (_attacking_side, defending_side) = state.get_both_sides_immutable(attacking_side_ref);
     let defender = defending_side.get_active_immutable();
+
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L215): Psychic Terrain first (a Prankster
+    // Encore on a grounded target: the Encore check returned before it)
+    if state.terrain_is_active(&Terrain::PSYCHICTERRAIN)
+        && (defending_side.active_grounded() || state.gravity > 0)
+        && choice.target == MoveTarget::Opponent
+        && choice.priority > 0
+        && !super::abilities::FIELD_OR_SIDE_MOVES.contains(&choice.move_id)
+    {
+        return true;
+    }
 
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L133): a status move aimed at the foe fails
     // against its Substitute unless it bypasses it (Showdown's substitute onTryPrimaryHit; the
@@ -5556,6 +5575,18 @@ fn finish_move(
     hit_count: i8,
     per_hit: Option<i16>,
 ) {
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L215): the target's contact abilities
+    // (Flame Body, Static, Poison Point, Effect Spore: a status on the user) roll at each hit of a
+    // multi-hit move (Showdown's onDamagingHit per hit; the user statused once): 1 - (1 - p)^k
+    if hit_count > 1 {
+        if let Some(v) = choice.secondaries.as_mut() {
+            for x in v.iter_mut() {
+                if x.target == MoveTarget::User && matches!(x.effect, Effect::Status(_)) {
+                    x.chance = 100.0 * (1.0 - (1.0 - x.chance / 100.0).powi(hit_count as i32));
+                }
+            }
+        }
+    }
     // (L162: a sure crit -- the move's, Merciless'; read before the sides are borrowed)
     let sure_crit_hit = is_sure_crit(state, &attacking_side, choice);
     let crit_stage_chance = crit_stage_chance(state, &attacking_side, choice);
@@ -7984,8 +8015,8 @@ fn run_move(
                 c.base_power =
                     choice.base_power * 2.0 * (hit as f32 + 1.0) / (hit_count as f32 + 1.0);
             }
-            let rolls_have = |c: &Choice| {
-                matches!(damage_rolls(state, &attacking_side, c),
+            let rolls_have = |st: &State, c: &Choice| {
+                matches!(damage_rolls(st, &attacking_side, c),
                     Some((r, cr)) if (if crit { cr } else { r }).contains(&d))
             };
             // (L213: Beat Up's hit by a hitter's power, 5 + its base Attack / 10, over the hitters'
@@ -8006,14 +8037,32 @@ fn run_move(
                     if mean > 0.0 {
                         c.base_power = choice.base_power * powers[j] / mean;
                     }
-                    if rolls_have(&c) {
+                    if rolls_have(state, &c) {
                         found = true;
                         break;
                     }
                 }
                 if found { d } else { hit_damage }
-            } else if rolls_have(&c) {
+            } else if rolls_have(state, &c) {
                 d
+            } else if choice.category == MoveCategory::Physical
+                && state
+                    .get_side_immutable(&attacking_side)
+                    .get_active_immutable()
+                    .status
+                    == PokemonStatus::NONE
+                && choice.secondaries.as_ref().is_some_and(|v| {
+                    v.iter().any(|x| {
+                        x.target == MoveTarget::User && x.effect == Effect::Status(PokemonStatus::BURN)
+                    })
+                })
+            {
+                // (L215: a hit after a Flame Body burn at an earlier hit -- the burn's own branch
+                // comes from the secondaries: its damage halved)
+                state.get_side(&attacking_side).get_active().status = PokemonStatus::BURN;
+                let burned = rolls_have(state, &c);
+                state.get_side(&attacking_side).get_active().status = PokemonStatus::NONE;
+                if burned { d } else { hit_damage }
             } else {
                 hit_damage
             }
@@ -8318,6 +8367,12 @@ fn run_move(
             ] {
                 state.apply_one_instruction(&ins);
                 instructions.instruction_list.push(ins);
+            }
+            // alpha-poke patch (2026-10-17, doc/engine-diff.md L215): a Choice item it takes
+            // starts with no lock (Showdown's choice items' onStart removes the choicelock, as
+            // Trick's: L188)
+            if matches!(item, Items::CHOICEBAND | Items::CHOICESPECS | Items::CHOICESCARF) {
+                release_choice_lock(state, &defender_ref, &mut instructions);
             }
             // (L114: a Life Orb taken gives no recoil: Showdown's comes after the move, from the
             // item its holder has then)
