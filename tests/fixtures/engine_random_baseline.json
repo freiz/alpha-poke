@@ -5,51 +5,13 @@
 "teams": "87327e3ee174c1b9"
 },
 "mismatches": {
-"b112-t14": [
-"hp"
-],
 "b123-t5": [
 "hp"
-],
-"b191-t49": [
-"hp"
-],
-"b217-t11": [
-"status"
 ],
 "b222-t25": [
 "boost.atk",
 "boost.def",
 "hp"
-],
-"b237-t13": [
-"ability",
-"attack",
-"base_ability",
-"base_types",
-"defense",
-"gender",
-"hp",
-"id",
-"last_item",
-"last_used_move",
-"level",
-"maxhp",
-"move",
-"must_switch",
-"nature",
-"options",
-"pp",
-"sc.protect",
-"special_attack",
-"special_defense",
-"speed",
-"status",
-"stellar_boosted",
-"tera_type",
-"terastallized",
-"types",
-"weight"
 ],
 "b241-t12": [
 "hp"
@@ -57,46 +19,7 @@
 "b241-t13": [
 "boost.def"
 ],
-"b241-t4": [
-"ability",
-"attack",
-"base_ability",
-"base_types",
-"defense",
-"gender",
-"id",
-"last_item",
-"level",
-"maxhp",
-"move",
-"must_switch",
-"nature",
-"options",
-"pp",
-"sc.protect",
-"special_attack",
-"special_defense",
-"speed",
-"status",
-"stellar_boosted",
-"tera_type",
-"terastallized",
-"types",
-"weight"
-],
-"b244-t6": [
-"status"
-],
 "b245-t6": [
-"hp"
-],
-"b269-t19": [
-"hp"
-],
-"b289-t9": [
-"hp"
-],
-"b48-t30": [
 "hp"
 ]
 }

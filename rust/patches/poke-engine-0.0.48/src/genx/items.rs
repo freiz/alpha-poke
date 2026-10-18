@@ -2182,7 +2182,9 @@ pub fn item_modify_attack_being_used(
             }
         }
         Items::LIFEORB => {
-            if attacking_choice.category != MoveCategory::Status {
+            // (L199: a hit Ice Face took too -- a status move by now: Showdown's recoil is the
+            // move's onAfterMoveSecondarySelf, whatever damage it did)
+            if attacking_choice.category != MoveCategory::Status || attacking_choice.face_break {
                 attacking_choice.damage_modifier *= 5324.0 / 4096.0;
 
                 #[cfg(feature = "gen4")]

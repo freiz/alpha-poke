@@ -6,12 +6,6 @@
 "seed_offset": 50000
 },
 "mismatches": {
-"b114-t12": [
-"hp"
-],
-"b126-t36": [
-"status"
-],
 "b30-t2": [
 "sc.reflect"
 ],
@@ -20,10 +14,6 @@
 ],
 "b30-t5": [
 "options"
-],
-"b46-t9": [
-"hp",
-"status"
 ],
 "b66-t52": [
 "hp"

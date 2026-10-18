@@ -1523,6 +1523,11 @@ pub struct State {
     // on for every real state (set_conditional_mechanics), off in State::default (the upstream
     // tests' instruction lists)
     pub use_exact_pp: bool,
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L199): the differential harness's damage
+    // hint by side (-1 none): the damage the side's single-hit move dealt in Showdown; a roll the
+    // engine computes too (a crit's or not) is taken instead of the rolls' branches (finish_move).
+    // Not serialized; the search never sets it
+    pub damage_hint: [i16; 2],
 }
 impl Default for State {
     fn default() -> State {
@@ -1547,6 +1552,7 @@ impl Default for State {
             last_move: Choices::NONE,
             use_last_move: false,
             use_exact_pp: false,
+            damage_hint: [-1, -1],
             use_last_used_move: false,
         };
 
@@ -2758,6 +2764,7 @@ impl State {
                 .map_or(Choices::NONE, |x| Choices::from_str(x).unwrap()),
             use_last_move: false,
             use_exact_pp: false,
+            damage_hint: [-1, -1],
             use_last_used_move: false,
         };
         state.set_conditional_mechanics();

@@ -5638,3 +5638,30 @@ def test_l198_gulp_missile_absorbed_surf():
     states = ec.run_showdown(cramorant, gastrodon, [("move surf", "move spikes")])
     assert states[1]["sides"][0]["mons"][0]["species"] == "cramorant"
     assert _keys(_full(states, 0, "surf", "spikes"), "id") == {}
+
+
+# L199 (doc/engine-diff.md): the differential's damage hints (Showdown's rolls from its log): a hint
+# that is one of the engine's rolls is the hit's damage (no rolls' branches), an off-roll one
+# changes nothing
+def test_l199_damage_hints():
+    states = ec.run_showdown(GARCHOMP_SD, BLISSEY, [("move earthquake", "move calmmind")])
+    hints = ec.damage_hints(states[0], states[1])
+    dealt = states[0]["sides"][1]["mons"][0]["hp"] - states[1]["sides"][1]["mons"][0]["hp"]
+    assert hints == (dealt, -1)
+    e = ec.engine_state(states[0])
+    outs = ec.engine_outcomes(e, "earthquake", "calmmind", hints)
+    assert {o.damage[1] for o in outs} == {dealt}
+    assert ec.closest(states[1], outs, (1, 1), hp=True, full=True, start=states[0])["diff"] == {}
+    plain = ec.engine_outcomes(e, "earthquake", "calmmind")
+    assert [round(o[0], 4) for o in ec.engine_outcomes(e, "earthquake", "calmmind", (1, -1))] == \
+        [round(o[0], 4) for o in plain]
+
+
+# L199: a hit Ice Face takes still gives its user Life Orb's recoil (Showdown's
+# onAfterMoveSecondarySelf, whatever the damage; was none: a status move by then)
+def test_l199_life_orb_recoil_on_ice_face():
+    gar = GARCHOMP_SD.replace("Garchomp @ Leftovers", "Garchomp @ Life Orb")
+    states = ec.run_showdown(gar, EISCUE, [("move earthquake", "move bellydrum")])
+    assert any("Ice Face" in x for x in states[1]["log"])
+    assert any("[from] item: Life Orb" in x for x in states[1]["log"])
+    assert _keys(_full(states, 0, "earthquake", "bellydrum"), "hp", "id") == {}

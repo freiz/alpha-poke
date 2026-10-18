@@ -6,20 +6,10 @@
 "seed_offset": 60000
 },
 "mismatches": {
-"b106-t18": [
-"hp"
-],
-"b106-t24": [
-"hp",
-"status"
-],
 "b109-t23": [
 "attack"
 ],
 "b114-t26": [
-"hp"
-],
-"b118-t5": [
 "hp"
 ],
 "b124-t14": [
@@ -55,104 +45,20 @@
 "b137-t31": [
 "sleep_turns"
 ],
-"b150-t42": [
-"hp"
-],
-"b152-t10": [
-"hp"
-],
-"b16-t18": [
-"status"
-],
 "b17-t22": [
 "boost.spa"
 ],
 "b171-t13": [
 "hp"
 ],
-"b187-t20": [
-"hp"
-],
 "b192-t31": [
 "hp"
-],
-"b2-t16": [
-"hp"
-],
-"b211-t55": [
-"hp"
-],
-"b217-t32": [
-"ability",
-"attack",
-"base_ability",
-"base_types",
-"defense",
-"gender",
-"id",
-"last_item",
-"last_used_move",
-"level",
-"maxhp",
-"move",
-"must_switch",
-"nature",
-"options",
-"pp",
-"sc.protect",
-"special_attack",
-"special_defense",
-"speed",
-"status",
-"stellar_boosted",
-"tera_type",
-"terastallized",
-"types",
-"weight"
-],
-"b22-t5": [
-"ability",
-"attack",
-"base_ability",
-"base_types",
-"defense",
-"gender",
-"id",
-"last_item",
-"last_used_move",
-"level",
-"maxhp",
-"move",
-"must_switch",
-"nature",
-"options",
-"pp",
-"sc.protect",
-"special_attack",
-"special_defense",
-"speed",
-"status",
-"stellar_boosted",
-"tera_type",
-"terastallized",
-"types",
-"weight"
 ],
 "b239-t5": [
 "attack"
 ],
 "b263-t53": [
 "hp"
-],
-"b271-t7": [
-"hp"
-],
-"b28-t15": [
-"hp"
-],
-"b283-t31": [
-"hp",
-"status"
 ],
 "b36-t19": [
 "hp"
@@ -200,9 +106,6 @@
 "hp"
 ],
 "b62-t52": [
-"hp"
-],
-"b66-t14": [
 "hp"
 ],
 "b67-t11": [

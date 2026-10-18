@@ -331,12 +331,68 @@ DAMAGE = re.compile(r"^Damage (SideOne|SideTwo): (-?\d+)$")
 SUB_DAMAGE = re.compile(r"^DamageSubstitute (SideOne|SideTwo): (-?\d+)$")
 
 
-def engine_outcomes(state: pe.State, c1: str, c2: str) -> list[tuple[float, pe.State]]:
+def _log_hp(text: str) -> int | None:
+    m = re.match(r"(\d+)(?:/\d+)?", text)
+    return int(m.group(1)) if m else None
+
+
+def damage_hints(start: dict, after: dict) -> tuple[int, int]:
+    """(L199) Each side's single-hit damage on its target this turn in Showdown's log (-1 none):
+    the first hit after its move line, the HP tracked from the turn's start. None for a knockout
+    (the HP caps it), a multi-hit move, a hit on a Substitute; the engine takes a hint only when
+    it is one of its own rolls (State::damage_hint)."""
+    hp = {f"{s['id']}a: {m.get('name', '')}": m["hp"] for s in start["sides"] for m in s["mons"]}
+    hints, pending, prev = [-1, -1], None, None
+    hinted = None  # (side, target) of the last hint: a survival effect after it voids it
+    for line in after.get("log", []):
+        if line == prev:  # (the split's private and public copies)
+            continue
+        prev = line
+        f = line.split("|")
+        # (a damage a Focus Sash / Focus Band / Sturdy / Endure capped: no roll -- its message
+        # before the damage line or after it)
+        capped = len(f) > 3 and (
+            (f[1] == "-enditem" and f[3] in ("Focus Sash", "Focus Band"))
+            or (f[1] == "-activate" and f[3] in ("ability: Sturdy", "move: Endure", "item: Focus Band")))
+        if capped and hinted and f[2] == hinted[1]:
+            hints[hinted[0]] = -1
+        if capped and pending and f[2] == pending[1]:
+            pending = None
+        if len(f) > 1 and f[1] in ("move", "switch", "drag", "upkeep"):
+            hinted = None
+        if len(f) < 3:
+            continue
+        tag = f[1]
+        if tag in ("switch", "drag", "replace") and len(f) > 4:
+            hp[f[2]] = _log_hp(f[4]) if _log_hp(f[4]) is not None else hp.get(f[2], 0)
+        elif tag == "move" and len(f) > 4:
+            side = 0 if f[2].startswith("p1") else 1
+            pending = (side, f[4]) if hints[side] == -1 and f[4] else None
+        elif tag in ("-damage", "-heal", "-sethp") and len(f) > 3:
+            new = _log_hp(f[3])
+            if new is None:
+                continue
+            if (tag == "-damage" and pending and f[2] == pending[1] and not any(x.startswith("[from]") for x in f[4:])):
+                before = hp.get(f[2])
+                if before is not None and new > 0 and before > new:
+                    hints[pending[0]] = before - new
+                    hinted = pending
+                pending = None
+            hp[f[2]] = new
+        elif tag == "-hitcount" and len(f) > 2:
+            hints[0 if f[2].startswith("p2") else 1] = -2  # (the attacker's: the other side)
+        elif tag == "-activate" and len(f) > 3 and "Substitute" in f[3] and "[damage]" in line:
+            pending = None
+    return tuple(h if h > 0 else -1 for h in hints)
+
+
+def engine_outcomes(state: pe.State, c1: str, c2: str,
+                    hints: tuple[int, int] = (-1, -1)) -> list[tuple[float, pe.State]]:  # fmt: skip
     """Every chance outcome of the move pair in poke-engine (choices as the engine names them:
     "defog", "earthquake-tera", "switch greattusk"): [(probability, resulting state)]; each
-    state carries ``damage`` (``engine_damage``)."""
+    state carries ``damage`` (``engine_damage``). ``hints``: damage_hints (the differential)."""
     out = []
-    for si in pe.generate_instructions(state, c1, c2):
+    for si in pe.generate_instructions(state, c1, c2, *hints):
         # the binding returns a new state (it does not change ``state``)
         dmg, sub = [0, 0], [0, 0]
         for ins in si.instruction_list:

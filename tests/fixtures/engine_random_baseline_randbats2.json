@@ -9,23 +9,10 @@
 "b10-t20": [
 "volatile.confusion"
 ],
-"b101-t17": [
-"status"
-],
-"b103-t3": [
-"status"
-],
 "b104-t7": [
 "attack"
 ],
 "b11-t7": [
-"hp"
-],
-"b111-t28": [
-"item",
-"last_item"
-],
-"b128-t12": [
 "hp"
 ],
 "b144-t23": [
@@ -35,9 +22,6 @@
 "hp"
 ],
 "b147-t13": [
-"hp"
-],
-"b151-t5": [
 "hp"
 ],
 "b165-t10": [
@@ -80,9 +64,6 @@
 "types",
 "weight"
 ],
-"b197-t10": [
-"hp"
-],
 "b197-t8": [
 "hp"
 ],
@@ -116,9 +97,6 @@
 "types",
 "weight"
 ],
-"b212-t5": [
-"boost.spa"
-],
 "b226-t29": [
 "hp"
 ],
@@ -143,108 +121,11 @@
 "b253-t25": [
 "hp"
 ],
-"b260-t23": [
-"hp"
-],
-"b274-t19": [
-"ability",
-"attack",
-"base_ability",
-"base_types",
-"defense",
-"gender",
-"id",
-"last_item",
-"level",
-"maxhp",
-"move",
-"must_switch",
-"nature",
-"options",
-"pp",
-"sc.protect",
-"special_attack",
-"special_defense",
-"speed",
-"status",
-"stellar_boosted",
-"tera_type",
-"terastallized",
-"types",
-"weight"
-],
-"b274-t20": [
-"hp",
-"item"
-],
 "b274-t43": [
 "hp"
 ],
-"b277-t11": [
-"hp"
-],
-"b284-t14": [
-"hp"
-],
-"b287-t6": [
-"status"
-],
-"b3-t21": [
-"ability",
-"attack",
-"base_ability",
-"base_types",
-"defense",
-"gender",
-"id",
-"last_item",
-"last_used_move",
-"level",
-"maxhp",
-"move",
-"must_switch",
-"nature",
-"options",
-"pp",
-"sc.protect",
-"special_attack",
-"special_defense",
-"speed",
-"status",
-"stellar_boosted",
-"tera_type",
-"terastallized",
-"types",
-"weight"
-],
 "b34-t2": [
-"ability",
-"attack",
-"base_ability",
-"base_types",
-"defense",
-"gender",
-"hp",
-"id",
-"last_item",
-"last_used_move",
-"level",
-"maxhp",
-"move",
-"must_switch",
-"nature",
-"options",
-"pp",
-"sc.protect",
-"special_attack",
-"special_defense",
-"speed",
-"status",
-"stellar_boosted",
-"tera_type",
-"terastallized",
-"types",
-"weight"
+"hp"
 ],
 "b74-t8": [
 "hp"
@@ -285,15 +166,6 @@
 ],
 "b8-t11": [
 "hp"
-],
-"b89-t34": [
-"hp",
-"substitute_hp",
-"volatile.substitute"
-],
-"b91-t51": [
-"hp",
-"status"
 ],
 "b92-t46": [
 "hp"

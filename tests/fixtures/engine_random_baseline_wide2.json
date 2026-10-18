@@ -6,16 +6,7 @@
 "seed_offset": 30000
 },
 "mismatches": {
-"b127-t11": [
-"hp"
-],
 "b130-t8": [
-"status"
-],
-"b149-t8": [
-"hp"
-],
-"b183-t27": [
 "status"
 ],
 "b184-t17": [
@@ -53,21 +44,8 @@
 "types",
 "weight"
 ],
-"b256-t8": [
-"hp"
-],
-"b258-t27": [
-"hp",
-"status"
-],
-"b270-t20": [
-"hp"
-],
 "b278-t18": [
 "substitute_hp"
-],
-"b279-t32": [
-"hp"
 ],
 "b297-t23": [
 "boost.def",

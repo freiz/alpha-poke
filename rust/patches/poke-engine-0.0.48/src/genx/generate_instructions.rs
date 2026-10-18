@@ -5204,6 +5204,28 @@ fn finish_move(
             None
         }
     };
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L199): the harness's damage hint (the
+    // damage Showdown's roll dealt) for a single hit on the target itself, when it is one of the
+    // engine's rolls, a crit's or not: that damage, no branches (an off-roll hint changes nothing)
+    let per_hit = match (state.damage_hint[attacking_side as usize], damage) {
+        (hint, Some(_))
+            if hint >= 0
+                && per_hit.is_none()
+                && fixed.is_none()
+                && hit_count == 1
+                && target_hp
+                    == state
+                        .get_side_immutable(&attacking_side.get_other_side())
+                        .get_active_immutable()
+                        .hp =>
+        {
+            match damage_rolls(state, &attacking_side, choice) {
+                Some((r, c)) if r.contains(&hint) || c.contains(&hint) => Some(hint),
+                _ => per_hit,
+            }
+        }
+        _ => per_hit,
+    };
     // the surviving rolls of the regular branch, (weight, damage), when they are known exactly
     let mut regular_rolls: Option<Vec<(f32, i16)>> = None;
     if let Some((max_damage_dealt, max_crit_damage)) = damage {

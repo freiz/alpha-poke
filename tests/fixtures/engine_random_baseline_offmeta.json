@@ -12,34 +12,6 @@
 "item",
 "last_item"
 ],
-"b158-t26": [
-"ability",
-"attack",
-"base_ability",
-"base_types",
-"defense",
-"gender",
-"id",
-"last_item",
-"last_used_move",
-"level",
-"maxhp",
-"move",
-"must_switch",
-"nature",
-"options",
-"pp",
-"sc.protect",
-"special_attack",
-"special_defense",
-"speed",
-"status",
-"stellar_boosted",
-"tera_type",
-"terastallized",
-"types",
-"weight"
-],
 "b161-t1": [
 "boost.def",
 "hp"
@@ -58,9 +30,6 @@
 "b169-t3": [
 "hp"
 ],
-"b178-t2": [
-"hp"
-],
 "b180-t13": [
 "boost.def"
 ],
@@ -68,9 +37,6 @@
 "volatile.uproar"
 ],
 "b36-t19": [
-"hp"
-],
-"b36-t35": [
 "hp"
 ],
 "b36-t47": [
@@ -133,9 +99,6 @@
 ],
 "b67-t16": [
 "hp",
-"status"
-],
-"b90-t1": [
 "status"
 ],
 "b96-t3": [

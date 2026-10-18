@@ -95,6 +95,7 @@ impl Into<State> for PyState {
             last_move: Choices::from_str(&self.last_move).unwrap_or(Choices::NONE),
             use_last_move: false,
             use_exact_pp: false,
+            damage_hint: [-1, -1],
         };
         state.set_conditional_mechanics();
         state
@@ -1206,14 +1207,20 @@ impl PyInstruction {
     }
 }
 
+// (alpha-poke patch, doc/engine-diff.md L199: `hint_one` / `hint_two`, the differential harness's
+// damage hints -- State::damage_hint)
 #[pyfunction]
+#[pyo3(signature = (py_state, side_one_move, side_two_move, hint_one=-1, hint_two=-1))]
 fn generate_instructions(
     py_state: PyState,
     side_one_move: String,
     side_two_move: String,
+    hint_one: i16,
+    hint_two: i16,
 ) -> PyResult<Vec<PyStateInstructions>> {
     let (s1_move, s2_move);
     let mut state: State = py_state.into();
+    state.damage_hint = [hint_one, hint_two];
     match MoveChoice::from_string(&side_one_move, &state.side_one) {
         Some(m) => s1_move = m,
         None => {

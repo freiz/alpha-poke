@@ -12,6 +12,7 @@ function monState(p, side) {
 		// (a transformed mon: its own species, the engine keeps it; L36)
 		species: p.transformed ? p.baseSpecies.id : p.species.id,
 		level: p.level,
+		name: p.name, // (L199: the log's ident, "p1a: <name>")
 		hp: p.hp,
 		maxhp: p.maxhp,
 		fainted: !!p.fainted,

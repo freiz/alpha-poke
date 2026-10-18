@@ -37,36 +37,6 @@
 "types",
 "weight"
 ],
-"b137-t20": [
-"hp"
-],
-"b169-t54": [
-"ability",
-"attack",
-"base_ability",
-"base_types",
-"defense",
-"gender",
-"id",
-"last_item",
-"level",
-"maxhp",
-"move",
-"must_switch",
-"nature",
-"options",
-"pp",
-"sc.protect",
-"special_attack",
-"special_defense",
-"speed",
-"status",
-"stellar_boosted",
-"tera_type",
-"terastallized",
-"types",
-"weight"
-],
 "b179-t2": [
 "active",
 "last_used_move",
@@ -75,15 +45,8 @@
 "b182-t25": [
 "hp"
 ],
-"b187-t32": [
-"hp",
-"status"
-],
 "b189-t18": [
 "options"
-],
-"b198-t19": [
-"hp"
 ],
 "b199-t3": [
 "ability",
@@ -120,46 +83,8 @@
 "b232-t27": [
 "types"
 ],
-"b242-t1": [
-"status"
-],
-"b268-t10": [
-"hp",
-"item",
-"last_item"
-],
-"b36-t52": [
-"ability",
-"attack",
-"base_ability",
-"base_types",
-"defense",
-"gender",
-"id",
-"last_item",
-"level",
-"maxhp",
-"move",
-"must_switch",
-"nature",
-"options",
-"pp",
-"sc.protect",
-"special_attack",
-"special_defense",
-"speed",
-"status",
-"stellar_boosted",
-"tera_type",
-"terastallized",
-"types",
-"weight"
-],
 "b53-t21": [
 "count.partiallytrapped"
-],
-"b68-t3": [
-"status"
 ],
 "b69-t16": [
 "hp"

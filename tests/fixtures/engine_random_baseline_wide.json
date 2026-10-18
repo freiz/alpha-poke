@@ -8,62 +8,13 @@
 "b122-t6": [
 "count.slowstart"
 ],
-"b144-t3": [
-"hp"
-],
-"b171-t28": [
-"hp"
-],
-"b176-t21": [
-"hp"
-],
 "b190-t4": [
-"hp"
-],
-"b196-t2": [
-"ability",
-"attack",
-"base_ability",
-"base_types",
-"defense",
-"gender",
-"id",
-"last_item",
-"last_used_move",
-"level",
-"maxhp",
-"move",
-"must_switch",
-"nature",
-"options",
-"pp",
-"sc.protect",
-"special_attack",
-"special_defense",
-"speed",
-"status",
-"stellar_boosted",
-"tera_type",
-"terastallized",
-"types",
-"weight"
-],
-"b2-t2": [
 "hp"
 ],
 "b208-t22": [
 "ability"
 ],
-"b224-t48": [
-"hp"
-],
 "b24-t6": [
-"hp"
-],
-"b246-t23": [
-"status"
-],
-"b260-t2": [
 "hp"
 ],
 "b268-t13": [
@@ -71,18 +22,6 @@
 ],
 "b33-t30": [
 "ability"
-],
-"b59-t31": [
-"hp"
-],
-"b61-t18": [
-"hp"
-],
-"b77-t39": [
-"hp"
-],
-"b94-t4": [
-"hp"
 ]
 }
 }
