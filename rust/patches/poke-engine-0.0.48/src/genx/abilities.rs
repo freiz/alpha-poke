@@ -1728,12 +1728,12 @@ pub fn ability_on_switch_out(
 ) {
     let (attacking_side, defending_side) = state.get_both_sides(side_ref);
     let active_pkmn = attacking_side.get_active();
-    if defending_side.get_active_immutable().ability == Abilities::NEUTRALIZINGGAS
-        && active_pkmn.item != Items::ABILITYSHIELD
-    {
-        return;
-    }
-    match active_pkmn.ability {
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L207): the foe's Neutralizing Gas stops the
+    // switch-out effects (Regenerator, Natural Cure, ...), not the revert below (a transformed
+    // mon's ability back); it returned before both
+    let gassed = defending_side.get_active_immutable().ability == Abilities::NEUTRALIZINGGAS
+        && active_pkmn.item != Items::ABILITYSHIELD;
+    match if gassed { Abilities::NONE } else { active_pkmn.ability } {
         Abilities::GULPMISSILE if active_pkmn.base_ability == Abilities::GULPMISSILE => {
             if active_pkmn.id != PokemonName::CRAMORANT {
                 instructions.instruction_list.push(Instruction::FormeChange(
@@ -2177,6 +2177,76 @@ fn trace_copy(state: &mut State, side_ref: &SideReference, instructions: &mut St
 pub fn trace_update(state: &mut State, side_ref: &SideReference, instructions: &mut StateInstructions) {
     if trace_copy(state, side_ref, instructions) {
         ability_on_switch_in(state, side_ref, instructions);
+    }
+}
+
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L207): the abilities that cure their holder's
+// status / volatile at any time (Showdown's onUpdate: Immunity / Pastel Veil a poison, Insomnia /
+// Vital Spirit a sleep, Limber a paralysis, Water Veil / Water Bubble / Thermal Exchange a burn,
+// Magma Armor a freeze, Oblivious attraction / Taunt, Own Tempo confusion); not under the foe's
+// Neutralizing Gas, so once it goes. They cured nothing (a status set under the gas stayed)
+pub fn status_ability_update(
+    state: &mut State,
+    side_ref: &SideReference,
+    instructions: &mut StateInstructions,
+) {
+    let ability = super::generate_instructions::effective_ability(state, side_ref);
+    let side = state.get_side(side_ref);
+    let p = side.get_active_immutable();
+    if p.hp == 0 {
+        return;
+    }
+    let cures = match ability {
+        Abilities::IMMUNITY | Abilities::PASTELVEIL => {
+            matches!(p.status, PokemonStatus::POISON | PokemonStatus::TOXIC)
+        }
+        Abilities::INSOMNIA | Abilities::VITALSPIRIT => p.status == PokemonStatus::SLEEP,
+        Abilities::LIMBER => p.status == PokemonStatus::PARALYZE,
+        Abilities::WATERVEIL | Abilities::WATERBUBBLE | Abilities::THERMALEXCHANGE => {
+            p.status == PokemonStatus::BURN
+        }
+        Abilities::MAGMAARMOR => p.status == PokemonStatus::FREEZE,
+        _ => false,
+    };
+    if cures {
+        let index = side.active_index;
+        add_remove_status_instructions(instructions, index, *side_ref, side);
+    }
+    let volatiles: &[PokemonVolatileStatus] = match ability {
+        Abilities::OBLIVIOUS => &[PokemonVolatileStatus::ATTRACT, PokemonVolatileStatus::TAUNT],
+        Abilities::OWNTEMPO => &[PokemonVolatileStatus::CONFUSION],
+        _ => &[],
+    };
+    for v in volatiles {
+        if side.volatile_statuses.contains(v) {
+            side.volatile_statuses.remove(v);
+            // (its count back to 0 with it)
+            let count = match v {
+                PokemonVolatileStatus::TAUNT => &mut side.volatile_status_durations.taunt,
+                PokemonVolatileStatus::CONFUSION => &mut side.volatile_status_durations.confusion,
+                _ => &mut 0,
+            };
+            if *count != 0 {
+                instructions.instruction_list.push(
+                    Instruction::ChangeVolatileStatusDuration(
+                        ChangeVolatileStatusDurationInstruction {
+                            side_ref: *side_ref,
+                            volatile_status: *v,
+                            amount: -*count,
+                        },
+                    ),
+                );
+                *count = 0;
+            }
+            instructions
+                .instruction_list
+                .push(Instruction::RemoveVolatileStatus(
+                    RemoveVolatileStatusInstruction {
+                        side_ref: *side_ref,
+                        volatile_status: *v,
+                    },
+                ));
+        }
     }
 }
 

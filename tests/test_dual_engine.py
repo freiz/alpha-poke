@@ -5974,3 +5974,62 @@ def test_l206_ruin_not_on_a_holder_of_the_same():
     for p1, p2, c1, c2 in ((chienpao, chienpao, "throatchop", "swordsdance"), (tinglu, tinglu, "earthpower", "stealthrock")):
         states = ec.run_showdown(p1, p2, [(f"move {c1}", f"move {c2}")])
         assert _keys(_full_hinted(states, 0, c1, c2), "hp") == {}
+
+
+
+# L207 (doc/engine-diff.md): Infiltrator's status move through a Substitute; Topsy-Turvy bounced
+# by Magic Bounce; a transformed mon's ability back as it leaves under the foe's Neutralizing Gas;
+# Heavy Metal in Heat Crash's weights; Minimize / Double Team's evasion; Immunity's cure once the
+# gas has gone (Showdown's onUpdate)
+def test_l207_infiltrator_status_through_substitute():
+    blissey = BLISSEY.replace("- Calm Mind", "- Substitute")
+    dragapult = _attacker("Dragapult", "Infiltrator", "Leftovers", "- Will-O-Wisp\n- Shadow Ball\n- Protect\n- Hex", "Timid")
+    states = ec.run_showdown(blissey, dragapult, [("move substitute", "move protect"), ("move softboiled", "move willowisp")],
+                             force_random=True)  # fmt: skip
+    assert states[2]["sides"][0]["mons"][0]["status"] == "brn"
+    assert _keys(_full(states, 1, "softboiled", "willowisp"), "status", "hp") == {}
+
+
+def test_l207_topsy_turvy_bounced():
+    malamar = _attacker("Malamar", "Suction Cups", "Leftovers", "- Topsy-Turvy\n- Swords Dance\n- Superpower\n- Knock Off")
+    hatterene = _attacker("Hatterene", "Magic Bounce", "Leftovers", "- Calm Mind\n- Psyshock\n- Draining Kiss\n- Protect", "Quiet")
+    states = ec.run_showdown(malamar, hatterene, [("move swordsdance", "move calmmind"), ("move topsyturvy", "move calmmind")])
+    assert states[2]["sides"][0]["mons"][0]["boosts"]["atk"] == -2
+    assert _keys(_full(states, 1, "topsyturvy", "calmmind"), "boost") == {}
+
+
+def test_l207_transformed_ability_back_under_gas():
+    weezing = _attacker("Weezing-Galar", "Neutralizing Gas", "Leftovers", "- Defog\n- Strange Steam\n- Will-O-Wisp\n- Pain Split", "Bold")
+    mew = _attacker("Mew", "Synchronize", "Leftovers", "- Transform\n- Soft-Boiled\n- Psychic\n- Protect", "Bold")
+    states = ec.run_showdown(weezing, mew + "\n\n" + BLISSEY, [("move defog", "move transform"), ("move defog", "switch 2")])
+    assert _keys(_full(states, 1, "defog", "blissey", (1, 2)), "ability") == {}
+
+
+def test_l207_heat_crash_heavy_metal():
+    copperajah = _attacker("Copperajah", "Heavy Metal", "Leftovers", "- Heat Crash\n- Iron Head\n- Stealth Rock\n- Knock Off")
+    ironhands = _attacker("Iron Hands", "Quark Drive", "Leftovers", "- Swords Dance\n- Drain Punch\n- Wild Charge\n- Ice Punch")
+    states = ec.run_showdown(copperajah, ironhands, [("move heatcrash", "move swordsdance")])
+    assert _keys(_full_hinted(states, 0, "heatcrash", "swordsdance"), "hp") == {}
+
+
+@pytest.mark.parametrize("move", ["minimize", "doubleteam"])
+def test_l207_evasion_raised(move):
+    blissey = BLISSEY.replace("- Calm Mind", "- " + {"minimize": "Minimize", "doubleteam": "Double Team"}[move])
+    states = ec.run_showdown(blissey, CORVIKNIGHT, [("move " + move, "move roost")])
+    assert _keys(_full(states, 0, move, "roost"), "boost") == {}
+
+
+def test_l207_immunity_cures_once_the_gas_goes():
+    snorlax = _attacker("Snorlax", "Immunity", "Leftovers", "- Body Slam\n- Rest\n- Curse\n- Protect", "Careful")
+    weezing = _attacker("Weezing-Galar", "Neutralizing Gas", "Leftovers", "- Toxic\n- Strange Steam\n- Will-O-Wisp\n- Pain Split", "Bold")
+    states = ec.run_showdown(snorlax, weezing + "\n\n" + BLISSEY, [("move curse", "move toxic"), ("move curse", "switch 2")])
+    assert states[1]["sides"][0]["mons"][0]["status"] == "tox" and states[2]["sides"][0]["mons"][0]["status"] == ""
+    assert _keys(_full(states, 1, "curse", "blissey", (1, 2)), "status") == {}
+
+
+def test_l207_topsy_turvy_on_the_foe():
+    malamar = _attacker("Malamar", "Suction Cups", "Leftovers", "- Topsy-Turvy\n- Swords Dance\n- Superpower\n- Knock Off")
+    hatterene = _attacker("Hatterene", "Healer", "Leftovers", "- Calm Mind\n- Psyshock\n- Draining Kiss\n- Protect", "Quiet")
+    states = ec.run_showdown(malamar, hatterene, [("move swordsdance", "move calmmind"), ("move topsyturvy", "move calmmind")])
+    assert states[2]["sides"][1]["mons"][0]["boosts"]["spa"] == 0  # (+1, inverted, then +1)
+    assert _keys(_full(states, 1, "topsyturvy", "calmmind"), "boost") == {}

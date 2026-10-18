@@ -1661,12 +1661,19 @@ pub fn fixed_damage(
     Some(amount)
 }
 
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L207): Heavy Metal doubles it, Light Metal
+// halves it (Showdown's onModifyWeight; the weight in hectograms, truncated)
 fn effective_weight(pkmn: &Pokemon) -> f32 {
-    if pkmn.item == Items::FLOATSTONE {
-        pkmn.weight_kg / 2.0
-    } else {
-        pkmn.weight_kg
+    let mut hg = (pkmn.weight_kg * 10.0).round();
+    match pkmn.ability {
+        Abilities::HEAVYMETAL => hg *= 2.0,
+        Abilities::LIGHTMETAL => hg = (hg / 2.0).floor(),
+        _ => {}
     }
+    if pkmn.item == Items::FLOATSTONE {
+        hg = (hg / 2.0).floor();
+    }
+    hg.max(1.0) / 10.0
 }
 
 // alpha-poke patch (2026-10-17, doc/engine-diff.md L154): Life Orb's recoil after a damaging move
@@ -1754,6 +1761,63 @@ pub fn choice_special_effect(
     attacking_side_ref: &SideReference,
     instructions: &mut StateInstructions,
 ) {
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L207): Minimize +2 / Double Team +1 evasion
+    // (the engine's StatBoosts have no evasion: Defog's drop is choice_hazard_clear's); they had
+    // none
+    let evasion = match choice.move_id {
+        Choices::MINIMIZE => 2,
+        Choices::DOUBLETEAM => 1,
+        _ => 0,
+    };
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L207): Topsy-Turvy inverts its target's
+    // stages (Showdown's onHit: set directly, no Contrary / Clear Body; a Magic Bounce sends it
+    // back, the target then its user; a Substitute stops it); it did nothing
+    if choice.move_id == Choices::TOPSYTURVY {
+        let target_ref = if choice.target == MoveTarget::User {
+            *attacking_side_ref
+        } else {
+            attacking_side_ref.get_other_side()
+        };
+        if target_ref == *attacking_side_ref
+            || !state
+                .get_side_immutable(&target_ref)
+                .volatile_statuses
+                .contains(&PokemonVolatileStatus::SUBSTITUTE)
+        {
+            for stat in [
+                PokemonBoostableStat::Attack,
+                PokemonBoostableStat::Defense,
+                PokemonBoostableStat::SpecialAttack,
+                PokemonBoostableStat::SpecialDefense,
+                PokemonBoostableStat::Speed,
+                PokemonBoostableStat::Accuracy,
+                PokemonBoostableStat::Evasion,
+            ] {
+                let amount = -2 * state
+                    .get_side_immutable(&target_ref)
+                    .get_boost_from_boost_enum(&stat);
+                if amount != 0 {
+                    let ins = Instruction::Boost(BoostInstruction {
+                        side_ref: target_ref,
+                        stat,
+                        amount,
+                    });
+                    state.apply_one_instruction(&ins);
+                    instructions.instruction_list.push(ins);
+                }
+            }
+        }
+    }
+    if evasion != 0 {
+        apply_boost_instruction(
+            state.get_side(attacking_side_ref),
+            &PokemonBoostableStat::Evasion,
+            &evasion,
+            attacking_side_ref,
+            attacking_side_ref,
+            instructions,
+        );
+    }
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L140): a Fling that goes off uses its user's
     // item up (hit, missed or protected against: Showdown's fling volatile, from onPrepareHit); its
     // damage keeps the item's boosts (in the choice by now), but no Life Orb recoil after it

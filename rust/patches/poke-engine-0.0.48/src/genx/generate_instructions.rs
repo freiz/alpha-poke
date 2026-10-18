@@ -1382,11 +1382,14 @@ pub fn immune_to_status_with(
     // (L188: grounded with its volatiles: Roost, Magnet Rise, Smack Down, Ingrain)
     } else if state.terrain.terrain_type == Terrain::MISTYTERRAIN && target_side.active_grounded() {
         true
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L207): not against an Infiltrator's move
+    // (Showdown: its move infiltrates the Substitute and Safeguard)
     } else if (target_side
         .volatile_statuses
         .contains(&PokemonVolatileStatus::SUBSTITUTE)
         || target_side.side_conditions.safeguard > 0)
         && status_target == &MoveTarget::Opponent
+        && attacker_ability != Abilities::INFILTRATOR
     // substitute/safeguard don't block if the target is yourself (eg. rest)
     {
         true
@@ -8603,6 +8606,7 @@ pub fn update_with(state: &mut State, instructions: &mut StateInstructions, cud_
     for side_ref in [SideReference::SideOne, SideReference::SideTwo] {
         choice_lock_release(state, &side_ref, instructions);
         super::abilities::trace_update(state, &side_ref, instructions);
+        super::abilities::status_ability_update(state, &side_ref, instructions);
         super::items::item_update(state, &side_ref, instructions);
         super::abilities::cud_chew_update(state, &side_ref, cud_chew, instructions);
         super::abilities::paradox_update(state, &side_ref, instructions);
