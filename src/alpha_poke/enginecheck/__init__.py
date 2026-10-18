@@ -151,6 +151,9 @@ NO_TRANSFORM = ("disguise", "embodyaspectcornerstone", "embodyaspecthearthflame"
                 "embodyaspectwellspring", "gulpmissile", "hungerswitch", "iceface", "neutralizinggas",
                 "protosynthesis", "quarkdrive", "terashift", "zerotohero")  # fmt: skip
 
+# (L224: the moves that call another -- a charge move one starts locks into the caller's slot)
+CALLERS = ("metronome", "copycat", "assist", "mefirst", "naturepower", "mirrormove")
+
 # the once-per-battle abilities (abilities.rs ONCE_PER_BATTLE, L184)
 ONCE_PER_BATTLE = ("dauntlessshield", "intrepidsword", "supersweetsyrup", "battlebond")
 
@@ -306,6 +309,8 @@ def _engine_side(s: dict, future_sight=None, wish=None) -> pe.Side:
             vol.discard("disable")
         if "slowstart" in vol:  # (L77: the turns left, as Showdown's counter)
             dur["slowstart"] = act["volatiles"]["slowstart"]["duration"]
+        if "uproar" in vol:  # (L224: the ends of turn passed, of Showdown's 3)
+            dur["uproar"] = min(max(3 - act["volatiles"]["uproar"]["duration"], 0), 2)
         if "cudchew" in vol:  # (L204: Showdown's counter)
             dur["cudchew"] = act["volatiles"]["cudchew"]["duration"]
         if "stockpile" in vol:  # (L73: its layers)
@@ -374,6 +379,7 @@ def damage_hints(start: dict, after: dict) -> tuple[int, int]:
     hints, pending, prev = [-1, -1], None, None
     crit = [False, False]  # (a -crit line on the pending hit: the hint marked CRIT_HINT)
     hinted = None  # (side, target) of the last hint: a survival effect after it voids it
+    sub_hits: dict = {}  # (L224: the hits each active's Substitute took)
     for line in after.get("log", []):
         if line == prev:  # (the split's private and public copies)
             continue
@@ -417,8 +423,29 @@ def damage_hints(start: dict, after: dict) -> tuple[int, int]:
         elif tag == "-hitcount" and len(f) > 2:
             hints[0 if f[2].startswith("p2") else 1] = -2  # (the attacker's: the other side)
         elif tag == "-activate" and len(f) > 3 and "Substitute" in f[3] and "[damage]" in line:
+            # (L224: a hit the Substitute took and survived -- the log shows no HP: its HP from
+            # the turn's start to its end, when the Substitute took that hit only)
+            if pending and f[2] == pending[1] and sub_hits.get(f[2], 0) == 0:
+                dealt = _sub_hp(start, f[2]) - _sub_hp(after, f[2])
+                if dealt > 0:
+                    hints[pending[0]] = dealt
+                    hinted = pending
+            sub_hits[f[2]] = sub_hits.get(f[2], 0) + 1
             pending = None
+    # (a Substitute hit twice: its HP no longer tells the first hit's)
+    for side, target in [x for x in (hinted,) if x]:
+        if sub_hits.get(target, 0) > 1 and _sub_hp(start, target) >= 0:
+            hints[side] = -1
     return tuple((h + CRIT_HINT if c else h) if h > 0 else -1 for h, c in zip(hints, crit))
+
+
+def _sub_hp(state: dict, ident: str) -> int:
+    """The Substitute HP of the active ``ident`` ("p1a: Name") in a Showdown state, -1 for none."""
+    s = next((x for x in state["sides"] if ident.startswith(x["id"])), None)
+    if s is None or s["active"] < 0:
+        return -1
+    v = s["mons"][s["active"]].get("volatiles", {}).get("substitute")
+    return v["hp"] if v else -1
 
 
 def roll_hints(start: dict, after: dict) -> tuple:
@@ -742,6 +769,10 @@ def showdown_options(side: dict) -> set[str] | None:
         if mid in ("struggle", "recharge"):
             out.add("none")
             continue
+        # (L224: a charge move a calling move started, not its own: the engine's caller slot)
+        own = [x["id"] for x in mon["moves"]]
+        if own and mid not in own and any(x in own for x in CALLERS):
+            mid = next(x for x in own if x in CALLERS)
         out.add(mid)
         if act.get("canTerastallize"):
             out.add(mid + "-tera")

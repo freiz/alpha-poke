@@ -4,14 +4,5 @@
 "max_turns": 60,
 "teams": "ec78e233fb2205eb"
 },
-"mismatches": {
-"b156-t7": [
-"hp",
-"item",
-"last_item",
-"last_used_move",
-"must_switch",
-"pp"
-]
-}
+"mismatches": {}
 }

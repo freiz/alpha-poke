@@ -6505,3 +6505,39 @@ def test_l223_positions(teams, i, turn, offset):
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
     assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}
 
+
+# L224 (doc/engine-diff.md): the remaining hard cases -- a used once-per-battle ability back on a
+# switch-out after Worry Seed (Dauntless Shield: wide b208-t22); Uproar's three turns (its end:
+# offmeta b25-t8)
+@pytest.mark.parametrize("teams,i,turn,offset", [
+    ("random_battle_teams_wide.jsonl", 208, 22, 0),
+    ("random_battle_teams_offmeta.jsonl", 25, 8, 0),
+    # (an Eject Pack a Sticky Web drop sets off at the switch-in: random b156-t7; a hit a
+    # Substitute survives, its damage from the Substitute's HP -- the harness's hint: wide2 b278-t18)
+    ("random_battle_teams_random.jsonl", 156, 7, 0),
+    ("random_battle_teams_wide2.jsonl", 278, 18, 30000),
+    # (a charge move Metronome started locks its user into it: the caller's slot -- Meteor Beam:
+    # offmeta b49-t3 / t4)
+    ("random_battle_teams_offmeta.jsonl", 49, 3, 0),
+    ("random_battle_teams_offmeta.jsonl", 49, 4, 0),
+    # (Power Split, called by Metronome: offmeta b49-t15)
+    ("random_battle_teams_offmeta.jsonl", 49, 15, 0),
+])  # fmt: skip
+def test_l224_positions(teams, i, turn, offset):
+    a, b = _random_position(teams, i, turn, offset)
+    c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
+    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"]))
+    n = tuple(len(s["mons"]) for s in a["state"]["sides"])
+    assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}
+
+
+def test_l224_state_string_keeps_uproar_count():
+    from pathlib import Path
+    s = pe.State.from_string(Path("tests/fixtures/engine_state_6v6.txt").read_text().splitlines()[0])
+    s1 = s.side_one
+    side = pe.Side(pokemon=s1.pokemon, active_index=s1.active_index, side_conditions=s1.side_conditions,
+                   volatile_statuses={"uproar"},
+                   volatile_status_durations=pe.VolatileStatusDurations(uproar=1))  # fmt: skip
+    t = pe.State(side_one=side, side_two=s.side_two).to_string()
+    assert pe.State.from_string(t).side_one.volatile_status_durations.uproar == 1
+    assert pe.State.from_string(t).to_string() == t

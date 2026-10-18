@@ -816,6 +816,8 @@ pub struct VolatileStatusDurations {
     // (L204: Cud Chew's counter, Showdown's: 2 from a berry eaten in the turn, 1 at its end; the
     // berry is eaten again at 0)
     pub cudchew: i8,
+    // (L224: Uproar's ends of turn; it ends at the third, Showdown's duration 3)
+    pub uproar: i8,
 }
 
 impl Default for VolatileStatusDurations {
@@ -836,6 +838,7 @@ impl Default for VolatileStatusDurations {
             disable: 0,
             stockpile: 0,
             cudchew: 0,
+            uproar: 0,
         }
     }
 }
@@ -858,6 +861,7 @@ impl VolatileStatusDurations {
             ("disable", self.disable),
             ("stockpile", self.stockpile),
             ("cudchew", self.cudchew),
+            ("uproar", self.uproar),
         ];
 
         let mut output = String::new();
@@ -873,8 +877,14 @@ impl VolatileStatusDurations {
     }
 
     pub fn serialize(&self) -> String {
+        // (L224: Uproar's count only when there is one: older strings have no such field)
+        let uproar = if self.uproar != 0 {
+            format!(";{}", self.uproar)
+        } else {
+            String::new()
+        };
         format!(
-            "{};{};{};{};{};{};{};{};{};{};{};{};{};{};{}",
+            "{};{};{};{};{};{};{};{};{};{};{};{};{};{};{}{}",
             self.confusion,
             self.encore,
             self.lockedmove,
@@ -889,7 +899,8 @@ impl VolatileStatusDurations {
             self.metronome,
             self.disable,
             self.stockpile,
-            self.cudchew
+            self.cudchew,
+            uproar
         )
     }
     pub fn deserialize(serialized: &str) -> VolatileStatusDurations {
@@ -911,6 +922,7 @@ impl VolatileStatusDurations {
             disable: split.get(12).map_or(0, |x| x.parse::<i8>().unwrap()),
             stockpile: split.get(13).map_or(0, |x| x.parse::<i8>().unwrap()),
             cudchew: split.get(14).map_or(0, |x| x.parse::<i8>().unwrap()),
+            uproar: split.get(15).map_or(0, |x| x.parse::<i8>().unwrap()),
         }
     }
 }
@@ -1911,6 +1923,9 @@ impl State {
             }
             PokemonVolatileStatus::CUDCHEW => {
                 side.volatile_status_durations.cudchew += amount;
+            }
+            PokemonVolatileStatus::UPROAR => {
+                side.volatile_status_durations.uproar += amount;
             }
             _ => panic!(
                 "Invalid volatile status for increment_volatile_status_duration: {:?}",

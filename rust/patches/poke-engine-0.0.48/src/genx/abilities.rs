@@ -705,6 +705,18 @@ pub const ONCE_PER_BATTLE: [Abilities; 4] = [
     Abilities::BATTLEBOND,
 ];
 
+// alpha-poke patch (2026-10-18, doc/engine-diff.md L224): the once-per-battle ability a species
+// has (its base ability none once used is that one: a switch-out after Worry Seed gives it back)
+fn once_ability_of(id: PokemonName) -> Option<Abilities> {
+    match id {
+        PokemonName::ZAMAZENTA | PokemonName::ZAMAZENTACROWNED => Some(Abilities::DAUNTLESSSHIELD),
+        PokemonName::ZACIAN | PokemonName::ZACIANCROWNED => Some(Abilities::INTREPIDSWORD),
+        PokemonName::GRENINJABOND | PokemonName::GRENINJAASH => Some(Abilities::BATTLEBOND),
+        PokemonName::DIPPLIN | PokemonName::HYDRAPPLE => Some(Abilities::SUPERSWEETSYRUP),
+        _ => None,
+    }
+}
+
 fn used_once(pkmn: &crate::state::Pokemon) -> bool {
     ONCE_PER_BATTLE.contains(&pkmn.ability) && pkmn.base_ability == Abilities::NONE
 }
@@ -1954,14 +1966,20 @@ pub fn ability_on_switch_out(
     let active_pkmn = state.get_side(side_ref).get_active();
     // alpha-poke patch (2026-10-16, L18): a used Dauntless Shield (base ability none) stays (L184:
     // any once-per-battle one)
-    if active_pkmn.ability != active_pkmn.base_ability && !used_once(active_pkmn) {
+    // (L224: a used once-per-battle one -- base ability none -- its own back: Showdown's
+    // baseAbility; it became none)
+    let base = match active_pkmn.base_ability {
+        Abilities::NONE => once_ability_of(active_pkmn.id).unwrap_or(Abilities::NONE),
+        b => b,
+    };
+    if active_pkmn.ability != base && !used_once(active_pkmn) {
         instructions
             .instruction_list
             .push(Instruction::ChangeAbility(ChangeAbilityInstruction {
                 side_ref: *side_ref,
-                ability_change: active_pkmn.base_ability as i16 - active_pkmn.ability as i16,
+                ability_change: base as i16 - active_pkmn.ability as i16,
             }));
-        active_pkmn.ability = active_pkmn.base_ability;
+        active_pkmn.ability = base;
     }
 }
 

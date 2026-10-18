@@ -2095,6 +2095,16 @@ pub fn choice_special_effect(
         super::generate_instructions::transform_into(state, attacking_side_ref, instructions);
         return;
     }
+    // (L224: Power Split / Guard Split)
+    if matches!(choice.move_id, Choices::POWERSPLIT | Choices::GUARDSPLIT) {
+        super::generate_instructions::stat_split(
+            state,
+            attacking_side_ref,
+            choice.move_id == Choices::GUARDSPLIT,
+            instructions,
+        );
+        return;
+    }
     let (attacking_side, defending_side) = state.get_both_sides(attacking_side_ref);
     // alpha-poke patch (2026-10-16, doc/engine-diff.md L16b): a move Protect blocks does nothing
     // here either (Pain Split, Trick / Switcheroo, Counter / Mirror Coat, ...); before, these

@@ -5,9 +5,5 @@
 "teams": "be6353498c71c21d",
 "seed_offset": 30000
 },
-"mismatches": {
-"b278-t18": [
-"substitute_hp"
-]
-}
+"mismatches": {}
 }

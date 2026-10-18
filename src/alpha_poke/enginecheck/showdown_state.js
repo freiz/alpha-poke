@@ -2,6 +2,13 @@
 // showdown_case.js (a given scenario) and random_battle.js (random choices).
 const {Teams} = require(process.argv[2]);
 
+// (L224) An active mon whose stored stats a Power Split / Guard Split changed (Showdown's
+// storedStats, not its baseStoredStats; not a Transform's or a Power Trick's)
+function splitStats(p) {
+	return !!(p.isActive && !p.transformed && !p.volatiles['powertrick'] && p.baseStoredStats &&
+		['atk', 'def', 'spa', 'spd'].some(s => p.storedStats[s] !== p.baseStoredStats[s]));
+}
+
 function teamOf(x) {
 	return typeof x === 'string' ? Teams.import(x) : x;
 }
@@ -61,6 +68,10 @@ function monState(p, side) {
 			.concat(p.isActive && p.battle.turn === 1 && p.statsRaisedThisTurn ?
 				[['statsraised', {duration: 0, layers: 0, counter: 0, stat: '',
 					time: 0, true_duration: 0, num_consecutive: 0, hp: 0, move: ''}]] : [])
+			// (L224: Power Split / Guard Split's stats: the engine's volatile)
+			.concat(splitStats(p) ?
+				[['statsplit', {duration: 0, layers: 0, counter: 0, stat: '',
+					time: 0, true_duration: 0, num_consecutive: 0, hp: 0, move: ''}]] : [])
 			// Cud Chew's berry to eat again: its counter in the ability's state (L204)
 			.concat(p.isActive && p.ability === 'cudchew' && p.abilityState.berry && p.abilityState.counter ?
 				[['cudchew', {duration: p.abilityState.counter, layers: 0, counter: 0, stat: '',
@@ -78,7 +89,9 @@ function monState(p, side) {
 		terastallized: p.terastallized || '',
 		transformed: !!p.transformed, // (L36: the engine's transform volatile)
 		// its own stats, weight, moves and PP while transformed (L180: the engine's Pokemon::own)
-		transform_backup: p.transformed ? [
+		// (L224: and while Power Split / Guard Split's stats are on: the engine's own set, its
+		// statsplit volatile)
+		transform_backup: p.transformed || splitStats(p) ? [
 			['atk', 'def', 'spa', 'spd', 'spe'].map(s => p.baseStoredStats[s]),
 			p.baseSpecies.weighthg,
 			p.baseMoveSlots.map(m => [m.id, m.pp]),

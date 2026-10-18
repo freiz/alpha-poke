@@ -4,19 +4,5 @@
 "max_turns": 60,
 "teams": "1b2440f0794c7f2a"
 },
-"mismatches": {
-"b25-t8": [
-"volatile.uproar"
-],
-"b49-t15": [
-"attack",
-"special_attack"
-],
-"b49-t3": [
-"options"
-],
-"b49-t4": [
-"error"
-]
-}
+"mismatches": {}
 }

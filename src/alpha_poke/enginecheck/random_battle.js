@@ -29,6 +29,13 @@ function pick(xs, r) {
 	return xs[Math.floor(r() * xs.length)];
 }
 
+const CALLERS = ['metronome', 'copycat', 'assist', 'mefirst', 'naturepower', 'mirrormove'];
+function calledLock(p, id) {
+	if (!p || p.moveSlots.some(m => m.id === id)) return null;
+	const caller = p.moveSlots.find(m => CALLERS.includes(m.id));
+	return caller ? caller.id : null;
+}
+
 function choose(side, req, r, c) {
 	const pokes = req.side.pokemon;
 	const switches = [];
@@ -53,6 +60,9 @@ function choose(side, req, r, c) {
 	if (!moves.length) return {choice: 'default', engine: 'none', kind: 'move'};
 	const [i, id] = pick(moves, r);
 	if (id === 'recharge') return {choice: `move ${i + 1}`, engine: 'none', kind: 'move'};
+	// (L224: a charge move a calling move started, not its own: the engine's caller slot)
+	const called = calledLock(side.active[0], id);
+	if (called) return {choice: `move ${i + 1}`, engine: called, kind: 'move'};
 	if (act.canTerastallize && r() < c.tera_p) {
 		return {choice: `move ${i + 1} terastallize`, engine: `${id}-tera`, kind: 'move'};
 	}

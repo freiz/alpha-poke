@@ -18349,6 +18349,12 @@ pub static MOVES: LazyLock<HashMap<Choices, Choice>> = LazyLock::new(|| {
                     sound: true,
                     ..Default::default()
                 },
+                // alpha-poke patch (2026-10-18, doc/engine-diff.md L224): its user's uproar, 3 turns
+                // locked into it, no one falls asleep (Showdown's self volatile); it had none
+                volatile_status: Some(VolatileStatus {
+                    target: MoveTarget::User,
+                    volatile_status: PokemonVolatileStatus::UPROAR,
+                }),
                 ..Default::default()
             },
         );

@@ -319,6 +319,9 @@ define_enum_with_from_str! {
         // turn's end; after that the turn's own instructions tell)
         STATSLOWERED,
         STATSRAISED,
+        // (L224: Power Split / Guard Split's stats, its own kept in Pokemon::own -- Showdown's
+        // storedStats, recomputed from the species as it switches out)
+        STATSPLIT,
     },
     default = NONE
 }
@@ -965,6 +968,26 @@ const ALL_POKEMON_INDICES: [PokemonIndex; 6] = [
     PokemonIndex::P5,
 ];
 
+const CHARGE_VOLATILES: &[(PokemonVolatileStatus, Choices)] = &[
+    (PokemonVolatileStatus::BOUNCE, Choices::BOUNCE),
+    (PokemonVolatileStatus::DIG, Choices::DIG),
+    (PokemonVolatileStatus::DIVE, Choices::DIVE),
+    (PokemonVolatileStatus::FLY, Choices::FLY),
+    (PokemonVolatileStatus::FREEZESHOCK, Choices::FREEZESHOCK),
+    (PokemonVolatileStatus::GEOMANCY, Choices::GEOMANCY),
+    (PokemonVolatileStatus::ICEBURN, Choices::ICEBURN),
+    (PokemonVolatileStatus::METEORBEAM, Choices::METEORBEAM),
+    (PokemonVolatileStatus::ELECTROSHOT, Choices::ELECTROSHOT),
+    (PokemonVolatileStatus::PHANTOMFORCE, Choices::PHANTOMFORCE),
+    (PokemonVolatileStatus::RAZORWIND, Choices::RAZORWIND),
+    (PokemonVolatileStatus::SHADOWFORCE, Choices::SHADOWFORCE),
+    (PokemonVolatileStatus::SKULLBASH, Choices::SKULLBASH),
+    (PokemonVolatileStatus::SKYATTACK, Choices::SKYATTACK),
+    (PokemonVolatileStatus::SKYDROP, Choices::SKYDROP),
+    (PokemonVolatileStatus::SOLARBEAM, Choices::SOLARBEAM),
+    (PokemonVolatileStatus::SOLARBLADE, Choices::SOLARBLADE),
+];
+
 impl Side {
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L188): the active's isGrounded as Showdown's,
     // with its volatiles (Pokemon::is_grounded has none): Ingrain / Smack Down / an Iron Ball
@@ -1117,27 +1140,20 @@ impl Side {
         }
         changed
     }
-    pub fn active_is_charging_move(&self) -> Option<PokemonMoveIndex> {
-        const CHARGE_VOLATILES: &[(PokemonVolatileStatus, Choices)] = &[
-            (PokemonVolatileStatus::BOUNCE, Choices::BOUNCE),
-            (PokemonVolatileStatus::DIG, Choices::DIG),
-            (PokemonVolatileStatus::DIVE, Choices::DIVE),
-            (PokemonVolatileStatus::FLY, Choices::FLY),
-            (PokemonVolatileStatus::FREEZESHOCK, Choices::FREEZESHOCK),
-            (PokemonVolatileStatus::GEOMANCY, Choices::GEOMANCY),
-            (PokemonVolatileStatus::ICEBURN, Choices::ICEBURN),
-            (PokemonVolatileStatus::METEORBEAM, Choices::METEORBEAM),
-            (PokemonVolatileStatus::ELECTROSHOT, Choices::ELECTROSHOT),
-            (PokemonVolatileStatus::PHANTOMFORCE, Choices::PHANTOMFORCE),
-            (PokemonVolatileStatus::RAZORWIND, Choices::RAZORWIND),
-            (PokemonVolatileStatus::SHADOWFORCE, Choices::SHADOWFORCE),
-            (PokemonVolatileStatus::SKULLBASH, Choices::SKULLBASH),
-            (PokemonVolatileStatus::SKYATTACK, Choices::SKYATTACK),
-            (PokemonVolatileStatus::SKYDROP, Choices::SKYDROP),
-            (PokemonVolatileStatus::SOLARBEAM, Choices::SOLARBEAM),
-            (PokemonVolatileStatus::SOLARBLADE, Choices::SOLARBLADE),
-        ];
+    // alpha-poke patch (2026-10-18, doc/engine-diff.md L224): the charge move a calling move
+    // started (Metronome's Meteor Beam), not in the moveset: its user is locked into it
+    // (Showdown's twoturnmove onLockMove) -- the caller's slot chosen, the move run
+    pub fn charging_called_move(&self) -> Option<Choices> {
+        let moves = &self.get_active_immutable().moves;
+        CHARGE_VOLATILES
+            .iter()
+            .find(|(v, c)| {
+                self.volatile_statuses.contains(v) && !moves.into_iter().any(|m| m.id == *c)
+            })
+            .map(|(_, c)| *c)
+    }
 
+    pub fn active_is_charging_move(&self) -> Option<PokemonMoveIndex> {
         let vs = &self.volatile_statuses;
 
         for (volatile, choice_id) in CHARGE_VOLATILES {
@@ -1147,6 +1163,23 @@ impl Side {
                     if mv.id == *choice_id {
                         return Some(iter.pokemon_move_index);
                     }
+                }
+            }
+        }
+        // (L224: a called one: its caller's slot -- Metronome, Copycat, Assist, ...)
+        if self.charging_called_move().is_some() {
+            let mut iter = self.get_active_immutable().moves.into_iter();
+            while let Some(mv) = iter.next() {
+                if matches!(
+                    mv.id,
+                    Choices::METRONOME
+                        | Choices::COPYCAT
+                        | Choices::ASSIST
+                        | Choices::MEFIRST
+                        | Choices::NATUREPOWER
+                        | Choices::MIRRORMOVE
+                ) {
+                    return Some(iter.pokemon_move_index);
                 }
             }
         }
@@ -1846,6 +1879,62 @@ impl State {
                                 ));
                                 m.id = own;
                                 m.choice = MOVES.get(&own).unwrap().to_owned();
+                            }
+                        }
+                    }
+                    false
+                }
+                // alpha-poke patch (2026-10-18, doc/engine-diff.md L224): a split's stats back
+                // (Showdown's setSpecies on the switch-out), its own set cleared; a Transform's
+                // restore came first (it clears the set)
+                PokemonVolatileStatus::STATSPLIT => {
+                    let side_ref = *side_ref;
+                    let active = side.get_active();
+                    if active.own.is_set() {
+                        let own = active.own;
+                        let current = [
+                            active.attack,
+                            active.defense,
+                            active.special_attack,
+                            active.special_defense,
+                            active.speed,
+                        ];
+                        for k in 0..5 {
+                            let amount = own.stats[k] - current[k];
+                            if amount == 0 {
+                                continue;
+                            }
+                            let c = crate::instruction::ChangeStatInstruction { side_ref, amount };
+                            instructions.push(match k {
+                                0 => Instruction::ChangeAttack(c),
+                                1 => Instruction::ChangeDefense(c),
+                                2 => Instruction::ChangeSpecialAttack(c),
+                                3 => Instruction::ChangeSpecialDefense(c),
+                                _ => Instruction::ChangeSpeed(c),
+                            });
+                        }
+                        active.attack = own.stats[0];
+                        active.defense = own.stats[1];
+                        active.special_attack = own.stats[2];
+                        active.special_defense = own.stats[3];
+                        active.speed = own.stats[4];
+                        let mut clear: Vec<(u8, i16)> =
+                            (0..5).map(|k| (k as u8, -own.stats[k])).collect();
+                        clear.push((5, -own.weight_hg));
+                        for k in 0..4 {
+                            clear.push((6 + k as u8, Choices::NONE as i16 - own.moves[k] as i16));
+                            clear.push((10 + k as u8, -(own.pp[k] as i16)));
+                        }
+                        for (field, amount) in clear {
+                            if amount != 0 {
+                                instructions.push(Instruction::ChangeOwn(
+                                    crate::instruction::ChangeOwnInstruction {
+                                        side_ref,
+                                        field,
+                                        amount,
+                                    },
+                                ));
+                                active.own.change(field, amount);
                             }
                         }
                     }

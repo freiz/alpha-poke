@@ -694,6 +694,7 @@ fn generate_instructions_from_switch(
             // so no need to check for going below -6
             // alpha-poke patch (2026-10-16, doc/engine-diff.md L76): the foe's drop (Clear Body
             // stops it, Defiant answers it); was its own
+            let speed_before = side.speed_boost;
             apply_boost_instruction(
                 side,
                 &PokemonBoostableStat::Speed,
@@ -702,6 +703,42 @@ fn generate_instructions_from_switch(
                 &switching_side_ref,
                 incoming_instructions,
             );
+            // alpha-poke patch (2026-10-18, doc/engine-diff.md L224): an Eject Pack its drop sets
+            // off switches its holder out at once (Showdown's onAfterBoost, used as the switch-in
+            // ends: onAnySwitchIn); the foe's move waits for the switch (the pivot's saved move,
+            // generate_instructions_from_move). It stayed in
+            let side = state.get_side_immutable(&switching_side_ref);
+            let holder = side.get_active_immutable();
+            if side.speed_boost < speed_before
+                && holder.item == Items::EJECTPACK
+                && !ignored
+                && holder.hp > 0
+                && side.visible_alive_pkmn() > 1
+                && !state.side_one.force_switch
+                && !state.side_two.force_switch
+            {
+                let ins = [
+                    Instruction::ChangeItem(ChangeItemInstruction {
+                        side_ref: switching_side_ref,
+                        current_item: Items::EJECTPACK,
+                        new_item: Items::NONE,
+                    }),
+                    match switching_side_ref {
+                        SideReference::SideOne => Instruction::ToggleSideOneForceSwitch,
+                        SideReference::SideTwo => Instruction::ToggleSideTwoForceSwitch,
+                    },
+                ];
+                for i in ins {
+                    state.apply_one_instruction(&i);
+                    incoming_instructions.instruction_list.push(i);
+                }
+                super::items::set_last_item(
+                    state.get_side(&switching_side_ref).get_active(),
+                    switching_side_ref,
+                    Items::EJECTPACK,
+                    incoming_instructions,
+                );
+            }
         }
 
         let side = state.get_side_immutable(&switching_side_ref);
@@ -1257,8 +1294,11 @@ fn get_instructions_from_volatile_statuses(
         // alpha-poke patch (2026-10-17, doc/engine-diff.md L179): a locking move's (Outrage's)
         // lock starts here, with the move's effect (Showdown's self lockedmove): its other moves
         // disabled (was before the move: also on a confusion's self-hit, an immune target)
-        if volatile_status.volatile_status == PokemonVolatileStatus::LOCKEDMOVE
-            && target_side == *attacking_side_reference
+        // (L224: Uproar's too)
+        if matches!(
+            volatile_status.volatile_status,
+            PokemonVolatileStatus::LOCKEDMOVE | PokemonVolatileStatus::UPROAR
+        ) && target_side == *attacking_side_reference
         {
             let side = state.get_side(&target_side);
             let ins = super::items::get_choice_move_disable_instructions(
@@ -1423,6 +1463,18 @@ pub fn immune_to_status_with(
     let (target_side, attacking_side) = state.get_both_sides_immutable(target_side_ref);
     let target_pkmn = target_side.get_active_immutable();
     let attacking_pkmn = attacking_side.get_active_immutable();
+    // alpha-poke patch (2026-10-18, doc/engine-diff.md L224): no one falls asleep during an Uproar
+    // (Showdown's uproar onAnySetStatus)
+    if status == &PokemonStatus::SLEEP
+        && (target_side
+            .volatile_statuses
+            .contains(&PokemonVolatileStatus::UPROAR)
+            || attacking_side
+                .volatile_statuses
+                .contains(&PokemonVolatileStatus::UPROAR))
+    {
+        return true;
+    }
     // alpha-poke patch (2026-10-16, doc/engine-diff.md L80): the other active's Neutralizing Gas
     // suppresses an ability (not through an Ability Shield; Comatose / Shields Down it cannot)
     let gassed = |gas: &crate::state::Pokemon, holder: &crate::state::Pokemon| {
@@ -3358,6 +3410,112 @@ fn embody_aspect_on_tera(
     apply_boost_instruction(side, &stat, &1, &side_ref, &side_ref, instructions);
 }
 
+// alpha-poke patch (2026-10-18, doc/engine-diff.md L224): Power Split / Guard Split -- the user's
+// and the target's Attack and Sp. Atk (Defense and Sp. Def) both their mean, rounded down
+// (Showdown's storedStats), till they switch out: each one's own stats kept (Pokemon::own, as a
+// Transform keeps them; not again for a transformed one) and its STATSPLIT mark. Not through
+// Protect (choice_special_effect's check came after Transform's and this). It did nothing
+pub fn stat_split(
+    state: &mut State,
+    side_ref: &SideReference,
+    guard: bool,
+    instructions: &mut StateInstructions,
+) {
+    let foe_ref = side_ref.get_other_side();
+    if [
+        PokemonVolatileStatus::PROTECT,
+        PokemonVolatileStatus::SPIKYSHIELD,
+        PokemonVolatileStatus::BANEFULBUNKER,
+        PokemonVolatileStatus::BURNINGBULWARK,
+        PokemonVolatileStatus::SILKTRAP,
+    ]
+    .iter()
+    .any(|v| state.get_side_immutable(&foe_ref).volatile_statuses.contains(v))
+    {
+        return;
+    }
+    let stats = |p: &crate::state::Pokemon| {
+        if guard {
+            (p.defense, p.special_defense)
+        } else {
+            (p.attack, p.special_attack)
+        }
+    };
+    let (a, b) = (
+        stats(state.get_side_immutable(side_ref).get_active_immutable()),
+        stats(state.get_side_immutable(&foe_ref).get_active_immutable()),
+    );
+    let mean = ((a.0 + b.0) / 2, (a.1 + b.1) / 2);
+    for r in [*side_ref, foe_ref] {
+        let side = state.get_side(&r);
+        let list = &mut instructions.instruction_list;
+        if !side.volatile_statuses.contains(&PokemonVolatileStatus::TRANSFORM)
+            && !side.volatile_statuses.contains(&PokemonVolatileStatus::STATSPLIT)
+        {
+            side.volatile_statuses.insert(PokemonVolatileStatus::STATSPLIT);
+            list.push(Instruction::ApplyVolatileStatus(ApplyVolatileStatusInstruction {
+                side_ref: r,
+                volatile_status: PokemonVolatileStatus::STATSPLIT,
+            }));
+        }
+        let active = side.get_active();
+        if !active.own.is_set() {
+            let mine = [
+                active.attack,
+                active.defense,
+                active.special_attack,
+                active.special_defense,
+                active.speed,
+            ];
+            let mut changes: Vec<(u8, i16)> = (0..5).map(|i| (i as u8, mine[i])).collect();
+            changes.push((5, (active.weight_kg * 10.0).round() as i16));
+            for (i, index) in [
+                PokemonMoveIndex::M0,
+                PokemonMoveIndex::M1,
+                PokemonMoveIndex::M2,
+                PokemonMoveIndex::M3,
+            ]
+            .iter()
+            .enumerate()
+            {
+                let m = &active.moves[index];
+                changes.push((6 + i as u8, m.id as i16 - Choices::NONE as i16));
+                changes.push((10 + i as u8, m.pp as i16));
+            }
+            for (field, amount) in changes {
+                if amount != 0 {
+                    list.push(Instruction::ChangeOwn(ChangeOwnInstruction {
+                        side_ref: r,
+                        field,
+                        amount,
+                    }));
+                    active.own.change(field, amount);
+                }
+            }
+        }
+        let (now0, now1) = stats(active);
+        for (k, amount) in [(0, mean.0 - now0), (1, mean.1 - now1)] {
+            if amount == 0 {
+                continue;
+            }
+            let c = ChangeStatInstruction { side_ref: r, amount };
+            list.push(match (guard, k) {
+                (false, 0) => Instruction::ChangeAttack(c),
+                (false, _) => Instruction::ChangeSpecialAttack(c),
+                (true, 0) => Instruction::ChangeDefense(c),
+                (true, _) => Instruction::ChangeSpecialDefense(c),
+            });
+        }
+        if guard {
+            active.defense = mean.0;
+            active.special_defense = mean.1;
+        } else {
+            active.attack = mean.0;
+            active.special_attack = mean.1;
+        }
+    }
+}
+
 // alpha-poke patch (2026-10-16, doc/engine-diff.md L36): Transform / Imposter (Showdown's
 // transformInto): the target's types (its own, not its tera type), stats but HP, ability, boosts
 // and moves (5 PP each); fails into a Substitute or a transformed target, or when transformed
@@ -4536,6 +4694,17 @@ pub fn generate_instructions_from_move(
 
         // alpha-poke patch (2026-10-16, doc/engine-diff.md L89): Encore's count is its ends of
         // turn (add_end_of_turn_instructions), not the encored moves
+    }
+
+    // alpha-poke patch (2026-10-18, doc/engine-diff.md L224): the charge move a calling move
+    // started finishes (its caller's slot chosen: Showdown's twoturnmove lock; no PP, the lock's)
+    if !choice.called_move {
+        if let Some(m) = state.get_side_immutable(&attacking_side).charging_called_move() {
+            let (first_move, index) = (choice.first_move, choice.move_index);
+            *choice = MOVES.get(&m).unwrap().clone();
+            choice.move_index = index;
+            choice.first_move = first_move;
+        }
     }
 
     // alpha-poke patch (2026-10-16, doc/engine-diff.md L90): Taunt's count is its ends of turn
@@ -5816,18 +5985,9 @@ fn finish_move(
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L199): the harness's damage hint (the
     // damage Showdown's roll dealt) for a single hit on the target itself, when it is one of the
     // engine's rolls, a crit's or not: that damage, no branches (an off-roll hint changes nothing)
+    // (L224: on its Substitute too -- target_hp its HP --, the harness's from the Substitute's HP)
     let per_hit = match (state.damage_hint[attacking_side as usize], damage) {
-        (hint, Some(_))
-            if hint >= 0
-                && per_hit.is_none()
-                && fixed.is_none()
-                && hit_count == 1
-                && target_hp
-                    == state
-                        .get_side_immutable(&attacking_side.get_other_side())
-                        .get_active_immutable()
-                        .hp =>
-        {
+        (hint, Some(_)) if hint >= 0 && per_hit.is_none() && fixed.is_none() && hit_count == 1 => {
             // (a crit's hint is marked +CRIT_HINT: Showdown's -crit line -- the two roll sets
             // can share a damage)
             let (crit, d) = if hint >= CRIT_HINT { (true, hint - CRIT_HINT) } else { (false, hint) };
@@ -6800,6 +6960,47 @@ fn end_of_turn_instructions(
     if state.side_one.force_switch || state.side_two.force_switch {
         return;
     }
+    // alpha-poke patch (2026-10-18, doc/engine-diff.md L224): Uproar's end of turn: it ends at the
+    // third (Showdown's duration 3), or at once under Throat Chop; its lock goes then
+    for side_ref in [SideReference::SideOne, SideReference::SideTwo] {
+        let side = state.get_side_immutable(&side_ref);
+        if !side
+            .volatile_statuses
+            .contains(&PokemonVolatileStatus::UPROAR)
+        {
+            continue;
+        }
+        let count = side.volatile_status_durations.uproar;
+        let ends = count + 1 >= 3
+            || side
+                .volatile_statuses
+                .contains(&PokemonVolatileStatus::THROATCHOP);
+        let mut list = vec![Instruction::ChangeVolatileStatusDuration(
+            ChangeVolatileStatusDurationInstruction {
+                side_ref,
+                volatile_status: PokemonVolatileStatus::UPROAR,
+                amount: if ends { -count } else { 1 },
+            },
+        )];
+        if ends {
+            list.push(Instruction::RemoveVolatileStatus(
+                RemoveVolatileStatusInstruction {
+                    side_ref,
+                    volatile_status: PokemonVolatileStatus::UPROAR,
+                },
+            ));
+        }
+        for ins in list {
+            if !matches!(ins, Instruction::ChangeVolatileStatusDuration(ChangeVolatileStatusDurationInstruction { amount: 0, .. })) {
+                state.apply_one_instruction(&ins);
+                incoming_instructions.instruction_list.push(ins);
+            }
+        }
+        let item = state.get_side_immutable(&side_ref).get_active_immutable().item;
+        if ends && !matches!(item, Items::CHOICEBAND | Items::CHOICESPECS | Items::CHOICESCARF) {
+            release_choice_lock(state, &side_ref, incoming_instructions);
+        }
+    }
     // (L222: the turn-1 marks end with the turn)
     for side_ref in [SideReference::SideOne, SideReference::SideTwo] {
         for v in [PokemonVolatileStatus::STATSLOWERED, PokemonVolatileStatus::STATSRAISED] {
@@ -7675,6 +7876,9 @@ fn end_of_turn_instructions(
                             && (side
                                 .volatile_statuses
                                 .contains(&PokemonVolatileStatus::LOCKEDMOVE)
+                                || side
+                                    .volatile_statuses
+                                    .contains(&PokemonVolatileStatus::UPROAR)
                                 || matches!(
                                     side.get_active_immutable().item,
                                     Items::CHOICEBAND | Items::CHOICESPECS | Items::CHOICESCARF
@@ -9252,9 +9456,13 @@ pub fn release_choice_lock(
     instructions: &mut StateInstructions,
 ) {
     let side = state.get_side(side_ref);
+    // (L224: nor while Uproar locks it)
     if side
         .volatile_statuses
         .contains(&PokemonVolatileStatus::LOCKEDMOVE)
+        || side
+            .volatile_statuses
+            .contains(&PokemonVolatileStatus::UPROAR)
     {
         return;
     }
