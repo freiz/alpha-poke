@@ -1,0 +1,44 @@
+{
+"setup": {
+"battles": 300,
+"max_turns": 60,
+"teams": "725cdcb4d439199e",
+"seed_offset": 260000
+},
+"mismatches": {
+"b120-t27": [
+"ability",
+"attack",
+"base_ability",
+"base_types",
+"defense",
+"gender",
+"hp",
+"id",
+"last_item",
+"level",
+"maxhp",
+"move",
+"must_switch",
+"nature",
+"options",
+"pp",
+"sc.protect",
+"special_attack",
+"special_defense",
+"speed",
+"status",
+"stellar_boosted",
+"tera_type",
+"terastallized",
+"types",
+"weight"
+],
+"b120-t28": [
+"hp"
+],
+"b294-t9": [
+"pp"
+]
+}
+}
