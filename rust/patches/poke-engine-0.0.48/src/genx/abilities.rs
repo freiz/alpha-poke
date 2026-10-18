@@ -1256,11 +1256,14 @@ pub fn ability_damaging_hit(
         }
     }
     {
+        // (L211: no Rocky Helmet under Magic Room)
+        let ignored = super::items::item_ignored(state);
         let (attacking_side, defending_side) = state.get_both_sides(side_ref);
         let attacker = attacking_side.get_active();
         let defender = defending_side.get_active_immutable();
         // (Rocky Helmet: contact, not through Magic Guard / Protective Pads; L94: at least 1)
         if defender.item == Items::ROCKYHELMET
+            && !ignored
             && choice.flags.contact
             && attacker.hp > 0
             && attacker.ability != Abilities::MAGICGUARD
@@ -3691,6 +3694,8 @@ pub fn ability_modify_attack_against(
                 && attacker_choice.target == MoveTarget::Opponent
                 && attacker_choice.move_id != Choices::THOUSANDARROWS
                 && !super::damage_calc::grounded_by_effect(defending_side, target_pkmn)
+                // (L211: nor under Gravity)
+                && state.gravity == 0
             {
                 attacker_choice.base_power = 0.0;
             }

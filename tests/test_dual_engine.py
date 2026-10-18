@@ -6135,3 +6135,74 @@ def test_l210_positions(teams, i, turn, offset):
     outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"]))
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
     assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}
+
+
+# L211 (doc/engine-diff.md): Magic Room -- 5 turns, its user's again ends it (Showdown's
+# pseudoWeather: the items have no effect, ignoringItem; moved items still move): no Leftovers, no
+# Choice Scarf speed or lock, a Light Clay's screen 5 turns
+@pytest.mark.parametrize("teams,i,turn,offset", [
+    ("random_battle_teams_forum.jsonl", 30, 2, 50000),
+    ("random_battle_teams_forum.jsonl", 30, 4, 50000),
+    ("random_battle_teams_forum.jsonl", 30, 5, 50000),
+    ("random_battle_teams_offmeta.jsonl", 41, 14, 0),
+    ("random_battle_teams_offmeta.jsonl", 41, 15, 0),
+    ("random_battle_teams_offmeta.jsonl", 41, 16, 0),
+    ("random_battle_teams_offmeta.jsonl", 41, 17, 0),
+])  # fmt: skip
+def test_l211_magic_room_positions(teams, i, turn, offset):
+    a, b = _random_position(teams, i, turn, offset)
+    c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
+    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"]))
+    n = tuple(len(s["mons"]) for s in a["state"]["sides"])
+    assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}
+
+
+KLEFKI_ROOM = _attacker("Klefki", "Prankster", "Leftovers", "- Magic Room\n- Spikes\n- Thunder Wave\n- Play Rough", "Bold")
+
+
+def test_l211_magic_room_leftovers_and_scarf():
+    gholdengo = _attacker("Gholdengo", "Good as Gold", "Choice Scarf", "- Shadow Ball\n- Make It Rain\n- Recover\n- Nasty Plot", "Timid")
+    states = ec.run_showdown(KLEFKI_ROOM, gholdengo, [("move magicroom", "move nastyplot"), ("move spikes", "move recover"),
+                                                      ("move magicroom", "move shadowball")])  # fmt: skip
+    for k, c1, c2 in ((0, "magicroom", "nastyplot"), (1, "spikes", "recover"), (2, "magicroom", "shadowball")):
+        assert _keys(_full_hinted(states, k, c1, c2), "hp", "options", "magic_room", "boost") == {}
+
+
+KINGAMBIT_ROOM = _attacker("Kingambit", "Defiant", "Leftovers", "- Magic Room\n- Kowtow Cleave\n- Sucker Punch\n- Iron Head")
+
+
+@pytest.mark.parametrize("item, c2", [("Focus Sash", "calmmind"), ("Rocky Helmet", "calmmind")])
+def test_l211_magic_room_sash_helmet(item, c2):
+    alakazam = _attacker("Alakazam", "Synchronize", item, "- Psychic\n- Recover\n- Calm Mind\n- Protect", "Timid")
+    hit = "kowtowcleave" if item == "Focus Sash" else "ironhead"
+    states = ec.run_showdown(KINGAMBIT_ROOM, alakazam + "\n\n" + BLISSEY, [("move magicroom", "move calmmind"), (f"move {hit}", f"move {c2}")])
+    assert _keys(_full_hinted(states, 1, hit, c2, (1, 2)), "hp", "item", "status") == {}
+
+
+def test_l211_magic_room_heavy_duty_boots():
+    states = ec.run_showdown(KLEFKI_ROOM, CORVIKNIGHT + "\n\n" + BLISSEY,
+                             [("move spikes", "move roost"), ("move magicroom", "move roost"), ("move thunderwave", "switch 2")])  # fmt: skip
+    assert any("[from] Spikes" in x for x in states[3]["log"])
+    assert _keys(_full(states, 2, "thunderwave", "blissey", (1, 2)), "hp") == {}
+
+
+# L211: Gravity -- 5 turns (fails while there is one); everyone grounded (Ground moves hit Flying
+# types and Levitate, the hazards and terrains reach them), accuracy x 5 / 3, the gravity moves
+# (High Jump Kick, Fly, ...) unusable
+def test_l211_gravity_position():
+    a, b = _random_position("random_battle_teams.jsonl", 189, 18, 10000)
+    c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
+    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"]))
+    n = tuple(len(s["mons"]) for s in a["state"]["sides"])
+    assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}
+
+
+@pytest.mark.parametrize("foe", ["corviknight", "rotom"])
+def test_l211_gravity_grounds(foe):
+    blissey = BLISSEY.replace("- Calm Mind", "- Gravity").replace("- Protect", "- Earthquake")
+    rotom = _attacker("Rotom-Wash", "Levitate", "Leftovers", "- Hydro Pump\n- Volt Switch\n- Will-O-Wisp\n- Protect", "Bold")
+    p2, c2 = (CORVIKNIGHT, "roost") if foe == "corviknight" else (rotom, "willowisp")
+    states = ec.run_showdown(blissey, p2, [("move gravity", "move " + c2), ("move earthquake", "move " + c2)])
+    assert not any("|-immune|" in x for x in states[2]["log"])
+    assert _keys(_full_hinted(states, 0, "gravity", c2), "gravity") == {}
+    assert _keys(_full_hinted(states, 1, "earthquake", c2), "hp", "gravity") == {}

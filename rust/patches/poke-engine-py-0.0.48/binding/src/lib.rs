@@ -52,6 +52,9 @@ pub struct PyState {
     pub team_preview: bool,
     // alpha-poke patch (L167): the battle's last move (Copycat)
     pub last_move: String,
+    // (L211: Magic Room's / Gravity's turns left)
+    pub magic_room: i8,
+    pub gravity: i8,
 }
 
 impl From<State> for PyState {
@@ -67,6 +70,8 @@ impl From<State> for PyState {
             trick_room_turns_remaining: other.trick_room.turns_remaining,
             team_preview: other.team_preview,
             last_move: other.last_move.to_string(),
+            magic_room: other.magic_room,
+            gravity: other.gravity,
         }
     }
 }
@@ -98,6 +103,8 @@ impl Into<State> for PyState {
             damage_hint: [-1, -1],
             hit_hint: [0, 0],
             called_hint: [Choices::NONE, Choices::NONE],
+            magic_room: self.magic_room,
+            gravity: self.gravity,
         };
         state.set_conditional_mechanics();
         state
@@ -118,6 +125,8 @@ impl PyState {
         trick_room_turns_remaining=0,
         team_preview=false,
         last_move="none".to_string(),
+        magic_room=0,
+        gravity=0,
     ))]
     fn new(
         side_one: PySide,
@@ -130,6 +139,8 @@ impl PyState {
         trick_room_turns_remaining: i8,
         team_preview: bool,
         last_move: String,
+        magic_room: i8,
+        gravity: i8,
     ) -> Self {
         PyState {
             side_one,
@@ -142,6 +153,8 @@ impl PyState {
             trick_room_turns_remaining,
             team_preview,
             last_move,
+            magic_room,
+            gravity,
         }
     }
     fn apply_instructions(&self, instructions: PyStateInstructions) -> PyState {

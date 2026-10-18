@@ -326,6 +326,8 @@ def engine_state(sd: dict) -> pe.State:
         weather=WEATHER[f["weather"]], weather_turns_remaining=f["weather_duration"],
         terrain=TERRAIN[f["terrain"]], terrain_turns_remaining=f["terrain_duration"],
         trick_room=tr, trick_room_turns_remaining=f["pseudo"].get("trickroom", 0),
+        # (L211: Magic Room's / Gravity's turns left)
+        magic_room=f["pseudo"].get("magicroom", 0), gravity=f["pseudo"].get("gravity", 0),
         # (L167: the battle's last move, for Copycat)
         last_move=next((m for m in [sd.get("last_move") or "none"] if _engine_move(m)), "none"),
     )  # fmt: skip
@@ -569,6 +571,10 @@ def extra_view(s: pe.State, n_mons: tuple[int, int] = (6, 6)) -> dict:
         v["terrain.turns"] = s.terrain_turns_remaining
     if s.trick_room:
         v["trick_room.turns"] = s.trick_room_turns_remaining
+    if s.magic_room:
+        v["magic_room.turns"] = s.magic_room
+    if s.gravity:
+        v["gravity.turns"] = s.gravity
     if "copycat" in moves:
         v["last_move"] = str(s.last_move).lower()
     for (k, side), n in zip((("s1", s.side_one), ("s2", s.side_two)), n_mons, strict=True):

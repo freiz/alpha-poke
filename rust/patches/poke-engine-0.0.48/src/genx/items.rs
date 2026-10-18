@@ -1206,12 +1206,23 @@ pub fn room_service(
     side.get_active().item = Items::NONE;
 }
 
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L211): Magic Room, the items have no effect
+// (Showdown's ignoringItem: the item dispatchers do nothing; moving an item -- Knock Off, Trick --
+// still works)
+pub fn item_ignored(state: &State) -> bool {
+    state.magic_room > 0
+}
+
 pub fn item_before_move(
     state: &mut State,
     choice: &mut Choice,
     side_ref: &SideReference,
     instructions: &mut StateInstructions,
 ) {
+    // (L211: Magic Room)
+    if item_ignored(state) {
+        return;
+    }
     // (L152: the attacker's Unnerve stops the target's resist berry, Showdown's onFoeTryEatItem)
     let berry_unnerved = unnerved(state, &side_ref.get_other_side());
     let (attacking_side, defending_side) = state.get_both_sides(side_ref);
@@ -1506,6 +1517,10 @@ pub fn item_on_switch_in(
     side_ref: &SideReference,
     instructions: &mut StateInstructions,
 ) {
+    // (L211: Magic Room)
+    if item_ignored(state) {
+        return;
+    }
     // alpha-poke patch (2026-10-16, L24)
     if state
         .get_side_immutable(side_ref)
@@ -1657,6 +1672,10 @@ pub fn terrain_seed(state: &mut State, side_ref: &SideReference, instructions: &
 // damage, before the holder's move, at the end of the turn). Starf Berry: its own branches;
 // Leppa Berry: at the PP use; Booster Energy: abilities::paradox_update
 pub fn item_update(state: &mut State, side_ref: &SideReference, instructions: &mut StateInstructions) {
+    // (L211: Magic Room)
+    if item_ignored(state) {
+        return;
+    }
     let a = state.get_side_immutable(side_ref).get_active_immutable();
     if a.hp <= 0 || a.item == Items::NONE || a.ability == Abilities::KLUTZ {
         return;
@@ -1783,6 +1802,10 @@ pub fn item_end_of_turn(
     instructions: &mut StateInstructions,
     before_status: bool,
 ) {
+    // (L211: Magic Room)
+    if item_ignored(state) {
+        return;
+    }
     if unnerved(state, side_ref) {
         return;
     }
@@ -1937,6 +1960,10 @@ pub fn item_modify_attack_against(
     attacking_choice: &mut Choice,
     attacking_side_ref: &SideReference,
 ) {
+    // (L211: Magic Room)
+    if item_ignored(state) {
+        return;
+    }
     if unnerved(state, &attacking_side_ref.get_other_side()) {
         return;
     }
@@ -1971,6 +1998,8 @@ pub fn item_modify_attack_against(
                     defending_side,
                     defending_side.get_active_immutable(),
                 )
+                // (L211: nor under Gravity)
+                && state.gravity == 0
             {
                 attacking_choice.base_power = 0.0;
             } else if attacking_choice.target == MoveTarget::Opponent
@@ -2168,6 +2197,10 @@ pub fn item_modify_attack_being_used(
     attacking_choice: &mut Choice,
     attacking_side_ref: &SideReference,
 ) {
+    // (L211: Magic Room)
+    if item_ignored(state) {
+        return;
+    }
     let (attacking_side, defending_side) = state.get_both_sides_immutable(attacking_side_ref);
     match attacking_side.get_active_immutable().item {
         // alpha-poke patch (2026-10-16, doc/engine-diff.md L24): a 10% flinch for a damaging move

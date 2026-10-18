@@ -20501,6 +20501,24 @@ impl Choices {
         )
     }
 
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L211): the moves Gravity disables (Showdown's
+    // flags.gravity)
+    pub fn disabled_by_gravity(&self) -> bool {
+        matches!(
+            self,
+            Choices::BOUNCE
+                | Choices::FLOATYFALL
+                | Choices::FLY
+                | Choices::FLYINGPRESS
+                | Choices::HIGHJUMPKICK
+                | Choices::JUMPKICK
+                | Choices::MAGNETRISE
+                | Choices::SKYDROP
+                | Choices::SPLASH
+                | Choices::TELEKINESIS
+        )
+    }
+
     pub fn ignores_evasion(&self) -> bool {
         matches!(self, Choices::DARKESTLARIAT | Choices::SACREDSWORD)
     }

@@ -1470,7 +1470,33 @@ impl State {
             s2_options.push(MoveChoice::None);
         }
 
-        (s1_options, s2_options)
+        // (L211: no gravity move under Gravity)
+        let mut out = (s1_options, s2_options);
+        self.gravity_filter(&mut out);
+        out
+    }
+
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L211): Gravity disables the gravity moves
+    // (Showdown's onDisableMove: High Jump Kick, Fly, Bounce, Splash, ...); with none left, Struggle
+    fn gravity_filter(&self, out: &mut (Vec<MoveChoice>, Vec<MoveChoice>)) {
+        if self.gravity == 0 {
+            return;
+        }
+        for (options, side) in [(&mut out.0, &self.side_one), (&mut out.1, &self.side_two)] {
+            let had_moves = options.iter().any(|o| !matches!(o, MoveChoice::Switch(_) | MoveChoice::None));
+            options.retain(|o| match o {
+                MoveChoice::Move(i) | MoveChoice::MoveTera(i) | MoveChoice::MoveMega(i) => {
+                    !side.get_active_immutable().moves[i].id.disabled_by_gravity()
+                }
+                _ => true,
+            });
+            if had_moves
+                && !options.iter().any(|o| !matches!(o, MoveChoice::Switch(_) | MoveChoice::None))
+                && !options.contains(&MoveChoice::None)
+            {
+                options.push(MoveChoice::None);
+            }
+        }
     }
 
     pub fn get_all_options(&self) -> (Vec<MoveChoice>, Vec<MoveChoice>) {
@@ -1638,7 +1664,10 @@ impl State {
             side_two_options.push(MoveChoice::None);
         }
 
-        (side_one_options, side_two_options)
+        // (L211: no gravity move under Gravity)
+        let mut out = (side_one_options, side_two_options);
+        self.gravity_filter(&mut out);
+        out
     }
 
     pub fn reset_toxic_count(

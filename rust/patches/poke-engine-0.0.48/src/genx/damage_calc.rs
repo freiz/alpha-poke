@@ -919,6 +919,24 @@ pub fn damage_recipe(
         return None;
     }
     let (attacking_side, defending_side) = state.get_both_sides_immutable(attacking_side);
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L211): Gravity grounds the target as Smack
+    // Down does (grounded_by_effect: its Flying type, Levitate, Magnet Rise, an Air Balloon); a
+    // copy of its side with the mark, only then
+    let grounded;
+    let defending_side = if state.gravity > 0
+        && choice.move_type == PokemonType::GROUND
+        && !defending_side
+            .volatile_statuses
+            .contains(&PokemonVolatileStatus::SMACKDOWN)
+    {
+        let mut side = defending_side.clone();
+        side.volatile_statuses
+            .insert(PokemonVolatileStatus::SMACKDOWN);
+        grounded = side;
+        &grounded
+    } else {
+        defending_side
+    };
     let attacker = attacking_side.get_active_immutable();
     let defender = defending_side.get_active_immutable();
 

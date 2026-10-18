@@ -123,6 +123,9 @@ pub enum Instruction {
     Revive(ReviveInstruction),
     ToggleTrickRoom(ToggleTrickRoomInstruction),
     DecrementTrickRoomTurnsRemaining,
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L211): a field condition's turns left
+    // (Magic Room, Gravity: Showdown's pseudoWeather), by `amount`
+    ChangeFieldTurns(ChangeFieldTurnsInstruction),
     ToggleSideOneForceSwitch,
     ToggleSideTwoForceSwitch,
     ToggleTerastallized(ToggleTerastallizedInstruction),
@@ -418,6 +421,9 @@ impl fmt::Debug for Instruction {
             Instruction::DecrementTrickRoomTurnsRemaining => {
                 write!(f, "DecrementTrickRoomTurnsRemaining")
             }
+            Instruction::ChangeFieldTurns(i) => {
+                write!(f, "ChangeFieldTurns: {:?} {}", i.field, i.amount)
+            }
             Instruction::ToggleSideOneForceSwitch => {
                 write!(f, "ToggleSideOneForceSwitch")
             }
@@ -677,6 +683,18 @@ pub struct ChangeTerrain {
     pub new_terrain_turns_remaining: i8,
     pub previous_terrain: Terrain,
     pub previous_terrain_turns_remaining: i8,
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum FieldCondition {
+    MagicRoom,
+    Gravity,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct ChangeFieldTurnsInstruction {
+    pub field: FieldCondition,
+    pub amount: i8,
 }
 
 #[derive(Debug, PartialEq, Clone)]

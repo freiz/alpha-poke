@@ -1539,6 +1539,10 @@ pub struct State {
     // -- its -hitcount; and the move Metronome called there, NONE none)
     pub hit_hint: [i8; 2],
     pub called_hint: [crate::choices::Choices; 2],
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L211): Magic Room's and Gravity's turns left
+    // (0: none; Showdown's pseudoWeather durations)
+    pub magic_room: i8,
+    pub gravity: i8,
 }
 impl Default for State {
     fn default() -> State {
@@ -1567,6 +1571,8 @@ impl Default for State {
             hit_hint: [0, 0],
             called_hint: [crate::choices::Choices::NONE, crate::choices::Choices::NONE],
             use_last_used_move: false,
+            magic_room: 0,
+            gravity: 0,
         };
 
         // many tests rely on the speed of side 2's active pokemon being greater than side_one's
@@ -2178,6 +2184,10 @@ impl State {
             Instruction::DecrementTrickRoomTurnsRemaining => {
                 self.trick_room.turns_remaining -= 1;
             }
+            Instruction::ChangeFieldTurns(i) => match i.field {
+                crate::instruction::FieldCondition::MagicRoom => self.magic_room += i.amount,
+                crate::instruction::FieldCondition::Gravity => self.gravity += i.amount,
+            },
             Instruction::ToggleSideOneForceSwitch => self.side_one.toggle_force_switch(),
             Instruction::ToggleSideTwoForceSwitch => self.side_two.toggle_force_switch(),
             Instruction::SetSideOneMoveSecondSwitchOutMove(instruction) => {
@@ -2423,6 +2433,10 @@ impl State {
             Instruction::DecrementTrickRoomTurnsRemaining => {
                 self.trick_room.turns_remaining += 1;
             }
+            Instruction::ChangeFieldTurns(i) => match i.field {
+                crate::instruction::FieldCondition::MagicRoom => self.magic_room -= i.amount,
+                crate::instruction::FieldCondition::Gravity => self.gravity -= i.amount,
+            },
             Instruction::ToggleSideOneForceSwitch => self.side_one.toggle_force_switch(),
             Instruction::ToggleSideTwoForceSwitch => self.side_two.toggle_force_switch(),
             Instruction::SetSideOneMoveSecondSwitchOutMove(instruction) => {
@@ -2569,8 +2583,11 @@ impl State {
             self.trick_room.serialize(),
             self.team_preview
         );
-        // (L167: only when there is one; older strings have no such field)
-        if self.last_move == Choices::NONE {
+        // (L167: only when there is one; older strings have no such field; L211: the field
+        // conditions after it, magic room;gravity, when any)
+        if self.magic_room != 0 || self.gravity != 0 {
+            format!("{}/{}/{};{}", out, self.last_move, self.magic_room, self.gravity)
+        } else if self.last_move == Choices::NONE {
             out
         } else {
             format!("{}/{}", out, self.last_move)
@@ -2784,7 +2801,14 @@ impl State {
             hit_hint: [0, 0],
             called_hint: [crate::choices::Choices::NONE, crate::choices::Choices::NONE],
             use_last_used_move: false,
+            magic_room: 0,
+            gravity: 0,
         };
+        if let Some(rooms) = split.get(7) {
+            let r: Vec<&str> = rooms.split(";").collect();
+            state.magic_room = r[0].parse::<i8>().unwrap();
+            state.gravity = r.get(1).map_or(0, |x| x.parse::<i8>().unwrap());
+        }
         state.set_conditional_mechanics();
         state
     }

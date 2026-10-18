@@ -13,7 +13,7 @@ use crate::choices::{
 };
 use crate::instruction::EnableMoveInstruction;
 use crate::instruction::{
-    ChangeTimesAttackedInstruction,
+    ChangeTimesAttackedInstruction, ChangeFieldTurnsInstruction, FieldCondition,
     ApplyVolatileStatusInstruction, BoostInstruction, ChangeDamageDealtDamageInstruction,
     ChangeDamageDealtMoveCategoryInstruction, ChangeItemInstruction,
     ChangeSideConditionInstruction, ChangeTerrain, ChangeType,
@@ -257,6 +257,8 @@ fn generate_instructions_from_switch(
     switching_side_ref: SideReference,
     incoming_instructions: &mut StateInstructions,
 ) {
+    // (L211: Gravity grounds everyone)
+    let gravity = state.gravity > 0;
     let switch_from = incoming_instructions.instruction_list.len();
     let should_last_used_move = state.use_last_used_move;
 
@@ -666,7 +668,7 @@ fn generate_instructions_from_switch(
     // Spikes with Heavy-Duty Boots too (Showdown checks the type before the boots)
     if active.item == Items::HEAVYDUTYBOOTS
         && side.side_conditions.toxic_spikes > 0
-        && active.is_grounded()
+        && (active.is_grounded() || gravity)
         && active.has_type(&PokemonType::POISON)
     {
         let i = Instruction::ChangeSideCondition(ChangeSideConditionInstruction {
@@ -677,11 +679,13 @@ fn generate_instructions_from_switch(
         state.apply_one_instruction(&i);
         incoming_instructions.instruction_list.push(i);
     }
+    // (L211: no Heavy-Duty Boots under Magic Room)
+    let ignored = super::items::item_ignored(state);
     let side = state.get_side(&switching_side_ref);
     let active = side.get_active_immutable();
-    if active.item != Items::HEAVYDUTYBOOTS {
+    if active.item != Items::HEAVYDUTYBOOTS || ignored {
         let switched_in_pkmn = side.get_active_immutable();
-        if side.side_conditions.sticky_web == 1 && switched_in_pkmn.is_grounded() {
+        if side.side_conditions.sticky_web == 1 && (switched_in_pkmn.is_grounded() || gravity) {
             // a pkmn switching in doesn't have any other speed drops,
             // so no need to check for going below -6
             // alpha-poke patch (2026-10-16, doc/engine-diff.md L76): the foe's drop (Clear Body
@@ -699,7 +703,7 @@ fn generate_instructions_from_switch(
         let side = state.get_side_immutable(&switching_side_ref);
         let switched_in_pkmn = side.get_active_immutable();
         let mut toxic_spike_instruction: Option<Instruction> = None;
-        if side.side_conditions.toxic_spikes > 0 && switched_in_pkmn.is_grounded() {
+        if side.side_conditions.toxic_spikes > 0 && (switched_in_pkmn.is_grounded() || state.gravity > 0) {
             if !immune_to_status(
                 &state,
                 &MoveTarget::User,
@@ -762,7 +766,7 @@ fn generate_instructions_from_switch(
             }
 
             let switched_in_pkmn = side.get_active_immutable();
-            if side.side_conditions.spikes > 0 && switched_in_pkmn.is_grounded() {
+            if side.side_conditions.spikes > 0 && (switched_in_pkmn.is_grounded() || gravity) {
                 // alpha-poke patch (2026-10-16): 1/8, 1/6, 1/4 of max HP for 1-3 layers (as
                 // Showdown's 3, 4, 6 24ths); before, layers/8
                 let layers = cmp::min(side.side_conditions.spikes, 3) as usize;
@@ -993,6 +997,8 @@ fn generate_instructions_from_duration_side_conditions(
         .get_active_immutable()
         .item
         == Items::LIGHTCLAY
+        // (L211: not under Magic Room)
+        && !super::items::item_ignored(state)
     {
         duration = 8;
     }
@@ -1436,7 +1442,7 @@ pub fn immune_to_status_with(
     if target_pkmn.status != PokemonStatus::NONE || target_pkmn.hp <= 0 {
         true
     // (L188: grounded with its volatiles: Roost, Magnet Rise, Smack Down, Ingrain)
-    } else if state.terrain.terrain_type == Terrain::MISTYTERRAIN && target_side.active_grounded() {
+    } else if state.terrain.terrain_type == Terrain::MISTYTERRAIN && (target_side.active_grounded() || state.gravity > 0) {
         true
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L207): not against an Infiltrator's move
     // (Showdown: its move infiltrates the Substitute and Safeguard)
@@ -1469,7 +1475,7 @@ pub fn immune_to_status_with(
             }
             PokemonStatus::SLEEP => {
                 (state.terrain.terrain_type == Terrain::ELECTRICTERRAIN
-                    && target_side.active_grounded())
+                    && (target_side.active_grounded() || state.gravity > 0))
                     || [
                         Abilities::INSOMNIA,
                         Abilities::SWEETVEIL,
@@ -1514,6 +1520,8 @@ fn get_instructions_from_status_effects(
     incoming_instructions: &mut StateInstructions,
     hit_sub: bool,
 ) {
+    // (L211: Gravity grounds everyone)
+    let gravity = state.gravity > 0;
     let target_side_ref: SideReference;
     match status.target {
         MoveTarget::Opponent => target_side_ref = attacking_side_reference.get_other_side(),
@@ -1629,7 +1637,7 @@ fn get_instructions_from_status_effects(
     {
         let target = target_side.get_active_immutable();
         if target.ability != Abilities::OWNTEMPO
-            && !(misty && target_side.active_grounded())
+            && !(misty && (target_side.active_grounded() || gravity))
             && !target_side
                 .volatile_statuses
                 .contains(&PokemonVolatileStatus::CONFUSION)
@@ -2115,7 +2123,7 @@ fn lock_end_instructions(
     }
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L205): not through Own Tempo or a grounded
     // user's Misty Terrain (Showdown's onTryAddVolatile)
-    let misty = state.terrain_is_active(&Terrain::MISTYTERRAIN) && side.active_grounded();
+    let misty = state.terrain_is_active(&Terrain::MISTYTERRAIN) && (side.active_grounded() || state.gravity > 0);
     if confuse
         && effective_ability(state, side_ref) != Abilities::OWNTEMPO
         && !misty
@@ -2492,6 +2500,7 @@ fn check_move_hit_or_miss(
     };
     // (L208: a status move aimed at a semi-invulnerable target)
     let semi_miss = misses_semi_invulnerable(state, choice, attacking_side_ref);
+    let gravity = state.gravity > 0;
     // (Showdown truncates the boosted accuracy)
     let boosted = match stage {
         b if b > 0 => (choice.accuracy * (3 + b) as f32 / 3.0).floor(),
@@ -2514,6 +2523,10 @@ fn check_move_hit_or_miss(
         }
         if micle {
             percent_hit *= 4915.0 / 4096.0;
+        }
+        // (L211: Gravity, x 6840 / 4096 -- Showdown's onModifyAccuracy)
+        if gravity {
+            percent_hit *= 6840.0 / 4096.0;
         }
     }
     let mut percent_hit = percent_hit.min(1.0);
@@ -2712,6 +2725,8 @@ fn generate_instructions_from_damage(
         - arbitrary other after_move as well from the old engine (triggers on hit OR miss)
             - dig/dive/bounce/fly volatilestatus
     */
+    // (L211: Magic Room)
+    let item_ignored = super::items::item_ignored(state);
     let mut hit_sub = false;
     let attacking_side = state.get_side(attacking_side_ref);
     let attacking_pokemon = attacking_side.get_active();
@@ -2813,7 +2828,8 @@ fn generate_instructions_from_damage(
                 // and the sash stayed
                 let full = defending_pokemon.maxhp == defending_pokemon.hp;
                 let sturdy = defending_pokemon.ability == Abilities::STURDY && full;
-                let sash = defending_pokemon.item == Items::FOCUSSASH && full;
+                // (L211: no Focus Sash under Magic Room)
+                let sash = defending_pokemon.item == Items::FOCUSSASH && full && !item_ignored;
                 if damage_dealt >= defending_pokemon.hp && (has_endure || sturdy || sash) {
                     damage_dealt -= 1;
                     if !has_endure && !sturdy {
@@ -3059,7 +3075,7 @@ fn move_has_no_effect(state: &State, choice: &Choice, attacking_side_ref: &SideR
             LastUsedMove::Switch(_) => true,
         };
     } else if state.terrain_is_active(&Terrain::PSYCHICTERRAIN)
-        && defending_side.active_grounded()
+        && (defending_side.active_grounded() || state.gravity > 0)
         && choice.target == MoveTarget::Opponent
         && choice.priority > 0
     {
@@ -3509,6 +3525,8 @@ fn flinched_or_taunted(state: &State, choice: &Choice, attacking_side_ref: &Side
             .volatile_statuses
             .contains(&PokemonVolatileStatus::THROATCHOP)
             && choice.flags.sound
+        // (L211: and Gravity a gravity move, Showdown's onBeforeMove)
+        || state.gravity > 0 && choice.move_id.disabled_by_gravity()
 }
 
 // alpha-poke patch (2026-10-17, doc/engine-diff.md L186): a Focus Punch hit by an attack this turn
@@ -3652,6 +3670,8 @@ fn choice_lock(
     side_ref: &SideReference,
     instructions: &mut StateInstructions,
 ) {
+    // (L211: no Choice item's lock under Magic Room)
+    let ignored = super::items::item_ignored(state);
     let (side, foe) = state.get_both_sides(side_ref);
     let active = side.get_active_immutable();
     let gassed = foe.get_active_immutable().ability == Abilities::NEUTRALIZINGGAS
@@ -3660,7 +3680,7 @@ fn choice_lock(
     let choice_item = matches!(
         active.item,
         Items::CHOICEBAND | Items::CHOICESPECS | Items::CHOICESCARF
-    );
+    ) && !ignored;
     // (and a locking move's later turns: the lock goes on, its other moves stay disabled)
     let locked = side
         .volatile_statuses
@@ -5444,7 +5464,7 @@ fn expected_residual(state: &State, side_ref: &SideReference) -> i16 {
             gain += m / 8;
         }
         if state.terrain_is_active(&Terrain::GRASSYTERRAIN)
-            && side.active_grounded()
+            && (side.active_grounded() || state.gravity > 0)
             && !side.semi_invulnerable()
         {
             gain += m / 16;
@@ -5931,7 +5951,8 @@ fn get_effective_speed(state: &State, side_reference: &SideReference) -> i16 {
         boosted_speed *= 2.0
     }
 
-    match active_pkmn.item {
+    // (L211: not under Magic Room)
+    match if super::items::item_ignored(state) { Items::NONE } else { active_pkmn.item } {
         Items::IRONBALL => boosted_speed *= 0.5,
         Items::CHOICESCARF => boosted_speed *= 1.5,
         _ => {}
@@ -6485,6 +6506,8 @@ fn end_of_turn_instructions(
     first_move_side: &SideReference,
     rolls: EotRolls,
 ) {
+    // (L211: Gravity grounds everyone)
+    let gravity = state.gravity > 0;
     let fs_crit = rolls.fs_crit;
     let end_of_turn_from = incoming_instructions.instruction_list.len();
     if state.side_one.force_switch || state.side_two.force_switch {
@@ -6818,7 +6841,7 @@ fn end_of_turn_instructions(
                     .contains(&PokemonVolatileStatus::HEALBLOCK);
                 // (L188: grounded with its volatiles: a Roost user that turn too; not a
                 // semi-invulnerable one)
-                let grounded = side.active_grounded() && !side.semi_invulnerable();
+                let grounded = (side.active_grounded() || gravity) && !side.semi_invulnerable();
                 let active_pkmn = side.get_active();
                 if active_pkmn.hp == 0 || !grounded || heal_blocked {
                     continue;
@@ -7671,6 +7694,25 @@ fn end_of_turn_instructions(
 
     // (L147: Showdown's Update after the residual action: Sitrus after the poison, a berry Heal
     // Block kept, a lock's fatigue cured by a Lum)
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L211): Magic Room's and Gravity's turns
+    // (Showdown's residual 27: after the items' residuals -- a Black Sludge under the room's last
+    // turn heals nothing)
+    for field in [FieldCondition::MagicRoom, FieldCondition::Gravity] {
+        let turns = match field {
+            FieldCondition::MagicRoom => &mut state.magic_room,
+            FieldCondition::Gravity => &mut state.gravity,
+        };
+        if *turns > 0 {
+            *turns -= 1;
+            incoming_instructions
+                .instruction_list
+                .push(Instruction::ChangeFieldTurns(ChangeFieldTurnsInstruction {
+                    field,
+                    amount: -1,
+                }));
+        }
+    }
+
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L208): Soul-Heart's Sp. Atk +1 for a foe the
     // residuals knocked out (Showdown's onAnyFaint: the burn, the poison, the weather, ...); was for
     // a knockout by its hit or the hazards only
@@ -8735,13 +8777,15 @@ pub fn foe_raise_copies(state: &mut State, instructions: &mut StateInstructions,
 // Choice item tricked / knocked away, Showdown's choicelock onDisableMove): the moves the lock
 // disabled are usable again (Disable's own slot stays)
 fn choice_lock_release(state: &mut State, side_ref: &SideReference, instructions: &mut StateInstructions) {
+    // (L211: a Choice item's lock off under Magic Room, its onDisableMove ignoring the item)
+    let ignored = super::items::item_ignored(state);
     let side = state.get_side(side_ref);
     let active = side.get_active_immutable();
     if active.hp <= 0
         || matches!(
             active.item,
             Items::CHOICEBAND | Items::CHOICESPECS | Items::CHOICESCARF
-        )
+        ) && !ignored
         || active.ability == Abilities::GORILLATACTICS
         || side
             .volatile_statuses

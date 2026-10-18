@@ -15,6 +15,7 @@ use crate::instruction::{
     DamageInstruction, HealInstruction, Instruction, RemoveVolatileStatusInstruction,
     SetSleepTurnsInstruction, StateInstructions,
     ToggleTrickRoomInstruction,
+    ChangeFieldTurnsInstruction, FieldCondition,
 };
 use crate::pokemon::PokemonName;
 use crate::state::{
@@ -551,8 +552,13 @@ pub fn modify_choice(
         // flung, or under Klutz. A berry's eating and White / Mental Herb's effects are left out
         Choices::FLING => {
             let user = attacking_side.get_active_immutable();
+            // (L211: it fails under Magic Room, Showdown's onPrepareHit ignoringItem)
             match user.item.fling_power() {
-                Some(power) if user.ability != Abilities::KLUTZ && !user.item_is_permanent() => {
+                Some(power)
+                    if user.ability != Abilities::KLUTZ
+                        && !user.item_is_permanent()
+                        && state.magic_room == 0 =>
+                {
                     attacker_choice.base_power = power as f32;
                     let effect = match user.item {
                         Items::FLAMEORB => Some(Effect::Status(PokemonStatus::BURN)),
@@ -1868,6 +1874,7 @@ pub fn choice_special_effect(
     // damage keeps the item's boosts (in the choice by now), but no Life Orb recoil after it
     let user = state.get_side_immutable(attacking_side_ref).get_active_immutable();
     if choice.move_id == Choices::FLING
+        && state.magic_room == 0
         && user.item.fling_power().is_some()
         && user.ability != Abilities::KLUTZ
         && !user.item_is_permanent()
@@ -2436,6 +2443,48 @@ pub fn choice_special_effect(
             // alpha-poke patch (2026-10-16, doc/engine-diff.md L24): Room Service on either side
             room_service(state, attacking_side_ref, instructions);
             room_service(state, &attacking_side_ref.get_other_side(), instructions);
+        }
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L211): Magic Room, 5 turns; used again,
+        // it ends (Showdown's onFieldRestart); Gravity, 5 turns, fails when there is one
+        Choices::MAGICROOM => {
+            let amount = if state.magic_room > 0 { -state.magic_room } else { 5 };
+            instructions
+                .instruction_list
+                .push(Instruction::ChangeFieldTurns(ChangeFieldTurnsInstruction {
+                    field: FieldCondition::MagicRoom,
+                    amount,
+                }));
+            state.magic_room += amount;
+        }
+        Choices::GRAVITY => {
+            if state.gravity == 0 {
+                instructions
+                    .instruction_list
+                    .push(Instruction::ChangeFieldTurns(ChangeFieldTurnsInstruction {
+                        field: FieldCondition::Gravity,
+                        amount: 5,
+                    }));
+                state.gravity = 5;
+                // (its onStart: Magnet Rise ends)
+                for side_ref in [SideReference::SideOne, SideReference::SideTwo] {
+                    let side = state.get_side(&side_ref);
+                    if side
+                        .volatile_statuses
+                        .contains(&PokemonVolatileStatus::MAGNETRISE)
+                    {
+                        side.volatile_statuses
+                            .remove(&PokemonVolatileStatus::MAGNETRISE);
+                        instructions
+                            .instruction_list
+                            .push(Instruction::RemoveVolatileStatus(
+                                RemoveVolatileStatusInstruction {
+                                    side_ref,
+                                    volatile_status: PokemonVolatileStatus::MAGNETRISE,
+                                },
+                            ));
+                    }
+                }
+            }
         }
         Choices::FINALGAMBIT => {
             let (attacking_side, defending_side) = state.get_both_sides(attacking_side_ref);
