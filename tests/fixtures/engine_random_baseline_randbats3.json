@@ -1,0 +1,42 @@
+{
+"setup": {
+"battles": 300,
+"max_turns": 60,
+"teams": "800b4fa5cea59c74",
+"seed_offset": 80000
+},
+"mismatches": {
+"b130-t9": [
+"boost.atk"
+],
+"b257-t7": [
+"hp",
+"status"
+],
+"b264-t14": [
+"sleep_turns",
+"status"
+],
+"b281-t15": [
+"hp"
+],
+"b47-t28": [
+"volatile.unburden"
+],
+"b47-t50": [
+"count.slowstart"
+],
+"b52-t3": [
+"hp"
+],
+"b60-t2": [
+"attack"
+],
+"b61-t5": [
+"hp"
+],
+"b91-t3": [
+"hp"
+]
+}
+}
