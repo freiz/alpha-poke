@@ -573,7 +573,7 @@ def view(sd: dict) -> dict:
                 # (L170: a partial trap whose source is out, as in engine_state)
                 if x == "partiallytrapped" and st.get("source_out"):
                     continue
-                if _engine_volatile(x) and x not in ("stall", "lastmovefailed"):
+                if _engine_volatile(x) and x not in ("stall", "lastmovefailed", "statslowered", "statsraised"):
                     v[f"{k}.volatile.{x}"] = True
         c = s["conditions"]
         for name, eng in {**LAYERED}.items():
@@ -604,7 +604,8 @@ def view_engine(s: pe.State, n_mons: tuple[int, int] = (6, 6)) -> dict:
         for x in side.volatile_statuses:
             # (a terastallized mon's typechange has no effect: its type is the tera type;
             # Showdown's side compares the types other than Terastallization, _changed_types)
-            if str(x).lower() not in ("none", "lastmovefailed") and not (
+            # (L222: nor the turn-1 marks, input only)
+            if str(x).lower() not in ("none", "lastmovefailed", "statslowered", "statsraised") and not (
                 tera and str(x).lower() == "typechange"
             ):
                 v[f"{k}.volatile.{str(x).lower()}"] = True

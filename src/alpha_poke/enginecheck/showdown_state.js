@@ -53,6 +53,14 @@ function monState(p, side) {
 			.concat(p.isActive && (p.abilityState.protean || p.abilityState.libero) ?
 				[['protean', {duration: 0, layers: 0, counter: 0, stat: '',
 					time: 0, true_duration: 0, num_consecutive: 0, hp: 0, move: ''}]] : [])
+			// (L222: Showdown's statsLoweredThisTurn / statsRaisedThisTurn at a turn's start -- turn
+			// 1's, from the leads' entries: the engine's marks, not compared)
+			.concat(p.isActive && p.battle.turn === 1 && p.statsLoweredThisTurn ?
+				[['statslowered', {duration: 0, layers: 0, counter: 0, stat: '',
+					time: 0, true_duration: 0, num_consecutive: 0, hp: 0, move: ''}]] : [])
+			.concat(p.isActive && p.battle.turn === 1 && p.statsRaisedThisTurn ?
+				[['statsraised', {duration: 0, layers: 0, counter: 0, stat: '',
+					time: 0, true_duration: 0, num_consecutive: 0, hp: 0, move: ''}]] : [])
 			// Cud Chew's berry to eat again: its counter in the ability's state (L204)
 			.concat(p.isActive && p.ability === 'cudchew' && p.abilityState.berry && p.abilityState.counter ?
 				[['cudchew', {duration: p.abilityState.counter, layers: 0, counter: 0, stat: '',

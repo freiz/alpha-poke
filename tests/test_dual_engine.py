@@ -6471,3 +6471,22 @@ def test_l221_positions(teams, i, turn, offset):
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
     assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}
 
+
+# L222 (doc/engine-diff.md): Lash Out doubled on turn 1 by a lead's Intimidate (Showdown keeps
+# statsLoweredThisTurn as turn 1 starts: randbats18 b132-t1 / b171-t1); Tinted Lens by the hit's
+# stages (Roost's turn without Flying: b163-t22); Gulp Missile's forme at the hit, not for an
+# asleep Cramorant (b169-t10 / b50-t46)
+@pytest.mark.parametrize("teams,i,turn,offset", [
+    ("random_battle_teams_randbats18.jsonl", 132, 1, 230000),
+    ("random_battle_teams_randbats18.jsonl", 171, 1, 230000),
+    ("random_battle_teams_randbats18.jsonl", 163, 22, 230000),
+    ("random_battle_teams_randbats18.jsonl", 169, 10, 230000),
+    ("random_battle_teams_randbats18.jsonl", 50, 46, 230000),
+])  # fmt: skip
+def test_l222_positions(teams, i, turn, offset):
+    a, b = _random_position(teams, i, turn, offset)
+    c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
+    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"]))
+    n = tuple(len(s["mons"]) for s in a["state"]["sides"])
+    assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}
+

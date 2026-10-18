@@ -730,6 +730,13 @@ def build_state(
         if mon is not None and "typechange" in vol and mon.ability in ("protean", "libero") \
                 and not (mon is active and our_tf or mon is opp_active and their_tf):
             vol.add("protean")
+        # (L222: turn 1's stage changes are its leads' entries -- Intimidate, Intrepid Sword, ...:
+        # Showdown's statsLoweredThisTurn / statsRaisedThisTurn, not reset as turn 1 starts)
+        if mon is not None and turn <= 1:
+            if any(v < 0 for v in mon.boosts.values()):
+                vol.add("statslowered")
+            if any(v > 0 for v in mon.boosts.values()):
+                vol.add("statsraised")
     # must recharge (the engine offers no move), Perish Song's count
     for mon, vol, tm in ((active, our_vol, tm_us), (opp_active, their_vol, tm_them)):
         if mon is None:

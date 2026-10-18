@@ -314,6 +314,11 @@ define_enum_with_from_str! {
         // (L218: Protean / Libero has changed the type since the switch-in -- Showdown's
         // effectState.protean / libero; a Transform's new ability starts without it)
         PROTEAN,
+        // (L222: the turn-1 marks of Showdown's statsLoweredThisTurn / statsRaisedThisTurn -- not
+        // reset as turn 1 starts: a lead's Intimidate doubles Lash Out; the harness's, to the
+        // turn's end; after that the turn's own instructions tell)
+        STATSLOWERED,
+        STATSRAISED,
     },
     default = NONE
 }

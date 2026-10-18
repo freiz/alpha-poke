@@ -890,12 +890,8 @@ fn common_pkmn_damage_calc(
             choice.move_id,
             Choices::SUNSTEELSTRIKE | Choices::MOONGEISTBEAM | Choices::PHOTONGEYSER
         );
-    Some(DamageRecipe {
-        base: base(attacking_stat, defending_stat),
-        crit_base: crit_base.floor() as i64,
-        stab: q4096(stab_modifier(&choice.move_type, &attacker)),
-        // Freeze-Dry: super effective on Water (its onEffectiveness: +1 instead of -1)
-        type_stages: if tera_shell {
+    // Freeze-Dry: super effective on Water (its onEffectiveness: +1 instead of -1)
+    let stages = if tera_shell {
             -1
         } else {
             type_stages(effectiveness)
@@ -914,20 +910,23 @@ fn common_pkmn_damage_calc(
             } else {
                 0
             }
-        },
+    };
+    // alpha-poke patch (2026-10-18, doc/engine-diff.md L219 / L222): Tinted Lens doubles a hit by
+    // its resisted stages here (Showdown's onModifyDamage, typeMod < 0: Tera Shell's resistance,
+    // Roost's turn without Flying); its ability hook saw the target's types only. Not under the
+    // target's Neutralizing Gas
+    let tinted = attacker.ability == Abilities::TINTEDLENS
+        && stages < 0
+        && !(defender.ability == Abilities::NEUTRALIZINGGAS
+            && defender.hp > 0
+            && attacker.item != Items::ABILITYSHIELD);
+    Some(DamageRecipe {
+        base: base(attacking_stat, defending_stat),
+        crit_base: crit_base.floor() as i64,
+        stab: q4096(stab_modifier(&choice.move_type, &attacker)),
+        type_stages: stages,
         burn: burn_modifier(&choice, &attacker, defender) != 1.0,
-        // alpha-poke patch (2026-10-18, doc/engine-diff.md L219): Tinted Lens doubles a hit Tera
-        // Shell made resisted (Showdown's typeMod; its ability hook saw the types only)
-        final_mod: vol.damage
-            * choice.damage_modifier
-            * if tera_shell
-                && attacker.ability == Abilities::TINTEDLENS
-                && move_type_effectiveness(choice, defender) >= 1.0
-            {
-                2.0
-            } else {
-                1.0
-            },
+        final_mod: vol.damage * choice.damage_modifier * if tinted { 2.0 } else { 1.0 },
         screen_mod,
     })
 }

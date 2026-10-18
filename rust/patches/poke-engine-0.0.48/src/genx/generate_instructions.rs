@@ -4602,7 +4602,12 @@ pub fn generate_instructions_from_move(
     // had a stat lowered this turn (Showdown's statsLoweredThisTurn: a drop since the turn began,
     // the user's own -- after its side's last switch; Intimidate on its entry too); was nothing
     if choice.move_id == Choices::LASHOUT {
-        let lowered = incoming_instructions
+        // (L222: or the turn-1 mark, a lead's Intimidate)
+        let marked = state
+            .get_side_immutable(&attacking_side)
+            .volatile_statuses
+            .contains(&PokemonVolatileStatus::STATSLOWERED);
+        let lowered = marked || incoming_instructions
             .instruction_list
             .iter()
             .rev()
@@ -4627,7 +4632,11 @@ pub fn generate_instructions_from_move(
     ) && choice.category != MoveCategory::Status
     {
         let defender_ref = attacking_side.get_other_side();
-        let mut raised = false;
+        // (L222: from the turn-1 mark, an entry's raise -- Intrepid Sword, Download, ...)
+        let mut raised = state
+            .get_side_immutable(&defender_ref)
+            .volatile_statuses
+            .contains(&PokemonVolatileStatus::STATSRAISED);
         for i in incoming_instructions.instruction_list.iter() {
             match i {
                 Instruction::Switch(x) if x.side_ref == defender_ref => raised = false,
@@ -6783,6 +6792,23 @@ fn end_of_turn_instructions(
     if state.side_one.force_switch || state.side_two.force_switch {
         return;
     }
+    // (L222: the turn-1 marks end with the turn)
+    for side_ref in [SideReference::SideOne, SideReference::SideTwo] {
+        for v in [PokemonVolatileStatus::STATSLOWERED, PokemonVolatileStatus::STATSRAISED] {
+            let side = state.get_side(&side_ref);
+            if side.volatile_statuses.contains(&v) {
+                side.volatile_statuses.remove(&v);
+                incoming_instructions
+                    .instruction_list
+                    .push(Instruction::RemoveVolatileStatus(
+                        RemoveVolatileStatusInstruction {
+                            side_ref,
+                            volatile_status: v,
+                        },
+                    ));
+            }
+        }
+    }
     unburden_check(state, incoming_instructions);
     // (L208: the actives alive as the residuals start, for Soul-Heart)
     let alive = [
@@ -8138,6 +8164,10 @@ fn run_move(
     let defender_boosts_before =
         boosts_of(state.get_side_immutable(&attacking_side.get_other_side()));
     let defender_ref = attacking_side.get_other_side();
+    // (L222: Gulp Missile's forme as the move hits, not through a Protect)
+    if !choice.protected {
+        super::abilities::gulp_missile_forme(state, choice, &attacking_side, &mut instructions);
+    }
     // (L196: the Disguise / Ice Face the move hits breaks now, not through a Protect)
     if choice.face_break && !choice.protected {
         super::abilities::break_face(state, &defender_ref, &mut instructions);

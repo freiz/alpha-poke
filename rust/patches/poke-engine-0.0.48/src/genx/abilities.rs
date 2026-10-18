@@ -990,6 +990,50 @@ pub fn face_before_hit(state: &mut State, choice: &mut Choice, side_ref: &SideRe
     }
 }
 
+// alpha-poke patch (2026-10-18, doc/engine-diff.md L222): Gulp Missile's forme when its Surf /
+// Dive hits (Showdown's onSourceTryPrimaryHit: run_move; it changed as the move was chosen, before
+// the sleep / paralysis checks -- an asleep Cramorant became Gulping). (L198: not a Surf a
+// water-absorbing target takes: the TryPrimaryHit comes after its TryHit)
+pub fn gulp_missile_forme(
+    state: &mut State,
+    choice: &Choice,
+    side_ref: &SideReference,
+    instructions: &mut StateInstructions,
+) {
+    let (attacking_side, defending_side) = state.get_both_sides(side_ref);
+    let active_pkmn = attacking_side.get_active();
+    let defending_pkmn = defending_side.get_active_immutable();
+    if active_pkmn.ability != Abilities::GULPMISSILE {
+        return;
+    }
+    let absorbed = choice.move_id == Choices::SURF
+        && matches!(
+            defending_pkmn.ability,
+            Abilities::STORMDRAIN | Abilities::WATERABSORB | Abilities::DRYSKIN
+        )
+        && !matches!(
+            active_pkmn.ability,
+            Abilities::MOLDBREAKER | Abilities::TERAVOLT | Abilities::TURBOBLAZE
+        );
+    if active_pkmn.id == PokemonName::CRAMORANT
+        && (choice.move_id == Choices::SURF || choice.move_id == Choices::DIVE)
+        && !absorbed
+    {
+        let new_forme = if active_pkmn.hp > active_pkmn.maxhp / 2 {
+            PokemonName::CRAMORANTGULPING
+        } else {
+            PokemonName::CRAMORANTGORGING
+        };
+        instructions
+            .instruction_list
+            .push(Instruction::FormeChange(FormeChangeInstruction {
+                side_ref: *side_ref,
+                name_change: new_forme as i16 - active_pkmn.id as i16,
+            }));
+        active_pkmn.id = new_forme;
+    }
+}
+
 pub fn ability_before_move(
     state: &mut State,
     choice: &mut Choice,
@@ -1031,36 +1075,7 @@ pub fn ability_before_move(
         _ => {}
     }
     match active_pkmn.ability {
-        // (L198: not a Surf a water-absorbing target takes: Showdown's onSourceTryPrimaryHit comes
-        // after its TryHit)
-        Abilities::GULPMISSILE => {
-            let absorbed = choice.move_id == Choices::SURF
-                && matches!(
-                    defending_pkmn.ability,
-                    Abilities::STORMDRAIN | Abilities::WATERABSORB | Abilities::DRYSKIN
-                )
-                && !matches!(
-                    active_pkmn.ability,
-                    Abilities::MOLDBREAKER | Abilities::TERAVOLT | Abilities::TURBOBLAZE
-                );
-            if active_pkmn.id == PokemonName::CRAMORANT
-                && (choice.move_id == Choices::SURF || choice.move_id == Choices::DIVE)
-                && !absorbed
-            {
-                let new_forme = if active_pkmn.hp > active_pkmn.maxhp / 2 {
-                    PokemonName::CRAMORANTGULPING
-                } else {
-                    PokemonName::CRAMORANTGORGING
-                };
-                instructions.instruction_list.push(Instruction::FormeChange(
-                    FormeChangeInstruction {
-                        side_ref: *side_ref,
-                        name_change: new_forme as i16 - active_pkmn.id as i16,
-                    },
-                ));
-                active_pkmn.id = new_forme;
-            }
-        }
+        // (L222: Gulp Missile's forme at the hit: gulp_missile_forme, run_move)
         // alpha-poke patch (2026-10-16, doc/engine-diff.md L41): Gen 9 Protean / Libero in
         // generate_instructions (protean_type_change), when the move starts
         #[cfg(any(feature = "gen6", feature = "gen7", feature = "gen8"))]
@@ -3219,13 +3234,7 @@ pub fn ability_modify_attack_being_used(
                 attacker_choice.attack_modifier *= 2.0;
             }
         }
-        Abilities::TINTEDLENS => {
-            if move_type_effectiveness(&attacker_choice, &defending_side.get_active_immutable())
-                < 1.0
-            {
-                attacker_choice.damage_modifier *= 2.0;
-            }
-        }
+        // (L222: Tinted Lens in damage_calc, by the hit's stages)
         Abilities::FLAREBOOST => {
             if attacking_pkmn.status == PokemonStatus::BURN {
                 attacker_choice.base_power *= 1.5;
