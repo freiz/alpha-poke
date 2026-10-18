@@ -586,7 +586,8 @@ pub struct DisableMoveInstruction {
 #[derive(Debug, PartialEq, Clone)]
 pub struct ChangeTimesAttackedInstruction {
     pub side_ref: SideReference,
-    pub amount: u8,
+    // (L220: signed -- a transformation sets its target's count, Showdown's transformInto)
+    pub amount: i16,
 }
 
 #[derive(Debug, PartialEq, Clone)]

@@ -505,6 +505,7 @@ impl Default for Side {
             reviving: false,
             tera_used: false,
             future_doom: false,
+            revived_faints: 0,
             pokemon: SidePokemon {
                 pkmn: [
                     Pokemon::default(),
@@ -1242,6 +1243,9 @@ pub struct Side {
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L218): the pending future move is Doom
     // Desire (Steel), not Future Sight
     pub future_doom: bool,
+    // alpha-poke patch (2026-10-18, doc/engine-diff.md L220): the side's faints Revival Blessing
+    // undid (Showdown's totalFainted counts them: Supreme Overlord, Last Respects)
+    pub revived_faints: u8,
     pub pokemon: SidePokemon,
     pub side_conditions: SideConditions,
     pub volatile_status_durations: VolatileStatusDurations,
@@ -1372,15 +1376,22 @@ impl Side {
             self.slow_uturn_move,
         );
         // (L166: only while reviving; L185: tera_used after it; L218: future_doom after them;
-        // older strings have no such field)
-        if self.future_doom {
-            format!("{}={}={}=true", out, self.reviving, self.tera_used)
-        } else if self.tera_used {
-            format!("{}={}=true", out, self.reviving)
-        } else if self.reviving {
-            format!("{}=true", out)
-        } else {
-            out
+        // L220: revived_faints last; older strings have no such field)
+        let tail = [
+            self.reviving.to_string(),
+            self.tera_used.to_string(),
+            self.future_doom.to_string(),
+            self.revived_faints.to_string(),
+        ];
+        let set = [
+            self.reviving,
+            self.tera_used,
+            self.future_doom,
+            self.revived_faints > 0,
+        ];
+        match set.iter().rposition(|x| *x) {
+            Some(last) => format!("{}={}", out, tail[..=last].join("=")),
+            None => out,
         }
     }
     pub fn deserialize(serialized: &str) -> Side {
@@ -1434,6 +1445,7 @@ impl Side {
             reviving: split.get(29).map_or(false, |x| x.parse::<bool>().unwrap()),
             tera_used: split.get(30).map_or(false, |x| x.parse::<bool>().unwrap()),
             future_doom: split.get(31).map_or(false, |x| x.parse::<bool>().unwrap()),
+            revived_faints: split.get(32).map_or(0, |x| x.parse::<u8>().unwrap()),
         }
     }
 }
@@ -2250,6 +2262,7 @@ impl State {
             Instruction::Revive(instruction) => {
                 let side = self.get_side(&instruction.side_ref);
                 side.pokemon[instruction.pokemon_index].hp = instruction.hp;
+                side.revived_faints += 1;
                 if instruction.tera {
                     side.pokemon[instruction.pokemon_index].terastallized = false;
                     side.tera_used = true;
@@ -2289,7 +2302,7 @@ impl State {
             }
             Instruction::ChangeTimesAttacked(instruction) => {
                 let active = self.get_side(&instruction.side_ref).get_active();
-                active.times_attacked = active.times_attacked.saturating_add(instruction.amount);
+                active.times_attacked = (active.times_attacked as i16 + instruction.amount) as u8;
             }
             Instruction::DecrementPP(instruction) => self.decrement_pp(
                 &instruction.side_ref,
@@ -2502,6 +2515,7 @@ impl State {
             Instruction::Revive(instruction) => {
                 let side = self.get_side(&instruction.side_ref);
                 side.pokemon[instruction.pokemon_index].hp = 0;
+                side.revived_faints -= 1;
                 if instruction.tera {
                     side.pokemon[instruction.pokemon_index].terastallized = true;
                     side.tera_used = false;
@@ -2542,7 +2556,7 @@ impl State {
             }
             Instruction::ChangeTimesAttacked(instruction) => {
                 let active = self.get_side(&instruction.side_ref).get_active();
-                active.times_attacked = active.times_attacked.saturating_sub(instruction.amount);
+                active.times_attacked = (active.times_attacked as i16 - instruction.amount) as u8;
             }
             Instruction::DecrementPP(instruction) => self.increment_pp(
                 &instruction.side_ref,

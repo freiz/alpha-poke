@@ -20715,6 +20715,12 @@ impl Choices {
         )
     }
 
+    // alpha-poke patch (2026-10-18, doc/engine-diff.md L220): the damaging moves other than sound
+    // ones that go through a Substitute (Showdown's bypasssub flag): they hit the mon behind it
+    pub fn damages_through_substitute(&self) -> bool {
+        matches!(self, Choices::HYPERSPACEFURY | Choices::HYPERSPACEHOLE)
+    }
+
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L133): the status moves aimed at the foe
     // that go through a Substitute (Showdown's bypasssub flag); any other fails against one.
     // tests/test_engine_data.py checks the list against Showdown's flags

@@ -6409,3 +6409,50 @@ def test_l219_positions(teams, i, turn, offset):
     outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"]))
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
     assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}
+
+
+# L220 (doc/engine-diff.md): an Encore on a move its Struggle replaced (randbats14 b170-t17: it
+# panicked); Supreme Overlord counting the faints Revival Blessing undid (Showdown's totalFainted:
+# randbats14 b146-t35); a Thunder Wave into Volt Absorb behind a Substitute (b197-t17); Judgment
+# Normal without a plate (a transformed Ditto's: b236-t48 / t49 / t50); Hyperspace Fury through a
+# Substitute (b58-t18 / t19); Roost's turn on a transformed mon (the harness's types: b72-t14); a
+# Disable's end keeps an Outrage's lock (randbats15 b44-t14); a transformation copies the times
+# attacked (b130-t11)
+@pytest.mark.parametrize("teams,i,turn,offset", [
+    ("random_battle_teams_randbats14.jsonl", 170, 17, 190000),
+    ("random_battle_teams_randbats14.jsonl", 146, 35, 190000),
+    ("random_battle_teams_randbats14.jsonl", 197, 17, 190000),
+    ("random_battle_teams_randbats14.jsonl", 236, 48, 190000),
+    ("random_battle_teams_randbats14.jsonl", 236, 49, 190000),
+    ("random_battle_teams_randbats14.jsonl", 236, 50, 190000),
+    ("random_battle_teams_randbats14.jsonl", 58, 18, 190000),
+    ("random_battle_teams_randbats14.jsonl", 58, 19, 190000),
+    ("random_battle_teams_randbats14.jsonl", 72, 14, 190000),
+    ("random_battle_teams_randbats15.jsonl", 44, 14, 200000),
+    ("random_battle_teams_randbats15.jsonl", 130, 11, 200000),
+    # (an Arceus's plate gives Judgment its type before the target's ability sees it: Sap Sipper,
+    # Disguise; randbats8 b188, randbats14 b18 / b200)
+    ("random_battle_teams_randbats8.jsonl", 188, 11, 130000),
+    ("random_battle_teams_randbats8.jsonl", 188, 52, 130000),
+    ("random_battle_teams_randbats8.jsonl", 188, 53, 130000),
+    ("random_battle_teams_randbats14.jsonl", 18, 12, 190000),
+    ("random_battle_teams_randbats14.jsonl", 200, 12, 190000),
+    ("random_battle_teams_randbats14.jsonl", 200, 14, 190000),
+])  # fmt: skip
+def test_l220_positions(teams, i, turn, offset):
+    a, b = _random_position(teams, i, turn, offset)
+    c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
+    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"]))
+    n = tuple(len(s["mons"]) for s in a["state"]["sides"])
+    assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}
+
+
+def test_l220_state_string_keeps_revived_faints():
+    from pathlib import Path
+    s = pe.State.from_string(Path("tests/fixtures/engine_state_6v6.txt").read_text().splitlines()[0])
+    s1 = s.side_one
+    side = pe.Side(pokemon=s1.pokemon, active_index=s1.active_index, side_conditions=s1.side_conditions,
+                   revived_faints=2)  # fmt: skip
+    t = pe.State(side_one=side, side_two=s.side_two).to_string()
+    assert pe.State.from_string(t).side_one.revived_faints == 2 and pe.State.from_string(t).to_string() == t
+

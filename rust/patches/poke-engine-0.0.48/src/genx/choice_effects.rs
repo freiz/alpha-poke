@@ -271,9 +271,9 @@ pub fn modify_choice(
             attacker_choice.base_power = bp.max(1) as f32;
         }
         Choices::LASTRESPECTS => {
-            // Technically not correct because of reviving moves but good enough
+            // (L220: the revived mons' faints too: Showdown's totalFainted)
             let mut bp_boost = 1.0;
-            bp_boost += 1.0 * attacking_side.num_fainted_pkmn() as f32;
+            bp_boost += 1.0 * attacking_side.total_fainted() as f32;
             attacker_choice.base_power *= bp_boost
         }
         Choices::CLANGOROUSSOUL => {
@@ -408,8 +408,17 @@ pub fn modify_choice(
                 attacker_choice.base_power *= 3.0; // 1.5x for being in sun, 2x for cancelling out rain debuff
             }
         }
+        // alpha-poke patch (2026-10-18, doc/engine-diff.md L220): its user's plate's type, else
+        // Normal (Showdown's onModifyType: not an ignored item -- Klutz, Magic Room), not the
+        // user's type (a Ditto transformed into an Arceus, its Choice Scarf: a Steel Judgment)
         Choices::JUDGMENT => {
-            attacker_choice.move_type = attacking_side.get_active_immutable().types.0;
+            let user = attacking_side.get_active_immutable();
+            attacker_choice.move_type =
+                if user.ability == Abilities::KLUTZ || super::items::item_ignored(state) {
+                    PokemonType::NORMAL
+                } else {
+                    super::items::plate_type(user.item).unwrap_or(PokemonType::NORMAL)
+                };
         }
         Choices::MULTIATTACK => {
             attacker_choice.move_type = attacking_side.get_active_immutable().types.0;

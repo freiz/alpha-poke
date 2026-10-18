@@ -204,6 +204,8 @@ pub struct PySide {
     tera_used: bool,
     // (L218: the pending future move is Doom Desire)
     future_doom: bool,
+    // (L220: the faints Revival Blessing undid)
+    revived_faints: u8,
     volatile_statuses: HashSet<String>,
     substitute_health: i16,
     attack_boost: i8,
@@ -245,6 +247,7 @@ impl From<Side> for PySide {
             reviving: other.reviving,
             tera_used: other.tera_used,
             future_doom: other.future_doom,
+            revived_faints: other.revived_faints,
             volatile_statuses,
             substitute_health: other.substitute_health,
             attack_boost: other.attack_boost,
@@ -297,6 +300,7 @@ impl Into<Side> for PySide {
             reviving: self.reviving,
             tera_used: self.tera_used,
             future_doom: self.future_doom,
+            revived_faints: self.revived_faints,
             volatile_statuses,
             substitute_health: self.substitute_health,
             attack_boost: self.attack_boost,
@@ -345,6 +349,7 @@ impl PySide {
         reviving=false,
         tera_used=false,
         future_doom=false,
+        revived_faints=0,
     ))]
     fn new(
         mut pokemon: Vec<PyPokemon>,
@@ -373,6 +378,7 @@ impl PySide {
         reviving: bool,
         tera_used: bool,
         future_doom: bool,
+        revived_faints: u8,
     ) -> Self {
         while pokemon.len() < 6 {
             pokemon.push(PyPokemon::create_fainted());
@@ -410,6 +416,7 @@ impl PySide {
             reviving,
             tera_used,
             future_doom,
+            revived_faints,
         }
     }
 }

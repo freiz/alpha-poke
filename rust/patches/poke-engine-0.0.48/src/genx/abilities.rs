@@ -3206,7 +3206,8 @@ pub fn ability_modify_attack_being_used(
         // ally, up to 5 (was 1 + 0.1 each, no cap)
         Abilities::SUPREMEOVERLORD => {
             const POW: [f32; 6] = [4096.0, 4506.0, 4915.0, 5325.0, 5734.0, 6144.0];
-            let n = (attacking_side.num_fainted_pkmn() as usize).min(5);
+            // (L220: the revived mons' faints too: Showdown's totalFainted)
+            let n = (attacking_side.total_fainted() as usize).min(5);
             attacker_choice.base_power *= POW[n] / 4096.0;
         }
         // alpha-poke patch (L34): Adaptability in damage_calc's stab_modifier (was its ratio here)
@@ -3509,6 +3510,26 @@ pub fn ability_modify_attack_being_used(
 
 // (L214: a move Magic Bounce sent back into its user's absorbing ability, onTryHit on the user:
 // the effect on the user, MoveTarget::User)
+// alpha-poke patch (2026-10-18, doc/engine-diff.md L220): whether the ability absorbs a move of the
+// type (bounced_absorb's, ability_modify_attack_against's: Volt Absorb, Flash Fire, Sap Sipper, ...)
+pub fn absorbs_type(ability: Abilities, t: PokemonType) -> bool {
+    matches!(
+        (ability, t),
+        (
+            Abilities::VOLTABSORB | Abilities::MOTORDRIVE | Abilities::LIGHTNINGROD,
+            PokemonType::ELECTRIC
+        ) | (
+            Abilities::WATERABSORB | Abilities::DRYSKIN | Abilities::STORMDRAIN,
+            PokemonType::WATER
+        ) | (Abilities::EARTHEATER, PokemonType::GROUND)
+            | (Abilities::SAPSIPPER, PokemonType::GRASS)
+            | (
+                Abilities::WELLBAKEDBODY | Abilities::FLASHFIRE,
+                PokemonType::FIRE
+            )
+    )
+}
+
 fn bounced_absorb(choice: &mut Choice, ability: Abilities) {
     let t = choice.move_type;
     let boost = |atk: i8, def: i8, spa: i8, spe: i8| Boost {

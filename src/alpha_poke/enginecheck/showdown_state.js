@@ -33,6 +33,8 @@ function monState(p, side) {
 		types: p.getTypes(),
 		pre_tera_types: p.getTypes(false, true), // what the engine keeps as types (STAB on them)
 		base_types: p.baseSpecies.types,
+		// (L220: the types under Roost's turn -- a transformed mon's are not its species')
+		roost_types: p.volatiles['roost'] ? p.types.slice() : null,
 		stats: p.storedStats,
 		boosts: p.boosts,
 		// (Perish Song: Showdown's perishsong with its turns left, the engine's perish<n>; L87)
@@ -109,7 +111,9 @@ function sideState(side) {
 	// the side used its Terastallization (a fainted tera mon loses its terastallized, the side's
 	// canTerastallize stays null: doc/engine-diff.md L177)
 	const tera_used = side.pokemon.some(p => p.terastallized || p.canTerastallize === null);
-	return {id: side.id, active, mons, conditions, slot, request, request_json: req || null, tera_used};
+	// (L220: Showdown's totalFainted, the revived mons' faints with the fainted ones')
+	return {id: side.id, active, mons, conditions, slot, request, request_json: req || null, tera_used,
+		total_fainted: side.totalFainted};
 }
 
 function state(battle, logFrom) {

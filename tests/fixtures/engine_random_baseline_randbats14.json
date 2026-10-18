@@ -5,37 +5,5 @@
 "teams": "714f46bee68eb0ec",
 "seed_offset": 190000
 },
-"mismatches": {
-"b146-t35": [
-"hp"
-],
-"b170-t17": [
-"error"
-],
-"b197-t17": [
-"hp"
-],
-"b236-t48": [
-"hp"
-],
-"b236-t49": [
-"hp"
-],
-"b236-t50": [
-"hp"
-],
-"b58-t18": [
-"hp",
-"substitute_hp",
-"volatile.substitute"
-],
-"b58-t19": [
-"hp",
-"status",
-"volatile.leechseed"
-],
-"b72-t14": [
-"types"
-]
-}
+"mismatches": {}
 }

@@ -294,6 +294,8 @@ fn generate_instructions_from_switch(
         if tera {
             side.tera_used = true;
         }
+        // (L220: a faint undone: Revive's apply counts it)
+        side.revived_faints += 1;
         let revived = &mut side.pokemon[new_pokemon_index];
         let hp = cmp::max(revived.maxhp / 2, 1);
         incoming_instructions
@@ -2808,6 +2810,7 @@ fn generate_instructions_from_damage(
             .volatile_statuses
             .contains(&PokemonVolatileStatus::SUBSTITUTE)
             && !choice.flags.sound
+            && !choice.move_id.damages_through_substitute()
             && attacking_pokemon.ability != Abilities::INFILTRATOR
         {
             damage_dealt = cmp::min(calculated_damage, defending_side.substitute_health);
@@ -3072,6 +3075,19 @@ fn move_has_no_effect(state: &State, choice: &Choice, attacking_side_ref: &SideR
             .volatile_statuses
             .contains(&PokemonVolatileStatus::SUBSTITUTE)
         && _attacking_side.get_active_immutable().ability != Abilities::INFILTRATOR
+        // alpha-poke patch (2026-10-18, doc/engine-diff.md L220): not one the target's absorbing
+        // ability takes first (Showdown's TryHit before the Substitute's TryPrimaryHit: a Thunder
+        // Wave into a Volt Absorb behind its Substitute heals); not through a Mold Breaker / gas
+        && !(super::abilities::absorbs_type(
+            defending_side.get_active_immutable().ability,
+            choice.move_type,
+        ) && !matches!(
+            _attacking_side.get_active_immutable().ability,
+            Abilities::MOLDBREAKER
+                | Abilities::TERAVOLT
+                | Abilities::TURBOBLAZE
+                | Abilities::NEUTRALIZINGGAS
+        ))
     {
         return true;
     }
@@ -3432,6 +3448,15 @@ pub fn transform_into(
                 active.own.change(field, amount);
             }
         }
+    }
+    // alpha-poke patch (2026-10-18, doc/engine-diff.md L220): the target's times attacked copied
+    // (Showdown's transformInto; Rage Fist)
+    if active.times_attacked != target.times_attacked {
+        list.push(Instruction::ChangeTimesAttacked(ChangeTimesAttackedInstruction {
+            side_ref: *side_ref,
+            amount: target.times_attacked as i16 - active.times_attacked as i16,
+        }));
+        active.times_attacked = target.times_attacked;
     }
     let weight = (target.weight_kg * 10.0).round() as i16 - (active.weight_kg * 10.0).round() as i16;
     if weight != 0 {
@@ -4494,7 +4519,11 @@ pub fn generate_instructions_from_move(
                     choice.first_move = first_move;
                 }
             }
-            _ => panic!("Encore should not be active when last used move is not a move"),
+            // alpha-poke patch (2026-10-18, doc/engine-diff.md L220): the encored move lost to the
+            // Struggle it forced (Gigaton Hammer / Blood Moon encored, unusable twice in a row:
+            // Showdown's encore keeps its move, the last move is Struggle): the choice stands. It
+            // panicked
+            _ => {}
         }
 
         // alpha-poke patch (2026-10-16, doc/engine-diff.md L89): Encore's count is its ends of
@@ -5747,6 +5776,7 @@ fn finish_move(
             .volatile_statuses
             .contains(&PokemonVolatileStatus::SUBSTITUTE)
             && !choice.flags.sound
+            && !choice.move_id.damages_through_substitute()
             && att.get_active_immutable().ability != Abilities::INFILTRATOR
         {
             def.substitute_health
@@ -5978,7 +6008,8 @@ fn finish_move(
         let behind_sub = side
             .volatile_statuses
             .contains(&PokemonVolatileStatus::SUBSTITUTE)
-            && !choice.flags.sound;
+            && !choice.flags.sound
+            && !choice.move_id.damages_through_substitute();
         if does_damage && defender.item == Items::FOCUSBAND && defender.hp > 0 && !behind_sub {
             Some(defender.hp)
         } else {
@@ -7601,8 +7632,24 @@ fn end_of_turn_instructions(
                     2 => PokemonMoveIndex::M2,
                     _ => PokemonMoveIndex::M3,
                 };
+                // alpha-poke patch (2026-10-18, doc/engine-diff.md L220): not a move a lock keeps
+                // out (an Outrage's or a Choice item's on another move: their disabled flags; the
+                // Disable's end lifted it)
+                let locked_out = match side.last_used_move {
+                    LastUsedMove::Move(m) => {
+                        m != slot
+                            && (side
+                                .volatile_statuses
+                                .contains(&PokemonVolatileStatus::LOCKEDMOVE)
+                                || matches!(
+                                    side.get_active_immutable().item,
+                                    Items::CHOICEBAND | Items::CHOICESPECS | Items::CHOICESCARF
+                                ))
+                    }
+                    _ => false,
+                };
                 let active = side.get_active();
-                if active.moves[&slot].disabled {
+                if active.moves[&slot].disabled && !locked_out {
                     active.moves[&slot].disabled = false;
                     incoming_instructions
                         .instruction_list
@@ -8387,7 +8434,7 @@ fn run_move(
                 .instruction_list
                 .push(Instruction::ChangeTimesAttacked(ChangeTimesAttackedInstruction {
                     side_ref: defender_ref,
-                    amount,
+                    amount: amount as i16,
                 }));
         }
     }

@@ -1346,6 +1346,12 @@ impl Side {
         false
     }
 
+    // alpha-poke patch (2026-10-18, doc/engine-diff.md L220): Showdown's totalFainted, the
+    // fainted ones and the faints Revival Blessing undid
+    pub fn total_fainted(&self) -> i8 {
+        self.num_fainted_pkmn() + self.revived_faints as i8
+    }
+
     pub fn num_fainted_pkmn(&self) -> i8 {
         let mut count = 0;
         for p in self.pokemon.into_iter() {

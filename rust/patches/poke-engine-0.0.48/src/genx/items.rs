@@ -1212,6 +1212,31 @@ pub fn room_service(
 // alpha-poke patch (2026-10-17, doc/engine-diff.md L211): Magic Room, the items have no effect
 // (Showdown's ignoringItem: the item dispatchers do nothing; moving an item -- Knock Off, Trick --
 // still works)
+// alpha-poke patch (2026-10-18, doc/engine-diff.md L220): a plate's type (Showdown's onPlate:
+// Judgment's, Multitype's)
+pub fn plate_type(item: Items) -> Option<PokemonType> {
+    Some(match item {
+        Items::DRACOPLATE => PokemonType::DRAGON,
+        Items::DREADPLATE => PokemonType::DARK,
+        Items::EARTHPLATE => PokemonType::GROUND,
+        Items::FISTPLATE => PokemonType::FIGHTING,
+        Items::FLAMEPLATE => PokemonType::FIRE,
+        Items::ICICLEPLATE => PokemonType::ICE,
+        Items::INSECTPLATE => PokemonType::BUG,
+        Items::IRONPLATE => PokemonType::STEEL,
+        Items::MEADOWPLATE => PokemonType::GRASS,
+        Items::MINDPLATE => PokemonType::PSYCHIC,
+        Items::PIXIEPLATE => PokemonType::FAIRY,
+        Items::SKYPLATE => PokemonType::FLYING,
+        Items::SPLASHPLATE => PokemonType::WATER,
+        Items::SPOOKYPLATE => PokemonType::GHOST,
+        Items::STONEPLATE => PokemonType::ROCK,
+        Items::TOXICPLATE => PokemonType::POISON,
+        Items::ZAPPLATE => PokemonType::ELECTRIC,
+        _ => return None,
+    })
+}
+
 pub fn item_ignored(state: &State) -> bool {
     state.magic_room > 0
 }

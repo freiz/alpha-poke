@@ -121,6 +121,8 @@ def _unroosted(m: dict, types: list[str]) -> list[str]:
     type Normal; the engine keeps the types and a roost volatile: L177)."""
     if "roost" not in m.get("volatiles", {}):
         return types
+    if m.get("roost_types"):  # (L220: Showdown's own types, a transformed Ditto's its target's)
+        return m["roost_types"]
     base = m["base_types"]
     if types == ["Normal"] and base == ["Flying"]:
         return ["Flying"]
@@ -236,6 +238,10 @@ def _engine_side(s: dict, future_sight=None, wish=None) -> pe.Side:
     kw: dict = {"future_sight": future_sight[:2], "future_doom": future_sight[2]} if future_sight else {}
     if tera_used:
         kw["tera_used"] = True
+    # (L220: the faints Revival Blessing undid)
+    revived = s.get("total_fainted", 0) - sum(1 for m in s["mons"] if m["hp"] <= 0)
+    if revived > 0:
+        kw["revived_faints"] = revived
     if wish:
         kw["wish"] = wish
     if act is not None:
