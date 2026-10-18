@@ -140,6 +140,11 @@ def _sleep(m: dict) -> dict:
     return {"sleep_turns": min(max(ss["startTime"] - ss["time"], 0), 3)}
 
 
+# the abilities that do nothing for a transformed holder (abilities.rs NO_TRANSFORM, L214)
+NO_TRANSFORM = ("disguise", "embodyaspectcornerstone", "embodyaspecthearthflame", "embodyaspectteal",
+                "embodyaspectwellspring", "gulpmissile", "hungerswitch", "iceface", "neutralizinggas",
+                "protosynthesis", "quarkdrive", "terashift", "zerotohero")  # fmt: skip
+
 # the once-per-battle abilities (abilities.rs ONCE_PER_BATTLE, L184)
 ONCE_PER_BATTLE = ("dauntlessshield", "intrepidsword", "supersweetsyrup", "battlebond")
 
@@ -153,7 +158,9 @@ def _engine_mon(m: dict) -> pe.Pokemon:
         base_types=_types(m["base_types"]), hp=m["hp"], maxhp=m["maxhp"],
         # (L209: Gastro Acid's suppressed one is none in the engine; Showdown keeps it, the volatile
         # marks it)
-        ability="none" if "gastroacid" in m.get("volatiles", {}) else (m["ability"] or "none"),
+        # (L214: a transformed mon's notransform ability is none in the engine too)
+        ability="none" if "gastroacid" in m.get("volatiles", {})
+        or (m.get("transformed") and m["ability"] in NO_TRANSFORM) else (m["ability"] or "none"),
         # a used once-per-battle switch-in ability: base ability none (L18; L190: its own, not one
         # it copied -- Trace, Skill Swap, Imposter: the engine marks its base ability only)
         base_ability="none" if m.get("used_once") and m["base_ability"] in ONCE_PER_BATTLE
@@ -262,6 +269,8 @@ def _engine_side(s: dict, future_sight=None, wish=None) -> pe.Side:
             kw["last_used_move"] = f"move:{ids.index(act['last_move'])}"
         elif act.get("move_actions") and act.get("last_move") in own:
             kw["last_used_move"] = f"move:{own.index(act['last_move'])}"
+        elif act.get("move_actions"):  # (L214: an action stopped before its move: none)
+            kw["last_used_move"] = "move:none"
         else:  # not moved since it came in
             kw["last_used_move"] = f"switch:{s['active']}"
         # the engine counts ends of turn up to its limit (L13; the 2026-10-13 patch), Showdown

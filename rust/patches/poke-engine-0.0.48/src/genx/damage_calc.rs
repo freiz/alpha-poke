@@ -861,7 +861,12 @@ fn common_pkmn_damage_calc(
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L195): Tera Shell, a full-HP
     // Terapagos-Terastal resists every damaging hit it is not immune to (Showdown's
     // onEffectiveness: -1; breakable)
-    let tera_shell = defender.id == crate::pokemon::PokemonName::TERAPAGOSTERASTAL
+    // (L214: a mon transformed into one too -- its species Terapagos-Terastal in Showdown, the
+    // engine keeps its own id)
+    let tera_shell = (defender.id == crate::pokemon::PokemonName::TERAPAGOSTERASTAL
+        || defending_side
+            .volatile_statuses
+            .contains(&PokemonVolatileStatus::TRANSFORM))
         && defender.ability == Abilities::TERASHELL
         && defender.hp == defender.maxhp
         && effectiveness > 0.0

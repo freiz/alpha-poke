@@ -6267,3 +6267,33 @@ def test_l213_stage_swaps(move):
     states = ec.run_showdown(blissey, sala, [("move calmmind", "move dragondance"), ("move calmmind", "move irondefense"),
                                              (f"move {mid}", "move roost")])  # fmt: skip
     assert _keys(_full(states, 2, mid, "roost"), "boost") == {}
+
+
+# L214 (doc/engine-diff.md), from the randbats4 / randbats5 sets: Lash Out not after Haze (a
+# direct set, SetBoost); a field move hits no absorbing ability (Sunny Day, Well-Baked Body);
+# Leech Seed into Liquid Ooze; a Sleep Talk its user woke up for (its PP, its last move); Tera
+# Shell on a transformed mon; White Herb after a switch-in's Intimidate; Soul-Heart for a foe its
+# own Life Orb knocked out; Toxic Spikes absorbed by a Poison type before the foe's Corrosion;
+# Encore on Dynamax Cannon (failencore); Fake Out after a turn out stopped by a flinch (none, not
+# its switch-in); a move Magic Bounce sends into Volt Absorb; Protosynthesis on a transformed mon
+# (notransform)
+@pytest.mark.parametrize("teams,i,turn,offset", [
+    ("random_battle_teams_randbats4.jsonl", 155, 45, 90000),
+    ("random_battle_teams_randbats4.jsonl", 199, 7, 90000),
+    ("random_battle_teams_randbats4.jsonl", 203, 53, 90000),
+    ("random_battle_teams_randbats4.jsonl", 229, 14, 90000),
+    ("random_battle_teams_randbats4.jsonl", 49, 35, 90000),
+    ("random_battle_teams_randbats4.jsonl", 99, 22, 90000),
+    ("random_battle_teams_randbats5.jsonl", 130, 5, 100000),
+    ("random_battle_teams_randbats5.jsonl", 155, 23, 100000),
+    ("random_battle_teams_randbats5.jsonl", 189, 19, 100000),
+    ("random_battle_teams_randbats5.jsonl", 198, 18, 100000),
+    ("random_battle_teams_randbats5.jsonl", 46, 25, 100000),
+    ("random_battle_teams_randbats5.jsonl", 56, 10, 100000),
+])  # fmt: skip
+def test_l214_positions(teams, i, turn, offset):
+    a, b = _random_position(teams, i, turn, offset)
+    c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
+    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"]))
+    n = tuple(len(s["mons"]) for s in a["state"]["sides"])
+    assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}

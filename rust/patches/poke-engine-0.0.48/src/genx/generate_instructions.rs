@@ -704,12 +704,20 @@ fn generate_instructions_from_switch(
         let switched_in_pkmn = side.get_active_immutable();
         let mut toxic_spike_instruction: Option<Instruction> = None;
         if side.side_conditions.toxic_spikes > 0 && (switched_in_pkmn.is_grounded() || state.gravity > 0) {
-            if !immune_to_status(
-                &state,
-                &MoveTarget::User,
-                &switching_side_ref,
-                &PokemonStatus::POISON,
-            ) {
+            // alpha-poke patch (2026-10-17, doc/engine-diff.md L214): a Poison type absorbs them
+            // first, a Steel type is left alone (Showdown's onEntry: before the status, which the
+            // foe's Corrosion let through onto a Poison type)
+            let poison_type = switched_in_pkmn.has_type(&PokemonType::POISON);
+            let steel_type = switched_in_pkmn.has_type(&PokemonType::STEEL);
+            if !poison_type
+                && !steel_type
+                && !immune_to_status(
+                    &state,
+                    &MoveTarget::User,
+                    &switching_side_ref,
+                    &PokemonStatus::POISON,
+                )
+            {
                 if side.side_conditions.toxic_spikes == 1 {
                     toxic_spike_instruction =
                         Some(Instruction::ChangeStatus(ChangeStatusInstruction {
@@ -727,7 +735,7 @@ fn generate_instructions_from_switch(
                             new_status: PokemonStatus::TOXIC,
                         }))
                 }
-            } else if switched_in_pkmn.has_type(&PokemonType::POISON) {
+            } else if poison_type {
                 toxic_spike_instruction = Some(Instruction::ChangeSideCondition(
                     ChangeSideConditionInstruction {
                         side_ref: switching_side_ref,
@@ -823,6 +831,9 @@ fn generate_instructions_from_switch(
     field_change_events(state, incoming_instructions, switch_from);
     update(state, incoming_instructions);
     foe_raise_copies(state, incoming_instructions, switch_from);
+    // (L214: White Herb too, Showdown's onAnySwitchIn after the switch-in's abilities: an
+    // Intimidate's drop)
+    white_herb(state, incoming_instructions);
 }
 
 // alpha-poke patch (2026-10-17, doc/engine-diff.md L200): an active's ability with the other
@@ -3070,6 +3081,17 @@ fn move_has_no_effect(state: &State, choice: &Choice, attacking_side_ref: &SideR
                         | Choices::SKETCH
                         | Choices::STRUGGLE
                         | Choices::TRANSFORM
+                        // (L214: the rest of Showdown's failencore: Dynamax Cannon, ...)
+                        | Choices::ASSIST
+                        | Choices::BLAZINGTORQUE
+                        | Choices::COMBATTORQUE
+                        | Choices::DYNAMAXCANNON
+                        | Choices::MAGICALTORQUE
+                        | Choices::MEFIRST
+                        | Choices::MIRRORMOVE
+                        | Choices::NATUREPOWER
+                        | Choices::NOXIOUSTORQUE
+                        | Choices::WICKEDTORQUE
                 ) || m.pp <= 0
             }
             LastUsedMove::Switch(_) => true,
@@ -3386,13 +3408,19 @@ pub fn transform_into(
     active.special_attack = target.special_attack;
     active.special_defense = target.special_defense;
     active.speed = target.speed;
-    let ability_changed = active.ability != target.ability;
-    if active.ability != target.ability {
+    // (L214: a notransform ability as none: Showdown keeps it, ignoring it)
+    let copied = if super::abilities::NO_TRANSFORM.contains(&target.ability) {
+        Abilities::NONE
+    } else {
+        target.ability
+    };
+    let ability_changed = active.ability != copied;
+    if active.ability != copied {
         list.push(Instruction::ChangeAbility(ChangeAbilityInstruction {
             side_ref: *side_ref,
-            ability_change: target.ability as i16 - active.ability as i16,
+            ability_change: copied as i16 - active.ability as i16,
         }));
-        active.ability = target.ability;
+        active.ability = copied;
     }
     for index in [
         PokemonMoveIndex::M0,
@@ -3891,6 +3919,7 @@ fn generate_instructions_from_existing_status_conditions(
 ) {
     // (L212: the harness's hint for a confusion self-hit)
     let confusion_hint = state.confusion_hint[*attacking_side_ref as usize];
+    let (exact_pp, use_last_used_move) = (state.use_exact_pp, state.use_last_used_move);
     let (attacking_side, _defending_side) = state.get_both_sides(attacking_side_ref);
     let current_active_index = attacking_side.active_index;
     let attacker_active = attacking_side.get_active();
@@ -4039,7 +4068,32 @@ fn generate_instructions_from_existing_status_conditions(
                         }
                         do_nothing_instructions.update_percentage(do_nothing_percentage);
                         incoming_instructions.update_percentage(1.0 - do_nothing_percentage);
-                        if attacker_choice.move_id != Choices::SLEEPTALK {
+                        // alpha-poke patch (2026-10-17, doc/engine-diff.md L214): a Sleep Talk its
+                        // user woke up for is used and fails (Showdown: its PP, its last used
+                        // move); it was nothing at all
+                        if attacker_choice.move_id == Choices::SLEEPTALK {
+                            let index = attacker_choice.move_index;
+                            let pp = attacker_active.moves[&index].pp;
+                            if (exact_pp || pp < 10) && (!exact_pp || pp > 0) {
+                                do_nothing_instructions.instruction_list.push(
+                                    Instruction::DecrementPP(DecrementPPInstruction {
+                                        side_ref: *attacking_side_ref,
+                                        move_index: index,
+                                        amount: 1,
+                                    }),
+                                );
+                            }
+                            if use_last_used_move
+                                && attacking_side.last_used_move != LastUsedMove::Move(index)
+                            {
+                                do_nothing_instructions.instruction_list.push(
+                                    Instruction::SetLastUsedMove(SetLastUsedMoveInstruction {
+                                        side_ref: *attacking_side_ref,
+                                        last_used_move: LastUsedMove::Move(index),
+                                        previous_last_used_move: attacking_side.last_used_move,
+                                    }),
+                                );
+                            }
                         }
                         final_instructions.push(do_nothing_instructions);
                     }
@@ -6983,6 +7037,22 @@ fn end_of_turn_instructions(
             } else {
                 health_sapped
             };
+            // alpha-poke patch (2026-10-17, doc/engine-diff.md L214): the seeded holder's Liquid
+            // Ooze makes the seeder lose it instead (Showdown's onSourceTryHeal, after Big Root);
+            // it healed
+            if ability == Abilities::LIQUIDOOZE {
+                if !seeder_heal_blocked {
+                    let damage_amount = cmp::min(sapped_heal, other_active_pkmn.hp);
+                    other_active_pkmn.hp -= damage_amount;
+                    incoming_instructions
+                        .instruction_list
+                        .push(Instruction::Damage(DamageInstruction {
+                            side_ref: side_ref.get_other_side(),
+                            damage_amount,
+                        }));
+                }
+                continue;
+            }
             let health_recovered =
                 cmp::min(sapped_heal, other_active_pkmn.maxhp - other_active_pkmn.hp);
             if health_recovered > 0 && !seeder_heal_blocked {
@@ -7848,7 +7918,13 @@ fn run_move(
     // (not through a Tera Shell that took the first hit: Showdown's resisted lasts the move)
     let tera_shell = {
         let d = state.get_side_immutable(&defender_ref).get_active_immutable();
-        d.id == PokemonName::TERAPAGOSTERASTAL && d.ability == Abilities::TERASHELL && d.hp == d.maxhp
+        let transformed = state
+            .get_side_immutable(&defender_ref)
+            .volatile_statuses
+            .contains(&PokemonVolatileStatus::TRANSFORM);
+        (d.id == PokemonName::TERAPAGOSTERASTAL || transformed)
+            && d.ability == Abilities::TERASHELL
+            && d.hp == d.maxhp
     };
     let first_max = if hit_count > 1 && does_damage && !tera_shell {
         calculate_damage(state, &attacking_side, choice, DamageRolls::Max).map(|d| d.0)
@@ -8980,9 +9056,42 @@ fn after_move_finish(
     state: &mut State,
     final_instructions: &mut Vec<StateInstructions>,
     from: usize,
+    mover: Option<SideReference>,
 ) {
     for state_instructions in final_instructions.iter_mut() {
         state.apply_instructions(&state_instructions.instruction_list);
+
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L214): a move action stopped before its
+        // move (a flinch, a full paralysis, sleep, ...) is still the mover's action (Showdown's
+        // runMove counts activeMoveActions first): a mon that came in has had its first turn
+        // (Fake Out / First Impression fail later), its last move none; it stayed its switch-in
+        if let Some(m) = mover {
+            // (a move's: not a switch action, not a mon that came in in the turn -- a pivot's, a
+            // drag's: its action is gone)
+            let acted = state_instructions.instruction_list[from..]
+                .iter()
+                .any(|i| matches!(i, Instruction::Acted(x) if *x == m))
+                || state_instructions
+                    .instruction_list
+                    .iter()
+                    .any(|i| matches!(i, Instruction::Switch(x) if x.side_ref == m));
+            // (not a move put off by a pivot's switch: either side's)
+            let pending = state.side_one.force_switch || state.side_two.force_switch;
+            let side = state.get_side(&m);
+            if !acted
+                && !pending
+                && matches!(side.last_used_move, LastUsedMove::Switch(_))
+                && side.get_active_immutable().hp > 0
+            {
+                let ins = Instruction::SetLastUsedMove(SetLastUsedMoveInstruction {
+                    side_ref: m,
+                    last_used_move: LastUsedMove::None,
+                    previous_last_used_move: side.last_used_move,
+                });
+                state.apply_one_instruction(&ins);
+                state_instructions.instruction_list.push(ins);
+            }
+        }
 
         // alpha-poke patch (2026-10-17, doc/engine-diff.md L146): a Neutralizing Gas holder the
         // move made faint: the gas ends (its ability none from now on) and the foe's ability
@@ -9053,6 +9162,31 @@ fn after_move_finish(
                     state.apply_one_instruction(&ins);
                     state_instructions.instruction_list.push(ins);
                 }
+            }
+        }
+
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L214): Soul-Heart for a mover that
+        // fainted from its own move (its recoil, Life Orb, a Rocky Helmet: Showdown's onAnyFaint);
+        // the foe's knockout is its own hit's (ability_after_damage_hit)
+        if let Some(m) = mover {
+            let fainted = state.get_side_immutable(&m).get_active_immutable().hp == 0
+                && state_instructions.instruction_list[from..].iter().any(|i| {
+                    matches!(i, Instruction::Damage(d) if d.side_ref == m)
+                        // (Life Orb's recoil is a negative heal)
+                        || matches!(i, Instruction::Heal(h) if h.side_ref == m && h.heal_amount < 0)
+                });
+            let holder = m.get_other_side();
+            let side = state.get_side(&holder);
+            let me = side.get_active_immutable();
+            if fainted && me.hp > 0 && me.ability == Abilities::SOULHEART {
+                apply_boost_instruction(
+                    side,
+                    &PokemonBoostableStat::SpecialAttack,
+                    &1,
+                    &holder,
+                    &holder,
+                    state_instructions,
+                );
             }
         }
 
@@ -9147,7 +9281,10 @@ fn handle_both_moves(
         &mut after_first,
         branch_on_damage,
     );
-    after_move_finish(state, &mut after_first, from);
+    // (L214: a mover's move action, not a switch -- done before)
+    let first_mover = (first_move_side_choice.category != MoveCategory::Switch)
+        .then_some(first_move_side_ref);
+    after_move_finish(state, &mut after_first, from, first_mover);
     let after_first = dancer_after(
         state,
         after_first,
@@ -9170,7 +9307,9 @@ fn handle_both_moves(
             &mut after_second,
             branch_on_damage,
         );
-        after_move_finish(state, &mut after_second, from);
+        let second_mover = (second_move_side_choice.category != MoveCategory::Switch)
+            .then_some(first_move_side_ref.get_other_side());
+        after_move_finish(state, &mut after_second, from, second_mover);
         let after_second = dancer_after(
             state,
             after_second,
@@ -9262,7 +9401,23 @@ fn dancer_after(
             &mut after,
             branch_on_damage,
         );
-        after_move_finish(state, &mut after, from2);
+        after_move_finish(state, &mut after, from2, None);
+        // (L214: a Dancer's move is its action too, Showdown's runMove: a mon that came in has
+        // had its turn out)
+        for branch in after.iter_mut() {
+            state.apply_instructions(&branch.instruction_list);
+            let side = state.get_side(&dancer_side);
+            if matches!(side.last_used_move, LastUsedMove::Switch(_)) {
+                let ins = Instruction::SetLastUsedMove(SetLastUsedMoveInstruction {
+                    side_ref: dancer_side,
+                    last_used_move: LastUsedMove::None,
+                    previous_last_used_move: side.last_used_move,
+                });
+                state.apply_one_instruction(&ins);
+                branch.instruction_list.push(ins);
+            }
+            state.reverse_instructions(&branch.instruction_list);
+        }
         out.extend(after);
     }
     out
@@ -9852,7 +10007,7 @@ fn get_instructions_from_pursuit_hitting_switching_target(
         &mut after_pursuit,
         branch_on_damage,
     );
-    after_move_finish(state, &mut after_pursuit, from);
+    after_move_finish(state, &mut after_pursuit, from, Some(pursuiting_side_ref));
 
     // loop through branches from pursuiting move, and apply the switching move on each of them
     switching_choice.first_move = false;
@@ -13162,12 +13317,12 @@ mod tests {
         let expected_instructions: StateInstructions = StateInstructions {
             percentage: 100.0,
             instruction_list: vec![
-                Instruction::Boost(BoostInstruction {
+                Instruction::SetBoost(BoostInstruction {
                     side_ref: SideReference::SideOne,
                     stat: PokemonBoostableStat::Attack,
                     amount: -2,
                 }),
-                Instruction::Boost(BoostInstruction {
+                Instruction::SetBoost(BoostInstruction {
                     side_ref: SideReference::SideOne,
                     stat: PokemonBoostableStat::Speed,
                     amount: -5,

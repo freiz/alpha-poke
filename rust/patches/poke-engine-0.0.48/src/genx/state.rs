@@ -1033,7 +1033,7 @@ impl Side {
         if self.attack_boost < 0 {
             instructions
                 .instruction_list
-                .push(Instruction::Boost(BoostInstruction {
+                .push(Instruction::SetBoost(BoostInstruction {
                     side_ref,
                     stat: PokemonBoostableStat::Attack,
                     amount: -self.attack_boost,
@@ -1044,7 +1044,7 @@ impl Side {
         if self.defense_boost < 0 {
             instructions
                 .instruction_list
-                .push(Instruction::Boost(BoostInstruction {
+                .push(Instruction::SetBoost(BoostInstruction {
                     side_ref,
                     stat: PokemonBoostableStat::Defense,
                     amount: -self.defense_boost,
@@ -1055,7 +1055,7 @@ impl Side {
         if self.special_attack_boost < 0 {
             instructions
                 .instruction_list
-                .push(Instruction::Boost(BoostInstruction {
+                .push(Instruction::SetBoost(BoostInstruction {
                     side_ref,
                     stat: PokemonBoostableStat::SpecialAttack,
                     amount: -self.special_attack_boost,
@@ -1066,7 +1066,7 @@ impl Side {
         if self.special_defense_boost < 0 {
             instructions
                 .instruction_list
-                .push(Instruction::Boost(BoostInstruction {
+                .push(Instruction::SetBoost(BoostInstruction {
                     side_ref,
                     stat: PokemonBoostableStat::SpecialDefense,
                     amount: -self.special_defense_boost,
@@ -1077,7 +1077,7 @@ impl Side {
         if self.speed_boost < 0 {
             instructions
                 .instruction_list
-                .push(Instruction::Boost(BoostInstruction {
+                .push(Instruction::SetBoost(BoostInstruction {
                     side_ref,
                     stat: PokemonBoostableStat::Speed,
                     amount: -self.speed_boost,
@@ -1088,7 +1088,7 @@ impl Side {
         if self.accuracy_boost < 0 {
             instructions
                 .instruction_list
-                .push(Instruction::Boost(BoostInstruction {
+                .push(Instruction::SetBoost(BoostInstruction {
                     side_ref,
                     stat: PokemonBoostableStat::Accuracy,
                     amount: -self.accuracy_boost,
@@ -1099,7 +1099,7 @@ impl Side {
         if self.evasion_boost < 0 {
             instructions
                 .instruction_list
-                .push(Instruction::Boost(BoostInstruction {
+                .push(Instruction::SetBoost(BoostInstruction {
                     side_ref,
                     stat: PokemonBoostableStat::Evasion,
                     amount: -self.evasion_boost,

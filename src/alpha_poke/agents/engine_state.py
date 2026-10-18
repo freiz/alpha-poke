@@ -522,9 +522,12 @@ def _as_transformed(p: pe.Pokemon, target: pe.Pokemon, moves: list) -> pe.Pokemo
     )  # fmt: skip
 
 
-def _last_move(mon, engine_mon, avail: set[str] | None = None) -> tuple[dict, set[str]]:
+def _last_move(mon, engine_mon, avail: set[str] | None = None,
+               index: int | None = None) -> tuple[dict, set[str]]:  # fmt: skip
     """(``last_used_move`` Side kwarg, volatiles) for an active mon. The engine panics on an
-    Encore without a last used move, so Encore is dropped when we cannot tell the move."""
+    Encore without a last used move, so Encore is dropped when we cannot tell the move. Without
+    one: its switch-in (``index``, its slot) on its first turn out -- Fake Out / First
+    Impression work --, else none (doc/engine-diff.md L214: a turn out without a move)."""
     vol = _volatiles(mon) if mon is not None else set()
     if mon is None or engine_mon is None:
         vol.discard("encore")
@@ -538,6 +541,8 @@ def _last_move(mon, engine_mon, avail: set[str] | None = None) -> tuple[dict, se
         idx = ids.index(only) if only in ids else None
     if idx is None:
         vol.discard("encore")
+        if index is not None and getattr(mon, "first_turn", False):
+            return {"last_used_move": f"switch:{index}"}, vol
         return {}, vol
     return {"last_used_move": f"move:{idx}"}, vol
 
@@ -704,9 +709,13 @@ def build_state(
             their_mons[their_idx] = _as_transformed(their_mons[their_idx], our_mons[t], moves)
             their_tf = True
     our_last, our_vol = _last_move(
-        active, our_mons[our_active_idx] if our_active_idx is not None else None, avail
+        active, our_mons[our_active_idx] if our_active_idx is not None else None, avail,
+        our_active_idx,
     )
-    their_last, their_vol = _last_move(opp_active, their_mons[their_idx] if their_mons else None)
+    their_last, their_vol = _last_move(
+        opp_active, their_mons[their_idx] if their_mons else None, None,
+        their_idx if their_mons else None,
+    )
     # the engine's transform / typechange volatiles (doc/engine-diff.md L36): a switch ends the
     # transformation, and an Imposter does not transform again while it is on
     for tf, vol in ((our_tf, our_vol), (their_tf, their_vol)):

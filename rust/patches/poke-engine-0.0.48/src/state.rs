@@ -1634,7 +1634,7 @@ impl State {
         let side = self.get_side(side_ref);
 
         if side.attack_boost != 0 {
-            vec_to_add_to.push(Instruction::Boost(BoostInstruction {
+            vec_to_add_to.push(Instruction::SetBoost(BoostInstruction {
                 side_ref: *side_ref,
                 stat: PokemonBoostableStat::Attack,
                 amount: -1 * side.attack_boost,
@@ -1643,7 +1643,7 @@ impl State {
         }
 
         if side.defense_boost != 0 {
-            vec_to_add_to.push(Instruction::Boost(BoostInstruction {
+            vec_to_add_to.push(Instruction::SetBoost(BoostInstruction {
                 side_ref: *side_ref,
                 stat: PokemonBoostableStat::Defense,
                 amount: -1 * side.defense_boost,
@@ -1652,7 +1652,7 @@ impl State {
         }
 
         if side.special_attack_boost != 0 {
-            vec_to_add_to.push(Instruction::Boost(BoostInstruction {
+            vec_to_add_to.push(Instruction::SetBoost(BoostInstruction {
                 side_ref: *side_ref,
                 stat: PokemonBoostableStat::SpecialAttack,
                 amount: -1 * side.special_attack_boost,
@@ -1661,7 +1661,7 @@ impl State {
         }
 
         if side.special_defense_boost != 0 {
-            vec_to_add_to.push(Instruction::Boost(BoostInstruction {
+            vec_to_add_to.push(Instruction::SetBoost(BoostInstruction {
                 side_ref: *side_ref,
                 stat: PokemonBoostableStat::SpecialDefense,
                 amount: -1 * side.special_defense_boost,
@@ -1670,7 +1670,7 @@ impl State {
         }
 
         if side.speed_boost != 0 {
-            vec_to_add_to.push(Instruction::Boost(BoostInstruction {
+            vec_to_add_to.push(Instruction::SetBoost(BoostInstruction {
                 side_ref: *side_ref,
                 stat: PokemonBoostableStat::Speed,
                 amount: -1 * side.speed_boost,
@@ -1679,7 +1679,7 @@ impl State {
         }
 
         if side.evasion_boost != 0 {
-            vec_to_add_to.push(Instruction::Boost(BoostInstruction {
+            vec_to_add_to.push(Instruction::SetBoost(BoostInstruction {
                 side_ref: *side_ref,
                 stat: PokemonBoostableStat::Evasion,
                 amount: -1 * side.evasion_boost,
@@ -1688,7 +1688,7 @@ impl State {
         }
 
         if side.accuracy_boost != 0 {
-            vec_to_add_to.push(Instruction::Boost(BoostInstruction {
+            vec_to_add_to.push(Instruction::SetBoost(BoostInstruction {
                 side_ref: *side_ref,
                 stat: PokemonBoostableStat::Accuracy,
                 amount: -1 * side.accuracy_boost,
@@ -2079,7 +2079,7 @@ impl State {
                 instruction.pokemon_index,
                 instruction.new_status,
             ),
-            Instruction::Boost(instruction) => {
+            Instruction::Boost(instruction) | Instruction::SetBoost(instruction) => {
                 self.apply_boost(&instruction.side_ref, &instruction.stat, instruction.amount)
             }
             Instruction::ChangeSideCondition(instruction) => self.increment_side_condition(
@@ -2328,7 +2328,7 @@ impl State {
                 instruction.pokemon_index,
                 instruction.old_status,
             ),
-            Instruction::Boost(instruction) => self.apply_boost(
+            Instruction::Boost(instruction) | Instruction::SetBoost(instruction) => self.apply_boost(
                 &instruction.side_ref,
                 &instruction.stat,
                 -1 * instruction.amount,

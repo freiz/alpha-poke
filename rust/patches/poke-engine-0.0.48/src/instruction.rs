@@ -64,6 +64,10 @@ pub enum Instruction {
     Heal(HealInstruction),
     Damage(DamageInstruction),
     Boost(BoostInstruction),
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L214): a stage set directly, not raised or
+    // lowered (Showdown's setBoost / clearBoosts: Haze, Clear Smog, Topsy-Turvy, the swaps, White
+    // Herb): Lash Out's drop and Alluring Voice's raise do not count it; applied as a Boost
+    SetBoost(BoostInstruction),
     ChangeSideCondition(ChangeSideConditionInstruction),
     ChangeVolatileStatusDuration(ChangeVolatileStatusDurationInstruction),
     ChangeWeather(ChangeWeather),
@@ -177,6 +181,9 @@ impl fmt::Debug for Instruction {
             }
             Instruction::Boost(b) => {
                 write!(f, "Boost {:?} {:?}: {:?}", b.side_ref, b.stat, b.amount)
+            }
+            Instruction::SetBoost(b) => {
+                write!(f, "SetBoost {:?} {:?}: {:?}", b.side_ref, b.stat, b.amount)
             }
             Instruction::ChangeSideCondition(c) => {
                 write!(

@@ -485,6 +485,25 @@ pub fn mold_breaker_ignores(ability: &Abilities) -> bool {
 // alpha-poke patch (2026-10-17, doc/engine-diff.md L184): the abilities no other ability can
 // replace (Showdown's cantsuppress: setAbility fails) and the ones Trace does not copy (notrace);
 // the data tests check the lists
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L214): the abilities that do nothing for a
+// transformed holder (Showdown's flags.notransform, ignoringAbility): Transform copies them as
+// none (transform_into)
+pub const NO_TRANSFORM: [Abilities; 13] = [
+    Abilities::DISGUISE,
+    Abilities::EMBODYASPECTCORNERSTONE,
+    Abilities::EMBODYASPECTHEARTHFLAME,
+    Abilities::EMBODYASPECTTEAL,
+    Abilities::EMBODYASPECTWELLSPRING,
+    Abilities::GULPMISSILE,
+    Abilities::HUNGERSWITCH,
+    Abilities::ICEFACE,
+    Abilities::NEUTRALIZINGGAS,
+    Abilities::PROTOSYNTHESIS,
+    Abilities::QUARKDRIVE,
+    Abilities::TERASHIFT,
+    Abilities::ZEROTOHERO,
+];
+
 pub const CANT_SUPPRESS: [Abilities; 16] = [
     Abilities::ASONEGLASTRIER,
     Abilities::ASONESPECTRIER,
@@ -3455,6 +3474,53 @@ pub fn ability_modify_attack_being_used(
     }
 }
 
+// (L214: a move Magic Bounce sent back into its user's absorbing ability, onTryHit on the user:
+// the effect on the user, MoveTarget::User)
+fn bounced_absorb(choice: &mut Choice, ability: Abilities) {
+    let t = choice.move_type;
+    let boost = |atk: i8, def: i8, spa: i8, spe: i8| Boost {
+        boosts: StatBoosts {
+            attack: atk,
+            defense: def,
+            special_attack: spa,
+            special_defense: 0,
+            speed: spe,
+            accuracy: 0,
+        },
+        target: MoveTarget::User,
+    };
+    let (heal, raise, flash) = match ability {
+        Abilities::VOLTABSORB if t == PokemonType::ELECTRIC => (true, None, false),
+        Abilities::WATERABSORB | Abilities::DRYSKIN if t == PokemonType::WATER => (true, None, false),
+        Abilities::EARTHEATER if t == PokemonType::GROUND => (true, None, false),
+        Abilities::MOTORDRIVE if t == PokemonType::ELECTRIC => (false, Some(boost(0, 0, 0, 1)), false),
+        Abilities::LIGHTNINGROD if t == PokemonType::ELECTRIC => {
+            (false, Some(boost(0, 0, 1, 0)), false)
+        }
+        Abilities::STORMDRAIN if t == PokemonType::WATER => (false, Some(boost(0, 0, 1, 0)), false),
+        Abilities::SAPSIPPER if t == PokemonType::GRASS => (false, Some(boost(1, 0, 0, 0)), false),
+        Abilities::WELLBAKEDBODY if t == PokemonType::FIRE => (false, Some(boost(0, 2, 0, 0)), false),
+        Abilities::FLASHFIRE if t == PokemonType::FIRE => (false, None, true),
+        _ => return,
+    };
+    choice.remove_all_effects();
+    choice.accuracy = 100.0;
+    choice.target = MoveTarget::User;
+    if heal {
+        choice.heal = Some(Heal {
+            target: MoveTarget::User,
+            amount: 0.25,
+        });
+    }
+    choice.boost = raise;
+    if flash {
+        choice.volatile_status = Some(VolatileStatus {
+            target: MoveTarget::User,
+            volatile_status: PokemonVolatileStatus::FLASHFIRE,
+        });
+    }
+}
+
 pub fn ability_modify_attack_against(
     state: &State,
     attacker_choice: &mut Choice,
@@ -3488,6 +3554,14 @@ pub fn ability_modify_attack_against(
         return;
     }
 
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L214): a move aimed at a side or the field
+    // hits no target (Sunny Day into Well-Baked Body / Flash Fire, Rain Dance into Storm Drain:
+    // Showdown's onTryHit is a target's) -- but Magic Bounce sends a hazard back
+    if FIELD_OR_SIDE_MOVES.contains(&attacker_choice.move_id)
+        && target_pkmn.ability != Abilities::MAGICBOUNCE
+    {
+        return;
+    }
     match target_pkmn.ability {
         // (L206: not a holder's of the same Ruin)
         Abilities::TABLETSOFRUIN => {
@@ -3895,6 +3969,11 @@ pub fn ability_modify_attack_against(
                         None
                     };
                 }
+                // alpha-poke patch (2026-10-17, doc/engine-diff.md L214): the move sent back meets
+                // its user's absorbing ability (Showdown: the reflector uses it at the user, whose
+                // onTryHit takes it: a Thunder Wave into Volt Absorb, a Will-O-Wisp into Flash
+                // Fire); it went through
+                bounced_absorb(attacker_choice, attacking_pkmn.ability);
             }
         }
         Abilities::STORMDRAIN => {

@@ -321,9 +321,12 @@ pub fn modify_choice(
                 });
             }
         }
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L214): only on the first turn out
+        // (its switch-in still its last used move); none -- a turn out stopped before its move,
+        // Showdown's activeMoveActions -- fails too (it went)
         Choices::FAKEOUT | Choices::FIRSTIMPRESSION => match attacking_side.last_used_move {
-            LastUsedMove::Move(_) => attacker_choice.remove_all_effects(),
-            _ => {}
+            LastUsedMove::Switch(_) => {}
+            _ => attacker_choice.remove_all_effects(),
         },
         Choices::GROWTH => {
             // as of writing this, growth should fail in champions if mega-sol is active
@@ -1847,7 +1850,7 @@ pub fn choice_special_effect(
         let theirs = state.get_side_immutable(&foe_ref).get_boost_from_boost_enum(stat);
         for (side_ref, amount) in [(*attacking_side_ref, theirs - mine), (foe_ref, mine - theirs)] {
             if amount != 0 {
-                let ins = Instruction::Boost(BoostInstruction {
+                let ins = Instruction::SetBoost(BoostInstruction {
                     side_ref,
                     stat: *stat,
                     amount,
@@ -1887,7 +1890,7 @@ pub fn choice_special_effect(
                     .get_side_immutable(&target_ref)
                     .get_boost_from_boost_enum(&stat);
                 if amount != 0 {
-                    let ins = Instruction::Boost(BoostInstruction {
+                    let ins = Instruction::SetBoost(BoostInstruction {
                         side_ref: target_ref,
                         stat,
                         amount,
