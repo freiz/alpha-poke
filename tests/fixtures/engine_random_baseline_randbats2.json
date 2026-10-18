@@ -18,19 +18,8 @@
 "b144-t23": [
 "hp"
 ],
-"b147-t12": [
-"hp"
-],
-"b147-t13": [
-"hp"
-],
 "b165-t10": [
 "attack"
-],
-"b165-t15": [
-"hp",
-"last_used_move",
-"pp"
 ],
 "b177-t49": [
 "hp"
@@ -115,22 +104,10 @@
 "b253-t25": [
 "hp"
 ],
-"b274-t43": [
-"hp"
-],
-"b34-t2": [
-"hp"
-],
-"b74-t8": [
-"hp"
-],
 "b76-t2": [
 "count.lockedmove",
 "options",
 "volatile.lockedmove"
-],
-"b8-t11": [
-"hp"
 ],
 "b92-t46": [
 "hp"

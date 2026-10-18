@@ -5712,3 +5712,46 @@ def test_l200_sunsteel_strike_and_tablets_of_ruin():
     wochien = _attacker("Wo-Chien", "Tablets of Ruin", "Leftovers", "- Giga Drain\n- Ruination\n- Leech Seed\n- Protect", "Calm")
     states = ec.run_showdown(solgaleo, wochien, [("move sunsteelstrike", "move leechseed")])
     assert _keys(_full_hinted(states, 0, "sunsteelstrike", "leechseed"), "hp") == {}
+
+
+# L201 (doc/engine-diff.md): a Guts mover that woke has no Guts by its hit; Sheer Force's moves (a
+# volatile secondary too: Throat Chop) take no Life Orb recoil; Lash Out's double power after a drop
+# this turn; Battery boosts no holder's own move; Tera Starstorm by Terapagos-Stellar is Stellar
+def test_l201_guts_after_waking():
+    ursaring = _attacker("Ursaring", "Guts", "Leftovers", "- Facade\n- Earthquake\n- Close Combat\n- Sleep Talk")
+    turns = [("move earthquake", "move spore"), ("move earthquake", "move spore")] + [("move earthquake", "move bulletseed")] * 3
+    states = ec.run_showdown(ursaring, BRELOOM, turns, seed="gen5,3,4,5,6")
+    k = next((k for k in range(1, len(states) - 1) if any("|-curestatus|p1a: Ursaring|slp" in x for x in states[k + 1]["log"])
+              and any("|move|p1a: Ursaring|Earthquake" in x for x in states[k + 1]["log"])), None)  # fmt: skip
+    assert k is not None
+    assert _keys(_full_hinted(states, k, "earthquake", "bulletseed" if k >= 2 else "spore"), "hp") == {}
+
+
+def test_l201_sheer_force_throat_chop_no_life_orb_recoil():
+    tauros = _attacker("Tauros", "Sheer Force", "Life Orb", "- Throat Chop\n- Body Slam\n- Close Combat\n- Earthquake")
+    states = ec.run_showdown(tauros, BLISSEY, [("move throatchop", "move calmmind")])
+    assert not any("[from] item: Life Orb" in x for x in states[1]["log"])
+    assert _keys(_full_hinted(states, 0, "throatchop", "calmmind"), "hp") == {}
+
+
+def test_l201_lash_out_after_intimidate():
+    honchkrow = _attacker("Honchkrow", "Moxie", "Leftovers", "- Lash Out\n- Brave Bird\n- Roost\n- Sucker Punch")
+    scrafty = _attacker("Scrafty", "Intimidate", "Leftovers", "- Drain Punch\n- Knock Off\n- Bulk Up\n- Rest", "Impish")
+    states = ec.run_showdown(honchkrow, BLISSEY + "\n\n" + scrafty, [("move lashout", "switch 2")])
+    hints = ec.damage_hints(states[0], states[1])
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "lashout", "scrafty", hints)
+    assert hints[0] > 0 and {o.damage[1] for o in outs} == {hints[0]}  # (the hint is a roll of its)
+    # (doubled: the engine's likeliest damage near Showdown's, not half of it)
+    plain = max(ec.engine_outcomes(ec.engine_state(states[0]), "lashout", "scrafty"), key=lambda o: o[0])
+    assert 0.8 * hints[0] <= plain.damage[1] <= 1.2 * hints[0]
+
+
+def test_l201_battery_not_its_holder():
+    charjabug = _attacker("Charjabug", "Battery", "Eviolite", "- Volt Switch\n- Bug Buzz\n- Sticky Web\n- Discharge", "Modest")
+    states = ec.run_showdown(charjabug, BLISSEY, [("move discharge", "move calmmind")])
+    assert _keys(_full_hinted(states, 0, "discharge", "calmmind"), "hp") == {}
+
+
+def test_l201_tera_starstorm_stellar():
+    states = ec.run_showdown(TERAPAGOS, BLISSEY, [("move terastarstorm terastallize", "move calmmind")])
+    assert _keys(_full_hinted(states, 0, "terastarstorm-tera", "calmmind"), "hp") == {}

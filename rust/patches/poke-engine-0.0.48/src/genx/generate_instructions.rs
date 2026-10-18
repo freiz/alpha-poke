@@ -4196,6 +4196,20 @@ pub fn generate_instructions_from_move(
         &attacking_side,
         &mut incoming_instructions,
     );
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L201): Lash Out's double power when its user
+    // had a stat lowered this turn (Showdown's statsLoweredThisTurn: a drop since the turn began,
+    // the user's own -- after its side's last switch; Intimidate on its entry too); was nothing
+    if choice.move_id == Choices::LASHOUT {
+        let lowered = incoming_instructions
+            .instruction_list
+            .iter()
+            .rev()
+            .take_while(|i| !matches!(i, Instruction::Switch(s) if s.side_ref == attacking_side))
+            .any(|i| matches!(i, Instruction::Boost(b) if b.side_ref == attacking_side && b.amount < 0));
+        if lowered {
+            choice.base_power *= 2.0;
+        }
+    }
     if incoming_instructions.percentage == 0.0 {
         state.reverse_instructions(&incoming_instructions.instruction_list);
         return;
@@ -4373,6 +4387,19 @@ pub fn generate_instructions_from_move(
         .get_active_immutable()
         .status
         == PokemonStatus::SLEEP;
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L201): a Guts mover that just woke / thawed
+    // has no status by its hit (Showdown's onModifyAtk at the damage): its 1.5 x off again (the
+    // choice took it before the status went: ability_modify_attack_being_used)
+    {
+        let me = state.get_side_immutable(&attacking_side).get_active_immutable();
+        if asleep_or_frozen_before
+            && me.status == PokemonStatus::NONE
+            && me.ability == Abilities::GUTS
+            && choice.category == MoveCategory::Physical
+        {
+            choice.attack_modifier /= 1.5;
+        }
+    }
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L184): a mover that woke / thawed and then
     // flinched (or is taunted) uses no PP and gets no choice lock either (Showdown's BeforeMove
     // stops runMove before them; L177 / L179 had only the last used move)
@@ -5173,6 +5200,9 @@ fn expected_residual(state: &State, side_ref: &SideReference) -> i16 {
     loss - gain
 }
 
+// (L199: a damage hint's crit mark, State::damage_hint)
+pub const CRIT_HINT: i16 = 16384;
+
 // alpha-poke patch (2026-10-16, doc/engine-diff.md L30): the rest of generate_instructions_from_move
 // after the hit count (the damage branches, run_move), once per hit count
 #[allow(clippy::too_many_arguments)]
@@ -5239,8 +5269,11 @@ fn finish_move(
                         .get_active_immutable()
                         .hp =>
         {
+            // (a crit's hint is marked +CRIT_HINT: Showdown's -crit line -- the two roll sets
+            // can share a damage)
+            let (crit, d) = if hint >= CRIT_HINT { (true, hint - CRIT_HINT) } else { (false, hint) };
             match damage_rolls(state, &attacking_side, choice) {
-                Some((r, c)) if r.contains(&hint) || c.contains(&hint) => Some(hint),
+                Some((r, c)) if (if crit { c.contains(&d) } else { r.contains(&d) }) => Some(d),
                 _ => per_hit,
             }
         }

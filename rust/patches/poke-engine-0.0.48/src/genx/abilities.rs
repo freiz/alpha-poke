@@ -2740,6 +2740,21 @@ pub fn ability_on_switch_in(
     }
 }
 
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L201): a move Sheer Force boosts (Showdown's
+// move.secondaries: the engine's secondaries, a volatile one but a partial trap / lock / Smack
+// Down, Eerie Spell's PP drop -- L186): its boost and no Life Orb recoil (items.rs)
+pub fn sheer_force_applies(choice: &Choice) -> bool {
+    let volatile = choice.volatile_status.as_ref().is_some_and(|v| {
+        !matches!(
+            v.volatile_status,
+            PokemonVolatileStatus::PARTIALLYTRAPPED
+                | PokemonVolatileStatus::LOCKEDMOVE
+                | PokemonVolatileStatus::SMACKDOWN
+        )
+    });
+    choice.secondaries.is_some() || volatile || choice.move_id == Choices::EERIESPELL
+}
+
 pub fn ability_modify_attack_being_used(
     state: &State,
     attacker_choice: &mut Choice,
@@ -3120,27 +3135,11 @@ pub fn ability_modify_attack_being_used(
                 attacker_choice.base_power *= 1.5;
             }
         }
-        Abilities::BATTERY => {
-            if attacker_choice.category == MoveCategory::Special {
-                attacker_choice.base_power *= 5325.0 / 4096.0;
-            }
-        }
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L201): Battery boosts an ally's special
+        // move, not its holder's (Showdown's onAllyBasePower: attacker !== target): nothing in
+        // singles; it boosted the holder's own
         Abilities::SHEERFORCE => {
-            let mut sheer_force_volatile_boosted = false;
-            if let Some(attacker_volatile_status) = &attacker_choice.volatile_status {
-                if attacker_volatile_status.volatile_status
-                    != PokemonVolatileStatus::PARTIALLYTRAPPED
-                    && attacker_volatile_status.volatile_status != PokemonVolatileStatus::LOCKEDMOVE
-                    && attacker_volatile_status.volatile_status != PokemonVolatileStatus::SMACKDOWN
-                {
-                    sheer_force_volatile_boosted = true;
-                }
-            }
-            // (L186: Eerie Spell's PP drop is a secondary too)
-            if attacker_choice.secondaries.is_some()
-                || sheer_force_volatile_boosted
-                || attacker_choice.move_id == Choices::EERIESPELL
-            {
+            if sheer_force_applies(attacker_choice) {
                 attacker_choice.base_power *= 5325.0 / 4096.0;
                 attacker_choice.secondaries = None;
                 attacker_choice.volatile_status = None

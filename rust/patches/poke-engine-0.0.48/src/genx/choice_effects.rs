@@ -603,6 +603,21 @@ pub fn modify_choice(
                 }
             }
         }
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L201): Tera Starstorm by
+        // Terapagos-Stellar is Stellar-type (its STAB a Stellar move's: 4915 / 4096), physical when
+        // its Attack is the higher (Showdown's onModifyType); was Normal (a 2 x STAB)
+        Choices::TERASTARSTORM => {
+            let active = attacking_side.get_active_immutable();
+            if active.id == PokemonName::TERAPAGOSSTELLAR {
+                attacker_choice.move_type = PokemonType::STELLAR;
+                if active.terastallized
+                    && attacking_side.calculate_boosted_stat(PokemonBoostableStat::Attack)
+                        > attacking_side.calculate_boosted_stat(PokemonBoostableStat::SpecialAttack)
+                {
+                    attacker_choice.category = MoveCategory::Physical;
+                }
+            }
+        }
         Choices::TERABLAST => {
             let active = attacking_side.get_active_immutable();
             if active.terastallized {

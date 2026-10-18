@@ -331,6 +331,9 @@ DAMAGE = re.compile(r"^Damage (SideOne|SideTwo): (-?\d+)$")
 SUB_DAMAGE = re.compile(r"^DamageSubstitute (SideOne|SideTwo): (-?\d+)$")
 
 
+CRIT_HINT = 16384  # (generate_instructions::CRIT_HINT)
+
+
 def _log_hp(text: str) -> int | None:
     m = re.match(r"(\d+)(?:/\d+)?", text)
     return int(m.group(1)) if m else None
@@ -343,6 +346,7 @@ def damage_hints(start: dict, after: dict) -> tuple[int, int]:
     it is one of its own rolls (State::damage_hint)."""
     hp = {f"{s['id']}a: {m.get('name', '')}": m["hp"] for s in start["sides"] for m in s["mons"]}
     hints, pending, prev = [-1, -1], None, None
+    crit = [False, False]  # (a -crit line on the pending hit: the hint marked CRIT_HINT)
     hinted = None  # (side, target) of the last hint: a survival effect after it voids it
     for line in after.get("log", []):
         if line == prev:  # (the split's private and public copies)
@@ -367,7 +371,10 @@ def damage_hints(start: dict, after: dict) -> tuple[int, int]:
             hp[f[2]] = _log_hp(f[4]) if _log_hp(f[4]) is not None else hp.get(f[2], 0)
         elif tag == "move" and len(f) > 4:
             side = 0 if f[2].startswith("p1") else 1
-            pending = (side, f[4]) if hints[side] == -1 and f[4] else None
+            # (on the foe only: a Substitute's cost is its user's own)
+            foe = f[4].startswith("p2" if side == 0 else "p1")
+            pending = (side, f[4]) if hints[side] == -1 and foe else None
+            crit[side] = False
         elif tag in ("-damage", "-heal", "-sethp") and len(f) > 3:
             new = _log_hp(f[3])
             if new is None:
@@ -379,11 +386,13 @@ def damage_hints(start: dict, after: dict) -> tuple[int, int]:
                     hinted = pending
                 pending = None
             hp[f[2]] = new
+        elif tag == "-crit" and pending and f[2] == pending[1]:
+            crit[pending[0]] = True
         elif tag == "-hitcount" and len(f) > 2:
             hints[0 if f[2].startswith("p2") else 1] = -2  # (the attacker's: the other side)
         elif tag == "-activate" and len(f) > 3 and "Substitute" in f[3] and "[damage]" in line:
             pending = None
-    return tuple(h if h > 0 else -1 for h in hints)
+    return tuple((h + CRIT_HINT if c else h) if h > 0 else -1 for h, c in zip(hints, crit))
 
 
 def engine_outcomes(state: pe.State, c1: str, c2: str,

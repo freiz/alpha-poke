@@ -2207,7 +2207,7 @@ pub fn item_modify_attack_being_used(
                     == Abilities::SHEERFORCE
                     && MOVES
                         .get(&attacking_choice.move_id)
-                        .is_some_and(|m| m.secondaries.is_some());
+                        .is_some_and(super::abilities::sheer_force_applies);
                 #[cfg(not(feature = "gen4"))]
                 if attacking_side.get_active_immutable().ability != Abilities::MAGICGUARD
                     && !sheer_force
