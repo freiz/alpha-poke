@@ -954,6 +954,10 @@ pub fn face_before_hit(state: &mut State, choice: &mut Choice, side_ref: &SideRe
     {
         return;
     }
+    // (L228: not an Endeavor that fails -- the target at no more HP than its user: Showdown's
+    // onTryImmunity, before the hit)
+    let endeavor_fails =
+        choice.move_id == Choices::ENDEAVOR && defending_pkmn.hp <= active_pkmn.hp;
     match defending_pkmn.ability {
         // Incomplete: IceFace should not stop secondaries, but setting base_power to 0 makes
         // secondaries not apply in this engine
@@ -962,12 +966,16 @@ pub fn face_before_hit(state: &mut State, choice: &mut Choice, side_ref: &SideRe
             if defending_pkmn.id == PokemonName::EISCUE
                 && choice.category == MoveCategory::Physical
                 && !behind_sub
+                && !endeavor_fails
             {
                 // hacky - changing the move to a status move makes it do no
                 // damage but preserve secondary effects
                 // due to some bad choices I made I cannot just set base_power to 0
                 // (L156: a multi-hit move's first hit only)
-                if choice.multi_hit() != crate::choices::MultiHitMove::None {
+                // (L228: Beat Up too, its hits its hitters)
+                if choice.multi_hit() != crate::choices::MultiHitMove::None
+                    || choice.move_id == Choices::BEATUP
+                {
                     choice.first_hit_blocked = true;
                 } else {
                     choice.category = MoveCategory::Status;
@@ -983,14 +991,17 @@ pub fn face_before_hit(state: &mut State, choice: &mut Choice, side_ref: &SideRe
                 && (defending_pkmn.id == PokemonName::MIMIKYU
                     || defending_pkmn.id == PokemonName::MIMIKYUTOTEM)
                 && !behind_sub
+                && !endeavor_fails
                 && (move_type_effectiveness(choice, defending_pkmn) > 0.0
                     || matches!(
                         active_pkmn.ability,
                         Abilities::SCRAPPY | Abilities::MINDSEYE
                     )) =>
         {
-            // (L156: a multi-hit move's first hit only)
-            if choice.multi_hit() != crate::choices::MultiHitMove::None {
+            // (L156: a multi-hit move's first hit only; L228: Beat Up's too)
+            if choice.multi_hit() != crate::choices::MultiHitMove::None
+                || choice.move_id == Choices::BEATUP
+            {
                 choice.first_hit_blocked = true;
             } else {
                 choice.base_power = 0.0;
@@ -1400,7 +1411,17 @@ pub fn ability_damaging_hit(
         .contains(&PokemonVolatileStatus::CHARGE);
     let attacking_pkmn = attacking_side.get_active();
     let defending_pkmn = defending_side.get_active();
-    match defending_pkmn.ability {
+    // (L228: a Mold Breaker attack breaks a breakable one: no Thermal Exchange boost from a
+    // Turboblaze Blue Flare)
+    let broken = (matches!(
+        attacking_pkmn.ability,
+        Abilities::MOLDBREAKER | Abilities::TERAVOLT | Abilities::TURBOBLAZE
+    ) || matches!(
+        choice.move_id,
+        Choices::MOONGEISTBEAM | Choices::PHOTONGEYSER | Choices::SUNSTEELSTRIKE
+    )) && defending_pkmn.item != Items::ABILITYSHIELD
+        && mold_breaker_ignores(&defending_pkmn.ability);
+    match if broken { Abilities::NONE } else { defending_pkmn.ability } {
         // (L151: were secondaries the move got before it: once per move, through a Substitute
         // for Gooey's)
         Abilities::WEAKARMOR if choice.category == MoveCategory::Physical => {
@@ -1704,19 +1725,14 @@ pub fn ability_damaging_hit(
                 && crate::choices::MOVES
                     .get(&choice.move_id)
                     .is_some_and(|m| sheer_force_applies(m));
+            // (L228: its boost after the move's secondaries -- a Spirit Break's drop at +6 first:
+            // choice.berserk)
             if damage_dealt > 0
                 && !sheer
                 && 2 * defending_pkmn.hp <= defending_pkmn.maxhp
                 && 2 * (defending_pkmn.hp + damage_dealt) > defending_pkmn.maxhp
             {
-                apply_boost_instruction(
-                    defending_side,
-                    &PokemonBoostableStat::SpecialAttack,
-                    &1,
-                    &side_ref.get_other_side(),
-                    &side_ref.get_other_side(),
-                    instructions,
-                );
+                choice.berserk = true;
             }
         }
         Abilities::ROUGHSKIN | Abilities::IRONBARBS => {
@@ -2120,7 +2136,9 @@ pub fn ability_end_of_turn(
     state: &mut State,
     side_ref: &SideReference,
     instructions: &mut StateInstructions,
-    before_status: bool,
+    // (L228: 0 the weather abilities, Showdown's weather residual 1 -- before Future Sight (3) and
+    // Wish (4); 1 Hydration / Shed Skin (5), before the status damage; 2 the rest)
+    phase: u8,
     // (L191: this branch's Shed Skin cures: generate_instructions::EotRolls)
     shed_skin: bool,
 ) {
@@ -2153,16 +2171,12 @@ pub fn ability_end_of_turn(
     let active_pkmn = attacking_side.get_active();
     // alpha-poke patch (2026-10-16): the weather abilities (Showdown's weather residual, order 1)
     // and Hydration / Shed Skin (5) come before the status damage (9-10), the rest after it
-    let early = matches!(
-        active_pkmn.ability,
-        Abilities::SOLARPOWER
-            | Abilities::ICEBODY
-            | Abilities::RAINDISH
-            | Abilities::DRYSKIN
-            | Abilities::HYDRATION
-            | Abilities::SHEDSKIN
-    );
-    if early != before_status {
+    let own_phase = match active_pkmn.ability {
+        Abilities::SOLARPOWER | Abilities::ICEBODY | Abilities::RAINDISH | Abilities::DRYSKIN => 0,
+        Abilities::HYDRATION | Abilities::SHEDSKIN => 1,
+        _ => 2,
+    };
+    if own_phase != phase {
         return;
     }
     if defending_side.get_active_immutable().ability == Abilities::NEUTRALIZINGGAS
@@ -2394,6 +2408,8 @@ fn trace_copy(state: &mut State, side_ref: &SideReference, instructions: &mut St
         || me.item == Items::ABILITYSHIELD
         || target.hp == 0
         || NO_TRACE.contains(&target.ability)
+        // (L228: nor a cantsuppress one -- Gulp Missile: Showdown's setAbility fails, Trace stays)
+        || CANT_SUPPRESS.contains(&target.ability)
         || target.ability == Abilities::NONE
     {
         return false;

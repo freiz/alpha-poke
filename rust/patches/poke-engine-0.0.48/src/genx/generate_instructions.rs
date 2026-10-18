@@ -257,6 +257,23 @@ fn generate_instructions_from_switch(
     switching_side_ref: SideReference,
     incoming_instructions: &mut StateInstructions,
 ) {
+    generate_instructions_from_switch_with(
+        state,
+        new_pokemon_index,
+        switching_side_ref,
+        incoming_instructions,
+        false,
+    )
+}
+
+// (L228: `dragged`, a drag's switch -- its runSwitch at once, no Update before the hazards)
+fn generate_instructions_from_switch_with(
+    state: &mut State,
+    new_pokemon_index: PokemonIndex,
+    switching_side_ref: SideReference,
+    incoming_instructions: &mut StateInstructions,
+    dragged: bool,
+) {
     // (L211: Gravity grounds everyone)
     let gravity = state.gravity > 0;
     let switch_from = incoming_instructions.instruction_list.len();
@@ -667,6 +684,13 @@ fn generate_instructions_from_switch(
         }
     }
 
+    // alpha-poke patch (2026-10-18, doc/engine-diff.md L228): the Update after the switch action,
+    // before the hazards (Showdown queues runSwitch: a Sitrus at half or less is eaten first, its
+    // heal to the max before the Spikes); not a drag's (its runSwitch at once)
+    if !dragged {
+        super::items::item_update(state, &switching_side_ref, incoming_instructions);
+    }
+    let side = state.get_side(&switching_side_ref);
     let active = side.get_active_immutable();
     // alpha-poke patch (2026-10-16, doc/engine-diff.md L96): a grounded Poison type absorbs Toxic
     // Spikes with Heavy-Duty Boots too (Showdown checks the type before the boots)
@@ -1331,10 +1355,19 @@ fn get_instructions_from_volatile_statuses(
                 .get_active_immutable()
                 .ability,
             Abilities::MOLDBREAKER | Abilities::TERAVOLT | Abilities::TURBOBLAZE
-        );
+        )
+        || target_side != *attacking_side_reference
+            && matches!(
+                attacker_choice.move_id,
+                Choices::MOONGEISTBEAM | Choices::PHOTONGEYSER | Choices::SUNSTEELSTRIKE
+            );
     let side = state.get_side(&target_side);
     let mut probe = side.get_active_immutable().clone();
-    if breaker && probe.ability == Abilities::AROMAVEIL && probe.item != Items::ABILITYSHIELD {
+    // (L228: any breakable one -- Inner Focus's flinch, Own Tempo's confusion, Oblivious's)
+    if breaker
+        && super::abilities::mold_breaker_ignores(&probe.ability)
+        && probe.item != Items::ABILITYSHIELD
+    {
         probe.ability = Abilities::NONE;
     }
     let affected_pkmn = &probe;
@@ -1609,13 +1642,25 @@ pub fn immune_to_status_with(
 
     // General Status Immunity
     match target_pkmn.ability {
-        Abilities::SHIELDSDOWN => return target_pkmn.hp > target_pkmn.maxhp / 2,
+        // (L228: by its forme, Meteor -- Showdown's onSetStatus; the forme changes later: a hit
+        // that took it below half leaves it immune till then); not a transformed one's; a Core
+        // goes on to the other checks (it returned "not immune" at once: a Toxic over its burn)
+        Abilities::SHIELDSDOWN
+            if target_pkmn.id == PokemonName::MINIORMETEOR
+                && !target_side
+                    .volatile_statuses
+                    .contains(&PokemonVolatileStatus::TRANSFORM) =>
+        {
+            return true
+        }
         Abilities::COMATOSE => return true,
         _ => {}
     }
     match ability {
         Abilities::PURIFYINGSALT => return true,
-        Abilities::LEAFGUARD => return state.weather_is_active(&Weather::SUN),
+        // (L228: only in sun -- else on to the other checks: it returned "not immune" at once,
+        // past the Sleep Clause, Misty Terrain, Safeguard, ...)
+        Abilities::LEAFGUARD if state.weather_is_active(&Weather::SUN) => return true,
         _ => {}
     }
 
@@ -1699,6 +1744,9 @@ fn get_instructions_from_status_effects(
     attacking_side_reference: &SideReference,
     incoming_instructions: &mut StateInstructions,
     hit_sub: bool,
+    // (L228: one Magic Bounce sent back: its target's side is the foe's for the checks -- the
+    // Sleep Clause, a Substitute, Safeguard)
+    reflected: bool,
 ) {
     // (L211: Gravity grounds everyone)
     let gravity = state.gravity > 0;
@@ -1723,7 +1771,12 @@ fn get_instructions_from_status_effects(
             .volatile_statuses
             .remove(&PokemonVolatileStatus::SUBSTITUTE);
     }
-    let immune = immune_to_status(state, &status.target, &target_side_ref, &status.status);
+    let immune = immune_to_status(
+        state,
+        if reflected { &MoveTarget::Opponent } else { &status.target },
+        &target_side_ref,
+        &status.status,
+    );
     if lifted {
         state
             .get_side(&target_side_ref)
@@ -2168,6 +2221,7 @@ fn get_instructions_from_secondaries(
                             side_reference,
                             &mut secondary_hit_instructions,
                             hit_sub,
+                            false,
                         );
                     }
                     Effect::Heal(heal_amount) => {
@@ -2854,11 +2908,14 @@ fn check_move_hit_or_miss(
     incoming_instructions.update_percentage(percent_hit);
 }
 
+// (L228: `breaker`, a Mold Breaker's drag move: its Levitate-ignoring hold lasts through the drag --
+// Showdown's activeMove is cleared after dragIn: the hazards hit a Levitate mon)
 fn get_instructions_from_drag(
     state: &mut State,
     attacking_side_reference: &SideReference,
     incoming_instructions: StateInstructions,
     frozen_instructions: &mut Vec<StateInstructions>,
+    breaker: bool,
 ) {
     let defending_side = state.get_side(&attacking_side_reference.get_other_side());
     if defending_side.get_active_immutable().hp == 0 {
@@ -2880,12 +2937,24 @@ fn get_instructions_from_drag(
     for pkmn_id in defending_side_alive_reserve_indices {
         let mut cloned_instructions = incoming_instructions.clone();
         state.apply_instructions(&cloned_instructions.instruction_list);
-        generate_instructions_from_switch(
+        let dragged_ref = attacking_side_reference.get_other_side();
+        let lifted = breaker && {
+            let p = &state.get_side_immutable(&dragged_ref).pokemon[pkmn_id];
+            p.ability == Abilities::LEVITATE && p.item != Items::ABILITYSHIELD
+        };
+        if lifted {
+            state.get_side(&dragged_ref).pokemon[pkmn_id].ability = Abilities::NONE;
+        }
+        generate_instructions_from_switch_with(
             state,
             pkmn_id,
-            attacking_side_reference.get_other_side(),
+            dragged_ref,
             &mut cloned_instructions,
+            true,
         );
+        if lifted {
+            state.get_side(&dragged_ref).pokemon[pkmn_id].ability = Abilities::LEVITATE;
+        }
         state.reverse_instructions(&cloned_instructions.instruction_list);
         cloned_instructions.update_percentage(1.0 / num_alive_reserve as f32);
         frozen_instructions.push(cloned_instructions);
@@ -3451,8 +3520,28 @@ fn protean_type_change(
             old_types: active.types,
         }));
     active.types = new_types;
+    // (L228: back to its base types -- a transformed Ditto's Normal -- no type change any more: the
+    // volatile's meaning, Transform's L172)
+    let own = active.types == active.base_types;
+    if own
+        && side
+            .volatile_statuses
+            .remove_with_check(&PokemonVolatileStatus::TYPECHANGE)
+    {
+        instructions
+            .instruction_list
+            .push(Instruction::RemoveVolatileStatus(
+                RemoveVolatileStatusInstruction {
+                    side_ref: *side_ref,
+                    volatile_status: PokemonVolatileStatus::TYPECHANGE,
+                },
+            ));
+    }
     // (L218: the type change once -- a transformed mon has it already -- and the ability's mark)
     for v in [PokemonVolatileStatus::TYPECHANGE, PokemonVolatileStatus::PROTEAN] {
+        if v == PokemonVolatileStatus::TYPECHANGE && own {
+            continue;
+        }
         if !side.volatile_statuses.contains(&v) {
             instructions
                 .instruction_list
@@ -4075,7 +4164,6 @@ fn flinched_or_taunted(state: &State, choice: &Choice, attacking_side_ref: &Side
                 attacking_side.get_active_immutable().item,
                 Items::CHOICEBAND | Items::CHOICESPECS | Items::CHOICESCARF
             )
-            && attacking_side.last_used_move == LastUsedMove::None
             && attacking_side.get_active_immutable().moves[&choice.move_index].disabled
             && !attacking_side
                 .volatile_statuses
@@ -4434,6 +4522,10 @@ fn generate_instructions_from_existing_status_conditions(
     // (L227: a flinch, Taunt, Throat Chop, ... -- BeforeMove priorities above confusion's 3 --
     // stop the mover before its confusion counts: Showdown's runEvent stops at the first false)
     let flinched = flinched_or_taunted(state, attacker_choice, attacking_side_ref);
+    let loafs = state
+        .get_side_immutable(attacking_side_ref)
+        .volatile_statuses
+        .contains(&PokemonVolatileStatus::TRUANT);
     // alpha-poke patch (2026-10-18, doc/engine-diff.md L227): a self-thawing move (Scald, Flare
     // Blitz, ...) thaws its user as it is used (Showdown's frz onModifyMove, after the BeforeMove):
     // a confusion self-hit or an infatuation keeps it frozen -- the thaw undone in those branches
@@ -4474,6 +4566,17 @@ fn generate_instructions_from_existing_status_conditions(
                 }));
         }
         PokemonStatus::SLEEP => {
+            // alpha-poke patch (2026-10-18, doc/engine-diff.md L228): Early Bird runs a Rest's
+            // count twice as fast too (Showdown's slp onBeforeMove: time-- twice; Rest's 3 wakes on
+            // the second attempt)
+            if attacker_active.ability == Abilities::EARLYBIRD && attacker_active.rest_turns >= 2 {
+                attacker_active.rest_turns -= 1;
+                incoming_instructions
+                    .instruction_list
+                    .push(Instruction::DecrementRestTurns(DecrementRestTurnsInstruction {
+                        side_ref: *attacking_side_ref,
+                    }));
+            }
             match attacker_active.rest_turns {
                 // Pokemon is not asleep because of Rest.
                 0 => {
@@ -4599,7 +4702,12 @@ fn generate_instructions_from_existing_status_conditions(
                         // alpha-poke patch (2026-10-17, doc/engine-diff.md L214): a Sleep Talk its
                         // user woke up for is used and fails (Showdown: its PP, its last used
                         // move); it was nothing at all
-                        if attacker_choice.move_id == Choices::SLEEPTALK {
+                        // (L228: not when a flinch / Taunt / Truant's loafing stops it after the
+                        // sleep: Showdown's later onBeforeMoves)
+                        if attacker_choice.move_id == Choices::SLEEPTALK
+                            && !flinched
+                            && !loafs
+                        {
                             let index = attacker_choice.move_index;
                             let pp = attacker_active.moves[&index].pp;
                             if (exact_pp || pp < 10) && (!exact_pp || pp > 0) {
@@ -5006,6 +5114,10 @@ pub fn generate_instructions_from_move(
                     // (an encored Protect as the turn's last action fails: L180's check)
                     let first_move = choice.first_move;
                     let boosted = choice.category == MoveCategory::Status;
+                    // (L228: with the chosen move's priority -- Showdown's runMove sets the
+                    // overriding move's to it: an encored Vacuum Wave for a Blood Moon goes through
+                    // Psychic Terrain)
+                    let priority = MOVES.get(&choice.move_id).map_or(choice.priority, |m| m.priority);
                     *choice = MOVES
                         .get(&side.get_active_immutable().moves[&last_used_move].id)
                         .unwrap()
@@ -5013,6 +5125,7 @@ pub fn generate_instructions_from_move(
                     choice.move_index = last_used_move;
                     choice.first_move = first_move;
                     choice.no_prankster = !boosted;
+                    choice.priority = priority;
                 }
             }
             // alpha-poke patch (2026-10-18, doc/engine-diff.md L220): the encored move lost to the
@@ -5144,10 +5257,29 @@ pub fn generate_instructions_from_move(
             .get_side_immutable(&defender_ref)
             .volatile_statuses
             .contains(&PokemonVolatileStatus::STATSRAISED);
-        for i in incoming_instructions.instruction_list.iter() {
+        // (L228: not the boosts a Transform copies -- an Imposter's: Showdown's transformInto sets
+        // them, no boost; they are the run of boosts just before its TYPECHANGE / TRANSFORM)
+        let list = &incoming_instructions.instruction_list;
+        let mut copied = vec![false; list.len()];
+        for (k, i) in list.iter().enumerate() {
+            if matches!(i, Instruction::ApplyVolatileStatus(v) if v.side_ref == defender_ref
+                && v.volatile_status == PokemonVolatileStatus::TRANSFORM)
+            {
+                let mut j = k;
+                while j > 0 {
+                    j -= 1;
+                    match &list[j] {
+                        Instruction::ApplyVolatileStatus(v) if v.side_ref == defender_ref => {}
+                        Instruction::Boost(b) if b.side_ref == defender_ref => copied[j] = true,
+                        _ => break,
+                    }
+                }
+            }
+        }
+        for (k, i) in list.iter().enumerate() {
             match i {
                 Instruction::Switch(x) if x.side_ref == defender_ref => raised = false,
-                Instruction::Boost(b) if b.side_ref == defender_ref && b.amount > 0 => {
+                Instruction::Boost(b) if b.side_ref == defender_ref && b.amount > 0 && !copied[k] => {
                     raised = true
                 }
                 _ => {}
@@ -5321,10 +5453,24 @@ pub fn generate_instructions_from_move(
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L184): a mover that woke / thawed and then
     // flinched (or is taunted) uses no PP and gets no choice lock either (Showdown's BeforeMove
     // stops runMove before them; L177 / L179 had only the last used move)
+    // (L228: or loafs -- Truant's onBeforeMove, below: no PP either)
     let stopped = asleep_or_frozen_before
         && !(asleep_now && choice.move_id != Choices::SLEEPTALK && !choice.sleep_talk_move)
         && flinched_or_taunted(state, &choice, &attacking_side)
-        || lost_focus(state, &choice, &attacking_side);
+        || lost_focus(state, &choice, &attacking_side)
+        || asleep_or_frozen_before
+            && !called
+            && !matches!(
+                state
+                    .get_side_immutable(&attacking_side)
+                    .get_active_immutable()
+                    .status,
+                PokemonStatus::SLEEP | PokemonStatus::FREEZE
+            )
+            && state
+                .get_side_immutable(&attacking_side)
+                .volatile_statuses
+                .contains(&PokemonVolatileStatus::TRUANT);
     if !stopped && !(asleep_now && choice.move_id != Choices::SLEEPTALK && !choice.sleep_talk_move) {
         // alpha-poke patch (2026-10-17, doc/engine-diff.md L177): the PP as Showdown's runMove /
         // useMoveInner: past the BeforeMove (not when asleep, fully paralyzed, confused into itself,
@@ -5935,8 +6081,15 @@ pub fn generate_instructions_from_move(
     }
 
     // start multi-hit
+    // alpha-poke patch (2026-10-18, doc/engine-diff.md L228): a multi-hit move an absorbing ability
+    // took (Water Absorb, ...: a status move with no power by now) hits once -- Showdown's TryHit
+    // stops it before the hits; Surging Strikes healed three times
+    let absorbed = choice.category == MoveCategory::Status
+        && MOVES
+            .get(&choice.move_id)
+            .is_some_and(|m| m.category != MoveCategory::Status);
     let hit_count;
-    match choice.multi_hit() {
+    match if absorbed { MultiHitMove::None } else { choice.multi_hit() } {
         MultiHitMove::None => {
             hit_count = 1;
         }
@@ -7272,6 +7425,15 @@ fn lock_end_of_turn(
             state.apply_one_instruction(&ins);
             instructions.instruction_list.push(ins);
         }
+        // (L228: a Choice item Tricked over this turn, before a move it did not get to use, locks
+        // nothing: its onStart removed the choicelock and no onModifyMove came)
+        let tricked = instructions.instruction_list.iter().any(|i| {
+            matches!(i, Instruction::ChangeItem(c) if c.side_ref == *side_ref
+                && matches!(c.new_item, Items::CHOICEBAND | Items::CHOICESPECS | Items::CHOICESCARF))
+        });
+        if !acted && tricked {
+            release_choice_lock(state, side_ref, instructions);
+        }
         return;
     }
     let amount = if count == 0 && short { 2 } else { 1 };
@@ -7334,12 +7496,27 @@ fn harvest_after_end_of_turn(
     first_move_side: &SideReference,
     rolls: EotRolls,
 ) -> Vec<StateInstructions> {
-    end_of_turn_instructions(state, si, first_move_side, rolls);
+    let final_from = end_of_turn_instructions(state, si, first_move_side, rolls);
+    // (L228: not a berry the residuals' damage had it eat -- Showdown's Update comes after all the
+    // residuals, Harvest's 28 among them: eaten then, it is back only the next turn)
+    let eaten_late = |side_ref: SideReference| {
+        si.instruction_list[final_from..].iter().any(|i| {
+            matches!(i, Instruction::ChangeLastItem(c) if c.side_ref == side_ref
+                && is_berry(c.new_item))
+        })
+    };
+    let late = [
+        eaten_late(SideReference::SideOne),
+        eaten_late(SideReference::SideTwo),
+    ];
     // (L209: both sides' Harvest, each on every branch; the extra branches with the state as at
     // `base`)
     let base = si.instruction_list.len();
     let mut extra: Vec<StateInstructions> = vec![];
     for side_ref in [SideReference::SideOne, SideReference::SideTwo] {
+        if late[side_ref as usize] {
+            continue;
+        }
         let mut next = vec![];
         if let Some(y) = harvest_side(state, side_ref, si) {
             next.push(y);
@@ -7389,18 +7566,19 @@ fn future_sight_crit_chance(state: &State) -> Option<(SideReference, f32)> {
     None
 }
 
+// (returns where its last Update starts, L228)
 fn end_of_turn_instructions(
     state: &mut State,
     mut incoming_instructions: &mut StateInstructions,
     first_move_side: &SideReference,
     rolls: EotRolls,
-) {
+) -> usize {
     // (L211: Gravity grounds everyone)
     let gravity = state.gravity > 0;
     let fs_crit = rolls.fs_crit;
     let end_of_turn_from = incoming_instructions.instruction_list.len();
     if state.side_one.force_switch || state.side_two.force_switch {
-        return;
+        return end_of_turn_from;
     }
     // alpha-poke patch (2026-10-18, doc/engine-diff.md L224): Uproar's end of turn: it ends at the
     // third (Showdown's duration 3), or at once under Throat Chop; its lock goes then
@@ -7448,8 +7626,13 @@ fn end_of_turn_instructions(
     for side_ref in [SideReference::SideOne, SideReference::SideTwo] {
         let side = state.get_side_immutable(&side_ref);
         let p = side.get_active_immutable();
-        if side.last_used_move == LastUsedMove::None
-            && matches!(p.item, Items::CHOICEBAND | Items::CHOICESPECS | Items::CHOICESCARF)
+        // (L228: not when a Disable on the locked move is what left none: Cursed Body on a
+        // Choice-locked Earthquake -- Struggle in Showdown, the choicelock stays)
+        let disabled_lock = side
+            .volatile_statuses
+            .contains(&PokemonVolatileStatus::DISABLE);
+        if matches!(p.item, Items::CHOICEBAND | Items::CHOICESPECS | Items::CHOICESCARF)
+            && !disabled_lock
             && p.moves.into_iter().all(|m| m.id == Choices::NONE || m.disabled)
             && p.moves.into_iter().any(|m| m.id != Choices::NONE)
         {
@@ -7604,19 +7787,33 @@ fn end_of_turn_instructions(
                 .push(sand_damage_instruction);
         }
     }
+    // (L228: the weather abilities -- Dry Skin, Solar Power, Ice Body, Rain Dish -- in the weather's
+    // residual too: before Future Sight and Wish)
+    for side_ref in sides {
+        if state.get_side_immutable(side_ref).get_active_immutable().hp == 0 {
+            continue;
+        }
+        ability_end_of_turn(state, side_ref, &mut incoming_instructions, 0, false);
+    }
     // (L147: Showdown's Update after the weather's residual -- eachEvent('Weather'), any weather)
     if state.weather.weather_type != Weather::NONE {
         update_with(state, &mut incoming_instructions, 1);
     }
 
     // future sight
-    for side_ref in sides {
+    // (L228: by its target's speed -- a slot condition of the target's side, its holder the
+    // target: the faster target is hit first)
+    for side_ref in [&second_ref, &first_ref] {
         // alpha-poke patch (2026-10-16, doc/engine-diff.md L35): the hit is its user's move
         // while the user is active (its abilities' and items' modifiers: Life Orb, Choice Specs,
         // ...; Life Orb's recoil below), the target's always (Assault Vest, Multiscale, ...)
+        // (L228: a user that fainted is no longer active -- Showdown's faint clears its volatiles
+        // and boosts: a Ditto's own stats again)
         let user_active = {
             let side = state.get_side_immutable(side_ref);
-            side.future_sight.0 == 1 && side.active_index == side.future_sight.1
+            side.future_sight.0 == 1
+                && side.active_index == side.future_sight.1
+                && side.get_active_immutable().hp > 0
         };
         if state.get_side_immutable(side_ref).future_sight.0 == 0 {
             continue;
@@ -7630,6 +7827,7 @@ fn end_of_turn_instructions(
         let future_hint = state.future_hint[*side_ref as usize];
         let use_times_attacked = state.use_times_attacked;
         let psychic = state.terrain_is_active(&Terrain::PSYCHICTERRAIN);
+        let mut landed = 0;
         let (attacking_side, defending_side) = state.get_both_sides(side_ref);
         if attacking_side.future_sight.0 > 0 {
             let decrement_future_sight_instruction =
@@ -7686,6 +7884,7 @@ fn end_of_turn_instructions(
                     .instruction_list
                     .push(future_sight_damage_instruction);
                 defender.hp -= damage;
+                landed = damage;
                 // alpha-poke patch (2026-10-18, doc/engine-diff.md L219): the hit attacks its
                 // target (Showdown's trySpreadMoveHit: timesAttacked; Rage Fist), not through a
                 // Substitute (L163; L227: its hit is true, not a number)
@@ -7727,6 +7926,29 @@ fn end_of_turn_instructions(
             incoming_instructions
                 .instruction_list
                 .push(decrement_future_sight_instruction);
+        }
+        // (L228: the hit's onDamagingHit -- Electromorphosis's Charge, Stamina, Justified, ...;
+        // not one on a user that left: Innards Out's / Gulp Missile's damage would be a benched
+        // mon's)
+        if landed > 0 {
+            let ability = state
+                .get_side_immutable(&side_ref.get_other_side())
+                .get_active_immutable()
+                .ability;
+            if user_active || !matches!(ability, Abilities::INNARDSOUT | Abilities::GULPMISSILE) {
+                let mut c = fs_choice.clone();
+                super::abilities::ability_damaging_hit(
+                    state,
+                    &mut c,
+                    side_ref,
+                    landed,
+                    incoming_instructions,
+                );
+                berserk_after_secondaries(state, &c, side_ref, incoming_instructions);
+            }
+            // (the hit's Update -- Showdown's hit loop: a Sitrus eaten now, at the residual's 3, so
+            // Harvest's 28 can bring it back)
+            super::items::item_update(state, &side_ref.get_other_side(), incoming_instructions);
         }
     }
 
@@ -7898,7 +8120,7 @@ fn end_of_turn_instructions(
         }
 
         let shed_skin = rolls.shed_skin[(*side_ref == SideReference::SideTwo) as usize];
-        ability_end_of_turn(state, side_ref, &mut incoming_instructions, true, shed_skin);
+        ability_end_of_turn(state, side_ref, &mut incoming_instructions, 1, shed_skin);
         item_end_of_turn(state, side_ref, &mut incoming_instructions, true);
     }
 
@@ -8142,7 +8364,7 @@ fn end_of_turn_instructions(
 
         item_end_of_turn(state, side_ref, &mut incoming_instructions, false);
         let shed_skin = rolls.shed_skin[(*side_ref == SideReference::SideTwo) as usize];
-        ability_end_of_turn(state, side_ref, &mut incoming_instructions, false, shed_skin);
+        ability_end_of_turn(state, side_ref, &mut incoming_instructions, 2, shed_skin);
     }
 
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L115): "failed last turn" is for one turn
@@ -8351,22 +8573,7 @@ fn end_of_turn_instructions(
                 // alpha-poke patch (2026-10-18, doc/engine-diff.md L220): not a move a lock keeps
                 // out (an Outrage's or a Choice item's on another move: their disabled flags; the
                 // Disable's end lifted it)
-                let locked_out = match side.last_used_move {
-                    LastUsedMove::Move(m) => {
-                        m != slot
-                            && (side
-                                .volatile_statuses
-                                .contains(&PokemonVolatileStatus::LOCKEDMOVE)
-                                || side
-                                    .volatile_statuses
-                                    .contains(&PokemonVolatileStatus::UPROAR)
-                                || matches!(
-                                    side.get_active_immutable().item,
-                                    Items::CHOICEBAND | Items::CHOICESPECS | Items::CHOICESCARF
-                                ))
-                    }
-                    _ => false,
-                };
+                let locked_out = lock_keeps_out(side, slot);
                 let active = side.get_active();
                 if active.moves[&slot].disabled && !locked_out {
                     active.moves[&slot].disabled = false;
@@ -8502,6 +8709,57 @@ fn end_of_turn_instructions(
                             },
                         ),
                     );
+                }
+                // (L228: its healing moves can be chosen again -- the flags a request under it
+                // gave them, Showdown's onDisableMove; not a lock's or a Disable's)
+                if volatile == PokemonVolatileStatus::HEALBLOCK {
+                    let disabled_slot = side
+                        .volatile_statuses
+                        .contains(&PokemonVolatileStatus::DISABLE)
+                        .then(|| side.volatile_status_durations.disable / 8);
+                    // (a lock -- Choice, Outrage, Uproar -- by the flags: another move than a
+                    // healing one or the Disable's is off; the last used move is not always kept,
+                    // State::use_last_used_move)
+                    let locked = side
+                        .volatile_statuses
+                        .contains(&PokemonVolatileStatus::LOCKEDMOVE)
+                        || side
+                            .volatile_statuses
+                            .contains(&PokemonVolatileStatus::UPROAR)
+                        || (&side.get_active_immutable().moves)
+                            .into_iter()
+                            .enumerate()
+                            .any(|(k, mv)| {
+                                mv.id != Choices::NONE
+                                    && mv.disabled
+                                    && !mv.choice.flags.heal
+                                    && disabled_slot != Some(k as i8)
+                            });
+                    for (k, slot) in [
+                        PokemonMoveIndex::M0,
+                        PokemonMoveIndex::M1,
+                        PokemonMoveIndex::M2,
+                        PokemonMoveIndex::M3,
+                    ]
+                    .iter()
+                    .enumerate()
+                    {
+                        let slot = *slot;
+                        let m = &side.get_active_immutable().moves[&slot];
+                        if m.disabled
+                            && m.choice.flags.heal
+                            && disabled_slot != Some(k as i8)
+                            && !locked
+                        {
+                            side.get_active().moves[&slot].disabled = false;
+                            incoming_instructions
+                                .instruction_list
+                                .push(Instruction::EnableMove(EnableMoveInstruction {
+                                    side_ref: *side_ref,
+                                    move_index: slot,
+                                }));
+                        }
+                    }
                 }
             } else {
                 *duration += 1;
@@ -8780,11 +9038,28 @@ fn end_of_turn_instructions(
             );
         }
     }
+    // alpha-poke patch (2026-10-18, doc/engine-diff.md L228): Shields Down / Schooling's forme by
+    // the HP after the residual damage (Salt Cure, ...: their onResidual comes last, order 29)
+    for side_ref in [SideReference::SideOne, SideReference::SideTwo] {
+        let side = state.get_side(&side_ref);
+        let transformed = side
+            .volatile_statuses
+            .contains(&PokemonVolatileStatus::TRANSFORM);
+        let p = side.get_active();
+        if p.hp > 0
+            && !transformed
+            && matches!(p.ability, Abilities::SHIELDSDOWN | Abilities::SCHOOLING)
+        {
+            super::abilities::hp_forme(p, &side_ref, incoming_instructions);
+        }
+    }
+    let final_from = incoming_instructions.instruction_list.len();
     update_with(state, incoming_instructions, 1);
     foe_raise_copies(state, incoming_instructions, end_of_turn_from);
 
     // (L62: an item used up at the end of the turn too)
     unburden_check(state, incoming_instructions);
+    final_from
 }
 
 // alpha-poke patch (2026-10-13): a side's stat stages (Eject Pack: lowered by a move)
@@ -8834,6 +9109,33 @@ fn beak_blast_heat(
             new_status: PokemonStatus::BURN,
         }));
     active.status = PokemonStatus::BURN;
+    // (L228: a Synchronize holder burns the Beak Blast user back: its onAfterSetStatus, the
+    // status's source; not under the foe's Neutralizing Gas)
+    let (holder, foe) = (
+        state.get_side_immutable(attacking_side).get_active_immutable(),
+        state
+            .get_side_immutable(&attacking_side.get_other_side())
+            .get_active_immutable(),
+    );
+    let foe_ref = attacking_side.get_other_side();
+    if holder.ability == Abilities::SYNCHRONIZE
+        && !(foe.ability == Abilities::NEUTRALIZINGGAS && holder.item != Items::ABILITYSHIELD)
+        && foe.hp > 0
+        && !immune_to_status(state, &MoveTarget::User, &foe_ref, &PokemonStatus::BURN)
+    {
+        let foe_side = state.get_side(&foe_ref);
+        let index = foe_side.active_index;
+        let foe = foe_side.get_active();
+        instructions
+            .instruction_list
+            .push(Instruction::ChangeStatus(ChangeStatusInstruction {
+                side_ref: foe_ref,
+                pokemon_index: index,
+                old_status: foe.status,
+                new_status: PokemonStatus::BURN,
+            }));
+        foe.status = PokemonStatus::BURN;
+    }
 }
 
 fn run_move(
@@ -8881,6 +9183,7 @@ fn run_move(
     // (L227: every hit once one landed on the target itself -- Showdown's moveDamage is a number
     // then, the Substitute's hits in the count; only Substitute hits: true, none counted)
     let mut hits_made: u8 = 0;
+    let mut damaging_hits: u8 = 0;
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L203): a multi-hit move's hits after the
     // first by the state they hit (Showdown computes each hit: a Flame Body burn, Weak Armor /
     // Stamina's stages after a hit): each hit's damage times the damage now over the first's
@@ -8959,7 +9262,10 @@ fn run_move(
         };
         let hit_damage = if let Some(d) = sub_hint.filter(|_| does_damage) {
             d
-        } else if (hit_count > 1 || choice.multi_hit() != MultiHitMove::None)
+        // (L228: a Beat Up with one hitter too: its -hitcount gives the hint)
+        } else if (hit_count > 1
+            || choice.multi_hit() != MultiHitMove::None
+            || choice.move_id == Choices::BEATUP)
             && hint >= 0
             && does_damage
             && !halved
@@ -9106,6 +9412,7 @@ fn run_move(
                 &attacking_side,
                 &mut instructions,
                 hit_sub,
+                choice.flags.reflectable && status.target == MoveTarget::User,
             );
         }
         if let Some(heal) = &choice.heal {
@@ -9137,6 +9444,9 @@ fn run_move(
                         .get_active_immutable()
                         .hp;
                 dealt_total += dealt;
+                if dealt > 0 {
+                    damaging_hits += 1;
+                }
                 hits_on_target += 1;
                 super::abilities::ability_damaging_hit(
                     state,
@@ -9198,6 +9508,37 @@ fn run_move(
             break;
         }
     } // end multi-hit
+    // alpha-poke patch (2026-10-18, doc/engine-diff.md L228): Toxic Chain's 3 / 10 at each damaging
+    // hit (Showdown's onSourceDamagingHit: a Beat Up's two can poison past a Lum Berry); the
+    // choice has one for the move: one more per hit after the first
+    if damaging_hits > 1
+        && state
+            .get_side_immutable(&attacking_side)
+            .get_active_immutable()
+            .ability
+            == Abilities::TOXICCHAIN
+    {
+        let chain = Secondary {
+            chance: 30.0,
+            target: MoveTarget::Opponent,
+            effect: Effect::Status(PokemonStatus::TOXIC),
+        };
+        if choice
+            .secondaries
+            .as_ref()
+            .is_some_and(|v| {
+                v.iter().any(|x| {
+                    x.chance == 30.0
+                        && x.target == MoveTarget::Opponent
+                        && x.effect == Effect::Status(PokemonStatus::TOXIC)
+                })
+            })
+        {
+            for _ in 1..damaging_hits {
+                choice.add_or_create_secondaries(chain.clone());
+            }
+        }
+    }
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L163): the target's times attacked, one per
     // hit not on its Substitute (Showdown's gotAttacked: timesAttacked += hits; Rage Fist)
     if hits_on_target > 0 && state.use_times_attacked {
@@ -9238,6 +9579,18 @@ fn run_move(
     let magician_dealt = if hits_made > 0 { dealt_total.max(1) } else { dealt_total };
     super::abilities::magician_after_move(state, choice, &attacking_side, magician_dealt, &mut instructions);
     super::abilities::relic_song_forme(state, choice, &attacking_side, dealt_total, &mut instructions);
+    // (L228: a multi-hit's last Update comes before onAfterMoveSecondary -- its hits do not keep
+    // the berry: an Anger Shell holder at half or less eats it first, and may then be above half)
+    if choice.multi_hit() != MultiHitMove::None
+        && hits_on_target > 0
+        && state
+            .get_side_immutable(&defender_ref)
+            .get_active_immutable()
+            .ability
+            == Abilities::ANGERSHELL
+    {
+        super::items::item_update(state, &defender_ref, &mut instructions);
+    }
     super::abilities::anger_shell(state, choice, &attacking_side, dealt_total, &mut instructions);
 
     // this is wrong, but I am deciding it is good enough for this engine (for now)
@@ -9485,6 +9838,7 @@ fn run_move(
                     );
                     for mut branch in branches {
                         state.apply_instructions(&branch.instruction_list);
+                        berserk_after_secondaries(state, &choice, &attacking_side, &mut branch);
                         // (L147: the Update after the hit, before the drag; L210: White Herb)
                         update(state, &mut branch);
                         white_herb(state, &mut branch);
@@ -9493,13 +9847,21 @@ fn run_move(
                             &defender_ref,
                             branch,
                             final_instructions,
+                            false,
                         );
                     }
                     return;
                 }
+                berserk_after_secondaries(state, &choice, &attacking_side, &mut instructions);
                 update(state, &mut instructions);
                 white_herb(state, &mut instructions);
-                get_instructions_from_drag(state, &defender_ref, instructions, final_instructions);
+                get_instructions_from_drag(
+                    state,
+                    &defender_ref,
+                    instructions,
+                    final_instructions,
+                    false,
+                );
                 return;
             }
             ejected = true;
@@ -9578,6 +9940,14 @@ fn run_move(
             .ability
             != Abilities::GUARDDOG
     {
+        let breaker = drag_from == attacking_side
+            && matches!(
+                state
+                    .get_side_immutable(&attacking_side)
+                    .get_active_immutable()
+                    .ability,
+                Abilities::MOLDBREAKER | Abilities::TERAVOLT | Abilities::TURBOBLAZE
+            );
         // alpha-poke patch (2026-10-16, doc/engine-diff.md L7): the secondaries first (the
         // target's contact effects -- Static, Rocky Helmet, ... -- are added to the move as
         // secondaries on its user), then the drag on each of their outcomes; the drag used to
@@ -9595,14 +9965,16 @@ fn run_move(
             );
             for mut branch in branches {
                 state.apply_instructions(&branch.instruction_list);
+                berserk_after_secondaries(state, &choice, &attacking_side, &mut branch);
                 // (L147: the Update after the hit, before the drag)
-                update(state, &mut branch);
-                get_instructions_from_drag(state, &drag_from, branch, final_instructions);
+                update_before_drag(state, &choice, &drag_from.get_other_side(), &mut branch);
+                get_instructions_from_drag(state, &drag_from, branch, final_instructions, breaker);
             }
             return;
         }
-        update(state, &mut instructions);
-        get_instructions_from_drag(state, &drag_from, instructions, final_instructions);
+        berserk_after_secondaries(state, &choice, &attacking_side, &mut instructions);
+        update_before_drag(state, &choice, &drag_from.get_other_side(), &mut instructions);
+        get_instructions_from_drag(state, &drag_from, instructions, final_instructions, breaker);
         return;
     }
 
@@ -9784,6 +10156,7 @@ fn run_move(
     });
     // (L147: Showdown's Update after the hit and its secondaries, before the after-move ones)
     if kept.as_ref().map_or(true, |v| v.is_empty()) {
+        berserk_after_secondaries(state, &choice, &attacking_side, &mut instructions);
         update(state, &mut instructions);
         state.reverse_instructions(&instructions.instruction_list);
         final_instructions.push(instructions);
@@ -9799,11 +10172,17 @@ fn run_move(
         );
         for branch in instructions_vec_after_secondaries.iter_mut() {
             knock_off_after_secondaries(state, &choice, &attacking_side, hit_sub, branch);
+            state.apply_instructions(&branch.instruction_list);
+            let from = branch.instruction_list.len();
+            berserk_after_secondaries(state, &choice, &attacking_side, branch);
+            state.reverse_instructions(&branch.instruction_list[from..].to_vec());
+            state.reverse_instructions(&branch.instruction_list[..from].to_vec());
             update_branch(state, branch);
             eject_pack_after_secondaries(state, attacking_side, &defender_boosts_before, branch);
         }
         final_instructions.extend(instructions_vec_after_secondaries);
     } else {
+        berserk_after_secondaries(state, &choice, &attacking_side, &mut instructions);
         update(state, &mut instructions);
         state.reverse_instructions(&instructions.instruction_list);
         final_instructions.push(instructions);
@@ -9985,6 +10364,42 @@ fn choice_lock_release(state: &mut State, side_ref: &SideReference, instructions
     release_choice_lock(state, side_ref, instructions);
 }
 
+// (L220: a move a lock keeps out -- an Outrage's, an Uproar's or a Choice item's on another move:
+// their disabled flags stay as a Disable / Heal Block that also had it ends)
+fn lock_keeps_out(side: &Side, slot: PokemonMoveIndex) -> bool {
+    match side.last_used_move {
+        LastUsedMove::Move(m) => {
+            m != slot
+                && (side
+                    .volatile_statuses
+                    .contains(&PokemonVolatileStatus::LOCKEDMOVE)
+                    || side
+                        .volatile_statuses
+                        .contains(&PokemonVolatileStatus::UPROAR)
+                    || matches!(
+                        side.get_active_immutable().item,
+                        Items::CHOICEBAND | Items::CHOICESPECS | Items::CHOICESCARF
+                    ) && {
+                        // (L228: a Choice item locks only when it was held as the
+                        // move went -- one Tricked over after has the other moves
+                        // still on: no choicelock in Showdown)
+                        let others: Vec<_> = (&side.get_active_immutable().moves)
+                            .into_iter()
+                            .enumerate()
+                            .filter(|(i, mv)| {
+                                *i != m as usize
+                                    && *i != slot as usize
+                                    && mv.id != Choices::NONE
+                            })
+                            .map(|(_, mv)| mv.disabled)
+                            .collect();
+                        others.is_empty() || others.iter().any(|d| *d)
+                    })
+        }
+        _ => false,
+    }
+}
+
 // (the moves a lock disabled enabled again, but a Disable's; L188: also a Choice item that starts --
 // Showdown's choice items' onStart removes the choicelock: one Trick gives)
 pub fn release_choice_lock(
@@ -10027,6 +10442,39 @@ pub fn release_choice_lock(
                     move_index: *index,
                 }));
         }
+    }
+}
+
+// alpha-poke patch (2026-10-18, doc/engine-diff.md L228): the Update before a drag -- an Anger Shell
+// / Berserk holder's healing berry waits for its onAfterMoveSecondary after a single hit (their
+// onTryEatItem: checkedAngerShell), and the drag comes before the next Update: dragged out with it
+fn update_before_drag(
+    state: &mut State,
+    choice: &Choice,
+    target_ref: &SideReference,
+    instructions: &mut StateInstructions,
+) {
+    let a = state.get_side(target_ref).get_active();
+    let held = a.item;
+    let kept = matches!(a.ability, Abilities::ANGERSHELL | Abilities::BERSERK)
+        && choice.category != MoveCategory::Status
+        && choice.multi_hit() == MultiHitMove::None
+        && matches!(
+            held,
+            Items::SITRUSBERRY
+                | Items::ORANBERRY
+                | Items::FIGYBERRY
+                | Items::WIKIBERRY
+                | Items::MAGOBERRY
+                | Items::AGUAVBERRY
+                | Items::IAPAPABERRY
+        );
+    if kept {
+        a.item = Items::NONE;
+    }
+    update(state, instructions);
+    if kept {
+        state.get_side(target_ref).get_active().item = held;
     }
 }
 
@@ -10096,6 +10544,29 @@ pub fn update_with(state: &mut State, instructions: &mut StateInstructions, cud_
 // (update on a branch whose instructions are not applied to the state)
 // alpha-poke patch (2026-10-18, doc/engine-diff.md L221): Knock Off's take after the secondaries
 // when a status one could use the berry up (choice_effects::knock_off_waits): the berry still held
+// (L228: Berserk's Sp. Atk boost, marked at the hit, after the secondaries -- the state has
+// `ins` applied)
+fn berserk_after_secondaries(
+    state: &mut State,
+    choice: &Choice,
+    attacking_side: &SideReference,
+    ins: &mut StateInstructions,
+) {
+    let holder_ref = attacking_side.get_other_side();
+    let side = state.get_side(&holder_ref);
+    if !choice.berserk || side.get_active_immutable().hp == 0 {
+        return;
+    }
+    apply_boost_instruction(
+        side,
+        &PokemonBoostableStat::SpecialAttack,
+        &1,
+        &holder_ref,
+        &holder_ref,
+        ins,
+    );
+}
+
 fn knock_off_after_secondaries(
     state: &mut State,
     choice: &Choice,
@@ -10544,25 +11015,29 @@ fn dancer_after(
             ) && !ignored
                 && side.get_active_immutable().hp > 0
             {
+                // (L228: onto the dance's own slot when it knows the move -- the lock stays then,
+                // its last move that slot; else onto no slot)
+                let dance_id = mover_choice.move_id;
+                let slot = {
+                    let mut iter = side.get_active_immutable().moves.into_iter();
+                    let mut found = None;
+                    while let Some(m) = iter.next() {
+                        if m.id == dance_id {
+                            found = Some(iter.pokemon_move_index);
+                        }
+                    }
+                    found
+                };
                 let ins = super::items::get_choice_move_disable_instructions(
                     side.get_active_immutable(),
                     &dancer_side,
-                    &Choices::NONE,
+                    &if slot.is_some() { dance_id } else { Choices::NONE },
                 );
                 for i in ins {
                     state.apply_one_instruction(&i);
                     branch.instruction_list.push(i);
                 }
-                let side = state.get_side(&dancer_side);
-                if side.last_used_move != LastUsedMove::None {
-                    let ins = Instruction::SetLastUsedMove(SetLastUsedMoveInstruction {
-                        side_ref: dancer_side,
-                        last_used_move: LastUsedMove::None,
-                        previous_last_used_move: side.last_used_move,
-                    });
-                    state.apply_one_instruction(&ins);
-                    branch.instruction_list.push(ins);
-                }
+                // (its last move stays: the dance is an external move, Showdown's moveUsed skips it)
             }
             let side = state.get_side(&dancer_side);
             if matches!(side.last_used_move, LastUsedMove::Switch(_)) {

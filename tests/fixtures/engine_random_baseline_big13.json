@@ -5,51 +5,5 @@
 "teams": "f393fb41f9a28f60",
 "seed_offset": 1130000
 },
-"mismatches": {
-"b1507-t15": [
-"sleep_turns",
-"status"
-],
-"b1942-t17": [
-"hp"
-],
-"b2619-t8": [
-"hp",
-"sc.toxic_count",
-"status"
-],
-"b2782-t13": [
-"sleep_turns",
-"status"
-],
-"b344-t32": [
-"ability",
-"attack",
-"base_ability",
-"base_types",
-"defense",
-"gender",
-"hp",
-"id",
-"last_item",
-"last_used_move",
-"level",
-"maxhp",
-"move",
-"must_switch",
-"nature",
-"options",
-"pp",
-"sc.protect",
-"special_attack",
-"special_defense",
-"speed",
-"status",
-"stellar_boosted",
-"tera_type",
-"terastallized",
-"types",
-"weight"
-]
-}
+"mismatches": {}
 }

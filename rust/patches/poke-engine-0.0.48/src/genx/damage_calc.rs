@@ -180,10 +180,12 @@ fn tera_floor_applies(attacker: &Pokemon, choice: &Choice) -> bool {
     use crate::choices::MOVES;
     let data = MOVES.get(&choice.move_id);
     let data_power = data.map_or(choice.base_power, |m| m.base_power);
+    // (L228: Beat Up too -- Showdown's basePower 0 with a basePowerCallback; the engine's data
+    // has 10)
     let own_power = data_power == 0.0
         || matches!(
             choice.move_id,
-            Choices::ERUPTION | Choices::WATERSPOUT | Choices::DRAGONENERGY
+            Choices::ERUPTION | Choices::WATERSPOUT | Choices::DRAGONENERGY | Choices::BEATUP
         );
     let typed = if attacker.tera_type == PokemonType::STELLAR {
         stellar_boost_due(&choice.move_type, attacker)
@@ -1092,11 +1094,19 @@ pub fn calculate_futuresight_damage(
     let choice = &boosted;
     // L35: the user's Special Attack boosts while it is active (Showdown's getDamage on the
     // source at the hit; a switch resets them)
-    let user_active = attacking_side.active_index == *attacking_side_pokemon_index;
+    // (L228: not one that fainted -- Showdown's faint clears its volatiles and boosts; a
+    // transformed one is its own again: its own Sp. Atk and types, Pokemon::own)
+    let user_active = attacking_side.active_index == *attacking_side_pokemon_index
+        && user.hp > 0;
+    let mut own_user = user.clone();
+    if !user_active && user.own.is_set() {
+        own_user.special_attack = user.own.stats[2];
+        own_user.types = user.base_types;
+    }
     let attacking_stat = if user_active {
         attacking_side.calculate_boosted_stat(PokemonBoostableStat::SpecialAttack)
     } else {
-        attacking_side.pokemon[attacking_side_pokemon_index].special_attack
+        own_user.special_attack
     };
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L168): a crit (the end of turn's branch)
     // leaves out the user's lowered Sp. Atk and the target's raised Sp. Def (and the screens: the
@@ -1104,7 +1114,7 @@ pub fn calculate_futuresight_damage(
     let crit_attacking_stat = if user_active && attacking_side.special_attack_boost > 0 {
         attacking_stat
     } else {
-        attacking_side.pokemon[attacking_side_pokemon_index].special_attack
+        own_user.special_attack
     };
     // alpha-poke patch (2026-10-16, doc/engine-diff.md L15): a special move's damage at the hit,
     // as Showdown's: the target's Special Defense boosts, its Eviolite / Assault Vest, Aurora
@@ -1118,7 +1128,7 @@ pub fn calculate_futuresight_damage(
     } else {
         defending_side.get_active_immutable().special_defense
     };
-    let attacker = &attacking_side.pokemon[attacking_side_pokemon_index];
+    let attacker = &own_user;
     match common_pkmn_damage_calc(
         attacking_side,
         attacker,

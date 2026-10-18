@@ -817,7 +817,11 @@ pub fn modify_choice(
                 ((25.0 * defender_speed as f32 / attacker_speed as f32).floor() + 1.0).min(150.0);
         }
         Choices::AVALANCHE => {
-            if !attacker_choice.first_move && defending_side.damage_dealt.damage > 0 {
+            // (L228: not a hit on its Substitute -- Showdown's attackedBy damage is 0 then)
+            if !attacker_choice.first_move
+                && defending_side.damage_dealt.damage > 0
+                && !defending_side.damage_dealt.hit_substitute
+            {
                 attacker_choice.base_power *= 2.0;
             }
         }

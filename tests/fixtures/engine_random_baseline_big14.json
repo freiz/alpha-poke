@@ -5,30 +5,5 @@
 "teams": "d66247de9717b7af",
 "seed_offset": 1140000
 },
-"mismatches": {
-"b1037-t17": [
-"volatile.charge"
-],
-"b1561-t19": [
-"hp",
-"item",
-"last_item"
-],
-"b1974-t31": [
-"last_used_move",
-"options"
-],
-"b1974-t6": [
-"last_used_move",
-"options"
-],
-"b2423-t31": [
-"volatile.charge"
-],
-"b756-t22": [
-"last_used_move",
-"options",
-"pp"
-]
-}
+"mismatches": {}
 }

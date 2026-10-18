@@ -395,8 +395,9 @@ def damage_hints(start: dict, after: dict) -> tuple[int, int]:
         f = [_slot(x) for x in line.split("|")]  # (L226: "p1a: Name" -> "p1a")
         # (a damage a Focus Sash / Focus Band / Sturdy / Endure capped: no roll -- its message
         # before the damage line or after it)
+        # (L228: not one knocked off / burnt up -- "[from] move: Knock Off": the hit was a roll)
         capped = len(f) > 3 and (
-            (f[1] == "-enditem" and f[3] in ("Focus Sash", "Focus Band"))
+            (f[1] == "-enditem" and f[3] in ("Focus Sash", "Focus Band") and "[from]" not in line)
             or (f[1] == "-activate" and f[3] in ("ability: Sturdy", "move: Endure", "item: Focus Band")))
         if capped and hinted and f[2] == hinted[1]:
             hints[hinted[0]] = -1
@@ -496,6 +497,7 @@ def roll_hints(start: dict, after: dict) -> tuple:
     hits, mover, target = [], None, None  # (the current move's hits on its target)
     pending_future, crit, prev = None, False, None
     sub_lines: dict = {}  # (L226: the Substitute hits by target, all moves')
+    darts: dict = {}  # (L228: a Dragon Darts' target by mover, its Substitute marks at the end)
     for line in _log_lines(after):
         f = [_slot(x) for x in line.split("|")]  # (L226: "p1a: Name" -> "p1a")
         if len(f) < 3:
@@ -509,6 +511,7 @@ def roll_hints(start: dict, after: dict) -> tuple:
             # they come)
             if f[3] == "Dragon Darts":
                 multi[mover] = hits
+                darts[mover] = target
         elif tag == "-crit":
             crit = True
         elif tag == "-end" and len(f) > 3 and f[3] in ("move: Future Sight", "move: Doom Desire"):
@@ -521,7 +524,7 @@ def roll_hints(start: dict, after: dict) -> tuple:
                 hits.append("B" if tag == "-end" else "S")
                 sub_lines[f[2]] = sub_lines.get(f[2], 0) + 1
             crit = False
-        elif tag in ("-enditem", "-activate") and len(f) > 3 and f[3] in (
+        elif tag in ("-enditem", "-activate") and len(f) > 3 and "[from]" not in line and f[3] in (
                 "Focus Sash", "ability: Sturdy", "move: Endure", "item: Focus Band", "Focus Band"):  # fmt: skip
             if hits and f[2] == target:
                 hits[-1] = -1
@@ -545,7 +548,11 @@ def roll_hints(start: dict, after: dict) -> tuple:
                 hits.append(mark(KO_HINT if ko else dealt))
             crit = False if tag == "-damage" else crit
             hp[f[2]] = new
-    # (L227: a Dragon Darts' Substitute marks with no -hitcount to turn them into hints)
+    # (L227: a Dragon Darts' Substitute marks with no -hitcount to turn them into hints; L228: as
+    # a -hitcount's, its share / break)
+    for k, t in darts.items():
+        if multi[k] and not all(isinstance(h, int) for h in multi[k]):
+            multi[k] = _sub_hits(multi[k], start, after, t, sub_lines)
     multi = [[h if isinstance(h, int) else -1 for h in m] for m in multi]
     return (*confusion, *future, *multi)
 

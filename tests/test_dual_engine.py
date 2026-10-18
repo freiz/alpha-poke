@@ -6615,8 +6615,8 @@ def test_l226_state_string_keeps_toxic_spikes_order():
 # Liquid Ooze, Explosion, Fur Coat, Toxic Spikes, Disguise, Facade, the residuals' order, Gulp
 # Missile, Magic Bounce, Relic Song, Berserk / Anger Shell, Encore, Aftermath, Truant, Trick's
 # accuracy, Mycelium Might, Aroma Veil, cosmetic formes' stats, ...
-def _big_position(k: int, i: int, turn: int):
-    pairs = {(x["set"], x["i"]): x for x in map(json.loads, (Path("tests/fixtures") / "random_battle_pairs_big_l227.jsonl").read_text().splitlines())}
+def _big_position(k: int, i: int, turn: int, fixture: str = "random_battle_pairs_big_l227.jsonl"):
+    pairs = {(x["set"], x["i"]): x for x in map(json.loads, (Path("tests/fixtures") / fixture).read_text().splitlines())}
     p = pairs[(k, i)]
     n = i + 1000000 + 10000 * k
     steps, _ = ec.random_battle(p["p1"], p["p2"], f"gen5,{n},{n + 1},{n + 2},{n + 3}", n + 1, max_turns=60)
@@ -6785,6 +6785,129 @@ def _big_position(k: int, i: int, turn: int):
 ])  # fmt: skip
 def test_l227_positions(k, i, turn):
     a, b = _big_position(k, i, turn)
+    c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
+    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"]))
+    n = tuple(len(s["mons"]) for s in a["state"]["sides"])
+    assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}
+
+
+# L228 (doc/engine-diff.md): the two-million-turn differential's positions (big10 - big29; their
+# pairs in random_battle_pairs_big_l228.jsonl) -- Beat Up's one hitter, Thermal Exchange under
+# Mold Breaker, a wake into Truant / a flinch (no PP), Choice items Tricked over, Heal Block's end,
+# Inner Focus under Mold Breaker, Future Sight (Electromorphosis, the target's order, a fainted
+# Ditto's stats), Ice Face and a failed Endeavor, Harvest and the residuals' Update, Anger Shell's
+# berry, Synchronize on Beak Blast, Avalanche on a Substitute, Levitate through a Mold Breaker's
+# drag, Berserk after the secondaries, Alluring Voice and Imposter's boosts, the switch's Update
+# before the hazards, Early Bird's Rest, an Encore's priority, Libero's base type, Minior's Core,
+# Dragon Darts on a Substitute, a knocked-off Focus Sash, Dry Skin before Wish
+@pytest.mark.parametrize("k,i,turn", [
+    (10, 458, 18),
+    (10, 458, 20),
+    (10, 1425, 31),
+    (10, 1924, 4),
+    (10, 2332, 35),
+    (10, 2577, 2),
+    (11, 1505, 35),
+    (11, 1963, 32),
+    (12, 2258, 4),
+    (12, 2258, 5),
+    (13, 344, 32),
+    (13, 1507, 15),
+    (13, 1942, 17),
+    (13, 2619, 8),
+    (13, 2782, 13),
+    (14, 756, 22),
+    (14, 1037, 17),
+    (14, 1561, 19),
+    (14, 1974, 6),
+    (14, 1974, 31),
+    (14, 2423, 31),
+    (15, 623, 25),
+    (15, 2601, 21),
+    (16, 307, 7),
+    (16, 785, 21),
+    (17, 2671, 18),
+    (17, 2888, 15),
+    (18, 605, 11),
+    (18, 1511, 8),
+    (19, 730, 26),
+    (19, 1306, 29),
+    (19, 1306, 34),
+    (19, 1437, 25),
+    (19, 1750, 6),
+    (19, 2587, 45),
+    (20, 668, 4),
+    (20, 1009, 19),
+    (20, 1662, 25),
+    (20, 2146, 10),
+    (21, 585, 9),
+    (21, 2296, 50),
+    (21, 2801, 10),
+    (22, 1545, 19),
+    (22, 1961, 46),
+    (23, 666, 19),
+    (23, 666, 20),
+    (23, 695, 11),
+    (23, 1779, 18),
+    (23, 2016, 31),
+    (23, 2453, 19),
+    (24, 2281, 14),
+    (24, 2838, 35),
+    (25, 435, 44),
+    (25, 1636, 17),
+    (25, 1662, 21),
+    (25, 2499, 3),
+    (25, 2499, 4),
+    (26, 26, 37),
+    (27, 899, 17),
+    (27, 899, 18),
+    (27, 1011, 2),
+    (27, 1081, 6),
+    (27, 1585, 36),
+    (27, 2691, 13),
+    (27, 2821, 22),
+    (29, 168, 30),
+    (29, 168, 31),
+    (29, 1068, 26),
+    (29, 1783, 27),
+    # (the regression's: Cursed Body on a Choice lock, Heal Block's end under a lock, Future
+    # Sight's Update before Harvest)
+    (0, 6, 15),
+    (0, 1288, 31),
+    (3, 238, 10),
+    (4, 1478, 12),
+    (6, 1391, 15),
+    (6, 1833, 16),
+    (7, 433, 5),
+    (7, 477, 21),
+    (7, 1720, 17),
+    (8, 242, 19),
+    (13, 793, 39),
+    (13, 1712, 9),
+    (15, 2451, 4),
+    (19, 2628, 27),
+    (20, 1148, 30),
+    (25, 38, 24),
+    (26, 324, 9),
+    (26, 1997, 17),
+    (26, 2030, 2),
+    (29, 153, 18),
+])  # fmt: skip
+def test_l228_positions(k, i, turn):
+    a, b = _big_position(k, i, turn, "random_battle_pairs_big_l228.jsonl")
+    c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
+    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"]))
+    n = tuple(len(s["mons"]) for s in a["state"]["sides"])
+    assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}
+
+
+# L228: the regular sets' regression positions (a Cursed Body Disable on a Choice-locked move)
+@pytest.mark.parametrize("teams,i,turn,offset", [
+    ("random_battle_teams_randbats3.jsonl", 244, 3, 80000),
+    ("random_battle_teams_randbats10.jsonl", 39, 2, 150000),
+])  # fmt: skip
+def test_l228_choice_lock_disabled(teams, i, turn, offset):
+    a, b = _random_position(teams, i, turn, offset)
     c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
     outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"]))
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
