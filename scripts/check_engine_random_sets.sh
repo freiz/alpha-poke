@@ -40,4 +40,6 @@ run randbats14 --battles 300 --seed-offset 190000 --teams tests/fixtures/random_
 run randbats15 --battles 300 --seed-offset 200000 --teams tests/fixtures/random_battle_teams_randbats15.jsonl "${@}"
 run randbats16 --battles 300 --seed-offset 210000 --teams tests/fixtures/random_battle_teams_randbats16.jsonl "${@}"
 run randbats17 --battles 300 --seed-offset 220000 --teams tests/fixtures/random_battle_teams_randbats17.jsonl "${@}"
+run randbats18 --battles 300 --seed-offset 230000 --teams tests/fixtures/random_battle_teams_randbats18.jsonl "${@}"
+run randbats19 --battles 300 --seed-offset 240000 --teams tests/fixtures/random_battle_teams_randbats19.jsonl "${@}"
 exit $status
