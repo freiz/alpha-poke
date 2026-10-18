@@ -1,6 +1,7 @@
 #!/bin/bash
-# The large random differential (doc/engine-diff.md L227): ten sets of 2900 Showdown random-battle
-# pairs, about a million compared turns, each against its own no-regression baseline. The teams
+# The large random differential (doc/engine-diff.md L227 / L228): thirty sets of 2900 Showdown
+# random-battle pairs, about three million compared turns, each against its own no-regression
+# baseline (BIG_SETS="10 11 ..." picks some). The teams
 # come from scripts/randbats_teams.py with fixed seeds (the same pairs every run); they are made
 # under data/teams/big/ when missing, not committed (some 7 MB a set). Extra arguments go to each
 # run (--update-baseline; --from-report: from the last run's reports, no new battles).
@@ -8,7 +9,7 @@
 cd "$(dirname "$0")/.." || exit 1
 status=0
 mkdir -p data/teams/big
-for k in 0 1 2 3 4 5 6 7 8 9; do
+for k in ${BIG_SETS:-$(seq 0 29)}; do
   teams=data/teams/big/random_battle_teams_big$k.jsonl
   if [ ! -s "$teams" ]; then
     systemd-run --user --scope -q -p MemoryMax=4G uv run python scripts/randbats_teams.py \

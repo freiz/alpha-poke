@@ -1,0 +1,32 @@
+{
+"setup": {
+"battles": 2900,
+"max_turns": 60,
+"teams": "f5d337b159a5fd27",
+"seed_offset": 1290000
+},
+"mismatches": {
+"b1068-t26": [
+"defense",
+"id",
+"special_defense",
+"speed"
+],
+"b168-t30": [
+"defense",
+"id",
+"special_defense",
+"speed"
+],
+"b168-t31": [
+"defense",
+"id",
+"special_defense",
+"speed"
+],
+"b1783-t27": [
+"hp",
+"status"
+]
+}
+}
