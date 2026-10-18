@@ -2141,6 +2141,47 @@ pub fn trace_update(state: &mut State, side_ref: &SideReference, instructions: &
     }
 }
 
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L195): a permanent forme change (Showdown's
+// formeChange(..., isPermanent): the species, its ability as the base ability too, the stats by
+// their change, updateMaxHp) -- Tera Shift's Terapagos-Terastal, the tera's Terapagos-Stellar
+pub fn permanent_forme_change(
+    state: &mut State,
+    side_ref: &SideReference,
+    to: PokemonName,
+    ability: Abilities,
+    instructions: &mut StateInstructions,
+) {
+    let active = state.get_side(side_ref).get_active();
+    let from = active.id;
+    instructions
+        .instruction_list
+        .push(Instruction::FormeChange(FormeChangeInstruction {
+            side_ref: *side_ref,
+            name_change: to as i16 - from as i16,
+        }));
+    active.id = to;
+    if active.ability != ability {
+        instructions
+            .instruction_list
+            .push(Instruction::ChangeAbility(ChangeAbilityInstruction {
+                side_ref: *side_ref,
+                ability_change: ability as i16 - active.ability as i16,
+            }));
+        active.ability = ability;
+    }
+    if active.base_ability != ability {
+        instructions
+            .instruction_list
+            .push(Instruction::ChangeBaseAbility(ChangeAbilityInstruction {
+                side_ref: *side_ref,
+                ability_change: ability as i16 - active.base_ability as i16,
+            }));
+        active.base_ability = ability;
+    }
+    active.recalculate_stats(from, side_ref, instructions);
+    active.update_max_hp(from, side_ref, instructions);
+}
+
 pub fn ability_on_switch_in(
     state: &mut State,
     side_ref: &SideReference,
@@ -2168,6 +2209,20 @@ pub fn ability_on_switch_in(
         return;
     }
 
+    // (L195: Tera Shift first, its onSwitchInPriority 2: Terapagos-Terastal and its Tera Shell)
+    {
+        let me = state.get_side_immutable(side_ref).get_active_immutable();
+        if me.ability == Abilities::TERASHIFT && me.id == PokemonName::TERAPAGOS {
+            permanent_forme_change(
+                state,
+                side_ref,
+                PokemonName::TERAPAGOSTERASTAL,
+                Abilities::TERASHELL,
+                instructions,
+            );
+            return;
+        }
+    }
     // trace copying an ability needs to happen before the ability check to activate on switch-in
     // e.g. tracing intimidate will activate intimidate
     trace_copy(state, side_ref, instructions);

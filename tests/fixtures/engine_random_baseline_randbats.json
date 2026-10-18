@@ -18,65 +18,9 @@
 "status"
 ],
 "b109-t23": [
-"ability",
-"attack",
-"base_ability",
-"defense",
-"hp",
-"id",
-"maxhp",
-"special_attack",
-"special_defense",
-"speed",
-"weight"
-],
-"b109-t28": [
-"hp"
-],
-"b109-t37": [
-"hp"
-],
-"b109-t52": [
-"hp"
-],
-"b112-t13": [
-"ability",
-"attack",
-"base_ability",
-"base_types",
-"defense",
-"gender",
-"hp",
-"id",
-"last_item",
-"level",
-"maxhp",
-"move",
-"must_switch",
-"nature",
-"options",
-"pp",
-"sc.protect",
-"special_attack",
-"special_defense",
-"speed",
-"status",
-"stellar_boosted",
-"tera_type",
-"terastallized",
-"types",
-"weight"
+"attack"
 ],
 "b114-t26": [
-"hp"
-],
-"b115-t1": [
-"hp"
-],
-"b115-t10": [
-"hp"
-],
-"b115-t4": [
 "hp"
 ],
 "b118-t5": [
@@ -112,14 +56,8 @@
 "types",
 "weight"
 ],
-"b127-t11": [
-"hp"
-],
 "b137-t31": [
 "sleep_turns"
-],
-"b144-t10": [
-"hp"
 ],
 "b146-t12": [
 "defense",
@@ -137,48 +75,6 @@
 "b152-t10": [
 "hp"
 ],
-"b154-t19": [
-"ability",
-"attack",
-"base_ability",
-"defense",
-"hp",
-"id",
-"maxhp",
-"special_attack",
-"special_defense",
-"speed",
-"weight"
-],
-"b154-t3": [
-"ability",
-"attack",
-"base_ability",
-"base_types",
-"defense",
-"gender",
-"hp",
-"id",
-"last_item",
-"last_used_move",
-"level",
-"maxhp",
-"move",
-"must_switch",
-"nature",
-"options",
-"pp",
-"sc.protect",
-"special_attack",
-"special_defense",
-"speed",
-"status",
-"stellar_boosted",
-"tera_type",
-"terastallized",
-"types",
-"weight"
-],
 "b16-t18": [
 "status"
 ],
@@ -186,22 +82,6 @@
 "boost.spa"
 ],
 "b171-t13": [
-"hp"
-],
-"b171-t22": [
-"ability",
-"attack",
-"base_ability",
-"defense",
-"hp",
-"id",
-"maxhp",
-"special_attack",
-"special_defense",
-"speed",
-"weight"
-],
-"b171-t23": [
 "hp"
 ],
 "b187-t20": [
@@ -272,30 +152,8 @@
 "types",
 "weight"
 ],
-"b239-t25": [
-"hp"
-],
-"b239-t28": [
-"hp"
-],
-"b239-t48": [
-"hp"
-],
 "b239-t5": [
-"ability",
-"attack",
-"base_ability",
-"defense",
-"hp",
-"id",
-"maxhp",
-"special_attack",
-"special_defense",
-"speed",
-"weight"
-],
-"b239-t7": [
-"hp"
+"attack"
 ],
 "b263-t53": [
 "hp"
@@ -311,9 +169,6 @@
 "status"
 ],
 "b36-t19": [
-"hp"
-],
-"b37-t1": [
 "hp"
 ],
 "b42-t1": [
@@ -357,17 +212,7 @@
 "hp"
 ],
 "b62-t13": [
-"ability",
-"attack",
-"base_ability",
-"defense",
-"hp",
-"id",
-"maxhp",
-"special_attack",
-"special_defense",
-"speed",
-"weight"
+"attack"
 ],
 "b62-t48": [
 "hp"
@@ -379,12 +224,6 @@
 "hp"
 ],
 "b67-t11": [
-"hp"
-],
-"b76-t14": [
-"hp"
-],
-"b78-t12": [
 "hp"
 ],
 "b83-t32": [

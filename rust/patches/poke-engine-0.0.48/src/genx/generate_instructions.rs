@@ -2938,6 +2938,49 @@ fn embody_aspect_on_tera(
     side_ref: SideReference,
     instructions: &mut StateInstructions,
 ) {
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L195): Terapagos-Terastal terastallizing
+    // becomes Terapagos-Stellar (Showdown's terastallize: a permanent forme, its Teraform Zero),
+    // whose Teraform Zero ends the weather and the terrain (onAfterTerastallization)
+    if state.get_side_immutable(&side_ref).get_active_immutable().id
+        == PokemonName::TERAPAGOSTERASTAL
+    {
+        super::abilities::permanent_forme_change(
+            state,
+            &side_ref,
+            PokemonName::TERAPAGOSSTELLAR,
+            Abilities::TERAFORMZERO,
+            instructions,
+        );
+        if state.weather.weather_type != Weather::NONE {
+            instructions
+                .instruction_list
+                .push(Instruction::ChangeWeather(ChangeWeather {
+                    new_weather: Weather::NONE,
+                    new_weather_turns_remaining: -1,
+                    previous_weather: state.weather.weather_type,
+                    previous_weather_turns_remaining: state.weather.turns_remaining,
+                }));
+            state.weather.weather_type = Weather::NONE;
+            state.weather.turns_remaining = -1;
+        }
+        if state.terrain.terrain_type != Terrain::NONE {
+            instructions
+                .instruction_list
+                .push(Instruction::ChangeTerrain(ChangeTerrain {
+                    new_terrain: Terrain::NONE,
+                    new_terrain_turns_remaining: 0,
+                    previous_terrain: state.terrain.terrain_type,
+                    previous_terrain_turns_remaining: state.terrain.turns_remaining,
+                }));
+            state.terrain.terrain_type = Terrain::NONE;
+            state.terrain.turns_remaining = 0;
+        }
+        // (the sun / Electric Terrain gone: Protosynthesis / Quark Drive, L141)
+        for s in [SideReference::SideOne, SideReference::SideTwo] {
+            super::abilities::paradox_update(state, &s, instructions);
+        }
+        return;
+    }
     let side = state.get_side(&side_ref);
     let active = side.get_active();
     let (ability, stat, tera) = match active.id {

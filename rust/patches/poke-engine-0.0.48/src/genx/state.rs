@@ -343,6 +343,52 @@ impl Pokemon {
         }
     }
 
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L195): Showdown's updateMaxHp after a
+    // permanent forme change (from `from`): the max HP by the HP stat's change, the HP lost kept
+    // (at least 1)
+    pub fn update_max_hp(
+        &mut self,
+        from: PokemonName,
+        side_ref: &SideReference,
+        instructions: &mut StateInstructions,
+    ) {
+        let new_hp = self.calculate_stats_from_base_stats().0;
+        let to = self.id;
+        self.id = from;
+        let old_hp = self.calculate_stats_from_base_stats().0;
+        self.id = to;
+        let amount = new_hp - old_hp;
+        if amount == 0 {
+            return;
+        }
+        instructions
+            .instruction_list
+            .push(Instruction::ChangeMaxHp(ChangeStatInstruction {
+                side_ref: *side_ref,
+                amount,
+            }));
+        self.maxhp += amount;
+        if self.hp > 0 {
+            let hp = std::cmp::max(1, self.hp + amount);
+            if hp > self.hp {
+                instructions
+                    .instruction_list
+                    .push(Instruction::Heal(crate::instruction::HealInstruction {
+                        side_ref: *side_ref,
+                        heal_amount: hp - self.hp,
+                    }));
+            } else if hp < self.hp {
+                instructions
+                    .instruction_list
+                    .push(Instruction::Damage(crate::instruction::DamageInstruction {
+                        side_ref: *side_ref,
+                        damage_amount: self.hp - hp,
+                    }));
+            }
+            self.hp = hp;
+        }
+    }
+
     pub fn recalculate_stats(
         &mut self,
         from: PokemonName,

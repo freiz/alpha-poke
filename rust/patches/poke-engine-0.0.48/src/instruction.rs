@@ -117,6 +117,9 @@ pub enum Instruction {
     // transformed (Pokemon::own, OwnSet::change's field), its weight (in hg)
     ChangeOwn(ChangeOwnInstruction),
     ChangeWeight(ChangeStatInstruction),
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L195): a permanent forme's max HP (Showdown's
+    // updateMaxHp: Tera Shift, Terapagos-Stellar); its HP by Heal / Damage
+    ChangeMaxHp(ChangeStatInstruction),
     Revive(ReviveInstruction),
     ToggleTrickRoom(ToggleTrickRoomInstruction),
     DecrementTrickRoomTurnsRemaining,
@@ -346,6 +349,9 @@ impl fmt::Debug for Instruction {
             }
             Instruction::ChangeOwn(s) => {
                 write!(f, "ChangeOwn {:?}: {} {}", s.side_ref, s.field, s.amount)
+            }
+            Instruction::ChangeMaxHp(s) => {
+                write!(f, "ChangeMaxHp {:?}: {}", s.side_ref, s.amount)
             }
             Instruction::ChangeWeight(s) => {
                 write!(f, "ChangeWeight {:?}: {}", s.side_ref, s.amount)

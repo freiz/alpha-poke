@@ -2186,6 +2186,9 @@ impl State {
                 .get_active()
                 .own
                 .change(instruction.field, instruction.amount),
+            Instruction::ChangeMaxHp(instruction) => {
+                self.get_side(&instruction.side_ref).get_active().maxhp += instruction.amount;
+            }
             Instruction::ChangeWeight(instruction) => {
                 let active = self.get_side(&instruction.side_ref).get_active();
                 let hg = (active.weight_kg * 10.0).round() as i16 + instruction.amount;
@@ -2430,6 +2433,9 @@ impl State {
                 .get_active()
                 .own
                 .change(instruction.field, -instruction.amount),
+            Instruction::ChangeMaxHp(instruction) => {
+                self.get_side(&instruction.side_ref).get_active().maxhp -= instruction.amount;
+            }
             Instruction::ChangeWeight(instruction) => {
                 let active = self.get_side(&instruction.side_ref).get_active();
                 let hg = (active.weight_kg * 10.0).round() as i16 - instruction.amount;

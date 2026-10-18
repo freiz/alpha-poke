@@ -5506,3 +5506,30 @@ Adamant Nature
     states = ec.run_showdown(toucannon, gar, [("move beakblast", "move dragonclaw")])
     assert states[1]["sides"][1]["mons"][0]["status"] == "brn"
     assert _keys(_full(states, 0, "beakblast", "dragonclaw"), "status") == {}
+
+
+# L195 (doc/engine-diff.md): Terapagos's permanent formes (Showdown's formeChange isPermanent: the
+# ability as base too, updateMaxHp): Tera Shift's Terapagos-Terastal on its entry, whose Tera Shell
+# resists every hit at full HP; Terapagos-Stellar on the tera (Teraform Zero)
+TERAPAGOS = """Terapagos @ Leftovers
+Ability: Tera Shift
+Tera Type: Stellar
+EVs: 252 HP / 252 SpA / 4 SpD
+Modest Nature
+- Tera Starstorm
+- Earth Power
+- Calm Mind
+- Rapid Spin"""
+
+
+def test_l195_tera_shift_and_tera_shell():
+    states = ec.run_showdown(GARCHOMP_SD, BLISSEY + "\n\n" + TERAPAGOS, [("move earthquake", "switch 2")])
+    assert states[1]["sides"][1]["mons"][1]["species"] == "terapagosterastal"
+    assert any("ability: Tera Shell" in x for x in states[1]["log"])
+    assert _full(states, 0, "earthquake", "terapagos", (1, 2)) == {}
+
+
+def test_l195_terapagos_stellar():
+    states = ec.run_showdown(GARCHOMP_SD, TERAPAGOS, [("move swordsdance", "move calmmind terastallize")])
+    assert states[1]["sides"][1]["mons"][0]["species"] == "terapagosstellar"
+    assert _full(states, 0, "swordsdance", "calmmind-tera") == {}

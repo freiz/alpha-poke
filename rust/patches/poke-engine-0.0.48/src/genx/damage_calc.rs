@@ -859,12 +859,26 @@ fn common_pkmn_damage_calc(
     } else {
         1.0
     };
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L195): Tera Shell, a full-HP
+    // Terapagos-Terastal resists every damaging hit it is not immune to (Showdown's
+    // onEffectiveness: -1; breakable)
+    let tera_shell = defender.id == crate::pokemon::PokemonName::TERAPAGOSTERASTAL
+        && defender.ability == Abilities::TERASHELL
+        && defender.hp == defender.maxhp
+        && effectiveness > 0.0
+        && !matches!(
+            attacker.ability,
+            Abilities::MOLDBREAKER | Abilities::TERAVOLT | Abilities::TURBOBLAZE
+        );
     Some(DamageRecipe {
         base: base(attacking_stat, defending_stat),
         crit_base: crit_base.floor() as i64,
         stab: q4096(stab_modifier(&choice.move_type, &attacker)),
         // Freeze-Dry: super effective on Water (its onEffectiveness: +1 instead of -1)
-        type_stages: type_stages(effectiveness)
+        type_stages: if tera_shell {
+            -1
+        } else {
+            type_stages(effectiveness)
             + vol.type_stages
             + if choice.move_id == Choices::FREEZEDRY && defender.has_type(&PokemonType::WATER) {
                 2
@@ -879,7 +893,8 @@ fn common_pkmn_damage_calc(
                 ))
             } else {
                 0
-            },
+            }
+        },
         burn: burn_modifier(&choice, &attacker, defender) != 1.0,
         final_mod: vol.damage * choice.damage_modifier,
         screen_mod,
