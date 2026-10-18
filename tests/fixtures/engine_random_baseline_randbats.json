@@ -5,9 +5,5 @@
 "teams": "cb86f66c1843bc5b",
 "seed_offset": 60000
 },
-"mismatches": {
-"b137-t31": [
-"sleep_turns"
-]
-}
+"mismatches": {}
 }

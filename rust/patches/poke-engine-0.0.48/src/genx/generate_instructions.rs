@@ -3527,6 +3527,20 @@ fn flinched_or_taunted(state: &State, choice: &Choice, attacking_side_ref: &Side
             && choice.flags.sound
         // (L211: and Gravity a gravity move, Showdown's onBeforeMove)
         || state.gravity > 0 && choice.move_id.disabled_by_gravity()
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L213): Heal Block's healing move
+        // (priority 6) and a move disabled after it was chosen (L70; priority 7), after an asleep /
+        // frozen mover's status too (Showdown's BeforeMove: sleep 10 first -- a Rest chosen
+        // asleep under Heal Block still counts its turn); they were checked before the status
+        || choice.flags.heal
+            && attacking_side
+                .volatile_statuses
+                .contains(&PokemonVolatileStatus::HEALBLOCK)
+        || attacking_side
+            .volatile_statuses
+            .contains(&PokemonVolatileStatus::DISABLE)
+            && choice.category != MoveCategory::Switch
+            && !choice.called_move
+            && choice.move_index as i8 == attacking_side.volatile_status_durations.disable / 8
 }
 
 // alpha-poke patch (2026-10-17, doc/engine-diff.md L186): a Focus Punch hit by an attack this turn
@@ -3639,25 +3653,8 @@ fn cannot_use_move(state: &State, choice: &Choice, attacking_side_ref: &SideRefe
         attacking_side.get_active_immutable().status,
         PokemonStatus::SLEEP | PokemonStatus::FREEZE
     );
-    if !asleep_or_frozen && flinched_or_taunted(state, choice, attacking_side_ref) {
-        return true;
-    } else if choice.flags.heal
-        && attacking_side
-            .volatile_statuses
-            .contains(&PokemonVolatileStatus::HEALBLOCK)
-    {
-        return true;
-    } else if attacking_side
-        .volatile_statuses
-        .contains(&PokemonVolatileStatus::DISABLE)
-        && choice.category != MoveCategory::Switch
-        && !choice.called_move
-        && choice.move_index as i8 == attacking_side.volatile_status_durations.disable / 8
-    {
-        // alpha-poke patch (L70): disabled after it chose it (Showdown's onBeforeMove)
-        return true;
-    }
-    false
+    // (L213: Heal Block and Disable with them, flinched_or_taunted)
+    !asleep_or_frozen && flinched_or_taunted(state, choice, attacking_side_ref)
 }
 
 
@@ -3726,6 +3723,8 @@ pub fn before_move(
 
     ability_modify_attack_being_used(state, choice, defender_choice, attacking_side);
     ability_modify_attack_against(state, choice, defender_choice, attacking_side);
+    // (L213: Ice Face / Disguise once the move is final)
+    super::abilities::face_before_hit(state, choice, attacking_side);
 
     item_modify_attack_being_used(state, choice, attacking_side);
     item_modify_attack_against(state, choice, attacking_side);
@@ -7897,7 +7896,7 @@ fn run_move(
         } else {
             -1
         };
-        let hit_damage = if choice.multi_hit() != MultiHitMove::None
+        let hit_damage = if (hit_count > 1 || choice.multi_hit() != MultiHitMove::None)
             && hint >= 0
             && does_damage
             && !halved
@@ -7909,9 +7908,38 @@ fn run_move(
                 c.base_power =
                     choice.base_power * 2.0 * (hit as f32 + 1.0) / (hit_count as f32 + 1.0);
             }
-            match damage_rolls(state, &attacking_side, &c) {
-                Some((r, cr)) if (if crit { cr } else { r }).contains(&d) => d,
-                _ => hit_damage,
+            let rolls_have = |c: &Choice| {
+                matches!(damage_rolls(state, &attacking_side, c),
+                    Some((r, cr)) if (if crit { cr } else { r }).contains(&d))
+            };
+            // (L213: Beat Up's hit by a hitter's power, 5 + its base Attack / 10, over the hitters'
+            // mean the choice has (modify_choice); the hitters in Showdown's party order, which
+            // its switches reorder: this hit's own one first, then the others)
+            if choice.move_id == Choices::BEATUP {
+                let powers: Vec<f32> = super::choice_effects::beat_up_allies(
+                    state.get_side_immutable(&attacking_side),
+                )
+                .iter()
+                .map(|p| 5.0 + (p.id.base_stats().1 / 10) as f32)
+                .collect();
+                let mean = powers.iter().sum::<f32>() / powers.len().max(1) as f32;
+                let k = (hit as usize).min(powers.len().saturating_sub(1));
+                let order = std::iter::once(k).chain((0..powers.len()).filter(|j| *j != k));
+                let mut found = false;
+                for j in order {
+                    if mean > 0.0 {
+                        c.base_power = choice.base_power * powers[j] / mean;
+                    }
+                    if rolls_have(&c) {
+                        found = true;
+                        break;
+                    }
+                }
+                if found { d } else { hit_damage }
+            } else if rolls_have(&c) {
+                d
+            } else {
+                hit_damage
             }
         } else {
             hit_damage

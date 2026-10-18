@@ -2062,6 +2062,11 @@ impl State {
                         return true;
                     }
                 }
+                // alpha-poke patch (2026-10-17, doc/engine-diff.md L213): a transformed mon's own
+                // moves too (back as it leaves)
+                if pkmn.own.moves.iter().any(|m| moves.contains(m)) {
+                    return true;
+                }
             }
         }
 

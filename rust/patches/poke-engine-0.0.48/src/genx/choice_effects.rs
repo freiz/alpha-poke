@@ -1820,6 +1820,43 @@ pub fn choice_special_effect(
             }
         }
     }
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L213): Guard Swap (Defense, Sp. Def), Power
+    // Swap (Attack, Sp. Atk) and Heart Swap (every stage) swap the stages of the user and the target
+    // (Showdown's onHit setBoost: set directly; through a Substitute); they did nothing
+    let swapped: &[PokemonBoostableStat] = match choice.move_id {
+        Choices::GUARDSWAP => &[PokemonBoostableStat::Defense, PokemonBoostableStat::SpecialDefense],
+        Choices::POWERSWAP => &[PokemonBoostableStat::Attack, PokemonBoostableStat::SpecialAttack],
+        Choices::HEARTSWAP => &[
+            PokemonBoostableStat::Attack,
+            PokemonBoostableStat::Defense,
+            PokemonBoostableStat::SpecialAttack,
+            PokemonBoostableStat::SpecialDefense,
+            PokemonBoostableStat::Speed,
+            PokemonBoostableStat::Accuracy,
+            PokemonBoostableStat::Evasion,
+        ],
+        _ => &[],
+    };
+    // (not through Protect)
+    let swapped = if choice.protected { &[] } else { swapped };
+    for stat in swapped {
+        let foe_ref = attacking_side_ref.get_other_side();
+        let mine = state
+            .get_side_immutable(attacking_side_ref)
+            .get_boost_from_boost_enum(stat);
+        let theirs = state.get_side_immutable(&foe_ref).get_boost_from_boost_enum(stat);
+        for (side_ref, amount) in [(*attacking_side_ref, theirs - mine), (foe_ref, mine - theirs)] {
+            if amount != 0 {
+                let ins = Instruction::Boost(BoostInstruction {
+                    side_ref,
+                    stat: *stat,
+                    amount,
+                });
+                state.apply_one_instruction(&ins);
+                instructions.instruction_list.push(ins);
+            }
+        }
+    }
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L207): Topsy-Turvy inverts its target's
     // stages (Showdown's onHit: set directly, no Contrary / Clear Body; a Magic Bounce sends it
     // back, the target then its user; a Substitute stops it); it did nothing
@@ -1829,11 +1866,13 @@ pub fn choice_special_effect(
         } else {
             attacking_side_ref.get_other_side()
         };
+        // (L213: not through Protect)
         if target_ref == *attacking_side_ref
-            || !state
-                .get_side_immutable(&target_ref)
-                .volatile_statuses
-                .contains(&PokemonVolatileStatus::SUBSTITUTE)
+            || !choice.protected
+                && !state
+                    .get_side_immutable(&target_ref)
+                    .volatile_statuses
+                    .contains(&PokemonVolatileStatus::SUBSTITUTE)
         {
             for stat in [
                 PokemonBoostableStat::Attack,

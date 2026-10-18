@@ -5,12 +5,6 @@
 "teams": "1b2440f0794c7f2a"
 },
 "mismatches": {
-"b169-t3": [
-"hp"
-],
-"b180-t13": [
-"boost.def"
-],
 "b25-t8": [
 "volatile.uproar"
 ],

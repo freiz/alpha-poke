@@ -357,6 +357,9 @@ define_enum_with_from_str! {
         DESTINYKNOT,
         // (L162: moves last in its bracket, generate_instructions' fractional priority)
         LAGGINGTAIL,
+        // (L213: appended likewise -- Big Nugget, for Fling's power 130; it was UNKNOWNITEM, which
+        // Fling could not throw)
+        BIGNUGGET,
     },
     default = UNKNOWNITEM
 }
@@ -660,7 +663,7 @@ impl Items {
             | Items::TOXICPLATE
             | Items::ZAPPLATE => Some(90),
             Items::HARDSTONE | Items::ROOMSERVICE => Some(100),
-            Items::IRONBALL => Some(130),
+            Items::IRONBALL | Items::BIGNUGGET => Some(130),
             _ => None,
         }
     }

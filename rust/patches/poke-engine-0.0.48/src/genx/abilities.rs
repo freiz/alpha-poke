@@ -873,26 +873,31 @@ pub fn break_face(state: &mut State, side_ref: &SideReference, instructions: &mu
     }
 }
 
-pub fn ability_before_move(
-    state: &mut State,
-    choice: &mut Choice,
-    side_ref: &SideReference,
-    instructions: &mut StateInstructions,
-) {
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L213): Ice Face / Disguise take the hit (their
+// marks: face_break), once the move's type and power are final -- after modify_choice and the
+// abilities' modifiers (a Weather Ball in rain is Water: Mimikyu's Disguise takes it; it was
+// checked as Normal, which a Ghost type is immune to); not a move that failed (L206: a Sucker Punch
+// into a foe that moved)
+pub fn face_before_hit(state: &mut State, choice: &mut Choice, side_ref: &SideReference) {
     let (attacking_side, defending_side) = state.get_both_sides(side_ref);
     let active_pkmn = attacking_side.get_active();
-    // alpha-poke patch (2026-10-16, doc/engine-diff.md L98): a hit on the target's Substitute
     let behind_sub = defending_side
         .volatile_statuses
         .contains(&PokemonVolatileStatus::SUBSTITUTE)
         && !choice.flags.sound
         && active_pkmn.ability != Abilities::INFILTRATOR;
+    let failed = matches!(
+        choice.move_id,
+        Choices::SUCKERPUNCH | Choices::THUNDERCLAP | Choices::POLTERGEIST | Choices::UPPERHAND
+    ) && choice.base_power == 0.0;
     let defending_pkmn = defending_side.get_active();
-
+    if failed
+        || active_pkmn.ability == Abilities::NEUTRALIZINGGAS
+            && defending_pkmn.item != Items::ABILITYSHIELD
+    {
+        return;
+    }
     match defending_pkmn.ability {
-        Abilities::NEUTRALIZINGGAS => {
-            return;
-        }
         // Incomplete: IceFace should not stop secondaries, but setting base_power to 0 makes
         // secondaries not apply in this engine
         Abilities::ICEFACE => {
@@ -912,24 +917,6 @@ pub fn ability_before_move(
                 }
                 choice.face_break = true;
             }
-        }
-        // Technically incorrect
-        // A move missing should not trigger this formechange
-        #[cfg(not(any(feature = "gen8", feature = "gen9", feature = "champions")))]
-        Abilities::DISGUISE
-            if (choice.category == MoveCategory::Physical
-                || choice.category == MoveCategory::Special)
-                && (defending_pkmn.id == PokemonName::MIMIKYU
-                    || defending_pkmn.id == PokemonName::MIMIKYUTOTEM) =>
-        {
-            choice.base_power = 0.0;
-            instructions
-                .instruction_list
-                .push(Instruction::FormeChange(FormeChangeInstruction {
-                    side_ref: side_ref.get_other_side(),
-                    name_change: PokemonName::MIMIKYUBUSTED as i16 - defending_pkmn.id as i16,
-                }));
-            defending_pkmn.id = PokemonName::MIMIKYUBUSTED;
         }
         // (L98: only a hit that damages it -- not one it is immune to, nor its Substitute)
         #[cfg(any(feature = "gen8", feature = "gen9", feature = "champions"))]
@@ -953,6 +940,48 @@ pub fn ability_before_move(
             }
             // (L196: its forme and 1/8 as the move hits: break_face)
             choice.face_break = true;
+        }
+        _ => {}
+    }
+}
+
+pub fn ability_before_move(
+    state: &mut State,
+    choice: &mut Choice,
+    side_ref: &SideReference,
+    instructions: &mut StateInstructions,
+) {
+    let (attacking_side, defending_side) = state.get_both_sides(side_ref);
+    let active_pkmn = attacking_side.get_active();
+    // alpha-poke patch (2026-10-16, doc/engine-diff.md L98): a hit on the target's Substitute
+    let behind_sub = defending_side
+        .volatile_statuses
+        .contains(&PokemonVolatileStatus::SUBSTITUTE)
+        && !choice.flags.sound
+        && active_pkmn.ability != Abilities::INFILTRATOR;
+    let defending_pkmn = defending_side.get_active();
+
+    match defending_pkmn.ability {
+        Abilities::NEUTRALIZINGGAS => {
+            return;
+        }
+        // Technically incorrect
+        // A move missing should not trigger this formechange
+        #[cfg(not(any(feature = "gen8", feature = "gen9", feature = "champions")))]
+        Abilities::DISGUISE
+            if (choice.category == MoveCategory::Physical
+                || choice.category == MoveCategory::Special)
+                && (defending_pkmn.id == PokemonName::MIMIKYU
+                    || defending_pkmn.id == PokemonName::MIMIKYUTOTEM) =>
+        {
+            choice.base_power = 0.0;
+            instructions
+                .instruction_list
+                .push(Instruction::FormeChange(FormeChangeInstruction {
+                    side_ref: side_ref.get_other_side(),
+                    name_change: PokemonName::MIMIKYUBUSTED as i16 - defending_pkmn.id as i16,
+                }));
+            defending_pkmn.id = PokemonName::MIMIKYUBUSTED;
         }
         _ => {}
     }

@@ -6235,3 +6235,35 @@ def test_l212_rivalry(foe_gender):
     garchomp = _attacker(f"Garchomp ({foe_gender})", "Rough Skin", "Leftovers", "- Earthquake\n- Swords Dance\n- Protect\n- Dragon Claw")
     states = ec.run_showdown(haxorus, garchomp, [("move earthquake", "move swordsdance")])
     assert _keys(_full_hinted(states, 0, "earthquake", "swordsdance"), "hp") == {}
+
+
+# L213 (doc/engine-diff.md): Heal Block / Disable after an asleep mover's sleep (randbats b137-t31);
+# Disguise once the move's type is final (Weather Ball in rain: seed10k b199-t3); a transformed
+# mon's own moves for the last used move (wide2 b184-t17); Guard Swap (offmeta b180-t13); Beat Up's
+# hits by their hitters (random b50-t6); a multi-hit move breaking the Substitute (offmeta
+# b169-t3, the harness); Big Nugget's Fling (wide2 b54-t12)
+@pytest.mark.parametrize("teams,i,turn,offset", [
+    ("random_battle_teams_randbats.jsonl", 137, 31, 60000),
+    ("random_battle_teams.jsonl", 199, 3, 10000),
+    ("random_battle_teams_wide2.jsonl", 184, 17, 30000),
+    ("random_battle_teams_offmeta.jsonl", 180, 13, 0),
+    ("random_battle_teams_random.jsonl", 50, 6, 0),
+    ("random_battle_teams_offmeta.jsonl", 169, 3, 0),
+    ("random_battle_teams_wide2.jsonl", 54, 12, 30000),
+])  # fmt: skip
+def test_l213_positions(teams, i, turn, offset):
+    a, b = _random_position(teams, i, turn, offset)
+    c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
+    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"]))
+    n = tuple(len(s["mons"]) for s in a["state"]["sides"])
+    assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}
+
+
+@pytest.mark.parametrize("move", ["Guard Swap", "Power Swap", "Heart Swap"])
+def test_l213_stage_swaps(move):
+    blissey = BLISSEY.replace("- Calm Mind", "- " + move).replace("- Protect", "- Calm Mind")
+    sala = _attacker("Salamence", "Moxie", "Leftovers", "- Dragon Dance\n- Iron Defense\n- Roost\n- Outrage")
+    mid = ec._id(move)
+    states = ec.run_showdown(blissey, sala, [("move calmmind", "move dragondance"), ("move calmmind", "move irondefense"),
+                                             (f"move {mid}", "move roost")])  # fmt: skip
+    assert _keys(_full(states, 2, mid, "roost"), "boost") == {}

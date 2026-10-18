@@ -427,7 +427,9 @@ def roll_hints(start: dict, after: dict) -> tuple:
             crit = True
         elif tag == "-end" and len(f) > 3 and f[3] in ("move: Future Sight", "move: Doom Desire"):
             pending_future, crit = (1 if f[2].startswith("p1") else 0, f[2]), False
-        elif tag == "-activate" and len(f) > 3 and "Substitute" in f[3] and "[damage]" in line:
+        elif (tag == "-activate" and len(f) > 3 and "Substitute" in f[3] and "[damage]" in line
+              or tag == "-end" and len(f) > 3 and f[3] == "Substitute"):  # fmt: skip
+            # (a hit on the Substitute, or the one that breaks it)
             if mover is not None and f[2] == target:
                 hits.append(-1)
             crit = False

@@ -6,15 +6,8 @@
 "seed_offset": 30000
 },
 "mismatches": {
-"b184-t17": [
-"last_used_move"
-],
 "b278-t18": [
 "substitute_hp"
-],
-"b54-t12": [
-"hp",
-"item"
 ]
 }
 }
