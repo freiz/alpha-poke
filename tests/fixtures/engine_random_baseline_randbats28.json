@@ -1,0 +1,9 @@
+{
+"setup": {
+"battles": 300,
+"max_turns": 60,
+"teams": "09536c5aac9694fb",
+"seed_offset": 330000
+},
+"mismatches": {}
+}

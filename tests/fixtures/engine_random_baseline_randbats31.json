@@ -1,0 +1,13 @@
+{
+"setup": {
+"battles": 300,
+"max_turns": 60,
+"teams": "ee93b66407226b13",
+"seed_offset": 360000
+},
+"mismatches": {
+"b170-t1": [
+"hp"
+]
+}
+}
