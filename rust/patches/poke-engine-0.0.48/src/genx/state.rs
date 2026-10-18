@@ -612,7 +612,9 @@ impl Pokemon {
 
     #[cfg(feature = "terastallization")]
     pub fn has_type(&self, pkmn_type: &PokemonType) -> bool {
-        if self.terastallized {
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L192): a Stellar tera keeps its own
+        // types (Showdown's getTypes: only a non-Stellar tera type replaces them); was Stellar only
+        if self.terastallized && self.tera_type != PokemonType::STELLAR {
             pkmn_type == &self.tera_type
         } else {
             pkmn_type == &self.types.0 || pkmn_type == &self.types.1

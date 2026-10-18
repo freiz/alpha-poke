@@ -561,6 +561,9 @@ def showdown_options(side: dict) -> set[str] | None:
     mon = side["mons"][side["active"]] if side.get("active", -1) >= 0 else {"moves": []}
     hidden = {x["id"] for x in mon["moves"] if x.get("disabled")}
     usable = [m for m in act["moves"] if not m.get("disabled") and m["id"] not in hidden]
+    # (L192: every move disabled, by a hidden one too -- Imprison: Struggle, the engine's none)
+    if not usable and act["moves"]:
+        out.add("none")
     for m in usable:
         mid = m["id"]
         if mid in ("struggle", "recharge"):

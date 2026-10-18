@@ -5393,3 +5393,37 @@ def test_l191_fire_thaws_the_target():
     # (no branch left frozen: the hit thaws it before its own move; was its 1 in 5 thaw only)
     outs = ec.engine_outcomes(ec.engine_state(states[1]), "flamethrower", "calmmind")
     assert not any(str(o[1].side_two.pokemon[0].status).lower() == "freeze" for o in outs)
+
+
+# L192 (doc/engine-diff.md): a Stellar tera keeps its own types (Showdown's getTypes: a Ghost one
+# cannot be trapped); the harness: every move disabled (Imprison's hidden ones too) is Struggle
+def test_l192_stellar_ghost_not_trapped():
+    heatran = """Heatran @ Leftovers
+Ability: Flash Fire
+EVs: 252 HP / 252 SpA / 4 SpD
+Modest Nature
+- Magma Storm
+- Earth Power
+- Stealth Rock
+- Protect"""
+    dragapult = DRAGAPULT_COPYCAT.replace("Ability: Infiltrator", "Ability: Infiltrator\nTera Type: Stellar")
+    states = ec.run_showdown(heatran, dragapult + "\n\n" + CORVIKNIGHT,
+                             [("move magmastorm", "move dragondance terastallize")], seed="gen5,1,2,3,4")  # fmt: skip
+    assert any("move: Magma Storm" in x for x in states[1]["log"])
+    assert "switch corviknight" in ec.showdown_options(states[1]["sides"][1])
+    assert _keys(_full(states, 0, "magmastorm", "dragondance-tera", (1, 2)), "options") == {}
+
+
+def test_l192_imprison_every_move_is_struggle():
+    mew = """Mew @ Leftovers
+Ability: Synchronize
+EVs: 252 HP / 4 Def / 252 Spe
+Timid Nature
+- Imprison
+- Transform
+- Soft-Boiled
+- Psychic"""
+    states = ec.run_showdown(mew, GARCHOMP_SD, [("move imprison", "move swordsdance"),
+                                                 ("move transform", "move swordsdance")])  # fmt: skip
+    assert "none" in ec.showdown_options(states[2]["sides"][1])
+    assert _keys(_full(states, 1, "transform", "swordsdance"), "options") == {}
