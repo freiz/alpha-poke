@@ -4306,12 +4306,24 @@ pub fn generate_instructions_from_move(
         );
     }
 
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L217): a recharge put off by the foe's pivot
+    // switch waits for it (the saved move is none: after the switch it recharges then); it went
+    // (the state does not have the instructions so far applied here)
+    let deferred = !choice.first_move && choice.move_id == Choices::NONE && {
+        state.apply_instructions(&incoming_instructions.instruction_list);
+        let pending = state
+            .get_side_immutable(&attacking_side.get_other_side())
+            .force_switch;
+        state.reverse_instructions(&incoming_instructions.instruction_list);
+        pending
+    };
     let attacker_side = state.get_side(&attacking_side);
 
     if choice.move_id == Choices::NONE {
-        if attacker_side
-            .volatile_statuses
-            .contains(&PokemonVolatileStatus::MUSTRECHARGE)
+        if !deferred
+            && attacker_side
+                .volatile_statuses
+                .contains(&PokemonVolatileStatus::MUSTRECHARGE)
         {
             incoming_instructions
                 .instruction_list

@@ -6342,3 +6342,19 @@ def test_l216_positions(teams, i, turn, offset):
     outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"]))
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
     assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}
+
+
+# L217 (doc/engine-diff.md), from randbats10 / randbats11: Early Bird's sleep counter (the
+# harness: Showdown's runs twice as fast); a failed Thunderclap into Volt Absorb heals nothing; a
+# recharge put off by the foe's U-turn waits for its switch
+@pytest.mark.parametrize("teams,i,turn,offset", [
+    ("random_battle_teams_randbats10.jsonl", 21, 3, 150000),
+    ("random_battle_teams_randbats10.jsonl", 60, 24, 150000),
+    ("random_battle_teams_randbats11.jsonl", 146, 6, 160000),
+])  # fmt: skip
+def test_l217_positions(teams, i, turn, offset):
+    a, b = _random_position(teams, i, turn, offset)
+    c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
+    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"]))
+    n = tuple(len(s["mons"]) for s in a["state"]["sides"])
+    assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}

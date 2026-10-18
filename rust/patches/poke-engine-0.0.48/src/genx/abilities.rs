@@ -3576,6 +3576,15 @@ pub fn ability_modify_attack_against(
     {
         return;
     }
+    // (L217: nor a move that failed -- a Thunderclap into a foe's status move, modify_choice's
+    // power of 0 -- into Volt Absorb, ...: it hits nothing)
+    if matches!(
+        attacker_choice.move_id,
+        Choices::SUCKERPUNCH | Choices::THUNDERCLAP | Choices::POLTERGEIST | Choices::UPPERHAND
+    ) && attacker_choice.base_power == 0.0
+    {
+        return;
+    }
     match target_pkmn.ability {
         // (L206: not a holder's of the same Ruin)
         Abilities::TABLETSOFRUIN => {

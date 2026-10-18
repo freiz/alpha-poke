@@ -137,7 +137,11 @@ def _sleep(m: dict) -> dict:
     ss = m["status_state"]
     if ss.get("source") == "rest":
         return {"rest_turns": max(ss["time"], 1)}
-    return {"sleep_turns": min(max(ss["startTime"] - ss["time"], 0), 3)}
+    # (L217: Early Bird's counter runs twice as fast in Showdown; the engine counts the attempts)
+    done = max(ss["startTime"] - ss["time"], 0)
+    if m.get("ability") == "earlybird":
+        done //= 2
+    return {"sleep_turns": min(done, 3)}
 
 
 # the abilities that do nothing for a transformed holder (abilities.rs NO_TRANSFORM, L214)

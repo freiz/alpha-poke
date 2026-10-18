@@ -5,10 +5,5 @@
 "teams": "e3daf1c709c593ac",
 "seed_offset": 160000
 },
-"mismatches": {
-"b146-t6": [
-"volatile.mustrecharge",
-"volatile.truant"
-]
-}
+"mismatches": {}
 }
