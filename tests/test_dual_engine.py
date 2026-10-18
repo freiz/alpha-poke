@@ -5825,3 +5825,33 @@ def test_l203_sunsteel_strike_through_tera_shell():
     solgaleo = _attacker("Solgaleo", "Full Metal Body", "Leftovers", "- Sunsteel Strike\n- Morning Sun\n- Flare Blitz\n- Knock Off")
     states = ec.run_showdown(solgaleo, BLISSEY + "\n\n" + TERAPAGOS, [("move sunsteelstrike", "switch 2")])
     assert _keys(_full_moves(states, 0, "sunsteelstrike", "terapagos", (1, 2)), "hp") == {}
+
+
+# L204 (doc/engine-diff.md): Cud Chew eats its berry again at the next turn's end (Showdown's
+# counter 2 from a berry eaten in the turn)
+def test_l204_cud_chew():
+    tauros = _attacker("Tauros-Paldea-Aqua", "Cud Chew", "Sitrus Berry", "- Wave Crash\n- Close Combat\n- Bulk Up\n- Protect")
+    turns = [("move bulkup", "move seismictoss")] * 4
+    states = ec.run_showdown(tauros, BLISSEY, turns)
+    k = next(k for k in range(len(states) - 1) if states[k + 1]["sides"][0]["mons"][0]["last_item"] == "sitrusberry")
+    assert any("Cud Chew" in x for x in states[k + 2]["log"])
+    for j in (k, k + 1):
+        assert _keys(_full(states, j, "bulkup", "seismictoss"), "hp", "item", "cudchew") == {}
+
+
+BLISSEY_TOXIC = BLISSEY.replace("- Calm Mind", "- Toxic")
+
+
+def test_l204_cud_chew_residual_berry():
+    # a berry eaten in the end-of-turn residuals (Sitrus after the poison) counts 1, eaten again at
+    # the next turn's end (Showdown: the queue is empty there)
+    tauros = _attacker("Tauros-Paldea-Aqua", "Cud Chew", "Sitrus Berry", "- Wave Crash\n- Close Combat\n- Bulk Up\n- Protect")
+    turns = [("move bulkup", "move toxic"), ("move bulkup", "move seismictoss")] + [("move bulkup", "move protect")] * 2
+    states = ec.run_showdown(tauros, BLISSEY_TOXIC, turns)
+    k = next(k for k in range(len(states) - 1) if states[k + 1]["sides"][0]["mons"][0]["last_item"] == "sitrusberry")
+    log = states[k + 1]["log"]
+    assert any("[from] psn" in x for x in log[: next(i for i, x in enumerate(log) if "Sitrus Berry|[eat]" in x)])
+    assert any("Cud Chew" in x for x in states[k + 2]["log"])
+    c2 = ("seismictoss", "protect")[k > 1]
+    assert _keys(_full(states, k, "bulkup", c2), "hp", "item", "cudchew") == {}
+    assert _keys(_full(states, k + 1, "bulkup", "protect"), "hp", "item", "cudchew") == {}

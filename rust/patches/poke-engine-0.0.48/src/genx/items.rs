@@ -422,6 +422,70 @@ pub fn set_last_item(
     }
 }
 
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L204): a berry eaten again (Cud Chew: Showdown's
+// singleEvent Eat, the berry not held): its effect -- the berry given back for its handler, which
+// uses it up again (the last item stays it); taken back if the handler did not
+pub fn eat_again(
+    state: &mut State,
+    side_ref: &SideReference,
+    berry: Items,
+    instructions: &mut StateInstructions,
+) {
+    let side = state.get_side(side_ref);
+    if side.get_active_immutable().hp == 0 || side.get_active_immutable().item != Items::NONE {
+        return;
+    }
+    instructions
+        .instruction_list
+        .push(Instruction::ChangeItem(ChangeItemInstruction {
+            side_ref: *side_ref,
+            current_item: Items::NONE,
+            new_item: berry,
+        }));
+    side.get_active().item = berry;
+    let stat = match berry {
+        Items::LIECHIBERRY => Some(PokemonBoostableStat::Attack),
+        Items::GANLONBERRY => Some(PokemonBoostableStat::Defense),
+        Items::PETAYABERRY => Some(PokemonBoostableStat::SpecialAttack),
+        Items::APICOTBERRY => Some(PokemonBoostableStat::SpecialDefense),
+        Items::SALACBERRY => Some(PokemonBoostableStat::Speed),
+        _ => None,
+    };
+    if let Some(stat) = stat {
+        boost_berry(side_ref, state, stat, instructions);
+    } else {
+        let side = state.get_side(side_ref);
+        match berry {
+            Items::SITRUSBERRY => sitrus_berry(side_ref, side, instructions),
+            Items::FIGYBERRY
+            | Items::WIKIBERRY
+            | Items::MAGOBERRY
+            | Items::AGUAVBERRY
+            | Items::IAPAPABERRY
+            | Items::ORANBERRY => pinch_berry(side_ref, side, instructions),
+            Items::LUMBERRY => lum_berry(side_ref, side, instructions),
+            Items::PECHABERRY
+            | Items::CHERIBERRY
+            | Items::RAWSTBERRY
+            | Items::ASPEARBERRY => status_berry(side_ref, side, berry, instructions),
+            Items::CHESTOBERRY => chesto_berry(side_ref, side, instructions),
+            Items::LANSATBERRY => lansat_berry(side_ref, side, instructions),
+            _ => {}
+        }
+    }
+    let active = state.get_side(side_ref).get_active();
+    if active.item == berry {
+        instructions
+            .instruction_list
+            .push(Instruction::ChangeItem(ChangeItemInstruction {
+                side_ref: *side_ref,
+                current_item: berry,
+                new_item: Items::NONE,
+            }));
+        active.item = Items::NONE;
+    }
+}
+
 pub fn is_berry(item: Items) -> bool {
     format!("{:?}", item).ends_with("BERRY")
 }

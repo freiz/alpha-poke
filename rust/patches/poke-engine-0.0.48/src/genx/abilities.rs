@@ -2180,6 +2180,105 @@ pub fn trace_update(state: &mut State, side_ref: &SideReference, instructions: &
     }
 }
 
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L204): Cud Chew (Showdown's onEatItem /
+// onResidual): a berry its holder ate -- a newer last item than its count, since its switch-in --
+// starts the count (2 in the turn, 1 at its end: `counter`), at 0 the berry is eaten again
+// (cud_chew_residual); was nothing
+pub fn cud_chew_update(
+    state: &mut State,
+    side_ref: &SideReference,
+    counter: i8,
+    instructions: &mut StateInstructions,
+) {
+    let side = state.get_side_immutable(side_ref);
+    let p = side.get_active_immutable();
+    if p.ability != Abilities::CUDCHEW || p.hp == 0 {
+        return;
+    }
+    let mut ate = false;
+    for i in instructions.instruction_list.iter().rev() {
+        match i {
+            Instruction::Switch(s) if s.side_ref == *side_ref => break,
+            Instruction::ApplyVolatileStatus(v)
+                if v.side_ref == *side_ref && v.volatile_status == PokemonVolatileStatus::CUDCHEW =>
+            {
+                break
+            }
+            Instruction::ChangeVolatileStatusDuration(v)
+                if v.side_ref == *side_ref && v.volatile_status == PokemonVolatileStatus::CUDCHEW =>
+            {
+                break
+            }
+            Instruction::ChangeLastItem(c)
+                if c.side_ref == *side_ref && super::items::is_berry(c.new_item) =>
+            {
+                ate = true;
+                break;
+            }
+            _ => {}
+        }
+    }
+    if !ate {
+        return;
+    }
+    let side = state.get_side(side_ref);
+    if !side.volatile_statuses.contains(&PokemonVolatileStatus::CUDCHEW) {
+        side.volatile_statuses.insert(PokemonVolatileStatus::CUDCHEW);
+        instructions
+            .instruction_list
+            .push(Instruction::ApplyVolatileStatus(ApplyVolatileStatusInstruction {
+                side_ref: *side_ref,
+                volatile_status: PokemonVolatileStatus::CUDCHEW,
+            }));
+    }
+    let amount = counter - side.volatile_status_durations.cudchew;
+    if amount != 0 {
+        side.volatile_status_durations.cudchew = counter;
+        instructions
+            .instruction_list
+            .push(Instruction::ChangeVolatileStatusDuration(
+                ChangeVolatileStatusDurationInstruction {
+                    side_ref: *side_ref,
+                    volatile_status: PokemonVolatileStatus::CUDCHEW,
+                    amount,
+                },
+            ));
+    }
+}
+
+pub fn cud_chew_residual(state: &mut State, side_ref: &SideReference, instructions: &mut StateInstructions) {
+    let side = state.get_side(side_ref);
+    if !side.volatile_statuses.contains(&PokemonVolatileStatus::CUDCHEW)
+        || side.get_active_immutable().hp == 0
+    {
+        return;
+    }
+    side.volatile_status_durations.cudchew -= 1;
+    instructions
+        .instruction_list
+        .push(Instruction::ChangeVolatileStatusDuration(
+            ChangeVolatileStatusDurationInstruction {
+                side_ref: *side_ref,
+                volatile_status: PokemonVolatileStatus::CUDCHEW,
+                amount: -1,
+            },
+        ));
+    if side.volatile_status_durations.cudchew > 0 {
+        return;
+    }
+    side.volatile_statuses.remove(&PokemonVolatileStatus::CUDCHEW);
+    instructions
+        .instruction_list
+        .push(Instruction::RemoveVolatileStatus(RemoveVolatileStatusInstruction {
+            side_ref: *side_ref,
+            volatile_status: PokemonVolatileStatus::CUDCHEW,
+        }));
+    let berry = side.get_active_immutable().last_item;
+    if super::items::is_berry(berry) {
+        super::items::eat_again(state, side_ref, berry, instructions);
+    }
+}
+
 // alpha-poke patch (2026-10-17, doc/engine-diff.md L195): a permanent forme change (Showdown's
 // formeChange(..., isPermanent): the species, its ability as the base ability too, the stats by
 // their change, updateMaxHp) -- Tera Shift's Terapagos-Terastal, the tera's Terapagos-Stellar

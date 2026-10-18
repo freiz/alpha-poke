@@ -9,9 +9,6 @@
 "b10-t20": [
 "volatile.confusion"
 ],
-"b11-t7": [
-"hp"
-],
 "b177-t49": [
 "hp"
 ],
@@ -76,9 +73,6 @@
 "terastallized",
 "types",
 "weight"
-],
-"b226-t29": [
-"hp"
 ],
 "b25-t30": [
 "count.lockedmove",

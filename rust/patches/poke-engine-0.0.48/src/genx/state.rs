@@ -308,6 +308,9 @@ define_enum_with_from_str! {
         // (L141: the Protosynthesis / Quark Drive volatile came from Booster Energy -- Showdown's
         // fromBooster: the weather / terrain leaving does not end it; ends on a switch)
         FROMBOOSTER,
+        // (L204: Cud Chew's berry to eat again: its counter in volatile_status_durations.cudchew,
+        // the berry its last item; ends on a switch)
+        CUDCHEW,
     },
     default = NONE
 }
@@ -1850,6 +1853,18 @@ impl State {
                         },
                     ));
                     side.volatile_status_durations.taunt = 0;
+                    false
+                }
+                // (L204: Cud Chew's count ends with it: Showdown's ability state goes)
+                PokemonVolatileStatus::CUDCHEW => {
+                    instructions.push(Instruction::ChangeVolatileStatusDuration(
+                        ChangeVolatileStatusDurationInstruction {
+                            side_ref: *side_ref,
+                            volatile_status: *pkmn_volatile_status,
+                            amount: -1 * side.volatile_status_durations.cudchew,
+                        },
+                    ));
+                    side.volatile_status_durations.cudchew = 0;
                     false
                 }
                 // (L73: Stockpile's layers end with it; its boosts with the switch)

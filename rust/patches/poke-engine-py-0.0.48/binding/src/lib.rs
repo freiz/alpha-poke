@@ -305,7 +305,7 @@ impl PySide {
         active_index="0".to_string(),
         baton_passing=false,
         shed_tailing=false,
-        volatile_status_durations=PyVolatileStatusDurations::new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+        volatile_status_durations=PyVolatileStatusDurations::new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
         wish=(0, 0),
         future_sight=(0, "0".to_string()),
         force_switch=false,
@@ -415,6 +415,7 @@ pub struct PyVolatileStatusDurations {
     pub metronome: i8,
     pub disable: i8,
     pub stockpile: i8,
+    pub cudchew: i8,
 }
 
 impl From<VolatileStatusDurations> for PyVolatileStatusDurations {
@@ -434,6 +435,7 @@ impl From<VolatileStatusDurations> for PyVolatileStatusDurations {
             metronome: other.metronome,
             disable: other.disable,
             stockpile: other.stockpile,
+            cudchew: other.cudchew,
         }
     }
 }
@@ -455,6 +457,7 @@ impl Into<VolatileStatusDurations> for PyVolatileStatusDurations {
             metronome: self.metronome,
             disable: self.disable,
             stockpile: self.stockpile,
+            cudchew: self.cudchew,
         }
     }
 }
@@ -477,6 +480,7 @@ impl PyVolatileStatusDurations {
         metronome=0,
         disable=0,
         stockpile=0,
+        cudchew=0,
     ))]
     fn new(
         confusion: i8,
@@ -493,6 +497,7 @@ impl PyVolatileStatusDurations {
         metronome: i8,
         disable: i8,
         stockpile: i8,
+        cudchew: i8,
     ) -> PyVolatileStatusDurations {
         PyVolatileStatusDurations {
             confusion,
@@ -509,6 +514,7 @@ impl PyVolatileStatusDurations {
             metronome,
             disable,
             stockpile,
+            cudchew,
         }
     }
 }

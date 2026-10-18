@@ -811,6 +811,9 @@ pub struct VolatileStatusDurations {
     pub disable: i8,
     // (L73: Stockpile's layers)
     pub stockpile: i8,
+    // (L204: Cud Chew's counter, Showdown's: 2 from a berry eaten in the turn, 1 at its end; the
+    // berry is eaten again at 0)
+    pub cudchew: i8,
 }
 
 impl Default for VolatileStatusDurations {
@@ -830,6 +833,7 @@ impl Default for VolatileStatusDurations {
             metronome: 0,
             disable: 0,
             stockpile: 0,
+            cudchew: 0,
         }
     }
 }
@@ -851,6 +855,7 @@ impl VolatileStatusDurations {
             ("metronome", self.metronome),
             ("disable", self.disable),
             ("stockpile", self.stockpile),
+            ("cudchew", self.cudchew),
         ];
 
         let mut output = String::new();
@@ -867,7 +872,7 @@ impl VolatileStatusDurations {
 
     pub fn serialize(&self) -> String {
         format!(
-            "{};{};{};{};{};{};{};{};{};{};{};{};{};{}",
+            "{};{};{};{};{};{};{};{};{};{};{};{};{};{};{}",
             self.confusion,
             self.encore,
             self.lockedmove,
@@ -881,7 +886,8 @@ impl VolatileStatusDurations {
             self.micleberry,
             self.metronome,
             self.disable,
-            self.stockpile
+            self.stockpile,
+            self.cudchew
         )
     }
     pub fn deserialize(serialized: &str) -> VolatileStatusDurations {
@@ -902,6 +908,7 @@ impl VolatileStatusDurations {
             metronome: split.get(11).map_or(0, |x| x.parse::<i8>().unwrap()),
             disable: split.get(12).map_or(0, |x| x.parse::<i8>().unwrap()),
             stockpile: split.get(13).map_or(0, |x| x.parse::<i8>().unwrap()),
+            cudchew: split.get(14).map_or(0, |x| x.parse::<i8>().unwrap()),
         }
     }
 }
@@ -1867,6 +1874,9 @@ impl State {
             }
             PokemonVolatileStatus::STOCKPILE => {
                 side.volatile_status_durations.stockpile += amount;
+            }
+            PokemonVolatileStatus::CUDCHEW => {
+                side.volatile_status_durations.cudchew += amount;
             }
             _ => panic!(
                 "Invalid volatile status for increment_volatile_status_duration: {:?}",

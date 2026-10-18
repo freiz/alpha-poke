@@ -285,6 +285,8 @@ def _engine_side(s: dict, future_sight=None, wish=None) -> pe.Side:
             vol.discard("disable")
         if "slowstart" in vol:  # (L77: the turns left, as Showdown's counter)
             dur["slowstart"] = act["volatiles"]["slowstart"]["duration"]
+        if "cudchew" in vol:  # (L204: Showdown's counter)
+            dur["cudchew"] = act["volatiles"]["cudchew"]["duration"]
         if "stockpile" in vol:  # (L73: its layers)
             dur["stockpile"] = act["volatiles"]["stockpile"]["layers"]
         if "confusion" in vol and act["volatiles"]["confusion"]["time"]:
@@ -620,7 +622,7 @@ def extra_view(s: pe.State, n_mons: tuple[int, int] = (6, 6)) -> dict:
         d = side.volatile_status_durations
         for f in ("confusion", "encore", "lockedmove", "slowstart", "taunt", "yawn", "healblock",
                   "magnetrise", "throatchop", "partiallytrapped", "metronome", "disable",
-                  "stockpile", "micleberry"):  # fmt: skip
+                  "stockpile", "micleberry", "cudchew"):  # fmt: skip
             if f in vol:
                 v[f"{k}.count.{f}"] = getattr(d, f)
         if moves & LAST_USED_MOVES or "metronome" in items or "cursedbody" in abilities:

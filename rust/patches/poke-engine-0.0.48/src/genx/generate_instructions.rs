@@ -6281,7 +6281,7 @@ fn end_of_turn_instructions(
     }
     // (L147: Showdown's Update after the weather's residual -- eachEvent('Weather'), any weather)
     if state.weather.weather_type != Weather::NONE {
-        update(state, &mut incoming_instructions);
+        update_with(state, &mut incoming_instructions, 1);
     }
 
     // future sight
@@ -6817,6 +6817,12 @@ fn end_of_turn_instructions(
             }
         }
 
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L204): Cud Chew's residual (order 28, as
+        // Slow Start's): a berry eaten at this end of the turn counts 1 (eaten again now), then
+        // the count goes down
+        super::abilities::cud_chew_update(state, side_ref, 1, &mut incoming_instructions);
+        super::abilities::cud_chew_residual(state, side_ref, &mut incoming_instructions);
+        let side = state.get_side(side_ref);
         // alpha-poke patch (2026-10-17, doc/engine-diff.md L203): not on the turn it came in
         // (Showdown's onResidual: activeTurns 0; its counter 5 from the switch-in -- was 6, one off
         // at a pivot's decision mid-turn)
@@ -7390,7 +7396,7 @@ fn end_of_turn_instructions(
 
     // (L147: Showdown's Update after the residual action: Sitrus after the poison, a berry Heal
     // Block kept, a lock's fatigue cured by a Lum)
-    update(state, incoming_instructions);
+    update_with(state, incoming_instructions, 1);
     foe_raise_copies(state, incoming_instructions, end_of_turn_from);
 
     // (L62: an item used up at the end of the turn too)
@@ -8489,6 +8495,12 @@ pub fn release_choice_lock(
 }
 
 pub fn update(state: &mut State, instructions: &mut StateInstructions) {
+    update_with(state, instructions, 2)
+}
+
+// (L204: `cud_chew` is Cud Chew's count for a berry eaten now: 2 in the turn, 1 in the end-of-turn
+// residuals -- Showdown's queue is empty there)
+pub fn update_with(state: &mut State, instructions: &mut StateInstructions, cud_chew: i8) {
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L198): Unburden as its item goes (Showdown's
     // onAfterUseItem / onTakeItem: a pivot's decision mid-turn sees it); was at the end of the turn
     unburden_check(state, instructions);
@@ -8496,6 +8508,7 @@ pub fn update(state: &mut State, instructions: &mut StateInstructions) {
         choice_lock_release(state, &side_ref, instructions);
         super::abilities::trace_update(state, &side_ref, instructions);
         super::items::item_update(state, &side_ref, instructions);
+        super::abilities::cud_chew_update(state, &side_ref, cud_chew, instructions);
         super::abilities::paradox_update(state, &side_ref, instructions);
         // (L150: attract's onUpdate, its source fainted; the switch: generate_instructions_from_switch)
         // alpha-poke patch (2026-10-17, doc/engine-diff.md L170): Mean Look / Block / Jaw Lock's
