@@ -5799,3 +5799,29 @@ def test_l202_tera_shell_resists_every_hit():
     if ec.move_hints(states[0], states[1])[2] < 2:
         pytest.skip("the seed's Triple Axel missed early")
     assert _keys(_full_moves(states, 0, "tripleaxel", "calmmind"), "hp") == {}
+
+
+# L203 (doc/engine-diff.md): Slow Start's counter 5 from the switch-in, kept on that turn (a pivot's
+# decision mid-turn); a forme's stats from the IVs inferred from the old forme's (a 0 Atk IV
+# Terapagos); the ability-ignoring moves through Tera Shell
+def test_l203_slow_start_at_a_pivot():
+    regigigas = _attacker("Regigigas", "Slow Start", "Leftovers", "- Body Slam\n- Knock Off\n- Protect\n- Substitute")
+    states = ec.run_showdown(BLISSEY + "\n\n" + regigigas, CORVIKNIGHT + "\n\n" + GARCHOMP_SD,
+                             [("switch 2", "move uturn")])  # fmt: skip
+    assert states[1]["sides"][1]["request"] == "switch"
+    assert _keys(_full(states, 0, "regigigas", "uturn", (2, 2)), "slowstart") == {}
+
+
+# (level 77, as the random battles': the stat formula's rounding then depends on the IV)
+TERAPAGOS_0ATK = TERAPAGOS.replace("EVs: 252 HP / 252 SpA / 4 SpD", "Level: 77\nEVs: 252 HP / 252 SpA / 4 SpD\nIVs: 0 Atk")
+
+
+def test_l203_forme_stats_from_inferred_ivs():
+    states = ec.run_showdown(GARCHOMP_SD, BLISSEY + "\n\n" + TERAPAGOS_0ATK, [("move swordsdance", "switch 2")])
+    assert _keys(_full(states, 0, "swordsdance", "terapagos", (1, 2)), "attack", "defense", "special") == {}
+
+
+def test_l203_sunsteel_strike_through_tera_shell():
+    solgaleo = _attacker("Solgaleo", "Full Metal Body", "Leftovers", "- Sunsteel Strike\n- Morning Sun\n- Flare Blitz\n- Knock Off")
+    states = ec.run_showdown(solgaleo, BLISSEY + "\n\n" + TERAPAGOS, [("move sunsteelstrike", "switch 2")])
+    assert _keys(_full_moves(states, 0, "sunsteelstrike", "terapagos", (1, 2)), "hp") == {}

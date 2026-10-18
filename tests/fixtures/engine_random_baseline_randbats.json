@@ -6,9 +6,6 @@
 "seed_offset": 60000
 },
 "mismatches": {
-"b109-t23": [
-"attack"
-],
 "b137-t31": [
 "sleep_turns"
 ],
@@ -17,9 +14,6 @@
 ],
 "b192-t31": [
 "hp"
-],
-"b239-t5": [
-"attack"
 ],
 "b42-t1": [
 "ability",
@@ -53,9 +47,6 @@
 "hp",
 "pp",
 "sleep_turns"
-],
-"b62-t13": [
-"attack"
 ],
 "b67-t11": [
 "hp"

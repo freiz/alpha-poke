@@ -9,14 +9,8 @@
 "b10-t20": [
 "volatile.confusion"
 ],
-"b104-t7": [
-"attack"
-],
 "b11-t7": [
 "hp"
-],
-"b165-t10": [
-"attack"
 ],
 "b177-t49": [
 "hp"
@@ -85,13 +79,6 @@
 ],
 "b226-t29": [
 "hp"
-],
-"b242-t5": [
-"attack",
-"hp"
-],
-"b245-t5": [
-"count.slowstart"
 ],
 "b25-t30": [
 "count.lockedmove",

@@ -16,9 +16,17 @@ use crate::state::{
 };
 use core::panic;
 
-fn common_pkmn_stat_calc(stat: u16, ev: u16, level: u16) -> u16 {
-    // 31 IV always used
-    ((2 * stat + 31 + (ev / 4)) * level) / 100
+// (L203: the IVs an inferred one is tried in: 31 and 0 first, the sets' usual ones -- two IVs can
+// give one stat, e.g. 0 and 1, the new forme's stat not)
+const IV_ORDER: [u16; 32] = [
+    31, 0, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8,
+    7, 6, 5, 4, 3, 2, 1,
+];
+
+// (L203: with an IV -- 31 for a state's own stats; recalculate_stats / update_max_hp infer it
+// from the stat it has)
+fn common_pkmn_stat_calc_iv(stat: u16, ev: u16, level: u16, iv: u16) -> u16 {
+    ((2 * stat + iv + (ev / 4)) * level) / 100
 }
 
 // alpha-poke patch (2026-10-16, doc/engine-diff.md L79): Showdown's "Paradox" species (their
@@ -352,12 +360,20 @@ impl Pokemon {
         side_ref: &SideReference,
         instructions: &mut StateInstructions,
     ) {
-        let new_hp = self.calculate_stats_from_base_stats().0;
+        // (L203: the HP IV inferred from its max HP in the old forme, as recalculate_stats')
         let to = self.id;
-        self.id = from;
-        let old_hp = self.calculate_stats_from_base_stats().0;
-        self.id = to;
-        let amount = new_hp - old_hp;
+        let iv = IV_ORDER
+            .iter()
+            .copied()
+            .find(|iv| {
+                let mut ivs = [31u16; 6];
+                ivs[0] = *iv;
+                self.stats_for(from, ivs).0 == self.maxhp
+            })
+            .unwrap_or(31);
+        let mut ivs = [31u16; 6];
+        ivs[0] = iv;
+        let amount = self.stats_for(to, ivs).0 - self.stats_for(from, ivs).0;
         if amount == 0 {
             return;
         }
@@ -400,19 +416,25 @@ impl Pokemon {
         // stat (the new forme's minus the old's, at its EVs / nature): its own IVs and EVs kept
         // (the state's EVs are not always its real ones: was the new forme's stats from them);
         // and the forme's weight (Showdown's weighthg: Minior-Meteor 40, Palafin-Hero 97.4, ...)
-        let new_stats = self.calculate_stats_from_base_stats();
+        // (L203: each stat's IV inferred from the stat it has in the old forme -- the first of
+        // IV_ORDER that fits -- and the new forme's from it exactly; the change when no IV fits:
+        // a stat Transform / Power Trick / Guard Split set)
         let to = self.id;
-        self.id = from;
-        let old_stats = self.calculate_stats_from_base_stats();
-        self.id = to;
-        let stats = (
-            new_stats.0,
-            self.attack + new_stats.1 - old_stats.1,
-            self.defense + new_stats.2 - old_stats.2,
-            self.special_attack + new_stats.3 - old_stats.3,
-            self.special_defense + new_stats.4 - old_stats.4,
-            self.speed + new_stats.5 - old_stats.5,
-        );
+        let new_stats = self.calculate_stats_from_base_stats();
+        let old_stats = self.stats_for(from, [31; 6]);
+        let has = [0, self.attack, self.defense, self.special_attack, self.special_defense, self.speed];
+        let pick = |k: usize, s: (i16, i16, i16, i16, i16, i16)| [s.0, s.1, s.2, s.3, s.4, s.5][k];
+        let stat = |k: usize| -> i16 {
+            for iv in IV_ORDER {
+                let mut ivs = [31u16; 6];
+                ivs[k] = iv;
+                if pick(k, self.stats_for(from, ivs)) == has[k] {
+                    return pick(k, self.stats_for(to, ivs));
+                }
+            }
+            has[k] + pick(k, new_stats) - pick(k, old_stats)
+        };
+        let stats = (new_stats.0, stat(1), stat(2), stat(3), stat(4), stat(5));
         if let Some(w) = to.forme_weight_hg() {
             let amount = w - (self.weight_kg * 10.0).round() as i16;
             if amount != 0 {
@@ -467,7 +489,13 @@ impl Pokemon {
         }
     }
     pub fn calculate_stats_from_base_stats(&self) -> (i16, i16, i16, i16, i16, i16) {
-        let base_stats = self.id.base_stats();
+        self.stats_for(self.id, [31; 6])
+    }
+
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L203): the stats of forme `id` with these
+    // IVs (the state's level, EVs, nature)
+    pub fn stats_for(&self, id: PokemonName, ivs: [u16; 6]) -> (i16, i16, i16, i16, i16, i16) {
+        let base_stats = id.base_stats();
 
         #[cfg(feature = "champions")]
         let evs = (
@@ -490,14 +518,14 @@ impl Pokemon {
         );
 
         let mut result = (
-            (common_pkmn_stat_calc(base_stats.0 as u16, evs.0, self.level as u16)
+            (common_pkmn_stat_calc_iv(base_stats.0 as u16, evs.0, self.level as u16, ivs[0])
                 + self.level as u16
                 + 10) as i16,
-            (common_pkmn_stat_calc(base_stats.1 as u16, evs.1, self.level as u16) + 5) as i16,
-            (common_pkmn_stat_calc(base_stats.2 as u16, evs.2, self.level as u16) + 5) as i16,
-            (common_pkmn_stat_calc(base_stats.3 as u16, evs.3, self.level as u16) + 5) as i16,
-            (common_pkmn_stat_calc(base_stats.4 as u16, evs.4, self.level as u16) + 5) as i16,
-            (common_pkmn_stat_calc(base_stats.5 as u16, evs.5, self.level as u16) + 5) as i16,
+            (common_pkmn_stat_calc_iv(base_stats.1 as u16, evs.1, self.level as u16, ivs[1]) + 5) as i16,
+            (common_pkmn_stat_calc_iv(base_stats.2 as u16, evs.2, self.level as u16, ivs[2]) + 5) as i16,
+            (common_pkmn_stat_calc_iv(base_stats.3 as u16, evs.3, self.level as u16, ivs[3]) + 5) as i16,
+            (common_pkmn_stat_calc_iv(base_stats.4 as u16, evs.4, self.level as u16, ivs[4]) + 5) as i16,
+            (common_pkmn_stat_calc_iv(base_stats.5 as u16, evs.5, self.level as u16, ivs[5]) + 5) as i16,
         );
 
         match self.nature {
@@ -2048,3 +2076,4 @@ impl State {
         self.use_exact_pp = true;
     }
 }
+

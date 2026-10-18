@@ -6817,9 +6817,17 @@ fn end_of_turn_instructions(
             }
         }
 
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L203): not on the turn it came in
+        // (Showdown's onResidual: activeTurns 0; its counter 5 from the switch-in -- was 6, one off
+        // at a pivot's decision mid-turn)
+        let came_in = incoming_instructions
+            .instruction_list
+            .iter()
+            .any(|i| matches!(i, Instruction::Switch(s) if s.side_ref == *side_ref));
         if side
             .volatile_statuses
             .contains(&PokemonVolatileStatus::SLOWSTART)
+            && !came_in
         {
             incoming_instructions
                 .instruction_list

@@ -869,6 +869,11 @@ fn common_pkmn_damage_calc(
         && !matches!(
             attacker.ability,
             Abilities::MOLDBREAKER | Abilities::TERAVOLT | Abilities::TURBOBLAZE
+        )
+        // (L203: nor the moves that ignore abilities)
+        && !matches!(
+            choice.move_id,
+            Choices::SUNSTEELSTRIKE | Choices::MOONGEISTBEAM | Choices::PHOTONGEYSER
         );
     Some(DamageRecipe {
         base: base(attacking_stat, defending_stat),

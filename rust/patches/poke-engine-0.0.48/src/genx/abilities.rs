@@ -2347,13 +2347,14 @@ pub fn ability_on_switch_in(
                     ChangeVolatileStatusDurationInstruction {
                         side_ref: *side_ref,
                         volatile_status: PokemonVolatileStatus::SLOWSTART,
-                        amount: 6 - attacking_side.volatile_status_durations.slowstart,
+                        amount: 5 - attacking_side.volatile_status_durations.slowstart,
                     },
                 ));
             attacking_side
                 .volatile_statuses
                 .insert(PokemonVolatileStatus::SLOWSTART);
-            attacking_side.volatile_status_durations.slowstart = 6;
+            // (L203: Showdown's counter 5, kept on the turn it came in)
+            attacking_side.volatile_status_durations.slowstart = 5;
         }
         Abilities::DROUGHT | Abilities::ORICHALCUMPULSE => {
             if state.weather.weather_type != Weather::SUN {
