@@ -2036,6 +2036,7 @@ fn get_instructions_from_secondaries(
                             },
                             side_reference,
                             &mut secondary_hit_instructions,
+                            HealRounding::Trunc,
                         );
                     }
                     Effect::RemoveItem => {
@@ -2117,11 +2118,21 @@ fn get_instructions_from_secondaries(
     return_instruction_list
 }
 
+// alpha-poke patch (2026-10-18, doc/engine-diff.md L225): how a heal's fraction of the max HP
+// rounds (it was always truncated: a Recover from 111 of 275 HP gave 137, Showdown's 138)
+#[derive(Clone, Copy, PartialEq)]
+enum HealRounding {
+    Trunc,
+    HalfUp,
+    HalfDown,
+}
+
 fn get_instructions_from_heal(
     state: &mut State,
     heal: &Heal,
     attacking_side_reference: &SideReference,
     incoming_instructions: &mut StateInstructions,
+    rounding: HealRounding,
 ) {
     let target_side_ref: SideReference;
     match heal.target {
@@ -2141,7 +2152,13 @@ fn get_instructions_from_heal(
     }
     let target_pkmn = state.get_side(&target_side_ref).get_active();
 
-    let mut health_recovered = (heal.amount * target_pkmn.maxhp as f32) as i16;
+    // (the fraction is an f32: a hair either way of a half)
+    let exact = heal.amount as f64 * target_pkmn.maxhp as f64;
+    let mut health_recovered = match rounding {
+        HealRounding::Trunc => (heal.amount * target_pkmn.maxhp as f32) as i16,
+        HealRounding::HalfUp => (exact + 0.5 + 1e-4).floor() as i16,
+        HealRounding::HalfDown => (exact - 0.5 - 1e-4).ceil() as i16,
+    };
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L113): a loss of HP is at least 1
     // (Showdown's damage: Rocky Helmet, Life Orb, ... on a 1-HP Shedinja)
     if heal.amount < 0.0 && health_recovered == 0 && target_pkmn.hp > 0 {
@@ -3144,18 +3161,27 @@ fn move_has_no_effect(state: &State, choice: &Choice, attacking_side_ref: &SideR
         return true;
     }
 
+    // alpha-poke patch (2026-10-18, doc/engine-diff.md L225): a powder move Magic Bounce sent back
+    // hits its user: its Grass type / Safety Goggles stop it (Showdown's hit steps on the new
+    // target); it slept a Grass-type Spore user
+    let reflected = choice.flags.reflectable && choice.target == MoveTarget::User;
+    let powder_target = if reflected {
+        _attacking_side.get_active_immutable()
+    } else {
+        defender
+    };
     #[cfg(not(any(feature = "gen4", feature = "gen5")))]
     if choice.flags.powder
-        && choice.target == MoveTarget::Opponent
-        && defender.has_type(&PokemonType::GRASS)
+        && (choice.target == MoveTarget::Opponent || reflected)
+        && powder_target.has_type(&PokemonType::GRASS)
     {
         return true;
     }
 
     // alpha-poke patch (2026-10-13): Safety Goggles block powder moves
     if choice.flags.powder
-        && choice.target == MoveTarget::Opponent
-        && defender.item == Items::SAFETYGOGGLES
+        && (choice.target == MoveTarget::Opponent || reflected)
+        && powder_target.item == Items::SAFETYGOGGLES
     {
         return true;
     }
@@ -3218,6 +3244,8 @@ fn move_has_no_effect(state: &State, choice: &Choice, attacking_side_ref: &SideR
         && (defending_side.active_grounded() || state.gravity > 0)
         && choice.target == MoveTarget::Opponent
         && choice.priority > 0
+        // (L225: not a move aimed at a side or the field -- a Prankster Spikes: L215's check)
+        && !super::abilities::FIELD_OR_SIDE_MOVES.contains(&choice.move_id)
     {
         return true;
     }
@@ -4647,10 +4675,16 @@ pub fn generate_instructions_from_move(
 
     // alpha-poke patch (2026-10-16, doc/engine-diff.md L8c): Glaive Rush's drawback ends when its
     // user moves again (Showdown: onBeforeMove, before anything else)
+    // (L225: not before a foe's pivot switch it waits for -- its saved move's turn ends it)
+    let waits = !choice.first_move
+        && state
+            .get_side_immutable(&attacking_side.get_other_side())
+            .force_switch;
     let side = state.get_side(&attacking_side);
-    if side
-        .volatile_statuses
-        .contains(&PokemonVolatileStatus::GLAIVERUSH)
+    if !waits
+        && side
+            .volatile_statuses
+            .contains(&PokemonVolatileStatus::GLAIVERUSH)
     {
         side.volatile_statuses
             .remove(&PokemonVolatileStatus::GLAIVERUSH);
@@ -5917,6 +5951,10 @@ fn expected_residual(state: &State, side_ref: &SideReference) -> i16 {
 
 // (L199: a damage hint's crit mark, State::damage_hint)
 pub const CRIT_HINT: i16 = 16384;
+// alpha-poke patch (2026-10-18, doc/engine-diff.md L225): a multi-hit move's hit that knocked its
+// target out (the log shows no roll then): its damage the HP left, when a roll (a crit's, with
+// CRIT_HINT) can deal it
+pub const KO_HINT: i16 = 8192;
 
 // alpha-poke patch (2026-10-16, doc/engine-diff.md L30): the rest of generate_instructions_from_move
 // after the hit count (the damage branches, run_move), once per hit count
@@ -8469,6 +8507,10 @@ fn run_move(
                 c.base_power =
                     choice.base_power * 2.0 * (hit as f32 + 1.0) / (hit_count as f32 + 1.0);
             }
+            // (L225: the knockout hit: the HP left, if a roll reaches it)
+            let ko = d == KO_HINT
+                && matches!(damage_rolls(state, &attacking_side, &c),
+                    Some((r, cr)) if (if crit { cr[15] } else { r[15] }) >= hp_before_hit);
             let rolls_have = |st: &State, c: &Choice| {
                 matches!(damage_rolls(st, &attacking_side, c),
                     Some((r, cr)) if (if crit { cr } else { r }).contains(&d))
@@ -8497,6 +8539,8 @@ fn run_move(
                     }
                 }
                 if found { d } else { hit_damage }
+            } else if ko {
+                hp_before_hit
             } else if rolls_have(state, &c) {
                 d
             } else if choice.category == MoveCategory::Physical
@@ -8590,7 +8634,20 @@ fn run_move(
             );
         }
         if let Some(heal) = &choice.heal {
-            get_instructions_from_heal(state, heal, &attacking_side, &mut instructions);
+            // (L225: a move's own heal of its user is rounded: Showdown's moveData.heal,
+            // Math.round; the weather ones' modify rounds a half down; an absorbing ability's,
+            // aimed at the absorber, is truncated)
+            let rounding = if heal.target != MoveTarget::User || heal.amount <= 0.0 {
+                HealRounding::Trunc
+            } else if matches!(
+                choice.move_id,
+                Choices::MORNINGSUN | Choices::MOONLIGHT | Choices::SYNTHESIS | Choices::SHOREUP
+            ) {
+                HealRounding::HalfDown
+            } else {
+                HealRounding::HalfUp
+            };
+            get_instructions_from_heal(state, heal, &attacking_side, &mut instructions, rounding);
         }
         // alpha-poke patch (2026-10-17, doc/engine-diff.md L151): the hit's DamagingHit (Rough Skin,
         // Rocky Helmet, Stamina, Weak Armor, ...: once per hit) and onAfterHit (Knock Off, Thief,

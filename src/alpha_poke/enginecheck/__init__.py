@@ -363,6 +363,7 @@ SUB_DAMAGE = re.compile(r"^DamageSubstitute (SideOne|SideTwo): (-?\d+)$")
 
 
 CRIT_HINT = 16384  # (generate_instructions::CRIT_HINT)
+KO_HINT = 8192  # (L225: a multi-hit move's knockout hit, generate_instructions.rs KO_HINT)
 
 
 def _log_hp(text: str) -> int | None:
@@ -499,7 +500,9 @@ def roll_hints(start: dict, after: dict) -> tuple:
                 future[pending_future[0]] = mark(dealt)
                 pending_future = None
             elif tag == "-damage" and len(f) == 4 and mover is not None and f[2] == target:
-                hits.append(mark(dealt))
+                # (L225: the hit that knocked the target out: KO_HINT, its damage the HP left)
+                ko = new == 0 and before is not None and before > 0
+                hits.append(mark(KO_HINT if ko else dealt))
             crit = False if tag == "-damage" else crit
             hp[f[2]] = new
     return (*confusion, *future, *multi)

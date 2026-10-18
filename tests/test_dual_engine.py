@@ -6541,3 +6541,24 @@ def test_l224_state_string_keeps_uproar_count():
     t = pe.State(side_one=side, side_two=s.side_two).to_string()
     assert pe.State.from_string(t).side_one.volatile_status_durations.uproar == 1
     assert pe.State.from_string(t).to_string() == t
+
+
+# L225 (doc/engine-diff.md): from randbats22 - 25 -- Glaive Rush's drawback stays till its user
+# moves after a foe's pivot (randbats22 b119-t27); a move's heal of its user rounded (Recover's
+# Math.round: b186-t26); a multi-hit move's knockout hit, the harness's KO hint (randbats24
+# b161-t26); a Prankster Spikes in Psychic Terrain (b292-t4); a Spore Magic Bounce sends back
+# into a Grass-type user (randbats25 b241-t36)
+@pytest.mark.parametrize("teams,i,turn,offset", [
+    ("random_battle_teams_randbats22.jsonl", 119, 27, 270000),
+    ("random_battle_teams_randbats22.jsonl", 186, 26, 270000),
+    ("random_battle_teams_randbats24.jsonl", 161, 26, 290000),
+    ("random_battle_teams_randbats24.jsonl", 292, 4, 290000),
+    ("random_battle_teams_randbats25.jsonl", 241, 36, 300000),
+])  # fmt: skip
+def test_l225_positions(teams, i, turn, offset):
+    a, b = _random_position(teams, i, turn, offset)
+    c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
+    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"]))
+    n = tuple(len(s["mons"]) for s in a["state"]["sides"])
+    assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}
+

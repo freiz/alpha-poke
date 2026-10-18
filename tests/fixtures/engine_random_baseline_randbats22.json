@@ -5,36 +5,5 @@
 "teams": "648f9c9ae9f9b39a",
 "seed_offset": 270000
 },
-"mismatches": {
-"b119-t27": [
-"volatile.glaiverush"
-],
-"b186-t26": [
-"ability",
-"attack",
-"base_ability",
-"base_types",
-"defense",
-"gender",
-"id",
-"last_item",
-"level",
-"maxhp",
-"move",
-"must_switch",
-"nature",
-"options",
-"pp",
-"sc.protect",
-"special_attack",
-"special_defense",
-"speed",
-"status",
-"stellar_boosted",
-"tera_type",
-"terastallized",
-"types",
-"weight"
-]
-}
+"mismatches": {}
 }
