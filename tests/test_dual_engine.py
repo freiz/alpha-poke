@@ -5575,3 +5575,17 @@ Modest Nature
     states = ec.run_showdown(armarouge, MIMIKYU, [("move meteorbeam", "move swordsdance")])
     assert states[1]["sides"][1]["mons"][0]["species"] == "mimikyu"
     assert _keys(_full(states, 0, "meteorbeam", "swordsdance"), "id", "hp") == {}
+
+
+# L197 (doc/engine-diff.md): Yawn's drowsiness is no sleep yet (the Sleep Clause Mod does not stop
+# it); its sleep is Showdown's trySetStatus (the Sleep Clause, the immunities)
+def test_l197_yawn_through_the_sleep_clause():
+    breloom = BRELOOM.replace("- Rock Tomb", "- Yawn")
+    # (Corviknight asleep on the bench: no Natural Cure to wake it)
+    turns = [("move spore", "move roost"), ("move yawn", "switch 2"), ("move bulletseed", "move calmmind")]
+    states = ec.run_showdown(breloom, CORVIKNIGHT + "\n\n" + BLISSEY, turns)
+    assert states[1]["sides"][1]["mons"][0]["status"] == "slp"
+    assert any("move: Yawn" in x for x in states[2]["log"])
+    assert any("Sleep Clause Mod activated" in x for x in states[3]["log"])
+    assert _keys(_full(states, 1, "yawn", "blissey", (1, 2)), "yawn") == {}
+    assert _keys(_full(states, 2, "bulletseed", "calmmind", (1, 2)), "status", "yawn") == {}

@@ -1089,12 +1089,14 @@ fn get_instructions_from_volatile_statuses(
         return;
     }
 
+    // (L197: the drowsiness is no sleep yet: not the Sleep Clause's)
     if volatile_status.volatile_status == PokemonVolatileStatus::YAWN
-        && immune_to_status(
+        && immune_to_status_with(
             state,
             &MoveTarget::Opponent,
             &target_side,
             &PokemonStatus::SLEEP,
+            false,
         )
     {
         return;
@@ -1285,6 +1287,18 @@ pub fn immune_to_status(
     target_side_ref: &SideReference,
     status: &PokemonStatus,
 ) -> bool {
+    immune_to_status_with(state, status_target, target_side_ref, status, true)
+}
+
+// alpha-poke patch (2026-10-17, doc/engine-diff.md L197): `clause`, the Sleep Clause Mod's part
+// (Showdown's onSetStatus: a sleep set, not Yawn's drowsiness -- its onTryHit's runStatusImmunity)
+pub fn immune_to_status_with(
+    state: &State,
+    status_target: &MoveTarget,
+    target_side_ref: &SideReference,
+    status: &PokemonStatus,
+    clause: bool,
+) -> bool {
     let (target_side, attacking_side) = state.get_both_sides_immutable(target_side_ref);
     let target_pkmn = target_side.get_active_immutable();
     let attacking_pkmn = attacking_side.get_active_immutable();
@@ -1366,6 +1380,7 @@ pub fn immune_to_status(
                     ]
                     .contains(&ability)
                     || (status_target == &MoveTarget::Opponent
+                        && clause
                         && target_side.has_alive_non_rested_sleeping_pkmn())
                 // sleep clause
             }
@@ -6598,6 +6613,10 @@ fn end_of_turn_instructions(
             .get_active_immutable()
             .hp
             == 0;
+        // (L197: Yawn's sleep as Showdown's trySetStatus: the immunities, the Sleep Clause, a
+        // Safeguard; was any mon without a status)
+        let yawn_sleep_blocked =
+            immune_to_status(state, &MoveTarget::Opponent, side_ref, &PokemonStatus::SLEEP);
         let side = state.get_side(side_ref);
         if side.get_active().hp == 0 {
             continue;
@@ -6902,7 +6921,7 @@ fn end_of_turn_instructions(
                     side.volatile_status_durations.yawn -= 1;
 
                     let active = side.get_active();
-                    if active.status == PokemonStatus::NONE {
+                    if active.status == PokemonStatus::NONE && !yawn_sleep_blocked {
                         active.status = PokemonStatus::SLEEP;
                         incoming_instructions
                             .instruction_list
