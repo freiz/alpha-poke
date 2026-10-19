@@ -43,7 +43,10 @@ pub fn beat_up_allies(side: &Side) -> Vec<&Pokemon> {
     let mut out = vec![];
     for i in pokemon_index_iter() {
         let p = &side.pokemon[i];
-        if i == active || (p.hp > 0 && p.status == PokemonStatus::NONE) {
+        // (2026-10-19: not an empty slot -- an active index on a padding mon panicked on its base
+        // stats, "Base stats not implemented for NONE")
+        if p.id != PokemonName::NONE && (i == active || (p.hp > 0 && p.status == PokemonStatus::NONE))
+        {
             out.push(p);
         }
     }

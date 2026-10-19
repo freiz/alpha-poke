@@ -256,7 +256,8 @@ def damage_posteriors(battle, belief, theirs: list, team_names: tuple[str, ...])
     if not bases:
         return {}
     role = battle.player_role or "p1"
-    lines = battle_log(battle)
+    # (poke-env's messages, split at "|")
+    lines = [m if isinstance(m, str) else "|".join(m) for m in battle_log(battle)]
     parsed_log = getattr(battle, "_alpha_hits", None)  # (lines seen, hits): once per new message
     if parsed_log is None or parsed_log[0] != len(lines):
         parsed_log = (len(lines), hits(lines, role))
