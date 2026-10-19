@@ -20,6 +20,7 @@ from poke_env.data import GenData
 
 from alpha_poke.agents.belief_state import BeliefModel, _preview_name, ability_probs
 from alpha_poke.agents.damage import calc_stats
+from alpha_poke.agents.damage_obs import damage_posteriors, record_base
 from alpha_poke.agents.speed import battle_observations, consistent, spread_dist
 from alpha_poke.agents.timers import SideTimers, battle_timers
 from alpha_poke.analysis.roles import to_id
@@ -161,6 +162,7 @@ def sample_set(
     known: KnownSet | None = None,
     temp: float = 1.0,
     speed_obs: list | None = None,
+    dmg_post: list | None = None,
 ):
     """One plausible full set for an opposing mon, consistent with what it revealed (and with
     ``known``: game-wide facts about the mon, used for side one of replay positions).
@@ -251,7 +253,20 @@ def sample_set(
         moves.append(pick)
         weights.pop(pick)
     spread = None
-    if speed_obs is not None:  # the spread sampled, consistent with the order
+    if dmg_post:  # F1: (item, ability, spread) from the damage posterior (agents/damage_obs.py)
+        level = mon.level or 100
+        w = [p for *_, p in dmg_post]
+        if speed_obs:  # the move order too: an inconsistent spread / item nearly ruled out
+            w = [p * (1.0 if consistent(speed_obs, calc_stats(mon.base_stats, s, level=level)["spe"],
+                                        it if not item_seen else item) else 1e-3)
+                 for (it, _, s, _), p in zip(dmg_post, w, strict=True)]  # fmt: skip
+        if sum(w) > 0:
+            it, ab, spread, _ = rng.choices(dmg_post, weights=w)[0]
+            if not item_seen:
+                item = it
+            if not mon.ability and not (known is not None and known.ability):
+                ability = ab
+    if spread is None and speed_obs is not None:  # the spread sampled, consistent with the order
         spread, item = _sample_spread(mon, item, item_seen, speed_obs, dist, rng)
     if spread is None:
         spread = belief.spread_for(mon.species)
@@ -614,6 +629,7 @@ def build_state(
     spectator: SpectatorSide | None = None,
     force_switch: bool | None = None,
     revived: str | None = None,
+    damage_belief: bool = True,
 ) -> pe.State:
     """One determinization of the current battle (side_one = us): the opponent's sets sampled
     from the belief, consistent with what they revealed. With ``spectator`` side
@@ -625,7 +641,8 @@ def build_state(
     opponent's PP from its uses, the opponent's spread consistent with the move order
     (agents/speed.py), Transform, Illusion, extending items, a hit Substitute.
     ``revived``: our mon of this species back at half HP (the states of a Revival Blessing
-    choice)."""
+    choice). ``damage_belief``: the opponent's sets also from the damage evidence (F1,
+    agents/damage_obs.py; off: as before 2026-10-19, for A/B)."""
     turn = battle.turn
     active = battle.active_pokemon
     role = battle.player_role or "p1"
@@ -674,8 +691,12 @@ def build_state(
 
     # the opponent's speed: usage spreads consistent with the observed move order
     obs = battle_observations(battle) if spectator is None else None
+    # F1: the damage evidence (play time only, as the speed's): a posterior per mon with hits
+    dmg = (damage_posteriors(battle, belief, theirs, team_names)
+           if spectator is None and damage_belief else {})  # fmt: skip
     their_sets = [sample_set(belief, m, team_names, rng, move_beta,
-                             speed_obs=None if obs is None else obs.get(to_id(m.species), []))
+                             speed_obs=None if obs is None else obs.get(to_id(m.species), []),
+                             dmg_post=dmg.get(to_id(m.species)))
                   for m in theirs]  # fmt: skip
     their_mons = [_their_mon(m, st, tm_them, tm_them.disabled if m is opp_active else None)
                   for m, st in zip(theirs, their_sets, strict=True)]  # fmt: skip
@@ -839,7 +860,7 @@ def build_state(
             terrain, tturns = TERRAIN[f], field_left("terrain", start)
         if f == Field.TRICK_ROOM:
             trick_room, trturns = True, _remaining(start, turn)
-    return pe.State(
+    st = pe.State(
         side_one=side_one,
         side_two=side_two,
         weather=pe.Weather(weather),
@@ -850,6 +871,10 @@ def build_state(
         trick_room_turns_remaining=trturns,
         last_move=tm_us.last_move or "none",  # (L167: Copycat's; an unknown one reads as none)
     )
+    # F1: a turn start's world is the base of that turn's hits (not a mid-turn switch's)
+    if spectator is None and not (battle.force_switch if force_switch is None else force_switch):
+        record_base(battle, st.to_string())
+    return st
 
 
 def engine_move_to_order(player, battle, choice: str):

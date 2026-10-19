@@ -267,6 +267,12 @@ struct Saved {
     sub: i16,
 }
 
+/// `j` made the side's active as a switch-in (none of the previous active's own state): the
+/// helper of `enter`, for callers outside this module (lib.rs set_damage_rolls)
+pub fn switch_in(side: &mut Side, j: usize) {
+    enter(side, j);
+}
+
 fn enter(side: &mut Side, j: usize) -> Option<Saved> {
     if side.active_index as usize == j {
         return None;

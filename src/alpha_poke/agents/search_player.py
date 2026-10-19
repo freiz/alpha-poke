@@ -63,6 +63,7 @@ class SearchPlayer(KnowledgePlayer):
         model=None,
         net_policy=None,
         device=None,
+        damage_belief: bool | None = None,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
@@ -74,6 +75,10 @@ class SearchPlayer(KnowledgePlayer):
         # sampled moves x team-conditioned move marginal ** move_beta (0 = archetype only; default
         # 1 since 2026-10-06: coverage of later revealed moves 61.7% -> 77.3%, design D11)
         self.move_beta = move_beta if move_beta is not None else _env_float("ALPHA_MOVE_BETA", 1.0)
+        # F1: the belief also from the damage evidence (agents/damage_obs.py; ALPHA_DAMAGE_BELIEF=0
+        # off, for A/B)
+        self.damage_belief = (damage_belief if damage_belief is not None
+                              else os.environ.get("ALPHA_DAMAGE_BELIEF", "1") != "0")  # fmt: skip
         self.worlds = worlds or _env_int("ALPHA_ISMCTS_WORLDS", 32)
         # leaf values (and priors) from a trained network (run directory, design D13); None =
         # poke-engine's handcrafted evaluation
@@ -151,6 +156,7 @@ class SearchPlayer(KnowledgePlayer):
         vals = {}
         for m in cands:
             states = [build_state(battle, self.belief, names, rng, move_beta=self.move_beta,
+                                  damage_belief=self.damage_belief,
                                   force_switch=False, revived=m.species)
                       for _ in range(self.worlds)]  # fmt: skip
             ctxs = (net_context.contexts(battle, states, net_context.needs_post(self.model))
@@ -173,7 +179,8 @@ class SearchPlayer(KnowledgePlayer):
         names = self._opp_team_names(battle)
         rng = random.Random(f"{battle.battle_tag}:{battle.turn}:{len(battle.available_moves)}")
         t0 = time.time()
-        states = [build_state(battle, self.belief, names, rng, move_beta=self.move_beta)
+        states = [build_state(battle, self.belief, names, rng, move_beta=self.move_beta,
+                                  damage_belief=self.damage_belief)
                   for _ in range(self.worlds)]  # fmt: skip
         issues = request_mismatch(battle, states[0])
         if issues:

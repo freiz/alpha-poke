@@ -122,6 +122,7 @@ class SelfPlayPlayer(SearchPlayer):
         futs = []
         for m in cands:
             states = [build_state(battle, self.belief, names, self.rng, move_beta=self.move_beta,
+                                  damage_belief=self.damage_belief,
                                   force_switch=False, revived=m.species)
                       for _ in range(self.fast_worlds)]  # fmt: skip
             ctxs = net_context.contexts(battle, states, net_context.needs_post(self.model))
@@ -159,7 +160,8 @@ class SelfPlayPlayer(SearchPlayer):
         full = self.rng.random() < self.full_frac
         n_worlds = self.worlds if full else self.fast_worlds
         names = self._opp_team_names(battle)
-        states = [build_state(battle, self.belief, names, self.rng, move_beta=self.move_beta)
+        states = [build_state(battle, self.belief, names, self.rng, move_beta=self.move_beta,
+                                  damage_belief=self.damage_belief)
                   for _ in range(n_worlds)]  # fmt: skip
         issues = request_mismatch(battle, states[0])
         if issues:

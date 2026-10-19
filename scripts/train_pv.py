@@ -849,6 +849,43 @@ def evaluate(model, d, idx, device, batch=16384) -> dict:
             out |= {"count_frac": float(act.mean()), "bce_count": float(vl[act].mean())}
             if (act & turn).any():
                 out["ce_count"] = float(pl[act & turn].mean())
+    # v7: the positions each new group speaks to (v7_subsets), their policy / value losses
+    acts = d["action"][idx]
+    for name, sub in v7_subsets(d, idx, acts).items():
+        if sub.any():
+            out[f"{name}_frac"] = float(sub.mean())
+            out[f"bce_{name}"] = float(vl[sub].mean())
+            if (sub & turn).any():
+                out[f"ce_{name}"] = float(pl[sub & turn].mean())
+                out[f"top1_{name}"] = float(hit[sub & turn].mean())
+    return out
+
+
+def v7_subsets(d: dict, idx: np.ndarray, acts: np.ndarray) -> dict[str, np.ndarray]:
+    """(v7 acceptance, design TODO 特征候选) the positions where a v7 group says something:
+    ko2 -- our active has a two-hit KO but no one-hit KO, or a priority KO is on; tera -- our side
+    can still terastallize; tera_used -- the player terastallized (its action); team -- the late
+    game (six mons or fewer left in all); post -- the belief worlds disagree on our active's
+    consequences (faster, KOed, KOs, safe switch-in, priority KO: between 0.1 and 0.9)."""
+    out = {}
+    own_active = d["dense"][idx][:, :6, 2] > 0.5
+    if "ent4" in d:
+        e4 = d["ent4"][idx].astype(np.float32)
+        k2, kt = DIMS["ent_ko2"], DIMS["ent_tera"]
+        own = (e4[:, :6] * own_active[..., None]).sum(1)  # our active's v7 columns
+        ko2_any = own[:, 1:8:2].max(1) > 0.5  # some move 2HKOs possibly
+        ent2 = d["ent2"][idx].astype(np.float32)
+        ohko_any = ((ent2[:, :6, 6:20:4] * own_active[..., None]).sum(1) > 0.5).any(1)
+        prio = (e4[:, :, 8:10] > 0.5).any((1, 2))
+        out["ko2"] = (ko2_any & ~ohko_any) | prio
+        out["tera"] = own[:, k2 + kt - 2] > 0.5  # our side can still terastallize
+        out["tera_used"] = (acts >= 4) & (acts < 8)
+        alive = d["dense"][idx][:, :, 1] > 0.5
+        out["team"] = alive.sum(1) <= 6  # the late game
+    if "post" in d:
+        pst = d["post"][idx].astype(np.float32)
+        key = (pst[:, :6, :5] * own_active[..., None]).sum(1)  # our active's consequences
+        out["post"] = ((key > 0.1) & (key < 0.9)).any(1)
     return out
 
 

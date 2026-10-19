@@ -1088,6 +1088,84 @@ fn feature_dims(py: Python<'_>) -> PyResult<Bound<'_, PyDict>> {
     Ok(d)
 }
 
+/// F1 (design TODO 特征候选, the belief's damage likelihood): the 16 non-crit damage rolls of one
+/// hit for each candidate set of side two's mon `opp` (made its active), in `state` (the turn's
+/// start; side one's active made `own_active` first, a switch-in before the hit). `side_one`: our
+/// active attacks (else theirs). A candidate: (item, ability, [hp, atk, def, spa, spd, spe], tera
+/// type, terastallized); its HP the base state's fraction of the new max. `own_tera`: our mon is
+/// terastallized at the hit (its tera type the state's). None for a candidate whose move does no
+/// / fixed damage.
+#[pyfunction]
+#[pyo3(signature = (state, side_one, mv, own_active, opp, cands, own_tera=false))]
+#[allow(clippy::type_complexity)]
+fn set_damage_rolls(
+    state: &str,
+    side_one: bool,
+    mv: &str,
+    own_active: usize,
+    opp: usize,
+    cands: Vec<(String, String, Vec<i16>, String, bool)>,
+    own_tera: bool,
+) -> PyResult<Vec<Option<Vec<i16>>>> {
+    use poke_engine::choices::{Choices, MOVES};
+    use poke_engine::engine::abilities::Abilities;
+    use poke_engine::engine::generate_instructions::calculate_damage_roll_sets;
+    use poke_engine::engine::items::Items;
+    use poke_engine::state::{PokemonType, SideReference};
+    use std::str::FromStr;
+    let choice = Choices::from_str(&mv.to_uppercase())
+        .ok()
+        .and_then(|c| MOVES.get(&c))
+        .cloned()
+        .ok_or_else(|| PyValueError::new_err(format!("unknown move {mv}")))?;
+    let splash = MOVES.get(&Choices::SPLASH).cloned().unwrap();
+    let mut base = State::deserialize(state);
+    if own_active > 5 || opp > 5 {
+        return Err(PyValueError::new_err("slot out of range"));
+    }
+    // (a mon that came in during the turn: none of the turn-start active's boosts / volatiles)
+    extra::switch_in(&mut base.side_one, own_active);
+    extra::switch_in(&mut base.side_two, opp);
+    if own_tera {
+        base.side_one.pokemon.pkmn[own_active].terastallized = true;
+    }
+    let side = if side_one {
+        SideReference::SideOne
+    } else {
+        SideReference::SideTwo
+    };
+    let mut out = Vec::with_capacity(cands.len());
+    for (item, ability, stats, tera, on) in cands {
+        let mut st = base.clone();
+        let p = &mut st.side_two.pokemon.pkmn[opp];
+        if let Ok(i) = Items::from_str(&item.to_uppercase()) {
+            p.item = i;
+        }
+        if let Ok(a) = Abilities::from_str(&ability.to_uppercase()) {
+            p.ability = a;
+            p.base_ability = a;
+        }
+        if stats.len() == 6 {
+            let frac = p.hp as f32 / p.maxhp.max(1) as f32;
+            p.maxhp = stats[0];
+            p.hp = ((frac * stats[0] as f32).round() as i16).clamp(1, stats[0]);
+            p.attack = stats[1];
+            p.defense = stats[2];
+            p.special_attack = stats[3];
+            p.special_defense = stats[4];
+            p.speed = stats[5];
+        }
+        if let Ok(t) = PokemonType::from_str(&tera.to_uppercase()) {
+            p.tera_type = t;
+        }
+        p.terastallized = on;
+        out.push(
+            calculate_damage_roll_sets(st, &side, choice.clone(), &splash).map(|(a, _)| a.to_vec()),
+        );
+    }
+    Ok(out)
+}
+
 /// poke-engine's exact 16 damage rolls, lowest first, of a side's move against the other side's
 /// move (doc/engine-diff.md L34; the dual-engine tests check Showdown's damage is one of them):
 /// (no crit, crit), None for a fixed-damage or no-damage move.
@@ -1452,6 +1530,7 @@ fn alpha_search(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(featurize_extra_full, m)?)?;
     m.add_function(wrap_pyfunction!(posterior, m)?)?;
     m.add_function(wrap_pyfunction!(posterior_many, m)?)?;
+    m.add_function(wrap_pyfunction!(set_damage_rolls, m)?)?;
     m.add_function(wrap_pyfunction!(featurize_counts, m)?)?;
     m.add_function(wrap_pyfunction!(move_table, m)?)?;
     m.add_function(wrap_pyfunction!(engine_data, m)?)?;

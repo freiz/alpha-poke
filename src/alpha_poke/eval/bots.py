@@ -53,6 +53,8 @@ VARIANTS: dict[str, tuple[str, dict]] = {
                 # the leaves' values from another network, the priors from the model (P/V
                 # cross evaluation, gpu_net.CrossNet)
                 "value_model": os.environ.get(f"ALPHA_VALUE_MODEL_{x.upper()}"),
+                # F1 off on this side: ALPHA_DAMAGE_BELIEF_A / _B = 0 (A/B)
+                "damage_belief": os.environ.get(f"ALPHA_DAMAGE_BELIEF_{x.upper()}", "1") != "0",
             },
         )
         for x in ("a", "b")
@@ -113,7 +115,8 @@ def make_bot(
         if cls_name == "batched":
             return _batched_bot(extra["model"], heldout_pool, trace_dir, kw, extra.get("dtype"),
                                 extra.get("iters"), extra.get("ml"),
-                                extra.get("value_model"))  # fmt: skip
+                                extra.get("value_model"),
+                                extra.get("damage_belief", True))  # fmt: skip
         if cls_name == "search":
             from alpha_poke.agents.search_player import SearchPlayer as cls
         elif cls_name == "policy":
@@ -131,7 +134,7 @@ _BATCHERS: dict = {}
 
 def _batched_bot(model: str, heldout_pool, trace_dir, kw, dtype: str | None = None,
                  iters: str | None = None, ml: str | None = None,
-                 value_model: str | None = None) -> Player:  # fmt: skip
+                 value_model: str | None = None, damage_belief: bool = True) -> Player:  # fmt: skip
     import random
 
     from alpha_poke.agents.belief_state import BeliefModel
@@ -148,5 +151,5 @@ def _batched_bot(model: str, heldout_pool, trace_dir, kw, dtype: str | None = No
         net_policy="both", model=model, batcher=_BATCHERS[key], full_frac=1.0,
         full_iters=iters, noise=(0.0, 10.0), greedy=True, record=False,
         turn_cap=int(os.environ.get("ALPHA_TURN_CAP", 300)),
-        seed=random.randrange(1 << 30), **kw,
+        seed=random.randrange(1 << 30), damage_belief=damage_belief, **kw,
     )  # fmt: skip
