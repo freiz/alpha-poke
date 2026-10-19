@@ -717,8 +717,12 @@ fn featurize_extra_with(
     glob.push(state.weather.turns_remaining.max(0) as f32 / 8.0);
     glob.push(state.terrain.turns_remaining.max(0) as f32 / 8.0);
     debug_assert_eq!(glob.len(), GLOBAL_EXTRA);
+    // (zeros if the engine panics in one of its calculations: a state it cannot handle)
     let new = if full {
-        v7_entities(state, &sides, act, refs, &mut memo)
+        std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            v7_entities(state, &sides, act, refs, &mut memo)
+        }))
+        .unwrap_or_else(|_| vec![0.0; 12 * ENT_NEW])
     } else {
         Vec::new()
     };
@@ -920,13 +924,21 @@ pub fn posterior(states: &[State], flip: bool) -> Vec<f32> {
     if states.is_empty() {
         return acc;
     }
+    // (a world the engine panics on -- a state it cannot handle -- is left out: the mean of the
+    // others; all zeros if none is left)
+    let mut n = 0;
     for st in states {
-        for (a, x) in acc.iter_mut().zip(posterior_world(st, flip)) {
-            *a += x;
+        let w = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| posterior_world(st, flip)));
+        if let Ok(w) = w {
+            for (a, x) in acc.iter_mut().zip(w) {
+                *a += x;
+            }
+            n += 1;
         }
     }
-    let n = states.len() as f32;
-    acc.iter_mut().for_each(|a| *a /= n);
+    if n > 0 {
+        acc.iter_mut().for_each(|a| *a /= n as f32);
+    }
     acc
 }
 
