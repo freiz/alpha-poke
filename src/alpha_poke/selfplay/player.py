@@ -124,7 +124,7 @@ class SelfPlayPlayer(SearchPlayer):
             states = [build_state(battle, self.belief, names, self.rng, move_beta=self.move_beta,
                                   force_switch=False, revived=m.species)
                       for _ in range(self.fast_worlds)]  # fmt: skip
-            ctxs = net_context.contexts(battle, states)
+            ctxs = net_context.contexts(battle, states, net_context.needs_post(self.model))
             futs.append((m, self.batcher.submit([s.to_string() for s in states], ctxs,
                                                 self.fast_iters, self.rng.randrange(1 << 30),
                                                 (0.0, 10.0))))  # fmt: skip
@@ -167,7 +167,7 @@ class SelfPlayPlayer(SearchPlayer):
             log.warning("request / engine state mismatch (%s turn %d): %s", battle.battle_tag,
                         battle.turn, issues)  # fmt: skip
         t1 = time.time()
-        ctxs = net_context.contexts(battle, states)
+        ctxs = net_context.contexts(battle, states, net_context.needs_post(self.model))
         t2 = time.time()
         iters = self.full_iters if full else self.fast_iters
         looping = self.looping(battle)

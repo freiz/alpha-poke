@@ -253,8 +253,10 @@ fn entity(p: &Pokemon, active: bool, own: bool, sparse: &mut Vec<i32>, dense: &m
     ] {
         dense.push(s as f32 / 500.0);
     }
+    // (2026-10-19, design TODO P2: not a fainted / padding mon's, not an empty slot -- the
+    // engine's empty move is NONE, not disabled, 32 PP)
     for mv in m {
-        dense.push((!mv.disabled && mv.pp > 0) as u8 as f32);
+        dense.push((alive && mv.id != Choices::NONE && !mv.disabled && mv.pp > 0) as u8 as f32);
     }
     dense.push(own as u8 as f32);
     dense.push(p.level as f32 / 100.0);

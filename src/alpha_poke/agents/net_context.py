@@ -11,7 +11,12 @@ state, built from the live battle exactly as the training positions are built fr
   * the turn.
 """
 
+import functools
+import json
 import logging
+from pathlib import Path
+
+import alpha_search
 
 from poke_env.battle import Battle
 
@@ -64,9 +69,29 @@ def _parsed(battle, lines: list[list[str]]):
     return parser.replay()
 
 
-def contexts(battle, states) -> list[tuple]:
+@functools.cache
+def model_feats(model_dir: str) -> frozenset:
+    """The input groups of a network (its config.json ``feats``)."""
+    cfg = json.loads((Path(model_dir) / "config.json").read_text())
+    return frozenset(cfg.get("feats", ()))
+
+
+def needs_full(model_dir: str | None) -> bool:
+    """The network reads the v7 entity inputs (ko2 / tera / team): the searches compute them
+    (alpha_search.BatchSearch(full=True); the CPU search and root_priors know it themselves)."""
+    return bool(model_dir) and bool(model_feats(model_dir) & {"ko2", "tera", "team"})
+
+
+def needs_post(model_dir: str | None) -> bool:
+    """The network reads F2 (``post``): the contexts carry the root worlds' posterior."""
+    return bool(model_dir) and "post" in model_feats(model_dir)
+
+
+def contexts(battle, states, post: bool = False) -> list[tuple]:
     """One (reveal bits [12], (own rating, opponent rating), turn, history) per world state
-    (poke_engine.State, side one = us), as alpha_search.ismcts(contexts=...) takes them."""
+    (poke_engine.State, side one = us), as alpha_search.ismcts(contexts=...) takes them. ``post``
+    (a network with F2): + the action-consequence probabilities over all these worlds
+    (alpha_search.posterior: computed once at the root, the same in every world's context)."""
     lines = battle_log(battle)
     side = battle.player_role or "p1"
     other = "p2" if side == "p1" else "p1"
@@ -77,4 +102,8 @@ def contexts(battle, states) -> list[tuple]:
     shadow = opponent_view(battle, lines)
     theirs = list(battle.opponent_team.values())
     ours = list(shadow.opponent_team.values())
+    if post:
+        p = alpha_search.posterior([st.to_string() for st in states])
+        return [(reveal_flags(st, theirs, ours), ratings, int(battle.turn), hist, p)
+                for st in states]  # fmt: skip
     return [(reveal_flags(st, theirs, ours), ratings, int(battle.turn), hist) for st in states]

@@ -309,6 +309,8 @@ impl<'a> PathCtx<'a> {
             rating: base.rating,
             turn: base.turn + self.mains,
             history: history.split_off(cut),
+            full: base.full,
+            post: base.post.clone(),
         }
     }
 }
@@ -825,6 +827,7 @@ mod tests {
             rating: [0, 0],
             turn: 10,
             history: vec![],
+            ..Default::default()
         };
         let mut state = ko_first();
         let mut pc = PathCtx::new(Some(&base));
@@ -867,6 +870,7 @@ mod tests {
             rating: [0, 0],
             turn: 3,
             history: vec![],
+            ..Default::default()
         };
         let mut state = ko_first();
         let a = state.side_one.get_active();

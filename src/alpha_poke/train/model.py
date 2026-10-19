@@ -36,6 +36,12 @@ v3 (design D13, network v3 first batch; TransformerPV only), inputs ``x`` from t
   * count (v6): the state's counters (alpha_search.featurize_counts: PP left, disabled moves,
     sleep turns per entity -> entity inputs; protects in a row, substitute HP, Wish / Future
     Sight turns, volatile durations per side -> global token).
+  * ko2 / tera / team (v7, design TODO 特征候选 F3a / F6 / F5; alpha_search.featurize_extra_full,
+    one [12, ent_new] array, each group its columns): two-hit KO lines and the priority threat
+    (actives), the damage terastallized either side (actives), the team matchup relations
+    (every mon) -> entity inputs; ko2 / tera also per move to the move head;
+  * post (v7, F2; alpha_search.posterior over a few belief worlds per position, the search's
+    root worlds in play): per entity the action-consequence probabilities -> entity inputs.
 ``mask_hidden`` (needs the reveal bits): the opponent's fields not revealed yet (item, ability,
 tera type, unused moves) are replaced by an "unknown" id (the last of each table) instead of the
 belief sample -- the input without the belief model.
@@ -53,7 +59,9 @@ from torch import nn
 
 # dense feature indices (rust/alpha_search/src/features.rs)
 D_ALIVE, D_ACTIVE, D_USABLE = 1, 2, slice(17, 21)
-FEATS = ("reveal", "num", "movetab", "matchup", "elo", "hres", "counter", "count")
+FEATS = ("reveal", "num", "movetab", "matchup", "elo", "hres", "counter", "count", "ko2", "tera",
+         "team", "post")
+V7 = ("ko2", "tera", "team")
 AUX_HEADS = ("oppset", "faint", "turns")
 N_REVEAL = 8
 # global extras (extra.rs): 0-15 per side numbers, 16-17 who moves first / speed ratio
@@ -104,6 +112,18 @@ class Embeddings(nn.Module):
             self.d_entity += N_REVEAL + self.n_ent2
         if "count" in self.feats:
             self.d_entity += dims["ent_count"]
+        # v7: the entity columns of the groups on (the others zeroed: same input size)
+        self.v7 = any(g in self.feats for g in V7)
+        if self.v7:
+            self.d_entity += dims["ent_new"]
+            k2, kt = dims["ent_ko2"], dims["ent_tera"]
+            on = torch.zeros(dims["ent_new"])
+            on[:k2] = float("ko2" in self.feats)
+            on[k2 : k2 + kt] = float("tera" in self.feats)
+            on[k2 + kt :] = float("team" in self.feats)
+            self.register_buffer("v7_on", on, persistent=False)
+        if "post" in self.feats:
+            self.d_entity += dims["post"]
         if "movetab" in self.feats:
             table = np.frombuffer(alpha_search.move_table(), np.float32).reshape(v_move, -1)
             self.register_buffer("move_table", torch.from_numpy(table.copy()), persistent=False)
@@ -133,6 +153,10 @@ class Embeddings(nn.Module):
             dense = torch.cat([dense, bits, ent2], dim=-1)
             if "count" in self.feats:
                 dense = torch.cat([dense, x["ent3"]], dim=-1)
+            if self.v7:
+                dense = torch.cat([dense, x["ent4"] * self.v7_on], dim=-1)
+            if "post" in self.feats:
+                dense = torch.cat([dense, x["post"]], dim=-1)
         x = torch.cat(
             [
                 self.species(sparse[..., 0]),
@@ -287,7 +311,12 @@ class TransformerPV(nn.Module):
             self.value_mlp = nn.Sequential(nn.Linear(d_model, vh), nn.SiLU(), nn.Linear(vh, 1))
             nn.init.zeros_(self.value_mlp[-1].weight)
             nn.init.zeros_(self.value_mlp[-1].bias)
-        self.move_head = mlp(d_model + 32 + 1 + (4 if feats else 0), 64, 2)
+        # per move: (v3) damage, KO lines, effectiveness; (v7 ko2 / tera) two-hit KO lines, the
+        # damage terastallized, against the foe terastallized
+        self.move_v7 = "ko2" in feats or "tera" in feats
+        self.dims_ko2 = dims.get("ent_ko2", 0)
+        self.move_head = mlp(d_model + 32 + 1 + (4 if feats else 0) + (7 if self.move_v7 else 0),
+                             64, 2)  # fmt: skip
         self.switch_head = mlp(2 * d_model, 64, 1)
 
     def forward(self, sparse, dense, glob, mask, hsparse=None, hdense=None, aux=False, x=None,
@@ -337,6 +366,13 @@ class TransformerPV(nn.Module):
         if self.feats:  # the active's moves vs the opposing active (damage, KO, effectiveness)
             mv = (xin["ent2"][:, :6, 4:20] * own_active[..., None]).sum(1).view(b, 4, 4)
             parts.append(mv * float("matchup" in self.feats))
+        if self.move_v7:  # the active's v7 per-move columns (Rust tnet.rs: the same order)
+            e4 = (xin["ent4"][:, :6] * own_active[..., None]).sum(1)  # [B, ent_new]
+            k2 = self.dims_ko2
+            ko = e4[:, :8].view(b, 4, 2) * float("ko2" in self.feats)
+            own_t = e4[:, k2 : k2 + 12].view(b, 4, 3) * float("tera" in self.feats)
+            foe_t = e4[:, k2 + 15 : k2 + 23].view(b, 4, 2) * float("tera" in self.feats)
+            parts += [ko, own_t, foe_t]
         mh = self.move_head(torch.cat(parts, dim=-1))
         sw = self.switch_head(torch.cat([t[:, None, :].expand(-1, 6, -1), h[:, :6]], dim=-1))
         logits = torch.cat([mh[..., 0], mh[..., 1], sw.squeeze(-1)], dim=-1)

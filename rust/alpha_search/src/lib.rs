@@ -72,7 +72,7 @@ fn py_ismcts(
         Some(d) => Some(tnet::shared(d).map_err(PyValueError::new_err)?),
         None => None,
     };
-    let ctxs: Vec<tnet::Context> = match (&tnet, contexts) {
+    let mut ctxs: Vec<tnet::Context> = match (&tnet, contexts) {
         (Some(_), Some(cs)) if cs.len() == worlds.len() => cs
             .into_iter()
             .map(to_context)
@@ -84,6 +84,9 @@ fn py_ismcts(
         }
         _ => Vec::new(),
     };
+    if let Some(t) = &tnet {
+        ctxs.iter_mut().for_each(|c| c.full = t.v7());
+    }
     let cfg = ismcts::Config {
         c,
         cache_root,
@@ -246,6 +249,68 @@ fn featurize_counts<'py>(
 /// v3 features of many state strings (design D13, `extra.rs`): (entity extras float32
 /// [B, 12, ENT_EXTRA], global extras float32 [B, GLOBAL_EXTRA]); `flip` as in `featurize`.
 /// `reference`: the slower path without the light state copy (parity checks).
+/// F2 (`extra::posterior`): the action-consequence probabilities [12 * N_POST] over the belief
+/// worlds `states` of one decision (side one's view; `flip`: side two's), as a list of floats.
+#[pyfunction]
+#[pyo3(signature = (states, flip=false))]
+fn posterior(py: Python<'_>, states: Vec<String>, flip: bool) -> Vec<f32> {
+    py.detach(|| {
+        let worlds: Vec<State> = states.iter().map(|s| State::deserialize(s)).collect();
+        extra::posterior(&worlds, flip)
+    })
+}
+
+/// F2 for many decisions at once: `groups` of world states -> [len(groups) * 12 * N_POST]
+/// little-endian f32 bytes (training data: a few worlds per position).
+#[pyfunction]
+fn posterior_many<'py>(py: Python<'py>, groups: Vec<Vec<String>>) -> Bound<'py, PyBytes> {
+    let out = py.detach(|| {
+        let mut out = Vec::with_capacity(groups.len() * features::N_ENTITIES * extra::N_POST);
+        for p in par_map(&groups, |g| {
+            let worlds: Vec<State> = g.iter().map(|s| State::deserialize(s)).collect();
+            extra::posterior(&worlds, false)
+        }) {
+            out.extend(p);
+        }
+        le_bytes(&out, f32::to_le_bytes)
+    });
+    PyBytes::new(py, &out)
+}
+
+/// The v3 extras and the v7 entity inputs from one damage memo (`extra::featurize_extra_full`):
+/// (entity extras [B * 12 * ENT_EXTRA], global extras [B * GLOBAL_EXTRA], v7 entities
+/// [B * 12 * ENT_NEW]) as little-endian f32 bytes; `reference`: the copying path (parity checks).
+#[pyfunction]
+#[pyo3(signature = (states, flip=false, reference=false))]
+fn featurize_extra_full<'py>(
+    py: Python<'py>,
+    states: Vec<String>,
+    flip: bool,
+    reference: bool,
+) -> (Bound<'py, PyBytes>, Bound<'py, PyBytes>, Bound<'py, PyBytes>) {
+    let (ent, glob, new) = py.detach(|| {
+        let (mut ent, mut glob, mut new) = (vec![], vec![], vec![]);
+        for (e, g, n) in par_map(&states, |s| {
+            let st = State::deserialize(s);
+            if reference {
+                extra::featurize_extra_reference(&st, flip)
+            } else {
+                extra::featurize_extra_full(&st, flip)
+            }
+        }) {
+            ent.extend(e);
+            glob.extend(g);
+            new.extend(n);
+        }
+        (
+            le_bytes(&ent, f32::to_le_bytes),
+            le_bytes(&glob, f32::to_le_bytes),
+            le_bytes(&new, f32::to_le_bytes),
+        )
+    });
+    (PyBytes::new(py, &ent), PyBytes::new(py, &glob), PyBytes::new(py, &new))
+}
+
 #[pyfunction]
 #[pyo3(signature = (states, flip=false, reference=false))]
 fn featurize_extra<'py>(
@@ -259,7 +324,8 @@ fn featurize_extra<'py>(
         for (e, g) in par_map(&states, |s| {
             let st = State::deserialize(s);
             if reference {
-                extra::featurize_extra_reference(&st, flip)
+                let (e, g, _) = extra::featurize_extra_reference(&st, flip);
+                (e, g)
             } else {
                 extra::featurize_extra(&st, flip)
             }
@@ -505,7 +571,8 @@ fn evaluate(py: Python<'_>, states: Vec<String>) -> Vec<f32> {
 /// Returns (policy logits [B * 14], -inf on illegal slots; value logits [B]). For checking the
 /// Rust forward pass against PyTorch.
 #[pyfunction]
-#[pyo3(signature = (model_dir, states, reveals, ratings, turns, histories, flip=false))]
+#[pyo3(signature = (model_dir, states, reveals, ratings, turns, histories, flip=false,
+                    posts=None))]
 #[allow(clippy::too_many_arguments)]
 fn tnet_forward(
     py: Python<'_>,
@@ -516,6 +583,7 @@ fn tnet_forward(
     turns: Vec<i32>,
     histories: Vec<String>,
     flip: bool,
+    posts: Option<Vec<Vec<f32>>>,
 ) -> PyResult<(Vec<f32>, Vec<f32>)> {
     let net = tnet::shared(model_dir).map_err(PyValueError::new_err)?;
     let n = states.len();
@@ -532,6 +600,8 @@ fn tnet_forward(
                 rating: [ratings[i].0, ratings[i].1],
                 turn: turns[i],
                 history: features::parse_history(&histories[i]),
+                full: net.v7(),
+                post: posts.as_ref().map_or_else(Vec::new, |p| p[i].clone()),
             };
             let ev = poke_engine::engine::evaluate::evaluate(&st);
             net.forward(&tnet::Input::new(&st, &ctx, flip, ev))
@@ -557,10 +627,21 @@ fn ml_params((slope, cap, threshold, winner_only): (f32, f32, f32, bool)) -> ism
 }
 
 /// A search context from Python: (public-information bits [12], (own rating, opponent rating),
-/// turn, history string), side one's view.
-type PyContext = (Vec<u8>, (i32, i32), i32, String);
+/// turn, history string[, F2 posterior [12 * N_POST]]), side one's view.
+#[derive(FromPyObject)]
+enum PyContext {
+    Plain((Vec<u8>, (i32, i32), i32, String)),
+    WithPost((Vec<u8>, (i32, i32), i32, String, Vec<f32>)),
+}
 
-fn to_context((rv, (r1, r2), turn, h): PyContext) -> PyResult<tnet::Context> {
+fn to_context(c: PyContext) -> PyResult<tnet::Context> {
+    let ((rv, (r1, r2), turn, h), post) = match c {
+        PyContext::Plain(t) => (t, Vec::new()),
+        PyContext::WithPost((a, b, c, d, p)) => ((a, b, c, d), p),
+    };
+    if !post.is_empty() && post.len() != features::N_ENTITIES * extra::N_POST {
+        return Err(PyValueError::new_err("a posterior of 12 * N_POST values"));
+    }
     if rv.len() != features::N_ENTITIES {
         return Err(PyValueError::new_err(
             "12 public-information bytes per context",
@@ -573,6 +654,8 @@ fn to_context((rv, (r1, r2), turn, h): PyContext) -> PyResult<tnet::Context> {
         rating: [r1, r2],
         turn,
         history: features::parse_history(&h),
+        full: false,
+        post,
     })
 }
 
@@ -616,6 +699,14 @@ fn batch_dict(py: Python<'_>, b: bsearch::Batch) -> PyResult<Bound<'_, PyDict>> 
         PyBytes::new(py, &le_bytes(&b.ent2, f32::to_le_bytes)),
     )?;
     d.set_item(
+        "ent4",
+        PyBytes::new(py, &le_bytes(&b.ent4, f32::to_le_bytes)),
+    )?;
+    d.set_item(
+        "post",
+        PyBytes::new(py, &le_bytes(&b.post, f32::to_le_bytes)),
+    )?;
+    d.set_item(
         "glob2",
         PyBytes::new(py, &le_bytes(&b.glob2, f32::to_le_bytes)),
     )?;
@@ -648,7 +739,7 @@ impl PyBatchSearch {
     #[new]
     #[pyo3(signature = (states, contexts, c_puct=1.0, policy_opponent=true, seed=None,
                         branch_depth=2, threads=1, vl=1, root_noise=(0.0, 10.0),
-                        ml=(0.0, 0.0, 0.0, false)))]
+                        ml=(0.0, 0.0, 0.0, false), full=false))]
     #[allow(clippy::too_many_arguments)]
     fn new(
         states: Vec<String>,
@@ -661,6 +752,7 @@ impl PyBatchSearch {
         vl: u32,
         root_noise: (f32, f32),
         ml: (f32, f32, f32, bool),
+        full: bool,
     ) -> PyResult<Self> {
         if states.is_empty() || states.len() != contexts.len() {
             return Err(PyValueError::new_err(
@@ -668,10 +760,12 @@ impl PyBatchSearch {
             ));
         }
         let worlds: Vec<State> = states.iter().map(|s| State::deserialize(s)).collect();
-        let ctxs = contexts
+        let mut ctxs = contexts
             .into_iter()
             .map(to_context)
             .collect::<PyResult<Vec<_>>>()?;
+        // (the network's v7 groups: their inputs computed at every leaf)
+        ctxs.iter_mut().for_each(|c| c.full = full);
         let cfg = ismcts::Config {
             cache_root: false,
             branch_depth,
@@ -801,10 +895,12 @@ fn root_priors(
         tnet: Some(tnet::shared(&model_dir).map_err(PyValueError::new_err)?),
         ..ismcts::Config::default()
     };
-    let ctxs = contexts
+    let full = cfg.tnet.as_ref().is_some_and(|t| t.v7());
+    let mut ctxs = contexts
         .into_iter()
         .map(to_context)
         .collect::<PyResult<Vec<_>>>()?;
+    ctxs.iter_mut().for_each(|c| c.full = full);
     let res = py.detach(|| ismcts::search(&mut worlds, &ctxs, Duration::ZERO, 1, &cfg, Some(0)));
     let w0 = &worlds[0];
     Ok(res
@@ -983,6 +1079,12 @@ fn feature_dims(py: Python<'_>) -> PyResult<Bound<'_, PyDict>> {
     d.set_item("ent_count", counts::ENT_COUNT)?;
     d.set_item("global_count", counts::GLOBAL_COUNT)?;
     d.set_item("count_version", counts::COUNT_VERSION)?;
+    d.set_item("ent_new", extra::ENT_NEW)?;
+    d.set_item("ent_ko2", extra::ENT_KO2)?;
+    d.set_item("ent_tera", extra::ENT_TERA)?;
+    d.set_item("ent_team", extra::ENT_TEAM)?;
+    d.set_item("extra_version", extra::EXTRA_VERSION)?;
+    d.set_item("post", extra::N_POST)?;
     Ok(d)
 }
 
@@ -1347,6 +1449,9 @@ fn alpha_search(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(featurize_history, m)?)?;
     m.add_function(wrap_pyfunction!(feature_dims, m)?)?;
     m.add_function(wrap_pyfunction!(featurize_extra, m)?)?;
+    m.add_function(wrap_pyfunction!(featurize_extra_full, m)?)?;
+    m.add_function(wrap_pyfunction!(posterior, m)?)?;
+    m.add_function(wrap_pyfunction!(posterior_many, m)?)?;
     m.add_function(wrap_pyfunction!(featurize_counts, m)?)?;
     m.add_function(wrap_pyfunction!(move_table, m)?)?;
     m.add_function(wrap_pyfunction!(engine_data, m)?)?;

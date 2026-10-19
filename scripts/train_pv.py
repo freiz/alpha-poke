@@ -85,6 +85,13 @@ def featurize_shard(path: Path, cache: Path) -> int:
             ok_v3 = ok_v3 and (not has_v3 or (
                 "ent3" in z.files and "count_version" in z.files
                 and (z["count_version"][:1] == DIMS["count_version"]).all()))  # fmt: skip
+            # v7: the extras' version (benched matchups without the active's state), the v7
+            # entity inputs, and the F2 posterior when the data has it
+            ok_v3 = ok_v3 and (not has_v3 or (
+                "ent4" in z.files and z["ent4"].shape[2] == DIMS["ent_new"]
+                and "extra_version" in z.files
+                and (z["extra_version"][:1] == DIMS["extra_version"]).all()
+                and ("post" in names) == ("post" in z.files)))  # fmt: skip
             # v4: the damage columns (fractions) are kept apart as percents ("hdmg"); the first
             # v4 caches stored them in the uint8 "hde" and truncated them to 0
             hdmg_ok = DIMS["hist_dense"] == 7 or "hdmg" in z.files
@@ -100,6 +107,7 @@ def featurize_shard(path: Path, cache: Path) -> int:
     extra = (["history"] if has_hist else []) + (["future"] if has_fut else [])
     if has_v3:
         extra += ["reveal", "opp_sets", "faint", "left_own", "left_opp", "turns"]
+        extra += ["post"] if "post" in names else []
     if "kind" in names:
         extra += ["rating_own", "rating_opp", "kind"]
     if "weight" in names:
@@ -172,13 +180,19 @@ def featurize_shard(path: Path, cache: Path) -> int:
 def v3_arrays(t, states: list[str]) -> dict:
     """v3 inputs (featurize_extra, reveal bits, turn), v6 counters (featurize_counts) and
     auxiliary targets of a shard."""
-    e, g = DIMS["ent_extra"], DIMS["global_extra"]
-    ent, glob = [], []
+    e, g, e4 = DIMS["ent_extra"], DIMS["global_extra"], DIMS["ent_new"]
+    ent, glob, new = [], [], []
     for i in range(0, len(states), 20_000):
-        a, b = alpha_search.featurize_extra(states[i : i + 20_000])
+        a, b, c = alpha_search.featurize_extra_full(states[i : i + 20_000])
         ent.append(np.frombuffer(a, np.float32).reshape(-1, 12, e).astype(np.float16))
         glob.append(np.frombuffer(b, np.float32).reshape(-1, g).astype(np.float16))
-    out = {"ent2": np.concatenate(ent), "glob2": np.concatenate(glob)}
+        new.append(np.frombuffer(c, np.float32).reshape(-1, 12, e4).astype(np.float16))
+    out = {"ent2": np.concatenate(ent), "glob2": np.concatenate(glob),
+           "ent4": np.concatenate(new),
+           "extra_version": np.full(len(states), DIMS["extra_version"], np.uint8)}  # fmt: skip
+    if "post" in t.column_names:  # F2: [12 * N_POST] per position (positions.py)
+        out["post"] = (np.asarray(t.column("post").to_pylist(), np.float32) / 255).astype(
+            np.float16).reshape(-1, 12, DIMS["post"])  # (stored x 255)
     e3, g3 = DIMS["ent_count"], DIMS["global_count"]
     ent, glob = [], []
     for i in range(0, len(states), 50_000):
@@ -259,8 +273,8 @@ def shard_caches(data: str) -> tuple[list[Path], list[int]]:
 MEMMAP_ROW_BYTES = 32
 
 
-V3_KEYS = ("reveal", "ent2", "glob2", "ent3", "glob3", "turn", "faint", "turns", "set_item",
-           "set_ability", "set_tera", "set_move", "rating", "kind")  # fmt: skip
+V3_KEYS = ("reveal", "ent2", "glob2", "ent3", "glob3", "ent4", "post", "turn", "faint", "turns",
+           "set_item", "set_ability", "set_tera", "set_move", "rating", "kind")  # fmt: skip
 
 
 def plan_selfplay(items: list[tuple[str, float]], per_game: int,

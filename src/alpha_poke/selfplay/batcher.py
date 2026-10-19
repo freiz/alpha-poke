@@ -69,6 +69,10 @@ class Batcher:
 
         self.net = (CrossNet(model, value_model, dtype=dtype) if value_model
                     else GpuNet(model, dtype=dtype))  # fmt: skip
+        # (a network with the v7 entity groups: the searches compute their inputs)
+        from alpha_poke.agents.net_context import needs_full
+
+        self.full = needs_full(model) or needs_full(value_model)
         assert ml[0] <= 0 or self.net.has_turns, f"{model}: no remaining-turns head for ml {ml}"
         self.leaves, self.threads, self.ml = leaves, threads, ml
         self.queue: queue.SimpleQueue = queue.SimpleQueue()
@@ -91,7 +95,8 @@ class Batcher:
             states, ctxs, iters, seed, noise, f = item
             try:
                 bs = alpha_search.BatchSearch(states, ctxs, seed=seed, threads=1, vl=1,
-                                              root_noise=noise, ml=self.ml)  # fmt: skip
+                                              root_noise=noise, ml=self.ml,
+                                              full=self.full)  # fmt: skip
                 active.append(_Job(bs, iters, f))
             except Exception as e:  # noqa: BLE001 - the game falls back, the batcher goes on
                 f.set_exception(e)

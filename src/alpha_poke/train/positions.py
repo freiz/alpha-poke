@@ -23,9 +23,12 @@ v3 (design D13, network v3 first batch):
 """
 
 import logging
+import os
 import random
 import zlib
 from dataclasses import dataclass
+
+import alpha_search
 
 from poke_env.battle import Battle, Pokemon
 
@@ -66,7 +69,15 @@ class Position:
     # drawn from it in this game (turn starts and the other decision points are separate pools
     # with different rates; weighting restores the game's real mix)
     weight: float = 1.0
+    # v7 (F2, design TODO 特征候选): the action-consequence probabilities over POST_WORLDS belief
+    # worlds of this position ([12 * N_POST], alpha_search.posterior, x 255 rounded); None
+    # without them
+    post: list[float] | None = None
 
+
+# F2: belief worlds per position (the main one + POST_WORLDS - 1 more draws; 1 = no posterior).
+# Training uses a few, the search all its root worlds: the same mean, noisier here
+POST_WORLDS = int(os.environ.get("ALPHA_POST_WORLDS", "4"))
 
 REVEAL_BITS = ("seen", "item", "ability", "tera", "move0", "move1", "move2", "move3")
 HIST = 8  # stored steps (rust/alpha_search/src/features.rs HIST); models may use fewer
@@ -361,7 +372,11 @@ def _emit_positions(row, rep, blind, actions, extra, w_main, w_extra, belief, rn
                         move_beta, kind)  # fmt: skip
         if pos is None:
             return
-        st, action = pos
+        st, action, more = pos
+        # (quantized to 0..255: small ints are shared objects -- a shard's 1M positions in the
+        # build's main process; train_pv divides by 255)
+        post = ([round(v * 255) for v in alpha_search.posterior([x.to_string() for x in [st, *more]])]
+                if more else None)  # fmt: skip
         reveal = reveal_flags(st, list(battles[side].opponent_team.values()),
                               list(battles[other].opponent_team.values()))  # fmt: skip
         labels = {to_id(r.species.replace("-*", "")): _set_label(r) for r in records[other]}
@@ -379,7 +394,7 @@ def _emit_positions(row, rep, blind, actions, extra, w_main, w_extra, belief, rn
                 len(records[side]) - total_faints[side],
                 len(records[other]) - total_faints[other],
                 cur, ratings[side], ratings[other], kind,
-                w_main if kind == KIND_MAIN else w_extra,
+                w_main if kind == KIND_MAIN else w_extra, post,
             )
         )  # fmt: skip
 
@@ -431,10 +446,14 @@ def _position(battle, side, a, records, known, belief, rng, move_beta, kind=KIND
     spec = SpectatorSide(team=team, known=known, names=names)
     state = build_state(battle, belief, opp_names, rng, move_beta=move_beta, spectator=spec,
                         force_switch=switch_only)  # fmt: skip
+    # F2: more belief worlds of the same position (the posterior; not the training state)
+    more = [build_state(battle, belief, opp_names, rng, move_beta=move_beta, spectator=spec,
+                        force_switch=switch_only)
+            for _ in range(POST_WORLDS - 1)]  # fmt: skip
     if isinstance(a, Blind):
         rec = next((r for r in records if _same_species(r.species, me.species)), None)
         tera = rec is not None and rec.tera_turn == battle.turn  # tera shows before any move
-        return state, BLIND_MOVE_TERA if tera else BLIND_MOVE
+        return state, BLIND_MOVE_TERA if tera else BLIND_MOVE, more
     if a.kind == "move":
         idx = next((i for i, m in enumerate(team) if m is me), None)
         moves = [to_id(m.id) for m in state.side_one.pokemon[idx].moves]
@@ -447,4 +466,4 @@ def _position(battle, side, a, records, known, belief, rng, move_beta, kind=KIND
         if j is None or j >= 6 or team[j] is me:
             return None
         action = SWITCH_OFFSET + j
-    return state, action
+    return state, action, more

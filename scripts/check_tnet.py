@@ -27,11 +27,11 @@ def flip_history(h: str) -> str:
     return ";".join("/".join(reversed(s.split("/", 1))) if "/" in s else s for s in h.split(";"))
 
 
-def torch_forward(model, states, reveal, rating, turn, hist, flip):
+def torch_forward(model, states, reveal, rating, turn, hist, flip, post=None):
     n, e = len(states), D["entities"]
     sp, de, gl, ma = alpha_search.featurize(states, flip=flip)
     hs, hd = alpha_search.featurize_history([flip_history(h) if flip else h for h in hist])
-    ent2, glob2 = alpha_search.featurize_extra(states, flip=flip)
+    ent2, glob2, ent4 = alpha_search.featurize_extra_full(states, flip=flip)
     ent3, glob3 = alpha_search.featurize_counts(states, flip=flip)
     ev = np.asarray(alpha_search.evaluate(states), np.float32) * (-1 if flip else 1)
 
@@ -47,6 +47,11 @@ def torch_forward(model, states, reveal, rating, turn, hist, flip):
         "glob2": t(glob2, np.float32, (n, D["global_extra"]), np.float32),
         "ent3": t(ent3, np.float32, (n, e, D["ent_count"]), np.float32),
         "glob3": t(glob3, np.float32, (n, D["global_count"]), np.float32),
+        "ent4": t(ent4, np.float32, (n, e, D["ent_new"]), np.float32),
+        # F2: side one's view, halves swapped for side two's (as the Rust Input::new)
+        "post": torch.from_numpy(
+            (np.zeros((n, e, D["post"]), np.float32) if post is None else
+             (np.concatenate([post[:, 6:], post[:, :6]], 1) if flip else post)).copy()),
         "turn": torch.from_numpy(turn.astype(np.int64)),
         "rating": torch.from_numpy(rating.astype(np.int64)),
     }
@@ -75,7 +80,10 @@ def main() -> None:
     files = sorted(glob.glob(f"data/train/{a.data}/*.parquet"))
     f = next(f for f in files if pq.read_metadata(f).num_rows)
     cols = ["state", "history", "reveal", "rating_own", "rating_opp", "turn"]
+    cols += ["post"] if "post" in pq.read_schema(f).names else []
     tb = pq.read_table(f, columns=cols).slice(0, a.n)
+    post = (np.asarray(tb.column("post").to_pylist(), np.float32).reshape(-1, 12, D["post"]) / 255
+            if "post" in cols else None)  # fmt: skip
     states, hist = tb.column("state").to_pylist(), tb.column("history").to_pylist()
     reveal = np.asarray(tb.column("reveal").to_pylist(), np.uint8)
     rating = np.stack([np.asarray(tb.column(c).to_pylist(), np.int32)
@@ -84,11 +92,13 @@ def main() -> None:
     model = load_run(Path(a.run), torch.device("cpu")).float()
     worst = 0.0
     for flip in (False, True):
-        lt, vt = torch_forward(model, states, reveal, rating, turn, hist, flip)
+        lt, vt = torch_forward(model, states, reveal, rating, turn, hist, flip, post)
         t0 = time.time()
         lr, vr = alpha_search.tnet_forward(a.run, states, [list(r) for r in reveal],
                                            [tuple(r) for r in rating.tolist()], turn.tolist(),
-                                           hist, flip)  # fmt: skip
+                                           hist, flip,
+                                           None if post is None else
+                                           [list(map(float, r.ravel())) for r in post])  # fmt: skip
         dt = time.time() - t0
         lr, vr = np.asarray(lr, np.float32).reshape(-1, 14), np.asarray(vr, np.float32)
         legal = np.isfinite(lt)

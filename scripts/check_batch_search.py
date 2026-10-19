@@ -26,6 +26,7 @@ import pyarrow.parquet as pq
 
 from alpha_poke.agents.gpu_net import GpuNet
 from alpha_poke.agents.gpu_search import GpuSearch
+from alpha_poke.agents.net_context import needs_full, needs_post
 
 
 def shares(root: list) -> dict:
@@ -64,14 +65,18 @@ def main() -> None:
     agree_b = agree_n = 0
     tv_b, tv_n, tv_g = [], [], []
     agree_g = 0
-    gs = GpuSearch(net, a.tree_batch, threads=8, trees=a.trees) if a.trees > 0 else None
+    full, post = needs_full(a.run), needs_post(a.run)
+    gs = (GpuSearch(net, a.tree_batch, threads=8, trees=a.trees, full=full)
+          if a.trees > 0 else None)  # fmt: skip
     t_b = t_c = 0.0
     n_b = n_c = 0
     for i, r in enumerate(rows):
         states = [r["state"]] * a.worlds
         ctx = (list(r["reveal"]), (r["rating_own"], r["rating_opp"]), r["turn"], r["history"])
+        if post:  # F2 at the root, from its worlds (as net_context.contexts)
+            ctx = (*ctx, alpha_search.posterior(states))
         ctxs = [ctx] * a.worlds
-        bs = alpha_search.BatchSearch(states, ctxs, seed=i, threads=a.threads)
+        bs = alpha_search.BatchSearch(states, ctxs, seed=i, threads=a.threads, full=full)
         t0 = time.time()
         while bs.stats()[0] < a.iterations:
             b = bs.collect(a.batch)

@@ -119,6 +119,8 @@ pub struct Batch {
     pub glob2: Vec<f32>,
     pub ent3: Vec<f32>,
     pub glob3: Vec<f32>,
+    pub ent4: Vec<f32>,
+    pub post: Vec<f32>,
     pub reveal: Vec<u8>,
     pub turn: Vec<i32>,
     pub rating: Vec<i32>,
@@ -139,6 +141,8 @@ impl Batch {
         self.glob2.extend(o.glob2);
         self.ent3.extend(o.ent3);
         self.glob3.extend(o.glob3);
+        self.ent4.extend(o.ent4);
+        self.post.extend(o.post);
         self.reveal.extend(o.reveal);
         self.turn.extend(o.turn);
         self.rating.extend(o.rating);
@@ -157,6 +161,8 @@ impl Batch {
         self.glob2.extend_from_slice(&x.glob2);
         self.ent3.extend_from_slice(&x.ent3);
         self.glob3.extend_from_slice(&x.glob3);
+        self.ent4.extend_from_slice(&x.ent4);
+        self.post.extend_from_slice(&x.post);
         self.reveal.extend_from_slice(&x.reveal);
         self.turn.push(x.turn);
         self.rating.extend_from_slice(&x.rating);

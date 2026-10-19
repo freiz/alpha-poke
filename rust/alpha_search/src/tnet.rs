@@ -15,7 +15,10 @@
 //! Read-only after loading, shared between search threads.
 
 use crate::counts::{featurize_counts, ENT_COUNT, GLOBAL_COUNT, SIDE_COUNT};
-use crate::extra::{featurize_extra, move_table, ENT_EXTRA, GLOBAL_EXTRA, MOVE_FEAT};
+use crate::extra::{
+    featurize_extra, featurize_extra_full, move_table, ENT_EXTRA, ENT_KO2, ENT_NEW, GLOBAL_EXTRA,
+    MOVE_FEAT, N_POST,
+};
 use crate::features::{
     featurize_view, history_features, Features, Step, DENSE, GLOBAL, HIST, HIST_DENSE, HIST_SPARSE,
     N_ACTIONS, N_ENTITIES, SPARSE, VOCAB,
@@ -52,6 +55,12 @@ pub struct Context {
     pub turn: i32,
     /// decision steps before the position, oldest first
     pub history: Vec<Step>,
+    /// the v7 entity inputs are computed (`extra::featurize_extra_full`; a network with the
+    /// ko2 / tera / team groups): else they are zeros (their damage calculations cost ~50%)
+    pub full: bool,
+    /// F2 (`extra::posterior`, [12 * N_POST] in side one's view, the root's belief worlds); empty
+    /// = zeros
+    pub post: Vec<f32>,
 }
 
 /// One position's inputs, in the acting side's view.
@@ -62,6 +71,10 @@ pub struct Input {
     /// v6 counters (`counts.rs`)
     pub ent3: Vec<f32>,
     pub glob3: Vec<f32>,
+    /// v7 entity inputs ([12 * ENT_NEW]: ko2, tera, team; zeros unless `Context::full`)
+    pub ent4: Vec<f32>,
+    /// F2 ([12 * N_POST], from the context)
+    pub post: Vec<f32>,
     pub reveal: [u8; N_ENTITIES],
     pub rating: [i32; 2],
     pub turn: i32,
@@ -74,8 +87,21 @@ pub struct Input {
 impl Input {
     pub fn new(state: &State, ctx: &Context, flip: bool, eval_side_one: f32) -> Input {
         let f = featurize_view(state, flip);
-        let (ent2, glob2) = featurize_extra(state, flip);
+        let (ent2, glob2, ent4) = if ctx.full {
+            featurize_extra_full(state, flip)
+        } else {
+            let (e, g) = featurize_extra(state, flip);
+            (e, g, vec![0.0; N_ENTITIES * ENT_NEW])
+        };
         let (ent3, glob3) = featurize_counts(state, flip);
+        let mut post = if ctx.post.len() == N_ENTITIES * N_POST {
+            ctx.post.clone()
+        } else {
+            vec![0.0; N_ENTITIES * N_POST]
+        };
+        if flip {
+            post.rotate_left(6 * N_POST);
+        }
         let (mut hs, mut hd) = (Vec::with_capacity(HIST * HIST_SPARSE), Vec::new());
         history_features(&ctx.history, flip, &mut hs, &mut hd);
         let mut reveal = ctx.reveal;
@@ -90,6 +116,8 @@ impl Input {
             glob2,
             ent3,
             glob3,
+            ent4,
+            post,
             reveal,
             rating,
             turn: ctx.turn,
@@ -113,6 +141,10 @@ impl Input {
         glob2[2 * side + 1] = -glob2[2 * side + 1];
         let mut ent3 = self.ent3.clone();
         ent3.rotate_left(6 * ENT_COUNT);
+        let mut ent4 = self.ent4.clone();
+        ent4.rotate_left(6 * ENT_NEW);
+        let mut post = self.post.clone();
+        post.rotate_left(6 * N_POST);
         let mut glob3 = self.glob3.clone();
         glob3.rotate_left(SIDE_COUNT);
         let (mut hs, mut hd) = (Vec::with_capacity(HIST * HIST_SPARSE), Vec::new());
@@ -125,6 +157,8 @@ impl Input {
             glob2,
             ent3,
             glob3,
+            ent4,
+            post,
             reveal,
             rating: [self.rating[1], self.rating[0]],
             turn: self.turn,
@@ -520,6 +554,12 @@ pub struct TNet {
     elo: bool,
     /// v6 counters (`counts.rs`) on the entity and global inputs
     count: bool,
+    /// v7 groups (`extra::v7_entities`): ko2 / tera / team on the entity inputs (ko2 / tera also
+    /// on the move head), F2 `post` on the entity inputs
+    ko2: bool,
+    tera: bool,
+    team: bool,
+    post: bool,
     species: Table,
     item: Table,
     ability: Table,
@@ -593,6 +633,13 @@ impl TNet {
         if has("count") && (dims["ent_count"] != ENT_COUNT || dims["global_count"] != GLOBAL_COUNT)
         {
             return Err("counter sizes differ from this build".into());
+        }
+        let v7 = has("ko2") || has("tera") || has("team");
+        if v7 && dims["ent_new"] != ENT_NEW {
+            return Err("v7 entity input sizes differ from this build".into());
+        }
+        if has("post") && dims["post"] != N_POST {
+            return Err("posterior input sizes differ from this build".into());
         }
 
         let bytes = std::fs::read(dir.join("best.safetensors")).map_err(|e| e.to_string())?;
@@ -759,6 +806,10 @@ impl TNet {
             matchup: has("matchup"),
             elo: has("elo"),
             count: has("count"),
+            ko2: has("ko2"),
+            tera: has("tera"),
+            team: has("team"),
+            post: has("post"),
             species: table("species")?,
             item: table("item")?,
             ability: table("ability")?,
@@ -787,7 +838,9 @@ impl TNet {
             + 32
             + DENSE
             + if v3 { N_REVEAL + net.n_ent2 } else { 0 }
-            + n_count(ENT_COUNT);
+            + n_count(ENT_COUNT)
+            + if net.v7() { ENT_NEW } else { 0 }
+            + if net.post { N_POST } else { 0 };
         let d_glob = GLOBAL
             + if v3 { GLOBAL_EXTRA + 1 } else { 0 }
             + if net.elo { N_ELO } else { 0 }
@@ -801,11 +854,36 @@ impl TNet {
         if !v3 {
             return Err("only v3+ models (with feature groups) are supported".into());
         }
+        let d_move = d + net.moves.dim + 5 + if net.move_v7() { 7 } else { 0 };
+        if net.move1.n_in != d_move {
+            return Err(format!("move head input {} vs {d_move}", net.move1.n_in));
+        }
         Ok(net)
     }
 
     pub fn has_residual(&self) -> bool {
         self.residual.is_some()
+    }
+
+    /// any v7 entity group: the inputs need `featurize_extra_full` (`Context::full`)
+    pub fn v7(&self) -> bool {
+        self.ko2 || self.tera || self.team
+    }
+
+    /// the mask of the v7 entity columns this network reads (its groups)
+    fn v7_on(&self, j: usize) -> bool {
+        if j < ENT_KO2 {
+            self.ko2
+        } else if j < ENT_KO2 + crate::extra::ENT_TERA {
+            self.tera
+        } else {
+            self.team
+        }
+    }
+
+    /// the per-move v7 inputs of the move head (ko2, own tera, against the foe's tera)
+    fn move_v7(&self) -> bool {
+        self.ko2 || self.tera
     }
 
     /// Token inputs -> encoder -> final norm: (tokens [n_tok * d], number of tokens).
@@ -862,6 +940,20 @@ impl TNet {
             k += self.n_ent2;
             if self.count {
                 xin[k..k + ENT_COUNT].copy_from_slice(&x.ent3[e * ENT_COUNT..(e + 1) * ENT_COUNT]);
+                k += ENT_COUNT;
+            }
+            if self.v7() {
+                for j in 0..ENT_NEW {
+                    xin[k + j] = if self.v7_on(j) {
+                        x.ent4[e * ENT_NEW + j]
+                    } else {
+                        0.0
+                    };
+                }
+                k += ENT_NEW;
+            }
+            if self.post {
+                xin[k..k + N_POST].copy_from_slice(&x.post[e * N_POST..(e + 1) * N_POST]);
             }
         }
         self.ent_in
@@ -1016,6 +1108,20 @@ impl TNet {
                         } else {
                             0.0
                         };
+                    }
+                    if self.move_v7() {
+                        let b = e * ENT_NEW;
+                        let o = d + dm + 5;
+                        let ko = if self.ko2 { 1.0 } else { 0.0 };
+                        let te = if self.tera { 1.0 } else { 0.0 };
+                        mx[o] = x.ent4[b + 2 * i] * ko;
+                        mx[o + 1] = x.ent4[b + 2 * i + 1] * ko;
+                        for j in 0..3 {
+                            mx[o + 2 + j] = x.ent4[b + ENT_KO2 + 3 * i + j] * te;
+                        }
+                        for j in 0..2 {
+                            mx[o + 5 + j] = x.ent4[b + ENT_KO2 + 15 + 2 * i + j] * te;
+                        }
                     }
                 }
                 None => mx[d..].iter_mut().for_each(|v| *v = 0.0),
@@ -1207,6 +1313,7 @@ mod tests {
             rating: [1400, 1600],
             turn: 7,
             history: parse_history("m:GLIMMORA:POWERGEM:35:f/s:GREATTUSK:KINGAMBIT::"),
+            ..Default::default()
         };
         let ev = poke_engine::engine::evaluate::evaluate(&st);
         let a = Input::new(&st, &ctx, false, ev).flipped(&st, &ctx);
@@ -1325,6 +1432,7 @@ mod tests {
             rating: [1500, 1500],
             turn: 10,
             history: parse_history(&[step; 8].join(";")),
+            ..Default::default()
         };
         let ev = poke_engine::engine::evaluate::evaluate(&st);
         let n = 3000;
@@ -1412,6 +1520,7 @@ mod tests {
             rating: [1500, 1500],
             turn: 10,
             history: parse_history(&[step; 8].join(";")),
+            ..Default::default()
         };
         let ev = poke_engine::engine::evaluate::evaluate(&st);
         let x = Input::new(&st, &ctx, false, ev);

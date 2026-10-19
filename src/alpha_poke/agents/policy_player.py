@@ -39,9 +39,9 @@ class PolicyPlayer(SearchPlayer):
         rng = random.Random(f"{battle.battle_tag}:{battle.turn}:{len(battle.available_moves)}")
         states = [build_state(battle, self.belief, names, rng, move_beta=self.move_beta)
                   for _ in range(self.policy_worlds)]  # fmt: skip
-        ctxs = net_context.contexts(battle, states)
+        ctxs = net_context.contexts(battle, states, net_context.needs_post(self.model))
         # the modelled player's rating as our own rating input (the opponent's stays)
-        ctxs = [(rv, (self.rating, rt[1]), turn, hist) for rv, rt, turn, hist in ctxs]
+        ctxs = [(rv, (self.rating, rt[1]), turn, hist, *rest) for rv, rt, turn, hist, *rest in ctxs]
         prior: dict[str, float] = defaultdict(float)
         for st, ctx in zip(states, ctxs, strict=True):
             for choice, p in alpha_search.root_priors([st.to_string()], self.model, [ctx]):
