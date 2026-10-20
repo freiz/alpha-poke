@@ -203,14 +203,16 @@ class SelfPlayPlayer(SearchPlayer):
             # (an order other than the option searched: a single available move -- Struggle,
             # a locked move -- the engine did not see; the record would name a move not played)
             return orders[slot]
-        reveal, ratings, turn, history = ctxs[0]
+        reveal, ratings, turn, history = ctxs[0][:4]
+        # F2: the root's posterior the network saw (x 255 rounded, as positions.py stores it)
+        post = [round(v * 255) for v in ctxs[0][4]] if len(ctxs[0]) > 4 else None
         self.records.setdefault(battle.battle_tag, []).append({
             "side": battle.player_role, "turn": battle.turn, "kind": kind, "full": full,
             "worlds": n_worlds, "iterations": n, "seconds": round(time.time() - t0, 3),
             "t_worlds": round(t1 - t0, 4), "t_ctx": round(t2 - t1, 4),
             "t_search": round(time.time() - t2, 4), "tau": tau, "loop": looping,
             "state": states[0].to_string(), "reveal": list(reveal), "ratings": list(ratings),
-            "ctx_turn": turn, "history": history, "slot": slot,
+            "ctx_turn": turn, "history": history, "slot": slot, "post": post,
             **{k: rec[k] for k in ("visits", "mean", "prior", "legal", "names", "q",
                                    "opp_visits", "opp_unmapped")},
         })  # fmt: skip

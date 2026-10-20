@@ -152,6 +152,8 @@ def convert_game(pair: int, game: dict, log: str, decisions: list, belief, gen: 
             "pi": [v / total for v in d["visits"]] if target else [0.0] * 14,
             "pi_w": 1.0 if target else 0.0, "q": d["q"], "weight": 1.0,
         })  # fmt: skip
+        if d.get("post") is not None:  # F2: the search root's posterior (all its worlds)
+            x["post"] = d["post"]
         rows.append(x)
     stats["unmatched_decisions"] += sum(len(ds) for ds in by_key.values())
     return rows
