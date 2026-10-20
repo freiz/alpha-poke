@@ -6912,3 +6912,63 @@ def test_l228_choice_lock_disabled(teams, i, turn, offset):
     outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"]))
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
     assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}
+
+
+# L230 (doc/engine-diff.md): calculate_damage_rolls' own damage of Endeavor (Normal) and Final
+# Gambit (Fighting) checked a Ghost move's immunity (none on a Normal target, damage on a Ghost
+# one); the move's own transition was right. Not on the transition path: the features
+# (extra.rs, a copy) and pe.calculate_damage read it. Showdown's getDamage (the damage probe) is
+# the reference; Pain Split (a status move: no immunity, Showdown's ignoreImmunity) the same
+L230_USER = """Smeargle @ Leftovers
+Ability: Own Tempo
+Level: 60
+Tera Type: Normal
+EVs: 252 HP / 252 Def / 4 SpD
+Bold Nature
+- Endeavor
+- Final Gambit
+- Pain Split
+- Super Fang
+
+Chansey @ Eviolite
+Ability: Natural Cure
+Tera Type: Normal
+EVs: 252 HP / 252 Def / 4 SpD
+Bold Nature
+- Soft-Boiled
+- Seismic Toss
+- Calm Mind
+- Protect"""  # (a second mon: the battle goes on after Final Gambit's faint)
+L230_TARGETS = {
+    "normal": """Blissey @ Leftovers
+Ability: Natural Cure
+Tera Type: Normal
+EVs: 252 HP / 252 Def / 4 SpD
+Bold Nature
+- Calm Mind
+- Seismic Toss
+- Soft-Boiled
+- Protect""",
+    "ghost": """Dusknoir @ Leftovers
+Ability: Pressure
+Tera Type: Ghost
+EVs: 252 HP / 252 Def / 4 SpD
+Bold Nature
+- Calm Mind
+- Shadow Sneak
+- Will-O-Wisp
+- Protect""",
+}
+
+
+@pytest.mark.parametrize("target", sorted(L230_TARGETS))
+@pytest.mark.parametrize("move", ["endeavor", "finalgambit"])
+def test_l230_fixed_damage_immunity(move, target):
+    states = ec.run_showdown(L230_USER, L230_TARGETS[target], [(f"move {move}", "move calmmind")],
+                             damage_probe=True)  # fmt: skip
+    want = states[0]["damage"]["p1"][move] or 0  # (False / 0: immune)
+    rolls = pe.calculate_damage(ec.engine_state(states[0]), move, "calmmind", True)[0]
+    assert (rolls[0] if rolls else 0) == want
+    # the transition (the engine's move) agrees with Showdown's turn as before
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), move, "calmmind")
+    assert ec.closest(states[1], outs, (2, 1), hp=True)["diff"] == {}

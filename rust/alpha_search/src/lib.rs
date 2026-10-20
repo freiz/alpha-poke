@@ -311,6 +311,15 @@ fn featurize_extra_full<'py>(
     (PyBytes::new(py, &ent), PyBytes::new(py, &glob), PyBytes::new(py, &new))
 }
 
+/// The exchanges of hits behind the `team` inputs (`extra::duels_debug`): [(side, mon, foe mon,
+/// its move slot, the foe's, [switch-in, switch-in possible, head-to-head, revenge]: 0 win / 1
+/// lose / 2 unknown)], side-relative to the view
+#[pyfunction]
+#[pyo3(signature = (state, flip=false))]
+fn duels_debug(state: &str, flip: bool) -> Vec<(usize, usize, usize, i8, i8, [u8; 4])> {
+    extra::duels_debug(&State::deserialize(state), flip)
+}
+
 #[pyfunction]
 #[pyo3(signature = (states, flip=false, reference=false))]
 fn featurize_extra<'py>(
@@ -1527,6 +1536,7 @@ fn alpha_search(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(featurize_history, m)?)?;
     m.add_function(wrap_pyfunction!(feature_dims, m)?)?;
     m.add_function(wrap_pyfunction!(featurize_extra, m)?)?;
+    m.add_function(wrap_pyfunction!(duels_debug, m)?)?;
     m.add_function(wrap_pyfunction!(featurize_extra_full, m)?)?;
     m.add_function(wrap_pyfunction!(posterior, m)?)?;
     m.add_function(wrap_pyfunction!(posterior_many, m)?)?;

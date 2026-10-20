@@ -1378,9 +1378,18 @@ fn calculate_damage(
     Ok((s1_py_rolls, s2_py_rolls))
 }
 
+/// alpha-poke patch (2026-10-20, doc/engine-diff.md L230): no chance crit and no miss in the
+/// transitions from now on (`on`), for checking the features' claims (they assume neither)
+#[pyfunction]
+fn set_no_chance(on: bool) {
+    poke_engine::engine::generate_instructions::NO_CHANCE_CRIT_OR_MISS
+        .store(on, std::sync::atomic::Ordering::Relaxed);
+}
+
 #[pymodule]
 #[pyo3(name = "poke_engine")]
 fn py_poke_engine(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    m.add_function(wrap_pyfunction!(set_no_chance, m)?)?;
     m.add_function(wrap_pyfunction!(calculate_damage, m)?)?;
     m.add_function(wrap_pyfunction!(generate_instructions, m)?)?;
     m.add_function(wrap_pyfunction!(id, m)?)?;

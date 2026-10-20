@@ -48,6 +48,17 @@ use crate::state::{
     PokemonStatus, PokemonType, Side, SideMovesFirst, SideReference, State,
 };
 use std::cmp;
+use std::sync::atomic::{AtomicBool, Ordering};
+
+// alpha-poke patch (2026-10-20, doc/engine-diff.md L230): a knob for checking the features' claims
+// against the transitions (alpha_search extra.rs; scripts/check_feature_claims.py): no chance
+// crit, no miss, no full paralysis / confusion self-hit, no chance secondary -- what the claims
+// assume (a sure crit, a 100% secondary stay); off unless set (poke_engine.set_no_chance)
+pub static NO_CHANCE_CRIT_OR_MISS: AtomicBool = AtomicBool::new(false);
+
+fn no_chance() -> bool {
+    NO_CHANCE_CRIT_OR_MISS.load(Ordering::Relaxed)
+}
 
 
 #[cfg(any(feature = "gen4", feature = "gen5", feature = "gen6"))]
@@ -251,7 +262,9 @@ fn set_last_used_move_as_move(
     side.last_used_move = LastUsedMove::Move(used_move);
 }
 
-fn generate_instructions_from_switch(
+// alpha-poke patch (2026-10-20): public, for the features (alpha_search extra.rs: a switch-in's
+// hazards and entry from the engine itself)
+pub fn generate_instructions_from_switch(
     state: &mut State,
     new_pokemon_index: PokemonIndex,
     switching_side_ref: SideReference,
@@ -2167,7 +2180,12 @@ fn get_instructions_from_secondaries(
         if secondary.target == MoveTarget::Opponent && hit_sub {
             continue;
         }
-        let secondary_percent_hit = (secondary.chance / 100.0).min(1.0);
+        // (L230: the claim check's knob, a chance secondary does not happen; a sure one does)
+        let secondary_percent_hit = if no_chance() && secondary.chance < 100.0 {
+            0.0
+        } else {
+            (secondary.chance / 100.0).min(1.0)
+        };
 
         let mut i = 0;
         while i < return_instruction_list.len() {
@@ -2605,6 +2623,8 @@ fn crit_stage_chance(state: &State, attacking_side: &SideReference, choice: &Cho
                 .contains(&PokemonVolatileStatus::FOCUSENERGY),
         );
     match stage {
+        // (L230: the claim check's knob, no chance crit; a sure one stays)
+        0..=2 if no_chance() => 0.0,
         0 => BASE_CRIT_CHANCE,
         1 => 1.0 / 8.0,
         2 => 1.0 / 2.0,
@@ -2612,9 +2632,23 @@ fn crit_stage_chance(state: &State, attacking_side: &SideReference, choice: &Cho
     }
 }
 
+// alpha-poke patch (2026-10-20): whether a damaging move hits the target's Substitute (not a
+// sound move, Hyperspace Fury / Hole or an Infiltrator's: L220); public, for the features
+// (alpha_search extra.rs)
+pub fn hits_substitute(state: &State, attacking_side: &SideReference, choice: &Choice) -> bool {
+    let (att, def) = state.get_both_sides_immutable(attacking_side);
+    def.volatile_statuses
+        .contains(&PokemonVolatileStatus::SUBSTITUTE)
+        && !choice.flags.sound
+        && !choice.move_id.damages_through_substitute()
+        && att.get_active_immutable().ability != Abilities::INFILTRATOR
+}
+
 // alpha-poke patch (2026-10-16, L30): a hit's crit chance against the defender (Battle / Shell
 // Armor: none; a guaranteed crit: sure)
-fn hit_crit_chance(state: &State, attacking_side: &SideReference, choice: &Choice) -> f32 {
+// alpha-poke patch (2026-10-20): public, for the features (alpha_search extra.rs: a sure crit's
+// damage)
+pub fn hit_crit_chance(state: &State, attacking_side: &SideReference, choice: &Choice) -> f32 {
     let defender = state
         .get_side_immutable(&attacking_side.get_other_side())
         .get_active_immutable();
@@ -2848,6 +2882,9 @@ fn check_move_hit_or_miss(
         }
     }
     let mut percent_hit = percent_hit.min(1.0);
+    if no_chance() {
+        percent_hit = 1.0;
+    }
     if Some((0, 0)) == damage && !disguise_hit {
         percent_hit = 0.0;
     }
@@ -4824,11 +4861,13 @@ fn generate_instructions_from_existing_status_conditions(
             attacking_side.volatile_status_durations.confusion += 1;
         }
     }
+    // (L230: the claim check's knob, no self-hit)
     if !stopped
         && attacking_side
             .volatile_statuses
             .contains(&PokemonVolatileStatus::CONFUSION)
         && confusion_self_hit > 0.0
+        && !no_chance()
     {
         let mut hit_yourself_instruction = incoming_instructions.clone();
         hit_yourself_instruction.update_percentage(confusion_self_hit);
@@ -4908,7 +4947,8 @@ fn generate_instructions_from_existing_status_conditions(
     }
 
     // (L150: paralysis last)
-    if !stopped && status == PokemonStatus::PARALYZE {
+    // (L230: the claim check's knob, never fully paralyzed)
+    if !stopped && status == PokemonStatus::PARALYZE && !no_chance() {
         // Fully-Paralyzed Branch
         let mut fully_paralyzed_instruction = incoming_instructions.clone();
         fully_paralyzed_instruction.update_percentage(FULLY_PARALYZED_CHANCE);
@@ -6172,7 +6212,8 @@ pub fn generate_instructions_from_move(
             10.0
         };
         let data = MOVES.get(&choice.move_id).map_or(first, |m| m.base_power);
-        let a = (choice.accuracy / 100.0).min(1.0);
+        // (L230: the claim check's knob, no miss)
+        let a = if no_chance() { 1.0 } else { (choice.accuracy / 100.0).min(1.0) };
         counts = (1..=3)
             .map(|k| {
                 let p = if k < 3 {
@@ -6199,8 +6240,12 @@ pub fn generate_instructions_from_move(
                 p[k] = 1.0 / 7.0;
             }
         } else {
-            let a = (choice.accuracy / 100.0 * if item == Items::WIDELENS { 1.1 } else { 1.0 })
-                .min(1.0);
+            // (L230: the claim check's knob, no miss)
+            let a = if no_chance() {
+                1.0
+            } else {
+                (choice.accuracy / 100.0 * if item == Items::WIDELENS { 1.1 } else { 1.0 }).min(1.0)
+            };
             for k in 1..10 {
                 p[k] = a.powi(k as i32 - 1) * (1.0 - a);
             }
@@ -6558,14 +6603,8 @@ fn finish_move(
     // Substitute's HP when it hits the Substitute (its break splits by the rolls, as a
     // knockout), else the target's HP
     let target_hp = {
-        let (att, def) = state.get_both_sides_immutable(&attacking_side);
-        if def
-            .volatile_statuses
-            .contains(&PokemonVolatileStatus::SUBSTITUTE)
-            && !choice.flags.sound
-            && !choice.move_id.damages_through_substitute()
-            && att.get_active_immutable().ability != Abilities::INFILTRATOR
-        {
+        let (_, def) = state.get_both_sides_immutable(&attacking_side);
+        if hits_substitute(state, &attacking_side, choice) {
             def.substitute_health
         } else {
             def.get_active_immutable().hp
@@ -6930,7 +6969,9 @@ fn combine_duplicate_instructions(list_of_instructions: &mut Vec<StateInstructio
     }
 }
 
-fn get_effective_speed(state: &State, side_reference: &SideReference) -> i16 {
+// alpha-poke patch (2026-10-20): public, for the features (alpha_search extra.rs: its copy
+// fell behind the engine's fixes, doc/engine-diff.md L230)
+pub fn get_effective_speed(state: &State, side_reference: &SideReference) -> i16 {
     let side = state.get_side_immutable(side_reference);
     let active_pkmn = side.get_active_immutable();
 
@@ -7023,7 +7064,8 @@ fn get_effective_speed(state: &State, side_reference: &SideReference) -> i16 {
     boosted_speed as i16
 }
 
-fn modify_choice_priority(state: &State, side_reference: &SideReference, choice: &mut Choice) {
+// alpha-poke patch (2026-10-20): public, for the features (alpha_search extra.rs)
+pub fn modify_choice_priority(state: &State, side_reference: &SideReference, choice: &mut Choice) {
     let side = state.get_side_immutable(side_reference);
     let active_pkmn = side.get_active_immutable();
 
@@ -7550,8 +7592,9 @@ fn harvest_after_end_of_turn(
     extra
 }
 
-#[allow(dead_code)] // (the upstream tests')
-fn add_end_of_turn_instructions(
+// alpha-poke patch (2026-10-20): public, for the features (alpha_search extra.rs: the end of
+// turn's HP changes from the engine itself)
+pub fn add_end_of_turn_instructions(
     state: &mut State,
     incoming_instructions: &mut StateInstructions,
     first_move_side: &SideReference,
@@ -7574,6 +7617,9 @@ fn future_sight_crit_chance(state: &State) -> Option<(SideReference, f32)> {
             && target.hp > 0
             && !matches!(target.ability, Abilities::BATTLEARMOR | Abilities::SHELLARMOR)
         {
+            if no_chance() {
+                return None;
+            }
             return Some((side_ref, 1.0 / 24.0));
         }
     }
@@ -11766,8 +11812,12 @@ pub fn calculate_damage_rolls(
         .get_side_immutable(&attacking_side_ref.get_other_side())
         .get_active_immutable();
     match choice.move_id {
+        // alpha-poke patch (2026-10-20, doc/engine-diff.md L230): each move's immunity by its own
+        // type (Seismic Toss: Fighting, Final Gambit: Fighting, Endeavor: Normal; a Ghost move's
+        // before: Endeavor / Final Gambit hit a Ghost and missed a Normal target); Pain Split (a
+        // status move) has none (Showdown's ignoreImmunity)
         Choices::SEISMICTOSS => {
-            if type_effectiveness_modifier(&PokemonType::NORMAL, &defender_active) == 0.0 {
+            if type_effectiveness_modifier(&PokemonType::FIGHTING, &defender_active) == 0.0 {
                 return None;
             }
             return Some(vec![attacker_active.level as i16]);
@@ -11779,13 +11829,13 @@ pub fn calculate_damage_rolls(
             return Some(vec![attacker_active.level as i16]);
         }
         Choices::FINALGAMBIT => {
-            if type_effectiveness_modifier(&PokemonType::GHOST, &defender_active) == 0.0 {
+            if type_effectiveness_modifier(&PokemonType::FIGHTING, &defender_active) == 0.0 {
                 return None;
             }
             return Some(vec![attacker_active.hp]);
         }
         Choices::ENDEAVOR => {
-            if type_effectiveness_modifier(&PokemonType::GHOST, &defender_active) == 0.0
+            if type_effectiveness_modifier(&PokemonType::NORMAL, &defender_active) == 0.0
                 || defender_active.hp <= attacker_active.hp
             {
                 return None;
@@ -11793,9 +11843,7 @@ pub fn calculate_damage_rolls(
             return Some(vec![defender_active.hp - attacker_active.hp]);
         }
         Choices::PAINSPLIT => {
-            if type_effectiveness_modifier(&PokemonType::GHOST, &defender_active) == 0.0
-                || defender_active.hp <= attacker_active.hp
-            {
+            if defender_active.hp <= attacker_active.hp {
                 return None;
             }
             return Some(vec![
