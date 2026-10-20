@@ -5166,9 +5166,23 @@ pub fn generate_instructions_from_move(
             .get_side(&attacking_side.get_other_side())
             .force_switch
     {
-        state
-            .get_side(&attacking_side)
-            .switch_out_move_second_saved_move = choice.move_id;
+        // alpha-poke patch (2026-10-20): saved by an instruction -- set on the state directly, it
+        // outlived the generation (reverse_instructions does not undo it): a search's world kept
+        // the move after every branch, a stale saved move a later forced switch (Eject Pack on a
+        // switch-in, L224) offered as the only option, or none when its mon had left (an empty
+        // option list: the batched search panicked)
+        let set = SetSecondMoveSwitchOutMoveInstruction {
+            new_choice: choice.move_id,
+            previous_choice: state
+                .get_side_immutable(&attacking_side)
+                .switch_out_move_second_saved_move,
+        };
+        let ins = match attacking_side {
+            SideReference::SideOne => Instruction::SetSideOneMoveSecondSwitchOutMove(set),
+            SideReference::SideTwo => Instruction::SetSideTwoMoveSecondSwitchOutMove(set),
+        };
+        state.apply_one_instruction(&ins);
+        incoming_instructions.instruction_list.push(ins);
         state.reverse_instructions(&incoming_instructions.instruction_list);
         final_instructions.push(incoming_instructions);
         return;
@@ -10081,7 +10095,8 @@ fn run_move(
                                 },
                             ),
                         );
-                        state.side_two.switch_out_move_second_saved_move = defender_choice.move_id;
+                        // (2026-10-20: the state as the instruction -- it had the foe's move)
+                        state.side_two.switch_out_move_second_saved_move = Choices::NONE;
                     }
                 }
             }
@@ -10134,7 +10149,8 @@ fn run_move(
                                 },
                             ),
                         );
-                        state.side_one.switch_out_move_second_saved_move = defender_choice.move_id;
+                        // (2026-10-20: the state as the instruction -- it had the foe's move)
+                        state.side_one.switch_out_move_second_saved_move = Choices::NONE;
                     }
                 }
             }
@@ -11364,6 +11380,30 @@ fn move_pair_in_order(
 
     let mut state_instructions_vec: Vec<StateInstructions> = Vec::with_capacity(4);
     let mut incoming_instructions: StateInstructions = StateInstructions::default();
+
+    // alpha-poke patch (2026-10-20): a saved move waits only for the foe's forced switch (a
+    // pivot's, an Eject Button's / Pack's); with none pending it is spent or void: cleared, or a
+    // later forced switch with no move waiting (the foe's Eject Pack on a turn-start switch-in)
+    // offered it again -- a move of a mon that had left: no option at all
+    if !state.side_one.force_switch && !state.side_two.force_switch {
+        for side_ref in [SideReference::SideOne, SideReference::SideTwo] {
+            let previous_choice = state
+                .get_side_immutable(&side_ref)
+                .switch_out_move_second_saved_move;
+            if previous_choice != Choices::NONE {
+                let set = SetSecondMoveSwitchOutMoveInstruction {
+                    new_choice: Choices::NONE,
+                    previous_choice,
+                };
+                let ins = match side_ref {
+                    SideReference::SideOne => Instruction::SetSideOneMoveSecondSwitchOutMove(set),
+                    SideReference::SideTwo => Instruction::SetSideTwoMoveSecondSwitchOutMove(set),
+                };
+                state.apply_one_instruction(&ins);
+                incoming_instructions.instruction_list.push(ins);
+            }
+        }
+    }
 
     // short-circuit if pursuit hitting a switching target
     // pursuit screws up some assumptions so it's just easier to separate the logic if we detect

@@ -819,6 +819,138 @@ mod tests {
         s
     }
 
+    /// 2026-10-20: a move that waits for the foe's pivot switch is saved by an instruction: the
+    /// generation leaves the state as it was (it was set on the state directly, outside the
+    /// instructions -- a search's world kept it after every branch, a stale saved move that a
+    /// later forced switch (Eject Pack on a switch-in) offered as the only option, or none: an
+    /// empty option list, `select_puct` panicked; 51 searches in a 1,200-game A/B)
+    #[test]
+    fn a_waiting_move_is_saved_by_an_instruction() {
+        use poke_engine::choices::MOVES;
+        let mut s = fixture();
+        for (side, id, speed) in [(&mut s.side_one, Choices::TACKLE, 1), (&mut s.side_two, Choices::UTURN, 999)] {
+            let a = side.get_active();
+            a.speed = speed;
+            a.moves[&PokemonMoveIndex::M0].id = id;
+            a.moves[&PokemonMoveIndex::M0].choice = MOVES.get(&id).unwrap().clone();
+            side.force_switch = false;
+            side.switch_out_move_second_saved_move = Choices::NONE;
+        }
+        let before = s.serialize();
+        let m = MoveChoice::Move(PokemonMoveIndex::M0);
+        let outcomes = generate_instructions_from_move_pair(&mut s, &m, &m, false);
+        assert_eq!(s.serialize(), before, "the generation left the state changed");
+        assert_eq!(s.side_one.switch_out_move_second_saved_move, Choices::NONE, "saved move leaked");
+        let pivots: Vec<_> = outcomes.iter().filter(|o| {
+            o.instruction_list.iter().any(|i| matches!(i, Instruction::ToggleSideTwoForceSwitch))
+        }).collect();
+        assert!(!pivots.is_empty(), "U-turn switches side two out");
+        for o in pivots {
+            s.apply_instructions(&o.instruction_list);
+            assert_eq!(s.side_one.switch_out_move_second_saved_move, Choices::TACKLE);
+            let (o1, _) = s.get_all_options();
+            assert!(!o1.is_empty());
+            s.reverse_instructions(&o.instruction_list);
+            assert_eq!(s.serialize(), before);
+            assert_eq!(s.side_one.switch_out_move_second_saved_move, Choices::NONE);
+        }
+        // the follow-up (side two's replacement, our move after it): nothing saved after it
+        s.apply_instructions(&outcomes.iter().find(|o| o.instruction_list.iter().any(|i| matches!(i, Instruction::ToggleSideTwoForceSwitch))).unwrap().instruction_list.clone());
+        let (o1, o2) = s.get_all_options();
+        let sw = o2.iter().find(|c| matches!(c, MoveChoice::Switch(_))).unwrap().clone();
+        let follow = generate_instructions_from_move_pair(&mut s, &o1[0], &sw, false);
+        for o in &follow {
+            s.apply_instructions(&o.instruction_list);
+            let (n1, n2) = s.get_all_options();
+            assert!(!n1.is_empty() && !n2.is_empty());
+            s.reverse_instructions(&o.instruction_list);
+        }
+    }
+
+    /// the A/B's case: a stale saved move (a mon that has left) and a turn-start switch-in into
+    /// Sticky Web with an Eject Pack: the foe's forced switch, side one with nothing waiting --
+    /// no action (it was offered the stale move: none, an empty option list)
+    #[test]
+    fn a_stale_saved_move_is_cleared() {
+        use poke_engine::engine::items::Items;
+        use poke_engine::state::PokemonType;
+        let mut s = fixture();
+        s.side_one.force_switch = false;
+        s.side_two.force_switch = false;
+        s.side_one.switch_out_move_second_saved_move = Choices::STONEAXE; // no mon of its has it
+        s.side_two.side_conditions.sticky_web = 1;
+        let a2 = s.side_two.active_index as usize;
+        let j = (0..6).find(|&j| j != a2 && s.side_two.pokemon.pkmn[j].hp > 0).unwrap();
+        let p = &mut s.side_two.pokemon.pkmn[j];
+        p.item = Items::EJECTPACK;
+        p.types.0 = PokemonType::NORMAL; // grounded
+        p.types.1 = PokemonType::TYPELESS;
+        p.ability = poke_engine::engine::abilities::Abilities::NONE;
+        let a1 = s.side_one.active_index as usize;
+        let k = (0..6).find(|&k| k != a1 && s.side_one.pokemon.pkmn[k].hp > 0).unwrap();
+        let (m1, m2) = (MoveChoice::Switch(PokemonIndex::deserialize(&k.to_string())),
+                        MoveChoice::Switch(PokemonIndex::deserialize(&j.to_string())));
+        let before = s.serialize();
+        let outcomes = generate_instructions_from_move_pair(&mut s, &m1, &m2, false);
+        assert_eq!(s.serialize(), before);
+        let mut ejected = 0;
+        for o in &outcomes {
+            s.apply_instructions(&o.instruction_list);
+            if s.side_two.force_switch {
+                ejected += 1;
+                let (o1, o2) = s.get_all_options();
+                assert_eq!(o1, vec![MoveChoice::None], "side one: no action");
+                assert!(!o2.is_empty());
+            }
+            s.reverse_instructions(&o.instruction_list);
+        }
+        assert!(ejected > 0, "the Eject Pack went off");
+    }
+
+    /// Random playouts from the states of a file (one per line, ALPHA_FUZZ_STATES): every move
+    /// pair's generation leaves the state unchanged and no side is left without an option.
+    /// `cargo test --release fuzz_generation -- --ignored --nocapture`
+    #[test]
+    #[ignore]
+    fn fuzz_generation() {
+        use rand::{rngs::StdRng, Rng, SeedableRng};
+        let path = std::env::var("ALPHA_FUZZ_STATES").expect("ALPHA_FUZZ_STATES");
+        let text = std::fs::read_to_string(path).unwrap();
+        let mut rng = StdRng::seed_from_u64(0);
+        let (mut steps, mut leaks, mut empty) = (0usize, 0usize, 0usize);
+        for line in text.lines().filter(|l| !l.is_empty()) {
+            let mut s = State::deserialize(line);
+            for _ in 0..12 {
+                if s.battle_is_over() != 0.0 {
+                    break;
+                }
+                let (o1, o2) = s.get_all_options();
+                if o1.is_empty() || o2.is_empty() {
+                    empty += 1;
+                    if empty <= 3 {
+                        eprintln!("EMPTY {}", s.serialize());
+                    }
+                    break;
+                }
+                let (m1, m2) = (o1[rng.gen_range(0..o1.len())].clone(), o2[rng.gen_range(0..o2.len())].clone());
+                let before = s.serialize();
+                let outcomes = generate_instructions_from_move_pair(&mut s, &m1, &m2, false);
+                steps += 1;
+                if s.serialize() != before {
+                    leaks += 1;
+                    if leaks <= 3 {
+                        eprintln!("LEAK {m1:?} {m2:?}\nBEFORE {before}\nAFTER  {}", s.serialize());
+                    }
+                    s = State::deserialize(&before);
+                }
+                let k = rng.gen_range(0..outcomes.len());
+                s.apply_instructions(&outcomes[k].instruction_list);
+            }
+        }
+        eprintln!("steps {steps} leaks {leaks} empty {empty}");
+        assert_eq!((leaks, empty), (0, 0));
+    }
+
     #[test]
     fn a_move_never_used_is_not_history_or_revealed() {
         // 2026-10-14 (external review): the chosen move was recorded as used before the turn
