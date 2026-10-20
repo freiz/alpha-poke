@@ -53,9 +53,9 @@
 //!   the foe's max, a speed tie to the foe) and possibly, head-to-head reliably, as a revenge kill
 //!   (in free after a faint, the hazards; its first hit KOs before the foe acts) reliably, and
 //!   against how many the reliable switch-in exchange is unresolved within the rounds; as a
-//!   threat, how many of the other side's mons answer it reliably as a switch-in and whether only
-//!   one does, how many revenge-kill it reliably; as an answer, the threats it alone answers as a
-//!   switch-in / as a revenge kill.
+//!   threat, how many of the other side's mons answer it reliably as a switch-in, against how many
+//!   that is Unknown, how many revenge-kill it reliably; as an answer, the threats it is the only
+//!   confirmed answer to as a switch-in / as a revenge kill.
 
 use poke_engine::choices::{Choice, Choices, Effect, MoveCategory, MoveTarget, MultiHitMove, MOVES};
 use poke_engine::engine::choice_effects::{charge_choice_to_volatile, modify_choice};
@@ -71,7 +71,7 @@ use poke_engine::engine::generate_instructions::{
 use poke_engine::engine::items::{item_ignored, Items};
 use poke_engine::engine::state::Terrain;
 use poke_engine::engine::state::PokemonVolatileStatus;
-use poke_engine::instruction::StateInstructions;
+use poke_engine::instruction::{Instruction, StateInstructions};
 use poke_engine::state::{
     LastUsedMove, Pokemon, PokemonIndex, PokemonMoveIndex,
     PokemonType, Side, SideReference, State,
@@ -241,82 +241,158 @@ fn entry_hp(work: &mut State, orig: &State, r: &SideReference, idx: usize) -> i1
     .unwrap_or(now)
 }
 
-/// The end of the turn's HP change of each side's active, heal positive ([refs[0], refs[1]]), by
-/// the engine itself (`add_end_of_turn_instructions` on `work`, undone; `orig`: `work` as it is,
-/// for a panic: Leftovers / Black Sludge by the current types, the weather and its suppression,
-/// Grassy Terrain, status, Leech Seed, Salt Cure, Wish, Future Sight, ...), each active at 3/4 of
-/// its max HP (no heal or damage cut off at full / no HP); zeros if the engine panics on the state
-/// or an active is down. Before `EXTRA_VERSION` 3 a copy of the common ones (by the original
-/// types: a terastallized mon's wrong).
-fn eot_on(work: &mut State, orig: &State, refs: &[SideReference; 2]) -> [f32; 2] {
-    // (both checked before either is changed)
-    if refs.iter().any(|r| work.get_side_immutable(r).get_active_immutable().hp <= 0) {
-        return [0.0, 0.0];
-    }
-    let mut h = [(0i16, 0i16); 2];
-    for (i, r) in refs.iter().enumerate() {
-        let p = work.get_side(r).get_active();
-        h[i] = (p.hp, (p.maxhp - p.maxhp / 4).max(1));
-        p.hp = h[i].1;
-    }
-    let refs = *refs;
-    let r = undone(work, orig, |st, ins| {
-        add_end_of_turn_instructions(st, ins, &SideReference::SideOne);
-        [0, 1].map(|i| (st.get_side_immutable(&refs[i]).get_active_immutable().hp - h[i].1) as f32)
-    });
-    for (i, r) in refs.iter().enumerate() {
-        work.get_side(r).get_active().hp = h[i].0;
-    }
-    r.unwrap_or([0.0, 0.0])
+/// One end of the turn's effect on a side's active: (its heal, its damage), each measured where
+/// no HP cuts it off -- the exchange adds them at its own HP (heal first, then the damage)
+type Hd = (f32, f32);
+
+/// The HP-threshold berries (Sitrus, the 1/3 ones, the pinch stat ones, Custap): taken off while
+/// the ends of the turns are measured (at a low HP they would go off there; the exchange follows
+/// the healing ones itself, `berry_heal`)
+fn hp_berry(i: Items) -> bool {
+    matches!(
+        i,
+        Items::SITRUSBERRY
+            | Items::FIGYBERRY
+            | Items::WIKIBERRY
+            | Items::MAGOBERRY
+            | Items::AGUAVBERRY
+            | Items::IAPAPABERRY
+            | Items::LIECHIBERRY
+            | Items::GANLONBERRY
+            | Items::SALACBERRY
+            | Items::PETAYABERRY
+            | Items::APICOTBERRY
+            | Items::STARFBERRY
+            | Items::LANSATBERRY
+            | Items::MICLEBERRY
+            | Items::CUSTAPBERRY
+    )
 }
 
-/// The ends of the turns of an exchange (`EOTS` in a row: the entry's, then each round's), each
-/// side's active's HP change in each ([turn][refs[0], refs[1]]), by the engine on `work` with the
-/// turns' state carried from one to the next -- the toxic counter, the weather's / terrain's
-/// turns, Wish, Future Sight, a binding's turns -- and all undone after (`orig`: `work` as it is,
-/// for a panic). Each active at 3/4 of its max HP in each (`eot_on`); zeros if one is down or the
-/// engine panics. Before, the first turn's change repeated (a toxic's 1/16 every turn).
-fn eot_turns(work: &mut State, orig: &State, refs: &[SideReference; 2]) -> [[f32; 2]; EOTS] {
-    let mut out = [[0.0f32; 2]; EOTS];
+/// The ends of `n` turns in a row (at most `EOTS`: an exchange's entry, then its rounds), by the
+/// engine (`add_end_of_turn_instructions`) on `work`, the turns' state carried from one to the
+/// next -- the toxic counter, the weather's / terrain's turns, Wish, Future Sight, a binding's
+/// turns -- and all undone after (`orig`: `work` as it is, for a panic: zeros then). Per turn
+/// and side's active ([turn][refs[0], refs[1]]): its heal and damage measured at 1/4 of its max
+/// HP (if one goes down there: the heal at 1/2, the damage at full HP) -- no HP cuts either off (before: the net
+/// change at 3/4, a Wish's half cut to a quarter; one turn's change repeated). Zeros when an
+/// active is down.
+fn eot_hd(work: &mut State, orig: &State, refs: &[SideReference; 2], n: usize) -> [[Hd; 2]; EOTS] {
+    let mut out = [[(0.0f32, 0.0f32); 2]; EOTS];
     if refs.iter().any(|r| work.get_side_immutable(r).get_active_immutable().hp <= 0) {
         return out;
     }
-    let hp0 = refs.map(|r| work.get_side_immutable(&r).get_active_immutable().hp);
-    let mid = refs.map(|r| {
-        let p = work.get_side_immutable(&r).get_active_immutable();
-        (p.maxhp - p.maxhp / 4).max(1)
-    });
     let refs = *refs;
-    let mut lists: Vec<StateInstructions> = Vec::with_capacity(EOTS);
-    let ok = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        for row in out.iter_mut() {
-            for i in 0..2 {
-                work.get_side(&refs[i]).get_active().hp = mid[i];
+    let hp0 = refs.map(|r| work.get_side_immutable(&r).get_active_immutable().hp);
+    let item0 = refs.map(|r| work.get_side_immutable(&r).get_active_immutable().item);
+    let max = refs.map(|r| work.get_side_immutable(&r).get_active_immutable().maxhp.max(1));
+    for i in 0..2 {
+        if hp_berry(item0[i]) {
+            work.get_side(&refs[i]).get_active().item = Items::NONE;
+        }
+    }
+    let sum = |ins: &StateInstructions, r: &SideReference| {
+        let (mut h, mut d) = (0.0f32, 0.0f32);
+        for x in &ins.instruction_list {
+            match x {
+                Instruction::Heal(v) if v.side_ref == *r => {
+                    if v.heal_amount >= 0 {
+                        h += v.heal_amount as f32
+                    } else {
+                        d -= v.heal_amount as f32
+                    }
+                }
+                Instruction::Damage(v) if v.side_ref == *r => d += v.damage_amount as f32,
+                _ => {}
             }
-            let mut ins = StateInstructions::default();
-            add_end_of_turn_instructions(work, &mut ins, &SideReference::SideOne);
-            *row = [0, 1].map(|i| (work.get_side_immutable(&refs[i]).get_active_immutable().hp - mid[i]) as f32);
-            lists.push(ins);
+        }
+        (h, d)
+    };
+    let set_hp = |work: &mut State, f: &dyn Fn(i16) -> i16| {
+        for i in 0..2 {
+            work.get_side(&refs[i]).get_active().hp = f(max[i]).max(1);
+        }
+    };
+    let mut kept: Vec<StateInstructions> = Vec::with_capacity(n);
+    // an end of the turn that changed nothing but HP: the next starts from the same state (its
+    // HP set again), the same then -- the rest copied, not run
+    let hp_only = |ins: &StateInstructions| {
+        ins.instruction_list.iter().all(|x| matches!(x, Instruction::Heal(_) | Instruction::Damage(_)))
+    };
+    let ok = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        for t in 0..n.min(EOTS) {
+            if t > 0 && kept.last().is_some_and(hp_only) {
+                out[t] = out[t - 1];
+                continue;
+            }
+            let row = &mut out[t];
+            // at 1/4 of the max HP: nothing cut off unless one goes down there (a heal over 3/4
+            // aside) -- then the heal at 1/2, the damage at full HP
+            set_hp(work, &|m| m / 4);
+            let mut a = StateInstructions::default();
+            add_end_of_turn_instructions(work, &mut a, &SideReference::SideOne);
+            if refs.iter().all(|r| work.get_side_immutable(r).get_active_immutable().hp > 0) {
+                *row = [0, 1].map(|i| sum(&a, &refs[i]));
+                kept.push(a);
+                continue;
+            }
+            work.reverse_instructions(&a.instruction_list);
+            set_hp(work, &|m| m / 2);
+            let mut a = StateInstructions::default();
+            add_end_of_turn_instructions(work, &mut a, &SideReference::SideOne);
+            let heal = [0, 1].map(|i| sum(&a, &refs[i]).0);
+            work.reverse_instructions(&a.instruction_list);
+            set_hp(work, &|m| m);
+            let mut b = StateInstructions::default();
+            add_end_of_turn_instructions(work, &mut b, &SideReference::SideOne);
+            *row = [0, 1].map(|i| (heal[i], sum(&b, &refs[i]).1));
+            kept.push(b);
         }
     }))
     .is_ok();
     if !ok {
         *work = orig.clone();
-        return [[0.0; 2]; EOTS];
+        return [[(0.0, 0.0); 2]; EOTS];
     }
-    for ins in lists.iter().rev() {
-        work.reverse_instructions(&ins.instruction_list);
+    for b in kept.iter().rev() {
+        work.reverse_instructions(&b.instruction_list);
     }
     for i in 0..2 {
-        work.get_side(&refs[i]).get_active().hp = hp0[i];
+        let p = work.get_side(&refs[i]).get_active();
+        p.hp = hp0[i];
+        p.item = item0[i];
     }
     out
 }
 
+/// One end of the turn (`eot_hd`)
+fn eot_on(work: &mut State, orig: &State, refs: &[SideReference; 2]) -> [Hd; 2] {
+    eot_hd(work, orig, refs, 1)[0]
+}
+
+/// `hp` after an end of the turn's (heal, damage) (`eot_hd`): the heal first, cut at `max`
+fn after_eot(hp: f32, max: f32, hd: Hd) -> f32 {
+    (hp + hd.0).min(max) - hd.1
+}
+
 /// `eot_on` on a copy of `state`
-fn eot_delta(state: &State, refs: &[SideReference; 2]) -> [f32; 2] {
+fn eot_delta(state: &State, refs: &[SideReference; 2]) -> [Hd; 2] {
     let mut st = state.clone();
     eot_on(&mut st, state, refs)
+}
+
+/// What of a foe can change a mon's end of the turn (with the foe as the other side's active):
+/// a weather suppressor (Cloud Nine, Air Lock), Neutralizing Gas, Bad Dreams; being the other
+/// side's actual active with a Leech Seed on it (it heals this side's active; `seeded`). The ends of
+/// the turns are cached by it (before: by the slot, the j-th of each side in together -- the
+/// order of the teams changed an answer)
+fn foe_context(p: &Pokemon, seeded: bool) -> (Option<Abilities>, bool) {
+    let a = matches!(
+        p.ability,
+        Abilities::CLOUDNINE | Abilities::AIRLOCK | Abilities::NEUTRALIZINGGAS | Abilities::BADDREAMS
+    )
+    .then_some(p.ability);
+    (a, seeded)
 }
 
 fn log_ratio(a: f32, b: f32) -> f32 {
@@ -914,9 +990,9 @@ fn after_hit(state: &State, att: &Pokemon, c: &Choice, def: &Pokemon, dealt: f32
     e
 }
 
-/// The end-of-turn HP changes of side `s`'s mon `j` turn by turn as its side's active
-/// (`eot_turns`) with its item knocked off (`off`) / the volatile `v` on it (Salt Cure, a
-/// binding), on `work` restored (`orig`: `work` as it is)
+/// The ends of the turns of side `s`'s mon `j` (`eot_hd`: [turn] its (heal, damage)) as its
+/// side's active against the other side's mon `k` made active, with its item lost (`off`) / the
+/// volatile `v` on it (Salt Cure, a binding), on `work` restored (`orig`: `work` as it is)
 #[allow(clippy::too_many_arguments)]
 fn eot_variant(
     work: &mut State,
@@ -924,10 +1000,13 @@ fn eot_variant(
     refs: &[SideReference; 2],
     s: usize,
     j: usize,
+    k: usize,
     off: bool,
     v: Option<PokemonVolatileStatus>,
-) -> [f32; EOTS] {
+    n: usize,
+) -> [Hd; EOTS] {
     let saved = enter(work.get_side(&refs[s]), j);
+    let saved_k = enter(work.get_side(&refs[1 - s]), k);
     let item = work.get_side_immutable(&refs[s]).pokemon.pkmn[j].item;
     if off {
         work.get_side(&refs[s]).pokemon.pkmn[j].item = Items::NONE;
@@ -936,11 +1015,12 @@ fn eot_variant(
     if let Some(v) = v {
         work.get_side(&refs[s]).volatile_statuses.insert(v);
     }
-    let out = eot_turns(work, orig, refs).map(|r| r[s]);
+    let out = eot_hd(work, orig, refs, n).map(|r| r[s]);
     if let (Some(v), false) = (v, had) {
         work.get_side(&refs[s]).volatile_statuses.remove(&v);
     }
     work.get_side(&refs[s]).pokemon.pkmn[j].item = item;
+    leave(work.get_side(&refs[1 - s]), saved_k);
     leave(work.get_side(&refs[s]), saved);
     out
 }
@@ -1239,8 +1319,8 @@ fn v7_entities(
         ]
     };
     let both = alive(0, act[0]) && alive(1, act[1]);
-    // the actives' end-of-turn HP changes (the engine's)
-    let eot = if both { eot_on(&mut memo.work, state, &refs) } else { [0.0, 0.0] };
+    // the actives' ends of the turn (the engine's: each one's heal, damage)
+    let eot = if both { eot_on(&mut memo.work, state, &refs) } else { [(0.0, 0.0); 2] };
     for s in 0..2 {
         let o = 1 - s;
         let me = &sides[s].pokemon.pkmn[act[s]];
@@ -1249,10 +1329,12 @@ fn v7_entities(
         if !both {
             continue;
         }
-        // ko2 (F3a): two hits of a move KO, hit by hit: the target's end-of-turn HP change
-        // between them, the second at the HP the first left (Super Fang's half of it), a Focus
-        // Sash / Sturdy at full HP, Final Gambit's one hit; for sure (min rolls / hits), possibly
-        // (max). The target does not act (no switch, no recovery move)
+        // ko2 (F3a): two uses of a move KO, hit by hit: the second at the HPs the first left
+        // (Super Fang's half of it) -- the target's and the attacker's (recoil, Life Orb, drain:
+        // a second use only if the attacker is still up), each one's end of the turn between
+        // them, a Focus Sash / Sturdy at full HP, an item the first took, Final Gambit's one hit;
+        // for sure (min rolls / hits), possibly (max). The target does not act (no switch, no
+        // recovery move)
         {
             for (i, c) in moves_of(me).iter().enumerate() {
                 if memo.get(s, act[s], i, c, act[o]).is_none() {
@@ -1268,38 +1350,47 @@ fn v7_entities(
                 if !now && matches!(c.move_id, Choices::FAKEOUT | Choices::FIRSTIMPRESSION) {
                     continue;
                 }
-                let max = foe.maxhp as f32;
+                let (max, my_max) = (foe.maxhp as f32, me.maxhp as f32);
                 for (col, sure) in [(0, true), (1, false)] {
                     let pick = |r: (f32, f32)| if sure { r.0 } else { r.1 };
-                    let mut hp = foe.hp as f32;
-                    let d1 = hit(memo, s, act[s], i, c, act[o], me.hp as f32, hp, [0; 4], [0; 4], (false, false))
-                        .map_or(0.0, pick);
+                    let (mut hp, mut mine) = (foe.hp as f32, me.hp as f32);
                     let n = if sure { nh.0 } else { nh.1 };
-                    let (d1, sub) = through_sub(d1, sub_in_way(state, &refs[s], c), n);
                     // (landing later: the end of the first turn, then the one hit)
-                    let (d1, sub) = if now { (d1, sub) } else {
-                        hp = (hp + eot[o]).min(max);
-                        (d1, sub)
-                    };
+                    if !now {
+                        hp = after_eot(hp, max, eot[o]);
+                        mine = after_eot(mine, my_max, eot[s]);
+                        if hp <= 0.0 || mine <= 0.0 {
+                            out[base + 2 * i + col] = (hp <= 0.0) as u8 as f32;
+                            continue;
+                        }
+                    }
+                    let d1 = hit(memo, s, act[s], i, c, act[o], mine, hp, [0; 4], [0; 4], (false, false))
+                        .map_or(0.0, pick);
+                    let (d1, sub) = through_sub(d1, sub_in_way(state, &refs[s], c), n);
                     let fx = after_hit(state, me, c, foe, d1.min(hp));
                     let lost = now && d1 > 0.0 && loses_item(state, c, foe);
-                    let eot_o = fx.afflict.map_or(eot[o], |v| eot_variant(&mut memo.work, state, &refs, o, act[o], lost, Some(v))[0]);
-                    let eot_o = if lost && fx.afflict.is_none() {
-                        eot_variant(&mut memo.work, state, &refs, o, act[o], true, None)[0]
+                    // (the target's end of the turn with its item lost / the move's volatile on it)
+                    let eot_o = if lost || fx.afflict.is_some() {
+                        eot_variant(&mut memo.work, state, &refs, o, act[o], act[s], lost, fx.afflict, 1)[0]
                     } else {
-                        eot_o
+                        eot[o]
                     };
                     hp = take(hp, max, d1, hold);
-                    if !lost {
+                    mine = (mine + fx.hp).min(my_max);
+                    if c.move_id == Choices::FINALGAMBIT && d1 > 0.0 {
+                        mine = 0.0;
+                    }
+                    if !lost && hp > 0.0 {
                         hp += berry_heal(state, foe, hp, unnerves(me));
                     }
                     let ko = hp <= 0.0 || {
-                        hp = (hp + eot_o).min(max);
+                        hp = after_eot(hp, max, eot_o);
+                        mine = after_eot(mine, my_max, eot[s]);
                         hp <= 0.0
-                            || (!once && {
+                            || (!once && mine > 0.0 && {
                                 // (its item lost to the first: the engine's damage without it -- a
                                 // Knock Off's 1.5x gone, an Air Balloon, a resist berry; no Focus Sash)
-                                let d2 = hit(memo, s, act[s], i, c, act[o], me.hp as f32, hp, fx.user, fx.target, (false, lost))
+                                let d2 = hit(memo, s, act[s], i, c, act[o], mine, hp, fx.user, fx.target, (false, lost))
                                     .map_or(0.0, pick);
                                 let (d2, _) = through_sub(d2, sub, n);
                                 take(hp, max, d2, hold && !lost) <= 0.0
@@ -1436,12 +1527,15 @@ fn v7_entities(
             e[4] = n(&|k| d[k].head_to_head == Fight::Win);
             e[5] = n(&|k| d[k].revenge == Fight::Win);
             e[6] = n(&|k| d[k].switch_in == Fight::Unknown);
-            // as a threat: the other side's reliable switch-in answers / revenge killers of it
-            let sw = (0..6).filter(|&m| alive(o, m) && duels[o][m][j].switch_in == Fight::Win).count();
-            e[7] = sw as f32 / 6.0;
-            e[8] = (sw == 1) as u8 as f32;
+            // as a threat: the other side's confirmed switch-in answers, the ones Unknown against it
+            // (not "cannot": a mechanic the exchange does not follow, or past its rounds), its
+            // confirmed revenge killers
+            let count = |f: Fight| (0..6).filter(|&m| alive(o, m) && duels[o][m][j].switch_in == f).count() as f32 / 6.0;
+            e[7] = count(Fight::Win);
+            e[8] = count(Fight::Unknown);
             e[9] = (0..6).filter(|&m| alive(o, m) && duels[o][m][j].revenge == Fight::Win).count() as f32 / 6.0;
-            // as an answer: the threats it alone answers (by switching in / by revenge)
+            // as an answer: the threats it is the only confirmed answer to (by switching in / by
+            // revenge; another one Unknown may answer too: e[8] of the threat)
             let only = |f: &dyn Fn(&Duel) -> bool| {
                 foes.iter()
                     .filter(|&&k| f(&d[k]) && (0..6).filter(|&m| alive(s, m) && f(&duels[s][m][k])).count() == 1)
@@ -1479,6 +1573,8 @@ enum Entry {
 const ROUNDS: usize = 4;
 /// The ends of the turns an exchange has at most (the entry's, then each round's)
 const EOTS: usize = ROUNDS + 1;
+/// The ends of the turns computed first (the rest when an exchange gets that far)
+const SHORT: usize = 2;
 
 /// A move that works only if its target attacks (Sucker Punch, Thunderclap) or uses a priority
 /// move (Upper Hand), and only before it acts: none on the turn the target switches in
@@ -1586,8 +1682,11 @@ struct DuelSetup<'a> {
     max_k: f32,
     /// the end-of-turn HP changes, turn by turn (`eot_turns`), as it is / its item knocked off /
     /// the other's volatile on it (Salt Cure, a binding) / both: [knocked * 2 + afflicted]
-    eot_j: [[f32; EOTS]; 4],
-    eot_k: [[f32; EOTS]; 4],
+    eot_j: [[Hd; EOTS]; 4],
+    eot_k: [[Hd; EOTS]; 4],
+    /// the ends of the turns known (`SHORT` first: most exchanges end by then; all of them
+    /// when one needs more -- `fight` None)
+    known: usize,
     /// the fixed move works only if the other attacks first-hand (`needs_target_move`); Upper
     /// Hand: the other's priority
     cond_j: bool,
@@ -1637,15 +1736,17 @@ fn fight(
     d: &DuelSetup<'_>,
     entry: Entry,
     sure: bool,
-) -> Fight {
+) -> Option<Fight> {
     if (d.unsupported && entry != Entry::Revenge) || (d.blocked_k && entry == Entry::Revenge) {
-        return Fight::Unknown;
+        return Some(Fight::Unknown);
     }
+    // (an end of the turn not known yet: None, run again with all of them)
+    let short = std::cell::Cell::new(false);
     let pick = |r: (f32, f32), mine: bool| if sure == mine { r.0 } else { r.1 };
     let mut hj = if entry == Entry::HeadToHead { d.hp_j } else { d.entry_j };
     let mut hk = d.hp_k;
     if hj <= 0.0 {
-        return Fight::Lose;
+        return Some(Fight::Lose);
     }
     let j_first = d.j_first.unwrap_or(!sure);
     let (mut sj, mut sk): (Stages, Stages) = ([0; 4], [0; 4]);
@@ -1746,30 +1847,36 @@ fn fight(
     };
     // the ends of the turns in order (the engine's, the turns' state carried: `eot_turns`)
     let turn = std::cell::Cell::new(0usize);
+    // (each one's heal at its HP then, cut at its max, then the damage; then a berry's heal)
     let end_of_turn = |hj: &mut f32, hk: &mut f32| {
         let (a, kn, t) = (afflicted.get(), knocked.get(), turn.get().min(EOTS - 1));
-        *hj = (*hj + d.eot_j[kn[0] as usize * 2 + a[0] as usize][t]).min(d.max_j);
-        *hk = (*hk + d.eot_k[kn[1] as usize * 2 + a[1] as usize][t]).min(d.max_k);
+        if t >= d.known {
+            short.set(true);
+        }
+        *hj = after_eot(*hj, d.max_j, d.eot_j[kn[0] as usize * 2 + a[0] as usize][t]);
+        *hk = after_eot(*hk, d.max_k, d.eot_k[kn[1] as usize * 2 + a[1] as usize][t]);
         turn.set(t + 1);
+        heal(0, hj, d.pj, d.pk);
+        heal(1, hk, d.pk, d.pj);
     };
     match entry {
         Entry::SwitchIn => {
             // (j only switches in: a move needing its attack fails -- Sucker Punch)
             k_hits(memo, &mut hj, &mut hk, &mut sj, &mut sk, false);
             if let Some(f) = ended(hj, hk) {
-                return f;
+                return if short.get() { None } else { Some(f) };
             }
             end_of_turn(&mut hj, &mut hk);
             if let Some(f) = ended(hj, hk) {
-                return f;
+                return if short.get() { None } else { Some(f) };
             }
         }
         Entry::Revenge => {
             if !j_first || d.mj.is_none() {
-                return Fight::Lose;
+                return Some(Fight::Lose);
             }
             j_hits(memo, &mut hj, &mut hk, &mut sj, &mut sk, true);
-            return ended(hj, hk).unwrap_or(Fight::Lose);
+            return Some(ended(hj, hk).unwrap_or(Fight::Lose));
         }
         Entry::HeadToHead => {}
     }
@@ -1777,56 +1884,32 @@ fn fight(
         if j_first {
             j_hits(memo, &mut hj, &mut hk, &mut sj, &mut sk, true);
             if let Some(f) = ended(hj, hk) {
-                return f;
+                return if short.get() { None } else { Some(f) };
             }
             k_hits(memo, &mut hj, &mut hk, &mut sj, &mut sk, false);
         } else {
             k_hits(memo, &mut hj, &mut hk, &mut sj, &mut sk, true);
             if let Some(f) = ended(hj, hk) {
-                return f;
+                return if short.get() { None } else { Some(f) };
             }
             j_hits(memo, &mut hj, &mut hk, &mut sj, &mut sk, false);
         }
         if let Some(f) = ended(hj, hk) {
-            return f;
+            return if short.get() { None } else { Some(f) };
         }
         end_of_turn(&mut hj, &mut hk);
         if let Some(f) = ended(hj, hk) {
-            return f;
+            return if short.get() { None } else { Some(f) };
         }
     }
-    Fight::Unknown
+    if short.get() { None } else { Some(Fight::Unknown) }
 }
 
 /// Every living mon of each side against each living mon of the other ([side][mon][foe mon]).
 fn duels(state: &State, sides: &[&Side; 2], act: [usize; 2], refs: [SideReference; 2], memo: &mut DamageMemo) -> [[[Duel; 6]; 6]; 2] {
     let alive = |s: usize, j: usize| sides[s].pokemon.pkmn[j].hp > 0;
-    // each mon's end-of-turn HP changes turn by turn as its side's active (a benched one made
-    // active, the other side's active as it is) and its HP after switching in
-    let mut eot = [[[0.0f32; EOTS]; 6]; 2];
+    // each mon's HP after switching in
     let mut entry = [[0.0f32; 6]; 2];
-    // (the j-th of both sides made active together: one run of the turns for two)
-    for j in 0..6 {
-        let saved: Vec<_> = (0..2)
-            .map(|s| alive(s, j).then(|| enter(memo.work.get_side(&refs[s]), j)).flatten())
-            .collect();
-        let d = eot_turns(&mut memo.work, state, &refs);
-        for s in (0..2).rev() {
-            leave(memo.work.get_side(&refs[s]), saved[s].clone());
-        }
-        for s in 0..2 {
-            if alive(s, j) {
-                eot[s][j] = d.map(|r| r[s]);
-            }
-        }
-    }
-    // (an active not made active again: its own needs the other side's active as it is -- the
-    // pairs above had the other side's j-th in)
-    for s in 0..2 {
-        if alive(s, act[s]) {
-            eot[s][act[s]] = eot_turns(&mut memo.work, state, &refs).map(|r| r[s]);
-        }
-    }
     for s in 0..2 {
         for j in 0..6 {
             if alive(s, j) {
@@ -1838,19 +1921,24 @@ fn duels(state: &State, sides: &[&Side; 2], act: [usize; 2], refs: [SideReferenc
             }
         }
     }
-    // the variants (an item knocked off, an end-of-turn volatile), as pairs need them
-    let mut variants: Vec<((usize, usize, bool, Option<PokemonVolatileStatus>), [f32; EOTS])> = vec![];
-    let mut variant = |memo: &mut DamageMemo, s: usize, j: usize, off: bool, v: Option<PokemonVolatileStatus>| {
-        if !off && v.is_none() {
-            return eot[s][j];
-        }
-        if let Some((_, x)) = variants.iter().find(|(key, _)| *key == (s, j, off, v)) {
+    // each mon's ends of the turns (turn by turn: `eot_variant`) as its side's active against a
+    // foe of the context `foe_context` (the foe made active: weather suppression, Neutralizing
+    // Gas, Bad Dreams, the actual active's volatiles), with its item lost / an end-of-turn
+    // volatile on it: cached by all of these, computed as pairs need them
+    type Key = (usize, usize, (Option<Abilities>, bool), bool, Option<PokemonVolatileStatus>, usize);
+    let mut cache: Vec<(Key, [Hd; EOTS])> = vec![];
+    let mut variant = |memo: &mut DamageMemo, s: usize, j: usize, k: usize, off: bool, v: Option<PokemonVolatileStatus>, n: usize| {
+        let seeded = k == act[1 - s] && sides[1 - s].volatile_statuses.contains(&PokemonVolatileStatus::LEECHSEED);
+        let key = (s, j, foe_context(&sides[1 - s].pokemon.pkmn[k], seeded), off, v, n);
+        if let Some((_, x)) = cache.iter().find(|(c, _)| *c == key) {
             return *x;
         }
-        let x = eot_variant(&mut memo.work, state, &refs, s, j, off, v);
-        variants.push(((s, j, off, v), x));
+        let x = eot_variant(&mut memo.work, state, &refs, s, j, k, off, v, n);
+        cache.push((key, x));
         x
     };
+    // (each mon's unsupported mechanics, once)
+    let uns: [[bool; 6]; 2] = [0, 1].map(|s| core::array::from_fn(|j| alive(s, j) && unsupported(state, &sides[s].pokemon.pkmn[j], j == act[s])));
     let mut out = [[[Duel::default(); 6]; 6]; 2];
     for s in 0..2 {
         let o = 1 - s;
@@ -1915,22 +2003,23 @@ fn duels(state: &State, sides: &[&Side; 2], act: [usize; 2], refs: [SideReferenc
                 let knocking = |m: &Option<(usize, Choice)>, def: &Pokemon| {
                     m.as_ref().is_some_and(|(_, c)| loses_item(state, c, def)) || berry_heal(state, def, 1.0, false) > 0.0
                 };
-                let mut seqs = |memo: &mut DamageMemo, s: usize, j: usize, att: &Pokemon, m: &Option<(usize, Choice)>, def: &Pokemon| {
+                let mut seqs = |memo: &mut DamageMemo, s: usize, j: usize, k: usize, att: &Pokemon, m: &Option<(usize, Choice)>, def: &Pokemon, n: usize| {
                     let (v, off) = (afflicting(att, m, def), knocking(m, def));
-                    [(false, None), (false, v), (off, None), (off, v)].map(|(o2, v2)| variant(memo, s, j, o2, v2))
+                    [(false, None), (false, v), (off, None), (off, v)].map(|(o2, v2)| variant(memo, s, j, k, o2, v2, n))
                 };
-                let eot_j = seqs(memo, s, j, pk, &mk, pj);
-                let eot_k = seqs(memo, o, k, pj, &mj, pk);
+                let eot_j = seqs(memo, s, j, k, pk, &mk, pj, SHORT);
+                let eot_k = seqs(memo, o, k, j, pj, &mj, pk, SHORT);
                 let cond = |m: &Option<(usize, Choice)>| m.as_ref().is_some_and(|(_, c)| needs_target_move(c));
                 let blocks_first = |p: &Pokemon| matches!(p.ability, Abilities::DISGUISE | Abilities::ICEFACE);
-                let setup = DuelSetup {
+                let mut setup = DuelSetup {
+                    known: SHORT,
                     eot_j,
                     eot_k,
                     cond_j: cond(&mj),
                     cond_k: cond(&mk),
                     prio_j: qj,
                     prio_k: qk,
-                    unsupported: unsupported(state, pj, j == act[s]) || unsupported(state, pk, k == act[o]),
+                    unsupported: uns[s][j] || uns[o][k],
                     blocked_k: blocks_first(pk),
                     sub_j,
                     sub_k,
@@ -1947,12 +2036,26 @@ fn duels(state: &State, sides: &[&Side; 2], act: [usize; 2], refs: [SideReferenc
                     hp_k: pk.hp as f32,
                     max_k: pk.maxhp as f32,
                 };
-                out[s][j][k] = Duel {
-                    switch_in: fight(memo, state, s, j, k, &setup, Entry::SwitchIn, true),
-                    switch_in_possible: fight(memo, state, s, j, k, &setup, Entry::SwitchIn, false),
-                    head_to_head: fight(memo, state, s, j, k, &setup, Entry::HeadToHead, true),
-                    revenge: fight(memo, state, s, j, k, &setup, Entry::Revenge, true),
-                };
+                let modes = [(Entry::SwitchIn, true), (Entry::SwitchIn, false), (Entry::HeadToHead, true), (Entry::Revenge, true)];
+                // (a possible switch-in lost: the reliable one too; won reliably: possibly too)
+                let mut res = [None; 4];
+                res[1] = fight(memo, state, s, j, k, &setup, Entry::SwitchIn, false);
+                res[0] = if res[1] == Some(Fight::Lose) { res[1] } else { fight(memo, state, s, j, k, &setup, Entry::SwitchIn, true) };
+                res[2] = fight(memo, state, s, j, k, &setup, Entry::HeadToHead, true);
+                res[3] = fight(memo, state, s, j, k, &setup, Entry::Revenge, true);
+                if res.iter().any(|r| r.is_none()) {
+                    // (one got past the ends of the turns known: all of them, and again)
+                    setup.eot_j = seqs(memo, s, j, k, pk, &setup.mk, pj, EOTS);
+                    setup.eot_k = seqs(memo, o, k, j, pj, &setup.mj, pk, EOTS);
+                    setup.known = EOTS;
+                    for (r, (e, sure)) in res.iter_mut().zip(modes) {
+                        if r.is_none() {
+                            *r = fight(memo, state, s, j, k, &setup, e, sure);
+                        }
+                    }
+                }
+                let [switch_in, switch_in_possible, head_to_head, revenge] = res.map(|r| r.unwrap_or(Fight::Unknown));
+                out[s][j][k] = Duel { switch_in, switch_in_possible, head_to_head, revenge };
             }
         }
     }
@@ -2347,21 +2450,37 @@ mod tests {
             p.ability = Abilities::NONE;
         }
         let max = st.side_one.get_active_immutable().maxhp;
-        assert_eq!(eot_delta(&st, &refs)[0], (max / 16) as f32, "Leftovers");
+        // (heal, damage) of side one's active
+        assert_eq!(eot_delta(&st, &refs)[0], ((max / 16) as f32, 0.0), "Leftovers");
         // Black Sludge on a Poison type terastallized into a Normal: damage (its current type)
         let p = st.side_one.get_active();
         p.item = Items::BLACKSLUDGE;
         p.types = (PokemonType::POISON, PokemonType::WATER);
         p.tera_type = PokemonType::NORMAL;
         p.terastallized = true;
-        assert_eq!(eot_delta(&st, &refs)[0], -((max / 8) as f32));
+        assert_eq!(eot_delta(&st, &refs)[0], (0.0, (max / 8) as f32));
         st.side_one.get_active().terastallized = false;
-        assert_eq!(eot_delta(&st, &refs)[0], (max / 16) as f32, "a Poison type heals");
-        // the HP now does not matter (each at 3/4 of its max), a fainted active: none
+        assert_eq!(eot_delta(&st, &refs)[0], ((max / 16) as f32, 0.0), "a Poison type heals");
+        // the HP now does not matter (no HP cuts either off), a fainted active: none
         st.side_one.get_active().hp = 1;
-        assert_eq!(eot_delta(&st, &refs)[0], (max / 16) as f32);
+        assert_eq!(eot_delta(&st, &refs)[0], ((max / 16) as f32, 0.0));
+        // a Wish of half the max HP, whole (the review: measured at 3/4 it was cut to 1/4)
+        st.side_one.get_active().hp = max - 1;
+        st.side_one.get_active().item = Items::NONE;
+        st.side_one.wish = (1, max / 2);
+        assert_eq!(eot_delta(&st, &refs)[0], ((max / 2) as f32, 0.0));
+        assert_eq!(after_eot(190.0, 400.0, (200.0, 0.0)), 390.0);
+        assert_eq!(after_eot(300.0, 400.0, (200.0, 50.0)), 350.0, "the heal cut at the max, then the damage");
+        // the turns' state carried: a toxic grows 1/16, 2/16, 3/16 (the review: 1/16 repeated)
+        st.side_one.wish = (0, 0);
+        st.side_one.get_active().status = poke_engine::state::PokemonStatus::TOXIC;
+        st.side_one.side_conditions.toxic_count = 0;
+        let mut work = st.clone();
+        let turns = eot_hd(&mut work, &st, &refs, 3);
+        assert_eq!([turns[0][0].1, turns[1][0].1, turns[2][0].1], [1, 2, 3].map(|k| (max * k / 16) as f32));
+        assert_eq!(work.serialize(), st.serialize());
         st.side_one.get_active().hp = 0;
-        assert_eq!(eot_delta(&st, &refs), [0.0, 0.0]);
+        assert_eq!(eot_delta(&st, &refs), [(0.0, 0.0); 2]);
     }
 
     #[test]
@@ -2381,9 +2500,9 @@ mod tests {
         }
         eot_on(&mut work, &st, &refs);
         assert_eq!(work.serialize(), st.serialize(), "end of turn");
-        eot_variant(&mut work, &st, &refs, 0, 1, true, Some(PokemonVolatileStatus::SALTCURE));
+        eot_variant(&mut work, &st, &refs, 0, 1, 2, true, Some(PokemonVolatileStatus::SALTCURE), EOTS);
         assert_eq!(work.serialize(), st.serialize(), "the ends of the turns, an item off, a volatile");
-        eot_turns(&mut work, &st, &refs);
+        eot_hd(&mut work, &st, &refs, EOTS);
         assert_eq!(work.serialize(), st.serialize(), "the ends of the turns");
         let mut memo = DamageMemo::new(&st, true, refs);
         let sides = [st.get_side_immutable(&refs[0]), st.get_side_immutable(&refs[1])];
@@ -2430,6 +2549,72 @@ mod tests {
         let n = states.len() as f64;
         let us = |d: std::time::Duration| d.as_secs_f64() * 1e6 / n;
         println!("per state: v3 {:.0} us; v7 {:.0} us (damage matrix {:.0}, duels after it {:.0})", us(v3), us(all), us(matrix), us(duel));
+    }
+
+    /// `state` with side `r`'s mons `a` and `b` swapped (the indices pointing at them too: the
+    /// active, a switch as the last move, a Future Sight's user)
+    fn swapped(state: &State, r: &SideReference, a: usize, b: usize) -> State {
+        let mut st = state.clone();
+        let side = st.get_side(r);
+        side.pokemon.pkmn.swap(a, b);
+        let map = |i: usize| if i == a { b } else if i == b { a } else { i };
+        let idx = |i: PokemonIndex| PokemonIndex::deserialize(&map(i as usize).to_string());
+        side.active_index = idx(side.active_index);
+        if let LastUsedMove::Switch(i) = side.last_used_move {
+            side.last_used_move = LastUsedMove::Switch(idx(i));
+        }
+        side.future_sight.1 = idx(side.future_sight.1);
+        st
+    }
+
+    /// The structural check (the third review): the order of the teams changes nothing -- two
+    /// mons of a side swapped, every input of each mon the same (its row moves), the global ones
+    /// the same, in both views. `states`: real states; each side's first two benched mons swapped
+    fn order_free(states: &[State]) -> usize {
+        // (equal up to the summing order's last bits: the HP fractions' sum)
+        let close = |x: &[f32], y: &[f32], what: &str| {
+            assert!(x.len() == y.len() && x.iter().zip(y).all(|(a, b)| (a - b).abs() < 1e-5), "{what}: {x:?} vs {y:?}");
+        };
+        let mut checked = 0;
+        for st in states {
+            for (si, r) in [SideReference::SideOne, SideReference::SideTwo].iter().enumerate() {
+                let side = st.get_side_immutable(r);
+                let bench: Vec<usize> = (0..6).filter(|&j| j != side.active_index as usize).collect();
+                let (a, b) = (bench[0], bench[1]);
+                let sw = swapped(st, r, a, b);
+                for flip in [false, true] {
+                    let (e1, g1, n1) = featurize_extra_full(st, flip);
+                    let (e2, g2, n2) = featurize_extra_full(&sw, flip);
+                    close(&g1, &g2, &format!("global inputs (side {si} {a}<->{b}, flip {flip})"));
+                    // the swapped side's rows in the view: own (0-5) when it is the view's side
+                    let off = if (si == 0) != flip { 0 } else { 6 };
+                    let row = |e: usize| if e == off + a { off + b } else if e == off + b { off + a } else { e };
+                    for e in 0..12 {
+                        close(&e1[e * ENT_EXTRA..(e + 1) * ENT_EXTRA], &e2[row(e) * ENT_EXTRA..(row(e) + 1) * ENT_EXTRA],
+                              &format!("v3 inputs of entity {e} (side {si} {a}<->{b}, flip {flip})"));
+                        close(&n1[e * ENT_NEW..(e + 1) * ENT_NEW], &n2[row(e) * ENT_NEW..(row(e) + 1) * ENT_NEW],
+                              &format!("v7 inputs of entity {e} (side {si} {a}<->{b}, flip {flip})"));
+                    }
+                    checked += 1;
+                }
+            }
+        }
+        checked
+    }
+
+    #[test]
+    fn the_team_order_changes_nothing() {
+        assert_eq!(order_free(&[fixture()]), 4);
+    }
+
+    /// (on real states: ALPHA_FUZZ_STATES=<file> cargo test --release --lib
+    /// the_team_order_changes_nothing_real -- --ignored)
+    #[test]
+    #[ignore]
+    fn the_team_order_changes_nothing_real() {
+        let path = std::env::var("ALPHA_FUZZ_STATES").expect("ALPHA_FUZZ_STATES");
+        let states: Vec<State> = std::fs::read_to_string(path).unwrap().lines().take(3000).map(State::deserialize).collect();
+        println!("checked {}", order_free(&states));
     }
 
     #[test]

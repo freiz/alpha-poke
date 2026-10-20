@@ -152,7 +152,7 @@ def test_focus_sash_holds_one_hit():
                    "252 Atk / 4 SpD / 252 Spe", "Jolly")  # fmt: skip
     heatran = mon("Heatran", "Focus Sash", "Flash Fire", ["Magma Storm", "Earth Power", "Taunt", "Protect"],
                   "4 HP / 252 SpA / 252 Spe", "Timid")  # fmt: skip
-    st = ec.run_showdown(garchomp, heatran, [("move earthquake", "move taunt")], seed=None)
+    st = clean_runs(garchomp, heatran, [("move earthquake", "move taunt")], n=1)[0]
     ent, _, _ = features(st[0])
     assert ent[0, 4] >= 1.0 and ent[0, 4 + 2] == 0.0  # max damage over its HP, no KO
     assert hp(st[1], 1) == 1
@@ -320,3 +320,87 @@ def test_head_to_head_with_a_growing_toxic():
         _, _, new = features(st[1])
         assert new[0, TEAM + TEAM_COLS["head_to_head"]] * 6 == 1
         assert outcome(st) == "win" and len(st) == 4  # (Jolteon down at the second round's end)
+
+
+def _with_hp(state, side: int, hp_now: int):
+    """``state`` (poke_engine.State) with side ``side``'s active at ``hp_now`` HP (its string's
+    HP field: Showdown cannot set one)."""
+    import poke_engine as pe
+
+    text = state.to_string()
+    sides = text.split("/")
+    s = state.side_one if side == 0 else state.side_two
+    a = int(s.active_index)
+    mons = sides[side].split("=")
+    f = mons[a].split(",")
+    f[6] = str(hp_now)
+    mons[a] = ",".join(f)
+    sides[side] = "=".join(mons)
+    return pe.State.from_string("/".join(sides))
+
+
+def _two_uses(state, move: str) -> float:
+    """The probability that two uses of side one's ``move`` (side two doing nothing, no chance:
+    poke_engine.set_no_chance) knock side two's active out, by the engine's transitions."""
+    import poke_engine as pe
+
+    pe.set_no_chance(True)
+    try:
+        b = int(state.side_two.active_index)
+        ko = 0.0
+        for o in pe.generate_instructions(state, move, "none"):
+            s2 = state.apply_instructions(o)
+            if s2.side_two.pokemon[b].hp <= 0:
+                ko += o.percentage / 100
+            elif s2.side_one.pokemon[int(s2.side_one.active_index)].hp > 0:
+                for o2 in pe.generate_instructions(s2, move, "none"):
+                    if s2.apply_instructions(o2).side_two.pokemon[b].hp <= 0:
+                        ko += o.percentage / 100 * o2.percentage / 100
+        return ko
+    finally:
+        pe.set_no_chance(False)
+
+
+# the attacker's own HP over two uses and a heal larger than a quarter (the third review), with
+# the engine's transitions as the reference (no HP a Showdown battle can be set to)
+
+
+def test_ko2_attacker_down_after_its_first_hit():
+    """A 1 HP Garchomp with a Life Orb: its first Earthquake's recoil knocks it out -- no second
+    use, no two-hit KO (before: the second hit at its starting HP)."""
+    gar = mon("Garchomp", "Life Orb", "Rough Skin", ["Earthquake", "Swords Dance", "Protect", "Substitute"],
+              "252 Atk / 4 SpD / 252 Spe", "Jolly")  # fmt: skip
+    tank = mon("Hippowdon", "Leftovers", "Sand Force", ["Slack Off", "Whirlwind", "Stealth Rock", "Yawn"],
+               "252 HP / 252 Def / 4 SpD", "Impish")  # fmt: skip
+    st = _with_hp(ec.engine_state(ec.run_showdown(gar, tank, [])[0]), 0, 1)
+    _, _, n = alpha_search.featurize_extra_full([st.to_string()])
+    new = np.frombuffer(n, "<f4").reshape(12, EN)
+    assert list(new[0, 0:2]) == [0.0, 0.0]
+    assert _two_uses(st, "earthquake") == 0.0
+    # at full HP the same two Earthquakes do KO (possibly): the attacker's HP is what decides
+    full = ec.engine_state(ec.run_showdown(gar, tank, [])[0])
+    _, _, n = alpha_search.featurize_extra_full([full.to_string()])
+    assert np.frombuffer(n, "<f4").reshape(12, EN)[0, 1] == float(_two_uses(full, "earthquake") > 0)
+
+
+def test_ko2_a_wish_heals_whole():
+    """A Wish of half the max HP lands between the two hits: whole (before: the end of the turn
+    measured at 3/4 of the max HP, the heal cut to a quarter -- a two-hit KO claimed). The
+    target's HP set where the cut heal would lose and the whole one survives."""
+    att = mon("Garchomp", "Choice Band", "Rough Skin", ["Earthquake", "Outrage", "Stone Edge", "Fire Fang"],
+              "252 Atk / 4 SpD / 252 Spe", "Jolly")  # fmt: skip
+    wisher = mon("Vaporeon", "Heavy-Duty Boots", "Water Absorb", ["Wish", "Protect", "Scald", "Roar"],
+                 "252 HP / 252 Def / 4 SpD", "Bold")  # fmt: skip
+    st = clean_runs(att, wisher, [("move earthquake", "move wish")], n=1)[0]
+    e = ec.engine_state(st[1])
+    assert e.side_two.wish[0] == 1  # (its Wish lands at this turn's end)
+    max_hp = e.side_two.pokemon[int(e.side_two.active_index)].maxhp
+    ent, _, _ = features(st[1])
+    d = float(ent[0, 4]) * hp(st[1], 1)  # Earthquake's max damage
+    target = int(2 * d - 0.35 * max_hp)  # (KO with a quarter healed, not with a half)
+    assert d < target
+    s = _with_hp(e, 1, target)
+    _, _, n = alpha_search.featurize_extra_full([s.to_string()])
+    new = np.frombuffer(n, "<f4").reshape(12, EN)
+    assert list(new[0, 0:2]) == [0.0, 0.0]
+    assert _two_uses(s, "earthquake") == 0.0

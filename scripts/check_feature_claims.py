@@ -335,7 +335,7 @@ def main() -> None:
     seen = collections.defaultdict(collections.Counter)
     errors = 0
     with mp.Pool(a.procs, initializer=_init) as pool:
-        for i, res in enumerate(pool.imap_unordered(_safe, lines, chunksize=4)):
+        for res in pool.imap_unordered(_safe, lines, chunksize=4):
             if res is None:
                 errors += 1
                 continue
