@@ -10,7 +10,7 @@
                      estimated Elo (95% CI) and its matches
 
 Elo: weighted least squares over the fitted matches. Each match gives an Elo difference
-400 log10(p / (1 - p)) with the variance of its paired mean (delta method). The anchor (v5-glu)
+400 log10(p / (1 - p)) with the variance of its paired mean (delta method). The anchor (v0)
 is fixed at ANCHOR_ELO; a model connected to it by no fitted match has no Elo. Rebuilt from
 state.json, the run directories and matches.jsonl by ``write()`` (scripts/selfplay.py
 registry, and after every evaluation)."""
@@ -33,12 +33,15 @@ RUNS = ROOT / "data" / "train"  # <data>/runs/<run>
 def run_dir(name: str) -> Path:
     """A run's directory by name (data/train/*/runs/<name>; the v5 one if none exists yet)."""
     found = sorted(RUNS.glob(f"*/runs/{name}"))
+    if len(found) > 1:  # (the name alone would pick one of them)
+        raise ValueError(f"run name {name} is ambiguous: {[str(f) for f in found]}")
     return found[0] if found else RUNS / "v5" / "runs" / name
 
 
 # 2026-10-09: self-play restarted from v5-glu (the human-data network); the earlier run is in
-# exp/archive-2026-10-08/
-ANCHOR, ANCHOR_ELO = "v5-glu", 1500.0
+# exp/archive-2026-10-08/. 2026-10-20: restarted from v0 (lineage r2, scripts/selfplay.py); the
+# v5-glu lineage's registry is in exp/archive-2026-10-20/
+ANCHOR, ANCHOR_ELO = "v0", 1500.0
 
 
 def name_of(run: str | None) -> str | None:
@@ -197,7 +200,7 @@ def build(state: dict) -> dict:
                             "played_generations": [], **_run_info(run)}  # fmt: skip
         return models[name]
 
-    entry("v5-glu")["role"] = "human-data baseline (self-play start)"
+    entry(ANCHOR)["role"] = "human-data baseline (self-play start)"
     for g, v in sorted(gens.items(), key=lambda kv: int(kv[0])):
         tr = v.get("train") or {}
         if tr.get("run"):

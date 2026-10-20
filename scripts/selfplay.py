@@ -6,10 +6,10 @@
 
   run    --gen G         play generation G's pairs (resumes; --limit N for a test run)
                          -> data/selfplay/gen<G>/games-w*.jsonl, decisions-w*.jsonl, logs
-  convert --gen G        -> data/train/sp<G> (training positions: recorded inputs + targets)
+  convert --gen G        -> data/train/r2-sp<G> (training positions: recorded inputs + targets)
   train  --gen G         warm start from the current network, human data + the last --window
                          generations' self-play (--sp-frac of each batch, each position seen
-                         --passes times) -> data/train/<TRAIN_DATA>/runs/sp-gen<G> (train.log,
+                         --passes times) -> data/train/<TRAIN_DATA>/runs/r2-gen<G> (train.log,
                          metrics)
   eval   --gen G         the new network vs the current one, equal time, paired; promoted
                          unless significantly worse (design D15-6)
@@ -116,24 +116,41 @@ def cmd_run(a) -> None:
 
 
 STATE = SELFPLAY_DIR / "state.json"  # the current network and every generation's summary
-BASE_RUN = "data/train/v5/runs/v5-glu"
+# 2026-10-20: self-play restarted from v0 (the v7.1 human data: inputs as the current state
+# construction, no search targets from the old engine); the lineage before it (v5-glu, gens
+# 0-8) is in data/selfplay/archive-v6/ and exp/archive-2026-10-20/, its game data deleted.
+# LINEAGE prefixes this lineage's products (self-play data data/train/<LINEAGE>-sp<G>, runs
+# <LINEAGE>-gen<G>): the registry finds runs by name, the old sp-gen<G> runs stay
+BASE_RUN = "data/train/v71/runs/v0"
+LINEAGE = "r2"
+
+
+def sp_data(gen: int) -> str:
+    """Generation ``gen``'s self-play training positions (data/train/<this>)."""
+    return f"{LINEAGE}-sp{gen}"
+
+
 # a candidate that moved this much (KL to its starting point, self-play positions) and was
 # rejected counts as an over-update (gen 1: 0.0023, lr 1e-4, 2 passes)
 KL_BIG = 0.01
-# the training setup of the current network (v5-glu): same flags, plus self-play
+# the training setup of the starting network (v5-glu, then v6-h, now v0): same flags, plus self-play
 # --stream 2 (2026-10-10, was 4): two human shards per chunk; a chunk in use and the next one
 # loading are in memory together (4 + 4 shards with the 50,000-game generations' self-play data:
 # over the 40 GB cap). A generation's training reads ~0.02 epoch of the human data either way
 # 2026-10-15 (from gen 8): v6 (design v6) -- the reconverted human data, the counters ("count"),
 # the remaining-turns head ("turns"), the self-play outcomes spread over the run (A/B 52.38% +-
 # 2.60%), the self-play data streamed in chunks (all generations no longer fit in memory)
-TRAIN_DATA = "v6"  # the human data (data/train/<x>); the generations' runs go to its runs/
+# 2026-10-20 (lineage r2): v0's setup -- the v7.1 human data, the v7 inputs ko2 / tera / team
+# (not post: design D13附); train_pv builds the model from these flags, so they must match the
+# starting network's (cmd_train checks its config)
+TRAIN_DATA = "v71"  # the human data (data/train/<x>); the generations' runs go to its runs/
+FEATS = "reveal,num,movetab,matchup,elo,counter,count,ko2,tera,team"
 TRAIN_FLAGS = (f"--data {TRAIN_DATA} --stream 2 --val-cutoff 1776921722 --train-only hf- "
                "--eval-every 500 "
                "--arch transformer "
                "--history --mtp 3 --mtp-weight 0.5 --mtp-decay 0.5 --value-residual "
                "--value-per-game 4 --kinds main,forced,pivot,blind --aux oppset,turns "
-               "--feats reveal,num,movetab,matchup,elo,counter,count "
+               f"--feats {FEATS} "
                "--d-ff 171 --ffn swiglu --norm rms --qk-norm "
                "--sp-value-schedule spread --sp-stream 1500000")  # fmt: skip
 
@@ -181,11 +198,12 @@ def record(gen: int, key: str, value) -> None:
 def cmd_convert(a) -> None:
     from alpha_poke.selfplay.convert import convert
 
-    if Path(f"data/train/sp{a.gen}/convert.json").exists() and not a.force:
-        print(f"sp{a.gen} is converted already (--force converts again)")
+    out = Path("data/train") / sp_data(a.gen)
+    if (out / "convert.json").exists() and not a.force:
+        print(f"{out.name} is converted already (--force converts again)")
         return
     logging.disable(logging.WARNING)
-    stats = convert(SELFPLAY_DIR / f"gen{a.gen}", Path(f"data/train/sp{a.gen}"), a.gen,
+    stats = convert(SELFPLAY_DIR / f"gen{a.gen}", out, a.gen,
                     loop_margin=a.loop_margin)  # fmt: skip
     record(a.gen, "convert", stats)
 
@@ -232,7 +250,7 @@ def cmd_value(a) -> None:
     out-of-sample test of the value on the bots' own play: BCE, ECE, calibration slope (> 1:
     underconfident, e.g. pulled to 0.5 by human outcomes), and each network's BCE minus the
     current one's (game-clustered 95% CI). Networks: the current one, the ones earlier
-    generations ended with (--back), v5-glu (value from human games only)."""
+    generations ended with (--back), the base network (BASE_RUN: value from human games only)."""
     import json
     import random
 
@@ -350,7 +368,7 @@ def team_groups(a, rows: list, y, nets: list, loss: dict, kl_net: dict, top1_net
     sets, reused across games), ``popular`` (a completed replay team whose six species came
     up >= --popular times in the teams of generations 0..gen, both sides), ``rare`` (<= --rare
     times), ``mid`` (the rest). Per network: BCE, policy KL / top-1 against the full searches;
-    ``gain_vs_base``: the base network's (v5-glu) BCE minus this one's, so a gain that grows on
+    ``gain_vs_base``: the base network's (BASE_RUN) BCE minus this one's, so a gain that grows on
     popular / catalog teams but not on rare ones over the generations is the overfitting sign."""
     import json
     from collections import Counter
@@ -404,6 +422,7 @@ def team_groups(a, rows: list, y, nets: list, loss: dict, kl_net: dict, top1_net
 
 
 def cmd_train(a) -> None:
+    import json
     import math
     import shlex
     import subprocess
@@ -412,13 +431,17 @@ def cmd_train(a) -> None:
 
     st = state()
     init = a.init or st["current"]
+    # the model is built from TRAIN_FLAGS: a starting network with other inputs does not load
+    feats = json.loads((Path(init) / "config.json").read_text()).get("feats")
+    if feats != FEATS.split(","):
+        raise SystemExit(f"{init} reads {feats}, the training flags {FEATS}")
 
     def rows(g: int) -> int:
         return sum(
-            pq.read_metadata(f).num_rows for f in Path(f"data/train/sp{g}").glob("*.parquet")
+            pq.read_metadata(f).num_rows for f in (Path("data/train") / sp_data(g)).glob("*.parquet")
         )
 
-    have = [g for g in range(a.gen + 1) if Path(f"data/train/sp{g}").exists()]
+    have = [g for g in range(a.gen + 1) if (Path("data/train") / sp_data(g)).exists()]
     recent = [g for g in have if g > a.gen - a.window]
     older = [g for g in have if g <= a.gen - a.window]
     n_recent = sum(rows(g) for g in recent)
@@ -426,7 +449,7 @@ def cmd_train(a) -> None:
     # older generations: a random share of their games, together ~old_share of the recent
     # window (against forgetting / cycling), the same share from every older generation
     old_keep = min(1.0, a.old_share * n_recent / n_older) if n_older else 0.0
-    sp = ",".join([f"sp{g}" for g in recent] + [f"sp{g}:{old_keep:.4f}" for g in older])
+    sp = ",".join([sp_data(g) for g in recent] + [f"{sp_data(g)}:{old_keep:.4f}" for g in older])
     n_sp = n_recent + round(old_keep * n_older)
     # human share of each batch: lowered over the generations (the human data anchors the play
     # against humans; self-play's search targets are what goes beyond them), never below 20%;
@@ -460,7 +483,7 @@ def cmd_train(a) -> None:
     steps = a.steps or (0 if a.per_game > 0 else max(50, math.ceil(a.passes * n_sp / bsp)))
     size = (f"--steps {steps} --eval-every {max(50, steps // 5)}" if steps else
             f"--sp-passes {a.passes} --eval-every 0")  # fmt: skip
-    run = f"sp-gen{a.gen}"
+    run = f"{LINEAGE}-gen{a.gen}"
     cmd = (f"{sys.executable} scripts/train_pv.py {TRAIN_FLAGS} --selfplay {sp} "
            f"--sp-frac {sp_frac} --init {init} {size} --lr {lr} --batch {a.batch} "
            f"--warmup-frac {a.warmup_frac} --export last --sp-per-game {a.per_game} "
@@ -476,7 +499,6 @@ def cmd_train(a) -> None:
         print("$", cmd, flush=True)
         with open(log_path, "w") as f:
             subprocess.run(shlex.split(cmd), check=True, stdout=f, stderr=subprocess.STDOUT)
-    import json
 
     rows = [json.loads(line) for line in (out / "metrics.jsonl").read_text().splitlines()]
     val = [r for r in rows if r.get("event") == "val"]
@@ -614,7 +636,7 @@ def cmd_eval(a) -> None:
 
 
 def anchor_of(st: dict, gen: int, back: int) -> str:
-    """The network generation ``gen - back`` ended with (v5-glu before the lineage starts)."""
+    """The network generation ``gen - back`` ended with (BASE_RUN before the lineage starts)."""
     lineage = st.get("lineage", {})
     for k in range(gen - back, -1, -1):
         if str(k) in lineage:
@@ -624,7 +646,7 @@ def anchor_of(st: dict, gen: int, back: int) -> str:
 
 def cmd_baseline(a) -> int:
     """Progress check (design D15-6): the current network vs the one --back generations ago
-    (--against: any network, e.g. v5-glu), equal time, sequential test. Worse (H0) -> the
+    (--against: any network, e.g. v6-s-spread), equal time, sequential test. Worse (H0) -> the
     current network reverts to that one, returns 2. No significant progress -> one more
     "stagnant" check in a row (state.json); returns 3 at --max-stagnant in a row (the loop stops
     for a look: most likely the network needs to grow)."""
@@ -664,7 +686,7 @@ def cmd_baseline(a) -> int:
 
 
 def cmd_diag(a) -> None:
-    """Diagnostic team pools (design D16): the current network vs --against (v5-glu) on fixed
+    """Diagnostic team pools (design D16): the current network vs --against (BASE_RUN) on fixed
     pools beyond the ladder distribution (data/teams/pools: wide200 = the ladder's, offmeta200,
     random200; scripts/team_pools.py), --pairs each, GPU search at --iterations, no early stop.
     Never decides anything: whether self-play's gain on the ladder pool and on the others drift
@@ -1045,7 +1067,7 @@ def main() -> None:
     p.add_argument("--ports", type=int, nargs="+", default=[8000, 8001, 8002, 8003])
     p.add_argument("--force", action="store_true")
     p.set_defaults(fn=cmd_eval)
-    p = sub.add_parser("diag", help="diagnostic team pools: current vs v5-glu (D16; by hand)")
+    p = sub.add_parser("diag", help="diagnostic team pools: current vs the base network (D16; by hand)")
     p.add_argument("--gen", type=int, required=True, help="where to log it")
     p.add_argument("--against", default=BASE_RUN)
     p.add_argument("--pools", default="wide200,offmeta200,random200")
@@ -1058,7 +1080,7 @@ def main() -> None:
     p = sub.add_parser("baseline", help="progress: the current network vs --back gens ago")
     p.add_argument("--gen", type=int, required=True, help="where to log it")
     p.add_argument("--back", type=int, default=3)
-    p.add_argument("--against", default="", help="instead: this network (e.g. v5-glu)")
+    p.add_argument("--against", default="", help="instead: this network (e.g. v6-s-spread)")
     p.add_argument("--max-stagnant", type=int, default=2)
     p.add_argument("--pairs", type=int, default=400)
     p.add_argument("--search-ms", type=int, default=500)

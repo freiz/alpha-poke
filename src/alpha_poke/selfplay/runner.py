@@ -26,7 +26,7 @@ from pathlib import Path
 
 from alpha_poke.servers import account, local_server
 
-MODEL = "data/train/v5/runs/v5-glu"
+MODEL = "data/train/v71/runs/v0"  # (the self-play start; scripts/selfplay.py BASE_RUN)
 
 
 def done_pairs(gen_dir: Path) -> set[int]:
