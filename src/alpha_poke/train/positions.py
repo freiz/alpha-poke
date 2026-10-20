@@ -375,7 +375,7 @@ def _emit_positions(row, rep, blind, actions, extra, w_main, w_extra, belief, rn
         st, action, more = pos
         # (quantized to 0..255: small ints are shared objects -- a shard's 1M positions in the
         # build's main process; train_pv divides by 255)
-        post = ([round(v * 255) for v in alpha_search.posterior([x.to_string() for x in [st, *more]])]
+        post = ([round(v * 255) for v in alpha_search.posterior([st.to_string(), *more])]
                 if more else None)  # fmt: skip
         reveal = reveal_flags(st, list(battles[side].opponent_team.values()),
                               list(battles[other].opponent_team.values()))  # fmt: skip
@@ -446,9 +446,14 @@ def _position(battle, side, a, records, known, belief, rng, move_beta, kind=KIND
     spec = SpectatorSide(team=team, known=known, names=names)
     state = build_state(battle, belief, opp_names, rng, move_beta=move_beta, spectator=spec,
                         force_switch=switch_only)  # fmt: skip
-    # F2: more belief worlds of the same position (the posterior; not the training state)
-    more = [build_state(battle, belief, opp_names, rng, move_beta=move_beta, spectator=spec,
-                        force_switch=switch_only)
+    # F2: more belief worlds of the same position (the posterior; not the training state), as
+    # strings: the opponent re-sampled, our side the training state's (in play our sets are
+    # known: every root world has the same side one; before v7.1 our unrevealed parts were
+    # re-sampled too and our rows of the posterior were fractions play never shows)
+    own = state.to_string().split("/", 1)[0]
+    more = [own + "/" + build_state(battle, belief, opp_names, rng, move_beta=move_beta,
+                                    spectator=spec, force_switch=switch_only
+                                    ).to_string().split("/", 1)[1]
             for _ in range(POST_WORLDS - 1)]  # fmt: skip
     if isinstance(a, Blind):
         rec = next((r for r in records if _same_species(r.species, me.species)), None)

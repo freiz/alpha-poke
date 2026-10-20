@@ -12,8 +12,10 @@ outcome); each is the poke-engine state seen by the player to act (its own sets:
 and whether it won (alpha_poke.train.positions). Features are computed from the state strings at
 training time (alpha_search.featurize); rating and uploadtime are kept for weighting there.
 
-One output file per source shard, written when the shard is done: rerunning skips finished
-shards, and memory stays bounded (the logs of all games do not fit at once).
+One output file per source shard, renamed into place when the shard is done: rerunning skips
+finished shards. Each task's positions are written as they come back (a row group per task,
+``--schema-from``: the column types of an earlier build, else the first task's): the main process
+holds one task's positions, not a shard's ~1.1M (2026-10-19).
 """
 
 import argparse
@@ -90,6 +92,10 @@ def main() -> None:
     ap.add_argument("--move-beta", type=float, default=1.0)
     ap.add_argument("--heldout", action="store_true", help="belief without the eval team pool")
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--row-group", type=int, default=50_000, help="positions per write")
+    ap.add_argument("--schema-from", default="",
+                    help="a parquet file of an earlier build: its column types (a column all "
+                         "null in the first task would otherwise be typed null)")  # fmt: skip
     ap.add_argument("--max-games", type=int, default=60_000,
                     help="per source shard (Metamon's: <= 58k; split bigger ones)")  # fmt: skip
     a = ap.parse_args()
@@ -99,6 +105,7 @@ def main() -> None:
     since = time.mktime(time.strptime(a.since, "%Y-%m-%d"))
     t0 = time.time()
     n_games = n_pos = n_failed = 0
+    schema = pq.read_schema(a.schema_from) if a.schema_from else None
     with ProcessPoolExecutor(a.workers, initializer=_init, initargs=(a.heldout,)) as pool:
         for k, src in enumerate(source_files()):
             dst = out / Path(src).name
@@ -109,6 +116,7 @@ def main() -> None:
                 raise SystemExit(f"{src}: {n_src} games > --max-games {a.max_games}: split it "
                                  "with scripts/split_shards.py")  # fmt: skip
             rows = load_games(src, a.min_rating, since, a.fraction, a.seed + k)
+            n_src_used = len(rows)
             tasks = [
                 (
                     rows[i : i + a.chunk],
@@ -121,17 +129,34 @@ def main() -> None:
                 )  # fmt: skip
                 for i in range(0, len(rows), a.chunk)
             ]
-            pos, failed = [], 0
-            for p, f in pool.map(_work, tasks):
-                pos += p
-                failed += f
+            n_shard, failed, writer, buf = 0, 0, None, []
             tmp = dst.with_suffix(".tmp")
-            pq.write_table(pa.Table.from_pylist(pos), tmp, compression="zstd")
-            tmp.rename(dst)
-            n_games, n_pos, n_failed = n_games + len(rows), n_pos + len(pos), n_failed + failed
+
+            def flush():
+                nonlocal writer, schema
+                t = pa.Table.from_pylist(buf, schema=schema)
+                if writer is None:
+                    schema = schema or t.schema
+                    writer = pq.ParquetWriter(tmp, schema, compression="zstd")
+                writer.write_table(t)
+                buf.clear()
+
+            for p, f in pool.map(_work, tasks):  # (in order; written as they come back)
+                failed += f
+                buf += p
+                n_shard += len(p)
+                if len(buf) >= a.row_group:
+                    flush()
+            if buf:
+                flush()
+            if writer is not None:
+                writer.close()
+                tmp.rename(dst)
+            del rows, tasks
+            n_games, n_pos, n_failed = n_games + n_src_used, n_pos + n_shard, n_failed + failed
             rate = n_games / (time.time() - t0)
             print(
-                f"{Path(src).name}: {len(rows)} games -> {len(pos)} positions ({failed} failed); "
+                f"{Path(src).name}: {n_src_used} games -> {n_shard} positions ({failed} failed); "
                 f"total {n_games} games, {n_pos} positions, {rate:.0f} games/s",
                 flush=True,
             )

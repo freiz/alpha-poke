@@ -992,9 +992,16 @@ fn posterior_world(state: &State, flip: bool) -> Vec<f32> {
                 e[1] = (takes >= 1.0) as u8 as f32;
                 e[2] = (deals >= 1.0) as u8 as f32;
                 e[3] = (takes < 0.5) as u8 as f32;
+                // (none on a grounded target in Psychic Terrain, as ko2's priority columns)
+                let psychic = state.terrain.terrain_type == Terrain::PSYCHICTERRAIN
+                    && sides[o].active_grounded();
                 let mut prio = 0.0f32;
                 for (k, m) in moves.iter().enumerate() {
-                    if m.choice.priority > 0 && m.choice.category != MoveCategory::Status {
+                    if !psychic
+                        && !m.disabled
+                        && m.choice.priority > 0
+                        && m.choice.category != MoveCategory::Status
+                    {
                         if let Some(d) = memo.get(s, j, k, &m.choice.clone(), a) {
                             prio = prio.max(d);
                         }
@@ -1002,15 +1009,25 @@ fn posterior_world(state: &State, flip: bool) -> Vec<f32> {
                 }
                 e[4] = (prio >= foe.hp as f32 && prio > 0.0) as u8 as f32;
             }
-            e[5] = moves.iter().any(|m| m.choice.flags.heal || m.choice.heal.is_some()) as u8 as f32;
+            // a recovery move: the heal flag without draining (Giga Drain, Drain Punch, Horn
+            // Leech have it too) or a heal effect
+            e[5] = moves
+                .iter()
+                .any(|m| (m.choice.flags.heal && m.choice.drain.is_none()) || m.choice.heal.is_some())
+                as u8 as f32;
+            // a self-boosting move: boost data on the user (Curse only for a non-Ghost), or one the
+            // engine boosts by hand (Belly Drum, Fillet Away, Clangorous Soul)
+            let ghost = p.has_type(&PokemonType::GHOST);
             e[6] = moves.iter().any(|m| {
-                m.choice.boost.as_ref().is_some_and(|b| {
-                    b.target == MoveTarget::User
-                        && b.boosts.attack + b.boosts.special_attack + b.boosts.speed
-                            + b.boosts.defense
-                            + b.boosts.special_defense
-                            > 0
-                })
+                matches!(m.id, Choices::BELLYDRUM | Choices::FILLETAWAY | Choices::CLANGOROUSSOUL)
+                    || (!(m.id == Choices::CURSE && ghost)
+                        && m.choice.boost.as_ref().is_some_and(|b| {
+                            b.target == MoveTarget::User
+                                && b.boosts.attack + b.boosts.special_attack + b.boosts.speed
+                                    + b.boosts.defense
+                                    + b.boosts.special_defense
+                                    > 0
+                        }))
             }) as u8 as f32;
             e[7] = moves
                 .iter()
@@ -1115,6 +1132,34 @@ mod tests {
         assert_eq!(&one[..6 * N_POST], &fl[6 * N_POST..]);
         assert!(one.iter().all(|&x| (0.0..=1.0).contains(&x)));
         assert!(one.iter().any(|&x| x > 0.0));
+    }
+
+    /// F2's set columns: a drain move is not recovery; Belly Drum is setup, Curse not on a Ghost
+    #[test]
+    fn posterior_set_columns() {
+        let mut st = fixture();
+        let a = st.side_one.active_index as usize;
+        let col = |st: &State, k: usize| posterior(&[st.clone()], false)[a * N_POST + k];
+        let set = |st: &mut State, ids: [Choices; 4]| {
+            let p = &mut st.side_one.pokemon.pkmn[a];
+            for (m, id) in [&mut p.moves.m0, &mut p.moves.m1, &mut p.moves.m2, &mut p.moves.m3]
+                .into_iter()
+                .zip(ids)
+            {
+                m.id = id;
+                m.choice = MOVES.get(&id).unwrap().clone();
+            }
+        };
+        let t = Choices::TACKLE;
+        set(&mut st, [Choices::GIGADRAIN, Choices::DRAINPUNCH, t, t]);
+        assert_eq!(col(&st, 5), 0.0, "drain moves are not recovery");
+        set(&mut st, [Choices::RECOVER, t, t, t]);
+        assert_eq!(col(&st, 5), 1.0);
+        set(&mut st, [Choices::BELLYDRUM, t, t, t]);
+        assert_eq!(col(&st, 6), 1.0, "Belly Drum is setup");
+        set(&mut st, [Choices::CURSE, t, t, t]);
+        let ghost = st.side_one.pokemon.pkmn[a].has_type(&PokemonType::GHOST);
+        assert_eq!(col(&st, 6), if ghost { 0.0 } else { 1.0 }, "Curse");
     }
 
     /// a benched mon's matchup no longer takes the active's boosts (EXTRA_VERSION 2)
