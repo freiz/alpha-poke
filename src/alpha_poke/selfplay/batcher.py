@@ -70,9 +70,11 @@ class Batcher:
         self.net = (CrossNet(model, value_model, dtype=dtype) if value_model
                     else GpuNet(model, dtype=dtype))  # fmt: skip
         # (a network with the v7 entity groups: the searches compute their inputs)
-        from alpha_poke.agents.net_context import needs_full
+        from alpha_poke.agents.net_context import needs_full, needs_post
 
         self.full = needs_full(model) or needs_full(value_model)
+        # (either network reads F2: the contexts carry the root's posterior)
+        self.post = needs_post(model) or needs_post(value_model)
         assert ml[0] <= 0 or self.net.has_turns, f"{model}: no remaining-turns head for ml {ml}"
         self.leaves, self.threads, self.ml = leaves, threads, ml
         self.queue: queue.SimpleQueue = queue.SimpleQueue()

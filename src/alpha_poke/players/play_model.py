@@ -38,6 +38,7 @@ def logits(model_dir: str, pos: list, rating: int | None) -> np.ndarray:
     lg, _ = alpha_search.tnet_forward(
         model_dir, [p.state for p in ps], [list(p.reveal) for p in ps], ratings,
         [p.turn for p in ps], [p.history for p in ps], False,
+        [[v / 255 for v in p.post] for p in ps] if all(p.post for p in ps) else None,
     )  # fmt: skip
     return np.asarray(lg, np.float32).reshape(-1, 14)
 

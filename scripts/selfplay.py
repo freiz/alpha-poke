@@ -300,7 +300,10 @@ def cmd_value(a) -> None:
     }  # fmt: skip
     kl_net, top1_net = {}, {}
     for net in nets:
-        lg, vz = alpha_search.tnet_forward(net, *ctx)
+        # (F2: the records' root posteriors; a network without post ignores them)
+        posts = ([[v / 255 for v in d["post"]] for d in rows]
+                 if all(d.get("post") for d in rows) else None)  # fmt: skip
+        lg, vz = alpha_search.tnet_forward(net, *ctx, False, posts)
         z = np.array(vz, np.float64)
         lg = np.array(lg, np.float64).reshape(len(rows), -1)
         lg = np.where(np.isfinite(lg), lg, -1e9)

@@ -256,6 +256,16 @@ def sample_set(
     if dmg_post:  # F1: (item, ability, spread) from the damage posterior (agents/damage_obs.py)
         level = mon.level or 100
         w = [p for *_, p in dmg_post]
+        if k is not None and not item_seen and ss.vocab.get("item"):
+            # the item consistent with the moves: the candidates' prior is the item marginal
+            # (dist.item), swapped here for the archetype's item weights (the moves drawn below
+            # are the archetype's: a Choice Scarf with Nasty Plot otherwise)
+            arch: dict[str, float] = {}
+            for n, v in zip(ss.vocab["item"], flat(ss.params["item"][k]), strict=False):
+                arch[to_id(n)] = arch.get(to_id(n), 0.0) + float(v)
+            marg = {to_id(n): v for n, v in dist.item.items()}
+            w = [p * arch.get(it, 0.0) / max(marg.get(it, 0.0), 1e-9)
+                 for (it, *_), p in zip(dmg_post, w, strict=True)]  # fmt: skip
         if speed_obs:  # the move order too: an inconsistent spread / item nearly ruled out
             w = [p * (1.0 if consistent(speed_obs, calc_stats(mon.base_stats, s, level=level)["spe"],
                                         it if not item_seen else item) else 1e-3)

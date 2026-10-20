@@ -330,8 +330,8 @@ def load_selfplay(items: list[tuple[str, float]], per_game: int, seed: int,
                     if memmap_dir is not None and v[:1].nbytes >= MEMMAP_ROW_BYTES:
                         out[k] = np.lib.format.open_memmap(memmap_dir / f"{k}.npy", mode="w+",
                                                            dtype=v.dtype, shape=shape)  # fmt: skip
-                    else:
-                        out[k] = np.empty(shape, v.dtype)
+                    else:  # (zeros: a key an earlier shard lacks -- post -- reads 0 there)
+                        out[k] = np.zeros(shape, v.dtype)
                 out[k][pos : pos + len(idx)] = v[idx]
         pos += len(idx)
     for v in out.values():  # written back: clean pages the kernel can drop and re-read
@@ -455,8 +455,8 @@ def gather(caches: list[Path], small: dict, idx: np.ndarray) -> dict:
         with np.load(caches[s_id]) as z:
             for k in z.files:
                 v = z[k][rows]
-                if k not in out:
-                    out[k] = np.empty((len(idx), *v.shape[1:]), v.dtype)
+                if k not in out:  # (zeros: a key another shard lacks)
+                    out[k] = np.zeros((len(idx), *v.shape[1:]), v.dtype)
                 out[k][pos : pos + len(rows)] = v
         pos += len(rows)
     return out

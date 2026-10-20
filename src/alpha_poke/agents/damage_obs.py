@@ -155,12 +155,33 @@ def _shown(hp: int, maxhp: int) -> int:
     return 99 if p == 100 and hp < maxhp else p
 
 
+def _with_hp(base: str, side_one: bool, slot: int, hp: int | None = None,
+             pct: int | None = None) -> str:
+    """``base`` with one mon's HP set: ``hp`` exact, or ``pct`` percent of its max HP (the state
+    string's mon fields: HP at index 6, max HP at 7)."""
+    parts = base.split("/")
+    k = 0 if side_one else 1
+    segs = parts[k].split("=")
+    f = segs[slot].split(",")
+    maxhp = int(f[7])
+    if hp is None:
+        hp = maxhp if pct >= 100 else max(1, min(maxhp - 1, round(pct * maxhp / 100)))
+    f[6] = str(max(1, min(maxhp, hp)))
+    segs[slot] = ",".join(f)
+    parts[k] = "=".join(segs)
+    return "/".join(parts)
+
+
 def likelihood(hit: Hit, base: str, our_slot: int, their_slot: int, cands: list[tuple]) -> list[float]:
     """P(the observed HP | candidate) per candidate (item, ability, stats [6], tera, on): the
-    16 non-crit rolls in the turn-start state ``base`` (side one = us)."""
+    16 non-crit rolls in the turn-start state ``base`` (side one = us), the defender at its HP
+    before the hit (a switch-in after its hazards: Multiscale / Shadow Shield need full HP)."""
     own_tera = bool(hit.tera if hit.by_us else hit.defender_tera)  # our mon terastallized
     if hit.item_gone:  # it held nothing at the hit, whatever it started with
         cands = [("none", *c[1:]) for c in cands]
+    if hit.before > 0:
+        base = (_with_hp(base, False, their_slot, pct=hit.before) if hit.by_us
+                else _with_hp(base, True, our_slot, hp=hit.before))  # fmt: skip
     rolls = alpha_search.set_damage_rolls(base, hit.by_us, hit.move, our_slot, their_slot, cands,
                                           own_tera)  # fmt: skip
     out = []
