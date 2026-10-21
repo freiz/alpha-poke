@@ -38,7 +38,8 @@
 //! * `ko2` (F3a, actives): each of its moves against the opposing active: KO within two hits for
 //!   sure / possibly, hit by hit (the second at the HP the first left: Super Fang; the target's
 //!   end-of-turn HP change between them, the engine's; a Focus Sash / Sturdy; one use of Final
-//!   Gambit / Fake Out / First Impression; the target does not act); then the opposing active's priority moves against it: KO for sure / possibly (none on
+//!   Gambit / Fake Out / First Impression / a pivot, none of Future Sight; the target does not
+//!   act); then the opposing active's priority moves against it: KO for sure / possibly (none on
 //!   a grounded target in Psychic Terrain);
 //! * `tera` (F6, actives): if its side can still terastallize, its moves terastallized against
 //!   the opposing active (max damage / HP, KO for sure, possibly) and the opposing active's best
@@ -232,13 +233,40 @@ fn undone<T>(work: &mut State, orig: &State, f: impl FnOnce(&mut State, &mut Sta
 /// `work` as it is, for a panic): its HP after the switch-in (entry hazards by its current types,
 /// Heavy-Duty Boots, an Air Balloon, ...); its HP now if the engine panics on the state.
 fn entry_hp(work: &mut State, orig: &State, r: &SideReference, idx: usize) -> i16 {
+    entry_effect(work, orig, r, idx).hp
+}
+
+/// What a switch-in does, by the engine (`entry_hp`'s switch-in): its HP after; its own stat
+/// stages then ([Atk, Def, SpA, SpD, Spe]: Intrepid Sword, Dauntless Shield, Download, a Sticky
+/// Web's Speed -1, ...); the other side's active's stage changes ([Atk, Def, SpA, SpD]:
+/// Intimidate, with its exceptions); whether it changed the weather or the terrain (Drizzle,
+/// Grassy Surge, ...)
+#[derive(Clone, Copy, Debug, Default)]
+struct EntryFx {
+    hp: i16,
+    own: [i8; 5],
+    foe: Stages,
+    field: bool,
+}
+
+fn entry_effect(work: &mut State, orig: &State, r: &SideReference, idx: usize) -> EntryFx {
     let r = *r;
     let now = work.get_side_immutable(&r).pokemon.pkmn[idx].hp;
+    let four = |sd: &Side| [sd.attack_boost, sd.defense_boost, sd.special_attack_boost, sd.special_defense_boost];
     undone(work, orig, |st, ins| {
+        let foe0 = four(st.get_side_immutable(&r.get_other_side()));
+        let field0 = (st.weather.weather_type, st.terrain.terrain_type);
         generate_instructions_from_switch(st, PokemonIndex::deserialize(&idx.to_string()), r, ins);
-        st.get_side_immutable(&r).pokemon.pkmn[idx].hp
+        let side = st.get_side_immutable(&r);
+        let foe1 = four(st.get_side_immutable(&r.get_other_side()));
+        EntryFx {
+            hp: side.pokemon.pkmn[idx].hp,
+            own: [side.attack_boost, side.defense_boost, side.special_attack_boost, side.special_defense_boost, side.speed_boost],
+            foe: [0, 1, 2, 3].map(|i| foe1[i] - foe0[i]),
+            field: (st.weather.weather_type, st.terrain.terrain_type) != field0,
+        }
     })
-    .unwrap_or(now)
+    .unwrap_or(EntryFx { hp: now, ..Default::default() })
 }
 
 /// One end of the turn's effect on a side's active: (its heal, its damage), each measured where
@@ -745,7 +773,8 @@ impl DamageMemo {
                 // in a repeated exchange: none landing on its first turn only or a later turn
                 // (with this mon made active; a Power Herb used up)
                 let skip = repeat
-                    && (matches!(
+                    && (c.flags.pivot
+                        || matches!(
                         c.move_id,
                         // (and the moves returning the damage taken: their damage is the turn's)
                         Choices::FAKEOUT
@@ -896,6 +925,12 @@ fn hit(
 /// The move slots by number
 const SLOTS: [PokemonMoveIndex; 4] =
     [PokemonMoveIndex::M0, PokemonMoveIndex::M1, PokemonMoveIndex::M2, PokemonMoveIndex::M3];
+
+/// A move that takes its user down as it goes (Final Gambit, Explosion, Self-Destruct, Misty
+/// Explosion): an exchange's user is down after it
+fn self_ko(c: &Choice) -> bool {
+    matches!(c.move_id, Choices::FINALGAMBIT | Choices::EXPLOSION | Choices::SELFDESTRUCT | Choices::MISTYEXPLOSION)
+}
 
 /// What a hit does besides its damage (`after_hit`)
 #[derive(Clone, Copy, Debug, PartialEq, Default)]
@@ -1345,9 +1380,16 @@ fn v7_entities(
                 // a use that lands on a later turn (a charge, Future Sight) lands once in the two
                 // turns; Fake Out / First Impression only now, once
                 let now = lands_now(state, &refs[s], c, true);
+                // (a pivot -- U-turn, Volt Switch, ...: its user goes out after it, one use)
                 let once = !now
-                    || matches!(c.move_id, Choices::FINALGAMBIT | Choices::FAKEOUT | Choices::FIRSTIMPRESSION);
-                if !now && matches!(c.move_id, Choices::FAKEOUT | Choices::FIRSTIMPRESSION) {
+                    || c.flags.pivot
+                    || self_ko(c)
+                    || matches!(c.move_id, Choices::FAKEOUT | Choices::FIRSTIMPRESSION);
+                // (Fake Out after the first turn; Future Sight / Doom Desire hit two turns after:
+                // none within the two)
+                if (!now && matches!(c.move_id, Choices::FAKEOUT | Choices::FIRSTIMPRESSION))
+                    || matches!(c.move_id, Choices::FUTURESIGHT | Choices::DOOMDESIRE)
+                {
                     continue;
                 }
                 let (max, my_max) = (foe.maxhp as f32, me.maxhp as f32);
@@ -1377,7 +1419,7 @@ fn v7_entities(
                     };
                     hp = take(hp, max, d1, hold);
                     mine = (mine + fx.hp).min(my_max);
-                    if c.move_id == Choices::FINALGAMBIT && d1 > 0.0 {
+                    if self_ko(c) {
                         mine = 0.0;
                     }
                     if !lost && hp > 0.0 {
@@ -1396,6 +1438,9 @@ fn v7_entities(
                                 take(hp, max, d2, hold && !lost) <= 0.0
                             })
                     };
+                    // ('possibly': some rolls do -- the max ones or, a berry's heal not being
+                    // monotone in them, the min ones of 'for sure')
+                    let ko = ko || (col == 1 && out[base + 2 * i] > 0.0);
                     out[base + 2 * i + col] = ko as u8 as f32;
                 }
             }
@@ -1588,7 +1633,8 @@ fn needs_target_move(c: &Choice) -> bool {
 /// change (Libero, Protean, Color Change), a blocked first hit (Disguise, Ice Face), a switch
 /// (Emergency Exit, Wimp Out, an Eject Button / Pack, a Red Card), a berry other than the status,
 /// resist, Sitrus and 1/3 ones (a pinch stat berry, Custap, Kee, ...), a White Herb, a Booster
-/// Energy on a mon not in yet (it goes off as it comes in). A pair with one: the switch-in / head-to-head
+/// Energy on a mon not in yet (it goes off as it comes in), a Flame / Toxic Orb not gone off yet
+/// (its status changes the damage after: Guts, a burn's halving, Facade). A pair with one: the switch-in / head-to-head
 /// outcomes Unknown (not a sure answer built on them); its frequency in `results.md`
 fn unsupported(state: &State, p: &Pokemon, active: bool) -> bool {
     let reacts = matches!(
@@ -1646,6 +1692,10 @@ fn unsupported(state: &State, p: &Pokemon, active: bool) -> bool {
     (format!("{:?}", p.item).ends_with("BERRY") && !followed_berry)
         // (a Booster Energy goes off as its holder comes in: not in the damage of one made active)
         || (p.item == Items::BOOSTERENERGY && !active)
+        // (a Flame / Toxic Orb's status at the first end of the turn changes the damage after:
+        // a burn's halving, Guts, Facade, ...; not Poison Heal's poison)
+        || (p.status == poke_engine::state::PokemonStatus::NONE
+            && (p.item == Items::FLAMEORB || (p.item == Items::TOXICORB && p.ability != Abilities::POISONHEAL)))
         || matches!(
             p.item,
             Items::WEAKNESSPOLICY
@@ -1695,6 +1745,13 @@ struct DuelSetup<'a> {
     prio_k: i8,
     /// a mechanic the exchange does not follow (`unsupported`): switch-in / head-to-head Unknown
     unsupported: bool,
+    /// j's switch-in (the engine's): who acts first after it (a Sticky Web's Speed -1), the
+    /// stat stages it leaves on j / on k (Intrepid Sword, Intimidate, ...), a field change
+    /// (Drizzle, Grassy Surge, ...: Unknown, not followed)
+    entry_first: Option<bool>,
+    entry_sj: Stages,
+    entry_sk: Stages,
+    entry_field: bool,
     /// the first hit blocked (Disguise / Ice Face): the revenge kill Unknown
     blocked_k: bool,
     hold_j: bool,
@@ -1748,8 +1805,12 @@ fn fight(
     if hj <= 0.0 {
         return Some(Fight::Lose);
     }
-    let j_first = d.j_first.unwrap_or(!sure);
-    let (mut sj, mut sk): (Stages, Stages) = ([0; 4], [0; 4]);
+    let entering = entry != Entry::HeadToHead;
+    if entering && d.entry_field {
+        return Some(Fight::Unknown);
+    }
+    let j_first = if entering { d.entry_first } else { d.j_first }.unwrap_or(!sure);
+    let (mut sj, mut sk): (Stages, Stages) = if entering { (d.entry_sj, d.entry_sk) } else { ([0; 4], [0; 4]) };
     let subs = std::cell::Cell::new([if entry == Entry::HeadToHead { d.sub_j } else { 0.0 }, d.sub_k]);
     // the items lost (index 0: j's, 1: k's: a Knock Off's, a popped Air Balloon, a berry eaten):
     // the engine's damage without them after, no Focus Sash, the ends of the turns without them
@@ -1812,7 +1873,7 @@ fn fight(
             *sj = add_stages(*sj, fx.user);
             *sk = add_stages(*sk, fx.target);
             afflict(1, &fx);
-            if c.move_id == Choices::FINALGAMBIT && dd > 0.0 {
+            if self_ko(c) {
                 *hj = 0.0;
             }
         }
@@ -1831,7 +1892,7 @@ fn fight(
             *sk = add_stages(*sk, fx.user);
             *sj = add_stages(*sj, fx.target);
             afflict(0, &fx);
-            if c.move_id == Choices::FINALGAMBIT && dd > 0.0 {
+            if self_ko(c) {
                 *hk = 0.0;
             }
         }
@@ -1908,15 +1969,15 @@ fn fight(
 /// Every living mon of each side against each living mon of the other ([side][mon][foe mon]).
 fn duels(state: &State, sides: &[&Side; 2], act: [usize; 2], refs: [SideReference; 2], memo: &mut DamageMemo) -> [[[Duel; 6]; 6]; 2] {
     let alive = |s: usize, j: usize| sides[s].pokemon.pkmn[j].hp > 0;
-    // each mon's HP after switching in
-    let mut entry = [[0.0f32; 6]; 2];
+    // each mon's switch-in (the engine's: its HP, the stat stages, a field change)
+    let mut entry = [[EntryFx::default(); 6]; 2];
     for s in 0..2 {
         for j in 0..6 {
             if alive(s, j) {
                 entry[s][j] = if j == act[s] {
-                    sides[s].pokemon.pkmn[j].hp as f32
+                    EntryFx { hp: sides[s].pokemon.pkmn[j].hp, ..Default::default() }
                 } else {
-                    entry_hp(&mut memo.work, state, &refs[s], j) as f32
+                    entry_effect(&mut memo.work, state, &refs[s], j)
                 };
             }
         }
@@ -1977,6 +2038,17 @@ fn duels(state: &State, sides: &[&Side; 2], act: [usize; 2], refs: [SideReferenc
                     get_effective_speed(&memo.work, &refs[s]) as f32,
                     get_effective_speed(&memo.work, &refs[o]) as f32,
                 );
+                // (j's speed after its switch-in: a Sticky Web's -1, ...)
+                let ej = entry[s][j];
+                let vj_in = if j != act[s] && ej.own[4] != 0 {
+                    let b = memo.work.get_side_immutable(&refs[s]).speed_boost;
+                    memo.work.get_side(&refs[s]).speed_boost = (b + ej.own[4]).clamp(-6, 6);
+                    let v = get_effective_speed(&memo.work, &refs[s]) as f32;
+                    memo.work.get_side(&refs[s]).speed_boost = b;
+                    v
+                } else {
+                    vj
+                };
                 // (a Substitute only on an active: `enter` clears a benched mon's)
                 let sub_on = |r: &SideReference, m: &Option<(usize, Choice)>| {
                     m.as_ref().map_or(0.0, |(_, c)| sub_in_way(&memo.work, r, c))
@@ -1984,13 +2056,16 @@ fn duels(state: &State, sides: &[&Side; 2], act: [usize; 2], refs: [SideReferenc
                 let (sub_j, sub_k) = (sub_on(&refs[o], &mk), sub_on(&refs[s], &mj));
                 leave(memo.work.get_side(&refs[o]), sk);
                 leave(memo.work.get_side(&refs[s]), sj);
-                let j_first = if qj != qk {
-                    Some(qj > qk)
-                } else if vj == vk {
-                    None
-                } else {
-                    Some((vj > vk) != state.trick_room.active)
+                let order = |vj: f32| {
+                    if qj != qk {
+                        Some(qj > qk)
+                    } else if vj == vk {
+                        None
+                    } else {
+                        Some((vj > vk) != state.trick_room.active)
+                    }
                 };
+                let (j_first, entry_first) = (order(vj), order(vj_in));
                 let hold = |att: &Pokemon, m: &Option<(usize, Choice)>, def: &Pokemon| {
                     m.as_ref().is_some_and(|(_, c)| holds_at_full(state, att, c, def))
                 };
@@ -2032,9 +2107,14 @@ fn duels(state: &State, sides: &[&Side; 2], act: [usize; 2], refs: [SideReferenc
                     j_first,
                     hp_j: pj.hp as f32,
                     max_j: pj.maxhp as f32,
-                    entry_j: entry[s][j],
+                    entry_j: entry[s][j].hp as f32,
                     hp_k: pk.hp as f32,
                     max_k: pk.maxhp as f32,
+                    entry_first,
+                    entry_sj: [ej.own[0], ej.own[1], ej.own[2], ej.own[3]],
+                    // (the other's changes reach the actual active only: the one in as j comes)
+                    entry_sk: if k == act[o] { ej.foe } else { [0; 4] },
+                    entry_field: ej.field,
                 };
                 let modes = [(Entry::SwitchIn, true), (Entry::SwitchIn, false), (Entry::HeadToHead, true), (Entry::Revenge, true)];
                 // (a possible switch-in lost: the reliable one too; won reliably: possibly too)
@@ -2602,6 +2682,151 @@ mod tests {
         checked
     }
 
+    /// The inputs' own logic on states (no reference needed; the review's structural checks):
+    /// a 'for sure' implies its 'possibly' (one hit, two, priority, the threat, the tera ones), a
+    /// one-hit KO a KO within two, a reliable switch-in answer a possible one, the counts within
+    /// the living mons; and monotone in the target's HP -- the foe's active at 60% of its HP, no
+    /// KO flag of a move not HP-based turns off, no reliable switch-in answer to it is lost.
+    /// Returns (checks, the failures by rule, examples).
+    fn invariants(states: &[State]) -> (usize, std::collections::BTreeMap<&'static str, usize>, Vec<String>) {
+        let mut fails: std::collections::BTreeMap<&'static str, usize> = Default::default();
+        let mut examples = vec![];
+        let mut n = 0;
+        let t = ENT_KO2;
+        let team = ENT_KO2 + ENT_TERA;
+        let mut fail = |rule: &'static str, what: String| {
+            *fails.entry(rule).or_default() += 1;
+            if examples.len() < 30 {
+                examples.push(format!("{rule}: {what}"));
+            }
+        };
+        for (si, st) in states.iter().enumerate() {
+            for flip in [false, true] {
+                let refs = [side_ref(true, flip), side_ref(false, flip)];
+                let me = st.get_side_immutable(&refs[0]);
+                let foe = st.get_side_immutable(&refs[1]);
+                let (a, b) = (me.active_index as usize, foe.active_index as usize);
+                if me.pokemon.pkmn[a].hp <= 0 || foe.pokemon.pkmn[b].hp <= 0 {
+                    continue;
+                }
+                let (e, _, nw) = featurize_extra_full(st, flip);
+                let er = |m: usize| &e[m * ENT_EXTRA..(m + 1) * ENT_EXTRA];
+                let nr = |m: usize| &nw[m * ENT_NEW..(m + 1) * ENT_NEW];
+                let le = |x: f32, y: f32| x <= y + 1e-6;
+                n += 1;
+                for m in 0..12 {
+                    let (x, y) = (er(m), nr(m));
+                    if !le(x[2], x[3]) {
+                        fail("threat sure => possible", format!("state {si} flip {flip} entity {m}"));
+                    }
+                    if !le(y[team + 2], y[team + 3]) {
+                        fail("switch-in reliable <= possible", format!("state {si} flip {flip} entity {m}: {} {}", y[team + 2], y[team + 3]));
+                    }
+                    if !le(y[team + 7] + y[team + 8], 1.0) {
+                        fail("confirmed + unknown answers <= 6", format!("state {si} flip {flip} entity {m}"));
+                    }
+                }
+                let (x, y) = (er(a), nr(a));
+                for i in 0..4 {
+                    let o = 4 + 4 * i;
+                    if !le(x[o + 1], x[o + 2]) {
+                        fail("ko1 sure => possible", format!("state {si} flip {flip} move {i}"));
+                    }
+                    if !le(y[2 * i], y[2 * i + 1]) {
+                        fail("ko2 sure => possible", format!("state {si} flip {flip} move {i}"));
+                    }
+                    if !le(x[o + 1], y[2 * i]) {
+                        fail("ko1 sure => ko2 sure", format!("state {si} flip {flip} move {i}: {:?}", st.get_side_immutable(&refs[0]).pokemon.pkmn[a].moves[&SLOTS[i]].id));
+                    }
+                    if !le(x[o + 2], y[2 * i + 1]) {
+                        fail("ko1 possible => ko2 possible", format!("state {si} flip {flip} move {i}: {:?}", st.get_side_immutable(&refs[0]).pokemon.pkmn[a].moves[&SLOTS[i]].id));
+                    }
+                    if !le(y[t + 3 * i + 1], y[t + 3 * i + 2]) {
+                        fail("tera ko sure => possible", format!("state {si} flip {flip} move {i}"));
+                    }
+                }
+                if !le(y[8], y[9]) || !le(y[t + 13], y[t + 14]) || !le(y[t + 15 + 9], y[t + 15 + 10]) {
+                    fail("priority / tera threat sure => possible", format!("state {si} flip {flip}"));
+                }
+                // the foe's active at 60% of its HP
+                let mut low = st.clone();
+                let p = &mut low.get_side(&refs[1]).pokemon.pkmn[b];
+                let h = ((p.hp as f32 * 0.6) as i16).max(1);
+                if h == p.hp {
+                    continue;
+                }
+                p.hp = h;
+                let (e2, _, n2) = featurize_extra_full(&low, flip);
+                let x2 = &e2[a * ENT_EXTRA..(a + 1) * ENT_EXTRA];
+                let y2 = &n2[a * ENT_NEW..(a + 1) * ENT_NEW];
+                let att = &me.pokemon.pkmn[a];
+                for i in 0..4 {
+                    let c = &att.moves[&SLOTS[i]].choice;
+                    if hp_based(c, att, &foe.pokemon.pkmn[b])
+                        || hp_based(c, att, &low.get_side_immutable(&refs[1]).pokemon.pkmn[b])
+                        || hp_berry(foe.pokemon.pkmn[b].item)
+                    {
+                        continue;
+                    }
+                    let o = 4 + 4 * i;
+                    for (before, after, rule) in [
+                        (x[o + 1], x2[o + 1], "ko1 sure monotone in the target's HP"),
+                        (x[o + 2], x2[o + 2], "ko1 possible monotone in the target's HP"),
+                        (y[2 * i], y2[2 * i], "ko2 sure monotone in the target's HP"),
+                        (y[2 * i + 1], y2[2 * i + 1], "ko2 possible monotone in the target's HP"),
+                    ] {
+                        if before > after {
+                            fail(rule, format!("state {si} flip {flip} move {:?} vs {:?} hp {} -> {h}", c.move_id, foe.pokemon.pkmn[b].id, foe.pokemon.pkmn[b].hp));
+                        }
+                    }
+                }
+                // (not monotone by the rules: an HP-based move or ability -- Endeavor, Overgrow,
+                // Multiscale --, a drain capped by the target's HP, an HP-threshold berry)
+                let bends = |p: &Pokemon, q: &Pokemon| {
+                    hp_berry(p.item)
+                        || (0..4).any(|i| {
+                            let c = &p.moves[&SLOTS[i]].choice;
+                            hp_based(c, p, q) || c.drain.is_some()
+                        })
+                };
+                let k = &foe.pokemon.pkmn[b];
+                for j in 0..6 {
+                    let pj = &me.pokemon.pkmn[j];
+                    if pj.hp <= 0 || bends(pj, k) || bends(k, pj) {
+                        continue;
+                    }
+                    let (before, after) = (nr(j)[team + 2], n2[j * ENT_NEW + team + 2]);
+                    if before > after + 1e-6 {
+                        fail("reliable switch-in answers monotone in the threat's HP", format!("state {si} flip {flip} own mon {j} vs {:?} hp {} -> {h}", foe.pokemon.pkmn[b].id, foe.pokemon.pkmn[b].hp));
+                    }
+                }
+            }
+        }
+        (n, fails, examples)
+    }
+
+    #[test]
+    fn the_inputs_logic_holds() {
+        let (n, fails, ex) = invariants(&[fixture()]);
+        assert!(n > 0 && fails.is_empty(), "{fails:?} {ex:?}");
+    }
+
+    /// (on real states: ALPHA_FUZZ_STATES=<file> cargo test --release --lib
+    /// the_inputs_logic_holds_real -- --ignored --nocapture)
+    #[test]
+    #[ignore]
+    fn the_inputs_logic_holds_real() {
+        let path = std::env::var("ALPHA_FUZZ_STATES").expect("ALPHA_FUZZ_STATES");
+        let take = std::env::var("ALPHA_FUZZ_LIMIT").ok().and_then(|x| x.parse().ok()).unwrap_or(3000);
+        let states: Vec<State> = std::fs::read_to_string(path).unwrap().lines().take(take).map(State::deserialize).collect();
+        let (n, fails, ex) = invariants(&states);
+        println!("checked {n} views; failures {fails:?}");
+        for x in &ex {
+            println!("  {x}");
+        }
+        assert!(fails.is_empty());
+    }
+
     #[test]
     fn the_team_order_changes_nothing() {
         assert_eq!(order_free(&[fixture()]), 4);
@@ -2613,7 +2838,8 @@ mod tests {
     #[ignore]
     fn the_team_order_changes_nothing_real() {
         let path = std::env::var("ALPHA_FUZZ_STATES").expect("ALPHA_FUZZ_STATES");
-        let states: Vec<State> = std::fs::read_to_string(path).unwrap().lines().take(3000).map(State::deserialize).collect();
+        let take = std::env::var("ALPHA_FUZZ_LIMIT").ok().and_then(|x| x.parse().ok()).unwrap_or(3000);
+        let states: Vec<State> = std::fs::read_to_string(path).unwrap().lines().take(take).map(State::deserialize).collect();
         println!("checked {}", order_free(&states));
     }
 

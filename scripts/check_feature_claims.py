@@ -35,6 +35,9 @@ from pathlib import Path
 import numpy as np
 
 ROUNDS = 4  # (extra.rs ROUNDS)
+# the pivots: their user goes out after one use (no second use / exchange to check)
+PIVOTS = {"uturn", "voltswitch", "flipturn", "partingshot", "teleport", "chillyreception",
+          "shedtail", "batonpass"}  # fmt: skip
 NEEDS_FOE_MOVE = {"suckerpunch", "thunderclap", "upperhand", "focuspunch", "counter", "mirrorcoat",
                   "metalburst", "comeuppance", "bide"}  # fmt: skip
 PLAIN: set[str] = set()  # damaging moves of priority 0 that no ability / terrain changes (_init)
@@ -170,7 +173,7 @@ def check_state(line: str) -> list[dict]:
                     lost += p
                     continue
                 p2 += p * sum(q for q, s3 in _turn_clean(pe, s2, own_one, mv, "none") if foe_hp(s3) <= 0)
-            if lost < 1e-6:
+            if lost < 1e-6 and mv not in PIVOTS:
                 rec("ko2_sure", new[a, 2 * i], p2, ctx)
                 rec("ko2_possible", new[a, 2 * i + 1], p2, ctx)
         # who moves first: a priority-0 damaging move each (none whose priority an ability or the

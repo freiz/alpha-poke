@@ -9,10 +9,13 @@
 //          "error": null}: a step per decision point (a turn's start, a forced switch, a pivot);
 //          c = {"choice": Showdown's, "engine": the engine's name ("knockoff", "earthquake-tera",
 //          "none" for a recharge, a species id for a switch), "kind": "move" / "switch"}; the
-//          last step has the final state and no choices.
+//          last step has the final state and no choices. "serialize_every": k -- every k-th
+//          step with both sides choosing also has "battle", Showdown's whole battle serialized
+//          (State.serializeBattle: showdown_claims.js plays from it)
 const {Battle, Teams} = require(process.argv[2]);
 const {teamOf, state} = require('./showdown_state.js');
 const {maxDamages} = require('./showdown_damage.js');
+const {State} = require(process.argv[2] + '/state');
 
 function rng(seed) { // mulberry32
 	let a = seed >>> 0;
@@ -98,6 +101,9 @@ process.stdin.on('end', () => {
 			if (!Object.keys(choices).length) break;
 			const step = {state: snap, choices};
 			if (c.damage_probe && choices.p1 && choices.p2 && choices.p1.kind !== 'pass') step.damage = maxDamages(battle);
+			if (c.serialize_every && choices.p1 && choices.p2 && steps.length % c.serialize_every === 0) {
+				step.battle = State.serializeBattle(battle);
+			}
 			steps.push(step);
 			for (const [sid, ch] of Object.entries(choices)) battle.choose(sid, ch.choice);
 		}

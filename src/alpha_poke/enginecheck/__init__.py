@@ -66,18 +66,31 @@ def run_showdown(p1, p2, turns, seed: str | None = "gen5,1,2,3,4", force_random=
 
 def random_battle(p1, p2, seed: str, choice_seed: int, max_turns: int = 100,
                   switch_p: float = 0.15, tera_p: float = 0.1, fmt: str = FORMAT,
-                  damage_probe: bool = False) -> tuple[list[dict], str | None]:  # fmt: skip
+                  damage_probe: bool = False,
+                  serialize_every: int = 0) -> tuple[list[dict], str | None]:  # fmt: skip
     """A whole battle with random legal choices (``random_battle.js``): ([{"state", "choices"}]
     per decision point, the error if the battle broke off). The full-information differential
     (doc/engine-diff.md): the truth at every step, no player's view, no belief."""
     case = {"format": fmt, "seed": seed, "choice_seed": choice_seed, "p1": p1, "p2": p2,
             "max_turns": max_turns, "switch_p": switch_p, "tera_p": tera_p,
-            "damage_probe": damage_probe}  # fmt: skip
+            "damage_probe": damage_probe, "serialize_every": serialize_every}  # fmt: skip
     r = subprocess.run(["node", str(RUNNER.with_name("random_battle.js")), str(SIM)],
                        input=json.dumps(case), capture_output=True, text=True, check=True,
                        timeout=600)  # fmt: skip
     out = json.loads(r.stdout)
     return out["steps"], out["error"]
+
+
+def showdown_claims(cases: list[dict]) -> list[dict]:
+    """Claims played out in Showdown from serialized battles under the claims' assumptions
+    (``showdown_claims.js``: sure hits, no chance crit / secondary, each side's rolls and hits at
+    their min or max): per case {"battle", "rolls": {"p1": "min" | "max", "p2": ...}, "noop":
+    side doing nothing or None, "turns": [[p1 choice, p2 choice], ...]} -> {"turns": [{"hp":
+    {side: {species: hp}}, "moves": [side of each move line], "ended"}, ...], "error"}."""
+    r = subprocess.run(["node", str(RUNNER.with_name("showdown_claims.js")), str(SIM)],
+                       input=json.dumps(cases), capture_output=True, text=True, check=True,
+                       timeout=1200)  # fmt: skip
+    return json.loads(r.stdout)
 
 
 @functools.cache
