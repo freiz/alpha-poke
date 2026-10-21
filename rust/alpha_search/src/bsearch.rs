@@ -65,8 +65,23 @@ pub struct Pending {
     turns: i32,
 }
 
+/// The engine's evaluation, the stat stages checked first: one past -6..6 panics in it (a
+/// search fell back on a +7, 2026-10-21, not reproduced): the state is printed for a repro
+pub(crate) fn evaluate_checked(state: &State) -> f32 {
+    let out = [&state.side_one, &state.side_two].iter().any(|sd| {
+        [sd.attack_boost, sd.defense_boost, sd.special_attack_boost, sd.special_defense_boost,
+         sd.speed_boost, sd.accuracy_boost, sd.evasion_boost]
+            .iter()
+            .any(|b| !(-6..=6).contains(b))
+    });
+    if out {
+        eprintln!("STAGES OUT OF RANGE (alpha_search): {}", state.serialize());
+    }
+    evaluate(state)
+}
+
 fn inputs(state: &State, ctx: &Context) -> Box<(Input, Input)> {
-    let ev = evaluate(state);
+    let ev = evaluate_checked(state);
     let own = Input::new(state, ctx, false, ev);
     let opp = own.flipped(state, ctx);
     Box::new((own, opp))
@@ -273,7 +288,7 @@ fn descend(
         let depth = n.depth;
         if m1 == MoveChoice::None && m2 == MoveChoice::None {
             // no decision for either side (should not happen): handcrafted leaf value
-            break Descent::Terminal(crate::ismcts::sigmoid(evaluate(state) - root_eval), None);
+            break Descent::Terminal(crate::ismcts::sigmoid(evaluate_checked(state) - root_eval), None);
         }
         // virtual loss: `vl` visits are counted now, the value when the evaluation is back
         n.visits += vl;

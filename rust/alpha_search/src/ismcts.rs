@@ -13,7 +13,7 @@
 //!   only: poke-engine instructions carry absolute old / new values, and below the root the
 //!   same node is reached in different states (different sampled outcomes above it), so a
 //!   cached list would apply and reverse the wrong values.
-//! * Leaf value: sigmoid(evaluate(state) - that world's root evaluation), as poke-engine.
+//! * Leaf value: sigmoid(crate::bsearch::evaluate_checked(state) - that world's root evaluation), as poke-engine.
 //! * Network (design D13): the transformer (`tnet`, with a `Context` per
 //!   world: public-information bits, ratings, turn, real history). Along the descent the path's
 //!   decision steps extend the history, the moves / tera / switch-ins used reveal their bits and
@@ -190,10 +190,10 @@ pub struct SearchResult {
 /// uses the handcrafted evaluation), else poke-engine's leaf value relative to the root.
 fn leaf_value(state: &State, root_eval: f32, cfg: &Config, path: &PathCtx) -> f32 {
     if let (Some(tnet), Some(ctx)) = (&cfg.tnet, path.base) {
-        let x = Input::new(state, &path.context(ctx), false, evaluate(state));
+        let x = Input::new(state, &path.context(ctx), false, crate::bsearch::evaluate_checked(state));
         return 1.0 / (1.0 + (-tnet.value(&x)).exp());
     }
-    sigmoid(evaluate(state) - root_eval)
+    sigmoid(crate::bsearch::evaluate_checked(state) - root_eval)
 }
 
 /// What the descent adds to a world's context: the decision steps taken, the bits they reveal,
@@ -521,7 +521,7 @@ impl Tree {
             }
             if cfg.use_policy && !n.priors_set {
                 if let (Some(tnet), Some(base)) = (&cfg.tnet, pc.base) {
-                    let ev = evaluate(state);
+                    let ev = crate::bsearch::evaluate_checked(state);
                     let lc = pc.context(base);
                     let cached = n.logits1.take();
                     let need_own = cached.is_none();
@@ -609,7 +609,7 @@ impl Tree {
                         (cfg.use_policy, &cfg.tnet, pc.base)
                     {
                         // one forward pass: the leaf value and the new node's own priors
-                        let x = Input::new(state, &pc.context(base), false, evaluate(state));
+                        let x = Input::new(state, &pc.context(base), false, crate::bsearch::evaluate_checked(state));
                         let out = tnet.forward(&x);
                         self.nodes[child as usize].logits1 = Some(Box::new(out.logits));
                         let ml = out.turns.map(|t| pc.mains as f32 + t);
@@ -908,7 +908,9 @@ mod tests {
     }
 
     /// Random playouts from the states of a file (one per line, ALPHA_FUZZ_STATES): every move
-    /// pair's generation leaves the state unchanged and no side is left without an option.
+    /// pair's generation leaves the state unchanged, no side is left without an option, and
+    /// every outcome keeps the stat stages within -6..6 (the engine's evaluation panics past
+    /// them: a search fell back, 2026-10-21).
     /// `cargo test --release fuzz_generation -- --ignored --nocapture`
     #[test]
     #[ignore]
@@ -917,7 +919,15 @@ mod tests {
         let path = std::env::var("ALPHA_FUZZ_STATES").expect("ALPHA_FUZZ_STATES");
         let text = std::fs::read_to_string(path).unwrap();
         let mut rng = StdRng::seed_from_u64(0);
-        let (mut steps, mut leaks, mut empty) = (0usize, 0usize, 0usize);
+        let (mut steps, mut leaks, mut empty, mut boosts, mut unreversed) = (0usize, 0usize, 0usize, 0usize, 0usize);
+        let in_range = |s: &State| {
+            [&s.side_one, &s.side_two].iter().all(|sd| {
+                [sd.attack_boost, sd.defense_boost, sd.special_attack_boost, sd.special_defense_boost,
+                 sd.speed_boost, sd.accuracy_boost, sd.evasion_boost]
+                    .iter()
+                    .all(|b| (-6..=6).contains(b))
+            })
+        };
         for line in text.lines().filter(|l| !l.is_empty()) {
             let mut s = State::deserialize(line);
             for _ in 0..12 {
@@ -943,12 +953,140 @@ mod tests {
                     }
                     s = State::deserialize(&before);
                 }
+                for o in &outcomes {
+                    s.apply_instructions(&o.instruction_list);
+                    if !in_range(&s) {
+                        boosts += 1;
+                        if boosts <= 5 {
+                            eprintln!("BOOST {m1:?} {m2:?}\nBEFORE {before}\nINSTRUCTIONS {:?}", o.instruction_list);
+                        }
+                    }
+                    s.reverse_instructions(&o.instruction_list);
+                    // (an outcome applied then reversed: the state again -- the search does it
+                    // every iteration)
+                    if s.serialize() != before {
+                        unreversed += 1;
+                        if unreversed <= 5 {
+                            eprintln!("UNREVERSED {m1:?} {m2:?}\nBEFORE {before}\nAFTER  {}\nINSTRUCTIONS {:?}", s.serialize(), o.instruction_list);
+                        }
+                        s = State::deserialize(&before);
+                    }
+                }
                 let k = rng.gen_range(0..outcomes.len());
                 s.apply_instructions(&outcomes[k].instruction_list);
             }
         }
-        eprintln!("steps {steps} leaks {leaks} empty {empty}");
-        assert_eq!((leaks, empty), (0, 0));
+        eprintln!("steps {steps} leaks {leaks} empty {empty} boosts out of range {boosts} not reversed {unreversed}");
+        assert_eq!((leaks, empty, boosts, unreversed), (0, 0, 0, 0));
+    }
+
+    /// The stat stages at their limits (+6 / -6 on both actives) and every move pair: no outcome
+    /// leaves one past them (`fuzz_generation`'s check where random playouts rarely get).
+    /// `ALPHA_FUZZ_STATES=<file> cargo test --release fuzz_stage_limits -- --ignored --nocapture`
+    #[test]
+    #[ignore]
+    fn fuzz_stage_limits() {
+        let path = std::env::var("ALPHA_FUZZ_STATES").expect("ALPHA_FUZZ_STATES");
+        let text = std::fs::read_to_string(path).unwrap();
+        let (mut pairs, mut bad) = (0usize, 0usize);
+        let mut seen = std::collections::BTreeSet::new();
+        for line in text.lines().filter(|l| !l.is_empty()).take(3000) {
+            for v in [6i8, -6] {
+                let mut s = State::deserialize(line);
+                if s.battle_is_over() != 0.0 {
+                    continue;
+                }
+                for sd in [&mut s.side_one, &mut s.side_two] {
+                    sd.attack_boost = v;
+                    sd.defense_boost = v;
+                    sd.special_attack_boost = v;
+                    sd.special_defense_boost = v;
+                    sd.speed_boost = v;
+                    sd.accuracy_boost = v;
+                    sd.evasion_boost = v;
+                }
+                let (o1, o2) = s.get_all_options();
+                for m1 in &o1 {
+                    for m2 in &o2 {
+                        let outcomes = generate_instructions_from_move_pair(&mut s, m1, m2, false);
+                        pairs += 1;
+                        for o in &outcomes {
+                            s.apply_instructions(&o.instruction_list);
+                            let out = [&s.side_one, &s.side_two].iter().any(|sd| {
+                                [sd.attack_boost, sd.defense_boost, sd.special_attack_boost, sd.special_defense_boost,
+                                 sd.speed_boost, sd.accuracy_boost, sd.evasion_boost]
+                                    .iter()
+                                    .any(|b| !(-6..=6).contains(b))
+                            });
+                            if out {
+                                bad += 1;
+                                let key = format!("{m1:?} / {m2:?}");
+                                if seen.insert(key.clone()) && seen.len() <= 12 {
+                                    eprintln!("STAGE {v}: {key}\n  {:?}", o.instruction_list.iter().filter(|i| format!("{i:?}").contains("Boost")).collect::<Vec<_>>());
+                                }
+                            }
+                            s.reverse_instructions(&o.instruction_list);
+                        }
+                    }
+                }
+            }
+        }
+        eprintln!("move pairs {pairs}, outcomes past the stages' limits {bad} ({} kinds)", seen.len());
+        assert_eq!(bad, 0);
+    }
+
+    /// The stages near their limits with the abilities that change stage changes (Contrary,
+    /// Simple, ...) and the moves that change them a lot: no outcome past -6..6 (the search's
+    /// evaluation panicked on a +7, 2026-10-21; `fuzz_stage_limits` has no such sets)
+    #[test]
+    fn stage_changes_stay_within_the_limits() {
+        use poke_engine::choices::Choices;
+        use poke_engine::engine::abilities::Abilities;
+        let base = State::deserialize(include_str!("../../../tests/fixtures/engine_state_6v6.txt").lines().next().unwrap());
+        let mut bad = vec![];
+        let abilities = [Abilities::CONTRARY, Abilities::SIMPLE, Abilities::NONE, Abilities::DEFIANT, Abilities::COMPETITIVE, Abilities::MOODY, Abilities::SPEEDBOOST, Abilities::ANGERPOINT, Abilities::BERSERK, Abilities::WEAKARMOR, Abilities::STAMINA, Abilities::MOXIE, Abilities::BEASTBOOST, Abilities::JUSTIFIED, Abilities::RATTLED, Abilities::STEAMENGINE, Abilities::WATERCOMPACTION, Abilities::MIRRORARMOR, Abilities::OPPORTUNIST, Abilities::GUARDDOG];
+        let moves = [Choices::LEAFSTORM, Choices::DRACOMETEOR, Choices::OVERHEAT, Choices::CLOSECOMBAT, Choices::SHELLSMASH, Choices::BELLYDRUM, Choices::SWORDSDANCE, Choices::NASTYPLOT, Choices::QUIVERDANCE, Choices::CURSE, Choices::SUPERPOWER, Choices::MAKEITRAIN, Choices::SPINOUT, Choices::FILLETAWAY, Choices::CLANGOROUSSOUL, Choices::ACUPRESSURE, Choices::GROWTH, Choices::TAILGLOW, Choices::GEOMANCY, Choices::SNARL, Choices::PARTINGSHOT, Choices::MEMENTO, Choices::CHARM, Choices::SCREECH, Choices::METALSOUND, Choices::FAKETEARS, Choices::FEATHERDANCE, Choices::TICKLE, Choices::NOBLEROAR, Choices::BABYDOLLEYES, Choices::PSYCHUP, Choices::SPECTRALTHIEF, Choices::POWERTRIP, Choices::STOREDPOWER, Choices::TOPSYTURVY, Choices::HAZE, Choices::DEFOG, Choices::SCALESHOT, Choices::TRIPLEARROWS, Choices::ROCKSMASH, Choices::FLAMECHARGE, Choices::TRAILBLAZE, Choices::TORCHSONG, Choices::POWERUPPUNCH, Choices::DIAMONDSTORM, Choices::METEORMASH, Choices::ARMORCANNON, Choices::HEADLONGRUSH, Choices::VCREATE, Choices::HAMMERARM, Choices::ICEHAMMER, Choices::LUNGE, Choices::TROPKICK, Choices::SPIRITBREAK, Choices::MYSTICALFIRE, Choices::STRUGGLEBUG, Choices::ELECTROWEB, Choices::ICYWIND, Choices::BULLDOZE, Choices::ROCKTOMB, Choices::SKITTERSMACK, Choices::BITTERMALICE, Choices::CHILLINGWATER, Choices::POUNCE, Choices::FIRELASH, Choices::THUNDEROUSKICK, Choices::GRAVAPPLE, Choices::BREAKINGSWIPE, Choices::CRUNCH, Choices::SHADOWBALL, Choices::MOONBLAST, Choices::ENERGYBALL, Choices::FOCUSBLAST, Choices::EARTHPOWER, Choices::PSYCHIC, Choices::IRONTAIL, Choices::BUGBUZZ, Choices::LIQUIDATION];
+        let names = |s: &State| [&s.side_one, &s.side_two].map(|sd| [sd.attack_boost, sd.defense_boost, sd.special_attack_boost, sd.special_defense_boost, sd.speed_boost, sd.accuracy_boost, sd.evasion_boost]);
+        for &ab in &abilities {
+            for &ab2 in &[Abilities::NONE, Abilities::CONTRARY, Abilities::SIMPLE, Abilities::DEFIANT, Abilities::COMPETITIVE, Abilities::MIRRORARMOR] {
+                for v in [-6i8, -5, 5, 6] {
+                    for &mv in &moves {
+                        let mut s = base.clone();
+                        for sd in [&mut s.side_one, &mut s.side_two] {
+                            sd.attack_boost = v;
+                            sd.defense_boost = v;
+                            sd.special_attack_boost = v;
+                            sd.special_defense_boost = v;
+                            sd.speed_boost = v;
+                            sd.accuracy_boost = v;
+                            sd.evasion_boost = v;
+                        }
+                        s.side_one.get_active().ability = ab;
+                        s.side_one.get_active().hp = s.side_one.get_active().maxhp;
+                        s.side_two.get_active().ability = ab2;
+                        let slot = &mut s.side_one.get_active().moves.m0;
+                        slot.id = mv;
+                        slot.choice = poke_engine::choices::MOVES.get(&mv).unwrap().clone();
+                        slot.disabled = false;
+                        slot.pp = 8;
+                        let (o1, o2) = s.get_all_options();
+                        let m1 = o1.iter().find(|m| matches!(m, MoveChoice::Move(PokemonMoveIndex::M0))).cloned();
+                        let Some(m1) = m1 else { continue };
+                        for m2 in o2.iter().take(3) {
+                            let outs = generate_instructions_from_move_pair(&mut s, &m1, m2, false);
+                            for o in &outs {
+                                s.apply_instructions(&o.instruction_list);
+                                if names(&s).iter().flatten().any(|b| !(-6..=6).contains(b)) && bad.len() < 20 {
+                                    bad.push(format!("{ab:?} vs {ab2:?} at {v}: {mv:?} / {m2:?} -> {:?}", names(&s)));
+                                }
+                                s.reverse_instructions(&o.instruction_list);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        assert!(bad.is_empty(), "{}", bad.join("\n"));
     }
 
     #[test]

@@ -55,6 +55,10 @@ class _Job:
     target: int
     future: Future
     inflight: int = 0
+    # (the search's input, written out when it fails: data/selfplay/diag/search_failures.jsonl)
+    states: list | None = None
+    contexts: list | None = None
+    seed: int = 0
     t0: float = field(default_factory=time.time)
 
 
@@ -99,7 +103,7 @@ class Batcher:
                 bs = alpha_search.BatchSearch(states, ctxs, seed=seed, threads=1, vl=1,
                                               root_noise=noise, ml=self.ml,
                                               full=self.full)  # fmt: skip
-                active.append(_Job(bs, iters, f))
+                active.append(_Job(bs, iters, f, states=states, contexts=ctxs, seed=seed))
             except Exception as e:  # noqa: BLE001 - the game falls back, the batcher goes on
                 f.set_exception(e)
             block = False
@@ -112,6 +116,20 @@ class Batcher:
                 j.future.set_exception(RuntimeError(f"search failed in {what}"))
         self.stats["failed"] = self.stats.get("failed", 0) + len(jobs)
         log.warning("batcher: %d search(es) failed in %s (engine panic?)", len(jobs), what)
+        # (the failed searches' input, to reproduce them: 2026-10-21, a stat stage of +7 in the
+        # engine's evaluation, 1 in 1,200 games)
+        try:
+            import json
+            import time
+            from pathlib import Path
+
+            out = Path(__file__).resolve().parents[3] / "data" / "selfplay" / "diag" / "search_failures.jsonl"
+            with open(out, "a") as fh:
+                for j in jobs:
+                    fh.write(json.dumps({"time": time.time(), "what": what, "seed": j.seed, "target": j.target,
+                                         "states": j.states, "contexts": j.contexts}, default=repr) + "\n")
+        except Exception:  # noqa: BLE001 - diagnostics only
+            log.exception("batcher: could not write the failed searches")
 
     def _loop(self) -> None:
         active: list[_Job] = []
