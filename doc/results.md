@@ -225,7 +225,7 @@ v6-h 的配方（medium，d 128 × 3 层，d_ff 171，6 个 epoch，65,590 步�
 
 ### 网络 v0：v7.1 数据的人类预训练，不含 `post`（2026-10-20；自对弈重开的起点）
 
-v6-h 的配方（medium，d 128 × 3 层，6 个 epoch）+ `ko2, tera, team`（不含 `post`），v7.1 数据（`--pool all --per-game 20 --heldout`，流式写出），`--stream 3`，内存上限 36G，115.6 分钟。模型 `data/train/v71/runs/v0`。
+v6-h 的配方（medium，d 128 × 3 层，6 个 epoch）+ `ko2, tera, team`（不含 `post`），v7.1 数据（`--pool all --per-game 20 --heldout`，流式写出），`--stream 3`，内存上限 36G，115.6 分钟。模型 `data/train/v71/runs/v0-v71`（2026-10-20 改名：v7.2 的 v0 在 `data/train/v72/runs/v0`）。
 
 | 指标 | v0 | v0-post | v6-h |
 |---|---|---|---|
