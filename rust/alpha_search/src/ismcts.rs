@@ -91,11 +91,26 @@ pub struct Node {
     pub s2: Vec<Arm>,
     /// priors set (first selection at this node, in whatever world it happens)
     pub priors_set: bool,
-    /// side one's policy logits from the forward pass that valued this node as a leaf
-    pub logits1: Option<Box<[f32; crate::features::N_ACTIONS]>>,
+    /// side one's policy logits from the forward pass that valued this node as a leaf, and our
+    /// active mon in that state (`cached_logits_fit`)
+    pub logits1: Option<Box<([f32; crate::features::N_ACTIONS], PokemonIndex)>>,
     /// batched search: created as a leaf whose network evaluation has not come back yet
     pub pending: bool,
+    /// (tests: the public phase of the state that first reached it, `phase`)
+    #[cfg(test)]
+    pub phase: Option<(PokemonIndex, PokemonIndex, bool, bool)>,
 }
+
+/// (tests) the public phase of a state: both actives, whether each side must switch
+#[cfg(test)]
+pub(crate) fn phase(state: &State) -> (PokemonIndex, PokemonIndex, bool, bool) {
+    let forced = |side: &Side| side.force_switch || side.get_active_immutable().hp <= 0;
+    (state.side_one.active_index, state.side_two.active_index, forced(&state.side_one), forced(&state.side_two))
+}
+
+#[cfg(test)]
+pub(crate) static PHASE_SAME: [std::sync::atomic::AtomicU64; 2] =
+    [std::sync::atomic::AtomicU64::new(0), std::sync::atomic::AtomicU64::new(0)];
 
 pub(crate) fn arm_index(arms: &mut Vec<Arm>, l: Label) -> usize {
     match arms.iter().position(|a| a.label == l) {
@@ -352,6 +367,28 @@ pub(crate) fn prior_probs(avail: &[(usize, MoveChoice)], logits: &[f32]) -> Vec<
         .collect()
 }
 
+/// The logits cached when a node was created serve its priors only if they were computed for
+/// the same options (2026-10-21, the search review): open loop, the node's first selection is in
+/// another world / sampled outcome than its creation -- created where our active fainted (the
+/// network's moves -inf: only switches legal), selected where it lives, every move's prior was 0
+/// for good; or our active another mon (a phazing move, Eject Button), its moves' logits were
+/// the other mon's. Same active and every option's slot finite, else a forward pass here.
+pub(crate) fn cached_logits_fit(
+    cached: &([f32; crate::features::N_ACTIONS], PokemonIndex),
+    state: &State,
+    avail: &[(usize, MoveChoice)],
+) -> bool {
+    cached.1 == state.side_one.active_index
+        && avail
+            .iter()
+            .all(|(_, mc)| crate::features::slot(mc).is_none_or(|k| cached.0[k].is_finite()))
+}
+
+/// (tests: how often the cached logits did not fit / did)
+#[cfg(test)]
+pub(crate) static CACHE_FIT: [std::sync::atomic::AtomicU64; 2] =
+    [std::sync::atomic::AtomicU64::new(0), std::sync::atomic::AtomicU64::new(0)];
+
 /// Averages the root's priors over the worlds (2026-10-21, the search review: they came from
 /// the first world alone -- the worlds' order changed the search's priors): `add(world's
 /// avail, its priors)` per world, then `finish` sets each arm's prior to its mean over all the
@@ -553,6 +590,16 @@ impl Tree {
                 state.get_all_options()
             };
             let n = &mut self.nodes[node as usize];
+            #[cfg(test)]
+            if node != 0 {
+                let ph = phase(state);
+                match n.phase {
+                    None => n.phase = Some(ph),
+                    Some(p) => {
+                        PHASE_SAME[(p == ph) as usize].fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                    }
+                }
+            }
             let mut av1 = Vec::with_capacity(o1.len());
             for mc in o1 {
                 let i = arm_index(&mut n.s1, label(&state.side_one, &mc));
@@ -569,11 +616,17 @@ impl Tree {
                 if let (Some(tnet), Some(base)) = (&cfg.tnet, pc.base) {
                     let ev = crate::bsearch::evaluate_checked(state);
                     let lc = pc.context(base);
-                    let cached = n.logits1.take();
+                    let cached = n.logits1.take().filter(|c| {
+                        let fit = cached_logits_fit(c, state, &av1);
+                        #[cfg(test)]
+                        CACHE_FIT[fit as usize].fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                        fit
+                    });
+                    let cached = cached.map(|c| c.0);
                     let need_own = cached.is_none();
                     let own = need_own.then(|| Input::new(state, &lc, false, ev));
                     let l1 = match cached {
-                        Some(l) => *l,
+                        Some(l) => l,
                         None => tnet.forward(own.as_ref().unwrap()).logits,
                     };
                     set_priors(&mut n.s1, &av1, &l1);
@@ -657,7 +710,7 @@ impl Tree {
                         // one forward pass: the leaf value and the new node's own priors
                         let x = Input::new(state, &pc.context(base), false, crate::bsearch::evaluate_checked(state));
                         let out = tnet.forward(&x);
-                        self.nodes[child as usize].logits1 = Some(Box::new(out.logits));
+                        self.nodes[child as usize].logits1 = Some(Box::new((out.logits, state.side_one.active_index)));
                         let ml = out.turns.map(|t| pc.mains as f32 + t);
                         (1.0 / (1.0 + (-out.value).exp()), ml)
                     } else {
@@ -1406,5 +1459,62 @@ mod tests {
             after[0] < 0.7 + 0.25 && after[0] >= 0.75 * 0.7 - 1e-6,
             "{after:?}"
         );
+    }
+
+    /// 2026-10-21: a node's cached logits (from the state that created it) set its priors only
+    /// for the same options -- not where they were computed with our active fainted (moves
+    /// -inf) or with another active
+    #[test]
+    fn cached_logits_serve_only_the_same_options() {
+        let s = fixture();
+        let (o1, _) = s.get_all_options();
+        let avail: Vec<(usize, MoveChoice)> = o1.into_iter().enumerate().collect();
+        assert!(avail.iter().any(|(_, mc)| matches!(mc, MoveChoice::Move(_))));
+        let active = s.side_one.active_index;
+        let n = crate::features::N_ACTIONS;
+        let all = [0.5f32; crate::features::N_ACTIONS];
+        assert!(cached_logits_fit(&(all, active), &s, &avail));
+        // created in a forced switch: only the switch slots are finite
+        let mut forced = [f32::NEG_INFINITY; crate::features::N_ACTIONS];
+        forced[8..n].fill(0.5);
+        assert!(!cached_logits_fit(&(forced, active), &s, &avail));
+        let switches: Vec<(usize, MoveChoice)> =
+            avail.iter().copied().filter(|(_, mc)| matches!(mc, MoveChoice::Switch(_))).collect();
+        assert!(cached_logits_fit(&(forced, active), &s, &switches));
+        // created with another active
+        let other = if active == PokemonIndex::P0 { PokemonIndex::P1 } else { PokemonIndex::P0 };
+        assert!(!cached_logits_fit(&(all, other), &s, &avail));
+    }
+
+    /// How often a node's cached logits do not fit its first selection, in real positions
+    /// (ALPHA_STATES: one state per line; ALPHA_MODEL: a run): 2026-10-21, the search review
+    #[test]
+    #[ignore]
+    fn measure_cached_logits_fit() {
+        use std::sync::atomic::Ordering;
+        let (Ok(states), Ok(model)) = (std::env::var("ALPHA_STATES"), std::env::var("ALPHA_MODEL")) else {
+            return;
+        };
+        let cfg = Config {
+            use_policy: true,
+            tnet: Some(crate::tnet::shared(&model).unwrap()),
+            ..Config::default()
+        };
+        let lines = std::fs::read_to_string(states).unwrap();
+        let mut n = 0;
+        for line in lines.lines().filter(|l| !l.is_empty()) {
+            let mut worlds = vec![State::deserialize(line)];
+            if worlds[0].battle_is_over() != 0.0 {
+                continue;
+            }
+            search(&mut worlds, &[Context::default()], Duration::ZERO, 800, &cfg, Some(1));
+            n += 1;
+        }
+        let (bad, ok) = (CACHE_FIT[0].load(Ordering::Relaxed), CACHE_FIT[1].load(Ordering::Relaxed));
+        let (diff, same) = (PHASE_SAME[0].load(Ordering::Relaxed), PHASE_SAME[1].load(Ordering::Relaxed));
+        println!("node visits after the first in another public phase (actives, forced switches) than the first: {diff} of {} ({:.2}%)",
+                 diff + same, 100.0 * diff as f64 / (diff + same).max(1) as f64);
+        println!("{n} searches x 800: cached logits did not fit {bad} of {} first selections ({:.2}%)",
+                 bad + ok, 100.0 * bad as f64 / (bad + ok).max(1) as f64);
     }
 }
