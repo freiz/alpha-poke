@@ -203,6 +203,9 @@ pub struct Tree {
     pub nodes: Vec<Node>,
     pub(crate) children: FxHashMap<(u32, u16, u16, u64), u32>,
     pub(crate) cache: FxHashMap<(u32, u16, u16, u16), Vec<StateInstructions>>,
+    /// the opponent's root priors per world (`RootPriors`): its selection at the root uses the
+    /// current world's own; empty = the arms' priors
+    pub(crate) root_opp: Vec<Vec<f32>>,
 }
 
 pub struct SearchResult {
@@ -415,32 +418,105 @@ fn check_stages(before: &str, m1: &MoveChoice, m2: &MoveChoice, ins: &[Instructi
 pub(crate) static CACHE_FIT: [std::sync::atomic::AtomicU64; 2] =
     [std::sync::atomic::AtomicU64::new(0), std::sync::atomic::AtomicU64::new(0)];
 
-/// Averages the root's priors over the worlds (2026-10-21, the search review: they came from
-/// the first world alone -- the worlds' order changed the search's priors): `add(world's
-/// avail, its priors)` per world, then `finish` sets each arm's prior to its mean over all the
-/// worlds (0 in a world where it is no option: the arm's marginal prior over the belief).
+/// The root's priors from every world's network evaluation (2026-10-21/22, the search reviews:
+/// they came from the first world alone -- the worlds' order changed the search):
+/// * ours: the mean over the worlds (our side, and so our options, is the same in every world);
+/// * the opponent's: each world's own (it knows its set: its policy is conditioned on the world,
+///   not the belief's marginal -- an arm of a rare set at its mean over all worlds was pushed
+///   down again where the set is); its arms' priors (the record, a fallback) are the mean over
+///   the worlds that have the arm;
+/// * root noise (self-play): one Dirichlet draw over all the root's arms of a side (every world's
+///   options), in label order -- the same for any order of the worlds (before: the last world's
+///   options only, the others' kept their prior).
+/// `add` per world in world order, then `finish`.
 #[derive(Default)]
-pub(crate) struct PriorMean {
-    sum: Vec<f32>,
+pub(crate) struct RootPriors {
+    ours: Vec<f32>,
     worlds: u32,
+    opp: Vec<Vec<(usize, f32)>>,
 }
 
-impl PriorMean {
-    pub(crate) fn add(&mut self, avail: &[(usize, MoveChoice)], probs: &[f32]) {
-        for (&(i, _), &p) in avail.iter().zip(probs) {
-            if self.sum.len() <= i {
-                self.sum.resize(i + 1, 0.0);
+impl RootPriors {
+    pub(crate) fn add(
+        &mut self,
+        av1: &[(usize, MoveChoice)],
+        p1: &[f32],
+        av2: &[(usize, MoveChoice)],
+        p2: Option<&[f32]>,
+    ) {
+        for (&(i, _), &p) in av1.iter().zip(p1) {
+            if self.ours.len() <= i {
+                self.ours.resize(i + 1, 0.0);
             }
-            self.sum[i] += p;
+            self.ours[i] += p;
         }
         self.worlds += 1;
-    }
-
-    pub(crate) fn finish(&self, arms: &mut [Arm]) {
-        for (i, a) in arms.iter_mut().enumerate() {
-            a.prior = self.sum.get(i).copied().unwrap_or(0.0) / self.worlds.max(1) as f32;
+        if let Some(p2) = p2 {
+            self.opp.push(av2.iter().zip(p2).map(|(&(i, _), &p)| (i, p)).collect());
         }
     }
+
+    pub(crate) fn finish(&self, root: &mut Node, root_opp: &mut Vec<Vec<f32>>, cfg: &Config, rng: &mut impl Rng) {
+        for (i, a) in root.s1.iter_mut().enumerate() {
+            a.prior = self.ours.get(i).copied().unwrap_or(0.0) / self.worlds.max(1) as f32;
+        }
+        root_opp.clear();
+        if !self.opp.is_empty() {
+            let n = root.s2.len();
+            let (mut sum, mut cnt) = (vec![0.0f32; n], vec![0u32; n]);
+            for w in &self.opp {
+                let mut v = vec![-1.0f32; n];
+                for &(i, p) in w {
+                    v[i] = p;
+                    sum[i] += p;
+                    cnt[i] += 1;
+                }
+                root_opp.push(v);
+            }
+            for (i, a) in root.s2.iter_mut().enumerate() {
+                a.prior = if cnt[i] > 0 { sum[i] / cnt[i] as f32 } else { -1.0 };
+            }
+        }
+        if cfg.root_noise_eps > 0.0 {
+            let (eps, conc) = (cfg.root_noise_eps, cfg.root_noise_conc);
+            let eta = dirichlet_by_label(&root.s1, conc, rng);
+            for (a, e) in root.s1.iter_mut().zip(&eta) {
+                a.prior = (1.0 - eps) * a.prior.max(0.0) + eps * e;
+            }
+            if !self.opp.is_empty() {
+                let eta = dirichlet_by_label(&root.s2, conc, rng);
+                for v in root_opp.iter_mut() {
+                    for (p, e) in v.iter_mut().zip(&eta) {
+                        if *p >= 0.0 {
+                            *p = (1.0 - eps) * *p + eps * e;
+                        }
+                    }
+                }
+                for (a, e) in root.s2.iter_mut().zip(&eta) {
+                    a.prior = (1.0 - eps) * a.prior.max(0.0) + eps * e;
+                }
+            }
+        }
+        root.priors_set = true;
+    }
+}
+
+/// One Dirichlet(conc / n) draw per arm, drawn in the arms' label order (the arms' own order
+/// follows the worlds' order)
+fn dirichlet_by_label(arms: &[Arm], conc: f32, rng: &mut impl Rng) -> Vec<f32> {
+    if arms.len() < 2 {
+        return vec![1.0; arms.len()];
+    }
+    let mut order: Vec<usize> = (0..arms.len()).collect();
+    order.sort_by_cached_key(|&i| format!("{:?}", arms[i].label));
+    let gamma = rand_distr::Gamma::new((conc / arms.len() as f32).max(1e-3), 1.0).expect("gamma");
+    let mut eta = vec![0.0f32; arms.len()];
+    for i in order {
+        eta[i] = rng.sample(gamma);
+    }
+    let total: f32 = eta.iter().sum::<f32>().max(1e-12);
+    eta.iter_mut().for_each(|e| *e /= total);
+    eta
 }
 
 /// Mix Dirichlet noise into the priors of the available arms (root exploration, self-play).
@@ -477,6 +553,22 @@ pub(crate) fn select_puct(
     c: f32,
     ml: &MlParams,
 ) -> (usize, MoveChoice) {
+    select_puct_with(arms, avail, c, ml, None)
+}
+
+/// `select_puct` with the priors from `priors` (by arm; the opponent's at the root: the current
+/// world's own, `RootPriors`) instead of the arms'
+pub(crate) fn select_puct_with(
+    arms: &[Arm],
+    avail: &[(usize, MoveChoice)],
+    c: f32,
+    ml: &MlParams,
+    priors: Option<&[f32]>,
+) -> (usize, MoveChoice) {
+    let prior = |i: usize| match priors {
+        Some(v) => v.get(i).copied().unwrap_or(-1.0),
+        None => arms[i].prior,
+    };
     let n: u32 = avail.iter().map(|&(i, _)| arms[i].visits).sum();
     let sq = (n.max(1) as f32).sqrt();
     let (mut qs, mut k) = (0.0f32, 0u32);
@@ -493,14 +585,14 @@ pub(crate) fn select_puct(
     // the root's marginal priors over the belief summed to less than 1 in a world)
     let (mut known, mut nk) = (0.0f32, 0u32);
     for &(i, _) in avail {
-        if arms[i].prior >= 0.0 {
-            known += arms[i].prior;
+        if prior(i) >= 0.0 {
+            known += prior(i);
             nk += 1;
         }
     }
     let stand_in = if nk > 0 { known / nk as f32 } else { 1.0 };
-    let raw = |a: &Arm| if a.prior >= 0.0 { a.prior } else { stand_in };
-    let z: f32 = avail.iter().map(|&(i, _)| raw(&arms[i])).sum();
+    let raw = |i: usize| if prior(i) >= 0.0 { prior(i) } else { stand_in };
+    let z: f32 = avail.iter().map(|&(i, _)| raw(i)).sum();
     let uniform = 1.0 / avail.len() as f32;
     let ml_term = moves_left_term(arms, avail, ml);
     let mut best = avail[0];
@@ -508,7 +600,7 @@ pub(crate) fn select_puct(
     for &(i, mc) in avail {
         let a = &arms[i];
         let q = if a.visits > 0 { a.mean() } else { fpu };
-        let p = if z > 0.0 { raw(a) / z } else { uniform };
+        let p = if z > 0.0 { raw(i) / z } else { uniform };
         let mut u = q + c * p * sq / (1.0 + a.visits as f32);
         if let Some((sign, m_node)) = ml_term {
             if a.ml_n > 0 {
@@ -587,6 +679,7 @@ impl Tree {
             nodes: vec![Node::default()],
             children: FxHashMap::default(),
             cache: FxHashMap::default(),
+            root_opp: Vec::new(),
         }
     }
 
@@ -685,7 +778,9 @@ impl Tree {
                 select(&n.s1, &av1, cfg.c)
             };
             let (i2, m2) = if cfg.use_policy && cfg.policy_opponent {
-                select_puct(&n.s2, &av2, cfg.c_puct, &cfg.ml)
+                // (the root: this world's own priors for the opponent, `RootPriors`)
+                let own = if node == 0 { self.root_opp.get(world as usize).map(|v| v.as_slice()) } else { None };
+                select_puct_with(&n.s2, &av2, cfg.c_puct, &cfg.ml, own)
             } else {
                 select(&n.s2, &av2, cfg.c)
             };
@@ -786,21 +881,17 @@ impl Default for Tree {
     }
 }
 
-/// Search over the given worlds (they must share our side; the opponent's hidden details may
-/// differ). Stops after `duration` or, when `max_iterations` > 0, after that many iterations.
-/// Every world's state is restored before returning.
-/// The root's priors from the network in every world, averaged (`PriorMean`), and its noise
-/// (2026-10-21, the search review: they came from the first iteration's world alone); nothing
-/// without the network's policy.
-fn root_priors_over_worlds(root: &mut Node, worlds: &[State], ctxs: &[Context], cfg: &Config, rng: &mut StdRng) {
+/// The root's priors from the network in every world (`RootPriors`: ours their mean, the
+/// opponent's each world's own) and its noise; nothing without the network's policy.
+fn root_priors_over_worlds(tree: &mut Tree, worlds: &[State], ctxs: &[Context], cfg: &Config, rng: &mut StdRng) {
     let Some(tnet) = cfg.tnet.as_ref().filter(|_| cfg.use_policy) else {
         return;
     };
     if ctxs.len() != worlds.len() || worlds.is_empty() {
         return;
     }
-    let (mut m1, mut m2) = (PriorMean::default(), PriorMean::default());
-    let (mut last1, mut last2) = (vec![], vec![]);
+    let root = &mut tree.nodes[0];
+    let mut rp = RootPriors::default();
     for (state, ctx) in worlds.iter().zip(ctxs) {
         let (o1, o2) = state.root_get_all_options();
         let av1: Vec<(usize, MoveChoice)> =
@@ -809,26 +900,19 @@ fn root_priors_over_worlds(root: &mut Node, worlds: &[State], ctxs: &[Context], 
             o2.into_iter().map(|mc| (arm_index(&mut root.s2, label(&state.side_two, &mc)), mc)).collect();
         let lc = PathCtx::new(Some(ctx)).context(ctx);
         let own = Input::new(state, &lc, false, crate::bsearch::evaluate_checked(state));
-        m1.add(&av1, &prior_probs(&av1, &tnet.forward(&own).logits));
-        if cfg.policy_opponent {
-            m2.add(&av2, &prior_probs(&av2, &tnet.forward(&own.flipped(state, &lc)).logits));
-        }
-        (last1, last2) = (av1, av2);
+        let p1 = prior_probs(&av1, &tnet.forward(&own).logits);
+        let p2 = cfg
+            .policy_opponent
+            .then(|| prior_probs(&av2, &tnet.forward(&own.flipped(state, &lc)).logits));
+        rp.add(&av1, &p1, &av2, p2.as_deref());
     }
-    m1.finish(&mut root.s1);
-    if cfg.policy_opponent {
-        m2.finish(&mut root.s2);
-    }
-    if cfg.root_noise_eps > 0.0 {
-        let (e, c) = (cfg.root_noise_eps, cfg.root_noise_conc);
-        add_root_noise(&mut root.s1, &last1, e, c, rng);
-        if cfg.policy_opponent {
-            add_root_noise(&mut root.s2, &last2, e, c, rng);
-        }
-    }
-    root.priors_set = true;
+    rp.finish(root, &mut tree.root_opp, cfg, rng);
 }
 
+/// Search over the given worlds (they must share our side; the opponent's hidden details may
+/// differ). Stops after `duration` or, when `max_iterations` > 0, after that many iterations;
+/// the root's evaluation in every world counts in the time (2026-10-22, the search review).
+/// Every world's state is restored before returning.
 pub fn search(
     worlds: &mut [State],
     ctxs: &[Context],
@@ -845,13 +929,15 @@ pub fn search(
         Some(s) => StdRng::seed_from_u64(s),
         None => StdRng::from_os_rng(),
     };
+    let start = Instant::now();
     let root_evals: Vec<f32> = worlds.iter().map(evaluate).collect();
     let mut tree = Tree::new();
-    root_priors_over_worlds(&mut tree.nodes[0], worlds, ctxs, cfg, &mut rng);
-    let start = Instant::now();
+    root_priors_over_worlds(&mut tree, worlds, ctxs, cfg, &mut rng);
     let mut it: u32 = 0;
     loop {
-        for _ in 0..256 {
+        // (the time checked every 16 iterations: every 256 overran a 200 ms budget by 60-70 ms
+        // with the network, 2026-10-22)
+        for _ in 0..16 {
             let w = (it as usize) % worlds.len();
             tree.iterate(
                 &mut worlds[w],
@@ -1491,6 +1577,97 @@ mod tests {
             after[0] < 0.7 + 0.25 && after[0] >= 0.75 * 0.7 - 1e-6,
             "{after:?}"
         );
+    }
+
+    /// The root's priors over worlds whose opponents differ (2026-10-22, the second search
+    /// review): world A's opponent has X, Y, world B's Y, Z (each 50 / 50); ours are the same.
+    /// Returns the root's arms and the opponent's per-world priors, keyed by label.
+    #[allow(clippy::type_complexity)]
+    fn root_priors_of(
+        worlds: &[(&[Choices], &[f32])],
+        eps: f32,
+    ) -> (Vec<(Label, f32)>, Vec<(Label, f32)>, Vec<Vec<(Label, f32)>>, Tree) {
+        let mut tree = Tree::new();
+        let mut rp = RootPriors::default();
+        let ours = [Choices::TACKLE, Choices::PROTECT, Choices::SWORDSDANCE];
+        for (opp, probs) in worlds {
+            let root = &mut tree.nodes[0];
+            let av1: Vec<(usize, MoveChoice)> =
+                ours.iter().map(|&m| (arm_index(&mut root.s1, Label::Move(m)), MoveChoice::None)).collect();
+            let av2: Vec<(usize, MoveChoice)> =
+                opp.iter().map(|&m| (arm_index(&mut root.s2, Label::Move(m)), MoveChoice::None)).collect();
+            rp.add(&av1, &[0.6, 0.3, 0.1], &av2, Some(probs));
+        }
+        let cfg = Config { root_noise_eps: eps, ..Config::default() };
+        let mut rng = StdRng::seed_from_u64(11);
+        let Tree { nodes, root_opp, .. } = &mut tree;
+        rp.finish(&mut nodes[0], root_opp, &cfg, &mut rng);
+        let by_label = |arms: &[Arm]| arms.iter().map(|a| (a.label, a.prior)).collect::<Vec<_>>();
+        let per_world = tree
+            .root_opp
+            .iter()
+            .map(|v| v.iter().enumerate().filter(|(_, p)| **p >= 0.0).map(|(i, p)| (tree.nodes[0].s2[i].label, *p)).collect())
+            .collect();
+        (by_label(&tree.nodes[0].s1), by_label(&tree.nodes[0].s2), per_world, tree)
+    }
+
+    fn sorted(mut v: Vec<(Label, f32)>) -> Vec<(String, f32)> {
+        let mut out: Vec<(String, f32)> = v.drain(..).map(|(l, p)| (format!("{l:?}"), p)).collect();
+        out.sort_by(|a, b| a.0.cmp(&b.0));
+        out
+    }
+
+    /// The opponent knows its set: at the root it selects with its world's own priors (X 50%,
+    /// Y 50% in A -- the belief's marginal, X 25% Y 50% Z 25%, renormalized gave A X 33% Y 67%)
+    #[test]
+    fn root_priors_condition_the_opponent_on_its_world() {
+        let (x, y, z) = (Choices::ICEBEAM, Choices::EARTHQUAKE, Choices::THUNDERBOLT);
+        let half = [0.5f32, 0.5];
+        let (ours, opp, per_world, tree) = root_priors_of(&[(&[x, y], &half), (&[y, z], &half)], 0.0);
+        assert_eq!(sorted(ours).iter().map(|x| x.1).collect::<Vec<_>>().len(), 3);
+        // the arms' priors (record, fallback): the mean over the worlds that have the arm
+        for (_, p) in &opp {
+            assert!((p - 0.5).abs() < 1e-6, "{opp:?}");
+        }
+        assert_eq!(sorted(per_world[0].clone()), sorted(vec![(Label::Move(x), 0.5), (Label::Move(y), 0.5)]));
+        assert_eq!(sorted(per_world[1].clone()), sorted(vec![(Label::Move(y), 0.5), (Label::Move(z), 0.5)]));
+        // the root's selection in world A: X and Y even (the first selection: prior only)
+        let root = &tree.nodes[0];
+        let ix = root.s2.iter().position(|a| a.label == Label::Move(x)).unwrap();
+        let iy = root.s2.iter().position(|a| a.label == Label::Move(y)).unwrap();
+        let av: Vec<(usize, MoveChoice)> = vec![(ix, MoveChoice::None), (iy, MoveChoice::None)];
+        let mut arms = root.s2.clone();
+        let (mut nx, mut ny) = (0, 0);
+        for _ in 0..1000 {
+            let (i, _) = select_puct_with(&arms, &av, 1.0, &MlParams::default(), Some(&tree.root_opp[0]));
+            arms[i].visits += 1;
+            arms[i].total += 0.5;
+            if i == ix { nx += 1 } else { ny += 1 }
+        }
+        assert!((nx as i32 - ny as i32).abs() <= 1, "{nx} {ny}");
+    }
+
+    /// Root noise: one draw over all the root's arms in label order -- every option gets noise,
+    /// the same for any order of the worlds (before: the last world's options only)
+    #[test]
+    fn root_noise_is_the_same_for_any_order_of_the_worlds() {
+        let (x, y, z) = (Choices::ICEBEAM, Choices::EARTHQUAKE, Choices::THUNDERBOLT);
+        let (a, b) = ((&[x, y][..], &[0.7f32, 0.3][..]), (&[y, z][..], &[0.4f32, 0.6][..]));
+        let (o1, p1, w1, _) = root_priors_of(&[a, b], 0.1);
+        let (o2, p2, w2, _) = root_priors_of(&[b, a], 0.1);
+        let close = |u: Vec<(String, f32)>, v: Vec<(String, f32)>| {
+            u.len() == v.len() && u.iter().zip(&v).all(|(s, t)| s.0 == t.0 && (s.1 - t.1).abs() < 1e-6)
+        };
+        assert!(close(sorted(o1.clone()), sorted(o2)), "ours");
+        assert!(close(sorted(p1), sorted(p2)), "the opponent's arms");
+        assert!(close(sorted(w1[0].clone()), sorted(w2[1].clone())), "world A");
+        assert!(close(sorted(w1[1].clone()), sorted(w2[0].clone())), "world B");
+        // every option got noise (with it, not the plain priors)
+        let (o0, _, w0, _) = root_priors_of(&[a, b], 0.0);
+        assert!(sorted(o1).iter().zip(sorted(o0)).all(|(s, t)| (s.1 - t.1).abs() > 1e-6));
+        for (s, t) in sorted(w1[1].clone()).iter().zip(sorted(w0[1].clone())) {
+            assert!((s.1 - t.1).abs() > 1e-6, "world B's {} kept its prior", s.0);
+        }
     }
 
     /// 2026-10-21: a node's cached logits (from the state that created it) set its priors only

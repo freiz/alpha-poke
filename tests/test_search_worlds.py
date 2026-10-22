@@ -72,3 +72,57 @@ def test_cpu_root_priors_do_not_depend_on_the_worlds_order():
     for k in pa:
         assert abs(ab[k] - ba[k]) < 1e-6
         assert abs(ab[k] - (pa[k] + pb[k]) / 2) < 1e-6
+
+
+def _other_moves(state: str) -> str:
+    """The opponent's active with another first move (the worlds' opponents differ in options)."""
+    s = pe.State.from_string(state)
+    a = int(s.side_two.active_index)
+    sides = state.split("/")
+    mons = sides[1].split("=")
+    f = mons[a].split(",")
+    k = next(i for i, x in enumerate(f) if ";" in x and x.split(";")[1] in ("true", "false"))
+    f[k] = "SPLASH;false;" + f[k].split(";")[2]
+    mons[a] = ",".join(f)
+    sides[1] = "=".join(mons)
+    return "/".join(sides)
+
+
+def test_root_evaluations_come_in_batches():
+    """2026-10-22, the second search review: the root's evaluations (one per world) are handed out
+    ``n`` at a time like the leaves (all 32 at once broke the batcher's row limit: 17 searches
+    gave 1,088 rows); the root is ready only when every world's is back."""
+    r = _row()
+    ctx = (list(r["reveal"]), (r["rating_own"], r["rating_opp"]), r["turn"], r["history"])
+    a, b = r["state"], _faster_foe(r["state"])
+    worlds = [a, b] * 16
+    bs = alpha_search.BatchSearch(worlds, [ctx] * 32, seed=0, threads=1)
+    rows = []
+    while bs.stats()[0] == 0 and len(rows) < 10:
+        rows.append(bs.collect(8)["rows"])
+        values, logits, turns = bs.evaluate_cpu(str(MODEL))
+        bs.apply(values, logits, turns)
+    assert rows[:4] == [16, 16, 16, 16], rows  # 8 worlds x (our view, theirs) a call
+    pa, pb = _root_prior([a], ctx), _root_prior([b], ctx)
+    legal = pa >= 0
+    assert np.allclose(np.array(bs.record()["prior"], dtype=np.float32)[legal],
+                       (pa[legal] + pb[legal]) / 2, atol=1e-5)  # fmt: skip
+
+
+def test_root_noise_does_not_depend_on_the_worlds_order():
+    """Root noise (self-play) is one draw over all the root's options in label order, the same for
+    any order of the worlds whose opponents differ (before: the last world's options only)."""
+    r = _row()
+    ctx = (list(r["reveal"]), (r["rating_own"], r["rating_opp"]), r["turn"], r["history"])
+    a, b = r["state"], _other_moves(r["state"])
+    assert a != b
+
+    def prior(ws):
+        bs = alpha_search.BatchSearch(ws, [ctx] * len(ws), seed=3, threads=1, root_noise=(0.25, 10.0))
+        bs.collect(8)
+        bs.apply(*bs.evaluate_cpu(str(MODEL)))
+        return np.array(bs.record()["prior"], dtype=np.float32)
+
+    ab, ba = prior([a, b]), prior([b, a])
+    assert np.allclose(ab, ba, atol=1e-6)
+    assert not np.allclose(ab, _root_prior([a, b], ctx), atol=1e-4)  # (the noise is in)
