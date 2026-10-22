@@ -6972,3 +6972,48 @@ def test_l230_fixed_damage_immunity(move, target):
     # the transition (the engine's move) agrees with Showdown's turn as before
     outs = ec.engine_outcomes(ec.engine_state(states[0]), move, "calmmind")
     assert ec.closest(states[1], outs, (2, 1), hp=True)["diff"] == {}
+
+
+# L231 (doc/engine-diff.md): Dauntless Shield / Intrepid Sword at +6 stay at +6 (Showdown's
+# this.boost: no change past the limit; fixed 2026-10-22, apply_boost_instruction); the engine
+# added the stage unchecked ("we are switching
+# in") -- a +7 its evaluation panicked on (a search fell back, 2026-10-21 / 22). Two ways to get
+# there: the ability starting when Neutralizing Gas ends (it came in suppressed, its once-per-
+# battle use still open) after three Iron Defenses; a Baton Pass of +6 to one switching in
+SMEARGLE_BP = """Smeargle @ Leftovers
+Ability: Own Tempo
+Tera Type: Normal
+EVs: 252 HP / 4 Def / 252 Spe
+Jolly Nature
+- Swords Dance
+- Iron Defense
+- Baton Pass
+- Protect"""
+
+
+@pytest.mark.parametrize("case", ["neutralizing gas", "baton pass shield", "baton pass sword"])
+def test_l231_once_per_battle_boost_at_the_limit(case):
+    if case == "neutralizing gas":
+        zama = _setter("Zamazenta", "Dauntless Shield", "Leftovers",
+                       "- Body Press\n- Iron Defense\n- Protect\n- Roar")  # fmt: skip
+        turns = [("move protect", "move irondefense"), ("move defog", "move irondefense"),
+                 ("move protect", "move irondefense"), ("switch 2", "move protect")]  # fmt: skip
+        states = ec.run_showdown(WEEZING_NG + "\n\n" + BLISSEY, zama, turns)
+        side, stat = 1, "def"
+        outs = ec.engine_outcomes(ec.engine_state(states[3]), "blissey", "protect")
+    else:
+        sword = case.endswith("sword")
+        mon = (_setter("Zacian", "Intrepid Sword", "Rusted Sword", "- Play Rough\n- Swords Dance\n- Protect\n- Close Combat")
+               if sword else
+               _setter("Zamazenta", "Dauntless Shield", "Rusted Shield", "- Body Press\n- Iron Defense\n- Protect\n- Roar"))  # fmt: skip
+        setup = "move swordsdance" if sword else "move irondefense"
+        turns = [(setup, "move calmmind")] * 3 + [("move batonpass", "move calmmind"), ("switch 2", "")]
+        states = ec.run_showdown(SMEARGLE_BP + "\n\n" + mon, BLISSEY, turns)
+        side, stat = 0, "atk" if sword else "def"
+        (_, mid), = ec.engine_outcomes(ec.engine_state(states[3]), "batonpass", "calmmind")
+        outs = ec.engine_outcomes(mid, mid.side_one.pokemon[1].id, "none")  # (the pass's pick)
+    active = next(m for m in states[-1]["sides"][side]["mons"] if m["active"])
+    assert active["boosts"][stat] == 6, active["boosts"]  # Showdown: at the limit
+    # (the switching side's stages: after the pass, the foe's move of that turn comes after the
+    # pick, outside the engine's outcomes here)
+    assert _keys(ec.closest(states[-1], outs, (2, 1), hp=True)["diff"], f"s{side + 1}.boost") == {}

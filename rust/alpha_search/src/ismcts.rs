@@ -398,6 +398,18 @@ pub(crate) fn cached_logits_fit(
             .all(|(_, mc)| crate::features::slot(mc).is_none_or(|k| cached.0[k].is_finite()))
 }
 
+/// (tests) a step's outcome leaves the stat stages within -6..6, else the step is printed
+#[cfg(test)]
+fn check_stages(before: &str, m1: &MoveChoice, m2: &MoveChoice, ins: &[Instruction], state: &State) {
+    let out = [&state.side_one, &state.side_two].iter().any(|sd| {
+        [sd.attack_boost, sd.defense_boost, sd.special_attack_boost, sd.special_defense_boost,
+         sd.speed_boost, sd.accuracy_boost, sd.evasion_boost]
+            .iter()
+            .any(|b| !(-6..=6).contains(b))
+    });
+    assert!(!out, "stages out of range\nBEFORE {before}\nMOVES {m1:?} {m2:?}\nINSTRUCTIONS {ins:?}");
+}
+
 /// (tests: how often the cached logits did not fit / did)
 #[cfg(test)]
 pub(crate) static CACHE_FIT: [std::sync::atomic::AtomicU64; 2] =
@@ -684,12 +696,16 @@ impl Tree {
             pc.push(state, &m1, &m2);
             let (i1, i2) = (i1 as u16, i2 as u16);
             let branch = depth < cfg.branch_depth;
+            #[cfg(test)]
+            let before = state.serialize();
             if node == 0 && cfg.cache_root {
                 let outcomes = self.cache.entry((node, i1, i2, world)).or_insert_with(|| {
                     generate_instructions_from_move_pair(state, &m1, &m2, branch)
                 });
                 let k = sample(outcomes, rng);
                 state.apply_instructions(&outcomes[k].instruction_list);
+                #[cfg(test)]
+                check_stages(&before, &m1, &m2, &outcomes[k].instruction_list, state);
                 pc.settle(&outcomes[k].instruction_list, state);
                 root_step = Some((i1, i2, k));
             } else {
@@ -697,6 +713,8 @@ impl Tree {
                 let k = sample(&outcomes, rng);
                 let instructions = outcomes.swap_remove(k).instruction_list;
                 state.apply_instructions(&instructions);
+                #[cfg(test)]
+                check_stages(&before, &m1, &m2, &instructions, state);
                 pc.settle(&instructions, state);
                 applied.push(instructions);
             }
@@ -1611,6 +1629,18 @@ mod tests {
                 );
             }
         }
+    }
+
+    /// The search that fell back on a +7 (2026-10-22, the `phase_key` A/B: world 0 of a dumped
+    /// failure, the handcrafted search, seed 1): ALPHA_STAGE_STATE = its state
+    #[test]
+    #[ignore]
+    fn the_search_keeps_the_stages_in_range() {
+        let Ok(line) = std::env::var("ALPHA_STAGE_STATE") else {
+            return;
+        };
+        let mut worlds = vec![State::deserialize(line.trim())];
+        search(&mut worlds, &[], Duration::ZERO, 20_000, &Config::default(), Some(1));
     }
 
     /// How often a node's cached logits do not fit its first selection, in real positions

@@ -2754,15 +2754,18 @@ pub fn ability_on_switch_in(
         }
         // (L184: once per battle, as Dauntless Shield)
         Abilities::INTREPIDSWORD if active_pkmn.base_ability != Abilities::NONE && !active_pkmn.once_used => {
-            // no need to check for boost at +6 because we are switching in
-            attacking_side.attack_boost += 1;
-            instructions
-                .instruction_list
-                .push(Instruction::Boost(BoostInstruction {
-                    side_ref: *side_ref,
-                    stat: PokemonBoostableStat::Attack,
-                    amount: 1,
-                }));
+            // alpha-poke patch (2026-10-22, doc/engine-diff.md L231): Showdown's this.boost
+            // (no change at +6, Contrary, Simple); it was added unchecked "because we are
+            // switching in" -- not so as Neutralizing Gas ends (it came in suppressed) or after a
+            // Baton Pass of +6: a +7 the evaluation panicked on
+            apply_boost_instruction(
+                attacking_side,
+                &PokemonBoostableStat::Attack,
+                &1,
+                side_ref,
+                side_ref,
+                instructions,
+            );
             use_once(attacking_side.get_active(), side_ref, instructions);
         }
         Abilities::SLOWSTART => {
@@ -2950,15 +2953,18 @@ pub fn ability_on_switch_in(
         // one has base ability none (agents/engine_state.py); before, at every switch-in
         // (L106: also one Skill Swap gave it, its base ability another)
         Abilities::DAUNTLESSSHIELD if active_pkmn.base_ability != Abilities::NONE && !active_pkmn.once_used => {
-            // no need to check for boost at +6 because we are switching in
-            attacking_side.defense_boost += 1;
-            instructions
-                .instruction_list
-                .push(Instruction::Boost(BoostInstruction {
-                    side_ref: *side_ref,
-                    stat: PokemonBoostableStat::Defense,
-                    amount: 1,
-                }));
+            // alpha-poke patch (2026-10-22, doc/engine-diff.md L231): Showdown's this.boost
+            // (no change at +6, Contrary, Simple); it was added unchecked "because we are
+            // switching in" -- not so as Neutralizing Gas ends (it came in suppressed) or after a
+            // Baton Pass of +6: a +7 the evaluation panicked on
+            apply_boost_instruction(
+                attacking_side,
+                &PokemonBoostableStat::Defense,
+                &1,
+                side_ref,
+                side_ref,
+                instructions,
+            );
             // alpha-poke patch (2026-10-17, doc/engine-diff.md L181): used now (Showdown's
             // shieldBoost, once per battle): its base ability none, the harness's encoding too
             use_once(attacking_side.get_active(), side_ref, instructions);
