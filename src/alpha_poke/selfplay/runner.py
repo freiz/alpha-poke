@@ -3,12 +3,14 @@
 Processes x lanes: a lane is two ``SelfPlayPlayer``s playing their share of the generation's
 team pairs one game at a time (``update_team`` before each game, the challenger alternates);
 the lanes of a process run concurrently and share one GPU batcher (cross-game batching,
-``selfplay.batcher``). After each game the lane writes
-  games-w<k>.jsonl      one row per game: pair index, battle, teams (sources), winner, turns,
-                        decisions, fallbacks, seconds
+``selfplay.batcher``). After each game the lane writes, in this order
   decisions-w<k>.jsonl  one row per decision of either side (SelfPlayPlayer.records) plus
-                        "game", "won" (that side's outcome; None if capped) and "model"
+                        "game", "won" (that side's outcome; None if capped), "model", "attempt"
   logs-w<k>.jsonl       the game's protocol log (labels for training: selfplay.convert)
+  games-w<k>.jsonl      one row per game: pair index, battle, teams (sources), winner, turns,
+                        decisions, fallbacks, seconds, "attempt" -- last, flushed: the pair's
+                        completion mark (a pair stopped before it is played again, as another
+                        attempt; the converter takes the named attempt's records only)
   progress-w<k>.log     every minute: games, decisions, leaves / s, fallbacks, batcher counters
   errors-w<k>.log       warnings and errors (failed searches, fallbacks)
 in ``data/selfplay/gen<g>/``. Pairs already in a games file are skipped (resume).
@@ -19,7 +21,9 @@ import asyncio
 import json
 import logging
 import multiprocessing as mp
+import os
 import time
+import uuid
 import zlib
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
@@ -33,7 +37,10 @@ def done_pairs(gen_dir: Path) -> set[int]:
     done = set()
     for f in gen_dir.glob("games-w*.jsonl"):
         for line in f.read_text().splitlines():
-            done.add(json.loads(line)["pair"])
+            try:
+                done.add(json.loads(line)["pair"])
+            except (ValueError, KeyError):  # (a line cut by a stop: not done)
+                continue
     return done
 
 
@@ -149,22 +156,30 @@ async def _lane(lane: str, jobs: list, port: int, gen_dir: Path, settings: dict,
             "revives": a.revives + b.revives - rv0[0],
             "mismatches": a.mismatches + b.mismatches - rv0[1],
             "seconds": round(time.time() - t0, 1), "model": settings["model"], "lane": lane,
+            # this attempt of the pair (2026-10-22 review): a run stopped after the decisions
+            # and before the games row plays the pair again; the converter takes only the
+            # records of the attempt the games row names
+            "attempt": uuid.uuid4().hex[:16],
         }  # fmt: skip
         with open(gen_dir / f"decisions-w{wid}.jsonl", "a") as f:
             for who, rs in recs.items():
                 won = won_a if who == "a" or won_a is None else not won_a
                 for r in rs:
-                    f.write(json.dumps(r | {"game": idx, "won": won, "model": settings["model"]})
-                            + "\n")  # fmt: skip
-        with open(gen_dir / f"games-w{wid}.jsonl", "a") as f:
-            f.write(json.dumps(game) + "\n")
+                    f.write(json.dumps(r | {"game": idx, "won": won, "model": settings["model"],
+                                            "attempt": game["attempt"]}) + "\n")  # fmt: skip
         # the protocol log (player a's view): the labels only the whole game knows are built
         # from it with the replay pipeline (selfplay.convert)
         from alpha_poke.agents.net_context import battle_log
 
         log_text = "\n".join("|".join(m) for m in battle_log(battle))
         with open(gen_dir / f"logs-w{wid}.jsonl", "a") as f:
-            f.write(json.dumps({"pair": idx, "battle": tag, "log": log_text}) + "\n")
+            f.write(json.dumps({"pair": idx, "battle": tag, "attempt": game["attempt"],
+                                "log": log_text}) + "\n")  # fmt: skip
+        # the games row last, flushed to disk: the pair's completion mark (resume, convert)
+        with open(gen_dir / f"games-w{wid}.jsonl", "a") as f:
+            f.write(json.dumps(game) + "\n")
+            f.flush()
+            os.fsync(f.fileno())
         # the previous game's state, no longer needed: one game late, so that no message of it
         # (e.g. |deinit| after /leave) can still come (poke-env would wait for that battle
         # forever, and wake every such waiter at each new battle)

@@ -65,12 +65,23 @@ def load_gen(gen_dir: Path) -> tuple[dict, dict]:
     games, logs = {}, {}
     for f in gen_dir.glob("games-w*.jsonl"):
         for line in f.read_text().splitlines():
-            g = json.loads(line)
+            try:
+                g = json.loads(line)
+            except ValueError:  # (a line cut by a stop)
+                continue
             games[g["pair"]] = g
     for f in gen_dir.glob("logs-w*.jsonl"):
         with open(f) as fh:
             for line in fh:
-                x = json.loads(line)
+                try:
+                    x = json.loads(line)
+                except ValueError:
+                    continue
+                # the log of the attempt the games row names (2026-10-22 review: a pair stopped
+                # after its records and played again has two); rows before attempts: any
+                g = games.get(x["pair"])
+                if g is not None and g.get("attempt") != x.get("attempt"):
+                    continue
                 logs[x["pair"]] = x["log"]
     return games, logs
 
@@ -125,6 +136,7 @@ def convert_game(pair: int, game: dict, log: str, decisions: list, belief, gen: 
     capped = bool(game.get("capped"))
     loop_from = (last_faint_turn(log) + loop_margin if capped and loop_margin >= 0
                  else math.inf)  # fmt: skip
+    checked = disagree = 0
     for p in positions:
         kind = KIND_MAIN if p.kind == KIND_BLIND else p.kind
         ds = by_key.get((p.side, p.turn, kind))
@@ -137,7 +149,16 @@ def convert_game(pair: int, game: dict, log: str, decisions: list, belief, gen: 
             # two states order moves / mons differently)
             stats["action_checked"] += 1
             logged = alpha_search.slot_names([p.state])[0][p.action]
-            stats["action_agree"] += logged == d["names"][d["slot"]]
+            agree = logged == d["names"][d["slot"]]
+            stats["action_agree"] += agree
+            checked += 1
+            if not agree:
+                # the record and the log disagree on this action: no row from it (2026-10-22
+                # review: they were trained on; ~0.4% of actions in the v5/v6 generations, the
+                # cause not known -- design.md TODO)
+                disagree += 1
+                stats["action_rows_dropped"] += 1
+                continue
         x = asdict(p)
         total = sum(d["visits"]) or 1
         target = d["full"] and p.turn < loop_from
@@ -156,6 +177,11 @@ def convert_game(pair: int, game: dict, log: str, decisions: list, belief, gen: 
             x["post"] = d["post"]
         rows.append(x)
     stats["unmatched_decisions"] += sum(len(ds) for ds in by_key.values())
+    if checked and disagree * 4 >= checked:
+        # a quarter or more disagree: the records and the log are out of step, the game's
+        # labels (its outcome too) cannot be trusted -- none of its rows
+        stats["rejected_games"] += 1
+        return []
     return rows
 
 
@@ -170,11 +196,17 @@ def _convert_shard(args) -> dict:
     if dec_file.exists():
         with open(dec_file) as fh:
             for line in fh:
-                d = json.loads(line)
+                try:
+                    d = json.loads(line)
+                except ValueError:  # (a line cut by a stop)
+                    stats["broken_decision_lines"] += 1
+                    continue
                 decs[d["game"]].append(d)
     rows = []
     for pair, game, log_text in items:
-        decisions = decs.pop(pair, [])
+        # the decisions of the attempt the games row names (others: an attempt stopped before
+        # its games row, played again)
+        decisions = [d for d in decs.pop(pair, []) if d.get("attempt") == game.get("attempt")]
         try:
             rows += convert_game(pair, game, log_text, decisions, belief, gen, stamp, stats,
                                  loop_margin)  # fmt: skip

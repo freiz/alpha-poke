@@ -659,7 +659,9 @@ def aux_loss(out: dict, x: dict, sp, turn, bw, heads, stats: dict | None = None)
     if "turns" in heads:
         y = torch.log1p((x["turns"] - turn).clamp(min=0).float())
         pred = out["turns"].float()
-        losses.append((F.smooth_l1_loss(pred, y, reduction="none") * bw).sum() / bw.sum())
+        # (clamped: a batch of capped self-play games only has no remaining-turns label -- all
+        # weights 0, 0 / 0 = NaN into the gradients, 2026-10-22 review; now 0)
+        losses.append((F.smooth_l1_loss(pred, y, reduction="none") * bw).sum() / bw.sum().clamp_min(1e-6))
         if stats is not None:
             add("turns_mae", (torch.expm1(pred.clamp(max=6)) - torch.expm1(y)).abs().sum().item())
     return torch.stack(losses).mean() if losses else torch.zeros((), device=sp.device)
@@ -1166,9 +1168,24 @@ def main() -> None:
         model.residual = torch.nn.Parameter(torch.tensor([0.714, 0.078]))
         torch.nn.init.zeros_(model.value.weight)
         torch.nn.init.zeros_(model.value.bias)
+    init_step = None
     if a.init:  # warm start (same architecture as the run it comes from)
         init = torch.load(Path(a.init) / "last.pt", weights_only=False, map_location="cpu")
         state = init["model"]
+        init_step = init.get("step")
+        # the exported weights (best.safetensors): the network that played the games and is
+        # evaluated (alpha_poke.train.load), not last.pt -- with --export best another step
+        # (v0: exported 64,000, last 65,590; 2026-10-22 review); last.pt gives the names
+        exported = Path(a.init) / "best.safetensors"
+        if exported.exists():
+            from safetensors.torch import load_file
+
+            names = set(state)
+            state = {("emb." + k if "emb." + k in names else k): v
+                     for k, v in load_file(exported).items()}  # fmt: skip
+            cfg_path = Path(a.init) / "config.json"
+            init_step = (json.loads(cfg_path.read_text()).get("step")
+                         if cfg_path.exists() else None)  # fmt: skip
         if "residual" in state:
             model.residual = torch.nn.Parameter(state["residual"].clone())
         # new heads (a value hidden layer --value-hidden, auxiliary heads --aux) are the only
@@ -1255,7 +1272,8 @@ def main() -> None:
         lambda s: min(1, (s + 1) / warm) * 0.5 * (1 + math.cos(math.pi * min(s, steps) / steps)),
     )
     emit(dict(event="start", arch=a.arch, history=a.history, size=a.size, params=n_params,
-              steps=steps, device=str(device), args=json.dumps(vars(a))))  # fmt: skip
+              steps=steps, device=str(device), init_step=init_step,
+              args=json.dumps(vars(a))))  # fmt: skip
     best = float("inf")
     probs = w[train_idx] / w[train_idx].sum()
     stream = (ChunkStream(caches, d, train_idx, probs, a.stream, hb, rng)
@@ -1268,6 +1286,7 @@ def main() -> None:
             m |= evaluate_sp(model, *sp_eval, device, a.value_per_game, ref=ref_model)
         emit(dict(event="val", step=0, **{k: float(v) for k, v in m.items()}))
     t_last = time.time()
+    nonfinite = 0  # batches with a non-finite loss / gradient (skipped)
     for step in range(1, steps + 1):
         if hb > 0:  # the human sub-batch (none with --sp-frac 1: the self-play data alone)
             if stream is not None:  # chunk data, its rows, their global ids
@@ -1286,12 +1305,12 @@ def main() -> None:
                 out = model(sp, de, gl, ma, hs, hd, aux=bool(a.mtp or heads), **kw)
             logits, v = out[0], out[1]
             pwb = torch.from_numpy(pw[b]).to(device)
-            ce = (policy_loss(logits, act, ma, reduction="none") * pwb).sum() / pwb.sum()
+            ce = (policy_loss(logits, act, ma, reduction="none") * pwb).sum() / pwb.sum().clamp_min(1e-6)
             bw = torch.from_numpy(vw[b]).to(device)
             vl = value_logit(model, v.float(), ev)
             bce = (
                 F.binary_cross_entropy_with_logits(vl, won, reduction="none") * bw
-            ).sum() / bw.sum()
+            ).sum() / bw.sum().clamp_min(1e-6)
             loss = ce + a.value_weight * bce
             if a.mtp:
                 tg = mtp_targets(sp, fs, fd, a.mtp)
@@ -1368,15 +1387,25 @@ def main() -> None:
         opt.zero_grad(set_to_none=True)
         loss.backward()
         gn = torch.nn.utils.clip_grad_norm_(model.parameters(), 5.0).item()
-        opt.step()
+        finite = math.isfinite(gn) and math.isfinite(loss.item())
+        if finite:
+            opt.step()
+        else:
+            # a non-finite loss or gradient: no update from this batch (counted; the schedule
+            # goes on), never NaN weights (2026-10-22 review)
+            opt.zero_grad(set_to_none=True)
+            nonfinite += 1
+            emit(dict(event="nonfinite", step=step, loss=float(loss.item()), grad_norm=gn,
+                      total=nonfinite))  # fmt: skip
         sched.step()
-        agg["ce"] += ce.item()
-        agg["bce"] += bce.item()
-        if logits is not None:
-            agg["acc"] += (logits.argmax(-1) == act).float().mean().item()
-        agg["gn"] += gn
-        agg["k"] += 1
-        if step % 100 == 0:
+        if finite:
+            agg["ce"] += ce.item()
+            agg["bce"] += bce.item()
+            if logits is not None:
+                agg["acc"] += (logits.argmax(-1) == act).float().mean().item()
+            agg["gn"] += gn
+            agg["k"] += 1
+        if step % 100 == 0 and agg["k"] > 0:
             k = agg.pop("k")
             sp_part = ({"sp_policy_ce": agg["sp_ce"] / k, "sp_value_bce": agg["sp_bce"] / k}
                        if "sp_ce" in agg else {})  # fmt: skip

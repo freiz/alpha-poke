@@ -167,3 +167,13 @@ def test_terastallized_keeps_original_types(belief, who, line, want):
     assert act.terastallized
     assert tuple(act.types) == want
     assert act.tera_type == line.rsplit("|", 1)[1].lower()
+
+
+# 2026-10-22 review: Gravity / Magic Room are in the engine (its remaining turns, as Trick Room's)
+# but were never passed in from a battle
+@pytest.mark.parametrize("field,attr", [("Gravity", "gravity"), ("Magic Room", "magic_room")])
+def test_gravity_and_magic_room(belief, field, attr):
+    b = battle([f"|move|p1a: Garchomp|{field}|p1a: Garchomp", f"|-fieldstart|move: {field}",
+                "|upkeep|", "|turn|2"])  # fmt: skip
+    assert getattr(state(b, belief), attr) == 5 - 1
+    assert getattr(state(battle(["|turn|2"]), belief), attr) == 0

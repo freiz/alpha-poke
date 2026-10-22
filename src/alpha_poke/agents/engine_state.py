@@ -870,6 +870,11 @@ def build_state(
             terrain, tturns = TERRAIN[f], field_left("terrain", start)
         if f == Field.TRICK_ROOM:
             trick_room, trturns = True, _remaining(start, turn)
+    # Gravity / Magic Room: the engine has them (L211 and others, its remaining turns as Trick
+    # Room's); they were never passed in (2026-10-22 review: grounding, accuracy, items)
+    gravity = _remaining(battle.fields[Field.GRAVITY], turn) if Field.GRAVITY in battle.fields else 0
+    magic_room = (_remaining(battle.fields[Field.MAGIC_ROOM], turn)
+                  if Field.MAGIC_ROOM in battle.fields else 0)  # fmt: skip
     st = pe.State(
         side_one=side_one,
         side_two=side_two,
@@ -880,6 +885,8 @@ def build_state(
         trick_room=trick_room,
         trick_room_turns_remaining=trturns,
         last_move=tm_us.last_move or "none",  # (L167: Copycat's; an unknown one reads as none)
+        gravity=gravity,
+        magic_room=magic_room,
     )
     # F1: a turn start's world is the base of that turn's hits (not a mid-turn switch's)
     if spectator is None and not (battle.force_switch if force_switch is None else force_switch):
