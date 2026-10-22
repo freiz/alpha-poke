@@ -28,7 +28,8 @@
 use crate::extra::{ENT_EXTRA, GLOBAL_EXTRA};
 use crate::features::{slot, HIST, HIST_DENSE, HIST_SPARSE, N_ACTIONS, N_ENTITIES, SPARSE};
 use crate::ismcts::{
-    add_root_noise, arm_index, label, sample, select_puct, set_priors, Config, Label, Node,
+    add_root_noise, arm_index, label, prior_probs, sample, select_puct, set_priors, Config, Label, Node,
+    PriorMean,
     PathCtx, Tree,
 };
 use crate::tnet::{Context, Input};
@@ -117,6 +118,10 @@ pub struct BatchSearch {
     returned: usize,
     /// sizes of the batches handed out and not applied yet, oldest first
     in_flight: std::collections::VecDeque<usize>,
+    /// the root's evaluations not back yet (one per world), the sums of their priors (ours,
+    /// the opponent's) and the last world's options (for the noise)
+    root_left: usize,
+    root_mean: (PriorMean, PriorMean, Vec<(usize, MoveChoice)>, Vec<(usize, MoveChoice)>),
 }
 
 /// The network inputs of a batch, row-major arrays (`rows` = 2 per pending leaf: side one's
@@ -392,13 +397,14 @@ impl BatchSearch {
         let root_evals = worlds.iter().map(evaluate).collect();
         let mut tree = Tree::new();
         tree.nodes[0].pending = true;
-        let pending = vec![Pending {
-            path: Vec::new(),
-            node: 0,
-            state: worlds[0].clone(),
-            inputs: inputs(&worlds[0], &ctxs[0]),
-            turns: 0,
-        }];
+        // the root evaluated in every world, its priors their mean (2026-10-21, the search
+        // review: the first world's alone -- the worlds' order changed the search)
+        let pending = worlds
+            .iter()
+            .zip(&ctxs)
+            .map(|(w, c)| Pending { path: Vec::new(), node: 0, state: w.clone(), inputs: inputs(w, c), turns: 0 })
+            .collect();
+        let root_left = worlds.len();
         BatchSearch {
             worlds: vec![worlds; threads.max(1)],
             ctxs,
@@ -419,6 +425,8 @@ impl BatchSearch {
             timing: [0.0; 2],
             returned: 0,
             in_flight: Default::default(),
+            root_left,
+            root_mean: Default::default(),
         }
     }
 
@@ -527,16 +535,35 @@ impl BatchSearch {
                 .into_iter()
                 .map(|mc| (arm_index(&mut n.s2, label(&p.state.side_two, &mc)), mc))
                 .collect();
-            set_priors(&mut n.s1, &av1, l1);
-            if policy_opponent {
-                set_priors(&mut n.s2, &av2, l2);
-            }
-            if p.node == 0 && noise_eps > 0.0 {
-                let mut rng = StdRng::seed_from_u64(seed ^ 0xD1B5_4A32_D192_ED03);
-                let (e, c) = (noise_eps, noise_conc);
-                add_root_noise(&mut n.s1, &av1, e, c, &mut rng);
+            if p.node == 0 {
+                // (a world's root evaluation: its priors into the mean; the root is ready
+                // when every world's is in)
+                let rm = &mut self.root_mean;
+                rm.0.add(&av1, &prior_probs(&av1, l1));
                 if policy_opponent {
-                    add_root_noise(&mut n.s2, &av2, e, c, &mut rng);
+                    rm.1.add(&av2, &prior_probs(&av2, l2));
+                }
+                (rm.2, rm.3) = (av1.clone(), av2.clone());
+                self.root_left = self.root_left.saturating_sub(1);
+                if self.root_left > 0 {
+                    continue;
+                }
+                rm.0.finish(&mut n.s1);
+                if policy_opponent {
+                    rm.1.finish(&mut n.s2);
+                }
+                if noise_eps > 0.0 {
+                    let mut rng = StdRng::seed_from_u64(seed ^ 0xD1B5_4A32_D192_ED03);
+                    let (e, c) = (noise_eps, noise_conc);
+                    add_root_noise(&mut n.s1, &rm.2, e, c, &mut rng);
+                    if policy_opponent {
+                        add_root_noise(&mut n.s2, &rm.3, e, c, &mut rng);
+                    }
+                }
+            } else {
+                set_priors(&mut n.s1, &av1, l1);
+                if policy_opponent {
+                    set_priors(&mut n.s2, &av2, l2);
                 }
             }
             n.priors_set = true;

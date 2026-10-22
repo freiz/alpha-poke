@@ -28,10 +28,14 @@ def merge(batches: list[dict]) -> dict:
 
 class GpuSearch:
     def __init__(self, net, batch: int = 32, threads: int = 8, trees: int = 1, vl: int = 1,
-                 full: bool = False):  # fmt: skip
-        """``full``: the network reads the v7 entity inputs (net_context.needs_full)."""
+                 full: bool = False, ml: tuple = (0.0, 0.0, 0.0, False),
+                 policy_opponent: bool = True):  # fmt: skip
+        """``full``: the network reads the v7 entity inputs (net_context.needs_full); ``ml``:
+        the moves-left term (selfplay.batcher.parse_ml); ``policy_opponent``: the opponent's
+        PUCT priors from the network too (else UCB1). (Before 2026-10-21 neither was passed:
+        the moves-left term was off and both sides' priors on, whatever SearchPlayer had.)"""
         self.net, self.trees, self.batch, self.threads, self.vl = net, trees, batch, threads, vl
-        self.full = full
+        self.full, self.ml, self.policy_opponent = full, tuple(ml), policy_opponent
         self.pool = ThreadPoolExecutor(trees)
 
     def run(self, states: list[str], contexts: list, seconds: float, seed: int = 0,
@@ -43,7 +47,8 @@ class GpuSearch:
         result in the network's action slots (``BatchSearch.record``, design D15-3)."""
         searches = [alpha_search.BatchSearch(states, contexts, seed=seed * 1009 + k,
                                              threads=self.threads, vl=self.vl,
-                                             root_noise=root_noise, full=self.full)
+                                             root_noise=root_noise, full=self.full, ml=self.ml,
+                                             policy_opponent=self.policy_opponent)
                     for k in range(self.trees)]  # fmt: skip
         t0 = time.time()
         calls = 0

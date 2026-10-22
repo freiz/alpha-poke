@@ -321,6 +321,14 @@ pub(crate) fn sigmoid(x: f32) -> f32 {
 
 /// Softmax of `logits` over the available options; their arms get the probabilities as priors.
 pub(crate) fn set_priors(arms: &mut [Arm], avail: &[(usize, MoveChoice)], logits: &[f32]) {
+    for (&(i, _), p) in avail.iter().zip(prior_probs(avail, logits)) {
+        arms[i].prior = p;
+    }
+}
+
+/// The network's priors over `avail` (a softmax over their action slots' logits; uniform when
+/// none is finite)
+pub(crate) fn prior_probs(avail: &[(usize, MoveChoice)], logits: &[f32]) -> Vec<f32> {
     let slots: Vec<Option<usize>> = avail
         .iter()
         .map(|(_, mc)| crate::features::slot(mc))
@@ -339,12 +347,36 @@ pub(crate) fn set_priors(arms: &mut [Arm], avail: &[(usize, MoveChoice)], logits
         })
         .collect();
     let z: f32 = exps.iter().sum();
-    for (j, &(i, _)) in avail.iter().enumerate() {
-        arms[i].prior = if z > 0.0 {
-            exps[j] / z
-        } else {
-            1.0 / avail.len() as f32
-        };
+    (0..avail.len())
+        .map(|j| if z > 0.0 { exps[j] / z } else { 1.0 / avail.len() as f32 })
+        .collect()
+}
+
+/// Averages the root's priors over the worlds (2026-10-21, the search review: they came from
+/// the first world alone -- the worlds' order changed the search's priors): `add(world's
+/// avail, its priors)` per world, then `finish` sets each arm's prior to its mean over all the
+/// worlds (0 in a world where it is no option: the arm's marginal prior over the belief).
+#[derive(Default)]
+pub(crate) struct PriorMean {
+    sum: Vec<f32>,
+    worlds: u32,
+}
+
+impl PriorMean {
+    pub(crate) fn add(&mut self, avail: &[(usize, MoveChoice)], probs: &[f32]) {
+        for (&(i, _), &p) in avail.iter().zip(probs) {
+            if self.sum.len() <= i {
+                self.sum.resize(i + 1, 0.0);
+            }
+            self.sum[i] += p;
+        }
+        self.worlds += 1;
+    }
+
+    pub(crate) fn finish(&self, arms: &mut [Arm]) {
+        for (i, a) in arms.iter_mut().enumerate() {
+            a.prior = self.sum.get(i).copied().unwrap_or(0.0) / self.worlds.max(1) as f32;
+        }
     }
 }
 
@@ -392,6 +424,20 @@ pub(crate) fn select_puct(
         }
     }
     let fpu = if k > 0 { qs / k as f32 } else { 0.5 };
+    // the priors over the options here, renormalized (2026-10-21, the search review): an arm
+    // with none (an option first seen in a later world) gets the known ones' mean, then all of
+    // them sum to 1 over `avail` (before: a uniform 1 / n mixed with another world's softmax;
+    // the root's marginal priors over the belief summed to less than 1 in a world)
+    let (mut known, mut nk) = (0.0f32, 0u32);
+    for &(i, _) in avail {
+        if arms[i].prior >= 0.0 {
+            known += arms[i].prior;
+            nk += 1;
+        }
+    }
+    let stand_in = if nk > 0 { known / nk as f32 } else { 1.0 };
+    let raw = |a: &Arm| if a.prior >= 0.0 { a.prior } else { stand_in };
+    let z: f32 = avail.iter().map(|&(i, _)| raw(&arms[i])).sum();
     let uniform = 1.0 / avail.len() as f32;
     let ml_term = moves_left_term(arms, avail, ml);
     let mut best = avail[0];
@@ -399,7 +445,7 @@ pub(crate) fn select_puct(
     for &(i, mc) in avail {
         let a = &arms[i];
         let q = if a.visits > 0 { a.mean() } else { fpu };
-        let p = if a.prior >= 0.0 { a.prior } else { uniform };
+        let p = if z > 0.0 { raw(a) / z } else { uniform };
         let mut u = q + c * p * sq / (1.0 + a.visits as f32);
         if let Some((sign, m_node)) = ml_term {
             if a.ml_n > 0 {
@@ -658,6 +704,46 @@ impl Default for Tree {
 /// Search over the given worlds (they must share our side; the opponent's hidden details may
 /// differ). Stops after `duration` or, when `max_iterations` > 0, after that many iterations.
 /// Every world's state is restored before returning.
+/// The root's priors from the network in every world, averaged (`PriorMean`), and its noise
+/// (2026-10-21, the search review: they came from the first iteration's world alone); nothing
+/// without the network's policy.
+fn root_priors_over_worlds(root: &mut Node, worlds: &[State], ctxs: &[Context], cfg: &Config, rng: &mut StdRng) {
+    let Some(tnet) = cfg.tnet.as_ref().filter(|_| cfg.use_policy) else {
+        return;
+    };
+    if ctxs.len() != worlds.len() || worlds.is_empty() {
+        return;
+    }
+    let (mut m1, mut m2) = (PriorMean::default(), PriorMean::default());
+    let (mut last1, mut last2) = (vec![], vec![]);
+    for (state, ctx) in worlds.iter().zip(ctxs) {
+        let (o1, o2) = state.root_get_all_options();
+        let av1: Vec<(usize, MoveChoice)> =
+            o1.into_iter().map(|mc| (arm_index(&mut root.s1, label(&state.side_one, &mc)), mc)).collect();
+        let av2: Vec<(usize, MoveChoice)> =
+            o2.into_iter().map(|mc| (arm_index(&mut root.s2, label(&state.side_two, &mc)), mc)).collect();
+        let lc = PathCtx::new(Some(ctx)).context(ctx);
+        let own = Input::new(state, &lc, false, crate::bsearch::evaluate_checked(state));
+        m1.add(&av1, &prior_probs(&av1, &tnet.forward(&own).logits));
+        if cfg.policy_opponent {
+            m2.add(&av2, &prior_probs(&av2, &tnet.forward(&own.flipped(state, &lc)).logits));
+        }
+        (last1, last2) = (av1, av2);
+    }
+    m1.finish(&mut root.s1);
+    if cfg.policy_opponent {
+        m2.finish(&mut root.s2);
+    }
+    if cfg.root_noise_eps > 0.0 {
+        let (e, c) = (cfg.root_noise_eps, cfg.root_noise_conc);
+        add_root_noise(&mut root.s1, &last1, e, c, rng);
+        if cfg.policy_opponent {
+            add_root_noise(&mut root.s2, &last2, e, c, rng);
+        }
+    }
+    root.priors_set = true;
+}
+
 pub fn search(
     worlds: &mut [State],
     ctxs: &[Context],
@@ -676,6 +762,7 @@ pub fn search(
     };
     let root_evals: Vec<f32> = worlds.iter().map(evaluate).collect();
     let mut tree = Tree::new();
+    root_priors_over_worlds(&mut tree.nodes[0], worlds, ctxs, cfg, &mut rng);
     let start = Instant::now();
     let mut it: u32 = 0;
     loop {

@@ -209,8 +209,12 @@ class SearchPlayer(KnowledgePlayer):
             from alpha_poke.agents.gpu_net import GpuNet  # torch only when used
             from alpha_poke.agents.gpu_search import GpuSearch
 
+            # (the CPU search's settings: the moves-left term, the opponent's priors -- "ours":
+            # UCB1 for it; the GPU search always takes our priors from the network, so no
+            # net_policy reads as "both" here)
             self._gpu = GpuSearch(GpuNet(self.model), self.gpu_batch, self.gpu_threads,
-                                  full=net_context.needs_full(self.model))
+                                  full=net_context.needs_full(self.model), ml=self.ml,
+                                  policy_opponent=self.net_policy != "ours")
         ours, n, _ = self._gpu.run(
             [s.to_string() for s in states],
             ctxs,
