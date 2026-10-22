@@ -41,7 +41,7 @@ fn roundtrip(state: &str) -> String {
 #[pyo3(signature = (states, duration_ms, iterations=0, seed=None, c=std::f32::consts::SQRT_2,
                     cache_root=true, branch_depth=2, threads=1, model_dir=None,
                     use_policy=false, policy_opponent=true, c_puct=1.0, contexts=None,
-                    root_noise=(0.0, 10.0), ml=(0.0, 0.0, 0.0, false)))]
+                    root_noise=(0.0, 10.0), ml=(0.0, 0.0, 0.0, false), phase_key=false))]
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 fn py_ismcts(
     py: Python<'_>,
@@ -60,6 +60,7 @@ fn py_ismcts(
     contexts: Option<Vec<PyContext>>,
     root_noise: (f32, f32),
     ml: (f32, f32, f32, bool),
+    phase_key: bool,
 ) -> PyResult<(Vec<(String, u32, f32)>, u32, usize, u16)> {
     if states.is_empty() {
         return Err(PyValueError::new_err("ismcts needs at least one world"));
@@ -98,6 +99,7 @@ fn py_ismcts(
         root_noise_eps: root_noise.0,
         root_noise_conc: root_noise.1,
         ml: ml_params(ml),
+        phase_key,
     };
     let res = py.detach(|| {
         if threads > 1 {
@@ -748,7 +750,7 @@ impl PyBatchSearch {
     #[new]
     #[pyo3(signature = (states, contexts, c_puct=1.0, policy_opponent=true, seed=None,
                         branch_depth=2, threads=1, vl=1, root_noise=(0.0, 10.0),
-                        ml=(0.0, 0.0, 0.0, false), full=false))]
+                        ml=(0.0, 0.0, 0.0, false), full=false, phase_key=false))]
     #[allow(clippy::too_many_arguments)]
     fn new(
         states: Vec<String>,
@@ -762,6 +764,7 @@ impl PyBatchSearch {
         root_noise: (f32, f32),
         ml: (f32, f32, f32, bool),
         full: bool,
+        phase_key: bool,
     ) -> PyResult<Self> {
         if states.is_empty() || states.len() != contexts.len() {
             return Err(PyValueError::new_err(
@@ -784,6 +787,7 @@ impl PyBatchSearch {
             root_noise_eps: root_noise.0,
             root_noise_conc: root_noise.1,
             ml: ml_params(ml),
+            phase_key,
             ..ismcts::Config::default()
         };
         Ok(PyBatchSearch {

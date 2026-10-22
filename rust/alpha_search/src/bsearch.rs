@@ -301,21 +301,6 @@ fn descend(
         n.s2[i2].visits += vl;
         let (i1, i2) = (i1 as u16, i2 as u16);
         path.push((node, i1, i2));
-        let key = (node, i1, i2, 0u64);
-        let (next, created) = match g.tree.children.get(&key) {
-            Some(&c) if g.tree.nodes[c as usize].pending => break Descent::Collision,
-            Some(&c) => (c, false),
-            None => {
-                let c = g.tree.nodes.len() as u32;
-                g.tree.nodes.push(Node {
-                    depth: depth + 1,
-                    pending: true,
-                    ..Node::default()
-                });
-                g.tree.children.insert(key, c);
-                (c, true)
-            }
-        };
         let cached = (node == 0)
             .then(|| g.root_cache.get(&(i1, i2, w)).cloned())
             .flatten();
@@ -345,6 +330,24 @@ fn descend(
             pc.settle(&instructions, state);
             applied.push(instructions);
         }
+        // the child: looked up after the outcome (its key may hold the public phase, `phase_sig`)
+        let key = (node, i1, i2, crate::ismcts::phase_sig(state, cfg));
+        let mut g = shared.lock().unwrap();
+        let (next, created) = match g.tree.children.get(&key) {
+            Some(&c) if g.tree.nodes[c as usize].pending => break Descent::Collision,
+            Some(&c) => (c, false),
+            None => {
+                let c = g.tree.nodes.len() as u32;
+                g.tree.nodes.push(Node {
+                    depth: depth + 1,
+                    pending: true,
+                    ..Node::default()
+                });
+                g.tree.children.insert(key, c);
+                (c, true)
+            }
+        };
+        drop(g);
         node = next;
         if created {
             let over = state.battle_is_over();

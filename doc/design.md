@@ -4,7 +4,7 @@
 |---|---|
 | 状态 | **当前状态版**（2026-10-14 整理：只保留现行设计、有效结论和未完成的事项；已证明 / 已结束的实验过程、被取代的设置见 git 历史 `2513d09` 之前） |
 | 数字 | 所有训练 / 评测数字在 [`results.md`](results.md)，本文只引用结论 |
-| 配套文档 | [`research.md`](research.md)（调研，引用写作 `R§x.y`）、[`research_metamon.md`](research_metamon.md)、[`research_foul_play.md`](research_foul_play.md)、[`belief_prior_eval.md`](belief_prior_eval.md)、[`data_collection.md`](data_collection.md) |
+| 配套文档 | [`research.md`](research.md)（调研，引用写作 `R§x.y`）、[`research_metamon.md`](research_metamon.md)、[`research_foul_play.md`](research_foul_play.md)、[`belief_prior_eval.md`](belief_prior_eval.md)、[`data_collection.md`](data_collection.md)、[`search_review.md`](search_review.md)（搜索自我审查） |
 
 决策编号沿用旧版（代码注释里引用 D5、D11–D17）。
 

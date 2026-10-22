@@ -101,11 +101,20 @@ pub struct Node {
     pub phase: Option<(PokemonIndex, PokemonIndex, bool, bool)>,
 }
 
-/// (tests) the public phase of a state: both actives, whether each side must switch
-#[cfg(test)]
+/// The public phase of a state: both actives, whether each side must switch
 pub(crate) fn phase(state: &State) -> (PokemonIndex, PokemonIndex, bool, bool) {
     let forced = |side: &Side| side.force_switch || side.get_active_immutable().hp <= 0;
     (state.side_one.active_index, state.side_two.active_index, forced(&state.side_one), forced(&state.side_two))
+}
+
+/// A child's key part after its joint action's outcome: the public phase (`Config::phase_key`),
+/// else 0 (open loop)
+pub(crate) fn phase_sig(state: &State, cfg: &Config) -> u64 {
+    if !cfg.phase_key {
+        return 0;
+    }
+    let (a, b, f1, f2) = phase(state);
+    1 << 8 | (a as u64) | (b as u64) << 3 | (f1 as u64) << 6 | (f2 as u64) << 7
 }
 
 #[cfg(test)]
@@ -166,6 +175,10 @@ pub struct Config {
     pub root_noise_conc: f32,
     /// moves-left term (needs a network with the remaining-turns head)
     pub ml: MlParams,
+    /// children keyed also by the public phase after the outcome (`phase_sig`: both actives,
+    /// forced switches; 2026-10-21, the search review): else open loop, one child per joint
+    /// action (a KO and no KO by the damage roll share a node)
+    pub phase_key: bool,
 }
 
 impl Default for Config {
@@ -181,6 +194,7 @@ impl Default for Config {
             root_noise_eps: 0.0,
             root_noise_conc: 10.0,
             ml: MlParams::default(),
+            phase_key: false,
         }
     }
 }
@@ -687,7 +701,7 @@ impl Tree {
                 applied.push(instructions);
             }
             path.push((node, i1, i2));
-            let sig = 0; // open-loop: one child per joint action
+            let sig = phase_sig(state, cfg);
             match self.children.get(&(node, i1, i2, sig)) {
                 Some(&child) => node = child,
                 None => {
@@ -1484,6 +1498,119 @@ mod tests {
         // created with another active
         let other = if active == PokemonIndex::P0 { PokemonIndex::P1 } else { PokemonIndex::P0 };
         assert!(!cached_logits_fit(&(all, other), &s, &avail));
+    }
+
+    /// 2026-10-21: with `phase_key`, a joint action whose damage roll KOs or not gets a child
+    /// for each (the KO: a forced switch next); open loop, one child
+    #[test]
+    fn the_phase_key_splits_a_ko_from_no_ko() {
+        use poke_engine::instruction::DamageInstruction;
+        let mut s = ko_first();
+        let b = s.side_two.get_active();
+        (b.hp, b.maxhp) = (1000, 1000);
+        let m1 = our_choice(&s, Label::Move(Choices::TACKLE)).unwrap();
+        let m2 = their_choice(&s, Label::Move(Choices::ICEBEAM)).unwrap();
+        // the foe's HP inside Tackle's damage range: some rolls KO
+        let mut dmg: Vec<i16> = generate_instructions_from_move_pair(&mut s, &m1, &m2, true)
+            .iter()
+            .flat_map(|o| o.instruction_list.iter())
+            .filter_map(|i| match i {
+                Instruction::Damage(DamageInstruction { side_ref: SideReference::SideTwo, damage_amount }) => {
+                    Some(*damage_amount)
+                }
+                _ => None,
+            })
+            .collect();
+        dmg.sort();
+        assert!(dmg[0] < dmg[dmg.len() - 1], "{dmg:?}");
+        s.side_two.get_active().hp = dmg[dmg.len() / 2];
+        for phase_key in [false, true] {
+            let cfg = Config { phase_key, ..Config::default() };
+            let mut tree = Tree::new();
+            let mut rng = StdRng::seed_from_u64(5);
+            let ev = evaluate(&s);
+            for _ in 0..3000 {
+                tree.iterate(&mut s, 0, ev, &cfg, None, &mut rng);
+            }
+            let n = &tree.nodes[0];
+            let i1 = n.s1.iter().position(|a| a.label == Label::Move(Choices::TACKLE)).unwrap() as u16;
+            let i2 = n.s2.iter().position(|a| a.label == Label::Move(Choices::ICEBEAM)).unwrap() as u16;
+            let kids = tree.children.keys().filter(|k| (k.0, k.1, k.2) == (0, i1, i2)).count();
+            assert_eq!(kids, if phase_key { 2 } else { 1 }, "phase_key {phase_key}");
+        }
+    }
+
+    /// Simultaneous moves (2026-10-21, the search review): the decoupled PUCT of both sides on
+    /// matrix games with known equilibria, as at a node whose children are terminal (value
+    /// M[i][j] for side one, Bernoulli). Prints our visit shares against the equilibrium and
+    /// the exploitability (equilibrium value - our worst case against a best response) of the
+    /// visit distribution and of the most visited option alone (what the search plays).
+    #[test]
+    #[ignore]
+    fn matrix_games() {
+        let games: [(&str, Vec<Vec<f32>>, Vec<f32>, f32); 4] = [
+            ("matching pennies", vec![vec![1.0, 0.0], vec![0.0, 1.0]], vec![0.5, 0.5], 0.5),
+            (
+                "rock paper scissors",
+                vec![vec![0.5, 0.0, 1.0], vec![1.0, 0.5, 0.0], vec![0.0, 1.0, 0.5]],
+                vec![1.0 / 3.0; 3],
+                0.5,
+            ),
+            // a win with rock counts double: equilibrium (1/4, 1/2, 1/4) for both
+            (
+                "biased rps",
+                vec![vec![0.5, 0.25, 1.0], vec![0.75, 0.5, 0.25], vec![0.0, 0.75, 0.5]],
+                vec![0.25, 0.5, 0.25],
+                0.5,
+            ),
+            // attack / protect against attack / set up: equilibrium (2/3, 1/3), value 2/3
+            ("protect guess", vec![vec![0.5, 1.0], vec![1.0, 0.0]], vec![2.0 / 3.0, 1.0 / 3.0], 2.0 / 3.0),
+        ];
+        let arm = |prior: f32| Arm {
+            label: Label::None,
+            visits: 0,
+            avail: 0,
+            total: 0.0,
+            prior,
+            ml_total: 0.0,
+            ml_n: 0,
+        };
+        for (name, m, nash, value) in games {
+            for iters in [200u32, 1600, 12800] {
+                let (n1, n2) = (m.len(), m[0].len());
+                let mut a1: Vec<Arm> = (0..n1).map(|_| arm(1.0 / n1 as f32)).collect();
+                let mut a2: Vec<Arm> = (0..n2).map(|_| arm(1.0 / n2 as f32)).collect();
+                let av1: Vec<(usize, MoveChoice)> = (0..n1).map(|i| (i, MoveChoice::None)).collect();
+                let av2: Vec<(usize, MoveChoice)> = (0..n2).map(|i| (i, MoveChoice::None)).collect();
+                let mut rng = StdRng::seed_from_u64(7);
+                for _ in 0..iters {
+                    let (i, _) = select_puct(&a1, &av1, 1.0, &MlParams::default());
+                    let (j, _) = select_puct(&a2, &av2, 1.0, &MlParams::default());
+                    let r = if rng.random::<f32>() < m[i][j] { 1.0 } else { 0.0 };
+                    a1[i].visits += 1;
+                    a1[i].total += r;
+                    a2[j].visits += 1;
+                    a2[j].total += 1.0 - r;
+                }
+                let x: Vec<f32> = a1.iter().map(|a| a.visits as f32 / iters as f32).collect();
+                let worst = |x: &[f32]| {
+                    (0..n2)
+                        .map(|j| (0..n1).map(|i| x[i] * m[i][j]).sum::<f32>())
+                        .fold(f32::MAX, f32::min)
+                };
+                let top = (0..n1).max_by_key(|&i| a1[i].visits).unwrap();
+                let pure: Vec<f32> = (0..n1).map(|i| (i == top) as u32 as f32).collect();
+                let tv = 0.5 * x.iter().zip(&nash).map(|(a, b)| (a - b).abs()).sum::<f32>();
+                println!(
+                    "{name:20} {iters:6}: visits {:?} (equilibrium {:?}, TV {tv:.3}); \
+                     exploitability: visit mix {:.3}, most visited alone {:.3}",
+                    x.iter().map(|v| (v * 1000.0).round() / 1000.0).collect::<Vec<_>>(),
+                    nash.iter().map(|v| (v * 1000.0).round() / 1000.0).collect::<Vec<_>>(),
+                    value - worst(&x),
+                    value - worst(&pure)
+                );
+            }
+        }
     }
 
     /// How often a node's cached logits do not fit its first selection, in real positions
