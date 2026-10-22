@@ -53,6 +53,9 @@ VARIANTS: dict[str, tuple[str, dict]] = {
                 # the leaves' values from another network, the priors from the model (P/V
                 # cross evaluation, gpu_net.CrossNet)
                 "value_model": os.environ.get(f"ALPHA_VALUE_MODEL_{x.upper()}"),
+                # children keyed by the public phase too: ALPHA_PHASE_KEY_A / _B = 1 (A/B,
+                # doc/search_review.md)
+                "phase_key": os.environ.get(f"ALPHA_PHASE_KEY_{x.upper()}", "0") == "1",
                 # F1 off on this side: ALPHA_DAMAGE_BELIEF_A / _B = 0 (A/B)
                 "damage_belief": os.environ.get(f"ALPHA_DAMAGE_BELIEF_{x.upper()}", "1") != "0",
             },
@@ -116,7 +119,8 @@ def make_bot(
             return _batched_bot(extra["model"], heldout_pool, trace_dir, kw, extra.get("dtype"),
                                 extra.get("iters"), extra.get("ml"),
                                 extra.get("value_model"),
-                                extra.get("damage_belief", True))  # fmt: skip
+                                extra.get("damage_belief", True),
+                                extra.get("phase_key", False))  # fmt: skip
         if cls_name == "search":
             from alpha_poke.agents.search_player import SearchPlayer as cls
         elif cls_name == "policy":
@@ -128,23 +132,24 @@ def make_bot(
     return BASELINES[kind](**kw)
 
 
-# (model, dtype, ml, value model) -> Batcher, one per network in each (worker) process
+# (model, dtype, ml, value model, phase key) -> Batcher, one per network in each (worker) process
 _BATCHERS: dict = {}
 
 
 def _batched_bot(model: str, heldout_pool, trace_dir, kw, dtype: str | None = None,
                  iters: str | None = None, ml: str | None = None,
-                 value_model: str | None = None, damage_belief: bool = True) -> Player:  # fmt: skip
+                 value_model: str | None = None, damage_belief: bool = True,
+                 phase_key: bool = False) -> Player:  # fmt: skip
     import random
 
     from alpha_poke.agents.belief_state import BeliefModel
     from alpha_poke.selfplay.batcher import Batcher, parse_ml
     from alpha_poke.selfplay.player import SelfPlayPlayer
 
-    key = (model, dtype, parse_ml(ml), value_model)
+    key = (model, dtype, parse_ml(ml), value_model, phase_key)
     if key not in _BATCHERS:
         _BATCHERS[key] = Batcher(model, leaves=8, threads=2, dtype=dtype, ml=key[2],
-                                 value_model=value_model)  # fmt: skip
+                                 value_model=value_model, phase_key=phase_key)  # fmt: skip
     iters = int(iters or os.environ.get("ALPHA_SEARCH_ITERATIONS") or 3000)
     return SelfPlayPlayer(
         BeliefModel.load(heldout_pool=heldout_pool), trace_dir=trace_dir, worlds=32,
