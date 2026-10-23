@@ -305,7 +305,14 @@ def test_perish_count_is_the_latest(belief):
 def test_terastallized_keeps_original_types(belief, who, line, want):
     """The engine's types stay the original ones after Terastallization (its STAB on them,
     Showdown's getTypes(false, true)); the tera type is apart (has_type reads only it)."""
-    s = state(battle([line, "|turn|2"]), belief)
+    b = battle([line, "|turn|2"])
+    if who == "one":  # (the request after the turn -- the server sends it last -- shows it)
+        g = mon("p1: Garchomp", "Garchomp", ["earthquake", "reflect", "substitute", "hyperbeam"],
+                "leftovers", "roughskin", True) | {"teraType": "Steel", "terastallized": "Steel"}
+        req = [{"move": m, "id": m, "pp": 8, "maxpp": 8, "disabled": False} for m in GARCHOMP]
+        b.parse_request({"active": [{"moves": req}], "side": {"name": "us", "id": "p1",
+                         "pokemon": [g, mon("p1: Dondozo", "Dondozo", ["wavecrash"])]}, "rqid": 2})  # fmt: skip
+    s = state(b, belief)
     side = getattr(s, f"side_{who}")
     act = side.pokemon[int(side.active_index)]
     assert act.terastallized

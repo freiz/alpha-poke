@@ -465,3 +465,62 @@ def test_formes_from_the_log():
     assert t["p2"].temp_forme == ("Bob", "gliscorfake")
     t = run(START + "|detailschange|p2a: Bob|Ogerpon-Wellspring-Tera, F, tera:Water")
     assert t["p2"].names["Bob"] == "ogerponwellspringtera"
+
+
+def test_the_logs_facts_third_batch():
+    """2026-10-23 (state-construction differential, 8,500 battles): a confused self-hit is a failed
+    action (and ends a lock); a status move at a Substitute is no failure, a damaging one's -fail
+    is; Psychic Terrain stopping a priority move fails it; Spite's PP; the last item -- used up,
+    eaten, a gem's, not one knocked off, a popped Air Balloon; Harvest clears it; Lunar Dance
+    restores the PP; Cud Chew's counter; a Simple Beam / Gastro Acid's ability; a type change
+    before / after terastallizing."""
+    t = run(START + "|-activate|p1a: Fishy|confusion\n|-damage|p1a: Fishy|400/503|[from] confusion\n|upkeep\n|turn|2")
+    assert t["p1"].last_failed and t["p1"].fresh == 0
+    t = run(START + "|move|p2a: Bob|Substitute|p2a: Bob\n|-start|p2a: Bob|Substitute\n"
+            "|move|p1a: Fishy|Will-O-Wisp||[still]\n|-fail|p1a: Fishy\n|upkeep\n|turn|2")  # fmt: skip
+    assert not t["p1"].last_failed
+    t = run(START + "|move|p2a: Bob|Substitute|p2a: Bob\n|-start|p2a: Bob|Substitute\n"
+            "|move|p1a: Fishy|Sucker Punch||[still]\n|-fail|p1a: Fishy\n|upkeep\n|turn|2")  # fmt: skip
+    assert t["p1"].last_failed
+    t = run(START + "|move|p2a: Bob|Quick Attack|p1a: Fishy\n|-activate|p1a: Fishy|move: Psychic Terrain\n"
+            "|upkeep\n|turn|2")  # fmt: skip
+    assert t["p2"].last_failed
+    t = run(START + "|move|p1a: Fishy|Spite|p2a: Bob\n|-activate|p2a: Bob|move: Spite|Earthquake|4")
+    assert t["p2"].pp_taken["gliscor"]["earthquake"] == 4
+    t = run(START + "|-enditem|p1a: Fishy|Sitrus Berry|[eat]\n|-enditem|p2a: Bob|Leftovers|[from] move: Knock Off\n"
+            "|-enditem|p1a: Fishy|Normal Gem|[from] gem")  # fmt: skip
+    assert t["p1"].last_item["dondozo"] == "normalgem" and "gliscor" not in t["p2"].last_item
+    t = run(START + "|-enditem|p1a: Fishy|Air Balloon")
+    assert "dondozo" not in t["p1"].last_item
+    t = run(START + "|-enditem|p1a: Fishy|Sitrus Berry|[eat]\n|-item|p1a: Fishy|Sitrus Berry|[from] ability: Harvest")
+    assert "dondozo" not in t["p1"].last_item
+    t = run(START + "|-heal|p1a: Fishy|503/503|[from] move: Lunar Dance\n|move|p1a: Fishy|Body Press|p2a: Bob")
+    assert t["p1"].pp_reset["dondozo"]["bodypress"] == 1
+    t = run(START + "|move|p2a: Bob|Earthquake|p1a: Fishy\n|-enditem|p1a: Fishy|Sitrus Berry|[eat]\n|upkeep\n|turn|2")
+    assert t["p1"].cud == 1
+    t = run(START + "|move|p2a: Bob|Simple Beam|p1a: Fishy\n|-ability|p1a: Fishy|Simple|[from] move: Simple Beam")
+    assert t["p1"].ability_now == "simple"
+    t = run(START + "|move|p2a: Bob|Gastro Acid|p1a: Fishy\n|-endability|p1a: Fishy")
+    assert t["p1"].ability_now == "none" and t["p1"].gastro
+    t = run(START + "|-terastallize|p2a: Bob|Electric\n|-start|p2a: Bob|typechange|Ground|[from] move: Double Shock")
+    assert not t["p2"].typechanged
+    t = run(START + "|-start|p2a: Bob|typechange|Fire|[from] ability: Protean\n|-terastallize|p2a: Bob|Ice")
+    assert t["p2"].typechanged
+
+
+def test_pressure_under_neutralizing_gas_takes_one_pp():
+    """poke-env took 2 PP at a Pressure holder under Neutralizing Gas (agents/poke_env_fixes.py)."""
+    import logging
+
+    from poke_env.battle import Battle
+
+    import alpha_poke.agents.engine_state  # noqa: F401 (the fixes)
+
+    b = Battle("battle-gen9ou-1", "us", logging.getLogger("t"), gen=9)
+    b.player_role = "p1"
+    for line in ["|switch|p1a: Weezing|Weezing-Galar|100/100", "|switch|p2a: Kyurem|Kyurem|100/100",
+                 "|-ability|p2a: Kyurem|Pressure", "|-ability|p1a: Weezing|Neutralizing Gas", "|turn|1",
+                 "|move|p1a: Weezing|Pain Split|p2a: Kyurem"]:  # fmt: skip
+        b.parse_message(line.split("|"))
+    mv = next(iter(b.active_pokemon.moves.values()))
+    assert mv.max_pp - mv.current_pp == 1

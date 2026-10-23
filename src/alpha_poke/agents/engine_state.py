@@ -21,6 +21,7 @@ from poke_env.battle import Effect, Field, SideCondition, Status, Weather
 from poke_env.battle.move import Move
 from poke_env.data import GenData
 
+from alpha_poke.agents import poke_env_fixes  # noqa: F401 (poke-env's tracking fixed on import)
 from alpha_poke.agents.belief_state import BeliefModel, _preview_name, ability_probs
 from alpha_poke.agents.damage import calc_stats
 from alpha_poke.agents.damage_obs import damage_posteriors, record_base
@@ -442,6 +443,14 @@ def engine_volatile(name: str) -> bool:
 
 
 @functools.cache
+def engine_item(name: str) -> bool:
+    """Whether poke-engine knows the item ``name`` (an unknown one reads back as UNKNOWNITEM)."""
+    p = pe.Pokemon(item=name)
+    s = pe.State(side_one=pe.Side(pokemon=[p] + [pe.Pokemon.create_fainted()] * 5))
+    return str(pe.State.from_string(s.to_string()).side_one.pokemon[0].item).lower() == name
+
+
+@functools.cache
 def engine_species(name: str) -> bool:
     """Whether poke-engine knows the species ``name`` (a state round trip keeps it)."""
     try:
@@ -465,7 +474,7 @@ def _formes(team: dict, mons: list, built: list, tm: SideTimers) -> list:
     for j, (m, p) in enumerate(zip(mons, built, strict=True)):
         n = nick.get(id(m))
         f = tm.names.get(n) if n is not None else None
-        if tm.temp_forme and n == tm.temp_forme[0] and m.active:
+        if tm.temp_forme and n == tm.temp_forme[0] and m.active and not m.fainted:
             f = tm.temp_forme[1]
         if p.id.lower() == "greninja" and str(p.ability).lower() == "battlebond":
             f = "greninjabond"
@@ -496,7 +505,7 @@ def derived_disable(move: str, *, taunt: bool, healblock: bool, throatchop: bool
     states and ours (2026-10-23, the state-construction differential: our request's Assault
     Vest disable stayed after the vest was knocked off)."""
     if lock and lock != move:
-        return False
+        return False  # (a lock's flags stay through a recharge: the engine's after it)
     if disabled == move or encore:  # (Encore keeps the others out by their flags too)
         return False
     if (charging and move != charging) or recharge or pp <= 0 or (uproar and move != "uproar"):
@@ -537,6 +546,8 @@ def _our_mon(
         available_moves = req_pp = None
     last = next((mid for mid, mv in mon.moves.items() if mv.is_last_used), "")
     lock = last if (mon.item in CHOICE_ITEMS or mon.ability == "gorillatactics") else ""
+    if tm is not None and tm.locked and mon.active:
+        lock = tm.locked[0]  # (a locking move's: its flags first -- L179; a Taunt on top derives none)
     own = _own_moves(mon)
     # (its moves as its request lists them: poke-env adds a move our disguised Zoroark used to its
     # disguise's -- 2026-10-23, the state-construction differential)
@@ -548,6 +559,7 @@ def _our_mon(
         pp = max(0, mv.current_pp + (pp_adj or {}).get(mid, 0))
         if reset is not None:  # (Lunar Dance's restore: its uses since)
             pp = max(0, mv.max_pp - reset[mid])
+        pp = max(0, pp - _spited(tm, mon, mid))
         if req_pp and req_pp.get(mid) is not None:
             pp = int(req_pp[mid])
         if available_moves is not None and mid in available_moves:
@@ -581,8 +593,11 @@ def _our_mon(
         status="none" if revived else STATUS.get(mon.status, "none"),
         weight_kg=_weight(mon),
         moves=moves,
-        terastallized=mon.is_terastallized,
-        tera_type=_tera(mon),
+        terastallized=bool((mon._last_request or {}).get("terastallized"))
+        if "terastallized" in (getattr(mon, "_last_request", None) or {}) else mon.is_terastallized,
+        # (the request's tera type: a switch line's tera: details went to the mon a disguised
+        # Illusion showed -- 2026-10-23, the state-construction differential)
+        tera_type=to_id((getattr(mon, "_last_request", None) or {}).get("teraType") or "") or _tera(mon),
         **_sleep(mon, tm),
         **_counted(mon, tm),
     )
@@ -599,7 +614,18 @@ def _counted(mon, tm: SideTimers | None) -> dict:
         d = _MOVES.get(m)
         if d and d.get("category") != "Status":
             boosted.add("stellar" if m == "terablast" else d["type"].lower())
-    return {"times_attacked": min(hits, 255), "gender": gender, "stellar_boosted": sorted(boosted)}
+    out = {"times_attacked": min(hits, 255), "gender": gender, "stellar_boosted": sorted(boosted)}
+    # its last item used up / eaten (Harvest, Recycle, Cud Chew: L57 / L178 / L204; 2026-10-23,
+    # the state-construction differential: never passed -- poke-env keeps no lastItem)
+    last = tm.last_item.get(to_id(mon.species)) if tm is not None else None
+    if last and engine_item(last):
+        out["last_item"] = last
+    return out
+
+
+def _spited(tm: SideTimers | None, mon, mid: str) -> int:
+    """The PP Spite took of ``mon``'s move (the timers': poke-env does not track it)."""
+    return (tm.pp_taken.get(to_id(mon.species)) or {}).get(mid, 0) if tm is not None else 0
 
 
 def _max_pp(mid: str) -> int:
@@ -699,7 +725,8 @@ def _their_mon(mon, s: SampledSet, tm: SideTimers | None = None, disabled: str |
         speed=s.stats["spe"],
         status=STATUS.get(mon.status, "none"),
         weight_kg=_weight(mon),
-        moves=[pe.Move(id=m, pp=max(0, min(_max_pp(m), _pp(mon, m) + pp_adj.get(m, 0)))
+        moves=[pe.Move(id=m, pp=max(0, min(_max_pp(m), _pp(mon, m) + pp_adj.get(m, 0))
+                                    - _spited(tm, mon, m))
                        if not (tm and to_id(mon.species) in tm.pp_reset)
                        else max(0, _max_pp(m) - tm.pp_reset[to_id(mon.species)][m]),
                        disabled=m == disabled) for m in s.moves[:4]],  # fmt: skip
@@ -730,7 +757,7 @@ def _with(p: pe.Pokemon, **kw) -> pe.Pokemon:
     keys = ("id", "level", "types", "base_types", "hp", "maxhp", "ability", "base_ability",
             "item", "attack", "defense", "special_attack", "special_defense", "speed", "status",
             "weight_kg", "moves", "terastallized", "tera_type", "rest_turns",
-            "sleep_turns", "times_attacked", "gender", "stellar_boosted",
+            "sleep_turns", "times_attacked", "gender", "stellar_boosted", "last_item",
             "transform_backup")  # fmt: skip
     return pe.Pokemon(**({k: getattr(p, k) for k in keys} | kw))
 
@@ -1054,7 +1081,10 @@ def build_state(
         if spectator is None:  # the request's moves (the target's, their PP exact)
             moves = [pe.Move(id=to_id(m["id"]), pp=int(m.get("pp") or 0),
                              disabled=avail is not None and to_id(m["id"]) not in avail)
-                     for m in act.get("moves", [])[:4] if "id" in m]  # fmt: skip
+                     for m in act.get("moves", [])[:4]
+                     if "id" in m and to_id(m["id"]) not in ("struggle", "recharge")]  # fmt: skip
+            if not moves:  # (out of PP, a recharge: the target's, the PP poke-env counted)
+                moves = [pe.Move(id=m.id, pp=_copied_pp(active, m.id)) for m in their_mons[t].moves]
         else:  # the target's (this world's), the PP poke-env counted, Disable's flag
             moves = [pe.Move(id=m.id, pp=_copied_pp(active, m.id), disabled=m.id == tm_us.disabled)
                      for m in their_mons[t].moves]  # fmt: skip
@@ -1117,6 +1147,14 @@ def build_state(
         p = mons[i] if i is not None and i < len(mons) else None
         if p is not None and not p.terastallized and p.hp > 0 and tuple(p.types) != tuple(p.base_types):
             vol.add("typechange")
+    for vol, mons, i, tm in ((our_vol, our_mons, our_active_idx, tm_us),
+                             (their_vol, their_mons, their_idx, tm_them)):  # fmt: skip
+        p = mons[i] if i is not None and i < len(mons) else None
+        if p is not None and p.terastallized and not tm.typechanged and not (
+                mons is our_mons and our_tf or mons is their_mons and their_tf):  # fmt: skip
+            # (a type change after it terastallized did nothing -- Showdown's setType: a Double
+            # Shock on a tera'd Pawmot; one before it stays)
+            vol.discard("typechange")
     # must recharge (the engine offers no move), Perish Song's count
     locked: dict = {}  # (is ours) -> the lock's count
     metronome: dict = {}  # (is ours) -> the Metronome item's count
@@ -1155,6 +1193,11 @@ def build_state(
         # 2026-10-23, the state-construction differential)
         if tm.struggled:  # (L232: the last action a Struggle -- never passed, 2026-10-23)
             vol.add("struggled")
+        if tm.gastro:  # (Gastro Acid: the volatile, its ability none -- L209)
+            vol.add("gastroacid")
+        if tm.cud and ab[mon is active] == "cudchew":  # (L204: its berry again, the counter)
+            vol.add("cudchew")
+            vcounts.setdefault(mon is active, {})["cudchew"] = tm.cud
         if tm.flashfire:  # (its Flash Fire's boost: the log's -start, not poke-env's effect)
             vol.add("flashfire")
         if tm.destinybond:
@@ -1246,6 +1289,11 @@ def build_state(
 
     our_mons = _formes(battle.team, ours, our_mons, tm_us)
     their_mons = _formes(battle.opponent_team, theirs, their_mons, tm_them)
+    # (the actives' abilities as a move / ability changed them this time in, a Gastro Acid's none
+    # -- poke-env keeps no temporary ability for them; the timers')
+    for ms, i, tm in ((our_mons, our_active_idx, tm_us), (their_mons, their_idx, tm_them)):
+        if tm.ability_now and i is not None and i < len(ms) and ms[i].hp > 0:
+            ms[i] = _with(ms[i], ability=tm.ability_now)
     # (a mon Revival Blessing brought back is no longer terastallized -- Showdown clears it;
     # the side's used Terastallization its own marker, L185; 2026-10-23, the differential)
     for ms, src, tm in ((our_mons, ours, tm_us), (their_mons, theirs, tm_them)):

@@ -18,11 +18,25 @@ pytestmark = pytest.mark.skipif(not (ROOT / "vendor/pokemon-showdown/dist/sim").
                                 reason="needs the built Showdown simulator")  # fmt: skip
 
 
+OU_TEAMS = ROOT / "data/teams/statebuild_catalog_pairs.jsonl"  # (the team catalog's pairs: local)
+OU_BASELINE = ROOT / "tests/fixtures/state_build_baseline_ou.json"
+
+
 def test_the_state_construction_differential_stays_within_its_baseline():
+    _check(BASELINE, TEAMS)
+
+
+@pytest.mark.skipif(not OU_TEAMS.exists(), reason="needs the OU team pairs (data/teams, local)")
+def test_ou_teams_stay_within_their_baseline():
+    """The same on real OU teams (the catalog's: the human data's metagame)."""
+    _check(OU_BASELINE, OU_TEAMS)
+
+
+def _check(baseline: Path, teams: Path) -> None:
     from alpha_poke.enginecheck.statebuild import battle_diffs
 
-    base = json.loads(BASELINE.read_text())
-    pairs = [json.loads(x) for x in TEAMS.read_text().splitlines()]
+    base = json.loads(baseline.read_text())
+    pairs = [json.loads(x) for x in teams.read_text().splitlines()]
     kinds: collections.Counter = collections.Counter()
     decisions = 0
     examples: dict = {}

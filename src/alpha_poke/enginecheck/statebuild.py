@@ -106,7 +106,7 @@ def own_diffs(built: pe.Side, truth: pe.Side) -> list[tuple[str, str]]:
         keys = ["hp"]  # (a fainted one: nothing else of it is read -- its forme back, its maxhp)
         if t.hp > 0:
             keys += ["maxhp", "status", "item", "ability", "base_ability", "rest_turns",
-                     "sleep_turns", "terastallized", "tera_type"]  # fmt: skip
+                     "sleep_turns", "terastallized", "tera_type", "last_item"]  # fmt: skip
         if t.transform_backup is None and t.hp > 0:
             keys += list(STATS)
         for k in keys:
@@ -132,11 +132,18 @@ def own_diffs(built: pe.Side, truth: pe.Side) -> list[tuple[str, str]]:
     out += _side_common("own", built, truth)
     for k in SIDE_FIELDS:
         bv, tv = getattr(built, k), getattr(truth, k)
+        if k == "future_sight":  # (its user by species: the sides' mon orders differ)
+            bv, tv = (_future(built), _future(truth))
         if k == "substitute_health" and tv not in (0, _active(truth).maxhp // 4):
             continue  # (a hit Substitute's HP: the log does not show it -- the player's guess)
         if str(bv).lower() != str(tv).lower():
             out.append((f"own:{k}", f"{bv} vs {tv}"))
     return out
+
+
+def _future(side: pe.Side):
+    turns, idx = side.future_sight
+    return (turns, _sp(side.pokemon[int(str(idx))]) if turns else "")
 
 
 def _tera_used(side: pe.Side) -> bool:
@@ -179,8 +186,28 @@ def _side_common(who: str, built: pe.Side, truth: pe.Side) -> list[tuple[str, st
     return out
 
 
-def foe_diffs(built: pe.Side, truth: pe.Side, seen: set[str],
-              oracle: bool = False) -> list[tuple[str, str]]:  # fmt: skip
+def _disguised(battle, truth: pe.Side) -> set[str]:
+    """The opponent's species ids a Zoroark showed itself as without being found out (a switch
+    line's max HP not the mon's -- the differential's battles show exact HP): the player cannot
+    tell (percentages in real battles), the belief's HP / moves for them its fair guess. Its
+    Zoroark too, while it was never revealed."""
+    tm = {_sp(p): p.maxhp for p in truth.pokemon}
+    role = "p2" if battle.player_role == "p1" else "p1"
+    out = set()
+    for m in battle._replay_data:
+        if len(m) > 4 and m[1] in ("switch", "drag") and m[2].startswith(role) and "/" in m[4]:
+            sp = to_id(m[3].split(",")[0])
+            sp = SAME_SPECIES.get(sp, sp)
+            mx = m[4].split(" ")[0].split("/")[1]
+            if sp in tm and mx.isdigit() and int(mx) != tm[sp] and int(mx) != 100:
+                out.add(sp)
+    if out:
+        out |= {s for s in tm if s.startswith("zoroark")}
+    return out
+
+
+def foe_diffs(built: pe.Side, truth: pe.Side, seen: set[str], oracle: bool = False,
+              hidden: frozenset = frozenset()) -> list[tuple[str, str]]:  # fmt: skip
     """The opponent's side as the player sees it: the active, the revealed mons' HP fraction
     and status, tera; the side's volatiles, counts, conditions, boosts. ``oracle`` (its sets the
     true ones): also the revealed mons' item, abilities, stats and moves with their PP."""
@@ -191,11 +218,12 @@ def foe_diffs(built: pe.Side, truth: pe.Side, seen: set[str],
         # the construction's)
         return [(k, d) for k, d in _side_common("foe", built, truth)
                 if k.split(":")[1] in ("condition",)]
+    seen = seen - hidden
     if oracle:
         bm, tm = _mons(built), _mons(truth)
         for sp in seen & set(bm) & set(tm):
             b, t = bm[sp], tm[sp]
-            keys = ["maxhp", "item", "ability", "base_ability"]
+            keys = ["maxhp", "item", "ability", "base_ability", "last_item"]
             if t.transform_backup is None:
                 keys += list(STATS)
             for k in keys:
@@ -377,13 +405,15 @@ def battle_diffs(p1: str, p2: str, seed: int, max_turns: int = 40, sides=("p1", 
         if built.side_one.force_switch != want:
             out.append((k, side, "own:force_switch", f"{built.side_one.force_switch} vs {want}"))
         diffs = own_diffs(built.side_one, t.side_one)
-        if want or req.get("forceSwitch"):
-            # (a switch decision: the active leaves -- its moves' flags are its last move
-            # request's in Showdown, whatever the lock since; nothing reads them)
+        recharge = any(m.get("id") == "recharge" for m in ((req.get("active") or [{}])[0].get("moves") or []))
+        if want or req.get("forceSwitch") or recharge:
+            # (a switch decision -- the active leaves -- or a recharge: its moves' flags are its
+            # last move request's in Showdown, whatever the lock since; nothing reads them now)
             act = _sp(_active(built.side_one))
             diffs = [(k2, d) for k2, d in diffs if not (k2 == "own:disabled" and d.startswith(act + " "))]
         for kind, detail in (diffs
-                             + foe_diffs(built.side_two, t.side_two, seen, oracle)
+                             + foe_diffs(built.side_two, t.side_two, seen, oracle,
+                                         frozenset(_disguised(b, t.side_two)))
                              + field_diffs(built, t)):  # fmt: skip
             out.append((k, side, kind, detail))
     return out, stats

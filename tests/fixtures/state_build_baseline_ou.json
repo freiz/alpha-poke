@@ -1,0 +1,8 @@
+{
+ "battles": 60,
+ "decisions": 4280,
+ "open": {
+  "foe:condition:protect": 1,
+  "foe:last_used_move": 1
+ }
+}
