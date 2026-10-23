@@ -66,18 +66,23 @@ def run_showdown(p1, p2, turns, seed: str | None = "gen5,1,2,3,4", force_random=
 
 def random_battle(p1, p2, seed: str, choice_seed: int, max_turns: int = 100,
                   switch_p: float = 0.15, tera_p: float = 0.1, fmt: str = FORMAT,
-                  damage_probe: bool = False,
-                  serialize_every: int = 0) -> tuple[list[dict], str | None]:  # fmt: skip
+                  damage_probe: bool = False, serialize_every: int = 0,
+                  views: dict | None = None) -> tuple[list[dict], str | None]:  # fmt: skip
     """A whole battle with random legal choices (``random_battle.js``): ([{"state", "choices"}]
     per decision point, the error if the battle broke off). The full-information differential
-    (doc/engine-diff.md): the truth at every step, no player's view, no belief."""
+    (doc/engine-diff.md): the truth at every step, no player's view, no belief. ``views`` (a
+    dict): filled with the players' views (their protocol lines; each step then has its
+    "view_pos" and "requests") -- the state-construction differential."""
     case = {"format": fmt, "seed": seed, "choice_seed": choice_seed, "p1": p1, "p2": p2,
             "max_turns": max_turns, "switch_p": switch_p, "tera_p": tera_p,
-            "damage_probe": damage_probe, "serialize_every": serialize_every}  # fmt: skip
+            "damage_probe": damage_probe, "serialize_every": serialize_every,
+            "views": views is not None}  # fmt: skip
     r = subprocess.run(["node", str(RUNNER.with_name("random_battle.js")), str(SIM)],
                        input=json.dumps(case), capture_output=True, text=True, check=True,
                        timeout=600)  # fmt: skip
     out = json.loads(r.stdout)
+    if views is not None:
+        views.update(out.get("views") or {})
     return out["steps"], out["error"]
 
 
@@ -664,37 +669,18 @@ def _drop_fainted_active(v: dict) -> dict:
     return v
 
 
-@functools.cache
-def _move_kinds() -> dict:
-    """Move id -> (category, flags) from the engine's data (alpha_search.engine_data)."""
-    import alpha_search
-
-    rows, _ = alpha_search.engine_data()
-    return {r[0].lower(): (r[3], set(r[-1].split(","))) for r in rows}
-
-
 def _derived_disable(m: dict, move: str) -> bool:
-    """Showdown disabled ``move`` only for a reason the engine derives itself -- not with the
-    move's disabled flag, from the volatiles / item / last move as it builds the options: a Taunt's
-    status move, a Heal Block's healing one, a Throat Chop's sound one, an Assault Vest's status
-    one, a Gigaton Hammer / Blood Moon used last. Its flag would stay with the engine, which never
-    clears what it never set (L232: Iron Defense still disabled after the Taunt ended, a Gigaton
-    Hammer after a Struggle). Not when a lock (a Choice item's, Gorilla Tactics', a Disable on it)
-    keeps it out as well: the engine's flags."""
+    """Showdown disabled ``move`` only for a reason the engine derives itself (Taunt, Heal Block,
+    Throat Chop, Assault Vest, Gigaton Hammer / Blood Moon): not the move's flag -- the shared
+    rule, engine_state.derived_disable (our state construction uses it too)."""
+    from alpha_poke.agents.engine_state import derived_disable
+
     vol = m.get("volatiles", {})
-    lock = (vol.get("choicelock") or {}).get("move")
-    if lock and lock != move:
-        return False
-    if (vol.get("disable") or {}).get("move") == move:
-        return False
-    cat, flags = _move_kinds().get(move, ("", set()))
-    return bool(
-        ("taunt" in vol and cat == "Status")
-        or ("healblock" in vol and "heal" in flags)
-        or ("throatchop" in vol and "sound" in flags)
-        or (m.get("item") == "assaultvest" and cat == "Status")
-        or (move in ("gigatonhammer", "bloodmoon") and m.get("last_move") == move)
-    )
+    return derived_disable(move, taunt="taunt" in vol, healblock="healblock" in vol,
+                           throatchop="throatchop" in vol, item=m.get("item") or "",
+                           last_move=m.get("last_move") or "",
+                           lock=(vol.get("choicelock") or {}).get("move") or "",
+                           disabled=(vol.get("disable") or {}).get("move") or "")  # fmt: skip
 
 
 def view(sd: dict) -> dict:

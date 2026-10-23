@@ -143,11 +143,12 @@ def test_hit_substitute(belief):
 
 
 def test_light_clay_reflect(belief):
+    # (a real log's end of turn: "|upkeep|" -- the timers count them, 2026-10-23)
     b = battle(["|move|p1a: Garchomp|Reflect|p1a: Garchomp", "|-sidestart|p1: us|Reflect",
-                "|turn|2"], item="lightclay")  # fmt: skip
+                "|upkeep|", "|turn|2"], item="lightclay")  # fmt: skip
     assert state(b, belief).side_one.side_conditions.reflect == 8 - 1
     b = battle(["|move|p1a: Garchomp|Reflect|p1a: Garchomp", "|-sidestart|p1: us|Reflect",
-                "|turn|2"])  # fmt: skip
+                "|upkeep|", "|turn|2"])  # fmt: skip
     assert state(b, belief).side_one.side_conditions.reflect == 5 - 1
 
 
@@ -703,3 +704,64 @@ def test_the_first_choice_of_a_copied_move_is_a_position(belief, seed):
                                random.Random(seed), pool="all", per_game=99)  # fmt: skip
     mine = [p for p in ps if p.side == "p1" and p.kind == 0]
     assert sorted(p.turn for p in mine) == [1, 2], [(p.turn, p.kind) for p in ps]
+
+
+def test_a_disable_the_engine_derives_is_no_flag(belief):
+    """2026-10-23 (state-construction differential): the request's Assault Vest / Taunt / recharge
+    disables were the moves' flags -- the engine never clears a flag it did not set (the vest
+    knocked off, the status move still out). derived_disable, shared with the differential."""
+    from alpha_poke.agents.engine_state import derived_disable
+
+    kw = dict(taunt=False, healblock=False, throatchop=False, item="", last_move="")
+    assert derived_disable("reflect", **(kw | {"item": "assaultvest"}))
+    assert derived_disable("reflect", **(kw | {"taunt": True}))
+    assert not derived_disable("earthquake", **(kw | {"taunt": True}))
+    assert derived_disable("earthquake", **kw, recharge=True)
+    assert derived_disable("earthquake", **kw, charging="meteorbeam")
+    assert not derived_disable("earthquake", **kw, charging="meteorbeam", lock="meteorbeam")
+    req = [{"move": m, "id": m, "pp": 8, "maxpp": 8, "disabled": m == "reflect"} for m in GARCHOMP]
+    b = battle(["|move|p2a: Gholdengo|Taunt|p1a: Garchomp", "|-start|p1a: Garchomp|move: Taunt",
+                "|upkeep|", "|turn|2"])  # fmt: skip
+    side = [mon("p1: Garchomp", "Garchomp", list(GARCHOMP), "leftovers", "roughskin", True),
+            mon("p1: Dondozo", "Dondozo", ["wavecrash"])]  # fmt: skip
+    b.parse_request({"active": [{"moves": req}], "side": {"name": "us", "id": "p1", "pokemon": side},
+                     "rqid": 2})  # fmt: skip
+    s = state(b, belief)
+    assert not any(m.disabled for m in s.side_one.pokemon[0].moves)
+    assert "taunt" in s.side_one.volatile_statuses
+
+
+def test_a_charging_and_a_locked_active(belief):
+    """A two-turn move's second turn: its volatile; an Outrage lock: lockedmove, the other moves
+    disabled (the differential's states' convention)."""
+    b = battle(["|move|p2a: Gholdengo|Meteor Beam||[still]", "|-prepare|p2a: Gholdengo|Meteor Beam",
+                "|upkeep|", "|turn|2"])  # fmt: skip
+    assert "meteorbeam" in state(b, belief).side_two.volatile_statuses
+    b = battle(["|move|p2a: Gholdengo|Outrage|p1a: Garchomp", "|-damage|p1a: Garchomp|60/100",
+                "|upkeep|", "|turn|2"])  # fmt: skip
+    two = state(b, belief).side_two
+    assert "lockedmove" in two.volatile_statuses
+    assert all(m.disabled for m in two.pokemon[0].moves if m.id not in ("outrage", "none"))
+
+
+def test_a_benched_regenerator_healed(belief):
+    """A benched mon seen before whose world's ability is Regenerator: a third back (silent in
+    the log; poke-env adds it only when it knew the ability)."""
+    from alpha_poke.agents import engine_state as es
+
+    b = battle(["|move|p1a: Garchomp|Earthquake|p2a: Gholdengo", "|-damage|p2a: Gholdengo|30/100",
+                "|upkeep|", "|turn|2", "|switch|p2a: Slowking|Slowking-Galar, M|100/100", "|upkeep|",
+                "|turn|3"])  # fmt: skip
+    inner = es.sample_set
+
+    def regen(*a, **kw):
+        s = inner(*a, **kw)
+        return es.SampledSet(s.moves, s.item, "regenerator", s.tera, s.stats)
+
+    es.sample_set = regen
+    try:
+        s = state(b, belief)
+    finally:
+        es.sample_set = inner
+    g = next(p for p in s.side_two.pokemon if p.id.lower() == "gholdengo")
+    assert abs(g.hp / g.maxhp - (0.30 + 1 / 3)) < 0.02

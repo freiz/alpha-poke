@@ -25,6 +25,9 @@ sides, in poke-engine's own units (rust/patches/poke-engine-0.0.48, generate_ins
               by Cursed Body (Showdown's duration 4, else 5): the engine's disable duration's
               count (2026-10-23 review: the move alone, without the volatile, was enabled again
               by the engine's next move)
+  charging    the two-turn move the active is charging (-prepare; not one fired at once: -anim)
+  locked      [its locking move (Outrage, Thrash, Petal Dance, Raging Fury), its uses] until the
+              lock's fatigue confusion, a move of another kind, cant or a switch
   recharge    the active must recharge this turn (-mustrecharge; cleared by its "cant recharge",
               a move or a switch: poke-env keeps its flag until the next move)
   healblock / throatchop / magnetrise
@@ -63,7 +66,12 @@ sides, in poke-engine's own units (rust/patches/poke-engine-0.0.48, generate_ins
               duration is the setter's item's when the effect starts (durationCallback), not its
               item now (2026-10-23 review: a Light Clay Reflect knocked off read 5 turns)
   fields_elapsed
-              "weather" / "terrain" -> ends of turn since it started (both sides keep the same
+              "weather" / "terrain" / a room (Trick Room, Gravity, Magic Room, Wonder Room) -> ends
+              of turn since it started
+  side_elapsed
+              a side's timed conditions (screens, Tailwind, Safeguard, Mist) -> ends of turn since
+              they started (2026-10-23: they were reckoned from poke-env's start turn, one off at
+              a forced switch after the turn's end) (both sides keep the same
               count; 2026-10-16, doc/engine-diff.md L3: the remaining turns were reckoned from
               poke-env's start turn, which every "[upkeep]" message reset -- weather always 4
               left -- and a lead's terrain was one turn short)
@@ -78,6 +86,11 @@ from alpha_poke.analysis.roles import to_id
 
 TRAPS = {"bind", "wrap", "firespin", "whirlpool", "sandtomb", "magmastorm", "infestation",
          "snaptrap", "thundercage", "clamp"}  # fmt: skip
+LOCKING = ("outrage", "thrash", "petaldance", "ragingfury")
+REFLECTED = ("[from] ability: Magic Bounce", "[from] Magic Coat", "[from] move: Magic Coat")
+ROOMS = {"trickroom", "gravity", "magicroom", "wonderroom"}
+# the side conditions that last some turns (their ends of turn counted: side_elapsed)
+TIMED_SIDE = {"reflect", "lightscreen", "auroraveil", "tailwind", "safeguard", "mist"}
 PROTECTS = {"protect", "detect", "spikyshield", "banefulbunker", "silktrap", "burningbulwark",
             "endure", "kingsshield", "obstruct"}  # fmt: skip
 
@@ -107,16 +120,20 @@ class SideTimers:
     frombooster: bool = False
     trapped: bool = False
     failed_now: bool = False  # this turn (last_failed at the next turn)
+    changed_now: bool = False  # its last move changed a stage (not all 0: it did not fail)
     last_failed: bool = False
     sub_hit: bool = False
     recharge: bool = False
+    charging: str | None = None  # the two-turn move it is charging (-prepare, not fired at once)
+    locked: list | None = None  # [the locking move (Outrage, ...), its uses so far]
     just_moved: str = ""  # species id of this side's mon that made the last move
     last_move: str = ""  # the battle's last move id (both sides; L167)
     # what this side set: "weather" / "terrain" -> (its id, the setter's species id); a screen
     # id (reflect, lightscreen, auroraveil) -> the setter's species id
     setters: dict = field(default_factory=dict)
     set_items: dict = field(default_factory=dict)  # a setters key -> its setter's item then
-    fields_elapsed: dict = field(default_factory=dict)  # "weather" / "terrain" -> ends of turn
+    fields_elapsed: dict = field(default_factory=dict)  # "weather" / "terrain" / ROOMS -> ends of turn
+    side_elapsed: dict = field(default_factory=dict)  # TIMED_SIDE (this side's) -> ends of turn
     used_once: set = field(default_factory=set)  # species ids (Dauntless Shield used)
     # species id -> the hits a foe's move landed on it (Rage Fist; doc/engine-diff.md L163)
     times_attacked: dict = field(default_factory=dict)
@@ -139,6 +156,7 @@ class SideTimers:
         self.trapped = self.frombooster = False
         self.failed_now = self.last_failed = False
         self.sub_hit = self.recharge = False
+        self.charging = self.locked = None
 
     def rest_sleep(self, species: str) -> tuple[int, int]:
         """(rest_turns, sleep_turns) of an asleep mon."""
@@ -183,6 +201,8 @@ def _feed(sides: dict, p: list[str]) -> None:
                     setattr(st, k, getattr(st, k) + 1)
             for k in st.fields_elapsed:
                 st.fields_elapsed[k] += 1
+            for k in st.side_elapsed:
+                st.side_elapsed[k] += 1
             if st.slowstart and st.slowstart[1]:
                 st.slowstart[0] -= 1
                 if st.slowstart[0] <= 0:
@@ -207,10 +227,16 @@ def _feed(sides: dict, p: list[str]) -> None:
                     st.fields_elapsed.pop(kind, None)
                 else:
                     st.fields_elapsed[kind] = 0
+        elif what in ROOMS:  # (its ends of turn: 2026-10-23, the state-construction
+            # differential -- poke-env's start turn was one off after an end of turn the turn
+            # number had not passed yet: a forced switch at the end of the turn)
+            for st in sides.values():
+                st.fields_elapsed[what] = 0
         return
-    if tag == "-fieldend" and len(p) > 2 and to_id(p[2].replace("move: ", "")).endswith("terrain"):
+    if tag == "-fieldend" and len(p) > 2:
+        what = to_id(p[2].replace("move: ", ""))
         for st in sides.values():
-            st.fields_elapsed.pop("terrain", None)
+            st.fields_elapsed.pop("terrain" if what.endswith("terrain") else what, None)
         return
     st, sp = _who(p, sides)
     if st is None:
@@ -236,6 +262,8 @@ def _feed(sides: dict, p: list[str]) -> None:
             st.status.pop(new, None)
     elif tag == "-status" and len(p) > 3:
         st.status[sp] = p[3]
+        if p[3] == "slp" and sp == st.active:
+            st.locked = None  # (Showdown's lockedmove ends asleep, without confusion)
         if p[3] == "slp":
             st.sleep[sp] = [0, any("move: Rest" in x for x in p[4:])]
         if p[3] == "tox" and sp == st.active:
@@ -255,8 +283,13 @@ def _feed(sides: dict, p: list[str]) -> None:
         foe.trap_out = foe.partiallytrapped is not None  # (L170: its trapper fainted)
     elif tag == "-mustrecharge":
         st.recharge = True
+    elif tag == "-prepare" and len(p) > 3:
+        st.charging = to_id(p[3])
+    elif tag == "-anim" and len(p) > 3 and st.charging == to_id(p[3]):
+        st.charging = None  # (fired at once: Solar Beam in the sun, Power Herb)
     elif tag == "cant" and len(p) > 3:
         st.acted = True
+        st.charging = st.locked = None  # (prevented: the charge and the lock end)
         st.failed_now = p[3] != "recharge"  # (L115)
         if p[3] == "recharge":
             st.recharge = False
@@ -264,8 +297,25 @@ def _feed(sides: dict, p: list[str]) -> None:
             st.sleep[sp][0] += 1
     elif tag == "-terastallize" and len(p) > 3 and to_id(p[3]) == "stellar":
         st.stellar_moves.setdefault(sp, set())
+    elif tag == "move" and len(p) > 3 and any(x in REFLECTED for x in p[4:]):
+        # a status move reflected (Magic Bounce, Magic Coat): not its reflector's action; the
+        # move its user chose failed (Showdown's moveLastTurnResult -- 2026-10-23, the
+        # state-construction differential: it read as the reflector's own move)
+        foe = sides["p2" if p[2][:2] == "p1" else "p1"]
+        foe.failed_now = True
+        foe.just_moved = ""
     elif tag == "move" and len(p) > 3:
         mv = to_id(p[3])
+        st.changed_now = False
+        # (a charge fires the turn after its -prepare; a locking move locks it, its next uses
+        # "[from]lockedmove" -- 2026-10-23, the state-construction differential: neither was in
+        # the engine's state, the search let it choose any move)
+        if st.charging is not None and "[still]" not in p:
+            st.charging = None
+        if mv in LOCKING and not any(x.startswith("[from]") and "lockedmove" not in x for x in p[4:]):
+            st.locked = [mv, (st.locked[1] if st.locked and st.locked[0] == mv else 0) + 1]
+        elif not any("lockedmove" in x for x in p[4:]):
+            st.locked = None
         if sp in st.stellar_moves:
             st.stellar_moves[sp].add(mv)
         st.just_moved = sp
@@ -284,15 +334,43 @@ def _feed(sides: dict, p: list[str]) -> None:
         sides["p2" if p[2][:2] == "p1" else "p1"].just_moved
     ):
         st.times_attacked[sp] = st.times_attacked.get(sp, 0) + 1  # (L163: a hit of the foe's move)
-    elif tag in ("-fail", "-miss") and st.just_moved:
-        st.failed_now = True  # (L115: its move failed)
+    elif tag in ("-boost", "-unboost") and len(p) > 4 and not any(x.startswith("[from]") for x in p[5:]):
+        # a status move's stage changes all 0 (Swords Dance at +6): it failed (Showdown's
+        # moveLastTurnResult; no -fail logged -- 2026-10-23, the state-construction differential);
+        # one that changed a stage did not (Dragon Dance at +6 Attack, +1 Speed)
+        mover = next((s for s in sides.values() if s.just_moved), None)
+        if mover is not None and _is_status(mover.last_move):
+            if p[4] == "0" and not mover.changed_now:
+                mover.failed_now = True
+            elif p[4] != "0":
+                mover.failed_now, mover.changed_now = False, True
+    elif tag in ("-fail", "-miss") and not any(x.startswith("[from]") for x in p[3:]):
+        # (L115: the last move failed -- its user's: the side that just moved; a -fail names its
+        # target as often, a Toxic on a poisoned foe: 2026-10-23, the state-construction
+        # differential -- it was the target's side, which had not just moved; a [from] one is an
+        # ability stopping an effect, not the move)
+        mover = next((s for s in sides.values() if s.just_moved), None)
+        if mover is not None:
+            _missed(mover)
     elif tag == "-immune" and sides["p2" if p[2][:2] == "p1" else "p1"].just_moved:
-        sides["p2" if p[2][:2] == "p1" else "p1"].failed_now = True
+        _missed(sides["p2" if p[2][:2] == "p1" else "p1"])
+    elif tag == "-activate" and len(p) > 3 and ("[broken]" in p or to_id(p[3]) == "movefeint"):
+        # its protection broken (Feint, Phantom Force, ...): Gen 6+ deletes the stall counter
+        # (Showdown's battle-actions; 2026-10-23, the state-construction differential)
+        st.protected = False
+        st.protect = 0
+    elif tag == "-activate" and len(p) > 3 and to_id(p[3].replace("move: ", "")) in PROTECTS:
+        # (its target protected: the move did nothing -- a lock does not start)
+        mover = sides["p2" if p[2][:2] == "p1" else "p1"]
+        if mover.just_moved and mover.locked and mover.locked[1] == 1:
+            mover.locked = None
     elif tag == "-singleturn" and len(p) > 3:
         if to_id(p[3].replace("move: ", "")) in PROTECTS:
             st.protected = True
     elif tag == "-start" and len(p) > 3:
         what = to_id(p[3].replace("move: ", ""))
+        if what == "confusion" and "[fatigue]" in p:
+            st.locked = None  # (the lock's last turn)
         if what == "confusion":
             st.confusion = 0
         elif what == "taunt":
@@ -333,6 +411,12 @@ def _feed(sides: dict, p: list[str]) -> None:
     elif tag == "-activate" and len(p) > 4 and to_id(p[3].replace("move: ", "")) == "substitute":
         if p[4] == "[damage]":
             st.sub_hit = True
+    elif tag == "-sideend" and len(p) > 3:
+        st.side_elapsed.pop(to_id(p[3].replace("move: ", "")), None)
+    elif tag == "-sidestart" and len(p) > 3 and to_id(p[3].replace("move: ", "")) in TIMED_SIDE:
+        st.side_elapsed[to_id(p[3].replace("move: ", ""))] = 0  # (its ends of turn, as ROOMS)
+        st.setters[to_id(p[3].replace("move: ", ""))] = st.just_moved
+        st.set_items.pop(to_id(p[3].replace("move: ", "")), None)
     elif tag == "-sidestart" and len(p) > 3:
         st.setters[to_id(p[3].replace("move: ", ""))] = st.just_moved
         st.set_items.pop(to_id(p[3].replace("move: ", "")), None)
@@ -383,6 +467,21 @@ def _feed(sides: dict, p: list[str]) -> None:
 # Switcheroo a swap: their own branches)
 GAINS = {"ability: Magician", "ability: Pickpocket", "move: Covet", "move: Thief", "move: Bestow",
          "ability: Harvest", "ability: Pickup", "move: Recycle", "move: G-Max Replenish"}  # fmt: skip
+
+
+def _missed(st: SideTimers) -> None:
+    """Its move failed (missed, the target immune): no lock starts by it (Showdown's lockedmove
+    is the move's self effect, on a hit; 2026-10-23, the state-construction differential: an
+    Outrage on a Fairy read as locked)."""
+    st.failed_now = True
+    if st.locked and st.locked[1] == 1:
+        st.locked = None
+
+
+def _is_status(move: str) -> bool:
+    from poke_env.data import GenData
+
+    return (GenData.from_gen(9).moves.get(move) or {}).get("category") == "Status"
 
 
 def _item_was(st: SideTimers, sp: str, item: str) -> None:

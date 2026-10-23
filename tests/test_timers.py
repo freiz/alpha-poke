@@ -348,3 +348,66 @@ def test_used_once_intrepid_sword():
 |turn|2
 """)  # fmt: skip
     assert t["p2"].used_once == {"gliscor"}
+
+
+# 2026-10-23: the state-construction differential's finds (enginecheck/statebuild.py), each
+# against Showdown's behaviour
+
+
+def test_a_fail_on_the_target_is_the_movers():
+    """Toxic on a poisoned foe: the -fail names the target; the failed move is the mover's."""
+    t = run(START + "|move|p2a: Bob|Toxic|p1a: Fishy\n|-fail|p1a: Fishy|tox\n|upkeep\n|turn|2")
+    assert t["p2"].last_failed and not t["p1"].last_failed
+
+
+def test_a_status_move_changing_no_stage_failed():
+    """Swords Dance at +6: -boost 0, no -fail -- failed; Dragon Dance at +6 Attack, +1 Speed: not."""
+    t = run(START + "|move|p2a: Bob|Swords Dance|p2a: Bob\n|-boost|p2a: Bob|atk|0\n|upkeep\n|turn|2")
+    assert t["p2"].last_failed
+    t = run(START + "|move|p2a: Bob|Dragon Dance|p2a: Bob\n|-boost|p2a: Bob|atk|0\n"
+            "|-boost|p2a: Bob|spe|1\n|upkeep\n|turn|2")  # fmt: skip
+    assert not t["p2"].last_failed
+
+
+def test_a_reflected_move_is_not_the_reflectors():
+    """Magic Bounce: the reflected line is not the reflector's action; the user's move failed."""
+    t = run(START + "|move|p2a: Bob|Toxic|p1a: Fishy\n"
+            "|move|p1a: Fishy|Toxic|p2a: Bob|[from] ability: Magic Bounce\n|-fail|p2a: Bob|tox\n"
+            "|move|p1a: Fishy|Body Press|p2a: Bob\n|upkeep\n|turn|2")  # fmt: skip
+    assert t["p2"].last_failed and not t["p1"].last_failed
+
+
+def test_a_broken_protect_resets_the_count():
+    """Phantom Force / Feint break a protection: Gen 6+ deletes the stall counter."""
+    t = run(START + "|move|p1a: Fishy|Protect|p1a: Fishy\n|-singleturn|p1a: Fishy|Protect\n"
+            "|move|p2a: Bob|Phantom Force|p1a: Fishy|[from] lockedmove\n"
+            "|-activate|p1a: Fishy|move: Phantom Force|[broken]\n|upkeep\n|turn|2")  # fmt: skip
+    assert t["p1"].protect == 0
+
+
+def test_rooms_and_screens_count_their_ends_of_turn():
+    """Trick Room / screens: ends of turn counted (poke-env's start turn was one off at a forced
+    switch after the turn's end)."""
+    t = run(START + "|move|p1a: Fishy|Trick Room|p1a: Fishy\n|-fieldstart|move: Trick Room|[of] p1a: Fishy\n"
+            "|-sidestart|p1: A|Reflect\n|upkeep\n|turn|2\n|upkeep")  # fmt: skip
+    assert t["p1"].fields_elapsed["trickroom"] == 2 and t["p1"].side_elapsed["reflect"] == 2
+    t = run(START + "|-sidestart|p1: A|Reflect\n|upkeep\n|-sideend|p1: A|Reflect\n|turn|2")
+    assert "reflect" not in t["p1"].side_elapsed
+
+
+def test_charging_and_locking_moves():
+    """-prepare: charging until the move fires (not with -anim: fired at once); Outrage locks,
+    a failed first use (immune) does not, the fatigue confusion ends it."""
+    t = run(START + "|move|p1a: Fishy|Meteor Beam||[still]\n|-prepare|p1a: Fishy|Meteor Beam\n|upkeep\n|turn|2")
+    assert t["p1"].charging == "meteorbeam"
+    t = run(START + "|move|p1a: Fishy|Solar Beam||[still]\n|-prepare|p1a: Fishy|Solar Beam\n"
+            "|-anim|p1a: Fishy|Solar Beam|p2a: Bob\n|upkeep\n|turn|2")  # fmt: skip
+    assert t["p1"].charging is None
+    t = run(START + "|move|p1a: Fishy|Outrage|p2a: Bob\n|-damage|p2a: Bob|50/100\n|upkeep\n|turn|2")
+    assert t["p1"].locked == ["outrage", 1]
+    t = run(START + "|move|p1a: Fishy|Outrage|p2a: Bob\n|-immune|p2a: Bob\n|upkeep\n|turn|2")
+    assert t["p1"].locked is None
+    t = run(START + "|move|p1a: Fishy|Outrage|p2a: Bob\n|upkeep\n|turn|2\n"
+            "|move|p1a: Fishy|Outrage|p2a: Bob|[from]lockedmove\n|-start|p1a: Fishy|confusion|[fatigue]\n"
+            "|upkeep\n|turn|3")  # fmt: skip
+    assert t["p1"].locked is None

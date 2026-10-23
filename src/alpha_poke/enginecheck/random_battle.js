@@ -11,11 +11,16 @@
 //          "none" for a recharge, a species id for a switch), "kind": "move" / "switch"}; the
 //          last step has the final state and no choices. "serialize_every": k -- every k-th
 //          step with both sides choosing also has "battle", Showdown's whole battle serialized
-//          (State.serializeBattle: showdown_claims.js plays from it)
+//          (State.serializeBattle: showdown_claims.js plays from it). "views": true -- the
+//          players' views too (the state-construction differential, scripts/check_state_build.py):
+//          "views": {"p1": lines, "p2": lines, "spectator": lines} (each channel's protocol lines,
+//          Showdown's |split| resolved), each step's "view_pos" (the lines of each view so far)
+//          and "requests" ({side: its request}, as the server sends it)
 const {Battle, Teams} = require(process.argv[2]);
 const {teamOf, state} = require('./showdown_state.js');
 const {maxDamages} = require('./showdown_damage.js');
 const {State} = require(process.argv[2] + '/state');
+const {extractChannelMessages} = require(process.argv[2] + '/battle');
 
 function rng(seed) { // mulberry32
 	let a = seed >>> 0;
@@ -77,6 +82,7 @@ process.stdin.on('data', d => { input += d; });
 process.stdin.on('end', () => {
 	const c = JSON.parse(input);
 	const steps = [];
+	const views = {p1: [], p2: [], spectator: []};
 	let error = null;
 	try {
 		const opts = {formatid: c.format || 'gen9customgame', strictChoices: true};
@@ -89,9 +95,26 @@ process.stdin.on('end', () => {
 		}
 		const r = rng(c.choice_seed || 1);
 		let from = 0;
+		let vpos = 0;
+		const grow = () => { // the new log lines into each view
+			const m = extractChannelMessages(battle.log.slice(vpos).join('\n'), [0, 1, 2]);
+			vpos = battle.log.length;
+			views.spectator.push(...m[0]);
+			views.p1.push(...m[1]);
+			views.p2.push(...m[2]);
+		};
 		while (!battle.ended && battle.turn <= (c.max_turns || 100)) {
 			const snap = state(battle, from);
 			from = battle.log.length;
+			let viewsAt = null;
+			if (c.views) {
+				grow();
+				viewsAt = {
+					view_pos: {p1: views.p1.length, p2: views.p2.length, spectator: views.spectator.length},
+					requests: {p1: JSON.parse(JSON.stringify(battle.p1.activeRequest || null)),
+						p2: JSON.parse(JSON.stringify(battle.p2.activeRequest || null))},
+				};
+			}
 			const choices = {};
 			for (const side of [battle.p1, battle.p2]) {
 				const req = side.activeRequest;
@@ -99,7 +122,7 @@ process.stdin.on('end', () => {
 				choices[side.id] = choose(side, req, r, c);
 			}
 			if (!Object.keys(choices).length) break;
-			const step = {state: snap, choices};
+			const step = {state: snap, choices, ...(viewsAt || {})};
 			if (c.damage_probe && choices.p1 && choices.p2 && choices.p1.kind !== 'pass') step.damage = maxDamages(battle);
 			if (c.serialize_every && choices.p1 && choices.p2 && steps.length % c.serialize_every === 0) {
 				step.battle = State.serializeBattle(battle);
@@ -108,8 +131,9 @@ process.stdin.on('end', () => {
 			for (const [sid, ch] of Object.entries(choices)) battle.choose(sid, ch.choice);
 		}
 		steps.push({state: state(battle, from), choices: {}});
+		if (c.views) grow();
 	} catch (e) {
 		error = String(e && e.stack || e);
 	}
-	process.stdout.write(JSON.stringify({steps, error}));
+	process.stdout.write(JSON.stringify({steps, error, ...(c.views ? {views} : {})}));
 });
