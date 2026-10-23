@@ -596,3 +596,110 @@ def test_an_opponents_copied_moves_keep_their_pp(belief):
     foe = two.pokemon[int(two.active_index)]
     assert foe.id.lower() == "ditto" and "transform" in two.volatile_statuses
     assert {m.id: m.pp for m in foe.moves}["earthquake"] == 0
+
+
+def _their_ditto(extra=()):
+    """The opponent's Ditto transformed into our Garchomp (Rough Skin), then ``extra``."""
+    return battle(["|switch|p2a: Ditto|Ditto|100/100",
+                   "|-transform|p2a: Ditto|p1a: Garchomp|[from] ability: Imposter", "|turn|2",
+                   *extra])  # fmt: skip
+
+
+def test_a_transformed_mons_own_hp_stats_and_ability(belief):
+    """2026-10-23 review: a transformed mon's HP and backup came from its target's base stats
+    (poke-env's base_stats while transformed: a Ditto at 403 HP, Showdown 300; its backup's
+    Attack 308, Showdown 132), and the copied ability was its base one too (Intimidate after the
+    switch-out)."""
+    s = state(_their_ditto(), belief)
+    two = s.side_two
+    d = two.pokemon[int(two.active_index)]
+    assert d.maxhp <= 2 * 48 + 31 + 63 + 110  # (Ditto's 48 base HP at most; Garchomp's 108: 420)
+    atk = d.transform_backup[0][0]
+    assert atk <= 2 * 48 + 31 + 63 + 5 + 30, d.transform_backup  # (Ditto's 48 base Attack)
+    assert d.ability == "roughskin" and d.base_ability == "imposter"
+
+
+def test_a_traced_ability_is_not_the_base_one(belief):
+    """2026-10-23 review: Trace's copied ability was the base one too (still on after a
+    switch-out in the search); base: Trace."""
+    b = battle(["|switch|p2a: Gardevoir|Gardevoir, F|100/100",
+                "|-ability|p2a: Gardevoir|Rough Skin|[from] ability: Trace|[of] p1a: Garchomp",
+                "|turn|2"])  # fmt: skip
+    s = state(b, belief)
+    g = s.side_two.pokemon[int(s.side_two.active_index)]
+    assert (g.ability, g.base_ability) == ("roughskin", "trace")
+
+
+def test_a_disabled_copied_move_is_disabled(belief):
+    """2026-10-23 review: Disable on a copied move was left out (the move rebuilt usable)."""
+    lines = ["|move|p2a: Ditto|Earthquake|p1a: Garchomp", "|-damage|p1a: Garchomp|80/100",
+             "|move|p1a: Garchomp|Disable|p2a: Ditto", "|-start|p2a: Ditto|Disable|Earthquake",
+             "|upkeep|", "|turn|3"]  # fmt: skip
+    s = state(_their_ditto(lines), belief)
+    two = s.side_two
+    d = two.pokemon[int(two.active_index)]
+    assert [m.disabled for m in d.moves if m.id == "earthquake"] == [True]
+    assert "disable" in two.volatile_statuses
+
+
+def test_a_copied_ability_does_not_follow_its_target_after(belief):
+    """2026-10-23 review: the copied ability was the target's at every rebuild -- our Ditto copied
+    an Ogerpon-Wellspring (Water Absorb), the Ogerpon terastallized after (Embody Aspect): both
+    Embody Aspect in the search. The ability it copied stays."""
+    lines = ["|switch|p2a: Ogerpon|Ogerpon-Wellspring, F|100/100", "|turn|2",
+             "|move|p1a: Ditto|Transform|p2a: Ogerpon", "|-transform|p1a: Ditto|p2a: Ogerpon",
+             "|upkeep|", "|turn|3", "|-terastallize|p2a: Ogerpon|Water",
+             "|detailschange|p2a: Ogerpon|Ogerpon-Wellspring-Tera, F, tera:Water",
+             "|-activate|p2a: Ogerpon|ability: Embody Aspect (Wellspring)",
+             "|-boost|p2a: Ogerpon|spd|1",
+             "|upkeep|", "|turn|4"]  # fmt: skip
+    b = _ditto_battle(lines)
+    spec = _spectator(b, "choicescarf", "imposter", ("transform",))
+    for s in (build_state(b, belief, ("Ditto", "Dondozo"), random.Random(0), spectator=spec),):
+        one, two = s.side_one, s.side_two
+        me, foe = one.pokemon[int(one.active_index)], two.pokemon[int(two.active_index)]
+        assert "transform" in one.volatile_statuses
+        assert (me.ability, me.base_ability) == ("waterabsorb", "imposter"), foe.ability
+
+
+LOG4 = """|player|p1|Alice|1|
+|player|p2|Bob|2|
+|gen|9
+|tier|[Gen 9] OU
+|poke|p1|Ditto|
+|poke|p1|Garchomp, M|
+|poke|p2|Kingambit, M|
+|poke|p2|Gholdengo|
+|start
+|switch|p1a: Ditto|Ditto|100/100
+|switch|p2a: Kingambit|Kingambit, M|100/100
+|-transform|p1a: Ditto|p2a: Kingambit|[from] ability: Imposter
+|turn|1
+|move|p1a: Ditto|Taunt|p2a: Kingambit
+|-start|p2a: Kingambit|move: Taunt
+|move|p2a: Kingambit|Swords Dance|p2a: Kingambit
+|-fail|p2a: Kingambit
+|upkeep
+|turn|2
+|move|p1a: Ditto|Kowtow Cleave|p2a: Kingambit
+|-damage|p2a: Kingambit|60/100
+|move|p2a: Kingambit|Kowtow Cleave|p1a: Ditto
+|-damage|p1a: Ditto|60/100
+|upkeep
+|turn|3
+|win|Bob
+"""
+
+
+@pytest.mark.parametrize("seed", [0, 1, 2])
+def test_the_first_choice_of_a_copied_move_is_a_position(belief, seed):
+    """2026-10-23 review: a replay's Ditto choosing a copied move for the first time (Taunt, turn
+    1) -- the move not yet in the log, the target's sampled set without it: the position was
+    dropped. The player knows the copied moves from its transform on (its request): the game's
+    moves it used transformed into that target are in the target's set."""
+    from alpha_poke.train.positions import positions_from_replay
+
+    ps = positions_from_replay({"id": "t4", "log": LOG4, "rating": None, "uploadtime": 0}, belief,
+                               random.Random(seed), pool="all", per_game=99)  # fmt: skip
+    mine = [p for p in ps if p.side == "p1" and p.kind == 0]
+    assert sorted(p.turn for p in mine) == [1, 2], [(p.turn, p.kind) for p in ps]

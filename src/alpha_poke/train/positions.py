@@ -395,6 +395,10 @@ def _emit_positions(row, rep, blind, actions, extra, w_main, w_extra, belief, rn
     battles = {s: Battle(f"battle-{row['id']}-{s}", names[s], _log, gen=9) for s in ("p1", "p2")}
     records = {s: [m for m in rep.teams[s] if not m.phantom] for s in ("p1", "p2")}
     known = {s: {to_id(m.species): _known(m) for m in records[s]} for s in ("p1", "p2")}
+    # the moves a side's transformed active used, by its target (known to it from the transform
+    # on: in the target's sampled set -- 2026-10-23 review: its first choice of one was dropped)
+    copied = {s: {to_id(t): [to_id(x) for x in ms] for (sd, t), ms in rep.copied.items() if sd == s}
+              for s in ("p1", "p2")}  # fmt: skip
     ratings = {s: rep.ratings_before.get(s) or 0 for s in ("p1", "p2")}
     # the parser's switch actions (leads included, drags not) in log order, to find the action
     # of each |switch| line
@@ -404,7 +408,7 @@ def _emit_positions(row, rep, blind, actions, extra, w_main, w_extra, belief, rn
     def emit(kind, side, turn, a, key, gen):
         other = "p2" if side == "p1" else "p1"
         pos = _position(battles[side], side, a, records[side], known[side], belief, gen,
-                        move_beta, kind)  # fmt: skip
+                        move_beta, kind, copied[side])  # fmt: skip
         if pos is None:
             return
         st, action, more = pos
@@ -468,7 +472,8 @@ def _emit_positions(row, rep, blind, actions, extra, w_main, w_extra, belief, rn
     return out
 
 
-def _position(battle, side, a, records, known, belief, rng, move_beta, kind=KIND_MAIN):
+def _position(battle, side, a, records, known, belief, rng, move_beta, kind=KIND_MAIN,
+              copied: dict | None = None):  # fmt: skip
     me = battle.active_pokemon
     switch_only = kind in (KIND_FORCED, KIND_PIVOT)
     if me is None or (me.fainted and kind != KIND_FORCED) or battle.opponent_active_pokemon is None:
@@ -481,7 +486,7 @@ def _position(battle, side, a, records, known, belief, rng, move_beta, kind=KIND
         return None
     names = tuple(belief.display(to_id(r.species.replace("-*", ""))) for r in records)
     opp_names = tuple(belief.display(m.species) for m in battle.teampreview_opponent_team)
-    spec = SpectatorSide(team=team, known=known, names=names)
+    spec = SpectatorSide(team=team, known=known, names=names, copied=copied or {})
     state = build_state(battle, belief, opp_names, rng, move_beta=move_beta, spectator=spec,
                         force_switch=switch_only)  # fmt: skip
     # F2: more belief worlds of the same position (the posterior; not the training state), as

@@ -131,6 +131,9 @@ class Replay:
     cants: list[tuple[int, str, str]]  # (turn, side, reason): could not act (par, slp, flinch...)
     field_events: list[dict]
     warnings: list[str]
+    # (side, target species) -> the moves the side's active used while transformed into it: its
+    # target's moves, all four known to the player from its transform on (its request)
+    copied: dict = field(default_factory=dict)
 
     def leads(self) -> dict[str, str | None]:
         out: dict[str, str | None] = {s: None for s in SIDES}
@@ -185,6 +188,8 @@ class ReplayParser:
         self.cants: list[tuple[int, str, str]] = []
         self.last_move: Action | None = None  # the move whose outcome is being recorded
         self.transformed: set[str] = set()
+        self.transform_into: dict[str, str] = {}  # side -> its transformed active's target species
+        self.copied: dict[tuple[str, str], list[str]] = {}
         self.ability_changed: set[str] = set()  # sides whose active mon's ability was swapped
         self.gametype = "singles"
 
@@ -314,6 +319,7 @@ class ReplayParser:
             cants=self.cants,
             field_events=self.field_events,
             warnings=self.warnings,
+            copied=self.copied,
         )
 
     # ---- header ----------------------------------------------------------------------
@@ -403,6 +409,7 @@ class ReplayParser:
             self.order += 1
         self.active[side] = mon
         self.transformed.discard(side)
+        self.transform_into.pop(side, None)
         self.ability_changed.discard(side)
         self.last_move = None
 
@@ -450,6 +457,10 @@ class ReplayParser:
         if move not in ("Struggle", "Recharge") and side not in self.transformed:
             if move not in mon.moves:
                 mon.moves.append(move)
+        elif move not in ("Struggle", "Recharge") and side in self.transform_into:
+            got = self.copied.setdefault((side, self.transform_into[side]), [])
+            if move not in got:
+                got.append(move)
         tera = self.tera_pending.pop(side, None) is not None
         act = Action(self.turn, side, "move", mon.species, move=move, tera=tera, order=self.order)
         self.actions.append(act)
@@ -611,6 +622,9 @@ class ReplayParser:
         side, _ = self._mon(a[0])
         if side:
             self.transformed.add(side)
+            _, target = self._mon(a[1]) if len(a) > 1 else (None, None)
+            if target is not None:
+                self.transform_into[side] = target.species
 
     # ---- field -----------------------------------------------------------------------
     def _field(self, kind: str, side: str | None, detail: str, **extra):

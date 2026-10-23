@@ -10,7 +10,7 @@ Written from the poke-engine API (poke_engine.pyi) and poke-env; no Foul Play co
 """
 
 import random
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import numpy as np
 import alpha_search
@@ -102,6 +102,21 @@ def _weight(mon) -> float:
     return float(mon.weight or 0.0)
 
 
+def _own_base_stats(mon) -> dict:
+    """A mon's own base stats (poke-env's ``base_stats`` are its target's while it is
+    transformed: 2026-10-23 review -- a Ditto's HP 403, Showdown 300; its backup's Attack its
+    target's)."""
+    return getattr(mon, "_base_stats", None) or mon.base_stats
+
+
+def _current_ability(mon, own: str) -> str:
+    """The engine's ability of a mon whose own (its set's) is ``own``: a temporary one -- Trace's,
+    a Skill Swap's, a Transform's -- if it has one (poke-env's temporary_ability; gone when it
+    switches out), else its own."""
+    t = getattr(mon, "temporary_ability", None)
+    return to_id(t) if t else own
+
+
 def _copied_pp(mon, mid: str) -> int:
     """The PP left of a move ``mon`` copied by transforming (poke-env counts its uses: 5 PP at
     most; 2026-10-23 review: always 5, a Scarf Ditto's fifth Protect left it at 5)."""
@@ -162,6 +177,9 @@ class SpectatorSide:
     team: list
     known: dict[str, KnownSet]
     names: tuple[str, ...]  # belief team names of this side
+    # target species id -> the moves this side's active used transformed into it (the game's:
+    # known from the transform on, as its request lists them)
+    copied: dict = field(default_factory=dict)
 
 
 _PRIORS: dict = {}  # (belief, species, team) -> Dist
@@ -251,7 +269,9 @@ def sample_set(
         item = draw("item", dist.item) or "none"
     if tera is None:
         tera = draw("tera", dist.tera) or _tera(mon)
-    ability = to_id(mon.ability) if mon.ability else None
+    # (its own: not a temporary one -- Trace's, a Transform's; 2026-10-23 review: the copied
+    # Intimidate was its base ability, still on after its switch-out)
+    ability = to_id(mon.base_ability) if mon.base_ability else None
     if ability is None and known is not None and known.ability:
         ability = known.ability
     if ability is None:
@@ -293,20 +313,21 @@ def sample_set(
             w = [p * arch.get(it, 0.0) / max(marg.get(it, 0.0), 1e-9)
                  for (it, *_), p in zip(dmg_post, w, strict=True)]  # fmt: skip
         if speed_obs:  # the move order too: an inconsistent spread / item nearly ruled out
-            w = [p * (1.0 if consistent(speed_obs, calc_stats(mon.base_stats, s, level=level)["spe"],
+            base = _own_base_stats(mon)
+            w = [p * (1.0 if consistent(speed_obs, calc_stats(base, s, level=level)["spe"],
                                         it if not item_seen else item) else 1e-3)
                  for (it, _, s, _), p in zip(dmg_post, w, strict=True)]  # fmt: skip
         if sum(w) > 0:
             it, ab, spread, _ = rng.choices(dmg_post, weights=w)[0]
             if not item_seen:
                 item = it
-            if not mon.ability and not (known is not None and known.ability):
+            if not mon.base_ability and not (known is not None and known.ability):
                 ability = ab
     if spread is None and speed_obs is not None:  # the spread sampled, consistent with the order
         spread, item = _sample_spread(mon, item, item_seen, speed_obs, dist, rng)
     if spread is None:
         spread = belief.spread_for(mon.species)
-    stats = calc_stats(mon.base_stats, spread, level=mon.level or 100)
+    stats = calc_stats(_own_base_stats(mon), spread, level=mon.level or 100)
     return SampledSet(moves or ["tackle"], item, ability, tera, stats)
 
 
@@ -326,7 +347,7 @@ def _sample_spread(mon, item: str, item_seen: bool, obs: list, dist, rng) -> tup
         key = (to_id(mon.species), level)
         speeds = _SPREAD_SPEEDS.get(key)
         if speeds is None:
-            speeds = [calc_stats(mon.base_stats, s, level=level)["spe"] for s in spreads]
+            speeds = [calc_stats(_own_base_stats(mon), s, level=level)["spe"] for s in spreads]
             _SPREAD_SPEEDS[key] = speeds
         for it in (item,) if item_seen else (item, "choicescarf"):
             if it == "choicescarf" and it != item and dist.item.get("choicescarf", 0) <= 0:
@@ -440,7 +461,7 @@ def _our_mon(
         hp=hp,
         maxhp=int(mon.max_hp or 1),
         ability=to_id(mon.ability) if mon.ability else "none",
-        base_ability=_base_ability(mon, to_id(mon.ability) if mon.ability else "none", tm),
+        base_ability=_base_ability(mon, to_id(mon.base_ability or "") or "none", tm),
         item=mon.item or "none",
         attack=int(stats.get("atk") or 100),
         defense=int(stats.get("def") or 100),
@@ -502,7 +523,7 @@ def _their_mon(mon, s: SampledSet, tm: SideTimers | None = None,
         base_types=_base_types(mon.species),
         hp=hp,
         maxhp=maxhp,
-        ability=s.ability,
+        ability=_current_ability(mon, s.ability),
         base_ability=_base_ability(mon, s.ability, tm),
         item=s.item,
         attack=s.stats["atk"],
@@ -562,19 +583,20 @@ def _illusion(theirs: list, opp_active, revealed: dict, rng: random.Random) -> i
     return zi if rng.random() < 1 / max(alive, 1) else None
 
 
-def _as_transformed(p: pe.Pokemon, target: pe.Pokemon, moves: list) -> pe.Pokemon:
+def _as_transformed(p: pe.Pokemon, target: pe.Pokemon, moves: list, ability: str) -> pe.Pokemon:
     """``p`` transformed into ``target`` (Showdown's transformInto): the target's types,
     ability, stats except HP, weight and ``moves``; its own species (as the engine's transform
     keeps it), HP, level, item, status, tera and base types / ability, and its own stats,
     weight, moves and PP as the engine's backup (transform_backup, L180: what its switch-out
     restores; 2026-10-23 review: none -- out in the search, a Ditto stayed a Kingambit with
-    Kingambit's stats and a 5 PP Transform)."""
+    Kingambit's stats and a 5 PP Transform). ``ability``: the one it copied as it transformed
+    (not its target's now: an Ogerpon terastallized after had both Embody Aspect)."""
     own = [(m.id, m.pp) for m in p.moves][:4]
     backup = ([p.attack, p.defense, p.special_attack, p.special_defense, p.speed],
               round(p.weight_kg * 10), own + [("none", 0)] * (4 - len(own)))  # fmt: skip
     return pe.Pokemon(
         id=p.id, level=p.level, types=target.types, base_types=p.base_types, hp=p.hp,
-        maxhp=p.maxhp, ability=target.ability, base_ability=p.base_ability, item=p.item,
+        maxhp=p.maxhp, ability=ability, base_ability=p.base_ability, item=p.item,
         attack=target.attack, defense=target.defense, special_attack=target.special_attack,
         special_defense=target.special_defense, speed=target.speed, status=p.status,
         weight_kg=target.weight_kg, moves=moves, terastallized=p.terastallized,
@@ -787,8 +809,13 @@ def build_state(
     our_t = _transform_target(battle, battle.team, active, their_keys)
     their_t = _transform_target(battle, battle.opponent_team, opp_active, our_keys)
     # (the moves our transformed active used are its target's: in that mon's sampled set)
-    copied = (KnownSet(moves=[m for m in active.moves if m in _MOVES])
-              if our_t is not None else None)  # fmt: skip
+    copied = None
+    if our_t is not None:
+        used = [m for m in active.moves if m in _MOVES]
+        if spectator is not None:  # (a replay: the game's, known from the transform on)
+            used += [m for m in spectator.copied.get(to_id(theirs[our_t].species), [])
+                     if m in _MOVES and m not in used]  # fmt: skip
+        copied = KnownSet(moves=used)
     their_sets = [sample_set(belief, m, team_names, rng, move_beta,
                              known=copied if i == our_t else None,
                              speed_obs=None if obs is None else obs.get(to_id(m.species), []),
@@ -813,16 +840,22 @@ def build_state(
             moves = [pe.Move(id=to_id(m["id"]), pp=int(m.get("pp") or 0),
                              disabled=avail is not None and to_id(m["id"]) not in avail)
                      for m in act.get("moves", [])[:4] if "id" in m]  # fmt: skip
-        else:  # the target's (this world's), the PP poke-env counted
-            moves = [pe.Move(id=m.id, pp=_copied_pp(active, m.id)) for m in their_mons[t].moves]
+        else:  # the target's (this world's), the PP poke-env counted, Disable's flag
+            moves = [pe.Move(id=m.id, pp=_copied_pp(active, m.id), disabled=m.id == tm_us.disabled)
+                     for m in their_mons[t].moves]  # fmt: skip
         our_mons[our_active_idx] = _as_transformed(
-            our_mons[our_active_idx], their_mons[t], moves or their_mons[t].moves
+            our_mons[our_active_idx], their_mons[t], moves or their_mons[t].moves,
+            _current_ability(active, their_sets[t].ability),
         )
         our_tf = True
     t = their_t
     if t is not None and their_mons and t < len(our_mons):
-        moves = [pe.Move(id=m.id, pp=_copied_pp(opp_active, m.id)) for m in our_mons[t].moves]
-        their_mons[their_idx] = _as_transformed(their_mons[their_idx], our_mons[t], moves)
+        # (Disable's flag on a copied move: 2026-10-23 review -- left out, usable)
+        moves = [pe.Move(id=m.id, pp=_copied_pp(opp_active, m.id),
+                         disabled=m.id == tm_them.disabled) for m in our_mons[t].moves]
+        own = to_id(ours[t].base_ability) if ours[t].base_ability else our_mons[t].ability
+        their_mons[their_idx] = _as_transformed(their_mons[their_idx], our_mons[t], moves,
+                                                _current_ability(opp_active, own))  # fmt: skip
         their_tf = True
     our_last, our_vol = _last_move(
         active, our_mons[our_active_idx] if our_active_idx is not None else None, avail,
