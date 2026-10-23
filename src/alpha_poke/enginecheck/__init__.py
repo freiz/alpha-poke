@@ -164,10 +164,7 @@ def _sleep(m: dict) -> dict:
     return {"sleep_turns": min(done, 3)}
 
 
-# the abilities that do nothing for a transformed holder (abilities.rs NO_TRANSFORM, L214)
-NO_TRANSFORM = ("disguise", "embodyaspectcornerstone", "embodyaspecthearthflame", "embodyaspectteal",
-                "embodyaspectwellspring", "gulpmissile", "hungerswitch", "iceface", "neutralizinggas",
-                "protosynthesis", "quarkdrive", "terashift", "zerotohero")  # fmt: skip
+from alpha_poke.agents.engine_state import NO_TRANSFORM  # noqa: E402 (one list: ours too)
 
 # (L224: the moves that call another -- a charge move one starts locks into the caller's slot)
 CALLERS = ("metronome", "copycat", "assist", "mefirst", "naturepower", "mirrormove")

@@ -103,17 +103,19 @@ def own_diffs(built: pe.Side, truth: pe.Side) -> list[tuple[str, str]]:
         # (a fainted mon's tera: where the side's used Terastallization is marked -- either
         # fainted one, L177 -- compared as the side's, own:tera_used; a transformed mon's stats
         # are its target's real ones, which its player does not see: not compared)
-        keys = ["hp", "maxhp", "status", "item", "ability", "base_ability", "rest_turns",
-                "sleep_turns"]  # fmt: skip
+        keys = ["hp"]  # (a fainted one: nothing else of it is read -- its forme back, its maxhp)
         if t.hp > 0:
-            keys += ["terastallized", "tera_type"]
-        if t.transform_backup is None:
+            keys += ["maxhp", "status", "item", "ability", "base_ability", "rest_turns",
+                     "sleep_turns", "terastallized", "tera_type"]  # fmt: skip
+        if t.transform_backup is None and t.hp > 0:
             keys += list(STATS)
         for k in keys:
             if str(getattr(b, k)).lower() != str(getattr(t, k)).lower():
                 out.append((f"own:{k}", f"{sp} {getattr(b, k)} vs {getattr(t, k)}"))
         bmv = {m.id.lower(): (m.pp, m.disabled) for m in b.moves if m.id.lower() != "none"}
         tmv = {m.id.lower(): (m.pp, m.disabled) for m in t.moves if m.id.lower() != "none"}
+        if t.hp <= 0:
+            continue  # (a fainted one's moves and PP: nothing reads them)
         if set(bmv) != set(tmv):
             out.append(("own:moves", f"{sp} {sorted(bmv)} vs {sorted(tmv)}"))
         for mid in set(bmv) & set(tmv):
@@ -183,9 +185,10 @@ def foe_diffs(built: pe.Side, truth: pe.Side, seen: set[str],
     and status, tera; the side's volatiles, counts, conditions, boosts. ``oracle`` (its sets the
     true ones): also the revealed mons' item, abilities, stats and moves with their PP."""
     out = []
-    if "illusion" in _vols(truth):
-        # (its active an Illusion in disguise: which mon it is the belief's draw -- each world
-        # its own, D17 G -- so the active, its moves and boosts are not the construction's)
+    if "illusion" in _vols(truth) or "illusion" in _vols(built):
+        # (its active an Illusion in disguise -- or this world drew one: which mon it is the
+        # belief's draw, each world its own, D17 G -- so the active, its moves and boosts are not
+        # the construction's)
         return [(k, d) for k, d in _side_common("foe", built, truth)
                 if k.split(":")[1] in ("condition",)]
     if oracle:
@@ -215,7 +218,7 @@ def foe_diffs(built: pe.Side, truth: pe.Side, seen: set[str],
         fb, ft = b.hp / max(b.maxhp, 1), t.hp / max(t.maxhp, 1)
         if abs(fb - ft) > 0.02 or (b.hp == 0) != (t.hp == 0):
             out.append(("foe:hp", f"{sp} {fb:.3f} vs {ft:.3f}"))
-        for k in ("status", "terastallized") if t.hp > 0 else ("status",):
+        for k in ("status", "terastallized") if t.hp > 0 else ():  # (a fainted one's: Showdown's last)
             if str(getattr(b, k)).lower() != str(getattr(t, k)).lower():
                 out.append((f"foe:{k}", f"{sp} {getattr(b, k)} vs {getattr(t, k)}"))
         if t.hp > 0 and t.terastallized and str(b.tera_type).lower() != str(t.tera_type).lower():
@@ -373,7 +376,13 @@ def battle_diffs(p1: str, p2: str, seed: int, max_turns: int = 40, sides=("p1", 
         want = bool(req.get("forceSwitch")) and _active(built.side_one).hp > 0
         if built.side_one.force_switch != want:
             out.append((k, side, "own:force_switch", f"{built.side_one.force_switch} vs {want}"))
-        for kind, detail in (own_diffs(built.side_one, t.side_one)
+        diffs = own_diffs(built.side_one, t.side_one)
+        if want or req.get("forceSwitch"):
+            # (a switch decision: the active leaves -- its moves' flags are its last move
+            # request's in Showdown, whatever the lock since; nothing reads them)
+            act = _sp(_active(built.side_one))
+            diffs = [(k2, d) for k2, d in diffs if not (k2 == "own:disabled" and d.startswith(act + " "))]
+        for kind, detail in (diffs
                              + foe_diffs(built.side_two, t.side_two, seen, oracle)
                              + field_diffs(built, t)):  # fmt: skip
             out.append((k, side, kind, detail))
