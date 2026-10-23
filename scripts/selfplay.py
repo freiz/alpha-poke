@@ -29,6 +29,7 @@ from pathlib import Path
 
 from alpha_poke.selfplay import SELFPLAY_DIR
 from alpha_poke.selfplay.batcher import ml_for  # SEARCH_ML with a remaining-turns head
+from alpha_poke.selfplay.runner import MODEL
 
 SINCE_DEFAULT = 1746057600  # 2025-05-01: the current metagame (the matchup model's window too)
 
@@ -120,7 +121,7 @@ STATE = SELFPLAY_DIR / "state.json"  # the current network and every generation'
 # 0-8) is in data/selfplay/archive-v6/ and exp/archive-2026-10-20/, its game data deleted.
 # LINEAGE prefixes this lineage's products (self-play data data/train/<LINEAGE>-sp<G>, runs
 # <LINEAGE>-gen<G>): the registry finds runs by name, the old sp-gen<G> runs stay
-BASE_RUN = "data/train/v72/runs/v0"
+BASE_RUN = MODEL  # (2026-10-23: v6arch-pp on the v7.3 data; was v72/v0)
 LINEAGE = "r2"
 
 
@@ -139,11 +140,13 @@ KL_BIG = 0.01
 # 2026-10-15 (from gen 8): v6 (design v6) -- the reconverted human data, the counters ("count"),
 # the remaining-turns head ("turns"), the self-play outcomes spread over the run (A/B 52.38% +-
 # 2.60%), the self-play data streamed in chunks (all generations no longer fit in memory)
-# 2026-10-20 (lineage r2): v0's setup -- the v7.2 human data (EXTRA_VERSION 3), the v7 inputs ko2 / tera / team
-# (not post: design D13附); train_pv builds the model from these flags, so they must match the
-# starting network's (cmd_train checks its config)
-TRAIN_DATA = "v72"  # the human data (data/train/<x>); the generations' runs go to its runs/
-FEATS = "reveal,num,movetab,matchup,elo,counter,count,ko2,tera,team"
+# 2026-10-20 (lineage r2): v0's setup -- the v7.2 human data (EXTRA_VERSION 3), the v7 inputs ko2 /
+# tera / team (not post: design D13附). 2026-10-23: v6arch-pp's -- the v7.3 data (the decision
+# stages, EXTRA_VERSION 4), v6's 7 input groups (its GPU search 38% faster than v0's). train_pv
+# builds the model from these flags, so they must match the starting network's (cmd_train checks
+# its config)
+TRAIN_DATA = "v73"  # the human data (data/train/<x>); the generations' runs go to its runs/
+FEATS = "reveal,num,movetab,matchup,elo,counter,count"
 TRAIN_FLAGS = (f"--data {TRAIN_DATA} --stream 2 --val-cutoff 1776921722 --train-only hf- "
                "--eval-every 500 "
                "--arch transformer "

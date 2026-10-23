@@ -248,13 +248,16 @@ pub(crate) struct PathCtx<'a> {
 }
 
 impl<'a> PathCtx<'a> {
-    pub(crate) fn new(base: Option<&'a Context>) -> Self {
+    /// `root`: the search's root state -- a switch to come there (a faint's replacement, a
+    /// pivot's switch-in) is the root turn's, not over yet: counted once it is done (2026-10-23
+    /// review: a forced root opened no turn, every node below read one turn behind)
+    pub(crate) fn new(base: Option<&'a Context>, root: &State) -> Self {
         PathCtx {
             base,
             steps: Vec::new(),
             reveal: base.map_or([0; 12], |c| c.reveal),
             mains: 0,
-            open: false,
+            open: base.is_some() && (forced(&root.side_one) || forced(&root.side_two)),
             pending: [None; 2],
         }
     }
@@ -726,7 +729,7 @@ impl Tree {
         ctx: Option<&Context>,
         rng: &mut impl Rng,
     ) {
-        let mut pc = PathCtx::new(ctx.filter(|_| cfg.tnet.is_some()));
+        let mut pc = PathCtx::new(ctx.filter(|_| cfg.tnet.is_some()), state);
         let mut path: Vec<(u32, u16, u16)> = Vec::with_capacity(16);
         let mut applied: Vec<Vec<Instruction>> = Vec::with_capacity(16); // below the root
         let mut root_step: Option<(u16, u16, usize)> = None; // cached root outcome applied
@@ -932,7 +935,7 @@ fn root_priors_over_worlds(tree: &mut Tree, worlds: &[State], ctxs: &[Context], 
             o1.into_iter().map(|mc| (arm_index(&mut root.s1, label(&state.side_one, &mc)), mc)).collect();
         let av2: Vec<(usize, MoveChoice)> =
             o2.into_iter().map(|mc| (arm_index(&mut root.s2, label(&state.side_two, &mc)), mc)).collect();
-        let lc = PathCtx::new(Some(ctx)).context(ctx);
+        let lc = PathCtx::new(Some(ctx), state).context(ctx);
         let own = Input::new(state, &lc, false, crate::bsearch::evaluate_checked(state));
         let p1 = prior_probs(&av1, &tnet.forward(&own).logits);
         let p2 = cfg
@@ -1392,7 +1395,7 @@ mod tests {
             ..Default::default()
         };
         let mut state = ko_first();
-        let mut pc = PathCtx::new(Some(&base));
+        let mut pc = PathCtx::new(Some(&base), &state);
         let m = MoveChoice::Move(PokemonMoveIndex::M0);
         pc.push(&state, &m, &m);
         let outcomes = generate_instructions_from_move_pair(&mut state, &m, &m, false);
@@ -1425,6 +1428,53 @@ mod tests {
         assert_eq!(pc.context(&base).turn, 11);
     }
 
+    /// 2026-10-23 review: the search started at a forced switch (a faint's replacement in turn
+    /// 10, a U-turn's switch-in): once the switch is done, the context is turn 11 (was 10, and
+    /// every node below one turn behind)
+    #[test]
+    fn a_forced_root_ends_its_turn() {
+        let base = Context { reveal: [0; 12], rating: [0, 0], turn: 10, history: vec![], ..Default::default() };
+        let m = MoveChoice::Move(PokemonMoveIndex::M0);
+        // the faint's replacement
+        let mut state = ko_first();
+        let outcomes = generate_instructions_from_move_pair(&mut state, &m, &m, false);
+        state.apply_instructions(&outcomes[0].instruction_list);
+        assert!(state.side_two.get_active_immutable().hp <= 0);
+        let mut pc = PathCtx::new(Some(&base), &state);
+        assert_eq!(pc.context(&base).turn, 10, "the root: still its turn");
+        let (o1, o2) = state.get_all_options();
+        pc.push(&state, &o1[0], &o2[0]);
+        let outcomes = generate_instructions_from_move_pair(&mut state, &o1[0], &o2[0], false);
+        state.apply_instructions(&outcomes[0].instruction_list);
+        pc.settle(&outcomes[0].instruction_list, &state);
+        assert_eq!(pc.context(&base).turn, 11);
+        // the next main step: turn 12 once over
+        let (o1, o2) = state.get_all_options();
+        pc.push(&state, &o1[0], &o2[0]);
+        let outcomes = generate_instructions_from_move_pair(&mut state, &o1[0], &o2[0], false);
+        state.apply_instructions(&outcomes[0].instruction_list);
+        pc.settle(&outcomes[0].instruction_list, &state);
+        if !(forced(&state.side_one) || forced(&state.side_two)) {
+            assert_eq!(pc.context(&base).turn, 12);
+        }
+        // a U-turn's switch-in, the foe's move saved
+        let mut state = ko_first();
+        state.side_one.get_active().moves[&PokemonMoveIndex::M0].id = Choices::UTURN;
+        state.side_one.get_active().moves[&PokemonMoveIndex::M0].choice = poke_engine::choices::MOVES.get(&Choices::UTURN).unwrap().clone();
+        let foe = state.side_two.get_active();
+        (foe.hp, foe.maxhp) = (400, 400);
+        let outcomes = generate_instructions_from_move_pair(&mut state, &m, &m, false);
+        state.apply_instructions(&outcomes[0].instruction_list);
+        assert!(state.side_one.force_switch);
+        let mut pc = PathCtx::new(Some(&base), &state);
+        let (o1, o2) = state.get_all_options();
+        pc.push(&state, &o1[0], &o2[0]);
+        let outcomes = generate_instructions_from_move_pair(&mut state, &o1[0], &o2[0], false);
+        state.apply_instructions(&outcomes[0].instruction_list);
+        pc.settle(&outcomes[0].instruction_list, &state);
+        assert_eq!(pc.context(&base).turn, 11);
+    }
+
     /// 2026-10-22 review: our U-turn first, the foe's move saved for after our switch-in: in
     /// the history that step has no action of the foe yet (the log so far; it read as prevented)
     /// and its move is unrevealed; the switch's step has the move
@@ -1437,7 +1487,7 @@ mod tests {
         let foe = state.side_two.get_active();
         (foe.hp, foe.maxhp) = (400, 400);
         foe.moves[&PokemonMoveIndex::M0].choice = poke_engine::choices::MOVES.get(&Choices::ICEBEAM).unwrap().clone();
-        let mut pc = PathCtx::new(Some(&base));
+        let mut pc = PathCtx::new(Some(&base), &state);
         let m = MoveChoice::Move(PokemonMoveIndex::M0);
         pc.push(&state, &m, &m);
         let outcomes = generate_instructions_from_move_pair(&mut state, &m, &m, false);
@@ -1504,7 +1554,7 @@ mod tests {
         let a = state.side_one.get_active();
         (a.status, a.sleep_turns, a.rest_turns) = (PokemonStatus::SLEEP, 0, 0); // cannot wake yet
         state.side_two.get_active().hp = 300;
-        let mut pc = PathCtx::new(Some(&base));
+        let mut pc = PathCtx::new(Some(&base), &state);
         let m = MoveChoice::Move(PokemonMoveIndex::M0);
         pc.push(&state, &m, &m);
         let outcomes = generate_instructions_from_move_pair(&mut state, &m, &m, false);
@@ -1514,7 +1564,7 @@ mod tests {
             let mut p = PathCtx {
                 pending: pc.pending,
                 steps: pc.steps.clone(),
-                ..PathCtx::new(Some(&base))
+                ..PathCtx::new(Some(&base), &st)
             };
             p.settle(&o.instruction_list, &st);
             let step = p.steps.last().unwrap();

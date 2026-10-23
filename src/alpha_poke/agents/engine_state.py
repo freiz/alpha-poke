@@ -612,10 +612,12 @@ def _counts(tm: SideTimers, active) -> tuple[int, int]:
     return toxic, tm.protect
 
 
-def _timed(tm: SideTimers, active, mons: list, engine_mons: list, vol: set[str]) -> dict:
+def _timed(tm: SideTimers, active, mons: list, engine_mons: list, vol: set[str],
+           disable: int | None = None) -> dict:  # fmt: skip
     """pe.Side kwargs: the pending Wish (turns, half the wisher's max HP), the pending Future
     Sight (turns, its user's slot) and the active's
-    volatile durations (only of volatiles it has; clamped to what the engine accepts)."""
+    volatile durations (only of volatiles it has; clamped to what the engine accepts;
+    ``disable``: Disable's, its move's slot * 8 + its count)."""
     out = {}
     if tm.wish is not None:
         idx = next((i for i, m in enumerate(mons) if to_id(m.species) == tm.wish[1]),
@@ -637,6 +639,8 @@ def _timed(tm: SideTimers, active, mons: list, engine_mons: list, vol: set[str])
             dur[name] = min(n, top)
     if "slowstart" in vol and tm.slowstart:  # the turns left (the engine counts them down)
         dur["slowstart"] = tm.slowstart[0]
+    if "disable" in vol and disable:
+        dur["disable"] = disable
     if dur:
         out["volatile_status_durations"] = pe.VolatileStatusDurations(**dur)
     return out
@@ -722,7 +726,7 @@ def build_state(
             # known moves come first in sample_set; in a real battle our moves are in moveset
             # order, unrelated to use: shuffle so the slot does not leak which move gets used
             rng.shuffle(s.moves)
-            our_mons.append(_their_mon(m, s, tm_us))
+            our_mons.append(_their_mon(m, s, tm_us, tm_us.disabled if m is active else None))
     our_idx = next((i for i, m in enumerate(ours) if m is active), 0)
     if battle.force_switch or (active is not None and active.fainted):
         our_idx = next((i for i, m in enumerate(ours) if m.active), our_idx)
@@ -824,6 +828,18 @@ def build_state(
             vol.add("frombooster")
         if tm.last_failed:  # (L115)
             vol.add("lastmovefailed")
+    # Disable (L70): its volatile and its move's slot and count, not the move's flag alone (the
+    # engine's next move enabled it again; 2026-10-23 review)
+    disable = {}
+    for who, mon, vol, tm, mons, i in (
+        ("us", active, our_vol, tm_us, our_mons, our_active_idx),
+        ("them", opp_active, their_vol, tm_them, their_mons, their_idx),
+    ):
+        ok = mon is not None and i is not None and i < len(mons)
+        ids = [m.id for m in mons[i].moves] if ok else []
+        if tm.disabled is not None and tm.disabled in ids:
+            vol.add("disable")
+            disable[who] = ids.index(tm.disabled) * 8 + min(tm.disable_ends, 4)
     # the items of the mons that set a screen / the weather / the terrain (ours known, theirs
     # this world's sample): an extending item makes it 8 turns
     items = {("us", to_id(m.species)): (m.item or "") for m in ours} if spectator is None else {}
@@ -853,7 +869,7 @@ def build_state(
             battle.side_conditions, turn, *_counts(tm_us, active), clay_us
         ),
         volatile_statuses=our_vol,
-        **_timed(tm_us, active, ours, our_mons, our_vol),
+        **_timed(tm_us, active, ours, our_mons, our_vol, disable.get("us")),
         substitute_health=(
             (
                 int((active.max_hp or 4) // 4)
@@ -892,7 +908,7 @@ def build_state(
             battle.opponent_side_conditions, turn, *_counts(tm_them, opp_active), clay_them
         ),
         volatile_statuses=their_vol,
-        **_timed(tm_them, opp_active, theirs, their_mons, their_vol),
+        **_timed(tm_them, opp_active, theirs, their_mons, their_vol, disable.get("them")),
         substitute_health=(
             their_mons[their_idx].maxhp // 4 // (2 if tm_them.sub_hit else 1)
             if opp_active is not None and Effect.SUBSTITUTE in opp_active.effects

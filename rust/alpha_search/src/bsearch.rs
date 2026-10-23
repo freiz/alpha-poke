@@ -251,7 +251,7 @@ fn descend(
     vl: u32,
     rng: &mut StdRng,
 ) {
-    let mut pc = PathCtx::new(Some(ctx));
+    let mut pc = PathCtx::new(Some(ctx), state);
     let mut path: Vec<(u32, u16, u16)> = Vec::with_capacity(16);
     let mut applied: Vec<Vec<Instruction>> = Vec::with_capacity(16);
     let mut root_step: Option<(Arc<Vec<StateInstructions>>, usize)> = None;

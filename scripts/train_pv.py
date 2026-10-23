@@ -28,8 +28,9 @@ turn-start positions only (comparable with v3), plus the forced / pivot switch a
 ``--stream K`` (data larger than memory, e.g. the full set: ~2.5 KB per position): only the small
 columns of all shards stay in memory (splits and weights); the validation positions (at most
 ``--val-max``, random) are loaded once; training reads K whole shards at a time (Metamon's shards
-are random in time), samples its batches there by time weight, and loads the next K shards in the
-background. Shard order is reshuffled every pass.
+are random in time), samples its batches there by time weight -- as many as the chunk's share of
+the whole weight (the global half-life) -- and loads the next K shards in the background. Shard
+order is reshuffled every pass.
 """
 
 import argparse
@@ -472,6 +473,7 @@ class ChunkStream:
         self.train[train_idx] = True
         self.w = np.zeros(len(small["shard"]))
         self.w[train_idx] = probs_w
+        self.w_total, self.n_train = float(self.w.sum()), len(train_idx)
         self.pool = ThreadPoolExecutor(1)
         self.order: list = []
         self.next = self.pool.submit(self._load, self._next_shards())
@@ -495,11 +497,17 @@ class ChunkStream:
         self.next = self.pool.submit(self._load, self._next_shards())
         w = self.w[self.glob_rows]
         self.p = w / w.sum()
-        self.left = max(1, len(self.glob_rows) // self.batch)
+        # the chunk's steps by its share of the whole time weight (a pass: n_train / batch
+        # steps; randomly rounded, 0 skips it): a row's chance is then its global weight. Before,
+        # by its rows (2026-10-23 review): a chunk of old games trained as long as one of new ones
+        # and the half-life held within a chunk only (the hf- shards ~23% of the batches, 43.5% by
+        # weight)
+        exp = w.sum() / self.w_total * self.n_train / self.batch
+        self.left = int(exp) + int(self.rng.random() < exp - int(exp))
         self.block, self.used = None, 0
 
     def batch_rows(self):
-        if self.left == 0:
+        while self.left == 0:
             self._advance()
         if self.block is None or self.used == len(self.block):
             m = min(1000, self.left)

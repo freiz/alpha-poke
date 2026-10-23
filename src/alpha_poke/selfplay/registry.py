@@ -10,8 +10,8 @@
                      estimated Elo (95% CI) and its matches
 
 Elo: weighted least squares over the fitted matches. Each match gives an Elo difference
-400 log10(p / (1 - p)) with the variance of its paired mean (delta method). The anchor (v0)
-is fixed at ANCHOR_ELO; a model connected to it by no fitted match has no Elo. Rebuilt from
+400 log10(p / (1 - p)) with the variance of its paired mean (delta method). The anchor (the self-play
+start) is fixed at ANCHOR_ELO; a model connected to it by no fitted match has no Elo. Rebuilt from
 state.json, the run directories and matches.jsonl by ``write()`` (scripts/selfplay.py
 registry, and after every evaluation)."""
 
@@ -22,6 +22,8 @@ import time
 from pathlib import Path
 
 import numpy as np
+
+from alpha_poke.selfplay.runner import MODEL
 
 ROOT = Path(__file__).resolve().parents[3]
 EXP = ROOT / "exp"
@@ -40,8 +42,9 @@ def run_dir(name: str) -> Path:
 
 # 2026-10-09: self-play restarted from v5-glu (the human-data network); the earlier run is in
 # exp/archive-2026-10-08/. 2026-10-20: restarted from v0 (lineage r2, scripts/selfplay.py); the
-# v5-glu lineage's registry is in exp/archive-2026-10-20/
-ANCHOR, ANCHOR_ELO = "v0", 1500.0
+# v5-glu lineage's registry is in exp/archive-2026-10-20/. 2026-10-23: the start v6arch-pp (v7.3)
+# before r2's first generation (no matches yet): the anchor is the start's name (runner.MODEL)
+ANCHOR, ANCHOR_ELO = Path(MODEL).name, 1500.0
 
 
 def name_of(run: str | None) -> str | None:

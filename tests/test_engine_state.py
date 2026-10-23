@@ -73,6 +73,68 @@ def test_disable_and_perish(belief):
     assert "perish3" in s.side_two.volatile_statuses
 
 
+DISABLED_REFLECT = ["|move|p1a: Garchomp|Reflect|p1a: Garchomp", "|-sidestart|p1: us|Reflect",
+                    "|move|p2a: Gholdengo|Disable|p1a: Garchomp",
+                    "|-start|p1a: Garchomp|Disable|Reflect", "|upkeep|", "|turn|3"]  # fmt: skip
+
+
+def _disable_holds(s, want: int):
+    """Side one's Reflect (slot 1) disabled by the volatile, its count ``want``; after one
+    Earthquake it is still disabled (2026-10-23 review: the move's flag alone -- the engine's
+    next move enabled it again)."""
+    import poke_engine as pe
+
+    one = s.side_one
+    assert "disable" in one.volatile_statuses
+    assert one.volatile_status_durations.disable == 1 * 8 + want
+    assert [m.disabled for m in one.pokemon[0].moves][:2] == [False, True]
+    for o in pe.generate_instructions(s, "earthquake", "none"):
+        assert not any("EnableMove" in str(i) and "M1" in str(i) for i in o.instruction_list), o
+
+
+def test_disable_holds_at_the_live_root(belief):
+    """Our Reflect disabled (the request leaves it out): the Disable's volatile and count."""
+    b = battle(["|move|p2a: Gholdengo|Make It Rain|p1a: Garchomp", "|turn|2", *DISABLED_REFLECT])
+    b.available_moves  # noqa: B018
+    req = [{"move": m, "id": m, "pp": 8, "maxpp": 8, "disabled": m == "reflect"}
+           for m in ("earthquake", "reflect", "substitute", "hyperbeam")]  # fmt: skip
+    side = [mon("p1: Garchomp", "Garchomp", ["earthquake", "reflect", "substitute", "hyperbeam"],
+                "leftovers", "roughskin", True), mon("p1: Dondozo", "Dondozo", ["wavecrash"])]
+    b.parse_request({"active": [{"moves": req}], "side": {"name": "us", "id": "p1", "pokemon": side},
+                     "rqid": 2})  # fmt: skip
+    _disable_holds(state(b, belief), 1)  # Garchomp had moved: 5 turns, one end passed
+
+
+def test_disable_holds_in_a_replay_position(belief):
+    """Side one from a spectator log (training positions): Reflect disabled too (was usable)."""
+    from alpha_poke.agents.engine_state import KnownSet, SpectatorSide
+
+    b = battle(["|turn|2", *DISABLED_REFLECT])
+    known = {"garchomp": KnownSet(moves=["earthquake", "reflect", "substitute", "hyperbeam"],
+                                  item="leftovers", ability="roughskin", tera="normal")}
+    spec = SpectatorSide(team=list(b.team.values()), known=known, names=("Garchomp", "Dondozo"))
+    s = build_state(b, belief, ("Garchomp", "Dondozo"), random.Random(0), spectator=spec)
+    one = s.side_one
+    slot = [m.id for m in one.pokemon[0].moves].index("reflect")
+    assert "disable" in one.volatile_statuses
+    assert one.volatile_status_durations.disable == slot * 8 + 1
+    assert one.pokemon[0].moves[slot].disabled
+
+
+def test_disable_before_its_target_moved_is_four_turns():
+    from alpha_poke.agents.timers import timers
+
+    lines = ["|switch|p1a: Garchomp|Garchomp|400/400", "|switch|p2a: Gholdengo|Gholdengo|100/100",
+             "|turn|1", "|move|p1a: Garchomp|Reflect|p1a: Garchomp", "|turn|2",
+             "|move|p2a: Gholdengo|Disable|p1a: Garchomp", "|-start|p1a: Garchomp|Disable|Reflect",
+             "|upkeep|"]  # fmt: skip
+    assert timers([x.split("|") for x in lines])["p1"].disable_ends == 2
+    lines[-3:] = ["|move|p1a: Garchomp|Earthquake|p2a: Gholdengo",
+                  "|-start|p1a: Garchomp|Disable|Earthquake|[from] ability: Cursed Body|[of] p2a: Gholdengo",
+                  "|upkeep|"]  # fmt: skip
+    assert timers([x.split("|") for x in lines])["p1"].disable_ends == 2  # (Cursed Body: 4 too)
+
+
 def test_hit_substitute(belief):
     b = battle(["|move|p1a: Garchomp|Substitute|p1a: Garchomp",
                 "|-start|p1a: Garchomp|Substitute", "|turn|2",

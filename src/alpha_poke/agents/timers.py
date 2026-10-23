@@ -20,6 +20,11 @@ sides, in poke-engine's own units (rust/patches/poke-engine-0.0.48, generate_ins
               duration 4); ends at the third (doc/engine-diff.md L89: it was the encored moves)
   yawn        ends of turn since the Yawn (sleep at the second)
   disabled    the active's move Disable blocks (-start Disable <move>; until -end)
+  disable_ends
+              ends of turn since the Disable, from 1 when its target had yet to move that turn or
+              by Cursed Body (Showdown's duration 4, else 5): the engine's disable duration's
+              count (2026-10-23 review: the move alone, without the volatile, was enabled again
+              by the engine's next move)
   recharge    the active must recharge this turn (-mustrecharge; cleared by its "cant recharge",
               a move or a switch: poke-env keeps its flag until the next move)
   healblock / throatchop / magnetrise
@@ -88,6 +93,7 @@ class SideTimers:
     switched_now: bool = False  # the active came in this turn (a switch is its action)
     yawn: int | None = None
     disabled: str | None = None  # move id
+    disable_ends: int = 0
     healblock: int | None = None
     throatchop: int | None = None
     magnetrise: int | None = None
@@ -165,6 +171,8 @@ def _feed(sides: dict, p: list[str]) -> None:
                 st.encore += 1
             if st.taunt is not None:
                 st.taunt += 1
+            if st.disabled is not None:
+                st.disable_ends += 1
             for k in ("healblock", "throatchop", "magnetrise", "partiallytrapped"):
                 if getattr(st, k) is not None:
                     setattr(st, k, getattr(st, k) + 1)
@@ -292,6 +300,8 @@ def _feed(sides: dict, p: list[str]) -> None:
             st.future = (3, sp)
         elif what == "disable" and len(p) > 4:
             st.disabled = to_id(p[4].replace("move: ", ""))
+            cursed = any(x.startswith("[from] ability:") for x in p[5:])  # (Cursed Body)
+            st.disable_ends = 1 if not st.acted or cursed else 0
         elif what in ("healblock", "throatchop", "magnetrise"):
             setattr(st, what, 0)
         elif what == "substitute":
