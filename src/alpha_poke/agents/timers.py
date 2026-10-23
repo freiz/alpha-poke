@@ -349,6 +349,16 @@ def _feed(sides: dict, p: list[str]) -> None:
         # a swap: the other side's active had the item this one gets
         foe = sides["p2" if p[2][:2] == "p1" else "p1"]
         _item_was(foe, foe.active, to_id(p[3]))
+    elif tag == "-item" and len(p) > 4 and p[4].removeprefix("[from] ") in GAINS:
+        # an item taken / given / found: only by an empty-handed mon -- it had none; the mon it
+        # came from ([of]: Magician, Covet, Thief, Pickpocket, Bestow) had it (2026-10-23 review:
+        # an itemless Reflect setter stealing a Light Clay after read 8 turns)
+        _item_was(st, sp, "")
+        of = next((x[5:] for x in p[5:] if x.startswith("[of] ")), None)
+        if of is not None:
+            ost, osp = _who(["", "", of], sides)
+            if ost is not None:
+                _item_was(ost, osp, to_id(p[3]))
     elif tag == "-end" and len(p) > 3:
         what = to_id(p[3].replace("move: ", ""))
         if "[partiallytrapped]" in p:
@@ -367,6 +377,12 @@ def _feed(sides: dict, p: list[str]) -> None:
             st.frombooster = False
         elif what == "futuresight":  # on the target: the other side's attack landed
             sides["p2" if p[2][:2] == "p1" else "p1"].future = None
+
+
+# -item sources that give an item to a mon holding none (Frisk's -item is a reveal, Trick /
+# Switcheroo a swap: their own branches)
+GAINS = {"ability: Magician", "ability: Pickpocket", "move: Covet", "move: Thief", "move: Bestow",
+         "ability: Harvest", "ability: Pickup", "move: Recycle", "move: G-Max Replenish"}  # fmt: skip
 
 
 def _item_was(st: SideTimers, sp: str, item: str) -> None:

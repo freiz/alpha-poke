@@ -84,6 +84,31 @@ EXTENDERS = {"sunnyday": "heatrock", "raindance": "damprock", "sandstorm": "smoo
              "snow": "icyrock", "snowscape": "icyrock", "hail": "icyrock"}  # fmt: skip
 
 
+def _own_moves(mon) -> dict:
+    """A mon's own moves: poke-env's ``moves`` are the copied ones while it is transformed (its
+    own set then is its base moves; 2026-10-23 review: a Ditto's set sampled with the copied
+    moves -- Transform and Kowtow Cleave in one set)."""
+    ms = mon._moves
+    return ms._base_moves if ms._transform_moves is not None else mon.moves
+
+
+def _weight(mon) -> float:
+    """A mon's own weight (poke-env's is its target's while it is transformed: the backup's
+    weight, 2026-10-23 review)."""
+    if mon.transformed:
+        entry = GEN.pokedex.get(to_id(mon.species))
+        if entry and entry.get("weightkg"):
+            return float(entry["weightkg"])
+    return float(mon.weight or 0.0)
+
+
+def _copied_pp(mon, mid: str) -> int:
+    """The PP left of a move ``mon`` copied by transforming (poke-env counts its uses: 5 PP at
+    most; 2026-10-23 review: always 5, a Scarf Ditto's fifth Protect left it at 5)."""
+    mv = mon.moves.get(mid) if mon is not None and mon.transformed else None
+    return max(0, mv.current_pp) if mv is not None else 5
+
+
 def _types(mon) -> tuple[str, str]:
     # the non-tera types: the engine keeps them when terastallized, STAB on them (tera_type
     # apart: has_type reads only it), as Showdown's getTypes(false, true) (L31)
@@ -176,7 +201,7 @@ def sample_set(
     revealed moves 61.7% -> 77.3% / 81.1% / 82.6% at beta 1 / 2 / 3, design D11)."""
     species = _preview_name(mon, team_names)
     dist = _prior(belief, species, team_names)
-    revealed = [m for m in mon.moves if m in _MOVES]
+    revealed = [m for m in _own_moves(mon) if m in _MOVES]
     ss = belief.sets.get(species)
     # poke-env: "unknown_item" = not seen yet; None = gone (eaten, knocked off, used up: its
     # end_item) -- no item now (2026-10-11: a gone item was sampled again, so an eaten berry or
@@ -394,7 +419,9 @@ def _our_mon(
     HP (Revival Blessing's choice)."""
     stats = mon.stats or {}
     moves = []
-    for mid, mv in list(mon.moves.items())[:4]:
+    if mon.transformed:  # its own moves (the request's are the copied ones: _as_transformed)
+        available_moves = req_pp = None
+    for mid, mv in list(_own_moves(mon).items())[:4]:
         disabled = available_moves is not None and mid not in available_moves
         pp = max(0, mv.current_pp)
         if req_pp and req_pp.get(mid) is not None:
@@ -421,7 +448,7 @@ def _our_mon(
         special_defense=int(stats.get("spd") or 100),
         speed=int(stats.get("spe") or 100),
         status="none" if revived else STATUS.get(mon.status, "none"),
-        weight_kg=float(mon.weight or 0.0),
+        weight_kg=_weight(mon),
         moves=moves,
         terastallized=mon.is_terastallized,
         tera_type=_tera(mon),
@@ -447,7 +474,7 @@ def _counted(mon, tm: SideTimers | None) -> dict:
 def _pp(mon, mid: str) -> int:
     """The PP of an opponent's move: poke-env counts its uses (Pressure included; not the turns
     of a locked move) of a revealed move; an unrevealed one has its maximum (PP Ups)."""
-    mv = mon.moves.get(mid)
+    mv = _own_moves(mon).get(mid)
     if mv is not None:
         # (a move Sleep Talk calls costs no PP: poke-env counts none -- [from] move: Sleep Talk --,
         # Sleep Talk its own; 2026-10-23 review: a floor of 1 for a Sleep Talk user's moves kept
@@ -484,7 +511,7 @@ def _their_mon(mon, s: SampledSet, tm: SideTimers | None = None,
         special_defense=s.stats["spd"],
         speed=s.stats["spe"],
         status=STATUS.get(mon.status, "none"),
-        weight_kg=float(mon.weight or 0.0),
+        weight_kg=_weight(mon),
         moves=[pe.Move(id=m, pp=_pp(mon, m), disabled=m == disabled) for m in s.moves[:4]],
         terastallized=mon.is_terastallized,
         tera_type=s.tera,
@@ -513,7 +540,8 @@ def _with(p: pe.Pokemon, **kw) -> pe.Pokemon:
     keys = ("id", "level", "types", "base_types", "hp", "maxhp", "ability", "base_ability",
             "item", "attack", "defense", "special_attack", "special_defense", "speed", "status",
             "weight_kg", "moves", "terastallized", "tera_type", "rest_turns",
-            "sleep_turns", "times_attacked", "gender", "stellar_boosted")  # fmt: skip
+            "sleep_turns", "times_attacked", "gender", "stellar_boosted",
+            "transform_backup")  # fmt: skip
     return pe.Pokemon(**({k: getattr(p, k) for k in keys} | kw))
 
 
@@ -535,17 +563,23 @@ def _illusion(theirs: list, opp_active, revealed: dict, rng: random.Random) -> i
 
 
 def _as_transformed(p: pe.Pokemon, target: pe.Pokemon, moves: list) -> pe.Pokemon:
-    """``p`` transformed into ``target`` (Showdown's transformInto): the target's species, types,
-    ability, stats except HP, weight and ``moves``; its own HP, level, item, status, tera and
-    base types / ability (what a switch restores in the engine)."""
+    """``p`` transformed into ``target`` (Showdown's transformInto): the target's types,
+    ability, stats except HP, weight and ``moves``; its own species (as the engine's transform
+    keeps it), HP, level, item, status, tera and base types / ability, and its own stats,
+    weight, moves and PP as the engine's backup (transform_backup, L180: what its switch-out
+    restores; 2026-10-23 review: none -- out in the search, a Ditto stayed a Kingambit with
+    Kingambit's stats and a 5 PP Transform)."""
+    own = [(m.id, m.pp) for m in p.moves][:4]
+    backup = ([p.attack, p.defense, p.special_attack, p.special_defense, p.speed],
+              round(p.weight_kg * 10), own + [("none", 0)] * (4 - len(own)))  # fmt: skip
     return pe.Pokemon(
-        id=target.id, level=p.level, types=target.types, base_types=p.base_types, hp=p.hp,
+        id=p.id, level=p.level, types=target.types, base_types=p.base_types, hp=p.hp,
         maxhp=p.maxhp, ability=target.ability, base_ability=p.base_ability, item=p.item,
         attack=target.attack, defense=target.defense, special_attack=target.special_attack,
         special_defense=target.special_defense, speed=target.speed, status=p.status,
         weight_kg=target.weight_kg, moves=moves, terastallized=p.terastallized,
         tera_type=p.tera_type, rest_turns=p.rest_turns, sleep_turns=p.sleep_turns,
-        times_attacked=p.times_attacked, gender=p.gender,
+        times_attacked=p.times_attacked, gender=p.gender, transform_backup=backup,
     )  # fmt: skip
 
 
@@ -746,10 +780,20 @@ def build_state(
     # F1: the damage evidence (play time only, as the speed's): a posterior per mon with hits
     dmg = (damage_posteriors(battle, belief, theirs, team_names)
            if spectator is None and damage_belief else {})  # fmt: skip
+    their_keys = [next((k for k, v in battle.opponent_team.items() if v is m), None)
+                  for m in theirs]  # fmt: skip
+    our_keys = [next((k for k, v in battle.team.items() if v is m), None) for m in ours]
+    # a transformed active: the index of its target (D17 J; replays too, 2026-10-23 review)
+    our_t = _transform_target(battle, battle.team, active, their_keys)
+    their_t = _transform_target(battle, battle.opponent_team, opp_active, our_keys)
+    # (the moves our transformed active used are its target's: in that mon's sampled set)
+    copied = (KnownSet(moves=[m for m in active.moves if m in _MOVES])
+              if our_t is not None else None)  # fmt: skip
     their_sets = [sample_set(belief, m, team_names, rng, move_beta,
+                             known=copied if i == our_t else None,
                              speed_obs=None if obs is None else obs.get(to_id(m.species), []),
                              dmg_post=dmg.get(to_id(m.species)))
-                  for m in theirs]  # fmt: skip
+                  for i, m in enumerate(theirs)]  # fmt: skip
     their_mons = [_their_mon(m, st, tm_them, tm_them.disabled if m is opp_active else None)
                   for m, st in zip(theirs, their_sets, strict=True)]  # fmt: skip
     their_idx = next((i for i, m in enumerate(theirs) if m is opp_active), 0)
@@ -760,27 +804,26 @@ def build_state(
         their_mons[zi] = _with(z, hp=max(1, round(opp_active.current_hp_fraction * z.maxhp)),
                                status=STATUS.get(opp_active.status, "none"))  # fmt: skip
         their_idx = zi
-    transformed = any(m is not None and m.transformed for m in (active, opp_active))
     our_tf = their_tf = False
-    if spectator is None and transformed:  # a transformed active (D17 J; 2026-10-13)
-        their_keys = [next((k for k, v in battle.opponent_team.items() if v is m), None)
-                      for m in theirs]  # fmt: skip
-        our_keys = list(battle.team)
-        t = _transform_target(battle, battle.team, active, their_keys)
-        if t is not None and our_active_idx is not None and t < len(their_mons):
-            # our moves are the request's (the target's real moves, 5 PP each)
+    # a transformed active (D17 J; 2026-10-13); a replay's too (2026-10-23 review: left out --
+    # a Ditto's training state had its own stats and moves, no transform)
+    t = our_t
+    if t is not None and our_active_idx is not None and t < len(their_mons):
+        if spectator is None:  # the request's moves (the target's, their PP exact)
             moves = [pe.Move(id=to_id(m["id"]), pp=int(m.get("pp") or 0),
                              disabled=avail is not None and to_id(m["id"]) not in avail)
                      for m in act.get("moves", [])[:4] if "id" in m]  # fmt: skip
-            our_mons[our_active_idx] = _as_transformed(
-                our_mons[our_active_idx], their_mons[t], moves or their_mons[t].moves
-            )
-            our_tf = True
-        t = _transform_target(battle, battle.opponent_team, opp_active, our_keys)
-        if t is not None and their_mons and t < len(our_mons):
-            moves = [pe.Move(id=m.id, pp=5) for m in our_mons[t].moves]
-            their_mons[their_idx] = _as_transformed(their_mons[their_idx], our_mons[t], moves)
-            their_tf = True
+        else:  # the target's (this world's), the PP poke-env counted
+            moves = [pe.Move(id=m.id, pp=_copied_pp(active, m.id)) for m in their_mons[t].moves]
+        our_mons[our_active_idx] = _as_transformed(
+            our_mons[our_active_idx], their_mons[t], moves or their_mons[t].moves
+        )
+        our_tf = True
+    t = their_t
+    if t is not None and their_mons and t < len(our_mons):
+        moves = [pe.Move(id=m.id, pp=_copied_pp(opp_active, m.id)) for m in our_mons[t].moves]
+        their_mons[their_idx] = _as_transformed(their_mons[their_idx], our_mons[t], moves)
+        their_tf = True
     our_last, our_vol = _last_move(
         active, our_mons[our_active_idx] if our_active_idx is not None else None, avail,
         our_active_idx,

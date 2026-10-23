@@ -184,6 +184,22 @@ def test_extending_items_in_a_replay_position(belief):
     assert s.weather_turns_remaining == 8 - 1
 
 
+@pytest.mark.parametrize("take", [
+    ["|move|p1a: Garchomp|Earthquake|p2a: Gholdengo", "|-damage|p2a: Gholdengo|50/100",
+     "|-item|p1a: Garchomp|Light Clay|[from] ability: Magician|[of] p2a: Gholdengo"],
+    ["|move|p1a: Garchomp|Thief|p2a: Gholdengo", "|-damage|p2a: Gholdengo|50/100",
+     "|-enditem|p2a: Gholdengo|Light Clay|[silent]|[from] move: Thief|[of] p1a: Garchomp",
+     "|-item|p1a: Garchomp|Light Clay|[from] move: Thief|[of] p2a: Gholdengo"],
+])  # fmt: skip
+def test_a_screen_set_without_an_item_is_not_extended_by_a_light_clay_taken_after(belief, take):
+    """2026-10-23 review: an itemless Reflect setter takes a Light Clay the next turn (Magician,
+    Thief): 5 turns (Showdown's 3 left after two ends of turn), not 8."""
+    lines = ["|move|p1a: Garchomp|Reflect|p1a: Garchomp", "|-sidestart|p1: us|Reflect", "|upkeep|",
+             "|turn|2", *take, "|upkeep|", "|turn|3"]
+    b = battle(lines, item="lightclay")  # (the request after: it holds the Light Clay)
+    assert state(b, belief).side_one.side_conditions.reflect == 5 - 2
+
+
 def test_a_screen_set_without_an_item_is_not_extended_by_a_light_clay_given_after(belief):
     """2026-10-23 review: Garchomp with no item sets Reflect, the next turn a Trick gives it a
     Light Clay: Showdown's 5 turns (3 left after two ends of turn), not 8 (6)."""
@@ -498,3 +514,85 @@ def test_live_and_replay_build_the_same_side(belief, lines, item, disabled):
     lv, rv = _our_view(live), _our_view(replay)
     lv.pop("pp"), rv.pop("pp")  # (live: the request's 8 each; a replay: from the uses)
     assert lv == rv
+
+
+IMPOSTER = ["|move|p2a: Gholdengo|Make It Rain|p1a: Ditto", "|-damage|p1a: Ditto|90/100", "|upkeep|",
+            "|turn|2", "|move|p1a: Ditto|Transform|p2a: Gholdengo",
+            "|-transform|p1a: Ditto|p2a: Gholdengo"]  # fmt: skip
+
+
+def _ditto_battle(lines, copied=None):
+    """Our Scarf Ditto (Transform its one move) transformed into Gholdengo; the request
+    (live) offers ``copied`` (the copied moves, 5 PP) when given."""
+    b = battle(lines, us="Ditto", item="choicescarf", ability="imposter", moves=("transform",))
+    if copied:
+        req = [{"move": m, "id": m, "pp": 5, "maxpp": 5, "disabled": False} for m in copied]
+        # (Showdown's side request lists a transformed mon's copied moves too)
+        side = [mon("p1: Ditto", "Ditto", list(copied), "choicescarf", "imposter", True),
+                mon("p1: Dondozo", "Dondozo", ["wavecrash"])]  # fmt: skip
+        b.parse_request({"active": [{"moves": req}],
+                         "side": {"name": "us", "id": "p1", "pokemon": side}, "rqid": 2})  # fmt: skip
+    return b
+
+
+def _check_transformed(s, want_moves=None):
+    one, two = s.side_one, s.side_two
+    me, foe = one.pokemon[int(one.active_index)], two.pokemon[int(two.active_index)]
+    assert me.id.lower() == "ditto"  # (its own species: the engine's transform keeps it)
+    assert "transform" in one.volatile_statuses
+    assert (me.attack, me.special_attack, me.speed) == (foe.attack, foe.special_attack, foe.speed)
+    assert me.types == foe.types and me.ability == foe.ability
+    stats, weight, own = me.transform_backup
+    assert own[0] == ("transform", 15) and stats[0] != foe.attack, me.transform_backup  # (used once)
+    assert weight == 40  # (Ditto's 4 kg: not its target's)
+    if want_moves is not None:
+        assert sorted(m.id for m in me.moves if m.id != "none") == sorted(want_moves)
+    return me
+
+
+def test_a_replays_transformed_active_is_transformed(belief):
+    """2026-10-23 review: a replay's own Ditto (spectator) transformed into Kingambit kept its own
+    stats and Transform, no transform volatile; the moves it used then joined its own set. Now
+    the live root's transform, the target's set (this world's) with the moves it used."""
+    lines = [*IMPOSTER, "|move|p1a: Ditto|Make It Rain|p2a: Gholdengo",
+             "|-damage|p2a: Gholdengo|60/100", "|upkeep|", "|turn|3"]  # fmt: skip
+    b = _ditto_battle(lines)
+    spec = _spectator(b, "choicescarf", "imposter", ("transform",))
+    s = build_state(b, belief, ("Ditto", "Dondozo"), random.Random(0), spectator=spec)
+    me = _check_transformed(s)
+    foe = s.side_two.pokemon[int(s.side_two.active_index)]
+    assert "makeitrain" in [m.id for m in foe.moves]  # (the target's set has it)
+    assert [m.pp for m in me.moves if m.id == "makeitrain"] == [4]  # (5, one used)
+
+
+def test_a_transformed_active_switched_out_in_the_search_is_itself_again(belief):
+    """2026-10-23 review: no transform_backup at the live root -- switched out in the search, the
+    Ditto stayed a Gholdengo (its stats, a 5 PP Transform); Showdown: its own again."""
+    import poke_engine as pe
+
+    copied = ("makeitrain", "shadowball", "nastyplot", "recover")
+    b = _ditto_battle([*IMPOSTER, "|upkeep|", "|turn|3"], copied)
+    s = state(b, belief)
+    me = _check_transformed(s, copied)
+    own_atk = me.transform_backup[0][0]
+    import alpha_search
+
+    j = next(i for i, p in enumerate(s.side_one.pokemon) if p.id.lower() == "dondozo")
+    for _, after, _ in alpha_search.chance_outcomes(s.to_string(), 8 + j, 0):
+        d = next(p for p in pe.State.from_string(after).side_one.pokemon if p.id.lower() == "ditto")
+        assert d.attack == own_atk and (d.moves[0].id.lower(), d.moves[0].pp) == ("transform", 15)
+
+
+def test_an_opponents_copied_moves_keep_their_pp(belief):
+    """2026-10-23 review: the opponent's transformed active's moves had 5 PP at every rebuild (a
+    Scarf Ditto's fifth Protect, the next request Struggle only, the search 5 PP)."""
+    lines = ["|switch|p2a: Ditto|Ditto|100/100", "|-transform|p2a: Ditto|p1a: Garchomp|[from] ability: Imposter",
+             "|turn|2"]  # fmt: skip
+    for t in range(5):
+        lines += ["|move|p2a: Ditto|Earthquake|p1a: Garchomp", "|-damage|p1a: Garchomp|90/100",
+                  f"|turn|{3 + t}"]  # fmt: skip
+    s = state(battle(lines), belief)
+    two = s.side_two
+    foe = two.pokemon[int(two.active_index)]
+    assert foe.id.lower() == "ditto" and "transform" in two.volatile_statuses
+    assert {m.id: m.pp for m in foe.moves}["earthquake"] == 0

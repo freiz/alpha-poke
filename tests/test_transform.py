@@ -61,7 +61,10 @@ def test_our_ditto_takes_the_targets_moves_and_stats(belief):
     s = build_state(b, belief, ("Ditto", "Garchomp"), random.Random(0))
     ours, theirs = s.side_one.pokemon[0], s.side_two.pokemon[0]
     assert sorted(m.id for m in ours.moves) == sorted(AMBIT)
-    assert ours.id == "kingambit" and ours.attack == theirs.attack and ours.speed == theirs.speed
+    # (its own species, as the engine's transform and the differential's states keep it; its
+    # own set the switch-out's backup -- 2026-10-23 review: the target's species, no backup)
+    assert ours.id == "ditto" and ours.attack == theirs.attack and ours.speed == theirs.speed
+    assert ours.transform_backup is not None
     assert ours.hp == 300 and ours.base_ability == "imposter"
     # (L36: the engine's transform / typechange volatiles: a switch ends them)
     assert {"transform", "typechange"} <= {str(v).lower() for v in s.side_one.volatile_statuses}
@@ -74,6 +77,7 @@ def test_their_ditto_takes_our_moves_and_stats(belief):
     ours, theirs = s.side_one.pokemon[0], s.side_two.pokemon[0]
     assert sorted(m.id for m in theirs.moves) == sorted(AMBIT)
     assert all(m.pp == 5 for m in theirs.moves)
-    assert theirs.id == "kingambit" and theirs.attack == 369 and theirs.speed == 198
+    assert theirs.id == "ditto" and theirs.attack == 369 and theirs.speed == 198
+    assert theirs.transform_backup is not None
     assert {"transform", "typechange"} <= {str(v).lower() for v in s.side_two.volatile_statuses}
     assert theirs.maxhp != ours.maxhp or theirs.hp > 0  # its own HP
