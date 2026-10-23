@@ -176,6 +176,10 @@ class ReplayParser:
         self.gen = 0
         self.tier = replay.get("format", "")
         self.pending_forced: set[str] = set()
+        # sides whose next switch an item / ability triggered in the middle of the turn (Eject
+        # Button, Eject Pack, Emergency Exit, Wimp Out): a pivot, not the turn's chosen switch
+        # (2026-10-22 review: an Eject Button's switch before its side moved was the turn's)
+        self.pending_eject: set[str] = set()
         self.tera_pending: dict[str, str] = {}
         self.order = 0
         self.cants: list[tuple[int, str, str]] = []
@@ -342,6 +346,7 @@ class ReplayParser:
         self.order = 0
         self.last_move = None
         self.pending_forced.clear()
+        self.pending_eject.clear()
         snap = {}
         for s in SIDES:
             m = self.active[s]
@@ -372,13 +377,13 @@ class ReplayParser:
         self._set_hp(side, mon, a[2] if len(a) > 2 else "")
         forced = side in self.pending_forced
         self.pending_forced.discard(side)
+        ejected = side in self.pending_eject
+        self.pending_eject.discard(side)
         last = next((x for x in reversed(self.actions) if x.side == side), None)
         pivot = (
             not forced
             and not is_lead
-            and last is not None
-            and last.turn == self.turn
-            and last.kind == "move"
+            and (ejected or (last is not None and last.turn == self.turn and last.kind == "move"))
         )
         if is_lead:
             self.actions.append(Action(0, side, "lead", "", to=mon.species))
@@ -546,6 +551,9 @@ class ReplayParser:
         side, mon = self._mon(a[0])
         tags = _tags(a[2:])
         src = tags.get("from", "")
+        # (used, not taken: |-enditem|MON|Eject Button with no [from] -- its switch is a pivot)
+        if side and not src and len(a) > 1 and a[1] in ("Eject Button", "Eject Pack"):
+            self.pending_eject.add(side)
         lost = src[5:].strip() if src.startswith("move:") else None
         self._reveal_item(mon, a[1], consumed=True, lost=lost)
 
@@ -580,6 +588,8 @@ class ReplayParser:
         if mon is None or len(a) < 2:
             return
         what = a[1]
+        if what in ("ability: Emergency Exit", "ability: Wimp Out"):  # (its switch: a pivot)
+            self.pending_eject.add(side)
         if what.replace("move: ", "") in _ABILITY_CHANGERS:
             # |-activate|SOURCE|move: Skill Swap|TARGET_ABILITY|SOURCE_ABILITY|[of] TARGET
             rest = [x for x in a[2:] if not x.startswith("[")]

@@ -123,13 +123,16 @@ def _step_str(s: dict, side: str) -> str:
 
 def blind_sides(rep) -> dict[tuple[int, str], Blind]:
     """(turn, side) -> Blind for the turns where a side with an active mon chose an action that
-    the log does not show: it could not move (``|cant|``) or its active fainted first."""
+    the log does not show: it could not move (``|cant|``), its active fainted first, or its
+    active went out first (an Eject Button / Emergency Exit's switch, a pivot with no move of
+    its own: 'p', "ejected"; 2026-10-22 review)."""
     main = {
         (a.turn, a.side)
         for a in rep.actions
         if a.turn >= 1 and a.kind in ("move", "switch") and not (a.forced or a.pivot)
     }
     cant = {(t, sd): r for t, sd, r in rep.cants}
+    ejected = {(a.turn, a.side) for a in rep.actions if a.turn >= 1 and a.kind == "switch" and a.pivot}
     out = {}
     for t, snap in rep.hp_by_turn.items():
         if t < 1:
@@ -139,6 +142,9 @@ def blind_sides(rep) -> dict[tuple[int, str], Blind]:
                 continue
             if (t, sd) in cant:
                 out[(t, sd)] = Blind("p", species, cant[(t, sd)])
+                continue
+            if (t, sd) in ejected:
+                out[(t, sd)] = Blind("p", species, "ejected")
                 continue
             rec = next((m for m in rep.teams[sd] if m.species == species), None)
             if rec is not None and rec.fainted_turn == t:
@@ -150,7 +156,11 @@ def decision_steps(actions, blind: dict | None = None) -> dict[int, list[dict]]:
     """Turn -> its decision steps in order, each {side: action / Blind}: the chosen actions
     (the first move / voluntary switch of each side; a Blind when it chose but the log does not
     show what; absent when it had no decision), then each pivot switch, then the forced switches
-    after faints (one step for both sides)."""
+    after faints (one step for both sides). A chosen action that comes after a pivot switch (our
+    U-turn first, the foe's move after our switch-in) is in that pivot's step, not the first: at
+    the pivot's decision it is not known yet (2026-10-22 review: the training history held the
+    foe's later move and its damage; the live history -- the log so far -- and the search's
+    tree -- the foe's saved move, run with the switch -- have it after)."""
     by_turn: dict[int, list] = {}
     for a in actions:
         if a.turn >= 1 and a.kind in ("move", "switch"):
@@ -168,10 +178,27 @@ def decision_steps(actions, blind: dict | None = None) -> dict[int, list[dict]]:
             if sd not in main and (t, sd) in (blind or {}):
                 main[sd] = blind[(t, sd)]
         steps = [main]
-        steps += [{a.side: a} for a in acts if a.pivot]
-        forced = {a.side: a for a in acts if a.forced}
-        if forced:
-            steps.append(forced)
+        for a in acts:
+            if not a.pivot:
+                continue
+            step = {a.side: a}
+            # the other side's chosen action, if it comes after this switch: here
+            other = "p2" if a.side == "p1" else "p1"
+            later = main.get(other)
+            if later is not None and not isinstance(later, Blind) and later.order > a.order:
+                step[other] = main.pop(other)
+            steps.append(step)
+        # the forced switches after faints, by rounds: both sides' replacements of one round
+        # are one step; a side's again in the same turn (its replacement fainted to the
+        # hazards as it came in) opens the next round -- 2026-10-22 review: they were one step,
+        # the last one's, decided before the first had come in
+        rounds: list[dict] = []
+        for a in acts:
+            if a.forced:
+                if not rounds or a.side in rounds[-1]:
+                    rounds.append({})
+                rounds[-1][a.side] = a
+        steps += rounds
         out[t] = steps
     return out
 
@@ -405,10 +432,13 @@ def _emit_positions(row, rep, blind, actions, extra, w_main, w_extra, belief, rn
             continue
         if split[1] == "switch" and switch_queue:
             a = switch_queue.pop(0)
-            # a forced step: all sides' positions before the first forced switch line is seen
-            if a.forced and (a.turn, "forced") not in forced_done:
-                forced_done.add((a.turn, "forced"))
-                for b in [x for x in steps.get(a.turn, [{}])[-1].values()
+            # a forced step (one round of replacements): all its sides' positions before its
+            # first switch line is seen -- each round on its own (the second after the first's
+            # switch-in fainted on entry)
+            key = step_key(steps, a) if a.forced else None
+            if a.forced and key is not None and key not in forced_done:
+                forced_done.add(key)
+                for b in [x for x in steps[key[0]][key[1]].values()
                           if getattr(x, "forced", False) and id(x) in switch_at]:  # fmt: skip
                     emit(KIND_FORCED, b.side, b.turn, b, step_key(steps, b), rng2)
             elif a.pivot and id(a) in switch_at:

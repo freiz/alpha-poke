@@ -23,6 +23,18 @@ from alpha_poke.train.positions import KIND_FORCED, KIND_MAIN, KIND_PIVOT
 log = logging.getLogger(__name__)
 
 
+def foe_move_weights(state, rec: dict) -> dict[str, float]:
+    """The opponent's root visits by move id (``BatchSearch.record``'s ``opp_visits``: its action
+    slots in world 0 -- moves 0-3, the same with tera 4-7; switches left out)."""
+    side = state.side_two
+    moves = [m.id for m in side.pokemon[int(side.active_index)].moves]
+    out: dict[str, float] = {}
+    for i, v in enumerate(rec.get("opp_visits") or []):
+        if i < 8 and v > 0 and i % 4 < len(moves) and moves[i % 4] != "none":
+            out[moves[i % 4]] = out.get(moves[i % 4], 0.0) + float(v)
+    return out
+
+
 def order_is(order, name: str) -> bool:
     """Is the poke-env ``order`` the searched option ``name`` ('earthquake', 'earthquake-tera',
     'switch greattusk')?"""
@@ -66,6 +78,10 @@ class SelfPlayPlayer(SearchPlayer):
         # the request each battle's last record answered (a refused choice drops its record)
         self._record_request: dict[str, int] = {}
         self.dropped_records = 0
+        # the opponent's root visits by move id at each battle's last turn-start search, (turn,
+        # weights): its move still to come after our pivot that turn is drawn from them
+        # (engine_state.build_state foe_pending; 2026-10-22 review)
+        self._foe_moves: dict[str, tuple[int, dict]] = {}
 
     def choose_move(self, battle):
         return self._choose_selfplay(battle)
@@ -160,8 +176,10 @@ class SelfPlayPlayer(SearchPlayer):
         full = self.rng.random() < self.full_frac
         n_worlds = self.worlds if full else self.fast_worlds
         names = self._opp_team_names(battle)
+        last = self._foe_moves.get(battle.battle_tag)
+        pending = last[1] if kind == KIND_PIVOT and last and last[0] == battle.turn else None
         states = [build_state(battle, self.belief, names, self.rng, move_beta=self.move_beta,
-                                  damage_belief=self.damage_belief)
+                                  damage_belief=self.damage_belief, foe_pending=pending)
                   for _ in range(n_worlds)]  # fmt: skip
         issues = request_mismatch(battle, states[0])
         if issues:
@@ -179,6 +197,8 @@ class SelfPlayPlayer(SearchPlayer):
         # safety net: a search must never hold a game forever
         res = await asyncio.wait_for(asyncio.wrap_future(fut), timeout=self.search_timeout)
         rec, n = res[0], res[1]
+        if kind == KIND_MAIN:
+            self._foe_moves[battle.battle_tag] = (battle.turn, foe_move_weights(states[0], rec))
         # the move: sampled from the visits, over options that have an order
         options = [(i, v) for i, v in enumerate(rec["visits"]) if v > 0 and rec["names"][i]]
         orders = {i: engine_move_to_order(self, battle, rec["names"][i]) for i, _ in options}
@@ -222,6 +242,7 @@ class SelfPlayPlayer(SearchPlayer):
     def forget(self, tag: str) -> None:
         super().forget(tag)
         self._record_request.pop(tag, None)
+        self._foe_moves.pop(tag, None)
 
     def _on_choice_rejected(self, tag: str) -> None:
         # the refused choice was not played: its record goes (the re-request makes a new one);

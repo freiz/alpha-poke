@@ -293,7 +293,7 @@ fn descend(
             crate::ismcts::select(&n.s2, &av2, cfg.c)
         };
         let depth = n.depth;
-        if m1 == MoveChoice::None && m2 == MoveChoice::None {
+        if m1 == MoveChoice::None && m2 == MoveChoice::None && !crate::ismcts::someone_struggles(state) {
             // no decision for either side (should not happen): handcrafted leaf value
             break Descent::Terminal(crate::ismcts::sigmoid(evaluate_checked(state) - root_eval), None);
         }

@@ -13,6 +13,7 @@ import random
 from dataclasses import dataclass
 
 import numpy as np
+import alpha_search
 import poke_engine as pe
 from poke_env.battle import Effect, Field, SideCondition, Status, Weather
 from poke_env.battle.move import Move
@@ -572,6 +573,38 @@ def _last_move(mon, engine_mon, avail: set[str] | None = None,
     return {"last_used_move": f"move:{idx}"}, vol
 
 
+def _pending_move(mon: pe.Pokemon, last: dict, vol: set[str], weights: dict | None,
+                  rng: random.Random, legal: list[str]) -> str:
+    """The opponent's move still to come this turn, in this world: its locked move (a Choice
+    item's, Outrage's: its last used one) if legal, else one of the ``legal`` ones (the engine's:
+    alpha_search.pending_moves) drawn by ``weights`` (by move id: the turn's search's opponent
+    visits, so conditioned on what is left; none or all zero: uniform); "none" without one."""
+    moves = list(mon.moves)
+    lu = last.get("last_used_move", "")
+    if lu.startswith("move:") and (mon.item in ("choiceband", "choicespecs", "choicescarf")
+                                   or "lockedmove" in vol):  # fmt: skip
+        m = moves[int(lu[5:])]
+        if m.id in legal:
+            return m.id
+    usable = list(legal)
+    if not usable:
+        return "none"
+    w = [max(0.0, (weights or {}).get(mid, 0.0)) for mid in usable]
+    return rng.choices(usable, weights=w if sum(w) > 0 else None)[0]
+
+
+def _with_saved_move(st: pe.State, move: str) -> pe.State:
+    """``st`` with side two's saved move (switch_out_move_second_saved_move: the sixth field from
+    the end of a side's string, poke-engine's State serialization) set to ``move``."""
+    parts = st.to_string().split("/")
+    fields = parts[1].split("=")
+    fields[-6] = move.upper()
+    parts[1] = "=".join(fields)
+    out = pe.State.from_string("/".join(parts))
+    assert out.side_two.switch_out_move_second_saved_move.lower() == move, (move, fields[-6:])
+    return out
+
+
 def _counts(tm: SideTimers, active) -> tuple[int, int]:
     """(toxic_count, protect) of a side's active (timers)."""
     # Showdown's toxic stage stops at 15: the engine's damage is (count + 1) / 16
@@ -640,6 +673,7 @@ def build_state(
     force_switch: bool | None = None,
     revived: str | None = None,
     damage_belief: bool = True,
+    foe_pending: dict[str, float] | None = None,
 ) -> pe.State:
     """One determinization of the current battle (side_one = us): the opponent's sets sampled
     from the belief, consistent with what they revealed. With ``spectator`` side
@@ -652,7 +686,10 @@ def build_state(
     (agents/speed.py), Transform, Illusion, extending items, a hit Substitute.
     ``revived``: our mon of this species back at half HP (the states of a Revival Blessing
     choice). ``damage_belief``: the opponent's sets also from the damage evidence (F1,
-    agents/damage_obs.py; off: as before 2026-10-19, for A/B)."""
+    agents/damage_obs.py; off: as before 2026-10-19, for A/B). ``foe_pending``: our switch in the
+    middle of a turn (a pivot, an Eject Button) with the opponent's move still to come -- the
+    weights of its moves (the turn's search's opponent visits; none: uniform), one drawn per
+    world as the engine's saved move (`_pending_move`)."""
     turn = battle.turn
     active = battle.active_pokemon
     role = battle.player_role or "p1"
@@ -829,11 +866,25 @@ def build_state(
             and our_active_idx is not None
             else 0
         ),
-        force_switch=bool(battle.force_switch) if force_switch is None else force_switch,
+        # the engine's force_switch is a switch in the middle of the turn (a pivot, an Eject
+        # Button: the foe waits, its saved move); a fainted active's replacement is its own phase
+        # from the HP (both sides at once when both fainted) -- 2026-10-22 review: a double KO's
+        # replacements were built as ours first, the foe choosing after seeing it
+        force_switch=(bool(battle.force_switch) if force_switch is None else force_switch)
+        and not (active is not None and active.fainted),
         **_side_tera_used(our_mons, bool(getattr(battle, "used_tera", False))),
         **our_last,
         **(_boosts(active) if active is not None else {}),
     )
+    # 2026-10-22 review: our switch in the middle of the turn (a pivot of ours went first, an
+    # Eject Button) and the opponent not acted yet: its move comes after our switch-in (the
+    # engine's saved move, as its own tree does after a U-turn); it was none -- the opponent did
+    # nothing that turn and the switch-in took no hit (Garchomp's U-turn, Dondozo in: 0 against
+    # 127-191 from a waiting Make It Rain)
+    our_switch = bool(battle.force_switch) if force_switch is None else force_switch
+    waiting = bool(our_switch and active is not None and not active.fainted and their_mons
+                   and opp_active is not None and not opp_active.fainted and not tm_them.acted
+                   and not tm_them.switched_now and not tm_them.recharge)  # fmt: skip
     side_two = pe.Side(
         pokemon=_pad(their_mons),
         active_index=pe.PokemonIndex(str(their_idx)),
@@ -888,6 +939,16 @@ def build_state(
         gravity=gravity,
         magic_room=magic_room,
     )
+    if waiting:
+        # (its legal moves no faster than our move that went first: the engine's,
+        # alpha_search.pending_moves -- not the turn start's options: a Taunt's status moves, a
+        # Protect that would have come before our U-turn)
+        ours = tm_us.last_move if tm_us.just_moved else ""
+        legal = alpha_search.pending_moves(st.to_string(), ours)
+        pending = _pending_move(their_mons[their_idx], their_last, their_vol, foe_pending, rng,
+                                legal)  # fmt: skip
+        if pending != "none":
+            st = _with_saved_move(st, pending)
     # F1: a turn start's world is the base of that turn's hits (not a mid-turn switch's)
     if spectator is None and not (battle.force_switch if force_switch is None else force_switch):
         record_base(battle, st.to_string())

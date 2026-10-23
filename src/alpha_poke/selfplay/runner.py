@@ -33,6 +33,34 @@ from alpha_poke.servers import account, local_server
 MODEL = "data/train/v72/runs/v0"  # (the self-play start; scripts/selfplay.py BASE_RUN)
 
 
+def append_lines(path: Path, lines: list[str], sync: bool = False) -> None:
+    """``lines`` appended to ``path``, on a line of their own: a file a stop cut in the middle
+    of a line gets the newline first (else the first new line would be glued to the cut one and
+    both lost to the parser); ``sync``: flushed to disk."""
+    with open(path, "ab") as f:
+        if f.tell() > 0:
+            with open(path, "rb") as r:
+                r.seek(-1, os.SEEK_END)
+                if r.read(1) != b"\n":
+                    f.write(b"\n")
+        f.write("".join(x + "\n" for x in lines).encode())
+        if sync:
+            f.flush()
+            os.fsync(f.fileno())
+
+
+def played_models(gen_dir: Path) -> set[str]:
+    """The models of a generation's games so far (a line cut by a stop skipped)."""
+    out = set()
+    for f in gen_dir.glob("games-w*.jsonl"):
+        for line in f.read_text().splitlines():
+            try:
+                out.add(json.loads(line)["model"])
+            except (ValueError, KeyError):
+                continue
+    return out
+
+
 def done_pairs(gen_dir: Path) -> set[int]:
     done = set()
     for f in gen_dir.glob("games-w*.jsonl"):
@@ -161,25 +189,22 @@ async def _lane(lane: str, jobs: list, port: int, gen_dir: Path, settings: dict,
             # records of the attempt the games row names
             "attempt": uuid.uuid4().hex[:16],
         }  # fmt: skip
-        with open(gen_dir / f"decisions-w{wid}.jsonl", "a") as f:
-            for who, rs in recs.items():
-                won = won_a if who == "a" or won_a is None else not won_a
-                for r in rs:
-                    f.write(json.dumps(r | {"game": idx, "won": won, "model": settings["model"],
-                                            "attempt": game["attempt"]}) + "\n")  # fmt: skip
+        rows = []
+        for who, rs in recs.items():
+            won = won_a if who == "a" or won_a is None else not won_a
+            rows += [json.dumps(r | {"game": idx, "won": won, "model": settings["model"],
+                                     "attempt": game["attempt"]}) for r in rs]  # fmt: skip
+        append_lines(gen_dir / f"decisions-w{wid}.jsonl", rows)
         # the protocol log (player a's view): the labels only the whole game knows are built
         # from it with the replay pipeline (selfplay.convert)
         from alpha_poke.agents.net_context import battle_log
 
         log_text = "\n".join("|".join(m) for m in battle_log(battle))
-        with open(gen_dir / f"logs-w{wid}.jsonl", "a") as f:
-            f.write(json.dumps({"pair": idx, "battle": tag, "attempt": game["attempt"],
-                                "log": log_text}) + "\n")  # fmt: skip
+        append_lines(gen_dir / f"logs-w{wid}.jsonl",
+                     [json.dumps({"pair": idx, "battle": tag, "attempt": game["attempt"],
+                                  "log": log_text})])  # fmt: skip
         # the games row last, flushed to disk: the pair's completion mark (resume, convert)
-        with open(gen_dir / f"games-w{wid}.jsonl", "a") as f:
-            f.write(json.dumps(game) + "\n")
-            f.flush()
-            os.fsync(f.fileno())
+        append_lines(gen_dir / f"games-w{wid}.jsonl", [json.dumps(game)], sync=True)
         # the previous game's state, no longer needed: one game late, so that no message of it
         # (e.g. |deinit| after /leave) can still come (poke-env would wait for that battle
         # forever, and wake every such waiter at each new battle)

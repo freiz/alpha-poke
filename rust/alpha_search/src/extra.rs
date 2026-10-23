@@ -82,8 +82,13 @@ use poke_engine::state::{
 /// (2026-10-20, the review of the v7 inputs, doc/engine-diff.md L230): the engine's own speed,
 /// priority, switch-in (hazards) and end of turn instead of copies of them; a multi-hit move's
 /// hits; Endeavor / Final Gambit's immunities; Focus Sash / Sturdy in the KO flags; ko2 hit by
-/// hit; team's answers by an exchange of hits (12 columns, were 7); a sure crit's damage
-pub const EXTRA_VERSION: usize = 3;
+/// hit; team's answers by an exchange of hits (12 columns, were 7); a sure crit's damage; 4
+/// (2026-10-22, the third and fourth reviews): a move with no PP left is no option (the best
+/// move: the threat, the predicted move, the counters, team's exchanges; tera's best hit); ko2
+/// as many uses as PP left (2 a use against Pressure); team's exchanges spend the PP, then
+/// Struggle (its damage, a quarter of the user's max HP back); a mon with no PP left at all:
+/// its Struggle as its threat / best hit
+pub const EXTRA_VERSION: usize = 4;
 pub const MOVE_FEAT: usize = 20 + 3 + 3 + 16 + 3 + 1 + 2 + 4 + 1;
 pub const ENT_KO2: usize = 4 * 2 + 2;
 pub const ENT_TERA: usize = 4 * 3 + 3 + 4 * 2 + 3 + 2;
@@ -790,7 +795,9 @@ impl DamageMemo {
                             enter(st.get_side(&self.refs[att]), j);
                             !lands_now(&st, &self.refs[att], c, false)
                         }));
-                (m.disabled, skip)
+                // (EXTRA_VERSION 4, 2026-10-22 review: a move with no PP left is no option -- the
+                // threat, the counters, the exchanges were won with it)
+                (m.disabled, skip || m.pp <= 0)
             };
             if (usable && disabled) || skip {
                 continue;
@@ -816,7 +823,15 @@ impl DamageMemo {
     /// The best max damage of side `att`'s mon `j` against the other side's mon `def` (both made
     /// active): its range, (0, 0) if none; `usable` as `best_move`.
     fn best(&mut self, att: usize, j: usize, def: usize, usable: bool) -> (f32, f32) {
-        self.best_move(att, j, def, usable, false).map_or((0.0, 0.0), |(_, r)| r)
+        if let Some((_, r)) = self.best_move(att, j, def, usable, false) {
+            return r;
+        }
+        // (EXTRA_VERSION 4: no move with PP left -- Struggle's)
+        let p = self.work.get_side_immutable(&self.refs[att]).pokemon.pkmn[j].clone();
+        if no_pp(&p) {
+            return self.damage(att, j, &struggle(), def).unwrap_or((0.0, 0.0));
+        }
+        (0.0, 0.0)
     }
 }
 
@@ -1205,7 +1220,7 @@ fn featurize_extra_with(
             att_moves
                 .iter()
                 .enumerate()
-                .filter(|(_, m)| !m.disabled)
+                .filter(|(_, m)| !m.disabled && m.pp > 0) // (EXTRA_VERSION 4: PP left)
                 .filter_map(|(k, m)| {
                     memo.get(1 - s, act[1 - s], k, &m.choice, act[s]).map(|d| (d.1, k))
                 })
@@ -1247,14 +1262,21 @@ fn featurize_extra_with(
                 let best = att_moves
                     .iter()
                     .enumerate()
-                    .filter(|(_, m)| !m.disabled)
+                    .filter(|(_, m)| !m.disabled && m.pp > 0) // (EXTRA_VERSION 4: PP left)
                     .filter_map(|(k, m)| memo.get(1 - s, act[1 - s], k, &m.choice, j).map(|r| (r, k)))
                     .fold(None, |a: Option<((f32, f32), usize)>, b| match a {
                         Some(x) if x.0 .1 >= b.0 .1 => Some(x),
                         _ => Some(b),
                     });
-                if let Some(((lo, d), k)) = best {
-                    let c = &att_moves[k].choice;
+                // (EXTRA_VERSION 4: no move with PP left -- its Struggle)
+                let st = struggle();
+                let fallback = (best.is_none() && no_pp(att))
+                    .then(|| memo.damage(1 - s, act[1 - s], &st, j))
+                    .flatten();
+                if let Some(((lo, d), c)) = best
+                    .map(|(r, k)| (r, &att_moves[k].choice))
+                    .or(fallback.map(|r| (r, &st)))
+                {
                     let sub = if j == act[s] { sub_in_way(state, &refs[1 - s], c) } else { 0.0 };
                     let now = lands_now(state, &refs[1 - s], c, true);
                     e[1] = (d / hp).min(2.0);
@@ -1372,7 +1394,10 @@ fn v7_entities(
         // recovery move)
         {
             for (i, c) in moves_of(me).iter().enumerate() {
-                if memo.get(s, act[s], i, c, act[o]).is_none() {
+                // (EXTRA_VERSION 4: as many uses as PP left -- none at 0, one at 1)
+                let pp = [&me.moves.m0, &me.moves.m1, &me.moves.m2, &me.moves.m3][i].pp;
+                let uses = uses_left(pp, foe);
+                if uses <= 0 || memo.get(s, act[s], i, c, act[o]).is_none() {
                     continue;
                 }
                 let hold = holds_at_full(state, me, c, foe);
@@ -1382,6 +1407,7 @@ fn v7_entities(
                 let now = lands_now(state, &refs[s], c, true);
                 // (a pivot -- U-turn, Volt Switch, ...: its user goes out after it, one use)
                 let once = !now
+                    || uses == 1
                     || c.flags.pivot
                     || self_ko(c)
                     || matches!(c.move_id, Choices::FAKEOUT | Choices::FIRSTIMPRESSION);
@@ -1760,6 +1786,18 @@ struct DuelSetup<'a> {
     /// j's on k
     sub_j: f32,
     sub_k: f32,
+    /// (EXTRA_VERSION 4) the uses of its move left (its PP; 2 a use against Pressure; i32::MAX
+    /// with no move to use but PP left); at 0 it struggles: Struggle's damage on the other, a
+    /// quarter of its max HP back
+    uses_j: i32,
+    uses_k: i32,
+    struggle_j: (f32, f32),
+    struggle_k: (f32, f32),
+    /// another attack with PP left besides the chosen move: its PP used up, the exchange goes on
+    /// with that one -- not followed (its setup is the chosen move's): Unknown, not a Struggle
+    /// (2026-10-22, the fifth review: a 1-PP Tackle and a 16-PP Scratch won, not struggled)
+    more_j: bool,
+    more_k: bool,
 }
 
 /// The outcomes of side s's mon j against side o's mon k: as a switch-in (reliable: j's min
@@ -1859,8 +1897,38 @@ fn fight(
     let works = |cond: bool, first: bool, other: &Option<(usize, Choice)>, other_prio: i8, c: &Choice| {
         !cond || (first && other.is_some() && (c.move_id != Choices::UPPERHAND || other_prio > 0))
     };
+    // (EXTRA_VERSION 4: each use takes its PP; out of them, Struggle -- its damage, a quarter of
+    // the user's max HP back)
+    let uses = std::cell::Cell::new([d.uses_j, d.uses_k]);
+    let st = struggle();
+    let use_one = |i: usize| {
+        let mut u = uses.get();
+        if u[i] <= 0 {
+            return true;
+        }
+        if u[i] != i32::MAX {
+            u[i] -= 1;
+            uses.set(u);
+        }
+        false
+    };
+    // (the chosen move out of PP with another attack left: not followed -- Unknown)
+    let untracked = std::cell::Cell::new(false);
     let j_hits = |memo: &mut DamageMemo, hj: &mut f32, hk: &mut f32, sj: &mut Stages, sk: &mut Stages, first: bool| {
+        if uses.get()[0] <= 0 && d.more_j {
+            untracked.set(true);
+            return;
+        }
+        if uses.get()[0] <= 0 {
+            let dd = behind(1, pick(d.struggle_j, true), &st, d.pj, true);
+            *hk = take(*hk, d.max_k, dd, d.hold_k && !knocked.get()[1]);
+            if dd > 0.0 {
+                *hj -= (d.max_j / 4.0).round().max(1.0);
+            }
+            return;
+        }
         if let Some((slot, c)) = d.mj.as_ref().filter(|(_, c)| works(d.cond_j, first, &d.mk, d.prio_k, c)) {
+            let _ = use_one(0);
             let lost = knocked.get();
             let dd = hit(memo, s, j, *slot, c, k, *hj, *hk, *sj, *sk, (lost[0], lost[1])).map_or(0.0, |r| pick(r, true));
             let held = d.hold_k && !lost[1];
@@ -1879,7 +1947,20 @@ fn fight(
         }
     };
     let k_hits = |memo: &mut DamageMemo, hj: &mut f32, hk: &mut f32, sj: &mut Stages, sk: &mut Stages, first: bool| {
+        if uses.get()[1] <= 0 && d.more_k {
+            untracked.set(true);
+            return;
+        }
+        if uses.get()[1] <= 0 {
+            let dd = behind(0, pick(d.struggle_k, false), &st, d.pk, false);
+            *hj = take(*hj, d.max_j, dd, d.hold_j && !knocked.get()[0]);
+            if dd > 0.0 {
+                *hk -= (d.max_k / 4.0).round().max(1.0);
+            }
+            return;
+        }
         if let Some((slot, c)) = d.mk.as_ref().filter(|(_, c)| works(d.cond_k, first, &d.mj, d.prio_j, c)) {
+            let _ = use_one(1);
             let lost = knocked.get();
             let dd = hit(memo, 1 - s, k, *slot, c, j, *hk, *hj, *sk, *sj, (lost[1], lost[0])).map_or(0.0, |r| pick(r, false));
             let held = d.hold_j && !lost[0];
@@ -1899,6 +1980,9 @@ fn fight(
     };
     // both down at once (Final Gambit): lost when sure, won otherwise
     let ended = |hj: f32, hk: f32| -> Option<Fight> {
+        if untracked.get() {
+            return Some(Fight::Unknown);
+        }
         match (hj <= 0.0, hk <= 0.0) {
             (true, true) => Some(if sure { Fight::Lose } else { Fight::Win }),
             (true, false) => Some(Fight::Lose),
@@ -2049,6 +2133,27 @@ fn duels(state: &State, sides: &[&Side; 2], act: [usize; 2], refs: [SideReferenc
                 } else {
                     vj
                 };
+                // (EXTRA_VERSION 4: the uses left, Struggle's damage either way, both in)
+                let uses = |att: &Pokemon, m: &Option<(usize, Choice)>, def: &Pokemon| match m {
+                    Some((slot, _)) => uses_left([&att.moves.m0, &att.moves.m1, &att.moves.m2, &att.moves.m3][*slot].pp, def),
+                    None if no_pp(att) => 0,
+                    None => i32::MAX,
+                };
+                let (uses_j, uses_k) = (uses(pj, &mj, pk), uses(pk, &mk, pj));
+                let more = |att: &Pokemon, m: &Option<(usize, Choice)>| {
+                    let chosen = m.as_ref().map(|(slot, _)| *slot);
+                    [&att.moves.m0, &att.moves.m1, &att.moves.m2, &att.moves.m3].iter().enumerate().any(|(k, mv)| {
+                        Some(k) != chosen
+                            && mv.id != Choices::NONE
+                            && mv.pp > 0
+                            && !mv.disabled
+                            && mv.choice.category != MoveCategory::Status
+                    })
+                };
+                let (more_j, more_k) = (more(pj, &mj), more(pk, &mk));
+                let st = struggle();
+                let struggle_j = max_damage_inplace(&mut memo.work, &refs[s], &st, k).unwrap_or((0.0, 0.0));
+                let struggle_k = max_damage_inplace(&mut memo.work, &refs[o], &st, j).unwrap_or((0.0, 0.0));
                 // (a Substitute only on an active: `enter` clears a benched mon's)
                 let sub_on = |r: &SideReference, m: &Option<(usize, Choice)>| {
                     m.as_ref().map_or(0.0, |(_, c)| sub_in_way(&memo.work, r, c))
@@ -2115,6 +2220,12 @@ fn duels(state: &State, sides: &[&Side; 2], act: [usize; 2], refs: [SideReferenc
                     // (the other's changes reach the actual active only: the one in as j comes)
                     entry_sk: if k == act[o] { ej.foe } else { [0; 4] },
                     entry_field: ej.field,
+                    uses_j,
+                    uses_k,
+                    struggle_j,
+                    struggle_k,
+                    more_j,
+                    more_k,
                 };
                 let modes = [(Entry::SwitchIn, true), (Entry::SwitchIn, false), (Entry::HeadToHead, true), (Entry::Revenge, true)];
                 // (a possible switch-in lost: the reliable one too; won reliably: possibly too)
@@ -2303,8 +2414,28 @@ fn posterior_world(state: &State, flip: bool) -> Vec<f32> {
     out
 }
 
+/// (EXTRA_VERSION 4) a mon with no move left to use (none with PP): it struggles
+fn no_pp(p: &Pokemon) -> bool {
+    [&p.moves.m0, &p.moves.m1, &p.moves.m2, &p.moves.m3]
+        .iter()
+        .all(|m| m.id == Choices::NONE || m.pp <= 0)
+}
+
+/// (EXTRA_VERSION 4) how many uses of a move with `pp` left against `foe`: a Pressure holder
+/// takes 2 PP a use
+fn uses_left(pp: i8, foe: &Pokemon) -> i32 {
+    let cost = if foe.ability == Abilities::PRESSURE { 2 } else { 1 };
+    (pp.max(0) as i32 + cost - 1) / cost
+}
+
+fn struggle() -> Choice {
+    MOVES.get(&Choices::STRUGGLE).unwrap().clone()
+}
+
 fn foe_disabled(p: &Pokemon, k: usize) -> bool {
-    [&p.moves.m0, &p.moves.m1, &p.moves.m2, &p.moves.m3][k].disabled
+    // (EXTRA_VERSION 4: no PP left is no option either)
+    let m = [&p.moves.m0, &p.moves.m1, &p.moves.m2, &p.moves.m3][k];
+    m.disabled || m.pp <= 0
 }
 
 #[cfg(test)]
@@ -2967,6 +3098,104 @@ mod tests {
     }
 
     /// a benched mon's matchup no longer takes the active's boosts (EXTRA_VERSION 2)
+    /// EXTRA_VERSION 4 (2026-10-22, the fourth review): an exchange of hits uses the PP --
+    /// a 1-HP attacker whose Tackle KOs in two hits wins head-to-head with 16 PP, not with 1
+    /// (its second turn is a Struggle: the recoil takes it down first)
+    #[test]
+    fn an_exchange_spends_the_pp() {
+        use poke_engine::engine::abilities::Abilities;
+        use poke_engine::engine::items::Items;
+        let base = fixture();
+        let (a1, a2) = (base.side_one.active_index as usize, base.side_two.active_index as usize);
+        let h2h = |pp: i8, second: bool| {
+            let mut st = base.clone();
+            {
+                let me = st.side_one.get_active();
+                for k in [PokemonMoveIndex::M0, PokemonMoveIndex::M1, PokemonMoveIndex::M2, PokemonMoveIndex::M3] {
+                    me.moves[&k].id = Choices::NONE;
+                    me.moves[&k].choice = mv(Choices::NONE);
+                }
+                me.moves[&PokemonMoveIndex::M0].id = Choices::BODYSLAM;
+                me.moves[&PokemonMoveIndex::M0].choice = mv(Choices::BODYSLAM);
+                me.moves[&PokemonMoveIndex::M0].pp = pp;
+                if second {
+                    // (a weaker attack with 16 PP: the exchange would go on with it)
+                    me.moves[&PokemonMoveIndex::M1].id = Choices::TACKLE;
+                    me.moves[&PokemonMoveIndex::M1].choice = mv(Choices::TACKLE);
+                    me.moves[&PokemonMoveIndex::M1].pp = 16;
+                }
+                (me.item, me.ability, me.speed) = (Items::NONE, Abilities::NONE, 999);
+            }
+            {
+                let foe = st.side_two.get_active();
+                for k in [PokemonMoveIndex::M0, PokemonMoveIndex::M1, PokemonMoveIndex::M2, PokemonMoveIndex::M3] {
+                    foe.moves[&k].id = Choices::SPLASH;
+                    foe.moves[&k].choice = mv(Choices::SPLASH);
+                }
+                (foe.item, foe.ability, foe.speed) = (Items::NONE, Abilities::NONE, 1);
+            }
+            let (lo, hi) = max_damage_inplace(&mut st, &SideReference::SideOne, &mv(Choices::BODYSLAM), a2).unwrap();
+            let hp = ((hi + 1.0).max(1.5 * lo)).ceil() as i16;
+            assert!((hp as f32) <= 2.0 * lo && (hp as f32) > hi);
+            let foe = st.side_two.get_active();
+            (foe.hp, foe.maxhp) = (hp, hp.max(foe.maxhp));
+            st.side_one.get_active().hp = 1;
+            let d = duels_debug(&st, false);
+            d.iter().find(|x| (x.0, x.1, x.2) == (0, a1, a2)).unwrap().5[2]
+        };
+        assert_eq!(h2h(16, false), 0, "two hits: a win");
+        assert_eq!(h2h(1, false), 1, "one use, then Struggle's recoil: a loss");
+        // (the fifth review: with another attack left, not a Struggle's loss -- Unknown)
+        assert_eq!(h2h(1, true), 2, "another attack with PP: not followed, Unknown");
+    }
+
+    /// EXTRA_VERSION 4 (2026-10-22, the third review): a move with no PP left is no option --
+    /// ko2 counts as many uses as PP left (two hits needed: a KO with 16 PP, none with 1 or 0),
+    /// the threat (the best move) leaves it out -- with none left, Struggle's
+    #[test]
+    fn the_pp_left_limits_the_uses() {
+        use poke_engine::engine::abilities::Abilities;
+        use poke_engine::engine::items::Items;
+        let base = fixture();
+        let (a1, a2) = (base.side_one.active_index as usize, base.side_two.active_index as usize);
+        let ko2_sure = |pp: i8| {
+            let mut st = base.clone();
+            {
+                let me = st.side_one.get_active();
+                me.moves[&PokemonMoveIndex::M0].id = Choices::BODYSLAM;
+                me.moves[&PokemonMoveIndex::M0].choice = mv(Choices::BODYSLAM);
+                me.moves[&PokemonMoveIndex::M0].pp = pp;
+                me.moves[&PokemonMoveIndex::M0].disabled = false;
+            }
+            {
+                let foe = st.side_two.get_active();
+                (foe.item, foe.ability) = (Items::NONE, Abilities::NONE);
+            }
+            let (lo, hi) = max_damage_inplace(&mut st, &SideReference::SideOne, &mv(Choices::BODYSLAM), a2).unwrap();
+            // two hits for sure, one not: the foe's HP between the max roll and two min rolls
+            let hp = ((hi + 1.0).max(1.5 * lo)).ceil() as i16;
+            assert!((hp as f32) <= 2.0 * lo && (hp as f32) > hi, "{lo} {hi} {hp}");
+            let foe = st.side_two.get_active();
+            (foe.hp, foe.maxhp) = (hp, hp.max(foe.maxhp));
+            let (_, _, n) = featurize_extra_full(&st, false);
+            n[a1 * ENT_NEW]
+        };
+        assert_eq!(ko2_sure(16), 1.0);
+        assert_eq!(ko2_sure(1), 0.0, "one use left: no second hit");
+        assert_eq!(ko2_sure(0), 0.0);
+        // the threat: the opposing active's best move, none of its moves with no PP
+        let mut st = base.clone();
+        let threat = |st: &State| featurize_extra(st, false).0[a1 * ENT_EXTRA + 1];
+        let t0 = threat(&st);
+        assert!(t0 > 0.0);
+        for k in [PokemonMoveIndex::M0, PokemonMoveIndex::M1, PokemonMoveIndex::M2, PokemonMoveIndex::M3] {
+            st.side_two.get_active().moves[&k].pp = 0;
+        }
+        // no move with PP left: its Struggle's (typeless 50 power), not none
+        let t1 = threat(&st);
+        assert!(t1 > 0.0 && t1 != t0, "no move with PP: Struggle's threat ({t0} -> {t1})");
+    }
+
     #[test]
     fn bench_ignores_active_boosts() {
         let mut st = fixture();

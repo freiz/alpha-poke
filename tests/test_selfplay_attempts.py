@@ -5,6 +5,10 @@ show, and rejects a game whose records and log are out of step."""
 
 import json
 from dataclasses import dataclass, field
+from pathlib import Path
+
+import pyarrow.parquet as pq
+import pytest
 
 from alpha_poke.selfplay import convert
 
@@ -79,3 +83,91 @@ def test_records_out_of_step_reject_the_game(monkeypatch):
     rows, stats = _game(monkeypatch, ["earthquake", "stealthrock", "swordsdance"],
                         ["stealthrock", "swordsdance", "earthquake"])  # fmt: skip
     assert rows == [] and stats["rejected_games"] == 1
+
+
+def test_same_action_by_species_and_unnamed():
+    """A switch names a mon by its forme of the moment on either side (Mimikyu / Mimikyu-Busted,
+    Ogerpon's tera forme): the same action; no name on the log's side: not checked."""
+    assert convert.same_action("switch mimikyu", "switch mimikyubusted")
+    assert convert.same_action("switch ogerponwellspringtera", "switch ogerponwellspring")
+    assert not convert.same_action("switch zapdos", "switch gliscor")
+    assert not convert.same_action("earthquake", "stealthrock")
+    assert convert.same_action("", "nastyplot") is None
+
+
+FIXTURE = Path(__file__).parent / "fixtures" / "selfplay_game.json.gz"
+
+
+def _records(attempt):
+    import gzip
+
+    x = json.loads(gzip.open(FIXTURE, "rt").read())
+    g, lg, ds = x["game"] | {"attempt": attempt}, x["log"] | {"attempt": attempt}, x["decisions"]
+    return g, lg, [d | {"attempt": attempt} for d in ds]
+
+
+def _attempt(gen, attempt, upto=None):
+    """One attempt's records in the runner's order (decisions, log, games); ``upto``: stopped at
+    that point -- (file, "cut": in the middle of its last line / "before": not written)."""
+    from alpha_poke.selfplay.runner import append_lines
+
+    g, lg, ds = _records(attempt)
+    for name, lines in (("decisions", [json.dumps(d) for d in ds]), ("logs", [json.dumps(lg)]),
+                        ("games", [json.dumps(g)])):  # fmt: skip
+        path = gen / f"{name}-w0.jsonl"
+        if upto == (name, "before"):
+            return
+        if upto == (name, "cut"):
+            append_lines(path, lines[:-1])
+            with open(path, "a") as f:
+                f.write(lines[-1][: len(lines[-1]) // 2])  # (no newline: the stop)
+            return
+        append_lines(path, lines)
+
+
+@pytest.mark.skipif(not FIXTURE.exists(), reason="needs the fixture")
+@pytest.mark.parametrize("upto", [("decisions", "cut"), ("logs", "before"), ("logs", "cut"),
+                                  ("games", "before"), ("games", "cut")])  # fmt: skip
+def test_a_stop_at_any_write_then_resume(tmp_path, upto):
+    """A run stopped at every write boundary (2026-10-22 review), the pair played again: the
+    resume sees it not done, the second attempt is appended after the cut line, the conversion
+    gives the rows of the clean run."""
+    from alpha_poke.selfplay import runner
+
+    clean, cut = tmp_path / "clean", tmp_path / "cut"
+    clean.mkdir()
+    cut.mkdir()
+    _attempt(clean, "b")
+    pair = json.loads(next((clean / "games-w0.jsonl").open()))["pair"]
+    want = convert.convert(clean, clean / "out", 9, procs=1, log=lambda *a: None)
+    _attempt(cut, "a", upto)
+    assert pair not in runner.done_pairs(cut)
+    assert runner.played_models(cut) <= runner.played_models(clean)
+    _attempt(cut, "b")  # (the resume plays the pair again)
+    assert pair in runner.done_pairs(cut)
+    got = convert.convert(cut, cut / "out", 9, procs=1, log=lambda *a: None)
+    for k in ("positions", "matched", "action_checked", "action_agree", "games"):
+        assert got.get(k) == want.get(k), (k, got, want)
+    a = pq.read_table(clean / "out" / "shard-0000.parquet").to_pylist()
+    b = pq.read_table(cut / "out" / "shard-0000.parquet").to_pylist()
+    assert [(r["turn"], r["action"], r["pi"], r["history"]) for r in a] == \
+        [(r["turn"], r["action"], r["pi"], r["history"]) for r in b]  # fmt: skip
+
+
+@pytest.mark.skipif(not FIXTURE.exists(), reason="needs the fixture")
+def test_a_reconversion_replaces_the_earlier_shards(tmp_path):
+    """The fifth review: a reconversion with no rows (or fewer shards) left the earlier shards
+    behind, read by the training; the output directory is now replaced whole."""
+    gen = tmp_path / "gen"
+    gen.mkdir()
+    _attempt(gen, "b")
+    out = tmp_path / "out"
+    convert.convert(gen, out, 9, procs=1, log=lambda *a: None)
+    assert list(out.glob("shard-*.parquet"))
+    (out / "shard-0007.parquet").write_bytes(b"stale")  # (a tail shard of a bigger run)
+    for f in gen.glob("games-w*.jsonl"):
+        f.write_text("")  # (no games now)
+    stats = convert.convert(gen, out, 9, procs=1, log=lambda *a: None)
+    assert stats.get("positions", 0) == 0
+    assert not list(out.glob("shard-*.parquet")), list(out.iterdir())
+    assert (out / "convert.json").exists()

@@ -177,3 +177,138 @@ def test_gravity_and_magic_room(belief, field, attr):
                 "|upkeep|", "|turn|2"])  # fmt: skip
     assert getattr(state(b, belief), attr) == 5 - 1
     assert getattr(state(battle(["|turn|2"]), belief), attr) == 0
+
+
+def _pivoted(lines):
+    """Our Garchomp's U-turn went first this turn; our switch request (the opponent's
+    Gholdengo, Make It Rain seen on turn 1, still to move unless ``lines`` say otherwise)."""
+    b = battle(["|move|p2a: Gholdengo|Make It Rain|p1a: Garchomp", "|upkeep|", "|turn|2", *lines],
+               moves=("uturn", "earthquake", "swordsdance", "stealthrock"))  # fmt: skip
+    side = [mon("p1: Garchomp", "Garchomp", ["uturn", "earthquake", "swordsdance", "stealthrock"],
+                active=True), mon("p1: Dondozo", "Dondozo", ["wavecrash"])]  # fmt: skip
+    b.parse_request({"forceSwitch": [True], "side": {"name": "us", "id": "p1", "pokemon": side},
+                     "rqid": 2})  # fmt: skip
+    return b
+
+
+UTURN = ["|move|p1a: Garchomp|U-turn|p2a: Gholdengo", "|-damage|p2a: Gholdengo|80/100"]
+
+
+# 2026-10-22 review: after our pivot the opponent's move is still to come -- the engine's saved
+# move, drawn per world (it was none: the opponent did nothing, the switch-in took no hit)
+def test_pivot_keeps_the_opponents_pending_move(belief):
+    import poke_engine as pe
+
+    b = _pivoted(UTURN)
+    assert b.force_switch
+    s = build_state(b, belief, ("Garchomp", "Dondozo"), random.Random(0),
+                    foe_pending={"makeitrain": 1.0})  # fmt: skip
+    assert s.side_two.switch_out_move_second_saved_move.lower() == "makeitrain"
+    # (uniform without weights: one of its usable moves)
+    moves = {m.id.lower() for m in s.side_two.pokemon[0].moves if m.id.lower() != "none"}
+    for k in range(5):
+        u = build_state(b, belief, ("Garchomp", "Dondozo"), random.Random(k))
+        assert u.side_two.switch_out_move_second_saved_move.lower() in moves
+    # the switch-in takes it
+    opts = pe.options(s)
+    assert opts[1] == ["makeitrain"], opts
+    hit = [si for si in pe.generate_instructions(s, "dondozo", "makeitrain", -1, -1)
+           if any("Damage SideOne" in str(i) for i in si.instruction_list)]  # fmt: skip
+    assert hit
+
+
+@pytest.mark.parametrize("lines", [
+    ["|move|p2a: Gholdengo|Nasty Plot|p2a: Gholdengo", *UTURN],  # it moved first
+    ["|switch|p2a: Kingambit|Kingambit|100/100", *[x.replace("Gholdengo", "Kingambit") for x in UTURN]],
+])  # fmt: skip
+def test_no_pending_move_once_the_opponent_acted(belief, lines):
+    s = build_state(_pivoted(lines), belief, ("Garchomp", "Dondozo"), random.Random(0),
+                    foe_pending={"makeitrain": 1.0})  # fmt: skip
+    assert s.side_two.switch_out_move_second_saved_move.lower() == "none"
+
+
+# 2026-10-22 review: a double KO's replacements are chosen by both sides at once (the engine's
+# phase from both actives' HP); the server's switch request as the engine's force_switch made it
+# ours first, the foe none -- the search let the foe pick after seeing ours
+def test_double_ko_replacements_are_simultaneous(belief):
+    import poke_engine as pe
+
+    b = battle(["|switch|p2a: Kingambit|Kingambit|100/100", "|turn|2",
+                "|switch|p2a: Gholdengo|Gholdengo|100/100", "|turn|3",
+                "|move|p1a: Garchomp|Earthquake|p2a: Gholdengo", "|-damage|p2a: Gholdengo|0 fnt",
+                "|faint|p2a: Gholdengo", "|-damage|p1a: Garchomp|0 fnt|[from] item: Rocky Helmet",
+                "|faint|p1a: Garchomp"])  # fmt: skip
+    side = [mon("p1: Garchomp", "Garchomp", ["earthquake"], active=True),
+            mon("p1: Dondozo", "Dondozo", ["wavecrash"])]  # fmt: skip
+    side[0]["condition"] = "0 fnt"
+    b.parse_request({"forceSwitch": [True], "side": {"name": "us", "id": "p1", "pokemon": side},
+                     "rqid": 2})  # fmt: skip
+    s = state(b, belief)
+    assert not s.side_one.force_switch
+    ours, theirs = pe.options(s)
+    assert ours == ["switch dondozo"] and theirs == ["switch kingambit"], (ours, theirs)
+
+
+# 2026-10-22 review: the opponent's move still to come after our pivot is a legal one (the
+# engine's: not a status move under Taunt) and no faster than our move that went first (a
+# Protect would have come before our U-turn)
+@pytest.mark.parametrize("extra,banned", [
+    (["|-start|p2a: Gholdengo|move: Taunt"], {"nastyplot", "recover", "protect"}),
+    ([], {"protect"}),
+])  # fmt: skip
+def test_pending_move_is_legal_and_not_faster(belief, extra, banned):
+    b = battle(["|move|p2a: Gholdengo|Make It Rain|p1a: Garchomp",
+                "|move|p2a: Gholdengo|Nasty Plot|p2a: Gholdengo", "|upkeep|", "|turn|2",
+                "|move|p2a: Gholdengo|Protect|p2a: Gholdengo", "|upkeep|", "|turn|3",
+                "|move|p2a: Gholdengo|Recover|p2a: Gholdengo", "|upkeep|", "|turn|4", *extra,
+                *UTURN], moves=("uturn", "earthquake", "swordsdance", "stealthrock"))  # fmt: skip
+    side = [mon("p1: Garchomp", "Garchomp", ["uturn", "earthquake", "swordsdance", "stealthrock"],
+                active=True), mon("p1: Dondozo", "Dondozo", ["wavecrash"])]  # fmt: skip
+    b.parse_request({"forceSwitch": [True], "side": {"name": "us", "id": "p1", "pokemon": side},
+                     "rqid": 2})  # fmt: skip
+    seen = set()
+    for k in range(40):
+        s = build_state(b, belief, ("Garchomp", "Dondozo"), random.Random(k),
+                        foe_pending={"protect": 5.0, "nastyplot": 5.0, "makeitrain": 1.0})  # fmt: skip
+        seen.add(s.side_two.switch_out_move_second_saved_move.lower())
+    assert seen and not seen & banned, seen
+    assert "makeitrain" in seen
+
+
+# the fifth review: a waiting Struggle (no move left to use) stays the opponent's action after our
+# pivot; at our move's priority, only if this world lets our move go first
+def test_pending_moves_struggle_and_speed():
+    import alpha_search
+    import poke_engine as pe
+
+    s = pe.State.from_string(open("tests/fixtures/engine_state_6v6.txt").readline().strip())
+    parts = s.to_string().split("/")
+    # every move of the opponent's active out of PP: it struggles
+    mons = parts[1].split("=")
+    a = int(s.side_two.active_index)
+    f = mons[a].split(",")
+    f = [(x.split(";")[0] + ";" + x.split(";")[1] + ";0") if x.count(";") == 2 else x for x in f]
+    mons[a] = ",".join(f)
+    parts[1] = "=".join(mons)
+    out = alpha_search.pending_moves("/".join(parts), "uturn")
+    assert out == ["struggle"], out
+    # speeds 200 (ours) / 300 (theirs), Tackle (priority 0) and Avalanche (-4): our U-turn went
+    # first, so not their Tackle (it would have come first) -- Avalanche; Tackle alone: the world
+    # contradicts the order, by priority alone
+    def world(moves):
+        parts = s.to_string().split("/")
+        for k, sp in ((0, 200), (1, 300)):
+            mons = parts[k].split("=")
+            a = int((s.side_one if k == 0 else s.side_two).active_index)
+            f = mons[a].split(",")
+            f[17] = str(sp)
+            slots = [i for i, x in enumerate(f) if x.count(";") == 2]
+            if k == 1:
+                for i, mv in zip(slots, moves + ["NONE"] * 4):
+                    f[i] = f"{mv};false;{0 if mv == 'NONE' else 16}"
+            mons[a] = ",".join(f)
+            parts[k] = "=".join(mons)
+        return "/".join(parts)
+
+    assert alpha_search.pending_moves(world(["TACKLE", "AVALANCHE"]), "uturn") == ["avalanche"]
+    assert alpha_search.pending_moves(world(["TACKLE"]), "uturn") == ["tackle"]

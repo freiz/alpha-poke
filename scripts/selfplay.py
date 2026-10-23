@@ -95,8 +95,7 @@ def cmd_run(a) -> None:
     # the generation's games are played by the current network (gens 1-2 were played by the
     # old default, v5-glu, until this was fixed)
     model = a.model or state()["current"]
-    played = {json.loads(line)["model"] for f in gen_dir.glob("games-w*.jsonl")
-              for line in f.read_text().splitlines()}  # fmt: skip
+    played = runner.played_models(gen_dir)
     if played - {model}:
         raise SystemExit(f"{gen_dir} has games of {sorted(played)}, not {model}: move them "
                          "away or pass that --model")  # fmt: skip

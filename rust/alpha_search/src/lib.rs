@@ -359,6 +359,71 @@ fn move_table(py: Python<'_>) -> Bound<'_, PyBytes> {
     PyBytes::new(py, &le_bytes(&t, f32::to_le_bytes))
 }
 
+/// The opponent's (side two's) moves that can still be to come this turn after side one's
+/// `our_move` went first and side one now switches (a pivot, an Eject Button; 2026-10-22
+/// review): its legal moves by the engine's own options (Taunt, Encore, a Choice lock, Heal
+/// Block, PP, ...: the turn's state without the switch) whose priority -- the engine's
+/// `modify_choice_priority`: Prankster, Gale Wings, ... -- is not above ours (one above would
+/// have gone first: a Protect, a Sucker Punch), and at our priority only if this world's speeds
+/// let ours go first (a tie kept; none left: by priority alone -- the world contradicts the
+/// order seen); with no move to use, "struggle" (2026-10-22, the fifth review); move ids.
+/// `our_move` unknown: no priority bound.
+#[pyfunction]
+fn pending_moves(state: &str, our_move: &str) -> Vec<String> {
+    use poke_engine::choices::{Choices, MOVES};
+    use poke_engine::engine::generate_instructions::modify_choice_priority;
+    use poke_engine::state::SideReference;
+    use std::str::FromStr;
+    let mut s = State::deserialize(state);
+    for side in [&mut s.side_one, &mut s.side_two] {
+        side.force_switch = false;
+        side.switch_out_move_second_saved_move = Choices::NONE;
+    }
+    let bound = Choices::from_str(our_move)
+        .ok()
+        .filter(|c| *c != Choices::NONE)
+        .and_then(|c| MOVES.get(&c).cloned())
+        .map_or(i8::MAX, |mut c| {
+            modify_choice_priority(&s, &SideReference::SideOne, &mut c);
+            c.priority
+        });
+    let (_, o2) = s.get_all_options();
+    // (the fifth review: no move to use -- it struggles, after our switch-in too)
+    if !o2.iter().any(|m| matches!(m, MoveChoice::Move(_) | MoveChoice::MoveTera(_))) {
+        let struggles = poke_engine::engine::generate_instructions::struggles(&s, &SideReference::SideTwo);
+        return if struggles && 0 <= bound { vec!["struggle".to_string()] } else { vec![] };
+    }
+    // (the fifth review: at our move's priority, only if this world lets ours go first -- not
+    // slower, the other way in Trick Room; a tie stays possible)
+    let speed = |r: &SideReference| poke_engine::engine::generate_instructions::get_effective_speed(&s, r);
+    let (v1, v2) = (speed(&SideReference::SideOne), speed(&SideReference::SideTwo));
+    let ours_first = v1 == v2 || ((v1 > v2) != s.trick_room.active);
+    let active = s.side_two.get_active_immutable();
+    let (mut out, mut by_priority): (Vec<String>, Vec<String>) = (Vec::new(), Vec::new());
+    for mc in o2 {
+        let (MoveChoice::Move(i) | MoveChoice::MoveTera(i)) = mc else {
+            continue;
+        };
+        let mut c = active.moves[&i].choice.clone();
+        modify_choice_priority(&s, &SideReference::SideTwo, &mut c);
+        let id = format!("{:?}", active.moves[&i].id).to_lowercase();
+        if active.moves[&i].id == Choices::NONE || c.priority > bound || by_priority.contains(&id) {
+            continue;
+        }
+        by_priority.push(id.clone());
+        if c.priority < bound || ours_first || bound == i8::MAX {
+            out.push(id);
+        }
+    }
+    // (none left: this world's speeds contradict the order seen -- its moves by priority only,
+    // a move still to come rather than none)
+    if out.is_empty() {
+        by_priority
+    } else {
+        out
+    }
+}
+
 /// poke-engine's data tables for the data tests against Showdown (tests/test_engine_data.py,
 /// doc/engine-diff.md L8): (the moves: per move [id, type, accuracy, category, base power,
 /// priority, target, boost, drain, recoil, heal, status, volatile status, side condition,
@@ -1559,6 +1624,7 @@ fn alpha_search(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(collect_many, m)?)?;
     m.add_function(wrap_pyfunction!(apply_many, m)?)?;
     m.add_function(wrap_pyfunction!(slot_names, m)?)?;
+    m.add_function(wrap_pyfunction!(pending_moves, m)?)?;
     m.add_function(wrap_pyfunction!(root_priors, m)?)?;
     m.add_function(wrap_pyfunction!(evaluate, m)?)?;
     m.add_function(wrap_pyfunction!(merge_sides, m)?)?;

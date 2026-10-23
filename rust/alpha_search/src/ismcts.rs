@@ -228,6 +228,12 @@ fn leaf_value(state: &State, root_eval: f32, cfg: &Config, path: &PathCtx) -> f3
     sigmoid(crate::bsearch::evaluate_checked(state) - root_eval)
 }
 
+/// A side switches before the turn goes on: a pivot's switch (`force_switch`) or a faint's (the
+/// engine switches a side whose active has no HP even without `force_switch`)
+fn forced(side: &Side) -> bool {
+    side.force_switch || side.get_active_immutable().hp <= 0
+}
+
 /// What the descent adds to a world's context: the decision steps taken, the bits they reveal,
 /// the main steps (turns) completed.
 pub(crate) struct PathCtx<'a> {
@@ -235,6 +241,8 @@ pub(crate) struct PathCtx<'a> {
     steps: Vec<Step>,
     reveal: [u8; 12],
     mains: i32,
+    // a main step pushed, its turn not over yet (a pivot's / a faint's switch to come)
+    open: bool,
     // the last step's moves, until `settle` (side: the reveal byte and bits a used move adds)
     pending: [Option<(usize, u8, PokemonIndex)>; 2],
 }
@@ -246,6 +254,7 @@ impl<'a> PathCtx<'a> {
             steps: Vec::new(),
             reveal: base.map_or([0; 12], |c| c.reveal),
             mains: 0,
+            open: false,
             pending: [None; 2],
         }
     }
@@ -257,10 +266,11 @@ impl<'a> PathCtx<'a> {
             return;
         }
         // a forced switch (a pivot, or a faint: the engine switches a side whose active has no
-        // HP even without `force_switch`; 2026-10-14) is not a new turn
-        let forced = |side: &Side| side.force_switch || side.get_active_immutable().hp <= 0;
+        // HP even without `force_switch`; 2026-10-14) is not a new turn; a main step opens one,
+        // counted when it is over (`settle`: no switch left to come -- 2026-10-22 review: a
+        // pivot's switch-in node read the next turn already, the log and replays the same one)
         if !(forced(&state.side_one) || forced(&state.side_two)) {
-            self.mains += 1;
+            self.open = true;
         }
         self.steps.push(Step {
             one: Act::of_choice(&state.side_one, m1),
@@ -295,6 +305,11 @@ impl<'a> PathCtx<'a> {
         if self.base.is_none() {
             return;
         }
+        // (the turn over: no pivot's / faint's switch to come)
+        if self.open && !(forced(&state.side_one) || forced(&state.side_two)) {
+            self.mains += 1;
+            self.open = false;
+        }
         let Some(step) = self.steps.last_mut() else {
             return;
         };
@@ -310,6 +325,18 @@ impl<'a> PathCtx<'a> {
                 .any(|i| matches!(i, Instruction::Acted(s) if *s == side_ref));
             if acted {
                 self.reveal[a] |= bits;
+                continue;
+            }
+            // its move still to come (the foe's pivot went first: saved, run with the switch --
+            // the next step's): no action yet, as the log so far and the training history show
+            // it (2026-10-22 review: it read as prevented); its move unrevealed until then
+            if side.switch_out_move_second_saved_move != poke_engine::choices::Choices::NONE {
+                let blank = Act::default();
+                if k == 0 {
+                    step.one = blank;
+                } else {
+                    step.two = blank;
+                }
                 continue;
             }
             let fainted = side.pokemon[slot].hp <= 0;
@@ -345,6 +372,13 @@ impl<'a> PathCtx<'a> {
             post: base.post.clone(),
         }
     }
+}
+
+/// Either side's none option is Struggle (the engine's `struggles`): both none is then a turn
+/// to play out, not a leaf (2026-10-22 review: both out of PP, the search stayed at the root)
+pub(crate) fn someone_struggles(state: &State) -> bool {
+    use poke_engine::engine::generate_instructions::struggles;
+    struggles(state, &SideReference::SideOne) || struggles(state, &SideReference::SideTwo)
 }
 
 pub(crate) fn sigmoid(x: f32) -> f32 {
@@ -785,7 +819,7 @@ impl Tree {
                 select(&n.s2, &av2, cfg.c)
             };
             let depth = n.depth;
-            if m1 == MoveChoice::None && m2 == MoveChoice::None {
+            if m1 == MoveChoice::None && m2 == MoveChoice::None && !crate::ismcts::someone_struggles(state) {
                 break (leaf_value(state, root_eval, cfg, &pc), None);
             }
             pc.push(state, &m1, &m2);
@@ -1378,7 +1412,8 @@ mod tests {
             ctx.reveal[0 + state.side_one.active_index as usize] & (1 << 4),
             0
         );
-        assert_eq!(ctx.turn, 11);
+        // (2026-10-22 review: the replacement is chosen in the same turn -- the next only after it)
+        assert_eq!(ctx.turn, 10);
         // the faint's forced switch: the same turn (the engine switches a side whose active has
         // no HP although `force_switch` is false)
         assert!(!state.side_two.force_switch && state.side_two.get_active_immutable().hp <= 0);
@@ -1388,6 +1423,71 @@ mod tests {
         state.apply_instructions(&outcomes[0].instruction_list);
         pc.settle(&outcomes[0].instruction_list, &state);
         assert_eq!(pc.context(&base).turn, 11);
+    }
+
+    /// 2026-10-22 review: our U-turn first, the foe's move saved for after our switch-in: in
+    /// the history that step has no action of the foe yet (the log so far; it read as prevented)
+    /// and its move is unrevealed; the switch's step has the move
+    #[test]
+    fn a_move_after_our_pivot_is_the_switch_steps() {
+        let base = Context { reveal: [0; 12], rating: [0, 0], turn: 10, history: vec![], ..Default::default() };
+        let mut state = ko_first();
+        state.side_one.get_active().moves[&PokemonMoveIndex::M0].id = Choices::UTURN;
+        state.side_one.get_active().moves[&PokemonMoveIndex::M0].choice = poke_engine::choices::MOVES.get(&Choices::UTURN).unwrap().clone();
+        let foe = state.side_two.get_active();
+        (foe.hp, foe.maxhp) = (400, 400);
+        foe.moves[&PokemonMoveIndex::M0].choice = poke_engine::choices::MOVES.get(&Choices::ICEBEAM).unwrap().clone();
+        let mut pc = PathCtx::new(Some(&base));
+        let m = MoveChoice::Move(PokemonMoveIndex::M0);
+        pc.push(&state, &m, &m);
+        let outcomes = generate_instructions_from_move_pair(&mut state, &m, &m, false);
+        state.apply_instructions(&outcomes[0].instruction_list);
+        pc.settle(&outcomes[0].instruction_list, &state);
+        assert!(state.side_one.force_switch);
+        assert_ne!(state.side_two.switch_out_move_second_saved_move, Choices::NONE, "its move saved");
+        let ctx = pc.context(&base);
+        let step = *ctx.history.last().unwrap();
+        assert_eq!(step.one.kind, 1, "our U-turn");
+        assert_eq!(step.two, Act::default(), "the foe's move not yet: {step:?}");
+        let theirs = 6 + state.side_two.active_index as usize;
+        assert_eq!(ctx.reveal[theirs] & (1 << 4), 0, "its move revealed before it came");
+        assert_eq!(ctx.turn, 10, "the pivot's switch-in: still the turn it started");
+        // the switch's step: our switch-in, then the foe's saved move
+        let (o1, o2) = state.get_all_options();
+        assert!(matches!(o2[..], [MoveChoice::Move(_)]), "{o2:?}");
+        pc.push(&state, &o1[0], &o2[0]);
+        let outcomes = generate_instructions_from_move_pair(&mut state, &o1[0], &o2[0], false);
+        state.apply_instructions(&outcomes[0].instruction_list);
+        pc.settle(&outcomes[0].instruction_list, &state);
+        let ctx = pc.context(&base);
+        let step = ctx.history.last().unwrap();
+        assert_eq!(step.two.kind, 1, "the foe's move with the switch: {step:?}");
+        assert_ne!(ctx.reveal[theirs] & (1 << 4), 0);
+        assert_eq!(ctx.turn, 11);
+    }
+
+    /// 2026-10-22 review: both sides out of PP, one mon each -- both struggle: the turn is played
+    /// out (the search stayed at the root: both none was a leaf)
+    #[test]
+    fn both_struggling_is_played_out() {
+        let mut s = fixture();
+        for side in [&mut s.side_one, &mut s.side_two] {
+            let a = side.active_index;
+            for p in [PokemonIndex::P0, PokemonIndex::P1, PokemonIndex::P2, PokemonIndex::P3, PokemonIndex::P4, PokemonIndex::P5] {
+                if p != a {
+                    side.pokemon[p].hp = 0;
+                }
+            }
+            for k in [PokemonMoveIndex::M0, PokemonMoveIndex::M1, PokemonMoveIndex::M2, PokemonMoveIndex::M3] {
+                side.get_active().moves[&k].pp = 0;
+            }
+        }
+        let (o1, o2) = s.get_all_options();
+        assert_eq!((o1.clone(), o2.clone()), (vec![MoveChoice::None], vec![MoveChoice::None]));
+        assert!(someone_struggles(&s));
+        let res = search(&mut vec![s], &[], Duration::ZERO, 32, &Config::default(), Some(1));
+        assert!(res.nodes > 1, "the search stayed at the root");
+        assert!(res.s1.iter().map(|x| x.1).sum::<u32>() > 0);
     }
 
     #[test]

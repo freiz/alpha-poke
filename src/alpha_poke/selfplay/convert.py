@@ -96,7 +96,13 @@ def split_decisions(gen_dir: Path, shard_of: dict, tmp: Path) -> None:
             with open(f) as fh:
                 for line in fh:
                     i = line.rfind('"game": ')
-                    game = int(line[i + 8 : line.index(",", i)])
+                    j = line.find(",", i) if i >= 0 else -1
+                    if j < 0:  # (a line cut by a stop: the shard's parse skips it too)
+                        continue
+                    try:
+                        game = int(line[i + 8 : j])
+                    except ValueError:
+                        continue
                     k = shard_of.get(game)
                     if k is None:
                         continue
@@ -106,6 +112,21 @@ def split_decisions(gen_dir: Path, shard_of: dict, tmp: Path) -> None:
     finally:
         for fh in out.values():
             fh.close()
+
+
+def same_action(logged: str, recorded: str) -> bool | None:
+    """Whether the log's action is the recorded one, by name; None when the log's side has no
+    name for it. A switch by species, a forme's suffix aside: the two states name a mon by its
+    forme of the moment (Mimikyu / Mimikyu-Busted, Ogerpon-Wellspring / its tera forme) --
+    2026-10-22, the cause of most of the ~0.4% disagreements of the v5 / v6 generations."""
+    if not logged:
+        return None
+    if logged == recorded:
+        return True
+    if logged.startswith("switch ") and recorded.startswith("switch "):
+        a, b = logged[7:], recorded[7:]
+        return a.startswith(b) or b.startswith(a)
+    return False
 
 
 def last_faint_turn(log: str) -> int:
@@ -145,17 +166,17 @@ def convert_game(pair: int, game: dict, log: str, decisions: list, belief, gen: 
             stats["unmatched_positions"] += 1
             continue
         stats["matched"] += 1
-        if p.action >= 0:  # the log shows the move: it must be the recorded one (by name: the
-            # two states order moves / mons differently)
+        # the log shows the move: it must be the recorded one (by name: the two states order
+        # moves / mons differently; same_action)
+        agree = (same_action(alpha_search.slot_names([p.state])[0][p.action], d["names"][d["slot"]])
+                 if p.action >= 0 else None)  # fmt: skip
+        if agree is not None:
             stats["action_checked"] += 1
-            logged = alpha_search.slot_names([p.state])[0][p.action]
-            agree = logged == d["names"][d["slot"]]
             stats["action_agree"] += agree
             checked += 1
             if not agree:
                 # the record and the log disagree on this action: no row from it (2026-10-22
-                # review: they were trained on; ~0.4% of actions in the v5/v6 generations, the
-                # cause not known -- design.md TODO)
+                # review: they were trained on)
                 disagree += 1
                 stats["action_rows_dropped"] += 1
                 continue
@@ -222,13 +243,19 @@ def _convert_shard(args) -> dict:
 def convert(gen_dir: Path, out_dir: Path, gen: int, shard_games: int = 500, log=print,
             procs: int = 10, loop_margin: int = 10) -> dict:  # fmt: skip
     """The generation's games in shards of ``shard_games``, ``procs`` shards at a time (each
-    game has its own random seed: the same rows in any order)."""
+    game has its own random seed: the same rows in any order). Built in a new directory that
+    then replaces ``out_dir`` whole (2026-10-22 review: a conversion with fewer shards -- or none
+    -- left the earlier ones behind, read by the training)."""
     import multiprocessing as mp
     from concurrent.futures import ProcessPoolExecutor
 
     games, logs = load_gen(gen_dir)
     stamp = int(time.time())
-    out_dir.mkdir(parents=True, exist_ok=True)
+    final = Path(out_dir)
+    out_dir = final.with_name(final.name + ".building")
+    if out_dir.exists():
+        shutil.rmtree(out_dir)
+    out_dir.mkdir(parents=True)
     pairs = sorted(p for p in games if p in logs)
     shard_of = {p: i // shard_games for i, p in enumerate(pairs)}
     tmp = out_dir / "decisions_tmp"
@@ -252,5 +279,13 @@ def convert(gen_dir: Path, out_dir: Path, gen: int, shard_games: int = 500, log=
     if stats.get("action_checked"):
         stats["action_agree_frac"] = round(stats["action_agree"] / stats["action_checked"], 4)
     (out_dir / "convert.json").write_text(json.dumps(stats, indent=1))
-    log(f"{gen_dir} -> {out_dir}: {stats}")
+    old = final.with_name(final.name + ".old")
+    if old.exists():
+        shutil.rmtree(old)
+    if final.exists():
+        final.rename(old)
+    out_dir.rename(final)
+    if old.exists():
+        shutil.rmtree(old)
+    log(f"{gen_dir} -> {final}: {stats}")
     return stats

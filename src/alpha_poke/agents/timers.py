@@ -85,6 +85,7 @@ class SideTimers:
     taunt: int | None = None
     encore: int | None = None
     acted: bool = False  # the active moved (or could not) this turn
+    switched_now: bool = False  # the active came in this turn (a switch is its action)
     yawn: int | None = None
     disabled: str | None = None  # move id
     healblock: int | None = None
@@ -117,6 +118,7 @@ class SideTimers:
     def came_in(self, species: str) -> None:
         self.active = species
         self.acted = False
+        self.switched_now = True
         self.toxic = self.protect = 0
         self.protected = False
         self.confusion = self.taunt = self.encore = self.yawn = None
@@ -176,6 +178,7 @@ def _feed(sides: dict, p: list[str]) -> None:
     if tag == "turn":
         for st in sides.values():
             st.acted = False
+            st.switched_now = False
             st.last_failed, st.failed_now = st.failed_now, False
             st.just_moved = ""  # (a new turn: a -fail from now is not its last move's)
             if st.slowstart:
