@@ -101,9 +101,9 @@ def battle(job: tuple) -> dict:
             continue
         a, b = steps[k], steps[k + 1]
         c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
-        if "struggle" in (c1, c2):  # the engine has no choice for it (no PP left)
-            out["skipped"]["struggle"] += 1
-            continue
+        # (L232: Struggle is the engine's none option since 2026-10-22; compared, no longer
+        # skipped)
+        c1, c2 = ("none" if c == "struggle" else c for c in (c1, c2))
         n = tuple(len(s["mons"]) for s in a["state"]["sides"])
         try:
             # (L199: Showdown's damage rolls as hints: no knockout-or-not roll noise)

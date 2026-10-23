@@ -16380,11 +16380,14 @@ pub static MOVES: LazyLock<HashMap<Choices, Choice>> = LazyLock::new(|| {
     );
     moves.insert(
         Choices::STRUGGLE,
+        // alpha-poke patch (2026-10-22, doc/engine-diff.md L232): typeless (Showdown's '???': no
+        // STAB, neutral on every type) and never misses (always_hits); the recoil, no PP: the
+        // move's own code (generate_instructions: struggles)
         Choice {
             move_id: Choices::STRUGGLE,
             base_power: 50.0,
             category: MoveCategory::Physical,
-            move_type: PokemonType::NORMAL,
+            move_type: PokemonType::TYPELESS,
             flags: Flags {
                 contact: true,
                 protect: true,
@@ -20532,7 +20535,8 @@ impl Choices {
     pub fn always_hits(&self) -> bool {
         matches!(
             self,
-            Choices::AERIALACE
+            Choices::STRUGGLE
+                | Choices::AERIALACE
                 | Choices::AFTERYOU
                 | Choices::AURASPHERE
                 | Choices::BLOCK

@@ -7017,3 +7017,53 @@ def test_l231_once_per_battle_boost_at_the_limit(case):
     # (the switching side's stages: after the pass, the foe's move of that turn comes after the
     # pick, outside the engine's outcomes here)
     assert _keys(ec.closest(states[-1], outs, (2, 1), hp=True)["diff"], f"s{side + 1}.boost") == {}
+
+
+# L232 (doc/engine-diff.md): Struggle (2026-10-22 review): with no usable move -- Imprison on the
+# only one, all PP gone -- Showdown's request is Struggle (pokemon.ts getMoveRequestData): 50
+# power, typeless ('???': no STAB, neutral on every type, Ghost too), never misses, no PP, the
+# user loses round(max HP / 4) after a hit (directDamage: Magic Guard and Rock Head do not stop
+# it); the engine's option was none and did nothing (fixed 2026-10-22: generate_instructions'
+# struggles)
+MEW_IMPRISON = """Mew @ Leftovers
+Ability: Synchronize
+Tera Type: Normal
+EVs: 252 HP / 4 Def / 252 Spe
+Timid Nature
+- Imprison
+- Tackle
+- Pound
+- Calm Mind"""
+
+
+@pytest.mark.parametrize("user", ["blissey", "magic guard", "into a ghost", "into tera shell"])
+def test_l232_struggle(user):
+    foe = MEW_IMPRISON
+    if user == "into tera shell":  # (Tera Shell does not resist Struggle: Showdown's runEffectiveness)
+        mon = _setter("Blissey", "Natural Cure", "Leftovers", "- Tackle")
+        foe = MEW_IMPRISON.replace("Mew @", "Terapagos @").replace("Synchronize", "Tera Shift")
+    elif user == "blissey":
+        mon = _setter("Blissey", "Natural Cure", "Leftovers", "- Tackle")
+    elif user == "magic guard":
+        mon = _setter("Clefable", "Magic Guard", "Leftovers", "- Pound")
+    else:  # (typeless: a Ghost takes it)
+        mon = _setter("Blissey", "Natural Cure", "Leftovers", "- Tackle")
+        foe = MEW_IMPRISON.replace("Mew @", "Gengar @").replace("Synchronize", "Cursed Body")
+    states = ec.run_showdown(mon, foe, [("move 1", "move imprison"), ("move 1", "move calmmind")])
+    if user == "into a ghost":
+        assert states[2]["sides"][1]["mons"][0]["hp"] < states[1]["sides"][1]["mons"][0]["hp"]
+    assert any("|-activate|p1a:" in x and "move: Struggle" in x for x in states[2]["log"])
+    outs = ec.engine_outcomes(ec.engine_state(states[1]), "none", "calmmind")
+    assert ec.closest(states[2], outs, (1, 1), hp=True)["diff"] == {}
+
+
+# L232: an Encore on a mon whose last move was a Struggle fails (Struggle's failencore; the engine
+# keeps a lock's move as its last used one, its STRUGGLED mark tells)
+def test_l232_encore_after_a_struggle_fails():
+    mon = _setter("Blissey", "Natural Cure", "Leftovers", "- Tackle")
+    foe = MEW_IMPRISON.replace("- Pound", "- Encore")
+    states = ec.run_showdown(mon, foe, [("move 1", "move imprison"), ("move 1", "move calmmind"),
+                                        ("move 1", "move encore")])  # fmt: skip
+    assert any(x.startswith("|-fail|") for x in states[3]["log"]), states[3]["log"]
+    outs = ec.engine_outcomes(ec.engine_state(states[2]), "none", "encore")
+    assert ec.closest(states[3], outs, (1, 1), hp=True, full=True, start=states[2])["diff"] == {}

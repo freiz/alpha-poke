@@ -922,7 +922,9 @@ fn common_pkmn_damage_calc(
         && !matches!(
             choice.move_id,
             Choices::SUNSTEELSTRIKE | Choices::MOONGEISTBEAM | Choices::PHOTONGEYSER
-        );
+        )
+        // (L232: nor Struggle -- Showdown's runEffectiveness)
+        && choice.move_id != Choices::STRUGGLE;
     // Freeze-Dry: super effective on Water (its onEffectiveness: +1 instead of -1)
     let stages = if tera_shell {
             -1

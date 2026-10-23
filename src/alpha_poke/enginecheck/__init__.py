@@ -198,8 +198,9 @@ def _engine_mon(m: dict) -> pe.Pokemon:
         # (L179: a locking move's -- Outrage's -- lock: its other moves disabled, as the engine
         # keeps it; Showdown's request lists only the locked one)
         moves=[pe.Move(id=x["id"], pp=x["pp"], disabled=bool(m.get("active")) and (
-                   x["disabled"] or ("lockedmove" in m.get("volatiles", {})
-                                     and x["id"] != m["volatiles"]["lockedmove"].get("move"))))
+                   (x["disabled"] and not _derived_disable(m, x["id"]))
+                   or ("lockedmove" in m.get("volatiles", {})
+                       and x["id"] != m["volatiles"]["lockedmove"].get("move"))))
                for x in m["moves"]],
         terastallized=bool(m["terastallized"]), tera_type=(m["tera_type"] or "typeless").lower(),
         last_item=m.get("last_item") if _engine_item(m.get("last_item") or "") else "none",
@@ -298,7 +299,15 @@ def _engine_side(s: dict, future_sight=None, wish=None) -> pe.Side:
         ids = [x["id"] for x in act["moves"]]
         # (L187: a transformed mon's Transform is in its own moves, as the engine keeps it)
         own = [x for x, _ in (act.get("transform_backup") or [None, None, []])[2]]
-        if act.get("move_actions") and act.get("last_move") in ids:
+        # (L232: after a Struggle -- no move of the set -- a lock's move is the engine's last
+        # used one: a Choice item's / Gorilla Tactics' / an Outrage's, its lock tracking)
+        lock = next((act["volatiles"][k].get("move") for k in ("choicelock", "lockedmove", "encore")
+                     if k in act["volatiles"]), "")  # fmt: skip
+        if act.get("move_actions") and act.get("last_move") == "struggle":
+            vol.add("struggled")  # (the engine's mark of it, L232)
+        if act.get("move_actions") and act.get("last_move") == "struggle" and lock in ids:
+            kw["last_used_move"] = f"move:{ids.index(lock)}"
+        elif act.get("move_actions") and act.get("last_move") in ids:
             kw["last_used_move"] = f"move:{ids.index(act['last_move'])}"
         elif act.get("move_actions") and act.get("last_move") in own:
             kw["last_used_move"] = f"move:{own.index(act['last_move'])}"
@@ -655,6 +664,39 @@ def _drop_fainted_active(v: dict) -> dict:
     return v
 
 
+@functools.cache
+def _move_kinds() -> dict:
+    """Move id -> (category, flags) from the engine's data (alpha_search.engine_data)."""
+    import alpha_search
+
+    rows, _ = alpha_search.engine_data()
+    return {r[0].lower(): (r[3], set(r[-1].split(","))) for r in rows}
+
+
+def _derived_disable(m: dict, move: str) -> bool:
+    """Showdown disabled ``move`` only for a reason the engine derives itself -- not with the
+    move's disabled flag, from the volatiles / item / last move as it builds the options: a Taunt's
+    status move, a Heal Block's healing one, a Throat Chop's sound one, an Assault Vest's status
+    one, a Gigaton Hammer / Blood Moon used last. Its flag would stay with the engine, which never
+    clears what it never set (L232: Iron Defense still disabled after the Taunt ended, a Gigaton
+    Hammer after a Struggle). Not when a lock (a Choice item's, Gorilla Tactics', a Disable on it)
+    keeps it out as well: the engine's flags."""
+    vol = m.get("volatiles", {})
+    lock = (vol.get("choicelock") or {}).get("move")
+    if lock and lock != move:
+        return False
+    if (vol.get("disable") or {}).get("move") == move:
+        return False
+    cat, flags = _move_kinds().get(move, ("", set()))
+    return bool(
+        ("taunt" in vol and cat == "Status")
+        or ("healblock" in vol and "heal" in flags)
+        or ("throatchop" in vol and "sound" in flags)
+        or (m.get("item") == "assaultvest" and cat == "Status")
+        or (move in ("gigatonhammer", "bloodmoon") and m.get("last_move") == move)
+    )
+
+
 def view(sd: dict) -> dict:
     """A Showdown state in the comparison format (``view_engine``)."""
     v: dict = {"weather": WEATHER[sd["field"]["weather"]],
@@ -727,7 +769,7 @@ def view_engine(s: pe.State, n_mons: tuple[int, int] = (6, 6)) -> dict:
             # (L222: nor the turn-1 marks, input only)
             # (L227: nor the Illusion / no-tera marks, input only too)
             if str(x).lower() not in ("none", "lastmovefailed", "statslowered", "statsraised",
-                                      "illusion", "notera") and not (
+                                      "illusion", "notera", "struggled") and not (
                 tera and str(x).lower() == "typechange"
             ):
                 v[f"{k}.volatile.{str(x).lower()}"] = True

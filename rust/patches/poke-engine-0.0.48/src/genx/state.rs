@@ -328,6 +328,10 @@ define_enum_with_from_str! {
         // (L227: transformed into an Ogerpon / Terapagos -- no Terastallization till it leaves:
         // Showdown's transformInto sets canTerastallize false)
         NOTERA,
+        // (L232: the side's last action was a Struggle -- Showdown's lastMove struggle: a Gigaton
+        // Hammer / Blood Moon usable again; its lock's move kept as the last used one; cleared
+        // by a move of its own, ends on a switch)
+        STRUGGLED,
     },
     default = NONE
 }
@@ -643,6 +647,7 @@ impl Pokemon {
         &self,
         vec: &mut Vec<MoveChoice>,
         last_used_move: &LastUsedMove,
+        struggled: bool,
         encored: bool,
         taunted: bool,
         throat_chopped: bool,
@@ -660,6 +665,7 @@ impl Pokemon {
                         } else if (self.moves[last_used_move].id == Choices::BLOODMOON
                             || self.moves[last_used_move].id == Choices::GIGATONHAMMER)
                             && &iter.pokemon_move_index == last_used_move
+                            && !struggled
                         {
                             continue;
                         }
@@ -701,11 +707,23 @@ impl Pokemon {
     }
 
     pub fn add_move_from_choice(&self, vec: &mut Vec<MoveChoice>, choice: Choices) {
+        // alpha-poke patch (2026-10-22, doc/engine-diff.md L232): a saved Struggle (the foe's
+        // pivot went first) is the none option, which struggles (generate_instructions: struggles)
+        if choice == Choices::STRUGGLE {
+            vec.push(MoveChoice::None);
+            return;
+        }
         let mut iter = self.moves.into_iter();
+        let before = vec.len();
         while let Some(p) = iter.next() {
             if p.id == choice {
                 vec.push(MoveChoice::Move(iter.pokemon_move_index));
             }
+        }
+        // (a saved move the active does not have -- a state built inconsistently: no move, not
+        // an empty option list the search would fail on, L229)
+        if vec.len() == before {
+            vec.push(MoveChoice::None);
         }
     }
 
@@ -1482,6 +1500,9 @@ impl State {
             self.side_one.get_active_immutable().add_available_moves(
                 &mut s1_options,
                 &self.side_one.last_used_move,
+                self.side_one
+                    .volatile_statuses
+                    .contains(&PokemonVolatileStatus::STRUGGLED),
                 encored,
                 taunted,
                 self.side_one
@@ -1521,6 +1542,9 @@ impl State {
             self.side_two.get_active_immutable().add_available_moves(
                 &mut s2_options,
                 &self.side_two.last_used_move,
+                self.side_two
+                    .volatile_statuses
+                    .contains(&PokemonVolatileStatus::STRUGGLED),
                 encored,
                 taunted,
                 self.side_two
@@ -1647,6 +1671,9 @@ impl State {
             self.side_one.get_active_immutable().add_available_moves(
                 &mut side_one_options,
                 &self.side_one.last_used_move,
+                self.side_one
+                    .volatile_statuses
+                    .contains(&PokemonVolatileStatus::STRUGGLED),
                 encored,
                 taunted,
                 self.side_one
@@ -1700,6 +1727,9 @@ impl State {
             self.side_two.get_active_immutable().add_available_moves(
                 &mut side_two_options,
                 &self.side_two.last_used_move,
+                self.side_two
+                    .volatile_statuses
+                    .contains(&PokemonVolatileStatus::STRUGGLED),
                 encored,
                 taunted,
                 self.side_two

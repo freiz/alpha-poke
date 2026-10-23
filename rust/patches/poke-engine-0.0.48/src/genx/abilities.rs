@@ -4009,7 +4009,9 @@ pub fn ability_modify_attack_against(
             attacker_choice.flags.drag = false;
         }
         Abilities::WONDERGUARD => {
+            // (L232: not Struggle, Showdown's onTryHit)
             if attacker_choice.category != MoveCategory::Status
+                && attacker_choice.move_id != Choices::STRUGGLE
                 && move_type_effectiveness(&attacker_choice, &target_pkmn) <= 1.0
             {
                 attacker_choice.remove_all_effects();

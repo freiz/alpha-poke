@@ -58,6 +58,8 @@ KNOWN_MOVES = {
     "shoreup": ({"heal"}, WEATHER_HEAL),
     "tripleaxel": ({"base_power"}, "the engine's data: 40 a hit; its hit-count branches (L58) give "
                    "k hits of the mean of 20, 40, ..., 20k (Showdown's 20 / 40 / 60)"),
+    "struggle": ({"type"}, "Showdown: Normal in its data, '???' (typeless) from its onModifyMove; "
+                 "the engine: typeless in its data (L232)"),
     "revivalblessing": ({"pivot"}, "Showdown: selfSwitch in its data (a switch request for a "
                         "fainted one); the engine: its pick in code (Side::reviving, L166)"),
 }

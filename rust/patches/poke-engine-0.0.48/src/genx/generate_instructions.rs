@@ -3342,6 +3342,21 @@ fn generate_instructions_from_damage(
                 .instruction_list
                 .push(recoil_instruction);
         }
+        // alpha-poke patch (2026-10-22, doc/engine-diff.md L232): Struggle's recoil, a quarter of
+        // the user's max HP (rounded, at least 1) after a hit -- Showdown's struggleRecoil, a
+        // direct damage (Magic Guard / Rock Head do not stop it)
+        let attacking_pokemon = state.get_side(attacking_side_ref).get_active();
+        if choice.move_id == Choices::STRUGGLE && damage_dealt > 0 && attacking_pokemon.hp > 0 {
+            let recoil = cmp::max((attacking_pokemon.maxhp as f32 / 4.0).round() as i16, 1);
+            let damage_amount = cmp::min(recoil, attacking_pokemon.hp);
+            attacking_pokemon.hp -= damage_amount;
+            incoming_instructions
+                .instruction_list
+                .push(Instruction::Damage(DamageInstruction {
+                    side_ref: *attacking_side_ref,
+                    damage_amount,
+                }));
+        }
         // alpha-poke patch (2026-10-17, doc/engine-diff.md L209): Shell Bell heals 1/8 of the
         // damage (truncated, at least 1; Showdown's onAfterMoveSecondarySelf) besides the move's
         // drain, after the recoil; it replaced the drain (no Drain Punch heal with it)
@@ -3473,6 +3488,10 @@ fn move_has_no_effect(state: &State, choice: &Choice, attacking_side_ref: &SideR
         };
         // (L101: nor on the other moves it cannot repeat -- Showdown's failencore -- or at 0 PP)
         let side = state.get_side_immutable(&target);
+        // (L232: its last move a Struggle -- failencore; the lock's move is kept as its last used)
+        if side.volatile_statuses.contains(&PokemonVolatileStatus::STRUGGLED) {
+            return true;
+        }
         return match side.last_used_move {
             LastUsedMove::None => true,
             LastUsedMove::Move(i) => {
@@ -4191,12 +4210,14 @@ fn flinched_or_taunted(state: &State, choice: &Choice, attacking_side_ref: &Side
             .contains(&PokemonVolatileStatus::DISABLE)
             && choice.category != MoveCategory::Switch
             && !choice.called_move
+            && choice.move_id != Choices::STRUGGLE // (L232: no slot of the set)
             && choice.move_index as i8 == attacking_side.volatile_status_durations.disable / 8
         // (L227: a Choice lock onto another move since it was chosen -- a Dancer's dance:
         // Showdown's choicelock onBeforeMove)
         || choice.category != MoveCategory::Switch
             && !choice.called_move
             && choice.move_id != Choices::NONE
+            && choice.move_id != Choices::STRUGGLE
             && matches!(
                 attacking_side.get_active_immutable().item,
                 Items::CHOICEBAND | Items::CHOICESPECS | Items::CHOICESCARF
@@ -5141,8 +5162,10 @@ pub fn generate_instructions_from_move(
     }
 
     let side = state.get_side(&attacking_side);
-    // (L171: not a called move -- a Dancer's dance is not its chosen one)
+    // (L171: not a called move -- a Dancer's dance is not its chosen one; L232: nor Struggle,
+    // Showdown's runMove runs no OverrideAction for it)
     if !choice.called_move
+        && choice.move_id != Choices::STRUGGLE
         && side
             .volatile_statuses
             .contains(&PokemonVolatileStatus::ENCORE)
@@ -5568,6 +5591,7 @@ pub fn generate_instructions_from_move(
         if !called
             && !locked_move
             && choice.move_id != Choices::NONE
+            && choice.move_id != Choices::STRUGGLE // (L232: no PP)
             && (exact_pp || active.moves[&choice.move_index].pp < 10)
             && (!exact_pp || active.moves[&choice.move_index].pp > 0)
         {
@@ -5616,7 +5640,12 @@ pub fn generate_instructions_from_move(
             }
         }
     }
-    if !called && !stopped && !(asleep_now && choice.move_id != Choices::SLEEPTALK) {
+    // (L232: Struggle locks nothing -- it is no move of the set)
+    if !called
+        && !stopped
+        && !(asleep_now && choice.move_id != Choices::SLEEPTALK)
+        && choice.move_id != Choices::STRUGGLE
+    {
         choice_lock(state, choice, &attacking_side, &mut incoming_instructions);
     }
     let attacker = state
@@ -5773,12 +5802,69 @@ pub fn generate_instructions_from_move(
         && !called
         && !stopped
     {
-        set_last_used_move_as_move(
-            state.get_side(&attacking_side),
-            choice.move_index,
-            attacking_side,
-            &mut incoming_instructions,
-        );
+        if choice.move_id == Choices::STRUGGLE {
+            // (L232: the last move Struggle -- no move of the set: none here; Showdown's lastMove
+            // struggle frees a Gigaton Hammer / Blood Moon. Under a lock -- a Choice item's,
+            // Gorilla Tactics', an Outrage's -- the locked move stays: the lock's tracking, as
+            // Showdown's choicelock keeps its move)
+            let ignored = super::items::item_ignored(state);
+            let side = state.get_side(&attacking_side);
+            let active = side.get_active_immutable();
+            // (a Choice item's / Gorilla Tactics' lock now: another move held out -- its disabled
+            // flags, a Disable's own aside; a Trick's new Choice item has none yet: Showdown's
+            // choicelock gone with the swap, and a Struggle sets none)
+            let disabled_slot = side
+                .volatile_statuses
+                .contains(&PokemonVolatileStatus::DISABLE)
+                .then(|| side.volatile_status_durations.disable / 8);
+            let holds_out = [PokemonMoveIndex::M0, PokemonMoveIndex::M1, PokemonMoveIndex::M2, PokemonMoveIndex::M3]
+                .iter()
+                .enumerate()
+                .any(|(k, i)| active.moves[i].disabled && disabled_slot != Some(k as i8));
+            let locked = (((matches!(active.item, Items::CHOICEBAND | Items::CHOICESPECS | Items::CHOICESCARF)
+                && !ignored)
+                || active.ability == Abilities::GORILLATACTICS)
+                && holds_out)
+                || side.volatile_statuses.contains(&PokemonVolatileStatus::LOCKEDMOVE)
+                || side.volatile_statuses.contains(&PokemonVolatileStatus::ENCORE);
+            if !side.volatile_statuses.contains(&PokemonVolatileStatus::STRUGGLED) {
+                side.volatile_statuses.insert(PokemonVolatileStatus::STRUGGLED);
+                incoming_instructions
+                    .instruction_list
+                    .push(Instruction::ApplyVolatileStatus(ApplyVolatileStatusInstruction {
+                        side_ref: attacking_side,
+                        volatile_status: PokemonVolatileStatus::STRUGGLED,
+                    }));
+            }
+            if !locked && side.last_used_move != LastUsedMove::None {
+                incoming_instructions
+                    .instruction_list
+                    .push(Instruction::SetLastUsedMove(SetLastUsedMoveInstruction {
+                        side_ref: attacking_side,
+                        last_used_move: LastUsedMove::None,
+                        previous_last_used_move: side.last_used_move,
+                    }));
+                side.last_used_move = LastUsedMove::None;
+            }
+        } else {
+            // (L232: a move of its own: no longer the Struggle)
+            let side = state.get_side(&attacking_side);
+            if side.volatile_statuses.contains(&PokemonVolatileStatus::STRUGGLED) {
+                side.volatile_statuses.remove(&PokemonVolatileStatus::STRUGGLED);
+                incoming_instructions
+                    .instruction_list
+                    .push(Instruction::RemoveVolatileStatus(RemoveVolatileStatusInstruction {
+                        side_ref: attacking_side,
+                        volatile_status: PokemonVolatileStatus::STRUGGLED,
+                    }));
+            }
+            set_last_used_move_as_move(
+                state.get_side(&attacking_side),
+                choice.move_index,
+                attacking_side,
+                &mut incoming_instructions,
+            );
+        }
     }
     let without_target = no_target(state, &choice, &attacking_side);
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L216): Meteor Beam / Electro Shot's onTryMove
@@ -7691,8 +7777,13 @@ fn end_of_turn_instructions(
         let disabled_lock = side
             .volatile_statuses
             .contains(&PokemonVolatileStatus::DISABLE);
+        // (L232: nor when the locked move is in the set, disabled by something else -- a Taunt on
+        // a locked status move: Struggle, the lock stays; the locked one is the last used move,
+        // kept through the Struggle)
+        let locked_in_set = matches!(side.last_used_move, LastUsedMove::Move(_));
         if matches!(p.item, Items::CHOICEBAND | Items::CHOICESPECS | Items::CHOICESCARF)
             && !disabled_lock
+            && !locked_in_set
             && p.moves.into_iter().all(|m| m.id == Choices::NONE || m.disabled)
             && p.moves.into_iter().any(|m| m.id != Choices::NONE)
         {
@@ -8582,6 +8673,21 @@ fn end_of_turn_instructions(
                             volatile_status: v,
                         },
                     ));
+                // (L232: an Encore's move kept as the last used one through a Struggle: Encore
+                // over, the last move is the Struggle -- none, Showdown's lastMove struggle)
+                if v == PokemonVolatileStatus::ENCORE
+                    && side.volatile_statuses.contains(&PokemonVolatileStatus::STRUGGLED)
+                    && side.last_used_move != LastUsedMove::None
+                {
+                    incoming_instructions
+                        .instruction_list
+                        .push(Instruction::SetLastUsedMove(SetLastUsedMoveInstruction {
+                            side_ref: *side_ref,
+                            last_used_move: LastUsedMove::None,
+                            previous_last_used_move: side.last_used_move,
+                        }));
+                    side.last_used_move = LastUsedMove::None;
+                }
             }
             if amount != 0 {
                 incoming_instructions.instruction_list.push(
@@ -10470,6 +10576,25 @@ pub fn release_choice_lock(
     instructions: &mut StateInstructions,
 ) {
     let side = state.get_side(side_ref);
+    // (L232: the lock's move was kept as the last used one through a Struggle: the lock gone,
+    // the last move is the Struggle -- none here, as Showdown's lastMove struggle)
+    // (not under an Encore: its move is the last used one too -- update() releases a lock with
+    // no Choice item after every action)
+    if side.volatile_statuses.contains(&PokemonVolatileStatus::STRUGGLED)
+        && !side.volatile_statuses.contains(&PokemonVolatileStatus::LOCKEDMOVE)
+        && !side.volatile_statuses.contains(&PokemonVolatileStatus::UPROAR)
+        && !side.volatile_statuses.contains(&PokemonVolatileStatus::ENCORE)
+        && side.last_used_move != LastUsedMove::None
+    {
+        instructions
+            .instruction_list
+            .push(Instruction::SetLastUsedMove(SetLastUsedMoveInstruction {
+                side_ref: *side_ref,
+                last_used_move: LastUsedMove::None,
+                previous_last_used_move: side.last_used_move,
+            }));
+        side.last_used_move = LastUsedMove::None;
+    }
     // (L224: nor while Uproar locks it)
     if side
         .volatile_statuses
@@ -11305,6 +11430,35 @@ pub fn generate_instructions_for_bss_team_preview(
 
 // alpha-poke patch (2026-10-17, doc/engine-diff.md L218): both switching at the same speed, either
 // may leave first, half the time each (Showdown's speed tie: random); it was side one first
+/// alpha-poke patch (2026-10-22, doc/engine-diff.md L232): a side's none option is Struggle --
+/// Showdown's move request with no usable move (getMoveRequestData: Imprison, Disable, Taunt,
+/// all PP gone, ...) -- when its active is up, not recharging, nobody switching out; or, while
+/// the foe's forced switch goes first, when its saved move (the foe's pivot) is Struggle. The
+/// engine had none: no move at all
+pub fn struggles(state: &State, side_ref: &SideReference) -> bool {
+    let (side, other) = state.get_both_sides_immutable(side_ref);
+    if other.force_switch {
+        return side.switch_out_move_second_saved_move == Choices::STRUGGLE;
+    }
+    if side.force_switch
+        || side.get_active_immutable().hp <= 0
+        || other.get_active_immutable().hp <= 0
+        || side
+            .volatile_statuses
+            .contains(&PokemonVolatileStatus::MUSTRECHARGE)
+    {
+        return false;
+    }
+    let (o1, o2) = state.get_all_options();
+    let options = if *side_ref == SideReference::SideOne { o1 } else { o2 };
+    !options.iter().any(|o| {
+        matches!(
+            o,
+            MoveChoice::Move(_) | MoveChoice::MoveTera(_) | MoveChoice::MoveMega(_)
+        )
+    })
+}
+
 pub fn generate_instructions_from_move_pair(
     state: &mut State,
     side_one_move: &MoveChoice,
@@ -11385,7 +11539,12 @@ fn move_pair_in_order(
             panic!("Team preview should not be handled in generate_instructions_from_move_pair");
         }
         MoveChoice::None => {
-            side_one_choice = Choice::default();
+            // (L232: no usable move -- Struggle)
+            side_one_choice = if struggles(state, &SideReference::SideOne) {
+                MOVES.get(&Choices::STRUGGLE).unwrap().clone()
+            } else {
+                Choice::default()
+            };
         }
     }
 
@@ -11420,7 +11579,12 @@ fn move_pair_in_order(
             panic!("Team preview should not be handled in generate_instructions_from_move_pair");
         }
         MoveChoice::None => {
-            side_two_choice = Choice::default();
+            // (L232: no usable move -- Struggle)
+            side_two_choice = if struggles(state, &SideReference::SideTwo) {
+                MOVES.get(&Choices::STRUGGLE).unwrap().clone()
+            } else {
+                Choice::default()
+            };
         }
     }
 
