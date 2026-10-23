@@ -110,7 +110,7 @@ def own_diffs(built: pe.Side, truth: pe.Side) -> list[tuple[str, str]]:
         if t.transform_backup is None and t.hp > 0:
             keys += list(STATS)
         for k in keys:
-            if str(getattr(b, k)).lower() != str(getattr(t, k)).lower():
+            if _norm(k, getattr(b, k)) != _norm(k, getattr(t, k)):
                 out.append((f"own:{k}", f"{sp} {getattr(b, k)} vs {getattr(t, k)}"))
         bmv = {m.id.lower(): (m.pp, m.disabled) for m in b.moves if m.id.lower() != "none"}
         tmv = {m.id.lower(): (m.pp, m.disabled) for m in t.moves if m.id.lower() != "none"}
@@ -139,6 +139,17 @@ def own_diffs(built: pe.Side, truth: pe.Side) -> list[tuple[str, str]]:
         if str(bv).lower() != str(tv).lower():
             out.append((f"own:{k}", f"{bv} vs {tv}"))
     return out
+
+
+def _norm(k: str, v) -> str:
+    """A field's value as the engine reads it (an item it does not know: UNKNOWNITEM, as the
+    differential's states name it)."""
+    from alpha_poke.agents.engine_state import engine_item
+
+    v = str(v).lower()
+    if k in ("item", "last_item") and v not in ("none", "") and not engine_item(v):
+        return "unknownitem"
+    return v
 
 
 def _future(side: pe.Side):
@@ -173,6 +184,9 @@ def _side_common(who: str, built: pe.Side, truth: pe.Side) -> list[tuple[str, st
     if _last_used(built) != _last_used(truth):
         out.append((f"{who}:last_used_move", f"{_last_used(built)} vs {_last_used(truth)}"))
     bv, tv = _vols(built), _vols(truth)
+    if "confusion" in bv & tv and "lockedmove" in bv ^ tv:
+        bv.discard("lockedmove")  # (a lock's end when it was confused already: silent -- hidden)
+        tv.discard("lockedmove")
     for v in sorted(bv ^ tv):
         out.append((f"{who}:volatile:{v}", "built" if v in bv else "truth"))
     bd, td = _durs(built, bv & tv), _durs(truth, bv & tv)
@@ -227,7 +241,7 @@ def foe_diffs(built: pe.Side, truth: pe.Side, seen: set[str], oracle: bool = Fal
             if t.transform_backup is None:
                 keys += list(STATS)
             for k in keys:
-                if str(getattr(b, k)).lower() != str(getattr(t, k)).lower():
+                if _norm(k, getattr(b, k)) != _norm(k, getattr(t, k)):
                     out.append((f"foe:{k}", f"{sp} {getattr(b, k)} vs {getattr(t, k)}"))
             bmv = {m.id.lower(): m.pp for m in b.moves if m.id.lower() != "none"}
             tmv = {m.id.lower(): m.pp for m in t.moves if m.id.lower() != "none"}

@@ -826,6 +826,9 @@ def _last_move(mon, engine_mon, avail: set[str] | None = None, index: int | None
     idx = next(
         (ids.index(mid) for mid, mv in mon.moves.items() if mv.is_last_used and mid in ids), None
     )
+    if idx is None and tm is not None and tm.illusion_last in ids:
+        # (a broken Illusion: its last move disguised -- poke-env gave it to the disguise)
+        return {"last_used_move": f"move:{ids.index(tm.illusion_last)}"}, vol
     if idx is None and "encore" in vol and avail is not None and len(avail) == 1:
         (only,) = avail  # we are encored: the request offers only the encored move
         idx = ids.index(only) if only in ids else None
@@ -1083,8 +1086,12 @@ def build_state(
                              disabled=avail is not None and to_id(m["id"]) not in avail)
                      for m in act.get("moves", [])[:4]
                      if "id" in m and to_id(m["id"]) not in ("struggle", "recharge")]  # fmt: skip
-            if not moves:  # (out of PP, a recharge: the target's, the PP poke-env counted)
-                moves = [pe.Move(id=m.id, pp=_copied_pp(active, m.id)) for m in their_mons[t].moves]
+            if not moves:  # (out of PP, a recharge: the target's, the PP poke-env counted; a
+                # Choice lock's flags -- its locked move out of PP: Struggle only)
+                last = next((mid for mid, mv in active.moves.items() if mv.is_last_used), "")
+                lock = last if active.item in CHOICE_ITEMS else ""
+                moves = [pe.Move(id=m.id, pp=_copied_pp(active, m.id), disabled=bool(lock) and m.id != lock)
+                         for m in their_mons[t].moves]  # fmt: skip
         else:  # the target's (this world's), the PP poke-env counted, Disable's flag
             moves = [pe.Move(id=m.id, pp=_copied_pp(active, m.id), disabled=m.id == tm_us.disabled)
                      for m in their_mons[t].moves]  # fmt: skip
@@ -1271,7 +1278,8 @@ def build_state(
                                       strict=True) if to_id(m.species) == sp), None)  # fmt: skip
         if mon is not None and str(mon.ability).lower() == "klutz":
             return ""  # (a Klutz holder's item does nothing: this world's ability)
-        return items.get((who, sp), "")
+        # (a Court Change put the other side's screen here: its setter is of that side)
+        return items.get((who, sp)) or items.get(("them" if who == "us" else "us", sp), "")
 
     clay_us, clay_them = (
         frozenset(k for k, sp in tm.setters.items()

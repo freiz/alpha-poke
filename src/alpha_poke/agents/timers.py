@@ -143,6 +143,7 @@ class SideTimers:
     sub_hit: bool = False
     recharge: bool = False
     prev: str = ""  # the last message's tag (both sides the same)
+    prev_line: list = field(default_factory=list)  # the last message
     protean: bool = False  # its Protean / Libero changed its type this time in
     item_lost: bool = False  # the active lost its item this time in (Unburden)
     struggled: bool = False  # the active's last move a Struggle (the engine's STRUGGLED)
@@ -155,6 +156,7 @@ class SideTimers:
     stockpile: int = 0  # its Stockpile layers
     embargo: bool = False  # the active under Embargo (its item does nothing)
     ability_now: str = ""  # the active's ability as a move / ability changed it ("none": suppressed)
+    gas_on: bool = False  # the active's Neutralizing Gas is on
     gastro: bool = False  # the active's ability suppressed by Gastro Acid
     cud: int = 0  # Cud Chew's counter of the berry the active ate (0: none to eat again)
     last_item: dict = field(default_factory=dict)  # species id -> its last item used up / eaten
@@ -174,6 +176,7 @@ class SideTimers:
                                                  "boosts": {}})  # fmt: skip
     illusions: dict = field(default_factory=dict)
     illusion_boosts: dict = field(default_factory=dict)
+    illusion_last: str = ""  # a broken Illusion's last move while disguised (its last used one)
     moves_by_nick: dict = field(default_factory=dict)  # nickname -> Counter of the moves its line used
     pp_reset: dict = field(default_factory=dict)  # species id -> its uses since Lunar Dance restored its PP
     consecutive: int = 0  # the same move used again in a row (the Metronome item's count)
@@ -205,9 +208,10 @@ class SideTimers:
     sleep: dict = field(default_factory=dict)  # species id -> [attempts, rest]
     names: dict = field(default_factory=dict)  # nickname -> species id
 
-    def came_in(self, species: str) -> None:
-        # (the one going out: its ability swapped / suppressed this time in -- no Regenerator)
-        if self.ability_off and self.active:
+    def came_in(self, species: str, gas: bool = False) -> None:
+        # (the one going out: its ability swapped / suppressed this time in -- or a Neutralizing
+        # Gas on as it goes -- no Regenerator)
+        if (self.ability_off or gas) and self.active:
             self.no_regen.add(self.active)
         elif self.active:
             self.no_regen.discard(self.active)
@@ -232,6 +236,7 @@ class SideTimers:
         self.destinybond = self.roosted = self.truant_next = self.minimized = False
         self.uproar, self.stockpile = None, 0
         self.embargo = self.sub_on = self.gastro = False
+        self.illusion_last = ""
         self.cud, self.cud_now = 0, False
         self.typechanged = False
         self.tera_now = False
@@ -265,6 +270,7 @@ def _feed(sides: dict, p: list[str]) -> None:
         if p[1] not in ("debug", ""):
             for st in sides.values():
                 st.prev = p[1]
+                st.prev_line = p
 
 
 def _feed_one(sides: dict, p: list[str]) -> None:
@@ -337,6 +343,21 @@ def _feed_one(sides: dict, p: list[str]) -> None:
         for st in sides.values():
             st.fields_elapsed.pop("terrain" if what.endswith("terrain") else what, None)
         return
+    if tag == "-swapsideconditions":  # (Court Change: the conditions and their counts swap)
+        a, b = sides["p1"], sides["p2"]
+        a.side_elapsed, b.side_elapsed = b.side_elapsed, a.side_elapsed
+        for k in TIMED_SIDE | {"spikes", "toxicspikes", "stealthrock", "stickyweb"}:
+            sa, sb = a.setters.pop(k, None), b.setters.pop(k, None)
+            ia, ib = a.set_items.pop(k, None), b.set_items.pop(k, None)
+            if sb is not None:
+                a.setters[k] = sb
+            if sa is not None:
+                b.setters[k] = sa
+            if ib is not None:
+                a.set_items[k] = ib
+            if ia is not None:
+                b.set_items[k] = ia
+        return
     st, sp = _who(p, sides)
     if st is None:
         return
@@ -364,6 +385,7 @@ def _feed_one(sides: dict, p: list[str]) -> None:
                 if used:
                     st.last_item[new] = used
             st.illusion_boosts = dict(st.stint["boosts"])
+            st.illusion_last = st.stint["moves"][-1] if st.stint["moves"] else ""
             st.stint = {"nick": nick, "species": new, "hp": None, "moves": [], "boosts": {}}
         if tag in ("detailschange", "replace"):  # same mon, new form / Illusion broken
             for d in (st.status, st.sleep):
@@ -374,7 +396,10 @@ def _feed_one(sides: dict, p: list[str]) -> None:
                 st.hp_shown[nick] = p[4]
             return
         passer = st.active
-        st.came_in(new)
+        # (a Neutralizing Gas on as it goes out: the other active's, or its own -- gone with it)
+        foe_side = sides["p2" if p[2][:2] == "p1" else "p1"]
+        st.came_in(new, foe_side.gas_on)
+        st.gas_on = False
         st.tera_now = "tera:" in p[3]
         if nick in st.illusions:  # (it is out again itself -- or so: its HP shown again)
             st.illusions[nick] = dict(st.illusions[nick], hp="")
@@ -489,6 +514,8 @@ def _feed_one(sides: dict, p: list[str]) -> None:
             st.charging = None
         if mv in LOCKING and not any(x.startswith("[from]") and "lockedmove" not in x for x in p[4:]):
             st.locked = [mv, (st.locked[1] if st.locked and st.locked[0] == mv else 0) + 1]
+            if st.locked[1] >= 3:
+                st.locked = None  # (its last turn: 3 at most -- its fatigue silent when confused)
         elif not any("lockedmove" in x for x in p[4:]):
             st.locked = None
         if sp in st.stellar_moves:
@@ -524,6 +551,8 @@ def _feed_one(sides: dict, p: list[str]) -> None:
             s.just_moved and _blocked_by_sub(s.last_move) and sides["p2" if k == "p1" else "p1"].sub_on
             for k, s in sides.items()):  # fmt: skip
         pass  # (a status move at a Substitute: its onTryPrimaryHit's null, not a failure)
+    elif tag == "-fail" and st.prev == "-activate" and any(x.startswith("ability:") for x in st.prev_line[3:4]):
+        pass  # (an ability's own failure -- Synchronize passing a burn to a Fire type -- not a move's)
     elif tag in ("-fail", "-miss") and not any(x.startswith("[from]") for x in p[3:]):
         # (L115: the last move failed -- its user's: the side that just moved; a -fail names its
         # target as often, a Toxic on a poisoned foe: 2026-10-23, the state-construction
@@ -544,7 +573,7 @@ def _feed_one(sides: dict, p: list[str]) -> None:
         _missed(sides["p2" if p[2][:2] == "p1" else "p1"])
         if "ability: Flash Fire" in p[3:]:
             st.flashfire = True
-    elif tag == "-activate" and len(p) > 5 and to_id(p[3].replace("move: ", "")) == "spite" \
+    elif tag == "-activate" and len(p) > 5 and to_id(p[3].replace("move: ", "")) in ("spite", "eeriespell") \
             and p[5].isdigit():
         # (Spite took that much PP of its last move -- poke-env does not track it; 2026-10-23)
         st.pp_taken.setdefault(sp, collections.Counter())[to_id(p[4])] += int(p[5])
@@ -593,6 +622,8 @@ def _feed_one(sides: dict, p: list[str]) -> None:
             st.ability_now = to_id(p[4])
             if ost is not None and not p[5].startswith("["):
                 ost.ability_now = to_id(p[5])
+    elif tag == "-ability" and len(p) > 3 and to_id(p[3]) == "neutralizinggas" and len(p) == 4:
+        st.gas_on = True
     elif tag == "-heal" and "[from] move: Revival Blessing" in p:
         st.revived.add(sp)  # (back from a faint: no longer terastallized -- Showdown's)
     elif tag == "-heal" and "[from] move: Lunar Dance" in p:
@@ -682,7 +713,8 @@ def _feed_one(sides: dict, p: list[str]) -> None:
         # not one taken -- Knock Off, Trick, Thief, Bug Bite: [from] / [silent] -- nor a popped Air
         # Balloon, its item just cleared): Harvest, Recycle, Cud Chew read it (L57, L178, L204)
         # (a gem's -enditem says [from] gem: used up too)
-        if ("[eat]" in p or "[from] gem" in p or not any(x.startswith(("[from]", "[silent]")) for x in p[4:])) \
+        if ("[eat]" in p or "[from] gem" in p or "[from] move: Fling" in p
+                or not any(x.startswith(("[from]", "[silent]")) for x in p[4:])) \
                 and to_id(p[3]) != "airballoon":
             st.stint.setdefault("items", []).append((sp, st.last_item.get(sp)))
             st.last_item[sp] = to_id(p[3])
@@ -735,6 +767,8 @@ def _feed_one(sides: dict, p: list[str]) -> None:
             st.uproar = None
         elif what == "embargo":
             st.embargo = False
+        elif what == "abilityneutralizinggas":
+            st.gas_on = False
         elif what == "stockpile":
             st.stockpile = 0
         elif what == "substitute":

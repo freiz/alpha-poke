@@ -36,7 +36,7 @@
 - **数据集**：
   - 常规 41 个，`scripts/check_engine_random_sets.sh`：main、seed10k、offmeta、random、wide、wide2、wide200、forum（OU 队伍池），randbats、randbats2–33（`scripts/randbats_teams.py` 生成的随机对战队伍）。
   - 大数据集 30 个，`scripts/check_engine_random_big.sh`：big0–big29，每个 2900 对。队伍用固定种子生成在 `data/teams/big/`，不提交；用 `BIG_SETS="..."` 可以只跑其中几个。
-- **局面构造另测**：我们自己的 `build_state`（从玩家收到的协议还原局面）不在这个差分里。它单独测：同一场对战，把玩家实际收到的协议喂给它，再和真实状态比较。
+- **局面构造另测**：我们自己的 `build_state`（从玩家收到的协议还原局面）不在这个差分里，单独的局面构造差分见 `doc/state-diff.md`（2026-10-23 起；在那之前这一步只有零散的单元测试）。
 
 ### 确认：双引擎单元测试
 

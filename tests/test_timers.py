@@ -524,3 +524,28 @@ def test_pressure_under_neutralizing_gas_takes_one_pp():
         b.parse_message(line.split("|"))
     mv = next(iter(b.active_pokemon.moves.values()))
     assert mv.max_pp - mv.current_pp == 1
+
+
+def test_the_logs_facts_fourth_batch():
+    """2026-10-23 (state-construction differential): Eerie Spell's PP; Court Change swaps the
+    conditions' counts; a Regenerator going out under Neutralizing Gas heals nothing; a lock ends
+    at its third use (its fatigue silent when confused); Fling's item is the last item; an
+    ability's -fail (Synchronize) is not the move's; a broken Illusion's last move."""
+    t = run(START + "|move|p1a: Fishy|Eerie Spell|p2a: Bob\n|-activate|p2a: Bob|move: Eerie Spell|Earthquake|3")
+    assert t["p2"].pp_taken["gliscor"]["earthquake"] == 3
+    t = run(START + "|-sidestart|p1: A|Reflect\n|upkeep\n|turn|2\n|move|p2a: Bob|Court Change|p2a: Bob\n"
+            "|-swapsideconditions\n|-activate|p2a: Bob|move: Court Change")  # fmt: skip
+    assert t["p2"].side_elapsed == {"reflect": 1} and t["p1"].side_elapsed == {}
+    t = run(START + "|-ability|p1a: Fishy|Neutralizing Gas\n|switch|p2a: Rob|Corviknight, M|100/100")
+    assert "gliscor" in t["p2"].no_regen
+    t = run(START + "".join(f"|move|p1a: Fishy|Outrage|p2a: Bob{'|[from]lockedmove' if k else ''}\n|upkeep\n|turn|{k + 2}\n"
+                            for k in range(3)))  # fmt: skip
+    assert t["p1"].locked is None
+    t = run(START + "|move|p2a: Bob|Fling|p1a: Fishy\n|-enditem|p2a: Bob|Toxic Orb|[from] move: Fling")
+    assert t["p2"].last_item["gliscor"] == "toxicorb"
+    t = run(START + "|move|p1a: Fishy|Will-O-Wisp|p2a: Bob\n|-status|p2a: Bob|brn\n"
+            "|-activate|p2a: Bob|ability: Synchronize\n|-fail|p2a: Bob\n|upkeep\n|turn|2")  # fmt: skip
+    assert not t["p1"].last_failed
+    t = run(START + "|move|p2a: Bob|Hyper Voice|p1a: Fishy\n|replace|p2a: Zoroark|Zoroark-Hisui, M\n"
+            "|-end|p2a: Zoroark|Illusion")  # fmt: skip
+    assert t["p2"].illusion_last == "hypervoice"
