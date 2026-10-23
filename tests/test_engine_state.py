@@ -765,3 +765,34 @@ def test_a_benched_regenerator_healed(belief):
         es.sample_set = inner
     g = next(p for p in s.side_two.pokemon if p.id.lower() == "gholdengo")
     assert abs(g.hp / g.maxhp - (0.30 + 1 / 3)) < 0.02
+
+
+def test_formes_and_more_volatiles_reach_the_engine(belief):
+    """2026-10-23 (state-construction differential): a forme's species (poke-env keeps the one it
+    came in as: Ogerpon's tera forme), a Battle Bond Greninja (the engine's Battle Bond works for
+    Greninja-Bond only), Destiny Bond, a Struggle's mark, Protean from the log."""
+    b = battle(["|switch|p2a: Ogerpon|Ogerpon-Wellspring, F|100/100", "|-terastallize|p2a: Ogerpon|Water",
+                "|detailschange|p2a: Ogerpon|Ogerpon-Wellspring-Tera, F, tera:Water",
+                "|move|p2a: Ogerpon|Destiny Bond|p2a: Ogerpon", "|-singlemove|p2a: Ogerpon|Destiny Bond",
+                "|upkeep|", "|turn|2"])  # fmt: skip
+    two = state(b, belief).side_two
+    assert two.pokemon[int(two.active_index)].id.lower() == "ogerponwellspringtera"
+    assert "destinybond" in two.volatile_statuses
+    b = battle(["|move|p1a: Garchomp|Struggle|p2a: Gholdengo", "|-damage|p2a: Gholdengo|90/100",
+                "|upkeep|", "|turn|2"], us="Greninja", ability="battlebond",
+               moves=("watershuriken", "darkpulse", "icebeam", "uturn"))  # fmt: skip
+    one = state(b, belief).side_one
+    assert one.pokemon[0].id.lower() == "greninjabond"
+    b = battle(["|move|p2a: Gholdengo|Shadow Ball|p1a: Garchomp",
+                "|-start|p2a: Gholdengo|typechange|Ghost|[from] ability: Protean", "|upkeep|", "|turn|2"])  # fmt: skip
+    assert "protean" in state(b, belief).side_two.volatile_statuses
+
+
+def test_out_of_pp_and_encore_flags(belief):
+    """Out of PP: the engine's own (no option), no flag; under Encore the others keep their flags
+    (a charge's derived rule does not drop them)."""
+    from alpha_poke.agents.engine_state import derived_disable
+
+    kw = dict(taunt=False, healblock=False, throatchop=False, item="", last_move="")
+    assert derived_disable("recover", **kw, pp=0)
+    assert not derived_disable("bodypress", **kw, charging="meteorbeam", encore=True)

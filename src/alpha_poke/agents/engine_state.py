@@ -432,6 +432,39 @@ def engine_volatile(name: str) -> bool:
 
 
 @functools.cache
+def engine_species(name: str) -> bool:
+    """Whether poke-engine knows the species ``name`` (a state round trip keeps it)."""
+    try:
+        side = pe.Side(pokemon=[pe.Pokemon(id=name)] + [pe.Pokemon.create_fainted()] * 5)
+        back = pe.State.from_string(pe.State(side_one=side).to_string()).side_one
+        return back.pokemon[0].id.lower() == name
+    except BaseException:  # noqa: BLE001
+        return False
+
+
+def _formes(team: dict, mons: list, built: list, tm: SideTimers) -> list:
+    """``built`` (the engine mons of ``mons``, a side's poke-env mons; ``team``: the side's
+    battle dict) with each one's species its forme now: poke-env keeps the one it came in as (a
+    detailschange -- Ogerpon's tera, Palafin-Hero, Mimikyu-Busted -- or a -formechange --
+    Cramorant's Gorging -- change its stats and types only); a Battle Bond Greninja the engine's
+    Greninja-Bond (its Battle Bond only works for that species; Showdown shows "Greninja"). Not a
+    transformed one (it keeps its own species). 2026-10-23, the state-construction
+    differential."""
+    nick = {id(m): k.split(": ", 1)[-1] for k, m in team.items()}
+    out = list(built)
+    for j, (m, p) in enumerate(zip(mons, built, strict=True)):
+        n = nick.get(id(m))
+        f = tm.names.get(n) if n is not None else None
+        if tm.temp_forme and n == tm.temp_forme[0] and m.active:
+            f = tm.temp_forme[1]
+        if p.id.lower() == "greninja" and str(p.ability).lower() == "battlebond":
+            f = "greninjabond"
+        if f and f != p.id.lower() and not m.transformed and engine_species(f):
+            out[j] = _with(p, id=f)
+    return out
+
+
+@functools.cache
 def _move_kinds() -> dict:
     """Move id -> (category, flags) from the engine's data (alpha_search.engine_data)."""
     rows, _ = alpha_search.engine_data()
@@ -440,7 +473,8 @@ def _move_kinds() -> dict:
 
 def derived_disable(move: str, *, taunt: bool, healblock: bool, throatchop: bool, item: str,
                     last_move: str, lock: str = "", disabled: str = "",
-                    charging: str = "", recharge: bool = False) -> bool:  # fmt: skip
+                    charging: str = "", recharge: bool = False, pp: int = 1,
+                    encore: bool = False) -> bool:  # fmt: skip
     """Showdown disables ``move`` only for a reason the engine derives itself -- so not the
     move's disabled flag, which the engine never clears (it never set it): a Taunt's status move,
     a Heal Block's healing one, a Throat Chop's sound one, an Assault Vest's status one, a
@@ -448,14 +482,14 @@ def derived_disable(move: str, *, taunt: bool, healblock: bool, throatchop: bool
     ended). Not when a lock keeps it out as well (``lock``: a Choice item's / Gorilla Tactics'
     move; ``disabled``: Disable's): the engine's flags. ``charging``: a two-turn move's second
     turn -- the engine's charge volatile keeps the others out; ``recharge``: a recharge turn
-    (the engine's mustrecharge). One rule for the differential's
+    (the engine's mustrecharge); ``pp`` 0: out of PP (the engine's own: no option). One rule for the differential's
     states and ours (2026-10-23, the state-construction differential: our request's Assault
     Vest disable stayed after the vest was knocked off)."""
     if lock and lock != move:
         return False
-    if disabled == move:
+    if disabled == move or encore:  # (Encore keeps the others out by their flags too)
         return False
-    if (charging and move != charging) or recharge:
+    if (charging and move != charging) or recharge or pp <= 0:
         return True
     cat, flags = _move_kinds().get(move, ("", set()))
     return bool(
@@ -493,17 +527,17 @@ def _our_mon(
     last = next((mid for mid, mv in mon.moves.items() if mv.is_last_used), "")
     lock = last if (mon.item in CHOICE_ITEMS or mon.ability == "gorillatactics") else ""
     for mid, mv in list(_own_moves(mon).items())[:4]:
-        disabled = available_moves is not None and mid not in available_moves and not (
-            tm is not None and derived_disable(
-                mid, taunt=tm.taunt is not None, healblock=tm.healblock is not None,
-                throatchop=tm.throatchop is not None, item=mon.item or "", last_move=last,
-                lock=lock, disabled=tm.disabled or "", charging=tm.charging or "",
-                recharge=tm.recharge))  # fmt: skip
         pp = max(0, mv.current_pp)
         if req_pp and req_pp.get(mid) is not None:
             pp = int(req_pp[mid])
         if available_moves is not None and mid in available_moves:
             pp = max(pp, 1)
+        disabled = available_moves is not None and mid not in available_moves and not (
+            tm is not None and derived_disable(
+                mid, taunt=tm.taunt is not None, healblock=tm.healblock is not None,
+                throatchop=tm.throatchop is not None, item=mon.item or "", last_move=last,
+                lock=lock, disabled=tm.disabled or "", charging=tm.charging or "",
+                recharge=tm.recharge, pp=pp, encore=tm.encore is not None))  # fmt: skip
         moves.append(pe.Move(id=mid, pp=pp, disabled=disabled))
     hp = 0 if mon.fainted else int(mon.current_hp or 0)
     if revived:
@@ -574,7 +608,8 @@ def _their_mon(mon, s: SampledSet, tm: SideTimers | None = None,
         # a Regenerator that switched out (a benched mon seen before): a third back, silently --
         # poke-env adds it only when it knew the ability (2026-10-23, the state-construction
         # differential: this world's Regenerator healed nothing)
-        if s.ability == "regenerator" and not mon.active and mon.ability != "regenerator":
+        if s.ability == "regenerator" and not mon.active and mon.ability != "regenerator" and not (
+                tm is not None and to_id(mon.species) in tm.no_regen):  # fmt: skip
             hp = min(maxhp, hp + maxhp // 3)
     return pe.Pokemon(
         id=mon.species,
@@ -665,8 +700,8 @@ def _as_transformed(p: pe.Pokemon, target: pe.Pokemon, moves: list, ability: str
     )  # fmt: skip
 
 
-def _last_move(mon, engine_mon, avail: set[str] | None = None,
-               index: int | None = None) -> tuple[dict, set[str]]:  # fmt: skip
+def _last_move(mon, engine_mon, avail: set[str] | None = None, index: int | None = None,
+               switched_now: bool = False, tm: SideTimers | None = None) -> tuple[dict, set[str]]:  # fmt: skip
     """(``last_used_move`` Side kwarg, volatiles) for an active mon. The engine panics on an
     Encore without a last used move, so Encore is dropped when we cannot tell the move. Without
     one: its switch-in (``index``, its slot) on its first turn out -- Fake Out / First
@@ -676,6 +711,15 @@ def _last_move(mon, engine_mon, avail: set[str] | None = None,
         vol.discard("encore")
         return {}, vol
     ids = [m.id for m in engine_mon.moves]
+    # (L232: after a Struggle, a lock's move -- a Choice item's / Gorilla Tactics' / Encore's --
+    # is the last used one; else none: 2026-10-23, the state-construction differential)
+    if tm is not None and tm.struggled:
+        locked = (str(engine_mon.item).lower() in CHOICE_ITEMS or str(engine_mon.ability).lower()
+                  == "gorillatactics" or "encore" in vol)  # fmt: skip
+        if locked and tm.own_last in ids:
+            return {"last_used_move": f"move:{ids.index(tm.own_last)}"}, vol
+        vol.discard("encore")
+        return {}, vol
     idx = next(
         (ids.index(mid) for mid, mv in mon.moves.items() if mv.is_last_used and mid in ids), None
     )
@@ -684,7 +728,10 @@ def _last_move(mon, engine_mon, avail: set[str] | None = None,
         idx = ids.index(only) if only in ids else None
     if idx is None:
         vol.discard("encore")
-        if index is not None and getattr(mon, "first_turn", False):
+        # (or it came in this very turn -- a mid-turn decision: poke-env's first_turn waits for
+        # the next turn; 2026-10-23, the state-construction differential)
+        if index is not None and (getattr(mon, "first_turn", False) or switched_now
+                                  or (tm is not None and tm.fresh)):
             return {"last_used_move": f"switch:{index}"}, vol
         return {}, vol
     return {"last_used_move": f"move:{idx}"}, vol
@@ -730,7 +777,8 @@ def _counts(tm: SideTimers, active) -> tuple[int, int]:
 
 
 def _timed(tm: SideTimers, active, mons: list, engine_mons: list, vol: set[str],
-           disable: int | None = None, locked: int | None = None) -> dict:  # fmt: skip
+           disable: int | None = None, locked: int | None = None,
+           metronome: int | None = None) -> dict:  # fmt: skip
     """pe.Side kwargs: the pending Wish (turns, half the wisher's max HP), the pending Future
     Sight (turns, its user's slot) and the active's
     volatile durations (only of volatiles it has; clamped to what the engine accepts;
@@ -760,6 +808,8 @@ def _timed(tm: SideTimers, active, mons: list, engine_mons: list, vol: set[str],
         dur["disable"] = disable
     if "lockedmove" in vol and locked:
         dur["lockedmove"] = locked
+    if "metronome" in vol and metronome:
+        dur["metronome"] = metronome
     if dur:
         out["volatile_status_durations"] = pe.VolatileStatusDurations(**dur)
     return out
@@ -921,11 +971,11 @@ def build_state(
         their_tf = True
     our_last, our_vol = _last_move(
         active, our_mons[our_active_idx] if our_active_idx is not None else None, avail,
-        our_active_idx,
+        our_active_idx, tm_us.switched_now, tm_us,
     )
     their_last, their_vol = _last_move(
         opp_active, their_mons[their_idx] if their_mons else None, None,
-        their_idx if their_mons else None,
+        their_idx if their_mons else None, tm_them.switched_now, tm_them,
     )
     # the engine's transform / typechange volatiles (doc/engine-diff.md L36): a switch ends the
     # transformation, and an Imposter does not transform again while it is on
@@ -938,7 +988,10 @@ def build_state(
         if tm.trap_out:  # (L170: its source left, it does nothing more)
             vol.discard("partiallytrapped")
         # (L218: a Protean / Libero type change marks the ability as used, its own volatile now)
-        if mon is not None and "typechange" in vol and mon.ability in ("protean", "libero") \
+        # (the log's -start typechange [from] ability: Protean / Libero -- the timers' -- not
+        # poke-env's ability, which it may not know: 2026-10-23, the state-construction
+        # differential)
+        if mon is not None and "typechange" in vol and (tm.protean or mon.ability in ("protean", "libero")) \
                 and not (mon is active and our_tf or mon is opp_active and their_tf):
             vol.add("protean")
         # (L222: turn 1's stage changes are its leads' entries -- Intimidate, Intrepid Sword, ...:
@@ -950,6 +1003,14 @@ def build_state(
                 vol.add("statsraised")
     # must recharge (the engine offers no move), Perish Song's count
     locked: dict = {}  # (is ours) -> the lock's count
+    metronome: dict = {}  # (is ours) -> the Metronome item's count
+    # (is ours) -> the active's ability in this world
+    ab = {True: str(our_mons[our_active_idx].ability).lower() if our_active_idx is not None
+          and our_active_idx < len(our_mons) else "",
+          False: str(their_mons[their_idx].ability).lower() if their_mons else ""}  # fmt: skip
+    items_now = {True: str(our_mons[our_active_idx].item).lower() if our_active_idx is not None
+                 and our_active_idx < len(our_mons) else "",
+                 False: str(their_mons[their_idx].item).lower() if their_mons else ""}  # fmt: skip
     for mon, vol, tm in ((active, our_vol, tm_us), (opp_active, their_vol, tm_them)):
         if mon is None:
             continue
@@ -973,6 +1034,29 @@ def build_state(
         # differential: neither was passed, the search let it choose another move
         if tm.charging and engine_volatile(tm.charging):
             vol.add(tm.charging)
+        # (Unburden: its item lost this time in, this world's ability -- silent in the log;
+        # 2026-10-23, the state-construction differential)
+        if tm.struggled:  # (L232: the last action a Struggle -- never passed, 2026-10-23)
+            vol.add("struggled")
+        if tm.flashfire:  # (its Flash Fire's boost: the log's -start, not poke-env's effect)
+            vol.add("flashfire")
+        if tm.destinybond:
+            vol.add("destinybond")
+        if tm.roosted:  # (a mid-turn decision after its Roost)
+            vol.add("roost")
+        if tm.consecutive and items_now[mon is active] == "metronome":
+            vol.add("metronome")
+            metronome[mon is active] = tm.consecutive
+        # an Illusion in disguise (the engine's volatile: a Transform into it fails, L227): ours
+        # when the log shows our active as another species; theirs in a world that drew the
+        # Zoroark (2026-10-23, the state-construction differential: never passed)
+        if mon is active and mon is not None and tm.active and tm.active != to_id(mon.species) \
+                and to_id(mon.species).startswith("zoroark"):
+            vol.add("illusion")
+        if mon is opp_active and zi is not None:
+            vol.add("illusion")
+        if tm.item_lost and ab[mon is active] == "unburden":
+            vol.add("unburden")
         if tm.locked:
             vol.add("lockedmove")
             # (the engine's count: its ends of turn, the length drawn at the first one --
@@ -1022,6 +1106,8 @@ def build_state(
                 if EXTENDERS.get(what) == item or (kind == "terrain" and item == "terrainextender"):
                     ext[kind] = 8
 
+    our_mons = _formes(battle.team, ours, our_mons, tm_us)
+    their_mons = _formes(battle.opponent_team, theirs, their_mons, tm_them)
     # (L177: a side's Terastallization used by a mon that fainted since: the engine reads it off
     # its mons, can_use_tera)
     our_mons = _tera_used(our_mons, bool(getattr(battle, "used_tera", False)))
@@ -1033,7 +1119,8 @@ def build_state(
             battle.side_conditions, turn, *_counts(tm_us, active), clay_us, tm_us.side_elapsed
         ),
         volatile_statuses=our_vol,
-        **_timed(tm_us, active, ours, our_mons, our_vol, disable.get("us"), locked.get(True)),
+        **_timed(tm_us, active, ours, our_mons, our_vol, disable.get("us"), locked.get(True),
+                 metronome.get(True)),
         substitute_health=(
             (
                 int((active.max_hp or 4) // 4)
@@ -1074,7 +1161,7 @@ def build_state(
         ),
         volatile_statuses=their_vol,
         **_timed(tm_them, opp_active, theirs, their_mons, their_vol, disable.get("them"),
-                 locked.get(False)),
+                 locked.get(False), metronome.get(False)),
         substitute_health=(
             their_mons[their_idx].maxhp // 4 // (2 if tm_them.sub_hit else 1)
             if opp_active is not None and Effect.SUBSTITUTE in opp_active.effects

@@ -411,3 +411,57 @@ def test_charging_and_locking_moves():
             "|move|p1a: Fishy|Outrage|p2a: Bob|[from]lockedmove\n|-start|p1a: Fishy|confusion|[fatigue]\n"
             "|upkeep\n|turn|3")  # fmt: skip
     assert t["p1"].locked is None
+
+
+def test_more_of_the_logs_facts():
+    """2026-10-23 (state-construction differential), each Showdown's: Protean / Libero's change
+    from the log; an absorbing ability fails the move (Flash Fire's -start, Wind Rider's -ability
+    form); Synthesis at full HP is no failure (NOT_FAIL), Substitute's is; a failed Protect drops
+    its count at once; an end-of-turn Future Sight's -immune is not the last move's; an ability's
+    boost after a status move is not the move's; Destiny Bond till its next move; Roost this turn;
+    the Metronome item's count; a reflected move is its reflector's result; a switch-in's first
+    turn out; Skill Swap: no Regenerator at its switch-out."""
+    t = run(START + "|move|p2a: Bob|Pyro Ball|p1a: Fishy\n|-start|p2a: Bob|typechange|Fire|[from] ability: Libero")
+    assert t["p2"].protean
+    t = run(START + "|move|p2a: Bob|Pyro Ball|p1a: Fishy\n|-start|p1a: Fishy|ability: Flash Fire\n|upkeep\n|turn|2")
+    assert t["p2"].last_failed and t["p1"].flashfire
+    t = run(START + "|move|p2a: Bob|Hurricane|p1a: Fishy\n|-ability|p1a: Fishy|Wind Rider|boost\n"
+            "|-boost|p1a: Fishy|atk|1\n|upkeep\n|turn|2")  # fmt: skip
+    assert t["p2"].last_failed
+    t = run(START + "|move|p1a: Fishy|Synthesis|p1a: Fishy\n|-fail|p1a: Fishy|heal\n|upkeep\n|turn|2")
+    assert not t["p1"].last_failed
+    t = run(START + "|move|p1a: Fishy|Substitute|p1a: Fishy\n|-fail|p1a: Fishy|move: Substitute|[weak]\n"
+            "|upkeep\n|turn|2")  # fmt: skip
+    assert t["p1"].last_failed
+    t = run(START + "|move|p1a: Fishy|Protect|p1a: Fishy\n|-singleturn|p1a: Fishy|Protect\n|upkeep\n|turn|2\n"
+            "|move|p1a: Fishy|Protect||[still]\n|-fail|p1a: Fishy")  # fmt: skip
+    assert t["p1"].protect == 0
+    t = run(START + "|move|p1a: Fishy|Taunt|p2a: Bob\n|-start|p2a: Bob|move: Taunt\n"
+            "|-end|p2a: Bob|move: Future Sight\n|-immune|p2a: Bob\n|upkeep\n|turn|2")  # fmt: skip
+    assert not t["p1"].last_failed
+    t = run(START + "|move|p2a: Bob|Stealth Rock||[still]\n|-fail|p2a: Bob\n"
+            "|-ability|p1a: Fishy|Speed Boost|boost\n|-boost|p1a: Fishy|spe|1\n|upkeep\n|turn|2")  # fmt: skip
+    assert t["p2"].last_failed
+    t = run(START + "|move|p2a: Bob|Destiny Bond|p2a: Bob\n|-singlemove|p2a: Bob|Destiny Bond\n|upkeep\n|turn|2")
+    assert t["p2"].destinybond
+    t = run(START + "|move|p2a: Bob|Roost|p2a: Bob\n|-singleturn|p2a: Bob|move: Roost")
+    assert t["p2"].roosted
+    t = run(START + "|move|p1a: Fishy|Body Press|p2a: Bob\n|upkeep\n|turn|2\n|move|p1a: Fishy|Body Press|p2a: Bob")
+    assert t["p1"].consecutive == 1
+    t = run(START + "|move|p1a: Fishy|Stealth Rock|p2a: Bob\n"
+            "|move|p2a: Bob|Stealth Rock||[from] ability: Magic Bounce|[still]\n|-fail|p2a: Bob\n|upkeep\n|turn|2")  # fmt: skip
+    assert t["p1"].last_failed and t["p2"].last_failed
+    t = run(START)
+    assert t["p1"].fresh == 2
+    t = run(START + "|-activate|p1a: Fishy|Skill Swap|Regenerator|Unaware|[of] p2a: Bob\n"
+            "|switch|p2a: Rob|Corviknight, M|100/100")  # fmt: skip
+    assert "gliscor" in t["p2"].no_regen
+
+
+def test_formes_from_the_log():
+    """A detailschange's forme stays (the species the engine needs: Ogerpon's tera); a
+    -formechange's until the switch-out."""
+    t = run(START + "|-formechange|p2a: Bob|Gliscor-Fake|[msg]")
+    assert t["p2"].temp_forme == ("Bob", "gliscorfake")
+    t = run(START + "|detailschange|p2a: Bob|Ogerpon-Wellspring-Tera, F, tera:Water")
+    assert t["p2"].names["Bob"] == "ogerponwellspringtera"

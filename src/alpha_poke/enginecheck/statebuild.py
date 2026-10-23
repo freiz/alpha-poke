@@ -41,6 +41,7 @@ STATS = ("attack", "defense", "special_attack", "special_defense", "speed")
 # the side's own fields compared as they are
 SIDE_FIELDS = ("substitute_health", "wish", "future_sight",
                "switch_out_move_second_saved_move")  # fmt: skip
+# both sides': the last used move (by name: a move slot's, a switch's slot, none)
 _BELIEF = None
 
 
@@ -53,8 +54,15 @@ def _belief():
     return _BELIEF
 
 
+# species ids taken as one: a Battle Bond set's Greninja (the engine's Greninja-Bond, its Battle
+# Bond's species; Showdown shows "Greninja", and a fixture's plain Greninja with Battle Bond is
+# "greninja" in Showdown, where its Battle Bond does nothing)
+SAME_SPECIES = {"greninjabond": "greninja"}
+
+
 def _sp(p) -> str:
-    return to_id(p.id)
+    sp = to_id(p.id)
+    return SAME_SPECIES.get(sp, sp)
 
 
 def _mons(side: pe.Side) -> dict:
@@ -122,6 +130,8 @@ def own_diffs(built: pe.Side, truth: pe.Side) -> list[tuple[str, str]]:
     out += _side_common("own", built, truth)
     for k in SIDE_FIELDS:
         bv, tv = getattr(built, k), getattr(truth, k)
+        if k == "substitute_health" and tv not in (0, _active(truth).maxhp // 4):
+            continue  # (a hit Substitute's HP: the log does not show it -- the player's guess)
         if str(bv).lower() != str(tv).lower():
             out.append((f"own:{k}", f"{bv} vs {tv}"))
     return out
@@ -129,6 +139,14 @@ def own_diffs(built: pe.Side, truth: pe.Side) -> list[tuple[str, str]]:
 
 def _tera_used(side: pe.Side) -> bool:
     return any(p.terastallized for p in side.pokemon) or bool(getattr(side, "tera_used", False))
+
+
+def _last_used(side: pe.Side) -> str:
+    """The side's last used move by name ("move:<id>", "switch", "none")."""
+    lu = str(side.last_used_move).lower()
+    if lu.startswith("move:") and lu[5:].isdigit():
+        return "move:" + _active(side).moves[int(lu[5:])].id.lower()
+    return lu.split(":")[0] if lu.startswith("switch") else lu
 
 
 def _side_common(who: str, built: pe.Side, truth: pe.Side) -> list[tuple[str, str]]:
@@ -143,6 +161,8 @@ def _side_common(who: str, built: pe.Side, truth: pe.Side) -> list[tuple[str, st
             out.append((f"{who}:condition:{k}", f"{b} vs {t}"))
     if _active(truth).hp <= 0:
         return out
+    if _last_used(built) != _last_used(truth):
+        out.append((f"{who}:last_used_move", f"{_last_used(built)} vs {_last_used(truth)}"))
     bv, tv = _vols(built), _vols(truth)
     for v in sorted(bv ^ tv):
         out.append((f"{who}:volatile:{v}", "built" if v in bv else "truth"))
@@ -163,6 +183,11 @@ def foe_diffs(built: pe.Side, truth: pe.Side, seen: set[str],
     and status, tera; the side's volatiles, counts, conditions, boosts. ``oracle`` (its sets the
     true ones): also the revealed mons' item, abilities, stats and moves with their PP."""
     out = []
+    if "illusion" in _vols(truth):
+        # (its active an Illusion in disguise: which mon it is the belief's draw -- each world
+        # its own, D17 G -- so the active, its moves and boosts are not the construction's)
+        return [(k, d) for k, d in _side_common("foe", built, truth)
+                if k.split(":")[1] in ("condition",)]
     if oracle:
         bm, tm = _mons(built), _mons(truth)
         for sp in seen & set(bm) & set(tm):
@@ -251,11 +276,12 @@ def _oracle(foe: dict | None):
         yield
         return
     inner = es.sample_set
-    truth = {m["species"]: m for m in foe["mons"]}
+    truth = {SAME_SPECIES.get(m["species"], m["species"]): m for m in foe["mons"]}
 
     def sample(belief, mon, *a, **kw):
         out = inner(belief, mon, *a, **kw)
-        t = truth.get(to_id(mon.species))
+        sp = to_id(mon.species)
+        t = truth.get(SAME_SPECIES.get(sp, sp))
         if t is None:
             return out
         own = t.get("transform_backup")
@@ -295,8 +321,16 @@ def decisions(p1: str, p2: str, seed: int, max_turns: int = 40, sides=("p1", "p2
     for k, step in enumerate(steps):
         if "requests" not in step:
             continue
+        sd = _fainted_no_status(step["state"])
+        seen_lines = views["spectator"][: step["view_pos"]["spectator"]]
+        last_turn = max((j for j, x in enumerate(seen_lines) if x.startswith("|turn|")), default=-1)
+        if any(x.startswith("|upkeep") for x in seen_lines[last_turn + 1:]):
+            # (a decision after the turn's end -- a forced switch -- before the next |turn|:
+            # engine_state reckons Future Sight / Wish from Showdown's turn number, the next
+            # turn's counters then -- the engine differential compares turn starts only)
+            sd["turn"] += 1
         try:
-            truth = engine_state(_fainted_no_status(step["state"]))
+            truth = engine_state(sd)
         except BaseException as e:  # noqa: BLE001
             stats["errors"].append(f"truth: {type(e).__name__}: {str(e)[:120]}")
             truth = None

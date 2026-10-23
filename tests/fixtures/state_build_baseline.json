@@ -1,25 +1,5 @@
 {
  "battles": 60,
  "decisions": 4495,
- "open": {
-  "foe:active": 7,
-  "foe:condition:protect": 1,
-  "foe:volatile:destinybond": 2,
-  "foe:volatile:flashfire": 2,
-  "foe:volatile:illusion": 1,
-  "foe:volatile:lastmovefailed": 11,
-  "foe:volatile:protean": 43,
-  "foe:volatile:struggled": 2,
-  "foe:volatile:unburden": 5,
-  "own:disabled": 3,
-  "own:future_sight": 1,
-  "own:substitute_health": 5,
-  "own:team": 42,
-  "own:volatile:destinybond": 2,
-  "own:volatile:flashfire": 2,
-  "own:volatile:illusion": 1,
-  "own:volatile:lastmovefailed": 11,
-  "own:volatile:struggled": 2,
-  "own:volatile:unburden": 3
- }
+ "open": {}
 }
