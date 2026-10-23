@@ -184,6 +184,18 @@ def test_extending_items_in_a_replay_position(belief):
     assert s.weather_turns_remaining == 8 - 1
 
 
+def test_a_screen_set_without_an_item_is_not_extended_by_a_light_clay_given_after(belief):
+    """2026-10-23 review: Garchomp with no item sets Reflect, the next turn a Trick gives it a
+    Light Clay: Showdown's 5 turns (3 left after two ends of turn), not 8 (6)."""
+    lines = ["|move|p1a: Garchomp|Reflect|p1a: Garchomp", "|-sidestart|p1: us|Reflect", "|upkeep|",
+             "|turn|2", "|move|p2a: Gholdengo|Trick|p1a: Garchomp",
+             "|-activate|p2a: Gholdengo|move: Trick|[of] p1a: Garchomp",
+             "|-item|p1a: Garchomp|Light Clay|[from] move: Trick",
+             "|-enditem|p2a: Gholdengo|Light Clay|[silent]|[from] move: Trick", "|upkeep|", "|turn|3"]
+    b = battle(lines, item="lightclay")  # (the request after the Trick: it holds the Light Clay)
+    assert state(b, belief).side_one.side_conditions.reflect == 5 - 2
+
+
 @pytest.mark.parametrize("lines", [
     ["|move|p2a: Gholdengo|Knock Off|p1a: Garchomp",
      "|-enditem|p1a: Garchomp|Light Clay|[from] move: Knock Off|[of] p2a: Gholdengo"],

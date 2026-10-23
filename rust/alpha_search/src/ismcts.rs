@@ -280,15 +280,22 @@ impl<'a> PathCtx<'a> {
             two: Act::of_choice(&state.side_two, m2),
         };
         // a Struggle (the none option of a side that struggles) is its move, as the log and the
-        // replays' history have it ("m:<mon>:STRUGGLE"; 2026-10-23 review: no action)
-        for (act, mc, side_ref) in [
+        // replays' history have it ("m:<mon>:STRUGGLE"; 2026-10-23 review: no action); checked
+        // by `settle` as a move is (it may not come: asleep, fainted first, saved behind the
+        // foe's pivot -- 2026-10-23 review)
+        let mut struggle = [false; 2];
+        for (k, (act, mc, side_ref)) in [
             (&mut step.one, m1, SideReference::SideOne),
             (&mut step.two, m2, SideReference::SideTwo),
-        ] {
+        ]
+        .into_iter()
+        .enumerate()
+        {
             if *mc == MoveChoice::None && crate::features::struggles(state, side_ref) {
                 act.kind = 1;
                 act.actor = state.get_side_immutable(&side_ref).get_active_immutable().id as i32;
                 act.target = Choices::STRUGGLE as i32;
+                struggle[k] = true;
             }
         }
         self.steps.push(step);
@@ -297,6 +304,11 @@ impl<'a> PathCtx<'a> {
             .enumerate()
         {
             self.pending[k] = None;
+            if struggle[k] {
+                // (nothing to reveal: no move of its set -- slot 0 is not its first move)
+                self.pending[k] = Some((off + side.active_index as usize, 0, side.active_index));
+                continue;
+            }
             match mc {
                 MoveChoice::Move(i) | MoveChoice::MoveTera(i) => {
                     let a = off + side.active_index as usize;
@@ -1584,6 +1596,42 @@ mod tests {
         let got = pc.steps[0].one;
         assert_eq!((got.kind, got.actor, got.target), (want.kind, want.actor, want.target));
         assert_eq!(want.target, Choices::STRUGGLE as i32);
+    }
+
+    /// 2026-10-23 review: a Struggle in the history is checked as a move: our U-turn first, the
+    /// foe's Struggle saved for after our switch-in -- no action yet (it showed the Struggle);
+    /// once it comes, the Struggle
+    #[test]
+    fn a_struggle_not_come_yet_is_no_action() {
+        let base = Context { reveal: [0; 12], rating: [0, 0], turn: 10, history: vec![], ..Default::default() };
+        let mut state = ko_first();
+        state.side_one.get_active().moves[&PokemonMoveIndex::M0].id = Choices::UTURN;
+        state.side_one.get_active().moves[&PokemonMoveIndex::M0].choice = poke_engine::choices::MOVES.get(&Choices::UTURN).unwrap().clone();
+        let foe = state.side_two.get_active();
+        (foe.hp, foe.maxhp) = (400, 400);
+        for k in [PokemonMoveIndex::M0, PokemonMoveIndex::M1, PokemonMoveIndex::M2, PokemonMoveIndex::M3] {
+            state.side_two.get_active().moves[&k].pp = 0;
+        }
+        assert!(crate::features::struggles(&state, SideReference::SideTwo));
+        let mut pc = PathCtx::new(Some(&base), &state);
+        let m = MoveChoice::Move(PokemonMoveIndex::M0);
+        pc.push(&state, &m, &MoveChoice::None);
+        let outcomes = generate_instructions_from_move_pair(&mut state, &m, &MoveChoice::None, false);
+        state.apply_instructions(&outcomes[0].instruction_list);
+        pc.settle(&outcomes[0].instruction_list, &state);
+        assert!(state.side_one.force_switch);
+        assert_eq!(state.side_two.switch_out_move_second_saved_move, Choices::STRUGGLE);
+        let ctx = pc.context(&base);
+        assert_eq!(ctx.history.last().unwrap().two, Act::default(), "the Struggle has not come yet");
+        assert_eq!(ctx.reveal[6 + state.side_two.active_index as usize] & 0xf0, 0, "a move revealed");
+        // our switch-in, then its Struggle
+        let (o1, o2) = state.get_all_options();
+        pc.push(&state, &o1[0], &o2[0]);
+        let outcomes = generate_instructions_from_move_pair(&mut state, &o1[0], &o2[0], false);
+        state.apply_instructions(&outcomes[0].instruction_list);
+        pc.settle(&outcomes[0].instruction_list, &state);
+        let two = pc.context(&base).history.last().unwrap().two;
+        assert_eq!((two.kind, two.target), (1, Choices::STRUGGLE as i32), "{two:?}");
     }
 
     #[test]

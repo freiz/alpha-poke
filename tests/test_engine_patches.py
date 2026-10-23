@@ -212,3 +212,18 @@ def test_eject_pack_after_draco_meteor():
         not st.side_one.force_switch for _, st in outs if st.side_one.special_attack_boost == 0
     )
     assert all(not st.side_one.force_switch for _, st in duel("dracometeor"))
+
+
+def test_a_lone_struggle_is_slot_0_both_ways():
+    """2026-10-23 review: a side whose only option is Struggle (no PP, no mon to switch to) named
+    it in slot 0 (slot_names) but chance_outcomes could not map slot 0 back (the options alone:
+    one option, read as no Struggle) -- 'slot not among the options'. -1 still works."""
+    s1 = pe.Side(pokemon=[pe.Pokemon(id="garchomp", hp=300, maxhp=300, attack=200, defense=200,
+                                     moves=[pe.Move(id="tackle", pp=0)])],
+                 active_index=pe.PokemonIndex("0"))  # fmt: skip
+    s2 = pe.Side(pokemon=[mon("tinglu"), mon("gholdengo")], active_index=pe.PokemonIndex("0"))
+    st = pe.State(side_one=s1, side_two=s2).to_string()
+    assert alpha_search.slot_names([st])[0][0] == "struggle"
+    for slot in (0, -1):
+        outs = alpha_search.chance_outcomes(st, slot, 0)
+        assert outs and all(pe.State.from_string(o[1]).side_two.pokemon[0].hp < 300 for o in outs)  # (hit)

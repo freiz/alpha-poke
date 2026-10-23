@@ -155,10 +155,10 @@ def blind_sides(rep) -> dict[tuple[int, str], Blind]:
 def decision_steps(actions, blind: dict | None = None) -> dict[int, list[dict]]:
     """Turn -> its decision steps in order, each {side: action / Blind}: the chosen actions
     (the first move / voluntary switch of each side; a Blind when it chose but the log does not
-    show what; absent when it had no decision), then each pivot switch, then the forced switches
-    after faints (one step for both sides). A chosen action that comes after a pivot switch (our
-    U-turn first, the foe's move after our switch-in) is in that pivot's step -- of the last
-    one before it --, not the first: at the pivot's decision it is not known yet (2026-10-22
+    show what; absent when it had no decision), then the pivot switches and the forced switches
+    after faints (by rounds: one step for both sides) in the order they came. A chosen action
+    that comes after a pivot switch (our U-turn first, the foe's move after our switch-in) is in
+    that pivot's step -- of the last one before it --, not the first: at the pivot's decision it is not known yet (2026-10-22
     review: the training history held the foe's later move and its damage; the live history --
     the log so far -- and the search's tree -- the foe's saved move, run with the switch -- have
     it after)."""
@@ -178,8 +178,25 @@ def decision_steps(actions, blind: dict | None = None) -> dict[int, list[dict]]:
         for sd in ("p1", "p2"):
             if sd not in main and (t, sd) in (blind or {}):
                 main[sd] = blind[(t, sd)]
-        pivots = [a for a in acts if a.pivot]
-        steps = [main] + [{a.side: a} for a in pivots]
+        # the switches in the order they came (2026-10-23 review: all pivots, then all forced
+        # rounds -- a faint's replacement whose entry set off an Eject Pack had that Eject Pack's
+        # switch in its history, the Eject Pack's choice not the replacement): a pivot its own
+        # step; the forced switches after faints by rounds -- both sides' replacements of one
+        # round one step (chosen together: a pivot in between does not split it), a side's
+        # again in the same turn (its replacement fainted to the hazards as it came in) opens the
+        # next round (2026-10-22 review: they were one step, the last one's)
+        steps = [main]
+        pivots: list[tuple[int, object]] = []  # (its step, the pivot switch)
+        rnd = None
+        for a in acts:
+            if a.pivot:
+                steps.append({a.side: a})
+                pivots.append((len(steps) - 1, a))
+            elif a.forced:
+                if rnd is None or a.side in rnd:
+                    rnd = {}
+                    steps.append(rnd)
+                rnd[a.side] = a
         # a side's chosen action that comes after the other side's pivot switch: in the step of
         # the last such switch before it (2026-10-23 review: the first one's -- a U-turn's
         # switch-in, then an Eject Pack's switch, then the foe's move: the Eject Pack's choice
@@ -187,20 +204,9 @@ def decision_steps(actions, blind: dict | None = None) -> dict[int, list[dict]]:
         for sd, later in list(main.items()):
             if isinstance(later, Blind):
                 continue
-            before = [i for i, a in enumerate(pivots, 1) if a.side != sd and a.order < later.order]
+            before = [i for i, a in pivots if a.side != sd and a.order < later.order]
             if before:
                 steps[before[-1]][sd] = main.pop(sd)
-        # the forced switches after faints, by rounds: both sides' replacements of one round
-        # are one step; a side's again in the same turn (its replacement fainted to the
-        # hazards as it came in) opens the next round -- 2026-10-22 review: they were one step,
-        # the last one's, decided before the first had come in
-        rounds: list[dict] = []
-        for a in acts:
-            if a.forced:
-                if not rounds or a.side in rounds[-1]:
-                    rounds.append({})
-                rounds[-1][a.side] = a
-        steps += rounds
         out[t] = steps
     return out
 

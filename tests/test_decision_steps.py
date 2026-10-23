@@ -158,3 +158,46 @@ def test_a_move_after_two_pivots_is_the_last_ones():
     assert [sorted(s) for s in steps] == [["p1"], ["p1"], ["p1", "p2"]], steps
     assert [steps[1]["p1"].to, steps[2]["p1"].to] == ["Garchomp", "Blissey"]
     assert steps[2]["p2"].move == "Tackle"
+
+
+LOG3 = """|player|p1|Alice|1|
+|player|p2|Bob|2|
+|gen|9
+|tier|[Gen 9] OU
+|poke|p1|Pikachu, M|
+|poke|p1|Garchomp, M|
+|poke|p1|Blissey, F|
+|poke|p2|Gholdengo|
+|poke|p2|Kingambit, M|
+|start
+|switch|p1a: Pikachu|Pikachu, M|100/100
+|switch|p2a: Gholdengo|Gholdengo|100/100
+|turn|1
+|move|p2a: Gholdengo|Sticky Web|p1a: Pikachu
+|-sidestart|p1: Alice|move: Sticky Web
+|move|p1a: Pikachu|Thunderbolt|p2a: Gholdengo
+|-damage|p2a: Gholdengo|80/100
+|upkeep
+|turn|2
+|move|p2a: Gholdengo|Make It Rain|p1a: Pikachu
+|-damage|p1a: Pikachu|0 fnt
+|faint|p1a: Pikachu
+|upkeep
+|switch|p1a: Garchomp|Garchomp, M|100/100
+|-activate|p1a: Garchomp|move: Sticky Web
+|-unboost|p1a: Garchomp|spe|1
+|-enditem|p1a: Garchomp|Eject Pack
+|switch|p1a: Blissey|Blissey, F|100/100
+|turn|3
+|win|Bob
+"""
+
+
+def test_a_pivot_after_a_faints_replacement_comes_after_it():
+    """2026-10-23 review: Pikachu faints, Garchomp is chosen, its entry sets off the Eject Pack,
+    Blissey is chosen: the replacement's step first (its history without the Eject Pack's
+    switch), then the pivot's (with the replacement). Before: every pivot, then the rounds."""
+    rep = parse_replay({"id": "t3", "log": LOG3, "rating": None, "uploadtime": 0})
+    steps = decision_steps(rep.actions)[2]
+    p1 = [s["p1"] for s in steps if "p1" in s]
+    assert [(a.to, a.forced, a.pivot) for a in p1] == [("Garchomp", True, False), ("Blissey", False, True)]

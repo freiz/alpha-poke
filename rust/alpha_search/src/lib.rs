@@ -1498,12 +1498,12 @@ fn merge_sides(a: &str, b: &str, weather_from_b: bool, terrain_from_b: bool) -> 
     st.serialize()
 }
 
-fn option_of(options: &[MoveChoice], slot: i32) -> Option<MoveChoice> {
-    // (a Struggle: slot 0 as the none option beside switches, no move -- features::slot_in)
-    let opts: Vec<(usize, MoveChoice)> = options.iter().map(|&mc| (0, mc)).collect();
-    let struggle = features::struggle_in(&opts);
+fn option_of(options: &[MoveChoice], slot: i32, struggle: bool) -> Option<MoveChoice> {
+    // (`struggle`: the side struggles, its none option Struggle in slot 0 -- features::slot_in;
+    // from the state: a lone Struggle too, 2026-10-23 review)
+    // (-1, no choice: the none option, a Struggle's too -- the callers before slot 0)
     options.iter().copied().find(|mc| match features::slot_in(mc, struggle) {
-        Some(i) => i as i32 == slot,
+        Some(i) => i as i32 == slot || (slot < 0 && *mc == MoveChoice::None),
         None => slot < 0,
     })
 }
@@ -1525,7 +1525,11 @@ fn chance_outcomes<'py>(
 ) -> PyResult<Vec<Bound<'py, pyo3::types::PyTuple>>> {
     let mut st = State::deserialize(state);
     let (o1, o2) = st.root_get_all_options();
-    let (Some(m1), Some(m2)) = (option_of(&o1, slot1), option_of(&o2, slot2)) else {
+    let (s1, s2) = (
+        features::struggles(&st, SideReference::SideOne),
+        features::struggles(&st, SideReference::SideTwo),
+    );
+    let (Some(m1), Some(m2)) = (option_of(&o1, slot1, s1), option_of(&o2, slot2, s2)) else {
         return Err(PyValueError::new_err("slot not among the options"));
     };
     let outcomes = generate_instructions_from_move_pair(&mut st, &m1, &m2, branch);

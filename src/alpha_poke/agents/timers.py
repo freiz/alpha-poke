@@ -338,6 +338,12 @@ def _feed(sides: dict, p: list[str]) -> None:
         st.set_items.pop(to_id(p[3].replace("move: ", "")), None)
     elif tag == "-enditem" and len(p) > 3:  # its item gone: the one its effects were set with
         _item_was(st, sp, to_id(p[3]))
+        if any(x in ("[from] move: Trick", "[from] move: Switcheroo") for x in p[4:]):
+            # (a swap where it gets none: the other mon had none -- Showdown's trick logs an
+            # -enditem for a side left empty-handed; 2026-10-23 review: an itemless setter given
+            # a Light Clay read it as its own)
+            foe = sides["p2" if p[2][:2] == "p1" else "p1"]
+            _item_was(foe, foe.active, "")
     elif tag == "-item" and len(p) > 3 and any(x in ("[from] move: Trick", "[from] move: Switcheroo")
                                                for x in p[4:]):  # fmt: skip
         # a swap: the other side's active had the item this one gets
