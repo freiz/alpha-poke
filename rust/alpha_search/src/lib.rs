@@ -11,7 +11,7 @@ pub mod tnet;
 
 use poke_engine::engine::generate_instructions::generate_instructions_from_move_pair;
 use poke_engine::engine::state::MoveChoice;
-use poke_engine::state::{Side, State};
+use poke_engine::state::{Side, SideReference, State};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict};
@@ -19,6 +19,15 @@ use std::time::Duration;
 
 /// Same strings as the poke-engine Python binding: "earthquake", "earthquake-tera",
 /// "switch greattusk".
+/// An option's name in its action slot: a Struggle (a side that `struggle`s: its none option)
+/// is "struggle", as the log and poke-env's request name it
+fn slot_name(side: &Side, mc: &MoveChoice, struggle: bool) -> String {
+    if struggle && *mc == MoveChoice::None {
+        return "struggle".to_string();
+    }
+    choice_str(side, mc)
+}
+
 pub fn choice_str(side: &Side, mc: &MoveChoice) -> String {
     match mc {
         MoveChoice::Switch(_) => format!("switch {}", mc.to_string(side)),
@@ -926,10 +935,11 @@ impl PyBatchSearch {
         // our option of each slot, as `root()` names it ("" = no option)
         let w0 = self.inner.world0().clone();
         let mut names = vec![String::new(); features::N_ACTIONS];
+        let st = features::struggles(&w0, SideReference::SideOne);
         for (l, _, _) in self.inner.root() {
             if let Some(mc) = ismcts::our_choice(&w0, l) {
-                if let Some(i) = features::slot(&mc) {
-                    names[i] = choice_str(&w0.side_one, &mc);
+                if let Some(i) = features::slot_in(&mc, st) {
+                    names[i] = slot_name(&w0.side_one, &mc, st);
                 }
             }
         }
@@ -1128,9 +1138,10 @@ fn slot_names(states: Vec<String>) -> Vec<Vec<String>> {
             let st = State::deserialize(s);
             let mut names = vec![String::new(); features::N_ACTIONS];
             let (o1, _) = st.root_get_all_options();
+            let sg = features::struggles(&st, SideReference::SideOne);
             for mc in o1 {
-                if let Some(i) = features::slot(&mc) {
-                    names[i] = choice_str(&st.side_one, &mc);
+                if let Some(i) = features::slot_in(&mc, sg) {
+                    names[i] = slot_name(&st.side_one, &mc, sg);
                 }
             }
             names
@@ -1488,7 +1499,10 @@ fn merge_sides(a: &str, b: &str, weather_from_b: bool, terrain_from_b: bool) -> 
 }
 
 fn option_of(options: &[MoveChoice], slot: i32) -> Option<MoveChoice> {
-    options.iter().copied().find(|mc| match features::slot(mc) {
+    // (a Struggle: slot 0 as the none option beside switches, no move -- features::slot_in)
+    let opts: Vec<(usize, MoveChoice)> = options.iter().map(|&mc| (0, mc)).collect();
+    let struggle = features::struggle_in(&opts);
+    options.iter().copied().find(|mc| match features::slot_in(mc, struggle) {
         Some(i) => i as i32 == slot,
         None => slot < 0,
     })

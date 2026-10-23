@@ -29,6 +29,7 @@
 | 13 | 双方都只能挣扎时（都是 none），搜索把它当叶节点直接返回，不调用引擎 | — | 有一方挣扎（引擎的 `struggles`）就照常展开 | `both_struggling_is_played_out` |
 | 14 | 实战根状态：我方回合中途换人时，对手尚未执行的招式丢失（不行动）；双方同时倒下时，构造成我方先选替换 | — | 每个世界抽一个合法、和观察到的出手顺序一致的待执行招式（`alpha_search.pending_moves`）；倒下补人不设 `force_switch`，交给引擎按 HP 处理 | `tests/test_engine_state.py` |
 | 15 | 搜索的根节点本身就处在换人阶段（倒下后选替补、U-turn 后换入）时，路径没有打开回合；换人完成后网络看到的仍是根回合，之后的节点一直落后一回合（第 12 行只修了从主行动走进换人的情况） | — | 根节点有待完成的换人时，回合视为已打开，换人完成后加一 | `a_forced_root_ends_its_turn` |
+| 16 | 挣扎（引擎的 none 选项）没有动作槽：有合法换人时先验为 0、不被探索；即使搜索发现它最好，导出记录也丢掉它的访问，自对弈只能从换人里选；树内 history 记为无动作（回放记为招式） | — | 一方 `struggles` 时它的 none 选项占招式槽 0（此时没有可用招式）：合法掩码、先验、记录、名字 `struggle`（下单与转换对得上），history 记为招式 STRUGGLE；回放中的挣扎样本标为槽 0（原来丢弃） | `struggle_has_move_slot_0_and_is_a_move_in_the_history`、`test_struggle_has_a_slot_a_prior_and_its_visits` |
 
 ## 2. 测得、未修
 

@@ -29,7 +29,7 @@ use poke_engine::choices::Choices;
 use poke_engine::engine::items::Items;
 use poke_engine::engine::state::MoveChoice;
 use poke_engine::pokemon::PokemonName;
-use poke_engine::state::{Pokemon, Side, State};
+use poke_engine::state::{Pokemon, Side, SideReference, State};
 use std::str::FromStr;
 
 pub const N_ENTITIES: usize = 12;
@@ -319,16 +319,41 @@ pub fn slot(mc: &MoveChoice) -> Option<usize> {
     (i < N_ACTIONS).then_some(i)
 }
 
-fn mask_of(options: &[MoveChoice]) -> Vec<u8> {
+/// Action slot of an option of a side that ``struggle``s (the engine's `struggles`: no move it
+/// can use): its none option is Struggle, in move slot 0 -- no move slot is legal then. It had no
+/// slot (2026-10-23 review): a prior of 0, left out of the record, never played. (The network's
+/// move head reads that slot's move: its usable flag off, a Struggle in training)
+pub fn slot_in(mc: &MoveChoice, struggle: bool) -> Option<usize> {
+    match mc {
+        MoveChoice::None if struggle => Some(0),
+        _ => slot(mc),
+    }
+}
+
+/// Whether `side` struggles (its none option is Struggle).
+pub fn struggles(state: &State, side: SideReference) -> bool {
+    poke_engine::engine::generate_instructions::struggles(state, &side)
+}
+
+/// Struggle read off a side's options alone (the priors' callers have no state): a none option
+/// beside others (switches) and no move -- a side waiting on the other's switch has the none
+/// option only, its prior 1 either way
+pub fn struggle_in(options: &[(usize, MoveChoice)]) -> bool {
+    options.len() > 1
+        && options.iter().any(|(_, mc)| *mc == MoveChoice::None)
+        && !options.iter().any(|(_, mc)| matches!(mc, MoveChoice::Move(_) | MoveChoice::MoveTera(_)))
+}
+
+fn mask_of(options: &[MoveChoice], struggle: bool) -> Vec<u8> {
     let mut mask = vec![0u8; N_ACTIONS];
-    for i in options.iter().filter_map(slot) {
+    for i in options.iter().filter_map(|mc| slot_in(mc, struggle)) {
         mask[i] = 1;
     }
     mask
 }
 
 pub fn legal_mask(state: &State) -> Vec<u8> {
-    mask_of(&state.root_get_all_options().0)
+    mask_of(&state.root_get_all_options().0, struggles(state, SideReference::SideOne))
 }
 
 /// Side one's view (training and the value at the leaves).
@@ -372,7 +397,11 @@ pub fn featurize_view(state: &State, flip: bool) -> Features {
         global,
         mask: {
             let (o1, o2) = state.root_get_all_options();
-            mask_of(if flip { &o2 } else { &o1 })
+            if flip {
+                mask_of(&o2, struggles(state, SideReference::SideTwo))
+            } else {
+                mask_of(&o1, struggles(state, SideReference::SideOne))
+            }
         },
     }
 }

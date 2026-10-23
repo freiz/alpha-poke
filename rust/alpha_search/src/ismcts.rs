@@ -275,10 +275,23 @@ impl<'a> PathCtx<'a> {
         if !(forced(&state.side_one) || forced(&state.side_two)) {
             self.open = true;
         }
-        self.steps.push(Step {
+        let mut step = Step {
             one: Act::of_choice(&state.side_one, m1),
             two: Act::of_choice(&state.side_two, m2),
-        });
+        };
+        // a Struggle (the none option of a side that struggles) is its move, as the log and the
+        // replays' history have it ("m:<mon>:STRUGGLE"; 2026-10-23 review: no action)
+        for (act, mc, side_ref) in [
+            (&mut step.one, m1, SideReference::SideOne),
+            (&mut step.two, m2, SideReference::SideTwo),
+        ] {
+            if *mc == MoveChoice::None && crate::features::struggles(state, side_ref) {
+                act.kind = 1;
+                act.actor = state.get_side_immutable(&side_ref).get_active_immutable().id as i32;
+                act.target = Choices::STRUGGLE as i32;
+            }
+        }
+        self.steps.push(step);
         for (k, (off, side, mc)) in [(0, &state.side_one, m1), (6, &state.side_two, m2)]
             .into_iter()
             .enumerate()
@@ -398,9 +411,11 @@ pub(crate) fn set_priors(arms: &mut [Arm], avail: &[(usize, MoveChoice)], logits
 /// The network's priors over `avail` (a softmax over their action slots' logits; uniform when
 /// none is finite)
 pub(crate) fn prior_probs(avail: &[(usize, MoveChoice)], logits: &[f32]) -> Vec<f32> {
+    // (a Struggle: move slot 0 -- it had none, a prior of 0; 2026-10-23 review)
+    let struggle = crate::features::struggle_in(avail);
     let slots: Vec<Option<usize>> = avail
         .iter()
-        .map(|(_, mc)| crate::features::slot(mc))
+        .map(|(_, mc)| crate::features::slot_in(mc, struggle))
         .collect();
     let m = slots
         .iter()
@@ -435,7 +450,10 @@ pub(crate) fn cached_logits_fit(
     cached.1 == state.side_one.active_index
         && avail
             .iter()
-            .all(|(_, mc)| crate::features::slot(mc).is_none_or(|k| cached.0[k].is_finite()))
+            .all(|(_, mc)| {
+                crate::features::slot_in(mc, crate::features::struggle_in(avail))
+                    .is_none_or(|k| cached.0[k].is_finite())
+            })
 }
 
 /// (tests) a step's outcome leaves the stat stages within -6..6, else the step is printed
@@ -1538,6 +1556,34 @@ mod tests {
         let res = search(&mut vec![s], &[], Duration::ZERO, 32, &Config::default(), Some(1));
         assert!(res.nodes > 1, "the search stayed at the root");
         assert!(res.s1.iter().map(|x| x.1).sum::<u32>() > 0);
+    }
+
+    /// 2026-10-23 review: Struggle beside a switch -- move slot 0 in the priors (it had none: a
+    /// prior of 0) and the masks, a move in the history as the replays write it
+    #[test]
+    fn struggle_has_move_slot_0_and_is_a_move_in_the_history() {
+        let mut s = fixture();
+        for k in [PokemonMoveIndex::M0, PokemonMoveIndex::M1, PokemonMoveIndex::M2, PokemonMoveIndex::M3] {
+            s.side_one.get_active().moves[&k].pp = 0;
+        }
+        let (o1, _) = s.get_all_options();
+        assert!(o1.contains(&MoveChoice::None) && o1.iter().any(|m| matches!(m, MoveChoice::Switch(_))), "{o1:?}");
+        assert!(crate::features::struggles(&s, SideReference::SideOne));
+        let mask = crate::features::legal_mask(&s);
+        assert_eq!(mask[0], 1);
+        assert!(mask[1..8].iter().all(|&m| m == 0));
+        let avail: Vec<(usize, MoveChoice)> = o1.iter().copied().enumerate().collect();
+        let p = prior_probs(&avail, &[0.0; crate::features::N_ACTIONS]);
+        let none = o1.iter().position(|m| *m == MoveChoice::None).unwrap();
+        assert!((p[none] - 1.0 / o1.len() as f32).abs() < 1e-6, "{p:?}");
+        let base = Context { reveal: [0; 12], rating: [0, 0], turn: 10, history: vec![], ..Default::default() };
+        let mut pc = PathCtx::new(Some(&base), &s);
+        pc.push(&s, &MoveChoice::None, &MoveChoice::Move(PokemonMoveIndex::M0));
+        let me = s.side_one.get_active_immutable().id;
+        let want = Act::parse(&format!("m:{}:STRUGGLE", format!("{me:?}")));
+        let got = pc.steps[0].one;
+        assert_eq!((got.kind, got.actor, got.target), (want.kind, want.actor, want.target));
+        assert_eq!(want.target, Choices::STRUGGLE as i32);
     }
 
     #[test]

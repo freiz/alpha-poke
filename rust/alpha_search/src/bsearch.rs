@@ -26,7 +26,7 @@
 //!   (the root state of a world is the same in every thread's copy).
 
 use crate::extra::{ENT_EXTRA, GLOBAL_EXTRA};
-use crate::features::{slot, HIST, HIST_DENSE, HIST_SPARSE, N_ACTIONS, N_ENTITIES, SPARSE};
+use crate::features::{slot_in, struggles, HIST, HIST_DENSE, HIST_SPARSE, N_ACTIONS, N_ENTITIES, SPARSE};
 use crate::ismcts::{
     arm_index, label, prior_probs, sample, select_puct, select_puct_with, set_priors, Config, Label,
     Node, PathCtx, RootPriors, Tree,
@@ -36,7 +36,7 @@ use poke_engine::engine::evaluate::evaluate;
 use poke_engine::engine::generate_instructions::generate_instructions_from_move_pair;
 use poke_engine::engine::state::MoveChoice;
 use poke_engine::instruction::{Instruction, StateInstructions};
-use poke_engine::state::State;
+use poke_engine::state::{SideReference, State};
 use rand::rngs::StdRng;
 use rand::SeedableRng;
 use std::sync::Arc;
@@ -616,8 +616,10 @@ impl BatchSearch {
         let root = &self.shared.get_mut().unwrap().tree.nodes[0];
         let mut r = Record::default();
         let (mut tv, mut tt) = (0u64, 0.0f64);
+        // (a Struggle in move slot 0: it was left out, its visits too; 2026-10-23 review)
+        let (st1, st2) = (struggles(&w0, SideReference::SideOne), struggles(&w0, SideReference::SideTwo));
         for a in &root.s1 {
-            if let Some(i) = crate::ismcts::our_choice(&w0, a.label).and_then(|mc| slot(&mc)) {
+            if let Some(i) = crate::ismcts::our_choice(&w0, a.label).and_then(|mc| slot_in(&mc, st1)) {
                 r.visits[i] = a.visits;
                 r.mean[i] = a.mean();
                 r.prior[i] = a.prior;
@@ -628,7 +630,7 @@ impl BatchSearch {
         }
         r.q = if tv > 0 { (tt / tv as f64) as f32 } else { 0.5 };
         for a in &root.s2 {
-            match crate::ismcts::their_choice(&w0, a.label).and_then(|mc| slot(&mc)) {
+            match crate::ismcts::their_choice(&w0, a.label).and_then(|mc| slot_in(&mc, st2)) {
                 Some(i) => r.opp_visits[i] += a.visits,
                 None => r.opp_unmapped += a.visits,
             }

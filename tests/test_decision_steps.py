@@ -113,3 +113,48 @@ def test_positions_of_hazard_faint_rounds_and_an_eject():
         assert act.id.lower() == gone and act.hp == 0, (act.id, act.hp)
     # (turn 3: its chosen action unseen -- out before it moved -- a Blind; the Eject's a pivot)
     assert [p.kind for p in mine if p.turn == 3] == [KIND_BLIND, KIND_PIVOT]
+
+
+LOG2 = """|player|p1|Alice|1|
+|player|p2|Bob|2|
+|gen|9
+|tier|[Gen 9] OU
+|poke|p1|Dragapult, M|
+|poke|p1|Garchomp, M|
+|poke|p1|Blissey, F|
+|poke|p2|Gholdengo|
+|poke|p2|Kingambit, M|
+|start
+|switch|p1a: Dragapult|Dragapult, M|100/100
+|switch|p2a: Gholdengo|Gholdengo|100/100
+|turn|1
+|move|p2a: Gholdengo|Sticky Web|p1a: Dragapult
+|-sidestart|p1: Alice|move: Sticky Web
+|move|p1a: Dragapult|Hex|p2a: Gholdengo
+|-damage|p2a: Gholdengo|80/100
+|upkeep
+|turn|2
+|move|p1a: Dragapult|U-turn|p2a: Gholdengo
+|-damage|p2a: Gholdengo|70/100
+|switch|p1a: Garchomp|Garchomp, M|100/100
+|-activate|p1a: Garchomp|move: Sticky Web
+|-unboost|p1a: Garchomp|spe|1
+|-enditem|p1a: Garchomp|Eject Pack
+|switch|p1a: Blissey|Blissey, F|100/100
+|move|p2a: Gholdengo|Tackle|p1a: Blissey
+|-damage|p1a: Blissey|82/100
+|upkeep
+|turn|3
+|win|Bob
+"""
+
+
+def test_a_move_after_two_pivots_is_the_last_ones():
+    """2026-10-23 review: a U-turn's switch-in, its Eject Pack's switch, then the foe's move: the
+    move is in the second pivot's step (it was in the first's: the Eject Pack's choice of Blissey
+    had the Tackle and its damage in its history; the log so far does not)."""
+    rep = parse_replay({"id": "t2", "log": LOG2, "rating": None, "uploadtime": 0})
+    steps = decision_steps(rep.actions)[2]
+    assert [sorted(s) for s in steps] == [["p1"], ["p1"], ["p1", "p2"]], steps
+    assert [steps[1]["p1"].to, steps[2]["p1"].to] == ["Garchomp", "Blissey"]
+    assert steps[2]["p2"].move == "Tackle"

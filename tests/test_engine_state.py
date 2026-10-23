@@ -160,6 +160,59 @@ def test_heat_rock_drought(belief):
     assert state(b, belief).weather_turns_remaining == 8 - 1
 
 
+def _spectator(b, item, ability, moves):
+    from alpha_poke.agents.engine_state import KnownSet, SpectatorSide
+
+    sp = next(iter(b.team.values())).species
+    known = {sp: KnownSet(moves=list(moves), item=item, ability=ability, tera="normal")}
+    return SpectatorSide(team=list(b.team.values()), known=known, names=("Garchomp", "Dondozo"))
+
+
+def test_extending_items_in_a_replay_position(belief):
+    """2026-10-23 review: a replay's own side (spectator) had no items for the durations: its
+    Light Clay Reflect and Heat Rock sun read 5 turns (live: 8)."""
+    b = battle(["|move|p1a: Garchomp|Reflect|p1a: Garchomp", "|-sidestart|p1: us|Reflect",
+                "|upkeep|", "|turn|2"], item="lightclay")  # fmt: skip
+    spec = _spectator(b, "lightclay", "roughskin", ("earthquake", "reflect", "substitute", "hyperbeam"))
+    s = build_state(b, belief, ("Garchomp", "Dondozo"), random.Random(0), spectator=spec)
+    assert s.side_one.side_conditions.reflect == 8 - 1 == state(b, belief).side_one.side_conditions.reflect
+    moves = ("lavaplume", "rapidspin", "yawn", "stealthrock")
+    b = battle(["|-weather|SunnyDay|[from] ability: Drought|[of] p1a: Torkoal", "|upkeep|",
+                "|turn|2"], us="Torkoal", item="heatrock", ability="drought", moves=moves)  # fmt: skip
+    spec = _spectator(b, "heatrock", "drought", moves)
+    s = build_state(b, belief, ("Torkoal", "Dondozo"), random.Random(0), spectator=spec)
+    assert s.weather_turns_remaining == 8 - 1
+
+
+@pytest.mark.parametrize("lines", [
+    ["|move|p2a: Gholdengo|Knock Off|p1a: Garchomp",
+     "|-enditem|p1a: Garchomp|Light Clay|[from] move: Knock Off|[of] p2a: Gholdengo"],
+    ["|move|p2a: Gholdengo|Trick|p1a: Garchomp", "|-activate|p2a: Gholdengo|move: Trick|[of] p1a: Garchomp",
+     "|-item|p1a: Garchomp|Choice Scarf|[from] move: Trick",
+     "|-item|p2a: Gholdengo|Light Clay|[from] move: Trick"],
+])  # fmt: skip
+def test_an_extended_screen_keeps_its_length_after_the_item_goes(belief, lines):
+    """2026-10-23 review: the length is the setter's item's as it starts (Showdown's
+    durationCallback): Knocked Off / Tricked away the next turn, a Light Clay Reflect has 6 turns
+    left, not 3."""
+    b = battle(["|move|p1a: Garchomp|Reflect|p1a: Garchomp", "|-sidestart|p1: us|Reflect",
+                "|upkeep|", "|turn|2", *lines, "|upkeep|", "|turn|3"], item="lightclay")  # fmt: skip
+    assert state(b, belief).side_one.side_conditions.reflect == 8 - 2
+
+
+def test_sleep_talk_runs_out_of_pp(belief):
+    """2026-10-23 review: every move of a Sleep Talk user had at least 1 PP, Sleep Talk itself too
+    (poke-env counts its uses, none of the moves it calls)."""
+    talk = ["|move|p2a: Gholdengo|Sleep Talk|p2a: Gholdengo",
+            "|move|p2a: Gholdengo|Make It Rain|p1a: Garchomp|[from]move: Sleep Talk"]  # fmt: skip
+    lines = ["|move|p2a: Gholdengo|Make It Rain|p1a: Garchomp", "|turn|2", "|-status|p2a: Gholdengo|slp"]
+    for t in range(16):  # 10 PP, 16 with PP Ups
+        lines += [*talk, f"|turn|{3 + t}"]
+    pp = {m.id: m.pp for m in state(battle(lines), belief).side_two.pokemon[0].moves}
+    assert pp["sleeptalk"] == 0
+    assert pp["makeitrain"] == 8 - 1  # (the calls cost none)
+
+
 def test_must_recharge_searches_to_the_recharge_order(belief):
     import alpha_search
 
@@ -374,3 +427,62 @@ def test_pending_moves_struggle_and_speed():
 
     assert alpha_search.pending_moves(world(["TACKLE", "AVALANCHE"]), "uturn") == ["avalanche"]
     assert alpha_search.pending_moves(world(["TACKLE"]), "uturn") == ["tackle"]
+
+
+SIDE_CONDITIONS = ("aurora_veil", "light_screen", "reflect", "safeguard", "mist", "tailwind",
+                   "spikes", "stealth_rock", "sticky_web", "toxic_spikes", "toxic_count",
+                   "protect")  # fmt: skip
+DURATIONS = ("confusion", "encore", "healblock", "magnetrise", "partiallytrapped", "slowstart",
+             "taunt", "throatchop", "yawn")  # fmt: skip
+
+
+def _our_view(s):
+    """Side one as both paths must agree on it: options by name (the move order differs: a
+    replay's own moves are shuffled), conditions, field turns, volatiles, their durations;
+    Disable's count and its move by name."""
+    import alpha_search
+
+    one = s.side_one
+    mon = one.pokemon[int(one.active_index)]
+    d = one.volatile_status_durations
+    dis = (d.disable % 8, mon.moves[d.disable // 8].id) if "disable" in one.volatile_statuses else None
+    return {
+        "options": sorted(n for n in alpha_search.slot_names([s.to_string()])[0] if n),
+        "conditions": {k: getattr(one.side_conditions, k) for k in SIDE_CONDITIONS},
+        "field": (s.weather, s.weather_turns_remaining, s.terrain, s.terrain_turns_remaining),
+        "volatiles": sorted(one.volatile_statuses),
+        "durations": {k: getattr(d, k) for k in DURATIONS},
+        "disable": dis,
+        "pp": sorted((m.id, m.pp) for m in mon.moves),
+    }
+
+
+GARCHOMP = ("earthquake", "reflect", "substitute", "hyperbeam")
+
+
+@pytest.mark.parametrize("lines,item,disabled", [
+    (["|turn|2", "|move|p1a: Garchomp|Reflect|p1a: Garchomp", "|-sidestart|p1: us|Reflect", "|upkeep|",
+      "|turn|3", "|move|p2a: Gholdengo|Knock Off|p1a: Garchomp",
+      "|-enditem|p1a: Garchomp|Light Clay|[from] move: Knock Off|[of] p2a: Gholdengo", "|upkeep|", "|turn|4"],
+     "lightclay", ()),
+    (["|turn|2", *DISABLED_REFLECT], "leftovers", ("reflect",)),
+    (["|turn|2", "|move|p1a: Garchomp|Substitute|p1a: Garchomp", "|-start|p1a: Garchomp|Substitute",
+      "|move|p2a: Gholdengo|Taunt|p1a: Garchomp", "|-start|p1a: Garchomp|move: Taunt", "|upkeep|",
+      "|turn|3"], "leftovers", ("reflect", "substitute")),
+])  # fmt: skip
+def test_live_and_replay_build_the_same_side(belief, lines, item, disabled):
+    """2026-10-23 review (regression of the battle -> engine conversion): our side from the live
+    root (the request) and from a replay of the same log (spectator: its known set) agree on the
+    options, the durations and the volatiles (a Light Clay knocked off, a Disable, a Taunt)."""
+    b = battle(lines, item=item)
+    req = [{"move": m, "id": m, "pp": 8, "maxpp": 8, "disabled": m in disabled} for m in GARCHOMP]
+    side = [mon("p1: Garchomp", "Garchomp", list(GARCHOMP), item, "roughskin", True),
+            mon("p1: Dondozo", "Dondozo", ["wavecrash"])]  # fmt: skip
+    b.parse_request({"active": [{"moves": req}], "side": {"name": "us", "id": "p1", "pokemon": side},
+                     "rqid": 2})  # fmt: skip
+    live = state(b, belief)
+    spec = _spectator(b, item, "roughskin", GARCHOMP)
+    replay = build_state(b, belief, ("Garchomp", "Dondozo"), random.Random(0), spectator=spec)
+    lv, rv = _our_view(live), _our_view(replay)
+    lv.pop("pp"), rv.pop("pp")  # (live: the request's 8 each; a replay: from the uses)
+    assert lv == rv

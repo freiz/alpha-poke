@@ -126,3 +126,41 @@ def test_root_noise_does_not_depend_on_the_worlds_order():
     ab, ba = prior([a, b]), prior([b, a])
     assert np.allclose(ab, ba, atol=1e-6)
     assert not np.allclose(ab, _root_prior([a, b], ctx), atol=1e-4)  # (the noise is in)
+
+
+def _struggling(state: str) -> str:
+    """Side one's active with no PP left (Struggle), the foe's active at 1 HP: Struggle wins."""
+    import re
+
+    s = pe.State.from_string(state)
+    sides = state.split("/")
+    mons = sides[0].split("=")
+    a = int(s.side_one.active_index)
+    mons[a] = re.sub(r"([A-Z0-9]+);(true|false);\d+", r"\1;\2;0", mons[a])
+    sides[0] = "=".join(mons)
+    foe = sides[1].split("=")
+    b = int(s.side_two.active_index)
+    f = foe[b].split(",")
+    f[6] = "1"  # (hp)
+    foe[b] = ",".join(f)
+    sides[1] = "=".join(foe)
+    return "/".join(sides)
+
+
+def test_struggle_has_a_slot_a_prior_and_its_visits():
+    """2026-10-23 review: Struggle (the none option beside switches) had no action slot: a prior
+    of 0, its visits left out of the record, self-play played a switch. Now move slot 0."""
+    r = _row()
+    ctx = (list(r["reveal"]), (r["rating_own"], r["rating_opp"]), r["turn"], r["history"])
+    st = _struggling(r["state"])
+    names = alpha_search.slot_names([st])[0]
+    assert names[0] == "struggle" and any(n.startswith("switch ") for n in names), names
+    bs = alpha_search.BatchSearch([st], [ctx], seed=0, threads=1, root_noise=(0.25, 10.0))
+    for _ in range(100):
+        bs.collect(16)
+        values, logits, turns = bs.evaluate_cpu(str(MODEL))
+        bs.apply(values, logits, turns)
+    rec = bs.record()
+    assert rec["legal"][0] and rec["names"][0] == "struggle"
+    assert rec["prior"][0] > 0
+    assert rec["visits"][0] == max(rec["visits"]), rec["visits"]  # (it wins at once)

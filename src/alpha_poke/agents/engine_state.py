@@ -449,9 +449,10 @@ def _pp(mon, mid: str) -> int:
     of a locked move) of a revealed move; an unrevealed one has its maximum (PP Ups)."""
     mv = mon.moves.get(mid)
     if mv is not None:
-        # poke-env also counts a move Sleep Talk calls (it costs no PP): a Sleep Talk user's
-        # moves keep at least 1
-        return max(1 if "sleeptalk" in mon.moves else 0, mv.current_pp)
+        # (a move Sleep Talk calls costs no PP: poke-env counts none -- [from] move: Sleep Talk --,
+        # Sleep Talk its own; 2026-10-23 review: a floor of 1 for a Sleep Talk user's moves kept
+        # Sleep Talk itself at 1 PP forever; the engine's Sleep Talk calls a move without PP too)
+        return max(0, mv.current_pp)
     return Move(mid, gen=9).max_pp if mid in _MOVES else 16
 
 
@@ -840,13 +841,19 @@ def build_state(
         if tm.disabled is not None and tm.disabled in ids:
             vol.add("disable")
             disable[who] = ids.index(tm.disabled) * 8 + min(tm.disable_ends, 4)
-    # the items of the mons that set a screen / the weather / the terrain (ours known, theirs
-    # this world's sample): an extending item makes it 8 turns
-    items = {("us", to_id(m.species)): (m.item or "") for m in ours} if spectator is None else {}
+    # the items of the mons that set a screen / the weather / the terrain (ours known -- a replay's
+    # own side: its set, 2026-10-23 review: none, 5 turns --, theirs this world's sample): an
+    # extending item makes it 8 turns. The item it set it with: changed since, the timers' (the
+    # duration is fixed as it starts; 2026-10-23 review: a Light Clay knocked off cut it to 5)
+    items = {("us", to_id(m.species)): (p.item or "") for m, p in zip(ours, our_mons, strict=True)}
     items |= {("them", to_id(m.species)): st.item for m, st in zip(theirs, their_sets, strict=True)}
+
+    def set_with(who: str, tm: SideTimers, key: str, sp: str) -> str:
+        return tm.set_items[key] if key in tm.set_items else items.get((who, sp), "")
+
     clay_us, clay_them = (
         frozenset(k for k, sp in tm.setters.items()
-                  if k in SCREENS and items.get((who, sp)) == "lightclay")
+                  if k in SCREENS and set_with(who, tm, k, sp) == "lightclay")
         for who, tm in (("us", tm_us), ("them", tm_them))
     )  # fmt: skip
     ext = {}
@@ -854,7 +861,7 @@ def build_state(
         for kind in ("weather", "terrain"):
             if kind in tm.setters:
                 what, sp = tm.setters[kind]
-                item = items.get((who, sp), "")
+                item = set_with(who, tm, kind, sp)
                 if EXTENDERS.get(what) == item or (kind == "terrain" and item == "terrainextender"):
                     ext[kind] = 8
 

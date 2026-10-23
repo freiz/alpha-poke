@@ -58,6 +58,10 @@ sides, in poke-engine's own units (rust/patches/poke-engine-0.0.48, generate_ins
   sub_hit     the active's Substitute took a hit and stands (its HP below a quarter)
   setters     who set the weather / terrain / a side's screens: (side, species id), for an
               extending item (Light Clay, Heat Rock, ...: 8 turns)
+  set_items   what a setter's item was as it set (the setters' keys): its item changed since
+              (-enditem: Knock Off, a used item; -item by Trick / Switcheroo) -- Showdown's
+              duration is the setter's item's when the effect starts (durationCallback), not its
+              item now (2026-10-23 review: a Light Clay Reflect knocked off read 5 turns)
   fields_elapsed
               "weather" / "terrain" -> ends of turn since it started (both sides keep the same
               count; 2026-10-16, doc/engine-diff.md L3: the remaining turns were reckoned from
@@ -111,6 +115,7 @@ class SideTimers:
     # what this side set: "weather" / "terrain" -> (its id, the setter's species id); a screen
     # id (reflect, lightscreen, auroraveil) -> the setter's species id
     setters: dict = field(default_factory=dict)
+    set_items: dict = field(default_factory=dict)  # a setters key -> its setter's item then
     fields_elapsed: dict = field(default_factory=dict)  # "weather" / "terrain" -> ends of turn
     used_once: set = field(default_factory=set)  # species ids (Dauntless Shield used)
     # species id -> the hits a foe's move landed on it (Rage Fist; doc/engine-diff.md L163)
@@ -330,6 +335,14 @@ def _feed(sides: dict, p: list[str]) -> None:
             st.sub_hit = True
     elif tag == "-sidestart" and len(p) > 3:
         st.setters[to_id(p[3].replace("move: ", ""))] = st.just_moved
+        st.set_items.pop(to_id(p[3].replace("move: ", "")), None)
+    elif tag == "-enditem" and len(p) > 3:  # its item gone: the one its effects were set with
+        _item_was(st, sp, to_id(p[3]))
+    elif tag == "-item" and len(p) > 3 and any(x in ("[from] move: Trick", "[from] move: Switcheroo")
+                                               for x in p[4:]):  # fmt: skip
+        # a swap: the other side's active had the item this one gets
+        foe = sides["p2" if p[2][:2] == "p1" else "p1"]
+        _item_was(foe, foe.active, to_id(p[3]))
     elif tag == "-end" and len(p) > 3:
         what = to_id(p[3].replace("move: ", ""))
         if "[partiallytrapped]" in p:
@@ -350,6 +363,15 @@ def _feed(sides: dict, p: list[str]) -> None:
             sides["p2" if p[2][:2] == "p1" else "p1"].future = None
 
 
+def _item_was(st: SideTimers, sp: str, item: str) -> None:
+    """``sp`` (of side ``st``) held ``item`` until now: the item of what it set and has not
+    changed its item since."""
+    for k, v in st.setters.items():
+        who = v[1] if isinstance(v, tuple) else v
+        if who == sp and k not in st.set_items:
+            st.set_items[k] = item
+
+
 def _set_by(sides: dict, p: list[str], kind: str, what: str) -> None:
     """The setter of a weather / terrain (``kind``): the mon of ``[of] <ident>`` (an ability),
     else the mon that just moved; kept in its side's ``setters`` (the other side's dropped)."""
@@ -363,6 +385,7 @@ def _set_by(sides: dict, p: list[str], kind: str, what: str) -> None:
                       (None, ""))  # fmt: skip
     if st is not None and what != "none":
         st.setters[kind] = (what, sp)
+        st.set_items.pop(kind, None)
 
 
 def timers(lines: list[list[str]]) -> dict[str, SideTimers]:

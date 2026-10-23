@@ -157,10 +157,11 @@ def decision_steps(actions, blind: dict | None = None) -> dict[int, list[dict]]:
     (the first move / voluntary switch of each side; a Blind when it chose but the log does not
     show what; absent when it had no decision), then each pivot switch, then the forced switches
     after faints (one step for both sides). A chosen action that comes after a pivot switch (our
-    U-turn first, the foe's move after our switch-in) is in that pivot's step, not the first: at
-    the pivot's decision it is not known yet (2026-10-22 review: the training history held the
-    foe's later move and its damage; the live history -- the log so far -- and the search's
-    tree -- the foe's saved move, run with the switch -- have it after)."""
+    U-turn first, the foe's move after our switch-in) is in that pivot's step -- of the last
+    one before it --, not the first: at the pivot's decision it is not known yet (2026-10-22
+    review: the training history held the foe's later move and its damage; the live history --
+    the log so far -- and the search's tree -- the foe's saved move, run with the switch -- have
+    it after)."""
     by_turn: dict[int, list] = {}
     for a in actions:
         if a.turn >= 1 and a.kind in ("move", "switch"):
@@ -177,17 +178,18 @@ def decision_steps(actions, blind: dict | None = None) -> dict[int, list[dict]]:
         for sd in ("p1", "p2"):
             if sd not in main and (t, sd) in (blind or {}):
                 main[sd] = blind[(t, sd)]
-        steps = [main]
-        for a in acts:
-            if not a.pivot:
+        pivots = [a for a in acts if a.pivot]
+        steps = [main] + [{a.side: a} for a in pivots]
+        # a side's chosen action that comes after the other side's pivot switch: in the step of
+        # the last such switch before it (2026-10-23 review: the first one's -- a U-turn's
+        # switch-in, then an Eject Pack's switch, then the foe's move: the Eject Pack's choice
+        # had the move in its history)
+        for sd, later in list(main.items()):
+            if isinstance(later, Blind):
                 continue
-            step = {a.side: a}
-            # the other side's chosen action, if it comes after this switch: here
-            other = "p2" if a.side == "p1" else "p1"
-            later = main.get(other)
-            if later is not None and not isinstance(later, Blind) and later.order > a.order:
-                step[other] = main.pop(other)
-            steps.append(step)
+            before = [i for i, a in enumerate(pivots, 1) if a.side != sd and a.order < later.order]
+            if before:
+                steps[before[-1]][sd] = main.pop(sd)
         # the forced switches after faints, by rounds: both sides' replacements of one round
         # are one step; a side's again in the same turn (its replacement fainted to the
         # hazards as it came in) opens the next round -- 2026-10-22 review: they were one step,
@@ -493,9 +495,12 @@ def _position(battle, side, a, records, known, belief, rng, move_beta, kind=KIND
         idx = next((i for i, m in enumerate(team) if m is me), None)
         moves = [to_id(m.id) for m in state.side_one.pokemon[idx].moves]
         mid = to_id(a.move)
-        if mid not in moves:
-            return None  # Struggle, a called move, ...
-        action = moves.index(mid) + (TERA_OFFSET if a.tera else 0)
+        if mid == "struggle" and alpha_search.slot_names([state.to_string()])[0][0] == "struggle":
+            action = 0  # (Struggle: move slot 0 -- features::slot_in; 2026-10-23 review)
+        elif mid not in moves:
+            return None  # a called move, ...
+        else:
+            action = moves.index(mid) + (TERA_OFFSET if a.tera else 0)
     else:
         j = next((i for i, m in enumerate(team) if _same_species(m.species, a.to or "")), None)
         if j is None or j >= 6 or team[j] is me:
