@@ -95,6 +95,7 @@ class Blind:
     kind: str
     mon: str
     reason: str = ""
+    order: int | None = None  # its place among the turn's actions (a prevented one's |cant|)
 
 
 def _act(a, first: bool = False) -> str:
@@ -131,8 +132,14 @@ def blind_sides(rep) -> dict[tuple[int, str], Blind]:
         for a in rep.actions
         if a.turn >= 1 and a.kind in ("move", "switch") and not (a.forced or a.pivot)
     }
-    cant = {(t, sd): r for t, sd, r in rep.cants}
-    ejected = {(a.turn, a.side) for a in rep.actions if a.turn >= 1 and a.kind == "switch" and a.pivot}
+    cant = {(c[0], c[1]): (c[2], c[3] if len(c) > 3 else None) for c in rep.cants}
+    # (turn, side) -> the place among the turn's actions it went out at (its eject's switch)
+    ejected = {(a.turn, a.side): a.order for a in rep.actions if a.turn >= 1 and a.kind == "switch" and a.pivot}
+    # (an eject triggered, its switch to come: the live log at that switch-in's choice -- it
+    # cannot act any more, as the training history and the search's tree have it; 2026-10-23, the
+    # causality check)
+    for e in getattr(rep, "ejecting", ()):
+        ejected.setdefault((e[0], e[1]), e[2] if len(e) > 2 else None)
     out = {}
     for t, snap in rep.hp_by_turn.items():
         if t < 1:
@@ -141,14 +148,16 @@ def blind_sides(rep) -> dict[tuple[int, str], Blind]:
             if (t, sd) in main or not hp:
                 continue
             if (t, sd) in cant:
-                out[(t, sd)] = Blind("p", species, cant[(t, sd)])
+                out[(t, sd)] = Blind("p", species, *cant[(t, sd)])
                 continue
             if (t, sd) in ejected:
-                out[(t, sd)] = Blind("p", species, "ejected")
+                out[(t, sd)] = Blind("p", species, "ejected", ejected[(t, sd)])
                 continue
             rec = next((m for m in rep.teams[sd] if m.species == species), None)
-            if rec is not None and rec.fainted_turn == t:
-                out[(t, sd)] = Blind("d", species)
+            # (any of its faints -- one brought back by Revival Blessing faints again: the
+            # last only lost the first's turn; 2026-10-23, the causality check)
+            if rec is not None and (t in getattr(rec, "faint_turns", ()) or rec.fainted_turn == t):
+                out[(t, sd)] = Blind("d", species, "", getattr(rec, "faint_orders", {}).get(t))
     return out
 
 
@@ -202,8 +211,11 @@ def decision_steps(actions, blind: dict | None = None) -> dict[int, list[dict]]:
         # switch-in, then an Eject Pack's switch, then the foe's move: the Eject Pack's choice
         # had the move in its history)
         for sd, later in list(main.items()):
-            if isinstance(later, Blind):
+            if isinstance(later, Blind) and later.order is None:
                 continue
+            # (a prevented one too -- its |cant| after the foe's pivot switch: at the pivot's
+            # decision it has not happened; 2026-10-23, the causality check: a Chilly Reception's
+            # switch-in choice had the foe's full paralysis after it in its history)
             before = [i for i, a in pivots if a.side != sd and a.order < later.order]
             if before:
                 steps[before[-1]][sd] = main.pop(sd)

@@ -1575,6 +1575,44 @@ fn chance_outcomes<'py>(
     Ok(out)
 }
 
+type ActFields = (u8, bool, i32, i32, bool, bool, u8, bool, bool, bool, bool);
+
+fn act_fields(a: &features::Act) -> ActFields {
+    (a.kind, a.tera, a.actor, a.target, a.prevented, a.fainted_first, a.dmg, a.first, a.crit, a.miss, a.ko)
+}
+
+/// The causality check of the search's tree (scripts/check_tree_history.py): for the move pair
+/// (slots as chance_outcomes takes them) in `state`, each chance outcome's decision step as the
+/// tree records it -- (probability, side one's act, side two's act, main steps completed, a
+/// turn still open) -- and `log_step` ("ONE/TWO", the replays' history format) parsed the same
+/// way: (its side one's act, its side two's act). An act: (kind, tera, actor, target,
+/// prevented, fainted first, dmg, first, crit, miss, ko) -- engine ids.
+#[pyfunction]
+#[pyo3(signature = (state, slot1, slot2, log_step, branch=true))]
+fn tree_steps(
+    state: &str,
+    slot1: i32,
+    slot2: i32,
+    log_step: &str,
+    branch: bool,
+) -> PyResult<(Vec<(f32, ActFields, ActFields, i32, bool)>, (ActFields, ActFields))> {
+    let st = State::deserialize(state);
+    let (o1, o2) = st.root_get_all_options();
+    let (s1, s2) = (
+        features::struggles(&st, SideReference::SideOne),
+        features::struggles(&st, SideReference::SideTwo),
+    );
+    let (Some(m1), Some(m2)) = (option_of(&o1, slot1, s1), option_of(&o2, slot2, s2)) else {
+        return Err(PyValueError::new_err("slot not among the options"));
+    };
+    let tree = ismcts::tree_step_outcomes(&st, &m1, &m2, branch)
+        .into_iter()
+        .map(|(p, s, mains, open)| (p, act_fields(&s.one), act_fields(&s.two), mains, open))
+        .collect();
+    let log = features::parse_history(log_step).first().copied().unwrap_or_default();
+    Ok((tree, (act_fields(&log.one), act_fields(&log.two))))
+}
+
 /// Per side: (active index, [(species, hp, max hp, status)], boosts [atk, def, spa, spd, spe,
 /// acc, eva]) — what a player sees of a state, to match outcomes with observations.
 type SideInfo = (usize, Vec<(String, i16, i16, String)>, [i8; 7]);
@@ -1642,6 +1680,7 @@ fn alpha_search(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(collect_many, m)?)?;
     m.add_function(wrap_pyfunction!(apply_many, m)?)?;
     m.add_function(wrap_pyfunction!(slot_names, m)?)?;
+    m.add_function(wrap_pyfunction!(tree_steps, m)?)?;
     m.add_function(wrap_pyfunction!(pending_moves, m)?)?;
     m.add_function(wrap_pyfunction!(root_priors, m)?)?;
     m.add_function(wrap_pyfunction!(evaluate, m)?)?;

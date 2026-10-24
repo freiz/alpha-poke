@@ -2096,3 +2096,38 @@ mod tests {
                  bad + ok, 100.0 * bad as f64 / (bad + ok).max(1) as f64);
     }
 }
+
+/// The causality check of the search's tree (doc/state-diff.md plan B): the decision step a
+/// descent records for the joint action (`m1`, `m2`) in `state`, for each of its chance outcomes
+/// -- (probability, the step, main steps completed, a turn still open). The step is what the
+/// network reads below the root; scripts/check_tree_history.py compares it with the step the
+/// log gives (the replays' history).
+pub(crate) fn tree_step_outcomes(
+    state: &State,
+    m1: &MoveChoice,
+    m2: &MoveChoice,
+    branch: bool,
+) -> Vec<(f32, Step, i32, bool)> {
+    let base = Context {
+        reveal: [0; 12],
+        rating: [0, 0],
+        turn: 1,
+        history: Vec::new(),
+        full: false,
+        post: Vec::new(),
+    };
+    let mut st = state.clone();
+    let outcomes = generate_instructions_from_move_pair(&mut st, m1, m2, branch);
+    let total: f32 = outcomes.iter().map(|o| o.percentage.max(0.0)).sum();
+    let mut out = Vec::with_capacity(outcomes.len());
+    for o in &outcomes {
+        let mut path = PathCtx::new(Some(&base), &st);
+        path.push(&st, m1, m2);
+        st.apply_instructions(&o.instruction_list);
+        path.settle(&o.instruction_list, &st);
+        let step = path.steps.last().copied().unwrap_or_default();
+        out.push((o.percentage.max(0.0) / total.max(1e-9), step, path.mains, path.open));
+        st.reverse_instructions(&o.instruction_list);
+    }
+    out
+}

@@ -201,3 +201,175 @@ def test_a_pivot_after_a_faints_replacement_comes_after_it():
     steps = decision_steps(rep.actions)[2]
     p1 = [s["p1"] for s in steps if "p1" in s]
     assert [(a.to, a.forced, a.pivot) for a in p1] == [("Garchomp", True, False), ("Blissey", False, True)]
+
+
+LOG_PAR = """|player|p1|Alice|1|
+|player|p2|Bob|2|
+|gen|9
+|tier|[Gen 9] OU
+|poke|p1|Slowking-Galar, M|
+|poke|p1|Zamazenta|
+|poke|p2|Slowking-Galar, F|
+|poke|p2|Heatran, M|
+|start
+|switch|p1a: Slowking|Slowking-Galar, M|100/100 par
+|switch|p2a: Slowking|Slowking-Galar, F|100/100
+|turn|1
+|move|p2a: Slowking|Chilly Reception|p2a: Slowking
+|-weather|Snow
+|switch|p2a: Heatran|Heatran, M|100/100|[from] Chilly Reception
+|cant|p1a: Slowking|par
+|upkeep
+|turn|2
+|move|p2a: Heatran|Earth Power|p1a: Slowking
+|-damage|p1a: Slowking|50/100 par
+|move|p1a: Slowking|Sludge Bomb|p2a: Heatran
+|-damage|p2a: Heatran|80/100
+|upkeep
+|turn|3
+|win|Bob
+"""
+
+
+def test_a_prevented_action_after_a_pivot_is_in_the_pivots_step():
+    """2026-10-23, the causality check (scripts/check_causality.py): the foe's full paralysis came
+    after our Chilly Reception's switch -- at that switch-in's choice it has not happened -- but
+    the Blind sat in the turn's first step: the training history had it, the live one not."""
+    from alpha_poke.train.positions import blind_sides, history_string
+
+    rep = parse_replay({"id": "t4", "log": LOG_PAR, "rating": None, "uploadtime": 0})
+    steps = decision_steps(rep.actions, blind_sides(rep))
+    first, pivot = steps[1][0], steps[1][1]
+    assert "p1" not in first and isinstance(pivot.get("p1"), Blind)
+    assert "par" not in history_string(steps, (1, 1), "p2")  # (the pivot's choice: before it)
+    assert "par" in history_string(steps, 2, "p2")
+
+
+LOG_EJECT = """|player|p1|Alice|1|
+|player|p2|Bob|2|
+|gen|9
+|tier|[Gen 9] OU
+|poke|p1|Hatterene, F|
+|poke|p1|Dragonite, M|
+|poke|p2|Landorus-Therian, M|
+|start
+|switch|p1a: Hatterene|Hatterene, F|100/100
+|switch|p2a: Landorus|Landorus-Therian, M|100/100
+|turn|1
+|move|p2a: Landorus|U-turn|p1a: Hatterene
+|-damage|p1a: Hatterene|90/100
+|-enditem|p1a: Hatterene|Eject Button
+"""
+
+
+def test_an_eject_before_its_switch_is_already_a_blind():
+    """2026-10-23, the causality check: the log cut at an ejected side's switch-in choice (the
+    live one) -- the Eject Button used, its switch not in the log yet -- had no Blind for it, the
+    training history (its switch later in the log) and the search's tree a prevented action."""
+    from alpha_poke.train.positions import blind_sides
+
+    rep = parse_replay({"id": "t5", "log": LOG_EJECT, "rating": None, "uploadtime": 0})
+    b = blind_sides(rep)
+    assert b.get((1, "p1")) is not None and b[(1, "p1")].kind == "p"
+
+
+LOG_REVIVE = """|player|p1|Alice|1|
+|player|p2|Bob|2|
+|gen|9
+|tier|[Gen 9] OU
+|poke|p1|Reuniclus, M|
+|poke|p1|Pawmot, F|
+|poke|p2|Venusaur, M|
+|start
+|switch|p1a: Reuniclus|Reuniclus, M|100/100
+|switch|p2a: Venusaur|Venusaur, M|100/100
+|turn|1
+|move|p2a: Venusaur|Weather Ball|p1a: Reuniclus
+|-damage|p1a: Reuniclus|0 fnt
+|faint|p1a: Reuniclus
+|upkeep
+|switch|p1a: Pawmot|Pawmot, F|100/100
+|turn|2
+|move|p1a: Pawmot|Revival Blessing|p1a: Pawmot
+|-heal|p1: Reuniclus|50/100|[from] move: Revival Blessing
+|move|p2a: Venusaur|Growth|p2a: Venusaur
+|-boost|p2a: Venusaur|atk|1
+|upkeep
+|turn|3
+|switch|p1a: Reuniclus|Reuniclus, M|50/100
+|move|p2a: Venusaur|Weather Ball|p1a: Reuniclus
+|-damage|p1a: Reuniclus|0 fnt
+|faint|p1a: Reuniclus
+|upkeep
+|switch|p1a: Pawmot|Pawmot, F|100/100
+|turn|4
+|win|Bob
+"""
+
+
+def test_a_revived_mons_first_faint_is_a_blind():
+    """2026-10-23, the causality check: a mon fainted before acting, brought back by Revival
+    Blessing, fainted again later -- its record kept the last turn only: the first turn's
+    "fainted before acting" was missing from the training history, the live one (the log so
+    far) had it."""
+    from alpha_poke.train.positions import blind_sides
+
+    rep = parse_replay({"id": "t6", "log": LOG_REVIVE, "rating": None, "uploadtime": 0})
+    b = blind_sides(rep)
+    assert b.get((1, "p1")) is not None and b[(1, "p1")].kind == "d"
+
+
+def test_a_faint_or_an_eject_after_a_pivot_is_in_the_pivots_step():
+    """2026-10-23, the causality check: the foe's active fainted before acting -- or was ejected
+    -- after our Chilly Reception's switch: at that switch-in's choice it had not happened, the
+    Blind sat in the turn's first step all the same (the prevented ones' fix covered |cant| only)."""
+    from alpha_poke.train.positions import blind_sides, history_string
+
+    for tail, kind in (("|-damage|p1a: Mimikyu|0 fnt|[from] Stealth Rock\n|faint|p1a: Mimikyu", "d"),
+                       ("|-damage|p1a: Mimikyu|80/100\n|-enditem|p1a: Mimikyu|Eject Button\n"
+                        "|switch|p1a: Zamazenta|Zamazenta|100/100", "p")):  # fmt: skip
+        log = LOG_PAR.replace("Slowking-Galar, M|100/100 par", "Mimikyu, F|100/100").replace(
+            "|switch|p1a: Slowking|", "|switch|p1a: Mimikyu|").replace(
+            "|cant|p1a: Slowking|par", tail).replace("|poke|p1|Slowking-Galar, M|", "|poke|p1|Mimikyu, F|")
+        log = log.split("|upkeep\n|turn|2")[0] + "|upkeep\n|turn|2\n|win|Bob\n"
+        rep = parse_replay({"id": "t7", "log": log, "rating": None, "uploadtime": 0})
+        steps = decision_steps(rep.actions, blind_sides(rep))
+        assert "p1" not in steps[1][0], (kind, steps[1])
+        hist = history_string(steps, (1, 1), "p2")  # (the pivot's choice: before the faint / eject)
+        assert f"{kind}:MIMIKYU" not in hist, hist
+        assert f"{kind}:MIMIKYU" in history_string(steps, 2, "p2")
+
+
+def test_a_tera_whose_mon_fainted_first_is_no_later_mons():
+    """2026-10-23, the tree's history check (scripts/check_tree_history.py): Manaphy
+    terastallized, a priority move knocked it out before it moved -- the side's next mon's next
+    move read as a tera one in the history (the parser's pending tera was never cleared)."""
+    log = """|player|p1|Alice|1|
+|player|p2|Bob|2|
+|gen|9
+|tier|[Gen 9] OU
+|poke|p1|Raging Bolt|
+|poke|p2|Manaphy|
+|poke|p2|Dragonite, M|
+|start
+|switch|p1a: Raging Bolt|Raging Bolt|100/100
+|switch|p2a: Manaphy|Manaphy|100/100
+|turn|1
+|-terastallize|p2a: Manaphy|Fairy
+|move|p1a: Raging Bolt|Thunderclap|p2a: Manaphy
+|-damage|p2a: Manaphy|0 fnt
+|faint|p2a: Manaphy
+|upkeep
+|switch|p2a: Dragonite|Dragonite, M|100/100
+|turn|2
+|move|p2a: Dragonite|Dragon Dance|p2a: Dragonite
+|-boost|p2a: Dragonite|atk|1
+|move|p1a: Raging Bolt|Thunderbolt|p2a: Dragonite
+|-damage|p2a: Dragonite|60/100
+|upkeep
+|turn|3
+|win|Bob
+"""
+    rep = parse_replay({"id": "t8", "log": log, "rating": None, "uploadtime": 0})
+    dd = next(a for a in rep.actions if a.move == "Dragon Dance")
+    assert not dd.tera

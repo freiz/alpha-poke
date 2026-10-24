@@ -82,6 +82,8 @@ class MonRecord:
     brought: bool = False  # ever appeared on the field
     switch_ins: list[int] = field(default_factory=list)  # turns of switch-in
     fainted_turn: int | None = None
+    faint_turns: list = field(default_factory=list)  # every turn it fainted in (Revival Blessing: more than one)
+    faint_orders: dict = field(default_factory=dict)  # turn -> its place among that turn's actions
     hp: int | None = None  # last known HP percent
     phantom: bool = False  # not in team preview (Illusion / unmatched)
 
@@ -128,12 +130,15 @@ class Replay:
     teams: dict[str, list[MonRecord]]
     actions: list[Action]
     hp_by_turn: dict[int, dict[str, tuple[str, int]]]  # turn -> side -> (species, hp%)
-    cants: list[tuple[int, str, str]]  # (turn, side, reason): could not act (par, slp, flinch...)
+    cants: list[tuple[int, str, str, int]]  # (turn, side, reason, order): could not act (par, slp, flinch...)
     field_events: list[dict]
     warnings: list[str]
     # (side, target species) -> the moves the side's active used while transformed into it: its
     # target's moves, all four known to the player from its transform on (its request)
     copied: dict = field(default_factory=dict)
+    # (turn, side): an Eject Button / Eject Pack / Emergency Exit triggered, its switch not in the
+    # log yet (a log cut at that side's switch-in choice -- the live one)
+    ejecting: list = field(default_factory=list)
 
     def leads(self) -> dict[str, str | None]:
         out: dict[str, str | None] = {s: None for s in SIDES}
@@ -183,6 +188,7 @@ class ReplayParser:
         # Button, Eject Pack, Emergency Exit, Wimp Out): a pivot, not the turn's chosen switch
         # (2026-10-22 review: an Eject Button's switch before its side moved was the turn's)
         self.pending_eject: set[str] = set()
+        self.eject_order: dict[str, int] = {}  # side -> its eject's place among the turn's actions
         self.tera_pending: dict[str, str] = {}
         self.order = 0
         self.cants: list[tuple[int, str, str]] = []
@@ -320,6 +326,7 @@ class ReplayParser:
             field_events=self.field_events,
             warnings=self.warnings,
             copied=self.copied,
+            ejecting=[(self.turn, sd, self.eject_order.get(sd)) for sd in sorted(self.pending_eject)],
         )
 
     # ---- header ----------------------------------------------------------------------
@@ -470,7 +477,8 @@ class ReplayParser:
     def _on_cant(self, a):
         side, mon = self._mon(a[0])
         if side is not None:
-            self.cants.append((self.turn, side, a[1] if len(a) > 1 else ""))
+            # (its place among the turn's actions: after a pivot's switch or not -- causality)
+            self.cants.append((self.turn, side, a[1] if len(a) > 1 else "", self.order))
             self.last_move = None
         if mon is not None and len(a) > 2 and a[2] and side not in self.transformed:
             if a[2] not in mon.moves:
@@ -480,8 +488,13 @@ class ReplayParser:
         side, mon = self._mon(a[0])
         if mon is not None:
             mon.fainted_turn = self.turn
+            mon.faint_turns.append(self.turn)
+            mon.faint_orders[self.turn] = self.order  # (its place among the turn's actions: causality)
             mon.hp = 0
             self.pending_forced.add(side)
+            # (a terastallized active fainting before its move -- a priority KO: its tera is no
+            # later mon's; 2026-10-23, the tree's history check: the next mon's move read as tera)
+            self.tera_pending.pop(side, None)
             if self._outcome_target(side):
                 self.last_move.ko = True
 
@@ -565,6 +578,7 @@ class ReplayParser:
         # (used, not taken: |-enditem|MON|Eject Button with no [from] -- its switch is a pivot)
         if side and not src and len(a) > 1 and a[1] in ("Eject Button", "Eject Pack"):
             self.pending_eject.add(side)
+            self.eject_order[side] = self.order
         lost = src[5:].strip() if src.startswith("move:") else None
         self._reveal_item(mon, a[1], consumed=True, lost=lost)
 
@@ -601,6 +615,7 @@ class ReplayParser:
         what = a[1]
         if what in ("ability: Emergency Exit", "ability: Wimp Out"):  # (its switch: a pivot)
             self.pending_eject.add(side)
+            self.eject_order[side] = self.order
         if what.replace("move: ", "") in _ABILITY_CHANGERS:
             # |-activate|SOURCE|move: Skill Swap|TARGET_ABILITY|SOURCE_ABILITY|[of] TARGET
             rest = [x for x in a[2:] if not x.startswith("[")]
