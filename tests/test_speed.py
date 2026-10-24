@@ -75,3 +75,40 @@ def test_sample_spread_zero_weight_fits(monkeypatch):
     o = Obs(1, "testmon", ours=250.0, mult=1.0, trick_room=False, opp_first=True)
     spread, item = _sample_spread(mon, "", True, [o], SimpleNamespace(item={}), random.Random(0))
     assert spread is fast and item == ""
+
+
+SWITCHEROO = """
+|switch|p1a: Fish|Basculegion, M|300/300
+|switch|p2a: Glalie|Glalie, M|100/100
+|turn|1
+|move|p1a: Fish|Pain Split|p2a: Glalie
+|move|p2a: Glalie|Spikes|p1a: Fish
+|upkeep
+|turn|2
+|move|p2a: Glalie|Switcheroo|p1a: Fish
+|-activate|p2a: Glalie|move: Trick|[of] p1a: Fish
+|-item|p1a: Fish|Life Orb|[from] move: Trick
+|-item|p2a: Glalie|Choice Scarf|[from] move: Trick
+|move|p1a: Fish|Wave Crash|p2a: Glalie
+|upkeep
+|turn|3
+|move|p2a: Glalie|Switcheroo|p1a: Fish
+|move|p1a: Fish|Wave Crash|p2a: Glalie
+|upkeep
+|turn|4
+"""
+
+
+def test_an_observation_is_read_with_the_item_held_then():
+    """2026-10-24, the belief check: a Glalie that got its Choice Scarf by Switcheroo after a turn
+    it moved second -- read with the scarf, its true speed ruled out. The turn before the swap
+    has the item it started with (revealed by the swap: the one we received) -- the swap's own
+    turn too (its order was before the swap) --, the turn after the one the log named."""
+    speeds = {"basculegion": (255, "", "adaptability")}
+    obs = observations(lines(SWITCHEROO), "p1", lambda sp: speeds[sp])
+    assert [(o.turn, o.item_then) for o in obs] == [(1, "lifeorb"), (2, "lifeorb"), (3, "choicescarf")]
+    assert consistent(obs[:1], 217, "choicescarf")  # (its scarf: not at turn 1)
+    # (we received nothing: it held none before)
+    empty = SWITCHEROO.replace("|-item|p1a: Fish|Life Orb|[from] move: Trick\n", "")
+    obs = observations(lines(empty), "p1", lambda sp: speeds[sp])
+    assert [(o.turn, o.item_then) for o in obs] == [(1, "none"), (2, "none"), (3, "choicescarf")]

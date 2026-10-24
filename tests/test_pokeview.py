@@ -94,3 +94,16 @@ def test_a_mons_own_weight_after_its_transform_ended():
     assert pv.own_weight(ditto) == 4.0
     ditto.switch_out({})
     assert not ditto.transformed and pv.own_weight(ditto) == 4.0
+
+
+def test_a_copied_moves_pp_before_its_first_use():
+    """Showdown's transformInto: min(5, the move's PP) -- a Revival Blessing's 1 (a replay's Ditto
+    read 5, 2026-10-24); poke-env's own count once it is used."""
+    from poke_env.battle import Pokemon
+
+    from alpha_poke.agents import pokeview as pv
+
+    ditto = Pokemon(species="ditto", gen=9)
+    ditto.transform(Pokemon(species="pawmot", gen=9))
+    assert pv.copied_pp(ditto, "revivalblessing") == 1
+    assert pv.copied_pp(ditto, "closecombat") == 5

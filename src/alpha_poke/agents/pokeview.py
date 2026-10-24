@@ -90,6 +90,10 @@ def copied_ability(mon, target: str) -> str:
 
 def copied_pp(mon, mid: str) -> int:
     """The PP left of a move ``mon`` copied by transforming (poke-env counts its uses: 5 PP at
-    most; 2026-10-23 review: always 5, a Scarf Ditto's fifth Protect left it at 5)."""
+    most; 2026-10-23 review: always 5, a Scarf Ditto's fifth Protect left it at 5). Not used yet
+    (poke-env has it not): Showdown's transformInto, min(5, its PP) -- a Revival Blessing's 1
+    (2026-10-24, the differential test framework: a replay's Ditto read 5)."""
     mv = mon.moves.get(mid) if mon is not None and mon.transformed else None
-    return max(0, mv.current_pp) if mv is not None else 5
+    if mv is not None:
+        return max(0, mv.current_pp)
+    return min(5, int((GEN.moves.get(mid) or {}).get("pp") or 5))

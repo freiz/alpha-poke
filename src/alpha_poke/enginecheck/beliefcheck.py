@@ -109,7 +109,9 @@ def belief_diffs(p1: str, p2: str, seed: int, max_turns: int = 40, script: list 
             where = (seed, k, side, sp)
             # (the evidence: the hard checks)
             spe = tm.speed
-            if obs.get(sp) and item not in ("", "none") and not consistent(obs[sp], spe, item):
+            # (the observations carry their item phases: speed.ObsTracker.result -- the item
+            # passed is the one of a mon whose item never changed)
+            if obs.get(sp) and not consistent(obs[sp], spe, item):
                 found("belief:speed", (*where, spe, item))
             if hits and hits[1]:
                 for h in hits[1]:

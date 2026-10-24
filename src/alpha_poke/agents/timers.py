@@ -225,6 +225,10 @@ class SideTimers:
     past_stints: list = field(default_factory=list)  # the times in before this one (stint dicts)
     pressure: set = field(default_factory=set)  # species keys with Pressure announced
     copied_from: str = ""  # the active's Transform target (the other side's species key)
+    # its target's forme as it transformed (a forme change of the target after is not copied:
+    # Showdown's transformInto takes the weight then -- a Terastal Terapagos's 16 kg, not the
+    # Stellar forme's 77 it had later; 2026-10-24, the differential test framework)
+    copied_forme: str = ""
     transformed_out: dict = field(default_factory=dict)  # species key -> the target it went out transformed into
     upkept: bool = False  # this turn's end passed (|upkeep|, before the next |turn|)
     swapped: set = field(default_factory=set)  # setters keys whose setter is the other side's (Court Change)
@@ -254,7 +258,7 @@ class SideTimers:
             self.transformed_out[self.active] = self.copied_from
         elif self.active:
             self.transformed_out.pop(self.active, None)
-        self.copied_from = ""
+        self.copied_from = self.copied_forme = ""
         self.no_regen.discard(species)
         self.fainted_out = ""
         self.ability_off = False
@@ -868,7 +872,9 @@ def _feed_one(sides: dict, p: list[str]) -> None:
             if ost is not None and not p[5].startswith("["):
                 ost.ability_now = to_id(p[5])
     elif tag == "-transform" and len(p) > 3:
-        st.copied_from = _who(["", "", p[3]], sides)[1]  # (S145)
+        ost, st.copied_from = _who(["", "", p[3]], sides)  # (S145)
+        tnick = p[3].split(": ", 1)[-1]
+        st.copied_forme = ((ost.formes.get(tnick) if ost is not None else None) or st.copied_from)
     elif tag == "-ability" and len(p) == 4 and to_id(p[3]) == "pressure":
         st.pressure.add(sp)  # (announced on its entry: S143)
     elif tag == "-ability" and len(p) > 3 and to_id(p[3]) == "neutralizinggas" and len(p) == 4:

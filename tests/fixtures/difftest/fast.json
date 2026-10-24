@@ -1,9 +1,10 @@
 {
  "belief_truth": {
   "belief:damage": 2,
-  "belief:item": 2,
-  "belief:move": 14,
-  "belief:tera": 13
+  "belief:item": 4,
+  "belief:move": 20,
+  "belief:speed": 6,
+  "belief:tera": 14
  },
  "engine_chain": {
   "hp": 4,

@@ -1440,6 +1440,18 @@ def build_state(
 
     our_mons = _formes(battle.team, ours, our_mons, tm_us)
     their_mons = _formes(battle.opponent_team, theirs, their_mons, tm_them)
+    # (a transformed active's weight its target's forme's as it transformed -- Showdown's
+    # transformInto takes it then: an Imposter Ditto into a Tera Shift Terapagos, 16 kg, read
+    # its base forme's 6.5; and not the Stellar forme's 77 the target had later; 2026-10-24, the
+    # differential test framework's full corpus)
+    def copied_weight(tm: SideTimers, target: pe.Pokemon) -> float:
+        w = (GEN.pokedex.get(tm.copied_forme) or {}).get("weightkg") if tm.copied_forme else None
+        return float(w) if w else target.weight_kg
+
+    if our_tf and our_t is not None and our_t < len(their_mons):
+        our_mons[our_active_idx] = _with(our_mons[our_active_idx], weight_kg=copied_weight(tm_us, their_mons[our_t]))
+    if their_tf and their_t is not None and their_t < len(our_mons):
+        their_mons[their_idx] = _with(their_mons[their_idx], weight_kg=copied_weight(tm_them, our_mons[their_t]))
     # (the actives' abilities as a move / ability changed them this time in, a Gastro Acid's none
     # -- poke-env keeps no temporary ability for them; the timers')
     for ms, i, tm in ((our_mons, our_active_idx, tm_us), (their_mons, their_idx, tm_them)):

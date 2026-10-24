@@ -1,10 +1,10 @@
 {
  "belief_truth": {
   "belief:damage": 55,
-  "belief:item": 1556,
-  "belief:move": 5045,
-  "belief:speed": 768,
-  "belief:tera": 1968
+  "belief:item": 1558,
+  "belief:move": 5051,
+  "belief:speed": 990,
+  "belief:tera": 1969
  },
  "engine_chain": {
   "ability": 2,
@@ -79,16 +79,8 @@
   "weather.turns": 4,
   "weight": 1
  },
- "state_live": {
-  "foe:weight_kg": 6,
-  "own:weight_kg": 6
- },
- "state_replay": {
-  "foe:pp": 3,
-  "foe:weight_kg": 6,
-  "own:pp": 3,
-  "own:weight_kg": 6
- },
+ "state_live": {},
+ "state_replay": {},
  "tree_history": {
   "tree:one.actor": 75,
   "tree:one.fainted_first": 3,

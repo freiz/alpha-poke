@@ -30,6 +30,16 @@ MUTATIONS = [
      'if then == "klutz" and key not in tm.set_gas:\n            return ""', 'if False:\n            return ""'),
     ("R4' Neutralizing Gas held the Klutz off", "src/alpha_poke/agents/engine_state.py",
      'if then == "klutz" and key not in tm.set_gas:', 'if then == "klutz":'),
+    ("a transformed active's weight its target's forme's", "src/alpha_poke/agents/engine_state.py",
+     "        our_mons[our_active_idx] = _with(our_mons[our_active_idx], weight_kg=copied_weight(tm_us, their_mons[our_t]))",
+     "        pass"),
+    ("a transform's weight its target's forme's then", "src/alpha_poke/agents/engine_state.py",
+     "        w = (GEN.pokedex.get(tm.copied_forme) or {}).get(\"weightkg\") if tm.copied_forme else None",
+     "        w = None"),
+    ("a copied move's PP before its first use", "src/alpha_poke/agents/pokeview.py",
+     '    return min(5, int((GEN.moves.get(mid) or {}).get("pp") or 5))', "    return 5"),
+    ("a speed observation's item then", "src/alpha_poke/agents/speed.py",
+     "    it = o.item_then if o.item_then is not None else item", "    it = item"),
     ("R2' each hit's item then", "src/alpha_poke/agents/damage_obs.py",
      "    if hit.item_then is not None:  # the item it held at the hit",
      "    if False:  # the item it held at the hit"),
@@ -61,6 +71,12 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--rust", action="store_true")
     a = ap.parse_args()
+    # (the code as it is must pass first: against a stale baseline -- a new scenario's own findings
+    # not in it -- every mutation reads as caught; 2026-10-24)
+    stale = _fast()
+    if stale:
+        print("the baseline is stale -- the unmutated code regresses; update it first:", stale[:3])
+        return 2
     missed = []
     for name, f, fixed, undone in (RUST if a.rust else MUTATIONS):
         p = ROOT / f

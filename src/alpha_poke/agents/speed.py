@@ -15,6 +15,7 @@ fast spread was never considered and "it moved first" was never learned from.
 """
 
 import functools
+import dataclasses
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -78,6 +79,11 @@ class Obs:
     mult: float  # the opponent's multiplier besides its stat and item
     trick_room: bool
     opp_first: bool
+    # the opponent's item then when the log names it (after its first change hands: a Trick's,
+    # a Switcheroo's, a Knock Off's none -- agents/damage_obs._Items); None: the one it started
+    # with, the candidate's (2026-10-24, the belief check: a Glalie that got its Choice Scarf by
+    # Switcheroo read with it at the turns before -- the true speed ruled out)
+    item_then: str | None = None
 
 
 @dataclass
@@ -126,15 +132,20 @@ class ObsTracker:
         # themselves must not count: 2026-10-11, 11% of the observations broke the opponent's
         # true speed until this)
         self.snap: dict | None = None
+        from alpha_poke.agents.damage_obs import _Items
+
+        self.items = _Items()  # each side's item as the log shows it (its phases)
+        self._iact: dict = {}  # "p1a" -> the species it switched in as (the item tracker's key)
 
     def _capture(self) -> dict:
         def one(st: _Side) -> tuple:
             m = boost_mult(st.spe) * (2.0 if st.tailwind else 1.0) * (1.5 if st.proto else 1.0)
             return st.active, m * (0.5 if st.status.get(st.active) == "par" else 1.0)
 
+        opp = (self.opp_side, self._iact.get(self.opp_side + "a"))
         return {"sides": {k: one(v) for k, v in self.sides.items()},
                 "trick_room": self.trick_room, "weather": self.weather,
-                "terrain": self.terrain}  # fmt: skip
+                "terrain": self.terrain, "opp_item": self.items.now.get(opp)}  # fmt: skip
 
     def _flush(self, out: list) -> None:
         """The current turn's observation, if any, into ``out``."""
@@ -174,18 +185,34 @@ class ObsTracker:
             return
         ours = stat * us_mult * (1.5 if item == "choicescarf" else 1.0)
         opp_first = mains[opp_side][0] < mains[our_side][0]
-        out.append(Obs(self.turn, them, ours, them_mult, snap["trick_room"], opp_first))
+        out.append(Obs(self.turn, them, ours, them_mult, snap["trick_room"], opp_first, snap.get("opp_item")))
 
     def result(self) -> list[Obs]:
-        """The observations so far, the current turn's included (if it has both moves)."""
+        """The observations so far, the current turn's included (if it has both moves). Those of
+        an opponent's first item phase once its item changed hands: with the item it started
+        with if the log revealed it, else left out -- so a caller's item is only ever that of a
+        mon whose item never changed (2026-10-24, the belief check: a Switcheroo's Choice Scarf
+        read at the turns before it)."""
         out = list(self.out)
         self._flush(out)
-        return out
+        keep = []
+        for o in out:
+            key = (self.opp_side, o.species)
+            if o.item_then is None and key in self.items.changed:
+                start = self.items.original.get(key)
+                if start is None:
+                    continue
+                o = dataclasses.replace(o, item_then=start)
+            keep.append(o)
+        return keep
 
     def feed(self, p: list[str]) -> None:
         if len(p) < 2:
             return
         tag = p[1]
+        if tag in ("switch", "drag") and len(p) > 3:
+            self._iact[p[2][:3]] = to_id(p[3].split(",")[0])
+        self.items.feed(p, self._iact)
         if tag == "turn":
             self._flush(self.out)
             self.turn, self.block, self.snap = int(p[2]), [], None
@@ -256,7 +283,10 @@ def observations(lines: list[list[str]], our_side: str, our_speed) -> list[Obs]:
 
 
 def opp_eff(o: Obs, speed_stat: int, item: str) -> float:
-    return speed_stat * o.mult * (1.5 if item == "choicescarf" else 1.0)
+    """The opponent's effective speed at ``o``: ``item`` its candidate (the one it started with),
+    the observation's own once the log named another (``Obs.item_then``)."""
+    it = o.item_then if o.item_then is not None else item
+    return speed_stat * o.mult * (1.5 if it == "choicescarf" else 1.0)
 
 
 def consistent(obs: list[Obs], speed_stat: int, item: str) -> bool:

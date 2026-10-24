@@ -292,6 +292,16 @@
 
 数据源：Radical Red 服务器的回放（改版游戏的 Gen 9 OU，自己的种族、能力值和招式；约 1,000 局，三分之一含图鉴里没有的种族）从训练数据构建中排除（`scripts/build_training_data.py`）。
 
+## 差分测试框架查出的（10-24）
+
+`doc/difftest.md` 的框架（场景 + 链式引擎差分 + 信念真值检查 + 变异测试）第一轮在 `full` 语料上查出、已修的：
+
+| # | 问题 | 影响 | 修复 | 守住它的 |
+|---|---|---|---|---|
+| S154 | 变身中的宝可梦体重取了目标"现在"的形态（Imposter Ditto 复制了已 Tera Shift 的 Terapagos，16 kg，我们给它的基础形态 6.5 kg；目标之后太晶成 Stellar 形态，又给了 77 kg）。Showdown 的 transformInto 在变身那一刻复制体重 | 训练数据 | 计时器在 `-transform` 时记下目标当时的形态（`copied_forme`），体重按它 | 场景 `transform/imposter-into-a-forme`、`transform/target-forme-after`；变异两条 |
+| S155 | 变身复制来的招式还没用过时 PP 一律当 5：Showdown 是 min(5, 招式的 PP)，Revival Blessing 是 1 | 训练数据（回放路径） | `pokeview.copied_pp` | `test_a_copied_moves_pp_before_its_first_use`；场景 `transform/copied-one-pp`；变异 |
+| B1 | 速度观测用对方"现在"的道具解释：Switcheroo 拿到 Choice Scarf 的 Glalie，换手之前那几回合的先后被按围巾算，真实速度被排除（实战信念） | 实战搜索 | 观测记下当时的道具阶段（`Obs.item_then`，与 F1 共用 `damage_obs._Items`）；道具换过手时，原道具阶段的观测带上原道具（被揭示时），否则丢弃 | `test_an_observation_is_read_with_the_item_held_then`；场景 `speed/scarf-knocked-off`；变异 |
+
 ## 效果开始时定下的值（计划 D）
 
 Showdown 里有一类值在效果开始的那一刻就定下，之后不再随状态变化：`durationCallback`（持续回合按开始时的道具 / 特性）、`onStart` 里写进 `effectState` 的值（替身的 HP、Wish 的回复量、锁定的招式……）。还原时如果按"现在"的状态去算，就会错（例如 Light Clay 的 Reflect 之后道具被打掉，剩余回合按 5 算——10-23 复查修过）。清单由 Showdown 源码扫出（`data/moves.ts`、`conditions.ts`、`abilities.ts`、`items.ts` 中所有 `durationCallback` 和对 `this.effectState.*` 的赋值，139 项），逐项对照我们的记法；"A 比较"指状态构造差分（计划 A）比较这个字段，百万级已到 99.999%。

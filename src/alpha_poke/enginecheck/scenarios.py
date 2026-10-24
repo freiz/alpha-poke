@@ -93,6 +93,25 @@ def transforms() -> list[Spec]:
         p1 = team(FILLER, ditto) if how == "imposter" else team(ditto, FILLER)
         out.append(_spec(f"transform/{how}-{move.lower().replace(' ', '')}", p1, team(heavy, FILLER),
                          lead + script if how == "imposter" else script))  # fmt: skip
+    # (its target's forme now: a Terapagos's Tera Shift Terastal forme, 16 kg -- not 6.5, its base)
+    terapagos = S("Terapagos", "Leftovers", "Tera Shift", ["Tera Starstorm", "Calm Mind", "Rapid Spin", "Dark Pulse"],
+                  tera="Stellar")  # fmt: skip
+    out.append(_spec("transform/imposter-into-a-forme", team(FILLER, S("Ditto", "Leftovers", "Imposter", ["Transform"])),
+                     team(terapagos, FILLER), [{"p1": "switch 2", "p2": "move 2"}, {"p1": "move 2", "p2": "move 2"},
+                                              {"p1": "move 2", "p2": "move 2"}],
+                     expect=("|-transform|p1a: Ditto|p2a: Terapagos",)))  # fmt: skip
+    # (and the target's forme changes after: its Terastallization, the Stellar forme -- the copy
+    # keeps the weight it took)
+    out.append(_spec("transform/target-forme-after", team(FILLER, S("Ditto", "Leftovers", "Imposter", ["Transform"])),
+                     team(terapagos, FILLER), [{"p1": "switch 2", "p2": "move 2"}, {"p1": "move 2", "p2": "move 2 terastallize"},
+                                              {"p1": "move 2", "p2": "move 2"}, {"p1": "move 2", "p2": "move 2"}],
+                     expect=("|-transform|p1a: Ditto|p2a: Terapagos", "Terapagos-Stellar")))  # fmt: skip
+    # (a copied 1-PP move: Showdown's min(5, its PP) -- Revival Blessing's 1)
+    pawmot = S("Pawmot", "Leftovers", "Volt Absorb", ["Revival Blessing", "Close Combat", "Nuzzle", "Double Shock"])
+    out.append(_spec("transform/copied-one-pp", team(FILLER, S("Ditto", "Leftovers", "Imposter", ["Transform"])),
+                     team(pawmot, FILLER), [{"p1": "switch 2", "p2": "move 3"}, {"p1": "move 3", "p2": "move 3"},
+                                           {"p1": "move 2", "p2": "move 3"}],
+                     expect=("|-transform|p1a: Ditto|p2a: Pawmot",)))  # fmt: skip
     gigas = S("Regigigas", "Leftovers", "Slow Start", ["Body Slam", "Protect", "Knock Off", "Substitute"])
     ditto = S("Ditto", "Leftovers", "Limber", ["Transform"])
     out.append(_spec("transform/slowstart-copied", team(ditto, FILLER), team(gigas, FILLER),
@@ -184,7 +203,21 @@ def formes() -> list[Spec]:
     ]
 
 
-FAMILIES = (extender_items, pp_takers, transforms, locks, failed_moves, item_phases, encore, formes)
+def speed_phases() -> list[Spec]:
+    """The move order read with the item held then (the speed observations' item phases): a
+    Choice Scarf Glalie moves first, a Knock Off takes the scarf, it moves second after -- read
+    with its item now (none), the first turn's order rules its true speed out (the players'
+    format: the belief check)."""
+    glalie = S("Glalie", "Choice Scarf", "Inner Focus", ["Spikes", "Freeze-Dry", "Disable", "Taunt"],
+               "252 HP / 252 Def / 4 SpD", "Bold")  # fmt: skip
+    fish = S("Basculegion", "Leftovers", "Adaptability", ["Knock Off", "Wave Crash", "Aqua Jet", "Phantom Force"],
+             FAST, "Jolly")  # fmt: skip
+    return [_spec("speed/scarf-knocked-off", team(fish, FILLER), team(glalie, FILLER),
+                  [{"p1": "move 1", "p2": "move 1"}, {"p1": "move 2", "p2": "move 2"}, {"p1": "move 2", "p2": "move 2"}],
+                  fmt=PCT, expect=("|-enditem|p2a: Glalie|Choice Scarf|[from] move: Knock Off",))]  # fmt: skip
+
+
+FAMILIES = (extender_items, pp_takers, transforms, locks, failed_moves, item_phases, encore, formes, speed_phases)
 
 
 def scenarios() -> list[Spec]:
