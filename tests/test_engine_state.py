@@ -876,3 +876,23 @@ def test_an_added_type_is_a_type_change(belief):
     b = battle(["|move|p1a: Garchomp|Forest's Curse|p2a: Gholdengo",
                 "|-start|p2a: Gholdengo|typeadd|Grass|[from] move: Forest's Curse", "|upkeep", "|turn|2"])  # fmt: skip
     assert "typechange" in {str(v).lower() for v in state(b, belief).side_two.volatile_statuses}
+
+
+def test_our_disguised_zoroarks_used_item_is_its_own(belief):
+    """S88 (2026-10-23, state-construction differential): our lead Zoroark disguised as
+    Ceruledge used up its Throat Spray -- the timers kept it as the disguise's last item."""
+    b = Battle("battle-gen9ou-1", "us", logging.getLogger("t"), gen=9)
+    b.player_role = "p1"
+    for line in ["|switch|p1a: Ceruledge|Ceruledge, F|251/251", "|switch|p2a: Gholdengo|Gholdengo|100/100",
+                 "|turn|1", "|move|p1a: Ceruledge|Hyper Voice|p2a: Gholdengo", "|-damage|p2a: Gholdengo|80/100",
+                 "|-enditem|p1a: Ceruledge|Throat Spray", "|-boost|p1a: Ceruledge|spa|1|[from] item: Throat Spray",
+                 "|upkeep", "|turn|2"]:  # fmt: skip
+        b.parse_message(line.split("|"))
+    side = [{**mon("p1: Zoroark", "Zoroark-Hisui", ["hypervoice"], "", "illusion", True), "condition": "251/251"},
+            {**mon("p1: Ceruledge", "Ceruledge", ["bitterblade"], "leftovers", "flashfire"), "condition": "291/291"}]  # fmt: skip
+    b.parse_request({"active": [{"moves": [{"move": "Hyper Voice", "id": "hypervoice", "pp": 15, "maxpp": 16,
+                                            "disabled": False}]}],
+                     "side": {"name": "us", "id": "p1", "pokemon": side}, "rqid": 2})  # fmt: skip
+    s = build_state(b, belief, ("Zoroark-Hisui", "Ceruledge"), random.Random(0))
+    last = {str(m.id).lower(): str(m.last_item).lower() for m in s.side_one.pokemon if str(m.id).lower() != "none"}
+    assert last.get("zoroarkhisui") == "throatspray" and last.get("ceruledge") in (None, "none"), last

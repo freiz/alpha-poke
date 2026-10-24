@@ -10,6 +10,7 @@ Written from the poke-engine API (poke_engine.pyi) and poke-env; no Foul Play co
 """
 
 import collections
+import copy
 import functools
 import random
 from dataclasses import dataclass, field
@@ -561,11 +562,8 @@ def _our_mon(
     listed = [to_id(x) for x in ((getattr(mon, "_last_request", None) or {}).get("moves") or [])]
     if listed and not mon.transformed and all(x in own for x in listed):
         own = {x: own[x] for x in listed}
-    reset = tm.pp_reset.get(tm.k(to_id(mon.species))) if tm is not None else None
     for mid, mv in list(own.items())[:4]:
         pp = max(0, mv.current_pp + (pp_adj or {}).get(mid, 0))
-        if reset is not None:  # (Lunar Dance's restore: its uses since)
-            pp = max(0, mv.max_pp - reset[mid])
         pp = max(0, pp - _spited(tm, mon, mid))
         if req_pp and req_pp.get(mid) is not None:
             pp = int(req_pp[mid])
@@ -733,9 +731,7 @@ def _their_mon(mon, s: SampledSet, tm: SideTimers | None = None, disabled: str |
         status=STATUS.get(mon.status, "none"),
         weight_kg=_weight(mon),
         moves=[pe.Move(id=m, pp=max(0, min(_max_pp(m), _pp(mon, m) + pp_adj.get(m, 0))
-                                    - _spited(tm, mon, m))
-                       if not (tm and tm.k(to_id(mon.species)) in tm.pp_reset)
-                       else max(0, _max_pp(m) - tm.pp_reset[tm.k(to_id(mon.species))][m]),
+                                    - _spited(tm, mon, m)),
                        disabled=m == disabled) for m in s.moves[:4]],  # fmt: skip
         terastallized=mon.is_terastallized,
         tera_type=s.tera,
@@ -1018,6 +1014,17 @@ def build_state(
     # moves are its, poke-env gives them to the disguise
     our_disguised = bool(active is not None and tm_us.active and tm_us.active != to_id(active.species)
                          and to_id(active.species).startswith("zoroark"))  # fmt: skip
+    if our_disguised and tm_us.stint.get("items"):
+        # (the items it used up this time in are the Zoroark's -- the timers move them as the
+        # Illusion breaks; 2026-10-23, S88: a disguised lead's Throat Spray read as its disguise's)
+        tm_us = copy.copy(tm_us)
+        tm_us.last_item = dict(tm_us.last_item)
+        for dsp, before in tm_us.stint["items"]:
+            used = tm_us.last_item.pop(dsp, None)
+            if before is not None:
+                tm_us.last_item[dsp] = before
+            if used:
+                tm_us.last_item[to_id(active.species)] = used
     if spectator is None:
         ours = list(battle.team.values())
         avail = {m.id for m in battle.available_moves} if battle.available_moves else None

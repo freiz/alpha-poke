@@ -22,6 +22,7 @@
 | 10-23 | 百万级首轮：8,000 局 OU（1 万对新配对）+ 40 组 fixtures + 30 组 big，换新种子，共 14,400 局 | 1,085,812 个决策点 | 有差异 0.23%（核心字段 0.08%）；查出一处实战会崩溃的问题（S43） |
 | 10-23 | 百万级第二轮（S43–S51 之后） | 1,085,812 个决策点 | 有差异 0.22%（核心字段 0.07%）；查出 S48 引入的我方回归（S52） |
 | 10-23 | 百万级第三轮（S52–S54 之后） | 1,085,812 个决策点 | 有差异 0.26%（核心字段 0.06%）；上一个道具在约 70 局里出错，是 S52 的别名在换回场时没跟上（S55）；之后 S55–S82 把这一轮的 219 个例子局修到只剩已知的两类 PP |
+| 10-23 | 百万级第四轮（S55–S82 之后） | 1,085,812 个决策点 | 有差异 **0.068%**（核心字段 0.043%，大半是已知的 PP 三局）；S82–S88 之后这一轮的 69 个例子局全部一致 |
 
 ## 方法
 
@@ -36,6 +37,7 @@
   - Future Sight 的使用者按种族比（两边的队伍顺序不同）；太晶标记的"本方已用过太晶"按一侧比；Greninja-Bond 当作 Greninja；引擎不认识的道具都当作 UNKNOWNITEM；
   - 一个在混乱中结束的 Outrage 锁定（已经混乱时锁定结束不打日志）；Own Tempo 的宝可梦的锁定结束（不会混乱，同样不打日志）；
   - 畏缩（flinch）：随机判定，静默加上，只有挡下招式时才显示。
+  - 伪装中倒下的 Zoroark：日志的 faint 写的是伪装的名字，那时无从得知。
 - **差分框架自身的修正**：回合结束后的换人决策（`|upkeep|` 之后、下一个 `|turn|` 之前），`engine_state` 推算 Future Sight / Wish 用的回合数要加一（引擎差分只比较回合开始，从未碰到）。
 - **数据**：`data/teams/statebuild_catalog_pairs.jsonl`（1,176 支真实 OU 队伍随机配对，本地生成）、`tests/fixtures/random_battle_teams*.jsonl`（40 组，1.16 万对）、`data/teams/big/`（30 组，8.7 万对）。同一对队伍换种子就是新对局。
 - **流程**：跑一批 → 按"出现在多少局里"排序 → 看例子（日志 + 两边的值）→ 对照 Showdown 源码确认规则 → 修 → 写针对性测试（修复前必须失败）→ 回归（全量测试 + 两个基线 + 引擎差分）→ 记入下表。
@@ -127,11 +129,15 @@
 | S79 | 变身后的宝可梦用复制来的 Protean 改了属性（日志写明），Protean 的 volatile 没有传（变身的一律排除了） | 两 | 日志写明时加上 | `test_a_transformed_mons_copied_protean` |
 | S80 | Forest's Curse / Trick-or-Treat 的附加属性：Showdown 的属性里有它，引擎的 typechange 没有传 | 两 | poke-env 的 TYPEADD 记为 typechange | `test_an_added_type_is_a_type_change` |
 | S81 | 实战：我方伪装中的 Zoroark 被识破，那回合打在伪装上的能力变化丢了（对方 / 回放走计时器的 `illusion_boosts`） | 实 | `poke_env_fixes`：实战时识破一并转移能力变化 | `test_a_broken_illusion_keeps_its_volatiles` |
-| S82 | 实战：request 已把出场纠正成我方 Zoroark，之后的日志仍写伪装的名字，能力变化 / volatile 记到了不在场的伪装对象上（多回合伪装时一直丢） | 实 | `poke_env_fixes`：我方出场位（`p1a`）的引用解析为出场的 Zoroark（换人类消息除外） | 同上 |
+| S82 | （撤回）以为 request 纠正后日志写伪装名字的能力变化会丢；其实 poke-env 的 `get_pokemon` 本身就把我方出场位解析到出场的 Zoroark，当时的实验是测试数据给每只宝可梦都设了 Illusion 特性 | — | 撤回，测试数据改正 | `test_a_broken_illusion_keeps_its_volatiles` |
+| S83 | Showdown 每次换入会发一条只为显示的 `-start typechange …|[silent]`（第 7 世代起的外观属性）；伪装时是伪装对象的属性（已太晶成 Water 的 Hatterene），被记成了 Zoroark 的属性改变 | 两 | 我方出场的是 Zoroark 时跳过；识破 / 纠正时这条带来的 typechange 不转给 Zoroark | 同上 |
+| S84 | Lunar Dance 回满 PP 后，计时器按"每招 1 点"重新计数，Pressure 下多扣的那 1 点没算 | 两 | `poke_env_fixes`：Lunar Dance 时把 poke-env 的 PP 恢复满（之后它自己的计数含 Pressure）；去掉计时器的这套计数；Spite 扣掉的也一并恢复 | `test_lunar_dance_and_skill_swap_pp` |
+| S85 | Skill Swap 时 poke-env 没记下 `[of]` 一方原本的特性（使用者换到的那个），之后宣告的 Pressure 被当成它的本来特性，此后每次对它出招都扣 2 PP | 两 | 记下 | 同上 |
+| S86 | 实战：我方 Zoroark 伪装上场，当回合 poke-env 以为上场的是伪装对象（伪装成 Pressure 宝可梦时对方多扣 PP，HP 也写到了伪装对象上）；换入行显示的最大 HP 其实是 Zoroark 的 | 实 | `poke_env_fixes`：按最大 HP 认出是 Zoroark，让 poke-env 换入 Zoroark（日志原样保留，计时器照旧认得出伪装） | `test_a_broken_illusion_keeps_its_volatiles` |
+| S87 | 回合结束后换上的宝可梦 Wind Rider 的 `-ability … boost` 被当成特性吸收了对方本回合的招 | 两 | 回合结束时清掉"刚出招" | `test_the_logs_facts_sixth_batch` |
+| S88 | 我方伪装中的 Zoroark 用掉的道具（开局伪装的 Throat Spray）记在伪装对象名下 | 两 | 构造时按本次上场记录把道具挪给 Zoroark（与识破时计时器的做法一致） | `test_our_disguised_zoroarks_used_item_is_its_own` |
 
-已知、待查：2 局里我方后备宝可梦每招都按 Pressure 多扣了 1 PP，日志里没有 Pressure。
-
-已知、暂不修：伪装成 Pressure 宝可梦的 Zoroark 挨打时，poke-env 按 Pressure 多扣 1 PP（识破后才能知道，极少见）。
+已知、待查：无（之前的两局 PP 是 S84 / S85，伪装成 Pressure 宝可梦的我方 Zoroark 是 S86；对方伪装时多扣的 PP 仍是玩家无从得知的，属隐藏信息）。
 
 差分之前的复查轮（10-22 至 10-23，第六到第十轮）修的 Disable、延长道具、Sleep Talk 的 PP、变身链路、连续 pivot 的顺序等，见各自的提交和 `tests/test_engine_state.py`、`tests/test_transform.py`。
 

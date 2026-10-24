@@ -504,8 +504,9 @@ def test_the_logs_facts_third_batch():
     assert "dondozo" not in t["p1"].last_item
     t = run(START + "|-enditem|p1a: Fishy|Sitrus Berry|[eat]\n|-item|p1a: Fishy|Sitrus Berry|[from] ability: Harvest")
     assert "dondozo" not in t["p1"].last_item
-    t = run(START + "|-heal|p1a: Fishy|503/503|[from] move: Lunar Dance\n|move|p1a: Fishy|Body Press|p2a: Bob")
-    assert t["p1"].pp_reset["dondozo"]["bodypress"] == 1
+    t = run(START + "|move|p1a: Fishy|Spite|p2a: Bob\n|-activate|p2a: Bob|move: Spite|Earthquake|4\n"
+            "|-heal|p2a: Bob|100/100|[from] move: Lunar Dance")  # fmt: skip
+    assert "gliscor" not in t["p2"].pp_taken  # (Lunar Dance's PP restore: poke-env's, S84)
     t = run(START + "|move|p2a: Bob|Earthquake|p1a: Fishy\n|-enditem|p1a: Fishy|Sitrus Berry|[eat]\n|upkeep\n|turn|2")
     assert t["p1"].cud == 1
     t = run(START + "|move|p2a: Bob|Simple Beam|p1a: Fishy\n|-ability|p1a: Fishy|Simple|[from] move: Simple Beam")
@@ -555,12 +556,26 @@ def test_a_broken_illusion_keeps_its_volatiles():
         b.parse_message(line.split("|"))
     assert b.opponent_active_pokemon.species == "zoroarkhisui"
     assert Effect.SALT_CURE in b.opponent_active_pokemon.effects
+    # (a display typechange -- the disguise's apparent types, [silent] -- is not the Zoroark's:
+    # S83)
+    b = Battle("battle-gen9ou-4", "us", logging.getLogger("t"), gen=9)
+    b.player_role = "p1"
+    for line in ["|switch|p1a: Garganacl|Garganacl|100/100", "|switch|p2a: Hatterene|Hatterene, F|100/100",
+                 "|turn|1", "|-terastallize|p2a: Hatterene|Water", "|switch|p2a: Slowking|Slowking|100/100",
+                 "|turn|2", "|switch|p2a: Hatterene|Hatterene, F|100/100",
+                 "|-start|p2a: Hatterene|typechange|Water|[silent]", "|turn|3",
+                 "|move|p1a: Garganacl|Salt Cure|p2a: Hatterene", "|-start|p2a: Hatterene|Salt Cure",
+                 "|replace|p2a: Zoroark|Zoroark-Hisui, M", "|-end|p2a: Zoroark|Illusion"]:  # fmt: skip
+        b.parse_message(line.split("|"))
+    effects = b.opponent_active_pokemon.effects
+    assert Effect.SALT_CURE in effects and Effect.TYPECHANGE not in effects
 
     # live: our Zoroark switched in as the disguise, a Sticky Web's drop on it, the request's
     # active the Zoroark -- the drop is the Zoroark's (S68)
     def mon(ident, details, active):
+        ab = "illusion" if details.startswith("Zoroark") else "levitate"
         return {"ident": ident, "details": details, "condition": "100/100", "active": active,
-                "moves": ["nightdaze"], "baseAbility": "illusion", "item": "", "ability": "illusion",
+                "moves": ["nightdaze"], "baseAbility": ab, "item": "", "ability": ab,
                 "stats": {"atk": 1, "def": 1, "spa": 1, "spd": 1, "spe": 1}, "teraType": "Dark",
                 "terastallized": ""}  # fmt: skip
 
@@ -587,7 +602,8 @@ def test_a_broken_illusion_keeps_its_volatiles():
                                             "disabled": False}]}], "side": side(True), "rqid": 1})  # fmt: skip
     assert b.active_pokemon.species == "zoroarkhisui" and b.active_pokemon.boosts["atk"] == -1
     # (later turns: the request made the Zoroark the active, the log names the disguise -- its
-    # stage changes are the Zoroark's, and stay through the Illusion's end: S81, S82)
+    # stage changes are the Zoroark's -- poke-env's own get_pokemon -- and stay through the
+    # Illusion's end: S81)
     def req(r):
         return {"active": [{"moves": [{"move": "Night Daze", "id": "nightdaze", "pp": 16, "maxpp": 16,
                                        "disabled": False}]}], "side": side(True), "rqid": r}  # fmt: skip
@@ -602,6 +618,26 @@ def test_a_broken_illusion_keeps_its_volatiles():
     b.parse_request(req(3))
     assert b.active_pokemon.species == "zoroarkhisui"
     assert (b.active_pokemon.boosts["atk"], b.active_pokemon.boosts["spd"]) == (-1, -1)
+    # (live, our Zoroark switched in as a Pressure mon: its max HP the Zoroark's -- poke-env
+    # switches the Zoroark in, a hit at it takes 1 PP: S86)
+    def mon2(ident, details, hp, active, ability):
+        return {**mon(ident, details, active), "condition": hp, "baseAbility": ability, "ability": ability}
+
+    b = Battle("battle-gen9ou-7", "us", logging.getLogger("t"), gen=9)
+    b.player_role = "p1"
+    team = lambda z: {"name": "us", "id": "p1", "pokemon": [  # noqa: E731
+        mon2("p1: Clodsire", "Clodsire, M", "464/464", not z, "unaware"),
+        mon2("p1: Corviknight", "Corviknight, F", "399/399", False, "pressure"),
+        mon2("p1: Zoroark", "Zoroark-Hisui, M", "251/251", z, "illusion")]}
+    b.parse_request({"side": team(False), "rqid": 1})
+    for line in ["|switch|p1a: Clodsire|Clodsire, M|464/464", "|switch|p2a: Azumarill|Azumarill, F|100/100",
+                 "|turn|1", "|switch|p1a: Corviknight|Corviknight, F|251/251",
+                 "|move|p2a: Azumarill|Liquidation|p1a: Corviknight", "|-damage|p1a: Corviknight|118/251"]:  # fmt: skip
+        b.parse_message(line.split("|"))
+    assert b.active_pokemon.species == "zoroarkhisui" and b.active_pokemon.current_hp == 118
+    mv = b.opponent_active_pokemon.moves["liquidation"]
+    assert mv.max_pp - mv.current_pp == 1
+    assert b._replay_data[-3][2] == "p1a: Corviknight"  # (the log as shown: the timers' disguise)
 
 def test_a_temporary_forme_ends_with_its_switch_out():
     """S66: Meloetta-Pirouette (-formechange) switched out and back in as Aria kept Pirouette's
@@ -626,6 +662,41 @@ def test_a_temporary_forme_ends_with_its_switch_out():
     assert PokemonType.PSYCHIC in mel.types and PokemonType.FIGHTING not in mel.types
     palafin = next(m for m in b.opponent_team.values() if m.species.startswith("palafin"))
     assert palafin.base_stats["atk"] == 160  # (Hero's, kept)
+
+
+def test_lunar_dance_and_skill_swap_pp():
+    """S84: Lunar Dance restores the PP (poke-env's count -- Pressure's 2 included after; the
+    timers' 1 per use read 1 PP too many). S85: Skill Swap's [of] mon's own ability is the one the
+    user got -- a Pressure announced after it was taken as the [of] mon's own: 2 PP for every
+    move at it after the swap back."""
+    import logging
+
+    from poke_env.battle import Battle
+
+    import alpha_poke.agents.engine_state  # noqa: F401 (the fixes)
+
+    b = Battle("battle-gen9ou-5", "us", logging.getLogger("t"), gen=9)
+    b.player_role = "p1"
+    for line in ["|switch|p1a: Diancie|Diancie|100/100", "|switch|p2a: Kingambit|Kingambit, F|100/100",
+                 "|-ability|p2a: Kingambit|Pressure", "|turn|1", "|move|p1a: Diancie|Earth Power|p2a: Kingambit",
+                 "|-heal|p1a: Diancie|100/100|[from] move: Lunar Dance",
+                 "|move|p1a: Diancie|Earth Power|p2a: Kingambit"]:  # fmt: skip
+        b.parse_message(line.split("|"))
+    mv = b.active_pokemon.moves["earthpower"]
+    assert mv.max_pp - mv.current_pp == 2
+    b = Battle("battle-gen9ou-6", "us", logging.getLogger("t"), gen=9)
+    b.player_role = "p1"
+    for line in ["|switch|p1a: Deoxys|Deoxys-Speed|100/100", "|switch|p2a: Skarmory|Skarmory, F|100/100",
+                 "|-ability|p1a: Deoxys|Pressure", "|turn|1",
+                 "|-activate|p1a: Deoxys|Skill Swap|Sturdy|Pressure|[of] p2a: Skarmory",
+                 "|-ability|p2a: Skarmory|Pressure",
+                 "|-activate|p1a: Deoxys|Skill Swap|Pressure|Sturdy|[of] p2a: Skarmory",
+                 "|-ability|p1a: Deoxys|Pressure", "|switch|p2a: Heatran|Heatran, M|100/100",
+                 "|switch|p2a: Skarmory|Skarmory, F|100/100", "|move|p1a: Deoxys|Taunt|p2a: Skarmory"]:  # fmt: skip
+        b.parse_message(line.split("|"))
+    assert b.opponent_active_pokemon.ability == "sturdy"
+    mv = b.active_pokemon.moves["taunt"]
+    assert mv.max_pp - mv.current_pp == 1
 
 def test_the_logs_facts_fourth_batch():
     """2026-10-23 (state-construction differential): Eerie Spell's PP; Court Change swaps the
@@ -763,3 +834,7 @@ def test_the_logs_facts_sixth_batch():
     t = run(START + "|move|p2a: Bob|Protect|p2a: Bob\n|-singleturn|p2a: Bob|Protect\n"
             "|move|p1a: Fishy|Hyperspace Fury|p2a: Bob\n|-activate|p2a: Bob|move: Hyperspace Fury|[broken]")  # fmt: skip
     assert t["p2"].protected_move == "" and not t["p2"].protected
+    # (a switch-in's Wind Rider after the turn's end is no absorbed move of the foe's: S87)
+    t = run(START + "|move|p1a: Fishy|Whirlwind|p2a: Bob\n|drag|p2a: Rob|Corviknight, M|100/100\n|upkeep\n"
+            "|switch|p2a: Bram|Brambleghast, F|100/100\n|-ability|p2a: Bram|Wind Rider|boost\n|-boost|p2a: Bram|atk|1\n|turn|2")  # fmt: skip
+    assert not t["p1"].last_failed

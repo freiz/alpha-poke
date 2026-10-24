@@ -183,7 +183,6 @@ class SideTimers:
     illusion_boosts: dict = field(default_factory=dict)
     illusion_last: str = ""  # a broken Illusion's last move while disguised (its last used one)
     moves_by_nick: dict = field(default_factory=dict)  # nickname -> Counter of the moves its line used
-    pp_reset: dict = field(default_factory=dict)  # species id -> its uses since Lunar Dance restored its PP
     consecutive: int = 0  # the same move used again in a row (the Metronome item's count)
     ability_off: bool = False  # the active's ability swapped / suppressed this time in
     # the active came in this turn (1) or last turn (2: its first turn out), no move since (0:
@@ -268,7 +267,7 @@ class SideTimers:
     def rekey(self, old: str, new: str) -> None:
         """A mon's species key changed (a switch line's new details): its records follow."""
         for d in (self.status, self.sleep, self.times_attacked, self.stellar_moves, self.last_item,
-                  self.pp_taken, self.pp_reset):  # fmt: skip
+                  self.pp_taken):  # fmt: skip
             if old in d:
                 d[new] = d.pop(old)
         for st in (self.revived, self.no_regen, self.used_once):
@@ -312,6 +311,7 @@ def _feed_one(sides: dict, p: list[str]) -> None:
     if tag == "upkeep":  # end of turn
         for st in sides.values():
             st.upkept = True
+            st.just_moved = ""  # (no move's effects after the turn's end: a switch-in's Wind Rider -- S87)
             if st.status.get(st.active) == "tox":
                 st.toxic += 1
             st.protect = st.protect + 1 if st.protected else 0
@@ -589,8 +589,6 @@ def _feed_one(sides: dict, p: list[str]) -> None:
         if not any(x.startswith("[from]") and "lockedmove" not in x for x in p[4:]):
             st.stint["moves"].append(mv)  # (this time in's moves: a disguised Illusion's are its own)
             st.moves_by_nick.setdefault(nick, collections.Counter())[mv] += 1
-            if sp in st.pp_reset:
-                st.pp_reset[sp][mv] += 1
         st.changed_now = False
         st.destinybond = False
         st.fresh = 0
@@ -743,9 +741,9 @@ def _feed_one(sides: dict, p: list[str]) -> None:
     elif tag == "-heal" and "[from] move: Revival Blessing" in p:
         st.revived.add(sp)  # (back from a faint: no longer terastallized -- Showdown's)
     elif tag == "-heal" and "[from] move: Lunar Dance" in p:
-        # (Gen 9's Lunar Dance restores the PP too: its uses counted afresh -- 2026-10-23, the
-        # state-construction differential)
-        st.pp_reset[sp] = collections.Counter()
+        # (Gen 9's Lunar Dance restores the PP too -- poke-env's count restored, agents/
+        # poke_env_fixes.py; Spite's taken PP back as well: S84)
+        st.pp_taken.pop(sp, None)
     elif tag == "-singlemove" and len(p) > 3 and to_id(p[3]) == "destinybond":
         st.destinybond = True  # (until its next move: Gen 7+ keeps it past the turn's end)
     elif tag == "-start" and len(p) > 3:

@@ -257,7 +257,9 @@ def foe_diffs(built: pe.Side, truth: pe.Side, seen: set[str], oracle: bool = Fal
             for mid in set(bmv) & set(tmv):
                 if bmv[mid] != tmv[mid]:
                     out.append(("foe:pp", f"{sp} {mid} {bmv[mid]} vs {tmv[mid]}"))
-    if _sp(_active(built)) != _sp(_active(truth)):
+    if _sp(_active(built)) != _sp(_active(truth)) and not (
+            _sp(_active(truth)).startswith("zoroark") and _active(truth).hp <= 0 and _active(built).hp <= 0):
+        # (a Zoroark fainting in disguise: the log's faint names the disguise -- hidden)
         out.append(("foe:active", f"{_sp(_active(built))} vs {_sp(_active(truth))}"))
     bm, tm = _mons(built), _mons(truth)
     if _tera_used(built) != _tera_used(truth):
