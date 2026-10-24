@@ -177,6 +177,8 @@ def _side_common(who: str, built: pe.Side, truth: pe.Side) -> list[tuple[str, st
     out = []
     for k in CONDITIONS:
         b, t = getattr(built.side_conditions, k), getattr(truth.side_conditions, k)
+        if k in ("toxic_count", "protect") and _active(truth).hp <= 0:
+            continue  # (the active's own counts: a fainted one's go with it)
         if b != t:
             out.append((f"{who}:condition:{k}", f"{b} vs {t}"))
     if _active(truth).hp <= 0:

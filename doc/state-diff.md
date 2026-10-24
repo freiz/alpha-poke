@@ -19,6 +19,8 @@
 | 10-23 | 8 组队伍各 100 局 | 约 5.8 万个决策点 | 约 1,100 → 约 650 处 |
 | 10-23 | 3,000 局 OU + 40 组 fixtures + 30 组 big，共 8,500 局 | 约 51 万个决策点 | 约 7,000 → 约 1,400 处 |
 | 10-23 | 600 局 OU，按决策点统计（与 v7.3 代码对比） | 45,219 个决策点 | 42.6% → 0.17% |
+| 10-23 | 百万级首轮：8,000 局 OU（1 万对新配对）+ 40 组 fixtures + 30 组 big，换新种子，共 14,400 局 | 1,085,812 个决策点 | 有差异 0.23%（核心字段 0.08%）；查出一处实战会崩溃的问题（S43） |
+| 10-23 | 百万级第二轮（S43–S51 之后） | 1,085,812 个决策点 | 有差异 0.22%（核心字段 0.07%）；查出 S48 引入的我方回归（S52） |
 
 ## 方法
 
@@ -84,6 +86,23 @@
 | S40 | 变身后 PP 用尽，request 只给 Struggle：复制招式丢失；讲究锁定的标记也要保留 | 实 | 回退到目标的招式和 poke-env 记的 PP，带锁定标记 | 基线 |
 | S41 | 我方的太晶属性 / 标记被伪装上场的 `tera:` 写到了别的宝可梦 | 实 | 以 request 为准 | 基线 |
 | S42 | Synchronize 等特性自己的 `-fail` 被算成出招失败 | 两 | 跳过紧跟特性 `-activate` 的 `-fail` | `test_the_logs_facts_fourth_batch` |
+| S43 | **我方 pivot、对方招式待执行时，`_with_saved_move` 按"倒数第 6 个字段"写入对方暂存的招式；一侧末尾的可选字段（`tera_used`、`future_doom`）出现时位置漂移，招式名写进布尔字段，引擎解析时 panic（实战会让这一步搜索崩溃）** | 两 | 按引擎反序列化的固定位置（第 24 个字段） | `test_a_saved_move_with_the_sides_optional_fields` |
+| S44 | Doom Desire 从未记为待命中的延迟攻击 | 两 | 与 Future Sight 一起记，带引擎的 `future_doom` | `test_the_logs_facts_fifth_batch` |
+| S45 | 本回合守住成功后，回合中途的决策（复活选择、pivot）里 Protect 计数还没加 | 两 | 当场计入（Showdown 的 stall 计数） | 同上 |
+| S46 | 上一招应是宝可梦自己选的招（Metronome 调用出的蓄力招结束后是 Metronome），poke-env 找不到 | 两 | 计时器记自己选的招，poke-env 没有时用它 | 同上 |
+| S47 | Trick 换来的讲究道具不锁定换来之前用的招（L228），我们按"道具是讲究 + 上一招"当成锁定 | 实 | 记"出招后才拿到道具" | 同上 |
+| S48 | 计时器的键随永久形态变化（`detailschange`）改变，构造时却用 poke-env 不变的种族名查：Eiscue-Noice 用掉的道具、睡眠计数、异常状态都会查不到 | 两 | 键始终跟 poke-env 的种族名（只有换入行的新 details 才改，并把记录一起搬过去）；当前形态另记 | `test_formes_from_the_log` |
+| S49 | Imprison 的 volatile 从未传 | 两 | 加入 | `test_the_logs_facts_fifth_batch` |
+| S50 | 第 1 回合的能力变化标记（L222）按当前能力等级判断，被 Haze 等清掉后就丢了 | 两 | 按日志里第 1 回合是否发生过 | 同上 |
+| S51 | Sleep Clause 挡下催眠招要算失败；传过来的替身挡下变化招不算；Double Shock / Burn Up 没有对应属性时不算，Shed Tail 体力不足算 | 两 | 加入 | 同上 |
+
+| S52 | S48 只照顾了对方：我方宝可梦的种族名随 request 的 details 变（Mimikyu-Busted），计时器的键不变，查不到用掉的道具、睡眠计数 | 两 | 计时器记"形态名 → 键"的别名（`SideTimers.k`），所有按种族查计时器的地方都经过它 | 基线 |
+| S53 | Metronome 调出的蓄力招在第二回合锁定执行，Showdown 把它写进 lastMove；它不是自己的招，上一招应为 none | 两 | 记最后一次锁定执行的招 | 基线 |
+| S54 | 禁用规则的先后：Encore 的标记不能盖过 Taunt / Assault Vest 这类引擎自己推出的（差分框架的顺序），蓄力 / 休息 / PP 用尽 / Uproar 只在没有其他标记理由时才不写 | 实 | `derived_disable` 按这个顺序 | `test_out_of_pp_and_encore_flags` |
+
+已知、待查：2 局里我方后备宝可梦每招都按 Pressure 多扣了 1 PP，日志里没有 Pressure。
+
+已知、暂不修：伪装成 Pressure 宝可梦的 Zoroark 挨打时，poke-env 按 Pressure 多扣 1 PP（识破后才能知道，极少见）。
 
 差分之前的复查轮（10-22 至 10-23，第六到第十轮）修的 Disable、延长道具、Sleep Talk 的 PP、变身链路、连续 pivot 的顺序等，见各自的提交和 `tests/test_engine_state.py`、`tests/test_transform.py`。
 

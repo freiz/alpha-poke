@@ -425,7 +425,7 @@ def _base_ability(mon, ability: str, tm: SideTimers | None) -> str:
     (Dauntless Shield; the patched engine then raises Defense no more, doc/engine-diff.md L18)."""
     if (tm is not None and ability in ("dauntlessshield", "battlebond", "supersweetsyrup",
                                                   "intrepidsword")
-            and to_id(mon.species) in tm.used_once):  # fmt: skip
+            and tm.k(to_id(mon.species)) in tm.used_once):  # fmt: skip
         return "none"
     return ability
 
@@ -473,7 +473,7 @@ def _formes(team: dict, mons: list, built: list, tm: SideTimers) -> list:
     out = list(built)
     for j, (m, p) in enumerate(zip(mons, built, strict=True)):
         n = nick.get(id(m))
-        f = tm.names.get(n) if n is not None else None
+        f = (tm.formes.get(n) or tm.names.get(n)) if n is not None else None
         if tm.temp_forme and n == tm.temp_forme[0] and m.active and not m.fainted:
             f = tm.temp_forme[1]
         if p.id.lower() == "greninja" and str(p.ability).lower() == "battlebond":
@@ -506,25 +506,25 @@ def derived_disable(move: str, *, taunt: bool, healblock: bool, throatchop: bool
     Vest disable stayed after the vest was knocked off)."""
     if lock and lock != move:
         return False  # (a lock's flags stay through a recharge: the engine's after it)
-    if disabled == move or encore:  # (Encore keeps the others out by their flags too)
+    if disabled == move:
         return False
-    if (charging and move != charging) or recharge or pp <= 0 or (uproar and move != "uproar"):
-        return True  # (Uproar: the engine's lock, L224)
     cat, flags = _move_kinds().get(move, ("", set()))
-    return bool(
-        (taunt and cat == "Status")
-        or (healblock and "heal" in flags)
-        or (throatchop and "sound" in flags)
-        or (item == "assaultvest" and cat == "Status")
-        or (move in ("gigatonhammer", "bloodmoon") and last_move == move)
-    )
+    if (taunt and cat == "Status") or (healblock and "heal" in flags) \
+            or (throatchop and "sound" in flags) or (item == "assaultvest" and cat == "Status") \
+            or (move in ("gigatonhammer", "bloodmoon") and last_move == move):
+        return True  # (the differential's own: these before an Encore's flag)
+    if encore:  # (Encore keeps the others out by their flags too)
+        return False
+    # (a charge's second turn, a recharge, out of PP, an Uproar: the engine's own too -- with no
+    # flag reason above)
+    return bool((charging and move != charging) or recharge or pp <= 0 or (uproar and move != "uproar"))
 
 
 def _sleep(mon, tm: SideTimers | None) -> dict:
     """rest_turns / sleep_turns of an asleep mon (timers), else nothing."""
     if tm is None or STATUS.get(mon.status) != "sleep":
         return {}
-    rest, sleep = tm.rest_sleep(to_id(mon.species))
+    rest, sleep = tm.rest_sleep(tm.k(to_id(mon.species)))
     return {"rest_turns": rest, "sleep_turns": sleep}
 
 
@@ -545,7 +545,8 @@ def _our_mon(
     if mon.transformed:  # its own moves (the request's are the copied ones: _as_transformed)
         available_moves = req_pp = None
     last = next((mid for mid, mv in mon.moves.items() if mv.is_last_used), "")
-    lock = last if (mon.item in CHOICE_ITEMS or mon.ability == "gorillatactics") else ""
+    lock = last if ((mon.item in CHOICE_ITEMS and not (tm is not None and tm.item_new))
+                    or mon.ability == "gorillatactics") else ""  # fmt: skip
     if tm is not None and tm.locked and mon.active:
         lock = tm.locked[0]  # (a locking move's: its flags first -- L179; a Taunt on top derives none)
     own = _own_moves(mon)
@@ -554,7 +555,7 @@ def _our_mon(
     listed = [to_id(x) for x in ((getattr(mon, "_last_request", None) or {}).get("moves") or [])]
     if listed and not mon.transformed and all(x in own for x in listed):
         own = {x: own[x] for x in listed}
-    reset = tm.pp_reset.get(to_id(mon.species)) if tm is not None else None
+    reset = tm.pp_reset.get(tm.k(to_id(mon.species))) if tm is not None else None
     for mid, mv in list(own.items())[:4]:
         pp = max(0, mv.current_pp + (pp_adj or {}).get(mid, 0))
         if reset is not None:  # (Lunar Dance's restore: its uses since)
@@ -607,17 +608,17 @@ def _counted(mon, tm: SideTimers | None) -> dict:
     """The engine's times attacked (Rage Fist) and gender (0 none, 1 male, 2 female; Attract,
     Cute Charm) of a mon (doc/engine-diff.md L163), a Stellar tera's boosted types (L175)."""
     gender = {"MALE": 1, "FEMALE": 2}.get(getattr(getattr(mon, "gender", None), "name", ""), 0)
-    hits = tm.times_attacked.get(to_id(mon.species), 0) if tm is not None else 0
+    hits = tm.times_attacked.get(tm.k(to_id(mon.species)), 0) if tm is not None else 0
     # (L175: a Stellar tera's types already boosted: its damaging moves' since; Tera Blast's Stellar)
     boosted = set()
-    for m in (tm.stellar_moves.get(to_id(mon.species), ()) if tm is not None else ()):
+    for m in (tm.stellar_moves.get(tm.k(to_id(mon.species)), ()) if tm is not None else ()):
         d = _MOVES.get(m)
         if d and d.get("category") != "Status":
             boosted.add("stellar" if m == "terablast" else d["type"].lower())
     out = {"times_attacked": min(hits, 255), "gender": gender, "stellar_boosted": sorted(boosted)}
     # its last item used up / eaten (Harvest, Recycle, Cud Chew: L57 / L178 / L204; 2026-10-23,
     # the state-construction differential: never passed -- poke-env keeps no lastItem)
-    last = tm.last_item.get(to_id(mon.species)) if tm is not None else None
+    last = tm.last_item.get(tm.k(to_id(mon.species))) if tm is not None else None
     if last and engine_item(last):
         out["last_item"] = last
     return out
@@ -625,7 +626,7 @@ def _counted(mon, tm: SideTimers | None) -> dict:
 
 def _spited(tm: SideTimers | None, mon, mid: str) -> int:
     """The PP Spite took of ``mon``'s move (the timers': poke-env does not track it)."""
-    return (tm.pp_taken.get(to_id(mon.species)) or {}).get(mid, 0) if tm is not None else 0
+    return (tm.pp_taken.get(tm.k(to_id(mon.species))) or {}).get(mid, 0) if tm is not None else 0
 
 
 def _max_pp(mid: str) -> int:
@@ -706,7 +707,7 @@ def _their_mon(mon, s: SampledSet, tm: SideTimers | None = None, disabled: str |
         # poke-env adds it only when it knew the ability (2026-10-23, the state-construction
         # differential: this world's Regenerator healed nothing)
         if s.ability == "regenerator" and not mon.active and mon.ability != "regenerator" and not (
-                tm is not None and to_id(mon.species) in tm.no_regen):  # fmt: skip
+                tm is not None and tm.k(to_id(mon.species)) in tm.no_regen):  # fmt: skip
             hp = min(maxhp, hp + maxhp // 3)
     return pe.Pokemon(
         id=mon.species,
@@ -727,8 +728,8 @@ def _their_mon(mon, s: SampledSet, tm: SideTimers | None = None, disabled: str |
         weight_kg=_weight(mon),
         moves=[pe.Move(id=m, pp=max(0, min(_max_pp(m), _pp(mon, m) + pp_adj.get(m, 0))
                                     - _spited(tm, mon, m))
-                       if not (tm and to_id(mon.species) in tm.pp_reset)
-                       else max(0, _max_pp(m) - tm.pp_reset[to_id(mon.species)][m]),
+                       if not (tm and tm.k(to_id(mon.species)) in tm.pp_reset)
+                       else max(0, _max_pp(m) - tm.pp_reset[tm.k(to_id(mon.species))][m]),
                        disabled=m == disabled) for m in s.moves[:4]],  # fmt: skip
         terastallized=mon.is_terastallized,
         tera_type=s.tera,
@@ -826,6 +827,11 @@ def _last_move(mon, engine_mon, avail: set[str] | None = None, index: int | None
     idx = next(
         (ids.index(mid) for mid, mv in mon.moves.items() if mv.is_last_used and mid in ids), None
     )
+    if tm is not None and tm.locked_exec and tm.locked_exec not in ids:
+        # (a called charge's second turn -- Metronome's Meteor Beam, run locked: Showdown's
+        # moveUsed sets lastMove to it, no move of its own: none; 2026-10-23)
+        vol.discard("encore")
+        return {}, vol
     if idx is None and tm is not None and tm.illusion_last in ids:
         # (a broken Illusion: its last move disguised -- poke-env gave it to the disguise)
         return {"last_used_move": f"move:{ids.index(tm.illusion_last)}"}, vol
@@ -864,11 +870,14 @@ def _pending_move(mon: pe.Pokemon, last: dict, vol: set[str], weights: dict | No
 
 
 def _with_saved_move(st: pe.State, move: str) -> pe.State:
-    """``st`` with side two's saved move (switch_out_move_second_saved_move: the sixth field from
-    the end of a side's string, poke-engine's State serialization) set to ``move``."""
+    """``st`` with side two's saved move (switch_out_move_second_saved_move: the 24th field of a
+    side's string -- poke-engine's Side::deserialize, split[23]) set to ``move``. (It was the
+    sixth from the end: the optional trailing fields -- tera_used, future_doom -- shifted it, the
+    move went into a bool field and the engine panicked; 2026-10-23, the state-construction
+    differential at a million decisions)"""
     parts = st.to_string().split("/")
     fields = parts[1].split("=")
-    fields[-6] = move.upper()
+    fields[23] = move.upper()
     parts[1] = "=".join(fields)
     out = pe.State.from_string("/".join(parts))
     assert out.side_two.switch_out_move_second_saved_move.lower() == move, (move, fields[-6:])
@@ -880,7 +889,8 @@ def _counts(tm: SideTimers, active) -> tuple[int, int]:
     # Showdown's toxic stage stops at 15 (the patched engine's count too, L181: its damage min(count +
     # 1, 15) / 16)
     toxic = min(tm.toxic, 15) if active is not None and STATUS.get(active.status) == "toxic" else 0
-    return toxic, tm.protect
+    # (a protection this turn counts at once -- Showdown's stall counter: a mid-turn decision)
+    return toxic, tm.protect + (1 if tm.protected else 0)
 
 
 def _timed(tm: SideTimers, active, mons: list, engine_mons: list, vol: set[str],
@@ -892,14 +902,16 @@ def _timed(tm: SideTimers, active, mons: list, engine_mons: list, vol: set[str],
     ``disable``: Disable's, its move's slot * 8 + its count)."""
     out = {}
     if tm.wish is not None:
-        idx = next((i for i, m in enumerate(mons) if to_id(m.species) == tm.wish[1]),
+        idx = next((i for i, m in enumerate(mons) if tm.k(to_id(m.species)) == tm.wish[1]),
                    next((i for i, m in enumerate(mons) if m is active), None))  # fmt: skip
         if idx is not None and idx < len(engine_mons):
             out["wish"] = (tm.wish[0], engine_mons[idx].maxhp // 2)
     if tm.future is not None:
-        idx = next((i for i, m in enumerate(mons) if to_id(m.species) == tm.future[1]), None)
+        idx = next((i for i, m in enumerate(mons) if tm.k(to_id(m.species)) == tm.future[1]), None)
         if idx is not None:
             out["future_sight"] = (tm.future[0], pe.PokemonIndex(str(idx)))
+            if tm.future_doom:
+                out["future_doom"] = True
     dur = {}
     # (the patched engine ends heal block, magnet rise and throat chop too; a partial trap at its
     # fifth end of turn: at 4 it ends at the next, right for Showdown's 5 and, at 4 or 5, its 6)
@@ -930,7 +942,7 @@ def _passed_sub(tm: SideTimers, mons: list, built: list) -> int:
     Showdown's; Baton Pass: its passer's, about that), 0 without one."""
     if not tm.sub_passed:
         return 0
-    p = next((b for m, b in zip(mons, built, strict=True) if to_id(m.species) == tm.sub_passed), None)
+    p = next((b for m, b in zip(mons, built, strict=True) if tm.k(to_id(m.species)) == tm.sub_passed), None)
     return p.maxhp // 4 if p is not None else 0
 
 
@@ -1142,11 +1154,13 @@ def build_state(
             vol.add("protean")
         # (L222: turn 1's stage changes are its leads' entries -- Intimidate, Intrepid Sword, ...:
         # Showdown's statsLoweredThisTurn / statsRaisedThisTurn, not reset as turn 1 starts)
-        if mon is not None and turn <= 1:
-            if any(v < 0 for v in mon.boosts.values()):
+        if mon is not None and turn <= 1:  # (the log's turn-1 changes, not the boosts now)
+            if tm.lowered_t1 or any(v < 0 for v in mon.boosts.values()):
                 vol.add("statslowered")
-            if any(v > 0 for v in mon.boosts.values()):
+            if tm.raised_t1 or any(v > 0 for v in mon.boosts.values()):
                 vol.add("statsraised")
+        if tm.imprison:
+            vol.add("imprison")
     # (a type change Showdown keeps no volatile for -- a forme's, Meloetta-Pirouette's: its types
     # not its species' and not terastallized -- the engine's typechange, as the differential's
     # states have it: its switch-out gives the species' back)
@@ -1232,7 +1246,7 @@ def build_state(
         # an Illusion in disguise (the engine's volatile: a Transform into it fails, L227): ours
         # when the log shows our active as another species; theirs in a world that drew the
         # Zoroark (2026-10-23, the state-construction differential: never passed)
-        if mon is active and mon is not None and tm.active and tm.active != to_id(mon.species) \
+        if mon is active and mon is not None and tm.active and tm.active != tm.k(to_id(mon.species)) \
                 and to_id(mon.species).startswith("zoroark"):
             vol.add("illusion")
         if mon is opp_active and zi is not None:
@@ -1306,7 +1320,7 @@ def build_state(
     # the side's used Terastallization its own marker, L185; 2026-10-23, the differential)
     for ms, src, tm in ((our_mons, ours, tm_us), (their_mons, theirs, tm_them)):
         for j, (m, p) in enumerate(zip(src, ms, strict=True)):
-            if p.terastallized and to_id(m.species) in tm.revived:
+            if p.terastallized and tm.k(to_id(m.species)) in tm.revived:
                 ms[j] = _with(p, terastallized=False)
     # (L177: a side's Terastallization used by a mon that fainted since: the engine reads it off
     # its mons, can_use_tera)

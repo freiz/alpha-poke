@@ -803,3 +803,19 @@ def test_out_of_pp_and_encore_flags(belief):
     kw = dict(taunt=False, healblock=False, throatchop=False, item="", last_move="")
     assert derived_disable("recover", **kw, pp=0)
     assert not derived_disable("bodypress", **kw, charging="meteorbeam", encore=True)
+
+
+def test_a_saved_move_with_the_sides_optional_fields():
+    """2026-10-23 (state-construction differential, a million decisions): the foe's waiting move
+    was written as the sixth field from the end of its side's string -- with the optional trailing
+    ones (tera_used, future_doom) present it went into a bool field and the engine panicked."""
+    import poke_engine as pe
+
+    from alpha_poke.agents.engine_state import _with_saved_move
+
+    s2 = pe.Side(pokemon=[pe.Pokemon(id="gholdengo", hp=300, maxhp=300, moves=[pe.Move(id="shadowball", pp=8)])],
+                 tera_used=True, future_sight=(2, pe.PokemonIndex("0")), future_doom=True)  # fmt: skip
+    st = pe.State(side_one=pe.Side(pokemon=[pe.Pokemon(id="garchomp", hp=300, maxhp=300)]), side_two=s2)
+    out = _with_saved_move(st, "shadowball")
+    assert out.side_two.switch_out_move_second_saved_move.lower() == "shadowball"
+    assert out.side_two.tera_used

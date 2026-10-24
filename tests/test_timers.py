@@ -464,7 +464,12 @@ def test_formes_from_the_log():
     t = run(START + "|-formechange|p2a: Bob|Gliscor-Fake|[msg]")
     assert t["p2"].temp_forme == ("Bob", "gliscorfake")
     t = run(START + "|detailschange|p2a: Bob|Ogerpon-Wellspring-Tera, F, tera:Water")
-    assert t["p2"].names["Bob"] == "ogerponwellspringtera"
+    assert t["p2"].formes["Bob"] == "ogerponwellspringtera"
+    assert t["p2"].names["Bob"] == "gliscor"  # (the key stays: poke-env's species does)
+    # (a record kept under the key is found after the forme change: Eiscue-Noice's eaten berry)
+    t = run(START + "|-enditem|p2a: Bob|Sitrus Berry|[eat]\n|detailschange|p2a: Bob|Gliscor-Fake, F\n"
+            "|-status|p2a: Bob|slp")  # fmt: skip
+    assert t["p2"].last_item["gliscor"] == "sitrusberry" and t["p2"].status["gliscor"] == "slp"
 
 
 def test_the_logs_facts_third_batch():
@@ -549,3 +554,37 @@ def test_the_logs_facts_fourth_batch():
     t = run(START + "|move|p2a: Bob|Hyper Voice|p1a: Fishy\n|replace|p2a: Zoroark|Zoroark-Hisui, M\n"
             "|-end|p2a: Zoroark|Illusion")  # fmt: skip
     assert t["p2"].illusion_last == "hypervoice"
+
+
+def test_the_logs_facts_fifth_batch():
+    """2026-10-23 (the million-decision differential): Doom Desire is a pending future attack;
+    a protection this turn counts at once (mid-turn decisions: Showdown's stall counter); the move
+    it chose stays its last (a Metronome-called charge's caller); a Choice item got by Trick after
+    its move locks nothing; Imprison; a turn-1 stage change marks the turn even when undone; the
+    Sleep Clause stopping a sleep move fails it; a status move at a passed Substitute is no
+    failure; Double Shock without its type is no failure, Shed Tail too weak is one."""
+    t = run(START + "|move|p1a: Fishy|Doom Desire|p2a: Bob\n|-start|p1a: Fishy|Doom Desire")
+    assert t["p1"].future == (3, "dondozo") and t["p1"].future_doom
+    t = run(START + "|move|p1a: Fishy|Protect|p1a: Fishy\n|-singleturn|p1a: Fishy|Protect")
+    assert t["p1"].protected and t["p1"].protect == 0  # (_counts adds this turn's: 1)
+    t = run(START + "|move|p1a: Fishy|Metronome|p1a: Fishy\n|move|p1a: Fishy|Meteor Beam||[from] move: Metronome|[still]\n"
+            "|-prepare|p1a: Fishy|Meteor Beam\n|upkeep\n|turn|2\n|move|p1a: Fishy|Meteor Beam|p2a: Bob|[from] lockedmove")  # fmt: skip
+    assert t["p1"].own_last == "metronome"
+    t = run(START + "|move|p1a: Fishy|Trick|p2a: Bob\n|-activate|p1a: Fishy|move: Trick|[of] p2a: Bob\n"
+            "|-item|p1a: Fishy|Choice Band|[from] move: Trick\n|-item|p2a: Bob|Leftovers|[from] move: Trick")  # fmt: skip
+    assert t["p1"].item_new
+    t = run(START + "|move|p1a: Fishy|Imprison|p1a: Fishy\n|-start|p1a: Fishy|move: Imprison")
+    assert t["p1"].imprison
+    t = timers([x.split("|") for x in ["|switch|p1a: Fishy|Dondozo, M|503/503", "|switch|p2a: Bob|Gliscor, F|100/100",
+                                       "|-unboost|p1a: Fishy|atk|1", "|turn|1", "|-clearallboost"]])  # fmt: skip
+    assert t["p1"].lowered_t1
+    t = run(START + "|move|p1a: Fishy|Spore|p2a: Bob\n|-message|Sleep Clause Mod activated.\n|upkeep\n|turn|2")
+    assert t["p1"].last_failed
+    t = run(START + "|move|p2a: Bob|Shed Tail|p2a: Bob\n|-start|p2a: Bob|Substitute|[from] move: Shed Tail\n"
+            "|switch|p2a: Rob|Corviknight, M|100/100|[from] Shed Tail\n|move|p1a: Fishy|Leech Seed||[still]\n"
+            "|-fail|p1a: Fishy\n|upkeep\n|turn|2")  # fmt: skip
+    assert not t["p1"].last_failed
+    t = run(START + "|move|p1a: Fishy|Double Shock||[still]\n|-fail|p1a: Fishy|move: Double Shock\n|upkeep\n|turn|2")
+    assert not t["p1"].last_failed
+    t = run(START + "|move|p1a: Fishy|Shed Tail|p1a: Fishy\n|-fail|p1a: Fishy|move: Shed Tail|[weak]\n|upkeep\n|turn|2")
+    assert t["p1"].last_failed

@@ -25,9 +25,9 @@ sides, in poke-engine's own units (rust/patches/poke-engine-0.0.48, generate_ins
               by Cursed Body (Showdown's duration 4, else 5): the engine's disable duration's
               count (2026-10-23 review: the move alone, without the volatile, was enabled again
               by the engine's next move)
-  names       nickname -> species id: its forme now (a detailschange's too: Ogerpon's tera,
-              Palafin-Hero, Mimikyu-Busted); temp_forme: the active's -formechange forme (until it
-              switches out)
+  names       nickname -> species id as its switch line names it (poke-env's species: the key of
+              every per-mon record); formes: its forme since a detailschange (Ogerpon's tera,
+              Mimikyu-Busted); temp_forme: the active's -formechange forme (until it switches out)
   charging    the two-turn move the active is charging (-prepare; not one fired at once: -anim)
   locked      [its locking move (Outrage, Thrash, Petal Dance, Raging Fury), its uses] until the
               lock's fatigue confusion, a move of another kind, cant or a switch
@@ -94,7 +94,8 @@ LOCKING = ("outrage", "thrash", "petaldance", "ragingfury")
 # the moves whose own -fail Showdown returns NOT_FAIL for (moveLastTurnResult not false: no
 # failure for Stomping Tantrum; data/moves.ts)
 NOT_FAIL = {"allyswitch", "batonpass", "floralhealing", "healpulse", "moonlight", "morningsun",
-            "purify", "shedtail", "shoreup", "swallow", "synthesis", "teatime"}  # fmt: skip
+            "purify", "shoreup", "swallow", "synthesis", "teatime", "doubleshock", "burnup"}  # fmt: skip
+# (not Shed Tail too weak: a failure; Double Shock / Burn Up without their type: null, none)
 # (not Healing Wish / Lunar Dance with no one to switch to: a failure in the differential's states)
 # (not Substitute: its -fail -- one up already, too weak -- is a failed move in the differential's
 # Showdown states, whatever its NOT_FAIL)
@@ -157,6 +158,10 @@ class SideTimers:
     embargo: bool = False  # the active under Embargo (its item does nothing)
     ability_now: str = ""  # the active's ability as a move / ability changed it ("none": suppressed)
     gas_on: bool = False  # the active's Neutralizing Gas is on
+    imprison: bool = False  # the active used Imprison
+    turn1: bool = True  # before turn 2 starts (the leads' entries: L222)
+    raised_t1: bool = False  # a stage went up on turn 1 (Showdown's statsRaisedThisTurn)
+    lowered_t1: bool = False
     gastro: bool = False  # the active's ability suppressed by Gastro Acid
     cud: int = 0  # Cud Chew's counter of the berry the active ate (0: none to eat again)
     last_item: dict = field(default_factory=dict)  # species id -> its last item used up / eaten
@@ -188,6 +193,9 @@ class SideTimers:
     no_regen: set = field(default_factory=set)  # benched species ids that went out so (no heal)
     revived: set = field(default_factory=set)  # species ids Revival Blessing brought back
     own_last: str = ""  # the active's last move this time in, not a Struggle (a lock's move)
+    future_doom: bool = False  # its pending future attack is Doom Desire
+    item_new: bool = False  # the active got its item after its last move (no Choice lock by it)
+    locked_exec: str = ""  # its last move line a locked continuation's (a charge's second turn)
     temp_forme: tuple | None = None  # (the active's nickname, its -formechange forme id)
     charging: str | None = None  # the two-turn move it is charging (-prepare, not fired at once)
     locked: list | None = None  # [the locking move (Outrage, ...), its uses so far]
@@ -206,7 +214,9 @@ class SideTimers:
     stellar_moves: dict = field(default_factory=dict)
     status: dict = field(default_factory=dict)  # species id -> status ('tox', 'slp', ...)
     sleep: dict = field(default_factory=dict)  # species id -> [attempts, rest]
-    names: dict = field(default_factory=dict)  # nickname -> species id
+    names: dict = field(default_factory=dict)  # nickname -> species id (poke-env's: the key)
+    formes: dict = field(default_factory=dict)  # nickname -> its forme since a detailschange
+    alias: dict = field(default_factory=dict)  # a forme's species id -> its records' key (k())
 
     def came_in(self, species: str, gas: bool = False) -> None:
         # (the one going out: its ability swapped / suppressed this time in -- or a Neutralizing
@@ -235,7 +245,8 @@ class SideTimers:
         self.protean = self.item_lost = self.struggled = self.flashfire = False
         self.destinybond = self.roosted = self.truant_next = self.minimized = False
         self.uproar, self.stockpile = None, 0
-        self.embargo = self.sub_on = self.gastro = False
+        self.embargo = self.sub_on = self.gastro = self.imprison = False
+        self.raised_t1 = self.lowered_t1 = False
         self.illusion_last = ""
         self.cud, self.cud_now = 0, False
         self.typechanged = False
@@ -244,6 +255,24 @@ class SideTimers:
         self.illusion_boosts = {}
         self.sub_passed = ""
         self.consecutive, self.own_last = 0, ""
+        self.item_new = False
+        self.locked_exec = ""
+
+    def k(self, species: str) -> str:
+        """The key of a mon's records for a species id poke-env gives (a forme of ours: the
+        request's details follow it)."""
+        return self.alias.get(species, species)
+
+    def rekey(self, old: str, new: str) -> None:
+        """A mon's species key changed (a switch line's new details): its records follow."""
+        for d in (self.status, self.sleep, self.times_attacked, self.stellar_moves, self.last_item,
+                  self.pp_taken, self.pp_reset):  # fmt: skip
+            if old in d:
+                d[new] = d.pop(old)
+        for st in (self.revived, self.no_regen, self.used_once):
+            if old in st:
+                st.discard(old)
+                st.add(new)
 
     def rest_sleep(self, species: str) -> tuple[int, int]:
         """(rest_turns, sleep_turns) of an asleep mon."""
@@ -314,6 +343,7 @@ def _feed_one(sides: dict, p: list[str]) -> None:
         return
     if tag == "turn":
         for st in sides.values():
+            st.turn1 = p[2:3] == ["1"]
             st.fresh = 2 if st.fresh == 1 else 0  # (in last turn: its first turn out now)
             st.acted = False
             st.switched_now = False
@@ -343,6 +373,11 @@ def _feed_one(sides: dict, p: list[str]) -> None:
         for st in sides.values():
             st.fields_elapsed.pop("terrain" if what.endswith("terrain") else what, None)
         return
+    if tag == "-message" and len(p) > 2 and p[2].startswith("Sleep Clause Mod activated"):
+        mover = next((s for s in sides.values() if s.just_moved), None)
+        if mover is not None:
+            _missed(mover)  # (its sleep move stopped by the clause: a failed move)
+        return
     if tag == "-swapsideconditions":  # (Court Change: the conditions and their counts swap)
         a, b = sides["p1"], sides["p2"]
         a.side_elapsed, b.side_elapsed = b.side_elapsed, a.side_elapsed
@@ -368,12 +403,32 @@ def _feed_one(sides: dict, p: list[str]) -> None:
     if tag in ("-boost", "-unboost") and len(p) > 4 and p[4].lstrip("-").isdigit() and sp == st.active:
         b = st.stint["boosts"]
         b[p[3]] = b.get(p[3], 0) + (int(p[4]) if tag == "-boost" else -int(p[4]))
+        if st.turn1 and int(p[4]) > 0:  # (L222's turn-1 marks: a change happened, whatever since)
+            if tag == "-boost":
+                st.raised_t1 = True
+            else:
+                st.lowered_t1 = True
     if tag in ("-clearboost", "-clearallboost", "-clearnegativeboost"):
         for s2 in (sides.values() if tag == "-clearallboost" else [st]):
             s2.stint["boosts"] = {}
     if tag in ("switch", "drag", "replace", "detailschange") and len(p) > 3:
         new = to_id(p[3].split(",")[0])
+        if tag == "detailschange":
+            # (a forme change: the species key stays -- an opponent's poke-env species stays too,
+            # ours follows the request's details: k() maps a forme to the key -- the forme apart;
+            # 2026-10-23, the state-construction differential: the key moved, the last item /
+            # sleep / status kept under it were not found again)
+            st.formes[nick] = new
+            if nick in st.names and new != st.names[nick]:
+                st.alias[new] = st.names[nick]
+            if len(p) > 4 and p[4]:
+                st.hp_shown[nick] = p[4]
+            return
+        old_key = st.names.get(nick)
+        if tag in ("switch", "drag") and old_key and old_key != new:
+            st.rekey(old_key, new)  # (its details changed -- Palafin-Hero: poke-env's species too)
         st.names[nick] = new
+        st.formes.pop(nick, None)
         if tag == "replace":  # an Illusion broken: this time in was the Zoroark's (Illusion)
             st.illusions[st.stint["nick"]] = dict(st.stint)
             for dsp, before in st.stint.get("items", []):  # (the items it used: the Zoroark's)
@@ -387,7 +442,7 @@ def _feed_one(sides: dict, p: list[str]) -> None:
             st.illusion_boosts = dict(st.stint["boosts"])
             st.illusion_last = st.stint["moves"][-1] if st.stint["moves"] else ""
             st.stint = {"nick": nick, "species": new, "hp": None, "moves": [], "boosts": {}}
-        if tag in ("detailschange", "replace"):  # same mon, new form / Illusion broken
+        if tag == "replace":  # the Illusion broken: the Zoroark's now
             for d in (st.status, st.sleep):
                 if sp in d:
                     d[new] = d.pop(sp)
@@ -424,6 +479,8 @@ def _feed_one(sides: dict, p: list[str]) -> None:
         # the engine's species (2026-10-23, the state-construction differential: poke-env keeps
         # the species it came in as)
         st.temp_forme = (p[2].split(": ", 1)[-1], to_id(p[3].split(",")[0]))
+        if st.names.get(st.temp_forme[0]) and st.temp_forme[1] != st.names[st.temp_forme[0]]:
+            st.alias[st.temp_forme[1]] = st.names[st.temp_forme[0]]
     elif tag == "-damage" and "[from] confusion" in p:
         st.acted = True  # (it hit itself: its action this turn -- Encore / Taunt's count)
         st.failed_now = True  # (and a failed one: Showdown's moveThisTurnResult false)
@@ -490,6 +547,7 @@ def _feed_one(sides: dict, p: list[str]) -> None:
         st.just_moved, st.failed_now = sp, False
     elif tag == "move" and len(p) > 3:
         mv = to_id(p[3])
+        st.locked_exec = mv if any("lockedmove" in x for x in p[4:]) else ""
         if not any(x.startswith("[from]") and "lockedmove" not in x for x in p[4:]):
             st.stint["moves"].append(mv)  # (this time in's moves: a disguised Illusion's are its own)
             st.moves_by_nick.setdefault(nick, collections.Counter())[mv] += 1
@@ -498,14 +556,15 @@ def _feed_one(sides: dict, p: list[str]) -> None:
         st.changed_now = False
         st.destinybond = False
         st.fresh = 0
+        st.item_new = False
         st.truant_next = True  # (a Truant mon loafs the turn after a move)
         if mv == "minimize":
             st.minimized = True
         if not any(x.startswith("[from]") and "lockedmove" not in x for x in p[4:]):
             # (the Metronome item's count: the same move again after one that did not fail)
             st.consecutive = st.consecutive + 1 if mv == st.own_last and not st.last_failed else 0
-            if mv != "struggle":
-                st.own_last = mv
+            if mv != "struggle" and not any("lockedmove" in x for x in p[4:]):
+                st.own_last = mv  # (the move it chose: a called move's caller -- Metronome's -- stays)
         # (a charge fires the turn after its -prepare; a locking move locks it, its next uses
         # "[from]lockedmove" -- 2026-10-23, the state-construction differential: neither was in
         # the engine's state, the search let it choose any move)
@@ -548,7 +607,8 @@ def _feed_one(sides: dict, p: list[str]) -> None:
     elif tag == "-fail" and any(s.just_moved and s.last_move in NOT_FAIL for s in sides.values()):
         pass  # (Showdown's NOT_FAIL: its -fail is not a failed move -- Synthesis at full HP)
     elif tag == "-fail" and len(p) == 3 and any(
-            s.just_moved and _blocked_by_sub(s.last_move) and sides["p2" if k == "p1" else "p1"].sub_on
+            s.just_moved and _blocked_by_sub(s.last_move)
+            and (sides["p2" if k == "p1" else "p1"].sub_on or sides["p2" if k == "p1" else "p1"].sub_passed)
             for k, s in sides.items()):  # fmt: skip
         pass  # (a status move at a Substitute: its onTryPrimaryHit's null, not a failure)
     elif tag == "-fail" and st.prev == "-activate" and any(x.startswith("ability:") for x in st.prev_line[3:4]):
@@ -636,6 +696,8 @@ def _feed_one(sides: dict, p: list[str]) -> None:
         what = to_id(p[3].replace("move: ", ""))
         if what == "embargo":
             st.embargo = True
+        if what == "imprison":
+            st.imprison = True  # (its moves are the foe's no more: the engine's volatile)
         if what == "uproar":  # (its ends of turn: the [upkeep] -start each turn it goes on)
             st.uproar = st.uproar + 1 if "[upkeep]" in p and st.uproar is not None else 0
         if what.startswith("stockpile") and what[9:].isdigit():
@@ -655,8 +717,9 @@ def _feed_one(sides: dict, p: list[str]) -> None:
             st.encore = -1 if st.acted else 0
         elif what == "yawn":
             st.yawn = 0
-        elif what == "futuresight":  # by the user: its side's attack is pending
+        elif what in ("futuresight", "doomdesire"):  # by the user: its side's attack is pending
             st.future = (3, sp)
+            st.future_doom = what == "doomdesire"  # (Doom Desire's own: L218; was never tracked)
         elif what == "disable" and len(p) > 4:
             st.disabled = to_id(p[4].replace("move: ", ""))
             cursed = any(x.startswith("[from] ability:") for x in p[5:])  # (Cursed Body)
@@ -733,6 +796,7 @@ def _feed_one(sides: dict, p: list[str]) -> None:
         _item_was(foe, foe.active, to_id(p[3]))
         if sp == st.active:
             st.item_lost = False  # (an item again: Unburden's speed off)
+            st.item_new = True  # (a Choice item got after its move locks nothing: L228)
     elif tag == "-item" and len(p) > 4 and p[4].removeprefix("[from] ") in GAINS:
         # an item taken / given / found: only by an empty-handed mon -- it had none; the mon it
         # came from ([of]: Magician, Covet, Thief, Pickpocket, Bestow) had it (2026-10-23 review:
@@ -740,6 +804,7 @@ def _feed_one(sides: dict, p: list[str]) -> None:
         _item_was(st, sp, "")
         if sp == st.active:
             st.item_lost = False
+            st.item_new = True
         if p[4] in ("[from] ability: Harvest", "[from] move: Recycle"):
             st.last_item.pop(sp, None)  # (its last item back: Showdown clears lastItem)
         of = next((x[5:] for x in p[5:] if x.startswith("[of] ")), None)
