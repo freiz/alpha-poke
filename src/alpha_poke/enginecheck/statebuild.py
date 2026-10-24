@@ -169,6 +169,14 @@ def _last_used(side: pe.Side) -> str:
     return lu.split(":")[0] if lu.startswith("switch") else lu
 
 
+def _transform_slot(side: pe.Side) -> bool:
+    """The side's last used move is a slot of its transformed active's backup holding Transform."""
+    lu = str(side.last_used_move).lower()
+    backup = getattr(_active(side), "transform_backup", None)
+    return bool(backup) and lu.startswith("move:") and lu[5:].isdigit() \
+        and str(backup[2][int(lu[5:])][0]).lower() == "transform"
+
+
 def _side_common(who: str, built: pe.Side, truth: pe.Side) -> list[tuple[str, str]]:
     """What both players see of a side: volatiles and their counts, conditions, boosts. (An active
     that fainted: its volatiles and boosts go with the switch -- not compared; the lengths
@@ -183,7 +191,9 @@ def _side_common(who: str, built: pe.Side, truth: pe.Side) -> list[tuple[str, st
             out.append((f"{who}:condition:{k}", f"{b} vs {t}"))
     if _active(truth).hp <= 0:
         return out
-    if _last_used(built) != _last_used(truth):
+    if _last_used(built) != _last_used(truth) and not (_transform_slot(built) and _transform_slot(truth)):
+        # (transformed, its Transform the last: the slot in its backup -- its own moves' order, a
+        # replay's sampled one, is notation)
         out.append((f"{who}:last_used_move", f"{_last_used(built)} vs {_last_used(truth)}"))
     bv, tv = _vols(built), _vols(truth)
     bv.discard("flinch")  # (a flinch is drawn silently -- shown only as it stops the move: hidden)
@@ -318,6 +328,15 @@ def _feed(battle: Battle, lines: list[str]) -> None:
         battle.parse_message(split)
 
 
+def _forme_match(truth: dict, sp: str):
+    """The true set of species id ``sp`` -- or of its one forme in the truth (poke-env keeps the
+    species a mon came in as: a Mimikyu now Mimikyu-Busted)."""
+    if sp in truth:
+        return truth[sp]
+    formes = [v for k, v in truth.items() if k.startswith(sp) or sp.startswith(k)]
+    return formes[0] if len(formes) == 1 else None
+
+
 @contextlib.contextmanager
 def _oracle(foe: dict | None):
     """build_state's belief samples of the opponent's mons replaced by their true sets (Showdown's
@@ -335,7 +354,7 @@ def _oracle(foe: dict | None):
     def sample(belief, mon, *a, **kw):
         out = inner(belief, mon, *a, **kw)
         sp = to_id(mon.species)
-        t = truth.get(SAME_SPECIES.get(sp, sp))
+        t = _forme_match(truth, SAME_SPECIES.get(sp, sp))
         if t is None:
             return out
         own = t.get("transform_backup")

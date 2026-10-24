@@ -32,8 +32,20 @@ def test_ou_teams_stay_within_their_baseline():
     _check(OU_BASELINE, OU_TEAMS)
 
 
-def _check(baseline: Path, teams: Path) -> None:
+REPLAY_BASELINE = ROOT / "tests/fixtures/state_build_baseline_replay.json"
+
+
+def test_the_replay_path_stays_within_its_baseline():
+    """The same for the replay path's construction (enginecheck/replaybuild.py: the training
+    positions' -- the spectator's log, both sides' sets the oracle's)."""
+    _check(REPLAY_BASELINE, TEAMS, replay=True)
+
+
+def _check(baseline: Path, teams: Path, replay: bool = False) -> None:
     from alpha_poke.enginecheck.statebuild import battle_diffs
+
+    if replay:
+        from alpha_poke.enginecheck.replaybuild import battle_diffs as replay_diffs
 
     base = json.loads(baseline.read_text())
     pairs = [json.loads(x) for x in teams.read_text().splitlines()]
@@ -42,7 +54,7 @@ def _check(baseline: Path, teams: Path) -> None:
     examples: dict = {}
     for i in range(base["battles"]):
         p = pairs[i % len(pairs)]
-        diffs, stats = battle_diffs(p["p1"], p["p2"], seed=i)
+        diffs, stats = replay_diffs(p["p1"], p["p2"], seed=i) if replay else battle_diffs(p["p1"], p["p2"], seed=i)
         assert not stats["errors"], stats["errors"]
         decisions += stats["decisions"]
         for k, side, kind, detail in diffs:

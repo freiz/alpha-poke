@@ -134,6 +134,14 @@ def _current_ability(mon, own: str) -> str:
     return to_id(t) if t else own
 
 
+def _copied_ability(mon, target: str) -> str:
+    """A transformed mon's copied ability: poke-env's temporary one -- unless poke-env never knew
+    its target's and kept the Imposter it came by (a replay's own side: no request; S144), the
+    target's in this world."""
+    t = getattr(mon, "temporary_ability", None)
+    return target if t and to_id(t) == "imposter" else _current_ability(mon, target)
+
+
 def _copied_pp(mon, mid: str) -> int:
     """The PP left of a move ``mon`` copied by transforming (poke-env counts its uses: 5 PP at
     most; 2026-10-23 review: always 5, a Scarf Ditto's fifth Protect left it at 5)."""
@@ -652,7 +660,7 @@ def _illusion_adj(m, dis: dict, z: dict) -> tuple:
     """_their_mon's (pp_adj, hp_line) for ``m`` by the Illusion bookkeeping (_illusion_fix; an
     hp_line "": its own HP shown since -- out again itself)."""
     if id(m) in dis:
-        hp, _, back = dis[id(m)]
+        hp, _, back, _ = dis[id(m)]
         return dict(back), hp
     if id(m) in z:
         return {mv: -c for mv, c in z[id(m)].items()}, ""
@@ -674,14 +682,19 @@ def _illusion_fix(team: dict, tm: SideTimers, current: bool) -> tuple[dict, dict
     for f in fixes:
         m = by_nick.get(f["nick"])
         uses = collections.Counter(f["moves"])
-        zuses.update(uses)
+        # (the PP the uses took -- a Pressure foe's 2: S143)
+        cost = collections.Counter()
+        for mv, c in zip(f["moves"], f.get("costs") or [1] * len(f["moves"]), strict=False):
+            cost[mv] += c
+        zuses.update(cost)
         if m is None or m is zoroark:
             continue
         own = tm.moves_by_nick.get(f["nick"], collections.Counter())
-        hp, ex, back = dis.get(id(m), (f["hp"], set(), collections.Counter()))
-        back.update(uses)
-        ex |= {mv for mv in uses if own[mv] - back[mv] <= 0}
-        dis[id(m)] = (hp, ex, back)
+        hp, ex, back, n = dis.get(id(m), (f["hp"], set(), collections.Counter(), collections.Counter()))
+        back.update(cost)
+        n.update(uses)
+        ex |= {mv for mv in uses if own[mv] - n[mv] <= 0}
+        dis[id(m)] = (hp, ex, back, n)
     z = {id(zoroark): zuses} if zoroark is not None and zuses else {}
     return dis, z, (tm.illusion_boosts if not current else {})
 
@@ -1195,7 +1208,7 @@ def build_state(
                      for m in their_mons[t].moves]  # fmt: skip
         our_mons[our_active_idx] = _as_transformed(
             our_mons[our_active_idx], their_mons[t], moves or their_mons[t].moves,
-            _current_ability(active, their_sets[t].ability),
+            _copied_ability(active, their_sets[t].ability),
             _types(active),  # (its types as it copied them: S136)
         )
         our_tf = True
@@ -1206,7 +1219,7 @@ def build_state(
                          disabled=m.id == tm_them.disabled) for m in our_mons[t].moves]  # (S131: Spite's)
         own = to_id(ours[t].base_ability) if ours[t].base_ability else our_mons[t].ability
         their_mons[their_idx] = _as_transformed(their_mons[their_idx], our_mons[t], moves,
-                                                _current_ability(opp_active, own), _types(opp_active))  # fmt: skip
+                                                _copied_ability(opp_active, own), _types(opp_active))  # fmt: skip
         their_tf = True
     our_last, our_vol = _last_move(
         active, our_mons[our_active_idx] if our_active_idx is not None else None, avail,
@@ -1216,6 +1229,19 @@ def build_state(
         opp_active, their_mons[their_idx] if their_mons else None, None,
         their_idx if their_mons else None, tm_them.switched_now, tm_them,
     )
+    # (a mon out transformed into a Regenerator holder healed as it went -- the copied ability;
+    # poke-env does so only when it knew the target's ability: a replay's side, S145)
+    for mons, src, tm, omons, osrc, otm, exact in ((our_mons, ours, tm_us, their_mons, theirs, tm_them, spectator is None),
+                                                   (their_mons, theirs, tm_them, our_mons, ours, tm_us, False)):  # fmt: skip
+        if exact or not tm.transformed_out:
+            continue
+        for j, (m, p) in enumerate(zip(src, mons, strict=True)):
+            tgt = tm.transformed_out.get(tm.k(to_id(m.species)))
+            if not tgt or getattr(m, "active", False) or p.hp <= 0 or tm.k(to_id(m.species)) in tm.no_regen:
+                continue
+            q = next(((om, oq) for om, oq in zip(osrc, omons, strict=True) if otm.k(to_id(om.species)) == tgt), None)
+            if q is not None and str(q[1].ability).lower() == "regenerator" and to_id(q[0].ability or "") != "regenerator":
+                mons[j] = _with(p, hp=min(p.maxhp, p.hp + p.maxhp // 3))
     # the engine's transform / typechange volatiles (doc/engine-diff.md L36): a switch ends the
     # transformation, and an Imposter does not transform again while it is on
     for tf, vol, mons, i, target in ((our_tf, our_vol, our_mons, our_active_idx, (their_mons, our_t)),

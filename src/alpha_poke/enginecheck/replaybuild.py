@@ -14,24 +14,26 @@ from poke_env.battle import Battle, Pokemon
 
 from alpha_poke.analysis.roles import to_id
 from alpha_poke.enginecheck import engine_state, random_battle
-from alpha_poke.enginecheck.statebuild import (LOG, SAME_SPECIES, _belief, _fainted_no_status, _feed,
-                                               _flip, field_diffs, foe_diffs)  # fmt: skip
+from alpha_poke.enginecheck.statebuild import (LOG, SAME_SPECIES, _belief, _disguised, _fainted_no_status, _forme_match,
+                                               _feed, _flip, field_diffs, foe_diffs)  # fmt: skip
 
 
 @contextlib.contextmanager
-def _oracle(truths: dict):
-    """build_state's samples replaced by the true sets: ``truths`` maps a side's belief team names
-    (the tuple build_state passes) to that side's Showdown state (its "mons")."""
+def _oracle(team: list, ours: dict, theirs: dict):
+    """build_state's samples replaced by the true sets: a mon of ``team`` (side one's, the
+    SpectatorSide's) by ``ours`` (its side's Showdown state), any other by ``theirs`` (the team
+    names cannot tell the sides apart: a mirror match)."""
     from alpha_poke.agents import engine_state as es
 
     inner = es.sample_set
-    by_names = {names: {SAME_SPECIES.get(m["species"], m["species"]): m for m in side["mons"]}
-                for names, side in truths.items()}  # fmt: skip
+    mine = {id(m) for m in team}
+    by_side = {side: {SAME_SPECIES.get(m["species"], m["species"]): m for m in st["mons"]}
+               for side, st in (("ours", ours), ("theirs", theirs))}  # fmt: skip
 
     def sample(belief, mon, team_names, *a, **kw):
         out = inner(belief, mon, team_names, *a, **kw)
         sp = to_id(mon.species)
-        t = by_names.get(tuple(team_names), {}).get(SAME_SPECIES.get(sp, sp))
+        t = _forme_match(by_side["ours" if id(mon) in mine else "theirs"], SAME_SPECIES.get(sp, sp))
         if t is None:
             return out
         own = t.get("transform_backup")
@@ -124,13 +126,21 @@ def decisions(p1: str, p2: str, seed: int, max_turns: int = 40, stats: dict | No
             theirs = step["state"]["sides"][1 if side == "p1" else 0]
             stats["decisions"] += 1
             try:
-                with _oracle({names: ours, opp_names: theirs}):
+                with _oracle(team, ours, theirs):
                     built = build_state(b, belief, opp_names, random.Random(k), spectator=spec,
                                         force_switch=bool(req.get("forceSwitch")))  # fmt: skip
             except BaseException as e:  # noqa: BLE001
                 stats["errors"].append(f"build: {type(e).__name__}: {str(e)[:160]}")
                 continue
             yield k, side, b, built, truth if side == "p1" else _flip(truth)
+
+
+class _Mirror:
+    """A battle seen from the other side (statebuild._disguised reads the opponent's lines)."""
+
+    def __init__(self, b):
+        self.player_role = "p2" if b.player_role == "p1" else "p1"
+        self._replay_data = b._replay_data
 
 
 def battle_diffs(p1: str, p2: str, seed: int, max_turns: int = 40) -> tuple[list[tuple], dict]:
@@ -140,8 +150,11 @@ def battle_diffs(p1: str, p2: str, seed: int, max_turns: int = 40) -> tuple[list
     for k, side, b, built, t in decisions(p1, p2, seed, max_turns, stats):
         own_seen = {to_id(m.species) for m in b.team.values()}
         foe_seen = {to_id(m.species) for m in b.opponent_team.values()}
+        # (a disguise not found out: a spectator cannot tell -- its percent HP -- on either side)
+        own_hidden = frozenset(_disguised(_Mirror(b), t.side_one))
         diffs = [(kind.replace("foe:", "own:", 1), d)
-                 for kind, d in foe_diffs(built.side_one, t.side_one, own_seen, True)]  # fmt: skip
-        diffs += foe_diffs(built.side_two, t.side_two, foe_seen, True) + field_diffs(built, t)
+                 for kind, d in foe_diffs(built.side_one, t.side_one, own_seen, True, own_hidden)]  # fmt: skip
+        diffs += foe_diffs(built.side_two, t.side_two, foe_seen, True, frozenset(_disguised(b, t.side_two)))
+        diffs += field_diffs(built, t)
         out += [(k, side, kind, detail) for kind, detail in diffs]
     return out, stats

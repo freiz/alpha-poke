@@ -1010,3 +1010,14 @@ def test_a_transformed_foes_last_item(belief):
                 "|-damage|p2a: Ditto|1/100", "|upkeep", "|turn|3"])  # fmt: skip
     two = state(b, belief).side_two
     assert str(two.pokemon[int(two.active_index)].last_item).lower() == "focussash"
+
+
+def test_a_copied_ability_poke_env_never_knew():
+    """S144: a replay's transformed mon -- poke-env never knew its target's ability, kept the
+    Imposter it came by: the target's in this world."""
+    from types import SimpleNamespace
+
+    from alpha_poke.agents.engine_state import _copied_ability
+
+    assert _copied_ability(SimpleNamespace(temporary_ability="Imposter"), "magicguard") == "magicguard"
+    assert _copied_ability(SimpleNamespace(temporary_ability="Rough Skin"), "magicguard") == "roughskin"

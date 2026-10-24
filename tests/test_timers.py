@@ -1032,3 +1032,14 @@ def test_imprison_pressure_glaive_rush_and_a_transforms_types():
                  "|-damage|p2a: Ditto|80/100", "|-transform|p2a: Ditto|p1a: Cinderace|[from] ability: Imposter"]:  # fmt: skip
         b.parse_message(line.split("|"))
     assert b.opponent_active_pokemon.base_types == [PokemonType.NORMAL]
+
+
+def test_a_replays_illusion_and_transform_records():
+    """S143: each use's PP this time in -- 2 at a Pressure foe (a broken Illusion's PP: the
+    bookkeeping counted 1 a use). S145: a mon out transformed keeps its target (a copied
+    Regenerator's heal)."""
+    t = run(START + "|-ability|p1a: Fishy|Pressure\n|move|p2a: Bob|Earthquake|p1a: Fishy\n|-damage|p1a: Fishy|400/503\n"
+            "|move|p2a: Bob|Swords Dance|p2a: Bob\n|-boost|p2a: Bob|atk|2")  # fmt: skip
+    assert t["p2"].stint["costs"] == [2, 1]
+    t = run(START + "|-transform|p2a: Bob|p1a: Fishy|[from] ability: Imposter\n|switch|p2a: Rob|Corviknight, M|100/100")
+    assert t["p2"].transformed_out == {"gliscor": "dondozo"}

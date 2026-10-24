@@ -216,6 +216,9 @@ class SideTimers:
     metronome_gone: bool = False  # its Metronome item lost since its last move (the volatile stays)
     in_residual: bool = False  # this end of turn's residuals under way (a future attack's hit seen)
     past_stints: list = field(default_factory=list)  # the times in before this one (stint dicts)
+    pressure: set = field(default_factory=set)  # species keys with Pressure announced
+    copied_from: str = ""  # the active's Transform target (the other side's species key)
+    transformed_out: dict = field(default_factory=dict)  # species key -> the target it went out transformed into
     upkept: bool = False  # this turn's end passed (|upkeep|, before the next |turn|)
     swapped: set = field(default_factory=set)  # setters keys whose setter is the other side's (Court Change)
     fields_elapsed: dict = field(default_factory=dict)  # "weather" / "terrain" / ROOMS -> ends of turn
@@ -238,6 +241,13 @@ class SideTimers:
             self.no_regen.add(self.active)
         elif self.active and self.active != self.fainted_out:  # (out by fainting: none -- S118)
             self.no_regen.discard(self.active)
+        # (out transformed: the ability it copied went out with it -- a copied Regenerator: S145)
+        if self.active and self.copied_from and not (self.ability_off or gas) \
+                and self.active != self.fainted_out:
+            self.transformed_out[self.active] = self.copied_from
+        elif self.active:
+            self.transformed_out.pop(self.active, None)
+        self.copied_from = ""
         self.no_regen.discard(species)
         self.fainted_out = ""
         self.ability_off = False
@@ -642,6 +652,8 @@ def _feed_one(sides: dict, p: list[str]) -> None:
         st.metronome_gone = False
         if not any(x.startswith("[from]") and "lockedmove" not in x for x in p[4:]):
             st.stint["moves"].append(mv)  # (this time in's moves: a disguised Illusion's are its own)
+            # (and the PP each took -- a Pressure foe's 2: a broken Illusion's PP, S143)
+            st.stint.setdefault("costs", []).append(_pp_cost(sides, p, mv))
             st.moves_by_nick.setdefault(nick, collections.Counter())[mv] += 1
         st.changed_now = False
         st.destinybond = False
@@ -831,6 +843,10 @@ def _feed_one(sides: dict, p: list[str]) -> None:
             st.ability_now = to_id(p[4])
             if ost is not None and not p[5].startswith("["):
                 ost.ability_now = to_id(p[5])
+    elif tag == "-transform" and len(p) > 3:
+        st.copied_from = _who(["", "", p[3]], sides)[1]  # (S145)
+    elif tag == "-ability" and len(p) == 4 and to_id(p[3]) == "pressure":
+        st.pressure.add(sp)  # (announced on its entry: S143)
     elif tag == "-ability" and len(p) > 3 and to_id(p[3]) == "neutralizinggas" and len(p) == 4:
         st.gas_on = True
     elif tag == "-heal" and "[from] move: Revival Blessing" in p:
@@ -1033,6 +1049,24 @@ def _blocked_by_sub(move: str) -> bool:
     d = GenData.from_gen(9).moves.get(move) or {}
     return d.get("category") == "Status" and d.get("target") in (
         "normal", "any", "adjacentFoe", "randomNormal") and not (d.get("flags") or {}).get("bypasssub")  # fmt: skip
+
+
+# (poke-env's _pressure_on: the move targets Pressure reaches)
+_PRESSURED = ("all", "allAdjacent", "allAdjacentFoes", "any", "normal", "randomNormal", "scripted")
+
+
+def _pp_cost(sides: dict, p: list[str], mv: str) -> int:
+    """The PP a move use takes: 2 at an active foe with Pressure (announced, not suppressed --
+    poke-env's rule, Gastro Acid and Neutralizing Gas apart), else 1."""
+    from poke_env.data import GenData
+
+    d = GenData.from_gen(9).moves.get(mv) or {}
+    if not (d.get("target") in _PRESSURED or "mustpressure" in d.get("flags", {})):
+        return 1
+    foe = sides["p2" if p[2][:2] == "p1" else "p1"]
+    if any(s.gas_on for s in sides.values()) or foe.gastro or foe.active not in foe.pressure:
+        return 1
+    return 2
 
 
 def _is_status(move: str) -> bool:
