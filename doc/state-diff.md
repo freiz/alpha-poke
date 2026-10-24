@@ -333,6 +333,21 @@ Showdown 里有一类值在效果开始的那一刻就定下，之后不再随�
 | R4 | 延长道具被 Klutz 抵消的判断看设置者现在的特性：设下日照后被 Skill Swap 换成 Regenerator，Heat Rock 被算成生效（剩 7 回合，Showdown 4） | 训练数据（极少） | 计时器在设置时记下设置者被招式 / 特性改变后的特性（`set_ability`，Court Change 时一起交换）；没有改变过就是它自己的特性 | `test_a_klutz_setters_weather_is_not_extended_after_its_ability_changed`（设置后变、设置前变两种） |
 | R5 | 引擎的 Spite 不扣 PP | 搜索 | 见 `doc/engine-diff.md` L233 | 双测试两个 |
 
+第二轮复查（同日）指出上面三处修得不完整，都是只修了报告的那条路径、没有按机制修：
+
+| # | 遗漏 | 修复 | 测试 |
+|---|---|---|---|
+| R5' | 引擎只在"已知会读上一招"的机制在场时才跟踪上一招（Encore、Fake Out、Metronome 道具、Cursed Body…），Spite 不在列表里：没有别的触发时 Spite 读到的上一招是换上场，不扣 PP。R5 的测试恰好带了 Cursed Body，掩盖了它。列表之外还有读上一招的边缘逻辑（讲究锁定 / 挣扎 / 一意孤行的 L228、L232 情形），开关关着时在树里读到根节点的旧值——单步差分从真实状态出发，根节点的值是对的，所以测不出 | 一直跟踪（`set_last_used_move_flag`）；代价约 4% 的搜索迭代（每秒 14.5 万 → 13.9 万，56 个局面） | `test_spite_after_its_targets_move_in_the_same_turn`（Infiltrator Spiritomb，无其他触发，修复前 23 vs 19）；R1 的 Rust 测试去掉手动打开的开关 |
+| R2' | 一个"换手前的道具"不能解释跨多个道具阶段的命中：Choice Specs 命中 → 被 Knock Off → Magician 拿到 Assault Vest，换手前道具记成 none，戴眼镜的命中按无道具算 | `damage_obs._Items`：每只宝可梦的道具时间线（开局的道具——候选，被揭示时为揭示的那个；-enditem 后为 none；-item 换手后为日志写明的那个；Frisk / 宣告不算换手），每次命中记下当时的道具（`Hit.item_then`），换手后的命中也保留 | `test_each_hit_is_explained_with_its_own_items_phase` |
+| R4' | 道具是否生效的快照漏了两条路径：已有道具快照（之后被 Knock Off）时直接返回，跳过了 Klutz 判断；Neutralizing Gas 在场时 Klutz 被压制，道具照常生效 | 设下时一并记下 Neutralizing Gas 是否在场（`set_gas`）；`set_with` 先做同一个判断（当时的特性是 Klutz 且没被毒气压制 → 道具无效），再取道具快照 / 现在的道具 | `test_a_klutz_setters_weather_after_its_item_is_gone_and_under_neutralizing_gas`（两种场景） |
+
+复查回归中（新种子、两条路径各 1,000 局）又查出两处回放第三轮就有、一直没查的（新加的选项比较把第一处标为核心差异：多给了换人选项）：
+
+| # | 问题 | 修复 | 测试 |
+|---|---|---|---|
+| S152 | 锁定中的 Outrage 打在 Endure 上（`-activate|…|move: Endure`：命中了，对方撑住）被当成"对方守住、招式没起作用"，锁定结束——第三回合的锁定没了，换人选项多给（我方实战的 request 其实说了） | 守住的判断不含 Endure（它只用于连续守住的计数） | `test_an_outrage_into_endure_keeps_its_lock` |
+| S153 | Slow Start 从 `-start` 之后的第一个回合开始才倒数：Showdown 是"在场时间 > 0"就倒数，上一回合就在场、这回合用 Transform 复制来 Slow Start 的 Ditto 本回合末就减一（我们晚一回合） | 开始时若本回合不是刚上场，立即开始倒数 | `test_a_slow_start_copied_by_a_mon_in_since_last_turn_counts_down_at_once` |
+
 另：C 的往返检查在已经混乱时悄悄结束的锁定上报了选项差异（比较器早已把这种锁定结束当作隐藏信息），选项比较同样排除（`_silent_lock_end`）。
 
 ## 后续

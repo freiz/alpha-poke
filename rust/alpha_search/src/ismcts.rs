@@ -1811,7 +1811,6 @@ mod tests {
             p.moves[&i].choice = MOVES.get(&id).unwrap().clone();
         }
         let mut s = ko_first();
-        s.use_last_used_move = true;
         let a = s.side_one.get_active();
         (a.speed, a.ability, a.item) = (1, Abilities::NONE, Items::NONE);
         a.types = (PokemonType::NORMAL, PokemonType::TYPELESS);

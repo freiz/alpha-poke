@@ -7090,3 +7090,17 @@ def test_spite_fails_on_a_target_with_no_last_move():
     assert any(x.startswith("|-fail|") for x in states[1]["log"]), states[1]["log"]
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "roost", "spite")
     assert ec.closest(states[1], outs, (1, 1), hp=True, full=True, start=states[0])["diff"] == {}
+
+
+def test_spite_after_its_targets_move_in_the_same_turn():
+    """2026-10-24 review: the engine tracks the last used move only when the state has a mechanic
+    that reads it -- Spite was not one (the first Spite test's Gengar has Cursed Body: that turned
+    it on). A slower Infiltrator Spiritomb's Spite after Corviknight's Brave Bird: Showdown 19 PP,
+    the engine 23 (its last move still its switch-in)."""
+    mon = _setter("Corviknight", "Mirror Armor", "Leftovers", "- Brave Bird\n- Roost\n- Defog\n- U-turn")
+    foe = _setter("Spiritomb", "Infiltrator", "Leftovers", "- Spite\n- Foul Play\n- Pain Split\n- Will-O-Wisp")
+    states = ec.run_showdown(mon, foe, [("move 1", "move spite")])
+    bb = [m for m in states[1]["sides"][0]["mons"][0]["moves"] if m["id"] == "bravebird"][0]
+    assert bb["pp"] == 19, states[1]["sides"][0]["mons"][0]["moves"]
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "bravebird", "spite")
+    assert ec.closest(states[1], outs, (1, 1), hp=True, full=True, start=states[0])["diff"] == {}

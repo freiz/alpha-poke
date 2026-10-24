@@ -25,6 +25,8 @@ CORE = ("hp", "maxhp", "status", "boost", "active", "team", "moves", "pp", "item
 
 
 def core(kind: str) -> bool:
+    if kind.split(":", 1)[0] == "options":  # (the legal actions: the search's options -- plan C)
+        return True
     rest = kind.split(":", 1)[1]
     return any(rest == c or rest.startswith(c + ":") or rest.startswith(c) for c in CORE) and not rest.startswith("last_item")
 

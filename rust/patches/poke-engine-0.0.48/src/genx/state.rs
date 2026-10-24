@@ -2249,31 +2249,13 @@ impl State {
     }
 
     pub fn set_last_used_move_flag(&mut self) {
-        // alpha-poke patch (2026-10-16, L24): Metronome counts on it
-        // (L70: Disable / Cursed Body stop the last move too)
-        let metronome = [&self.side_one, &self.side_two].iter().any(|s| {
-            s.pokemon
-                .pkmn
-                .iter()
-                .any(|p| p.item == Items::METRONOME || p.ability == Abilities::CURSEDBODY)
-        });
-        if metronome {
-            self.use_last_used_move = true;
-        }
-        if self._state_contains_any_move(&[
-            Choices::ENCORE,
-            Choices::FAKEOUT,
-            Choices::FIRSTIMPRESSION,
-            Choices::BLOODMOON,
-            Choices::GIGATONHAMMER,
-            Choices::DISABLE,
-            // (L179: Taunt reads it -- the target came in this turn, Showdown's activeTurns)
-            Choices::TAUNT,
-            // (L186: Eerie Spell takes the PP of the target's last move)
-            Choices::EERIESPELL,
-        ]) {
-            self.use_last_used_move = true
-        }
+        // alpha-poke patch (2026-10-24 review): always on. It was on only when a mechanic known
+        // to read it was in the state (Encore, Fake Out, Disable, Eerie Spell, a Metronome item,
+        // Cursed Body, ...): a reader left off the list read a stale last move past the root --
+        // Spite took no PP, a Choice lock's / Struggle's / Gorilla Tactics' edge cases read the
+        // root's -- and a single-transition differential cannot see it (the root's is right).
+        // Its cost: ~4% of the search's iterations (145k -> 139k a second, 56 states)
+        self.use_last_used_move = true;
     }
 
     pub fn set_conditional_mechanics(&mut self) {

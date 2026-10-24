@@ -1040,3 +1040,51 @@ def test_a_klutz_setters_weather_is_not_extended_after_its_ability_changed(belie
              "|move|p1a: Golurk|Sunny Day|p1a: Golurk", "|-weather|SunnyDay", "|upkeep|", "|turn|2"]
     b = battle(lines, us="Golurk", item="heatrock", ability="regenerator", moves=moves)
     assert state(b, belief).weather_turns_remaining == 5 - 1
+
+
+def test_a_klutz_setters_weather_after_its_item_is_gone_and_under_neutralizing_gas(belief):
+    """2026-10-24 review, the item's effect as the sun began, along every path: a Klutz Golurk's
+    Heat Rock knocked off after (the item snapshot path skipped the Klutz check: 8 turns, Showdown
+    5); Neutralizing Gas out as it set it -- its Klutz suppressed, the Heat Rock works (Showdown 8;
+    the ability snapshot had no gas: 5)."""
+    moves = ("sunnyday", "earthquake", "poltergeist", "rockpolish")
+    lines = ["|move|p1a: Golurk|Sunny Day|p1a: Golurk", "|-weather|SunnyDay",
+             "|move|p2a: Gholdengo|Knock Off|p1a: Golurk", "|-damage|p1a: Golurk|300/400",
+             "|-enditem|p1a: Golurk|Heat Rock|[from] move: Knock Off|[of] p2a: Gholdengo",
+             "|upkeep|", "|turn|2"]
+    b = battle(lines, us="Golurk", item="", ability="klutz", moves=moves)
+    assert state(b, belief).weather_turns_remaining == 5 - 1
+    lines = ["|-ability|p2a: Gholdengo|Neutralizing Gas", "|turn|2",
+             "|move|p1a: Golurk|Sunny Day|p1a: Golurk", "|-weather|SunnyDay", "|upkeep|", "|turn|3"]
+    b = battle(lines, us="Golurk", item="heatrock", ability="klutz", moves=moves)
+    assert state(b, belief).weather_turns_remaining == 8 - 1
+
+
+def test_an_outrage_into_endure_keeps_its_lock():
+    """2026-10-24, the state-construction differential: Dragonite's locked Outrage hit an Endure
+    (|-activate|...|move: Endure: the hit landed, the target held on) -- read as a protected
+    target, the move doing nothing: the lock ended, its third turn's switch options offered."""
+    from alpha_poke.agents.timers import timers
+
+    lines = ["|switch|p1a: Dragonite|Dragonite|323/323", "|switch|p2a: Araquanid|Araquanid|100/100",
+             "|turn|1", "|move|p1a: Dragonite|Outrage|p2a: Araquanid", "|-damage|p2a: Araquanid|60/100",
+             "|upkeep|", "|turn|2", "|move|p2a: Araquanid|Endure|p2a: Araquanid",
+             "|-singleturn|p2a: Araquanid|move: Endure",
+             "|move|p1a: Dragonite|Outrage|p2a: Araquanid|[from] lockedmove",
+             "|-activate|p2a: Araquanid|move: Endure", "|-damage|p2a: Araquanid|1/100", "|upkeep|", "|turn|3"]
+    assert timers([x.split("|") for x in lines])["p1"].locked == ["outrage", 2]
+
+
+def test_a_slow_start_copied_by_a_mon_in_since_last_turn_counts_down_at_once():
+    """2026-10-24, the state-construction differential: a Ditto in since the last turn copies
+    Regigigas by Transform (its Slow Start starts mid-turn): Showdown counts it down this end of
+    turn already (activeTurns > 0) -- 4 left, the timers' 5."""
+    from alpha_poke.agents.timers import timers
+
+    lines = ["|switch|p1a: Regigigas|Regigigas|322/322", "|-start|p1a: Regigigas|ability: Slow Start",
+             "|switch|p2a: Ditto|Ditto|225/225", "|turn|1", "|move|p2a: Ditto|Transform|p1a: Regigigas",
+             "|-transform|p2a: Ditto|p1a: Regigigas", "|-start|p2a: Ditto|ability: Slow Start",
+             "|upkeep|", "|turn|2"]
+    t = timers([x.split("|") for x in lines])
+    assert t["p2"].slowstart == [4, True], t["p2"].slowstart
+    assert t["p1"].slowstart == [4, True], t["p1"].slowstart  # (a lead: in at turn 1's start too)

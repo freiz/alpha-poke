@@ -49,8 +49,11 @@ class Hit:
     after: int  # after (0 = fainted)
     tera: str | None = None  # the attacker's tera type if it terastallized this turn or earlier
     defender_tera: str | None = None
-    # their mon's item was gone at the hit (knocked off, eaten, popped: -enditem): it held none
-    item_gone: bool = False
+    # their mon's item at the hit when the log names it (after its first change: an -enditem's
+    # "none", a Trick's / Thief's / Magician's / Harvest's item); None: the one it started with
+    # (the candidates' item -- 2026-10-24 review: one item for every hit read a Choice Specs hit
+    # before a Knock Off and a Magician Assault Vest as itemless)
+    item_then: str | None = None
 
 
 def _side(ident: str) -> str:
@@ -73,8 +76,7 @@ def hits(lines: list[str], our_side: str) -> list[Hit]:
     active: dict[str, str] = {}  # "p1a" -> species id
     hp: dict[tuple[str, str], int] = {}  # (side, species) -> HP (ours exact, theirs percent)
     tera: dict[tuple[str, str], str] = {}
-    gone: set[tuple[str, str]] = set()  # items used up / removed
-    changed: set[tuple[str, str]] = set()  # items swapped in (Trick, ...): no evidence of them
+    items = _Items()  # their mons' items as the log shows them: each hit's item then
     turn, quiet, seen_move = 0, True, False
     pending: dict | None = None
     recent = False  # the last hit can still be voided (a multi-hit's count, a Sash / Sturdy save)
@@ -83,6 +85,7 @@ def hits(lines: list[str], our_side: str) -> list[Hit]:
         if len(f) < 2:
             continue
         tag = f[1]
+        items.feed(f, active)
         if recent:
             if tag in ("move", "turn"):
                 recent = False
@@ -110,18 +113,13 @@ def hits(lines: list[str], our_side: str) -> list[Hit]:
             sp = active.get(slot)
             new = _hp(f[3])
             if pending is not None and tag == "-damage" and len(f) == 4 and slot == pending["def"]:
-                if pending["key"] not in changed:
-                    out.append(Hit(turn, pending["by_us"], pending["move"], pending["att"], sp,
-                                   pending["before"], new, pending["tera"], pending["dtera"],
-                                   pending["key"] in gone))  # fmt: skip
-                    recent = True
+                out.append(Hit(turn, pending["by_us"], pending["move"], pending["att"], sp,
+                               pending["before"], new, pending["tera"], pending["dtera"],
+                               items.now.get(pending["key"])))  # fmt: skip
+                recent = True
                 pending = None
             if sp is not None:
                 hp[(slot[:2], sp)] = new
-        elif tag in ("-enditem", "-item") and len(f) > 2:
-            slot = f[2][:3]
-            if active.get(slot):
-                (gone if tag == "-enditem" else changed).add((slot[:2], active[slot]))
         elif tag == "-terastallize" and len(f) > 3:
             slot = f[2][:3]
             if active.get(slot):
@@ -177,8 +175,8 @@ def likelihood(hit: Hit, base: str, our_slot: int, their_slot: int, cands: list[
     16 non-crit rolls in the turn-start state ``base`` (side one = us), the defender at its HP
     before the hit (a switch-in after its hazards: Multiscale / Shadow Shield need full HP)."""
     own_tera = bool(hit.tera if hit.by_us else hit.defender_tera)  # our mon terastallized
-    if hit.item_gone:  # it held nothing at the hit, whatever it started with
-        cands = [("none", *c[1:]) for c in cands]
+    if hit.item_then is not None:  # the item it held at the hit, the log's (not the one it started with)
+        cands = [(hit.item_then, *c[1:]) for c in cands]
     if hit.before > 0:
         base = (_with_hp(base, False, their_slot, pct=hit.before) if hit.by_us
                 else _with_hp(base, True, our_slot, hp=hit.before))  # fmt: skip
@@ -239,47 +237,77 @@ TOP_SPREADS = 12
 # (the item changes hands: the mover's Trick / Switcheroo swap; a thief takes one only with none)
 _SWAPS = ("[from] move: Trick", "[from] move: Switcheroo")
 _TAKERS = ("[from] move: Thief", "[from] move: Covet", "[from] ability: Magician",
-           "[from] ability: Pickpocket")  # fmt: skip
+           "[from] ability: Pickpocket", "[from] move: Bestow")  # fmt: skip
+
+
+class _Items:
+    """A battle's items as its log shows them, per (side, species id): the item a mon holds now --
+    None while it is the one it started with (unknown unless revealed), else the one the log
+    names: an -item change's (Trick, Thief, Magician, Harvest, Bestow, ...), "none" after an
+    -enditem -- and the one it started with once revealed: an -enditem of it, a Frisk, a swap
+    partner's received one, a taker's none (Thief, Covet, Magician, Pickpocket, Bestow's receiver
+    take one only with none). A Frisk / an announcement (Air Balloon) is no change."""
+
+    def __init__(self):
+        self.now: dict = {}
+        self.original: dict = {}
+        self.changed: set = set()
+        self._swap: list | None = None  # [(key, its item before)...] of the swap going on
+        self._got: dict = {}
+
+    def _end_swap(self) -> None:
+        if self._swap:
+            keys = [k for k, _ in self._swap]
+            for k, before in self._swap:
+                other = next((x for x in keys if x != k), None)
+                if before is None and other is not None:
+                    self.original.setdefault(k, self._got.get(other, "none"))
+        self._swap, self._got = None, {}
+
+    def feed(self, f: list[str], active: dict) -> None:
+        tag = f[1] if len(f) > 1 else ""
+        line = "|".join(f)
+        if self._swap is not None and not (tag in ("-item", "-enditem") and any(x in line for x in _SWAPS)):
+            self._end_swap()
+        if tag == "-activate" and len(f) > 3 and f[3] in ("move: Trick", "move: Switcheroo"):
+            of = next((x[5:] for x in f[4:] if x.startswith("[of] ")), "")
+            a, b = active.get(f[2][:3]), active.get(of[:3])
+            if a and b:
+                ka, kb = (f[2][:2], a), (of[:2], b)
+                self._swap = [(ka, self.now.get(ka)), (kb, self.now.get(kb))]
+            return
+        if tag not in ("-item", "-enditem") or len(f) < 4 or not active.get(f[2][:3]):
+            return
+        key, item = (f[2][:2], active[f[2][:3]]), to_id(f[3])
+        if tag == "-enditem":
+            if self.now.get(key) is None:
+                self.original.setdefault(key, item)
+            self.now[key] = "none"
+            self.changed.add(key)
+        elif "[from]" not in line or "[from] ability: Frisk" in line:  # (a reveal)
+            if self.now.get(key) is None:
+                self.original.setdefault(key, item)
+        else:
+            if any(x in line for x in _SWAPS):
+                self._got[key] = item
+            elif any(x in line for x in _TAKERS) and self.now.get(key) is None:
+                self.original.setdefault(key, "none")
+            self.now[key] = item
+            self.changed.add(key)
 
 
 def item_changes(lines: list[str]) -> dict[tuple[str, str], str | None]:
-    """(side, species id) -> the item it held before its item first changed hands, for the mons
-    whose item did: a Trick / Switcheroo partner's -- the one the other received --, a thief's
-    none (Thief, Covet, Magician, Pickpocket take one only with none), None if not known (a
-    Bestow's receiver, ...). ``hits`` keeps no hit after the change: every hit is of that item
-    (2026-10-24 review: a Choice Specs Latios's Surf read with the Life Orb a Trick gave it)."""
-    out: dict[tuple[str, str], str | None] = {}
-    active: dict[str, str] = {}
-    swap: list = []  # (key, item received) of the swap going on
-    swap_with = None  # the swap's [of] mon's key
+    """(side, species id) -> the item it started with, for the mons whose item changed (``_Items``):
+    None if not revealed -- its hits before the change are of that item, the candidates' (not the
+    one it holds now: 2026-10-24 review, a Choice Specs Latios's Surf read with the Life Orb a
+    Trick gave it)."""
+    items, active = _Items(), {}
     for line in lines + [""]:
         f = line.split("|")
-        tag = f[1] if len(f) > 1 else ""
-        if swap and not (tag == "-item" and any(x in line for x in _SWAPS)):
-            keys = [k for k, _ in swap]
-            got = dict(swap)
-            if len(keys) == 1 and swap_with is not None and swap_with not in keys:
-                keys.append(swap_with)  # (one of them had none: it gave nothing)
-            for k in keys:
-                other = next((x for x in keys if x != k), None)
-                out.setdefault(k, got.get(other, "none") if other is not None else None)
-            swap = []
-        if tag in ("switch", "drag") and len(f) > 3:
+        if len(f) > 3 and f[1] in ("switch", "drag"):
             active[f[2][:3]] = _species(f[3])
-        elif tag == "-activate" and len(f) > 3 and f[3] in ("move: Trick", "move: Switcheroo"):
-            of = next((x[5:] for x in f[4:] if x.startswith("[of] ")), "")
-            a, b = active.get(f[2][:3]), active.get(of[:3])
-            swap = []
-            swap_with = (of[:2], b) if a is not None and b is not None else None
-        elif tag == "-item" and len(f) > 3 and active.get(f[2][:3]):
-            key = (f[2][:2], active[f[2][:3]])
-            if any(x in line for x in _SWAPS):
-                swap.append((key, to_id(f[3])))
-            elif any(x in line for x in _TAKERS):
-                out.setdefault(key, "none")
-            elif "[from] move:" in line:
-                out.setdefault(key, None)
-    return out
+        items.feed(f, active)
+    return {k: items.original.get(k) for k in items.changed}
 
 
 def _candidates(belief, mon, team_names: tuple[str, ...], then=False) -> tuple[list, list[float]]:

@@ -1405,17 +1405,19 @@ def build_state(
     items |= {("them", to_id(m.species)): st.item for m, st in zip(theirs, their_sets, strict=True)}
 
     def set_with(who: str, tm: SideTimers, key: str, sp: str) -> str:
-        if key in tm.set_items:
-            return tm.set_items[key]
+        # whether its item worked as the effect began, one rule along every path (2026-10-24
+        # review): a Klutz holder's does nothing -- its ability then: a move's change before,
+        # else its own, this world's; not under Neutralizing Gas, which held the Klutz off --,
+        # then the item it held then (the timers' snapshot: changed since, Magic Room / Embargo's
+        # none) or now
         mine = (who == "us") != (key in tm.swapped)  # (the setter's side)
         setter = next((p for m, p in zip(ours if mine else theirs, our_mons if mine else their_mons,
                                          strict=True) if to_id(m.species) == sp), None)  # fmt: skip
-        # (a Klutz holder's item does nothing: its ability as it set it -- a move's change then,
-        # else its own, this world's -- not its ability now: 2026-10-24 review, a Skill Swap
-        # after made a Klutz Heat Rock sun 8 turns)
         then = tm.set_ability.get(key) or (str(setter.base_ability).lower() if setter is not None else "")
-        if then == "klutz":
+        if then == "klutz" and key not in tm.set_gas:
             return ""
+        if key in tm.set_items:
+            return tm.set_items[key]
         # (a Court Change put the other side's screen here: its setter is of that side)
         other = "them" if who == "us" else "us"
         if key in tm.swapped:

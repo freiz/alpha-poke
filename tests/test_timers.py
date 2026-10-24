@@ -841,7 +841,10 @@ def test_the_logs_facts_sixth_batch():
             "|move|p2a: Bob|Court Change|p2a: Bob\n|-swapsideconditions\n|-activate|p2a: Bob|move: Court Change")  # fmt: skip
     assert t["p2"].setters["reflect"] == "dondozo" and "reflect" in t["p2"].swapped and not t["p1"].swapped
     # (Slow Start's count stops under a Neutralizing Gas: S74)
-    t = run(START + "|-start|p2a: Bob|ability: Slow Start\n|upkeep\n|turn|2\n|switch|p1a: Weezing|Weezing-Galar, M|100/100\n"
+    # (Bob comes in this turn and its Slow Start begins: not counted this end of turn -- a mon in
+    # at the turn's start whose Slow Start began later is: S153)
+    t = run(START + "|switch|p2a: Bob|Regigigas|100/100\n|-start|p2a: Bob|ability: Slow Start\n|upkeep\n|turn|2\n"
+            "|switch|p1a: Weezing|Weezing-Galar, M|100/100\n"
             "|-ability|p1a: Weezing|Neutralizing Gas\n|upkeep\n|turn|3\n|upkeep\n|turn|4")  # fmt: skip
     assert t["p2"].slowstart == [5, True]  # (not counted: its first turn, then the Gas)
     # (a confused self-hit aborts the move: a charge's second turn ends; Truant ran before it, a

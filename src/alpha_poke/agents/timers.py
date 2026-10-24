@@ -45,8 +45,9 @@ sides, in poke-engine's own units (rust/patches/poke-engine-0.0.48, generate_ins
   frombooster the active's Protosynthesis / Quark Drive came from Booster Energy (-activate ...
               [fromitem]) until it ends or the mon leaves (doc/engine-diff.md L141)
   slowstart   the active's Slow Start: [turns left, counting]; 5 from its -start, one less at each
-              end of turn from the first turn start it is in for (Showdown's counter skips the
-              turn it came in; doc/engine-diff.md L77), gone at its -end
+              end of turn once it has been in at a turn's start (Showdown's counter skips the
+              turn it came in -- its activeTurns; doc/engine-diff.md L77 -- not a later start's: a
+              Transform's, a Skill Swap's), gone at its -end
   trapped     the active is trapped by Mean Look / Block / Jaw Lock / Spirit Shackle / Anchor Shot
               (-activate trapped) until it or the other side's active leaves (doc/engine-diff.md L107)
   last_failed the active's move failed last turn (a -fail / -miss of its own, an -immune of the
@@ -210,6 +211,8 @@ class SideTimers:
     # ability_now; none: its own -- an ability's change is always in the log): a Klutz setter's
     # extending item does nothing (2026-10-24 review: a Skill Swap after read the new one)
     set_ability: dict = field(default_factory=dict)
+    # the setters keys set under Neutralizing Gas: no ability on, a Klutz's neither (its item works)
+    set_gas: set = field(default_factory=set)
     nothing_now: bool = False  # its move did nothing this turn (protected: Showdown's null result)
     last_nothing: bool = False
     sub_failed_now: bool = False  # its status move's -fail at a Substitute this turn (S93)
@@ -435,6 +438,13 @@ def _feed_one(sides: dict, p: list[str]) -> None:
                 a.set_ability[k] = xb
             if xa is not None:
                 b.set_ability[k] = xa
+            ga, gb = k in a.set_gas, k in b.set_gas
+            a.set_gas.discard(k)
+            b.set_gas.discard(k)
+            if gb:
+                a.set_gas.add(k)
+            if ga:
+                b.set_gas.add(k)
             if sb is not None:
                 a.setters[k] = sb
             if sa is not None:
@@ -812,9 +822,10 @@ def _feed_one(sides: dict, p: list[str]) -> None:
         st.protected = False
         st.protect = 0
         st.protected_move = ""  # (its volatile gone too: S78)
-    elif tag == "-activate" and len(p) > 3 and to_id(p[3].replace("move: ", "")) in PROTECTS:
+    elif tag == "-activate" and len(p) > 3 and to_id(p[3].replace("move: ", "")) in PROTECTS - {"endure"}:
         # (its target protected: the move did nothing -- a lock does not start; its result null,
-        # not false: the Metronome item's count ends -- S120)
+        # not false: the Metronome item's count ends -- S120. Not an Endure's: the hit landed, the
+        # target held on -- 2026-10-24, an Outrage's lock ended there)
         mover = sides["p2" if p[2][:2] == "p1" else "p1"]
         if mover.just_moved:
             mover.nothing_now = True
@@ -910,7 +921,10 @@ def _feed_one(sides: dict, p: list[str]) -> None:
             st.sub_hit = False
             st.sub_on = True
         elif what == "abilityslowstart":
-            st.slowstart = [5, False]
+            # (counting from this end of turn already if it was in at the turn's start: Showdown
+            # counts down while its activeTurns > 0 -- a Ditto in since the last turn that copied
+            # it by Transform; 2026-10-24, the state-construction differential: one turn late)
+            st.slowstart = [5, not st.switched_now]
     elif tag == "-ability" and len(p) > 3 and to_id(p[3]) in ("dauntlessshield", "supersweetsyrup",
                                                                  "intrepidsword"):  # fmt: skip
         st.used_once.add(sp)  # (L172: Supersweet Syrup's once per battle too; L184: Intrepid Sword)
@@ -942,7 +956,7 @@ def _feed_one(sides: dict, p: list[str]) -> None:
         st.setters[to_id(p[3].replace("move: ", ""))] = st.just_moved
         st.swapped.discard(to_id(p[3].replace("move: ", "")))
         st.set_items.pop(to_id(p[3].replace("move: ", "")), None)
-        _ability_then(st, to_id(p[3].replace("move: ", "")), st.just_moved)
+        _ability_then(sides, st, to_id(p[3].replace("move: ", "")), st.just_moved)
         if "magicroom" in st.fields_elapsed or st.embargo:
             # (its item suppressed as it set it -- Magic Room, Embargo: no Light Clay; Showdown's
             # hasItem; 2026-10-23, the state-construction differential)
@@ -1108,11 +1122,16 @@ def _item_was(st: SideTimers, sp: str, item: str) -> None:
             st.set_items[k] = item
 
 
-def _ability_then(st: SideTimers, key: str, sp: str) -> None:
-    """The ability ``sp`` set ``key`` with, if a move / an ability had changed it (else its own)."""
+def _ability_then(sides: dict, st: SideTimers, key: str, sp: str) -> None:
+    """The ability ``sp`` set ``key`` with, if a move / an ability had changed it (else its own),
+    and whether Neutralizing Gas was out then: whether its item worked as the effect began -- a
+    Klutz's not, unless the gas held its Klutz off (2026-10-24 review)."""
     st.set_ability.pop(key, None)
+    st.set_gas.discard(key)
     if sp and sp == st.active and st.ability_now:
         st.set_ability[key] = st.ability_now
+    if any(s.gas_on for s in sides.values()):
+        st.set_gas.add(key)
 
 
 def _set_by(sides: dict, p: list[str], kind: str, what: str) -> None:
@@ -1129,7 +1148,7 @@ def _set_by(sides: dict, p: list[str], kind: str, what: str) -> None:
     if st is not None and what != "none":
         st.setters[kind] = (what, sp)
         st.set_items.pop(kind, None)
-        _ability_then(st, kind, sp)
+        _ability_then(sides, st, kind, sp)
         if "magicroom" in st.fields_elapsed or (st.embargo and sp == st.active):
             st.set_items[kind] = ""  # (its item suppressed as it set it)
 
