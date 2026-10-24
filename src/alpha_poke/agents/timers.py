@@ -211,6 +211,11 @@ class SideTimers:
     sub_failed_now: bool = False  # its status move's -fail at a Substitute this turn (S93)
     last_sub_failed: bool = False  # last turn's
     fainted_out: str = ""  # the active that fainted (its way out: no Regenerator)
+    perish_fresh: bool = False  # Perish Song's silent perish3 this turn: its count 4 till the turn's end
+    notarget: bool = False  # its move this turn had no target ([notarget])
+    metronome_gone: bool = False  # its Metronome item lost since its last move (the volatile stays)
+    in_residual: bool = False  # this end of turn's residuals under way (a future attack's hit seen)
+    past_stints: list = field(default_factory=list)  # the times in before this one (stint dicts)
     upkept: bool = False  # this turn's end passed (|upkeep|, before the next |turn|)
     swapped: set = field(default_factory=set)  # setters keys whose setter is the other side's (Court Change)
     fields_elapsed: dict = field(default_factory=dict)  # "weather" / "terrain" / ROOMS -> ends of turn
@@ -253,7 +258,7 @@ class SideTimers:
         self.nothing_now = self.last_nothing = False
         self.sub_hit = self.recharge = False
         self.charging = self.locked = self.temp_forme = None
-        self.protean = self.item_lost = self.struggled = self.flashfire = False
+        self.protean = self.item_lost = self.struggled = self.flashfire = self.metronome_gone = False
         self.destinybond = self.roosted = self.truant_next = self.minimized = False
         self.uproar, self.stockpile = None, 0
         self.embargo = self.sub_on = self.gastro = self.imprison = False
@@ -321,6 +326,7 @@ def _feed_one(sides: dict, p: list[str]) -> None:
     if tag == "upkeep":  # end of turn
         for st in sides.values():
             st.upkept = True
+            st.perish_fresh = st.in_residual = False  # (the residuals over: S126)
             st.just_moved = ""  # (no move's effects after the turn's end: a switch-in's Wind Rider -- S87)
             if st.status.get(st.active) == "tox":
                 st.toxic += 1
@@ -363,7 +369,7 @@ def _feed_one(sides: dict, p: list[str]) -> None:
         for st in sides.values():
             st.turn1 = p[2:3] == ["1"]
             st.fresh = 2 if st.fresh == 1 else 0  # (in last turn: its first turn out now)
-            st.acted = st.upkept = False
+            st.acted = st.upkept = st.in_residual = False
             st.switched_now = False
             st.last_failed, st.failed_now = st.failed_now, False
             st.last_sub_failed, st.sub_failed_now = st.sub_failed_now, False
@@ -381,7 +387,10 @@ def _feed_one(sides: dict, p: list[str]) -> None:
                 if what == "none":
                     st.fields_elapsed.pop(kind, None)
                 else:
-                    st.fields_elapsed[kind] = 0
+                    # (started in this end of turn's residuals -- a Future Sight's hit, Seed
+                    # Sower: Showdown's residual handlers were gathered before, this end of turn
+                    # does not count it; S126)
+                    st.fields_elapsed[kind] = -1 if st.in_residual else 0
         elif what in ROOMS:  # (its ends of turn: 2026-10-23, the state-construction
             # differential -- poke-env's start turn was one off after an end of turn the turn
             # number had not passed yet: a forced switch at the end of the turn)
@@ -425,6 +434,10 @@ def _feed_one(sides: dict, p: list[str]) -> None:
             if sa is not None and not wa:
                 b.swapped.add(k)
         return
+    if tag == "-clearallboost":  # (Haze: no mon named -- a broken Illusion's carried changes too: S125)
+        for s2 in sides.values():
+            s2.stint["boosts"] = {}
+            s2.illusion_boosts = {}
     st, sp = _who(p, sides)
     if st is None:
         return
@@ -505,9 +518,11 @@ def _feed_one(sides: dict, p: list[str]) -> None:
         if nick in st.illusions:  # (it is out again itself -- or so: its HP shown again)
             st.illusions[nick] = dict(st.illusions[nick], hp="")
         # this time in (an Illusion's disguise shows the mon it copies: its HP before is kept)
+        st.past_stints.append(st.stint)  # (S127: a disguise's time in found out later)
         st.stint = {"nick": nick, "species": new, "hp": st.hp_shown.get(nick), "moves": [],
                     "boosts": {}, "records": {"status": st.status.get(new),  # (its records before: S123)
-                                              "sleep": copy.deepcopy(st.sleep.get(new))}}  # fmt: skip
+                                              "sleep": copy.deepcopy(st.sleep.get(new))},
+                    "max": p[4].split(" ")[0].split("/")[-1] if len(p) > 4 else ""}  # fmt: skip
         if len(p) > 4:
             st.hp_shown[nick] = p[4]
         if any(x in ("[from] Shed Tail", "[from] Baton Pass") for x in p[4:]):
@@ -623,6 +638,8 @@ def _feed_one(sides: dict, p: list[str]) -> None:
     elif tag == "move" and len(p) > 3:
         mv = to_id(p[3])
         st.locked_exec = mv if any("lockedmove" in x for x in p[4:]) else ""
+        st.notarget = "[notarget]" in p
+        st.metronome_gone = False
         if not any(x.startswith("[from]") and "lockedmove" not in x for x in p[4:]):
             st.stint["moves"].append(mv)  # (this time in's moves: a disguised Illusion's are its own)
             st.moves_by_nick.setdefault(nick, collections.Counter())[mv] += 1
@@ -687,7 +704,8 @@ def _feed_one(sides: dict, p: list[str]) -> None:
                 mover.failed_now = True
             elif p[4] != "0":
                 mover.failed_now, mover.changed_now = False, True
-    elif tag == "-fail" and any(s.just_moved and s.last_move in NOT_FAIL for s in sides.values()):
+    elif tag == "-fail" and any(s.just_moved and s.last_move in NOT_FAIL and not s.notarget
+                                for s in sides.values()):  # (no target: a failure all the same, S129)
         pass  # (Showdown's NOT_FAIL: its -fail is not a failed move -- Synthesis at full HP)
     elif tag == "-fail" and len(p) == 3 and any(
             s.just_moved and _blocked_by_sub(s.last_move)
@@ -722,7 +740,9 @@ def _feed_one(sides: dict, p: list[str]) -> None:
             if mover.own_last in PROTECTS:
                 mover.protect = 0  # (a failed protection: Showdown removes the stall count at once)
     elif tag == "-block" and len(p) > 3 and p[3].startswith("ability:") \
-            and sides["p2" if p[2][:2] == "p1" else "p1"].just_moved:
+            and sides["p2" if p[2][:2] == "p1" else "p1"].just_moved \
+            and _is_status(sides["p2" if p[2][:2] == "p1" else "p1"].last_move):  # (not a hit's
+        # secondary -- Psychic Noise's Heal Block: S133)
         # (an ability blocking the foe's move -- Aroma Veil's Taunt / Encore: it failed; S91)
         _missed(sides["p2" if p[2][:2] == "p1" else "p1"])
     elif tag == "-immune" and sides["p2" if p[2][:2] == "p1" else "p1"].just_moved \
@@ -813,6 +833,8 @@ def _feed_one(sides: dict, p: list[str]) -> None:
         # (Gen 9's Lunar Dance restores the PP too -- poke-env's count restored, agents/
         # poke_env_fixes.py; Spite's taken PP back as well: S84)
         st.pp_taken.pop(sp, None)
+    elif tag == "-start" and len(p) > 3 and p[3] == "perish3" and "[silent]" in p and sp == st.active:
+        st.perish_fresh = True  # (Showdown's duration 4 till this end of turn: S128)
     elif tag == "-singlemove" and len(p) > 3 and to_id(p[3]) == "destinybond":
         st.destinybond = True  # (until its next move: Gen 7+ keeps it past the turn's end)
     elif tag == "-start" and len(p) > 3:
@@ -908,6 +930,8 @@ def _feed_one(sides: dict, p: list[str]) -> None:
             st.last_item[sp] = to_id(p[3])
         if sp == st.active:  # (Unburden's: an item lost this time in -- silent in the log)
             st.item_lost = True
+            # (the Metronome item's volatile stays till its next move tries -- its onTryMove: S132)
+            st.metronome_gone = to_id(p[3]) == "metronome"
         if any(x in ("[from] move: Trick", "[from] move: Switcheroo") for x in p[4:]):
             # (a swap where it gets none: the other mon had none -- Showdown's trick logs an
             # -enditem for a side left empty-handed; 2026-10-23 review: an itemless setter given
@@ -943,6 +967,7 @@ def _feed_one(sides: dict, p: list[str]) -> None:
         # failed move; 2026-10-23, the state-construction differential)
         for s in sides.values():
             s.just_moved = ""
+            s.in_residual = True  # (the end of turn's residuals: S126)
         sides["p2" if p[2][:2] == "p1" else "p1"].future = None
     elif tag == "-end" and len(p) > 3:
         what = to_id(p[3].replace("move: ", ""))

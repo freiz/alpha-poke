@@ -964,3 +964,59 @@ def test_the_logs_facts_seventh_batch():
             "|replace|p2a: Zoroark|Zoroark, M\n|-end|p2a: Zoroark|Illusion")  # fmt: skip
     assert t["p2"].status.get("suicune") == "slp" and "suicune" in t["p2"].sleep
     assert t["p2"].status.get("zoroark") == "par"
+
+
+def test_the_logs_facts_eighth_batch():
+    """2026-10-23 (the sixth million-decision run, new seeds): Haze clears a broken Illusion's
+    carried stage changes (S125); a field started in the end of turn's residuals is not counted
+    by it (S126); Perish Song's silent perish3 is 4 till the turn's end (S128); a no-target move's
+    -fail is a failure, Double Shock's too (S129); each time in keeps its shown max HP (S127)."""
+    t = run(START + "|switch|p2a: Rob|Corviknight, F|100/100\n|-unboost|p2a: Rob|spe|1\n"
+            "|replace|p2a: Zoroark|Zoroark-Hisui, F\n|-end|p2a: Zoroark|Illusion\n|-clearallboost")  # fmt: skip
+    assert t["p2"].illusion_boosts == {}
+    t = run(START + "|-end|p1a: Fishy|move: Future Sight\n|-damage|p1a: Fishy|400/503\n"
+            "|-fieldstart|move: Grassy Terrain|[from] ability: Seed Sower|[of] p1a: Fishy\n|upkeep\n|turn|2")  # fmt: skip
+    assert t["p1"].fields_elapsed["terrain"] == 0
+    t = run(START + "|move|p1a: Fishy|Perish Song|p1a: Fishy\n|-start|p1a: Fishy|perish3|[silent]\n"
+            "|-start|p2a: Bob|perish3|[silent]")  # fmt: skip
+    assert t["p1"].perish_fresh and t["p2"].perish_fresh
+    t = run(START + "|faint|p2a: Bob\n|move|p1a: Fishy|Double Shock|p2: Bob|[notarget]\n|-fail|p1a: Fishy\n|upkeep\n|turn|2")
+    assert t["p1"].last_failed
+    t = run(START + "|switch|p1a: Rob|Corviknight, F|251/251")
+    assert t["p1"].stint["max"] == "251" and t["p1"].past_stints[-1]["species"] == "dondozo"
+    # (S132: the Metronome item knocked off -- its volatile till the next move; S133: Aroma Veil
+    # blocking a hit's secondary is no failure of the hit)
+    t = run(START + "|-enditem|p2a: Bob|Metronome|[from] move: Knock Off|[of] p1a: Fishy")
+    assert t["p2"].metronome_gone
+    t = run(START + "|move|p1a: Fishy|Psychic Noise|p2a: Bob\n|-damage|p2a: Bob|80/100\n"
+            "|-block|p2a: Bob|ability: Aroma Veil|[of] p2a: Bob\n|upkeep\n|turn|2")  # fmt: skip
+    assert not t["p1"].last_failed
+
+
+def test_imprison_pressure_glaive_rush_and_a_transforms_types():
+    """S134: Imprison (self-targeting, mustpressure) at a Pressure foe takes 2 PP -- poke-env
+    checked its user. S135: Glaive Rush's drawback ends before a stopped move (paralysis). S136:
+    Transform copies its target's types now (a Libero's), not its species'."""
+    import logging
+
+    from poke_env.battle import Battle, Effect, PokemonType
+
+    import alpha_poke.agents.engine_state  # noqa: F401 (the fixes)
+
+    b = Battle("battle-gen9ou-11", "us", logging.getLogger("t"), gen=9)
+    b.player_role = "p1"
+    for line in ["|switch|p1a: Mew|Mew|100/100", "|switch|p2a: Kyurem|Kyurem|100/100", "|-ability|p2a: Kyurem|Pressure",
+                 "|turn|1", "|move|p1a: Mew|Imprison|p1a: Mew", "|-start|p1a: Mew|move: Imprison", "|upkeep", "|turn|2",
+                 "|move|p2a: Kyurem|Glaive Rush|p1a: Mew", "|-damage|p1a: Mew|50/100", "|upkeep", "|turn|3",
+                 "|cant|p2a: Kyurem|par"]:  # fmt: skip
+        b.parse_message(line.split("|"))
+    mv = b.active_pokemon.moves["imprison"]
+    assert mv.max_pp - mv.current_pp == 2
+    assert Effect.GLAIVE_RUSH not in b.opponent_active_pokemon.effects
+    b = Battle("battle-gen9ou-12", "us", logging.getLogger("t"), gen=9)
+    b.player_role = "p1"
+    for line in ["|switch|p1a: Cinderace|Cinderace|100/100", "|switch|p2a: Ditto|Ditto|100/100", "|turn|1",
+                 "|move|p1a: Cinderace|Quick Attack|p2a: Ditto", "|-start|p1a: Cinderace|typechange|Normal|[from] ability: Libero",
+                 "|-damage|p2a: Ditto|80/100", "|-transform|p2a: Ditto|p1a: Cinderace|[from] ability: Imposter"]:  # fmt: skip
+        b.parse_message(line.split("|"))
+    assert b.opponent_active_pokemon.base_types == [PokemonType.NORMAL]

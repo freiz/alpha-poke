@@ -38,6 +38,19 @@ _inner_pressure = AbstractBattle._pressure_on
 def _pressure_on(self, pokemon: str, move: str, target_str):
     if Field.NEUTRALIZING_GAS in self.fields:
         return False
+    try:
+        from poke_env.data import GenData
+
+        data = GenData.from_gen(self.gen).moves[_move_id(move)]
+    except Exception:  # noqa: BLE001
+        data = {}
+    if data.get("target") == "self" and "mustpressure" in data.get("flags", {}):
+        # (a self-targeting move Pressure reaches all the same -- Imprison, Snatch: the foe's
+        # active's Pressure, poke-env checked its user's; S134)
+        user = self.get_pokemon(pokemon)
+        foe = self.opponent_active_pokemon if user in self.team.values() else self.active_pokemon
+        return foe is not None and foe.ability == "pressure" and not foe.fainted \
+            and Effect.GASTRO_ACID not in foe.effects
     if not _inner_pressure(self, pokemon, move, target_str):
         return False
     try:
@@ -169,6 +182,12 @@ def _parse_message(self, split_message):
         of = self.get_pokemon(split_message[-1][5:])
         if of._ability is None and split_message[4]:
             of._ability = to_id_str(split_message[4].replace("[ability] ", ""))
+    kept = None
+    if split_message[1:2] == ["-terastallize"] and len(split_message) > 2:
+        # (Terastallization keeps the pre-tera types -- a transformed Ditto's copied ones:
+        # poke-env drops its temporary types; S136)
+        kept = self.get_pokemon(split_message[2])
+        kept = (kept, list(kept._temporary_types))
     disguised = _our_disguised_switch(self, split_message)
     if disguised is not None:  # (poke-env switches the Zoroark in; the log stays as shown)
         _inner_parse_message(self, disguised)
@@ -180,10 +199,16 @@ def _parse_message(self, split_message):
         self._replay_data.append(split_message[:])
     else:
         _inner_parse_message(self, split_message)
+    if kept is not None and kept[1]:
+        kept[0]._temporary_types = kept[1]
     for m in yawned:  # (poke-env ends Yawn at any sleep its HP line shows -- a Rest's too:
         # Showdown keeps it till its own -end; S115)
         if Effect.YAWN not in m.effects and m.active and not yawn_end:
             m.effects[Effect.YAWN] = 0
+    if split_message[1:2] == ["cant"] and len(split_message) > 3 \
+            and not any(x.startswith("[of]") for x in split_message[4:]):
+        # (Glaive Rush's drawback ends before any stopped move -- its BeforeMove priority 100: S135)
+        self.get_pokemon(split_message[2]).effects.pop(Effect.GLAIVE_RUSH, None)
     if len(split_message) == 3 and split_message[1] == "-endability":
         # (Gastro Acid: Showdown logs its suppression so -- poke-env keeps no effect of it, its
         # Pressure still took 2 PP: S100)
@@ -200,6 +225,15 @@ def _parse_message(self, split_message):
             temp[id(mon)] = mon
         else:
             temp.pop(id(mon), None)
+        # (a forme change sets the forme's types -- Showdown's setSpecies: a Soak before it gone;
+        # S124: an Ogerpon soaked, then its tera forme)
+        mon.effects.pop(Effect.TYPECHANGE, None)
+        mon._temporary_types = []
+    if len(split_message) > 3 and split_message[1] == "-transform":
+        # (its target's types now -- a Libero's / Soak's included: Showdown's transformInto copies
+        # getTypes; poke-env its species' -- S136)
+        mon, target = self.get_pokemon(split_message[2]), self.get_pokemon(split_message[3])
+        mon._temporary_types = list(target.base_types)
     if len(split_message) > 3 and split_message[1] == "-heal" and "[from] move: Lunar Dance" in split_message:
         for mv in self.get_pokemon(split_message[2]).moves.values():
             mv._current_pp = mv.max_pp

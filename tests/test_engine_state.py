@@ -977,3 +977,26 @@ def test_as_one_and_a_type_change_after_terastallizing(belief):
                 "|-damage|p1a: Garchomp|300/400", "|-start|p2a: Gholdengo|typechange|Steel|[from] move: Double Shock",
                 "|upkeep", "|turn|2"])  # fmt: skip
     assert "typechange" not in {str(v).lower() for v in state(b, belief).side_two.volatile_statuses}
+
+
+def test_the_sixth_runs_construction_facts(belief):
+    """S124: a forme change sets its types -- a Soak before it gone (poke-env kept the typechange).
+    S131: Spite's / Eerie Spell's PP of a transformed foe's copied move."""
+    b = battle(["|switch|p2a: Palafin|Palafin, F|100/100", "|turn|2",
+                "|move|p1a: Garchomp|Soak|p2a: Palafin", "|-start|p2a: Palafin|typechange|Water",
+                "|detailschange|p2a: Palafin|Palafin-Hero, F", "|upkeep", "|turn|3"])  # fmt: skip
+    assert "typechange" not in {str(v).lower() for v in state(b, belief).side_two.volatile_statuses}
+    b = battle(["|switch|p2a: Ditto|Ditto|100/100", "|-transform|p2a: Ditto|p1a: Garchomp|[from] ability: Imposter",
+                "|turn|2", "|move|p2a: Ditto|Earthquake|p1a: Garchomp", "|-damage|p1a: Garchomp|300/400",
+                "|move|p1a: Garchomp|Spite|p2a: Ditto", "|-activate|p2a: Ditto|move: Spite|Earthquake|4",
+                "|upkeep", "|turn|3"])  # fmt: skip
+    two = state(b, belief).side_two
+    assert {m.id: m.pp for m in two.pokemon[int(two.active_index)].moves}["earthquake"] == 0
+
+
+def test_a_type_change_to_its_own_types_is_none(belief):
+    """S137: a Libero into its own type (a Ghost's Poltergeist) -- Showdown's types unchanged: no
+    typechange (poke-env's effect stayed)."""
+    b = battle(["|move|p2a: Gholdengo|Make It Rain|p1a: Garchomp", "|-start|p2a: Gholdengo|typechange|Steel/Ghost|[from] ability: Libero",
+                "|-damage|p1a: Garchomp|300/400", "|upkeep", "|turn|2"])  # fmt: skip
+    assert "typechange" not in {str(v).lower() for v in state(b, belief).side_two.volatile_statuses}
