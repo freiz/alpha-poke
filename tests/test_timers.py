@@ -470,6 +470,11 @@ def test_formes_from_the_log():
     t = run(START + "|-enditem|p2a: Bob|Sitrus Berry|[eat]\n|detailschange|p2a: Bob|Gliscor-Fake, F\n"
             "|-status|p2a: Bob|slp")  # fmt: skip
     assert t["p2"].last_item["gliscor"] == "sitrusberry" and t["p2"].status["gliscor"] == "slp"
+    # (switched back in with the forme in its details: the key moves, the forme maps to it --
+    # 2026-10-23: a Mimikyu-Busted's Red Card was lost)
+    t = run(START + "|-enditem|p2a: Bob|Sitrus Berry|[eat]\n|detailschange|p2a: Bob|Gliscor-Fake, F\n"
+            "|switch|p2a: Bob|Gliscor-Fake, F|100/100")  # fmt: skip
+    assert t["p2"].last_item[t["p2"].k("gliscorfake")] == "sitrusberry"
 
 
 def test_the_logs_facts_third_batch():
@@ -531,6 +536,97 @@ def test_pressure_under_neutralizing_gas_takes_one_pp():
     assert mv.max_pp - mv.current_pp == 1
 
 
+
+def test_a_broken_illusion_keeps_its_volatiles():
+    """S60: a Salt Cure on a disguised Zoroark that broke its Illusion: poke-env cleared it with
+    the disguise's switch-out, the Zoroark had none (agents/poke_env_fixes.py)."""
+    import logging
+
+    from poke_env.battle import Battle, Effect
+
+    import alpha_poke.agents.engine_state  # noqa: F401 (the fixes)
+
+    b = Battle("battle-gen9ou-1", "us", logging.getLogger("t"), gen=9)
+    b.player_role = "p1"
+    for line in ["|switch|p1a: Garganacl|Garganacl|100/100", "|switch|p2a: Slowking|Slowking|100/100",
+                 "|turn|1", "|move|p1a: Garganacl|Salt Cure|p2a: Slowking", "|-damage|p2a: Slowking|80/100",
+                 "|-start|p2a: Slowking|Salt Cure", "|replace|p2a: Zoroark|Zoroark-Hisui, M",
+                 "|-end|p2a: Zoroark|Illusion"]:  # fmt: skip
+        b.parse_message(line.split("|"))
+    assert b.opponent_active_pokemon.species == "zoroarkhisui"
+    assert Effect.SALT_CURE in b.opponent_active_pokemon.effects
+
+    # live: our Zoroark switched in as the disguise, a Sticky Web's drop on it, the request's
+    # active the Zoroark -- the drop is the Zoroark's (S68)
+    def mon(ident, details, active):
+        return {"ident": ident, "details": details, "condition": "100/100", "active": active,
+                "moves": ["nightdaze"], "baseAbility": "illusion", "item": "", "ability": "illusion",
+                "stats": {"atk": 1, "def": 1, "spa": 1, "spd": 1, "spe": 1}, "teraType": "Dark",
+                "terastallized": ""}  # fmt: skip
+
+    b = Battle("battle-gen9ou-2", "us", logging.getLogger("t"), gen=9)
+    b.player_role = "p1"
+    side = lambda z: {"name": "us", "id": "p1", "pokemon": [  # noqa: E731
+        mon("p1: Bronzong", "Bronzong", not z), mon("p1: Zoroark", "Zoroark-Hisui, M", z)]}
+    b.parse_request({"side": side(False), "rqid": 1})
+    for line in ["|switch|p1a: Bronzong|Bronzong|100/100", "|switch|p2a: Slowking|Slowking|100/100",
+                 "|turn|1", "|move|p2a: Slowking|Sticky Web|p1a: Bronzong", "|upkeep", "|turn|2",
+                 "|switch|p1a: Bronzong|Bronzong|100/100", "|-activate|p1a: Bronzong|move: Sticky Web",
+                 "|-unboost|p1a: Bronzong|spe|1", "|upkeep", "|turn|3"]:  # fmt: skip
+        b.parse_message(line.split("|"))
+    b.parse_request({"active": [{"moves": [{"move": "Night Daze", "id": "nightdaze", "pp": 16, "maxpp": 16,
+                                            "disabled": False}]}], "side": side(True), "rqid": 2})  # fmt: skip
+    assert b.active_pokemon.species == "zoroarkhisui" and b.active_pokemon.boosts["spe"] == -1
+    # (a lead: the Zoroark not in poke-env's team before the first request after the log)
+    b = Battle("battle-gen9ou-3", "us", logging.getLogger("t"), gen=9)
+    b.player_role = "p1"
+    for line in ["|switch|p1a: Bronzong|Bronzong|100/100", "|switch|p2a: Landorus|Landorus-Therian, M|100/100",
+                 "|-ability|p2a: Landorus|Intimidate|boost", "|-unboost|p1a: Bronzong|atk|1", "|turn|1"]:  # fmt: skip
+        b.parse_message(line.split("|"))
+    b.parse_request({"active": [{"moves": [{"move": "Night Daze", "id": "nightdaze", "pp": 16, "maxpp": 16,
+                                            "disabled": False}]}], "side": side(True), "rqid": 1})  # fmt: skip
+    assert b.active_pokemon.species == "zoroarkhisui" and b.active_pokemon.boosts["atk"] == -1
+    # (later turns: the request made the Zoroark the active, the log names the disguise -- its
+    # stage changes are the Zoroark's, and stay through the Illusion's end: S81, S82)
+    def req(r):
+        return {"active": [{"moves": [{"move": "Night Daze", "id": "nightdaze", "pp": 16, "maxpp": 16,
+                                       "disabled": False}]}], "side": side(True), "rqid": r}  # fmt: skip
+
+    for line in ["|move|p2a: Landorus|Earth Power|p1a: Bronzong", "|-damage|p1a: Bronzong|50/100",
+                 "|-unboost|p1a: Bronzong|spd|1", "|upkeep", "|turn|2"]:  # fmt: skip
+        b.parse_message(line.split("|"))
+    b.parse_request(req(2))
+    for line in ["|move|p2a: Landorus|Earth Power|p1a: Bronzong", "|-damage|p1a: Bronzong|20/100",
+                 "|replace|p1a: Zoroark|Zoroark-Hisui, M", "|-end|p1a: Zoroark|Illusion", "|upkeep", "|turn|3"]:  # fmt: skip
+        b.parse_message(line.split("|"))
+    b.parse_request(req(3))
+    assert b.active_pokemon.species == "zoroarkhisui"
+    assert (b.active_pokemon.boosts["atk"], b.active_pokemon.boosts["spd"]) == (-1, -1)
+
+def test_a_temporary_forme_ends_with_its_switch_out():
+    """S66: Meloetta-Pirouette (-formechange) switched out and back in as Aria kept Pirouette's
+    types in poke-env (agents/poke_env_fixes.py); a detailschange's forme stays."""
+    import logging
+
+    from poke_env.battle import Battle, PokemonType
+
+    import alpha_poke.agents.engine_state  # noqa: F401 (the fixes)
+
+    b = Battle("battle-gen9ou-1", "us", logging.getLogger("t"), gen=9)
+    b.player_role = "p1"
+    for line in ["|switch|p1a: Garganacl|Garganacl|100/100", "|switch|p2a: Meloetta|Meloetta|100/100",
+                 "|turn|1", "|move|p2a: Meloetta|Relic Song|p1a: Garganacl",
+                 "|-formechange|p2a: Meloetta|Meloetta-Pirouette|[msg]", "|upkeep", "|turn|2"]:  # fmt: skip
+        b.parse_message(line.split("|"))
+    mel = b.opponent_active_pokemon
+    assert PokemonType.FIGHTING in mel.types
+    for line in ["|switch|p2a: Palafin|Palafin|100/100", "|detailschange|p2a: Palafin|Palafin-Hero",
+                 "|upkeep", "|turn|3", "|switch|p2a: Meloetta|Meloetta|100/100"]:  # fmt: skip
+        b.parse_message(line.split("|"))
+    assert PokemonType.PSYCHIC in mel.types and PokemonType.FIGHTING not in mel.types
+    palafin = next(m for m in b.opponent_team.values() if m.species.startswith("palafin"))
+    assert palafin.base_stats["atk"] == 160  # (Hero's, kept)
+
 def test_the_logs_facts_fourth_batch():
     """2026-10-23 (state-construction differential): Eerie Spell's PP; Court Change swaps the
     conditions' counts; a Regenerator going out under Neutralizing Gas heals nothing; a lock ends
@@ -588,3 +684,82 @@ def test_the_logs_facts_fifth_batch():
     assert not t["p1"].last_failed
     t = run(START + "|move|p1a: Fishy|Shed Tail|p1a: Fishy\n|-fail|p1a: Fishy|move: Shed Tail|[weak]\n|upkeep\n|turn|2")
     assert t["p1"].last_failed
+
+
+def test_the_logs_facts_sixth_batch():
+    """2026-10-23 (the third million-decision run): an ability stopping a priority move (Armor
+    Tail: Showdown's cant names its holder, [of] the mover) fails the mover's move, not the
+    holder's."""
+    t = run(START + "|move|p2a: Bob|Protect|p2a: Bob\n|-singleturn|p2a: Bob|Protect\n"
+            "|move|p1a: Fishy|Aqua Jet||[still]\n|cant|p2a: Bob|ability: Armor Tail|Aqua Jet|[of] p1a: Fishy\n"
+            "|upkeep\n|turn|2")  # fmt: skip
+    assert t["p1"].last_failed and not t["p2"].last_failed
+    # (Baneful Bunker logs "move: Protect": its own volatile -- S61)
+    t = run(START + "|move|p2a: Bob|Baneful Bunker|p2a: Bob\n|-singleturn|p2a: Bob|move: Protect")
+    assert t["p2"].protected_move == "banefulbunker"
+    t = run(START + "|move|p2a: Bob|Detect|p2a: Bob\n|-singleturn|p2a: Bob|Protect")
+    assert t["p2"].protected_move == "protect"
+    # (Dry Skin's heal in the rain at the turn's end is no absorbed move -- S63; one at the move,
+    # [of] the mover, is)
+    t = run(START + "|move|p2a: Bob|Earthquake|p1a: Fishy\n|-damage|p1a: Fishy|300/503\n"
+            "|-weather|RainDance|[upkeep]\n|-heal|p1a: Fishy|363/503|[from] ability: Dry Skin\n|upkeep\n|turn|2")  # fmt: skip
+    assert not t["p2"].last_failed
+    t = run(START + "|move|p2a: Bob|Surf|p1a: Fishy\n|-heal|p1a: Fishy|363/503|[from] ability: Dry Skin|[of] p2a: Bob\n"
+            "|upkeep\n|turn|2")  # fmt: skip
+    assert t["p2"].last_failed
+    # (a Perish Song with one target immune -- Good as Gold -- did not fail: S64)
+    t = run(START + "|move|p1a: Fishy|Perish Song|p1a: Fishy\n|-start|p1a: Fishy|perish3|[silent]\n"
+            "|-immune|p2a: Bob|[from] ability: Good as Gold\n|-fieldactivate|move: Perish Song\n|upkeep\n|turn|2")  # fmt: skip
+    assert not t["p1"].last_failed
+    # (a stopped action -- paralysed -- ends Destiny Bond: its onMoveAborted, S65)
+    t = run(START + "|move|p2a: Bob|Destiny Bond|p2a: Bob\n|-singlemove|p2a: Bob|Destiny Bond\n|upkeep\n|turn|2\n"
+            "|cant|p2a: Bob|par")  # fmt: skip
+    assert not t["p2"].destinybond
+    # (a Morpeko terastallized as Hangry stays Hangry after its switch-out: S67)
+    t = run(START + "|switch|p2a: Morpeko|Morpeko, F|100/100\n|-formechange|p2a: Morpeko|Morpeko-Hangry\n"
+            "|upkeep\n|turn|2\n|-terastallize|p2a: Morpeko|Dark\n|drag|p2a: Bob|Gliscor, M|100/100")  # fmt: skip
+    assert t["p2"].formes["Morpeko"] == "morpekohangry"
+    # (brought back by Revival Blessing, then terastallized: no longer "revived" -- S69)
+    t = run(START + "|faint|p2a: Bob\n|-heal|p2: Bob|50/100|[from] move: Revival Blessing\n"
+            "|switch|p2a: Bob|Gliscor, M|50/100\n|-terastallize|p2a: Bob|Water")  # fmt: skip
+    assert "gliscor" not in t["p2"].revived
+    # (a Truant mon moving under a Neutralizing Gas does not loaf after: S71)
+    t = run(START + "|switch|p1a: Weezing|Weezing-Galar, M|100/100\n|-ability|p1a: Weezing|Neutralizing Gas\n"
+            "|move|p2a: Bob|Knock Off|p1a: Weezing\n|upkeep\n|turn|2")  # fmt: skip
+    assert not t["p2"].truant_next
+    t = run(START + "|move|p2a: Bob|Knock Off|p1a: Fishy\n|upkeep\n|turn|2")
+    assert t["p2"].truant_next
+    # (a Choice item got by Trick, then a Struggle: no lock of its set -- S72)
+    t = run(START + "|move|p1a: Fishy|Trick|p2a: Bob\n|-activate|p1a: Fishy|move: Trick|[of] p2a: Bob\n"
+            "|-item|p2a: Bob|Choice Scarf|[from] move: Trick\n|-item|p1a: Fishy|Choice Band|[from] move: Trick\n"
+            "|-activate|p2a: Bob|move: Struggle\n|move|p2a: Bob|Struggle|p1a: Fishy\n|upkeep\n|turn|2")  # fmt: skip
+    assert t["p2"].item_new and t["p2"].struggled
+    # (a Court Change's swapped screen: its setter of the other side -- S73)
+    t = run(START + "|move|p1a: Fishy|Reflect|p1a: Fishy\n|-sidestart|p1: A|Reflect\n|upkeep\n|turn|2\n"
+            "|move|p2a: Bob|Court Change|p2a: Bob\n|-swapsideconditions\n|-activate|p2a: Bob|move: Court Change")  # fmt: skip
+    assert t["p2"].setters["reflect"] == "dondozo" and "reflect" in t["p2"].swapped and not t["p1"].swapped
+    # (Slow Start's count stops under a Neutralizing Gas: S74)
+    t = run(START + "|-start|p2a: Bob|ability: Slow Start\n|upkeep\n|turn|2\n|switch|p1a: Weezing|Weezing-Galar, M|100/100\n"
+            "|-ability|p1a: Weezing|Neutralizing Gas\n|upkeep\n|turn|3\n|upkeep\n|turn|4")  # fmt: skip
+    assert t["p2"].slowstart == [5, True]  # (not counted: its first turn, then the Gas)
+    # (a confused self-hit aborts the move: a charge's second turn ends; Truant ran before it, a
+    # paralysis stop too -- a loaf next; asleep not -- S75)
+    t = run(START + "|move|p2a: Bob|Phantom Force||[still]\n|-prepare|p2a: Bob|Phantom Force\n|upkeep\n|turn|2\n"
+            "|-activate|p2a: Bob|confusion\n|-damage|p2a: Bob|80/100|[from] confusion")  # fmt: skip
+    assert t["p2"].charging is None and t["p2"].truant_next
+    assert run(START + "|cant|p2a: Bob|par")["p2"].truant_next
+    assert not run(START + "|cant|p2a: Bob|slp")["p2"].truant_next
+    # (a Neutralizing Gas ending after a Truant mon moved: its onStart, a loaf next -- S76)
+    t = run(START + "|switch|p1a: Weezing|Weezing-Galar, M|100/100\n|-ability|p1a: Weezing|Neutralizing Gas\n"
+            "|upkeep\n|turn|2\n|move|p2a: Bob|Body Slam|p1a: Weezing\n|-damage|p1a: Weezing|0 fnt\n|faint|p1a: Weezing\n"
+            "|-end|p1a: Weezing|ability: Neutralizing Gas")  # fmt: skip
+    assert t["p2"].truant_next
+    # (an Intimidate a Substitute stopped -- its -immune -- is no failed move of the U-turn's
+    # user: S77; a protection broken -- Hyperspace Fury -- ends its volatile too: S78)
+    t = run(START + "|move|p2a: Bob|U-turn|p1a: Fishy\n|-damage|p1a: Fishy|400/503\n"
+            "|switch|p2a: Rob|Landorus-Therian, M|100/100|[from] U-turn\n|-ability|p2a: Rob|Intimidate|boost\n"
+            "|-immune|p1a: Fishy\n|upkeep\n|turn|2")  # fmt: skip
+    assert not t["p2"].last_failed
+    t = run(START + "|move|p2a: Bob|Protect|p2a: Bob\n|-singleturn|p2a: Bob|Protect\n"
+            "|move|p1a: Fishy|Hyperspace Fury|p2a: Bob\n|-activate|p2a: Bob|move: Hyperspace Fury|[broken]")  # fmt: skip
+    assert t["p2"].protected_move == "" and not t["p2"].protected

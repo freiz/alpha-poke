@@ -81,3 +81,23 @@ def test_their_ditto_takes_our_moves_and_stats(belief):
     assert theirs.transform_backup is not None
     assert {"transform", "typechange"} <= {str(v).lower() for v in s.side_two.volatile_statuses}
     assert theirs.maxhp != ours.maxhp or theirs.hp > 0  # its own HP
+
+
+def test_our_struggling_choice_locked_ditto_keeps_the_locks_flags(belief):
+    """2026-10-23 (state-construction differential, S59): our Scarf Ditto's locked copied move out
+    of PP, a Struggle, the request Struggle only -- the lock's flags were lost (poke-env's last
+    used move is the Struggle): the others disabled, the locked one not."""
+    b = battle(our_ditto=True)
+    for line in ("|move|p1a: Ditto|Kowtow Cleave|p2a: Kingambit", "|-damage|p2a: Kingambit|80/100",
+                 "|upkeep", "|turn|2", "|-activate|p1a: Ditto|move: Struggle",
+                 "|move|p1a: Ditto|Struggle|p2a: Kingambit", "|-damage|p2a: Kingambit|70/100",
+                 "|upkeep", "|turn|3"):  # fmt: skip
+        b.parse_message(line.split("|"))
+    side = [mon("p1: Ditto", "Ditto", AMBIT, True), mon("p1: Garchomp", "Garchomp", ["earthquake"])]
+    b.parse_request({"active": [{"moves": [{"move": "Struggle", "id": "struggle", "pp": 1, "maxpp": 1,
+                                            "disabled": False}]}],
+                     "side": {"name": "us", "id": "p1", "pokemon": side}, "rqid": 3})  # fmt: skip
+    s = build_state(b, belief, ("Ditto", "Garchomp"), random.Random(0))
+    flags = {m.id: m.disabled for m in s.side_one.pokemon[0].moves if m.id != "none"}
+    assert flags.get("kowtowcleave") is False, flags
+    assert all(v for k, v in flags.items() if k != "kowtowcleave"), flags

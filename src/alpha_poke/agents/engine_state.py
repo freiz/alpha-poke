@@ -74,6 +74,9 @@ BOOSTS |= {getattr(Effect, n): n.replace("_", "").lower() for n in (
     "TYPECHANGE", "HEAL_BLOCK", "CHARGE", "FLASH_FIRE", "CURSE", "MAGNET_RISE", "THROAT_CHOP",
     "FOCUS_ENERGY", "SMACK_DOWN", "ATTRACT", "NO_RETREAT", "TAR_SHOT", "AQUA_RING", "INGRAIN",
     "GLAIVE_RUSH", "OCTOLOCK", "TORMENT", "GASTRO_ACID", "SYRUP_BOMB")}  # fmt: skip
+# (an added type -- Forest's Curse, Trick-or-Treat: Showdown's getTypes has it, the engine's
+# typechange volatile; S80)
+BOOSTS[Effect.TYPEADD] = "typechange"
 # partial trapping (doc/engine-diff.md L2c, 2026-10-16: left out until then -- the search did not
 # see the trapped mon unable to switch nor its 1/8 per turn): poke-env names it after the move
 BOOSTS |= {getattr(Effect, n): "partiallytrapped" for n in (
@@ -545,7 +548,10 @@ def _our_mon(
     if mon.transformed:  # its own moves (the request's are the copied ones: _as_transformed)
         available_moves = req_pp = None
     last = next((mid for mid, mv in mon.moves.items() if mv.is_last_used), "")
-    lock = last if ((mon.item in CHOICE_ITEMS and not (tm is not None and tm.item_new))
+    # (after a Struggle -- its locked move out of PP -- the lock's move is the one it chose: the
+    # timers'; poke-env's last used one is not -- 2026-10-23, S70: a Taunt's flag on top)
+    chosen = tm.own_last if tm is not None and tm.struggled and tm.own_last else last
+    lock = chosen if ((mon.item in CHOICE_ITEMS and not (tm is not None and tm.item_new))
                     or mon.ability == "gorillatactics") else ""  # fmt: skip
     if tm is not None and tm.locked and mon.active:
         lock = tm.locked[0]  # (a locking move's: its flags first -- L179; a Taunt on top derives none)
@@ -818,8 +824,10 @@ def _last_move(mon, engine_mon, avail: set[str] | None = None, index: int | None
     # (L232: after a Struggle, a lock's move -- a Choice item's / Gorilla Tactics' / Encore's --
     # is the last used one; else none: 2026-10-23, the state-construction differential)
     if tm is not None and tm.struggled:
-        locked = (str(engine_mon.item).lower() in CHOICE_ITEMS or str(engine_mon.ability).lower()
-                  == "gorillatactics" or "encore" in vol)  # fmt: skip
+        # (a Choice item got since its locked move -- Trick: the lock gone, the Struggle's own
+        # locks none; 2026-10-23, S72)
+        locked = ((str(engine_mon.item).lower() in CHOICE_ITEMS and not tm.item_new)
+                  or str(engine_mon.ability).lower() == "gorillatactics" or "encore" in vol)  # fmt: skip
         if locked and tm.own_last in ids:
             return {"last_used_move": f"move:{ids.index(tm.own_last)}"}, vol
         vol.discard("encore")
@@ -832,6 +840,11 @@ def _last_move(mon, engine_mon, avail: set[str] | None = None, index: int | None
         # moveUsed sets lastMove to it, no move of its own: none; 2026-10-23)
         vol.discard("encore")
         return {}, vol
+    backup = getattr(engine_mon, "transform_backup", None)
+    if idx is None and tm is not None and backup and tm.own_last in [m for m, _ in backup[2]]:
+        # (a transformed mon's own move -- its Transform: poke-env has its target's moves only;
+        # the engine's last used one is its slot in the backup, L187; 2026-10-23)
+        return {"last_used_move": f"move:{[m for m, _ in backup[2]].index(tm.own_last)}"}, vol
     if idx is None and tm is not None and tm.illusion_last in ids:
         # (a broken Illusion: its last move disguised -- poke-env gave it to the disguise)
         return {"last_used_move": f"move:{ids.index(tm.illusion_last)}"}, vol
@@ -841,9 +854,10 @@ def _last_move(mon, engine_mon, avail: set[str] | None = None, index: int | None
     if idx is None:
         vol.discard("encore")
         # (or it came in this very turn -- a mid-turn decision: poke-env's first_turn waits for
-        # the next turn; 2026-10-23, the state-construction differential)
-        if index is not None and (getattr(mon, "first_turn", False) or switched_now
-                                  or (tm is not None and tm.fresh)):
+        # the next turn; 2026-10-23, the state-construction differential; with the timers, theirs
+        # only: poke-env's first_turn stays through a stopped action -- cant -- this turn)
+        fresh = tm.fresh if tm is not None else getattr(mon, "first_turn", False)
+        if index is not None and (fresh or switched_now):
             return {"last_used_move": f"switch:{index}"}, vol
         return {}, vol
     return {"last_used_move": f"move:{idx}"}, vol
@@ -1100,7 +1114,10 @@ def build_state(
                      if "id" in m and to_id(m["id"]) not in ("struggle", "recharge")]  # fmt: skip
             if not moves:  # (out of PP, a recharge: the target's, the PP poke-env counted; a
                 # Choice lock's flags -- its locked move out of PP: Struggle only)
-                last = next((mid for mid, mv in active.moves.items() if mv.is_last_used), "")
+                # (the move it chose: after a Struggle poke-env's last used one is the Struggle --
+                # 2026-10-23, the state-construction differential: the lock's flags were lost)
+                last = (tm_us.own_last if tm_us is not None else "") or next(
+                    (mid for mid, mv in active.moves.items() if mv.is_last_used), "")
                 lock = last if active.item in CHOICE_ITEMS else ""
                 moves = [pe.Move(id=m.id, pp=_copied_pp(active, m.id), disabled=bool(lock) and m.id != lock)
                          for m in their_mons[t].moves]  # fmt: skip
@@ -1131,10 +1148,14 @@ def build_state(
     )
     # the engine's transform / typechange volatiles (doc/engine-diff.md L36): a switch ends the
     # transformation, and an Imposter does not transform again while it is on
-    for tf, vol, mons, i in ((our_tf, our_vol, our_mons, our_active_idx),
-                             (their_tf, their_vol, their_mons, their_idx)):  # fmt: skip
+    for tf, vol, mons, i, target in ((our_tf, our_vol, our_mons, our_active_idx, (their_mons, our_t)),
+                                     (their_tf, their_vol, their_mons, their_idx, (our_mons, their_t))):  # fmt: skip
         if tf:
             vol.add("transform")
+            # (transformed into an Ogerpon / Terapagos: no Terastallization, the engine's notera --
+            # L227; 2026-10-23, the state-construction differential: left out)
+            if str(target[0][target[1]].id).lower().startswith(("ogerpon", "terapagos")):
+                vol.add("notera")
             # (a type change only if its types changed: Ditto into Blissey keeps Normal -- the
             # differential's states, Showdown's; 2026-10-23)
             p = mons[i] if i is not None and i < len(mons) else None
@@ -1149,8 +1170,11 @@ def build_state(
         # (the log's -start typechange [from] ability: Protean / Libero -- the timers' -- not
         # poke-env's ability, which it may not know: 2026-10-23, the state-construction
         # differential)
-        if mon is not None and "typechange" in vol and (tm.protean or mon.ability in ("protean", "libero")) \
-                and not (mon is active and our_tf or mon is opp_active and their_tf):
+        # (a transformed mon's typechange is its transform's -- unless the log shows its copied
+        # Protean's: S79)
+        tf = mon is active and our_tf or mon is opp_active and their_tf
+        if mon is not None and "typechange" in vol and (
+                tm.protean or (mon.ability in ("protean", "libero") and not tf)):
             vol.add("protean")
         # (L222: turn 1's stage changes are its leads' entries -- Intimidate, Intrepid Sword, ...:
         # Showdown's statsLoweredThisTurn / statsRaisedThisTurn, not reset as turn 1 starts)
@@ -1288,12 +1312,16 @@ def build_state(
     def set_with(who: str, tm: SideTimers, key: str, sp: str) -> str:
         if key in tm.set_items:
             return tm.set_items[key]
-        mon = next((p for m, p in zip(ours if who == "us" else theirs, our_mons if who == "us" else their_mons,
+        mine = (who == "us") != (key in tm.swapped)  # (the setter's side)
+        mon = next((p for m, p in zip(ours if mine else theirs, our_mons if mine else their_mons,
                                       strict=True) if to_id(m.species) == sp), None)  # fmt: skip
         if mon is not None and str(mon.ability).lower() == "klutz":
             return ""  # (a Klutz holder's item does nothing: this world's ability)
         # (a Court Change put the other side's screen here: its setter is of that side)
-        return items.get((who, sp)) or items.get(("them" if who == "us" else "us", sp), "")
+        other = "them" if who == "us" else "us"
+        if key in tm.swapped:
+            return items.get((other, sp), "")
+        return items.get((who, sp)) or items.get((other, sp), "")
 
     clay_us, clay_them = (
         frozenset(k for k, sp in tm.setters.items()

@@ -186,8 +186,13 @@ def _side_common(who: str, built: pe.Side, truth: pe.Side) -> list[tuple[str, st
     if _last_used(built) != _last_used(truth):
         out.append((f"{who}:last_used_move", f"{_last_used(built)} vs {_last_used(truth)}"))
     bv, tv = _vols(built), _vols(truth)
-    if "confusion" in bv & tv and "lockedmove" in bv ^ tv:
-        bv.discard("lockedmove")  # (a lock's end when it was confused already: silent -- hidden)
+    bv.discard("flinch")  # (a flinch is drawn silently -- shown only as it stops the move: hidden)
+    tv.discard("flinch")
+    if ("confusion" in bv & tv or str(_active(truth).ability).lower() == "owntempo") \
+            and "lockedmove" in bv ^ tv:
+        # (a lock's end when it was confused already, or with Own Tempo -- no confusion: silent
+        # -- hidden)
+        bv.discard("lockedmove")
         tv.discard("lockedmove")
     for v in sorted(bv ^ tv):
         out.append((f"{who}:volatile:{v}", "built" if v in bv else "truth"))

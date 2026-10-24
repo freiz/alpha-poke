@@ -58,6 +58,32 @@ def test_last_move_sets_encore_move_or_drops_encore():
     kw, vol = _last_move(_poke_env_mon(encored=True), em)
     assert kw == {} and "encore" not in vol
 
+    # its first turn out, its action stopped (cant: frozen) before a mid-turn decision: poke-env's
+    # first_turn stays, the timers' count does not -- no switch-in last move (2026-10-23, S56)
+    from alpha_poke.agents.timers import SideTimers
+
+    mon = _poke_env_mon()
+    mon.first_turn = True
+    tm = SideTimers()
+    tm.fresh = 0
+    assert _last_move(mon, em, index=0, tm=tm)[0] == {}
+    tm.fresh = 2
+    assert _last_move(mon, em, index=0, tm=tm)[0] == {"last_used_move": "switch:0"}
+    # a transformed Ditto's Transform: poke-env has its target's moves only, the engine's last
+    # used move is Transform's slot in its backup (L187; 2026-10-23, S58)
+    import poke_engine as pe
+
+    t = ("normal", "typeless")
+    ditto = pe.Pokemon(id="ditto", level=100, types=t, base_types=t, hp=300, maxhp=300,
+                       ability="none", base_ability="none", item="none", attack=200, defense=200,
+                       special_attack=200, special_defense=200, speed=200, status="none",
+                       weight_kg=50.0, moves=[pe.Move(id=m, pp=5) for m in ("roost", "dragondance")],
+                       terastallized=False, tera_type="normal",
+                       transform_backup=([1] * 5, 40, [("transform", 15)] + [("none", 0)] * 3))  # fmt: skip
+    tm = SideTimers()
+    tm.own_last = "transform"
+    assert _last_move(_poke_env_mon(), ditto, index=0, tm=tm)[0] == {"last_used_move": "move:0"}
+
 
 def test_unrevealed_opponent_mon_is_at_full_hp():
 

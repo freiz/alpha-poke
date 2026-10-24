@@ -21,6 +21,7 @@
 | 10-23 | 600 局 OU，按决策点统计（与 v7.3 代码对比） | 45,219 个决策点 | 42.6% → 0.17% |
 | 10-23 | 百万级首轮：8,000 局 OU（1 万对新配对）+ 40 组 fixtures + 30 组 big，换新种子，共 14,400 局 | 1,085,812 个决策点 | 有差异 0.23%（核心字段 0.08%）；查出一处实战会崩溃的问题（S43） |
 | 10-23 | 百万级第二轮（S43–S51 之后） | 1,085,812 个决策点 | 有差异 0.22%（核心字段 0.07%）；查出 S48 引入的我方回归（S52） |
+| 10-23 | 百万级第三轮（S52–S54 之后） | 1,085,812 个决策点 | 有差异 0.26%（核心字段 0.06%）；上一个道具在约 70 局里出错，是 S52 的别名在换回场时没跟上（S55）；之后 S55–S82 把这一轮的 219 个例子局修到只剩已知的两类 PP |
 
 ## 方法
 
@@ -33,7 +34,8 @@
   - 对方伪装中的 Zoroark（这个世界是否抽中它，是信念的抽样）；没被识破就换下的伪装（真实对战里 HP 是百分比，看不出来）；
   - 已倒下的宝可梦的其余字段（形态已还原，什么都不读它）；要换下的出场宝可梦和"必须休息"回合的禁用标记（Showdown 的标记是上一次招式请求时的）；
   - Future Sight 的使用者按种族比（两边的队伍顺序不同）；太晶标记的"本方已用过太晶"按一侧比；Greninja-Bond 当作 Greninja；引擎不认识的道具都当作 UNKNOWNITEM；
-  - 一个在混乱中结束的 Outrage 锁定（已经混乱时锁定结束不打日志）。
+  - 一个在混乱中结束的 Outrage 锁定（已经混乱时锁定结束不打日志）；Own Tempo 的宝可梦的锁定结束（不会混乱，同样不打日志）；
+  - 畏缩（flinch）：随机判定，静默加上，只有挡下招式时才显示。
 - **差分框架自身的修正**：回合结束后的换人决策（`|upkeep|` 之后、下一个 `|turn|` 之前），`engine_state` 推算 Future Sight / Wish 用的回合数要加一（引擎差分只比较回合开始，从未碰到）。
 - **数据**：`data/teams/statebuild_catalog_pairs.jsonl`（1,176 支真实 OU 队伍随机配对，本地生成）、`tests/fixtures/random_battle_teams*.jsonl`（40 组，1.16 万对）、`data/teams/big/`（30 组，8.7 万对）。同一对队伍换种子就是新对局。
 - **流程**：跑一批 → 按"出现在多少局里"排序 → 看例子（日志 + 两边的值）→ 对照 Showdown 源码确认规则 → 修 → 写针对性测试（修复前必须失败）→ 回归（全量测试 + 两个基线 + 引擎差分）→ 记入下表。
@@ -95,10 +97,37 @@
 | S49 | Imprison 的 volatile 从未传 | 两 | 加入 | `test_the_logs_facts_fifth_batch` |
 | S50 | 第 1 回合的能力变化标记（L222）按当前能力等级判断，被 Haze 等清掉后就丢了 | 两 | 按日志里第 1 回合是否发生过 | 同上 |
 | S51 | Sleep Clause 挡下催眠招要算失败；传过来的替身挡下变化招不算；Double Shock / Burn Up 没有对应属性时不算，Shed Tail 体力不足算 | 两 | 加入 | 同上 |
-
 | S52 | S48 只照顾了对方：我方宝可梦的种族名随 request 的 details 变（Mimikyu-Busted），计时器的键不变，查不到用掉的道具、睡眠计数 | 两 | 计时器记"形态名 → 键"的别名（`SideTimers.k`），所有按种族查计时器的地方都经过它 | 基线 |
 | S53 | Metronome 调出的蓄力招在第二回合锁定执行，Showdown 把它写进 lastMove；它不是自己的招，上一招应为 none | 两 | 记最后一次锁定执行的招 | 基线 |
 | S54 | 禁用规则的先后：Encore 的标记不能盖过 Taunt / Assault Vest 这类引擎自己推出的（差分框架的顺序），蓄力 / 休息 / PP 用尽 / Uproar 只在没有其他标记理由时才不写 | 实 | `derived_disable` 按这个顺序 | `test_out_of_pp_and_encore_flags` |
+| S55 | S52 的别名没跟上换回场：以新形态的 details 换回场时键搬到新形态，别名却还指向旧键，Mimikyu-Busted 的 Red Card、Eiscue-Noice 的树果、Terapagos 的睡眠计数都查不到 | 两 | 键搬家时别名一起改，新形态不再指向旧键 | `test_formes_from_the_log` |
+| S56 | 首回合上场、行动被阻止（冻住 / 睡着的 `cant`）后回合中途的决策：poke-env 的 `first_turn` 只按回合数算，上一招仍写成 switch | 两 | 有计时器时只认计时器的计数 | `test_last_move_sets_encore_move_or_drops_encore` |
+| S57 | Armor Tail / Dazzling / Queenly Majesty / Damp 挡下先制招时，Showdown 的 `cant` 写的是特性持有者、`[of]` 才是出招方：失败记错了一方 | 两 | 带 `[of]` 的 `cant` 记给 `[of]` 一方 | `test_the_logs_facts_sixth_batch` |
+| S58 | 变身后的 Transform 自己是上一招（L187：引擎记在备份招式的格位上），poke-env 只剩目标的招式，上一招丢了 | 两 | 计时器记的招在备份招式里时，取它的格位 | `test_last_move_sets_encore_move_or_drops_encore` |
+| S59 | 变身后讲究锁定的招 PP 用尽、改用 Struggle：poke-env 的上一招是 Struggle，锁定标记丢了 | 实 | 用计时器记的自己选的招 | `test_our_struggling_choice_locked_ditto_keeps_the_locks_flags` |
+| S60 | Illusion 被识破时，poke-env 让伪装换下（清掉 volatile），Zoroark 一个都没有：同回合打在伪装上的 Salt Cure 丢了 | 两 | `poke_env_fixes`：识破时 volatile 转给 Zoroark | `test_a_broken_illusion_keeps_its_volatiles` |
+| S61 | Baneful Bunker / King's Shield / Spiky Shield / Silk Trap / Burning Bulwark / Obstruct 的日志写的是 "Protect"，volatile 被写成 protect | 两 | 取紧前的出招行里的招（Detect 仍是 protect） | `test_the_logs_facts_sixth_batch` |
+| S62 | 变身成 Ogerpon / Terapagos 后不能太晶（引擎的 notera，L227）从未传 | 两 | 加入 | `test_transformed_into_an_ogerpon_cannot_terastallize` |
+| S63 | Dry Skin 回合末在雨天的回复被当成"特性吸收了对方的招"，对方记失败 | 两 | 吸收的回复带 `[of]` 出招方，只认这种 | `test_the_logs_facts_sixth_batch` |
+| S64 | Perish Song 有目标免疫（Good as Gold）或落空不算失败（它的 onHitField 仍返回成功） | 两 | 跳过 Perish Song 的 `-immune` / `-miss` | 同上 |
+| S65 | 行动被阻止（`cant`）时 Destiny Bond 结束（onMoveAborted），我们留着它 | 两 | `cant` 时结束 | 同上 |
+| S66 | 暂时形态（`-formechange`：Meloetta-Pirouette、Cramorant、Morpeko-Hangry）换下后 poke-env 仍保留那个形态的属性和能力值（重新上场的 details 没变，它不更新） | 两 | `poke_env_fixes`：换下时恢复本来种族的属性和能力值；`detailschange` 的永久形态不动 | `test_a_temporary_forme_ends_with_its_switch_out` |
+| S67 | Morpeko-Hangry 太晶后，Showdown 把它的 baseSpecies 设成 Hangry（静默，没有 detailschange）：换下后仍是 Hangry | 两 | 太晶时 Morpeko 的暂时形态转为永久 | `test_the_logs_facts_sixth_batch` |
+| S68 | 实战：我方 Zoroark 伪装上场，当回合打在伪装上的能力变化 / volatile（Sticky Web 的减速），在 poke-env 按 request 纠正出场时被清掉；开局伪装时 Zoroark 甚至还不在 poke-env 的队伍里 | 实 | `poke_env_fixes`：纠正时转给 request 的出场宝可梦 | `test_a_broken_illusion_keeps_its_volatiles` |
+| S69 | Revival Blessing 复活过的宝可梦之后再太晶，"复活过 → 不再是太晶状态"的标记还在，把它的太晶清掉了，太晶记到了一只倒下的宝可梦上 | 两 | 太晶时清掉复活标记 | `test_the_logs_facts_sixth_batch` |
+| S70 | 我方讲究锁定的招 PP 用尽后 Struggle，又中了 Taunt：锁定的招丢了，变化招的标记按 Taunt 推导成"不写" | 实 | Struggle 后用计时器记的自己选的招 | `test_a_struggling_choice_lock_keeps_its_flags_under_a_taunt` |
+| S71 | Neutralizing Gas / Gastro Acid 下出招的 Truant 宝可梦下回合不偷懒（它的 onBeforeMove 不运行） | 两 | 特性被压制时不记 | `test_the_logs_facts_sixth_batch` |
+| S72 | Trick 换来新的讲究道具后，Showdown 解除原来的锁定，随后的 Struggle 不锁定任何招：上一招应为 none | 两 | Struggle 不清"出招后才拿到道具"；Struggle 后的锁定要求没有这个标记 | 同上 |
+| S73 | Court Change 换过来的墙，setter 只按种族记；两边都有 Dragapult 时，查到了自己这边那只的道具（Choice Specs），Light Clay 的 8 回合变成 5 回合 | 两 | 记哪些 setter 来自对面 | 同上 |
+| S74 | 这个 Showdown 版本的 Slow Start 是特性自己的计数，Neutralizing Gas 下不减 | 两 | Gas / Gastro Acid 下不数 | 同上 |
+| S75 | 混乱自伤同样触发 onMoveAborted：蓄力招的第二回合、Destiny Bond 结束；Truant（BeforeMove 优先级 9）先于畏缩 / Disable / 麻痹 / 混乱运行，这些情况下下回合仍偷懒，睡眠 / 冰冻 / 需要休息则不 | 两 | 按 Showdown 的顺序 | 同上 |
+| S76 | Neutralizing Gas 结束时其他特性重新开始：Truant 的 onStart 给本回合已经行动（或回合已结束）的宝可梦加上偷懒（S71 之后漏了这一条） | 两 | Gas 结束时补上 | 同上 |
+| S77 | Intimidate 被替身挡下的 `-immune` 被算成刚 U-turn 换下的宝可梦的失败 | 两 | 紧跟特性行的 `-immune` 不算招式的 | 同上 |
+| S78 | 守住被打破（Hyperspace Fury 等 `[broken]`）后它的 volatile 还在 | 两 | 一起清掉 | 同上 |
+| S79 | 变身后的宝可梦用复制来的 Protean 改了属性（日志写明），Protean 的 volatile 没有传（变身的一律排除了） | 两 | 日志写明时加上 | `test_a_transformed_mons_copied_protean` |
+| S80 | Forest's Curse / Trick-or-Treat 的附加属性：Showdown 的属性里有它，引擎的 typechange 没有传 | 两 | poke-env 的 TYPEADD 记为 typechange | `test_an_added_type_is_a_type_change` |
+| S81 | 实战：我方伪装中的 Zoroark 被识破，那回合打在伪装上的能力变化丢了（对方 / 回放走计时器的 `illusion_boosts`） | 实 | `poke_env_fixes`：实战时识破一并转移能力变化 | `test_a_broken_illusion_keeps_its_volatiles` |
+| S82 | 实战：request 已把出场纠正成我方 Zoroark，之后的日志仍写伪装的名字，能力变化 / volatile 记到了不在场的伪装对象上（多回合伪装时一直丢） | 实 | `poke_env_fixes`：我方出场位（`p1a`）的引用解析为出场的 Zoroark（换人类消息除外） | 同上 |
 
 已知、待查：2 局里我方后备宝可梦每招都按 Pressure 多扣了 1 PP，日志里没有 Pressure。
 
@@ -108,7 +137,7 @@
 
 ## 后续
 
-- 规模：百万级决策点（进行中）。
+- 规模：百万级决策点（第四轮进行中）。
 - 回放路径（spectator）单独对照：训练数据的质量直接取决于它。
 - 因果性检查：训练样本的历史 / 暴露信息必须等于截至该决策点的日志所能给出的（计划 B）。
 - 统一转换层：poke-env 的"自身 / 当前"取值收拢到一层（计划 C）。

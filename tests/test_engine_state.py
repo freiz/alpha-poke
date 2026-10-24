@@ -819,3 +819,60 @@ def test_a_saved_move_with_the_sides_optional_fields():
     out = _with_saved_move(st, "shadowball")
     assert out.side_two.switch_out_move_second_saved_move.lower() == "shadowball"
     assert out.side_two.tera_used
+
+
+def test_transformed_into_an_ogerpon_cannot_terastallize(belief):
+    """S62 (2026-10-23, state-construction differential): a Ditto transformed into an Ogerpon /
+    Terapagos has no Terastallization -- the engine's notera (L227) was left out."""
+    b = battle(["|switch|p2a: Ditto|Ditto|100/100",
+                "|-transform|p2a: Ditto|p1a: Ogerpon|[from] ability: Imposter", "|turn|2"],
+               us="Ogerpon", ability="defiant", moves=("ivycudgel", "uturn", "hornleech", "spikes"))  # fmt: skip
+    s = build_state(b, belief, ("Ogerpon", "Dondozo"), random.Random(0))
+    assert {"transform", "notera"} <= {str(v).lower() for v in s.side_two.volatile_statuses}
+    assert "notera" not in {str(v).lower() for v in state(_their_ditto_garchomp(), belief).side_two.volatile_statuses}
+
+
+def _their_ditto_garchomp():
+    return battle(["|switch|p2a: Ditto|Ditto|100/100",
+                   "|-transform|p2a: Ditto|p1a: Garchomp|[from] ability: Imposter", "|turn|2"])  # fmt: skip
+
+
+def test_a_struggling_choice_lock_keeps_its_flags_under_a_taunt(belief):
+    """S70 (2026-10-23, state-construction differential): our Scarf Landorus locked into a move
+    out of PP, Taunted, a Struggle: the lock's move from poke-env's last used one was lost -- the
+    Taunt then derived Reflect's flag (no flag: usable once the Taunt ends). The lock's flags."""
+    moves = ("earthquake", "reflect", "substitute", "hyperbeam")
+    b = battle(["|move|p1a: Garchomp|Earthquake|p2a: Gholdengo", "|-damage|p2a: Gholdengo|80/100",
+                "|move|p2a: Gholdengo|Taunt|p1a: Garchomp", "|-start|p1a: Garchomp|move: Taunt",
+                "|upkeep", "|turn|2", "|-activate|p1a: Garchomp|move: Struggle",
+                "|move|p1a: Garchomp|Struggle|p2a: Gholdengo", "|-damage|p2a: Gholdengo|70/100",
+                "|upkeep", "|turn|3"], item="choicescarf", moves=moves)  # fmt: skip
+    side = [mon("p1: Garchomp", "Garchomp", list(moves), "choicescarf", "roughskin", True),
+            mon("p1: Dondozo", "Dondozo", ["wavecrash"])]  # fmt: skip
+    b.parse_request({"active": [{"moves": [{"move": "Struggle", "id": "struggle", "pp": 1, "maxpp": 1,
+                                            "disabled": False}]}],
+                     "side": {"name": "us", "id": "p1", "pokemon": side}, "rqid": 3})  # fmt: skip
+    flags = {m.id: m.disabled for m in state(b, belief).side_one.pokemon[0].moves}
+    assert flags["reflect"] and flags["substitute"] and flags["hyperbeam"], flags  # (its locked move: PP)
+
+
+def test_a_transformed_mons_copied_protean(belief):
+    """S79 (2026-10-23, state-construction differential): a Ditto transformed into a Protean mon,
+    its type changed by the copied Protean (the log's -start typechange): the engine's protean
+    volatile (L218) -- left out for every transformed mon."""
+    b = battle(["|switch|p2a: Ditto|Ditto|100/100",
+                "|-transform|p2a: Ditto|p1a: Greninja|[from] ability: Imposter", "|turn|2",
+                "|move|p2a: Ditto|Ice Beam|p1a: Greninja", "|-start|p2a: Ditto|typechange|Ice|[from] ability: Protean",
+                "|-damage|p1a: Greninja|300/400", "|upkeep", "|turn|3"],
+               us="Greninja", ability="protean", moves=("icebeam", "uturn", "gunkshot", "darkpulse"))  # fmt: skip
+    s = build_state(b, belief, ("Greninja", "Dondozo"), random.Random(0))
+    assert {"transform", "protean"} <= {str(v).lower() for v in s.side_two.volatile_statuses}
+    assert "protean" not in {str(v).lower() for v in state(_their_ditto_garchomp(), belief).side_two.volatile_statuses}
+
+
+def test_an_added_type_is_a_type_change(belief):
+    """S80 (2026-10-23, state-construction differential): Forest's Curse's added Grass type --
+    Showdown's types have it: the engine's typechange volatile (its switch-out ends it)."""
+    b = battle(["|move|p1a: Garchomp|Forest's Curse|p2a: Gholdengo",
+                "|-start|p2a: Gholdengo|typeadd|Grass|[from] move: Forest's Curse", "|upkeep", "|turn|2"])  # fmt: skip
+    assert "typechange" in {str(v).lower() for v in state(b, belief).side_two.volatile_statuses}

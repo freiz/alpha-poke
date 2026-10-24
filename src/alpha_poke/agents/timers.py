@@ -205,6 +205,8 @@ class SideTimers:
     # id (reflect, lightscreen, auroraveil) -> the setter's species id
     setters: dict = field(default_factory=dict)
     set_items: dict = field(default_factory=dict)  # a setters key -> its setter's item then
+    upkept: bool = False  # this turn's end passed (|upkeep|, before the next |turn|)
+    swapped: set = field(default_factory=set)  # setters keys whose setter is the other side's (Court Change)
     fields_elapsed: dict = field(default_factory=dict)  # "weather" / "terrain" / ROOMS -> ends of turn
     side_elapsed: dict = field(default_factory=dict)  # TIMED_SIDE (this side's) -> ends of turn
     used_once: set = field(default_factory=set)  # species ids (Dauntless Shield used)
@@ -273,6 +275,9 @@ class SideTimers:
             if old in st:
                 st.discard(old)
                 st.add(new)
+        # (a forme mapped to the old key maps to the new; the new one is its own key now --
+        # 2026-10-23: a Mimikyu-Busted switched back in still mapped to "mimikyu")
+        self.alias = {a: new if v == old else v for a, v in self.alias.items() if a != new}
 
     def rest_sleep(self, species: str) -> tuple[int, int]:
         """(rest_turns, sleep_turns) of an asleep mon."""
@@ -306,6 +311,7 @@ def _feed_one(sides: dict, p: list[str]) -> None:
     tag = p[1]
     if tag == "upkeep":  # end of turn
         for st in sides.values():
+            st.upkept = True
             if st.status.get(st.active) == "tox":
                 st.toxic += 1
             st.protect = st.protect + 1 if st.protected else 0
@@ -336,7 +342,9 @@ def _feed_one(sides: dict, p: list[str]) -> None:
             st.cud_now = False
             if st.locked and st.status.get(st.active) == "slp":
                 st.locked = None  # (lockedmove's residual: asleep then -- a Lum Berry before, not)
-            if st.slowstart and st.slowstart[1]:
+            # (its ability's own counter: none counted under a Neutralizing Gas / Gastro Acid --
+            # its residual suppressed; S74)
+            if st.slowstart and st.slowstart[1] and not (st.gastro or any(s.gas_on for s in sides.values())):
                 st.slowstart[0] -= 1
                 if st.slowstart[0] <= 0:
                     st.slowstart = None
@@ -345,7 +353,7 @@ def _feed_one(sides: dict, p: list[str]) -> None:
         for st in sides.values():
             st.turn1 = p[2:3] == ["1"]
             st.fresh = 2 if st.fresh == 1 else 0  # (in last turn: its first turn out now)
-            st.acted = False
+            st.acted = st.upkept = False
             st.switched_now = False
             st.last_failed, st.failed_now = st.failed_now, False
             st.just_moved = ""  # (a new turn: a -fail from now is not its last move's)
@@ -392,6 +400,15 @@ def _feed_one(sides: dict, p: list[str]) -> None:
                 a.set_items[k] = ib
             if ia is not None:
                 b.set_items[k] = ia
+            # (its setter is of the other side now -- or back to its own: a species of both
+            # teams, a Dragapult each, read the wrong one's Light Clay; S73)
+            wa, wb = k in a.swapped, k in b.swapped
+            a.swapped.discard(k)
+            b.swapped.discard(k)
+            if sb is not None and not wb:
+                a.swapped.add(k)
+            if sa is not None and not wa:
+                b.swapped.add(k)
         return
     st, sp = _who(p, sides)
     if st is None:
@@ -486,6 +503,11 @@ def _feed_one(sides: dict, p: list[str]) -> None:
         st.failed_now = True  # (and a failed one: Showdown's moveThisTurnResult false)
         st.fresh = 0
         st.locked = None  # (a lock's turn lost: it ends)
+        # (its move aborted: a charge's second turn and Destiny Bond end -- onMoveAborted; Truant
+        # ran before: a loaf next; S75)
+        st.charging = None
+        st.destinybond = False
+        st.truant_next = not (st.gastro or any(s.gas_on for s in sides.values()))
     elif tag == "-damage" and not any("[from]" in x for x in p[4:]) and (
         sides["p2" if p[2][:2] == "p1" else "p1"].just_moved
     ):
@@ -518,13 +540,23 @@ def _feed_one(sides: dict, p: list[str]) -> None:
         st.charging = to_id(p[3])
     elif tag == "-anim" and len(p) > 3 and st.charging == to_id(p[3]):
         st.charging = None  # (fired at once: Solar Beam in the sun, Power Herb)
+    elif tag == "cant" and len(p) > 3 and any(x.startswith("[of] ") for x in p[4:]):
+        # an ability stopping a foe's move (Armor Tail, Dazzling, Queenly Majesty, Damp): Showdown's
+        # cant names the holder, [of] the mover -- the mover's move failed, the holder did nothing
+        # (2026-10-23, the state-construction differential: read as the holder's stopped action)
+        ost, _ = _who(["", "", next(x[5:] for x in p[4:] if x.startswith("[of] "))], sides)
+        if ost is not None:
+            _missed(ost)
     elif tag == "cant" and len(p) > 3:
         st.acted = True
         st.fresh = 0  # (an action, stopped: Showdown's activeMoveActions -- its last move none now)
-        st.truant_next = False  # (a turn without its move -- recharging, asleep: no loaf after)
-        if to_id(p[3].replace("ability: ", "")) == "truant":
-            st.truant_next = False
+        # (Truant's onBeforeMove -- priority 9 -- ran before a flinch, Disable, paralysis, ...:
+        # its volatile on, a loaf next; not after a recharge, sleep, freeze -- before it -- nor its
+        # own loaf; S75)
+        st.truant_next = to_id(p[3].replace("ability: ", "")) not in ("slp", "frz", "recharge", "truant") \
+            and not (st.gastro or any(s.gas_on for s in sides.values()))
         st.charging = st.locked = None  # (prevented: the charge and the lock end)
+        st.destinybond = False  # (its onMoveAborted: S65)
         st.failed_now = p[3] != "recharge"  # (L115)
         if p[3] == "recharge":
             st.recharge = False
@@ -533,6 +565,12 @@ def _feed_one(sides: dict, p: list[str]) -> None:
     elif tag == "-terastallize" and len(p) > 3:
         if sp == st.active:
             st.tera_now = True
+        st.revived.discard(sp)  # (terastallized after it was brought back: S69)
+        nick = p[2].split(": ", 1)[-1]
+        if st.temp_forme and st.temp_forme[0] == nick and st.temp_forme[1] == "morpekohangry":
+            # (a Morpeko terastallized in its Hangry forme keeps it -- Showdown's terastallize sets
+            # its baseSpecies, silently: S67)
+            st.formes[nick] = st.temp_forme[1]
         if to_id(p[3]) == "stellar":
             st.stellar_moves.setdefault(sp, set())
     elif tag == "move" and len(p) > 3 and any(x in REFLECTED for x in p[4:]):
@@ -556,8 +594,11 @@ def _feed_one(sides: dict, p: list[str]) -> None:
         st.changed_now = False
         st.destinybond = False
         st.fresh = 0
-        st.item_new = False
-        st.truant_next = True  # (a Truant mon loafs the turn after a move)
+        if mv != "struggle":  # (a Struggle locks no move of its set: S72)
+            st.item_new = False
+        # (a Truant mon loafs the turn after a move -- not one its ability was suppressed for, a
+        # Neutralizing Gas, Gastro Acid: its onBeforeMove adds the volatile; S71)
+        st.truant_next = not (st.gastro or any(s.gas_on for s in sides.values()))
         if mv == "minimize":
             st.minimized = True
         if not any(x.startswith("[from]") and "lockedmove" not in x for x in p[4:]):
@@ -613,6 +654,10 @@ def _feed_one(sides: dict, p: list[str]) -> None:
         pass  # (a status move at a Substitute: its onTryPrimaryHit's null, not a failure)
     elif tag == "-fail" and st.prev == "-activate" and any(x.startswith("ability:") for x in st.prev_line[3:4]):
         pass  # (an ability's own failure -- Synchronize passing a burn to a Fire type -- not a move's)
+    elif tag in ("-immune", "-miss") and any(s.just_moved and s.own_last == "perishsong"
+                                             for s in sides.values()):  # fmt: skip
+        pass  # (Perish Song: a target immune or missed is no failure -- its onHitField's result
+        # true; 2026-10-23, S64: Good as Gold's -immune read as a failed Perish Song)
     elif tag in ("-fail", "-miss") and not any(x.startswith("[from]") for x in p[3:]):
         # (L115: the last move failed -- its user's: the side that just moved; a -fail names its
         # target as often, a Toxic on a poisoned foe: 2026-10-23, the state-construction
@@ -623,11 +668,15 @@ def _feed_one(sides: dict, p: list[str]) -> None:
             _missed(mover)
             if mover.own_last in PROTECTS:
                 mover.protect = 0  # (a failed protection: Showdown removes the stall count at once)
-    elif tag == "-immune" and sides["p2" if p[2][:2] == "p1" else "p1"].just_moved:
+    elif tag == "-immune" and sides["p2" if p[2][:2] == "p1" else "p1"].just_moved \
+            and st.prev_line[1:2] != ["-ability"]:
+        # (not an ability's effect -- an Intimidate a Substitute stopped: S77)
         _missed(sides["p2" if p[2][:2] == "p1" else "p1"])
     elif tag in ("-start", "-heal", "-boost", "-ability") and sides["p2" if p[2][:2] == "p1" else "p1"].just_moved \
-            and any(x.replace("[from] ", "") in ABSORB or "ability: " + x in ABSORB for x in p[3:5]):
-        # (-ability|X|Wind Rider|boost: the boosting ones' own form)
+            and any(x.replace("[from] ", "") in ABSORB or "ability: " + x in ABSORB for x in p[3:5]) \
+            and (tag != "-heal" or any(x.startswith("[of] ") for x in p[4:])):
+        # (-ability|X|Wind Rider|boost: the boosting ones' own form; an absorbing heal names the
+        # mover -- [of] --, Dry Skin's in the rain at the turn's end does not: 2026-10-23, S63)
         # the foe's move absorbed by an ability (Flash Fire, Water Absorb, Storm Drain, ...):
         # it failed as against an immunity (2026-10-23, the state-construction differential)
         _missed(sides["p2" if p[2][:2] == "p1" else "p1"])
@@ -649,6 +698,7 @@ def _feed_one(sides: dict, p: list[str]) -> None:
         # (Showdown's battle-actions; 2026-10-23, the state-construction differential)
         st.protected = False
         st.protect = 0
+        st.protected_move = ""  # (its volatile gone too: S78)
     elif tag == "-activate" and len(p) > 3 and to_id(p[3].replace("move: ", "")) in PROTECTS:
         # (its target protected: the move did nothing -- a lock does not start)
         mover = sides["p2" if p[2][:2] == "p1" else "p1"]
@@ -658,6 +708,12 @@ def _feed_one(sides: dict, p: list[str]) -> None:
         if to_id(p[3].replace("move: ", "")) in PROTECTS:
             st.protected = True
             st.protected_move = to_id(p[3].replace("move: ", ""))
+            # (Baneful Bunker, King's Shield, Spiky Shield, ... log "Protect": the move used --
+            # its own volatile; 2026-10-23, the state-construction differential)
+            pl = st.prev_line
+            if st.protected_move == "protect" and len(pl) > 3 and pl[1] == "move" and pl[2] == p[2] \
+                    and to_id(pl[3]) in PROTECTS - {"detect"}:  # (Detect: protect)
+                st.protected_move = to_id(pl[3])
         if to_id(p[3].replace("move: ", "")) == "roost":
             st.roosted = True  # (its Flying type off for the rest of the turn)
     elif (tag == "-activate" and len(p) > 3 and to_id(p[3].replace("move: ", "")) == "skillswap") \
@@ -756,6 +812,7 @@ def _feed_one(sides: dict, p: list[str]) -> None:
     elif tag == "-sidestart" and len(p) > 3 and to_id(p[3].replace("move: ", "")) in TIMED_SIDE:
         st.side_elapsed[to_id(p[3].replace("move: ", ""))] = 0  # (its ends of turn, as ROOMS)
         st.setters[to_id(p[3].replace("move: ", ""))] = st.just_moved
+        st.swapped.discard(to_id(p[3].replace("move: ", "")))
         st.set_items.pop(to_id(p[3].replace("move: ", "")), None)
         if "magicroom" in st.fields_elapsed or st.embargo:
             # (its item suppressed as it set it -- Magic Room, Embargo: no Light Clay; Showdown's
@@ -763,6 +820,7 @@ def _feed_one(sides: dict, p: list[str]) -> None:
             st.set_items[to_id(p[3].replace("move: ", ""))] = ""
     elif tag == "-sidestart" and len(p) > 3:
         st.setters[to_id(p[3].replace("move: ", ""))] = st.just_moved
+        st.swapped.discard(to_id(p[3].replace("move: ", "")))
         st.set_items.pop(to_id(p[3].replace("move: ", "")), None)
     elif tag == "-enditem" and len(p) > 3:  # its item gone: the one its effects were set with
         _item_was(st, sp, to_id(p[3]))
@@ -834,6 +892,11 @@ def _feed_one(sides: dict, p: list[str]) -> None:
             st.embargo = False
         elif what == "abilityneutralizinggas":
             st.gas_on = False
+            # (the others' abilities start again: Truant's onStart puts its volatile on one that
+            # moved this turn or will not move -- the turn's end; S76)
+            for o in sides.values():
+                if o is not st and o.active and (o.acted or o.upkept) and not o.gastro:
+                    o.truant_next = True
         elif what == "stockpile":
             st.stockpile = 0
         elif what == "substitute":
