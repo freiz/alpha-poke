@@ -53,7 +53,8 @@ def _oracle(team: list, ours: dict, theirs: dict):
         es.sample_set = inner
 
 
-def decisions(p1: str, p2: str, seed: int, max_turns: int = 40, stats: dict | None = None):
+def decisions(p1: str, p2: str, seed: int, max_turns: int = 40, stats: dict | None = None,
+              script: list | None = None, fmt: str | None = None):
     """Each decision of a random battle, built from the spectator's log as a replay's position
     is: (step, side, poke-env battle, built state, truth from that side's point of view)."""
     from alpha_poke.agents.engine_state import KnownSet, SpectatorSide, build_state
@@ -65,7 +66,8 @@ def decisions(p1: str, p2: str, seed: int, max_turns: int = 40, stats: dict | No
     stats.setdefault("errors", [])
     views: dict = {}
     steps, err = random_battle(p1, p2, f"gen5,{seed},{seed + 1},{seed + 2},{seed + 3}", seed + 1,
-                               max_turns=max_turns, views=views)  # fmt: skip
+                               max_turns=max_turns, views=views, script=script,
+                               **({"fmt": fmt} if fmt else {}))  # fmt: skip
     if err is not None:
         stats["errors"].append(f"battle: {err[:200]}")
     log = views.get("spectator") or []
@@ -143,11 +145,12 @@ class _Mirror:
         self._replay_data = b._replay_data
 
 
-def battle_diffs(p1: str, p2: str, seed: int, max_turns: int = 40) -> tuple[list[tuple], dict]:
+def battle_diffs(p1: str, p2: str, seed: int, max_turns: int = 40,
+                 script: list | None = None, fmt: str | None = None) -> tuple[list[tuple], dict]:
     """[(step, side, kind, detail)] over a random battle's decisions, replay-built; and counts."""
     out: list = []
     stats: dict = {}
-    for k, side, b, built, t in decisions(p1, p2, seed, max_turns, stats):
+    for k, side, b, built, t in decisions(p1, p2, seed, max_turns, stats, script, fmt):
         own_seen = {to_id(m.species) for m in b.team.values()}
         foe_seen = {to_id(m.species) for m in b.opponent_team.values()}
         # (a disguise not found out: a spectator cannot tell -- its percent HP -- on either side)

@@ -376,7 +376,8 @@ def _oracle(foe: dict | None):
 
 
 def decisions(p1: str, p2: str, seed: int, max_turns: int = 40, sides=("p1", "p2"),
-              stats: dict | None = None, oracle: bool = True):  # fmt: skip
+              stats: dict | None = None, oracle: bool = True, script: list | None = None,
+              fmt: str | None = None):  # fmt: skip
     """Each decision of a random battle: (step, side, poke-env battle, built state, truth from
     that side's point of view). ``stats``: filled with "decisions" and "errors". ``oracle``: the
     opponent's hidden parts its true set (_oracle), else the belief's samples."""
@@ -388,7 +389,8 @@ def decisions(p1: str, p2: str, seed: int, max_turns: int = 40, sides=("p1", "p2
     stats.setdefault("errors", [])
     views: dict = {}
     steps, err = random_battle(p1, p2, f"gen5,{seed},{seed + 1},{seed + 2},{seed + 3}", seed + 1,
-                               max_turns=max_turns, views=views)  # fmt: skip
+                               max_turns=max_turns, views=views, script=script,
+                               **({"fmt": fmt} if fmt else {}))  # fmt: skip
     if err is not None:
         stats["errors"].append(f"battle: {err[:200]}")
     belief = _belief()
@@ -436,12 +438,13 @@ def decisions(p1: str, p2: str, seed: int, max_turns: int = 40, sides=("p1", "p2
 
 
 def battle_diffs(p1: str, p2: str, seed: int, max_turns: int = 40, sides=("p1", "p2"),
-                 oracle: bool = True) -> tuple[list[tuple], dict]:  # fmt: skip
+                 oracle: bool = True, script: list | None = None,
+                 fmt: str | None = None) -> tuple[list[tuple], dict]:  # fmt: skip
     """[(step, side, kind, detail)] over a random battle's decisions; and counts ({"decisions",
     "errors": [...]})."""
     out: list = []
     stats: dict = {}
-    for k, side, b, built, t in decisions(p1, p2, seed, max_turns, sides, stats, oracle):
+    for k, side, b, built, t in decisions(p1, p2, seed, max_turns, sides, stats, oracle, script, fmt):
         seen = {to_id(m.species) for m in b.opponent_team.values()}
         # (a pivot's switch: force_switch, as the search needs it -- the differential's states
         # leave it off; a fainted active: off, the engine switches it anyway)

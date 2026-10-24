@@ -15,7 +15,10 @@
 //          players' views too (the state-construction differential, scripts/check_state_build.py):
 //          "views": {"p1": lines, "p2": lines, "spectator": lines} (each channel's protocol lines,
 //          Showdown's |split| resolved), each step's "view_pos" (the lines of each view so far)
-//          and "requests" ({side: its request}, as the server sends it)
+//          and "requests" ({side: its request}, as the server sends it). "script": [{"p1": c, "p2":
+//          c}, ...] -- the choices of the first decision points, Showdown's ("move 2", "move 1
+//          terastallize", "switch 3", "pass"); a side missing or the script used up: random
+//          (doc/difftest.md: the scenarios)
 const {Battle, Teams} = require(process.argv[2]);
 const {teamOf, state} = require('./showdown_state.js');
 const {maxDamages} = require('./showdown_damage.js');
@@ -77,6 +80,18 @@ function choose(side, req, r, c) {
 	return {choice: `move ${i + 1}`, engine: id, kind: 'move'};
 }
 
+function scripted(side, req, text) {
+	const [kind, n, tera] = text.split(' ');
+	if (kind === 'pass') return {choice: 'pass', engine: 'none', kind: 'pass'};
+	const i = Number(n) - 1;
+	if (kind === 'switch') return {choice: text, engine: side.pokemon[i].species.id, kind: 'switch'};
+	const id = req.active[0].moves[i].id;
+	if (id === 'recharge' || id === 'struggle') return {choice: text, engine: 'none', kind: 'move'};
+	const called = calledLock(side.active[0], id);
+	if (called) return {choice: text, engine: called, kind: 'move'};
+	return {choice: text, engine: tera ? `${id}-tera` : id, kind: 'move'};
+}
+
 let input = '';
 process.stdin.on('data', d => { input += d; });
 process.stdin.on('end', () => {
@@ -119,7 +134,10 @@ process.stdin.on('end', () => {
 			for (const side of [battle.p1, battle.p2]) {
 				const req = side.activeRequest;
 				if (!req || req.wait) continue;
-				choices[side.id] = choose(side, req, r, c);
+				const line = (c.script || [])[steps.length];
+				// (a scripted move where the request has none -- a forced switch: random there)
+				const fits = line && line[side.id] && (!line[side.id].startsWith('move') || req.active);
+				choices[side.id] = fits ? scripted(side, req, line[side.id]) : choose(side, req, r, c);
 			}
 			if (!Object.keys(choices).length) break;
 			const step = {state: snap, choices, ...(viewsAt || {})};

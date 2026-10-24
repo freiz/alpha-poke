@@ -13,8 +13,11 @@ volatiles it knows), so a difference is the engine's, not our state construction
 """
 
 import functools
+import gzip
+import hashlib
 import json
 import math
+import os
 import re
 import subprocess
 from pathlib import Path
@@ -64,23 +67,65 @@ def run_showdown(p1, p2, turns, seed: str | None = "gen5,1,2,3,4", force_random=
     return out["states"]
 
 
-def random_battle(p1, p2, seed: str, choice_seed: int, max_turns: int = 100,
-                  switch_p: float = 0.15, tera_p: float = 0.1, fmt: str = FORMAT,
-                  damage_probe: bool = False, serialize_every: int = 0,
-                  views: dict | None = None) -> tuple[list[dict], str | None]:  # fmt: skip
-    """A whole battle with random legal choices (``random_battle.js``): ([{"state", "choices"}]
-    per decision point, the error if the battle broke off). The full-information differential
-    (doc/engine-diff.md): the truth at every step, no player's view, no belief. ``views`` (a
-    dict): filled with the players' views (their protocol lines; each step then has its
-    "view_pos" and "requests") -- the state-construction differential."""
-    case = {"format": fmt, "seed": seed, "choice_seed": choice_seed, "p1": p1, "p2": p2,
-            "max_turns": max_turns, "switch_p": switch_p, "tera_p": tera_p,
-            "damage_probe": damage_probe, "serialize_every": serialize_every,
-            "views": views is not None}  # fmt: skip
+CACHE = ROOT / "data" / "difftest" / "cache"
+
+
+@functools.cache
+def _recorder_id() -> str:
+    """What a recorded battle depends on besides its case: the simulator's build (its files'
+    names, sizes, times) and the recording scripts (their text)."""
+    h = hashlib.sha1()
+    for d in (SIM, SIM.parent / "data"):
+        for f in sorted(d.rglob("*.js")):
+            st = f.stat()
+            h.update(f"{f.relative_to(d.parent)}:{st.st_size}:{st.st_mtime_ns}".encode())
+    for name in ("random_battle.js", "showdown_state.js", "showdown_damage.js"):
+        h.update(RUNNER.with_name(name).read_bytes())
+    return h.hexdigest()
+
+
+def _recorded(case: dict) -> dict:
+    """``random_battle.js``'s output for ``case``: from the cache (doc/difftest.md -- Showdown is
+    deterministic in its seeds: a battle is recorded once per simulator build), else played and
+    kept. ALPHA_DIFF_CACHE=0: always played."""
+    use = os.environ.get("ALPHA_DIFF_CACHE", "1") != "0"
+    key = hashlib.sha1((_recorder_id() + json.dumps(case, sort_keys=True)).encode()).hexdigest()
+    f = CACHE / key[:2] / f"{key}.json.gz"
+    if use and f.exists():
+        try:
+            return json.loads(gzip.decompress(f.read_bytes()))
+        except (OSError, ValueError, EOFError):
+            pass  # (a broken entry: played again)
     r = subprocess.run(["node", str(RUNNER.with_name("random_battle.js")), str(SIM)],
                        input=json.dumps(case), capture_output=True, text=True, check=True,
                        timeout=600)  # fmt: skip
     out = json.loads(r.stdout)
+    if use:
+        f.parent.mkdir(parents=True, exist_ok=True)
+        tmp = f.with_name(f"{f.name}.{os.getpid()}.tmp")
+        tmp.write_bytes(gzip.compress(r.stdout.encode(), 6))
+        tmp.replace(f)
+    return out
+
+
+def random_battle(p1, p2, seed: str, choice_seed: int, max_turns: int = 100,
+                  switch_p: float = 0.15, tera_p: float = 0.1, fmt: str = FORMAT,
+                  damage_probe: bool = False, serialize_every: int = 0,
+                  views: dict | None = None, script: list | None = None) -> tuple[list[dict], str | None]:  # fmt: skip
+    """A whole battle with random legal choices (``random_battle.js``): ([{"state", "choices"}]
+    per decision point, the error if the battle broke off). The full-information differential
+    (doc/engine-diff.md): the truth at every step, no player's view, no belief. ``views`` (a
+    dict): filled with the players' views (their protocol lines; each step then has its
+    "view_pos" and "requests") -- the state-construction differential. ``script``: the first
+    decision points' choices ([{"p1": "move 2", "p2": "switch 3"}, ...]; then random): the
+    scenarios (doc/difftest.md). Recorded once per simulator build (``_recorded``)."""
+    case = {"format": fmt, "seed": seed, "choice_seed": choice_seed, "p1": p1, "p2": p2,
+            "max_turns": max_turns, "switch_p": switch_p, "tera_p": tera_p,
+            "damage_probe": damage_probe, "serialize_every": serialize_every,
+            "views": views is not None}  # fmt: skip
+    if script:
+        case["script"] = script
+    out = _recorded(case)
     if views is not None:
         views.update(out.get("views") or {})
     return out["steps"], out["error"]
@@ -1028,8 +1073,10 @@ def closest(showdown_after: dict, outs: list, n_mons=(6, 6), hp: bool = False,
         if full:
             d |= extra_diff(showdown_after, o, n_mons, hp=hp, start=start)
         if best is None or len(d) < len(best[1]):
-            best = (o[0], d)
-    return {"p": best[0], "diff": best[1]} if best else {"p": 0.0, "diff": {"no outcome": 1}}
+            best = (o[0], d, o[1])
+    # ("state": that outcome's engine state -- the chained differential goes on from it)
+    return ({"p": best[0], "diff": best[1], "state": best[2]} if best
+            else {"p": 0.0, "diff": {"no outcome": 1}, "state": None})  # fmt: skip
 
 
 def player_log(lines: list[str], side: str) -> list[str]:

@@ -1,0 +1,23 @@
+{
+ "belief_truth": {
+  "belief:damage": 2,
+  "belief:item": 2,
+  "belief:move": 14,
+  "belief:tera": 13
+ },
+ "engine_chain": {
+  "hp": 4,
+  "sc.protect": 2,
+  "sc.reflect": 1,
+  "weather.turns": 4
+ },
+ "engine_step": {
+  "hp": 2,
+  "sc.protect": 4,
+  "sc.reflect": 1,
+  "weather.turns": 4
+ },
+ "state_live": {},
+ "state_replay": {},
+ "tree_history": {}
+}
