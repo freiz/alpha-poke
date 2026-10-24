@@ -992,6 +992,18 @@ def test_the_logs_facts_eighth_batch():
             "|-block|p2a: Bob|ability: Aroma Veil|[of] p2a: Bob\n|upkeep\n|turn|2")  # fmt: skip
     assert not t["p1"].last_failed
 
+    # (S141: Clear Body blocking a Tickle's drop fails it; S142: Own Tempo blocking an Intimidate
+    # is no failure of the blocked mon's own move)
+    t = run(START + "|move|p1a: Fishy|Tickle|p2a: Bob\n|-fail|p2a: Bob|unboost|[from] ability: Clear Body|[of] p2a: Bob\n"
+            "|upkeep\n|turn|2")  # fmt: skip
+    assert t["p1"].last_failed
+    t = run(START + "|move|p1a: Fishy|Defog|p2a: Bob\n|-fail|p2a: Bob|unboost|[from] ability: Clear Body|[of] p2a: Bob\n"
+            "|-sideend|p1: A|Spikes|[from] move: Defog|[of] p1a: Fishy\n|upkeep\n|turn|2")  # fmt: skip
+    assert not t["p1"].last_failed  # (Defog did more than the drop)
+    t = run(START + "|move|p1a: Fishy|Whirlwind|p2a: Bob\n|drag|p2a: Rob|Corviknight, M|100/100\n"
+            "|-ability|p2a: Rob|Intimidate|boost\n|-fail|p1a: Fishy|unboost|atk|[from] ability: Own Tempo|[of] p1a: Fishy\n"
+            "|upkeep\n|turn|2")  # fmt: skip
+    assert not t["p1"].last_failed
 
 def test_imprison_pressure_glaive_rush_and_a_transforms_types():
     """S134: Imprison (self-targeting, mustpressure) at a Pressure foe takes 2 PP -- poke-env

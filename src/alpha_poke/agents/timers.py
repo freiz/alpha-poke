@@ -726,8 +726,14 @@ def _feed_one(sides: dict, p: list[str]) -> None:
                                              for s in sides.values()):  # fmt: skip
         pass  # (Perish Song: a target immune or missed is no failure -- its onHitField's result
         # true; 2026-10-23, S64: Good as Gold's -immune read as a failed Perish Song)
-    elif tag == "-fail" and st.just_moved == sp and _is_status(st.last_move) \
-            and any(x.startswith("[from] ability:") for x in p[3:]):
+    elif tag == "-fail" and len(p) > 3 and p[3] == "unboost" and any(x.startswith("[from] ability:") for x in p[4:]) \
+            and st.prev_line[1:2] != ["-ability"] \
+            and (mover := sides["p2" if p[2][:2] == "p1" else "p1"]).just_moved and _is_status(mover.last_move) \
+            and mover.last_move not in ("defog", "partingshot", "memento", "toxicthread", "spicyextract",
+                                        "venomdrench", "strengthsap", "topsyturvy"):  # (more than a drop)
+        _missed(mover)  # (a status move's only effect, a drop, all blocked -- Clear Body at a Tickle: S141)
+    elif tag == "-fail" and st.just_moved == sp and _is_status(st.last_move) and "unboost" not in p \
+            and any(x.startswith("[from] ability:") for x in p[3:]):  # (not an Intimidate's: S142)
         _missed(st)  # (its own ability stopping its own move -- Rest under Insomnia: S107)
     elif tag in ("-fail", "-miss") and not any(x.startswith("[from]") for x in p[3:]):
         # (L115: the last move failed -- its user's: the side that just moved; a -fail names its

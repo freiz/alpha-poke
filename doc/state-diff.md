@@ -7,7 +7,7 @@
 - 600 局真实 OU 对局（队伍目录的随机配对），45,219 个决策点：
   - v7.3 数据构建时的代码（`102e1fe`）：**42.6%** 的决策点至少一处不一致，其中 **10.5%** 落在核心字段（HP、异常状态、能力等级、招式与 PP、道具、特性、出场宝可梦、场地）；最大的一项是对方后备宝可梦的 HP（Regenerator 的回复、Zoroark 伪装期间的记账）。
   - 现在：**0.17%**（核心字段 0.02%）。
-- 百万级（每轮约 108 万个决策点，OU + 40 组 fixtures + 30 组 big）：首轮 0.23% → 第六轮（新种子）**0.010%**，核心字段 **0.0036%**，即一致率 99.99%。
+- 百万级（每轮约 108 万个决策点，OU + 40 组 fixtures + 30 组 big）：首轮 0.23% → 第七轮（新种子）**0.0010%**（11 个决策点），核心字段 **0.0002%**，即一致率 99.999%。
 - 实战路径（request + 日志）已对照；回放路径（spectator，训练数据用的那条）共用 poke-env、计时器和大部分 `build_state`，它特有的部分（整局已知配置、回放里的 Illusion）**还未单独对照**，见"后续"。
 - 测试：`tests/test_state_build.py` 把 60 局随机配置和 60 局 OU 对局（`data/teams/statebuild_catalog_pairs.jsonl`，本地生成、不提交）钉在基线上（`tests/fixtures/state_build_baseline*.json`：不许出现新类别，各类别次数不许变多）；每条修复另有针对性测试（`tests/test_timers.py`、`tests/test_engine_state.py`）。
 
@@ -26,6 +26,7 @@
 | 10-23 | 百万级第四轮（S55–S82 之后） | 1,085,812 个决策点 | 有差异 **0.068%**（核心字段 0.043%，大半是已知的 PP 三局）。（更正：当时说"S82–S88 之后这一轮的 69 个例子局全部一致"不对——复查工具取队伍配对时用了 `seed % 文件长度`，而 `check_state_build` 取的是 `pairs[seed - 偏移]`；偏移不为 0 时 300 对的 fixtures 和 big 文件取到的是别的对局，OU 和 200 对的文件不受影响。之前修的问题都是在真实复现的对局里确认过的，但 fixtures / big 那部分的"已修完"是对错了局；报告现在记下 `seed_offset`，工具按它取） |
 | 10-23 | 百万级第五轮：换新种子（OU 偏移 50000，fixtures / big 偏移 2000），共 14,400 局 | 1,087,510 个决策点 | 有差异 **0.034%**（核心字段 0.014%）；S89–S111 之后，第三到第五轮的 323 个例子局只剩约 12 局；S112–S123 之后全部一致 |
 | 10-23 | 百万级第六轮：又一批新种子（OU 偏移 60000，fixtures / big 偏移 3000） | 1,085,967 个决策点 | 有差异 **0.010%**（112 个决策点；核心字段 **0.0036%**）；S124–S137 之后，第三到第六轮的 342 个例子局全部一致 |
+| 10-23 | 百万级第七轮：又一批新种子（OU 偏移 70000，fixtures / big 偏移 4000） | 1,086,825 个决策点 | 有差异 **0.0010%**（11 个决策点，5 局；核心字段 0.0002%）；S138–S142 之后第三到第七轮的 347 个例子局全部一致 |
 
 ## 方法
 
@@ -189,6 +190,11 @@
 | S135 | Glaive Rush 的弱点（BeforeMove 优先级 100）在任何被阻止的行动之前就结束 | 两 | `poke_env_fixes`：`cant` 时去掉 | 同上 |
 | S136 | 变身复制的是目标当时的属性（Libero 改成的 Normal），poke-env 复制的是种族属性；构造时也改用变身者自己的属性（目标之后可能换下、属性恢复）；太晶不改变太晶前的属性，poke-env 却清掉了 | 两 | `poke_env_fixes` 两处；`_as_transformed` 用变身者的属性 | 同上 |
 | S137 | 变成自己原本的属性（纯 Ghost 的 Banette 用 Libero 放 Poltergeist）：Showdown 比较的是属性，没有 typechange | 两 | 属性与种族相同时不加（附加属性、变身、Roost 除外） | `test_a_type_change_to_its_own_types_is_none` |
+| S138 | 变身后用掉的道具（Focus Sash）：`_as_transformed` 重建引擎宝可梦时没带上一个道具 | 两 | 带上 | `test_a_transformed_foes_last_item` |
+| S139 | S95 的补充：只剩 Struggle 且锁定时，锁定的招也可能是被 Heal Block / Throat Chop / Assault Vest 封住的（不一定没 PP） | 实 | 这些原因时不改 PP | 基线 |
+| S140 | S103 的补充：Imprison 看的是施放者的全部招式，不只已暴露的（这个世界的配置）；变身中的只看复制来的 | 实 | 用这个世界的配置 | 基线 |
+| S141 | 只降能力的变化招（Tickle）被 Clear Body 全部挡下：失败（Defog、Parting Shot 等还有别的效果，不算） | 两 | 加入 | `test_the_logs_facts_eighth_batch` |
+| S142 | S107 误伤：Intimidate 被 Own Tempo 挡下的 `-fail … unboost … [from] ability`，被算成那只宝可梦自己招式的失败 | 两 | 排除 unboost | 同上 |
 
 已知、待查：无（之前的两局 PP 是 S84 / S85，伪装成 Pressure 宝可梦的我方 Zoroark 是 S86；对方伪装时多扣的 PP 仍是玩家无从得知的，属隐藏信息）。
 

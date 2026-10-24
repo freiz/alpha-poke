@@ -1000,3 +1000,13 @@ def test_a_type_change_to_its_own_types_is_none(belief):
     b = battle(["|move|p2a: Gholdengo|Make It Rain|p1a: Garchomp", "|-start|p2a: Gholdengo|typechange|Steel/Ghost|[from] ability: Libero",
                 "|-damage|p1a: Garchomp|300/400", "|upkeep", "|turn|2"])  # fmt: skip
     assert "typechange" not in {str(v).lower() for v in state(b, belief).side_two.volatile_statuses}
+
+
+def test_a_transformed_foes_last_item(belief):
+    """S138: a transformed Ditto's Focus Sash used up -- its last item was dropped as the engine's
+    transformed mon was rebuilt."""
+    b = battle(["|switch|p2a: Ditto|Ditto|100/100", "|-transform|p2a: Ditto|p1a: Garchomp|[from] ability: Imposter",
+                "|turn|2", "|move|p1a: Garchomp|Earthquake|p2a: Ditto", "|-enditem|p2a: Ditto|Focus Sash",
+                "|-damage|p2a: Ditto|1/100", "|upkeep", "|turn|3"])  # fmt: skip
+    two = state(b, belief).side_two
+    assert str(two.pokemon[int(two.active_index)].last_item).lower() == "focussash"

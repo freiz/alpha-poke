@@ -2,7 +2,9 @@
 differential's team pairs, at every decision our engine state from the player's view (poke-env
 from its protocol lines and request, build_state) against the one from Showdown's own state.
 --belief: the opponent's hidden parts sampled by the belief (default: their true sets, so a
-difference is the construction's). Report by kind with examples, like check_engine_random.
+difference is the construction's). --path replay: the state built as a replay's position is
+(enginecheck/replaybuild.py: the spectator's log, both sides' sets the oracle's). Report by kind
+with examples, like check_engine_random.
 
   uv run python scripts/check_state_build.py --battles 200 --teams tests/fixtures/random_battle_teams.jsonl
 """
@@ -30,9 +32,12 @@ def core(kind: str) -> bool:
 def battle(job) -> dict:
     from alpha_poke.enginecheck.statebuild import battle_diffs
 
-    i, p1, p2, max_turns, oracle = job
+    i, p1, p2, max_turns, oracle, path = job
+    if path == "replay":
+        from alpha_poke.enginecheck.replaybuild import battle_diffs as replay_diffs
     try:
-        diffs, stats = battle_diffs(p1, p2, seed=i[1], max_turns=max_turns, oracle=oracle)
+        diffs, stats = (replay_diffs(p1, p2, seed=i[1], max_turns=max_turns) if path == "replay"
+                        else battle_diffs(p1, p2, seed=i[1], max_turns=max_turns, oracle=oracle))  # fmt: skip
     except Exception as e:  # noqa: BLE001
         return {"i": i, "diffs": [], "decisions": 0, "errors": [f"{type(e).__name__}: {e}"[:200]]}
     return {"i": i, "diffs": diffs, "decisions": stats["decisions"], "errors": stats["errors"]}
@@ -47,6 +52,7 @@ def main() -> None:
     ap.add_argument("--procs", type=int, default=8)
     ap.add_argument("--belief", action="store_true", help="the belief's samples, not the true sets")
     ap.add_argument("--seed-offset", type=int, default=0)
+    ap.add_argument("--path", choices=("live", "replay"), default="live")
     ap.add_argument("--out", default="data/selfplay/diag/state_build.json")
     a = ap.parse_args()
     import glob
@@ -56,7 +62,7 @@ def main() -> None:
     for f in files:  # (a.battles from each file; the job id: the file and the seed)
         pairs = [json.loads(x) for x in Path(f).read_text().splitlines()]
         jobs += [((Path(f).stem, a.seed_offset + i), pairs[i % len(pairs)]["p1"],
-                  pairs[i % len(pairs)]["p2"], a.max_turns, not a.belief) for i in range(a.battles)]  # fmt: skip
+                  pairs[i % len(pairs)]["p2"], a.max_turns, not a.belief, a.path) for i in range(a.battles)]  # fmt: skip
     kinds: collections.Counter = collections.Counter()
     battles_by_kind: dict = collections.defaultdict(set)
     examples: dict = {}
@@ -89,6 +95,7 @@ def main() -> None:
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
     Path(a.out).write_text(json.dumps({"battles": len(jobs), "teams": files, "decisions": decisions,
                                        "seed_offset": a.seed_offset,  # (a job's pair: seed - offset)
+                                       "path": a.path,
                                        "decisions_with": bad_dec, "core_decisions_with": core_dec,
                                        "kinds": dict(kinds), "errors": dict(errors),
                                        "examples": {k: v[:20] for k, v in examples.items()}}, indent=1))

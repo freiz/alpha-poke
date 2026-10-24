@@ -815,6 +815,7 @@ def _as_transformed(p: pe.Pokemon, target: pe.Pokemon, moves: list, ability: str
         weight_kg=target.weight_kg, moves=moves, terastallized=p.terastallized,
         tera_type=p.tera_type, rest_turns=p.rest_turns, sleep_turns=p.sleep_turns,
         times_attacked=p.times_attacked, gender=p.gender, transform_backup=backup,
+        stellar_boosted=p.stellar_boosted, last_item=p.last_item,  # (S138: its last item kept)
     )  # fmt: skip
 
 
@@ -1138,6 +1139,12 @@ def build_state(
                   for m, st in zip(theirs, their_sets, strict=True)]  # fmt: skip
     their_idx = next((i for i, m in enumerate(theirs) if m is opp_active), 0)
     our_active_idx = next((i for i, m in enumerate(ours) if m is active), None)
+    if spectator is None and tm_them.imprison and their_mons and our_active_idx is not None:
+        # (the imprisoner's moves in this world -- its set's, not only those it revealed: S140)
+        world = frozenset(opp_active.moves) if their_t is not None else \
+            frozenset(their_sets[their_idx].moves) | frozenset(opp_active.moves)  # (transformed: its copied ones)
+        our_mons[our_active_idx] = _our_mon(active, avail, tm_us, req_pp, revived == to_id(active.species),
+                                            imprisoned=world)  # fmt: skip
     if zi is not None:  # the active is the Zoroark: what is shown (HP fraction, status) is its
         z = their_mons[zi]
         their_mons[zi] = _with(z, hp=max(1, round(opp_active.current_hp_fraction * z.maxhp)),
@@ -1167,7 +1174,12 @@ def build_state(
             struggling = avail is not None and avail <= {"struggle"}
             for mid in ids:
                 pp = int(req[mid]) if req.get(mid) is not None else max(0, _copied_pp(active, mid) - _spited(tm_us, active, mid))
-                if struggling and mid == lock and tm_us.taunt is None and tm_us.disabled != mid:
+                cat, flags = _move_kinds().get(mid, ("", set()))
+                blocked = (tm_us.taunt is not None and cat == "Status") or tm_us.disabled == mid \
+                    or (tm_us.healblock is not None and "heal" in flags) \
+                    or (tm_us.throatchop is not None and "sound" in flags) \
+                    or (active.item == "assaultvest" and cat == "Status")  # (S139: Heal Block's Horn Leech)
+                if struggling and mid == lock and not blocked:
                     pp = 0  # (Struggle only, locked into it: it is out of PP -- poke-env's count drifts)
                 # (its flags as an untransformed mon's: not offered and no reason the engine
                 # derives itself -- out of PP, a Taunt, ...: S95)
