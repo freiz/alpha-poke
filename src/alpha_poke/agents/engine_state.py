@@ -472,7 +472,10 @@ def _formes(team: dict, mons: list, built: list, tm: SideTimers) -> list:
         if p.id.lower() == "greninja" and str(p.ability).lower() == "battlebond":
             f = "greninjabond"
         if f and f != p.id.lower() and not m.transformed and engine_species(f):
-            out[j] = _with(p, id=f)
+            # (its weight its forme's: Showdown's formeChange sets the species' -- Minior's
+            # Meteor 40 kg, its core 0.3; 2026-10-24, the differential's weight check)
+            w = (GEN.pokedex.get(f) or {}).get("weightkg")
+            out[j] = _with(p, id=f, weight_kg=float(w) if w else p.weight_kg)
     return out
 
 
@@ -1407,8 +1410,12 @@ def build_state(
         mine = (who == "us") != (key in tm.swapped)  # (the setter's side)
         setter = next((p for m, p in zip(ours if mine else theirs, our_mons if mine else their_mons,
                                          strict=True) if to_id(m.species) == sp), None)  # fmt: skip
-        if setter is not None and str(setter.ability).lower() == "klutz":
-            return ""  # (a Klutz holder's item does nothing: this world's ability)
+        # (a Klutz holder's item does nothing: its ability as it set it -- a move's change then,
+        # else its own, this world's -- not its ability now: 2026-10-24 review, a Skill Swap
+        # after made a Klutz Heat Rock sun 8 turns)
+        then = tm.set_ability.get(key) or (str(setter.base_ability).lower() if setter is not None else "")
+        if then == "klutz":
+            return ""
         # (a Court Change put the other side's screen here: its setter is of that side)
         other = "them" if who == "us" else "us"
         if key in tm.swapped:

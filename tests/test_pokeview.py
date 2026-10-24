@@ -79,3 +79,18 @@ def test_a_switch_order_by_the_engines_forme_name():
     assert slots.order_of(player, battle, "switch greninjabond") is gren
     assert slots.order_of(player, battle, "switch greattusk") is tusk
     assert slots.order_of(player, battle, "switch kingambit") is None
+
+
+def test_a_mons_own_weight_after_its_transform_ended():
+    """poke-env's transform overwrites the weight with its target's and its switch-out keeps it:
+    a Ditto out of its Copperajah transform read 650 kg, Showdown's 4 (2026-10-24 review: Heavy
+    Slam, Low Kick, Grass Knot from it or at it)."""
+    from poke_env.battle import Pokemon
+
+    from alpha_poke.agents import pokeview as pv
+
+    ditto = Pokemon(species="ditto", gen=9)
+    ditto.transform(Pokemon(species="copperajah", gen=9))
+    assert pv.own_weight(ditto) == 4.0
+    ditto.switch_out({})
+    assert not ditto.transformed and pv.own_weight(ditto) == 4.0

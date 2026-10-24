@@ -7067,3 +7067,26 @@ def test_l232_encore_after_a_struggle_fails():
     assert any(x.startswith("|-fail|") for x in states[3]["log"]), states[3]["log"]
     outs = ec.engine_outcomes(ec.engine_state(states[2]), "none", "encore")
     assert ec.closest(states[3], outs, (1, 1), hp=True, full=True, start=states[2])["diff"] == {}
+
+
+def test_spite_takes_four_pp_of_its_targets_last_move():
+    """2026-10-24 review: Spite (Gengar, faster) on a Corviknight whose last move was Brave Bird:
+    Showdown takes 4 of its PP (23 -> 19); the engine had the move's data only, no effect."""
+    mon = _setter("Corviknight", "Mirror Armor", "Leftovers", "- Brave Bird\n- Roost\n- Defog\n- U-turn")
+    foe = _setter("Gengar", "Cursed Body", "Leftovers", "- Spite\n- Protect\n- Shadow Ball\n- Sludge Bomb")
+    states = ec.run_showdown(mon, foe, [("move 1", "move protect"), ("move 2", "move spite")])
+    bb = [m for m in states[2]["sides"][0]["mons"][0]["moves"] if m["id"] == "bravebird"][0]
+    assert bb["pp"] == 19, states[2]["sides"][0]["mons"][0]["moves"]
+    outs = ec.engine_outcomes(ec.engine_state(states[1]), "roost", "spite")
+    assert ec.closest(states[2], outs, (1, 1), hp=True, full=True, start=states[1])["diff"] == {}
+
+
+def test_spite_fails_on_a_target_with_no_last_move():
+    """Spite (Gengar, faster) on the first turn: Corviknight has no last move -- it fails
+    (Showdown's onHit: no lastMove), its Brave Bird after it at full PP less its own use."""
+    mon = _setter("Corviknight", "Mirror Armor", "Leftovers", "- Brave Bird\n- Roost\n- Defog\n- U-turn")
+    foe = _setter("Gengar", "Cursed Body", "Leftovers", "- Spite\n- Protect\n- Shadow Ball\n- Sludge Bomb")
+    states = ec.run_showdown(mon, foe, [("move 2", "move spite")])
+    assert any(x.startswith("|-fail|") for x in states[1]["log"]), states[1]["log"]
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "roost", "spite")
+    assert ec.closest(states[1], outs, (1, 1), hp=True, full=True, start=states[0])["diff"] == {}

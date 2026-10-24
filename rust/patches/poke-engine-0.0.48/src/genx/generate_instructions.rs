@@ -3478,6 +3478,22 @@ fn move_has_no_effect(state: &State, choice: &Choice, attacking_side_ref: &SideR
         ))
     {
         return true;
+    } else if choice.move_id == Choices::SPITE {
+        // alpha-poke patch (2026-10-24 review): Spite fails without a last move with PP left on
+        // the side it lands on (Showdown's onHit: lastMove, deductPP's 0; a Struggle's none)
+        let target = if choice.target == MoveTarget::User {
+            *attacking_side_ref
+        } else {
+            attacking_side_ref.get_other_side()
+        };
+        let side = state.get_side_immutable(&target);
+        return match side.last_used_move {
+            LastUsedMove::Move(i) => {
+                side.volatile_statuses.contains(&PokemonVolatileStatus::STRUGGLED)
+                    || side.get_active_immutable().moves[&i].pp <= 0
+            }
+            _ => true,
+        };
     } else if choice.move_id == Choices::ENCORE {
         // alpha-poke patch (2026-10-16, doc/engine-diff.md L69): the side it lands on (its user's
         // when Magic Bounce reflects it), and it fails on an Encore (Encore cannot encore Encore)

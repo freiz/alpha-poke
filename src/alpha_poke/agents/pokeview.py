@@ -34,12 +34,12 @@ def last_used_move(mon) -> str:
 
 
 def own_weight(mon) -> float:
-    """A mon's own weight (poke-env's is its target's while it is transformed: the backup's
-    weight, 2026-10-23 review)."""
-    if mon.transformed:
-        entry = GEN.pokedex.get(to_id(mon.species))
-        if entry and entry.get("weightkg"):
-            return float(entry["weightkg"])
+    """A mon's own weight, its species' (poke-env's is its target's while it is transformed:
+    the backup's weight, 2026-10-23 review -- and after: its switch-out does not restore it, a
+    Ditto out of its Copperajah transform read 650 kg; 2026-10-24 review)."""
+    entry = GEN.pokedex.get(to_id(mon.species))
+    if entry and entry.get("weightkg"):
+        return float(entry["weightkg"])
     return float(mon.weight or 0.0)
 
 

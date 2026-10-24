@@ -236,17 +236,68 @@ TOP_ITEMS = 8  # the belief's most likely items per mon (+ a revealed one)
 TOP_SPREADS = 12
 
 
-def _candidates(belief, mon, team_names: tuple[str, ...]) -> tuple[list, list[float]]:
+# (the item changes hands: the mover's Trick / Switcheroo swap; a thief takes one only with none)
+_SWAPS = ("[from] move: Trick", "[from] move: Switcheroo")
+_TAKERS = ("[from] move: Thief", "[from] move: Covet", "[from] ability: Magician",
+           "[from] ability: Pickpocket")  # fmt: skip
+
+
+def item_changes(lines: list[str]) -> dict[tuple[str, str], str | None]:
+    """(side, species id) -> the item it held before its item first changed hands, for the mons
+    whose item did: a Trick / Switcheroo partner's -- the one the other received --, a thief's
+    none (Thief, Covet, Magician, Pickpocket take one only with none), None if not known (a
+    Bestow's receiver, ...). ``hits`` keeps no hit after the change: every hit is of that item
+    (2026-10-24 review: a Choice Specs Latios's Surf read with the Life Orb a Trick gave it)."""
+    out: dict[tuple[str, str], str | None] = {}
+    active: dict[str, str] = {}
+    swap: list = []  # (key, item received) of the swap going on
+    swap_with = None  # the swap's [of] mon's key
+    for line in lines + [""]:
+        f = line.split("|")
+        tag = f[1] if len(f) > 1 else ""
+        if swap and not (tag == "-item" and any(x in line for x in _SWAPS)):
+            keys = [k for k, _ in swap]
+            got = dict(swap)
+            if len(keys) == 1 and swap_with is not None and swap_with not in keys:
+                keys.append(swap_with)  # (one of them had none: it gave nothing)
+            for k in keys:
+                other = next((x for x in keys if x != k), None)
+                out.setdefault(k, got.get(other, "none") if other is not None else None)
+            swap = []
+        if tag in ("switch", "drag") and len(f) > 3:
+            active[f[2][:3]] = _species(f[3])
+        elif tag == "-activate" and len(f) > 3 and f[3] in ("move: Trick", "move: Switcheroo"):
+            of = next((x[5:] for x in f[4:] if x.startswith("[of] ")), "")
+            a, b = active.get(f[2][:3]), active.get(of[:3])
+            swap = []
+            swap_with = (of[:2], b) if a is not None and b is not None else None
+        elif tag == "-item" and len(f) > 3 and active.get(f[2][:3]):
+            key = (f[2][:2], active[f[2][:3]])
+            if any(x in line for x in _SWAPS):
+                swap.append((key, to_id(f[3])))
+            elif any(x in line for x in _TAKERS):
+                out.setdefault(key, "none")
+            elif "[from] move:" in line:
+                out.setdefault(key, None)
+    return out
+
+
+def _candidates(belief, mon, team_names: tuple[str, ...], then=False) -> tuple[list, list[float]]:
     """(item, ability, Spread) candidates of an opposing mon and their prior: the belief's team-
     conditioned item marginal (a revealed item alone), the usage of its possible abilities (a
     revealed one alone), the usage spreads. The item is the one it held when it hit / was hit:
-    a gone item counts as unknown here."""
+    a gone item counts as unknown here; ``then``, for a mon whose item changed hands since
+    (``item_changes``), the one it held before (None: not known -- not the one it holds now)."""
     from alpha_poke.agents.belief_state import _preview_name, ability_probs
     from alpha_poke.agents.engine_state import _prior
     from alpha_poke.agents.speed import spread_dist
 
     dist = _prior(belief, _preview_name(mon, team_names), team_names)
-    if mon.item and mon.item != "unknown_item":
+    if then is not False and then is not None:
+        items = [(then, 1.0)]
+    elif then is None:
+        items = sorted(dist.item.items(), key=lambda kv: -kv[1])[:TOP_ITEMS] or [("none", 1.0)]
+    elif mon.item and mon.item != "unknown_item":
         items = [(mon.item, 1.0)]
     else:
         items = sorted(dist.item.items(), key=lambda kv: -kv[1])[:TOP_ITEMS] or [("none", 1.0)]
@@ -281,8 +332,10 @@ def damage_posteriors(battle, belief, theirs: list, team_names: tuple[str, ...])
     lines = [m if isinstance(m, str) else "|".join(m) for m in battle_log(battle)]
     parsed_log = getattr(battle, "_alpha_hits", None)  # (lines seen, hits): once per new message
     if parsed_log is None or parsed_log[0] != len(lines):
-        parsed_log = (len(lines), hits(lines, role))
+        parsed_log = (len(lines), hits(lines, role), item_changes(lines))
         battle._alpha_hits = parsed_log
+    them = "p2" if role == "p1" else "p1"
+    changes = parsed_log[2]
     hs = [h for h in parsed_log[1] if h.turn in bases]
     if not hs:
         return {}
@@ -297,9 +350,10 @@ def damage_posteriors(battle, belief, theirs: list, team_names: tuple[str, ...])
         mh = [h for h in hs if (h.defender if h.by_us else h.attacker) == sp]
         if not mh:
             continue
-        key = (sp, len(mh), m.item, m.ability)
+        then = changes.get((them, sp), False)  # (its item changed hands: the one it held then)
+        key = (sp, len(mh), m.item, m.ability, then)
         if key not in cache:
-            cands, prior = _candidates(belief, m, team_names)
+            cands, prior = _candidates(belief, m, team_names, then=then)
             level = m.level or 100
             stats = [calc_stats(m.base_stats, c[2], level=level) for c in cands]
             vec = [[s["hp"], s["atk"], s["def"], s["spa"], s["spd"], s["spe"]] for s in stats]

@@ -321,6 +321,20 @@ Showdown 里有一类值在效果开始的那一刻就定下，之后不再随�
 
 结论：跨决策点、我们需要还原的值都按事件发生时记下，A 的百万级差分覆盖了其中可观察的部分；剩下的是引擎没有建模的几项（束缚的道具、连续使用的倍率、Laser Focus、Stockpile 在 +6 时的那层），属引擎缺口，按"引擎问题先写双测试"的规则另行处理（另：C 的往返检查查出 Uproar 的锁定，也是引擎缺口）。
 
+## 复查（10-24）
+
+外部复查查出的 5 处（各有确定性场景复现），都已修复：
+
+| # | 问题 | 影响 | 修复 | 测试 |
+|---|---|---|---|---|
+| R1 | 树内历史取"实际用的招"时看本步第一个扣这一方 PP 的指令：对方先手的 Eerie Spell（及 Spite）扣掉的上一招 PP 被当成这一方用的招（Roost 记成 Brave Bird），这一方被阻止时还会被当成用了招 | 搜索 | 只看这一方自己出招的区间：它的 `Turn` 到它的 `Acted`（没有 `Acted` 时到对方的下一个 `Turn`） | `ismcts.rs` 的 `a_foes_eerie_spell_is_not_the_targets_move`（修复前失败） |
+| R2 | F1 的伤害证据：道具换手（Trick）之后，用现在的道具解释换手之前的命中（Choice Specs 的 Surf 按 Life Orb 算，真实特攻被排除） | 实战搜索的信念（回放路径不用 F1） | `damage_obs.item_changes`：换手前的道具（Trick / Switcheroo：对方收到的那个；Thief / Covet / Magician / Pickpocket：没有道具），候选按它；不知道时用信念的候选，不用现在的道具 | `tests/test_damage_obs.py` |
+| R3 | 变身结束后体重仍是复制目标的（poke-env 换下不恢复）：Ditto 复制 Copperajah 换下后 650 kg，Showdown 4 kg。另：形态改变时体重是新形态的（Minior 的 Meteor 40 kg，核心 0.3 kg），我们一直按出场形态 | **训练数据**（0.9% 的局有变身者换下又上场） | `pokeview.own_weight` 一律按自身种族；`_formes` 改形态时一并改体重；差分加比较体重和变身备份里的体重（以前不比，所以漏了） | `test_a_mons_own_weight_after_its_transform_ended`；12 局含 Ditto 的对局：修复前 474 处体重差异，修复后 0 |
+| R4 | 延长道具被 Klutz 抵消的判断看设置者现在的特性：设下日照后被 Skill Swap 换成 Regenerator，Heat Rock 被算成生效（剩 7 回合，Showdown 4） | 训练数据（极少） | 计时器在设置时记下设置者被招式 / 特性改变后的特性（`set_ability`，Court Change 时一起交换）；没有改变过就是它自己的特性 | `test_a_klutz_setters_weather_is_not_extended_after_its_ability_changed`（设置后变、设置前变两种） |
+| R5 | 引擎的 Spite 不扣 PP | 搜索 | 见 `doc/engine-diff.md` L233 | 双测试两个 |
+
+另：C 的往返检查在已经混乱时悄悄结束的锁定上报了选项差异（比较器早已把这种锁定结束当作隐藏信息），选项比较同样排除（`_silent_lock_end`）。
+
 ## 后续
 
 - 因果性检查（计划 B）：见上；B2 的结果字段待搜索 A/B；Illusion / Minior 的名字要由 Context 带上。

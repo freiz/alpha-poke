@@ -206,6 +206,10 @@ class SideTimers:
     # id (reflect, lightscreen, auroraveil) -> the setter's species id
     setters: dict = field(default_factory=dict)
     set_items: dict = field(default_factory=dict)  # a setters key -> its setter's item then
+    # a setters key -> its setter's ability then, as a move / ability had changed it (its
+    # ability_now; none: its own -- an ability's change is always in the log): a Klutz setter's
+    # extending item does nothing (2026-10-24 review: a Skill Swap after read the new one)
+    set_ability: dict = field(default_factory=dict)
     nothing_now: bool = False  # its move did nothing this turn (protected: Showdown's null result)
     last_nothing: bool = False
     sub_failed_now: bool = False  # its status move's -fail at a Substitute this turn (S93)
@@ -426,6 +430,11 @@ def _feed_one(sides: dict, p: list[str]) -> None:
         for k in TIMED_SIDE | {"spikes", "toxicspikes", "stealthrock", "stickyweb"}:
             sa, sb = a.setters.pop(k, None), b.setters.pop(k, None)
             ia, ib = a.set_items.pop(k, None), b.set_items.pop(k, None)
+            xa, xb = a.set_ability.pop(k, None), b.set_ability.pop(k, None)
+            if xb is not None:
+                a.set_ability[k] = xb
+            if xa is not None:
+                b.set_ability[k] = xa
             if sb is not None:
                 a.setters[k] = sb
             if sa is not None:
@@ -933,6 +942,7 @@ def _feed_one(sides: dict, p: list[str]) -> None:
         st.setters[to_id(p[3].replace("move: ", ""))] = st.just_moved
         st.swapped.discard(to_id(p[3].replace("move: ", "")))
         st.set_items.pop(to_id(p[3].replace("move: ", "")), None)
+        _ability_then(st, to_id(p[3].replace("move: ", "")), st.just_moved)
         if "magicroom" in st.fields_elapsed or st.embargo:
             # (its item suppressed as it set it -- Magic Room, Embargo: no Light Clay; Showdown's
             # hasItem; 2026-10-23, the state-construction differential)
@@ -1098,6 +1108,13 @@ def _item_was(st: SideTimers, sp: str, item: str) -> None:
             st.set_items[k] = item
 
 
+def _ability_then(st: SideTimers, key: str, sp: str) -> None:
+    """The ability ``sp`` set ``key`` with, if a move / an ability had changed it (else its own)."""
+    st.set_ability.pop(key, None)
+    if sp and sp == st.active and st.ability_now:
+        st.set_ability[key] = st.ability_now
+
+
 def _set_by(sides: dict, p: list[str], kind: str, what: str) -> None:
     """The setter of a weather / terrain (``kind``): the mon of ``[of] <ident>`` (an ability),
     else the mon that just moved; kept in its side's ``setters`` (the other side's dropped)."""
@@ -1112,6 +1129,7 @@ def _set_by(sides: dict, p: list[str], kind: str, what: str) -> None:
     if st is not None and what != "none":
         st.setters[kind] = (what, sp)
         st.set_items.pop(kind, None)
+        _ability_then(st, kind, sp)
         if "magicroom" in st.fields_elapsed or (st.embargo and sp == st.active):
             st.set_items[kind] = ""  # (its item suppressed as it set it)
 

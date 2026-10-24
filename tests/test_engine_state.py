@@ -1021,3 +1021,22 @@ def test_a_copied_ability_poke_env_never_knew():
 
     assert _copied_ability(SimpleNamespace(temporary_ability="Imposter"), "magicguard") == "magicguard"
     assert _copied_ability(SimpleNamespace(temporary_ability="Rough Skin"), "magicguard") == "roughskin"
+
+
+def test_a_klutz_setters_weather_is_not_extended_after_its_ability_changed(belief):
+    """2026-10-24 review: a Klutz Golurk with a Heat Rock sets the sun (5 turns: Klutz keeps the
+    rock out), a Skill Swap makes it Regenerator the same turn -- the setter's ability now was
+    read: 8 turns (7 left), Showdown's 4. The ability it had as it set it counts."""
+    moves = ("sunnyday", "earthquake", "poltergeist", "rockpolish")
+    lines = ["|move|p1a: Golurk|Sunny Day|p1a: Golurk", "|-weather|SunnyDay",
+             "|move|p2a: Gholdengo|Skill Swap|p1a: Golurk",
+             "|-activate|p2a: Gholdengo|move: Skill Swap|Klutz|Regenerator|[of] p1a: Golurk",
+             "|upkeep|", "|turn|2"]
+    b = battle(lines, us="Golurk", item="heatrock", ability="klutz", moves=moves)
+    assert state(b, belief).weather_turns_remaining == 5 - 1
+    # (and the other way: a Klutz it got before setting keeps the rock out too)
+    lines = ["|move|p2a: Gholdengo|Skill Swap|p1a: Golurk",
+             "|-activate|p2a: Gholdengo|move: Skill Swap|Regenerator|Klutz|[of] p1a: Golurk",
+             "|move|p1a: Golurk|Sunny Day|p1a: Golurk", "|-weather|SunnyDay", "|upkeep|", "|turn|2"]
+    b = battle(lines, us="Golurk", item="heatrock", ability="regenerator", moves=moves)
+    assert state(b, belief).weather_turns_remaining == 5 - 1

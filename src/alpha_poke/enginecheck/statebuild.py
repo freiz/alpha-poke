@@ -106,7 +106,8 @@ def own_diffs(built: pe.Side, truth: pe.Side) -> list[tuple[str, str]]:
         keys = ["hp"]  # (a fainted one: nothing else of it is read -- its forme back, its maxhp)
         if t.hp > 0:
             keys += ["maxhp", "status", "item", "ability", "base_ability", "rest_turns",
-                     "sleep_turns", "terastallized", "tera_type", "last_item"]  # fmt: skip
+                     "sleep_turns", "terastallized", "tera_type", "last_item",
+                     "weight_kg"]  # fmt: skip (2026-10-24 review: a Ditto's copied weight kept)
         if t.transform_backup is None and t.hp > 0:
             keys += list(STATS)
         for k in keys:
@@ -125,7 +126,8 @@ def own_diffs(built: pe.Side, truth: pe.Side) -> list[tuple[str, str]]:
                 out.append(("own:disabled", f"{sp} {mid} {bmv[mid][1]} vs {tmv[mid][1]}"))
         if (b.transform_backup is None) != (t.transform_backup is None) or (
             b.transform_backup and sorted(b.transform_backup[2]) != sorted(t.transform_backup[2])
-        ) or (b.transform_backup and b.transform_backup[0] != t.transform_backup[0]):
+        ) or (b.transform_backup and b.transform_backup[0] != t.transform_backup[0]) or (
+            b.transform_backup and b.transform_backup[1] != t.transform_backup[1]):
             out.append(("own:transform_backup", f"{sp} {b.transform_backup} vs {t.transform_backup}"))
     if _tera_used(built) != _tera_used(truth):
         out.append(("own:tera_used", f"{_tera_used(built)} vs {_tera_used(truth)}"))
@@ -146,6 +148,8 @@ def _norm(k: str, v) -> str:
     differential's states name it)."""
     from alpha_poke.agents.engine_state import engine_item
 
+    if k == "weight_kg":
+        return f"{float(v):.1f}"
     v = str(v).lower()
     if k in ("item", "last_item") and v not in ("none", "") and not engine_item(v):
         return "unknownitem"
@@ -198,10 +202,7 @@ def _side_common(who: str, built: pe.Side, truth: pe.Side) -> list[tuple[str, st
     bv, tv = _vols(built), _vols(truth)
     bv.discard("flinch")  # (a flinch is drawn silently -- shown only as it stops the move: hidden)
     tv.discard("flinch")
-    if ("confusion" in bv & tv or str(_active(truth).ability).lower() == "owntempo") \
-            and "lockedmove" in bv ^ tv:
-        # (a lock's end when it was confused already, or with Own Tempo -- no confusion: silent
-        # -- hidden)
+    if _silent_lock_end(built, truth):
         bv.discard("lockedmove")
         tv.discard("lockedmove")
     for v in sorted(bv ^ tv):
@@ -254,7 +255,7 @@ def foe_diffs(built: pe.Side, truth: pe.Side, seen: set[str], oracle: bool = Fal
         bm, tm = _mons(built), _mons(truth)
         for sp in seen & set(bm) & set(tm):
             b, t = bm[sp], tm[sp]
-            keys = ["maxhp", "item", "ability", "base_ability", "last_item"]
+            keys = ["maxhp", "item", "ability", "base_ability", "last_item", "weight_kg"]
             if t.transform_backup is None:
                 keys += list(STATS)
             for k in keys:
@@ -464,6 +465,14 @@ def battle_diffs(p1: str, p2: str, seed: int, max_turns: int = 40, sides=("p1", 
     return out, stats
 
 
+def _silent_lock_end(built: pe.Side, truth: pe.Side) -> bool:
+    """A lock's end when it was confused already, or with Own Tempo -- no confusion: silent,
+    hidden (the lock's moves and its options, the built side's)."""
+    bv, tv = _vols(built), _vols(truth)
+    return ("confusion" in bv & tv or str(_active(truth).ability).lower() == "owntempo") \
+        and "lockedmove" in bv ^ tv
+
+
 def option_diffs(b, built, t) -> list[tuple[str, str]]:
     """Plan C's round trip (agents/slots): the built state's options by name are the true
     state's, and each one is an order of the battle (poke-env's request). Not at a switch
@@ -472,6 +481,8 @@ def option_diffs(b, built, t) -> list[tuple[str, str]]:
 
     from alpha_poke.agents import slots
 
+    if _silent_lock_end(built.side_one, t.side_one):
+        return []
     ours, truth = slots.names(built), slots.names(t)
     out = []
     # (Greninja-Bond as Greninja: the true states' name, Showdown's details -- as the comparator)

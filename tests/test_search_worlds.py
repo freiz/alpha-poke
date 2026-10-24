@@ -13,10 +13,13 @@ pq = pytest.importorskip("pyarrow.parquet")
 
 ROOT = Path(__file__).resolve().parents[1]
 MODEL = ROOT / "data/train/v72/runs/v6arch"
-DATA = ROOT / "data/train/v72/hf-part11.parquet"
+# (positions of a human-data build -- the newest one here: only their states and contexts are
+# read; v7.2's own data was deleted 2026-10-24, the tests skipped silently)
+DATA = next((p for v in ("v74", "v73", "v72") if (p := ROOT / f"data/train/{v}/hf-part11.parquet").exists()),
+            ROOT / "data/train/v73/hf-part11.parquet")
 
 pytestmark = pytest.mark.skipif(not (MODEL / "best.safetensors").exists() or not DATA.exists(),
-                                reason="needs the v6arch run and the v7.2 data")  # fmt: skip
+                                reason="needs the v6arch run and a human-data build's positions")  # fmt: skip
 
 
 def _row():

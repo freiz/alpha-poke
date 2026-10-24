@@ -397,7 +397,20 @@ impl<'a> PathCtx<'a> {
             // history: the move used -- 2026-10-24, the tree's history check). A move with no
             // target left (its foe gone: the engine returns before `Acted`) is used too: the
             // log's move line, failed ("[notarget]"; a locked one's "[from]lockedmove": none)
-            let used = instructions[..acted.unwrap_or(instructions.len())]
+            // (its own move's span only: from its Turn on, to its start -- or to the foe's turn
+            // after; a foe's Eerie Spell / Spite takes its PP too: 2026-10-24 review, the Roost of
+            // a Corviknight Eerie Spell hit read as its Brave Bird)
+            let from = instructions
+                .iter()
+                .position(|i| matches!(i, Instruction::Turn(s) if *s == side_ref))
+                .unwrap_or(instructions.len());
+            let to = acted.unwrap_or_else(|| {
+                instructions[from..]
+                    .iter()
+                    .position(|i| matches!(i, Instruction::Turn(s) if *s != side_ref))
+                    .map_or(instructions.len(), |k| from + k)
+            });
+            let used = instructions[from..to.max(from)]
                 .iter()
                 .find_map(|i| match i {
                     Instruction::DecrementPP(d) if d.side_ref == side_ref && d.amount > 0 => {
@@ -1781,6 +1794,46 @@ mod tests {
                 step.two.kind == 1 && step.two.target == Choices::TACKLE as i32 && !step.two.prevented,
                 "no target: {step:?}"
             );
+        }
+    }
+
+    /// 2026-10-24 review: a foe's Eerie Spell takes the PP of its target's last move before the
+    /// target moves -- that slot read as the move it used (Brave Bird for its Roost)
+    #[test]
+    fn a_foes_eerie_spell_is_not_the_targets_move() {
+        use poke_engine::engine::abilities::Abilities;
+        use poke_engine::engine::items::Items;
+        use poke_engine::choices::MOVES;
+        use poke_engine::state::{LastUsedMove, Pokemon, PokemonType};
+        // (a move's choice data with its id: the engine reads the choice)
+        fn set(p: &mut Pokemon, i: PokemonMoveIndex, id: Choices) {
+            p.moves[&i].id = id;
+            p.moves[&i].choice = MOVES.get(&id).unwrap().clone();
+        }
+        let mut s = ko_first();
+        s.use_last_used_move = true;
+        let a = s.side_one.get_active();
+        (a.speed, a.ability, a.item) = (1, Abilities::NONE, Items::NONE);
+        a.types = (PokemonType::NORMAL, PokemonType::TYPELESS);
+        set(a, PokemonMoveIndex::M0, Choices::ROOST);
+        set(a, PokemonMoveIndex::M1, Choices::BRAVEBIRD);
+        s.side_one.last_used_move = LastUsedMove::Move(PokemonMoveIndex::M1);
+        let b = s.side_two.get_active();
+        (b.hp, b.speed) = (300, 999);
+        set(b, PokemonMoveIndex::M0, Choices::EERIESPELL);
+        let m = MoveChoice::Move(PokemonMoveIndex::M0);
+        let outcomes = generate_instructions_from_move_pair(&mut s.clone(), &m, &m, true);
+        let took = outcomes.iter().any(|o| {
+            o.instruction_list.iter().any(|i| {
+                matches!(i, Instruction::DecrementPP(d) if d.side_ref == SideReference::SideOne
+                    && d.move_index == PokemonMoveIndex::M1)
+            })
+        });
+        assert!(took, "the Eerie Spell takes Brave Bird's PP: {:?}", outcomes[0].instruction_list);
+        for (_, step, _, _) in tree_step_outcomes(&s, &m, &m, true) {
+            if step.one.kind == 1 {
+                assert!(step.one.target == Choices::ROOST as i32, "{step:?}");
+            }
         }
     }
 

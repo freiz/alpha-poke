@@ -1932,6 +1932,31 @@ pub fn choice_special_effect(
     if super::generate_instructions::misses_semi_invulnerable(state, choice, attacking_side_ref) {
         return;
     }
+    // alpha-poke patch (2026-10-24 review): Spite, 4 PP off its target's last move, down to 0
+    // (Showdown's onHit: deductPP(lastMove, 4); move_has_no_effect: none to take, it fails); was
+    // the move's data only
+    if choice.move_id == Choices::SPITE {
+        let target_ref = if choice.target == MoveTarget::User {
+            *attacking_side_ref
+        } else {
+            attacking_side_ref.get_other_side()
+        };
+        let side = state.get_side(&target_ref);
+        if let LastUsedMove::Move(index) = side.last_used_move {
+            let target = side.get_active();
+            let amount = cmp::min(4, target.moves[&index].pp);
+            if amount > 0 {
+                target.moves[&index].pp -= amount;
+                instructions
+                    .instruction_list
+                    .push(Instruction::DecrementPP(DecrementPPInstruction {
+                        side_ref: target_ref,
+                        move_index: index,
+                        amount,
+                    }));
+            }
+        }
+    }
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L207): Minimize +2 / Double Team +1 evasion
     // (the engine's StatBoosts have no evasion: Defog's drop is choice_hazard_clear's); they had
     // none
