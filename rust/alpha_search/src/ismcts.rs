@@ -24,8 +24,9 @@ use crate::tnet::{Context, Input, TNet};
 use poke_engine::choices::Choices;
 use poke_engine::engine::evaluate::evaluate;
 use poke_engine::engine::generate_instructions::generate_instructions_from_move_pair;
-use poke_engine::engine::state::MoveChoice;
+use poke_engine::engine::state::{MoveChoice, PokemonVolatileStatus};
 use poke_engine::instruction::{Instruction, StateInstructions};
+use poke_engine::state::PokemonMoveIndex::{M0, M1, M2, M3};
 use poke_engine::state::{PokemonIndex, Side, SideReference, State};
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
@@ -243,8 +244,23 @@ pub(crate) struct PathCtx<'a> {
     mains: i32,
     // a main step pushed, its turn not over yet (a pivot's / a faint's switch to come)
     open: bool,
-    // the last step's moves, until `settle` (side: the reveal byte and bits a used move adds)
-    pending: [Option<(usize, u8, PokemonIndex)>; 2],
+    // the last step's moves, until `settle`
+    pending: [Option<Pending>; 2],
+}
+
+/// A side's move in the last step, until `settle` sees whether it came.
+#[derive(Clone, Copy)]
+struct Pending {
+    /// its reveal byte
+    at: usize,
+    slot: PokemonIndex,
+    /// the move slot chosen (none: a Struggle, a recharge)
+    chosen: Option<usize>,
+    /// its moves' ids then (the slot it used may be another: an Encore's)
+    moves: [i32; 4],
+    /// locked into its move (Outrage's later turns, a charge move's second, a recharge): no
+    /// decision -- the log's move line is "[from]lockedmove", no action
+    locked: bool,
 }
 
 impl<'a> PathCtx<'a> {
@@ -293,7 +309,9 @@ impl<'a> PathCtx<'a> {
         {
             if *mc == MoveChoice::None && crate::features::struggles(state, side_ref) {
                 act.kind = 1;
-                act.actor = state.get_side_immutable(&side_ref).get_active_immutable().id as i32;
+                act.actor = crate::features::entry_forme(
+                    state.get_side_immutable(&side_ref).get_active_immutable().id,
+                ) as i32;
                 act.target = Choices::STRUGGLE as i32;
                 struggle[k] = true;
             }
@@ -304,20 +322,43 @@ impl<'a> PathCtx<'a> {
             .enumerate()
         {
             self.pending[k] = None;
+            let me = side.get_active_immutable();
+            let mut pending = Pending {
+                at: off + side.active_index as usize,
+                slot: side.active_index,
+                chosen: None,
+                moves: [M0, M1, M2, M3].map(|j| me.moves[&j].id as i32),
+                locked: false,
+            };
             if struggle[k] {
                 // (nothing to reveal: no move of its set -- slot 0 is not its first move)
-                self.pending[k] = Some((off + side.active_index as usize, 0, side.active_index));
+                self.pending[k] = Some(pending);
                 continue;
             }
             match mc {
                 MoveChoice::Move(i) | MoveChoice::MoveTera(i) => {
-                    let a = off + side.active_index as usize;
+                    let a = pending.at;
                     // seen (and its tera) whether or not the move comes
                     self.reveal[a] |= 1;
                     if matches!(mc, MoveChoice::MoveTera(_)) {
                         self.reveal[a] |= 1 << 3;
                     }
-                    self.pending[k] = Some((a, 1 << (4 + *i as usize), side.active_index));
+                    pending.chosen = Some(*i as usize);
+                    pending.locked = side
+                        .volatile_statuses
+                        .contains(&PokemonVolatileStatus::LOCKEDMOVE)
+                        || side.active_is_charging_move().is_some();
+                    self.pending[k] = Some(pending);
+                }
+                // a recharge (the engine's only option then): "cant ... recharge" in the log --
+                // prevented, or fainted first (2026-10-24, the tree's history check: no action)
+                MoveChoice::None
+                    if side
+                        .volatile_statuses
+                        .contains(&PokemonVolatileStatus::MUSTRECHARGE) =>
+                {
+                    pending.locked = true;
+                    self.pending[k] = Some(pending);
                 }
                 MoveChoice::Switch(p) => self.reveal[off + *p as usize] |= 1,
                 _ => {}
@@ -345,32 +386,68 @@ impl<'a> PathCtx<'a> {
             (0, SideReference::SideOne, &state.side_one),
             (1, SideReference::SideTwo, &state.side_two),
         ] {
-            let Some((a, bits, slot)) = self.pending[k].take() else {
+            let Some(p) = self.pending[k].take() else {
                 continue;
             };
             let acted = instructions
                 .iter()
-                .any(|i| matches!(i, Instruction::Acted(s) if *s == side_ref));
-            if acted {
-                self.reveal[a] |= bits;
-                continue;
-            }
-            // its move still to come (the foe's pivot went first: saved, run with the switch --
-            // the next step's): no action yet, as the log so far and the training history show
-            // it (2026-10-22 review: it read as prevented); its move unrevealed until then
-            if side.switch_out_move_second_saved_move != poke_engine::choices::Choices::NONE {
-                let blank = Act::default();
-                if k == 0 {
-                    step.one = blank;
-                } else {
-                    step.two = blank;
+                .position(|i| matches!(i, Instruction::Acted(s) if *s == side_ref));
+            // the slot its PP went from, before the move started: the move it used (an Encore
+            // in the turn put it on another than the chosen one; Showdown's log, the replays'
+            // history: the move used -- 2026-10-24, the tree's history check). A move with no
+            // target left (its foe gone: the engine returns before `Acted`) is used too: the
+            // log's move line, failed ("[notarget]"; a locked one's "[from]lockedmove": none)
+            let used = instructions[..acted.unwrap_or(instructions.len())]
+                .iter()
+                .find_map(|i| match i {
+                    Instruction::DecrementPP(d) if d.side_ref == side_ref && d.amount > 0 => {
+                        Some(d.move_index as usize)
+                    }
+                    _ => None,
+                });
+            let no_target = instructions
+                .iter()
+                .any(|i| matches!(i, Instruction::NoTarget(s) if *s == side_ref));
+            if acted.is_some() || used.is_some() || no_target {
+                if p.locked {
+                    // (no decision: no action, nothing revealed by it)
+                    if k == 0 {
+                        step.one = Act::default();
+                    } else {
+                        step.two = Act::default();
+                    }
+                    continue;
+                }
+                let slot = used.or(p.chosen);
+                if let Some(j) = slot {
+                    self.reveal[p.at] |= 1 << (4 + j);
+                    if slot != p.chosen {
+                        let act = if k == 0 { &mut step.one } else { &mut step.two };
+                        act.target = p.moves[j];
+                    }
                 }
                 continue;
             }
-            let fainted = side.pokemon[slot].hp <= 0;
+            // a move that did not come, as the replays record it (train/positions blind_sides):
+            // stopped at its turn -- asleep, frozen, fully paralysed, flinched, recharging, ...:
+            // "cant" in the log -- prevented, knocked out after it or not; it hit itself in
+            // confusion (no "cant"): fainted first if that knocked it out, else no action; no turn
+            // (fainted before it, dragged out, its move saved behind the foe's pivot -- the next
+            // step's): fainted first if it fainted, else no action -- but one ejected before it (an
+            // Eject Button's, an Emergency Exit's switch to come: "ejected", prevented) (2026-10-24,
+            // the tree's history check: a frozen mon knocked out after read as fainted first, a
+            // dragged one or a confusion self-hit as prevented)
+            let turn = instructions
+                .iter()
+                .any(|i| matches!(i, Instruction::Turn(s) if *s == side_ref))
+                || (side.force_switch && side.pokemon[p.slot].hp > 0);
+            let hit = instructions
+                .iter()
+                .any(|i| matches!(i, Instruction::HitItself(s) if *s == side_ref));
+            let fainted = side.pokemon[p.slot].hp <= 0;
             let act = Act {
-                fainted_first: fainted,
-                prevented: !fainted,
+                prevented: turn && !hit,
+                fainted_first: !(turn && !hit) && fainted,
                 ..Act::default()
             };
             if k == 0 {
@@ -1664,6 +1741,46 @@ mod tests {
             let step = p.steps.last().unwrap();
             assert!(step.one.kind == 0 && step.one.prevented, "asleep: {step:?}");
             assert!(step.two.kind == 1, "their move came: {step:?}");
+        }
+    }
+
+    /// 2026-10-24, the tree's history check: the step the tree records as the log has it -- a
+    /// locked turn (Outrage's later ones, a charge move's second: "[from]lockedmove") no action;
+    /// a recharge prevented; a move with no target left (the foe's Healing Wish fainted it) the
+    /// move (an Encore's move in the turn: tests/test_tree_history.py, from a battle)
+    #[test]
+    fn the_tree_step_is_the_logs() {
+        use poke_engine::engine::state::PokemonVolatileStatus as V;
+        use poke_engine::state::LastUsedMove;
+        let outrage = {
+            let mut s = ko_first();
+            s.side_two.get_active().hp = 300;
+            s.side_one.get_active().moves[&PokemonMoveIndex::M0].id = Choices::OUTRAGE;
+            s.side_one.volatile_statuses.insert(V::LOCKEDMOVE);
+            s.side_one.volatile_status_durations.lockedmove = 1;
+            s.side_one.last_used_move = LastUsedMove::Move(PokemonMoveIndex::M0);
+            s
+        };
+        let m = MoveChoice::Move(PokemonMoveIndex::M0);
+        for (_, step, _, _) in tree_step_outcomes(&outrage, &m, &m, true) {
+            assert!(step.one == Act::default(), "locked: {step:?}");
+        }
+        let mut recharge = ko_first();
+        recharge.side_two.get_active().hp = 300;
+        recharge.side_one.volatile_statuses.insert(V::MUSTRECHARGE);
+        for (_, step, _, _) in tree_step_outcomes(&recharge, &MoveChoice::None, &m, true) {
+            assert!(step.one.kind == 0 && step.one.prevented, "recharge: {step:?}");
+        }
+        let mut wish = ko_first();
+        wish.side_one.get_active().moves[&PokemonMoveIndex::M0].id = Choices::HEALINGWISH;
+        wish.side_two.get_active().hp = 300;
+        wish.side_two.get_active().moves[&PokemonMoveIndex::M0].id = Choices::TACKLE;
+        for (_, step, _, _) in tree_step_outcomes(&wish, &m, &m, true) {
+            assert!(step.one.kind == 1, "{step:?}");
+            assert!(
+                step.two.kind == 1 && step.two.target == Choices::TACKLE as i32 && !step.two.prevented,
+                "no target: {step:?}"
+            );
         }
     }
 

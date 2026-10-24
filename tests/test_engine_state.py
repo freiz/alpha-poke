@@ -969,7 +969,7 @@ def test_as_one_and_a_type_change_after_terastallizing(belief):
     Shock's message) did nothing -- not a forme's."""
     from types import SimpleNamespace
 
-    from alpha_poke.agents.engine_state import _current_ability
+    from alpha_poke.agents.pokeview import engine_ability as _current_ability
 
     assert _current_ability(SimpleNamespace(temporary_ability="Unnerve"), "asoneglastrier") == "asoneglastrier"
     assert _current_ability(SimpleNamespace(temporary_ability="Simple"), "asoneglastrier") == "simple"
@@ -1017,7 +1017,7 @@ def test_a_copied_ability_poke_env_never_knew():
     Imposter it came by: the target's in this world."""
     from types import SimpleNamespace
 
-    from alpha_poke.agents.engine_state import _copied_ability
+    from alpha_poke.agents.pokeview import copied_ability as _copied_ability
 
     assert _copied_ability(SimpleNamespace(temporary_ability="Imposter"), "magicguard") == "magicguard"
     assert _copied_ability(SimpleNamespace(temporary_ability="Rough Skin"), "magicguard") == "roughskin"

@@ -53,11 +53,18 @@ def battle(job) -> dict:
         out["skipped"]["parse warnings"] += 1
         return out
     log_steps = decision_steps(rep.actions, blind_sides(rep))
+    # (the battle's last turn when it was won: the moves after the last knockout never come --
+    # the engine plays them on; no input comes after it, in training or in the tree)
+    won = any(x.startswith("|win|") for x in views["spectator"])
+    last = max(log_steps, default=0) if won else None
     for k in range(len(steps) - 1):
         a = steps[k]
         if set(a.get("choices", {})) != {"p1", "p2"} or any(s["request"] != "move" for s in a["state"]["sides"]):
             continue
         turn = a["state"]["turn"]
+        if turn == last:
+            out["skipped"]["the last turn"] += 1
+            continue
         if turn not in log_steps or not log_steps[turn]:
             out["skipped"]["no log step"] += 1
             continue

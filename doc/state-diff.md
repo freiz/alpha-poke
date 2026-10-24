@@ -2,13 +2,16 @@
 
 搜索的根状态和训练数据的输入，都是我们从玩家收到的协议（日志 + request）还原出来的引擎状态：poke-env 解析日志，`agents/timers.py` 数日志里的计数，`agents/engine_state.build_state` 拼成 poke-engine 的 `State`。引擎差分（`doc/engine-diff.md`）只验证"从真实状态出发，引擎的推演和 Showdown 一致"，**不验证这一步**：它直接用 Showdown 内部的完整状态构造引擎状态。这份文档追踪还原这一步的一致性。
 
-## 结论（2026-10-23）
+## 结论（2026-10-24）
 
 - 600 局真实 OU 对局（队伍目录的随机配对），45,219 个决策点：
   - v7.3 数据构建时的代码（`102e1fe`）：**42.6%** 的决策点至少一处不一致，其中 **10.5%** 落在核心字段（HP、异常状态、能力等级、招式与 PP、道具、特性、出场宝可梦、场地）；最大的一项是对方后备宝可梦的 HP（Regenerator 的回复、Zoroark 伪装期间的记账）。
   - 现在：**0.17%**（核心字段 0.02%）。
 - 百万级（每轮约 108 万个决策点，OU + 40 组 fixtures + 30 组 big）：首轮 0.23% → 第七轮（新种子）**0.0010%**（11 个决策点），核心字段 **0.0002%**，即一致率 99.999%。
 - 回放路径（spectator，训练数据用的那条）：第二轮（新种子）**0.011%**；`enginecheck/replaybuild.py`、`scripts/check_state_build.py --path replay`——按 `train/positions.py` 的方式从观战者日志构造（整局解析的 SpectatorSide），双方隐藏的配置都换成真实配置。首轮百万级 0.66% / 0.65% / 0.43%（OU / fixtures / big），修复 S143–S145 及比较框架后，例子局全部一致（见下）。未覆盖：真实天梯回放的 HP 是百分比（差分里是精确值）。原句：回放路径共用 poke-env、计时器和大部分 `build_state`，它特有的部分（整局已知配置、回放里的 Illusion）当时还未单独对照，见"后续"。
+- 因果性（计划 B，10-24）：训练样本的历史 / 暴露标记 / 评分 / 回合 = 截至该决策点的日志在实战路径上算出的，3,000 局真实回放 0 处差异；搜索树内扩展的历史与日志一致，2,000 局 64,098 步里结构字段只剩 0.24%（Illusion、Minior 的颜色、Revival Blessing，见下）；树里不填结果字段（伤害、先手等），补上须经搜索 A/B。途中修了解析器的 C5–C10（训练和实战共用）。
+- 统一转换层（计划 C，10-24）：poke-env 的读取收拢到 `agents/pokeview`（自身 / 当前分开，AST 测试强制），动作只有一种表示（`agents/slots`，槽位只由 Rust 算）；往返检查进了 A 的每个决策点。顺带修了抽样出 Assault Vest + 变化招式的不可能配置（P1）和 Greninja-Bond 转不成指令（P2）。
+- 开始时定下的值（计划 D，10-24）：按 Showdown 源码逐项核对，需要还原的都按事件发生时记下；剩下的是引擎缺口（束缚道具、连续使用倍率、Laser Focus、Stockpile 在 +6 时、Uproar 的锁定）。
 - 测试：`tests/test_state_build.py` 把 60 局随机配置和 60 局 OU 对局（`data/teams/statebuild_catalog_pairs.jsonl`，本地生成、不提交）钉在基线上（`tests/fixtures/state_build_baseline*.json`：不许出现新类别，各类别次数不许变多）；每条修复另有针对性测试（`tests/test_timers.py`、`tests/test_engine_state.py`）。
 
 ### 一致率历程
@@ -29,6 +32,7 @@
 | 10-23 | 回放路径百万级首轮（OU 偏移 70000，fixtures / big 偏移 4000） | 1,086,816 个决策点 | 有差异 OU 0.66%、fixtures 0.65%、big 0.43%：大部分是比较框架（未识破的伪装没排除；镜像对局里先知替换按队伍名分不清两边；形态不同的种族名对不上——实战路径的先知替换同样修了；变身后上一招的格位是记法），其余 S143–S145；之后这一轮的 55 个例子局全部一致 |
 | 10-23 | 回放路径百万级第二轮：新种子（OU 偏移 80000，fixtures / big 偏移 5000） | 1,086,136 个决策点 | 有差异 **0.011%**（115 个决策点）；S146–S151 及比较框架之后，只剩一局：Zoroark 伪装成最大 HP 相同的 Ditto（见"已知"） |
 | 10-23 | 百万级第七轮：又一批新种子（OU 偏移 70000，fixtures / big 偏移 4000） | 1,086,825 个决策点 | 有差异 **0.0010%**（11 个决策点，5 局；核心字段 0.0002%）；S138–S142 之后第三到第七轮的 347 个例子局全部一致 |
+| 10-23 | 回放路径百万级第三轮：新种子（OU 偏移 90000，fixtures / big 偏移 6000） | 1,086,608 个决策点 | 有差异 **0.0012%**（13 个决策点），核心字段 0；另有一局是测试框架选招出错（不是构造问题） |
 
 ## 方法
 
@@ -234,13 +238,90 @@
 
 **B2：搜索树内扩展的历史 = 日志随后给出的历史。** 根以下，搜索按树里走的步骤扩展历史（`rust/alpha_search` 的 PathCtx：`push` / `settle`）。`alpha_search.tree_steps` 对一次联合行动的每个结果分支给出树会记下的那一步，并用同一个 `Act::parse` 解析日志那一步；`scripts/check_tree_history.py` 在 A 的随机对局上，对每个双方都做了选择的回合，比较两者。结构字段（行动类型、太晶、出手者、目标、被阻止、先倒下）必须与某个分支一致；结果字段单独统计。
 
-- 结构字段：40 局 1,342 步里约 2.6% 对不上，几类：锁定 / 蓄力中的回合（日志不算决策，写空；树记成出招）、需要休息的回合（日志"被阻止"，树写空）、Encore 改变了实际出招（树记的是选的招）、Healing Wish（引擎走"无目标"的分支不给 `Acted`，树当成先倒下）。
-- 结果字段：**树里一律不填**（伤害、先手、击倒、未命中、暴击都是 0），训练历史里都有——网络在根以下的节点上看到的最近几步历史总是"没造成伤害"，与训练分布不同。补上会改变搜索的输入，须经搜索 A/B 才能采用（"Validate features with search A/B"）。
-- 查出一处解析器错误（训练和实战历史都受影响）：太晶后、出招前就被先制招击倒的宝可梦，它"待用的太晶"没清，下一只宝可梦的下一招被记成太晶招（C5，`test_a_tera_whose_mon_fainted_first_is_no_later_mons`）。
+| 日期 | 数据 | 结果 |
+|---|---|---|
+| 10-23 | 40 局，1,342 步 | 结构字段约 2.6% 的步对不上 |
+| 10-24 | 修复后：同样 40 局 | 0 |
+| 10-24 | 40 组 fixtures 各 50 局（新种子，偏移 7000），2,000 局 64,098 步（跳过分出胜负的最后一回合：最后一击之后的招式永远不会出，引擎照样推演；之后没有任何输入） | 首轮约 2.6% 的步；修复 T1–T10、C6–C9 后 **151 步（0.24%）**，全部是下面"已知、未修"的三类（Illusion、Minior 的核心颜色、Revival Blessing），另两步不是历史的问题（Metronome 随机召出的招；引擎按平均伤害算，混乱自伤在所有分支里都倒下） |
+
+树一侧的修复（`rust/alpha_search` 的 PathCtx，`features::entry_forme`；引擎加了只给树读的无操作标记 `Turn` / `HitItself` / `NoTarget`，比较指令时与 `Acted` 一样滤掉，引擎 cargo 229 不变）：
+
+| # | 问题 | 修复 |
+|---|---|---|
+| T1 | 锁定 / 蓄力中的回合（Outrage 之后的回合、Phantom Force / Meteor Beam 的第二回合）：日志的招式行带 `[from]lockedmove`，不算行动；树记成出招 | 选招时已锁定（`LOCKEDMOVE`、`active_is_charging_move`）：出了招记空，被阻止 / 先倒下照常 |
+| T2 | 需要休息的回合：日志 `cant … recharge`（被阻止），先倒下则"先倒下"；树写空 | 休息回合按待定的招式处理：引擎在它轮到时发 `Turn` |
+| T3 | Encore 在本回合改变了实际出招：日志记实际用的招，树记选的招 | 取 `Acted` 之前扣 PP 的格位作为实际用的招，暴露位也按它 |
+| T4 | 没有目标的招式（对方已被 Healing Wish 等打倒；引擎提前返回，没有 `Acted`）：日志是那招（失败），树当成被阻止 / 先倒下 | 扣了 PP 或引擎发 `NoTarget` 即算用了招；锁定中的（`[from]lockedmove|[notarget]`）记空 |
+| T5 | 先行动的一方被冰冻 / 麻痹挡住、随后被对方打倒：日志"被阻止"，树看整步结束后的 HP 记成"先倒下"；被换人方先手、之后在回合末倒下的同理 | 引擎在这一方活着轮到自己的招式时发 `Turn`：有 `Turn` 而没出招 = 被阻止（之后倒下也是） |
+| T6 | 混乱自伤：日志没有 `cant`，自伤倒下记"先倒下"，没倒下记空；树记成被阻止 | 引擎在自伤分支发 `HitItself` |
+| T7 | 被 Whirlwind / Dragon Tail 拖下场、还没出招：日志空，树记被阻止 | 没有 `Turn`、还活着：空；但自己被弹出（Eject Button / Emergency Exit，一侧 `force_switch`）的是"被弹出"（被阻止） |
+| T8 | U-turn 先手打倒了对方，对方的招式被存到换人之后：树记空，日志"先倒下" | 先看是否倒下 |
+| T9 | Truant 偷懒的回合（引擎在倒下检查之前就返回）：树没有 `Turn` | 偷懒处也发 `Turn` |
+| T10 | 出手者 / 换人目标的种族：日志（训练与实战的历史）用第一次见到时的名字——队伍预览隐藏的形态写基础种族（`Urshifu-*`、`Dudunsparce-*`、`Greninja-*`…，Showdown 的 onTeamPreview）、对战中才变的形态写变之前的（太晶后的 Ogerpon、Busted Mimikyu、Hero Palafin、Crowned Zacian…，Showdown 的 battleOnly）；树用引擎的当前形态 | `entry_forme` 映射回去 |
+
+同时查出的解析器错误（训练和实战的历史都受影响，两边一致，所以 B1 看不出）：
+
+| # | 问题 | 修复 | 测试 |
+|---|---|---|---|
+| C5 | 太晶后、出招前就被先制招击倒，它"待用的太晶"没清，下一只的下一招被记成太晶招 | 倒下时清 | `test_a_tera_whose_mon_fainted_first_is_no_later_mons` |
+| C6 | 太晶后被挑衅挡住（`cant`），待用的太晶留到下一回合的招上 | 每回合开始清（太晶只属于本回合的招） | `test_a_tera_whose_move_was_stopped_is_no_later_moves` |
+| C7 | Magic Bounce 把 Parting Shot 弹回，弹回者被换下（`switch …|[from] Parting Shot`），被当成它自己选的换人；它自己的招没了 | 带 `[from]` 的换人都不是选的（Showdown 的 switchIn 带来源效果）：算 pivot，没有自己的行动时为"被弹出" | `test_a_switch_a_bounced_parting_shot_made_is_no_chosen_switch` |
+| C8 | 剩 1/307 HP（Focus Sash）四舍五入成 0%，下一回合开始被当成已倒下，出招前被打倒时没有"先倒下" | 活着至少 1% | `test_a_mon_left_at_one_hp_that_fainted_first_is_a_blind` |
+| C9 | 锁定中的 Outrage 出了招（`[from]lockedmove`：不是决策，不算行动），之后被打倒：被记成"出招前已倒下"（没有自己的行动、又倒下了）；树记空，与其他锁定回合一样 | 解析器记下锁定招式的使用，`blind_sides` 把它当作有行动 | `test_a_locked_move_then_a_faint_is_no_blind` |
+
+- 结果字段：**树里一律不填**（伤害、先手、击倒、未命中、暴击都是 0），训练历史里都有——网络在根以下的节点上看到的最近几步历史总是"没造成伤害"，与训练分布不同。补上会改变搜索的输入，须经搜索 A/B 才能采用（"Validate features with search A/B"），未改。
+- 已知、未修（只影响树，不影响训练数据）：未识破的 Illusion（日志写伪装的名字，树写 Zoroark）和 Minior 的核心颜色（树写 Meteor 形态）——引擎状态里没有这个信息，要由根的 Context 带上每个格位在日志里的名字；Revival Blessing（Showdown 在复活时中途请求选择，引擎把对方的招存到选择之后，日志和训练历史里没有这一步）。
+- 测试：`tests/test_tree_history.py`（14 局，每类问题出现过的对局：结构字段 0）；`ismcts.rs` 的 `the_tree_step_is_the_logs`。
+
+## 统一转换层（计划 C）
+
+- **读 poke-env 的一层**：`agents/pokeview.py`。poke-env 把自身的值和当前的值混在一起（变身后 `moves`、`base_stats`、`weight` 是目标的，有临时特性时 `ability` 是临时的），这是复查轮里反复出现的错误来源。这一层的每个函数都写明读的是哪个：`own_*`（自身的、配置里的）和 `current_*`（现在在对战中的）——`own_moves` / `current_moves`、`own_base_stats`、`own_weight`、`own_stats`、`own_ability` / `current_ability`、`engine_ability`（引擎用的：临时的优先）、`copied_ability`、`copied_pp`、`last_used_move`。`agents/engine_state.py` 原来的同名辅助函数搬过来，直接读取都改成调用它们（行为不变）。
+- **检查**：`tests/test_pokeview.py` 用 AST 扫 `engine_state.py`：`moves`、`ability`、`base_ability`、`base_stats`、`stats`、`weight`、`temporary_ability` 等只能在引擎 / 配置对象上读（列出的接收者，逐个确认过不是 poke-env 的宝可梦；同名的引擎对象改了名：`engine_mon`、`em`、`setter`）。新加一处直接读取就会失败。
+- **动作的唯一表示**：`agents/slots.py`。动作的名字（引擎选项名："earthquake"、"earthquake-tera"、"switch greattusk"、"struggle"）是网络的槽位、搜索的标签、对战指令之间唯一的中间表示；槽位只在 Rust 里算（`features::slot` / `slot_in`），Python 按名字在 `slot_names` 里查。训练数据（`train/positions`）原来自己再算一遍（招式下标 + 4 表示太晶、8 + 队伍下标表示换人，不管是不是合法选项），已删除；`engine_move_to_order` 改为 `slots.order_of` 的别名。
+- **往返检查**：A 的每个决策点（`enginecheck/statebuild.option_diffs`）：构造状态的选项名集合 = 真实状态的（Greninja-Bond 按 Greninja 比，与比较器一致）；每个选项名都能转成这场对局的指令。基线测试钉住它的类别。
+
+| 日期 | 数据 | 结果 |
+|---|---|---|
+| 10-24 | 训练样本的槽位，新旧两种算法，1,000 局真实回放、52,886 个样本 | 13 个（0.025%）的动作不是我们状态里的合法选项，10 个是抽样出的不可能配置（下面 P1）；修复后 3 个（Illusion、被 Trick 换来的 Assault Vest），按名字查找时丢掉（原来照样给槽位，网络学着把概率放在被屏蔽的槽位上） |
+| 10-24 | A 的往返检查，120 局 8,683 个决策点 | 选项集合全部一致；转不成指令两类：Greninja-Bond（P2）、Uproar 锁定（引擎缺口，见 D） |
+
+| # | 问题 | 修复 | 测试 |
+|---|---|---|---|
+| P1 | 抽样出携带 Assault Vest 却会变化招式的配置（原型的道具和招式分开抽）：回放里我方 Slowking-Galar 已知 Toxic / Future Sight / Sludge Bomb，抽到 Assault Vest，它实际用了的 Toxic 不是选项；实战给对手抽样同样会这样 | 已知变化招式时不抽 Assault Vest；持有 Assault Vest 时补抽的招式不含变化招式；伤害后验选道具时同样 | `tests/test_sample_set.py`（没有这条检查时 3,000 次抽到 4 次） |
+| P2 | 实战：搜索选了换上 Battle Bond Greninja（引擎名 "greninjabond"），poke-env 按日志叫它 "greninja"，转不成指令，退回次优 | 按名字找不到时按前缀找唯一的一只（Species Clause 保证同一队基础种族不重复） | `test_a_switch_order_by_the_engines_forme_name` |
+
+数据源：Radical Red 服务器的回放（改版游戏的 Gen 9 OU，自己的种族、能力值和招式；约 1,000 局，三分之一含图鉴里没有的种族）从训练数据构建中排除（`scripts/build_training_data.py`）。
+
+## 效果开始时定下的值（计划 D）
+
+Showdown 里有一类值在效果开始的那一刻就定下，之后不再随状态变化：`durationCallback`（持续回合按开始时的道具 / 特性）、`onStart` 里写进 `effectState` 的值（替身的 HP、Wish 的回复量、锁定的招式……）。还原时如果按"现在"的状态去算，就会错（例如 Light Clay 的 Reflect 之后道具被打掉，剩余回合按 5 算——10-23 复查修过）。清单由 Showdown 源码扫出（`data/moves.ts`、`conditions.ts`、`abilities.ts`、`items.ts` 中所有 `durationCallback` 和对 `this.effectState.*` 的赋值，139 项），逐项对照我们的记法；"A 比较"指状态构造差分（计划 A）比较这个字段，百万级已到 99.999%。
+
+| 值 | Showdown 在何时定下 | 我们 | A 比较 | 结论 |
+|---|---|---|---|---|
+| 天气 / 场地 / 屏障的回合数（Damp / Heat / Smooth / Icy Rock、Terrain Extender、Light Clay：8） | 开始时设置者的道具（`durationCallback`） | `timers.set_items`：设置那一刻记下设置者的道具；之后道具变化、被压制（Magic Room、Embargo）都按当时 | 剩余回合 | 一致 |
+| Trick Room、Gravity、Magic / Wonder Room、Tailwind、Safeguard、Aurora Veil 的回合数 | `durationCallback` 只给第四代的 Persistent 加回合 | 固定回合 | 剩余回合 | 第九代无关 |
+| Taunt 的回合数 | 开始时目标本回合已行动则 +1（`onStart`） | `taunt = -1`（已行动时） | 剩余回合 | 一致 |
+| Heal Block 的回合数 | Psychic Noise 2，其余 5 | 引擎只有 2（只有 Psychic Noise） | 有无 | 引擎限制，第九代只有 Psychic Noise |
+| Wish 的回复量 | 使用者最大 HP 的一半（使用时）、生效回合 | 记下使用者和回合，按使用者的最大 HP | Wish | 一致 |
+| 替身的 HP | 开始时最大 HP 的 1/4 | 同 | 有无（挨过打后剩多少玩家无从得知） | 一致 |
+| Encore / Disable / 讲究锁定的招式 | 开始时（`onStart: move`） | 计时器记下当时的招式 | 是 | 一致 |
+| Stockpile 的层数和实际提升的防御 / 特防 | 每层开始时记下实际提升的级数（`effectState.def / spd`），Spit Up / Swallow 撤销这么多 | 层数（`-start stockpileN`）；引擎撤销的级数等于层数 | 层数 | 层数一致；**引擎缺口**：在 +6 时叠的那层没有提升，Showdown 不撤，引擎照撤（少见） |
+| Protosynthesis / Quark Drive 提升哪一项、是否来自 Booster Energy | 激活时的最高能力、来源 | `frombooster`；提升哪一项由 `-activate` 的能力名给出 | 是 | 一致 |
+| Metronome 道具的连续次数 | 每次使用时 | `consecutive`、`metronome_gone` | 是 | 一致 |
+| Slow Start 的剩余回合 | 出场时 5 | `slowstart` | 是 | 一致 |
+| Supreme Overlord 的倒下数 | 出场时（`onStart: fallen`） | 当前倒下数 | 是 | 单打里在场期间队友不会倒下，等于出场时的数 |
+| 剧毒的层数、连续 Protect 的计数、Future Sight 的回合与格位 | 开始时 / 每次 | 计时器 | 是 | 一致 |
+| 混乱、睡眠、连续招式（Outrage）、束缚的长度 | 开始时随机 | 只记有无与已过的回合 | 有无 | 隐藏信息，引擎按概率展开 |
+| 束缚的回合数和伤害（Grip Claw：8 回合；Binding Band：1/6） | 开始时施放者的道具（`durationCallback`、`boundDivisor`） | 引擎固定 5 回合、1/8 | — | **引擎缺口**（未建模） |
+| Fury Cutter / Echoed Voice 的倍率、Rollout / Ice Ball 的段数 | 每次连续使用时累加 | 引擎只有招式数据 | — | **引擎缺口**（未建模；这些招在 OU / 随机对战里少见） |
+| Laser Focus（下一回合必定会心） | 开始时 | 引擎有 volatile，没有必定会心 | — | **引擎缺口** |
+| Uproar 的锁定（3 回合，期间被困住、不能换人） | 开始时 | 引擎只有 volatile，不锁定、不困住：会给出换人选项（C 的往返检查查出：这时转不成指令） | — | **引擎缺口** |
+| Magic Coat 的 Prankster、Roost 的属性、Counter / Mirror Coat 的伤害、Focus Punch / Shell Trap、Helping Hand、Opportunist / Mirror Herb / White Herb 的能力变化、Eject Pack | 本回合 / 当下 | 不跨决策点 | — | 无需还原 |
+| Dragon Cheer、Ally Switch、Dynamax、G-Max、Bide | — | — | — | 双打或非第九代 |
+
+结论：跨决策点、我们需要还原的值都按事件发生时记下，A 的百万级差分覆盖了其中可观察的部分；剩下的是引擎没有建模的几项（束缚的道具、连续使用的倍率、Laser Focus、Stockpile 在 +6 时的那层），属引擎缺口，按"引擎问题先写双测试"的规则另行处理（另：C 的往返检查查出 Uproar 的锁定，也是引擎缺口）。
 
 ## 后续
 
-- 规模：百万级决策点（第四轮进行中）。
-- 回放路径（spectator）单独对照：训练数据的质量直接取决于它。
-- 因果性检查（计划 B）：见上；B2 的树内历史待修（结构字段）与待 A/B（结果字段）。
-- 统一转换层：poke-env 的"自身 / 当前"取值收拢到一层（计划 C）。
+- 因果性检查（计划 B）：见上；B2 的结果字段待搜索 A/B；Illusion / Minior 的名字要由 Context 带上。
+- 引擎缺口（计划 D）：束缚的 Grip Claw / Binding Band、连续使用的倍率、Laser Focus、Stockpile 在 +6 时的那层、Uproar 的锁定。

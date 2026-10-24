@@ -32,12 +32,12 @@ import alpha_search
 
 from poke_env.battle import Battle, Pokemon
 
+from alpha_poke.agents import slots
 from alpha_poke.agents.engine_state import KnownSet, SpectatorSide, build_state
 from alpha_poke.analysis.roles import to_id
 from alpha_poke.replay import parse_replay
 
-N_ACTIONS = 14  # 0-3 move slot, 4-7 move slot + tera, 8-13 switch to team slot
-TERA_OFFSET, SWITCH_OFFSET = 4, 8
+N_ACTIONS = 14  # (alpha_search's slots: an action's by its name -- agents/slots)
 _IGNORED = {"", "t:", "j", "J", "l", "L", "c", "raw", "inactive", "inactiveoff", "html", "uhtml",
             "chat", "n", "N", "win", "tie", "seed", "bigerror", "error", "debug"}  # fmt: skip
 _log = logging.getLogger("alpha_poke.positions")
@@ -132,6 +132,9 @@ def blind_sides(rep) -> dict[tuple[int, str], Blind]:
         for a in rep.actions
         if a.turn >= 1 and a.kind in ("move", "switch") and not (a.forced or a.pivot)
     }
+    # (a locked move that came -- Outrage's later turns: no decision, no action, but it moved: no
+    # Blind even if it fainted after; 2026-10-24, the tree's history check: "fainted before acting")
+    main |= {(t, sd) for t, sd in getattr(rep, "locked", ())}
     cant = {(c[0], c[1]): (c[2], c[3] if len(c) > 3 else None) for c in rep.cants}
     # (turn, side) -> the place among the turn's actions it went out at (its eject's switch)
     ejected = {(a.turn, a.side): a.order for a in rep.actions if a.turn >= 1 and a.kind == "switch" and a.pivot}
@@ -514,19 +517,20 @@ def _position(battle, side, a, records, known, belief, rng, move_beta, kind=KIND
         rec = next((r for r in records if _same_species(r.species, me.species)), None)
         tera = rec is not None and rec.tera_turn == battle.turn  # tera shows before any move
         return state, BLIND_MOVE_TERA if tera else BLIND_MOVE, more
+    # the action's slot, by its name among the state's options (agents/slots: the slots are
+    # alpha_search's only -- plan C; they were computed here again: a move's index + 4 with its
+    # tera, 8 + its team index for a switch, an option or not); not one of them: no position (a
+    # called move; an action our state does not allow -- 3 in 52,886 positions, 2026-10-24)
+    names = slots.names(state)
     if a.kind == "move":
-        idx = next((i for i, m in enumerate(team) if m is me), None)
-        moves = [to_id(m.id) for m in state.side_one.pokemon[idx].moves]
         mid = to_id(a.move)
-        if mid == "struggle" and alpha_search.slot_names([state.to_string()])[0][0] == "struggle":
-            action = 0  # (Struggle: move slot 0 -- features::slot_in; 2026-10-23 review)
-        elif mid not in moves:
-            return None  # a called move, ...
-        else:
-            action = moves.index(mid) + (TERA_OFFSET if a.tera else 0)
+        name = "struggle" if mid == "struggle" else slots.move_name(mid, a.tera)
     else:
         j = next((i for i, m in enumerate(team) if _same_species(m.species, a.to or "")), None)
         if j is None or j >= 6 or team[j] is me:
             return None
-        action = SWITCH_OFFSET + j
+        name = slots.switch_name(str(state.side_one.pokemon[j].id))
+    action = slots.slot_of(names, name)
+    if action is None:
+        return None
     return state, action, more

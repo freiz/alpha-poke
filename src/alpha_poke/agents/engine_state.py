@@ -26,6 +26,20 @@ from alpha_poke.agents import poke_env_fixes  # noqa: F401 (poke-env's tracking 
 from alpha_poke.agents.belief_state import BeliefModel, _preview_name, ability_probs
 from alpha_poke.agents.damage import calc_stats
 from alpha_poke.agents.damage_obs import damage_posteriors, record_base
+from alpha_poke.agents import slots
+from alpha_poke.agents.pokeview import (
+    copied_ability,
+    copied_pp,
+    current_ability,
+    current_moves,
+    engine_ability,
+    last_used_move,
+    own_ability,
+    own_base_stats,
+    own_moves,
+    own_stats,
+    own_weight,
+)
 from alpha_poke.agents.speed import battle_observations, consistent, spread_dist
 from alpha_poke.agents.timers import SideTimers, battle_timers
 from alpha_poke.analysis.roles import to_id
@@ -97,56 +111,9 @@ EXTENDERS = {"sunnyday": "heatrock", "raindance": "damprock", "sandstorm": "smoo
              "snow": "icyrock", "snowscape": "icyrock", "hail": "icyrock"}  # fmt: skip
 
 
-def _own_moves(mon) -> dict:
-    """A mon's own moves: poke-env's ``moves`` are the copied ones while it is transformed (its
-    own set then is its base moves; 2026-10-23 review: a Ditto's set sampled with the copied
-    moves -- Transform and Kowtow Cleave in one set)."""
-    ms = mon._moves
-    return ms._base_moves if ms._transform_moves is not None else mon.moves
-
-
-def _weight(mon) -> float:
-    """A mon's own weight (poke-env's is its target's while it is transformed: the backup's
-    weight, 2026-10-23 review)."""
-    if mon.transformed:
-        entry = GEN.pokedex.get(to_id(mon.species))
-        if entry and entry.get("weightkg"):
-            return float(entry["weightkg"])
-    return float(mon.weight or 0.0)
-
-
-def _own_base_stats(mon) -> dict:
-    """A mon's own base stats (poke-env's ``base_stats`` are its target's while it is
-    transformed: 2026-10-23 review -- a Ditto's HP 403, Showdown 300; its backup's Attack its
-    target's)."""
-    return getattr(mon, "_base_stats", None) or mon.base_stats
-
-
-def _current_ability(mon, own: str) -> str:
-    """The engine's ability of a mon whose own (its set's) is ``own``: a temporary one -- Trace's,
-    a Skill Swap's, a Transform's -- if it has one (poke-env's temporary_ability; gone when it
-    switches out), else its own."""
-    t = getattr(mon, "temporary_ability", None)
-    # (As One announces itself and the ability it holds -- Unnerve, Chilling / Grim Neigh: the set's
-    # As One, a Ditto's copied one too; S121)
-    if t and own.startswith("asone") and to_id(t) in ("asone", "unnerve", "chillingneigh", "grimneigh"):
-        return own
-    return to_id(t) if t else own
-
-
-def _copied_ability(mon, target: str) -> str:
-    """A transformed mon's copied ability: poke-env's temporary one -- unless poke-env never knew
-    its target's and kept the Imposter it came by (a replay's own side: no request; S144), the
-    target's in this world."""
-    t = getattr(mon, "temporary_ability", None)
-    return target if t and to_id(t) == "imposter" else _current_ability(mon, target)
-
-
-def _copied_pp(mon, mid: str) -> int:
-    """The PP left of a move ``mon`` copied by transforming (poke-env counts its uses: 5 PP at
-    most; 2026-10-23 review: always 5, a Scarf Ditto's fifth Protect left it at 5)."""
-    mv = mon.moves.get(mid) if mon is not None and mon.transformed else None
-    return max(0, mv.current_pp) if mv is not None else 5
+def _status(mid: str) -> bool:
+    """A status move (an Assault Vest holder cannot choose one)."""
+    return (_MOVES.get(mid) or {}).get("category") == "Status"
 
 
 def _types(mon) -> tuple[str, str]:
@@ -246,7 +213,7 @@ def sample_set(
     species = _preview_name(mon, team_names)
     dist = _prior(belief, species, team_names)
     # (``exclude``: moves its line showed that were a disguised Illusion's: _illusion_fix)
-    revealed = [m for m in _own_moves(mon) if m in _MOVES and m not in exclude]
+    revealed = [m for m in own_moves(mon) if m in _MOVES and m not in exclude]
     ss = belief.sets.get(species)
     # poke-env: "unknown_item" = not seen yet; None = gone (eaten, knocked off, used up: its
     # end_item) -- no item now (2026-10-11: a gone item was sampled again, so an eaten berry or
@@ -277,14 +244,17 @@ def sample_set(
         k = int(np.searchsorted(np.cumsum(post), rng.random() * post.sum()))
         k = min(k, len(post) - 1)
 
-    def draw(attr, fallback: dict[str, float]):
+    def draw(attr, fallback: dict[str, float], exclude: tuple = ()):
         if k is not None and ss.vocab.get(attr):
             w = flat(ss.params[attr][k])
+            if exclude:
+                w = np.where([to_id(n) in exclude for n in ss.vocab[attr]], 0.0, w)
             if w.sum() > 0:
                 i = int(np.searchsorted(np.cumsum(w), rng.random() * w.sum()))
                 return to_id(ss.vocab[attr][min(i, len(w) - 1)])
         if fallback:
             keys, ws = zip(*flat(fallback).items(), strict=True)
+            ws = [0.0 if to_id(key) in exclude else x for key, x in zip(keys, ws, strict=True)]
             if sum(ws) > 0:
                 return to_id(rng.choices(keys, weights=ws)[0])
         return None
@@ -293,12 +263,16 @@ def sample_set(
     if gone:
         item = "none"
     elif item is None:
-        item = draw("item", dist.item) or "none"
+        # (an Assault Vest holder cannot choose a status move: not with one known -- the
+        # archetype's item and moves are drawn apart; 2026-10-24, plan C's slot check: a replay's
+        # Slowking-Galar with Toxic and Chilly Reception held an Assault Vest, its Toxic no option)
+        no_vest = ("assaultvest",) if any(map(_status, revealed)) else ()
+        item = draw("item", dist.item, no_vest) or "none"
     if tera is None:
         tera = draw("tera", dist.tera) or _tera(mon)
     # (its own: not a temporary one -- Trace's, a Transform's; 2026-10-23 review: the copied
     # Intimidate was its base ability, still on after its switch-out)
-    ability = to_id(mon.base_ability) if mon.base_ability else None
+    ability = own_ability(mon)
     if ability is None and known is not None and known.ability:
         ability = known.ability
     if ability is None:
@@ -316,7 +290,7 @@ def sample_set(
         weights = dict(dist.move)
     weights = flat(weights)
     for mid in list(weights):
-        if mid in moves or mid not in _MOVES:
+        if mid in moves or mid not in _MOVES or (item == "assaultvest" and _status(mid)):
             weights.pop(mid)
     while len(moves) < 4 and weights:
         keys, ws = zip(*weights.items(), strict=True)
@@ -339,8 +313,10 @@ def sample_set(
             marg = {to_id(n): v for n, v in dist.item.items()}
             w = [p * arch.get(it, 0.0) / max(marg.get(it, 0.0), 1e-9)
                  for (it, *_), p in zip(dmg_post, w, strict=True)]  # fmt: skip
+        if not item_seen and any(map(_status, moves)):  # (no Assault Vest with a status move)
+            w = [0.0 if it == "assaultvest" else p for (it, *_), p in zip(dmg_post, w, strict=True)]
         if speed_obs:  # the move order too: an inconsistent spread / item nearly ruled out
-            base = _own_base_stats(mon)
+            base = own_base_stats(mon)
             w = [p * (1.0 if consistent(speed_obs, calc_stats(base, s, level=level)["spe"],
                                         it if not item_seen else item) else 1e-3)
                  for (it, _, s, _), p in zip(dmg_post, w, strict=True)]  # fmt: skip
@@ -348,13 +324,13 @@ def sample_set(
             it, ab, spread, _ = rng.choices(dmg_post, weights=w)[0]
             if not item_seen:
                 item = it
-            if not mon.base_ability and not (known is not None and known.ability):
+            if own_ability(mon) is None and not (known is not None and known.ability):
                 ability = ab
     if spread is None and speed_obs is not None:  # the spread sampled, consistent with the order
         spread, item = _sample_spread(mon, item, item_seen, speed_obs, dist, rng)
     if spread is None:
         spread = belief.spread_for(mon.species)
-    stats = calc_stats(_own_base_stats(mon), spread, level=mon.level or 100)
+    stats = calc_stats(own_base_stats(mon), spread, level=mon.level or 100)
     return SampledSet(moves or ["tackle"], item, ability, tera, stats)
 
 
@@ -374,7 +350,7 @@ def _sample_spread(mon, item: str, item_seen: bool, obs: list, dist, rng) -> tup
         key = (to_id(mon.species), level)
         speeds = _SPREAD_SPEEDS.get(key)
         if speeds is None:
-            speeds = [calc_stats(_own_base_stats(mon), s, level=level)["spe"] for s in spreads]
+            speeds = [calc_stats(own_base_stats(mon), s, level=level)["spe"] for s in spreads]
             _SPREAD_SPEEDS[key] = speeds
         for it in (item,) if item_seen else (item, "choicescarf"):
             if it == "choicescarf" and it != item and dist.item.get("choicescarf", 0) <= 0:
@@ -558,19 +534,19 @@ def _our_mon(
     drifts low over long games: 2026-10-11, a move with PP left was 0 in the engine, no legal
     option); a move the request offers has PP. ``revived``: a fainted mon brought back at half
     HP (Revival Blessing's choice)."""
-    stats = mon.stats or {}
+    stats = own_stats(mon)
     moves = []
     if mon.transformed:  # its own moves (the request's are the copied ones: _as_transformed)
         available_moves = req_pp = None
-    last = next((mid for mid, mv in mon.moves.items() if mv.is_last_used), "")
+    last = last_used_move(mon)
     # (after a Struggle -- its locked move out of PP -- the lock's move is the one it chose: the
     # timers'; poke-env's last used one is not -- 2026-10-23, S70: a Taunt's flag on top)
     chosen = tm.own_last if tm is not None and tm.struggled and tm.own_last else last
     lock = chosen if ((mon.item in CHOICE_ITEMS and not (tm is not None and tm.item_new))
-                    or mon.ability == "gorillatactics") else ""  # fmt: skip
+                    or current_ability(mon) == "gorillatactics") else ""  # fmt: skip
     if tm is not None and tm.locked and mon.active:
         lock = tm.locked[0]  # (a locking move's: its flags first -- L179; a Taunt on top derives none)
-    own = _own_moves(mon)
+    own = own_moves(mon)
     # (its moves as its request lists them: poke-env adds a move our disguised Zoroark used to its
     # disguise's -- 2026-10-23, the state-construction differential)
     listed = [to_id(x) for x in ((getattr(mon, "_last_request", None) or {}).get("moves") or [])]
@@ -606,8 +582,8 @@ def _our_mon(
         base_types=_base_types(mon.species),
         hp=hp,
         maxhp=int(mon.max_hp or 1),
-        ability=to_id(mon.ability) if mon.ability else "none",
-        base_ability=_base_ability(mon, to_id(mon.base_ability or "") or "none", tm),
+        ability=current_ability(mon) or "none",
+        base_ability=_base_ability(mon, own_ability(mon) or "none", tm),
         item=mon.item or "none",
         attack=int(stats.get("atk") or 100),
         defense=int(stats.get("def") or 100),
@@ -615,7 +591,7 @@ def _our_mon(
         special_defense=int(stats.get("spd") or 100),
         speed=int(stats.get("spe") or 100),
         status="none" if revived else STATUS.get(mon.status, "none"),
-        weight_kg=_weight(mon),
+        weight_kg=own_weight(mon),
         moves=moves,
         terastallized=bool((mon._last_request or {}).get("terastallized"))
         if "terastallized" in (getattr(mon, "_last_request", None) or {}) else mon.is_terastallized,
@@ -702,7 +678,7 @@ def _illusion_fix(team: dict, tm: SideTimers, current: bool) -> tuple[dict, dict
 def _pp(mon, mid: str) -> int:
     """The PP of an opponent's move: poke-env counts its uses (Pressure included; not the turns
     of a locked move) of a revealed move; an unrevealed one has its maximum (PP Ups)."""
-    mv = _own_moves(mon).get(mid)
+    mv = own_moves(mon).get(mid)
     if mv is not None:
         # (a move Sleep Talk calls costs no PP: poke-env counts none -- [from] move: Sleep Talk --,
         # Sleep Talk its own; 2026-10-23 review: a floor of 1 for a Sleep Talk user's moves kept
@@ -734,7 +710,8 @@ def _their_mon(mon, s: SampledSet, tm: SideTimers | None = None, disabled: str |
         # a Regenerator that switched out (a benched mon seen before): a third back, silently --
         # poke-env adds it only when it knew the ability (2026-10-23, the state-construction
         # differential: this world's Regenerator healed nothing)
-        if s.ability == "regenerator" and not mon.active and mon.ability != "regenerator" and not (
+        regen = s.ability == "regenerator" and current_ability(mon) != "regenerator"
+        if regen and not mon.active and not (
                 tm is not None and tm.k(to_id(mon.species)) in tm.no_regen):  # fmt: skip
             hp = min(maxhp, hp + maxhp // 3)
     return pe.Pokemon(
@@ -744,7 +721,7 @@ def _their_mon(mon, s: SampledSet, tm: SideTimers | None = None, disabled: str |
         base_types=_base_types(mon.species),
         hp=hp,
         maxhp=maxhp,
-        ability=_current_ability(mon, s.ability),
+        ability=engine_ability(mon, s.ability),
         base_ability=_base_ability(mon, s.ability, tm),
         item=s.item,
         attack=s.stats["atk"],
@@ -753,7 +730,7 @@ def _their_mon(mon, s: SampledSet, tm: SideTimers | None = None, disabled: str |
         special_defense=s.stats["spd"],
         speed=s.stats["spe"],
         status=STATUS.get(mon.status, "none"),
-        weight_kg=_weight(mon),
+        weight_kg=own_weight(mon),
         moves=[pe.Move(id=m, pp=max(0, min(_max_pp(m), _pp(mon, m) + pp_adj.get(m, 0))
                                     - _spited(tm, mon, m)),
                        disabled=m == disabled) for m in s.moves[:4]],  # fmt: skip
@@ -855,7 +832,8 @@ def _last_move(mon, engine_mon, avail: set[str] | None = None, index: int | None
         vol.discard("encore")
         return {}, vol
     idx = next(
-        (ids.index(mid) for mid, mv in mon.moves.items() if mv.is_last_used and mid in ids), None
+        (ids.index(mid) for mid, mv in current_moves(mon).items() if mv.is_last_used and mid in ids),
+        None,
     )
     if tm is not None and tm.locked_exec and tm.locked_exec not in ids:
         # (a called charge's second turn -- Metronome's Meteor Beam, run locked: Showdown's
@@ -885,15 +863,15 @@ def _last_move(mon, engine_mon, avail: set[str] | None = None, index: int | None
     return {"last_used_move": f"move:{idx}"}, vol
 
 
-def _pending_move(mon: pe.Pokemon, last: dict, vol: set[str], weights: dict | None,
+def _pending_move(engine_mon: pe.Pokemon, last: dict, vol: set[str], weights: dict | None,
                   rng: random.Random, legal: list[str]) -> str:
     """The opponent's move still to come this turn, in this world: its locked move (a Choice
     item's, Outrage's: its last used one) if legal, else one of the ``legal`` ones (the engine's:
     alpha_search.pending_moves) drawn by ``weights`` (by move id: the turn's search's opponent
     visits, so conditioned on what is left; none or all zero: uniform); "none" without one."""
-    moves = list(mon.moves)
+    moves = list(engine_mon.moves)
     lu = last.get("last_used_move", "")
-    if lu.startswith("move:") and (mon.item in ("choiceband", "choicespecs", "choicescarf")
+    if lu.startswith("move:") and (engine_mon.item in ("choiceband", "choicespecs", "choicescarf")
                                    or "lockedmove" in vol):  # fmt: skip
         m = moves[int(lu[5:])]
         if m.id in legal:
@@ -1077,7 +1055,8 @@ def build_state(
         act = (req.get("active") or [{}])[0]
         req_pp = {to_id(m["id"]): m.get("pp") for m in act.get("moves", []) if "id" in m}
         foe = battle.opponent_active_pokemon
-        imprisoned = frozenset(foe.moves) if tm_them.imprison and foe is not None else frozenset()
+        imprisoned = (frozenset(current_moves(foe)) if tm_them.imprison and foe is not None
+                      else frozenset())  # fmt: skip
         our_mons = [
             _our_mon(m, avail if m is active else None, tm_us,
                      req_pp if m is active else None, revived == to_id(m.species),
@@ -1130,7 +1109,7 @@ def build_state(
     # (the moves our transformed active used are its target's: in that mon's sampled set)
     copied = None
     if our_t is not None:
-        used = [m for m in active.moves if m in _MOVES]
+        used = [m for m in current_moves(active) if m in _MOVES]
         if spectator is not None:  # (a replay: the game's, known from the transform on)
             used += [m for m in spectator.copied.get(to_id(theirs[our_t].species), [])
                      if m in _MOVES and m not in used]  # fmt: skip
@@ -1154,8 +1133,8 @@ def build_state(
     our_active_idx = next((i for i, m in enumerate(ours) if m is active), None)
     if spectator is None and tm_them.imprison and their_mons and our_active_idx is not None:
         # (the imprisoner's moves in this world -- its set's, not only those it revealed: S140)
-        world = frozenset(opp_active.moves) if their_t is not None else \
-            frozenset(their_sets[their_idx].moves) | frozenset(opp_active.moves)  # (transformed: its copied ones)
+        world = frozenset(current_moves(opp_active)) if their_t is not None else \
+            frozenset(their_sets[their_idx].moves) | frozenset(current_moves(opp_active))  # (transformed: its copied ones)
         our_mons[our_active_idx] = _our_mon(active, avail, tm_us, req_pp, revived == to_id(active.species),
                                             imprisoned=world)  # fmt: skip
     if zi is not None:  # the active is the Zoroark: what is shown (HP fraction, status) is its
@@ -1178,15 +1157,14 @@ def build_state(
                 list(dict.fromkeys(list(req) + [m.id for m in their_mons[t].moves]))[:4]
             # (the move it chose: after a Struggle poke-env's last used one is the Struggle --
             # 2026-10-23, the state-construction differential: the lock's flags were lost)
-            last = (tm_us.own_last if tm_us is not None else "") or next(
-                (mid for mid, mv in active.moves.items() if mv.is_last_used), "")
+            last = (tm_us.own_last if tm_us is not None else "") or last_used_move(active)
             lock = last if active.item in CHOICE_ITEMS and not tm_us.item_new else ""
             if tm_us.locked:
                 lock = tm_us.locked[0]
             moves = []
             struggling = avail is not None and avail <= {"struggle"}
             for mid in ids:
-                pp = int(req[mid]) if req.get(mid) is not None else max(0, _copied_pp(active, mid) - _spited(tm_us, active, mid))
+                pp = int(req[mid]) if req.get(mid) is not None else max(0, copied_pp(active, mid) - _spited(tm_us, active, mid))
                 cat, flags = _move_kinds().get(mid, ("", set()))
                 blocked = (tm_us.taunt is not None and cat == "Status") or tm_us.disabled == mid \
                     or (tm_us.healblock is not None and "heal" in flags) \
@@ -1204,22 +1182,22 @@ def build_state(
                     uproar=tm_us.uproar is not None)  # fmt: skip
                 moves.append(pe.Move(id=mid, pp=pp, disabled=disabled))
         else:  # the target's (this world's), the PP poke-env counted, Disable's flag
-            moves = [pe.Move(id=m.id, pp=_copied_pp(active, m.id), disabled=m.id == tm_us.disabled)
+            moves = [pe.Move(id=m.id, pp=copied_pp(active, m.id), disabled=m.id == tm_us.disabled)
                      for m in their_mons[t].moves]  # fmt: skip
         our_mons[our_active_idx] = _as_transformed(
             our_mons[our_active_idx], their_mons[t], moves or their_mons[t].moves,
-            _copied_ability(active, their_sets[t].ability),
+            copied_ability(active, their_sets[t].ability),
             _types(active),  # (its types as it copied them: S136)
         )
         our_tf = True
     t = their_t
     if t is not None and their_mons and t < len(our_mons):
         # (Disable's flag on a copied move: 2026-10-23 review -- left out, usable)
-        moves = [pe.Move(id=m.id, pp=max(0, _copied_pp(opp_active, m.id) - _spited(tm_them, opp_active, m.id)),
+        moves = [pe.Move(id=m.id, pp=max(0, copied_pp(opp_active, m.id) - _spited(tm_them, opp_active, m.id)),
                          disabled=m.id == tm_them.disabled) for m in our_mons[t].moves]  # (S131: Spite's)
-        own = to_id(ours[t].base_ability) if ours[t].base_ability else our_mons[t].ability
+        own = own_ability(ours[t]) or our_mons[t].ability
         their_mons[their_idx] = _as_transformed(their_mons[their_idx], our_mons[t], moves,
-                                                _copied_ability(opp_active, own), _types(opp_active))  # fmt: skip
+                                                copied_ability(opp_active, own), _types(opp_active))  # fmt: skip
         their_tf = True
     our_last, our_vol = _last_move(
         active, our_mons[our_active_idx] if our_active_idx is not None else None, avail,
@@ -1240,7 +1218,7 @@ def build_state(
             if not tgt or getattr(m, "active", False) or p.hp <= 0 or tm.k(to_id(m.species)) in tm.no_regen:
                 continue
             q = next(((om, oq) for om, oq in zip(osrc, omons, strict=True) if otm.k(to_id(om.species)) == tgt), None)
-            if q is not None and str(q[1].ability).lower() == "regenerator" and to_id(q[0].ability or "") != "regenerator":
+            if q is not None and str(q[1].ability).lower() == "regenerator" and current_ability(q[0]) != "regenerator":
                 mons[j] = _with(p, hp=min(p.maxhp, p.hp + p.maxhp // 3))
     # the engine's transform / typechange volatiles (doc/engine-diff.md L36): a switch ends the
     # transformation, and an Imposter does not transform again while it is on
@@ -1401,9 +1379,9 @@ def build_state(
     for mons, i, tm, mine in ((their_mons, their_idx, tm_them, False),
                               (our_mons, our_active_idx, tm_us, True)):  # fmt: skip
         if tm.locked and i is not None and i < len(mons) and not (mine and spectator is None):
-            m = mons[i]
-            mons[i] = _with(m, moves=[pe.Move(id=x.id, pp=x.pp, disabled=x.disabled or x.id != tm.locked[0])
-                                      for x in m.moves])  # fmt: skip
+            em = mons[i]
+            mons[i] = _with(em, moves=[pe.Move(id=x.id, pp=x.pp, disabled=x.disabled or x.id != tm.locked[0])
+                                       for x in em.moves])  # fmt: skip
     # Disable (L70): its volatile and its move's slot and count, not the move's flag alone (the
     # engine's next move enabled it again; 2026-10-23 review)
     disable = {}
@@ -1427,9 +1405,9 @@ def build_state(
         if key in tm.set_items:
             return tm.set_items[key]
         mine = (who == "us") != (key in tm.swapped)  # (the setter's side)
-        mon = next((p for m, p in zip(ours if mine else theirs, our_mons if mine else their_mons,
-                                      strict=True) if to_id(m.species) == sp), None)  # fmt: skip
-        if mon is not None and str(mon.ability).lower() == "klutz":
+        setter = next((p for m, p in zip(ours if mine else theirs, our_mons if mine else their_mons,
+                                         strict=True) if to_id(m.species) == sp), None)  # fmt: skip
+        if setter is not None and str(setter.ability).lower() == "klutz":
             return ""  # (a Klutz holder's item does nothing: this world's ability)
         # (a Court Change put the other side's screen here: its setter is of that side)
         other = "them" if who == "us" else "us"
@@ -1584,22 +1562,8 @@ def build_state(
     return st
 
 
-def engine_move_to_order(player, battle, choice: str):
-    """'earthquake' / 'earthquake-tera' / 'switch greattusk' -> a poke-env order (or None)."""
-    if choice.startswith("switch "):
-        sp = choice.split(" ", 1)[1]
-        for m in battle.available_switches:
-            if m.species == sp:
-                return player.create_order(m)
-        return None
-    tera = choice.endswith("-tera")
-    mid = choice[: -len("-tera")] if tera else choice
-    for mv in battle.available_moves:
-        if mv.id == mid:
-            return player.create_order(mv, terastallize=tera and battle.can_tera)
-    if len(battle.available_moves) == 1:  # recharge / struggle / locked move
-        return player.create_order(battle.available_moves[0])
-    return None
+# (an option name -> the battle's order: agents/slots, the actions' one vocabulary -- plan C)
+engine_move_to_order = slots.order_of
 
 
 __all__ = ["build_state", "sample_set", "engine_move_to_order", "Move"]

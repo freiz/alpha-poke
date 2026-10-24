@@ -49,6 +49,7 @@ LOG = """|player|p1|Alice|1|
 |poke|p1|Garchomp, M|
 |poke|p1|Dondozo, M|
 |poke|p1|Blissey, F|
+|poke|p1|Corviknight, M|
 |poke|p2|Gholdengo|
 |poke|p2|Kingambit, M|
 |start
@@ -74,7 +75,7 @@ LOG = """|player|p1|Alice|1|
 |move|p2a: Gholdengo|Make It Rain|p1a: Blissey
 |-damage|p1a: Blissey|50/100
 |-enditem|p1a: Blissey|Eject Button
-|switch|p1a: Dondozo|Dondozo, M|100/100
+|switch|p1a: Corviknight|Corviknight, M|100/100
 |turn|4
 |win|Bob
 """
@@ -111,7 +112,8 @@ def test_positions_of_hazard_faint_rounds_and_an_eject():
         st = pe.State.from_string(p.state)
         act = st.side_one.pokemon[int(st.side_one.active_index)]
         assert act.id.lower() == gone and act.hp == 0, (act.id, act.hp)
-    # (turn 3: its chosen action unseen -- out before it moved -- a Blind; the Eject's a pivot)
+    # (turn 3: its chosen action unseen -- out before it moved -- a Blind; the Eject's a pivot --
+    # to Corviknight: the log had the fainted Dondozo come back, no option, 2026-10-24)
     assert [p.kind for p in mine if p.turn == 3] == [KIND_BLIND, KIND_PIVOT]
 
 
@@ -373,3 +375,167 @@ def test_a_tera_whose_mon_fainted_first_is_no_later_mons():
     rep = parse_replay({"id": "t8", "log": log, "rating": None, "uploadtime": 0})
     dd = next(a for a in rep.actions if a.move == "Dragon Dance")
     assert not dd.tera
+
+
+def test_a_tera_whose_move_was_stopped_is_no_later_moves():
+    """2026-10-24, the tree's history check: Pecharunt terastallized, Taunt stopped its Toxic
+    (|cant|) -- its next turn's move read as a tera one (the pending tera kept past the turn)."""
+    log = """|player|p1|Alice|1|
+|player|p2|Bob|2|
+|gen|9
+|tier|[Gen 9] OU
+|poke|p1|Pecharunt|
+|poke|p2|Landorus-Therian, M|
+|start
+|switch|p1a: Pecharunt|Pecharunt|100/100
+|switch|p2a: Landorus|Landorus-Therian, M|100/100
+|turn|1
+|-terastallize|p1a: Pecharunt|Water
+|move|p2a: Landorus|Taunt|p1a: Pecharunt
+|-start|p1a: Pecharunt|move: Taunt
+|cant|p1a: Pecharunt|move: Taunt|Toxic
+|upkeep
+|turn|2
+|move|p1a: Pecharunt|Shadow Ball|p2a: Landorus
+|-damage|p2a: Landorus|67/100
+|upkeep
+|turn|3
+|win|Bob
+"""
+    rep = parse_replay({"id": "t9", "log": log, "rating": None, "uploadtime": 0})
+    ball = next(a for a in rep.actions if a.move == "Shadow Ball")
+    assert not ball.tera
+
+
+def test_a_switch_a_bounced_parting_shot_made_is_no_chosen_switch():
+    """2026-10-24, the tree's history check: Espeon's Magic Bounce sent Parting Shot back, its
+    switch out ("[from] Parting Shot") read as its chosen action -- its own move lost: ejected,
+    prevented (the bounced move's line is "[from] ability: Magic Bounce": not its action)."""
+    from alpha_poke.train.positions import blind_sides
+
+    log = """|player|p1|Alice|1|
+|player|p2|Bob|2|
+|gen|9
+|tier|[Gen 9] OU
+|poke|p1|Grimmsnarl, M|
+|poke|p2|Espeon, F|
+|poke|p2|Furret, M|
+|start
+|switch|p1a: Grimmsnarl|Grimmsnarl, M|100/100
+|switch|p2a: Espeon|Espeon, F|100/100
+|turn|1
+|move|p1a: Grimmsnarl|Parting Shot|p2a: Espeon
+|move|p2a: Espeon|Parting Shot|p1a: Grimmsnarl|[from] ability: Magic Bounce
+|-unboost|p1a: Grimmsnarl|atk|1
+|-unboost|p1a: Grimmsnarl|spa|1
+|
+|switch|p2a: Furret|Furret, M|100/100|[from] Parting Shot
+|upkeep
+|turn|2
+|win|Alice
+"""
+    rep = parse_replay({"id": "t10", "log": log, "rating": None, "uploadtime": 0})
+    steps = decision_steps(rep.actions, blind_sides(rep))
+    a = steps[1][0]["p2"]
+    assert getattr(a, "kind", None) == "p" and a.reason == "ejected", steps[1]
+
+
+def test_a_mon_left_at_one_hp_that_fainted_first_is_a_blind():
+    """2026-10-24, the tree's history check: a Glimmora left at 1/307 by its Focus Sash read as
+    0% -- as fainted -- at the next turn's start; knocked out before it moved, it had no "fainted
+    before acting" (the search's tree has it)."""
+    from alpha_poke.train.positions import blind_sides
+
+    log = """|player|p1|Alice|1|
+|player|p2|Bob|2|
+|gen|9
+|tier|[Gen 9] OU
+|poke|p1|Glimmora, M|
+|poke|p1|Enamorus, F|
+|poke|p2|Great Tusk|
+|start
+|switch|p1a: Glimmora|Glimmora, M|307/307
+|switch|p2a: Great Tusk|Great Tusk|371/371
+|turn|1
+|move|p2a: Great Tusk|Headlong Rush|p1a: Glimmora
+|-damage|p1a: Glimmora|1/307
+|-enditem|p1a: Glimmora|Focus Sash
+|move|p1a: Glimmora|Spiky Shield|p1a: Glimmora
+|upkeep
+|turn|2
+|move|p2a: Great Tusk|Rapid Spin|p1a: Glimmora
+|-damage|p1a: Glimmora|0 fnt
+|faint|p1a: Glimmora
+|upkeep
+|switch|p1a: Enamorus|Enamorus, F|289/289
+|turn|3
+|win|Bob
+"""
+    rep = parse_replay({"id": "t11", "log": log, "rating": None, "uploadtime": 0})
+    b = blind_sides(rep)
+    assert b.get((2, "p1")) is not None and b[(2, "p1")].kind == "d", b
+
+
+def test_a_locked_move_then_a_faint_is_no_blind():
+    """2026-10-24, the tree's history check: Roaring Moon's locked Outrage ("[from]lockedmove":
+    no decision, no action) came, then Lugia knocked it out -- it read as "fainted before acting"
+    (no action of its own, a faint); the search's tree has no action, as for any locked turn."""
+    from alpha_poke.train.positions import blind_sides
+
+    log = """|player|p1|Alice|1|
+|player|p2|Bob|2|
+|gen|9
+|tier|[Gen 9] OU
+|poke|p1|Lugia|
+|poke|p2|Roaring Moon|
+|poke|p2|Keldeo-Resolute|
+|start
+|switch|p1a: Lugia|Lugia|100/100
+|switch|p2a: Roaring Moon|Roaring Moon|100/100
+|turn|1
+|move|p2a: Roaring Moon|Outrage|p1a: Lugia
+|-damage|p1a: Lugia|80/100
+|move|p1a: Lugia|Aeroblast|p2a: Roaring Moon
+|-damage|p2a: Roaring Moon|40/100
+|upkeep
+|turn|2
+|move|p2a: Roaring Moon|Outrage|p1a: Lugia|[from] lockedmove
+|-damage|p1a: Lugia|40/100
+|-start|p2a: Roaring Moon|confusion|[fatigue]
+|move|p1a: Lugia|Aeroblast|p2a: Roaring Moon
+|-damage|p2a: Roaring Moon|0 fnt
+|faint|p2a: Roaring Moon
+|upkeep
+|switch|p2a: Keldeo|Keldeo-Resolute|100/100
+|turn|3
+|win|Alice
+"""
+    rep = parse_replay({"id": "t12", "log": log, "rating": None, "uploadtime": 0})
+    assert (2, "p2") not in blind_sides(rep)
+
+
+def test_a_bounced_parting_shot_before_its_switch_is_already_a_blind():
+    """2026-10-24, the causality check: the log cut at the switch-in choice of the Magic Bounce
+    holder a bounced Parting Shot sends out (the live one: its switch not in the log yet) had no
+    Blind for it, the training history (its switch later in the log) "ejected" -- as C3's eject."""
+    from alpha_poke.train.positions import blind_sides
+
+    log = """|player|p1|Alice|1|
+|player|p2|Bob|2|
+|gen|9
+|tier|[Gen 9] OU
+|poke|p1|Grimmsnarl, M|
+|poke|p2|Hatterene, F|
+|poke|p2|Furret, M|
+|start
+|switch|p1a: Grimmsnarl|Grimmsnarl, M|100/100
+|switch|p2a: Hatterene|Hatterene, F|100/100
+|turn|1
+|move|p1a: Grimmsnarl|Parting Shot|p2a: Hatterene
+|move|p2a: Hatterene|Parting Shot|p1a: Grimmsnarl|[from] ability: Magic Bounce
+|-unboost|p1a: Grimmsnarl|atk|1
+|-unboost|p1a: Grimmsnarl|spa|1
+"""
+    rep = parse_replay({"id": "t13", "log": log, "rating": None, "uploadtime": 0})
+    b = blind_sides(rep)
+    assert b.get((1, "p2")) is not None and b[(1, "p2")].kind == "p" and b[(1, "p2")].reason == "ejected", b

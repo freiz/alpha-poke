@@ -139,6 +139,9 @@ class Replay:
     # (turn, side): an Eject Button / Eject Pack / Emergency Exit triggered, its switch not in the
     # log yet (a log cut at that side's switch-in choice -- the live one)
     ejecting: list = field(default_factory=list)
+    # (turn, side): its active's locked move came ("[from]lockedmove": Outrage's later turns, a
+    # charge move's second) -- no decision, no action, yet it moved
+    locked: list = field(default_factory=list)
 
     def leads(self) -> dict[str, str | None]:
         out: dict[str, str | None] = {s: None for s in SIDES}
@@ -189,6 +192,8 @@ class ReplayParser:
         # (2026-10-22 review: an Eject Button's switch before its side moved was the turn's)
         self.pending_eject: set[str] = set()
         self.eject_order: dict[str, int] = {}  # side -> its eject's place among the turn's actions
+        self.locked: list[tuple[int, str]] = []
+        self.bounced_shot: tuple[str, int] | None = None  # (side, order): a Parting Shot bounced back
         self.tera_pending: dict[str, str] = {}
         self.order = 0
         self.cants: list[tuple[int, str, str]] = []
@@ -232,7 +237,9 @@ class ReplayParser:
         m = re.match(r"^(\d+)/(\d+)", hp_field)
         if m:
             cur, mx = int(m.group(1)), int(m.group(2))
-            mon.hp = round(100 * cur / mx) if mx else None
+            # (alive: 1% at least -- a Focus Sash's 1/307 read as 0, as fainted: its "fainted
+            # before acting" next turn was lost; 2026-10-24, the tree's history check)
+            mon.hp = (max(1, round(100 * cur / mx)) if cur else 0) if mx else None
 
     def _holder(
         self, token_mon: tuple[str | None, MonRecord | None], tags: dict
@@ -327,6 +334,7 @@ class ReplayParser:
             warnings=self.warnings,
             copied=self.copied,
             ejecting=[(self.turn, sd, self.eject_order.get(sd)) for sd in sorted(self.pending_eject)],
+            locked=self.locked,
         )
 
     # ---- header ----------------------------------------------------------------------
@@ -360,6 +368,10 @@ class ReplayParser:
         self.last_move = None
         self.pending_forced.clear()
         self.pending_eject.clear()
+        self.bounced_shot = None
+        # (a Terastallization is its turn's move's: one stopped -- |cant| -- or dragged out before
+        # it is no later move's; 2026-10-24, the tree's history check)
+        self.tera_pending.clear()
         snap = {}
         for s in SIDES:
             m = self.active[s]
@@ -393,10 +405,14 @@ class ReplayParser:
         ejected = side in self.pending_eject
         self.pending_eject.discard(side)
         last = next((x for x in reversed(self.actions) if x.side == side), None)
+        # (a move's switch -- "[from] Parting Shot": Showdown's switchIn with its source effect --
+        # is no chosen one: a Magic Bounce holder's that Parting Shot came back from has no move
+        # line of its own; 2026-10-24, the tree's history check)
+        moved = "from" in _tags(a[3:] if len(a) > 3 else [])
         pivot = (
             not forced
             and not is_lead
-            and (ejected or (last is not None and last.turn == self.turn and last.kind == "move"))
+            and (ejected or moved or (last is not None and last.turn == self.turn and last.kind == "move"))
         )
         if is_lead:
             self.actions.append(Action(0, side, "lead", "", to=mon.species))
@@ -460,7 +476,12 @@ class ReplayParser:
         move = a[1]
         tags = _tags(a[3:] if len(a) > 3 else [])
         if "from" in tags:  # called / locked / ability-triggered: not a revealed move slot
+            if tags["from"].strip().lower() == "lockedmove":
+                self.locked.append((self.turn, side))
+            elif move == "Parting Shot" and "magic bounce" in tags["from"].lower():
+                self.bounced_shot = (side, self.order)
             return
+        self.bounced_shot = None
         if move not in ("Struggle", "Recharge") and side not in self.transformed:
             if move not in mon.moves:
                 mon.moves.append(move)
@@ -570,6 +591,16 @@ class ReplayParser:
                 self._reveal_ability(mon, ability)
             return
         self._reveal_item(mon, a[1])
+
+    def _on_unboost(self, a):
+        # (a Parting Shot Magic Bounce sent back lowered a stat: its holder goes out, its switch
+        # to come -- Showdown drops the selfSwitch only when the drop fails; 2026-10-24, the
+        # causality check: as an eject, C3)
+        if self.bounced_shot is not None:
+            sd, order = self.bounced_shot
+            self.bounced_shot = None
+            self.pending_eject.add(sd)
+            self.eject_order[sd] = order
 
     def _on_enditem(self, a):
         side, mon = self._mon(a[0])

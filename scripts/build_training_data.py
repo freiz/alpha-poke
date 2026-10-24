@@ -69,6 +69,9 @@ def load_games(path: str, min_rating: int, since: float, fraction: float, seed: 
     t = pq.read_table(path, columns=["id", "log", "rating", "uploadtime"])
     rating = pc.cast(pc.if_else(pc.utf8_is_numeric(t["rating"]), t["rating"], "0"), pa.int64())
     keep = pc.and_(pc.greater_equal(rating, min_rating), pc.greater_equal(t["uploadtime"], since))
+    # (not Radical Red's server: a ROM hack's Gen 9 OU, its own species, stats and moves -- ~1,000
+    # games in the sources, a third of them with species the dex does not have; 2026-10-24)
+    keep = pc.and_(keep, pc.invert(pc.starts_with(t["id"], "radicalred-")))
     rows = t.filter(keep).to_pylist()
     if fraction < 1:
         rows = random.Random(seed).sample(rows, int(len(rows) * fraction))

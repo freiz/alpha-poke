@@ -123,7 +123,7 @@ impl Act {
     /// The action `mc` of `side` in the state it is chosen in (the search's tree path).
     pub fn of_choice(side: &Side, mc: &MoveChoice) -> Act {
         let me = side.get_active_immutable();
-        let actor = me.id as i32;
+        let actor = entry_forme(me.id) as i32;
         match mc {
             MoveChoice::Move(i) | MoveChoice::MoveTera(i) => Act {
                 kind: 1,
@@ -135,11 +135,69 @@ impl Act {
             MoveChoice::Switch(p) => Act {
                 kind: 2,
                 actor,
-                target: side.pokemon[*p].id as i32,
+                target: entry_forme(side.pokemon[*p].id) as i32,
                 ..Act::default()
             },
             _ => Act::default(),
         }
+    }
+}
+
+/// The species a history action names a mon by: the log's as first seen (replay/parser: a mon
+/// record keeps it) -- the forme it comes into the battle in, for one it changes to in the battle
+/// (a Terastallized Ogerpon, a Busted Mimikyu, a Hero Palafin, a Crowned Zacian, ...; Showdown's
+/// battleOnly), and the base species of those the team preview hides (Showdown's onTeamPreview:
+/// "Urshifu-*", ...; the training replays' and the live battles' format) (2026-10-24, the tree's
+/// history check: the tree named them by their engine forme). Not known from the state: an
+/// undetected Illusion's disguise, a Minior's core colour (the tree names the Zoroark, Meteor)
+pub fn entry_forme(id: PokemonName) -> PokemonName {
+    use PokemonName as P;
+    match id {
+        P::ZACIANCROWNED => P::ZACIAN,
+        P::ZAMAZENTACROWNED => P::ZAMAZENTA,
+        P::GRENINJABOND | P::GRENINJAASH => P::GRENINJA,
+        P::URSHIFURAPIDSTRIKE => P::URSHIFU,
+        P::DUDUNSPARCETHREESEGMENT => P::DUDUNSPARCE,
+        P::GOURGEISTLARGE | P::GOURGEISTSMALL | P::GOURGEISTSUPER => P::GOURGEIST,
+        P::PUMPKABOOLARGE | P::PUMPKABOOSMALL | P::PUMPKABOOSUPER => P::PUMPKABOO,
+        P::XERNEASNEUTRAL => P::XERNEAS,
+        P::SILVALLYBUG
+        | P::SILVALLYDARK
+        | P::SILVALLYDRAGON
+        | P::SILVALLYELECTRIC
+        | P::SILVALLYFAIRY
+        | P::SILVALLYFIGHTING
+        | P::SILVALLYFIRE
+        | P::SILVALLYFLYING
+        | P::SILVALLYGHOST
+        | P::SILVALLYGRASS
+        | P::SILVALLYGROUND
+        | P::SILVALLYICE
+        | P::SILVALLYPOISON
+        | P::SILVALLYPSYCHIC
+        | P::SILVALLYROCK
+        | P::SILVALLYSTEEL
+        | P::SILVALLYWATER => P::SILVALLY,
+        P::OGERPONWELLSPRINGTERA => P::OGERPONWELLSPRING,
+        P::OGERPONHEARTHFLAMETERA => P::OGERPONHEARTHFLAME,
+        P::OGERPONCORNERSTONETERA => P::OGERPONCORNERSTONE,
+        P::OGERPONTEALTERA => P::OGERPON,
+        P::TERAPAGOSTERASTAL | P::TERAPAGOSSTELLAR => P::TERAPAGOS,
+        P::MIMIKYUBUSTED => P::MIMIKYU,
+        P::MIMIKYUBUSTEDTOTEM => P::MIMIKYUTOTEM,
+        P::PALAFINHERO => P::PALAFIN,
+        P::AEGISLASHBLADE => P::AEGISLASH,
+        P::EISCUENOICE => P::EISCUE,
+        P::MORPEKOHANGRY => P::MORPEKO,
+        P::CRAMORANTGULPING | P::CRAMORANTGORGING => P::CRAMORANT,
+        P::DARMANITANZEN => P::DARMANITAN,
+        P::DARMANITANGALARZEN => P::DARMANITANGALAR,
+        P::WISHIWASHISCHOOL => P::WISHIWASHI,
+        P::MELOETTAPIROUETTE => P::MELOETTA,
+        P::CHERRIMSUNSHINE => P::CHERRIM,
+        P::CASTFORMRAINY | P::CASTFORMSNOWY | P::CASTFORMSUNNY => P::CASTFORM,
+        P::MINIORMETEOR => P::MINIOR,
+        _ => id,
     }
 }
 

@@ -20,7 +20,7 @@ impl PartialEq for StateInstructions {
     fn eq(&self, other: &Self) -> bool {
         let real = |v: &Vec<Instruction>| -> Vec<Instruction> {
             v.iter()
-                .filter(|i| !matches!(i, Instruction::Acted(_)))
+                .filter(|i| !i.is_marker())
                 .cloned()
                 .collect()
         };
@@ -140,6 +140,27 @@ pub enum Instruction {
     // (past sleep, freeze, paralysis, flinch, taunt, fainting first); the search's history
     // tells a move used from one prevented (training's replays do)
     Acted(SideReference),
+    // alpha-poke patch (2026-10-24): markers, no state change, for the search's history as the
+    // replays record a move that did not come: Turn -- the side's move came to its turn, its mon
+    // alive (stopped after it: "cant", prevented; none: fainted first, dragged out, waiting for
+    // the foe's pivot); HitItself -- it hit itself in confusion (no "cant" in the log); NoTarget
+    // -- its move was used with no target left (the log's "[notarget]")
+    Turn(SideReference),
+    HitItself(SideReference),
+    NoTarget(SideReference),
+}
+
+impl Instruction {
+    /// alpha-poke patch (2026-10-24): a marker for the search's history (no state change)
+    pub fn is_marker(&self) -> bool {
+        matches!(
+            self,
+            Instruction::Acted(_)
+                | Instruction::Turn(_)
+                | Instruction::HitItself(_)
+                | Instruction::NoTarget(_)
+        )
+    }
 }
 
 impl fmt::Debug for Instruction {
@@ -441,6 +462,9 @@ impl fmt::Debug for Instruction {
                 write!(f, "TeamPreviewFaintIndex: {:?}, {:?}", side_ref, index)
             }
             Instruction::Acted(side_ref) => write!(f, "Acted: {:?}", side_ref),
+            Instruction::Turn(side_ref) => write!(f, "Turn: {:?}", side_ref),
+            Instruction::HitItself(side_ref) => write!(f, "HitItself: {:?}", side_ref),
+            Instruction::NoTarget(side_ref) => write!(f, "NoTarget: {:?}", side_ref),
             Instruction::ToggleTeamPreview => {
                 write!(f, "ToggleTeamPreview")
             }

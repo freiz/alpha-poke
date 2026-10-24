@@ -458,6 +458,28 @@ def battle_diffs(p1: str, p2: str, seed: int, max_turns: int = 40, sides=("p1", 
         for kind, detail in (diffs
                              + foe_diffs(built.side_two, t.side_two, seen, oracle,
                                          frozenset(_disguised(b, t.side_two)))
-                             + field_diffs(built, t)):  # fmt: skip
+                             + field_diffs(built, t)
+                             + ([] if want or req.get("forceSwitch") else option_diffs(b, built, t))):  # fmt: skip
             out.append((k, side, kind, detail))
     return out, stats
+
+
+def option_diffs(b, built, t) -> list[tuple[str, str]]:
+    """Plan C's round trip (agents/slots): the built state's options by name are the true
+    state's, and each one is an order of the battle (poke-env's request). Not at a switch
+    decision (the true states leave force_switch off)."""
+    from poke_env.player import Player
+
+    from alpha_poke.agents import slots
+
+    ours, truth = slots.names(built), slots.names(t)
+    out = []
+    # (Greninja-Bond as Greninja: the true states' name, Showdown's details -- as the comparator)
+    a = {n.replace("switch greninjabond", "switch greninja") for n in ours if n}
+    z = {n.replace("switch greninjabond", "switch greninja") for n in truth if n}
+    if a != z:
+        out.append(("options", f"{sorted(a - z)} vs {sorted(z - a)}"))
+    none = [n for n in ours if n and slots.order_of(Player, b, n) is None]
+    if none:
+        out.append(("options:order", f"{none}"))
+    return out

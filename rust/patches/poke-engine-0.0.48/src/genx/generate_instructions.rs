@@ -4937,6 +4937,10 @@ fn generate_instructions_from_existing_status_conditions(
         for (damage, chance) in branches {
             let mut branch = hit_yourself_instruction.clone();
             branch.update_percentage(chance);
+            // alpha-poke patch (2026-10-24): a marker -- the search's history
+            branch
+                .instruction_list
+                .push(Instruction::HitItself(*attacking_side_ref));
             branch
                 .instruction_list
                 .push(Instruction::Damage(DamageInstruction {
@@ -5052,6 +5056,21 @@ pub fn generate_instructions_from_move(
                 .volatile_statuses
                 .contains(&PokemonVolatileStatus::MUSTRECHARGE)
         {
+            // alpha-poke patch (2026-10-24): the recharge's turn, its mon alive (a marker: the
+            // search's history -- "cant ... recharge")
+            state.apply_instructions(&incoming_instructions.instruction_list);
+            let alive = state
+                .get_side_immutable(&attacking_side)
+                .get_active_immutable()
+                .hp
+                > 0;
+            state.reverse_instructions(&incoming_instructions.instruction_list);
+            if alive {
+                incoming_instructions
+                    .instruction_list
+                    .push(Instruction::Turn(attacking_side));
+            }
+            let attacker_side = state.get_side(&attacking_side);
             incoming_instructions
                 .instruction_list
                 .push(Instruction::RemoveVolatileStatus(
@@ -5098,6 +5117,20 @@ pub fn generate_instructions_from_move(
             .volatile_statuses
             .contains(&PokemonVolatileStatus::TRUANT)
     {
+        // alpha-poke patch (2026-10-24): the loafing turn, its mon alive (a marker: the search's
+        // history -- "cant ... ability: Truant")
+        state.apply_instructions(&incoming_instructions.instruction_list);
+        let alive = state
+            .get_side_immutable(&attacking_side)
+            .get_active_immutable()
+            .hp
+            > 0;
+        state.reverse_instructions(&incoming_instructions.instruction_list);
+        if alive {
+            incoming_instructions
+                .instruction_list
+                .push(Instruction::Turn(attacking_side));
+        }
         incoming_instructions
             .instruction_list
             .push(Instruction::RemoveVolatileStatus(
@@ -5261,6 +5294,10 @@ pub fn generate_instructions_from_move(
         final_instructions.push(incoming_instructions);
         return;
     }
+    // alpha-poke patch (2026-10-24): the move's turn, its user alive (a marker: the search's history)
+    incoming_instructions
+        .instruction_list
+        .push(Instruction::Turn(attacking_side));
 
     // (L177: locked into the move: no PP -- Showdown's getLockedMove; Outrage's later turns, a
     // charge move's second)
@@ -5920,6 +5957,12 @@ pub fn generate_instructions_from_move(
         }
     }
     if without_target || stopped {
+        // alpha-poke patch (2026-10-24): used with no target left (a marker: the search's history)
+        if without_target && !stopped {
+            incoming_instructions
+                .instruction_list
+                .push(Instruction::NoTarget(attacking_side));
+        }
         if asleep_or_frozen_before {
             steadfast(state, &attacking_side, &mut incoming_instructions);
         }
@@ -11091,7 +11134,7 @@ fn dancer_after(
             .is_some_and(|k| {
                 b.instruction_list[from + k + 1..]
                     .iter()
-                    .any(|i| !matches!(i, Instruction::Acted(_)))
+                    .any(|i| !i.is_marker())
             });
         state.apply_instructions(&b.instruction_list);
         let ok = did && {
