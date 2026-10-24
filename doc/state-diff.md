@@ -23,7 +23,7 @@
 | 10-23 | 百万级第二轮（S43–S51 之后） | 1,085,812 个决策点 | 有差异 0.22%（核心字段 0.07%）；查出 S48 引入的我方回归（S52） |
 | 10-23 | 百万级第三轮（S52–S54 之后） | 1,085,812 个决策点 | 有差异 0.26%（核心字段 0.06%）；上一个道具在约 70 局里出错，是 S52 的别名在换回场时没跟上（S55）；之后 S55–S82 把这一轮的 219 个例子局修到只剩已知的两类 PP |
 | 10-23 | 百万级第四轮（S55–S82 之后） | 1,085,812 个决策点 | 有差异 **0.068%**（核心字段 0.043%，大半是已知的 PP 三局）。（更正：当时说"S82–S88 之后这一轮的 69 个例子局全部一致"不对——复查工具取队伍配对时用了 `seed % 文件长度`，而 `check_state_build` 取的是 `pairs[seed - 偏移]`；偏移不为 0 时 300 对的 fixtures 和 big 文件取到的是别的对局，OU 和 200 对的文件不受影响。之前修的问题都是在真实复现的对局里确认过的，但 fixtures / big 那部分的"已修完"是对错了局；报告现在记下 `seed_offset`，工具按它取） |
-| 10-23 | 百万级第五轮：换新种子（OU 偏移 50000，fixtures / big 偏移 2000），共 14,400 局 | 1,087,510 个决策点 | 有差异 **0.034%**（核心字段 0.014%）；S89–S111 之后，第三到第五轮的 323 个例子局只剩约 12 局 |
+| 10-23 | 百万级第五轮：换新种子（OU 偏移 50000，fixtures / big 偏移 2000），共 14,400 局 | 1,087,510 个决策点 | 有差异 **0.034%**（核心字段 0.014%）；S89–S111 之后，第三到第五轮的 323 个例子局只剩约 12 局；S112–S123 之后全部一致 |
 
 ## 方法
 
@@ -161,6 +161,18 @@
 | S109 | Illusion 被识破时，伪装名下的异常 / 睡眠记录没挪给 Zoroark（replace 行写的是 Zoroark 自己，按它查不到），剧毒计数丢了 | 两 | 从伪装的键挪 | 同上 |
 | S110 | 我方伪装中的 Zoroark 被催眠，睡眠计数记在伪装名下 | 实 | 构造时 request 说 Zoroark 睡着、伪装对象没睡时挪过来 | `test_our_disguised_zoroarks_sleep_is_its_own` |
 | S111 | Power Trick 的 volatile 和攻防交换从未传（引擎状态里是交换后的值加 volatile） | 两 | 加入 | `test_a_disabled_locked_move_and_power_trick` |
+| S112 | Simple Beam 打在 Dry Skin 宝可梦上：`-ability|…|Simple|Dry Skin|[from] move: Simple Beam` 被"特性吸收"的分支截走（第 5 个字段是 Dry Skin），特性没变还记了一次失败 | 两 | 带 `[from] move:` 的不算吸收 | `test_the_logs_facts_seventh_batch` |
+| S113 | 识破后的 Zoroark 用 White Herb 清掉负面能力变化，计时器补上的伪装期间的那份没清 | 两 | 清能力变化时一并清 | 同上 |
+| S114 | Neutralizing Gas 下 Truant 的处理不运行：上回合留下的偷懒标记既不加也不去（S71 把它清掉了） | 两 | 被压制时保持原值 | 同上 |
+| S115 | poke-env 看到 HP 行里的睡眠就结束 Yawn（自己用 Rest 睡着也算）；Showdown 留到它自己的 `-end` | 两 | `poke_env_fixes`：只有 `-end` 或离场才结束（日志和 request 两处） | `test_lunar_dance_and_skill_swap_pp` |
+| S116 | Skill Swap 换走 Protean 后，Protean 的"已用过"标记还在（Showdown 的特性状态重置） | 两 | 特性变化时清掉 | `test_the_logs_facts_seventh_batch` |
+| S117 | Copycat / Metronome 调出的 Outrage 同样锁定，我们把带 `[from] move:` 的排除了 | 两 | 加入 | 同上 |
+| S118 | 倒下离场的宝可梦没有 Regenerator：Revival Blessing 复活后被多补了 1/3 | 两 | 倒下时记入不再生 | 同上 |
+| S119 | 我方 Zoroark 在更早一次伪装上场时睡着，睡眠计数记在那次伪装的名下（S110 只管这次上场） | 实 | request 说 Zoroark 睡着而无记录、某个没睡着的宝可梦名下有一条时挪过来 | 基线 |
+| S120 | 打在 Protect 上的招结果是 null（不是 false）：Metronome 道具的连续计数要清零 | 两 | 另记"什么都没做" | `test_the_logs_facts_seventh_batch` |
+| S121 | As One 宣告时会连带它包含的特性（Unnerve / Chilling Neigh），poke-env 留下后者；变身成 Calyrex 的 Ditto 也是 | 两 | 以配置里的 As One 为准 | `test_as_one_and_a_type_change_after_terastallizing` |
+| S122 | S98 把"属性 ≠ 种族属性"都当成形态造成的：太晶后 Double Shock 的属性变化（实际无效）也被留下了 | 两 | 只认计时器记下的形态 | 同上 |
+| S123 | S109 的补充：伪装的键与真正的那只宝可梦共用，识破时把真 Suicune 自己的 Rest 睡眠也挪给了 Zoroark | 两 | 每次上场记下原有记录，识破时只挪这次上场改变的部分 | `test_the_logs_facts_seventh_batch` |
 
 已知、待查：无（之前的两局 PP 是 S84 / S85，伪装成 Pressure 宝可梦的我方 Zoroark 是 S86；对方伪装时多扣的 PP 仍是玩家无从得知的，属隐藏信息）。
 

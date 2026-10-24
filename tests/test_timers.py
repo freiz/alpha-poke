@@ -717,6 +717,17 @@ def test_lunar_dance_and_skill_swap_pp():
         b.parse_message(line.split("|"))
     mv = b.active_pokemon.moves["discharge"]
     assert mv.max_pp - mv.current_pp == 1
+    # (S115: a Yawned mon's own Rest -- its HP line asleep -- keeps the Yawn: Showdown's own -end)
+    from poke_env.battle import Effect
+
+    b = Battle("battle-gen9ou-10", "us", logging.getLogger("t"), gen=9)
+    b.player_role = "p1"
+    for line in ["|switch|p1a: Dachsbun|Dachsbun, F|100/100", "|switch|p2a: Ursaring|Ursaring, M|60/100",
+                 "|turn|1", "|move|p1a: Dachsbun|Yawn|p2a: Ursaring", "|-start|p2a: Ursaring|move: Yawn|[of] p1a: Dachsbun",
+                 "|move|p2a: Ursaring|Rest|p2a: Ursaring", "|-status|p2a: Ursaring|slp|[from] move: Rest",
+                 "|-heal|p2a: Ursaring|100/100 slp|[silent]", "|upkeep", "|turn|2"]:  # fmt: skip
+        b.parse_message(line.split("|"))
+    assert Effect.YAWN in b.opponent_active_pokemon.effects
 
 def test_the_logs_facts_fourth_batch():
     """2026-10-23 (state-construction differential): Eerie Spell's PP; Court Change swaps the
@@ -919,3 +930,37 @@ def test_the_logs_facts_seventh_batch():
     t = run(START + "|switch|p1a: Hydreigon|Hydreigon, F|251/251\n|-status|p1a: Hydreigon|tox\n|upkeep\n|turn|2\n"
             "|replace|p1a: Zoroark|Zoroark-Hisui, F\n|-end|p1a: Zoroark|Illusion\n|upkeep\n|turn|3")  # fmt: skip
     assert t["p1"].status.get("zoroarkhisui") == "tox" and t["p1"].toxic == 2
+    # (S112: Simple Beam on a Dry Skin mon -- the old ability named -- is an ability change)
+    t = run(START + "|move|p1a: Fishy|Simple Beam|p2a: Bob\n|-ability|p2a: Bob|Simple|Dry Skin|[from] move: Simple Beam")
+    assert t["p2"].ability_now == "simple" and not t["p1"].failed_now
+    # (S113: a broken Illusion's stage changes cleared -- White Herb's negative ones)
+    t = run(START + "|switch|p2a: Rob|Corviknight, F|100/100\n|-unboost|p2a: Rob|spe|1\n|-boost|p2a: Rob|atk|1\n"
+            "|replace|p2a: Zoroark|Zoroark-Hisui, F\n|-end|p2a: Zoroark|Illusion\n"
+            "|-enditem|p2a: Zoroark|White Herb\n|-clearnegativeboost|p2a: Zoroark|[silent]")  # fmt: skip
+    assert t["p2"].illusion_boosts == {"atk": 1}
+    # (S114: a loaf due before the Gas came stays -- Truant's handler suppressed, its volatile kept)
+    t = run(START + "|move|p2a: Bob|Knock Off|p1a: Fishy\n|upkeep\n|turn|2\n|switch|p1a: Weezing|Weezing-Galar, M|100/100\n"
+            "|-ability|p1a: Weezing|Neutralizing Gas\n|upkeep\n|turn|3\n|move|p2a: Bob|Rock Slide|p1a: Weezing\n|upkeep\n|turn|4")  # fmt: skip
+    assert t["p2"].truant_next
+    # (S116: Skill Swap takes Protean -- its use mark gone; S117: a Copycat's Outrage locks)
+    t = run(START + "|move|p1a: Fishy|Flower Trick|p2a: Bob\n|-start|p1a: Fishy|typechange|Grass|[from] ability: Protean\n"
+            "|move|p2a: Bob|Skill Swap|p1a: Fishy\n|-activate|p2a: Bob|Skill Swap|Protean|Harvest|[of] p1a: Fishy")  # fmt: skip
+    assert not t["p1"].protean
+    t = run(START + "|move|p2a: Bob|Copycat|p2a: Bob\n|move|p2a: Bob|Outrage|p1a: Fishy|[from] move: Copycat\n"
+            "|-damage|p1a: Fishy|300/503\n|upkeep\n|turn|2")  # fmt: skip
+    assert t["p2"].locked == ["outrage", 1]
+    # (S118: a mon out by fainting has no Regenerator -- brought back by Revival Blessing)
+    t = run(START + "|faint|p2a: Bob\n|switch|p2a: Rob|Corviknight, M|100/100\n|-heal|p2: Bob|50/100|[from] move: Revival Blessing")
+    assert "gliscor" in t["p2"].no_regen
+    # (S120: a move into Protect -- a null result -- ends the Metronome item's count)
+    t = run(START + "|move|p1a: Fishy|Wave Crash|p2a: Bob\n|-damage|p2a: Bob|80/100\n|upkeep\n|turn|2\n"
+            "|move|p2a: Bob|Protect|p2a: Bob\n|-singleturn|p2a: Bob|Protect\n|move|p1a: Fishy|Wave Crash|p2a: Bob\n"
+            "|-activate|p2a: Bob|move: Protect\n|upkeep\n|turn|3\n|move|p1a: Fishy|Wave Crash|p2a: Bob\n|-damage|p2a: Bob|60/100")  # fmt: skip
+    assert t["p1"].consecutive == 0
+    # (S123: a Zoroark disguised as our asleep Suicune, found out -- the Suicune's own Rest stays
+    # its; the Zoroark gets what this time in changed)
+    t = run(START + "|switch|p2a: Sui|Suicune|100/100\n|move|p2a: Sui|Rest|p2a: Sui\n|-status|p2a: Sui|slp|[from] move: Rest\n"
+            "|upkeep\n|turn|2\n|switch|p2a: Bob|Gliscor, M|100/100\n|upkeep\n|turn|3\n|switch|p2a: Sui|Suicune|50/100 par\n"
+            "|replace|p2a: Zoroark|Zoroark, M\n|-end|p2a: Zoroark|Illusion")  # fmt: skip
+    assert t["p2"].status.get("suicune") == "slp" and "suicune" in t["p2"].sleep
+    assert t["p2"].status.get("zoroark") == "par"

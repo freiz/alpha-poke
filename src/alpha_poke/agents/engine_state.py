@@ -127,6 +127,10 @@ def _current_ability(mon, own: str) -> str:
     a Skill Swap's, a Transform's -- if it has one (poke-env's temporary_ability; gone when it
     switches out), else its own."""
     t = getattr(mon, "temporary_ability", None)
+    # (As One announces itself and the ability it holds -- Unnerve, Chilling / Grim Neigh: the set's
+    # As One, a Ditto's copied one too; S121)
+    if t and own.startswith("asone") and to_id(t) in ("asone", "unnerve", "chillingneigh", "grimneigh"):
+        return own
     return to_id(t) if t else own
 
 
@@ -1026,14 +1030,6 @@ def build_state(
         # Illusion breaks; 2026-10-23, S88: a disguised lead's Throat Spray read as its disguise's)
         tm_us = copy.copy(tm_us)
         tm_us.last_item = dict(tm_us.last_item)
-        # (its sleep counted under the disguise: the request's Zoroark asleep, the disguise not --
-        # S110)
-        z, dis = to_id(active.species), tm_us.active
-        shown = next((m for m in battle.team.values() if to_id(m.species) == dis), None)
-        if STATUS.get(active.status) == "sleep" and dis in tm_us.sleep and z not in tm_us.sleep \
-                and (shown is None or STATUS.get(shown.status) != "sleep"):
-            tm_us.sleep = dict(tm_us.sleep)
-            tm_us.sleep[z] = tm_us.sleep.pop(dis)
         for dsp, before in tm_us.stint.get("items", []):
             used = tm_us.last_item.pop(dsp, None)
             if before is not None:
@@ -1041,6 +1037,16 @@ def build_state(
             if used:
                 tm_us.last_item[to_id(active.species)] = used
     if spectator is None:
+        # (our Zoroark's sleep counted under a disguise -- this time in or an earlier one: the
+        # request's Zoroark asleep with no count, a mon not asleep with one -- S110, S119)
+        zor = next((m for m in battle.team.values() if to_id(m.species).startswith("zoroark")), None)
+        if zor is not None and STATUS.get(zor.status) == "sleep" and tm_us.k(to_id(zor.species)) not in tm_us.sleep:
+            stray = [k for k in tm_us.sleep if not any(
+                tm_us.k(to_id(m.species)) == k and STATUS.get(m.status) == "sleep" for m in battle.team.values())]
+            if len(stray) == 1:
+                tm_us = copy.copy(tm_us)
+                tm_us.sleep = dict(tm_us.sleep)
+                tm_us.sleep[tm_us.k(to_id(zor.species))] = tm_us.sleep.pop(stray[0])
         ours = list(battle.team.values())
         avail = {m.id for m in battle.available_moves} if battle.available_moves else None
         req = battle.last_request or {}
@@ -1237,11 +1243,13 @@ def build_state(
     # (a forme's even after its Terastallization -- Meloetta-Pirouette's: Showdown's formeChange
     # sets the pre-tera types; 2026-10-23, S98)
     forme_tc = set()
-    for vol, mons, i in ((our_vol, our_mons, our_active_idx), (their_vol, their_mons, their_idx)):
+    for vol, mons, i, mon, tm in ((our_vol, our_mons, our_active_idx, active, tm_us),
+                                  (their_vol, their_mons, their_idx, opp_active, tm_them)):  # fmt: skip
         p = mons[i] if i is not None and i < len(mons) else None
         if p is not None and p.hp > 0 and tuple(p.types) != tuple(p.base_types):
             vol.add("typechange")
-            forme_tc.add(id(vol))
+            if tm.temp_forme is not None or (mon is not None and str(p.id).lower() != to_id(mon.species)):
+                forme_tc.add(id(vol))  # (a forme's -- the timers': not a Double Shock's, S122)
     for vol, mons, i, tm in ((our_vol, our_mons, our_active_idx, tm_us),
                              (their_vol, their_mons, their_idx, tm_them)):  # fmt: skip
         p = mons[i] if i is not None and i < len(mons) else None

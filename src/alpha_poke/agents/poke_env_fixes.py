@@ -21,6 +21,7 @@ battles alike.
               after the swap became its own -- every move at it 2 PP after (S85)
   Switch-in   live, our Zoroark switched in as a disguise: the shown max HP is the Zoroark's --
               poke-env switches the Zoroark in (S86)
+  Yawn        poke-env ends it at any sleep an HP line shows (a Rest's): Showdown's own -end (S115)
   Formes      a -formechange (Meloetta-Pirouette, Cramorant-Gulping, Morpeko-Hangry: Showdown's
               formeChange, not permanent) changes poke-env's types and stats and its switch-out
               keeps them -- Showdown's switch-out (clearVolatile) gives the species' back: the
@@ -160,6 +161,8 @@ def _display_typechange(split_message) -> bool:
 
 
 def _parse_message(self, split_message):
+    yawned = [m for m in (*self._team.values(), *self._opponent_team.values()) if Effect.YAWN in m.effects]
+    yawn_end = split_message[1:2] == ["-end"] and "Yawn" in "".join(split_message[3:4])
     if len(split_message) > 6 and split_message[1] == "-activate" \
             and split_message[3].replace("move: ", "") == "Skill Swap" and split_message[-1].startswith("[of] "):
         # (the [of] mon's own ability: the one the user got -- the first named; S85)
@@ -177,6 +180,10 @@ def _parse_message(self, split_message):
         self._replay_data.append(split_message[:])
     else:
         _inner_parse_message(self, split_message)
+    for m in yawned:  # (poke-env ends Yawn at any sleep its HP line shows -- a Rest's too:
+        # Showdown keeps it till its own -end; S115)
+        if Effect.YAWN not in m.effects and m.active and not yawn_end:
+            m.effects[Effect.YAWN] = 0
     if len(split_message) == 3 and split_message[1] == "-endability":
         # (Gastro Acid: Showdown logs its suppression so -- poke-env keeps no effect of it, its
         # Pressure still took 2 PP: S100)
@@ -209,3 +216,22 @@ if getattr(AbstractBattle, "_alpha_formes_fixed", False) is False:
     AbstractBattle.parse_message = _parse_message
     AbstractBattle._alpha_formes_fixed = True
 
+
+
+from poke_env.battle import Battle  # noqa: E402
+
+_inner_parse_request = Battle.parse_request
+
+
+def _parse_request(self, request):
+    # (a request's conditions: its sleep ends no Yawn either -- S115)
+    yawned = [m for m in self._team.values() if Effect.YAWN in m.effects]
+    _inner_parse_request(self, request)
+    for m in yawned:
+        if Effect.YAWN not in m.effects and m.active:
+            m.effects[Effect.YAWN] = 0
+
+
+if getattr(Battle, "_alpha_yawn_fixed", False) is False:
+    Battle.parse_request = _parse_request
+    Battle._alpha_yawn_fixed = True

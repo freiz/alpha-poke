@@ -961,3 +961,19 @@ def test_our_disguised_zoroarks_sleep_is_its_own(belief):
     s = build_state(b, belief, ("Zoroark-Hisui", "Ceruledge"), random.Random(0))
     z = next(m for m in s.side_one.pokemon if str(m.id).lower() == "zoroarkhisui")
     assert z.sleep_turns == 1, (z.sleep_turns, z.rest_turns)
+
+
+def test_as_one_and_a_type_change_after_terastallizing(belief):
+    """S121: As One announces itself and Unnerve -- poke-env's temporary ability the last one: the
+    set's As One (a Ditto's copied one too). S122: a type change after terastallizing (Double
+    Shock's message) did nothing -- not a forme's."""
+    from types import SimpleNamespace
+
+    from alpha_poke.agents.engine_state import _current_ability
+
+    assert _current_ability(SimpleNamespace(temporary_ability="Unnerve"), "asoneglastrier") == "asoneglastrier"
+    assert _current_ability(SimpleNamespace(temporary_ability="Simple"), "asoneglastrier") == "simple"
+    b = battle(["|-terastallize|p2a: Gholdengo|Steel", "|move|p2a: Gholdengo|Make It Rain|p1a: Garchomp",
+                "|-damage|p1a: Garchomp|300/400", "|-start|p2a: Gholdengo|typechange|Steel|[from] move: Double Shock",
+                "|upkeep", "|turn|2"])  # fmt: skip
+    assert "typechange" not in {str(v).lower() for v in state(b, belief).side_two.volatile_statuses}
