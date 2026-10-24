@@ -101,3 +101,19 @@ def test_our_struggling_choice_locked_ditto_keeps_the_locks_flags(belief):
     flags = {m.id: m.disabled for m in s.side_one.pokemon[0].moves if m.id != "none"}
     assert flags.get("kowtowcleave") is False, flags
     assert all(v for k, v in flags.items() if k != "kowtowcleave"), flags
+
+
+def test_our_locked_dittos_request_lists_one_move(belief):
+    """S94 (2026-10-23, state-construction differential): a locked move's request (Outrage's)
+    lists that move only, without PP -- the Ditto had it as its one move, 0 PP. Its copied set
+    stays, the PP poke-env counted."""
+    b = battle(our_ditto=True)
+    for line in ("|move|p1a: Ditto|Kowtow Cleave|p2a: Kingambit", "|-damage|p2a: Kingambit|80/100",
+                 "|upkeep", "|turn|2"):  # fmt: skip
+        b.parse_message(line.split("|"))
+    side = [mon("p1: Ditto", "Ditto", AMBIT, True), mon("p1: Garchomp", "Garchomp", ["earthquake"])]
+    b.parse_request({"active": [{"moves": [{"move": "Kowtow Cleave", "id": "kowtowcleave"}]}],
+                     "side": {"name": "us", "id": "p1", "pokemon": side}, "rqid": 2})  # fmt: skip
+    moves = {m.id: m.pp for m in build_state(b, belief, ("Ditto", "Garchomp"), random.Random(0)).side_one.pokemon[0].moves
+             if m.id != "none"}  # fmt: skip
+    assert len(moves) == 4 and moves["kowtowcleave"] == 4, moves

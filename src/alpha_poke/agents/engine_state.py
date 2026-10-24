@@ -78,6 +78,7 @@ BOOSTS |= {getattr(Effect, n): n.replace("_", "").lower() for n in (
 # (an added type -- Forest's Curse, Trick-or-Treat: Showdown's getTypes has it, the engine's
 # typechange volatile; S80)
 BOOSTS[Effect.TYPEADD] = "typechange"
+BOOSTS[Effect.POWER_TRICK] = "powertrick"  # (S111: never passed)
 # partial trapping (doc/engine-diff.md L2c, 2026-10-16: left out until then -- the search did not
 # see the trapped mon unable to switch nor its 1/8 per turn): poke-env names it after the move
 BOOSTS |= {getattr(Effect, n): "partiallytrapped" for n in (
@@ -539,6 +540,7 @@ def _our_mon(
     req_pp: dict | None = None,
     revived: bool = False,
     pp_adj: dict | None = None,
+    imprisoned: frozenset = frozenset(),
 ) -> pe.Pokemon:
     """``req_pp``: the request's PP of the active's moves (exact; poke-env counts uses itself and
     drifts low over long games: 2026-10-11, a move with PP left was 0 in the engine, no legal
@@ -569,7 +571,12 @@ def _our_mon(
             pp = int(req_pp[mid])
         if available_moves is not None and mid in available_moves:
             pp = max(pp, 1)
-        disabled = available_moves is not None and mid not in available_moves and not (
+        # (a Disable'd move offered anyway -- its lock's request, Outrage's: Showdown's slot is
+        # disabled; S101)
+        # (the foe's Imprison on a move it knows too: Showdown disables it -- its request says only
+        # maybeDisabled; S103: a Mew's Imprison, then its Transform into us)
+        disabled = available_moves is not None and (mid not in available_moves or mid in imprisoned or (
+            tm is not None and tm.disabled == mid)) and not (
             tm is not None and derived_disable(
                 mid, taunt=tm.taunt is not None, healblock=tm.healblock is not None,
                 throatchop=tm.throatchop is not None, item=mon.item or "", last_move=last,
@@ -1014,12 +1021,20 @@ def build_state(
     # moves are its, poke-env gives them to the disguise
     our_disguised = bool(active is not None and tm_us.active and tm_us.active != to_id(active.species)
                          and to_id(active.species).startswith("zoroark"))  # fmt: skip
-    if our_disguised and tm_us.stint.get("items"):
+    if our_disguised:
         # (the items it used up this time in are the Zoroark's -- the timers move them as the
         # Illusion breaks; 2026-10-23, S88: a disguised lead's Throat Spray read as its disguise's)
         tm_us = copy.copy(tm_us)
         tm_us.last_item = dict(tm_us.last_item)
-        for dsp, before in tm_us.stint["items"]:
+        # (its sleep counted under the disguise: the request's Zoroark asleep, the disguise not --
+        # S110)
+        z, dis = to_id(active.species), tm_us.active
+        shown = next((m for m in battle.team.values() if to_id(m.species) == dis), None)
+        if STATUS.get(active.status) == "sleep" and dis in tm_us.sleep and z not in tm_us.sleep \
+                and (shown is None or STATUS.get(shown.status) != "sleep"):
+            tm_us.sleep = dict(tm_us.sleep)
+            tm_us.sleep[z] = tm_us.sleep.pop(dis)
+        for dsp, before in tm_us.stint.get("items", []):
             used = tm_us.last_item.pop(dsp, None)
             if before is not None:
                 tm_us.last_item[dsp] = before
@@ -1031,9 +1046,12 @@ def build_state(
         req = battle.last_request or {}
         act = (req.get("active") or [{}])[0]
         req_pp = {to_id(m["id"]): m.get("pp") for m in act.get("moves", []) if "id" in m}
+        foe = battle.opponent_active_pokemon
+        imprisoned = frozenset(foe.moves) if tm_them.imprison and foe is not None else frozenset()
         our_mons = [
             _our_mon(m, avail if m is active else None, tm_us,
-                     req_pp if m is active else None, revived == to_id(m.species))
+                     req_pp if m is active else None, revived == to_id(m.species),
+                     imprisoned=imprisoned if m is active else frozenset())
             for m in ours
         ]  # fmt: skip
     else:
@@ -1115,19 +1133,35 @@ def build_state(
     t = our_t
     if t is not None and our_active_idx is not None and t < len(their_mons):
         if spectator is None:  # the request's moves (the target's, their PP exact)
-            moves = [pe.Move(id=to_id(m["id"]), pp=int(m.get("pp") or 0),
-                             disabled=avail is not None and to_id(m["id"]) not in avail)
-                     for m in act.get("moves", [])[:4]
-                     if "id" in m and to_id(m["id"]) not in ("struggle", "recharge")]  # fmt: skip
-            if not moves:  # (out of PP, a recharge: the target's, the PP poke-env counted; a
-                # Choice lock's flags -- its locked move out of PP: Struggle only)
-                # (the move it chose: after a Struggle poke-env's last used one is the Struggle --
-                # 2026-10-23, the state-construction differential: the lock's flags were lost)
-                last = (tm_us.own_last if tm_us is not None else "") or next(
-                    (mid for mid, mv in active.moves.items() if mv.is_last_used), "")
-                lock = last if active.item in CHOICE_ITEMS else ""
-                moves = [pe.Move(id=m.id, pp=_copied_pp(active, m.id), disabled=bool(lock) and m.id != lock)
-                         for m in their_mons[t].moves]  # fmt: skip
+            req = {to_id(m["id"]): m.get("pp") for m in act.get("moves", [])[:4]
+                   if "id" in m and to_id(m["id"]) not in ("struggle", "recharge")}  # fmt: skip
+            # (a lock's request lists the locked move only, without PP; Struggle only, a recharge
+            # none: the target's moves, the PP poke-env counted -- 2026-10-23, S94: a locked
+            # Outrage the Ditto's only move, 0 PP)
+            ids = list(req) if len(req) == 4 or not their_mons[t].moves else \
+                list(dict.fromkeys(list(req) + [m.id for m in their_mons[t].moves]))[:4]
+            # (the move it chose: after a Struggle poke-env's last used one is the Struggle --
+            # 2026-10-23, the state-construction differential: the lock's flags were lost)
+            last = (tm_us.own_last if tm_us is not None else "") or next(
+                (mid for mid, mv in active.moves.items() if mv.is_last_used), "")
+            lock = last if active.item in CHOICE_ITEMS and not tm_us.item_new else ""
+            if tm_us.locked:
+                lock = tm_us.locked[0]
+            moves = []
+            struggling = avail is not None and avail <= {"struggle"}
+            for mid in ids:
+                pp = int(req[mid]) if req.get(mid) is not None else _copied_pp(active, mid)
+                if struggling and mid == lock and tm_us.taunt is None and tm_us.disabled != mid:
+                    pp = 0  # (Struggle only, locked into it: it is out of PP -- poke-env's count drifts)
+                # (its flags as an untransformed mon's: not offered and no reason the engine
+                # derives itself -- out of PP, a Taunt, ...: S95)
+                disabled = avail is not None and mid not in avail and not derived_disable(
+                    mid, taunt=tm_us.taunt is not None, healblock=tm_us.healblock is not None,
+                    throatchop=tm_us.throatchop is not None, item=active.item or "", last_move=last,
+                    lock=lock, disabled=tm_us.disabled or "", charging=tm_us.charging or "",
+                    recharge=tm_us.recharge, pp=pp, encore=tm_us.encore is not None,
+                    uproar=tm_us.uproar is not None)  # fmt: skip
+                moves.append(pe.Move(id=mid, pp=pp, disabled=disabled))
         else:  # the target's (this world's), the PP poke-env counted, Disable's flag
             moves = [pe.Move(id=m.id, pp=_copied_pp(active, m.id), disabled=m.id == tm_us.disabled)
                      for m in their_mons[t].moves]  # fmt: skip
@@ -1192,17 +1226,26 @@ def build_state(
                 vol.add("statsraised")
         if tm.imprison:
             vol.add("imprison")
+    # (Power Trick: Showdown swaps its stored Attack and Defense -- the engine keeps them swapped
+    # with the volatile; the request's and the sets' are the unswapped ones: S111)
+    for vol, mons, i in ((our_vol, our_mons, our_active_idx), (their_vol, their_mons, their_idx)):
+        if "powertrick" in vol and i is not None and i < len(mons):
+            mons[i] = _with(mons[i], attack=mons[i].defense, defense=mons[i].attack)
     # (a type change Showdown keeps no volatile for -- a forme's, Meloetta-Pirouette's: its types
     # not its species' and not terastallized -- the engine's typechange, as the differential's
     # states have it: its switch-out gives the species' back)
+    # (a forme's even after its Terastallization -- Meloetta-Pirouette's: Showdown's formeChange
+    # sets the pre-tera types; 2026-10-23, S98)
+    forme_tc = set()
     for vol, mons, i in ((our_vol, our_mons, our_active_idx), (their_vol, their_mons, their_idx)):
         p = mons[i] if i is not None and i < len(mons) else None
-        if p is not None and not p.terastallized and p.hp > 0 and tuple(p.types) != tuple(p.base_types):
+        if p is not None and p.hp > 0 and tuple(p.types) != tuple(p.base_types):
             vol.add("typechange")
+            forme_tc.add(id(vol))
     for vol, mons, i, tm in ((our_vol, our_mons, our_active_idx, tm_us),
                              (their_vol, their_mons, their_idx, tm_them)):  # fmt: skip
         p = mons[i] if i is not None and i < len(mons) else None
-        if p is not None and p.terastallized and not tm.typechanged and not (
+        if p is not None and p.terastallized and not tm.typechanged and id(vol) not in forme_tc and not (
                 mons is our_mons and our_tf or mons is their_mons and their_tf):  # fmt: skip
             # (a type change after it terastallized did nothing -- Showdown's setType: a Double
             # Shock on a tera'd Pawmot; one before it stays)
@@ -1234,7 +1277,7 @@ def build_state(
             vol.add("trapped")
         if tm.frombooster:  # (L141)
             vol.add("frombooster")
-        if tm.last_failed:  # (L115)
+        if tm.last_failed or (tm.last_sub_failed and ab[mon is active] == "infiltrator"):  # (L115; S93)
             vol.add("lastmovefailed")
         # a two-turn move charging (its second turn comes: the engine's volatile of the move)
         # and a locking move (Outrage: lockedmove) -- 2026-10-23, the state-construction

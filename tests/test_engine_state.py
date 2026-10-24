@@ -896,3 +896,68 @@ def test_our_disguised_zoroarks_used_item_is_its_own(belief):
     s = build_state(b, belief, ("Zoroark-Hisui", "Ceruledge"), random.Random(0))
     last = {str(m.id).lower(): str(m.last_item).lower() for m in s.side_one.pokemon if str(m.id).lower() != "none"}
     assert last.get("zoroarkhisui") == "throatspray" and last.get("ceruledge") in (None, "none"), last
+
+
+def test_a_formes_type_change_after_terastallizing(belief):
+    """S98 (2026-10-23, state-construction differential): Meloetta terastallized, then Relic Song's
+    Pirouette forme -- Showdown's formeChange sets its pre-tera types: the engine's typechange
+    (left out: a terastallized mon's type change counted as none)."""
+    b = battle(["|switch|p2a: Meloetta|Meloetta|100/100", "|turn|2", "|-terastallize|p2a: Meloetta|Dark",
+                "|move|p2a: Meloetta|Relic Song|p1a: Garchomp", "|-damage|p1a: Garchomp|300/400",
+                "|-formechange|p2a: Meloetta|Meloetta-Pirouette|[msg]", "|upkeep", "|turn|3"])  # fmt: skip
+    assert "typechange" in {str(v).lower() for v in state(b, belief).side_two.volatile_statuses}
+
+
+def test_an_imprisoning_foes_shared_moves_are_disabled(belief):
+    """S103 (2026-10-23, state-construction differential): the foe's Imprison, then its Transform
+    into our active -- it knows all our moves: Showdown disables them (our request says only
+    maybeDisabled); they were usable."""
+    b = battle(["|move|p2a: Gholdengo|Imprison|p2a: Gholdengo", "|-start|p2a: Gholdengo|move: Imprison",
+                "|upkeep", "|turn|2", "|move|p2a: Gholdengo|Transform|p1a: Garchomp",
+                "|-transform|p2a: Gholdengo|p1a: Garchomp", "|upkeep", "|turn|3"])  # fmt: skip
+    flags = {m.id: m.disabled for m in state(b, belief).side_one.pokemon[0].moves}
+    assert all(flags.values()), flags
+
+
+def test_a_disabled_locked_move_and_power_trick(belief):
+    """S101: Cursed Body's Disable on our locked Outrage -- its request still lists it, Showdown's
+    slot is disabled: the flag. S111: Power Trick -- the volatile, Attack and Defense swapped (the
+    request's stats are the unswapped ones)."""
+    moves = ("outrage", "earthquake", "swordsdance", "fireblast")
+    b = battle(["|move|p1a: Garchomp|Outrage|p2a: Gholdengo", "|-damage|p2a: Gholdengo|60/100",
+                "|-start|p1a: Garchomp|Disable|Outrage|[from] ability: Cursed Body|[of] p2a: Gholdengo",
+                "|upkeep", "|turn|2"], moves=moves)  # fmt: skip
+    side = [mon("p1: Garchomp", "Garchomp", list(moves), "leftovers", "roughskin", True),
+            mon("p1: Dondozo", "Dondozo", ["wavecrash"])]  # fmt: skip
+    b.parse_request({"active": [{"moves": [{"move": "Outrage", "id": "outrage"}]}],
+                     "side": {"name": "us", "id": "p1", "pokemon": side}, "rqid": 2})  # fmt: skip
+    flags = {m.id: m.disabled for m in state(b, belief).side_one.pokemon[0].moves}
+    assert flags["outrage"], flags
+    b = battle(["|move|p1a: Garchomp|Power Trick|p1a: Garchomp", "|-start|p1a: Garchomp|Power Trick",
+                "|upkeep", "|turn|2"])  # fmt: skip
+    s = state(b, belief)
+    assert "powertrick" in {str(v).lower() for v in s.side_one.volatile_statuses}
+    their = battle(["|move|p2a: Gholdengo|Power Trick|p2a: Gholdengo", "|-start|p2a: Gholdengo|Power Trick",
+                    "|upkeep", "|turn|2"])  # fmt: skip
+    plain = battle(["|move|p2a: Gholdengo|Power Trick|p2a: Gholdengo", "|upkeep", "|turn|2"])  # (the same set)
+    plain, tricked = state(plain, belief).side_two.pokemon[0], state(their, belief).side_two.pokemon[0]
+    assert (tricked.attack, tricked.defense) == (plain.defense, plain.attack)
+
+
+def test_our_disguised_zoroarks_sleep_is_its_own(belief):
+    """S110: our Zoroark disguised as Ceruledge put to sleep -- the timers counted it as the
+    disguise's sleep: the Zoroark's (the request: it is asleep, the Ceruledge not)."""
+    b = Battle("battle-gen9ou-1", "us", logging.getLogger("t"), gen=9)
+    b.player_role = "p1"
+    for line in ["|switch|p1a: Ceruledge|Ceruledge, F|251/251", "|switch|p2a: Darkrai|Darkrai|100/100",
+                 "|turn|1", "|move|p2a: Darkrai|Hypnosis|p1a: Ceruledge", "|-status|p1a: Ceruledge|slp|[from] move: Hypnosis",
+                 "|upkeep", "|turn|2", "|cant|p1a: Ceruledge|slp", "|upkeep", "|turn|3"]:  # fmt: skip
+        b.parse_message(line.split("|"))
+    side = [{**mon("p1: Zoroark", "Zoroark-Hisui", ["hypervoice"], "", "illusion", True), "condition": "251/251 slp"},
+            {**mon("p1: Ceruledge", "Ceruledge", ["bitterblade"], "leftovers", "flashfire"), "condition": "291/291"}]  # fmt: skip
+    b.parse_request({"active": [{"moves": [{"move": "Hyper Voice", "id": "hypervoice", "pp": 16, "maxpp": 16,
+                                            "disabled": False}]}],
+                     "side": {"name": "us", "id": "p1", "pokemon": side}, "rqid": 3})  # fmt: skip
+    s = build_state(b, belief, ("Zoroark-Hisui", "Ceruledge"), random.Random(0))
+    z = next(m for m in s.side_one.pokemon if str(m.id).lower() == "zoroarkhisui")
+    assert z.sleep_turns == 1, (z.sleep_turns, z.rest_turns)

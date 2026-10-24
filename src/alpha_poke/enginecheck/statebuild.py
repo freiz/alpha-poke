@@ -341,6 +341,8 @@ def _oracle(foe: dict | None):
         own = t.get("transform_backup")
         moves = [x for x, _ in own[2]] if own else [x["id"] for x in t["moves"]]
         st = dict(zip(("atk", "def", "spa", "spd", "spe"), own[0], strict=True)) if own else dict(t["stats"])
+        if "powertrick" in (t.get("volatiles") or {}) and not own:  # (its set's: unswapped -- S111)
+            st["atk"], st["def"] = st["def"], st["atk"]
         return es.SampledSet(moves=moves, item=t["item"] or "none",
                              ability=t["base_ability"] or t["ability"] or "none",
                              tera=(t["tera_type"] or "typeless").lower(),

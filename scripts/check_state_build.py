@@ -88,6 +88,7 @@ def main() -> None:
         print(f"  error x{c}: {e}")
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
     Path(a.out).write_text(json.dumps({"battles": len(jobs), "teams": files, "decisions": decisions,
+                                       "seed_offset": a.seed_offset,  # (a job's pair: seed - offset)
                                        "decisions_with": bad_dec, "core_decisions_with": core_dec,
                                        "kinds": dict(kinds), "errors": dict(errors),
                                        "examples": {k: v[:20] for k, v in examples.items()}}, indent=1))

@@ -22,7 +22,8 @@
 | 10-23 | 百万级首轮：8,000 局 OU（1 万对新配对）+ 40 组 fixtures + 30 组 big，换新种子，共 14,400 局 | 1,085,812 个决策点 | 有差异 0.23%（核心字段 0.08%）；查出一处实战会崩溃的问题（S43） |
 | 10-23 | 百万级第二轮（S43–S51 之后） | 1,085,812 个决策点 | 有差异 0.22%（核心字段 0.07%）；查出 S48 引入的我方回归（S52） |
 | 10-23 | 百万级第三轮（S52–S54 之后） | 1,085,812 个决策点 | 有差异 0.26%（核心字段 0.06%）；上一个道具在约 70 局里出错，是 S52 的别名在换回场时没跟上（S55）；之后 S55–S82 把这一轮的 219 个例子局修到只剩已知的两类 PP |
-| 10-23 | 百万级第四轮（S55–S82 之后） | 1,085,812 个决策点 | 有差异 **0.068%**（核心字段 0.043%，大半是已知的 PP 三局）；S82–S88 之后这一轮的 69 个例子局全部一致 |
+| 10-23 | 百万级第四轮（S55–S82 之后） | 1,085,812 个决策点 | 有差异 **0.068%**（核心字段 0.043%，大半是已知的 PP 三局）。（更正：当时说"S82–S88 之后这一轮的 69 个例子局全部一致"不对——复查工具取队伍配对时用了 `seed % 文件长度`，而 `check_state_build` 取的是 `pairs[seed - 偏移]`；偏移不为 0 时 300 对的 fixtures 和 big 文件取到的是别的对局，OU 和 200 对的文件不受影响。之前修的问题都是在真实复现的对局里确认过的，但 fixtures / big 那部分的"已修完"是对错了局；报告现在记下 `seed_offset`，工具按它取） |
+| 10-23 | 百万级第五轮：换新种子（OU 偏移 50000，fixtures / big 偏移 2000），共 14,400 局 | 1,087,510 个决策点 | 有差异 **0.034%**（核心字段 0.014%）；S89–S111 之后，第三到第五轮的 323 个例子局只剩约 12 局 |
 
 ## 方法
 
@@ -38,6 +39,7 @@
   - 一个在混乱中结束的 Outrage 锁定（已经混乱时锁定结束不打日志）；Own Tempo 的宝可梦的锁定结束（不会混乱，同样不打日志）；
   - 畏缩（flinch）：随机判定，静默加上，只有挡下招式时才显示。
   - 伪装中倒下的 Zoroark：日志的 faint 写的是伪装的名字，那时无从得知。
+- **差分框架自身的修正（续）**：先知模式注入对方真实配置时，Power Trick 下 Showdown 的能力值已交换，注入未交换的（与变身时取 backup 一样）。
 - **差分框架自身的修正**：回合结束后的换人决策（`|upkeep|` 之后、下一个 `|turn|` 之前），`engine_state` 推算 Future Sight / Wish 用的回合数要加一（引擎差分只比较回合开始，从未碰到）。
 - **数据**：`data/teams/statebuild_catalog_pairs.jsonl`（1,176 支真实 OU 队伍随机配对，本地生成）、`tests/fixtures/random_battle_teams*.jsonl`（40 组，1.16 万对）、`data/teams/big/`（30 组，8.7 万对）。同一对队伍换种子就是新对局。
 - **流程**：跑一批 → 按"出现在多少局里"排序 → 看例子（日志 + 两边的值）→ 对照 Showdown 源码确认规则 → 修 → 写针对性测试（修复前必须失败）→ 回归（全量测试 + 两个基线 + 引擎差分）→ 记入下表。
@@ -136,6 +138,29 @@
 | S86 | 实战：我方 Zoroark 伪装上场，当回合 poke-env 以为上场的是伪装对象（伪装成 Pressure 宝可梦时对方多扣 PP，HP 也写到了伪装对象上）；换入行显示的最大 HP 其实是 Zoroark 的 | 实 | `poke_env_fixes`：按最大 HP 认出是 Zoroark，让 poke-env 换入 Zoroark（日志原样保留，计时器照旧认得出伪装） | `test_a_broken_illusion_keeps_its_volatiles` |
 | S87 | 回合结束后换上的宝可梦 Wind Rider 的 `-ability … boost` 被当成特性吸收了对方本回合的招 | 两 | 回合结束时清掉"刚出招" | `test_the_logs_facts_sixth_batch` |
 | S88 | 我方伪装中的 Zoroark 用掉的道具（开局伪装的 Throat Spray）记在伪装对象名下 | 两 | 构造时按本次上场记录把道具挪给 Zoroark（与识破时计时器的做法一致） | `test_our_disguised_zoroarks_used_item_is_its_own` |
+| S89 | Misty Terrain / Electric Terrain / Safeguard 挡下异常状态招（`-activate … move: Misty Terrain`），Showdown 算招式失败；回合末 Yawn 生效时的 `-activate` 不算 | 两 | 加入 BLOCKERS，排除紧跟 Yawn `-end` 的 | `test_the_logs_facts_seventh_batch` |
+| S90 | 回合末 Yawn 生效时触发的 Sleep Clause 消息被算成最后出招一方的失败 | 两 | 紧跟 Yawn `-end` 的不算 | 同上 |
+| S91 | Aroma Veil 等特性的 `-block`（挡下 Taunt / Encore）算招式失败 | 两 | 加入 | 同上 |
+| S92 | 替身持有者倒下后替身还在（之后的变化招 `-fail` 被当成"打在替身上"）；Shed Tail 传来的替身也是 | 两 | 倒下时清掉 `sub_on` / `sub_passed` | 同上 |
+| S93 | 变化招打在替身上的 `-fail` 与 Infiltrator 穿过替身后失败的日志完全一样（模拟器实测：前者 moveLastTurnResult 为真） | 两 | 计时器单独记下，构造时按这个世界出招方的特性（Infiltrator）决定 | 同上 |
+| S94 | 变身后锁定招式（Outrage）的 request 只列出那一招、不带 PP：Ditto 只剩一招、0 PP | 实 | request 没列全时用目标的招式和 poke-env 记的 PP | `test_our_locked_dittos_request_lists_one_move` |
+| S95 | 变身后的招式标记没走 `derived_disable`（PP 用尽 / Taunt 等引擎自己推出的也写成了标记）；只剩 Struggle 且锁定时，锁定的招 PP 必为 0 | 实 | 与未变身时同一套规则 | 基线、`test_our_struggling_choice_locked_ditto_keeps_the_locks_flags` |
+| S96 | 上一个锁定在混乱中静默结束，下回合重新选的 Outrage 被当成第 3 次而结束锁定 | 两 | 不带 `[from] lockedmove` 的一律重新计数 | `test_the_logs_facts_sixth_batch` |
+| S97 | Showdown 换入时只为显示的 `typechange [silent]`（变身成同属性的 Ditto、伪装）被 poke-env 记成属性改变 | 两 | `poke_env_fixes`：这类显示行 poke-env 一律不处理（S83 的特殊处理随之简化） | `test_a_broken_illusion_keeps_its_volatiles` |
+| S98 | 太晶后形态变化（Meloetta-Pirouette）：Showdown 改掉的是太晶前的属性，引擎的 typechange 应保留，我们按"太晶后的属性变化无效"删了 | 两 | 形态带来的属性变化不受太晶影响 | `test_a_formes_type_change_after_terastallizing` |
+| S99 | 打伪装成 Pressure 宝可梦的对方 Zoroark 时 poke-env 扣了 2 PP；识破后可知只该 1 | 两 | `poke_env_fixes`：按目标记下 Pressure 多扣的，识破时退还 | `test_lunar_dance_and_skill_swap_pp` |
+| S100 | Gastro Acid 的压制在日志里是 `-endability`，poke-env 不记，Pressure 照扣 2 PP | 两 | `poke_env_fixes`：`-endability` 记为 Gastro Acid | 同上 |
+| S101 | 锁定的 Outrage 被 Cursed Body 封住：锁定的 request 仍列出它，Showdown 的格位是禁用的 | 实 | 被 Disable 的招即使在 request 里也写标记（引擎给出 No Move，与 Showdown 的 `cant … Disable` 一致） | `test_a_disabled_locked_move_and_power_trick` |
+| S102 | Unburden：引擎的 volatile 在本次上场失去过道具后一直在（只在无道具时加速，L226）；我们拿到新道具就清掉；Trick 交换没有 `-enditem`，失去的一方没记 | 两 | 不清；交换时双方都记失去 | `test_the_logs_facts_sixth_batch` |
+| S103 | 对方 Imprison 后变身成我方：我方招式全被封（request 只说 maybeDisabled），我们照常可用 | 实 | 对方 Imprison 时，它出场宝可梦也会的招写标记 | `test_an_imprisoning_foes_shared_moves_are_disabled` |
+| S104 | Yawn 在 onTryHit 里先查目标的异常状态（早于替身）：打在已有异常、有替身的目标上算失败 | 两 | 替身例外里排除这种 Yawn | `test_the_logs_facts_seventh_batch` |
+| S105 | Synchronize 把异常传给火属性对手时的 `-immune` 被算成招式失败 | 两 | 紧跟特性 `-activate` 的 `-immune` 不算 | 同上 |
+| S106 | Take Heart 在 +6 时能力不变但治好了异常，不算失败 | 两 | 紧跟的 `-curestatus` 撤销失败 | 同上 |
+| S107 | Rest 被自己的 Insomnia 挡下（`-fail … [from] ability`）是失败（带 `[from]` 的一律跳过了） | 两 | 出招方自己的特性挡下自己的变化招：失败 | 同上 |
+| S108 | Effect Spore 在接触时被 Sleep Clause 挡下，消息被算成攻击方招式的失败 | 两 | 只认出招方的变化招 | 同上 |
+| S109 | Illusion 被识破时，伪装名下的异常 / 睡眠记录没挪给 Zoroark（replace 行写的是 Zoroark 自己，按它查不到），剧毒计数丢了 | 两 | 从伪装的键挪 | 同上 |
+| S110 | 我方伪装中的 Zoroark 被催眠，睡眠计数记在伪装名下 | 实 | 构造时 request 说 Zoroark 睡着、伪装对象没睡时挪过来 | `test_our_disguised_zoroarks_sleep_is_its_own` |
+| S111 | Power Trick 的 volatile 和攻防交换从未传（引擎状态里是交换后的值加 volatile） | 两 | 加入 | `test_a_disabled_locked_move_and_power_trick` |
 
 已知、待查：无（之前的两局 PP 是 S84 / S85，伪装成 Pressure 宝可梦的我方 Zoroark 是 S86；对方伪装时多扣的 PP 仍是玩家无从得知的，属隐藏信息）。
 

@@ -697,6 +697,26 @@ def test_lunar_dance_and_skill_swap_pp():
     assert b.opponent_active_pokemon.ability == "sturdy"
     mv = b.active_pokemon.moves["taunt"]
     assert mv.max_pp - mv.current_pp == 1
+    # (S99: a move at the opponent's Zoroark disguised as a Pressure mon took 2 PP; found out, 1)
+    b = Battle("battle-gen9ou-8", "us", logging.getLogger("t"), gen=9)
+    b.player_role = "p1"
+    for line in ["|switch|p1a: Dragapult|Dragapult, F|100/100", "|switch|p2a: Corviknight|Corviknight, F|100/100",
+                 "|-ability|p2a: Corviknight|Pressure", "|turn|1", "|switch|p2a: Clodsire|Clodsire, M|100/100",
+                 "|turn|2", "|switch|p2a: Corviknight|Corviknight, F|100/100",
+                 "|move|p1a: Dragapult|Hex|p2a: Corviknight", "|-damage|p2a: Corviknight|60/100",
+                 "|replace|p2a: Zoroark|Zoroark-Hisui, M", "|-end|p2a: Zoroark|Illusion"]:  # fmt: skip
+        b.parse_message(line.split("|"))
+    mv = b.active_pokemon.moves["hex"]
+    assert mv.max_pp - mv.current_pp == 1
+    # (S100: Gastro Acid's suppression is logged as -endability: no Pressure after it)
+    b = Battle("battle-gen9ou-9", "us", logging.getLogger("t"), gen=9)
+    b.player_role = "p1"
+    for line in ["|switch|p1a: Eelektross|Eelektross, M|100/100", "|switch|p2a: Corviknight|Corviknight, F|100/100",
+                 "|-ability|p2a: Corviknight|Pressure", "|turn|1", "|move|p1a: Eelektross|Gastro Acid|p2a: Corviknight",
+                 "|-endability|p2a: Corviknight", "|turn|2", "|move|p1a: Eelektross|Discharge|p2a: Corviknight"]:  # fmt: skip
+        b.parse_message(line.split("|"))
+    mv = b.active_pokemon.moves["discharge"]
+    assert mv.max_pp - mv.current_pp == 1
 
 def test_the_logs_facts_fourth_batch():
     """2026-10-23 (state-construction differential): Eerie Spell's PP; Court Change swaps the
@@ -838,3 +858,64 @@ def test_the_logs_facts_sixth_batch():
     t = run(START + "|move|p1a: Fishy|Whirlwind|p2a: Bob\n|drag|p2a: Rob|Corviknight, M|100/100\n|upkeep\n"
             "|switch|p2a: Bram|Brambleghast, F|100/100\n|-ability|p2a: Bram|Wind Rider|boost\n|-boost|p2a: Bram|atk|1\n|turn|2")  # fmt: skip
     assert not t["p1"].last_failed
+
+
+def test_the_logs_facts_seventh_batch():
+    """2026-10-23 (the fifth million-decision run, new seeds): Misty / Electric Terrain or
+    Safeguard stopping a status fails the move -- not a Yawn's sleep at the turn's end (S89); the
+    Sleep Clause after a Yawn's end is no move's failure (S90); an ability's -block (Aroma Veil)
+    fails the move (S91); a Substitute ends with its fainted holder (S92); a status move's -fail at
+    a Substitute is kept apart -- an Infiltrator's went through (S93)."""
+    t = run(START + "|move|p1a: Fishy|Will-O-Wisp|p2a: Bob\n|-activate|p2a: Bob|move: Misty Terrain\n|upkeep\n|turn|2")
+    assert t["p1"].last_failed
+    t = run(START + "|move|p1a: Fishy|Yawn|p2a: Bob\n|-start|p2a: Bob|move: Yawn|[of] p1a: Fishy\n|upkeep\n|turn|2\n"
+            "|move|p1a: Fishy|Earthquake|p2a: Bob\n|-damage|p2a: Bob|80/100\n|-end|p2a: Bob|move: Yawn|[silent]\n"
+            "|-activate|p2a: Bob|move: Electric Terrain\n|upkeep\n|turn|3")  # fmt: skip
+    assert not t["p1"].last_failed
+    t = run(START + "|move|p1a: Fishy|Earthquake|p2a: Bob\n|-damage|p2a: Bob|80/100\n|-end|p2a: Bob|move: Yawn|[silent]\n"
+            "|-message|Sleep Clause Mod activated.\n|upkeep\n|turn|2")  # fmt: skip
+    assert not t["p1"].last_failed
+    t = run(START + "|move|p1a: Fishy|Taunt|p2a: Bob\n|-block|p2a: Bob|ability: Aroma Veil|[of] p2a: Bob\n|upkeep\n|turn|2")
+    assert t["p1"].last_failed
+    t = run(START + "|move|p2a: Bob|Substitute|p2a: Bob\n|-start|p2a: Bob|Substitute\n|faint|p2a: Bob")
+    assert not t["p2"].sub_on
+    t = run(START + "|move|p2a: Bob|Substitute|p2a: Bob\n|-start|p2a: Bob|Substitute\n"
+            "|move|p1a: Fishy|Will-O-Wisp||[still]\n|-fail|p1a: Fishy\n|upkeep\n|turn|2")  # fmt: skip
+    assert not t["p1"].last_failed and t["p1"].last_sub_failed
+    # (a new Outrage after a lock that ended silently -- confused: a new lock, not its third use:
+    # S96)
+    t = run(START + "|move|p1a: Fishy|Outrage|p2a: Bob\n|-damage|p2a: Bob|80/100\n|upkeep\n|turn|2\n"
+            "|move|p1a: Fishy|Outrage|p2a: Bob|[from]lockedmove\n|-damage|p2a: Bob|60/100\n|upkeep\n|turn|3\n"
+            "|move|p1a: Fishy|Outrage|p2a: Bob\n|-damage|p2a: Bob|40/100\n|upkeep\n|turn|4")  # fmt: skip
+    assert t["p1"].locked == ["outrage", 1]
+    # (Trick takes the user's and the target's items -- no -enditem: both lost one; Unburden's
+    # volatile stays with the new item -- S102)
+    t = run(START + "|move|p2a: Bob|Trick|p1a: Fishy\n|-activate|p2a: Bob|move: Trick|[of] p1a: Fishy\n"
+            "|-item|p1a: Fishy|Choice Scarf|[from] move: Trick\n|-item|p2a: Bob|Sitrus Berry|[from] move: Trick")  # fmt: skip
+    assert t["p1"].item_lost and t["p2"].item_lost
+    # (S104: Yawn at a statused foe behind a Substitute fails -- its status checked first)
+    t = run(START + "|move|p2a: Bob|Substitute|p2a: Bob\n|-start|p2a: Bob|Substitute\n|-status|p2a: Bob|psn\n"
+            "|move|p1a: Fishy|Yawn||[still]\n|-fail|p1a: Fishy\n|upkeep\n|turn|2")  # fmt: skip
+    assert t["p1"].last_failed
+    # (S105: a Synchronized burn at a Fire type -- its -immune -- is no failed move)
+    t = run(START + "|move|p1a: Fishy|Knock Off|p2a: Bob\n|-damage|p2a: Bob|80/100\n"
+            "|-status|p1a: Fishy|brn|[from] ability: Flame Body|[of] p2a: Bob\n|-activate|p1a: Fishy|ability: Synchronize\n"
+            "|-immune|p2a: Bob\n|upkeep\n|turn|2")  # fmt: skip
+    assert not t["p1"].last_failed
+    # (S106: Take Heart at +6 curing its paralysis did something)
+    t = run(START + "|move|p1a: Fishy|Take Heart|p1a: Fishy\n|-boost|p1a: Fishy|spa|0\n|-boost|p1a: Fishy|spd|0\n"
+            "|-curestatus|p1a: Fishy|par|[msg]\n|upkeep\n|turn|2")  # fmt: skip
+    assert not t["p1"].last_failed
+    # (S107: Rest stopped by its own Insomnia failed; S108: the Sleep Clause stopping an Effect
+    # Spore at the attacker's contact is no failure of its move)
+    t = run(START + "|move|p1a: Fishy|Rest|p1a: Fishy\n|-fail|p1a: Fishy|[from] ability: Insomnia|[of] p1a: Fishy\n"
+            "|upkeep\n|turn|2")  # fmt: skip
+    assert t["p1"].last_failed
+    t = run(START + "|move|p1a: Fishy|Wave Crash|p2a: Bob\n|-damage|p2a: Bob|80/100\n|-message|Sleep Clause Mod activated.\n"
+            "|upkeep\n|turn|2")  # fmt: skip
+    assert not t["p1"].last_failed
+    # (S109: a broken Illusion's status counted under its disguise goes to the Zoroark: its toxic
+    # count)
+    t = run(START + "|switch|p1a: Hydreigon|Hydreigon, F|251/251\n|-status|p1a: Hydreigon|tox\n|upkeep\n|turn|2\n"
+            "|replace|p1a: Zoroark|Zoroark-Hisui, F\n|-end|p1a: Zoroark|Illusion\n|upkeep\n|turn|3")  # fmt: skip
+    assert t["p1"].status.get("zoroarkhisui") == "tox" and t["p1"].toxic == 2

@@ -13,6 +13,8 @@ battles alike.
               -- and live, a request's active the Zoroark our switch-in's log named the disguise
               of: poke-env's fix switches the disguise out, its stage changes and volatiles this
               turn lost (a Sticky Web's Speed drop: S68)
+  Pressure    ... and a disguised Zoroark's (Illusion, no Pressure) found out: the moves at it this
+              time in get their extra PP back (S99)
   Lunar Dance Gen 9's restores the PP too: poke-env's count restored (its count, Pressure's 2
               included, from there -- the timers' uses since counted 1 each: S84)
   Skill Swap  the [of] mon's own ability (the one the user got) never set: a Pressure announced
@@ -44,7 +46,12 @@ def _pressure_on(self, pokemon: str, move: str, target_str):
         target = self._get_target_mon(pokemon, move_data["target"], target_str)
     except Exception:  # noqa: BLE001
         return True
-    return not (target is not None and Effect.GASTRO_ACID in target.effects)
+    if target is not None and Effect.GASTRO_ACID in target.effects:
+        return False
+    if target is not None:  # (its extra PP, kept per target this time in: an Illusion's refunded)
+        self.__dict__.setdefault("_alpha_pressured", {}).setdefault(id(target), []).append(
+            (self.get_pokemon(pokemon), _move_id(move)))
+    return True
 
 
 def _move_id(move: str) -> str:
@@ -61,18 +68,13 @@ if getattr(AbstractBattle, "_alpha_pressure_fixed", False) is False:
 _inner_end_illusion = AbstractBattle._end_illusion_on
 
 
-def _carried_effects(self, mon) -> dict:
-    """A disguise's volatiles that go to its Zoroark: not a display typechange's (Showdown's
-    -start typechange [silent] at a switch-in: the disguise's apparent types, Gen 7+'s bottom
-    screen -- S83: a Hatterene's tera Water read as the Zoroark's type change)"""
-    effects = dict(mon.effects)
-    if id(mon) in self.__dict__.get("_alpha_display_tc", {}):
-        effects.pop(Effect.TYPECHANGE, None)
-    return effects
-
-
 def _end_illusion_on(self, illusionist, illusioned, details: str):
-    effects = _carried_effects(self, illusioned) if illusioned is not None else {}
+    effects = dict(illusioned.effects) if illusioned is not None else {}
+    # (the moves at the disguise a Pressure took 2 PP from: the Zoroark's Illusion, 1 -- S99)
+    for user, mid in self.__dict__.get("_alpha_pressured", {}).pop(id(illusioned), []):
+        mv = user.moves.get(mid)
+        if mv is not None:
+            mv._current_pp = min(mv.max_pp, mv._current_pp + 1)
     # (our own disguise's stage changes too, live -- a battle with requests; the opponent's / a
     # replay's: the timers' illusion_boosts, engine_state adds them; S81: a Special Defense drop
     # the turn it broke)
@@ -99,7 +101,7 @@ def _update_team_from_request(self, side, strict_battle_tracking: bool = False):
     falsely = [m for p in side.get("pokemon", []) if not p.get("active")
                and (m := self._team.get(p["ident"])) is not None and m.active]  # fmt: skip
     # (one disguise, its Zoroark: the request's active -- maybe not in the team yet, a lead's)
-    carried = (dict(falsely[0].boosts), _carried_effects(self, falsely[0])) \
+    carried = (dict(falsely[0].boosts), dict(falsely[0].effects)) \
         if len(falsely) == 1 and len(actives) == 1 else None  # fmt: skip
     _inner_update_team(self, side, strict_battle_tracking)
     target = self._team.get(actives[0]) if carried is not None else None
@@ -169,17 +171,18 @@ def _parse_message(self, split_message):
         _inner_parse_message(self, disguised)
         self._replay_data[-1] = split_message[:]
     elif _display_typechange(split_message):
-        ident = split_message[2][:2] + split_message[2][3:]
-        ours = ident[:2] == self.player_role
-        named = self._team.get(ident) if ours else self.get_pokemon(split_message[2])
-        if self._last_request and ours and named is not self.active_pokemon:
-            self._replay_data.append(split_message[:])  # (our disguise's apparent types: nothing
-            # of our Zoroark's -- S83)
-        else:
-            self.__dict__.setdefault("_alpha_display_tc", {})[id(named)] = named
-            _inner_parse_message(self, split_message)
+        # (Showdown's display of a switch-in's apparent types -- Gen 7+'s bottom screen: no type
+        # change; a disguise's are its disguise's -- S83, S97: a Ditto transformed into a Normal
+        # type read as type-changed)
+        self._replay_data.append(split_message[:])
     else:
         _inner_parse_message(self, split_message)
+    if len(split_message) == 3 and split_message[1] == "-endability":
+        # (Gastro Acid: Showdown logs its suppression so -- poke-env keeps no effect of it, its
+        # Pressure still took 2 PP: S100)
+        self.get_pokemon(split_message[2]).effects.setdefault(Effect.GASTRO_ACID, 1)
+    if len(split_message) > 3 and split_message[1] in ("switch", "drag"):  # (a new time in)
+        self.__dict__.get("_alpha_pressured", {}).pop(id(self.get_pokemon(split_message[2])), None)
     temp = self.__dict__.setdefault("_alpha_temp_formes", {})  # id -> a mon in a -formechange forme
     if len(split_message) > 3 and split_message[1] in ("-formechange", "detailschange"):
         try:
@@ -193,10 +196,6 @@ def _parse_message(self, split_message):
     if len(split_message) > 3 and split_message[1] == "-heal" and "[from] move: Lunar Dance" in split_message:
         for mv in self.get_pokemon(split_message[2]).moves.values():
             mv._current_pp = mv.max_pp
-    shown = self.__dict__.get("_alpha_display_tc", {})
-    for k, mon in list(shown.items()):
-        if not mon.active and split_message[1] != "replace":  # (its time in over)
-            del shown[k]
     for k, mon in list(temp.items()):
         if not mon.active:  # (switched out: the species' types and stats back)
             del temp[k]
