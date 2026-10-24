@@ -1043,3 +1043,55 @@ def test_a_replays_illusion_and_transform_records():
     assert t["p2"].stint["costs"] == [2, 1]
     t = run(START + "|-transform|p2a: Bob|p1a: Fishy|[from] ability: Imposter\n|switch|p2a: Rob|Corviknight, M|100/100")
     assert t["p2"].transformed_out == {"gliscor": "dondozo"}
+    # (S147: Psych Up -- |-copyboost|user|target -- the user takes the target's stage changes)
+    import logging
+
+    from poke_env.battle import Battle
+
+    import alpha_poke.agents.engine_state  # noqa: F401 (the fixes)
+
+    b = Battle("battle-gen9ou-13", "us", logging.getLogger("t"), gen=9)
+    b.player_role = "p1"
+    for line in ["|switch|p1a: Azumarill|Azumarill|100/100", "|switch|p2a: Corviknight|Corviknight|100/100",
+                 "|turn|1", "|-unboost|p1a: Azumarill|evasion|1", "|-boost|p2a: Corviknight|def|2",
+                 "|move|p1a: Azumarill|Psych Up|p2a: Corviknight",
+                 "|-copyboost|p1a: Azumarill|p2a: Corviknight|[from] move: Psych Up"]:  # fmt: skip
+        b.parse_message(line.split("|"))
+    assert (b.active_pokemon.boosts["evasion"], b.active_pokemon.boosts["def"]) == (0, 2)
+    assert b.opponent_active_pokemon.boosts["def"] == 2
+
+
+def test_the_replay_paths_second_run_facts():
+    """2026-10-23 (the replay path's second million-decision run): a broken Illusion's shown
+    status is the Zoroark's, its disguise's own (the same) kept (S146); a Sticky Web's drop a
+    Clear Body blocks is no failure of the Whirlwind that dragged it in (S149); an asleep Truant
+    mon's loaf mark is kept -- Truant's handler after sleep's (S150); Defog at the evasion floor
+    clearing hazards did something (S151); a Soak on the disguise is the Zoroark's (S148)."""
+    t = run(START + "|switch|p2a: Tink|Tinkaton, F|100/100 tox\n|upkeep\n|turn|2\n|switch|p2a: Bob|Gliscor, M|100/100\n"
+            "|switch|p2a: Tink|Tinkaton, F|60/100 tox\n|replace|p2a: Zoroark|Zoroark, M\n|-end|p2a: Zoroark|Illusion")  # fmt: skip
+    assert t["p2"].status.get("zoroark") == "tox" and t["p2"].status.get("tinkaton") == "tox"
+    t = run(START + "|move|p1a: Fishy|Whirlwind|p2a: Bob\n|drag|p2a: Reg|Registeel|100/100\n"
+            "|-activate|p2a: Reg|move: Sticky Web\n|-fail|p2a: Reg|unboost|[from] ability: Clear Body|[of] p2a: Reg\n"
+            "|upkeep\n|turn|2")  # fmt: skip
+    assert not t["p1"].last_failed
+    t = run(START + "|move|p2a: Bob|Knock Off|p1a: Fishy\n|upkeep\n|turn|2\n|cant|p2a: Bob|slp")
+    assert t["p2"].truant_next
+    t = run(START + "|move|p1a: Fishy|Defog|p2a: Bob\n|-unboost|p2a: Bob|evasion|0\n"
+            "|-sideend|p2: B|Stealth Rock|[from] move: Defog|[of] p1a: Fishy\n|upkeep\n|turn|2")  # fmt: skip
+    assert not t["p1"].last_failed
+    import logging
+
+    from poke_env.battle import Battle, PokemonType
+
+    import alpha_poke.agents.engine_state  # noqa: F401 (the fixes)
+
+    b = Battle("battle-gen9ou-14", "us", logging.getLogger("t"), gen=9)
+    b.player_role = "p1"
+    for line in ["|switch|p1a: Alomomola|Alomomola|100/100", "|switch|p2a: Iron Treads|Iron Treads|100/100", "|turn|1",
+                 "|move|p1a: Alomomola|Soak|p2a: Iron Treads", "|-start|p2a: Iron Treads|typechange|Water",
+                 "|replace|p2a: Zoroark|Zoroark-Hisui, F", "|-end|p2a: Zoroark|Illusion"]:  # fmt: skip
+        b.parse_message(line.split("|"))
+    assert b.opponent_active_pokemon.base_types == [PokemonType.WATER]
+    # (a recharge removes Truant's volatile -- Showdown's mustrecharge: no loaf after)
+    t = run(START + "|move|p2a: Bob|Giga Impact|p1a: Fishy\n|-mustrecharge|p2a: Bob\n|upkeep\n|turn|2\n|cant|p2a: Bob|recharge")
+    assert not t["p2"].truant_next

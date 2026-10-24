@@ -8,7 +8,7 @@
   - v7.3 数据构建时的代码（`102e1fe`）：**42.6%** 的决策点至少一处不一致，其中 **10.5%** 落在核心字段（HP、异常状态、能力等级、招式与 PP、道具、特性、出场宝可梦、场地）；最大的一项是对方后备宝可梦的 HP（Regenerator 的回复、Zoroark 伪装期间的记账）。
   - 现在：**0.17%**（核心字段 0.02%）。
 - 百万级（每轮约 108 万个决策点，OU + 40 组 fixtures + 30 组 big）：首轮 0.23% → 第七轮（新种子）**0.0010%**（11 个决策点），核心字段 **0.0002%**，即一致率 99.999%。
-- 回放路径（spectator，训练数据用的那条）：`enginecheck/replaybuild.py`、`scripts/check_state_build.py --path replay`——按 `train/positions.py` 的方式从观战者日志构造（整局解析的 SpectatorSide），双方隐藏的配置都换成真实配置。首轮百万级 0.66% / 0.65% / 0.43%（OU / fixtures / big），修复 S143–S145 及比较框架后，例子局全部一致（见下）。未覆盖：真实天梯回放的 HP 是百分比（差分里是精确值）。原句：回放路径共用 poke-env、计时器和大部分 `build_state`，它特有的部分（整局已知配置、回放里的 Illusion）当时还未单独对照，见"后续"。
+- 回放路径（spectator，训练数据用的那条）：第二轮（新种子）**0.011%**；`enginecheck/replaybuild.py`、`scripts/check_state_build.py --path replay`——按 `train/positions.py` 的方式从观战者日志构造（整局解析的 SpectatorSide），双方隐藏的配置都换成真实配置。首轮百万级 0.66% / 0.65% / 0.43%（OU / fixtures / big），修复 S143–S145 及比较框架后，例子局全部一致（见下）。未覆盖：真实天梯回放的 HP 是百分比（差分里是精确值）。原句：回放路径共用 poke-env、计时器和大部分 `build_state`，它特有的部分（整局已知配置、回放里的 Illusion）当时还未单独对照，见"后续"。
 - 测试：`tests/test_state_build.py` 把 60 局随机配置和 60 局 OU 对局（`data/teams/statebuild_catalog_pairs.jsonl`，本地生成、不提交）钉在基线上（`tests/fixtures/state_build_baseline*.json`：不许出现新类别，各类别次数不许变多）；每条修复另有针对性测试（`tests/test_timers.py`、`tests/test_engine_state.py`）。
 
 ### 一致率历程
@@ -27,6 +27,7 @@
 | 10-23 | 百万级第五轮：换新种子（OU 偏移 50000，fixtures / big 偏移 2000），共 14,400 局 | 1,087,510 个决策点 | 有差异 **0.034%**（核心字段 0.014%）；S89–S111 之后，第三到第五轮的 323 个例子局只剩约 12 局；S112–S123 之后全部一致 |
 | 10-23 | 百万级第六轮：又一批新种子（OU 偏移 60000，fixtures / big 偏移 3000） | 1,085,967 个决策点 | 有差异 **0.010%**（112 个决策点；核心字段 **0.0036%**）；S124–S137 之后，第三到第六轮的 342 个例子局全部一致 |
 | 10-23 | 回放路径百万级首轮（OU 偏移 70000，fixtures / big 偏移 4000） | 1,086,816 个决策点 | 有差异 OU 0.66%、fixtures 0.65%、big 0.43%：大部分是比较框架（未识破的伪装没排除；镜像对局里先知替换按队伍名分不清两边；形态不同的种族名对不上——实战路径的先知替换同样修了；变身后上一招的格位是记法），其余 S143–S145；之后这一轮的 55 个例子局全部一致 |
+| 10-23 | 回放路径百万级第二轮：新种子（OU 偏移 80000，fixtures / big 偏移 5000） | 1,086,136 个决策点 | 有差异 **0.011%**（115 个决策点）；S146–S151 及比较框架之后，只剩一局：Zoroark 伪装成最大 HP 相同的 Ditto（见"已知"） |
 | 10-23 | 百万级第七轮：又一批新种子（OU 偏移 70000，fixtures / big 偏移 4000） | 1,086,825 个决策点 | 有差异 **0.0010%**（11 个决策点，5 局；核心字段 0.0002%）；S138–S142 之后第三到第七轮的 347 个例子局全部一致 |
 
 ## 方法
@@ -47,6 +48,7 @@
 - **差分框架自身的修正**：回合结束后的换人决策（`|upkeep|` 之后、下一个 `|turn|` 之前），`engine_state` 推算 Future Sight / Wish 用的回合数要加一（引擎差分只比较回合开始，从未碰到）。
 - **数据**：`data/teams/statebuild_catalog_pairs.jsonl`（1,176 支真实 OU 队伍随机配对，本地生成）、`tests/fixtures/random_battle_teams*.jsonl`（40 组，1.16 万对）、`data/teams/big/`（30 组，8.7 万对）。同一对队伍换种子就是新对局。
 - **流程**：跑一批 → 按"出现在多少局里"排序 → 看例子（日志 + 两边的值）→ 对照 Showdown 源码确认规则 → 修 → 写针对性测试（修复前必须失败）→ 回归（全量测试 + 两个基线 + 引擎差分）→ 记入下表。
+- **脚本**：百万级扫描 `scripts/state_build_sweep.sh <live|replay> <OU 种子偏移> <fixtures / big 种子偏移> <标签>`（每轮换新种子）；复查报告里的例子局 `scripts/rerun_state_build.py <报告…> [--list 类别]`（按 `pairs[种子 − 偏移]` 取队伍配对，与扫描一致）。
 
 ## 问题表
 
@@ -199,6 +201,14 @@
 | S143 | 回放路径：识破后的 Illusion 记账按"用了几次"把 PP 记给 Zoroark，伪装期间打带 Pressure 的对手每次实际扣 2 | 两 | 计时器按 poke-env 同一套规则记每次使用的扣点（Pressure 已宣告、未被压制），记账按扣点 | `test_a_replays_illusion_and_transform_records` |
 | S144 | 回放路径：变身时 poke-env 不知道目标的特性（没有 request），留下了它带来的 Imposter | 回 | 此时用这个世界里目标的特性 | `test_a_copied_ability_poke_env_never_knew` |
 | S145 | 变身成 Regenerator 宝可梦后换下，复制来的 Regenerator 回 1/3：poke-env 只在知道目标特性时才补（实战知道，回放不知道） | 两 | 计时器记下换下时变身的目标；构造时目标在这个世界里是 Regenerator、poke-env 又不知道时补上 | 同上 |
+| S146 | Illusion 识破时，伪装期间显示的异常状态是 Zoroark 的；真宝可梦自己恰好也是同一异常时（S123 按"有变化才挪"）没给 Zoroark | 两 | 异常状态一律给 Zoroark，伪装对象恢复原值 | `test_the_replay_paths_second_run_facts` |
+| S147 | Psych Up：`-copyboost|使用者|目标` 是使用者复制目标的能力变化，poke-env 写反了（实战也有，扫描里没碰到） | 两 | `poke_env_fixes`：接管 | `test_a_replays_illusion_and_transform_records` |
+| S148 | 打在伪装上的 Soak（属性改变）是 Zoroark 的：识破 / request 纠正时只转了 volatile，没转临时属性，S137 又把 typechange 去掉了 | 两 | 一并转临时属性 | `test_the_replay_paths_second_run_facts` |
+| S149 | S141 误伤：Sticky Web 的减速被 Clear Body 挡下，算成了把它吹上场的 Whirlwind 的失败 | 两 | 只认配置数据里带降能力的招 | 同上 |
+| S150 | 睡着 / 冻住时 Truant 的处理不运行（它们的 BeforeMove 在前）：偷懒标记保持原值（S75 把它清掉了）；需要休息的那回合由 Showdown 的 mustrecharge 自己清掉（复查时抓到的回归） | 两 | 保持；需要休息时清 | 同上 |
+| S151 | Defog 在闪避已到 −6 时能力不变（算失败），但它清掉了钉子，是成功的 | 两 | 由这招带来的 `-sideend` 撤销失败 | 同上 |
+
+已知、比较器漏掉的隐藏信息：回放路径里 Zoroark 伪装成最大 HP 恰好相同的宝可梦（Ditto 和 Zoroark 都是 261）时，比较器靠最大 HP 认不出伪装，伪装期间的 HP / PP 混在一起被算成差异——观战者本就无从得知（回放 1 局）。
 
 已知、待查：无（之前的两局 PP 是 S84 / S85，伪装成 Pressure 宝可梦的我方 Zoroark 是 S86；对方伪装时多扣的 PP 仍是玩家无从得知的，属隐藏信息）。
 

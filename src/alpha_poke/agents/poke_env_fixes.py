@@ -15,6 +15,8 @@ battles alike.
               turn lost (a Sticky Web's Speed drop: S68)
   Pressure    ... and a disguised Zoroark's (Illusion, no Pressure) found out: the moves at it this
               time in get their extra PP back (S99)
+  Psych Up    |-copyboost|user|target: the user takes the target's stage changes -- poke-env had
+              it backwards (S147)
   Lunar Dance Gen 9's restores the PP too: poke-env's count restored (its count, Pressure's 2
               included, from there -- the timers' uses since counted 1 each: S84)
   Skill Swap  the [of] mon's own ability (the one the user got) never set: a Pressure announced
@@ -95,8 +97,11 @@ def _end_illusion_on(self, illusionist, illusioned, details: str):
     ours = illusioned is not None and bool(self._last_request) \
         and any(m is illusioned for m in self.team.values())
     boosts = dict(illusioned.boosts) if ours else {}
+    types = list(illusioned._temporary_types) if illusioned is not None else []  # (a Soak on it: S148)
     mon = _inner_end_illusion(self, illusionist, illusioned, details)
     if mon is not illusioned:
+        if types:
+            mon._temporary_types = types
         for effect, count in effects.items():
             mon.effects.setdefault(effect, count)
         for k, v in boosts.items():
@@ -115,12 +120,14 @@ def _update_team_from_request(self, side, strict_battle_tracking: bool = False):
     falsely = [m for p in side.get("pokemon", []) if not p.get("active")
                and (m := self._team.get(p["ident"])) is not None and m.active]  # fmt: skip
     # (one disguise, its Zoroark: the request's active -- maybe not in the team yet, a lead's)
-    carried = (dict(falsely[0].boosts), dict(falsely[0].effects)) \
+    carried = (dict(falsely[0].boosts), dict(falsely[0].effects), list(falsely[0]._temporary_types)) \
         if len(falsely) == 1 and len(actives) == 1 else None  # fmt: skip
     _inner_update_team(self, side, strict_battle_tracking)
     target = self._team.get(actives[0]) if carried is not None else None
     if target is not None and target is not falsely[0]:
-        boosts, effects = carried
+        boosts, effects, types = carried
+        if types:
+            target._temporary_types = types
         for k, v in boosts.items():
             if v:
                 target.boosts[k] = v
@@ -192,6 +199,11 @@ def _parse_message(self, split_message):
     if disguised is not None:  # (poke-env switches the Zoroark in; the log stays as shown)
         _inner_parse_message(self, disguised)
         self._replay_data[-1] = split_message[:]
+    elif split_message[1:2] == ["-copyboost"] and len(split_message) > 3:
+        # (Psych Up: |-copyboost|user|target -- the user takes its target's stage changes;
+        # poke-env copied them the other way: S147)
+        self._replay_data.append(split_message[:])
+        self.get_pokemon(split_message[2]).copy_boosts(self.get_pokemon(split_message[3]))
     elif _display_typechange(split_message):
         # (Showdown's display of a switch-in's apparent types -- Gen 7+'s bottom screen: no type
         # change; a disguise's are its disguise's -- S83, S97: a Ditto transformed into a Normal

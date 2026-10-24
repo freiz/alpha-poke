@@ -154,7 +154,11 @@ def battle_diffs(p1: str, p2: str, seed: int, max_turns: int = 40) -> tuple[list
         own_hidden = frozenset(_disguised(_Mirror(b), t.side_one))
         diffs = [(kind.replace("foe:", "own:", 1), d)
                  for kind, d in foe_diffs(built.side_one, t.side_one, own_seen, True, own_hidden)]  # fmt: skip
-        diffs += foe_diffs(built.side_two, t.side_two, foe_seen, True, frozenset(_disguised(b, t.side_two)))
+        foe_hidden = frozenset(_disguised(b, t.side_two))
+        diffs += foe_diffs(built.side_two, t.side_two, foe_seen, True, foe_hidden)
+        # (the PP its foe's moves took at an undetected disguise -- a Pressure one's 2: hidden too)
+        diffs = [(kind, d) for kind, d in diffs
+                 if not (kind == "own:pp" and foe_hidden) and not (kind == "foe:pp" and own_hidden)]
         diffs += field_diffs(built, t)
         out += [(k, side, kind, detail) for kind, detail in diffs]
     return out, stats

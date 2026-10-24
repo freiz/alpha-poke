@@ -513,8 +513,8 @@ def _feed_one(sides: dict, p: list[str]) -> None:
                     now = d.pop(st.active)
                     if was is not None:
                         d[st.active] = was
-                    if now != was:
-                        d[new] = now
+                    if now != was or name == "status":  # (the status it showed is the Zoroark's:
+                        d[new] = now  # the same as its disguise's own too -- S146)
             st.active = new
             if len(p) > 4 and p[4]:
                 st.hp_shown[nick] = p[4]
@@ -615,8 +615,11 @@ def _feed_one(sides: dict, p: list[str]) -> None:
         # (Truant's onBeforeMove -- priority 9 -- ran before a flinch, Disable, paralysis, ...:
         # its volatile on, a loaf next; not after a recharge, sleep, freeze -- before it -- nor its
         # own loaf; S75)
-        if not (st.gastro or any(s.gas_on for s in sides.values())):  # (suppressed: kept -- S114)
-            st.truant_next = to_id(p[3].replace("ability: ", "")) not in ("slp", "frz", "recharge", "truant")
+        why = to_id(p[3].replace("ability: ", ""))
+        if why in ("truant", "recharge"):
+            st.truant_next = False  # (its loaf; a recharge removes Truant's volatile -- Showdown's mustrecharge)
+        elif why not in ("slp", "frz") and not (st.gastro or any(s.gas_on for s in sides.values())):
+            st.truant_next = True  # (asleep, frozen -- before Truant's turn: kept, S150)
         st.charging = st.locked = None  # (prevented: the charge and the lock end)
         st.destinybond = False  # (its onMoveAborted: S65)
         st.failed_now = p[3] != "recharge"  # (L115)
@@ -742,7 +745,8 @@ def _feed_one(sides: dict, p: list[str]) -> None:
             and st.prev_line[1:2] != ["-ability"] \
             and (mover := sides["p2" if p[2][:2] == "p1" else "p1"]).just_moved and _is_status(mover.last_move) \
             and mover.last_move not in ("defog", "partingshot", "memento", "toxicthread", "spicyextract",
-                                        "venomdrench", "strengthsap", "topsyturvy"):  # (more than a drop)
+                                        "venomdrench", "strengthsap", "topsyturvy") \
+            and "boosts" in (_move_data(mover.last_move)):  # (its own drop: not a hazard's -- S149)
         _missed(mover)  # (a status move's only effect, a drop, all blocked -- Clear Body at a Tickle: S141)
     elif tag == "-fail" and st.just_moved == sp and _is_status(st.last_move) and "unboost" not in p \
             and any(x.startswith("[from] ability:") for x in p[3:]):  # (not an Intimidate's: S142)
@@ -918,6 +922,10 @@ def _feed_one(sides: dict, p: list[str]) -> None:
     elif tag == "-activate" and len(p) > 4 and to_id(p[3].replace("move: ", "")) == "substitute":
         if p[4] == "[damage]":
             st.sub_hit = True
+    elif tag == "-sideend" and len(p) > 3 and any(x.startswith("[from] move:") for x in p[4:]) \
+            and (mover := next((s2 for s2 in sides.values() if s2.just_moved), None)) is not None:
+        mover.failed_now = False  # (Defog at -6 evasion cleared the hazards: it did something -- S151)
+        st.side_elapsed.pop(to_id(p[3].replace("move: ", "")), None)
     elif tag == "-sideend" and len(p) > 3:
         st.side_elapsed.pop(to_id(p[3].replace("move: ", "")), None)
     elif tag == "-sidestart" and len(p) > 3 and to_id(p[3].replace("move: ", "")) in TIMED_SIDE:
@@ -1067,6 +1075,12 @@ def _pp_cost(sides: dict, p: list[str], mv: str) -> int:
     if any(s.gas_on for s in sides.values()) or foe.gastro or foe.active not in foe.pressure:
         return 1
     return 2
+
+
+def _move_data(move: str) -> dict:
+    from poke_env.data import GenData
+
+    return GenData.from_gen(9).moves.get(move) or {}
 
 
 def _is_status(move: str) -> bool:
