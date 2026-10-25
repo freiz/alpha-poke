@@ -12,6 +12,7 @@ Priors (each falls back to the previous one, Dirichlet-smoothed with strength ``
   TeamPrior           per species *within the exact same 6-mon team* (copied teams)
 """
 
+import contextvars
 import functools
 import json
 from collections import Counter, defaultdict
@@ -86,6 +87,37 @@ def signature_items() -> dict[str, frozenset]:
 
 
 @functools.cache
+def standard_items() -> frozenset:
+    """The items of Gen 9 (data/items.ts without isNonstandard: no Z-Crystal, no Mega Stone)."""
+    import re
+
+    try:
+        text = ITEMS_TS.read_text()
+    except OSError:
+        return frozenset()
+    return frozenset(m.group(1) for m in re.finditer(r"\n\t(\w+): \{(.*?)\n\t\}", text, re.S)
+                     if "isNonstandard" not in m.group(2))  # fmt: skip
+
+
+def items_for(sid: str, items: dict[str, float]) -> dict[str, float]:
+    """OU's items across species (``global_item``) as one species can use them, normalized: not
+    another species' own (its itemUser: an Ogerpon mask, a Latias's Soul Dew), no Booster Energy
+    without Protosynthesis / Quark Drive (2026-10-25 review: 7% of a fallback's items a Booster
+    Energy, 4% a Wellspring Mask)."""
+    from poke_env.data import GenData
+
+    sig = signature_items()
+    owned = frozenset().union(*sig.values()) if sig else frozenset()
+    mine = frozenset().union(*(v for k, v in sig.items() if sid.startswith(k)))
+    abilities = {to_id(a) for a in ((GenData.from_gen(9).pokedex.get(sid) or {}).get("abilities") or {}).values()}
+    out = {i: w for i, w in items.items()
+           if (i not in owned or i in mine)
+           and (i != "boosterenergy" or abilities & {"protosynthesis", "quarkdrive"})}  # fmt: skip
+    t = sum(out.values())
+    return {i: w / t for i, w in out.items()} if t > 0 else out
+
+
+@functools.cache
 def legal_moves(species: str) -> frozenset:
     """A species' Gen 9 learnset (move ids): its own, its base forme's, its pre-evolutions'."""
     from poke_env.data import GenData
@@ -153,13 +185,20 @@ class SmogonPrior:
         # same in battle, its types and base stats; not Tauros-Paldea-Combat as Tauros. 2026-10-25,
         # the belief check: its whole prior was empty)
         same = [k for k in self._d if sid.startswith(k) and _same_in_battle(sid, k)]
-        return self._d[max(same, key=len)] if same else self.fallback(sid)
+        if same:
+            return self._d[max(same, key=len)]
+        return self.fallback(sid) if FALLBACK.get() else Dist({}, {}, {})
 
     def fallback(self, sid: str) -> Dist:
         """A species OU's usage does not list: Showdown's random-battle movepool and tera types
         (each set's share), else its learnset and every type, alike; OU's items across species."""
         tera, move = _fallback_tera_moves(sid)
-        return Dist(dict(self.global_item), dict(tera), dict(move))
+        return Dist(items_for(sid, self.global_item), dict(tera), dict(move))
+
+
+# (the fallback on: off for the belief before it -- engine_state's mix 0, the search A/B's old side;
+# 2026-10-25 review, the switch left it on. A context variable: per thread, reset after the call)
+FALLBACK: contextvars.ContextVar[bool] = contextvars.ContextVar("alpha_poke_prior_fallback", default=True)
 
 
 @functools.cache

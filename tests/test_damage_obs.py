@@ -251,3 +251,32 @@ def test_a_contact_with_lingering_aroma_or_mummy_changes_the_hitters_ability():
         ]
         assert ability_changes(lines) == {("p2", "azumarill"): "hugepower"}
         assert [h.ability_then for h in hits(lines, "p1")] == [None, ability.lower().replace(" ", "")]
+
+
+def test_an_illusions_changes_are_the_real_mons():
+    """Showdown's log (a Zoroark-Hisui as the Garchomp it shows hits a Mummy Cofagrigus): Illusion's
+    End prints the replace before the -activate -- the change is the Zoroark's. ability_changes /
+    item_changes followed switches only: the Garchomp's candidates held Illusion alone (2026-10-25
+    review)."""
+    from alpha_poke.agents.damage_obs import ability_changes
+
+    lines = [
+        "|switch|p1a: Cofagrigus|Cofagrigus, M|320/320",
+        "|switch|p2a: Garchomp|Garchomp, M|100/100",
+        "|turn|1",
+        "|move|p2a: Garchomp|Night Slash|p1a: Cofagrigus",
+        "|-supereffective|p1a: Cofagrigus",
+        "|-damage|p1a: Cofagrigus|204/320",
+        "|replace|p2a: Zoroark|Zoroark-Hisui, M",
+        "|-end|p2a: Zoroark|Illusion",
+        "|-activate|p1a: Cofagrigus|ability: Mummy|p2a: Zoroark|[ability] Illusion",
+        "|turn|2",
+        "|move|p2a: Zoroark|Night Slash|p1a: Cofagrigus",
+        "|-supereffective|p1a: Cofagrigus",
+        "|-damage|p1a: Cofagrigus|138/320",
+        "|-enditem|p2a: Zoroark|Leftovers|[from] move: Knock Off|[of] p1a: Cofagrigus",
+        "|turn|3",
+    ]
+    assert ability_changes(lines) == {("p2", "zoroarkhisui"): "illusion"}
+    assert set(item_changes(lines)) == {("p2", "zoroarkhisui")}
+    assert [(h.attacker, h.ability_then) for h in hits(lines, "p1")] == [("zoroarkhisui", "mummy")]

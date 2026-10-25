@@ -276,3 +276,35 @@ def test_each_turn_read_with_the_abilities_then():
     # (no change: the same turns kept)
     plain = log.replace("|-activate|p1a: Regigigas|Skill Swap|Rough Skin|Slow Start|[of] p2a: Garchomp\n", "")
     assert [o.turn for o in _obs(plain, {"regigigas": (236, "leftovers", "pressure")})] == [1, 2, 3]
+
+
+def test_our_ability_then_is_the_snapshots_mon():
+    """2026-10-25 review: our ability then was read at the turn's flush with the slot's mon then --
+    a faint's replacement. Grimmsnarl's Prankster Reflect at turn 3 (it fainted, the swapped
+    Gardevoir came back): read with Gardevoir's Synchronize, the priority move's turn kept."""
+    log = """
+|switch|p1a: Gardevoir|Gardevoir, F|300/300
+|switch|p2a: Garchomp|Garchomp, M|100/100
+|turn|1
+|move|p2a: Garchomp|Swords Dance|p2a: Garchomp
+|-boost|p2a: Garchomp|atk|2
+|move|p1a: Gardevoir|Skill Swap|p2a: Garchomp
+|-activate|p1a: Gardevoir|Skill Swap|Rough Skin|Synchronize|[of] p2a: Garchomp
+|upkeep
+|turn|2
+|switch|p1a: Grimmsnarl|Grimmsnarl, M|300/300
+|move|p2a: Garchomp|Swords Dance|p2a: Garchomp
+|-boost|p2a: Garchomp|atk|2
+|upkeep
+|turn|3
+|move|p1a: Grimmsnarl|Reflect|p1a: Grimmsnarl
+|-sidestart|p1: x|Reflect
+|move|p2a: Garchomp|Earthquake|p1a: Grimmsnarl
+|-damage|p1a: Grimmsnarl|0 fnt
+|faint|p1a: Grimmsnarl
+|upkeep
+|switch|p1a: Gardevoir|Gardevoir, F|300/300
+|turn|4
+"""
+    speeds = {"gardevoir": (200, "", "roughskin"), "grimmsnarl": (150, "", "prankster")}
+    assert [o.turn for o in _obs(log, speeds)] == [1]

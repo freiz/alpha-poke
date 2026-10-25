@@ -102,6 +102,12 @@ MUTATIONS = [
     # (B6's fallback prior: the floor under it keeps the support whole -- the support check cannot
     # tell; tests/test_sample_set.py's test_a_species_ou_never_uses_has_a_prior guards it)
     ("B6 the floor under the base", "src/alpha_poke/agents/engine_state.py", "FLOOR = 1e-3\n", "FLOOR = 0.0\n"),
+    # (the belief check's move support is the sampler's own weights: a floor broken there is seen --
+    # 2026-10-25 review, the check re-derived it)
+    ("B6 the moves' floor", "src/alpha_poke/agents/engine_state.py",
+     "    rest = [m for m in legal_moves(species) if weights.get(m, 0.0) <= 0]", "    rest = []"),
+    # (its floor under a 0 weight: the full corpus' 10 cases, none in the fast one -- guarded by
+    # tests/test_sample_set.py's test_the_move_floor_lifts_a_0_weight)
 ]
 RUST = [
     ("R1 the tree's move used: its own span", "rust/alpha_search/src/ismcts.rs",

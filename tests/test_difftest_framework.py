@@ -103,6 +103,12 @@ def test_fewer_comparisons_or_more_skips_regress():
         ["engine_step: #compared 10 -> 0"]  # fmt: skip
     assert dt.regressions({"engine_step": {**run["engine_step"], "skipped": {"no choice": 2}}}, base) == \
         ["engine_step: #skipped: no choice 1 -> 2"]  # fmt: skip
+    # (a part of the corpus, --only: fewer comparisons are no regression; more findings still are --
+    # 2026-10-25 review, every --only run exited 1)
+    part = {"engine_step": {"n": 2, "kinds": {"hp": 1}, "skipped": {}}}
+    assert dt.regressions(part, base, subset=True) == []
+    assert dt.regressions({"engine_step": {**part["engine_step"], "kinds": {"hp": 3}}}, base, subset=True) == \
+        ["engine_step: hp 2 -> 3"]  # fmt: skip
 
 
 def test_a_refused_baseline_update_is_refused():
@@ -143,6 +149,11 @@ def test_a_refused_update_exits_1(tmp_path, monkeypatch):
         monkeypatch.setattr(sys, "argv", ["difftest.py", "--corpus", "fast", "--out", str(tmp_path / "o.json"), *argv])
         assert mod.main() == code, argv
     assert json.loads((tmp_path / "fast.json").read_text())["engine_step"]["hp"] == 3
+    # (an --only run that finds no more than the corpus' baseline: 0, though it compares less)
+    (tmp_path / "fast.json").write_text(json.dumps({c: {"hp": 3, "#compared": 100} for c in dt.CHECKS}))
+    monkeypatch.setattr(sys, "argv", ["difftest.py", "--corpus", "fast", "--out", str(tmp_path / "o.json"),
+                                      "--only", "scenario/"])  # fmt: skip
+    assert mod.main() == 0
 
 
 def test_the_recording_depends_on_the_format_rules():

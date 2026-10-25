@@ -179,15 +179,23 @@ class SpectatorSide:
 _PRIORS: dict = {}  # (belief, species, team) -> Dist
 
 
-def _prior(belief: BeliefModel, species: str, team_names: tuple[str, ...]):
+def _prior(belief: BeliefModel, species: str, team_names: tuple[str, ...], mix: float | None = None):
     """``belief.prior.predict``, cached: deterministic, and the same mon and team at every world
-    of every decision (2026-10-11: 14% of a policy-only worker). Read-only for the callers."""
-    key = (id(belief), species, team_names)
+    of every decision (2026-10-11: 14% of a policy-only worker). Read-only for the callers. Mix 0
+    (the belief before 2026-10-25): without the fallback prior of a species OU's usage lacks."""
+    from alpha_poke.belief.priors import FALLBACK
+
+    fallback = (mix if mix is not None else ARCH_MIX) > 0
+    key = (id(belief), species, team_names, fallback)
     dist = _PRIORS.get(key)
     if dist is None:
         if len(_PRIORS) > 20_000:  # (a few KB each: bounded)
             _PRIORS.clear()
-        dist = _PRIORS[key] = belief.prior.predict(species, team_names)
+        token = FALLBACK.set(fallback)
+        try:
+            dist = _PRIORS[key] = belief.prior.predict(species, team_names)
+        finally:
+            FALLBACK.reset(token)
     return dist
 
 
@@ -228,7 +236,7 @@ def base_marginal(belief: BeliefModel, species: str, team_names: tuple[str, ...]
     if out is None:
         if len(_BASES) > 20_000:
             _BASES.clear()
-        parts = [getattr(_prior(belief, species, team_names), attr)]
+        parts = [getattr(_prior(belief, species, team_names, mix), attr)]
         sm = _smogon(belief)
         if sm is not None and not old:
             parts.append(getattr(sm.predict(species, team_names), attr))
@@ -241,7 +249,10 @@ def base_marginal(belief: BeliefModel, species: str, team_names: tuple[str, ...]
         if not old and sm is not None:  # (the floor)
             from alpha_poke.belief.priors import TYPES
 
-            floor = sm.global_item if attr == "item" else {x: 1.0 / len(TYPES) for x in TYPES}
+            from alpha_poke.belief.priors import items_for
+
+            floor = items_for(to_id(species), sm.global_item) if attr == "item" \
+                else {x: 1.0 / len(TYPES) for x in TYPES}  # fmt: skip
             if attr == "item":  # (and the items made for it: Palkia's Lustrous Orb)
                 from alpha_poke.belief.priors import signature_items
 
@@ -262,16 +273,24 @@ def base_marginal(belief: BeliefModel, species: str, team_names: tuple[str, ...]
 
 def required_item(mon) -> str | None:
     """The item a forme is made by (Showdown's requiredItem: Zamazenta-Crowned's Rusted Shield,
-    an Ogerpon mask): its item for sure."""
-    r = (GEN.pokedex.get(to_id(mon.species)) or {}).get("requiredItem")
-    return to_id(r) if r else None
+    an Ogerpon mask; requiredItems, its Gen 9 one: an Arceus forme's Plate, not its Z-Crystal --
+    2026-10-25 review): its item for sure."""
+    from alpha_poke.belief.priors import standard_items
+
+    entry = GEN.pokedex.get(to_id(mon.species)) or {}
+    if entry.get("requiredItem"):
+        return to_id(entry["requiredItem"])
+    legal = [to_id(x) for x in entry.get("requiredItems") or [] if to_id(x) in standard_items()]
+    return legal[0] if len(legal) == 1 else None
 
 
 def _move_floor(weights: dict, species: str) -> dict:
-    """``weights`` with FLOOR of their total spread over the species' other legal moves."""
+    """``weights`` with FLOOR of their total spread over the species' other legal moves -- those
+    without weight, a 0 one too (an archetype's vocabulary lists its species' moves at 0: they
+    stayed impossible -- 2026-10-25, seen once the belief check read the sampler's own weights)."""
     from alpha_poke.belief.priors import legal_moves
 
-    rest = [m for m in legal_moves(species) if m not in weights]
+    rest = [m for m in legal_moves(species) if weights.get(m, 0.0) <= 0]
     total = sum(weights.values())
     if not rest:
         return weights
@@ -280,6 +299,23 @@ def _move_floor(weights: dict, species: str) -> dict:
     for m in rest:
         out[m] = share
     return out
+
+
+def move_weights(ss, k: int | None, dist, species: str, move_beta: float, mix: float | None = None) -> dict:
+    """The moves ``sample_set`` draws from (unnormalized): archetype ``k``'s weights (times the
+    prior's ** ``move_beta``), else the prior's; the floor under them (``_move_floor``) when the
+    mix is on. The belief check's move support is these (2026-10-25 review: it re-derived them)."""
+    if k is not None and ss is not None and ss.vocab.get("move"):
+        weights = {
+            to_id(n): float(w) for n, w in zip(ss.vocab["move"], ss.params["move"][k], strict=False)
+        }
+        if move_beta > 0:
+            weights = {mid: w * dist.move.get(mid, 1e-4) ** move_beta for mid, w in weights.items()}
+    else:
+        weights = dict(dist.move)
+    if (mix if mix is not None else ARCH_MIX) > 0:  # (the floor: its learnset's other moves)
+        weights = _move_floor(weights, species)
+    return weights
 
 
 def arch_mix(ss, k: int, attr: str, base: dict, mix: float | None = None) -> dict:
@@ -318,7 +354,7 @@ def sample_set(
     ignores the opponent's team; the team prior is much sharper: time-split coverage of later
     revealed moves 61.7% -> 77.3% / 81.1% / 82.6% at beta 1 / 2 / 3, design D11)."""
     species = _preview_name(mon, team_names)
-    dist = _prior(belief, species, team_names)
+    dist = _prior(belief, species, team_names, mix)
     # (``exclude``: moves its line showed that were a disguised Illusion's: _illusion_fix)
     revealed = [m for m in own_moves(mon) if m in _MOVES and m not in exclude]
     ss = belief.sets.get(species)
@@ -390,17 +426,7 @@ def sample_set(
         ability = (rng.choices(list(ap), weights=list(ap.values()))[0] if ap else None) or "none"
     # moves: revealed + draws (without replacement) from the archetype's move weights
     moves = list(revealed)[:4]
-    if k is not None and ss.vocab.get("move"):
-        weights = {
-            to_id(n): float(w) for n, w in zip(ss.vocab["move"], ss.params["move"][k], strict=False)
-        }
-        if move_beta > 0:
-            weights = {mid: w * dist.move.get(mid, 1e-4) ** move_beta for mid, w in weights.items()}
-    else:
-        weights = dict(dist.move)
-    if (mix if mix is not None else ARCH_MIX) > 0:  # (the floor: its learnset's other moves)
-        weights = _move_floor(weights, to_id(mon.species))
-    weights = flat(weights)
+    weights = flat(move_weights(ss, k, dist, to_id(mon.species), move_beta, mix))
     for mid in list(weights):
         if mid in moves or mid not in _MOVES or (item == "assaultvest" and _status(mid)):
             weights.pop(mid)

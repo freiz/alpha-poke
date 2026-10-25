@@ -237,10 +237,11 @@ COMPARED = "#compared"  # (a baseline's comparisons made: fewer is a regression)
 SKIPPED = "#skipped: "  # (+ a reason: more left out is one)
 
 
-def regressions(result: dict, baseline: dict) -> list[str]:
+def regressions(result: dict, baseline: dict, subset: bool = False) -> list[str]:
     """What a run has more of than its baseline: a new kind, or a kind more often; a skip reason
     more often; fewer comparisons (2026-10-25 review: every check at 0 compared passed -- the
-    baseline counted findings only)."""
+    baseline counted findings only) -- not for ``subset``, a part of the corpus (--only: its
+    comparisons are fewer; its counts can only be fewer too)."""
     out = []
     for c, o in result.items():
         base = baseline.get(c, {})
@@ -248,7 +249,7 @@ def regressions(result: dict, baseline: dict) -> list[str]:
         for k, n in counts.items():
             if n > base.get(k, 0):
                 out.append(f"{c}: {k} {base.get(k, 0)} -> {n}")
-        if o["n"] < base.get(COMPARED, 0):
+        if not subset and o["n"] < base.get(COMPARED, 0):
             out.append(f"{c}: {COMPARED} {base[COMPARED]} -> {o['n']}")
     return out
 

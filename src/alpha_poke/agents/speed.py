@@ -210,7 +210,9 @@ class ObsTracker:
             return
         # (the abilities then: the log's after a change, else the one it started with -- ours
         # left out if the log never named it; 2026-10-25 review, F1's twin: a Skill Swap after)
-        ours_key = (our_side, self._iact.get(our_side + "a"))
+        # (the key the snapshot took: at the flush, the next |turn|, a faint's replacement or a
+        # late pivot may be in the slot -- 2026-10-25 review)
+        ours_key = snap["our_key"]
         if snap["our_ab"] is not None:
             ability = snap["our_ab"]
         elif ours_key in self.abilities.changed:
@@ -274,9 +276,11 @@ class ObsTracker:
         if len(p) < 2:
             return
         tag = p[1]
-        if tag in ("switch", "drag") and len(p) > 3:
+        if tag in ("switch", "drag", "replace") and len(p) > 3:
+            # (replace: an Illusion broken -- the real mon's items / abilities from then)
             self._iact[p[2][:3]] = to_id(p[3].split(",")[0])
-            self.abilities.entered((p[2][:2], self._iact[p[2][:3]]))
+            if tag != "replace":
+                self.abilities.entered((p[2][:2], self._iact[p[2][:3]]))
         self.items.feed(p, self._iact)
         self.abilities.feed(p, self._iact)
         self.illusion.feed(p)

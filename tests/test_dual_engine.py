@@ -262,6 +262,13 @@ def test_l3b_built_terrain_turns(belief):
     # counts down from 8, 4% of OU's Rillaboom; 2026-10-25, a full run drew one. Each turn either
     # world's, the terrain over when Showdown's is)
     assert all(b in (d, d + 3) if d > 0 else b == 0 for d, b in zip(sd, built, strict=True)), (sd, built)
+    # (each world exactly, its item known -- 2026-10-25 review: the per-turn either-or alone would
+    # pass a builder that adds 3 at random turns, or one with no Terrain Extender at all): the
+    # foe's announced Air Balloon, 5 turns; our own Terrain Extender, 8
+    sd, _, built = field_turns(RILLABOOM.replace("@ Leftovers", "@ Air Balloon"), "terrain", 6, belief)
+    assert sd == [5, 4, 3, 2, 1, 0, 0] and built == sd, built
+    sd, _, built = field_turns(RILLABOOM.replace("@ Leftovers", "@ Terrain Extender"), "terrain", 9, belief, view="p1")
+    assert sd[:9] == [8, 7, 6, 5, 4, 3, 2, 1, 0] and built == sd, (sd, built)
 
 
 DRAGAPULT_SLUDGE = """Dragapult @ Black Sludge

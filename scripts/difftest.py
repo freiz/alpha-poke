@@ -47,7 +47,7 @@ def main() -> int:
     Path(a.out).write_text(json.dumps(res, indent=1, default=str))
     bp = dt.baseline_path(a.corpus)
     base = json.loads(bp.read_text()) if bp.exists() else {}
-    grown = dt.regressions(res, base)
+    grown = dt.regressions(res, base, subset=bool(a.only))
     for g in grown:
         print("REGRESSION", g)
     if a.update_baseline:

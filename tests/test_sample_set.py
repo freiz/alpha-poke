@@ -110,3 +110,49 @@ def test_a_legal_set_no_ou_player_uses_is_never_impossible():
 
     old = base_marginal(belief, "Corviknight", names, "item", mix=0.0)
     assert set(old) == {to_id(k) for k in _prior(belief, "Corviknight", names).item}
+
+
+def test_the_fallback_is_off_at_mix_0():
+    """2026-10-25 review: ALPHA_ARCH_MIX=0 (the search A/B's old belief) left the fallback prior
+    on -- not the belief before it for a species OU's usage lacks."""
+    from alpha_poke.agents.engine_state import _prior, base_marginal
+
+    belief = BeliefModel.load()
+    assert _prior(belief, "Glalie", ("Glalie",), mix=0).move == {}
+    assert _prior(belief, "Glalie", ("Glalie",)).move  # (on by default)
+    assert base_marginal(belief, "Glalie", ("Glalie",), "item", 0.0) == {}
+
+
+def test_a_species_gets_only_the_items_it_can_use():
+    """2026-10-25 review: OU's items across species gave any fallback species a Booster Energy (7%)
+    and an Ogerpon's mask (4%): another species' own item, Booster Energy without its abilities."""
+    from alpha_poke.agents.engine_state import _smogon
+    from alpha_poke.belief.priors import items_for
+
+    g = _smogon(BeliefModel.load()).global_item
+    for sid, gets, never in (("glalie", "leftovers", ("boosterenergy", "wellspringmask", "souldew")),
+                             ("ironvaliant", "boosterenergy", ("wellspringmask",)),
+                             ("ogerponwellspring", "wellspringmask", ("boosterenergy",))):  # fmt: skip
+        f = items_for(sid, g)
+        assert f.get(gets, 0) > 0 and not any(f.get(i, 0) for i in never), (sid, gets)
+        assert abs(sum(f.values()) - 1) < 1e-9
+
+
+def test_an_arceus_formes_plate_is_its_item():
+    """Showdown's requiredItems (plural) for an Arceus forme: its Gen 9 one, the Plate (the
+    Z-Crystal is non-standard) -- required_item read requiredItem only (2026-10-25 review)."""
+    from types import SimpleNamespace
+
+    from alpha_poke.agents.engine_state import required_item
+
+    assert required_item(SimpleNamespace(species="arceusfire")) == "flameplate"
+    assert required_item(SimpleNamespace(species="arceus")) is None
+
+
+def test_the_move_floor_lifts_a_0_weight():
+    """An archetype lists its species' moves, many at 0: the floor passed over a move with a weight
+    (any), so those stayed impossible (2026-10-25, the belief check on the sampler's own weights)."""
+    from alpha_poke.agents.engine_state import _move_floor
+
+    out = _move_floor({"spikes": 1.0, "freezedry": 0.0}, "glalie")
+    assert out["freezedry"] > 0 and out["earthquake"] > 0 and out["spikes"] == 1.0

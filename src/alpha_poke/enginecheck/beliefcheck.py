@@ -61,21 +61,17 @@ def _tera_support(belief, species: str, team_names) -> dict:
 
 def _move_support(belief, mon, team_names) -> set:
     from alpha_poke.agents.belief_state import _preview_name
-    from alpha_poke.agents.engine_state import _prior
+    from alpha_poke.agents.engine_state import _prior, move_weights
 
     species = _preview_name(mon, team_names)
     dist = _prior(belief, species, team_names)
-    out = {to_id(m) for m, w in dist.move.items() if w > 0}
+    # (the sampler's own weights -- engine_state.move_weights, its floor too: every archetype's and
+    # the prior's; 2026-10-25 review, this re-derived them and a broken floor went unseen)
     ss = belief.sets.get(species)
-    if ss is not None and ss.params and ss.vocab.get("move"):
-        for k in range(len(ss.params["move"])):
-            out |= {to_id(n) for n, w in zip(ss.vocab["move"], ss.params["move"][k], strict=False) if w > 0}
-    # (the sampler's floor: the species' learnset -- engine_state._move_floor)
-    from alpha_poke.agents.engine_state import ARCH_MIX
-    from alpha_poke.belief.priors import legal_moves
-
-    if ARCH_MIX > 0:
-        out |= legal_moves(to_id(mon.species))
+    ks = range(len(ss.params["move"])) if ss is not None and ss.params and ss.vocab.get("move") else ()
+    out: set = set()
+    for k in (None, *ks):
+        out |= {to_id(m) for m, w in move_weights(ss, k, dist, to_id(mon.species), 0.0).items() if w > 0}
     return out
 
 

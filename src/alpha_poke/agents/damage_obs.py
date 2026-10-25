@@ -457,7 +457,9 @@ def item_changes(lines: list[str]) -> dict[tuple[str, str], str | None]:
     items, active = _Items(), {}
     for line in lines + [""]:
         f = line.split("|")
-        if len(f) > 3 and f[1] in ("switch", "drag"):
+        # (an Illusion broken -- replace: the slot's mon is the real one from then; Showdown prints
+        # it before the line its End came from, a Mummy's -activate: 2026-10-25 review)
+        if len(f) > 3 and f[1] in ("switch", "drag", "replace"):
             active[f[2][:3]] = _species(f[3])
         items.feed(f, active)
     return {k: items.original.get(k) for k in items.changed}
@@ -526,9 +528,10 @@ def ability_changes(lines: list[str]) -> dict[tuple[str, str], str | None]:
     abil, active = _Abilities(), {}
     for line in lines + [""]:
         f = line.split("|")
-        if len(f) > 3 and f[1] in ("switch", "drag"):
+        if len(f) > 3 and f[1] in ("switch", "drag", "replace"):  # (replace: item_changes')
             active[f[2][:3]] = _species(f[3])
-            abil.entered((f[2][:2], active[f[2][:3]]))
+            if f[1] != "replace":
+                abil.entered((f[2][:2], active[f[2][:3]]))
         abil.feed(f, active)
     return {k: abil.original.get(k) for k in abil.changed}
 
