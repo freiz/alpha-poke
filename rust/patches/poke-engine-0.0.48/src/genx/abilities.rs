@@ -3184,15 +3184,51 @@ pub fn ability_on_switch_in(
 // move.secondaries: the engine's secondaries, a volatile one but a partial trap / lock / Smack
 // Down, Eerie Spell's PP drop -- L186): its boost and no Life Orb recoil (items.rs)
 pub fn sheer_force_applies(choice: &Choice) -> bool {
+    // alpha-poke patch (2026-10-24, doc/engine-diff.md L236): a move with secondaries (Showdown's
+    // onModifyMove): never a status move -- its volatile is the move's own effect (a Sheer Force
+    // user's Protect, Taunt, Leech Seed did nothing); its own category (not one an absorbing
+    // ability turned into a status one)
+    if crate::choices::MOVES
+        .get(&choice.move_id)
+        .map_or(choice.category, |m| m.category)
+        == MoveCategory::Status
+    {
+        return false;
+    }
     let volatile = choice.volatile_status.as_ref().is_some_and(|v| {
         !matches!(
             v.volatile_status,
             PokemonVolatileStatus::PARTIALLYTRAPPED
                 | PokemonVolatileStatus::LOCKEDMOVE
                 | PokemonVolatileStatus::SMACKDOWN
+                // (L236: Showdown's self volatiles, no secondaries)
+                | PokemonVolatileStatus::GLAIVERUSH
+                | PokemonVolatileStatus::UPROAR
         )
     });
-    choice.secondaries.is_some() || volatile || choice.move_id == Choices::EERIESPELL
+    // (L236: and the moves whose secondaries the engine has in code -- their code checks Sheer
+    // Force: Alluring Voice / Burning Jealousy's, Spirit Shackle's trap; Ceaseless Edge / Stone
+    // Axe's hazard, Showdown's onAfterHit !hasSheerForce: the side condition taken below; Dire
+    // Claw's, choice_effects adds them before)
+    choice.secondaries.is_some()
+        || volatile
+        || matches!(
+            choice.move_id,
+            Choices::EERIESPELL
+                | Choices::DIRECLAW
+                | Choices::ALLURINGVOICE
+                | Choices::BURNINGJEALOUSY
+                | Choices::SPIRITSHACKLE
+                | Choices::CEASELESSEDGE
+                | Choices::STONEAXE
+        )
+}
+
+// alpha-poke patch (2026-10-24, doc/engine-diff.md L236): the moves Sheer Force boosts -- those it
+// takes the secondaries of, and Showdown's hasSheerForceBoost ones, their effects kept (Electro
+// Shot's Sp. Atk +1, Order Up's)
+pub fn sheer_force_boosts(choice: &Choice) -> bool {
+    sheer_force_applies(choice) || matches!(choice.move_id, Choices::ELECTROSHOT | Choices::ORDERUP)
 }
 
 pub fn ability_modify_attack_being_used(
@@ -3575,10 +3611,15 @@ pub fn ability_modify_attack_being_used(
         // move, not its holder's (Showdown's onAllyBasePower: attacker !== target): nothing in
         // singles; it boosted the holder's own
         Abilities::SHEERFORCE => {
+            let boosts = sheer_force_boosts(attacker_choice);
             if sheer_force_applies(attacker_choice) {
-                attacker_choice.base_power *= 5325.0 / 4096.0;
                 attacker_choice.secondaries = None;
-                attacker_choice.volatile_status = None
+                attacker_choice.volatile_status = None;
+                // (L236: Ceaseless Edge / Stone Axe's hazard, the only damaging moves with one)
+                attacker_choice.side_condition = None;
+            }
+            if boosts {
+                attacker_choice.base_power *= 5325.0 / 4096.0;
             }
         }
         Abilities::IRONFIST => {

@@ -1241,6 +1241,21 @@ pub fn item_ignored(state: &State) -> bool {
     state.magic_room > 0
 }
 
+// alpha-poke patch (2026-10-24, doc/engine-diff.md L234): whether the active's held item is ignored
+// (Showdown's ignoringItem): Magic Room, its Embargo, its Klutz -- unless the Klutz is suppressed
+// (the other active's Neutralizing Gas, not through an Ability Shield)
+pub fn holder_item_ignored(state: &State, side_ref: &SideReference) -> bool {
+    let side = state.get_side_immutable(side_ref);
+    let holder = side.get_active_immutable();
+    let foe = state.get_side_immutable(&side_ref.get_other_side()).get_active_immutable();
+    item_ignored(state)
+        || side.volatile_statuses.contains(&PokemonVolatileStatus::EMBARGO)
+        || holder.ability == Abilities::KLUTZ
+            && !(foe.ability == Abilities::NEUTRALIZINGGAS
+                && foe.hp > 0
+                && holder.item != Items::ABILITYSHIELD)
+}
+
 pub fn item_before_move(
     state: &mut State,
     choice: &mut Choice,

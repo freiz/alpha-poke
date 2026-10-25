@@ -1082,7 +1082,13 @@ pub fn extend_field_durations(
     instructions: &mut StateInstructions,
     from: usize,
 ) {
-    let item = state.get_side_immutable(holder).get_active_immutable().item;
+    // alpha-poke patch (2026-10-24, doc/engine-diff.md L234): not an ignored item (Klutz, Embargo,
+    // Magic Room: Showdown's durationCallback reads hasItem)
+    let item = if super::items::holder_item_ignored(state, holder) {
+        Items::NONE
+    } else {
+        state.get_side_immutable(holder).get_active_immutable().item
+    };
     for ins in instructions.instruction_list[from..].iter_mut() {
         match ins {
             Instruction::ChangeWeather(w) if w.new_weather_turns_remaining == 5 => {
@@ -1145,8 +1151,8 @@ fn generate_instructions_from_duration_side_conditions(
         .get_active_immutable()
         .item
         == Items::LIGHTCLAY
-        // (L211: not under Magic Room)
-        && !super::items::item_ignored(state)
+        // (L211: not under Magic Room; L234: nor Klutz, Embargo)
+        && !super::items::holder_item_ignored(state, attacking_side_reference)
     {
         duration = 8;
     }
@@ -3466,8 +3472,17 @@ fn move_has_no_effect(state: &State, choice: &Choice, attacking_side_ref: &SideR
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L198): an absorbing ability takes it first
     // (Showdown's hitStepTryHitEvent comes before the type immunity: a Ground Lightning Rod
     // holder's Sp. Atk +1; the absorbed move is a status one by now)
+    // alpha-poke patch (2026-10-24, doc/engine-diff.md L235): not a status move -- they ignore type
+    // immunity (Showdown's ignoreImmunity defaults to the category being Status), Thunder Wave
+    // excepted (its ignoreImmunity: false); a field move has no target (Electric Terrain into a
+    // Ground foe did nothing, Eerie Impulse did not lower it)
     if choice.move_type == PokemonType::ELECTRIC
         && choice.target == MoveTarget::Opponent
+        && (MOVES
+            .get(&choice.move_id)
+            .map_or(choice.category, |m| m.category)
+            != MoveCategory::Status
+            || choice.move_id == Choices::THUNDERWAVE)
         && defender.has_type(&PokemonType::GROUND)
         && !(matches!(
             defender.ability,

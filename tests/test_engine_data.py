@@ -265,6 +265,20 @@ def test_mold_breaker_abilities_match_showdown():
     assert alpha_search.mold_breaker_abilities(ids) == sorted(breakable)
 
 
+def test_sheer_force_moves_match_showdown():
+    """The moves Sheer Force applies to: Showdown's onModifyMove -- the move has secondaries (or
+    hasSheerForceBoost: Electro Shot, Order Up). The engine counted any move with a volatile
+    status: a Sheer Force Copperajah's Protect did nothing (L236)."""
+    import alpha_search
+
+    from alpha_poke.enginecheck import data
+
+    eng = set(alpha_search.sheer_force_moves())
+    known = {m["id"] for m in data.showdown()["moves"]}
+    want = {m["id"] for m in data.showdown()["moves"] if m["sheer_force"]}
+    assert sorted(eng & known - want) == [] and sorted(want - eng) == []
+
+
 def test_bypass_substitute_moves_match_showdown():
     """The status moves aimed at the foe that go through a Substitute (Showdown's bypasssub
     flag; any other fails against one: L133), among the engine's moves aimed at the opponent."""

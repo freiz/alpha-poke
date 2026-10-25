@@ -22,6 +22,8 @@ const moves = dex.moves.all().filter(legal).map(m => ({
 		volatileStatus: s.volatileStatus || null, boosts: s.boosts || null,
 		self: s.self ? {boosts: s.self.boosts || null} : null})),
 	forceSwitch: !!m.forceSwitch, selfSwitch: !!m.selfSwitch,
+	// (Sheer Force's onModifyMove / onBasePower: secondaries, or its boost without them)
+	sheer_force: !!((m.secondaries && m.secondaries.length) || m.hasSheerForceBoost),
 }));
 
 const species = dex.species.all().filter(legal).map(s => ({

@@ -7,17 +7,9 @@
   "belief:tera": 14
  },
  "engine_chain": {
-  "hp": 4,
-  "sc.protect": 2,
-  "sc.reflect": 1,
-  "weather.turns": 4
+  "hp": 2
  },
- "engine_step": {
-  "hp": 2,
-  "sc.protect": 4,
-  "sc.reflect": 1,
-  "weather.turns": 4
- },
+ "engine_step": {},
  "state_live": {},
  "state_replay": {},
  "tree_history": {}

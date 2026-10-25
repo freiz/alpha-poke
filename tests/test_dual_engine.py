@@ -7104,3 +7104,110 @@ def test_spite_after_its_targets_move_in_the_same_turn():
     assert bb["pp"] == 19, states[1]["sides"][0]["mons"][0]["moves"]
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "bravebird", "spite")
     assert ec.closest(states[1], outs, (1, 1), hp=True, full=True, start=states[0])["diff"] == {}
+
+
+# L234 (doc/engine-diff.md, 2026-10-24, the differential test framework): an extending item works
+# only if its holder's item is not ignored -- Showdown's durationCallback reads source.hasItem,
+# which is false under ignoringItem: Magic Room, Embargo, Klutz (unless the Klutz is suppressed:
+# Neutralizing Gas). The engine read the held item alone (Light Clay: Magic Room only)
+def _klutz(item, ability="Klutz"):
+    return _setter("Golurk", ability, item, "- Sunny Day\n- Reflect\n- Electric Terrain\n- Roost")
+
+
+GAS = _setter("Weezing-Galar", "Neutralizing Gas", "Leftovers", "- Spikes\n- Protect\n- Embargo\n- Magic Room")
+EXTENDERS = [  # (item, the holder's move, Showdown's turns left after the first end of turn, read)
+    ("Heat Rock", "sunnyday", lambda s: s["field"]["weather_duration"], lambda o: o.weather_turns_remaining),
+    ("Light Clay", "reflect", lambda s: s["sides"][0]["conditions"]["reflect"]["duration"],
+     lambda o: o.side_one.side_conditions.reflect),
+    ("Terrain Extender", "electricterrain", lambda s: s["field"]["terrain_duration"],
+     lambda o: o.terrain_turns_remaining),
+]
+
+
+@pytest.mark.parametrize("item, move, sd, eng", EXTENDERS)
+@pytest.mark.parametrize("ability, foe, works", [
+    ("Klutz", TINGLU, False), ("Iron Fist", TINGLU, True), ("Klutz", GAS, True)])  # fmt: skip
+def test_l234_extending_item_and_klutz(item, move, sd, eng, ability, foe, works):
+    """A Klutz Golurk's extending item does nothing (5 turns, 4 left after the turn); not Klutz,
+    or its Klutz under the foe's Neutralizing Gas, it works (8, 7 left)."""
+    states = ec.run_showdown(_klutz(item, ability), foe, [(f"move {move}", "move spikes")])
+    assert sd(states[1]) == (7 if works else 4)
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), move, "spikes")
+    assert {eng(o[1]) for o in outs} == {7 if works else 4}
+
+
+@pytest.mark.parametrize("item, move, sd, eng", EXTENDERS)
+@pytest.mark.parametrize("room", ["embargo", "magicroom"])
+def test_l234_extending_item_ignored(item, move, sd, eng, room):
+    """Under the foe's Embargo on the holder, or Magic Room, an extending item does nothing
+    (Iron Fist: no Klutz; the foe's Neutralizing Gas does not matter to either)."""
+    states = ec.run_showdown(_klutz(item, "Iron Fist"), GAS, [("move roost", f"move {room}"),
+                                                              (f"move {move}", "move spikes")])  # fmt: skip
+    assert sd(states[2]) == 4
+    outs = ec.engine_outcomes(ec.engine_state(states[1]), move, "spikes")
+    assert {eng(o[1]) for o in outs} == {4}
+
+
+# L235 (doc/engine-diff.md, 2026-10-24, found by L234's test): a status move ignores type immunity
+# (Showdown's hitStepTypeImmunity: ignoreImmunity defaults to the move being a status one; Thunder
+# Wave's is false) -- and a field move has no target. The engine failed every Electric move aimed
+# at a Ground foe: Electric Terrain did nothing against Ting-Lu, Eerie Impulse did not lower it
+@pytest.mark.parametrize("move, check", [
+    ("electricterrain", lambda s: s["field"]["terrain"] == "electricterrain"),
+    ("eerieimpulse", lambda s: s["sides"][1]["mons"][0]["boosts"].get("spa") == -2),
+    ("thunderwave", lambda s: not s["sides"][1]["mons"][0]["status"]),  # (control: immune)
+])  # fmt: skip
+def test_l235_electric_status_moves_on_a_ground_foe(move, check):
+    p1 = _setter("Golurk", "Iron Fist", "Leftovers", "- Electric Terrain\n- Eerie Impulse\n- Thunder Wave\n- Roost")
+    states = ec.run_showdown(p1, TINGLU, [(f"move {move}", "move spikes")])
+    assert check(states[1]), states[1]["log"]
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), move, "spikes")
+    assert ec.closest(states[1], outs, (1, 1), hp=True, full=True, start=states[0])["diff"] == {}
+
+
+# L236 (doc/engine-diff.md, 2026-10-24, the differential test framework -- its transform scenarios'
+# Copperajah): Sheer Force applies to a move with secondaries (Showdown's onModifyMove); the engine
+# took any move with a volatile status for one -- its user's Protect, Substitute, Taunt, Leech
+# Seed did nothing (tests/test_engine_data.py checks the list against Showdown's)
+@pytest.mark.parametrize("move, check", [
+    ("protect", lambda s: s["sides"][1]["conditions"].get("protect") is None
+     and "|-singleturn|p2a: Copperajah|Protect" in s["log"]),
+    ("substitute", lambda s: "substitute" in s["sides"][1]["mons"][0]["volatiles"]),
+    ("taunt", lambda s: "taunt" in s["sides"][0]["mons"][0]["volatiles"]),
+    ("leechseed", lambda s: "leechseed" in s["sides"][0]["mons"][0]["volatiles"]),
+])  # fmt: skip
+def test_l236_sheer_force_status_moves(move, check):
+    cop = _setter("Copperajah", "Sheer Force", "Leftovers", "- Protect\n- Substitute\n- Taunt\n- Leech Seed")
+    states = ec.run_showdown(CORVIKNIGHT, cop, [("move roost", f"move {move}")])
+    assert check(states[1]), states[1]["log"]
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "roost", move)
+    assert ec.closest(states[1], outs, (1, 1), hp=True, full=True, start=states[0])["diff"] == {}
+
+
+def test_l236_sheer_force_still_takes_a_secondary():
+    """(control) Sheer Force's Iron Head: boosted, no flinch chance -- the same in both."""
+    cop = _setter("Copperajah", "Sheer Force", "Leftovers", "- Iron Head\n- Protect\n- Stealth Rock\n- Iron Defense")
+    states = ec.run_showdown(CORVIKNIGHT, cop, [("move roost", "move ironhead")])
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "roost", "ironhead")
+    assert len(outs) <= 2  # (a hit or a crit: no flinch branch)
+    assert ec.closest(states[1], outs, (1, 1), hp=True, full=True, start=states[0])["diff"] == {}
+
+
+@pytest.mark.parametrize("move", ["alluringvoice", "burningjealousy", "ceaselessedge", "stoneaxe", "direclaw",
+                                  "spiritshackle", "orderup"])  # fmt: skip
+def test_l236_sheer_force_moves_done_in_code(move):
+    """The moves whose secondaries the engine has in code (or Showdown's hasSheerForceBoost: Order
+    Up): Sheer Force boosts them, their secondaries gone (Ceaseless Edge's Spikes, Stone Axe's
+    Stealth Rock, Dire Claw's status, Spirit Shackle's trap); Order Up keeps its effect."""
+    # (a strong user, a big target: the boost beyond the HP comparison's roll tolerance; Shell
+    # Armor: no crit branch to match it)
+    user = f"""Kleavor @ Leftovers
+Ability: Sheer Force
+EVs: 252 Atk / 252 SpA / 4 Spe
+Hardy Nature
+- {move}
+- Protect"""
+    foe = _setter("Hippowdon", "Shell Armor", "Heavy-Duty Boots", "- Curse\n- Rest\n- Body Slam\n- Spikes")
+    states = ec.run_showdown(user, foe, [(f"move {move}", "move curse")])
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), move, "curse")
+    assert ec.closest(states[1], outs, (1, 1), hp=True, full=True, start=states[0])["diff"] == {}

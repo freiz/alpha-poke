@@ -50,6 +50,16 @@ RUST = [
     ("R5' the last move always tracked", "rust/patches/poke-engine-0.0.48/src/genx/state.rs",
      "        self.use_last_used_move = true;\n    }\n\n    pub fn set_conditional_mechanics",
      "    }\n\n    pub fn set_conditional_mechanics"),
+    ("L234 an ignored item extends nothing", "rust/patches/poke-engine-0.0.48/src/genx/generate_instructions.rs",
+     "let item = if super::items::holder_item_ignored(state, holder) {", "let item = if false {"),
+    ("L234 Light Clay: an ignored one", "rust/patches/poke-engine-0.0.48/src/genx/generate_instructions.rs",
+     "&& !super::items::holder_item_ignored(state, attacking_side_reference)", "&& !super::items::item_ignored(state)"),
+    ("L235 a status move ignores type immunity", "rust/patches/poke-engine-0.0.48/src/genx/generate_instructions.rs",
+     "            != MoveCategory::Status\n            || choice.move_id == Choices::THUNDERWAVE)",
+     "            != MoveCategory::Status\n            || true)"),
+    ("L236 Sheer Force: no status move", "rust/patches/poke-engine-0.0.48/src/genx/abilities.rs",
+     "        == MoveCategory::Status\n    {\n        return false;\n    }\n    let volatile",
+     "        == MoveCategory::Status\n        && false\n    {\n        return false;\n    }\n    let volatile"),
 ]
 
 

@@ -1407,6 +1407,20 @@ fn not_aimed_at_foe_moves() -> Vec<String> {
     out
 }
 
+/// The moves Sheer Force boosts and takes the secondaries of (`abilities::sheer_force_applies` on
+/// their data, lowercase; doc/engine-diff.md L236).
+#[pyfunction]
+fn sheer_force_moves() -> Vec<String> {
+    use poke_engine::choices::MOVES;
+    let mut out: Vec<String> = MOVES
+        .iter()
+        .filter(|(_, m)| poke_engine::engine::abilities::sheer_force_boosts(m))
+        .map(|(c, _)| format!("{:?}", c).to_lowercase())
+        .collect();
+    out.sort();
+    out
+}
+
 /// The species poke-engine counts as Paradox (`PARADOX`, lowercase; doc/engine-diff.md L79).
 #[pyfunction]
 fn paradox_species() -> Vec<String> {
@@ -1688,6 +1702,7 @@ fn alpha_search(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(damage_rolls, m)?)?;
     m.add_function(wrap_pyfunction!(move_targets, m)?)?;
     m.add_function(wrap_pyfunction!(not_aimed_at_foe_moves, m)?)?;
+    m.add_function(wrap_pyfunction!(sheer_force_moves, m)?)?;
     m.add_function(wrap_pyfunction!(bypass_substitute_moves, m)?)?;
     m.add_function(wrap_pyfunction!(fail_copycat_moves, m)?)?;
     m.add_function(wrap_pyfunction!(dance_moves, m)?)?;

@@ -59,6 +59,15 @@ def extender_items() -> list[Spec]:
         script = [{"p1": "move 1", "p2": "move 1"}] + [{"p1": "move 2", "p2": "move 4"}] * 3
         out.append(_spec(f"extender/screen-{ability.lower().replace(' ', '')}-knockoff", team(setter, FILLER),
                          team(foe, FILLER), script))  # fmt: skip
+    # (a terrain: Terrain Extender, into a Ground foe -- an Electric status move ignores its
+    # immunity, Eerie Impulse lowers it; L234, L235)
+    for ability in ("Klutz", "No Guard"):
+        setter = S("Golurk", "Terrain Extender", ability, ["Electric Terrain", "Eerie Impulse", "Earthquake", "Rock Polish"],
+                   FAST, "Jolly")  # fmt: skip
+        foe = S("Ting-Lu", "Leftovers", "Vessel of Ruin", ["Spikes", "Ruination", "Earthquake", "Whirlwind"])
+        script = [{"p1": "move 1", "p2": "move 1"}, {"p1": "move 2", "p2": "move 2"}] + [{"p1": "move 4", "p2": "move 2"}] * 2
+        out.append(_spec(f"extender/terrain-{ability.lower().replace(' ', '')}-ground", team(setter, FILLER),
+                         team(foe, FILLER), script, expect=("|-fieldstart|move: Electric Terrain", "|-unboost|p2a: Ting-Lu|spa|2")))  # fmt: skip
     return out
 
 
