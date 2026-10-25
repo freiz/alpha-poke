@@ -697,8 +697,9 @@ def _feed_one(sides: dict, p: list[str]) -> None:
         mv = to_id(p[3])
         st.locked_exec = mv if any("lockedmove" in x for x in p[4:]) else ""
         # (L241: its own Rollout / Ice Ball, the lock's next, or a called one -- Copycat's: L242; not
-        # a reflected or an ability's)
-        st.rollout_moving = mv in ("rollout", "iceball") and not any(
+        # a reflected or an ability's; not asleep as it runs -- Showdown's onModifyMove adds no
+        # volatile then: a Sleep Talk's, 2026-10-25 review)
+        st.rollout_moving = mv in ("rollout", "iceball") and st.status.get(sp) != "slp" and not any(
             x.startswith("[from]") and "lockedmove" not in x and not x.startswith("[from] move:")
             for x in p[4:])  # fmt: skip
         if st.rollout_moving and (st.rollout is None or st.rollout[0] != mv):

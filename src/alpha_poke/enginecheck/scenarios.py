@@ -402,7 +402,26 @@ def engine_ends() -> list[Spec]:
               # (locked: the request's one move, "move 1")
               [{"p1": "move 2", "p2": "move 2"}] + [{"p1": "move 1", "p2": "move 2"}] * 2,
               expect=("[from] lockedmove",)),
-    ] + rollouts() + called_locks()  # fmt: skip
+    ] + rollouts() + called_locks() + lock_edges()  # fmt: skip
+
+
+def lock_edges() -> list[Spec]:
+    """2026-10-25 review: a Sleep Talk's Rollout (asleep: Showdown's onModifyMove adds no volatile --
+    no lock); an Uproar drained to 0 PP by Spite and Pressure while it locks (it goes on: L243)."""
+    # (not a Snorlax -- the bench's is one; Sleep Talk calls neither Uproar nor Focus Punch: the
+    # Rollout it must; no Belch, its berry rule open in the engine)
+    snorlax = S("Lickilicky", "Leftovers", "Oblivious", ["Sleep Talk", "Rollout", "Uproar", "Focus Punch"])
+    breloom = S("Breloom", "Leftovers", "Technician", ["Spore", "Mach Punch", "Bullet Seed", "Swords Dance"], FAST, "Jolly")
+    uproar = S("Lickilicky", "Leftovers", "Oblivious", ["Uproar", "Body Slam", "Rest", "Curse"])
+    corv = S("Corviknight", "Leftovers", "Pressure", ["Spite", "Roost", "Iron Defense", "Defog"], FAST, "Jolly")
+    return [
+        _spec("ends/sleeptalk-rollout", team(snorlax, FILLER), team(breloom, FILLER),
+              [{"p1": "move 1", "p2": "move 1"}, {"p1": "move 1", "p2": "move 4"}],
+              expect=("|move|p1a: Lickilicky|Rollout|p2a: Breloom|[from] move: Sleep Talk",)),
+        # (locked: the request's one move, "move 1" -- also the Uproar again after its three turns)
+        _spec("ends/uproar-zero-pp", team(uproar, FILLER), team(corv, FILLER), [{"p1": "move 1", "p2": "move 1"}] * 6,
+              expect=("|move|p1a: Lickilicky|Uproar|p2a: Corviknight|[from] lockedmove",)),
+    ]  # fmt: skip
 
 
 def called_locks() -> list[Spec]:

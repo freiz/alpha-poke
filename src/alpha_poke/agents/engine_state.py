@@ -708,7 +708,10 @@ def _our_mon(
         pp = max(0, pp - _spited(tm, mon, mid))
         if req_pp and req_pp.get(mid) is not None:
             pp = int(req_pp[mid])
-        if available_moves is not None and mid in available_moves:
+        # (offered: 1 at least -- poke-env's count drifts; not a lock's move, which the request names
+        # without its PP whatever it is: at 0 too -- L243, an Uproar Spite drained)
+        if available_moves is not None and mid in available_moves and not (req_pp and mid in req_pp
+                                                                           and req_pp[mid] is None):  # fmt: skip
             pp = max(pp, 1)
         # (a Disable'd move offered anyway -- its lock's request, Outrage's: Showdown's slot is
         # disabled; S101)

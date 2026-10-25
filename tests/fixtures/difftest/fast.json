@@ -3,21 +3,21 @@
   "#compared": 1095
  },
  "engine_chain": {
-  "#compared": 654
+  "#compared": 661
  },
  "engine_step": {
-  "#compared": 1640,
+  "#compared": 1656,
   "#skipped: battle ended": 27,
-  "#skipped: not a turn start": 314
+  "#skipped: not a turn start": 315
  },
  "state_live": {
-  "#compared": 2557
+  "#compared": 2590
  },
  "state_replay": {
-  "#compared": 2557
+  "#compared": 2590
  },
  "tree_history": {
-  "#compared": 1138,
+  "#compared": 1154,
   "#skipped: no log step": 5,
   "#skipped: the last turn": 22
  }

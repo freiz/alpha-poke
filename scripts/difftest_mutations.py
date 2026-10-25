@@ -99,6 +99,15 @@ MUTATIONS = [
      "elif False:"),
     ("B5 a Role Play's [of] keeps its ability", "src/alpha_poke/agents/timers.py",
      'if of is not None and tag == "-activate" else None', "if of is not None else None"),
+    ("L243 our locked move's real PP", "src/alpha_poke/agents/engine_state.py",
+     "        if available_moves is not None and mid in available_moves and not (req_pp and mid in req_pp\n",
+     "        if available_moves is not None and mid in available_moves and not (False and mid in req_pp\n"),
+    ("a Sleep Talk's Rollout locks nothing", "src/alpha_poke/agents/timers.py",
+     'st.rollout_moving = mv in ("rollout", "iceball") and st.status.get(sp) != "slp" and not any(',
+     'st.rollout_moving = mv in ("rollout", "iceball") and not any('),
+    # (an ability set over an unknown one -- Worry Seed's: the old one its own -- is the belief's
+    # derivation, which the oracle-mode state checks never see; guarded by tests/test_dual_engine.py's
+    # test_an_ability_set_over_an_unknown_one_keeps_it_as_its_own until a non-oracle check exists)
     ("L242 our called lock", "src/alpha_poke/agents/engine_state.py",
      "        called = keep != lock_move and lock_move in CALLED_LOCKS", "        called = False"),
     ("L241 our Rollout's lock", "src/alpha_poke/agents/timers.py",
@@ -115,6 +124,8 @@ MUTATIONS = [
     # tests/test_sample_set.py's test_the_move_floor_lifts_a_0_weight)
 ]
 RUST = [
+    ("L243 a locked slot at 0 PP", "rust/patches/poke-engine-0.0.48/src/genx/state.rs",
+     "            let lock_slot = locked\n", "            let lock_slot = false && locked\n"),
     # (L242's called move run on the lock's turn, not its caller again: in the scenarios the battle's
     # last move is the locked one -- a Copycat run anew copies the same; guarded by
     # tests/test_dual_engine.py's test_l242_the_called_move_not_the_battles_last)

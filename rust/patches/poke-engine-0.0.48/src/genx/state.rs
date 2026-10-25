@@ -664,10 +664,17 @@ impl Pokemon {
         can_tera: bool,
         side_can_mega: bool,
         heal_blocked: bool,
+        locked: bool,
     ) {
         let mut iter = self.moves.into_iter();
         while let Some(p) = iter.next() {
-            if !p.disabled && p.pp > 0 {
+            // alpha-poke patch (2026-10-25 review, doc/engine-diff.md L243): locked into a move, its
+            // slot even at 0 PP -- Showdown's request names the locked move whatever its PP (a
+            // Spite / Pressure drained Uproar: it goes on, no Struggle); the others the lock's
+            // disabled flags keep out
+            let lock_slot = locked
+                && matches!(last_used_move, LastUsedMove::Move(i) if *i == iter.pokemon_move_index);
+            if !p.disabled && (p.pp > 0 || lock_slot) {
                 match last_used_move {
                     LastUsedMove::Move(last_used_move) => {
                         if encored && last_used_move != &iter.pokemon_move_index {
@@ -1568,6 +1575,7 @@ impl State {
                 self.side_one
                     .volatile_statuses
                     .contains(&PokemonVolatileStatus::HEALBLOCK),
+                self.side_one.locked(),
             );
         }
 
@@ -1606,6 +1614,7 @@ impl State {
                 self.side_two
                     .volatile_statuses
                     .contains(&PokemonVolatileStatus::HEALBLOCK),
+                self.side_two.locked(),
             );
         }
 
@@ -1731,6 +1740,7 @@ impl State {
                 self.side_one
                     .volatile_statuses
                     .contains(&PokemonVolatileStatus::HEALBLOCK),
+                self.side_one.locked(),
             );
             // (L179: not a move the foe's Imprison holder knows -- Showdown's onFoeDisableMove)
             let foe = &self.side_two;
@@ -1783,6 +1793,7 @@ impl State {
                 self.side_two
                     .volatile_statuses
                     .contains(&PokemonVolatileStatus::HEALBLOCK),
+                self.side_two.locked(),
             );
             // (L179: not a move the foe's Imprison holder knows -- Showdown's onFoeDisableMove)
             let foe = &self.side_one;

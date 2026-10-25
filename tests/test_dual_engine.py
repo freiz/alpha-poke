@@ -7505,3 +7505,105 @@ def test_l242_the_called_move_not_the_battles_last():
     outs = ec.engine_outcomes(st, "copycat", "none")
     res = ec.closest(states[2], outs, (2, 1), hp=True, full=True, start=states[1])
     assert _keys(res["diff"], "s2.0.hp") == {}, res["diff"]
+
+
+# 2026-10-25 review: our state construction (no oracle: the belief's) at Showdown's states
+AZUMARILL_HP = """Azumarill @ Leftovers
+Ability: Huge Power
+EVs: 252 HP / 252 Atk / 4 SpD
+Adamant Nature
+- Liquidation
+- Aqua Jet
+- Play Rough
+- Belly Drum"""
+
+
+@pytest.mark.parametrize("p1,first,new", [
+    ("""Whimsicott @ Leftovers
+Ability: Prankster
+EVs: 252 HP / 4 SpA / 252 SpD
+Calm Nature
+- Worry Seed
+- Moonblast
+- Protect
+- Encore""", ("move worryseed", "move bellydrum"), "insomnia"),
+    ("""Cofagrigus @ Leftovers
+Ability: Mummy
+EVs: 252 HP / 252 Def / 4 SpD
+Bold Nature
+- Calm Mind
+- Shadow Ball
+- Protect
+- Will-O-Wisp""", ("move calmmind", "move liquidation"), "mummy"),
+])  # fmt: skip
+def test_an_ability_set_over_an_unknown_one_keeps_it_as_its_own(p1, first, new, belief):
+    """Worry Seed on a Huge Power Azumarill whose ability we did not know: Showdown's -ability
+    names the old one (setAbility's -ability NEW OLD [from]; Mummy's -activate its [ability] OLD).
+    poke-env took the new one for its own: the state's base ability Insomnia, kept after a
+    switch-out -- Showdown's Huge Power is back then."""
+    states = ec.run_showdown(p1, AZUMARILL_HP + "\n\n" + BLISSEY, [first])
+    assert any(new.capitalize()[:4] in x and "Huge Power" in x for x in states[1]["log"]), states[1]["log"]
+    st = ec.built_state(states, 1, "p1", belief)
+    them = st.side_two.pokemon[int(st.side_two.active_index)]
+    assert (str(them.ability).lower(), str(them.base_ability).lower()) == (new, "hugepower")
+
+
+SNORLAX_TALK = """Snorlax @ Leftovers
+Ability: Thick Fat
+EVs: 252 HP / 4 Atk / 252 SpD
+Careful Nature
+- Sleep Talk
+- Rollout
+- Uproar
+- Belch"""
+BRELOOM_SPORE = """Breloom @ Leftovers
+Ability: Technician
+EVs: 252 HP / 4 Atk / 252 Spe
+Jolly Nature
+- Spore
+- Mach Punch
+- Bullet Seed
+- Swords Dance"""
+
+
+def test_a_sleep_talks_rollout_locks_nothing(belief):
+    """Asleep, Sleep Talk calls Rollout (its other moves Sleep Talk does not call): Showdown's
+    onModifyMove adds no rollout volatile then -- its switch and tera still offered. Our state had
+    it rolling (2026-10-25 review: rollout 1, the options gone)."""
+    states = ec.run_showdown(SNORLAX_TALK + "\n\n" + BLISSEY, BRELOOM_SPORE, [("move sleeptalk", "move spore")])
+    assert "|move|p1a: Snorlax|Rollout|p2a: Breloom|[from] move: Sleep Talk" in states[1]["log"]
+    assert "rollout" not in states[1]["sides"][0]["mons"][0]["volatiles"]
+    for side in ("p1", "p2"):  # (ours and the foe's view)
+        st = ec.built_state(states, 1, side, belief)
+        mine = st.side_one if side == "p1" else st.side_two
+        assert "rollout" not in {str(v).lower() for v in mine.volatile_statuses}, side
+
+
+# L243 (2026-10-25 review): a locked move at 0 PP -- Pressure and Spite drain an Uproar to 0 while it
+# locks: Showdown's request names it alone (getLockedMove: no PP check), it goes on; the engine's
+# options asked pp > 0 (none: a Struggle in the tree)
+SNORLAX_UPROAR = """Snorlax @ Leftovers
+Ability: Thick Fat
+EVs: 252 HP / 4 Atk / 252 SpD
+Careful Nature
+- Uproar
+- Body Slam
+- Rest
+- Curse"""
+CORVIKNIGHT_SPITE = """Corviknight @ Leftovers
+Ability: Pressure
+EVs: 252 HP / 4 Atk / 252 Spe
+Jolly Nature
+- Spite
+- Roost
+- Iron Defense
+- Defog"""
+
+
+def test_l243_a_locked_move_at_0_pp_goes_on():
+    states = ec.run_showdown(SNORLAX_UPROAR, CORVIKNIGHT_SPITE, [("move uproar", "move spite")] + [("move 1", "move spite")] * 4)
+    pp = [next(x["pp"] for x in s["sides"][0]["mons"][0]["moves"] if x["id"] == "uproar") for s in states]
+    assert pp[4] == 0 and "uproar" in states[4]["sides"][0]["mons"][0]["volatiles"], pp  # (Showdown)
+    assert "|move|p1a: Snorlax|Uproar|p2a: Corviknight|[from] lockedmove" in states[5]["log"]
+    for k in (3, 4):  # (the turn it hits 0, the turn it goes on at 0)
+        assert _keys(_full(states, k, "uproar", "spite"), "options", "pp", "volatile", "hp") == {}, k

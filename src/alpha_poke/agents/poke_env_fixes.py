@@ -180,6 +180,26 @@ def _display_typechange(split_message) -> bool:
         and "[silent]" in split_message and not any(x.startswith("[from]") for x in split_message[4:])
 
 
+def _ability_set(self, split_message):
+    """(the mon, its ability before, the one it had, the new one) of a line that sets an ability
+    over another, else None."""
+    tag = split_message[1] if len(split_message) > 1 else ""
+    if tag == "-ability" and len(split_message) > 5 and not split_message[4].startswith("[") \
+            and any(x.startswith("[from]") for x in split_message[5:]):
+        mon, old, new = split_message[2], split_message[4], split_message[3]
+    elif tag == "-activate" and len(split_message) > 5 \
+            and split_message[3] in ("ability: Mummy", "ability: Lingering Aroma"):
+        old = next((x[10:] for x in split_message[5:] if x.startswith("[ability] ")), "")
+        mon, new = split_message[4], split_message[3][9:]
+    else:
+        return None
+    try:
+        p = self.get_pokemon(mon)
+    except Exception:  # noqa: BLE001 - not a mon of this battle's
+        return None
+    return (p, p._ability, to_id_str(old), to_id_str(new)) if old else None
+
+
 def _parse_message(self, split_message):
     yawned = [m for m in (*self._team.values(), *self._opponent_team.values()) if Effect.YAWN in m.effects]
     yawn_end = split_message[1:2] == ["-end"] and "Yawn" in "".join(split_message[3:4])
@@ -189,6 +209,11 @@ def _parse_message(self, split_message):
         of = self.get_pokemon(split_message[-1][5:])
         if of._ability is None and split_message[4]:
             of._ability = to_id_str(split_message[4].replace("[ability] ", ""))
+    # (an ability set over another -- Worry Seed, Entrainment, Simple Beam, Role Play, Doodle, Trace:
+    # Showdown's -ability NEW OLD [from]; Mummy / Lingering Aroma's -activate's [ability] OLD -- names
+    # the one it had: its own when unknown, the new one temporary. poke-env took the first ability it
+    # saw for its own: a Worry Seed's Insomnia, kept after a switch-out; 2026-10-25 review)
+    changed = _ability_set(self, split_message)
     kept = None
     if split_message[1:2] == ["-terastallize"] and len(split_message) > 2:
         # (Terastallization keeps the pre-tera types -- a transformed Ditto's copied ones:
@@ -213,6 +238,12 @@ def _parse_message(self, split_message):
         _inner_parse_message(self, split_message)
     if kept is not None and kept[1]:
         kept[0]._temporary_types = kept[1]
+    if changed is not None:
+        mon, before, old, new = changed
+        if before is None:
+            mon._ability = old  # (the one it had: its own)
+        if new != to_id_str(mon._ability or ""):
+            mon.temporary_ability = new
     for m in yawned:  # (poke-env ends Yawn at any sleep its HP line shows -- a Rest's too:
         # Showdown keeps it till its own -end; S115)
         if Effect.YAWN not in m.effects and m.active and not yawn_end:

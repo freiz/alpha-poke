@@ -3,7 +3,7 @@
   "#compared": 30105
  },
  "engine_chain": {
-  "#compared": 24501,
+  "#compared": 24508,
   "hp": 2,
   "sc.toxic_count": 2,
   "status": 2,
@@ -15,9 +15,9 @@
   "volatile.substitute": 1
  },
  "engine_step": {
-  "#compared": 77536,
+  "#compared": 77552,
   "#skipped: battle ended": 1569,
-  "#skipped: not a turn start": 21400,
+  "#skipped: not a turn start": 21401,
   "ability": 1,
   "attack": 1,
   "base_ability": 1,
@@ -51,13 +51,13 @@
   "weight": 1
  },
  "state_live": {
-  "#compared": 149935
+  "#compared": 149968
  },
  "state_replay": {
-  "#compared": 149935
+  "#compared": 149968
  },
  "tree_history": {
-  "#compared": 64524,
+  "#compared": 64540,
   "#skipped: choice not a slot": 3,
   "#skipped: no log step": 5,
   "#skipped: the last turn": 1340,
