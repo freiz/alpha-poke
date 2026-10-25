@@ -160,6 +160,9 @@ MUTATIONS = [
     # tests/test_sample_set.py's test_the_move_floor_lifts_a_0_weight)
 ]
 RUST = [
+    ("L244 Sleep Talk calls no nosleeptalk / charge move", "rust/patches/poke-engine-0.0.48/src/state.rs",
+     "            if p.id != Choices::NONE && !p.choice.flags.charge && !NO_SLEEP_TALK.contains(&p.id) {",
+     "            if p.id != Choices::SLEEPTALK && p.id != Choices::NONE {"),
     ("L243 a locked slot at 0 PP", "rust/patches/poke-engine-0.0.48/src/genx/state.rs",
      "            let lock_slot = locked\n", "            let lock_slot = false && locked\n"),
     # (L242's called move run on the lock's turn, not its caller again: in the scenarios the battle's

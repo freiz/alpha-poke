@@ -5,6 +5,13 @@
  "engine_chain": {
   "#compared": 686
  },
+ "engine_dist": {
+  "#compared": 464,
+  "#skipped: a hidden length drawn": 10,
+  "#skipped: a sleep's length drawn": 5,
+  "dist.freq": 1,
+  "dist.unmatched": 1
+ },
  "engine_step": {
   "#compared": 1720,
   "#skipped: battle ended": 27,

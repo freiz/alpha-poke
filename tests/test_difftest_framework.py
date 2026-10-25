@@ -234,3 +234,32 @@ def test_every_field_is_compared_or_says_why():
     assert fields(pe.State) == set(sb.STATE_FIELDS) | set(sb.STATE_SKIPPED)
     assert all(sb.MON_SKIPPED.values()) and all(sb.SIDE_SKIPPED.values()) and all(sb.STATE_SKIPPED.values())
 
+
+
+@needs_sim
+def test_a_wrong_chance_is_seen(monkeypatch):
+    """closest matched a step's one outcome to any branch with a positive probability: a
+    Will-O-Wisp's 85% made 15% matched its hits all the same (2026-10-25 review). distdiff plays
+    the turn again in Showdown under many seeds: the frequencies against the engine's."""
+    from alpha_poke import enginecheck as ec
+    from alpha_poke.enginecheck import distdiff
+    from alpha_poke.enginecheck.scenarios import FILLER, S, team
+
+    gengar = S("Gengar", "Leftovers", "Cursed Body", ["Will-O-Wisp", "Protect", "Shadow Ball", "Taunt"],
+               "252 HP / 4 Atk / 252 Spe", "Timid")  # fmt: skip
+    steps, err = ec.random_battle(team(gengar, FILLER), team(FILLER, FILLER), "gen5,1,2,3,4", 2, max_turns=2,
+                                  script=[{"p1": "move 1", "p2": "move 4"}], serialize_every=1)  # fmt: skip
+    assert err is None and "battle" in steps[0]
+    one = steps[:2]
+    r = distdiff.dist_diffs(one)
+    assert r["compared"] == 1 and not r["kinds"], r
+    real = ec.engine_outcomes
+
+    def skewed(*a, **k):  # (the hit's chance and the miss's swapped: 15% / 85%)
+        outs = real(*a, **k)
+        ps = [o[0] for o in outs][::-1]
+        return [ec.Outcome(p, o[1], o.damage, o.sub_damage) for p, o in zip(ps, outs, strict=True)]
+
+    monkeypatch.setattr(ec, "engine_outcomes", skewed)
+    r = distdiff.dist_diffs(one)
+    assert r["kinds"].get("dist.freq") == 1, r

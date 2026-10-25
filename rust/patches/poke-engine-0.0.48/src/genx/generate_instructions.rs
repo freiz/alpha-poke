@@ -6026,6 +6026,15 @@ pub fn generate_instructions_from_move(
             );
         }
         state.reverse_instructions(&incoming_instructions.instruction_list);
+        // alpha-poke patch (2026-10-25, doc/engine-diff.md L244): nothing it may call --
+        // Showdown's onHit returns false, it fails (the outcome was dropped: no branch at all)
+        if new_choices.is_empty() {
+            move_failed(state, &attacking_side, &mut incoming_instructions, false);
+            if incoming_instructions.percentage > 0.0 {
+                final_instructions.push(incoming_instructions);
+            }
+            return;
+        }
         let num_choices = new_choices.len() as f32;
         for mut new_choice in new_choices {
             new_choice.sleep_talk_move = true;

@@ -7607,3 +7607,39 @@ def test_l243_a_locked_move_at_0_pp_goes_on():
     assert "|move|p1a: Snorlax|Uproar|p2a: Corviknight|[from] lockedmove" in states[5]["log"]
     for k in (3, 4):  # (the turn it hits 0, the turn it goes on at 0)
         assert _keys(_full(states, k, "uproar", "spite"), "options", "pp", "volatile", "hp") == {}, k
+
+
+# L244 (2026-10-25, the distribution check: engine_dist): Sleep Talk calls none of its user's moves
+# Showdown marks nosleeptalk or charge (data/moves.ts sleeptalk.onHit: Uproar, Focus Punch, Solar
+# Beam, Meteor Beam, ...) -- the engine called each of the others alike, an Uproar a third of
+# the time; none left: it fails (the engine dropped the whole outcome: no branch)
+# (BRELOOM_SPORE: L241's -- it moves first, the Spore before)
+
+
+def _asleep(moves: str):
+    licki = _setter("Lickilicky", "Oblivious", "Leftovers", moves)
+    return licki, ec.run_showdown(licki, BRELOOM_SPORE, [("move 4", "move spore")])
+
+
+def test_l244_sleep_talk_calls_no_uproar_nor_focus_punch():
+    licki, states = _asleep("- Sleep Talk\n- Uproar\n- Focus Punch\n- Body Slam")
+    assert states[1]["sides"][0]["mons"][0]["status"] == "slp"
+    turns = [("move 4", "move spore"), ("move sleeptalk", "move swordsdance")]
+    for line in ("|move|p1a: Lickilicky|Uproar", "|move|p1a: Lickilicky|Focus Punch"):  # (Showdown)
+        assert ec.showdown_rate(licki, BRELOOM_SPORE, turns, line, n=200) == 0.0, line
+    assert ec.showdown_rate(licki, BRELOOM_SPORE, turns, "|Body Slam|p2a: Breloom|[from] move: Sleep Talk", n=200) > 0.3
+    outs = ec.engine_outcomes(ec.engine_state(states[1]), "sleeptalk", "swordsdance")
+    assert abs(sum(o[0] for o in outs) - 1) < 1e-4
+    assert not any("uproar" in {str(v).lower() for v in o[1].side_one.volatile_statuses} for o in outs)
+    assert all(o[1].side_one.pokemon[0].moves[2].pp == states[1]["sides"][0]["mons"][0]["moves"][2]["pp"]
+               for o in outs)  # (no Focus Punch: its PP, as no use -- a called move's is the caller's anyway)  # fmt: skip
+
+
+def test_l244_sleep_talk_with_nothing_to_call_fails():
+    licki, states = _asleep("- Sleep Talk\n- Uproar\n- Solar Beam\n- Meteor Beam")  # (charge moves too)
+    turns = [("move 4", "move spore"), ("move sleeptalk", "move swordsdance")]
+    assert ec.showdown_rate(licki, BRELOOM_SPORE, turns, "[from] move: Sleep Talk", n=200) == 0.0  # (Showdown)
+    outs = ec.engine_outcomes(ec.engine_state(states[1]), "sleeptalk", "swordsdance")
+    assert abs(sum(o[0] for o in outs) - 1) < 1e-4, [o[0] for o in outs]
+    breloom = states[1]["sides"][1]["mons"][0]["hp"]
+    assert all(o[1].side_two.pokemon[0].hp >= breloom for o in outs)

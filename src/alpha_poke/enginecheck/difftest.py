@@ -42,10 +42,12 @@ class Spec:
     def steps_script(self) -> list | None:
         return json.loads(self.script) if self.script else None
 
-    def battle(self, views: dict | None = None):
+    def battle(self, views: dict | None = None, serialize_every: int = 0):
         from alpha_poke.enginecheck import random_battle
 
         kw = {"fmt": self.fmt} if self.fmt else {}
+        if serialize_every:
+            kw["serialize_every"] = serialize_every
         s = self.seed
         return random_battle(self.p1, self.p2, f"gen5,{s},{s + 1},{s + 2},{s + 3}", s + 1,
                              max_turns=self.max_turns, views=views, script=self.steps_script, **kw)  # fmt: skip
@@ -120,6 +122,22 @@ def check_engine_chain(spec: Spec) -> dict:
         out["kinds"][k] += c
         out["examples"][k] = r["examples"].get(k, [])
     out["errors"] = r["errors"] + ([f"showdown: {err.splitlines()[0][:150]}"] if err else [])
+    return out
+
+
+def check_engine_dist(spec: Spec) -> dict:
+    """The engine's branch probabilities against Showdown's own outcomes of the turn played again
+    under many seeds (distdiff; 2026-10-25 review: a chance made wrong still matched)."""
+    from alpha_poke.enginecheck.distdiff import EVERY, dist_diffs
+
+    steps, err = spec.battle(serialize_every=EVERY)
+    r = dist_diffs(steps)
+    out = _result(r["compared"])
+    for k, c in r["kinds"].items():
+        out["kinds"][k] += c
+        out["examples"][k] = r["examples"].get(k, [])
+    out["errors"] = r["errors"] + ([f"showdown: {err.splitlines()[0][:150]}"] if err else [])
+    out["skipped"].update(r["skipped"])
     return out
 
 
@@ -211,6 +229,8 @@ def check_belief_truth(spec: Spec) -> dict:
 CHECKS = {
     "engine_step": (check_engine_step, lambda s: True),
     "engine_chain": (check_engine_chain, lambda s: True),
+    # (2026-10-25: the branches' probabilities, Showdown's distribution -- the turn played again)
+    "engine_dist": (check_engine_dist, lambda s: True),
     "state_live": (check_state_live, lambda s: not s.fmt),
     "state_replay": (check_state_replay, lambda s: not s.fmt),
     # (2026-10-25: the construction itself, no oracle -- what its draws all hold, the log's facts)

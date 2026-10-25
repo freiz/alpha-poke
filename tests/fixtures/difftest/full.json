@@ -3,7 +3,7 @@
   "#compared": 30105
  },
  "engine_chain": {
-  "#compared": 24525,
+  "#compared": 24533,
   "hp": 2,
   "sc.toxic_count": 2,
   "status": 2,
@@ -14,10 +14,17 @@
   "volatile.perish2": 1,
   "volatile.substitute": 1
  },
+ "engine_dist": {
+  "#compared": 19479,
+  "#skipped: a hidden length drawn": 346,
+  "#skipped: a sleep's length drawn": 673,
+  "dist.freq": 100,
+  "dist.unmatched": 48
+ },
  "engine_step": {
-  "#compared": 77600,
+  "#compared": 77616,
   "#skipped: battle ended": 1569,
-  "#skipped: not a turn start": 21406,
+  "#skipped: not a turn start": 21409,
   "ability": 1,
   "attack": 1,
   "base_ability": 1,
@@ -51,7 +58,7 @@
   "weight": 1
  },
  "state_chain": {
-  "#compared": 41545,
+  "#compared": 41558,
   "hp": 4,
   "status": 1,
   "substitute_hp": 1,
@@ -60,16 +67,16 @@
   "volatile.typechange": 1
  },
  "state_facts": {
-  "#compared": 150069
+  "#compared": 150104
  },
  "state_live": {
-  "#compared": 150069
+  "#compared": 150104
  },
  "state_replay": {
-  "#compared": 150069
+  "#compared": 150104
  },
  "tree_history": {
-  "#compared": 64588,
+  "#compared": 64604,
   "#skipped: choice not a slot": 3,
   "#skipped: no log step": 5,
   "#skipped: the last turn": 1340,

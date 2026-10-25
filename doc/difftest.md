@@ -23,6 +23,7 @@
 - **检查**：都接受同一份轨迹，互不依赖：
   - `engine_step`：每个回合开始，一次转移（原 `check_engine_random`）；
   - `engine_chain`：从真实状态出发，沿 Showdown 实际的选择连续推进几个回合，每一步取与 Showdown 最接近的结果继续（HP 按真实值同步，避免伤害取均值带来的漂移），从第二步起与 Showdown 比较——专抓"树里第二步起才错"的问题；
+  - `engine_dist`（2026-10-25）：分支概率对 Showdown 的分布。`engine_step` 只把实际出现的那一个结果匹配到概率为正的某个分支，命中率 85% 改成 1% 照样匹配（复查第 2 批）。现在每 4 个可比回合序列化一次 Showdown 的对局，换 100 个种子重放同一组选择（`showdown_resample.js`），每个结果按不含 HP 的状态（异常、易变状态、能力等级、在场者……）和谁倒下归类，引擎的每个分支（不带提示，用引擎自己的随机）同样归类，比较频率和概率：超出 4 个标准差且差 ≥ 0.06 记 `dist.freq`，引擎没有的结果占比 > 0.06 记 `dist.unmatched`。Showdown 已经抽好的隐藏值（在场者身上运行中的混乱、锁定、束缚的长度，睡眠）存在序列化里，重放时固定，引擎按概率算，这类回合跳过并计数。纯伤害招式的命中与否不在类别里（伤害和剩饭回复可能互相抵消，随机数一差就落到别的类），留给 HP 比较；
   - `state_live` / `state_replay`：两条路径的状态构造（原 `check_state_build`，含选项往返）；
   - `tree_history`：树内历史与日志的历史（原 `check_tree_history`）；
   - `state_facts`（2026-10-25）：非先知的构建（信念自己的抽样），检查它认定已知的事实——poke-env / 跟踪器记下的对手当前特性、原始特性、道具、已暴露的招式——必须为真。先知模式的检查给对手真实配置，这些推断从来没被检验（B8：Worry Seed 之后的原始特性）。抽样一致性不能代替“已知”：确定性的点估计（努力值）、接近确定的先验（99% 的特性）抽几次都一样，却只是猜测。
@@ -53,6 +54,7 @@
 | 检查 | `full` 比较了 | 发现 |
 |---|---|---|
 | `engine_step` | 77,457 个回合 | 42（原 72）：Skill Swap 换走 Slow Start（4，L239，待确认）；没有目标的招式的 lastMove（L240，待确认）；Copycat 调出的 Dig 被 Earthquake 打中的那一回合，其昏厥宝可梦的各字段（25 类各 1）；Klutz / Embargo / 魔法空间下的延长道具——L234；电系变化招式对地面系——L235；Sheer Force 去掉 Protect 等——L236；“上一招失败”——L237（比较器原来跳过这个标记，开始比较时一次暴露 4,309 处，逐类对照 Showdown 源码修到 1 处：Copycat 调出的 Dig 被 Earthquake 打中）；`gen9ou` 的第二次睡眠（该格式没有 Sleep Clause Mod）——L238；其余零星 |
+| `engine_dist` | 19,479 个回合（跳过：隐藏长度 346、睡眠 673） | 148（2026-10-25 首次，L244 修后）：多数是引擎对“不击倒的伤害”取平均（`average_non_kill_damage`，击倒与否本身按 16 个随机数精确分支，L34）——同一回合里之后靠剩余 HP 的事件随之确定：反伤把攻击方打倒（33 处带反伤招式：Flare Blitz、Wave Crash、Brave Bird……）、后手的击倒、回合末的残余伤害、Sitrus Berry 的触发（约 100 处）；另有待确认的引擎问题：Cursed Body 对多段招式只判一次（Showdown 每一下 30%）、Magic Bounce 反弹的 Will-O-Wisp 的命中、冰冻解除的概率、Ice Spinner 等零散；已知的 Copycat 调出的 Dig、Counter（engine_step 的同类） |
 | `engine_chain` | 24,463 个回合 | 23（原 108）：同上（L239 占 8）；链式只同步 HP、不同步异常状态，上一步已有的状态差异会连锁（Baneful Bunker 的中毒之后的 Toxic 失败） |
 | `state_live` / `state_replay` | 各 149,760 个决策点 | 0（第一轮的 12 / 18：变身的体重、复制招式的 PP——S154、S155；比较器原来不比较 `types` / `base_types`，加上后查出 Double Shock 之后的属性——S156） |
 | `tree_history` | 64,450 步 | 175：已知的三类（Illusion、Minior 的颜色、Revival Blessing） |

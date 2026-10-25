@@ -1114,7 +1114,10 @@ impl Pokemon {
     pub fn get_sleep_talk_choices(&self) -> Vec<Choice> {
         let mut vec = Vec::with_capacity(4);
         for p in self.moves.into_iter() {
-            if p.id != Choices::SLEEPTALK && p.id != Choices::NONE {
+            // alpha-poke patch (2026-10-25, doc/engine-diff.md L244): none Showdown marks
+            // nosleeptalk or charge (data/moves.ts sleeptalk.onHit) -- an Uproar, a Focus Punch,
+            // a Solar Beam were called a share each
+            if p.id != Choices::NONE && !p.choice.flags.charge && !NO_SLEEP_TALK.contains(&p.id) {
                 vec.push(p.choice.clone());
             }
         }
@@ -2928,3 +2931,17 @@ impl State {
         state
     }
 }
+
+// alpha-poke patch (2026-10-25, doc/engine-diff.md L244): Showdown's nosleeptalk and charge moves
+// (Gen 9's dex -- the charge ones too, not only by the engine's own flag)
+pub const NO_SLEEP_TALK: [Choices; 42] = [
+    Choices::ASSIST, Choices::BEAKBLAST, Choices::BELCH, Choices::BIDE, Choices::BLAZINGTORQUE,
+    Choices::BOUNCE, Choices::CELEBRATE, Choices::CHATTER, Choices::COMBATTORQUE, Choices::COPYCAT,
+    Choices::DIG, Choices::DIVE, Choices::DYNAMAXCANNON, Choices::FLY, Choices::FOCUSPUNCH,
+    Choices::HOLDHANDS, Choices::MAGICALTORQUE, Choices::MEFIRST, Choices::METRONOME, Choices::MIMIC,
+    Choices::MIRRORMOVE, Choices::NATUREPOWER, Choices::NOXIOUSTORQUE, Choices::PHANTOMFORCE,
+    Choices::SHADOWFORCE, Choices::SHELLTRAP, Choices::SKETCH, Choices::SLEEPTALK, Choices::STRUGGLE,
+    Choices::UPROAR, Choices::WICKEDTORQUE, Choices::ELECTROSHOT, Choices::FREEZESHOCK, Choices::GEOMANCY,
+    Choices::ICEBURN, Choices::METEORBEAM, Choices::RAZORWIND, Choices::SKULLBASH, Choices::SKYATTACK,
+    Choices::SKYDROP, Choices::SOLARBEAM, Choices::SOLARBLADE,
+];
