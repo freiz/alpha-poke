@@ -43,3 +43,32 @@ def test_an_assault_vest_holder_draws_no_status_move():
         s = sample_set(belief, _mon("sludgebomb", item="assaultvest"), NAMES, rng)
         assert s.item == "assaultvest"
         assert not any(_status(m) for m in s.moves), s.moves
+
+
+def test_an_item_replays_never_show_is_drawn():
+    """2026-10-25 (the belief check's prior support): the archetypes are mined from replays, which
+    show an item only when it reveals itself -- a Latias's Soul Dew never: its archetypes had no
+    weight on it, the sampler never drew it (Smogon's usage: 36%). Mixed with the base marginal
+    (ARCH_MIX) it is drawn; at mix 0, the old belief, not."""
+    belief = BeliefModel.load()
+    names = ("Corviknight", "Great Tusk", "Latias", "Gholdengo", "Kingambit", "Dragapult")
+    mon = Pokemon(species="latias", gen=9)
+
+    def items(mix):
+        rng = random.Random(0)
+        return {sample_set(belief, mon, names, rng, 1.0, mix=mix).item for _ in range(400)}
+
+    assert "souldew" in items(None) and "souldew" not in items(0.0)
+
+
+def test_a_cosmetic_formes_prior_is_its_base_species():
+    """Smogon's usage lists Maushold-Four under Maushold: its prior was empty (2026-10-25). Only
+    a forme the same in battle falls back -- not Tauros-Paldea-Combat to Tauros."""
+    from alpha_poke.belief.priors import SmogonPrior
+
+    belief = BeliefModel.load()
+    p = belief.prior
+    while not isinstance(p, SmogonPrior):
+        p = p.base
+    assert p.predict("Maushold-Four", ()).move == p.predict("Maushold", ()).move != {}
+    assert p.predict("Tauros-Paldea-Combat", ()).move != p.predict("Tauros", ()).move

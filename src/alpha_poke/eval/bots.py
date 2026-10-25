@@ -58,6 +58,9 @@ VARIANTS: dict[str, tuple[str, dict]] = {
                 "phase_key": os.environ.get(f"ALPHA_PHASE_KEY_{x.upper()}", "0") == "1",
                 # F1 off on this side: ALPHA_DAMAGE_BELIEF_A / _B = 0 (A/B)
                 "damage_belief": os.environ.get(f"ALPHA_DAMAGE_BELIEF_{x.upper()}", "1") != "0",
+                # the item / tera archetype mix on this side: ALPHA_ARCH_MIX_A / _B (0: the belief
+                # before 2026-10-25; A/B)
+                "arch_mix": os.environ.get(f"ALPHA_ARCH_MIX_{x.upper()}"),
             },
         )
         for x in ("a", "b")
@@ -120,7 +123,7 @@ def make_bot(
                                 extra.get("iters"), extra.get("ml"),
                                 extra.get("value_model"),
                                 extra.get("damage_belief", True),
-                                extra.get("phase_key", False))  # fmt: skip
+                                extra.get("phase_key", False), extra.get("arch_mix"))  # fmt: skip
         if cls_name == "search":
             from alpha_poke.agents.search_player import SearchPlayer as cls
         elif cls_name == "policy":
@@ -139,7 +142,7 @@ _BATCHERS: dict = {}
 def _batched_bot(model: str, heldout_pool, trace_dir, kw, dtype: str | None = None,
                  iters: str | None = None, ml: str | None = None,
                  value_model: str | None = None, damage_belief: bool = True,
-                 phase_key: bool = False) -> Player:  # fmt: skip
+                 phase_key: bool = False, arch_mix: str | None = None) -> Player:  # fmt: skip
     import random
 
     from alpha_poke.agents.belief_state import BeliefModel
@@ -156,5 +159,6 @@ def _batched_bot(model: str, heldout_pool, trace_dir, kw, dtype: str | None = No
         net_policy="both", model=model, batcher=_BATCHERS[key], full_frac=1.0,
         full_iters=iters, noise=(0.0, 10.0), greedy=True, record=False,
         turn_cap=int(os.environ.get("ALPHA_TURN_CAP", 300)),
-        seed=random.randrange(1 << 30), damage_belief=damage_belief, **kw,
+        seed=random.randrange(1 << 30), damage_belief=damage_belief,
+        arch_mix=float(arch_mix) if arch_mix not in (None, "") else None, **kw,
     )  # fmt: skip

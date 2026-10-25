@@ -1,8 +1,8 @@
 {
  "belief_truth": {
-  "belief:item": 8,
+  "belief:item": 6,
   "belief:move": 55,
-  "belief:tera": 22
+  "belief:tera": 12
  },
  "engine_chain": {},
  "engine_step": {},

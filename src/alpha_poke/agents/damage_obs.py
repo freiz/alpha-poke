@@ -441,25 +441,27 @@ def item_changes(lines: list[str]) -> dict[tuple[str, str], str | None]:
     return {k: items.original.get(k) for k in items.changed}
 
 
-def _candidates(belief, mon, team_names: tuple[str, ...], then=False) -> tuple[list, list[float]]:
+def _candidates(belief, mon, team_names: tuple[str, ...], then=False, mix=None) -> tuple[list, list[float]]:
     """(item, ability, Spread) candidates of an opposing mon and their prior: the belief's team-
     conditioned item marginal (a revealed item alone), the usage of its possible abilities (a
     revealed one alone), the usage spreads. The item is the one it held when it hit / was hit:
     a gone item counts as unknown here; ``then``, for a mon whose item changed hands since
     (``item_changes``), the one it held before (None: not known -- not the one it holds now)."""
     from alpha_poke.agents.belief_state import _preview_name, ability_probs
-    from alpha_poke.agents.engine_state import _prior
+    from alpha_poke.agents.engine_state import base_marginal
     from alpha_poke.agents.speed import spread_dist
 
-    dist = _prior(belief, _preview_name(mon, team_names), team_names)
+    # (the sampler's base item marginal: engine_state.base_marginal -- the team prior's sees the
+    # revealed items only; 2026-10-25)
+    marg = base_marginal(belief, _preview_name(mon, team_names), team_names, "item", mix)
     if then is not False and then is not None:
         items = [(then, 1.0)]
     elif then is None:
-        items = sorted(dist.item.items(), key=lambda kv: -kv[1])[:TOP_ITEMS] or [("none", 1.0)]
+        items = sorted(marg.items(), key=lambda kv: -kv[1])[:TOP_ITEMS] or [("none", 1.0)]
     elif mon.item and mon.item != "unknown_item":
         items = [(mon.item, 1.0)]
     else:
-        items = sorted(dist.item.items(), key=lambda kv: -kv[1])[:TOP_ITEMS] or [("none", 1.0)]
+        items = sorted(marg.items(), key=lambda kv: -kv[1])[:TOP_ITEMS] or [("none", 1.0)]
     abilities = list(ability_probs(mon).items()) or [("none", 1.0)]
     spreads, ws = spread_dist(mon.species)
     if not spreads:
@@ -474,7 +476,7 @@ def _candidates(belief, mon, team_names: tuple[str, ...], then=False) -> tuple[l
     return cands, prior
 
 
-def damage_posteriors(battle, belief, theirs: list, team_names: tuple[str, ...]) -> dict:
+def damage_posteriors(battle, belief, theirs: list, team_names: tuple[str, ...], mix=None) -> dict:
     """Per opposing species id with clean hits: [(item, ability, Spread, posterior weight)] over
     its candidates (``_candidates``), from the turn-start states the search recorded
     (``record_base``). Cached per mon and evidence."""
@@ -511,9 +513,9 @@ def damage_posteriors(battle, belief, theirs: list, team_names: tuple[str, ...])
         if not mh:
             continue
         then = changes.get((them, sp), False)  # (its item changed hands: the one it held then)
-        key = (sp, len(mh), m.item, m.ability, then)
+        key = (sp, len(mh), m.item, m.ability, then, mix)
         if key not in cache:
-            cands, prior = _candidates(belief, m, team_names, then=then)
+            cands, prior = _candidates(belief, m, team_names, then=then, mix=mix)
             level = m.level or 100
             # (its own base stats: a transformed one's poke-env has its target's)
             stats = [calc_stats(own_base_stats(m), c[2], level=level) for c in cands]

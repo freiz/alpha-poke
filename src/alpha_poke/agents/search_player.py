@@ -64,6 +64,7 @@ class SearchPlayer(KnowledgePlayer):
         net_policy=None,
         device=None,
         damage_belief: bool | None = None,
+        arch_mix: float | None = None,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
@@ -79,6 +80,10 @@ class SearchPlayer(KnowledgePlayer):
         # off, for A/B)
         self.damage_belief = (damage_belief if damage_belief is not None
                               else os.environ.get("ALPHA_DAMAGE_BELIEF", "1") != "0")  # fmt: skip
+        # the opponent's item / tera: the archetypes' weights mixed with the base marginal at this
+        # (engine_state.ARCH_MIX if None; 0: the belief before 2026-10-25 -- ALPHA_ARCH_MIX, A/B)
+        env = os.environ.get("ALPHA_ARCH_MIX")
+        self.arch_mix = arch_mix if arch_mix is not None else (float(env) if env else None)
         self.worlds = worlds or _env_int("ALPHA_ISMCTS_WORLDS", 32)
         # leaf values (and priors) from a trained network (run directory, design D13); None =
         # poke-engine's handcrafted evaluation
@@ -156,7 +161,7 @@ class SearchPlayer(KnowledgePlayer):
         vals = {}
         for m in cands:
             states = [build_state(battle, self.belief, names, rng, move_beta=self.move_beta,
-                                  damage_belief=self.damage_belief,
+                                  damage_belief=self.damage_belief, arch_mix=self.arch_mix,
                                   force_switch=False, revived=m.species)
                       for _ in range(self.worlds)]  # fmt: skip
             ctxs = (net_context.contexts(battle, states, net_context.needs_post(self.model))
@@ -180,7 +185,7 @@ class SearchPlayer(KnowledgePlayer):
         rng = random.Random(f"{battle.battle_tag}:{battle.turn}:{len(battle.available_moves)}")
         t0 = time.time()
         states = [build_state(battle, self.belief, names, rng, move_beta=self.move_beta,
-                                  damage_belief=self.damage_belief)
+                                  damage_belief=self.damage_belief, arch_mix=self.arch_mix)
                   for _ in range(self.worlds)]  # fmt: skip
         issues = request_mismatch(battle, states[0])
         if issues:

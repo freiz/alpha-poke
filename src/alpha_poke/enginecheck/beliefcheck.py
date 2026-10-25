@@ -23,10 +23,10 @@ def _item_support(belief, mon, team_names, known_moves) -> dict:
     weights under the posterior of its revealed moves; the team prior's marginal without
     archetypes); an Assault Vest out with a status move known."""
     from alpha_poke.agents.belief_state import _preview_name
-    from alpha_poke.agents.engine_state import _prior, _status
+    from alpha_poke.agents.engine_state import _status, arch_mix, base_marginal
 
     species = _preview_name(mon, team_names)
-    dist = _prior(belief, species, team_names)
+    base = base_marginal(belief, species, team_names, "item")
     ss = belief.sets.get(species)
     out: dict = collections.defaultdict(float)
     if ss is not None and ss.params and ss.vocab.get("item"):
@@ -34,15 +34,26 @@ def _item_support(belief, mon, team_names, known_moves) -> dict:
         post = ss.posterior(item=None, moves=[names.get(m, m) for m in known_moves])
         total = float(sum(post)) or 1.0
         for k, pk in enumerate(post):
-            w = ss.params["item"][k]
-            s = float(sum(w)) or 1.0
-            for n, x in zip(ss.vocab["item"], w, strict=False):
-                out[to_id(n)] += float(pk) / total * float(x) / s
+            for n, x in arch_mix(ss, k, "item", base).items():
+                out[n] += float(pk) / total * x
     else:
-        for n, x in dist.item.items():
-            out[to_id(n)] += float(x)
+        for n, x in base.items():
+            out[n] += float(x)
     if any(map(_status, known_moves)):
         out.pop("assaultvest", None)
+    return out
+
+
+def _tera_support(belief, species: str, team_names) -> dict:
+    """The tera types the sampler draws from: the base marginal, mixed into every archetype's."""
+    from alpha_poke.agents.engine_state import base_marginal
+
+    out = dict(base_marginal(belief, species, team_names, "tera"))
+    ss = belief.sets.get(species)
+    if ss is not None and ss.params and ss.vocab.get("tera"):
+        for k in range(len(ss.params["tera"])):
+            for n, w in zip(ss.vocab["tera"], ss.params["tera"][k], strict=False):
+                out[to_id(n)] = out.get(to_id(n), 0.0) + float(w)
     return out
 
 
@@ -64,9 +75,8 @@ def belief_diffs(p1: str, p2: str, seed: int, max_turns: int = 40, script: list 
                  fmt: str | None = None) -> dict:
     """{"decisions", "kinds": {kind: n}, "examples": {kind: [...]}, "errors"} over a recorded
     battle's decisions, both sides' views."""
-    from alpha_poke.agents.belief_state import ability_probs
+    from alpha_poke.agents.belief_state import _preview_name, ability_probs
     from alpha_poke.agents.damage_obs import EPS, item_changes, likelihood, our_disguised, slot_of
-    from alpha_poke.agents.engine_state import _prior
     from alpha_poke.agents.net_context import battle_log
     from alpha_poke.agents.pokeview import own_moves
     from alpha_poke.agents.speed import battle_observations, consistent, spe_stat
@@ -170,9 +180,11 @@ def belief_diffs(p1: str, p2: str, seed: int, max_turns: int = 40, script: list 
                 if ability_probs(mon).get(ab, 0.0) <= 0 and not any(to_id(x) == ab for x in ability_probs(mon)):
                     found("belief:ability", (*where, ab))
             if not mon.is_terastallized:
-                dist = _prior(belief, mon.species, names)
+                # (the name the sampler asks with: engine_state.sample_set's -- poke-env's id is no
+                # table name, Maushold-Four's tera prior read empty; 2026-10-25)
+                tera_support = _tera_support(belief, _preview_name(mon, names), names)
                 tt = str(tm.tera_type).lower()
-                if tt not in ("", "typeless") and not any(to_id(x) == tt and w > 0 for x, w in dist.tera.items()):
+                if tt not in ("", "typeless") and tera_support.get(tt, 0.0) <= 0:
                     found("belief:tera", (*where, tt))
             support = None
             for mv in tm.moves:

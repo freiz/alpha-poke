@@ -138,7 +138,7 @@ class SelfPlayPlayer(SearchPlayer):
         futs = []
         for m in cands:
             states = [build_state(battle, self.belief, names, self.rng, move_beta=self.move_beta,
-                                  damage_belief=self.damage_belief,
+                                  damage_belief=self.damage_belief, arch_mix=self.arch_mix,
                                   force_switch=False, revived=m.species)
                       for _ in range(self.fast_worlds)]  # fmt: skip
             ctxs = net_context.contexts(battle, states, self.batcher.post)
@@ -179,7 +179,7 @@ class SelfPlayPlayer(SearchPlayer):
         last = self._foe_moves.get(battle.battle_tag)
         pending = last[1] if kind == KIND_PIVOT and last and last[0] == battle.turn else None
         states = [build_state(battle, self.belief, names, self.rng, move_beta=self.move_beta,
-                                  damage_belief=self.damage_belief, foe_pending=pending)
+                                  damage_belief=self.damage_belief, arch_mix=self.arch_mix, foe_pending=pending)
                   for _ in range(n_worlds)]  # fmt: skip
         issues = request_mismatch(battle, states[0])
         if issues:

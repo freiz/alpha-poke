@@ -71,6 +71,8 @@ MUTATIONS = [
      "or h.forme == forme.get((their, h.defender if h.by_us else h.attacker), h.forme)]", "or True]"),
     ("S156 the types a tera'd mon kept", "src/alpha_poke/agents/engine_state.py",
      "            mons[i] = _with(p, types=tuple(p.base_types))", "            pass"),
+    ("B4 the archetypes' item / tera mixed with the base marginal", "src/alpha_poke/agents/engine_state.py",
+     "ARCH_MIX = 0.6\n", "ARCH_MIX = 0.0\n"),
     ("S156 ??? is typeless", "src/alpha_poke/agents/engine_state.py",
      '"typeless" if t.name == "THREE_QUESTION_MARKS" else t.name.lower()', "t.name.lower()"),
 ]

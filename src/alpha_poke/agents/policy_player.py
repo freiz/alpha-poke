@@ -38,7 +38,7 @@ class PolicyPlayer(SearchPlayer):
         names = self._opp_team_names(battle)
         rng = random.Random(f"{battle.battle_tag}:{battle.turn}:{len(battle.available_moves)}")
         states = [build_state(battle, self.belief, names, rng, move_beta=self.move_beta,
-                              damage_belief=self.damage_belief)
+                              damage_belief=self.damage_belief, arch_mix=self.arch_mix)
                   for _ in range(self.policy_worlds)]  # fmt: skip
         ctxs = net_context.contexts(battle, states, net_context.needs_post(self.model))
         # the modelled player's rating as our own rating input (the opponent's stays)

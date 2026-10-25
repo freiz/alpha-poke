@@ -61,7 +61,22 @@ class SmogonPrior:
         if sid in self._d:
             return self._d[sid]
         match = [v for k, v in self._d.items() if k.startswith(sid)]
-        return match[0] if match else Dist({}, {}, {})
+        if match:
+            return match[0]
+        # (a forme the stats list under its base species -- Maushold-Four as Maushold: only one the
+        # same in battle, its types and base stats; not Tauros-Paldea-Combat as Tauros. 2026-10-25,
+        # the belief check: its whole prior was empty)
+        same = [k for k in self._d if sid.startswith(k) and _same_in_battle(sid, k)]
+        return self._d[max(same, key=len)] if same else Dist({}, {}, {})
+
+
+def _same_in_battle(a: str, b: str) -> bool:
+    """Two species ids with the same types and base stats (a cosmetic forme and its base)."""
+    from poke_env.data import GenData
+
+    dex = GenData.from_gen(9).pokedex
+    x, y = dex.get(a), dex.get(b)
+    return bool(x and y) and x["types"] == y["types"] and x["baseStats"] == y["baseStats"]
 
 
 class _Counts:

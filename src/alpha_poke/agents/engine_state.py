@@ -191,6 +191,65 @@ def _prior(belief: BeliefModel, species: str, team_names: tuple[str, ...]):
     return dist
 
 
+# The item / tera an archetype is drawn with: its weights mixed with a base marginal (ARCH_MIX of
+# it) -- the archetypes are mined from replays, which show an item only when it reveals itself
+# (Leftovers, Rocky Helmet, a Focus Sash: yes; Heavy-Duty Boots, Soul Dew: hardly ever) and a tera
+# type only when used: a Latias's Soul Dew, a Cramorant's Boots had no weight at all. The base is
+# half the team prior's (its replay counts the same bias, its support the widest) and half
+# Smogon's usage (the teams' own items). 2026-10-25, the catalog's 1,170 OU teams with two moves
+# shown: item NLL 1.93 -> 1.65, top-1 0.48 -> 0.51, the true one at 0 5.6% -> 1.2%; tera NLL 2.49
+# -> 2.14, at 0 12% -> 3.3%.
+ARCH_MIX = 0.6
+_BASES: dict = {}
+
+
+def _smogon(belief: BeliefModel):
+    from alpha_poke.belief.priors import SmogonPrior
+
+    p = belief.prior
+    while not isinstance(p, SmogonPrior) and hasattr(p, "base"):
+        p = p.base
+    return p if isinstance(p, SmogonPrior) else None
+
+
+def base_marginal(belief: BeliefModel, species: str, team_names: tuple[str, ...], attr: str,
+                  mix: float | None = None) -> dict:
+    """``attr`` ("item" / "tera") of a species in a team: half the team prior's, half Smogon's
+    (each normalized; one alone if the other has none), ids as keys -- the team prior's alone at
+    ``mix`` 0 (the belief before 2026-10-25, for A/B). Cached, read-only."""
+    old = (mix if mix is not None else ARCH_MIX) <= 0
+    key = (id(belief), species, team_names, attr, old)
+    out = _BASES.get(key)
+    if out is None:
+        if len(_BASES) > 20_000:
+            _BASES.clear()
+        parts = [getattr(_prior(belief, species, team_names), attr)]
+        sm = _smogon(belief)
+        if sm is not None and not old:
+            parts.append(getattr(sm.predict(species, team_names), attr))
+        parts = [d for d in parts if sum(d.values()) > 0]
+        out = {}
+        for d in parts:
+            t = sum(d.values())
+            for k, v in d.items():
+                out[to_id(k)] = out.get(to_id(k), 0.0) + v / t / len(parts)
+        _BASES[key] = out
+    return out
+
+
+def arch_mix(ss, k: int, attr: str, base: dict, mix: float | None = None) -> dict:
+    """Archetype ``k``'s ``attr`` weights (normalized) mixed with ``base`` (``mix`` of it, ARCH_MIX
+    if None): ids as keys."""
+    w = np.asarray(ss.params[attr][k], dtype=float)
+    total = float(w.sum())
+    lam = (mix if mix is not None else ARCH_MIX) if base else 0.0
+    out = {key: lam * v for key, v in base.items()} if lam > 0 else {}
+    if total > 0:
+        for n, v in zip(ss.vocab[attr], w, strict=False):
+            out[to_id(n)] = out.get(to_id(n), 0.0) + (1 - lam) * float(v) / total
+    return out
+
+
 def sample_set(
     belief: BeliefModel,
     mon,
@@ -202,6 +261,7 @@ def sample_set(
     speed_obs: list | None = None,
     dmg_post: list | None = None,
     exclude: frozenset = frozenset(),
+    mix: float | None = None,
 ):
     """One plausible full set for an opposing mon, consistent with what it revealed (and with
     ``known``: game-wide facts about the mon, used for side one of replay positions).
@@ -247,7 +307,9 @@ def sample_set(
         k = min(k, len(post) - 1)
 
     def draw(attr, fallback: dict[str, float], exclude: tuple = ()):
-        if k is not None and ss.vocab.get(attr):
+        if k is not None and ss.vocab.get(attr) and attr in ("item", "tera"):
+            fallback = arch_mix(ss, k, attr, fallback, mix)  # (its weights with the base: ARCH_MIX)
+        elif k is not None and ss.vocab.get(attr):
             w = flat(ss.params[attr][k])
             if exclude:
                 w = np.where([to_id(n) in exclude for n in ss.vocab[attr]], 0.0, w)
@@ -269,9 +331,9 @@ def sample_set(
         # archetype's item and moves are drawn apart; 2026-10-24, plan C's slot check: a replay's
         # Slowking-Galar with Toxic and Chilly Reception held an Assault Vest, its Toxic no option)
         no_vest = ("assaultvest",) if any(map(_status, revealed)) else ()
-        item = draw("item", dist.item, no_vest) or "none"
+        item = draw("item", base_marginal(belief, species, team_names, "item", mix), no_vest) or "none"
     if tera is None:
-        tera = draw("tera", dist.tera) or _tera(mon)
+        tera = draw("tera", base_marginal(belief, species, team_names, "tera", mix)) or _tera(mon)
     # (its own: not a temporary one -- Trace's, a Transform's; 2026-10-23 review: the copied
     # Intimidate was its base ability, still on after its switch-out)
     ability = own_ability(mon)
@@ -306,13 +368,12 @@ def sample_set(
         level = mon.level or 100
         w = [p for *_, p in dmg_post]
         if k is not None and not item_seen and ss.vocab.get("item"):
-            # the item consistent with the moves: the candidates' prior is the item marginal
-            # (dist.item), swapped here for the archetype's item weights (the moves drawn below
-            # are the archetype's: a Choice Scarf with Nasty Plot otherwise)
-            arch: dict[str, float] = {}
-            for n, v in zip(ss.vocab["item"], flat(ss.params["item"][k]), strict=False):
-                arch[to_id(n)] = arch.get(to_id(n), 0.0) + float(v)
-            marg = {to_id(n): v for n, v in dist.item.items()}
+            # the item consistent with the moves: the candidates' prior is the base marginal
+            # (damage_obs._candidates), swapped here for the archetype's item weights mixed with
+            # it (the moves drawn below are the archetype's: a Choice Scarf with Nasty Plot
+            # otherwise; ARCH_MIX)
+            marg = base_marginal(belief, species, team_names, "item", mix)
+            arch = flat(arch_mix(ss, k, "item", marg, mix))
             w = [p * arch.get(it, 0.0) / max(marg.get(it, 0.0), 1e-9)
                  for (it, *_), p in zip(dmg_post, w, strict=True)]  # fmt: skip
         if not item_seen and any(map(_status, moves)):  # (no Assault Vest with a status move)
@@ -1003,6 +1064,7 @@ def build_state(
     revived: str | None = None,
     damage_belief: bool = True,
     foe_pending: dict[str, float] | None = None,
+    arch_mix: float | None = None,
 ) -> pe.State:
     """One determinization of the current battle (side_one = us): the opponent's sets sampled
     from the belief, consistent with what they revealed. With ``spectator`` side
@@ -1109,7 +1171,7 @@ def build_state(
     # the opponent's speed: usage spreads consistent with the observed move order
     obs = battle_observations(battle) if spectator is None else None
     # F1: the damage evidence (play time only, as the speed's): a posterior per mon with hits
-    dmg = (damage_posteriors(battle, belief, theirs, team_names)
+    dmg = (damage_posteriors(battle, belief, theirs, team_names, arch_mix)
            if spectator is None and damage_belief else {})  # fmt: skip
     their_keys = [next((k for k, v in battle.opponent_team.items() if v is m), None)
                   for m in theirs]  # fmt: skip
@@ -1129,7 +1191,7 @@ def build_state(
     # Zoroark's (_illusion_fix)
     zi = _illusion(theirs, opp_active, battle.opponent_team, rng)
     dis_them, z_them, _ = _illusion_fix(battle.opponent_team, tm_them, zi is not None)
-    their_sets = [sample_set(belief, m, team_names, rng, move_beta,
+    their_sets = [sample_set(belief, m, team_names, rng, move_beta, mix=arch_mix,
                              known=copied if i == our_t else (
                                  KnownSet(moves=[x for x in z_them[id(m)] if x in _MOVES])
                                  if id(m) in z_them else None),
