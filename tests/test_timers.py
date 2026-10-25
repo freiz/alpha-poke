@@ -1142,3 +1142,22 @@ def test_the_replay_paths_second_run_facts():
     # (a recharge removes Truant's volatile -- Showdown's mustrecharge: no loaf after)
     t = run(START + "|move|p2a: Bob|Giga Impact|p1a: Fishy\n|-mustrecharge|p2a: Bob\n|upkeep\n|turn|2\n|cant|p2a: Bob|recharge")
     assert not t["p2"].truant_next
+
+
+def test_a_healing_wish_waits_for_a_mon_that_needs_it():
+    """S158 (state_chain): Gen 9's Healing Wish / Lunar Dance stay on the slot until a mon that
+    needs them comes in (Showdown's slot condition, its -heal ends it) -- our states never had
+    one: a hurt mon switching in later not healed in the search."""
+    t = run(START + "|move|p1a: Fishy|Healing Wish|p1a: Fishy\n|faint|p1a: Fishy\n|upkeep\n"
+            "|switch|p1a: Tank|Snorlax, M|430/430\n|turn|2")  # fmt: skip
+    assert t["p1"].healing_wish == 1 and t["p2"].healing_wish == 0
+    t = run(START + "|move|p1a: Fishy|Lunar Dance|p1a: Fishy\n|faint|p1a: Fishy\n|upkeep\n"
+            "|switch|p1a: Tank|Snorlax, M|200/430\n|-heal|p1a: Tank|430/430|[from] move: Lunar Dance\n|turn|2")  # fmt: skip
+    assert t["p1"].healing_wish == 0
+    t = run(START + "|move|p1a: Fishy|Healing Wish|p1a: Fishy\n|faint|p1a: Fishy\n|upkeep\n"
+            "|switch|p1a: Tank|Snorlax, M|430/430\n|turn|2\n|switch|p1a: Cat|Persian, M|100/300\n"
+            "|-heal|p1a: Cat|300/300|[from] move: Healing Wish\n|upkeep\n|turn|3")  # fmt: skip
+    assert t["p1"].healing_wish == 0
+    # (no one to switch to: [still], -fail -- none waits)
+    t = run(START + "|move|p1a: Fishy|Healing Wish|p1a: Fishy|[still]\n|-fail|p1a: Fishy\n|upkeep\n|turn|2")
+    assert t["p1"].healing_wish == 0

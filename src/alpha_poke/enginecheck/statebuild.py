@@ -34,8 +34,9 @@ LOG.setLevel(logging.CRITICAL)
 # the side's volatile counts compared (the engine's VolatileStatusDurations)
 DURATIONS = ("confusion", "disable", "encore", "healblock", "magnetrise", "partiallytrapped",
              "slowstart", "taunt", "throatchop", "yawn", "lockedmove")  # fmt: skip
-CONDITIONS = ("aurora_veil", "light_screen", "reflect", "safeguard", "mist", "tailwind", "spikes",
-              "stealth_rock", "sticky_web", "toxic_spikes", "toxic_count", "protect")  # fmt: skip
+# every side condition of the engine's (S158: a hand-written list left Healing Wish out -- never
+# compared, never built); test_every_field_is_compared_or_says_why
+CONDITIONS = tuple(sorted(x for x in dir(pe.SideConditions) if not x.startswith("_")))
 BOOSTS = ("attack_boost", "defense_boost", "special_attack_boost", "special_defense_boost",
           "speed_boost", "accuracy_boost", "evasion_boost")  # fmt: skip
 STATS = ("attack", "defense", "special_attack", "special_defense", "speed")

@@ -184,3 +184,14 @@ def test_the_tree_check_keeps_a_recording_error(monkeypatch):
     monkeypatch.setattr(ec, "random_battle", broken)
     r = treediff.tree_diffs("", "", 1)
     assert any("broke off" in e for e in r["errors"]), r
+
+
+def test_every_side_condition_is_compared():
+    """The state checks compared a hand-written list of side conditions: Healing Wish was never in
+    it -- never compared, never built (S158, found by state_chain). Every engine field now."""
+    import poke_engine as pe
+
+    from alpha_poke.enginecheck import statebuild
+
+    assert set(statebuild.CONDITIONS) == {x for x in dir(pe.SideConditions) if not x.startswith("_")}
+    assert "healing_wish" in statebuild.CONDITIONS

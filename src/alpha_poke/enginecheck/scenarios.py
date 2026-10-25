@@ -427,6 +427,21 @@ def engine_ends() -> list[Spec]:
               team(S("Dragonite", "Leftovers", "Inner Focus", ["Dragon Dance", "Earthquake", "Outrage", "Roost"]), FILLER),
               [{"p1": "move 3", "p2": "move 1"}, {"p1": "move 1", "p2": "move 1"}],
               expect=("|move|p1a: Ditto|Outrage|p2a: Dragonite|[from] lockedmove",)),
+        # (S158: a Healing Wish waiting -- Gen 9's: its replacement at full HP, a full Corviknight
+        # after, the hurt Snorlax back healed; our state never had it)
+        _spec("ends/healing-wish-waits",
+              team(S("Gardevoir", "Leftovers", "Synchronize", ["Healing Wish", "Moonblast", "Calm Mind", "Protect"]), FILLER,
+                   S("Corviknight", "Leftovers", "Pressure", ["Roost", "Body Press", "Iron Defense", "Defog"])),
+              team(S("Garchomp", "Leftovers", "Rough Skin", ["Earthquake", "Dragon Claw", "Stone Edge", "Swords Dance"]), FILLER),
+              [{"p1": "move 1", "p2": "move 4"}, {"p1": "switch 2"}, {"p1": "move 4", "p2": "move 1"},
+               {"p1": "switch 3", "p2": "move 4"}, {"p1": "switch 3", "p2": "move 4"}],
+              expect=("|-heal|p1a: Snorlax|", "[from] move: Healing Wish")),
+        # (S158c / L226: the Stealth Rock laid before the Toxic Spikes -- their order on a switch-in;
+        # our state never had it)
+        _spec("ends/toxic-spikes-order", team(S("Corviknight", "Leftovers", "Pressure", ["Roost", "Body Press", "Iron Defense", "Defog"]), FILLER),
+              team(S("Glimmora", "Focus Sash", "Toxic Debris", ["Stealth Rock", "Toxic Spikes", "Power Gem", "Mortal Spin"]), FILLER),
+              [{"p1": "move 3", "p2": "move 1"}, {"p1": "move 3", "p2": "move 2"}, {"p1": "switch 2", "p2": "move 3"},
+               {"p1": "move 4", "p2": "move 3"}], expect=("|-sidestart|p1: ", "move: Toxic Spikes")),
     ]  # fmt: skip
 
 

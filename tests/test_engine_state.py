@@ -1088,3 +1088,17 @@ def test_a_slow_start_copied_by_a_mon_in_since_last_turn_counts_down_at_once():
     t = timers([x.split("|") for x in lines])
     assert t["p2"].slowstart == [4, True], t["p2"].slowstart
     assert t["p1"].slowstart == [4, True], t["p1"].slowstart  # (a lead: in at turn 1's start too)
+
+
+def test_the_toxic_spikes_order():
+    """L226 / S158c: the damaging hazards laid before the Toxic Spikes (their order on a
+    switch-in) -- the engine's toxic_spikes_order, never passed (the state checks compared a
+    hand-written list without it)."""
+    from poke_env.battle import SideCondition as C
+
+    from alpha_poke.agents.engine_state import _toxic_spikes_order
+
+    assert _toxic_spikes_order({C.STEALTH_ROCK: 1, C.SPIKES: 2, C.TOXIC_SPIKES: 1}) == 3
+    assert _toxic_spikes_order({C.TOXIC_SPIKES: 1, C.STEALTH_ROCK: 1, C.SPIKES: 1}) == 0
+    assert _toxic_spikes_order({C.SPIKES: 1, C.TOXIC_SPIKES: 2, C.STEALTH_ROCK: 1}) == 2
+    assert _toxic_spikes_order({C.STEALTH_ROCK: 1}) == 0

@@ -582,10 +582,12 @@ def _boosts(mon, more: dict | None = None) -> dict:
 
 
 def _side_conditions(sc: dict, turn: int, toxic: int = 0, protect: int = 0,
-                     clay: frozenset = frozenset(), elapsed: dict | None = None) -> pe.SideConditions:  # fmt: skip
+                     clay: frozenset = frozenset(), elapsed: dict | None = None,
+                     healing_wish: int = 0) -> pe.SideConditions:  # fmt: skip
     """``clay``: the screens (reflect, lightscreen, auroraveil) set by a Light Clay holder: 8
     turns. ``elapsed``: the timed conditions' ends of turn so far (the timers' side_elapsed;
-    poke-env's start turn when the log never showed one start)."""
+    poke-env's start turn when the log never showed one start). ``healing_wish``: the timers'
+    (1 Healing Wish, 2 Lunar Dance waiting on the slot)."""
     elapsed = elapsed or {}
 
     def left(cond, key: str, length: int) -> int:
@@ -608,7 +610,22 @@ def _side_conditions(sc: dict, turn: int, toxic: int = 0, protect: int = 0,
         # (the engine has them: 2026-10-23, the state-construction differential -- never passed)
         safeguard=left(SideCondition.SAFEGUARD, "safeguard", 5),
         mist=left(SideCondition.MIST, "mist", 5),
+        # (S158: never passed -- a Healing Wish waiting for a mon that needs it, Gen 9's)
+        healing_wish=healing_wish,
+        # (L226: the damaging hazards laid before the Toxic Spikes, their order on switching in --
+        # Showdown's conditions in the order they came, poke-env's dict too; never passed: S158c)
+        toxic_spikes_order=_toxic_spikes_order(sc),
     )
+
+
+def _toxic_spikes_order(sc: dict) -> int:
+    """1 Stealth Rock, 2 Spikes: those laid before the Toxic Spikes (the engine's
+    toxic_spikes_order)."""
+    keys = list(sc)
+    if SideCondition.TOXIC_SPIKES not in keys:
+        return 0
+    before = keys[: keys.index(SideCondition.TOXIC_SPIKES)]
+    return (SideCondition.STEALTH_ROCK in before) | (SideCondition.SPIKES in before) << 1
 
 
 def _volatiles(mon) -> set[str]:
@@ -1764,7 +1781,8 @@ def build_state(
         pokemon=_pad(our_mons),
         active_index=pe.PokemonIndex(str(our_idx)),
         side_conditions=_side_conditions(
-            battle.side_conditions, turn, *_counts(tm_us, active), clay_us, tm_us.side_elapsed
+            battle.side_conditions, turn, *_counts(tm_us, active), clay_us, tm_us.side_elapsed,
+            tm_us.healing_wish,
         ),
         volatile_statuses=our_vol,
         **_timed(tm_us, active, ours, our_mons, our_vol, disable.get("us"), locked.get(True),
@@ -1809,7 +1827,7 @@ def build_state(
         active_index=pe.PokemonIndex(str(their_idx)),
         side_conditions=_side_conditions(
             battle.opponent_side_conditions, turn, *_counts(tm_them, opp_active), clay_them,
-            tm_them.side_elapsed,
+            tm_them.side_elapsed, tm_them.healing_wish,
         ),
         volatile_statuses=their_vol,
         **_timed(tm_them, opp_active, theirs, their_mons, their_vol, disable.get("them"),

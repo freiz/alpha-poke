@@ -125,6 +125,9 @@ class SideTimers:
     protected_move: str = ""  # its protection this turn (protect, banefulbunker, endure, ...)
     wish: tuple[int, str] | None = None  # (turns left, the wisher's species id)
     future: tuple[int, str] | None = None  # Future Sight pending (turns, the user's species id)
+    # Healing Wish (1) / Lunar Dance (2) waiting on the slot: Gen 9's until a mon that needs it
+    # comes in (Showdown's slot condition -- its -heal ends it; the engine's side condition, L48)
+    healing_wish: int = 0
     confusion: int | None = None
     taunt: int | None = None
     encore: int | None = None
@@ -756,6 +759,8 @@ def _feed_one(sides: dict, p: list[str]) -> None:
             s.last_move = mv
         if mv == "wish" and st.wish is None and "[still]" not in p:
             st.wish = (2, sp)
+        if mv in ("healingwish", "lunardance") and "[still]" not in p:  # (no one to switch to: [still], -fail)
+            st.healing_wish = 1 if mv == "healingwish" else 2
     elif tag == "-fail" and len(p) > 3 and to_id(p[3].replace("move: ", "")) == "wish":
         st.wish = None
         st.failed_now = True
@@ -924,6 +929,9 @@ def _feed_one(sides: dict, p: list[str]) -> None:
         # (Gen 9's Lunar Dance restores the PP too -- poke-env's count restored, agents/
         # poke_env_fixes.py; Spite's taken PP back as well: S84)
         st.pp_taken.pop(sp, None)
+        st.healing_wish = 0
+    elif tag == "-heal" and "[from] move: Healing Wish" in p:
+        st.healing_wish = 0
     elif tag == "-start" and len(p) > 3 and p[3] == "perish3" and "[silent]" in p and sp == st.active:
         st.perish_fresh = True  # (Showdown's duration 4 till this end of turn: S128)
     elif tag == "-singlemove" and len(p) > 3 and to_id(p[3]) == "destinybond":
