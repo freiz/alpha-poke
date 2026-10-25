@@ -160,3 +160,94 @@ def test_which_switch_ins_may_be_an_illusion():
     assert il.ambiguous["p2a"] is False and il.order["p2"] == ["zoroarkhisui", "corviknight", "snorlax"]
     il.feed("|faint|p2a: Zoroark".split("|"))
     assert switch("|switch|p2a: Snorlax|Snorlax, M|100/100") is False
+
+
+def test_a_takers_victim_lost_its_item():
+    """2026-10-25 review: Showdown's Magician / Covet / Bestow print no -enditem of the one that
+    lost the item (its takeItem prints nothing) -- the Latios's Choice Scarf turns read itemless.
+    (Showdown's log of the scenario belief/magician-scarf.)"""
+    lines = [
+        "|switch|p1a: Hoopa|Hoopa|100/100",
+        "|switch|p2a: Latios|Latios, M|100/100",
+        "|turn|1",
+        "|move|p2a: Latios|Psyshock|p1a: Hoopa",
+        "|-resisted|p1a: Hoopa",
+        "|-damage|p1a: Hoopa|69/100",
+        "|move|p1a: Hoopa|Shadow Ball|p2a: Latios",
+        "|-supereffective|p2a: Latios",
+        "|-damage|p2a: Latios|48/100",
+        "|-item|p1a: Hoopa|Choice Scarf|[from] ability: Magician|[of] p2a: Latios",
+        "|turn|2",
+    ]
+    assert item_changes(lines) == {("p1", "hoopa"): "none", ("p2", "latios"): "choicescarf"}
+    bestow = lines[:3] + ["|move|p2a: Latios|Bestow|p1a: Hoopa",
+                          "|-item|p1a: Hoopa|Choice Scarf|[from] move: Bestow|[of] p2a: Latios", "|turn|2"]
+    assert item_changes(bestow) == {("p1", "hoopa"): "none", ("p2", "latios"): "choicescarf"}
+
+
+# (Showdown's log of the scenario belief/skillswap-after-hit: our Gardevoir Skill Swaps after
+# their Huge Power Azumarill's first hit)
+SKILL_SWAP = [
+    "|switch|p1a: Gardevoir|Gardevoir, M|340/340",
+    "|switch|p2a: Azumarill|Azumarill, M|100/100",
+    "|turn|1",
+    "|move|p2a: Azumarill|Liquidation|p1a: Gardevoir",
+    "|-damage|p1a: Gardevoir|187/340",
+    "|-unboost|p1a: Gardevoir|def|1",
+    "|move|p1a: Gardevoir|Skill Swap|p2a: Azumarill",
+    "|-activate|p1a: Gardevoir|Skill Swap|Huge Power|Synchronize|[of] p2a: Azumarill",
+    "|turn|2",
+    "|move|p2a: Azumarill|Liquidation|p1a: Gardevoir",
+    "|-damage|p1a: Gardevoir|88/340",
+    "|turn|3",
+]
+
+
+def test_each_hit_is_explained_with_its_ability_then():
+    """2026-10-25 review: a Huge Power Azumarill's hit, then a Skill Swap gave it Synchronize --
+    F1's candidates held the Synchronize alone (poke-env's ability now), the first hit's true set
+    read at the floor. The candidates hold the ability it started with (the swap names it), each
+    hit its own then."""
+    from alpha_poke.agents.damage_obs import ability_changes
+
+    assert ability_changes(SKILL_SWAP) == {("p2", "azumarill"): "hugepower", ("p1", "gardevoir"): "synchronize"}
+    assert [h.ability_then for h in hits(SKILL_SWAP, "p1") if not h.by_us] == [None, "synchronize"]
+    mon = Pokemon(species="azumarill", gen=9)
+    mon.ability = "hugepower"
+    mon.temporary_ability = "synchronize"  # (poke-env after the swap)
+    cands, _ = _candidates(BeliefModel.load(), mon, ("Azumarill",),
+                           ab=ability_changes(SKILL_SWAP).get(("p2", "azumarill"), False))  # fmt: skip
+    assert {c[1] for c in cands} == {"hugepower"}
+    # (the one it started with unknown -- a Gastro Acid's suppression names none: the species')
+    gastro = SKILL_SWAP[:6] + ["|-endability|p2a: Azumarill", "|turn|2"] + SKILL_SWAP[9:]
+    assert ability_changes(gastro) == {("p2", "azumarill"): None}
+    assert [h.ability_then for h in hits(gastro, "p1") if not h.by_us] == [None, "none"]
+    cands, _ = _candidates(BeliefModel.load(), Pokemon(species="azumarill", gen=9), ("Azumarill",), ab=None)
+    assert {"hugepower", "thickfat"} <= {c[1] for c in cands}
+    # (a change lasts while it is in: back after a switch, its own again)
+    back = SKILL_SWAP[:9] + ["|switch|p2a: Snorlax|Snorlax, M|100/100", "|turn|2",
+                             "|switch|p2a: Azumarill|Azumarill, M|100/100", "|turn|3"] + [
+        x.replace("turn|2", "turn|3") for x in SKILL_SWAP[9:11]] + ["|turn|4"]
+    assert [h.ability_then for h in hits(back, "p1") if not h.by_us] == [None, None]
+
+
+def test_a_contact_with_lingering_aroma_or_mummy_changes_the_hitters_ability():
+    """2026-10-25 review: Showdown prints the change as -activate holder "ability: X" hitter
+    "[ability] OLD" (setAbility) -- no -ability line (the scenarios belief/*-contact)."""
+    from alpha_poke.agents.damage_obs import ability_changes
+
+    for holder, ability in (("Oinkologne", "Lingering Aroma"), ("Cofagrigus", "Mummy")):
+        lines = [
+            f"|switch|p1a: {holder}|{holder}, M|424/424",
+            "|switch|p2a: Azumarill|Azumarill, M|100/100",
+            "|turn|1",
+            f"|move|p2a: Azumarill|Liquidation|p1a: {holder}",
+            f"|-damage|p1a: {holder}|264/424",
+            f"|-activate|p1a: {holder}|ability: {ability}|p2a: Azumarill|[ability] Huge Power",
+            "|turn|2",
+            f"|move|p2a: Azumarill|Liquidation|p1a: {holder}",
+            f"|-damage|p1a: {holder}|215/424",
+            "|turn|3",
+        ]
+        assert ability_changes(lines) == {("p2", "azumarill"): "hugepower"}
+        assert [h.ability_then for h in hits(lines, "p1")] == [None, ability.lower().replace(" ", "")]

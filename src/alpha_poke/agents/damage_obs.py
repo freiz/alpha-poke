@@ -57,6 +57,9 @@ class Hit:
     # (their mon's forme at the hit: a hit in another forme than its last is left out -- the
     # candidates' stats are the forme's now; 2026-10-24, the belief check: a Palafin-Zero's hit)
     forme: str = ""
+    # their mon's ability at the hit when the log changed it (``_Abilities``: a Skill Swap's, a
+    # Mummy's, a Gastro Acid's "none"); None: the one it started with (the candidates')
+    ability_then: str | None = None
 
 
 def _side(ident: str) -> str:
@@ -80,6 +83,7 @@ def hits(lines: list[str], our_side: str) -> list[Hit]:
     hp: dict[tuple[str, str], int] = {}  # (side, species) -> HP (ours exact, theirs percent)
     tera: dict[tuple[str, str], str] = {}
     items = _Items()  # their mons' items as the log shows them: each hit's item then
+    abil = _Abilities()  # and their abilities: each hit's ability then
     forme: dict[tuple[str, str], str] = {}  # (side, species) -> its forme now (a -formechange's, ...)
     transformed: set = set()  # slots whose active is transformed (its stats its target's)
     since: dict[str, int] = {}  # slot -> the hits' count as its active came in (an Illusion's undo)
@@ -96,6 +100,7 @@ def hits(lines: list[str], our_side: str) -> list[Hit]:
             continue
         tag = f[1]
         items.feed(f, active)
+        abil.feed(f, active)
         illusion.feed(f)
         if recent:
             if tag in ("move", "turn"):
@@ -119,6 +124,7 @@ def hits(lines: list[str], our_side: str) -> list[Hit]:
             shown = _species(f[3])
             sp = came_as.setdefault((slot[:2], f[2].split(": ", 1)[-1]), shown)
             active[slot] = sp
+            abil.entered((slot[:2], sp))
             hp[(slot[:2], sp)] = _hp(f[4])
             forme[(slot[:2], sp)] = shown
             transformed.discard(slot)
@@ -151,7 +157,8 @@ def hits(lines: list[str], our_side: str) -> list[Hit]:
             if pending is not None and tag == "-damage" and len(f) == 4 and slot == pending["def"]:
                 out.append(Hit(turn, pending["by_us"], pending["move"], pending["att"], sp,
                                pending["before"], new, pending["tera"], pending["dtera"],
-                               items.now.get(pending["key"]), pending["forme"]))  # fmt: skip
+                               items.now.get(pending["key"]), pending["forme"],
+                               abil.now.get(pending["key"])))  # fmt: skip
                 recent = True
                 pending = None
             if sp is not None:
@@ -223,6 +230,8 @@ def likelihood(hit: Hit, base: str, our_slot: int, their_slot: int, cands: list[
     own_tera = bool(hit.tera if hit.by_us else hit.defender_tera)  # our mon terastallized
     if hit.item_then is not None:  # the item it held at the hit, the log's (not the one it started with)
         cands = [(hit.item_then, *c[1:]) for c in cands]
+    if hit.ability_then is not None:  # and the ability it had then, the log's
+        cands = [(c[0], hit.ability_then, *c[2:]) for c in cands]
     if hit.before > 0:
         base = (_with_hp(base, False, their_slot, pct=hit.before) if hit.by_us
                 else _with_hp(base, True, our_slot, hp=hit.before))  # fmt: skip
@@ -377,7 +386,8 @@ class _Items:
     names: an -item change's (Trick, Thief, Magician, Harvest, Bestow, ...), "none" after an
     -enditem -- and the one it started with once revealed: an -enditem of it, a Frisk, a swap
     partner's received one, a taker's none (Thief, Covet, Magician, Pickpocket, Bestow's receiver
-    take one only with none). A Frisk / an announcement (Air Balloon) is no change."""
+    take one only with none), the one a taker's [of] lost. A Frisk / an announcement (Air Balloon)
+    is no change."""
 
     def __init__(self):
         self.now: dict = {}
@@ -421,8 +431,20 @@ class _Items:
         else:
             if any(x in line for x in _SWAPS):
                 self._got[key] = item
-            elif any(x in line for x in _TAKERS) and self.now.get(key) is None:
-                self.original.setdefault(key, "none")
+            elif any(x in line for x in _TAKERS):
+                if self.now.get(key) is None:
+                    self.original.setdefault(key, "none")
+                # (the [of] one lost it: Magician's, Covet's, Bestow's giver's log no -enditem of
+                # it -- Showdown's takeItem prints nothing; 2026-10-25 review: a Choice Scarf
+                # Latios's turns before a Magician took it read itemless)
+                of = next((x[5:] for x in f[4:] if x.startswith("[of] ")), "")
+                lost = active.get(of[:3])
+                if lost and of[:2] != f[2][:2]:
+                    lk = (of[:2], lost)
+                    if self.now.get(lk) is None:
+                        self.original.setdefault(lk, item)
+                    self.now[lk] = "none"
+                    self.changed.add(lk)
             self.now[key] = item
             self.changed.add(key)
 
@@ -441,14 +463,87 @@ def item_changes(lines: list[str]) -> dict[tuple[str, str], str | None]:
     return {k: items.original.get(k) for k in items.changed}
 
 
-def _candidates(belief, mon, team_names: tuple[str, ...], then=False, mix=None) -> tuple[list, list[float]]:
+class _Abilities:
+    """A battle's abilities as its log shows them changing, per (side, species id) -- Showdown's
+    Pokemon.setAbility / Battle.skillSwap, each till the mon switches out (clearVolatile: its
+    baseAbility back): the ability it has now (None: the one it started with) and the one it
+    started with once the log names it. The lines: -ability NEW OLD [from] (Trace, Role Play,
+    Entrainment, Worry Seed, Simple Beam, Doodle; OLD absent in an older protocol); -activate
+    "ability: Mummy" / "ability: Lingering Aroma" with the contact mon and its [ability] OLD;
+    -activate Skill Swap A B [of] (Wandering Spirit's too: the user gets A, the [of] one B);
+    -endability (Gastro Acid, Core Enforcer: suppressed, "none"). An announcement (-ability
+    without [from]) is its ability now: the one it started with if unchanged."""
+
+    def __init__(self):
+        self.now: dict = {}
+        self.original: dict = {}
+        self.changed: set = set()
+
+    def entered(self, key) -> None:
+        self.now.pop(key, None)  # (its changes ended as it left)
+
+    def _set(self, key, new: str, old: str = "") -> None:
+        if self.now.get(key) is None and old:
+            self.original.setdefault(key, to_id(old))
+        self.now[key] = to_id(new) or "none"
+        self.changed.add(key)
+
+    def feed(self, f: list[str], active: dict) -> None:
+        tag = f[1] if len(f) > 1 else ""
+        if len(f) < 3 or not active.get(f[2][:3]):  # (-endability has no fourth field)
+            return
+        key = (f[2][:2], active[f[2][:3]])
+        if tag == "-endability":
+            self._set(key, "none")
+        elif len(f) < 4:
+            return
+        elif tag == "-ability":
+            if any(x.startswith("[from]") for x in f[4:]):
+                self._set(key, f[3], f[4] if len(f) > 5 and not f[4].startswith("[") else "")
+            elif self.now.get(key) is None:
+                self.original.setdefault(key, to_id(f[3]))
+        elif tag == "-activate" and f[3] in ("ability: Mummy", "ability: Lingering Aroma") and len(f) > 4:
+            if self.now.get(key) is None:
+                self.original.setdefault(key, to_id(f[3][9:]))  # (the holder's)
+            mon = active.get(f[4][:3])
+            if mon:
+                old = next((x[10:] for x in f[5:] if x.startswith("[ability] ")), "")
+                self._set((f[4][:2], mon), f[3][9:], old)
+        elif tag == "-activate" and f[3].replace("move: ", "") == "Skill Swap" and len(f) > 6:
+            of = next((x[5:] for x in f[4:] if x.startswith("[of] ")), "")
+            other = active.get(of[:3])
+            a, b = f[4].replace("[ability] ", ""), f[5].replace("[ability] ", "")
+            if other and a and b and not b.startswith("[of]"):
+                self._set(key, a, b)
+                self._set((of[:2], other), b, a)
+
+
+def ability_changes(lines: list[str]) -> dict[tuple[str, str], str | None]:
+    """(side, species id) -> the ability it started with, for the mons whose ability changed
+    (``_Abilities``): None if the log never named it -- its hits before the change are of that
+    ability, the candidates' (not the one it has now: 2026-10-25 review, a Huge Power Azumarill's
+    hit read with the Synchronize a Skill Swap gave it after)."""
+    abil, active = _Abilities(), {}
+    for line in lines + [""]:
+        f = line.split("|")
+        if len(f) > 3 and f[1] in ("switch", "drag"):
+            active[f[2][:3]] = _species(f[3])
+            abil.entered((f[2][:2], active[f[2][:3]]))
+        abil.feed(f, active)
+    return {k: abil.original.get(k) for k in abil.changed}
+
+
+def _candidates(belief, mon, team_names: tuple[str, ...], then=False, mix=None,
+                ab=False) -> tuple[list, list[float]]:
     """(item, ability, Spread) candidates of an opposing mon and their prior: the belief's team-
     conditioned item marginal (a revealed item alone), the usage of its possible abilities (a
     revealed one alone), the usage spreads. The item is the one it held when it hit / was hit:
     a gone item counts as unknown here; ``then``, for a mon whose item changed hands since
-    (``item_changes``), the one it held before (None: not known -- not the one it holds now)."""
-    from alpha_poke.agents.belief_state import _preview_name, ability_probs
-    from alpha_poke.agents.engine_state import base_marginal
+    (``item_changes``), the one it held before (None: not known -- not the one it holds now).
+    The ability likewise the one it started with: ``ab``, for a mon whose ability changed since
+    (``ability_changes``), the log's (None: not known -- the species', not poke-env's now)."""
+    from alpha_poke.agents.belief_state import _preview_name, ability_probs, species_ability_probs
+    from alpha_poke.agents.engine_state import base_marginal, required_item
     from alpha_poke.agents.speed import spread_dist
 
     # (the sampler's base item marginal: engine_state.base_marginal -- the team prior's sees the
@@ -460,9 +555,15 @@ def _candidates(belief, mon, team_names: tuple[str, ...], then=False, mix=None) 
         items = sorted(marg.items(), key=lambda kv: -kv[1])[:TOP_ITEMS] or [("none", 1.0)]
     elif mon.item and mon.item != "unknown_item":
         items = [(mon.item, 1.0)]
+    elif required_item(mon) and (mix is None or mix > 0):  # (a forme's item: engine_state.required_item)
+        items = [(required_item(mon), 1.0)]
     else:
         items = sorted(marg.items(), key=lambda kv: -kv[1])[:TOP_ITEMS] or [("none", 1.0)]
-    abilities = list(ability_probs(mon).items()) or [("none", 1.0)]
+    if ab is not False and ab is not None:
+        abilities = [(ab, 1.0)]
+    else:
+        abilities = list((ability_probs(mon) if ab is False else species_ability_probs(mon)).items()) \
+            or [("none", 1.0)]  # fmt: skip
     spreads, ws = spread_dist(mon.species)
     if not spreads:
         spreads, ws = (belief.spread_for(mon.species),), (1.0,)
@@ -494,7 +595,7 @@ def damage_posteriors(battle, belief, theirs: list, team_names: tuple[str, ...],
     lines = [m if isinstance(m, str) else "|".join(m) for m in battle_log(battle)]
     parsed_log = getattr(battle, "_alpha_hits", None)  # (lines seen, hits): once per new message
     if parsed_log is None or parsed_log[0] != len(lines):
-        parsed_log = (len(lines), hits(lines, role), item_changes(lines))
+        parsed_log = (len(lines), hits(lines, role), item_changes(lines), ability_changes(lines))
         battle._alpha_hits = parsed_log
     them = "p2" if role == "p1" else "p1"
     changes = parsed_log[2]
@@ -513,9 +614,10 @@ def damage_posteriors(battle, belief, theirs: list, team_names: tuple[str, ...],
         if not mh:
             continue
         then = changes.get((them, sp), False)  # (its item changed hands: the one it held then)
-        key = (sp, len(mh), m.item, m.ability, then, mix)
+        ab = parsed_log[3].get((them, sp), False)  # (its ability changed: the one it started with)
+        key = (sp, len(mh), m.item, m.ability, then, ab, mix)
         if key not in cache:
-            cands, prior = _candidates(belief, m, team_names, then=then, mix=mix)
+            cands, prior = _candidates(belief, m, team_names, then=then, mix=mix, ab=ab)
             level = m.level or 100
             # (its own base stats: a transformed one's poke-env has its target's)
             stats = [calc_stats(own_base_stats(m), c[2], level=level) for c in cands]

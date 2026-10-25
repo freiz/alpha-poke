@@ -258,7 +258,10 @@ def test_l3a_built_weather_turns(belief):
 def test_l3b_built_terrain_turns(belief):
     sd, _, built = field_turns(RILLABOOM, "terrain", 6, belief)
     assert sd == [5, 4, 3, 2, 1, 0, 0]
-    assert built == sd
+    # (the setter's item is the foe's, never revealed: a belief sample -- a Terrain Extender world
+    # counts down from 8, 4% of OU's Rillaboom; 2026-10-25, a full run drew one. Each turn either
+    # world's, the terrain over when Showdown's is)
+    assert all(b in (d, d + 3) if d > 0 else b == 0 for d, b in zip(sd, built, strict=True)), (sd, built)
 
 
 DRAGAPULT_SLUDGE = """Dragapult @ Black Sludge

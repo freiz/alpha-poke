@@ -12,8 +12,11 @@ Priors (each falls back to the previous one, Dirichlet-smoothed with strength ``
   TeamPrior           per species *within the exact same 6-mon team* (copied teams)
 """
 
+import functools
+import json
 from collections import Counter, defaultdict
 from dataclasses import dataclass
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -44,6 +47,76 @@ def _blend(counts: Counter, prior: dict[str, float], alpha: float) -> dict[str, 
     return {k: (counts.get(k, 0) + alpha * prior.get(k, 0.0)) / (n + alpha) for k in keys}
 
 
+# Showdown's random-battle sets (the local checkout): a species no OU set uses -- its movepool and
+# tera types, the fallback prior (2026-10-25, the belief check: 91% of its prior gaps were species
+# the usage does not list at all, their prior empty: no move but the revealed ones, no item)
+RANDBATS = Path(__file__).resolve().parents[3] / "vendor/pokemon-showdown/data/random-battles/gen9/sets.json"
+TYPES = ("bug", "dark", "dragon", "electric", "fairy", "fighting", "fire", "flying", "ghost", "grass",
+         "ground", "ice", "normal", "poison", "psychic", "rock", "steel", "water", "stellar")
+
+
+@functools.cache
+def _randbats() -> dict:
+    try:
+        return {to_id(k): v for k, v in json.loads(RANDBATS.read_text()).items()}
+    except OSError:
+        return {}
+
+
+ITEMS_TS = RANDBATS.parents[3] / "data/items.ts"
+
+
+@functools.cache
+def signature_items() -> dict[str, frozenset]:
+    """Species id -> the items made for it (Showdown's itemUser: Palkia's Lustrous Orb, Latias's
+    Soul Dew, ...), from the local checkout's data/items.ts."""
+    import re
+
+    try:
+        text = ITEMS_TS.read_text()
+    except OSError:
+        return {}
+    out: dict[str, set] = defaultdict(set)
+    for m in re.finditer(r"\n\t(\w+): \{(.*?)\n\t\}", text, re.S):
+        users = re.search(r"itemUser: \[([^\]]*)\]", m.group(2))
+        if users and "isNonstandard" not in m.group(2):  # (no Mega Stone, Z-Crystal: not in Gen 9)
+            for u in re.findall(r'"([^"]+)"', users.group(1)):
+                out[to_id(u)].add(m.group(1))
+    return {k: frozenset(v) for k, v in out.items()}
+
+
+@functools.cache
+def legal_moves(species: str) -> frozenset:
+    """A species' Gen 9 learnset (move ids): its own, its base forme's, its pre-evolutions'."""
+    from poke_env.data import GenData
+
+    g = GenData.from_gen(9)
+    out, seen, todo = set(), set(), [to_id(species)]
+    while todo:
+        sid = todo.pop()
+        if sid in seen or sid not in g.pokedex:
+            continue
+        seen.add(sid)
+        entry = g.pokedex[sid]
+        for k in ("changesFrom", "baseSpecies", "prevo"):
+            if entry.get(k):
+                todo.append(to_id(entry[k]))
+        ls = (g.learnset.get(sid) or {}).get("learnset") or {}
+        out |= {m for m, src in ls.items() if any(str(s).startswith("9") for s in src)}
+    if "sketch" in out:  # (Smeargle: any move)
+        out |= {m for m, d in g.moves.items() if not d.get("isNonstandard") and not d.get("isZ") and not d.get("isMax")}
+    return frozenset(out)
+
+
+def _global_items(stats: UsageStats) -> dict[str, float]:
+    glob: dict[str, float] = defaultdict(float)
+    for s in stats.species.values():
+        t = sum(s.items.values()) or 1.0
+        for k, v in s.items.items():
+            glob[to_id(k)] += s.usage * v / t
+    return _norm(dict(glob))
+
+
 class SmogonPrior:
     name = "smogon"
 
@@ -55,6 +128,19 @@ class SmogonPrior:
                 tera={to_id(k): v for k, v in s.tera_types.items()},
                 move={to_id(k): v for k, v in s.moves.items()},
             )
+        self._global_item = _global_items(stats)
+
+    @property
+    def global_item(self) -> dict[str, float]:
+        """OU's items across its species, by usage (a species' unknown: the fallback, the floor);
+        a model pickled before 2026-10-25 has none: from the usage file it was built from."""
+        g = self.__dict__.get("_global_item")
+        if g is None:
+            from alpha_poke.data.smogon_stats import DEFAULT_DIR
+
+            months = sorted(x.name for x in Path(DEFAULT_DIR).iterdir() if x.is_dir())
+            g = self._global_item = _global_items(UsageStats.load(DEFAULT_DIR / months[-1] / "chaos" / "gen9ou-1825.json"))
+        return g
 
     def predict(self, species: str, team: tuple[str, ...]) -> Dist:
         sid = to_id(species.replace("-*", ""))
@@ -67,7 +153,33 @@ class SmogonPrior:
         # same in battle, its types and base stats; not Tauros-Paldea-Combat as Tauros. 2026-10-25,
         # the belief check: its whole prior was empty)
         same = [k for k in self._d if sid.startswith(k) and _same_in_battle(sid, k)]
-        return self._d[max(same, key=len)] if same else Dist({}, {}, {})
+        return self._d[max(same, key=len)] if same else self.fallback(sid)
+
+    def fallback(self, sid: str) -> Dist:
+        """A species OU's usage does not list: Showdown's random-battle movepool and tera types
+        (each set's share), else its learnset and every type, alike; OU's items across species."""
+        tera, move = _fallback_tera_moves(sid)
+        return Dist(dict(self.global_item), dict(tera), dict(move))
+
+
+@functools.cache
+def _fallback_tera_moves(sid: str) -> tuple[dict, dict]:
+    """``SmogonPrior.fallback``'s tera types and moves (the species' alone: cached here, not on the
+    prior -- a method's cache keeps its instance)."""
+    sets = (_randbats().get(sid) or {}).get("sets") or []
+    move: dict[str, float] = defaultdict(float)
+    tera: dict[str, float] = defaultdict(float)
+    for s in sets:
+        for m in s.get("movepool", []):
+            move[to_id(m)] += 1.0 / len(sets) / max(len(s["movepool"]), 1)
+        for x in s.get("teraTypes", []):
+            tera[to_id(x)] += 1.0 / len(sets) / max(len(s["teraTypes"]), 1)
+    if not move:
+        moves = legal_moves(sid)
+        move = {m: 1.0 / len(moves) for m in moves}
+    if not tera:
+        tera = {x: 1.0 / len(TYPES) for x in TYPES}
+    return dict(tera), dict(move)
 
 
 def _same_in_battle(a: str, b: str) -> bool:

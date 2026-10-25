@@ -200,6 +200,11 @@ def _prior(belief: BeliefModel, species: str, team_names: tuple[str, ...]):
 # shown: item NLL 1.93 -> 1.65, top-1 0.48 -> 0.51, the true one at 0 5.6% -> 1.2%; tera NLL 2.49
 # -> 2.14, at 0 12% -> 3.3%.
 ARCH_MIX = 0.6
+# A floor under the base: FLOOR of its mass on what no set of the species was seen with -- OU's
+# items across species, every tera type, the species' learnset -- so a true off-meta set is never
+# impossible to the belief (its evidence can find it), and hardly ever drawn (2026-10-25, the
+# belief check's prior support: 3% of its gaps a value no OU set of the species uses)
+FLOOR = 1e-3
 _BASES: dict = {}
 
 
@@ -233,7 +238,47 @@ def base_marginal(belief: BeliefModel, species: str, team_names: tuple[str, ...]
             t = sum(d.values())
             for k, v in d.items():
                 out[to_id(k)] = out.get(to_id(k), 0.0) + v / t / len(parts)
+        if not old and sm is not None:  # (the floor)
+            from alpha_poke.belief.priors import TYPES
+
+            floor = sm.global_item if attr == "item" else {x: 1.0 / len(TYPES) for x in TYPES}
+            if attr == "item":  # (and the items made for it: Palkia's Lustrous Orb)
+                from alpha_poke.belief.priors import signature_items
+
+                own = [i for k, v in signature_items().items() if to_id(species).startswith(k) for i in v]
+                if own:
+                    floor = {k: 0.5 * v for k, v in floor.items()}
+                    for i in own:
+                        floor[i] = floor.get(i, 0.0) + 0.5 / len(own)
+            if out:
+                out = {k: (1 - FLOOR) * v for k, v in out.items()}
+                for k, v in floor.items():
+                    out[k] = out.get(k, 0.0) + FLOOR * v
+            else:
+                out = dict(floor)
         _BASES[key] = out
+    return out
+
+
+def required_item(mon) -> str | None:
+    """The item a forme is made by (Showdown's requiredItem: Zamazenta-Crowned's Rusted Shield,
+    an Ogerpon mask): its item for sure."""
+    r = (GEN.pokedex.get(to_id(mon.species)) or {}).get("requiredItem")
+    return to_id(r) if r else None
+
+
+def _move_floor(weights: dict, species: str) -> dict:
+    """``weights`` with FLOOR of their total spread over the species' other legal moves."""
+    from alpha_poke.belief.priors import legal_moves
+
+    rest = [m for m in legal_moves(species) if m not in weights]
+    total = sum(weights.values())
+    if not rest:
+        return weights
+    out = dict(weights)
+    share = (FLOOR * total if total > 0 else 1.0) / len(rest)
+    for m in rest:
+        out[m] = share
     return out
 
 
@@ -331,7 +376,8 @@ def sample_set(
         # archetype's item and moves are drawn apart; 2026-10-24, plan C's slot check: a replay's
         # Slowking-Galar with Toxic and Chilly Reception held an Assault Vest, its Toxic no option)
         no_vest = ("assaultvest",) if any(map(_status, revealed)) else ()
-        item = draw("item", base_marginal(belief, species, team_names, "item", mix), no_vest) or "none"
+        item = (required_item(mon) if (mix if mix is not None else ARCH_MIX) > 0 else None) or draw(
+            "item", base_marginal(belief, species, team_names, "item", mix), no_vest) or "none"
     if tera is None:
         tera = draw("tera", base_marginal(belief, species, team_names, "tera", mix)) or _tera(mon)
     # (its own: not a temporary one -- Trace's, a Transform's; 2026-10-23 review: the copied
@@ -352,6 +398,8 @@ def sample_set(
             weights = {mid: w * dist.move.get(mid, 1e-4) ** move_beta for mid, w in weights.items()}
     else:
         weights = dict(dist.move)
+    if (mix if mix is not None else ARCH_MIX) > 0:  # (the floor: its learnset's other moves)
+        weights = _move_floor(weights, to_id(mon.species))
     weights = flat(weights)
     for mid in list(weights):
         if mid in moves or mid not in _MOVES or (item == "assaultvest" and _status(mid)):

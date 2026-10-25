@@ -172,6 +172,12 @@ def ability_probs(mon: Pokemon) -> dict[str, float]:
     the species' possible abilities, uniform over them when there is no usage data."""
     if mon.ability:
         return {to_id(mon.ability): 1.0}
+    return species_ability_probs(mon)
+
+
+def species_ability_probs(mon: Pokemon) -> dict[str, float]:
+    """``ability_probs`` whatever the mon's ability now: the one it started with when it changed
+    since and the log never named it (agents/damage_obs._Abilities)."""
     possible = [to_id(a) for a in (mon.possible_abilities or [])]
     try:
         usage = _ability_usage().get(to_id(mon.species), {})

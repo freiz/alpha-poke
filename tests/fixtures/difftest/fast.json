@@ -1,11 +1,13 @@
 {
- "belief_truth": {
-  "belief:item": 6,
-  "belief:move": 55,
-  "belief:tera": 12
+ "belief_truth": {},
+ "engine_chain": {
+  "count.slowstart": 4,
+  "volatile.slowstart": 4
  },
- "engine_chain": {},
- "engine_step": {},
+ "engine_step": {
+  "count.slowstart": 2,
+  "volatile.slowstart": 2
+ },
  "state_live": {},
  "state_replay": {},
  "tree_history": {}

@@ -320,11 +320,62 @@ def belief_evidence() -> list[Spec]:
                      [{"p1": "move 3", "p2": "move 1"}, {"p2": "switch 2"}, {"p1": "move 3", "p2": "switch 2"},
                       {"p1": "move 3", "p2": "move 3"}],
                      fmt=PCT, expect=("Palafin-Hero",)))  # fmt: skip
+    # (2026-10-25 review: the phases of a value the log changes on the other mon -- a Magician
+    # takes the Choice Scarf of a Latios that moved first with it, 256 x 1.5 before the Hoopa's
+    # 262: no -enditem of it; a Huge Power Azumarill's hit, then a Skill Swap gives it Synchronize
+    # and it hits again; a contact with Lingering Aroma / Mummy changes the hitter's ability)
+    latios = S("Latios", "Choice Scarf", "Levitate", ["Psyshock", "Draco Meteor", "Recover", "Calm Mind"])
+    hoopa = S("Hoopa", "", "Magician", ["Shadow Ball", "Psychic", "Nasty Plot", "Protect"], FAST, "Timid")
+    out.append(_spec("belief/magician-scarf", team(hoopa, FILLER), team(latios, FILLER),
+                     [{"p1": "move 1", "p2": "move 1"}] * 3,
+                     fmt=PCT, expect=("|-item|p1a: Hoopa|Choice Scarf|[from] ability: Magician",)))  # fmt: skip
+    # (the Azumarill's 218 before the Gardevoir's 196: its hits the turns' first moves)
+    azu = S("Azumarill", "Leftovers", "Huge Power", ["Liquidation", "Aqua Jet", "Belly Drum", "Knock Off"], FAST, "Jolly")
+    gard = S("Gardevoir", "Leftovers", "Synchronize", ["Skill Swap", "Calm Mind", "Moonblast", "Protect"])
+    out.append(_spec("belief/skillswap-after-hit", team(gard, FILLER), team(azu, FILLER),
+                     [{"p1": "move 1", "p2": "move 1"}] + [{"p1": "move 2", "p2": "move 1"}] * 2,
+                     fmt=PCT, expect=("Skill Swap|Huge Power|Synchronize",)))  # fmt: skip
+    for holder, ability in (("Oinkologne", "Lingering Aroma"), ("Cofagrigus", "Mummy")):
+        mon = S(holder, "Leftovers", ability, ["Calm Mind", "Body Slam", "Yawn", "Protect"])
+        out.append(_spec(f"belief/{ability.lower().replace(' ', '')}-contact", team(mon, FILLER), team(azu, FILLER),
+                         [{"p1": "move 1", "p2": "move 1"}] * 3,
+                         fmt=PCT, expect=(f"|ability: {ability}|p2a: Azumarill|[ability] Huge Power",)))  # fmt: skip
+    # (the speed's abilities then: a Regigigas Skill Swaps its Slow Start away -- its 118 before,
+    # 236 after; a Garchomp's 216 first on turn 1 (read with our ability now, not halved: ruled
+    # out), its Jolly 333 halved second after (read with its species' abilities: ruled out))
+    gigas = S("Regigigas", "Leftovers", "Slow Start", ["Skill Swap", "Bulk Up", "Body Slam", "Protect"])
+    for name, evs, nature in (("slow", "252 HP / 4 Atk / 252 SpD", "Brave"), ("fast", FAST, "Jolly")):
+        chomp = S("Garchomp", "Leftovers", "Rough Skin", ["Swords Dance", "Stealth Rock", "Earthquake", "Dragon Claw"],
+                  evs, nature)  # fmt: skip
+        out.append(_spec(f"belief/slowstart-swapped-{name}", team(gigas, FILLER), team(chomp, FILLER),
+                         [{"p1": "move 1", "p2": "move 1"}, {"p1": "move 2", "p2": "move 1"}, {"p1": "move 2", "p2": "move 2"}],
+                         fmt=PCT, expect=("Skill Swap|Rough Skin|Slow Start",)))  # fmt: skip
+    return out
+
+
+def ability_changes() -> list[Spec]:
+    """A contact with a Mummy / Lingering Aroma holder: the hitter's ability its, till it switches
+    (Showdown prints -activate holder "ability: X" hitter "[ability] OLD"; 2026-10-25 review: the
+    state kept the Huge Power); a Role Play's [of] keeps its own -- a Regenerator still heals as
+    it switches out."""
+    out = []
+    azu = S("Azumarill", "Leftovers", "Huge Power", ["Liquidation", "Aqua Jet", "Belly Drum", "Knock Off"], FAST, "Jolly")
+    for holder, ability in (("Oinkologne", "Lingering Aroma"), ("Cofagrigus", "Mummy")):
+        mon = S(holder, "Leftovers", ability, ["Calm Mind", "Body Slam", "Yawn", "Protect"])
+        out.append(_spec(f"abilities/{ability.lower().replace(' ', '')}-contact", team(mon, FILLER), team(azu, FILLER),
+                         [{"p1": "move 1", "p2": "move 1"}] * 3,
+                         expect=(f"|ability: {ability}|p2a: Azumarill|[ability] Huge Power",)))  # fmt: skip
+    rai = S("Raichu", "Leftovers", "Lightning Rod", ["Role Play", "Thunderbolt", "Nasty Plot", "Surf"], FAST, "Timid")
+    slow = S("Slowking-Galar", "Leftovers", "Regenerator", ["Sludge Bomb", "Psyshock", "Calm Mind", "Thunder Wave"])
+    out.append(_spec("abilities/roleplay-regenerator", team(rai, FILLER), team(slow, FILLER),
+                     [{"p1": "move 1", "p2": "move 3"}, {"p1": "move 2", "p2": "move 3"},
+                      {"p1": "move 2", "p2": "switch 2"}, {"p1": "move 2", "p2": "move 1"}],
+                     expect=("[from] move: Role Play",)))  # fmt: skip
     return out
 
 
 FAMILIES = (extender_items, pp_takers, transforms, locks, failed_moves, item_phases, encore, formes, speed_phases,
-            second_sleep, type_changes, belief_evidence)
+            second_sleep, type_changes, belief_evidence, ability_changes)
 
 
 def scenarios() -> list[Spec]:

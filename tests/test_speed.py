@@ -237,3 +237,42 @@ def test_each_turn_in_the_opponents_forme_then():
     stat_of = lambda b: spe_stat(b, 252, "jolly", 100)  # noqa: E731
     assert (stat_of(60), stat_of(120)) == (240, 372)
     assert consistent(obs, 372, "", stat_of) and not consistent(obs[:1], 372, "")
+
+
+def test_each_turn_read_with_the_abilities_then():
+    """2026-10-25 review (F1's twin): our Regigigas Skill Swaps its Slow Start to their Garchomp
+    (Showdown's log). Turn 1 is read with our Slow Start then (not the Rough Skin we have now: our
+    118 read as 236, the Garchomp's first move ruled its 216 out); turns 2 and 3 with their Slow
+    Start (not the species' abilities: its halved speed read whole) -- both left out."""
+    log = """
+|switch|p1a: Regigigas|Regigigas|424/424
+|switch|p2a: Garchomp|Garchomp, M|100/100
+|-start|p1a: Regigigas|ability: Slow Start
+|turn|1
+|move|p2a: Garchomp|Swords Dance|p2a: Garchomp
+|-boost|p2a: Garchomp|atk|2
+|move|p1a: Regigigas|Skill Swap|p2a: Garchomp
+|-activate|p1a: Regigigas|Skill Swap|Rough Skin|Slow Start|[of] p2a: Garchomp
+|-end|p1a: Regigigas|Slow Start|[silent]
+|-start|p2a: Garchomp|ability: Slow Start
+|upkeep
+|turn|2
+|move|p1a: Regigigas|Bulk Up|p1a: Regigigas
+|-boost|p1a: Regigigas|atk|1
+|-boost|p1a: Regigigas|def|1
+|move|p2a: Garchomp|Swords Dance|p2a: Garchomp
+|-boost|p2a: Garchomp|atk|2
+|upkeep
+|turn|3
+|move|p1a: Regigigas|Bulk Up|p1a: Regigigas
+|-boost|p1a: Regigigas|atk|1
+|-boost|p1a: Regigigas|def|1
+|move|p2a: Garchomp|Stealth Rock|p1a: Regigigas
+|-sidestart|p1: p1|move: Stealth Rock
+|upkeep
+|turn|4
+"""
+    assert _obs(log, {"regigigas": (236, "leftovers", "roughskin")}) == []
+    # (no change: the same turns kept)
+    plain = log.replace("|-activate|p1a: Regigigas|Skill Swap|Rough Skin|Slow Start|[of] p2a: Garchomp\n", "")
+    assert [o.turn for o in _obs(plain, {"regigigas": (236, "leftovers", "pressure")})] == [1, 2, 3]

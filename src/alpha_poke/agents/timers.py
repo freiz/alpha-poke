@@ -852,11 +852,12 @@ def _feed_one(sides: dict, p: list[str]) -> None:
                 x.startswith(("[from] ability: Mummy", "[from] ability: Wandering Spirit",
                               "[from] ability: Lingering Aroma", "[from] move:")) for x in p[4:])):
         # (its ability changed / suppressed: a Regenerator gone till it switches -- Skill Swap
-        # names both: the [of] one's too)
+        # names both: the [of] one's too; a Role Play's / Entrainment's [of] is its source, its
+        # own unchanged -- Showdown's setAbility)
         st.ability_off = True
         st.protean = False  # (its ability's state anew: Protean's use gone -- S116)
         of = next((x[5:] for x in p[4:] if x.startswith("[of] ")), None)
-        ost = _who(["", "", of], sides)[0] if of is not None else None
+        ost = _who(["", "", of], sides)[0] if of is not None and tag == "-activate" else None
         if ost is not None:
             ost.ability_off = True
             ost.protean = False
@@ -871,6 +872,14 @@ def _feed_one(sides: dict, p: list[str]) -> None:
             st.ability_now = to_id(p[4])
             if ost is not None and not p[5].startswith("["):
                 ost.ability_now = to_id(p[5])
+    elif tag == "-activate" and len(p) > 4 and p[3] in ("ability: Mummy", "ability: Lingering Aroma"):
+        # (the contact mon -- the line's second -- gets the holder's ability, its old one the
+        # [ability]: Showdown's setAbility prints Mummy's / Lingering Aroma's so; 2026-10-25 review:
+        # a Huge Power kept after a Lingering Aroma)
+        ost = _who(["", "", p[4]], sides)[0]
+        if ost is not None:
+            ost.ability_off, ost.protean = True, False
+            ost.ability_now = to_id(p[3][9:])
     elif tag == "-transform" and len(p) > 3:
         ost, st.copied_from = _who(["", "", p[3]], sides)  # (S145)
         tnick = p[3].split(": ", 1)[-1]

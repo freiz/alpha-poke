@@ -75,6 +75,33 @@ MUTATIONS = [
      "ARCH_MIX = 0.6\n", "ARCH_MIX = 0.0\n"),
     ("S156 ??? is typeless", "src/alpha_poke/agents/engine_state.py",
      '"typeless" if t.name == "THREE_QUESTION_MARKS" else t.name.lower()', "t.name.lower()"),
+    ("B5 a taker's [of] lost its item", "src/alpha_poke/agents/damage_obs.py",
+     "if lost and of[:2] != f[2][:2]:", "if False:"),
+    ("B5 each hit's ability then", "src/alpha_poke/agents/damage_obs.py",
+     "    if hit.ability_then is not None:  # and the ability it had then", "    if False:  # and the ability it had then"),
+    ("B5 the candidates' ability the one it started with", "src/alpha_poke/agents/damage_obs.py",
+     "    if ab is not False and ab is not None:\n        abilities = [(ab, 1.0)]\n    else:\n"
+     "        abilities = list((ability_probs(mon) if ab is False else species_ability_probs(mon)).items()) \\\n",
+     "    if False:\n        abilities = [(ab, 1.0)]\n    else:\n"
+     "        abilities = list(ability_probs(mon).items()) \\\n"),
+    ("B5 Skill Swap's abilities", "src/alpha_poke/agents/damage_obs.py",
+     'if other and a and b and not b.startswith("[of]"):', "if False:"),
+    ("B5 Mummy's / Lingering Aroma's ability (F1)", "src/alpha_poke/agents/damage_obs.py",
+     'elif tag == "-activate" and f[3] in ("ability: Mummy", "ability: Lingering Aroma") and len(f) > 4:',
+     "elif False:"),
+    ("B5 the speed's opponent ability then", "src/alpha_poke/agents/speed.py",
+     'opp_abils = {snap["opp_ab"]} if snap["opp_ab"] is not None else abilities(them)', "opp_abils = abilities(them)"),
+    ("B5 the speed's own ability then", "src/alpha_poke/agents/speed.py",
+     '        if snap["our_ab"] is not None:\n            ability = snap["our_ab"]\n        elif',
+     '        if False:\n            ability = snap["our_ab"]\n        elif False and'),
+    ("B5 Mummy's / Lingering Aroma's ability (the state)", "src/alpha_poke/agents/timers.py",
+     'elif tag == "-activate" and len(p) > 4 and p[3] in ("ability: Mummy", "ability: Lingering Aroma"):',
+     "elif False:"),
+    ("B5 a Role Play's [of] keeps its ability", "src/alpha_poke/agents/timers.py",
+     'if of is not None and tag == "-activate" else None', "if of is not None else None"),
+    # (B6's fallback prior: the floor under it keeps the support whole -- the support check cannot
+    # tell; tests/test_sample_set.py's test_a_species_ou_never_uses_has_a_prior guards it)
+    ("B6 the floor under the base", "src/alpha_poke/agents/engine_state.py", "FLOOR = 1e-3\n", "FLOOR = 0.0\n"),
 ]
 RUST = [
     ("R1 the tree's move used: its own span", "rust/alpha_search/src/ismcts.rs",

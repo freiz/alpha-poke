@@ -14,7 +14,7 @@ import collections
 
 from alpha_poke.analysis.roles import to_id
 
-HARD = ("belief:speed", "belief:damage")
+HARD = ("belief:speed", "belief:damage", "belief:candidates")
 EXAMPLES = 5  # (examples kept per kind; an analysis may raise it)
 
 
@@ -23,9 +23,11 @@ def _item_support(belief, mon, team_names, known_moves) -> dict:
     weights under the posterior of its revealed moves; the team prior's marginal without
     archetypes); an Assault Vest out with a status move known."""
     from alpha_poke.agents.belief_state import _preview_name
-    from alpha_poke.agents.engine_state import _status, arch_mix, base_marginal
+    from alpha_poke.agents.engine_state import _status, arch_mix, base_marginal, required_item
 
     species = _preview_name(mon, team_names)
+    if required_item(mon):  # (a forme's item: the sampler's for sure)
+        return {required_item(mon): 1.0}
     base = base_marginal(belief, species, team_names, "item")
     ss = belief.sets.get(species)
     out: dict = collections.defaultdict(float)
@@ -68,6 +70,12 @@ def _move_support(belief, mon, team_names) -> set:
     if ss is not None and ss.params and ss.vocab.get("move"):
         for k in range(len(ss.params["move"])):
             out |= {to_id(n) for n, w in zip(ss.vocab["move"], ss.params["move"][k], strict=False) if w > 0}
+    # (the sampler's floor: the species' learnset -- engine_state._move_floor)
+    from alpha_poke.agents.engine_state import ARCH_MIX
+    from alpha_poke.belief.priors import legal_moves
+
+    if ARCH_MIX > 0:
+        out |= legal_moves(to_id(mon.species))
     return out
 
 
@@ -76,10 +84,20 @@ def belief_diffs(p1: str, p2: str, seed: int, max_turns: int = 40, script: list 
     """{"decisions", "kinds": {kind: n}, "examples": {kind: [...]}, "errors"} over a recorded
     battle's decisions, both sides' views."""
     from alpha_poke.agents.belief_state import _preview_name, ability_probs
-    from alpha_poke.agents.damage_obs import EPS, item_changes, likelihood, our_disguised, slot_of
+    from alpha_poke.agents.damage_obs import (
+        EPS,
+        _candidates,
+        ability_changes,
+        item_changes,
+        likelihood,
+        our_disguised,  # fmt: skip
+        slot_of,
+    )
     from alpha_poke.agents.net_context import battle_log
     from alpha_poke.agents.pokeview import own_moves
+    from alpha_poke.agents.speed import abilities as species_abilities
     from alpha_poke.agents.speed import battle_observations, consistent, spe_stat
+    from alpha_poke.belief.priors import legal_moves
     from alpha_poke.enginecheck import random_battle
     from alpha_poke.enginecheck.statebuild import _belief, decisions
 
@@ -124,7 +142,8 @@ def belief_diffs(p1: str, p2: str, seed: int, max_turns: int = 40, script: list 
         obs = battle_observations(b) or {}
         hits = getattr(b, "_alpha_hits", None)
         bases = getattr(b, "_alpha_bases", {}) or {}
-        changes = item_changes([m if isinstance(m, str) else "|".join(m) for m in battle_log(b)])
+        lines = [m if isinstance(m, str) else "|".join(m) for m in battle_log(b)]
+        changes, ab_changes = item_changes(lines), ability_changes(lines)
         them = "p2" if side == "p1" else "p1"
         for mon in b.opponent_team.values():
             sp = to_id(mon.species)
@@ -140,8 +159,18 @@ def belief_diffs(p1: str, p2: str, seed: int, max_turns: int = 40, script: list 
             # passed is the one of a mon whose item never changed)
             if obs.get(sp) and not consistent(obs[sp], spe, item, stat_of(them, sp)):
                 found("belief:speed", (*where, spe, item))
-            if hits and hits[1]:
-                for h in hits[1]:
+            mine = [h for h in (hits[1] if hits else ()) if (h.defender if h.by_us else h.attacker) == sp
+                    and h.turn in bases]  # fmt: skip
+            if mine:
+                # (the ability F1's candidates hold: the one it started with -- _candidates, the
+                # code under test, not the truth's put in; 2026-10-25 review: a Skill Swap after the
+                # hit left the candidates the Synchronize it got, the check passed with the truth's)
+                cands, _ = _candidates(belief, mon, names, then=changes.get((them, sp), False),
+                                       ab=ab_changes.get((them, sp), False))  # fmt: skip
+                # (an illegal one is no set the belief need know: a scenario's -- a Shell Armor Rotom)
+                if ab in species_abilities(mon.species) and not any(c[1] == ab for c in cands):
+                    found("belief:candidates", (*where, ab, sorted({c[1] for c in cands})))
+                for h in mine:
                     if (h.defender if h.by_us else h.attacker) != sp or h.turn not in bases:
                         continue
                     hk = (side, sp, h.turn, h.move, h.by_us, h.before, h.after)
@@ -192,7 +221,9 @@ def belief_diffs(p1: str, p2: str, seed: int, max_turns: int = 40, script: list 
                 if mid in ("none", "") or mid in known:
                     continue
                 support = support if support is not None else _move_support(belief, mon, names)
-                if mid not in support:
+                # (an illegal one is no set the belief need know: a scenario's hand-written --
+                # Snorlax's Slack Off)
+                if mid not in support and mid in legal_moves(to_id(mon.species)):
                     found("belief:move", (*where, mid))
     out["errors"] += stats.get("errors", [])
     out["kinds"] = dict(out["kinds"])

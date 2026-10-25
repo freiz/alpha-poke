@@ -147,9 +147,10 @@ class ObsTracker:
         # themselves must not count: 2026-10-11, 11% of the observations broke the opponent's
         # true speed until this)
         self.snap: dict | None = None
-        from alpha_poke.agents.damage_obs import _Illusion, _Items
+        from alpha_poke.agents.damage_obs import _Abilities, _Illusion, _Items
 
         self.items = _Items()  # each side's item as the log shows it (its phases)
+        self.abilities = _Abilities()  # and its ability (a Skill Swap's, a Mummy's, ...)
         self.illusion = _Illusion()  # (switch-ins that may be an Illusion holder: left out)
         self._iact: dict = {}  # "p1a" -> the species it switched in as (the item tracker's key)
 
@@ -166,6 +167,7 @@ class ObsTracker:
                 "trick_room": self.trick_room, "weather": self.weather,
                 "terrain": self.terrain, "opp_item": self.items.now.get(opp),
                 "our_item": self.items.now.get(ours) if ours in self.items.changed else None,
+                "opp_ab": self.abilities.now.get(opp), "our_ab": self.abilities.now.get(ours),
                 "our_key": ours, "opp_base": (entry.get("baseStats") or {}).get("spe"),
                 "our_forme": self.sides[self.our_side].forme.get(self.sides[self.our_side].active, ""),
                 "transformed": any(s.transformed for s in self.sides.values()),
@@ -206,7 +208,16 @@ class ObsTracker:
         stat, item, ability = self.our_speed(us)
         if not stat:
             return
-        opp_abils = abilities(them)
+        # (the abilities then: the log's after a change, else the one it started with -- ours
+        # left out if the log never named it; 2026-10-25 review, F1's twin: a Skill Swap after)
+        ours_key = (our_side, self._iact.get(our_side + "a"))
+        if snap["our_ab"] is not None:
+            ability = snap["our_ab"]
+        elif ours_key in self.abilities.changed:
+            ability = self.abilities.original.get(ours_key)
+            if ability is None:
+                return
+        opp_abils = {snap["opp_ab"]} if snap["opp_ab"] is not None else abilities(them)
         grassy = snap["terrain"] == "grassyterrain"
         if _move_priority(our_move) != _move_priority(opp_move) \
                 or _risky_priority(our_move, {ability}, grassy) \
@@ -265,7 +276,9 @@ class ObsTracker:
         tag = p[1]
         if tag in ("switch", "drag") and len(p) > 3:
             self._iact[p[2][:3]] = to_id(p[3].split(",")[0])
+            self.abilities.entered((p[2][:2], self._iact[p[2][:3]]))
         self.items.feed(p, self._iact)
+        self.abilities.feed(p, self._iact)
         self.illusion.feed(p)
         if tag == "turn":
             self._flush(self.out)
