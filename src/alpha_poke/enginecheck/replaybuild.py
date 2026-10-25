@@ -44,7 +44,9 @@ def _oracle(team: list, ours: dict, theirs: dict):
         return es.SampledSet(moves=moves, item=t["item"] or "none",
                              ability=t["base_ability"] or t["ability"] or "none",
                              tera=(t["tera_type"] or "typeless").lower(),
-                             stats={"hp": t["maxhp"], **st})  # fmt: skip
+                             stats={"hp": t["maxhp"], **st},
+                             nature=(t.get("nature") or "serious").lower(),  # (S158)
+                             evs=tuple(t["evs"]) if t.get("evs") else None)  # fmt: skip
 
     es.sample_set = sample
     try:

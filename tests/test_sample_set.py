@@ -156,3 +156,21 @@ def test_the_move_floor_lifts_a_0_weight():
 
     out = _move_floor({"spikes": 1.0, "freezedry": 0.0}, "glalie")
     assert out["freezedry"] > 0 and out["earthquake"] > 0 and out["spikes"] == 1.0
+
+
+def test_our_natures_and_evs_from_our_team():
+    """S158: no request names our natures or EVs -- the engine needs them (a forme change's stats,
+    a confusion berry): from our team (text, or a poke-env teambuilder), by species and nickname
+    (a transformed mon's poke-env species is its target's)."""
+    from types import SimpleNamespace
+
+    from poke_env.teambuilder import ConstantTeambuilder
+
+    from alpha_poke.agents.knowledge_player import remember_own_sets
+
+    text = "Bob (Ditto) @ Choice Scarf\nAbility: Imposter\nEVs: 252 HP / 4 Def / 252 Spe\nRelaxed Nature\n- Transform\n"
+    for team in (text, ConstantTeambuilder(text)):
+        b = SimpleNamespace()
+        remember_own_sets(b, team)
+        assert b._alpha_own_sets["ditto"] == ("relaxed", (252, 0, 4, 0, 0, 252))
+        assert b._alpha_own_sets["bob"] == b._alpha_own_sets["ditto"]

@@ -11,12 +11,7 @@
   "#skipped: not a turn start": 316
  },
  "state_chain": {
-  "#compared": 865,
-  "attack": 6,
-  "hp": 1,
-  "nature": 865,
-  "special_attack": 11,
-  "special_defense": 2
+  "#compared": 865
  },
  "state_facts": {
   "#compared": 2607

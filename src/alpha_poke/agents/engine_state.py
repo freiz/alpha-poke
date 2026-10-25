@@ -24,7 +24,7 @@ from poke_env.data import GenData
 
 from alpha_poke.agents import poke_env_fixes  # noqa: F401 (poke-env's tracking fixed on import)
 from alpha_poke.agents.belief_state import BeliefModel, _preview_name, ability_probs
-from alpha_poke.agents.damage import calc_stats
+from alpha_poke.agents.damage import Spread, calc_stats
 from alpha_poke.agents.damage_obs import damage_posteriors, record_base
 from alpha_poke.agents import slots
 from alpha_poke.agents.pokeview import (
@@ -149,6 +149,10 @@ class SampledSet:
     ability: str
     tera: str
     stats: dict[str, int]
+    # (S158: the spread's -- the engine recomputes stats from them on a forme change, a confusion
+    # berry reads the nature; our states had neither)
+    nature: str = "serious"
+    evs: tuple | None = None
 
 
 @dataclass
@@ -467,7 +471,7 @@ def sample_set(
     if spread is None:
         spread = belief.spread_for(mon.species)
     stats = calc_stats(own_base_stats(mon), spread, level=mon.level or 100)
-    return SampledSet(moves or ["tackle"], item, ability, tera, stats)
+    return SampledSet(moves or ["tackle"], item, ability, tera, stats, spread.nature, tuple(spread.evs))
 
 
 _SPREAD_SPEEDS: dict = {}  # (species, level) -> the speed stat of each usage spread
@@ -672,6 +676,17 @@ def _sleep(mon, tm: SideTimers | None) -> dict:
     return {"rest_turns": rest, "sleep_turns": sleep}
 
 
+def _own_set(battle, mon) -> tuple | None:
+    """(nature, EVs) of our mon from our team (``battle._alpha_own_sets``: species id -> them, the
+    players' -- KnowledgePlayer -- and the differential's: no request names them; S158)."""
+    sets = getattr(battle, "_alpha_own_sets", None) or {}
+    # (its nickname first -- the team's key, a transformed mon's species its target's)
+    nick = next((to_id(k.split(": ", 1)[-1]) for k, v in battle.team.items() if v is mon), "")
+    sp = to_id(mon.species)
+    return sets.get(nick) or sets.get(sp) or next(
+        (v for k, v in sets.items() if sp.startswith(k) or k.startswith(sp)), None)  # fmt: skip
+
+
 def _our_mon(
     mon,
     available_moves: set[str] | None,
@@ -680,6 +695,7 @@ def _our_mon(
     revived: bool = False,
     pp_adj: dict | None = None,
     imprisoned: frozenset = frozenset(),
+    own_set: tuple | None = None,
 ) -> pe.Pokemon:
     """``req_pp``: the request's PP of the active's moves (exact; poke-env counts uses itself and
     drifts low over long games: 2026-10-11, a move with PP left was 0 in the engine, no legal
@@ -751,6 +767,7 @@ def _our_mon(
         # (the request's tera type: a switch line's tera: details went to the mon a disguised
         # Illusion showed -- 2026-10-23, the state-construction differential)
         tera_type=to_id((getattr(mon, "_last_request", None) or {}).get("teraType") or "") or _tera(mon),
+        **({"nature": own_set[0], "evs": tuple(own_set[1])} if own_set else {}),
         **_sleep(mon, tm),
         **_counted(mon, tm),
     )
@@ -893,6 +910,8 @@ def _their_mon(mon, s: SampledSet, tm: SideTimers | None = None, disabled: str |
                        disabled=m == disabled) for m in s.moves[:4]],  # fmt: skip
         terastallized=mon.is_terastallized,
         tera_type=s.tera,
+        nature=s.nature,
+        **({"evs": tuple(s.evs)} if s.evs else {}),
         **_sleep(mon, tm),
         **_counted(mon, tm),
     )
@@ -920,7 +939,9 @@ def _with(p: pe.Pokemon, **kw) -> pe.Pokemon:
             "weight_kg", "moves", "terastallized", "tera_type", "rest_turns",
             "sleep_turns", "times_attacked", "gender", "stellar_boosted", "last_item",
             "transform_backup")  # fmt: skip
-    return pe.Pokemon(**({k: getattr(p, k) for k in keys} | kw))
+    # (and its nature, EVs: S158 -- a copy lost them)
+    kept = {"nature": str(p.nature).lower(), "evs": tuple(p.evs)}
+    return pe.Pokemon(**({k: getattr(p, k) for k in keys} | kept | kw))
 
 
 def _illusion(theirs: list, opp_active, revealed: dict, rng: random.Random) -> int | None:
@@ -938,6 +959,10 @@ def _illusion(theirs: list, opp_active, revealed: dict, rng: random.Random) -> i
         return None
     alive = sum(1 for m in theirs if not m.fainted)
     return zi if rng.random() < 1 / max(alive, 1) else None
+
+
+def _sp_id(p: pe.Pokemon) -> str:
+    return to_id(str(p.id))
 
 
 def _as_transformed(p: pe.Pokemon, target: pe.Pokemon, moves: list, ability: str,
@@ -963,6 +988,8 @@ def _as_transformed(p: pe.Pokemon, target: pe.Pokemon, moves: list, ability: str
         tera_type=p.tera_type, rest_turns=p.rest_turns, sleep_turns=p.sleep_turns,
         times_attacked=p.times_attacked, gender=p.gender, transform_backup=backup,
         stellar_boosted=p.stellar_boosted, last_item=p.last_item,  # (S138: its last item kept)
+        # (its own nature, EVs: Showdown's transformInto copies the stats, not the set -- S158)
+        nature=str(p.nature).lower(), evs=tuple(p.evs),
     )  # fmt: skip
 
 
@@ -1218,7 +1245,7 @@ def build_state(
         our_mons = [
             _our_mon(m, avail if m is active else None, tm_us,
                      req_pp if m is active else None, revived == to_id(m.species),
-                     imprisoned=imprisoned if m is active else frozenset())
+                     imprisoned=imprisoned if m is active else frozenset(), own_set=_own_set(battle, m))
             for m in ours
         ]  # fmt: skip
     else:
@@ -1294,7 +1321,7 @@ def build_state(
         world = frozenset(current_moves(opp_active)) if their_t is not None else \
             frozenset(their_sets[their_idx].moves) | frozenset(current_moves(opp_active))  # (transformed: its copied ones)
         our_mons[our_active_idx] = _our_mon(active, avail, tm_us, req_pp, revived == to_id(active.species),
-                                            imprisoned=world)  # fmt: skip
+                                            imprisoned=world, own_set=_own_set(battle, active))  # fmt: skip
     if zi is not None:  # the active is the Zoroark: what is shown (HP fraction, status) is its
         z = their_mons[zi]
         their_mons[zi] = _with(z, hp=max(1, round(opp_active.current_hp_fraction * z.maxhp)),
@@ -1629,10 +1656,22 @@ def build_state(
         w = (GEN.pokedex.get(tm.copied_forme) or {}).get("weightkg") if tm.copied_forme else None
         return float(w) if w else target.weight_kg
 
+    # (and its stats: the target's in that forme -- an Ogerpon / Terapagos that changed forme after
+    # the transform; the target's spread, now in its state: S158)
+    def copied_stats(tm: SideTimers, target: pe.Pokemon) -> dict:
+        entry = GEN.pokedex.get(tm.copied_forme) if tm.copied_forme else None
+        if not entry or to_id(tm.copied_forme) == _sp_id(target):
+            return {}
+        st = calc_stats(entry["baseStats"], Spread(str(target.nature).lower(), tuple(target.evs)), level=target.level)
+        return {"attack": st["atk"], "defense": st["def"], "special_attack": st["spa"],
+                "special_defense": st["spd"], "speed": st["spe"]}
+
     if our_tf and our_t is not None and our_t < len(their_mons):
-        our_mons[our_active_idx] = _with(our_mons[our_active_idx], weight_kg=copied_weight(tm_us, their_mons[our_t]))
+        our_mons[our_active_idx] = _with(our_mons[our_active_idx], weight_kg=copied_weight(tm_us, their_mons[our_t]),
+                                         **copied_stats(tm_us, their_mons[our_t]))  # fmt: skip
     if their_tf and their_t is not None and their_t < len(our_mons):
-        their_mons[their_idx] = _with(their_mons[their_idx], weight_kg=copied_weight(tm_them, our_mons[their_t]))
+        their_mons[their_idx] = _with(their_mons[their_idx], weight_kg=copied_weight(tm_them, our_mons[their_t]),
+                                      **copied_stats(tm_them, our_mons[their_t]))  # fmt: skip
     # (the actives' abilities as a move / ability changed them this time in, a Gastro Acid's none
     # -- poke-env keeps no temporary ability for them; the timers')
     for ms, i, tm in ((our_mons, our_active_idx, tm_us), (their_mons, their_idx, tm_them)):

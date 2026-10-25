@@ -83,6 +83,27 @@ def sync_tera_types(battle) -> None:
                 mon._terastallized_type = PokemonType.from_name(req["teraType"])
 
 
+def remember_own_sets(battle, team) -> None:
+    """Our team's natures and EVs on the battle (``battle._alpha_own_sets``: species id -> (nature,
+    EVs)) -- no request names them, the engine needs them (a forme change's stats, a confusion
+    berry; S158). ``team``: a poke-env teambuilder (its ``team``: the parsed sets) or Showdown export
+    text. Our players play one battle at a time per team (eval lanes, self-play: update_team
+    before it), so the team now is the battle's."""
+    from poke_env.teambuilder import Teambuilder
+
+    try:
+        mons = Teambuilder.parse_showdown_team(team) if isinstance(team, str) else list(team.team)
+    except Exception:  # noqa: BLE001 - a teambuilder without parsed sets: none known
+        return
+    sets = {}
+    for m in mons:
+        evs = tuple(int(x or 0) for x in (m.evs or (0,) * 6))
+        # (by species and by nickname: a transformed mon's poke-env species is its target's)
+        for key in {to_id_str(m.species or ""), to_id_str(m.nickname or "")} - {""}:
+            sets.setdefault(key, (to_id_str(m.nature or "serious"), evs))
+    battle._alpha_own_sets = sets
+
+
 def _display_species(species_id: str) -> str:
     from poke_env.data import GenData
 
@@ -572,6 +593,7 @@ class KnowledgePlayer(Player):
         return state
 
     async def teampreview(self, battle: AbstractBattle) -> str:
+        remember_own_sets(battle, self._team)
         try:
             sync_tera_types(battle)
             plan = self.make_plan(battle)

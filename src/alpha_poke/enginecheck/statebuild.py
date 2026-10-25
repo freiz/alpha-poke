@@ -385,7 +385,9 @@ def _oracle(foe: dict | None):
         return es.SampledSet(moves=moves, item=t["item"] or "none",
                              ability=t["base_ability"] or t["ability"] or "none",
                              tera=(t["tera_type"] or "typeless").lower(),
-                             stats={"hp": t["maxhp"], **st})  # fmt: skip
+                             stats={"hp": t["maxhp"], **st},
+                             nature=(t.get("nature") or "serious").lower(),  # (S158)
+                             evs=tuple(t["evs"]) if t.get("evs") else None)  # fmt: skip
 
     es.sample_set = sample
     try:
@@ -401,7 +403,7 @@ def decisions(p1: str, p2: str, seed: int, max_turns: int = 40, sides=("p1", "p2
     that side's point of view). ``stats``: filled with "decisions" and "errors". ``oracle``: the
     opponent's hidden parts its true set (_oracle), else the belief's samples."""
     from alpha_poke.agents.engine_state import build_state
-    from alpha_poke.agents.knowledge_player import sync_tera_types
+    from alpha_poke.agents.knowledge_player import remember_own_sets, sync_tera_types
 
     stats = {} if stats is None else stats
     stats.setdefault("decisions", 0)
@@ -431,6 +433,7 @@ def decisions(p1: str, p2: str, seed: int, max_turns: int = 40, sides=("p1", "p2
             if b is None:
                 b = battles[side] = Battle(f"battle-gen9customgame-{seed}", side, LOG, gen=9)
                 b._player_role = side
+                remember_own_sets(b, p1 if side == "p1" else p2)  # (our natures, EVs: the players')
             _feed(b, views[side][pos[side]:step["view_pos"][side]])
             pos[side] = step["view_pos"][side]
             req = step["requests"][side]
