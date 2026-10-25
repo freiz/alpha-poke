@@ -14,7 +14,7 @@ from poke_env.battle import Battle, Pokemon
 
 from alpha_poke.analysis.roles import to_id
 from alpha_poke.enginecheck import engine_state, random_battle
-from alpha_poke.enginecheck.statebuild import (LOG, SAME_SPECIES, _belief, _disguised, _fainted_no_status, _forme_match,
+from alpha_poke.enginecheck.statebuild import (LOG, SAME_SPECIES, _belief, _disguised, _fainted_no_status, _forme_match, _true_forme,
                                                _feed, _flip, field_diffs, foe_diffs)  # fmt: skip
 
 
@@ -46,13 +46,15 @@ def _oracle(team: list, ours: dict, theirs: dict):
                              tera=(t["tera_type"] or "typeless").lower(),
                              stats={"hp": t["maxhp"], **st},
                              nature=(t.get("nature") or "serious").lower(),  # (S158)
-                             evs=tuple(t["evs"]) if t.get("evs") else None)  # fmt: skip
+                             evs=tuple(t["evs"]) if t.get("evs") else None,
+                             forme=_true_forme(sp, t, moves))  # fmt: skip
 
     es.sample_set = sample
     try:
         yield
     finally:
         es.sample_set = inner
+
 
 
 def decisions(p1: str, p2: str, seed: int, max_turns: int = 40, stats: dict | None = None,

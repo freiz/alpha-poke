@@ -409,7 +409,25 @@ def engine_ends() -> list[Spec]:
               # (locked: the request's one move, "move 1")
               [{"p1": "move 2", "p2": "move 2"}] + [{"p1": "move 1", "p2": "move 2"}] * 2,
               expect=("[from] lockedmove",)),
-    ] + rollouts() + called_locks() + lock_edges()  # fmt: skip
+    ] + rollouts() + called_locks() + lock_edges() + [
+        # (S158: the foe's Choice lock -- our state gave it all its moves; state_chain's)
+        _spec("ends/foe-choice-lock", team(S("Corviknight", "Leftovers", "Pressure", ["Roost", "Body Press", "Iron Defense", "Defog"]), FILLER),
+              team(S("Garchomp", "Choice Scarf", "Rough Skin", ["Earthquake", "Dragon Claw", "Stone Edge", "Fire Fang"], FAST, "Jolly"), FILLER),
+              [{"p1": "move 3", "p2": "move 2"}] * 3, expect=("|move|p2a: Garchomp|Dragon Claw",)),
+        # (S158: a hidden forme -- the team preview's Zacian-* / Urshifu-*, built as the base: its
+        # stats, types and moves a Zacian's / a Single Strike's when it came in)
+        _spec("ends/hidden-formes", team(S("Corviknight", "Leftovers", "Pressure", ["Roost", "Body Press", "Iron Defense", "Defog"]), FILLER),
+              team(FILLER, S("Zacian", "Rusted Sword", "Intrepid Sword", ["Behemoth Blade", "Play Rough", "Swords Dance", "Close Combat"], FAST, "Jolly"),
+                   S("Urshifu-Rapid-Strike", "Choice Band", "Unseen Fist", ["Surging Strikes", "Close Combat", "Aqua Jet", "U-turn"], FAST, "Jolly")),
+              [{"p1": "move 3", "p2": "switch 2"}, {"p1": "move 3", "p2": "move 1"}, {"p1": "move 3", "p2": "switch 3"},
+               {"p1": "move 3", "p2": "move 1"}], expect=("|switch|p2a: Zacian|Zacian-Crowned", "|switch|p2a: Urshifu|Urshifu-Rapid-Strike")),
+        # (S158: our transformed mon locked -- the request names the lock's move alone: its slot the
+        # target's third, not the first)
+        _spec("ends/transformed-lock-order", team(S("Ditto", "Choice Scarf", "Imposter", ["Transform"]), FILLER),
+              team(S("Dragonite", "Leftovers", "Inner Focus", ["Dragon Dance", "Earthquake", "Outrage", "Roost"]), FILLER),
+              [{"p1": "move 3", "p2": "move 1"}, {"p1": "move 1", "p2": "move 1"}],
+              expect=("|move|p1a: Ditto|Outrage|p2a: Dragonite|[from] lockedmove",)),
+    ]  # fmt: skip
 
 
 def lock_edges() -> list[Spec]:

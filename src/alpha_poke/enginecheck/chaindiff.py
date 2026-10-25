@@ -96,6 +96,10 @@ def chain_diffs(steps: list[dict], depth: int = 3, every: int = 3, start=None, f
         if st is None:
             continue
         out["chains"] += 1
+        # (a start of our own: its legal options too, the request's -- the steps compare those after
+        # each step, when the engine's own rules have set them: a Choice lock our state left out
+        # was on again after the locked move; S158)
+        pre = {} if start is None else ec.options_diff(st, steps[k0]["state"]["sides"], "start_options")
         k = k0
         for d in range(depth):
             if k >= len(steps) - 1 or comparable(steps, k) is not None or at_decision(steps, k):
@@ -119,7 +123,7 @@ def chain_diffs(steps: list[dict], depth: int = 3, every: int = 3, start=None, f
             if d >= first:
                 out["compared"] += 1
                 hidden = _hidden_keys(a["state"], b["state"])
-                diff = {x: v for x, v in res["diff"].items()
+                diff = {x: v for x, v in {**(pre if d == 0 else {}), **res["diff"]}.items()
                         if x not in hidden and not (same is not None and same(x, *v))}  # fmt: skip
                 for kind in sorted({kind_of(x) for x in diff}):
                     out["kinds"][kind] = out["kinds"].get(kind, 0) + 1

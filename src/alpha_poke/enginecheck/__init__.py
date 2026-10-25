@@ -1068,16 +1068,25 @@ def extra_diff(showdown_after: dict, out, n_mons=(6, 6), hp: bool = True,
                     and not any(m["hp"] > 0 for j, m in enumerate(s["mons"]) if j != s["active"])):
                 bad[f"{k}.must_switch"] = (must, s["request"] == "switch")
     # the legal actions (where both sides choose a move next)
+    bad.update(options_diff(out[1], sides))
+    return bad
+
+
+def options_diff(state: pe.State, sides: list[dict], key: str = "options") -> dict:
+    """{"s1.<key>": (the engine's extra, Showdown's missing)} where a side's legal actions in
+    ``state`` are not its Showdown request's (``sides``: a recorded state's) -- where both sides
+    choose a move."""
+    bad: dict = {}
     want = [showdown_options(s) for s in sides]
     if all(w is not None for w in want):
-        got = pe.options(out[1])
+        got = pe.options(state)
         # (a Minior core's colour, as extra_view's id)
         core = lambda x: re.sub(r"^switch minior(?!meteor)\w*$", "switch minior", x)  # noqa: E731
         for k, g, w in zip(("s1", "s2"), got, want, strict=True):
             g = {core("none" if x == "No Move" else x) for x in g}
             w = {core(x) for x in w}
             if g != w:
-                bad[f"{k}.options"] = (sorted(g - w), sorted(w - g))
+                bad[f"{k}.{key}"] = (sorted(g - w), sorted(w - g))
     return bad
 
 

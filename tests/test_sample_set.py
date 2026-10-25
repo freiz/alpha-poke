@@ -174,3 +174,38 @@ def test_our_natures_and_evs_from_our_team():
         remember_own_sets(b, team)
         assert b._alpha_own_sets["ditto"] == ("relaxed", (252, 0, 4, 0, 0, 252))
         assert b._alpha_own_sets["bob"] == b._alpha_own_sets["ditto"]
+
+
+def test_a_hidden_formes_set_makes_its_forme():
+    """S158: the team preview hides some formes (Showdown's onTeamPreview: Zacian-*, Urshifu-*,
+    Greninja-* ...; a Greninja-Bond shows as Greninja even when it comes in) -- the engine needs
+    them: Battle Bond works only as Greninja-Bond, a Rusted Sword Zacian is Zacian-Crowned."""
+    from alpha_poke.agents.engine_state import resolve_forme
+
+    assert resolve_forme("greninja", "lifeorb", "battlebond", ["hydropump", "darkpulse"]) == "greninjabond"
+    assert resolve_forme("greninja", "lifeorb", "protean", ["hydropump", "darkpulse"]) == "greninja"
+    assert resolve_forme("zacian", "rustedsword", "intrepidsword", ["playrough"]) == "zaciancrowned"
+    assert resolve_forme("zacian", "lifeorb", "intrepidsword", ["playrough"]) == "zacian"
+    assert resolve_forme("urshifu", "choiceband", "unseenfist", ["surgingstrikes", "uturn"]) == "urshifurapidstrike"
+    assert resolve_forme("urshifu", "choiceband", "unseenfist", ["wickedblow", "uturn"]) == "urshifu"
+
+
+def test_a_hidden_formes_changed_types_kept():
+    """A hidden forme's types its own (Zacian-Crowned's Steel) -- unless they changed: a Protean
+    Greninja's after its Ice Beam (the full belief check: our state gave it Water / Dark again,
+    the Ice Beam's damage no STAB, the true set ruled out)."""
+    from poke_env.battle import PokemonType
+
+    from alpha_poke.agents.engine_state import SampledSet, _their_mon
+
+    s = SampledSet(moves=["icebeam"], item="choicespecs", ability="battlebond", tera="water",
+                   stats={"hp": 285, "atk": 203, "def": 171, "spa": 305, "spd": 178, "spe": 377},
+                   forme="greninjabond")  # fmt: skip
+    mon = Pokemon(species="greninja", gen=9)
+    assert {str(t).lower() for t in _their_mon(mon, s).types} == {"water", "dark"}
+    mon._temporary_types = [PokemonType.ICE]
+    assert str(_their_mon(mon, s).types[0]).lower() == "ice"
+    zacian = SampledSet(moves=["playrough"], item="rustedsword", ability="intrepidsword", tera="fairy",
+                        stats={"hp": 323, "atk": 337, "def": 266, "spa": 176, "spd": 266, "spe": 390},
+                        forme="zaciancrowned")  # fmt: skip
+    assert {str(t).lower() for t in _their_mon(Pokemon(species="zacian", gen=9), zacian).types} == {"fairy", "steel"}

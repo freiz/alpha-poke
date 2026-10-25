@@ -153,6 +153,9 @@ class SampledSet:
     # berry reads the nature; our states had neither)
     nature: str = "serious"
     evs: tuple | None = None
+    # (S158: the forme a hidden one's set makes it -- Greninja-Bond by Battle Bond, Zacian-Crowned
+    # by its Rusted Sword: resolve_forme; None, its own)
+    forme: str | None = None
 
 
 @dataclass
@@ -470,8 +473,62 @@ def sample_set(
         spread, item = _sample_spread(mon, item, item_seen, speed_obs, dist, rng)
     if spread is None:
         spread = belief.spread_for(mon.species)
-    stats = calc_stats(own_base_stats(mon), spread, level=mon.level or 100)
-    return SampledSet(moves or ["tackle"], item, ability, tera, stats, spread.nature, tuple(spread.evs))
+    sp = to_id(mon.species)
+    forme = resolve_forme(sp, item, ability, moves) if sp in HIDDEN_FORMES else None
+    forme = forme if forme != sp else None
+    base = (GEN.pokedex.get(forme) or {}).get("baseStats") if forme else None
+    stats = calc_stats(base or own_base_stats(mon), spread, level=mon.level or 100)
+    return SampledSet(moves or ["tackle"], item, ability, tera, stats, spread.nature, tuple(spread.evs), forme)
+
+
+# Showdown's team preview hides these formes ("-*": data/rulesets.ts' onTeamPreview -- Zacian /
+# Zamazenta till the Crowned item changes them as the battle begins); a switch-in shows them, but
+# Greninja-Bond as "Greninja" (its ability tells). Ours from our team
+HIDDEN_FORMES = frozenset({"greninja", "gourgeist", "pumpkaboo", "xerneas", "silvally", "urshifu", "dudunsparce",
+                           "zacian", "zamazenta"})  # fmt: skip
+
+
+@functools.cache
+def _forme_candidates(base: str) -> tuple[str, ...]:
+    """A species' formes a set can make it: itself and its formes in Gen 9 -- not a Mega, a Gmax,
+    nor one only a battle event makes (Greninja-Ash), but one its item makes (Zacian-Crowned)."""
+    out = [base]
+    for k, e in GEN.pokedex.items():
+        if k == base or to_id(e.get("baseSpecies") or "") != base or e.get("isNonstandard"):
+            continue
+        forme = e.get("forme") or ""
+        if "Mega" in forme or "Gmax" in forme or (e.get("battleOnly") and not e.get("requiredItem")):
+            continue
+        out.append(k)
+    return tuple(out)
+
+
+def resolve_forme(base: str, item: str, ability: str, moves) -> str:
+    """The forme a set makes a hidden species (HIDDEN_FORMES; S158 -- the engine's: Battle Bond
+    works only as Greninja-Bond, a Zacian with its Rusted Sword is Zacian-Crowned): the candidates
+    its ability is one of, its item the one a forme requires (else not that forme -- nor the base
+    when the item is another's requirement), its moves all legal for; of those the one whose
+    abilities are fewest (Battle Bond: Greninja-Bond's alone). None fitting: the base."""
+    from alpha_poke.belief.priors import legal_moves
+
+    def fits(c: str) -> bool:
+        e = GEN.pokedex.get(c) or {}
+        req = to_id(e.get("requiredItem") or "")
+        abilities = {to_id(a) for a in (e.get("abilities") or {}).values()}
+        if req and to_id(item or "") != req:
+            return False
+        if not req and any(to_id((GEN.pokedex.get(o) or {}).get("requiredItem") or "") == to_id(item or "")
+                           for o in _forme_candidates(base) if o != c):  # fmt: skip
+            return False
+        if ability and ability != "none" and abilities and to_id(ability) not in abilities:
+            return False
+        legal = legal_moves(c)
+        return not legal or all(to_id(m) in legal for m in moves or ())
+
+    fit = [c for c in _forme_candidates(base) if fits(c)]
+    if not fit:
+        return base
+    return min(fit, key=lambda c: (len((GEN.pokedex.get(c) or {}).get("abilities") or {}), c != base))
 
 
 _SPREAD_SPEEDS: dict = {}  # (species, level) -> the speed stat of each usage spread
@@ -889,10 +946,12 @@ def _their_mon(mon, s: SampledSet, tm: SideTimers | None = None, disabled: str |
                 tm is not None and tm.k(to_id(mon.species)) in tm.no_regen):  # fmt: skip
             hp = min(maxhp, hp + maxhp // 3)
     return pe.Pokemon(
-        id=mon.species,
+        id=s.forme or mon.species,
         level=mon.level or 100,
-        types=_types(mon),
-        base_types=_base_types(mon.species),
+        # (a hidden forme's: its own types -- Zacian-Crowned's Steel; S158 -- unless they changed:
+        # a Protean Greninja's, poke-env's then; the full belief check, an Ice Beam with no STAB)
+        types=_base_types(s.forme) if s.forme and _types(mon) == _base_types(mon.species) else _types(mon),
+        base_types=_base_types(s.forme or mon.species),
         hp=hp,
         maxhp=maxhp,
         ability=engine_ability(mon, s.ability),
@@ -904,7 +963,8 @@ def _their_mon(mon, s: SampledSet, tm: SideTimers | None = None, disabled: str |
         special_defense=s.stats["spd"],
         speed=s.stats["spe"],
         status=STATUS.get(mon.status, "none"),
-        weight_kg=own_weight(mon),
+        weight_kg=float((GEN.pokedex.get(s.forme) or {}).get("weightkg") or own_weight(mon)) if s.forme
+        else own_weight(mon),
         moves=[pe.Move(id=m, pp=max(0, min(_max_pp(m), _pp(mon, m) + pp_adj.get(m, 0))
                                     - _spited(tm, mon, m)),
                        disabled=m == disabled) for m in s.moves[:4]],  # fmt: skip
@@ -1338,8 +1398,11 @@ def build_state(
             # (a lock's request lists the locked move only, without PP; Struggle only, a recharge
             # none: the target's moves, the PP poke-env counted -- 2026-10-23, S94: a locked
             # Outrage the Ditto's only move, 0 PP)
-            ids = list(req) if len(req) == 4 or not their_mons[t].moves else \
-                list(dict.fromkeys(list(req) + [m.id for m in their_mons[t].moves]))[:4]
+            # (in the target's slot order: a locked Outrage, the request's only one, in its own slot
+            # -- not the first, S158; a move of the request this world's target lacks, last)
+            base = [m.id for m in their_mons[t].moves]
+            extra = [x for x in req if x not in base]
+            ids = list(req) if len(req) == 4 or not base else base[: 4 - len(extra)] + extra
             # (the move it chose: after a Struggle poke-env's last used one is the Struggle --
             # 2026-10-23, the state-construction differential: the lock's flags were lost)
             last = (tm_us.own_last if tm_us is not None else "") or last_used_move(active)
@@ -1593,6 +1656,16 @@ def build_state(
         if called or not (mine and spectator is None):
             mons[i] = _with(em, moves=[pe.Move(id=x.id, pp=x.pp, disabled=(x.disabled and not called) or x.id != keep)
                                        for x in em.moves])  # fmt: skip
+    # (S158: the foe's Choice lock -- its world's Choice item or Gorilla Tactics and the move it
+    # chose this time in: the engine keeps it by the other moves' flags, as ours by our request's;
+    # its options were all of its moves. Not an item it got after that move -- L228)
+    if their_idx is not None and their_idx < len(their_mons) and not tm_them.locked:
+        em = their_mons[their_idx]
+        last = tm_them.own_last
+        if last and not tm_them.item_new and any(x.id == last for x in em.moves) and (
+                str(em.item).lower() in CHOICE_ITEMS or str(em.ability).lower() == "gorillatactics"):
+            their_mons[their_idx] = _with(em, moves=[pe.Move(id=x.id, pp=x.pp, disabled=x.disabled or x.id != last)
+                                                     for x in em.moves])  # fmt: skip
     # Disable (L70): its volatile and its move's slot and count, not the move's flag alone (the
     # engine's next move enabled it again; 2026-10-23 review)
     disable = {}

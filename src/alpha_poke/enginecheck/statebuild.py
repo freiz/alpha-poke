@@ -46,6 +46,21 @@ SIDE_FIELDS = ("substitute_health", "wish", "future_sight",
 _BELIEF = None
 
 
+
+def _true_forme(sp: str, t: dict, moves: list) -> str | None:
+    """A hidden forme's, the truth's: Showdown's species when it is one of the forme candidates
+    (S158 -- not engine_state.resolve_forme from the true set: a Dudunsparce-Three-Segment's set
+    is a Dudunsparce's too); a forme the set alone tells, resolve_forme's (unit-tested)."""
+    from alpha_poke.agents import engine_state as es
+
+    if sp not in es.HIDDEN_FORMES:
+        return None
+    f = to_id(t.get("species") or "")
+    if f not in es._forme_candidates(sp):
+        f = es.resolve_forme(sp, t["item"] or "", t["base_ability"] or t["ability"] or "", moves)
+    return f if f != sp else None
+
+
 def _belief():
     global _BELIEF
     if _BELIEF is None:
@@ -350,10 +365,16 @@ def _feed(battle: Battle, lines: list[str]) -> None:
 
 def _forme_match(truth: dict, sp: str):
     """The true set of species id ``sp`` -- or of its one forme in the truth (poke-env keeps the
-    species a mon came in as: a Mimikyu now Mimikyu-Busted)."""
+    species a mon came in as: a Mimikyu now Mimikyu-Busted; a Minior-Meteor the truth's core,
+    Minior-Yellow -- by the base species, not a prefix)."""
     if sp in truth:
         return truth[sp]
-    formes = [v for k, v in truth.items() if k.startswith(sp) or sp.startswith(k)]
+    from alpha_poke.agents.engine_state import GEN
+
+    def base(k: str) -> str:
+        return to_id((GEN.pokedex.get(k) or {}).get("baseSpecies") or k)
+
+    formes = [v for k, v in truth.items() if k.startswith(sp) or sp.startswith(k) or base(k) == base(sp)]
     return formes[0] if len(formes) == 1 else None
 
 
@@ -387,7 +408,8 @@ def _oracle(foe: dict | None):
                              tera=(t["tera_type"] or "typeless").lower(),
                              stats={"hp": t["maxhp"], **st},
                              nature=(t.get("nature") or "serious").lower(),  # (S158)
-                             evs=tuple(t["evs"]) if t.get("evs") else None)  # fmt: skip
+                             evs=tuple(t["evs"]) if t.get("evs") else None,
+                             forme=_true_forme(sp, t, moves))  # fmt: skip
 
     es.sample_set = sample
     try:
@@ -553,9 +575,13 @@ def built_chain(p1: str, p2: str, seed: int, max_turns: int = 40, script: list |
     # (in the truth's order: the comparison is by slot -- Showdown's team order; ours, poke-env's.
     # The lengths Showdown draws hidden -- confusion's, a lock's, a partial trap's -- the truth's:
     # no player knows them, the chain's own resync after each step takes them so too)
-    built = {k: _with_true_unseen(_with_true_hidden(_in_order_of(st, t), t), t)
-             for k, _, _, st, t in decisions(p1, p2, seed, max_turns, ("p1",), stats, True, script, fmt)
-             if not ({"illusion"} & (_vols(t.side_one) | _vols(t.side_two)))}  # fmt: skip
+    # (the lock's silent end first: the hidden lengths' sync drops its volatile, not its flags)
+    built = {k: _with_true_disguised(_with_true_unseen(_with_true_hidden(_with_true_lock(_in_order_of(st, t), t), t), t),
+                                     t, _disguised(b, t.side_two))
+             for k, _, b, st, t in decisions(p1, p2, seed, max_turns, ("p1",), stats, True, script, fmt)
+             # (an Illusion in disguise -- the truth's, or our construction's guess of one: a shown
+             # Cetitan as the Zoroark it may be; the decision checks compare that one)
+             if not ({"illusion"} & (_vols(t.side_one) | _vols(t.side_two) | _vols(st.side_one) | _vols(st.side_two)))}  # fmt: skip
     views: dict = {}  # (the same recording: its cache key has views)
     steps, err = random_battle(p1, p2, f"gen5,{seed},{seed + 1},{seed + 2},{seed + 3}", seed + 1,
                                max_turns=max_turns, views=views, script=script,
@@ -576,17 +602,59 @@ def _alias(key: str, ours, theirs) -> bool:
 
 
 def _rename_choice(st: pe.State, k: int, choice: str) -> str:
-    """A choice as Showdown names it -- "switch greninja" -- as the state's mon is named (our
-    construction's: Greninja-Bond), the one whose species it is (SAME_SPECIES)."""
-    if not choice.startswith("switch "):
-        return choice
+    """A choice as Showdown names it -- a switch's "greninja" -- as the state's mon is named (our
+    construction's: Greninja-Bond; or the truth's Greninja-Bond our Greninja), the one whose
+    species it is (SAME_SPECIES). (The engine's switch: the species id alone.)"""
     side = st.side_one if k == 0 else st.side_two
-    sp = choice[7:]
-    ids = [_sp(p) for p in side.pokemon]
-    if sp in ids:
+    ids = [to_id(p.id) for p in side.pokemon]
+    sp = SAME_SPECIES.get(choice, choice)
+    if choice in ids or not any(SAME_SPECIES.get(i, i) == sp for i in ids):
         return choice
-    alias = next((i for i in ids if SAME_SPECIES.get(i) == sp), None)
-    return f"switch {alias}" if alias else choice
+    return next(i for i in ids if SAME_SPECIES.get(i, i) == sp)
+
+
+def _with_true_lock(st: pe.State, truth: pe.State) -> pe.State:
+    """``st`` with a lock's silent end the truth's: confused already (or Own Tempo), its end shows
+    nothing -- whether it is on, Showdown's drawn length (_silent_lock_end; a Zekrom's Outrage
+    over after two turns, our state's on for a third)."""
+    from alpha_poke.agents.engine_state import _with
+
+    kws = []
+    for a, b in ((st.side_one, truth.side_one), (st.side_two, truth.side_two)):
+        kw = {x: getattr(a, x) for x in dir(pe.Side) if not x.startswith("_")}
+        if _silent_lock_end(a, b):
+            kw["volatile_statuses"] = (_vols(a) - {"lockedmove"}) | (_vols(b) & {"lockedmove"})
+            off = {m.id.lower(): m.disabled for m in _active(b).moves}
+            mons = list(a.pokemon)
+            i = int(a.active_index)
+            mons[i] = _with(mons[i], moves=[pe.Move(id=m.id, pp=m.pp, disabled=off.get(m.id.lower(), m.disabled))
+                                            for m in mons[i].moves])  # fmt: skip
+            kw["pokemon"] = mons
+        kws.append(pe.Side(**kw))
+    new = pe.State(side_one=kws[0], side_two=kws[1]).to_string().split("/")[:2]
+    return pe.State.from_string("/".join(new + st.to_string().split("/")[2:]))
+
+
+def _with_true_disguised(st: pe.State, truth: pe.State, hidden: set[str]) -> pe.State:
+    """``st`` with the HP and PP of the foe's mons a Zoroark showed itself as, never found out
+    (_disguised) -- and of the Zoroark -- the truth's: the player cannot tell whose they were (a
+    Zoroark's Dark Pulse as a Spectrier's: its PP full in our state)."""
+    from alpha_poke.agents.engine_state import _with
+
+    if not hidden:
+        return st
+    a, b = st.side_two, truth.side_two
+    tm = _mons(b)
+    mons = list(a.pokemon)
+    for i, p in enumerate(mons):
+        t = tm.get(_sp(p))
+        if _sp(p) in hidden and t is not None:
+            pp = {m.id.lower(): m.pp for m in t.moves}
+            mons[i] = _with(p, hp=t.hp, moves=[pe.Move(id=m.id, pp=pp.get(m.id.lower(), m.pp), disabled=m.disabled)
+                                               for m in p.moves])  # fmt: skip
+    kw = {x: getattr(a, x) for x in dir(pe.Side) if not x.startswith("_")} | {"pokemon": mons}
+    new = pe.State(side_one=st.side_one, side_two=pe.Side(**kw)).to_string().split("/")[:2]
+    return pe.State.from_string("/".join(new + st.to_string().split("/")[2:]))
 
 
 def _with_true_unseen(st: pe.State, truth: pe.State) -> pe.State:

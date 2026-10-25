@@ -28,9 +28,12 @@ battles alike.
               formeChange, not permanent) changes poke-env's types and stats and its switch-out
               keeps them -- Showdown's switch-out (clearVolatile) gives the species' back: the
               Meloetta back in as Aria had Pirouette's types (S66); a detailschange's stays
+  Tera        ... and a disguised Zoroark's Terastallization: the -terastallize line named the
+              disguise -- its own after the Illusion broke; and a disguise's level: its switch-in's
+              details the Zoroark's -- the team preview's kept (S158)
 """
 
-from poke_env.battle import Effect, Field
+from poke_env.battle import Battle, Effect, Field
 from poke_env.battle.abstract_battle import AbstractBattle
 from poke_env.data.normalize import to_id_str
 
@@ -98,10 +101,20 @@ def _end_illusion_on(self, illusionist, illusioned, details: str):
         and any(m is illusioned for m in self.team.values())
     boosts = dict(illusioned.boosts) if ours else {}
     types = list(illusioned._temporary_types) if illusioned is not None else []  # (a Soak on it: S148)
+    # (its Terastallization in disguise -- the -terastallize line named the disguise: the Zoroark's;
+    # the disguise, a Flygon never in, had it after: S158)
+    tera = (illusioned._terastallized, illusioned._terastallized_type) if illusioned is not None else (False, None)
+    if illusioned is not None and self.__dict__.get("_alpha_tera_in", {}).get(id(illusioned)):
+        tera = (False, None)  # (its own, before the disguise came in: a Serperior's earlier one)
     mon = _inner_end_illusion(self, illusionist, illusioned, details)
     if mon is not illusioned:
         if types:
             mon._temporary_types = types
+        if tera[0] and illusioned is not None:
+            mon._terastallized, mon._terastallized_type = tera
+            illusioned._terastallized = False
+            if not ours:  # (ours: the request's; the foe's disguise its own, unknown)
+                illusioned._terastallized_type = None
         for effect, count in effects.items():
             mon.effects.setdefault(effect, count)
         for k, v in boosts.items():
@@ -135,9 +148,27 @@ def _update_team_from_request(self, side, strict_battle_tracking: bool = False):
             target.effects.setdefault(effect, count)
 
 
+_inner_switch = Battle.switch
+
+
+def _switch(self, pokemon_str: str, details: str, hp_status: str):
+    _inner_switch(self, pokemon_str, details, hp_status)
+    # (a disguised Zoroark's switch-in details name the disguise at the Zoroark's level -- a
+    # Spectrier at 83 for its 75, never found out; a level never changes: the team preview's)
+    if pokemon_str.split(":")[0][:2] != self._player_role:
+        mon = self.opponent_active_pokemon
+        # (whether it came in terastallized: a Zoroark's tera in its disguise is the one after)
+        if mon is not None:
+            self.__dict__.setdefault("_alpha_tera_in", {})[id(mon)] = mon._terastallized
+        lv = next((m.level for m in self._teampreview_opponent_team if mon is not None and m.species == mon.species), None)
+        if lv is not None:
+            mon._level = lv
+
+
 if getattr(AbstractBattle, "_alpha_illusion_fixed", False) is False:
     AbstractBattle._end_illusion_on = _end_illusion_on
     AbstractBattle._update_team_from_request = _update_team_from_request
+    Battle.switch = _switch
     AbstractBattle._alpha_illusion_fixed = True
 
 
@@ -295,7 +326,6 @@ if getattr(AbstractBattle, "_alpha_formes_fixed", False) is False:
 
 
 
-from poke_env.battle import Battle  # noqa: E402
 
 _inner_parse_request = Battle.parse_request
 

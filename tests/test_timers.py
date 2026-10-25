@@ -1064,6 +1064,50 @@ def test_a_replays_illusion_and_transform_records():
     assert b.opponent_active_pokemon.boosts["def"] == 2
 
 
+def test_a_broken_illusions_tera_is_the_zoroarks():
+    """S158 (state_chain): a Zoroark-Hisui terastallized disguised as a Flygon -- the log's
+    -terastallize named the Flygon; poke-env kept it on the Flygon, never in, after the Illusion
+    broke: our state's Flygon a terastallized Rock type. Its level alike: a Dodrio at the
+    Zoroark's 80."""
+    import logging
+
+    from poke_env.battle import Battle, PokemonType
+
+    import alpha_poke.agents.engine_state  # noqa: F401 (the fixes)
+
+    b = Battle("battle-gen9ou-15", "us", logging.getLogger("t"), gen=9)
+    b.player_role = "p1"
+    # (and its level: the disguise's switch-in details the Zoroark's, L80 -- the preview's L85)
+    for line in ["|poke|p2|Flygon, L85, M|", "|poke|p2|Zoroark-Hisui, L80, M|",
+                 "|switch|p1a: Garganacl|Garganacl|100/100", "|switch|p2a: Flygon|Flygon, L80, M|100/100", "|turn|1",
+                 "|-terastallize|p2a: Flygon|Normal", "|move|p1a: Garganacl|Salt Cure|p2a: Flygon",
+                 "|-damage|p2a: Flygon|60/100", "|replace|p2a: Zoroark|Zoroark-Hisui, L80, M",
+                 "|-end|p2a: Zoroark|Illusion"]:  # fmt: skip
+        b.parse_message(line.split("|"))
+    zoroark = b.opponent_active_pokemon
+    flygon = next(m for m in b.opponent_team.values() if m.species == "flygon")
+    assert zoroark.species == "zoroarkhisui" and zoroark.is_terastallized and zoroark.tera_type == PokemonType.NORMAL
+    assert not flygon.is_terastallized and flygon.tera_type is None
+    assert flygon.level == 85 and zoroark.level == 80
+    # (the disguise's own, before: a Serperior terastallized, a Zoroark as it later -- its own)
+    b = Battle("battle-gen9ou-17", "us", logging.getLogger("t"), gen=9)
+    b.player_role = "p1"
+    for line in ["|switch|p1a: Garganacl|Garganacl|100/100", "|switch|p2a: Serperior|Serperior, F|100/100", "|turn|1",
+                 "|-terastallize|p2a: Serperior|Electric", "|switch|p2a: Weavile|Weavile, F|100/100", "|turn|2",
+                 "|switch|p2a: Serperior|Serperior, F|100/100", "|turn|3", "|replace|p2a: Zoroark|Zoroark-Hisui, F",
+                 "|-end|p2a: Zoroark|Illusion"]:  # fmt: skip
+        b.parse_message(line.split("|"))
+    serperior = next(m for m in b.opponent_team.values() if m.species == "serperior")
+    assert serperior.is_terastallized and not b.opponent_active_pokemon.is_terastallized
+    # (never found out: the Spectrier's level its own still)
+    b = Battle("battle-gen9ou-16", "us", logging.getLogger("t"), gen=9)
+    b.player_role = "p1"
+    for line in ["|poke|p2|Spectrier, L75|", "|poke|p2|Zoroark, L83, M|", "|switch|p1a: Garganacl|Garganacl|100/100",
+                 "|switch|p2a: Spectrier|Spectrier, L83|100/100", "|turn|1"]:  # fmt: skip
+        b.parse_message(line.split("|"))
+    assert b.opponent_active_pokemon.level == 75
+
+
 def test_the_replay_paths_second_run_facts():
     """2026-10-23 (the replay path's second million-decision run): a broken Illusion's shown
     status is the Zoroark's, its disguise's own (the same) kept (S146); a Sticky Web's drop a
