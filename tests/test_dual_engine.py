@@ -7287,3 +7287,95 @@ def test_l238_a_second_sleep(clause, request):
     assert states[1]["sides"][1]["mons"][0]["status"] == "slp"
     assert (states[3]["sides"][1]["mons"][1]["status"] == "slp") != clause, states[3]["log"]
     assert _keys(_full(states, 2, "spore", "calmmind", (1, 2)), "status") == {}
+
+
+# L239 - L241 (doc/engine-diff.md, 2026-10-25): found by the differential framework, confirmed here
+# against Showdown's outcome before any fix
+REGIGIGAS = """Regigigas @ Leftovers
+Ability: Slow Start
+EVs: 252 HP / 4 Atk / 252 SpD
+Careful Nature
+- Skill Swap
+- Bulk Up
+- Body Slam
+- Protect"""
+
+
+def test_l239_control_slow_start_stays_without_a_swap():
+    states = ec.run_showdown(REGIGIGAS, GARCHOMP_SD, [("move bulkup", "move swordsdance")])
+    assert "slowstart" in states[1]["sides"][0]["mons"][0]["volatiles"]
+    assert _keys(_full(states, 0, "bulkup", "swordsdance"), "slowstart") == {}
+
+
+@pytest.mark.xfail(strict=True, reason="L239: the engine keeps Slow Start on the Skill Swap's user")
+def test_l239_skill_swap_takes_slow_start_away():
+    """Showdown's skillSwap ends both abilities (Slow Start's End: its volatile off the user,
+    silently) and starts each on the other (the target's Slow Start begins: 5 turns)."""
+    states = ec.run_showdown(REGIGIGAS, GARCHOMP_SD, [("move skillswap", "move swordsdance")])
+    log = states[1]["log"]
+    assert "|-end|p1a: Regigigas|Slow Start|[silent]" in log
+    assert "|-start|p2a: Garchomp|ability: Slow Start" in log
+    assert "slowstart" not in states[1]["sides"][0]["mons"][0]["volatiles"]
+    assert "slowstart" in states[1]["sides"][1]["mons"][0]["volatiles"]
+    assert _keys(_full(states, 0, "skillswap", "swordsdance"), "slowstart") == {}
+
+
+# (a Copycat in the state -- BLISSEY_COPYCAT on the bench: the engine keeps the battle's last move
+# only then, L167's use_last_move, and the comparison compares it only then)
+GARCHOMP_MEMENTO = GARCHOMP_SD.replace("- Scale Shot", "- Memento") + "\n\n" + BLISSEY_COPYCAT
+BLISSEY_UTURN = BLISSEY.replace("- Protect", "- U-turn")
+# (no boost: the Dragon Claw leaves the Blissey in; no Leftovers, no Rough Skin: 357 -> 57 exactly)
+GARCHOMP_CLAW = GARCHOMP_SD.replace("- Stealth Rock", "- Dragon Claw").replace("- Swords Dance", "- Splash") \
+    .replace("Garchomp @ Leftovers", "Garchomp").replace("Rough Skin", "Sand Veil") + "\n\n" + BLISSEY_COPYCAT
+BLISSEY_HELMET = BLISSEY_UTURN.replace("@ Heavy-Duty Boots", "@ Rocky Helmet")
+
+
+def test_l240_control_the_last_move_is_the_last_one_used():
+    states = ec.run_showdown(GARCHOMP_MEMENTO.replace("- Memento", "- Scale Shot"), BLISSEY_UTURN,
+                             [("move swordsdance", "move uturn")])  # fmt: skip
+    assert states[1]["last_move"] == "uturn"
+    assert _keys(_full(states, 0, "swordsdance", "uturn", (2, 1)), "last_move") == {}
+
+
+def _no_target(case):
+    """(Showdown's states, the turn, the choices) of a U-turn with its target fainted first."""
+    if case == "memento":  # (its user faints itself)
+        return ec.run_showdown(GARCHOMP_MEMENTO, BLISSEY_UTURN, [("move memento", "move uturn")]), 0, "memento"
+    # (the corpus' case, rbt/7027 t6: the attacker faints to the helmet of the one it hit -- three
+    # Seismic Tosses, 357 -> 57, the helmet's 59)
+    turns = [("move splash", "move seismictoss")] * 3 + [("move dragonclaw", "move uturn")]
+    return ec.run_showdown(GARCHOMP_CLAW, BLISSEY_HELMET, turns), 3, "dragonclaw"
+
+
+@pytest.mark.parametrize("case", ["memento", "rockyhelmet"])
+@pytest.mark.xfail(strict=True, reason="L240: a move with no target is no last move in the engine")
+def test_l240_a_move_with_no_target_is_the_last_move(case):
+    """The U-turn has no target ([notarget], -fail); Showdown's runMove still ends in
+    clearActiveMove() unfailed: battle.lastMove (Copycat's) is the U-turn. The engine returns
+    before its last-move update (generate_instructions: the no-target branch)."""
+    states, k, mine = _no_target(case)
+    log = states[k + 1]["log"]
+    assert any("|move|p2a: Blissey|U-turn|" in x and "[notarget]" in x for x in log), log
+    assert states[k + 1]["last_move"] == "uturn"
+    assert _keys(_full(states, k, mine, "uturn", (2, 1)), "last_move") == {}
+
+
+_L241 = pytest.mark.xfail(strict=True, reason="L241: the engine spends PP on a turn its own volatile locks")
+
+
+@pytest.mark.parametrize("move,name", [
+    ("outrage", "Outrage"), ("petaldance", "Petal Dance"), ("thrash", "Thrash"),  # (lockedmove: agree)
+    pytest.param("uproar", "Uproar", marks=_L241),
+    pytest.param("rollout", "Rollout", marks=_L241),
+    pytest.param("iceball", "Ice Ball", marks=_L241),
+])  # fmt: skip
+def test_l241_a_locked_turn_spends_no_pp(move, name):
+    """Showdown's runMove deducts no PP while getLockedMove() names a move -- the LockMove event:
+    Outrage's / Petal Dance's / Thrash's lockedmove, Uproar's uproar, Rollout's / Ice Ball's
+    rollout: the first turn's PP only."""
+    states = ec.run_showdown(GARCHOMP_SD.replace("- Scale Shot", f"- {name}"), BLISSEY,
+                             [(f"move {move}", "move softboiled")] * 3)  # fmt: skip
+    pp = [next(m["pp"] for m in s["sides"][0]["mons"][0]["moves"] if m["id"] == move) for s in states]
+    assert pp[0] - pp[1] == 1 and pp[1] == pp[2] == pp[3], pp  # (Showdown)
+    for k in (1, 2):
+        assert _keys(_full(states, k, move, "softboiled"), "pp") == {}, k
