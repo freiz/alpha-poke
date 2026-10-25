@@ -55,6 +55,7 @@ function monState(p, side) {
 			[k === 'perishsong' ? `perish${v.duration}` : k, {duration: v.duration || 0, layers: v.layers || 0, counter: v.counter || 0,
 				stat: v.bestStat || '', time: v.time || 0, true_duration: v.trueDuration || 0,
 				num_consecutive: v.numConsecutive || 0, hp: v.hp || 0, move: v.move || '',
+				hit_count: v.hitCount || 0, // (Rollout / Ice Ball's hits: L241)
 				// (a partial trap's source no longer in: it no longer traps and ends silently at
 				// the residual; doc/engine-diff.md L170)
 				source_out: !!(v.source && v.source.side !== p.side && !v.source.isActive)}])

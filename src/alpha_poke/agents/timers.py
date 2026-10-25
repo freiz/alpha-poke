@@ -157,6 +157,11 @@ class SideTimers:
     truant_next: bool = False  # it moved last: a Truant mon loafs next (Showdown's truant volatile)
     minimized: bool = False  # it used Minimize this time in
     uproar: int | None = None  # its Uproar's ends of turn so far
+    # its Rollout / Ice Ball rolling: [move, hits so far] (Showdown's volatile and hitCount: L241);
+    # a hit this turn (renews it), its move going on (the next hit line is its)
+    rollout: list | None = None
+    rollout_hit: bool = False
+    rollout_moving: bool = False
     stockpile: int = 0  # its Stockpile layers
     embargo: bool = False  # the active under Embargo (its item does nothing)
     ability_now: str = ""  # the active's ability as a move / ability changed it ("none": suppressed)
@@ -282,6 +287,7 @@ class SideTimers:
         self.protean = self.item_lost = self.struggled = self.flashfire = self.metronome_gone = False
         self.destinybond = self.roosted = self.truant_next = self.minimized = False
         self.uproar, self.stockpile = None, 0
+        self.rollout, self.rollout_hit, self.rollout_moving = None, False, False
         self.embargo = self.sub_on = self.gastro = self.imprison = False
         self.raised_t1 = self.lowered_t1 = False
         self.illusion_last = ""
@@ -356,6 +362,11 @@ def _feed_one(sides: dict, p: list[str]) -> None:
             st.protected_move = ""
             if st.wish is not None:
                 st.wish = (st.wish[0] - 1, st.wish[1]) if st.wish[0] > 1 else None
+            # (L241: Rollout's lock goes on after a hit under the fifth -- Showdown's duration 2 --,
+            # else it ends at the residual)
+            if st.rollout is not None and (not st.rollout_hit or st.rollout[1] >= 5):
+                st.rollout = None
+            st.rollout_hit = st.rollout_moving = False
             if st.future is not None:
                 st.future = (st.future[0] - 1, st.future[1]) if st.future[0] > 1 else None
             if st.yawn is not None:
@@ -474,6 +485,17 @@ def _feed_one(sides: dict, p: list[str]) -> None:
     st, sp = _who(p, sides)
     if st is None:
         return
+    if tag in ("-damage", "-activate", "-end") and len(p) > 3:
+        # (L241: the foe's rolling Rollout / Ice Ball hit this one -- its damage, its Substitute's,
+        # a Disguise / Ice Face that took it: Showdown's basePowerCallback, hitCount up)
+        foe = sides["p2" if p[2][:2] == "p1" else "p1"]
+        if foe.rollout_moving and foe.rollout is not None and (
+                (tag == "-damage" and not any("[from]" in x for x in p[4:]))
+                or (tag == "-activate" and ("Substitute" in p[3] and "[damage]" in p
+                                            or p[3] in ("ability: Disguise", "ability: Ice Face")))
+                or (tag == "-end" and "Substitute" in p[3])):  # fmt: skip
+            foe.rollout[1] += 1
+            foe.rollout_hit, foe.rollout_moving = True, False
     nick = p[2].split(": ", 1)[-1] if len(p) > 2 else ""
     if tag in ("-damage", "-heal", "-sethp") and len(p) > 3 and p[2][2:3] in ("a", ":"):
         st.hp_shown[nick] = p[3]  # (its HP as last shown: a disguise's before its Zoroark came)
@@ -674,6 +696,11 @@ def _feed_one(sides: dict, p: list[str]) -> None:
     elif tag == "move" and len(p) > 3:
         mv = to_id(p[3])
         st.locked_exec = mv if any("lockedmove" in x for x in p[4:]) else ""
+        # (L241: its own Rollout / Ice Ball, or the lock's next -- not a called one: L242)
+        st.rollout_moving = mv in ("rollout", "iceball") and not any(
+            x.startswith("[from]") and "lockedmove" not in x for x in p[4:])  # fmt: skip
+        if st.rollout_moving and (st.rollout is None or st.rollout[0] != mv):
+            st.rollout = [mv, 0]
         st.notarget = "[notarget]" in p
         st.metronome_gone = False
         if not any(x.startswith("[from]") and "lockedmove" not in x for x in p[4:]):

@@ -834,6 +834,8 @@ pub struct VolatileStatusDurations {
     pub cudchew: i8,
     // (L224: Uproar's ends of turn; it ends at the third, Showdown's duration 3)
     pub uproar: i8,
+    // (L241: Rollout / Ice Ball's hits so far -- Showdown's hitCount: 30 x 2 ** it the power)
+    pub rollout: i8,
 }
 
 impl Default for VolatileStatusDurations {
@@ -855,6 +857,7 @@ impl Default for VolatileStatusDurations {
             stockpile: 0,
             cudchew: 0,
             uproar: 0,
+            rollout: 0,
         }
     }
 }
@@ -878,6 +881,7 @@ impl VolatileStatusDurations {
             ("stockpile", self.stockpile),
             ("cudchew", self.cudchew),
             ("uproar", self.uproar),
+            ("rollout", self.rollout),
         ];
 
         let mut output = String::new();
@@ -893,8 +897,11 @@ impl VolatileStatusDurations {
     }
 
     pub fn serialize(&self) -> String {
-        // (L224: Uproar's count only when there is one: older strings have no such field)
-        let uproar = if self.uproar != 0 {
+        // (L224: Uproar's count only when there is one: older strings have no such field; L241:
+        // Rollout's after it, the same way)
+        let uproar = if self.rollout != 0 {
+            format!(";{};{}", self.uproar, self.rollout)
+        } else if self.uproar != 0 {
             format!(";{}", self.uproar)
         } else {
             String::new()
@@ -939,6 +946,7 @@ impl VolatileStatusDurations {
             stockpile: split.get(13).map_or(0, |x| x.parse::<i8>().unwrap()),
             cudchew: split.get(14).map_or(0, |x| x.parse::<i8>().unwrap()),
             uproar: split.get(15).map_or(0, |x| x.parse::<i8>().unwrap()),
+            rollout: split.get(16).map_or(0, |x| x.parse::<i8>().unwrap()),
         }
     }
 }
@@ -1964,6 +1972,9 @@ impl State {
             }
             PokemonVolatileStatus::UPROAR => {
                 side.volatile_status_durations.uproar += amount;
+            }
+            PokemonVolatileStatus::ROLLOUT => {
+                side.volatile_status_durations.rollout += amount;
             }
             _ => panic!(
                 "Invalid volatile status for increment_volatile_status_duration: {:?}",

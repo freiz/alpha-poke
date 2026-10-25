@@ -7360,14 +7360,10 @@ def test_l240_a_move_with_no_target_is_the_last_move(case):
     assert _keys(_full(states, k, mine, "uturn", (2, 1)), "last_move") == {}
 
 
-_L241 = pytest.mark.xfail(strict=True, reason="L241: the engine spends PP on a turn its own volatile locks")
-
-
 @pytest.mark.parametrize("move,name", [
     ("outrage", "Outrage"), ("petaldance", "Petal Dance"), ("thrash", "Thrash"),  # (lockedmove: agree)
-    ("uproar", "Uproar"),  # (its own volatile: fixed 2026-10-25)
-    pytest.param("rollout", "Rollout", marks=_L241),
-    pytest.param("iceball", "Ice Ball", marks=_L241),
+    # (their own volatiles: fixed 2026-10-25)
+    ("uproar", "Uproar"), ("rollout", "Rollout"), ("iceball", "Ice Ball"),
 ])  # fmt: skip
 def test_l241_a_locked_turn_spends_no_pp(move, name):
     """Showdown's runMove deducts no PP while getLockedMove() names a move -- the LockMove event:
@@ -7428,3 +7424,45 @@ def test_l239_skill_swap_ends_the_old_abilitys_volatile(p1, first, volatile):
     assert volatile in states[1]["sides"][0]["mons"][0]["volatiles"], states[1]["log"]
     assert volatile not in states[2]["sides"][0]["mons"][0]["volatiles"], states[2]["log"]
     assert _keys(_full(states, 1, c1, "skillswap"), volatile, "ability") == {}
+
+
+# L241, Rollout / Ice Ball (Showdown's rollout / iceball volatile): locked into the move, 30 x 2 ** its
+# hits so far (x 2 after a Defense Curl), the lock renewed by a hit under the fifth -- a miss, a
+# Protect, the fifth hit end it at the turn's end. The engine modelled none of it (a 30 BP move)
+GARCHOMP_ROLLOUT = GARCHOMP_SD.replace("- Scale Shot", "- Rollout").replace("- Stealth Rock", "- Ice Ball")
+BLISSEY_BENCH = BLISSEY + "\n\n" + CORVIKNIGHT
+
+
+@pytest.mark.parametrize("move", ["rollout", "iceball"])
+def test_l241_rollout_rolls_five_hits(move):
+    """Each turn its power doubles (the HP), its lock holds (the options, no PP), the count goes up;
+    after the fifth (the Blissey knocked out) it ends."""
+    # (a weak user: the Blissey takes four, the fifth knocks it out)
+    weak = GARCHOMP_ROLLOUT.replace("EVs: 252 Atk / 4 SpD / 252 Spe", "EVs: 252 HP / 4 SpD / 252 Spe") \
+        .replace("Jolly Nature", "Timid Nature")  # fmt: skip
+    states = ec.run_showdown(weak, BLISSEY_BENCH, [(f"move {move}", "move softboiled")] * 5)
+    hits = [(s["sides"][0]["mons"][0]["volatiles"].get(move) or {}).get("hit_count") for s in states[1:]]
+    assert hits == [1, 2, 3, 4, None], hits  # (Showdown: the lock over after the fifth)
+    assert states[5]["sides"][1]["mons"][0]["hp"] == 0
+    for k in range(5):
+        assert _keys(_full(states, k, move, "softboiled", (1, 2)), "rollout", "options", "pp", "hp") == {}, k
+
+
+def test_l241_defense_curl_doubles_rollout():
+    sets = GARCHOMP_ROLLOUT.replace("- Swords Dance", "- Defense Curl")
+    states = ec.run_showdown(sets, BLISSEY_BENCH, [("move defensecurl", "move softboiled")]
+                             + [("move rollout", "move softboiled")] * 2)  # fmt: skip
+    assert "defensecurl" in states[1]["sides"][0]["mons"][0]["volatiles"]
+    for k in (1, 2):
+        assert _keys(_full(states, k, "rollout", "softboiled", (1, 2)), "rollout", "hp") == {}, k
+
+
+def test_l241_a_protect_ends_rollout():
+    """Turn 2's Protect: no hit, the lock not renewed -- at the turn's end it is over, the other
+    moves free again."""
+    turns = [("move rollout", "move softboiled"), ("move rollout", "move protect"), ("move earthquake", "move softboiled")]
+    states = ec.run_showdown(GARCHOMP_ROLLOUT, BLISSEY_BENCH, turns)
+    assert "rollout" in states[1]["sides"][0]["mons"][0]["volatiles"]
+    assert "rollout" not in states[2]["sides"][0]["mons"][0]["volatiles"], states[2]["log"]
+    for k, (c1, c2) in enumerate([("rollout", "softboiled"), ("rollout", "protect")]):
+        assert _keys(_full(states, k, c1, c2, (1, 2)), "rollout", "options", "pp", "disabled") == {}, k

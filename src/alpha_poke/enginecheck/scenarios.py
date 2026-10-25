@@ -402,7 +402,26 @@ def engine_ends() -> list[Spec]:
               # (locked: the request's one move, "move 1")
               [{"p1": "move 2", "p2": "move 2"}] + [{"p1": "move 1", "p2": "move 2"}] * 2,
               expect=("[from] lockedmove",)),
-    ]  # fmt: skip
+    ] + rollouts()  # fmt: skip
+
+
+def rollouts() -> list[Spec]:
+    """L241's Rollout / Ice Ball: locked, 30 x 2 ** its hits -- five (the fifth a knockout, a weak
+    user), or ended by a Protect (the lock over, the other moves back)."""
+    weak = S("Garchomp", "Leftovers", "Rough Skin", ["Rollout", "Ice Ball", "Swords Dance", "Earthquake"],
+             "252 HP / 4 SpD / 252 Spe", "Timid")  # fmt: skip
+    blissey = S("Blissey", "Heavy-Duty Boots", "Natural Cure", ["Soft-Boiled", "Protect", "Seismic Toss", "Calm Mind"])
+    corv = S("Corviknight", "Leftovers", "Pressure", ["Roost", "Body Press", "Iron Defense", "Defog"])
+    out = []
+    for k, move in ((1, "rollout"), (2, "iceball")):
+        out.append(_spec(f"ends/{move}-five", team(weak, FILLER), team(blissey, corv),
+                         # (locked: the request's one move, "move 1")
+                         [{"p1": f"move {k}", "p2": "move 1"}] + [{"p1": "move 1", "p2": "move 1"}] * 4,
+                         expect=("[from] lockedmove", "|faint|p2a: Blissey")))  # fmt: skip
+    out.append(_spec("ends/rollout-protect", team(weak, FILLER), team(blissey, corv),
+                     [{"p1": "move 1", "p2": "move 1"}, {"p1": "move 1", "p2": "move 2"}, {"p1": "move 4", "p2": "move 1"}],
+                     expect=("|-activate|p2a: Blissey|move: Protect",)))  # fmt: skip
+    return out
 
 
 FAMILIES = (extender_items, pp_takers, transforms, locks, failed_moves, item_phases, encore, formes, speed_phases,

@@ -1507,6 +1507,9 @@ def build_state(
         if tm.uproar is not None:
             vol.add("uproar")
             vcounts.setdefault(mon is active, {})["uproar"] = min(tm.uproar, 2)
+        if tm.rollout is not None:  # (L241: its hits so far)
+            vol.add("rollout")
+            vcounts.setdefault(mon is active, {})["rollout"] = tm.rollout[1]
         if tm.stockpile:
             vol.add("stockpile")
             vcounts.setdefault(mon is active, {})["stockpile"] = tm.stockpile
@@ -1535,7 +1538,8 @@ def build_state(
     # (L241: an Uproar's own lock too -- Showdown's getLockedMove, onLockMove 'uproar')
     for mons, i, tm, mine in ((their_mons, their_idx, tm_them, False),
                               (our_mons, our_active_idx, tm_us, True)):  # fmt: skip
-        lock_move = tm.locked[0] if tm.locked else ("uproar" if tm.uproar is not None else None)
+        lock_move = tm.locked[0] if tm.locked else ("uproar" if tm.uproar is not None else
+                                                      tm.rollout[0] if tm.rollout is not None else None)  # fmt: skip
         if lock_move and i is not None and i < len(mons) and not (mine and spectator is None):
             em = mons[i]
             mons[i] = _with(em, moves=[pe.Move(id=x.id, pp=x.pp, disabled=x.disabled or x.id != lock_move)

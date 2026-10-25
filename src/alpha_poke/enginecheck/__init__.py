@@ -258,7 +258,8 @@ def _engine_mon(m: dict) -> pe.Pokemon:
                    (x["disabled"] and not _derived_disable(m, x["id"]))
                    or ("lockedmove" in m.get("volatiles", {})
                        and x["id"] != m["volatiles"]["lockedmove"].get("move"))
-                   or ("uproar" in m.get("volatiles", {}) and x["id"] != "uproar")))
+                   or any(k in m.get("volatiles", {}) and x["id"] != k
+                          for k in ("uproar", "rollout", "iceball"))))  # (L241: their own locks)
                for x in m["moves"]],
         terastallized=bool(m["terastallized"]), tera_type=(m["tera_type"] or "typeless").lower(),
         last_item=m.get("last_item") if _engine_item(m.get("last_item") or "") else "none",
@@ -330,6 +331,8 @@ def _engine_side(s: dict, future_sight=None, wish=None) -> pe.Side:
         kw |= {ENGINE_BOOST[b]: act["boosts"][b] for b in BOOSTS}
         names = [x + st["stat"] if x in ("protosynthesis", "quarkdrive") and st.get("stat") else x
                  for x, st in act["volatiles"].items()]  # fmt: skip
+        # (L241: Ice Ball's volatile is the engine's rollout -- one lock, its move its slot's)
+        names = ["rollout" if x == "iceball" else x for x in names]
         vol = {v for v in names if _engine_volatile(v) and v != "stall"}
         # (L170: a partial trap whose source is out does nothing more -- Showdown ends it at the
         # residual, silently; the engine ends it as its trapper leaves)
@@ -398,6 +401,9 @@ def _engine_side(s: dict, future_sight=None, wish=None) -> pe.Side:
             dur["slowstart"] = act["volatiles"]["slowstart"]["duration"]
         if "uproar" in vol:  # (L224: the ends of turn passed, of Showdown's 3)
             dur["uproar"] = min(max(3 - act["volatiles"]["uproar"]["duration"], 0), 2)
+        if "rollout" in vol:  # (L241: its hits so far, Showdown's hitCount)
+            roll = act["volatiles"].get("rollout") or act["volatiles"].get("iceball") or {}
+            dur["rollout"] = roll.get("hit_count", 0)
         if "cudchew" in vol:  # (L204: Showdown's counter)
             dur["cudchew"] = act["volatiles"]["cudchew"]["duration"]
         if "stockpile" in vol:  # (L73: its layers)
@@ -768,6 +774,8 @@ def view(sd: dict) -> dict:
                 # one per stat in the engine ("protosynthesisatk")
                 if x in ("protosynthesis", "quarkdrive") and st.get("stat"):
                     x += st["stat"]
+                if x == "iceball":  # (L241: the engine's rollout, as engine_state)
+                    x = "rollout"
                 # (Protect's counter: Showdown's "stall" volatile, the engine's protect side
                 # condition -- not compared as a volatile)
                 if x == "metronome" and not st.get("num_consecutive"):
@@ -921,7 +929,7 @@ def extra_view(s: pe.State, n_mons: tuple[int, int] = (6, 6)) -> dict:
         d = side.volatile_status_durations
         for f in ("confusion", "encore", "lockedmove", "slowstart", "taunt", "yawn", "healblock",
                   "magnetrise", "throatchop", "partiallytrapped", "metronome", "disable",
-                  "stockpile", "micleberry", "cudchew"):  # fmt: skip
+                  "stockpile", "micleberry", "cudchew", "uproar", "rollout"):  # fmt: skip
             if f in vol:
                 v[f"{k}.count.{f}"] = getattr(d, f)
         if moves & LAST_USED_MOVES or "metronome" in items or "cursedbody" in abilities:

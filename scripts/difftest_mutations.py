@@ -99,6 +99,9 @@ MUTATIONS = [
      "elif False:"),
     ("B5 a Role Play's [of] keeps its ability", "src/alpha_poke/agents/timers.py",
      'if of is not None and tag == "-activate" else None', "if of is not None else None"),
+    ("L241 our Rollout's lock", "src/alpha_poke/agents/timers.py",
+     "        if st.rollout_moving and (st.rollout is None or st.rollout[0] != mv):\n            st.rollout = [mv, 0]",
+     "        if False:\n            st.rollout = [mv, 0]"),
     # (B6's fallback prior: the floor under it keeps the support whole -- the support check cannot
     # tell; tests/test_sample_set.py's test_a_species_ou_never_uses_has_a_prior guards it)
     ("B6 the floor under the base", "src/alpha_poke/agents/engine_state.py", "FLOOR = 1e-3\n", "FLOOR = 0.0\n"),
@@ -110,6 +113,11 @@ MUTATIONS = [
     # tests/test_sample_set.py's test_the_move_floor_lifts_a_0_weight)
 ]
 RUST = [
+    ("L241 Rollout's hit counts", "rust/patches/poke-engine-0.0.48/src/genx/choice_effects.rs",
+     "                        volatile_status: PokemonVolatileStatus::ROLLOUT,\n                        amount: 1,",
+     "                        volatile_status: PokemonVolatileStatus::ROLLOUT,\n                        amount: 0,"),
+    ("L241 Rollout ends without a hit", "rust/patches/poke-engine-0.0.48/src/genx/generate_instructions.rs",
+     "        rollout_end_of_turn(state, side_ref, incoming_instructions);\n", ""),
     ("L239 an ability's End: its volatile off", "rust/patches/poke-engine-0.0.48/src/genx/abilities.rs",
      "    if let Some(v) = volatile {", "    if let Some(v) = volatile.filter(|_| false) {"),
     ("L240 a move with no target the battle's last move", "rust/patches/poke-engine-0.0.48/src/genx/generate_instructions.rs",

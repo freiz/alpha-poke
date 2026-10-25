@@ -2413,6 +2413,75 @@ fn get_instructions_from_heal(
     }
 }
 
+// (L23, L241) a lock's other moves usable again as it ends -- not under a Choice item (its own lock),
+// not a Disable's move (L215: Cursed Body's on the last use stays disabled)
+fn lock_moves_back(state: &State, side_ref: &SideReference) -> Vec<Instruction> {
+    let side = state.get_side_immutable(side_ref);
+    let mut out = vec![];
+    let active = side.get_active_immutable();
+    if !matches!(
+        active.item,
+        Items::CHOICEBAND | Items::CHOICESPECS | Items::CHOICESCARF
+    ) {
+        // alpha-poke patch (2026-10-17, doc/engine-diff.md L215): not a Disable's move (Cursed
+        // Body's on the last use: it stays disabled)
+        let disabled_slot = side
+            .volatile_statuses
+            .contains(&PokemonVolatileStatus::DISABLE)
+            .then(|| side.volatile_status_durations.disable / 8);
+        let mut iter = active.moves.into_iter();
+        let mut k = 0;
+        while let Some(m) = iter.next() {
+            if m.disabled && disabled_slot != Some(k) {
+                out.push(Instruction::EnableMove(EnableMoveInstruction {
+                    side_ref: *side_ref,
+                    move_index: iter.pokemon_move_index,
+                }));
+            }
+            k += 1;
+        }
+    }
+    out
+}
+
+// alpha-poke patch (2026-10-25, doc/engine-diff.md L241): Rollout / Ice Ball's lock at the turn's
+// end -- Showdown's volatile lasts 1, a hit under the fifth makes it 2: it goes on after a hit this
+// turn (its count up: choice_after_damage_hit) below 5; else it ends, its count, the volatile,
+// the other moves usable again (a miss, a Protect, the fifth hit, asleep)
+fn rollout_end_of_turn(state: &mut State, side_ref: &SideReference, instructions: &mut StateInstructions) {
+    let side = state.get_side_immutable(side_ref);
+    if !side.volatile_statuses.contains(&PokemonVolatileStatus::ROLLOUT) {
+        return;
+    }
+    let hit = instructions.instruction_list.iter().any(|i| {
+        matches!(i, Instruction::ChangeVolatileStatusDuration(c) if c.side_ref == *side_ref
+            && c.volatile_status == PokemonVolatileStatus::ROLLOUT && c.amount > 0)
+    });
+    let count = side.volatile_status_durations.rollout;
+    if hit && count < 5 {
+        return;
+    }
+    let mut out = vec![];
+    if count != 0 {
+        out.push(Instruction::ChangeVolatileStatusDuration(
+            ChangeVolatileStatusDurationInstruction {
+                side_ref: *side_ref,
+                volatile_status: PokemonVolatileStatus::ROLLOUT,
+                amount: -count,
+            },
+        ));
+    }
+    out.push(Instruction::RemoveVolatileStatus(RemoveVolatileStatusInstruction {
+        side_ref: *side_ref,
+        volatile_status: PokemonVolatileStatus::ROLLOUT,
+    }));
+    out.extend(lock_moves_back(state, side_ref));
+    for ins in out {
+        state.apply_one_instruction(&ins);
+        instructions.instruction_list.push(ins);
+    }
+}
+
 // alpha-poke patch (2026-10-16, doc/engine-diff.md L22 / L23): the instructions that end a locking
 // move's lock (Outrage, Petal Dance, ...): the volatile and its count go, the other moves can be
 // used again (unless a choice item locks them anyway), and with `confuse` the user is confused
@@ -2451,29 +2520,7 @@ fn lock_end_instructions(
             volatile_status: PokemonVolatileStatus::LOCKEDMOVE,
         },
     ));
-    let active = side.get_active_immutable();
-    if !matches!(
-        active.item,
-        Items::CHOICEBAND | Items::CHOICESPECS | Items::CHOICESCARF
-    ) {
-        // alpha-poke patch (2026-10-17, doc/engine-diff.md L215): not a Disable's move (Cursed
-        // Body's on the last use: it stays disabled)
-        let disabled_slot = side
-            .volatile_statuses
-            .contains(&PokemonVolatileStatus::DISABLE)
-            .then(|| side.volatile_status_durations.disable / 8);
-        let mut iter = active.moves.into_iter();
-        let mut k = 0;
-        while let Some(m) = iter.next() {
-            if m.disabled && disabled_slot != Some(k) {
-                out.push(Instruction::EnableMove(EnableMoveInstruction {
-                    side_ref: *side_ref,
-                    move_index: iter.pokemon_move_index,
-                }));
-            }
-            k += 1;
-        }
-    }
+    out.extend(lock_moves_back(state, side_ref));
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L205): not through Own Tempo or a grounded
     // user's Misty Terrain (Showdown's onTryAddVolatile)
     let misty = state.terrain_is_active(&Terrain::MISTYTERRAIN) && (side.active_grounded() || state.gravity > 0);
@@ -6085,7 +6132,7 @@ pub fn generate_instructions_from_move(
                 && !ignored)
                 || active.ability == Abilities::GORILLATACTICS)
                 && holds_out)
-                || side.volatile_statuses.contains(&PokemonVolatileStatus::LOCKEDMOVE)
+                || side.locked() // (L241: an Uproar's, a Rollout's too)
                 || side.volatile_statuses.contains(&PokemonVolatileStatus::ENCORE);
             if !side.volatile_statuses.contains(&PokemonVolatileStatus::STRUGGLED) {
                 side.volatile_statuses.insert(PokemonVolatileStatus::STRUGGLED);
@@ -9489,6 +9536,7 @@ fn end_of_turn_instructions(
         // (L205: the lock's residual, the last: after Yawn's sleep)
         let short = rolls.short_lock[matches!(side_ref, SideReference::SideTwo) as usize];
         lock_end_of_turn(state, side_ref, short, incoming_instructions);
+        rollout_end_of_turn(state, side_ref, incoming_instructions);
     } // end volatile statuses
 
     // (L147: Showdown's Update after the residual action: Sitrus after the poison, a berry Heal
@@ -10892,9 +10940,7 @@ fn choice_lock_release(state: &mut State, side_ref: &SideReference, instructions
             Items::CHOICEBAND | Items::CHOICESPECS | Items::CHOICESCARF
         ) && !ignored
         || active.ability == Abilities::GORILLATACTICS
-        || side
-            .volatile_statuses
-            .contains(&PokemonVolatileStatus::LOCKEDMOVE)
+        || side.locked() // (L241: an Uproar's, a Rollout's too)
     {
         return;
     }
@@ -10907,12 +10953,7 @@ fn lock_keeps_out(side: &Side, slot: PokemonMoveIndex) -> bool {
     match side.last_used_move {
         LastUsedMove::Move(m) => {
             m != slot
-                && (side
-                    .volatile_statuses
-                    .contains(&PokemonVolatileStatus::LOCKEDMOVE)
-                    || side
-                        .volatile_statuses
-                        .contains(&PokemonVolatileStatus::UPROAR)
+                && (side.locked() // (L241: a Rollout's too)
                     || matches!(
                         side.get_active_immutable().item,
                         Items::CHOICEBAND | Items::CHOICESPECS | Items::CHOICESCARF
@@ -10950,8 +10991,7 @@ pub fn release_choice_lock(
     // (not under an Encore: its move is the last used one too -- update() releases a lock with
     // no Choice item after every action)
     if side.volatile_statuses.contains(&PokemonVolatileStatus::STRUGGLED)
-        && !side.volatile_statuses.contains(&PokemonVolatileStatus::LOCKEDMOVE)
-        && !side.volatile_statuses.contains(&PokemonVolatileStatus::UPROAR)
+        && !side.locked()
         && !side.volatile_statuses.contains(&PokemonVolatileStatus::ENCORE)
         && side.last_used_move != LastUsedMove::None
     {
@@ -10964,14 +11004,8 @@ pub fn release_choice_lock(
             }));
         side.last_used_move = LastUsedMove::None;
     }
-    // (L224: nor while Uproar locks it)
-    if side
-        .volatile_statuses
-        .contains(&PokemonVolatileStatus::LOCKEDMOVE)
-        || side
-            .volatile_statuses
-            .contains(&PokemonVolatileStatus::UPROAR)
-    {
+    // (L224: nor while Uproar locks it; L241: Side::locked, a Rollout's too)
+    if side.locked() {
         return;
     }
     let disabled_slot = side

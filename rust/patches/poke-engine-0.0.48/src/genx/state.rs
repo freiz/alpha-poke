@@ -335,6 +335,10 @@ define_enum_with_from_str! {
         // (L237: the side's move failed this turn -- Showdown's moveThisTurnResult false; the end of
         // the turn makes it LASTMOVEFAILED for the next; ends on a switch)
         MOVEFAILED,
+        // (L241: Rollout / Ice Ball rolling -- Showdown's rollout / iceball volatile: locked into
+        // the move, its hits so far in volatile_status_durations.rollout; ends at a turn's end
+        // without a hit, after the fifth, on a switch)
+        ROLLOUT,
     },
     default = NONE
 }
@@ -1404,6 +1408,7 @@ impl Side {
         self.volatile_statuses
             .contains(&PokemonVolatileStatus::LOCKEDMOVE)
             || self.volatile_statuses.contains(&PokemonVolatileStatus::UPROAR)
+            || self.volatile_statuses.contains(&PokemonVolatileStatus::ROLLOUT)
     }
 
     pub fn trapped(&self, opponent_active: &Pokemon) -> bool {
@@ -2003,6 +2008,18 @@ impl State {
                         }));
                         active.types = active.base_types;
                     }
+                    false
+                }
+                // (L241: Rollout's count goes with it, as a lock's)
+                PokemonVolatileStatus::ROLLOUT => {
+                    instructions.push(Instruction::ChangeVolatileStatusDuration(
+                        ChangeVolatileStatusDurationInstruction {
+                            side_ref: *side_ref,
+                            volatile_status: *pkmn_volatile_status,
+                            amount: -1 * side.volatile_status_durations.rollout,
+                        },
+                    ));
+                    side.volatile_status_durations.rollout = 0;
                     false
                 }
                 // While you can't switch out of a locked move you can be forced out in other ways

@@ -273,6 +273,26 @@ pub fn modify_choice(
             let bp = ((100 * (100 * (hp * 4096 / maxhp)) + 2047) / 4096) / 100;
             attacker_choice.base_power = bp.max(1) as f32;
         }
+        // alpha-poke patch (2026-10-25, doc/engine-diff.md L241): Showdown's basePowerCallback --
+        // 30 x 2 ** its hits so far (its rollout volatile's count), x 2 after a Defense Curl
+        Choices::ROLLOUT | Choices::ICEBALL => {
+            let hits = if attacking_side
+                .volatile_statuses
+                .contains(&PokemonVolatileStatus::ROLLOUT)
+            {
+                attacking_side.volatile_status_durations.rollout.clamp(0, 4)
+            } else {
+                0
+            };
+            let mut bp = 30.0 * 2f32.powi(hits as i32);
+            if attacking_side
+                .volatile_statuses
+                .contains(&PokemonVolatileStatus::DEFENSECURL)
+            {
+                bp *= 2.0;
+            }
+            attacker_choice.base_power = bp;
+        }
         Choices::LASTRESPECTS => {
             // (L220: the revived mons' faints too: Showdown's totalFainted)
             let mut bp_boost = 1.0;
@@ -980,6 +1000,46 @@ pub fn choice_after_damage_hit(
         // move starts (generate_instructions_from_move), not on a hit
     }
     match choice.move_id {
+        // alpha-poke patch (2026-10-25, doc/engine-diff.md L241): Rollout / Ice Ball's hit -- Showdown's
+        // onModifyMove volatile (not asleep: a Sleep Talk's has none), its hitCount up in the
+        // basePowerCallback; the lock (its other moves disabled) from the first, as Outrage's
+        Choices::ROLLOUT | Choices::ICEBALL
+            if attacking_side.get_active_immutable().status != PokemonStatus::SLEEP =>
+        {
+            if !attacking_side
+                .volatile_statuses
+                .contains(&PokemonVolatileStatus::ROLLOUT)
+            {
+                attacking_side
+                    .volatile_statuses
+                    .insert(PokemonVolatileStatus::ROLLOUT);
+                instructions
+                    .instruction_list
+                    .push(Instruction::ApplyVolatileStatus(ApplyVolatileStatusInstruction {
+                        side_ref: *attacking_side_ref,
+                        volatile_status: PokemonVolatileStatus::ROLLOUT,
+                    }));
+                for i in super::items::get_choice_move_disable_instructions(
+                    attacking_side.get_active_immutable(),
+                    attacking_side_ref,
+                    &choice.move_id,
+                ) {
+                    state.apply_one_instruction(&i);
+                    instructions.instruction_list.push(i);
+                }
+            }
+            let side = state.get_side(attacking_side_ref);
+            side.volatile_status_durations.rollout += 1;
+            instructions
+                .instruction_list
+                .push(Instruction::ChangeVolatileStatusDuration(
+                    ChangeVolatileStatusDurationInstruction {
+                        side_ref: *attacking_side_ref,
+                        volatile_status: PokemonVolatileStatus::ROLLOUT,
+                        amount: 1,
+                    },
+                ));
+        }
         Choices::DOUBLESHOCK => {
             let attacker_active = attacking_side.get_active_immutable();
             // alpha-poke patch (2026-10-18, doc/engine-diff.md L219): not a terastallized user's
