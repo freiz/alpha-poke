@@ -333,9 +333,19 @@ def test_stellar_moves_after_the_tera():
 |turn|2
 |-terastallize|p2a: Bob|Stellar
 |move|p2a: Bob|Knock Off|p1a: Fishy
+|-damage|p1a: Fishy|400/503
 |upkeep
 |turn|3
+|move|p2a: Bob|Earthquake|p1a: Fishy|[miss]
+|-miss|p2a: Bob|p1a: Fishy
+|upkeep
+|turn|4
+|move|p2a: Bob|Fake Out||[still]
+|-fail|p2a: Bob
+|upkeep
+|turn|5
 """)  # fmt: skip
+    # (S158: marked as it hits -- Showdown's, in the damage's STAB: not a miss, not a failure)
     assert t["p2"].stellar_moves == {"gliscor": {"knockoff"}}
 
 
@@ -1161,3 +1171,42 @@ def test_a_healing_wish_waits_for_a_mon_that_needs_it():
     # (no one to switch to: [still], -fail -- none waits)
     t = run(START + "|move|p1a: Fishy|Healing Wish|p1a: Fishy|[still]\n|-fail|p1a: Fishy\n|upkeep\n|turn|2")
     assert t["p1"].healing_wish == 0
+
+
+def test_a_rage_fists_count_after_transform_and_future_sight():
+    """S158 (the state checks, once they compared every field): Showdown's transformInto copies the
+    target's timesAttacked -- a Ditto's after an Imposter, kept; a Future Sight's hit is a move's
+    hit too (moveHit) -- both counted for Rage Fist."""
+    t = run(START + "|move|p1a: Fishy|Wave Crash|p2a: Bob\n|-damage|p2a: Bob|60/100\n|upkeep\n|turn|2\n"
+            "|switch|p1a: Copy|Ditto|300/300\n|-transform|p1a: Copy|p2a: Bob|[from] ability: Imposter\n|upkeep\n|turn|3")  # fmt: skip
+    assert t["p1"].times_attacked.get("ditto") == 1
+    t = run(START + "|move|p1a: Fishy|Future Sight|p2a: Bob\n|-start|p1a: Fishy|move: Future Sight\n|upkeep\n|turn|2\n"
+            "|upkeep\n|turn|3\n|-end|p2a: Bob|move: Future Sight\n|-supereffective|p2a: Bob\n|-damage|p2a: Bob|40/100\n"
+            "|upkeep\n|turn|4")  # fmt: skip
+    assert t["p2"].times_attacked.get("gliscor") == 1
+
+
+def test_revival_blessings_faints_counted():
+    """S158 (the state checks, every field): the faints Revival Blessing undid -- Showdown's
+    totalFainted keeps them (Supreme Overlord, Last Respects; the engine's revived_faints, L220):
+    never passed."""
+    t = run(START + "|faint|p1a: Fishy\n|upkeep\n|switch|p1a: Paw|Pawmot, M|300/300\n|turn|2\n"
+            "|move|p1a: Paw|Revival Blessing|p1a: Paw\n|-heal|p1a: Fishy|251/503|[from] move: Revival Blessing\n"
+            "|upkeep\n|turn|3")  # fmt: skip
+    assert t["p1"].revivals == 1 and t["p2"].revivals == 0
+
+
+def test_a_multi_hits_count_follows_its_last_hit():
+    """S158: Showdown's timesAttacked takes a multi-hit move's hits all at once when its last one
+    landed on the mon (moveDamage, the last hit's) -- those on its Substitute too; none when the
+    last was on the Substitute. A Bullet Seed: three on the Substitute, one breaking it, one on
+    the Uxie -- five."""
+    t = run(START + "|move|p2a: Bob|Bullet Seed|p1a: Fishy\n" + "|-activate|p1a: Fishy|move: Substitute|[damage]\n" * 3
+            + "|-end|p1a: Fishy|Substitute\n|-damage|p1a: Fishy|400/503\n|-hitcount|p1a: Fishy|5\n|upkeep\n|turn|2")  # fmt: skip
+    assert t["p1"].times_attacked.get("dondozo") == 5
+    t = run(START + "|move|p2a: Bob|Bullet Seed|p1a: Fishy\n" + "|-activate|p1a: Fishy|move: Substitute|[damage]\n" * 2
+            + "|-hitcount|p1a: Fishy|2\n|upkeep\n|turn|2")  # fmt: skip
+    assert not t["p1"].times_attacked.get("dondozo")
+    t = run(START + "|move|p2a: Bob|Bullet Seed|p1a: Fishy\n" + "|-damage|p1a: Fishy|450/503\n" * 3
+            + "|-hitcount|p1a: Fishy|3\n|upkeep\n|turn|2")  # fmt: skip
+    assert t["p1"].times_attacked.get("dondozo") == 3

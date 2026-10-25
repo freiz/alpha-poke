@@ -442,6 +442,21 @@ def engine_ends() -> list[Spec]:
               team(S("Glimmora", "Focus Sash", "Toxic Debris", ["Stealth Rock", "Toxic Spikes", "Power Gem", "Mortal Spin"]), FILLER),
               [{"p1": "move 3", "p2": "move 1"}, {"p1": "move 3", "p2": "move 2"}, {"p1": "switch 2", "p2": "move 3"},
                {"p1": "move 4", "p2": "move 3"}], expect=("|-sidestart|p1: ", "move: Toxic Spikes")),
+        # (S158d: a Stellar tera's type marked as its damage is computed -- an Earthquake at a
+        # Corviknight (immune) not, a Dragon Claw's hit yes, a failed Fake Out not)
+        _spec("ends/stellar-on-hit",
+              team(S("Garchomp", "Leftovers", "Rough Skin", ["Earthquake", "Fake Out", "Dragon Claw", "Swords Dance"], FAST, "Jolly",
+                     tera="Stellar"), FILLER),
+              team(S("Corviknight", "Leftovers", "Pressure", ["Roost", "Body Press", "Iron Defense", "Defog"]), FILLER),
+              [{"p1": "move 1 terastallize", "p2": "move 3"}, {"p1": "move 3", "p2": "move 3"},
+               {"p1": "move 2", "p2": "move 3"}], expect=("|-terastallize|p1a: Garchomp|Stellar", "|-fail|p1a: Garchomp")),
+        # (S158d: a faint Revival Blessing undid -- Showdown's totalFainted keeps it)
+        _spec("ends/revival-blessing",
+              team(S("Shedinja", "", "Wonder Guard", ["Swords Dance", "Shadow Sneak", "X-Scissor", "Protect"]),
+                   S("Pawmot", "Leftovers", "Volt Absorb", ["Revival Blessing", "Close Combat", "Nuzzle", "Protect"]), FILLER),
+              team(S("Heatran", "Leftovers", "Flash Fire", ["Flamethrower", "Earth Power", "Stealth Rock", "Protect"]), FILLER),
+              [{"p1": "move 1", "p2": "move 1"}, {"p1": "switch 2"}, {"p1": "move 1", "p2": "move 4"}, {"p1": "switch 2"},
+               {"p1": "move 4", "p2": "move 3"}], expect=("[from] move: Revival Blessing",)),
     ]  # fmt: skip
 
 

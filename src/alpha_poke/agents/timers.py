@@ -128,6 +128,11 @@ class SideTimers:
     # Healing Wish (1) / Lunar Dance (2) waiting on the slot: Gen 9's until a mon that needs it
     # comes in (Showdown's slot condition -- its -heal ends it; the engine's side condition, L48)
     healing_wish: int = 0
+    # a Future Sight / Doom Desire ended on its active: its hit's -damage next (-supereffective,
+    # -crit between) -- a hit of a move, Rage Fist's count
+    future_hit: bool = False
+    stellar_pending: str = ""  # a Stellar tera's move just used, its type marked as it hits
+    multihit_real: bool = False  # a multi-hit move's last hit on the active itself (not its Substitute)
     confusion: int | None = None
     taunt: int | None = None
     encore: int | None = None
@@ -202,6 +207,7 @@ class SideTimers:
     fresh: int = 0
     no_regen: set = field(default_factory=set)  # benched species ids that went out so (no heal)
     revived: set = field(default_factory=set)  # species ids Revival Blessing brought back
+    revivals: int = 0  # the faints Revival Blessing undid (the engine's revived_faints, L220)
     own_last: str = ""  # the active's last move this time in, not a Struggle (a lock's move)
     future_doom: bool = False  # its pending future attack is Doom Desire
     item_new: bool = False  # the active got its item after its last move (no Choice lock by it)
@@ -351,12 +357,31 @@ def _feed(sides: dict, p: list[str]) -> None:
                 st.prev_line = p
 
 
+def _stellar_hit(sides: dict, p: list[str]) -> None:
+    """A hit of the mover's move on the other side (its -damage, its Substitute's): a Stellar
+    tera's pending move type boosted -- Showdown marks stellarBoostedTypes in the damage's STAB."""
+    mover = sides["p2" if p[2][:2] == "p1" else "p1"]
+    if not (mover.stellar_pending and mover.just_moved in mover.stellar_moves):
+        return
+    if (p[1] == "-damage" and not any("[from]" in x for x in p[4:])) \
+            or (p[1] == "-activate" and "Substitute" in p[3] and "[damage]" in p[4:]) \
+            or (p[1] == "-end" and p[3] == "Substitute"):  # fmt: skip
+        mover.stellar_moves[mover.just_moved].add(mover.stellar_pending)
+        mover.stellar_pending = ""
+
+
 def _feed_one(sides: dict, p: list[str]) -> None:
     tag = p[1]
+    if tag in ("-damage", "-activate", "-end") and len(p) > 3 and p[2][:2] in sides:
+        _stellar_hit(sides, p)
+        # (a hit on its Substitute: a multi-hit move's last one there counts none -- Showdown's)
+        if (tag == "-activate" and "Substitute" in p[3] and "[damage]" in p[4:]) or (tag == "-end" and p[3] == "Substitute"):
+            sides[p[2][:2]].multihit_real = False
     if tag == "upkeep":  # end of turn
         for st in sides.values():
             st.upkept = True
             st.perish_fresh = st.in_residual = False  # (the residuals over: S126)
+            st.future_hit = False
             st.just_moved = ""  # (no move's effects after the turn's end: a switch-in's Wind Rider -- S87)
             if st.status.get(st.active) == "tox":
                 st.toxic += 1
@@ -563,6 +588,12 @@ def _feed_one(sides: dict, p: list[str]) -> None:
                         d[st.active] = was
                     if now != was or name == "status":  # (the status it showed is the Zoroark's:
                         d[new] = now  # the same as its disguise's own too -- S146)
+            # (the hits it took this time in: the Zoroark's -- Rage Fist's count; S158)
+            if st.active != new and "hits" in before:
+                gained = st.times_attacked.get(st.active, 0) - before["hits"]
+                if gained > 0:
+                    st.times_attacked[st.active] = before["hits"]
+                    st.times_attacked[new] = st.times_attacked.get(new, 0) + gained
             st.active = new
             if len(p) > 4 and p[4]:
                 st.hp_shown[nick] = p[4]
@@ -579,7 +610,8 @@ def _feed_one(sides: dict, p: list[str]) -> None:
         st.past_stints.append(st.stint)  # (S127: a disguise's time in found out later)
         st.stint = {"nick": nick, "species": new, "hp": st.hp_shown.get(nick), "moves": [],
                     "boosts": {}, "records": {"status": st.status.get(new),  # (its records before: S123)
-                                              "sleep": copy.deepcopy(st.sleep.get(new))},
+                                              "sleep": copy.deepcopy(st.sleep.get(new)),
+                                              "hits": st.times_attacked.get(new, 0)},
                     "max": p[4].split(" ")[0].split("/")[-1] if len(p) > 4 else ""}  # fmt: skip
         if len(p) > 4:
             st.hp_shown[nick] = p[4]
@@ -614,8 +646,22 @@ def _feed_one(sides: dict, p: list[str]) -> None:
             st.truant_next = True
     elif tag == "-damage" and not any("[from]" in x for x in p[4:]) and (
         sides["p2" if p[2][:2] == "p1" else "p1"].just_moved
+        # (a Future Sight's / Doom Desire's hit: Showdown's moveHit too -- counted; S158)
+        or st.future_hit
     ):
-        st.times_attacked[sp] = st.times_attacked.get(sp, 0) + 1  # (L163: a hit of the foe's move)
+        # (L163: a hit of the foe's move; a multi-hit one's at its -hitcount -- Showdown counts
+        # all its hits when its last landed on the mon, none when on a Substitute: S158)
+        # (not Dragon Darts': smartTarget -- each hit 1, no -hitcount)
+        md = _move_data(st.last_move)
+        if "multihit" in md and not md.get("smartTarget") and not st.future_hit:
+            st.multihit_real = True
+        else:
+            st.times_attacked[sp] = st.times_attacked.get(sp, 0) + 1
+        st.future_hit = False
+    elif tag == "-hitcount" and len(p) > 3 and p[3].isdigit():
+        if st.multihit_real:
+            st.times_attacked[sp] = st.times_attacked.get(sp, 0) + int(p[3])
+        st.multihit_real = False
     elif tag == "-status" and len(p) > 3:
         st.status[sp] = p[3]
         pass
@@ -748,8 +794,9 @@ def _feed_one(sides: dict, p: list[str]) -> None:
                 st.locked = None  # (its last turn: 3 at most -- its fatigue silent when confused)
         elif not any("lockedmove" in x for x in p[4:]):
             st.locked = None
-        if sp in st.stellar_moves:
-            st.stellar_moves[sp].add(mv)
+        # (a Stellar tera's type boosted once: marked as its damage is computed -- a hit, not a
+        # miss, a failure, an immunity, a protection: _stellar_hit; S158, a failed Fake Out's)
+        st.stellar_pending = mv if sp in st.stellar_moves else ""
         st.just_moved = sp
         st.acted = True
         st.failed_now = False
@@ -919,12 +966,16 @@ def _feed_one(sides: dict, p: list[str]) -> None:
         ost, st.copied_from = _who(["", "", p[3]], sides)  # (S145)
         tnick = p[3].split(": ", 1)[-1]
         st.copied_forme = ((ost.formes.get(tnick) if ost is not None else None) or st.copied_from)
+        # (Showdown's transformInto copies the target's timesAttacked -- kept after: Rage Fist's)
+        if ost is not None:
+            st.times_attacked[sp] = ost.times_attacked.get(st.copied_from, 0)
     elif tag == "-ability" and len(p) == 4 and to_id(p[3]) == "pressure":
         st.pressure.add(sp)  # (announced on its entry: S143)
     elif tag == "-ability" and len(p) > 3 and to_id(p[3]) == "neutralizinggas" and len(p) == 4:
         st.gas_on = True
     elif tag == "-heal" and "[from] move: Revival Blessing" in p:
         st.revived.add(sp)  # (back from a faint: no longer terastallized -- Showdown's)
+        st.revivals += 1  # (Showdown's totalFainted keeps the faint: Supreme Overlord's, Last Respects')
     elif tag == "-heal" and "[from] move: Lunar Dance" in p:
         # (Gen 9's Lunar Dance restores the PP too -- poke-env's count restored, agents/
         # poke_env_fixes.py; Spite's taken PP back as well: S84)
@@ -1076,6 +1127,7 @@ def _feed_one(sides: dict, p: list[str]) -> None:
             s.just_moved = ""
             s.in_residual = True  # (the end of turn's residuals: S126)
         sides["p2" if p[2][:2] == "p1" else "p1"].future = None
+        st.future_hit = True  # (its -damage next: a move's hit -- Rage Fist's count; an -immune, none)
     elif tag == "-end" and len(p) > 3:
         what = to_id(p[3].replace("move: ", ""))
         if what == "abilityflashfire":

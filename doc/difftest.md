@@ -80,7 +80,7 @@
 - **先知**：状态检查让对手隐藏的部分取真实配置，我方取 request 的真值。构建器靠推断得到的字段（原始特性、原始道具……）从来没被检验。
 - **时间点**：只比较决策点当下的状态。引擎检查的起点是 Showdown 状态的换算，不是我们构建的状态；“当下对、往后推才错”的问题（换下后特性恢复）没有检查覆盖。
 - **共用规则**：Showdown 状态的换算和 `build_state` 共用一些规则（`derived_disable`、锁定）。规则本身错时两边一起错，比较一致。
-- **比较字段**：比较哪些字段是手工列的。没列的永远是 0（Uproar 的计数在 L241 之前从未比较；状态检查的 side condition 列表漏了 Healing Wish，我们的状态从来没构建它，`state_chain` 才发现：S158c——现在取引擎的全部字段，`test_every_side_condition_is_compared` 守住；`pe.Side` / `pe.Pokemon` 的逐字段清单待做）。
+- **比较字段**：比较哪些字段是手工列的。没列的永远是 0（Uproar 的计数在 L241 之前从未比较；状态检查的 side condition 列表漏了 Healing Wish，我们的状态从来没构建它，`state_chain` 才发现：S158c——现在取引擎的全部字段，`test_every_side_condition_is_compared` 守住；`pe.State` / `pe.Side` / `pe.Pokemon` 的每个字段要么比较、要么在 `statebuild` 的跳过表里写明原因，`test_every_field_is_compared_or_says_why` 守住——引擎加了字段，测试先失败；改完当天又查出 Rage Fist 计数、Revival Blessing 次数、变身后的一次性特性、Stellar 标记四类：S158d）。
 - **场景**：场景是按我们对机制的理解写的，测的是已经实现的东西；没想到的维度就没有场景。
 - **跳过和基线**：跳过的比较里可能藏着整类问题（有昏厥的回合 17,743 个，参考状态一直转换失败）；基线只拦“变多”，已知的差异进了基线就不再显眼。
 - **变异测试**只能证明已有的测试能发现修复被撤销，证明不了覆盖得全。

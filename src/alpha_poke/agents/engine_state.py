@@ -642,6 +642,14 @@ def _base_ability(mon, ability: str, tm: SideTimers | None) -> str:
     return ability
 
 
+def _once_used(mon, ability: str, tm: SideTimers | None) -> bool:
+    """A once-per-battle ability it used as a copy (transformed: Showdown's swordBoost /
+    shieldBoost on the mon -- a Ditto's second Dauntless Shield does nothing; the engine's
+    once_used, L227; its own one's: _base_ability's none). S158: never passed."""
+    return (tm is not None and ability not in ("dauntlessshield", "battlebond", "supersweetsyrup", "intrepidsword")
+            and tm.k(to_id(mon.species)) in tm.used_once)  # fmt: skip
+
+
 @functools.cache
 def engine_volatile(name: str) -> bool:
     """Whether poke-engine knows the volatile status ``name`` (the binding takes any name and the
@@ -827,6 +835,7 @@ def _our_mon(
         maxhp=int(mon.max_hp or 1),
         ability=current_ability(mon) or "none",
         base_ability=_base_ability(mon, own_ability(mon) or "none", tm),
+        once_used=_once_used(mon, own_ability(mon) or "none", tm),
         item=mon.item or "none",
         attack=int(stats.get("atk") or 100),
         defense=int(stats.get("def") or 100),
@@ -973,6 +982,7 @@ def _their_mon(mon, s: SampledSet, tm: SideTimers | None = None, disabled: str |
         maxhp=maxhp,
         ability=engine_ability(mon, s.ability),
         base_ability=_base_ability(mon, s.ability, tm),
+        once_used=_once_used(mon, s.ability, tm),
         item=s.item,
         attack=s.stats["atk"],
         defense=s.stats["def"],
@@ -1015,7 +1025,7 @@ def _with(p: pe.Pokemon, **kw) -> pe.Pokemon:
             "item", "attack", "defense", "special_attack", "special_defense", "speed", "status",
             "weight_kg", "moves", "terastallized", "tera_type", "rest_turns",
             "sleep_turns", "times_attacked", "gender", "stellar_boosted", "last_item",
-            "transform_backup")  # fmt: skip
+            "transform_backup", "once_used", "mega_evolved")  # fmt: skip
     # (and its nature, EVs: S158 -- a copy lost them)
     kept = {"nature": str(p.nature).lower(), "evs": tuple(p.evs)}
     return pe.Pokemon(**({k: getattr(p, k) for k in keys} | kept | kw))
@@ -1066,7 +1076,7 @@ def _as_transformed(p: pe.Pokemon, target: pe.Pokemon, moves: list, ability: str
         times_attacked=p.times_attacked, gender=p.gender, transform_backup=backup,
         stellar_boosted=p.stellar_boosted, last_item=p.last_item,  # (S138: its last item kept)
         # (its own nature, EVs: Showdown's transformInto copies the stats, not the set -- S158)
-        nature=str(p.nature).lower(), evs=tuple(p.evs),
+        nature=str(p.nature).lower(), evs=tuple(p.evs), once_used=p.once_used,
     )  # fmt: skip
 
 
@@ -1778,6 +1788,7 @@ def build_state(
     our_mons = _tera_used(our_mons, bool(getattr(battle, "used_tera", False)))
     their_mons = _tera_used(their_mons, bool(getattr(battle, "opponent_used_tera", False)))
     side_one = pe.Side(
+        revived_faints=min(tm_us.revivals, 6),  # (S158: never passed -- Supreme Overlord's, Last Respects' count)
         pokemon=_pad(our_mons),
         active_index=pe.PokemonIndex(str(our_idx)),
         side_conditions=_side_conditions(
@@ -1823,6 +1834,7 @@ def build_state(
                    and opp_active is not None and not opp_active.fainted and not tm_them.acted
                    and not tm_them.switched_now and not tm_them.recharge)  # fmt: skip
     side_two = pe.Side(
+        revived_faints=min(tm_them.revivals, 6),  # (S158: never passed -- Supreme Overlord's, Last Respects' count)
         pokemon=_pad(their_mons),
         active_index=pe.PokemonIndex(str(their_idx)),
         side_conditions=_side_conditions(

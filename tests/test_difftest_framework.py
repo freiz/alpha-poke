@@ -195,3 +195,42 @@ def test_every_side_condition_is_compared():
 
     assert set(statebuild.CONDITIONS) == {x for x in dir(pe.SideConditions) if not x.startswith("_")}
     assert "healing_wish" in statebuild.CONDITIONS
+
+
+@needs_sim
+def test_the_foes_side_fields_are_compared():
+    """foe_diffs compared no side field -- a pending Wish, Future Sight, a Substitute's HP: the
+    live path's opponent and the replay path's both sides never had them checked (2026-10-25
+    review)."""
+    import poke_engine as pe
+
+    from alpha_poke import enginecheck as ec
+    from alpha_poke.enginecheck import statebuild
+
+    side = ec.engine_state(_recorded_pair()[1]["state"]).side_two
+    kw = {x: getattr(side, x) for x in dir(pe.Side) if not x.startswith("_")}
+    for k, v in (("wish", (2, 150)), ("future_sight", (2, pe.PokemonIndex("0")))):
+        other = pe.Side(**(kw | {k: v}))
+        seen = {statebuild._sp(p) for p in side.pokemon}
+        for oracle in (True, False):
+            assert any(d[0] == f"foe:{k}" for d in statebuild.foe_diffs(other, side, seen, oracle)), (k, oracle)
+        assert not statebuild.foe_diffs(side, side, seen, True)
+
+
+def test_every_field_is_compared_or_says_why():
+    """The state checks' compared fields were hand-listed: one left out was 0 for ever (Healing
+    Wish, the Toxic Spikes' order, a Rage Fist's count, a forme's level -- 2026-10-25). Every
+    field of the engine's state, side and mon is compared or skipped with its reason; a new
+    engine field fails here until it is one of them."""
+    import poke_engine as pe
+
+    from alpha_poke.enginecheck import statebuild as sb
+
+    def fields(cls):
+        return {x for x in dir(cls) if not x.startswith("_")}
+
+    assert fields(pe.Pokemon) == set(sb.MON_FIELDS) | set(sb.STATS) | set(sb.MON_OWN_WAY) | set(sb.MON_SKIPPED)
+    assert fields(pe.Side) == set(sb.SIDE_FIELDS) | set(sb.SIDE_OWN_WAY) | set(sb.SIDE_SKIPPED)
+    assert fields(pe.State) == set(sb.STATE_FIELDS) | set(sb.STATE_SKIPPED)
+    assert all(sb.MON_SKIPPED.values()) and all(sb.SIDE_SKIPPED.values()) and all(sb.STATE_SKIPPED.values())
+

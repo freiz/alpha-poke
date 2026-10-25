@@ -41,8 +41,32 @@ BOOSTS = ("attack_boost", "defense_boost", "special_attack_boost", "special_defe
           "speed_boost", "accuracy_boost", "evasion_boost")  # fmt: skip
 STATS = ("attack", "defense", "special_attack", "special_defense", "speed")
 # the side's own fields compared as they are
-SIDE_FIELDS = ("substitute_health", "wish", "future_sight",
+SIDE_FIELDS = ("substitute_health", "wish", "future_sight", "future_doom", "revived_faints",
                "switch_out_move_second_saved_move")  # fmt: skip
+# a mon's fields compared as they are (an alive one's; own_diffs, foe_diffs' oracle sets) -- with
+# STATS and those compared their own way (MON_OWN_WAY); MON_SKIPPED: why not. Every engine field
+# is one of them: test_every_field_is_compared_or_says_why (2026-10-25 review: the compared fields
+# were hand-listed -- one left out was 0 for ever)
+MON_FIELDS = ("maxhp", "status", "item", "ability", "base_ability", "rest_turns", "sleep_turns",
+              "terastallized", "tera_type", "last_item", "weight_kg", "level", "nature", "evs", "gender",
+              "stellar_boosted", "times_attacked", "once_used", "mega_evolved")  # fmt: skip
+MON_OWN_WAY = ("id", "hp", "moves", "types", "base_types", "transform_backup")
+MON_SKIPPED = {"create_fainted": "a constructor, no field"}
+SIDE_OWN_WAY = ("pokemon", "active_index", "side_conditions", "volatile_statuses", "volatile_status_durations",
+                "last_used_move", "tera_used", *BOOSTS)  # fmt: skip
+SIDE_SKIPPED = {
+    "force_switch": "a switch decision's: the true states leave it off (option_diffs)",
+    "baton_passing": "a pivot in progress: set by the engine as its move resolves, never at a decision",
+    "shed_tailing": "a pivot in progress: as baton_passing",
+    "slow_uturn_move": "a pivot in progress: as baton_passing",
+    "reviving": "Revival Blessing's choice in progress: as baton_passing",
+    "force_trapped": "the engine's, set as its turn runs (a trapping move's), not a state's field",
+}
+STATE_FIELDS = ("weather", "weather_turns_remaining", "terrain", "terrain_turns_remaining",
+                "trick_room", "trick_room_turns_remaining", "gravity", "magic_room", "last_move")  # fmt: skip
+STATE_SKIPPED = {"side_one": "own_diffs", "side_two": "foe_diffs", "team_preview": "a battle's first decision only",
+                 "apply_instructions": "a method", "reverse_instructions": "a method",
+                 "from_string": "a method", "to_string": "a method"}  # fmt: skip
 # both sides': the last used move (by name: a move slot's, a switch's slot, none)
 _BELIEF = None
 
@@ -122,9 +146,7 @@ def own_diffs(built: pe.Side, truth: pe.Side) -> list[tuple[str, str]]:
         # are its target's real ones, which its player does not see: not compared)
         keys = ["hp"]  # (a fainted one: nothing else of it is read -- its forme back, its maxhp)
         if t.hp > 0:
-            keys += ["maxhp", "status", "item", "ability", "base_ability", "rest_turns",
-                     "sleep_turns", "terastallized", "tera_type", "last_item",
-                     "weight_kg"]  # fmt: skip (2026-10-24 review: a Ditto's copied weight kept)
+            keys += list(MON_FIELDS)  # (2026-10-24 review: a Ditto's copied weight kept)
         if t.transform_backup is None and t.hp > 0:
             keys += list(STATS)
         for k in keys:
@@ -150,14 +172,29 @@ def own_diffs(built: pe.Side, truth: pe.Side) -> list[tuple[str, str]]:
     if _tera_used(built) != _tera_used(truth):
         out.append(("own:tera_used", f"{_tera_used(built)} vs {_tera_used(truth)}"))
     out += _side_common("own", built, truth)
+    out += _side_fields("own", built, truth)
+    return out
+
+
+def _side_fields(who: str, built: pe.Side, truth: pe.Side, exact: bool = True) -> list[tuple[str, str]]:
+    """A side's own fields (SIDE_FIELDS: a pending Wish, Future Sight, a Substitute's HP, the
+    saved move of a pivot switch) -- the opponent's as well (2026-10-25 review: the foe's side and
+    the replay path's both sides never compared them). ``exact``: its max HP the true one (a
+    Wish's amount, a fresh Substitute's HP follow it); else only the Wish's turns."""
+    out = []
     for k in SIDE_FIELDS:
+        if k == "switch_out_move_second_saved_move" and who == "foe":
+            continue  # (the foe's move still to come after our pivot: the player's guess, build_state's
+            # draw -- Showdown's queue, not in the truth's state)
         bv, tv = getattr(built, k), getattr(truth, k)
         if k == "future_sight":  # (its user by species: the sides' mon orders differ)
             bv, tv = (_future(built), _future(truth))
-        if k == "substitute_health" and tv not in (0, _active(truth).maxhp // 4):
+        if k == "wish" and not exact:
+            bv, tv = bv[0], tv[0]
+        if k == "substitute_health" and (tv not in (0, _active(truth).maxhp // 4) or (not exact and bv and tv)):
             continue  # (a hit Substitute's HP: the log does not show it -- the player's guess)
         if str(bv).lower() != str(tv).lower():
-            out.append((f"own:{k}", f"{bv} vs {tv}"))
+            out.append((f"{who}:{k}", f"{bv} vs {tv}"))
     return out
 
 
@@ -267,13 +304,15 @@ def foe_diffs(built: pe.Side, truth: pe.Side, seen: set[str], oracle: bool = Fal
         # belief's draw, each world its own, D17 G -- so the active, its moves and boosts are not
         # the construction's)
         return [(k, d) for k, d in _side_common("foe", built, truth)
-                if k.split(":")[1] in ("condition",)]
+                if k.split(":")[1] in ("condition",)] + _side_fields("foe", built, truth, False)  # (whose HP: the draw's)
     seen = seen - hidden
     if oracle:
         bm, tm = _mons(built), _mons(truth)
         for sp in seen & set(bm) & set(tm):
             b, t = bm[sp], tm[sp]
-            keys = ["maxhp", "item", "ability", "base_ability", "last_item", "weight_kg"]
+            # (its status, tera: below, as seen; a fainted one's the set's own only)
+            keys = [k for k in MON_FIELDS if k not in ("status", "terastallized", "tera_type")] if t.hp > 0 else \
+                ["maxhp", "item", "ability", "base_ability", "last_item", "weight_kg"]
             if t.transform_backup is None:
                 keys += list(STATS)
             for k in keys:
@@ -298,13 +337,15 @@ def foe_diffs(built: pe.Side, truth: pe.Side, seen: set[str], oracle: bool = Fal
         fb, ft = b.hp / max(b.maxhp, 1), t.hp / max(t.maxhp, 1)
         if abs(fb - ft) > 0.02 or (b.hp == 0) != (t.hp == 0):
             out.append(("foe:hp", f"{sp} {fb:.3f} vs {ft:.3f}"))
-        for k in ("status", "terastallized") if t.hp > 0 else ():  # (a fainted one's: Showdown's last)
+        # (its level: the team preview's -- seen, not the set's)
+        for k in ("status", "terastallized", "level") if t.hp > 0 else ():  # (a fainted one's: Showdown's last)
             if str(getattr(b, k)).lower() != str(getattr(t, k)).lower():
                 out.append((f"foe:{k}", f"{sp} {getattr(b, k)} vs {getattr(t, k)}"))
         if t.hp > 0 and t.terastallized and str(b.tera_type).lower() != str(t.tera_type).lower():
             out.append(("foe:tera_type", f"{sp} {b.tera_type} vs {t.tera_type}"))
         out += _type_diffs("foe", sp, b, t)
     out += _side_common("foe", built, truth)
+    out += _side_fields("foe", built, truth, oracle)
     return out
 
 
@@ -326,8 +367,7 @@ def _type_diffs(who: str, sp: str, b, t) -> list[tuple[str, str]]:
 
 def field_diffs(built: pe.State, truth: pe.State) -> list[tuple[str, str]]:
     out = []
-    for k in ("weather", "weather_turns_remaining", "terrain", "terrain_turns_remaining",
-              "trick_room", "trick_room_turns_remaining", "gravity", "magic_room"):  # fmt: skip
+    for k in STATE_FIELDS:
         b, t = getattr(built, k, None), getattr(truth, k, None)
         if str(b).lower() != str(t).lower():
             out.append((f"field:{k}", f"{b} vs {t}"))
