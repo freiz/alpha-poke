@@ -196,7 +196,7 @@ pub fn modify_choice(
                 .get_active_immutable()
                 .has_type(&PokemonType::ELECTRIC)
             {
-                attacker_choice.remove_all_effects();
+                attacker_choice.remove_all_effects(); // (L237: onTryMove's null, no failure)
             }
         }
         Choices::BURNUP => {
@@ -204,7 +204,7 @@ pub fn modify_choice(
                 .get_active_immutable()
                 .has_type(&PokemonType::FIRE)
             {
-                attacker_choice.remove_all_effects();
+                attacker_choice.remove_all_effects(); // (L237: onTryMove's null, no failure)
             }
         }
         Choices::REVERSAL => {
@@ -331,7 +331,7 @@ pub fn modify_choice(
         // Showdown's activeMoveActions -- fails too (it went)
         Choices::FAKEOUT | Choices::FIRSTIMPRESSION => match attacking_side.last_used_move {
             LastUsedMove::Switch(_) => {}
-            _ => attacker_choice.remove_all_effects(),
+            _ => attacker_choice.remove_all_effects_try(),
         },
         Choices::GROWTH => {
             // as of writing this, growth should fail in champions if mega-sol is active
@@ -516,6 +516,7 @@ pub fn modify_choice(
             if defending_side.get_active_immutable().item == Items::NONE {
                 attacker_choice.base_power = 0.0;
                 attacker_choice.face_break = false;
+                attacker_choice.try_failed = true; // (L237: its onTry, before Protect)
             }
         }
         Choices::PSYBLADE => {
@@ -588,7 +589,7 @@ pub fn modify_choice(
                         });
                     }
                 }
-                _ => attacker_choice.remove_all_effects(),
+                _ => attacker_choice.remove_all_effects_try(),
             }
         }
         // alpha-poke patch (2026-10-16, doc/engine-diff.md L93): it fails against a Substitute
@@ -792,7 +793,7 @@ pub fn modify_choice(
                 && !defending_side.damage_dealt.hit_substitute
                 && defending_side.damage_dealt.damage > 0
             {
-                attacker_choice.remove_all_effects();
+                attacker_choice.remove_all_effects_try();
             }
         }
         Choices::ELECTROBALL => {
@@ -903,11 +904,12 @@ pub fn modify_choice(
             if !attacker_choice.first_move || defender_choice.category == MoveCategory::Status {
                 attacker_choice.base_power = 0.0;
                 attacker_choice.face_break = false;
+                attacker_choice.try_failed = true; // (L237: its onTry, before Protect)
             }
         }
         Choices::UPPERHAND => {
             if !(attacker_choice.first_move && defender_choice.priority > 0) {
-                attacker_choice.remove_all_effects();
+                attacker_choice.remove_all_effects_try();
                 attacker_choice.face_break = false;
             }
         }
@@ -1386,7 +1388,7 @@ fn destinybond_before_move(
             .volatile_statuses
             .remove(&PokemonVolatileStatus::DESTINYBOND);
         if choice.move_id == Choices::DESTINYBOND {
-            choice.remove_all_effects();
+            choice.remove_all_effects_try();
         }
     }
 }
@@ -2204,6 +2206,14 @@ pub fn choice_special_effect(
         .iter()
         .any(|v| defending_side.volatile_statuses.contains(v))
     {
+        // (L237: a protecting target hit nothing this turn -- Counter's, Mirror Coat's, ...
+        // onTry fails first, before the Protect)
+        if matches!(
+            choice.move_id,
+            Choices::COUNTER | Choices::MIRRORCOAT | Choices::METALBURST | Choices::COMEUPPANCE
+        ) {
+            choice.try_failed = true;
+        }
         return;
     }
     // alpha-poke patch (2026-10-16, doc/engine-diff.md L20): nor does a status move Good as Gold
@@ -2492,6 +2502,13 @@ pub fn choice_special_effect(
                     // (L170: the target's DamagingHit after it, generate_instructions_from_move)
                     choice.returned_hit = dealt;
                 }
+            } else {
+                // (L237: nothing to return -- its onTry fails, before Protect)
+                choice.try_failed = true;
+            }
+            // (no damage taken this turn either: the engine's last damage of 0 is none)
+            if defending_side.damage_dealt.damage <= 0 {
+                choice.try_failed = true;
             }
         }
         Choices::MIRRORCOAT => {
@@ -2514,6 +2531,13 @@ pub fn choice_special_effect(
                     // (L170: the target's DamagingHit after it, generate_instructions_from_move)
                     choice.returned_hit = dealt;
                 }
+            } else {
+                // (L237: nothing to return -- its onTry fails, before Protect)
+                choice.try_failed = true;
+            }
+            // (no damage taken this turn either: the engine's last damage of 0 is none)
+            if defending_side.damage_dealt.damage <= 0 {
+                choice.try_failed = true;
             }
         }
         Choices::METALBURST | Choices::COMEUPPANCE => {
@@ -2534,6 +2558,13 @@ pub fn choice_special_effect(
                     // (L170: the target's DamagingHit after it, generate_instructions_from_move)
                     choice.returned_hit = dealt;
                 }
+            } else {
+                // (L237: nothing to return -- its onTry fails, before Protect)
+                choice.try_failed = true;
+            }
+            // (no damage taken this turn either: the engine's last damage of 0 is none)
+            if defending_side.damage_dealt.damage <= 0 {
+                choice.try_failed = true;
             }
         }
         Choices::WISH => {
@@ -2912,6 +2943,7 @@ pub fn choice_special_effect(
                 || !defender.item_can_be_taken_by(attacker.ability)
                 || defender_has_sub && attacker.ability != Abilities::INFILTRATOR
             {
+                choice.tryhit_failed = true; // (L237: it failed -- not its swap of two same items)
                 return;
             }
             if attacker_item != defender_item {

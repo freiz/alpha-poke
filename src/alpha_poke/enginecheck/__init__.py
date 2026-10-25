@@ -45,9 +45,9 @@ LAYERED = {"spikes": "spikes", "toxicspikes": "toxic_spikes"}
 PRESENT = {"stealthrock": "stealth_rock", "stickyweb": "sticky_web"}
 
 
-# (L197: the in-battle rule the engine models -- the ladder's Sleep Clause Mod; a custom game:
-# any set legal)
-FORMAT = "gen9customgame@@@Sleep Clause Mod"
+# (a custom game: any set legal, every HP exact. L238: no Sleep Clause Mod -- the players' format,
+# Showdown's [Gen 9] OU, has none, nor has the engine by default; L197's was the old ladder's)
+FORMAT = "gen9customgame"
 
 
 def run_showdown(p1, p2, turns, seed: str | None = "gen5,1,2,3,4", force_random=None,
@@ -757,12 +757,12 @@ def view(sd: dict) -> dict:
                 # condition -- not compared as a volatile)
                 if x == "metronome" and not st.get("num_consecutive"):
                     continue  # (the engine's is on while it counts)
-                # (lastmovefailed: Showdown's moveLastTurnResult, for the engine's state only: the
-                # engine ends it at the end of the turn, Showdown sets the next one then)
+                # (lastmovefailed: Showdown's moveLastTurnResult -- compared since the engine sets
+                # it for the next turn too, L237)
                 # (L170: a partial trap whose source is out, as in engine_state)
                 if x == "partiallytrapped" and st.get("source_out"):
                     continue
-                if _engine_volatile(x) and x not in ("stall", "lastmovefailed", "statslowered", "statsraised",
+                if _engine_volatile(x) and x not in ("stall", "statslowered", "statsraised",
                                                      "illusion", "notera"):
                     v[f"{k}.volatile.{x}"] = True
         c = s["conditions"]
@@ -796,7 +796,7 @@ def view_engine(s: pe.State, n_mons: tuple[int, int] = (6, 6)) -> dict:
             # Showdown's side compares the types other than Terastallization, _changed_types)
             # (L222: nor the turn-1 marks, input only)
             # (L227: nor the Illusion / no-tera marks, input only too)
-            if str(x).lower() not in ("none", "lastmovefailed", "statslowered", "statsraised",
+            if str(x).lower() not in ("none", "statslowered", "statsraised",
                                       "illusion", "notera", "struggled") and not (
                 tera and str(x).lower() == "typechange"
             ):

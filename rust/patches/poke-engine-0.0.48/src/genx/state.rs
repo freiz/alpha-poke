@@ -332,6 +332,9 @@ define_enum_with_from_str! {
         // Hammer / Blood Moon usable again; its lock's move kept as the last used one; cleared
         // by a move of its own, ends on a switch)
         STRUGGLED,
+        // (L237: the side's move failed this turn -- Showdown's moveThisTurnResult false; the end of
+        // the turn makes it LASTMOVEFAILED for the next; ends on a switch)
+        MOVEFAILED,
     },
     default = NONE
 }

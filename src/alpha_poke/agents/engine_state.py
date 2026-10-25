@@ -1322,8 +1322,15 @@ def build_state(
             vol.add("trapped")
         if tm.frombooster:  # (L141)
             vol.add("frombooster")
-        if tm.last_failed or (tm.last_sub_failed and ab[mon is active] == "infiltrator"):  # (L115; S93)
+        # (L237: and this turn's, a decision mid-turn -- the engine makes it the next turn's at the
+        # turn's end; past the end (a faint's switch-in) it is the next turn's already, as the
+        # engine's: Showdown's moveLastTurnResult changes only at the next turn's start)
+        now = tm.failed_now or (tm.sub_failed_now and ab[mon is active] == "infiltrator")
+        last = tm.last_failed or (tm.last_sub_failed and ab[mon is active] == "infiltrator")  # (L115; S93)
+        if now if tm.upkept else last:
             vol.add("lastmovefailed")
+        if now and not tm.upkept:
+            vol.add("movefailed")
         # a two-turn move charging (its second turn comes: the engine's volatile of the move)
         # and a locking move (Outrage: lockedmove) -- 2026-10-23, the state-construction
         # differential: neither was passed, the search let it choose another move

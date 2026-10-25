@@ -2161,7 +2161,7 @@ pub fn ability_end_of_turn(
                 &PokemonStatus::SLEEP,
                 false,
             )
-            && !foe.has_alive_non_rested_sleeping_pkmn()
+            && !(super::generate_instructions::sleep_clause() && foe.has_alive_non_rested_sleeping_pkmn())
     };
     let (attacking_side, defending_side) = state.get_both_sides(side_ref);
     // alpha-poke patch (2026-10-16, doc/engine-diff.md L19): no healing under Heal Block
@@ -3265,7 +3265,7 @@ pub fn ability_modify_attack_being_used(
                     .get_active_immutable()
                     .has_type(&PokemonType::DARK)
             {
-                attacker_choice.remove_all_effects();
+                attacker_choice.remove_all_effects_tryhit();
             }
         }
         // alpha-poke patch (2026-10-17, doc/engine-diff.md L206): not a holder's of the same Ruin
@@ -3743,7 +3743,7 @@ fn bounced_absorb(choice: &mut Choice, ability: Abilities) {
         Abilities::FLASHFIRE if t == PokemonType::FIRE => (false, None, true),
         _ => return,
     };
-    choice.remove_all_effects();
+    choice.remove_all_effects_tryhit();
     choice.accuracy = 100.0;
     choice.target = MoveTarget::User;
     if heal {
@@ -3839,12 +3839,22 @@ pub fn ability_modify_attack_against(
         }
         Abilities::ARMORTAIL => {
             if attacker_choice.priority > 0 && attacker_choice.category != MoveCategory::Status {
-                attacker_choice.remove_all_effects();
+                attacker_choice.remove_all_effects_tryhit();
+            }
+        }
+        // alpha-poke patch (2026-10-24, doc/engine-diff.md L237): Oblivious takes Taunt / Attract
+        // (Showdown's onTryHit null: a failure; the volatile it cures after, the engine's way)
+        Abilities::OBLIVIOUS => {
+            if matches!(
+                attacker_choice.move_id,
+                Choices::TAUNT | Choices::ATTRACT | Choices::CAPTIVATE
+            ) {
+                attacker_choice.tryhit_failed = true;
             }
         }
         Abilities::SOUNDPROOF => {
             if attacker_choice.flags.sound {
-                attacker_choice.remove_all_effects();
+                attacker_choice.remove_all_effects_tryhit();
                 attacker_choice.accuracy = 0.0;
             }
         }
@@ -3859,7 +3869,7 @@ pub fn ability_modify_attack_against(
         }
         Abilities::BULLETPROOF => {
             if attacker_choice.flags.bullet {
-                attacker_choice.remove_all_effects();
+                attacker_choice.remove_all_effects_tryhit();
                 attacker_choice.accuracy = 0.0;
             }
         }
@@ -3877,7 +3887,7 @@ pub fn ability_modify_attack_against(
         }
         Abilities::LIGHTNINGROD => {
             if attacker_choice.move_type == PokemonType::ELECTRIC {
-                attacker_choice.remove_all_effects();
+                attacker_choice.remove_all_effects_tryhit();
                 attacker_choice.accuracy = 100.0;
                 attacker_choice.target = MoveTarget::Opponent;
                 attacker_choice.boost = Some(Boost {
@@ -3899,7 +3909,7 @@ pub fn ability_modify_attack_against(
             if attacker_choice.move_type == PokemonType::GROUND
                 && !attacker_choice.move_id.not_aimed_at_foe()
             {
-                attacker_choice.remove_all_effects();
+                attacker_choice.remove_all_effects_tryhit();
                 attacker_choice.base_power = 0.0;
                 attacker_choice.heal = Some(Heal {
                     target: MoveTarget::Opponent,
@@ -3927,13 +3937,13 @@ pub fn ability_modify_attack_against(
         }
         Abilities::QUEENLYMAJESTY => {
             if attacker_choice.priority > 0 {
-                attacker_choice.remove_all_effects();
+                attacker_choice.remove_all_effects_tryhit();
                 attacker_choice.accuracy = 0.0;
             }
         }
         Abilities::SAPSIPPER => {
             if attacker_choice.move_type == PokemonType::GRASS {
-                attacker_choice.remove_all_effects();
+                attacker_choice.remove_all_effects_tryhit();
                 attacker_choice.accuracy = 100.0;
                 attacker_choice.target = MoveTarget::Opponent;
                 attacker_choice.boost = Some(Boost {
@@ -4010,7 +4020,7 @@ pub fn ability_modify_attack_against(
         }
         Abilities::MOTORDRIVE => {
             if attacker_choice.move_type == PokemonType::ELECTRIC {
-                attacker_choice.remove_all_effects();
+                attacker_choice.remove_all_effects_tryhit();
                 attacker_choice.accuracy = 100.0;
                 attacker_choice.target = MoveTarget::Opponent;
                 attacker_choice.boost = Some(Boost {
@@ -4029,7 +4039,7 @@ pub fn ability_modify_attack_against(
         }
         Abilities::WINDRIDER => {
             if attacker_choice.flags.wind {
-                attacker_choice.remove_all_effects();
+                attacker_choice.remove_all_effects_tryhit();
                 attacker_choice.accuracy = 100.0;
                 attacker_choice.target = MoveTarget::Opponent;
                 attacker_choice.boost = Some(Boost {
@@ -4055,7 +4065,7 @@ pub fn ability_modify_attack_against(
                 && attacker_choice.move_id != Choices::STRUGGLE
                 && move_type_effectiveness(&attacker_choice, &target_pkmn) <= 1.0
             {
-                attacker_choice.remove_all_effects();
+                attacker_choice.remove_all_effects_tryhit();
                 attacker_choice.base_power = 0.0;
             }
         }
@@ -4115,7 +4125,7 @@ pub fn ability_modify_attack_against(
         }
         Abilities::FLASHFIRE => {
             if attacker_choice.move_type == PokemonType::FIRE {
-                attacker_choice.remove_all_effects();
+                attacker_choice.remove_all_effects_tryhit();
                 attacker_choice.volatile_status = Some(VolatileStatus {
                     target: MoveTarget::Opponent,
                     volatile_status: PokemonVolatileStatus::FLASHFIRE,
@@ -4124,7 +4134,7 @@ pub fn ability_modify_attack_against(
         }
         Abilities::WELLBAKEDBODY => {
             if attacker_choice.move_type == PokemonType::FIRE {
-                attacker_choice.remove_all_effects();
+                attacker_choice.remove_all_effects_tryhit();
                 attacker_choice.boost = Some(Boost {
                     boosts: StatBoosts {
                         attack: 0,
@@ -4200,6 +4210,10 @@ pub fn ability_modify_attack_against(
         // target, it fails)
         Abilities::MAGICBOUNCE => {
             if attacker_choice.flags.reflectable && target_pkmn.hp > 0 {
+                // (L237: its user's move failed -- Magic Bounce's onTryHit null; the reflector's
+                // result this turn is the reflected move's: useMove)
+                attacker_choice.tryhit_failed = true;
+                attacker_choice.reflected = true;
                 attacker_choice.target = MoveTarget::User;
                 if let Some(side_condition) = &mut attacker_choice.side_condition {
                     if side_condition.target == MoveTarget::Opponent {
@@ -4257,7 +4271,7 @@ pub fn ability_modify_attack_against(
         }
         Abilities::STORMDRAIN => {
             if attacker_choice.move_type == PokemonType::WATER {
-                attacker_choice.remove_all_effects();
+                attacker_choice.remove_all_effects_tryhit();
                 attacker_choice.accuracy = 100.0;
                 attacker_choice.target = MoveTarget::Opponent;
                 attacker_choice.boost = Some(Boost {
@@ -4284,7 +4298,7 @@ pub fn ability_modify_attack_against(
             if attacker_choice.move_type == PokemonType::WATER
                 && !attacker_choice.move_id.not_aimed_at_foe()
             {
-                attacker_choice.remove_all_effects();
+                attacker_choice.remove_all_effects_tryhit();
                 attacker_choice.base_power = 0.0;
                 attacker_choice.heal = Some(Heal {
                     target: MoveTarget::Opponent,
@@ -4298,7 +4312,7 @@ pub fn ability_modify_attack_against(
             if attacker_choice.move_type == PokemonType::WATER
                 && !attacker_choice.move_id.not_aimed_at_foe()
             {
-                attacker_choice.remove_all_effects();
+                attacker_choice.remove_all_effects_tryhit();
                 attacker_choice.base_power = 0.0;
                 attacker_choice.heal = Some(Heal {
                     target: MoveTarget::Opponent,
@@ -4340,7 +4354,7 @@ pub fn ability_modify_attack_against(
             if attacker_choice.move_type == PokemonType::ELECTRIC
                 && !attacker_choice.move_id.not_aimed_at_foe()
             {
-                attacker_choice.remove_all_effects();
+                attacker_choice.remove_all_effects_tryhit();
                 attacker_choice.accuracy = 100.0;
                 attacker_choice.base_power = 0.0;
                 attacker_choice.heal = Some(Heal {
@@ -4357,7 +4371,7 @@ pub fn ability_modify_attack_against(
         }
         Abilities::OVERCOAT => {
             if attacker_choice.flags.powder {
-                attacker_choice.remove_all_effects();
+                attacker_choice.remove_all_effects_tryhit();
                 attacker_choice.accuracy = 0.0
             }
         }
@@ -4368,12 +4382,19 @@ pub fn ability_modify_attack_against(
             // Haze, ... -- and a non-Ghost Curse, aimed at its user, pass)
             let self_curse = attacker_choice.move_id == Choices::CURSE
                 && !attacking_pkmn.has_type(&PokemonType::GHOST);
+            // (L237: a status move of its own -- not one a Future Sight's use or a failure made
+            // status: Showdown's Good as Gold reads the move's category)
+            let status = crate::choices::MOVES
+                .get(&attacker_choice.move_id)
+                .map_or(attacker_choice.category, |m| m.category)
+                == MoveCategory::Status;
             if attacker_choice.category == MoveCategory::Status
+                && status
                 && attacker_choice.target == MoveTarget::Opponent
                 && !attacker_choice.move_id.not_aimed_at_foe()
                 && !self_curse
             {
-                attacker_choice.remove_all_effects();
+                attacker_choice.remove_all_effects_tryhit();
             }
         }
         Abilities::WATERBUBBLE => {

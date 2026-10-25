@@ -1386,10 +1386,19 @@ fn set_no_chance(on: bool) {
         .store(on, std::sync::atomic::Ordering::Relaxed);
 }
 
+/// alpha-poke patch (2026-10-24, doc/engine-diff.md L238): the Sleep Clause Mod in the transitions
+/// from now on (`on`; off by default: Showdown's [Gen 9] OU has none)
+#[pyfunction]
+fn set_sleep_clause(on: bool) {
+    poke_engine::engine::generate_instructions::SLEEP_CLAUSE_MOD
+        .store(on, std::sync::atomic::Ordering::Relaxed);
+}
+
 #[pymodule]
 #[pyo3(name = "poke_engine")]
 fn py_poke_engine(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(set_no_chance, m)?)?;
+    m.add_function(wrap_pyfunction!(set_sleep_clause, m)?)?;
     m.add_function(wrap_pyfunction!(calculate_damage, m)?)?;
     m.add_function(wrap_pyfunction!(generate_instructions, m)?)?;
     m.add_function(wrap_pyfunction!(id, m)?)?;

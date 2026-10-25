@@ -21922,6 +21922,17 @@ pub struct Choice {
     // true: No Guard, a Poison type's Toxic, Blizzard in snow, Thunder / Hurricane / the Storms in
     // rain): no accuracy or evasion stage applies
     pub sure_hit: bool,
+    // alpha-poke patch (2026-10-24, doc/engine-diff.md L237): the instruction the move's effects begin
+    // at (past its BeforeMove's, its PP's, a Protean's: run_move's did-nothing check)
+    pub effects_from: usize,
+    // (L237: the target's ability took it -- Showdown's TryHit null, a failure: Volt Absorb,
+    // Soundproof, Good as Gold, Magic Bounce, ...; Prankster into a Dark type, Queenly Majesty --
+    // after Protect's; and the move's own onTry failed -- Fake Out past its first turn, Sucker
+    // Punch, a failed Burn Up, ...: before Protect's, a failure through it)
+    pub tryhit_failed: bool,
+    pub try_failed: bool,
+    // (L237: Magic Bounce sent it back -- the reflector's result this turn is the reflected move's)
+    pub reflected: bool,
 }
 
 impl fmt::Debug for Choice {
@@ -22008,6 +22019,17 @@ impl Choice {
         self.side_condition = None;
         self.secondaries = None;
     }
+    // alpha-poke patch (2026-10-24, doc/engine-diff.md L237): the target's ability takes the move
+    // (Showdown's TryHit null or false: the move failed)
+    pub fn remove_all_effects_tryhit(&mut self) {
+        self.remove_all_effects();
+        self.tryhit_failed = true;
+    }
+    // (L237: the move's own onTry fails it)
+    pub fn remove_all_effects_try(&mut self) {
+        self.remove_all_effects();
+        self.try_failed = true;
+    }
     pub fn remove_all_effects(&mut self) {
         self.category = MoveCategory::Status;
         // alpha-poke patch (2026-10-17, doc/engine-diff.md L135): Protect still stops it (an
@@ -22074,6 +22096,10 @@ impl Default for Choice {
             berserk: false,
             power_herb: false,
             full_hp_halved: false,
+            effects_from: 0,
+            tryhit_failed: false,
+            try_failed: false,
+            reflected: false,
         }
     }
 }

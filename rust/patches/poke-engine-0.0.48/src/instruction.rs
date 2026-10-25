@@ -16,11 +16,25 @@ pub struct StateInstructions {
 
 // alpha-poke patch (2026-10-14): equal up to the Acted markers (no state change; the engine's
 // own branch merging compares the lists themselves, markers included)
+// (2026-10-24, doc/engine-diff.md L237: and up to the move-failed marks -- MOVEFAILED, the next
+// turn's LASTMOVEFAILED: the engine's unit tests' lists predate them; the dual tests and the
+// differential test framework check them against Showdown)
 impl PartialEq for StateInstructions {
     fn eq(&self, other: &Self) -> bool {
+        let failed_mark = |i: &Instruction| match i {
+            Instruction::ApplyVolatileStatus(v) => matches!(
+                v.volatile_status,
+                PokemonVolatileStatus::MOVEFAILED | PokemonVolatileStatus::LASTMOVEFAILED
+            ),
+            Instruction::RemoveVolatileStatus(v) => matches!(
+                v.volatile_status,
+                PokemonVolatileStatus::MOVEFAILED | PokemonVolatileStatus::LASTMOVEFAILED
+            ),
+            _ => false,
+        };
         let real = |v: &Vec<Instruction>| -> Vec<Instruction> {
             v.iter()
-                .filter(|i| !i.is_marker())
+                .filter(|i| !i.is_marker() && !failed_mark(i))
                 .cloned()
                 .collect()
         };

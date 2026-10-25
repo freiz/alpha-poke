@@ -60,6 +60,16 @@ fn no_chance() -> bool {
     NO_CHANCE_CRIT_OR_MISS.load(Ordering::Relaxed)
 }
 
+// alpha-poke patch (2026-10-24, doc/engine-diff.md L238): the Sleep Clause Mod -- off: the format the
+// players play, Showdown's [Gen 9] OU ('Sleep Moves Clause', '!Sleep Clause Mod': the sleep moves
+// banned by the validator, a second sleep -- Dire Claw's, Effect Spore's -- allowed); on for a
+// format that has it (poke_engine.set_sleep_clause; L197's tests)
+pub static SLEEP_CLAUSE_MOD: AtomicBool = AtomicBool::new(false);
+
+pub fn sleep_clause() -> bool {
+    SLEEP_CLAUSE_MOD.load(Ordering::Relaxed)
+}
+
 
 #[cfg(any(feature = "gen4", feature = "gen5", feature = "gen6"))]
 pub const BASE_CRIT_CHANCE: f32 = 1.0 / 16.0;
@@ -1728,6 +1738,7 @@ pub fn immune_to_status_with(
                     .contains(&ability)
                     || (status_target == &MoveTarget::Opponent
                         && clause
+                        && sleep_clause()
                         && target_side.has_alive_non_rested_sleeping_pkmn())
                 // sleep clause
             }
@@ -2946,6 +2957,16 @@ fn check_move_hit_or_miss(
         move_missed_instruction
             .instruction_list
             .extend(lock_end_instructions(state, attacking_side_ref, false));
+        // (L237: a miss -- an immune target's too: no damage, a hit chance of 0; not a move
+        // Protect took: NOT_FAIL; nor a Counter / Mirror Coat, its hit done already -- on a
+        // Substitute, no damage left here: its failure its onTry's, choice_special_effect)
+        let returned = matches!(
+            choice.move_id,
+            Choices::COUNTER | Choices::MIRRORCOAT | Choices::METALBURST | Choices::COMEUPPANCE
+        );
+        if choice.try_failed || !choice.protected && !returned {
+            move_failed(state, attacking_side_ref, &mut move_missed_instruction, false);
+        }
         frozen_instructions.push(move_missed_instruction);
     }
     incoming_instructions.update_percentage(percent_hit);
@@ -3398,7 +3419,11 @@ fn generate_instructions_from_damage(
     hit_sub
 }
 
-fn move_has_no_effect(state: &State, choice: &Choice, attacking_side_ref: &SideReference) -> bool {
+// alpha-poke patch (2026-10-24, doc/engine-diff.md L237): why the move has no effect -- Some(true): it
+// failed (Showdown's moveThisTurnResult false: -immune, -fail; a TryHit's null is false too --
+// Psychic Terrain, Safety Goggles), Some(false): a Substitute stopped a status move (its
+// TryPrimaryHit's null: no failure), None: it has one
+fn move_no_effect(state: &State, choice: &Choice, attacking_side_ref: &SideReference) -> Option<bool> {
     let (_attacking_side, defending_side) = state.get_both_sides_immutable(attacking_side_ref);
     let defender = defending_side.get_active_immutable();
 
@@ -3410,38 +3435,7 @@ fn move_has_no_effect(state: &State, choice: &Choice, attacking_side_ref: &SideR
         && choice.priority > 0
         && !super::abilities::FIELD_OR_SIDE_MOVES.contains(&choice.move_id)
     {
-        return true;
-    }
-
-    // alpha-poke patch (2026-10-17, doc/engine-diff.md L133): a status move aimed at the foe fails
-    // against its Substitute unless it bypasses it (Showdown's substitute onTryPrimaryHit; the
-    // move's own category: an attack an absorbing ability turned into a status one is absorbed)
-    if choice.target == MoveTarget::Opponent
-        && MOVES
-            .get(&choice.move_id)
-            .map_or(choice.category, |m| m.category)
-            == MoveCategory::Status
-        && !choice.move_id.not_aimed_at_foe()
-        && !choice.move_id.bypasses_substitute()
-        && defending_side
-            .volatile_statuses
-            .contains(&PokemonVolatileStatus::SUBSTITUTE)
-        && _attacking_side.get_active_immutable().ability != Abilities::INFILTRATOR
-        // alpha-poke patch (2026-10-18, doc/engine-diff.md L220): not one the target's absorbing
-        // ability takes first (Showdown's TryHit before the Substitute's TryPrimaryHit: a Thunder
-        // Wave into a Volt Absorb behind its Substitute heals); not through a Mold Breaker / gas
-        && !(super::abilities::absorbs_type(
-            defending_side.get_active_immutable().ability,
-            choice.move_type,
-        ) && !matches!(
-            _attacking_side.get_active_immutable().ability,
-            Abilities::MOLDBREAKER
-                | Abilities::TERAVOLT
-                | Abilities::TURBOBLAZE
-                | Abilities::NEUTRALIZINGGAS
-        ))
-    {
-        return true;
+        return Some(true);
     }
 
     // alpha-poke patch (2026-10-18, doc/engine-diff.md L225): a powder move Magic Bounce sent back
@@ -3458,7 +3452,7 @@ fn move_has_no_effect(state: &State, choice: &Choice, attacking_side_ref: &SideR
         && (choice.target == MoveTarget::Opponent || reflected)
         && powder_target.has_type(&PokemonType::GRASS)
     {
-        return true;
+        return Some(true);
     }
 
     // alpha-poke patch (2026-10-13): Safety Goggles block powder moves
@@ -3466,7 +3460,7 @@ fn move_has_no_effect(state: &State, choice: &Choice, attacking_side_ref: &SideR
         && (choice.target == MoveTarget::Opponent || reflected)
         && powder_target.item == Items::SAFETYGOGGLES
     {
-        return true;
+        return Some(true);
     }
 
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L198): an absorbing ability takes it first
@@ -3492,7 +3486,7 @@ fn move_has_no_effect(state: &State, choice: &Choice, attacking_side_ref: &SideR
             Abilities::MOLDBREAKER | Abilities::TERAVOLT | Abilities::TURBOBLAZE
         ))
     {
-        return true;
+        return Some(true);
     } else if choice.move_id == Choices::SPITE {
         // alpha-poke patch (2026-10-24 review): Spite fails without a last move with PP left on
         // the side it lands on (Showdown's onHit: lastMove, deductPP's 0; a Struggle's none)
@@ -3502,13 +3496,14 @@ fn move_has_no_effect(state: &State, choice: &Choice, attacking_side_ref: &SideR
             attacking_side_ref.get_other_side()
         };
         let side = state.get_side_immutable(&target);
-        return match side.last_used_move {
+        let failed = match side.last_used_move {
             LastUsedMove::Move(i) => {
                 side.volatile_statuses.contains(&PokemonVolatileStatus::STRUGGLED)
                     || side.get_active_immutable().moves[&i].pp <= 0
             }
             _ => true,
         };
+        return failed.then_some(true);
     } else if choice.move_id == Choices::ENCORE {
         // alpha-poke patch (2026-10-16, doc/engine-diff.md L69): the side it lands on (its user's
         // when Magic Bounce reflects it), and it fails on an Encore (Encore cannot encore Encore)
@@ -3521,9 +3516,9 @@ fn move_has_no_effect(state: &State, choice: &Choice, attacking_side_ref: &SideR
         let side = state.get_side_immutable(&target);
         // (L232: its last move a Struggle -- failencore; the lock's move is kept as its last used)
         if side.volatile_statuses.contains(&PokemonVolatileStatus::STRUGGLED) {
-            return true;
+            return Some(true);
         }
-        return match side.last_used_move {
+        let failed = match side.last_used_move {
             LastUsedMove::None => true,
             LastUsedMove::Move(i) => {
                 let m = &side.get_active_immutable().moves[&i];
@@ -3552,6 +3547,7 @@ fn move_has_no_effect(state: &State, choice: &Choice, attacking_side_ref: &SideR
             }
             LastUsedMove::Switch(_) => true,
         };
+        return failed.then_some(true);
     } else if state.terrain_is_active(&Terrain::PSYCHICTERRAIN)
         && (defending_side.active_grounded() || state.gravity > 0)
         && choice.target == MoveTarget::Opponent
@@ -3559,9 +3555,174 @@ fn move_has_no_effect(state: &State, choice: &Choice, attacking_side_ref: &SideR
         // (L225: not a move aimed at a side or the field -- a Prankster Spikes: L215's check)
         && !super::abilities::FIELD_OR_SIDE_MOVES.contains(&choice.move_id)
     {
-        return true;
+        return Some(true);
     }
-    false
+    // (L237: the Substitute last -- Showdown's TryPrimaryHit, after the immunities: a Grass type's
+    // powder / Leech Seed immunity behind a Substitute is a failure; not one an ability took first --
+    // Sap Sipper's TryHit, its Attack +1)
+    if choice.move_id == Choices::LEECHSEED
+        && !choice.tryhit_failed
+        && defender.has_type(&PokemonType::GRASS)
+    {
+        return Some(true);
+    }
+    // alpha-poke patch (2026-10-17, doc/engine-diff.md L133): a status move aimed at the foe fails
+    // against its Substitute unless it bypasses it (Showdown's substitute onTryPrimaryHit; the
+    // move's own category: an attack an absorbing ability turned into a status one is absorbed)
+    if choice.target == MoveTarget::Opponent
+        && MOVES
+            .get(&choice.move_id)
+            .map_or(choice.category, |m| m.category)
+            == MoveCategory::Status
+        && !choice.move_id.not_aimed_at_foe()
+        && !choice.move_id.bypasses_substitute()
+        && defending_side
+            .volatile_statuses
+            .contains(&PokemonVolatileStatus::SUBSTITUTE)
+        && _attacking_side.get_active_immutable().ability != Abilities::INFILTRATOR
+        // alpha-poke patch (2026-10-18, doc/engine-diff.md L220): not one the target's absorbing
+        // ability takes first (Showdown's TryHit before the Substitute's TryPrimaryHit: a Thunder
+        // Wave into a Volt Absorb behind its Substitute heals); not through a Mold Breaker / gas
+        && !(super::abilities::absorbs_type(
+            defending_side.get_active_immutable().ability,
+            choice.move_type,
+        ) && !matches!(
+            _attacking_side.get_active_immutable().ability,
+            Abilities::MOLDBREAKER
+                | Abilities::TERAVOLT
+                | Abilities::TURBOBLAZE
+                | Abilities::NEUTRALIZINGGAS
+        ))
+    {
+        return Some(false);
+    }
+    None
+}
+
+// alpha-poke patch (2026-10-24, doc/engine-diff.md L237): the side's move failed this turn
+// (Showdown's moveThisTurnResult false: a cant but a recharge, the move's -fail / -miss / -immune):
+// MOVEFAILED, LASTMOVEFAILED at the end of the turn (Temper Flare / Stomping Tantrum double the
+// next). `applied`: the state has `instructions` applied (the volatile goes on it too); a branch
+// set aside for later has not
+fn move_failed(
+    state: &mut State,
+    side_ref: &SideReference,
+    instructions: &mut StateInstructions,
+    applied: bool,
+) {
+    let side = state.get_side(side_ref);
+    let on = side
+        .volatile_statuses
+        .contains(&PokemonVolatileStatus::MOVEFAILED);
+    if !applied {
+        push_move_failed(side_ref, instructions, on);
+        return;
+    }
+    // (the state is the list's: it says)
+    if !on {
+        side.volatile_statuses.insert(PokemonVolatileStatus::MOVEFAILED);
+        instructions
+            .instruction_list
+            .push(Instruction::ApplyVolatileStatus(ApplyVolatileStatusInstruction {
+                side_ref: *side_ref,
+                volatile_status: PokemonVolatileStatus::MOVEFAILED,
+            }));
+    }
+}
+
+// (L237: a status move that did nothing: no effect's instruction since its effects began -- Showdown's
+// moveHit: no effect's result, -fail. Not one that cannot fail so: Haze (its onHitField returns
+// nothing), the weather heals at full HP (onHit's NOT_FAIL), a Future Sight set (onTry's NOT_FAIL;
+// set before its effects here), a non-Ghost's Curse (its boosts the move's self), Parting Shot
+// (its onHit's), Trick / Switcheroo (their own failure marked: two same items swapped did
+// something), Double Shock / Burn Up stopped by their onTryMove (null))
+fn did_nothing(state: &State, choice: &Choice, side_ref: &SideReference, instructions: &StateInstructions) -> bool {
+    let list = &instructions.instruction_list;
+    // (Defog's own result: its target's evasion drop or a clearing -- one Mirror Armor sent back on
+    // its user is none: its onHit's false)
+    let effect = |i: &Instruction| {
+        is_effect(i)
+            && !(choice.move_id == Choices::DEFOG
+                && matches!(i, Instruction::Boost(b) if b.side_ref == *side_ref))
+    };
+    // (a charging turn neither: its onTryMove's null -- the charge volatile set before here)
+    if list[choice.effects_from.min(list.len())..].iter().any(effect)
+        || super::choice_effects::charging_turn(choice)
+    {
+        return false;
+    }
+    match choice.move_id {
+        Choices::HAZE
+        | Choices::MOONLIGHT
+        | Choices::MORNINGSUN
+        | Choices::SYNTHESIS
+        | Choices::SHOREUP
+        | Choices::PARTINGSHOT
+        | Choices::TRICK
+        | Choices::SWITCHEROO
+        // (a non-Electric's Double Shock, a non-Fire's Burn Up: onTryMove's null)
+        | Choices::DOUBLESHOCK
+        | Choices::BURNUP => false,
+        Choices::FUTURESIGHT | Choices::DOOMDESIRE => {
+            !list.iter().any(|i| matches!(i, Instruction::SetFutureSight(_)))
+        }
+        Choices::CURSE => state
+            .get_side_immutable(side_ref)
+            .get_active_immutable()
+            .has_type(&PokemonType::GHOST),
+        _ => true,
+    }
+}
+
+// (L237: the failure mark itself, set or cleared)
+fn is_failure_mark(i: &Instruction) -> bool {
+    matches!(i, Instruction::ApplyVolatileStatus(v) if v.volatile_status == PokemonVolatileStatus::MOVEFAILED)
+        || matches!(i, Instruction::RemoveVolatileStatus(v) if v.volatile_status == PokemonVolatileStatus::MOVEFAILED)
+}
+
+// (L237: an instruction that is a move's effect -- not the markers, the damage-dealt / times-attacked /
+// last-move bookkeeping, the failure mark itself)
+fn is_effect(i: &Instruction) -> bool {
+    !is_failure_mark(i)
+        && !matches!(
+        i,
+        Instruction::Turn(_)
+            | Instruction::Acted(_)
+            | Instruction::NoTarget(_)
+            | Instruction::HitItself(_)
+            | Instruction::ChangeDamageDealtDamage(_)
+            | Instruction::ChangeDamageDealtMoveCatagory(_)
+            | Instruction::ToggleDamageDealtHitSubstitute(_)
+            | Instruction::ChangeTimesAttacked(_)
+            | Instruction::ChangeLastMove(_)
+            | Instruction::SetLastUsedMove(_)
+    )
+}
+
+// (L237: the instruction alone, for a branch set aside -- `on`: the state has it; the branch's own
+// last mark of it (a Magic Bounce's failure, undone as the side's own move began) over that)
+fn push_move_failed(side_ref: &SideReference, instructions: &mut StateInstructions, on: bool) {
+    let last = instructions.instruction_list.iter().rev().find_map(|i| match i {
+        Instruction::ApplyVolatileStatus(v)
+            if v.side_ref == *side_ref && v.volatile_status == PokemonVolatileStatus::MOVEFAILED =>
+        {
+            Some(true)
+        }
+        Instruction::RemoveVolatileStatus(v)
+            if v.side_ref == *side_ref && v.volatile_status == PokemonVolatileStatus::MOVEFAILED =>
+        {
+            Some(false)
+        }
+        _ => None,
+    });
+    if !last.unwrap_or(on) {
+        instructions
+            .instruction_list
+            .push(Instruction::ApplyVolatileStatus(ApplyVolatileStatusInstruction {
+                side_ref: *side_ref,
+                volatile_status: PokemonVolatileStatus::MOVEFAILED,
+            }));
+    }
 }
 
 // alpha-poke patch (2026-10-16, doc/engine-diff.md L41): Gen 9 Protean / Libero, once per entry
@@ -4608,6 +4769,10 @@ fn generate_instructions_from_existing_status_conditions(
     // (L212: the harness's hint for a confusion self-hit)
     let confusion_hint = state.confusion_hint[*attacking_side_ref as usize];
     let (exact_pp, use_last_used_move) = (state.use_exact_pp, state.use_last_used_move);
+    let failed_on = state
+        .get_side_immutable(attacking_side_ref)
+        .volatile_statuses
+        .contains(&PokemonVolatileStatus::MOVEFAILED);
     // (L227: a flinch, Taunt, Throat Chop, ... -- BeforeMove priorities above confusion's 3 --
     // stop the mover before its confusion counts: Showdown's runEvent stops at the first false)
     let flinched = flinched_or_taunted(state, attacker_choice, attacking_side_ref);
@@ -4641,6 +4806,8 @@ fn generate_instructions_from_existing_status_conditions(
         PokemonStatus::FREEZE => {
             let mut still_frozen_instruction = incoming_instructions.clone();
             still_frozen_instruction.update_percentage(1.0 - THAW_CHANCE);
+            // (L237: each cant here a failure: Showdown's BeforeMove false)
+            push_move_failed(attacking_side_ref, &mut still_frozen_instruction, failed_on);
             final_instructions.push(still_frozen_instruction);
 
             incoming_instructions.update_percentage(THAW_CHANCE);
@@ -4718,6 +4885,7 @@ fn generate_instructions_from_existing_status_conditions(
                                     previous_turns: current_sleep_turns,
                                 }),
                             );
+                            push_move_failed(attacking_side_ref, &mut still_asleep_instruction, failed_on);
                             final_instructions.push(still_asleep_instruction);
                             incoming_instructions.update_percentage(0.0);
                         }
@@ -4820,6 +4988,7 @@ fn generate_instructions_from_existing_status_conditions(
                                 );
                             }
                         }
+                        push_move_failed(attacking_side_ref, &mut do_nothing_instructions, failed_on);
                         final_instructions.push(do_nothing_instructions);
                     }
                 }
@@ -4981,6 +5150,7 @@ fn generate_instructions_from_existing_status_conditions(
             if refreeze {
                 branch.instruction_list.push(refreeze_ins.clone());
             }
+            push_move_failed(attacking_side_ref, &mut branch, failed_on);
             final_instructions.push(branch);
         }
 
@@ -4998,6 +5168,7 @@ fn generate_instructions_from_existing_status_conditions(
         if refreeze {
             immobilized.instruction_list.push(refreeze_ins.clone());
         }
+        push_move_failed(attacking_side_ref, &mut immobilized, failed_on);
         final_instructions.push(immobilized);
         incoming_instructions.update_percentage(0.5);
     }
@@ -5008,6 +5179,7 @@ fn generate_instructions_from_existing_status_conditions(
         // Fully-Paralyzed Branch
         let mut fully_paralyzed_instruction = incoming_instructions.clone();
         fully_paralyzed_instruction.update_percentage(FULLY_PARALYZED_CHANCE);
+        push_move_failed(attacking_side_ref, &mut fully_paralyzed_instruction, failed_on);
         final_instructions.push(fully_paralyzed_instruction);
 
         // Non-Paralyzed Branch
@@ -5161,6 +5333,7 @@ pub fn generate_instructions_from_move(
             incoming_instructions
                 .instruction_list
                 .push(Instruction::Turn(attacking_side));
+            move_failed(state, &attacking_side, &mut incoming_instructions, false); // (L237: a cant)
         }
         incoming_instructions
             .instruction_list
@@ -5556,6 +5729,7 @@ pub fn generate_instructions_from_move(
     }
     if (!called || choice.dancer_move) && cannot_use_move(state, &choice, &attacking_side) {
         steadfast(state, &attacking_side, &mut incoming_instructions);
+        move_failed(state, &attacking_side, &mut incoming_instructions, true); // (L237: a cant)
         state.reverse_instructions(&incoming_instructions.instruction_list);
         final_instructions.push(incoming_instructions);
         return;
@@ -5755,6 +5929,8 @@ pub fn generate_instructions_from_move(
         }
         return;
     } else if attacker.status == PokemonStatus::SLEEP && !choice.sleep_talk_move && !stopped {
+        // (L237: asleep -- a Rest's sleep too: a cant)
+        move_failed(state, &attacking_side, &mut incoming_instructions, true);
         state.reverse_instructions(&incoming_instructions.instruction_list);
         if incoming_instructions.percentage > 0.0 {
             final_instructions.push(incoming_instructions);
@@ -5855,6 +6031,7 @@ pub fn generate_instructions_from_move(
                     volatile_status: PokemonVolatileStatus::TRUANT,
                 },
             ));
+        move_failed(state, &attacking_side, &mut incoming_instructions, true); // (L237: a cant)
         state.reverse_instructions(&incoming_instructions.instruction_list);
         final_instructions.push(incoming_instructions);
         return;
@@ -6009,6 +6186,11 @@ pub fn generate_instructions_from_move(
         {
             self_destruct(state, &choice, &attacking_side, &mut incoming_instructions);
         }
+        // (L237: either failed -- Showdown's -fail with no target, a cant; not a charging turn
+        // begun with no target: its onTryMove's null comes first)
+        if stopped || !charging {
+            move_failed(state, &attacking_side, &mut incoming_instructions, true);
+        }
         state.reverse_instructions(&incoming_instructions.instruction_list);
         final_instructions.push(incoming_instructions);
         return;
@@ -6018,6 +6200,18 @@ pub fn generate_instructions_from_move(
     incoming_instructions
         .instruction_list
         .push(Instruction::Acted(attacking_side));
+    // (L237: its own result from here -- Showdown's useMove resets moveThisTurnResult: a Magic
+    // Bounce's failed reflection earlier this turn undone)
+    let side = state.get_side(&attacking_side);
+    if side.volatile_statuses.contains(&PokemonVolatileStatus::MOVEFAILED) {
+        side.volatile_statuses.remove(&PokemonVolatileStatus::MOVEFAILED);
+        incoming_instructions
+            .instruction_list
+            .push(Instruction::RemoveVolatileStatus(RemoveVolatileStatusInstruction {
+                side_ref: attacking_side,
+                volatile_status: PokemonVolatileStatus::MOVEFAILED,
+            }));
+    }
     self_destruct(state, &choice, &attacking_side, &mut incoming_instructions);
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L180): a consecutive Protect fails as the
     // move goes (Showdown's onPrepareHit StallMove: its PP used, its last used move set); was a
@@ -6043,10 +6237,12 @@ pub fn generate_instructions_from_move(
             || (defender_choice.move_id == Choices::NONE && !recharging);
         if protecting && last {
             choice.volatile_status = None;
+            move_failed(state, &attacking_side, &mut incoming_instructions, true); // (L237)
         } else if protect > 0 && protecting {
             let success = CONSECUTIVE_PROTECT_CHANCE.powi(protect as i32);
             let mut fail = incoming_instructions.clone();
             fail.update_percentage(1.0 - success);
+            move_failed(state, &attacking_side, &mut fail, false); // (L237)
             // alpha-poke patch (2026-10-17, doc/engine-diff.md L184): the failed roll ends the
             // count at once (Showdown's onStallMove deletes the stall volatile; was at the end
             // of the turn: a pivot's decision before it had the old count)
@@ -6160,7 +6356,23 @@ pub fn generate_instructions_from_move(
     #[cfg(any(feature = "gen9", feature = "champions"))]
     protean_type_change(state, choice, &attacking_side, &mut incoming_instructions);
 
-    if move_has_no_effect(state, &choice, &attacking_side) {
+    if let Some(failed) = move_no_effect(state, &choice, &attacking_side) {
+        // (L237: a status move a Substitute stops hits or misses first -- Showdown's accuracy step
+        // before the TryPrimaryHit: a miss is a failure)
+        if !failed
+            && choice.category == MoveCategory::Status
+            && choice.target == MoveTarget::Opponent
+            && !choice.move_id.always_hits()
+        {
+            check_move_hit_or_miss(
+                state,
+                &choice,
+                &attacking_side,
+                None,
+                &mut incoming_instructions,
+                &mut final_instructions,
+            );
+        }
         // L22: a locked move without effect ends the lock
         let lock_end = lock_end_instructions(state, &attacking_side, false);
         // L50: a crash move into an immune target crashes (Showdown's onMoveFail)
@@ -6170,6 +6382,15 @@ pub fn generate_instructions_from_move(
                 .get_active_immutable();
             cmp::min((user.maxhp as f32 * f) as i16, user.hp)
         });
+        // (not one Protect took: its TryHit comes first, NOT_FAIL -- a Thunder into a protecting
+        // Ground type)
+        if failed && !choice.protected {
+            move_failed(state, &attacking_side, &mut incoming_instructions, true);
+            // (a reflected one's failure is its reflector's too: run_move)
+            if choice.reflected {
+                move_failed(state, &attacking_side.get_other_side(), &mut incoming_instructions, true);
+            }
+        }
         state.reverse_instructions(&incoming_instructions.instruction_list);
         incoming_instructions.instruction_list.extend(lock_end);
         if let Some(amount) = crash.filter(|a| *a > 0) {
@@ -6204,6 +6425,8 @@ pub fn generate_instructions_from_move(
             return;
         }
     }
+    // (L237: its effects from here: run_move's did-nothing check)
+    choice.effects_from = incoming_instructions.instruction_list.len();
     choice_special_effect(state, choice, &attacking_side, &mut incoming_instructions);
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L170): Counter / Mirror Coat / Metal
     // Burst's hit is a damaging hit (Showdown's onDamagingHit: Rocky Helmet, Rough Skin, Stamina,
@@ -8593,22 +8816,43 @@ fn end_of_turn_instructions(
     }
 
     // alpha-poke patch (2026-10-17, doc/engine-diff.md L115): "failed last turn" is for one turn
+    // (L237: this turn's failure is the next turn's -- Showdown's nextTurn: moveLastTurnResult =
+    // moveThisTurnResult; it was only ended)
     for side_ref in sides {
         let side = state.get_side(side_ref);
-        if side
+        let failed = side
             .volatile_statuses
-            .contains(&PokemonVolatileStatus::LASTMOVEFAILED)
-        {
-            side.volatile_statuses
-                .remove(&PokemonVolatileStatus::LASTMOVEFAILED);
-            incoming_instructions
-                .instruction_list
-                .push(Instruction::RemoveVolatileStatus(
-                    RemoveVolatileStatusInstruction {
-                        side_ref: *side_ref,
-                        volatile_status: PokemonVolatileStatus::LASTMOVEFAILED,
-                    },
-                ));
+            .contains(&PokemonVolatileStatus::MOVEFAILED);
+        let last = side
+            .volatile_statuses
+            .contains(&PokemonVolatileStatus::LASTMOVEFAILED);
+        let mut ins = vec![];
+        if failed {
+            ins.push(Instruction::RemoveVolatileStatus(
+                RemoveVolatileStatusInstruction {
+                    side_ref: *side_ref,
+                    volatile_status: PokemonVolatileStatus::MOVEFAILED,
+                },
+            ));
+        }
+        if failed && !last {
+            ins.push(Instruction::ApplyVolatileStatus(
+                ApplyVolatileStatusInstruction {
+                    side_ref: *side_ref,
+                    volatile_status: PokemonVolatileStatus::LASTMOVEFAILED,
+                },
+            ));
+        } else if last && !failed {
+            ins.push(Instruction::RemoveVolatileStatus(
+                RemoveVolatileStatusInstruction {
+                    side_ref: *side_ref,
+                    volatile_status: PokemonVolatileStatus::LASTMOVEFAILED,
+                },
+            ));
+        }
+        for i in ins {
+            state.apply_one_instruction(&i);
+            incoming_instructions.instruction_list.push(i);
         }
     }
 
@@ -8632,9 +8876,10 @@ fn end_of_turn_instructions(
             side_ref,
             &PokemonStatus::SLEEP,
             false,
-        ) || state
-            .get_side_immutable(side_ref)
-            .has_alive_non_rested_sleeping_pkmn();
+        ) || sleep_clause()
+            && state
+                .get_side_immutable(side_ref)
+                .has_alive_non_rested_sleeping_pkmn();
         let side = state.get_side(side_ref);
         if side.get_active().hp == 0 {
             continue;
@@ -10214,6 +10459,15 @@ fn run_move(
         }
         berserk_after_secondaries(state, &choice, &attacking_side, &mut instructions);
         update_before_drag(state, &choice, &drag_from.get_other_side(), &mut instructions);
+        // (L237: a status drag with no one to drag in failed -- Showdown's forceSwitch: canSwitch)
+        if choice.category == MoveCategory::Status
+            && state
+                .get_side_immutable(&drag_from.get_other_side())
+                .get_alive_pkmn_indices()
+                .is_empty()
+        {
+            move_failed(state, &attacking_side, &mut instructions, true);
+        }
         get_instructions_from_drag(state, &drag_from, instructions, final_instructions, breaker);
         return;
     }
@@ -10380,6 +10634,36 @@ fn run_move(
                     }
                 }
             }
+        }
+    }
+
+    // alpha-poke patch (2026-10-24, doc/engine-diff.md L237): the move failed -- its onTry (before
+    // Protect), the target's ability took it, or a status move did nothing (after Protect's)
+    if choice.try_failed
+        || choice.category == MoveCategory::Status
+            && !choice.protected
+            && (choice.tryhit_failed || did_nothing(state, choice, &attacking_side, &instructions))
+    {
+        move_failed(state, &attacking_side, &mut instructions, true);
+    }
+    // (Magic Bounce's reflected move is its reflector's this turn -- Showdown's useMove sets the
+    // result: failed, or not -- a failure of its own earlier this turn undone)
+    if choice.reflected && !choice.protected {
+        let reflector = attacking_side.get_other_side();
+        // (the reflector its user now: Defog's evasion drop Mirror Armor sent back on it is none)
+        if !did_nothing(state, choice, &reflector, &instructions) {
+            let side = state.get_side(&reflector);
+            if side.volatile_statuses.contains(&PokemonVolatileStatus::MOVEFAILED) {
+                side.volatile_statuses.remove(&PokemonVolatileStatus::MOVEFAILED);
+                instructions.instruction_list.push(Instruction::RemoveVolatileStatus(
+                    RemoveVolatileStatusInstruction {
+                        side_ref: reflector,
+                        volatile_status: PokemonVolatileStatus::MOVEFAILED,
+                    },
+                ));
+            }
+        } else {
+            move_failed(state, &reflector, &mut instructions, true);
         }
     }
 
@@ -11163,9 +11447,10 @@ fn dancer_after(
             .iter()
             .position(|i| matches!(i, Instruction::Acted(s) if *s == mover_side))
             .is_some_and(|k| {
+                // (L237: nor the mover's failure mark -- not a thing its move did)
                 b.instruction_list[from + k + 1..]
                     .iter()
-                    .any(|i| !i.is_marker())
+                    .any(|i| !i.is_marker() && !is_failure_mark(i))
             });
         state.apply_instructions(&b.instruction_list);
         let ok = did && {
@@ -11232,6 +11517,8 @@ fn dancer_after(
                 state.apply_one_instruction(&ins);
                 b.instruction_list.push(ins);
             }
+            // (L237: the dance failed -- its useMove's result the dancer's this turn)
+            move_failed(state, &dancer_side, &mut b, true);
             state.reverse_instructions(&b.instruction_list);
             out.push(b);
             continue;

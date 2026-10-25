@@ -1741,8 +1741,10 @@ def test_l43_substitute_hp_mapped():
 def test_l44_red_card_needs_a_replacement():
     red = _setter("Blissey", "Natural Cure", "Red Card", "- Soft-Boiled\n- Seismic Toss\n- Calm Mind\n- Protect")
     turns = [("move calmmind", "move earthquake")]
-    # (no crit: force_random False; Ting-Lu alone: no replacement)
-    states = ec.run_showdown(red, TINGLU_HITS_EQ, turns, force_random=False)
+    # (Ting-Lu alone: no replacement. 2026-10-24, L237: not force_random False -- it fails every
+    # roll, a 100% move's accuracy too: the Earthquake missed, the Red Card was never tried)
+    states = ec.run_showdown(red, TINGLU_HITS_EQ, turns)
+    assert any(x.startswith("|-damage|p1a: Blissey") for x in states[1]["log"]), states[1]["log"]
     assert states[1]["sides"][0]["mons"][0]["item"] == "redcard"
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "calmmind", "earthquake")
     assert ec.closest(states[1], outs, (1, 1))["diff"] == {}
@@ -5579,11 +5581,12 @@ Modest Nature
 
 # L197 (doc/engine-diff.md): Yawn's drowsiness is no sleep yet (the Sleep Clause Mod does not stop
 # it); its sleep is Showdown's trySetStatus (the Sleep Clause, the immunities)
-def test_l197_yawn_through_the_sleep_clause():
+def test_l197_yawn_through_the_sleep_clause(sleep_clause):
     breloom = BRELOOM.replace("- Rock Tomb", "- Yawn")
     # (Corviknight asleep on the bench: no Natural Cure to wake it)
+    # (L238: a format with the Sleep Clause Mod, the engine's switch on)
     turns = [("move spore", "move roost"), ("move yawn", "switch 2"), ("move bulletseed", "move calmmind")]
-    states = ec.run_showdown(breloom, CORVIKNIGHT + "\n\n" + BLISSEY, turns)
+    states = ec.run_showdown(breloom, CORVIKNIGHT + "\n\n" + BLISSEY, turns, fmt=ec.FORMAT + "@@@Sleep Clause Mod")
     assert states[1]["sides"][1]["mons"][0]["status"] == "slp"
     assert any("move: Yawn" in x for x in states[2]["log"])
     assert any("Sleep Clause Mod activated" in x for x in states[3]["log"])
@@ -7211,3 +7214,67 @@ Hardy Nature
     states = ec.run_showdown(user, foe, [(f"move {move}", "move curse")])
     outs = ec.engine_outcomes(ec.engine_state(states[0]), move, "curse")
     assert ec.closest(states[1], outs, (1, 1), hp=True, full=True, start=states[0])["diff"] == {}
+
+
+# L237 (doc/engine-diff.md, 2026-10-24, the differential test framework's chain check): a move that
+# failed this turn makes Temper Flare / Stomping Tantrum double the next (Showdown's
+# moveThisTurnResult false, moveLastTurnResult at the next turn): the engine read the flag from the
+# state it was given (L115) but never set it -- the search's next turn after a failure had it off.
+# Each case: the engine's turn from Showdown's state has the flag as Showdown's next state does
+# (the comparator reads Showdown's moveLastTurnResult), and its next turn's double power follows
+FAKE_OUTER = _setter("Incineroar", "Blaze", "Leftovers", "- Fake Out\n- Temper Flare\n- Knock Off\n- Parting Shot")
+TUSK = _setter("Great Tusk", "Protosynthesis", "Leftovers", "- Headlong Rush\n- Stomping Tantrum\n- Thunder Wave\n- Sucker Punch")
+FLIER = _setter("Corviknight", "Pressure", "Leftovers", "- Roost\n- Body Press\n- Iron Defense\n- Protect")
+
+
+@pytest.mark.parametrize("name, p1, script, at, e1, failed", [
+    # (Fake Out past its first turn: its onTry)
+    ("fakeout", FAKE_OUTER, [("move fakeout", "move roost"), ("move fakeout", "move roost")], 1, "fakeout", True),
+    # (a Ground move into a Flying type: -immune)
+    ("immune", TUSK, [("move headlongrush", "move roost")], 0, "headlongrush", True),
+    # (Sucker Punch into a status move: its onTry)
+    ("sucker", TUSK, [("move suckerpunch", "move irondefense")], 0, "suckerpunch", True),
+    # (a move into Protect: not a failure -- Showdown's NOT_FAIL)
+    ("protected", TUSK, [("move stompingtantrum", "move protect")], 0, "stompingtantrum", False),
+])  # fmt: skip
+def test_l237_move_failed_this_turn(name, p1, script, at, e1, failed):
+    states = ec.run_showdown(p1, FLIER, script)
+    mon = states[at + 1]["sides"][0]["mons"][0]
+    assert ("lastmovefailed" in mon["volatiles"]) == failed, states[at + 1]["log"]
+    outs = ec.engine_outcomes(ec.engine_state(states[at]), e1, script[at][1].split()[1])
+    assert ec.closest(states[at + 1], outs, (1, 1), hp=True, full=True, start=states[at])["diff"] == {}
+
+
+# L238 (doc/engine-diff.md, 2026-10-24): the Sleep Clause Mod as the format has it -- Showdown's
+# [Gen 9] OU has none ('Sleep Moves Clause', '!Sleep Clause Mod': the validator bans the sleep
+# moves; a second sleep -- Dire Claw's, Effect Spore's -- goes through); the engine always applied
+# it (L197's format, gen9customgame@@@Sleep Clause Mod, then the harness's). Off by default now
+# (poke_engine.set_sleep_clause), ec.FORMAT plain gen9customgame
+@pytest.fixture
+def sleep_clause():
+    pe.set_sleep_clause(True)
+    yield
+    pe.set_sleep_clause(False)
+
+
+def test_l238_gen9ou_has_no_sleep_clause():
+    """gen9ou's own rules: its format has no Sleep Clause Mod, the engine's default neither."""
+    import json, subprocess
+    js = "const {Dex} = require(process.argv[1]); console.log(JSON.stringify(Dex.formats.get('gen9ou').ruleset))"
+    rules = json.loads(subprocess.run(["node", "-e", js, str(ec.SIM)], capture_output=True, text=True, check=True).stdout)
+    assert "!Sleep Clause Mod" in rules and "Sleep Moves Clause" in rules
+
+
+@pytest.mark.parametrize("clause", [False, True])
+def test_l238_a_second_sleep(clause, request):
+    """Spore on Corviknight, then on the Blissey switched in: without the Sleep Clause Mod it sleeps
+    too (both engines); with it, it fails (the format and the engine's switch)."""
+    if clause:
+        request.getfixturevalue("sleep_clause")
+    breloom = BRELOOM.replace("- Rock Tomb", "- Yawn")
+    turns = [("move spore", "move roost"), ("move bulletseed", "switch 2"), ("move spore", "move calmmind")]
+    fmt = ec.FORMAT + "@@@Sleep Clause Mod" if clause else ec.FORMAT
+    states = ec.run_showdown(breloom, CORVIKNIGHT + "\n\n" + BLISSEY, turns, fmt=fmt)
+    assert states[1]["sides"][1]["mons"][0]["status"] == "slp"
+    assert (states[3]["sides"][1]["mons"][1]["status"] == "slp") != clause, states[3]["log"]
+    assert _keys(_full(states, 2, "spore", "calmmind", (1, 2)), "status") == {}

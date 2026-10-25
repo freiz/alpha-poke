@@ -43,6 +43,8 @@ MUTATIONS = [
     ("R2' each hit's item then", "src/alpha_poke/agents/damage_obs.py",
      "    if hit.item_then is not None:  # the item it held at the hit",
      "    if False:  # the item it held at the hit"),
+    ("L237 past the turn's end the failure is the next turn's", "src/alpha_poke/agents/engine_state.py",
+     "        if now if tm.upkept else last:", "        if last:"),
 ]
 RUST = [
     ("R1 the tree's move used: its own span", "rust/alpha_search/src/ismcts.rs",
@@ -57,6 +59,14 @@ RUST = [
     ("L235 a status move ignores type immunity", "rust/patches/poke-engine-0.0.48/src/genx/generate_instructions.rs",
      "            != MoveCategory::Status\n            || choice.move_id == Choices::THUNDERWAVE)",
      "            != MoveCategory::Status\n            || true)"),
+    ("L238 no Sleep Clause Mod by default", "rust/patches/poke-engine-0.0.48/src/genx/generate_instructions.rs",
+     "pub static SLEEP_CLAUSE_MOD: AtomicBool = AtomicBool::new(false);",
+     "pub static SLEEP_CLAUSE_MOD: AtomicBool = AtomicBool::new(true);"),
+    ("L237 this turn's failure is the next turn's", "rust/patches/poke-engine-0.0.48/src/genx/generate_instructions.rs",
+     "        if failed && !last {", "        if false {"),
+    ("L237 a status move that did nothing failed", "rust/patches/poke-engine-0.0.48/src/genx/generate_instructions.rs",
+     "&& (choice.tryhit_failed || did_nothing(state, choice, &attacking_side, &instructions))",
+     "&& choice.tryhit_failed"),
     ("L236 Sheer Force: no status move", "rust/patches/poke-engine-0.0.48/src/genx/abilities.rs",
      "        == MoveCategory::Status\n    {\n        return false;\n    }\n    let volatile",
      "        == MoveCategory::Status\n        && false\n    {\n        return false;\n    }\n    let volatile"),

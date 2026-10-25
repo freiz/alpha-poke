@@ -13,6 +13,12 @@ function teamOf(x) {
 	return typeof x === 'string' ? Teams.import(x) : x;
 }
 
+// the turn's end has passed: mid-turn with no residual left in the queue (a faint's switch-in), or
+// the battle over (no next turn: the engine's turn still ends)
+function upkept(battle) {
+	return battle.ended || battle.midTurn && !battle.queue.list.some(a => a.choice === 'residual');
+}
+
 function monState(p, side) {
 	return {
 		slot: side.team.indexOf(p.set),
@@ -90,8 +96,14 @@ function monState(p, side) {
 				[['frombooster', {duration: 0, layers: 0, counter: 0, stat: '', time: 0,
 					true_duration: 0, num_consecutive: 0, hp: 0, move: ''}]] : [])
 			// its move failed last turn (Temper Flare / Stomping Tantrum; L115): the engine's volatile
-			.concat(p.isActive && p.moveLastTurnResult === false ?
+			// (L237: past the turn's end -- a faint's switch-in, no residual left to run -- this
+			// turn's, as the engine's: it changes at the end of the turn, Showdown at the next start)
+			.concat(p.isActive && (upkept(p.battle) ? p.moveThisTurnResult : p.moveLastTurnResult) === false ?
 				[['lastmovefailed', {duration: 0, layers: 0, counter: 0, stat: '', time: 0,
+					true_duration: 0, num_consecutive: 0, hp: 0, move: ''}]] : [])
+			// and this turn's, before the turn ends (a decision mid-turn; L237)
+			.concat(p.isActive && !upkept(p.battle) && p.moveThisTurnResult === false ?
+				[['movefailed', {duration: 0, layers: 0, counter: 0, stat: '', time: 0,
 					true_duration: 0, num_consecutive: 0, hp: 0, move: ''}]] : [])),
 		moves: p.moveSlots.map(m => ({id: m.id, pp: m.pp, maxpp: m.maxpp, disabled: !!m.disabled})),
 		terastallized: p.terastallized || '',

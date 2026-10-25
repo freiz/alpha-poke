@@ -226,7 +226,20 @@ def speed_phases() -> list[Spec]:
                   fmt=PCT, expect=("|-enditem|p2a: Glalie|Choice Scarf|[from] move: Knock Off",))]  # fmt: skip
 
 
-FAMILIES = (extender_items, pp_takers, transforms, locks, failed_moves, item_phases, encore, formes, speed_phases)
+def second_sleep() -> list[Spec]:
+    """A second foe put to sleep (L238: the players' format, Showdown's [Gen 9] OU, has no Sleep
+    Clause Mod -- a Dire Claw's / Effect Spore's second sleep goes through; the engine's default)."""
+    breloom = S("Breloom", "Leftovers", "Technician", ["Spore", "Mach Punch", "Bullet Seed", "Rock Tomb"], FAST, "Jolly")
+    corv = S("Corviknight", "Leftovers", "Pressure", ["Roost", "Body Press", "Iron Defense", "Defog"])
+    blissey = S("Blissey", "Heavy-Duty Boots", "Serene Grace", ["Soft-Boiled", "Seismic Toss", "Calm Mind", "Protect"])
+    script = [{"p1": "move 1", "p2": "move 1"}, {"p1": "move 3", "p2": "switch 2"}, {"p1": "move 1", "p2": "move 3"},
+              {"p1": "move 3", "p2": "move 3"}]
+    return [_spec("sleep/second-sleep", team(breloom, FILLER), team(corv, blissey), script,
+                  expect=("|-status|p2a: Corviknight|slp", "|-status|p2a: Blissey|slp"))]  # fmt: skip
+
+
+FAMILIES = (extender_items, pp_takers, transforms, locks, failed_moves, item_phases, encore, formes, speed_phases,
+            second_sleep)
 
 
 def scenarios() -> list[Spec]:
