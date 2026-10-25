@@ -329,7 +329,7 @@ impl PySide {
         active_index="0".to_string(),
         baton_passing=false,
         shed_tailing=false,
-        volatile_status_durations=PyVolatileStatusDurations::new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+        volatile_status_durations=PyVolatileStatusDurations::new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
         wish=(0, 0),
         future_sight=(0, "0".to_string()),
         force_switch=false,
@@ -448,6 +448,7 @@ pub struct PyVolatileStatusDurations {
     pub cudchew: i8,
     pub uproar: i8,
     pub rollout: i8,
+    pub calledlock: i8,
 }
 
 impl From<VolatileStatusDurations> for PyVolatileStatusDurations {
@@ -470,6 +471,7 @@ impl From<VolatileStatusDurations> for PyVolatileStatusDurations {
             cudchew: other.cudchew,
             uproar: other.uproar,
             rollout: other.rollout,
+            calledlock: other.calledlock,
         }
     }
 }
@@ -494,6 +496,7 @@ impl Into<VolatileStatusDurations> for PyVolatileStatusDurations {
             cudchew: self.cudchew,
             uproar: self.uproar,
             rollout: self.rollout,
+            calledlock: self.calledlock,
         }
     }
 }
@@ -519,6 +522,7 @@ impl PyVolatileStatusDurations {
         cudchew=0,
         uproar=0,
         rollout=0,
+        calledlock=0,
     ))]
     fn new(
         confusion: i8,
@@ -538,6 +542,7 @@ impl PyVolatileStatusDurations {
         cudchew: i8,
         uproar: i8,
         rollout: i8,
+        calledlock: i8,
     ) -> PyVolatileStatusDurations {
         PyVolatileStatusDurations {
             confusion,
@@ -557,6 +562,7 @@ impl PyVolatileStatusDurations {
             cudchew,
             uproar,
             rollout,
+            calledlock,
         }
     }
 }

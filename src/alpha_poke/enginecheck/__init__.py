@@ -24,6 +24,8 @@ from pathlib import Path
 
 import poke_engine as pe
 
+from alpha_poke.agents.engine_state import CALLED_LOCKS, CALLERS  # (L242: one list, ours too)
+
 ROOT = Path(__file__).resolve().parents[3]
 SIM = ROOT / "vendor" / "pokemon-showdown" / "dist" / "sim"
 RUNNER = Path(__file__).with_name("showdown_case.js")
@@ -169,6 +171,22 @@ def _engine_move(name: str) -> bool:
         return False
 
 
+
+
+def lock_of(m: dict) -> tuple[str, str]:
+    """(the move a Showdown mon is locked into -- lockedmove's, Uproar's, Rollout's / Ice Ball's --,
+    the slot that chooses it): its own slot, or for a move it called its caller's (L242); ("", "")."""
+    vol = m.get("volatiles", {})
+    lock = (vol.get("lockedmove") or {}).get("move") if "lockedmove" in vol else \
+        next((k for k in ("uproar", "rollout", "iceball") if k in vol), "")  # fmt: skip
+    if not lock:
+        return "", ""
+    ids = [x["id"] for x in m["moves"]]
+    if lock in ids:
+        return lock, lock
+    return lock, next((x for x in ids if x in CALLERS), lock)
+
+
 @functools.cache
 def _engine_volatile(name: str) -> bool:
     """Whether poke-engine knows the volatile status ``name`` (unknown ones are left out): the
@@ -256,10 +274,8 @@ def _engine_mon(m: dict) -> pe.Pokemon:
         # volatile's lock, onLockMove 'uproar')
         moves=[pe.Move(id=x["id"], pp=x["pp"], disabled=bool(m.get("active")) and (
                    (x["disabled"] and not _derived_disable(m, x["id"]))
-                   or ("lockedmove" in m.get("volatiles", {})
-                       and x["id"] != m["volatiles"]["lockedmove"].get("move"))
-                   or any(k in m.get("volatiles", {}) and x["id"] != k
-                          for k in ("uproar", "rollout", "iceball"))))  # (L241: their own locks)
+                   # (L241: Uproar's, Rollout's own locks too; L242: a called one's, its caller's slot)
+                   or (bool(lock_of(m)[1]) and x["id"] != lock_of(m)[1])))
                for x in m["moves"]],
         terastallized=bool(m["terastallized"]), tera_type=(m["tera_type"] or "typeless").lower(),
         last_item=m.get("last_item") if _engine_item(m.get("last_item") or "") else "none",
@@ -401,6 +417,10 @@ def _engine_side(s: dict, future_sight=None, wish=None) -> pe.Side:
             dur["slowstart"] = act["volatiles"]["slowstart"]["duration"]
         if "uproar" in vol:  # (L224: the ends of turn passed, of Showdown's 3)
             dur["uproar"] = min(max(3 - act["volatiles"]["uproar"]["duration"], 0), 2)
+        locked, slot = lock_of(act)
+        if locked and slot != locked and locked in CALLED_LOCKS:  # (L242: a called lock's move)
+            vol.add("calledlock")
+            dur["calledlock"] = CALLED_LOCKS.index(locked) + 1
         if "rollout" in vol:  # (L241: its hits so far, Showdown's hitCount)
             roll = act["volatiles"].get("rollout") or act["volatiles"].get("iceball") or {}
             dur["rollout"] = roll.get("hit_count", 0)
@@ -788,6 +808,9 @@ def view(sd: dict) -> dict:
                 if _engine_volatile(x) and x not in ("stall", "statslowered", "statsraised",
                                                      "illusion", "notera"):
                     v[f"{k}.volatile.{x}"] = True
+            locked, slot = lock_of(act)
+            if locked and slot != locked and locked in CALLED_LOCKS:  # (L242, as engine_state)
+                v[f"{k}.volatile.calledlock"] = True
         c = s["conditions"]
         for name, eng in {**LAYERED}.items():
             v[f"{k}.{eng}"] = c[name]["layers"] if name in c else 0
@@ -929,7 +952,7 @@ def extra_view(s: pe.State, n_mons: tuple[int, int] = (6, 6)) -> dict:
         d = side.volatile_status_durations
         for f in ("confusion", "encore", "lockedmove", "slowstart", "taunt", "yawn", "healblock",
                   "magnetrise", "throatchop", "partiallytrapped", "metronome", "disable",
-                  "stockpile", "micleberry", "cudchew", "uproar", "rollout"):  # fmt: skip
+                  "stockpile", "micleberry", "cudchew", "uproar", "rollout", "calledlock"):  # fmt: skip
             if f in vol:
                 v[f"{k}.count.{f}"] = getattr(d, f)
         if moves & LAST_USED_MOVES or "metronome" in items or "cursedbody" in abilities:

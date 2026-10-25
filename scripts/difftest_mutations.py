@@ -99,6 +99,8 @@ MUTATIONS = [
      "elif False:"),
     ("B5 a Role Play's [of] keeps its ability", "src/alpha_poke/agents/timers.py",
      'if of is not None and tag == "-activate" else None', "if of is not None else None"),
+    ("L242 our called lock", "src/alpha_poke/agents/engine_state.py",
+     "        called = keep != lock_move and lock_move in CALLED_LOCKS", "        called = False"),
     ("L241 our Rollout's lock", "src/alpha_poke/agents/timers.py",
      "        if st.rollout_moving and (st.rollout is None or st.rollout[0] != mv):\n            st.rollout = [mv, 0]",
      "        if False:\n            st.rollout = [mv, 0]"),
@@ -113,6 +115,12 @@ MUTATIONS = [
     # tests/test_sample_set.py's test_the_move_floor_lifts_a_0_weight)
 ]
 RUST = [
+    # (L242's called move run on the lock's turn, not its caller again: in the scenarios the battle's
+    # last move is the locked one -- a Copycat run anew copies the same; guarded by
+    # tests/test_dual_engine.py's test_l242_the_called_move_not_the_battles_last)
+    ("L242 a called lock keeps its caller's slot", "rust/patches/poke-engine-0.0.48/src/genx/generate_instructions.rs",
+     "    let caller = if own { None } else { side.caller_slot() };",
+     "    let caller = if own { None } else { side.caller_slot().filter(|_| false) };"),
     ("L241 Rollout's hit counts", "rust/patches/poke-engine-0.0.48/src/genx/choice_effects.rs",
      "                        volatile_status: PokemonVolatileStatus::ROLLOUT,\n                        amount: 1,",
      "                        volatile_status: PokemonVolatileStatus::ROLLOUT,\n                        amount: 0,"),

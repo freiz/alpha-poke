@@ -629,6 +629,13 @@ def _move_kinds() -> dict:
     return {r[0].lower(): (r[3], set(r[-1].split(","))) for r in rows}
 
 
+# (L242) the locking moves a calling move can run -- the engine's genx::state::CALLED_LOCKS, its
+# order (volatile_status_durations.calledlock - 1) -- and the calling moves whose slot runs one
+# (Side::caller_slot; the differential's choice too)
+CALLED_LOCKS = ("outrage", "thrash", "petaldance", "ragingfury", "uproar", "rollout", "iceball")
+CALLERS = ("metronome", "copycat", "assist", "mefirst", "naturepower", "mirrormove")
+
+
 def derived_disable(move: str, *, taunt: bool, healblock: bool, throatchop: bool, item: str,
                     last_move: str, lock: str = "", disabled: str = "",
                     charging: str = "", recharge: bool = False, pp: int = 1,
@@ -1535,14 +1542,24 @@ def build_state(
             locked[mon is active] = 2 if tm.locked[1] >= 2 or rng.random() < 0.5 else 1
     # a lock's other moves disabled (the engine's flags, as the differential's states have them,
     # L179; ours at the live root: the request's)
-    # (L241: an Uproar's own lock too -- Showdown's getLockedMove, onLockMove 'uproar')
-    for mons, i, tm, mine in ((their_mons, their_idx, tm_them, False),
-                              (our_mons, our_active_idx, tm_us, True)):  # fmt: skip
+    # (L241: an Uproar's own lock too -- Showdown's getLockedMove, onLockMove 'uproar'; L242: a move
+    # it called -- Copycat's Outrage, not in its moveset -- its caller's slot runs it, the engine's
+    # CALLEDLOCK keeps which: ours at the live root too, the request names the called move alone)
+    for mons, i, tm, mine, vol in ((their_mons, their_idx, tm_them, False, their_vol),
+                                   (our_mons, our_active_idx, tm_us, True, our_vol)):  # fmt: skip
         lock_move = tm.locked[0] if tm.locked else ("uproar" if tm.uproar is not None else
                                                       tm.rollout[0] if tm.rollout is not None else None)  # fmt: skip
-        if lock_move and i is not None and i < len(mons) and not (mine and spectator is None):
-            em = mons[i]
-            mons[i] = _with(em, moves=[pe.Move(id=x.id, pp=x.pp, disabled=x.disabled or x.id != lock_move)
+        if not lock_move or i is None or i >= len(mons):
+            continue
+        em = mons[i]
+        ids = [x.id for x in em.moves]
+        keep = lock_move if lock_move in ids else next((x for x in ids if x in CALLERS), lock_move)
+        called = keep != lock_move and lock_move in CALLED_LOCKS
+        if called:
+            vol.add("calledlock")
+            vcounts.setdefault(mine, {})["calledlock"] = CALLED_LOCKS.index(lock_move) + 1
+        if called or not (mine and spectator is None):
+            mons[i] = _with(em, moves=[pe.Move(id=x.id, pp=x.pp, disabled=(x.disabled and not called) or x.id != keep)
                                        for x in em.moves])  # fmt: skip
     # Disable (L70): its volatile and its move's slot and count, not the move's flag alone (the
     # engine's next move enabled it again; 2026-10-23 review)

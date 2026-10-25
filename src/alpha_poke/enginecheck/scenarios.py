@@ -402,7 +402,25 @@ def engine_ends() -> list[Spec]:
               # (locked: the request's one move, "move 1")
               [{"p1": "move 2", "p2": "move 2"}] + [{"p1": "move 1", "p2": "move 2"}] * 2,
               expect=("[from] lockedmove",)),
-    ] + rollouts()  # fmt: skip
+    ] + rollouts() + called_locks()  # fmt: skip
+
+
+def called_locks() -> list[Spec]:
+    """L242: a locking move a Copycat ran -- Outrage, Uproar, Rollout: its user locked into that
+    move, its caller's slot runs it (Showdown's request the move alone), no PP."""
+    # (physically bulky, Shell Armor -- no crit: the Outrage it copies leaves it in)
+    blissey = S("Blissey", "Heavy-Duty Boots", "Shell Armor", ["Soft-Boiled", "Seismic Toss", "Protect", "Copycat"],
+                "252 HP / 252 Def / 4 SpD", "Bold")  # fmt: skip
+    corv = S("Corviknight", "Leftovers", "Pressure", ["Roost", "Body Press", "Iron Defense", "Defog"])
+    out = []
+    for name in ("Outrage", "Uproar", "Rollout"):
+        # (weak, no Rough Skin: the Blissey lives to use the lock -- still the faster)
+        weak = S("Garchomp", "Leftovers", "Sand Veil", [name, "Swords Dance", "Earthquake", "Protect"],
+                 "252 HP / 4 SpD / 252 Spe", "Timid")  # fmt: skip
+        out.append(_spec(f"ends/copycat-{name.lower()}", team(blissey, corv), team(weak, FILLER),
+                         [{"p1": "move 4", "p2": "move 1"}, {"p1": "move 1", "p2": "move 1"}],
+                         expect=(f"|move|p1a: Blissey|{name}|p2a: Garchomp|[from] lockedmove",)))  # fmt: skip
+    return out
 
 
 def rollouts() -> list[Spec]:

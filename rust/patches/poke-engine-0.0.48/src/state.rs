@@ -836,6 +836,8 @@ pub struct VolatileStatusDurations {
     pub uproar: i8,
     // (L241: Rollout / Ice Ball's hits so far -- Showdown's hitCount: 30 x 2 ** it the power)
     pub rollout: i8,
+    // (L242: a called lock's move, genx::state::CALLED_LOCKS' index + 1)
+    pub calledlock: i8,
 }
 
 impl Default for VolatileStatusDurations {
@@ -858,6 +860,7 @@ impl Default for VolatileStatusDurations {
             cudchew: 0,
             uproar: 0,
             rollout: 0,
+            calledlock: 0,
         }
     }
 }
@@ -882,6 +885,7 @@ impl VolatileStatusDurations {
             ("cudchew", self.cudchew),
             ("uproar", self.uproar),
             ("rollout", self.rollout),
+            ("calledlock", self.calledlock),
         ];
 
         let mut output = String::new();
@@ -899,7 +903,9 @@ impl VolatileStatusDurations {
     pub fn serialize(&self) -> String {
         // (L224: Uproar's count only when there is one: older strings have no such field; L241:
         // Rollout's after it, the same way)
-        let uproar = if self.rollout != 0 {
+        let uproar = if self.calledlock != 0 {
+            format!(";{};{};{}", self.uproar, self.rollout, self.calledlock)
+        } else if self.rollout != 0 {
             format!(";{};{}", self.uproar, self.rollout)
         } else if self.uproar != 0 {
             format!(";{}", self.uproar)
@@ -947,6 +953,7 @@ impl VolatileStatusDurations {
             cudchew: split.get(14).map_or(0, |x| x.parse::<i8>().unwrap()),
             uproar: split.get(15).map_or(0, |x| x.parse::<i8>().unwrap()),
             rollout: split.get(16).map_or(0, |x| x.parse::<i8>().unwrap()),
+            calledlock: split.get(17).map_or(0, |x| x.parse::<i8>().unwrap()),
         }
     }
 }
@@ -1975,6 +1982,9 @@ impl State {
             }
             PokemonVolatileStatus::ROLLOUT => {
                 side.volatile_status_durations.rollout += amount;
+            }
+            PokemonVolatileStatus::CALLEDLOCK => {
+                side.volatile_status_durations.calledlock += amount;
             }
             _ => panic!(
                 "Invalid volatile status for increment_volatile_status_duration: {:?}",

@@ -339,6 +339,9 @@ define_enum_with_from_str! {
         // the move, its hits so far in volatile_status_durations.rollout; ends at a turn's end
         // without a hit, after the fifth, on a switch)
         ROLLOUT,
+        // (L242: the lock is a called move's -- Copycat's Outrage, not in the moveset: which one in
+        // volatile_status_durations.calledlock, CALLED_LOCKS' index + 1; its caller's slot runs it)
+        CALLEDLOCK,
     },
     default = NONE
 }
@@ -1014,6 +1017,18 @@ const ALL_POKEMON_INDICES: [PokemonIndex; 6] = [
     PokemonIndex::P5,
 ];
 
+// (L242) the locking moves a calling move can run: lockedmove's, Uproar's, Rollout's -- the order of
+// volatile_status_durations.calledlock
+pub const CALLED_LOCKS: [Choices; 7] = [
+    Choices::OUTRAGE,
+    Choices::THRASH,
+    Choices::PETALDANCE,
+    Choices::RAGINGFURY,
+    Choices::UPROAR,
+    Choices::ROLLOUT,
+    Choices::ICEBALL,
+];
+
 const CHARGE_VOLATILES: &[(PokemonVolatileStatus, Choices)] = &[
     (PokemonVolatileStatus::BOUNCE, Choices::BOUNCE),
     (PokemonVolatileStatus::DIG, Choices::DIG),
@@ -1199,6 +1214,43 @@ impl Side {
             .map(|(_, c)| *c)
     }
 
+    // (L224, L242) the slot of the active's calling move -- Metronome, Copycat, ...: a move it
+    // called and is locked into is chosen by it (the differential's choice, Showdown's request
+    // the called move alone)
+    pub fn caller_slot(&self) -> Option<PokemonMoveIndex> {
+        let mut iter = self.get_active_immutable().moves.into_iter();
+        while let Some(mv) = iter.next() {
+            if matches!(
+                mv.id,
+                Choices::METRONOME
+                    | Choices::COPYCAT
+                    | Choices::ASSIST
+                    | Choices::MEFIRST
+                    | Choices::NATUREPOWER
+                    | Choices::MIRRORMOVE
+            ) {
+                return Some(iter.pokemon_move_index);
+            }
+        }
+        None
+    }
+
+    // alpha-poke patch (2026-10-25, doc/engine-diff.md L242): the locking move a calling move ran
+    // that its user is locked into (Showdown's getLockedMove: the called move itself)
+    pub fn called_lock_move(&self) -> Option<Choices> {
+        if !self.locked()
+            || !self
+                .volatile_statuses
+                .contains(&PokemonVolatileStatus::CALLEDLOCK)
+        {
+            return None;
+        }
+        let k = self.volatile_status_durations.calledlock;
+        (k >= 1)
+            .then(|| CALLED_LOCKS.get(k as usize - 1).copied())
+            .flatten()
+    }
+
     pub fn active_is_charging_move(&self) -> Option<PokemonMoveIndex> {
         let vs = &self.volatile_statuses;
 
@@ -1214,20 +1266,7 @@ impl Side {
         }
         // (L224: a called one: its caller's slot -- Metronome, Copycat, Assist, ...)
         if self.charging_called_move().is_some() {
-            let mut iter = self.get_active_immutable().moves.into_iter();
-            while let Some(mv) = iter.next() {
-                if matches!(
-                    mv.id,
-                    Choices::METRONOME
-                        | Choices::COPYCAT
-                        | Choices::ASSIST
-                        | Choices::MEFIRST
-                        | Choices::NATUREPOWER
-                        | Choices::MIRRORMOVE
-                ) {
-                    return Some(iter.pokemon_move_index);
-                }
-            }
+            return self.caller_slot();
         }
         None
     }
@@ -2008,6 +2047,18 @@ impl State {
                         }));
                         active.types = active.base_types;
                     }
+                    false
+                }
+                // (L242: and a called lock's move)
+                PokemonVolatileStatus::CALLEDLOCK => {
+                    instructions.push(Instruction::ChangeVolatileStatusDuration(
+                        ChangeVolatileStatusDurationInstruction {
+                            side_ref: *side_ref,
+                            volatile_status: *pkmn_volatile_status,
+                            amount: -1 * side.volatile_status_durations.calledlock,
+                        },
+                    ));
+                    side.volatile_status_durations.calledlock = 0;
                     false
                 }
                 // (L241: Rollout's count goes with it, as a lock's)

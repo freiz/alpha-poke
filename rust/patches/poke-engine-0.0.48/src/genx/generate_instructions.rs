@@ -1464,16 +1464,7 @@ fn get_instructions_from_volatile_statuses(
             PokemonVolatileStatus::LOCKEDMOVE | PokemonVolatileStatus::UPROAR
         ) && target_side == *attacking_side_reference
         {
-            let side = state.get_side(&target_side);
-            let ins = super::items::get_choice_move_disable_instructions(
-                side.get_active_immutable(),
-                &target_side,
-                &attacker_choice.move_id,
-            );
-            for i in ins {
-                state.apply_one_instruction(&i);
-                incoming_instructions.instruction_list.push(i);
-            }
+            lock_start(state, &target_side, attacker_choice.move_id, incoming_instructions);
         }
         let side = state.get_side(&target_side);
         // alpha-poke patch (2026-10-16, doc/engine-diff.md L89): Encore ends at its third end of
@@ -2410,6 +2401,68 @@ fn get_instructions_from_heal(
         });
         target_pkmn.hp += health_recovered;
         incoming_instructions.instruction_list.push(ins);
+    }
+}
+
+// alpha-poke patch (2026-10-25, doc/engine-diff.md L242): a lock begins -- the user's other moves
+// disabled (L179); a move it called (not in its moveset: Copycat's Outrage) keeps its caller's slot
+// for it, and the move is kept (CALLEDLOCK): that slot runs it (Showdown's request the called move)
+pub fn lock_start(state: &mut State, side_ref: &SideReference, move_id: Choices, instructions: &mut StateInstructions) {
+    let side = state.get_side_immutable(side_ref);
+    let active = side.get_active_immutable();
+    let own = (&active.moves).into_iter().any(|m| m.id == move_id);
+    let caller = if own { None } else { side.caller_slot() };
+    let keep = caller.map(|s| active.moves[&s].id).unwrap_or(move_id);
+    let mut ins = super::items::get_choice_move_disable_instructions(active, side_ref, &keep);
+    let k = super::state::CALLED_LOCKS.iter().position(|m| *m == move_id);
+    if let (Some(_), Some(k)) = (caller, k) {
+        if !side.volatile_statuses.contains(&PokemonVolatileStatus::CALLEDLOCK) {
+            ins.push(Instruction::ApplyVolatileStatus(ApplyVolatileStatusInstruction {
+                side_ref: *side_ref,
+                volatile_status: PokemonVolatileStatus::CALLEDLOCK,
+            }));
+        }
+        let amount = k as i8 + 1 - side.volatile_status_durations.calledlock;
+        if amount != 0 {
+            ins.push(Instruction::ChangeVolatileStatusDuration(
+                ChangeVolatileStatusDurationInstruction {
+                    side_ref: *side_ref,
+                    volatile_status: PokemonVolatileStatus::CALLEDLOCK,
+                    amount,
+                },
+            ));
+        }
+    }
+    for i in ins {
+        state.apply_one_instruction(&i);
+        instructions.instruction_list.push(i);
+    }
+}
+
+// (L242) a called lock's mark gone with the lock (the turn's end; a switch-out its own)
+fn called_lock_end(state: &mut State, side_ref: &SideReference, instructions: &mut StateInstructions) {
+    let side = state.get_side_immutable(side_ref);
+    if side.locked() || !side.volatile_statuses.contains(&PokemonVolatileStatus::CALLEDLOCK) {
+        return;
+    }
+    let mut out = vec![];
+    let k = side.volatile_status_durations.calledlock;
+    if k != 0 {
+        out.push(Instruction::ChangeVolatileStatusDuration(
+            ChangeVolatileStatusDurationInstruction {
+                side_ref: *side_ref,
+                volatile_status: PokemonVolatileStatus::CALLEDLOCK,
+                amount: -k,
+            },
+        ));
+    }
+    out.push(Instruction::RemoveVolatileStatus(RemoveVolatileStatusInstruction {
+        side_ref: *side_ref,
+        volatile_status: PokemonVolatileStatus::CALLEDLOCK,
+    }));
+    for ins in out {
+        state.apply_one_instruction(&ins);
+        instructions.instruction_list.push(ins);
     }
 }
 
@@ -5502,8 +5555,13 @@ pub fn generate_instructions_from_move(
 
     // alpha-poke patch (2026-10-18, doc/engine-diff.md L224): the charge move a calling move
     // started finishes (its caller's slot chosen: Showdown's twoturnmove lock; no PP, the lock's)
+    // (L242: and a locking one -- Copycat's Outrage: its caller's slot runs it, the lock's turn)
     if !choice.called_move {
-        if let Some(m) = state.get_side_immutable(&attacking_side).charging_called_move() {
+        let side = state.get_side_immutable(&attacking_side);
+        if let Some(m) = side.charging_called_move().or_else(|| {
+            side.called_lock_move()
+                .filter(|_| side.caller_slot() == Some(choice.move_index))
+        }) {
             let (first_move, index) = (choice.first_move, choice.move_index);
             *choice = MOVES.get(&m).unwrap().clone();
             choice.move_index = index;
@@ -9537,6 +9595,7 @@ fn end_of_turn_instructions(
         let short = rolls.short_lock[matches!(side_ref, SideReference::SideTwo) as usize];
         lock_end_of_turn(state, side_ref, short, incoming_instructions);
         rollout_end_of_turn(state, side_ref, incoming_instructions);
+        called_lock_end(state, side_ref, incoming_instructions);
     } // end volatile statuses
 
     // (L147: Showdown's Update after the residual action: Sitrus after the poison, a berry Heal

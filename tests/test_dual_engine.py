@@ -7466,3 +7466,42 @@ def test_l241_a_protect_ends_rollout():
     assert "rollout" not in states[2]["sides"][0]["mons"][0]["volatiles"], states[2]["log"]
     for k, (c1, c2) in enumerate([("rollout", "softboiled"), ("rollout", "protect")]):
         assert _keys(_full(states, k, c1, c2, (1, 2)), "rollout", "options", "pp", "disabled") == {}, k
+
+
+# L242: a locking move a calling move ran (Copycat's Outrage / Uproar / Rollout): Showdown locks its
+# user into that move (lockedmove's / uproar's / rollout's onLockMove) -- its request that move
+# only, its runs the move itself, no PP. The differential's choice: the caller's slot (as a called
+# charge move's, L224)
+WEAK_CHOMP = GARCHOMP_SD.replace("EVs: 252 Atk / 4 SpD / 252 Spe", "EVs: 252 HP / 4 SpD / 252 Spe") \
+    .replace("Jolly Nature", "Timid Nature")  # fmt: skip
+
+
+@pytest.mark.parametrize("name", ["Outrage", "Uproar", "Rollout"])
+def test_l242_a_called_lock_runs_the_called_move(name):
+    mid = name.lower()
+    # (a bench: a knockout ends no battle -- the engine's end of turn after the last faint is no
+    # Showdown turn's)
+    states = ec.run_showdown(BLISSEY_COPYCAT + "\n\n" + CORVIKNIGHT, WEAK_CHOMP.replace("- Scale Shot", f"- {name}"),
+                             [("move copycat", f"move {mid}"), ("move 1", "move 1")])  # fmt: skip
+    log = states[2]["log"]
+    assert f"|move|p1a: Blissey|{name}|p2a: Garchomp|[from] lockedmove" in log, log  # (Showdown)
+    pp = [next(x["pp"] for x in s["sides"][0]["mons"][0]["moves"] if x["id"] == "copycat") for s in states[1:3]]
+    assert pp[0] == pp[1], pp  # (the locked turn spends none)
+    for k in (0, 1):
+        assert _keys(_full(states, k, "copycat", mid, (2, 1)), "options", "pp", "volatile", "hp", "disabled") == {}, k
+
+
+def test_l242_the_called_move_not_the_battles_last():
+    """The lock's turn runs the called move itself, not its caller again: with the battle's last
+    move another (Earthquake), a Copycat run anew would copy that. Showdown's locked turn (its
+    Outrage) against the engine from the same state, its last move made Earthquake -- the faster
+    Garchomp's own Outrage left out (it would be the last move again): its HP, the Blissey's hit."""
+    states = ec.run_showdown(BLISSEY_COPYCAT + "\n\n" + CORVIKNIGHT, WEAK_CHOMP.replace("- Scale Shot", "- Outrage"),
+                             [("move copycat", "move outrage"), ("move 1", "move 1")])  # fmt: skip
+    parts = ec.engine_state(states[1]).to_string().split("/")
+    assert parts[6].lower() == "outrage"  # (the battle's last move: the state string's field 6)
+    parts[6] = "EARTHQUAKE"
+    st = pe.State.from_string("/".join(parts))
+    outs = ec.engine_outcomes(st, "copycat", "none")
+    res = ec.closest(states[2], outs, (2, 1), hp=True, full=True, start=states[1])
+    assert _keys(res["diff"], "s2.0.hp") == {}, res["diff"]

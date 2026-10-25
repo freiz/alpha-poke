@@ -1019,14 +1019,8 @@ pub fn choice_after_damage_hit(
                         side_ref: *attacking_side_ref,
                         volatile_status: PokemonVolatileStatus::ROLLOUT,
                     }));
-                for i in super::items::get_choice_move_disable_instructions(
-                    attacking_side.get_active_immutable(),
-                    attacking_side_ref,
-                    &choice.move_id,
-                ) {
-                    state.apply_one_instruction(&i);
-                    instructions.instruction_list.push(i);
-                }
+                // (L242: a called one keeps its caller's slot)
+                super::generate_instructions::lock_start(state, attacking_side_ref, choice.move_id, instructions);
             }
             let side = state.get_side(attacking_side_ref);
             side.volatile_status_durations.rollout += 1;
