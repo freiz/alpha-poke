@@ -15,6 +15,7 @@ import collections
 from alpha_poke.analysis.roles import to_id
 
 HARD = ("belief:speed", "belief:damage")
+EXAMPLES = 5  # (examples kept per kind; an analysis may raise it)
 
 
 def _item_support(belief, mon, team_names, known_moves) -> dict:
@@ -87,7 +88,7 @@ def belief_diffs(p1: str, p2: str, seed: int, max_turns: int = 40, script: list 
             reported.add(key)
         out["kinds"][kind] += 1
         ex = out["examples"].setdefault(kind, [])
-        if len(ex) < 5:
+        if len(ex) < EXAMPLES:
             ex.append(detail)
 
     seen_hits: set = set()  # (each hit checked once: the log's hits are all the battle's so far)
@@ -183,7 +184,4 @@ def belief_diffs(p1: str, p2: str, seed: int, max_turns: int = 40, script: list 
                     found("belief:move", (*where, mid))
     out["errors"] += stats.get("errors", [])
     out["kinds"] = dict(out["kinds"])
-    # (the state constructions' errors too: a build that failed was silent here -- 2026-10-24,
-    # every F1 hit's build raised and the damage check read none)
-    out["errors"] += [f"build: {e}" for e in stats.get("errors", [])]
     return out
