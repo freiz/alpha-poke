@@ -247,9 +247,7 @@ def base_marginal(belief: BeliefModel, species: str, team_names: tuple[str, ...]
             for k, v in d.items():
                 out[to_id(k)] = out.get(to_id(k), 0.0) + v / t / len(parts)
         if not old and sm is not None:  # (the floor)
-            from alpha_poke.belief.priors import TYPES
-
-            from alpha_poke.belief.priors import items_for
+            from alpha_poke.belief.priors import TYPES, items_for
 
             floor = items_for(to_id(species), sm.global_item) if attr == "item" \
                 else {x: 1.0 / len(TYPES) for x in TYPES}  # fmt: skip
