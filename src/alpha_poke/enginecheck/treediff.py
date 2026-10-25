@@ -40,6 +40,10 @@ def tree_diffs(p1: str, p2: str, seed: int, max_turns: int = 40, script: list | 
     except Exception as e:  # noqa: BLE001
         out["errors"].append(f"{type(e).__name__}: {e}"[:200])
         return out
+    # (the recording's error and a skipped battle are kept: 2026-10-25 review, a recording that
+    # failed read as no error)
+    if err:
+        out["errors"].append(f"showdown: {err.splitlines()[0][:200]}")
     if rep.warnings:
         out["skipped"]["parse warnings"] += 1
         return out

@@ -6,9 +6,10 @@ with the corpus' baseline (tests/fixtures/difftest/<corpus>.json).
   uv run python scripts/difftest.py --corpus fast --update-baseline # fewer findings: tighten it
   uv run python scripts/difftest.py --corpus scenarios --checks engine_chain --show 3
 
-Exit status 1 on a regression (a kind new to the baseline, or more often). --update-baseline
-writes the run's counts only when nothing grew (--force: a deliberate change, e.g. a check that
-sees more now)."""
+Exit status 1 on a regression (a kind new to the baseline, or more often; a skip reason more
+often; fewer comparisons). --update-baseline writes the run's counts only when nothing grew
+(--force: a deliberate change, e.g. a check that sees more now) and only from the whole corpus
+(not --only); refused, the status is 1 too."""
 
 import argparse
 import json
@@ -38,6 +39,8 @@ def main() -> int:
             print(f"  {n:6d}  {k}")
             for sid, x in o["examples"].get(k, [])[: a.show]:
                 print(f"            {sid}: {json.dumps(x)[:200]}")
+        for k, n in o.get("skipped", {}).items():
+            print(f"  {n:6d}  (skipped: {k})")
         for sid, e in o["errors"][: a.show]:
             print(f"    error {sid}: {e[:200]}")
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
@@ -47,12 +50,16 @@ def main() -> int:
     grown = dt.regressions(res, base)
     for g in grown:
         print("REGRESSION", g)
-    if a.update_baseline and (not grown or a.force):
-        new = base | dt.baseline_of(res) if a.only or set(checks) != set(dt.CHECKS) else dt.baseline_of(res)
+    if a.update_baseline:
+        new, why = dt.updated_baseline(base, res, checks, a.only, a.force)
+        if new is None:  # (2026-10-25 review: a refused update exited 0)
+            print("baseline NOT written:", why)
+            return 1
         bp.parent.mkdir(parents=True, exist_ok=True)
         bp.write_text(json.dumps(new, indent=1, sort_keys=True) + "\n")
         print("baseline written:", bp)
-    return 1 if grown and not a.update_baseline else 0
+        return 0
+    return 1 if grown else 0
 
 
 if __name__ == "__main__":

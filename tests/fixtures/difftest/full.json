@@ -1,6 +1,9 @@
 {
- "belief_truth": {},
+ "belief_truth": {
+  "#compared": 30105
+ },
  "engine_chain": {
+  "#compared": 24463,
   "count.slowstart": 4,
   "hp": 2,
   "sc.toxic_count": 2,
@@ -14,19 +17,54 @@
   "volatile.substitute": 1
  },
  "engine_step": {
+  "#compared": 77457,
+  "#skipped: battle ended": 1566,
+  "#skipped: not a turn start": 21389,
+  "ability": 1,
+  "attack": 1,
+  "base_ability": 1,
+  "base_types": 1,
   "count.slowstart": 2,
+  "defense": 1,
+  "gender": 1,
   "hp": 5,
+  "id": 1,
+  "last_item": 1,
+  "last_move": 1,
+  "last_used_move": 1,
+  "level": 1,
+  "maxhp": 1,
+  "move": 1,
+  "must_switch": 1,
+  "nature": 1,
+  "pp": 1,
+  "sc.protect": 1,
+  "sc.toxic_count": 1,
+  "special_attack": 1,
+  "special_defense": 1,
+  "speed": 1,
   "status": 2,
-  "types": 1,
+  "stellar_boosted": 1,
+  "tera_type": 1,
+  "terastallized": 1,
+  "types": 2,
   "volatile.lastmovefailed": 1,
   "volatile.perish3": 1,
   "volatile.protean": 1,
   "volatile.slowstart": 2,
-  "volatile.typechange": 1
+  "volatile.typechange": 1,
+  "weight": 1
  },
- "state_live": {},
- "state_replay": {},
+ "state_live": {
+  "#compared": 149760
+ },
+ "state_replay": {
+  "#compared": 149760
+ },
  "tree_history": {
+  "#compared": 64450,
+  "#skipped: choice not a slot": 3,
+  "#skipped: the last turn": 1337,
   "tree:one.actor": 75,
   "tree:one.fainted_first": 3,
   "tree:one.kind": 5,

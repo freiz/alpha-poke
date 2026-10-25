@@ -35,7 +35,7 @@
 
 ## 变异测试
 
-基线只说明"没有变多"，说明不了"测到了"：一个场景能跑通，不等于它走到了要测的机制（2026-10-24：第一个 Endure 场景里 Endure 从来没有真正撑住，把 S152 改回去，`fast` 毫无反应）。所以：
+基线只说明"没有变多"，说明不了"测到了"（2026-10-25 复查：七处检查没比较也报"无差异"——参考状态转换失败返回空差异、比较次数为 0 也通过、链式检查过滤掉新施加的效果是否存在、概率为 0 的分支也能匹配、基线更新被拒绝时退出码 0、`--only` 覆盖全量基线、缓存指纹漏了 `dist/config` 的格式规则。现在：转换失败是差异 `reference_state`；基线还记每个检查的实际比较次数 `#compared`（变少是回归）和每种跳过原因 `#skipped: …`（变多是回归）；链式检查只不比较新效果的随机持续时间；`closest` 只接受正概率分支、各分支概率之和须为 1；被拒绝的更新退出码 1，`--only` 不写基线；指纹扫描 `dist/{sim,data,lib,config}`。各自的测试：`tests/test_difftest_framework.py`。修好转换之后，昏厥回合的扩展字段第一次被比较：17,743 个回合，查出两处比较器的时间点问题——昏厥一方的 Toxic 计数、换人决策点的 Wish / Future Sight 回合数，统一由 `showdown_state.js` 的 `upkept` 处理——和引擎的 L240）：一个场景能跑通，不等于它走到了要测的机制（2026-10-24：第一个 Endure 场景里 Endure 从来没有真正撑住，把 S152 改回去，`fast` 毫无反应）。所以：
 
 - 场景声明 `expect`：它的日志里必须出现的行（Endure 的 `-activate`、Minior 的 `-formechange`……），`tests/test_difftest.py` 检查它真的发生了。
 - `scripts/difftest_mutations.py`：把每一处修复临时改回去，`fast` 必须报出回归，没报的就是没被守住的修复（`--rust`：引擎 / 搜索的修复，要重新编译）。每修一个问题，就在这里加一条。
@@ -50,7 +50,7 @@
 
 | 检查 | `full` 比较了 | 发现 |
 |---|---|---|
-| `engine_step` | 77,457 个回合 | 16（原 72）：Skill Swap 换走 Slow Start（4，L239，待确认）；Klutz / Embargo / 魔法空间下的延长道具——L234；电系变化招式对地面系——L235；Sheer Force 去掉 Protect 等——L236；“上一招失败”——L237（比较器原来跳过这个标记，开始比较时一次暴露 4,309 处，逐类对照 Showdown 源码修到 1 处：Copycat 调出的 Dig 被 Earthquake 打中）；`gen9ou` 的第二次睡眠（该格式没有 Sleep Clause Mod）——L238；其余零星 |
+| `engine_step` | 77,457 个回合 | 42（原 72）：Skill Swap 换走 Slow Start（4，L239，待确认）；没有目标的招式的 lastMove（L240，待确认）；Copycat 调出的 Dig 被 Earthquake 打中的那一回合，其昏厥宝可梦的各字段（25 类各 1）；Klutz / Embargo / 魔法空间下的延长道具——L234；电系变化招式对地面系——L235；Sheer Force 去掉 Protect 等——L236；“上一招失败”——L237（比较器原来跳过这个标记，开始比较时一次暴露 4,309 处，逐类对照 Showdown 源码修到 1 处：Copycat 调出的 Dig 被 Earthquake 打中）；`gen9ou` 的第二次睡眠（该格式没有 Sleep Clause Mod）——L238；其余零星 |
 | `engine_chain` | 24,463 个回合 | 23（原 108）：同上（L239 占 8）；链式只同步 HP、不同步异常状态，上一步已有的状态差异会连锁（Baneful Bunker 的中毒之后的 Toxic 失败） |
 | `state_live` / `state_replay` | 各 149,760 个决策点 | 0（第一轮的 12 / 18：变身的体重、复制招式的 PP——S154、S155；比较器原来不比较 `types` / `base_types`，加上后查出 Double Shock 之后的属性——S156） |
 | `tree_history` | 64,450 步 | 175：已知的三类（Illusion、Minior 的颜色、Revival Blessing） |

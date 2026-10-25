@@ -81,7 +81,7 @@ def step_diffs(steps: list[dict], err: str | None, i=0) -> dict:
             dealt = (follows_dealt(a["state"], 0, c1) or c2.startswith("endeavor"),
                      follows_dealt(a["state"], 1, c2) or c1.startswith("endeavor"))  # fmt: skip
             res = ec.closest(b["state"], outs, n, hp=True, dealt=dealt, full=True,
-                             start=a["state"])  # fmt: skip
+                             start=a["state"], complete=True)  # fmt: skip
         except BaseException as e:  # noqa: BLE001 - the binding's panics are BaseExceptions
             out["errors"].append(f"engine: {c1} | {c2}: {type(e).__name__}: {str(e)[:120]}")
             out["mismatches"][f"b{i}-t{a['state']['turn']}"] = {

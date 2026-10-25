@@ -164,6 +164,9 @@ function state(battle, logFrom) {
 	// a deep copy: the battle's objects (boosts, ...) keep changing
 	return JSON.parse(JSON.stringify({
 		turn: battle.turn,
+		// (past the turn's end: its residuals run, the turn not yet advanced -- the turn-counted
+		// conditions' remaining turns are the next turn's then)
+		upkept: upkept(battle),
 		ended: battle.ended,
 		winner: battle.winner || '',
 		field: {

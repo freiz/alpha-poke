@@ -10,8 +10,10 @@ see; the search's tree is that chain.
 After each step the HP is set to Showdown's (the engine's damage is the rolls' mean or a
 branch: a drift that is no state error), and so are the volatiles whose length Showdown draws as
 they start (ec.HIDDEN_LENGTH: confusion, a partial trap, a lock -- their presence and count: the
-truth encodes the draw); one that started in the step is not compared at it (the engine's count
-is its own then). The rest is the engine's own."""
+truth encodes the draw); one that started in the step has its count not compared at it (the
+engine's count is its own then), its presence is (2026-10-25 review: a Confuse Ray's confusion
+the engine never applied was filtered, then synced from the truth -- unseen). The rest is the
+engine's own."""
 
 import poke_engine as pe
 
@@ -60,15 +62,15 @@ def _with_true_hp(st: pe.State, truth: pe.State) -> pe.State:
 
 
 def _hidden_keys(start: dict, now: dict) -> set[str]:
-    """The diff keys of the hidden-length volatiles not there at the step's start on the same
-    active (their counts and presence: Showdown's draws)."""
+    """The diff keys of the hidden-length volatiles' counts not there at the step's start on the
+    same active (Showdown's draws; their presence is compared)."""
     out = set()
     for k, (s0, s1) in enumerate(zip(start["sides"], now["sides"], strict=True)):
         same = s0["active"] == s1["active"] and s0["active"] >= 0
         had = set(s0["mons"][s0["active"]]["volatiles"]) if same else set()
         for x in ec.HIDDEN_LENGTH:
             if x not in had:
-                out |= {f"s{k + 1}.count.{x}", f"s{k + 1}.volatile.{x}"}
+                out.add(f"s{k + 1}.count.{x}")
     return out
 
 
@@ -100,7 +102,8 @@ def chain_diffs(steps: list[dict], depth: int = 3, every: int = 3) -> dict:
                 outs = ec.engine_outcomes(st, c1, c2, hints)
                 dealt = (follows_dealt(a["state"], 0, c1) or c2.startswith("endeavor"),
                          follows_dealt(a["state"], 1, c2) or c1.startswith("endeavor"))  # fmt: skip
-                res = ec.closest(b["state"], outs, n, hp=True, dealt=dealt, full=True, start=a["state"])
+                res = ec.closest(b["state"], outs, n, hp=True, dealt=dealt, full=True, start=a["state"],
+                                 complete=True)  # fmt: skip
             except BaseException as e:  # noqa: BLE001 - the binding's panics are BaseExceptions
                 out["errors"].append(f"engine d{d}: {c1} | {c2}: {type(e).__name__}: {str(e)[:120]}")
                 break

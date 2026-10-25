@@ -417,14 +417,9 @@ def decisions(p1: str, p2: str, seed: int, max_turns: int = 40, sides=("p1", "p2
     for k, step in enumerate(steps):
         if "requests" not in step:
             continue
+        # (a decision after the turn's end -- a forced switch -- before the next |turn|: the
+        # next turn's counters of Future Sight / Wish -- engine_state's, from the state's upkept)
         sd = _fainted_no_status(step["state"])
-        seen_lines = views["spectator"][: step["view_pos"]["spectator"]]
-        last_turn = max((j for j, x in enumerate(seen_lines) if x.startswith("|turn|")), default=-1)
-        if any(x.startswith("|upkeep") for x in seen_lines[last_turn + 1:]):
-            # (a decision after the turn's end -- a forced switch -- before the next |turn|:
-            # engine_state reckons Future Sight / Wish from Showdown's turn number, the next
-            # turn's counters then -- the engine differential compares turn starts only)
-            sd["turn"] += 1
         try:
             truth = engine_state(sd)
         except BaseException as e:  # noqa: BLE001

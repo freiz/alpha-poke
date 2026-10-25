@@ -28,8 +28,11 @@ ROOT = Path(__file__).resolve().parents[3]
 SIM = ROOT / "vendor" / "pokemon-showdown" / "dist" / "sim"
 RUNNER = Path(__file__).with_name("showdown_case.js")
 
+# ("fnt": Showdown's status of a mon fainted this turn -- battle.faintMessages; the engine has
+# none, its 0 HP is the faint. Missing, the reference state of every turn with a faint failed to
+# build and its extended fields went unchecked: 17,743 turns of the full corpus, 2026-10-25)
 STATUS = {"": "none", "brn": "burn", "par": "paralyze", "slp": "sleep", "frz": "freeze",
-          "psn": "poison", "tox": "toxic"}  # fmt: skip
+          "psn": "poison", "tox": "toxic", "fnt": "none"}  # fmt: skip
 WEATHER = {"": "none", "sunnyday": "sun", "raindance": "rain", "sandstorm": "sand",
            "snowscape": "snow", "snow": "snow", "hail": "hail", "desolateland": "harshsun",
            "primordialsea": "heavyrain"}  # fmt: skip
@@ -70,15 +73,21 @@ def run_showdown(p1, p2, turns, seed: str | None = "gen5,1,2,3,4", force_random=
 CACHE = ROOT / "data" / "difftest" / "cache"
 
 
+def _recorder_files() -> list[Path]:
+    """The simulator's build files a recorded battle depends on: what it loads -- its sim, data,
+    lib and config (the formats' rules: dist/config/formats.js; 2026-10-25 review, a format rule
+    changed kept the battles recorded under the old one)."""
+    return [f for d in ("sim", "data", "lib", "config") for f in sorted((SIM.parent / d).rglob("*.js"))]
+
+
 @functools.cache
 def _recorder_id() -> str:
     """What a recorded battle depends on besides its case: the simulator's build (its files'
-    names, sizes, times) and the recording scripts (their text)."""
+    names, sizes, times: ``_recorder_files``) and the recording scripts (their text)."""
     h = hashlib.sha1()
-    for d in (SIM, SIM.parent / "data"):
-        for f in sorted(d.rglob("*.js")):
-            st = f.stat()
-            h.update(f"{f.relative_to(d.parent)}:{st.st_size}:{st.st_mtime_ns}".encode())
+    for f in _recorder_files():
+        st = f.stat()
+        h.update(f"{f.relative_to(SIM.parent)}:{st.st_size}:{st.st_mtime_ns}".encode())
     for name in ("random_battle.js", "showdown_state.js", "showdown_damage.js"):
         h.update(RUNNER.with_name(name).read_bytes())
     return h.hexdigest()
@@ -408,10 +417,14 @@ def engine_state(sd: dict) -> pe.State:
     # a pending Future Sight is on its target's slot in Showdown (it hits at the end of turn
     # endingTurn + 1), on its user's side in the engine (turns: 1 before the turn it hits)
     future = [None, None]
+    # (past the turn's end -- a faint's switch-in, the battle over -- the turn's residuals have run,
+    # Showdown's turn not yet advanced: the counts are the next turn's, as the engine's after its
+    # end of turn; 2026-10-25, a Wish read a turn long at a faint's switch-in)
+    turn = sd["turn"] + (1 if sd.get("upkept") else 0)
     for k, s in enumerate(sd["sides"]):
         fm = s.get("slot", {}).get("futuremove")
         if fm and fm["source"] >= 0:
-            turns = fm["ending_turn"] - sd["turn"] + 2
+            turns = fm["ending_turn"] - turn + 2
             # (L218: and whether it is Doom Desire)
             future[1 - k] = (turns, pe.PokemonIndex(str(fm["source"])), fm.get("move") == "doomdesire")
     # Wish: a condition of the user's slot (its HP, unrounded maxhp / 2; Showdown heals at the end
@@ -420,7 +433,7 @@ def engine_state(sd: dict) -> pe.State:
     for k, s in enumerate(sd["sides"]):
         w = s.get("slot", {}).get("wish")
         if w and w.get("hp"):
-            wish[k] = (w["starting_turn"] + 3 - sd["turn"], int(w["hp"]))
+            wish[k] = (w["starting_turn"] + 3 - turn, int(w["hp"]))
     sides = [_engine_side(s, f, w) for s, f, w in zip(sd["sides"], future, wish, strict=True)]
     return pe.State(
         side_one=sides[0], side_two=sides[1],
@@ -887,6 +900,11 @@ def extra_view(s: pe.State, n_mons: tuple[int, int] = (6, 6)) -> dict:
         sc = side.side_conditions
         for f in ("reflect", "light_screen", "aurora_veil", "tailwind", "safeguard", "mist",
                   "lucky_chant", "healing_wish", "lunar_dance", "toxic_count"):  # fmt: skip
+            # (a fainted active's Toxic counter: Showdown's goes with its status as it faints, the
+            # engine's at the switch-in -- not compared, as its volatiles; 2026-10-25, seen once
+            # the reference state of a faint's turn built)
+            if f == "toxic_count" and side.pokemon[a].hp <= 0:
+                continue
             v[f"{k}.sc.{f}"] = getattr(sc, f)
         if side.wish[0] > 0:
             v[f"{k}.wish"] = tuple(side.wish)
@@ -965,8 +983,10 @@ def extra_diff(showdown_after: dict, out, n_mons=(6, 6), hp: bool = True,
     Showdown's state the turn started from (HIDDEN_LENGTH)."""
     try:
         target = extra_view(engine_state(showdown_after), n_mons)
-    except BaseException:  # noqa: BLE001 - a state the conversion cannot build
-        return {}
+    except BaseException as e:  # noqa: BLE001 - a state the conversion cannot build
+        # (a finding, not none: the rest of the state unchecked -- 2026-10-25 review, a failed
+        # conversion read as no difference)
+        return {"reference_state": (None, f"{type(e).__name__}: {str(e)[:80]}")}
     v = extra_view(out[1], n_mons)
     for k, i in (("s1", 0), ("s2", 1)):
         for x in HIDDEN_LENGTH:
@@ -1060,13 +1080,24 @@ def hp_diff(showdown_after: dict, out, n_mons=(6, 6), tol: int = 2,
 
 
 def closest(showdown_after: dict, outs: list, n_mons=(6, 6), hp: bool = False,
-            dealt=(False, False), full: bool = False, start: dict | None = None) -> dict:  # fmt: skip
+            dealt=(False, False), full: bool = False, start: dict | None = None,
+            complete: bool = False) -> dict:  # fmt: skip
     """The engine outcome nearest to Showdown's next state: its differences and probability.
     HP is left out unless ``hp`` (then compared within the damage rolls' spread, ``hp_diff``);
-    ``full``: the rest of the state too (``extra_view``)."""
+    ``full``: the rest of the state too (``extra_view``). ``complete``: ``outs`` are all of the
+    branches (their probabilities sum to 1; else a part of them, as a test's chosen one)."""
     target = view(showdown_after)
     best = None
+    # (only an outcome that can happen: 2026-10-25 review, a probability-0 branch matched; the
+    # branches' probabilities a distribution)
+    total = sum(o[0] for o in outs)
+    # (the engine's percentages are f32: a sum off by 1e-6 over many branches -- Tri Attack's)
+    if outs and (any(not 0.0 <= o[0] <= 1.0 + 1e-4 for o in outs) or total > 1.0 + 1e-4
+                 or complete and abs(total - 1.0) > 1e-4):  # fmt: skip
+        return {"p": 0.0, "diff": {"probability": (round(total, 9), 1.0)}, "state": None}
     for o in outs:
+        if o[0] <= 0:
+            continue
         d = diff(view_engine(o[1], n_mons), target, skip_hp=True)
         if hp:
             d |= hp_diff(showdown_after, o, n_mons, dealt=dealt)

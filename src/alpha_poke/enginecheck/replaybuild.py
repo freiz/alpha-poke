@@ -96,11 +96,7 @@ def decisions(p1: str, p2: str, seed: int, max_turns: int = 40, stats: dict | No
         for b in battles.values():
             _feed(b, log[pos:upto])
         pos = upto
-        sd = _fainted_no_status(step["state"])
-        seen_lines = log[:upto]
-        last_turn = max((j for j, x in enumerate(seen_lines) if x.startswith("|turn|")), default=-1)
-        if any(x.startswith("|upkeep") for x in seen_lines[last_turn + 1:]):
-            sd["turn"] += 1  # (as statebuild: a decision after the turn's end)
+        sd = _fainted_no_status(step["state"])  # (after the turn's end: engine_state's upkept)
         try:
             truth = engine_state(sd)
         except BaseException as e:  # noqa: BLE001

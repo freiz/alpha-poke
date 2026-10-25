@@ -85,7 +85,8 @@ def corpus(name: str) -> list[Spec]:
 
 
 def _result(n: int = 0) -> dict:
-    return {"n": n, "kinds": collections.Counter(), "examples": {}, "errors": []}
+    # ("skipped": reason -> what a check left out uncompared -- kept, the baseline bounds it)
+    return {"n": n, "kinds": collections.Counter(), "examples": {}, "errors": [], "skipped": collections.Counter()}
 
 
 def _add(out: dict, kind: str, detail, cap: int = 5) -> None:
@@ -105,6 +106,7 @@ def check_engine_step(spec: Spec) -> dict:
         for k in m["kinds"]:
             _add(out, k, {"at": key, "choices": [m["p1"], m["p2"]], "diff": m["diff"]})
     out["errors"] = r["errors"]
+    out["skipped"].update(r["skipped"])
     return out
 
 
@@ -135,6 +137,7 @@ def _state(spec: Spec, path: str) -> dict:
     for k, side, kind, detail in diffs:
         _add(out, kind, {"step": k, "side": side, "detail": detail})
     out["errors"] = st["errors"]
+    out["skipped"].update(x.split(":")[0] for x in st.get("skipped", []))
     return out
 
 
@@ -159,6 +162,7 @@ def check_tree_history(spec: Spec) -> dict:
             if len(ex) < 5:
                 ex.append({"turn": e[2], "choices": [e[3], e[4]], "log": e[5]})
     out["errors"] = r["errors"]
+    out["skipped"].update(r["skipped"])
     return out
 
 
@@ -195,6 +199,7 @@ def _job(job):
         r = _result()
         r["errors"].append(f"{type(e).__name__}: {str(e)[:200]}")
     r["kinds"] = dict(r["kinds"])
+    r["skipped"] = dict(r.get("skipped", {}))
     return check, spec.id, r
 
 
@@ -203,13 +208,15 @@ def run(specs: list[Spec], checks: list[str], procs: int = 8) -> dict:
     "examples": {kind: [(spec id, detail), ...]}, "errors": [(spec id, error), ...]}}; a spec's
     errors count as the kind "error"."""
     jobs = [(c, s) for c in checks for s in specs if CHECKS[c][1](s)]
-    out = {c: {"specs": 0, "n": 0, "kinds": collections.Counter(), "examples": {}, "errors": []} for c in checks}
+    out = {c: {"specs": 0, "n": 0, "kinds": collections.Counter(), "examples": {}, "errors": [],
+               "skipped": collections.Counter()} for c in checks}  # fmt: skip
     with mp.get_context("spawn").Pool(procs) as pool:
         for c, sid, r in pool.imap_unordered(_job, jobs):
             o = out[c]
             o["specs"] += 1
             o["n"] += r["n"]
             o["kinds"].update(r["kinds"])
+            o["skipped"].update(r["skipped"])
             for k, ex in r["examples"].items():
                 lst = o["examples"].setdefault(k, [])
                 lst += [(sid, x) for x in ex[: max(0, 10 - len(lst))]]
@@ -218,6 +225,7 @@ def run(specs: list[Spec], checks: list[str], procs: int = 8) -> dict:
                 o["errors"] += [(sid, e) for e in r["errors"][:3]]
     for o in out.values():
         o["kinds"] = dict(sorted(o["kinds"].items()))
+        o["skipped"] = dict(sorted(o["skipped"].items()))
     return out
 
 
@@ -225,16 +233,38 @@ def baseline_path(name: str) -> Path:
     return BASELINES / f"{name}.json"
 
 
+COMPARED = "#compared"  # (a baseline's comparisons made: fewer is a regression)
+SKIPPED = "#skipped: "  # (+ a reason: more left out is one)
+
+
 def regressions(result: dict, baseline: dict) -> list[str]:
-    """What a run has more of than its baseline: a new kind, or a kind more often."""
+    """What a run has more of than its baseline: a new kind, or a kind more often; a skip reason
+    more often; fewer comparisons (2026-10-25 review: every check at 0 compared passed -- the
+    baseline counted findings only)."""
     out = []
     for c, o in result.items():
         base = baseline.get(c, {})
-        for k, n in o["kinds"].items():
+        counts = {**o["kinds"], **{SKIPPED + k: n for k, n in o.get("skipped", {}).items()}}
+        for k, n in counts.items():
             if n > base.get(k, 0):
                 out.append(f"{c}: {k} {base.get(k, 0)} -> {n}")
+        if o["n"] < base.get(COMPARED, 0):
+            out.append(f"{c}: {COMPARED} {base[COMPARED]} -> {o['n']}")
     return out
 
 
+def updated_baseline(base: dict, result: dict, checks: list[str], only: str, force: bool) -> tuple[dict | None, str]:
+    """The baseline a run writes (None: refused, and why): not from a subset of the corpus (its
+    counts are the whole corpus' -- 2026-10-25 review, an --only run emptied a check's), not over
+    a regression unless forced; a subset of the checks replaces those checks' alone."""
+    if only:
+        return None, "a subset of the corpus (--only) writes no baseline: its counts are the whole corpus'"
+    grown = regressions(result, base)
+    if grown and not force:
+        return None, f"{len(grown)} regressions (--force: a deliberate change)"
+    return (base | baseline_of(result) if set(checks) != set(CHECKS) else baseline_of(result)), ""
+
+
 def baseline_of(result: dict) -> dict:
-    return {c: o["kinds"] for c, o in result.items()}
+    return {c: {**o["kinds"], **{SKIPPED + k: n for k, n in o.get("skipped", {}).items()}, COMPARED: o["n"]}
+            for c, o in result.items()}  # fmt: skip
