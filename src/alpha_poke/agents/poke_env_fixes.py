@@ -269,10 +269,12 @@ from poke_env.battle import Battle  # noqa: E402
 _inner_parse_request = Battle.parse_request
 
 
-def _parse_request(self, request):
+def _parse_request(self, request, *args, **kwargs):
     # (a request's conditions: its sleep ends no Yawn either -- S115)
+    # (poke-env's player passes strict_battle_tracking too: 2026-10-25, every live game stalled
+    # on a TypeError at its first request -- the state checks call it with the request alone)
     yawned = [m for m in self._team.values() if Effect.YAWN in m.effects]
-    _inner_parse_request(self, request)
+    _inner_parse_request(self, request, *args, **kwargs)
     for m in yawned:
         if Effect.YAWN not in m.effects and m.active:
             m.effects[Effect.YAWN] = 0
