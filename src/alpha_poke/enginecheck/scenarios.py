@@ -238,8 +238,93 @@ def second_sleep() -> list[Spec]:
                   expect=("|-status|p2a: Corviknight|slp", "|-status|p2a: Blissey|slp"))]  # fmt: skip
 
 
+def type_changes() -> list[Spec]:
+    """Double Shock's type change: "???" in Showdown (poke-env's THREE_QUESTION_MARKS: the engine's
+    typeless); after a Terastallization it does nothing, though Showdown prints a typechange of the
+    tera type -- the original types kept, Close Combat's STAB on them (2026-10-24, the belief
+    check's damage evidence; the state check's types)."""
+    out = []
+    for tera in (False, True):
+        pawmot = S("Pawmot", "Leftovers", "Iron Fist", ["Double Shock", "Close Combat", "Protect", "Revival Blessing"],
+                   FAST, "Jolly", tera="Electric")  # fmt: skip
+        first = {"p1": "move 1 terastallize" if tera else "move 1", "p2": "move 1"}
+        script = [first, {"p1": "move 2", "p2": "move 1"}, {"p1": "move 2", "p2": "move 1"}]
+        out.append(_spec(f"types/doubleshock-{'tera' if tera else 'plain'}", team(pawmot, FILLER),
+                         team(S("Blissey", "Leftovers", "Natural Cure", ["Soft-Boiled", "Seismic Toss", "Calm Mind", "Protect"]),
+                              FILLER), script, expect=("typechange",)))  # fmt: skip
+    return out
+
+
+def belief_evidence() -> list[Spec]:
+    """The belief's evidence read as it was at its turn (2026-10-24, the belief check: the true
+    speed / set ruled out -- B2, B3): a Pain Split's -sethp before a Knock Off; a Stakeout on a
+    switch-in; a Zoroark's Illusion broken; an Imposter Ditto's hits; a Minior's Meteor shell
+    broken (the speed in each forme); a Healing Wish's cure of a paralysis; our Choice Scarf
+    Tricked away (our speed with it before). The players' format."""
+    out = []
+    cat = S("Meowscarada", "Choice Scarf", "Overgrow", ["Knock Off", "Trick", "U-turn", "Flower Trick"], FAST, "Jolly")
+    # (Shell Armor: no crit voids the hit after the Pain Split)
+    rotom = S("Rotom-Wash", "Leftovers", "Shell Armor", ["Pain Split", "Hydro Pump", "Volt Switch", "Will-O-Wisp"])
+    out.append(_spec("belief/painsplit-knockoff", team(cat, FILLER), team(rotom, FILLER),
+                     [{"p1": "move 1", "p2": "move 2"}, {"p1": "move 1", "p2": "move 1"}, {"p1": "move 1", "p2": "move 2"}],
+                     fmt=PCT, expect=("|-sethp|p2a: Rotom",)))  # fmt: skip
+    spid = S("Spidops", "Leftovers", "Stakeout", ["Knock Off", "Circle Throw", "Sticky Web", "U-turn"])
+    corv = S("Corviknight", "Leftovers", "Pressure", ["Roost", "Body Press", "Iron Defense", "Defog"])
+    out.append(_spec("belief/stakeout-switch-in", team(spid, FILLER), team(FILLER, corv),
+                     [{"p1": "move 1", "p2": "switch 2"}, {"p1": "move 1", "p2": "move 1"}],
+                     fmt=PCT, expect=("|switch|p2a: Corviknight",)))  # fmt: skip
+    zor = S("Zoroark-Hisui", "Choice Specs", "Illusion", ["Shadow Ball", "Hyper Voice", "Flamethrower", "U-turn"], FAST, "Timid")
+    out.append(_spec("belief/illusion-broken", team(spid, FILLER), team(zor, FILLER),
+                     [{"p1": "move 1", "p2": "move 3"}, {"p1": "move 1", "p2": "move 3"}, {"p1": "move 1", "p2": "move 3"}],
+                     fmt=PCT, expect=("|replace|p2a: Zoroark",)))  # fmt: skip
+    ditto = S("Ditto", "Choice Scarf", "Imposter", ["Transform"])
+    # (our Corviknight 256: the Ditto's own speed with its scarf 198, its copy's 384 -- it moves first)
+    fast_corv = S("Corviknight", "Leftovers", "Pressure", ["Roost", "Body Press", "Iron Defense", "Defog"], FAST, "Jolly")
+    out.append(_spec("belief/imposter-hits", team(fast_corv, FILLER), team(ditto, FILLER),
+                     [{"p1": "move 2", "p2": "move 2"}, {"p1": "move 2", "p2": "move 2"}],
+                     fmt=PCT, expect=("|-transform|p2a: Ditto",)))  # fmt: skip
+    # (the Meteor 156 moves after our Garchomp's 240; its Core 276 before -- each turn in its forme)
+    minior = S("Minior", "Leftovers", "Shields Down", ["Power Gem", "Acrobatics", "Stealth Rock", "Earthquake"])
+    chomp = S("Garchomp", "Leftovers", "Rough Skin", ["Iron Head", "Earthquake", "Stealth Rock", "Swords Dance"])
+    out.append(_spec("belief/minior-shell", team(chomp, FILLER), team(minior, FILLER),
+                     [{"p1": "move 1", "p2": "move 1"}] * 5, fmt=PCT, expect=("|-formechange|p2a: Minior",)))  # fmt: skip
+    zap = S("Raichu", "Leftovers", "Lightning Rod", ["Thunder Wave", "Thunderbolt", "Nasty Plot", "Volt Switch"], FAST, "Timid")
+    suicune = S("Suicune", "Leftovers", "Pressure", ["Scald", "Calm Mind", "Rest", "Protect"])
+    gard = S("Gardevoir", "Leftovers", "Synchronize", ["Healing Wish", "Moonblast", "Calm Mind", "Protect"])
+    # (cured, the Suicune's 206 moves before our Corviknight's 170 -- read paralyzed, 103, it could not)
+    out.append(_spec("belief/healingwish-cure", team(zap, corv), team(suicune, gard),
+                     [{"p1": "move 1", "p2": "move 2"}, {"p1": "move 3", "p2": "switch 2"}, {"p1": "move 3", "p2": "move 1"},
+                      {"p1": "move 3", "p2": "switch 2"}, {"p1": "switch 2", "p2": "move 2"}, {"p1": "move 2", "p2": "move 2"},
+                      {"p1": "move 2", "p2": "move 2"}],
+                     fmt=PCT, max_turns=10, expect=("[from] move: Healing Wish",)))  # fmt: skip
+    goth = S("Gothitelle", "Choice Scarf", "Frisk", ["Psychic", "Trick", "Thunderbolt", "Calm Mind"])
+    bolt = S("Zekrom", "Life Orb", "Teravolt", ["Bolt Strike", "Outrage", "Dragon Claw", "Roost"])
+    out.append(_spec("belief/our-scarf-tricked", team(goth, FILLER), team(bolt, FILLER),
+                     [{"p1": "move 2", "p2": "move 4"}, {"p1": "move 1", "p2": "move 4"}, {"p1": "move 1", "p2": "move 4"}],
+                     fmt=PCT, expect=("|-item|p2a: Zekrom|Choice Scarf|[from] move: Trick",)))  # fmt: skip
+    # (an Encore on the faster's -6 Dragon Tail: its Energy Ball after the slower's Encore)
+    mega = S("Meganium", "Leftovers", "Overgrow", ["Energy Ball", "Dragon Tail", "Synthesis", "Leech Seed"], FAST, "Jolly")
+    chan = S("Hitmonchan", "Leftovers", "Iron Fist", ["Encore", "Drain Punch", "Ice Punch", "Rapid Spin"])
+    out.append(_spec("belief/encore-a-dragon-tail", team(mega, FILLER), team(chan, FILLER),
+                     [{"p1": "move 1", "p2": "move 2"}, {"p1": "move 2", "p2": "move 1"}, {"p1": "move 1", "p2": "move 2"}],
+                     fmt=PCT, expect=("|-start|p1a: Meganium|Encore",)))  # fmt: skip
+    # (Mycelium Might: the faster Toedscruel's Spore after the Dragonite's Earthquake)
+    toed = S("Toedscruel", "Leftovers", "Mycelium Might", ["Spore", "Earth Power", "Knock Off", "Rapid Spin"], FAST, "Jolly")
+    nite = S("Dragonite", "Leftovers", "Inner Focus", ["Earthquake", "Roost", "Fire Punch", "Ice Spinner"])
+    out.append(_spec("belief/mycelium-might", team(toed, FILLER), team(nite, FILLER),
+                     [{"p1": "move 1", "p2": "move 1"}, {"p1": "move 2", "p2": "move 1"}],
+                     fmt=PCT, expect=("|move|p1a: Toedscruel|Spore",)))  # fmt: skip
+    # (a Palafin-Zero's Flip Turn, back in as the Hero: the hit in another forme)
+    fin = S("Palafin", "Leftovers", "Zero to Hero", ["Flip Turn", "Jet Punch", "Wave Crash", "Bulk Up"], FAST, "Jolly")
+    out.append(_spec("belief/palafin-hero", team(FILLER, FILLER), team(fin, FILLER),
+                     [{"p1": "move 3", "p2": "move 1"}, {"p2": "switch 2"}, {"p1": "move 3", "p2": "switch 2"},
+                      {"p1": "move 3", "p2": "move 3"}],
+                     fmt=PCT, expect=("Palafin-Hero",)))  # fmt: skip
+    return out
+
+
 FAMILIES = (extender_items, pp_takers, transforms, locks, failed_moves, item_phases, encore, formes, speed_phases,
-            second_sleep)
+            second_sleep, type_changes, belief_evidence)
 
 
 def scenarios() -> list[Spec]:

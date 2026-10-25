@@ -113,6 +113,7 @@ def own_diffs(built: pe.Side, truth: pe.Side) -> list[tuple[str, str]]:
         for k in keys:
             if _norm(k, getattr(b, k)) != _norm(k, getattr(t, k)):
                 out.append((f"own:{k}", f"{sp} {getattr(b, k)} vs {getattr(t, k)}"))
+        out += _type_diffs("own", sp, b, t)
         bmv = {m.id.lower(): (m.pp, m.disabled) for m in b.moves if m.id.lower() != "none"}
         tmv = {m.id.lower(): (m.pp, m.disabled) for m in t.moves if m.id.lower() != "none"}
         if t.hp <= 0:
@@ -285,7 +286,24 @@ def foe_diffs(built: pe.Side, truth: pe.Side, seen: set[str], oracle: bool = Fal
                 out.append((f"foe:{k}", f"{sp} {getattr(b, k)} vs {getattr(t, k)}"))
         if t.hp > 0 and t.terastallized and str(b.tera_type).lower() != str(t.tera_type).lower():
             out.append(("foe:tera_type", f"{sp} {b.tera_type} vs {t.tera_type}"))
+        out += _type_diffs("foe", sp, b, t)
     out += _side_common("foe", built, truth)
+    return out
+
+
+def _type_diffs(who: str, sp: str, b, t) -> list[tuple[str, str]]:
+    """An alive mon's types and base types (the engine's STAB, immunities, the types a switch-out
+    gives back), as sets -- their order and a typeless second do not matter to the engine; not a
+    transformed one's (its target's). 2026-10-24, the belief check: a tera'd Pawmot's Fighting
+    type lost after a Double Shock -- the types were never compared."""
+    if t.hp <= 0 or t.transform_backup is not None:
+        return []
+    out = []
+    for k in ("types", "base_types"):
+        bv = {str(x).lower() for x in getattr(b, k)} - {"typeless"}
+        tv = {str(x).lower() for x in getattr(t, k)} - {"typeless"}
+        if bv != tv:
+            out.append((f"{who}:{k}", f"{sp} {sorted(bv)} vs {sorted(tv)}"))
     return out
 
 

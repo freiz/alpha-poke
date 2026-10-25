@@ -46,17 +46,19 @@
 
 ## 现状（2026-10-24）
 
-`fast`：50 个场景 + 30 局随机，全部检查约 4 秒（缓存命中、14 个进程）；`full`：50 个场景 + 2,400 局，约 100 秒。
+`fast`：62 个场景 + 30 局随机，全部检查约 4 秒（缓存命中、14 个进程）；`full`：62 个场景 + 2,400 局，约 100 秒。
 
 | 检查 | `full` 比较了 | 发现 |
 |---|---|---|
 | `engine_step` | 77,300 个回合 | 12（原 72）：Klutz / Embargo / 魔法空间下的延长道具——L234；电系变化招式对地面系——L235；Sheer Force 去掉 Protect 等——L236；“上一招失败”——L237（比较器原来跳过这个标记，开始比较时一次暴露 4,309 处，逐类对照 Showdown 源码修到 1 处：Copycat 调出的 Dig 被 Earthquake 打中）；`gen9ou` 的第二次睡眠（该格式没有 Sleep Clause Mod）——L238；其余零星 |
 | `engine_chain` | 24,387 个回合 | 15（原 108）：同上；链式只同步 HP、不同步异常状态，上一步已有的状态差异会连锁（Baneful Bunker 的中毒之后的 Toxic 失败） |
-| `state_live` / `state_replay` | 各 149,706 个决策点 | 0（第一轮的 12 / 18：变身的体重、复制招式的 PP——S154、S155，已修） |
-| `tree_history` | 64,400 步 | 175：已知的三类（Illusion、Minior 的颜色、Revival Blessing） |
-| `belief_truth` | 29,832 个决策点 | 硬约束：速度观测把真实速度排除 990 处（道具换手的已修：B1；剩下的待查——形态变化如 Eiscue 的 Noice、以及分布在多种宝可梦上的其他原因），伤害证据 55 处（变身中的 Ditto、Knock Off）；先验支撑（每局每只每个值计一次）约 8,600 |
+| `state_live` / `state_replay` | 各 149,711 个决策点 | 0（第一轮的 12 / 18：变身的体重、复制招式的 PP——S154、S155；比较器原来不比较 `types` / `base_types`，加上后查出 Double Shock 之后的属性——S156） |
+| `tree_history` | 64,426 步 | 175：已知的三类（Illusion、Minior 的颜色、Revival Blessing） |
+| `belief_truth` | 29,943 个决策点 | 硬约束 0：速度观测原排除真实速度 990 处（B1 道具换手；B2：我方道具、对方形态、变身、Healing Wish 的治愈、Encore、Mycelium Might / Stall、Illusion），伤害证据原 57 处（B3：Pain Split 的 `-sethp`、变身、另一形态、Illusion、Stakeout；以及 S156 的属性）；先验支撑（每局每只每个值计一次）约 8,600 |
 
-变异测试：21 个修复（Python 12、引擎 / 搜索 9）全部抓到；脚本先确认未改动的代码对基线零回归（基线过期时任何变异都会显得"被抓到"）。
+变异测试：35 个修复（Python 25、引擎 / 搜索 10）全部抓到；脚本先确认未改动的代码对基线零回归（基线过期时任何变异都会显得"被抓到"）。
+
+信念检查的错误（状态构造失败）原来只留在 `decisions` 里、不计入类别：2026-10-24 一个类型错误让每个 F1 命中都失败，检查却报 0，已并入。
 
 精确 HP 的格式是 `gen9customgame`（没有 Sleep Clause Mod，与玩家的 `[Gen 9] OU` 一致：L238）。
 

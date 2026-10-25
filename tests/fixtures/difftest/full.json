@@ -1,10 +1,8 @@
 {
  "belief_truth": {
-  "belief:damage": 55,
-  "belief:item": 1558,
-  "belief:move": 5051,
-  "belief:speed": 990,
-  "belief:tera": 1969
+  "belief:item": 1562,
+  "belief:move": 5086,
+  "belief:tera": 1977
  },
  "engine_chain": {
   "hp": 2,

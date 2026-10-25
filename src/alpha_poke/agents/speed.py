@@ -84,6 +84,15 @@ class Obs:
     # with, the candidate's (2026-10-24, the belief check: a Glalie that got its Choice Scarf by
     # Switcheroo read with it at the turns before -- the true speed ruled out)
     item_then: str | None = None
+    # the opponent's forme's base speed then (a Minior's Meteor / Core, an Eiscue's Noice, ...:
+    # consistent's stat_of; 2026-10-24, the belief check -- the forme now read for every turn)
+    base_spe: int | None = None
+    # (our speed besides our item, our species, and our item then -- None: the one it started with,
+    # resolved in result(): a Trick's Choice Scarf read at the turns before it, 2026-10-24)
+    ours_raw: float = 0.0
+    our_species: str = ""
+    our_item_then: str | None = None
+    our_forme: str = ""  # (our active's forme then: our speed stat is the one now -- another left out)
 
 
 @dataclass
@@ -94,9 +103,15 @@ class _Side:
     status: dict = None
     tailwind: bool = False
     proto: bool = False  # Protosynthesis / Quark Drive on speed
+    forme: dict = None  # species -> its forme now (a -formechange's, a detailschange's)
+    transformed: bool = False  # the active is transformed (its speed its target's)
 
     def __post_init__(self):
-        self.names, self.status = {}, {}
+        self.names, self.status, self.forme = {}, {}, {}
+
+
+def _status_move(move: str) -> bool:
+    return (GEN.moves.get(to_id(move)) or {}).get("category") == "Status"
 
 
 def _move_priority(move: str) -> int:
@@ -132,9 +147,10 @@ class ObsTracker:
         # themselves must not count: 2026-10-11, 11% of the observations broke the opponent's
         # true speed until this)
         self.snap: dict | None = None
-        from alpha_poke.agents.damage_obs import _Items
+        from alpha_poke.agents.damage_obs import _Illusion, _Items
 
         self.items = _Items()  # each side's item as the log shows it (its phases)
+        self.illusion = _Illusion()  # (switch-ins that may be an Illusion holder: left out)
         self._iact: dict = {}  # "p1a" -> the species it switched in as (the item tracker's key)
 
     def _capture(self) -> dict:
@@ -143,9 +159,17 @@ class ObsTracker:
             return st.active, m * (0.5 if st.status.get(st.active) == "par" else 1.0)
 
         opp = (self.opp_side, self._iact.get(self.opp_side + "a"))
+        ours = (self.our_side, self._iact.get(self.our_side + "a"))
+        o = self.sides[self.opp_side]
+        entry = GEN.pokedex.get(o.forme.get(o.active, o.active)) or {}
         return {"sides": {k: one(v) for k, v in self.sides.items()},
                 "trick_room": self.trick_room, "weather": self.weather,
-                "terrain": self.terrain, "opp_item": self.items.now.get(opp)}  # fmt: skip
+                "terrain": self.terrain, "opp_item": self.items.now.get(opp),
+                "our_item": self.items.now.get(ours) if ours in self.items.changed else None,
+                "our_key": ours, "opp_base": (entry.get("baseStats") or {}).get("spe"),
+                "our_forme": self.sides[self.our_side].forme.get(self.sides[self.our_side].active, ""),
+                "transformed": any(s.transformed for s in self.sides.values()),
+                "disguised": any(self.illusion.ambiguous.get(k + "a") for k in self.sides)}  # fmt: skip
 
     def _flush(self, out: list) -> None:
         """The current turn's observation, if any, into ``out``."""
@@ -167,6 +191,16 @@ class ObsTracker:
                 return
         if any(any(it in x for it in ORDER_ITEMS) for p in block[:last] for x in p):
             return
+        # (a transformed active's speed is its target's; the second mover Encored before it moved
+        # used another move than it chose -- its priority unknown: a Dragon Tail's -6 into Energy
+        # Ball; 2026-10-24, the belief check)
+        if snap["transformed"] or snap["disguised"]:
+            return
+        second = our_side if mains[our_side][0] > mains[opp_side][0] else opp_side
+        first_i = min(mains[our_side][0], mains[opp_side][0])
+        if any(len(p) > 3 and p[1] == "-start" and p[2][:2] == second and "Encore" in p[3]
+               for p in block[first_i:last]):  # fmt: skip
+            return
         our_move, opp_move = mains[our_side][1], mains[opp_side][1]
         (us, us_mult), (them, them_mult) = snap["sides"][our_side], snap["sides"][opp_side]
         stat, item, ability = self.our_speed(us)
@@ -183,9 +217,14 @@ class ObsTracker:
             speedy.add("surgesurfer")
         if (opp_abils | {ability}) & speedy:
             return
+        # (Stall moves its holder last, Mycelium Might its status moves)
+        for abils, move in (({ability}, our_move), (opp_abils, opp_move)):
+            if "stall" in abils or "myceliummight" in abils and _status_move(move):
+                return
         ours = stat * us_mult * (1.5 if item == "choicescarf" else 1.0)
         opp_first = mains[opp_side][0] < mains[our_side][0]
-        out.append(Obs(self.turn, them, ours, them_mult, snap["trick_room"], opp_first, snap.get("opp_item")))
+        out.append(Obs(self.turn, them, ours, them_mult, snap["trick_room"], opp_first, snap.get("opp_item"),
+                       snap["opp_base"], stat * us_mult, us, snap["our_item"], snap["our_forme"]))  # fmt: skip
 
     def result(self) -> list[Obs]:
         """The observations so far, the current turn's included (if it has both moves). Those of
@@ -203,6 +242,20 @@ class ObsTracker:
                 if start is None:
                     continue
                 o = dataclasses.replace(o, item_then=start)
+            mine = self.sides[self.our_side]
+            if o.our_forme and mine.forme.get(o.our_species, o.our_species) != o.our_forme:
+                continue
+            # (our item then: the one the log named, the one it started with if it changed since --
+            # left out if the log never said which -- else the one we hold now)
+            ours_key = (self.our_side, o.our_species)
+            item = o.our_item_then
+            if item is None and ours_key in self.items.changed:
+                item = self.items.original.get(ours_key)
+                if item is None:
+                    continue
+            if item is None:
+                item = to_id(self.our_speed(o.our_species)[1] or "")
+            o = dataclasses.replace(o, ours=o.ours_raw * (1.5 if item == "choicescarf" else 1.0))
             keep.append(o)
         return keep
 
@@ -213,6 +266,7 @@ class ObsTracker:
         if tag in ("switch", "drag") and len(p) > 3:
             self._iact[p[2][:3]] = to_id(p[3].split(",")[0])
         self.items.feed(p, self._iact)
+        self.illusion.feed(p)
         if tag == "turn":
             self._flush(self.out)
             self.turn, self.block, self.snap = int(p[2]), [], None
@@ -248,8 +302,9 @@ class ObsTracker:
         if tag in ("switch", "drag", "replace", "detailschange") and len(p) > 3:
             new = to_id(p[3].split(",")[0])
             st.names[nick] = new
+            st.forme[new] = new
             if tag in ("switch", "drag"):
-                st.active, st.spe, st.proto = new, 0, False
+                st.active, st.spe, st.proto, st.transformed = new, 0, False, False
                 hp = p[4] if len(p) > 4 else ""
                 if " " in hp:
                     st.status[new] = hp.split(" ", 1)[1]
@@ -267,6 +322,18 @@ class ObsTracker:
             st.status[sp] = p[3]
         elif tag == "-curestatus":
             st.status.pop(sp, None)
+        elif tag in ("-damage", "-heal", "-sethp") and len(p) > 3 and "fnt" not in p[3]:
+            # (the HP field names the status now: a Healing Wish's cure is only its -heal's;
+            # 2026-10-24, the belief check -- a paralysis it cured kept)
+            hp = p[3].split(" ", 1)
+            if len(hp) > 1:
+                st.status[sp] = hp[1]
+            else:
+                st.status.pop(sp, None)
+        elif tag == "-formechange" and len(p) > 3:
+            st.forme[sp] = to_id(p[3])
+        elif tag == "-transform":
+            st.transformed = True
         elif tag == "-start" and len(p) > 3 and to_id(p[3]) in ("protosynthesisspe",
                                                                  "quarkdrivespe"):  # fmt: skip
             st.proto = True
@@ -289,11 +356,19 @@ def opp_eff(o: Obs, speed_stat: int, item: str) -> float:
     return speed_stat * o.mult * (1.5 if it == "choicescarf" else 1.0)
 
 
-def consistent(obs: list[Obs], speed_stat: int, item: str) -> bool:
+def spe_stat(base: int, ev: int, nature: str, level: int = 100, iv: int = 31) -> int:
+    """A speed stat (the damage module's calc_stats for one stat)."""
+    nat = GEN.natures.get(nature, {}).get("spe", 1.0)
+    return int(((2 * base + iv + ev // 4) * level // 100 + 5) * nat)
+
+
+def consistent(obs: list[Obs], speed_stat: int, item: str, stat_of=None) -> bool:
     """Can an opponent mon with ``speed_stat`` and ``item`` have moved as observed? (ties: either
-    order)"""
+    order) ``stat_of(base speed)``: its speed stat in another forme (``Obs.base_spe``: the forme
+    it was in then), else ``speed_stat`` at every turn."""
     for o in obs:
-        e = opp_eff(o, speed_stat, item)
+        stat = stat_of(o.base_spe) if stat_of is not None and o.base_spe is not None else speed_stat
+        e = opp_eff(o, stat, item)
         if abs(e - o.ours) <= TIE * o.ours:  # Showdown rounds each step: near-ties are ties
             continue
         faster = e > o.ours if not o.trick_room else e < o.ours

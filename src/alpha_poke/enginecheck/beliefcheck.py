@@ -64,11 +64,12 @@ def belief_diffs(p1: str, p2: str, seed: int, max_turns: int = 40, script: list 
     """{"decisions", "kinds": {kind: n}, "examples": {kind: [...]}, "errors"} over a recorded
     battle's decisions, both sides' views."""
     from alpha_poke.agents.belief_state import ability_probs
-    from alpha_poke.agents.damage_obs import EPS, item_changes, likelihood, slot_of
+    from alpha_poke.agents.damage_obs import EPS, item_changes, likelihood, our_disguised, slot_of
     from alpha_poke.agents.engine_state import _prior
     from alpha_poke.agents.net_context import battle_log
     from alpha_poke.agents.pokeview import own_moves
-    from alpha_poke.agents.speed import battle_observations, consistent
+    from alpha_poke.agents.speed import battle_observations, consistent, spe_stat
+    from alpha_poke.enginecheck import random_battle
     from alpha_poke.enginecheck.statebuild import _belief, decisions
 
     out: dict = {"decisions": 0, "kinds": collections.Counter(), "examples": {}, "errors": []}
@@ -90,6 +91,21 @@ def belief_diffs(p1: str, p2: str, seed: int, max_turns: int = 40, script: list 
             ex.append(detail)
 
     seen_hits: set = set()  # (each hit checked once: the log's hits are all the battle's so far)
+    # (the true sets' EVs / IVs / nature / level: a mon's speed in the forme it was in at each
+    # turn -- the observations carry it, Obs.base_spe; Showdown's recording, cached)
+    steps, _ = random_battle(p1, p2, f"gen5,{seed},{seed + 1},{seed + 2},{seed + 3}", seed + 1,
+                             max_turns=max_turns, script=script, **({"fmt": fmt} if fmt else {}))  # fmt: skip
+    true_sets = {}
+    for s in steps[0]["state"]["sides"] if steps else ():
+        for m in s["mons"]:
+            true_sets[(s["id"], to_id(m["name"]))] = m
+
+    def stat_of(side_id: str, sp: str):
+        m = true_sets.get((side_id, sp)) or next(
+            (v for (s, n), v in true_sets.items() if s == side_id and (sp.startswith(n) or n.startswith(sp))), None)
+        if m is None:
+            return None
+        return lambda base: spe_stat(base, m["evs"][5], to_id(m["nature"]), m["level"], m["ivs"][5])
     for k, side, b, _built, t in decisions(p1, p2, seed, max_turns, ("p1", "p2"), stats, False, script, fmt):
         out["decisions"] += 1
         names = tuple(belief.display(m.species) for m in (b.teampreview_opponent_team or list(b.opponent_team.values())))
@@ -111,7 +127,7 @@ def belief_diffs(p1: str, p2: str, seed: int, max_turns: int = 40, script: list 
             spe = tm.speed
             # (the observations carry their item phases: speed.ObsTracker.result -- the item
             # passed is the one of a mon whose item never changed)
-            if obs.get(sp) and not consistent(obs[sp], spe, item):
+            if obs.get(sp) and not consistent(obs[sp], spe, item, stat_of(them, sp)):
                 found("belief:speed", (*where, spe, item))
             if hits and hits[1]:
                 for h in hits[1]:
@@ -133,7 +149,7 @@ def belief_diffs(p1: str, p2: str, seed: int, max_turns: int = 40, script: list 
                         st = pe.State.from_string(bases[h.turn])
                         ours = h.attacker if h.by_us else h.defender
                         os_, ts = slot_of(st, True, ours), slot_of(st, False, sp)
-                        if os_ is None or ts is None:
+                        if os_ is None or ts is None or our_disguised(st, ours, b.team):
                             continue
                         on = h.defender_tera if h.by_us else h.tera
                         tera = on or str(tm.tera_type).lower()
@@ -167,4 +183,7 @@ def belief_diffs(p1: str, p2: str, seed: int, max_turns: int = 40, script: list 
                     found("belief:move", (*where, mid))
     out["errors"] += stats.get("errors", [])
     out["kinds"] = dict(out["kinds"])
+    # (the state constructions' errors too: a build that failed was silent here -- 2026-10-24,
+    # every F1 hit's build raised and the damage check read none)
+    out["errors"] += [f"build: {e}" for e in stats.get("errors", [])]
     return out

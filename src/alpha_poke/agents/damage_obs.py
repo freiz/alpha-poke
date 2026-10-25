@@ -54,6 +54,9 @@ class Hit:
     # (the candidates' item -- 2026-10-24 review: one item for every hit read a Choice Specs hit
     # before a Knock Off and a Magician Assault Vest as itemless)
     item_then: str | None = None
+    # (their mon's forme at the hit: a hit in another forme than its last is left out -- the
+    # candidates' stats are the forme's now; 2026-10-24, the belief check: a Palafin-Zero's hit)
+    forme: str = ""
 
 
 def _side(ident: str) -> str:
@@ -77,6 +80,13 @@ def hits(lines: list[str], our_side: str) -> list[Hit]:
     hp: dict[tuple[str, str], int] = {}  # (side, species) -> HP (ours exact, theirs percent)
     tera: dict[tuple[str, str], str] = {}
     items = _Items()  # their mons' items as the log shows them: each hit's item then
+    forme: dict[tuple[str, str], str] = {}  # (side, species) -> its forme now (a -formechange's, ...)
+    transformed: set = set()  # slots whose active is transformed (its stats its target's)
+    since: dict[str, int] = {}  # slot -> the hits' count as its active came in (an Illusion's undo)
+    # (side, nickname) -> the species it first came in as -- poke-env's key: a Palafin back in as
+    # Palafin-Hero is the same mon in another forme
+    came_as: dict[tuple[str, str], str] = {}
+    illusion = _Illusion()  # (switch-ins that may be an Illusion holder: their hits left out)
     turn, quiet, seen_move = 0, True, False
     pending: dict | None = None
     recent = False  # the last hit can still be voided (a multi-hit's count, a Sash / Sturdy save)
@@ -86,6 +96,7 @@ def hits(lines: list[str], our_side: str) -> list[Hit]:
             continue
         tag = f[1]
         items.feed(f, active)
+        illusion.feed(f)
         if recent:
             if tag in ("move", "turn"):
                 recent = False
@@ -105,17 +116,42 @@ def hits(lines: list[str], our_side: str) -> list[Hit]:
             continue
         if tag in ("switch", "drag") and len(f) > 4:
             slot = f[2][:3]
-            sp = _species(f[3])
+            shown = _species(f[3])
+            sp = came_as.setdefault((slot[:2], f[2].split(": ", 1)[-1]), shown)
             active[slot] = sp
             hp[(slot[:2], sp)] = _hp(f[4])
-        elif tag in ("-damage", "-heal") and len(f) > 3:
+            forme[(slot[:2], sp)] = shown
+            transformed.discard(slot)
+            since[slot] = len(out)
+        elif tag == "replace" and len(f) > 3:
+            # (an Illusion broken: the hits since it came in were the disguise's name, not its own --
+            # either side's, ours under its name after too; 2026-10-24, the belief check -- a
+            # Zoroark's Choice Specs hits read as a Latias's)
+            slot, fake = f[2][:3], active.get(f[2][:3])
+            mine = slot[:2] == our_side
+            out[since.get(slot, 0):] = [
+                h for h in out[since.get(slot, 0):]
+                if ((h.attacker if h.by_us else h.defender) if mine else (h.defender if h.by_us else h.attacker)) != fake]
+            real = came_as.setdefault((slot[:2], f[2].split(": ", 1)[-1]), _species(f[3]))
+            if fake is not None and (slot[:2], fake) in hp:
+                hp[(slot[:2], real)] = hp[(slot[:2], fake)]
+            active[slot] = real
+            forme.setdefault((slot[:2], real), real)
+            pending = None
+        elif tag in ("-formechange", "detailschange") and len(f) > 3 and active.get(f[2][:3]):
+            forme[(f[2][:2], active[f[2][:3]])] = _species(f[3])
+        elif tag == "-transform":
+            transformed.add(f[2][:3])
+        elif tag in ("-damage", "-heal", "-sethp") and len(f) > 3:
+            # (-sethp too: a Pain Split's HP -- the next hit's HP before was the old one;
+            # 2026-10-24, the belief check)
             slot = f[2][:3]
             sp = active.get(slot)
             new = _hp(f[3])
             if pending is not None and tag == "-damage" and len(f) == 4 and slot == pending["def"]:
                 out.append(Hit(turn, pending["by_us"], pending["move"], pending["att"], sp,
                                pending["before"], new, pending["tera"], pending["dtera"],
-                               items.now.get(pending["key"])))  # fmt: skip
+                               items.now.get(pending["key"]), pending["forme"]))  # fmt: skip
                 recent = True
                 pending = None
             if sp is not None:
@@ -134,15 +170,25 @@ def hits(lines: list[str], our_side: str) -> list[Hit]:
             a_sp, d_sp = active.get(att), active.get(dfn)
             if a_sp is None or d_sp is None or (dfn[:2], d_sp) not in hp:
                 continue
+            # (not a transformed mon's: its stats are its target's; 2026-10-24, the belief check:
+            # an Imposter Ditto's Body Press read with its own Defense)
+            if att in transformed or dfn in transformed:
+                continue
+            # (nor one that may be an Illusion holder in disguise)
+            if illusion.ambiguous.get(att) or illusion.ambiguous.get(dfn):
+                continue
             theirs = (dfn[:2], d_sp) if att[:2] == our_side else (att[:2], a_sp)
             pending = {"by_us": att[:2] == our_side, "move": to_id(f[3]), "att": a_sp,
                        "def": dfn, "before": hp[(dfn[:2], d_sp)],
                        "tera": tera.get((att[:2], a_sp)), "dtera": tera.get((dfn[:2], d_sp)),
-                       "key": theirs}  # fmt: skip
+                       "key": theirs, "forme": forme.get(theirs, "")}  # fmt: skip
             continue
         if not seen_move and tag not in _QUIET:
             quiet = False
-    return out
+    # (their mons' formes now: the candidates' -- a hit in another is left out)
+    their = "p2" if our_side == "p1" else "p1"
+    return [h for h in out if not h.forme
+            or h.forme == forme.get((their, h.defender if h.by_us else h.attacker), h.forme)]
 
 
 def _shown(hp: int, maxhp: int) -> int:
@@ -211,6 +257,16 @@ def likelihood(hit: Hit, base: str, our_slot: int, their_slot: int, cands: list[
 _SLOT = re.compile(r"[^A-Z0-9]")
 
 
+def our_disguised(state, ours: str, our_team) -> bool:
+    """Our mon at a hit may be our Illusion user under another's name: the hit's species is not
+    our turn-start active while an Illusion holder of ours is alive (the log shows the disguise;
+    2026-10-24, the belief check -- our Zoroark hit as a Latias). ``our_team``: poke-env's."""
+    active = state.side_one.pokemon[int(state.side_one.active_index)]
+    if _SLOT.sub("", str(active.id).upper()) == _SLOT.sub("", ours.upper()):
+        return False
+    return any(to_id(m.ability or "") == "illusion" and not m.fainted for m in our_team.values())
+
+
 def slot_of(state, side_one: bool, species: str) -> int | None:
     """The team index of a species in a poke_engine.State side (engine ids, upper case)."""
     side = state.side_one if side_one else state.side_two
@@ -238,6 +294,81 @@ TOP_SPREADS = 12
 _SWAPS = ("[from] move: Trick", "[from] move: Switcheroo")
 _TAKERS = ("[from] move: Thief", "[from] move: Covet", "[from] ability: Magician",
            "[from] ability: Pickpocket", "[from] move: Bestow")  # fmt: skip
+
+
+ILLUSION = {"zoroark", "zoroarkhisui", "zorua", "zoruahisui"}
+
+
+class _Illusion:
+    """Which switch-ins may be an Illusion holder in disguise (2026-10-24, the belief check: a
+    Zoroark's hits / move order read as its disguise's -- the true set ruled out). Showdown's
+    Illusion: the last non-fainted mon after the holder in party order; a switch swaps the two
+    mons' places (battle-actions switchIn); the order the team preview's (|poke|), its lead
+    first. ``feed`` each line; ``ambiguous[slot]``: the active there may be the holder."""
+
+    def __init__(self):
+        self.order: dict[str, list[str]] = {"p1": [], "p2": []}
+        self.fainted: set = set()
+        self.active: dict[str, str] = {}  # slot -> the species shown
+        self.ambiguous: dict[str, bool] = {}
+        self._led: set = set()
+        self._before: dict[str, tuple] = {}  # slot -> (the order before its last switch-in, a lead's)
+
+    def _target(self, side: str, order: list[str], holder: str) -> str | None:
+        """The disguise of ``holder`` switching in to the place of order[0]: Showdown swaps the
+        two places first (switchIn), then picks it (Illusion's onBeforeSwitchIn) -- the one
+        going out may be it."""
+        hyp = list(order)
+        j = hyp.index(holder)
+        hyp[0], hyp[j] = hyp[j], hyp[0]
+        for sp in reversed(hyp[1:]):
+            if (side, sp) not in self.fainted:
+                return sp
+        return None
+
+    def feed(self, f: list[str]) -> None:
+        tag = f[1] if len(f) > 1 else ""
+        if tag == "poke" and len(f) > 3:
+            sp = _species(f[3])
+            if sp not in self.order[f[2]]:
+                self.order[f[2]].append(sp)
+        elif tag in ("switch", "drag") and len(f) > 3:
+            slot, side, shown = f[2][:3], f[2][:2], _species(f[3])
+            order = self.order[side]
+            if shown not in order:
+                order.append(shown)
+            lead = side not in self._led
+            holders = [h for h in order if h in ILLUSION and (side, h) not in self.fainted
+                       and h != self.active.get(slot)]
+            # (if it is the holder: its disguise -- a lead's from the preview's order)
+            self.ambiguous[slot] = any(
+                h != shown and self._target(side, [h] + [x for x in order if x != h] if lead else order, h) == shown
+                for h in holders)  # fmt: skip
+            self._before[slot] = (list(order), lead)
+            if lead:  # (the lead first, the rest in the preview's order)
+                self._led.add(side)
+                order.remove(shown)
+                order.insert(0, shown)
+            i, j = 0, order.index(shown)
+            order[i], order[j] = order[j], order[i]
+            self.active[slot] = shown
+        elif tag == "replace" and len(f) > 3:
+            slot, side, real = f[2][:3], f[2][:2], _species(f[3])
+            before, lead = self._before.get(slot, (None, False))
+            if before is not None and real in before:
+                # (the holder came in, not the one shown: its switch redone from the order before --
+                # a lead first, else its place swapped with the first's)
+                if lead:
+                    order = [real] + [h for h in before if h != real]
+                else:
+                    order, j = list(before), before.index(real)
+                    order[0], order[j] = order[j], order[0]
+                self.order[side] = order
+            self.active[slot], self.ambiguous[slot] = real, False
+        elif tag == "faint" and len(f) > 2:
+            sp = self.active.get(f[2][:3])
+            if sp is not None:
+                self.fainted.add((f[2][:2], sp))
 
 
 class _Items:
@@ -349,6 +480,7 @@ def damage_posteriors(battle, belief, theirs: list, team_names: tuple[str, ...])
     (``record_base``). Cached per mon and evidence."""
     from alpha_poke.agents.damage import calc_stats
     from alpha_poke.agents.net_context import battle_log
+    from alpha_poke.agents.pokeview import own_base_stats
 
     import poke_engine as pe
 
@@ -383,7 +515,8 @@ def damage_posteriors(battle, belief, theirs: list, team_names: tuple[str, ...])
         if key not in cache:
             cands, prior = _candidates(belief, m, team_names, then=then)
             level = m.level or 100
-            stats = [calc_stats(m.base_stats, c[2], level=level) for c in cands]
+            # (its own base stats: a transformed one's poke-env has its target's)
+            stats = [calc_stats(own_base_stats(m), c[2], level=level) for c in cands]
             vec = [[s["hp"], s["atk"], s["def"], s["spa"], s["spd"], s["spe"]] for s in stats]
             likes = []
             for h in mh:
@@ -393,7 +526,7 @@ def damage_posteriors(battle, belief, theirs: list, team_names: tuple[str, ...])
                     st = parsed[h.turn] = pe.State.from_string(base)
                 ours = h.attacker if h.by_us else h.defender
                 os_, ts = slot_of(st, True, ours), slot_of(st, False, sp)
-                if os_ is None or ts is None:
+                if os_ is None or ts is None or our_disguised(st, ours, battle.team):
                     continue
                 on = h.defender_tera if h.by_us else h.tera  # their mon terastallized at the hit
                 tera = on or (m.tera_type.name.lower() if m.tera_type else "typeless")

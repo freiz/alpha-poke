@@ -40,7 +40,7 @@ from alpha_poke.agents.pokeview import (
     own_stats,
     own_weight,
 )
-from alpha_poke.agents.speed import battle_observations, consistent, spread_dist
+from alpha_poke.agents.speed import battle_observations, consistent, spe_stat, spread_dist
 from alpha_poke.agents.timers import SideTimers, battle_timers
 from alpha_poke.analysis.roles import to_id
 
@@ -119,7 +119,9 @@ def _status(mid: str) -> bool:
 def _types(mon) -> tuple[str, str]:
     # the non-tera types: the engine keeps them when terastallized, STAB on them (tera_type
     # apart: has_type reads only it), as Showdown's getTypes(false, true) (L31)
-    ts = [t.name.lower() for t in mon.base_types if t is not None]
+    # (Showdown's "???" -- Double Shock's, Burn Up's -- poke-env's THREE_QUESTION_MARKS: the
+    # engine's typeless; 2026-10-24, the state check's types)
+    ts = ["typeless" if t.name == "THREE_QUESTION_MARKS" else t.name.lower() for t in mon.base_types if t is not None]
     return (ts + ["typeless", "typeless"])[0], (ts + ["typeless", "typeless"])[1]
 
 
@@ -317,8 +319,9 @@ def sample_set(
             w = [0.0 if it == "assaultvest" else p for (it, *_), p in zip(dmg_post, w, strict=True)]
         if speed_obs:  # the move order too: an inconsistent spread / item nearly ruled out
             base = own_base_stats(mon)
+            # (each turn's in the forme it was in then: a Minior's Meteor, an Eiscue's Noice)
             w = [p * (1.0 if consistent(speed_obs, calc_stats(base, s, level=level)["spe"],
-                                        it if not item_seen else item) else 1e-3)
+                                        it if not item_seen else item, _forme_stat(s, level)) else 1e-3)
                  for (it, _, s, _), p in zip(dmg_post, w, strict=True)]  # fmt: skip
         if sum(w) > 0:
             it, ab, spread, _ = rng.choices(dmg_post, weights=w)[0]
@@ -335,6 +338,11 @@ def sample_set(
 
 
 _SPREAD_SPEEDS: dict = {}  # (species, level) -> the speed stat of each usage spread
+
+
+def _forme_stat(spread, level: int):
+    """A spread's speed stat in a forme of the given base speed (speed.consistent's stat_of)."""
+    return lambda base: spe_stat(base, spread.evs[5], spread.nature, level)
 
 
 def _sample_spread(mon, item: str, item_seen: bool, obs: list, dist, rng) -> tuple:
@@ -355,7 +363,7 @@ def _sample_spread(mon, item: str, item_seen: bool, obs: list, dist, rng) -> tup
         for it in (item,) if item_seen else (item, "choicescarf"):
             if it == "choicescarf" and it != item and dist.item.get("choicescarf", 0) <= 0:
                 continue
-            ok = [i for i, sp in enumerate(speeds) if consistent(obs, sp, it)]
+            ok = [i for i, sp in enumerate(speeds) if consistent(obs, sp, it, _forme_stat(spreads[i], level))]
             if ok:  # by usage; uniform if the fitting spreads all have zero usage weight
                 w = [ws[j] for j in ok]
                 i = rng.choices(ok, weights=w if sum(w) > 0 else None)[0]
@@ -1287,6 +1295,10 @@ def build_state(
             # (a type change after it terastallized did nothing -- Showdown's setType: a Double
             # Shock on a tera'd Pawmot; one before it stays)
             vol.discard("typechange")
+            # (its types too: the -start typechange poke-env read names the tera type -- the
+            # engine's STAB on the types it kept, Close Combat's lost; 2026-10-24, the belief
+            # check, its damage evidence)
+            mons[i] = _with(p, types=tuple(p.base_types))
     # (a type change to its own types -- a Ghost's Libero into Ghost: none, as Showdown's types
     # compare; not a transformed one's, nor Roost's turn -- S137)
     for vol, mons, i, tf, tm, mon in ((our_vol, our_mons, our_active_idx, our_tf, tm_us, active),

@@ -123,6 +123,8 @@ function monState(p, side) {
 		nature: p.set.nature || 'Serious',
 		// (L183: the set's EVs -- a forme change's stats are recomputed from them)
 		evs: ['hp', 'atk', 'def', 'spa', 'spd', 'spe'].map(s => (p.set.evs || {})[s] || 0),
+		// (the set's IVs, 31 unless given: the belief check's speed in another forme)
+		ivs: ['hp', 'atk', 'def', 'spa', 'spd', 'spe'].map(s => ((p.set.ivs || {})[s] ?? 31)),
 		active: !!p.isActive,
 		// trapped for its request (true, or 'hidden': an ability's -- Shadow Tag, Magnet Pull --
 		// that the request shows only as maybeTrapped; doc/engine-diff.md L177)

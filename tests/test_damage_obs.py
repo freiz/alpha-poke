@@ -71,3 +71,92 @@ def test_each_hit_is_explained_with_its_own_items_phase():
     assert item_changes(lines)[("p2", "delphox")] == "choicespecs"
     theirs = [h.item_then for h in hits(lines, "p1") if not h.by_us]
     assert theirs == [None, "none", "assaultvest"], theirs
+
+
+# 2026-10-24, the belief check (doc/state-diff.md B3): hits F1 read wrong -- each one's test
+def test_a_pain_splits_hp_is_the_next_hits_before():
+    """-sethp (Pain Split) sets the HP too: the next hit's HP before was the old one (a Knock Off
+    of 79 HP read as 26 -- the true set ruled out)."""
+    lines = [
+        "|switch|p1a: Cat|Meowscarada, F|294/294",
+        "|switch|p2a: Rotom|Rotom-Wash|62/100",
+        "|turn|1",
+        "|move|p2a: Rotom|Pain Split|p1a: Cat",
+        "|-sethp|p1a: Cat|210/294|[from] move: Pain Split|[silent]",
+        "|-sethp|p2a: Rotom|79/100|[from] move: Pain Split",
+        "|turn|2",
+        "|move|p1a: Cat|Knock Off|p2a: Rotom",
+        "|-damage|p2a: Rotom|54/100",
+        "|turn|3",
+    ]
+    (h,) = hits(lines, "p1")
+    assert (h.before, h.after) == (79, 54)
+
+
+def test_a_transformed_mons_hits_and_another_formes_are_left_out():
+    transform = [
+        "|switch|p1a: Corv|Corviknight, M|399/399",
+        "|switch|p2a: Ditto|Ditto|100/100",
+        "|-transform|p2a: Ditto|p1a: Corv|[from] ability: Imposter",
+        "|turn|1",
+        "|move|p2a: Ditto|Body Press|p1a: Corv",
+        "|-damage|p1a: Corv|300/399",
+        "|turn|2",
+    ]
+    assert hits(transform, "p1") == []
+    # (a Palafin-Zero's hit, Hero now: the candidates' stats are the Hero's)
+    forme = [
+        "|switch|p1a: Corv|Corviknight, M|399/399",
+        "|switch|p2a: Fin|Palafin|100/100",
+        "|turn|1",
+        "|move|p2a: Fin|Flip Turn|p1a: Corv",
+        "|-damage|p1a: Corv|370/399",
+        "|turn|2",
+        "|switch|p2a: Fin|Palafin-Hero|100/100",
+        "|detailschange|p2a: Fin|Palafin-Hero",
+        "|turn|3",
+    ]
+    assert hits(forme, "p1") == []
+    assert len(hits(forme[:6], "p1")) == 1
+
+
+def test_a_broken_illusions_hits_are_left_out():
+    """Their Zoroark hit as a Latias until its Illusion broke: those hits are not the Latias's."""
+    lines = [
+        "|switch|p1a: Corv|Corviknight, M|399/399",
+        "|switch|p2a: Latias|Latias, F|100/100",
+        "|turn|1",
+        "|move|p2a: Latias|Sludge Bomb|p1a: Corv",
+        "|-damage|p1a: Corv|330/399",
+        "|turn|2",
+        "|move|p1a: Corv|Brave Bird|p2a: Latias",
+        "|-damage|p2a: Latias|40/100",
+        "|replace|p2a: Zoroark|Zoroark-Hisui, F",
+        "|-end|p2a: Zoroark|Illusion",
+        "|turn|3",
+    ]
+    assert hits(lines, "p1") == []
+
+
+def test_which_switch_ins_may_be_an_illusion():
+    """Showdown's Illusion: the last non-fainted mon after the holder, the two places swapped
+    first (the one going out may be it). Preview order Corviknight, Zoroark, Snorlax: a
+    Corviknight lead is itself (a Zoroark lead would show the Snorlax); a Snorlax in for it may be
+    the Zoroark (its place swapped with Corviknight's: the Snorlax last) -- it was; after its
+    faint nothing is."""
+    from alpha_poke.agents.damage_obs import _Illusion
+
+    il = _Illusion()
+    for line in ("|poke|p2|Corviknight, M|", "|poke|p2|Zoroark-Hisui, M|", "|poke|p2|Snorlax, M|"):
+        il.feed(line.split("|"))
+
+    def switch(line):
+        il.feed(line.split("|"))
+        return il.ambiguous["p2a"]
+
+    assert switch("|switch|p2a: Corviknight|Corviknight, M|100/100") is False
+    assert switch("|switch|p2a: Snorlax|Snorlax, M|100/100") is True
+    il.feed("|replace|p2a: Zoroark|Zoroark-Hisui, M".split("|"))
+    assert il.ambiguous["p2a"] is False and il.order["p2"] == ["zoroarkhisui", "corviknight", "snorlax"]
+    il.feed("|faint|p2a: Zoroark".split("|"))
+    assert switch("|switch|p2a: Snorlax|Snorlax, M|100/100") is False

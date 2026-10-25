@@ -1207,10 +1207,20 @@ fn set_damage_rolls(
         .and_then(|c| MOVES.get(&c))
         .cloned()
         .ok_or_else(|| PyValueError::new_err(format!("unknown move {mv}")))?;
-    let splash = MOVES.get(&Choices::SPLASH).cloned().unwrap();
+    let mut splash = MOVES.get(&Choices::SPLASH).cloned().unwrap();
     let mut base = State::deserialize(state);
     if own_active > 5 || opp > 5 {
         return Err(PyValueError::new_err("slot out of range"));
+    }
+    // (2026-10-24, the belief check: a defender that came in this turn switched -- Stakeout's
+    // double power reads the defender's choice; it was Splash)
+    let defender_came_in = if side_one {
+        base.side_two.active_index as usize != opp
+    } else {
+        base.side_one.active_index as usize != own_active
+    };
+    if defender_came_in {
+        splash.category = poke_engine::choices::MoveCategory::Switch;
     }
     // (a mon that came in during the turn: none of the turn-start active's boosts / volatiles)
     extra::switch_in(&mut base.side_one, own_active);
