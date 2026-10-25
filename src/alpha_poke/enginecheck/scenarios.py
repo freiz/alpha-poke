@@ -365,6 +365,13 @@ def ability_changes() -> list[Spec]:
         out.append(_spec(f"abilities/{ability.lower().replace(' ', '')}-contact", team(mon, FILLER), team(azu, FILLER),
                          [{"p1": "move 1", "p2": "move 1"}] * 3,
                          expect=(f"|ability: {ability}|p2a: Azumarill|[ability] Huge Power",)))  # fmt: skip
+    # (B8: Worry Seed over an ability the foe has not shown -- the log names the old one, its own
+    # back after a switch-out; the state_facts check's: the oracle gives the true set)
+    whim = S("Whimsicott", "Leftovers", "Prankster", ["Worry Seed", "Moonblast", "Protect", "Encore"])
+    out.append(_spec("abilities/worryseed-unknown", team(whim, FILLER), team(azu, FILLER),
+                     [{"p1": "move 1", "p2": "move 3"}, {"p1": "move 2", "p2": "switch 2"},
+                      {"p1": "move 2", "p2": "switch 2"}, {"p1": "move 2", "p2": "move 3"}],
+                     expect=("|-ability|p2a: Azumarill|Insomnia|Huge Power|[from] move: Worry Seed",)))  # fmt: skip
     rai = S("Raichu", "Leftovers", "Lightning Rod", ["Role Play", "Thunderbolt", "Nasty Plot", "Surf"], FAST, "Timid")
     slow = S("Slowking-Galar", "Leftovers", "Regenerator", ["Sludge Bomb", "Psyshock", "Calm Mind", "Thunder Wave"])
     out.append(_spec("abilities/roleplay-regenerator", team(rai, FILLER), team(slow, FILLER),

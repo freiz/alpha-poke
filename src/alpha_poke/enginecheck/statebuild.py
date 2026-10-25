@@ -17,6 +17,7 @@ compared the same way (``replay=True``).
 """
 
 import contextlib
+import json
 import logging
 import random
 
@@ -458,27 +459,171 @@ def battle_diffs(p1: str, p2: str, seed: int, max_turns: int = 40, sides=("p1", 
     out: list = []
     stats: dict = {}
     for k, side, b, built, t in decisions(p1, p2, seed, max_turns, sides, stats, oracle, script, fmt):
-        seen = {to_id(m.species) for m in b.opponent_team.values()}
-        # (a pivot's switch: force_switch, as the search needs it -- the differential's states
-        # leave it off; a fainted active: off, the engine switches it anyway)
-        req = b.last_request or {}
-        want = bool(req.get("forceSwitch")) and _active(built.side_one).hp > 0
-        if built.side_one.force_switch != want:
-            out.append((k, side, "own:force_switch", f"{built.side_one.force_switch} vs {want}"))
-        diffs = own_diffs(built.side_one, t.side_one)
-        recharge = any(m.get("id") == "recharge" for m in ((req.get("active") or [{}])[0].get("moves") or []))
-        if want or req.get("forceSwitch") or recharge:
-            # (a switch decision -- the active leaves -- or a recharge: its moves' flags are its
-            # last move request's in Showdown, whatever the lock since; nothing reads them now)
-            act = _sp(_active(built.side_one))
-            diffs = [(k2, d) for k2, d in diffs if not (k2 == "own:disabled" and d.startswith(act + " "))]
-        for kind, detail in (diffs
-                             + foe_diffs(built.side_two, t.side_two, seen, oracle,
-                                         frozenset(_disguised(b, t.side_two)))
-                             + field_diffs(built, t)
-                             + ([] if want or req.get("forceSwitch") else option_diffs(b, built, t))):  # fmt: skip
-            out.append((k, side, kind, detail))
+        out += [(k, side, kind, detail) for kind, detail in decision_diffs(b, built, t, oracle)]
     return out, stats
+
+
+def fact_diffs(p1: str, p2: str, seed: int, max_turns: int = 40, sides=("p1", "p2"),
+               script: list | None = None, fmt: str | None = None) -> tuple[list[tuple], dict]:  # fmt: skip
+    """The belief's own construction (no oracle) against the truth on what it holds as known of
+    the foe -- poke-env's / our trackers' facts: an ability it knows (now, its own), an item it
+    knows, the moves it saw. Each must be true (2026-10-25: the oracle-mode checks took the true set
+    for the foe -- a Worry Seed's Insomnia held as its own ability went unseen). Not what it draws:
+    a spread, an unrevealed item are guesses, not facts (the draws' agreement is no test of them --
+    a deterministic spread, a 99% prior)."""
+    from alpha_poke.agents.pokeview import current_ability, own_ability, own_moves
+
+    out: list = []
+    stats: dict = {}
+    for k, side, b, built, t in decisions(p1, p2, seed, max_turns, sides, stats, False, script, fmt):
+        if "illusion" in _vols(t.side_two) or "illusion" in _vols(built.side_two):
+            continue  # (which mon it is the world's draw: foe_diffs')
+        hidden = frozenset(_disguised(b, t.side_two))
+        bm, tm = _mons(built.side_two), _mons(t.side_two)
+        for mon in b.opponent_team.values():
+            sp = to_id(mon.species)
+            if sp in hidden or sp not in bm or sp not in tm or mon.transformed:
+                continue
+            bp, tp = bm[sp], tm[sp]
+            facts = []
+            if own_ability(mon):
+                facts.append(("base_ability", own_ability(mon)))
+            if current_ability(mon):
+                facts.append(("ability", None))
+            if mon.item and mon.item != "unknown_item":
+                facts.append(("item", None))
+            for k2, known in facts:
+                tv = _norm(k2, getattr(tp, k2))
+                bv = _norm(k2, getattr(bp, k2))
+                if bv != tv:
+                    out.append((k, side, f"fact:{k2}", f"{sp} {bv} vs {tv}" + (f" (known {known})" if known else "")))
+            seen_moves = {m for m in own_moves(mon)}
+            tmv = {str(m.id).lower() for m in tp.moves}
+            wrong = sorted(m for m in seen_moves if m not in tmv and m not in ("struggle",))
+            if wrong and tp.transform_backup is None:
+                out.append((k, side, "fact:moves", f"{sp} {wrong} not in {sorted(tmv)}"))
+    return out, stats
+
+
+def _in_order_of(st: pe.State, truth: pe.State) -> pe.State:
+    """``st`` with each side's mons in ``truth``'s order (by species; the active, the last switch-in
+    and Future Sight's user follow); a side it cannot match, as it is."""
+    sides = []
+    for a, b in ((st.side_one, truth.side_one), (st.side_two, truth.side_two)):
+        have = [SAME_SPECIES.get(_sp(p), _sp(p)) for p in a.pokemon]
+        want = [SAME_SPECIES.get(_sp(p), _sp(p)) for p in b.pokemon]
+        perm = []  # new index -> old
+        for sp in want:
+            i = next((j for j, x in enumerate(have) if x == sp and j not in perm), None)
+            perm.append(i)
+        rest = [j for j in range(len(have)) if j not in perm]
+        perm = [i if i is not None else rest.pop(0) for i in perm] if len(rest) == perm.count(None) else None
+        if perm is None or perm == list(range(len(have))):
+            sides.append(a)
+            continue
+        new_of = {old: new for new, old in enumerate(perm)}
+        kw = {x: getattr(a, x) for x in dir(pe.Side) if not x.startswith("_")}
+        kw["pokemon"] = [a.pokemon[i] for i in perm]
+        kw["active_index"] = pe.PokemonIndex(str(new_of[int(str(a.active_index))]))
+        lu = str(a.last_used_move)
+        if lu.startswith("switch:"):
+            kw["last_used_move"] = f"switch:{new_of[int(lu[7:])]}"
+        if a.future_sight[0] > 0:
+            kw["future_sight"] = (a.future_sight[0], pe.PokemonIndex(str(new_of[int(str(a.future_sight[1]))])))
+        sides.append(pe.Side(**kw))
+    new = pe.State(side_one=sides[0], side_two=sides[1]).to_string().split("/")[:2]
+    return pe.State.from_string("/".join(new + st.to_string().split("/")[2:]))
+
+
+def built_chain(p1: str, p2: str, seed: int, max_turns: int = 40, script: list | None = None,
+                fmt: str | None = None, depth: int = 2, every: int = 2) -> tuple[dict, dict]:  # fmt: skip
+    """The engine played on from our own construction (p1's, the oracle's sets) along the battle's
+    choices, compared with Showdown from its first step (chaindiff.chain_diffs' start): what the
+    state holds now is right, what it implies wrong -- a base ability back after a switch-out, a
+    lock's options, a move at 0 PP (2026-10-25: the checks compared the decision's state alone, the
+    engine's chains began at the truth). ({chain_diffs' counts}, {"decisions", "errors"})."""
+    from alpha_poke.enginecheck.chaindiff import chain_diffs
+
+    stats: dict = {}
+    from alpha_poke.enginecheck.chaindiff import _with_true_hidden
+
+    # (in the truth's order: the comparison is by slot -- Showdown's team order; ours, poke-env's.
+    # The lengths Showdown draws hidden -- confusion's, a lock's, a partial trap's -- the truth's:
+    # no player knows them, the chain's own resync after each step takes them so too)
+    built = {k: _with_true_unseen(_with_true_hidden(_in_order_of(st, t), t), t)
+             for k, _, _, st, t in decisions(p1, p2, seed, max_turns, ("p1",), stats, True, script, fmt)
+             if not ({"illusion"} & (_vols(t.side_one) | _vols(t.side_two)))}  # fmt: skip
+    views: dict = {}  # (the same recording: its cache key has views)
+    steps, err = random_battle(p1, p2, f"gen5,{seed},{seed + 1},{seed + 2},{seed + 3}", seed + 1,
+                               max_turns=max_turns, views=views, script=script,
+                               **({"fmt": fmt} if fmt else {}))  # fmt: skip
+    r = chain_diffs(steps, depth, every, start=built.get, first=0, rename=_rename_choice, same=_alias)
+    return r, stats
+
+
+def _alias(key: str, ours, theirs) -> bool:
+    """Our names for one thing Showdown names otherwise (SAME_SPECIES: Greninja-Bond as Greninja --
+    its id, its switch option)."""
+    def norm(v):
+        s = json.dumps(v, default=str).lower()
+        for a, b in SAME_SPECIES.items():
+            s = s.replace(a, b)
+        return s
+    return norm(ours) == norm(theirs)
+
+
+def _rename_choice(st: pe.State, k: int, choice: str) -> str:
+    """A choice as Showdown names it -- "switch greninja" -- as the state's mon is named (our
+    construction's: Greninja-Bond), the one whose species it is (SAME_SPECIES)."""
+    if not choice.startswith("switch "):
+        return choice
+    side = st.side_one if k == 0 else st.side_two
+    sp = choice[7:]
+    ids = [_sp(p) for p in side.pokemon]
+    if sp in ids:
+        return choice
+    alias = next((i for i in ids if SAME_SPECIES.get(i) == sp), None)
+    return f"switch {alias}" if alias else choice
+
+
+def _with_true_unseen(st: pe.State, truth: pe.State) -> pe.State:
+    """``st`` with what no player sees from the truth: a Substitute's HP after a hit (the log does
+    not show it -- the state checks skip it too)."""
+    kws = []
+    for a, b in ((st.side_one, truth.side_one), (st.side_two, truth.side_two)):
+        kw = {x: getattr(a, x) for x in dir(pe.Side) if not x.startswith("_")}
+        if "substitute" in _vols(a) and "substitute" in _vols(b):
+            kw["substitute_health"] = b.substitute_health
+        kws.append(pe.Side(**kw))
+    new = pe.State(side_one=kws[0], side_two=kws[1]).to_string().split("/")[:2]
+    return pe.State.from_string("/".join(new + st.to_string().split("/")[2:]))
+
+
+def decision_diffs(b, built, t, sets: bool) -> list[tuple[str, str]]:
+    """One decision's built state against the truth (both from the player's side): [(kind,
+    detail)]; ``sets``: the foe's revealed mons' sets too (item, abilities, stats, moves, PP)."""
+    out: list = []
+    seen = {to_id(m.species) for m in b.opponent_team.values()}
+    # (a pivot's switch: force_switch, as the search needs it -- the differential's states
+    # leave it off; a fainted active: off, the engine switches it anyway)
+    req = b.last_request or {}
+    want = bool(req.get("forceSwitch")) and _active(built.side_one).hp > 0
+    if built.side_one.force_switch != want:
+        out.append(("own:force_switch", f"{built.side_one.force_switch} vs {want}"))
+    diffs = own_diffs(built.side_one, t.side_one)
+    recharge = any(m.get("id") == "recharge" for m in ((req.get("active") or [{}])[0].get("moves") or []))
+    if want or req.get("forceSwitch") or recharge:
+        # (a switch decision -- the active leaves -- or a recharge: its moves' flags are its
+        # last move request's in Showdown, whatever the lock since; nothing reads them now)
+        act = _sp(_active(built.side_one))
+        diffs = [(k2, d) for k2, d in diffs if not (k2 == "own:disabled" and d.startswith(act + " "))]
+    for kind, detail in (diffs
+                         + foe_diffs(built.side_two, t.side_two, seen, sets,
+                                     frozenset(_disguised(b, t.side_two)))
+                         + field_diffs(built, t)
+                         + ([] if want or req.get("forceSwitch") else option_diffs(b, built, t))):  # fmt: skip
+        out.append((kind, detail))
+    return out
 
 
 def _silent_lock_end(built: pe.Side, truth: pe.Side) -> bool:

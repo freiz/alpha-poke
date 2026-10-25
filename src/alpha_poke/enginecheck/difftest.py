@@ -141,6 +141,33 @@ def _state(spec: Spec, path: str) -> dict:
     return out
 
 
+def check_state_facts(spec: Spec) -> dict:
+    """The belief's own construction (no oracle) against the truth: what its draws all hold alike
+    (statebuild.fact_diffs -- the log's facts), the foe's sets compared too."""
+    from alpha_poke.enginecheck.statebuild import fact_diffs
+
+    diffs, st = fact_diffs(spec.p1, spec.p2, spec.seed, spec.max_turns, script=spec.steps_script,
+                           fmt=spec.fmt or None)  # fmt: skip
+    out = _result(st["decisions"])
+    for k, side, kind, detail in diffs:
+        _add(out, kind, {"step": k, "side": side, "detail": detail})
+    out["errors"] = st["errors"]
+    return out
+
+
+def check_state_chain(spec: Spec) -> dict:
+    """The engine played on from our own construction (statebuild.built_chain)."""
+    from alpha_poke.enginecheck.statebuild import built_chain
+
+    r, st = built_chain(spec.p1, spec.p2, spec.seed, spec.max_turns, spec.steps_script, spec.fmt or None)
+    out = _result(r["compared"])
+    for k, c in r["kinds"].items():
+        out["kinds"][k] += c
+        out["examples"][k] = r["examples"].get(k, [])
+    out["errors"] = r["errors"] + st["errors"]
+    return out
+
+
 def check_state_live(spec: Spec) -> dict:
     return _state(spec, "live")
 
@@ -186,6 +213,9 @@ CHECKS = {
     "engine_chain": (check_engine_chain, lambda s: True),
     "state_live": (check_state_live, lambda s: not s.fmt),
     "state_replay": (check_state_replay, lambda s: not s.fmt),
+    # (2026-10-25: the construction itself, no oracle -- what its draws all hold, the log's facts)
+    "state_facts": (check_state_facts, lambda s: not s.fmt),
+    "state_chain": (check_state_chain, lambda s: not s.fmt),
     "tree_history": (check_tree_history, lambda s: not s.fmt),
     "belief_truth": (check_belief_truth, lambda s: s.fmt == PCT),
 }

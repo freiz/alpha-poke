@@ -74,19 +74,26 @@ def _hidden_keys(start: dict, now: dict) -> set[str]:
     return out
 
 
-def chain_diffs(steps: list[dict], depth: int = 3, every: int = 3) -> dict:
+def chain_diffs(steps: list[dict], depth: int = 3, every: int = 3, start=None, first: int = 1,
+                rename=None, same=None) -> dict:  # fmt: skip
     """From every ``every``-th comparable turn start: up to ``depth`` turns played on by the
     engine (clean turns only: turn start to turn start, both sides choosing); the second turn's
     on compared. {"chains", "compared", "kinds": {kind: n}, "examples": {kind: [...]},
-    "errors"}."""
+    "errors"}. ``start``: step index -> the chain's first state (None: no chain there) -- our own
+    construction's (builtchain), else the truth's; ``first``: the depth compared from (0 with a
+    start of our own: its first step is no other check's); ``rename``: (state, side 0 / 1, choice)
+    -> the choice as that state names it, ``same``: (key, engine value, Showdown's) -> alike though
+    unequal (a start of our own: its names, poke-env's)."""
     out: dict = {"chains": 0, "compared": 0, "kinds": {}, "examples": {}, "errors": []}
     starts = [k for k in range(len(steps) - 1)
               if comparable(steps, k) is None and not at_decision(steps, k)][::every]  # fmt: skip
     for k0 in starts:
         try:
-            st = ec.engine_state(steps[k0]["state"])
+            st = ec.engine_state(steps[k0]["state"]) if start is None else start(k0)
         except BaseException as e:  # noqa: BLE001
-            out["errors"].append(f"truth: {type(e).__name__}: {str(e)[:120]}")
+            out["errors"].append(f"start: {type(e).__name__}: {str(e)[:120]}")
+            continue
+        if st is None:
             continue
         out["chains"] += 1
         k = k0
@@ -96,6 +103,8 @@ def chain_diffs(steps: list[dict], depth: int = 3, every: int = 3) -> dict:
             a, b = steps[k], steps[k + 1]
             c1, c2 = ("none" if a["choices"][s]["engine"] == "struggle" else a["choices"][s]["engine"]
                       for s in ("p1", "p2"))  # fmt: skip
+            if rename is not None:
+                c1, c2 = rename(st, 0, c1), rename(st, 1, c2)
             n = tuple(len(s["mons"]) for s in a["state"]["sides"])
             try:
                 hints = ec.move_hints(a["state"], b["state"])
@@ -107,10 +116,11 @@ def chain_diffs(steps: list[dict], depth: int = 3, every: int = 3) -> dict:
             except BaseException as e:  # noqa: BLE001 - the binding's panics are BaseExceptions
                 out["errors"].append(f"engine d{d}: {c1} | {c2}: {type(e).__name__}: {str(e)[:120]}")
                 break
-            if d >= 1:
+            if d >= first:
                 out["compared"] += 1
                 hidden = _hidden_keys(a["state"], b["state"])
-                diff = {x: v for x, v in res["diff"].items() if x not in hidden}
+                diff = {x: v for x, v in res["diff"].items()
+                        if x not in hidden and not (same is not None and same(x, *v))}  # fmt: skip
                 for kind in sorted({kind_of(x) for x in diff}):
                     out["kinds"][kind] = out["kinds"].get(kind, 0) + 1
                     ex = out["examples"].setdefault(kind, [])

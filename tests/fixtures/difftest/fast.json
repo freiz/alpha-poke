@@ -3,21 +3,32 @@
   "#compared": 1095
  },
  "engine_chain": {
-  "#compared": 661
+  "#compared": 663
  },
  "engine_step": {
-  "#compared": 1656,
+  "#compared": 1664,
   "#skipped: battle ended": 27,
-  "#skipped: not a turn start": 315
+  "#skipped: not a turn start": 316
+ },
+ "state_chain": {
+  "#compared": 865,
+  "attack": 6,
+  "hp": 1,
+  "nature": 865,
+  "special_attack": 11,
+  "special_defense": 2
+ },
+ "state_facts": {
+  "#compared": 2607
  },
  "state_live": {
-  "#compared": 2590
+  "#compared": 2607
  },
  "state_replay": {
-  "#compared": 2590
+  "#compared": 2607
  },
  "tree_history": {
-  "#compared": 1154,
+  "#compared": 1162,
   "#skipped: no log step": 5,
   "#skipped: the last turn": 22
  }

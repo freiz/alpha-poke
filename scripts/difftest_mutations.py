@@ -105,9 +105,12 @@ MUTATIONS = [
     ("a Sleep Talk's Rollout locks nothing", "src/alpha_poke/agents/timers.py",
      'st.rollout_moving = mv in ("rollout", "iceball") and st.status.get(sp) != "slp" and not any(',
      'st.rollout_moving = mv in ("rollout", "iceball") and not any('),
-    # (an ability set over an unknown one -- Worry Seed's: the old one its own -- is the belief's
-    # derivation, which the oracle-mode state checks never see; guarded by tests/test_dual_engine.py's
-    # test_an_ability_set_over_an_unknown_one_keeps_it_as_its_own until a non-oracle check exists)
+    # (the belief's own derivation -- the oracle-mode state checks never see it: state_facts does)
+    ("an ability set over an unknown one: the old its own", "src/alpha_poke/agents/poke_env_fixes.py",
+     "            mon._ability = old  # (the one it had: its own)", "            pass"),
+    ("S157 a Terapagos's Stellar boosts unmarked", "src/alpha_poke/agents/engine_state.py",
+     '    stellar_moves = () if to_id(mon.species).startswith("terapagos") else (',
+     '    stellar_moves = () if False else ('),
     ("L242 our called lock", "src/alpha_poke/agents/engine_state.py",
      "        called = keep != lock_move and lock_move in CALLED_LOCKS", "        called = False"),
     ("L241 our Rollout's lock", "src/alpha_poke/agents/timers.py",

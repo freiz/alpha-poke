@@ -761,9 +761,13 @@ def _counted(mon, tm: SideTimers | None) -> dict:
     Cute Charm) of a mon (doc/engine-diff.md L163), a Stellar tera's boosted types (L175)."""
     gender = {"MALE": 1, "FEMALE": 2}.get(getattr(getattr(mon, "gender", None), "name", ""), 0)
     hits = tm.times_attacked.get(tm.k(to_id(mon.species)), 0) if tm is not None else 0
-    # (L175: a Stellar tera's types already boosted: its damaging moves' since; Tera Blast's Stellar)
+    # (L175: a Stellar tera's types already boosted: its damaging moves' since; Tera Blast's Stellar.
+    # Not a Terapagos -- Stellar-terastallized it is Terapagos-Stellar, which Showdown never marks:
+    # its boost each time; 2026-10-25, the chain from our own state)
     boosted = set()
-    for m in (tm.stellar_moves.get(tm.k(to_id(mon.species)), ()) if tm is not None else ()):
+    stellar_moves = () if to_id(mon.species).startswith("terapagos") else (
+        tm.stellar_moves.get(tm.k(to_id(mon.species)), ()) if tm is not None else ())  # fmt: skip
+    for m in stellar_moves:
         d = _MOVES.get(m)
         if d and d.get("category") != "Status":
             boosted.add("stellar" if m == "terablast" else d["type"].lower())
