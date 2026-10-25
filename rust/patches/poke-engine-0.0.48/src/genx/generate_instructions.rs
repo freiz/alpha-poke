@@ -4337,6 +4337,20 @@ pub fn transform_into(
     }
 }
 
+// (L167, L240) the battle's last move (Copycat's: Showdown's battle.lastMove, set as an unfailed
+// move's clearActiveMove) -- kept only with a Copycat in the state (use_last_move)
+fn set_battle_last_move(state: &mut State, choice: &Choice, instructions: &mut StateInstructions) {
+    if state.use_last_move && state.last_move != choice.move_id {
+        instructions
+            .instruction_list
+            .push(Instruction::ChangeLastMove(ChangeLastMoveInstruction {
+                new_move: choice.move_id,
+                previous_move: state.last_move,
+            }));
+        state.last_move = choice.move_id;
+    }
+}
+
 // alpha-poke patch (2026-10-17, doc/engine-diff.md L119): no target for the move (the opponent
 // fainted), checked after the mover's status (Showdown's BeforeMove -- sleep, a thaw, ... -- comes
 // before the target check); it was in cannot_use_move, before the status
@@ -5505,10 +5519,11 @@ pub fn generate_instructions_from_move(
 
     // (L177: locked into the move: no PP -- Showdown's getLockedMove; Outrage's later turns, a
     // charge move's second)
+    // (L241, 2026-10-25: an Uproar's own lock too -- Showdown's runMove deducts no PP while
+    // getLockedMove names a move: Side::locked; a Copycat's Uproar too, its caller's slot)
     let locked_move = {
         let side = state.get_side_immutable(&attacking_side);
-        side.volatile_statuses
-            .contains(&PokemonVolatileStatus::LOCKEDMOVE)
+        side.locked()
             || (choice.flags.charge
                 && side
                     .volatile_statuses
@@ -6170,6 +6185,10 @@ pub fn generate_instructions_from_move(
             incoming_instructions
                 .instruction_list
                 .push(Instruction::NoTarget(attacking_side));
+            // alpha-poke patch (2026-10-25, doc/engine-diff.md L240): the battle's last move too --
+            // Showdown's runMove ends in an unfailed clearActiveMove after useMove's [notarget]
+            // (a stopped one, a cant: clearActiveMove(true), none)
+            set_battle_last_move(state, &choice, &mut incoming_instructions);
         }
         if asleep_or_frozen_before {
             steadfast(state, &attacking_side, &mut incoming_instructions);
@@ -6326,15 +6345,7 @@ pub fn generate_instructions_from_move(
         }
     }
     // (L167: the battle's last move, for Copycat: one past its BeforeMove)
-    if state.use_last_move && state.last_move != choice.move_id {
-        incoming_instructions
-            .instruction_list
-            .push(Instruction::ChangeLastMove(ChangeLastMoveInstruction {
-                new_move: choice.move_id,
-                previous_move: state.last_move,
-            }));
-        state.last_move = choice.move_id;
-    }
+    set_battle_last_move(state, &choice, &mut incoming_instructions);
     // (L165: Meteor Beam / Electro Shot's Sp. Atk +1 as it starts, before the hit: the charging
     // turn's, or the move's own boost when it hits at once -- Power Herb, Electro Shot in rain)
     let charging = choice.volatile_status.as_ref().is_some_and(|v| {

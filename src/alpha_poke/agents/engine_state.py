@@ -632,7 +632,7 @@ def _move_kinds() -> dict:
 def derived_disable(move: str, *, taunt: bool, healblock: bool, throatchop: bool, item: str,
                     last_move: str, lock: str = "", disabled: str = "",
                     charging: str = "", recharge: bool = False, pp: int = 1,
-                    encore: bool = False, uproar: bool = False) -> bool:  # fmt: skip
+                    encore: bool = False) -> bool:  # fmt: skip
     """Showdown disables ``move`` only for a reason the engine derives itself -- so not the
     move's disabled flag, which the engine never clears (it never set it): a Taunt's status move,
     a Heal Block's healing one, a Throat Chop's sound one, an Assault Vest's status one, a
@@ -654,9 +654,9 @@ def derived_disable(move: str, *, taunt: bool, healblock: bool, throatchop: bool
         return True  # (the differential's own: these before an Encore's flag)
     if encore:  # (Encore keeps the others out by their flags too)
         return False
-    # (a charge's second turn, a recharge, out of PP, an Uproar: the engine's own too -- with no
-    # flag reason above)
-    return bool((charging and move != charging) or recharge or pp <= 0 or (uproar and move != "uproar"))
+    # (a charge's second turn, a recharge, out of PP: the engine's own too -- with no flag reason
+    # above. Not an Uproar's lock: the engine keeps it by the flags, as lockedmove's -- L241)
+    return bool((charging and move != charging) or recharge or pp <= 0)
 
 
 def _sleep(mon, tm: SideTimers | None) -> dict:
@@ -715,8 +715,7 @@ def _our_mon(
                 mid, taunt=tm.taunt is not None, healblock=tm.healblock is not None,
                 throatchop=tm.throatchop is not None, item=mon.item or "", last_move=last,
                 lock=lock, disabled=tm.disabled or "", charging=tm.charging or "",
-                recharge=tm.recharge, pp=pp, encore=tm.encore is not None,
-                uproar=tm.uproar is not None))  # fmt: skip
+                recharge=tm.recharge, pp=pp, encore=tm.encore is not None))  # fmt: skip
         moves.append(pe.Move(id=mid, pp=pp, disabled=disabled))
     hp = 0 if mon.fainted else int(mon.current_hp or 0)
     if revived:
@@ -1325,8 +1324,7 @@ def build_state(
                     mid, taunt=tm_us.taunt is not None, healblock=tm_us.healblock is not None,
                     throatchop=tm_us.throatchop is not None, item=active.item or "", last_move=last,
                     lock=lock, disabled=tm_us.disabled or "", charging=tm_us.charging or "",
-                    recharge=tm_us.recharge, pp=pp, encore=tm_us.encore is not None,
-                    uproar=tm_us.uproar is not None)  # fmt: skip
+                    recharge=tm_us.recharge, pp=pp, encore=tm_us.encore is not None)  # fmt: skip
                 moves.append(pe.Move(id=mid, pp=pp, disabled=disabled))
         else:  # the target's (this world's), the PP poke-env counted, Disable's flag
             moves = [pe.Move(id=m.id, pp=copied_pp(active, m.id), disabled=m.id == tm_us.disabled)
@@ -1534,11 +1532,13 @@ def build_state(
             locked[mon is active] = 2 if tm.locked[1] >= 2 or rng.random() < 0.5 else 1
     # a lock's other moves disabled (the engine's flags, as the differential's states have them,
     # L179; ours at the live root: the request's)
+    # (L241: an Uproar's own lock too -- Showdown's getLockedMove, onLockMove 'uproar')
     for mons, i, tm, mine in ((their_mons, their_idx, tm_them, False),
                               (our_mons, our_active_idx, tm_us, True)):  # fmt: skip
-        if tm.locked and i is not None and i < len(mons) and not (mine and spectator is None):
+        lock_move = tm.locked[0] if tm.locked else ("uproar" if tm.uproar is not None else None)
+        if lock_move and i is not None and i < len(mons) and not (mine and spectator is None):
             em = mons[i]
-            mons[i] = _with(em, moves=[pe.Move(id=x.id, pp=x.pp, disabled=x.disabled or x.id != tm.locked[0])
+            mons[i] = _with(em, moves=[pe.Move(id=x.id, pp=x.pp, disabled=x.disabled or x.id != lock_move)
                                        for x in em.moves])  # fmt: skip
     # Disable (L70): its volatile and its move's slot and count, not the move's flag alone (the
     # engine's next move enabled it again; 2026-10-23 review)

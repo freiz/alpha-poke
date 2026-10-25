@@ -1397,11 +1397,18 @@ impl Side {
         }
     }
 
+    // alpha-poke patch (2026-10-25, doc/engine-diff.md L241): locked into a move -- Showdown's
+    // getLockedMove, the LockMove event: an Outrage's lockedmove, an Uproar's own (the volatiles
+    // the engine keeps). Its request: that move only, trapped, no Terastallization; its PP not spent
+    pub fn locked(&self) -> bool {
+        self.volatile_statuses
+            .contains(&PokemonVolatileStatus::LOCKEDMOVE)
+            || self.volatile_statuses.contains(&PokemonVolatileStatus::UPROAR)
+    }
+
     pub fn trapped(&self, opponent_active: &Pokemon) -> bool {
         let active_pkmn = self.get_active_immutable();
-        if self
-            .volatile_statuses
-            .contains(&PokemonVolatileStatus::LOCKEDMOVE)
+        if self.locked()
             || self
                 .volatile_statuses
                 .contains(&PokemonVolatileStatus::NORETREAT)
@@ -1512,11 +1519,7 @@ impl State {
                     .volatile_statuses
                     .contains(&PokemonVolatileStatus::THROATCHOP),
                 // (L179: not while locked into a move -- Showdown's request offers no Terastallization then)
-                self.side_one.can_use_tera()
-                    && !self
-                        .side_one
-                        .volatile_statuses
-                        .contains(&PokemonVolatileStatus::LOCKEDMOVE),
+                self.side_one.can_use_tera() && !self.side_one.locked(),
                 self.side_one.can_use_mega(),
                 self.side_one
                     .volatile_statuses
@@ -1554,11 +1557,7 @@ impl State {
                     .volatile_statuses
                     .contains(&PokemonVolatileStatus::THROATCHOP),
                 // (L179: not while locked into a move -- Showdown's request offers no Terastallization then)
-                self.side_two.can_use_tera()
-                    && !self
-                        .side_two
-                        .volatile_statuses
-                        .contains(&PokemonVolatileStatus::LOCKEDMOVE),
+                self.side_two.can_use_tera() && !self.side_two.locked(),
                 self.side_two.can_use_mega(),
                 self.side_two
                     .volatile_statuses
@@ -1683,11 +1682,7 @@ impl State {
                     .volatile_statuses
                     .contains(&PokemonVolatileStatus::THROATCHOP),
                 // (L179: not while locked into a move -- Showdown's request offers no Terastallization then)
-                self.side_one.can_use_tera()
-                    && !self
-                        .side_one
-                        .volatile_statuses
-                        .contains(&PokemonVolatileStatus::LOCKEDMOVE),
+                self.side_one.can_use_tera() && !self.side_one.locked(),
                 self.side_one.can_use_mega(),
                 self.side_one
                     .volatile_statuses
@@ -1739,11 +1734,7 @@ impl State {
                     .volatile_statuses
                     .contains(&PokemonVolatileStatus::THROATCHOP),
                 // (L179: not while locked into a move -- Showdown's request offers no Terastallization then)
-                self.side_two.can_use_tera()
-                    && !self
-                        .side_two
-                        .volatile_statuses
-                        .contains(&PokemonVolatileStatus::LOCKEDMOVE),
+                self.side_two.can_use_tera() && !self.side_two.locked(),
                 self.side_two.can_use_mega(),
                 self.side_two
                     .volatile_statuses

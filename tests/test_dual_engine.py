@@ -6519,11 +6519,6 @@ def test_l223_positions(teams, i, turn, offset):
     assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}
 
 
-# (a known difference besides the case's, pending (doc/engine-diff.md): Uproar's locked turn spends
-# no PP in Showdown -- L241, seen once the reference state of a turn with a faint built)
-L224_PENDING = {("random_battle_teams_offmeta.jsonl", 25, 8): {"s1.1.pp[0]": (14, 15)}}
-
-
 # L224 (doc/engine-diff.md): the remaining hard cases -- a used once-per-battle ability back on a
 # switch-out after Worry Seed (Dauntless Shield: wide b208-t22); Uproar's three turns (its end:
 # offmeta b25-t8)
@@ -6546,8 +6541,8 @@ def test_l224_positions(teams, i, turn, offset):
     c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
     outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"]))
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
-    diff = ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"]
-    assert diff == L224_PENDING.get((teams, i, turn), {})
+    # (offmeta b25-t8: also Uproar's locked turn's PP -- L241, fixed 2026-10-25)
+    assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}
 
 
 def test_l224_state_string_keeps_uproar_count():
@@ -7314,7 +7309,6 @@ def test_l239_control_slow_start_stays_without_a_swap():
     assert _keys(_full(states, 0, "bulkup", "swordsdance"), "slowstart") == {}
 
 
-@pytest.mark.xfail(strict=True, reason="L239: the engine keeps Slow Start on the Skill Swap's user")
 def test_l239_skill_swap_takes_slow_start_away():
     """Showdown's skillSwap ends both abilities (Slow Start's End: its volatile off the user,
     silently) and starts each on the other (the target's Slow Start begins: 5 turns)."""
@@ -7355,7 +7349,6 @@ def _no_target(case):
 
 
 @pytest.mark.parametrize("case", ["memento", "rockyhelmet"])
-@pytest.mark.xfail(strict=True, reason="L240: a move with no target is no last move in the engine")
 def test_l240_a_move_with_no_target_is_the_last_move(case):
     """The U-turn has no target ([notarget], -fail); Showdown's runMove still ends in
     clearActiveMove() unfailed: battle.lastMove (Copycat's) is the U-turn. The engine returns
@@ -7372,7 +7365,7 @@ _L241 = pytest.mark.xfail(strict=True, reason="L241: the engine spends PP on a t
 
 @pytest.mark.parametrize("move,name", [
     ("outrage", "Outrage"), ("petaldance", "Petal Dance"), ("thrash", "Thrash"),  # (lockedmove: agree)
-    pytest.param("uproar", "Uproar", marks=_L241),
+    ("uproar", "Uproar"),  # (its own volatile: fixed 2026-10-25)
     pytest.param("rollout", "Rollout", marks=_L241),
     pytest.param("iceball", "Ice Ball", marks=_L241),
 ])  # fmt: skip
@@ -7386,3 +7379,52 @@ def test_l241_a_locked_turn_spends_no_pp(move, name):
     assert pp[0] - pp[1] == 1 and pp[1] == pp[2] == pp[3], pp  # (Showdown)
     for k in (1, 2):
         assert _keys(_full(states, k, move, "softboiled"), "pp") == {}, k
+
+
+# (L239's other branches: Showdown's ability End through setAbility -- Worry Seed -- and the
+# other abilities whose End takes a volatile off: Flash Fire's, Unburden's)
+GARDEVOIR_SWAP = """Gardevoir @ Leftovers
+Ability: Synchronize
+EVs: 252 HP / 4 SpA / 252 SpD
+Calm Mind Nature
+- Skill Swap
+- Worry Seed
+- Flamethrower
+- Knock Off"""
+HEATRAN_FF = """Heatran @ Leftovers
+Ability: Flash Fire
+EVs: 252 HP / 4 SpA / 252 SpD
+Calm Nature
+- Calm Mind
+- Earth Power
+- Magma Storm
+- Protect"""
+HAWLUCHA_UNBURDEN = """Hawlucha @ Leftovers
+Ability: Unburden
+EVs: 252 HP / 4 Atk / 252 SpD
+Careful Nature
+- Bulk Up
+- Close Combat
+- Acrobatics
+- Roost"""
+
+
+def test_l239_worry_seed_ends_slow_start():
+    states = ec.run_showdown(REGIGIGAS, GARDEVOIR_SWAP, [("move bulkup", "move worryseed")])
+    assert "|-end|p1a: Regigigas|Slow Start|[silent]" in states[1]["log"], states[1]["log"]
+    assert "slowstart" not in states[1]["sides"][0]["mons"][0]["volatiles"]
+    assert _keys(_full(states, 0, "bulkup", "worryseed"), "slowstart", "ability") == {}
+
+
+@pytest.mark.parametrize("p1,first,volatile", [
+    (HEATRAN_FF, ("move calmmind", "move flamethrower"), "flashfire"),
+    (HAWLUCHA_UNBURDEN, ("move bulkup", "move knockoff"), "unburden"),
+])  # fmt: skip
+def test_l239_skill_swap_ends_the_old_abilitys_volatile(p1, first, volatile):
+    """Turn 1 sets it off (Flash Fire's immunity, Unburden's item lost); turn 2's Skill Swap ends
+    the ability: its volatile off (Showdown's onEnd: removeVolatile)."""
+    c1 = first[0].split()[1]
+    states = ec.run_showdown(p1, GARDEVOIR_SWAP, [first, (first[0], "move skillswap")])
+    assert volatile in states[1]["sides"][0]["mons"][0]["volatiles"], states[1]["log"]
+    assert volatile not in states[2]["sides"][0]["mons"][0]["volatiles"], states[2]["log"]
+    assert _keys(_full(states, 1, c1, "skillswap"), volatile, "ability") == {}

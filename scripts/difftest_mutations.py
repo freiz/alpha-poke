@@ -110,6 +110,13 @@ MUTATIONS = [
     # tests/test_sample_set.py's test_the_move_floor_lifts_a_0_weight)
 ]
 RUST = [
+    ("L239 an ability's End: its volatile off", "rust/patches/poke-engine-0.0.48/src/genx/abilities.rs",
+     "    if let Some(v) = volatile {", "    if let Some(v) = volatile.filter(|_| false) {"),
+    ("L240 a move with no target the battle's last move", "rust/patches/poke-engine-0.0.48/src/genx/generate_instructions.rs",
+     "            // (a stopped one, a cant: clearActiveMove(true), none)\n            set_battle_last_move(state, &choice, &mut incoming_instructions);",
+     "            // (a stopped one, a cant: clearActiveMove(true), none)"),
+    ("L241 an Uproar's own lock", "rust/patches/poke-engine-0.0.48/src/genx/state.rs",
+     "            || self.volatile_statuses.contains(&PokemonVolatileStatus::UPROAR)\n    }", "    }"),
     ("R1 the tree's move used: its own span", "rust/alpha_search/src/ismcts.rs",
      "let used = instructions[from..to.max(from)]", "let used = instructions[..acted.unwrap_or(instructions.len())]"),
     ("R5' the last move always tracked", "rust/patches/poke-engine-0.0.48/src/genx/state.rs",

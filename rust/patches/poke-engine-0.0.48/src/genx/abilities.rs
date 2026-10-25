@@ -643,13 +643,7 @@ pub fn set_ability(
         }));
     p.ability = ability;
     reset_ability_state(state.get_side(side_ref), side_ref, instructions);
-    if old == Abilities::NEUTRALIZINGGAS {
-        super::generate_instructions::restart_ability_after_gas(
-            state,
-            &side_ref.get_other_side(),
-            instructions,
-        );
-    }
+    ability_end(state, side_ref, old, instructions);
     if ability != Abilities::IMPOSTER {
         ability_on_switch_in(state, side_ref, instructions);
     }
@@ -686,11 +680,62 @@ pub fn skill_swap(state: &mut State, side_ref: &SideReference, instructions: &mu
             }));
         state.get_side(&side_ref).get_active().ability = new;
         reset_ability_state(state.get_side(&side_ref), &side_ref, instructions);
+        ability_end(state, &side_ref, old, instructions); // (L239: the old ones end first)
     }
     for side_ref in [target_ref, *side_ref] {
         if state.get_side_immutable(&side_ref).get_active_immutable().ability != Abilities::IMPOSTER {
             ability_on_switch_in(state, &side_ref, instructions);
         }
+    }
+}
+
+// alpha-poke patch (2026-10-25, doc/engine-diff.md L239): Showdown's ability End event as an
+// ability changes (setAbility, skillSwap -- not a switch-out's: its volatiles go anyway): what the
+// old one kept on its holder ends -- Slow Start's slowstart (its count too), Flash Fire's
+// flashfire, Unburden's unburden; a Neutralizing Gas: the others' abilities start again (was set
+// _ability's alone; Skill Swap left a Slow Start on its user)
+pub fn ability_end(
+    state: &mut State,
+    side_ref: &SideReference,
+    old: Abilities,
+    instructions: &mut StateInstructions,
+) {
+    let volatile = match old {
+        Abilities::SLOWSTART => Some(PokemonVolatileStatus::SLOWSTART),
+        Abilities::FLASHFIRE => Some(PokemonVolatileStatus::FLASHFIRE),
+        Abilities::UNBURDEN => Some(PokemonVolatileStatus::UNBURDEN),
+        _ => None,
+    };
+    if let Some(v) = volatile {
+        let side = state.get_side(side_ref);
+        if side.volatile_statuses.contains(&v) {
+            side.volatile_statuses.remove(&v);
+            instructions
+                .instruction_list
+                .push(Instruction::RemoveVolatileStatus(RemoveVolatileStatusInstruction {
+                    side_ref: *side_ref,
+                    volatile_status: v,
+                }));
+        }
+        if v == PokemonVolatileStatus::SLOWSTART && side.volatile_status_durations.slowstart != 0 {
+            instructions
+                .instruction_list
+                .push(Instruction::ChangeVolatileStatusDuration(
+                    ChangeVolatileStatusDurationInstruction {
+                        side_ref: *side_ref,
+                        volatile_status: PokemonVolatileStatus::SLOWSTART,
+                        amount: -side.volatile_status_durations.slowstart,
+                    },
+                ));
+            side.volatile_status_durations.slowstart = 0;
+        }
+    }
+    if old == Abilities::NEUTRALIZINGGAS {
+        super::generate_instructions::restart_ability_after_gas(
+            state,
+            &side_ref.get_other_side(),
+            instructions,
+        );
     }
 }
 

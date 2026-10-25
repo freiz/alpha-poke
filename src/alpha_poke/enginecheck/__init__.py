@@ -252,11 +252,13 @@ def _engine_mon(m: dict) -> pe.Pokemon:
         # (a benched mon's disabled flags are its last request's -- a Choice lock --: Showdown
         # sets them afresh for its next one; L177)
         # (L179: a locking move's -- Outrage's -- lock: its other moves disabled, as the engine
-        # keeps it; Showdown's request lists only the locked one)
+        # keeps it; Showdown's request lists only the locked one. L241: an Uproar's too -- its own
+        # volatile's lock, onLockMove 'uproar')
         moves=[pe.Move(id=x["id"], pp=x["pp"], disabled=bool(m.get("active")) and (
                    (x["disabled"] and not _derived_disable(m, x["id"]))
                    or ("lockedmove" in m.get("volatiles", {})
-                       and x["id"] != m["volatiles"]["lockedmove"].get("move"))))
+                       and x["id"] != m["volatiles"]["lockedmove"].get("move"))
+                   or ("uproar" in m.get("volatiles", {}) and x["id"] != "uproar")))
                for x in m["moves"]],
         terastallized=bool(m["terastallized"]), tera_type=(m["tera_type"] or "typeless").lower(),
         last_item=m.get("last_item") if _engine_item(m.get("last_item") or "") else "none",

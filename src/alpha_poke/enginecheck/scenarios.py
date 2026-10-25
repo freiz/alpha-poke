@@ -374,8 +374,39 @@ def ability_changes() -> list[Spec]:
     return out
 
 
+def engine_ends() -> list[Spec]:
+    """L239 - L241 (doc/engine-diff.md), the engine's: an ability's End as it changes (Worry Seed,
+    Skill Swap -- Slow Start's, Flash Fire's, Unburden's volatile off); a move with no target the
+    battle's last move (a Copycat on the bench: the engine keeps it only then); an Uproar's locked
+    turns spend no PP."""
+    gigas = S("Regigigas", "Leftovers", "Slow Start", ["Skill Swap", "Bulk Up", "Body Slam", "Protect"])
+    gard = S("Gardevoir", "Leftovers", "Synchronize", ["Skill Swap", "Worry Seed", "Flamethrower", "Knock Off"])
+    heatran = S("Heatran", "Leftovers", "Flash Fire", ["Calm Mind", "Earth Power", "Magma Storm", "Protect"])
+    hawlucha = S("Hawlucha", "Leftovers", "Unburden", ["Bulk Up", "Close Combat", "Acrobatics", "Roost"])
+    blissey = S("Blissey", "Heavy-Duty Boots", "Natural Cure", ["U-turn", "Soft-Boiled", "Seismic Toss", "Copycat"])
+    chomp = S("Garchomp", "Leftovers", "Rough Skin", ["Memento", "Uproar", "Swords Dance", "Earthquake"], FAST, "Jolly")
+    return [
+        _spec("ends/worryseed-slowstart", team(gigas, FILLER), team(gard, FILLER),
+              [{"p1": "move 2", "p2": "move 2"}, {"p1": "move 2", "p2": "move 3"}],
+              expect=("|-end|p1a: Regigigas|Slow Start|[silent]",)),
+        _spec("ends/skillswap-flashfire", team(heatran, FILLER), team(gard, FILLER),
+              [{"p1": "move 1", "p2": "move 3"}, {"p1": "move 1", "p2": "move 1"}, {"p1": "move 1", "p2": "move 3"}],
+              expect=("|-start|p1a: Heatran|ability: Flash Fire", "Skill Swap|Flash Fire|Synchronize")),
+        _spec("ends/skillswap-unburden", team(hawlucha, FILLER), team(gard, FILLER),
+              [{"p1": "move 1", "p2": "move 4"}, {"p1": "move 1", "p2": "move 1"}],
+              expect=("|-enditem|p1a: Hawlucha|Leftovers|[from] move: Knock Off", "Skill Swap|Unburden|Synchronize")),
+        _spec("ends/notarget-lastmove", team(chomp, blissey), team(blissey, FILLER),
+              [{"p1": "move 1", "p2": "move 1"}], expect=("[notarget]",)),
+        # (its foe without Copycat: a called lock -- Copycat's Uproar -- is L242's, pending)
+        _spec("ends/uproar-pp", team(chomp, FILLER), team(blissey.replace("- Copycat", "- Calm Mind"), FILLER),
+              # (locked: the request's one move, "move 1")
+              [{"p1": "move 2", "p2": "move 2"}] + [{"p1": "move 1", "p2": "move 2"}] * 2,
+              expect=("[from] lockedmove",)),
+    ]  # fmt: skip
+
+
 FAMILIES = (extender_items, pp_takers, transforms, locks, failed_moves, item_phases, encore, formes, speed_phases,
-            second_sleep, type_changes, belief_evidence, ability_changes)
+            second_sleep, type_changes, belief_evidence, ability_changes, engine_ends)
 
 
 def scenarios() -> list[Spec]:

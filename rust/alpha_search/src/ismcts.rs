@@ -344,10 +344,8 @@ impl<'a> PathCtx<'a> {
                         self.reveal[a] |= 1 << 3;
                     }
                     pending.chosen = Some(*i as usize);
-                    pending.locked = side
-                        .volatile_statuses
-                        .contains(&PokemonVolatileStatus::LOCKEDMOVE)
-                        || side.active_is_charging_move().is_some();
+                    // (L241: an Uproar's own lock too -- the engine's Side::locked)
+                    pending.locked = side.locked() || side.active_is_charging_move().is_some();
                     self.pending[k] = Some(pending);
                 }
                 // a recharge (the engine's only option then): "cant ... recharge" in the log --

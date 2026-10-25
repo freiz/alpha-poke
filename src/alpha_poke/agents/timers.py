@@ -1040,6 +1040,10 @@ def _feed_one(sides: dict, p: list[str]) -> None:
         sides["p2" if p[2][:2] == "p1" else "p1"].future = None
     elif tag == "-end" and len(p) > 3:
         what = to_id(p[3].replace("move: ", ""))
+        if what == "abilityflashfire":
+            # (its boost ended with the ability -- Flash Fire's End, a Skill Swap's: Showdown's
+            # -end [silent]; L239, 2026-10-25)
+            st.flashfire = False
         if "[partiallytrapped]" in p:
             st.partiallytrapped = None
             st.trap_out = False
