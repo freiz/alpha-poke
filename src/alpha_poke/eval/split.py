@@ -11,6 +11,7 @@ import multiprocessing as mp
 import os
 import subprocess
 import sys
+import time
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import asdict
 from pathlib import Path
@@ -19,6 +20,7 @@ from alpha_poke.eval.arena import GAME_TIMEOUT, TURN_CAP, Match, _base, _species
 from alpha_poke.teams import load_team_files
 
 ROOT = Path(__file__).resolve().parents[3]
+START_WAIT = 90  # seconds before a lane's first match (scripts/eval_pairs_opponent.py's too)
 
 
 async def _lane(bot_a: str, matches: list[Match], port: int, pool: str, run: str, i: int, log_path: str) -> list:
@@ -28,13 +30,16 @@ async def _lane(bot_a: str, matches: list[Match], port: int, pool: str, run: str
     expected = {k: _species(v) for k, v in teams.items()}
     me = make_bot(bot_a, f"a{run}l{i}", port, next(iter(teams.values())))
     opp = f"b{run}l{i}"
-    await asyncio.sleep(20)  # (the opponent's interpreter: its imports, its model, its login)
+    # (both sides online before the first challenge: the opponent's interpreter -- its imports, its
+    # model, its login; a challenge to a user not yet on is lost -- "not found", the lane stuck)
+    await asyncio.sleep(START_WAIT)
     rows = []
     for m in matches:
         me.update_team(teams[m.team_a])
         before = set(me.battles)
         fb0 = (getattr(me, "fallbacks", 0), getattr(me, "search_fallbacks", 0))
         play = me.send_challenges(opp, n_challenges=1) if m.a_challenges else me.accept_challenges(opp, n_challenges=1)
+        t0 = time.time()
         try:
             await asyncio.wait_for(play, GAME_TIMEOUT)
         except TimeoutError:
@@ -52,6 +57,7 @@ async def _lane(bot_a: str, matches: list[Match], port: int, pool: str, run: str
             "fallbacks_a": getattr(me, "fallbacks", 0) - fb0[0],
             "search_fallbacks_a": getattr(me, "search_fallbacks", 0) - fb0[1],
             "fallbacks_b": None,  # (the opponent's own: its log's OPPONENT DONE line)
+            "seconds": round(time.time() - t0, 1),
         }
         rows.append(row)
         with open(log_path, "a") as f:

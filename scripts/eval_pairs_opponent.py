@@ -17,6 +17,7 @@ import re
 from pathlib import Path
 
 GAME_TIMEOUT = 1200  # (arena.GAME_TIMEOUT)
+START_WAIT = 90  # (split.START_WAIT)
 
 
 def schedule(pool: str, pairs: int) -> list[tuple[str, str, bool]]:
@@ -39,6 +40,7 @@ async def lane(bot: str, matches, port: int, pool: str, run: str, i: int) -> int
     me = make_bot(bot, f"b{run}l{i}", port, next(iter(teams.values())))
     opp = f"a{run}l{i}"
     failed = 0
+    await asyncio.sleep(START_WAIT)  # (both sides online before the first challenge: split.py's)
     for _team_a, team_b, a_challenges in matches:
         me.update_team(teams[team_b])
         play = me.accept_challenges(opp, n_challenges=1) if a_challenges else me.send_challenges(opp, n_challenges=1)

@@ -40,3 +40,10 @@ def test_revival_blessing_like_switch():
 def test_struggle_is_fine():
     s = state([("shadowball", 0)])
     assert request_mismatch(battle(["struggle"]), s) == []
+
+
+def test_greninja_bond_is_the_requests_greninja():
+    """The engine's Greninja-Bond is the request's "greninja" (slots.order_of maps it by prefix):
+    no mismatch -- 2026-10-25, the A/B's logs, 867 false warnings."""
+    s = state([("shadowball", 10)], bench=(("greninjabond", 100),))
+    assert request_mismatch(battle(switches=["greninja"]), s) == []

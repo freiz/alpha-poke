@@ -26,6 +26,9 @@ def request_mismatch(battle, state) -> list[str]:
     if battle.available_switches:
         bench = {to_id(p.id) for i, p in enumerate(s1.pokemon) if i != act_i and p.hp > 0}
         for m in battle.available_switches:
-            if to_id(m.species) not in bench:
+            sp = to_id(m.species)
+            # (a forme's name the other's prefix -- Greninja-Bond is "Greninja" in the request:
+            # slots.order_of's rule; 2026-10-25, the A/B's logs: 867 false warnings)
+            if sp not in bench and not any(b.startswith(sp) or sp.startswith(b) for b in bench):
                 out.append(f"switch {m.species}: not a live benched mon in the engine")
     return out
