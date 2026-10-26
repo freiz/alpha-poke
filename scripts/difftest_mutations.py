@@ -94,9 +94,9 @@ MUTATIONS = [
     ("B5 the speed's own ability then", "src/alpha_poke/agents/speed.py",
      '        if snap["our_ab"] is not None:\n            ability = snap["our_ab"]\n        elif',
      '        if False:\n            ability = snap["our_ab"]\n        elif False and'),
-    ("B5 Mummy's / Lingering Aroma's ability (the state)", "src/alpha_poke/agents/timers.py",
-     'elif tag == "-activate" and len(p) > 4 and p[3] in ("ability: Mummy", "ability: Lingering Aroma"):',
-     "elif False:"),
+    # (B5's state copy -- the timers' Mummy / Lingering Aroma -activate: B8 made poke-env set the
+    # same current ability, two copies neither alone seen in the differential (2026-10-26, the whole
+    # run: MISSED); guarded by test_timers.py's test_a_lingering_aromas_ability_on_the_contact_mon)
     ("B5 a Role Play's [of] keeps its ability", "src/alpha_poke/agents/timers.py",
      'if of is not None and tag == "-activate" else None', "if of is not None else None"),
     ("L243 our locked move's real PP", "src/alpha_poke/agents/engine_state.py",

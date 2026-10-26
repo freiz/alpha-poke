@@ -1247,3 +1247,13 @@ def test_the_moves_a_choice_lock_counts_since_its_item_or_transform():
             "|move|p2a: Bob|Substitute|p2a: Bob\n|upkeep\n|turn|3")  # fmt: skip
     st = t["p2"].stint
     assert st["moves"][st["item_mark"]:] == ["substitute"]
+
+
+def test_a_lingering_aromas_ability_on_the_contact_mon():
+    """B5 (the timers' copy): Mummy / Lingering Aroma give the contact mon -- the -activate's second
+    -- their ability, its old one the [ability]; its Protean's mark goes. The poke-env copy
+    (poke_env_fixes._ability_set, B8) sets the same: neither alone is seen in the differential --
+    this test the timers' guard (2026-10-26, the mutation run)."""
+    t = run(START + "|move|p1a: Fishy|Wave Crash|p2a: Bob\n"
+            "|-activate|p2a: Bob|ability: Lingering Aroma|p1a: Fishy|[ability] Unaware\n|upkeep\n|turn|2")  # fmt: skip
+    assert t["p1"].ability_now == "lingeringaroma" and not t["p1"].protean
