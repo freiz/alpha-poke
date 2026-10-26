@@ -24,6 +24,10 @@ if __name__ == "__main__":
     ap.add_argument("--lanes", type=int, default=12)
     ap.add_argument("--ports", type=int, nargs="+", default=[8000, 8001, 8002, 8003])
     ap.add_argument("--log-dir", default="data/selfplay/diag")
+    # (bot B in another checkout, its own code and engine: alpha_poke.eval.split -- an A/B of two
+    # versions; its .venv built there)
+    ap.add_argument("--other", default="", help="a checkout running bot B (scripts/eval_pairs_opponent.py)")
+    ap.add_argument("--run", default="r", help="a short tag in the split run's player names")
     a = ap.parse_args()
     ks = sorted({int(m.group(1)) for f in Path(a.pool).glob("pair*_a.txt")
                  if (m := re.match(r"pair(\d+)_a", f.stem))})  # fmt: skip
@@ -36,6 +40,12 @@ if __name__ == "__main__":
     Path(a.log_dir).mkdir(parents=True, exist_ok=True)
     log = str(Path(a.log_dir) / f"{time.strftime('%Y%m%d-%H%M%S')}_{a.bot_a}_vs_{a.bot_b}_"
               f"{Path(a.pool).name}.jsonl")  # fmt: skip
-    rows = run_schedule(a.bot_a, a.bot_b, schedule, a.pool, log, ports=tuple(a.ports),
-                        procs=a.procs, lanes_per_proc=a.lanes)  # fmt: skip
+    if a.other:
+        from alpha_poke.eval.split import run_split
+
+        rows = run_split(a.bot_a, a.bot_b, schedule, a.pool, a.pairs, log, a.other, ports=tuple(a.ports),
+                         procs=a.procs, lanes_per_proc=a.lanes, run=a.run)  # fmt: skip
+    else:
+        rows = run_schedule(a.bot_a, a.bot_b, schedule, a.pool, log, ports=tuple(a.ports),
+                            procs=a.procs, lanes_per_proc=a.lanes)  # fmt: skip
     print("SUMMARY", json.dumps(summarize(rows) | {"log": log}))
