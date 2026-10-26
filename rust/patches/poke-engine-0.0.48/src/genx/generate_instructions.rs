@@ -3067,6 +3067,12 @@ fn check_move_hit_or_miss(
         if choice.try_failed || !choice.protected && !returned {
             move_failed(state, attacking_side_ref, &mut move_missed_instruction, false);
         }
+        // alpha-poke patch (2026-10-25, doc/engine-diff.md L247): a Magic Bounce reflects before
+        // the accuracy check (Showdown's hitStepTryHitEvent first) -- this miss is the reflected
+        // move's, its reflector's move this turn: failed too (it was the user's alone)
+        if choice.reflected && !choice.protected {
+            move_failed(state, &attacking_side_ref.get_other_side(), &mut move_missed_instruction, false);
+        }
         frozen_instructions.push(move_missed_instruction);
     }
     incoming_instructions.update_percentage(percent_hit);
@@ -7105,7 +7111,13 @@ fn finish_move(
     if hit_count > 1 {
         if let Some(v) = choice.secondaries.as_mut() {
             for x in v.iter_mut() {
-                if x.target == MoveTarget::User && matches!(x.effect, Effect::Status(_)) {
+                // (L246: Cursed Body's Disable too -- its onDamagingHit per hit, none once disabled)
+                if x.target == MoveTarget::User
+                    && matches!(
+                        x.effect,
+                        Effect::Status(_) | Effect::VolatileStatus(PokemonVolatileStatus::DISABLE)
+                    )
+                {
                     x.chance = 100.0 * (1.0 - (1.0 - x.chance / 100.0).powi(hit_count as i32));
                 }
             }

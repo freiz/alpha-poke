@@ -4,7 +4,7 @@
   "@specs": {}
  },
  "engine_chain": {
-  "#compared": 24535,
+  "#compared": 24545,
   "@specs": {
    "random/rbt_offmeta/7034": {
     "types": 1
@@ -47,11 +47,13 @@
   "volatile.substitute": 1
  },
  "engine_dist": {
-  "#compared": 19849,
+  "#compared": 19851,
+  "#skipped: a Metronome's call": 2,
   "#skipped: a hidden length drawn": 360,
   "#skipped: a sleep's length drawn": 677,
   "@specs": {
    "pct/rbt/8002": {
+    "dist.freq": 1,
     "dist.unmatched": 1
    },
    "pct/rbt/8009": {
@@ -60,25 +62,20 @@
    "pct/rbt_forum/8004": {
     "dist.freq": 1
    },
+   "pct/rbt_forum/8008": {
+    "dist.freq": 1
+   },
    "pct/rbt_offmeta/8006": {
-    "dist.freq": 1
-   },
-   "pct/rbt_randbats10/8003": {
-    "dist.freq": 1
-   },
-   "pct/rbt_randbats14/8002": {
     "dist.freq": 1
    },
    "pct/rbt_randbats14/8003": {
     "dist.unmatched": 1
    },
    "pct/rbt_randbats17/8006": {
+    "dist.freq": 1,
     "dist.unmatched": 1
    },
    "pct/rbt_randbats18/8001": {
-    "dist.freq": 1
-   },
-   "pct/rbt_randbats2/8005": {
     "dist.freq": 1
    },
    "pct/rbt_randbats21/8003": {
@@ -92,6 +89,9 @@
     "dist.freq": 1
    },
    "pct/rbt_randbats25/8001": {
+    "dist.freq": 1
+   },
+   "pct/rbt_randbats26/8003": {
     "dist.freq": 1
    },
    "pct/rbt_randbats27/8006": {
@@ -108,17 +108,9 @@
     "dist.freq": 1,
     "dist.unmatched": 1
    },
-   "pct/rbt_randbats32/8000": {
-    "dist.unmatched": 1
-   },
    "pct/rbt_randbats4/8002": {
-    "dist.freq": 1
-   },
-   "pct/rbt_randbats4/8008": {
-    "dist.freq": 1
-   },
-   "pct/rbt_randbats6/8000": {
-    "dist.freq": 1
+    "dist.freq": 1,
+    "dist.unmatched": 1
    },
    "pct/rbt_randbats6/8008": {
     "dist.freq": 1
@@ -126,9 +118,6 @@
    "pct/rbt_randbats6/8009": {
     "dist.freq": 1,
     "dist.unmatched": 1
-   },
-   "pct/rbt_randbats7/8006": {
-    "dist.freq": 1
    },
    "pct/rbt_random/8005": {
     "dist.freq": 1
@@ -140,23 +129,11 @@
    "pct/rbt_wide/8002": {
     "dist.freq": 1
    },
-   "random/rbt/7000": {
-    "dist.freq": 1
-   },
    "random/rbt/7009": {
     "dist.freq": 1,
     "dist.unmatched": 1
    },
-   "random/rbt/7013": {
-    "dist.freq": 1
-   },
-   "random/rbt/7024": {
-    "dist.freq": 1
-   },
    "random/rbt_forum/7023": {
-    "dist.freq": 1
-   },
-   "random/rbt_forum/7037": {
     "dist.freq": 1
    },
    "random/rbt_offmeta/7025": {
@@ -172,22 +149,15 @@
     "dist.unmatched": 1
    },
    "random/rbt_offmeta/7039": {
-    "dist.freq": 1,
     "dist.unmatched": 1
    },
    "random/rbt_offmeta/7042": {
     "dist.freq": 1
    },
-   "random/rbt_randbats/7004": {
-    "dist.freq": 1
-   },
    "random/rbt_randbats/7005": {
     "dist.freq": 1
    },
-   "random/rbt_randbats/7031": {
-    "dist.freq": 2
-   },
-   "random/rbt_randbats11/7004": {
+   "random/rbt_randbats/7006": {
     "dist.freq": 1
    },
    "random/rbt_randbats11/7005": {
@@ -201,20 +171,13 @@
     "dist.freq": 1,
     "dist.unmatched": 1
    },
-   "random/rbt_randbats12/7027": {
+   "random/rbt_randbats12/7012": {
     "dist.freq": 1
    },
-   "random/rbt_randbats13/7005": {
-    "dist.freq": 2
-   },
    "random/rbt_randbats14/7002": {
-    "dist.freq": 1,
     "dist.unmatched": 1
    },
    "random/rbt_randbats14/7023": {
-    "dist.freq": 1
-   },
-   "random/rbt_randbats14/7032": {
     "dist.freq": 1
    },
    "random/rbt_randbats14/7033": {
@@ -231,13 +194,7 @@
     "dist.freq": 1,
     "dist.unmatched": 1
    },
-   "random/rbt_randbats15/7018": {
-    "dist.freq": 1
-   },
    "random/rbt_randbats15/7022": {
-    "dist.freq": 1
-   },
-   "random/rbt_randbats16/7008": {
     "dist.freq": 1
    },
    "random/rbt_randbats16/7035": {
@@ -262,12 +219,6 @@
    "random/rbt_randbats19/7021": {
     "dist.freq": 1
    },
-   "random/rbt_randbats19/7042": {
-    "dist.freq": 1
-   },
-   "random/rbt_randbats2/7000": {
-    "dist.freq": 1
-   },
    "random/rbt_randbats20/7000": {
     "dist.freq": 1
    },
@@ -281,21 +232,14 @@
     "dist.freq": 1
    },
    "random/rbt_randbats20/7047": {
-    "dist.freq": 1,
     "dist.unmatched": 1
-   },
-   "random/rbt_randbats21/7001": {
-    "dist.freq": 1
    },
    "random/rbt_randbats21/7003": {
     "dist.freq": 1,
     "dist.unmatched": 1
    },
    "random/rbt_randbats21/7006": {
-    "dist.freq": 1
-   },
-   "random/rbt_randbats21/7011": {
-    "dist.freq": 1
+    "dist.freq": 2
    },
    "random/rbt_randbats21/7026": {
     "dist.freq": 1
@@ -307,18 +251,6 @@
     "dist.freq": 1
    },
    "random/rbt_randbats22/7006": {
-    "dist.freq": 1
-   },
-   "random/rbt_randbats23/7029": {
-    "dist.freq": 1
-   },
-   "random/rbt_randbats23/7043": {
-    "dist.freq": 1
-   },
-   "random/rbt_randbats24/7020": {
-    "dist.freq": 1
-   },
-   "random/rbt_randbats24/7039": {
     "dist.freq": 1
    },
    "random/rbt_randbats24/7045": {
@@ -335,22 +267,19 @@
     "dist.freq": 1,
     "dist.unmatched": 1
    },
+   "random/rbt_randbats25/7042": {
+    "dist.freq": 1
+   },
    "random/rbt_randbats26/7023": {
     "dist.freq": 1
    },
-   "random/rbt_randbats26/7026": {
+   "random/rbt_randbats26/7035": {
     "dist.freq": 1
    },
-   "random/rbt_randbats26/7039": {
+   "random/rbt_randbats26/7040": {
     "dist.freq": 1
-   },
-   "random/rbt_randbats26/7042": {
-    "dist.unmatched": 1
    },
    "random/rbt_randbats27/7007": {
-    "dist.freq": 1
-   },
-   "random/rbt_randbats27/7009": {
     "dist.freq": 1
    },
    "random/rbt_randbats27/7020": {
@@ -360,16 +289,10 @@
     "dist.freq": 1,
     "dist.unmatched": 1
    },
-   "random/rbt_randbats29/7033": {
-    "dist.freq": 2
-   },
-   "random/rbt_randbats3/7029": {
+   "random/rbt_randbats3/7022": {
     "dist.freq": 1
    },
    "random/rbt_randbats3/7042": {
-    "dist.freq": 1
-   },
-   "random/rbt_randbats30/7017": {
     "dist.freq": 1
    },
    "random/rbt_randbats30/7033": {
@@ -382,9 +305,6 @@
     "dist.unmatched": 1
    },
    "random/rbt_randbats32/7001": {
-    "dist.freq": 1
-   },
-   "random/rbt_randbats32/7018": {
     "dist.freq": 1
    },
    "random/rbt_randbats32/7033": {
@@ -406,6 +326,9 @@
     "dist.freq": 1,
     "dist.unmatched": 1
    },
+   "random/rbt_randbats4/7025": {
+    "dist.freq": 1
+   },
    "random/rbt_randbats4/7028": {
     "dist.freq": 1,
     "dist.unmatched": 2
@@ -418,7 +341,7 @@
     "dist.unmatched": 1
    },
    "random/rbt_randbats5/7017": {
-    "dist.freq": 2
+    "dist.freq": 1
    },
    "random/rbt_randbats5/7049": {
     "dist.freq": 1,
@@ -440,16 +363,7 @@
    "random/rbt_randbats7/7038": {
     "dist.freq": 1
    },
-   "random/rbt_randbats8/7023": {
-    "dist.unmatched": 1
-   },
    "random/rbt_randbats8/7043": {
-    "dist.freq": 1
-   },
-   "random/rbt_randbats8/7045": {
-    "dist.unmatched": 1
-   },
-   "random/rbt_randbats9/7007": {
     "dist.freq": 1
    },
    "random/rbt_randbats9/7032": {
@@ -457,9 +371,6 @@
    },
    "random/rbt_randbats9/7034": {
     "dist.unmatched": 1
-   },
-   "random/rbt_randbats9/7041": {
-    "dist.freq": 1
    },
    "random/rbt_random/7011": {
     "dist.freq": 1
@@ -470,25 +381,15 @@
    "random/rbt_wide/7033": {
     "dist.freq": 1
    },
-   "random/rbt_wide/7046": {
-    "dist.freq": 1
-   },
-   "random/rbt_wide2/7002": {
-    "dist.freq": 1,
-    "dist.unmatched": 1
-   },
    "random/rbt_wide200/7048": {
-    "dist.freq": 1
-   },
-   "scenario/extender/noguard-trick-gas": {
     "dist.freq": 1
    }
   },
-  "dist.freq": 124,
-  "dist.unmatched": 45
+  "dist.freq": 91,
+  "dist.unmatched": 41
  },
  "engine_step": {
-  "#compared": 79189,
+  "#compared": 79205,
   "#skipped: not a turn start": 21409,
   "@specs": {
    "random/rbt/7009": {
@@ -575,7 +476,7 @@
   "weight": 1
  },
  "state_chain": {
-  "#compared": 41561,
+  "#compared": 41577,
   "@specs": {
    "random/rbt_forum/7020": {
     "hp": 1
@@ -607,19 +508,19 @@
   "volatile.typechange": 1
  },
  "state_facts": {
-  "#compared": 150112,
+  "#compared": 150144,
   "@specs": {}
  },
  "state_live": {
-  "#compared": 150112,
+  "#compared": 150144,
   "@specs": {}
  },
  "state_replay": {
-  "#compared": 150112,
+  "#compared": 150144,
   "@specs": {}
  },
  "tree_history": {
-  "#compared": 65948,
+  "#compared": 65964,
   "#skipped: choice not a slot": 3,
   "#skipped: no log step": 5,
   "@specs": {

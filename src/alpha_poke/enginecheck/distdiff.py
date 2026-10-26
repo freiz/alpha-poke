@@ -126,6 +126,10 @@ def dist_diffs(steps: list[dict], n: int = N) -> dict:
         if why or "battle" not in steps[k]:
             continue
         why = _drawn(steps[k]["state"])
+        # (a Metronome's call: the engine's needs its hint, the move Showdown drew -- no model of
+        # its own to compare)
+        if any(steps[k]["choices"][s]["engine"].startswith("metronome") for s in ("p1", "p2")):
+            why = "a Metronome's call"
         if why:
             out["skipped"][why] += 1
             continue

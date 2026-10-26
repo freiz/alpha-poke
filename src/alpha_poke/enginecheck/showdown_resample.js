@@ -8,6 +8,7 @@
 //          "p2": c} (Showdown's), "n": seeds, "salt": n}, ...]
 // stdout: [{"states": [state (showdown_state.js) after the turn, ...], "error": null}, ...]
 const {State} = require(process.argv[2] + '/state');
+const crypto = require('crypto');
 const {PRNG} = require(process.argv[2] + '/prng');
 const {state} = require('./showdown_state.js');
 
@@ -21,10 +22,12 @@ process.stdin.on('end', () => {
 		try {
 			const raw = JSON.stringify(c.battle); // (deserializeBattle takes the object apart: a copy each time)
 			for (let i = 0; i < c.n; i++) {
-				// (well spread seeds: neighbouring small ones give correlated first rolls -- chance_count.js)
-				const h = k => (Math.imul(i + 1 + (c.salt || 0) * 7919, 0x9E3779B1 + k * 0x85EBCA6B) >>> 16) & 0xFFFF;
+				// (a sodium seed from a hash: Showdown's "gen5," seeds are four 4-digit hex fields run
+				// together -- "gen5,1,2,3,4"-like ones parse to near-identical, correlated seeds; the
+				// turn's first roll, a freeze's thaw, came out 39% for its 20%)
+				const hex = crypto.createHash('sha256').update(`${c.salt || 0}:${i}`).digest('hex').slice(0, 32);
 				const battle = State.deserializeBattle(JSON.parse(raw));
-				battle.prng = new PRNG(`gen5,${h(1)},${h(2)},${h(3)},${h(4)}`);
+				battle.prng = new PRNG(`sodium,${hex}`);
 				const from = battle.log.length;
 				for (const sid of ['p1', 'p2']) {
 					if (c.choices[sid]) battle.choose(sid, c.choices[sid]);

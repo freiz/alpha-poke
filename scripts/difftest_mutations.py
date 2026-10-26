@@ -160,6 +160,12 @@ MUTATIONS = [
     # tests/test_sample_set.py's test_the_move_floor_lifts_a_0_weight)
 ]
 RUST = [
+    ("L246 Cursed Body at each hit", "rust/patches/poke-engine-0.0.48/src/genx/generate_instructions.rs",
+     "                        Effect::Status(_) | Effect::VolatileStatus(PokemonVolatileStatus::DISABLE)",
+     "                        Effect::Status(_)"),
+    ("L247 a reflected move's miss its reflector's", "rust/patches/poke-engine-0.0.48/src/genx/generate_instructions.rs",
+     "        if choice.reflected && !choice.protected {\n            move_failed(state, &attacking_side_ref.get_other_side(),",
+     "        if false {\n            move_failed(state, &attacking_side_ref.get_other_side(),"),
     ("L245 no end of the turn after the win", "rust/patches/poke-engine-0.0.48/src/genx/generate_instructions.rs",
      "    if state.battle_is_over() != 0.0 {\n        return vec![];\n    }", "    if false {\n        return vec![];\n    }"),
     ("L244 Sleep Talk calls no nosleeptalk / charge move", "rust/patches/poke-engine-0.0.48/src/state.rs",

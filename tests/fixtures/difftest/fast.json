@@ -4,43 +4,38 @@
   "@specs": {}
  },
  "engine_chain": {
-  "#compared": 688,
+  "#compared": 698,
   "@specs": {}
  },
  "engine_dist": {
-  "#compared": 470,
+  "#compared": 474,
   "#skipped: a hidden length drawn": 10,
   "#skipped: a sleep's length drawn": 7,
-  "@specs": {
-   "scenario/extender/noguard-trick-gas": {
-    "dist.freq": 1
-   }
-  },
-  "dist.freq": 1
+  "@specs": {}
  },
  "engine_step": {
-  "#compared": 1751,
+  "#compared": 1767,
   "#skipped: not a turn start": 323,
   "@specs": {}
  },
  "state_chain": {
-  "#compared": 916,
+  "#compared": 932,
   "@specs": {}
  },
  "state_facts": {
-  "#compared": 2734,
+  "#compared": 2766,
   "@specs": {}
  },
  "state_live": {
-  "#compared": 2734,
+  "#compared": 2766,
   "@specs": {}
  },
  "state_replay": {
-  "#compared": 2734,
+  "#compared": 2766,
   "@specs": {}
  },
  "tree_history": {
-  "#compared": 1244,
+  "#compared": 1260,
   "#skipped: no log step": 5,
   "@specs": {}
  }

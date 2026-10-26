@@ -464,6 +464,16 @@ def engine_ends() -> list[Spec]:
               team(S("Shedinja", "", "Wonder Guard", ["Perish Song", "Swords Dance", "Shadow Sneak", "Protect"])),
               [{"p1": "move 2", "p2": "move 1"}, {"p1": "move 3", "p2": "move 2"}, {"p1": "move 3", "p2": "move 2"},
                {"p1": "move 1", "p2": "move 2"}], expect=("|-start|p1a: Gengar|perish1", "|win|p1")),
+        # (L246: Cursed Body at each hit of a multi-hit move -- engine_dist's turn 1)
+        _spec("chance/cursed-body-multihit",
+              team(S("Corviknight", "Leftovers", "Pressure", ["Dual Wingbeat", "Roost", "Body Press", "Defog"], FAST, "Jolly"), FILLER),
+              team(S("Gengar", "Leftovers", "Cursed Body", ["Protect", "Shadow Ball", "Taunt", "Calm Mind"]), FILLER),
+              [{"p1": "move 1", "p2": "move 4"}], expect=("|move|p1a: Corviknight|Dual Wingbeat",)),
+        # (L247: Magic Bounce before the accuracy -- a miss the reflector's move too)
+        _spec("chance/magic-bounce-miss",
+              team(S("Skeledirge", "Leftovers", "Unaware", ["Will-O-Wisp", "Torch Song", "Slack Off", "Shadow Ball"]), FILLER),
+              team(FILLER, S("Hatterene", "Leftovers", "Magic Bounce", ["Calm Mind", "Psyshock", "Draining Kiss", "Mystical Fire"])),
+              [{"p1": "move 1", "p2": "switch 2"}], expect=("[from] ability: Magic Bounce",)),
     ]  # fmt: skip
 
 

@@ -1327,10 +1327,10 @@ def test_l30_multi_hit_counts(item, counts):
 
 # L8b, second step (doc/engine-diff.md): the expected power (80 x 1.3) was an approximation
 def test_l8b_fickle_beam_double_power_branch():
-    """30% of the time double power (Showdown's rate over 1,000 seeds): the engine's outcomes
+    """30% of the time double power (Showdown's rate over 2,000 seeds): the engine's outcomes
     with at least 1.9 x the smallest damage (a crit is 1.5 x) have that chance."""
     turns = [("move ficklebeam", "move softboiled")]
-    rate = ec.showdown_rate(HYDRAPPLE, BLISSEY, turns, "move: Fickle Beam", 1000)
+    rate = ec.showdown_rate(HYDRAPPLE, BLISSEY, turns, "move: Fickle Beam", 2000)  # (sd 0.01: the bound 4 sd)
     states = ec.run_showdown(HYDRAPPLE, BLISSEY, turns)
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "ficklebeam", "softboiled")
     low = min(o.damage[1] for o in outs if o.damage[1] > 0)
@@ -7677,3 +7677,35 @@ def test_l245_the_battle_ends_at_the_win():
     loser = (lambda st: st.side_two) if win == "p1" else (lambda st: st.side_one)
     assert any(out(loser(o[1])) for o in outs if o[0] > 0)
     assert not any(out(o[1].side_one) and out(o[1].side_two) for o in outs if o[0] > 0)
+
+
+# L246 (2026-10-25, the distribution check): Cursed Body rolls at each hit of a multi-hit move
+# (Showdown's onDamagingHit per hit, none once disabled): 1 - 0.7^k -- the engine's secondary
+# rolled once (L215 made the contact statuses per hit, not this volatile)
+def test_l246_cursed_body_at_each_hit():
+    gengar = _setter("Gengar", "Cursed Body", "Leftovers", "- Protect\n- Shadow Ball\n- Taunt\n- Calm Mind")
+    bird = _attacker("Corviknight", "Pressure", "Leftovers", "- Dual Wingbeat\n- Roost\n- Body Press\n- Defog")
+    turns = [("move dualwingbeat", "move calmmind")]
+    rate = ec.showdown_rate(bird, gengar, turns, "|-start|p1a: Corviknight|Disable", n=600)
+    want = 0.9 * (1 - 0.7**2)  # (its 90% accuracy, once; two hits, a roll each)
+    assert abs(rate - want) < 0.06, rate  # (Showdown)
+    states = ec.run_showdown(bird, gengar, [])
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "dualwingbeat", "calmmind")
+    p = sum(o[0] for o in outs if "disable" in {str(v).lower() for v in o[1].side_one.volatile_statuses})
+    assert abs(p - want) < 0.01, p
+
+
+# L247 (2026-10-25, the distribution check): Magic Bounce reflects before the accuracy check
+# (Showdown's hit steps: tryHit, then accuracy) -- a miss is the reflected move's, its reflector's
+# move this turn failed (Stomping Tantrum's, Temper Flare's); the engine's miss branch marked the
+# user's alone
+def test_l247_a_reflected_moves_miss_is_its_reflectors():
+    dirge = _setter("Skeledirge", "Unaware", "Leftovers", "- Will-O-Wisp\n- Torch Song\n- Slack Off\n- Shadow Ball")
+    hatt = _setter("Hatterene", "Magic Bounce", "Leftovers", "- Calm Mind\n- Psyshock\n- Draining Kiss\n- Mystical Fire")
+    states = ec.run_showdown(dirge, CORVIKNIGHT + "\n\n" + hatt, [("move willowisp", "switch 2")])
+    assert any("[from] ability: Magic Bounce" in x for x in states[1]["log"])  # (Showdown)
+    assert ec.view(states[1]).get("s2.volatile.lastmovefailed")  # (the reflected one failed: a Fire type)
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "willowisp", "hatterene")
+    # (a hit at a Fire type, a miss: alike now -- one outcome or two, each failed)
+    assert abs(sum(o[0] for o in outs) - 1) < 1e-4
+    assert all(ec.view_engine(o[1], (2, 2)).get("s2.volatile.lastmovefailed") for o in outs)

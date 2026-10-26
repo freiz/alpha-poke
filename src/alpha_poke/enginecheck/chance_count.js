@@ -5,6 +5,7 @@
 // Usage: node chance_count.js <path to pokemon-showdown/dist/sim>
 // stdin: {"p1": team, "p2": team, "turns": [[c1, c2], ...], "line": substring, "n": seeds}
 // stdout: {"hits": k, "n": n, "error": null}
+const crypto = require('crypto');
 const {Battle, Teams} = require(process.argv[2]);
 const {teamOf} = require('./showdown_state.js');
 
@@ -17,10 +18,11 @@ process.stdin.on('end', () => {
 	let error = null;
 	try {
 		for (let i = 0; i < c.n; i++) {
-			// well spread seeds: neighbouring small ones give correlated first rolls (a 28.75% flinch
-			// for King's Rock's 10% with gen5,i,i+7,...)
-			const h = k => (Math.imul(i + 1, 0x9E3779B1 + k * 0x85EBCA6B) >>> 16) & 0xFFFF;
-			const battle = new Battle({formatid: 'gen9customgame', seed: `gen5,${h(1)},${h(2)},${h(3)},${h(4)}`});
+			// a sodium seed from a hash (2026-10-25): Showdown's "gen5," seeds are four 4-digit hex
+			// fields run together -- "gen5,i,j,..." ones parse to near-identical, correlated seeds (a
+			// 28.75% flinch for King's Rock's 10%; a resampled freeze's thaw 39% for its 20%)
+			const hex = crypto.createHash('sha256').update(`chance:${i}`).digest('hex').slice(0, 32);
+			const battle = new Battle({formatid: 'gen9customgame', seed: `sodium,${hex}`});
 			battle.setPlayer('p1', {name: 'p1', team: Teams.pack(teamOf(c.p1))});
 			battle.setPlayer('p2', {name: 'p2', team: Teams.pack(teamOf(c.p2))});
 			if (battle.p1.activeRequest && battle.p1.activeRequest.teamPreview) {
