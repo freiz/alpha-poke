@@ -476,6 +476,7 @@ def engine_state(sd: dict) -> pe.State:
 
 
 DAMAGE = re.compile(r"^Damage (SideOne|SideTwo): (-?\d+)$")
+SWITCH = re.compile(r"^Switch (SideOne|SideTwo): P\d+ -> P(\d+)$")
 SUB_DAMAGE = re.compile(r"^DamageSubstitute (SideOne|SideTwo): (-?\d+)$")
 
 
@@ -715,18 +716,31 @@ def engine_outcomes(state: pe.State, c1: str, c2: str,
     "defog", "earthquake-tera", "switch greattusk"): [(probability, resulting state)]; each
     state carries ``damage`` (``engine_damage``). ``hints``: damage_hints (the differential)."""
     out = []
+    start = (int(state.side_one.active_index), int(state.side_two.active_index))
     for si in pe.generate_instructions(state, c1, c2, *hints):
         # the binding returns a new state (it does not change ``state``)
         dmg, sub = [0, 0], [0, 0]
+        # (by mon too: the active the damage hit then -- a switch's next one after; 2026-10-25
+        # review, the HP tolerance of a side's damage applied to its bench)
+        active, per_mon, were_in = list(start), {}, {(0, start[0]), (1, start[1])}
         for ins in si.instruction_list:
-            m = DAMAGE.match(str(ins))
+            text = str(ins)
+            m = SWITCH.match(text)
+            if m:
+                k = m.group(1) == "SideTwo"
+                active[k] = int(m.group(2))
+                were_in.add((k, active[k]))
+                continue
+            m = DAMAGE.match(text)
             if m:  # (a negative one is a heal: Pain Split, not a roll)
-                dmg[m.group(1) == "SideTwo"] += max(int(m.group(2)), 0)
-            m = SUB_DAMAGE.match(str(ins))
+                k = m.group(1) == "SideTwo"
+                dmg[k] += max(int(m.group(2)), 0)
+                per_mon[(k, active[k])] = per_mon.get((k, active[k]), 0) + max(int(m.group(2)), 0)
+            m = SUB_DAMAGE.match(text)
             if m:
                 sub[m.group(1) == "SideTwo"] += max(int(m.group(2)), 0)
-        out.append((si.percentage / 100, state.apply_instructions(si), tuple(dmg), tuple(sub)))
-    return [Outcome(p, s, d, b) for p, s, d, b in out]
+        out.append((si.percentage / 100, state.apply_instructions(si), tuple(dmg), tuple(sub), per_mon, were_in))
+    return [Outcome(p, s, d, b, pm, w) for p, s, d, b, pm, w in out]
 
 
 class Outcome(tuple):
@@ -734,10 +748,14 @@ class Outcome(tuple):
     instructions: the roll tolerance of the HP comparison)."""
 
     def __new__(cls, p: float, state: pe.State, damage: tuple[int, int],
-                sub_damage: tuple[int, int] = (0, 0)):  # fmt: skip
+                sub_damage: tuple[int, int] = (0, 0), mon_damage: dict | None = None,
+                were_in: set | None = None):  # fmt: skip
         o = super().__new__(cls, (p, state))
         o.damage = damage
         o.sub_damage = sub_damage  # (the damage each side's Substitute took)
+        # ({(side 0 / 1, team index): the damage it took}; the mons in this turn -- None: by side)
+        o.mon_damage = mon_damage
+        o.were_in = were_in
         return o
 
 
@@ -1111,11 +1129,17 @@ def hp_diff(showdown_after: dict, out, n_mons=(6, 6), tol: int = 2,
     target = view(showdown_after)
     v = view_engine(out[1], n_mons)
     dmg = getattr(out, "damage", (0, 0))
+    per_mon, were_in = getattr(out, "mon_damage", None), getattr(out, "were_in", None)
     bad = {}
     for k, e in v.items():
         if k.endswith(".hp"):
             side = 0 if k.startswith("s1.") else 1
-            spread = 0.085 * dmg[side] + (0.085 * 0.75 * dmg[1 - side] if dealt[side] else 0)
+            j = int(k.split(".")[1])
+            # (the damage this mon took, not its side's: a bench mon's HP has no roll in it --
+            # 2026-10-25 review; an outcome without the split, the side's)
+            took = dmg[side] if per_mon is None else per_mon.get((side, j), 0)
+            followed = dealt[side] and (were_in is None or (side, j) in were_in)
+            spread = 0.085 * took + (0.085 * 0.75 * dmg[1 - side] if followed else 0)
             if abs(e - target[k]) > spread + tol:
                 bad[k] = (e, target[k])
     return bad
@@ -1150,6 +1174,30 @@ def closest(showdown_after: dict, outs: list, n_mons=(6, 6), hp: bool = False,
     # ("state": that outcome's engine state -- the chained differential goes on from it)
     return ({"p": best[0], "diff": best[1], "state": best[2]} if best
             else {"p": 0.0, "diff": {"no outcome": 1}, "state": None})  # fmt: skip
+
+
+def end_diff(showdown_after: dict, outs: list, n_mons=(6, 6)) -> dict:
+    """A battle's last transition (``showdown_after`` ended): who fainted -- its winner -- the
+    only thing compared. Showdown stops the turn at the win (no move after, no end of turn: a
+    Leftovers, a weather's count, a Rollout's volatile); the engine plays it out, a terminal state
+    the search scores by its winner alone (2026-10-25 review: the last transition was never
+    compared). As ``closest``: {"p", "diff", "state"}."""
+    def fainted(v: dict) -> set:
+        return {k for k, x in v.items() if k.endswith(".hp") and x == 0}
+
+    want = fainted(view(showdown_after))
+    best = None
+    for o in outs:
+        if o[0] <= 0:
+            continue
+        got = fainted(view_engine(o[1], n_mons))
+        if got == want:
+            return {"p": o[0], "diff": {}, "state": o[1]}
+        if best is None or len(got ^ want) < len(best[1] ^ want):
+            best = (o[0], got, o[1])
+    if best is None:
+        return {"p": 0.0, "diff": {"no outcome": 1}, "state": None}
+    return {"p": best[0], "diff": {"end.fainted": (sorted(best[1]), sorted(want))}, "state": None}
 
 
 def player_log(lines: list[str], side: str) -> list[str]:

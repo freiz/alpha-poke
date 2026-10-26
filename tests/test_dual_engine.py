@@ -3176,7 +3176,8 @@ def test_l115_power_doubles_after_a_failed_move():
     states = ec.run_showdown(tusk, corv, [("move headlongrush", "move defog"), ("move temperflare", "move defog")])
     assert any(x.startswith("|-immune|p2a:") for x in states[1]["log"])
     outs = ec.engine_outcomes(ec.engine_state(states[1]), "temperflare", "defog")
-    res = ec.closest(states[2], outs, (1, 1), hp=True)
+    # (a knockout ends the battle: who fainted alone -- L245, the turn stops at the win)
+    res = ec.end_diff(states[2], outs, (1, 1)) if states[2]["ended"] else ec.closest(states[2], outs, (1, 1), hp=True)
     crit = any(x.startswith("|-crit") for x in states[2]["log"])
     ko = states[2]["sides"][1]["mons"][0]["hp"] == 0  # (a knockout by the rolls: its branch's share)
     assert res["diff"] == {} and (crit or ko or res["p"] > 0.9)
@@ -4150,7 +4151,9 @@ def test_l161_shell_side_arm_physical():
     blissey = BLISSEY.replace("Heavy-Duty Boots", "Rocky Helmet").replace("252 Def / 4 SpD", "4 Def / 252 SpD")
     states = ec.run_showdown(user, blissey.replace("Bold", "Calm"), [("move shellsidearm", "move calmmind")])
     assert any("Rocky Helmet" in x for x in states[1]["log"])  # (physical: contact)
-    outs = ec.engine_outcomes(ec.engine_state(states[0]), "shellsidearm", "calmmind")
+    # (Showdown's rolls as hints: its poison's knockout at the end of the turn follows the damage --
+    # without them a crit's branch matched, by the HP tolerance; L245)
+    outs = ec.engine_outcomes(ec.engine_state(states[0]), "shellsidearm", "calmmind", ec.move_hints(states[0], states[1]))
     assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
 
 
@@ -7643,3 +7646,34 @@ def test_l244_sleep_talk_with_nothing_to_call_fails():
     assert abs(sum(o[0] for o in outs) - 1) < 1e-4, [o[0] for o in outs]
     breloom = states[1]["sides"][1]["mons"][0]["hp"]
     assert all(o[1].side_two.pokemon[0].hp >= breloom for o in outs)
+
+
+# L245 (2026-10-25, the last transition compared: end_diff): the battle is over at the faint that
+# leaves a side no mon (Showdown's checkWin) -- the engine played the turn on: a residual knocked
+# the winner's last mon out after, both sides out, and battle_is_over read side two's win whoever
+# won (the full corpus' last turns: 11 so)
+def _last_turn(sid: str):
+    from alpha_poke.enginecheck import difftest as dt
+
+    steps, err = next(s for s in dt.corpus("full") if s.id == sid).battle()
+    assert err is None and steps[-1]["state"]["ended"]
+    return steps[-2], steps[-1]
+
+
+def test_l245_the_battle_ends_at_the_win():
+    a, b = _last_turn("random/rbt_randbats/7041")
+    win = b["state"]["winner"]
+    assert win in ("p1", "p2")  # (Showdown)
+    c1, c2 = (a["choices"][s]["engine"] for s in ("p1", "p2"))
+    n = tuple(len(s["mons"]) for s in a["state"]["sides"])
+    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2)
+    assert ec.end_diff(b["state"], outs, n)["diff"] == {}
+
+    def out(side) -> bool:
+        return all(p.hp <= 0 for p in side.pokemon)
+
+    # (the loser's side out in some outcome; in none both sides out -- the engine's battle_is_over
+    # reads both out as side two's win)
+    loser = (lambda st: st.side_two) if win == "p1" else (lambda st: st.side_one)
+    assert any(out(loser(o[1])) for o in outs if o[0] > 0)
+    assert not any(out(o[1].side_one) and out(o[1].side_two) for o in outs if o[0] > 0)

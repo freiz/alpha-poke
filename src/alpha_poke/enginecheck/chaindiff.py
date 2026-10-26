@@ -115,8 +115,9 @@ def chain_diffs(steps: list[dict], depth: int = 3, every: int = 3, start=None, f
                 outs = ec.engine_outcomes(st, c1, c2, hints)
                 dealt = (follows_dealt(a["state"], 0, c1) or c2.startswith("endeavor"),
                          follows_dealt(a["state"], 1, c2) or c1.startswith("endeavor"))  # fmt: skip
-                res = ec.closest(b["state"], outs, n, hp=True, dealt=dealt, full=True, start=a["state"],
-                                 complete=True)  # fmt: skip
+                res = (ec.end_diff(b["state"], outs, n) if b["state"]["ended"] else
+                       ec.closest(b["state"], outs, n, hp=True, dealt=dealt, full=True, start=a["state"],
+                                  complete=True))  # fmt: skip
             except BaseException as e:  # noqa: BLE001 - the binding's panics are BaseExceptions
                 out["errors"].append(f"engine d{d}: {c1} | {c2}: {type(e).__name__}: {str(e)[:120]}")
                 break

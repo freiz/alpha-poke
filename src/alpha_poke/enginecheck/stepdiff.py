@@ -35,13 +35,13 @@ def follows_dealt(state: dict, side: int, move: str) -> bool:
 
 def comparable(steps: list[dict], k: int) -> str | None:
     """Why turn step k cannot be compared with step k + 1 (None: it can)."""
-    a, b = steps[k], steps[k + 1]
+    a = steps[k]
     if set(a["choices"]) != {"p1", "p2"} or any(
         s["request"] != "move" for s in a["state"]["sides"]
     ):
         return "not a turn start"
-    if b["state"]["ended"]:
-        return "battle ended"
+    # (an ended battle's last transition: compared by who fainted -- ec.end_diff; 2026-10-25
+    # review: skipped whole before)
     return None
 
 
@@ -80,8 +80,8 @@ def step_diffs(steps: list[dict], err: str | None, i=0) -> dict:
             # (an Endeavor's target ends at its user's HP: it follows the damage it dealt itself)
             dealt = (follows_dealt(a["state"], 0, c1) or c2.startswith("endeavor"),
                      follows_dealt(a["state"], 1, c2) or c1.startswith("endeavor"))  # fmt: skip
-            res = ec.closest(b["state"], outs, n, hp=True, dealt=dealt, full=True,
-                             start=a["state"], complete=True)  # fmt: skip
+            res = (ec.end_diff(b["state"], outs, n) if b["state"]["ended"] else
+                   ec.closest(b["state"], outs, n, hp=True, dealt=dealt, full=True, start=a["state"], complete=True))  # fmt: skip
         except BaseException as e:  # noqa: BLE001 - the binding's panics are BaseExceptions
             out["errors"].append(f"engine: {c1} | {c2}: {type(e).__name__}: {str(e)[:120]}")
             out["mismatches"][f"b{i}-t{a['state']['turn']}"] = {

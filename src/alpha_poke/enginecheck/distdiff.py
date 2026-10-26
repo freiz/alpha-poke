@@ -83,7 +83,9 @@ def turn_dist(a: dict, outcomes: list[dict]) -> dict:
     for s in outcomes:
         vs = ec.view(s)
         pat = _showdown_pattern(s, vs)
-        key = next((k for v, k in branches if k[1] == pat and not ec.diff(v, vs, skip_hp=True)), None)
+        # (an outcome that ended the battle: who fainted alone -- Showdown stops the turn at the
+        # win, the engine plays it out: ec.end_diff)
+        key = next((k for v, k in branches if k[1] == pat and (s.get("ended") or not ec.diff(v, vs, skip_hp=True))), None)
         counts[key] += 1
         if key is None:
             unmatched.append(_describe(vs, v0s, pat))

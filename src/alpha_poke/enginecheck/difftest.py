@@ -259,7 +259,7 @@ def run(specs: list[Spec], checks: list[str], procs: int = 8) -> dict:
     errors count as the kind "error"."""
     jobs = [(c, s) for c in checks for s in specs if CHECKS[c][1](s)]
     out = {c: {"specs": 0, "n": 0, "kinds": collections.Counter(), "examples": {}, "errors": [],
-               "skipped": collections.Counter()} for c in checks}  # fmt: skip
+               "skipped": collections.Counter(), "by_spec": {}} for c in checks}  # fmt: skip
     with mp.get_context("spawn").Pool(procs) as pool:
         for c, sid, r in pool.imap_unordered(_job, jobs):
             o = out[c]
@@ -273,6 +273,11 @@ def run(specs: list[Spec], checks: list[str], procs: int = 8) -> dict:
             if r["errors"]:
                 o["kinds"]["error"] += len(r["errors"])
                 o["errors"] += [(sid, e) for e in r["errors"][:3]]
+            # (by spec too: a fixed finding of one battle no longer hides a new one of another --
+            # 2026-10-25 review, the totals alone)
+            mine = {**r["kinds"], **({"error": len(r["errors"])} if r["errors"] else {})}
+            if mine:
+                o["by_spec"][sid] = dict(sorted(mine.items()))
     for o in out.values():
         o["kinds"] = dict(sorted(o["kinds"].items()))
         o["skipped"] = dict(sorted(o["skipped"].items()))
@@ -285,6 +290,7 @@ def baseline_path(name: str) -> Path:
 
 COMPARED = "#compared"  # (a baseline's comparisons made: fewer is a regression)
 SKIPPED = "#skipped: "  # (+ a reason: more left out is one)
+BY_SPEC = "@specs"  # ({spec id: {kind: count}}: no spec's kind more often either)
 
 
 def regressions(result: dict, baseline: dict, subset: bool = False) -> list[str]:
@@ -299,6 +305,14 @@ def regressions(result: dict, baseline: dict, subset: bool = False) -> list[str]
         for k, n in counts.items():
             if n > base.get(k, 0):
                 out.append(f"{c}: {k} {base.get(k, 0)} -> {n}")
+        # (each spec's kinds within its own: a total kept by a fix elsewhere hides nothing; a
+        # baseline from before has none -- its totals only)
+        if BY_SPEC in base:
+            for sid, kinds in o.get("by_spec", {}).items():
+                had = base[BY_SPEC].get(sid, {})
+                for k, n in kinds.items():
+                    if n > had.get(k, 0):
+                        out.append(f"{c}: {sid} {k} {had.get(k, 0)} -> {n}")
         if not subset and o["n"] < base.get(COMPARED, 0):
             out.append(f"{c}: {COMPARED} {base[COMPARED]} -> {o['n']}")
     return out
@@ -317,5 +331,6 @@ def updated_baseline(base: dict, result: dict, checks: list[str], only: str, for
 
 
 def baseline_of(result: dict) -> dict:
-    return {c: {**o["kinds"], **{SKIPPED + k: n for k, n in o.get("skipped", {}).items()}, COMPARED: o["n"]}
+    return {c: {**o["kinds"], **{SKIPPED + k: n for k, n in o.get("skipped", {}).items()}, COMPARED: o["n"],
+                BY_SPEC: dict(sorted(o.get("by_spec", {}).items()))}
             for c, o in result.items()}  # fmt: skip

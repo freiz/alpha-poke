@@ -1,37 +1,47 @@
 {
  "belief_truth": {
-  "#compared": 1095
+  "#compared": 1095,
+  "@specs": {}
  },
  "engine_chain": {
-  "#compared": 686
+  "#compared": 688,
+  "@specs": {}
  },
  "engine_dist": {
-  "#compared": 464,
+  "#compared": 470,
   "#skipped: a hidden length drawn": 10,
-  "#skipped: a sleep's length drawn": 5,
-  "dist.freq": 1,
-  "dist.unmatched": 1
+  "#skipped: a sleep's length drawn": 7,
+  "@specs": {
+   "scenario/extender/noguard-trick-gas": {
+    "dist.freq": 1
+   }
+  },
+  "dist.freq": 1
  },
  "engine_step": {
-  "#compared": 1720,
-  "#skipped: battle ended": 27,
-  "#skipped: not a turn start": 323
+  "#compared": 1751,
+  "#skipped: not a turn start": 323,
+  "@specs": {}
  },
  "state_chain": {
-  "#compared": 913
+  "#compared": 916,
+  "@specs": {}
  },
  "state_facts": {
-  "#compared": 2726
+  "#compared": 2734,
+  "@specs": {}
  },
  "state_live": {
-  "#compared": 2726
+  "#compared": 2734,
+  "@specs": {}
  },
  "state_replay": {
-  "#compared": 2726
+  "#compared": 2734,
+  "@specs": {}
  },
  "tree_history": {
-  "#compared": 1218,
+  "#compared": 1244,
   "#skipped: no log step": 5,
-  "#skipped: the last turn": 22
+  "@specs": {}
  }
 }

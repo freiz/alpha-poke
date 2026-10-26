@@ -1,9 +1,41 @@
 {
  "belief_truth": {
-  "#compared": 30105
+  "#compared": 30105,
+  "@specs": {}
  },
  "engine_chain": {
-  "#compared": 24533,
+  "#compared": 24535,
+  "@specs": {
+   "random/rbt_offmeta/7034": {
+    "types": 1
+   },
+   "random/rbt_randbats17/7010": {
+    "substitute_hp": 1
+   },
+   "random/rbt_randbats31/7046": {
+    "substitute_hp": 1
+   },
+   "random/rbt_randbats5/7010": {
+    "substitute_hp": 1,
+    "volatile.substitute": 1
+   },
+   "random/rbt_wide/7016": {
+    "substitute_hp": 1
+   },
+   "random/rbt_wide200/7006": {
+    "hp": 1
+   },
+   "random/rbt_wide200/7035": {
+    "volatile.perish1": 1,
+    "volatile.perish2": 1
+   },
+   "random/rbt_wide200/7038": {
+    "hp": 1,
+    "sc.toxic_count": 2,
+    "status": 2,
+    "volatile.lastmovefailed": 1
+   }
+  },
   "hp": 2,
   "sc.toxic_count": 2,
   "status": 2,
@@ -15,16 +47,501 @@
   "volatile.substitute": 1
  },
  "engine_dist": {
-  "#compared": 19479,
-  "#skipped: a hidden length drawn": 346,
-  "#skipped: a sleep's length drawn": 673,
-  "dist.freq": 100,
-  "dist.unmatched": 48
+  "#compared": 19849,
+  "#skipped: a hidden length drawn": 360,
+  "#skipped: a sleep's length drawn": 677,
+  "@specs": {
+   "pct/rbt/8002": {
+    "dist.unmatched": 1
+   },
+   "pct/rbt/8009": {
+    "dist.freq": 1
+   },
+   "pct/rbt_forum/8004": {
+    "dist.freq": 1
+   },
+   "pct/rbt_offmeta/8006": {
+    "dist.freq": 1
+   },
+   "pct/rbt_randbats10/8003": {
+    "dist.freq": 1
+   },
+   "pct/rbt_randbats14/8002": {
+    "dist.freq": 1
+   },
+   "pct/rbt_randbats14/8003": {
+    "dist.unmatched": 1
+   },
+   "pct/rbt_randbats17/8006": {
+    "dist.unmatched": 1
+   },
+   "pct/rbt_randbats18/8001": {
+    "dist.freq": 1
+   },
+   "pct/rbt_randbats2/8005": {
+    "dist.freq": 1
+   },
+   "pct/rbt_randbats21/8003": {
+    "dist.freq": 1
+   },
+   "pct/rbt_randbats22/8000": {
+    "dist.freq": 1,
+    "dist.unmatched": 1
+   },
+   "pct/rbt_randbats24/8003": {
+    "dist.freq": 1
+   },
+   "pct/rbt_randbats25/8001": {
+    "dist.freq": 1
+   },
+   "pct/rbt_randbats27/8006": {
+    "dist.freq": 1
+   },
+   "pct/rbt_randbats29/8006": {
+    "dist.freq": 1,
+    "dist.unmatched": 1
+   },
+   "pct/rbt_randbats30/8006": {
+    "dist.freq": 1
+   },
+   "pct/rbt_randbats31/8006": {
+    "dist.freq": 1,
+    "dist.unmatched": 1
+   },
+   "pct/rbt_randbats32/8000": {
+    "dist.unmatched": 1
+   },
+   "pct/rbt_randbats4/8002": {
+    "dist.freq": 1
+   },
+   "pct/rbt_randbats4/8008": {
+    "dist.freq": 1
+   },
+   "pct/rbt_randbats6/8000": {
+    "dist.freq": 1
+   },
+   "pct/rbt_randbats6/8008": {
+    "dist.freq": 1
+   },
+   "pct/rbt_randbats6/8009": {
+    "dist.freq": 1,
+    "dist.unmatched": 1
+   },
+   "pct/rbt_randbats7/8006": {
+    "dist.freq": 1
+   },
+   "pct/rbt_random/8005": {
+    "dist.freq": 1
+   },
+   "pct/rbt_random/8006": {
+    "dist.freq": 1,
+    "dist.unmatched": 1
+   },
+   "pct/rbt_wide/8002": {
+    "dist.freq": 1
+   },
+   "random/rbt/7000": {
+    "dist.freq": 1
+   },
+   "random/rbt/7009": {
+    "dist.freq": 1,
+    "dist.unmatched": 1
+   },
+   "random/rbt/7013": {
+    "dist.freq": 1
+   },
+   "random/rbt/7024": {
+    "dist.freq": 1
+   },
+   "random/rbt_forum/7023": {
+    "dist.freq": 1
+   },
+   "random/rbt_forum/7037": {
+    "dist.freq": 1
+   },
+   "random/rbt_offmeta/7025": {
+    "dist.freq": 1,
+    "dist.unmatched": 1
+   },
+   "random/rbt_offmeta/7029": {
+    "dist.freq": 1,
+    "dist.unmatched": 1
+   },
+   "random/rbt_offmeta/7034": {
+    "dist.freq": 1,
+    "dist.unmatched": 1
+   },
+   "random/rbt_offmeta/7039": {
+    "dist.freq": 1,
+    "dist.unmatched": 1
+   },
+   "random/rbt_offmeta/7042": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats/7004": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats/7005": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats/7031": {
+    "dist.freq": 2
+   },
+   "random/rbt_randbats11/7004": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats11/7005": {
+    "dist.freq": 1,
+    "dist.unmatched": 1
+   },
+   "random/rbt_randbats11/7007": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats12/7005": {
+    "dist.freq": 1,
+    "dist.unmatched": 1
+   },
+   "random/rbt_randbats12/7027": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats13/7005": {
+    "dist.freq": 2
+   },
+   "random/rbt_randbats14/7002": {
+    "dist.freq": 1,
+    "dist.unmatched": 1
+   },
+   "random/rbt_randbats14/7023": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats14/7032": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats14/7033": {
+    "dist.freq": 2,
+    "dist.unmatched": 1
+   },
+   "random/rbt_randbats14/7040": {
+    "dist.unmatched": 1
+   },
+   "random/rbt_randbats15/7004": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats15/7010": {
+    "dist.freq": 1,
+    "dist.unmatched": 1
+   },
+   "random/rbt_randbats15/7018": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats15/7022": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats16/7008": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats16/7035": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats16/7039": {
+    "dist.freq": 1,
+    "dist.unmatched": 1
+   },
+   "random/rbt_randbats17/7025": {
+    "dist.unmatched": 1
+   },
+   "random/rbt_randbats17/7043": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats18/7048": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats19/7005": {
+    "dist.unmatched": 1
+   },
+   "random/rbt_randbats19/7021": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats19/7042": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats2/7000": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats20/7000": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats20/7007": {
+    "dist.freq": 2
+   },
+   "random/rbt_randbats20/7012": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats20/7014": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats20/7047": {
+    "dist.freq": 1,
+    "dist.unmatched": 1
+   },
+   "random/rbt_randbats21/7001": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats21/7003": {
+    "dist.freq": 1,
+    "dist.unmatched": 1
+   },
+   "random/rbt_randbats21/7006": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats21/7011": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats21/7026": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats21/7043": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats22/7001": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats22/7006": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats23/7029": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats23/7043": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats24/7020": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats24/7039": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats24/7045": {
+    "dist.freq": 1,
+    "dist.unmatched": 1
+   },
+   "random/rbt_randbats24/7048": {
+    "dist.unmatched": 1
+   },
+   "random/rbt_randbats25/7005": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats25/7034": {
+    "dist.freq": 1,
+    "dist.unmatched": 1
+   },
+   "random/rbt_randbats26/7023": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats26/7026": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats26/7039": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats26/7042": {
+    "dist.unmatched": 1
+   },
+   "random/rbt_randbats27/7007": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats27/7009": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats27/7020": {
+    "dist.unmatched": 1
+   },
+   "random/rbt_randbats29/7017": {
+    "dist.freq": 1,
+    "dist.unmatched": 1
+   },
+   "random/rbt_randbats29/7033": {
+    "dist.freq": 2
+   },
+   "random/rbt_randbats3/7029": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats3/7042": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats30/7017": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats30/7033": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats31/7011": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats31/7022": {
+    "dist.unmatched": 1
+   },
+   "random/rbt_randbats32/7001": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats32/7018": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats32/7033": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats32/7034": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats33/7021": {
+    "dist.unmatched": 1
+   },
+   "random/rbt_randbats33/7031": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats33/7036": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats4/7004": {
+    "dist.freq": 1,
+    "dist.unmatched": 1
+   },
+   "random/rbt_randbats4/7028": {
+    "dist.freq": 1,
+    "dist.unmatched": 2
+   },
+   "random/rbt_randbats4/7033": {
+    "dist.unmatched": 1
+   },
+   "random/rbt_randbats5/7008": {
+    "dist.freq": 1,
+    "dist.unmatched": 1
+   },
+   "random/rbt_randbats5/7017": {
+    "dist.freq": 2
+   },
+   "random/rbt_randbats5/7049": {
+    "dist.freq": 1,
+    "dist.unmatched": 1
+   },
+   "random/rbt_randbats6/7030": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats6/7040": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats7/7017": {
+    "dist.freq": 1,
+    "dist.unmatched": 1
+   },
+   "random/rbt_randbats7/7029": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats7/7038": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats8/7023": {
+    "dist.unmatched": 1
+   },
+   "random/rbt_randbats8/7043": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats8/7045": {
+    "dist.unmatched": 1
+   },
+   "random/rbt_randbats9/7007": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats9/7032": {
+    "dist.freq": 1
+   },
+   "random/rbt_randbats9/7034": {
+    "dist.unmatched": 1
+   },
+   "random/rbt_randbats9/7041": {
+    "dist.freq": 1
+   },
+   "random/rbt_random/7011": {
+    "dist.freq": 1
+   },
+   "random/rbt_random/7026": {
+    "dist.unmatched": 1
+   },
+   "random/rbt_wide/7033": {
+    "dist.freq": 1
+   },
+   "random/rbt_wide/7046": {
+    "dist.freq": 1
+   },
+   "random/rbt_wide2/7002": {
+    "dist.freq": 1,
+    "dist.unmatched": 1
+   },
+   "random/rbt_wide200/7048": {
+    "dist.freq": 1
+   },
+   "scenario/extender/noguard-trick-gas": {
+    "dist.freq": 1
+   }
+  },
+  "dist.freq": 124,
+  "dist.unmatched": 45
  },
  "engine_step": {
-  "#compared": 77616,
-  "#skipped: battle ended": 1569,
+  "#compared": 79189,
   "#skipped: not a turn start": 21409,
+  "@specs": {
+   "random/rbt/7009": {
+    "ability": 1,
+    "attack": 1,
+    "base_ability": 1,
+    "base_types": 1,
+    "defense": 1,
+    "gender": 1,
+    "id": 1,
+    "last_item": 1,
+    "last_used_move": 1,
+    "level": 1,
+    "maxhp": 1,
+    "move": 1,
+    "must_switch": 1,
+    "nature": 1,
+    "pp": 1,
+    "sc.protect": 1,
+    "sc.toxic_count": 1,
+    "special_attack": 1,
+    "special_defense": 1,
+    "speed": 1,
+    "status": 1,
+    "stellar_boosted": 1,
+    "tera_type": 1,
+    "terastallized": 1,
+    "types": 1,
+    "volatile.lastmovefailed": 1,
+    "weight": 1
+   },
+   "random/rbt_forum/7020": {
+    "hp": 1
+   },
+   "random/rbt_offmeta/7034": {
+    "types": 1,
+    "volatile.protean": 1,
+    "volatile.typechange": 1
+   },
+   "random/rbt_wide2/7002": {
+    "hp": 2
+   },
+   "random/rbt_wide200/7006": {
+    "hp": 1
+   },
+   "random/rbt_wide200/7035": {
+    "volatile.perish3": 1
+   },
+   "random/rbt_wide200/7038": {
+    "hp": 1,
+    "status": 1
+   }
+  },
   "ability": 1,
   "attack": 1,
   "base_ability": 1,
@@ -58,7 +575,30 @@
   "weight": 1
  },
  "state_chain": {
-  "#compared": 41558,
+  "#compared": 41561,
+  "@specs": {
+   "random/rbt_forum/7020": {
+    "hp": 1
+   },
+   "random/rbt_offmeta/7034": {
+    "types": 2,
+    "volatile.protean": 1,
+    "volatile.typechange": 1
+   },
+   "random/rbt_wide/7016": {
+    "substitute_hp": 1
+   },
+   "random/rbt_wide2/7002": {
+    "hp": 1
+   },
+   "random/rbt_wide200/7006": {
+    "hp": 1
+   },
+   "random/rbt_wide200/7038": {
+    "hp": 1,
+    "status": 1
+   }
+  },
   "hp": 4,
   "status": 1,
   "substitute_hp": 1,
@@ -67,25 +607,255 @@
   "volatile.typechange": 1
  },
  "state_facts": {
-  "#compared": 150104
+  "#compared": 150112,
+  "@specs": {}
  },
  "state_live": {
-  "#compared": 150104
+  "#compared": 150112,
+  "@specs": {}
  },
  "state_replay": {
-  "#compared": 150104
+  "#compared": 150112,
+  "@specs": {}
  },
  "tree_history": {
-  "#compared": 64604,
+  "#compared": 65948,
   "#skipped: choice not a slot": 3,
   "#skipped: no log step": 5,
-  "#skipped: the last turn": 1340,
-  "tree:one.actor": 75,
+  "@specs": {
+   "random/rbt_offmeta/7013": {
+    "tree:one.actor": 1,
+    "tree:one.fainted_first": 1,
+    "tree:one.target": 1
+   },
+   "random/rbt_offmeta/7020": {
+    "tree:one.actor": 5,
+    "tree:one.kind": 1,
+    "tree:one.target": 2
+   },
+   "random/rbt_offmeta/7032": {
+    "tree:one.actor": 1,
+    "tree:one.kind": 1,
+    "tree:one.target": 1
+   },
+   "random/rbt_offmeta/7040": {
+    "tree:two.actor": 5,
+    "tree:two.target": 1
+   },
+   "random/rbt_offmeta/7049": {
+    "tree:two.actor": 1,
+    "tree:two.fainted_first": 1,
+    "tree:two.kind": 1,
+    "tree:two.target": 1
+   },
+   "random/rbt_randbats10/7020": {
+    "tree:two.actor": 3
+   },
+   "random/rbt_randbats10/7025": {
+    "tree:two.actor": 1
+   },
+   "random/rbt_randbats10/7027": {
+    "tree:two.actor": 4
+   },
+   "random/rbt_randbats10/7029": {
+    "tree:one.prevented": 1
+   },
+   "random/rbt_randbats10/7034": {
+    "tree:two.actor": 1,
+    "tree:two.kind": 1,
+    "tree:two.target": 1
+   },
+   "random/rbt_randbats11/7017": {
+    "tree:one.fainted_first": 1
+   },
+   "random/rbt_randbats13/7030": {
+    "tree:two.actor": 1
+   },
+   "random/rbt_randbats14/7001": {
+    "tree:one.actor": 3
+   },
+   "random/rbt_randbats14/7006": {
+    "tree:two.actor": 2
+   },
+   "random/rbt_randbats16/7029": {
+    "tree:one.target": 1
+   },
+   "random/rbt_randbats16/7048": {
+    "tree:one.target": 1
+   },
+   "random/rbt_randbats17/7009": {
+    "tree:two.actor": 1
+   },
+   "random/rbt_randbats17/7029": {
+    "tree:two.actor": 2,
+    "tree:two.target": 1
+   },
+   "random/rbt_randbats18/7000": {
+    "tree:one.actor": 1,
+    "tree:one.kind": 1,
+    "tree:one.target": 1
+   },
+   "random/rbt_randbats18/7037": {
+    "tree:two.actor": 1
+   },
+   "random/rbt_randbats19/7028": {
+    "tree:one.actor": 1
+   },
+   "random/rbt_randbats2/7009": {
+    "tree:one.actor": 1,
+    "tree:one.kind": 1,
+    "tree:one.target": 1
+   },
+   "random/rbt_randbats2/7013": {
+    "tree:two.actor": 2
+   },
+   "random/rbt_randbats20/7021": {
+    "tree:two.actor": 3
+   },
+   "random/rbt_randbats21/7003": {
+    "tree:two.actor": 1
+   },
+   "random/rbt_randbats21/7025": {
+    "tree:one.actor": 1,
+    "tree:one.fainted_first": 1
+   },
+   "random/rbt_randbats21/7030": {
+    "tree:one.actor": 1,
+    "tree:one.kind": 1,
+    "tree:one.target": 1
+   },
+   "random/rbt_randbats22/7019": {
+    "tree:one.actor": 4
+   },
+   "random/rbt_randbats23/7034": {
+    "tree:two.actor": 3
+   },
+   "random/rbt_randbats23/7037": {
+    "tree:one.target": 1
+   },
+   "random/rbt_randbats25/7010": {
+    "tree:one.actor": 5,
+    "tree:one.target": 1
+   },
+   "random/rbt_randbats25/7015": {
+    "tree:two.actor": 1,
+    "tree:two.kind": 1,
+    "tree:two.target": 1
+   },
+   "random/rbt_randbats26/7003": {
+    "tree:one.actor": 4
+   },
+   "random/rbt_randbats26/7045": {
+    "tree:two.actor": 1
+   },
+   "random/rbt_randbats28/7036": {
+    "tree:one.actor": 1,
+    "tree:one.target": 1
+   },
+   "random/rbt_randbats29/7014": {
+    "tree:one.actor": 11
+   },
+   "random/rbt_randbats29/7043": {
+    "tree:one.actor": 3
+   },
+   "random/rbt_randbats3/7004": {
+    "tree:two.actor": 1
+   },
+   "random/rbt_randbats3/7012": {
+    "tree:two.actor": 3
+   },
+   "random/rbt_randbats3/7036": {
+    "tree:one.actor": 5
+   },
+   "random/rbt_randbats3/7041": {
+    "tree:two.actor": 2,
+    "tree:two.target": 1
+   },
+   "random/rbt_randbats30/7008": {
+    "tree:one.actor": 1
+   },
+   "random/rbt_randbats30/7047": {
+    "tree:one.actor": 5
+   },
+   "random/rbt_randbats30/7049": {
+    "tree:one.actor": 9,
+    "tree:one.target": 1
+   },
+   "random/rbt_randbats31/7001": {
+    "tree:one.actor": 1
+   },
+   "random/rbt_randbats31/7007": {
+    "tree:two.actor": 1,
+    "tree:two.kind": 1,
+    "tree:two.target": 1
+   },
+   "random/rbt_randbats31/7015": {
+    "tree:one.target": 1
+   },
+   "random/rbt_randbats31/7032": {
+    "tree:two.actor": 2
+   },
+   "random/rbt_randbats31/7036": {
+    "tree:two.actor": 2
+   },
+   "random/rbt_randbats31/7038": {
+    "tree:two.actor": 1
+   },
+   "random/rbt_randbats32/7015": {
+    "tree:one.target": 1
+   },
+   "random/rbt_randbats32/7028": {
+    "tree:one.actor": 1
+   },
+   "random/rbt_randbats32/7039": {
+    "tree:one.actor": 2
+   },
+   "random/rbt_randbats33/7014": {
+    "tree:one.actor": 1
+   },
+   "random/rbt_randbats33/7048": {
+    "tree:two.actor": 2
+   },
+   "random/rbt_randbats5/7023": {
+    "tree:two.actor": 1,
+    "tree:two.target": 3
+   },
+   "random/rbt_randbats5/7049": {
+    "tree:two.actor": 1
+   },
+   "random/rbt_randbats8/7048": {
+    "tree:one.actor": 2,
+    "tree:one.target": 2
+   },
+   "random/rbt_randbats9/7028": {
+    "tree:two.actor": 3
+   },
+   "random/rbt_randbats9/7036": {
+    "tree:one.actor": 4
+   },
+   "random/rbt_randbats9/7038": {
+    "tree:one.actor": 2
+   },
+   "random/rbt_random/7040": {
+    "tree:two.actor": 2
+   },
+   "random/rbt_wide/7012": {
+    "tree:two.actor": 1,
+    "tree:two.kind": 1,
+    "tree:two.target": 1
+   },
+   "random/rbt_wide2/7027": {
+    "tree:two.actor": 1,
+    "tree:two.kind": 1,
+    "tree:two.target": 1
+   }
+  },
+  "tree:one.actor": 76,
   "tree:one.fainted_first": 3,
   "tree:one.kind": 5,
   "tree:one.prevented": 1,
   "tree:one.target": 17,
-  "tree:two.actor": 55,
+  "tree:two.actor": 56,
   "tree:two.fainted_first": 1,
   "tree:two.kind": 6,
   "tree:two.target": 12

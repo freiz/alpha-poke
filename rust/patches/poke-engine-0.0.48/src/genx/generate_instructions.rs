@@ -5339,6 +5339,17 @@ pub fn generate_instructions_from_move(
             return;
         }
     }
+    // alpha-poke patch (2026-10-25, doc/engine-diff.md L245): the first move ended the battle (its
+    // user's own recoil took its side's last mon): no second move -- Showdown's checkWin
+    if !choice.first_move {
+        state.apply_instructions(&incoming_instructions.instruction_list);
+        let over = state.battle_is_over() != 0.0;
+        state.reverse_instructions(&incoming_instructions.instruction_list);
+        if over {
+            final_instructions.push(incoming_instructions);
+            return;
+        }
+    }
     if state.use_damage_dealt {
         reset_damage_dealt(
             state.get_side(&attacking_side),
@@ -7898,6 +7909,12 @@ fn end_of_turn_with_harvest(
 ) -> Vec<StateInstructions> {
     // (L168: a Future Sight crit's branch; L191: each Shed Skin's 1 in 3 -- every combination, the
     // state back as it was after each but the last)
+    // alpha-poke patch (2026-10-25, doc/engine-diff.md L245): the battle over -- a side with no
+    // mon left: Showdown's checkWin ends it at the faint, no end of the turn (a residual knocked
+    // the winner's last mon out after it: both sides out, battle_is_over side two's win whoever won)
+    if state.battle_is_over() != 0.0 {
+        return vec![];
+    }
     let mut branches: Vec<(EotRolls, f32)> = vec![(EotRolls::default(), 1.0)];
     if let Some((side, p)) = future_sight_crit_chance(state) {
         branches = branches

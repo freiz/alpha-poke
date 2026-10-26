@@ -48,18 +48,13 @@ def tree_diffs(p1: str, p2: str, seed: int, max_turns: int = 40, script: list | 
         out["skipped"]["parse warnings"] += 1
         return out
     log_steps = decision_steps(rep.actions, blind_sides(rep))
-    # (the battle's last turn when it was won: the moves after the last knockout never come --
-    # the engine plays them on; no input comes after it, in training or in the tree)
-    won = any(x.startswith("|win|") for x in views["spectator"])
-    last = max(log_steps, default=0) if won else None
+    # (the battle's last turn compared too: the tree's step up to the knockout is the log's --
+    # 2026-10-25 review, it was skipped whole)
     for k in range(len(steps) - 1):
         a = steps[k]
         if set(a.get("choices", {})) != {"p1", "p2"} or any(s["request"] != "move" for s in a["state"]["sides"]):
             continue
         turn = a["state"]["turn"]
-        if turn == last:
-            out["skipped"]["the last turn"] += 1
-            continue
         if turn not in log_steps or not log_steps[turn]:
             out["skipped"]["no log step"] += 1
             continue
@@ -81,7 +76,9 @@ def tree_diffs(p1: str, p2: str, seed: int, max_turns: int = 40, script: list | 
         out["steps"] += 1
         log = dict(zip(FIELDS, l1, strict=True)), dict(zip(FIELDS, l2, strict=True))
         best = None
-        for _, t1, t2, _, _ in tree:
+        for p, t1, t2, _, _ in tree:
+            if p <= 0:  # (only an outcome that can happen: 2026-10-25 review, a probability-0 one matched)
+                continue
             t = dict(zip(FIELDS, t1, strict=True)), dict(zip(FIELDS, t2, strict=True))
             miss = [f"{sd}.{f}" for sd, x, y in (("one", log[0], t[0]), ("two", log[1], t[1]))
                     for f in STRUCT if x[f] != y[f]]  # fmt: skip

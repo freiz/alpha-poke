@@ -160,6 +160,8 @@ MUTATIONS = [
     # tests/test_sample_set.py's test_the_move_floor_lifts_a_0_weight)
 ]
 RUST = [
+    ("L245 no end of the turn after the win", "rust/patches/poke-engine-0.0.48/src/genx/generate_instructions.rs",
+     "    if state.battle_is_over() != 0.0 {\n        return vec![];\n    }", "    if false {\n        return vec![];\n    }"),
     ("L244 Sleep Talk calls no nosleeptalk / charge move", "rust/patches/poke-engine-0.0.48/src/state.rs",
      "            if p.id != Choices::NONE && !p.choice.flags.charge && !NO_SLEEP_TALK.contains(&p.id) {",
      "            if p.id != Choices::SLEEPTALK && p.id != Choices::NONE {"),
@@ -211,10 +213,18 @@ RUST = [
 ]
 
 
+class RunnerFailed(RuntimeError):
+    """The fast tier's runner broke (not a regression: its exit status 0 with none, 1 with
+    some -- 2026-10-25 review, a crash read as nothing found)."""
+
+
 def _fast() -> list[str]:
     r = subprocess.run([sys.executable, "scripts/difftest.py", "--corpus", "fast", "--procs", "14", "--show", "0",
                         "--out", "/dev/null"], cwd=ROOT, capture_output=True, text=True)  # fmt: skip
-    return [x for x in r.stdout.splitlines() if x.startswith("REGRESSION")]
+    grown = [x for x in r.stdout.splitlines() if x.startswith("REGRESSION")]
+    if r.returncode not in (0, 1) or (r.returncode == 1) != bool(grown):
+        raise RunnerFailed(f"exit {r.returncode}: {(r.stderr or r.stdout).strip().splitlines()[-1:]}")
+    return grown
 
 
 def _build() -> None:
@@ -231,12 +241,20 @@ def main() -> int:
     a = ap.parse_args()
     # (the code as it is must pass first: against a stale baseline -- a new scenario's own findings
     # not in it -- every mutation reads as caught; 2026-10-24)
-    stale = _fast()
+    try:
+        stale = _fast()
+    except RunnerFailed as e:
+        print("the fast tier's runner broke on the code as it is:", e)
+        return 2
     if stale:
         print("the baseline is stale -- the unmutated code regresses; update it first:", stale[:3])
         return 2
     missed = []
-    for name, f, fixed, undone in (RUST if a.rust else MUTATIONS):
+    todo = RUST if a.rust else MUTATIONS
+    if not todo:  # (2026-10-25: a wrapper set RUST without --rust -- none run, "every mutation caught")
+        print("no mutation to run" + ("" if a.rust else " (the Rust ones need --rust)"))
+        return 2
+    for name, f, fixed, undone in todo:
         p = ROOT / f
         keep = p.with_suffix(p.suffix + ".mutkeep")
         shutil.copy2(p, keep)
@@ -249,7 +267,12 @@ def main() -> int:
             p.write_text(text.replace(fixed, undone))
             if f.startswith("rust/"):
                 _build()
-            grown = _fast()
+            try:
+                grown = _fast()
+            except RunnerFailed as e:  # (a crash is no catch: a finding of the checks is)
+                print(f"ERROR {name}: the runner broke -- {e}")
+                missed.append(name)
+                continue
             print(("caught " if grown else "MISSED ") + name + (f"  ({grown[0]}, ...)" if grown else ""))
             if not grown:
                 missed.append(name)
@@ -258,12 +281,16 @@ def main() -> int:
             keep.unlink()
             if f.startswith("rust/"):
                 _build()
-    if a.rust:  # (the build back as the sources are: the Spite test that needs the fix passes)
+    # (the code back as it was: the fast tier within its baseline again -- the build too; a
+    # failed check exits 3, 2026-10-25 review: it printed STALE and returned 0)
+    restored = not _fast()
+    if a.rust:  # (and the Spite test that needs the fix passes)
         r = subprocess.run([sys.executable, "-m", "pytest", "-q", "tests/test_dual_engine.py", "-k", "spite_after_its"],
                            cwd=ROOT, capture_output=True, text=True)  # fmt: skip
-        print("restored build:", "ok" if r.returncode == 0 else "STALE -- rebuild by hand")
-    print(f"{len(missed)} missed: {missed}" if missed else "every mutation caught")
-    return 1 if missed else 0
+        restored = restored and r.returncode == 0
+    print("restored:", "ok" if restored else "STALE -- the code or the build is not back; rebuild / restore by hand")
+    print(f"{len(missed)} missed: {missed}" if missed else f"every mutation caught ({len(todo)})")
+    return 3 if not restored else 1 if missed else 0
 
 
 if __name__ == "__main__":

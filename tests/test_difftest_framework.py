@@ -263,3 +263,123 @@ def test_a_wrong_chance_is_seen(monkeypatch):
     monkeypatch.setattr(ec, "engine_outcomes", skewed)
     r = distdiff.dist_diffs(one)
     assert r["kinds"].get("dist.freq") == 1, r
+
+
+@needs_sim
+def test_a_bench_mons_hp_has_no_roll_in_it():
+    """hp_diff's tolerance was its side's damage this turn: a Sludge Bomb's 8.5% on the active
+    let a bench mon's HP be off as much (2026-10-25 review). The damage by mon (the active it hit
+    then)."""
+    import copy
+
+    from alpha_poke import enginecheck as ec
+    from alpha_poke.enginecheck.scenarios import FILLER, S, team
+
+    gengar = S("Gengar", "Leftovers", "Cursed Body", ["Sludge Bomb", "Protect", "Taunt", "Will-O-Wisp"],
+               "252 HP / 4 Atk / 252 Spe", "Timid")  # fmt: skip
+    p2 = team(S("Snorlax", "", "Thick Fat", ["Curse", "Rest", "Slack Off", "Body Slam"]), FILLER)
+    steps, err = ec.random_battle(team(gengar, FILLER), p2, "gen5,1,2,3,4", 2, max_turns=2,
+                                  script=[{"p1": "move 1", "p2": "move 1"}])  # fmt: skip
+    assert err is None
+    a, b = steps[0]["state"], steps[1]["state"]
+    outs = ec.engine_outcomes(ec.engine_state(a), "sludgebomb", "curse")
+    n = tuple(len(s["mons"]) for s in a["sides"])
+    o = next(x for x in outs if x[0] > 0 and not ec.hp_diff(b, x, n))  # (the one that happened)
+    assert o.damage[1] >= 60
+    off = copy.deepcopy(b)
+    bench = next(j for j, m in enumerate(off["sides"][1]["mons"]) if j != off["sides"][1]["active"])
+    off["sides"][1]["mons"][bench]["hp"] -= 5
+    assert f"s2.{bench}.hp" in ec.hp_diff(off, o, n)
+    # (by side, as before: within)
+    assert not ec.hp_diff(off, ec.Outcome(o[0], o[1], o.damage, o.sub_damage), n)
+
+
+def test_a_fixed_finding_does_not_hide_a_new_one():
+    """regressions compared the kinds' totals alone: a finding fixed in one battle hid a new one
+    in another (2026-10-25 review). By spec too."""
+    from alpha_poke.enginecheck import difftest as dt
+
+    run = {"engine_step": {"n": 10, "kinds": {"hp": 1}, "skipped": {}, "by_spec": {"a": {"hp": 1}}}}
+    base = dt.baseline_of(run)
+    assert dt.regressions(run, base) == []
+    moved = {"engine_step": {"n": 10, "kinds": {"hp": 1}, "skipped": {}, "by_spec": {"b": {"hp": 1}}}}
+    assert dt.regressions(moved, base) == ["engine_step: b hp 0 -> 1"]
+    # (a baseline from before the split: its totals only)
+    old = {"engine_step": {k: v for k, v in base["engine_step"].items() if k != dt.BY_SPEC}}
+    assert dt.regressions(moved, old) == []
+
+
+@needs_sim
+def test_the_last_transition_is_compared_by_its_faints():
+    """A battle's last transition was skipped by every check (2026-10-25 review). Showdown stops
+    the turn at the win, the engine plays it out: who fainted -- the winner -- is compared."""
+    from alpha_poke import enginecheck as ec
+    from alpha_poke.enginecheck.scenarios import FILLER, S, team
+
+    gengar = S("Gengar", "Leftovers", "Cursed Body", ["Shadow Ball", "Protect", "Taunt", "Will-O-Wisp"],
+               "252 HP / 4 Atk / 252 Spe", "Timid")  # fmt: skip
+    shedinja = S("Shedinja", "", "Wonder Guard", ["Swords Dance", "Shadow Sneak", "X-Scissor", "Protect"])
+    steps, err = ec.random_battle(team(gengar, FILLER), team(shedinja), "gen5,1,2,3,4", 2, max_turns=3,
+                                  script=[{"p1": "move 1", "p2": "move 1"}])  # fmt: skip
+    assert err is None and steps[1]["state"]["ended"]
+    a, b = steps[0]["state"], steps[1]["state"]
+    n = tuple(len(s["mons"]) for s in a["sides"])
+    outs = ec.engine_outcomes(ec.engine_state(a), "shadowball", "swordsdance")
+    assert ec.end_diff(b, outs, n)["diff"] == {}
+    nothing = ec.Outcome(1.0, ec.engine_state(a), (0, 0), (0, 0))
+    assert "end.fainted" in ec.end_diff(b, [nothing], n)["diff"]
+    from alpha_poke.enginecheck.stepdiff import comparable
+
+    assert comparable(steps, 0) is None
+
+
+@needs_sim
+def test_the_tree_check_takes_no_probability_0_branch(monkeypatch):
+    """tree_diffs matched the log's step to the nearest of the tree's whatever its probability --
+    the right one at 0, a wrong one at 1 read as no difference (2026-10-25 review)."""
+    import alpha_search
+
+    from alpha_poke.enginecheck import difftest as dt
+    from alpha_poke.enginecheck import treediff
+
+    spec = next(s for s in dt.corpus("fast") if s.id == "scenario/ends/healing-wish-waits")
+    clean = treediff.tree_diffs(spec.p1, spec.p2, spec.seed, spec.max_turns, spec.steps_script, spec.id)
+    assert clean["steps"] and not clean["struct"]
+    real = alpha_search.tree_steps
+
+    def zero_right(s, i1, i2, logged, *a):
+        tree, (l1, l2) = real(s, i1, i2, logged, *a)
+        wrong = (l1[0], l1[1], l1[2] + 1, *l1[3:])  # (another actor)
+        return [(0.0, l1, l2, 0, False), (1.0, wrong, l2, 0, False)], (l1, l2)
+
+    monkeypatch.setattr(alpha_search, "tree_steps", zero_right)
+    r = treediff.tree_diffs(spec.p1, spec.p2, spec.seed, spec.max_turns, spec.steps_script, spec.id)
+    assert r["struct"].get("one.actor", 0) == r["steps"], r["struct"]
+
+
+def test_the_mutation_script_fails_loudly(monkeypatch, tmp_path):
+    """The mutation script read the runner's output alone: a crash was "nothing found", a failed
+    restore printed STALE and exited 0 (2026-10-25 review); a run with no mutation said "every
+    mutation caught"."""
+    import importlib.util
+    import subprocess
+    import sys
+    from types import SimpleNamespace
+
+    spec = importlib.util.spec_from_file_location("difftest_mutations", ROOT / "scripts" / "difftest_mutations.py")
+    m = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m)
+    monkeypatch.setattr(sys, "argv", ["difftest_mutations.py"])
+    crash = SimpleNamespace(returncode=2, stdout="", stderr="Traceback ...\nImportError: x")
+    monkeypatch.setattr(subprocess, "run", lambda *a, **k: crash)
+    assert m.main() == 2  # (the code as it is: the runner broke)
+    monkeypatch.setattr(m, "MUTATIONS", [])
+    monkeypatch.setattr(m, "_fast", lambda: [])
+    assert m.main() == 2  # (nothing to run)
+    f = tmp_path / "x.py"
+    f.write_text("a = 1\n")
+    monkeypatch.setattr(m, "ROOT", tmp_path)
+    monkeypatch.setattr(m, "MUTATIONS", [("x", "x.py", "a = 1", "a = 2")])
+    calls = iter([[], ["REGRESSION x"], ["REGRESSION still"]])  # (before, mutated, after the restore)
+    monkeypatch.setattr(m, "_fast", lambda: next(calls))
+    assert m.main() == 3 and f.read_text() == "a = 1\n"

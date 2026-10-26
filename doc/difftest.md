@@ -29,7 +29,7 @@
   - `state_facts`（2026-10-25）：非先知的构建（信念自己的抽样），检查它认定已知的事实——poke-env / 跟踪器记下的对手当前特性、原始特性、道具、已暴露的招式——必须为真。先知模式的检查给对手真实配置，这些推断从来没被检验（B8：Worry Seed 之后的原始特性）。抽样一致性不能代替“已知”：确定性的点估计（努力值）、接近确定的先验（99% 的特性）抽几次都一样，却只是猜测。
   - `state_chain`（2026-10-25）：从我们构建的状态（先知模式，p1 视角）出发，沿实际选择推 2 回合，从第一步起和 Showdown 比较——“当下对、往后推才错”的问题。起点按真实状态的槽位顺序重排（Showdown 的队伍顺序；我们的是 poke-env 的），玩家不可能知道的取真实值（Showdown 暗中抽的持续时间、被打过的替身 HP、已混乱时锁定招式悄无声息的结束、从未被识破的伪装对象的 HP 和 PP），Illusion 伪装中（真实的，或我们构建时猜的）不比较；我们的命名（Greninja-Bond）按别名比较（换人选择是物种 id，双向）。起点还比较双方的合法选项和 Showdown 的 request（`start_options`）：每步之后的状态由引擎自己的规则设定，起点缺的锁定（对手的 Choice 锁）走一步就被补上，只比步后看不出来。
   - `belief_truth`：非先知模式下，真实配置从来不被排除——硬约束（速度观测、伤害证据、Assault Vest 与变化招式等规则）下真实值的似然不为 0，F1 的候选（经 `_candidates`，不代入真实值）含真实的初始特性（`belief:candidates`）；先验的支撑（真实的道具 / 特性 / 招式 / 太晶在信念里概率不为 0）单独计数。
-- **基线**：每个（语料，检查）一个文件 `tests/fixtures/difftest/<语料>.<检查>.json`，记各类别的次数：不许出现新类别，任何类别不许变多；修好的类别自动从基线里去掉（`--update-baseline`，只许变少）。
+- **基线**：每个（语料，检查）一个文件 `tests/fixtures/difftest/<语料>.<检查>.json`，记各类别的次数：不许出现新类别，任何类别不许变多；修好的类别自动从基线里去掉（`--update-baseline`，只许变少）。另按对局记各类别的次数（`@specs`）：只比总数时，一局修好的旧错误会抵消另一局新出现的同类错误（2026-10-25 复查第 3 批），现在任何一局的任何类别都不许变多。
 - **分层**：
   - `fast`：全部场景 + 少量随机对局，所有检查；pytest 里跑，缓存命中时几分钟；
   - `full`：每组 fixtures 各 50 局（约 2,000 局），提交前跑；
@@ -41,7 +41,7 @@
 基线只说明"没有变多"，说明不了"测到了"（2026-10-25 复查：七处检查没比较也报"无差异"——参考状态转换失败返回空差异、比较次数为 0 也通过、链式检查过滤掉新施加的效果是否存在、概率为 0 的分支也能匹配、基线更新被拒绝时退出码 0、`--only` 覆盖全量基线、缓存指纹漏了 `dist/config` 的格式规则。现在：转换失败是差异 `reference_state`；基线还记每个检查的实际比较次数 `#compared`（变少是回归）和每种跳过原因 `#skipped: …`（变多是回归）；链式检查只不比较新效果的随机持续时间；`closest` 只接受正概率分支、各分支概率之和须为 1；被拒绝的更新退出码 1，`--only` 不写基线；指纹扫描 `dist/{sim,data,lib,config}`。各自的测试：`tests/test_difftest_framework.py`。修好转换之后，昏厥回合的扩展字段第一次被比较：17,743 个回合，查出两处比较器的时间点问题——昏厥一方的 Toxic 计数、换人决策点的 Wish / Future Sight 回合数，统一由 `showdown_state.js` 的 `upkept` 处理——和引擎的 L240）：一个场景能跑通，不等于它走到了要测的机制（2026-10-24：第一个 Endure 场景里 Endure 从来没有真正撑住，把 S152 改回去，`fast` 毫无反应）。所以：
 
 - 场景声明 `expect`：它的日志里必须出现的行（Endure 的 `-activate`、Minior 的 `-formechange`……），`tests/test_difftest.py` 检查它真的发生了。
-- `scripts/difftest_mutations.py`：把每一处修复临时改回去，`fast` 必须报出回归，没报的就是没被守住的修复（`--rust`：引擎 / 搜索的修复，要重新编译）。每修一个问题，就在这里加一条。
+- `scripts/difftest_mutations.py`：把每一处修复临时改回去，`fast` 必须报出回归，没报的就是没被守住的修复（`--rust`：引擎 / 搜索的修复，要重新编译）。每修一个问题，就在这里加一条。运行器的退出码只能是 0（无回归）或 1（有 REGRESSION 行），否则算错误、不算抓到；一个变异都没跑报错（2026-10-25：只设了 `RUST` 没加 `--rust` 的包装脚本跑了空列表，照样打印 every mutation caught——L244 的变异因此当时其实没跑）；全部跑完后未变异的代码必须重新通过 `fast`，否则退出码 3（原来只打印 STALE、返回 0）。
 
 ## 场景
 
@@ -54,7 +54,7 @@
 | 检查 | `full` 比较了 | 发现 |
 |---|---|---|
 | `engine_step` | 77,457 个回合 | 42（原 72）：Skill Swap 换走 Slow Start（4，L239，待确认）；没有目标的招式的 lastMove（L240，待确认）；Copycat 调出的 Dig 被 Earthquake 打中的那一回合，其昏厥宝可梦的各字段（25 类各 1）；Klutz / Embargo / 魔法空间下的延长道具——L234；电系变化招式对地面系——L235；Sheer Force 去掉 Protect 等——L236；“上一招失败”——L237（比较器原来跳过这个标记，开始比较时一次暴露 4,309 处，逐类对照 Showdown 源码修到 1 处：Copycat 调出的 Dig 被 Earthquake 打中）；`gen9ou` 的第二次睡眠（该格式没有 Sleep Clause Mod）——L238；其余零星 |
-| `engine_dist` | 19,479 个回合（跳过：隐藏长度 346、睡眠 673） | 148（2026-10-25 首次，L244 修后）：多数是引擎对“不击倒的伤害”取平均（`average_non_kill_damage`，击倒与否本身按 16 个随机数精确分支，L34）——同一回合里之后靠剩余 HP 的事件随之确定：反伤把攻击方打倒（33 处带反伤招式：Flare Blitz、Wave Crash、Brave Bird……）、后手的击倒、回合末的残余伤害、Sitrus Berry 的触发（约 100 处）；另有待确认的引擎问题：Cursed Body 对多段招式只判一次（Showdown 每一下 30%）、Magic Bounce 反弹的 Will-O-Wisp 的命中、冰冻解除的概率、Ice Spinner 等零散；已知的 Copycat 调出的 Dig、Counter（engine_step 的同类） |
+| `engine_dist` | 19,849 个回合（跳过：隐藏长度 360、睡眠 677；含终局回合） | 169（2026-10-25 首次 148，L244 修后；加上终局回合 +21，同一类）：多数是引擎对“不击倒的伤害”取平均（`average_non_kill_damage`，击倒与否本身按 16 个随机数精确分支，L34）——同一回合里之后靠剩余 HP 的事件随之确定：反伤把攻击方打倒（33 处带反伤招式：Flare Blitz、Wave Crash、Brave Bird……）、后手的击倒、回合末的残余伤害、Sitrus Berry 的触发（约 100 处）；另有待确认的引擎问题：Cursed Body 对多段招式只判一次（Showdown 每一下 30%）、Magic Bounce 反弹的 Will-O-Wisp 的命中、冰冻解除的概率、Ice Spinner 等零散；已知的 Copycat 调出的 Dig、Counter（engine_step 的同类） |
 | `engine_chain` | 24,463 个回合 | 23（原 108）：同上（L239 占 8）；链式只同步 HP、不同步异常状态，上一步已有的状态差异会连锁（Baneful Bunker 的中毒之后的 Toxic 失败） |
 | `state_live` / `state_replay` | 各 149,760 个决策点 | 0（第一轮的 12 / 18：变身的体重、复制招式的 PP——S154、S155；比较器原来不比较 `types` / `base_types`，加上后查出 Double Shock 之后的属性——S156） |
 | `tree_history` | 64,450 步 | 175：已知的三类（Illusion、Minior 的颜色、Revival Blessing） |
@@ -84,6 +84,7 @@
 - **共用规则**：Showdown 状态的换算和 `build_state` 共用一些规则（`derived_disable`、锁定）。规则本身错时两边一起错，比较一致。
 - **比较字段**：比较哪些字段是手工列的。没列的永远是 0（Uproar 的计数在 L241 之前从未比较；状态检查的 side condition 列表漏了 Healing Wish，我们的状态从来没构建它，`state_chain` 才发现：S158c——现在取引擎的全部字段，`test_every_side_condition_is_compared` 守住；`pe.State` / `pe.Side` / `pe.Pokemon` 的每个字段要么比较、要么在 `statebuild` 的跳过表里写明原因，`test_every_field_is_compared_or_says_why` 守住——引擎加了字段，测试先失败；改完当天又查出 Rage Fist 计数、Revival Blessing 次数、变身后的一次性特性、Stellar 标记四类：S158d）。
 - **场景**：场景是按我们对机制的理解写的，测的是已经实现的东西；没想到的维度就没有场景。
+- **终局**：最后一次转移（胜负已分）原来在单步、链式、树历史里都被跳过。Showdown 在分出胜负时就停止这个回合，引擎把回合走完；现在只比较谁倒下（`ec.end_diff`），树历史的最后一回合照常比较。
 - **跳过和基线**：跳过的比较里可能藏着整类问题（有昏厥的回合 17,743 个，参考状态一直转换失败）；基线只拦“变多”，已知的差异进了基线就不再显眼。
 - **变异测试**只能证明已有的测试能发现修复被撤销，证明不了覆盖得全。
 

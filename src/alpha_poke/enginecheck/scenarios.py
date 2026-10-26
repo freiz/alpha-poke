@@ -457,6 +457,13 @@ def engine_ends() -> list[Spec]:
               team(S("Heatran", "Leftovers", "Flash Fire", ["Flamethrower", "Earth Power", "Stealth Rock", "Protect"]), FILLER),
               [{"p1": "move 1", "p2": "move 1"}, {"p1": "switch 2"}, {"p1": "move 1", "p2": "move 4"}, {"p1": "switch 2"},
                {"p1": "move 4", "p2": "move 3"}], expect=("[from] move: Revival Blessing",)),
+        # (L245: the battle over at the knockout of the last mon -- the winner's Perish Song count
+        # at 1 never runs out; the engine played the turn on, both sides out)
+        _spec("ends/win-before-perish",
+              team(S("Gengar", "Leftovers", "Cursed Body", ["Shadow Ball", "Protect", "Calm Mind", "Taunt"], FAST, "Timid")),
+              team(S("Shedinja", "", "Wonder Guard", ["Perish Song", "Swords Dance", "Shadow Sneak", "Protect"])),
+              [{"p1": "move 2", "p2": "move 1"}, {"p1": "move 3", "p2": "move 2"}, {"p1": "move 3", "p2": "move 2"},
+               {"p1": "move 1", "p2": "move 2"}], expect=("|-start|p1a: Gengar|perish1", "|win|p1")),
     ]  # fmt: skip
 
 
