@@ -474,7 +474,10 @@ def sample_set(
     if spread is None:
         spread = belief.spread_for(mon.species)
     sp = to_id(mon.species)
-    forme = resolve_forme(sp, item, ability, moves) if sp in HIDDEN_FORMES else None
+    # (only a mon never in: a switch-in shows its forme -- a "Zacian" seen is no Zacian-Crowned,
+    # whatever this world drew; but Greninja-Bond shows as Greninja even then: 2026-10-26 review)
+    hidden = sp in HIDDEN_FORMES and (sp == "greninja" or not mon.revealed)
+    forme = resolve_forme(sp, item, ability, moves) if hidden else None
     forme = forme if forme != sp else None
     base = (GEN.pokedex.get(forme) or {}).get("baseStats") if forme else None
     stats = calc_stats(base or own_base_stats(mon), spread, level=mon.level or 100)
@@ -696,7 +699,9 @@ def _formes(team: dict, mons: list, built: list, tm: SideTimers) -> list:
         f = (tm.formes.get(n) or tm.names.get(n)) if n is not None else None
         if tm.temp_forme and n == tm.temp_forme[0] and m.active and not m.fainted:
             f = tm.temp_forme[1]
-        if p.id.lower() == "greninja" and str(p.ability).lower() == "battlebond":
+        # (one already built as Greninja-Bond -- a hidden forme's resolve_forme -- stays so: the
+        # shown "Greninja" is the disguise of its forme; 2026-10-26 review, it went back to Greninja)
+        if p.id.lower() in ("greninja", "greninjabond") and str(p.ability).lower() == "battlebond":
             f = "greninjabond"
         if f and f != p.id.lower() and not m.transformed and engine_species(f):
             # (its weight its forme's: Showdown's formeChange sets the species' -- Minior's
@@ -1429,7 +1434,11 @@ def build_state(
             # -- not the first, S158; a move of the request this world's target lacks, last)
             base = [m.id for m in their_mons[t].moves]
             extra = [x for x in req if x not in base]
-            ids = list(req) if len(req) == 4 or not base else base[: 4 - len(extra)] + extra
+            # (every move of the request kept: a target move it does not list goes first when
+            # they are more than four -- 2026-10-26 review, a request move dropped)
+            while len(base) + len(extra) > 4 and any(x not in req for x in base):
+                base.remove(next(x for x in reversed(base) if x not in req))
+            ids = list(req) if len(req) == 4 or not base else base + extra
             # (the move it chose: after a Struggle poke-env's last used one is the Struggle --
             # 2026-10-23, the state-construction differential: the lock's flags were lost)
             last = (tm_us.own_last if tm_us is not None else "") or last_used_move(active)
@@ -1689,8 +1698,13 @@ def build_state(
     if their_idx is not None and their_idx < len(their_mons) and not tm_them.locked:
         em = their_mons[their_idx]
         last = tm_them.own_last
-        if last and not tm_them.item_new and any(x.id == last for x in em.moves) and (
-                str(em.item).lower() in CHOICE_ITEMS or str(em.ability).lower() == "gorillatactics"):
+        # (not a world that contradicts the log -- two moves this time in: no Choice item, whatever
+        # it drew; nor an item doing nothing: Klutz, Embargo, Magic Room -- Showdown's choicelock
+        # ignoringItem; 2026-10-26 review)
+        used = {m for m in tm_them.stint.get("moves", [])[tm_them.stint.get("item_mark", 0):] if m != "struggle"}
+        item_on = str(em.ability).lower() != "klutz" and not tm_them.embargo and Field.MAGIC_ROOM not in battle.fields
+        if last and not tm_them.item_new and any(x.id == last for x in em.moves) and len(used) <= 1 and (
+                (str(em.item).lower() in CHOICE_ITEMS and item_on) or str(em.ability).lower() == "gorillatactics"):
             their_mons[their_idx] = _with(em, moves=[pe.Move(id=x.id, pp=x.pp, disabled=x.disabled or x.id != last)
                                                      for x in em.moves])  # fmt: skip
     # Disable (L70): its volatile and its move's slot and count, not the move's flag alone (the

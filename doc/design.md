@@ -324,7 +324,8 @@ F1、F2、F3a、F5、F6 的第一版已实现（2026-10-19，进入 v0；内容�
 - [x] P0 **非先知的检查**：`state_facts`（构建器认定已知的事实必须为真；抽样不变性试过，确定的值多是先验而非事实）。
 - [x] P0 **从构建状态出发的推演检查**：`state_chain`（S158 各类已修，9,475 → 10）。
 - [x] P0 复查（2026-10-25 第二批）：双方的侧字段（`_side_fields`）；已知事实（`state_facts`）；分布（`engine_dist`）；逐字段覆盖（`test_every_field_is_compared_or_says_why`，S158d）。
-- [ ] P1 `engine_dist` 的 132 处（`difftest.md` 现状）：不击倒伤害取平均使同回合之后的阈值事件确定（约 0.45% 的回合，概率差约 0.2；L109 已对回合末残余做阈值分支，可同样扩展到反伤击倒、后手击倒、树果阈值——搜索宽度的代价先用 A/B 量）；零散约 25 处待逐个确认（Population Bomb / Triple Axel、Air Balloon）。L246（Cursed Body）、L247（Magic Bounce）已修；冰冻解除是重放种子的偏差，不是引擎。
+- [ ] P1 引擎（2026-10-26 自查，待按引擎问题的流程确认）：锁定中的招式被 Disable / Throat Chop / Imprison 时引擎改用 Struggle（Showdown：getMoves 照样给锁定的招式，BeforeMove 里 cant）；Disable 打到 0 PP 的招式（Showdown 的 onStart 失败）；双方同时全灭的胜负（Showdown：最后倒下的一方胜，引擎一律 side two）；Sleep Talk 调出的招式 first_move 恒为真（后手的 Sucker Punch 成功）；Sleep Talk 失败分支漏了 Acted / battle last move；Pursuit 后最后一只倒下仍换人；被反弹招式的命中用了原使用者的 Blunder Policy / 命中等级；L215 / L246 在击倒分支按抽到的段数而非击倒那一下算附加效果。
+- [ ] P1 `engine_dist` 的 120 处（`difftest.md` 现状）：不击倒伤害取平均使同回合之后的阈值事件确定（约 0.45% 的回合，概率差约 0.2；L109 已对回合末残余做阈值分支，可同样扩展到反伤击倒、后手击倒、树果阈值——搜索宽度的代价先用 A/B 量）；零散约 25 处待逐个确认（Population Bomb / Triple Axel、Air Balloon）。L246（Cursed Body）、L247（Magic Bounce）已修；冰冻解除是重放种子的偏差，不是引擎。
 - [x] P0 复查（2026-10-25 第三批，已修：后备的 HP 容差按单只的伤害；回归按对局记；终局转移按谁倒下比较；树历史跳过概率为 0 的分支；变异脚本的退出码 / 空运行 / 恢复验证）：`hp_diff` 的伤害容差按整侧计算，用在了后备身上（P1）；`regressions` 只比较各类别的总数，修好一处旧错误能抵消一处新错误——改为按场景、决策点、字段记录预期差异（P1）；终局转移整体被跳过（`ended`：单步、链式、树历史都不检查最后一击）；树历史仍接受概率为 0 的分支；变异脚本不检查运行器的退出码，恢复验证失败也返回 0。
 - [ ] P1 **移植机制的清单**（写进 `difftest.md`）：列出 Showdown 源码里这个机制的每个条件判断，对照每一份实现（引擎、`timers`、差分框架的换算）；场景按标准维度展开（自己用 / Copycat / Metronome / Sleep Talk 调用、睡眠或混乱、PP 耗尽、被迫换下、Illusion / Transform）。
 - [ ] P1 **覆盖率报告**：每个机制和关键交互在语料里实际被比较过的次数；为 0 的进入定向随机对局和场景。

@@ -1210,3 +1210,40 @@ def test_a_multi_hits_count_follows_its_last_hit():
     t = run(START + "|move|p2a: Bob|Bullet Seed|p1a: Fishy\n" + "|-damage|p1a: Fishy|450/503\n" * 3
             + "|-hitcount|p1a: Fishy|3\n|upkeep\n|turn|2")  # fmt: skip
     assert t["p1"].times_attacked.get("dondozo") == 3
+
+
+def test_our_disguise_as_a_spectator_sees_it():
+    """2026-10-26 review: the tera and level fixes ran for the opponent alone -- the replay path's
+    (a spectator's: no request) own Zoroark disguised as our Serperior moved Serperior's own
+    earlier tera to it, and its disguise kept the Zoroark's level."""
+    import logging
+
+    from poke_env.battle import Battle
+
+    import alpha_poke.agents.engine_state  # noqa: F401 (the fixes)
+
+    b = Battle("battle-gen9ou-18", "us", logging.getLogger("t"), gen=9)
+    b.player_role = "p1"
+    for line in ["|poke|p1|Serperior, L88, F|", "|poke|p1|Zoroark-Hisui, L80, F|",
+                 "|switch|p1a: Serperior|Serperior, L88, F|100/100", "|switch|p2a: Garganacl|Garganacl|100/100",
+                 "|turn|1", "|-terastallize|p1a: Serperior|Grass", "|switch|p1a: Weavile|Weavile, F|100/100", "|turn|2",
+                 "|switch|p1a: Serperior|Serperior, L80, F|100/100", "|turn|3",
+                 "|replace|p1a: Zoroark|Zoroark-Hisui, L80, F", "|-end|p1a: Zoroark|Illusion"]:  # fmt: skip
+        b.parse_message(line.split("|"))
+    serperior = next(m for m in b.team.values() if m.species == "serperior")
+    assert serperior.is_terastallized and serperior.level == 88
+    assert not b.active_pokemon.is_terastallized
+
+
+def test_the_moves_a_choice_lock_counts_since_its_item_or_transform():
+    """2026-10-26: the foe's Choice-lock guard counts its distinct moves since its item last
+    changed (a Trick's Choice Scarf locks from the next move) or it transformed (the lock's move
+    no longer its own: Showdown's choicelock ends) -- the full corpus' Quagsire and Ditto."""
+    t = run(START + "|move|p2a: Bob|Earthquake|p1a: Fishy\n|upkeep\n|turn|2\n|move|p1a: Fishy|Trick|p2a: Bob\n"
+            "|-item|p2a: Bob|Choice Scarf|[from] move: Trick\n|move|p2a: Bob|Toxic|p1a: Fishy\n|upkeep\n|turn|3")  # fmt: skip
+    st = t["p2"].stint
+    assert st["moves"][st["item_mark"]:] == ["toxic"]
+    t = run(START + "|move|p2a: Bob|Transform|p1a: Fishy\n|-transform|p2a: Bob|p1a: Fishy\n|upkeep\n|turn|2\n"
+            "|move|p2a: Bob|Substitute|p2a: Bob\n|upkeep\n|turn|3")  # fmt: skip
+    st = t["p2"].stint
+    assert st["moves"][st["item_mark"]:] == ["substitute"]

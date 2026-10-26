@@ -548,16 +548,24 @@ def fact_diffs(p1: str, p2: str, seed: int, max_turns: int = 40, sides=("p1", "p
         bm, tm = _mons(built.side_two), _mons(t.side_two)
         for mon in b.opponent_team.values():
             sp = to_id(mon.species)
-            if sp in hidden or sp not in bm or sp not in tm or mon.transformed:
+            if sp in hidden or mon.transformed:
                 continue
-            bp, tp = bm[sp], tm[sp]
+            # (by its base species too -- poke-env's Minior / Palafin, the states' Minior-Meteor /
+            # Palafin-Hero: skipped silently before, 2026-10-26 review; a mon still unmatched, counted)
+            bp, tp = _forme_match(bm, sp), _forme_match(tm, sp)
+            if bp is None or tp is None:
+                stats.setdefault("skipped", []).append("facts: a mon not matched")
+                continue
             facts = []
             if own_ability(mon):
                 facts.append(("base_ability", own_ability(mon)))
             if current_ability(mon):
                 facts.append(("ability", None))
-            if mon.item and mon.item != "unknown_item":
+            # (an item known, or known none -- poke-env's None after an -enditem: a Knock Off's, a
+            # berry eaten; never checked before, 2026-10-26 review)
+            if mon.item != "unknown_item":
                 facts.append(("item", None))
+            stats["facts"] = stats.get("facts", 0) + len(facts) + 1
             for k2, known in facts:
                 tv = _norm(k2, getattr(tp, k2))
                 bv = _norm(k2, getattr(bp, k2))
@@ -568,6 +576,12 @@ def fact_diffs(p1: str, p2: str, seed: int, max_turns: int = 40, sides=("p1", "p
             wrong = sorted(m for m in seen_moves if m not in tmv and m not in ("struggle",))
             if wrong and tp.transform_backup is None:
                 out.append((k, side, "fact:moves", f"{sp} {wrong} not in {sorted(tmv)}"))
+            # (and in the built state: a revealed move this world lost -- the oracle checks put the
+            # true moves in; 2026-10-26 review)
+            bmv = {str(m.id).lower() for m in bp.moves}
+            lost = sorted(m for m in seen_moves if m not in bmv and m in tmv and m not in ("struggle",))
+            if lost and tp.transform_backup is None and bp.transform_backup is None:
+                out.append((k, side, "fact:built_moves", f"{sp} {lost} not in {sorted(bmv)}"))
     return out, stats
 
 

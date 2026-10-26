@@ -85,8 +85,12 @@ def chain_diffs(steps: list[dict], depth: int = 3, every: int = 3, start=None, f
     -> the choice as that state names it, ``same``: (key, engine value, Showdown's) -> alike though
     unequal (a start of our own: its names, poke-env's)."""
     out: dict = {"chains": 0, "compared": 0, "kinds": {}, "examples": {}, "errors": []}
-    starts = [k for k in range(len(steps) - 1)
-              if comparable(steps, k) is None and not at_decision(steps, k)][::every]  # fmt: skip
+    # (a battle's last transition too: it "stops at a decision" -- its turn not on, no request --
+    # but is compared by who fainted, end_diff; 2026-10-26 review, it never was in a chain)
+    def stops(k: int) -> bool:
+        return at_decision(steps, k) and not steps[k + 1]["state"]["ended"]
+
+    starts = [k for k in range(len(steps) - 1) if comparable(steps, k) is None and not stops(k)][::every]
     for k0 in starts:
         try:
             st = ec.engine_state(steps[k0]["state"]) if start is None else start(k0)
@@ -102,7 +106,7 @@ def chain_diffs(steps: list[dict], depth: int = 3, every: int = 3, start=None, f
         pre = {} if start is None else ec.options_diff(st, steps[k0]["state"]["sides"], "start_options")
         k = k0
         for d in range(depth):
-            if k >= len(steps) - 1 or comparable(steps, k) is not None or at_decision(steps, k):
+            if k >= len(steps) - 1 or comparable(steps, k) is not None or stops(k):
                 break
             a, b = steps[k], steps[k + 1]
             c1, c2 = ("none" if a["choices"][s]["engine"] == "struggle" else a["choices"][s]["engine"]
@@ -124,16 +128,19 @@ def chain_diffs(steps: list[dict], depth: int = 3, every: int = 3, start=None, f
             if d >= first:
                 out["compared"] += 1
                 hidden = _hidden_keys(a["state"], b["state"])
+                # (a value not a pair -- "no outcome": 1 -- is a difference as it is: 2026-10-26 review,
+                # same(x, *1) broke the spec's whole chain)
                 diff = {x: v for x, v in {**(pre if d == 0 else {}), **res["diff"]}.items()
-                        if x not in hidden and not (same is not None and same(x, *v))}  # fmt: skip
+                        if x not in hidden and not (same is not None and isinstance(v, tuple | list) and same(x, *v))}  # fmt: skip
                 for kind in sorted({kind_of(x) for x in diff}):
                     out["kinds"][kind] = out["kinds"].get(kind, 0) + 1
                     ex = out["examples"].setdefault(kind, [])
                     if len(ex) < 5:
                         ex.append({"from_turn": steps[k0]["state"]["turn"], "turn": a["state"]["turn"],
                                    "depth": d, "choices": [c1, c2],
-                                   "diff": {x: list(v) for x, v in diff.items() if kind_of(x) == kind}})
-            if res["state"] is None:
+                                   "diff": {x: list(v) if isinstance(v, tuple | list) else v
+                                            for x, v in diff.items() if kind_of(x) == kind}})  # fmt: skip
+            if res["state"] is None or b["state"]["ended"]:
                 break
             try:
                 truth = ec.engine_state(b["state"])

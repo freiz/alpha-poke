@@ -46,9 +46,10 @@ async def lane(bot: str, matches, port: int, pool: str, run: str, i: int) -> int
         play = me.accept_challenges(opp, n_challenges=1) if a_challenges else me.send_challenges(opp, n_challenges=1)
         try:
             await asyncio.wait_for(play, GAME_TIMEOUT)
-        except TimeoutError:
+        except TimeoutError:  # (the lane stops: the other side's too -- split.py)
             failed += 1
-            logging.getLogger(__name__).warning("lane %d: no finished game after %ds", i, GAME_TIMEOUT)
+            logging.getLogger(__name__).warning("lane %d: no finished game after %ds -- the lane stops", i, GAME_TIMEOUT)
+            break
     if hasattr(me, "close"):
         me.close()
     return {"failed": failed, "fallbacks": getattr(me, "fallbacks", 0), "search_fallbacks": getattr(me, "search_fallbacks", 0)}

@@ -383,3 +383,15 @@ def test_the_mutation_script_fails_loudly(monkeypatch, tmp_path):
     calls = iter([[], ["REGRESSION x"], ["REGRESSION still"]])  # (before, mutated, after the restore)
     monkeypatch.setattr(m, "_fast", lambda: next(calls))
     assert m.main() == 3 and f.read_text() == "a = 1\n"
+
+
+def test_every_mutation_applies():
+    """Three mutations' fixed texts had changed since (2026-10-26 review): the script printed ??
+    for them -- those fixes guarded by nothing. Each must be in its file once."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("difftest_mutations", ROOT / "scripts" / "difftest_mutations.py")
+    m = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m)
+    stale = [n for n, f, fixed, _ in m.MUTATIONS + m.RUST if (ROOT / f).read_text().count(fixed) != 1]
+    assert stale == []

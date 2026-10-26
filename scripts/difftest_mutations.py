@@ -31,8 +31,8 @@ MUTATIONS = [
     ("R4' Neutralizing Gas held the Klutz off", "src/alpha_poke/agents/engine_state.py",
      'if then == "klutz" and key not in tm.set_gas:', 'if then == "klutz":'),
     ("a transformed active's weight its target's forme's", "src/alpha_poke/agents/engine_state.py",
-     "        our_mons[our_active_idx] = _with(our_mons[our_active_idx], weight_kg=copied_weight(tm_us, their_mons[our_t]))",
-     "        pass"),
+     "        our_mons[our_active_idx] = _with(our_mons[our_active_idx], weight_kg=copied_weight(tm_us, their_mons[our_t]),\n",
+     "        our_mons[our_active_idx] = _with(our_mons[our_active_idx],\n"),
     ("a transform's weight its target's forme's then", "src/alpha_poke/agents/engine_state.py",
      "        w = (GEN.pokedex.get(tm.copied_forme) or {}).get(\"weightkg\") if tm.copied_forme else None",
      "        w = None"),
@@ -109,14 +109,14 @@ MUTATIONS = [
     ("an ability set over an unknown one: the old its own", "src/alpha_poke/agents/poke_env_fixes.py",
      "            mon._ability = old  # (the one it had: its own)", "            pass"),
     ("S158 the foe's Choice lock", "src/alpha_poke/agents/engine_state.py",
-     "        if last and not tm_them.item_new and any(x.id == last for x in em.moves) and (",
-     "        if False and last and not tm_them.item_new and any(x.id == last for x in em.moves) and ("),
+     "        if last and not tm_them.item_new and any(x.id == last for x in em.moves) and len(used) <= 1 and (",
+     "        if False and last and not tm_them.item_new and any(x.id == last for x in em.moves) and len(used) <= 1 and ("),
     ("S158 a hidden forme", "src/alpha_poke/agents/engine_state.py",
      "        id=s.forme or mon.species,", "        id=mon.species,"),
     ("S158 a hidden forme's types", "src/alpha_poke/agents/engine_state.py",
      "        types=_base_types(s.forme) if s.forme and", "        types=_types(mon) if s.forme and"),
     ("S158 a transformed lock's slot order", "src/alpha_poke/agents/engine_state.py",
-     "            ids = list(req) if len(req) == 4 or not base else base[: 4 - len(extra)] + extra",
+     "            ids = list(req) if len(req) == 4 or not base else base + extra",
      "            ids = list(req) if len(req) == 4 or not base else list(dict.fromkeys(list(req) + base))[:4]"),
     ("S158 a Healing Wish waiting", "src/alpha_poke/agents/timers.py",
      '            st.healing_wish = 1 if mv == "healingwish" else 2', "            pass"),
@@ -138,7 +138,8 @@ MUTATIONS = [
     ("S158 a copy keeps its nature", "src/alpha_poke/agents/engine_state.py",
      '    kept = {"nature": str(p.nature).lower(), "evs": tuple(p.evs)}', "    kept = {}"),
     ("S158 a transformed mon's own nature", "src/alpha_poke/agents/engine_state.py",
-     "        nature=str(p.nature).lower(), evs=tuple(p.evs),\n    )  # fmt: skip", "    )  # fmt: skip"),
+     "        nature=str(p.nature).lower(), evs=tuple(p.evs), once_used=p.once_used,",
+     "        once_used=p.once_used,"),
     ("S158 the stats of the forme it transformed into", "src/alpha_poke/agents/engine_state.py",
      "        if not entry or to_id(tm.copied_forme) == _sp_id(target):", "        if True:"),
     ("S157 a Terapagos's Stellar boosts unmarked", "src/alpha_poke/agents/engine_state.py",
@@ -190,7 +191,7 @@ RUST = [
      "            // (a stopped one, a cant: clearActiveMove(true), none)\n            set_battle_last_move(state, &choice, &mut incoming_instructions);",
      "            // (a stopped one, a cant: clearActiveMove(true), none)"),
     ("L241 an Uproar's own lock", "rust/patches/poke-engine-0.0.48/src/genx/state.rs",
-     "            || self.volatile_statuses.contains(&PokemonVolatileStatus::UPROAR)\n    }", "    }"),
+     "            || self.volatile_statuses.contains(&PokemonVolatileStatus::UPROAR)\n", ""),
     ("R1 the tree's move used: its own span", "rust/alpha_search/src/ismcts.rs",
      "let used = instructions[from..to.max(from)]", "let used = instructions[..acted.unwrap_or(instructions.len())]"),
     ("R5' the last move always tracked", "rust/patches/poke-engine-0.0.48/src/genx/state.rs",
@@ -277,6 +278,12 @@ def main() -> int:
                 grown = _fast()
             except RunnerFailed as e:  # (a crash is no catch: a finding of the checks is)
                 print(f"ERROR {name}: the runner broke -- {e}")
+                missed.append(name)
+                continue
+            # (only the "error" kind grown: the mutated code raised in the checks -- a crash, no
+            # catch of theirs; 2026-10-26 review)
+            if grown and all(" error " in g for g in grown):
+                print(f"ERROR {name}: only the checks' errors grew ({grown[0]}, ...)")
                 missed.append(name)
                 continue
             print(("caught " if grown else "MISSED ") + name + (f"  ({grown[0]}, ...)" if grown else ""))

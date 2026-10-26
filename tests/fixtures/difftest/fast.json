@@ -4,7 +4,7 @@
   "@specs": {}
  },
  "engine_chain": {
-  "#compared": 698,
+  "#compared": 708,
   "@specs": {}
  },
  "engine_dist": {
@@ -19,11 +19,11 @@
   "@specs": {}
  },
  "state_chain": {
-  "#compared": 932,
+  "#compared": 952,
   "@specs": {}
  },
  "state_facts": {
-  "#compared": 2766,
+  "#compared": 16838,
   "@specs": {}
  },
  "state_live": {

@@ -34,7 +34,13 @@ async def _lane(bot_a: str, matches: list[Match], port: int, pool: str, run: str
     # model, its login; a challenge to a user not yet on is lost -- "not found", the lane stuck)
     await asyncio.sleep(START_WAIT)
     rows = []
+    broken = False  # (a game that never finished: the other side may be a game ahead or behind)
     for m in matches:
+        if broken:  # (the lane stops: its teams and challenges would no longer agree -- 2026-10-26 review)
+            rows.append(asdict(m) | {"bot_a": bot_a, "bot_b": "opponent", "battle": None, "a_won": None,
+                                     "turns": None, "capped": False, "team_ok": False, "fallbacks_a": 0,
+                                     "search_fallbacks_a": 0, "fallbacks_b": None, "seconds": 0.0})  # fmt: skip
+            continue
         me.update_team(teams[m.team_a])
         before = set(me.battles)
         fb0 = (getattr(me, "fallbacks", 0), getattr(me, "search_fallbacks", 0))
@@ -43,7 +49,9 @@ async def _lane(bot_a: str, matches: list[Match], port: int, pool: str, run: str
         try:
             await asyncio.wait_for(play, GAME_TIMEOUT)
         except TimeoutError:
-            logging.getLogger(__name__).warning("lane %d pair %d game %d: no finished game", i, m.pair, m.game)
+            logging.getLogger(__name__).warning("lane %d pair %d game %d: no finished game -- the lane stops", i,
+                                                m.pair, m.game)  # fmt: skip
+            broken = True
         new = [me.battles[t] for t in me.battles if t not in before]
         battle = new[0] if new else None
         row = asdict(m) | {

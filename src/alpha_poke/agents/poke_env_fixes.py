@@ -149,26 +149,45 @@ def _update_team_from_request(self, side, strict_battle_tracking: bool = False):
 
 
 _inner_switch = Battle.switch
+_inner_register_preview = AbstractBattle._register_teampreview_pokemon
+
+
+def _register_preview(self, player: str, details: str):
+    """poke-env keeps the opponent's team preview only: our own's levels too (a spectator's --
+    the replay path's -- our disguise's level below; 2026-10-26 review)."""
+    _inner_register_preview(self, player, details)
+    if player == self._player_role:
+        from poke_env.battle import Pokemon
+
+        mon = Pokemon(details=details, gen=self.gen)
+        self.__dict__.setdefault("_alpha_own_preview", {})[mon.species] = mon.level
 
 
 def _switch(self, pokemon_str: str, details: str, hp_status: str):
     _inner_switch(self, pokemon_str, details, hp_status)
+    ours = pokemon_str.split(":")[0][:2] == self._player_role
+    mon = self.active_pokemon if ours else self.opponent_active_pokemon
+    if mon is None:
+        return
+    # (whether it came in terastallized: a Zoroark's tera in its disguise is the one after -- either
+    # side's: the replay path's own Zoroark too, 2026-10-26 review)
+    self.__dict__.setdefault("_alpha_tera_in", {})[id(mon)] = mon._terastallized
     # (a disguised Zoroark's switch-in details name the disguise at the Zoroark's level -- a
-    # Spectrier at 83 for its 75, never found out; a level never changes: the team preview's)
-    if pokemon_str.split(":")[0][:2] != self._player_role:
-        mon = self.opponent_active_pokemon
-        # (whether it came in terastallized: a Zoroark's tera in its disguise is the one after)
-        if mon is not None:
-            self.__dict__.setdefault("_alpha_tera_in", {})[id(mon)] = mon._terastallized
-        lv = next((m.level for m in self._teampreview_opponent_team if mon is not None and m.species == mon.species), None)
-        if lv is not None:
-            mon._level = lv
+    # Spectrier at 83 for its 75, never found out; a level never changes: the team preview's.
+    # Ours: a request's level is exact -- only a spectator's, the replay path's)
+    if ours:
+        lv = None if self._last_request else self.__dict__.get("_alpha_own_preview", {}).get(mon.species)
+    else:
+        lv = next((m.level for m in self._teampreview_opponent_team if m.species == mon.species), None)
+    if lv is not None:
+        mon._level = lv
 
 
 if getattr(AbstractBattle, "_alpha_illusion_fixed", False) is False:
     AbstractBattle._end_illusion_on = _end_illusion_on
     AbstractBattle._update_team_from_request = _update_team_from_request
     Battle.switch = _switch
+    AbstractBattle._register_teampreview_pokemon = _register_preview
     AbstractBattle._alpha_illusion_fixed = True
 
 

@@ -1102,3 +1102,35 @@ def test_the_toxic_spikes_order():
     assert _toxic_spikes_order({C.TOXIC_SPIKES: 1, C.STEALTH_ROCK: 1, C.SPIKES: 1}) == 0
     assert _toxic_spikes_order({C.SPIKES: 1, C.TOXIC_SPIKES: 2, C.STEALTH_ROCK: 1}) == 2
     assert _toxic_spikes_order({C.STEALTH_ROCK: 1}) == 0
+
+
+def test_no_choice_lock_for_a_world_the_log_contradicts(belief):
+    """2026-10-26 review: the foe's Choice lock (S158b) trusted the world's drawn item -- a
+    Gholdengo that used two moves this time in can hold no Choice item, yet a world that drew one
+    locked it into the last. Two moves: no lock in any world; one: the Choice worlds lock."""
+    two = battle(["|move|p2a: Gholdengo|Make It Rain|p1a: Garchomp", "|-damage|p1a: Garchomp|300/400",
+                  "|upkeep|", "|turn|2", "|move|p2a: Gholdengo|Shadow Ball|p1a: Garchomp",
+                  "|-damage|p1a: Garchomp|200/400", "|upkeep|", "|turn|3"])  # fmt: skip
+    one = battle(["|move|p2a: Gholdengo|Shadow Ball|p1a: Garchomp", "|-damage|p1a: Garchomp|300/400",
+                  "|upkeep|", "|turn|2"])  # fmt: skip
+
+    def locked(b, k):
+        s = build_state(b, belief, ("Garchomp", "Dondozo"), random.Random(k))
+        foe = s.side_two.pokemon[int(s.side_two.active_index)]
+        choice = str(foe.item).lower().startswith("choice")
+        return choice, choice and sum(not m.disabled for m in foe.moves if str(m.id).lower() != "none") == 1
+
+    worlds = [locked(two, k) for k in range(40)]
+    assert any(c for c, _ in worlds) and not any(lk for _, lk in worlds)
+    worlds = [locked(one, k) for k in range(40)]
+    assert all(lk for c, lk in worlds if c) and any(c for c, _ in worlds)
+    # (its two moves before a Trick gave it a Choice Scarf: locked into the one after -- the full
+    # corpus' Quagsire; the moves counted since its item changed)
+    tricked = battle(["|move|p2a: Gholdengo|Make It Rain|p1a: Garchomp", "|upkeep|", "|turn|2",
+                      "|move|p2a: Gholdengo|Recover|p2a: Gholdengo", "|upkeep|", "|turn|3",
+                      "|move|p1a: Garchomp|Trick|p2a: Gholdengo", "|-item|p2a: Gholdengo|Choice Scarf|[from] move: Trick",
+                      "|-item|p1a: Garchomp|Leftovers|[from] move: Trick",
+                      "|move|p2a: Gholdengo|Shadow Ball|p1a: Garchomp", "|upkeep|", "|turn|4"],
+                     moves=("earthquake", "trick", "substitute", "hyperbeam"), item="choicescarf")  # fmt: skip
+    worlds = [locked(tricked, k) for k in range(10)]
+    assert all(c and lk for c, lk in worlds), worlds

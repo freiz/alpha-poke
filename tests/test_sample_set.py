@@ -209,3 +209,34 @@ def test_a_hidden_formes_changed_types_kept():
                         stats={"hp": 323, "atk": 337, "def": 266, "spa": 176, "spd": 266, "spe": 390},
                         forme="zaciancrowned")  # fmt: skip
     assert {str(t).lower() for t in _their_mon(Pokemon(species="zacian", gen=9), zacian).types} == {"fairy", "steel"}
+
+
+def test_a_revealed_greninja_bond_stays_greninja_bond():
+    """2026-10-26 review: a switched-in Greninja-Bond (its set's forme, resolve_forme) went back to
+    Greninja in _formes -- the shown species "Greninja" read as its forme now -- Battle Bond inert.
+    (The state checks alias the two names: SAME_SPECIES hid it.)"""
+    import poke_engine as pe
+
+    from alpha_poke.agents.engine_state import _formes
+    from alpha_poke.agents.timers import SideTimers
+
+    mon = Pokemon(species="greninja", gen=9)
+    tm = SideTimers()
+    tm.names["Greninja"] = "greninja"
+    built = [pe.Pokemon(id="greninjabond", ability="battlebond")]
+    assert str(_formes({"p2: Greninja": mon}, [mon], built, tm)[0].id).lower() == "greninjabond"
+    plain = [pe.Pokemon(id="greninja", ability="protean")]
+    assert str(_formes({"p2: Greninja": mon}, [mon], plain, tm)[0].id).lower() == "greninja"
+
+
+def test_a_seen_base_forme_is_no_hidden_forme():
+    """2026-10-26 review: resolve_forme ran on a mon whose switch-in showed it -- an "Urshifu" seen
+    with a Surging Strikes drawn was built as Rapid Strike (types, stats). Only one never in, and
+    Greninja (Greninja-Bond shows as Greninja)."""
+    belief = BeliefModel.load()
+    known = KnownSet(moves=["surgingstrikes"])
+    unseen = Pokemon(species="urshifu", gen=9)
+    assert sample_set(belief, unseen, ("Urshifu",), random.Random(0), known=known).forme == "urshifurapidstrike"
+    seen = Pokemon(species="urshifu", gen=9)
+    seen._revealed = True  # (it came in as "Urshifu": Single Strike)
+    assert sample_set(belief, seen, ("Urshifu",), random.Random(0), known=known).forme is None

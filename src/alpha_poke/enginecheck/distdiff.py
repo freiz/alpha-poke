@@ -21,7 +21,9 @@ from alpha_poke.enginecheck.stepdiff import comparable
 
 N = 100  # Showdown's outcomes per turn
 EVERY = 4  # every EVERY-th turn with both sides choosing is serialized (random_battle.js)
-FLOOR = 0.06  # the least difference reported (the engine's own approximations: a roll's kill chance)
+FLOOR = 0.04  # the least difference reported (the engine's own approximations: a roll's kill chance)
+ALPHA = 1e-4  # a class's two-sided exact binomial test (2026-10-26 review: the normal approximation
+# missed an engine's 10% that Showdown never has -- p > 0.138 only -- and was loose at a small p)
 EXAMPLES = 5  # (kept per kind; an analysis may raise it)
 
 
@@ -74,7 +76,9 @@ def turn_dist(a: dict, outcomes: list[dict]) -> dict:
         if o[0] <= 0:
             continue
         v = ec.view_engine(o[1], nm)
-        key = (_rest(v), _engine_pattern(o, v))
+        # (a branch that ends the battle: who fainted alone -- the turn stops at the win in
+        # Showdown, the engine plays it out: one class per faint set, as its ended samples)
+        key = (("end", _engine_pattern(o, v)) if _over(v, nm) else (_rest(v), _engine_pattern(o, v)))
         probs[key] += o[0]
         desc.setdefault(key, _describe(v, v0e, key[1]))
         branches.append((v, key))
@@ -85,7 +89,10 @@ def turn_dist(a: dict, outcomes: list[dict]) -> dict:
         pat = _showdown_pattern(s, vs)
         # (an outcome that ended the battle: who fainted alone -- Showdown stops the turn at the
         # win, the engine plays it out: ec.end_diff)
-        key = next((k for v, k in branches if k[1] == pat and (s.get("ended") or not ec.diff(v, vs, skip_hp=True))), None)
+        if s.get("ended"):  # (2026-10-26 review: every ended sample went to the first branch's class)
+            key = ("end", pat) if ("end", pat) in probs else None
+        else:
+            key = next((k for v, k in branches if k[0] != "end" and k[1] == pat and not ec.diff(v, vs, skip_hp=True)), None)
         counts[key] += 1
         if key is None:
             unmatched.append(_describe(vs, v0s, pat))
@@ -96,8 +103,19 @@ def turn_dist(a: dict, outcomes: list[dict]) -> dict:
 
 
 def off(p: float, f: float, n: int) -> bool:
-    """A frequency ``f`` of ``n`` outcomes further from ``p`` than chance allows."""
-    return abs(f - p) > max(4 * math.sqrt(max(p * (1 - p), 1 / n) / n), FLOOR)
+    """A frequency ``f`` of ``n`` outcomes further from ``p`` than chance allows: its exact
+    binomial tail below ALPHA (two-sided), and at least FLOOR apart."""
+    if abs(f - p) < FLOOR:
+        return False
+    k = round(f * n)
+    p = min(max(p, 0.0), 1.0)
+    pmf = [math.comb(n, i) * p**i * (1 - p) ** (n - i) for i in range(n + 1)]
+    return min(sum(pmf[: k + 1]), sum(pmf[k:])) * 2 < ALPHA
+
+
+def _over(v: dict, nm: tuple) -> bool:
+    """A side with no mon left in the view: the battle over."""
+    return any(all(v.get(f"{k}.{j}.hp", 0) == 0 for j in range(n)) for k, n in zip(("s1", "s2"), nm, strict=True))
 
 
 def _drawn(state: dict) -> str | None:

@@ -166,10 +166,13 @@ def check_state_facts(spec: Spec) -> dict:
 
     diffs, st = fact_diffs(spec.p1, spec.p2, spec.seed, spec.max_turns, script=spec.steps_script,
                            fmt=spec.fmt or None)  # fmt: skip
-    out = _result(st["decisions"])
+    # (the facts compared, not the decisions: none compared -- a broken name match -- is fewer;
+    # 2026-10-26 review)
+    out = _result(st.get("facts", 0))
     for k, side, kind, detail in diffs:
         _add(out, kind, {"step": k, "side": side, "detail": detail})
     out["errors"] = st["errors"]
+    out["skipped"].update(st.get("skipped", []))
     return out
 
 

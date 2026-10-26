@@ -372,6 +372,14 @@ def _stellar_hit(sides: dict, p: list[str]) -> None:
 
 def _feed_one(sides: dict, p: list[str]) -> None:
     tag = p[1]
+    # (the moves since the active's last item change this time in: a Choice item a Trick gave it
+    # locks from its next move -- the earlier ones no evidence against it; 2026-10-26)
+    # (and since its Transform: the lock's move no longer its own, Showdown's choicelock ends --
+    # the next move locks; a Choice Ditto's Transform, then Substitute)
+    if tag in ("-item", "-enditem", "-transform") and len(p) > 2 and p[2][:2] in sides:
+        st0 = sides[p[2][:2]]
+        if p[2].split(": ", 1)[-1] == st0.stint.get("nick"):
+            st0.stint["item_mark"] = len(st0.stint.get("moves", []))
     if tag in ("-damage", "-activate", "-end") and len(p) > 3 and p[2][:2] in sides:
         _stellar_hit(sides, p)
         # (a hit on its Substitute: a multi-hit move's last one there counts none -- Showdown's)
