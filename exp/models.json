@@ -1,19 +1,69 @@
 {
  "anchor": {
-  "model": "v0",
+  "model": "v6arch-pp-v75",
   "elo": 1500.0
  },
- "built": "2026-10-20 13:54",
- "current": "v0",
+ "built": "2026-10-27 14:05",
+ "current": "v6arch-pp-v75",
  "models": [
   {
-   "name": "v0",
-   "run": "data/train/v71/runs/v0",
-   "sha256": "39ba24538c48e501",
+   "name": "r2-gen0a1",
+   "run": "data/train/v75/runs/r2-gen0a1",
+   "sha256": "a0dfb9310c516815",
+   "generation": 0,
+   "role": "generation",
+   "promoted": null,
+   "played_generations": [],
+   "training": {
+    "init": "data/train/v75/runs/v6arch-pp-v75",
+    "selfplay": "r2-sp0",
+    "sp_frac": 0.5,
+    "lr": 0.0004,
+    "batch": 4096,
+    "warmup_frac": 0.2,
+    "sp_per_game": 50,
+    "sp_value_passes": 1,
+    "seed": 0,
+    "epochs": 6,
+    "steps": 3501,
+    "params": 741868,
+    "human_share": 0.5,
+    "sp_positions": 3862166,
+    "sp_positions_kept": 2517316,
+    "recent_gens": [
+     0
+    ]
+   },
+   "parent": "v6arch-pp-v75",
+   "validation_last": {
+    "ce_turn_w": 1.1391,
+    "bce_all_w": 0.5484,
+    "top1": 0.5568,
+    "value_ece": 0.0225,
+    "hce_true": 1.2263,
+    "opp_act_acc": 0.4241,
+    "sp_kl": 0.2234,
+    "sp_top1": 0.7351,
+    "sp_bce": 0.4394,
+    "sp_kl_ref": 0.0333
+   },
+   "created": "2026-10-27 13:38",
+   "matches": [
+    "gen0-eval-a1"
+   ],
+   "elo": 1501.5,
+   "elo_ci95": 25.8
+  },
+  {
+   "name": "v6arch-pp-v75",
+   "run": "data/train/v75/runs/v6arch-pp-v75",
+   "sha256": "1c3440d1d7c76bb8",
    "generation": null,
    "role": "human-data baseline (self-play start)",
    "promoted": null,
-   "played_generations": [],
+   "played_generations": [
+    0
+   ],
    "training": {
     "init": "",
     "selfplay": "",
@@ -25,21 +75,23 @@
     "sp_value_passes": 0,
     "seed": 0,
     "epochs": 6.0,
-    "steps": 65590,
-    "params": 748076
+    "steps": 65722,
+    "params": 741868
    },
    "parent": null,
    "validation_last": {
-    "ce_turn_w": 1.1136,
-    "bce_all_w": 0.5372,
-    "top1": 0.5638,
-    "value_ece": 0.0109,
-    "opp_act_acc": 0.4296
+    "ce_turn_w": 1.1291,
+    "bce_all_w": 0.5429,
+    "top1": 0.5595,
+    "value_ece": 0.0166,
+    "opp_act_acc": 0.4251
    },
-   "created": "2026-10-20 09:30",
-   "matches": [],
-   "elo": null,
-   "elo_ci95": null,
+   "created": "2026-10-26 18:56",
+   "matches": [
+    "gen0-eval-a1"
+   ],
+   "elo": 1500.0,
+   "elo_ci95": 0.0,
    "current": true
   }
  ]
