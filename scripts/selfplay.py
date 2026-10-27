@@ -490,7 +490,8 @@ def cmd_train(a) -> None:
     steps = a.steps or (0 if a.per_game > 0 else max(50, math.ceil(a.passes * n_sp / bsp)))
     size = (f"--steps {steps} --eval-every {max(50, steps // 5)}" if steps else
             f"--sp-passes {a.passes} --eval-every 0")  # fmt: skip
-    run = f"{LINEAGE}-gen{a.gen}"
+    # (iterate: attempt k of a generation -- its games so far -- is a run of its own)
+    run = f"{LINEAGE}-gen{a.gen}" + (f"a{a.attempt}" if a.attempt else "")
     cmd = (f"{sys.executable} scripts/train_pv.py {TRAIN_FLAGS} --selfplay {sp} "
            f"--sp-frac {sp_frac} --init {init} {size} --lr {lr} --batch {a.batch} "
            f"--warmup-frac {a.warmup_frac} --export last --sp-per-game {a.per_game} "
@@ -506,7 +507,7 @@ def cmd_train(a) -> None:
                f"--batch {a.batch} --warmup-frac 0.02 --eval-every 2000 --export best "
                f"--sp-per-game {a.per_game} --sp-value-passes {a.value_passes} --seed {a.gen} "
                f"--run {run}")  # fmt: skip
-    log_path = SELFPLAY_DIR / f"gen{a.gen}" / "train.log"
+    log_path = SELFPLAY_DIR / f"gen{a.gen}" / (f"train-a{a.attempt}.log" if a.attempt else "train.log")
     out = Path("data/train") / TRAIN_DATA / "runs" / run
     done = (out / "metrics.jsonl").exists() and '"event": "done"' in (
         out / "metrics.jsonl"
@@ -635,24 +636,38 @@ def cmd_eval(a) -> None:
     import json
 
     st = state()
-    if "eval" in st["generations"].get(str(a.gen), {}) and not a.force:
-        print(f"gen {a.gen} is evaluated already (--force evaluates again)")
+    key = f"eval_a{a.attempt}" if a.attempt else "eval"
+    if key in st["generations"].get(str(a.gen), {}) and not a.force:
+        print(f"gen {a.gen} ({key}) is evaluated already (--force evaluates again)")
         return
     cand = st["generations"][str(a.gen)]["train"]["run"]
     base = a.against or st["current"]
-    res = sequential_match(a, cand, base, a.gen, str(SELFPLAY_DIR / f"gen{a.gen}"))
+    # (an attempt's own team pool: seed 1,000 x gen + attempt -- a pool used again would let
+    # the attempts' repeated tests fit it)
+    seed = 1000 * a.gen + a.attempt if a.attempt else a.gen
+    res = sequential_match(a, cand, base, seed, str(SELFPLAY_DIR / f"gen{a.gen}"))
     p, ci = res["paired_mean"], res["ci95_paired"]
-    # promotion (design D15-6): unless the sequential test says worse than the current network
+    # promotion (design D15-6): unless the sequential test says worse than the current network;
+    # iterate (2026-10-27): only when it says better (H1 = elo1 above, against H0 = elo0 above)
     promote = res["decision"] == "H1"
+    if a.attempt and promote and res["llr"] < res["llr_bounds"][1]:
+        # (the test ran to --pairs undecided: H1 by the sign alone -- an attempt is promoted then
+        # only if the 95% interval's lower end is above H0's score)
+        from alpha_poke.eval.arena import elo_score
+
+        promote = p - ci >= elo_score(a.elo0)
     res |= {"candidate": cand, "against": base, "promoted": promote,
             "significantly_better": p - ci > 0.5}  # fmt: skip
-    record(a.gen, "eval", res)
-    registry_match(f"gen{a.gen}-eval", cand, base, res, "promotion", True)
+    record(a.gen, key, res)
+    registry_match(f"gen{a.gen}-{key.replace('_', '-')}", cand, base, res, "promotion", True)
     st = state()
     if promote:
         st["current"] = cand
-    # the network each generation ended with (the anchor of later checks)
-    st.setdefault("lineage", {})[str(a.gen)] = st["current"]
+    if promote or not a.attempt:  # (an attempt that failed: the generation goes on)
+        if a.attempt:
+            st["generations"][str(a.gen)]["eval"] = res
+        # the network each generation ended with (the anchor of later checks)
+        st.setdefault("lineage", {})[str(a.gen)] = st["current"]
     save_state(st)
     print(json.dumps(res, indent=1))
 
@@ -935,6 +950,65 @@ def cmd_cycle(a) -> None:
     print(f"[{time.strftime('%H:%M:%S')}] gen {a.gen} done: {state()['generations'][str(a.gen)]}")
 
 
+def cmd_iterate(a) -> None:
+    """One generation grown until it gives a clearly better network (2026-10-27): its games so
+    far converted, the current network fine-tuned on them (attempt k: run <LINEAGE>-gen<G>a<k>),
+    then the sequential test against the current network with H0 = --elo0 better (default
+    +13.9 Elo: a 52% score), H1 = --elo1 (+34.9: 55%) -- promoted only on H1, i.e. confidently
+    above 52%. Otherwise --chunk more games of the same network and the next attempt on all of
+    them; stops promoted or at --max-games. Every attempt's games and result: the generation's
+    "attempts" (state.json): how many self-play games a clearly better network takes."""
+    import json
+    import subprocess
+
+    from alpha_poke.selfplay import runner
+    from alpha_poke.selfplay import teams as teams_mod
+
+    gen_dir = SELFPLAY_DIR / f"gen{a.gen}"
+    me = [sys.executable, __file__]
+
+    def step(name: str, args: list[str]) -> None:
+        t0 = time.time()
+        print(f"[{time.strftime('%m-%d %H:%M:%S')}] gen {a.gen}: {name}", flush=True)
+        with open(gen_dir / f"{name}.log", "a") as f:
+            subprocess.run(capped(me + args, a.mem_cap_gb), check=True, stdout=f,
+                           stderr=subprocess.STDOUT)  # fmt: skip
+        record(a.gen, f"{name}_minutes", round((time.time() - t0) / 60, 1))
+
+    attempts = state()["generations"].get(str(a.gen), {}).get("attempts", [])
+    while True:
+        k = len(attempts) + 1
+        games = len(runner.done_pairs(gen_dir))
+        if attempts and attempts[-1]["games"] >= games:  # (more games before another attempt)
+            if games >= a.max_games:
+                print(f"gen {a.gen}: {games} games, no clearly better network -- stopped")
+                return
+            have = len(teams_mod.load(gen_dir / "teams.jsonl")) if (gen_dir / "teams.jsonl").exists() else 0
+            if have < games + a.chunk:
+                step("teams", ["teams", "--gen", str(a.gen), "--n", str(games + a.chunk - have),
+                               "--seed", str(1000 * a.gen + have)] + (["--append"] if have else []))  # fmt: skip
+            step("run", ["run", "--gen", str(a.gen), "--procs", str(a.procs), "--lanes",
+                         str(a.lanes), "--threads", str(a.threads), "--limit", str(a.chunk)])  # fmt: skip
+            games = len(runner.done_pairs(gen_dir))
+        step("convert", ["convert", "--gen", str(a.gen), "--force"])
+        step("train", ["train", "--gen", str(a.gen), "--attempt", str(k), "--force"])
+        step("eval", ["eval", "--gen", str(a.gen), "--attempt", str(k), "--force",
+                      "--pairs", str(a.eval_pairs), "--iterations", str(a.eval_iterations),
+                      "--elo0", str(a.elo0), "--elo1", str(a.elo1), "--alpha", str(a.alpha),
+                      "--beta", str(a.beta)])  # fmt: skip
+        g = state()["generations"][str(a.gen)]
+        ev, tr = g[f"eval_a{k}"], g["train"]
+        attempts.append({"attempt": k, "games": games, "run": tr["run"], "steps": tr["steps"],
+                         "pairs": ev["pairs"],
+                         "paired_mean": ev["paired_mean"], "ci95": ev["ci95_paired"],
+                         "llr": ev["llr"], "decision": ev["decision"], "promoted": ev["promoted"]})  # fmt: skip
+        record(a.gen, "attempts", attempts)
+        print(json.dumps(attempts[-1]), flush=True)
+        if ev["promoted"]:
+            print(f"gen {a.gen}: promoted {tr['run']} after {games} games")
+            return
+
+
 def _stop_workers(*_) -> None:
     """On SIGTERM also stop the game worker processes (they would keep playing)."""
     import multiprocessing as mp
@@ -1084,6 +1158,7 @@ def main() -> None:
     p.add_argument("--warmup-frac", type=float, default=0.2)
     p.add_argument("--batch", type=int, default=4096)
     p.add_argument("--force", action="store_true", help="retrain even if the run is complete")
+    p.add_argument("--attempt", type=int, default=0, help="iterate: attempt k (run ...a<k>)")
     p.add_argument("--scratch", action="store_true",
                    help="from random weights: human + self-play one shuffled mixture")  # fmt: skip
     p.add_argument("--scratch-epochs", type=float, default=6.0, help="--scratch: passes over each row")
@@ -1101,6 +1176,7 @@ def main() -> None:
     p.add_argument("--lanes", type=int, default=2)
     p.add_argument("--ports", type=int, nargs="+", default=[8000, 8001, 8002, 8003])
     p.add_argument("--force", action="store_true")
+    p.add_argument("--attempt", type=int, default=0, help="iterate: attempt k (eval_a<k>)")
     p.set_defaults(fn=cmd_eval)
     p = sub.add_parser("diag", help="diagnostic team pools: current vs the base network (D16; by hand)")
     p.add_argument("--gen", type=int, required=True, help="where to log it")
@@ -1157,6 +1233,22 @@ def main() -> None:
     p.add_argument("--mem-cap-gb", type=float, default=40,
                    help="memory cap of every step (cgroup; WSL has 48 GB; 0 = none)")  # fmt: skip
     p.set_defaults(fn=cmd_loop)
+    p = sub.add_parser("iterate", help="one generation grown until a clearly better network")
+    p.add_argument("--gen", type=int, required=True)
+    p.add_argument("--chunk", type=int, default=25000, help="more games before the next attempt")
+    p.add_argument("--max-games", type=int, default=300000)
+    p.add_argument("--procs", type=int, default=10)
+    p.add_argument("--lanes", type=int, default=24)
+    p.add_argument("--threads", type=int, default=2)
+    p.add_argument("--eval-pairs", type=int, default=2000, help="the test's most pairs")
+    p.add_argument("--eval-iterations", type=int, default=1600)
+    # (H0: 52% -- 400 log10(0.52 / 0.48) Elo; H1: 55%)
+    p.add_argument("--elo0", type=float, default=13.9, help="H0: the candidate this much better")
+    p.add_argument("--elo1", type=float, default=34.9, help="H1: this much (promoted)")
+    p.add_argument("--alpha", type=float, default=0.05, help="P(promoted | at most elo0)")
+    p.add_argument("--beta", type=float, default=0.1)
+    p.add_argument("--mem-cap-gb", type=float, default=40, help="memory cap of every step")
+    p.set_defaults(fn=cmd_iterate)
     p = sub.add_parser("cycle", help="one generation end to end")
     p.add_argument("--gen", type=int, required=True)
     p.add_argument("--games", type=int, default=100000, help="team pairs (drawn / topped up)")
