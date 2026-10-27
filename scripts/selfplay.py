@@ -159,7 +159,7 @@ TRAIN_FLAGS = (f"--data {TRAIN_DATA} --stream 2 --val-cutoff 1776921722 --train-
                "--value-per-game 4 --kinds main,forced,pivot,blind --aux oppset,turns "
                f"--feats {FEATS} "
                "--d-ff 171 --ffn swiglu --norm rms --qk-norm "
-               "--sp-value-schedule spread --sp-stream 1500000")  # fmt: skip
+               "--sp-value-schedule spread --sp-stream 750000")  # fmt: skip
 
 
 def capped(cmd: list[str], gb: float) -> list[str]:
@@ -990,7 +990,9 @@ def cmd_iterate(a) -> None:
             step("run", ["run", "--gen", str(a.gen), "--procs", str(a.procs), "--lanes",
                          str(a.lanes), "--threads", str(a.threads), "--limit", str(a.chunk)])  # fmt: skip
             games = len(runner.done_pairs(gen_dir))
-        step("convert", ["convert", "--gen", str(a.gen), "--force"])
+        conv = Path("data/train") / sp_data(a.gen) / "convert.json"
+        if not (conv.exists() and json.loads(conv.read_text()).get("games") == games):
+            step("convert", ["convert", "--gen", str(a.gen), "--force"])  # (else: converted already)
         step("train", ["train", "--gen", str(a.gen), "--attempt", str(k), "--force"])
         step("eval", ["eval", "--gen", str(a.gen), "--attempt", str(k), "--force",
                       "--pairs", str(a.eval_pairs), "--iterations", str(a.eval_iterations),
@@ -1247,7 +1249,9 @@ def main() -> None:
     p.add_argument("--elo1", type=float, default=34.9, help="H1: this much (promoted)")
     p.add_argument("--alpha", type=float, default=0.05, help="P(promoted | at most elo0)")
     p.add_argument("--beta", type=float, default=0.1)
-    p.add_argument("--mem-cap-gb", type=float, default=40, help="memory cap of every step")
+    # (30, 2026-10-27: a 40 GB training left the 48 GB WSL too little -- the session's background
+    # tasks were stopped for low memory)
+    p.add_argument("--mem-cap-gb", type=float, default=30, help="memory cap of every step")
     p.set_defaults(fn=cmd_iterate)
     p = sub.add_parser("cycle", help="one generation end to end")
     p.add_argument("--gen", type=int, required=True)
