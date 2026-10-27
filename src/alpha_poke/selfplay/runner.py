@@ -30,9 +30,10 @@ from pathlib import Path
 
 from alpha_poke.servers import account, local_server
 
-# the self-play start (lineage r2; scripts/selfplay.py BASE_RUN, the registry's ANCHOR): v6arch-pp,
-# the v7.3 human data (2026-10-23; was v72/v0)
-MODEL = "data/train/v73/runs/v6arch-pp"
+# the self-play start (lineage r2; scripts/selfplay.py BASE_RUN, the registry's ANCHOR):
+# v6arch-pp-v75, the v7.5 human data (2026-10-26: the current state construction; was v6arch-pp
+# on v7.3, 2026-10-23, and v72/v0 before)
+MODEL = "data/train/v75/runs/v6arch-pp-v75"
 
 
 def append_lines(path: Path, lines: list[str], sync: bool = False) -> None:

@@ -43,7 +43,8 @@ def run_dir(name: str) -> Path:
 # 2026-10-09: self-play restarted from v5-glu (the human-data network); the earlier run is in
 # exp/archive-2026-10-08/. 2026-10-20: restarted from v0 (lineage r2, scripts/selfplay.py); the
 # v5-glu lineage's registry is in exp/archive-2026-10-20/. 2026-10-23: the start v6arch-pp (v7.3)
-# before r2's first generation (no matches yet): the anchor is the start's name (runner.MODEL)
+# before r2's first generation (no matches yet), 2026-10-26 v6arch-pp-v75 (v7.5): the anchor is
+# the start's name (runner.MODEL)
 ANCHOR, ANCHOR_ELO = Path(MODEL).name, 1500.0
 
 

@@ -126,7 +126,7 @@ STATE = SELFPLAY_DIR / "state.json"  # the current network and every generation'
 # 0-8) is in data/selfplay/archive-v6/ and exp/archive-2026-10-20/, its game data deleted.
 # LINEAGE prefixes this lineage's products (self-play data data/train/<LINEAGE>-sp<G>, runs
 # <LINEAGE>-gen<G>): the registry finds runs by name, the old sp-gen<G> runs stay
-BASE_RUN = MODEL  # (2026-10-23: v6arch-pp on the v7.3 data; was v72/v0)
+BASE_RUN = MODEL  # (2026-10-26: v6arch-pp-v75; 2026-10-23: v6arch-pp on v7.3; was v72/v0)
 LINEAGE = "r2"
 
 
@@ -150,7 +150,7 @@ KL_BIG = 0.01
 # stages, EXTRA_VERSION 4), v6's 7 input groups (its GPU search 38% faster than v0's). train_pv
 # builds the model from these flags, so they must match the starting network's (cmd_train checks
 # its config)
-TRAIN_DATA = "v73"  # the human data (data/train/<x>); the generations' runs go to its runs/
+TRAIN_DATA = "v75"  # the human data (data/train/<x>); the generations' runs go to its runs/
 FEATS = "reveal,num,movetab,matchup,elo,counter,count"
 TRAIN_FLAGS = (f"--data {TRAIN_DATA} --stream 2 --val-cutoff 1776921722 --train-only hf- "
                "--eval-every 500 "
@@ -495,6 +495,17 @@ def cmd_train(a) -> None:
            f"--sp-frac {sp_frac} --init {init} {size} --lr {lr} --batch {a.batch} "
            f"--warmup-frac {a.warmup_frac} --export last --sp-per-game {a.per_game} "
            f"--sp-value-passes {a.value_passes} --seed {a.gen} --run {run}")  # fmt: skip
+    if a.scratch:
+        # (2026-10-26, from gen 0 of v75: no warm start -- the human and the self-play train
+        # rows one shuffled mixture from random weights, each row --scratch-epochs times, the
+        # starting network's own recipe: v6arch-pp-v75's lr / warmup / evaluation / export)
+        init, lr, sp_frac, steps = "", a.scratch_lr, None, 0
+        held, rejected = False, 0
+        cmd = (f"{sys.executable} scripts/train_pv.py {TRAIN_FLAGS} --selfplay {sp} "
+               f"--sp-mix {a.scratch_epochs} --epochs {a.scratch_epochs} --lr {lr} "
+               f"--batch {a.batch} --warmup-frac 0.02 --eval-every 2000 --export best "
+               f"--sp-per-game {a.per_game} --sp-value-passes {a.value_passes} --seed {a.gen} "
+               f"--run {run}")  # fmt: skip
     log_path = SELFPLAY_DIR / f"gen{a.gen}" / "train.log"
     out = Path("data/train") / TRAIN_DATA / "runs" / run
     done = (out / "metrics.jsonl").exists() and '"event": "done"' in (
@@ -511,6 +522,9 @@ def cmd_train(a) -> None:
     val = [r for r in rows if r.get("event") == "val"]
     steps = next((r["steps"] for r in rows if r.get("event") == "start" and "steps" in r), steps)
     kept = next((r for r in rows if r.get("event") == "sp_per_game"), None)
+    mix = next((r for r in rows if r.get("event") == "sp_mix"), None)
+    if mix:  # (--scratch: the self-play share as the sizes gave it)
+        sp_frac = mix["sp_frac"]
     keep = ("ce_turn_w", "bce_all_w", "top1", "top3", "top1_forced", "opp_act_acc", "value_ece",
             "hce_true", "hce_unk", "hce_lt1300", "hce_1300_1600", "hce_ge1600", "kl_ref_true",
             "kl_ref_unk", "sp_ce", "sp_kl", "sp_top1", "sp_bce", "sp_bce_rootq",
@@ -520,7 +534,7 @@ def cmd_train(a) -> None:
                "human_share": round(1 - sp_frac, 4), "human_share_held": held,
                "steps": steps, "lr": lr, "after_rejections": rejected,
                "per_game": a.per_game, "sp_positions_kept": kept and kept["kept"],
-               "warmup_frac": a.warmup_frac,
+               "warmup_frac": 0.02 if a.scratch else a.warmup_frac, "scratch": a.scratch,
                "first_val": {k: val[0].get(k) for k in keep} if val else None,
                "last_val": {k: val[-1].get(k) for k in keep} if val else None,
                "log": str(log_path)}  # fmt: skip
@@ -529,7 +543,8 @@ def cmd_train(a) -> None:
     # the flag: the moves of a human *with their rating as input* predicted worse (hce_true),
     # or the opponent's next move predicted worse (opp_act_acc, what the search's opponent
     # prior needs)
-    if val and val[0].get("ce_turn_w") is not None:
+    # (--scratch: no starting point to drift from -- the first validation is a net in training)
+    if val and val[0].get("ce_turn_w") is not None and not a.scratch:
         keys = [k for k in keep if val[-1].get(k) is not None and val[0].get(k) is not None]
         drift = {k: round(val[-1][k] - val[0][k], 4) for k in keys}
         summary["human_drift"] = drift
@@ -1069,6 +1084,10 @@ def main() -> None:
     p.add_argument("--warmup-frac", type=float, default=0.2)
     p.add_argument("--batch", type=int, default=4096)
     p.add_argument("--force", action="store_true", help="retrain even if the run is complete")
+    p.add_argument("--scratch", action="store_true",
+                   help="from random weights: human + self-play one shuffled mixture")  # fmt: skip
+    p.add_argument("--scratch-epochs", type=float, default=6.0, help="--scratch: passes over each row")
+    p.add_argument("--scratch-lr", type=float, default=0.002)
     p.set_defaults(fn=cmd_train)
     p = sub.add_parser("eval")
     p.add_argument("--gen", type=int, required=True)
