@@ -152,7 +152,9 @@ KL_BIG = 0.01
 # its config)
 TRAIN_DATA = "v75"  # the human data (data/train/<x>); the generations' runs go to its runs/
 FEATS = "reveal,num,movetab,matchup,elo,counter,count"
-TRAIN_FLAGS = (f"--data {TRAIN_DATA} --stream 2 --val-cutoff 1776921722 --train-only hf- "
+# 2026-10-27: --stream 1 (was 2) -- a 52,959-game generation's training took 31 GB with 2 human shards
+# per chunk (2 in use + 2 loading, ~4.2 GB each of v7.5 features): over the 30 GB cap
+TRAIN_FLAGS = (f"--data {TRAIN_DATA} --stream 1 --val-cutoff 1776921722 --train-only hf- "
                "--eval-every 500 "
                "--arch transformer "
                "--history --mtp 3 --mtp-weight 0.5 --mtp-decay 0.5 --value-residual "
