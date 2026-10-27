@@ -981,16 +981,20 @@ def cmd_iterate(a) -> None:
     while True:
         k = len(attempts) + 1
         games = len(runner.done_pairs(gen_dir))
-        if attempts and attempts[-1]["games"] >= games:  # (more games before another attempt)
+        # (more games before another attempt: --chunk more than the last attempt had; a resumed
+        # run plays only what the chunk still lacks)
+        target = attempts[-1]["games"] + a.chunk if attempts else 0
+        if games < target:
             if games >= a.max_games:
                 print(f"gen {a.gen}: {games} games, no clearly better network -- stopped")
                 return
+            need = target - games
             have = len(teams_mod.load(gen_dir / "teams.jsonl")) if (gen_dir / "teams.jsonl").exists() else 0
-            if have < games + a.chunk:
-                step("teams", ["teams", "--gen", str(a.gen), "--n", str(games + a.chunk - have),
+            if have < target:
+                step("teams", ["teams", "--gen", str(a.gen), "--n", str(target - have),
                                "--seed", str(1000 * a.gen + have)] + (["--append"] if have else []))  # fmt: skip
             step("run", ["run", "--gen", str(a.gen), "--procs", str(a.procs), "--lanes",
-                         str(a.lanes), "--threads", str(a.threads), "--limit", str(a.chunk)])  # fmt: skip
+                         str(a.lanes), "--threads", str(a.threads), "--limit", str(need)])  # fmt: skip
             games = len(runner.done_pairs(gen_dir))
         conv = Path("data/train") / sp_data(a.gen) / "convert.json"
         if not (conv.exists() and json.loads(conv.read_text()).get("games") == games):
