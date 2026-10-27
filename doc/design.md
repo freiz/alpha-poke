@@ -193,6 +193,8 @@ v7.2 输入（2026-10-20，`EXTRA_VERSION` 3，审查后的修复；数据待按
 ### D16. 自对弈的队伍分布（研究中）
 诊断（sp-gen1 对 v5-glu：天梯 / 偏门 / 随机池 54.6% / 51.6% / 51.8%，均不显著不同）：多样性目前不是明显短板。待做的改动小的两项：压平热门度（权重再乘 1 / 组合次数^0.3）、队伍库比例 30% → 15%；诊断池需要时手动跑（`selfplay.py diag`）。
 
+**合成队伍（2026-10-26，`selfplay/teams.py` Composer / `synthetic`、`selfplay/synergy.py`）**：自对弈一半的队伍（`--synth-frac 0.5`）为合成：物种按 Smogon 使用率与已选队友的提升度依次抽（γ 0.7，种族条款按基础物种，ε 0.1 的压平噪音）；配置按信念先补全，每个招式位 / 道具 / 特性 / 太晶各以 0.1 概率从 Smogon 分布（开方压平）重抽；再做 12 步 Metropolis-Hastings：每步重抽一只的配置，按 exp(β·跨队友组合分的变化) 接受（β 0.5；组合分 = 队友间特征对的 log 提升度之和，扣除物种本身能解释的部分，`scripts/build_synergy.py` 用 12 万局已暴露配置统计）；最后过本地校验器。诊断（`scripts/check_synthetic_teams.py`，1,000 队）：组合 92% 不在天梯出现过、99.8% 互不相同；前 200 队友对频率与天梯相关 0.80（独立抽 0.63）；第二个戏法空间手比例 0.17 → 0.46（β 1.0：0.53，天梯已暴露 0.53），道具分布与 Smogon 的 TV 0.23 → 0.17；全部通过校验（重抽 2–4%）。不会显示的特性（叶绿素、悠游自如）天梯统计里看不到，组合分学不到。
+
 ### D17. 引擎状态与规则模拟（`agents/engine_state.py`、`agents/timers.py`、`rust/patches`）
 引擎 = poke-engine 0.0.48 + alpha-poke 补丁（注释"alpha-poke patch"），Python 绑定用同一份源码。每次搜索前 `agents/consistency.py` 检查请求与引擎状态。验证工具：`scripts/check_actions.py`、`check_timers.py`、`check_speed.py`、`tests/test_engine_patches.py`、`test_timers.py`、`test_engine_state.py`、`test_transform.py`。
 

@@ -15,11 +15,23 @@ Per game:
      their learnset;
   3. with probability ``catalog_frac`` a side is replaced by a complete real team from the
      catalog (data/teams/catalog.jsonl; no completion at all);
+  3'. with probability ``synth_frac`` (first: the rest split by ``catalog_frac``) a side is a
+     synthetic team (2026-10-26, more varied teams than the ladder's own compositions): its six
+     species drawn one after another by the Smogon usage and the teammates of those already in
+     (``Composer``: the compositions' joint distribution, not each species on its own), its sets
+     completed as a replay side's with nothing known (the belief's archetypes: moves, item,
+     ability and tera drawn together), each set's move slots, item, ability and tera redrawn
+     with probability ``set_eps`` (noise), then ``synth_steps`` Metropolis-Hastings steps over
+     the sets (one mon's set drawn again the same way, kept with probability
+     min(1, exp(synth_beta * the change of the team's cross-mon synergy)): selfplay.synergy --
+     the combos the ladder builds, a Drought with a Chlorophyll, more often than their species
+     alone explain);
   4. every team passes the local Showdown validator (canonical export); a side that fails is
      completed again (up to ``retries`` times), otherwise the game is skipped.
 """
 
 import json
+import logging
 import random
 import re
 from dataclasses import asdict, dataclass
@@ -34,6 +46,9 @@ from alpha_poke.analysis.games_lite import logs
 from alpha_poke.analysis.roles import to_id
 from alpha_poke.data.smogon_stats import DEFAULT_DIR, UsageStats
 from alpha_poke.replay.parser import parse_replay
+from alpha_poke.selfplay.synergy import PATH as SYNERGY
+from alpha_poke.selfplay.synergy import Synergy
+from alpha_poke.selfplay.synergy import tokens as synergy_tokens
 from alpha_poke.teams import catalog
 from alpha_poke.teams.replay_pool import STAT_NAMES, smogon_entry
 from alpha_poke.teams.validate import check
@@ -41,11 +56,73 @@ from alpha_poke.teams.validate import check
 DAY = 86400
 
 
+class Composer:
+    """Synthetic team compositions (2026-10-26): species one after another, the first by its
+    usage, each next by its usage and how often it is the teammate of those already chosen --
+    P(B) ** (1 / tau) x (the product of lift(A, B) over the chosen A) ** gamma, lift(A, B) =
+    P(B | A) / P(B) from Smogon's Teammates (co-occurrence weights: a team's five others,
+    P(B | A) = 5 w(A, B) / sum_B' w(A, B')). tau > 1 flattens the usage (rarer species more often),
+    gamma 0 ignores the teammates; a pair never seen together keeps ``floor`` of a lift. One mon
+    per base species (the species clause; Ogerpon's masks, Urshifu's styles alike). ``eps``: a
+    pick's chance of the noise (the usage flattened by ``noise_tau``, no teammates)."""
+
+    # (gamma 0.7: the top-300 teammate pairs' rates against the ladder's 0.91, 98.7% compositions
+    # distinct -- 2026-10-26; the geometric mean's 0.82, a gamma 1 product's 0.91 but 94%)
+    def __init__(self, stats: UsageStats, min_usage: float = 0.002, tau: float = 1.0, gamma: float = 0.7,
+                 floor: float = 0.05, eps: float = 0.0, noise_tau: float = 3.0):  # fmt: skip
+        from poke_env.data import GenData
+
+        dex = GenData.from_gen(9).pokedex
+        self.names = [
+            x.name for x in stats.ranked() if x.usage >= min_usage and to_id(x.name) in dex
+        ]
+        self.base = {n: to_id(dex[to_id(n)].get("baseSpecies") or n) for n in self.names}
+        idx = {n: i for i, n in enumerate(self.names)}
+        usage = np.array([stats.species[n].usage for n in self.names], dtype=float)
+        self.prior = usage ** (1 / tau)
+        self.prior /= self.prior.sum()
+        # (the noise, 2026-10-26: a pick with probability eps by the usage flattened -- noise_tau --
+        # and no teammates; still among the species the ladder brings, the validator's after)
+        self.eps, self.flat = eps, usage ** (1 / noise_tau) / (usage ** (1 / noise_tau)).sum()
+        p_b = usage / usage.sum() * 6  # (a species' share of a team's six)
+        n = len(self.names)
+        self.log_lift = np.full((n, n), np.log(floor))
+        for a in self.names:
+            tm = stats.species[a].teammates
+            total = sum(tm.values())
+            if not total:
+                continue
+            for b, w in tm.items():
+                if b in idx and w > 0:
+                    self.log_lift[idx[a], idx[b]] = np.log(max(5 * w / total / p_b[idx[b]], floor))
+        self.gamma = gamma
+        self.same_base = [[k for k, m in enumerate(self.names) if self.base[m] == self.base[nm]]
+                          for nm in self.names]  # fmt: skip
+
+    def sample(self, rng: np.random.Generator) -> list[str]:
+        chosen: list[int] = []
+        for _ in range(6):
+            if rng.random() < self.eps:
+                w = self.flat.copy()
+            else:
+                w = np.log(self.prior)
+                # (the lifts multiplied -- each chosen mon a factor; their mean too weak)
+                if chosen:
+                    w = w + self.gamma * self.log_lift[chosen].sum(axis=0)
+                w = np.exp(w - w.max())
+            for j in chosen:  # (the species clause: by base species)
+                w[self.same_base[j]] = 0
+            chosen.append(int(rng.choice(len(w), p=w / w.sum())))
+        return [self.names[j] for j in chosen]
+
+
 @dataclass
 class Side:
     text: str  # canonical Showdown export
-    kind: str  # "replay" (completed from a real game) / "catalog" (a complete real team)
-    ref: str  # "<game id>:<p1|p2>" / catalog entry id
+    # "replay" (completed from a real game) / "catalog" (a complete real team) / "synthetic"
+    # (Composer's)
+    kind: str
+    ref: str  # "<game id>:<p1|p2>" / catalog entry id / "syn:<game id>:<p1|p2>"
 
 
 @dataclass
@@ -89,7 +166,10 @@ class TeamSampler:
     def __init__(self, belief, since: int | None = None, half_life_days: float = 120.0,
                  catalog_frac: float = 0.3, temp: float = 1.3, spread_temp: float = 1.0,
                  move_beta: float = 1.0, seed: int = 0, retries: int = 3,
-                 stats_cutoff: str = "1500", popularity_beta: float = 0.0):  # fmt: skip
+                 stats_cutoff: str = "1500", popularity_beta: float = 0.0, synth_frac: float = 0.0,
+                 synth_tau: float = 1.0, synth_gamma: float = 0.7, synth_eps: float = 0.1,
+                 set_eps: float = 0.1, synth_beta: float = 0.5, synth_steps: int = 12,
+                 synergy=None):  # fmt: skip
         g = pd.read_parquet(GAMES, columns=["id", "time", "r1", "r2", "winner", "shard", "row",
                                             "team1", "team2"])  # fmt: skip
         g = g[g.winner > 0]
@@ -113,6 +193,19 @@ class TeamSampler:
             DEFAULT_DIR / months[-1] / "chaos" / f"gen9ou-{stats_cutoff}.json"
         )
         self.belief, self.catalog_frac, self.temp = belief, catalog_frac, temp
+        self.synth_frac = synth_frac
+        self.composer = (Composer(self.stats, tau=synth_tau, gamma=synth_gamma, eps=synth_eps)
+                         if synth_frac > 0 else None)  # fmt: skip
+        self.set_eps = set_eps  # (a synthetic set's noise: _noisy)
+        if self.composer is not None and synergy is None:
+            if SYNERGY.exists():
+                synergy = Synergy.load(SYNERGY)
+            else:  # (the sets then drawn each on its own: scripts/build_synergy.py builds it)
+                logging.getLogger(__name__).warning("no %s: sets without synergy", SYNERGY)
+        # (beta 0.5, 12 steps -- 2026-10-26, 1,000 teams: a second Trick Room setter beside one
+        # 0.17 -> 0.46 (beta 1.0: 0.53, the ladder's revealed 0.53), the items' TV against
+        # Smogon's 0.23 -> 0.17; the lower beta for the noise)
+        self.synergy, self.synth_beta, self.synth_steps = synergy, synth_beta, synth_steps
         self.spread_temp, self.move_beta, self.retries = spread_temp, move_beta, retries
         self.rng = random.Random(seed)
         self.banned_moves: set[str] = set()  # move ids the validator reported as banned
@@ -128,32 +221,99 @@ class TeamSampler:
 
     def complete(self, records: list) -> str:
         """One completed export of a replay side (preview order)."""
-        from alpha_poke.agents.engine_state import sample_set
         from alpha_poke.train.positions import _known
 
         names = tuple(self.belief.display(to_id(r.species.replace("-*", ""))) for r in records)
-        sets = []
-        for rec in records:
-            species = _species(rec)
-            mon = Pokemon(details=species, gen=9)
-            known = _known(rec)
-            known.moves = [m for m in known.moves if m not in self.banned_moves]
-            s = sample_set(self.belief, mon, names, self.rng, self.move_beta, known=known,
-                           temp=self.temp)  # fmt: skip
-            moves = [m for m in s.moves if m not in self.banned_moves
-                     and (m != "tackle" or "tackle" in known.moves)][:4]  # fmt: skip
-            if len(moves) < 4:
-                moves += self._top_up(species, moves, 4 - len(moves))
-            tera = s.tera if s.tera and s.tera != "typeless" else ""
-            sets.append(export_set(species, s.item, s.ability, tera, moves,
-                                   self.spread(species)))  # fmt: skip
-        return "\n\n".join(sets)
+        return self._complete([(_species(rec), _known(rec)) for rec in records], names)
 
-    def _try_complete(self, records: list) -> str:
-        """``complete``, or "" (rejected by the validator) for a species the dex does not know
-        (nonstandard formes in old logs)."""
+    def synthetic(self) -> str:
+        """One completed export of a synthetic team (Composer's six; nothing known; the sets'
+        synergy by Metropolis-Hastings: an independence proposal per mon, the target the
+        completion's own distribution x exp(beta * team_score))."""
+        from alpha_poke.agents.engine_state import KnownSet
+
+        species = self.composer.sample(self.np_rng)
+        names = tuple(self.belief.display(to_id(x)) for x in species)
+        sets = [self._draw_set(x, KnownSet(moves=[]), names, self.set_eps) for x in species]
+        if self.synergy is not None and self.synth_steps > 0:
+            feats = [synergy_tokens(ability, item, moves) for _, item, ability, _, moves in sets]
+            score = self.synergy.team_score(feats)
+            for _ in range(self.synth_steps):
+                i = self.rng.randrange(len(sets))
+                new = self._draw_set(species[i], KnownSet(moves=[]), names, self.set_eps)
+                trial = feats[:i] + [synergy_tokens(new[2], new[1], new[4])] + feats[i + 1 :]
+                s = self.synergy.team_score(trial)
+                if s >= score or self.rng.random() < np.exp(self.synth_beta * (s - score)):
+                    sets[i], feats, score = new, trial, s
+        return "\n\n".join(
+            export_set(sp, item, ab, tera, moves, self.spread(sp))
+            for sp, item, ab, tera, moves in sets
+        )
+
+    def _noisy(self, species: str, moves: list, item: str, ability: str, tera: str, eps: float):
+        """A set with noise (2026-10-26): each move slot, the item, the ability and the tera type
+        with probability ``eps`` drawn again from what the ladder uses on the species (Smogon's,
+        weights square-rooted: its long tail more often), moves within its learnset; the
+        validator after -- legal sets only."""
+        from alpha_poke.dex import MOVE_IDS, learnset
+
+        smog = smogon_entry(self.stats, species)
+        if smog is None or eps <= 0:
+            return moves, item, ability, tera
+
+        def draw(d: dict, skip=()):
+            pool = {k: v**0.5 for k, v in d.items() if k and k not in skip}
+            return self.rng.choices(list(pool), weights=list(pool.values()))[0] if pool else None
+
+        legal = learnset(species) or set()
+        out = list(moves)
+        for i in range(len(out)):
+            if self.rng.random() < eps:
+                pool = {m: w for m, w in smog.move_has.items() if m in legal and m in MOVE_IDS}
+                m = draw(pool, skip=set(out) | self.banned_moves)
+                if m:
+                    out[i] = m
+        if self.rng.random() < eps:
+            item = to_id(draw(smog.items) or item)
+        if self.rng.random() < eps:
+            ability = to_id(draw(smog.abilities) or ability)
+        if self.rng.random() < eps:
+            tera = to_id(
+                draw({k: v for k, v in smog.tera_types.items() if to_id(k) != "stellar"}) or tera
+            )
+        return out, item, ability, tera
+
+    def _draw_set(self, species: str, known, names: tuple, noise: float = 0.0) -> tuple:
+        """(species, item, ability, tera, moves): what is known of the set kept, the rest drawn."""
+        from alpha_poke.agents.engine_state import sample_set
+
+        mon = Pokemon(details=species, gen=9)
+        known.moves = [m for m in known.moves if m not in self.banned_moves]
+        s = sample_set(self.belief, mon, names, self.rng, self.move_beta, known=known,
+                       temp=self.temp)  # fmt: skip
+        moves = [m for m in s.moves if m not in self.banned_moves
+                 and (m != "tackle" or "tackle" in known.moves)][:4]  # fmt: skip
+        if len(moves) < 4:
+            moves += self._top_up(species, moves, 4 - len(moves))
+        tera = s.tera if s.tera and s.tera != "typeless" else ""
+        item, ability = s.item, s.ability
+        if noise > 0:
+            moves, item, ability, tera = self._noisy(species, moves, item, ability, tera, noise)
+        return species, item, ability, tera, moves
+
+    def _complete(self, entries: list, names: tuple, noise: float = 0.0) -> str:
+        """The export of a side's (species, what is known of its set) entries, the rest drawn."""
+        sets = [self._draw_set(species, known, names, noise) for species, known in entries]
+        return "\n\n".join(
+            export_set(sp, item, ab, tera, moves, self.spread(sp))
+            for sp, item, ab, tera, moves in sets
+        )
+
+    def _try_complete(self, records) -> str:
+        """``complete`` (``synthetic`` for None), or "" (rejected by the validator) for a species
+        the dex does not know (nonstandard formes in old logs)."""
         try:
-            return self.complete(records)
+            return self.synthetic() if records is None else self.complete(records)
         except KeyError:
             return ""
 
@@ -185,7 +345,13 @@ class TeamSampler:
         """``n`` validated pairs (completion and validation in batches: one validator process
         per round)."""
         out: list[TeamPair] = []
-        stats = {"games": 0, "skipped": 0, "invalid_completions": 0, "catalog_sides": 0}
+        stats = {
+            "games": 0,
+            "skipped": 0,
+            "invalid_completions": 0,
+            "catalog_sides": 0,
+            "synthetic_sides": 0,
+        }
         while len(out) < n:
             k = int((n - len(out)) * 1.2) + 4
             idx = self.np_rng.choice(len(self.games), size=k, p=self.weights)
@@ -203,7 +369,12 @@ class TeamSampler:
                     continue
                 games.append(r)
                 for s, recs in teams.items():
-                    if self.rng.random() < self.catalog_frac:
+                    # (a synthetic side first -- its share of all sides -- then the rest as before:
+                    # a catalog team, else the replay's side completed)
+                    if self.composer is not None and self.rng.random() < self.synth_frac:
+                        todo.append((r["id"], s, None))
+                        stats["synthetic_sides"] += 1
+                    elif self.rng.random() < self.catalog_frac:
                         e = self.rng.choice(self.catalog)
                         sides[(r["id"], s)] = Side(e.text, "catalog", e.id)
                         stats["catalog_sides"] += 1
@@ -216,7 +387,8 @@ class TeamSampler:
                 left = []
                 for (gid, s, recs), x in zip(todo, res, strict=True):
                     if x["n"] == 6 and not x["problems"]:
-                        sides[(gid, s)] = Side(x["text"], "replay", f"{gid}:{s}")
+                        sides[(gid, s)] = (Side(x["text"], "synthetic", f"syn:{gid}:{s}") if recs is None
+                                           else Side(x["text"], "replay", f"{gid}:{s}"))  # fmt: skip
                     else:
                         stats["invalid_completions"] += 1
                         self._learn_bans(x["problems"])

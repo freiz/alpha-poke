@@ -36,16 +36,20 @@ SINCE_DEFAULT = 1746057600  # 2025-05-01: the current metagame (the matchup mode
 
 def sample_pairs(n: int, seed: int, since: int = 0, half_life: float = 120.0,
                  catalog_frac: float = 0.3, temp: float = 1.3,
-                 popularity_beta: float = 0.0) -> tuple[list, object]:  # fmt: skip
-    """``n`` validated real-game team pairs, drawn like self-play's (selfplay.teams)."""
+                 popularity_beta: float = 0.0, synth_frac: float = 0.0, synth_tau: float = 1.0,
+                 synth_gamma: float = 0.7, synth_eps: float = 0.1, set_eps: float = 0.1,
+                 synth_beta: float = 0.5, synth_steps: int = 12) -> tuple[list, object]:  # fmt: skip
+    """``n`` validated real-game team pairs, drawn like self-play's (selfplay.teams); ``synth_frac``
+    of the sides synthetic (Composer: the usage and teammates' joint draw; evaluation pools: 0)."""
     from alpha_poke.agents.belief_state import BeliefModel
     from alpha_poke.selfplay import teams
 
     logging.disable(logging.WARNING)
     ts = teams.TeamSampler(BeliefModel.load(), since=since or SINCE_DEFAULT,
                            half_life_days=half_life, catalog_frac=catalog_frac, temp=temp,
-                           popularity_beta=popularity_beta,
-                           seed=seed)  # fmt: skip
+                           popularity_beta=popularity_beta, synth_frac=synth_frac, synth_tau=synth_tau,
+                           synth_gamma=synth_gamma, synth_eps=synth_eps, set_eps=set_eps, synth_beta=synth_beta,
+                           synth_steps=synth_steps, seed=seed)  # fmt: skip
     pairs = ts.sample(n)
     logging.disable(logging.NOTSET)
     return pairs, ts
@@ -73,7 +77,8 @@ def cmd_teams(a) -> None:
     from alpha_poke.selfplay import teams
 
     pairs, ts = sample_pairs(a.n, a.seed, a.since, a.half_life, a.catalog_frac, a.temp,
-                             a.popularity_beta)  # fmt: skip
+                             a.popularity_beta, a.synth_frac, a.synth_tau, a.synth_gamma, a.synth_eps,
+                             a.set_eps, a.synth_beta, a.synth_steps)  # fmt: skip
     path = SELFPLAY_DIR / f"gen{a.gen}" / "teams.jsonl"
     if a.append and path.exists():  # more pairs for a grown generation; the drawn ones stay
         pairs = teams.load(path) + pairs
@@ -399,14 +404,14 @@ def team_groups(a, rows: list, y, nets: list, loss: dict, kl_net: dict, top1_net
     def group(d: dict) -> str:
         pr = pairs[d["game"]]
         side = pr.p1 if d["side"] == a_side.get(d["game"]) else pr.p2
-        if side.kind == "catalog":
-            return "catalog"
+        if side.kind in ("catalog", "synthetic"):  # (synthetic: Composer's, 2026-10-26)
+            return side.kind
         n = counts[comp(side.text)]
         return "popular" if n >= a.popular else "rare" if n <= a.rare else "mid"
 
     labels = np.array([group(d) for d in rows])
     out = {}
-    for lab in ("catalog", "popular", "mid", "rare"):
+    for lab in ("catalog", "synthetic", "popular", "mid", "rare"):
         m = labels == lab
         if not m.any():
             continue
@@ -962,6 +967,15 @@ def main() -> None:
     p.add_argument("--popularity-beta", type=float, default=0.3,
                    help="flatten the compositions' popularity (0 = as on the ladder)")  # fmt: skip
     p.add_argument("--temp", type=float, default=1.3, help="completion temperature")
+    # (2026-10-26: half the sides synthetic -- compositions beyond the ladder's own, drawn by the
+    # usage and the teammates jointly; the other half as before: catalog / completed replay sides)
+    p.add_argument("--synth-frac", type=float, default=0.5, help="share of synthetic sides")
+    p.add_argument("--synth-tau", type=float, default=1.0, help="usage flattening (> 1: rarer)")
+    p.add_argument("--synth-gamma", type=float, default=0.7, help="teammates' weight (0: none)")
+    p.add_argument("--synth-eps", type=float, default=0.1, help="a pick's noise (flat usage)")
+    p.add_argument("--set-eps", type=float, default=0.1, help="a set's noise per slot")
+    p.add_argument("--synth-beta", type=float, default=0.5, help="the sets' synergy weight")
+    p.add_argument("--synth-steps", type=int, default=12, help="Metropolis-Hastings steps per team")
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--append", action="store_true", help="add to the generation's pairs")
     p.set_defaults(fn=cmd_teams)
