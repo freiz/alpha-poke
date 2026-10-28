@@ -9,7 +9,10 @@ account from .env (PS_BOT_USERNAME / PS_BOT_PASSWORD), accepts challenges ONLY f
 exits after --n games. Without --public it runs against a local server (dry run).
 
 The opponent challenges the bot in Gen 9 OU with their own team. The bot's team: --team (pool
-team name or a Showdown-export file), default a random pool team each game.
+team name or a Showdown-export file), default a random team of --pool each game (default
+ladder_top5, 2026-10-28: scripts/top_ladder_teams.py -- the human ladder's best time-weighted win
+rates by players >= 1600). The network: the current one (the last promoted, state.json), or
+--model <run> (e.g. a self-play attempt still under evaluation).
 Difficulty: easy = heuristic bot, normal = ISMCTS + the current network 200 ms, hard = ISMCTS +
 the current network 1 s x 4 threads (CPU; --model, default the self-play's current network in
 data/selfplay/state.json; with its moves-left term, selfplay.batcher.SEARCH_ML); the lead from
@@ -40,7 +43,7 @@ from poke_env.teambuilder import Teambuilder
 
 from alpha_poke.eval.bots import make_bot
 from alpha_poke.servers import account, local_server, public_account, public_server
-from alpha_poke.teams import DEFAULT_POOL, load_team_files
+from alpha_poke.teams import POOLS_DIR, load_team_files
 
 DIFFICULTY = {  # variant, search env (the search variants get --model)
     "easy": ("knowledge", {}),
@@ -129,7 +132,7 @@ if __name__ == "__main__":
     ap.add_argument("--n", type=int, default=3)
     ap.add_argument("--difficulty", choices=sorted(DIFFICULTY), default="normal")
     ap.add_argument("--team", default=None, help="pool team name or Showdown-export file")
-    ap.add_argument("--pool", default=str(DEFAULT_POOL))
+    ap.add_argument("--pool", default=str(POOLS_DIR / "ladder_top5"))
     ap.add_argument("--model", default=None, help="network run (default: the current one)")
     ap.add_argument("--search-ms", type=int, default=None, help="search time per decision")
     ap.add_argument("--threads", type=int, default=None, help="search threads")
