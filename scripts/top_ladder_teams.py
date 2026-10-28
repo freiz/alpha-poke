@@ -60,8 +60,10 @@ def ranked(a) -> pd.DataFrame:
     return agg.sort_values("score", ascending=False), g
 
 
-NATURE_UP = {"atk": {"adamant", "jolly", "brave", "lonely", "naughty"},
-              "spa": {"modest", "timid", "quiet", "mild", "rash"}}  # fmt: skip
+NATURE_UP = {
+    "atk": {"adamant", "brave", "lonely", "naughty"},
+    "spa": {"modest", "quiet", "mild", "rash"},
+}
 NATURE_DOWN = {
     "atk": {"modest", "timid", "bold", "calm"},
     "spa": {"adamant", "jolly", "impish", "careful"},
@@ -86,9 +88,19 @@ def fit_spread(text: str, stats: UsageStats) -> str:
     item = to_id(head[1]) if len(head) > 1 else ""
     cats = [moves_dex.get(to_id(x[2:]), {}).get("category") for x in lines if x.startswith("- ")]
     phys, spec = cats.count("Physical"), cats.count("Special")
-    need = ("atk" if item == "choiceband" or (item != "choicespecs" and phys > spec and phys >= 2) else
-            "spa" if item == "choicespecs" or (spec > phys and spec >= 2) else
-            "mixed" if phys == spec >= 2 else None)  # fmt: skip
+    # (only clearly offensive sets: an attacking item, or three attacks of a kind -- a wall's two
+    # physical moves, Ting-Lu's Earthquake / Stone Edge, keep its usual bulky spread)
+    offensive = item in {
+        "choiceband",
+        "choicespecs",
+        "choicescarf",
+        "lifeorb",
+        "loadeddice",
+        "expertbelt",
+    }
+    need = ("atk" if item == "choiceband" else "spa" if item == "choicespecs" else
+            None if not (offensive or max(phys, spec) >= 3) else
+            "atk" if phys > spec else "spa" if spec > phys else "mixed")  # fmt: skip
     smog = smogon_entry(stats, head[0])
     if need is None or smog is None or not smog.spreads:
         return text
@@ -108,6 +120,31 @@ def fit_spread(text: str, stats: UsageStats) -> str:
             k = next(i for i, x in enumerate(out) if x.startswith("- "))
             return "\n".join(out[:k] + [f"EVs: {ev_text}", f"{nature} Nature"] + out[k:])
     return text
+
+
+def trick_item(text: str, stats: UsageStats) -> str:
+    """A Trick / Switcheroo set without a choice item: the species' most used choice item (the
+    replay's item of a mon that used Trick is the one it received -- the opponent's)."""
+    from alpha_poke.analysis.roles import to_id
+    from alpha_poke.teams.replay_pool import smogon_entry
+
+    lines = text.split("\n")
+    head = lines[0].split(" @ ")
+    moves = {to_id(x[2:]) for x in lines if x.startswith("- ")}
+    if not moves & {"trick", "switcheroo"} or (
+        len(head) > 1 and to_id(head[1]).startswith("choice")
+    ):
+        return text
+    smog = smogon_entry(stats, head[0])
+    choice = [i for i in (smog.items if smog else {}) if i.startswith("choice")]
+    if not choice:
+        return text
+    names = {
+        "choicescarf": "Choice Scarf",
+        "choicespecs": "Choice Specs",
+        "choiceband": "Choice Band",
+    }
+    return "\n".join([f"{head[0]} @ {names.get(choice[0], choice[0])}"] + lines[1:])
 
 
 def reconstruct(team: str, g: pd.DataFrame, a, stats: UsageStats) -> str:
@@ -138,7 +175,9 @@ def reconstruct(team: str, g: pd.DataFrame, a, stats: UsageStats) -> str:
         return rows
 
     sets = [
-        build_set(s, one_variant(d[d.species == s]), stats, "top", random.Random(0))
+        trick_item(
+            build_set(s, one_variant(d[d.species == s]), stats, "top", random.Random(0)), stats
+        )
         for s in team.split("|")
     ]
     return "\n\n".join(fit_spread(x, stats) for x in sets)
