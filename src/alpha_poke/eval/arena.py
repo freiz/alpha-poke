@@ -53,7 +53,8 @@ TURN_CAP = int(os.environ.get("ALPHA_TURN_CAP", 300))
 
 # seconds per game: a game that never starts or never ends (2026-10-09: the last games of an
 # evaluation hung for 20+ minutes with no search running); a 300-turn game takes ~10 minutes
-GAME_TIMEOUT = 1200.0
+# (ALPHA_GAME_TIMEOUT: longer searches per move, e.g. 5 s against Foul Play -- 2026-10-27)
+GAME_TIMEOUT = float(os.environ.get("ALPHA_GAME_TIMEOUT", 1200))
 
 
 @dataclass
