@@ -956,8 +956,8 @@ def cmd_iterate(a) -> None:
     """One generation grown until it gives a clearly better network (2026-10-27): its games so
     far converted, the current network fine-tuned on them (attempt k: run <LINEAGE>-gen<G>a<k>),
     then the sequential test against the current network with H0 = --elo0 better (default
-    +13.9 Elo: a 52% score), H1 = --elo1 (+34.9: 55%) -- promoted only on H1, i.e. confidently
-    above 52%. Otherwise --chunk more games of the same network and the next attempt on all of
+    +7.0 Elo: a 51% score), H1 = --elo1 (+27.8: 54%) -- promoted only on H1, i.e. confidently
+    above 51% (2026-10-28; was 52% / 55%). Otherwise --chunk more games of the same network and the next attempt on all of
     them; stops promoted or at --max-games. Every attempt's games and result: the generation's
     "attempts" (state.json): how many self-play games a clearly better network takes."""
     import json
@@ -1243,16 +1243,18 @@ def main() -> None:
     p.set_defaults(fn=cmd_loop)
     p = sub.add_parser("iterate", help="one generation grown until a clearly better network")
     p.add_argument("--gen", type=int, required=True)
-    p.add_argument("--chunk", type=int, default=25000, help="more games before the next attempt")
+    # (50,000, 2026-10-28: was 25,000 -- attempt 2 on 77,959 games 52.5% +- 2.1%, short of the bar)
+    p.add_argument("--chunk", type=int, default=50000, help="more games before the next attempt")
     p.add_argument("--max-games", type=int, default=300000)
     p.add_argument("--procs", type=int, default=10)
     p.add_argument("--lanes", type=int, default=24)
     p.add_argument("--threads", type=int, default=2)
     p.add_argument("--eval-pairs", type=int, default=2000, help="the test's most pairs")
     p.add_argument("--eval-iterations", type=int, default=1600)
-    # (H0: 52% -- 400 log10(0.52 / 0.48) Elo; H1: 55%)
-    p.add_argument("--elo0", type=float, default=13.9, help="H0: the candidate this much better")
-    p.add_argument("--elo1", type=float, default=34.9, help="H1: this much (promoted)")
+    # (H0: 51% -- 400 log10(0.51 / 0.49) Elo; H1: 54%. 2026-10-28, was 52% / 55%: promoted with
+    # P ~ 18% / 57% / 86% at a true 52 / 53 / 54%, ~1% at 50%)
+    p.add_argument("--elo0", type=float, default=7.0, help="H0: the candidate this much better")
+    p.add_argument("--elo1", type=float, default=27.8, help="H1: this much (promoted)")
     p.add_argument("--alpha", type=float, default=0.05, help="P(promoted | at most elo0)")
     p.add_argument("--beta", type=float, default=0.1)
     # (30, 2026-10-27: a 40 GB training left the 48 GB WSL too little -- the session's background
