@@ -13,8 +13,9 @@ exits after --n games, or after the current game once data/ladder/STOP exists. L
 machine: CPU search (--threads, default 2, at nice 10), no GPU.
 
 The bot: ISMCTS + the network (--model, default the self-play's current network), --search-ms
-per decision (default 3,000), the moves-left term. Its team: a random team of --pool each game
-(default forum_curated: sample teams, teams of the week, tour teams), the ones the local
+per decision (default 5,000), the moves-left term. Its team: a random team of --pool each game
+(default ladder_top5: scripts/top_ladder_teams.py, the human ladder's best time-weighted win
+rates by players >= 1600), the ones the local
 validator passes. Every game's result, turns, ratings (as shown at the game's start: before it)
 and team: data/ladder/<date>/games.jsonl (dry runs: data/ladder/dryrun/<date>/); replays and
 decision traces next to it.
@@ -115,9 +116,9 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.WARNING)
     ap = argparse.ArgumentParser()
     ap.add_argument("--n", type=int, default=10, help="ladder games, one at a time")
-    ap.add_argument("--pool", default=str(POOLS_DIR / "forum_curated"))
+    ap.add_argument("--pool", default=str(POOLS_DIR / "ladder_top5"))
     ap.add_argument("--model", default=None, help="network run (default: the current one)")
-    ap.add_argument("--search-ms", type=int, default=3000, help="search time per decision")
+    ap.add_argument("--search-ms", type=int, default=5000, help="search time per decision")
     ap.add_argument("--threads", type=int, default=2, help="search threads")
     ap.add_argument("--public", action="store_true", help="connect to the OFFICIAL server")
     ap.add_argument("--local-port", type=int, default=8000, help="dry run (without --public)")
