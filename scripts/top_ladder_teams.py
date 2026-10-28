@@ -147,8 +147,56 @@ def trick_item(text: str, stats: UsageStats) -> str:
     return "\n".join([f"{head[0]} @ {names.get(choice[0], choice[0])}"] + lines[1:])
 
 
-def reconstruct(team: str, g: pd.DataFrame, a, stats: UsageStats) -> str:
-    """The composition's sets from its recent replays (players >= --min-elo)."""
+def forum_index() -> dict:
+    """species id -> [(composition, item id, move ids, spread lines)] of the complete catalog sets."""
+    from alpha_poke.analysis.roles import to_id
+
+    index: dict = {}
+    for e in catalog.load():
+        if not e.complete:
+            continue
+        for block in e.text.strip().split("\n\n"):
+            lines = [x.strip() for x in block.strip().splitlines()]
+            head = lines[0].split(" @ ")
+            spread = [x for x in lines if x.startswith(("EVs:", "IVs:")) or x.endswith(" Nature")]
+            moves = {to_id(x[2:]) for x in lines if x.startswith("- ")}
+            index.setdefault(to_id(head[0]), []).append(
+                (e.key, to_id(head[1]) if len(head) > 1 else "", moves, spread)
+            )
+    return index
+
+
+def forum_spread(text: str, index: dict, exclude: str) -> str | None:
+    """The set's nature / EVs / IVs from the forum's set of its species with the same item and the
+    most moves in common (>= 2), the catalog's other teams only (``exclude``: the composition);
+    None without one. (Cross-validated against the forum's own teams, 2026-10-27: nature 66.7%
+    -> 75.3%, the EVs' L1 distance 0.224 -> 0.150; scripts/check_team_reconstruction.py.)"""
+    from alpha_poke.analysis.roles import to_id
+
+    lines = text.split("\n")
+    head = lines[0].split(" @ ")
+    item = to_id(head[1]) if len(head) > 1 else ""
+    moves = {to_id(x[2:]) for x in lines if x.startswith("- ")}
+    best, score = None, 1
+    for key, it, mv, spread in index.get(to_id(head[0]), []):
+        sc = len(mv & moves)
+        if key != exclude and it == item and sc > score:
+            best, score = spread, sc
+    if best is None:
+        return None
+    out = [x for x in lines if not (x.startswith(("EVs:", "IVs:")) or x.endswith(" Nature"))]
+    k = next(i for i, x in enumerate(out) if x.startswith("- "))
+    return "\n".join(out[:k] + best + out[k:])
+
+
+_MONS: dict = {}  # (team, min_elo, replays) -> its replays' revealed sets
+
+
+def replay_mons(team: str, g: pd.DataFrame, a) -> pd.DataFrame:
+    """The composition's revealed sets in its recent replays (players >= --min-elo), cached."""
+    key = (team, a.min_elo, a.replays)
+    if key in _MONS:
+        return _MONS[key]
     rows = g[((g.team1 == team) & (g.r1 >= a.min_elo)) | ((g.team2 == team) & (g.r2 >= a.min_elo))]
     rows = rows.sort_values("time", ascending=False).head(a.replays).to_dict("records")
     full = logs(rows)
@@ -164,6 +212,13 @@ def reconstruct(team: str, g: pd.DataFrame, a, stats: UsageStats) -> str:
                 mons.append({"species": m.species, "item": m.item, "ability": m.ability,
                              "tera_type": m.tera_type, "moves": "|".join(m.moves)})  # fmt: skip
     d = pd.DataFrame(mons, columns=["species", "item", "ability", "tera_type", "moves"])
+    _MONS[key] = d
+    return d
+
+
+def reconstruct(team: str, g: pd.DataFrame, a, stats: UsageStats, index: dict | None = None) -> str:
+    """The composition's sets from its recent replays (players >= --min-elo)."""
+    d = replay_mons(team, g, a)
 
     def one_variant(rows: pd.DataFrame) -> pd.DataFrame:
         # (players run different sets of a species on the same six: the moves counted over all
@@ -180,7 +235,8 @@ def reconstruct(team: str, g: pd.DataFrame, a, stats: UsageStats) -> str:
         )
         for s in team.split("|")
     ]
-    return "\n\n".join(fit_spread(x, stats) for x in sets)
+    index = forum_index() if index is None else index
+    return "\n\n".join(forum_spread(x, index, team) or fit_spread(x, stats) for x in sets)
 
 
 def main() -> None:
@@ -208,6 +264,7 @@ def main() -> None:
               f"elo {r.elo:.0f}, last {pd.Timestamp(r['last'], unit='s').date()}) {team}")  # fmt: skip
     months = sorted(p.name for p in Path(DEFAULT_DIR).iterdir() if p.is_dir())
     stats = UsageStats.load(DEFAULT_DIR / months[-1] / "chaos" / "gen9ou-1825.json")
+    index = forum_index()
     real = {}
     for e in sorted((e for e in catalog.load() if e.complete), key=lambda e: e.date):
         real[e.key] = e  # (the newest of a composition last)
@@ -216,7 +273,7 @@ def main() -> None:
         if len(picked) >= a.top:
             break
         text, src = (real[team].text, f"catalog {real[team].id}") if team in real else (
-            reconstruct(team, g, a, stats), "replays")  # fmt: skip
+            reconstruct(team, g, a, stats, index), "replays")  # fmt: skip
         res = check([text])[0]
         if res["n"] != 6 or res["problems"]:
             print(f"  [skip] {team}: {res['problems'][:1]}")
