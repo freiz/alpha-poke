@@ -89,7 +89,7 @@ matchup model's expected score -0.23 and CVaR -0.22 (the wrong direction). Per s
 the matchup model's prediction correlates +0.06 with the result (log loss 0.679 vs 0.693): a
 model of people's ladder results says little about the teams in our bot's hands -- stage 2 is
 the decision, stage 1 only a candidate list; threat coverage is a cheap filter worth keeping.
-(`scripts/validate_team_measures.py`; the log data/eval/teamsim/20261028-172543_*.jsonl.)
+(`scripts/validate_team_measures.py`; the log data/eval/teamsim/20261028-172553_g_ma_vs_g_mb.jsonl.)
 
 ## The first friendly game (2026-10-28, r2-gen0a2, 3 s x 4 threads, team ladder_top5/team_04)
 
