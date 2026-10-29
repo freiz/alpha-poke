@@ -91,6 +91,13 @@ model of people's ladder results says little about the teams in our bot's hands 
 the decision, stage 1 only a candidate list; threat coverage is a cheap filter worth keeping.
 (`scripts/validate_team_measures.py`; the log data/eval/teamsim/20261028-172553_g_ma_vs_g_mb.jsonl.)
 
+**The pool in use** (`data/derived/teams/pools/ladder_robust`, the default of `ladder.py` and
+`play_public.py`; 2026-10-28): stage 2's top 5 with the stall team replaced by the sixth --
+Darkrai / Garganacl / Iron Treads / Moltres / Ogerpon-W / Zamazenta; Dragonite / Gholdengo /
+Glimmora / Ogerpon-W / Ting-Lu / Zamazenta; Alomomola / Great Tusk / Iron Crown / Sinistcha /
+Ting-Lu / Zamazenta; Dragonite / Iron Treads / Kyurem / Pecharunt / Samurott-H / Zamazenta; Iron
+Treads / Ogerpon / Okidogi / Pecharunt / Raging Bolt / Ting-Lu.
+
 ## The first friendly game (2026-10-28, r2-gen0a2, 3 s x 4 threads, team ladder_top5/team_04)
 
 Lost in 49 turns to a 1300 player's Blaziken / Alomomola / Ting-Lu / Corviknight / Ogerpon-W /

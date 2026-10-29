@@ -14,8 +14,8 @@ machine: CPU search (--threads, default 2, at nice 10), no GPU.
 
 The bot: ISMCTS + the network (--model, default the self-play's current network), --search-ms
 per decision (default 5,000), the moves-left term. Its team: a random team of --pool each game
-(default ladder_top5: scripts/top_ladder_teams.py, the human ladder's best time-weighted win
-rates by players >= 1600), the ones the local
+(default ladder_robust: the team-design pipeline's stage 2 -- our bot's best teams against
+the recent ladder, doc/team_design.md), the ones the local
 validator passes. Every game's result, turns, ratings (as shown at the game's start: before it)
 and team: data/ladder/<date>/games.jsonl (dry runs: data/ladder/dryrun/<date>/); replays and
 decision traces next to it.
@@ -116,7 +116,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.WARNING)
     ap = argparse.ArgumentParser()
     ap.add_argument("--n", type=int, default=10, help="ladder games, one at a time")
-    ap.add_argument("--pool", default=str(POOLS_DIR / "ladder_top5"))
+    ap.add_argument("--pool", default=str(POOLS_DIR / "ladder_robust"))
     ap.add_argument("--model", default=None, help="network run (default: the current one)")
     ap.add_argument("--search-ms", type=int, default=5000, help="search time per decision")
     ap.add_argument("--threads", type=int, default=2, help="search threads")
