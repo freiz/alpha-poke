@@ -10,7 +10,7 @@ Added columns: ``pi`` (visit distribution over the 14 slots, full searches; zero
 ``pi_w`` (1 = full search: policy target), ``q`` (root value), ``value_ok`` (1 with an
 outcome). ``action`` = the slot played (the record's).
 
-Capped games (the turn cap; 2026-10-14, design "防拖延循环"): their decisions have the value
+Capped games (the turn cap; 2026-10-14, design "stall loops"): their decisions have the value
 0.5 (a draw: the stalling loop's states learn that looping gives the win away; before, no value
 label), and no policy target ``loop_margin`` turns after the last faint (in the loop the
 search's visits only echo the prior: training on them taught "switch" in stall positions).

@@ -1,7 +1,8 @@
 [project]
 name = "alpha-poke"
 version = "0.1.0"
-description = "Reinforcement learning / ML agents for competitive Pokémon battles, built on poke-env"
+description = "A Pokémon Showdown Gen 9 OU AI: ISMCTS over belief-sampled worlds with a policy / value network"
+license = "MIT"
 authors = [
     { name = "freiz", email = "freizsu@gmail.com" }
 ]

@@ -1177,7 +1177,7 @@ fn feature_dims(py: Python<'_>) -> PyResult<Bound<'_, PyDict>> {
     Ok(d)
 }
 
-/// F1 (design TODO 特征候选, the belief's damage likelihood): the 16 non-crit damage rolls of one
+/// F1 (design: feature candidates, the belief's damage likelihood): the 16 non-crit damage rolls of one
 /// hit for each candidate set of side two's mon `opp` (made its active), in `state` (the turn's
 /// start; side one's active made `own_active` first, a switch-in before the hit). `side_one`: our
 /// active attacks (else theirs). A candidate: (item, ability, [hp, atk, def, spa, spd, spe], tera

@@ -872,7 +872,7 @@ def evaluate(model, d, idx, device, batch=16384) -> dict:
 
 
 def v7_subsets(d: dict, idx: np.ndarray, acts: np.ndarray) -> dict[str, np.ndarray]:
-    """(v7 acceptance, design TODO 特征候选) the positions where a v7 group says something:
+    """(v7 acceptance, design: feature candidates) the positions where a v7 group says something:
     ko2 -- our active has a two-hit KO but no one-hit KO, or a priority KO is on; tera -- our side
     can still terastallize; tera_used -- the player terastallized (its action); team -- the late
     game (six mons or fewer left in all); post -- the belief worlds disagree on our active's
@@ -1055,7 +1055,7 @@ def main() -> None:
         help="self-play outcomes train the value only the first k draws of a position (0: all); "
              "with --sp-value-schedule spread: k passes of the outcomes over the run",
     )  # fmt: skip
-    # design v6 "价值训练调度": "first" lets a position's outcome train the value the first k
+    # design v6 "value training schedule": "first" lets a position's outcome train the value the first k
     # times its row is drawn (fewer fresh rows later, same denominator: the value's weight
     # shrinks over the run); "spread" draws the value rows on their own, every outcome k times
     # in a random order spread evenly over the steps, its loss the weighted mean of those rows

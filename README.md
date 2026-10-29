@@ -22,7 +22,7 @@ results against people are not in yet.
 - [Team design](#team-design)
 - [Engine correctness](#engine-correctness)
 - [Repository layout](#repository-layout), [Tests](#tests), [Data and licenses](#data-and-licenses),
-  [Playing on the official server](#playing-on-the-official-server)
+  [Playing on the official server](#playing-on-the-official-server), [License](#license)
 
 ## How it works
 
@@ -299,3 +299,9 @@ account in `.env` (`PS_BOT_USERNAME`, `PS_BOT_PASSWORD`). Showdown's bot policy 
 account to be registered as a bot first: open a help ticket, choose "Something else", then "I
 want to register my bot". An unregistered bot can be banned. The scripts never join rooms,
 chat, or challenge anyone.
+
+## License
+
+The code is MIT (`LICENSE`). The released model files (network weights, belief and reveal
+models) are trained on public Showdown replays whose datasets state no license; they are
+released for non-commercial research use (`doc/model_card.md`).

@@ -1,4 +1,4 @@
-"""Capped self-play games in the conversion (2026-10-14, design "防拖延循环")."""
+"""Capped self-play games in the conversion (2026-10-14, design "stall loops")."""
 
 from alpha_poke.selfplay.convert import last_faint_turn
 

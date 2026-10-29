@@ -69,7 +69,7 @@ class Position:
     # drawn from it in this game (turn starts and the other decision points are separate pools
     # with different rates; weighting restores the game's real mix)
     weight: float = 1.0
-    # v7 (F2, design TODO 特征候选): the action-consequence probabilities over POST_WORLDS belief
+    # v7 (F2, design: feature candidates): the action-consequence probabilities over POST_WORLDS belief
     # worlds of this position ([12 * N_POST], alpha_search.posterior, x 255 rounded); None
     # without them
     post: list[float] | None = None

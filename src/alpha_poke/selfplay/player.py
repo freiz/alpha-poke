@@ -70,7 +70,7 @@ class SelfPlayPlayer(SearchPlayer):
         # the outcome a noisy label of the position: in gen 2 only 58% of the moves played were
         # the most visited)
         self.temp_turns, self.temp_late = temp_turns, temp_late
-        # stalling loops (2026-10-14, design "防拖延循环"): (quiet, switches, window, tau, eps):
+        # stalling loops (2026-10-14, design "stall loops"): (quiet, switches, window, tau, eps):
         # when no mon has fainted for ``quiet`` turns and this side switched in ``switches`` of
         # its last ``window`` turns, its moves are sampled at ``tau`` with root noise ``eps``
         # (the loop broken and played out, its states get outcomes); None: off

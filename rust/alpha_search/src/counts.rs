@@ -1,4 +1,4 @@
-//! v6 network inputs (design TODO v6 "新特征"): the counters of a poke-engine state that the v1 /
+//! v6 network inputs (design TODO v6 "new features"): the counters of a poke-engine state that the v1 /
 //! v3 features leave out (the move usability bit merges "no PP" with "disabled"; the volatile
 //! bits say a status is on, not for how long), side-relative like `featurize_view`:
 //!

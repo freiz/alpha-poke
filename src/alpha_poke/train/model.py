@@ -36,7 +36,7 @@ v3 (design D13, network v3 first batch; TransformerPV only), inputs ``x`` from t
   * count (v6): the state's counters (alpha_search.featurize_counts: PP left, disabled moves,
     sleep turns per entity -> entity inputs; protects in a row, substitute HP, Wish / Future
     Sight turns, volatile durations per side -> global token).
-  * ko2 / tera / team (v7, design TODO 特征候选 F3a / F6 / F5; alpha_search.featurize_extra_full,
+  * ko2 / tera / team (v7, design: feature candidates F3a / F6 / F5; alpha_search.featurize_extra_full,
     one [12, ent_new] array, each group its columns): two-hit KO lines and the priority threat
     (actives), the damage terastallized either side (actives), the team matchup relations
     (every mon) -> entity inputs; ko2 / tera also per move to the move head;

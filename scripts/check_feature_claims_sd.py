@@ -1,4 +1,4 @@
-"""The network inputs' claims against Showdown itself (doc/results.md "特征断言检验"; the
+"""The network inputs' claims against Showdown itself (doc/results.md "feature claim checks"; the
 engine-based check is scripts/check_feature_claims.py). Random battles of the differential's team
 pairs (enginecheck.random_battle), every --every-th decision point serialized; at each, both
 views, each claim played out in Showdown from that very battle under the claims' assumptions

@@ -42,7 +42,7 @@ def is_complete(text: str) -> bool:
 def build(links: list[dict], fmt: str = "gen9ou", log=print) -> list[Entry]:
     texts, metas, skipped = [], [], Counter()
     for row in links:
-        meta = dict(row)
+        meta = {k: v for k, v in row.items() if k != "author"}  # posters' names stay local
         if "paste" in row:
             p = pokepaste.load(row["paste"])
             if p is None:

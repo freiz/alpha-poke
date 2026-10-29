@@ -33,7 +33,7 @@
 //! own state (boosts, volatiles, substitute: side-level in the engine); before `EXTRA_VERSION` 2
 //! it took the active's (design TODO P0, 2026-10-19).
 //!
-//! v7 entity inputs (`featurize_extra_full`, [12, ENT_NEW], side-relative; design TODO 特征候选,
+//! v7 entity inputs (`featurize_extra_full`, [12, ENT_NEW], side-relative; design: feature candidates,
 //! 2026-10-19), from the same damage memo:
 //! * `ko2` (F3a, actives): each of its moves against the opposing active: KO within two hits for
 //!   sure / possibly, hit by hit (the second at the HP the first left: Super Fang; the target's
@@ -2289,7 +2289,7 @@ pub fn duels_debug(state: &State, flip: bool) -> Vec<(usize, usize, usize, i8, i
     out
 }
 
-/// F2 (design TODO 特征候选): per entity, side-relative, against the other side's active, the
+/// F2 (design: feature candidates): per entity, side-relative, against the other side's active, the
 /// mean over the belief worlds `states` (the same player's view: its own sets fixed, the
 /// opponent's sampled -- the joint posterior, not independent marginals): faster than it; its
 /// best hit KOs this one (max roll); this one's best hit KOs it; this one takes under half its

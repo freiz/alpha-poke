@@ -1,5 +1,5 @@
 // The network inputs' claims played out in Showdown's simulator itself (the feature-claim check,
-// doc/results.md "特征断言检验"; scripts/check_feature_claims_sd.py): a battle restored from its
+// doc/results.md "feature claim checks"; scripts/check_feature_claims_sd.py): a battle restored from its
 // serialization (random_battle.js "serialize_every") under the claims' assumptions -- every move
 // hits; nothing by chance happens (randomChance true only when sure: no chance crit, secondary,
 // full paralysis, confusion hit, Quick Claw, Static, ...; a sure crit, a 100% secondary stay);

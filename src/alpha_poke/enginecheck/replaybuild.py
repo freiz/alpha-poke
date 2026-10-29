@@ -1,4 +1,4 @@
-"""The replay-path state-construction differential (doc/state-diff.md "后续": the training data's
+"""The replay-path state-construction differential (doc/state-diff.md "follow-up": the training data's
 path). As statebuild.py for the live path, but the state built as train/positions.py builds a
 replay's: a spectator's log (Showdown's public lines -- HP in percent, no request), the side's
 team from the whole game's parse (parse_replay: preview order, the game-wide known parts of each

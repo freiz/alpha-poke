@@ -1,4 +1,4 @@
-"""Self-play: the stalling-loop detector (2026-10-14, design "防拖延循环")."""
+"""Self-play: the stalling-loop detector (2026-10-14, design "stall loops")."""
 
 from types import SimpleNamespace
 

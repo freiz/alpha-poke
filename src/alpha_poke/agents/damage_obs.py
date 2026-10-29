@@ -1,4 +1,4 @@
-"""F1 (design TODO 特征候选): the opponent's sets from the damage its mons dealt and took.
+"""F1 (design: feature candidates): the opponent's sets from the damage its mons dealt and took.
 
 Like the speed inference (agents/speed.py) this is evidence the belief samples against, at play
 time (training positions sample the belief without it): a likelihood over candidate sets

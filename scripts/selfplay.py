@@ -147,7 +147,7 @@ KL_BIG = 0.01
 # the remaining-turns head ("turns"), the self-play outcomes spread over the run (A/B 52.38% +-
 # 2.60%), the self-play data streamed in chunks (all generations no longer fit in memory)
 # 2026-10-20 (lineage r2): v0's setup -- the v7.2 human data (EXTRA_VERSION 3), the v7 inputs ko2 /
-# tera / team (not post: design D13附). 2026-10-23: v6arch-pp's -- the v7.3 data (the decision
+# tera / team (not post: design D13 appendix). 2026-10-23: v6arch-pp's -- the v7.3 data (the decision
 # stages, EXTRA_VERSION 4), v6's 7 input groups (its GPU search 38% faster than v0's). train_pv
 # builds the model from these flags, so they must match the starting network's (cmd_train checks
 # its config)
@@ -937,7 +937,7 @@ def main() -> None:
     p.add_argument("--turn-cap", type=int, default=300, help="forfeit at this turn (capped)")
     p.add_argument("--temp-turns", type=int, default=8, help="moves sampled at tau 1 until")
     p.add_argument("--temp-late", type=float, default=0.25, help="tau after --temp-turns")
-    # stalling loops (2026-10-14, design "防拖延循环"): exploration once a side loops
+    # stalling loops (2026-10-14, design "stall loops"): exploration once a side loops
     p.add_argument(
         "--loop-quiet",
         type=int,
