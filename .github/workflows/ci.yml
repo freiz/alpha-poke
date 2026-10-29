@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python-lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: ruff (the locked version)
+        run: uv sync --locked --only-group dev --no-install-project
+      - run: uv run --no-sync ruff check src scripts tests
+      - run: uv run --no-sync ruff format --check src scripts tests
+
+  rust:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5  # pyo3 links libpython for cargo test
+        with:
+          python-version: "3.12"
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            rust/alpha_search
+            rust/patches/poke-engine-0.0.48
+      - name: cargo fmt (alpha_search)
+        working-directory: rust/alpha_search
+        run: cargo fmt --check
+      - name: clippy (alpha_search)
+        working-directory: rust/alpha_search
+        run: cargo clippy --all-targets -- -D warnings
+      - name: cargo test (alpha_search)
+        working-directory: rust/alpha_search
+        run: cargo test
+      - name: cargo test (the patched poke-engine, as the search builds it)
+        working-directory: rust/patches/poke-engine-0.0.48
+        run: cargo test --lib --no-default-features --features terastallization
+
+  python-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.x"
+      - uses: dtolnay/rust-toolchain@stable  # alpha_search and the poke-engine binding build on install
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - name: the pinned Showdown commit
+        id: showdown
+        run: echo "commit=$(grep -oP 'SHOWDOWN_COMMIT:-\K[0-9a-f]+' scripts/start_showdown.sh)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        with:
+          path: vendor/pokemon-showdown
+          key: showdown-${{ steps.showdown.outputs.commit }}-node22
+      - name: Showdown (clone at the pinned commit, build)
+        run: scripts/start_showdown.sh --setup
+      - name: Python environment (CPU-only torch)
+        run: |
+          uv sync --locked
+          uv pip install --index-url https://download.pytorch.org/whl/cpu torch==2.14.1
+          uv pip install safetensors==0.8.0
+      - name: pytest (on the repository's fixtures only; no data/, no GPU)
+        run: uv run --no-sync pytest -n auto -q

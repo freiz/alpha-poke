@@ -274,15 +274,24 @@ Every script's docstring has its usage; `--help` lists the options.
 | team design (`doc/team_design.md`) | `teams.py` (forum catalog, pools), `meta_shift.py`, `top_ladder_teams.py`, `check_team_reconstruction.py`, `build_robust_teams.py`, `threat_check.py`, `sim_team_pool.py`, `validate_team_measures.py` |
 | one specific opponent (public replays; names stay in `data/players/`) | `player.py`, `counter_team.py`, `counter_pipeline.py` |
 | engine and state vs Showdown (`doc/difftest.md`, `engine-diff.md`, `state-diff.md`) | `difftest.py`, `difftest_mutations.py`, `check_engine_random.py`, `check_engine_random_sets.sh`, `check_engine_random_big.sh`, `randbats_teams.py`, `check_damage_calc.py`, `check_state_build.py`, `rerun_state_build.py`, `state_build_sweep.sh`, `check_causality.py`, `check_tree_history.py` |
+| development | `lint.sh` (the CI's lint checks) |
 | network and search checks | `check_tnet.py` (Rust vs PyTorch inference), `check_extra.py`, `check_feature_claims.py`, `check_feature_claims_sd.py`, `check_batch_search.py`, `check_search_worlds.py`, `eval_belief_priors.py` |
 
 ## Tests
 
 ```bash
-uv run pytest -n 8          # ~1,500 tests, about 1 minute with 8 workers; needs Node and the
-                            # Showdown checkout (scripts/start_showdown.sh clones it)
-uv run ruff check <the files you changed>   # the whole tree still has old long lines (#22)
+scripts/start_showdown.sh --setup   # once: the pinned Showdown checkout, built (the dual tests)
+uv run pytest -n 8                  # ~1,500 tests, about 2 minutes with 8 workers
+scripts/lint.sh                     # ruff check + format, cargo fmt + clippy (--fix: format first)
+(cd rust/alpha_search && cargo test)
 ```
+
+The tests run on the repository alone: `tests/conftest.py` points `ALPHA_DATA` at a temporary
+copy of `tests/fixtures/data` (trimmed Smogon statistics, a 5,000-game replay-table sample; the
+belief model is built from it in a few seconds), and the fixtures hold anonymized replays, team
+pairs, positions and a tiny random network (`tests/make_fixture_data.py` rebuilds them from the
+local data). No `data/`, no GPU. CI (`.github/workflows/ci.yml`) runs the lint, both crates'
+Rust tests and the Python tests (CPU-only torch) on every push and pull request.
 
 When changing the Rust inference or featurizer, also run `scripts/check_tnet.py` (Rust vs
 PyTorch, layer by layer) and `scripts/check_extra.py`.
