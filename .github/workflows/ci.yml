@@ -30,8 +30,9 @@ jobs:
       - uses: actions/setup-python@v5  # pyo3 links libpython for cargo test
         with:
           python-version: "3.12"
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@master
         with:
+          toolchain: "1.95.0"  # pinned: a newer clippy brings new lints (raise it deliberately)
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
         with:
@@ -59,7 +60,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22.x"
-      - uses: dtolnay/rust-toolchain@stable  # alpha_search and the poke-engine binding build on install
+      - uses: dtolnay/rust-toolchain@master  # alpha_search and the poke-engine binding build on install
+        with:
+          toolchain: "1.95.0"
       - uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true

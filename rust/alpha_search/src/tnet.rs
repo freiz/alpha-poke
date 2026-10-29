@@ -257,9 +257,8 @@ unsafe fn rows4_avx512(x: [&[f32]; 4], wt: &[f32], b: &[f32], y: [*mut f32; 4]) 
 #[inline]
 fn dot(a: &[f32], b: &[f32]) -> f32 {
     let mut acc = [0.0f32; 8];
-    let (ca, cb) = (a.chunks_exact(8), b.chunks_exact(8));
-    let (ra, rb) = (ca.remainder(), cb.remainder());
-    for (x, y) in ca.zip(cb) {
+    let ((ca, ra), (cb, rb)) = (a.as_chunks::<8>(), b.as_chunks::<8>());
+    for (x, y) in ca.iter().zip(cb) {
         for k in 0..8 {
             acc[k] += x[k] * y[k];
         }
@@ -589,8 +588,10 @@ fn tensor(st: &SafeTensors, name: &str) -> Result<(Vec<f32>, Vec<usize>), String
     }
     let data = t
         .data()
-        .chunks_exact(4)
-        .map(|b| f32::from_le_bytes([b[0], b[1], b[2], b[3]]))
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .map(|b| f32::from_le_bytes(*b))
         .collect();
     Ok((data, t.shape().to_vec()))
 }
