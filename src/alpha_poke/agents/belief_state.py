@@ -39,15 +39,6 @@ class BeliefModel:
     names: dict[str, str]  # species id -> name as used in replay tables (e.g. 'Zamazenta-*')
     in_battle_update: bool = True  # re-weight unrevealed moves with set-archetype posteriors
 
-    def marginal_only(self) -> "BeliefModel":
-        """Ablation: Smogon marginal prior per species, no team/core conditioning, no in-battle
-        archetype update (revealed information is still used)."""
-        from dataclasses import replace
-
-        smogon = self.prior
-        while hasattr(smogon, "base"):
-            smogon = smogon.base
-        return replace(self, prior=smogon, in_battle_update=False)
 
     @classmethod
     def build(

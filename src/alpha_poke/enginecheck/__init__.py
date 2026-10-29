@@ -1243,31 +1243,6 @@ def built_state(states: list[dict], k: int, side: str, belief, seed: int = 0) ->
     return build_state(battle, belief, names, random.Random(seed))
 
 
-def field_setters(lines: list[str]) -> dict[int, tuple[str | None, str | None]]:
-    """{turn t: (the side that set the weather, the side that set the terrain)} at the start of
-    turn t ("p1" / "p2" / None), from a battle's protocol lines (public: "[of] pXa: ..." for an
-    ability, else the side that just moved). The full-information state of a turn takes the
-    weather / terrain from the setter's own view: only it knows its extending item (Damp Rock,
-    Terrain Extender, ...); the other view's turns are a belief sample."""
-    out: dict[int, tuple[str | None, str | None]] = {}
-    weather = terrain = mover = None
-    for line in lines:
-        p = line.split("|")
-        if len(p) < 2:
-            continue
-        of = next((x[5:7] for x in p[3:] if x.startswith("[of] p")), None)
-        if p[1] == "move" and len(p) > 2:
-            mover = p[2][:2]
-        elif p[1] == "-weather" and len(p) > 2 and "[upkeep]" not in p:
-            weather = None if p[2] == "none" else (of or mover)
-        elif p[1] == "-fieldstart" and len(p) > 2 and p[2].endswith("Terrain"):
-            terrain = of or mover
-        elif p[1] == "-fieldend" and len(p) > 2 and p[2].endswith("Terrain"):
-            terrain = None
-        elif p[1] == "turn" and len(p) > 2:
-            out[int(p[2])] = (weather, terrain)
-    return out
-
 
 def crit_stages(p1, p2, turns=(), seed: str = "gen5,1,2,3,4") -> dict[str, int]:
     """Showdown's critical-hit stage of p1's active's moves against p2's active after ``turns``

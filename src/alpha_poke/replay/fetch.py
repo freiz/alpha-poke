@@ -13,7 +13,6 @@ Replays are cached on disk as ``<cache>/<format>/<id>.json.gz``.
 
 import gzip
 import json
-from collections.abc import Iterator
 from pathlib import Path
 
 from alpha_poke.http import PoliteClient
@@ -39,16 +38,6 @@ class ReplayClient:
             params["user"] = user
         return self.http.get(f"{BASE}/search.json", params).json()
 
-    def iter_search(
-        self, format_id: str, max_pages: int = 3, before: int | None = None
-    ) -> Iterator[dict]:
-        """Walk back in time page by page, yielding replay metadata entries."""
-        for _ in range(max_pages):
-            page = self.search(format_id, before=before)
-            yield from page
-            if len(page) < 51:
-                return
-            before = page[-1]["uploadtime"]
 
     # ---- full replays ---------------------------------------------------------------
     def path_for(self, format_id: str, replay_id: str) -> Path:

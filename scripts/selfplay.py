@@ -498,17 +498,6 @@ def cmd_train(a) -> None:
            f"--sp-frac {sp_frac} --init {init} {size} --lr {lr} --batch {a.batch} "
            f"--warmup-frac {a.warmup_frac} --export last --sp-per-game {a.per_game} "
            f"--sp-value-passes {a.value_passes} --seed {a.gen} --run {run}")  # fmt: skip
-    if a.scratch:
-        # (2026-10-26, from gen 0 of v75: no warm start -- the human and the self-play train
-        # rows one shuffled mixture from random weights, each row --scratch-epochs times, the
-        # starting network's own recipe: v6arch-pp-v75's lr / warmup / evaluation / export)
-        init, lr, sp_frac, steps = "", a.scratch_lr, None, 0
-        held, rejected = False, 0
-        cmd = (f"{sys.executable} scripts/train_pv.py {TRAIN_FLAGS} --selfplay {sp} "
-               f"--sp-mix {a.scratch_epochs} --epochs {a.scratch_epochs} --lr {lr} "
-               f"--batch {a.batch} --warmup-frac 0.02 --eval-every 2000 --export best "
-               f"--sp-per-game {a.per_game} --sp-value-passes {a.value_passes} --seed {a.gen} "
-               f"--run {run}")  # fmt: skip
     log_path = SELFPLAY_DIR / f"gen{a.gen}" / (f"train-a{a.attempt}.log" if a.attempt else "train.log")
     out = Path("data/train") / TRAIN_DATA / "runs" / run
     done = (out / "metrics.jsonl").exists() and '"event": "done"' in (
@@ -525,9 +514,6 @@ def cmd_train(a) -> None:
     val = [r for r in rows if r.get("event") == "val"]
     steps = next((r["steps"] for r in rows if r.get("event") == "start" and "steps" in r), steps)
     kept = next((r for r in rows if r.get("event") == "sp_per_game"), None)
-    mix = next((r for r in rows if r.get("event") == "sp_mix"), None)
-    if mix:  # (--scratch: the self-play share as the sizes gave it)
-        sp_frac = mix["sp_frac"]
     keep = ("ce_turn_w", "bce_all_w", "top1", "top3", "top1_forced", "opp_act_acc", "value_ece",
             "hce_true", "hce_unk", "hce_lt1300", "hce_1300_1600", "hce_ge1600", "kl_ref_true",
             "kl_ref_unk", "sp_ce", "sp_kl", "sp_top1", "sp_bce", "sp_bce_rootq",
@@ -537,7 +523,7 @@ def cmd_train(a) -> None:
                "human_share": round(1 - sp_frac, 4), "human_share_held": held,
                "steps": steps, "lr": lr, "after_rejections": rejected,
                "per_game": a.per_game, "sp_positions_kept": kept and kept["kept"],
-               "warmup_frac": 0.02 if a.scratch else a.warmup_frac, "scratch": a.scratch,
+               "warmup_frac": a.warmup_frac,
                "first_val": {k: val[0].get(k) for k in keep} if val else None,
                "last_val": {k: val[-1].get(k) for k in keep} if val else None,
                "log": str(log_path)}  # fmt: skip
@@ -546,8 +532,7 @@ def cmd_train(a) -> None:
     # the flag: the moves of a human *with their rating as input* predicted worse (hce_true),
     # or the opponent's next move predicted worse (opp_act_acc, what the search's opponent
     # prior needs)
-    # (--scratch: no starting point to drift from -- the first validation is a net in training)
-    if val and val[0].get("ce_turn_w") is not None and not a.scratch:
+    if val and val[0].get("ce_turn_w") is not None:
         keys = [k for k in keep if val[-1].get(k) is not None and val[0].get(k) is not None]
         drift = {k: round(val[-1][k] - val[0][k], 4) for k in keys}
         summary["human_drift"] = drift
@@ -806,152 +791,6 @@ def cmd_foulplay(a) -> int:
     return code
 
 
-def cmd_loop(a) -> None:
-    """Generations one after another (design D15): each a full cycle; a failed step is retried
-    once. Every --anchor-every generations: the current network vs the one --anchor-back
-    generations ago (baseline); every --foulplay-every generations (and first when there is no
-    Foul Play result yet): vs Foul Play. Stops when: --max-rejected consecutive generations were
-    not promoted, the progress check reverted (worse) or found no progress --max-stagnant times
-    in a row, the Foul Play score dropped significantly, or a step failed twice.
-    Log: data/selfplay/loop.log."""
-    import subprocess
-
-    log = SELFPLAY_DIR / "loop.log"
-
-    def say(msg: str) -> None:
-        line = f"[{time.strftime('%m-%d %H:%M:%S')}] {msg}"
-        print(line, flush=True)
-        with open(log, "a") as f:
-            f.write(line + "\n")
-
-    me = [sys.executable, __file__]
-    say(f"loop: generations {a.start}..{a.start + a.gens - 1}")
-    for gen in range(a.start, a.start + a.gens):
-        if gen > a.start and (SELFPLAY_DIR / "STOP").exists():  # stop between generations
-            say(f"loop: {SELFPLAY_DIR / 'STOP'} found; stopped before gen {gen}")
-            return
-        args = [
-            "cycle",
-            "--gen",
-            str(gen),
-            "--games",
-            str(a.games),
-            "--procs",
-            str(a.procs),
-            "--threads",
-            str(a.threads),
-            "--eval-pairs",
-            str(a.eval_pairs),
-            "--eval-iterations",
-            str(a.eval_iterations),
-            "--mem-cap-gb",
-            str(a.mem_cap_gb),
-        ]
-        for attempt in (1, 2):
-            say(f"gen {gen}: cycle (attempt {attempt})")
-            if subprocess.run(me + args).returncode == 0:
-                break
-        else:
-            say(f"gen {gen}: the cycle failed twice; loop stopped (see gen{gen}/cycle.log)")
-            return
-        g = state()["generations"][str(gen)]
-        ev, tr = g.get("eval", {}), g.get("train", {})
-        gs = g.get("game_stats", {})
-        vp = gs.get("vs_previous", {})
-        say(f"gen {gen}: games: turns mean {gs.get('turns_mean')} / p99 {gs.get('turns_p99')}, "
-            f">200 {gs.get('over_200')}, capped {gs.get('capped')}, status moves "
-            f"{gs.get('status_share')}; vs previous at the same team mix "
-            f"{vp.get('turns_mean_diff_same_teams')} turns {vp.get('ci95')}")  # fmt: skip
-        vc = g.get("value_check", {}).get("networks", {})
-        pol = {Path(k).name: v.get("policy", {}).get("entropy") for k, v in vc.items()}
-        say(f"gen {gen}: policy entropy on its fresh games {pol}; targets "
-            f"{g.get('value_check', {}).get('targets')}")  # fmt: skip
-        say(f"gen {gen}: value on its fresh games (BCE minus the generator's): "
-            + ", ".join(f"{Path(k).name} {v['bce']} ({v['minus_current']:+.4f} +- {v['ci95']})"
-                        for k, v in vc.items()))  # fmt: skip
-        say(f"gen {gen}: {'promoted' if ev.get('promoted') else 'NOT promoted'} "
-            f"({ev.get('paired_mean')} +- {ev.get('ci95_paired')} vs {ev.get('against')}); "
-            f"human drift flag {tr.get('human_drift_flag')}; "
-            f"current {state()['current']}")  # fmt: skip
-        st = state()
-        rejected = 0
-        for k in range(gen, -1, -1):
-            if st["generations"].get(str(k), {}).get("eval", {}).get("promoted", True):
-                break
-            rejected += 1
-        if rejected >= a.max_rejected:
-            say(f"{rejected} consecutive generations not promoted: loop stopped")
-            return
-        if gen % a.anchor_every == 0 and gen >= a.anchor_back:  # gen 0: nothing 3 gens before
-            st = state()
-            say(f"gen {gen}: progress check of {st['current']} vs "
-                f"{anchor_of(st, gen, a.anchor_back)}")  # fmt: skip
-            check = ["baseline", "--gen", str(gen), "--back", str(a.anchor_back), "--pairs",
-                     str(a.baseline_pairs), "--max-stagnant", str(a.max_stagnant)]  # fmt: skip
-            code = subprocess.run(capped(me + check, a.mem_cap_gb)).returncode
-            b = state()["generations"][str(gen)].get("baseline", {})
-            say(f"gen {gen}: vs {b.get('anchor')} {b.get('paired_mean')} +- "
-                f"{b.get('ci95_paired')}; progress {b.get('progress')} "
-                f"(stagnant {b.get('stagnant_in_a_row')} in a row)"
-                f"{'; REVERTED to ' + str(b.get('reverted_to')) if code == 2 else ''}")  # fmt: skip
-            if code == 2:
-                say("worse than 3 generations ago: reverted; loop stopped for a look")
-                return
-            if code == 3:
-                say("no progress in consecutive checks: loop stopped for a look (network size?)")
-                return
-        if gen % a.foulplay_every == 0 or not state().get("foulplay"):
-            say(f"gen {gen}: Foul Play check of {state()['current']}")
-            code = subprocess.run(
-                capped(me + ["foulplay", "--gen", str(gen)], a.mem_cap_gb)
-            ).returncode
-            f = state()["generations"][str(gen)].get("foulplay", {})
-            say(f"gen {gen}: vs Foul Play {f.get('paired_mean')} +- {f.get('ci95_paired')} "
-                f"({f.get('games')} games; drop {f.get('drop')}, z {f.get('drop_z')})")  # fmt: skip
-            if code == 3:
-                say("significantly worse against Foul Play than before: loop stopped for a look")
-                return
-    say("loop: done")
-
-
-def cmd_cycle(a) -> None:
-    """One generation end to end: team pairs (if missing) -> games -> convert -> train -> eval.
-    Each step's output goes to data/selfplay/gen<G>/<step>.log; stops at the first failure."""
-    import subprocess
-
-    gen_dir = SELFPLAY_DIR / f"gen{a.gen}"
-    gen_dir.mkdir(parents=True, exist_ok=True)
-    me = [sys.executable, __file__]
-    steps = []
-    from alpha_poke.selfplay import teams as teams_mod
-
-    have = len(teams_mod.load(gen_dir / "teams.jsonl")) if (gen_dir / "teams.jsonl").exists() else 0
-    if have == 0:
-        # a seed per generation: with the default (0) every generation drew the same ~5,000 real
-        # games (gens 1-3: 99% of their source games shared, 2026-10-08)
-        steps.append(("teams", ["teams", "--gen", str(a.gen), "--n", str(a.games), "--seed",
-                                str(a.gen)]))  # fmt: skip
-    elif have < a.games:  # a generation grown after its pairs were drawn (gen 4: 10k -> 50k)
-        steps.append(("teams", ["teams", "--gen", str(a.gen), "--n", str(a.games - have),
-                                "--seed", str(1000 * a.gen + have), "--append"]))  # fmt: skip
-    steps += [("run", ["run", "--gen", str(a.gen), "--procs", str(a.procs),
-                       "--lanes", str(a.lanes), "--threads", str(a.threads)]),
-              ("stats", ["stats", "--gen", str(a.gen)]),
-              ("value", ["value", "--gen", str(a.gen)]),
-              ("convert", ["convert", "--gen", str(a.gen)]),
-              ("train", ["train", "--gen", str(a.gen)]),
-              ("eval", ["eval", "--gen", str(a.gen), "--pairs", str(a.eval_pairs),
-                        "--iterations", str(a.eval_iterations)])]  # fmt: skip
-    for name, args in steps:
-        t0 = time.time()
-        print(f"[{time.strftime('%H:%M:%S')}] gen {a.gen}: {name}", flush=True)
-        with open(gen_dir / f"{name}.log", "a") as f:
-            subprocess.run(capped(me + args, a.mem_cap_gb), check=True, stdout=f,
-                           stderr=subprocess.STDOUT)  # fmt: skip
-        record(a.gen, f"{name}_minutes", round((time.time() - t0) / 60, 1))
-    print(f"[{time.strftime('%H:%M:%S')}] gen {a.gen} done: {state()['generations'][str(a.gen)]}")
-
-
 def cmd_iterate(a) -> None:
     """One generation grown until it gives a clearly better network (2026-10-27): its games so
     far converted, the current network fine-tuned on them (attempt k: run <LINEAGE>-gen<G>a<k>),
@@ -1167,10 +1006,6 @@ def main() -> None:
     p.add_argument("--batch", type=int, default=4096)
     p.add_argument("--force", action="store_true", help="retrain even if the run is complete")
     p.add_argument("--attempt", type=int, default=0, help="iterate: attempt k (run ...a<k>)")
-    p.add_argument("--scratch", action="store_true",
-                   help="from random weights: human + self-play one shuffled mixture")  # fmt: skip
-    p.add_argument("--scratch-epochs", type=float, default=6.0, help="--scratch: passes over each row")
-    p.add_argument("--scratch-lr", type=float, default=0.002)
     p.set_defaults(fn=cmd_train)
     p = sub.add_parser("eval")
     p.add_argument("--gen", type=int, required=True)
@@ -1220,27 +1055,6 @@ def main() -> None:
     p.add_argument("--drop", type=float, default=0.05, help="stop at a significant drop > this")
     p.add_argument("--ports", type=int, nargs="+", default=[8000, 8001, 8002, 8003])
     p.set_defaults(fn=lambda a: sys.exit(cmd_foulplay(a)))
-    p = sub.add_parser("loop", help="generations one after another")
-    p.add_argument("--start", type=int, required=True)
-    p.add_argument("--gens", type=int, default=100)
-    # 2026-10-09: 10,000 (was 5,000): per-generation gains were near the evaluation's resolution
-    # (+-23 Elo), the evaluation was 35-40% of the time, and value labels (one per game) scarce
-    p.add_argument("--games", type=int, default=100000)  # 2026-10-12, from gen 6 (was 50,000)
-    p.add_argument("--procs", type=int, default=6)  # self-play processes (20 logical CPUs)
-    p.add_argument("--threads", type=int, default=2)
-    # promotion at 1,600 iterations, up to 600 pairs (2026-10-10; was 3,000 / 400); the progress
-    # check every 3 generations stays at 3,000 / 400 (deep search, the strength that matters)
-    p.add_argument("--eval-pairs", type=int, default=600)
-    p.add_argument("--eval-iterations", type=int, default=1600)
-    p.add_argument("--anchor-every", type=int, default=3)
-    p.add_argument("--anchor-back", type=int, default=3)
-    p.add_argument("--baseline-pairs", type=int, default=400)
-    p.add_argument("--max-stagnant", type=int, default=2)
-    p.add_argument("--foulplay-every", type=int, default=9)
-    p.add_argument("--max-rejected", type=int, default=3)
-    p.add_argument("--mem-cap-gb", type=float, default=40,
-                   help="memory cap of every step (cgroup; WSL has 48 GB; 0 = none)")  # fmt: skip
-    p.set_defaults(fn=cmd_loop)
     p = sub.add_parser("iterate", help="one generation grown until a clearly better network")
     p.add_argument("--gen", type=int, required=True)
     # (50,000, 2026-10-28: was 25,000 -- attempt 2 on 77,959 games 52.5% +- 2.1%, short of the bar)
@@ -1261,21 +1075,6 @@ def main() -> None:
     # tasks were stopped for low memory)
     p.add_argument("--mem-cap-gb", type=float, default=30, help="memory cap of every step")
     p.set_defaults(fn=cmd_iterate)
-    p = sub.add_parser("cycle", help="one generation end to end")
-    p.add_argument("--gen", type=int, required=True)
-    p.add_argument("--games", type=int, default=100000, help="team pairs (drawn / topped up)")
-    p.add_argument("--eval-iterations", type=int, default=1600)
-    p.add_argument("--procs", type=int, default=2)
-    p.add_argument("--lanes", type=int, default=24)
-    p.add_argument("--threads", type=int, default=8, help="collect threads per process")
-    p.add_argument(
-        "--eval-pairs",
-        type=int,
-        default=600,
-        help="most pairs of the per-generation sequential test (eval)",
-    )
-    p.add_argument("--mem-cap-gb", type=float, default=40, help="memory cap of every step")
-    p.set_defaults(fn=cmd_cycle)
     a = ap.parse_args()
     a.fn(a)
 

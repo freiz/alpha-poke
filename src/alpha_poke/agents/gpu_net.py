@@ -224,23 +224,3 @@ class GpuNet:
         return (v[:n].float().cpu().numpy(), logits[:n].float().cpu().numpy().reshape(-1),
                 turns[:n].float().cpu().numpy() if turns is not None else None)  # fmt: skip
 
-
-class CrossNet:
-    """Two networks' outputs combined, the GpuNet interface (design v6 P/V cross evaluation:
-    which half limits the search): the policy logits of ``policy_run``, the value (and remaining
-    turns) of ``value_run``; both run on every batch."""
-
-    def __init__(self, policy_run: str, value_run: str, dtype: str | None = None):
-        self.p, self.v = GpuNet(policy_run, dtype=dtype), GpuNet(value_run, dtype=dtype)
-        self.has_turns = self.v.has_turns
-
-    def launch(self, b: dict):
-        return self.p.launch(b), self.v.launch(b)
-
-    def result(self, handle) -> tuple:
-        _, logits, _ = self.p.result(handle[0])
-        values, _, turns = self.v.result(handle[1])
-        return values, logits, turns
-
-    def __call__(self, b: dict) -> tuple:
-        return self.result((("sync", self.p(b)), ("sync", self.v(b))))

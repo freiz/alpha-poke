@@ -74,8 +74,6 @@ class RevealModel:
         rho = self.rho.get((sid, mid), self.rho.get(("", mid), 1.0))
         return float(rho * f[min(t, MAX_T)])
 
-    def unrevealed_likelihood(self, species: str, move: str, t: int) -> float:
-        return 1.0 - self.r(species, move, t)
 
     @classmethod
     def fit(cls, rows, smogon) -> "RevealModel":

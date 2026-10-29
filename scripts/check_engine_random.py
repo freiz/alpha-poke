@@ -1,6 +1,6 @@
 """The full-information engine differential (doc/engine-diff.md): random battles in Showdown's
 simulator (real OU team pairs, random legal choices), poke-engine's outcomes of every turn
-compared with Showdown's truth -- no player's view, no belief (unlike check_engine_diff.py on
+compared with Showdown's truth -- no player's view, no belief (unlike the removed check_engine_diff.py on
 self-play records, where the field came from one player's view).
 
 A turn is compared from a turn start to the next turn start, or to the decision point it stops at

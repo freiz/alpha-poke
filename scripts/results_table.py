@@ -21,7 +21,7 @@ from alpha_poke.eval.arena import summarize
 
 DOC = Path("doc/results.md")
 BEGIN, END = "<!-- BEGIN GENERATED -->", "<!-- END GENERATED -->"
-SETTINGS = ("ALPHA_SEARCH_MS", "ALPHA_SEARCH_SAMPLES", "ALPHA_SEARCH_THREADS")
+SETTINGS = ("ALPHA_SEARCH_MS", "ALPHA_SEARCH_THREADS")
 
 
 def n_params(path: Path) -> int | None:

@@ -1073,10 +1073,6 @@ def main() -> None:
     ap.add_argument("--sp-passes", type=float, default=0.0,
                     help="steps = passes over the kept self-play train positions")  # fmt: skip
     ap.add_argument("--sp-frac", type=float, default=0.5, help="share of each batch from self-play")
-    # (2026-10-26: one shuffled mixture -- every human and self-play train row alike, E passes
-    # each; --sp-frac and --sp-passes follow from the sizes; for training from scratch)
-    ap.add_argument("--sp-mix", type=float, default=0.0,
-                    help="E > 0: --sp-frac = the self-play share of all train rows, E passes")  # fmt: skip
     ap.add_argument("--sp-val-frac", type=float, default=0.05, help="self-play games held out")
     ap.add_argument("--init", default="", help="warm start: a run directory (its last.pt)")
     ap.add_argument("--steps", type=int, default=0, help="training steps (default: from --epochs)")
@@ -1249,11 +1245,6 @@ def main() -> None:
                  else np.ones(len(sinv))) * dsp["value_ok"]  # fmt: skip
         sp_vw = sp_vw.astype(np.float32)
         sp_seen = np.zeros(len(sp_vw), np.int32)  # draws per position (--sp-value-passes)
-        if a.sp_mix > 0:  # (--sp-mix: the batch shares of the rows' own counts, E passes of both)
-            a.sp_frac = len(sp_train) / (len(sp_train) + len(train_idx))
-            a.sp_passes = a.sp_mix
-            emit(dict(event="sp_mix", passes=a.sp_mix, sp_frac=round(a.sp_frac, 5),
-                      human_train=len(train_idx), selfplay_train=len(sp_train)))  # fmt: skip
         bsp = int(round(a.batch * a.sp_frac))
         sp_eval = (dsp, sp_val)  # the self-play validation data and its rows
         if a.sp_stream:

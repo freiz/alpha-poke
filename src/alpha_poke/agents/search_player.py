@@ -5,8 +5,8 @@ determinizations from the belief model (engine_state.build_state) go to ONE info
 tree; the time spent building them is taken out of the search budget. With a transformer model
 (design D13) the per-world contexts (history, public-information bits, ratings, turn) come from
 ``net_context`` (their time is taken out of the budget too), the network gives the leaf values
-and, with ``net_policy``, the PUCT priors; on the GPU (``device="cuda"``) one batched tree
-(agents.gpu_search). The most visited option that maps to a legal order is played. Any failure
+and, with ``net_policy``, the PUCT priors (the network on the CPU, Rust inference; the GPU search
+is selfplay.batcher's). The most visited option that maps to a legal order is played. Any failure
 falls back to the KnowledgePlayer's heuristic decision (counted in ``search_fallbacks``).
 """
 
@@ -62,9 +62,6 @@ class SearchPlayer(KnowledgePlayer):
         worlds=None,
         model=None,
         net_policy=None,
-        device=None,
-        damage_belief: bool | None = None,
-        arch_mix: float | None = None,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
@@ -76,14 +73,6 @@ class SearchPlayer(KnowledgePlayer):
         # sampled moves x team-conditioned move marginal ** move_beta (0 = archetype only; default
         # 1 since 2026-10-06: coverage of later revealed moves 61.7% -> 77.3%, design D11)
         self.move_beta = move_beta if move_beta is not None else _env_float("ALPHA_MOVE_BETA", 1.0)
-        # F1: the belief also from the damage evidence (agents/damage_obs.py; ALPHA_DAMAGE_BELIEF=0
-        # off, for A/B)
-        self.damage_belief = (damage_belief if damage_belief is not None
-                              else os.environ.get("ALPHA_DAMAGE_BELIEF", "1") != "0")  # fmt: skip
-        # the opponent's item / tera: the archetypes' weights mixed with the base marginal at this
-        # (engine_state.ARCH_MIX if None; 0: the belief before 2026-10-25 -- ALPHA_ARCH_MIX, A/B)
-        env = os.environ.get("ALPHA_ARCH_MIX")
-        self.arch_mix = arch_mix if arch_mix is not None else (float(env) if env else None)
         self.worlds = worlds or _env_int("ALPHA_ISMCTS_WORLDS", 32)
         # leaf values (and priors) from a trained network (run directory, design D13); None =
         # poke-engine's handcrafted evaluation
@@ -91,15 +80,9 @@ class SearchPlayer(KnowledgePlayer):
         if self.model and not _is_transformer(self.model):
             raise ValueError(f"{self.model}: not a transformer run (the only network)")
         self.model_transformer = bool(self.model)
-        # the GPU: one batched tree, `gpu_threads` threads descending it, `gpu_batch` leaves per
-        # network call (agents.gpu_search); "cpu" = Rust CPU inference
-        self.device = device or os.environ.get("ALPHA_SEARCH_DEVICE", "cpu")
-        self.gpu_threads = _env_int("ALPHA_GPU_THREADS", 8)
-        self.gpu_batch = _env_int("ALPHA_GPU_BATCH", 32)
         # > 0: a fixed number of iterations (leaves) per decision instead of the time budget
         # (equal-work comparisons, e.g. GPU vs CPU search)
         self.search_iterations = _env_int("ALPHA_SEARCH_ITERATIONS", 0)
-        self._gpu = None
         # PUCT with the network's policy priors: None = off, "both" = both sides, "ours" = ours
         # only (the opponent keeps UCB1)
         self.net_policy = net_policy or os.environ.get("ALPHA_NET_POLICY") or None
@@ -108,11 +91,6 @@ class SearchPlayer(KnowledgePlayer):
 
         self.ml = parse_ml(os.environ.get("ALPHA_ML"))
         assert self.net_policy in (None, "both", "ours"), self.net_policy
-
-    def close(self) -> None:
-        if self._gpu is not None:
-            self._gpu.close()
-            self._gpu = None
 
     def choose_move(self, battle):
         if battle.turn >= TURN_CAP:  # evaluation: a draw at the cap (eval.arena scores it 0.5)
@@ -132,8 +110,6 @@ class SearchPlayer(KnowledgePlayer):
 
     def _run(self, states, ctxs, budget: int, rng) -> tuple[list, int]:
         """A search of ``states`` (``budget`` ms): ([(option, visits, mean value)], iterations)."""
-        if self.model_transformer and self.device == "cuda":
-            return self._gpu_search(states, ctxs, budget, rng)
         ours, n, _, _ = alpha_search.ismcts(
             [s.to_string() for s in states],
             budget,
@@ -161,7 +137,6 @@ class SearchPlayer(KnowledgePlayer):
         vals = {}
         for m in cands:
             states = [build_state(battle, self.belief, names, rng, move_beta=self.move_beta,
-                                  damage_belief=self.damage_belief, arch_mix=self.arch_mix,
                                   force_switch=False, revived=m.species)
                       for _ in range(self.worlds)]  # fmt: skip
             ctxs = (net_context.contexts(battle, states, net_context.needs_post(self.model))
@@ -184,8 +159,7 @@ class SearchPlayer(KnowledgePlayer):
         names = self._opp_team_names(battle)
         rng = random.Random(f"{battle.battle_tag}:{battle.turn}:{len(battle.available_moves)}")
         t0 = time.time()
-        states = [build_state(battle, self.belief, names, rng, move_beta=self.move_beta,
-                                  damage_belief=self.damage_belief, arch_mix=self.arch_mix)
+        states = [build_state(battle, self.belief, names, rng, move_beta=self.move_beta)
                   for _ in range(self.worlds)]  # fmt: skip
         issues = request_mismatch(battle, states[0])
         if issues:
@@ -207,27 +181,6 @@ class SearchPlayer(KnowledgePlayer):
         if self.trace_dir:
             self._trace_search(battle, ranked, chosen, n, time.time() - t0)
         return order
-
-    def _gpu_search(self, states, ctxs, budget_ms: int, rng) -> tuple[list, int]:
-        """The batched search with the network on the GPU (agents.gpu_search)."""
-        if self._gpu is None:
-            from alpha_poke.agents.gpu_net import GpuNet  # torch only when used
-            from alpha_poke.agents.gpu_search import GpuSearch
-
-            # (the CPU search's settings: the moves-left term, the opponent's priors -- "ours":
-            # UCB1 for it; the GPU search always takes our priors from the network, so no
-            # net_policy reads as "both" here)
-            self._gpu = GpuSearch(GpuNet(self.model), self.gpu_batch, self.gpu_threads,
-                                  full=net_context.needs_full(self.model), ml=self.ml,
-                                  policy_opponent=self.net_policy != "ours")
-        ours, n, _ = self._gpu.run(
-            [s.to_string() for s in states],
-            ctxs,
-            budget_ms / 1000,
-            seed=rng.randrange(1 << 30),
-            iterations=self.search_iterations,
-        )
-        return ours, n
 
     def _trace_fallback(self, battle, reason: str) -> None:
         """Why the search gave no order (the heuristic decides instead)."""

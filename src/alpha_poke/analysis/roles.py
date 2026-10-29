@@ -15,7 +15,7 @@ The result is a probability per role, so a team's role profile is the sum over i
 import functools
 from collections.abc import Iterable
 
-from alpha_poke.data.smogon_stats import SpeciesStats, UsageStats
+from alpha_poke.data.smogon_stats import SpeciesStats
 
 
 @functools.lru_cache(maxsize=1 << 16)
@@ -231,24 +231,3 @@ def revealed_roles(moves: Iterable[str], ability: str | None, item: str | None) 
     return {r for r, (ms, abils, its) in ROLES.items() if mv & ms or ab in abils or it in its}
 
 
-class RoleModel:
-    """Role probabilities for a mon given its species and whatever was revealed."""
-
-    def __init__(self, stats: UsageStats):
-        self._prior = {to_id(n): species_role_prior(s) for n, s in stats.species.items()}
-
-    def prior(self, species: str) -> dict[str, float]:
-        sid = to_id(species.replace("-*", ""))
-        if sid in self._prior:
-            return self._prior[sid]
-        # preview forms like "Urshifu-*" / "Zamazenta-*": fall back to any matching forme
-        match = [v for k, v in self._prior.items() if k.startswith(sid)]
-        return match[0] if match else dict.fromkeys(ROLE_NAMES, 0.0)
-
-    def roles(
-        self, species: str, moves: Iterable[str] = (), ability=None, item=None
-    ) -> dict[str, float]:
-        p = dict(self.prior(species))
-        for r in revealed_roles(moves, ability, item):
-            p[r] = 1.0
-        return p

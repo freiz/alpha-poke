@@ -87,14 +87,6 @@ class MonRecord:
     hp: int | None = None  # last known HP percent
     phantom: bool = False  # not in team preview (Illusion / unmatched)
 
-    def revealed_fraction(self) -> dict[str, float | bool]:
-        return {
-            "moves": len(self.moves) / 4,
-            "item": self.item is not None,
-            "ability": self.ability is not None,
-            "tera": self.tera_type is not None,
-        }
-
 
 @dataclass
 class Action:

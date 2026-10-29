@@ -175,17 +175,3 @@ def mine_sets(mons: pd.DataFrame, min_appearances: int = 150, **kw) -> dict[str,
     return out
 
 
-def assign_sets(mons: pd.DataFrame, sets: dict[str, SpeciesSets], min_post: float = 0.7):
-    """Most likely set archetype per appearance (``None`` if unsure or species not modelled)."""
-    out = []
-    for r in mons.itertuples():
-        ss = sets.get(r.species)
-        if ss is None or not r.brought:
-            out.append(None)
-            continue
-        p = ss.posterior(
-            r.item, r.ability, r.tera_type, [m for m in (r.moves or "").split("|") if m]
-        )
-        j = int(p.argmax())
-        out.append(j if p[j] >= min_post else None)
-    return out

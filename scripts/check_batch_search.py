@@ -12,8 +12,6 @@ For every position (its state as all ``--worlds`` worlds, its context from the d
      variation distance of the root visit shares (two unbatched runs with different seeds give
      the noise level);
   3. speed: leaves per second of both;
-  4. with ``--trees`` > 1 also the multi-tree GPU search (agents.gpu_search: root parallel,
-     ``--trees`` x ``--tree-batch``) at the same number of iterations against the CPU search.
 """
 
 import argparse
@@ -25,7 +23,6 @@ import numpy as np
 import pyarrow.parquet as pq
 
 from alpha_poke.agents.gpu_net import GpuNet
-from alpha_poke.agents.gpu_search import GpuSearch
 from alpha_poke.agents.net_context import needs_full, needs_post
 
 
@@ -52,8 +49,6 @@ def main() -> None:
     ap.add_argument("--batch", type=int, default=32)
     ap.add_argument("--check", type=int, default=10, help="positions with the CPU output check")
     ap.add_argument("--threads", type=int, default=1, help="threads descending the batched tree")
-    ap.add_argument("--trees", type=int, default=0)
-    ap.add_argument("--tree-batch", type=int, default=16)
     a = ap.parse_args()
     files = sorted(glob.glob(f"data/train/{a.data}/*.parquet"))
     f = next(f for f in files if pq.read_metadata(f).num_rows)
@@ -63,11 +58,8 @@ def main() -> None:
     net = GpuNet(a.run, dtype="fp32")  # parity with the CPU reference
     dv = dl = dt = 0.0
     agree_b = agree_n = 0
-    tv_b, tv_n, tv_g = [], [], []
-    agree_g = 0
+    tv_b, tv_n = [], []
     full, post = needs_full(a.run), needs_post(a.run)
-    gs = (GpuSearch(net, a.tree_batch, threads=8, trees=a.trees, full=full)
-          if a.trees > 0 else None)  # fmt: skip
     t_b = t_c = 0.0
     n_b = n_c = 0
     for i, r in enumerate(rows):
@@ -107,11 +99,6 @@ def main() -> None:
             t_c += time.time() - t0
             n_c += n
             runs.append(shares([(c, v, m) for c, v, m in ours]))
-        if gs is not None:
-            ours, _, _ = gs.run(states, ctxs, 0, seed=i, iterations=a.iterations)
-            sg = shares(ours)
-            agree_g += top(sg) == top(runs[0])
-            tv_g.append(tv(sg, runs[0]))
         agree_b += top(sb) == top(runs[0])
         agree_n += top(runs[1]) == top(runs[0])
         tv_b.append(tv(sb, runs[0]))
@@ -123,9 +110,6 @@ def main() -> None:
           f"agrees with the unbatched CPU search {agree_b / n:.0%} (two CPU seeds: "
           f"{agree_n / n:.0%}); visit-share TV distance {np.mean(tv_b):.3f} "
           f"(two CPU seeds: {np.mean(tv_n):.3f})")  # fmt: skip
-    if gs is not None:
-        print(f"multi-tree GPU search ({a.trees} x {a.tree_batch}): top option agrees "
-              f"{agree_g / n:.0%}, TV distance {np.mean(tv_g):.3f}")  # fmt: skip
     print(f"speed: batched GPU {n_b / t_b:.0f} leaves/s (incl. CPU checks on {a.check}), "
           f"CPU {n_c / t_c:.0f} leaves/s (1 thread)")  # fmt: skip
 

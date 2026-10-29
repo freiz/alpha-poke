@@ -64,24 +64,20 @@ class _Job:
 
 class Batcher:
     def __init__(self, model: str, leaves: int = 8, threads: int = 8, dtype: str | None = None,
-                 ml: tuple[float, float, float, bool] = (0.0, 0.0, 0.0, False),
-                 value_model: str | None = None, phase_key: bool = False):  # fmt: skip
+                 ml: tuple[float, float, float, bool] = (0.0, 0.0, 0.0, False)):  # fmt: skip
         """``ml``: the moves-left term of every search (``parse_ml``; needs a network with the
-        remaining-turns head). ``value_model``: the leaves' values from this network, the
-        priors from ``model`` (``gpu_net.CrossNet``; evaluation only). ``phase_key``: children
-        keyed also by the public phase after the outcome (doc/search_review.md; A/B)."""
-        from alpha_poke.agents.gpu_net import CrossNet, GpuNet
+        remaining-turns head)."""
+        from alpha_poke.agents.gpu_net import GpuNet
 
-        self.net = (CrossNet(model, value_model, dtype=dtype) if value_model
-                    else GpuNet(model, dtype=dtype))  # fmt: skip
+        self.net = GpuNet(model, dtype=dtype)
         # (a network with the v7 entity groups: the searches compute their inputs)
         from alpha_poke.agents.net_context import needs_full, needs_post
 
-        self.full = needs_full(model) or needs_full(value_model)
-        # (either network reads F2: the contexts carry the root's posterior)
-        self.post = needs_post(model) or needs_post(value_model)
+        self.full = needs_full(model)
+        # (a network reading F2: the contexts carry the root's posterior)
+        self.post = needs_post(model)
         assert ml[0] <= 0 or self.net.has_turns, f"{model}: no remaining-turns head for ml {ml}"
-        self.leaves, self.threads, self.ml, self.phase_key = leaves, threads, ml, phase_key
+        self.leaves, self.threads, self.ml = leaves, threads, ml
         self.queue: queue.SimpleQueue = queue.SimpleQueue()
         self.stats = {"rounds": 0, "rows": 0, "searches": 0, "gpu_s": 0.0, "collect_s": 0.0}
         threading.Thread(target=self._loop, daemon=True).start()
@@ -103,7 +99,7 @@ class Batcher:
             try:
                 bs = alpha_search.BatchSearch(states, ctxs, seed=seed, threads=1, vl=1,
                                               root_noise=noise, ml=self.ml,
-                                              full=self.full, phase_key=self.phase_key)  # fmt: skip
+                                              full=self.full)  # fmt: skip
                 active.append(_Job(bs, iters, f, states=states, contexts=ctxs, seed=seed))
             except Exception as e:  # noqa: BLE001 - the game falls back, the batcher goes on
                 f.set_exception(e)

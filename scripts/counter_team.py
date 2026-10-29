@@ -121,7 +121,7 @@ def main() -> None:
     ap.add_argument("--procs", type=int, default=4)
     ap.add_argument("--lanes", type=int, default=2)
     ap.add_argument("--ports", type=int, nargs="+", default=[8000, 8001])
-    ap.add_argument("--bot", default="s_ismcts_glu")
+    ap.add_argument("--bot", default="s_ismcts_ma")
     ap.add_argument("--opp-bot", default="pol")
     ap.add_argument("--rating", type=int, help="the policy bots' rating input (default: fit)")
     ap.add_argument("--tau", type=float, help="their temperature (default: fit)")
@@ -140,7 +140,7 @@ def main() -> None:
         "--only",
         default="",
         help="play only these candidate stems (e.g. the "
-        "finalists of an earlier run, with --bot s_ismcts_glu)",
+        "finalists of an earlier run, with --bot s_ismcts_ma)",
     )
     a = ap.parse_args()
     uid = to_id(a.user)

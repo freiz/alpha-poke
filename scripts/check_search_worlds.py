@@ -1,7 +1,7 @@
 """The search over real, different belief worlds (2026-10-21, the search review; check_batch_search
 copies one state into every world and cannot see this): positions from replays, each with
 --worlds belief worlds as the training data draws them (train.positions: the opponent's hidden
-sets re-sampled, ours kept), searched by the GPU batched search at --iterations:
+sets re-sampled, ours kept), searched by the GPU batched search (selfplay.batcher) at --iterations:
 
   seed      the same worlds, another seed: the search's own noise
   order     the worlds shuffled (same seed): should be no more than the seed's (the root's
@@ -40,11 +40,9 @@ def main() -> None:
     import pyarrow.parquet as pq
 
     from alpha_poke.agents.belief_state import BeliefModel
-    from alpha_poke.agents.gpu_net import GpuNet
-    from alpha_poke.agents.gpu_search import GpuSearch
-    from alpha_poke.agents.net_context import needs_full
-    from alpha_poke.train import positions as P
+    from alpha_poke.selfplay.batcher import Batcher
     from alpha_poke.teams import DEFAULT_POOL
+    from alpha_poke.train import positions as P
 
     logging.disable(logging.WARNING)
     belief = BeliefModel.load(heldout_pool=str(DEFAULT_POOL))
@@ -80,13 +78,14 @@ def main() -> None:
             ctx = (list(p.reveal), (p.rating_own, p.rating_opp), p.turn, p.history)
             cases.append((worlds, ctx))
     print(f"{len(cases)} positions, {a.worlds} worlds each")
-    net = GpuNet(a.run)
-    gs = GpuSearch(net, 32, threads=8, full=needs_full(a.run))
+    # (the GPU search the games use: selfplay.batcher's BatchSearch, no root noise; 2026-10-28,
+    # was agents.gpu_search)
+    batcher = Batcher(a.run)
 
     def search(worlds, ctx, seed):
-        ours, _, _ = gs.run(worlds, [ctx] * len(worlds), 0.0, seed=seed, iterations=a.iterations)
-        tot = sum(v for _, v, _ in ours) or 1
-        return {c: v / tot for c, v, _ in ours}
+        rec, _ = batcher.submit(worlds, [ctx] * len(worlds), a.iterations, seed, (0.0, 10.0)).result()
+        tot = sum(rec["visits"]) or 1
+        return {c: v / tot for c, v in zip(rec["names"], rec["visits"], strict=True) if c and v}
 
     def tv(x, y):
         return 0.5 * sum(abs(x.get(k, 0) - y.get(k, 0)) for k in set(x) | set(y))
