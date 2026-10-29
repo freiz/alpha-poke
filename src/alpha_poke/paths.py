@@ -22,6 +22,7 @@ writes; the scripts' defaults come from here.
     archive/                ended experiments' leftovers
 """
 
+import os
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -30,7 +31,8 @@ TEAMS = ROOT / "teams"
 CATALOG = TEAMS / "catalog.jsonl"
 TRACKED_POOLS = TEAMS / "pools"
 
-DATA = ROOT / "data"
+# ALPHA_DATA moves all of it (the unit tests: a temporary directory built from tests/fixtures)
+DATA = Path(os.environ.get("ALPHA_DATA") or ROOT / "data")
 RAW = DATA / "raw"
 METAMON = RAW / "metamon"
 REPLAYS_HF = RAW / "replays_hf"

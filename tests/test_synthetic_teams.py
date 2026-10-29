@@ -9,7 +9,6 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from alpha_poke import paths  # noqa: E402
 from alpha_poke.selfplay import synergy
 from alpha_poke.selfplay.teams import Composer, TeamSampler
 
@@ -125,10 +124,6 @@ def test_synthetic_sets_metropolis_hastings_prefer_synergy():
     assert mh > base + 0.3
 
 
-SMOGON = paths.SMOGON
-
-
-@pytest.mark.skipif(not SMOGON.exists(), reason="needs the Smogon statistics (data/raw/smogon, local)")
 def test_noisy_sets_stay_within_the_learnset():
     from alpha_poke.data.smogon_stats import DEFAULT_DIR, UsageStats
     from alpha_poke.dex import learnset

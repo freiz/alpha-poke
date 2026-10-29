@@ -19,6 +19,8 @@ from dataclasses import dataclass, field
 import alpha_search
 import numpy as np
 
+from alpha_poke import paths
+
 log = logging.getLogger(__name__)
 
 MAX_LEAVES = 512  # GpuNet's largest CUDA graph: 1024 rows = 512 leaves (two views each)
@@ -118,9 +120,8 @@ class Batcher:
         try:
             import json
             import time
-            from pathlib import Path
 
-            out = Path(__file__).resolve().parents[3] / "data" / "selfplay" / "diag" / "search_failures.jsonl"
+            out = paths.SELFPLAY / "diag" / "search_failures.jsonl"
             with open(out, "a") as fh:
                 for j in jobs:
                     fh.write(json.dumps({"time": time.time(), "what": what, "seed": j.seed, "target": j.target,

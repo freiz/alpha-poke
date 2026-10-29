@@ -3,7 +3,6 @@ from pathlib import Path
 
 import pytest
 
-from alpha_poke import paths  # noqa: E402
 from alpha_poke.replay import parse_replay
 
 FIXTURE = Path(__file__).parent / "fixtures" / "gen9ou_sample.json"
@@ -127,11 +126,19 @@ def test_illusion_phantom_merged_on_replace():
     assert any("Illusion" in w for w in r.warnings)
 
 
-@pytest.mark.skipif(not paths.REPLAYS_SAMPLE.exists(), reason="no local sample replays")
-def test_all_local_samples_parse():
-    for f in paths.REPLAYS_SAMPLE.glob("*.json"):
-        r = parse_replay(json.loads(f.read_text()))
-        assert r.winner in ("p1", "p2") and len(r.teams["p1"]) >= 6
+def test_real_games_parse():
+    """The 200 anonymized rated games of tests/fixtures (tests/make_fixture_data.py)."""
+    import gzip
+
+    path = Path(__file__).parent / "fixtures" / "replays_gen9ou.jsonl.gz"
+    rows = [json.loads(x) for x in gzip.decompress(path.read_bytes()).decode().splitlines()]
+    full = 0
+    for row in rows:
+        r = parse_replay(row)
+        assert r.players == {"p1": "Player A", "p2": "Player B"}
+        assert r.winner in ("p1", "p2", None) and r.teams["p1"] and r.teams["p2"]
+        full += len(r.teams["p1"]) == len(r.teams["p2"]) == 6
+    assert full >= 0.9 * len(rows)
 
 
 def test_generic_from_tags_reveal_ability_and_item():

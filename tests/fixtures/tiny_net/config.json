@@ -1,0 +1,59 @@
+{
+  "dims": {
+    "entities": 12,
+    "sparse": 10,
+    "dense": 23,
+    "global": 277,
+    "actions": 14,
+    "vocab": [
+      1536,
+      256,
+      384,
+      32,
+      1024
+    ],
+    "hist": 8,
+    "hist_sparse": 6,
+    "hist_dense": 21,
+    "ent_extra": 25,
+    "global_extra": 20,
+    "move_feat": 53,
+    "ent_count": 10,
+    "global_count": 28,
+    "count_version": 2,
+    "ent_new": 50,
+    "ent_ko2": 10,
+    "ent_tera": 28,
+    "ent_team": 12,
+    "extra_version": 4,
+    "post": 10
+  },
+  "arch": "transformer",
+  "history": true,
+  "mtp": 3,
+  "feats": [
+    "reveal",
+    "num",
+    "movetab",
+    "matchup",
+    "elo",
+    "counter",
+    "count"
+  ],
+  "aux_heads": [
+    "oppset",
+    "turns"
+  ],
+  "arch_opts": {
+    "ffn": "swiglu",
+    "norm": "rms",
+    "qk_norm": true
+  },
+  "size": {
+    "d_model": 32,
+    "n_layers": 1,
+    "n_heads": 2,
+    "d_ff": 43
+  },
+  "step": 0
+}

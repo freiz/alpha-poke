@@ -3,25 +3,24 @@ of a pivot switch held the foe's move that came after it (our U-turn first, the 
 after our switch-in), which the live history -- the log so far -- does not have."""
 
 
-import pytest
+import gzip
+import json
+from pathlib import Path
 
-from alpha_poke import paths  # noqa: E402
 from alpha_poke.replay.parser import parse_replay
 from alpha_poke.train.positions import Blind, decision_steps
 
-pq = pytest.importorskip("pyarrow.parquet")
-GAMES = sorted((paths.REPLAYS_HF / "gen9ou").glob("*.parquet"))
+# 200 anonymized rated games (tests/make_fixture_data.py)
+REPLAYS = Path(__file__).parent / "fixtures" / "replays_gen9ou.jsonl.gz"
 
 
-def _rows(n):
-    t = pq.ParquetFile(GAMES[-1]).read_row_group(0, columns=["id", "log", "rating", "uploadtime"])
-    return t.to_pylist()[:n]
+def _rows():
+    return [json.loads(x) for x in gzip.decompress(REPLAYS.read_bytes()).decode().splitlines()]
 
 
-@pytest.mark.skipif(not GAMES, reason="needs the replays")
 def test_no_step_before_a_pivot_holds_a_later_action():
     pivots = moved = 0
-    for row in _rows(400):
+    for row in _rows():
         rep = parse_replay(row)
         if rep.warnings:
             continue

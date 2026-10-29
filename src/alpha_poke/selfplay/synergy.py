@@ -20,9 +20,10 @@ from pathlib import Path
 
 import numpy as np
 
+from alpha_poke import paths
 from alpha_poke.analysis.roles import to_id
 
-PATH = Path("data/selfplay/synergy.npz")
+PATH = paths.SELFPLAY / "synergy.npz"
 
 
 def tokens(ability: str | None, item: str | None, moves) -> list[str]:

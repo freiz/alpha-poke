@@ -97,6 +97,7 @@ class BeliefModel:
         if heldout_pool is not None:
             exclude = set(json.loads((Path(heldout_pool) / "index.json").read_text()).values())
         model = cls.build(exclude_teams=exclude)
+        path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(pickle.dumps(model))
         return model
 

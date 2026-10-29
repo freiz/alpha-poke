@@ -155,4 +155,7 @@ def cache():
 
 
 if __name__ == "__main__":
-    {"install": install, "patch": patch, "cache": cache}[sys.argv[1]]()
+    steps = {"install": install, "patch": patch, "cache": cache}
+    if len(sys.argv) != 2 or sys.argv[1] not in steps:
+        sys.exit(__doc__)
+    steps[sys.argv[1]]()

@@ -1,6 +1,6 @@
 """Self-play (design D15): team sampling (``teams``), the game runner, recording of the
 search results, conversion to training data. Data under ``data/selfplay/gen<g>/``."""
 
-from pathlib import Path
+from alpha_poke import paths
 
-SELFPLAY_DIR = Path(__file__).resolve().parents[3] / "data" / "selfplay"
+SELFPLAY_DIR = paths.SELFPLAY

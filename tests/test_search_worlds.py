@@ -11,15 +11,11 @@ alpha_search = pytest.importorskip("alpha_search")
 pe = pytest.importorskip("poke_engine")
 pq = pytest.importorskip("pyarrow.parquet")
 
-ROOT = Path(__file__).resolve().parents[1]
-MODEL = ROOT / "data/train/v72/runs/v6arch"
-# (positions of a human-data build -- the newest one here: only their states and contexts are
-# read; v7.2's own data was deleted 2026-10-24, the tests skipped silently)
-DATA = next((p for v in ("v74", "v73", "v72") if (p := ROOT / f"data/train/{v}/hf-part11.parquet").exists()),
-            ROOT / "data/train/v73/hf-part11.parquet")
-
-pytestmark = pytest.mark.skipif(not (MODEL / "best.safetensors").exists() or not DATA.exists(),
-                                reason="needs the v6arch run and a human-data build's positions")  # fmt: skip
+FIXTURES = Path(__file__).resolve().parent / "fixtures"
+# a randomly initialized network with the released one's inputs (the properties tested are the
+# search's, not the network's) and 50 positions of the v75 human data (tests/make_fixture_data.py)
+MODEL = FIXTURES / "tiny_net"
+DATA = FIXTURES / "positions_v75.parquet"
 
 
 def _row():

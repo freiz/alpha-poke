@@ -49,16 +49,19 @@ def test_an_item_replays_never_show_is_drawn():
     """2026-10-25 (the belief check's prior support): the archetypes are mined from replays, which
     show an item only when it reveals itself -- a Latias's Soul Dew never: its archetypes had no
     weight on it, the sampler never drew it (Smogon's usage: 36%). Mixed with the base marginal
-    (ARCH_MIX) it is drawn; at mix 0, the old belief, not."""
+    (ARCH_MIX) it is drawn far more often than at mix 0, the old belief (on the full replay data:
+    never; on the tests' 5,000-game sample Latias has no archetypes of its own, so the old
+    belief draws it a little)."""
     belief = BeliefModel.load()
     names = ("Corviknight", "Great Tusk", "Latias", "Gholdengo", "Kingambit", "Dragapult")
     mon = Pokemon(species="latias", gen=9)
 
-    def items(mix):
+    def soul_dews(mix):
         rng = random.Random(0)
-        return {sample_set(belief, mon, names, rng, 1.0, mix=mix).item for _ in range(400)}
+        draws = (sample_set(belief, mon, names, rng, 1.0, mix=mix).item for _ in range(400))
+        return sum(item == "souldew" for item in draws)
 
-    assert "souldew" in items(None) and "souldew" not in items(0.0)
+    assert soul_dews(None) > 3 * soul_dews(0.0)
 
 
 def test_a_cosmetic_formes_prior_is_its_base_species():

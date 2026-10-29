@@ -5,6 +5,8 @@ A summary of the numbers, kept for later comparisons. The "key results" below ar
 `data/train/*/runs/*`). Since 2026-10-06 every arena run writes `<log>.meta.json` (commit,
 `ALPHA_*` environment variables, arguments, bot definitions, summary), so the generated tables carry the setup automatically.
 
+Older entries name scripts that were removed later (they are in the git history) and data paths from before the 2026-10-28 layout (`data/teams/...` is now `teams/` or `data/derived/teams/`; `alpha_poke/paths.py`).
+
 Conventions: all win rates are side A's paired win rate ± 95% confidence interval (each pair of teams is played twice, sides swapped); "heldout" = the belief model does not include the evaluation team pool;
 local Showdown server, 40-team pool (`data/teams/pools/replay40`). Elo ≈ 400·log10(p / (1 − p)).
 

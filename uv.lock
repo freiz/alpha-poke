@@ -16,10 +16,12 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "alpha-search" },
+    { name = "numpy" },
     { name = "pandas" },
     { name = "poke-engine" },
     { name = "poke-env" },
     { name = "pyarrow" },
+    { name = "requests" },
 ]
 
 [package.dev-dependencies]
@@ -36,10 +38,12 @@ train = [
 [package.metadata]
 requires-dist = [
     { name = "alpha-search", directory = "rust/alpha_search" },
+    { name = "numpy", specifier = ">=2.5.3" },
     { name = "pandas", specifier = ">=3.0.6" },
     { name = "poke-engine", directory = "rust/patches/poke-engine-py-0.0.48" },
     { name = "poke-env", specifier = ">=0.16.1" },
     { name = "pyarrow", specifier = ">=25.0.1" },
+    { name = "requests", specifier = ">=2.34.2" },
 ]
 
 [package.metadata.requires-dev]

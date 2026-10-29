@@ -31,7 +31,7 @@ ROOT = paths.ROOT
 EXP = paths.SELFPLAY / "registry"
 MATCHES = EXP / "matches.jsonl"
 MODELS = EXP / "models.json"
-RUNS = ROOT / "data" / "train"  # <data>/runs/<run>
+RUNS = paths.TRAIN  # <data>/runs/<run>
 
 
 def run_dir(name: str) -> Path:
@@ -217,7 +217,7 @@ def build(state: dict) -> dict:
             for k in ("human_share", "sp_positions", "sp_positions_kept", "recent_gens"):
                 if k in tr:
                     e.setdefault("training", {})[k] = tr[k]
-        played = _played_by(ROOT / "data" / "selfplay" / f"gen{g}")
+        played = _played_by(paths.SELFPLAY / f"gen{g}")
         if played:
             entry(name_of(played))["played_generations"].append(int(g))
     # the network each generation ended with: a variant that became the current network (gen 1's

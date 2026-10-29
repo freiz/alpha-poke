@@ -24,6 +24,7 @@ from pathlib import Path
 
 import poke_engine as pe
 
+from alpha_poke import paths
 from alpha_poke.agents.engine_state import CALLED_LOCKS, CALLERS  # (L242: one list, ours too)
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -113,7 +114,7 @@ def run_showdown(p1, p2, turns, seed: str | None = "gen5,1,2,3,4", force_random=
     return out["states"]
 
 
-CACHE = ROOT / "data" / "difftest" / "cache"
+CACHE = paths.DIFFTEST / "cache"
 
 
 def _recorder_files() -> list[Path]:

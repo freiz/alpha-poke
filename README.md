@@ -21,7 +21,7 @@ results against people are not in yet.
 - [Self-play](#self-play)
 - [Team design](#team-design)
 - [Engine correctness](#engine-correctness)
-- [Repository layout](#repository-layout), [Tests](#tests), [Data and licenses](#data-and-licenses),
+- [Repository layout](#repository-layout), [Scripts](#scripts), [Tests](#tests), [Data and licenses](#data-and-licenses),
   [Playing on the official server](#playing-on-the-official-server), [License](#license)
 
 ## How it works
@@ -140,6 +140,7 @@ never imported):
 
 ```bash
 uv run python scripts/setup_foul_play.py install && uv run python scripts/setup_foul_play.py patch
+uv run python scripts/fetch_smogon_stats.py --months 1   # Foul Play's set data: last month's stats
 uv run python scripts/setup_foul_play.py cache
 uv run python scripts/vs_foulplay.py s_ismcts_ma --pairs 20 --lanes 2 --search-ms 200 --parallelism 2
 ```
@@ -248,8 +249,8 @@ src/alpha_poke/
   players/     models of one specific opponent (public replays only)
   paths.py     where every piece of data lives
 rust/          alpha_search (ISMCTS, batched search, featurizer, inference) + patched poke-engine
-teams/         tracked team data: catalog.jsonl (forum teams), pools/<fixed pool>
-scripts/       entry points (each one's docstring has its usage)
+teams/         tracked team data: catalog.jsonl (forum teams), pools/<fixed pool> (teams/README.md)
+scripts/       entry points (below; each one's docstring has its usage)
 tests/         unit tests, including the dual Showdown / engine tests
 doc/           design, results ledger, differential-test logs, team design, model card
 ```
@@ -258,6 +259,20 @@ doc/           design, results ledger, differential-test logs, team design, mode
 (replay datasets, crawled replays, Smogon statistics, the forum cache), `derived/` what
 scripts rebuild from them (replay tables, belief models, generated pools), plus `train/`,
 `selfplay/` and the run outputs (`eval/`, `difftest/`, `public_games/`, `ladder/`).
+
+## Scripts
+
+Every script's docstring has its usage; `--help` lists the options.
+
+| area | scripts |
+|---|---|
+| model and data | `fetch_model.py` (the released model), `fetch_metamon.py`, `fetch_smogon_stats.py`, `crawl_replays.py`, `split_shards.py`, `build_replay_tables.py`, `build_reveal_model.py`, `build_training_data.py`, `train_pv.py`, `build_synergy.py` (teammate synergy for synthetic teams) |
+| play and evaluate | `start_showdown.sh`, `eval_pairs.py` (paired games between two bots; `eval_pairs_opponent.py`: bot B from another checkout), `vs_foulplay.py` / `setup_foul_play.py`, `play_public.py`, `ladder.py`, `results_table.py` (the generated tables of `doc/results.md`) |
+| self-play | `selfplay.py` (`iterate`, `teams`, `run`, `convert`, `train`, `eval`, `registry`, ...), `team_pools.py` (diagnostic pools), `check_synthetic_teams.py` |
+| team design (`doc/team_design.md`) | `teams.py` (forum catalog, pools), `meta_shift.py`, `top_ladder_teams.py`, `check_team_reconstruction.py`, `build_robust_teams.py`, `threat_check.py`, `sim_team_pool.py`, `validate_team_measures.py` |
+| one specific opponent (public replays; names stay in `data/players/`) | `player.py`, `counter_team.py`, `counter_pipeline.py` |
+| engine and state vs Showdown (`doc/difftest.md`, `engine-diff.md`, `state-diff.md`) | `difftest.py`, `difftest_mutations.py`, `check_engine_random.py`, `check_engine_random_sets.sh`, `check_engine_random_big.sh`, `randbats_teams.py`, `check_damage_calc.py`, `check_state_build.py`, `rerun_state_build.py`, `state_build_sweep.sh`, `check_causality.py`, `check_tree_history.py` |
+| network and search checks | `check_tnet.py` (Rust vs PyTorch inference), `check_extra.py`, `check_feature_claims.py`, `check_feature_claims_sd.py`, `check_batch_search.py`, `check_search_worlds.py`, `eval_belief_priors.py` |
 
 ## Tests
 

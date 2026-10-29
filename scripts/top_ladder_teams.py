@@ -244,7 +244,7 @@ def main() -> None:
     ap.add_argument("--min-elo", type=int, default=1600, help="the team's player rated at least")
     ap.add_argument("--days", type=int, default=365, help="games of the last N days")
     ap.add_argument("--half-life", type=float, default=90.0, help="recency weight, days")
-    ap.add_argument("--prior", type=float, default=20.0, help="shrinkage toward 50%, in games")
+    ap.add_argument("--prior", type=float, default=20.0, help="shrinkage toward 50%%, in games")
     ap.add_argument("--min-n", type=float, default=30.0, help="weighted games at least")
     # (5: a composition one player brought is that player's results, not the team's)
     ap.add_argument("--min-players", type=int, default=5, help="distinct players at least")
