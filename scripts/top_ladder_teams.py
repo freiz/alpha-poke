@@ -3,14 +3,14 @@ the best time-weighted win rates on the human ladder, then complete sets for the
 
   uv run python scripts/top_ladder_teams.py --min-elo 1600 --top 5
 
-Ranking (the lite scan of all games, data/parsed/gen9ou_games_lite.parquet): the sides whose
+Ranking (the lite scan of all games, data/derived/parsed/gen9ou_games_lite.parquet): the sides whose
 player is rated >= --min-elo in the last --days days, each weighted 0.5 ** (age / --half-life)
 (recent results first); per composition the weighted win rate shrunk toward 50% by --prior games
 ((W + prior / 2) / (N + prior)), compositions with >= --min-n weighted games by >= --min-players players only. Reported too:
 the Elo-adjusted margin (weighted wins minus the wins the rating differences predict, per game)
 -- strong players' teams win more because the players are strong.
 
-Sets: a complete real team of the same composition from the catalog (data/teams/catalog.jsonl,
+Sets: a complete real team of the same composition from the catalog (teams/catalog.jsonl,
 the newest) if there is one, else reconstructed from the composition's recent replays by players
 >= --min-elo (teams.replay_pool.build_set: the most revealed item / ability / tera / moves, the
 species' Smogon spreads at the 1825 cutoff fitting the item and moves; one variant per species:

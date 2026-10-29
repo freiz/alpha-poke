@@ -22,6 +22,8 @@ from pathlib import Path
 
 import numpy as np
 
+from alpha_poke import paths  # noqa: E402
+
 
 def main() -> None:
     ap = argparse.ArgumentParser()
@@ -29,7 +31,7 @@ def main() -> None:
     ap.add_argument("--positions", type=int, default=100)
     ap.add_argument("--worlds", type=int, default=16)
     ap.add_argument("--iterations", type=int, default=1600)
-    ap.add_argument("--games", default="data/replays_hf/gen9ou")
+    ap.add_argument("--games", default=str(paths.REPLAYS_HF / "gen9ou"))
     ap.add_argument("--seed", type=int, default=0)
     a = ap.parse_args()
     os.environ["ALPHA_POST_WORLDS"] = str(a.worlds)  # (read when train.positions is imported)

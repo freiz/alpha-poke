@@ -12,13 +12,13 @@ uv run python scripts/crawl_replays.py --max-hours 1.5 list --mode new --pages 2
 uv run python scripts/crawl_replays.py --max-hours 5 download --target <done + N> --min-rating 1500 --since-days 25
 # 2. how the metagame moved (and the crawler's sample checked against the lite scan)
 uv run python scripts/meta_shift.py --recent 21
-# 3. stage 1: candidates scored against the recent metagame -> data/teams/pools/robust_candidates
-uv run python scripts/build_robust_teams.py --score-pool data/teams/pools/<current pool>
+# 3. stage 1: candidates scored against the recent metagame -> data/derived/teams/pools/robust_candidates
+uv run python scripts/build_robust_teams.py --score-pool data/derived/teams/pools/<current pool>
 # 4. threat coverage and role slots of the candidates (threats: the recent metagame's top 15)
-uv run python scripts/threat_check.py data/teams/pools/robust_candidates
+uv run python scripts/threat_check.py data/derived/teams/pools/robust_candidates
 # 5. stage 2 (GPU, not with self-play): our bot plays each candidate against 100 recent ladder teams
-uv run python scripts/sim_team_pool.py --candidates data/teams/pools/robust_candidates --keep 5
-# 6. scripts/ladder.py / play_public.py --pool data/teams/pools/<the kept pool>
+uv run python scripts/sim_team_pool.py --candidates data/derived/teams/pools/robust_candidates --keep 5
+# 6. scripts/ladder.py / play_public.py --pool data/derived/teams/pools/<the kept pool>
 ```
 
 Sets that only replays show (no forum original) are reconstructed; their accuracy:
@@ -28,7 +28,7 @@ Sets that only replays show (no forum original) are reconstructed; their accurac
 
 | script | what |
 |---|---|
-| `crawl_replays.py` | the replay crawler (data/replays/gen9ou/*.json.gz; index.sqlite) |
+| `crawl_replays.py` | the replay crawler (data/raw/replays/gen9ou/*.json.gz; index.sqlite) |
 | `meta_shift.py` | species usage, recent vs before; the crawler's sampling bias check |
 | `top_ladder_teams.py` | compositions by time-weighted ladder win rate (players >= 1600, >= 5 players); set reconstruction from replays (`reconstruct`, `forum_spread`, `fit_spread`, `trick_item`) |
 | `check_team_reconstruction.py` | the reconstruction cross-validated against complete forum teams |

@@ -3,13 +3,13 @@ compositions, scored against the current metagame by the matchup model, not by t
 rates alone (a team's ladder win rate is its players' too, and says nothing of what it loses to).
 
 Stage 1 (this script, CPU):
-  games: the lite scan (data/parsed/gen9ou_games_lite.parquet) + the crawler's replays
-    (data/replays/gen9ou/*.json.gz, newer), deduplicated by id;
+  games: the lite scan (data/derived/parsed/gen9ou_games_lite.parquet) + the crawler's replays
+    (data/raw/replays/gen9ou/*.json.gz, newer), deduplicated by id;
   the matchup model (analysis.matchups: species strength + species-vs-species, the players'
     ratings in) refit on the games since --since;
   the metagame: the compositions played by players >= --meta-elo in the last --meta-days, each
     game weighted 0.5 ** (age / --meta-half-life);
-  candidates: the forum's complete teams legal today (data/teams/catalog.jsonl, validated) and
+  candidates: the forum's complete teams legal today (teams/catalog.jsonl, validated) and
     the ladder's compositions with the best time-weighted win rates (top_ladder_teams.ranked);
   per candidate, against the metagame (equal ratings): the expected score (mean), the mean of its
     worst --tail of the metagame's weight (CVaR: what it loses to), and the worst threat (its mean
@@ -37,13 +37,14 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import top_ladder_teams as tlt  # noqa: E402
 
+from alpha_poke import paths  # noqa: E402
 from alpha_poke.analysis import games_lite, matchups  # noqa: E402
 from alpha_poke.data.smogon_stats import DEFAULT_DIR, UsageStats  # noqa: E402
 from alpha_poke.teams import POOLS_DIR, catalog  # noqa: E402
 from alpha_poke.teams.validate import check  # noqa: E402
 
 DAY = 86400
-CRAWL = "data/replays/gen9ou/*.json.gz"
+CRAWL = str(paths.REPLAYS / "gen9ou" / "*.json.gz")
 
 
 def crawled_games() -> pd.DataFrame:
@@ -154,7 +155,7 @@ def main() -> None:
     import pickle
 
     # (cached by the games' newest time: the same data, the same model)
-    cache = Path(a.out).parent / f"matchup_model_{int(g.time.max())}.pkl"
+    cache = paths.TEAM_DATA / f"matchup_model_{int(g.time.max())}.pkl"
     if cache.exists():
         model, val = pickle.loads(cache.read_bytes())
     else:

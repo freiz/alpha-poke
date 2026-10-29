@@ -1,12 +1,12 @@
 """Team data (design D5-T; layout in ``alpha_poke.teams``).
 
   collect      crawl the Smogon forum sources + download the pokepast.es pastes they link
-               (cached under data/teams/raw; --refresh re-reads forum listings / last pages)
-               -> data/teams/raw/links.jsonl
-  build        links + caches -> data/teams/catalog.jsonl (canonical, deduplicated, only the
+               (cached under data/raw/forum; --refresh re-reads forum listings / last pages)
+               -> data/raw/forum/links.jsonl
+  build        links + caches -> teams/catalog.jsonl (canonical, deduplicated, only the
                teams legal in gen9ou today; rerun after a rule change)
   stats        catalog summary
-  export       catalog entries -> a pool directory (data/teams/pools/<name>)
+  export       catalog entries -> a pool directory (data/derived/teams/pools/<name>)
   reconstruct  a pool of widely copied ladder teams reconstructed from replays
 
 Usage:

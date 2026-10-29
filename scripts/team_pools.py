@@ -1,5 +1,5 @@
 """Build the diagnostic team pools (design D16; selfplay.pools): off-meta real games and random
-teams, fixed pairs under data/teams/pools/ (git-ignored).
+teams, fixed pairs under data/derived/teams/pools/ (git-ignored).
 
   uv run python scripts/team_pools.py --pairs 200
 """
@@ -9,6 +9,7 @@ import collections
 import logging
 from pathlib import Path
 
+from alpha_poke import paths  # noqa: E402
 from alpha_poke.agents.belief_state import BeliefModel
 from alpha_poke.selfplay import pools
 from alpha_poke.selfplay.teams import TeamSampler
@@ -18,7 +19,7 @@ SINCE = 1746057600  # 2025-05-01, as scripts/selfplay.py SINCE_DEFAULT
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--pairs", type=int, default=200)
-    ap.add_argument("--out", default="data/teams/pools")
+    ap.add_argument("--out", default=str(paths.POOLS))
     ap.add_argument("--top-k", type=int, default=40)
     ap.add_argument("--min-off", type=int, default=4)
     ap.add_argument("--max-count", type=int, default=2)

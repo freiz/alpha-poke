@@ -3,7 +3,7 @@
 Usage: uv run python scripts/build_training_data.py --name v1 --per-game 4 --workers 8
 
 Source: the Gen9 OU replays of analysis.games_lite.SOURCES (Metamon's, scripts/fetch_metamon.py,
-and the newer HF dump's, data/replays_hf), all of them
+and the newer HF dump's, data/raw/replays_hf), all of them
 by default. Every game gives ``--per-game`` positions drawn at random among its turn-start
 decision points (+ ``--extra-per-game`` of its forced / pivot switches and unseen choices, v4)
 (many games x few positions: positions of one game are strongly correlated and share one

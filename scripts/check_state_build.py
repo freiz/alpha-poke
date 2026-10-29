@@ -15,7 +15,6 @@ import json
 import multiprocessing as mp
 from pathlib import Path
 
-
 # the fields whose difference is in a core part of the state (doc/state-diff.md: HP, status,
 # stages, moves and PP, item, ability, the active, the field, the conditions, the flags)
 CORE = ("hp", "maxhp", "status", "boost", "active", "team", "moves", "pp", "item", "ability",

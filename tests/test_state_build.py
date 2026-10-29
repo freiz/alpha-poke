@@ -10,6 +10,8 @@ from pathlib import Path
 
 import pytest
 
+from alpha_poke import paths  # noqa: E402
+
 ROOT = Path(__file__).resolve().parents[1]
 BASELINE = ROOT / "tests/fixtures/state_build_baseline.json"
 TEAMS = ROOT / "tests/fixtures/random_battle_teams.jsonl"
@@ -18,7 +20,7 @@ pytestmark = pytest.mark.skipif(not (ROOT / "vendor/pokemon-showdown/dist/sim").
                                 reason="needs the built Showdown simulator")  # fmt: skip
 
 
-OU_TEAMS = ROOT / "data/teams/statebuild_catalog_pairs.jsonl"  # (the team catalog's pairs: local)
+OU_TEAMS = paths.TEAM_DATA / "statebuild_catalog_pairs.jsonl"  # (the team catalog's pairs: local)
 OU_BASELINE = ROOT / "tests/fixtures/state_build_baseline_ou.json"
 
 
@@ -26,7 +28,7 @@ def test_the_state_construction_differential_stays_within_its_baseline():
     _check(BASELINE, TEAMS)
 
 
-@pytest.mark.skipif(not OU_TEAMS.exists(), reason="needs the OU team pairs (data/teams, local)")
+@pytest.mark.skipif(not OU_TEAMS.exists(), reason="needs the OU team pairs (data/derived/teams, local)")
 def test_ou_teams_stay_within_their_baseline():
     """The same on real OU teams (the catalog's: the human data's metagame)."""
     _check(OU_BASELINE, OU_TEAMS)

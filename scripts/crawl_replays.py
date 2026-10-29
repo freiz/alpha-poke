@@ -28,7 +28,7 @@ def main() -> None:
     ap.add_argument("--interval", type=float, default=2.0)
     ap.add_argument("--max-requests", type=int, default=None)
     ap.add_argument("--max-hours", type=float, default=None)
-    ap.add_argument("--root", default=None, help="data directory (default: data/replays)")
+    ap.add_argument("--root", default=None, help="data directory (default: data/raw/replays)")
     sub = ap.add_subparsers(dest="cmd", required=True)
 
     s = sub.add_parser("seed-users")

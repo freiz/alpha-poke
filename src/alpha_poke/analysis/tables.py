@@ -8,15 +8,14 @@ be joined with Smogon usage statistics.
 import gzip
 import json
 import sqlite3
-from pathlib import Path
 
 import pandas as pd
 
+from alpha_poke import paths  # noqa: E402
 from alpha_poke.replay import parse_replay
 
-ROOT = Path(__file__).resolve().parents[3] / "data"
-REPLAYS = ROOT / "replays"
-OUT = ROOT / "parsed"
+REPLAYS = paths.REPLAYS
+OUT = paths.PARSED
 
 
 def to_id(name: str | None) -> str | None:

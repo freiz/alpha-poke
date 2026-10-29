@@ -2,7 +2,7 @@
 teams as team preview shows them, winner. ~2M Metamon games in minutes; used for team strength
 and matchup statistics and for per-player histories (design D5-L / D5-O).
 
-Output: data/parsed/gen9ou_games_lite.parquet, one row per game:
+Output: data/derived/parsed/gen9ou_games_lite.parquet, one row per game:
   id, time, p1, p2 (user ids), r1, r2 (ratings, 0 = unknown), team1, team2 (sorted preview
   species joined by '|'), winner (1 / 2, 0 = tie or unknown), turns, shard (source parquet file
   name) and row (its row there: ``log`` loads the full log of sampled games)."""
@@ -15,13 +15,14 @@ from pathlib import Path
 import pyarrow as pa
 import pyarrow.parquet as pq
 
+from alpha_poke import paths
 from alpha_poke.analysis.roles import to_id
 from alpha_poke.analysis.tables import OUT
 
 # replay sources, same columns (id, log, uploadtime, rating, ...): Metamon's Gen9 OU (to
 # 2026-05-19) and the HolidayOugi HF dump's games after it (deduplicated by id; 2026-10-09).
 # Shard file names are unique across the sources
-SOURCES = ("data/metamon/gen9ou/*.parquet", "data/replays_hf/gen9ou/*.parquet")
+SOURCES = (str(paths.METAMON / "gen9ou" / "*.parquet"), str(paths.REPLAYS_HF / "gen9ou" / "*.parquet"))
 
 
 def source_files() -> list[str]:

@@ -8,7 +8,7 @@ The threats' sets: the belief (agents.belief_state: the species' most likely mov
 most common spread); ours: exact (the export's EVs / nature). The damage model is the knowledge
 layer's (agents.damage: average roll, the main multipliers -- an estimate, not the engine).
 
-  uv run python scripts/threat_check.py data/teams/pools/ladder_top5 [--threats 15] [--also "Iron Valiant"]
+  uv run python scripts/threat_check.py data/derived/teams/pools/ladder_top5 [--threats 15] [--also "Iron Valiant"]
 """
 
 import argparse
@@ -21,6 +21,7 @@ from poke_env.teambuilder import Teambuilder
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+from alpha_poke import paths  # noqa: E402
 from alpha_poke.agents.damage import (
     MonView,
     Spread,
@@ -156,7 +157,7 @@ def main() -> None:
     ap.add_argument("pools", nargs="+", help="pool directories (team_XX.txt) or export files")
     ap.add_argument("--threats", type=int, default=15, help="the metagame's most used species")
     ap.add_argument("--also", nargs="*", default=[], help="more threats by name")
-    ap.add_argument("--meta", default="data/teams/pools/robust_candidates/report.json",
+    ap.add_argument("--meta", default=str(paths.POOLS / "robust_candidates" / "report.json"),
                     help="build_robust_teams' report (its threats), else Smogon's top usage")  # fmt: skip
     ap.add_argument("--check-in", type=float, default=0.5)
     ap.add_argument("--check-out", type=float, default=0.35)

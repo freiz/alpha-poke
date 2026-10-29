@@ -7273,7 +7273,8 @@ def sleep_clause():
 
 def test_l238_gen9ou_has_no_sleep_clause():
     """gen9ou's own rules: its format has no Sleep Clause Mod, the engine's default neither."""
-    import json, subprocess
+    import json
+    import subprocess
     js = "const {Dex} = require(process.argv[1]); console.log(JSON.stringify(Dex.formats.get('gen9ou').ruleset))"
     rules = json.loads(subprocess.run(["node", "-e", js, str(ec.SIM)], capture_output=True, text=True, check=True).stdout)
     assert "!Sleep Clause Mod" in rules and "Sleep Moves Clause" in rules

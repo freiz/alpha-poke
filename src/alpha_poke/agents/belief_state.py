@@ -18,6 +18,7 @@ from poke_env.battle import Pokemon
 from poke_env.battle.move import Move
 from poke_env.data import GenData
 
+from alpha_poke import paths
 from alpha_poke.agents.damage import MonView, Spread, calc_stats
 from alpha_poke.analysis.archetypes import team_table
 from alpha_poke.analysis.cores import mine_cores
@@ -27,7 +28,7 @@ from alpha_poke.analysis.tables import OUT
 from alpha_poke.belief.priors import CorePrior, SmogonPrior, SpeciesReplayPrior, TeamPrior
 from alpha_poke.data.smogon_stats import DEFAULT_DIR, UsageStats
 
-CACHE = Path(__file__).resolve().parents[3] / "data" / "belief_model.pkl"
+CACHE = paths.BELIEF / "belief_model.pkl"
 
 
 @dataclass

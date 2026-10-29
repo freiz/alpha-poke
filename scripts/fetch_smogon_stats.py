@@ -1,4 +1,4 @@
-"""Download Smogon usage statistics for one format (default gen9ou) into data/smogon/.
+"""Download Smogon usage statistics for one format (default gen9ou) into data/raw/smogon/.
 
 Usage: uv run python scripts/fetch_smogon_stats.py [--format gen9ou] [--months 3] [--interval 2]
 """
@@ -20,7 +20,7 @@ def main() -> None:
     print("latest months on server:", months[-6:])
     for m in months[-a.months :]:
         paths = c.fetch_month(m, a.format)
-        print(f"{m}: {len(paths)} files in data/smogon/{m}/")
+        print(f"{m}: {len(paths)} files in data/raw/smogon/{m}/")
     print(f"{c.http.requests_made} requests made")
 
 

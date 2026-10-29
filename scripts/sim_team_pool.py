@@ -18,6 +18,7 @@ import time
 from collections import defaultdict
 from pathlib import Path
 
+from alpha_poke import paths  # noqa: E402
 from alpha_poke.teams import POOLS_DIR, load_team_files
 
 
@@ -33,7 +34,7 @@ def recent_opponents(ts, a) -> list[str]:
     from alpha_poke.teams.validate import check
 
     games = []
-    for f in glob.glob("data/replays/gen9ou/*.json.gz"):
+    for f in glob.glob(str(paths.REPLAYS / "gen9ou" / "*.json.gz")):
         try:
             d = json.loads(gzip.open(f).read())
         except (OSError, ValueError):
@@ -107,7 +108,7 @@ def main() -> None:
     )
     opps = recent_opponents(ts, a)
 
-    pool = Path("data/teams/pools") / f"teamsim_{time.strftime('%Y%m%d_%H%M')}"
+    pool = paths.TEAM_DATA / "sims" / f"teamsim_{time.strftime('%Y%m%d_%H%M')}"
     pool.mkdir(parents=True)
     index = {}
     for i, n in enumerate(names):

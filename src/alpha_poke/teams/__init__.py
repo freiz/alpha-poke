@@ -1,14 +1,15 @@
 """Teams: every complete team we have, where it came from, and the pools built from them
 (design D5-T). The CLI is ``scripts/teams.py``.
 
-Data layout (``data/teams``):
-  raw/smogon/<thread id>/page-<n>.html  forum pages as downloaded (cache, untrusted)
-  raw/pokepaste/<paste id>.json         pokepast.es pastes as downloaded (cache, untrusted)
-  raw/links.jsonl                       where each team was found: one row per (post, team)
-  catalog.jsonl                         all complete teams, canonical, deduplicated, validated
-                                        (``catalog.Entry``); built from raw/ by ``teams.py build``
-  pools/<name>/team_XX.txt + index.json fixed pools for evaluation (``index.json``: file stem
-                                        -> preview team key, used for the heldout belief model)
+Data layout (``alpha_poke.paths``):
+  data/raw/forum/smogon/<thread id>/page-<n>.html   forum pages as downloaded (cache, untrusted)
+  data/raw/forum/pokepaste/<paste id>.json          pokepast.es pastes as downloaded
+  data/raw/forum/links.jsonl                        where each team was found: (post, team) rows
+  teams/catalog.jsonl (tracked)                     all complete teams, canonical, deduplicated,
+                                                    validated (``catalog.Entry``; ``teams.py build``)
+  teams/pools/<name>/ (tracked)                     the fixed pools: team_XX.txt + index.json (file
+                                                    stem -> preview team key: the heldout belief)
+  data/derived/teams/pools/<name>/                  generated pools (sampled, candidates, ...)
 
 Modules: ``validate`` (Showdown canonical export + validator), ``forum`` (Smogon forum
 crawler), ``pokepaste``, ``catalog`` (the catalog and pool export), ``replay_pool`` (pools
@@ -20,13 +21,14 @@ from pathlib import Path
 
 from poke_env.teambuilder import Teambuilder
 
-ROOT = Path(__file__).resolve().parents[3]
-TEAMS_DIR = ROOT / "data" / "teams"
-RAW_DIR = TEAMS_DIR / "raw"
-CATALOG = TEAMS_DIR / "catalog.jsonl"
-POOLS_DIR = TEAMS_DIR / "pools"
+from alpha_poke import paths
+
+ROOT = paths.ROOT
+RAW_DIR = paths.FORUM
+CATALOG = paths.CATALOG
+POOLS_DIR = paths.POOLS  # (where generated pools go; a pool by name: paths.pool)
 # the evaluation pool: 40 teams reconstructed from replays (2026-10)
-DEFAULT_POOL = POOLS_DIR / "replay40"
+DEFAULT_POOL = paths.pool("replay40")
 DEFAULT_TEAM_DIR = ROOT / "configs" / "teams"
 
 

@@ -24,19 +24,9 @@ wandb/
 *.ckpt
 *.npz
 
-# Data: all of data/ is local, except the curated team data -- the forum catalog and the fixed
-# pools named here (small; the crawl is slow to redo, the replay pools cannot be rebuilt as they
-# were). Any other pool (sampled, simulated, candidates) stays local: listed by name, not excluded.
-/data/*
-!/data/teams/
-/data/teams/*
-!/data/teams/catalog.jsonl
-!/data/teams/pools/
-/data/teams/pools/*
-!/data/teams/pools/ab600b/
-!/data/teams/pools/forum_curated/
-!/data/teams/pools/replay40/
-!/data/teams/pools/replay40b/
+# Data: all of data/ is local (layout: alpha_poke/paths.py, README "Data"). The curated team data
+# that is kept in git lives in teams/ (top level): the forum catalog and the fixed pools.
+/data/
 
 # Editor / OS
 .vscode/

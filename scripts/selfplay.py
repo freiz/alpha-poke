@@ -27,6 +27,7 @@ import sys
 import time
 from pathlib import Path
 
+from alpha_poke import paths  # noqa: E402
 from alpha_poke.selfplay import SELFPLAY_DIR
 from alpha_poke.selfplay.batcher import ml_for  # SEARCH_ML with a remaining-turns head
 from alpha_poke.selfplay.runner import MODEL
@@ -711,7 +712,7 @@ def cmd_baseline(a) -> int:
 
 def cmd_diag(a) -> None:
     """Diagnostic team pools (design D16): the current network vs --against (BASE_RUN) on fixed
-    pools beyond the ladder distribution (data/teams/pools: wide200 = the ladder's, offmeta200,
+    pools beyond the ladder distribution (data/derived/teams/pools: wide200 = the ladder's, offmeta200,
     random200; scripts/team_pools.py), --pairs each, GPU search at --iterations, no early stop.
     Never decides anything: whether self-play's gain on the ladder pool and on the others drift
     apart over the generations (overfitting to the common teams). Recorded in state.json
@@ -729,7 +730,7 @@ def cmd_diag(a) -> None:
     os.environ["ALPHA_GPU_COMPILE"] = "1"
     out = {}
     for pool in a.pools.split(","):
-        pdir = f"data/teams/pools/{pool}"
+        pdir = str(paths.pool(pool))
         res = run_arena("g_ma", "g_mb", a.pairs, pool_dir=pdir, ports=tuple(a.ports),
                         procs=a.gpu_procs, lanes_per_proc=a.gpu_lanes, seed=0,
                         log_dir=str(SELFPLAY_DIR / f"gen{a.gen}"), pairs=True)  # fmt: skip
@@ -745,7 +746,7 @@ def cmd_diag(a) -> None:
 def cmd_foulplay(a) -> int:
     """External anchor (design D15-6): the current network vs Foul Play at a fixed setting
     (our CPU ISMCTS --search-ms vs Foul Play --fp-ms x --fp-parallelism) on the SAME 200 real-game
-    team pairs every time (data/teams/pools/wide200, sampled like self-play's with seed 9001;
+    team pairs every time (data/derived/teams/pools/wide200, sampled like self-play's with seed 9001;
     re-sampled if missing), each played twice with the teams exchanged.
     Never decides promotion: returns 3 (the loop stops for a look) when the score is below the
     best earlier one at the same setting by more than --drop and significantly."""
@@ -760,7 +761,7 @@ def cmd_foulplay(a) -> int:
     os.environ["ALPHA_MODEL_A"] = cur
     os.environ["ALPHA_ML"] = ml_for(cur)  # the CPU search (s_ismcts_ma)
     os.environ["ALPHA_SEARCH_MS"] = str(a.search_ms)
-    pool = eval_pool(Path("data/teams/pools"), "wide200", 200, 9001)
+    pool = eval_pool(paths.POOLS, "wide200", 200, 9001)
     setting = (f"ours {a.search_ms}ms vs foulplay {a.fp_ms}ms x{a.fp_parallelism}, "
                f"{Path(pool).name} pairs")  # fmt: skip
     res = run_vs_foulplay("s_ismcts_ma", a.pairs, pool_dir=pool, ports=tuple(a.ports),

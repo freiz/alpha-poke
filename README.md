@@ -35,6 +35,7 @@ src/alpha_poke/
   teams/       team catalog (forum), pools, validator
   players/     models of one specific opponent
 rust/          alpha_search (ISMCTS, batched search, features) + patched poke-engine
+teams/         tracked team data: catalog.jsonl, pools/<fixed pool>
 scripts/       entry points (below)
 tests/         unit tests, incl. the dual Showdown / engine tests
 doc/           design, results, differential-test logs, team design, research
@@ -45,14 +46,23 @@ Entry points: `scripts/selfplay.py` (teams, run, convert, train, eval, iterate),
 `scripts/vs_foulplay.py`, `scripts/play_public.py` / `scripts/ladder.py` (official server, `--public`
 only), the team-design pipeline in `doc/team_design.md`.
 
-## Data (all under `data/`, git-ignored; never commit replays: real usernames)
+## Data
+
+Layout (`src/alpha_poke/paths.py`): `teams/` (tracked: the forum catalog and the fixed pools) and
+`data/` (git-ignored; never commit replays: real usernames) with `raw/` (downloaded: replay
+datasets, the crawler's replays, Smogon statistics, the forum cache), `derived/` (rebuilt by
+scripts: replay tables, belief models, generated pools and team-design runs), `train/` and
+`selfplay/`, the run outputs (`eval/`, `difftest/`, `public_games/`, `ladder/`, ...) and
+`archive/` (ended experiments). The old top-level places (`data/metamon`, `data/teams`, ...) are
+symlinks to the new ones.
+
 
 | source | how | notes |
 |---|---|---|
-| Metamon's Gen 9 OU replays (to 2026-05) + the HolidayOugi HF dump (to 2026-10) | `scripts/fetch_metamon.py` | ~2.3M games; `analysis/games_lite` scans them into `data/parsed/gen9ou_games_lite.parquet` |
-| Showdown replays (newest) | `scripts/crawl_replays.py list --mode new` then `download --min-rating 1500` | `data/replays/` (SQLite index + json.gz) |
+| Metamon's Gen 9 OU replays (to 2026-05) + the HolidayOugi HF dump (to 2026-10) | `scripts/fetch_metamon.py` | ~2.3M games; `analysis/games_lite` scans them into `data/derived/parsed/gen9ou_games_lite.parquet` |
+| Showdown replays (newest) | `scripts/crawl_replays.py list --mode new` then `download --min-rating 1500` | `data/raw/replays/` (SQLite index + json.gz) |
 | Smogon usage statistics | `scripts/fetch_smogon_stats.py` | monthly chaos JSON; ids, not display names |
-| Smogon forum teams | `scripts/teams.py` | `data/teams/catalog.jsonl` (complete teams), pools |
+| Smogon forum teams | `scripts/teams.py` | `teams/catalog.jsonl` (complete teams), pools |
 
 Crawling etiquette (`alpha_poke.http.PoliteClient`, every fetch): one connection, ~2 s between
 requests (+ jitter), `Retry-After` honored, exponential backoff on 429 / 5xx, abort on 403 or 5

@@ -1,9 +1,9 @@
 """Paired evaluation on a pool of fixed team pairs (``pair<k>_a.txt`` / ``pair<k>_b.txt``, e.g.
-data/teams/pools/wide200: real-game pairs drawn like self-play's), each pair played twice with
+data/derived/teams/pools/wide200: real-game pairs drawn like self-play's), each pair played twice with
 the teams exchanged. Networks: ALPHA_MODEL_A / ALPHA_MODEL_B with the bots of eval.bots.
 
   ALPHA_MODEL_A=<run> ALPHA_MODEL_B=<run> uv run python scripts/eval_pairs.py g_ma g_mb \\
-      --pool data/teams/pools/wide200
+      --pool data/derived/teams/pools/wide200
 """
 
 import argparse
@@ -12,13 +12,14 @@ import re
 import time
 from pathlib import Path
 
+from alpha_poke import paths  # noqa: E402
 from alpha_poke.eval.arena import Match, run_schedule, summarize
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("bot_a")
     ap.add_argument("bot_b")
-    ap.add_argument("--pool", default="data/teams/pools/wide200")
+    ap.add_argument("--pool", default=str(paths.pool("wide200")))
     ap.add_argument("--pairs", type=int, default=0, help="the first N pairs (0: all)")
     ap.add_argument("--procs", type=int, default=4)
     ap.add_argument("--lanes", type=int, default=12)

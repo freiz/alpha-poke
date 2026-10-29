@@ -2,15 +2,15 @@
 of a pivot switch held the foe's move that came after it (our U-turn first, the foe's attack
 after our switch-in), which the live history -- the log so far -- does not have."""
 
-from pathlib import Path
 
 import pytest
 
+from alpha_poke import paths  # noqa: E402
 from alpha_poke.replay.parser import parse_replay
 from alpha_poke.train.positions import Blind, decision_steps
 
 pq = pytest.importorskip("pyarrow.parquet")
-GAMES = sorted(Path("data/replays_hf/gen9ou").glob("*.parquet"))
+GAMES = sorted((paths.REPLAYS_HF / "gen9ou").glob("*.parquet"))
 
 
 def _rows(n):
@@ -100,7 +100,12 @@ def test_positions_of_hazard_faint_rounds_and_an_eject():
     import poke_engine as pe
 
     from alpha_poke.agents.belief_state import BeliefModel
-    from alpha_poke.train.positions import KIND_BLIND, KIND_FORCED, KIND_PIVOT, positions_from_replay
+    from alpha_poke.train.positions import (
+        KIND_BLIND,
+        KIND_FORCED,
+        KIND_PIVOT,
+        positions_from_replay,
+    )
 
     ps = positions_from_replay({"id": "t1", "log": LOG, "rating": None, "uploadtime": 0},
                                BeliefModel.load(), random.Random(0), pool="all", per_game=99)  # fmt: skip

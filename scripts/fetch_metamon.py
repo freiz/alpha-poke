@@ -3,7 +3,7 @@
 Usage: uv run python scripts/fetch_metamon.py [--format gen9ou] [--keep-raw]
 
 Every shard (46 x ~125 MB, 5.7 GB in total) is downloaded, checked against its sha256, filtered
-to ``formatid == --format`` and written to data/metamon/<format>/<shard>.parquet; the raw shard
+to ``formatid == --format`` and written to data/raw/metamon/<format>/<shard>.parquet; the raw shard
 is then deleted (unless --keep-raw). Finished shards are skipped, so the script can be rerun.
 Usernames are pseudonymized by Metamon; the dataset card states no license (public Showdown
 replays): local research use only, not redistributed (design D13).
@@ -19,10 +19,12 @@ from pathlib import Path
 import pyarrow.compute as pc
 import pyarrow.parquet as pq
 
+from alpha_poke import paths  # noqa: E402
+
 REPO = "jakegrigsby/metamon-raw-replays"
 API = f"https://huggingface.co/api/datasets/{REPO}/tree/main/data"
 FILE = f"https://huggingface.co/datasets/{REPO}/resolve/main/"
-ROOT = Path("data/metamon")
+ROOT = paths.METAMON
 
 
 def sha256(path: Path) -> str:

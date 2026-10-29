@@ -14,7 +14,7 @@ Per game:
      again; species without belief data get their moves from the Smogon statistics within
      their learnset;
   3. with probability ``catalog_frac`` a side is replaced by a complete real team from the
-     catalog (data/teams/catalog.jsonl; no completion at all);
+     catalog (teams/catalog.jsonl; no completion at all);
   3'. with probability ``synth_frac`` (first: the rest split by ``catalog_frac``) a side is a
      synthetic team (2026-10-26, more varied teams than the ladder's own compositions): its six
      species drawn one after another by the Smogon usage and the teammates of those already in

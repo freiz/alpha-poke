@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pytest
 
+from alpha_poke import paths  # noqa: E402
 from alpha_poke.replay import parse_replay
 
 FIXTURE = Path(__file__).parent / "fixtures" / "gen9ou_sample.json"
@@ -126,9 +127,9 @@ def test_illusion_phantom_merged_on_replace():
     assert any("Illusion" in w for w in r.warnings)
 
 
-@pytest.mark.skipif(not Path("data/replays_sample").exists(), reason="no local sample replays")
+@pytest.mark.skipif(not paths.REPLAYS_SAMPLE.exists(), reason="no local sample replays")
 def test_all_local_samples_parse():
-    for f in Path("data/replays_sample").glob("*.json"):
+    for f in paths.REPLAYS_SAMPLE.glob("*.json"):
         r = parse_replay(json.loads(f.read_text()))
         assert r.winner in ("p1", "p2") and len(r.teams["p1"]) >= 6
 

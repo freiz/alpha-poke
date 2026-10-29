@@ -200,11 +200,11 @@ def test_moves_not_aimed_at_the_foe_match_showdown():
 
 def test_paradox_species_match_showdown():
     """The species whose Booster Energy cannot be taken (Showdown's "Paradox" tag; L79)."""
+    import subprocess
+
     import alpha_search
 
     from alpha_poke import enginecheck as ec
-
-    import subprocess
 
     js = ("const {Dex} = require(process.argv[1]); console.log(JSON.stringify(Dex.species.all()"
           ".filter(s => s.tags.includes('Paradox') && !s.isNonstandard).map(s => s.id)))")
@@ -215,11 +215,11 @@ def test_paradox_species_match_showdown():
 
 def test_skill_swap_failures_match_showdown():
     """The abilities Skill Swap fails on (Showdown's failskillswap flag; L106)."""
+    import subprocess
+
     import alpha_search
 
     from alpha_poke import enginecheck as ec
-
-    import subprocess
 
     js = ("const {Dex} = require(process.argv[1]); console.log(JSON.stringify(Dex.abilities.all()"
           ".filter(a => a.flags.failskillswap && !a.isNonstandard).map(a => a.id)))")

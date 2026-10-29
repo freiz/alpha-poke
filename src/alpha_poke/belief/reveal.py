@@ -28,13 +28,14 @@ from pathlib import Path
 
 import numpy as np
 
+from alpha_poke import paths
 from alpha_poke.analysis.roles import to_id
 
 MAX_T = 16  # F(m, t) is tabulated for t = 0..MAX_T (t >= MAX_T uses the last value)
 LONG = 10  # "long stay": >= LONG move actions in the game
 MIN_SPECIES_OBS = 40  # per-(species, move) estimates need this many long-stay first uses
 RHO_MIN = 0.05
-CACHE = Path("data/reveal_model.pkl")
+CACHE = paths.BELIEF / "reveal_model.pkl"
 
 
 def first_use_rows(replay) -> list[tuple[str, str, int, int | None]]:

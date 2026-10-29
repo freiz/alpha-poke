@@ -9,8 +9,8 @@ usage-weighted; role slots lacking):
   per (team, opponent) pair: the matchup model's prediction against the pair's result (log loss,
     correlation) -- does the model see matchups at all?
 
-  uv run python scripts/validate_team_measures.py --pool data/teams/pools/teamsim_<...> \\
-      --candidates data/teams/pools/sim_candidates_v2 --threats <threat_check --out json>
+  uv run python scripts/validate_team_measures.py --pool data/derived/teams/pools/teamsim_<...> \\
+      --candidates data/derived/teams/pools/sim_candidates_v2 --threats <threat_check --out json>
 """
 
 import argparse
@@ -27,6 +27,7 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from build_robust_teams import all_games, metagame, score  # noqa: E402
 
+from alpha_poke import paths  # noqa: E402
 from alpha_poke.eval.arena import read_log  # noqa: E402
 from alpha_poke.teams.validate import check  # noqa: E402
 
@@ -51,6 +52,7 @@ def main() -> None:
     ap.add_argument("--threats", default="", help="threat_check --out JSON")
     ap.add_argument("--log", default="", help="the arena log (default: the newest teamsim log)")
     ap.add_argument("--tail", type=float, default=0.2)
+    ap.add_argument("--model", default="", help="matchup model pickle (default: the newest)")
     a = ap.parse_args()
 
     pool, cands = Path(a.pool), Path(a.candidates)
@@ -76,7 +78,7 @@ def main() -> None:
     ns = argparse.Namespace(
         meta_days=21, meta_half_life=14.0, meta_elo=1500, meta_teams=5000, tail=a.tail, threats=15
     )
-    cache = sorted(glob.glob("data/teams/pools/matchup_model_*.pkl"))[-1]
+    cache = a.model or sorted(glob.glob(str(paths.TEAM_DATA / "matchup_model_*.pkl")))[-1]
     model, _ = pickle.loads(Path(cache).read_bytes())
     meta = metagame(all_games(log=lambda *x: None), ns)
     st1 = score(model, [index[n] for n in names], meta, ns)

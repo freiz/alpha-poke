@@ -1,4 +1,4 @@
-"""Parse downloaded replays into data/parsed/<format>_{games,mons}.parquet (incremental).
+"""Parse downloaded replays into data/derived/parsed/<format>_{games,mons}.parquet (incremental).
 
 Usage: uv run python scripts/build_replay_tables.py [--format gen9ou]
 """

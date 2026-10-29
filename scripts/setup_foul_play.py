@@ -20,6 +20,8 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+from alpha_poke import paths  # noqa: E402
+
 ROOT = Path(__file__).resolve().parents[1]
 FP = ROOT / "external" / "foul-play"
 COMMIT = "8f541f8"
@@ -116,7 +118,7 @@ def patch():
 
 
 def cache():
-    """One-time warm-up. Smogon stats come from our own download (data/smogon/); the other
+    """One-time warm-up. Smogon stats come from our own download (data/raw/smogon/); the other
     two files are fetched once from their public static URLs."""
     import requests
 
@@ -142,7 +144,7 @@ def cache():
         if month.month > 1
         else month.replace(year=month.year - 1, month=12)
     ).strftime("%Y-%m")
-    src = ROOT / "data" / "smogon" / prev / "chaos" / f"{FORMAT}-0.json"
+    src = paths.SMOGON / prev / "chaos" / f"{FORMAT}-0.json"
     dst_dir = FP / "fp" / "data" / "smogon_stats_cache"
     dst_dir.mkdir(parents=True, exist_ok=True)
     dst = dst_dir / f"{FORMAT}-0.json"

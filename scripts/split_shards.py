@@ -4,7 +4,7 @@ read whole. Featurization holds a shard in memory (train_pv.MAX_SHARD_ROWS); the
 shards hold up to 193k games where Metamon's hold <= 58k (2026-10-09: one of 3.7M positions took
 41.5 GB and WSL down).
 
-  uv run python scripts/split_shards.py data/replays_hf/gen9ou/hf-part12.parquet --train v5
+  uv run python scripts/split_shards.py data/raw/replays_hf/gen9ou/hf-part12.parquet --train v5
 
 Writes <stem>-<k>.parquet next to each, drops the old feature cache, and moves the originals
 to <dir>/unsplit/ (outside the source globs).

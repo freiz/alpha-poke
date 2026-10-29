@@ -15,10 +15,11 @@ import gzip
 import json
 from pathlib import Path
 
+from alpha_poke import paths
 from alpha_poke.http import PoliteClient
 
 BASE = "https://replay.pokemonshowdown.com"
-DEFAULT_CACHE = Path(__file__).resolve().parents[3] / "data" / "replays"
+DEFAULT_CACHE = paths.REPLAYS
 
 
 class ReplayClient:

@@ -1,5 +1,5 @@
 """Cross-validation of the ladder teams' set reconstruction (scripts/top_ladder_teams.py) against
-the forum's complete teams (2026-10-27): for the catalog teams (data/teams/catalog.jsonl, complete
+the forum's complete teams (2026-10-27): for the catalog teams (teams/catalog.jsonl, complete
 sets) whose six species the ladder played often, the sets reconstructed from those replays as if
 the catalog had none, compared field by field with the posted ones -- item, ability, tera type,
 moves (of 4), nature, EVs (exact; and the L1 distance / 1020); the production reconstruction (top_ladder_teams.reconstruct:

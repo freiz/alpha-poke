@@ -16,10 +16,11 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from alpha_poke import paths
 from alpha_poke.http import PoliteClient
 
 BASE = "https://www.smogon.com/stats"
-DEFAULT_DIR = Path(__file__).resolve().parents[3] / "data" / "smogon"
+DEFAULT_DIR = paths.SMOGON
 KINDS = ("", "chaos", "moveset", "leads", "metagame")
 
 

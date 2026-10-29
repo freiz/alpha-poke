@@ -7,6 +7,7 @@ distribution), ``play_model`` (step 2: the network's rating input and temperatur
 explain their decisions). CLI: ``scripts/player.py``.
 """
 
-from pathlib import Path
 
-PLAYERS_DIR = Path(__file__).resolve().parents[3] / "data" / "players"
+from alpha_poke import paths
+
+PLAYERS_DIR = paths.PLAYERS

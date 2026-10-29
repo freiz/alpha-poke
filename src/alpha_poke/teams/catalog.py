@@ -1,4 +1,4 @@
-"""The catalog of complete teams (``data/teams/catalog.jsonl``) and pool export.
+"""The catalog of complete teams (``teams/catalog.jsonl``) and pool export.
 
 Built from the crawl (``raw/links.jsonl`` + the paste cache): every found team is put into
 Showdown's canonical export, deduplicated on the canonical text (the same team posted twice ->
