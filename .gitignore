@@ -38,3 +38,6 @@ wandb/
 
 # third-party bots run as separate processes (own venvs, not part of this repo)
 /external/
+
+# test fixtures are data the tests need, whatever their type
+!/tests/fixtures/**
