@@ -21,6 +21,54 @@ from pathlib import Path
 from alpha_poke.teams import POOLS_DIR, load_team_files
 
 
+def recent_opponents(ts, a) -> list[str]:
+    """--opponents teams of the recent ladder (2026-10-28: the metagame moved in October): sides of
+    the crawler's replays of the last --opp-days by players >= --opp-elo, completed by the belief
+    as self-play's replay sides (TeamSampler.complete), validated."""
+    import glob
+    import gzip
+    import random
+
+    from alpha_poke.replay.parser import parse_replay
+    from alpha_poke.teams.validate import check
+
+    games = []
+    for f in glob.glob("data/replays/gen9ou/*.json.gz"):
+        try:
+            d = json.loads(gzip.open(f).read())
+        except (OSError, ValueError):
+            continue
+        if d.get("uploadtime"):
+            games.append(d)
+    newest = max(d["uploadtime"] for d in games)
+    games = [d for d in games if d["uploadtime"] >= newest - a.opp_days * 86400]
+    rng = random.Random(a.seed)
+    rng.shuffle(games)
+    texts = []
+    for d in games:
+        if len(texts) >= 2 * a.opponents:  # (some fail the validator)
+            break
+        try:
+            rep = parse_replay(d)
+        except Exception:
+            continue
+        if rep.warnings:
+            continue
+        for s in ("p1", "p2"):
+            recs = [m for m in rep.teams[s] if not m.phantom]
+            if len(recs) != 6 or (rep.ratings_before.get(s) or 0) < a.opp_elo:
+                continue
+            text = ts._try_complete(recs)
+            if text:
+                texts.append(text)
+    out = [r["text"] for r in check(texts) if r["n"] == 6 and not r["problems"]][: a.opponents]
+    print(
+        f"{len(out)} recent ladder opponents ({len(games)} games of the last {a.opp_days} days)",
+        flush=True,
+    )
+    return out
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--candidates", default=str(POOLS_DIR / "robust_candidates"))
@@ -29,6 +77,8 @@ def main() -> None:
         "--since", type=int, default=1754006400, help="opponents' games from (2025-08-01)"
     )
     ap.add_argument("--iterations", type=int, default=1600)
+    ap.add_argument("--opp-days", type=int, default=21, help="opponents: the crawler's last N days")
+    ap.add_argument("--opp-elo", type=int, default=1500)
     ap.add_argument("--keep", type=int, default=5)
     ap.add_argument("--procs", type=int, default=4)
     ap.add_argument("--lanes", type=int, default=12)
@@ -55,10 +105,7 @@ def main() -> None:
     ts = TeamSampler(
         BeliefModel.load(), since=a.since, catalog_frac=0.0, synth_frac=0.0, seed=a.seed
     )
-    opps = []
-    for p in ts.sample((a.opponents + 1) // 2, log=lambda *x: None):
-        opps += [p.p1.text, p.p2.text]
-    opps = opps[: a.opponents]
+    opps = recent_opponents(ts, a)
 
     pool = Path("data/teams/pools") / f"teamsim_{time.strftime('%Y%m%d_%H%M')}"
     pool.mkdir(parents=True)

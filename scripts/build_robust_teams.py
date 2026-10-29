@@ -88,7 +88,7 @@ def score(model: matchups.MatchupModel, cands: list[str], meta: pd.Series, a) ->
     meta = meta.head(a.meta_teams)
     w = (meta / meta.sum()).to_numpy()
     opp = [model.index(t.split("|")) for t in meta.index]
-    O = np.array(opp)  # [J, 6]
+    opp_idx = np.array(opp)  # [J, 6]
     # the threats: the most used species in the metagame (by weight)
     use = pd.Series({}, dtype=float)
     for t, x in zip(meta.index, w, strict=True):
@@ -101,8 +101,8 @@ def score(model: matchups.MatchupModel, cands: list[str], meta: pd.Series, a) ->
         ic = model.index(c.split("|"))
         z = (
             model.a[ic].sum()
-            - model.a[O].sum(1)
-            + model.M[np.ix_(ic, O.ravel())].reshape(6, -1, 6).sum((0, 2))
+            - model.a[opp_idx].sum(1)
+            + model.M[np.ix_(ic, opp_idx.ravel())].reshape(6, -1, 6).sum((0, 2))
         )
         p = 1 / (1 + np.exp(-z))
         order = np.argsort(p)
@@ -122,8 +122,10 @@ def main() -> None:
     ap.add_argument(
         "--since", type=int, default=1746057600, help="the model's games from (2025-05-01)"
     )
-    ap.add_argument("--meta-days", type=int, default=60)
-    ap.add_argument("--meta-half-life", type=float, default=30.0)
+    # (21 days / half-life 14, 2026-10-28: the metagame moved in October -- Zamazenta, Ogerpon-W,
+    # Gholdengo, Dragonite, Iron Treads up ~10 points, Slowking-G / Cinderace / Rillaboom down)
+    ap.add_argument("--meta-days", type=int, default=21)
+    ap.add_argument("--meta-half-life", type=float, default=14.0)
     ap.add_argument("--meta-elo", type=int, default=1500)
     ap.add_argument(
         "--meta-teams", type=int, default=5000, help="the metagame's most weighted compositions"
@@ -227,7 +229,14 @@ def main() -> None:
                        "ladder_n": None if emp is None else int(emp.n)})  # fmt: skip
         print(f"  {r.robust:.3f} (mean {r['mean']:.3f}, cvar {r.cvar:.3f}, worst vs {r.worst_threat} "
               f"{r.worst_threat_p:.3f}) {team} [{src}]", flush=True)  # fmt: skip
-    meta_info = {"kind": "robust candidates", "args": vars(a), "model_val": val, "teams": report}
+    use = {}
+    mw = meta / meta.sum()
+    for t, x in mw.items():
+        for s in t.split("|"):
+            use[s] = use.get(s, 0.0) + float(x)
+    threats = sorted(use, key=use.get, reverse=True)[: a.threats]
+    meta_info = {"kind": "robust candidates", "args": vars(a), "model_val": val, "teams": report,
+                 "threats": [(s, round(use[s], 4)) for s in threats]}  # fmt: skip
     catalog.write_pool(Path(a.out), picked, meta_info)
     (Path(a.out) / "report.json").write_text(json.dumps(meta_info, indent=1, default=str))
     print(f"{len(picked)} finalists -> {a.out}")

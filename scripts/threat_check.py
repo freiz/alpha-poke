@@ -81,10 +81,51 @@ def threat_sets(belief, stats, name: str, k: int, min_w: float) -> list[tuple[fl
 
 
 def threat_views(belief, stats, names: list[str], k: int, min_w: float) -> dict[str, list]:
-    """name -> [(weight, (MonView, moves))] of its main builds."""
+    """name -> [(weight, (MonView, moves))] of its main builds (preview names -- "Zamazenta-*" --
+    as the species they are)."""
+    from alpha_poke.teams.replay_pool import PREVIEW_FORMS
+
     out = {}
     for n in names:
-        out[n] = [(w, own_views(text)[0]) for w, text in threat_sets(belief, stats, n, k, min_w)]
+        sp = PREVIEW_FORMS.get(n, n)
+        out[n] = [(w, own_views(text)[0]) for w, text in threat_sets(belief, stats, sp, k, min_w)]
+    return out
+
+
+HAZARDS = {"stealthrock", "spikes", "toxicspikes", "stickyweb", "stoneaxe", "ceaselessedge"}
+REMOVAL = {"rapidspin", "defog", "mortalspin", "tidyup", "courtchange"}
+PIVOT = {
+    "uturn",
+    "voltswitch",
+    "flipturn",
+    "partingshot",
+    "teleport",
+    "chillyreception",
+    "shedtail",
+}
+SPEED = {"thunderwave", "icywind", "trickroom", "tailwind", "electroweb", "stickyweb", "nuzzle",
+         "glare", "dragondance", "quiverdance", "shellsmash", "agility", "rockpolish", "bulkup"}  # fmt: skip
+
+
+def roles(ours: list[tuple[MonView, list]]) -> dict[str, list[str]]:
+    """The team's role slots: hazards, their removal, pivoting (moves or Regenerator), speed
+    control (a Choice Scarf, priority, speed-changing / setup moves)."""
+    out = {"hazards": [], "removal": [], "pivot": [], "speed": []}
+    for v, moves in ours:
+        ids = {m.id for m in moves}
+        name = v.mon.species
+        if ids & HAZARDS:
+            out["hazards"].append(name)
+        if ids & REMOVAL:
+            out["removal"].append(name)
+        if ids & PIVOT or v.mon.ability == "regenerator":
+            out["pivot"].append(name)
+        if (
+            v.mon.item == "choicescarf"
+            or ids & SPEED
+            or any(priority(m) > 0 and m.base_power for m in moves)
+        ):
+            out["speed"].append(name)
     return out
 
 
@@ -131,7 +172,13 @@ def main() -> None:
 
     months = sorted(p.name for p in Path(DEFAULT_DIR).iterdir() if p.is_dir())
     stats = UsageStats.load(DEFAULT_DIR / months[-1] / "chaos" / "gen9ou-1500.json")
-    names = [s.name for s in stats.ranked()[: a.threats]] + [x for x in a.also]
+    rep = Path(a.meta)
+    meta_threats = json.loads(rep.read_text()).get("threats") if rep.exists() else None
+    if meta_threats:  # (the recent metagame's, build_robust_teams' report)
+        names = [s for s, _ in meta_threats[: a.threats]] + list(a.also)
+    else:
+        names = [s.name for s in stats.ranked()[: a.threats]] + list(a.also)
+    print("threats:", ", ".join(names), flush=True)
     belief = BeliefModel.load()
     threats = threat_views(belief, stats, names, a.builds, a.min_build)
     files = []
@@ -145,9 +192,13 @@ def main() -> None:
         cover = {n: answers(ours, t, a) for n, t in threats.items()}
         missing = [n for n, x in cover.items() if not x]
         single = [n for n, x in cover.items() if len(x) == 1]
-        result[str(f)] = {"team": team, "unanswered": missing, "single": single, "answers": cover}
+        rl = roles(ours)
+        lacking = [r for r, x in rl.items() if not x]
+        result[str(f)] = {"team": team, "unanswered": missing, "single": single, "answers": cover,
+                          "roles": rl, "lacking": lacking}  # fmt: skip
         print(f"{f.parent.name}/{f.stem}: none {len(missing)} [{', '.join(missing) or '-'}]; "
-              f"one {len(single)} [{', '.join(single) or '-'}]   ({team})", flush=True)  # fmt: skip
+              f"one {len(single)} [{', '.join(single) or '-'}]; roles lacking [{', '.join(lacking) or '-'}]"
+              f"   ({team})", flush=True)  # fmt: skip
     if a.out:
         Path(a.out).write_text(json.dumps(result, indent=1))
 
