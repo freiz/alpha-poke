@@ -12,11 +12,9 @@ const crypto = require('crypto');
 const {PRNG} = require(process.argv[2] + '/prng');
 const {state} = require('./showdown_state.js');
 
-let input = '';
-process.stdin.on('data', d => { input += d; });
-process.stdin.on('end', () => {
+function main(cases) {
 	const out = [];
-	for (const c of JSON.parse(input)) {
+	for (const c of cases) {
 		const states = [];
 		let error = null;
 		try {
@@ -39,5 +37,13 @@ process.stdin.on('end', () => {
 		}
 		out.push({states, error});
 	}
-	process.stdout.write(JSON.stringify(out));
-});
+	return out;
+}
+
+module.exports = {main};
+// (as a command: one JSON on stdin, one on stdout; showdown_server.js calls main() directly)
+if (require.main === module) {
+	let input = '';
+	process.stdin.on('data', d => { input += d; });
+	process.stdin.on('end', () => process.stdout.write(JSON.stringify(main(JSON.parse(input)))));
+}

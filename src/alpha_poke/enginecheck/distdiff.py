@@ -31,9 +31,7 @@ def resample(cases: list[dict]) -> list[dict]:
     """[{"battle", "choices": {side: Showdown's choice}, "n", "salt"}] -> [{"states", "error"}]."""
     if not cases:
         return []
-    r = subprocess.run(["node", str(ec.RUNNER.with_name("showdown_resample.js")), str(ec.SIM)],
-                       input=json.dumps(cases), capture_output=True, text=True, check=True)  # fmt: skip
-    return json.loads(r.stdout)
+    return ec.node_script("showdown_resample", cases, timeout=3600)
 
 
 def _fainted(v: dict) -> tuple:

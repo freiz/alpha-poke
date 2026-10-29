@@ -17,7 +17,7 @@ engine and the search, `rust/`).
 ```bash
 uv sync --all-groups             # all groups: a plain `uv sync` removes torch (the train group)
 ./scripts/start_showdown.sh 8000 # local Showdown server (also 8001-8003 for parallel games)
-uv run pytest                    # tests
+uv run pytest -n 8               # tests: 8 workers, ~1.5 min (one process: ~7 min)
 ```
 
 ## Layout

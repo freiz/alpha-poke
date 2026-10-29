@@ -105,3 +105,8 @@
    - Illusion、Transform；
    - 我方和对手两个视角，实战和回放两条路径。
 5. 修复一个值时，列出它的所有消费方（F1、速度推断、`sample_set`、`build_state` 读 poke-env 的地方……）。
+
+## Showdown 的调用方式（2026-10-28）
+
+单元测试和检查里对 Showdown 的调用（`showdown_case` / `crit_ratio` / `chance_count` / `showdown_claims` / `showdown_resample`）经 `enginecheck.node_script` 走一个常驻 node 进程（`showdown_server.js`：模拟器只加载一次，每个请求调一次脚本的 `main()`），每个 Python 进程一个；出错或卡住就退回原来的每次新开 `node <脚本>`（同一个 `main()`，命令行形式不变）；`ALPHA_NODE_SERVER=0` 总是新开。双测 1,001 个从 218 秒降到 34 秒，结果相同；全量测试加 `-n 8`（pytest-xdist）从 414 秒降到 86 秒。`random_battle.js` 不走常驻进程：录制缓存的键含它（和 `showdown_state.js`、`showdown_damage.js`）的文本，改它会让已录的对局全部失效。
+

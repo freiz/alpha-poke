@@ -30,6 +30,49 @@ ROOT = Path(__file__).resolve().parents[3]
 SIM = ROOT / "vendor" / "pokemon-showdown" / "dist" / "sim"
 RUNNER = Path(__file__).with_name("showdown_case.js")
 
+# a persistent node process per Python process (2026-10-28: a fresh `node` per Showdown call -- the
+# simulator loaded each time -- was most of the unit tests' time): showdown_server.js runs the
+# scripts' main() on each request line; ALPHA_NODE_SERVER=0 always starts a fresh process
+_SERVER: dict = {}
+
+
+def _server():
+    import atexit
+    import threading
+
+    pid = os.getpid()
+    srv = _SERVER.get(pid)
+    if srv is None or srv["proc"].poll() is not None:
+        proc = subprocess.Popen(["node", str(RUNNER.with_name("showdown_server.js")), str(SIM)],
+                                stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, bufsize=1)  # fmt: skip
+        srv = _SERVER[pid] = {"proc": proc, "lock": threading.Lock()}
+        atexit.register(proc.kill)
+    return srv
+
+
+def node_script(script: str, payload, timeout: float = 600):
+    """``script`` (enginecheck/<script>.js, its main()) on ``payload``: through the persistent
+    node process, else a fresh ``node <script>.js`` (its stdin / stdout form, the same main)."""
+    if os.environ.get("ALPHA_NODE_SERVER", "1") != "0":
+        import select
+
+        srv = _server()
+        proc = srv["proc"]
+        with srv["lock"]:
+            try:
+                proc.stdin.write(json.dumps({"script": script, "input": payload}) + "\n")
+                proc.stdin.flush()
+                if select.select([proc.stdout], [], [], timeout)[0]:
+                    res = json.loads(proc.stdout.readline())
+                    if res.get("server_error") is None:
+                        return res["out"]
+            except (OSError, ValueError):
+                pass
+            proc.kill()  # (a broken or stuck server: a fresh one next time; this call runs alone)
+    r = subprocess.run(["node", str(RUNNER.with_name(f"{script}.js")), str(SIM)], input=json.dumps(payload),
+                       capture_output=True, text=True, check=True, timeout=timeout)  # fmt: skip
+    return json.loads(r.stdout)
+
 # ("fnt": Showdown's status of a mon fainted this turn -- battle.faintMessages; the engine has
 # none, its 0 HP is the faint. Missing, the reference state of every turn with a faint failed to
 # build and its extended fields went unchecked: 17,743 turns of the full corpus, 2026-10-25)
@@ -64,9 +107,7 @@ def run_showdown(p1, p2, turns, seed: str | None = "gen5,1,2,3,4", force_random=
     (``showdown_damage.js``)."""
     case = {"format": fmt, "seed": seed, "force_random": force_random, "p1": p1, "p2": p2,
             "turns": [list(t) for t in turns], "damage_probe": damage_probe}  # fmt: skip
-    r = subprocess.run(["node", str(RUNNER), str(SIM)], input=json.dumps(case),
-                       capture_output=True, text=True, check=True, timeout=120)  # fmt: skip
-    out = json.loads(r.stdout)
+    out = node_script("showdown_case", case, timeout=120)
     if out["error"]:
         raise RuntimeError(out["error"])
     return out["states"]
@@ -148,10 +189,7 @@ def showdown_claims(cases: list[dict]) -> list[dict]:
     their min or max): per case {"battle", "rolls": {"p1": "min" | "max", "p2": ...}, "noop":
     side doing nothing or None, "turns": [[p1 choice, p2 choice], ...]} -> {"turns": [{"hp":
     {side: {species: hp}}, "moves": [side of each move line], "ended"}, ...], "error"}."""
-    r = subprocess.run(["node", str(RUNNER.with_name("showdown_claims.js")), str(SIM)],
-                       input=json.dumps(cases), capture_output=True, text=True, check=True,
-                       timeout=1200)  # fmt: skip
-    return json.loads(r.stdout)
+    return node_script("showdown_claims", cases, timeout=1200)
 
 
 @functools.cache
@@ -1249,10 +1287,7 @@ def crit_stages(p1, p2, turns=(), seed: str = "gen5,1,2,3,4") -> dict[str, int]:
     (``crit_ratio.js``: its ModifyCritRatio event; Showdown's ratio starts at 1, a move's
     default: chance 1/24, 1/8, 1/2, 1 for 1, 2, 3, 4)."""
     case = {"p1": p1, "p2": p2, "turns": [list(t) for t in turns], "seed": seed}
-    r = subprocess.run(["node", str(RUNNER.with_name("crit_ratio.js")), str(SIM)],
-                       input=json.dumps(case), capture_output=True, text=True, check=True,
-                       timeout=120)  # fmt: skip
-    out = json.loads(r.stdout)
+    out = node_script("crit_ratio", case, timeout=120)
     if out["error"]:
         raise RuntimeError(out["error"])
     return out["stages"]
@@ -1262,10 +1297,7 @@ def accuracies(p1, p2, turns=(), seed: str = "gen5,1,2,3,4") -> dict:
     """Showdown's accuracy of p1's active's moves against p2's active after ``turns`` (its
     ModifyAccuracy event: Bright Powder, Zoom Lens as if p2 had moved; True: it cannot miss)."""
     case = {"p1": p1, "p2": p2, "turns": [list(t) for t in turns], "seed": seed}
-    r = subprocess.run(["node", str(RUNNER.with_name("crit_ratio.js")), str(SIM)],
-                       input=json.dumps(case), capture_output=True, text=True, check=True,
-                       timeout=120)  # fmt: skip
-    out = json.loads(r.stdout)
+    out = node_script("crit_ratio", case, timeout=120)
     if out["error"]:
         raise RuntimeError(out["error"])
     return out["accuracy"]
@@ -1275,10 +1307,7 @@ def showdown_rate(p1, p2, turns, line: str, n: int = 400) -> float:
     """The share of n simulator seeds where ``line`` (a substring) appears in the last turn's
     protocol (``chance_count.js``): Showdown's chance of an event one battle cannot show."""
     case = {"p1": p1, "p2": p2, "turns": [list(t) for t in turns], "line": line, "n": n}
-    r = subprocess.run(["node", str(RUNNER.with_name("chance_count.js")), str(SIM)],
-                       input=json.dumps(case), capture_output=True, text=True, check=True,
-                       timeout=600)  # fmt: skip
-    out = json.loads(r.stdout)
+    out = node_script("chance_count", case, timeout=600)
     if out["error"]:
         raise RuntimeError(out["error"])
     return out["hits"] / out["n"]
@@ -1289,10 +1318,7 @@ def showdown_log_counts(p1, p2, turns, n: int = 1000) -> list[list[str]]:
     for chances that depend on each other (the crits of a multi-hit move)."""
     case = {"p1": p1, "p2": p2, "turns": [list(t) for t in turns], "line": "", "n": n,
             "lines": True}  # fmt: skip
-    r = subprocess.run(["node", str(RUNNER.with_name("chance_count.js")), str(SIM)],
-                       input=json.dumps(case), capture_output=True, text=True, check=True,
-                       timeout=600)  # fmt: skip
-    out = json.loads(r.stdout)
+    out = node_script("chance_count", case, timeout=600)
     if out["error"]:
         raise RuntimeError(out["error"])
     return out["logs"]

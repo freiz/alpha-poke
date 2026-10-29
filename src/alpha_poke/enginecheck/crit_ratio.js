@@ -9,10 +9,7 @@
 const {Battle, Teams} = require(process.argv[2]);
 const {teamOf} = require('./showdown_state.js');
 
-let input = '';
-process.stdin.on('data', d => { input += d; });
-process.stdin.on('end', () => {
-	const c = JSON.parse(input);
+function main(c) {
 	const stages = {};
 	const accuracy = {};
 	let error = null;
@@ -46,5 +43,13 @@ process.stdin.on('end', () => {
 	} catch (e) {
 		error = String(e && e.stack || e);
 	}
-	process.stdout.write(JSON.stringify({stages, accuracy, error}));
-});
+	return {stages, accuracy, error};
+}
+
+module.exports = {main};
+// (as a command: one JSON on stdin, one on stdout; showdown_server.js calls main() directly)
+if (require.main === module) {
+	let input = '';
+	process.stdin.on('data', d => { input += d; });
+	process.stdin.on('end', () => process.stdout.write(JSON.stringify(main(JSON.parse(input)))));
+}

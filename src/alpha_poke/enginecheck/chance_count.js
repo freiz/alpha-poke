@@ -9,10 +9,7 @@ const crypto = require('crypto');
 const {Battle, Teams} = require(process.argv[2]);
 const {teamOf} = require('./showdown_state.js');
 
-let input = '';
-process.stdin.on('data', d => { input += d; });
-process.stdin.on('end', () => {
-	const c = JSON.parse(input);
+function main(c) {
 	let hits = 0;
 	const logs = [];
 	let error = null;
@@ -39,5 +36,13 @@ process.stdin.on('end', () => {
 	} catch (e) {
 		error = String(e && e.stack || e);
 	}
-	process.stdout.write(JSON.stringify({hits, n: c.n, logs, error}));
-});
+	return {hits, n: c.n, logs, error};
+}
+
+module.exports = {main};
+// (as a command: one JSON on stdin, one on stdout; showdown_server.js calls main() directly)
+if (require.main === module) {
+	let input = '';
+	process.stdin.on('data', d => { input += d; });
+	process.stdin.on('end', () => process.stdout.write(JSON.stringify(main(JSON.parse(input)))));
+}
