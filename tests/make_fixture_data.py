@@ -7,7 +7,7 @@ copies it into a temporary ALPHA_DATA directory; the tests never read the local 
   from, trimmed (no checks and counters; the 30 most common spreads, the 60 most common
   teammates of each species; abilities, items, moves, tera types whole);
 - derived/parsed/gen9ou_mons.parquet: the per-mon replay table of 5,000 games (seed 0) without the
-  players' names, what BeliefModel.build reads.
+  players' names and with synthetic game ids, what BeliefModel.build reads.
 
 And next to it, in tests/fixtures/:
 - replays_gen9ou.jsonl.gz: 200 rated games of the newest HF replay shard, anonymized: the two
@@ -129,6 +129,9 @@ def main() -> int:
     ids = np.sort(m.id.unique())
     keep = set(np.random.default_rng(0).choice(ids, GAMES, replace=False))
     m = m[m.id.isin(keep)].drop(columns=["player"]).reset_index(drop=True)
+    # synthetic game ids (the real ones lead back to the public replays and their players)
+    ids = {g: f"g{k:05d}" for k, g in enumerate(sorted(m.id.unique()))}
+    m["id"] = m.id.map(ids)
     out = OUT / "derived" / "parsed" / "gen9ou_mons.parquet"
     out.parent.mkdir(parents=True, exist_ok=True)
     m.to_parquet(out, index=False)
