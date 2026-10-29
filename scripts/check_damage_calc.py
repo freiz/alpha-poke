@@ -72,7 +72,9 @@ def battle(job: tuple) -> list[dict]:
                     continue
                 if other["ability"] in BLOCKERS or "substitute" in other["volatiles"]:
                     continue
-                if mon(st, side)["ability"] in QUEUE_ABILITIES | MOVE_START_ABILITIES or SEMI_INVULNERABLE & set(
+                if mon(st, side)[
+                    "ability"
+                ] in QUEUE_ABILITIES | MOVE_START_ABILITIES or SEMI_INVULNERABLE & set(
                     other["volatiles"]
                 ):
                     continue

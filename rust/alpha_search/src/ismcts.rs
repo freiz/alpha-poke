@@ -105,7 +105,12 @@ pub struct Node {
 /// The public phase of a state: both actives, whether each side must switch
 pub(crate) fn phase(state: &State) -> (PokemonIndex, PokemonIndex, bool, bool) {
     let forced = |side: &Side| side.force_switch || side.get_active_immutable().hp <= 0;
-    (state.side_one.active_index, state.side_two.active_index, forced(&state.side_one), forced(&state.side_two))
+    (
+        state.side_one.active_index,
+        state.side_two.active_index,
+        forced(&state.side_one),
+        forced(&state.side_two),
+    )
 }
 
 /// A child's key part after its joint action's outcome: the public phase (`Config::phase_key`),
@@ -119,8 +124,10 @@ pub(crate) fn phase_sig(state: &State, cfg: &Config) -> u64 {
 }
 
 #[cfg(test)]
-pub(crate) static PHASE_SAME: [std::sync::atomic::AtomicU64; 2] =
-    [std::sync::atomic::AtomicU64::new(0), std::sync::atomic::AtomicU64::new(0)];
+pub(crate) static PHASE_SAME: [std::sync::atomic::AtomicU64; 2] = [
+    std::sync::atomic::AtomicU64::new(0),
+    std::sync::atomic::AtomicU64::new(0),
+];
 
 pub(crate) fn arm_index(arms: &mut Vec<Arm>, l: Label) -> usize {
     match arms.iter().position(|a| a.label == l) {
@@ -223,7 +230,12 @@ pub struct SearchResult {
 /// uses the handcrafted evaluation), else poke-engine's leaf value relative to the root.
 fn leaf_value(state: &State, root_eval: f32, cfg: &Config, path: &PathCtx) -> f32 {
     if let (Some(tnet), Some(ctx)) = (&cfg.tnet, path.base) {
-        let x = Input::new(state, &path.context(ctx), false, crate::bsearch::evaluate_checked(state));
+        let x = Input::new(
+            state,
+            &path.context(ctx),
+            false,
+            crate::bsearch::evaluate_checked(state),
+        );
         return 1.0 / (1.0 + (-tnet.value(&x)).exp());
     }
     sigmoid(crate::bsearch::evaluate_checked(state) - root_eval)
@@ -310,7 +322,10 @@ impl<'a> PathCtx<'a> {
             if *mc == MoveChoice::None && crate::features::struggles(state, side_ref) {
                 act.kind = 1;
                 act.actor = crate::features::entry_forme(
-                    state.get_side_immutable(&side_ref).get_active_immutable().id,
+                    state
+                        .get_side_immutable(&side_ref)
+                        .get_active_immutable()
+                        .id,
                 ) as i32;
                 act.target = Choices::STRUGGLE as i32;
                 struggle[k] = true;
@@ -458,7 +473,7 @@ impl<'a> PathCtx<'a> {
             let fainted = side.pokemon[p.slot].hp <= 0;
             let act = Act {
                 prevented: turn && !hit,
-                fainted_first: !(turn && !hit) && fainted,
+                fainted_first: (!turn || hit) && fainted,
                 ..Act::default()
             };
             if k == 0 {
@@ -532,7 +547,13 @@ pub(crate) fn prior_probs(avail: &[(usize, MoveChoice)], logits: &[f32]) -> Vec<
         .collect();
     let z: f32 = exps.iter().sum();
     (0..avail.len())
-        .map(|j| if z > 0.0 { exps[j] / z } else { 1.0 / avail.len() as f32 })
+        .map(|j| {
+            if z > 0.0 {
+                exps[j] / z
+            } else {
+                1.0 / avail.len() as f32
+            }
+        })
         .collect()
 }
 
@@ -548,30 +569,46 @@ pub(crate) fn cached_logits_fit(
     avail: &[(usize, MoveChoice)],
 ) -> bool {
     cached.1 == state.side_one.active_index
-        && avail
-            .iter()
-            .all(|(_, mc)| {
-                crate::features::slot_in(mc, crate::features::struggle_in(avail))
-                    .is_none_or(|k| cached.0[k].is_finite())
-            })
+        && avail.iter().all(|(_, mc)| {
+            crate::features::slot_in(mc, crate::features::struggle_in(avail))
+                .is_none_or(|k| cached.0[k].is_finite())
+        })
 }
 
 /// (tests) a step's outcome leaves the stat stages within -6..6, else the step is printed
 #[cfg(test)]
-fn check_stages(before: &str, m1: &MoveChoice, m2: &MoveChoice, ins: &[Instruction], state: &State) {
+fn check_stages(
+    before: &str,
+    m1: &MoveChoice,
+    m2: &MoveChoice,
+    ins: &[Instruction],
+    state: &State,
+) {
     let out = [&state.side_one, &state.side_two].iter().any(|sd| {
-        [sd.attack_boost, sd.defense_boost, sd.special_attack_boost, sd.special_defense_boost,
-         sd.speed_boost, sd.accuracy_boost, sd.evasion_boost]
-            .iter()
-            .any(|b| !(-6..=6).contains(b))
+        [
+            sd.attack_boost,
+            sd.defense_boost,
+            sd.special_attack_boost,
+            sd.special_defense_boost,
+            sd.speed_boost,
+            sd.accuracy_boost,
+            sd.evasion_boost,
+        ]
+        .iter()
+        .any(|b| !(-6..=6).contains(b))
     });
-    assert!(!out, "stages out of range\nBEFORE {before}\nMOVES {m1:?} {m2:?}\nINSTRUCTIONS {ins:?}");
+    assert!(
+        !out,
+        "stages out of range\nBEFORE {before}\nMOVES {m1:?} {m2:?}\nINSTRUCTIONS {ins:?}"
+    );
 }
 
 /// (tests: how often the cached logits did not fit / did)
 #[cfg(test)]
-pub(crate) static CACHE_FIT: [std::sync::atomic::AtomicU64; 2] =
-    [std::sync::atomic::AtomicU64::new(0), std::sync::atomic::AtomicU64::new(0)];
+pub(crate) static CACHE_FIT: [std::sync::atomic::AtomicU64; 2] = [
+    std::sync::atomic::AtomicU64::new(0),
+    std::sync::atomic::AtomicU64::new(0),
+];
 
 /// The root's priors from every world's network evaluation (2026-10-21/22, the search reviews:
 /// they came from the first world alone -- the worlds' order changed the search):
@@ -583,6 +620,7 @@ pub(crate) static CACHE_FIT: [std::sync::atomic::AtomicU64; 2] =
 /// * root noise (self-play): one Dirichlet draw over all the root's arms of a side (every world's
 ///   options), in label order -- the same for any order of the worlds (before: the last world's
 ///   options only, the others' kept their prior).
+///
 /// `add` per world in world order, then `finish`.
 #[derive(Default)]
 pub(crate) struct RootPriors {
@@ -607,11 +645,18 @@ impl RootPriors {
         }
         self.worlds += 1;
         if let Some(p2) = p2 {
-            self.opp.push(av2.iter().zip(p2).map(|(&(i, _), &p)| (i, p)).collect());
+            self.opp
+                .push(av2.iter().zip(p2).map(|(&(i, _), &p)| (i, p)).collect());
         }
     }
 
-    pub(crate) fn finish(&self, root: &mut Node, root_opp: &mut Vec<Vec<f32>>, cfg: &Config, rng: &mut impl Rng) {
+    pub(crate) fn finish(
+        &self,
+        root: &mut Node,
+        root_opp: &mut Vec<Vec<f32>>,
+        cfg: &Config,
+        rng: &mut impl Rng,
+    ) {
         for (i, a) in root.s1.iter_mut().enumerate() {
             a.prior = self.ours.get(i).copied().unwrap_or(0.0) / self.worlds.max(1) as f32;
         }
@@ -629,7 +674,11 @@ impl RootPriors {
                 root_opp.push(v);
             }
             for (i, a) in root.s2.iter_mut().enumerate() {
-                a.prior = if cnt[i] > 0 { sum[i] / cnt[i] as f32 } else { -1.0 };
+                a.prior = if cnt[i] > 0 {
+                    sum[i] / cnt[i] as f32
+                } else {
+                    -1.0
+                };
             }
         }
         if cfg.root_noise_eps > 0.0 {
@@ -870,7 +919,8 @@ impl Tree {
                 match n.phase {
                     None => n.phase = Some(ph),
                     Some(p) => {
-                        PHASE_SAME[(p == ph) as usize].fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                        PHASE_SAME[(p == ph) as usize]
+                            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
                     }
                 }
             }
@@ -934,13 +984,20 @@ impl Tree {
             };
             let (i2, m2) = if cfg.use_policy && cfg.policy_opponent {
                 // (the root: this world's own priors for the opponent, `RootPriors`)
-                let own = if node == 0 { self.root_opp.get(world as usize).map(|v| v.as_slice()) } else { None };
+                let own = if node == 0 {
+                    self.root_opp.get(world as usize).map(|v| v.as_slice())
+                } else {
+                    None
+                };
                 select_puct_with(&n.s2, &av2, cfg.c_puct, &cfg.ml, own)
             } else {
                 select(&n.s2, &av2, cfg.c)
             };
             let depth = n.depth;
-            if m1 == MoveChoice::None && m2 == MoveChoice::None && !crate::ismcts::someone_struggles(state) {
+            if m1 == MoveChoice::None
+                && m2 == MoveChoice::None
+                && !crate::ismcts::someone_struggles(state)
+            {
                 break (leaf_value(state, root_eval, cfg, &pc), None);
             }
             pc.push(state, &m1, &m2);
@@ -990,9 +1047,15 @@ impl Tree {
                         (cfg.use_policy, &cfg.tnet, pc.base)
                     {
                         // one forward pass: the leaf value and the new node's own priors
-                        let x = Input::new(state, &pc.context(base), false, crate::bsearch::evaluate_checked(state));
+                        let x = Input::new(
+                            state,
+                            &pc.context(base),
+                            false,
+                            crate::bsearch::evaluate_checked(state),
+                        );
                         let out = tnet.forward(&x);
-                        self.nodes[child as usize].logits1 = Some(Box::new((out.logits, state.side_one.active_index)));
+                        self.nodes[child as usize].logits1 =
+                            Some(Box::new((out.logits, state.side_one.active_index)));
                         let ml = out.turns.map(|t| pc.mains as f32 + t);
                         (1.0 / (1.0 + (-out.value).exp()), ml)
                     } else {
@@ -1038,7 +1101,13 @@ impl Default for Tree {
 
 /// The root's priors from the network in every world (`RootPriors`: ours their mean, the
 /// opponent's each world's own) and its noise; nothing without the network's policy.
-fn root_priors_over_worlds(tree: &mut Tree, worlds: &[State], ctxs: &[Context], cfg: &Config, rng: &mut StdRng) {
+fn root_priors_over_worlds(
+    tree: &mut Tree,
+    worlds: &[State],
+    ctxs: &[Context],
+    cfg: &Config,
+    rng: &mut StdRng,
+) {
     let Some(tnet) = cfg.tnet.as_ref().filter(|_| cfg.use_policy) else {
         return;
     };
@@ -1049,10 +1118,14 @@ fn root_priors_over_worlds(tree: &mut Tree, worlds: &[State], ctxs: &[Context], 
     let mut rp = RootPriors::default();
     for (state, ctx) in worlds.iter().zip(ctxs) {
         let (o1, o2) = state.root_get_all_options();
-        let av1: Vec<(usize, MoveChoice)> =
-            o1.into_iter().map(|mc| (arm_index(&mut root.s1, label(&state.side_one, &mc)), mc)).collect();
-        let av2: Vec<(usize, MoveChoice)> =
-            o2.into_iter().map(|mc| (arm_index(&mut root.s2, label(&state.side_two, &mc)), mc)).collect();
+        let av1: Vec<(usize, MoveChoice)> = o1
+            .into_iter()
+            .map(|mc| (arm_index(&mut root.s1, label(&state.side_one, &mc)), mc))
+            .collect();
+        let av2: Vec<(usize, MoveChoice)> = o2
+            .into_iter()
+            .map(|mc| (arm_index(&mut root.s2, label(&state.side_two, &mc)), mc))
+            .collect();
         let lc = PathCtx::new(Some(ctx), state).context(ctx);
         let own = Input::new(state, &lc, false, crate::bsearch::evaluate_checked(state));
         let p1 = prior_probs(&av1, &tnet.forward(&own).logits);
@@ -1196,6 +1269,46 @@ pub fn their_choice(state: &State, l: Label) -> Option<MoveChoice> {
     o2.into_iter().find(|mc| label(&state.side_two, mc) == l)
 }
 
+/// The causality check of the search's tree (doc/state-diff.md plan B): the decision step a
+/// descent records for the joint action (`m1`, `m2`) in `state`, for each of its chance outcomes
+/// -- (probability, the step, main steps completed, a turn still open). The step is what the
+/// network reads below the root; scripts/check_tree_history.py compares it with the step the
+/// log gives (the replays' history).
+pub(crate) fn tree_step_outcomes(
+    state: &State,
+    m1: &MoveChoice,
+    m2: &MoveChoice,
+    branch: bool,
+) -> Vec<(f32, Step, i32, bool)> {
+    let base = Context {
+        reveal: [0; 12],
+        rating: [0, 0],
+        turn: 1,
+        history: Vec::new(),
+        full: false,
+        post: Vec::new(),
+    };
+    let mut st = state.clone();
+    let outcomes = generate_instructions_from_move_pair(&mut st, m1, m2, branch);
+    let total: f32 = outcomes.iter().map(|o| o.percentage.max(0.0)).sum();
+    let mut out = Vec::with_capacity(outcomes.len());
+    for o in &outcomes {
+        let mut path = PathCtx::new(Some(&base), &st);
+        path.push(&st, m1, m2);
+        st.apply_instructions(&o.instruction_list);
+        path.settle(&o.instruction_list, &st);
+        let step = path.steps.last().copied().unwrap_or_default();
+        out.push((
+            o.percentage.max(0.0) / total.max(1e-9),
+            step,
+            path.mains,
+            path.open,
+        ));
+        st.reverse_instructions(&o.instruction_list);
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1241,7 +1354,10 @@ mod tests {
     fn a_waiting_move_is_saved_by_an_instruction() {
         use poke_engine::choices::MOVES;
         let mut s = fixture();
-        for (side, id, speed) in [(&mut s.side_one, Choices::TACKLE, 1), (&mut s.side_two, Choices::UTURN, 999)] {
+        for (side, id, speed) in [
+            (&mut s.side_one, Choices::TACKLE, 1),
+            (&mut s.side_two, Choices::UTURN, 999),
+        ] {
             let a = side.get_active();
             a.speed = speed;
             a.moves[&PokemonMoveIndex::M0].id = id;
@@ -1252,15 +1368,31 @@ mod tests {
         let before = s.serialize();
         let m = MoveChoice::Move(PokemonMoveIndex::M0);
         let outcomes = generate_instructions_from_move_pair(&mut s, &m, &m, false);
-        assert_eq!(s.serialize(), before, "the generation left the state changed");
-        assert_eq!(s.side_one.switch_out_move_second_saved_move, Choices::NONE, "saved move leaked");
-        let pivots: Vec<_> = outcomes.iter().filter(|o| {
-            o.instruction_list.iter().any(|i| matches!(i, Instruction::ToggleSideTwoForceSwitch))
-        }).collect();
+        assert_eq!(
+            s.serialize(),
+            before,
+            "the generation left the state changed"
+        );
+        assert_eq!(
+            s.side_one.switch_out_move_second_saved_move,
+            Choices::NONE,
+            "saved move leaked"
+        );
+        let pivots: Vec<_> = outcomes
+            .iter()
+            .filter(|o| {
+                o.instruction_list
+                    .iter()
+                    .any(|i| matches!(i, Instruction::ToggleSideTwoForceSwitch))
+            })
+            .collect();
         assert!(!pivots.is_empty(), "U-turn switches side two out");
         for o in pivots {
             s.apply_instructions(&o.instruction_list);
-            assert_eq!(s.side_one.switch_out_move_second_saved_move, Choices::TACKLE);
+            assert_eq!(
+                s.side_one.switch_out_move_second_saved_move,
+                Choices::TACKLE
+            );
             let (o1, _) = s.get_all_options();
             assert!(!o1.is_empty());
             s.reverse_instructions(&o.instruction_list);
@@ -1268,9 +1400,24 @@ mod tests {
             assert_eq!(s.side_one.switch_out_move_second_saved_move, Choices::NONE);
         }
         // the follow-up (side two's replacement, our move after it): nothing saved after it
-        s.apply_instructions(&outcomes.iter().find(|o| o.instruction_list.iter().any(|i| matches!(i, Instruction::ToggleSideTwoForceSwitch))).unwrap().instruction_list.clone());
+        s.apply_instructions(
+            &outcomes
+                .iter()
+                .find(|o| {
+                    o.instruction_list
+                        .iter()
+                        .any(|i| matches!(i, Instruction::ToggleSideTwoForceSwitch))
+                })
+                .unwrap()
+                .instruction_list
+                .clone(),
+        );
         let (o1, o2) = s.get_all_options();
-        let sw = o2.iter().find(|c| matches!(c, MoveChoice::Switch(_))).unwrap().clone();
+        let sw = o2
+            .iter()
+            .find(|c| matches!(c, MoveChoice::Switch(_)))
+            .copied()
+            .unwrap();
         let follow = generate_instructions_from_move_pair(&mut s, &o1[0], &sw, false);
         for o in &follow {
             s.apply_instructions(&o.instruction_list);
@@ -1293,16 +1440,22 @@ mod tests {
         s.side_one.switch_out_move_second_saved_move = Choices::STONEAXE; // no mon of its has it
         s.side_two.side_conditions.sticky_web = 1;
         let a2 = s.side_two.active_index as usize;
-        let j = (0..6).find(|&j| j != a2 && s.side_two.pokemon.pkmn[j].hp > 0).unwrap();
+        let j = (0..6)
+            .find(|&j| j != a2 && s.side_two.pokemon.pkmn[j].hp > 0)
+            .unwrap();
         let p = &mut s.side_two.pokemon.pkmn[j];
         p.item = Items::EJECTPACK;
         p.types.0 = PokemonType::NORMAL; // grounded
         p.types.1 = PokemonType::TYPELESS;
         p.ability = poke_engine::engine::abilities::Abilities::NONE;
         let a1 = s.side_one.active_index as usize;
-        let k = (0..6).find(|&k| k != a1 && s.side_one.pokemon.pkmn[k].hp > 0).unwrap();
-        let (m1, m2) = (MoveChoice::Switch(PokemonIndex::deserialize(&k.to_string())),
-                        MoveChoice::Switch(PokemonIndex::deserialize(&j.to_string())));
+        let k = (0..6)
+            .find(|&k| k != a1 && s.side_one.pokemon.pkmn[k].hp > 0)
+            .unwrap();
+        let (m1, m2) = (
+            MoveChoice::Switch(PokemonIndex::deserialize(&k.to_string())),
+            MoveChoice::Switch(PokemonIndex::deserialize(&j.to_string())),
+        );
         let before = s.serialize();
         let outcomes = generate_instructions_from_move_pair(&mut s, &m1, &m2, false);
         assert_eq!(s.serialize(), before);
@@ -1332,13 +1485,21 @@ mod tests {
         let path = std::env::var("ALPHA_FUZZ_STATES").expect("ALPHA_FUZZ_STATES");
         let text = std::fs::read_to_string(path).unwrap();
         let mut rng = StdRng::seed_from_u64(0);
-        let (mut steps, mut leaks, mut empty, mut boosts, mut unreversed) = (0usize, 0usize, 0usize, 0usize, 0usize);
+        let (mut steps, mut leaks, mut empty, mut boosts, mut unreversed) =
+            (0usize, 0usize, 0usize, 0usize, 0usize);
         let in_range = |s: &State| {
             [&s.side_one, &s.side_two].iter().all(|sd| {
-                [sd.attack_boost, sd.defense_boost, sd.special_attack_boost, sd.special_defense_boost,
-                 sd.speed_boost, sd.accuracy_boost, sd.evasion_boost]
-                    .iter()
-                    .all(|b| (-6..=6).contains(b))
+                [
+                    sd.attack_boost,
+                    sd.defense_boost,
+                    sd.special_attack_boost,
+                    sd.special_defense_boost,
+                    sd.speed_boost,
+                    sd.accuracy_boost,
+                    sd.evasion_boost,
+                ]
+                .iter()
+                .all(|b| (-6..=6).contains(b))
             })
         };
         for line in text.lines().filter(|l| !l.is_empty()) {
@@ -1355,14 +1516,20 @@ mod tests {
                     }
                     break;
                 }
-                let (m1, m2) = (o1[rng.gen_range(0..o1.len())].clone(), o2[rng.gen_range(0..o2.len())].clone());
+                let (m1, m2) = (
+                    o1[rng.random_range(0..o1.len())],
+                    o2[rng.random_range(0..o2.len())],
+                );
                 let before = s.serialize();
                 let outcomes = generate_instructions_from_move_pair(&mut s, &m1, &m2, false);
                 steps += 1;
                 if s.serialize() != before {
                     leaks += 1;
                     if leaks <= 3 {
-                        eprintln!("LEAK {m1:?} {m2:?}\nBEFORE {before}\nAFTER  {}", s.serialize());
+                        eprintln!(
+                            "LEAK {m1:?} {m2:?}\nBEFORE {before}\nAFTER  {}",
+                            s.serialize()
+                        );
                     }
                     s = State::deserialize(&before);
                 }
@@ -1371,7 +1538,10 @@ mod tests {
                     if !in_range(&s) {
                         boosts += 1;
                         if boosts <= 5 {
-                            eprintln!("BOOST {m1:?} {m2:?}\nBEFORE {before}\nINSTRUCTIONS {:?}", o.instruction_list);
+                            eprintln!(
+                                "BOOST {m1:?} {m2:?}\nBEFORE {before}\nINSTRUCTIONS {:?}",
+                                o.instruction_list
+                            );
                         }
                     }
                     s.reverse_instructions(&o.instruction_list);
@@ -1385,7 +1555,7 @@ mod tests {
                         s = State::deserialize(&before);
                     }
                 }
-                let k = rng.gen_range(0..outcomes.len());
+                let k = rng.random_range(0..outcomes.len());
                 s.apply_instructions(&outcomes[k].instruction_list);
             }
         }
@@ -1426,16 +1596,29 @@ mod tests {
                         for o in &outcomes {
                             s.apply_instructions(&o.instruction_list);
                             let out = [&s.side_one, &s.side_two].iter().any(|sd| {
-                                [sd.attack_boost, sd.defense_boost, sd.special_attack_boost, sd.special_defense_boost,
-                                 sd.speed_boost, sd.accuracy_boost, sd.evasion_boost]
-                                    .iter()
-                                    .any(|b| !(-6..=6).contains(b))
+                                [
+                                    sd.attack_boost,
+                                    sd.defense_boost,
+                                    sd.special_attack_boost,
+                                    sd.special_defense_boost,
+                                    sd.speed_boost,
+                                    sd.accuracy_boost,
+                                    sd.evasion_boost,
+                                ]
+                                .iter()
+                                .any(|b| !(-6..=6).contains(b))
                             });
                             if out {
                                 bad += 1;
                                 let key = format!("{m1:?} / {m2:?}");
                                 if seen.insert(key.clone()) && seen.len() <= 12 {
-                                    eprintln!("STAGE {v}: {key}\n  {:?}", o.instruction_list.iter().filter(|i| format!("{i:?}").contains("Boost")).collect::<Vec<_>>());
+                                    eprintln!(
+                                        "STAGE {v}: {key}\n  {:?}",
+                                        o.instruction_list
+                                            .iter()
+                                            .filter(|i| format!("{i:?}").contains("Boost"))
+                                            .collect::<Vec<_>>()
+                                    );
                                 }
                             }
                             s.reverse_instructions(&o.instruction_list);
@@ -1444,7 +1627,10 @@ mod tests {
                 }
             }
         }
-        eprintln!("move pairs {pairs}, outcomes past the stages' limits {bad} ({} kinds)", seen.len());
+        eprintln!(
+            "move pairs {pairs}, outcomes past the stages' limits {bad} ({} kinds)",
+            seen.len()
+        );
         assert_eq!(bad, 0);
     }
 
@@ -1455,13 +1641,137 @@ mod tests {
     fn stage_changes_stay_within_the_limits() {
         use poke_engine::choices::Choices;
         use poke_engine::engine::abilities::Abilities;
-        let base = State::deserialize(include_str!("../../../tests/fixtures/engine_state_6v6.txt").lines().next().unwrap());
+        let base = State::deserialize(
+            include_str!("../../../tests/fixtures/engine_state_6v6.txt")
+                .lines()
+                .next()
+                .unwrap(),
+        );
         let mut bad = vec![];
-        let abilities = [Abilities::CONTRARY, Abilities::SIMPLE, Abilities::NONE, Abilities::DEFIANT, Abilities::COMPETITIVE, Abilities::MOODY, Abilities::SPEEDBOOST, Abilities::ANGERPOINT, Abilities::BERSERK, Abilities::WEAKARMOR, Abilities::STAMINA, Abilities::MOXIE, Abilities::BEASTBOOST, Abilities::JUSTIFIED, Abilities::RATTLED, Abilities::STEAMENGINE, Abilities::WATERCOMPACTION, Abilities::MIRRORARMOR, Abilities::OPPORTUNIST, Abilities::GUARDDOG];
-        let moves = [Choices::LEAFSTORM, Choices::DRACOMETEOR, Choices::OVERHEAT, Choices::CLOSECOMBAT, Choices::SHELLSMASH, Choices::BELLYDRUM, Choices::SWORDSDANCE, Choices::NASTYPLOT, Choices::QUIVERDANCE, Choices::CURSE, Choices::SUPERPOWER, Choices::MAKEITRAIN, Choices::SPINOUT, Choices::FILLETAWAY, Choices::CLANGOROUSSOUL, Choices::ACUPRESSURE, Choices::GROWTH, Choices::TAILGLOW, Choices::GEOMANCY, Choices::SNARL, Choices::PARTINGSHOT, Choices::MEMENTO, Choices::CHARM, Choices::SCREECH, Choices::METALSOUND, Choices::FAKETEARS, Choices::FEATHERDANCE, Choices::TICKLE, Choices::NOBLEROAR, Choices::BABYDOLLEYES, Choices::PSYCHUP, Choices::SPECTRALTHIEF, Choices::POWERTRIP, Choices::STOREDPOWER, Choices::TOPSYTURVY, Choices::HAZE, Choices::DEFOG, Choices::SCALESHOT, Choices::TRIPLEARROWS, Choices::ROCKSMASH, Choices::FLAMECHARGE, Choices::TRAILBLAZE, Choices::TORCHSONG, Choices::POWERUPPUNCH, Choices::DIAMONDSTORM, Choices::METEORMASH, Choices::ARMORCANNON, Choices::HEADLONGRUSH, Choices::VCREATE, Choices::HAMMERARM, Choices::ICEHAMMER, Choices::LUNGE, Choices::TROPKICK, Choices::SPIRITBREAK, Choices::MYSTICALFIRE, Choices::STRUGGLEBUG, Choices::ELECTROWEB, Choices::ICYWIND, Choices::BULLDOZE, Choices::ROCKTOMB, Choices::SKITTERSMACK, Choices::BITTERMALICE, Choices::CHILLINGWATER, Choices::POUNCE, Choices::FIRELASH, Choices::THUNDEROUSKICK, Choices::GRAVAPPLE, Choices::BREAKINGSWIPE, Choices::CRUNCH, Choices::SHADOWBALL, Choices::MOONBLAST, Choices::ENERGYBALL, Choices::FOCUSBLAST, Choices::EARTHPOWER, Choices::PSYCHIC, Choices::IRONTAIL, Choices::BUGBUZZ, Choices::LIQUIDATION];
-        let names = |s: &State| [&s.side_one, &s.side_two].map(|sd| [sd.attack_boost, sd.defense_boost, sd.special_attack_boost, sd.special_defense_boost, sd.speed_boost, sd.accuracy_boost, sd.evasion_boost]);
+        let abilities = [
+            Abilities::CONTRARY,
+            Abilities::SIMPLE,
+            Abilities::NONE,
+            Abilities::DEFIANT,
+            Abilities::COMPETITIVE,
+            Abilities::MOODY,
+            Abilities::SPEEDBOOST,
+            Abilities::ANGERPOINT,
+            Abilities::BERSERK,
+            Abilities::WEAKARMOR,
+            Abilities::STAMINA,
+            Abilities::MOXIE,
+            Abilities::BEASTBOOST,
+            Abilities::JUSTIFIED,
+            Abilities::RATTLED,
+            Abilities::STEAMENGINE,
+            Abilities::WATERCOMPACTION,
+            Abilities::MIRRORARMOR,
+            Abilities::OPPORTUNIST,
+            Abilities::GUARDDOG,
+        ];
+        let moves = [
+            Choices::LEAFSTORM,
+            Choices::DRACOMETEOR,
+            Choices::OVERHEAT,
+            Choices::CLOSECOMBAT,
+            Choices::SHELLSMASH,
+            Choices::BELLYDRUM,
+            Choices::SWORDSDANCE,
+            Choices::NASTYPLOT,
+            Choices::QUIVERDANCE,
+            Choices::CURSE,
+            Choices::SUPERPOWER,
+            Choices::MAKEITRAIN,
+            Choices::SPINOUT,
+            Choices::FILLETAWAY,
+            Choices::CLANGOROUSSOUL,
+            Choices::ACUPRESSURE,
+            Choices::GROWTH,
+            Choices::TAILGLOW,
+            Choices::GEOMANCY,
+            Choices::SNARL,
+            Choices::PARTINGSHOT,
+            Choices::MEMENTO,
+            Choices::CHARM,
+            Choices::SCREECH,
+            Choices::METALSOUND,
+            Choices::FAKETEARS,
+            Choices::FEATHERDANCE,
+            Choices::TICKLE,
+            Choices::NOBLEROAR,
+            Choices::BABYDOLLEYES,
+            Choices::PSYCHUP,
+            Choices::SPECTRALTHIEF,
+            Choices::POWERTRIP,
+            Choices::STOREDPOWER,
+            Choices::TOPSYTURVY,
+            Choices::HAZE,
+            Choices::DEFOG,
+            Choices::SCALESHOT,
+            Choices::TRIPLEARROWS,
+            Choices::ROCKSMASH,
+            Choices::FLAMECHARGE,
+            Choices::TRAILBLAZE,
+            Choices::TORCHSONG,
+            Choices::POWERUPPUNCH,
+            Choices::DIAMONDSTORM,
+            Choices::METEORMASH,
+            Choices::ARMORCANNON,
+            Choices::HEADLONGRUSH,
+            Choices::VCREATE,
+            Choices::HAMMERARM,
+            Choices::ICEHAMMER,
+            Choices::LUNGE,
+            Choices::TROPKICK,
+            Choices::SPIRITBREAK,
+            Choices::MYSTICALFIRE,
+            Choices::STRUGGLEBUG,
+            Choices::ELECTROWEB,
+            Choices::ICYWIND,
+            Choices::BULLDOZE,
+            Choices::ROCKTOMB,
+            Choices::SKITTERSMACK,
+            Choices::BITTERMALICE,
+            Choices::CHILLINGWATER,
+            Choices::POUNCE,
+            Choices::FIRELASH,
+            Choices::THUNDEROUSKICK,
+            Choices::GRAVAPPLE,
+            Choices::BREAKINGSWIPE,
+            Choices::CRUNCH,
+            Choices::SHADOWBALL,
+            Choices::MOONBLAST,
+            Choices::ENERGYBALL,
+            Choices::FOCUSBLAST,
+            Choices::EARTHPOWER,
+            Choices::PSYCHIC,
+            Choices::IRONTAIL,
+            Choices::BUGBUZZ,
+            Choices::LIQUIDATION,
+        ];
+        let names = |s: &State| {
+            [&s.side_one, &s.side_two].map(|sd| {
+                [
+                    sd.attack_boost,
+                    sd.defense_boost,
+                    sd.special_attack_boost,
+                    sd.special_defense_boost,
+                    sd.speed_boost,
+                    sd.accuracy_boost,
+                    sd.evasion_boost,
+                ]
+            })
+        };
         for &ab in &abilities {
-            for &ab2 in &[Abilities::NONE, Abilities::CONTRARY, Abilities::SIMPLE, Abilities::DEFIANT, Abilities::COMPETITIVE, Abilities::MIRRORARMOR] {
+            for &ab2 in &[
+                Abilities::NONE,
+                Abilities::CONTRARY,
+                Abilities::SIMPLE,
+                Abilities::DEFIANT,
+                Abilities::COMPETITIVE,
+                Abilities::MIRRORARMOR,
+            ] {
                 for v in [-6i8, -5, 5, 6] {
                     for &mv in &moves {
                         let mut s = base.clone();
@@ -1483,14 +1793,22 @@ mod tests {
                         slot.disabled = false;
                         slot.pp = 8;
                         let (o1, o2) = s.get_all_options();
-                        let m1 = o1.iter().find(|m| matches!(m, MoveChoice::Move(PokemonMoveIndex::M0))).cloned();
+                        let m1 = o1
+                            .iter()
+                            .find(|m| matches!(m, MoveChoice::Move(PokemonMoveIndex::M0)))
+                            .cloned();
                         let Some(m1) = m1 else { continue };
                         for m2 in o2.iter().take(3) {
                             let outs = generate_instructions_from_move_pair(&mut s, &m1, m2, false);
                             for o in &outs {
                                 s.apply_instructions(&o.instruction_list);
-                                if names(&s).iter().flatten().any(|b| !(-6..=6).contains(b)) && bad.len() < 20 {
-                                    bad.push(format!("{ab:?} vs {ab2:?} at {v}: {mv:?} / {m2:?} -> {:?}", names(&s)));
+                                if names(&s).iter().flatten().any(|b| !(-6..=6).contains(b))
+                                    && bad.len() < 20
+                                {
+                                    bad.push(format!(
+                                        "{ab:?} vs {ab2:?} at {v}: {mv:?} / {m2:?} -> {:?}",
+                                        names(&s)
+                                    ));
                                 }
                                 s.reverse_instructions(&o.instruction_list);
                             }
@@ -1530,7 +1848,7 @@ mod tests {
         let theirs = 6 + state.side_two.active_index as usize;
         assert_eq!(ctx.reveal[theirs] & (1 << 4), 0, "Ice Beam revealed");
         assert_ne!(
-            ctx.reveal[0 + state.side_one.active_index as usize] & (1 << 4),
+            ctx.reveal[state.side_one.active_index as usize] & (1 << 4),
             0
         );
         // (2026-10-22 review: the replacement is chosen in the same turn -- the next only after it)
@@ -1551,7 +1869,13 @@ mod tests {
     /// every node below one turn behind)
     #[test]
     fn a_forced_root_ends_its_turn() {
-        let base = Context { reveal: [0; 12], rating: [0, 0], turn: 10, history: vec![], ..Default::default() };
+        let base = Context {
+            reveal: [0; 12],
+            rating: [0, 0],
+            turn: 10,
+            history: vec![],
+            ..Default::default()
+        };
         let m = MoveChoice::Move(PokemonMoveIndex::M0);
         // the faint's replacement
         let mut state = ko_first();
@@ -1578,7 +1902,11 @@ mod tests {
         // a U-turn's switch-in, the foe's move saved
         let mut state = ko_first();
         state.side_one.get_active().moves[&PokemonMoveIndex::M0].id = Choices::UTURN;
-        state.side_one.get_active().moves[&PokemonMoveIndex::M0].choice = poke_engine::choices::MOVES.get(&Choices::UTURN).unwrap().clone();
+        state.side_one.get_active().moves[&PokemonMoveIndex::M0].choice =
+            poke_engine::choices::MOVES
+                .get(&Choices::UTURN)
+                .unwrap()
+                .clone();
         let foe = state.side_two.get_active();
         (foe.hp, foe.maxhp) = (400, 400);
         let outcomes = generate_instructions_from_move_pair(&mut state, &m, &m, false);
@@ -1598,13 +1926,26 @@ mod tests {
     /// and its move is unrevealed; the switch's step has the move
     #[test]
     fn a_move_after_our_pivot_is_the_switch_steps() {
-        let base = Context { reveal: [0; 12], rating: [0, 0], turn: 10, history: vec![], ..Default::default() };
+        let base = Context {
+            reveal: [0; 12],
+            rating: [0, 0],
+            turn: 10,
+            history: vec![],
+            ..Default::default()
+        };
         let mut state = ko_first();
         state.side_one.get_active().moves[&PokemonMoveIndex::M0].id = Choices::UTURN;
-        state.side_one.get_active().moves[&PokemonMoveIndex::M0].choice = poke_engine::choices::MOVES.get(&Choices::UTURN).unwrap().clone();
+        state.side_one.get_active().moves[&PokemonMoveIndex::M0].choice =
+            poke_engine::choices::MOVES
+                .get(&Choices::UTURN)
+                .unwrap()
+                .clone();
         let foe = state.side_two.get_active();
         (foe.hp, foe.maxhp) = (400, 400);
-        foe.moves[&PokemonMoveIndex::M0].choice = poke_engine::choices::MOVES.get(&Choices::ICEBEAM).unwrap().clone();
+        foe.moves[&PokemonMoveIndex::M0].choice = poke_engine::choices::MOVES
+            .get(&Choices::ICEBEAM)
+            .unwrap()
+            .clone();
         let mut pc = PathCtx::new(Some(&base), &state);
         let m = MoveChoice::Move(PokemonMoveIndex::M0);
         pc.push(&state, &m, &m);
@@ -1612,14 +1953,25 @@ mod tests {
         state.apply_instructions(&outcomes[0].instruction_list);
         pc.settle(&outcomes[0].instruction_list, &state);
         assert!(state.side_one.force_switch);
-        assert_ne!(state.side_two.switch_out_move_second_saved_move, Choices::NONE, "its move saved");
+        assert_ne!(
+            state.side_two.switch_out_move_second_saved_move,
+            Choices::NONE,
+            "its move saved"
+        );
         let ctx = pc.context(&base);
         let step = *ctx.history.last().unwrap();
         assert_eq!(step.one.kind, 1, "our U-turn");
         assert_eq!(step.two, Act::default(), "the foe's move not yet: {step:?}");
         let theirs = 6 + state.side_two.active_index as usize;
-        assert_eq!(ctx.reveal[theirs] & (1 << 4), 0, "its move revealed before it came");
-        assert_eq!(ctx.turn, 10, "the pivot's switch-in: still the turn it started");
+        assert_eq!(
+            ctx.reveal[theirs] & (1 << 4),
+            0,
+            "its move revealed before it came"
+        );
+        assert_eq!(
+            ctx.turn, 10,
+            "the pivot's switch-in: still the turn it started"
+        );
         // the switch's step: our switch-in, then the foe's saved move
         let (o1, o2) = state.get_all_options();
         assert!(matches!(o2[..], [MoveChoice::Move(_)]), "{o2:?}");
@@ -1641,19 +1993,41 @@ mod tests {
         let mut s = fixture();
         for side in [&mut s.side_one, &mut s.side_two] {
             let a = side.active_index;
-            for p in [PokemonIndex::P0, PokemonIndex::P1, PokemonIndex::P2, PokemonIndex::P3, PokemonIndex::P4, PokemonIndex::P5] {
+            for p in [
+                PokemonIndex::P0,
+                PokemonIndex::P1,
+                PokemonIndex::P2,
+                PokemonIndex::P3,
+                PokemonIndex::P4,
+                PokemonIndex::P5,
+            ] {
                 if p != a {
                     side.pokemon[p].hp = 0;
                 }
             }
-            for k in [PokemonMoveIndex::M0, PokemonMoveIndex::M1, PokemonMoveIndex::M2, PokemonMoveIndex::M3] {
+            for k in [
+                PokemonMoveIndex::M0,
+                PokemonMoveIndex::M1,
+                PokemonMoveIndex::M2,
+                PokemonMoveIndex::M3,
+            ] {
                 side.get_active().moves[&k].pp = 0;
             }
         }
         let (o1, o2) = s.get_all_options();
-        assert_eq!((o1.clone(), o2.clone()), (vec![MoveChoice::None], vec![MoveChoice::None]));
+        assert_eq!(
+            (o1.clone(), o2.clone()),
+            (vec![MoveChoice::None], vec![MoveChoice::None])
+        );
         assert!(someone_struggles(&s));
-        let res = search(&mut vec![s], &[], Duration::ZERO, 32, &Config::default(), Some(1));
+        let res = search(
+            &mut [s],
+            &[],
+            Duration::ZERO,
+            32,
+            &Config::default(),
+            Some(1),
+        );
         assert!(res.nodes > 1, "the search stayed at the root");
         assert!(res.s1.iter().map(|x| x.1).sum::<u32>() > 0);
     }
@@ -1663,11 +2037,19 @@ mod tests {
     #[test]
     fn struggle_has_move_slot_0_and_is_a_move_in_the_history() {
         let mut s = fixture();
-        for k in [PokemonMoveIndex::M0, PokemonMoveIndex::M1, PokemonMoveIndex::M2, PokemonMoveIndex::M3] {
+        for k in [
+            PokemonMoveIndex::M0,
+            PokemonMoveIndex::M1,
+            PokemonMoveIndex::M2,
+            PokemonMoveIndex::M3,
+        ] {
             s.side_one.get_active().moves[&k].pp = 0;
         }
         let (o1, _) = s.get_all_options();
-        assert!(o1.contains(&MoveChoice::None) && o1.iter().any(|m| matches!(m, MoveChoice::Switch(_))), "{o1:?}");
+        assert!(
+            o1.contains(&MoveChoice::None) && o1.iter().any(|m| matches!(m, MoveChoice::Switch(_))),
+            "{o1:?}"
+        );
         assert!(crate::features::struggles(&s, SideReference::SideOne));
         let mask = crate::features::legal_mask(&s);
         assert_eq!(mask[0], 1);
@@ -1676,13 +2058,26 @@ mod tests {
         let p = prior_probs(&avail, &[0.0; crate::features::N_ACTIONS]);
         let none = o1.iter().position(|m| *m == MoveChoice::None).unwrap();
         assert!((p[none] - 1.0 / o1.len() as f32).abs() < 1e-6, "{p:?}");
-        let base = Context { reveal: [0; 12], rating: [0, 0], turn: 10, history: vec![], ..Default::default() };
+        let base = Context {
+            reveal: [0; 12],
+            rating: [0, 0],
+            turn: 10,
+            history: vec![],
+            ..Default::default()
+        };
         let mut pc = PathCtx::new(Some(&base), &s);
-        pc.push(&s, &MoveChoice::None, &MoveChoice::Move(PokemonMoveIndex::M0));
+        pc.push(
+            &s,
+            &MoveChoice::None,
+            &MoveChoice::Move(PokemonMoveIndex::M0),
+        );
         let me = s.side_one.get_active_immutable().id;
-        let want = Act::parse(&format!("m:{}:STRUGGLE", format!("{me:?}")));
+        let want = Act::parse(&format!("m:{me:?}:STRUGGLE"));
         let got = pc.steps[0].one;
-        assert_eq!((got.kind, got.actor, got.target), (want.kind, want.actor, want.target));
+        assert_eq!(
+            (got.kind, got.actor, got.target),
+            (want.kind, want.actor, want.target)
+        );
         assert_eq!(want.target, Choices::STRUGGLE as i32);
     }
 
@@ -1691,27 +2086,54 @@ mod tests {
     /// once it comes, the Struggle
     #[test]
     fn a_struggle_not_come_yet_is_no_action() {
-        let base = Context { reveal: [0; 12], rating: [0, 0], turn: 10, history: vec![], ..Default::default() };
+        let base = Context {
+            reveal: [0; 12],
+            rating: [0, 0],
+            turn: 10,
+            history: vec![],
+            ..Default::default()
+        };
         let mut state = ko_first();
         state.side_one.get_active().moves[&PokemonMoveIndex::M0].id = Choices::UTURN;
-        state.side_one.get_active().moves[&PokemonMoveIndex::M0].choice = poke_engine::choices::MOVES.get(&Choices::UTURN).unwrap().clone();
+        state.side_one.get_active().moves[&PokemonMoveIndex::M0].choice =
+            poke_engine::choices::MOVES
+                .get(&Choices::UTURN)
+                .unwrap()
+                .clone();
         let foe = state.side_two.get_active();
         (foe.hp, foe.maxhp) = (400, 400);
-        for k in [PokemonMoveIndex::M0, PokemonMoveIndex::M1, PokemonMoveIndex::M2, PokemonMoveIndex::M3] {
+        for k in [
+            PokemonMoveIndex::M0,
+            PokemonMoveIndex::M1,
+            PokemonMoveIndex::M2,
+            PokemonMoveIndex::M3,
+        ] {
             state.side_two.get_active().moves[&k].pp = 0;
         }
         assert!(crate::features::struggles(&state, SideReference::SideTwo));
         let mut pc = PathCtx::new(Some(&base), &state);
         let m = MoveChoice::Move(PokemonMoveIndex::M0);
         pc.push(&state, &m, &MoveChoice::None);
-        let outcomes = generate_instructions_from_move_pair(&mut state, &m, &MoveChoice::None, false);
+        let outcomes =
+            generate_instructions_from_move_pair(&mut state, &m, &MoveChoice::None, false);
         state.apply_instructions(&outcomes[0].instruction_list);
         pc.settle(&outcomes[0].instruction_list, &state);
         assert!(state.side_one.force_switch);
-        assert_eq!(state.side_two.switch_out_move_second_saved_move, Choices::STRUGGLE);
+        assert_eq!(
+            state.side_two.switch_out_move_second_saved_move,
+            Choices::STRUGGLE
+        );
         let ctx = pc.context(&base);
-        assert_eq!(ctx.history.last().unwrap().two, Act::default(), "the Struggle has not come yet");
-        assert_eq!(ctx.reveal[6 + state.side_two.active_index as usize] & 0xf0, 0, "a move revealed");
+        assert_eq!(
+            ctx.history.last().unwrap().two,
+            Act::default(),
+            "the Struggle has not come yet"
+        );
+        assert_eq!(
+            ctx.reveal[6 + state.side_two.active_index as usize] & 0xf0,
+            0,
+            "a move revealed"
+        );
         // our switch-in, then its Struggle
         let (o1, o2) = state.get_all_options();
         pc.push(&state, &o1[0], &o2[0]);
@@ -1719,7 +2141,11 @@ mod tests {
         state.apply_instructions(&outcomes[0].instruction_list);
         pc.settle(&outcomes[0].instruction_list, &state);
         let two = pc.context(&base).history.last().unwrap().two;
-        assert_eq!((two.kind, two.target), (1, Choices::STRUGGLE as i32), "{two:?}");
+        assert_eq!(
+            (two.kind, two.target),
+            (1, Choices::STRUGGLE as i32),
+            "{two:?}"
+        );
     }
 
     #[test]
@@ -1780,7 +2206,10 @@ mod tests {
         recharge.side_two.get_active().hp = 300;
         recharge.side_one.volatile_statuses.insert(V::MUSTRECHARGE);
         for (_, step, _, _) in tree_step_outcomes(&recharge, &MoveChoice::None, &m, true) {
-            assert!(step.one.kind == 0 && step.one.prevented, "recharge: {step:?}");
+            assert!(
+                step.one.kind == 0 && step.one.prevented,
+                "recharge: {step:?}"
+            );
         }
         let mut wish = ko_first();
         wish.side_one.get_active().moves[&PokemonMoveIndex::M0].id = Choices::HEALINGWISH;
@@ -1789,7 +2218,9 @@ mod tests {
         for (_, step, _, _) in tree_step_outcomes(&wish, &m, &m, true) {
             assert!(step.one.kind == 1, "{step:?}");
             assert!(
-                step.two.kind == 1 && step.two.target == Choices::TACKLE as i32 && !step.two.prevented,
+                step.two.kind == 1
+                    && step.two.target == Choices::TACKLE as i32
+                    && !step.two.prevented,
                 "no target: {step:?}"
             );
         }
@@ -1799,9 +2230,9 @@ mod tests {
     /// target moves -- that slot read as the move it used (Brave Bird for its Roost)
     #[test]
     fn a_foes_eerie_spell_is_not_the_targets_move() {
+        use poke_engine::choices::MOVES;
         use poke_engine::engine::abilities::Abilities;
         use poke_engine::engine::items::Items;
-        use poke_engine::choices::MOVES;
         use poke_engine::state::{LastUsedMove, Pokemon, PokemonType};
         // (a move's choice data with its id: the engine reads the choice)
         fn set(p: &mut Pokemon, i: PokemonMoveIndex, id: Choices) {
@@ -1826,7 +2257,11 @@ mod tests {
                     && d.move_index == PokemonMoveIndex::M1)
             })
         });
-        assert!(took, "the Eerie Spell takes Brave Bird's PP: {:?}", outcomes[0].instruction_list);
+        assert!(
+            took,
+            "the Eerie Spell takes Brave Bird's PP: {:?}",
+            outcomes[0].instruction_list
+        );
         for (_, step, _, _) in tree_step_outcomes(&s, &m, &m, true) {
             if step.one.kind == 1 {
                 assert!(step.one.target == Choices::ROOST as i32, "{step:?}");
@@ -1997,29 +2432,54 @@ mod tests {
     fn root_priors_of(
         worlds: &[(&[Choices], &[f32])],
         eps: f32,
-    ) -> (Vec<(Label, f32)>, Vec<(Label, f32)>, Vec<Vec<(Label, f32)>>, Tree) {
+    ) -> (
+        Vec<(Label, f32)>,
+        Vec<(Label, f32)>,
+        Vec<Vec<(Label, f32)>>,
+        Tree,
+    ) {
         let mut tree = Tree::new();
         let mut rp = RootPriors::default();
         let ours = [Choices::TACKLE, Choices::PROTECT, Choices::SWORDSDANCE];
         for (opp, probs) in worlds {
             let root = &mut tree.nodes[0];
-            let av1: Vec<(usize, MoveChoice)> =
-                ours.iter().map(|&m| (arm_index(&mut root.s1, Label::Move(m)), MoveChoice::None)).collect();
-            let av2: Vec<(usize, MoveChoice)> =
-                opp.iter().map(|&m| (arm_index(&mut root.s2, Label::Move(m)), MoveChoice::None)).collect();
+            let av1: Vec<(usize, MoveChoice)> = ours
+                .iter()
+                .map(|&m| (arm_index(&mut root.s1, Label::Move(m)), MoveChoice::None))
+                .collect();
+            let av2: Vec<(usize, MoveChoice)> = opp
+                .iter()
+                .map(|&m| (arm_index(&mut root.s2, Label::Move(m)), MoveChoice::None))
+                .collect();
             rp.add(&av1, &[0.6, 0.3, 0.1], &av2, Some(probs));
         }
-        let cfg = Config { root_noise_eps: eps, ..Config::default() };
+        let cfg = Config {
+            root_noise_eps: eps,
+            ..Config::default()
+        };
         let mut rng = StdRng::seed_from_u64(11);
-        let Tree { nodes, root_opp, .. } = &mut tree;
+        let Tree {
+            nodes, root_opp, ..
+        } = &mut tree;
         rp.finish(&mut nodes[0], root_opp, &cfg, &mut rng);
         let by_label = |arms: &[Arm]| arms.iter().map(|a| (a.label, a.prior)).collect::<Vec<_>>();
         let per_world = tree
             .root_opp
             .iter()
-            .map(|v| v.iter().enumerate().filter(|(_, p)| **p >= 0.0).map(|(i, p)| (tree.nodes[0].s2[i].label, *p)).collect())
+            .map(|v| {
+                v.iter()
+                    .enumerate()
+                    .filter(|(_, p)| **p >= 0.0)
+                    .map(|(i, p)| (tree.nodes[0].s2[i].label, *p))
+                    .collect()
+            })
             .collect();
-        (by_label(&tree.nodes[0].s1), by_label(&tree.nodes[0].s2), per_world, tree)
+        (
+            by_label(&tree.nodes[0].s1),
+            by_label(&tree.nodes[0].s2),
+            per_world,
+            tree,
+        )
     }
 
     fn sorted(mut v: Vec<(Label, f32)>) -> Vec<(String, f32)> {
@@ -2034,28 +2494,56 @@ mod tests {
     fn root_priors_condition_the_opponent_on_its_world() {
         let (x, y, z) = (Choices::ICEBEAM, Choices::EARTHQUAKE, Choices::THUNDERBOLT);
         let half = [0.5f32, 0.5];
-        let (ours, opp, per_world, tree) = root_priors_of(&[(&[x, y], &half), (&[y, z], &half)], 0.0);
-        assert_eq!(sorted(ours).iter().map(|x| x.1).collect::<Vec<_>>().len(), 3);
+        let (ours, opp, per_world, tree) =
+            root_priors_of(&[(&[x, y], &half), (&[y, z], &half)], 0.0);
+        assert_eq!(
+            sorted(ours).iter().map(|x| x.1).collect::<Vec<_>>().len(),
+            3
+        );
         // the arms' priors (record, fallback): the mean over the worlds that have the arm
         for (_, p) in &opp {
             assert!((p - 0.5).abs() < 1e-6, "{opp:?}");
         }
-        assert_eq!(sorted(per_world[0].clone()), sorted(vec![(Label::Move(x), 0.5), (Label::Move(y), 0.5)]));
-        assert_eq!(sorted(per_world[1].clone()), sorted(vec![(Label::Move(y), 0.5), (Label::Move(z), 0.5)]));
+        assert_eq!(
+            sorted(per_world[0].clone()),
+            sorted(vec![(Label::Move(x), 0.5), (Label::Move(y), 0.5)])
+        );
+        assert_eq!(
+            sorted(per_world[1].clone()),
+            sorted(vec![(Label::Move(y), 0.5), (Label::Move(z), 0.5)])
+        );
         // the root's selection in world A: X and Y even (the first selection: prior only)
         let root = &tree.nodes[0];
-        let ix = root.s2.iter().position(|a| a.label == Label::Move(x)).unwrap();
-        let iy = root.s2.iter().position(|a| a.label == Label::Move(y)).unwrap();
+        let ix = root
+            .s2
+            .iter()
+            .position(|a| a.label == Label::Move(x))
+            .unwrap();
+        let iy = root
+            .s2
+            .iter()
+            .position(|a| a.label == Label::Move(y))
+            .unwrap();
         let av: Vec<(usize, MoveChoice)> = vec![(ix, MoveChoice::None), (iy, MoveChoice::None)];
         let mut arms = root.s2.clone();
-        let (mut nx, mut ny) = (0, 0);
+        let (mut nx, mut ny) = (0i32, 0i32);
         for _ in 0..1000 {
-            let (i, _) = select_puct_with(&arms, &av, 1.0, &MlParams::default(), Some(&tree.root_opp[0]));
+            let (i, _) = select_puct_with(
+                &arms,
+                &av,
+                1.0,
+                &MlParams::default(),
+                Some(&tree.root_opp[0]),
+            );
             arms[i].visits += 1;
             arms[i].total += 0.5;
-            if i == ix { nx += 1 } else { ny += 1 }
+            if i == ix {
+                nx += 1
+            } else {
+                ny += 1
+            }
         }
-        assert!((nx as i32 - ny as i32).abs() <= 1, "{nx} {ny}");
+        assert!((nx - ny).abs() <= 1, "{nx} {ny}");
     }
 
     /// Root noise: one draw over all the root's arms in label order -- every option gets noise,
@@ -2063,19 +2551,34 @@ mod tests {
     #[test]
     fn root_noise_is_the_same_for_any_order_of_the_worlds() {
         let (x, y, z) = (Choices::ICEBEAM, Choices::EARTHQUAKE, Choices::THUNDERBOLT);
-        let (a, b) = ((&[x, y][..], &[0.7f32, 0.3][..]), (&[y, z][..], &[0.4f32, 0.6][..]));
+        let (a, b) = (
+            (&[x, y][..], &[0.7f32, 0.3][..]),
+            (&[y, z][..], &[0.4f32, 0.6][..]),
+        );
         let (o1, p1, w1, _) = root_priors_of(&[a, b], 0.1);
         let (o2, p2, w2, _) = root_priors_of(&[b, a], 0.1);
         let close = |u: Vec<(String, f32)>, v: Vec<(String, f32)>| {
-            u.len() == v.len() && u.iter().zip(&v).all(|(s, t)| s.0 == t.0 && (s.1 - t.1).abs() < 1e-6)
+            u.len() == v.len()
+                && u.iter()
+                    .zip(&v)
+                    .all(|(s, t)| s.0 == t.0 && (s.1 - t.1).abs() < 1e-6)
         };
         assert!(close(sorted(o1.clone()), sorted(o2)), "ours");
         assert!(close(sorted(p1), sorted(p2)), "the opponent's arms");
-        assert!(close(sorted(w1[0].clone()), sorted(w2[1].clone())), "world A");
-        assert!(close(sorted(w1[1].clone()), sorted(w2[0].clone())), "world B");
+        assert!(
+            close(sorted(w1[0].clone()), sorted(w2[1].clone())),
+            "world A"
+        );
+        assert!(
+            close(sorted(w1[1].clone()), sorted(w2[0].clone())),
+            "world B"
+        );
         // every option got noise (with it, not the plain priors)
         let (o0, _, w0, _) = root_priors_of(&[a, b], 0.0);
-        assert!(sorted(o1).iter().zip(sorted(o0)).all(|(s, t)| (s.1 - t.1).abs() > 1e-6));
+        assert!(sorted(o1)
+            .iter()
+            .zip(sorted(o0))
+            .all(|(s, t)| (s.1 - t.1).abs() > 1e-6));
         for (s, t) in sorted(w1[1].clone()).iter().zip(sorted(w0[1].clone())) {
             assert!((s.1 - t.1).abs() > 1e-6, "world B's {} kept its prior", s.0);
         }
@@ -2089,7 +2592,9 @@ mod tests {
         let s = fixture();
         let (o1, _) = s.get_all_options();
         let avail: Vec<(usize, MoveChoice)> = o1.into_iter().enumerate().collect();
-        assert!(avail.iter().any(|(_, mc)| matches!(mc, MoveChoice::Move(_))));
+        assert!(avail
+            .iter()
+            .any(|(_, mc)| matches!(mc, MoveChoice::Move(_))));
         let active = s.side_one.active_index;
         let n = crate::features::N_ACTIONS;
         let all = [0.5f32; crate::features::N_ACTIONS];
@@ -2098,11 +2603,18 @@ mod tests {
         let mut forced = [f32::NEG_INFINITY; crate::features::N_ACTIONS];
         forced[8..n].fill(0.5);
         assert!(!cached_logits_fit(&(forced, active), &s, &avail));
-        let switches: Vec<(usize, MoveChoice)> =
-            avail.iter().copied().filter(|(_, mc)| matches!(mc, MoveChoice::Switch(_))).collect();
+        let switches: Vec<(usize, MoveChoice)> = avail
+            .iter()
+            .copied()
+            .filter(|(_, mc)| matches!(mc, MoveChoice::Switch(_)))
+            .collect();
         assert!(cached_logits_fit(&(forced, active), &s, &switches));
         // created with another active
-        let other = if active == PokemonIndex::P0 { PokemonIndex::P1 } else { PokemonIndex::P0 };
+        let other = if active == PokemonIndex::P0 {
+            PokemonIndex::P1
+        } else {
+            PokemonIndex::P0
+        };
         assert!(!cached_logits_fit(&(all, other), &s, &avail));
     }
 
@@ -2121,9 +2633,10 @@ mod tests {
             .iter()
             .flat_map(|o| o.instruction_list.iter())
             .filter_map(|i| match i {
-                Instruction::Damage(DamageInstruction { side_ref: SideReference::SideTwo, damage_amount }) => {
-                    Some(*damage_amount)
-                }
+                Instruction::Damage(DamageInstruction {
+                    side_ref: SideReference::SideTwo,
+                    damage_amount,
+                }) => Some(*damage_amount),
                 _ => None,
             })
             .collect();
@@ -2131,7 +2644,10 @@ mod tests {
         assert!(dmg[0] < dmg[dmg.len() - 1], "{dmg:?}");
         s.side_two.get_active().hp = dmg[dmg.len() / 2];
         for phase_key in [false, true] {
-            let cfg = Config { phase_key, ..Config::default() };
+            let cfg = Config {
+                phase_key,
+                ..Config::default()
+            };
             let mut tree = Tree::new();
             let mut rng = StdRng::seed_from_u64(5);
             let ev = evaluate(&s);
@@ -2139,9 +2655,19 @@ mod tests {
                 tree.iterate(&mut s, 0, ev, &cfg, None, &mut rng);
             }
             let n = &tree.nodes[0];
-            let i1 = n.s1.iter().position(|a| a.label == Label::Move(Choices::TACKLE)).unwrap() as u16;
-            let i2 = n.s2.iter().position(|a| a.label == Label::Move(Choices::ICEBEAM)).unwrap() as u16;
-            let kids = tree.children.keys().filter(|k| (k.0, k.1, k.2) == (0, i1, i2)).count();
+            let i1 =
+                n.s1.iter()
+                    .position(|a| a.label == Label::Move(Choices::TACKLE))
+                    .unwrap() as u16;
+            let i2 =
+                n.s2.iter()
+                    .position(|a| a.label == Label::Move(Choices::ICEBEAM))
+                    .unwrap() as u16;
+            let kids = tree
+                .children
+                .keys()
+                .filter(|k| (k.0, k.1, k.2) == (0, i1, i2))
+                .count();
             assert_eq!(kids, if phase_key { 2 } else { 1 }, "phase_key {phase_key}");
         }
     }
@@ -2155,22 +2681,40 @@ mod tests {
     #[ignore]
     fn matrix_games() {
         let games: [(&str, Vec<Vec<f32>>, Vec<f32>, f32); 4] = [
-            ("matching pennies", vec![vec![1.0, 0.0], vec![0.0, 1.0]], vec![0.5, 0.5], 0.5),
+            (
+                "matching pennies",
+                vec![vec![1.0, 0.0], vec![0.0, 1.0]],
+                vec![0.5, 0.5],
+                0.5,
+            ),
             (
                 "rock paper scissors",
-                vec![vec![0.5, 0.0, 1.0], vec![1.0, 0.5, 0.0], vec![0.0, 1.0, 0.5]],
+                vec![
+                    vec![0.5, 0.0, 1.0],
+                    vec![1.0, 0.5, 0.0],
+                    vec![0.0, 1.0, 0.5],
+                ],
                 vec![1.0 / 3.0; 3],
                 0.5,
             ),
             // a win with rock counts double: equilibrium (1/4, 1/2, 1/4) for both
             (
                 "biased rps",
-                vec![vec![0.5, 0.25, 1.0], vec![0.75, 0.5, 0.25], vec![0.0, 0.75, 0.5]],
+                vec![
+                    vec![0.5, 0.25, 1.0],
+                    vec![0.75, 0.5, 0.25],
+                    vec![0.0, 0.75, 0.5],
+                ],
                 vec![0.25, 0.5, 0.25],
                 0.5,
             ),
             // attack / protect against attack / set up: equilibrium (2/3, 1/3), value 2/3
-            ("protect guess", vec![vec![0.5, 1.0], vec![1.0, 0.0]], vec![2.0 / 3.0, 1.0 / 3.0], 2.0 / 3.0),
+            (
+                "protect guess",
+                vec![vec![0.5, 1.0], vec![1.0, 0.0]],
+                vec![2.0 / 3.0, 1.0 / 3.0],
+                2.0 / 3.0,
+            ),
         ];
         let arm = |prior: f32| Arm {
             label: Label::None,
@@ -2186,13 +2730,19 @@ mod tests {
                 let (n1, n2) = (m.len(), m[0].len());
                 let mut a1: Vec<Arm> = (0..n1).map(|_| arm(1.0 / n1 as f32)).collect();
                 let mut a2: Vec<Arm> = (0..n2).map(|_| arm(1.0 / n2 as f32)).collect();
-                let av1: Vec<(usize, MoveChoice)> = (0..n1).map(|i| (i, MoveChoice::None)).collect();
-                let av2: Vec<(usize, MoveChoice)> = (0..n2).map(|i| (i, MoveChoice::None)).collect();
+                let av1: Vec<(usize, MoveChoice)> =
+                    (0..n1).map(|i| (i, MoveChoice::None)).collect();
+                let av2: Vec<(usize, MoveChoice)> =
+                    (0..n2).map(|i| (i, MoveChoice::None)).collect();
                 let mut rng = StdRng::seed_from_u64(7);
                 for _ in 0..iters {
                     let (i, _) = select_puct(&a1, &av1, 1.0, &MlParams::default());
                     let (j, _) = select_puct(&a2, &av2, 1.0, &MlParams::default());
-                    let r = if rng.random::<f32>() < m[i][j] { 1.0 } else { 0.0 };
+                    let r = if rng.random::<f32>() < m[i][j] {
+                        1.0
+                    } else {
+                        0.0
+                    };
                     a1[i].visits += 1;
                     a1[i].total += r;
                     a2[j].visits += 1;
@@ -2210,8 +2760,12 @@ mod tests {
                 println!(
                     "{name:20} {iters:6}: visits {:?} (equilibrium {:?}, TV {tv:.3}); \
                      exploitability: visit mix {:.3}, most visited alone {:.3}",
-                    x.iter().map(|v| (v * 1000.0).round() / 1000.0).collect::<Vec<_>>(),
-                    nash.iter().map(|v| (v * 1000.0).round() / 1000.0).collect::<Vec<_>>(),
+                    x.iter()
+                        .map(|v| (v * 1000.0).round() / 1000.0)
+                        .collect::<Vec<_>>(),
+                    nash.iter()
+                        .map(|v| (v * 1000.0).round() / 1000.0)
+                        .collect::<Vec<_>>(),
                     value - worst(&x),
                     value - worst(&pure)
                 );
@@ -2228,7 +2782,14 @@ mod tests {
             return;
         };
         let mut worlds = vec![State::deserialize(line.trim())];
-        search(&mut worlds, &[], Duration::ZERO, 20_000, &Config::default(), Some(1));
+        search(
+            &mut worlds,
+            &[],
+            Duration::ZERO,
+            20_000,
+            &Config::default(),
+            Some(1),
+        );
     }
 
     /// How often a node's cached logits do not fit its first selection, in real positions
@@ -2237,7 +2798,8 @@ mod tests {
     #[ignore]
     fn measure_cached_logits_fit() {
         use std::sync::atomic::Ordering;
-        let (Ok(states), Ok(model)) = (std::env::var("ALPHA_STATES"), std::env::var("ALPHA_MODEL")) else {
+        let (Ok(states), Ok(model)) = (std::env::var("ALPHA_STATES"), std::env::var("ALPHA_MODEL"))
+        else {
             return;
         };
         let cfg = Config {
@@ -2252,49 +2814,30 @@ mod tests {
             if worlds[0].battle_is_over() != 0.0 {
                 continue;
             }
-            search(&mut worlds, &[Context::default()], Duration::ZERO, 800, &cfg, Some(1));
+            search(
+                &mut worlds,
+                &[Context::default()],
+                Duration::ZERO,
+                800,
+                &cfg,
+                Some(1),
+            );
             n += 1;
         }
-        let (bad, ok) = (CACHE_FIT[0].load(Ordering::Relaxed), CACHE_FIT[1].load(Ordering::Relaxed));
-        let (diff, same) = (PHASE_SAME[0].load(Ordering::Relaxed), PHASE_SAME[1].load(Ordering::Relaxed));
+        let (bad, ok) = (
+            CACHE_FIT[0].load(Ordering::Relaxed),
+            CACHE_FIT[1].load(Ordering::Relaxed),
+        );
+        let (diff, same) = (
+            PHASE_SAME[0].load(Ordering::Relaxed),
+            PHASE_SAME[1].load(Ordering::Relaxed),
+        );
         println!("node visits after the first in another public phase (actives, forced switches) than the first: {diff} of {} ({:.2}%)",
                  diff + same, 100.0 * diff as f64 / (diff + same).max(1) as f64);
-        println!("{n} searches x 800: cached logits did not fit {bad} of {} first selections ({:.2}%)",
-                 bad + ok, 100.0 * bad as f64 / (bad + ok).max(1) as f64);
+        println!(
+            "{n} searches x 800: cached logits did not fit {bad} of {} first selections ({:.2}%)",
+            bad + ok,
+            100.0 * bad as f64 / (bad + ok).max(1) as f64
+        );
     }
-}
-
-/// The causality check of the search's tree (doc/state-diff.md plan B): the decision step a
-/// descent records for the joint action (`m1`, `m2`) in `state`, for each of its chance outcomes
-/// -- (probability, the step, main steps completed, a turn still open). The step is what the
-/// network reads below the root; scripts/check_tree_history.py compares it with the step the
-/// log gives (the replays' history).
-pub(crate) fn tree_step_outcomes(
-    state: &State,
-    m1: &MoveChoice,
-    m2: &MoveChoice,
-    branch: bool,
-) -> Vec<(f32, Step, i32, bool)> {
-    let base = Context {
-        reveal: [0; 12],
-        rating: [0, 0],
-        turn: 1,
-        history: Vec::new(),
-        full: false,
-        post: Vec::new(),
-    };
-    let mut st = state.clone();
-    let outcomes = generate_instructions_from_move_pair(&mut st, m1, m2, branch);
-    let total: f32 = outcomes.iter().map(|o| o.percentage.max(0.0)).sum();
-    let mut out = Vec::with_capacity(outcomes.len());
-    for o in &outcomes {
-        let mut path = PathCtx::new(Some(&base), &st);
-        path.push(&st, m1, m2);
-        st.apply_instructions(&o.instruction_list);
-        path.settle(&o.instruction_list, &st);
-        let step = path.steps.last().copied().unwrap_or_default();
-        out.push((o.percentage.max(0.0) / total.max(1e-9), step, path.mains, path.open));
-        st.reverse_instructions(&o.instruction_list);
-    }
-    out
 }

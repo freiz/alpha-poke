@@ -226,4 +226,5 @@ def test_a_lone_struggle_is_slot_0_both_ways():
     assert alpha_search.slot_names([st])[0][0] == "struggle"
     for slot in (0, -1):
         outs = alpha_search.chance_outcomes(st, slot, 0)
-        assert outs and all(pe.State.from_string(o[1]).side_two.pokemon[0].hp < 300 for o in outs)  # (hit)
+        # (hit)
+        assert outs and all(pe.State.from_string(o[1]).side_two.pokemon[0].hp < 300 for o in outs)

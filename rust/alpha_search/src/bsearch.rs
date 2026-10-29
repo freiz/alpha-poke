@@ -26,10 +26,12 @@
 //!   (the root state of a world is the same in every thread's copy).
 
 use crate::extra::{ENT_EXTRA, GLOBAL_EXTRA};
-use crate::features::{slot_in, struggles, HIST, HIST_DENSE, HIST_SPARSE, N_ACTIONS, N_ENTITIES, SPARSE};
+use crate::features::{
+    slot_in, struggles, HIST, HIST_DENSE, HIST_SPARSE, N_ACTIONS, N_ENTITIES, SPARSE,
+};
 use crate::ismcts::{
-    arm_index, label, prior_probs, sample, select_puct, select_puct_with, set_priors, Config, Label,
-    Node, PathCtx, RootPriors, Tree,
+    arm_index, label, prior_probs, sample, select_puct, select_puct_with, set_priors, Config,
+    Label, Node, PathCtx, RootPriors, Tree,
 };
 use crate::tnet::{Context, Input};
 use poke_engine::engine::evaluate::evaluate;
@@ -69,10 +71,17 @@ pub struct Pending {
 /// search fell back on a +7, 2026-10-21, not reproduced): the state is printed for a repro
 pub(crate) fn evaluate_checked(state: &State) -> f32 {
     let out = [&state.side_one, &state.side_two].iter().any(|sd| {
-        [sd.attack_boost, sd.defense_boost, sd.special_attack_boost, sd.special_defense_boost,
-         sd.speed_boost, sd.accuracy_boost, sd.evasion_boost]
-            .iter()
-            .any(|b| !(-6..=6).contains(b))
+        [
+            sd.attack_boost,
+            sd.defense_boost,
+            sd.special_attack_boost,
+            sd.special_defense_boost,
+            sd.speed_boost,
+            sd.accuracy_boost,
+            sd.evasion_boost,
+        ]
+        .iter()
+        .any(|b| !(-6..=6).contains(b))
     });
     if out {
         eprintln!("STAGES OUT OF RANGE (alpha_search): {}", state.serialize());
@@ -287,15 +296,25 @@ fn descend(
         let (i1, m1) = select_puct(&n.s1, &av1, cfg.c_puct, &cfg.ml);
         let (i2, m2) = if cfg.policy_opponent {
             // (the root: this world's own priors for the opponent, `RootPriors`)
-            let own = if node == 0 { tree.root_opp.get(w as usize).map(|v| v.as_slice()) } else { None };
+            let own = if node == 0 {
+                tree.root_opp.get(w as usize).map(|v| v.as_slice())
+            } else {
+                None
+            };
             select_puct_with(&n.s2, &av2, cfg.c_puct, &cfg.ml, own)
         } else {
             crate::ismcts::select(&n.s2, &av2, cfg.c)
         };
         let depth = n.depth;
-        if m1 == MoveChoice::None && m2 == MoveChoice::None && !crate::ismcts::someone_struggles(state) {
+        if m1 == MoveChoice::None
+            && m2 == MoveChoice::None
+            && !crate::ismcts::someone_struggles(state)
+        {
             // no decision for either side (should not happen): handcrafted leaf value
-            break Descent::Terminal(crate::ismcts::sigmoid(evaluate_checked(state) - root_eval), None);
+            break Descent::Terminal(
+                crate::ismcts::sigmoid(evaluate_checked(state) - root_eval),
+                None,
+            );
         }
         // virtual loss: `vl` visits are counted now, the value when the evaluation is back
         n.visits += vl;
@@ -407,7 +426,13 @@ impl BatchSearch {
         let pending = worlds
             .iter()
             .zip(&ctxs)
-            .map(|(w, c)| Pending { path: Vec::new(), node: 0, state: w.clone(), inputs: inputs(w, c), turns: 0 })
+            .map(|(w, c)| Pending {
+                path: Vec::new(),
+                node: 0,
+                state: w.clone(),
+                inputs: inputs(w, c),
+                turns: 0,
+            })
             .collect();
         let root_left = worlds.len();
         BatchSearch {
@@ -488,7 +513,11 @@ impl BatchSearch {
         }
         // (the root's evaluations, one per world: at most `n` a call, as the leaves -- all of
         // them at once broke the batcher's row limit, 2026-10-22, the search review)
-        let end = if root_pending { (self.returned + n).min(g.pending.len()) } else { g.pending.len() };
+        let end = if root_pending {
+            (self.returned + n).min(g.pending.len())
+        } else {
+            g.pending.len()
+        };
         let mut b = Batch::default();
         for p in &g.pending[self.returned..end] {
             b.push(&p.inputs.0);
@@ -553,7 +582,8 @@ impl BatchSearch {
                     continue;
                 }
                 let mut rng = StdRng::seed_from_u64(seed ^ 0xD1B5_4A32_D192_ED03);
-                self.root_priors.finish(n, &mut tree.root_opp, &self.cfg, &mut rng);
+                self.root_priors
+                    .finish(n, &mut tree.root_opp, &self.cfg, &mut rng);
             } else {
                 set_priors(&mut n.s1, &av1, l1);
                 if policy_opponent {
@@ -617,9 +647,14 @@ impl BatchSearch {
         let mut r = Record::default();
         let (mut tv, mut tt) = (0u64, 0.0f64);
         // (a Struggle in move slot 0: it was left out, its visits too; 2026-10-23 review)
-        let (st1, st2) = (struggles(&w0, SideReference::SideOne), struggles(&w0, SideReference::SideTwo));
+        let (st1, st2) = (
+            struggles(&w0, SideReference::SideOne),
+            struggles(&w0, SideReference::SideTwo),
+        );
         for a in &root.s1 {
-            if let Some(i) = crate::ismcts::our_choice(&w0, a.label).and_then(|mc| slot_in(&mc, st1)) {
+            if let Some(i) =
+                crate::ismcts::our_choice(&w0, a.label).and_then(|mc| slot_in(&mc, st1))
+            {
                 r.visits[i] = a.visits;
                 r.mean[i] = a.mean();
                 r.prior[i] = a.prior;

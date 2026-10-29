@@ -37,9 +37,15 @@ def _one(job):
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("reports", nargs="+", help="check_state_build reports (globs too)")
-    ap.add_argument("--path", choices=("live", "replay"), default=None,
-                    help="default: each report's own (its 'path', else live)")
-    ap.add_argument("--list", default="", help="a kind: each of its battles with its first decision")
+    ap.add_argument(
+        "--path",
+        choices=("live", "replay"),
+        default=None,
+        help="default: each report's own (its 'path', else live)",
+    )
+    ap.add_argument(
+        "--list", default="", help="a kind: each of its battles with its first decision"
+    )
     ap.add_argument("--procs", type=int, default=8)
     a = ap.parse_args()
     jobs = set()
@@ -49,7 +55,9 @@ def main() -> None:
         path = a.path or rep.get("path", "live")
         for kind, ex in rep["examples"].items():
             if kind != "error":
-                jobs |= {(files[stem], seed, rep.get("seed_offset", 0), path) for (stem, seed), *_ in ex}
+                jobs |= {
+                    (files[stem], seed, rep.get("seed_offset", 0), path) for (stem, seed), *_ in ex
+                }
     now: collections.Counter = collections.Counter()
     battles: dict = collections.defaultdict(set)
     first: dict = {}

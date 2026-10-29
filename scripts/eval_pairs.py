@@ -27,7 +27,9 @@ if __name__ == "__main__":
     ap.add_argument("--log-dir", default="data/selfplay/diag")
     # (bot B in another checkout, its own code and engine: alpha_poke.eval.split -- an A/B of two
     # versions; its .venv built there)
-    ap.add_argument("--other", default="", help="a checkout running bot B (scripts/eval_pairs_opponent.py)")
+    ap.add_argument(
+        "--other", default="", help="a checkout running bot B (scripts/eval_pairs_opponent.py)"
+    )
     ap.add_argument("--run", default="r", help="a short tag in the split run's player names")
     a = ap.parse_args()
     ks = sorted({int(m.group(1)) for f in Path(a.pool).glob("pair*_a.txt")

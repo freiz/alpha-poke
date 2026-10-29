@@ -53,15 +53,29 @@ def main() -> None:
             examples += r["examples"]
             errors += r["errors"]
     bad = sum(1 for e in examples)
-    print(f"{len(jobs)} battles, {total} turn steps; structural mismatches by field: {dict(struct)}")
+    print(
+        f"{len(jobs)} battles, {total} turn steps; structural mismatches by field: {dict(struct)}"
+    )
     print(f"  outcome fields the tree leaves out (log != tree): {dict(outcome)}")
     print(f"  skipped {dict(skipped)}; errors {len(errors)} {errors[:3]}")
     for e in examples[:10]:
         print("  e.g.", e)
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
-    Path(a.out).write_text(json.dumps({"battles": len(jobs), "steps": total, "struct": dict(struct),
-                                       "outcome": dict(outcome), "skipped": dict(skipped),
-                                       "examples": examples, "errors": errors[:50], "bad": bad}, indent=1))
+    Path(a.out).write_text(
+        json.dumps(
+            {
+                "battles": len(jobs),
+                "steps": total,
+                "struct": dict(struct),
+                "outcome": dict(outcome),
+                "skipped": dict(skipped),
+                "examples": examples,
+                "errors": errors[:50],
+                "bad": bad,
+            },
+            indent=1,
+        )
+    )
 
 
 if __name__ == "__main__":

@@ -22,7 +22,13 @@ START_WAIT = 90  # (split.START_WAIT)
 
 def schedule(pool: str, pairs: int) -> list[tuple[str, str, bool]]:
     """[(team A, team B, A challenges)] in play order -- eval_pairs.py's."""
-    ks = sorted({int(m.group(1)) for f in Path(pool).glob("pair*_a.txt") if (m := re.match(r"pair(\d+)_a", f.stem))})
+    ks = sorted(
+        {
+            int(m.group(1))
+            for f in Path(pool).glob("pair*_a.txt")
+            if (m := re.match(r"pair(\d+)_a", f.stem))
+        }
+    )
     if pairs:
         ks = ks[:pairs]
     out = []
@@ -43,22 +49,34 @@ async def lane(bot: str, matches, port: int, pool: str, run: str, i: int) -> int
     await asyncio.sleep(START_WAIT)  # (both sides online before the first challenge: split.py's)
     for _team_a, team_b, a_challenges in matches:
         me.update_team(teams[team_b])
-        play = me.accept_challenges(opp, n_challenges=1) if a_challenges else me.send_challenges(opp, n_challenges=1)
+        play = (
+            me.accept_challenges(opp, n_challenges=1)
+            if a_challenges
+            else me.send_challenges(opp, n_challenges=1)
+        )
         try:
             await asyncio.wait_for(play, GAME_TIMEOUT)
         except TimeoutError:  # (the lane stops: the other side's too -- split.py)
             failed += 1
-            logging.getLogger(__name__).warning("lane %d: no finished game after %ds -- the lane stops", i, GAME_TIMEOUT)
+            logging.getLogger(__name__).warning(
+                "lane %d: no finished game after %ds -- the lane stops", i, GAME_TIMEOUT
+            )
             break
     if hasattr(me, "close"):
         me.close()
-    return {"failed": failed, "fallbacks": getattr(me, "fallbacks", 0), "search_fallbacks": getattr(me, "search_fallbacks", 0)}
+    return {
+        "failed": failed,
+        "fallbacks": getattr(me, "fallbacks", 0),
+        "search_fallbacks": getattr(me, "search_fallbacks", 0),
+    }
 
 
 async def main(a) -> None:
     sched = schedule(a.pool, a.pairs)
     lanes = [sched[i :: a.lanes_total] for i in range(a.lanes_total)]
-    fails = await asyncio.gather(*[lane(a.bot, lanes[i], a.port, a.pool, a.run, i) for i in a.lanes])
+    fails = await asyncio.gather(
+        *[lane(a.bot, lanes[i], a.port, a.pool, a.run, i) for i in a.lanes]
+    )
     print("OPPONENT DONE", dict(zip(a.lanes, fails, strict=True)), flush=True)
 
 

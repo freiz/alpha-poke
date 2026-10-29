@@ -12,7 +12,10 @@ import alpha_poke.agents.poke_env_fixes  # noqa: F401 - installs the replacement
 
 
 def test_the_replaced_methods_take_poke_envs_arguments():
-    for cls, name, args in ((Battle, "parse_request", ({}, False)), (AbstractBattle, "parse_message", ([],))):
+    for cls, name, args in (
+        (Battle, "parse_request", ({}, False)),
+        (AbstractBattle, "parse_message", ([],)),
+    ):
         inspect.signature(getattr(cls, name)).bind(object(), *args)  # (raises TypeError if not)
 
 

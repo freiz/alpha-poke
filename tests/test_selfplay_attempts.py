@@ -40,7 +40,9 @@ def test_shard_passes_the_named_attempts_decisions(tmp_path, monkeypatch):
                  {"game": 3, "turn": 2, "attempt": "b"}])  # fmt: skip
     with open(dec, "a") as f:
         f.write('{"game": 3, "tu')  # (cut)
-    stats = convert._convert_shard((tmp_path / "x.parquet", [(3, {"attempt": "b"}, "")], dec, 1, 0, 10))
+    stats = convert._convert_shard(
+        (tmp_path / "x.parquet", [(3, {"attempt": "b"}, "")], dec, 1, 0, 10)
+    )
     assert [d["turn"] for d in seen[3]] == [1, 2] and all(d["attempt"] == "b" for d in seen[3])
     assert stats["broken_decision_lines"] == 1
 

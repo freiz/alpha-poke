@@ -38,7 +38,9 @@ SEEDS = {
 
 
 def _check():
-    spec = importlib.util.spec_from_file_location("check_tree_history", ROOT / "scripts/check_tree_history.py")
+    spec = importlib.util.spec_from_file_location(
+        "check_tree_history", ROOT / "scripts/check_tree_history.py"
+    )
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod

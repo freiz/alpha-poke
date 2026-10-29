@@ -53,7 +53,13 @@ def _init():
     PLAIN.clear()
     for row in A.engine_data()[0]:
         name, cat, power, prio, flags = row[0].lower(), row[3], float(row[4]), int(row[5]), row[-1]
-        if cat != "Status" and power > 0 and prio == 0 and "heal" not in flags and name != "grassyglide":
+        if (
+            cat != "Status"
+            and power > 0
+            and prio == 0
+            and "heal" not in flags
+            and name != "grassyglide"
+        ):
             PLAIN.add(name)
 
 
@@ -67,7 +73,9 @@ def _dims():
 def _turn(pe, st, own_one: bool, mine: str, theirs: str):
     """The transitions of a turn: [(p, state)] (own / foe choices in the view's order)."""
     c1, c2 = (mine, theirs) if own_one else (theirs, mine)
-    return [(o.percentage / 100, st.apply_instructions(o)) for o in pe.generate_instructions(st, c1, c2)]
+    return [
+        (o.percentage / 100, st.apply_instructions(o)) for o in pe.generate_instructions(st, c1, c2)
+    ]
 
 
 def _sides(st, own_one: bool):
@@ -137,9 +145,11 @@ def check_state(line: str) -> list[dict]:
 
         def mech(*mons):
             """the mons' abilities and items (the breakdown of the wrong / missed ones)"""
-            return [f"{str(m.ability).lower()}" for m in mons] + [f"{str(m.item).lower()}" for m in mons]
+            return [f"{str(m.ability).lower()}" for m in mons] + [
+                f"{str(m.item).lower()}" for m in mons
+            ]
 
-        def foe_hp(s2):
+        def foe_hp(s2, own_one=own_one, b=b):
             return _sides(s2, own_one)[1].pokemon[b].hp
 
         # (the KO checks need the foe's HP to change by the hits only: none where the end of the
@@ -172,10 +182,13 @@ def check_state(line: str) -> list[dict]:
                 if mv not in _legal(pe, s2, own_one)[0]:
                     lost += p
                     continue
-                p2 += p * sum(q for q, s3 in _turn_clean(pe, s2, own_one, mv, "none") if foe_hp(s3) <= 0)
+                p2 += p * sum(
+                    q for q, s3 in _turn_clean(pe, s2, own_one, mv, "none") if foe_hp(s3) <= 0
+                )
             if lost < 1e-6 and mv not in PIVOTS:
                 rec("ko2_sure", new[a, 2 * i], p2, ctx)
                 rec("ko2_possible", new[a, 2 * i + 1], p2, ctx)
+
         # who moves first: a priority-0 damaging move each (none whose priority an ability or the
         # terrain changes)
         def plain(p, legal):
@@ -227,6 +240,7 @@ def _exchange(pe, st, own_one, j, b, switch, mj, mk, mode):
     the engine: 'switch' -- j switches in taking the foe's move, then ROUNDS rounds; 'h2h' --
     ROUNDS rounds; 'revenge' -- j comes in (the foe doing nothing), then wins if its first
     move KOs before the foe acts."""
+
     def hp(s, own):
         side = _sides(s, own_one)[0 if own else 1]
         return side.pokemon[j if own else b].hp
@@ -360,7 +374,8 @@ def main() -> None:
         n = sum(stats[k].values())
         breakdown[f"{k}/{v}"] = [
             {"key": key, "count": x, "rate": round(x / seen[k][key], 4), "checked": seen[k][key]}
-            for key, x in c.most_common(25) if seen[k][key] >= 5 and key not in ("none", "move:none")
+            for key, x in c.most_common(25)
+            if seen[k][key] >= 5 and key not in ("none", "move:none")
         ][:15]
         del n
     report = {"states": len(lines), "errors": errors,

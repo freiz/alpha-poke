@@ -89,7 +89,10 @@ def test_a_species_ou_never_uses_has_a_prior():
         p = p.base
     glalie = p.predict("Glalie", ())
     assert set(glalie.move) == {"earthquake", "freezedry", "spikes", "taunt"}
-    assert set(glalie.tera) == {"ghost", "ground", "water"} and glalie.item.get("heavydutyboots", 0) > 0.1
+    assert (
+        set(glalie.tera) == {"ghost", "ground", "water"}
+        and glalie.item.get("heavydutyboots", 0) > 0.1
+    )
     assert "spore" in legal_moves("smeargle") and "spikes" in legal_moves("glalie")
 
 
@@ -185,12 +188,20 @@ def test_a_hidden_formes_set_makes_its_forme():
     them: Battle Bond works only as Greninja-Bond, a Rusted Sword Zacian is Zacian-Crowned."""
     from alpha_poke.agents.engine_state import resolve_forme
 
-    assert resolve_forme("greninja", "lifeorb", "battlebond", ["hydropump", "darkpulse"]) == "greninjabond"
+    assert (
+        resolve_forme("greninja", "lifeorb", "battlebond", ["hydropump", "darkpulse"])
+        == "greninjabond"
+    )
     assert resolve_forme("greninja", "lifeorb", "protean", ["hydropump", "darkpulse"]) == "greninja"
     assert resolve_forme("zacian", "rustedsword", "intrepidsword", ["playrough"]) == "zaciancrowned"
     assert resolve_forme("zacian", "lifeorb", "intrepidsword", ["playrough"]) == "zacian"
-    assert resolve_forme("urshifu", "choiceband", "unseenfist", ["surgingstrikes", "uturn"]) == "urshifurapidstrike"
-    assert resolve_forme("urshifu", "choiceband", "unseenfist", ["wickedblow", "uturn"]) == "urshifu"
+    assert (
+        resolve_forme("urshifu", "choiceband", "unseenfist", ["surgingstrikes", "uturn"])
+        == "urshifurapidstrike"
+    )
+    assert (
+        resolve_forme("urshifu", "choiceband", "unseenfist", ["wickedblow", "uturn"]) == "urshifu"
+    )
 
 
 def test_a_hidden_formes_changed_types_kept():
@@ -211,7 +222,10 @@ def test_a_hidden_formes_changed_types_kept():
     zacian = SampledSet(moves=["playrough"], item="rustedsword", ability="intrepidsword", tera="fairy",
                         stats={"hp": 323, "atk": 337, "def": 266, "spa": 176, "spd": 266, "spe": 390},
                         forme="zaciancrowned")  # fmt: skip
-    assert {str(t).lower() for t in _their_mon(Pokemon(species="zacian", gen=9), zacian).types} == {"fairy", "steel"}
+    assert {str(t).lower() for t in _their_mon(Pokemon(species="zacian", gen=9), zacian).types} == {
+        "fairy",
+        "steel",
+    }
 
 
 def test_a_revealed_greninja_bond_stays_greninja_bond():
@@ -239,7 +253,10 @@ def test_a_seen_base_forme_is_no_hidden_forme():
     belief = BeliefModel.load()
     known = KnownSet(moves=["surgingstrikes"])
     unseen = Pokemon(species="urshifu", gen=9)
-    assert sample_set(belief, unseen, ("Urshifu",), random.Random(0), known=known).forme == "urshifurapidstrike"
+    assert (
+        sample_set(belief, unseen, ("Urshifu",), random.Random(0), known=known).forme
+        == "urshifurapidstrike"
+    )
     seen = Pokemon(species="urshifu", gen=9)
     seen._revealed = True  # (it came in as "Urshifu": Single Strike)
     assert sample_set(belief, seen, ("Urshifu",), random.Random(0), known=known).forme is None

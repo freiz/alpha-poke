@@ -261,13 +261,20 @@ def test_l3b_built_terrain_turns(belief):
     # (the setter's item is the foe's, never revealed: a belief sample -- a Terrain Extender world
     # counts down from 8, 4% of OU's Rillaboom; 2026-10-25, a full run drew one. Each turn either
     # world's, the terrain over when Showdown's is)
-    assert all(b in (d, d + 3) if d > 0 else b == 0 for d, b in zip(sd, built, strict=True)), (sd, built)
+    assert all(b in (d, d + 3) if d > 0 else b == 0 for d, b in zip(sd, built, strict=True)), (
+        sd,
+        built,
+    )
     # (each world exactly, its item known -- 2026-10-25 review: the per-turn either-or alone would
     # pass a builder that adds 3 at random turns, or one with no Terrain Extender at all): the
     # foe's announced Air Balloon, 5 turns; our own Terrain Extender, 8
-    sd, _, built = field_turns(RILLABOOM.replace("@ Leftovers", "@ Air Balloon"), "terrain", 6, belief)
+    sd, _, built = field_turns(
+        RILLABOOM.replace("@ Leftovers", "@ Air Balloon"), "terrain", 6, belief
+    )
     assert sd == [5, 4, 3, 2, 1, 0, 0] and built == sd, built
-    sd, _, built = field_turns(RILLABOOM.replace("@ Leftovers", "@ Terrain Extender"), "terrain", 9, belief, view="p1")
+    sd, _, built = field_turns(
+        RILLABOOM.replace("@ Leftovers", "@ Terrain Extender"), "terrain", 9, belief, view="p1"
+    )
     assert sd[:9] == [8, 7, 6, 5, 4, 3, 2, 1, 0] and built == sd, (sd, built)
 
 
@@ -798,7 +805,9 @@ def test_l23_moves_usable_after_a_lock_ends():
     states = ec.run_showdown(p1, BLISSEY, [("move outrage", "move softboiled")] * 2,
                              seed="gen5,3,3,3,3")  # fmt: skip
     assert "confusion" in states[2]["sides"][0]["mons"][0]["volatiles"]  # Showdown: lock over
-    usable = [not m.get("disabled") for m in states[2]["sides"][0]["request_json"]["active"][0]["moves"]]
+    usable = [
+        not m.get("disabled") for m in states[2]["sides"][0]["request_json"]["active"][0]["moves"]
+    ]
     assert usable == [True] * 4  # Showdown: every move again
     for _, s in ec.engine_outcomes(ec.engine_state(states[1]), "outrage", "softboiled"):
         assert [not m.disabled for m in s.side_one.pokemon[0].moves] == usable
@@ -818,6 +827,7 @@ def test_control_trick_room_against_good_as_gold():
 # L24 (doc/engine-diff.md): items the engine did not know, added from Showdown's source; fixed
 # ones are regression tests
 
+
 def _setter(species, ability, item, moves="- Protect\n- Roost\n- Knock Off\n- U-turn"):
     return f"""{species} @ {item}
 Ability: {ability}
@@ -832,7 +842,11 @@ DURATION_SETTERS = [  # (setter, the field's key, the engine's turns attribute)
     (_setter("Torkoal", "Drought", "Heat Rock"), "weather", "weather_turns_remaining"),
     (_setter("Ninetales-Alola", "Snow Warning", "Icy Rock"), "weather", "weather_turns_remaining"),
     (_setter("Tyranitar", "Sand Stream", "Smooth Rock"), "weather", "weather_turns_remaining"),
-    (_setter("Rillaboom", "Grassy Surge", "Terrain Extender"), "terrain", "terrain_turns_remaining"),
+    (
+        _setter("Rillaboom", "Grassy Surge", "Terrain Extender"),
+        "terrain",
+        "terrain_turns_remaining",
+    ),
 ]
 
 
@@ -901,7 +915,9 @@ TINGLU_HITS = _setter("Ting-Lu", "Vessel of Ruin", "Leftovers",
 
 def _corviknight(item, nature="Careful"):
     # 400 HP: two Ruinations take it to exactly 1/4 (400 -> 200 -> 100)
-    return CORVIKNIGHT.replace("@ Leftovers", f"@ {item}").replace("Careful Nature", f"{nature} Nature")
+    return CORVIKNIGHT.replace("@ Leftovers", f"@ {item}").replace(
+        "Careful Nature", f"{nature} Nature"
+    )
 
 
 def _item_turn(p1, p2, turns, choices, n=(1, 1), seed="gen5,5,5,5,5"):
@@ -935,7 +951,9 @@ def test_l24_oran_berry():
 KYUREM_ICE = KYUREM.replace("- Earth Power", "- Ice Beam")
 ROTOM_WASH = _setter("Rotom-Wash", "Levitate", "Leftovers",
                      "- Thunderbolt\n- Hydro Pump\n- Volt Switch\n- Will-O-Wisp")  # fmt: skip
-PELIPPER_SURF = _setter("Pelipper", "Keen Eye", "Leftovers", "- Surf\n- Roost\n- Hurricane\n- U-turn")
+PELIPPER_SURF = _setter(
+    "Pelipper", "Keen Eye", "Leftovers", "- Surf\n- Roost\n- Hurricane\n- U-turn"
+)
 
 
 @pytest.mark.parametrize("item, p2, move, check", [
@@ -982,7 +1000,9 @@ def test_l24_sticky_barb():
 
 def test_l24_room_service():
     """Trick Room starts: the holder's Speed -1, the item used up."""
-    hatterene = HATTERENE.replace("@ Life Orb", "@ Room Service").replace("- Calm Mind", "- Trick Room")
+    hatterene = HATTERENE.replace("@ Life Orb", "@ Room Service").replace(
+        "- Calm Mind", "- Trick Room"
+    )
     states, res = _item_turn(hatterene, TINGLU_HITS, [("move trickroom", "move spikes")],
                              ("trickroom", "spikes"))  # fmt: skip
     assert states[1]["sides"][0]["mons"][0]["boosts"]["spe"] == -1  # Showdown
@@ -1014,7 +1034,9 @@ def _engine_crit_chance(outs) -> float:
 
 
 def _kingambit(ability, item):
-    return _setter("Kingambit", ability, item, "- Kowtow Cleave\n- Night Slash\n- Focus Energy\n- Iron Head")
+    return _setter(
+        "Kingambit", ability, item, "- Kowtow Cleave\n- Night Slash\n- Focus Energy\n- Iron Head"
+    )
 
 
 @pytest.mark.parametrize("ability, item, move, focus", [
@@ -1159,7 +1181,9 @@ def test_l24_quick_claw():
     turns = [("move gyroball", "move spikes")]
     rate = ec.showdown_rate(p1, TINGLU, turns, "|-activate|p1a: Ferrothorn|item: Quick Claw", 1000)
     states = ec.run_showdown(p1, TINGLU, turns)
-    assert _engine_first_chance(ec.engine_state(states[0]), "gyroball", "spikes") == pytest.approx(rate, abs=0.03)
+    assert _engine_first_chance(ec.engine_state(states[0]), "gyroball", "spikes") == pytest.approx(
+        rate, abs=0.03
+    )
 
 
 PIKACHU_BAND = """Pikachu @ Focus Band
@@ -1238,7 +1262,11 @@ def test_l24_leppa_berry():
 def test_l24_micle_berry():
     """Eaten at 1/4 HP at the end of the turn: the next move's accuracy x 4915 / 4096."""
     # (L191: Iron Defense, not Defog: Defog's evasion drop is an accuracy stage now)
-    p1 = _corviknight("Micle Berry").replace("- Brave Bird", "- Stone Edge").replace("- Defog", "- Iron Defense")
+    p1 = (
+        _corviknight("Micle Berry")
+        .replace("- Brave Bird", "- Stone Edge")
+        .replace("- Defog", "- Iron Defense")
+    )
     turns = [("move irondefense", "move ruination")] * 2
     states = ec.run_showdown(p1, TINGLU_HITS, turns, seed="gen5,5,5,5,5")
     assert "micleberry" in states[2]["sides"][0]["mons"][0]["volatiles"]  # Showdown
@@ -1284,7 +1312,9 @@ def test_l24_ability_shield_against_mold_breaker():
 def test_l24_destiny_knot():
     """The holder infatuated: its foe too."""
     p1 = "Corviknight (M) @ Destiny Knot\n" + "\n".join(CORVIKNIGHT.split("\n")[1:])
-    p2 = _setter("Gardevoir (F)", "Trace", "Leftovers", "- Attract\n- Moonblast\n- Psychic\n- Calm Mind")
+    p2 = _setter(
+        "Gardevoir (F)", "Trace", "Leftovers", "- Attract\n- Moonblast\n- Psychic\n- Calm Mind"
+    )
     # (Roost at full HP: nothing either way, whether the infatuation stops it or not)
     states, res = _item_turn(p1, p2, [("move roost", "move attract")], ("roost", "attract"))
     assert "attract" in states[1]["sides"][1]["mons"][0]["volatiles"]  # Showdown: the foe too
@@ -1316,7 +1346,9 @@ def _engine_hit_counts(state, c1, c2) -> dict[int, float]:
 @pytest.mark.parametrize("item, counts", [("Leftovers", (2, 3, 4, 5)), ("Loaded Dice", (4, 5))])
 def test_l30_multi_hit_counts(item, counts):
     """2-5 hits: 35 / 35 / 15 / 15% (Loaded Dice: 4 or 5), Showdown's rates over 1,000 seeds."""
-    p1 = _setter("Breloom", "Technician", item, "- Bullet Seed\n- Mach Punch\n- Spore\n- Swords Dance")
+    p1 = _setter(
+        "Breloom", "Technician", item, "- Bullet Seed\n- Mach Punch\n- Spore\n- Swords Dance"
+    )
     turns = [("move bulletseed", "move softboiled")]
     states = ec.run_showdown(p1, BLISSEY, turns)
     engine = _engine_hit_counts(ec.engine_state(states[0]), "bulletseed", "softboiled")
@@ -1330,7 +1362,8 @@ def test_l8b_fickle_beam_double_power_branch():
     """30% of the time double power (Showdown's rate over 2,000 seeds): the engine's outcomes
     with at least 1.9 x the smallest damage (a crit is 1.5 x) have that chance."""
     turns = [("move ficklebeam", "move softboiled")]
-    rate = ec.showdown_rate(HYDRAPPLE, BLISSEY, turns, "move: Fickle Beam", 2000)  # (sd 0.01: the bound 4 sd)
+    # (sd 0.01: the bound 4 sd)
+    rate = ec.showdown_rate(HYDRAPPLE, BLISSEY, turns, "move: Fickle Beam", 2000)
     states = ec.run_showdown(HYDRAPPLE, BLISSEY, turns)
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "ficklebeam", "softboiled")
     low = min(o.damage[1] for o in outs if o.damage[1] > 0)
@@ -1363,7 +1396,9 @@ def test_l30_multi_hit_knockout_rolls():
     """A multi-hit total near the target's HP: its rolls decide the knockout (Bullet Seed into a
     level-82 Shell Armor Lapras: no crits; 3+ hits always knock it out, 2 some of the time:
     Showdown's knockout rate over 1,000 seeds); before, the engine's average total decided."""
-    p1 = _setter("Breloom", "Technician", "Leftovers", "- Bullet Seed\n- Mach Punch\n- Spore\n- Swords Dance")
+    p1 = _setter(
+        "Breloom", "Technician", "Leftovers", "- Bullet Seed\n- Mach Punch\n- Spore\n- Swords Dance"
+    )
     p2 = "Lapras @ Leftovers\nAbility: Shell Armor\nLevel: 82\n- Freeze-Dry\n- Surf\n- Haze\n- Protect"
     turns = [("move bulletseed", "move haze")]
     rate = ec.showdown_rate(p1, p2, turns, "|faint|p2a: Lapras", 1000)
@@ -1423,10 +1458,24 @@ def test_l32_grounded_flying_hit_by_ground(item, pre):
     assert ec.closest(states[-1], outs, (1, 1), hp=True)["diff"] == {}
 
 
-URSALUNA_FACADE = _setter("Ursaluna", "Bulletproof", "Flame Orb", "- Facade\n- Protect\n- Earthquake\n- Swords Dance")
-KINGAMBIT_KNOCK = _setter("Kingambit", "Supreme Overlord", "Leftovers", "- Knock Off\n- Protect\n- Iron Head\n- Swords Dance")
-SLOWKING_COLBUR = _setter("Slowking-Galar", "Regenerator", "Colbur Berry", "- Chilly Reception\n- Slack Off\n- Sludge Bomb\n- Future Sight")
-PINCURCHIN = _setter("Pincurchin", "Electric Surge", "Leftovers", "- Rising Voltage\n- Spikes\n- Protect\n- Recover")
+URSALUNA_FACADE = _setter(
+    "Ursaluna", "Bulletproof", "Flame Orb", "- Facade\n- Protect\n- Earthquake\n- Swords Dance"
+)
+KINGAMBIT_KNOCK = _setter(
+    "Kingambit",
+    "Supreme Overlord",
+    "Leftovers",
+    "- Knock Off\n- Protect\n- Iron Head\n- Swords Dance",
+)
+SLOWKING_COLBUR = _setter(
+    "Slowking-Galar",
+    "Regenerator",
+    "Colbur Berry",
+    "- Chilly Reception\n- Slack Off\n- Sludge Bomb\n- Future Sight",
+)
+PINCURCHIN = _setter(
+    "Pincurchin", "Electric Surge", "Leftovers", "- Rising Voltage\n- Spikes\n- Protect\n- Recover"
+)
 
 
 # L33 (doc/engine-diff.md): found by the damage calculation differential
@@ -1523,7 +1572,7 @@ def _hit(before: dict, after: dict, attacker: str, target: str) -> tuple[int, bo
         if x.startswith((f"|-damage|{target}", f"|-heal|{target}")):
             hp = int(x.split("|")[3].split("/")[0].split()[0])
     crit = False
-    for x in log[i + 1:]:
+    for x in log[i + 1 :]:
         if x.startswith("|move|"):
             break
         crit |= x.startswith(f"|-crit|{target}")
@@ -1543,10 +1592,28 @@ EVs: 252 Atk / 4 SpD / 252 SpA
 
 
 DONDOZO = _setter("Dondozo", "Unaware", "Leftovers", "- Rest\n- Wave Crash\n- Curse\n- Yawn")
-DRAGONITE = _setter("Dragonite", "Multiscale", "Heavy-Duty Boots", "- Roost\n- Earthquake\n- Extreme Speed\n- Dragon Dance")
-TINGLU_AV = _setter("Ting-Lu", "Vessel of Ruin", "Assault Vest", "- Earthquake\n- Ruination\n- Payback\n- Stone Edge")
-TINGLU_HITS_EQ = _setter("Ting-Lu", "Vessel of Ruin", "Leftovers", "- Earthquake\n- Ruination\n- Payback\n- Spikes")
-KYUREM_SPECIAL = _attacker("Kyurem", "Pressure", "Leftovers", "- Ice Beam\n- Earth Power\n- Freeze-Dry\n- Protect", "Modest")
+DRAGONITE = _setter(
+    "Dragonite",
+    "Multiscale",
+    "Heavy-Duty Boots",
+    "- Roost\n- Earthquake\n- Extreme Speed\n- Dragon Dance",
+)
+TINGLU_AV = _setter(
+    "Ting-Lu",
+    "Vessel of Ruin",
+    "Assault Vest",
+    "- Earthquake\n- Ruination\n- Payback\n- Stone Edge",
+)
+TINGLU_HITS_EQ = _setter(
+    "Ting-Lu", "Vessel of Ruin", "Leftovers", "- Earthquake\n- Ruination\n- Payback\n- Spikes"
+)
+KYUREM_SPECIAL = _attacker(
+    "Kyurem",
+    "Pressure",
+    "Leftovers",
+    "- Ice Beam\n- Earth Power\n- Freeze-Dry\n- Protect",
+    "Modest",
+)
 
 # L34 (doc/engine-diff.md): Showdown's damage step by step with its rounding; each case's hit
 # must be one of the engine's 16 rolls (alpha_search.damage_rolls), not only near them
@@ -1615,7 +1682,12 @@ def test_l35_future_sight_user_life_orb():
     assert ec.closest(states[3], outs, (1, 1), hp=True)["diff"] == {}
 
 
-BLAZIKEN = _setter("Blaziken", "Speed Boost", "Leftovers", "- Protect\n- Flare Blitz\n- Close Combat\n- Swords Dance")
+BLAZIKEN = _setter(
+    "Blaziken",
+    "Speed Boost",
+    "Leftovers",
+    "- Protect\n- Flare Blitz\n- Close Combat\n- Swords Dance",
+)
 
 
 # L37 (doc/engine-diff.md): Speed Boost needs a turn on the field (Showdown's activeTurns: 0 at
@@ -1646,7 +1718,9 @@ def test_l38_rest_fails_at_full_hp(pre, slept):
 
 
 def test_l38_rest_fails_with_purifying_salt():
-    garganacl = _setter("Garganacl", "Purifying Salt", "Leftovers", "- Rest\n- Salt Cure\n- Protect\n- Stealth Rock")
+    garganacl = _setter(
+        "Garganacl", "Purifying Salt", "Leftovers", "- Rest\n- Salt Cure\n- Protect\n- Stealth Rock"
+    )
     turns = [("move protect", "move earthquake"), ("move rest", "move spikes")]
     states = ec.run_showdown(garganacl, TINGLU_HITS_EQ, turns)
     assert states[-1]["sides"][0]["mons"][0]["status"] == ""
@@ -1654,8 +1728,19 @@ def test_l38_rest_fails_with_purifying_salt():
     assert ec.closest(states[-1], outs, (1, 1))["diff"] == {}
 
 
-INCINEROAR_INTIM = _setter("Incineroar", "Intimidate", "Leftovers", "- Knock Off\n- Parting Shot\n- Flare Blitz\n- Will-O-Wisp")
-DRAGAPULT = _attacker("Dragapult", "Clear Body", "Choice Specs", "- Shadow Ball\n- Draco Meteor\n- U-turn\n- Flamethrower", "Timid")
+INCINEROAR_INTIM = _setter(
+    "Incineroar",
+    "Intimidate",
+    "Leftovers",
+    "- Knock Off\n- Parting Shot\n- Flare Blitz\n- Will-O-Wisp",
+)
+DRAGAPULT = _attacker(
+    "Dragapult",
+    "Clear Body",
+    "Choice Specs",
+    "- Shadow Ball\n- Draco Meteor\n- U-turn\n- Flamethrower",
+    "Timid",
+)
 
 
 # L39 (doc/engine-diff.md): both sides switching, the faster of the two leaving switches first
@@ -1671,7 +1756,12 @@ def test_l39_double_switch_order(p1, p2):
     assert ec.closest(states[1], outs, (2, 2))["diff"] == {}
 
 
-PECHARUNT = _setter("Pecharunt", "Poison Puppeteer", "Heavy-Duty Boots", "- Malignant Chain\n- Toxic\n- Recover\n- Parting Shot")
+PECHARUNT = _setter(
+    "Pecharunt",
+    "Poison Puppeteer",
+    "Heavy-Duty Boots",
+    "- Malignant Chain\n- Toxic\n- Recover\n- Parting Shot",
+)
 
 
 # L40 (doc/engine-diff.md): Poison Puppeteer, a target Pecharunt's move poisons is confused too
@@ -1685,7 +1775,13 @@ def test_l40_poison_puppeteer(move):
     assert ec.closest(states[1], outs, (1, 1))["diff"] == {}
 
 
-MEOWSCARADA_PROTEAN = _attacker("Meowscarada", "Protean", "Choice Band", "- Knock Off\n- Flower Trick\n- U-turn\n- Sucker Punch", "Jolly")
+MEOWSCARADA_PROTEAN = _attacker(
+    "Meowscarada",
+    "Protean",
+    "Choice Band",
+    "- Knock Off\n- Flower Trick\n- U-turn\n- Sucker Punch",
+    "Jolly",
+)
 
 
 # L41 (doc/engine-diff.md): Gen 9 Protean / Libero, once per entry, when the move starts
@@ -1713,7 +1809,8 @@ def test_l41_protean_not_when_frozen():
     stuck = [o for o in outs if "FREEZE" in str(o[1].side_one.pokemon[0].status).upper()]
     assert stuck
     assert all("GRASS" in str(o[1].side_one.pokemon[0].types[0]).upper() for o in stuck), [
-        o[1].side_one.pokemon[0].types for o in stuck]
+        o[1].side_one.pokemon[0].types for o in stuck
+    ]
 
 
 # L42 (doc/engine-diff.md): a guaranteed crit's knockout by its crit rolls (the engine took the
@@ -1732,7 +1829,9 @@ def test_l42_guaranteed_crit_knockout_rolls():
     assert kill == pytest.approx(sum(d >= hp for d in crit) / 16, abs=1e-3), (crit, hp)
 
 
-GARGANACL_SUB = _setter("Garganacl", "Purifying Salt", "Leftovers", "- Substitute\n- Salt Cure\n- Protect\n- Recover")
+GARGANACL_SUB = _setter(
+    "Garganacl", "Purifying Salt", "Leftovers", "- Substitute\n- Salt Cure\n- Protect\n- Recover"
+)
 
 
 # harness (doc/engine-diff.md, L43): the Substitute's HP from Showdown's state (it was 0 in the
@@ -1749,7 +1848,12 @@ def test_l43_substitute_hp_mapped():
 # in (Showdown's canSwitch); Air Balloon pops when a hit only breaks / damages a Substitute
 # (its onAfterSubDamage)
 def test_l44_red_card_needs_a_replacement():
-    red = _setter("Blissey", "Natural Cure", "Red Card", "- Soft-Boiled\n- Seismic Toss\n- Calm Mind\n- Protect")
+    red = _setter(
+        "Blissey",
+        "Natural Cure",
+        "Red Card",
+        "- Soft-Boiled\n- Seismic Toss\n- Calm Mind\n- Protect",
+    )
     turns = [("move calmmind", "move earthquake")]
     # (Ting-Lu alone: no replacement. 2026-10-24, L237: not force_random False -- it fails every
     # roll, a 100% move's accuracy too: the Earthquake missed, the Red Card was never tried)
@@ -1761,7 +1865,9 @@ def test_l44_red_card_needs_a_replacement():
 
 
 def test_l44_air_balloon_pops_on_a_substitute_hit():
-    gliscor = _setter("Gliscor", "Poison Heal", "Air Balloon", "- Substitute\n- Protect\n- Earthquake\n- Toxic")
+    gliscor = _setter(
+        "Gliscor", "Poison Heal", "Air Balloon", "- Substitute\n- Protect\n- Earthquake\n- Toxic"
+    )
     turns = [("move substitute", "move calmmind"), ("move toxic", "move seismictoss")]
     states = ec.run_showdown(gliscor, BLISSEY, turns)
     assert states[2]["sides"][0]["mons"][0]["item"] == ""  # Showdown: popped through the Sub
@@ -1773,8 +1879,15 @@ def test_l44_air_balloon_pops_on_a_substitute_hit():
 # confusion), at once; resist berries only on a damaging, non-fixed hit (onSourceModifyDamage:
 # not Ground Spikes, Dark Nasty Plot, Ruination)
 def test_l45_lum_berry_cures_confusion():
-    lum = _setter("Blissey", "Natural Cure", "Lum Berry", "- Soft-Boiled\n- Seismic Toss\n- Calm Mind\n- Protect")
-    sableye = _setter("Sableye", "Prankster", "Leftovers", "- Confuse Ray\n- Recover\n- Knock Off\n- Will-O-Wisp")
+    lum = _setter(
+        "Blissey",
+        "Natural Cure",
+        "Lum Berry",
+        "- Soft-Boiled\n- Seismic Toss\n- Calm Mind\n- Protect",
+    )
+    sableye = _setter(
+        "Sableye", "Prankster", "Leftovers", "- Confuse Ray\n- Recover\n- Knock Off\n- Will-O-Wisp"
+    )
     states = ec.run_showdown(lum, sableye, [("move calmmind", "move confuseray")])
     b = states[1]["sides"][0]["mons"][0]
     assert b["item"] == "" and "confusion" not in b["volatiles"] and b["boosts"]["spa"] == 1
@@ -1799,7 +1912,12 @@ UMBREON = _setter("Umbreon", "Synchronize", "Leftovers", "- Foul Play\n- Wish\n-
 
 # L46 (doc/engine-diff.md): Synchronize, a poison / burn / paralysis from the foe goes back to
 # it (Showdown's onAfterSetStatus; not sleep / freeze); not implemented in the engine
-SYNC_FOE = _setter("Blissey", "Natural Cure", "Heavy-Duty Boots", "- Thunder Wave\n- Toxic\n- Soft-Boiled\n- Will-O-Wisp")
+SYNC_FOE = _setter(
+    "Blissey",
+    "Natural Cure",
+    "Heavy-Duty Boots",
+    "- Thunder Wave\n- Toxic\n- Soft-Boiled\n- Will-O-Wisp",
+)
 
 
 @pytest.mark.parametrize("foe, foe_move, status", [
@@ -1825,11 +1943,15 @@ def test_l47_rest_sleep_mapped(asleep_turns):
     asleep = states[-1]["sides"][0]["mons"][0]["status"] == "slp"  # Rest: 2 turns asleep
     assert asleep == (asleep_turns < 3)
     outs = ec.engine_outcomes(ec.engine_state(states[-2]), "rest", "spikes")
-    p = sum(o[0] for o in outs if ("SLEEP" in str(o[1].side_one.pokemon[0].status).upper()) == asleep)
+    p = sum(
+        o[0] for o in outs if ("SLEEP" in str(o[1].side_one.pokemon[0].status).upper()) == asleep
+    )
     assert p == pytest.approx(1.0, abs=1e-3)  # deterministic: no wake-up roll
 
 
-HEALING_WISHER = _setter("Blissey", "Natural Cure", "Leftovers", "- Healing Wish\n- Soft-Boiled\n- Calm Mind\n- Protect")
+HEALING_WISHER = _setter(
+    "Blissey", "Natural Cure", "Leftovers", "- Healing Wish\n- Soft-Boiled\n- Calm Mind\n- Protect"
+)
 
 
 # harness (doc/engine-diff.md, L48): Healing Wish waiting on its slot (Gen 9: until a mon that
@@ -1849,7 +1971,12 @@ def test_l48_healing_wish_waits_mapped():
 # L49 (doc/engine-diff.md): Belly Drum fails at +6 Attack (Showdown's onHit); the engine still
 # took half the HP
 def test_l49_belly_drum_fails_at_plus_six():
-    azumarill = _setter("Azumarill", "Huge Power", "Sitrus Berry", "- Belly Drum\n- Aqua Jet\n- Play Rough\n- Protect")
+    azumarill = _setter(
+        "Azumarill",
+        "Huge Power",
+        "Sitrus Berry",
+        "- Belly Drum\n- Aqua Jet\n- Play Rough\n- Protect",
+    )
     turns = [("move bellydrum", "move spikes"), ("move bellydrum", "move spikes")]
     states = ec.run_showdown(azumarill, TINGLU, turns)
     assert any("|-fail|p1a: Azumarill" in x for x in states[2]["log"])
@@ -1861,8 +1988,18 @@ def test_l49_belly_drum_fails_at_plus_six():
 # target crashes too (Showdown's onMoveFail: a miss, an immunity, a Protect); and each hit of a
 # multi-hit move into Rocky Helmet hurts (once per hit, Showdown's onDamagingHit)
 def test_l50_crash_into_an_immune_target():
-    hands = _attacker("Iron Hands", "Quark Drive", "Leftovers", "- Supercell Slam\n- Drain Punch\n- Ice Punch\n- Swords Dance")
-    treads = _setter("Iron Treads", "Quark Drive", "Leftovers", "- Stealth Rock\n- Rapid Spin\n- Earthquake\n- Knock Off")
+    hands = _attacker(
+        "Iron Hands",
+        "Quark Drive",
+        "Leftovers",
+        "- Supercell Slam\n- Drain Punch\n- Ice Punch\n- Swords Dance",
+    )
+    treads = _setter(
+        "Iron Treads",
+        "Quark Drive",
+        "Leftovers",
+        "- Stealth Rock\n- Rapid Spin\n- Earthquake\n- Knock Off",
+    )
     states = ec.run_showdown(hands, treads, [("move supercellslam", "move stealthrock")])
     assert any("[from] supercellslam" in x for x in states[1]["log"])
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "supercellslam", "stealthrock")
@@ -1870,8 +2007,19 @@ def test_l50_crash_into_an_immune_target():
 
 
 def test_l50_rocky_helmet_per_hit():
-    cinccino = _attacker("Cinccino", "Skill Link", "Leftovers", "- Tail Slap\n- U-turn\n- Knock Off\n- Tidy Up", "Jolly")
-    lando = _setter("Landorus-Therian", "Intimidate", "Rocky Helmet", "- Stealth Rock\n- Earthquake\n- U-turn\n- Taunt")
+    cinccino = _attacker(
+        "Cinccino",
+        "Skill Link",
+        "Leftovers",
+        "- Tail Slap\n- U-turn\n- Knock Off\n- Tidy Up",
+        "Jolly",
+    )
+    lando = _setter(
+        "Landorus-Therian",
+        "Intimidate",
+        "Rocky Helmet",
+        "- Stealth Rock\n- Earthquake\n- U-turn\n- Taunt",
+    )
     states = ec.run_showdown(cinccino, lando, [("move tailslap", "move stealthrock")])
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "tailslap", "stealthrock")
     assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
@@ -1894,7 +2042,9 @@ def test_l51_crit_knockout_rolls():
     assert kill == pytest.approx(CRIT_CHANCE[1] * sum(d >= hp for d in crit) / 16, abs=1e-4)
 
 
-LUNAR_DANCER = _setter("Cresselia", "Levitate", "Leftovers", "- Lunar Dance\n- Moonlight\n- Calm Mind\n- Protect")
+LUNAR_DANCER = _setter(
+    "Cresselia", "Levitate", "Leftovers", "- Lunar Dance\n- Moonlight\n- Calm Mind\n- Protect"
+)
 
 
 # L52 (doc/engine-diff.md): Lunar Dance had no effect in the engine (the user faints, the next
@@ -1920,14 +2070,21 @@ def test_l52_lunar_dance(waits):
 # L53 (doc/engine-diff.md): Weakness Policy is not set off by a fixed damage (Showdown:
 # !move.damage && !move.damageCallback)
 def test_l53_weakness_policy_not_by_fixed_damage():
-    ceruledge = _setter("Ceruledge", "Weak Armor", "Weakness Policy", "- Bulk Up\n- Bitter Blade\n- Shadow Sneak\n- Protect")
+    ceruledge = _setter(
+        "Ceruledge",
+        "Weak Armor",
+        "Weakness Policy",
+        "- Bulk Up\n- Bitter Blade\n- Shadow Sneak\n- Protect",
+    )
     states = ec.run_showdown(ceruledge, TINGLU_HITS_EQ, [("move bulkup", "move ruination")])
     assert states[1]["sides"][0]["mons"][0]["item"] == "weaknesspolicy"
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "bulkup", "ruination")
     assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
 
 
-SABLEYE = _setter("Sableye", "Prankster", "Leftovers", "- Confuse Ray\n- Recover\n- Will-O-Wisp\n- Knock Off")
+SABLEYE = _setter(
+    "Sableye", "Prankster", "Leftovers", "- Confuse Ray\n- Recover\n- Will-O-Wisp\n- Knock Off"
+)
 
 
 # L54 (doc/engine-diff.md): confusion's self-hit, Showdown's getConfusionDamage: 40 power of the
@@ -1949,14 +2106,21 @@ def test_l54_confusion_self_hit_burned():
 # skips AfterMoveSecondarySelf for it); control: a move without secondaries
 @pytest.mark.parametrize("move, recoil", [("icebeam", False), ("earthquake", True)])
 def test_l55_sheer_force_life_orb(move, recoil):
-    gator = _attacker("Feraligatr", "Sheer Force", "Life Orb", "- Ice Beam\n- Earthquake\n- Crunch\n- Dragon Dance")
+    gator = _attacker(
+        "Feraligatr",
+        "Sheer Force",
+        "Life Orb",
+        "- Ice Beam\n- Earthquake\n- Crunch\n- Dragon Dance",
+    )
     states = ec.run_showdown(gator, TINGLU, [(f"move {move}", "move spikes")])
     assert any("[from] item: Life Orb" in x for x in states[1]["log"]) == recoil
     outs = ec.engine_outcomes(ec.engine_state(states[0]), move, "spikes")
     assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
 
 
-JIRACHI = _setter("Jirachi", "Serene Grace", "Leftovers", "- Doom Desire\n- Wish\n- Protect\n- Iron Head")
+JIRACHI = _setter(
+    "Jirachi", "Serene Grace", "Leftovers", "- Doom Desire\n- Wish\n- Protect\n- Iron Head"
+)
 
 
 # L56 (doc/engine-diff.md): Doom Desire's hit is a Steel move of 140 power (the engine hit with
@@ -1974,7 +2138,13 @@ def test_l56_doom_desire():
 # 20 / 40 / 60 power (the engine: one check, 3 hits of 40); Skill Link: all 3
 @pytest.mark.parametrize("ability", ["Pressure", "Skill Link"])
 def test_l58_triple_axel_hits(ability):
-    p1 = _attacker("Weavile", ability, "Leftovers", "- Triple Axel\n- Knock Off\n- Ice Shard\n- Swords Dance", "Jolly")
+    p1 = _attacker(
+        "Weavile",
+        ability,
+        "Leftovers",
+        "- Triple Axel\n- Knock Off\n- Ice Shard\n- Swords Dance",
+        "Jolly",
+    )
     turns = [("move tripleaxel", "move softboiled")]
     states = ec.run_showdown(p1, BLISSEY, turns)
     engine = _engine_hit_counts(ec.engine_state(states[0]), "tripleaxel", "softboiled")
@@ -1992,7 +2162,9 @@ BANDS = {2: range(1, 4), 5: range(4, 7), 8: range(7, 10), 10: range(10, 11)}
 @pytest.mark.parametrize("ability, item", [("Technician", "Leftovers"), ("Technician", "Loaded Dice"),
                                            ("Skill Link", "Leftovers")])  # fmt: skip
 def test_l58_population_bomb_hits(ability, item):
-    p1 = _attacker("Maushold", ability, item, "- Population Bomb\n- Bite\n- Tidy Up\n- Encore", "Jolly")
+    p1 = _attacker(
+        "Maushold", ability, item, "- Population Bomb\n- Bite\n- Tidy Up\n- Encore", "Jolly"
+    )
     turns = [("move populationbomb", "move softboiled")]
     states = ec.run_showdown(p1, BLISSEY, turns)
     engine = _engine_hit_counts(ec.engine_state(states[0]), "populationbomb", "softboiled")
@@ -2012,7 +2184,9 @@ def test_l58_population_bomb_hits(ability, item):
     (CORVIKNIGHT, "defog"),
 ])  # fmt: skip
 def test_l59_protected_move_does_nothing(p1, move):
-    protector = _setter("Gliscor", "Poison Heal", "Toxic Orb", "- Protect\n- Stealth Rock\n- Earthquake\n- Spikes")
+    protector = _setter(
+        "Gliscor", "Poison Heal", "Toxic Orb", "- Protect\n- Stealth Rock\n- Earthquake\n- Spikes"
+    )
     turns = [("move " + ("headlongrush" if move == "rapidspin" else "roost"), "move stealthrock"),
              (f"move {move}", "move protect")]  # fmt: skip
     states = ec.run_showdown(p1, protector, turns)
@@ -2041,9 +2215,18 @@ def test_l60_embody_aspect_on_tera(species, ability, item, tera, stat):
 # (Showdown's lockedmove onEnd: by trueDuration, however it ends); L22 ended it without
 @pytest.mark.parametrize("last", [True, False])
 def test_l61_lock_stopped_on_its_last_turn_confuses(last):
-    chomp = _setter("Garchomp", "Rough Skin", "Leftovers", "- Outrage\n- Earthquake\n- Swords Dance\n- Stealth Rock")
-    corv = _setter("Corviknight", "Pressure", "Leftovers", "- Protect\n- Roost\n- Defog\n- Body Press")
-    turns = [("move outrage", "move roost")] * (2 if last else 1) + [("move outrage", "move protect")]
+    chomp = _setter(
+        "Garchomp",
+        "Rough Skin",
+        "Leftovers",
+        "- Outrage\n- Earthquake\n- Swords Dance\n- Stealth Rock",
+    )
+    corv = _setter(
+        "Corviknight", "Pressure", "Leftovers", "- Protect\n- Roost\n- Defog\n- Body Press"
+    )
+    turns = [("move outrage", "move roost")] * (2 if last else 1) + [
+        ("move outrage", "move protect")
+    ]
     states = ec.run_showdown(chomp, corv, turns)
     assert ("confusion" in states[-1]["sides"][0]["mons"][0]["volatiles"]) == last
     outs = ec.engine_outcomes(ec.engine_state(states[-2]), "outrage", "protect")
@@ -2052,10 +2235,16 @@ def test_l61_lock_stopped_on_its_last_turn_confuses(last):
 
 # L62 (doc/engine-diff.md): Unburden was never set off in the engine (its volatile only read for
 # the Speed): an item used or lost while out puts it on (Showdown's onAfterUseItem / onTakeItem)
-@pytest.mark.parametrize("item, foe_move", [("Sitrus Berry", "ruination"), ("Leftovers", "knockoff")])
+@pytest.mark.parametrize(
+    "item, foe_move", [("Sitrus Berry", "ruination"), ("Leftovers", "knockoff")]
+)
 def test_l62_unburden(item, foe_move):
-    hawlucha = _setter("Hawlucha", "Unburden", item, "- Swords Dance\n- Acrobatics\n- Close Combat\n- Roost")
-    tinglu = _setter("Ting-Lu", "Vessel of Ruin", "Leftovers", "- Ruination\n- Knock Off\n- Spikes\n- Whirlwind")
+    hawlucha = _setter(
+        "Hawlucha", "Unburden", item, "- Swords Dance\n- Acrobatics\n- Close Combat\n- Roost"
+    )
+    tinglu = _setter(
+        "Ting-Lu", "Vessel of Ruin", "Leftovers", "- Ruination\n- Knock Off\n- Spikes\n- Whirlwind"
+    )
     states = ec.run_showdown(hawlucha, tinglu, [("move swordsdance", f"move {foe_move}")])
     assert "unburden" in states[1]["sides"][0]["mons"][0]["volatiles"]
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "swordsdance", foe_move)
@@ -2065,8 +2254,15 @@ def test_l62_unburden(item, foe_move):
 # L63 (doc/engine-diff.md): a sound move (Parting Shot) or an Infiltrator's move lowers the stats
 # of a target behind a Substitute (Showdown's bypasssub); the engine's Substitute blocked them
 def test_l63_parting_shot_through_a_substitute():
-    grimm = _setter("Grimmsnarl", "Prankster", "Leftovers", "- Parting Shot\n- Spirit Break\n- Thunder Wave\n- Reflect")
-    prim = _setter("Primarina", "Torrent", "Leftovers", "- Substitute\n- Moonblast\n- Surf\n- Calm Mind")
+    grimm = _setter(
+        "Grimmsnarl",
+        "Prankster",
+        "Leftovers",
+        "- Parting Shot\n- Spirit Break\n- Thunder Wave\n- Reflect",
+    )
+    prim = _setter(
+        "Primarina", "Torrent", "Leftovers", "- Substitute\n- Moonblast\n- Surf\n- Calm Mind"
+    )
     turns = [("move reflect", "move substitute"), ("move partingshot", "move calmmind")]
     states = ec.run_showdown(grimm, prim, turns)
     assert states[2]["sides"][1]["mons"][0]["boosts"]["atk"] == -1
@@ -2085,10 +2281,20 @@ def test_l56_doom_desire_hits_later():
 # L64 (doc/engine-diff.md): Red Card's drag comes after the hit's secondaries (Showdown's
 # onAfterMoveSecondary); the engine dragged first and the secondaries never happened
 def test_l64_red_card_after_secondaries():
-    red = _setter("Ting-Lu", "Vessel of Ruin", "Red Card", "- Spikes\n- Ruination\n- Earthquake\n- Whirlwind")
-    clef = _attacker("Clefable", "Magic Guard", "Leftovers", "- Moonblast\n- Moonlight\n- Calm Mind\n- Protect", "Modest")
-    states = ec.run_showdown(clef + "\n\n" + BLISSEY, red, [("move moonblast", "move spikes")],
-                             seed="gen5,1,7,13,3")  # (a seed with the 30% drop)
+    red = _setter(
+        "Ting-Lu", "Vessel of Ruin", "Red Card", "- Spikes\n- Ruination\n- Earthquake\n- Whirlwind"
+    )
+    clef = _attacker(
+        "Clefable",
+        "Magic Guard",
+        "Leftovers",
+        "- Moonblast\n- Moonlight\n- Calm Mind\n- Protect",
+        "Modest",
+    )
+    # (a seed with the 30% drop)
+    states = ec.run_showdown(
+        clef + "\n\n" + BLISSEY, red, [("move moonblast", "move spikes")], seed="gen5,1,7,13,3"
+    )
     assert states[1]["sides"][1]["mons"][0]["boosts"]["spa"] == -1
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "moonblast", "spikes")
     assert ec.closest(states[1], outs, (2, 1))["diff"] == {}
@@ -2098,8 +2304,18 @@ def test_l64_red_card_after_secondaries():
 # the self ones: Rapid Spin's Speed); the engine dropped every secondary (the target's contact
 # abilities too: Static, ..., added to the move as secondaries on its user)
 def test_l65_covert_cloak_keeps_self_secondaries():
-    tusk = _attacker("Great Tusk", "Protosynthesis", "Leftovers", "- Rapid Spin\n- Headlong Rush\n- Ice Spinner\n- Knock Off")
-    cloak = _setter("Blissey", "Natural Cure", "Covert Cloak", "- Soft-Boiled\n- Seismic Toss\n- Calm Mind\n- Protect")
+    tusk = _attacker(
+        "Great Tusk",
+        "Protosynthesis",
+        "Leftovers",
+        "- Rapid Spin\n- Headlong Rush\n- Ice Spinner\n- Knock Off",
+    )
+    cloak = _setter(
+        "Blissey",
+        "Natural Cure",
+        "Covert Cloak",
+        "- Soft-Boiled\n- Seismic Toss\n- Calm Mind\n- Protect",
+    )
     states = ec.run_showdown(tusk, cloak, [("move rapidspin", "move calmmind")])
     assert states[1]["sides"][0]["mons"][0]["boosts"]["spe"] == 1
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "rapidspin", "calmmind")
@@ -2109,7 +2325,9 @@ def test_l65_covert_cloak_keeps_self_secondaries():
 # L66 (doc/engine-diff.md): Take Heart had no effect in the engine (Showdown: Sp. Atk and Sp. Def
 # +1 and its status cured, in code)
 def test_l66_take_heart():
-    manaphy = _setter("Manaphy", "Hydration", "Leftovers", "- Take Heart\n- Scald\n- Energy Ball\n- Rest")
+    manaphy = _setter(
+        "Manaphy", "Hydration", "Leftovers", "- Take Heart\n- Scald\n- Energy Ball\n- Rest"
+    )
     turns = [("move scald", "move willowisp"), ("move takeheart", "move recover")]
     states = ec.run_showdown(manaphy, SABLEYE, turns, force_random=True)
     assert states[1]["sides"][0]["mons"][0]["status"] == "brn"
@@ -2122,8 +2340,16 @@ def test_l66_take_heart():
 def test_l64_red_card_stops_life_orb_recoil():
     """The attacker Red Card drags out takes no Life Orb recoil (its onAfterMoveSecondarySelf
     checks forceSwitchFlag)."""
-    red = _setter("Ting-Lu", "Vessel of Ruin", "Red Card", "- Spikes\n- Ruination\n- Earthquake\n- Whirlwind")
-    orb = _attacker("Clefable", "Unaware", "Life Orb", "- Moonblast\n- Moonlight\n- Calm Mind\n- Protect", "Modest")
+    red = _setter(
+        "Ting-Lu", "Vessel of Ruin", "Red Card", "- Spikes\n- Ruination\n- Earthquake\n- Whirlwind"
+    )
+    orb = _attacker(
+        "Clefable",
+        "Unaware",
+        "Life Orb",
+        "- Moonblast\n- Moonlight\n- Calm Mind\n- Protect",
+        "Modest",
+    )
     states = ec.run_showdown(orb + "\n\n" + BLISSEY, red, [("move moonblast", "move spikes")])
     assert not any("Life Orb" in x for x in states[1]["log"])
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "moonblast", "spikes")
@@ -2133,14 +2359,26 @@ def test_l64_red_card_stops_life_orb_recoil():
 # L67 (doc/engine-diff.md): Sacred Sword / Darkest Lariat ignore the target's Defense boosts
 # (Showdown's ignoreDefensive); the engine used them
 def test_l67_sacred_sword_ignores_defense_boosts():
-    gallade = _attacker("Gallade", "Sharpness", "Leftovers", "- Sacred Sword\n- Psycho Cut\n- Night Slash\n- Swords Dance")
-    tusk = _setter("Great Tusk", "Protosynthesis", "Leftovers", "- Close Combat\n- Rapid Spin\n- Ice Spinner\n- Knock Off")
+    gallade = _attacker(
+        "Gallade",
+        "Sharpness",
+        "Leftovers",
+        "- Sacred Sword\n- Psycho Cut\n- Night Slash\n- Swords Dance",
+    )
+    tusk = _setter(
+        "Great Tusk",
+        "Protosynthesis",
+        "Leftovers",
+        "- Close Combat\n- Rapid Spin\n- Ice Spinner\n- Knock Off",
+    )
     turns = [("move swordsdance", "move closecombat"), ("move sacredsword", "move rapidspin")]
     states = ec.run_showdown(gallade, tusk, turns, damage_probe=True)
     assert states[1]["sides"][1]["mons"][0]["boosts"]["def"] == -1
     import alpha_search
 
-    rolls = alpha_search.damage_rolls(ec.engine_state(states[1]).to_string(), True, "sacredsword", "rapidspin")
+    rolls = alpha_search.damage_rolls(
+        ec.engine_state(states[1]).to_string(), True, "sacredsword", "rapidspin"
+    )
     assert rolls[0][-1] == states[1]["damage"]["p1"]["sacredsword"]
 
 
@@ -2150,7 +2388,9 @@ Tera Type: Normal
 EVs: 248 HP / 8 Def / 252 Spe
 Relaxed Nature
 - Transform"""
-CLEFABLE = _setter("Clefable", "Magic Guard", "Leftovers", "- Moonblast\n- Calm Mind\n- Moonlight\n- Protect")
+CLEFABLE = _setter(
+    "Clefable", "Magic Guard", "Leftovers", "- Moonblast\n- Calm Mind\n- Moonlight\n- Protect"
+)
 
 
 # L36 (doc/engine-diff.md): Imposter / Transform, the user takes the target's types (not its tera
@@ -2159,14 +2399,27 @@ CLEFABLE = _setter("Clefable", "Magic Guard", "Leftovers", "- Moonblast\n- Calm 
 def test_l36_imposter_transforms_on_switch_in():
     states = ec.run_showdown(BLISSEY + "\n\n" + DITTO, CLEFABLE, [("switch 2", "move calmmind")])
     d = states[1]["sides"][0]["mons"][1]
-    assert d["types"] == ["Fairy"] and [m["id"] for m in d["moves"]][:2] == ["moonblast", "calmmind"]
+    assert d["types"] == ["Fairy"] and [m["id"] for m in d["moves"]][:2] == [
+        "moonblast",
+        "calmmind",
+    ]
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "ditto", "calmmind")
     assert ec.closest(states[1], outs, (2, 1))["diff"] == {}
     e = outs[0][1].side_one.pokemon[1]
-    assert [str(m.id).lower() for m in e.moves][:4] == ["moonblast", "calmmind", "moonlight", "protect"]
+    assert [str(m.id).lower() for m in e.moves][:4] == [
+        "moonblast",
+        "calmmind",
+        "moonlight",
+        "protect",
+    ]
     sd = states[1]["sides"][0]["mons"][1]["stats"]
     assert (e.attack, e.defense, e.special_attack, e.special_defense, e.speed) == (
-        sd["atk"], sd["def"], sd["spa"], sd["spd"], sd["spe"])
+        sd["atk"],
+        sd["def"],
+        sd["spa"],
+        sd["spd"],
+        sd["spe"],
+    )
     assert str(e.ability).lower() == "magicguard"
 
 
@@ -2181,7 +2434,9 @@ def test_l36_transformed_moves_then_switch_back():
     assert str(d.moves[0].id).lower() == "transform" and str(d.ability).lower() == "imposter"
 
 
-EXEGGUTOR = _setter("Exeggutor", "Harvest", "Sitrus Berry", "- Leaf Storm\n- Psychic\n- Synthesis\n- Protect")
+EXEGGUTOR = _setter(
+    "Exeggutor", "Harvest", "Sitrus Berry", "- Leaf Storm\n- Psychic\n- Synthesis\n- Protect"
+)
 
 
 # L57 (doc/engine-diff.md): Harvest, a used-up berry back at the end of the turn, always in sun,
@@ -2199,7 +2454,12 @@ def test_l57_harvest(seed):
         assert back / sum(o[0] for o in hit) == pytest.approx(0.5, abs=1e-3)
 
 
-HATTERENE_HW = _setter("Hatterene", "Magic Bounce", "Leftovers", "- Healing Wish\n- Psyshock\n- Calm Mind\n- Mystical Fire")
+HATTERENE_HW = _setter(
+    "Hatterene",
+    "Magic Bounce",
+    "Leftovers",
+    "- Healing Wish\n- Psyshock\n- Calm Mind\n- Mystical Fire",
+)
 
 
 # L68 (doc/engine-diff.md): Healing Wish / Lunar Dance fail without a mon to switch in (Showdown's
@@ -2214,15 +2474,21 @@ def test_l68_healing_wish_needs_a_replacement():
 # L69: a Whirlwind / Roar Magic Bounce reflects drags its user's side; an Encore reflected onto an
 # Encore user fails (Encore cannot encore Encore)
 def test_l69_magic_bounce_whirlwind():
-    lu = _setter("Ting-Lu", "Vessel of Ruin", "Leftovers", "- Whirlwind\n- Ruination\n- Spikes\n- Earthquake")
-    states = ec.run_showdown(HATTERENE_HW, lu + "\n\n" + BLISSEY, [("move calmmind", "move whirlwind")])
+    lu = _setter(
+        "Ting-Lu", "Vessel of Ruin", "Leftovers", "- Whirlwind\n- Ruination\n- Spikes\n- Earthquake"
+    )
+    states = ec.run_showdown(
+        HATTERENE_HW, lu + "\n\n" + BLISSEY, [("move calmmind", "move whirlwind")]
+    )
     assert states[1]["sides"][1]["active"] == 1  # Ting-Lu dragged out
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "calmmind", "whirlwind")
     assert ec.closest(states[1], outs, (1, 2))["diff"] == {}
 
 
 def test_l69_encore_bounced_onto_an_encore_user_fails():
-    encorer = _setter("Clefable", "Magic Guard", "Leftovers", "- Encore\n- Moonblast\n- Moonlight\n- Calm Mind")
+    encorer = _setter(
+        "Clefable", "Magic Guard", "Leftovers", "- Encore\n- Moonblast\n- Moonlight\n- Calm Mind"
+    )
     turns = [("move calmmind", "move moonblast"), ("move psyshock", "move encore")]
     states = ec.run_showdown(HATTERENE_HW, encorer, turns)
     assert "encore" not in states[2]["sides"][1]["mons"][0]["volatiles"]
@@ -2238,13 +2504,18 @@ def test_no_name_defined_twice():
 
     tree = ast.parse(Path(__file__).read_text())
     names = collections.Counter(
-        t.id for n in tree.body if isinstance(n, ast.Assign) for t in n.targets
+        t.id
+        for n in tree.body
+        if isinstance(n, ast.Assign)
+        for t in n.targets
         if isinstance(t, ast.Name)
     ) + collections.Counter(n.name for n in tree.body if isinstance(n, ast.FunctionDef))
     assert [k for k, v in names.items() if v > 1] == []
 
 
-GENGAR_CB = _setter("Gengar", "Cursed Body", "Leftovers", "- Shadow Ball\n- Sludge Bomb\n- Disable\n- Will-O-Wisp")
+GENGAR_CB = _setter(
+    "Gengar", "Cursed Body", "Leftovers", "- Shadow Ball\n- Sludge Bomb\n- Disable\n- Will-O-Wisp"
+)
 
 
 # L70 (doc/engine-diff.md): Disable stops the target's last move for 4 turns (Showdown's duration
@@ -2256,7 +2527,8 @@ def test_l70_disable(extra):
     turns += [("move shadowball", "move ruination")] * extra
     states = ec.run_showdown(GENGAR_CB.replace("Cursed Body", "Levitate"), TINGLU_HITS_EQ, turns)
     lu = states[-1]["sides"][1]["mons"][0]
-    assert ("disable" in lu["volatiles"]) == (extra < 3)  # 4 turns with the one used (the target to move)
+    # 4 turns with the one used (the target to move)
+    assert ("disable" in lu["volatiles"]) == (extra < 3)
     move, foe = ("shadowball", "ruination") if extra else ("disable", "earthquake")
     outs = ec.engine_outcomes(ec.engine_state(states[-2]), move, foe)
     assert ec.closest(states[-1], outs, (1, 1))["diff"] == {}
@@ -2269,7 +2541,9 @@ def test_l70_cursed_body():
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "willowisp", "ruination")
     assert ec.closest(states[1], outs, (1, 1))["diff"] == {}
     hit = [o for o in outs if o.damage[0] > 0]  # (Ruination's 90%)
-    disabled = sum(o[0] for o in hit if "DISABLE" in {str(v).upper() for v in o[1].side_two.volatile_statuses})
+    disabled = sum(
+        o[0] for o in hit if "DISABLE" in {str(v).upper() for v in o[1].side_two.volatile_statuses}
+    )
     assert disabled / sum(o[0] for o in hit) == pytest.approx(0.3, abs=1e-3)
 
 
@@ -2278,7 +2552,9 @@ def test_l70_cursed_body():
 # basePowerCallback); the engine's had no power (the engine has every Gen 9 species' base
 # stats now, generated from Showdown's Dex)
 def test_l71_beat_up():
-    sableye = _attacker("Sableye", "Prankster", "Leftovers", "- Beat Up\n- Recover\n- Will-O-Wisp\n- Knock Off")
+    sableye = _attacker(
+        "Sableye", "Prankster", "Leftovers", "- Beat Up\n- Recover\n- Will-O-Wisp\n- Knock Off"
+    )
     team = sableye + "\n\n" + KINGAMBIT_KNOCK + "\n\n" + CORVIKNIGHT
     states = ec.run_showdown(team, BLISSEY, [("move beatup", "move calmmind")])
     assert any("|-hitcount|p2a: Blissey|3" in x for x in states[1]["log"])
@@ -2289,14 +2565,21 @@ def test_l71_beat_up():
 # L72 (doc/engine-diff.md): Good as Gold blocks only status moves aimed at it: a non-Ghost Curse
 # targets its user (Showdown's onModifyMove), the engine's Curse kept its foe target
 def test_l72_curse_through_good_as_gold():
-    g = _setter("Gholdengo", "Good as Gold", "Leftovers", "- Shadow Ball\n- Make It Rain\n- Recover\n- Nasty Plot")
+    g = _setter(
+        "Gholdengo",
+        "Good as Gold",
+        "Leftovers",
+        "- Shadow Ball\n- Make It Rain\n- Recover\n- Nasty Plot",
+    )
     states = ec.run_showdown(DONDOZO, g, [("move curse", "move recover")])
     assert states[1]["sides"][0]["mons"][0]["boosts"]["atk"] == 1
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "curse", "recover")
     assert ec.closest(states[1], outs, (1, 1))["diff"] == {}
 
 
-STOCKPILER = _setter("Toxapex", "Regenerator", "Black Sludge", "- Stockpile\n- Spit Up\n- Swallow\n- Toxic")
+STOCKPILER = _setter(
+    "Toxapex", "Regenerator", "Black Sludge", "- Stockpile\n- Spit Up\n- Swallow\n- Toxic"
+)
 
 
 # L73 (doc/engine-diff.md): Stockpile, a layer (at most 3) of Defense / Sp. Def +1 each; Spit Up
@@ -2317,7 +2600,12 @@ def test_l73_stockpile(pre, move):
 # L74 (doc/engine-diff.md): Electromorphosis, a damaging hit charges its holder (Showdown's
 # onDamagingHit); not implemented in the engine
 def test_l74_electromorphosis():
-    belli = _setter("Bellibolt", "Electromorphosis", "Leftovers", "- Slack Off\n- Discharge\n- Muddy Water\n- Toxic")
+    belli = _setter(
+        "Bellibolt",
+        "Electromorphosis",
+        "Leftovers",
+        "- Slack Off\n- Discharge\n- Muddy Water\n- Toxic",
+    )
     states = ec.run_showdown(belli, TINGLU_HITS_EQ, [("move slackoff", "move ruination")])
     assert "charge" in states[1]["sides"][0]["mons"][0]["volatiles"]
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "slackoff", "ruination")
@@ -2339,8 +2627,12 @@ def test_l75_sitrus_at_once():
 # foe's active): Clear Body stops it, Defiant answers it; the engine applied it as self-inflicted
 @pytest.mark.parametrize("ability, spe, atk", [("Clear Body", 0, 0), ("Light Metal", -1, 0)])
 def test_l76_sticky_web_from_the_foe(ability, spe, atk):
-    webber = _setter("Ribombee", "Shield Dust", "Focus Sash", "- Sticky Web\n- Moonblast\n- U-turn\n- Stun Spore")
-    gross = _setter("Metagross", ability, "Leftovers", "- Meteor Mash\n- Earthquake\n- Bullet Punch\n- Agility")
+    webber = _setter(
+        "Ribombee", "Shield Dust", "Focus Sash", "- Sticky Web\n- Moonblast\n- U-turn\n- Stun Spore"
+    )
+    gross = _setter(
+        "Metagross", ability, "Leftovers", "- Meteor Mash\n- Earthquake\n- Bullet Punch\n- Agility"
+    )
     turns = [("move stickyweb", "move softboiled"), ("move moonblast", "switch 2")]
     states = ec.run_showdown(webber, BLISSEY + "\n\n" + gross, turns)
     assert states[2]["sides"][1]["mons"][1]["boosts"]["spe"] == spe
@@ -2351,7 +2643,12 @@ def test_l76_sticky_web_from_the_foe(ability, spe, atk):
 def test_l75_knock_off_takes_the_berry_before_it_is_eaten():
     """Knock Off removes the Sitrus its hit would set off (its onAfterHit comes first)."""
     pex = _setter("Toxapex", "Regenerator", "Sitrus Berry", "- Recover\n- Toxic\n- Haze\n- Scald")
-    knock = _attacker("Kingambit", "Supreme Overlord", "Life Orb", "- Knock Off\n- Iron Head\n- Sucker Punch\n- Swords Dance")
+    knock = _attacker(
+        "Kingambit",
+        "Supreme Overlord",
+        "Life Orb",
+        "- Knock Off\n- Iron Head\n- Sucker Punch\n- Swords Dance",
+    )
     states = ec.run_showdown(pex, knock, [("move haze", "move knockoff")])
     assert not any("[eat]" in x for x in states[1]["log"])
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "haze", "knockoff")
@@ -2364,7 +2661,12 @@ def test_l75_knock_off_takes_the_berry_before_it_is_eaten():
 # it came in on (Showdown: a counter in the ability's state, not a volatile); the harness did not
 # carry it into the engine's state, so a Regigigas already in hit at full power
 def test_l77_slow_start_counts_its_turns():
-    gigas = _attacker("Regigigas", "Slow Start", "Leftovers", "- Earthquake\n- Protect\n- Substitute\n- Thunder Wave")
+    gigas = _attacker(
+        "Regigigas",
+        "Slow Start",
+        "Leftovers",
+        "- Earthquake\n- Protect\n- Substitute\n- Thunder Wave",
+    )
     states = ec.run_showdown(gigas, BLISSEY, [("move earthquake", "move softboiled")] * 6)
     assert any("|-end|p1a: Regigigas|Slow Start" in x for x in states[5]["log"])
     for k in range(6):
@@ -2379,7 +2681,12 @@ def test_l77_slow_start_from_the_protocol():
     for a lead and for one that comes in mid-battle."""
     from alpha_poke.agents.timers import timers
 
-    gigas = _attacker("Regigigas", "Slow Start", "Leftovers", "- Earthquake\n- Protect\n- Substitute\n- Thunder Wave")
+    gigas = _attacker(
+        "Regigigas",
+        "Slow Start",
+        "Leftovers",
+        "- Earthquake\n- Protect\n- Substitute\n- Thunder Wave",
+    )
     other = gigas.replace("Regigigas @", "Gigas (Regigigas) @")
     turns = [("move earthquake", "move softboiled"), ("move earthquake", "move protect"),
              ("switch 2", "move softboiled")]  # fmt: skip
@@ -2409,7 +2716,12 @@ Jolly Nature
 
 
 def test_l78_pickpocket_after_knock_off():
-    knock = _attacker("Kingambit", "Supreme Overlord", "Leftovers", "- Knock Off\n- Iron Head\n- Sucker Punch\n- Swords Dance")
+    knock = _attacker(
+        "Kingambit",
+        "Supreme Overlord",
+        "Leftovers",
+        "- Knock Off\n- Iron Head\n- Sucker Punch\n- Swords Dance",
+    )
     states = ec.run_showdown(WEAVILE_PICKPOCKET, knock, [("move swordsdance", "move knockoff")])
     assert states[1]["sides"][0]["mons"][0]["item"] == "leftovers"
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "swordsdance", "knockoff")
@@ -2427,7 +2739,12 @@ def test_l78_pickpocket_holder_takes_nothing_when_it_hits():
 # L79 (doc/engine-diff.md): a Paradox Pokemon's Booster Energy cannot be taken (Showdown's
 # onTakeItem), so Knock Off neither removes it nor gets its 1.5x; the engine did both
 def test_l79_booster_energy_stays_on_a_paradox():
-    tusk = _setter("Great Tusk", "Protosynthesis", "Booster Energy", "- Rapid Spin\n- Headlong Rush\n- Ice Spinner\n- Bulk Up")
+    tusk = _setter(
+        "Great Tusk",
+        "Protosynthesis",
+        "Booster Energy",
+        "- Rapid Spin\n- Headlong Rush\n- Ice Spinner\n- Bulk Up",
+    )
     # (a faster Drought first: the sun activates Protosynthesis, the Booster Energy stays)
     knock = """Ninetales @ Leftovers
 Ability: Drought
@@ -2450,8 +2767,18 @@ Adamant Nature
 # (Purifying Salt, Water Veil, Limber, ...; not Comatose / Shields Down, which it cannot), and the
 # target's Gas the user's Corrosion; the engine's status immunity read the abilities as they are
 def test_l80_neutralizing_gas_lets_a_burn_through_purifying_salt():
-    weezing = _setter("Weezing-Galar", "Neutralizing Gas", "Heavy-Duty Boots", "- Will-O-Wisp\n- Pain Split\n- Strange Steam\n- Defog")
-    salt = _setter("Garganacl", "Purifying Salt", "Leftovers", "- Recover\n- Salt Cure\n- Stealth Rock\n- Protect")
+    weezing = _setter(
+        "Weezing-Galar",
+        "Neutralizing Gas",
+        "Heavy-Duty Boots",
+        "- Will-O-Wisp\n- Pain Split\n- Strange Steam\n- Defog",
+    )
+    salt = _setter(
+        "Garganacl",
+        "Purifying Salt",
+        "Leftovers",
+        "- Recover\n- Salt Cure\n- Stealth Rock\n- Protect",
+    )
     states = ec.run_showdown(weezing, salt, [("move willowisp", "move recover")])
     assert states[1]["sides"][1]["mons"][0]["status"] == "brn"
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "willowisp", "recover")
@@ -2459,8 +2786,15 @@ def test_l80_neutralizing_gas_lets_a_burn_through_purifying_salt():
 
 
 def test_l80_neutralizing_gas_stops_synchronize():
-    weezing = _setter("Weezing-Galar", "Neutralizing Gas", "Heavy-Duty Boots", "- Will-O-Wisp\n- Pain Split\n- Strange Steam\n- Defog")
-    garde = _setter("Gardevoir", "Synchronize", "Leftovers", "- Calm Mind\n- Moonblast\n- Psychic\n- Protect")
+    weezing = _setter(
+        "Weezing-Galar",
+        "Neutralizing Gas",
+        "Heavy-Duty Boots",
+        "- Will-O-Wisp\n- Pain Split\n- Strange Steam\n- Defog",
+    )
+    garde = _setter(
+        "Gardevoir", "Synchronize", "Leftovers", "- Calm Mind\n- Moonblast\n- Psychic\n- Protect"
+    )
     states = ec.run_showdown(weezing, garde, [("move willowisp", "move calmmind")])
     assert states[1]["sides"][1]["mons"][0]["status"] == "brn"
     assert states[1]["sides"][0]["mons"][0]["status"] == ""
@@ -2474,8 +2808,12 @@ def test_l80_neutralizing_gas_stops_synchronize():
 @pytest.mark.parametrize("berry", ["Lum Berry", "Chesto Berry"])
 def test_l81_rest_berry_at_once(berry):
     clef = _setter("Clefable", "Unaware", berry, "- Rest\n- Moonblast\n- Calm Mind\n- Protect")
-    tork = _setter("Torkoal", "White Smoke", "Leftovers", "- Will-O-Wisp\n- Flamethrower\n- Rapid Spin\n- Yawn")
-    states = ec.run_showdown(clef, tork, [("move moonblast", "move flamethrower"), ("move rest", "move willowisp")])
+    tork = _setter(
+        "Torkoal", "White Smoke", "Leftovers", "- Will-O-Wisp\n- Flamethrower\n- Rapid Spin\n- Yawn"
+    )
+    states = ec.run_showdown(
+        clef, tork, [("move moonblast", "move flamethrower"), ("move rest", "move willowisp")]
+    )
     assert states[2]["sides"][0]["mons"][0]["status"] == "brn"
     outs = ec.engine_outcomes(ec.engine_state(states[1]), "rest", "willowisp")
     assert ec.closest(states[2], outs, (1, 1), hp=True)["diff"] == {}
@@ -2489,7 +2827,9 @@ def test_l81_rest_berry_at_once(berry):
     (_setter("Gengar", "Cursed Body", "Black Sludge", "- Curse\n- Shadow Ball\n- Protect\n- Toxic"), "curse"),
 ], ids=["infestation", "saltcure", "curse"])  # fmt: skip
 def test_l82_magic_guard_stops_residual_damage(foe, move):
-    clef = _setter("Clefable", "Magic Guard", "Leftovers", "- Calm Mind\n- Moonblast\n- Protect\n- Soft-Boiled")
+    clef = _setter(
+        "Clefable", "Magic Guard", "Leftovers", "- Calm Mind\n- Moonblast\n- Protect\n- Soft-Boiled"
+    )
     states = ec.run_showdown(clef, foe, [("move calmmind", f"move {move}")] * 2)
     for k in (0, 1):
         outs = ec.engine_outcomes(ec.engine_state(states[k]), "calmmind", move)
@@ -2500,7 +2840,9 @@ def test_l82_magic_guard_stops_residual_damage(foe, move):
 # Sludge's end-of-turn damage; the engine took it
 @pytest.mark.parametrize("item", ["Sticky Barb", "Black Sludge"])
 def test_l83_magic_guard_stops_item_damage(item):
-    clef = _setter("Clefable", "Magic Guard", item, "- Calm Mind\n- Moonblast\n- Protect\n- Soft-Boiled")
+    clef = _setter(
+        "Clefable", "Magic Guard", item, "- Calm Mind\n- Moonblast\n- Protect\n- Soft-Boiled"
+    )
     states = ec.run_showdown(clef, BLISSEY, [("move calmmind", "move softboiled")])
     assert states[1]["sides"][0]["mons"][0]["hp"] == states[0]["sides"][0]["mons"][0]["hp"]
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "calmmind", "softboiled")
@@ -2511,8 +2853,18 @@ def test_l83_magic_guard_stops_item_damage(item):
 # order: weather 1, Future Sight 3, Wish 4, Grassy Terrain 5.2, the terrain's end 27); the engine
 # healed first (nothing at full HP) and ended the terrain before
 def test_l84_grassy_terrain_heals_after_sand():
-    ttar = _setter("Tyranitar", "Sand Stream", "Leftovers", "- Stealth Rock\n- Knock Off\n- Protect\n- Thunder Wave")
-    rilla = _setter("Rillaboom", "Grassy Surge", "Heavy-Duty Boots", "- Swords Dance\n- Wood Hammer\n- U-turn\n- Protect")
+    ttar = _setter(
+        "Tyranitar",
+        "Sand Stream",
+        "Leftovers",
+        "- Stealth Rock\n- Knock Off\n- Protect\n- Thunder Wave",
+    )
+    rilla = _setter(
+        "Rillaboom",
+        "Grassy Surge",
+        "Heavy-Duty Boots",
+        "- Swords Dance\n- Wood Hammer\n- U-turn\n- Protect",
+    )
     states = ec.run_showdown(ttar, rilla, [("move stealthrock", "move swordsdance")])
     assert states[1]["sides"][1]["mons"][0]["hp"] == states[1]["sides"][1]["mons"][0]["maxhp"]
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "stealthrock", "swordsdance")
@@ -2520,8 +2872,18 @@ def test_l84_grassy_terrain_heals_after_sand():
 
 
 def test_l84_grassy_terrain_heals_on_its_last_turn():
-    rilla = _setter("Rillaboom", "Grassy Surge", "Heavy-Duty Boots", "- Swords Dance\n- Wood Hammer\n- U-turn\n- Protect")
-    tusk = _setter("Great Tusk", "Protosynthesis", "Leftovers", "- Rapid Spin\n- Headlong Rush\n- Bulk Up\n- Ice Spinner")
+    rilla = _setter(
+        "Rillaboom",
+        "Grassy Surge",
+        "Heavy-Duty Boots",
+        "- Swords Dance\n- Wood Hammer\n- U-turn\n- Protect",
+    )
+    tusk = _setter(
+        "Great Tusk",
+        "Protosynthesis",
+        "Leftovers",
+        "- Rapid Spin\n- Headlong Rush\n- Bulk Up\n- Ice Spinner",
+    )
     turns = [("move woodhammer", "move bulkup")] + [("move swordsdance", "move bulkup")] * 4
     states = ec.run_showdown(rilla, tusk, turns)
     assert any("|-fieldend|move: Grassy Terrain" in x for x in states[5]["log"])
@@ -2536,7 +2898,9 @@ def test_l84_grassy_terrain_heals_on_its_last_turn():
     (_attacker("Hatterene", "Magic Bounce", "Leftovers", "- Psychic Noise\n- Calm Mind\n- Draining Kiss\n- Protect", "Modest"), "psychicnoise", "healblock"),
 ], ids=["saltcure", "psychicnoise"])  # fmt: skip
 def test_l85_covert_cloak_stops_the_volatile(user, move, volatile):
-    mana = _setter("Manaphy", "Hydration", "Covert Cloak", "- Tail Glow\n- Surf\n- Rest\n- Energy Ball")
+    mana = _setter(
+        "Manaphy", "Hydration", "Covert Cloak", "- Tail Glow\n- Surf\n- Rest\n- Energy Ball"
+    )
     states = ec.run_showdown(user, mana, [(f"move {move}", "move tailglow")])
     assert volatile not in states[1]["sides"][1]["mons"][0]["volatiles"]
     outs = ec.engine_outcomes(ec.engine_state(states[0]), move, "tailglow")
@@ -2551,7 +2915,12 @@ def test_l85_covert_cloak_stops_the_volatile(user, move, volatile):
     (_setter("Corviknight", "Pressure", "Leftovers", "- Roost\n- Brave Bird\n- Defog\n- U-turn"), False),
 ], ids=["grounded", "flying"])  # fmt: skip
 def test_l86_smack_down_only_grounds_the_airborne(target, grounded):
-    lando = _attacker("Landorus-Therian", "Intimidate", "Leftovers", "- Smack Down\n- Earthquake\n- U-turn\n- Stealth Rock")
+    lando = _attacker(
+        "Landorus-Therian",
+        "Intimidate",
+        "Leftovers",
+        "- Smack Down\n- Earthquake\n- U-turn\n- Stealth Rock",
+    )
     second = target.splitlines()[5][2:].lower().replace(" ", "")
     states = ec.run_showdown(lando, target, [("move smackdown", f"move {second}")])
     assert ("smackdown" in states[1]["sides"][1]["mons"][0]["volatiles"]) != grounded
@@ -2563,10 +2932,16 @@ def test_l86_smack_down_only_grounds_the_airborne(target, grounded):
 # its turns left) into the engine's perish<n>; without it the engine's state had none, and a
 # second Perish Song worked again
 def test_l87_perish_song_counts_down():
-    alt = _setter("Altaria", "Natural Cure", "Leftovers", "- Perish Song\n- Roost\n- Protect\n- Defog")
+    alt = _setter(
+        "Altaria", "Natural Cure", "Leftovers", "- Perish Song\n- Roost\n- Protect\n- Defog"
+    )
     states = ec.run_showdown(alt, BLISSEY, [("move perishsong", "move softboiled"), ("move perishsong", "move protect"),
                                             ("move roost", "move softboiled")])  # fmt: skip
-    for k, c1, c2 in ((0, "perishsong", "softboiled"), (1, "perishsong", "protect"), (2, "roost", "softboiled")):
+    for k, c1, c2 in (
+        (0, "perishsong", "softboiled"),
+        (1, "perishsong", "protect"),
+        (2, "roost", "softboiled"),
+    ):
         outs = ec.engine_outcomes(ec.engine_state(states[k]), c1, c2)
         assert ec.closest(states[k + 1], outs, (1, 1), hp=True)["diff"] == {}, k
 
@@ -2575,7 +2950,12 @@ def test_l87_perish_song_counts_down():
 # move uses (Showdown's getDamage); the engine's crit took Body Press's user's Defense and Foul
 # Play's target's Attack unboosted (a crit below the normal hit at +2)
 def test_l88_body_press_crit_keeps_the_defense_boost():
-    corv = _attacker("Corviknight", "Pressure", "Scope Lens", "- Iron Defense\n- Focus Energy\n- Body Press\n- Roost")
+    corv = _attacker(
+        "Corviknight",
+        "Pressure",
+        "Scope Lens",
+        "- Iron Defense\n- Focus Energy\n- Body Press\n- Roost",
+    )
     pex = _setter("Toxapex", "Regenerator", "Leftovers", "- Recover\n- Toxic\n- Haze\n- Scald")
     turns = [("move irondefense", "move recover"), ("move focusenergy", "move recover"),
              ("move bodypress", "move toxic")]  # fmt: skip
@@ -2587,8 +2967,18 @@ def test_l88_body_press_crit_keeps_the_defense_boost():
 
 
 def test_l88_foul_play_crit_keeps_the_targets_attack_boost():
-    grim = _attacker("Grimmsnarl", "Prankster", "Scope Lens", "- Focus Energy\n- Foul Play\n- Reflect\n- Thunder Wave")
-    sd = _attacker("Kingambit", "Supreme Overlord", "Leftovers", "- Swords Dance\n- Iron Head\n- Sucker Punch\n- Protect")
+    grim = _attacker(
+        "Grimmsnarl",
+        "Prankster",
+        "Scope Lens",
+        "- Focus Energy\n- Foul Play\n- Reflect\n- Thunder Wave",
+    )
+    sd = _attacker(
+        "Kingambit",
+        "Supreme Overlord",
+        "Leftovers",
+        "- Swords Dance\n- Iron Head\n- Sucker Punch\n- Protect",
+    )
     turns = [("move focusenergy", "move swordsdance"), ("move foulplay", "move swordsdance")]
     states = ec.run_showdown(grim, sd, turns)
     assert any(x.startswith("|-crit") for x in states[2]["log"])
@@ -2605,7 +2995,13 @@ def test_l88_foul_play_crit_keeps_the_targets_attack_boost():
     _setter("Clefable", "Unaware", "Leftovers", "- Encore\n- Moonblast\n- Protect\n- Soft-Boiled"),
 ], ids=["before-it-moved", "after-it-moved"])  # fmt: skip
 def test_l89_encore_counts_turns(encorer):
-    val = _attacker("Iron Valiant", "Quark Drive", "Leftovers", "- Calm Mind\n- Moonblast\n- Close Combat\n- Knock Off", "Timid")
+    val = _attacker(
+        "Iron Valiant",
+        "Quark Drive",
+        "Leftovers",
+        "- Calm Mind\n- Moonblast\n- Close Combat\n- Knock Off",
+        "Timid",
+    )
     states = ec.run_showdown(val, encorer, [("move calmmind", "move encore")] * 6)
     assert any("|-end|p1a: Iron Valiant|Encore" in x for x in sum((s["log"] for s in states), []))
     for k in range(6):
@@ -2649,8 +3045,12 @@ def test_l90_taunt_counts_turns(taunter):
 def test_l90_taunted_attack_into_an_absorbing_ability():
     """A taunted attack into Water Absorb still goes (the engine's absorbed move is a status move:
     Taunt's check reads the move's own category)."""
-    lan = _setter("Lanturn", "Water Absorb", "Life Orb", "- Thunderbolt\n- Scald\n- Volt Switch\n- Heal Bell")
-    taunter = _setter("Grimmsnarl", "Prankster", "Leftovers", "- Taunt\n- Spirit Break\n- Reflect\n- Parting Shot")
+    lan = _setter(
+        "Lanturn", "Water Absorb", "Life Orb", "- Thunderbolt\n- Scald\n- Volt Switch\n- Heal Bell"
+    )
+    taunter = _setter(
+        "Grimmsnarl", "Prankster", "Leftovers", "- Taunt\n- Spirit Break\n- Reflect\n- Parting Shot"
+    )
     pex = _setter("Toxapex", "Regenerator", "Black Sludge", "- Scald\n- Recover\n- Haze\n- Toxic")
     turns = [("move thunderbolt", "move recover"), ("switch 2", "move recover"), ("move taunt", "move recover"),
              ("switch 2", "move scald")]  # fmt: skip
@@ -2665,11 +3065,17 @@ def test_l90_taunted_attack_into_an_absorbing_ability():
 # target's side only (hazards of both); Good as Gold stops it unless a Mold Breaker / Neutralizing
 # Gas user; Mirror Armor sends its evasion drop back. The engine cleared the user's screens too,
 # let Good as Gold stop a Mold Breaker's Defog and Mirror Armor not see it
-CORV_DEFOG = _setter("Corviknight", "Pressure", "Leftovers", "- Reflect\n- Defog\n- Roost\n- U-turn")
+CORV_DEFOG = _setter(
+    "Corviknight", "Pressure", "Leftovers", "- Reflect\n- Defog\n- Roost\n- U-turn"
+)
 
 
 def test_l91_defog_keeps_the_users_screens():
-    states = ec.run_showdown(CORV_DEFOG, BLISSEY, [("move reflect", "move softboiled"), ("move defog", "move softboiled")])
+    states = ec.run_showdown(
+        CORV_DEFOG,
+        BLISSEY,
+        [("move reflect", "move softboiled"), ("move defog", "move softboiled")],
+    )
     assert "reflect" in states[2]["sides"][0]["conditions"]
     outs = ec.engine_outcomes(ec.engine_state(states[1]), "defog", "softboiled")
     assert ec.closest(states[2], outs, (1, 1), hp=True)["diff"] == {}
@@ -2691,8 +3097,15 @@ def test_l91_defog_evasion_drop(user, target, drop):
 
 
 def test_l91_neutralizing_gas_defog_through_mirror_armor():
-    weezing = _setter("Weezing-Galar", "Neutralizing Gas", "Leftovers", "- Defog\n- Pain Split\n- Strange Steam\n- Will-O-Wisp")
-    corv = _setter("Corviknight", "Mirror Armor", "Leftovers", "- Roost\n- Brave Bird\n- Defog\n- U-turn")
+    weezing = _setter(
+        "Weezing-Galar",
+        "Neutralizing Gas",
+        "Leftovers",
+        "- Defog\n- Pain Split\n- Strange Steam\n- Will-O-Wisp",
+    )
+    corv = _setter(
+        "Corviknight", "Mirror Armor", "Leftovers", "- Roost\n- Brave Bird\n- Defog\n- U-turn"
+    )
     states = ec.run_showdown(corv, weezing, [("move roost", "move defog")])
     assert states[1]["sides"][0]["mons"][0]["boosts"]["evasion"] == -1
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "roost", "defog")
@@ -2702,8 +3115,16 @@ def test_l91_neutralizing_gas_defog_through_mirror_armor():
 # L92 (doc/engine-diff.md): a hit on a Substitute whose rolls straddle its HP splits by the exact
 # rolls into a break and the rest, like a knockout (L34 / L51); the engine dealt the average roll
 def test_l92_substitute_break_by_the_rolls():
-    tran = _attacker("Heatran", "Flash Fire", "Choice Specs", "- Earth Power\n- Protect\n- Rest\n- Roar", "Modest")
-    whim = _setter("Whimsicott", "Prankster", "Leftovers", "- Substitute\n- Moonblast\n- Protect\n- Encore")
+    tran = _attacker(
+        "Heatran",
+        "Flash Fire",
+        "Choice Specs",
+        "- Earth Power\n- Protect\n- Rest\n- Roar",
+        "Modest",
+    )
+    whim = _setter(
+        "Whimsicott", "Prankster", "Leftovers", "- Substitute\n- Moonblast\n- Protect\n- Encore"
+    )
     states = ec.run_showdown(tran, whim, [("move earthpower", "move substitute")])
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "earthpower", "substitute")
     broken = sum(p for p, o in outs if not ec.view_engine(o, (1, 1)).get("s2.volatile.substitute"))
@@ -2715,9 +3136,20 @@ def test_l92_substitute_break_by_the_rolls():
 # L93 (doc/engine-diff.md): Strength Sap fails against a Substitute (Showdown: no bypasssub); the
 # engine healed by the target's Attack anyway
 def test_l93_strength_sap_against_a_substitute():
-    whim = _setter("Whimsicott", "Prankster", "Leftovers", "- Substitute\n- Air Slash\n- Protect\n- Encore")
-    plume = _setter("Vileplume", "Effect Spore", "Black Sludge", "- Strength Sap\n- Giga Drain\n- Sleep Powder\n- Sludge Bomb")
-    states = ec.run_showdown(plume, whim, [("move sleeppowder", "move airslash"), ("move strengthsap", "move substitute")])
+    whim = _setter(
+        "Whimsicott", "Prankster", "Leftovers", "- Substitute\n- Air Slash\n- Protect\n- Encore"
+    )
+    plume = _setter(
+        "Vileplume",
+        "Effect Spore",
+        "Black Sludge",
+        "- Strength Sap\n- Giga Drain\n- Sleep Powder\n- Sludge Bomb",
+    )
+    states = ec.run_showdown(
+        plume,
+        whim,
+        [("move sleeppowder", "move airslash"), ("move strengthsap", "move substitute")],
+    )
     assert states[1]["sides"][0]["mons"][0]["hp"] < states[1]["sides"][0]["mons"][0]["maxhp"]
     outs = ec.engine_outcomes(ec.engine_state(states[1]), "strengthsap", "substitute")
     assert ec.closest(states[2], outs, (1, 1), hp=True)["diff"] == {}
@@ -2727,8 +3159,18 @@ def test_l93_strength_sap_against_a_substitute():
 # an absorbing ability (Earth Eater, Water / Volt Absorb, Dry Skin) does not take a move aimed at
 # its side (Spikes: Showdown's onTryHit is for the moves that hit it). The engine took both
 def test_l94_magic_guard_against_rough_skin_and_rocky_helmet():
-    clef = _setter("Clefable", "Magic Guard", "Leftovers", "- Draining Kiss\n- Moonblast\n- Calm Mind\n- Soft-Boiled")
-    chomp = _setter("Garchomp", "Rough Skin", "Rocky Helmet", "- Stealth Rock\n- Earthquake\n- Dragon Tail\n- Spikes")
+    clef = _setter(
+        "Clefable",
+        "Magic Guard",
+        "Leftovers",
+        "- Draining Kiss\n- Moonblast\n- Calm Mind\n- Soft-Boiled",
+    )
+    chomp = _setter(
+        "Garchomp",
+        "Rough Skin",
+        "Rocky Helmet",
+        "- Stealth Rock\n- Earthquake\n- Dragon Tail\n- Spikes",
+    )
     states = ec.run_showdown(clef, chomp, [("move drainingkiss", "move stealthrock")])
     assert states[1]["sides"][0]["mons"][0]["hp"] == states[1]["sides"][0]["mons"][0]["maxhp"]
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "drainingkiss", "stealthrock")
@@ -2736,8 +3178,15 @@ def test_l94_magic_guard_against_rough_skin_and_rocky_helmet():
 
 
 def test_l94_spikes_into_earth_eater():
-    glis = _setter("Gliscor", "Poison Heal", "Toxic Orb", "- Spikes\n- Earthquake\n- Protect\n- Toxic")
-    worm = _setter("Orthworm", "Earth Eater", "Leftovers", "- Shed Tail\n- Iron Head\n- Body Press\n- Stealth Rock")
+    glis = _setter(
+        "Gliscor", "Poison Heal", "Toxic Orb", "- Spikes\n- Earthquake\n- Protect\n- Toxic"
+    )
+    worm = _setter(
+        "Orthworm",
+        "Earth Eater",
+        "Leftovers",
+        "- Shed Tail\n- Iron Head\n- Body Press\n- Stealth Rock",
+    )
     states = ec.run_showdown(glis, worm, [("move spikes", "move stealthrock")])
     assert states[1]["sides"][1]["conditions"].get("spikes")
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "spikes", "stealthrock")
@@ -2750,14 +3199,28 @@ def test_l94_spikes_into_earth_eater():
 @pytest.mark.parametrize("foe_move, sub", [("leechseed", False), ("infestation", False), ("leechseed", True)],
                          ids=["leech-seed", "partial-trap", "through-a-substitute"])  # fmt: skip
 def test_l95_rapid_spin_frees_its_user(foe_move, sub):
-    tusk = _setter("Great Tusk", "Protosynthesis", "Leftovers", "- Rapid Spin\n- Headlong Rush\n- Bulk Up\n- Ice Spinner")
-    foe = _setter("Ferrothorn", "Iron Barbs", "Leftovers", "- Leech Seed\n- Infestation\n- Substitute\n- Iron Defense")
-    turns = [("move bulkup", f"move {foe_move}")] + ([("move bulkup", "move substitute")] if sub else [])
+    tusk = _setter(
+        "Great Tusk",
+        "Protosynthesis",
+        "Leftovers",
+        "- Rapid Spin\n- Headlong Rush\n- Bulk Up\n- Ice Spinner",
+    )
+    foe = _setter(
+        "Ferrothorn",
+        "Iron Barbs",
+        "Leftovers",
+        "- Leech Seed\n- Infestation\n- Substitute\n- Iron Defense",
+    )
+    turns = [("move bulkup", f"move {foe_move}")] + (
+        [("move bulkup", "move substitute")] if sub else []
+    )
     turns.append(("move rapidspin", "move irondefense"))
     states = ec.run_showdown(tusk, foe, turns)
     k = len(turns) - 1
     assert {"leechseed", "partiallytrapped"} & set(states[k]["sides"][0]["mons"][0]["volatiles"])
-    assert not {"leechseed", "partiallytrapped"} & set(states[k + 1]["sides"][0]["mons"][0]["volatiles"])
+    assert not {"leechseed", "partiallytrapped"} & set(
+        states[k + 1]["sides"][0]["mons"][0]["volatiles"]
+    )
     outs = ec.engine_outcomes(ec.engine_state(states[k]), "rapidspin", "irondefense")
     assert ec.closest(states[k + 1], outs, (1, 1), hp=True)["diff"] == {}
 
@@ -2766,9 +3229,23 @@ def test_l95_rapid_spin_frees_its_user(foe_move, sub):
 # Boots or not (Showdown's onSwitchIn checks the Poison type before the boots); the engine skipped
 # a boots holder
 def test_l96_poison_type_with_boots_absorbs_toxic_spikes():
-    glim = _setter("Glimmora", "Toxic Debris", "Focus Sash", "- Toxic Spikes\n- Power Gem\n- Mortal Spin\n- Earth Power")
-    pech = _setter("Pecharunt", "Poison Puppeteer", "Heavy-Duty Boots", "- Malignant Chain\n- Recover\n- Parting Shot\n- Nasty Plot")
-    states = ec.run_showdown(glim, BLISSEY + "\n\n" + pech, [("move toxicspikes", "move softboiled"), ("move powergem", "switch 2")])
+    glim = _setter(
+        "Glimmora",
+        "Toxic Debris",
+        "Focus Sash",
+        "- Toxic Spikes\n- Power Gem\n- Mortal Spin\n- Earth Power",
+    )
+    pech = _setter(
+        "Pecharunt",
+        "Poison Puppeteer",
+        "Heavy-Duty Boots",
+        "- Malignant Chain\n- Recover\n- Parting Shot\n- Nasty Plot",
+    )
+    states = ec.run_showdown(
+        glim,
+        BLISSEY + "\n\n" + pech,
+        [("move toxicspikes", "move softboiled"), ("move powergem", "switch 2")],
+    )
     assert states[1]["sides"][1]["conditions"].get("toxicspikes")
     assert not states[2]["sides"][1]["conditions"].get("toxicspikes")
     outs = ec.engine_outcomes(ec.engine_state(states[1]), "powergem", "pecharunt")
@@ -2777,9 +3254,13 @@ def test_l96_poison_type_with_boots_absorbs_toxic_spikes():
 
 # L97 (doc/engine-diff.md): Leech Seed is not a powder move (Overcoat / Safety Goggles do not stop
 # it); the engine flagged it powder for the Grass immunity, which its volatile check has anyway
-@pytest.mark.parametrize("ability, item", [("Overcoat", "Leftovers"), ("Pressure", "Safety Goggles")])
+@pytest.mark.parametrize(
+    "ability, item", [("Overcoat", "Leftovers"), ("Pressure", "Safety Goggles")]
+)
 def test_l97_leech_seed_through_overcoat(ability, item):
-    ferro = _setter("Ferrothorn", "Iron Barbs", "Leftovers", "- Leech Seed\n- Spikes\n- Protect\n- Power Whip")
+    ferro = _setter(
+        "Ferrothorn", "Iron Barbs", "Leftovers", "- Leech Seed\n- Spikes\n- Protect\n- Power Whip"
+    )
     buzz = _setter("Mandibuzz", ability, item, "- Roost\n- Foul Play\n- Defog\n- U-turn")
     states = ec.run_showdown(ferro, buzz, [("move leechseed", "move defog")])
     assert "leechseed" in states[1]["sides"][1]["mons"][0]["volatiles"]
@@ -2790,11 +3271,25 @@ def test_l97_leech_seed_through_overcoat(ability, item):
 # L98 (doc/engine-diff.md): Disguise breaks only on a hit that damages Mimikyu (Showdown's
 # onDamage): not on a move it is immune to, nor on its Substitute; the engine broke it (and took
 # the 1/8) on any attack
-@pytest.mark.parametrize("move, sub", [("extremespeed", False), ("shadowsneak", True)], ids=["immune", "substitute"])
+@pytest.mark.parametrize(
+    "move, sub", [("extremespeed", False), ("shadowsneak", True)], ids=["immune", "substitute"]
+)
 def test_l98_disguise_needs_a_damaging_hit(move, sub):
-    mimi = _setter("Mimikyu", "Disguise", "Leftovers", "- Substitute\n- Swords Dance\n- Shadow Claw\n- Play Rough")
-    nite = _attacker("Dragonite", "Inner Focus", "Leftovers", "- Extreme Speed\n- Shadow Sneak\n- Roost\n- Dragon Dance")
-    turns = ([("move substitute", "move roost")] if sub else []) + [("move swordsdance", f"move {move}")]
+    mimi = _setter(
+        "Mimikyu",
+        "Disguise",
+        "Leftovers",
+        "- Substitute\n- Swords Dance\n- Shadow Claw\n- Play Rough",
+    )
+    nite = _attacker(
+        "Dragonite",
+        "Inner Focus",
+        "Leftovers",
+        "- Extreme Speed\n- Shadow Sneak\n- Roost\n- Dragon Dance",
+    )
+    turns = ([("move substitute", "move roost")] if sub else []) + [
+        ("move swordsdance", f"move {move}")
+    ]
     states = ec.run_showdown(mimi, nite, turns)
     assert states[-1]["sides"][0]["mons"][0]["species"].lower() == "mimikyu"
     outs = ec.engine_outcomes(ec.engine_state(states[-2]), "swordsdance", move)
@@ -2804,9 +3299,22 @@ def test_l98_disguise_needs_a_damaging_hit(move, sub):
 # L99 (doc/engine-diff.md): Soak makes its target pure Water (Showdown's setType; not a pure Water
 # type, a Terastallized one or through a Substitute); it had no effect in the engine
 def test_l99_soak():
-    belli = _setter("Bellibolt", "Electromorphosis", "Leftovers", "- Soak\n- Slack Off\n- Discharge\n- Muddy Water")
-    bolt = _attacker("Raging Bolt", "Protosynthesis", "Leftovers", "- Thunderbolt\n- Calm Mind\n- Draco Meteor\n- Protect", "Modest")
-    states = ec.run_showdown(belli, bolt, [("move soak", "move calmmind"), ("move discharge", "move calmmind")])
+    belli = _setter(
+        "Bellibolt",
+        "Electromorphosis",
+        "Leftovers",
+        "- Soak\n- Slack Off\n- Discharge\n- Muddy Water",
+    )
+    bolt = _attacker(
+        "Raging Bolt",
+        "Protosynthesis",
+        "Leftovers",
+        "- Thunderbolt\n- Calm Mind\n- Draco Meteor\n- Protect",
+        "Modest",
+    )
+    states = ec.run_showdown(
+        belli, bolt, [("move soak", "move calmmind"), ("move discharge", "move calmmind")]
+    )
     assert states[1]["sides"][1]["mons"][0]["types"] == ["Water"]
     for k, c1 in ((0, "soak"), (1, "discharge")):
         outs = ec.engine_outcomes(ec.engine_state(states[k]), c1, "calmmind")
@@ -2816,16 +3324,30 @@ def test_l99_soak():
 # L100 (doc/engine-diff.md): Dry Skin loses 1/8 in sun (Showdown's onWeather), heals 1/8 in rain
 # and heavy rain; the engine only healed in rain
 def test_l100_dry_skin_in_the_sun():
-    tork = _setter("Torkoal", "Drought", "Leftovers", "- Stealth Rock\n- Lava Plume\n- Rapid Spin\n- Yawn")
-    croak = _setter("Toxicroak", "Dry Skin", "Leftovers", "- Bulk Up\n- Drain Punch\n- Gunk Shot\n- Sucker Punch")
+    tork = _setter(
+        "Torkoal", "Drought", "Leftovers", "- Stealth Rock\n- Lava Plume\n- Rapid Spin\n- Yawn"
+    )
+    croak = _setter(
+        "Toxicroak",
+        "Dry Skin",
+        "Leftovers",
+        "- Bulk Up\n- Drain Punch\n- Gunk Shot\n- Sucker Punch",
+    )
     states = ec.run_showdown(tork, croak, [("move stealthrock", "move bulkup")])
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "stealthrock", "bulkup")
     assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
 
 
 def test_l99_soak_into_water_absorb():
-    belli = _setter("Bellibolt", "Electromorphosis", "Leftovers", "- Soak\n- Slack Off\n- Discharge\n- Muddy Water")
-    lan = _setter("Lanturn", "Water Absorb", "Leftovers", "- Thunderbolt\n- Scald\n- Volt Switch\n- Heal Bell")
+    belli = _setter(
+        "Bellibolt",
+        "Electromorphosis",
+        "Leftovers",
+        "- Soak\n- Slack Off\n- Discharge\n- Muddy Water",
+    )
+    lan = _setter(
+        "Lanturn", "Water Absorb", "Leftovers", "- Thunderbolt\n- Scald\n- Volt Switch\n- Heal Bell"
+    )
     states = ec.run_showdown(belli, lan, [("move soak", "move healbell")])
     assert "typechange" not in states[1]["sides"][1]["mons"][0]["volatiles"]
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "soak", "healbell")
@@ -2839,7 +3361,11 @@ def test_l99_soak_into_water_absorb():
 def test_l101_asleep_has_not_used_its_move():
     lax = _setter("Snorlax", "Thick Fat", "Leftovers", "- Spore\n- Encore\n- Body Slam\n- Rest")
     chansey = BLISSEY.replace("Blissey @ Heavy-Duty Boots", "Chansey @ Eviolite")
-    states = ec.run_showdown(lax, chansey + "\n\n" + BLISSEY, [("move spore", "switch 2"), ("move encore", "move softboiled")])
+    states = ec.run_showdown(
+        lax,
+        chansey + "\n\n" + BLISSEY,
+        [("move spore", "switch 2"), ("move encore", "move softboiled")],
+    )
     assert any(x.startswith("|cant|p2a: Blissey|slp") for x in states[2]["log"])
     assert "encore" not in states[2]["sides"][1]["mons"][1]["volatiles"]
     outs = ec.engine_outcomes(ec.engine_state(states[1]), "encore", "softboiled")
@@ -2851,7 +3377,11 @@ def test_l101_encore_fails_on_sleep_talk():
     Metronome, Mimic, Sketch, Struggle, Transform) or one at 0 PP."""
     lax = _setter("Snorlax", "Thick Fat", "Leftovers", "- Spore\n- Encore\n- Body Slam\n- Rest")
     zo = _setter("Dondozo", "Unaware", "Leftovers", "- Sleep Talk\n- Curse\n- Rest\n- Waterfall")
-    turns = [("move spore", "move curse"), ("move bodyslam", "move sleeptalk"), ("move encore", "move sleeptalk")]
+    turns = [
+        ("move spore", "move curse"),
+        ("move bodyslam", "move sleeptalk"),
+        ("move encore", "move sleeptalk"),
+    ]
     states = ec.run_showdown(lax, zo, turns)
     assert states[2]["sides"][1]["mons"][0]["last_move"] == "sleeptalk"
     assert "encore" not in states[3]["sides"][1]["mons"][0]["volatiles"]
@@ -2864,7 +3394,9 @@ def test_l101_encore_fails_on_sleep_talk():
 @pytest.mark.parametrize("berry, move", [("Sitrus Berry", "ruination"), ("Lum Berry", "willowisp")])
 def test_l102_unnerve_stops_berries(berry, move):
     pex = _setter("Toxapex", "Regenerator", berry, "- Recover\n- Toxic\n- Haze\n- Scald")
-    lu = _setter("Ting-Lu", "Unnerve", "Leftovers", "- Ruination\n- Will-O-Wisp\n- Stealth Rock\n- Whirlwind")
+    lu = _setter(
+        "Ting-Lu", "Unnerve", "Leftovers", "- Ruination\n- Will-O-Wisp\n- Stealth Rock\n- Whirlwind"
+    )
     states = ec.run_showdown(pex, lu, [("move haze", f"move {move}")])
     assert states[1]["sides"][0]["mons"][0]["item"] == berry.lower().replace(" ", "")
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "haze", move)
@@ -2874,8 +3406,18 @@ def test_l102_unnerve_stops_berries(berry, move):
 # L103 (doc/engine-diff.md): Throat Spray only after a sound move that went through (Showdown's
 # onAfterMoveSecondarySelf): not a Clangorous Soul that fails at a third of the HP or below
 def test_l103_throat_spray_not_on_a_failed_clangorous_soul():
-    kommo = _setter("Kommo-o", "Soundproof", "Throat Spray", "- Clangorous Soul\n- Belly Drum\n- Substitute\n- Protect")
-    lu = _setter("Ting-Lu", "Vessel of Ruin", "Leftovers", "- Ruination\n- Stealth Rock\n- Whirlwind\n- Spikes")
+    kommo = _setter(
+        "Kommo-o",
+        "Soundproof",
+        "Throat Spray",
+        "- Clangorous Soul\n- Belly Drum\n- Substitute\n- Protect",
+    )
+    lu = _setter(
+        "Ting-Lu",
+        "Vessel of Ruin",
+        "Leftovers",
+        "- Ruination\n- Stealth Rock\n- Whirlwind\n- Spikes",
+    )
     turns = [("move bellydrum", "move stealthrock"), ("move substitute", "move spikes"),
              ("move clangoroussoul", "move spikes")]  # fmt: skip
     states = ec.run_showdown(kommo, lu, turns)
@@ -2889,7 +3431,9 @@ def test_l103_throat_spray_not_on_a_failed_clangorous_soul():
 # L104 (doc/engine-diff.md): a Gem powers only a damaging move (Showdown's onSourceTryPrimaryHit:
 # not a status move); the engine used up a Normal Gem on Court Change
 def test_l104_gem_not_on_a_status_move():
-    cinder = _setter("Cinderace", "Blaze", "Normal Gem", "- Court Change\n- Pyro Ball\n- U-turn\n- Sucker Punch")
+    cinder = _setter(
+        "Cinderace", "Blaze", "Normal Gem", "- Court Change\n- Pyro Ball\n- U-turn\n- Sucker Punch"
+    )
     states = ec.run_showdown(cinder, BLISSEY, [("move courtchange", "move softboiled")])
     assert states[1]["sides"][0]["mons"][0]["item"] == "normalgem"
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "courtchange", "softboiled")
@@ -2904,8 +3448,12 @@ def test_l104_gem_not_on_a_status_move():
 def test_l105_terrain_moves(move, item):
     names = {"electricterrain": "Electric Terrain", "grassyterrain": "Grassy Terrain",
              "mistyterrain": "Misty Terrain", "psychicterrain": "Psychic Terrain"}  # fmt: skip
-    setter = _setter("Indeedee", "Inner Focus", item, f"- {names[move]}\n- Psychic\n- Protect\n- Calm Mind")
-    states = ec.run_showdown(setter, BLISSEY, [(f"move {move}", "move softboiled"), ("move calmmind", "move softboiled")])
+    setter = _setter(
+        "Indeedee", "Inner Focus", item, f"- {names[move]}\n- Psychic\n- Protect\n- Calm Mind"
+    )
+    states = ec.run_showdown(
+        setter, BLISSEY, [(f"move {move}", "move softboiled"), ("move calmmind", "move softboiled")]
+    )
     assert states[1]["field"]["terrain"] == move
     for k, c1 in ((0, move), (1, "calmmind")):
         outs = ec.engine_outcomes(ec.engine_state(states[k]), c1, "softboiled")
@@ -2921,7 +3469,9 @@ def test_l105_terrain_moves(move, item):
     (_setter("Mimikyu", "Disguise", "Leftovers", "- Swords Dance\n- Shadow Claw\n- Play Rough\n- Substitute"), "swordsdance"),
 ], ids=["dauntless-shield", "intimidate", "disguise-fails"])  # fmt: skip
 def test_l106_skill_swap(target, second):
-    bee = _setter("Ribombee", "Shield Dust", "Leftovers", "- Skill Swap\n- Moonblast\n- Sticky Web\n- U-turn")
+    bee = _setter(
+        "Ribombee", "Shield Dust", "Leftovers", "- Skill Swap\n- Moonblast\n- Sticky Web\n- U-turn"
+    )
     states = ec.run_showdown(bee, target, [("move skillswap", f"move {second}")])
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "skillswap", second)
     assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
@@ -2937,9 +3487,13 @@ def _switch_options(state, side_two=True):
 
 
 def test_l107_mean_look_traps():
-    umb = _setter("Umbreon", "Synchronize", "Leftovers", "- Mean Look\n- Wish\n- Protect\n- Foul Play")
+    umb = _setter(
+        "Umbreon", "Synchronize", "Leftovers", "- Mean Look\n- Wish\n- Protect\n- Foul Play"
+    )
     chansey = BLISSEY.replace("Blissey @ Heavy-Duty Boots", "Chansey @ Eviolite")
-    states = ec.run_showdown(umb, BLISSEY + "\n\n" + chansey, [("move meanlook", "move softboiled")])
+    states = ec.run_showdown(
+        umb, BLISSEY + "\n\n" + chansey, [("move meanlook", "move softboiled")]
+    )
     assert "trapped" in states[1]["sides"][1]["mons"][0]["volatiles"]
     assert states[1]["sides"][1]["request_json"]["active"][0].get("trapped")
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "meanlook", "softboiled")
@@ -2948,7 +3502,9 @@ def test_l107_mean_look_traps():
 
 
 def test_l107_trap_ends_when_the_trapper_leaves():
-    umb = _setter("Umbreon", "Synchronize", "Leftovers", "- Mean Look\n- Wish\n- Protect\n- Foul Play")
+    umb = _setter(
+        "Umbreon", "Synchronize", "Leftovers", "- Mean Look\n- Wish\n- Protect\n- Foul Play"
+    )
     chansey = BLISSEY.replace("Blissey @ Heavy-Duty Boots", "Chansey @ Eviolite")
     states = ec.run_showdown(umb + "\n\n" + chansey, BLISSEY + "\n\n" + chansey,
                              [("move meanlook", "move softboiled"), ("switch 2", "move softboiled")])  # fmt: skip
@@ -2977,8 +3533,15 @@ def test_l108_trapping_attacks(user, move, both):
 
 
 def test_l108_prankster_mean_look_into_a_dark_type():
-    sable = _setter("Sableye", "Prankster", "Leftovers", "- Mean Look\n- Recover\n- Will-O-Wisp\n- Knock Off")
-    gambit = _attacker("Kingambit", "Supreme Overlord", "Leftovers", "- Swords Dance\n- Iron Head\n- Sucker Punch\n- Protect")
+    sable = _setter(
+        "Sableye", "Prankster", "Leftovers", "- Mean Look\n- Recover\n- Will-O-Wisp\n- Knock Off"
+    )
+    gambit = _attacker(
+        "Kingambit",
+        "Supreme Overlord",
+        "Leftovers",
+        "- Swords Dance\n- Iron Head\n- Sucker Punch\n- Protect",
+    )
     states = ec.run_showdown(sable, gambit, [("move meanlook", "move swordsdance")])
     assert "trapped" not in states[1]["sides"][1]["mons"][0]["volatiles"]
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "meanlook", "swordsdance")
@@ -2989,7 +3552,9 @@ def test_l107_trapped_from_the_protocol():
     """Our state construction's trap (agents/timers.py, from the log) against Showdown's."""
     from alpha_poke.agents.timers import timers
 
-    umb = _setter("Umbreon", "Synchronize", "Leftovers", "- Mean Look\n- Wish\n- Protect\n- Foul Play")
+    umb = _setter(
+        "Umbreon", "Synchronize", "Leftovers", "- Mean Look\n- Wish\n- Protect\n- Foul Play"
+    )
     chansey = BLISSEY.replace("Blissey @ Heavy-Duty Boots", "Chansey @ Eviolite")
     states = ec.run_showdown(umb + "\n\n" + chansey, BLISSEY + "\n\n" + chansey,
                              [("move meanlook", "move softboiled"), ("move protect", "move softboiled"),
@@ -2998,7 +3563,9 @@ def test_l107_trapped_from_the_protocol():
     for st in states:
         lines += [x.split("|") for x in st["log"]]
         p2 = st["sides"][1]
-        assert timers(lines)["p2"].trapped == ("trapped" in p2["mons"][p2["active"]]["volatiles"]), st["turn"]
+        assert timers(lines)["p2"].trapped == (
+            "trapped" in p2["mons"][p2["active"]]["volatiles"]
+        ), st["turn"]
 
 
 # L109 (doc/engine-diff.md): a hit whose rolls straddle "survives the end of the turn" (the
@@ -3008,14 +3575,32 @@ def test_l107_trapped_from_the_protocol():
 def test_l109_end_of_turn_knockout_by_the_rolls():
     import alpha_search
 
-    gar = _setter("Garganacl", "Purifying Salt", "Leftovers", "- Salt Cure\n- Recover\n- Protect\n- Stealth Rock")
-    gam = _attacker("Kingambit", "Supreme Overlord", "Choice Band", "- Kowtow Cleave\n- Protect\n- Swords Dance\n- Low Kick")
-    blis = BLISSEY.replace("Blissey @ Heavy-Duty Boots", "Blissey @ Leftovers").replace("- Protect", "- Belly Drum")
-    turns = [("move saltcure", "move bellydrum"), ("switch 2", "move softboiled"), ("move kowtowcleave", "move seismictoss")]
+    gar = _setter(
+        "Garganacl",
+        "Purifying Salt",
+        "Leftovers",
+        "- Salt Cure\n- Recover\n- Protect\n- Stealth Rock",
+    )
+    gam = _attacker(
+        "Kingambit",
+        "Supreme Overlord",
+        "Choice Band",
+        "- Kowtow Cleave\n- Protect\n- Swords Dance\n- Low Kick",
+    )
+    blis = BLISSEY.replace("Blissey @ Heavy-Duty Boots", "Blissey @ Leftovers").replace(
+        "- Protect", "- Belly Drum"
+    )
+    turns = [
+        ("move saltcure", "move bellydrum"),
+        ("switch 2", "move softboiled"),
+        ("move kowtowcleave", "move seismictoss"),
+    ]
     states = ec.run_showdown(gar + "\n\n" + gam, blis, turns)
     b = states[2]["sides"][1]["mons"][0]
     assert "saltcure" in b["volatiles"]
-    rolls, crits = alpha_search.damage_rolls(ec.engine_state(states[2]).to_string(), True, "kowtowcleave", "seismictoss")
+    rolls, crits = alpha_search.damage_rolls(
+        ec.engine_state(states[2]).to_string(), True, "kowtowcleave", "seismictoss"
+    )
     h, m = b["hp"], b["maxhp"]
 
     def dies(d):
@@ -3039,8 +3624,19 @@ def test_l109_end_of_turn_knockout_by_the_rolls():
 # roost volatile says it); the trapper's faint ends its partial trap before the end of the turn
 # (Showdown's onResidual: the source is not active), and a fainted seeder's Leech Seed saps nothing
 def test_l110_roost_is_no_type_change():
-    nite = _setter("Dragonite", "Multiscale", "Heavy-Duty Boots", "- Roost\n- Extreme Speed\n- Dragon Dance\n- Earthquake")
-    bolt = _attacker("Raging Bolt", "Protosynthesis", "Leftovers", "- Volt Switch\n- Thunderbolt\n- Draco Meteor\n- Calm Mind", "Modest")
+    nite = _setter(
+        "Dragonite",
+        "Multiscale",
+        "Heavy-Duty Boots",
+        "- Roost\n- Extreme Speed\n- Dragon Dance\n- Earthquake",
+    )
+    bolt = _attacker(
+        "Raging Bolt",
+        "Protosynthesis",
+        "Leftovers",
+        "- Volt Switch\n- Thunderbolt\n- Draco Meteor\n- Calm Mind",
+        "Modest",
+    )
     states = ec.run_showdown(nite, bolt + "\n\n" + BLISSEY, [("move dragondance", "move dracometeor"),
                                                                ("move roost", "move voltswitch")])  # fmt: skip
     assert "roost" in states[2]["sides"][0]["mons"][0]["volatiles"]
@@ -3049,8 +3645,15 @@ def test_l110_roost_is_no_type_change():
 
 
 def test_l110_partial_trap_ends_with_its_fainted_user():
-    pex = _setter("Toxapex", "Regenerator", "Black Sludge", "- Infestation\n- Recover\n- Haze\n- Toxic")
-    gambit = _attacker("Kingambit", "Supreme Overlord", "Leftovers", "- Sucker Punch\n- Iron Head\n- Swords Dance\n- Kowtow Cleave")
+    pex = _setter(
+        "Toxapex", "Regenerator", "Black Sludge", "- Infestation\n- Recover\n- Haze\n- Toxic"
+    )
+    gambit = _attacker(
+        "Kingambit",
+        "Supreme Overlord",
+        "Leftovers",
+        "- Sucker Punch\n- Iron Head\n- Swords Dance\n- Kowtow Cleave",
+    )
     pex2 = pex.replace("Toxapex @", "Pex (Toxapex) @")
     turns = [("move infestation", "move swordsdance")] + [("move toxic", "move ironhead")] * 3
     states = ec.run_showdown(pex + "\n\n" + pex2, gambit, turns)
@@ -3067,7 +3670,9 @@ def test_l110_partial_trap_ends_with_its_fainted_user():
 # to any holder at every knockout
 @pytest.mark.parametrize("species, boost", [("Greninja-Bond", 1), ("Greninja", 0)])
 def test_l111_battle_bond(species, boost):
-    gren = _attacker(species, "Battle Bond", "Life Orb", "- Dark Pulse\n- Surf\n- Ice Beam\n- U-turn", "Timid")
+    gren = _attacker(
+        species, "Battle Bond", "Life Orb", "- Dark Pulse\n- Surf\n- Ice Beam\n- U-turn", "Timid"
+    )
     shed = """Shedinja @ Heavy-Duty Boots
 Ability: Wonder Guard
 EVs: 252 Atk / 252 Spe
@@ -3076,7 +3681,9 @@ Adamant Nature
 - Shadow Sneak
 - Protect
 - X-Scissor"""
-    states = ec.run_showdown(gren, shed + "\n\n" + BLISSEY, [("move darkpulse", "move swordsdance")])
+    states = ec.run_showdown(
+        gren, shed + "\n\n" + BLISSEY, [("move darkpulse", "move swordsdance")]
+    )
     assert states[1]["sides"][0]["mons"][0]["boosts"]["spa"] == boost
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "darkpulse", "swordsdance")
     assert ec.closest(states[1], outs, (1, 2), hp=True)["diff"] == {}
@@ -3087,9 +3694,26 @@ Adamant Nature
 # fails without a target, then the end of the turn); the engine stopped for its pivot switch and
 # saved the foe's move for the replacement
 def test_l112_pivot_user_fainting():
-    cinder = _attacker("Cinderace", "Blaze", "Life Orb", "- U-turn\n- Pyro Ball\n- Sucker Punch\n- Court Change", "Jolly")
-    chomp = _setter("Garchomp", "Rough Skin", "Rocky Helmet", "- Earthquake\n- Stealth Rock\n- Swords Dance\n- Dragon Tail")
-    pult = _attacker("Dragapult", "Infiltrator", "Choice Specs", "- Shadow Ball\n- Draco Meteor\n- U-turn\n- Flamethrower", "Timid")
+    cinder = _attacker(
+        "Cinderace",
+        "Blaze",
+        "Life Orb",
+        "- U-turn\n- Pyro Ball\n- Sucker Punch\n- Court Change",
+        "Jolly",
+    )
+    chomp = _setter(
+        "Garchomp",
+        "Rough Skin",
+        "Rocky Helmet",
+        "- Earthquake\n- Stealth Rock\n- Swords Dance\n- Dragon Tail",
+    )
+    pult = _attacker(
+        "Dragapult",
+        "Infiltrator",
+        "Choice Specs",
+        "- Shadow Ball\n- Draco Meteor\n- U-turn\n- Flamethrower",
+        "Timid",
+    )
     turns = [("move pyroball", "move earthquake"), ("move uturn", "move earthquake")]
     states = ec.run_showdown(cinder + "\n\n" + pult, chomp, turns)
     assert any(x.startswith("|faint|p1a: Cinderace") for x in states[2]["log"])
@@ -3101,10 +3725,27 @@ def test_l112_pivot_user_fainting():
 def test_l112_status_move_without_a_target():
     """After the pivot user faints, a status move aimed at it fails (Showdown's [notarget]): Pain
     Split does nothing; one aimed at the side (Stealth Rock) still goes."""
-    cinder = _attacker("Cinderace", "Blaze", "Life Orb", "- U-turn\n- Pyro Ball\n- Sucker Punch\n- Court Change", "Jolly")
-    pult = _attacker("Dragapult", "Infiltrator", "Choice Specs", "- Shadow Ball\n- Draco Meteor\n- U-turn\n- Flamethrower", "Timid")
+    cinder = _attacker(
+        "Cinderace",
+        "Blaze",
+        "Life Orb",
+        "- U-turn\n- Pyro Ball\n- Sucker Punch\n- Court Change",
+        "Jolly",
+    )
+    pult = _attacker(
+        "Dragapult",
+        "Infiltrator",
+        "Choice Specs",
+        "- Shadow Ball\n- Draco Meteor\n- U-turn\n- Flamethrower",
+        "Timid",
+    )
     for move in ("painsplit", "stealthrock", "curse"):
-        chomp = _setter("Garchomp", "Rough Skin", "Rocky Helmet", "- Earthquake\n- Stealth Rock\n- Pain Split\n- Curse")
+        chomp = _setter(
+            "Garchomp",
+            "Rough Skin",
+            "Rocky Helmet",
+            "- Earthquake\n- Stealth Rock\n- Pain Split\n- Curse",
+        )
         turns = [("move pyroball", "move earthquake"), ("move uturn", f"move {move}")]
         states = ec.run_showdown(cinder + "\n\n" + pult, chomp, turns)
         assert any(x.startswith("|faint|p1a: Cinderace") for x in states[2]["log"]), move
@@ -3124,8 +3765,19 @@ Adamant Nature
 - Shadow Sneak
 - Protect
 - X-Scissor"""
-    pult = _attacker("Dragapult", "Infiltrator", "Choice Specs", "- Shadow Ball\n- Draco Meteor\n- U-turn\n- Flamethrower", "Timid")
-    chomp = _setter("Garchomp", "Rough Skin", "Rocky Helmet", "- Earthquake\n- Stealth Rock\n- Swords Dance\n- Spikes")
+    pult = _attacker(
+        "Dragapult",
+        "Infiltrator",
+        "Choice Specs",
+        "- Shadow Ball\n- Draco Meteor\n- U-turn\n- Flamethrower",
+        "Timid",
+    )
+    chomp = _setter(
+        "Garchomp",
+        "Rough Skin",
+        "Rocky Helmet",
+        "- Earthquake\n- Stealth Rock\n- Swords Dance\n- Spikes",
+    )
     states = ec.run_showdown(shed + "\n\n" + pult, chomp, [("move knockoff", "move spikes")])
     assert any(x.startswith("|faint|p1a: Shedinja") for x in states[1]["log"])
     assert states[1]["sides"][1]["mons"][0]["item"] == "rockyhelmet"
@@ -3138,9 +3790,13 @@ Adamant Nature
 # Pickpocket takes gives its former holder no recoil (Showdown: the recoil after the move, from the
 # item it holds then)
 def test_l114_sticky_barb_before_knock_off():
-    buzz = _setter("Mandibuzz", "Overcoat", "Heavy-Duty Boots", "- Knock Off\n- Roost\n- Defog\n- U-turn")
+    buzz = _setter(
+        "Mandibuzz", "Overcoat", "Heavy-Duty Boots", "- Knock Off\n- Roost\n- Defog\n- U-turn"
+    )
     buzz = buzz.replace(" @ Heavy-Duty Boots", "")
-    clef = _setter("Clefable", "Magic Guard", "Sticky Barb", "- Calm Mind\n- Moonblast\n- Protect\n- Trick")
+    clef = _setter(
+        "Clefable", "Magic Guard", "Sticky Barb", "- Calm Mind\n- Moonblast\n- Protect\n- Trick"
+    )
     states = ec.run_showdown(buzz, clef, [("move knockoff", "move calmmind")])
     assert states[1]["sides"][0]["mons"][0]["item"] == "stickybarb"
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "knockoff", "calmmind")
@@ -3149,7 +3805,9 @@ def test_l114_sticky_barb_before_knock_off():
 
 def test_l114_pickpocket_takes_the_life_orb_before_its_recoil():
     weavile = WEAVILE_PICKPOCKET.replace("Heavy-Duty Boots", "Leftovers")
-    scizor = _attacker("Scizor", "Technician", "Life Orb", "- Knock Off\n- Bullet Punch\n- Swords Dance\n- U-turn")
+    scizor = _attacker(
+        "Scizor", "Technician", "Life Orb", "- Knock Off\n- Bullet Punch\n- Swords Dance\n- U-turn"
+    )
     states = ec.run_showdown(weavile, scizor, [("move swordsdance", "move knockoff")])
     assert states[1]["sides"][0]["mons"][0]["item"] == "lifeorb"
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "swordsdance", "knockoff")
@@ -3159,8 +3817,18 @@ def test_l114_pickpocket_takes_the_life_orb_before_its_recoil():
 def test_l114_balloon_pop_leaves_the_stolen_item():
     """Air Balloon pops on the hit; Pickpocket then takes the attacker's item, which the pop must
     not remove too (the engine's pop is a secondary after the move: it removed the new item)."""
-    treads = _attacker("Iron Treads", "Quark Drive", "Assault Vest", "- Knock Off\n- Earthquake\n- Rapid Spin\n- Iron Head")
-    tink = _setter("Tinkaton", "Pickpocket", "Air Balloon", "- Gigaton Hammer\n- Stealth Rock\n- Encore\n- Thunder Wave")
+    treads = _attacker(
+        "Iron Treads",
+        "Quark Drive",
+        "Assault Vest",
+        "- Knock Off\n- Earthquake\n- Rapid Spin\n- Iron Head",
+    )
+    tink = _setter(
+        "Tinkaton",
+        "Pickpocket",
+        "Air Balloon",
+        "- Gigaton Hammer\n- Stealth Rock\n- Encore\n- Thunder Wave",
+    )
     states = ec.run_showdown(treads, tink, [("move knockoff", "move stealthrock")])
     assert states[1]["sides"][1]["mons"][0]["item"] == "assaultvest"
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "knockoff", "stealthrock")
@@ -3171,15 +3839,29 @@ def test_l114_balloon_pop_leaves_the_stolen_item():
 # move failed the turn before (Showdown's moveLastTurnResult false: a miss, an immunity, a failure,
 # a full paralysis / sleep / flinch; not a Protect, which gives null); the engine had no doubling
 def test_l115_power_doubles_after_a_failed_move():
-    tusk = _attacker("Great Tusk", "Protosynthesis", "Leftovers", "- Temper Flare\n- Headlong Rush\n- Rapid Spin\n- Bulk Up")
-    corv = _setter("Corviknight", "Pressure", "Leftovers", "- Roost\n- Brave Bird\n- Defog\n- U-turn")
-    states = ec.run_showdown(tusk, corv, [("move headlongrush", "move defog"), ("move temperflare", "move defog")])
+    tusk = _attacker(
+        "Great Tusk",
+        "Protosynthesis",
+        "Leftovers",
+        "- Temper Flare\n- Headlong Rush\n- Rapid Spin\n- Bulk Up",
+    )
+    corv = _setter(
+        "Corviknight", "Pressure", "Leftovers", "- Roost\n- Brave Bird\n- Defog\n- U-turn"
+    )
+    states = ec.run_showdown(
+        tusk, corv, [("move headlongrush", "move defog"), ("move temperflare", "move defog")]
+    )
     assert any(x.startswith("|-immune|p2a:") for x in states[1]["log"])
     outs = ec.engine_outcomes(ec.engine_state(states[1]), "temperflare", "defog")
     # (a knockout ends the battle: who fainted alone -- L245, the turn stops at the win)
-    res = ec.end_diff(states[2], outs, (1, 1)) if states[2]["ended"] else ec.closest(states[2], outs, (1, 1), hp=True)
+    res = (
+        ec.end_diff(states[2], outs, (1, 1))
+        if states[2]["ended"]
+        else ec.closest(states[2], outs, (1, 1), hp=True)
+    )
     crit = any(x.startswith("|-crit") for x in states[2]["log"])
-    ko = states[2]["sides"][1]["mons"][0]["hp"] == 0  # (a knockout by the rolls: its branch's share)
+    # (a knockout by the rolls: its branch's share)
+    ko = states[2]["sides"][1]["mons"][0]["hp"] == 0
     assert res["diff"] == {} and (crit or ko or res["p"] > 0.9)
 
 
@@ -3188,9 +3870,20 @@ def test_l115_failed_move_from_the_protocol():
     moveLastTurnResult (the harness's lastmovefailed)."""
     from alpha_poke.agents.timers import timers
 
-    tusk = _attacker("Great Tusk", "Protosynthesis", "Leftovers", "- Temper Flare\n- Headlong Rush\n- Rapid Spin\n- Bulk Up")
-    corv = _setter("Corviknight", "Pressure", "Leftovers", "- Roost\n- Brave Bird\n- Defog\n- U-turn")
-    turns = [("move headlongrush", "move defog"), ("move bulkup", "move roost"), ("move headlongrush", "move defog")]
+    tusk = _attacker(
+        "Great Tusk",
+        "Protosynthesis",
+        "Leftovers",
+        "- Temper Flare\n- Headlong Rush\n- Rapid Spin\n- Bulk Up",
+    )
+    corv = _setter(
+        "Corviknight", "Pressure", "Leftovers", "- Roost\n- Brave Bird\n- Defog\n- U-turn"
+    )
+    turns = [
+        ("move headlongrush", "move defog"),
+        ("move bulkup", "move roost"),
+        ("move headlongrush", "move defog"),
+    ]
     states = ec.run_showdown(tusk, corv, turns)
     lines: list = []
     seen = set()
@@ -3204,10 +3897,20 @@ def test_l115_failed_move_from_the_protocol():
 
 # L116 (doc/engine-diff.md): Steel Beam costs its user half its HP when it misses or is blocked too
 # (Showdown's onMoveFail); the engine's cost came with the hit only
-@pytest.mark.parametrize("foe_move, force", [("calmmind", False), ("protect", None)], ids=["miss", "protect"])
+@pytest.mark.parametrize(
+    "foe_move, force", [("calmmind", False), ("protect", None)], ids=["miss", "protect"]
+)
 def test_l116_steel_beam_fails_at_a_cost(foe_move, force):
-    treads = _attacker("Iron Treads", "Quark Drive", "Leftovers", "- Steel Beam\n- Earthquake\n- Rapid Spin\n- Iron Head", "Modest")
-    states = ec.run_showdown(treads, BLISSEY, [("move steelbeam", f"move {foe_move}")], force_random=force)
+    treads = _attacker(
+        "Iron Treads",
+        "Quark Drive",
+        "Leftovers",
+        "- Steel Beam\n- Earthquake\n- Rapid Spin\n- Iron Head",
+        "Modest",
+    )
+    states = ec.run_showdown(
+        treads, BLISSEY, [("move steelbeam", f"move {foe_move}")], force_random=force
+    )
     assert any("[from] Steel Beam" in x or "[from] steelbeam" in x for x in states[1]["log"])
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "steelbeam", foe_move)
     assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
@@ -3217,9 +3920,21 @@ def test_l116_steel_beam_fails_at_a_cost(foe_move, force):
 # target's contact damage (Rocky Helmet, Rough Skin: Showdown's hit loop breaks); the engine dealt
 # every hit
 def test_l117_multi_hit_stops_when_the_user_faints():
-    cinc = _attacker("Cinccino", "Skill Link", "Heavy-Duty Boots", "- Tail Slap\n- Belly Drum\n- Substitute\n- U-turn", "Jolly")
+    cinc = _attacker(
+        "Cinccino",
+        "Skill Link",
+        "Heavy-Duty Boots",
+        "- Tail Slap\n- Belly Drum\n- Substitute\n- U-turn",
+        "Jolly",
+    )
     blis = BLISSEY.replace("Heavy-Duty Boots", "Rocky Helmet")
-    pult = _attacker("Dragapult", "Infiltrator", "Choice Specs", "- Shadow Ball\n- Draco Meteor\n- U-turn\n- Flamethrower", "Timid")
+    pult = _attacker(
+        "Dragapult",
+        "Infiltrator",
+        "Choice Specs",
+        "- Shadow Ball\n- Draco Meteor\n- U-turn\n- Flamethrower",
+        "Timid",
+    )
     turns = [("move substitute", "move seismictoss")] * 2 + [("move tailslap", "move calmmind")]
     states = ec.run_showdown(cinc + "\n\n" + pult, blis, turns)
     assert any(x.startswith("|faint|p1a: Cinccino") for x in states[3]["log"])
@@ -3231,8 +3946,16 @@ def test_l117_multi_hit_stops_when_the_user_faints():
 # L118 (doc/engine-diff.md): Flying Press is Fighting and Flying for its effectiveness (Showdown's
 # onEffectiveness adds Flying's); the engine took Fighting only (2x on a Tera Steel target, not 1x)
 def test_l118_flying_press_is_flying_too():
-    lucha = _attacker("Hawlucha", "Unburden", "Leftovers", "- Flying Press\n- Swords Dance\n- Roost\n- Acrobatics", "Jolly")
-    latios = _setter("Latios", "Levitate", "Leftovers", "- Calm Mind\n- Draco Meteor\n- Recover\n- Psyshock")
+    lucha = _attacker(
+        "Hawlucha",
+        "Unburden",
+        "Leftovers",
+        "- Flying Press\n- Swords Dance\n- Roost\n- Acrobatics",
+        "Jolly",
+    )
+    latios = _setter(
+        "Latios", "Levitate", "Leftovers", "- Calm Mind\n- Draco Meteor\n- Recover\n- Psyshock"
+    )
     latios = latios.replace("Tera Type: Normal", "Tera Type: Steel")
     states = ec.run_showdown(lucha, latios, [("move flyingpress", "move calmmind terastallize")])
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "flyingpress", "calmmind-tera")
@@ -3244,7 +3967,9 @@ def test_l118_flying_press_is_flying_too():
 # count and waking, a thaw: Showdown's BeforeMove comes before the target check); the engine stopped
 # it first, so a Rest sleeper due to wake stayed asleep
 def test_l119_sleeper_wakes_without_a_target():
-    lu = _setter("Ting-Lu", "Vessel of Ruin", "Leftovers", "- Rest\n- Stealth Rock\n- Whirlwind\n- Ruination")
+    lu = _setter(
+        "Ting-Lu", "Vessel of Ruin", "Leftovers", "- Rest\n- Stealth Rock\n- Whirlwind\n- Ruination"
+    )
     blis = BLISSEY.replace("- Calm Mind", "- Healing Wish")
     chansey = BLISSEY.replace("Blissey @ Heavy-Duty Boots", "Chansey @ Eviolite")
     turns = [("move stealthrock", "move seismictoss"), ("move rest", "move seismictoss"),
@@ -3261,8 +3986,15 @@ def test_l119_sleeper_wakes_without_a_target():
 # Mirror Coat / Metal Burst's, Final Gambit's too (Showdown's onDamagingHit); the engine popped it
 # only on a move's ordinary hit (a secondary)
 def test_l120_balloon_pops_on_mirror_coat():
-    momo = _setter("Alomomola", "Regenerator", "Leftovers", "- Mirror Coat\n- Wish\n- Protect\n- Scald")
-    tran = _setter("Heatran", "Flash Fire", "Air Balloon", "- Earth Power\n- Magma Storm\n- Protect\n- Stealth Rock")
+    momo = _setter(
+        "Alomomola", "Regenerator", "Leftovers", "- Mirror Coat\n- Wish\n- Protect\n- Scald"
+    )
+    tran = _setter(
+        "Heatran",
+        "Flash Fire",
+        "Air Balloon",
+        "- Earth Power\n- Magma Storm\n- Protect\n- Stealth Rock",
+    )
     states = ec.run_showdown(momo, tran, [("move mirrorcoat", "move earthpower")])
     assert states[1]["sides"][1]["mons"][0]["hp"] > 0
     assert states[1]["sides"][1]["mons"][0]["item"] == ""
@@ -3273,9 +4005,18 @@ def test_l120_balloon_pops_on_mirror_coat():
 # L121 (doc/engine-diff.md): Parting Shot fails, and its user stays, when it lowers no stat (Clear
 # Body, Mirror Armor, at -6, a Substitute: Showdown's onHit returns false); the engine switched out
 def test_l121_parting_shot_into_clear_body():
-    room = _setter("Revavroom", "Filter", "Leftovers", "- Parting Shot\n- Gunk Shot\n- Shift Gear\n- Iron Head")
-    steel = _setter("Registeel", "Clear Body", "Leftovers", "- Body Press\n- Iron Defense\n- Stealth Rock\n- Protect")
-    states = ec.run_showdown(steel, room + "\n\n" + BLISSEY, [("move irondefense", "move partingshot")])
+    room = _setter(
+        "Revavroom", "Filter", "Leftovers", "- Parting Shot\n- Gunk Shot\n- Shift Gear\n- Iron Head"
+    )
+    steel = _setter(
+        "Registeel",
+        "Clear Body",
+        "Leftovers",
+        "- Body Press\n- Iron Defense\n- Stealth Rock\n- Protect",
+    )
+    states = ec.run_showdown(
+        steel, room + "\n\n" + BLISSEY, [("move irondefense", "move partingshot")]
+    )
     assert states[1]["sides"][1]["active"] == 0 and states[1]["sides"][1]["request"] == "move"
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "irondefense", "partingshot")
     assert ec.closest(states[1], outs, (1, 2), hp=True)["diff"] == {}
@@ -3284,9 +4025,21 @@ def test_l121_parting_shot_into_clear_body():
 # L122 (doc/engine-diff.md): Red Card / Eject Button go off on a hit Disguise takes too (Showdown's
 # onAfterMoveSecondary: a non-status move that hit, no damage needed); the engine needed damage
 def test_l122_red_card_through_disguise():
-    mimi = _setter("Mimikyu", "Disguise", "Red Card", "- Swords Dance\n- Shadow Claw\n- Play Rough\n- Substitute")
-    gambit = _attacker("Kingambit", "Supreme Overlord", "Leftovers", "- Iron Head\n- Sucker Punch\n- Swords Dance\n- Kowtow Cleave")
-    states = ec.run_showdown(mimi, gambit + "\n\n" + BLISSEY, [("move swordsdance", "move ironhead")])
+    mimi = _setter(
+        "Mimikyu",
+        "Disguise",
+        "Red Card",
+        "- Swords Dance\n- Shadow Claw\n- Play Rough\n- Substitute",
+    )
+    gambit = _attacker(
+        "Kingambit",
+        "Supreme Overlord",
+        "Leftovers",
+        "- Iron Head\n- Sucker Punch\n- Swords Dance\n- Kowtow Cleave",
+    )
+    states = ec.run_showdown(
+        mimi, gambit + "\n\n" + BLISSEY, [("move swordsdance", "move ironhead")]
+    )
     assert any(x.startswith("|-enditem|p1a: Mimikyu|Red Card") for x in states[1]["log"])
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "swordsdance", "ironhead")
     assert ec.closest(states[1], outs, (1, 2), hp=True)["diff"] == {}
@@ -3296,8 +4049,17 @@ def test_l122_red_card_through_disguise():
 # its HP or less (half with Gluttony), whatever the priorities (Showdown's onFractionalPriority
 # gets the fractional priority, 0); the engine ate it only at equal priorities, below a quarter
 def test_l123_custap_with_endure():
-    quanid = _setter("Araquanid", "Water Bubble", "Custap Berry", "- Endure\n- Belly Drum\n- Substitute\n- Liquidation")
-    turns = [("move bellydrum", "move calmmind"), ("move substitute", "move calmmind"), ("move endure", "move calmmind")]
+    quanid = _setter(
+        "Araquanid",
+        "Water Bubble",
+        "Custap Berry",
+        "- Endure\n- Belly Drum\n- Substitute\n- Liquidation",
+    )
+    turns = [
+        ("move bellydrum", "move calmmind"),
+        ("move substitute", "move calmmind"),
+        ("move endure", "move calmmind"),
+    ]
     states = ec.run_showdown(quanid, BLISSEY, turns)
     a = states[2]["sides"][0]["mons"][0]
     assert a["hp"] * 4 == a["maxhp"] and a["item"] == "custapberry"  # (exactly a quarter)
@@ -3310,8 +4072,19 @@ def test_l123_custap_with_endure():
 # a Protosynthesis / Quark Drive holder's Booster Energy goes off at once (Showdown: the abilities
 # start again); the engine never used it
 def test_l124_booster_energy_after_neutralizing_gas():
-    weezing = _setter("Weezing-Galar", "Neutralizing Gas", "Leftovers", "- Will-O-Wisp\n- Pain Split\n- Strange Steam\n- Defog")
-    tusk = _attacker("Great Tusk", "Protosynthesis", "Booster Energy", "- Headlong Rush\n- Ice Spinner\n- Rapid Spin\n- Bulk Up", "Jolly")
+    weezing = _setter(
+        "Weezing-Galar",
+        "Neutralizing Gas",
+        "Leftovers",
+        "- Will-O-Wisp\n- Pain Split\n- Strange Steam\n- Defog",
+    )
+    tusk = _attacker(
+        "Great Tusk",
+        "Protosynthesis",
+        "Booster Energy",
+        "- Headlong Rush\n- Ice Spinner\n- Rapid Spin\n- Bulk Up",
+        "Jolly",
+    )
     states = ec.run_showdown(weezing + "\n\n" + BLISSEY, tusk, [("switch 2", "move bulkup")])
     assert states[0]["sides"][1]["mons"][0]["item"] == "boosterenergy"
     assert states[1]["sides"][1]["mons"][0]["item"] == ""
@@ -3338,7 +4111,12 @@ def test_l125_healing_moves_cure_status(user, move):
 # engine stopped it first
 def test_l126_wakes_before_the_flinch():
     zo = _setter("Dondozo", "Unaware", "Leftovers", "- Rest\n- Curse\n- Waterfall\n- Sleep Talk")
-    gambit = _attacker("Kingambit", "Supreme Overlord", "Leftovers", "- Iron Head\n- Sucker Punch\n- Swords Dance\n- Kowtow Cleave")
+    gambit = _attacker(
+        "Kingambit",
+        "Supreme Overlord",
+        "Leftovers",
+        "- Iron Head\n- Sucker Punch\n- Swords Dance\n- Kowtow Cleave",
+    )
     turns = [("move curse", "move ironhead"), ("move rest", "move swordsdance"), ("move curse", "move swordsdance"),
              ("move curse", "move swordsdance"), ("move curse", "move ironhead")]  # fmt: skip
     states = ec.run_showdown(zo, gambit, turns, force_random=True)
@@ -3351,8 +4129,18 @@ def test_l126_wakes_before_the_flinch():
 # L127 (doc/engine-diff.md): a Mold Breaker's status move goes through a breakable status-blocking
 # ability (Purifying Salt, Limber, Insomnia, ...); the engine's immunity ignored Mold Breaker
 def test_l127_mold_breaker_through_purifying_salt():
-    tink = _setter("Tinkaton", "Mold Breaker", "Leftovers", "- Thunder Wave\n- Gigaton Hammer\n- Stealth Rock\n- Encore")
-    salt = _setter("Garganacl", "Purifying Salt", "Leftovers", "- Recover\n- Salt Cure\n- Stealth Rock\n- Protect")
+    tink = _setter(
+        "Tinkaton",
+        "Mold Breaker",
+        "Leftovers",
+        "- Thunder Wave\n- Gigaton Hammer\n- Stealth Rock\n- Encore",
+    )
+    salt = _setter(
+        "Garganacl",
+        "Purifying Salt",
+        "Leftovers",
+        "- Recover\n- Salt Cure\n- Stealth Rock\n- Protect",
+    )
     states = ec.run_showdown(tink, salt, [("move thunderwave", "move recover")], force_random=True)
     assert states[1]["sides"][1]["mons"][0]["status"] == "par"
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "thunderwave", "recover")
@@ -3363,8 +4151,18 @@ def test_l127_mold_breaker_through_purifying_salt():
 # (Parting Shot, Tickle, ...) and the user does not switch out (its Parting Shot was bounced); the
 # engine bounced the side / status / volatile effects only, the boosts stayed on the bouncer
 def test_l128_magic_bounce_parting_shot():
-    pech = _setter("Pecharunt", "Poison Puppeteer", "Leftovers", "- Parting Shot\n- Recover\n- Malignant Chain\n- Nasty Plot")
-    hatt = _setter("Hatterene", "Magic Bounce", "Leftovers", "- Calm Mind\n- Psyshock\n- Draining Kiss\n- Protect")
+    pech = _setter(
+        "Pecharunt",
+        "Poison Puppeteer",
+        "Leftovers",
+        "- Parting Shot\n- Recover\n- Malignant Chain\n- Nasty Plot",
+    )
+    hatt = _setter(
+        "Hatterene",
+        "Magic Bounce",
+        "Leftovers",
+        "- Calm Mind\n- Psyshock\n- Draining Kiss\n- Protect",
+    )
     states = ec.run_showdown(pech + "\n\n" + BLISSEY, hatt, [("move partingshot", "move calmmind")])
     assert states[1]["sides"][0]["mons"][0]["boosts"]["atk"] == -1
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "partingshot", "calmmind")
@@ -3374,9 +4172,21 @@ def test_l128_magic_bounce_parting_shot():
 # L128: a reflector with someone to switch in is the one that switches out (its own move -- Calm
 # Mind, after the faster Pecharunt's -- is lost)
 def test_l128_magic_bounce_parting_shot_switches_the_reflector():
-    pech = _setter("Pecharunt", "Poison Puppeteer", "Leftovers", "- Parting Shot\n- Recover\n- Malignant Chain\n- Nasty Plot")
-    hatt = _setter("Hatterene", "Magic Bounce", "Leftovers", "- Calm Mind\n- Psyshock\n- Draining Kiss\n- Protect")
-    states = ec.run_showdown(pech + "\n\n" + BLISSEY, hatt + "\n\n" + BLISSEY, [("move partingshot", "move calmmind")])
+    pech = _setter(
+        "Pecharunt",
+        "Poison Puppeteer",
+        "Leftovers",
+        "- Parting Shot\n- Recover\n- Malignant Chain\n- Nasty Plot",
+    )
+    hatt = _setter(
+        "Hatterene",
+        "Magic Bounce",
+        "Leftovers",
+        "- Calm Mind\n- Psyshock\n- Draining Kiss\n- Protect",
+    )
+    states = ec.run_showdown(
+        pech + "\n\n" + BLISSEY, hatt + "\n\n" + BLISSEY, [("move partingshot", "move calmmind")]
+    )
     assert states[1]["sides"][1]["request"] == "switch"
     assert states[1]["sides"][1]["mons"][0]["boosts"]["spa"] == 0
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "partingshot", "calmmind")
@@ -3389,8 +4199,14 @@ def _random_position(teams: str, i: int, turn: int, offset: int = 0):
     pairs = [json.loads(x) for x in (Path("tests/fixtures") / teams).read_text().splitlines()]
     p = pairs[i % len(pairs)]
     k = i + offset
-    steps, _ = ec.random_battle(p["p1"], p["p2"], f"gen5,{k},{k + 1},{k + 2},{k + 3}", k + 1, max_turns=60)
-    j = next(j for j, s in enumerate(steps) if s["state"]["turn"] == turn and set(s["choices"]) == {"p1", "p2"})
+    steps, _ = ec.random_battle(
+        p["p1"], p["p2"], f"gen5,{k},{k + 1},{k + 2},{k + 3}", k + 1, max_turns=60
+    )
+    j = next(
+        j
+        for j, s in enumerate(steps)
+        if s["state"]["turn"] == turn and set(s["choices"]) == {"p1", "p2"}
+    )
     return steps[j], steps[j + 1]
 
 
@@ -3414,8 +4230,12 @@ def test_l129_no_intimidate_after_fainting_to_hazards():
     ("Light Metal", "Clear Amulet", "swagger"),
 ])  # fmt: skip
 def test_l130_clear_body_lets_foe_raises_through(ability, item, foe_move):
-    meta = _setter("Metagross", ability, item, "- Protect\n- Iron Defense\n- Bullet Punch\n- Agility")
-    chomp = _setter("Garchomp", "Rough Skin", "Leftovers", "- Earthquake\n- Swagger\n- Protect\n- Roar")
+    meta = _setter(
+        "Metagross", ability, item, "- Protect\n- Iron Defense\n- Bullet Punch\n- Agility"
+    )
+    chomp = _setter(
+        "Garchomp", "Rough Skin", "Leftovers", "- Earthquake\n- Swagger\n- Protect\n- Roar"
+    )
     states = ec.run_showdown(meta, chomp, [("move irondefense", f"move {foe_move}")])
     assert states[1]["sides"][0]["mons"][0]["boosts"]["atk"] == 2
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "irondefense", foe_move)
@@ -3424,9 +4244,18 @@ def test_l130_clear_body_lets_foe_raises_through(ability, item, foe_move):
 
 # L130's control: a Substitute still stops Swagger (raise and confusion)
 def test_l130_swagger_into_substitute():
-    meta = _setter("Metagross", "Light Metal", "Leftovers", "- Protect\n- Substitute\n- Bullet Punch\n- Agility")
-    chomp = _setter("Garchomp", "Rough Skin", "Leftovers", "- Earthquake\n- Swagger\n- Protect\n- Roar")
-    states = ec.run_showdown(meta, chomp, [("move substitute", "move protect"), ("move agility", "move swagger")])
+    meta = _setter(
+        "Metagross",
+        "Light Metal",
+        "Leftovers",
+        "- Protect\n- Substitute\n- Bullet Punch\n- Agility",
+    )
+    chomp = _setter(
+        "Garchomp", "Rough Skin", "Leftovers", "- Earthquake\n- Swagger\n- Protect\n- Roar"
+    )
+    states = ec.run_showdown(
+        meta, chomp, [("move substitute", "move protect"), ("move agility", "move swagger")]
+    )
     assert states[2]["sides"][0]["mons"][0]["boosts"]["atk"] == 0
     outs = ec.engine_outcomes(ec.engine_state(states[1]), "agility", "swagger")
     assert ec.closest(states[2], outs, (1, 1), hp=True)["diff"] == {}
@@ -3435,8 +4264,15 @@ def test_l130_swagger_into_substitute():
 # L131 (doc/engine-diff.md): Mirror Herb copies the foe's raises whoever caused them (its holder's
 # own Swagger too: Showdown's onFoeAfterBoost); the engine's only the foe's own
 def test_l131_mirror_herb_copies_swagger():
-    meta = _setter("Metagross", "Light Metal", "Leftovers", "- Protect\n- Iron Defense\n- Bullet Punch\n- Agility")
-    chomp = _setter("Garchomp", "Rough Skin", "Mirror Herb", "- Earthquake\n- Swagger\n- Protect\n- Roar")
+    meta = _setter(
+        "Metagross",
+        "Light Metal",
+        "Leftovers",
+        "- Protect\n- Iron Defense\n- Bullet Punch\n- Agility",
+    )
+    chomp = _setter(
+        "Garchomp", "Rough Skin", "Mirror Herb", "- Earthquake\n- Swagger\n- Protect\n- Roar"
+    )
     states = ec.run_showdown(meta, chomp, [("move irondefense", "move swagger")])
     assert states[1]["sides"][1]["mons"][0]["boosts"]["atk"] == 2
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "irondefense", "swagger")
@@ -3475,9 +4311,17 @@ def test_l132_truant_after_any_move(turns):
 # bypasses it (Showdown's bypasssub): Memento's user stays (the engine's fainted), and a Contrary
 # target gets no raise (L130's control)
 def test_l133_memento_into_contrary_substitute():
-    drif = _setter("Drifblim", "Aftermath", "Leftovers", "- Memento\n- Protect\n- Shadow Ball\n- Will-O-Wisp")
-    enam = _setter("Enamorus", "Contrary", "Leftovers", "- Substitute\n- Protect\n- Moonblast\n- Earth Power")
-    states = ec.run_showdown(drif + "\n\n" + BLISSEY, enam, [("move protect", "move substitute"), ("move memento", "move moonblast")])
+    drif = _setter(
+        "Drifblim", "Aftermath", "Leftovers", "- Memento\n- Protect\n- Shadow Ball\n- Will-O-Wisp"
+    )
+    enam = _setter(
+        "Enamorus", "Contrary", "Leftovers", "- Substitute\n- Protect\n- Moonblast\n- Earth Power"
+    )
+    states = ec.run_showdown(
+        drif + "\n\n" + BLISSEY,
+        enam,
+        [("move protect", "move substitute"), ("move memento", "move moonblast")],
+    )
     assert states[2]["sides"][1]["mons"][0]["boosts"]["atk"] == 0
     assert any("|-fail|p1a: Drifblim" in x for x in states[2]["log"])
     outs = ec.engine_outcomes(ec.engine_state(states[1]), "memento", "moonblast")
@@ -3488,9 +4332,15 @@ def test_l133_memento_into_contrary_substitute():
 # engine's own checks already did)
 @pytest.mark.parametrize("move", ["painsplit", "trick"])
 def test_l133_status_moves_into_substitute(move):
-    drif = _setter("Drifblim", "Aftermath", "Light Clay", "- Pain Split\n- Trick\n- Shadow Ball\n- Protect")
-    enam = _setter("Enamorus", "Contrary", "Leftovers", "- Substitute\n- Protect\n- Moonblast\n- Earth Power")
-    states = ec.run_showdown(drif, enam, [("move protect", "move substitute"), (f"move {move}", "move earthpower")])
+    drif = _setter(
+        "Drifblim", "Aftermath", "Light Clay", "- Pain Split\n- Trick\n- Shadow Ball\n- Protect"
+    )
+    enam = _setter(
+        "Enamorus", "Contrary", "Leftovers", "- Substitute\n- Protect\n- Moonblast\n- Earth Power"
+    )
+    states = ec.run_showdown(
+        drif, enam, [("move protect", "move substitute"), (f"move {move}", "move earthpower")]
+    )
     assert any("|-fail|p1a: Drifblim" in x for x in states[2]["log"])
     outs = ec.engine_outcomes(ec.engine_state(states[1]), move, "earthpower")
     assert ec.closest(states[2], outs, (1, 1), hp=True)["diff"] == {}
@@ -3523,7 +4373,12 @@ Jolly Nature
     (_setter("Dachsbun", "Well-Baked Body", "Leftovers", "- Protect\n- Body Press\n- Wish\n- Roar"), "willowisp"),
 ])  # fmt: skip
 def test_l135_protect_before_absorbing_abilities(target, move):
-    user = _setter("Ninetales", "Flash Fire", "Leftovers", "- Flamethrower\n- Will-O-Wisp\n- Thunder Wave\n- Protect")
+    user = _setter(
+        "Ninetales",
+        "Flash Fire",
+        "Leftovers",
+        "- Flamethrower\n- Will-O-Wisp\n- Thunder Wave\n- Protect",
+    )
     states = ec.run_showdown(user, target, [(f"move {move}", "move protect")])
     outs = ec.engine_outcomes(ec.engine_state(states[0]), move, "protect")
     assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
@@ -3532,9 +4387,15 @@ def test_l135_protect_before_absorbing_abilities(target, move):
 # L136 (doc/engine-diff.md): a Substitute frees its user from a partial trap (Showdown's
 # substitute onStart); the engine kept the trap
 def test_l136_substitute_ends_partial_trap():
-    user = _setter("Serperior", "Contrary", "Leftovers", "- Substitute\n- Leaf Storm\n- Glare\n- Protect")
-    trapper = _setter("Alomomola", "Regenerator", "Leftovers", "- Whirlpool\n- Protect\n- Wish\n- Scald")
-    states = ec.run_showdown(user, trapper, [("move leafstorm", "move whirlpool"), ("move substitute", "move protect")])
+    user = _setter(
+        "Serperior", "Contrary", "Leftovers", "- Substitute\n- Leaf Storm\n- Glare\n- Protect"
+    )
+    trapper = _setter(
+        "Alomomola", "Regenerator", "Leftovers", "- Whirlpool\n- Protect\n- Wish\n- Scald"
+    )
+    states = ec.run_showdown(
+        user, trapper, [("move leafstorm", "move whirlpool"), ("move substitute", "move protect")]
+    )
     assert "partiallytrapped" in states[1]["sides"][0]["mons"][0]["volatiles"]
     assert "partiallytrapped" not in states[2]["sides"][0]["mons"][0]["volatiles"]
     outs = ec.engine_outcomes(ec.engine_state(states[1]), "substitute", "protect")
@@ -3544,8 +4405,15 @@ def test_l136_substitute_ends_partial_trap():
 # L137 (doc/engine-diff.md): Heal Block keeps a Sitrus Berry uneaten (Showdown's onTryEatItem: no
 # heal); the engine's Sitrus was eaten (pinch berries already checked)
 def test_l137_heal_block_stops_sitrus():
-    noise = _setter("Latios", "Levitate", "Leftovers", "- Psychic Noise\n- Recover\n- Protect\n- Draco Meteor")
-    azu = _setter("Azumarill", "Huge Power", "Sitrus Berry", "- Belly Drum\n- Aqua Jet\n- Play Rough\n- Protect")
+    noise = _setter(
+        "Latios", "Levitate", "Leftovers", "- Psychic Noise\n- Recover\n- Protect\n- Draco Meteor"
+    )
+    azu = _setter(
+        "Azumarill",
+        "Huge Power",
+        "Sitrus Berry",
+        "- Belly Drum\n- Aqua Jet\n- Play Rough\n- Protect",
+    )
     states = ec.run_showdown(noise, azu, [("move psychicnoise", "move bellydrum")])
     after = states[1]["sides"][1]["mons"][0]
     assert after["item"] == "sitrusberry" and after["boosts"]["atk"] == 6
@@ -3557,7 +4425,9 @@ def test_l137_heal_block_stops_sitrus():
 # onStart fails; its types stay); the engine's did (seen at a pivot's decision, mid-turn)
 def test_l138_roost_after_terastallizing():
     corv = CORVIKNIGHT.replace("Tera Type: Dragon", "Tera Type: Flying")
-    forre = _setter("Forretress", "Sturdy", "Leftovers", "- U-turn\n- Stone Edge\n- Spikes\n- Rapid Spin")
+    forre = _setter(
+        "Forretress", "Sturdy", "Leftovers", "- U-turn\n- Stone Edge\n- Spikes\n- Rapid Spin"
+    )
     states = ec.run_showdown(corv, forre + "\n\n" + BLISSEY, [("move defog", "move stoneedge"),
                                                               ("move roost terastallize", "move uturn")])  # fmt: skip
     assert states[2]["sides"][1]["request"] == "switch"
@@ -3568,7 +4438,9 @@ def test_l138_roost_after_terastallizing():
 
 # L135's control: a charge move's first turn into Protect still charges (Meteor Beam's raise)
 def test_l135_charge_turn_into_protect():
-    glim = _setter("Glimmora", "Toxic Debris", "Leftovers", "- Meteor Beam\n- Earth Power\n- Spikes\n- Protect")
+    glim = _setter(
+        "Glimmora", "Toxic Debris", "Leftovers", "- Meteor Beam\n- Earth Power\n- Spikes\n- Protect"
+    )
     states = ec.run_showdown(glim, _setter("Heatran", "Flash Fire", "Leftovers", "- Protect\n- Magma Storm\n- Earth Power\n- Taunt"),
                              [("move meteorbeam", "move protect")])  # fmt: skip
     assert "meteorbeam" in states[1]["sides"][0]["mons"][0]["volatiles"]
@@ -3591,8 +4463,18 @@ def test_l137_sitrus_after_heal_block_ends():
 # Balloon (Showdown: the balloon goes on the damaging hit, Pickpocket after the move); the
 # engine's Pickpocket saw the balloon still there
 def test_l139_pickpocket_after_air_balloon():
-    tink = _setter("Tinkaton", "Pickpocket", "Air Balloon", "- Stealth Rock\n- Gigaton Hammer\n- Encore\n- Protect")
-    gambit = _setter("Kingambit", "Supreme Overlord", "Leftovers", "- Iron Head\n- Sucker Punch\n- Swords Dance\n- Protect")
+    tink = _setter(
+        "Tinkaton",
+        "Pickpocket",
+        "Air Balloon",
+        "- Stealth Rock\n- Gigaton Hammer\n- Encore\n- Protect",
+    )
+    gambit = _setter(
+        "Kingambit",
+        "Supreme Overlord",
+        "Leftovers",
+        "- Iron Head\n- Sucker Punch\n- Swords Dance\n- Protect",
+    )
     states = ec.run_showdown(tink, gambit, [("move stealthrock", "move ironhead")])
     assert states[1]["sides"][0]["mons"][0]["item"] == "leftovers"
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "stealthrock", "ironhead")
@@ -3632,15 +4514,32 @@ Timid Nature
 # the engine only looked at a switch-in and the sun's end of turn
 @pytest.mark.parametrize("case", ["sunny day", "chilly reception", "sun ends"])
 def test_l141_protosynthesis_follows_the_weather(case):
-    wake = WALKING_WAKE.replace("Booster Energy", "Leftovers") if case == "sunny day" else WALKING_WAKE
+    wake = (
+        WALKING_WAKE.replace("Booster Energy", "Leftovers") if case == "sunny day" else WALKING_WAKE
+    )
     if case == "sunny day":
-        foe = _setter("Torkoal", "White Smoke", "Leftovers", "- Sunny Day\n- Rapid Spin\n- Lava Plume\n- Protect")
+        foe = _setter(
+            "Torkoal",
+            "White Smoke",
+            "Leftovers",
+            "- Sunny Day\n- Rapid Spin\n- Lava Plume\n- Protect",
+        )
         turns, k = [("move protect", "move sunnyday")], 0
     elif case == "chilly reception":
-        foe = _setter("Torkoal", "Drought", "Leftovers", "- Sunny Day\n- Chilly Reception\n- Lava Plume\n- Protect")
+        foe = _setter(
+            "Torkoal",
+            "Drought",
+            "Leftovers",
+            "- Sunny Day\n- Chilly Reception\n- Lava Plume\n- Protect",
+        )
         turns, k = [("move protect", "move chillyreception")], 0
     else:
-        foe = _setter("Torkoal", "White Smoke", "Leftovers", "- Sunny Day\n- Rapid Spin\n- Lava Plume\n- Protect")
+        foe = _setter(
+            "Torkoal",
+            "White Smoke",
+            "Leftovers",
+            "- Sunny Day\n- Rapid Spin\n- Lava Plume\n- Protect",
+        )
         # (Blissey first: the Booster Energy stays held under the sun)
         wake = BLISSEY + "\n\n" + WALKING_WAKE
         turns = [("move protect", "move sunnyday"), ("switch 2", "move rapidspin"),
@@ -3659,9 +4558,15 @@ def test_l141_protosynthesis_follows_the_weather(case):
 # target's move for the turn (Showdown); the engine skipped the slower target's move whenever the
 # faster one's move was a drag
 def test_l142_failed_drag_leaves_the_targets_move():
-    chomp = _setter("Garchomp", "Rough Skin", "Leftovers", "- Dragon Tail\n- Earthquake\n- Protect\n- Roar")
-    clef = _setter("Clefable", "Magic Guard", "Leftovers", "- Trick Room\n- Moonblast\n- Protect\n- Moonlight")
-    states = ec.run_showdown(chomp, clef + "\n\n" + BLISSEY, [("move dragontail", "move trickroom")])
+    chomp = _setter(
+        "Garchomp", "Rough Skin", "Leftovers", "- Dragon Tail\n- Earthquake\n- Protect\n- Roar"
+    )
+    clef = _setter(
+        "Clefable", "Magic Guard", "Leftovers", "- Trick Room\n- Moonblast\n- Protect\n- Moonlight"
+    )
+    states = ec.run_showdown(
+        chomp, clef + "\n\n" + BLISSEY, [("move dragontail", "move trickroom")]
+    )
     assert "trickroom" in states[1]["field"]["pseudo"]  # (Trick Room's -7 after Dragon Tail's -6)
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "dragontail", "trickroom")
     assert ec.closest(states[1], outs, (1, 2), hp=True)["diff"] == {}
@@ -3690,8 +4595,12 @@ Jolly Nature
 # (Acid Spray's Sp. Def -2; Showdown's onAfterBoost): its holder switches out, its own move lost;
 # the engine checked only the move's own stat drops
 def test_l144_eject_pack_after_a_secondary_drop():
-    user = _setter("Glimmora", "Toxic Debris", "Leftovers", "- Acid Spray\n- Earth Power\n- Spikes\n- Protect")
-    goon = _setter("Amoonguss", "Regenerator", "Eject Pack", "- Spore\n- Giga Drain\n- Clear Smog\n- Protect")
+    user = _setter(
+        "Glimmora", "Toxic Debris", "Leftovers", "- Acid Spray\n- Earth Power\n- Spikes\n- Protect"
+    )
+    goon = _setter(
+        "Amoonguss", "Regenerator", "Eject Pack", "- Spore\n- Giga Drain\n- Clear Smog\n- Protect"
+    )
     states = ec.run_showdown(user.replace("Careful", "Timid"), goon.replace("Careful", "Relaxed") + "\n\n" + BLISSEY,
                              [("move acidspray", "move gigadrain")])  # fmt: skip
     assert states[1]["sides"][1]["request"] == "switch"
@@ -3706,9 +4615,18 @@ def test_l144_eject_pack_after_a_secondary_drop():
     ("alluringvoice", "swordsdance"), ("burningjealousy", "swordsdance"), ("alluringvoice", "protect"),
 ])  # fmt: skip
 def test_l145_stats_raised_this_turn(move, foe_move):
-    user = _setter("Skeledirge", "Unaware", "Leftovers", "- Alluring Voice\n- Burning Jealousy\n- Slack Off\n- Protect")
-    chomp = _setter("Garchomp", "Rough Skin", "Leftovers", "- Swords Dance\n- Protect\n- Earthquake\n- Roar")
-    states = ec.run_showdown(user, chomp.replace("Careful", "Jolly"), [(f"move {move}", f"move {foe_move}")])
+    user = _setter(
+        "Skeledirge",
+        "Unaware",
+        "Leftovers",
+        "- Alluring Voice\n- Burning Jealousy\n- Slack Off\n- Protect",
+    )
+    chomp = _setter(
+        "Garchomp", "Rough Skin", "Leftovers", "- Swords Dance\n- Protect\n- Earthquake\n- Roar"
+    )
+    states = ec.run_showdown(
+        user, chomp.replace("Careful", "Jolly"), [(f"move {move}", f"move {foe_move}")]
+    )
     outs = ec.engine_outcomes(ec.engine_state(states[0]), move, foe_move)
     assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
 
@@ -3760,7 +4678,9 @@ Jolly Nature
 # hit's own Heal Block (Psychic Noise) comes before the Sitrus Berry it takes to half (the engine
 # ate the berry at the damage, before the secondaries)
 def test_l147_update_after_the_secondaries():
-    user = _setter("Latios", "Levitate", "Leftovers", "- Psychic Noise\n- Recover\n- Protect\n- Draco Meteor")
+    user = _setter(
+        "Latios", "Levitate", "Leftovers", "- Psychic Noise\n- Recover\n- Protect\n- Draco Meteor"
+    )
     user = user.replace("Careful", "Modest").replace("4 Atk / 252 SpD", "252 SpA / 4 SpD")
     foe = """Azumarill @ Sitrus Berry
 Ability: Huge Power
@@ -3794,17 +4714,31 @@ def test_l147_update_before_the_drag():
 @pytest.mark.parametrize("case", ["electric seed", "ice face"])
 def test_l148_field_change_events(case):
     if case == "electric seed":
-        user = _setter("Jolteon", "Volt Absorb", "Leftovers", "- Electric Terrain\n- Thunderbolt\n- Protect\n- Wish")
+        user = _setter(
+            "Jolteon",
+            "Volt Absorb",
+            "Leftovers",
+            "- Electric Terrain\n- Thunderbolt\n- Protect\n- Wish",
+        )
         user = user.replace("Careful", "Timid")
-        foe = _setter("Corviknight", "Pressure", "Electric Seed", "- Defog\n- Roost\n- Brave Bird\n- U-turn")
+        foe = _setter(
+            "Corviknight", "Pressure", "Electric Seed", "- Defog\n- Roost\n- Brave Bird\n- U-turn"
+        )
         turns, k, c = [("move electricterrain", "move defog")], 0, ("electricterrain", "defog")
         states = ec.run_showdown(user, foe, turns)
         assert states[1]["sides"][1]["mons"][0]["item"] == ""
     else:
         # (turn 1: the face takes the Earthquake; turn 2: Snowscape first, the face back takes
         # the slower Hippowdon's Earthquake again)
-        eiscue = _setter("Eiscue", "Ice Face", "Leftovers", "- Snowscape\n- Belly Drum\n- Protect\n- Icicle Crash")
-        foe = _setter("Hippowdon", "Sand Force", "Leftovers", "- Earthquake\n- Slack Off\n- Protect\n- Roar")
+        eiscue = _setter(
+            "Eiscue",
+            "Ice Face",
+            "Leftovers",
+            "- Snowscape\n- Belly Drum\n- Protect\n- Icicle Crash",
+        )
+        foe = _setter(
+            "Hippowdon", "Sand Force", "Leftovers", "- Earthquake\n- Slack Off\n- Protect\n- Roar"
+        )
         turns = [("move iciclecrash", "move earthquake"), ("move snowscape", "move earthquake")]
         states = ec.run_showdown(eiscue, foe, turns)
         assert states[1]["sides"][0]["mons"][0]["species"] == "eiscuenoice"
@@ -3821,35 +4755,59 @@ def test_l148_field_change_events(case):
 @pytest.mark.parametrize("case", ["simple", "big pecks", "mist", "guard dog", "rattled", "opportunist",
                                   "ripen"])  # fmt: skip
 def test_l149_boost_handlers(case):
-    foe = _setter("Garchomp", "Rough Skin", "Leftovers", "- Swords Dance\n- Earthquake\n- Protect\n- Roar")
+    foe = _setter(
+        "Garchomp", "Rough Skin", "Leftovers", "- Swords Dance\n- Earthquake\n- Protect\n- Roar"
+    )
     k = 0
     if case == "simple":
-        user = _setter("Swoobat", "Simple", "Leftovers", "- Calm Mind\n- Protect\n- Roost\n- Air Slash")
+        user = _setter(
+            "Swoobat", "Simple", "Leftovers", "- Calm Mind\n- Protect\n- Roost\n- Air Slash"
+        )
         turns = [("move calmmind", "move protect")]
     elif case == "big pecks":
-        user = _setter("Pidgeot", "Big Pecks", "Leftovers", "- Roost\n- Protect\n- Hurricane\n- U-turn")
-        foe = _setter("Garchomp", "Rough Skin", "Leftovers", "- Swords Dance\n- Leer\n- Protect\n- Roar")
+        user = _setter(
+            "Pidgeot", "Big Pecks", "Leftovers", "- Roost\n- Protect\n- Hurricane\n- U-turn"
+        )
+        foe = _setter(
+            "Garchomp", "Rough Skin", "Leftovers", "- Swords Dance\n- Leer\n- Protect\n- Roar"
+        )
         turns = [("move protect", "move swordsdance"), ("move roost", "move leer")]
         k = 1
     elif case == "mist":
-        user = _setter("Lapras", "Water Absorb", "Leftovers", "- Mist\n- Protect\n- Freeze-Dry\n- Haze")
-        foe = _setter("Garchomp", "Rough Skin", "Leftovers", "- Swords Dance\n- Scary Face\n- Protect\n- Roar")
+        user = _setter(
+            "Lapras", "Water Absorb", "Leftovers", "- Mist\n- Protect\n- Freeze-Dry\n- Haze"
+        )
+        foe = _setter(
+            "Garchomp", "Rough Skin", "Leftovers", "- Swords Dance\n- Scary Face\n- Protect\n- Roar"
+        )
         turns = [("move mist", "move swordsdance"), ("move freezedry", "move scaryface")]
         k = 1
     elif case in ("guard dog", "rattled"):
         user = (_setter("Okidogi", "Guard Dog", "Leftovers", "- Bulk Up\n- Drain Punch\n- Protect\n- Knock Off")
                 if case == "guard dog" else
                 _setter("Sudowoodo", "Rattled", "Leftovers", "- Protect\n- Stealth Rock\n- Head Smash\n- Sucker Punch"))  # fmt: skip
-        lando = _setter("Landorus-Therian", "Intimidate", "Leftovers", "- Earthquake\n- U-turn\n- Stealth Rock\n- Protect")
+        lando = _setter(
+            "Landorus-Therian",
+            "Intimidate",
+            "Leftovers",
+            "- Earthquake\n- U-turn\n- Stealth Rock\n- Protect",
+        )
         states = ec.run_showdown(user, foe + "\n\n" + lando, [("move protect", "switch 2")])
         outs = ec.engine_outcomes(ec.engine_state(states[0]), "protect", "landorustherian")
         assert ec.closest(states[1], outs, (1, 2), hp=True)["diff"] == {}
         return
     elif case == "opportunist":
-        user = _setter("Espathra", "Opportunist", "Leftovers", "- Calm Mind\n- Protect\n- Roost\n- Lumina Crash")
+        user = _setter(
+            "Espathra",
+            "Opportunist",
+            "Leftovers",
+            "- Calm Mind\n- Protect\n- Roost\n- Lumina Crash",
+        )
         turns = [("move roost", "move swordsdance")]
     else:  # ripen: a Kee Berry's +2
-        user = _setter("Appletun", "Ripen", "Kee Berry", "- Recover\n- Apple Acid\n- Protect\n- Dragon Pulse")
+        user = _setter(
+            "Appletun", "Ripen", "Kee Berry", "- Recover\n- Apple Acid\n- Protect\n- Dragon Pulse"
+        )
         foe = foe.replace("- Swords Dance", "- Tackle")
         turns = [("move recover", "move tackle")]
     states = ec.run_showdown(user, foe, turns)
@@ -3910,20 +4868,39 @@ Careful Nature
 # engine's were one secondary per move), Stamina after Clear Smog's clear (onHit before it)
 @pytest.mark.parametrize("case", ["rough skin", "weak armor", "gooey", "stamina"])
 def test_l151_damaging_hit(case):
-    cinccino = _attacker("Cinccino", "Skill Link", "Leftovers", "- Tail Slap\n- U-turn\n- Knock Off\n- Tidy Up", "Jolly")
+    cinccino = _attacker(
+        "Cinccino",
+        "Skill Link",
+        "Leftovers",
+        "- Tail Slap\n- U-turn\n- Knock Off\n- Tidy Up",
+        "Jolly",
+    )
     k, turns = 0, [("move tailslap", "move protect")]
     if case == "rough skin":
-        foe = _setter("Garchomp", "Rough Skin", "Leftovers", "- Swords Dance\n- Earthquake\n- Protect\n- Roar")
+        foe = _setter(
+            "Garchomp", "Rough Skin", "Leftovers", "- Swords Dance\n- Earthquake\n- Protect\n- Roar"
+        )
         turns = [("move tailslap", "move swordsdance")]
     elif case == "weak armor":
-        foe = _setter("Skarmory", "Weak Armor", "Leftovers", "- Roost\n- Spikes\n- Protect\n- Whirlwind")
+        foe = _setter(
+            "Skarmory", "Weak Armor", "Leftovers", "- Roost\n- Spikes\n- Protect\n- Whirlwind"
+        )
         turns = [("move tailslap", "move roost")]
     elif case == "gooey":
-        foe = _setter("Goodra", "Gooey", "Leftovers", "- Draco Meteor\n- Fire Blast\n- Protect\n- Sludge Bomb")
+        foe = _setter(
+            "Goodra", "Gooey", "Leftovers", "- Draco Meteor\n- Fire Blast\n- Protect\n- Sludge Bomb"
+        )
         turns = [("move tailslap", "move sludgebomb")]
     else:
-        cinccino = _setter("Gastrodon", "Storm Drain", "Leftovers", "- Clear Smog\n- Recover\n- Earth Power\n- Scald")
-        foe = _setter("Mudsdale", "Stamina", "Leftovers", "- Earthquake\n- Iron Defense\n- Protect\n- Rest")
+        cinccino = _setter(
+            "Gastrodon",
+            "Storm Drain",
+            "Leftovers",
+            "- Clear Smog\n- Recover\n- Earth Power\n- Scald",
+        )
+        foe = _setter(
+            "Mudsdale", "Stamina", "Leftovers", "- Earthquake\n- Iron Defense\n- Protect\n- Rest"
+        )
         turns = [("move recover", "move irondefense"), ("move clearsmog", "move irondefense")]
         k = 1
     states = ec.run_showdown(cinccino, foe, turns)
@@ -3956,10 +4933,19 @@ def test_l151_positions(teams, i, turn, offset):
 # differential's wide b103-t33); the engine ate it as the move started. A hit: a control
 @pytest.mark.parametrize("case", ["protect", "hit"])
 def test_l152_resist_berry_on_the_hit(case):
-    chomp = _setter("Garchomp", "Rough Skin", "Leftovers", "- Dragon Claw\n- Earthquake\n- Protect\n- Roar")
-    dnite = _setter("Dragonite", "Multiscale", "Haban Berry", "- Roost\n- Protect\n- Extreme Speed\n- Dragon Dance")
+    chomp = _setter(
+        "Garchomp", "Rough Skin", "Leftovers", "- Dragon Claw\n- Earthquake\n- Protect\n- Roar"
+    )
+    dnite = _setter(
+        "Dragonite",
+        "Multiscale",
+        "Haban Berry",
+        "- Roost\n- Protect\n- Extreme Speed\n- Dragon Dance",
+    )
     foe_move = "protect" if case == "protect" else "roost"
-    states = ec.run_showdown(chomp.replace("Careful", "Jolly"), dnite, [("move dragonclaw", f"move {foe_move}")])
+    states = ec.run_showdown(
+        chomp.replace("Careful", "Jolly"), dnite, [("move dragonclaw", f"move {foe_move}")]
+    )
     assert (states[1]["sides"][1]["mons"][0]["item"] == "habanberry") == (case == "protect")
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "dragonclaw", foe_move)
     assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
@@ -4048,8 +5034,16 @@ def test_l156_positions(teams, i, turn, offset):
 
 # L156: Ice Face takes a multi-hit move's first hit only (Rock Blast's later hits damage)
 def test_l156_ice_face_multi_hit():
-    eiscue = _setter("Eiscue", "Ice Face", "Leftovers", "- Belly Drum\n- Icicle Crash\n- Protect\n- Substitute")
-    cloyster = _attacker("Cloyster", "Skill Link", "Leftovers", "- Icicle Spear\n- Rock Blast\n- Shell Smash\n- Spikes", "Jolly")
+    eiscue = _setter(
+        "Eiscue", "Ice Face", "Leftovers", "- Belly Drum\n- Icicle Crash\n- Protect\n- Substitute"
+    )
+    cloyster = _attacker(
+        "Cloyster",
+        "Skill Link",
+        "Leftovers",
+        "- Icicle Spear\n- Rock Blast\n- Shell Smash\n- Spikes",
+        "Jolly",
+    )
     states = ec.run_showdown(cloyster, eiscue, [("move rockblast", "move bellydrum")])
     assert states[1]["sides"][1]["mons"][0]["hp"] < states[0]["sides"][1]["mons"][0]["hp"]
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "rockblast", "bellydrum")
@@ -4126,17 +5120,31 @@ def test_l160_positions(teams, i, turn, offset):
 # physical (contact: Rocky Helmet) when that deals more
 @pytest.mark.parametrize("move", ["venoshock", "infernalparade"])
 def test_l161_doubled_on_a_status(move):
-    user = _setter("Toxapex", "Regenerator", "Black Sludge", "- Toxic\n- Venoshock\n- Infernal Parade\n- Recover")
+    user = _setter(
+        "Toxapex",
+        "Regenerator",
+        "Black Sludge",
+        "- Toxic\n- Venoshock\n- Infernal Parade\n- Recover",
+    )
     user = user.replace("Careful", "Modest").replace("4 Atk / 252 SpD", "252 SpA / 4 SpD")
-    foe = _setter("Garchomp", "Rough Skin", "Leftovers", "- Swords Dance\n- Protect\n- Earthquake\n- Roar")
-    states = ec.run_showdown(user, foe, [("move toxic", "move swordsdance"), (f"move {move}", "move swordsdance")])
+    foe = _setter(
+        "Garchomp", "Rough Skin", "Leftovers", "- Swords Dance\n- Protect\n- Earthquake\n- Roar"
+    )
+    states = ec.run_showdown(
+        user, foe, [("move toxic", "move swordsdance"), (f"move {move}", "move swordsdance")]
+    )
     assert states[1]["sides"][1]["mons"][0]["status"] == "tox"
     outs = ec.engine_outcomes(ec.engine_state(states[1]), move, "swordsdance")
     assert ec.closest(states[2], outs, (1, 1), hp=True)["diff"] == {}
 
 
 def test_l161_bleakwind_storm_in_rain():
-    torn = _setter("Tornadus-Therian", "Regenerator", "Leftovers", "- Bleakwind Storm\n- Rain Dance\n- U-turn\n- Taunt")
+    torn = _setter(
+        "Tornadus-Therian",
+        "Regenerator",
+        "Leftovers",
+        "- Bleakwind Storm\n- Rain Dance\n- U-turn\n- Taunt",
+    )
     # (the misses forced in Showdown: it still hits; the engine has no miss branch)
     states = ec.run_showdown(torn, CORVIKNIGHT, [("move raindance", "move roost"), ("move bleakwindstorm", "move defog")],
                              force_random=False)  # fmt: skip
@@ -4147,13 +5155,25 @@ def test_l161_bleakwind_storm_in_rain():
 
 
 def test_l161_shell_side_arm_physical():
-    user = _attacker("Slowbro-Galar", "Regenerator", "Leftovers", "- Shell Side Arm\n- Psychic\n- Flamethrower\n- Slack Off", "Adamant")
-    blissey = BLISSEY.replace("Heavy-Duty Boots", "Rocky Helmet").replace("252 Def / 4 SpD", "4 Def / 252 SpD")
-    states = ec.run_showdown(user, blissey.replace("Bold", "Calm"), [("move shellsidearm", "move calmmind")])
+    user = _attacker(
+        "Slowbro-Galar",
+        "Regenerator",
+        "Leftovers",
+        "- Shell Side Arm\n- Psychic\n- Flamethrower\n- Slack Off",
+        "Adamant",
+    )
+    blissey = BLISSEY.replace("Heavy-Duty Boots", "Rocky Helmet").replace(
+        "252 Def / 4 SpD", "4 Def / 252 SpD"
+    )
+    states = ec.run_showdown(
+        user, blissey.replace("Bold", "Calm"), [("move shellsidearm", "move calmmind")]
+    )
     assert any("Rocky Helmet" in x for x in states[1]["log"])  # (physical: contact)
     # (Showdown's rolls as hints: its poison's knockout at the end of the turn follows the damage --
     # without them a crit's branch matched, by the HP tolerance; L245)
-    outs = ec.engine_outcomes(ec.engine_state(states[0]), "shellsidearm", "calmmind", ec.move_hints(states[0], states[1]))
+    outs = ec.engine_outcomes(
+        ec.engine_state(states[0]), "shellsidearm", "calmmind", ec.move_hints(states[0], states[1])
+    )
     assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
 
 
@@ -4161,9 +5181,15 @@ def test_l161_shell_side_arm_physical():
 # use: Merciless (a sure crit on a poisoned target), Steadfast (Speed +1 when flinched), Lagging
 # Tail (last in its bracket), Anger Shell (main b100-t13), Quick Draw (3/10 first in its bracket)
 def test_l162_merciless():
-    pex = _setter("Toxapex", "Merciless", "Black Sludge", "- Toxic\n- Liquidation\n- Recover\n- Haze")
-    foe = _setter("Garchomp", "Rough Skin", "Leftovers", "- Swords Dance\n- Protect\n- Earthquake\n- Roar")
-    states = ec.run_showdown(pex, foe, [("move toxic", "move swordsdance"), ("move liquidation", "move swordsdance")])
+    pex = _setter(
+        "Toxapex", "Merciless", "Black Sludge", "- Toxic\n- Liquidation\n- Recover\n- Haze"
+    )
+    foe = _setter(
+        "Garchomp", "Rough Skin", "Leftovers", "- Swords Dance\n- Protect\n- Earthquake\n- Roar"
+    )
+    states = ec.run_showdown(
+        pex, foe, [("move toxic", "move swordsdance"), ("move liquidation", "move swordsdance")]
+    )
     assert any("|-crit|" in x for x in states[2]["log"])
     outs = ec.engine_outcomes(ec.engine_state(states[1]), "liquidation", "swordsdance")
     res = ec.closest(states[2], outs, (1, 1), hp=True)
@@ -4171,17 +5197,42 @@ def test_l162_merciless():
 
 
 def test_l162_steadfast():
-    mach = _attacker("Mienshao", "Steadfast", "Leftovers", "- U-turn\n- Close Combat\n- Fake Out\n- Knock Off", "Jolly")
-    foe = _attacker("Weavile", "Pressure", "Leftovers", "- Fake Out\n- Ice Shard\n- Knock Off\n- Swords Dance", "Jolly")
-    states = ec.run_showdown(mach.replace("Jolly", "Adamant"), foe, [("move knockoff", "move fakeout")])
+    mach = _attacker(
+        "Mienshao",
+        "Steadfast",
+        "Leftovers",
+        "- U-turn\n- Close Combat\n- Fake Out\n- Knock Off",
+        "Jolly",
+    )
+    foe = _attacker(
+        "Weavile",
+        "Pressure",
+        "Leftovers",
+        "- Fake Out\n- Ice Shard\n- Knock Off\n- Swords Dance",
+        "Jolly",
+    )
+    states = ec.run_showdown(
+        mach.replace("Jolly", "Adamant"), foe, [("move knockoff", "move fakeout")]
+    )
     assert states[1]["sides"][0]["mons"][0]["boosts"]["spe"] == 1
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "knockoff", "fakeout")
     assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
 
 
 def test_l162_lagging_tail():
-    slow = _setter("Hippowdon", "Sand Stream", "Lagging Tail", "- Slack Off\n- Earthquake\n- Stealth Rock\n- Whirlwind")
-    fast = _attacker("Weavile", "Pressure", "Leftovers", "- Fake Out\n- Ice Shard\n- Knock Off\n- Swords Dance", "Jolly")
+    slow = _setter(
+        "Hippowdon",
+        "Sand Stream",
+        "Lagging Tail",
+        "- Slack Off\n- Earthquake\n- Stealth Rock\n- Whirlwind",
+    )
+    fast = _attacker(
+        "Weavile",
+        "Pressure",
+        "Leftovers",
+        "- Fake Out\n- Ice Shard\n- Knock Off\n- Swords Dance",
+        "Jolly",
+    )
     # (Hippowdon is slower anyway: Lagging Tail on the faster one)
     states = ec.run_showdown(fast.replace("Leftovers", "Lagging Tail"), slow.replace("Lagging Tail", "Leftovers"),
                              [("move knockoff", "move earthquake")])  # fmt: skip
@@ -4190,7 +5241,9 @@ def test_l162_lagging_tail():
     # (the final state is the same either way: the engine's order itself)
     e = ec.engine_state(states[0])
     for x in pe.generate_instructions(e, "knockoff", "earthquake"):
-        assert [str(i) for i in x.instruction_list if str(i).startswith("Acted")][:1] == ["Acted: SideTwo"]
+        assert [str(i) for i in x.instruction_list if str(i).startswith("Acted")][:1] == [
+            "Acted: SideTwo"
+        ]
 
 
 def test_l162_anger_shell():
@@ -4204,13 +5257,28 @@ def test_l162_anger_shell():
 def test_l162_quick_draw_chance():
     """The engine's chance that the slower Quick Draw holder moves first with a damaging move: 3/10
     (Showdown's randomChance(3, 10)); with a status move: never."""
-    slow = _setter("Slowbro-Galar", "Quick Draw", "Leftovers", "- Shell Side Arm\n- Psychic\n- Calm Mind\n- Slack Off")
-    fast = _attacker("Weavile", "Pressure", "Leftovers", "- Fake Out\n- Ice Shard\n- Knock Off\n- Swords Dance", "Jolly")
+    slow = _setter(
+        "Slowbro-Galar",
+        "Quick Draw",
+        "Leftovers",
+        "- Shell Side Arm\n- Psychic\n- Calm Mind\n- Slack Off",
+    )
+    fast = _attacker(
+        "Weavile",
+        "Pressure",
+        "Leftovers",
+        "- Fake Out\n- Ice Shard\n- Knock Off\n- Swords Dance",
+        "Jolly",
+    )
     states = ec.run_showdown(slow, fast, [])
     e = ec.engine_state(states[0])
     for move, want in (("psychic", 0.3), ("calmmind", 0.0)):
-        first = sum(x.percentage for x in pe.generate_instructions(e, move, "swordsdance")
-                    if [str(i) for i in x.instruction_list if str(i).startswith("Acted")][:1] == ["Acted: SideOne"])
+        first = sum(
+            x.percentage
+            for x in pe.generate_instructions(e, move, "swordsdance")
+            if [str(i) for i in x.instruction_list if str(i).startswith("Acted")][:1]
+            == ["Acted: SideOne"]
+        )
         assert first / 100 == pytest.approx(want, abs=1e-3), move
 
 
@@ -4232,8 +5300,12 @@ def test_l163_positions(teams, i, turn, offset):
 
 
 def test_l163_attract_same_gender_fails():
-    user = _setter("Gardevoir", "Synchronize", "Leftovers", "- Attract\n- Calm Mind\n- Protect\n- Moonblast")
-    foe = _setter("Garchomp", "Rough Skin", "Leftovers", "- Swords Dance\n- Earthquake\n- Protect\n- Roar")
+    user = _setter(
+        "Gardevoir", "Synchronize", "Leftovers", "- Attract\n- Calm Mind\n- Protect\n- Moonblast"
+    )
+    foe = _setter(
+        "Garchomp", "Rough Skin", "Leftovers", "- Swords Dance\n- Earthquake\n- Protect\n- Roar"
+    )
     states = ec.run_showdown(user.replace("Gardevoir @", "Gardevoir (F) @"), foe.replace("Garchomp @", "Garchomp (F) @"),
                              [("move attract", "move swordsdance")])  # fmt: skip
     assert "attract" not in states[1]["sides"][1]["mons"][0]["volatiles"]
@@ -4258,7 +5330,13 @@ def test_l164_positions(teams, i, turn, offset):
 
 # L164's control: a gem that hits is used up
 def test_l164_gem_on_a_hit():
-    user = _attacker("Dragonite", "Inner Focus", "Normal Gem", "- Extreme Speed\n- Earthquake\n- Roost\n- Dragon Dance", "Adamant")
+    user = _attacker(
+        "Dragonite",
+        "Inner Focus",
+        "Normal Gem",
+        "- Extreme Speed\n- Earthquake\n- Roost\n- Dragon Dance",
+        "Adamant",
+    )
     states = ec.run_showdown(user, CORVIKNIGHT, [("move extremespeed", "move roost")])
     assert states[1]["sides"][0]["mons"][0]["item"] == ""
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "extremespeed", "roost")
@@ -4311,9 +5389,12 @@ def test_l166_revival_blessing():
     assert states[4]["sides"][0]["mons"][0]["hp"] == 9  # Magikarp's 18 / 2
     outs = ec.engine_outcomes(ec.engine_state(states[2]), "revivalblessing", "seismictoss")
     assert ec.closest(states[3], outs, (2, 1), hp=True)["diff"] == {}
-    (_, mid), = outs
+    ((_, mid),) = outs
     r = pe.mcts(mid, 10, 0, 1)  # the pick's options: the fainted one; the foe's move saved
-    assert ([x.move_choice for x in r.s1], [x.move_choice for x in r.s2]) == (["switch magikarp"], ["seismictoss"])
+    assert ([x.move_choice for x in r.s1], [x.move_choice for x in r.s2]) == (
+        ["switch magikarp"],
+        ["seismictoss"],
+    )
     outs = ec.engine_outcomes(mid, "magikarp", "seismictoss")
     assert ec.closest(states[4], outs, (2, 1), hp=True)["diff"] == {}
 
@@ -4341,7 +5422,9 @@ Timid Nature
 
 
 def test_l167_copycat_copies_the_foes_move_this_turn():
-    states = ec.run_showdown(BLISSEY_COPYCAT, DRAGAPULT_COPYCAT, [("move copycat", "move dragondance")])
+    states = ec.run_showdown(
+        BLISSEY_COPYCAT, DRAGAPULT_COPYCAT, [("move copycat", "move dragondance")]
+    )
     assert states[1]["sides"][0]["mons"][0]["boosts"]["atk"] == 1
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "copycat", "dragondance")
     assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
@@ -4403,7 +5486,9 @@ def test_l168_future_sight_into_a_substitute():
     turns = [("move futuresight", "move calmmind"), ("move slackoff", "move calmmind"),
              ("move slackoff", "move substitute")]  # fmt: skip
     states = ec.run_showdown(SLOWKING_FUTURE, BLISSEY_CM_SUB, turns)
-    assert any(x.startswith("|-activate|p2a: Blissey|move: Substitute|[damage]") for x in states[3]["log"])
+    assert any(
+        x.startswith("|-activate|p2a: Blissey|move: Substitute|[damage]") for x in states[3]["log"]
+    )
     outs = ec.engine_outcomes(ec.engine_state(states[2]), "slackoff", "substitute")
     assert ec.closest(states[3], outs, (1, 1), hp=True)["diff"] == {}
 
@@ -4545,7 +5630,9 @@ Ability: Imposter
 EVs: 252 HP / 4 Def / 252 Spe
 Relaxed Nature
 - Transform"""
-HYDRAPPLE_BACK = DITTO_BACK.split("\n\n")[0] + """
+HYDRAPPLE_BACK = (
+    DITTO_BACK.split("\n\n")[0]
+    + """
 
 Hydrapple @ Leftovers
 Ability: Supersweet Syrup
@@ -4553,6 +5640,7 @@ EVs: 252 HP / 252 SpD / 4 SpA
 Calm Nature
 - Draco Meteor
 - Giga Drain"""
+)
 
 
 def test_l172_imposter_copies_intimidate():
@@ -4649,7 +5737,10 @@ Timid Nature
 
 
 def test_l175_stellar_boost_once_per_type():
-    turns = [("move calmmind terastallize", "move softboiled"), ("move moonblast", "move softboiled")]
+    turns = [
+        ("move calmmind terastallize", "move softboiled"),
+        ("move moonblast", "move softboiled"),
+    ]
     states = ec.run_showdown(VALIANT_STELLAR, BLISSEY, turns, damage_probe=True)
     for k in (1, 2):  # the first Moonblast boosted (2x), the next not (1.5x)
         want = states[k]["damage"]["p1"]["moonblast"]
@@ -4703,7 +5794,9 @@ Quiet Nature
 
 
 def test_l176_magic_powder():
-    states = ec.run_showdown(HATTERENE_POWDER, GARCHOMP_SD, [("move magicpowder", "move swordsdance")])
+    states = ec.run_showdown(
+        HATTERENE_POWDER, GARCHOMP_SD, [("move magicpowder", "move swordsdance")]
+    )
     assert states[1]["sides"][1]["mons"][0]["types"] == ["Psychic"]
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "magicpowder", "swordsdance")
     assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
@@ -4711,7 +5804,9 @@ def test_l176_magic_powder():
 
 # L176's control: a Grass type is immune to the powder
 def test_l176_magic_powder_on_a_grass_type():
-    rilla = TORNADUS_ACRO.replace("Tornadus-Therian", "Rillaboom").replace("Regenerator", "Overgrow")
+    rilla = TORNADUS_ACRO.replace("Tornadus-Therian", "Rillaboom").replace(
+        "Regenerator", "Overgrow"
+    )
     states = ec.run_showdown(HATTERENE_POWDER, rilla, [("move magicpowder", "move taunt")])
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "magicpowder", "taunt")
     assert ec.closest(states[1], outs, (1, 1), hp=True)["diff"] == {}
@@ -4816,7 +5911,9 @@ def test_l178_focus_sash_and_white_herb_used_up():
                              [("move splash", "move seismictoss")])  # fmt: skip
     assert states[1]["sides"][0]["mons"][0]["last_item"] == "focussash"
     assert _last_items(states, 0, "splash", "seismictoss", (2, 1)) == {}
-    gar = GARCHOMP_SD.replace("Garchomp @ Leftovers", "Garchomp @ White Herb").replace("- Scale Shot", "- Close Combat")
+    gar = GARCHOMP_SD.replace("Garchomp @ Leftovers", "Garchomp @ White Herb").replace(
+        "- Scale Shot", "- Close Combat"
+    )
     states = ec.run_showdown(gar, BLISSEY, [("move closecombat", "move calmmind")])
     assert states[1]["sides"][0]["mons"][0]["last_item"] == "whiteherb"
     assert _last_items(states, 0, "closecombat", "calmmind") == {}
@@ -4826,7 +5923,10 @@ def test_l178_focus_sash_and_white_herb_used_up():
 def test_l178_air_balloon_is_not_used():
     gar = GARCHOMP_SD.replace("Garchomp @ Leftovers", "Garchomp @ Air Balloon")
     states = ec.run_showdown(gar, BLISSEY, [("move swordsdance", "move seismictoss")])
-    assert states[1]["sides"][0]["mons"][0]["item"] == "" and states[1]["sides"][0]["mons"][0]["last_item"] == ""
+    assert (
+        states[1]["sides"][0]["mons"][0]["item"] == ""
+        and states[1]["sides"][0]["mons"][0]["last_item"] == ""
+    )
     assert _last_items(states, 0, "swordsdance", "seismictoss") == {}
 
 
@@ -4923,7 +6023,9 @@ Bold Nature
 - Soft-Boiled
 - Calm Mind
 - Seismic Toss"""
-    states = ec.run_showdown(mew, BLISSEY, [("move imprison", "move calmmind"), ("move calmmind", "move protect")])
+    states = ec.run_showdown(
+        mew, BLISSEY, [("move imprison", "move calmmind"), ("move calmmind", "move protect")]
+    )
     assert any("move: Imprison" in x for x in states[1]["log"])
     assert ec.showdown_options(states[1]["sides"][1]) == {"protect", "protect-tera"}
     assert _keys(_full(states, 0, "imprison", "calmmind"), "options") == {}
@@ -4955,7 +6057,9 @@ def test_l180_phantom_force_breaks_the_protect_count():
 
 
 def test_l180_transform_own_set_back_on_switch_out():
-    states = ec.run_showdown(DITTO_BACK, LANDO, [("switch 2", "move stealthrock"), ("switch 2", "move stealthrock")])
+    states = ec.run_showdown(
+        DITTO_BACK, LANDO, [("switch 2", "move stealthrock"), ("switch 2", "move stealthrock")]
+    )
     assert states[1]["sides"][0]["mons"][1]["weight"] == 68.0  # Landorus-T's
     assert _full(states, 0, "ditto", "stealthrock", (2, 1)) == {}
     assert _full(states, 1, "blissey", "stealthrock", (2, 1)) == {}
@@ -4972,7 +6076,9 @@ def test_l180_curse_no_pressure():
 # good (species, base ability)
 def test_l181_toxic_counts_under_magic_guard():
     blissey = BLISSEY.replace("- Calm Mind", "- Toxic")
-    states = ec.run_showdown(CLEFABLE, blissey, [("move calmmind", "move toxic"), ("move calmmind", "move softboiled")])
+    states = ec.run_showdown(
+        CLEFABLE, blissey, [("move calmmind", "move toxic"), ("move calmmind", "move softboiled")]
+    )
     assert _keys(_full(states, 0, "calmmind", "toxic"), "toxic_count") == {}
     assert _keys(_full(states, 1, "calmmind", "softboiled"), "toxic_count") == {}
 
@@ -5066,15 +6172,25 @@ Impish Nature
 
 
 def test_l184_lingering_aroma_gives_itself():
-    states = ec.run_showdown(GARCHOMP_SD.replace("- Scale Shot", "- Dragon Claw"), OINKOLOGNE, [("move dragonclaw", "move curse")])
+    states = ec.run_showdown(
+        GARCHOMP_SD.replace("- Scale Shot", "- Dragon Claw"),
+        OINKOLOGNE,
+        [("move dragonclaw", "move curse")],
+    )
     assert states[1]["sides"][0]["mons"][0]["ability"] == "lingeringaroma"
     assert _keys(_full(states, 0, "dragonclaw", "curse"), "ability") == {}
 
 
 def test_l184_wandering_spirit_swaps():
-    runerigus = OINKOLOGNE.replace("Oinkologne", "Runerigus").replace("Lingering Aroma", "Wandering Spirit")
+    runerigus = OINKOLOGNE.replace("Oinkologne", "Runerigus").replace(
+        "Lingering Aroma", "Wandering Spirit"
+    )
     runerigus = runerigus.replace("- Body Slam", "- Shadow Ball").replace("- Yawn", "- Will-O-Wisp")
-    states = ec.run_showdown(GARCHOMP_SD.replace("- Scale Shot", "- Dragon Claw"), runerigus, [("move dragonclaw", "move curse")])
+    states = ec.run_showdown(
+        GARCHOMP_SD.replace("- Scale Shot", "- Dragon Claw"),
+        runerigus,
+        [("move dragonclaw", "move curse")],
+    )
     assert states[1]["sides"][1]["mons"][0]["ability"] == "roughskin"
     assert _keys(_full(states, 0, "dragonclaw", "curse"), "ability") == {}
 
@@ -5125,8 +6241,14 @@ Jolly Nature
 
 
 def test_l184_no_pp_after_waking_into_a_flinch():
-    turns = [("move calmmind", "move spore"), ("move calmmind", "switch 2"), ("move calmmind", "move fakeout")]
-    states = ec.run_showdown(BLISSEY, BRELOOM + "\n\n" + MEOWSCARADA, turns, seed="gen5,35,42,105,175")
+    turns = [
+        ("move calmmind", "move spore"),
+        ("move calmmind", "switch 2"),
+        ("move calmmind", "move fakeout"),
+    ]
+    states = ec.run_showdown(
+        BLISSEY, BRELOOM + "\n\n" + MEOWSCARADA, turns, seed="gen5,35,42,105,175"
+    )
     log = states[3]["log"]
     assert any("|-curestatus|p1a: Blissey|slp" in x for x in log)
     assert any("|cant|p1a: Blissey|flinch" in x for x in log)
@@ -5137,7 +6259,9 @@ def test_l184_failed_protect_ends_the_count():
     states = ec.run_showdown(BLISSEY, SLOWKING_FUTURE + "\n\n" + CORVIKNIGHT,
                              [("move protect", "move slackoff"), ("move protect", "move chillyreception")],
                              seed="gen5,35,42,105,175")  # fmt: skip
-    assert "|-fail|p1a: Blissey" in states[2]["log"] and states[2]["sides"][1]["request"] == "switch"
+    assert (
+        "|-fail|p1a: Blissey" in states[2]["log"] and states[2]["sides"][1]["request"] == "switch"
+    )
     assert _keys(_full(states, 1, "protect", "chillyreception", (1, 2)), "sc.protect") == {}
 
 
@@ -5174,16 +6298,17 @@ def test_l185_revived_tera_mon():
              ("move revivalblessing", "move seismictoss"), ("switch 2", ""), ("move nuzzle", "move calmmind")]  # fmt: skip
     states = ec.run_showdown(p1, BLISSEY, turns)
     after = states[4]["sides"][0]
-    assert after["tera_used"] and not after["mons"][0]["terastallized"] and after["mons"][0]["hp"] > 0
+    assert (
+        after["tera_used"] and not after["mons"][0]["terastallized"] and after["mons"][0]["hp"] > 0
+    )
     assert not any(o.endswith("-tera") for o in ec.showdown_options(after))
     outs = ec.engine_outcomes(ec.engine_state(states[2]), "revivalblessing", "seismictoss")
-    (_, mid), = outs
+    ((_, mid),) = outs
     outs = ec.engine_outcomes(mid, "magikarp", "seismictoss")
     assert ec.closest(states[4], outs, (2, 1), hp=True, full=True, start=states[3])["diff"] == {}
     # the state built from Showdown's (no mon terastallized, none fainted) can no longer either
     assert not any(o.endswith("-tera") for o in pe.options(ec.engine_state(states[4]))[0])
     assert _full(states, 4, "nuzzle", "calmmind", (2, 1)) == {}
-
 
 
 # L186 (doc/engine-diff.md): the PP as Showdown's: Pressure's after the move's own, down to 0 at
@@ -5192,14 +6317,18 @@ def test_l185_revived_tera_mon():
 # last move (a 100% secondary)
 def test_l186_pressure_stops_at_zero():
     blissey = BLISSEY + "\n\n" + CORVIKNIGHT
-    turns = [("move dracometeor", "move calmmind"), ("move dracometeor", "switch 2")] + [("move dracometeor", "move roost")] * 3
+    turns = [("move dracometeor", "move calmmind"), ("move dracometeor", "switch 2")] + [
+        ("move dracometeor", "move roost")
+    ] * 3
     states = ec.run_showdown(DRAGAPULT_COPYCAT, blissey, turns)
     assert [s["sides"][0]["mons"][0]["moves"][2]["pp"] for s in states] == [8, 7, 5, 3, 1, 0]
     assert _keys(_full(states, 4, "dracometeor", "roost", (1, 2)), "pp") == {}
 
 
 def test_l186_pressure_on_sleep_talk():
-    zozo = _setter("Dondozo", "Unaware", "Leftovers", "- Sleep Talk\n- Wave Crash\n- Earthquake\n- Body Slam")
+    zozo = _setter(
+        "Dondozo", "Unaware", "Leftovers", "- Sleep Talk\n- Wave Crash\n- Earthquake\n- Body Slam"
+    )
     turns = [("move bodyslam", "move spore"), ("move sleeptalk", "switch 2")]
     states = ec.run_showdown(zozo, BRELOOM + "\n\n" + CORVIKNIGHT, turns, seed="gen5,36,43,108,180")
     assert any("[from] move: Sleep Talk" in x for x in states[2]["log"])  # (an Earthquake: immune)
@@ -5227,7 +6356,9 @@ def test_l186_eerie_spell():
 # before its Terastallization keeps the typechange volatile (the types back on the switch-out)
 def test_l187_no_future_sight_when_fully_paralyzed():
     blissey = BLISSEY.replace("- Calm Mind", "- Thunder Wave")
-    states = ec.run_showdown(SLOWKING_FUTURE, blissey, [("move futuresight", "move thunderwave")], force_random=True)
+    states = ec.run_showdown(
+        SLOWKING_FUTURE, blissey, [("move futuresight", "move thunderwave")], force_random=True
+    )
     assert any(x.startswith("|cant|p1a: Slowking|par") for x in states[1]["log"])
     assert _keys(_full(states, 0, "futuresight", "thunderwave"), "future_sight") == {}
 
@@ -5251,7 +6382,9 @@ Timid Nature
 - Soft-Boiled
 - Psychic"""
     # (Taunt: the comparison has the last used move with a move reading it)
-    states = ec.run_showdown(mew, BLISSEY.replace("- Protect", "- Taunt"), [("move transform", "move calmmind")])
+    states = ec.run_showdown(
+        mew, BLISSEY.replace("- Protect", "- Taunt"), [("move transform", "move calmmind")]
+    )
     assert _keys(_full(states, 0, "transform", "calmmind"), "last_used_move") == {}
 
 
@@ -5286,7 +6419,11 @@ Adamant Nature
 
 
 def test_l188_roost_grounds_for_grassy_terrain():
-    turns = [("move knockoff", "move uturn"), ("move knockoff", "move uturn"), ("move knockoff", "move roost")]
+    turns = [
+        ("move knockoff", "move uturn"),
+        ("move knockoff", "move uturn"),
+        ("move knockoff", "move roost"),
+    ]
     states = ec.run_showdown(RILLABOOM_KNOCK, CORVIKNIGHT, turns)
     assert any("[from] Grassy Terrain" in x and "Corviknight" in x for x in states[3]["log"])
     assert _keys(_full(states, 2, "knockoff", "roost"), "hp") == {}
@@ -5294,14 +6431,18 @@ def test_l188_roost_grounds_for_grassy_terrain():
 
 def test_l188_no_grassy_heal_while_semi_invulnerable():
     dragapult = DRAGAPULT_COPYCAT.replace("- Copycat", "- Phantom Force")
-    states = ec.run_showdown(RILLABOOM_KNOCK, dragapult, [("move grassyglide", "move phantomforce")])
+    states = ec.run_showdown(
+        RILLABOOM_KNOCK, dragapult, [("move grassyglide", "move phantomforce")]
+    )
     assert not any("[from] Grassy Terrain" in x and "Dragapult" in x for x in states[1]["log"])
     assert _keys(_full(states, 0, "grassyglide", "phantomforce"), "hp") == {}
 
 
 # L188: a Choice item a Trick gives starts: its lock ends (Showdown's choice items' onStart), two
 # same items swap too
-DRAGAPULT_SPECS = DRAGAPULT_COPYCAT.replace("@ Leftovers", "@ Choice Specs").replace("- Copycat", "- Shadow Ball")
+DRAGAPULT_SPECS = DRAGAPULT_COPYCAT.replace("@ Leftovers", "@ Choice Specs").replace(
+    "- Copycat", "- Shadow Ball"
+)
 
 
 @pytest.mark.parametrize("item", ["Choice Scarf", "Choice Specs"])
@@ -5329,9 +6470,14 @@ Bold Nature
     assert states[1]["sides"][0]["mons"][0]["moves"][3]["pp"] == 31
     assert states[4]["sides"][0]["mons"][0]["moves"][3]["pp"] == 32
     outs = ec.engine_outcomes(ec.engine_state(states[2]), "lunardance", "swordsdance")
-    (_, mid), = outs
+    ((_, mid),) = outs
     outs = ec.engine_outcomes(mid, "blissey", "none")  # (the end of the turn's pick)
-    assert _keys(ec.closest(states[4], outs, (2, 1), hp=True, full=True, start=states[3])["diff"], "pp") == {}
+    assert (
+        _keys(
+            ec.closest(states[4], outs, (2, 1), hp=True, full=True, start=states[3])["diff"], "pp"
+        )
+        == {}
+    )
 
 
 # L190 (doc/engine-diff.md): the moves that set an ability, Showdown's setAbility (Worry Seed's
@@ -5358,7 +6504,9 @@ def test_l190_ability_moves(move, side, ability):
 # L190 (the harness): a copied once-per-battle ability used (Imposter into Zamazenta) keeps the base
 # ability (the engine marks an own one only)
 def test_l190_copied_dauntless_shield_keeps_the_base_ability():
-    states = ec.run_showdown(DITTO_BACK, ZAMAZENTA, [("switch 2", "move irondefense")], fmt="gen9customgame")
+    states = ec.run_showdown(
+        DITTO_BACK, ZAMAZENTA, [("switch 2", "move irondefense")], fmt="gen9customgame"
+    )
     assert any("Dauntless Shield" in x for x in states[1]["log"])
     assert _keys(_full(states, 0, "ditto", "irondefense", (2, 1)), "ability") == {}
 
@@ -5385,7 +6533,9 @@ def test_l191_evasion():
 
 
 def test_l191_unaware_ignores_the_accuracy():
-    gar = GARCHOMP_SD.replace("- Scale Shot", "- Stone Edge").replace("- Stealth Rock", "- Hone Claws")
+    gar = GARCHOMP_SD.replace("- Scale Shot", "- Stone Edge").replace(
+        "- Stealth Rock", "- Hone Claws"
+    )
     states = ec.run_showdown(gar, DONDOZO, [("move honeclaws", "move curse"), ("move stoneedge", "move curse")],
                              seed="gen5,41,48,123,205")  # fmt: skip
     assert any("|-miss|p1a: Garchomp" in x for x in states[2]["log"])
@@ -5394,7 +6544,9 @@ def test_l191_unaware_ignores_the_accuracy():
 
 def test_l191_shed_skin_one_in_three():
     blissey = BLISSEY.replace("- Calm Mind", "- Toxic")
-    states = ec.run_showdown(SCRAFTY_SHED, blissey, [("move bulkup", "move toxic")], seed="gen5,1,8,3,5")
+    states = ec.run_showdown(
+        SCRAFTY_SHED, blissey, [("move bulkup", "move toxic")], seed="gen5,1,8,3,5"
+    )
     assert states[1]["sides"][0]["mons"][0]["status"] == "tox"  # not cured this time
     assert _keys(_full(states, 0, "bulkup", "toxic"), "status", "toxic") == {}
 
@@ -5421,7 +6573,9 @@ Modest Nature
 - Earth Power
 - Stealth Rock
 - Protect"""
-    dragapult = DRAGAPULT_COPYCAT.replace("Ability: Infiltrator", "Ability: Infiltrator\nTera Type: Stellar")
+    dragapult = DRAGAPULT_COPYCAT.replace(
+        "Ability: Infiltrator", "Ability: Infiltrator\nTera Type: Stellar"
+    )
     states = ec.run_showdown(heatran, dragapult + "\n\n" + CORVIKNIGHT,
                              [("move magmastorm", "move dragondance terastallize")], seed="gen5,1,2,3,4")  # fmt: skip
     assert any("move: Magma Storm" in x for x in states[1]["log"])
@@ -5471,7 +6625,9 @@ Timid Nature
 - Protect
 - Encore"""
     # (its first Protect fails as the last action: no count, Protect its last move)
-    states = ec.run_showdown(BLISSEY, valiant, [("move protect", "move protect"), ("move calmmind", "move encore")])
+    states = ec.run_showdown(
+        BLISSEY, valiant, [("move protect", "move protect"), ("move calmmind", "move encore")]
+    )
     assert any(x.startswith("|-fail|p1a: Blissey") for x in states[1]["log"])
     assert any(x.startswith("|-fail|p1a: Blissey") for x in states[2]["log"])
     assert _keys(_full(states, 1, "calmmind", "encore"), "protect", "volatile") == {}
@@ -5538,14 +6694,18 @@ Modest Nature
 
 
 def test_l195_tera_shift_and_tera_shell():
-    states = ec.run_showdown(GARCHOMP_SD, BLISSEY + "\n\n" + TERAPAGOS, [("move earthquake", "switch 2")])
+    states = ec.run_showdown(
+        GARCHOMP_SD, BLISSEY + "\n\n" + TERAPAGOS, [("move earthquake", "switch 2")]
+    )
     assert states[1]["sides"][1]["mons"][1]["species"] == "terapagosterastal"
     assert any("ability: Tera Shell" in x for x in states[1]["log"])
     assert _full(states, 0, "earthquake", "terapagos", (1, 2)) == {}
 
 
 def test_l195_terapagos_stellar():
-    states = ec.run_showdown(GARCHOMP_SD, TERAPAGOS, [("move swordsdance", "move calmmind terastallize")])
+    states = ec.run_showdown(
+        GARCHOMP_SD, TERAPAGOS, [("move swordsdance", "move calmmind terastallize")]
+    )
     assert states[1]["sides"][1]["mons"][0]["species"] == "terapagosstellar"
     assert _full(states, 0, "swordsdance", "calmmind-tera") == {}
 
@@ -5572,7 +6732,9 @@ Jolly Nature
 
 def test_l196_ice_face_kept_on_a_miss():
     gar = GARCHOMP_SD.replace("- Scale Shot", "- Stone Edge")
-    states = ec.run_showdown(EISCUE, gar, [("move bellydrum", "move stoneedge")], force_random=False)
+    states = ec.run_showdown(
+        EISCUE, gar, [("move bellydrum", "move stoneedge")], force_random=False
+    )
     assert any("|-miss|p2a: Garchomp" in x for x in states[1]["log"])
     assert states[1]["sides"][0]["mons"][0]["species"] == "eiscue"
     assert _keys(_full(states, 0, "bellydrum", "stoneedge"), "id", "defense") == {}
@@ -5598,8 +6760,14 @@ def test_l197_yawn_through_the_sleep_clause(sleep_clause):
     breloom = BRELOOM.replace("- Rock Tomb", "- Yawn")
     # (Corviknight asleep on the bench: no Natural Cure to wake it)
     # (L238: a format with the Sleep Clause Mod, the engine's switch on)
-    turns = [("move spore", "move roost"), ("move yawn", "switch 2"), ("move bulletseed", "move calmmind")]
-    states = ec.run_showdown(breloom, CORVIKNIGHT + "\n\n" + BLISSEY, turns, fmt=ec.FORMAT + "@@@Sleep Clause Mod")
+    turns = [
+        ("move spore", "move roost"),
+        ("move yawn", "switch 2"),
+        ("move bulletseed", "move calmmind"),
+    ]
+    states = ec.run_showdown(
+        breloom, CORVIKNIGHT + "\n\n" + BLISSEY, turns, fmt=ec.FORMAT + "@@@Sleep Clause Mod"
+    )
     assert states[1]["sides"][1]["mons"][0]["status"] == "slp"
     assert any("move: Yawn" in x for x in states[2]["log"])
     assert any("Sleep Clause Mod activated" in x for x in states[3]["log"])
@@ -5612,17 +6780,41 @@ def test_l197_yawn_through_the_sleep_clause(sleep_clause):
 # Herb is used as the move goes; Unburden as the item goes; a Surf a target absorbs gives Gulp
 # Missile no forme; Berserk's halves unrounded
 def test_l198_lightning_rod_on_a_ground_type():
-    rhydon = _attacker("Rhydon", "Lightning Rod", "Eviolite", "- Megahorn\n- Earthquake\n- Rock Blast\n- Stealth Rock")
-    regice = _attacker("Regice", "Clear Body", "Leftovers", "- Thunderbolt\n- Ice Beam\n- Thunder Wave\n- Rest", "Modest")
+    rhydon = _attacker(
+        "Rhydon",
+        "Lightning Rod",
+        "Eviolite",
+        "- Megahorn\n- Earthquake\n- Rock Blast\n- Stealth Rock",
+    )
+    regice = _attacker(
+        "Regice",
+        "Clear Body",
+        "Leftovers",
+        "- Thunderbolt\n- Ice Beam\n- Thunder Wave\n- Rest",
+        "Modest",
+    )
     states = ec.run_showdown(rhydon, regice, [("move stealthrock", "move thunderbolt")])
     assert states[1]["sides"][0]["mons"][0]["boosts"]["spa"] == 1
     assert _keys(_full(states, 0, "stealthrock", "thunderbolt"), "boost") == {}
 
 
 def test_l198_charge_ends_with_a_flinched_electric_move():
-    excadrill = _attacker("Excadrill", "Sand Rush", "Leftovers", "- Iron Head\n- Earthquake\n- Rock Slide\n- Rapid Spin")
-    bellibolt = _attacker("Bellibolt", "Electromorphosis", "Leftovers", "- Thunderbolt\n- Muddy Water\n- Slack Off\n- Toxic", "Modest")
-    states = ec.run_showdown(excadrill, bellibolt, [("move ironhead", "move thunderbolt")], force_random=True)
+    excadrill = _attacker(
+        "Excadrill",
+        "Sand Rush",
+        "Leftovers",
+        "- Iron Head\n- Earthquake\n- Rock Slide\n- Rapid Spin",
+    )
+    bellibolt = _attacker(
+        "Bellibolt",
+        "Electromorphosis",
+        "Leftovers",
+        "- Thunderbolt\n- Muddy Water\n- Slack Off\n- Toxic",
+        "Modest",
+    )
+    states = ec.run_showdown(
+        excadrill, bellibolt, [("move ironhead", "move thunderbolt")], force_random=True
+    )
     assert any("|cant|p2a: Bellibolt|flinch" in x for x in states[1]["log"])
     assert _keys(_full(states, 0, "ironhead", "thunderbolt"), "charge", "pp") == {}
 
@@ -5642,15 +6834,30 @@ Modest Nature
 
 
 def test_l198_unburden_as_the_item_goes():
-    hawlucha = _attacker("Hawlucha", "Unburden", "White Herb", "- Close Combat\n- Acrobatics\n- Swords Dance\n- Roost")
-    states = ec.run_showdown(hawlucha, CORVIKNIGHT + "\n\n" + BLISSEY, [("move closecombat", "move uturn")])
+    hawlucha = _attacker(
+        "Hawlucha",
+        "Unburden",
+        "White Herb",
+        "- Close Combat\n- Acrobatics\n- Swords Dance\n- Roost",
+    )
+    states = ec.run_showdown(
+        hawlucha, CORVIKNIGHT + "\n\n" + BLISSEY, [("move closecombat", "move uturn")]
+    )
     assert states[1]["sides"][1]["request"] == "switch"
     assert _keys(_full(states, 0, "closecombat", "uturn", (1, 2)), "unburden") == {}
 
 
 def test_l198_gulp_missile_absorbed_surf():
-    cramorant = _attacker("Cramorant", "Gulp Missile", "Leftovers", "- Surf\n- Brave Bird\n- Roost\n- Defog", "Modest")
-    gastrodon = _attacker("Gastrodon", "Storm Drain", "Leftovers", "- Earth Power\n- Recover\n- Spikes\n- Ice Beam", "Calm")
+    cramorant = _attacker(
+        "Cramorant", "Gulp Missile", "Leftovers", "- Surf\n- Brave Bird\n- Roost\n- Defog", "Modest"
+    )
+    gastrodon = _attacker(
+        "Gastrodon",
+        "Storm Drain",
+        "Leftovers",
+        "- Earth Power\n- Recover\n- Spikes\n- Ice Beam",
+        "Calm",
+    )
     states = ec.run_showdown(cramorant, gastrodon, [("move surf", "move spikes")])
     assert states[1]["sides"][0]["mons"][0]["species"] == "cramorant"
     assert _keys(_full(states, 0, "surf", "spikes"), "id") == {}
@@ -5669,8 +6876,9 @@ def test_l199_damage_hints():
     assert {o.damage[1] for o in outs} == {dealt}
     assert ec.closest(states[1], outs, (1, 1), hp=True, full=True, start=states[0])["diff"] == {}
     plain = ec.engine_outcomes(e, "earthquake", "calmmind")
-    assert [round(o[0], 4) for o in ec.engine_outcomes(e, "earthquake", "calmmind", (1, -1))] == \
-        [round(o[0], 4) for o in plain]
+    assert [round(o[0], 4) for o in ec.engine_outcomes(e, "earthquake", "calmmind", (1, -1))] == [
+        round(o[0], 4) for o in plain
+    ]
 
 
 # L199: a hit Ice Face takes still gives its user Life Orb's recoil (Showdown's
@@ -5700,8 +6908,18 @@ def test_l200_minior_meteor_on_the_switch_in():
 
 
 def test_l200_magic_guard_under_neutralizing_gas():
-    weezing = _attacker("Weezing-Galar", "Neutralizing Gas", "Black Sludge", "- Stealth Rock\n- Toxic Spikes\n- Strange Steam\n- Will-O-Wisp", "Bold")
-    clefable = CLEFABLE if "Magic Guard" in CLEFABLE else CLEFABLE.replace("Ability: Unaware", "Ability: Magic Guard")
+    weezing = _attacker(
+        "Weezing-Galar",
+        "Neutralizing Gas",
+        "Black Sludge",
+        "- Stealth Rock\n- Toxic Spikes\n- Strange Steam\n- Will-O-Wisp",
+        "Bold",
+    )
+    clefable = (
+        CLEFABLE
+        if "Magic Guard" in CLEFABLE
+        else CLEFABLE.replace("Ability: Unaware", "Ability: Magic Guard")
+    )
     states = ec.run_showdown(weezing, BLISSEY + "\n\n" + clefable, [("move stealthrock", "move calmmind"),
                                                                      ("move toxicspikes", "switch 2")])  # fmt: skip
     assert any("[from] Stealth Rock" in x for x in states[2]["log"])
@@ -5717,15 +6935,28 @@ EVs: 4 HP
 - Body Slam
 - Curse
 - Rest"""
-    states = ec.run_showdown(snorlax, BLISSEY, [("move curse", "move seismictoss"), ("move recycle", "move calmmind")])
+    states = ec.run_showdown(
+        snorlax, BLISSEY, [("move curse", "move seismictoss"), ("move recycle", "move calmmind")]
+    )
     assert states[1]["sides"][0]["mons"][0]["last_item"] == "sitrusberry"
     assert states[2]["sides"][0]["mons"][0]["item"] == "sitrusberry"
     assert _keys(_full(states, 1, "recycle", "calmmind"), "item") == {}
 
 
 def test_l200_sunsteel_strike_and_tablets_of_ruin():
-    solgaleo = _attacker("Solgaleo", "Full Metal Body", "Leftovers", "- Sunsteel Strike\n- Morning Sun\n- Flare Blitz\n- Knock Off")
-    wochien = _attacker("Wo-Chien", "Tablets of Ruin", "Leftovers", "- Giga Drain\n- Ruination\n- Leech Seed\n- Protect", "Calm")
+    solgaleo = _attacker(
+        "Solgaleo",
+        "Full Metal Body",
+        "Leftovers",
+        "- Sunsteel Strike\n- Morning Sun\n- Flare Blitz\n- Knock Off",
+    )
+    wochien = _attacker(
+        "Wo-Chien",
+        "Tablets of Ruin",
+        "Leftovers",
+        "- Giga Drain\n- Ruination\n- Leech Seed\n- Protect",
+        "Calm",
+    )
     states = ec.run_showdown(solgaleo, wochien, [("move sunsteelstrike", "move leechseed")])
     assert _keys(_full_hinted(states, 0, "sunsteelstrike", "leechseed"), "hp") == {}
 
@@ -5734,42 +6965,72 @@ def test_l200_sunsteel_strike_and_tablets_of_ruin():
 # volatile secondary too: Throat Chop) take no Life Orb recoil; Lash Out's double power after a drop
 # this turn; Battery boosts no holder's own move; Tera Starstorm by Terapagos-Stellar is Stellar
 def test_l201_guts_after_waking():
-    ursaring = _attacker("Ursaring", "Guts", "Leftovers", "- Facade\n- Earthquake\n- Close Combat\n- Sleep Talk")
-    turns = [("move earthquake", "move spore"), ("move earthquake", "move spore")] + [("move earthquake", "move bulletseed")] * 3
+    ursaring = _attacker(
+        "Ursaring", "Guts", "Leftovers", "- Facade\n- Earthquake\n- Close Combat\n- Sleep Talk"
+    )
+    turns = [("move earthquake", "move spore"), ("move earthquake", "move spore")] + [
+        ("move earthquake", "move bulletseed")
+    ] * 3
     states = ec.run_showdown(ursaring, BRELOOM, turns, seed="gen5,3,4,5,6")
     k = next((k for k in range(1, len(states) - 1) if any("|-curestatus|p1a: Ursaring|slp" in x for x in states[k + 1]["log"])
               and any("|move|p1a: Ursaring|Earthquake" in x for x in states[k + 1]["log"])), None)  # fmt: skip
     assert k is not None
-    assert _keys(_full_hinted(states, k, "earthquake", "bulletseed" if k >= 2 else "spore"), "hp") == {}
+    assert (
+        _keys(_full_hinted(states, k, "earthquake", "bulletseed" if k >= 2 else "spore"), "hp")
+        == {}
+    )
 
 
 def test_l201_sheer_force_throat_chop_no_life_orb_recoil():
-    tauros = _attacker("Tauros", "Sheer Force", "Life Orb", "- Throat Chop\n- Body Slam\n- Close Combat\n- Earthquake")
+    tauros = _attacker(
+        "Tauros",
+        "Sheer Force",
+        "Life Orb",
+        "- Throat Chop\n- Body Slam\n- Close Combat\n- Earthquake",
+    )
     states = ec.run_showdown(tauros, BLISSEY, [("move throatchop", "move calmmind")])
     assert not any("[from] item: Life Orb" in x for x in states[1]["log"])
     assert _keys(_full_hinted(states, 0, "throatchop", "calmmind"), "hp") == {}
 
 
 def test_l201_lash_out_after_intimidate():
-    honchkrow = _attacker("Honchkrow", "Moxie", "Leftovers", "- Lash Out\n- Brave Bird\n- Roost\n- Sucker Punch")
-    scrafty = _attacker("Scrafty", "Intimidate", "Leftovers", "- Drain Punch\n- Knock Off\n- Bulk Up\n- Rest", "Impish")
+    honchkrow = _attacker(
+        "Honchkrow", "Moxie", "Leftovers", "- Lash Out\n- Brave Bird\n- Roost\n- Sucker Punch"
+    )
+    scrafty = _attacker(
+        "Scrafty",
+        "Intimidate",
+        "Leftovers",
+        "- Drain Punch\n- Knock Off\n- Bulk Up\n- Rest",
+        "Impish",
+    )
     states = ec.run_showdown(honchkrow, BLISSEY + "\n\n" + scrafty, [("move lashout", "switch 2")])
     hints = ec.damage_hints(states[0], states[1])
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "lashout", "scrafty", hints)
     assert hints[0] > 0 and {o.damage[1] for o in outs} == {hints[0]}  # (the hint is a roll of its)
     # (doubled: the engine's likeliest damage near Showdown's, not half of it)
-    plain = max(ec.engine_outcomes(ec.engine_state(states[0]), "lashout", "scrafty"), key=lambda o: o[0])
+    plain = max(
+        ec.engine_outcomes(ec.engine_state(states[0]), "lashout", "scrafty"), key=lambda o: o[0]
+    )
     assert 0.8 * hints[0] <= plain.damage[1] <= 1.2 * hints[0]
 
 
 def test_l201_battery_not_its_holder():
-    charjabug = _attacker("Charjabug", "Battery", "Eviolite", "- Volt Switch\n- Bug Buzz\n- Sticky Web\n- Discharge", "Modest")
+    charjabug = _attacker(
+        "Charjabug",
+        "Battery",
+        "Eviolite",
+        "- Volt Switch\n- Bug Buzz\n- Sticky Web\n- Discharge",
+        "Modest",
+    )
     states = ec.run_showdown(charjabug, BLISSEY, [("move discharge", "move calmmind")])
     assert _keys(_full_hinted(states, 0, "discharge", "calmmind"), "hp") == {}
 
 
 def test_l201_tera_starstorm_stellar():
-    states = ec.run_showdown(TERAPAGOS, BLISSEY, [("move terastarstorm terastallize", "move calmmind")])
+    states = ec.run_showdown(
+        TERAPAGOS, BLISSEY, [("move terastarstorm terastallize", "move calmmind")]
+    )
     assert _keys(_full_hinted(states, 0, "terastarstorm-tera", "calmmind"), "hp") == {}
 
 
@@ -5790,8 +7051,16 @@ def test_l202_metronome_hint():
 
 
 def test_l202_population_bomb_into_multiscale():
-    maushold = _attacker("Maushold", "Technician", "Wide Lens", "- Population Bomb\n- Bite\n- Encore\n- Tidy Up")
-    lugia = _attacker("Lugia", "Multiscale", "Leftovers", "- Aeroblast\n- Roost\n- Calm Mind\n- Earthquake", "Bold")
+    maushold = _attacker(
+        "Maushold", "Technician", "Wide Lens", "- Population Bomb\n- Bite\n- Encore\n- Tidy Up"
+    )
+    lugia = _attacker(
+        "Lugia",
+        "Multiscale",
+        "Leftovers",
+        "- Aeroblast\n- Roost\n- Calm Mind\n- Earthquake",
+        "Bold",
+    )
     states = ec.run_showdown(maushold, lugia, [("move populationbomb", "move calmmind")])
     hints = ec.move_hints(states[0], states[1])
     assert hints[2] >= 2
@@ -5801,17 +7070,31 @@ def test_l202_population_bomb_into_multiscale():
 # L202: a multi-hit move's later hits by the state they hit (a Weak Armor drop after the first),
 # all of them through a Tera Shell that took the first
 def test_l202_triple_axel_after_weak_armor():
-    weavile = _attacker("Weavile", "Pressure", "Choice Band", "- Triple Axel\n- Knock Off\n- Ice Shard\n- Low Kick")
-    skarmory = _attacker("Skarmory", "Weak Armor", "Leftovers", "- Roost\n- Spikes\n- Brave Bird\n- Whirlwind", "Impish")
-    states = ec.run_showdown(weavile, skarmory, [("move tripleaxel", "move roost")], seed="gen5,2,3,4,5")
+    weavile = _attacker(
+        "Weavile", "Pressure", "Choice Band", "- Triple Axel\n- Knock Off\n- Ice Shard\n- Low Kick"
+    )
+    skarmory = _attacker(
+        "Skarmory",
+        "Weak Armor",
+        "Leftovers",
+        "- Roost\n- Spikes\n- Brave Bird\n- Whirlwind",
+        "Impish",
+    )
+    states = ec.run_showdown(
+        weavile, skarmory, [("move tripleaxel", "move roost")], seed="gen5,2,3,4,5"
+    )
     if ec.move_hints(states[0], states[1])[2] < 2:
         pytest.skip("the seed's Triple Axel missed early")
     assert _keys(_full_moves(states, 0, "tripleaxel", "roost"), "hp") == {}
 
 
 def test_l202_tera_shell_resists_every_hit():
-    weavile = _attacker("Weavile", "Pressure", "Choice Band", "- Triple Axel\n- Knock Off\n- Ice Shard\n- Low Kick")
-    states = ec.run_showdown(weavile, TERAPAGOS, [("move tripleaxel", "move calmmind")], seed="gen5,2,3,4,5")
+    weavile = _attacker(
+        "Weavile", "Pressure", "Choice Band", "- Triple Axel\n- Knock Off\n- Ice Shard\n- Low Kick"
+    )
+    states = ec.run_showdown(
+        weavile, TERAPAGOS, [("move tripleaxel", "move calmmind")], seed="gen5,2,3,4,5"
+    )
     if ec.move_hints(states[0], states[1])[2] < 2:
         pytest.skip("the seed's Triple Axel missed early")
     assert _keys(_full_moves(states, 0, "tripleaxel", "calmmind"), "hp") == {}
@@ -5821,7 +7104,9 @@ def test_l202_tera_shell_resists_every_hit():
 # decision mid-turn); a forme's stats from the IVs inferred from the old forme's (a 0 Atk IV
 # Terapagos); the ability-ignoring moves through Tera Shell
 def test_l203_slow_start_at_a_pivot():
-    regigigas = _attacker("Regigigas", "Slow Start", "Leftovers", "- Body Slam\n- Knock Off\n- Protect\n- Substitute")
+    regigigas = _attacker(
+        "Regigigas", "Slow Start", "Leftovers", "- Body Slam\n- Knock Off\n- Protect\n- Substitute"
+    )
     states = ec.run_showdown(BLISSEY + "\n\n" + regigigas, CORVIKNIGHT + "\n\n" + GARCHOMP_SD,
                              [("switch 2", "move uturn")])  # fmt: skip
     assert states[1]["sides"][1]["request"] == "switch"
@@ -5829,27 +7114,50 @@ def test_l203_slow_start_at_a_pivot():
 
 
 # (level 77, as the random battles': the stat formula's rounding then depends on the IV)
-TERAPAGOS_0ATK = TERAPAGOS.replace("EVs: 252 HP / 252 SpA / 4 SpD", "Level: 77\nEVs: 252 HP / 252 SpA / 4 SpD\nIVs: 0 Atk")
+TERAPAGOS_0ATK = TERAPAGOS.replace(
+    "EVs: 252 HP / 252 SpA / 4 SpD", "Level: 77\nEVs: 252 HP / 252 SpA / 4 SpD\nIVs: 0 Atk"
+)
 
 
 def test_l203_forme_stats_from_inferred_ivs():
-    states = ec.run_showdown(GARCHOMP_SD, BLISSEY + "\n\n" + TERAPAGOS_0ATK, [("move swordsdance", "switch 2")])
-    assert _keys(_full(states, 0, "swordsdance", "terapagos", (1, 2)), "attack", "defense", "special") == {}
+    states = ec.run_showdown(
+        GARCHOMP_SD, BLISSEY + "\n\n" + TERAPAGOS_0ATK, [("move swordsdance", "switch 2")]
+    )
+    assert (
+        _keys(_full(states, 0, "swordsdance", "terapagos", (1, 2)), "attack", "defense", "special")
+        == {}
+    )
 
 
 def test_l203_sunsteel_strike_through_tera_shell():
-    solgaleo = _attacker("Solgaleo", "Full Metal Body", "Leftovers", "- Sunsteel Strike\n- Morning Sun\n- Flare Blitz\n- Knock Off")
-    states = ec.run_showdown(solgaleo, BLISSEY + "\n\n" + TERAPAGOS, [("move sunsteelstrike", "switch 2")])
+    solgaleo = _attacker(
+        "Solgaleo",
+        "Full Metal Body",
+        "Leftovers",
+        "- Sunsteel Strike\n- Morning Sun\n- Flare Blitz\n- Knock Off",
+    )
+    states = ec.run_showdown(
+        solgaleo, BLISSEY + "\n\n" + TERAPAGOS, [("move sunsteelstrike", "switch 2")]
+    )
     assert _keys(_full_moves(states, 0, "sunsteelstrike", "terapagos", (1, 2)), "hp") == {}
 
 
 # L204 (doc/engine-diff.md): Cud Chew eats its berry again at the next turn's end (Showdown's
 # counter 2 from a berry eaten in the turn)
 def test_l204_cud_chew():
-    tauros = _attacker("Tauros-Paldea-Aqua", "Cud Chew", "Sitrus Berry", "- Wave Crash\n- Close Combat\n- Bulk Up\n- Protect")
+    tauros = _attacker(
+        "Tauros-Paldea-Aqua",
+        "Cud Chew",
+        "Sitrus Berry",
+        "- Wave Crash\n- Close Combat\n- Bulk Up\n- Protect",
+    )
     turns = [("move bulkup", "move seismictoss")] * 4
     states = ec.run_showdown(tauros, BLISSEY, turns)
-    k = next(k for k in range(len(states) - 1) if states[k + 1]["sides"][0]["mons"][0]["last_item"] == "sitrusberry")
+    k = next(
+        k
+        for k in range(len(states) - 1)
+        if states[k + 1]["sides"][0]["mons"][0]["last_item"] == "sitrusberry"
+    )
     assert any("Cud Chew" in x for x in states[k + 2]["log"])
     for j in (k, k + 1):
         assert _keys(_full(states, j, "bulkup", "seismictoss"), "hp", "item", "cudchew") == {}
@@ -5861,12 +7169,26 @@ BLISSEY_TOXIC = BLISSEY.replace("- Calm Mind", "- Toxic")
 def test_l204_cud_chew_residual_berry():
     # a berry eaten in the end-of-turn residuals (Sitrus after the poison) counts 1, eaten again at
     # the next turn's end (Showdown: the queue is empty there)
-    tauros = _attacker("Tauros-Paldea-Aqua", "Cud Chew", "Sitrus Berry", "- Wave Crash\n- Close Combat\n- Bulk Up\n- Protect")
-    turns = [("move bulkup", "move toxic"), ("move bulkup", "move seismictoss")] + [("move bulkup", "move protect")] * 2
+    tauros = _attacker(
+        "Tauros-Paldea-Aqua",
+        "Cud Chew",
+        "Sitrus Berry",
+        "- Wave Crash\n- Close Combat\n- Bulk Up\n- Protect",
+    )
+    turns = [("move bulkup", "move toxic"), ("move bulkup", "move seismictoss")] + [
+        ("move bulkup", "move protect")
+    ] * 2
     states = ec.run_showdown(tauros, BLISSEY_TOXIC, turns)
-    k = next(k for k in range(len(states) - 1) if states[k + 1]["sides"][0]["mons"][0]["last_item"] == "sitrusberry")
+    k = next(
+        k
+        for k in range(len(states) - 1)
+        if states[k + 1]["sides"][0]["mons"][0]["last_item"] == "sitrusberry"
+    )
     log = states[k + 1]["log"]
-    assert any("[from] psn" in x for x in log[: next(i for i, x in enumerate(log) if "Sitrus Berry|[eat]" in x)])
+    assert any(
+        "[from] psn" in x
+        for x in log[: next(i for i, x in enumerate(log) if "Sitrus Berry|[eat]" in x)]
+    )
     assert any("Cud Chew" in x for x in states[k + 2]["log"])
     c2 = ("seismictoss", "protect")[k > 1]
     assert _keys(_full(states, k, "bulkup", c2), "hp", "item", "cudchew") == {}
@@ -5877,15 +7199,22 @@ def test_l204_cud_chew_residual_berry():
 # (trueDuration random(2, 4)), the last use ending it after the move with the confusion
 # (onAfterMove), an interrupted lock confusing on its drawn last turn only, an asleep user's lock
 # going after Yawn's sleep (its residual is the last), the fatigue's confusion stopped by Own Tempo
-SALAMENCE_OUTRAGE = _attacker("Salamence", "Intimidate", "Leftovers", "- Outrage\n- Roost\n- Protect\n- Earthquake")
-SLOWKING_YAWN = _attacker("Slowking", "Oblivious", "Leftovers", "- Yawn\n- Slack Off\n- Protect\n- Fake Out", "Bold")
+SALAMENCE_OUTRAGE = _attacker(
+    "Salamence", "Intimidate", "Leftovers", "- Outrage\n- Roost\n- Protect\n- Earthquake"
+)
+SLOWKING_YAWN = _attacker(
+    "Slowking", "Oblivious", "Leftovers", "- Yawn\n- Slack Off\n- Protect\n- Fake Out", "Bold"
+)
 SEED_TWO_USES = "gen5,1234,5678,910,1112"  # (the default seed draws 3)
 
 
 def test_l205_lock_ends_after_its_last_use():
     states = ec.run_showdown(SALAMENCE_OUTRAGE, CORVIKNIGHT + "\n\n" + BLISSEY,
                              [("move outrage", "move roost"), ("move outrage", "move uturn")], seed=SEED_TWO_USES)  # fmt: skip
-    assert any("[fatigue]" in x for x in states[2]["log"]) and states[2]["sides"][1]["request"] == "switch"
+    assert (
+        any("[fatigue]" in x for x in states[2]["log"])
+        and states[2]["sides"][1]["request"] == "switch"
+    )
     assert _keys(_full(states, 1, "outrage", "uturn", (1, 2)), "lockedmove", "confusion") == {}
 
 
@@ -5901,7 +7230,11 @@ def test_l205_lock_length_drawn():
 
 def test_l205_lock_asleep_after_yawn():
     corviknight = CORVIKNIGHT.replace("- Defog", "- Yawn")
-    states = ec.run_showdown(SALAMENCE_OUTRAGE, corviknight, [("move outrage", "move yawn"), ("move outrage", "move roost")])
+    states = ec.run_showdown(
+        SALAMENCE_OUTRAGE,
+        corviknight,
+        [("move outrage", "move yawn"), ("move outrage", "move roost")],
+    )
     assert states[2]["sides"][0]["mons"][0]["status"] == "slp"
     assert _keys(_full(states, 1, "outrage", "roost"), "lockedmove", "confusion", "status") == {}
 
@@ -5918,7 +7251,9 @@ def test_l205_lock_interrupted(seed, confused):
 
 def test_l205_fatigue_through_own_tempo():
     sala = SALAMENCE_OUTRAGE.replace("Ability: Intimidate", "Ability: Own Tempo")
-    states = ec.run_showdown(sala, CORVIKNIGHT, [("move outrage", "move roost")] * 2, seed=SEED_TWO_USES)
+    states = ec.run_showdown(
+        sala, CORVIKNIGHT, [("move outrage", "move roost")] * 2, seed=SEED_TWO_USES
+    )
     assert "lockedmove" not in states[2]["sides"][0]["mons"][0]["volatiles"]
     assert _keys(_full(states, 1, "outrage", "roost"), "lockedmove", "confusion") == {}
 
@@ -5931,13 +7266,21 @@ def test_l205_fatigue_through_own_tempo():
 def test_l206_yawn_sleep_through(move):
     corviknight = CORVIKNIGHT.replace("- Defog", "- Yawn")
     blissey = BLISSEY.replace("- Calm Mind", "- " + move.capitalize())
-    states = ec.run_showdown(corviknight, blissey, [("move yawn", "move softboiled"), ("move roost", "move " + move)])
+    states = ec.run_showdown(
+        corviknight, blissey, [("move yawn", "move softboiled"), ("move roost", "move " + move)]
+    )
     assert states[2]["sides"][1]["mons"][0]["status"] == "slp"
     assert _keys(_full(states, 1, "roost", move), "status", "sleep") == {}
 
 
 def test_l206_mycelium_might_status_move_last():
-    toedscruel = _attacker("Toedscruel", "Mycelium Might", "Leftovers", "- Spore\n- Earth Power\n- Giga Drain\n- Rapid Spin", "Timid")
+    toedscruel = _attacker(
+        "Toedscruel",
+        "Mycelium Might",
+        "Leftovers",
+        "- Spore\n- Earth Power\n- Giga Drain\n- Rapid Spin",
+        "Timid",
+    )
     states = ec.run_showdown(toedscruel, BLISSEY, [("move spore", "move seismictoss")])
     log = [x for x in states[1]["log"] if x.startswith("|move|")]
     assert "Blissey" in log[0]
@@ -5945,52 +7288,114 @@ def test_l206_mycelium_might_status_move_last():
 
 
 def test_l206_throat_chop_stops_a_sound_move_this_turn():
-    chienpao = _attacker("Chien-Pao", "Sword of Ruin", "Leftovers", "- Throat Chop\n- Icicle Crash\n- Sacred Sword\n- Swords Dance", "Jolly")
+    chienpao = _attacker(
+        "Chien-Pao",
+        "Sword of Ruin",
+        "Leftovers",
+        "- Throat Chop\n- Icicle Crash\n- Sacred Sword\n- Swords Dance",
+        "Jolly",
+    )
     blissey = BLISSEY.replace("- Calm Mind", "- Hyper Voice")
     states = ec.run_showdown(chienpao, blissey, [("move throatchop", "move hypervoice")])
     assert any("|cant|p2a: Blissey|move: Throat Chop" in x for x in states[1]["log"])
-    assert _keys(_full_hinted(states, 0, "throatchop", "hypervoice"), "hp", "pp", "last_used_move") == {}
+    assert (
+        _keys(_full_hinted(states, 0, "throatchop", "hypervoice"), "hp", "pp", "last_used_move")
+        == {}
+    )
 
 
 def test_l206_explosion_user_flinched_does_not_faint():
-    golem = _attacker("Golem", "Sturdy", "Leftovers", "- Explosion\n- Earthquake\n- Stone Edge\n- Stealth Rock")
-    excadrill = _attacker("Excadrill", "Sand Rush", "Leftovers", "- Iron Head\n- Earthquake\n- Rapid Spin\n- Swords Dance", "Jolly")
-    states = ec.run_showdown(golem, excadrill, [("move explosion", "move ironhead")], force_random=True)
+    golem = _attacker(
+        "Golem", "Sturdy", "Leftovers", "- Explosion\n- Earthquake\n- Stone Edge\n- Stealth Rock"
+    )
+    excadrill = _attacker(
+        "Excadrill",
+        "Sand Rush",
+        "Leftovers",
+        "- Iron Head\n- Earthquake\n- Rapid Spin\n- Swords Dance",
+        "Jolly",
+    )
+    states = ec.run_showdown(
+        golem, excadrill, [("move explosion", "move ironhead")], force_random=True
+    )
     assert any("|cant|p1a: Golem|flinch" in x for x in states[1]["log"])
     assert _keys(_full(states, 0, "explosion", "ironhead"), "status") == {}
 
 
-@pytest.mark.parametrize("move, item", [("Aqua Ring", "Heavy-Duty Boots"), ("Ingrain", "Heavy-Duty Boots"), ("Aqua Ring", "Big Root")])
+@pytest.mark.parametrize(
+    "move, item",
+    [("Aqua Ring", "Heavy-Duty Boots"), ("Ingrain", "Heavy-Duty Boots"), ("Aqua Ring", "Big Root")],
+)
 def test_l206_aqua_ring_ingrain_heal(move, item):
     blissey = BLISSEY.replace("- Calm Mind", "- " + move).replace("@ Heavy-Duty Boots", "@ " + item)
     mid = ec._id(move)
-    states = ec.run_showdown(blissey, BLISSEY, [("move " + mid, "move seismictoss"), ("move protect", "move seismictoss")])
+    states = ec.run_showdown(
+        blissey,
+        BLISSEY,
+        [("move " + mid, "move seismictoss"), ("move protect", "move seismictoss")],
+    )
     for k, c1 in ((0, mid), (1, "protect")):
         assert _keys(_full(states, k, c1, "seismictoss"), "hp") == {}
 
 
 def test_l206_failed_sucker_punch_keeps_disguise():
-    mimikyu = _attacker("Mimikyu", "Disguise", "Leftovers", "- Shadow Sneak\n- Play Rough\n- Swords Dance\n- Shadow Claw", "Jolly")
-    kingambit = _attacker("Kingambit", "Supreme Overlord", "Leftovers", "- Sucker Punch\n- Iron Head\n- Kowtow Cleave\n- Swords Dance")
+    mimikyu = _attacker(
+        "Mimikyu",
+        "Disguise",
+        "Leftovers",
+        "- Shadow Sneak\n- Play Rough\n- Swords Dance\n- Shadow Claw",
+        "Jolly",
+    )
+    kingambit = _attacker(
+        "Kingambit",
+        "Supreme Overlord",
+        "Leftovers",
+        "- Sucker Punch\n- Iron Head\n- Kowtow Cleave\n- Swords Dance",
+    )
     states = ec.run_showdown(mimikyu, kingambit, [("move shadowsneak", "move suckerpunch")])
     assert any("|-fail|p2a: Kingambit" in x for x in states[1]["log"])
     assert _keys(_full_hinted(states, 0, "shadowsneak", "suckerpunch"), "hp", "id") == {}
 
 
 def test_l206_clear_body_under_neutralizing_gas():
-    weezing = _attacker("Weezing-Galar", "Neutralizing Gas", "Leftovers", "- Defog\n- Strange Steam\n- Will-O-Wisp\n- Pain Split", "Bold")
-    metagross = _attacker("Metagross", "Clear Body", "Leftovers", "- Bullet Punch\n- Meteor Mash\n- Earthquake\n- Agility")
+    weezing = _attacker(
+        "Weezing-Galar",
+        "Neutralizing Gas",
+        "Leftovers",
+        "- Defog\n- Strange Steam\n- Will-O-Wisp\n- Pain Split",
+        "Bold",
+    )
+    metagross = _attacker(
+        "Metagross",
+        "Clear Body",
+        "Leftovers",
+        "- Bullet Punch\n- Meteor Mash\n- Earthquake\n- Agility",
+    )
     states = ec.run_showdown(weezing, metagross, [("move defog", "move agility")])
     assert _keys(_full(states, 0, "defog", "agility"), "boost") == {}
 
 
 def test_l206_ruin_not_on_a_holder_of_the_same():
-    chienpao = _attacker("Chien-Pao", "Sword of Ruin", "Leftovers", "- Throat Chop\n- Icicle Crash\n- Sacred Sword\n- Swords Dance", "Jolly")
-    tinglu = _attacker("Ting-Lu", "Vessel of Ruin", "Leftovers", "- Earth Power\n- Ruination\n- Whirlwind\n- Stealth Rock", "Modest")
-    for p1, p2, c1, c2 in ((chienpao, chienpao, "throatchop", "swordsdance"), (tinglu, tinglu, "earthpower", "stealthrock")):
+    chienpao = _attacker(
+        "Chien-Pao",
+        "Sword of Ruin",
+        "Leftovers",
+        "- Throat Chop\n- Icicle Crash\n- Sacred Sword\n- Swords Dance",
+        "Jolly",
+    )
+    tinglu = _attacker(
+        "Ting-Lu",
+        "Vessel of Ruin",
+        "Leftovers",
+        "- Earth Power\n- Ruination\n- Whirlwind\n- Stealth Rock",
+        "Modest",
+    )
+    for p1, p2, c1, c2 in (
+        (chienpao, chienpao, "throatchop", "swordsdance"),
+        (tinglu, tinglu, "earthpower", "stealthrock"),
+    ):
         states = ec.run_showdown(p1, p2, [(f"move {c1}", f"move {c2}")])
         assert _keys(_full_hinted(states, 0, c1, c2), "hp") == {}
-
 
 
 # L207 (doc/engine-diff.md): Infiltrator's status move through a Substitute; Topsy-Turvy bounced
@@ -5999,7 +7404,13 @@ def test_l206_ruin_not_on_a_holder_of_the_same():
 # gas has gone (Showdown's onUpdate)
 def test_l207_infiltrator_status_through_substitute():
     blissey = BLISSEY.replace("- Calm Mind", "- Substitute")
-    dragapult = _attacker("Dragapult", "Infiltrator", "Leftovers", "- Will-O-Wisp\n- Shadow Ball\n- Protect\n- Hex", "Timid")
+    dragapult = _attacker(
+        "Dragapult",
+        "Infiltrator",
+        "Leftovers",
+        "- Will-O-Wisp\n- Shadow Ball\n- Protect\n- Hex",
+        "Timid",
+    )
     states = ec.run_showdown(blissey, dragapult, [("move substitute", "move protect"), ("move softboiled", "move willowisp")],
                              force_random=True)  # fmt: skip
     assert states[2]["sides"][0]["mons"][0]["status"] == "brn"
@@ -6007,46 +7418,119 @@ def test_l207_infiltrator_status_through_substitute():
 
 
 def test_l207_topsy_turvy_bounced():
-    malamar = _attacker("Malamar", "Suction Cups", "Leftovers", "- Topsy-Turvy\n- Swords Dance\n- Superpower\n- Knock Off")
-    hatterene = _attacker("Hatterene", "Magic Bounce", "Leftovers", "- Calm Mind\n- Psyshock\n- Draining Kiss\n- Protect", "Quiet")
-    states = ec.run_showdown(malamar, hatterene, [("move swordsdance", "move calmmind"), ("move topsyturvy", "move calmmind")])
+    malamar = _attacker(
+        "Malamar",
+        "Suction Cups",
+        "Leftovers",
+        "- Topsy-Turvy\n- Swords Dance\n- Superpower\n- Knock Off",
+    )
+    hatterene = _attacker(
+        "Hatterene",
+        "Magic Bounce",
+        "Leftovers",
+        "- Calm Mind\n- Psyshock\n- Draining Kiss\n- Protect",
+        "Quiet",
+    )
+    states = ec.run_showdown(
+        malamar,
+        hatterene,
+        [("move swordsdance", "move calmmind"), ("move topsyturvy", "move calmmind")],
+    )
     assert states[2]["sides"][0]["mons"][0]["boosts"]["atk"] == -2
     assert _keys(_full(states, 1, "topsyturvy", "calmmind"), "boost") == {}
 
 
 def test_l207_transformed_ability_back_under_gas():
-    weezing = _attacker("Weezing-Galar", "Neutralizing Gas", "Leftovers", "- Defog\n- Strange Steam\n- Will-O-Wisp\n- Pain Split", "Bold")
-    mew = _attacker("Mew", "Synchronize", "Leftovers", "- Transform\n- Soft-Boiled\n- Psychic\n- Protect", "Bold")
-    states = ec.run_showdown(weezing, mew + "\n\n" + BLISSEY, [("move defog", "move transform"), ("move defog", "switch 2")])
+    weezing = _attacker(
+        "Weezing-Galar",
+        "Neutralizing Gas",
+        "Leftovers",
+        "- Defog\n- Strange Steam\n- Will-O-Wisp\n- Pain Split",
+        "Bold",
+    )
+    mew = _attacker(
+        "Mew",
+        "Synchronize",
+        "Leftovers",
+        "- Transform\n- Soft-Boiled\n- Psychic\n- Protect",
+        "Bold",
+    )
+    states = ec.run_showdown(
+        weezing,
+        mew + "\n\n" + BLISSEY,
+        [("move defog", "move transform"), ("move defog", "switch 2")],
+    )
     assert _keys(_full(states, 1, "defog", "blissey", (1, 2)), "ability") == {}
 
 
 def test_l207_heat_crash_heavy_metal():
-    copperajah = _attacker("Copperajah", "Heavy Metal", "Leftovers", "- Heat Crash\n- Iron Head\n- Stealth Rock\n- Knock Off")
-    ironhands = _attacker("Iron Hands", "Quark Drive", "Leftovers", "- Swords Dance\n- Drain Punch\n- Wild Charge\n- Ice Punch")
+    copperajah = _attacker(
+        "Copperajah",
+        "Heavy Metal",
+        "Leftovers",
+        "- Heat Crash\n- Iron Head\n- Stealth Rock\n- Knock Off",
+    )
+    ironhands = _attacker(
+        "Iron Hands",
+        "Quark Drive",
+        "Leftovers",
+        "- Swords Dance\n- Drain Punch\n- Wild Charge\n- Ice Punch",
+    )
     states = ec.run_showdown(copperajah, ironhands, [("move heatcrash", "move swordsdance")])
     assert _keys(_full_hinted(states, 0, "heatcrash", "swordsdance"), "hp") == {}
 
 
 @pytest.mark.parametrize("move", ["minimize", "doubleteam"])
 def test_l207_evasion_raised(move):
-    blissey = BLISSEY.replace("- Calm Mind", "- " + {"minimize": "Minimize", "doubleteam": "Double Team"}[move])
+    blissey = BLISSEY.replace(
+        "- Calm Mind", "- " + {"minimize": "Minimize", "doubleteam": "Double Team"}[move]
+    )
     states = ec.run_showdown(blissey, CORVIKNIGHT, [("move " + move, "move roost")])
     assert _keys(_full(states, 0, move, "roost"), "boost") == {}
 
 
 def test_l207_immunity_cures_once_the_gas_goes():
-    snorlax = _attacker("Snorlax", "Immunity", "Leftovers", "- Body Slam\n- Rest\n- Curse\n- Protect", "Careful")
-    weezing = _attacker("Weezing-Galar", "Neutralizing Gas", "Leftovers", "- Toxic\n- Strange Steam\n- Will-O-Wisp\n- Pain Split", "Bold")
-    states = ec.run_showdown(snorlax, weezing + "\n\n" + BLISSEY, [("move curse", "move toxic"), ("move curse", "switch 2")])
-    assert states[1]["sides"][0]["mons"][0]["status"] == "tox" and states[2]["sides"][0]["mons"][0]["status"] == ""
+    snorlax = _attacker(
+        "Snorlax", "Immunity", "Leftovers", "- Body Slam\n- Rest\n- Curse\n- Protect", "Careful"
+    )
+    weezing = _attacker(
+        "Weezing-Galar",
+        "Neutralizing Gas",
+        "Leftovers",
+        "- Toxic\n- Strange Steam\n- Will-O-Wisp\n- Pain Split",
+        "Bold",
+    )
+    states = ec.run_showdown(
+        snorlax,
+        weezing + "\n\n" + BLISSEY,
+        [("move curse", "move toxic"), ("move curse", "switch 2")],
+    )
+    assert (
+        states[1]["sides"][0]["mons"][0]["status"] == "tox"
+        and states[2]["sides"][0]["mons"][0]["status"] == ""
+    )
     assert _keys(_full(states, 1, "curse", "blissey", (1, 2)), "status") == {}
 
 
 def test_l207_topsy_turvy_on_the_foe():
-    malamar = _attacker("Malamar", "Suction Cups", "Leftovers", "- Topsy-Turvy\n- Swords Dance\n- Superpower\n- Knock Off")
-    hatterene = _attacker("Hatterene", "Healer", "Leftovers", "- Calm Mind\n- Psyshock\n- Draining Kiss\n- Protect", "Quiet")
-    states = ec.run_showdown(malamar, hatterene, [("move swordsdance", "move calmmind"), ("move topsyturvy", "move calmmind")])
+    malamar = _attacker(
+        "Malamar",
+        "Suction Cups",
+        "Leftovers",
+        "- Topsy-Turvy\n- Swords Dance\n- Superpower\n- Knock Off",
+    )
+    hatterene = _attacker(
+        "Hatterene",
+        "Healer",
+        "Leftovers",
+        "- Calm Mind\n- Psyshock\n- Draining Kiss\n- Protect",
+        "Quiet",
+    )
+    states = ec.run_showdown(
+        malamar,
+        hatterene,
+        [("move swordsdance", "move calmmind"), ("move topsyturvy", "move calmmind")],
+    )
     assert states[2]["sides"][1]["mons"][0]["boosts"]["spa"] == 0  # (+1, inverted, then +1)
     assert _keys(_full(states, 1, "topsyturvy", "calmmind"), "boost") == {}
 
@@ -6056,43 +7540,87 @@ def test_l207_topsy_turvy_on_the_foe():
 # Counter's contact
 def test_l208_air_lock_fainted():
     blissey = BLISSEY.replace("Ability: Natural Cure", "Ability: Sand Stream")
-    rayquaza = _attacker("Rayquaza", "Air Lock", "Leftovers", "- Memento\n- Dragon Dance\n- Outrage\n- Extreme Speed", "Jolly")
-    states = ec.run_showdown(blissey, rayquaza + "\n\n" + BLISSEY, [("move calmmind", "move memento")])
+    rayquaza = _attacker(
+        "Rayquaza",
+        "Air Lock",
+        "Leftovers",
+        "- Memento\n- Dragon Dance\n- Outrage\n- Extreme Speed",
+        "Jolly",
+    )
+    states = ec.run_showdown(
+        blissey, rayquaza + "\n\n" + BLISSEY, [("move calmmind", "move memento")]
+    )
     assert any("[from] Sandstorm" in x and "p1a" in x for x in states[1]["log"])
     assert _keys(_full(states, 0, "calmmind", "memento", (1, 2)), "hp") == {}
 
 
 def test_l208_soul_heart_residual_faint():
-    magearna = _attacker("Magearna", "Soul-Heart", "Leftovers", "- Sandstorm\n- Flash Cannon\n- Protect\n- Calm Mind", "Modest")
-    shedinja = _attacker("Shedinja", "Wonder Guard", "Leftovers", "- Swords Dance\n- Shadow Sneak\n- X-Scissor\n- Protect")
-    states = ec.run_showdown(magearna, shedinja + "\n\n" + BLISSEY, [("move sandstorm", "move swordsdance")])
+    magearna = _attacker(
+        "Magearna",
+        "Soul-Heart",
+        "Leftovers",
+        "- Sandstorm\n- Flash Cannon\n- Protect\n- Calm Mind",
+        "Modest",
+    )
+    shedinja = _attacker(
+        "Shedinja",
+        "Wonder Guard",
+        "Leftovers",
+        "- Swords Dance\n- Shadow Sneak\n- X-Scissor\n- Protect",
+    )
+    states = ec.run_showdown(
+        magearna, shedinja + "\n\n" + BLISSEY, [("move sandstorm", "move swordsdance")]
+    )
     assert states[1]["sides"][0]["mons"][0]["boosts"]["spa"] == 1
     assert _keys(_full(states, 0, "sandstorm", "swordsdance", (1, 2)), "boost") == {}
 
 
 def test_l208_trick_misses_a_semi_invulnerable_target():
     blissey = BLISSEY.replace("- Calm Mind", "- Trick")
-    dragapult = _attacker("Dragapult", "Clear Body", "Leftovers", "- Phantom Force\n- Dragon Darts\n- U-turn\n- Protect", "Jolly")
+    dragapult = _attacker(
+        "Dragapult",
+        "Clear Body",
+        "Leftovers",
+        "- Phantom Force\n- Dragon Darts\n- U-turn\n- Protect",
+        "Jolly",
+    )
     states = ec.run_showdown(blissey, dragapult, [("move trick", "move phantomforce")])
     assert any("|-miss|p1a: Blissey" in x for x in states[1]["log"])
     assert _keys(_full(states, 0, "trick", "phantomforce"), "item") == {}
 
 
 def test_l208_curse_on_its_user_through_a_semi_invulnerable_foe():
-    snorlax = _attacker("Snorlax", "Thick Fat", "Leftovers", "- Curse\n- Body Slam\n- Rest\n- Protect", "Careful")
-    dragapult = _attacker("Dragapult", "Clear Body", "Leftovers", "- Phantom Force\n- Dragon Darts\n- U-turn\n- Protect", "Jolly")
+    snorlax = _attacker(
+        "Snorlax", "Thick Fat", "Leftovers", "- Curse\n- Body Slam\n- Rest\n- Protect", "Careful"
+    )
+    dragapult = _attacker(
+        "Dragapult",
+        "Clear Body",
+        "Leftovers",
+        "- Phantom Force\n- Dragon Darts\n- U-turn\n- Protect",
+        "Jolly",
+    )
     states = ec.run_showdown(snorlax, dragapult, [("move curse", "move phantomforce")])
     assert states[1]["sides"][0]["mons"][0]["boosts"]["atk"] == 1
     assert _keys(_full(states, 0, "curse", "phantomforce"), "boost") == {}
 
 
 def test_l208_flame_body_on_counter():
-    snorlax = _attacker("Snorlax", "Thick Fat", "Leftovers", "- Counter\n- Body Slam\n- Rest\n- Curse", "Careful")
-    talonflame = _attacker("Talonflame", "Flame Body", "Heavy-Duty Boots", "- Brave Bird\n- Flare Blitz\n- U-turn\n- Roost", "Jolly")
-    states = ec.run_showdown(snorlax, talonflame, [("move counter", "move bravebird")], force_random=True)
+    snorlax = _attacker(
+        "Snorlax", "Thick Fat", "Leftovers", "- Counter\n- Body Slam\n- Rest\n- Curse", "Careful"
+    )
+    talonflame = _attacker(
+        "Talonflame",
+        "Flame Body",
+        "Heavy-Duty Boots",
+        "- Brave Bird\n- Flare Blitz\n- U-turn\n- Roost",
+        "Jolly",
+    )
+    states = ec.run_showdown(
+        snorlax, talonflame, [("move counter", "move bravebird")], force_random=True
+    )
     assert states[1]["sides"][0]["mons"][0]["status"] == "brn"
     assert _keys(_full(states, 0, "counter", "bravebird"), "status") == {}
-
 
 
 # L209 (doc/engine-diff.md): the move Sleep Talk calls branches on its damage as any (a knockout
@@ -6112,15 +7640,29 @@ def test_l208_flame_body_on_counter():
 def test_l209_positions(teams, i, turn, offset):
     a, b = _random_position(teams, i, turn, offset)
     c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
-    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"]))
+    outs = ec.engine_outcomes(
+        ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"])
+    )
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
     assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}
 
 
 def test_l209_gastro_acid_suppresses():
     blissey = BLISSEY.replace("- Calm Mind", "- Gastro Acid")
-    excadrill = _attacker("Excadrill", "Sand Rush", "Leftovers", "- Earthquake\n- Iron Head\n- Rapid Spin\n- Swords Dance", "Jolly")
-    rotom = _attacker("Rotom-Wash", "Levitate", "Leftovers", "- Hydro Pump\n- Volt Switch\n- Will-O-Wisp\n- Protect", "Bold")
+    excadrill = _attacker(
+        "Excadrill",
+        "Sand Rush",
+        "Leftovers",
+        "- Earthquake\n- Iron Head\n- Rapid Spin\n- Swords Dance",
+        "Jolly",
+    )
+    rotom = _attacker(
+        "Rotom-Wash",
+        "Levitate",
+        "Leftovers",
+        "- Hydro Pump\n- Volt Switch\n- Will-O-Wisp\n- Protect",
+        "Bold",
+    )
     states = ec.run_showdown(blissey + "\n\n" + excadrill, rotom, [("move gastroacid", "move willowisp"), ("switch 2", "move willowisp"),
                                                                ("move earthquake", "move hydropump")])  # fmt: skip
     assert not any("ability: Levitate" in x for x in states[3]["log"])
@@ -6129,8 +7671,17 @@ def test_l209_gastro_acid_suppresses():
 
 
 def test_l209_shell_bell_besides_drain():
-    hariyama = _attacker("Hariyama", "Thick Fat", "Shell Bell", "- Drain Punch\n- Knock Off\n- Bullet Punch\n- Bulk Up")
-    states = ec.run_showdown(hariyama, BLISSEY, [("move bulkup", "move seismictoss"), ("move drainpunch", "move seismictoss")])
+    hariyama = _attacker(
+        "Hariyama",
+        "Thick Fat",
+        "Shell Bell",
+        "- Drain Punch\n- Knock Off\n- Bullet Punch\n- Bulk Up",
+    )
+    states = ec.run_showdown(
+        hariyama,
+        BLISSEY,
+        [("move bulkup", "move seismictoss"), ("move drainpunch", "move seismictoss")],
+    )
     assert _keys(_full_hinted(states, 1, "drainpunch", "seismictoss"), "hp") == {}
 
 
@@ -6148,7 +7699,9 @@ def test_l209_shell_bell_besides_drain():
 def test_l210_positions(teams, i, turn, offset):
     a, b = _random_position(teams, i, turn, offset)
     c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
-    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"]))
+    outs = ec.engine_outcomes(
+        ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"])
+    )
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
     assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}
 
@@ -6168,30 +7721,59 @@ def test_l210_positions(teams, i, turn, offset):
 def test_l211_magic_room_positions(teams, i, turn, offset):
     a, b = _random_position(teams, i, turn, offset)
     c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
-    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"]))
+    outs = ec.engine_outcomes(
+        ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"])
+    )
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
     assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}
 
 
-KLEFKI_ROOM = _attacker("Klefki", "Prankster", "Leftovers", "- Magic Room\n- Spikes\n- Thunder Wave\n- Play Rough", "Bold")
+KLEFKI_ROOM = _attacker(
+    "Klefki",
+    "Prankster",
+    "Leftovers",
+    "- Magic Room\n- Spikes\n- Thunder Wave\n- Play Rough",
+    "Bold",
+)
 
 
 def test_l211_magic_room_leftovers_and_scarf():
-    gholdengo = _attacker("Gholdengo", "Good as Gold", "Choice Scarf", "- Shadow Ball\n- Make It Rain\n- Recover\n- Nasty Plot", "Timid")
+    gholdengo = _attacker(
+        "Gholdengo",
+        "Good as Gold",
+        "Choice Scarf",
+        "- Shadow Ball\n- Make It Rain\n- Recover\n- Nasty Plot",
+        "Timid",
+    )
     states = ec.run_showdown(KLEFKI_ROOM, gholdengo, [("move magicroom", "move nastyplot"), ("move spikes", "move recover"),
                                                       ("move magicroom", "move shadowball")])  # fmt: skip
-    for k, c1, c2 in ((0, "magicroom", "nastyplot"), (1, "spikes", "recover"), (2, "magicroom", "shadowball")):
+    for k, c1, c2 in (
+        (0, "magicroom", "nastyplot"),
+        (1, "spikes", "recover"),
+        (2, "magicroom", "shadowball"),
+    ):
         assert _keys(_full_hinted(states, k, c1, c2), "hp", "options", "magic_room", "boost") == {}
 
 
-KINGAMBIT_ROOM = _attacker("Kingambit", "Defiant", "Leftovers", "- Magic Room\n- Kowtow Cleave\n- Sucker Punch\n- Iron Head")
+KINGAMBIT_ROOM = _attacker(
+    "Kingambit",
+    "Defiant",
+    "Leftovers",
+    "- Magic Room\n- Kowtow Cleave\n- Sucker Punch\n- Iron Head",
+)
 
 
 @pytest.mark.parametrize("item, c2", [("Focus Sash", "calmmind"), ("Rocky Helmet", "calmmind")])
 def test_l211_magic_room_sash_helmet(item, c2):
-    alakazam = _attacker("Alakazam", "Synchronize", item, "- Psychic\n- Recover\n- Calm Mind\n- Protect", "Timid")
+    alakazam = _attacker(
+        "Alakazam", "Synchronize", item, "- Psychic\n- Recover\n- Calm Mind\n- Protect", "Timid"
+    )
     hit = "kowtowcleave" if item == "Focus Sash" else "ironhead"
-    states = ec.run_showdown(KINGAMBIT_ROOM, alakazam + "\n\n" + BLISSEY, [("move magicroom", "move calmmind"), (f"move {hit}", f"move {c2}")])
+    states = ec.run_showdown(
+        KINGAMBIT_ROOM,
+        alakazam + "\n\n" + BLISSEY,
+        [("move magicroom", "move calmmind"), (f"move {hit}", f"move {c2}")],
+    )
     assert _keys(_full_hinted(states, 1, hit, c2, (1, 2)), "hp", "item", "status") == {}
 
 
@@ -6208,7 +7790,9 @@ def test_l211_magic_room_heavy_duty_boots():
 def test_l211_gravity_position():
     a, b = _random_position("random_battle_teams.jsonl", 189, 18, 10000)
     c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
-    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"]))
+    outs = ec.engine_outcomes(
+        ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"])
+    )
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
     assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}
 
@@ -6216,9 +7800,17 @@ def test_l211_gravity_position():
 @pytest.mark.parametrize("foe", ["corviknight", "rotom"])
 def test_l211_gravity_grounds(foe):
     blissey = BLISSEY.replace("- Calm Mind", "- Gravity").replace("- Protect", "- Earthquake")
-    rotom = _attacker("Rotom-Wash", "Levitate", "Leftovers", "- Hydro Pump\n- Volt Switch\n- Will-O-Wisp\n- Protect", "Bold")
+    rotom = _attacker(
+        "Rotom-Wash",
+        "Levitate",
+        "Leftovers",
+        "- Hydro Pump\n- Volt Switch\n- Will-O-Wisp\n- Protect",
+        "Bold",
+    )
     p2, c2 = (CORVIKNIGHT, "roost") if foe == "corviknight" else (rotom, "willowisp")
-    states = ec.run_showdown(blissey, p2, [("move gravity", "move " + c2), ("move earthquake", "move " + c2)])
+    states = ec.run_showdown(
+        blissey, p2, [("move gravity", "move " + c2), ("move earthquake", "move " + c2)]
+    )
     assert not any("|-immune|" in x for x in states[2]["log"])
     assert _keys(_full_hinted(states, 0, "gravity", c2), "gravity") == {}
     assert _keys(_full_hinted(states, 1, "earthquake", c2), "hp", "gravity") == {}
@@ -6240,15 +7832,27 @@ def test_l211_gravity_grounds(foe):
 def test_l212_positions(teams, i, turn, offset):
     a, b = _random_position(teams, i, turn, offset)
     c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
-    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"]))
+    outs = ec.engine_outcomes(
+        ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"])
+    )
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
     assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}
 
 
 @pytest.mark.parametrize("foe_gender", ["M", "F"])
 def test_l212_rivalry(foe_gender):
-    haxorus = _attacker("Haxorus (M)", "Rivalry", "Leftovers", "- Dragon Claw\n- Swords Dance\n- Earthquake\n- Iron Tail")
-    garchomp = _attacker(f"Garchomp ({foe_gender})", "Rough Skin", "Leftovers", "- Earthquake\n- Swords Dance\n- Protect\n- Dragon Claw")
+    haxorus = _attacker(
+        "Haxorus (M)",
+        "Rivalry",
+        "Leftovers",
+        "- Dragon Claw\n- Swords Dance\n- Earthquake\n- Iron Tail",
+    )
+    garchomp = _attacker(
+        f"Garchomp ({foe_gender})",
+        "Rough Skin",
+        "Leftovers",
+        "- Earthquake\n- Swords Dance\n- Protect\n- Dragon Claw",
+    )
     states = ec.run_showdown(haxorus, garchomp, [("move earthquake", "move swordsdance")])
     assert _keys(_full_hinted(states, 0, "earthquake", "swordsdance"), "hp") == {}
 
@@ -6270,7 +7874,9 @@ def test_l212_rivalry(foe_gender):
 def test_l213_positions(teams, i, turn, offset):
     a, b = _random_position(teams, i, turn, offset)
     c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
-    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"]))
+    outs = ec.engine_outcomes(
+        ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"])
+    )
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
     assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}
 
@@ -6278,7 +7884,9 @@ def test_l213_positions(teams, i, turn, offset):
 @pytest.mark.parametrize("move", ["Guard Swap", "Power Swap", "Heart Swap"])
 def test_l213_stage_swaps(move):
     blissey = BLISSEY.replace("- Calm Mind", "- " + move).replace("- Protect", "- Calm Mind")
-    sala = _attacker("Salamence", "Moxie", "Leftovers", "- Dragon Dance\n- Iron Defense\n- Roost\n- Outrage")
+    sala = _attacker(
+        "Salamence", "Moxie", "Leftovers", "- Dragon Dance\n- Iron Defense\n- Roost\n- Outrage"
+    )
     mid = ec._id(move)
     states = ec.run_showdown(blissey, sala, [("move calmmind", "move dragondance"), ("move calmmind", "move irondefense"),
                                              (f"move {mid}", "move roost")])  # fmt: skip
@@ -6310,7 +7918,9 @@ def test_l213_stage_swaps(move):
 def test_l214_positions(teams, i, turn, offset):
     a, b = _random_position(teams, i, turn, offset)
     c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
-    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"]))
+    outs = ec.engine_outcomes(
+        ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"])
+    )
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
     assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}
 
@@ -6330,7 +7940,9 @@ def test_l214_positions(teams, i, turn, offset):
 def test_l215_positions(teams, i, turn, offset):
     a, b = _random_position(teams, i, turn, offset)
     c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
-    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"]))
+    outs = ec.engine_outcomes(
+        ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"])
+    )
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
     assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}
 
@@ -6355,7 +7967,9 @@ def test_l215_positions(teams, i, turn, offset):
 def test_l216_positions(teams, i, turn, offset):
     a, b = _random_position(teams, i, turn, offset)
     c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
-    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"]))
+    outs = ec.engine_outcomes(
+        ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"])
+    )
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
     assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}
 
@@ -6371,7 +7985,9 @@ def test_l216_positions(teams, i, turn, offset):
 def test_l217_positions(teams, i, turn, offset):
     a, b = _random_position(teams, i, turn, offset)
     c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
-    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"]))
+    outs = ec.engine_outcomes(
+        ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"])
+    )
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
     assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}
 
@@ -6389,14 +8005,19 @@ def test_l217_positions(teams, i, turn, offset):
 def test_l218_positions(teams, i, turn, offset):
     a, b = _random_position(teams, i, turn, offset)
     c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
-    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"]))
+    outs = ec.engine_outcomes(
+        ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"])
+    )
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
     assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}
 
 
 def test_l218_state_string_keeps_doom_desire():
     from pathlib import Path
-    s = pe.State.from_string(Path("tests/fixtures/engine_state_6v6.txt").read_text().splitlines()[0])
+
+    s = pe.State.from_string(
+        Path("tests/fixtures/engine_state_6v6.txt").read_text().splitlines()[0]
+    )
     s1 = s.side_one
     side = pe.Side(pokemon=s1.pokemon, active_index=s1.active_index, side_conditions=s1.side_conditions,
                    future_sight=(2, pe.PokemonIndex("1")), future_doom=True)  # fmt: skip
@@ -6422,7 +8043,9 @@ def test_l218_state_string_keeps_doom_desire():
 def test_l219_positions(teams, i, turn, offset):
     a, b = _random_position(teams, i, turn, offset)
     c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
-    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"]))
+    outs = ec.engine_outcomes(
+        ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"])
+    )
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
     assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}
 
@@ -6458,19 +8081,27 @@ def test_l219_positions(teams, i, turn, offset):
 def test_l220_positions(teams, i, turn, offset):
     a, b = _random_position(teams, i, turn, offset)
     c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
-    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"]))
+    outs = ec.engine_outcomes(
+        ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"])
+    )
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
     assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}
 
 
 def test_l220_state_string_keeps_revived_faints():
     from pathlib import Path
-    s = pe.State.from_string(Path("tests/fixtures/engine_state_6v6.txt").read_text().splitlines()[0])
+
+    s = pe.State.from_string(
+        Path("tests/fixtures/engine_state_6v6.txt").read_text().splitlines()[0]
+    )
     s1 = s.side_one
     side = pe.Side(pokemon=s1.pokemon, active_index=s1.active_index, side_conditions=s1.side_conditions,
                    revived_faints=2)  # fmt: skip
     t = pe.State(side_one=side, side_two=s.side_two).to_string()
-    assert pe.State.from_string(t).side_one.revived_faints == 2 and pe.State.from_string(t).to_string() == t
+    assert (
+        pe.State.from_string(t).side_one.revived_faints == 2
+        and pe.State.from_string(t).to_string() == t
+    )
 
 
 # L221 (doc/engine-diff.md): Knock Off on a Lum Berry the hit's status secondary uses up first
@@ -6483,7 +8114,9 @@ def test_l220_state_string_keeps_revived_faints():
 def test_l221_positions(teams, i, turn, offset):
     a, b = _random_position(teams, i, turn, offset)
     c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
-    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"]))
+    outs = ec.engine_outcomes(
+        ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"])
+    )
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
     assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}
 
@@ -6502,7 +8135,9 @@ def test_l221_positions(teams, i, turn, offset):
 def test_l222_positions(teams, i, turn, offset):
     a, b = _random_position(teams, i, turn, offset)
     c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
-    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"]))
+    outs = ec.engine_outcomes(
+        ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"])
+    )
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
     assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}
 
@@ -6517,7 +8152,9 @@ def test_l222_positions(teams, i, turn, offset):
 def test_l223_positions(teams, i, turn, offset):
     a, b = _random_position(teams, i, turn, offset)
     c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
-    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"]))
+    outs = ec.engine_outcomes(
+        ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"])
+    )
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
     assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}
 
@@ -6542,7 +8179,9 @@ def test_l223_positions(teams, i, turn, offset):
 def test_l224_positions(teams, i, turn, offset):
     a, b = _random_position(teams, i, turn, offset)
     c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
-    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"]))
+    outs = ec.engine_outcomes(
+        ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"])
+    )
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
     # (offmeta b25-t8: also Uproar's locked turn's PP -- L241, fixed 2026-10-25)
     assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}
@@ -6550,7 +8189,10 @@ def test_l224_positions(teams, i, turn, offset):
 
 def test_l224_state_string_keeps_uproar_count():
     from pathlib import Path
-    s = pe.State.from_string(Path("tests/fixtures/engine_state_6v6.txt").read_text().splitlines()[0])
+
+    s = pe.State.from_string(
+        Path("tests/fixtures/engine_state_6v6.txt").read_text().splitlines()[0]
+    )
     s1 = s.side_one
     side = pe.Side(pokemon=s1.pokemon, active_index=s1.active_index, side_conditions=s1.side_conditions,
                    volatile_statuses={"uproar"},
@@ -6575,7 +8217,9 @@ def test_l224_state_string_keeps_uproar_count():
 def test_l225_positions(teams, i, turn, offset):
     a, b = _random_position(teams, i, turn, offset)
     c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
-    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"]))
+    outs = ec.engine_outcomes(
+        ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"])
+    )
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
     assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}
 
@@ -6608,14 +8252,19 @@ def test_l225_positions(teams, i, turn, offset):
 def test_l226_positions(teams, i, turn, offset):
     a, b = _random_position(teams, i, turn, offset)
     c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
-    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"]))
+    outs = ec.engine_outcomes(
+        ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"])
+    )
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
     assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}
 
 
 def test_l226_state_string_keeps_toxic_spikes_order():
     from pathlib import Path
-    s = pe.State.from_string(Path("tests/fixtures/engine_state_6v6.txt").read_text().splitlines()[0])
+
+    s = pe.State.from_string(
+        Path("tests/fixtures/engine_state_6v6.txt").read_text().splitlines()[0]
+    )
     s1 = s.side_one
     side = pe.Side(pokemon=s1.pokemon, active_index=s1.active_index,
                    side_conditions=pe.SideConditions(spikes=1, toxic_spikes=1, toxic_spikes_order=2))  # fmt: skip
@@ -6633,11 +8282,20 @@ def test_l226_state_string_keeps_toxic_spikes_order():
 # Missile, Magic Bounce, Relic Song, Berserk / Anger Shell, Encore, Aftermath, Truant, Trick's
 # accuracy, Mycelium Might, Aroma Veil, cosmetic formes' stats, ...
 def _big_position(k: int, i: int, turn: int, fixture: str = "random_battle_pairs_big_l227.jsonl"):
-    pairs = {(x["set"], x["i"]): x for x in map(json.loads, (Path("tests/fixtures") / fixture).read_text().splitlines())}
+    pairs = {
+        (x["set"], x["i"]): x
+        for x in map(json.loads, (Path("tests/fixtures") / fixture).read_text().splitlines())
+    }
     p = pairs[(k, i)]
     n = i + 1000000 + 10000 * k
-    steps, _ = ec.random_battle(p["p1"], p["p2"], f"gen5,{n},{n + 1},{n + 2},{n + 3}", n + 1, max_turns=60)
-    j = next(j for j, s in enumerate(steps) if s["state"]["turn"] == turn and set(s["choices"]) == {"p1", "p2"})
+    steps, _ = ec.random_battle(
+        p["p1"], p["p2"], f"gen5,{n},{n + 1},{n + 2},{n + 3}", n + 1, max_turns=60
+    )
+    j = next(
+        j
+        for j, s in enumerate(steps)
+        if s["state"]["turn"] == turn and set(s["choices"]) == {"p1", "p2"}
+    )
     return steps[j], steps[j + 1]
 
 
@@ -6803,7 +8461,9 @@ def _big_position(k: int, i: int, turn: int, fixture: str = "random_battle_pairs
 def test_l227_positions(k, i, turn):
     a, b = _big_position(k, i, turn)
     c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
-    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"]))
+    outs = ec.engine_outcomes(
+        ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"])
+    )
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
     assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}
 
@@ -6913,7 +8573,9 @@ def test_l227_positions(k, i, turn):
 def test_l228_positions(k, i, turn):
     a, b = _big_position(k, i, turn, "random_battle_pairs_big_l228.jsonl")
     c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
-    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"]))
+    outs = ec.engine_outcomes(
+        ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"])
+    )
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
     assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}
 
@@ -6926,7 +8588,9 @@ def test_l228_positions(k, i, turn):
 def test_l228_choice_lock_disabled(teams, i, turn, offset):
     a, b = _random_position(teams, i, turn, offset)
     c1, c2 = a["choices"]["p1"]["engine"], a["choices"]["p2"]["engine"]
-    outs = ec.engine_outcomes(ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"]))
+    outs = ec.engine_outcomes(
+        ec.engine_state(a["state"]), c1, c2, ec.move_hints(a["state"], b["state"])
+    )
     n = tuple(len(s["mons"]) for s in a["state"]["sides"])
     assert ec.closest(b["state"], outs, n, hp=True, full=True, start=a["state"])["diff"] == {}
 
@@ -7024,10 +8688,13 @@ def test_l231_once_per_battle_boost_at_the_limit(case):
                if sword else
                _setter("Zamazenta", "Dauntless Shield", "Rusted Shield", "- Body Press\n- Iron Defense\n- Protect\n- Roar"))  # fmt: skip
         setup = "move swordsdance" if sword else "move irondefense"
-        turns = [(setup, "move calmmind")] * 3 + [("move batonpass", "move calmmind"), ("switch 2", "")]
+        turns = [(setup, "move calmmind")] * 3 + [
+            ("move batonpass", "move calmmind"),
+            ("switch 2", ""),
+        ]
         states = ec.run_showdown(SMEARGLE_BP + "\n\n" + mon, BLISSEY, turns)
         side, stat = 0, "atk" if sword else "def"
-        (_, mid), = ec.engine_outcomes(ec.engine_state(states[3]), "batonpass", "calmmind")
+        ((_, mid),) = ec.engine_outcomes(ec.engine_state(states[3]), "batonpass", "calmmind")
         outs = ec.engine_outcomes(mid, mid.side_one.pokemon[1].id, "none")  # (the pass's pick)
     active = next(m for m in states[-1]["sides"][side]["mons"] if m["active"])
     assert active["boosts"][stat] == 6, active["boosts"]  # Showdown: at the limit
@@ -7056,7 +8723,8 @@ Timid Nature
 @pytest.mark.parametrize("user", ["blissey", "magic guard", "into a ghost", "into tera shell"])
 def test_l232_struggle(user):
     foe = MEW_IMPRISON
-    if user == "into tera shell":  # (Tera Shell does not resist Struggle: Showdown's runEffectiveness)
+    # (Tera Shell does not resist Struggle: Showdown's runEffectiveness)
+    if user == "into tera shell":
         mon = _setter("Blissey", "Natural Cure", "Leftovers", "- Tackle")
         foe = MEW_IMPRISON.replace("Mew @", "Terapagos @").replace("Synchronize", "Tera Shift")
     elif user == "blissey":
@@ -7089,8 +8757,12 @@ def test_l232_encore_after_a_struggle_fails():
 def test_spite_takes_four_pp_of_its_targets_last_move():
     """2026-10-24 review: Spite (Gengar, faster) on a Corviknight whose last move was Brave Bird:
     Showdown takes 4 of its PP (23 -> 19); the engine had the move's data only, no effect."""
-    mon = _setter("Corviknight", "Mirror Armor", "Leftovers", "- Brave Bird\n- Roost\n- Defog\n- U-turn")
-    foe = _setter("Gengar", "Cursed Body", "Leftovers", "- Spite\n- Protect\n- Shadow Ball\n- Sludge Bomb")
+    mon = _setter(
+        "Corviknight", "Mirror Armor", "Leftovers", "- Brave Bird\n- Roost\n- Defog\n- U-turn"
+    )
+    foe = _setter(
+        "Gengar", "Cursed Body", "Leftovers", "- Spite\n- Protect\n- Shadow Ball\n- Sludge Bomb"
+    )
     states = ec.run_showdown(mon, foe, [("move 1", "move protect"), ("move 2", "move spite")])
     bb = [m for m in states[2]["sides"][0]["mons"][0]["moves"] if m["id"] == "bravebird"][0]
     assert bb["pp"] == 19, states[2]["sides"][0]["mons"][0]["moves"]
@@ -7101,8 +8773,12 @@ def test_spite_takes_four_pp_of_its_targets_last_move():
 def test_spite_fails_on_a_target_with_no_last_move():
     """Spite (Gengar, faster) on the first turn: Corviknight has no last move -- it fails
     (Showdown's onHit: no lastMove), its Brave Bird after it at full PP less its own use."""
-    mon = _setter("Corviknight", "Mirror Armor", "Leftovers", "- Brave Bird\n- Roost\n- Defog\n- U-turn")
-    foe = _setter("Gengar", "Cursed Body", "Leftovers", "- Spite\n- Protect\n- Shadow Ball\n- Sludge Bomb")
+    mon = _setter(
+        "Corviknight", "Mirror Armor", "Leftovers", "- Brave Bird\n- Roost\n- Defog\n- U-turn"
+    )
+    foe = _setter(
+        "Gengar", "Cursed Body", "Leftovers", "- Spite\n- Protect\n- Shadow Ball\n- Sludge Bomb"
+    )
     states = ec.run_showdown(mon, foe, [("move 2", "move spite")])
     assert any(x.startswith("|-fail|") for x in states[1]["log"]), states[1]["log"]
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "roost", "spite")
@@ -7114,8 +8790,12 @@ def test_spite_after_its_targets_move_in_the_same_turn():
     that reads it -- Spite was not one (the first Spite test's Gengar has Cursed Body: that turned
     it on). A slower Infiltrator Spiritomb's Spite after Corviknight's Brave Bird: Showdown 19 PP,
     the engine 23 (its last move still its switch-in)."""
-    mon = _setter("Corviknight", "Mirror Armor", "Leftovers", "- Brave Bird\n- Roost\n- Defog\n- U-turn")
-    foe = _setter("Spiritomb", "Infiltrator", "Leftovers", "- Spite\n- Foul Play\n- Pain Split\n- Will-O-Wisp")
+    mon = _setter(
+        "Corviknight", "Mirror Armor", "Leftovers", "- Brave Bird\n- Roost\n- Defog\n- U-turn"
+    )
+    foe = _setter(
+        "Spiritomb", "Infiltrator", "Leftovers", "- Spite\n- Foul Play\n- Pain Split\n- Will-O-Wisp"
+    )
     states = ec.run_showdown(mon, foe, [("move 1", "move spite")])
     bb = [m for m in states[1]["sides"][0]["mons"][0]["moves"] if m["id"] == "bravebird"][0]
     assert bb["pp"] == 19, states[1]["sides"][0]["mons"][0]["moves"]
@@ -7131,13 +8811,28 @@ def _klutz(item, ability="Klutz"):
     return _setter("Golurk", ability, item, "- Sunny Day\n- Reflect\n- Electric Terrain\n- Roost")
 
 
-GAS = _setter("Weezing-Galar", "Neutralizing Gas", "Leftovers", "- Spikes\n- Protect\n- Embargo\n- Magic Room")
+GAS = _setter(
+    "Weezing-Galar", "Neutralizing Gas", "Leftovers", "- Spikes\n- Protect\n- Embargo\n- Magic Room"
+)
 EXTENDERS = [  # (item, the holder's move, Showdown's turns left after the first end of turn, read)
-    ("Heat Rock", "sunnyday", lambda s: s["field"]["weather_duration"], lambda o: o.weather_turns_remaining),
-    ("Light Clay", "reflect", lambda s: s["sides"][0]["conditions"]["reflect"]["duration"],
-     lambda o: o.side_one.side_conditions.reflect),
-    ("Terrain Extender", "electricterrain", lambda s: s["field"]["terrain_duration"],
-     lambda o: o.terrain_turns_remaining),
+    (
+        "Heat Rock",
+        "sunnyday",
+        lambda s: s["field"]["weather_duration"],
+        lambda o: o.weather_turns_remaining,
+    ),
+    (
+        "Light Clay",
+        "reflect",
+        lambda s: s["sides"][0]["conditions"]["reflect"]["duration"],
+        lambda o: o.side_one.side_conditions.reflect,
+    ),
+    (
+        "Terrain Extender",
+        "electricterrain",
+        lambda s: s["field"]["terrain_duration"],
+        lambda o: o.terrain_turns_remaining,
+    ),
 ]
 
 
@@ -7175,7 +8870,12 @@ def test_l234_extending_item_ignored(item, move, sd, eng, room):
     ("thunderwave", lambda s: not s["sides"][1]["mons"][0]["status"]),  # (control: immune)
 ])  # fmt: skip
 def test_l235_electric_status_moves_on_a_ground_foe(move, check):
-    p1 = _setter("Golurk", "Iron Fist", "Leftovers", "- Electric Terrain\n- Eerie Impulse\n- Thunder Wave\n- Roost")
+    p1 = _setter(
+        "Golurk",
+        "Iron Fist",
+        "Leftovers",
+        "- Electric Terrain\n- Eerie Impulse\n- Thunder Wave\n- Roost",
+    )
     states = ec.run_showdown(p1, TINGLU, [(f"move {move}", "move spikes")])
     assert check(states[1]), states[1]["log"]
     outs = ec.engine_outcomes(ec.engine_state(states[0]), move, "spikes")
@@ -7194,7 +8894,9 @@ def test_l235_electric_status_moves_on_a_ground_foe(move, check):
     ("leechseed", lambda s: "leechseed" in s["sides"][0]["mons"][0]["volatiles"]),
 ])  # fmt: skip
 def test_l236_sheer_force_status_moves(move, check):
-    cop = _setter("Copperajah", "Sheer Force", "Leftovers", "- Protect\n- Substitute\n- Taunt\n- Leech Seed")
+    cop = _setter(
+        "Copperajah", "Sheer Force", "Leftovers", "- Protect\n- Substitute\n- Taunt\n- Leech Seed"
+    )
     states = ec.run_showdown(CORVIKNIGHT, cop, [("move roost", f"move {move}")])
     assert check(states[1]), states[1]["log"]
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "roost", move)
@@ -7203,7 +8905,12 @@ def test_l236_sheer_force_status_moves(move, check):
 
 def test_l236_sheer_force_still_takes_a_secondary():
     """(control) Sheer Force's Iron Head: boosted, no flinch chance -- the same in both."""
-    cop = _setter("Copperajah", "Sheer Force", "Leftovers", "- Iron Head\n- Protect\n- Stealth Rock\n- Iron Defense")
+    cop = _setter(
+        "Copperajah",
+        "Sheer Force",
+        "Leftovers",
+        "- Iron Head\n- Protect\n- Stealth Rock\n- Iron Defense",
+    )
     states = ec.run_showdown(CORVIKNIGHT, cop, [("move roost", "move ironhead")])
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "roost", "ironhead")
     assert len(outs) <= 2  # (a hit or a crit: no flinch branch)
@@ -7224,7 +8931,9 @@ EVs: 252 Atk / 252 SpA / 4 Spe
 Hardy Nature
 - {move}
 - Protect"""
-    foe = _setter("Hippowdon", "Shell Armor", "Heavy-Duty Boots", "- Curse\n- Rest\n- Body Slam\n- Spikes")
+    foe = _setter(
+        "Hippowdon", "Shell Armor", "Heavy-Duty Boots", "- Curse\n- Rest\n- Body Slam\n- Spikes"
+    )
     states = ec.run_showdown(user, foe, [(f"move {move}", "move curse")])
     outs = ec.engine_outcomes(ec.engine_state(states[0]), move, "curse")
     assert ec.closest(states[1], outs, (1, 1), hp=True, full=True, start=states[0])["diff"] == {}
@@ -7236,9 +8945,18 @@ Hardy Nature
 # state it was given (L115) but never set it -- the search's next turn after a failure had it off.
 # Each case: the engine's turn from Showdown's state has the flag as Showdown's next state does
 # (the comparator reads Showdown's moveLastTurnResult), and its next turn's double power follows
-FAKE_OUTER = _setter("Incineroar", "Blaze", "Leftovers", "- Fake Out\n- Temper Flare\n- Knock Off\n- Parting Shot")
-TUSK = _setter("Great Tusk", "Protosynthesis", "Leftovers", "- Headlong Rush\n- Stomping Tantrum\n- Thunder Wave\n- Sucker Punch")
-FLIER = _setter("Corviknight", "Pressure", "Leftovers", "- Roost\n- Body Press\n- Iron Defense\n- Protect")
+FAKE_OUTER = _setter(
+    "Incineroar", "Blaze", "Leftovers", "- Fake Out\n- Temper Flare\n- Knock Off\n- Parting Shot"
+)
+TUSK = _setter(
+    "Great Tusk",
+    "Protosynthesis",
+    "Leftovers",
+    "- Headlong Rush\n- Stomping Tantrum\n- Thunder Wave\n- Sucker Punch",
+)
+FLIER = _setter(
+    "Corviknight", "Pressure", "Leftovers", "- Roost\n- Body Press\n- Iron Defense\n- Protect"
+)
 
 
 @pytest.mark.parametrize("name, p1, script, at, e1, failed", [
@@ -7256,7 +8974,9 @@ def test_l237_move_failed_this_turn(name, p1, script, at, e1, failed):
     mon = states[at + 1]["sides"][0]["mons"][0]
     assert ("lastmovefailed" in mon["volatiles"]) == failed, states[at + 1]["log"]
     outs = ec.engine_outcomes(ec.engine_state(states[at]), e1, script[at][1].split()[1])
-    assert ec.closest(states[at + 1], outs, (1, 1), hp=True, full=True, start=states[at])["diff"] == {}
+    assert (
+        ec.closest(states[at + 1], outs, (1, 1), hp=True, full=True, start=states[at])["diff"] == {}
+    )
 
 
 # L238 (doc/engine-diff.md, 2026-10-24): the Sleep Clause Mod as the format has it -- Showdown's
@@ -7275,8 +8995,13 @@ def test_l238_gen9ou_has_no_sleep_clause():
     """gen9ou's own rules: its format has no Sleep Clause Mod, the engine's default neither."""
     import json
     import subprocess
+
     js = "const {Dex} = require(process.argv[1]); console.log(JSON.stringify(Dex.formats.get('gen9ou').ruleset))"
-    rules = json.loads(subprocess.run(["node", "-e", js, str(ec.SIM)], capture_output=True, text=True, check=True).stdout)
+    rules = json.loads(
+        subprocess.run(
+            ["node", "-e", js, str(ec.SIM)], capture_output=True, text=True, check=True
+        ).stdout
+    )
     assert "!Sleep Clause Mod" in rules and "Sleep Moves Clause" in rules
 
 
@@ -7287,7 +9012,11 @@ def test_l238_a_second_sleep(clause, request):
     if clause:
         request.getfixturevalue("sleep_clause")
     breloom = BRELOOM.replace("- Rock Tomb", "- Yawn")
-    turns = [("move spore", "move roost"), ("move bulletseed", "switch 2"), ("move spore", "move calmmind")]
+    turns = [
+        ("move spore", "move roost"),
+        ("move bulletseed", "switch 2"),
+        ("move spore", "move calmmind"),
+    ]
     fmt = ec.FORMAT + "@@@Sleep Clause Mod" if clause else ec.FORMAT
     states = ec.run_showdown(breloom, CORVIKNIGHT + "\n\n" + BLISSEY, turns, fmt=fmt)
     assert states[1]["sides"][1]["mons"][0]["status"] == "slp"
@@ -7330,8 +9059,14 @@ def test_l239_skill_swap_takes_slow_start_away():
 GARCHOMP_MEMENTO = GARCHOMP_SD.replace("- Scale Shot", "- Memento") + "\n\n" + BLISSEY_COPYCAT
 BLISSEY_UTURN = BLISSEY.replace("- Protect", "- U-turn")
 # (no boost: the Dragon Claw leaves the Blissey in; no Leftovers, no Rough Skin: 357 -> 57 exactly)
-GARCHOMP_CLAW = GARCHOMP_SD.replace("- Stealth Rock", "- Dragon Claw").replace("- Swords Dance", "- Splash") \
-    .replace("Garchomp @ Leftovers", "Garchomp").replace("Rough Skin", "Sand Veil") + "\n\n" + BLISSEY_COPYCAT
+GARCHOMP_CLAW = (
+    GARCHOMP_SD.replace("- Stealth Rock", "- Dragon Claw")
+    .replace("- Swords Dance", "- Splash")
+    .replace("Garchomp @ Leftovers", "Garchomp")
+    .replace("Rough Skin", "Sand Veil")
+    + "\n\n"
+    + BLISSEY_COPYCAT
+)
 BLISSEY_HELMET = BLISSEY_UTURN.replace("@ Heavy-Duty Boots", "@ Rocky Helmet")
 
 
@@ -7345,7 +9080,11 @@ def test_l240_control_the_last_move_is_the_last_one_used():
 def _no_target(case):
     """(Showdown's states, the turn, the choices) of a U-turn with its target fainted first."""
     if case == "memento":  # (its user faints itself)
-        return ec.run_showdown(GARCHOMP_MEMENTO, BLISSEY_UTURN, [("move memento", "move uturn")]), 0, "memento"
+        return (
+            ec.run_showdown(GARCHOMP_MEMENTO, BLISSEY_UTURN, [("move memento", "move uturn")]),
+            0,
+            "memento",
+        )
     # (the corpus' case, rbt/7027 t6: the attacker faints to the helmet of the one it hit -- three
     # Seismic Tosses, 357 -> 57, the helmet's 59)
     turns = [("move splash", "move seismictoss")] * 3 + [("move dragonclaw", "move uturn")]
@@ -7375,7 +9114,9 @@ def test_l241_a_locked_turn_spends_no_pp(move, name):
     rollout: the first turn's PP only."""
     states = ec.run_showdown(GARCHOMP_SD.replace("- Scale Shot", f"- {name}"), BLISSEY,
                              [(f"move {move}", "move softboiled")] * 3)  # fmt: skip
-    pp = [next(m["pp"] for m in s["sides"][0]["mons"][0]["moves"] if m["id"] == move) for s in states]
+    pp = [
+        next(m["pp"] for m in s["sides"][0]["mons"][0]["moves"] if m["id"] == move) for s in states
+    ]
     assert pp[0] - pp[1] == 1 and pp[1] == pp[2] == pp[3], pp  # (Showdown)
     for k in (1, 2):
         assert _keys(_full(states, k, move, "softboiled"), "pp") == {}, k
@@ -7433,7 +9174,9 @@ def test_l239_skill_swap_ends_the_old_abilitys_volatile(p1, first, volatile):
 # L241, Rollout / Ice Ball (Showdown's rollout / iceball volatile): locked into the move, 30 x 2 ** its
 # hits so far (x 2 after a Defense Curl), the lock renewed by a hit under the fifth -- a miss, a
 # Protect, the fifth hit end it at the turn's end. The engine modelled none of it (a 30 BP move)
-GARCHOMP_ROLLOUT = GARCHOMP_SD.replace("- Scale Shot", "- Rollout").replace("- Stealth Rock", "- Ice Ball")
+GARCHOMP_ROLLOUT = GARCHOMP_SD.replace("- Scale Shot", "- Rollout").replace(
+    "- Stealth Rock", "- Ice Ball"
+)
 BLISSEY_BENCH = BLISSEY + "\n\n" + CORVIKNIGHT
 
 
@@ -7445,11 +9188,16 @@ def test_l241_rollout_rolls_five_hits(move):
     weak = GARCHOMP_ROLLOUT.replace("EVs: 252 Atk / 4 SpD / 252 Spe", "EVs: 252 HP / 4 SpD / 252 Spe") \
         .replace("Jolly Nature", "Timid Nature")  # fmt: skip
     states = ec.run_showdown(weak, BLISSEY_BENCH, [(f"move {move}", "move softboiled")] * 5)
-    hits = [(s["sides"][0]["mons"][0]["volatiles"].get(move) or {}).get("hit_count") for s in states[1:]]
+    hits = [
+        (s["sides"][0]["mons"][0]["volatiles"].get(move) or {}).get("hit_count") for s in states[1:]
+    ]
     assert hits == [1, 2, 3, 4, None], hits  # (Showdown: the lock over after the fifth)
     assert states[5]["sides"][1]["mons"][0]["hp"] == 0
     for k in range(5):
-        assert _keys(_full(states, k, move, "softboiled", (1, 2)), "rollout", "options", "pp", "hp") == {}, k
+        assert (
+            _keys(_full(states, k, move, "softboiled", (1, 2)), "rollout", "options", "pp", "hp")
+            == {}
+        ), k
 
 
 def test_l241_defense_curl_doubles_rollout():
@@ -7464,12 +9212,18 @@ def test_l241_defense_curl_doubles_rollout():
 def test_l241_a_protect_ends_rollout():
     """Turn 2's Protect: no hit, the lock not renewed -- at the turn's end it is over, the other
     moves free again."""
-    turns = [("move rollout", "move softboiled"), ("move rollout", "move protect"), ("move earthquake", "move softboiled")]
+    turns = [
+        ("move rollout", "move softboiled"),
+        ("move rollout", "move protect"),
+        ("move earthquake", "move softboiled"),
+    ]
     states = ec.run_showdown(GARCHOMP_ROLLOUT, BLISSEY_BENCH, turns)
     assert "rollout" in states[1]["sides"][0]["mons"][0]["volatiles"]
     assert "rollout" not in states[2]["sides"][0]["mons"][0]["volatiles"], states[2]["log"]
     for k, (c1, c2) in enumerate([("rollout", "softboiled"), ("rollout", "protect")]):
-        assert _keys(_full(states, k, c1, c2, (1, 2)), "rollout", "options", "pp", "disabled") == {}, k
+        assert (
+            _keys(_full(states, k, c1, c2, (1, 2)), "rollout", "options", "pp", "disabled") == {}
+        ), k
 
 
 # L242: a locking move a calling move ran (Copycat's Outrage / Uproar / Rollout): Showdown locks its
@@ -7489,10 +9243,23 @@ def test_l242_a_called_lock_runs_the_called_move(name):
                              [("move copycat", f"move {mid}"), ("move 1", "move 1")])  # fmt: skip
     log = states[2]["log"]
     assert f"|move|p1a: Blissey|{name}|p2a: Garchomp|[from] lockedmove" in log, log  # (Showdown)
-    pp = [next(x["pp"] for x in s["sides"][0]["mons"][0]["moves"] if x["id"] == "copycat") for s in states[1:3]]
+    pp = [
+        next(x["pp"] for x in s["sides"][0]["mons"][0]["moves"] if x["id"] == "copycat")
+        for s in states[1:3]
+    ]
     assert pp[0] == pp[1], pp  # (the locked turn spends none)
     for k in (0, 1):
-        assert _keys(_full(states, k, "copycat", mid, (2, 1)), "options", "pp", "volatile", "hp", "disabled") == {}, k
+        assert (
+            _keys(
+                _full(states, k, "copycat", mid, (2, 1)),
+                "options",
+                "pp",
+                "volatile",
+                "hp",
+                "disabled",
+            )
+            == {}
+        ), k
 
 
 def test_l242_the_called_move_not_the_battles_last():
@@ -7546,7 +9313,9 @@ def test_an_ability_set_over_an_unknown_one_keeps_it_as_its_own(p1, first, new, 
     poke-env took the new one for its own: the state's base ability Insomnia, kept after a
     switch-out -- Showdown's Huge Power is back then."""
     states = ec.run_showdown(p1, AZUMARILL_HP + "\n\n" + BLISSEY, [first])
-    assert any(new.capitalize()[:4] in x and "Huge Power" in x for x in states[1]["log"]), states[1]["log"]
+    assert any(new.capitalize()[:4] in x and "Huge Power" in x for x in states[1]["log"]), states[
+        1
+    ]["log"]
     st = ec.built_state(states, 1, "p1", belief)
     them = st.side_two.pokemon[int(st.side_two.active_index)]
     assert (str(them.ability).lower(), str(them.base_ability).lower()) == (new, "hugepower")
@@ -7574,7 +9343,9 @@ def test_a_sleep_talks_rollout_locks_nothing(belief):
     """Asleep, Sleep Talk calls Rollout (its other moves Sleep Talk does not call): Showdown's
     onModifyMove adds no rollout volatile then -- its switch and tera still offered. Our state had
     it rolling (2026-10-25 review: rollout 1, the options gone)."""
-    states = ec.run_showdown(SNORLAX_TALK + "\n\n" + BLISSEY, BRELOOM_SPORE, [("move sleeptalk", "move spore")])
+    states = ec.run_showdown(
+        SNORLAX_TALK + "\n\n" + BLISSEY, BRELOOM_SPORE, [("move sleeptalk", "move spore")]
+    )
     assert "|move|p1a: Snorlax|Rollout|p2a: Breloom|[from] move: Sleep Talk" in states[1]["log"]
     assert "rollout" not in states[1]["sides"][0]["mons"][0]["volatiles"]
     for side in ("p1", "p2"):  # (ours and the foe's view)
@@ -7605,12 +9376,22 @@ Jolly Nature
 
 
 def test_l243_a_locked_move_at_0_pp_goes_on():
-    states = ec.run_showdown(SNORLAX_UPROAR, CORVIKNIGHT_SPITE, [("move uproar", "move spite")] + [("move 1", "move spite")] * 4)
-    pp = [next(x["pp"] for x in s["sides"][0]["mons"][0]["moves"] if x["id"] == "uproar") for s in states]
-    assert pp[4] == 0 and "uproar" in states[4]["sides"][0]["mons"][0]["volatiles"], pp  # (Showdown)
+    states = ec.run_showdown(
+        SNORLAX_UPROAR,
+        CORVIKNIGHT_SPITE,
+        [("move uproar", "move spite")] + [("move 1", "move spite")] * 4,
+    )
+    pp = [
+        next(x["pp"] for x in s["sides"][0]["mons"][0]["moves"] if x["id"] == "uproar")
+        for s in states
+    ]
+    # (Showdown)
+    assert pp[4] == 0 and "uproar" in states[4]["sides"][0]["mons"][0]["volatiles"], pp
     assert "|move|p1a: Snorlax|Uproar|p2a: Corviknight|[from] lockedmove" in states[5]["log"]
     for k in (3, 4):  # (the turn it hits 0, the turn it goes on at 0)
-        assert _keys(_full(states, k, "uproar", "spite"), "options", "pp", "volatile", "hp") == {}, k
+        assert (
+            _keys(_full(states, k, "uproar", "spite"), "options", "pp", "volatile", "hp") == {}
+        ), k
 
 
 # L244 (2026-10-25, the distribution check: engine_dist): Sleep Talk calls none of its user's moves
@@ -7631,18 +9412,27 @@ def test_l244_sleep_talk_calls_no_uproar_nor_focus_punch():
     turns = [("move 4", "move spore"), ("move sleeptalk", "move swordsdance")]
     for line in ("|move|p1a: Lickilicky|Uproar", "|move|p1a: Lickilicky|Focus Punch"):  # (Showdown)
         assert ec.showdown_rate(licki, BRELOOM_SPORE, turns, line, n=200) == 0.0, line
-    assert ec.showdown_rate(licki, BRELOOM_SPORE, turns, "|Body Slam|p2a: Breloom|[from] move: Sleep Talk", n=200) > 0.3
+    assert (
+        ec.showdown_rate(
+            licki, BRELOOM_SPORE, turns, "|Body Slam|p2a: Breloom|[from] move: Sleep Talk", n=200
+        )
+        > 0.3
+    )
     outs = ec.engine_outcomes(ec.engine_state(states[1]), "sleeptalk", "swordsdance")
     assert abs(sum(o[0] for o in outs) - 1) < 1e-4
-    assert not any("uproar" in {str(v).lower() for v in o[1].side_one.volatile_statuses} for o in outs)
+    assert not any(
+        "uproar" in {str(v).lower() for v in o[1].side_one.volatile_statuses} for o in outs
+    )
     assert all(o[1].side_one.pokemon[0].moves[2].pp == states[1]["sides"][0]["mons"][0]["moves"][2]["pp"]
                for o in outs)  # (no Focus Punch: its PP, as no use -- a called move's is the caller's anyway)  # fmt: skip
 
 
 def test_l244_sleep_talk_with_nothing_to_call_fails():
-    licki, states = _asleep("- Sleep Talk\n- Uproar\n- Solar Beam\n- Meteor Beam")  # (charge moves too)
+    # (charge moves too)
+    licki, states = _asleep("- Sleep Talk\n- Uproar\n- Solar Beam\n- Meteor Beam")
     turns = [("move 4", "move spore"), ("move sleeptalk", "move swordsdance")]
-    assert ec.showdown_rate(licki, BRELOOM_SPORE, turns, "[from] move: Sleep Talk", n=200) == 0.0  # (Showdown)
+    # (Showdown)
+    assert ec.showdown_rate(licki, BRELOOM_SPORE, turns, "[from] move: Sleep Talk", n=200) == 0.0
     outs = ec.engine_outcomes(ec.engine_state(states[1]), "sleeptalk", "swordsdance")
     assert abs(sum(o[0] for o in outs) - 1) < 1e-4, [o[0] for o in outs]
     breloom = states[1]["sides"][1]["mons"][0]["hp"]
@@ -7684,15 +9474,21 @@ def test_l245_the_battle_ends_at_the_win():
 # (Showdown's onDamagingHit per hit, none once disabled): 1 - 0.7^k -- the engine's secondary
 # rolled once (L215 made the contact statuses per hit, not this volatile)
 def test_l246_cursed_body_at_each_hit():
-    gengar = _setter("Gengar", "Cursed Body", "Leftovers", "- Protect\n- Shadow Ball\n- Taunt\n- Calm Mind")
-    bird = _attacker("Corviknight", "Pressure", "Leftovers", "- Dual Wingbeat\n- Roost\n- Body Press\n- Defog")
+    gengar = _setter(
+        "Gengar", "Cursed Body", "Leftovers", "- Protect\n- Shadow Ball\n- Taunt\n- Calm Mind"
+    )
+    bird = _attacker(
+        "Corviknight", "Pressure", "Leftovers", "- Dual Wingbeat\n- Roost\n- Body Press\n- Defog"
+    )
     turns = [("move dualwingbeat", "move calmmind")]
     rate = ec.showdown_rate(bird, gengar, turns, "|-start|p1a: Corviknight|Disable", n=600)
     want = 0.9 * (1 - 0.7**2)  # (its 90% accuracy, once; two hits, a roll each)
     assert abs(rate - want) < 0.06, rate  # (Showdown)
     states = ec.run_showdown(bird, gengar, [])
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "dualwingbeat", "calmmind")
-    p = sum(o[0] for o in outs if "disable" in {str(v).lower() for v in o[1].side_one.volatile_statuses})
+    p = sum(
+        o[0] for o in outs if "disable" in {str(v).lower() for v in o[1].side_one.volatile_statuses}
+    )
     assert abs(p - want) < 0.01, p
 
 
@@ -7701,11 +9497,22 @@ def test_l246_cursed_body_at_each_hit():
 # move this turn failed (Stomping Tantrum's, Temper Flare's); the engine's miss branch marked the
 # user's alone
 def test_l247_a_reflected_moves_miss_is_its_reflectors():
-    dirge = _setter("Skeledirge", "Unaware", "Leftovers", "- Will-O-Wisp\n- Torch Song\n- Slack Off\n- Shadow Ball")
-    hatt = _setter("Hatterene", "Magic Bounce", "Leftovers", "- Calm Mind\n- Psyshock\n- Draining Kiss\n- Mystical Fire")
+    dirge = _setter(
+        "Skeledirge",
+        "Unaware",
+        "Leftovers",
+        "- Will-O-Wisp\n- Torch Song\n- Slack Off\n- Shadow Ball",
+    )
+    hatt = _setter(
+        "Hatterene",
+        "Magic Bounce",
+        "Leftovers",
+        "- Calm Mind\n- Psyshock\n- Draining Kiss\n- Mystical Fire",
+    )
     states = ec.run_showdown(dirge, CORVIKNIGHT + "\n\n" + hatt, [("move willowisp", "switch 2")])
     assert any("[from] ability: Magic Bounce" in x for x in states[1]["log"])  # (Showdown)
-    assert ec.view(states[1]).get("s2.volatile.lastmovefailed")  # (the reflected one failed: a Fire type)
+    # (the reflected one failed: a Fire type)
+    assert ec.view(states[1]).get("s2.volatile.lastmovefailed")
     outs = ec.engine_outcomes(ec.engine_state(states[0]), "willowisp", "hatterene")
     # (a hit at a Fire type, a miss: alike now -- one outcome or two, each failed)
     assert abs(sum(o[0] for o in outs) - 1) < 1e-4

@@ -38,6 +38,9 @@ src = ["src", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
+# line length is the formatter's (ruff format, 100); the lines it leaves long are the hand-aligned
+# `# fmt: skip` ones
+ignore = ["E501"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

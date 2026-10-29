@@ -85,7 +85,9 @@ def main() -> None:
     batcher = Batcher(a.run)
 
     def search(worlds, ctx, seed):
-        rec, _ = batcher.submit(worlds, [ctx] * len(worlds), a.iterations, seed, (0.0, 10.0)).result()
+        rec, _ = batcher.submit(
+            worlds, [ctx] * len(worlds), a.iterations, seed, (0.0, 10.0)
+        ).result()
         tot = sum(rec["visits"]) or 1
         return {c: v / tot for c, v in zip(rec["names"], rec["visits"], strict=True) if c and v}
 

@@ -23,11 +23,18 @@ LINES = [
 
 
 def test_the_item_a_mon_held_before_a_trick():
-    assert item_changes(LINES) == {("p2", "latios"): "choicespecs", ("p1", "corviknight"): "lifeorb"}
+    assert item_changes(LINES) == {
+        ("p2", "latios"): "choicespecs",
+        ("p1", "corviknight"): "lifeorb",
+    }
     # (Thief: it held none to steal one)
-    thief = LINES[:6] + ["|move|p2a: Latios|Thief|p1a: Corviknight", "|-damage|p1a: Corviknight|200/399",
-                         "|-enditem|p1a: Corviknight|Leftovers|[silent]|[from] move: Thief|[of] p2a: Latios",
-                         "|-item|p2a: Latios|Leftovers|[from] move: Thief|[of] p1a: Corviknight", "|turn|3"]
+    thief = LINES[:6] + [
+        "|move|p2a: Latios|Thief|p1a: Corviknight",
+        "|-damage|p1a: Corviknight|200/399",
+        "|-enditem|p1a: Corviknight|Leftovers|[silent]|[from] move: Thief|[of] p2a: Latios",
+        "|-item|p2a: Latios|Leftovers|[from] move: Thief|[of] p1a: Corviknight",
+        "|turn|3",
+    ]
     assert item_changes(thief) == {("p2", "latios"): "none", ("p1", "corviknight"): "leftovers"}
 
 
@@ -35,7 +42,9 @@ def test_a_tricked_mons_candidates_are_its_item_then():
     belief = BeliefModel.load()
     mon = Pokemon(species="latios", gen=9)
     mon.item = "lifeorb"  # (poke-env: the item it holds now)
-    cands, _ = _candidates(belief, mon, ("Latios",), then=item_changes(LINES).get(("p2", "latios"), False))
+    cands, _ = _candidates(
+        belief, mon, ("Latios",), then=item_changes(LINES).get(("p2", "latios"), False)
+    )
     assert {c[0] for c in cands} == {"choicespecs"}
     # (not changed: the revealed item as before)
     cands, _ = _candidates(belief, mon, ("Latios",))
@@ -157,7 +166,11 @@ def test_which_switch_ins_may_be_an_illusion():
     assert switch("|switch|p2a: Corviknight|Corviknight, M|100/100") is False
     assert switch("|switch|p2a: Snorlax|Snorlax, M|100/100") is True
     il.feed("|replace|p2a: Zoroark|Zoroark-Hisui, M".split("|"))
-    assert il.ambiguous["p2a"] is False and il.order["p2"] == ["zoroarkhisui", "corviknight", "snorlax"]
+    assert il.ambiguous["p2a"] is False and il.order["p2"] == [
+        "zoroarkhisui",
+        "corviknight",
+        "snorlax",
+    ]
     il.feed("|faint|p2a: Zoroark".split("|"))
     assert switch("|switch|p2a: Snorlax|Snorlax, M|100/100") is False
 
@@ -180,8 +193,11 @@ def test_a_takers_victim_lost_its_item():
         "|turn|2",
     ]
     assert item_changes(lines) == {("p1", "hoopa"): "none", ("p2", "latios"): "choicescarf"}
-    bestow = lines[:3] + ["|move|p2a: Latios|Bestow|p1a: Hoopa",
-                          "|-item|p1a: Hoopa|Choice Scarf|[from] move: Bestow|[of] p2a: Latios", "|turn|2"]
+    bestow = lines[:3] + [
+        "|move|p2a: Latios|Bestow|p1a: Hoopa",
+        "|-item|p1a: Hoopa|Choice Scarf|[from] move: Bestow|[of] p2a: Latios",
+        "|turn|2",
+    ]
     assert item_changes(bestow) == {("p1", "hoopa"): "none", ("p2", "latios"): "choicescarf"}
 
 
@@ -210,7 +226,10 @@ def test_each_hit_is_explained_with_its_ability_then():
     hit its own then."""
     from alpha_poke.agents.damage_obs import ability_changes
 
-    assert ability_changes(SKILL_SWAP) == {("p2", "azumarill"): "hugepower", ("p1", "gardevoir"): "synchronize"}
+    assert ability_changes(SKILL_SWAP) == {
+        ("p2", "azumarill"): "hugepower",
+        ("p1", "gardevoir"): "synchronize",
+    }
     assert [h.ability_then for h in hits(SKILL_SWAP, "p1") if not h.by_us] == [None, "synchronize"]
     mon = Pokemon(species="azumarill", gen=9)
     mon.ability = "hugepower"
@@ -222,12 +241,22 @@ def test_each_hit_is_explained_with_its_ability_then():
     gastro = SKILL_SWAP[:6] + ["|-endability|p2a: Azumarill", "|turn|2"] + SKILL_SWAP[9:]
     assert ability_changes(gastro) == {("p2", "azumarill"): None}
     assert [h.ability_then for h in hits(gastro, "p1") if not h.by_us] == [None, "none"]
-    cands, _ = _candidates(BeliefModel.load(), Pokemon(species="azumarill", gen=9), ("Azumarill",), ab=None)
+    cands, _ = _candidates(
+        BeliefModel.load(), Pokemon(species="azumarill", gen=9), ("Azumarill",), ab=None
+    )
     assert {"hugepower", "thickfat"} <= {c[1] for c in cands}
     # (a change lasts while it is in: back after a switch, its own again)
-    back = SKILL_SWAP[:9] + ["|switch|p2a: Snorlax|Snorlax, M|100/100", "|turn|2",
-                             "|switch|p2a: Azumarill|Azumarill, M|100/100", "|turn|3"] + [
-        x.replace("turn|2", "turn|3") for x in SKILL_SWAP[9:11]] + ["|turn|4"]
+    back = (
+        SKILL_SWAP[:9]
+        + [
+            "|switch|p2a: Snorlax|Snorlax, M|100/100",
+            "|turn|2",
+            "|switch|p2a: Azumarill|Azumarill, M|100/100",
+            "|turn|3",
+        ]
+        + [x.replace("turn|2", "turn|3") for x in SKILL_SWAP[9:11]]
+        + ["|turn|4"]
+    )
     assert [h.ability_then for h in hits(back, "p1") if not h.by_us] == [None, None]
 
 
@@ -250,7 +279,10 @@ def test_a_contact_with_lingering_aroma_or_mummy_changes_the_hitters_ability():
             "|turn|3",
         ]
         assert ability_changes(lines) == {("p2", "azumarill"): "hugepower"}
-        assert [h.ability_then for h in hits(lines, "p1")] == [None, ability.lower().replace(" ", "")]
+        assert [h.ability_then for h in hits(lines, "p1")] == [
+            None,
+            ability.lower().replace(" ", ""),
+        ]
 
 
 def test_an_illusions_changes_are_the_real_mons():

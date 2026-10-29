@@ -82,7 +82,8 @@ class MonRecord:
     brought: bool = False  # ever appeared on the field
     switch_ins: list[int] = field(default_factory=list)  # turns of switch-in
     fainted_turn: int | None = None
-    faint_turns: list = field(default_factory=list)  # every turn it fainted in (Revival Blessing: more than one)
+    # every turn it fainted in (Revival Blessing: more than one)
+    faint_turns: list = field(default_factory=list)
     faint_orders: dict = field(default_factory=dict)  # turn -> its place among that turn's actions
     hp: int | None = None  # last known HP percent
     phantom: bool = False  # not in team preview (Illusion / unmatched)
@@ -122,7 +123,8 @@ class Replay:
     teams: dict[str, list[MonRecord]]
     actions: list[Action]
     hp_by_turn: dict[int, dict[str, tuple[str, int]]]  # turn -> side -> (species, hp%)
-    cants: list[tuple[int, str, str, int]]  # (turn, side, reason, order): could not act (par, slp, flinch...)
+    # (turn, side, reason, order): could not act (par, slp, flinch...)
+    cants: list[tuple[int, str, str, int]]
     field_events: list[dict]
     warnings: list[str]
     # (side, target species) -> the moves the side's active used while transformed into it: its
@@ -185,7 +187,9 @@ class ReplayParser:
         self.pending_eject: set[str] = set()
         self.eject_order: dict[str, int] = {}  # side -> its eject's place among the turn's actions
         self.locked: list[tuple[int, str]] = []
-        self.bounced_shot: tuple[str, int] | None = None  # (side, order): a Parting Shot bounced back
+        self.bounced_shot: tuple[str, int] | None = (
+            None  # (side, order): a Parting Shot bounced back
+        )
         self.tera_pending: dict[str, str] = {}
         self.order = 0
         self.cants: list[tuple[int, str, str]] = []
@@ -325,7 +329,9 @@ class ReplayParser:
             field_events=self.field_events,
             warnings=self.warnings,
             copied=self.copied,
-            ejecting=[(self.turn, sd, self.eject_order.get(sd)) for sd in sorted(self.pending_eject)],
+            ejecting=[
+                (self.turn, sd, self.eject_order.get(sd)) for sd in sorted(self.pending_eject)
+            ],
             locked=self.locked,
         )
 
@@ -404,7 +410,11 @@ class ReplayParser:
         pivot = (
             not forced
             and not is_lead
-            and (ejected or moved or (last is not None and last.turn == self.turn and last.kind == "move"))
+            and (
+                ejected
+                or moved
+                or (last is not None and last.turn == self.turn and last.kind == "move")
+            )
         )
         if is_lead:
             self.actions.append(Action(0, side, "lead", "", to=mon.species))
@@ -502,7 +512,8 @@ class ReplayParser:
         if mon is not None:
             mon.fainted_turn = self.turn
             mon.faint_turns.append(self.turn)
-            mon.faint_orders[self.turn] = self.order  # (its place among the turn's actions: causality)
+            # (its place among the turn's actions: causality)
+            mon.faint_orders[self.turn] = self.order
             mon.hp = 0
             self.pending_forced.add(side)
             # (a terastallized active fainting before its move -- a priority KO: its tera is no

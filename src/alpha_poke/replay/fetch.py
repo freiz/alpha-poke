@@ -39,7 +39,6 @@ class ReplayClient:
             params["user"] = user
         return self.http.get(f"{BASE}/search.json", params).json()
 
-
     # ---- full replays ---------------------------------------------------------------
     def path_for(self, format_id: str, replay_id: str) -> Path:
         return self.cache_dir / format_id / f"{replay_id}.json.gz"

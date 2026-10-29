@@ -75,7 +75,11 @@ def engine_ability(mon, own: str) -> str:
     t = getattr(mon, "temporary_ability", None)
     # (As One announces itself and the ability it holds -- Unnerve, Chilling / Grim Neigh: the set's
     # As One, a Ditto's copied one too; S121)
-    if t and own.startswith("asone") and to_id(t) in ("asone", "unnerve", "chillingneigh", "grimneigh"):
+    if (
+        t
+        and own.startswith("asone")
+        and to_id(t) in ("asone", "unnerve", "chillingneigh", "grimneigh")
+    ):
         return own
     return to_id(t) if t else own
 

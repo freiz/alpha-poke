@@ -22,7 +22,10 @@ from alpha_poke.analysis.tables import OUT
 # replay sources, same columns (id, log, uploadtime, rating, ...): Metamon's Gen9 OU (to
 # 2026-05-19) and the HolidayOugi HF dump's games after it (deduplicated by id; 2026-10-09).
 # Shard file names are unique across the sources
-SOURCES = (str(paths.METAMON / "gen9ou" / "*.parquet"), str(paths.REPLAYS_HF / "gen9ou" / "*.parquet"))
+SOURCES = (
+    str(paths.METAMON / "gen9ou" / "*.parquet"),
+    str(paths.REPLAYS_HF / "gen9ou" / "*.parquet"),
+)
 
 
 def source_files() -> list[str]:

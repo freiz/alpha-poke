@@ -33,7 +33,14 @@ EPS = 1e-3  # the likelihood floor (x prior): no candidate is ever excluded outr
 _QUIET = ("switch", "drag", "-damage", "-heal", "detailschange", "-terastallize", "j", "c", "l",
           "raw", "", "t:", "upkeep", "-hint", "-message", "-ability")  # fmt: skip
 # moves whose damage line is not one roll of one hit (Dragon Darts' two hits show no -hitcount)
-_SKIP_MOVES = {"dragondarts", "beatup", "populationbomb", "tripleaxel", "triplekick", "surgingstrikes"}
+_SKIP_MOVES = {
+    "dragondarts",
+    "beatup",
+    "populationbomb",
+    "tripleaxel",
+    "triplekick",
+    "surgingstrikes",
+}
 # after the move line, these void the hit as evidence
 _VOID = ("-crit", "-hitcount", "-immune", "-miss", "-fail", "-activate", "-enditem", "cant")
 
@@ -84,7 +91,9 @@ def hits(lines: list[str], our_side: str) -> list[Hit]:
     tera: dict[tuple[str, str], str] = {}
     items = _Items()  # their mons' items as the log shows them: each hit's item then
     abil = _Abilities()  # and their abilities: each hit's ability then
-    forme: dict[tuple[str, str], str] = {}  # (side, species) -> its forme now (a -formechange's, ...)
+    forme: dict[
+        tuple[str, str], str
+    ] = {}  # (side, species) -> its forme now (a -formechange's, ...)
     transformed: set = set()  # slots whose active is transformed (its stats its target's)
     since: dict[str, int] = {}  # slot -> the hits' count as its active came in (an Illusion's undo)
     # (side, nickname) -> the species it first came in as -- poke-env's key: a Palafin back in as
@@ -135,9 +144,16 @@ def hits(lines: list[str], our_side: str) -> list[Hit]:
             # Zoroark's Choice Specs hits read as a Latias's)
             slot, fake = f[2][:3], active.get(f[2][:3])
             mine = slot[:2] == our_side
-            out[since.get(slot, 0):] = [
-                h for h in out[since.get(slot, 0):]
-                if ((h.attacker if h.by_us else h.defender) if mine else (h.defender if h.by_us else h.attacker)) != fake]
+            out[since.get(slot, 0) :] = [
+                h
+                for h in out[since.get(slot, 0) :]
+                if (
+                    (h.attacker if h.by_us else h.defender)
+                    if mine
+                    else (h.defender if h.by_us else h.attacker)
+                )
+                != fake
+            ]
             real = came_as.setdefault((slot[:2], f[2].split(": ", 1)[-1]), _species(f[3]))
             if fake is not None and (slot[:2], fake) in hp:
                 hp[(slot[:2], real)] = hp[(slot[:2], fake)]
@@ -194,8 +210,12 @@ def hits(lines: list[str], our_side: str) -> list[Hit]:
             quiet = False
     # (their mons' formes now: the candidates' -- a hit in another is left out)
     their = "p2" if our_side == "p1" else "p1"
-    return [h for h in out if not h.forme
-            or h.forme == forme.get((their, h.defender if h.by_us else h.attacker), h.forme)]
+    return [
+        h
+        for h in out
+        if not h.forme
+        or h.forme == forme.get((their, h.defender if h.by_us else h.attacker), h.forme)
+    ]
 
 
 def _shown(hp: int, maxhp: int) -> int:
@@ -206,8 +226,9 @@ def _shown(hp: int, maxhp: int) -> int:
     return 99 if p == 100 and hp < maxhp else p
 
 
-def _with_hp(base: str, side_one: bool, slot: int, hp: int | None = None,
-             pct: int | None = None) -> str:
+def _with_hp(
+    base: str, side_one: bool, slot: int, hp: int | None = None, pct: int | None = None
+) -> str:
     """``base`` with one mon's HP set: ``hp`` exact, or ``pct`` percent of its max HP (the state
     string's mon fields: HP at index 6, max HP at 7)."""
     parts = base.split("/")
@@ -223,12 +244,15 @@ def _with_hp(base: str, side_one: bool, slot: int, hp: int | None = None,
     return "/".join(parts)
 
 
-def likelihood(hit: Hit, base: str, our_slot: int, their_slot: int, cands: list[tuple]) -> list[float]:
+def likelihood(
+    hit: Hit, base: str, our_slot: int, their_slot: int, cands: list[tuple]
+) -> list[float]:
     """P(the observed HP | candidate) per candidate (item, ability, stats [6], tera, on): the
     16 non-crit rolls in the turn-start state ``base`` (side one = us), the defender at its HP
     before the hit (a switch-in after its hazards: Multiscale / Shadow Shield need full HP)."""
     own_tera = bool(hit.tera if hit.by_us else hit.defender_tera)  # our mon terastallized
-    if hit.item_then is not None:  # the item it held at the hit, the log's (not the one it started with)
+    # the item it held at the hit, the log's (not the one it started with)
+    if hit.item_then is not None:
         cands = [(hit.item_then, *c[1:]) for c in cands]
     if hit.ability_then is not None:  # and the ability it had then, the log's
         cands = [(c[0], hit.ability_then, *c[2:]) for c in cands]
@@ -321,7 +345,9 @@ class _Illusion:
         self.active: dict[str, str] = {}  # slot -> the species shown
         self.ambiguous: dict[str, bool] = {}
         self._led: set = set()
-        self._before: dict[str, tuple] = {}  # slot -> (the order before its last switch-in, a lead's)
+        self._before: dict[
+            str, tuple
+        ] = {}  # slot -> (the order before its last switch-in, a lead's)
 
     def _target(self, side: str, order: list[str], holder: str) -> str | None:
         """The disguise of ``holder`` switching in to the place of order[0]: Showdown swaps the
@@ -347,8 +373,11 @@ class _Illusion:
             if shown not in order:
                 order.append(shown)
             lead = side not in self._led
-            holders = [h for h in order if h in ILLUSION and (side, h) not in self.fainted
-                       and h != self.active.get(slot)]
+            holders = [
+                h
+                for h in order
+                if h in ILLUSION and (side, h) not in self.fainted and h != self.active.get(slot)
+            ]
             # (if it is the holder: its disguise -- a lead's from the preview's order)
             self.ambiguous[slot] = any(
                 h != shown and self._target(side, [h] + [x for x in order if x != h] if lead else order, h) == shown
@@ -408,7 +437,9 @@ class _Items:
     def feed(self, f: list[str], active: dict) -> None:
         tag = f[1] if len(f) > 1 else ""
         line = "|".join(f)
-        if self._swap is not None and not (tag in ("-item", "-enditem") and any(x in line for x in _SWAPS)):
+        if self._swap is not None and not (
+            tag in ("-item", "-enditem") and any(x in line for x in _SWAPS)
+        ):
             self._end_swap()
         if tag == "-activate" and len(f) > 3 and f[3] in ("move: Trick", "move: Switcheroo"):
             of = next((x[5:] for x in f[4:] if x.startswith("[of] ")), "")
@@ -504,7 +535,11 @@ class _Abilities:
                 self._set(key, f[3], f[4] if len(f) > 5 and not f[4].startswith("[") else "")
             elif self.now.get(key) is None:
                 self.original.setdefault(key, to_id(f[3]))
-        elif tag == "-activate" and f[3] in ("ability: Mummy", "ability: Lingering Aroma") and len(f) > 4:
+        elif (
+            tag == "-activate"
+            and f[3] in ("ability: Mummy", "ability: Lingering Aroma")
+            and len(f) > 4
+        ):
             if self.now.get(key) is None:
                 self.original.setdefault(key, to_id(f[3][9:]))  # (the holder's)
             mon = active.get(f[4][:3])
@@ -536,8 +571,9 @@ def ability_changes(lines: list[str]) -> dict[tuple[str, str], str | None]:
     return {k: abil.original.get(k) for k in abil.changed}
 
 
-def _candidates(belief, mon, team_names: tuple[str, ...], then=False, mix=None,
-                ab=False) -> tuple[list, list[float]]:
+def _candidates(
+    belief, mon, team_names: tuple[str, ...], then=False, mix=None, ab=False
+) -> tuple[list, list[float]]:
     """(item, ability, Spread) candidates of an opposing mon and their prior: the belief's team-
     conditioned item marginal (a revealed item alone), the usage of its possible abilities (a
     revealed one alone), the usage spreads. The item is the one it held when it hit / was hit:
@@ -558,7 +594,8 @@ def _candidates(belief, mon, team_names: tuple[str, ...], then=False, mix=None,
         items = sorted(marg.items(), key=lambda kv: -kv[1])[:TOP_ITEMS] or [("none", 1.0)]
     elif mon.item and mon.item != "unknown_item":
         items = [(mon.item, 1.0)]
-    elif required_item(mon) and (mix is None or mix > 0):  # (a forme's item: engine_state.required_item)
+    # (a forme's item: engine_state.required_item)
+    elif required_item(mon) and (mix is None or mix > 0):
         items = [(required_item(mon), 1.0)]
     else:
         items = sorted(marg.items(), key=lambda kv: -kv[1])[:TOP_ITEMS] or [("none", 1.0)]
@@ -584,11 +621,11 @@ def damage_posteriors(battle, belief, theirs: list, team_names: tuple[str, ...],
     """Per opposing species id with clean hits: [(item, ability, Spread, posterior weight)] over
     its candidates (``_candidates``), from the turn-start states the search recorded
     (``record_base``). Cached per mon and evidence."""
+    import poke_engine as pe
+
     from alpha_poke.agents.damage import calc_stats
     from alpha_poke.agents.net_context import battle_log
     from alpha_poke.agents.pokeview import own_base_stats
-
-    import poke_engine as pe
 
     bases = getattr(battle, "_alpha_bases", None)
     if not bases:
@@ -639,7 +676,7 @@ def damage_posteriors(battle, belief, theirs: list, team_names: tuple[str, ...],
                 tera = on or (m.tera_type.name.lower() if m.tera_type else "typeless")
                 try:
                     likes.append(likelihood(h, base, os_, ts, [(c[0], c[1], v, tera, bool(on))
-                                                               for c, v in zip(cands, vec)]))  # fmt: skip
+                                                               for c, v in zip(cands, vec, strict=True)]))  # fmt: skip
                 except BaseException:  # noqa: BLE001 - an engine panic: no evidence from it
                     continue
             post = posterior(prior, likes)

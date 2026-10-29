@@ -54,7 +54,11 @@ VARIANTS: dict[str, tuple[str, dict]] = {
     **{
         f"p_m{x}": (
             "policy",
-            {"model": os.environ.get(f"ALPHA_MODEL_{x.upper()}", DEFAULT_MODEL), "tau": 0.05, "rating": 0},
+            {
+                "model": os.environ.get(f"ALPHA_MODEL_{x.upper()}", DEFAULT_MODEL),
+                "tau": 0.05,
+                "rating": 0,
+            },
         )
         for x in ("a", "b")
     },  # fmt: skip

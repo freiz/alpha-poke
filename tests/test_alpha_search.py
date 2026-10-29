@@ -13,4 +13,3 @@ def test_state_string_roundtrip():
     for s in STATES:
         assert alpha_search.roundtrip(s) == s
         assert pe.State.from_string(alpha_search.roundtrip(s)).to_string() == s
-

@@ -98,8 +98,17 @@ def test_disable_holds_at_the_live_root(belief):
     b.available_moves  # noqa: B018
     req = [{"move": m, "id": m, "pp": 8, "maxpp": 8, "disabled": m == "reflect"}
            for m in ("earthquake", "reflect", "substitute", "hyperbeam")]  # fmt: skip
-    side = [mon("p1: Garchomp", "Garchomp", ["earthquake", "reflect", "substitute", "hyperbeam"],
-                "leftovers", "roughskin", True), mon("p1: Dondozo", "Dondozo", ["wavecrash"])]
+    side = [
+        mon(
+            "p1: Garchomp",
+            "Garchomp",
+            ["earthquake", "reflect", "substitute", "hyperbeam"],
+            "leftovers",
+            "roughskin",
+            True,
+        ),
+        mon("p1: Dondozo", "Dondozo", ["wavecrash"]),
+    ]
     b.parse_request({"active": [{"moves": req}], "side": {"name": "us", "id": "p1", "pokemon": side},
                      "rqid": 2})  # fmt: skip
     _disable_holds(state(b, belief), 1)  # Garchomp had moved: 5 turns, one end passed
@@ -110,8 +119,14 @@ def test_disable_holds_in_a_replay_position(belief):
     from alpha_poke.agents.engine_state import KnownSet, SpectatorSide
 
     b = battle(["|turn|2", *DISABLED_REFLECT])
-    known = {"garchomp": KnownSet(moves=["earthquake", "reflect", "substitute", "hyperbeam"],
-                                  item="leftovers", ability="roughskin", tera="normal")}
+    known = {
+        "garchomp": KnownSet(
+            moves=["earthquake", "reflect", "substitute", "hyperbeam"],
+            item="leftovers",
+            ability="roughskin",
+            tera="normal",
+        )
+    }
     spec = SpectatorSide(team=list(b.team.values()), known=known, names=("Garchomp", "Dondozo"))
     s = build_state(b, belief, ("Garchomp", "Dondozo"), random.Random(0), spectator=spec)
     one = s.side_one
@@ -174,9 +189,15 @@ def test_extending_items_in_a_replay_position(belief):
     Light Clay Reflect and Heat Rock sun read 5 turns (live: 8)."""
     b = battle(["|move|p1a: Garchomp|Reflect|p1a: Garchomp", "|-sidestart|p1: us|Reflect",
                 "|upkeep|", "|turn|2"], item="lightclay")  # fmt: skip
-    spec = _spectator(b, "lightclay", "roughskin", ("earthquake", "reflect", "substitute", "hyperbeam"))
+    spec = _spectator(
+        b, "lightclay", "roughskin", ("earthquake", "reflect", "substitute", "hyperbeam")
+    )
     s = build_state(b, belief, ("Garchomp", "Dondozo"), random.Random(0), spectator=spec)
-    assert s.side_one.side_conditions.reflect == 8 - 1 == state(b, belief).side_one.side_conditions.reflect
+    assert (
+        s.side_one.side_conditions.reflect
+        == 8 - 1
+        == state(b, belief).side_one.side_conditions.reflect
+    )
     moves = ("lavaplume", "rapidspin", "yawn", "stealthrock")
     b = battle(["|-weather|SunnyDay|[from] ability: Drought|[of] p1a: Torkoal", "|upkeep|",
                 "|turn|2"], us="Torkoal", item="heatrock", ability="drought", moves=moves)  # fmt: skip
@@ -195,8 +216,15 @@ def test_extending_items_in_a_replay_position(belief):
 def test_a_screen_set_without_an_item_is_not_extended_by_a_light_clay_taken_after(belief, take):
     """2026-10-23 review: an itemless Reflect setter takes a Light Clay the next turn (Magician,
     Thief): 5 turns (Showdown's 3 left after two ends of turn), not 8."""
-    lines = ["|move|p1a: Garchomp|Reflect|p1a: Garchomp", "|-sidestart|p1: us|Reflect", "|upkeep|",
-             "|turn|2", *take, "|upkeep|", "|turn|3"]
+    lines = [
+        "|move|p1a: Garchomp|Reflect|p1a: Garchomp",
+        "|-sidestart|p1: us|Reflect",
+        "|upkeep|",
+        "|turn|2",
+        *take,
+        "|upkeep|",
+        "|turn|3",
+    ]
     b = battle(lines, item="lightclay")  # (the request after: it holds the Light Clay)
     assert state(b, belief).side_one.side_conditions.reflect == 5 - 2
 
@@ -204,11 +232,18 @@ def test_a_screen_set_without_an_item_is_not_extended_by_a_light_clay_taken_afte
 def test_a_screen_set_without_an_item_is_not_extended_by_a_light_clay_given_after(belief):
     """2026-10-23 review: Garchomp with no item sets Reflect, the next turn a Trick gives it a
     Light Clay: Showdown's 5 turns (3 left after two ends of turn), not 8 (6)."""
-    lines = ["|move|p1a: Garchomp|Reflect|p1a: Garchomp", "|-sidestart|p1: us|Reflect", "|upkeep|",
-             "|turn|2", "|move|p2a: Gholdengo|Trick|p1a: Garchomp",
-             "|-activate|p2a: Gholdengo|move: Trick|[of] p1a: Garchomp",
-             "|-item|p1a: Garchomp|Light Clay|[from] move: Trick",
-             "|-enditem|p2a: Gholdengo|Light Clay|[silent]|[from] move: Trick", "|upkeep|", "|turn|3"]
+    lines = [
+        "|move|p1a: Garchomp|Reflect|p1a: Garchomp",
+        "|-sidestart|p1: us|Reflect",
+        "|upkeep|",
+        "|turn|2",
+        "|move|p2a: Gholdengo|Trick|p1a: Garchomp",
+        "|-activate|p2a: Gholdengo|move: Trick|[of] p1a: Garchomp",
+        "|-item|p1a: Garchomp|Light Clay|[from] move: Trick",
+        "|-enditem|p2a: Gholdengo|Light Clay|[silent]|[from] move: Trick",
+        "|upkeep|",
+        "|turn|3",
+    ]
     b = battle(lines, item="lightclay")  # (the request after the Trick: it holds the Light Clay)
     assert state(b, belief).side_one.side_conditions.reflect == 5 - 2
 
@@ -234,7 +269,11 @@ def test_sleep_talk_runs_out_of_pp(belief):
     (poke-env counts its uses, none of the moves it calls)."""
     talk = ["|move|p2a: Gholdengo|Sleep Talk|p2a: Gholdengo",
             "|move|p2a: Gholdengo|Make It Rain|p1a: Garchomp|[from]move: Sleep Talk"]  # fmt: skip
-    lines = ["|move|p2a: Gholdengo|Make It Rain|p1a: Garchomp", "|turn|2", "|-status|p2a: Gholdengo|slp"]
+    lines = [
+        "|move|p2a: Gholdengo|Make It Rain|p1a: Garchomp",
+        "|turn|2",
+        "|-status|p2a: Gholdengo|slp",
+    ]
     for t in range(16):  # 10 PP, 16 with PP Ups
         lines += [*talk, f"|turn|{3 + t}"]
     pp = {m.id: m.pp for m in state(battle(lines), belief).side_two.pokemon[0].moves}
@@ -307,8 +346,14 @@ def test_terastallized_keeps_original_types(belief, who, line, want):
     Showdown's getTypes(false, true)); the tera type is apart (has_type reads only it)."""
     b = battle([line, "|turn|2"])
     if who == "one":  # (the request after the turn -- the server sends it last -- shows it)
-        g = mon("p1: Garchomp", "Garchomp", ["earthquake", "reflect", "substitute", "hyperbeam"],
-                "leftovers", "roughskin", True) | {"teraType": "Steel", "terastallized": "Steel"}
+        g = mon(
+            "p1: Garchomp",
+            "Garchomp",
+            ["earthquake", "reflect", "substitute", "hyperbeam"],
+            "leftovers",
+            "roughskin",
+            True,
+        ) | {"teraType": "Steel", "terastallized": "Steel"}
         req = [{"move": m, "id": m, "pp": 8, "maxpp": 8, "disabled": False} for m in GARCHOMP]
         b.parse_request({"active": [{"moves": req}], "side": {"name": "us", "id": "p1",
                          "pokemon": [g, mon("p1: Dondozo", "Dondozo", ["wavecrash"])]}, "rqid": 2})  # fmt: skip
@@ -443,6 +488,7 @@ def test_pending_moves_struggle_and_speed():
     parts[1] = "=".join(mons)
     out = alpha_search.pending_moves("/".join(parts), "uturn")
     assert out == ["struggle"], out
+
     # speeds 200 (ours) / 300 (theirs), Tackle (priority 0) and Avalanche (-4): our U-turn went
     # first, so not their Tackle (it would have come first) -- Avalanche; Tackle alone: the world
     # contradicts the order, by priority alone
@@ -455,7 +501,7 @@ def test_pending_moves_struggle_and_speed():
             f[17] = str(sp)
             slots = [i for i, x in enumerate(f) if x.count(";") == 2]
             if k == 1:
-                for i, mv in zip(slots, moves + ["NONE"] * 4):
+                for i, mv in zip(slots, moves + ["NONE"] * 4, strict=False):
                     f[i] = f"{mv};false;{0 if mv == 'NONE' else 16}"
             mons[a] = ",".join(f)
             parts[k] = "=".join(mons)
@@ -481,7 +527,11 @@ def _our_view(s):
     one = s.side_one
     mon = one.pokemon[int(one.active_index)]
     d = one.volatile_status_durations
-    dis = (d.disable % 8, mon.moves[d.disable // 8].id) if "disable" in one.volatile_statuses else None
+    dis = (
+        (d.disable % 8, mon.moves[d.disable // 8].id)
+        if "disable" in one.volatile_statuses
+        else None
+    )
     return {
         "options": sorted(n for n in alpha_search.slot_names([s.to_string()])[0] if n),
         "conditions": {k: getattr(one.side_conditions, k) for k in SIDE_CONDITIONS},
@@ -551,7 +601,8 @@ def _check_transformed(s, want_moves=None):
     assert (me.attack, me.special_attack, me.speed) == (foe.attack, foe.special_attack, foe.speed)
     assert me.types == foe.types and me.ability == foe.ability
     stats, weight, own = me.transform_backup
-    assert own[0] == ("transform", 15) and stats[0] != foe.attack, me.transform_backup  # (used once)
+    # (used once)
+    assert own[0] == ("transform", 15) and stats[0] != foe.attack, me.transform_backup
     assert weight == 40  # (Ditto's 4 kg: not its target's)
     if want_moves is not None:
         assert sorted(m.id for m in me.moves if m.id != "none") == sorted(want_moves)
@@ -815,7 +866,9 @@ def test_a_saved_move_with_the_sides_optional_fields():
 
     s2 = pe.Side(pokemon=[pe.Pokemon(id="gholdengo", hp=300, maxhp=300, moves=[pe.Move(id="shadowball", pp=8)])],
                  tera_used=True, future_sight=(2, pe.PokemonIndex("0")), future_doom=True)  # fmt: skip
-    st = pe.State(side_one=pe.Side(pokemon=[pe.Pokemon(id="garchomp", hp=300, maxhp=300)]), side_two=s2)
+    st = pe.State(
+        side_one=pe.Side(pokemon=[pe.Pokemon(id="garchomp", hp=300, maxhp=300)]), side_two=s2
+    )
     out = _with_saved_move(st, "shadowball")
     assert out.side_two.switch_out_move_second_saved_move.lower() == "shadowball"
     assert out.side_two.tera_used
@@ -829,7 +882,9 @@ def test_transformed_into_an_ogerpon_cannot_terastallize(belief):
                us="Ogerpon", ability="defiant", moves=("ivycudgel", "uturn", "hornleech", "spikes"))  # fmt: skip
     s = build_state(b, belief, ("Ogerpon", "Dondozo"), random.Random(0))
     assert {"transform", "notera"} <= {str(v).lower() for v in s.side_two.volatile_statuses}
-    assert "notera" not in {str(v).lower() for v in state(_their_ditto_garchomp(), belief).side_two.volatile_statuses}
+    assert "notera" not in {
+        str(v).lower() for v in state(_their_ditto_garchomp(), belief).side_two.volatile_statuses
+    }
 
 
 def _their_ditto_garchomp():
@@ -853,7 +908,8 @@ def test_a_struggling_choice_lock_keeps_its_flags_under_a_taunt(belief):
                                             "disabled": False}]}],
                      "side": {"name": "us", "id": "p1", "pokemon": side}, "rqid": 3})  # fmt: skip
     flags = {m.id: m.disabled for m in state(b, belief).side_one.pokemon[0].moves}
-    assert flags["reflect"] and flags["substitute"] and flags["hyperbeam"], flags  # (its locked move: PP)
+    # (its locked move: PP)
+    assert flags["reflect"] and flags["substitute"] and flags["hyperbeam"], flags
 
 
 def test_a_transformed_mons_copied_protean(belief):
@@ -867,7 +923,9 @@ def test_a_transformed_mons_copied_protean(belief):
                us="Greninja", ability="protean", moves=("icebeam", "uturn", "gunkshot", "darkpulse"))  # fmt: skip
     s = build_state(b, belief, ("Greninja", "Dondozo"), random.Random(0))
     assert {"transform", "protean"} <= {str(v).lower() for v in s.side_two.volatile_statuses}
-    assert "protean" not in {str(v).lower() for v in state(_their_ditto_garchomp(), belief).side_two.volatile_statuses}
+    assert "protean" not in {
+        str(v).lower() for v in state(_their_ditto_garchomp(), belief).side_two.volatile_statuses
+    }
 
 
 def test_an_added_type_is_a_type_change(belief):
@@ -894,8 +952,14 @@ def test_our_disguised_zoroarks_used_item_is_its_own(belief):
                                             "disabled": False}]}],
                      "side": {"name": "us", "id": "p1", "pokemon": side}, "rqid": 2})  # fmt: skip
     s = build_state(b, belief, ("Zoroark-Hisui", "Ceruledge"), random.Random(0))
-    last = {str(m.id).lower(): str(m.last_item).lower() for m in s.side_one.pokemon if str(m.id).lower() != "none"}
-    assert last.get("zoroarkhisui") == "throatspray" and last.get("ceruledge") in (None, "none"), last
+    last = {
+        str(m.id).lower(): str(m.last_item).lower()
+        for m in s.side_one.pokemon
+        if str(m.id).lower() != "none"
+    }
+    assert last.get("zoroarkhisui") == "throatspray" and last.get("ceruledge") in (None, "none"), (
+        last
+    )
 
 
 def test_a_formes_type_change_after_terastallizing(belief):
@@ -939,8 +1003,12 @@ def test_a_disabled_locked_move_and_power_trick(belief):
     assert "powertrick" in {str(v).lower() for v in s.side_one.volatile_statuses}
     their = battle(["|move|p2a: Gholdengo|Power Trick|p2a: Gholdengo", "|-start|p2a: Gholdengo|Power Trick",
                     "|upkeep", "|turn|2"])  # fmt: skip
-    plain = battle(["|move|p2a: Gholdengo|Power Trick|p2a: Gholdengo", "|upkeep", "|turn|2"])  # (the same set)
-    plain, tricked = state(plain, belief).side_two.pokemon[0], state(their, belief).side_two.pokemon[0]
+    # (the same set)
+    plain = battle(["|move|p2a: Gholdengo|Power Trick|p2a: Gholdengo", "|upkeep", "|turn|2"])
+    plain, tricked = (
+        state(plain, belief).side_two.pokemon[0],
+        state(their, belief).side_two.pokemon[0],
+    )
     assert (tricked.attack, tricked.defense) == (plain.defense, plain.attack)
 
 
@@ -971,8 +1039,13 @@ def test_as_one_and_a_type_change_after_terastallizing(belief):
 
     from alpha_poke.agents.pokeview import engine_ability as _current_ability
 
-    assert _current_ability(SimpleNamespace(temporary_ability="Unnerve"), "asoneglastrier") == "asoneglastrier"
-    assert _current_ability(SimpleNamespace(temporary_ability="Simple"), "asoneglastrier") == "simple"
+    assert (
+        _current_ability(SimpleNamespace(temporary_ability="Unnerve"), "asoneglastrier")
+        == "asoneglastrier"
+    )
+    assert (
+        _current_ability(SimpleNamespace(temporary_ability="Simple"), "asoneglastrier") == "simple"
+    )
     b = battle(["|-terastallize|p2a: Gholdengo|Steel", "|move|p2a: Gholdengo|Make It Rain|p1a: Garchomp",
                 "|-damage|p1a: Garchomp|300/400", "|-start|p2a: Gholdengo|typechange|Steel|[from] move: Double Shock",
                 "|upkeep", "|turn|2"])  # fmt: skip
@@ -1019,8 +1092,13 @@ def test_a_copied_ability_poke_env_never_knew():
 
     from alpha_poke.agents.pokeview import copied_ability as _copied_ability
 
-    assert _copied_ability(SimpleNamespace(temporary_ability="Imposter"), "magicguard") == "magicguard"
-    assert _copied_ability(SimpleNamespace(temporary_ability="Rough Skin"), "magicguard") == "roughskin"
+    assert (
+        _copied_ability(SimpleNamespace(temporary_ability="Imposter"), "magicguard") == "magicguard"
+    )
+    assert (
+        _copied_ability(SimpleNamespace(temporary_ability="Rough Skin"), "magicguard")
+        == "roughskin"
+    )
 
 
 def test_a_klutz_setters_weather_is_not_extended_after_its_ability_changed(belief):
@@ -1028,16 +1106,25 @@ def test_a_klutz_setters_weather_is_not_extended_after_its_ability_changed(belie
     rock out), a Skill Swap makes it Regenerator the same turn -- the setter's ability now was
     read: 8 turns (7 left), Showdown's 4. The ability it had as it set it counts."""
     moves = ("sunnyday", "earthquake", "poltergeist", "rockpolish")
-    lines = ["|move|p1a: Golurk|Sunny Day|p1a: Golurk", "|-weather|SunnyDay",
-             "|move|p2a: Gholdengo|Skill Swap|p1a: Golurk",
-             "|-activate|p2a: Gholdengo|move: Skill Swap|Klutz|Regenerator|[of] p1a: Golurk",
-             "|upkeep|", "|turn|2"]
+    lines = [
+        "|move|p1a: Golurk|Sunny Day|p1a: Golurk",
+        "|-weather|SunnyDay",
+        "|move|p2a: Gholdengo|Skill Swap|p1a: Golurk",
+        "|-activate|p2a: Gholdengo|move: Skill Swap|Klutz|Regenerator|[of] p1a: Golurk",
+        "|upkeep|",
+        "|turn|2",
+    ]
     b = battle(lines, us="Golurk", item="heatrock", ability="klutz", moves=moves)
     assert state(b, belief).weather_turns_remaining == 5 - 1
     # (and the other way: a Klutz it got before setting keeps the rock out too)
-    lines = ["|move|p2a: Gholdengo|Skill Swap|p1a: Golurk",
-             "|-activate|p2a: Gholdengo|move: Skill Swap|Regenerator|Klutz|[of] p1a: Golurk",
-             "|move|p1a: Golurk|Sunny Day|p1a: Golurk", "|-weather|SunnyDay", "|upkeep|", "|turn|2"]
+    lines = [
+        "|move|p2a: Gholdengo|Skill Swap|p1a: Golurk",
+        "|-activate|p2a: Gholdengo|move: Skill Swap|Regenerator|Klutz|[of] p1a: Golurk",
+        "|move|p1a: Golurk|Sunny Day|p1a: Golurk",
+        "|-weather|SunnyDay",
+        "|upkeep|",
+        "|turn|2",
+    ]
     b = battle(lines, us="Golurk", item="heatrock", ability="regenerator", moves=moves)
     assert state(b, belief).weather_turns_remaining == 5 - 1
 
@@ -1048,14 +1135,25 @@ def test_a_klutz_setters_weather_after_its_item_is_gone_and_under_neutralizing_g
     5); Neutralizing Gas out as it set it -- its Klutz suppressed, the Heat Rock works (Showdown 8;
     the ability snapshot had no gas: 5)."""
     moves = ("sunnyday", "earthquake", "poltergeist", "rockpolish")
-    lines = ["|move|p1a: Golurk|Sunny Day|p1a: Golurk", "|-weather|SunnyDay",
-             "|move|p2a: Gholdengo|Knock Off|p1a: Golurk", "|-damage|p1a: Golurk|300/400",
-             "|-enditem|p1a: Golurk|Heat Rock|[from] move: Knock Off|[of] p2a: Gholdengo",
-             "|upkeep|", "|turn|2"]
+    lines = [
+        "|move|p1a: Golurk|Sunny Day|p1a: Golurk",
+        "|-weather|SunnyDay",
+        "|move|p2a: Gholdengo|Knock Off|p1a: Golurk",
+        "|-damage|p1a: Golurk|300/400",
+        "|-enditem|p1a: Golurk|Heat Rock|[from] move: Knock Off|[of] p2a: Gholdengo",
+        "|upkeep|",
+        "|turn|2",
+    ]
     b = battle(lines, us="Golurk", item="", ability="klutz", moves=moves)
     assert state(b, belief).weather_turns_remaining == 5 - 1
-    lines = ["|-ability|p2a: Gholdengo|Neutralizing Gas", "|turn|2",
-             "|move|p1a: Golurk|Sunny Day|p1a: Golurk", "|-weather|SunnyDay", "|upkeep|", "|turn|3"]
+    lines = [
+        "|-ability|p2a: Gholdengo|Neutralizing Gas",
+        "|turn|2",
+        "|move|p1a: Golurk|Sunny Day|p1a: Golurk",
+        "|-weather|SunnyDay",
+        "|upkeep|",
+        "|turn|3",
+    ]
     b = battle(lines, us="Golurk", item="heatrock", ability="klutz", moves=moves)
     assert state(b, belief).weather_turns_remaining == 8 - 1
 
@@ -1066,12 +1164,22 @@ def test_an_outrage_into_endure_keeps_its_lock():
     target, the move doing nothing: the lock ended, its third turn's switch options offered."""
     from alpha_poke.agents.timers import timers
 
-    lines = ["|switch|p1a: Dragonite|Dragonite|323/323", "|switch|p2a: Araquanid|Araquanid|100/100",
-             "|turn|1", "|move|p1a: Dragonite|Outrage|p2a: Araquanid", "|-damage|p2a: Araquanid|60/100",
-             "|upkeep|", "|turn|2", "|move|p2a: Araquanid|Endure|p2a: Araquanid",
-             "|-singleturn|p2a: Araquanid|move: Endure",
-             "|move|p1a: Dragonite|Outrage|p2a: Araquanid|[from] lockedmove",
-             "|-activate|p2a: Araquanid|move: Endure", "|-damage|p2a: Araquanid|1/100", "|upkeep|", "|turn|3"]
+    lines = [
+        "|switch|p1a: Dragonite|Dragonite|323/323",
+        "|switch|p2a: Araquanid|Araquanid|100/100",
+        "|turn|1",
+        "|move|p1a: Dragonite|Outrage|p2a: Araquanid",
+        "|-damage|p2a: Araquanid|60/100",
+        "|upkeep|",
+        "|turn|2",
+        "|move|p2a: Araquanid|Endure|p2a: Araquanid",
+        "|-singleturn|p2a: Araquanid|move: Endure",
+        "|move|p1a: Dragonite|Outrage|p2a: Araquanid|[from] lockedmove",
+        "|-activate|p2a: Araquanid|move: Endure",
+        "|-damage|p2a: Araquanid|1/100",
+        "|upkeep|",
+        "|turn|3",
+    ]
     assert timers([x.split("|") for x in lines])["p1"].locked == ["outrage", 2]
 
 
@@ -1081,10 +1189,17 @@ def test_a_slow_start_copied_by_a_mon_in_since_last_turn_counts_down_at_once():
     turn already (activeTurns > 0) -- 4 left, the timers' 5."""
     from alpha_poke.agents.timers import timers
 
-    lines = ["|switch|p1a: Regigigas|Regigigas|322/322", "|-start|p1a: Regigigas|ability: Slow Start",
-             "|switch|p2a: Ditto|Ditto|225/225", "|turn|1", "|move|p2a: Ditto|Transform|p1a: Regigigas",
-             "|-transform|p2a: Ditto|p1a: Regigigas", "|-start|p2a: Ditto|ability: Slow Start",
-             "|upkeep|", "|turn|2"]
+    lines = [
+        "|switch|p1a: Regigigas|Regigigas|322/322",
+        "|-start|p1a: Regigigas|ability: Slow Start",
+        "|switch|p2a: Ditto|Ditto|225/225",
+        "|turn|1",
+        "|move|p2a: Ditto|Transform|p1a: Regigigas",
+        "|-transform|p2a: Ditto|p1a: Regigigas",
+        "|-start|p2a: Ditto|ability: Slow Start",
+        "|upkeep|",
+        "|turn|2",
+    ]
     t = timers([x.split("|") for x in lines])
     assert t["p2"].slowstart == [4, True], t["p2"].slowstart
     assert t["p1"].slowstart == [4, True], t["p1"].slowstart  # (a lead: in at turn 1's start too)
@@ -1118,7 +1233,9 @@ def test_no_choice_lock_for_a_world_the_log_contradicts(belief):
         s = build_state(b, belief, ("Garchomp", "Dondozo"), random.Random(k))
         foe = s.side_two.pokemon[int(s.side_two.active_index)]
         choice = str(foe.item).lower().startswith("choice")
-        return choice, choice and sum(not m.disabled for m in foe.moves if str(m.id).lower() != "none") == 1
+        return choice, choice and sum(
+            not m.disabled for m in foe.moves if str(m.id).lower() != "none"
+        ) == 1
 
     worlds = [locked(two, k) for k in range(40)]
     assert any(c for c, _ in worlds) and not any(lk for _, lk in worlds)

@@ -14,8 +14,19 @@ from poke_env.battle import Battle, Pokemon
 
 from alpha_poke.analysis.roles import to_id
 from alpha_poke.enginecheck import engine_state, random_battle
-from alpha_poke.enginecheck.statebuild import (LOG, SAME_SPECIES, _belief, _disguised, _fainted_no_status, _forme_match, _true_forme,
-                                               _feed, _flip, field_diffs, foe_diffs)  # fmt: skip
+from alpha_poke.enginecheck.statebuild import (
+    LOG,
+    SAME_SPECIES,
+    _belief,
+    _disguised,
+    _fainted_no_status,
+    _feed,  # fmt: skip
+    _flip,
+    _forme_match,
+    _true_forme,
+    field_diffs,
+    foe_diffs,
+)
 
 
 @contextlib.contextmanager
@@ -38,7 +49,11 @@ def _oracle(team: list, ours: dict, theirs: dict):
             return out
         own = t.get("transform_backup")
         moves = [x for x, _ in own[2]] if own else [x["id"] for x in t["moves"]]
-        st = dict(zip(("atk", "def", "spa", "spd", "spe"), own[0], strict=True)) if own else dict(t["stats"])
+        st = (
+            dict(zip(("atk", "def", "spa", "spd", "spe"), own[0], strict=True))
+            if own
+            else dict(t["stats"])
+        )
         if "powertrick" in (t.get("volatiles") or {}) and not own:
             st["atk"], st["def"] = st["def"], st["atk"]
         return es.SampledSet(moves=moves, item=t["item"] or "none",
@@ -56,9 +71,15 @@ def _oracle(team: list, ours: dict, theirs: dict):
         es.sample_set = inner
 
 
-
-def decisions(p1: str, p2: str, seed: int, max_turns: int = 40, stats: dict | None = None,
-              script: list | None = None, fmt: str | None = None):
+def decisions(
+    p1: str,
+    p2: str,
+    seed: int,
+    max_turns: int = 40,
+    stats: dict | None = None,
+    script: list | None = None,
+    fmt: str | None = None,
+):
     """Each decision of a random battle, built from the spectator's log as a replay's position
     is: (step, side, poke-env battle, built state, truth from that side's point of view)."""
     from alpha_poke.agents.engine_state import KnownSet, SpectatorSide, build_state
@@ -116,7 +137,9 @@ def decisions(p1: str, p2: str, seed: int, max_turns: int = 40, stats: dict | No
                 continue
             team = []
             for rec in records[side]:  # (train/positions._position: preview order)
-                mon = next((m for m in b.team.values() if _same_species(m.species, rec.species)), None)
+                mon = next(
+                    (m for m in b.team.values() if _same_species(m.species, rec.species)), None
+                )
                 team.append(mon if mon is not None else Pokemon(details=rec.species, gen=9))
             if len(team) > 6 or not any(m is me for m in team):
                 stats.setdefault("skipped", []).append("team")
@@ -145,8 +168,14 @@ class _Mirror:
         self._replay_data = b._replay_data
 
 
-def battle_diffs(p1: str, p2: str, seed: int, max_turns: int = 40,
-                 script: list | None = None, fmt: str | None = None) -> tuple[list[tuple], dict]:
+def battle_diffs(
+    p1: str,
+    p2: str,
+    seed: int,
+    max_turns: int = 40,
+    script: list | None = None,
+    fmt: str | None = None,
+) -> tuple[list[tuple], dict]:
     """[(step, side, kind, detail)] over a random battle's decisions, replay-built; and counts."""
     out: list = []
     stats: dict = {}
@@ -160,8 +189,11 @@ def battle_diffs(p1: str, p2: str, seed: int, max_turns: int = 40,
         foe_hidden = frozenset(_disguised(b, t.side_two))
         diffs += foe_diffs(built.side_two, t.side_two, foe_seen, True, foe_hidden)
         # (the PP its foe's moves took at an undetected disguise -- a Pressure one's 2: hidden too)
-        diffs = [(kind, d) for kind, d in diffs
-                 if not (kind == "own:pp" and foe_hidden) and not (kind == "foe:pp" and own_hidden)]
+        diffs = [
+            (kind, d)
+            for kind, d in diffs
+            if not (kind == "own:pp" and foe_hidden) and not (kind == "foe:pp" and own_hidden)
+        ]
         diffs += field_diffs(built, t)
         out += [(k, side, kind, detail) for kind, detail in diffs]
     return out, stats

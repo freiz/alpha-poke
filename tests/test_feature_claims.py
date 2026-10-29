@@ -107,7 +107,7 @@ def test_ko2_hp_based_moves(attacker, move, slot):
     """Two Super Fangs / Ruinations halve the HP twice (714 -> 357 -> 179): no two-hit KO (before:
     2 x half the HP now, 'possibly')."""
     _, _, new = features(ec.run_showdown(attacker, BLISSEY, [])[0])
-    assert list(new[0, 2 * slot:2 * slot + 2]) == [0.0, 0.0]
+    assert list(new[0, 2 * slot : 2 * slot + 2]) == [0.0, 0.0]
     st = ec.run_showdown(attacker, BLISSEY, [(f"move {move}", "move calmmind")] * 2,
                          force_random=True)  # fmt: skip
     assert hp(st[2], 1) > 0
@@ -122,7 +122,9 @@ BLISSEY_TOSS = mon("Blissey", "Leftovers", "Natural Cure", ["Seismic Toss", "Cal
 def test_ko2_end_of_turn_by_current_types():
     """A Tera Normal Toxapex (Poison originally) loses 1/8 to Black Sludge at the end of the
     turn: two Seismic Tosses KO it from 181 HP (before: the original types, a heal, no KO)."""
-    turns = [("move seismictoss", "move haze terastallize")] + [("move seismictoss", "move haze")] * 2
+    turns = [("move seismictoss", "move haze terastallize")] + [
+        ("move seismictoss", "move haze")
+    ] * 2
     st = ec.run_showdown(BLISSEY_TOSS, TOXAPEX_SLUDGE, turns)
     assert any("Black Sludge" in x for x in st[1]["log"])
     _, _, new = features(st[1])
@@ -313,7 +315,9 @@ def test_head_to_head_with_a_growing_toxic():
                    "252 HP / 4 Def / 252 SpD", "Calm")  # fmt: skip
     jolteon = mon("Jolteon", "Heavy-Duty Boots", "Volt Absorb", ["Seismic Toss", "Protect", "Thunderbolt", "Calm Mind"],
                   "4 HP / 252 SpA / 252 Spe", "Timid")  # fmt: skip
-    turns = [("move toxic", "move seismictoss")] + [("move seismictoss", "move seismictoss")] * ROUNDS
+    turns = [("move toxic", "move seismictoss")] + [
+        ("move seismictoss", "move seismictoss")
+    ] * ROUNDS
     for st in clean_runs(clefable, jolteon, turns):
         assert st[1]["sides"][1]["mons"][0]["status"] == "tox"
         assert 200 < hp(st[1], 0) <= 300  # (two Seismic Tosses survived, three not)

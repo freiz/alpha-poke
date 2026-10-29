@@ -29,7 +29,6 @@ import zlib
 from dataclasses import dataclass
 
 import alpha_search
-
 from poke_env.battle import Battle, Pokemon
 
 from alpha_poke.agents import slots
@@ -137,7 +136,11 @@ def blind_sides(rep) -> dict[tuple[int, str], Blind]:
     main |= {(t, sd) for t, sd in getattr(rep, "locked", ())}
     cant = {(c[0], c[1]): (c[2], c[3] if len(c) > 3 else None) for c in rep.cants}
     # (turn, side) -> the place among the turn's actions it went out at (its eject's switch)
-    ejected = {(a.turn, a.side): a.order for a in rep.actions if a.turn >= 1 and a.kind == "switch" and a.pivot}
+    ejected = {
+        (a.turn, a.side): a.order
+        for a in rep.actions
+        if a.turn >= 1 and a.kind == "switch" and a.pivot
+    }
     # (an eject triggered, its switch to come: the live log at that switch-in's choice -- it
     # cannot act any more, as the training history and the search's tree have it; 2026-10-23, the
     # causality check)

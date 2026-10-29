@@ -2,6 +2,10 @@
 //! instruction generation, evaluation, apply / reverse. Python passes poke-engine state strings
 //! (`poke_engine.State.to_string()`); see design D12.
 
+// Index loops over parallel arrays (features, damage tables) and the long tuple types of the
+// Python interface read better as they are.
+#![allow(clippy::needless_range_loop, clippy::type_complexity)]
+
 pub mod bsearch;
 pub mod counts;
 pub mod extra;
@@ -298,7 +302,11 @@ fn featurize_extra_full<'py>(
     states: Vec<String>,
     flip: bool,
     reference: bool,
-) -> (Bound<'py, PyBytes>, Bound<'py, PyBytes>, Bound<'py, PyBytes>) {
+) -> (
+    Bound<'py, PyBytes>,
+    Bound<'py, PyBytes>,
+    Bound<'py, PyBytes>,
+) {
     let (ent, glob, new) = py.detach(|| {
         let (mut ent, mut glob, mut new) = (vec![], vec![], vec![]);
         for (e, g, n) in par_map(&states, |s| {
@@ -319,7 +327,11 @@ fn featurize_extra_full<'py>(
             le_bytes(&new, f32::to_le_bytes),
         )
     });
-    (PyBytes::new(py, &ent), PyBytes::new(py, &glob), PyBytes::new(py, &new))
+    (
+        PyBytes::new(py, &ent),
+        PyBytes::new(py, &glob),
+        PyBytes::new(py, &new),
+    )
 }
 
 /// The exchanges of hits behind the `team` inputs (`extra::duels_debug`): [(side, mon, foe mon,
@@ -398,14 +410,26 @@ fn pending_moves(state: &str, our_move: &str) -> Vec<String> {
         });
     let (_, o2) = s.get_all_options();
     // (the fifth review: no move to use -- it struggles, after our switch-in too)
-    if !o2.iter().any(|m| matches!(m, MoveChoice::Move(_) | MoveChoice::MoveTera(_))) {
-        let struggles = poke_engine::engine::generate_instructions::struggles(&s, &SideReference::SideTwo);
-        return if struggles && 0 <= bound { vec!["struggle".to_string()] } else { vec![] };
+    if !o2
+        .iter()
+        .any(|m| matches!(m, MoveChoice::Move(_) | MoveChoice::MoveTera(_)))
+    {
+        let struggles =
+            poke_engine::engine::generate_instructions::struggles(&s, &SideReference::SideTwo);
+        return if struggles && 0 <= bound {
+            vec!["struggle".to_string()]
+        } else {
+            vec![]
+        };
     }
     // (the fifth review: at our move's priority, only if this world lets ours go first -- not
     // slower, the other way in Trick Room; a tie stays possible)
-    let speed = |r: &SideReference| poke_engine::engine::generate_instructions::get_effective_speed(&s, r);
-    let (v1, v2) = (speed(&SideReference::SideOne), speed(&SideReference::SideTwo));
+    let speed =
+        |r: &SideReference| poke_engine::engine::generate_instructions::get_effective_speed(&s, r);
+    let (v1, v2) = (
+        speed(&SideReference::SideOne),
+        speed(&SideReference::SideTwo),
+    );
     let ours_first = v1 == v2 || ((v1 > v2) != s.trick_room.active);
     let active = s.side_two.get_active_immutable();
     let (mut out, mut by_priority): (Vec<String>, Vec<String>) = (Vec::new(), Vec::new());
@@ -516,9 +540,11 @@ fn engine_data() -> (Vec<Vec<String>>, Vec<(String, String, f32)>) {
     let mut chart = Vec::new();
     for a in types {
         for d in types {
-            let mut p = Pokemon::default();
-            p.types = (d, PokemonType::TYPELESS);
-            p.terastallized = false;
+            let p = Pokemon {
+                types: (d, PokemonType::TYPELESS),
+                terastallized: false,
+                ..Pokemon::default()
+            };
             let m = type_effectiveness_modifier(&a, &p);
             chart.push((format!("{:?}", a), format!("{:?}", d), m));
         }
@@ -1364,9 +1390,21 @@ fn forme_weights() -> Vec<(String, i16)> {
     use poke_engine::pokemon::PokemonName;
     use std::str::FromStr;
     let names = [
-        "minior", "miniorblue", "miniorgreen", "miniorindigo", "miniororange", "miniorviolet",
-        "minioryellow", "miniormeteor", "wishiwashi", "wishiwashischool", "palafin",
-        "palafinhero", "terapagos", "terapagosterastal", "terapagosstellar",
+        "minior",
+        "miniorblue",
+        "miniorgreen",
+        "miniorindigo",
+        "miniororange",
+        "miniorviolet",
+        "minioryellow",
+        "miniormeteor",
+        "wishiwashi",
+        "wishiwashischool",
+        "palafin",
+        "palafinhero",
+        "terapagos",
+        "terapagosterastal",
+        "terapagosstellar",
     ];
     names
         .iter()
@@ -1526,10 +1564,13 @@ fn option_of(options: &[MoveChoice], slot: i32, struggle: bool) -> Option<MoveCh
     // (`struggle`: the side struggles, its none option Struggle in slot 0 -- features::slot_in;
     // from the state: a lone Struggle too, 2026-10-23 review)
     // (-1, no choice: the none option, a Struggle's too -- the callers before slot 0)
-    options.iter().copied().find(|mc| match features::slot_in(mc, struggle) {
-        Some(i) => i as i32 == slot || (slot < 0 && *mc == MoveChoice::None),
-        None => slot < 0,
-    })
+    options
+        .iter()
+        .copied()
+        .find(|mc| match features::slot_in(mc, struggle) {
+            Some(i) => i as i32 == slot || (slot < 0 && *mc == MoveChoice::None),
+            None => slot < 0,
+        })
 }
 
 /// The chance outcomes of the move pair (slots relative to each side; -1 = no choice) in
@@ -1602,7 +1643,19 @@ fn chance_outcomes<'py>(
 type ActFields = (u8, bool, i32, i32, bool, bool, u8, bool, bool, bool, bool);
 
 fn act_fields(a: &features::Act) -> ActFields {
-    (a.kind, a.tera, a.actor, a.target, a.prevented, a.fainted_first, a.dmg, a.first, a.crit, a.miss, a.ko)
+    (
+        a.kind,
+        a.tera,
+        a.actor,
+        a.target,
+        a.prevented,
+        a.fainted_first,
+        a.dmg,
+        a.first,
+        a.crit,
+        a.miss,
+        a.ko,
+    )
 }
 
 /// The causality check of the search's tree (scripts/check_tree_history.py): for the move pair
@@ -1619,7 +1672,10 @@ fn tree_steps(
     slot2: i32,
     log_step: &str,
     branch: bool,
-) -> PyResult<(Vec<(f32, ActFields, ActFields, i32, bool)>, (ActFields, ActFields))> {
+) -> PyResult<(
+    Vec<(f32, ActFields, ActFields, i32, bool)>,
+    (ActFields, ActFields),
+)> {
     let st = State::deserialize(state);
     let (o1, o2) = st.root_get_all_options();
     let (s1, s2) = (
@@ -1633,7 +1689,10 @@ fn tree_steps(
         .into_iter()
         .map(|(p, s, mains, open)| (p, act_fields(&s.one), act_fields(&s.two), mains, open))
         .collect();
-    let log = features::parse_history(log_step).first().copied().unwrap_or_default();
+    let log = features::parse_history(log_step)
+        .first()
+        .copied()
+        .unwrap_or_default();
     Ok((tree, (act_fields(&log.one), act_fields(&log.two))))
 }
 

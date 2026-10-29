@@ -44,7 +44,9 @@ def anonymized_replays(n: int = 200) -> None:
 
     src = sorted((paths.REPLAYS_HF / "gen9ou").glob("*.parquet"))[-1]
     rows = pq.ParquetFile(src).read_row_group(0).to_pylist()
-    drop = re.compile(r"^\|(c|c:|chat|j|J|l|L|n|N|raw|html|uhtml|uhtmlchange|inactive|inactiveoff)\|")
+    drop = re.compile(
+        r"^\|(c|c:|chat|j|J|l|L|n|N|raw|html|uhtml|uhtmlchange|inactive|inactiveoff)\|"
+    )
     out = []
     for r in rows:
         if len(out) == n:
@@ -53,7 +55,9 @@ def anonymized_replays(n: int = 200) -> None:
         if len(names) != 2 or not str(r["rating"] or "").isdigit():
             continue
         log = "\n".join(line for line in r["log"].split("\n") if not drop.match(line))
-        for name, new in sorted(zip(names, ("Player A", "Player B")), key=lambda x: -len(x[0])):
+        for name, new in sorted(
+            zip(names, ("Player A", "Player B"), strict=True), key=lambda x: -len(x[0])
+        ):
             log = log.replace(name, new)
         if any(len(x) >= 3 and x.lower() in log.lower() for x in names):
             continue  # a name left in another spelling: skip the game

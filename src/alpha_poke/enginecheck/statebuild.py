@@ -71,7 +71,6 @@ STATE_SKIPPED = {"side_one": "own_diffs", "side_two": "foe_diffs", "team_preview
 _BELIEF = None
 
 
-
 def _true_forme(sp: str, t: dict, moves: list) -> str | None:
     """A hidden forme's, the truth's: Showdown's species when it is one of the forme candidates
     (S158 -- not engine_state.resolve_forme from the true set: a Dudunsparce-Three-Segment's set
@@ -164,11 +163,18 @@ def own_diffs(built: pe.Side, truth: pe.Side) -> list[tuple[str, str]]:
                 out.append(("own:pp", f"{sp} {mid} {bmv[mid][0]} vs {tmv[mid][0]}"))
             if bmv[mid][1] != tmv[mid][1]:
                 out.append(("own:disabled", f"{sp} {mid} {bmv[mid][1]} vs {tmv[mid][1]}"))
-        if (b.transform_backup is None) != (t.transform_backup is None) or (
-            b.transform_backup and sorted(b.transform_backup[2]) != sorted(t.transform_backup[2])
-        ) or (b.transform_backup and b.transform_backup[0] != t.transform_backup[0]) or (
-            b.transform_backup and b.transform_backup[1] != t.transform_backup[1]):
-            out.append(("own:transform_backup", f"{sp} {b.transform_backup} vs {t.transform_backup}"))
+        if (
+            (b.transform_backup is None) != (t.transform_backup is None)
+            or (
+                b.transform_backup
+                and sorted(b.transform_backup[2]) != sorted(t.transform_backup[2])
+            )
+            or (b.transform_backup and b.transform_backup[0] != t.transform_backup[0])
+            or (b.transform_backup and b.transform_backup[1] != t.transform_backup[1])
+        ):
+            out.append(
+                ("own:transform_backup", f"{sp} {b.transform_backup} vs {t.transform_backup}")
+            )
     if _tera_used(built) != _tera_used(truth):
         out.append(("own:tera_used", f"{_tera_used(built)} vs {_tera_used(truth)}"))
     out += _side_common("own", built, truth)
@@ -176,7 +182,9 @@ def own_diffs(built: pe.Side, truth: pe.Side) -> list[tuple[str, str]]:
     return out
 
 
-def _side_fields(who: str, built: pe.Side, truth: pe.Side, exact: bool = True) -> list[tuple[str, str]]:
+def _side_fields(
+    who: str, built: pe.Side, truth: pe.Side, exact: bool = True
+) -> list[tuple[str, str]]:
     """A side's own fields (SIDE_FIELDS: a pending Wish, Future Sight, a Substitute's HP, the
     saved move of a pivot switch) -- the opponent's as well (2026-10-25 review: the foe's side and
     the replay path's both sides never compared them). ``exact``: its max HP the true one (a
@@ -191,7 +199,9 @@ def _side_fields(who: str, built: pe.Side, truth: pe.Side, exact: bool = True) -
             bv, tv = (_future(built), _future(truth))
         if k == "wish" and not exact:
             bv, tv = bv[0], tv[0]
-        if k == "substitute_health" and (tv not in (0, _active(truth).maxhp // 4) or (not exact and bv and tv)):
+        if k == "substitute_health" and (
+            tv not in (0, _active(truth).maxhp // 4) or (not exact and bv and tv)
+        ):
             continue  # (a hit Substitute's HP: the log does not show it -- the player's guess)
         if str(bv).lower() != str(tv).lower():
             out.append((f"{who}:{k}", f"{bv} vs {tv}"))
@@ -232,8 +242,12 @@ def _transform_slot(side: pe.Side) -> bool:
     """The side's last used move is a slot of its transformed active's backup holding Transform."""
     lu = str(side.last_used_move).lower()
     backup = getattr(_active(side), "transform_backup", None)
-    return bool(backup) and lu.startswith("move:") and lu[5:].isdigit() \
+    return (
+        bool(backup)
+        and lu.startswith("move:")
+        and lu[5:].isdigit()
         and str(backup[2][int(lu[5:])][0]).lower() == "transform"
+    )
 
 
 def _side_common(who: str, built: pe.Side, truth: pe.Side) -> list[tuple[str, str]]:
@@ -250,7 +264,9 @@ def _side_common(who: str, built: pe.Side, truth: pe.Side) -> list[tuple[str, st
             out.append((f"{who}:condition:{k}", f"{b} vs {t}"))
     if _active(truth).hp <= 0:
         return out
-    if _last_used(built) != _last_used(truth) and not (_transform_slot(built) and _transform_slot(truth)):
+    if _last_used(built) != _last_used(truth) and not (
+        _transform_slot(built) and _transform_slot(truth)
+    ):
         # (transformed, its Transform the last: the slot in its backup -- its own moves' order, a
         # replay's sampled one, is notation)
         out.append((f"{who}:last_used_move", f"{_last_used(built)} vs {_last_used(truth)}"))
@@ -303,16 +319,22 @@ def foe_diffs(built: pe.Side, truth: pe.Side, seen: set[str], oracle: bool = Fal
         # (its active an Illusion in disguise -- or this world drew one: which mon it is the
         # belief's draw, each world its own, D17 G -- so the active, its moves and boosts are not
         # the construction's)
-        return [(k, d) for k, d in _side_common("foe", built, truth)
-                if k.split(":")[1] in ("condition",)] + _side_fields("foe", built, truth, False)  # (whose HP: the draw's)
+        return [
+            (k, d)
+            for k, d in _side_common("foe", built, truth)
+            if k.split(":")[1] in ("condition",)
+        ] + _side_fields("foe", built, truth, False)  # (whose HP: the draw's)
     seen = seen - hidden
     if oracle:
         bm, tm = _mons(built), _mons(truth)
         for sp in seen & set(bm) & set(tm):
             b, t = bm[sp], tm[sp]
             # (its status, tera: below, as seen; a fainted one's the set's own only)
-            keys = [k for k in MON_FIELDS if k not in ("status", "terastallized", "tera_type")] if t.hp > 0 else \
-                ["maxhp", "item", "ability", "base_ability", "last_item", "weight_kg"]
+            keys = (
+                [k for k in MON_FIELDS if k not in ("status", "terastallized", "tera_type")]
+                if t.hp > 0
+                else ["maxhp", "item", "ability", "base_ability", "last_item", "weight_kg"]
+            )
             if t.transform_backup is None:
                 keys += list(STATS)
             for k in keys:
@@ -326,7 +348,10 @@ def foe_diffs(built: pe.Side, truth: pe.Side, seen: set[str], oracle: bool = Fal
                 if bmv[mid] != tmv[mid]:
                     out.append(("foe:pp", f"{sp} {mid} {bmv[mid]} vs {tmv[mid]}"))
     if _sp(_active(built)) != _sp(_active(truth)) and not (
-            _sp(_active(truth)).startswith("zoroark") and _active(truth).hp <= 0 and _active(built).hp <= 0):
+        _sp(_active(truth)).startswith("zoroark")
+        and _active(truth).hp <= 0
+        and _active(built).hp <= 0
+    ):
         # (a Zoroark fainting in disguise: the log's faint names the disguise -- hidden)
         out.append(("foe:active", f"{_sp(_active(built))} vs {_sp(_active(truth))}"))
     bm, tm = _mons(built), _mons(truth)
@@ -338,7 +363,8 @@ def foe_diffs(built: pe.Side, truth: pe.Side, seen: set[str], oracle: bool = Fal
         if abs(fb - ft) > 0.02 or (b.hp == 0) != (t.hp == 0):
             out.append(("foe:hp", f"{sp} {fb:.3f} vs {ft:.3f}"))
         # (its level: the team preview's -- seen, not the set's)
-        for k in ("status", "terastallized", "level") if t.hp > 0 else ():  # (a fainted one's: Showdown's last)
+        # (a fainted one's: Showdown's last)
+        for k in ("status", "terastallized", "level") if t.hp > 0 else ():
             if str(getattr(b, k)).lower() != str(getattr(t, k)).lower():
                 out.append((f"foe:{k}", f"{sp} {getattr(b, k)} vs {getattr(t, k)}"))
         if t.hp > 0 and t.terastallized and str(b.tera_type).lower() != str(t.tera_type).lower():
@@ -415,7 +441,9 @@ def _forme_match(truth: dict, sp: str):
     def base(k: str) -> str:
         return to_id((GEN.pokedex.get(k) or {}).get("baseSpecies") or k)
 
-    formes = [v for k, v in truth.items() if k.startswith(sp) or sp.startswith(k) or base(k) == base(sp)]
+    formes = [
+        v for k, v in truth.items() if k.startswith(sp) or sp.startswith(k) or base(k) == base(sp)
+    ]
     return formes[0] if len(formes) == 1 else None
 
 
@@ -441,7 +469,11 @@ def _oracle(foe: dict | None):
             return out
         own = t.get("transform_backup")
         moves = [x for x, _ in own[2]] if own else [x["id"] for x in t["moves"]]
-        st = dict(zip(("atk", "def", "spa", "spd", "spe"), own[0], strict=True)) if own else dict(t["stats"])
+        st = (
+            dict(zip(("atk", "def", "spa", "spd", "spe"), own[0], strict=True))
+            if own
+            else dict(t["stats"])
+        )
         if "powertrick" in (t.get("volatiles") or {}) and not own:  # (its set's: unswapped -- S111)
             st["atk"], st["def"] = st["def"], st["atk"]
         return es.SampledSet(moves=moves, item=t["item"] or "none",
@@ -497,7 +529,7 @@ def decisions(p1: str, p2: str, seed: int, max_turns: int = 40, sides=("p1", "p2
                 b = battles[side] = Battle(f"battle-gen9customgame-{seed}", side, LOG, gen=9)
                 b._player_role = side
                 remember_own_sets(b, p1 if side == "p1" else p2)  # (our natures, EVs: the players')
-            _feed(b, views[side][pos[side]:step["view_pos"][side]])
+            _feed(b, views[side][pos[side] : step["view_pos"][side]])
             pos[side] = step["view_pos"][side]
             req = step["requests"][side]
             if truth is None or not req or req.get("wait") or req.get("teamPreview"):
@@ -507,8 +539,10 @@ def decisions(p1: str, p2: str, seed: int, max_turns: int = 40, sides=("p1", "p2
             stats["decisions"] += 1
             foe = step["state"]["sides"][1 if side == "p1" else 0]
             try:
-                names = tuple(belief.display(m.species) for m in
-                              (b.teampreview_opponent_team or list(b.opponent_team.values())))
+                names = tuple(
+                    belief.display(m.species)
+                    for m in (b.teampreview_opponent_team or list(b.opponent_team.values()))
+                )
                 with _oracle(foe if oracle else None):
                     built = build_state(b, belief, names, random.Random(k))
             except BaseException as e:  # noqa: BLE001
@@ -524,7 +558,9 @@ def battle_diffs(p1: str, p2: str, seed: int, max_turns: int = 40, sides=("p1", 
     "errors": [...]})."""
     out: list = []
     stats: dict = {}
-    for k, side, b, built, t in decisions(p1, p2, seed, max_turns, sides, stats, oracle, script, fmt):
+    for k, side, b, built, t in decisions(
+        p1, p2, seed, max_turns, sides, stats, oracle, script, fmt
+    ):
         out += [(k, side, kind, detail) for kind, detail in decision_diffs(b, built, t, oracle)]
     return out, stats
 
@@ -541,7 +577,9 @@ def fact_diffs(p1: str, p2: str, seed: int, max_turns: int = 40, sides=("p1", "p
 
     out: list = []
     stats: dict = {}
-    for k, side, b, built, t in decisions(p1, p2, seed, max_turns, sides, stats, False, script, fmt):
+    for k, side, b, built, t in decisions(
+        p1, p2, seed, max_turns, sides, stats, False, script, fmt
+    ):
         if "illusion" in _vols(t.side_two) or "illusion" in _vols(built.side_two):
             continue  # (which mon it is the world's draw: foe_diffs')
         hidden = frozenset(_disguised(b, t.side_two))
@@ -570,7 +608,14 @@ def fact_diffs(p1: str, p2: str, seed: int, max_turns: int = 40, sides=("p1", "p
                 tv = _norm(k2, getattr(tp, k2))
                 bv = _norm(k2, getattr(bp, k2))
                 if bv != tv:
-                    out.append((k, side, f"fact:{k2}", f"{sp} {bv} vs {tv}" + (f" (known {known})" if known else "")))
+                    out.append(
+                        (
+                            k,
+                            side,
+                            f"fact:{k2}",
+                            f"{sp} {bv} vs {tv}" + (f" (known {known})" if known else ""),
+                        )
+                    )
             seen_moves = {m for m in own_moves(mon)}
             tmv = {str(m.id).lower() for m in tp.moves}
             wrong = sorted(m for m in seen_moves if m not in tmv and m not in ("struggle",))
@@ -579,7 +624,9 @@ def fact_diffs(p1: str, p2: str, seed: int, max_turns: int = 40, sides=("p1", "p
             # (and in the built state: a revealed move this world lost -- the oracle checks put the
             # true moves in; 2026-10-26 review)
             bmv = {str(m.id).lower() for m in bp.moves}
-            lost = sorted(m for m in seen_moves if m not in bmv and m in tmv and m not in ("struggle",))
+            lost = sorted(
+                m for m in seen_moves if m not in bmv and m in tmv and m not in ("struggle",)
+            )
             if lost and tp.transform_backup is None and bp.transform_backup is None:
                 out.append((k, side, "fact:built_moves", f"{sp} {lost} not in {sorted(bmv)}"))
     return out, stats
@@ -597,7 +644,11 @@ def _in_order_of(st: pe.State, truth: pe.State) -> pe.State:
             i = next((j for j, x in enumerate(have) if x == sp and j not in perm), None)
             perm.append(i)
         rest = [j for j in range(len(have)) if j not in perm]
-        perm = [i if i is not None else rest.pop(0) for i in perm] if len(rest) == perm.count(None) else None
+        perm = (
+            [i if i is not None else rest.pop(0) for i in perm]
+            if len(rest) == perm.count(None)
+            else None
+        )
         if perm is None or perm == list(range(len(have))):
             sides.append(a)
             continue
@@ -609,7 +660,10 @@ def _in_order_of(st: pe.State, truth: pe.State) -> pe.State:
         if lu.startswith("switch:"):
             kw["last_used_move"] = f"switch:{new_of[int(lu[7:])]}"
         if a.future_sight[0] > 0:
-            kw["future_sight"] = (a.future_sight[0], pe.PokemonIndex(str(new_of[int(str(a.future_sight[1]))])))
+            kw["future_sight"] = (
+                a.future_sight[0],
+                pe.PokemonIndex(str(new_of[int(str(a.future_sight[1]))])),
+            )
         sides.append(pe.Side(**kw))
     new = pe.State(side_one=sides[0], side_two=sides[1]).to_string().split("/")[:2]
     return pe.State.from_string("/".join(new + st.to_string().split("/")[2:]))
@@ -641,18 +695,22 @@ def built_chain(p1: str, p2: str, seed: int, max_turns: int = 40, script: list |
     steps, err = random_battle(p1, p2, f"gen5,{seed},{seed + 1},{seed + 2},{seed + 3}", seed + 1,
                                max_turns=max_turns, views=views, script=script,
                                **({"fmt": fmt} if fmt else {}))  # fmt: skip
-    r = chain_diffs(steps, depth, every, start=built.get, first=0, rename=_rename_choice, same=_alias)
+    r = chain_diffs(
+        steps, depth, every, start=built.get, first=0, rename=_rename_choice, same=_alias
+    )
     return r, stats
 
 
 def _alias(key: str, ours, theirs) -> bool:
     """Our names for one thing Showdown names otherwise (SAME_SPECIES: Greninja-Bond as Greninja --
     its id, its switch option)."""
+
     def norm(v):
         s = json.dumps(v, default=str).lower()
         for a, b in SAME_SPECIES.items():
             s = s.replace(a, b)
         return s
+
     return norm(ours) == norm(theirs)
 
 
@@ -737,12 +795,16 @@ def decision_diffs(b, built, t, sets: bool) -> list[tuple[str, str]]:
     if built.side_one.force_switch != want:
         out.append(("own:force_switch", f"{built.side_one.force_switch} vs {want}"))
     diffs = own_diffs(built.side_one, t.side_one)
-    recharge = any(m.get("id") == "recharge" for m in ((req.get("active") or [{}])[0].get("moves") or []))
+    recharge = any(
+        m.get("id") == "recharge" for m in ((req.get("active") or [{}])[0].get("moves") or [])
+    )
     if want or req.get("forceSwitch") or recharge:
         # (a switch decision -- the active leaves -- or a recharge: its moves' flags are its
         # last move request's in Showdown, whatever the lock since; nothing reads them now)
         act = _sp(_active(built.side_one))
-        diffs = [(k2, d) for k2, d in diffs if not (k2 == "own:disabled" and d.startswith(act + " "))]
+        diffs = [
+            (k2, d) for k2, d in diffs if not (k2 == "own:disabled" and d.startswith(act + " "))
+        ]
     for kind, detail in (diffs
                          + foe_diffs(built.side_two, t.side_two, seen, sets,
                                      frozenset(_disguised(b, t.side_two)))
@@ -756,8 +818,9 @@ def _silent_lock_end(built: pe.Side, truth: pe.Side) -> bool:
     """A lock's end when it was confused already, or with Own Tempo -- no confusion: silent,
     hidden (the lock's moves and its options, the built side's)."""
     bv, tv = _vols(built), _vols(truth)
-    return ("confusion" in bv & tv or str(_active(truth).ability).lower() == "owntempo") \
-        and "lockedmove" in bv ^ tv
+    return (
+        "confusion" in bv & tv or str(_active(truth).ability).lower() == "owntempo"
+    ) and "lockedmove" in bv ^ tv
 
 
 def option_diffs(b, built, t) -> list[tuple[str, str]]:

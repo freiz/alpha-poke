@@ -85,12 +85,15 @@ def chain_diffs(steps: list[dict], depth: int = 3, every: int = 3, start=None, f
     -> the choice as that state names it, ``same``: (key, engine value, Showdown's) -> alike though
     unequal (a start of our own: its names, poke-env's)."""
     out: dict = {"chains": 0, "compared": 0, "kinds": {}, "examples": {}, "errors": []}
+
     # (a battle's last transition too: it "stops at a decision" -- its turn not on, no request --
     # but is compared by who fainted, end_diff; 2026-10-26 review, it never was in a chain)
     def stops(k: int) -> bool:
         return at_decision(steps, k) and not steps[k + 1]["state"]["ended"]
 
-    starts = [k for k in range(len(steps) - 1) if comparable(steps, k) is None and not stops(k)][::every]
+    starts = [k for k in range(len(steps) - 1) if comparable(steps, k) is None and not stops(k)][
+        ::every
+    ]
     for k0 in starts:
         try:
             st = ec.engine_state(steps[k0]["state"]) if start is None else start(k0)
@@ -103,7 +106,11 @@ def chain_diffs(steps: list[dict], depth: int = 3, every: int = 3, start=None, f
         # (a start of our own: its legal options too, the request's -- the steps compare those after
         # each step, when the engine's own rules have set them: a Choice lock our state left out
         # was on again after the locked move; S158)
-        pre = {} if start is None else ec.options_diff(st, steps[k0]["state"]["sides"], "start_options")
+        pre = (
+            {}
+            if start is None
+            else ec.options_diff(st, steps[k0]["state"]["sides"], "start_options")
+        )
         k = k0
         for d in range(depth):
             if k >= len(steps) - 1 or comparable(steps, k) is not None or stops(k):
@@ -123,7 +130,9 @@ def chain_diffs(steps: list[dict], depth: int = 3, every: int = 3, start=None, f
                        ec.closest(b["state"], outs, n, hp=True, dealt=dealt, full=True, start=a["state"],
                                   complete=True))  # fmt: skip
             except BaseException as e:  # noqa: BLE001 - the binding's panics are BaseExceptions
-                out["errors"].append(f"engine d{d}: {c1} | {c2}: {type(e).__name__}: {str(e)[:120]}")
+                out["errors"].append(
+                    f"engine d{d}: {c1} | {c2}: {type(e).__name__}: {str(e)[:120]}"
+                )
                 break
             if d >= first:
                 out["compared"] += 1

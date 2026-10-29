@@ -2,7 +2,6 @@
 of a pivot switch held the foe's move that came after it (our U-turn first, the foe's attack
 after our switch-in), which the live history -- the log so far -- does not have."""
 
-
 import gzip
 import json
 from pathlib import Path
@@ -112,7 +111,7 @@ def test_positions_of_hazard_faint_rounds_and_an_eject():
     forced = [p for p in mine if p.kind == KIND_FORCED and p.turn == 2]
     assert len(forced) == 2, [(p.turn, p.kind) for p in mine]
     # the second round: Dondozo down already (it came in and fainted), Blissey the choice
-    for p, gone in zip(forced, ("garchomp", "dondozo")):
+    for p, gone in zip(forced, ("garchomp", "dondozo"), strict=True):
         st = pe.State.from_string(p.state)
         act = st.side_one.pokemon[int(st.side_one.active_index)]
         assert act.id.lower() == gone and act.hp == 0, (act.id, act.hp)
@@ -206,7 +205,10 @@ def test_a_pivot_after_a_faints_replacement_comes_after_it():
     rep = parse_replay({"id": "t3", "log": LOG3, "rating": None, "uploadtime": 0})
     steps = decision_steps(rep.actions)[2]
     p1 = [s["p1"] for s in steps if "p1" in s]
-    assert [(a.to, a.forced, a.pivot) for a in p1] == [("Garchomp", True, False), ("Blissey", False, True)]
+    assert [(a.to, a.forced, a.pivot) for a in p1] == [
+        ("Garchomp", True, False),
+        ("Blissey", False, True),
+    ]
 
 
 LOG_PAR = """|player|p1|Alice|1|
@@ -334,9 +336,12 @@ def test_a_faint_or_an_eject_after_a_pivot_is_in_the_pivots_step():
     for tail, kind in (("|-damage|p1a: Mimikyu|0 fnt|[from] Stealth Rock\n|faint|p1a: Mimikyu", "d"),
                        ("|-damage|p1a: Mimikyu|80/100\n|-enditem|p1a: Mimikyu|Eject Button\n"
                         "|switch|p1a: Zamazenta|Zamazenta|100/100", "p")):  # fmt: skip
-        log = LOG_PAR.replace("Slowking-Galar, M|100/100 par", "Mimikyu, F|100/100").replace(
-            "|switch|p1a: Slowking|", "|switch|p1a: Mimikyu|").replace(
-            "|cant|p1a: Slowking|par", tail).replace("|poke|p1|Slowking-Galar, M|", "|poke|p1|Mimikyu, F|")
+        log = (
+            LOG_PAR.replace("Slowking-Galar, M|100/100 par", "Mimikyu, F|100/100")
+            .replace("|switch|p1a: Slowking|", "|switch|p1a: Mimikyu|")
+            .replace("|cant|p1a: Slowking|par", tail)
+            .replace("|poke|p1|Slowking-Galar, M|", "|poke|p1|Mimikyu, F|")
+        )
         log = log.split("|upkeep\n|turn|2")[0] + "|upkeep\n|turn|2\n|win|Bob\n"
         rep = parse_replay({"id": "t7", "log": log, "rating": None, "uploadtime": 0})
         steps = decision_steps(rep.actions, blind_sides(rep))
@@ -542,4 +547,8 @@ def test_a_bounced_parting_shot_before_its_switch_is_already_a_blind():
 """
     rep = parse_replay({"id": "t13", "log": log, "rating": None, "uploadtime": 0})
     b = blind_sides(rep)
-    assert b.get((1, "p2")) is not None and b[(1, "p2")].kind == "p" and b[(1, "p2")].reason == "ejected", b
+    assert (
+        b.get((1, "p2")) is not None
+        and b[(1, "p2")].kind == "p"
+        and b[(1, "p2")].reason == "ejected"
+    ), b

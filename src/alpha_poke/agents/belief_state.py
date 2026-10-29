@@ -40,7 +40,6 @@ class BeliefModel:
     names: dict[str, str]  # species id -> name as used in replay tables (e.g. 'Zamazenta-*')
     in_battle_update: bool = True  # re-weight unrevealed moves with set-archetype posteriors
 
-
     @classmethod
     def build(
         cls, format_id: str = "gen9ou", cutoff: int = 1825, exclude_teams: set[str] | None = None

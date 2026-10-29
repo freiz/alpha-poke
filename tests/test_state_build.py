@@ -54,7 +54,11 @@ def _check(baseline: Path, teams: Path, replay: bool = False) -> None:
     examples: dict = {}
     for i in range(base["battles"]):
         p = pairs[i % len(pairs)]
-        diffs, stats = replay_diffs(p["p1"], p["p2"], seed=i) if replay else battle_diffs(p["p1"], p["p2"], seed=i)
+        diffs, stats = (
+            replay_diffs(p["p1"], p["p2"], seed=i)
+            if replay
+            else battle_diffs(p["p1"], p["p2"], seed=i)
+        )
         assert not stats["errors"], stats["errors"]
         decisions += stats["decisions"]
         for k, side, kind, detail in diffs:

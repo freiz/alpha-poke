@@ -21,7 +21,9 @@ from alpha_poke.enginecheck.stepdiff import comparable
 
 N = 100  # Showdown's outcomes per turn
 EVERY = 4  # every EVERY-th turn with both sides choosing is serialized (random_battle.js)
-FLOOR = 0.04  # the least difference reported (the engine's own approximations: a roll's kill chance)
+FLOOR = (
+    0.04  # the least difference reported (the engine's own approximations: a roll's kill chance)
+)
 ALPHA = 1e-4  # a class's two-sided exact binomial test (2026-10-26 review: the normal approximation
 # missed an engine's 10% that Showdown never has -- p > 0.138 only -- and was loose at a small p)
 EXAMPLES = 5  # (kept per kind; an analysis may raise it)
@@ -63,7 +65,10 @@ def _describe(v: dict, v0: dict, pattern: tuple) -> dict:
 def turn_dist(a: dict, outcomes: list[dict]) -> dict:
     """One turn: ``a`` the recorded step (state, choices), ``outcomes`` Showdown's states after it.
     {"classes": {key: (p, frequency, description)}, "unmatched": [description, ...]}."""
-    c1, c2 = ("none" if a["choices"][s]["engine"] == "struggle" else a["choices"][s]["engine"] for s in ("p1", "p2"))
+    c1, c2 = (
+        "none" if a["choices"][s]["engine"] == "struggle" else a["choices"][s]["engine"]
+        for s in ("p1", "p2")
+    )
     nm = tuple(len(s["mons"]) for s in a["state"]["sides"])
     start = ec.engine_state(a["state"])
     v0e, v0s = ec.view_engine(start, nm), ec.view(a["state"])
@@ -76,7 +81,7 @@ def turn_dist(a: dict, outcomes: list[dict]) -> dict:
         v = ec.view_engine(o[1], nm)
         # (a branch that ends the battle: who fainted alone -- the turn stops at the win in
         # Showdown, the engine plays it out: one class per faint set, as its ended samples)
-        key = (("end", _engine_pattern(o, v)) if _over(v, nm) else (_rest(v), _engine_pattern(o, v)))
+        key = ("end", _engine_pattern(o, v)) if _over(v, nm) else (_rest(v), _engine_pattern(o, v))
         probs[key] += o[0]
         desc.setdefault(key, _describe(v, v0e, key[1]))
         branches.append((v, key))
@@ -87,10 +92,18 @@ def turn_dist(a: dict, outcomes: list[dict]) -> dict:
         pat = _showdown_pattern(s, vs)
         # (an outcome that ended the battle: who fainted alone -- Showdown stops the turn at the
         # win, the engine plays it out: ec.end_diff)
-        if s.get("ended"):  # (2026-10-26 review: every ended sample went to the first branch's class)
+        # (2026-10-26 review: every ended sample went to the first branch's class)
+        if s.get("ended"):
             key = ("end", pat) if ("end", pat) in probs else None
         else:
-            key = next((k for v, k in branches if k[0] != "end" and k[1] == pat and not ec.diff(v, vs, skip_hp=True)), None)
+            key = next(
+                (
+                    k
+                    for v, k in branches
+                    if k[0] != "end" and k[1] == pat and not ec.diff(v, vs, skip_hp=True)
+                ),
+                None,
+            )
         counts[key] += 1
         if key is None:
             unmatched.append(_describe(vs, v0s, pat))
@@ -113,7 +126,10 @@ def off(p: float, f: float, n: int) -> bool:
 
 def _over(v: dict, nm: tuple) -> bool:
     """A side with no mon left in the view: the battle over."""
-    return any(all(v.get(f"{k}.{j}.hp", 0) == 0 for j in range(n)) for k, n in zip(("s1", "s2"), nm, strict=True))
+    return any(
+        all(v.get(f"{k}.{j}.hp", 0) == 0 for j in range(n))
+        for k, n in zip(("s1", "s2"), nm, strict=True)
+    )
 
 
 def _drawn(state: dict) -> str | None:
@@ -159,17 +175,26 @@ def dist_diffs(steps: list[dict], n: int = N) -> dict:
         return out
     for k, r in zip(at, results, strict=True):
         if r["error"]:
-            out["errors"].append(f"resample t{steps[k]['state']['turn']}: {r['error'].splitlines()[0][:150]}")
+            out["errors"].append(
+                f"resample t{steps[k]['state']['turn']}: {r['error'].splitlines()[0][:150]}"
+            )
             continue
         try:
             t = turn_dist(steps[k], r["states"])
         except BaseException as e:  # noqa: BLE001 - the binding's panics are BaseExceptions
-            out["errors"].append(f"engine t{steps[k]['state']['turn']}: {type(e).__name__}: {str(e)[:120]}")
+            out["errors"].append(
+                f"engine t{steps[k]['state']['turn']}: {type(e).__name__}: {str(e)[:120]}"
+            )
             continue
         out["compared"] += 1
         found = []
         if len(t["unmatched"]) / t["n"] > FLOOR:
-            found.append(("dist.unmatched", {"share": len(t["unmatched"]) / t["n"], "outcome": t["unmatched"][0]}))
+            found.append(
+                (
+                    "dist.unmatched",
+                    {"share": len(t["unmatched"]) / t["n"], "outcome": t["unmatched"][0]},
+                )
+            )
         for p, f, d in t["classes"].values():
             if off(p, f, t["n"]):
                 found.append(("dist.freq", {"engine": p, "showdown": f, "outcome": d}))

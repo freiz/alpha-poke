@@ -98,8 +98,10 @@ promotion bar, so self-play continues on the same generation.
 
 Requirements: Linux or WSL2 (developed on WSL2 Ubuntu), [uv](https://docs.astral.sh/uv/),
 Node.js ≥ 22.18 (the local Showdown server), a Rust toolchain (the search is built on install),
-git. A CUDA GPU is optional: the CPU search is what plays people and Foul Play, while
-self-play and the large evaluations batch on the GPU.
+git. A CUDA GPU is optional: everything runs on the CPU alone (the network falls back to
+the CPU without CUDA graphs, compilation or BF16; checked with `CUDA_VISIBLE_DEVICES=""`). The
+CPU search is what plays people and Foul Play anyway; a GPU makes self-play, training and the
+large batched evaluations much faster.
 
 ```bash
 git clone https://github.com/freiz/alpha-poke && cd alpha-poke

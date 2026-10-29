@@ -59,8 +59,20 @@ from torch import nn
 
 # dense feature indices (rust/alpha_search/src/features.rs)
 D_ALIVE, D_ACTIVE, D_USABLE = 1, 2, slice(17, 21)
-FEATS = ("reveal", "num", "movetab", "matchup", "elo", "hres", "counter", "count", "ko2", "tera",
-         "team", "post")
+FEATS = (
+    "reveal",
+    "num",
+    "movetab",
+    "matchup",
+    "elo",
+    "hres",
+    "counter",
+    "count",
+    "ko2",
+    "tera",
+    "team",
+    "post",
+)
 V7 = ("ko2", "tera", "team")
 AUX_HEADS = ("oppset", "faint", "turns")
 N_REVEAL = 8

@@ -117,7 +117,9 @@ def test_root_noise_does_not_depend_on_the_worlds_order():
     assert a != b
 
     def prior(ws):
-        bs = alpha_search.BatchSearch(ws, [ctx] * len(ws), seed=3, threads=1, root_noise=(0.25, 10.0))
+        bs = alpha_search.BatchSearch(
+            ws, [ctx] * len(ws), seed=3, threads=1, root_noise=(0.25, 10.0)
+        )
         bs.collect(8)
         bs.apply(*bs.evaluate_cpu(str(MODEL)))
         return np.array(bs.record()["prior"], dtype=np.float32)

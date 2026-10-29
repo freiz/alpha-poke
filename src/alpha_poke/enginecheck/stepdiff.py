@@ -22,7 +22,9 @@ def drain_or_recoil() -> frozenset[str]:
     import alpha_search
 
     rows, _ = alpha_search.engine_data()
-    return frozenset(r[0].lower() for r in rows if r[8].startswith("Some") or r[9].startswith("Some"))
+    return frozenset(
+        r[0].lower() for r in rows if r[8].startswith("Some") or r[9].startswith("Some")
+    )
 
 
 def follows_dealt(state: dict, side: int, move: str) -> bool:

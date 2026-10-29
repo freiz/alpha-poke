@@ -20,12 +20,17 @@ def test_the_fast_tier_stays_within_its_baseline():
     res = dt.run(dt.corpus("fast"), list(dt.CHECKS), procs=8)
     base = json.loads(dt.baseline_path("fast").read_text())
     grown = dt.regressions(res, base)
-    detail = {g: res[g.split(":")[0]]["examples"].get(g.split(": ")[1].rsplit(" ", 3)[0], [])[:2] for g in grown}
+    detail = {
+        g: res[g.split(":")[0]]["examples"].get(g.split(": ")[1].rsplit(" ", 3)[0], [])[:2]
+        for g in grown
+    }
     assert not grown, (grown, detail)
     # (every check compared something: a corpus or applies rule that silently skips is no test --
     # "specs" counts the jobs given, not the comparisons made: 2026-10-25 review, every check at 0
     # compared passed; the baseline's #compared bounds each check from below too)
-    assert all(o["specs"] > 0 and o["n"] > 0 for o in res.values()), {c: (o["specs"], o["n"]) for c, o in res.items()}
+    assert all(o["specs"] > 0 and o["n"] > 0 for o in res.values()), {
+        c: (o["specs"], o["n"]) for c, o in res.items()
+    }
 
 
 def test_every_scenario_plays_its_script():

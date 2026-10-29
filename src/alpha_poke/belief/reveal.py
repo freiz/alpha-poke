@@ -75,7 +75,6 @@ class RevealModel:
         rho = self.rho.get((sid, mid), self.rho.get(("", mid), 1.0))
         return float(rho * f[min(t, MAX_T)])
 
-
     @classmethod
     def fit(cls, rows, smogon) -> "RevealModel":
         """rows: iterable of ``first_use_rows`` tuples; smogon: UsageStats (P(set contains m))."""

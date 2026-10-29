@@ -14,8 +14,8 @@ fast spread was never considered and "it moved first" was never learned from.
                          a candidate (speed stat, item) of the opponent's mon against them
 """
 
-import functools
 import dataclasses
+import functools
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -92,7 +92,9 @@ class Obs:
     ours_raw: float = 0.0
     our_species: str = ""
     our_item_then: str | None = None
-    our_forme: str = ""  # (our active's forme then: our speed stat is the one now -- another left out)
+    our_forme: str = (
+        ""  # (our active's forme then: our speed stat is the one now -- another left out)
+    )
 
 
 @dataclass

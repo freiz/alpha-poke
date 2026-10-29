@@ -51,9 +51,31 @@ def _blend(counts: Counter, prior: dict[str, float], alpha: float) -> dict[str, 
 # Showdown's random-battle sets (the local checkout): a species no OU set uses -- its movepool and
 # tera types, the fallback prior (2026-10-25, the belief check: 91% of its prior gaps were species
 # the usage does not list at all, their prior empty: no move but the revealed ones, no item)
-RANDBATS = Path(__file__).resolve().parents[3] / "vendor/pokemon-showdown/data/random-battles/gen9/sets.json"
-TYPES = ("bug", "dark", "dragon", "electric", "fairy", "fighting", "fire", "flying", "ghost", "grass",
-         "ground", "ice", "normal", "poison", "psychic", "rock", "steel", "water", "stellar")
+RANDBATS = (
+    Path(__file__).resolve().parents[3]
+    / "vendor/pokemon-showdown/data/random-battles/gen9/sets.json"
+)
+TYPES = (
+    "bug",
+    "dark",
+    "dragon",
+    "electric",
+    "fairy",
+    "fighting",
+    "fire",
+    "flying",
+    "ghost",
+    "grass",
+    "ground",
+    "ice",
+    "normal",
+    "poison",
+    "psychic",
+    "rock",
+    "steel",
+    "water",
+    "stellar",
+)
 
 
 @functools.cache
@@ -109,7 +131,10 @@ def items_for(sid: str, items: dict[str, float]) -> dict[str, float]:
     sig = signature_items()
     owned = frozenset().union(*sig.values()) if sig else frozenset()
     mine = frozenset().union(*(v for k, v in sig.items() if sid.startswith(k)))
-    abilities = {to_id(a) for a in ((GenData.from_gen(9).pokedex.get(sid) or {}).get("abilities") or {}).values()}
+    abilities = {
+        to_id(a)
+        for a in ((GenData.from_gen(9).pokedex.get(sid) or {}).get("abilities") or {}).values()
+    }
     out = {i: w for i, w in items.items()
            if (i not in owned or i in mine)
            and (i != "boosterenergy" or abilities & {"protosynthesis", "quarkdrive"})}  # fmt: skip
@@ -136,7 +161,11 @@ def legal_moves(species: str) -> frozenset:
         ls = (g.learnset.get(sid) or {}).get("learnset") or {}
         out |= {m for m, src in ls.items() if any(str(s).startswith("9") for s in src)}
     if "sketch" in out:  # (Smeargle: any move)
-        out |= {m for m, d in g.moves.items() if not d.get("isNonstandard") and not d.get("isZ") and not d.get("isMax")}
+        out |= {
+            m
+            for m, d in g.moves.items()
+            if not d.get("isNonstandard") and not d.get("isZ") and not d.get("isMax")
+        }
     return frozenset(out)
 
 
@@ -171,7 +200,9 @@ class SmogonPrior:
             from alpha_poke.data.smogon_stats import DEFAULT_DIR
 
             months = sorted(x.name for x in Path(DEFAULT_DIR).iterdir() if x.is_dir())
-            g = self._global_item = _global_items(UsageStats.load(DEFAULT_DIR / months[-1] / "chaos" / "gen9ou-1825.json"))
+            g = self._global_item = _global_items(
+                UsageStats.load(DEFAULT_DIR / months[-1] / "chaos" / "gen9ou-1825.json")
+            )
         return g
 
     def predict(self, species: str, team: tuple[str, ...]) -> Dist:
@@ -198,7 +229,9 @@ class SmogonPrior:
 
 # (the fallback on: off for the belief before it -- engine_state's mix 0, the search A/B's old side;
 # 2026-10-25 review, the switch left it on. A context variable: per thread, reset after the call)
-FALLBACK: contextvars.ContextVar[bool] = contextvars.ContextVar("alpha_poke_prior_fallback", default=True)
+FALLBACK: contextvars.ContextVar[bool] = contextvars.ContextVar(
+    "alpha_poke_prior_fallback", default=True
+)
 
 
 @functools.cache

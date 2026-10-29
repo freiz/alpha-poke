@@ -223,4 +223,3 @@ class GpuNet:
         v, logits, turns = out
         return (v[:n].float().cpu().numpy(), logits[:n].float().cpu().numpy().reshape(-1),
                 turns[:n].float().cpu().numpy() if turns is not None else None)  # fmt: skip
-

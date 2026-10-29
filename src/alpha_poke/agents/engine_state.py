@@ -15,18 +15,20 @@ import functools
 import random
 from dataclasses import dataclass, field
 
-import numpy as np
 import alpha_search
+import numpy as np
 import poke_engine as pe
 from poke_env.battle import Effect, Field, SideCondition, Status, Weather
 from poke_env.battle.move import Move
 from poke_env.data import GenData
 
-from alpha_poke.agents import poke_env_fixes  # noqa: F401 (poke-env's tracking fixed on import)
+from alpha_poke.agents import (
+    poke_env_fixes,  # noqa: F401 (poke-env's tracking fixed on import)
+    slots,
+)
 from alpha_poke.agents.belief_state import BeliefModel, _preview_name, ability_probs
 from alpha_poke.agents.damage import Spread, calc_stats
 from alpha_poke.agents.damage_obs import damage_posteriors, record_base
-from alpha_poke.agents import slots
 from alpha_poke.agents.pokeview import (
     copied_ability,
     copied_pp,
@@ -121,7 +123,11 @@ def _types(mon) -> tuple[str, str]:
     # apart: has_type reads only it), as Showdown's getTypes(false, true) (L31)
     # (Showdown's "???" -- Double Shock's, Burn Up's -- poke-env's THREE_QUESTION_MARKS: the
     # engine's typeless; 2026-10-24, the state check's types)
-    ts = ["typeless" if t.name == "THREE_QUESTION_MARKS" else t.name.lower() for t in mon.base_types if t is not None]
+    ts = [
+        "typeless" if t.name == "THREE_QUESTION_MARKS" else t.name.lower()
+        for t in mon.base_types
+        if t is not None
+    ]
     return (ts + ["typeless", "typeless"])[0], (ts + ["typeless", "typeless"])[1]
 
 
@@ -186,7 +192,9 @@ class SpectatorSide:
 _PRIORS: dict = {}  # (belief, species, team) -> Dist
 
 
-def _prior(belief: BeliefModel, species: str, team_names: tuple[str, ...], mix: float | None = None):
+def _prior(
+    belief: BeliefModel, species: str, team_names: tuple[str, ...], mix: float | None = None
+):
     """``belief.prior.predict``, cached: deterministic, and the same mon and team at every world
     of every decision (2026-10-11: 14% of a policy-only worker). Read-only for the callers. Mix 0
     (the belief before 2026-10-25): without the fallback prior of a species OU's usage lacks."""
@@ -232,8 +240,13 @@ def _smogon(belief: BeliefModel):
     return p if isinstance(p, SmogonPrior) else None
 
 
-def base_marginal(belief: BeliefModel, species: str, team_names: tuple[str, ...], attr: str,
-                  mix: float | None = None) -> dict:
+def base_marginal(
+    belief: BeliefModel,
+    species: str,
+    team_names: tuple[str, ...],
+    attr: str,
+    mix: float | None = None,
+) -> dict:
     """``attr`` ("item" / "tera") of a species in a team: half the team prior's, half Smogon's
     (each normalized; one alone if the other has none), ids as keys -- the team prior's alone at
     ``mix`` 0 (the belief before 2026-10-25, for A/B). Cached, read-only."""
@@ -261,7 +274,12 @@ def base_marginal(belief: BeliefModel, species: str, team_names: tuple[str, ...]
             if attr == "item":  # (and the items made for it: Palkia's Lustrous Orb)
                 from alpha_poke.belief.priors import signature_items
 
-                own = [i for k, v in signature_items().items() if to_id(species).startswith(k) for i in v]
+                own = [
+                    i
+                    for k, v in signature_items().items()
+                    if to_id(species).startswith(k)
+                    for i in v
+                ]
                 if own:
                     floor = {k: 0.5 * v for k, v in floor.items()}
                     for i in own:
@@ -306,7 +324,9 @@ def _move_floor(weights: dict, species: str) -> dict:
     return out
 
 
-def move_weights(ss, k: int | None, dist, species: str, move_beta: float, mix: float | None = None) -> dict:
+def move_weights(
+    ss, k: int | None, dist, species: str, move_beta: float, mix: float | None = None
+) -> dict:
     """The moves ``sample_set`` draws from (unnormalized): archetype ``k``'s weights (times the
     prior's ** ``move_beta``), else the prior's; the floor under them (``_move_floor``) when the
     mix is on. The belief check's move support is these (2026-10-25 review: it re-derived them)."""
@@ -417,8 +437,11 @@ def sample_set(
         # archetype's item and moves are drawn apart; 2026-10-24, plan C's slot check: a replay's
         # Slowking-Galar with Toxic and Chilly Reception held an Assault Vest, its Toxic no option)
         no_vest = ("assaultvest",) if any(map(_status, revealed)) else ()
-        item = (required_item(mon) if (mix if mix is not None else ARCH_MIX) > 0 else None) or draw(
-            "item", base_marginal(belief, species, team_names, "item", mix), no_vest) or "none"
+        item = (
+            (required_item(mon) if (mix if mix is not None else ARCH_MIX) > 0 else None)
+            or draw("item", base_marginal(belief, species, team_names, "item", mix), no_vest)
+            or "none"
+        )
     if tera is None:
         tera = draw("tera", base_marginal(belief, species, team_names, "tera", mix)) or _tera(mon)
     # (its own: not a temporary one -- Trace's, a Transform's; 2026-10-23 review: the copied
@@ -481,7 +504,9 @@ def sample_set(
     forme = forme if forme != sp else None
     base = (GEN.pokedex.get(forme) or {}).get("baseStats") if forme else None
     stats = calc_stats(base or own_base_stats(mon), spread, level=mon.level or 100)
-    return SampledSet(moves or ["tackle"], item, ability, tera, stats, spread.nature, tuple(spread.evs), forme)
+    return SampledSet(
+        moves or ["tackle"], item, ability, tera, stats, spread.nature, tuple(spread.evs), forme
+    )
 
 
 # Showdown's team preview hides these formes ("-*": data/rulesets.ts' onTeamPreview -- Zacian /
@@ -500,7 +525,11 @@ def _forme_candidates(base: str) -> tuple[str, ...]:
         if k == base or to_id(e.get("baseSpecies") or "") != base or e.get("isNonstandard"):
             continue
         forme = e.get("forme") or ""
-        if "Mega" in forme or "Gmax" in forme or (e.get("battleOnly") and not e.get("requiredItem")):
+        if (
+            "Mega" in forme
+            or "Gmax" in forme
+            or (e.get("battleOnly") and not e.get("requiredItem"))
+        ):
             continue
         out.append(k)
     return tuple(out)
@@ -531,7 +560,9 @@ def resolve_forme(base: str, item: str, ability: str, moves) -> str:
     fit = [c for c in _forme_candidates(base) if fits(c)]
     if not fit:
         return base
-    return min(fit, key=lambda c: (len((GEN.pokedex.get(c) or {}).get("abilities") or {}), c != base))
+    return min(
+        fit, key=lambda c: (len((GEN.pokedex.get(c) or {}).get("abilities") or {}), c != base)
+    )
 
 
 _SPREAD_SPEEDS: dict = {}  # (species, level) -> the speed stat of each usage spread
@@ -560,7 +591,11 @@ def _sample_spread(mon, item: str, item_seen: bool, obs: list, dist, rng) -> tup
         for it in (item,) if item_seen else (item, "choicescarf"):
             if it == "choicescarf" and it != item and dist.item.get("choicescarf", 0) <= 0:
                 continue
-            ok = [i for i, sp in enumerate(speeds) if consistent(obs, sp, it, _forme_stat(spreads[i], level))]
+            ok = [
+                i
+                for i, sp in enumerate(speeds)
+                if consistent(obs, sp, it, _forme_stat(spreads[i], level))
+            ]
             if ok:  # by usage; uniform if the fitting spreads all have zero usage weight
                 w = [ws[j] for j in ok]
                 i = rng.choices(ok, weights=w if sum(w) > 0 else None)[0]
@@ -607,7 +642,9 @@ def _side_conditions(sc: dict, turn: int, toxic: int = 0, protect: int = 0,
         stealth_rock=int(SideCondition.STEALTH_ROCK in sc),
         sticky_web=int(SideCondition.STICKY_WEB in sc),
         reflect=left(SideCondition.REFLECT, "reflect", 8 if "reflect" in clay else 5),
-        light_screen=left(SideCondition.LIGHT_SCREEN, "lightscreen", 8 if "lightscreen" in clay else 5),
+        light_screen=left(
+            SideCondition.LIGHT_SCREEN, "lightscreen", 8 if "lightscreen" in clay else 5
+        ),
         aurora_veil=left(SideCondition.AURORA_VEIL, "auroraveil", 8 if "auroraveil" in clay else 5),
         tailwind=left(SideCondition.TAILWIND, "tailwind", 4),
         # (the engine has them: 2026-10-23, the state-construction differential -- never passed)
@@ -722,6 +759,7 @@ def _move_kinds() -> dict:
 # order (volatile_status_durations.calledlock - 1) -- and the calling moves whose slot runs one
 # (Side::caller_slot; the differential's choice too)
 CALLED_LOCKS = ("outrage", "thrash", "petaldance", "ragingfury", "uproar", "rollout", "iceball")
+# (L224: the moves that call another -- a charge move one starts locks into the caller's slot)
 CALLERS = ("metronome", "copycat", "assist", "mefirst", "naturepower", "mirrormove")
 
 
@@ -744,9 +782,13 @@ def derived_disable(move: str, *, taunt: bool, healblock: bool, throatchop: bool
     if disabled == move:
         return False
     cat, flags = _move_kinds().get(move, ("", set()))
-    if (taunt and cat == "Status") or (healblock and "heal" in flags) \
-            or (throatchop and "sound" in flags) or (item == "assaultvest" and cat == "Status") \
-            or (move in ("gigatonhammer", "bloodmoon") and last_move == move):
+    if (
+        (taunt and cat == "Status")
+        or (healblock and "heal" in flags)
+        or (throatchop and "sound" in flags)
+        or (item == "assaultvest" and cat == "Status")
+        or (move in ("gigatonhammer", "bloodmoon") and last_move == move)
+    ):
         return True  # (the differential's own: these before an Encore's flag)
     if encore:  # (Encore keeps the others out by their flags too)
         return False
@@ -799,7 +841,8 @@ def _our_mon(
     lock = chosen if ((mon.item in CHOICE_ITEMS and not (tm is not None and tm.item_new))
                     or current_ability(mon) == "gorillatactics") else ""  # fmt: skip
     if tm is not None and tm.locked and mon.active:
-        lock = tm.locked[0]  # (a locking move's: its flags first -- L179; a Taunt on top derives none)
+        # (a locking move's: its flags first -- L179; a Taunt on top derives none)
+        lock = tm.locked[0]
     own = own_moves(mon)
     # (its moves as its request lists them: poke-env adds a move our disguised Zoroark used to its
     # disguise's -- 2026-10-23, the state-construction differential)
@@ -851,10 +894,12 @@ def _our_mon(
         weight_kg=own_weight(mon),
         moves=moves,
         terastallized=bool((mon._last_request or {}).get("terastallized"))
-        if "terastallized" in (getattr(mon, "_last_request", None) or {}) else mon.is_terastallized,
+        if "terastallized" in (getattr(mon, "_last_request", None) or {})
+        else mon.is_terastallized,
         # (the request's tera type: a switch line's tera: details went to the mon a disguised
         # Illusion showed -- 2026-10-23, the state-construction differential)
-        tera_type=to_id((getattr(mon, "_last_request", None) or {}).get("teraType") or "") or _tera(mon),
+        tera_type=to_id((getattr(mon, "_last_request", None) or {}).get("teraType") or "")
+        or _tera(mon),
         **({"nature": own_set[0], "evs": tuple(own_set[1])} if own_set else {}),
         **_sleep(mon, tm),
         **_counted(mon, tm),
@@ -928,7 +973,9 @@ def _illusion_fix(team: dict, tm: SideTimers, current: bool) -> tuple[dict, dict
         if m is None or m is zoroark:
             continue
         own = tm.moves_by_nick.get(f["nick"], collections.Counter())
-        hp, ex, back, n = dis.get(id(m), (f["hp"], set(), collections.Counter(), collections.Counter()))
+        hp, ex, back, n = dis.get(
+            id(m), (f["hp"], set(), collections.Counter(), collections.Counter())
+        )
         back.update(cost)
         n.update(uses)
         ex |= {mv for mv in uses if own[mv] - n[mv] <= 0}
@@ -962,7 +1009,10 @@ def _their_mon(mon, s: SampledSet, tm: SideTimers | None = None, disabled: str |
         hp = maxhp
         if hp_line:
             cur, tot = hp_line.split(" ")[0].split("/")
-            hp = max(1, round(int(cur) / max(int("".join(c for c in tot if c.isdigit()) or 1), 1) * maxhp))
+            hp = max(
+                1,
+                round(int(cur) / max(int("".join(c for c in tot if c.isdigit()) or 1), 1) * maxhp),
+            )
     elif not mon.max_hp:
         # never on the field (team preview only): poke-env reports an HP fraction of 0; the
         # mon is at full HP (before 2026-10-06 this gave it 1 HP in every search)
@@ -981,7 +1031,11 @@ def _their_mon(mon, s: SampledSet, tm: SideTimers | None = None, disabled: str |
         level=mon.level or 100,
         # (a hidden forme's: its own types -- Zacian-Crowned's Steel; S158 -- unless they changed:
         # a Protean Greninja's, poke-env's then; the full belief check, an Ice Beam with no STAB)
-        types=_base_types(s.forme) if s.forme and _types(mon) == _base_types(mon.species) else _types(mon),
+        types=(
+            _base_types(s.forme)
+            if s.forme and _types(mon) == _base_types(mon.species)
+            else _types(mon)
+        ),
         base_types=_base_types(s.forme or mon.species),
         hp=hp,
         maxhp=maxhp,
@@ -995,11 +1049,17 @@ def _their_mon(mon, s: SampledSet, tm: SideTimers | None = None, disabled: str |
         special_defense=s.stats["spd"],
         speed=s.stats["spe"],
         status=STATUS.get(mon.status, "none"),
-        weight_kg=float((GEN.pokedex.get(s.forme) or {}).get("weightkg") or own_weight(mon)) if s.forme
+        weight_kg=float((GEN.pokedex.get(s.forme) or {}).get("weightkg") or own_weight(mon))
+        if s.forme
         else own_weight(mon),
-        moves=[pe.Move(id=m, pp=max(0, min(_max_pp(m), _pp(mon, m) + pp_adj.get(m, 0))
-                                    - _spited(tm, mon, m)),
-                       disabled=m == disabled) for m in s.moves[:4]],  # fmt: skip
+        moves=[
+            pe.Move(
+                id=m,
+                pp=max(0, min(_max_pp(m), _pp(mon, m) + pp_adj.get(m, 0)) - _spited(tm, mon, m)),
+                disabled=m == disabled,
+            )
+            for m in s.moves[:4]
+        ],  # fmt: skip
         terastallized=mon.is_terastallized,
         tera_type=s.tera,
         nature=s.nature,
@@ -1057,8 +1117,9 @@ def _sp_id(p: pe.Pokemon) -> str:
     return to_id(str(p.id))
 
 
-def _as_transformed(p: pe.Pokemon, target: pe.Pokemon, moves: list, ability: str,
-                    types: tuple | None = None) -> pe.Pokemon:
+def _as_transformed(
+    p: pe.Pokemon, target: pe.Pokemon, moves: list, ability: str, types: tuple | None = None
+) -> pe.Pokemon:
     """``p`` transformed into ``target`` (Showdown's transformInto): the target's types,
     ability, stats except HP, weight and ``moves``; its own species (as the engine's transform
     keeps it), HP, level, item, status, tera and base types / ability, and its own stats,
@@ -1108,7 +1169,11 @@ def _last_move(mon, engine_mon, avail: set[str] | None = None, index: int | None
         vol.discard("encore")
         return {}, vol
     idx = next(
-        (ids.index(mid) for mid, mv in current_moves(mon).items() if mv.is_last_used and mid in ids),
+        (
+            ids.index(mid)
+            for mid, mv in current_moves(mon).items()
+            if mv.is_last_used and mid in ids
+        ),
         None,
     )
     if tm is not None and tm.locked_exec and tm.locked_exec not in ids:
@@ -1139,8 +1204,14 @@ def _last_move(mon, engine_mon, avail: set[str] | None = None, index: int | None
     return {"last_used_move": f"move:{idx}"}, vol
 
 
-def _pending_move(engine_mon: pe.Pokemon, last: dict, vol: set[str], weights: dict | None,
-                  rng: random.Random, legal: list[str]) -> str:
+def _pending_move(
+    engine_mon: pe.Pokemon,
+    last: dict,
+    vol: set[str],
+    weights: dict | None,
+    rng: random.Random,
+    legal: list[str],
+) -> str:
     """The opponent's move still to come this turn, in this world: its locked move (a Choice
     item's, Outrage's: its last used one) if legal, else one of the ``legal`` ones (the engine's:
     alpha_search.pending_moves) drawn by ``weights`` (by move id: the turn's search's opponent
@@ -1232,7 +1303,10 @@ def _passed_sub(tm: SideTimers, mons: list, built: list) -> int:
     Showdown's; Baton Pass: its passer's, about that), 0 without one."""
     if not tm.sub_passed:
         return 0
-    p = next((b for m, b in zip(mons, built, strict=True) if tm.k(to_id(m.species)) == tm.sub_passed), None)
+    p = next(
+        (b for m, b in zip(mons, built, strict=True) if tm.k(to_id(m.species)) == tm.sub_passed),
+        None,
+    )
     return p.maxhp // 4 if p is not None else 0
 
 
@@ -1244,7 +1318,7 @@ def _tera_used(mons: list, used: bool) -> list:
     j = next((j for j, p in enumerate(mons) if p.hp <= 0), None)
     if j is None:
         return mons
-    return mons[:j] + [_with(mons[j], terastallized=True)] + mons[j + 1:]
+    return mons[:j] + [_with(mons[j], terastallized=True)] + mons[j + 1 :]
 
 
 def _side_tera_used(mons: list, used: bool) -> dict:
@@ -1303,8 +1377,13 @@ def build_state(
         z = tm_us.k(to_id(zor.species))
         for stint in [*tm_us.past_stints, tm_us.stint]:
             shown = battle.team.get(f"{role}: {stint.get('nick', '')}")
-            if not stint.get("items") or shown is None or shown is zor or str(zor.max_hp) != stint.get("max") \
-                    or str(shown.max_hp) == stint.get("max"):
+            if (
+                not stint.get("items")
+                or shown is None
+                or shown is zor
+                or str(zor.max_hp) != stint.get("max")
+                or str(shown.max_hp) == stint.get("max")
+            ):
                 continue
             if tm_us is tms[role]:
                 tm_us = copy.copy(tm_us)
@@ -1318,10 +1397,22 @@ def build_state(
     if spectator is None:
         # (our Zoroark's sleep counted under a disguise -- this time in or an earlier one: the
         # request's Zoroark asleep with no count, a mon not asleep with one -- S110, S119)
-        zor = next((m for m in battle.team.values() if to_id(m.species).startswith("zoroark")), None)
-        if zor is not None and STATUS.get(zor.status) == "sleep" and tm_us.k(to_id(zor.species)) not in tm_us.sleep:
-            stray = [k for k in tm_us.sleep if not any(
-                tm_us.k(to_id(m.species)) == k and STATUS.get(m.status) == "sleep" for m in battle.team.values())]
+        zor = next(
+            (m for m in battle.team.values() if to_id(m.species).startswith("zoroark")), None
+        )
+        if (
+            zor is not None
+            and STATUS.get(zor.status) == "sleep"
+            and tm_us.k(to_id(zor.species)) not in tm_us.sleep
+        ):
+            stray = [
+                k
+                for k in tm_us.sleep
+                if not any(
+                    tm_us.k(to_id(m.species)) == k and STATUS.get(m.status) == "sleep"
+                    for m in battle.team.values()
+                )
+            ]
             if len(stray) == 1:
                 tm_us = copy.copy(tm_us)
                 tm_us.sleep = dict(tm_us.sleep)
@@ -1357,8 +1448,15 @@ def build_state(
             # known moves come first in sample_set; in a real battle our moves are in moveset
             # order, unrelated to use: shuffle so the slot does not leak which move gets used
             rng.shuffle(s.moves)
-            our_mons.append(_their_mon(m, s, tm_us, tm_us.disabled if m is active else None,
-                                       *_illusion_adj(m, dis_us, z_us)))
+            our_mons.append(
+                _their_mon(
+                    m,
+                    s,
+                    tm_us,
+                    tm_us.disabled if m is active else None,
+                    *_illusion_adj(m, dis_us, z_us),
+                )
+            )
     our_idx = next((i for i, m in enumerate(ours) if m is active), 0)
     if battle.force_switch or (active is not None and active.fainted):
         our_idx = next((i for i, m in enumerate(ours) if m.active), our_idx)
@@ -1410,8 +1508,12 @@ def build_state(
     our_active_idx = next((i for i, m in enumerate(ours) if m is active), None)
     if spectator is None and tm_them.imprison and their_mons and our_active_idx is not None:
         # (the imprisoner's moves in this world -- its set's, not only those it revealed: S140)
-        world = frozenset(current_moves(opp_active)) if their_t is not None else \
-            frozenset(their_sets[their_idx].moves) | frozenset(current_moves(opp_active))  # (transformed: its copied ones)
+        # (transformed: its copied ones)
+        world = (
+            frozenset(current_moves(opp_active))
+            if their_t is not None
+            else frozenset(their_sets[their_idx].moves) | frozenset(current_moves(opp_active))
+        )
         our_mons[our_active_idx] = _our_mon(active, avail, tm_us, req_pp, revived == to_id(active.species),
                                             imprisoned=world, own_set=_own_set(battle, active))  # fmt: skip
     if zi is not None:  # the active is the Zoroark: what is shown (HP fraction, status) is its
@@ -1448,12 +1550,20 @@ def build_state(
             moves = []
             struggling = avail is not None and avail <= {"struggle"}
             for mid in ids:
-                pp = int(req[mid]) if req.get(mid) is not None else max(0, copied_pp(active, mid) - _spited(tm_us, active, mid))
+                pp = (
+                    int(req[mid])
+                    if req.get(mid) is not None
+                    else max(0, copied_pp(active, mid) - _spited(tm_us, active, mid))
+                )
                 cat, flags = _move_kinds().get(mid, ("", set()))
-                blocked = (tm_us.taunt is not None and cat == "Status") or tm_us.disabled == mid \
-                    or (tm_us.healblock is not None and "heal" in flags) \
-                    or (tm_us.throatchop is not None and "sound" in flags) \
-                    or (active.item == "assaultvest" and cat == "Status")  # (S139: Heal Block's Horn Leech)
+                # (S139: Heal Block's Horn Leech)
+                blocked = (
+                    (tm_us.taunt is not None and cat == "Status")
+                    or tm_us.disabled == mid
+                    or (tm_us.healblock is not None and "heal" in flags)
+                    or (tm_us.throatchop is not None and "sound" in flags)
+                    or (active.item == "assaultvest" and cat == "Status")
+                )
                 if struggling and mid == lock and not blocked:
                     pp = 0  # (Struggle only, locked into it: it is out of PP -- poke-env's count drifts)
                 # (its flags as an untransformed mon's: not offered and no reason the engine
@@ -1468,7 +1578,9 @@ def build_state(
             moves = [pe.Move(id=m.id, pp=copied_pp(active, m.id), disabled=m.id == tm_us.disabled)
                      for m in their_mons[t].moves]  # fmt: skip
         our_mons[our_active_idx] = _as_transformed(
-            our_mons[our_active_idx], their_mons[t], moves or their_mons[t].moves,
+            our_mons[our_active_idx],
+            their_mons[t],
+            moves or their_mons[t].moves,
             copied_ability(active, their_sets[t].ability),
             _types(active),  # (its types as it copied them: S136)
         )
@@ -1476,19 +1588,34 @@ def build_state(
     t = their_t
     if t is not None and their_mons and t < len(our_mons):
         # (Disable's flag on a copied move: 2026-10-23 review -- left out, usable)
-        moves = [pe.Move(id=m.id, pp=max(0, copied_pp(opp_active, m.id) - _spited(tm_them, opp_active, m.id)),
-                         disabled=m.id == tm_them.disabled) for m in our_mons[t].moves]  # (S131: Spite's)
+        # (S131: Spite's)
+        moves = [
+            pe.Move(
+                id=m.id,
+                pp=max(0, copied_pp(opp_active, m.id) - _spited(tm_them, opp_active, m.id)),
+                disabled=m.id == tm_them.disabled,
+            )
+            for m in our_mons[t].moves
+        ]
         own = own_ability(ours[t]) or our_mons[t].ability
         their_mons[their_idx] = _as_transformed(their_mons[their_idx], our_mons[t], moves,
                                                 copied_ability(opp_active, own), _types(opp_active))  # fmt: skip
         their_tf = True
     our_last, our_vol = _last_move(
-        active, our_mons[our_active_idx] if our_active_idx is not None else None, avail,
-        our_active_idx, tm_us.switched_now, tm_us,
+        active,
+        our_mons[our_active_idx] if our_active_idx is not None else None,
+        avail,
+        our_active_idx,
+        tm_us.switched_now,
+        tm_us,
     )
     their_last, their_vol = _last_move(
-        opp_active, their_mons[their_idx] if their_mons else None, None,
-        their_idx if their_mons else None, tm_them.switched_now, tm_them,
+        opp_active,
+        their_mons[their_idx] if their_mons else None,
+        None,
+        their_idx if their_mons else None,
+        tm_them.switched_now,
+        tm_them,
     )
     # (a mon out transformed into a Regenerator holder healed as it went -- the copied ability;
     # poke-env does so only when it knew the target's ability: a replay's side, S145)
@@ -1498,10 +1625,26 @@ def build_state(
             continue
         for j, (m, p) in enumerate(zip(src, mons, strict=True)):
             tgt = tm.transformed_out.get(tm.k(to_id(m.species)))
-            if not tgt or getattr(m, "active", False) or p.hp <= 0 or tm.k(to_id(m.species)) in tm.no_regen:
+            if (
+                not tgt
+                or getattr(m, "active", False)
+                or p.hp <= 0
+                or tm.k(to_id(m.species)) in tm.no_regen
+            ):
                 continue
-            q = next(((om, oq) for om, oq in zip(osrc, omons, strict=True) if otm.k(to_id(om.species)) == tgt), None)
-            if q is not None and str(q[1].ability).lower() == "regenerator" and current_ability(q[0]) != "regenerator":
+            q = next(
+                (
+                    (om, oq)
+                    for om, oq in zip(osrc, omons, strict=True)
+                    if otm.k(to_id(om.species)) == tgt
+                ),
+                None,
+            )
+            if (
+                q is not None
+                and str(q[1].ability).lower() == "regenerator"
+                and current_ability(q[0]) != "regenerator"
+            ):
                 mons[j] = _with(p, hp=min(p.maxhp, p.hp + p.maxhp // 3))
     # the engine's transform / typechange volatiles (doc/engine-diff.md L36): a switch ends the
     # transformation, and an Imposter does not transform again while it is on
@@ -1557,7 +1700,9 @@ def build_state(
         p = mons[i] if i is not None and i < len(mons) else None
         if p is not None and p.hp > 0 and tuple(p.types) != tuple(p.base_types):
             vol.add("typechange")
-            if tm.temp_forme is not None or (mon is not None and str(p.id).lower() != to_id(mon.species)):
+            if tm.temp_forme is not None or (
+                mon is not None and str(p.id).lower() != to_id(mon.species)
+            ):
                 forme_tc.add(id(vol))  # (a forme's -- the timers': not a Double Shock's, S122)
     for vol, mons, i, tm in ((our_vol, our_mons, our_active_idx, tm_us),
                              (their_vol, their_mons, their_idx, tm_them)):  # fmt: skip
@@ -1576,8 +1721,15 @@ def build_state(
     for vol, mons, i, tf, tm, mon in ((our_vol, our_mons, our_active_idx, our_tf, tm_us, active),
                                       (their_vol, their_mons, their_idx, their_tf, tm_them, opp_active)):  # fmt: skip
         p = mons[i] if i is not None and i < len(mons) else None
-        if p is not None and "typechange" in vol and not tf and not tm.roosted and not p.terastallized \
-                and tuple(p.types) == tuple(p.base_types) and Effect.TYPEADD not in getattr(mon, "effects", {}):
+        if (
+            p is not None
+            and "typechange" in vol
+            and not tf
+            and not tm.roosted
+            and not p.terastallized
+            and tuple(p.types) == tuple(p.base_types)
+            and Effect.TYPEADD not in getattr(mon, "effects", {})
+        ):
             vol.discard("typechange")
     # must recharge (the engine offers no move), Perish Song's count
     locked: dict = {}  # (is ours) -> the lock's count
@@ -1598,7 +1750,8 @@ def build_state(
         # Showdown starts perish3, perish2, ... without ending the previous count: poke-env keeps
         # them all, the lowest is current
         counts = [n for e, n in PERISH.items() if e in mon.effects]
-        if counts:  # (this turn's start: Showdown's 4 till the turn's end -- a mid-turn decision, S128)
+        # (this turn's start: Showdown's 4 till the turn's end -- a mid-turn decision, S128)
+        if counts:
             vol.add(f"perish{4 if tm.perish_fresh and min(counts) == 3 else min(counts)}")
         if tm.slowstart:  # (L77)
             vol.add("slowstart")
@@ -1610,7 +1763,8 @@ def build_state(
         # turn's end; past the end (a faint's switch-in) it is the next turn's already, as the
         # engine's: Showdown's moveLastTurnResult changes only at the next turn's start)
         now = tm.failed_now or (tm.sub_failed_now and ab[mon is active] == "infiltrator")
-        last = tm.last_failed or (tm.last_sub_failed and ab[mon is active] == "infiltrator")  # (L115; S93)
+        # (L115; S93)
+        last = tm.last_failed or (tm.last_sub_failed and ab[mon is active] == "infiltrator")
         if now if tm.upkept else last:
             vol.add("lastmovefailed")
         if now and not tm.upkept:
@@ -1653,14 +1807,20 @@ def build_state(
             vcounts.setdefault(mon is active, {})["stockpile"] = tm.stockpile
         if tm.roosted:  # (a mid-turn decision after its Roost)
             vol.add("roost")
-        if tm.consecutive and (items_now[mon is active] == "metronome" or tm.metronome_gone):  # (S132)
+        # (S132)
+        if tm.consecutive and (items_now[mon is active] == "metronome" or tm.metronome_gone):
             vol.add("metronome")
             metronome[mon is active] = tm.consecutive
         # an Illusion in disguise (the engine's volatile: a Transform into it fails, L227): ours
         # when the log shows our active as another species; theirs in a world that drew the
         # Zoroark (2026-10-23, the state-construction differential: never passed)
-        if mon is active and mon is not None and tm.active and tm.active != tm.k(to_id(mon.species)) \
-                and to_id(mon.species).startswith("zoroark"):
+        if (
+            mon is active
+            and mon is not None
+            and tm.active
+            and tm.active != tm.k(to_id(mon.species))
+            and to_id(mon.species).startswith("zoroark")
+        ):
             vol.add("illusion")
         if mon is opp_active and zi is not None:
             vol.add("illusion")
@@ -1701,10 +1861,26 @@ def build_state(
         # (not a world that contradicts the log -- two moves this time in: no Choice item, whatever
         # it drew; nor an item doing nothing: Klutz, Embargo, Magic Room -- Showdown's choicelock
         # ignoringItem; 2026-10-26 review)
-        used = {m for m in tm_them.stint.get("moves", [])[tm_them.stint.get("item_mark", 0):] if m != "struggle"}
-        item_on = str(em.ability).lower() != "klutz" and not tm_them.embargo and Field.MAGIC_ROOM not in battle.fields
-        if last and not tm_them.item_new and any(x.id == last for x in em.moves) and len(used) <= 1 and (
-                (str(em.item).lower() in CHOICE_ITEMS and item_on) or str(em.ability).lower() == "gorillatactics"):
+        used = {
+            m
+            for m in tm_them.stint.get("moves", [])[tm_them.stint.get("item_mark", 0) :]
+            if m != "struggle"
+        }
+        item_on = (
+            str(em.ability).lower() != "klutz"
+            and not tm_them.embargo
+            and Field.MAGIC_ROOM not in battle.fields
+        )
+        if (
+            last
+            and not tm_them.item_new
+            and any(x.id == last for x in em.moves)
+            and len(used) <= 1
+            and (
+                (str(em.item).lower() in CHOICE_ITEMS and item_on)
+                or str(em.ability).lower() == "gorillatactics"
+            )
+        ):
             their_mons[their_idx] = _with(em, moves=[pe.Move(id=x.id, pp=x.pp, disabled=x.disabled or x.id != last)
                                                      for x in em.moves])  # fmt: skip
     # Disable (L70): its volatile and its move's slot and count, not the move's flag alone (the
@@ -1735,7 +1911,9 @@ def build_state(
         mine = (who == "us") != (key in tm.swapped)  # (the setter's side)
         setter = next((p for m, p in zip(ours if mine else theirs, our_mons if mine else their_mons,
                                          strict=True) if to_id(m.species) == sp), None)  # fmt: skip
-        then = tm.set_ability.get(key) or (str(setter.base_ability).lower() if setter is not None else "")
+        then = tm.set_ability.get(key) or (
+            str(setter.base_ability).lower() if setter is not None else ""
+        )
         if then == "klutz" and key not in tm.set_gas:
             return ""
         if key in tm.set_items:
@@ -1762,6 +1940,7 @@ def build_state(
 
     our_mons = _formes(battle.team, ours, our_mons, tm_us)
     their_mons = _formes(battle.opponent_team, theirs, their_mons, tm_them)
+
     # (a transformed active's weight its target's forme's as it transformed -- Showdown's
     # transformInto takes it then: an Imposter Ditto into a Tera Shift Terapagos, 16 kg, read
     # its base forme's 6.5; and not the Stellar forme's 77 the target had later; 2026-10-24, the
@@ -1776,9 +1955,18 @@ def build_state(
         entry = GEN.pokedex.get(tm.copied_forme) if tm.copied_forme else None
         if not entry or to_id(tm.copied_forme) == _sp_id(target):
             return {}
-        st = calc_stats(entry["baseStats"], Spread(str(target.nature).lower(), tuple(target.evs)), level=target.level)
-        return {"attack": st["atk"], "defense": st["def"], "special_attack": st["spa"],
-                "special_defense": st["spd"], "speed": st["spe"]}
+        st = calc_stats(
+            entry["baseStats"],
+            Spread(str(target.nature).lower(), tuple(target.evs)),
+            level=target.level,
+        )
+        return {
+            "attack": st["atk"],
+            "defense": st["def"],
+            "special_attack": st["spa"],
+            "special_defense": st["spd"],
+            "speed": st["spe"],
+        }
 
     if our_tf and our_t is not None and our_t < len(their_mons):
         our_mons[our_active_idx] = _with(our_mons[our_active_idx], weight_kg=copied_weight(tm_us, their_mons[our_t]),
@@ -1802,16 +1990,30 @@ def build_state(
     our_mons = _tera_used(our_mons, bool(getattr(battle, "used_tera", False)))
     their_mons = _tera_used(their_mons, bool(getattr(battle, "opponent_used_tera", False)))
     side_one = pe.Side(
-        revived_faints=min(tm_us.revivals, 6),  # (S158: never passed -- Supreme Overlord's, Last Respects' count)
+        # (S158: never passed -- Supreme Overlord's, Last Respects' count)
+        revived_faints=min(tm_us.revivals, 6),
         pokemon=_pad(our_mons),
         active_index=pe.PokemonIndex(str(our_idx)),
         side_conditions=_side_conditions(
-            battle.side_conditions, turn, *_counts(tm_us, active), clay_us, tm_us.side_elapsed,
+            battle.side_conditions,
+            turn,
+            *_counts(tm_us, active),
+            clay_us,
+            tm_us.side_elapsed,
             tm_us.healing_wish,
         ),
         volatile_statuses=our_vol,
-        **_timed(tm_us, active, ours, our_mons, our_vol, disable.get("us"), locked.get(True),
-                 metronome.get(True), vcounts.get(True)),
+        **_timed(
+            tm_us,
+            active,
+            ours,
+            our_mons,
+            our_vol,
+            disable.get("us"),
+            locked.get(True),
+            metronome.get(True),
+            vcounts.get(True),
+        ),
         substitute_health=(
             (
                 int((active.max_hp or 4) // 4)
@@ -1834,9 +2036,16 @@ def build_state(
         **our_last,
         # (a replay's disguised / broken Illusion's boosts: poke-env gave them to the disguise;
         # live, the request's active is the Zoroark and poke-env keeps them there)
-        **(_boosts(active, (tm_us.stint["boosts"] if our_disguised else tm_us.illusion_boosts)
-                   if spectator is not None else None)
-           if active is not None else {}),
+        **(
+            _boosts(
+                active,
+                (tm_us.stint["boosts"] if our_disguised else tm_us.illusion_boosts)
+                if spectator is not None
+                else None,
+            )
+            if active is not None
+            else {}
+        ),
     )
     # 2026-10-22 review: our switch in the middle of the turn (a pivot of ours went first, an
     # Eject Button) and the opponent not acted yet: its move comes after our switch-in (the
@@ -1848,16 +2057,30 @@ def build_state(
                    and opp_active is not None and not opp_active.fainted and not tm_them.acted
                    and not tm_them.switched_now and not tm_them.recharge)  # fmt: skip
     side_two = pe.Side(
-        revived_faints=min(tm_them.revivals, 6),  # (S158: never passed -- Supreme Overlord's, Last Respects' count)
+        # (S158: never passed -- Supreme Overlord's, Last Respects' count)
+        revived_faints=min(tm_them.revivals, 6),
         pokemon=_pad(their_mons),
         active_index=pe.PokemonIndex(str(their_idx)),
         side_conditions=_side_conditions(
-            battle.opponent_side_conditions, turn, *_counts(tm_them, opp_active), clay_them,
-            tm_them.side_elapsed, tm_them.healing_wish,
+            battle.opponent_side_conditions,
+            turn,
+            *_counts(tm_them, opp_active),
+            clay_them,
+            tm_them.side_elapsed,
+            tm_them.healing_wish,
         ),
         volatile_statuses=their_vol,
-        **_timed(tm_them, opp_active, theirs, their_mons, their_vol, disable.get("them"),
-                 locked.get(False), metronome.get(False), vcounts.get(False)),
+        **_timed(
+            tm_them,
+            opp_active,
+            theirs,
+            their_mons,
+            their_vol,
+            disable.get("them"),
+            locked.get(False),
+            metronome.get(False),
+            vcounts.get(False),
+        ),
         substitute_health=(
             their_mons[their_idx].maxhp // 4 // (2 if tm_them.sub_hit else 1)
             if opp_active is not None and Effect.SUBSTITUTE in opp_active.effects
@@ -1888,7 +2111,9 @@ def build_state(
             trick_room, trturns = True, field_left("trickroom", start)
     # Gravity / Magic Room: the engine has them (L211 and others, its remaining turns as Trick
     # Room's); they were never passed in (2026-10-22 review: grounding, accuracy, items)
-    gravity = field_left("gravity", battle.fields[Field.GRAVITY]) if Field.GRAVITY in battle.fields else 0
+    gravity = (
+        field_left("gravity", battle.fields[Field.GRAVITY]) if Field.GRAVITY in battle.fields else 0
+    )
     magic_room = (field_left("magicroom", battle.fields[Field.MAGIC_ROOM])
                   if Field.MAGIC_ROOM in battle.fields else 0)  # fmt: skip
     st = pe.State(

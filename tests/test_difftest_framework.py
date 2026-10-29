@@ -48,7 +48,9 @@ def _without(outcome, volatile: str):
         sides.append(pe.Side(**kw))
     new = pe.State(side_one=sides[0], side_two=sides[1]).to_string().split("/")[:2]
     rest = st.to_string().split("/")[2:]
-    return ec.Outcome(outcome[0], pe.State.from_string("/".join(new + rest)), outcome.damage, outcome.sub_damage)
+    return ec.Outcome(
+        outcome[0], pe.State.from_string("/".join(new + rest)), outcome.damage, outcome.sub_damage
+    )
 
 
 @needs_sim
@@ -63,7 +65,9 @@ def test_the_chain_sees_an_effect_never_applied(monkeypatch):
     assert any("|-start|p2a: Snorlax|confusion" in x for x in steps[2]["state"]["log"])
     assert chaindiff.chain_diffs(steps)["kinds"].get("volatile.confusion", 0) == 0
     real = ec.engine_outcomes
-    monkeypatch.setattr(ec, "engine_outcomes", lambda *a, **k: [_without(o, "confusion") for o in real(*a, **k)])
+    monkeypatch.setattr(
+        ec, "engine_outcomes", lambda *a, **k: [_without(o, "confusion") for o in real(*a, **k)]
+    )
     assert chaindiff.chain_diffs(steps)["kinds"].get("volatile.confusion", 0) >= 1
 
 
@@ -75,7 +79,9 @@ def test_a_probability_0_branch_is_no_match():
 
     steps = _recorded_pair()
     a, b = steps[1]["state"], steps[2]["state"]
-    outs = ec.engine_outcomes(ec.engine_state(a), *(steps[1]["choices"][s]["engine"] for s in ("p1", "p2")))
+    outs = ec.engine_outcomes(
+        ec.engine_state(a), *(steps[1]["choices"][s]["engine"] for s in ("p1", "p2"))
+    )
     n = tuple(len(x["mons"]) for x in a["sides"])
 
     def at(p, o):
@@ -137,20 +143,36 @@ def test_a_refused_update_exits_1(tmp_path, monkeypatch):
 
     from alpha_poke.enginecheck import difftest as dt
 
-    spec = importlib.util.spec_from_file_location("difftest_script", ROOT / "scripts" / "difftest.py")
+    spec = importlib.util.spec_from_file_location(
+        "difftest_script", ROOT / "scripts" / "difftest.py"
+    )
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
-    monkeypatch.setattr(dt, "run", lambda specs, checks, procs: {
-        c: {"specs": 1, "n": 1, "kinds": {"hp": 3}, "examples": {}, "errors": [], "skipped": {}} for c in checks})
+    monkeypatch.setattr(
+        dt,
+        "run",
+        lambda specs, checks, procs: {
+            c: {"specs": 1, "n": 1, "kinds": {"hp": 3}, "examples": {}, "errors": [], "skipped": {}}
+            for c in checks
+        },
+    )
     monkeypatch.setattr(dt, "baseline_path", lambda name: tmp_path / f"{name}.json")
-    (tmp_path / "fast.json").write_text(json.dumps({c: {"hp": 2, "#compared": 1} for c in dt.CHECKS}))
+    (tmp_path / "fast.json").write_text(
+        json.dumps({c: {"hp": 2, "#compared": 1} for c in dt.CHECKS})
+    )
     for argv, code in ((["--update-baseline"], 1), (["--update-baseline", "--only", "scenario/"], 1), ([], 1),
                        (["--update-baseline", "--force"], 0)):  # fmt: skip
-        monkeypatch.setattr(sys, "argv", ["difftest.py", "--corpus", "fast", "--out", str(tmp_path / "o.json"), *argv])
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            ["difftest.py", "--corpus", "fast", "--out", str(tmp_path / "o.json"), *argv],
+        )
         assert mod.main() == code, argv
     assert json.loads((tmp_path / "fast.json").read_text())["engine_step"]["hp"] == 3
     # (an --only run that finds no more than the corpus' baseline: 0, though it compares less)
-    (tmp_path / "fast.json").write_text(json.dumps({c: {"hp": 3, "#compared": 100} for c in dt.CHECKS}))
+    (tmp_path / "fast.json").write_text(
+        json.dumps({c: {"hp": 3, "#compared": 100} for c in dt.CHECKS})
+    )
     monkeypatch.setattr(sys, "argv", ["difftest.py", "--corpus", "fast", "--out", str(tmp_path / "o.json"),
                                       "--only", "scenario/"])  # fmt: skip
     assert mod.main() == 0
@@ -193,7 +215,9 @@ def test_every_side_condition_is_compared():
 
     from alpha_poke.enginecheck import statebuild
 
-    assert set(statebuild.CONDITIONS) == {x for x in dir(pe.SideConditions) if not x.startswith("_")}
+    assert set(statebuild.CONDITIONS) == {
+        x for x in dir(pe.SideConditions) if not x.startswith("_")
+    }
     assert "healing_wish" in statebuild.CONDITIONS
 
 
@@ -213,7 +237,9 @@ def test_the_foes_side_fields_are_compared():
         other = pe.Side(**(kw | {k: v}))
         seen = {statebuild._sp(p) for p in side.pokemon}
         for oracle in (True, False):
-            assert any(d[0] == f"foe:{k}" for d in statebuild.foe_diffs(other, side, seen, oracle)), (k, oracle)
+            assert any(
+                d[0] == f"foe:{k}" for d in statebuild.foe_diffs(other, side, seen, oracle)
+            ), (k, oracle)
         assert not statebuild.foe_diffs(side, side, seen, True)
 
 
@@ -229,11 +255,16 @@ def test_every_field_is_compared_or_says_why():
     def fields(cls):
         return {x for x in dir(cls) if not x.startswith("_")}
 
-    assert fields(pe.Pokemon) == set(sb.MON_FIELDS) | set(sb.STATS) | set(sb.MON_OWN_WAY) | set(sb.MON_SKIPPED)
+    assert fields(pe.Pokemon) == set(sb.MON_FIELDS) | set(sb.STATS) | set(sb.MON_OWN_WAY) | set(
+        sb.MON_SKIPPED
+    )
     assert fields(pe.Side) == set(sb.SIDE_FIELDS) | set(sb.SIDE_OWN_WAY) | set(sb.SIDE_SKIPPED)
     assert fields(pe.State) == set(sb.STATE_FIELDS) | set(sb.STATE_SKIPPED)
-    assert all(sb.MON_SKIPPED.values()) and all(sb.SIDE_SKIPPED.values()) and all(sb.STATE_SKIPPED.values())
-
+    assert (
+        all(sb.MON_SKIPPED.values())
+        and all(sb.SIDE_SKIPPED.values())
+        and all(sb.STATE_SKIPPED.values())
+    )
 
 
 @needs_sim
@@ -302,7 +333,9 @@ def test_a_fixed_finding_does_not_hide_a_new_one():
     run = {"engine_step": {"n": 10, "kinds": {"hp": 1}, "skipped": {}, "by_spec": {"a": {"hp": 1}}}}
     base = dt.baseline_of(run)
     assert dt.regressions(run, base) == []
-    moved = {"engine_step": {"n": 10, "kinds": {"hp": 1}, "skipped": {}, "by_spec": {"b": {"hp": 1}}}}
+    moved = {
+        "engine_step": {"n": 10, "kinds": {"hp": 1}, "skipped": {}, "by_spec": {"b": {"hp": 1}}}
+    }
     assert dt.regressions(moved, base) == ["engine_step: b hp 0 -> 1"]
     # (a baseline from before the split: its totals only)
     old = {"engine_step": {k: v for k, v in base["engine_step"].items() if k != dt.BY_SPEC}}
@@ -318,7 +351,9 @@ def test_the_last_transition_is_compared_by_its_faints():
 
     gengar = S("Gengar", "Leftovers", "Cursed Body", ["Shadow Ball", "Protect", "Taunt", "Will-O-Wisp"],
                "252 HP / 4 Atk / 252 Spe", "Timid")  # fmt: skip
-    shedinja = S("Shedinja", "", "Wonder Guard", ["Swords Dance", "Shadow Sneak", "X-Scissor", "Protect"])
+    shedinja = S(
+        "Shedinja", "", "Wonder Guard", ["Swords Dance", "Shadow Sneak", "X-Scissor", "Protect"]
+    )
     steps, err = ec.random_battle(team(gengar, FILLER), team(shedinja), "gen5,1,2,3,4", 2, max_turns=3,
                                   script=[{"p1": "move 1", "p2": "move 1"}])  # fmt: skip
     assert err is None and steps[1]["state"]["ended"]
@@ -343,7 +378,9 @@ def test_the_tree_check_takes_no_probability_0_branch(monkeypatch):
     from alpha_poke.enginecheck import treediff
 
     spec = next(s for s in dt.corpus("fast") if s.id == "scenario/ends/healing-wish-waits")
-    clean = treediff.tree_diffs(spec.p1, spec.p2, spec.seed, spec.max_turns, spec.steps_script, spec.id)
+    clean = treediff.tree_diffs(
+        spec.p1, spec.p2, spec.seed, spec.max_turns, spec.steps_script, spec.id
+    )
     assert clean["steps"] and not clean["struct"]
     real = alpha_search.tree_steps
 
@@ -366,7 +403,9 @@ def test_the_mutation_script_fails_loudly(monkeypatch, tmp_path):
     import sys
     from types import SimpleNamespace
 
-    spec = importlib.util.spec_from_file_location("difftest_mutations", ROOT / "scripts" / "difftest_mutations.py")
+    spec = importlib.util.spec_from_file_location(
+        "difftest_mutations", ROOT / "scripts" / "difftest_mutations.py"
+    )
     m = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(m)
     monkeypatch.setattr(sys, "argv", ["difftest_mutations.py"])
@@ -380,7 +419,8 @@ def test_the_mutation_script_fails_loudly(monkeypatch, tmp_path):
     f.write_text("a = 1\n")
     monkeypatch.setattr(m, "ROOT", tmp_path)
     monkeypatch.setattr(m, "MUTATIONS", [("x", "x.py", "a = 1", "a = 2")])
-    calls = iter([[], ["REGRESSION x"], ["REGRESSION still"]])  # (before, mutated, after the restore)
+    # (before, mutated, after the restore)
+    calls = iter([[], ["REGRESSION x"], ["REGRESSION still"]])
     monkeypatch.setattr(m, "_fast", lambda: next(calls))
     assert m.main() == 3 and f.read_text() == "a = 1\n"
 
@@ -390,8 +430,12 @@ def test_every_mutation_applies():
     for them -- those fixes guarded by nothing. Each must be in its file once."""
     import importlib.util
 
-    spec = importlib.util.spec_from_file_location("difftest_mutations", ROOT / "scripts" / "difftest_mutations.py")
+    spec = importlib.util.spec_from_file_location(
+        "difftest_mutations", ROOT / "scripts" / "difftest_mutations.py"
+    )
     m = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(m)
-    stale = [n for n, f, fixed, _ in m.MUTATIONS + m.RUST if (ROOT / f).read_text().count(fixed) != 1]
+    stale = [
+        n for n, f, fixed, _ in m.MUTATIONS + m.RUST if (ROOT / f).read_text().count(fixed) != 1
+    ]
     assert stale == []

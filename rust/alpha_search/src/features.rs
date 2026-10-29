@@ -399,7 +399,9 @@ pub fn struggles(state: &State, side: SideReference) -> bool {
 pub fn struggle_in(options: &[(usize, MoveChoice)]) -> bool {
     options.len() > 1
         && options.iter().any(|(_, mc)| *mc == MoveChoice::None)
-        && !options.iter().any(|(_, mc)| matches!(mc, MoveChoice::Move(_) | MoveChoice::MoveTera(_)))
+        && !options
+            .iter()
+            .any(|(_, mc)| matches!(mc, MoveChoice::Move(_) | MoveChoice::MoveTera(_)))
 }
 
 fn mask_of(options: &[MoveChoice], struggle: bool) -> Vec<u8> {
@@ -411,7 +413,10 @@ fn mask_of(options: &[MoveChoice], struggle: bool) -> Vec<u8> {
 }
 
 pub fn legal_mask(state: &State) -> Vec<u8> {
-    mask_of(&state.root_get_all_options().0, struggles(state, SideReference::SideOne))
+    mask_of(
+        &state.root_get_all_options().0,
+        struggles(state, SideReference::SideOne),
+    )
 }
 
 /// Side one's view (training and the value at the leaves).

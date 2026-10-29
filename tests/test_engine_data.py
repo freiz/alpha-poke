@@ -19,15 +19,20 @@ ENGINE_IN_CODE = "the engine does it in code (choice_effects), Showdown in its d
 ALLY_ONLY = "it only affects an ally: nothing in singles (the engine has no effect either)"
 NO_EVASION = "the engine has no evasion stat (known limitation; Defog's drop is in code, L1)"
 SELF_DAMAGE = "the engine's negative heal is the user's HP loss (Showdown: in code)"
-WEATHER_HEAL = "Showdown's heal depends on the weather in code; the engine's 1/2 is adjusted in code"
+WEATHER_HEAL = (
+    "Showdown's heal depends on the weather in code; the engine's 1/2 is adjusted in code"
+)
 
 # {move: ({fields that differ}, why)}
 KNOWN_MOVES = {
     "aromaticmist": ({"boosts"}, ALLY_ONLY),
     "coaching": ({"boosts"}, ALLY_ONLY),
     "dragoncheer": ({"effects"}, ALLY_ONLY),
-    "helpinghand": ({"effects"}, "it only affects an ally: nothing in singles (the engine's "
-                    "volatile on the user is a marker without effect)"),
+    "helpinghand": (
+        {"effects"},
+        "it only affects an ally: nothing in singles (the engine's "
+        "volatile on the user is a marker without effect)",
+    ),
     "ceaselessedge": ({"side_condition"}, SHOWDOWN_IN_CODE),
     "stoneaxe": ({"side_condition"}, SHOWDOWN_IN_CODE),
     "partingshot": ({"boosts"}, SHOWDOWN_IN_CODE),
@@ -47,21 +52,35 @@ KNOWN_MOVES = {
     "sweetscent": ({"boosts"}, NO_EVASION),
     "chloroblast": ({"heal"}, SELF_DAMAGE),
     "steelbeam": ({"heal"}, SELF_DAMAGE),
-    "healingwish": ({"heal", "side_condition"}, "the engine: heal -1 = the user faints, the "
-                    "next mon is healed by its side condition (Showdown: in code)"),
-    "lunardance": ({"heal", "side_condition"}, "the engine: as Healing Wish (L52; Showdown: a "
-                   "slot condition in code)"),
+    "healingwish": (
+        {"heal", "side_condition"},
+        "the engine: heal -1 = the user faints, the "
+        "next mon is healed by its side condition (Showdown: in code)",
+    ),
+    "lunardance": (
+        {"heal", "side_condition"},
+        "the engine: as Healing Wish (L52; Showdown: a slot condition in code)",
+    ),
     "memento": ({"heal"}, "the engine: heal -1 = the user faints (Showdown: in code)"),
     "moonlight": ({"heal"}, WEATHER_HEAL),
     "morningsun": ({"heal"}, WEATHER_HEAL),
     "synthesis": ({"heal"}, WEATHER_HEAL),
     "shoreup": ({"heal"}, WEATHER_HEAL),
-    "tripleaxel": ({"base_power"}, "the engine's data: 40 a hit; its hit-count branches (L58) give "
-                   "k hits of the mean of 20, 40, ..., 20k (Showdown's 20 / 40 / 60)"),
-    "struggle": ({"type"}, "Showdown: Normal in its data, '???' (typeless) from its onModifyMove; "
-                 "the engine: typeless in its data (L232)"),
-    "revivalblessing": ({"pivot"}, "Showdown: selfSwitch in its data (a switch request for a "
-                        "fainted one); the engine: its pick in code (Side::reviving, L166)"),
+    "tripleaxel": (
+        {"base_power"},
+        "the engine's data: 40 a hit; its hit-count branches (L58) give "
+        "k hits of the mean of 20, 40, ..., 20k (Showdown's 20 / 40 / 60)",
+    ),
+    "struggle": (
+        {"type"},
+        "Showdown: Normal in its data, '???' (typeless) from its onModifyMove; "
+        "the engine: typeless in its data (L232)",
+    ),
+    "revivalblessing": (
+        {"pivot"},
+        "Showdown: selfSwitch in its data (a switch request for a "
+        "fainted one); the engine: its pick in code (Side::reviving, L166)",
+    ),
 }
 
 
@@ -159,8 +178,10 @@ def test_max_pps_match_showdown():
 
     import alpha_search
 
-    js = ("const {Dex} = require(process.argv[1]); console.log(JSON.stringify(Object.fromEntries("
-          "Dex.moves.all().map(m => [m.id, m.noPPBoosts ? m.pp : Math.floor(m.pp * 8 / 5)]))))")
+    js = (
+        "const {Dex} = require(process.argv[1]); console.log(JSON.stringify(Object.fromEntries("
+        "Dex.moves.all().map(m => [m.id, m.noPPBoosts ? m.pp : Math.floor(m.pp * 8 / 5)]))))"
+    )
     sd = json.loads(subprocess.run(["node", "-e", js, str(ec.SIM)], capture_output=True, text=True,
                                    check=True).stdout)  # fmt: skip
     got = dict(alpha_search.max_pps())
@@ -206,8 +227,10 @@ def test_paradox_species_match_showdown():
 
     from alpha_poke import enginecheck as ec
 
-    js = ("const {Dex} = require(process.argv[1]); console.log(JSON.stringify(Dex.species.all()"
-          ".filter(s => s.tags.includes('Paradox') && !s.isNonstandard).map(s => s.id)))")
+    js = (
+        "const {Dex} = require(process.argv[1]); console.log(JSON.stringify(Dex.species.all()"
+        ".filter(s => s.tags.includes('Paradox') && !s.isNonstandard).map(s => s.id)))"
+    )
     want = sorted(json.loads(subprocess.run(["node", "-e", js, str(ec.SIM)], capture_output=True,
                                             text=True, check=True).stdout))  # fmt: skip
     assert alpha_search.paradox_species() == want
@@ -221,8 +244,10 @@ def test_skill_swap_failures_match_showdown():
 
     from alpha_poke import enginecheck as ec
 
-    js = ("const {Dex} = require(process.argv[1]); console.log(JSON.stringify(Dex.abilities.all()"
-          ".filter(a => a.flags.failskillswap && !a.isNonstandard).map(a => a.id)))")
+    js = (
+        "const {Dex} = require(process.argv[1]); console.log(JSON.stringify(Dex.abilities.all()"
+        ".filter(a => a.flags.failskillswap && !a.isNonstandard).map(a => a.id)))"
+    )
     want = sorted(json.loads(subprocess.run(["node", "-e", js, str(ec.SIM)], capture_output=True,
                                             text=True, check=True).stdout))  # fmt: skip
     assert alpha_search.fail_skill_swap_abilities() == want
@@ -241,8 +266,10 @@ def test_ability_flags_match_showdown(flag, got):
 
     from alpha_poke import enginecheck as ec
 
-    js = ("const {Dex} = require(process.argv[1]); console.log(JSON.stringify(Dex.abilities.all()"
-          ".filter(a => a.flags[process.argv[2]] && !a.isNonstandard).map(a => a.id)))")
+    js = (
+        "const {Dex} = require(process.argv[1]); console.log(JSON.stringify(Dex.abilities.all()"
+        ".filter(a => a.flags[process.argv[2]] && !a.isNonstandard).map(a => a.id)))"
+    )
     want = sorted(json.loads(subprocess.run(["node", "-e", js, str(ec.SIM), flag], capture_output=True,
                                             text=True, check=True).stdout))  # fmt: skip
     assert getattr(alpha_search, got)() == want
@@ -257,9 +284,11 @@ def test_mold_breaker_abilities_match_showdown():
 
     from alpha_poke import enginecheck as ec
 
-    js = ("const {Dex} = require(process.argv[1]); const all = Dex.abilities.all().filter(a => "
-          "!a.isNonstandard); console.log(JSON.stringify([all.map(a => a.id), all.filter(a => "
-          "a.flags.breakable).map(a => a.id)]))")
+    js = (
+        "const {Dex} = require(process.argv[1]); const all = Dex.abilities.all().filter(a => "
+        "!a.isNonstandard); console.log(JSON.stringify([all.map(a => a.id), all.filter(a => "
+        "a.flags.breakable).map(a => a.id)]))"
+    )
     ids, breakable = json.loads(subprocess.run(["node", "-e", js, str(ec.SIM)], capture_output=True,
                                                text=True, check=True).stdout)  # fmt: skip
     assert alpha_search.mold_breaker_abilities(ids) == sorted(breakable)
@@ -304,14 +333,16 @@ def test_fling_powers_match_showdown():
 
     from alpha_poke.enginecheck import _engine_item
 
-    js = ("const {Dex} = require(process.argv[1]); console.log(JSON.stringify(Dex.items.all()"
-          ".filter(i => !i.isNonstandard).map(i => [i.id, i.fling ? i.fling.basePower : null])))")
+    js = (
+        "const {Dex} = require(process.argv[1]); console.log(JSON.stringify(Dex.items.all()"
+        ".filter(i => !i.isNonstandard).map(i => [i.id, i.fling ? i.fling.basePower : null])))"
+    )
     items = json.loads(subprocess.run(["node", "-e", js, str(ec.SIM)], capture_output=True,
                                       text=True, check=True).stdout)  # fmt: skip
     items = [(i, p) for i, p in items if _engine_item(i)]
     assert len(items) > 150
     got = alpha_search.fling_powers([i.upper() for i, _ in items])
-    assert {i: g for (i, _), g in zip(items, got)} == dict(items)
+    assert {i: g for (i, _), g in zip(items, got, strict=True)} == dict(items)
 
 
 def test_fail_copycat_moves_match_showdown():
@@ -365,8 +396,10 @@ def test_forme_weights_match_showdown():
 
     got = dict(alpha_search.forme_weights())
     assert len(got) == 15
-    js = ("const {Dex} = require(process.argv[1]); console.log(JSON.stringify(process.argv.slice(2)"
-          ".map(n => Dex.species.get(n).weighthg)))")
+    js = (
+        "const {Dex} = require(process.argv[1]); console.log(JSON.stringify(process.argv.slice(2)"
+        ".map(n => Dex.species.get(n).weighthg)))"
+    )
     want = json.loads(subprocess.run(["node", "-e", js, str(ec.SIM), *got], capture_output=True,
                                      text=True, check=True).stdout)  # fmt: skip
     assert list(got.values()) == want

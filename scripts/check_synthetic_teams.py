@@ -154,7 +154,9 @@ def main() -> None:
     from alpha_poke.analysis.games_lite import logs
     from alpha_poke.replay.parser import parse_replay
 
-    rows = ts.games.iloc[rng.choice(len(ts.games), size=a.real_sets, p=ts.weights)].to_dict("records")
+    rows = ts.games.iloc[rng.choice(len(ts.games), size=a.real_sets, p=ts.weights)].to_dict(
+        "records"
+    )
     full = logs(rows)
     real_feats = []
     for r in rows:

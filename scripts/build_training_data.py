@@ -135,7 +135,7 @@ def main() -> None:
             n_shard, failed, writer, buf = 0, 0, None, []
             tmp = dst.with_suffix(".tmp")
 
-            def flush():
+            def flush(buf=buf, tmp=tmp):  # (this shard's)
                 nonlocal writer, schema
                 t = pa.Table.from_pylist(buf, schema=schema)
                 if writer is None:

@@ -9,9 +9,11 @@
 # will likely look very different (and much more reasonable).
 # See Cargo.toml.orig for the original contents.
 
-# alpha-poke: poke-engine 0.0.48 from crates.io, vendored for one change (design D2):
-# genx/generate_instructions.rs `before_move` is `pub` (damage features without state copies,
-# rust/alpha_search/src/extra.rs). Test targets removed (their files are not vendored).
+# alpha-poke: poke-engine 0.0.48 from crates.io, vendored with our patches ("alpha-poke patch"
+# comments; the rules ported from Showdown, doc/engine-diff.md; `before_move` public for
+# rust/alpha_search/src/extra.rs). The test and benchmark targets whose files are not vendored
+# are removed; the library's own tests run with
+#   cargo test --lib --no-default-features --features terastallization
 [package]
 edition = "2018"
 name = "poke-engine"
@@ -47,10 +49,6 @@ terastallization = ["gen9"]
 name = "poke_engine"
 crate-type = ["lib"]
 path = "src/lib.rs"
-
-[[bin]]
-name = "benchmark"
-path = "data/benchmark.rs"
 
 [[bin]]
 name = "poke-engine"

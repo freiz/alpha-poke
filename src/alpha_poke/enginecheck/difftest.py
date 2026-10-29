@@ -53,7 +53,9 @@ class Spec:
                              max_turns=self.max_turns, views=views, script=self.steps_script, **kw)  # fmt: skip
 
 
-def random_specs(files: str, n: int, offset: int = 0, fmt: str = "", tag: str = "random") -> list[Spec]:
+def random_specs(
+    files: str, n: int, offset: int = 0, fmt: str = "", tag: str = "random"
+) -> list[Spec]:
     """``n`` battles of each team-pair file (globs, comma-separated): pairs[i], seed offset + i."""
     out = []
     for f in sorted({x for g in files.split(",") for x in (glob.glob(str(ROOT / g)) or [g])}):
@@ -61,7 +63,11 @@ def random_specs(files: str, n: int, offset: int = 0, fmt: str = "", tag: str = 
         stem = Path(f).stem.replace("random_battle_teams", "rbt")
         for i in range(n):
             p = pairs[i % len(pairs)]
-            out.append(Spec(f"{tag}/{stem}/{offset + i}", p["p1"], p["p2"], offset + i, fmt=fmt, tags=(tag,)))
+            out.append(
+                Spec(
+                    f"{tag}/{stem}/{offset + i}", p["p1"], p["p2"], offset + i, fmt=fmt, tags=(tag,)
+                )
+            )
     return out
 
 
@@ -88,7 +94,13 @@ def corpus(name: str) -> list[Spec]:
 
 def _result(n: int = 0) -> dict:
     # ("skipped": reason -> what a check left out uncompared -- kept, the baseline bounds it)
-    return {"n": n, "kinds": collections.Counter(), "examples": {}, "errors": [], "skipped": collections.Counter()}
+    return {
+        "n": n,
+        "kinds": collections.Counter(),
+        "examples": {},
+        "errors": [],
+        "skipped": collections.Counter(),
+    }
 
 
 def _add(out: dict, kind: str, detail, cap: int = 5) -> None:
@@ -145,7 +157,9 @@ def _state(spec: Spec, path: str) -> dict:
     if path == "replay":
         from alpha_poke.enginecheck.replaybuild import battle_diffs
 
-        diffs, st = battle_diffs(spec.p1, spec.p2, spec.seed, spec.max_turns, spec.steps_script, spec.fmt or None)
+        diffs, st = battle_diffs(
+            spec.p1, spec.p2, spec.seed, spec.max_turns, spec.steps_script, spec.fmt or None
+        )
     else:
         from alpha_poke.enginecheck.statebuild import battle_diffs
 
@@ -180,7 +194,9 @@ def check_state_chain(spec: Spec) -> dict:
     """The engine played on from our own construction (statebuild.built_chain)."""
     from alpha_poke.enginecheck.statebuild import built_chain
 
-    r, st = built_chain(spec.p1, spec.p2, spec.seed, spec.max_turns, spec.steps_script, spec.fmt or None)
+    r, st = built_chain(
+        spec.p1, spec.p2, spec.seed, spec.max_turns, spec.steps_script, spec.fmt or None
+    )
     out = _result(r["compared"])
     for k, c in r["kinds"].items():
         out["kinds"][k] += c
@@ -217,7 +233,9 @@ def check_tree_history(spec: Spec) -> dict:
 def check_belief_truth(spec: Spec) -> dict:
     from alpha_poke.enginecheck.beliefcheck import belief_diffs
 
-    r = belief_diffs(spec.p1, spec.p2, spec.seed, spec.max_turns, spec.steps_script, spec.fmt or None)
+    r = belief_diffs(
+        spec.p1, spec.p2, spec.seed, spec.max_turns, spec.steps_script, spec.fmt or None
+    )
     out = _result(r["decisions"])
     for k, c in r["kinds"].items():
         out["kinds"][k] += c
@@ -321,12 +339,17 @@ def regressions(result: dict, baseline: dict, subset: bool = False) -> list[str]
     return out
 
 
-def updated_baseline(base: dict, result: dict, checks: list[str], only: str, force: bool) -> tuple[dict | None, str]:
+def updated_baseline(
+    base: dict, result: dict, checks: list[str], only: str, force: bool
+) -> tuple[dict | None, str]:
     """The baseline a run writes (None: refused, and why): not from a subset of the corpus (its
     counts are the whole corpus' -- 2026-10-25 review, an --only run emptied a check's), not over
     a regression unless forced; a subset of the checks replaces those checks' alone."""
     if only:
-        return None, "a subset of the corpus (--only) writes no baseline: its counts are the whole corpus'"
+        return (
+            None,
+            "a subset of the corpus (--only) writes no baseline: its counts are the whole corpus'",
+        )
     grown = regressions(result, base)
     if grown and not force:
         return None, f"{len(grown)} regressions (--force: a deliberate change)"

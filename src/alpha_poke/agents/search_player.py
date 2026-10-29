@@ -139,8 +139,11 @@ class SearchPlayer(KnowledgePlayer):
             states = [build_state(battle, self.belief, names, rng, move_beta=self.move_beta,
                                   force_switch=False, revived=m.species)
                       for _ in range(self.worlds)]  # fmt: skip
-            ctxs = (net_context.contexts(battle, states, net_context.needs_post(self.model))
-                    if self.model_transformer else None)
+            ctxs = (
+                net_context.contexts(battle, states, net_context.needs_post(self.model))
+                if self.model_transformer
+                else None
+            )
             ours, _ = self._run(states, ctxs, budget, rng)
             total = sum(v for _, v, _ in ours) or 1
             vals[m.species] = sum(v * q for _, v, q in ours) / total
@@ -166,8 +169,11 @@ class SearchPlayer(KnowledgePlayer):
             self.mismatches += 1
             log.warning("request / engine state mismatch (%s turn %d): %s", battle.battle_tag,
                         battle.turn, issues)  # fmt: skip
-        ctxs = (net_context.contexts(battle, states, net_context.needs_post(self.model))
-                    if self.model_transformer else None)
+        ctxs = (
+            net_context.contexts(battle, states, net_context.needs_post(self.model))
+            if self.model_transformer
+            else None
+        )
         budget = max(20, self.search_ms - int((time.time() - t0) * 1000))
         ours, n = self._run(states, ctxs, budget, rng)
         total = sum(v for _, v, _ in ours) or 1

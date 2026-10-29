@@ -17,7 +17,6 @@ import logging
 from pathlib import Path
 
 import alpha_search
-
 from poke_env.battle import Battle
 
 from alpha_poke.replay.parser import ReplayParser

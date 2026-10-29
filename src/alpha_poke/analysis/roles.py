@@ -229,5 +229,3 @@ def revealed_roles(moves: Iterable[str], ability: str | None, item: str | None) 
     mv = {to_id(m) for m in moves}
     ab, it = to_id(ability), to_id(item)
     return {r for r, (ms, abils, its) in ROLES.items() if mv & ms or ab in abils or it in its}
-
-

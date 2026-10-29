@@ -50,8 +50,12 @@ def torch_forward(model, states, reveal, rating, turn, hist, flip, post=None):
         "ent4": t(ent4, np.float32, (n, e, D["ent_new"]), np.float32),
         # F2: side one's view, halves swapped for side two's (as the Rust Input::new)
         "post": torch.from_numpy(
-            (np.zeros((n, e, D["post"]), np.float32) if post is None else
-             (np.concatenate([post[:, 6:], post[:, :6]], 1) if flip else post)).copy()),
+            (
+                np.zeros((n, e, D["post"]), np.float32)
+                if post is None
+                else (np.concatenate([post[:, 6:], post[:, :6]], 1) if flip else post)
+            ).copy()
+        ),
         "turn": torch.from_numpy(turn.astype(np.int64)),
         "rating": torch.from_numpy(rating.astype(np.int64)),
     }

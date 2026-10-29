@@ -17,8 +17,9 @@ def _slots(names: list[str], choice: str) -> int | None:
     return -1 if choice == "none" else None
 
 
-def tree_diffs(p1: str, p2: str, seed: int, max_turns: int = 40, script: list | None = None,
-               label: str = "") -> dict:
+def tree_diffs(
+    p1: str, p2: str, seed: int, max_turns: int = 40, script: list | None = None, label: str = ""
+) -> dict:
     """The tree's step against the log's at each turn start of a recorded battle where both
     sides chose: structural mismatches by field (examples: (label, seed, turn, choices, the
     log's step, the fields)), the outcome fields counted apart."""
@@ -52,7 +53,9 @@ def tree_diffs(p1: str, p2: str, seed: int, max_turns: int = 40, script: list | 
     # 2026-10-25 review, it was skipped whole)
     for k in range(len(steps) - 1):
         a = steps[k]
-        if set(a.get("choices", {})) != {"p1", "p2"} or any(s["request"] != "move" for s in a["state"]["sides"]):
+        if set(a.get("choices", {})) != {"p1", "p2"} or any(
+            s["request"] != "move" for s in a["state"]["sides"]
+        ):
             continue
         turn = a["state"]["turn"]
         if turn not in log_steps or not log_steps[turn]:
@@ -77,7 +80,8 @@ def tree_diffs(p1: str, p2: str, seed: int, max_turns: int = 40, script: list | 
         log = dict(zip(FIELDS, l1, strict=True)), dict(zip(FIELDS, l2, strict=True))
         best = None
         for p, t1, t2, _, _ in tree:
-            if p <= 0:  # (only an outcome that can happen: 2026-10-25 review, a probability-0 one matched)
+            # (only an outcome that can happen: 2026-10-25 review, a probability-0 one matched)
+            if p <= 0:
                 continue
             t = dict(zip(FIELDS, t1, strict=True)), dict(zip(FIELDS, t2, strict=True))
             miss = [f"{sd}.{f}" for sd, x, y in (("one", log[0], t[0]), ("two", log[1], t[1]))
@@ -94,5 +98,3 @@ def tree_diffs(p1: str, p2: str, seed: int, max_turns: int = 40, script: list | 
                 if y and x[f] != y[f]:
                     out["outcome"][f"{sd}.{f}"] += 1
     return out
-
-

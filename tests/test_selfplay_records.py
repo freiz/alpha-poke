@@ -54,4 +54,7 @@ def test_foe_move_weights_by_move_id():
     mon = N(moves=[N(id="makeitrain"), N(id="nastyplot"), N(id="shadowball"), N(id="none")])
     state = N(side_two=N(active_index="0", pokemon=[mon]))
     visits = [10, 0, 5, 0, 3, 0, 0, 0, 7, 0, 0, 0, 0, 0]
-    assert foe_move_weights(state, {"opp_visits": visits}) == {"makeitrain": 13.0, "shadowball": 5.0}
+    assert foe_move_weights(state, {"opp_visits": visits}) == {
+        "makeitrain": 13.0,
+        "shadowball": 5.0,
+    }

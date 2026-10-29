@@ -41,7 +41,13 @@ def _init():
 
     for row in A.engine_data()[0]:
         name, cat, power, prio, flags = row[0].lower(), row[3], float(row[4]), int(row[5]), row[-1]
-        if cat != "Status" and power > 0 and prio == 0 and "heal" not in flags and name != "grassyglide":
+        if (
+            cat != "Status"
+            and power > 0
+            and prio == 0
+            and "heal" not in flags
+            and name != "grassyglide"
+        ):
             PLAIN.add(name)
 
 
@@ -85,9 +91,16 @@ def check_battle(job) -> list[dict]:
             ent = np.frombuffer(e, "<f4").reshape(12, EE)
             glob = np.frombuffer(g, "<f4")
             new = np.frombuffer(n, "<f4").reshape(12, EN)
-            mech = [me.get("ability", ""), me.get("item", ""), them.get("ability", ""), them.get("item", "")]
+            mech = [
+                me.get("ability", ""),
+                me.get("item", ""),
+                them.get("ability", ""),
+                them.get("item", ""),
+            ]
 
-            def add(kind, claim, case, judge, ctx, unknown=False):
+            def add(
+                kind, claim, case, judge, ctx, unknown=False, claims=claims, cases=cases, step=step
+            ):
                 claims.append({"kind": kind, "claim": bool(claim), "unknown": unknown,
                                "case": len(cases), "judge": judge, "ctx": ctx})  # fmt: skip
                 cases.append({"battle": step["battle"], **case})
@@ -97,7 +110,10 @@ def check_battle(job) -> list[dict]:
                 if ent[a, 4 + 4 * k] <= 0 or mv in NEEDS_FOE_MOVE or m.get("disabled"):
                     continue
                 ctx = {"move": mv, "flip": flip, "mech": mech, "foe": them["species"]}
-                for sure, rolls in ((True, {own: "min", foe: "max"}), (False, {own: "max", foe: "min"})):
+                for sure, rolls in (
+                    (True, {own: "min", foe: "max"}),
+                    (False, {own: "max", foe: "min"}),
+                ):
                     turns = [_orient(own, f"move {mv}", "move splash")] * 2
                     case = {"rolls": rolls, "noop": foe, "turns": turns}
                     add("ko1_sure" if sure else "ko1_possible", ent[a, 4 + 4 * k + (1 if sure else 2)],
@@ -106,12 +122,22 @@ def check_battle(job) -> list[dict]:
                         add("ko2_sure" if sure else "ko2_possible", new[a, 2 * k + (0 if sure else 1)],
                             case, ("ko2", foe, str(b)), ctx)  # fmt: skip
             # who moves first
-            mine = next((m["id"] for m in me["moves"] if m["id"] in PLAIN and not m.get("disabled")), None)
-            theirs = next((m["id"] for m in them["moves"] if m["id"] in PLAIN and not m.get("disabled")), None)
+            mine = next(
+                (m["id"] for m in me["moves"] if m["id"] in PLAIN and not m.get("disabled")), None
+            )
+            theirs = next(
+                (m["id"] for m in them["moves"] if m["id"] in PLAIN and not m.get("disabled")), None
+            )
             if mine and theirs and glob[16] != 0:
                 case = {"rolls": {"p1": "max", "p2": "max"}, "noop": None,
                         "turns": [_orient(own, f"move {mine}", f"move {theirs}")]}  # fmt: skip
-                add("first", glob[16] > 0, case, ("first", own), {"moves": [mine, theirs], "flip": flip, "mech": mech})
+                add(
+                    "first",
+                    glob[16] > 0,
+                    case,
+                    ("first", own),
+                    {"moves": [mine, theirs], "flip": flip, "mech": mech},
+                )
             # team: own mons on the foe's active
             for s_, j, k, mj, mk, res in A.duels_debug(line, flip):
                 if s_ != 0 or k != b or mj < 0:
@@ -133,10 +159,20 @@ def check_battle(job) -> list[dict]:
                 if pj.get("status") in ("slp", "frz"):
                     continue
                 entry = [_orient(own, f"switch {j}", f"move {mkn}")]
-                for kind, code, sure in (("team_switch_in", res[0], True), ("team_switch_in_possible", res[1], False)):
+                for kind, code, sure in (
+                    ("team_switch_in", res[0], True),
+                    ("team_switch_in_possible", res[1], False),
+                ):
                     rolls = {own: "min", foe: "max"} if sure else {own: "max", foe: "min"}
                     case = {"rolls": rolls, "noop": None, "turns": entry + rounds}
-                    add(kind, code == 0, case, ("fight", own, str(j), foe, str(b), sure), ctx, code == 2)
+                    add(
+                        kind,
+                        code == 0,
+                        case,
+                        ("fight", own, str(j), foe, str(b), sure),
+                        ctx,
+                        code == 2,
+                    )
         if not cases:
             continue
         try:
@@ -220,7 +256,9 @@ def main() -> None:
                 if v in ("wrong", "missed") and len(examples[(r["kind"], v)]) < 25:
                     examples[(r["kind"], v)].append(r)
     breakdown = {
-        f"{k}/{v}": [{"key": key, "count": x, "checked": seen[k][key]} for key, x in c.most_common(15)]
+        f"{k}/{v}": [
+            {"key": key, "count": x, "checked": seen[k][key]} for key, x in c.most_common(15)
+        ]
         for (k, v), c in blame.items()
     }
     report = {"battles": a.battles, "claims": {k: dict(c) for k, c in sorted(stats.items())},
@@ -233,7 +271,9 @@ def main() -> None:
         print(f"  {k:24s} {n:6d} checked  wrong {c['wrong'] / n:6.2%}  missed {c['missed'] / n:6.2%}"
               f"  unknown {c['unknown'] / n:6.2%}")  # fmt: skip
     for key, rows in sorted(breakdown.items()):
-        print(f"    {key}: " + ", ".join(f"{r['key']} {r['count']}/{r['checked']}" for r in rows[:6]))
+        print(
+            f"    {key}: " + ", ".join(f"{r['key']} {r['count']}/{r['checked']}" for r in rows[:6])
+        )
 
 
 if __name__ == "__main__":

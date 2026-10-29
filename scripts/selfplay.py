@@ -448,7 +448,8 @@ def cmd_train(a) -> None:
 
     def rows(g: int) -> int:
         return sum(
-            pq.read_metadata(f).num_rows for f in (Path("data/train") / sp_data(g)).glob("*.parquet")
+            pq.read_metadata(f).num_rows
+            for f in (Path("data/train") / sp_data(g)).glob("*.parquet")
         )
 
     have = [g for g in range(a.gen + 1) if (Path("data/train") / sp_data(g)).exists()]
@@ -499,7 +500,9 @@ def cmd_train(a) -> None:
            f"--sp-frac {sp_frac} --init {init} {size} --lr {lr} --batch {a.batch} "
            f"--warmup-frac {a.warmup_frac} --export last --sp-per-game {a.per_game} "
            f"--sp-value-passes {a.value_passes} --seed {a.gen} --run {run}")  # fmt: skip
-    log_path = SELFPLAY_DIR / f"gen{a.gen}" / (f"train-a{a.attempt}.log" if a.attempt else "train.log")
+    log_path = (
+        SELFPLAY_DIR / f"gen{a.gen}" / (f"train-a{a.attempt}.log" if a.attempt else "train.log")
+    )
     out = Path("data/train") / TRAIN_DATA / "runs" / run
     done = (out / "metrics.jsonl").exists() and '"event": "done"' in (
         out / "metrics.jsonl"
@@ -829,7 +832,11 @@ def cmd_iterate(a) -> None:
                 print(f"gen {a.gen}: {games} games, no clearly better network -- stopped")
                 return
             need = target - games
-            have = len(teams_mod.load(gen_dir / "teams.jsonl")) if (gen_dir / "teams.jsonl").exists() else 0
+            have = (
+                len(teams_mod.load(gen_dir / "teams.jsonl"))
+                if (gen_dir / "teams.jsonl").exists()
+                else 0
+            )
             if have < target:
                 step("teams", ["teams", "--gen", str(a.gen), "--n", str(target - have),
                                "--seed", str(1000 * a.gen + have)] + (["--append"] if have else []))  # fmt: skip
@@ -838,7 +845,8 @@ def cmd_iterate(a) -> None:
             games = len(runner.done_pairs(gen_dir))
         conv = Path("data/train") / sp_data(a.gen) / "convert.json"
         if not (conv.exists() and json.loads(conv.read_text()).get("games") == games):
-            step("convert", ["convert", "--gen", str(a.gen), "--force"])  # (else: converted already)
+            # (else: converted already)
+            step("convert", ["convert", "--gen", str(a.gen), "--force"])
         step("train", ["train", "--gen", str(a.gen), "--attempt", str(k), "--force"])
         step("eval", ["eval", "--gen", str(a.gen), "--attempt", str(k), "--force",
                       "--pairs", str(a.eval_pairs), "--iterations", str(a.eval_iterations),
@@ -961,7 +969,9 @@ def main() -> None:
     # after the last faint
     p.add_argument("--loop-margin", type=int, default=10)
     p.set_defaults(fn=cmd_convert)
-    p = sub.add_parser("registry", help="rebuild the model registry (data/selfplay/registry/models.json)")
+    p = sub.add_parser(
+        "registry", help="rebuild the model registry (data/selfplay/registry/models.json)"
+    )
     p.set_defaults(fn=cmd_registry)
     p = sub.add_parser("stats", help="game statistics of the generation")
     p.add_argument("--gen", type=int, required=True)
@@ -1022,7 +1032,9 @@ def main() -> None:
     p.add_argument("--force", action="store_true")
     p.add_argument("--attempt", type=int, default=0, help="iterate: attempt k (eval_a<k>)")
     p.set_defaults(fn=cmd_eval)
-    p = sub.add_parser("diag", help="diagnostic team pools: current vs the base network (D16; by hand)")
+    p = sub.add_parser(
+        "diag", help="diagnostic team pools: current vs the base network (D16; by hand)"
+    )
     p.add_argument("--gen", type=int, required=True, help="where to log it")
     p.add_argument("--against", default=BASE_RUN)
     p.add_argument("--pools", default="wide200,offmeta200,random200")

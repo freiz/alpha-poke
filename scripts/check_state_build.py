@@ -27,7 +27,9 @@ def core(kind: str) -> bool:
     if kind.split(":", 1)[0] == "options":  # (the legal actions: the search's options -- plan C)
         return True
     rest = kind.split(":", 1)[1]
-    return any(rest == c or rest.startswith(c + ":") or rest.startswith(c) for c in CORE) and not rest.startswith("last_item")
+    return any(
+        rest == c or rest.startswith(c + ":") or rest.startswith(c) for c in CORE
+    ) and not rest.startswith("last_item")
 
 
 def battle(job) -> dict:
@@ -47,8 +49,11 @@ def battle(job) -> dict:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--battles", type=int, default=100)
-    ap.add_argument("--teams", default="tests/fixtures/random_battle_teams.jsonl",
-                    help="team pairs (one {p1, p2} per line); several, comma-separated or a glob")
+    ap.add_argument(
+        "--teams",
+        default="tests/fixtures/random_battle_teams.jsonl",
+        help="team pairs (one {p1, p2} per line); several, comma-separated or a glob",
+    )
     ap.add_argument("--max-turns", type=int, default=40)
     ap.add_argument("--procs", type=int, default=8)
     ap.add_argument("--belief", action="store_true", help="the belief's samples, not the true sets")
@@ -90,16 +95,29 @@ def main() -> None:
           f"({'oracle' if not a.belief else 'belief'}); decisions with one: {bad_dec} "
           f"({100 * bad_dec / n:.3f}%), in a core field: {core_dec} ({100 * core_dec / n:.3f}%)")  # fmt: skip
     for kind, c in kinds.most_common():
-        print(f"  {c:6d}  {kind:36s} in {len(battles_by_kind[kind])} battles, e.g. {examples[kind][0]}")
+        print(
+            f"  {c:6d}  {kind:36s} in {len(battles_by_kind[kind])} battles, e.g. {examples[kind][0]}"
+        )
     for e, c in errors.most_common(10):
         print(f"  error x{c}: {e}")
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
-    Path(a.out).write_text(json.dumps({"battles": len(jobs), "teams": files, "decisions": decisions,
-                                       "seed_offset": a.seed_offset,  # (a job's pair: seed - offset)
-                                       "path": a.path,
-                                       "decisions_with": bad_dec, "core_decisions_with": core_dec,
-                                       "kinds": dict(kinds), "errors": dict(errors),
-                                       "examples": {k: v[:20] for k, v in examples.items()}}, indent=1))
+    Path(a.out).write_text(
+        json.dumps(
+            {
+                "battles": len(jobs),
+                "teams": files,
+                "decisions": decisions,
+                "seed_offset": a.seed_offset,  # (a job's pair: seed - offset)
+                "path": a.path,
+                "decisions_with": bad_dec,
+                "core_decisions_with": core_dec,
+                "kinds": dict(kinds),
+                "errors": dict(errors),
+                "examples": {k: v[:20] for k, v in examples.items()},
+            },
+            indent=1,
+        )
+    )
 
 
 if __name__ == "__main__":

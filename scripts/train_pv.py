@@ -192,8 +192,12 @@ def v3_arrays(t, states: list[str]) -> dict:
            "ent4": np.concatenate(new),
            "extra_version": np.full(len(states), DIMS["extra_version"], np.uint8)}  # fmt: skip
     if "post" in t.column_names:  # F2: [12 * N_POST] per position (positions.py)
-        out["post"] = (np.asarray(t.column("post").to_pylist(), np.float32) / 255).astype(
-            np.float16).reshape(-1, 12, DIMS["post"])  # (stored x 255)
+        # (stored x 255)
+        out["post"] = (
+            (np.asarray(t.column("post").to_pylist(), np.float32) / 255)
+            .astype(np.float16)
+            .reshape(-1, 12, DIMS["post"])
+        )
     e3, g3 = DIMS["ent_count"], DIMS["global_count"]
     ent, glob = [], []
     for i in range(0, len(states), 50_000):
@@ -669,7 +673,9 @@ def aux_loss(out: dict, x: dict, sp, turn, bw, heads, stats: dict | None = None)
         pred = out["turns"].float()
         # (clamped: a batch of capped self-play games only has no remaining-turns label -- all
         # weights 0, 0 / 0 = NaN into the gradients, 2026-10-22 review; now 0)
-        losses.append((F.smooth_l1_loss(pred, y, reduction="none") * bw).sum() / bw.sum().clamp_min(1e-6))
+        losses.append(
+            (F.smooth_l1_loss(pred, y, reduction="none") * bw).sum() / bw.sum().clamp_min(1e-6)
+        )
         if stats is not None:
             add("turns_mae", (torch.expm1(pred.clamp(max=6)) - torch.expm1(y)).abs().sum().item())
     return torch.stack(losses).mean() if losses else torch.zeros((), device=sp.device)
@@ -1313,7 +1319,9 @@ def main() -> None:
                 out = model(sp, de, gl, ma, hs, hd, aux=bool(a.mtp or heads), **kw)
             logits, v = out[0], out[1]
             pwb = torch.from_numpy(pw[b]).to(device)
-            ce = (policy_loss(logits, act, ma, reduction="none") * pwb).sum() / pwb.sum().clamp_min(1e-6)
+            ce = (policy_loss(logits, act, ma, reduction="none") * pwb).sum() / pwb.sum().clamp_min(
+                1e-6
+            )
             bw = torch.from_numpy(vw[b]).to(device)
             vl = value_logit(model, v.float(), ev)
             bce = (

@@ -74,6 +74,7 @@ def node_script(script: str, payload, timeout: float = 600):
                        capture_output=True, text=True, check=True, timeout=timeout)  # fmt: skip
     return json.loads(r.stdout)
 
+
 # ("fnt": Showdown's status of a mon fainted this turn -- battle.faintMessages; the engine has
 # none, its 0 HP is the faint. Missing, the reference state of every turn with a faint failed to
 # build and its extended fields went unchecked: 17,743 turns of the full corpus, 2026-10-25)
@@ -121,7 +122,9 @@ def _recorder_files() -> list[Path]:
     """The simulator's build files a recorded battle depends on: what it loads -- its sim, data,
     lib and config (the formats' rules: dist/config/formats.js; 2026-10-25 review, a format rule
     changed kept the battles recorded under the old one)."""
-    return [f for d in ("sim", "data", "lib", "config") for f in sorted((SIM.parent / d).rglob("*.js"))]
+    return [
+        f for d in ("sim", "data", "lib", "config") for f in sorted((SIM.parent / d).rglob("*.js"))
+    ]
 
 
 @functools.cache
@@ -205,11 +208,12 @@ def _engine_item(name: str) -> bool:
 def _engine_move(name: str) -> bool:
     """Whether poke-engine knows the move ``name`` (the battle's last move, L167)."""
     try:
-        return str(pe.State.from_string(pe.State(last_move=name).to_string()).last_move).lower() == name
+        return (
+            str(pe.State.from_string(pe.State(last_move=name).to_string()).last_move).lower()
+            == name
+        )
     except BaseException:  # noqa: BLE001 - the binding panics on an unknown name
         return False
-
-
 
 
 def lock_of(m: dict) -> tuple[str, str]:
@@ -276,9 +280,6 @@ def _sleep(m: dict) -> dict:
 
 
 from alpha_poke.agents.engine_state import NO_TRANSFORM  # noqa: E402 (one list: ours too)
-
-# (L224: the moves that call another -- a charge move one starts locks into the caller's slot)
-CALLERS = ("metronome", "copycat", "assist", "mefirst", "naturepower", "mirrormove")
 
 # the once-per-battle abilities (abilities.rs ONCE_PER_BATTLE, L184)
 ONCE_PER_BATTLE = ("dauntlessshield", "intrepidsword", "supersweetsyrup", "battlebond")
@@ -373,7 +374,9 @@ def _engine_side(s: dict, future_sight=None, wish=None) -> pe.Side:
     for name, eng, v in (("healingwish", "healing_wish", 1), ("lunardance", "healing_wish", 2)):
         if name in s.get("slot", {}):
             sc[eng] = v
-    kw: dict = {"future_sight": future_sight[:2], "future_doom": future_sight[2]} if future_sight else {}
+    kw: dict = (
+        {"future_sight": future_sight[:2], "future_doom": future_sight[2]} if future_sight else {}
+    )
     if tera_used:
         kw["tera_used"] = True
     # (L220: the faints Revival Blessing undid)
@@ -493,7 +496,11 @@ def engine_state(sd: dict) -> pe.State:
         if fm and fm["source"] >= 0:
             turns = fm["ending_turn"] - turn + 2
             # (L218: and whether it is Doom Desire)
-            future[1 - k] = (turns, pe.PokemonIndex(str(fm["source"])), fm.get("move") == "doomdesire")
+            future[1 - k] = (
+                turns,
+                pe.PokemonIndex(str(fm["source"])),
+                fm.get("move") == "doomdesire",
+            )
     # Wish: a condition of the user's slot (its HP, unrounded maxhp / 2; Showdown heals at the end
     # of turn startingTurn + 2, the engine at the end of the turn its count is 1)
     wish = [None, None]
@@ -536,7 +543,7 @@ def damage_hints(start: dict, after: dict) -> tuple[int, int]:
     it is one of its own rolls (State::damage_hint)."""
     # (L226: by the active slot, "p1a" -- an Illusion's log names the mon it shows)
     hp = {f"{s['id']}a": s["mons"][s["active"]]["hp"] for s in start["sides"] if s["active"] >= 0}
-    hints, pending, prev = [-1, -1], None, None
+    hints, pending = [-1, -1], None
     crit = [False, False]  # (a -crit line on the pending hit: the hint marked CRIT_HINT)
     hinted = None  # (side, target) of the last hint: a survival effect after it voids it
     sub_hits: dict = {}  # (L224: the hits each active's Substitute took)
@@ -548,7 +555,11 @@ def damage_hints(start: dict, after: dict) -> tuple[int, int]:
         # (L228: not one knocked off / burnt up -- "[from] move: Knock Off": the hit was a roll)
         capped = len(f) > 3 and (
             (f[1] == "-enditem" and f[3] in ("Focus Sash", "Focus Band") and "[from]" not in line)
-            or (f[1] == "-activate" and f[3] in ("ability: Sturdy", "move: Endure", "item: Focus Band")))
+            or (
+                f[1] == "-activate"
+                and f[3] in ("ability: Sturdy", "move: Endure", "item: Focus Band")
+            )
+        )
         if capped and hinted and f[2] == hinted[1]:
             hints[hinted[0]] = -1
         if capped and pending and f[2] == pending[1]:
@@ -577,7 +588,12 @@ def damage_hints(start: dict, after: dict) -> tuple[int, int]:
             new = _log_hp(f[3])
             if new is None:
                 continue
-            if (tag == "-damage" and pending and f[2] == pending[1] and not any(x.startswith("[from]") for x in f[4:])):
+            if (
+                tag == "-damage"
+                and pending
+                and f[2] == pending[1]
+                and not any(x.startswith("[from]") for x in f[4:])
+            ):
                 before = hp.get(f[2])
                 if before is not None and new > 0 and before > new:
                     hints[pending[0]] = before - new
@@ -602,7 +618,9 @@ def damage_hints(start: dict, after: dict) -> tuple[int, int]:
     for side, target in [x for x in (hinted,) if x]:
         if sub_hits.get(target, 0) > 1 and _sub_hp(start, target) >= 0:
             hints[side] = -1
-    return tuple((h + CRIT_HINT if c else h) if h > 0 else -1 for h, c in zip(hints, crit))
+    return tuple(
+        (h + CRIT_HINT if c else h) if h > 0 else -1 for h, c in zip(hints, crit, strict=True)
+    )
 
 
 def _log_lines(state: dict):
@@ -645,7 +663,7 @@ def roll_hints(start: dict, after: dict) -> tuple:
     hp = {f"{s['id']}a": s["mons"][s["active"]]["hp"] for s in start["sides"] if s["active"] >= 0}
     confusion, future, multi = [-1, -1], [-1, -1], [[], []]
     hits, mover, target = [], None, None  # (the current move's hits on its target)
-    pending_future, crit, prev = None, False, None
+    pending_future, crit = None, False
     sub_lines: dict = {}  # (L226: the Substitute hits by target, all moves')
     darts: dict = {}  # (L228: a Dragon Darts' target by mover, its Substitute marks at the end)
     for line in _log_lines(after):
@@ -686,7 +704,10 @@ def roll_hints(start: dict, after: dict) -> tuple:
                 continue
             before = hp.get(f[2])
             dealt = before - new if before is not None and new > 0 and before > new else -1
-            mark = (lambda d: d + CRIT_HINT if crit and d >= 0 else d)
+
+            def mark(d, crit=crit):
+                return d + CRIT_HINT if crit and d >= 0 else d
+
             if tag == "-damage" and "[from] confusion" in line:
                 confusion[0 if f[2].startswith("p1") else 1] = dealt
             elif tag == "-damage" and len(f) == 4 and pending_future and f[2] == pending_future[1]:
@@ -727,7 +748,7 @@ def _sub_hits(hits: list, start: dict, after: dict, target: str, sub_lines: dict
         b = hits.index("B")
         if any(h != "S" for h in hits[:b]):
             return out
-        return [SUB_SHARE + s0 - 1] * b + [SUB_BREAK] + out[b + 1:]
+        return [SUB_SHARE + s0 - 1] * b + [SUB_BREAK] + out[b + 1 :]
     s1 = _sub_hp(after, target)
     if s1 < 0 or s1 >= s0 or any(h != "S" for h in hits):
         return out
@@ -778,7 +799,16 @@ def engine_outcomes(state: pe.State, c1: str, c2: str,
             m = SUB_DAMAGE.match(text)
             if m:
                 sub[m.group(1) == "SideTwo"] += max(int(m.group(2)), 0)
-        out.append((si.percentage / 100, state.apply_instructions(si), tuple(dmg), tuple(sub), per_mon, were_in))
+        out.append(
+            (
+                si.percentage / 100,
+                state.apply_instructions(si),
+                tuple(dmg),
+                tuple(sub),
+                per_mon,
+                were_in,
+            )
+        )
     return [Outcome(p, s, d, b, pm, w) for p, s, d, b, pm, w in out]
 
 
@@ -837,7 +867,11 @@ def view(sd: dict) -> dict:
             # (a fainted mon's item is not compared: it has no effect any more, and Showdown does not
             # use one up on a fainted holder -- Weakness Policy, Knock Off's on a knocked-out target)
             if m["hp"] > 0:
-                v[f"{k}.{j}.item"] = (m["item"] if _engine_item(m["item"]) else "unknownitem") if m["item"] else "none"
+                v[f"{k}.{j}.item"] = (
+                    (m["item"] if _engine_item(m["item"]) else "unknownitem")
+                    if m["item"]
+                    else "none"
+                )
         act = s["mons"][s["active"]] if s["active"] >= 0 else None
         if act is not None:
             for b in BOOSTS:
@@ -862,8 +896,13 @@ def view(sd: dict) -> dict:
                 # (L170: a partial trap whose source is out, as in engine_state)
                 if x == "partiallytrapped" and st.get("source_out"):
                     continue
-                if _engine_volatile(x) and x not in ("stall", "statslowered", "statsraised",
-                                                     "illusion", "notera"):
+                if _engine_volatile(x) and x not in (
+                    "stall",
+                    "statslowered",
+                    "statsraised",
+                    "illusion",
+                    "notera",
+                ):
                     v[f"{k}.volatile.{x}"] = True
             locked, slot = lock_of(act)
             if locked and slot != locked and locked in CALLED_LOCKS:  # (L242, as engine_state)
@@ -899,10 +938,14 @@ def view_engine(s: pe.State, n_mons: tuple[int, int] = (6, 6)) -> dict:
             # Showdown's side compares the types other than Terastallization, _changed_types)
             # (L222: nor the turn-1 marks, input only)
             # (L227: nor the Illusion / no-tera marks, input only too)
-            if str(x).lower() not in ("none", "statslowered", "statsraised",
-                                      "illusion", "notera", "struggled") and not (
-                tera and str(x).lower() == "typechange"
-            ):
+            if str(x).lower() not in (
+                "none",
+                "statslowered",
+                "statsraised",
+                "illusion",
+                "notera",
+                "struggled",
+            ) and not (tera and str(x).lower() == "typechange"):
                 v[f"{k}.volatile.{str(x).lower()}"] = True
         sc = side.side_conditions
         for eng in LAYERED.values():
@@ -916,8 +959,16 @@ def view_engine(s: pe.State, n_mons: tuple[int, int] = (6, 6)) -> dict:
 
 # the moves / items that make the engine keep a count it otherwise leaves (its conditional
 # mechanics, State::set_conditional_mechanics): compared only then
-LAST_USED_MOVES = {"encore", "fakeout", "firstimpression", "bloodmoon", "gigatonhammer", "disable",
-                   "taunt", "eeriespell"}
+LAST_USED_MOVES = {
+    "encore",
+    "fakeout",
+    "firstimpression",
+    "bloodmoon",
+    "gigatonhammer",
+    "disable",
+    "taunt",
+    "eeriespell",
+}
 
 
 def _field_moves(s: pe.State) -> set[str]:
@@ -1051,7 +1102,9 @@ def showdown_options(side: dict) -> set[str] | None:
             out.add(mid + "-tera")
     # (switches by the state's species ids: the request's details name a forme by its species --
     # Greninja-Bond's "Greninja")
-    if not act.get("trapped") and not (side["active"] >= 0 and side["mons"][side["active"]].get("trapped")):
+    if not act.get("trapped") and not (
+        side["active"] >= 0 and side["mons"][side["active"]].get("trapped")
+    ):
         for j, m in enumerate(side["mons"]):
             if j != side["active"] and m["hp"] > 0:
                 out.add("switch " + m["species"])
@@ -1081,12 +1134,18 @@ def extra_diff(showdown_after: dict, out, n_mons=(6, 6), hp: bool = True,
     for k, i in (("s1", 0), ("s2", 1)):
         for x in HIDDEN_LENGTH:
             s = (start or {}).get("sides", [{}, {}])[i] if start else None
-            had = s is not None and s.get("active", -1) >= 0 and x in s["mons"][s["active"]]["volatiles"] \
+            had = (
+                s is not None
+                and s.get("active", -1) >= 0
+                and x in s["mons"][s["active"]]["volatiles"]
                 and s["active"] == showdown_after["sides"][i]["active"]
+            )
             # (L205: one that ended and started again in the turn -- a confusion run out, then a
             # lock's fatigue -- drew a new length)
             tag = f"|-start|p{i + 1}a: "
-            if any(line.startswith(tag) and f"|{x}" in line for line in showdown_after.get("log", [])):
+            if any(
+                line.startswith(tag) and f"|{x}" in line for line in showdown_after.get("log", [])
+            ):
                 had = False
             # (L209: a partial trap started again -- Rapid Spin, then Infestation: its -activate)
             trap = f"|-activate|p{i + 1}a: "
@@ -1117,12 +1176,16 @@ def extra_diff(showdown_after: dict, out, n_mons=(6, 6), hp: bool = True,
     eng = (out[1].side_one, out[1].side_two)
     for (k, side), s, other in zip((("s1", eng[0]), ("s2", eng[1])), sides, eng[::-1], strict=True):
         # (a fainted active's replacement waits for the other side's pivot switch first)
-        must = bool(side.force_switch) or (side.pokemon[int(side.active_index)].hp <= 0
-                                           and not other.force_switch)
+        must = bool(side.force_switch) or (
+            side.pokemon[int(side.active_index)].hp <= 0 and not other.force_switch
+        )
         if s["request"] in ("move", "switch", "wait") and must != (s["request"] == "switch"):
             # (a side with nobody left to send in: no request -- "wait" -- in Showdown)
-            if not (must and s["request"] == "wait"
-                    and not any(m["hp"] > 0 for j, m in enumerate(s["mons"]) if j != s["active"])):
+            if not (
+                must
+                and s["request"] == "wait"
+                and not any(m["hp"] > 0 for j, m in enumerate(s["mons"]) if j != s["active"])
+            ):
                 bad[f"{k}.must_switch"] = (must, s["request"] == "switch")
     # the legal actions (where both sides choose a move next)
     bad.update(options_diff(out[1], sides))
@@ -1221,6 +1284,7 @@ def end_diff(showdown_after: dict, outs: list, n_mons=(6, 6)) -> dict:
     Leftovers, a weather's count, a Rollout's volatile); the engine plays it out, a terminal state
     the search scores by its winner alone (2026-10-25 review: the last transition was never
     compared). As ``closest``: {"p", "diff", "state"}."""
+
     def fainted(v: dict) -> set:
         return {k for k, x in v.items() if k.endswith(".hp") and x == 0}
 
@@ -1280,7 +1344,6 @@ def built_state(states: list[dict], k: int, side: str, belief, seed: int = 0) ->
         battle.parse_request(req)
     names = tuple(belief.display(m.species) for m in battle.teampreview_opponent_team)
     return build_state(battle, belief, names, random.Random(seed))
-
 
 
 def crit_stages(p1, p2, turns=(), seed: str = "gen5,1,2,3,4") -> dict[str, int]:

@@ -14,8 +14,15 @@ import json
 from alpha_poke.enginecheck.difftest import PCT, Spec
 
 
-def S(species: str, item: str, ability: str, moves: list[str], evs: str = "252 HP / 4 Atk / 252 SpD",
-      nature: str = "Careful", tera: str = "Normal") -> str:
+def S(
+    species: str,
+    item: str,
+    ability: str,
+    moves: list[str],
+    evs: str = "252 HP / 4 Atk / 252 SpD",
+    nature: str = "Careful",
+    tera: str = "Normal",
+) -> str:
     """A set in Showdown's export text."""
     head = f"{species} @ {item}" if item else species
     return "\n".join([head, f"Ability: {ability}", f"Tera Type: {tera}", f"EVs: {evs}", f"{nature} Nature",
@@ -31,10 +38,20 @@ FILLER = S("Snorlax", "Leftovers", "Thick Fat", ["Body Slam", "Rest", "Slack Off
 FAST = "252 HP / 4 Atk / 252 Spe"
 
 
-def _spec(name: str, p1: str, p2: str, script: list[dict], seed: int = 1, max_turns: int = 8,
-          fmt: str = "", expect: tuple = ()) -> Spec:
+def _spec(
+    name: str,
+    p1: str,
+    p2: str,
+    script: list[dict],
+    seed: int = 1,
+    max_turns: int = 8,
+    fmt: str = "",
+    expect: tuple = (),
+) -> Spec:
     """``expect``: the log lines (substrings) that show the mechanism happened."""
-    return Spec(f"scenario/{name}", p1, p2, seed, max_turns, json.dumps(script), fmt, ("scenario",), expect)
+    return Spec(
+        f"scenario/{name}", p1, p2, seed, max_turns, json.dumps(script), fmt, ("scenario",), expect
+    )
 
 
 def extender_items() -> list[Spec]:
@@ -54,8 +71,20 @@ def extender_items() -> list[Spec]:
                          team(setter, FILLER), team(foe, FILLER), script))  # fmt: skip
     # (a screen: Light Clay, a Klutz setter, the clay knocked off after)
     for ability in ("Klutz", "Cursed Body"):
-        setter = S("Golurk", "Light Clay", ability, ["Reflect", "Earthquake", "Poltergeist", "Light Screen"], FAST, "Jolly")
-        foe = S("Slowking-Galar", "Leftovers", "Regenerator", ["Knock Off", "Trick", "Skill Swap", "Slack Off"])
+        setter = S(
+            "Golurk",
+            "Light Clay",
+            ability,
+            ["Reflect", "Earthquake", "Poltergeist", "Light Screen"],
+            FAST,
+            "Jolly",
+        )
+        foe = S(
+            "Slowking-Galar",
+            "Leftovers",
+            "Regenerator",
+            ["Knock Off", "Trick", "Skill Swap", "Slack Off"],
+        )
         script = [{"p1": "move 1", "p2": "move 1"}] + [{"p1": "move 2", "p2": "move 4"}] * 3
         out.append(_spec(f"extender/screen-{ability.lower().replace(' ', '')}-knockoff", team(setter, FILLER),
                          team(foe, FILLER), script))  # fmt: skip
@@ -64,8 +93,15 @@ def extender_items() -> list[Spec]:
     for ability in ("Klutz", "No Guard"):
         setter = S("Golurk", "Terrain Extender", ability, ["Electric Terrain", "Eerie Impulse", "Earthquake", "Rock Polish"],
                    FAST, "Jolly")  # fmt: skip
-        foe = S("Ting-Lu", "Leftovers", "Vessel of Ruin", ["Spikes", "Ruination", "Earthquake", "Whirlwind"])
-        script = [{"p1": "move 1", "p2": "move 1"}, {"p1": "move 2", "p2": "move 2"}] + [{"p1": "move 4", "p2": "move 2"}] * 2
+        foe = S(
+            "Ting-Lu",
+            "Leftovers",
+            "Vessel of Ruin",
+            ["Spikes", "Ruination", "Earthquake", "Whirlwind"],
+        )
+        script = [{"p1": "move 1", "p2": "move 1"}, {"p1": "move 2", "p2": "move 2"}] + [
+            {"p1": "move 4", "p2": "move 2"}
+        ] * 2
         out.append(_spec(f"extender/terrain-{ability.lower().replace(' ', '')}-ground", team(setter, FILLER),
                          team(foe, FILLER), script, expect=("|-fieldstart|move: Electric Terrain", "|-unboost|p2a: Ting-Lu|spa|2")))  # fmt: skip
     return out
@@ -75,13 +111,19 @@ def pp_takers() -> list[Spec]:
     """Spite (4 PP) and Eerie Spell (3) off the target's last move: before / after its move this
     turn (R1, R5, R5'); no other mechanic that tracks the last move in the sets."""
     out = []
-    target = S("Corviknight", "Leftovers", "Mirror Armor", ["Brave Bird", "Roost", "Defog", "U-turn"])
+    target = S(
+        "Corviknight", "Leftovers", "Mirror Armor", ["Brave Bird", "Roost", "Defog", "U-turn"]
+    )
     for move, fast in itertools.product(("Spite", "Eerie Spell"), (True, False)):
         taker = S("Slowking-Galar" if move == "Eerie Spell" else "Spiritomb", "Leftovers",
                   "Regenerator" if move == "Eerie Spell" else "Infiltrator",
                   [move, "Slack Off", "Foul Play", "Thunder Wave"], FAST if fast else "252 HP / 252 SpD / 4 Spe",
                   "Timid" if fast else "Calm")  # fmt: skip
-        script = [{"p1": "move 1", "p2": "move 1"}, {"p1": "move 2", "p2": "move 1"}, {"p1": "move 1", "p2": "move 1"}]
+        script = [
+            {"p1": "move 1", "p2": "move 1"},
+            {"p1": "move 2", "p2": "move 1"},
+            {"p1": "move 1", "p2": "move 1"},
+        ]
         out.append(_spec(f"pp/{move.lower().replace(' ', '')}-{'faster' if fast else 'slower'}",
                          team(target, FILLER), team(taker, FILLER), script))  # fmt: skip
     return out
@@ -94,11 +136,25 @@ def transforms() -> list[Spec]:
     start (S153)."""
     out = []
     for how, move in itertools.product(("imposter", "transform"), ("Heavy Slam", "Low Kick")):
-        ditto = S("Ditto", "Choice Scarf", "Imposter" if how == "imposter" else "Limber", ["Transform"])
-        heavy = S("Copperajah", "Leftovers", "Sheer Force", [move, "Protect", "Stealth Rock", "Iron Defense"])
+        ditto = S(
+            "Ditto", "Choice Scarf", "Imposter" if how == "imposter" else "Limber", ["Transform"]
+        )
+        heavy = S(
+            "Copperajah",
+            "Leftovers",
+            "Sheer Force",
+            [move, "Protect", "Stealth Rock", "Iron Defense"],
+        )
         lead = [{"p1": "switch 2", "p2": "move 2"}] if how == "imposter" else []
-        script = ([{"p1": "move 1", "p2": "move 2"}] if how == "transform" else [{"p1": "move 1", "p2": "move 2"}]) + [
-            {"p1": "switch 2", "p2": "move 3"}, {"p1": "switch 2", "p2": "move 1"}, {"p1": "move 1", "p2": "move 1"}]
+        script = (
+            [{"p1": "move 1", "p2": "move 2"}]
+            if how == "transform"
+            else [{"p1": "move 1", "p2": "move 2"}]
+        ) + [
+            {"p1": "switch 2", "p2": "move 3"},
+            {"p1": "switch 2", "p2": "move 1"},
+            {"p1": "move 1", "p2": "move 1"},
+        ]
         p1 = team(FILLER, ditto) if how == "imposter" else team(ditto, FILLER)
         out.append(_spec(f"transform/{how}-{move.lower().replace(' ', '')}", p1, team(heavy, FILLER),
                          lead + script if how == "imposter" else script))  # fmt: skip
@@ -116,12 +172,19 @@ def transforms() -> list[Spec]:
                                               {"p1": "move 2", "p2": "move 2"}, {"p1": "move 2", "p2": "move 2"}],
                      expect=("|-transform|p1a: Ditto|p2a: Terapagos", "Terapagos-Stellar")))  # fmt: skip
     # (a copied 1-PP move: Showdown's min(5, its PP) -- Revival Blessing's 1)
-    pawmot = S("Pawmot", "Leftovers", "Volt Absorb", ["Revival Blessing", "Close Combat", "Nuzzle", "Double Shock"])
+    pawmot = S(
+        "Pawmot",
+        "Leftovers",
+        "Volt Absorb",
+        ["Revival Blessing", "Close Combat", "Nuzzle", "Double Shock"],
+    )
     out.append(_spec("transform/copied-one-pp", team(FILLER, S("Ditto", "Leftovers", "Imposter", ["Transform"])),
                      team(pawmot, FILLER), [{"p1": "switch 2", "p2": "move 3"}, {"p1": "move 3", "p2": "move 3"},
                                            {"p1": "move 2", "p2": "move 3"}],
                      expect=("|-transform|p1a: Ditto|p2a: Pawmot",)))  # fmt: skip
-    gigas = S("Regigigas", "Leftovers", "Slow Start", ["Body Slam", "Protect", "Knock Off", "Substitute"])
+    gigas = S(
+        "Regigigas", "Leftovers", "Slow Start", ["Body Slam", "Protect", "Knock Off", "Substitute"]
+    )
     ditto = S("Ditto", "Leftovers", "Limber", ["Transform"])
     out.append(_spec("transform/slowstart-copied", team(ditto, FILLER), team(gigas, FILLER),
                      [{"p1": "move 1", "p2": "move 2"}, {"p1": "move 1", "p2": "move 1"},
@@ -133,9 +196,23 @@ def locks() -> list[Spec]:
     """A locked Outrage's later turns into an Endure, a Protect, a Fairy (immune: the lock ends),
     a Substitute (S152)."""
     out = []
-    user = S("Dragonite", "Leftovers", "Inner Focus", ["Outrage", "Roost", "Extreme Speed", "Earthquake"], FAST, "Jolly")
+    user = S(
+        "Dragonite",
+        "Leftovers",
+        "Inner Focus",
+        ["Outrage", "Roost", "Extreme Speed", "Earthquake"],
+        FAST,
+        "Jolly",
+    )
     # (an Endure that holds on: a frail target, Outrage's first hit would knock it out)
-    frail = S("Pikachu", "", "Static", ["Endure", "Protect", "Thunderbolt", "Volt Switch"], "4 HP / 252 SpA / 252 Spe", "Timid")
+    frail = S(
+        "Pikachu",
+        "",
+        "Static",
+        ["Endure", "Protect", "Thunderbolt", "Volt Switch"],
+        "4 HP / 252 SpA / 252 Spe",
+        "Timid",
+    )
     out.append(_spec("lock/outrage-into-endure", team(user, FILLER), team(frail, FILLER),
                      [{"p1": "move 1", "p2": "move 1"}, {"p1": "move 1", "p2": "move 2"}, {"p1": "move 1", "p2": "move 3"}],
                      expect=("|-activate|p2a: Pikachu|move: Endure", "|[from] lockedmove")))  # fmt: skip
@@ -143,7 +220,11 @@ def locks() -> list[Spec]:
                             ("protect", S("Toxapex", "Leftovers", "Regenerator", ["Protect", "Recover", "Toxic", "Haze"]), "move 1"),
                             ("fairy", S("Clefable", "Leftovers", "Unaware", ["Moonblast", "Soft-Boiled", "Calm Mind", "Protect"]), "move 3"),
                             ("substitute", S("Toxapex", "Leftovers", "Regenerator", ["Substitute", "Recover", "Toxic", "Haze"]), "move 1")):  # fmt: skip
-        script = [{"p1": "move 1", "p2": "move 2"}, {"p1": "move 1", "p2": move}, {"p1": "move 1", "p2": "move 2"}]
+        script = [
+            {"p1": "move 1", "p2": "move 2"},
+            {"p1": "move 1", "p2": move},
+            {"p1": "move 1", "p2": "move 2"},
+        ]
         out.append(_spec(f"lock/outrage-{name}", team(user, FILLER), team(foe, FILLER), script))
     return out
 
@@ -151,14 +232,45 @@ def locks() -> list[Spec]:
 def failed_moves() -> list[Spec]:
     """A move that failed doubles the next turn's Stomping Tantrum / Temper Flare (Showdown's
     moveLastTurnResult): a Fake Out past its first turn, a Ground move into a Flying type."""
-    inc = S("Incineroar", "Leftovers", "Blaze", ["Fake Out", "Temper Flare", "Knock Off", "Parting Shot"])
-    tusk = S("Great Tusk", "Leftovers", "Protosynthesis", ["Headlong Rush", "Stomping Tantrum", "Rapid Spin", "Bulk Up"])
-    foe = S("Corviknight", "Leftovers", "Mirror Armor", ["Roost", "Body Press", "Iron Defense", "Brave Bird"])
+    inc = S(
+        "Incineroar",
+        "Leftovers",
+        "Blaze",
+        ["Fake Out", "Temper Flare", "Knock Off", "Parting Shot"],
+    )
+    tusk = S(
+        "Great Tusk",
+        "Leftovers",
+        "Protosynthesis",
+        ["Headlong Rush", "Stomping Tantrum", "Rapid Spin", "Bulk Up"],
+    )
+    foe = S(
+        "Corviknight",
+        "Leftovers",
+        "Mirror Armor",
+        ["Roost", "Body Press", "Iron Defense", "Brave Bird"],
+    )
     return [
-        _spec("failed/fakeout-temperflare", team(inc, FILLER), team(foe, FILLER),
-              [{"p1": "move 3", "p2": "move 1"}, {"p1": "move 1", "p2": "move 1"}, {"p1": "move 2", "p2": "move 1"}]),
-        _spec("failed/immune-stompingtantrum", team(tusk, FILLER), team(foe, FILLER),
-              [{"p1": "move 1", "p2": "move 1"}, {"p1": "move 2", "p2": "move 1"}, {"p1": "move 2", "p2": "move 3"}]),
+        _spec(
+            "failed/fakeout-temperflare",
+            team(inc, FILLER),
+            team(foe, FILLER),
+            [
+                {"p1": "move 3", "p2": "move 1"},
+                {"p1": "move 1", "p2": "move 1"},
+                {"p1": "move 2", "p2": "move 1"},
+            ],
+        ),
+        _spec(
+            "failed/immune-stompingtantrum",
+            team(tusk, FILLER),
+            team(foe, FILLER),
+            [
+                {"p1": "move 1", "p2": "move 1"},
+                {"p1": "move 2", "p2": "move 1"},
+                {"p1": "move 2", "p2": "move 3"},
+            ],
+        ),
     ]
 
 
@@ -166,8 +278,12 @@ def item_phases() -> list[Spec]:
     """F1's evidence across an item's phases (R2, R2'): hits before a Trick, after a Knock Off,
     after a Magician / Thief take -- in the players' format too (the belief check)."""
     out = []
-    target = S("Corviknight", "Leftovers", "Mirror Armor", ["Brave Bird", "Roost", "Knock Off", "U-turn"])
-    tricker = S("Corviknight", "Life Orb", "Mirror Armor", ["Brave Bird", "Roost", "Trick", "U-turn"])
+    target = S(
+        "Corviknight", "Leftovers", "Mirror Armor", ["Brave Bird", "Roost", "Knock Off", "U-turn"]
+    )
+    tricker = S(
+        "Corviknight", "Life Orb", "Mirror Armor", ["Brave Bird", "Roost", "Trick", "U-turn"]
+    )
     for name, att, script, tgt in (
         # (the Choice Specs holder is locked after its Surf: the target Tricks its Life Orb onto it)
         ("trick", S("Latios", "Choice Specs", "Levitate", ["Surf", "Draco Meteor", "Psyshock", "Calm Mind"], FAST, "Timid"),
@@ -185,30 +301,80 @@ def item_phases() -> list[Spec]:
 
 def encore() -> list[Spec]:
     """An Encore in the turn changes the target's move (R1's tree check: the move used)."""
-    tgt = S("Ceruledge", "Leftovers", "Flash Fire", ["Bitter Blade", "Poltergeist", "Swords Dance", "Shadow Sneak"])
-    enc = S("Iron Valiant", "Leftovers", "Quark Drive", ["Encore", "Moonblast", "Close Combat", "Knock Off"], FAST, "Timid")
-    return [_spec("encore/mid-turn", team(tgt, FILLER), team(enc, FILLER),
-                  [{"p1": "move 3", "p2": "move 2"}, {"p1": "move 2", "p2": "move 1"}, {"p1": "move 3", "p2": "move 2"}])]
+    tgt = S(
+        "Ceruledge",
+        "Leftovers",
+        "Flash Fire",
+        ["Bitter Blade", "Poltergeist", "Swords Dance", "Shadow Sneak"],
+    )
+    enc = S(
+        "Iron Valiant",
+        "Leftovers",
+        "Quark Drive",
+        ["Encore", "Moonblast", "Close Combat", "Knock Off"],
+        FAST,
+        "Timid",
+    )
+    return [
+        _spec(
+            "encore/mid-turn",
+            team(tgt, FILLER),
+            team(enc, FILLER),
+            [
+                {"p1": "move 3", "p2": "move 2"},
+                {"p1": "move 2", "p2": "move 1"},
+                {"p1": "move 3", "p2": "move 2"},
+            ],
+        )
+    ]
 
 
 def formes() -> list[Spec]:
     """A forme change's weight is its new forme's (R3: Showdown's formeChange sets the species):
     Minior's Meteor shell broken below half its HP (40 kg -> 0.3), Palafin's Hero forme after its
     switch out and back (60.2 -> 97.4); the foe's weight move reads it."""
-    minior = S("Minior", "Leftovers", "Shields Down", ["Shell Smash", "Acrobatics", "Earthquake", "Power Gem"])
+    minior = S(
+        "Minior",
+        "Leftovers",
+        "Shields Down",
+        ["Shell Smash", "Acrobatics", "Earthquake", "Power Gem"],
+    )
     hitter = S("Kingambit", "Leftovers", "Supreme Overlord", ["Iron Head", "Low Kick", "Sucker Punch", "Swords Dance"],
                "252 Atk / 4 Def / 252 Spe", "Adamant")  # fmt: skip
-    palafin = S("Palafin", "Leftovers", "Zero to Hero", ["Jet Punch", "Wave Crash", "Bulk Up", "Flip Turn"])
-    heavy = S("Copperajah", "Leftovers", "Sheer Force", ["Heavy Slam", "Low Kick", "Protect", "Iron Defense"])
+    palafin = S(
+        "Palafin", "Leftovers", "Zero to Hero", ["Jet Punch", "Wave Crash", "Bulk Up", "Flip Turn"]
+    )
+    heavy = S(
+        "Copperajah",
+        "Leftovers",
+        "Sheer Force",
+        ["Heavy Slam", "Low Kick", "Protect", "Iron Defense"],
+    )
     return [
-        _spec("forme/minior-shell", team(minior, FILLER), team(hitter, FILLER),
-              [{"p1": "move 1", "p2": "move 1"}, {"p1": "move 1", "p2": "move 2"}, {"p1": "move 2", "p2": "move 2"},
-               {"p1": "move 2", "p2": "move 2"}],
-              expect=("|-formechange|p1a: Minior|Minior",)),
-        _spec("forme/palafin-hero", team(palafin, FILLER), team(heavy, FILLER),
-              [{"p1": "switch 2", "p2": "move 4"}, {"p1": "switch 2", "p2": "move 4"}, {"p1": "move 1", "p2": "move 1"},
-               {"p1": "move 3", "p2": "move 2"}],
-              expect=("Palafin-Hero",)),
+        _spec(
+            "forme/minior-shell",
+            team(minior, FILLER),
+            team(hitter, FILLER),
+            [
+                {"p1": "move 1", "p2": "move 1"},
+                {"p1": "move 1", "p2": "move 2"},
+                {"p1": "move 2", "p2": "move 2"},
+                {"p1": "move 2", "p2": "move 2"},
+            ],
+            expect=("|-formechange|p1a: Minior|Minior",),
+        ),
+        _spec(
+            "forme/palafin-hero",
+            team(palafin, FILLER),
+            team(heavy, FILLER),
+            [
+                {"p1": "switch 2", "p2": "move 4"},
+                {"p1": "switch 2", "p2": "move 4"},
+                {"p1": "move 1", "p2": "move 1"},
+                {"p1": "move 3", "p2": "move 2"},
+            ],
+            expect=("Palafin-Hero",),
+        ),
     ]
 
 
@@ -229,11 +395,29 @@ def speed_phases() -> list[Spec]:
 def second_sleep() -> list[Spec]:
     """A second foe put to sleep (L238: the players' format, Showdown's [Gen 9] OU, has no Sleep
     Clause Mod -- a Dire Claw's / Effect Spore's second sleep goes through; the engine's default)."""
-    breloom = S("Breloom", "Leftovers", "Technician", ["Spore", "Mach Punch", "Bullet Seed", "Rock Tomb"], FAST, "Jolly")
-    corv = S("Corviknight", "Leftovers", "Pressure", ["Roost", "Body Press", "Iron Defense", "Defog"])
-    blissey = S("Blissey", "Heavy-Duty Boots", "Serene Grace", ["Soft-Boiled", "Seismic Toss", "Calm Mind", "Protect"])
-    script = [{"p1": "move 1", "p2": "move 1"}, {"p1": "move 3", "p2": "switch 2"}, {"p1": "move 1", "p2": "move 3"},
-              {"p1": "move 3", "p2": "move 3"}]
+    breloom = S(
+        "Breloom",
+        "Leftovers",
+        "Technician",
+        ["Spore", "Mach Punch", "Bullet Seed", "Rock Tomb"],
+        FAST,
+        "Jolly",
+    )
+    corv = S(
+        "Corviknight", "Leftovers", "Pressure", ["Roost", "Body Press", "Iron Defense", "Defog"]
+    )
+    blissey = S(
+        "Blissey",
+        "Heavy-Duty Boots",
+        "Serene Grace",
+        ["Soft-Boiled", "Seismic Toss", "Calm Mind", "Protect"],
+    )
+    script = [
+        {"p1": "move 1", "p2": "move 1"},
+        {"p1": "move 3", "p2": "switch 2"},
+        {"p1": "move 1", "p2": "move 3"},
+        {"p1": "move 3", "p2": "move 3"},
+    ]
     return [_spec("sleep/second-sleep", team(breloom, FILLER), team(corv, blissey), script,
                   expect=("|-status|p2a: Corviknight|slp", "|-status|p2a: Blissey|slp"))]  # fmt: skip
 
@@ -262,60 +446,142 @@ def belief_evidence() -> list[Spec]:
     broken (the speed in each forme); a Healing Wish's cure of a paralysis; our Choice Scarf
     Tricked away (our speed with it before). The players' format."""
     out = []
-    cat = S("Meowscarada", "Choice Scarf", "Overgrow", ["Knock Off", "Trick", "U-turn", "Flower Trick"], FAST, "Jolly")
+    cat = S(
+        "Meowscarada",
+        "Choice Scarf",
+        "Overgrow",
+        ["Knock Off", "Trick", "U-turn", "Flower Trick"],
+        FAST,
+        "Jolly",
+    )
     # (Shell Armor: no crit voids the hit after the Pain Split)
-    rotom = S("Rotom-Wash", "Leftovers", "Shell Armor", ["Pain Split", "Hydro Pump", "Volt Switch", "Will-O-Wisp"])
+    rotom = S(
+        "Rotom-Wash",
+        "Leftovers",
+        "Shell Armor",
+        ["Pain Split", "Hydro Pump", "Volt Switch", "Will-O-Wisp"],
+    )
     out.append(_spec("belief/painsplit-knockoff", team(cat, FILLER), team(rotom, FILLER),
                      [{"p1": "move 1", "p2": "move 2"}, {"p1": "move 1", "p2": "move 1"}, {"p1": "move 1", "p2": "move 2"}],
                      fmt=PCT, expect=("|-sethp|p2a: Rotom",)))  # fmt: skip
-    spid = S("Spidops", "Leftovers", "Stakeout", ["Knock Off", "Circle Throw", "Sticky Web", "U-turn"])
-    corv = S("Corviknight", "Leftovers", "Pressure", ["Roost", "Body Press", "Iron Defense", "Defog"])
+    spid = S(
+        "Spidops", "Leftovers", "Stakeout", ["Knock Off", "Circle Throw", "Sticky Web", "U-turn"]
+    )
+    corv = S(
+        "Corviknight", "Leftovers", "Pressure", ["Roost", "Body Press", "Iron Defense", "Defog"]
+    )
     out.append(_spec("belief/stakeout-switch-in", team(spid, FILLER), team(FILLER, corv),
                      [{"p1": "move 1", "p2": "switch 2"}, {"p1": "move 1", "p2": "move 1"}],
                      fmt=PCT, expect=("|switch|p2a: Corviknight",)))  # fmt: skip
-    zor = S("Zoroark-Hisui", "Choice Specs", "Illusion", ["Shadow Ball", "Hyper Voice", "Flamethrower", "U-turn"], FAST, "Timid")
+    zor = S(
+        "Zoroark-Hisui",
+        "Choice Specs",
+        "Illusion",
+        ["Shadow Ball", "Hyper Voice", "Flamethrower", "U-turn"],
+        FAST,
+        "Timid",
+    )
     out.append(_spec("belief/illusion-broken", team(spid, FILLER), team(zor, FILLER),
                      [{"p1": "move 1", "p2": "move 3"}, {"p1": "move 1", "p2": "move 3"}, {"p1": "move 1", "p2": "move 3"}],
                      fmt=PCT, expect=("|replace|p2a: Zoroark",)))  # fmt: skip
     ditto = S("Ditto", "Choice Scarf", "Imposter", ["Transform"])
     # (our Corviknight 256: the Ditto's own speed with its scarf 198, its copy's 384 -- it moves first)
-    fast_corv = S("Corviknight", "Leftovers", "Pressure", ["Roost", "Body Press", "Iron Defense", "Defog"], FAST, "Jolly")
+    fast_corv = S(
+        "Corviknight",
+        "Leftovers",
+        "Pressure",
+        ["Roost", "Body Press", "Iron Defense", "Defog"],
+        FAST,
+        "Jolly",
+    )
     out.append(_spec("belief/imposter-hits", team(fast_corv, FILLER), team(ditto, FILLER),
                      [{"p1": "move 2", "p2": "move 2"}, {"p1": "move 2", "p2": "move 2"}],
                      fmt=PCT, expect=("|-transform|p2a: Ditto",)))  # fmt: skip
     # (the Meteor 156 moves after our Garchomp's 240; its Core 276 before -- each turn in its forme)
-    minior = S("Minior", "Leftovers", "Shields Down", ["Power Gem", "Acrobatics", "Stealth Rock", "Earthquake"])
-    chomp = S("Garchomp", "Leftovers", "Rough Skin", ["Iron Head", "Earthquake", "Stealth Rock", "Swords Dance"])
+    minior = S(
+        "Minior",
+        "Leftovers",
+        "Shields Down",
+        ["Power Gem", "Acrobatics", "Stealth Rock", "Earthquake"],
+    )
+    chomp = S(
+        "Garchomp",
+        "Leftovers",
+        "Rough Skin",
+        ["Iron Head", "Earthquake", "Stealth Rock", "Swords Dance"],
+    )
     out.append(_spec("belief/minior-shell", team(chomp, FILLER), team(minior, FILLER),
                      [{"p1": "move 1", "p2": "move 1"}] * 5, fmt=PCT, expect=("|-formechange|p2a: Minior",)))  # fmt: skip
-    zap = S("Raichu", "Leftovers", "Lightning Rod", ["Thunder Wave", "Thunderbolt", "Nasty Plot", "Volt Switch"], FAST, "Timid")
+    zap = S(
+        "Raichu",
+        "Leftovers",
+        "Lightning Rod",
+        ["Thunder Wave", "Thunderbolt", "Nasty Plot", "Volt Switch"],
+        FAST,
+        "Timid",
+    )
     suicune = S("Suicune", "Leftovers", "Pressure", ["Scald", "Calm Mind", "Rest", "Protect"])
-    gard = S("Gardevoir", "Leftovers", "Synchronize", ["Healing Wish", "Moonblast", "Calm Mind", "Protect"])
+    gard = S(
+        "Gardevoir",
+        "Leftovers",
+        "Synchronize",
+        ["Healing Wish", "Moonblast", "Calm Mind", "Protect"],
+    )
     # (cured, the Suicune's 206 moves before our Corviknight's 170 -- read paralyzed, 103, it could not)
     out.append(_spec("belief/healingwish-cure", team(zap, corv), team(suicune, gard),
                      [{"p1": "move 1", "p2": "move 2"}, {"p1": "move 3", "p2": "switch 2"}, {"p1": "move 3", "p2": "move 1"},
                       {"p1": "move 3", "p2": "switch 2"}, {"p1": "switch 2", "p2": "move 2"}, {"p1": "move 2", "p2": "move 2"},
                       {"p1": "move 2", "p2": "move 2"}],
                      fmt=PCT, max_turns=10, expect=("[from] move: Healing Wish",)))  # fmt: skip
-    goth = S("Gothitelle", "Choice Scarf", "Frisk", ["Psychic", "Trick", "Thunderbolt", "Calm Mind"])
+    goth = S(
+        "Gothitelle", "Choice Scarf", "Frisk", ["Psychic", "Trick", "Thunderbolt", "Calm Mind"]
+    )
     bolt = S("Zekrom", "Life Orb", "Teravolt", ["Bolt Strike", "Outrage", "Dragon Claw", "Roost"])
     out.append(_spec("belief/our-scarf-tricked", team(goth, FILLER), team(bolt, FILLER),
                      [{"p1": "move 2", "p2": "move 4"}, {"p1": "move 1", "p2": "move 4"}, {"p1": "move 1", "p2": "move 4"}],
                      fmt=PCT, expect=("|-item|p2a: Zekrom|Choice Scarf|[from] move: Trick",)))  # fmt: skip
     # (an Encore on the faster's -6 Dragon Tail: its Energy Ball after the slower's Encore)
-    mega = S("Meganium", "Leftovers", "Overgrow", ["Energy Ball", "Dragon Tail", "Synthesis", "Leech Seed"], FAST, "Jolly")
-    chan = S("Hitmonchan", "Leftovers", "Iron Fist", ["Encore", "Drain Punch", "Ice Punch", "Rapid Spin"])
+    mega = S(
+        "Meganium",
+        "Leftovers",
+        "Overgrow",
+        ["Energy Ball", "Dragon Tail", "Synthesis", "Leech Seed"],
+        FAST,
+        "Jolly",
+    )
+    chan = S(
+        "Hitmonchan", "Leftovers", "Iron Fist", ["Encore", "Drain Punch", "Ice Punch", "Rapid Spin"]
+    )
     out.append(_spec("belief/encore-a-dragon-tail", team(mega, FILLER), team(chan, FILLER),
                      [{"p1": "move 1", "p2": "move 2"}, {"p1": "move 2", "p2": "move 1"}, {"p1": "move 1", "p2": "move 2"}],
                      fmt=PCT, expect=("|-start|p1a: Meganium|Encore",)))  # fmt: skip
     # (Mycelium Might: the faster Toedscruel's Spore after the Dragonite's Earthquake)
-    toed = S("Toedscruel", "Leftovers", "Mycelium Might", ["Spore", "Earth Power", "Knock Off", "Rapid Spin"], FAST, "Jolly")
-    nite = S("Dragonite", "Leftovers", "Inner Focus", ["Earthquake", "Roost", "Fire Punch", "Ice Spinner"])
+    toed = S(
+        "Toedscruel",
+        "Leftovers",
+        "Mycelium Might",
+        ["Spore", "Earth Power", "Knock Off", "Rapid Spin"],
+        FAST,
+        "Jolly",
+    )
+    nite = S(
+        "Dragonite",
+        "Leftovers",
+        "Inner Focus",
+        ["Earthquake", "Roost", "Fire Punch", "Ice Spinner"],
+    )
     out.append(_spec("belief/mycelium-might", team(toed, FILLER), team(nite, FILLER),
                      [{"p1": "move 1", "p2": "move 1"}, {"p1": "move 2", "p2": "move 1"}],
                      fmt=PCT, expect=("|move|p1a: Toedscruel|Spore",)))  # fmt: skip
     # (a Palafin-Zero's Flip Turn, back in as the Hero: the hit in another forme)
-    fin = S("Palafin", "Leftovers", "Zero to Hero", ["Flip Turn", "Jet Punch", "Wave Crash", "Bulk Up"], FAST, "Jolly")
+    fin = S(
+        "Palafin",
+        "Leftovers",
+        "Zero to Hero",
+        ["Flip Turn", "Jet Punch", "Wave Crash", "Bulk Up"],
+        FAST,
+        "Jolly",
+    )
     out.append(_spec("belief/palafin-hero", team(FILLER, FILLER), team(fin, FILLER),
                      [{"p1": "move 3", "p2": "move 1"}, {"p2": "switch 2"}, {"p1": "move 3", "p2": "switch 2"},
                       {"p1": "move 3", "p2": "move 3"}],
@@ -324,14 +590,27 @@ def belief_evidence() -> list[Spec]:
     # takes the Choice Scarf of a Latios that moved first with it, 256 x 1.5 before the Hoopa's
     # 262: no -enditem of it; a Huge Power Azumarill's hit, then a Skill Swap gives it Synchronize
     # and it hits again; a contact with Lingering Aroma / Mummy changes the hitter's ability)
-    latios = S("Latios", "Choice Scarf", "Levitate", ["Psyshock", "Draco Meteor", "Recover", "Calm Mind"])
-    hoopa = S("Hoopa", "", "Magician", ["Shadow Ball", "Psychic", "Nasty Plot", "Protect"], FAST, "Timid")
+    latios = S(
+        "Latios", "Choice Scarf", "Levitate", ["Psyshock", "Draco Meteor", "Recover", "Calm Mind"]
+    )
+    hoopa = S(
+        "Hoopa", "", "Magician", ["Shadow Ball", "Psychic", "Nasty Plot", "Protect"], FAST, "Timid"
+    )
     out.append(_spec("belief/magician-scarf", team(hoopa, FILLER), team(latios, FILLER),
                      [{"p1": "move 1", "p2": "move 1"}] * 3,
                      fmt=PCT, expect=("|-item|p1a: Hoopa|Choice Scarf|[from] ability: Magician",)))  # fmt: skip
     # (the Azumarill's 218 before the Gardevoir's 196: its hits the turns' first moves)
-    azu = S("Azumarill", "Leftovers", "Huge Power", ["Liquidation", "Aqua Jet", "Belly Drum", "Knock Off"], FAST, "Jolly")
-    gard = S("Gardevoir", "Leftovers", "Synchronize", ["Skill Swap", "Calm Mind", "Moonblast", "Protect"])
+    azu = S(
+        "Azumarill",
+        "Leftovers",
+        "Huge Power",
+        ["Liquidation", "Aqua Jet", "Belly Drum", "Knock Off"],
+        FAST,
+        "Jolly",
+    )
+    gard = S(
+        "Gardevoir", "Leftovers", "Synchronize", ["Skill Swap", "Calm Mind", "Moonblast", "Protect"]
+    )
     out.append(_spec("belief/skillswap-after-hit", team(gard, FILLER), team(azu, FILLER),
                      [{"p1": "move 1", "p2": "move 1"}] + [{"p1": "move 2", "p2": "move 1"}] * 2,
                      fmt=PCT, expect=("Skill Swap|Huge Power|Synchronize",)))  # fmt: skip
@@ -343,8 +622,13 @@ def belief_evidence() -> list[Spec]:
     # (the speed's abilities then: a Regigigas Skill Swaps its Slow Start away -- its 118 before,
     # 236 after; a Garchomp's 216 first on turn 1 (read with our ability now, not halved: ruled
     # out), its Jolly 333 halved second after (read with its species' abilities: ruled out))
-    gigas = S("Regigigas", "Leftovers", "Slow Start", ["Skill Swap", "Bulk Up", "Body Slam", "Protect"])
-    for name, evs, nature in (("slow", "252 HP / 4 Atk / 252 SpD", "Brave"), ("fast", FAST, "Jolly")):
+    gigas = S(
+        "Regigigas", "Leftovers", "Slow Start", ["Skill Swap", "Bulk Up", "Body Slam", "Protect"]
+    )
+    for name, evs, nature in (
+        ("slow", "252 HP / 4 Atk / 252 SpD", "Brave"),
+        ("fast", FAST, "Jolly"),
+    ):
         chomp = S("Garchomp", "Leftovers", "Rough Skin", ["Swords Dance", "Stealth Rock", "Earthquake", "Dragon Claw"],
                   evs, nature)  # fmt: skip
         out.append(_spec(f"belief/slowstart-swapped-{name}", team(gigas, FILLER), team(chomp, FILLER),
@@ -359,7 +643,14 @@ def ability_changes() -> list[Spec]:
     state kept the Huge Power); a Role Play's [of] keeps its own -- a Regenerator still heals as
     it switches out."""
     out = []
-    azu = S("Azumarill", "Leftovers", "Huge Power", ["Liquidation", "Aqua Jet", "Belly Drum", "Knock Off"], FAST, "Jolly")
+    azu = S(
+        "Azumarill",
+        "Leftovers",
+        "Huge Power",
+        ["Liquidation", "Aqua Jet", "Belly Drum", "Knock Off"],
+        FAST,
+        "Jolly",
+    )
     for holder, ability in (("Oinkologne", "Lingering Aroma"), ("Cofagrigus", "Mummy")):
         mon = S(holder, "Leftovers", ability, ["Calm Mind", "Body Slam", "Yawn", "Protect"])
         out.append(_spec(f"abilities/{ability.lower().replace(' ', '')}-contact", team(mon, FILLER), team(azu, FILLER),
@@ -367,13 +658,27 @@ def ability_changes() -> list[Spec]:
                          expect=(f"|ability: {ability}|p2a: Azumarill|[ability] Huge Power",)))  # fmt: skip
     # (B8: Worry Seed over an ability the foe has not shown -- the log names the old one, its own
     # back after a switch-out; the state_facts check's: the oracle gives the true set)
-    whim = S("Whimsicott", "Leftovers", "Prankster", ["Worry Seed", "Moonblast", "Protect", "Encore"])
+    whim = S(
+        "Whimsicott", "Leftovers", "Prankster", ["Worry Seed", "Moonblast", "Protect", "Encore"]
+    )
     out.append(_spec("abilities/worryseed-unknown", team(whim, FILLER), team(azu, FILLER),
                      [{"p1": "move 1", "p2": "move 3"}, {"p1": "move 2", "p2": "switch 2"},
                       {"p1": "move 2", "p2": "switch 2"}, {"p1": "move 2", "p2": "move 3"}],
                      expect=("|-ability|p2a: Azumarill|Insomnia|Huge Power|[from] move: Worry Seed",)))  # fmt: skip
-    rai = S("Raichu", "Leftovers", "Lightning Rod", ["Role Play", "Thunderbolt", "Nasty Plot", "Surf"], FAST, "Timid")
-    slow = S("Slowking-Galar", "Leftovers", "Regenerator", ["Sludge Bomb", "Psyshock", "Calm Mind", "Thunder Wave"])
+    rai = S(
+        "Raichu",
+        "Leftovers",
+        "Lightning Rod",
+        ["Role Play", "Thunderbolt", "Nasty Plot", "Surf"],
+        FAST,
+        "Timid",
+    )
+    slow = S(
+        "Slowking-Galar",
+        "Leftovers",
+        "Regenerator",
+        ["Sludge Bomb", "Psyshock", "Calm Mind", "Thunder Wave"],
+    )
     out.append(_spec("abilities/roleplay-regenerator", team(rai, FILLER), team(slow, FILLER),
                      [{"p1": "move 1", "p2": "move 3"}, {"p1": "move 2", "p2": "move 3"},
                       {"p1": "move 2", "p2": "switch 2"}, {"p1": "move 2", "p2": "move 1"}],
@@ -386,12 +691,35 @@ def engine_ends() -> list[Spec]:
     Skill Swap -- Slow Start's, Flash Fire's, Unburden's volatile off); a move with no target the
     battle's last move (a Copycat on the bench: the engine keeps it only then); an Uproar's locked
     turns spend no PP."""
-    gigas = S("Regigigas", "Leftovers", "Slow Start", ["Skill Swap", "Bulk Up", "Body Slam", "Protect"])
-    gard = S("Gardevoir", "Leftovers", "Synchronize", ["Skill Swap", "Worry Seed", "Flamethrower", "Knock Off"])
-    heatran = S("Heatran", "Leftovers", "Flash Fire", ["Calm Mind", "Earth Power", "Magma Storm", "Protect"])
-    hawlucha = S("Hawlucha", "Leftovers", "Unburden", ["Bulk Up", "Close Combat", "Acrobatics", "Roost"])
-    blissey = S("Blissey", "Heavy-Duty Boots", "Natural Cure", ["U-turn", "Soft-Boiled", "Seismic Toss", "Copycat"])
-    chomp = S("Garchomp", "Leftovers", "Rough Skin", ["Memento", "Uproar", "Swords Dance", "Earthquake"], FAST, "Jolly")
+    gigas = S(
+        "Regigigas", "Leftovers", "Slow Start", ["Skill Swap", "Bulk Up", "Body Slam", "Protect"]
+    )
+    gard = S(
+        "Gardevoir",
+        "Leftovers",
+        "Synchronize",
+        ["Skill Swap", "Worry Seed", "Flamethrower", "Knock Off"],
+    )
+    heatran = S(
+        "Heatran", "Leftovers", "Flash Fire", ["Calm Mind", "Earth Power", "Magma Storm", "Protect"]
+    )
+    hawlucha = S(
+        "Hawlucha", "Leftovers", "Unburden", ["Bulk Up", "Close Combat", "Acrobatics", "Roost"]
+    )
+    blissey = S(
+        "Blissey",
+        "Heavy-Duty Boots",
+        "Natural Cure",
+        ["U-turn", "Soft-Boiled", "Seismic Toss", "Copycat"],
+    )
+    chomp = S(
+        "Garchomp",
+        "Leftovers",
+        "Rough Skin",
+        ["Memento", "Uproar", "Swords Dance", "Earthquake"],
+        FAST,
+        "Jolly",
+    )
     return [
         _spec("ends/worryseed-slowstart", team(gigas, FILLER), team(gard, FILLER),
               [{"p1": "move 2", "p2": "move 2"}, {"p1": "move 2", "p2": "move 3"}],
@@ -482,10 +810,26 @@ def lock_edges() -> list[Spec]:
     no lock); an Uproar drained to 0 PP by Spite and Pressure while it locks (it goes on: L243)."""
     # (not a Snorlax -- the bench's is one; Sleep Talk calls neither Uproar nor Focus Punch: the
     # Rollout it must; no Belch, its berry rule open in the engine)
-    snorlax = S("Lickilicky", "Leftovers", "Oblivious", ["Sleep Talk", "Rollout", "Uproar", "Focus Punch"])
-    breloom = S("Breloom", "Leftovers", "Technician", ["Spore", "Mach Punch", "Bullet Seed", "Swords Dance"], FAST, "Jolly")
+    snorlax = S(
+        "Lickilicky", "Leftovers", "Oblivious", ["Sleep Talk", "Rollout", "Uproar", "Focus Punch"]
+    )
+    breloom = S(
+        "Breloom",
+        "Leftovers",
+        "Technician",
+        ["Spore", "Mach Punch", "Bullet Seed", "Swords Dance"],
+        FAST,
+        "Jolly",
+    )
     uproar = S("Lickilicky", "Leftovers", "Oblivious", ["Uproar", "Body Slam", "Rest", "Curse"])
-    corv = S("Corviknight", "Leftovers", "Pressure", ["Spite", "Roost", "Iron Defense", "Defog"], FAST, "Jolly")
+    corv = S(
+        "Corviknight",
+        "Leftovers",
+        "Pressure",
+        ["Spite", "Roost", "Iron Defense", "Defog"],
+        FAST,
+        "Jolly",
+    )
     return [
         _spec("ends/sleeptalk-rollout", team(snorlax, FILLER), team(breloom, FILLER),
               [{"p1": "move 1", "p2": "move 1"}, {"p1": "move 1", "p2": "move 4"}],
@@ -502,7 +846,9 @@ def called_locks() -> list[Spec]:
     # (physically bulky, Shell Armor -- no crit: the Outrage it copies leaves it in)
     blissey = S("Blissey", "Heavy-Duty Boots", "Shell Armor", ["Soft-Boiled", "Seismic Toss", "Protect", "Copycat"],
                 "252 HP / 252 Def / 4 SpD", "Bold")  # fmt: skip
-    corv = S("Corviknight", "Leftovers", "Pressure", ["Roost", "Body Press", "Iron Defense", "Defog"])
+    corv = S(
+        "Corviknight", "Leftovers", "Pressure", ["Roost", "Body Press", "Iron Defense", "Defog"]
+    )
     out = []
     for name in ("Outrage", "Uproar", "Rollout"):
         # (weak, no Rough Skin: the Blissey lives to use the lock -- still the faster)
@@ -519,8 +865,15 @@ def rollouts() -> list[Spec]:
     user), or ended by a Protect (the lock over, the other moves back)."""
     weak = S("Garchomp", "Leftovers", "Rough Skin", ["Rollout", "Ice Ball", "Swords Dance", "Earthquake"],
              "252 HP / 4 SpD / 252 Spe", "Timid")  # fmt: skip
-    blissey = S("Blissey", "Heavy-Duty Boots", "Natural Cure", ["Soft-Boiled", "Protect", "Seismic Toss", "Calm Mind"])
-    corv = S("Corviknight", "Leftovers", "Pressure", ["Roost", "Body Press", "Iron Defense", "Defog"])
+    blissey = S(
+        "Blissey",
+        "Heavy-Duty Boots",
+        "Natural Cure",
+        ["Soft-Boiled", "Protect", "Seismic Toss", "Calm Mind"],
+    )
+    corv = S(
+        "Corviknight", "Leftovers", "Pressure", ["Roost", "Body Press", "Iron Defense", "Defog"]
+    )
     out = []
     for k, move in ((1, "rollout"), (2, "iceball")):
         out.append(_spec(f"ends/{move}-five", team(weak, FILLER), team(blissey, corv),
@@ -533,8 +886,22 @@ def rollouts() -> list[Spec]:
     return out
 
 
-FAMILIES = (extender_items, pp_takers, transforms, locks, failed_moves, item_phases, encore, formes, speed_phases,
-            second_sleep, type_changes, belief_evidence, ability_changes, engine_ends)
+FAMILIES = (
+    extender_items,
+    pp_takers,
+    transforms,
+    locks,
+    failed_moves,
+    item_phases,
+    encore,
+    formes,
+    speed_phases,
+    second_sleep,
+    type_changes,
+    belief_evidence,
+    ability_changes,
+    engine_ends,
+)
 
 
 def scenarios() -> list[Spec]:

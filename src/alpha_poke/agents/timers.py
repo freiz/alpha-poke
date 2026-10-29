@@ -132,7 +132,9 @@ class SideTimers:
     # -crit between) -- a hit of a move, Rage Fist's count
     future_hit: bool = False
     stellar_pending: str = ""  # a Stellar tera's move just used, its type marked as it hits
-    multihit_real: bool = False  # a multi-hit move's last hit on the active itself (not its Substitute)
+    multihit_real: bool = (
+        False  # a multi-hit move's last hit on the active itself (not its Substitute)
+    )
     confusion: int | None = None
     taunt: int | None = None
     encore: int | None = None
@@ -172,7 +174,9 @@ class SideTimers:
     rollout_moving: bool = False
     stockpile: int = 0  # its Stockpile layers
     embargo: bool = False  # the active under Embargo (its item does nothing)
-    ability_now: str = ""  # the active's ability as a move / ability changed it ("none": suppressed)
+    ability_now: str = (
+        ""  # the active's ability as a move / ability changed it ("none": suppressed)
+    )
     gas_on: bool = False  # the active's Neutralizing Gas is on
     imprison: bool = False  # the active used Imprison
     turn1: bool = True  # before turn 2 starts (the leads' entries: L222)
@@ -185,8 +189,12 @@ class SideTimers:
     cud_now: bool = False  # it ate one this turn
     cud_eats: bool = False  # Cud Chew is eating its berry again (the next -enditem)
     typechanged: bool = False  # its type changed this time in, while not terastallized
-    tera_now: bool = False  # the active is terastallized (this time in's -terastallize / switch line)
-    sub_passed: str = ""  # the species that passed its Substitute to the active (Shed Tail, Baton Pass)
+    tera_now: bool = (
+        False  # the active is terastallized (this time in's -terastallize / switch line)
+    )
+    sub_passed: str = (
+        ""  # the species that passed its Substitute to the active (Shed Tail, Baton Pass)
+    )
     sub_on: bool = False  # the active has a Substitute (a -start, until its -end)
     # Illusion: nickname -> the HP line last shown of it (switch / damage / heal); this time in
     # ({"nick", "species", "hp" before it, "moves", "boosts"}); a disguise's nickname -> the time
@@ -198,7 +206,8 @@ class SideTimers:
     illusions: dict = field(default_factory=dict)
     illusion_boosts: dict = field(default_factory=dict)
     illusion_last: str = ""  # a broken Illusion's last move while disguised (its last used one)
-    moves_by_nick: dict = field(default_factory=dict)  # nickname -> Counter of the moves its line used
+    # nickname -> Counter of the moves its line used
+    moves_by_nick: dict = field(default_factory=dict)
     consecutive: int = 0  # the same move used again in a row (the Metronome item's count)
     ability_off: bool = False  # the active's ability swapped / suppressed this time in
     # the active came in this turn (1) or last turn (2: its first turn out), no move since (0:
@@ -232,7 +241,9 @@ class SideTimers:
     sub_failed_now: bool = False  # its status move's -fail at a Substitute this turn (S93)
     last_sub_failed: bool = False  # last turn's
     fainted_out: str = ""  # the active that fainted (its way out: no Regenerator)
-    perish_fresh: bool = False  # Perish Song's silent perish3 this turn: its count 4 till the turn's end
+    perish_fresh: bool = (
+        False  # Perish Song's silent perish3 this turn: its count 4 till the turn's end
+    )
     notarget: bool = False  # its move this turn had no target ([notarget])
     metronome_gone: bool = False  # its Metronome item lost since its last move (the volatile stays)
     in_residual: bool = False  # this end of turn's residuals under way (a future attack's hit seen)
@@ -243,10 +254,13 @@ class SideTimers:
     # Showdown's transformInto takes the weight then -- a Terastal Terapagos's 16 kg, not the
     # Stellar forme's 77 it had later; 2026-10-24, the differential test framework)
     copied_forme: str = ""
-    transformed_out: dict = field(default_factory=dict)  # species key -> the target it went out transformed into
+    # species key -> the target it went out transformed into
+    transformed_out: dict = field(default_factory=dict)
     upkept: bool = False  # this turn's end passed (|upkeep|, before the next |turn|)
-    swapped: set = field(default_factory=set)  # setters keys whose setter is the other side's (Court Change)
-    fields_elapsed: dict = field(default_factory=dict)  # "weather" / "terrain" / ROOMS -> ends of turn
+    # setters keys whose setter is the other side's (Court Change)
+    swapped: set = field(default_factory=set)
+    # "weather" / "terrain" / ROOMS -> ends of turn
+    fields_elapsed: dict = field(default_factory=dict)
     side_elapsed: dict = field(default_factory=dict)  # TIMED_SIDE (this side's) -> ends of turn
     used_once: set = field(default_factory=set)  # species ids (Dauntless Shield used)
     # species id -> the hits a foe's move landed on it (Rage Fist; doc/engine-diff.md L163)
@@ -267,8 +281,12 @@ class SideTimers:
         elif self.active and self.active != self.fainted_out:  # (out by fainting: none -- S118)
             self.no_regen.discard(self.active)
         # (out transformed: the ability it copied went out with it -- a copied Regenerator: S145)
-        if self.active and self.copied_from and not (self.ability_off or gas) \
-                and self.active != self.fainted_out:
+        if (
+            self.active
+            and self.copied_from
+            and not (self.ability_off or gas)
+            and self.active != self.fainted_out
+        ):
             self.transformed_out[self.active] = self.copied_from
         elif self.active:
             self.transformed_out.pop(self.active, None)
@@ -293,7 +311,9 @@ class SideTimers:
         self.nothing_now = self.last_nothing = False
         self.sub_hit = self.recharge = False
         self.charging = self.locked = self.temp_forme = None
-        self.protean = self.item_lost = self.struggled = self.flashfire = self.metronome_gone = False
+        self.protean = self.item_lost = self.struggled = self.flashfire = self.metronome_gone = (
+            False
+        )
         self.destinybond = self.roosted = self.truant_next = self.minimized = False
         self.uproar, self.stockpile = None, 0
         self.rollout, self.rollout_hit, self.rollout_moving = None, False, False
@@ -383,14 +403,18 @@ def _feed_one(sides: dict, p: list[str]) -> None:
     if tag in ("-damage", "-activate", "-end") and len(p) > 3 and p[2][:2] in sides:
         _stellar_hit(sides, p)
         # (a hit on its Substitute: a multi-hit move's last one there counts none -- Showdown's)
-        if (tag == "-activate" and "Substitute" in p[3] and "[damage]" in p[4:]) or (tag == "-end" and p[3] == "Substitute"):
+        if (tag == "-activate" and "Substitute" in p[3] and "[damage]" in p[4:]) or (
+            tag == "-end" and p[3] == "Substitute"
+        ):
             sides[p[2][:2]].multihit_real = False
     if tag == "upkeep":  # end of turn
         for st in sides.values():
             st.upkept = True
             st.perish_fresh = st.in_residual = False  # (the residuals over: S126)
             st.future_hit = False
-            st.just_moved = ""  # (no move's effects after the turn's end: a switch-in's Wind Rider -- S87)
+            st.just_moved = (
+                ""  # (no move's effects after the turn's end: a switch-in's Wind Rider -- S87)
+            )
             if st.status.get(st.active) == "tox":
                 st.toxic += 1
             st.protect = st.protect + 1 if st.protected else 0
@@ -428,7 +452,11 @@ def _feed_one(sides: dict, p: list[str]) -> None:
                 st.locked = None  # (lockedmove's residual: asleep then -- a Lum Berry before, not)
             # (its ability's own counter: none counted under a Neutralizing Gas / Gastro Acid --
             # its residual suppressed; S74)
-            if st.slowstart and st.slowstart[1] and not (st.gastro or any(s.gas_on for s in sides.values())):
+            if (
+                st.slowstart
+                and st.slowstart[1]
+                and not (st.gastro or any(s.gas_on for s in sides.values()))
+            ):
                 st.slowstart[0] -= 1
                 if st.slowstart[0] <= 0:
                     st.slowstart = None
@@ -473,8 +501,12 @@ def _feed_one(sides: dict, p: list[str]) -> None:
     if tag == "-message" and len(p) > 2 and p[2].startswith("Sleep Clause Mod activated"):
         mover = next((s for s in sides.values() if s.just_moved), None)
         pl = next(iter(sides.values())).prev_line
-        if mover is not None and not (pl[1:2] == ["-end"] and "Yawn" in "".join(pl[3:4])) \
-                and _is_status(mover.last_move):  # (not an Effect Spore's at its contact: S108)
+        # (not an Effect Spore's at its contact: S108)
+        if (
+            mover is not None
+            and not (pl[1:2] == ["-end"] and "Yawn" in "".join(pl[3:4]))
+            and _is_status(mover.last_move)
+        ):
             # (not a Yawn's sleep at the turn's end: S90)
             _missed(mover)  # (its sleep move stopped by the clause: a failed move)
         return
@@ -514,7 +546,8 @@ def _feed_one(sides: dict, p: list[str]) -> None:
             if sa is not None and not wa:
                 b.swapped.add(k)
         return
-    if tag == "-clearallboost":  # (Haze: no mon named -- a broken Illusion's carried changes too: S125)
+    # (Haze: no mon named -- a broken Illusion's carried changes too: S125)
+    if tag == "-clearallboost":
         for s2 in sides.values():
             s2.stint["boosts"] = {}
             s2.illusion_boosts = {}
@@ -536,7 +569,12 @@ def _feed_one(sides: dict, p: list[str]) -> None:
     if tag in ("-damage", "-heal", "-sethp") and len(p) > 3 and p[2][2:3] in ("a", ":"):
         st.hp_shown[nick] = p[3]  # (its HP as last shown: a disguise's before its Zoroark came)
     # (this time in's stage changes: a broken Illusion's go to the Zoroark)
-    if tag in ("-boost", "-unboost") and len(p) > 4 and p[4].lstrip("-").isdigit() and sp == st.active:
+    if (
+        tag in ("-boost", "-unboost")
+        and len(p) > 4
+        and p[4].lstrip("-").isdigit()
+        and sp == st.active
+    ):
         b = st.stint["boosts"]
         b[p[3]] = b.get(p[3], 0) + (int(p[4]) if tag == "-boost" else -int(p[4]))
         if st.turn1 and int(p[4]) > 0:  # (L222's turn-1 marks: a change happened, whatever since)
@@ -545,11 +583,14 @@ def _feed_one(sides: dict, p: list[str]) -> None:
             else:
                 st.lowered_t1 = True
     if tag in ("-clearboost", "-clearallboost", "-clearnegativeboost"):
-        for s2 in (sides.values() if tag == "-clearallboost" else [st]):
+        for s2 in sides.values() if tag == "-clearallboost" else [st]:
             s2.stint["boosts"] = {}
             # (a broken Illusion's stage changes too -- White Herb's negative ones: S113)
-            s2.illusion_boosts = {} if tag != "-clearnegativeboost" else \
-                {k: v for k, v in s2.illusion_boosts.items() if v > 0}
+            s2.illusion_boosts = (
+                {}
+                if tag != "-clearnegativeboost"
+                else {k: v for k, v in s2.illusion_boosts.items() if v > 0}
+            )
     if tag in ("switch", "drag", "replace", "detailschange") and len(p) > 3:
         new = to_id(p[3].split(",")[0])
         if tag == "detailschange":
@@ -652,10 +693,14 @@ def _feed_one(sides: dict, p: list[str]) -> None:
         st.destinybond = False
         if not (st.gastro or any(s.gas_on for s in sides.values())):  # (suppressed: kept -- S114)
             st.truant_next = True
-    elif tag == "-damage" and not any("[from]" in x for x in p[4:]) and (
-        sides["p2" if p[2][:2] == "p1" else "p1"].just_moved
-        # (a Future Sight's / Doom Desire's hit: Showdown's moveHit too -- counted; S158)
-        or st.future_hit
+    elif (
+        tag == "-damage"
+        and not any("[from]" in x for x in p[4:])
+        and (
+            sides["p2" if p[2][:2] == "p1" else "p1"].just_moved
+            # (a Future Sight's / Doom Desire's hit: Showdown's moveHit too -- counted; S158)
+            or st.future_hit
+        )
     ):
         # (L163: a hit of the foe's move; a multi-hit one's at its -hitcount -- Showdown counts
         # all its hits when its last landed on the mon, none when on a Substitute: S158)
@@ -719,7 +764,9 @@ def _feed_one(sides: dict, p: list[str]) -> None:
         # own loaf; S75)
         why = to_id(p[3].replace("ability: ", ""))
         if why in ("truant", "recharge"):
-            st.truant_next = False  # (its loaf; a recharge removes Truant's volatile -- Showdown's mustrecharge)
+            st.truant_next = (
+                False  # (its loaf; a recharge removes Truant's volatile -- Showdown's mustrecharge)
+            )
         elif why not in ("slp", "frz") and not (st.gastro or any(s.gas_on for s in sides.values())):
             st.truant_next = True  # (asleep, frozen -- before Truant's turn: kept, S150)
         st.charging = st.locked = None  # (prevented: the charge and the lock end)
@@ -764,7 +811,8 @@ def _feed_one(sides: dict, p: list[str]) -> None:
         st.notarget = "[notarget]" in p
         st.metronome_gone = False
         if not any(x.startswith("[from]") and "lockedmove" not in x for x in p[4:]):
-            st.stint["moves"].append(mv)  # (this time in's moves: a disguised Illusion's are its own)
+            # (this time in's moves: a disguised Illusion's are its own)
+            st.stint["moves"].append(mv)
             # (and the PP each took -- a Pressure foe's 2: a broken Illusion's PP, S143)
             st.stint.setdefault("costs", []).append(_pp_cost(sides, p, mv))
             st.moves_by_nick.setdefault(nick, collections.Counter())[mv] += 1
@@ -781,10 +829,15 @@ def _feed_one(sides: dict, p: list[str]) -> None:
             st.minimized = True
         if not any(x.startswith("[from]") and "lockedmove" not in x for x in p[4:]):
             # (the Metronome item's count: the same move again after one that did not fail)
-            st.consecutive = st.consecutive + 1 if mv == st.own_last and not st.last_failed \
-                and not st.last_nothing else 0
+            st.consecutive = (
+                st.consecutive + 1
+                if mv == st.own_last and not st.last_failed and not st.last_nothing
+                else 0
+            )
             if mv != "struggle" and not any("lockedmove" in x for x in p[4:]):
-                st.own_last = mv  # (the move it chose: a called move's caller -- Metronome's -- stays)
+                st.own_last = (
+                    mv  # (the move it chose: a called move's caller -- Metronome's -- stays)
+                )
         # (a charge fires the turn after its -prepare; a locking move locks it, its next uses
         # "[from]lockedmove" -- 2026-10-23, the state-construction differential: neither was in
         # the engine's state, the search let it choose any move)
@@ -792,8 +845,10 @@ def _feed_one(sides: dict, p: list[str]) -> None:
         if st.charging is not None and "[still]" not in p:
             st.charging = None
         # (a called one -- Copycat's, Metronome's -- locks too: S117)
-        if mv in LOCKING and not any(x.startswith("[from]") and "lockedmove" not in x
-                                     and not x.startswith("[from] move:") for x in p[4:]):
+        if mv in LOCKING and not any(
+            x.startswith("[from]") and "lockedmove" not in x and not x.startswith("[from] move:")
+            for x in p[4:]
+        ):
             # (a continuation says [from] lockedmove; one without is a new lock -- the last one
             # may have ended silently, confused: S96)
             going = st.locked and st.locked[0] == mv and any("lockedmove" in x for x in p[4:])
@@ -814,13 +869,18 @@ def _feed_one(sides: dict, p: list[str]) -> None:
             s.last_move = mv
         if mv == "wish" and st.wish is None and "[still]" not in p:
             st.wish = (2, sp)
-        if mv in ("healingwish", "lunardance") and "[still]" not in p:  # (no one to switch to: [still], -fail)
+        # (no one to switch to: [still], -fail)
+        if mv in ("healingwish", "lunardance") and "[still]" not in p:
             st.healing_wish = 1 if mv == "healingwish" else 2
     elif tag == "-fail" and len(p) > 3 and to_id(p[3].replace("move: ", "")) == "wish":
         st.wish = None
         st.failed_now = True
-    elif tag in ("-boost", "-unboost") and len(p) > 4 and not any(x.startswith("[from]") for x in p[5:]) \
-            and next(iter(sides.values())).prev in ("move", "-boost", "-unboost"):
+    elif (
+        tag in ("-boost", "-unboost")
+        and len(p) > 4
+        and not any(x.startswith("[from]") for x in p[5:])
+        and next(iter(sides.values())).prev in ("move", "-boost", "-unboost")
+    ):
         # (the move's own stage changes: right after its line -- not an ability's after it,
         # Speed Boost's at the end of the turn)
         # a status move's stage changes all 0 (Swords Dance at +6): it failed (Showdown's
@@ -832,8 +892,10 @@ def _feed_one(sides: dict, p: list[str]) -> None:
                 mover.failed_now = True
             elif p[4] != "0":
                 mover.failed_now, mover.changed_now = False, True
-    elif tag == "-fail" and any(s.just_moved and s.last_move in NOT_FAIL and not s.notarget
-                                for s in sides.values()):  # (no target: a failure all the same, S129)
+    # (no target: a failure all the same, S129)
+    elif tag == "-fail" and any(
+        s.just_moved and s.last_move in NOT_FAIL and not s.notarget for s in sides.values()
+    ):
         pass  # (Showdown's NOT_FAIL: its -fail is not a failed move -- Synthesis at full HP)
     elif tag == "-fail" and len(p) == 3 and any(
             s.just_moved and _blocked_by_sub(s.last_move)
@@ -848,21 +910,48 @@ def _feed_one(sides: dict, p: list[str]) -> None:
         for s in sides.values():
             if s.just_moved:
                 s.sub_failed_now = True
-    elif tag == "-fail" and st.prev == "-activate" and any(x.startswith("ability:") for x in st.prev_line[3:4]):
+    elif (
+        tag == "-fail"
+        and st.prev == "-activate"
+        and any(x.startswith("ability:") for x in st.prev_line[3:4])
+    ):
         pass  # (an ability's own failure -- Synchronize passing a burn to a Fire type -- not a move's)
     elif tag in ("-immune", "-miss") and any(s.just_moved and s.own_last == "perishsong"
                                              for s in sides.values()):  # fmt: skip
         pass  # (Perish Song: a target immune or missed is no failure -- its onHitField's result
         # true; 2026-10-23, S64: Good as Gold's -immune read as a failed Perish Song)
-    elif tag == "-fail" and len(p) > 3 and p[3] == "unboost" and any(x.startswith("[from] ability:") for x in p[4:]) \
-            and st.prev_line[1:2] != ["-ability"] \
-            and (mover := sides["p2" if p[2][:2] == "p1" else "p1"]).just_moved and _is_status(mover.last_move) \
-            and mover.last_move not in ("defog", "partingshot", "memento", "toxicthread", "spicyextract",
-                                        "venomdrench", "strengthsap", "topsyturvy") \
-            and "boosts" in (_move_data(mover.last_move)):  # (its own drop: not a hazard's -- S149)
-        _missed(mover)  # (a status move's only effect, a drop, all blocked -- Clear Body at a Tickle: S141)
-    elif tag == "-fail" and st.just_moved == sp and _is_status(st.last_move) and "unboost" not in p \
-            and any(x.startswith("[from] ability:") for x in p[3:]):  # (not an Intimidate's: S142)
+    # (its own drop: not a hazard's -- S149)
+    elif (
+        tag == "-fail"
+        and len(p) > 3
+        and p[3] == "unboost"
+        and any(x.startswith("[from] ability:") for x in p[4:])
+        and st.prev_line[1:2] != ["-ability"]
+        and (mover := sides["p2" if p[2][:2] == "p1" else "p1"]).just_moved
+        and _is_status(mover.last_move)
+        and mover.last_move
+        not in (
+            "defog",
+            "partingshot",
+            "memento",
+            "toxicthread",
+            "spicyextract",
+            "venomdrench",
+            "strengthsap",
+            "topsyturvy",
+        )
+        and "boosts" in (_move_data(mover.last_move))
+    ):
+        # (a status move's only effect, a drop, all blocked -- Clear Body at a Tickle: S141)
+        _missed(mover)
+    # (not an Intimidate's: S142)
+    elif (
+        tag == "-fail"
+        and st.just_moved == sp
+        and _is_status(st.last_move)
+        and "unboost" not in p
+        and any(x.startswith("[from] ability:") for x in p[3:])
+    ):
         _missed(st)  # (its own ability stopping its own move -- Rest under Insomnia: S107)
     elif tag in ("-fail", "-miss") and not any(x.startswith("[from]") for x in p[3:]):
         # (L115: the last move failed -- its user's: the side that just moved; a -fail names its
@@ -874,22 +963,36 @@ def _feed_one(sides: dict, p: list[str]) -> None:
             _missed(mover)
             if mover.own_last in PROTECTS:
                 mover.protect = 0  # (a failed protection: Showdown removes the stall count at once)
-    elif tag == "-block" and len(p) > 3 and p[3].startswith("ability:") \
-            and sides["p2" if p[2][:2] == "p1" else "p1"].just_moved \
-            and _is_status(sides["p2" if p[2][:2] == "p1" else "p1"].last_move):  # (not a hit's
+    # (not a hit's
+    elif (
+        tag == "-block"
+        and len(p) > 3
+        and p[3].startswith("ability:")
+        and sides["p2" if p[2][:2] == "p1" else "p1"].just_moved
+        and _is_status(sides["p2" if p[2][:2] == "p1" else "p1"].last_move)
+    ):
         # secondary -- Psychic Noise's Heal Block: S133)
         # (an ability blocking the foe's move -- Aroma Veil's Taunt / Encore: it failed; S91)
         _missed(sides["p2" if p[2][:2] == "p1" else "p1"])
-    elif tag == "-immune" and sides["p2" if p[2][:2] == "p1" else "p1"].just_moved \
-            and st.prev_line[1:2] != ["-ability"] \
-            and not (st.prev_line[1:2] == ["-activate"] and "".join(st.prev_line[3:4]).startswith("ability:")):
+    elif (
+        tag == "-immune"
+        and sides["p2" if p[2][:2] == "p1" else "p1"].just_moved
+        and st.prev_line[1:2] != ["-ability"]
+        and not (
+            st.prev_line[1:2] == ["-activate"] and "".join(st.prev_line[3:4]).startswith("ability:")
+        )
+    ):
         # (not an ability's effect -- an Intimidate a Substitute stopped: S77; a Synchronize's
         # status at a Fire type: S105)
         _missed(sides["p2" if p[2][:2] == "p1" else "p1"])
-    elif tag in ("-start", "-heal", "-boost", "-ability") and sides["p2" if p[2][:2] == "p1" else "p1"].just_moved \
-            and any(x.replace("[from] ", "") in ABSORB or "ability: " + x in ABSORB for x in p[3:5]) \
-            and (tag != "-heal" or any(x.startswith("[of] ") for x in p[4:])) \
-            and not any(x.startswith("[from] move:") for x in p[4:]):  # (an ability changed by a
+    # (an ability changed by a
+    elif (
+        tag in ("-start", "-heal", "-boost", "-ability")
+        and sides["p2" if p[2][:2] == "p1" else "p1"].just_moved
+        and any(x.replace("[from] ", "") in ABSORB or "ability: " + x in ABSORB for x in p[3:5])
+        and (tag != "-heal" or any(x.startswith("[of] ") for x in p[4:]))
+        and not any(x.startswith("[from] move:") for x in p[4:])
+    ):
         # move -- Simple Beam's |Simple|Dry Skin|: its old one named, not absorbing; S112)
         # (-ability|X|Wind Rider|boost: the boosting ones' own form; an absorbing heal names the
         # mover -- [of] --, Dry Skin's in the rain at the turn's end does not: 2026-10-23, S63)
@@ -898,14 +1001,23 @@ def _feed_one(sides: dict, p: list[str]) -> None:
         _missed(sides["p2" if p[2][:2] == "p1" else "p1"])
         if "ability: Flash Fire" in p[3:]:
             st.flashfire = True
-    elif tag == "-activate" and len(p) > 5 and to_id(p[3].replace("move: ", "")) in ("spite", "eeriespell") \
-            and p[5].isdigit():
+    elif (
+        tag == "-activate"
+        and len(p) > 5
+        and to_id(p[3].replace("move: ", "")) in ("spite", "eeriespell")
+        and p[5].isdigit()
+    ):
         # (Spite took that much PP of its last move -- poke-env does not track it; 2026-10-23)
         st.pp_taken.setdefault(sp, collections.Counter())[to_id(p[4])] += int(p[5])
     elif tag == "-activate" and len(p) > 3 and to_id(p[3]) == "abilitycudchew":
         st.cud_eats = True
-    elif tag == "-activate" and len(p) > 3 and p[3] in BLOCKERS \
-            and sides["p2" if p[2][:2] == "p1" else "p1"].just_moved and st.prev_line[1:2] != ["-end"]:
+    elif (
+        tag == "-activate"
+        and len(p) > 3
+        and p[3] in BLOCKERS
+        and sides["p2" if p[2][:2] == "p1" else "p1"].just_moved
+        and st.prev_line[1:2] != ["-end"]
+    ):
         # (a priority move stopped -- Psychic Terrain, Queenly Majesty, Dazzling, Armor Tail: the
         # foe's move failed; 2026-10-23, the state-construction differential; a status stopped by
         # Misty / Electric Terrain, Safeguard too -- not a Yawn's sleep at the turn's end: S89)
@@ -916,7 +1028,11 @@ def _feed_one(sides: dict, p: list[str]) -> None:
         st.protected = False
         st.protect = 0
         st.protected_move = ""  # (its volatile gone too: S78)
-    elif tag == "-activate" and len(p) > 3 and to_id(p[3].replace("move: ", "")) in PROTECTS - {"endure"}:
+    elif (
+        tag == "-activate"
+        and len(p) > 3
+        and to_id(p[3].replace("move: ", "")) in PROTECTS - {"endure"}
+    ):
         # (its target protected: the move did nothing -- a lock does not start; its result null,
         # not false: the Metronome item's count ends -- S120. Not an Endure's: the hit landed, the
         # target held on -- 2026-10-24, an Outrage's lock ended there)
@@ -932,15 +1048,35 @@ def _feed_one(sides: dict, p: list[str]) -> None:
             # (Baneful Bunker, King's Shield, Spiky Shield, ... log "Protect": the move used --
             # its own volatile; 2026-10-23, the state-construction differential)
             pl = st.prev_line
-            if st.protected_move == "protect" and len(pl) > 3 and pl[1] == "move" and pl[2] == p[2] \
-                    and to_id(pl[3]) in PROTECTS - {"detect"}:  # (Detect: protect)
+            # (Detect: protect)
+            if (
+                st.protected_move == "protect"
+                and len(pl) > 3
+                and pl[1] == "move"
+                and pl[2] == p[2]
+                and to_id(pl[3]) in PROTECTS - {"detect"}
+            ):
                 st.protected_move = to_id(pl[3])
         if to_id(p[3].replace("move: ", "")) == "roost":
             st.roosted = True  # (its Flying type off for the rest of the turn)
-    elif (tag == "-activate" and len(p) > 3 and to_id(p[3].replace("move: ", "")) == "skillswap") \
-            or tag == "-endability" or (tag == "-ability" and any(
-                x.startswith(("[from] ability: Mummy", "[from] ability: Wandering Spirit",
-                              "[from] ability: Lingering Aroma", "[from] move:")) for x in p[4:])):
+    elif (
+        (tag == "-activate" and len(p) > 3 and to_id(p[3].replace("move: ", "")) == "skillswap")
+        or tag == "-endability"
+        or (
+            tag == "-ability"
+            and any(
+                x.startswith(
+                    (
+                        "[from] ability: Mummy",
+                        "[from] ability: Wandering Spirit",
+                        "[from] ability: Lingering Aroma",
+                        "[from] move:",
+                    )
+                )
+                for x in p[4:]
+            )
+        )
+    ):
         # (its ability changed / suppressed: a Regenerator gone till it switches -- Skill Swap
         # names both: the [of] one's too; a Role Play's / Entrainment's [of] is its source, its
         # own unchanged -- Showdown's setAbility)
@@ -962,7 +1098,9 @@ def _feed_one(sides: dict, p: list[str]) -> None:
             st.ability_now = to_id(p[4])
             if ost is not None and not p[5].startswith("["):
                 ost.ability_now = to_id(p[5])
-    elif tag == "-activate" and len(p) > 4 and p[3] in ("ability: Mummy", "ability: Lingering Aroma"):
+    elif (
+        tag == "-activate" and len(p) > 4 and p[3] in ("ability: Mummy", "ability: Lingering Aroma")
+    ):
         # (the contact mon -- the line's second -- gets the holder's ability, its old one the
         # [ability]: Showdown's setAbility prints Mummy's / Lingering Aroma's so; 2026-10-25 review:
         # a Huge Power kept after a Lingering Aroma)
@@ -973,7 +1111,7 @@ def _feed_one(sides: dict, p: list[str]) -> None:
     elif tag == "-transform" and len(p) > 3:
         ost, st.copied_from = _who(["", "", p[3]], sides)  # (S145)
         tnick = p[3].split(": ", 1)[-1]
-        st.copied_forme = ((ost.formes.get(tnick) if ost is not None else None) or st.copied_from)
+        st.copied_forme = (ost.formes.get(tnick) if ost is not None else None) or st.copied_from
         # (Showdown's transformInto copies the target's timesAttacked -- kept after: Rage Fist's)
         if ost is not None:
             st.times_attacked[sp] = ost.times_attacked.get(st.copied_from, 0)
@@ -983,7 +1121,9 @@ def _feed_one(sides: dict, p: list[str]) -> None:
         st.gas_on = True
     elif tag == "-heal" and "[from] move: Revival Blessing" in p:
         st.revived.add(sp)  # (back from a faint: no longer terastallized -- Showdown's)
-        st.revivals += 1  # (Showdown's totalFainted keeps the faint: Supreme Overlord's, Last Respects')
+        st.revivals += (
+            1  # (Showdown's totalFainted keeps the faint: Supreme Overlord's, Last Respects')
+        )
     elif tag == "-heal" and "[from] move: Lunar Dance" in p:
         # (Gen 9's Lunar Dance restores the PP too -- poke-env's count restored, agents/
         # poke_env_fixes.py; Spite's taken PP back as well: S84)
@@ -991,7 +1131,9 @@ def _feed_one(sides: dict, p: list[str]) -> None:
         st.healing_wish = 0
     elif tag == "-heal" and "[from] move: Healing Wish" in p:
         st.healing_wish = 0
-    elif tag == "-start" and len(p) > 3 and p[3] == "perish3" and "[silent]" in p and sp == st.active:
+    elif (
+        tag == "-start" and len(p) > 3 and p[3] == "perish3" and "[silent]" in p and sp == st.active
+    ):
         st.perish_fresh = True  # (Showdown's duration 4 till this end of turn: S128)
     elif tag == "-singlemove" and len(p) > 3 and to_id(p[3]) == "destinybond":
         st.destinybond = True  # (until its next move: Gen 7+ keeps it past the turn's end)
@@ -1057,9 +1199,15 @@ def _feed_one(sides: dict, p: list[str]) -> None:
     elif tag == "-activate" and len(p) > 4 and to_id(p[3].replace("move: ", "")) == "substitute":
         if p[4] == "[damage]":
             st.sub_hit = True
-    elif tag == "-sideend" and len(p) > 3 and any(x.startswith("[from] move:") for x in p[4:]) \
-            and (mover := next((s2 for s2 in sides.values() if s2.just_moved), None)) is not None:
-        mover.failed_now = False  # (Defog at -6 evasion cleared the hazards: it did something -- S151)
+    elif (
+        tag == "-sideend"
+        and len(p) > 3
+        and any(x.startswith("[from] move:") for x in p[4:])
+        and (mover := next((s2 for s2 in sides.values() if s2.just_moved), None)) is not None
+    ):
+        mover.failed_now = (
+            False  # (Defog at -6 evasion cleared the hazards: it did something -- S151)
+        )
         st.side_elapsed.pop(to_id(p[3].replace("move: ", "")), None)
     elif tag == "-sideend" and len(p) > 3:
         st.side_elapsed.pop(to_id(p[3].replace("move: ", "")), None)
@@ -1089,9 +1237,12 @@ def _feed_one(sides: dict, p: list[str]) -> None:
         # not one taken -- Knock Off, Trick, Thief, Bug Bite: [from] / [silent] -- nor a popped Air
         # Balloon, its item just cleared): Harvest, Recycle, Cud Chew read it (L57, L178, L204)
         # (a gem's -enditem says [from] gem: used up too)
-        if ("[eat]" in p or "[from] gem" in p or "[from] move: Fling" in p
-                or not any(x.startswith(("[from]", "[silent]")) for x in p[4:])) \
-                and to_id(p[3]) != "airballoon":
+        if (
+            "[eat]" in p
+            or "[from] gem" in p
+            or "[from] move: Fling" in p
+            or not any(x.startswith(("[from]", "[silent]")) for x in p[4:])
+        ) and to_id(p[3]) != "airballoon":
             st.stint.setdefault("items", []).append((sp, st.last_item.get(sp)))
             st.last_item[sp] = to_id(p[3])
         if sp == st.active:  # (Unburden's: an item lost this time in -- silent in the log)
@@ -1128,14 +1279,20 @@ def _feed_one(sides: dict, p: list[str]) -> None:
             ost, osp = _who(["", "", of], sides)
             if ost is not None:
                 _item_was(ost, osp, to_id(p[3]))
-    elif tag == "-end" and len(p) > 3 and to_id(p[3].replace("move: ", "")) in ("futuresight", "doomdesire"):
+    elif (
+        tag == "-end"
+        and len(p) > 3
+        and to_id(p[3].replace("move: ", "")) in ("futuresight", "doomdesire")
+    ):
         # (its hit at the end of the turn: not the last move's -- an -immune after it is not a
         # failed move; 2026-10-23, the state-construction differential)
         for s in sides.values():
             s.just_moved = ""
             s.in_residual = True  # (the end of turn's residuals: S126)
         sides["p2" if p[2][:2] == "p1" else "p1"].future = None
-        st.future_hit = True  # (its -damage next: a move's hit -- Rage Fist's count; an -immune, none)
+        st.future_hit = (
+            True  # (its -damage next: a move's hit -- Rage Fist's count; an -immune, none)
+        )
     elif tag == "-end" and len(p) > 3:
         what = to_id(p[3].replace("move: ", ""))
         if what == "abilityflashfire":

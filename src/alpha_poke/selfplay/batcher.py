@@ -124,8 +124,20 @@ class Batcher:
             out = paths.SELFPLAY / "diag" / "search_failures.jsonl"
             with open(out, "a") as fh:
                 for j in jobs:
-                    fh.write(json.dumps({"time": time.time(), "what": what, "seed": j.seed, "target": j.target,
-                                         "states": j.states, "contexts": j.contexts}, default=repr) + "\n")
+                    fh.write(
+                        json.dumps(
+                            {
+                                "time": time.time(),
+                                "what": what,
+                                "seed": j.seed,
+                                "target": j.target,
+                                "states": j.states,
+                                "contexts": j.contexts,
+                            },
+                            default=repr,
+                        )
+                        + "\n"
+                    )
         except Exception:  # noqa: BLE001 - diagnostics only
             log.exception("batcher: could not write the failed searches")
 

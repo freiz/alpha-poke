@@ -23,7 +23,9 @@ ROOT = Path(__file__).resolve().parents[3]
 START_WAIT = 90  # seconds before a lane's first match (scripts/eval_pairs_opponent.py's too)
 
 
-async def _lane(bot_a: str, matches: list[Match], port: int, pool: str, run: str, i: int, log_path: str) -> list:
+async def _lane(
+    bot_a: str, matches: list[Match], port: int, pool: str, run: str, i: int, log_path: str
+) -> list:
     from alpha_poke.eval.bots import make_bot
 
     teams = load_team_files(pool)
@@ -36,7 +38,8 @@ async def _lane(bot_a: str, matches: list[Match], port: int, pool: str, run: str
     rows = []
     broken = False  # (a game that never finished: the other side may be a game ahead or behind)
     for m in matches:
-        if broken:  # (the lane stops: its teams and challenges would no longer agree -- 2026-10-26 review)
+        # (the lane stops: its teams and challenges would no longer agree -- 2026-10-26 review)
+        if broken:
             rows.append(asdict(m) | {"bot_a": bot_a, "bot_b": "opponent", "battle": None, "a_won": None,
                                      "turns": None, "capped": False, "team_ok": False, "fallbacks_a": 0,
                                      "search_fallbacks_a": 0, "fallbacks_b": None, "seconds": 0.0})  # fmt: skip
@@ -44,7 +47,11 @@ async def _lane(bot_a: str, matches: list[Match], port: int, pool: str, run: str
         me.update_team(teams[m.team_a])
         before = set(me.battles)
         fb0 = (getattr(me, "fallbacks", 0), getattr(me, "search_fallbacks", 0))
-        play = me.send_challenges(opp, n_challenges=1) if m.a_challenges else me.accept_challenges(opp, n_challenges=1)
+        play = (
+            me.send_challenges(opp, n_challenges=1)
+            if m.a_challenges
+            else me.accept_challenges(opp, n_challenges=1)
+        )
         t0 = time.time()
         try:
             await asyncio.wait_for(play, GAME_TIMEOUT)
@@ -61,7 +68,10 @@ async def _lane(bot_a: str, matches: list[Match], port: int, pool: str, run: str
             "a_won": None if battle is None else battle.won,
             "turns": battle.turn if battle else None,
             "capped": bool(battle and battle.turn >= TURN_CAP),
-            "team_ok": bool(battle and sorted(_base(p.species) for p in battle.team.values()) == expected[m.team_a]),
+            "team_ok": bool(
+                battle
+                and sorted(_base(p.species) for p in battle.team.values()) == expected[m.team_a]
+            ),
             "fallbacks_a": getattr(me, "fallbacks", 0) - fb0[0],
             "search_fallbacks_a": getattr(me, "search_fallbacks", 0) - fb0[1],
             "fallbacks_b": None,  # (the opponent's own: its log's OPPONENT DONE line)
@@ -82,10 +92,17 @@ def _worker(args):
            "--pool", str(Path(pool).resolve()), "--pairs", str(pairs), "--lanes-total", str(n_lanes),
            "--lanes", *map(str, ids), "--port", str(port), "--run", run]  # fmt: skip
     out = open(Path(log_path).with_suffix(f".opp{ids[0]}.log"), "w")
-    proc = subprocess.Popen(cmd, cwd=other, stdout=out, stderr=subprocess.STDOUT, env=dict(os.environ))
+    proc = subprocess.Popen(
+        cmd, cwd=other, stdout=out, stderr=subprocess.STDOUT, env=dict(os.environ)
+    )
 
     async def go():
-        return await asyncio.gather(*[_lane(bot_a, ms, port, pool, run, i, log_path) for i, ms in zip(ids, lanes, strict=True)])
+        return await asyncio.gather(
+            *[
+                _lane(bot_a, ms, port, pool, run, i, log_path)
+                for i, ms in zip(ids, lanes, strict=True)
+            ]
+        )
 
     try:
         return [r for lane in asyncio.run(go()) for r in lane]

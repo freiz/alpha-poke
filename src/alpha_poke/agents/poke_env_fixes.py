@@ -54,8 +54,12 @@ def _pressure_on(self, pokemon: str, move: str, target_str):
         # active's Pressure, poke-env checked its user's; S134)
         user = self.get_pokemon(pokemon)
         foe = self.opponent_active_pokemon if user in self.team.values() else self.active_pokemon
-        return foe is not None and foe.ability == "pressure" and not foe.fainted \
+        return (
+            foe is not None
+            and foe.ability == "pressure"
+            and not foe.fainted
             and Effect.GASTRO_ACID not in foe.effects
+        )
     if not _inner_pressure(self, pokemon, move, target_str):
         return False
     try:
@@ -69,7 +73,8 @@ def _pressure_on(self, pokemon: str, move: str, target_str):
         return False
     if target is not None:  # (its extra PP, kept per target this time in: an Illusion's refunded)
         self.__dict__.setdefault("_alpha_pressured", {}).setdefault(id(target), []).append(
-            (self.get_pokemon(pokemon), _move_id(move)))
+            (self.get_pokemon(pokemon), _move_id(move))
+        )
     return True
 
 
@@ -97,13 +102,21 @@ def _end_illusion_on(self, illusionist, illusioned, details: str):
     # (our own disguise's stage changes too, live -- a battle with requests; the opponent's / a
     # replay's: the timers' illusion_boosts, engine_state adds them; S81: a Special Defense drop
     # the turn it broke)
-    ours = illusioned is not None and bool(self._last_request) \
+    ours = (
+        illusioned is not None
+        and bool(self._last_request)
         and any(m is illusioned for m in self.team.values())
+    )
     boosts = dict(illusioned.boosts) if ours else {}
-    types = list(illusioned._temporary_types) if illusioned is not None else []  # (a Soak on it: S148)
+    # (a Soak on it: S148)
+    types = list(illusioned._temporary_types) if illusioned is not None else []
     # (its Terastallization in disguise -- the -terastallize line named the disguise: the Zoroark's;
     # the disguise, a Flygon never in, had it after: S158)
-    tera = (illusioned._terastallized, illusioned._terastallized_type) if illusioned is not None else (False, None)
+    tera = (
+        (illusioned._terastallized, illusioned._terastallized_type)
+        if illusioned is not None
+        else (False, None)
+    )
     if illusioned is not None and self.__dict__.get("_alpha_tera_in", {}).get(id(illusioned)):
         tera = (False, None)  # (its own, before the disguise came in: a Serperior's earlier one)
     mon = _inner_end_illusion(self, illusionist, illusioned, details)
@@ -121,8 +134,6 @@ def _end_illusion_on(self, illusionist, illusioned, details: str):
             if v:
                 mon.boosts[k] = v
     return mon
-
-
 
 
 _inner_update_team = AbstractBattle._update_team_from_request
@@ -176,9 +187,15 @@ def _switch(self, pokemon_str: str, details: str, hp_status: str):
     # Spectrier at 83 for its 75, never found out; a level never changes: the team preview's.
     # Ours: a request's level is exact -- only a spectator's, the replay path's)
     if ours:
-        lv = None if self._last_request else self.__dict__.get("_alpha_own_preview", {}).get(mon.species)
+        lv = (
+            None
+            if self._last_request
+            else self.__dict__.get("_alpha_own_preview", {}).get(mon.species)
+        )
     else:
-        lv = next((m.level for m in self._teampreview_opponent_team if m.species == mon.species), None)
+        lv = next(
+            (m.level for m in self._teampreview_opponent_team if m.species == mon.species), None
+        )
     if lv is not None:
         mon._level = lv
 
@@ -204,8 +221,12 @@ def _our_disguised_switch(self, split_message):
     Zoroark in disguise (we chose it) -- the message as poke-env should read it (the Zoroark's
     ident and details), else None. poke-env took the disguise as the one in until the turn's
     request (S86: a hit on it at a Pressure disguise took 2 PP of the foe's move)."""
-    if len(split_message) < 5 or split_message[1] not in ("switch", "drag") or not self._last_request \
-            or split_message[2][:2] != self.player_role:
+    if (
+        len(split_message) < 5
+        or split_message[1] not in ("switch", "drag")
+        or not self._last_request
+        or split_message[2][:2] != self.player_role
+    ):
         return None
     side = (self._last_request.get("side") or {}).get("pokemon") or []
     shown = _max_hp(split_message[4])
@@ -226,19 +247,31 @@ def _our_disguised_switch(self, split_message):
 def _display_typechange(split_message) -> bool:
     """Showdown's -start typechange [silent] with no cause: a switch-in's apparent types (Gen 7+),
     an Illusion's its disguise's."""
-    return len(split_message) > 4 and split_message[1] == "-start" and split_message[3] == "typechange" \
-        and "[silent]" in split_message and not any(x.startswith("[from]") for x in split_message[4:])
+    return (
+        len(split_message) > 4
+        and split_message[1] == "-start"
+        and split_message[3] == "typechange"
+        and "[silent]" in split_message
+        and not any(x.startswith("[from]") for x in split_message[4:])
+    )
 
 
 def _ability_set(self, split_message):
     """(the mon, its ability before, the one it had, the new one) of a line that sets an ability
     over another, else None."""
     tag = split_message[1] if len(split_message) > 1 else ""
-    if tag == "-ability" and len(split_message) > 5 and not split_message[4].startswith("[") \
-            and any(x.startswith("[from]") for x in split_message[5:]):
+    if (
+        tag == "-ability"
+        and len(split_message) > 5
+        and not split_message[4].startswith("[")
+        and any(x.startswith("[from]") for x in split_message[5:])
+    ):
         mon, old, new = split_message[2], split_message[4], split_message[3]
-    elif tag == "-activate" and len(split_message) > 5 \
-            and split_message[3] in ("ability: Mummy", "ability: Lingering Aroma"):
+    elif (
+        tag == "-activate"
+        and len(split_message) > 5
+        and split_message[3] in ("ability: Mummy", "ability: Lingering Aroma")
+    ):
         old = next((x[10:] for x in split_message[5:] if x.startswith("[ability] ")), "")
         mon, new = split_message[4], split_message[3][9:]
     else:
@@ -251,10 +284,16 @@ def _ability_set(self, split_message):
 
 
 def _parse_message(self, split_message):
-    yawned = [m for m in (*self._team.values(), *self._opponent_team.values()) if Effect.YAWN in m.effects]
+    yawned = [
+        m for m in (*self._team.values(), *self._opponent_team.values()) if Effect.YAWN in m.effects
+    ]
     yawn_end = split_message[1:2] == ["-end"] and "Yawn" in "".join(split_message[3:4])
-    if len(split_message) > 6 and split_message[1] == "-activate" \
-            and split_message[3].replace("move: ", "") == "Skill Swap" and split_message[-1].startswith("[of] "):
+    if (
+        len(split_message) > 6
+        and split_message[1] == "-activate"
+        and split_message[3].replace("move: ", "") == "Skill Swap"
+        and split_message[-1].startswith("[of] ")
+    ):
         # (the [of] mon's own ability: the one the user got -- the first named; S85)
         of = self.get_pokemon(split_message[-1][5:])
         if of._ability is None and split_message[4]:
@@ -298,8 +337,11 @@ def _parse_message(self, split_message):
         # Showdown keeps it till its own -end; S115)
         if Effect.YAWN not in m.effects and m.active and not yawn_end:
             m.effects[Effect.YAWN] = 0
-    if split_message[1:2] == ["cant"] and len(split_message) > 3 \
-            and not any(x.startswith("[of]") for x in split_message[4:]):
+    if (
+        split_message[1:2] == ["cant"]
+        and len(split_message) > 3
+        and not any(x.startswith("[of]") for x in split_message[4:])
+    ):
         # (Glaive Rush's drawback ends before any stopped move -- its BeforeMove priority 100: S135)
         self.get_pokemon(split_message[2]).effects.pop(Effect.GLAIVE_RUSH, None)
     if len(split_message) == 3 and split_message[1] == "-endability":
@@ -327,7 +369,11 @@ def _parse_message(self, split_message):
         # getTypes; poke-env its species' -- S136)
         mon, target = self.get_pokemon(split_message[2]), self.get_pokemon(split_message[3])
         mon._temporary_types = list(target.base_types)
-    if len(split_message) > 3 and split_message[1] == "-heal" and "[from] move: Lunar Dance" in split_message:
+    if (
+        len(split_message) > 3
+        and split_message[1] == "-heal"
+        and "[from] move: Lunar Dance" in split_message
+    ):
         for mv in self.get_pokemon(split_message[2]).moves.values():
             mv._current_pp = mv.max_pp
     for k, mon in list(temp.items()):
@@ -342,8 +388,6 @@ def _parse_message(self, split_message):
 if getattr(AbstractBattle, "_alpha_formes_fixed", False) is False:
     AbstractBattle.parse_message = _parse_message
     AbstractBattle._alpha_formes_fixed = True
-
-
 
 
 _inner_parse_request = Battle.parse_request

@@ -372,7 +372,9 @@ def test_a_fail_on_the_target_is_the_movers():
 
 def test_a_status_move_changing_no_stage_failed():
     """Swords Dance at +6: -boost 0, no -fail -- failed; Dragon Dance at +6 Attack, +1 Speed: not."""
-    t = run(START + "|move|p2a: Bob|Swords Dance|p2a: Bob\n|-boost|p2a: Bob|atk|0\n|upkeep\n|turn|2")
+    t = run(
+        START + "|move|p2a: Bob|Swords Dance|p2a: Bob\n|-boost|p2a: Bob|atk|0\n|upkeep\n|turn|2"
+    )
     assert t["p2"].last_failed
     t = run(START + "|move|p2a: Bob|Dragon Dance|p2a: Bob\n|-boost|p2a: Bob|atk|0\n"
             "|-boost|p2a: Bob|spe|1\n|upkeep\n|turn|2")  # fmt: skip
@@ -408,7 +410,10 @@ def test_rooms_and_screens_count_their_ends_of_turn():
 def test_charging_and_locking_moves():
     """-prepare: charging until the move fires (not with -anim: fired at once); Outrage locks,
     a failed first use (immune) does not, the fatigue confusion ends it."""
-    t = run(START + "|move|p1a: Fishy|Meteor Beam||[still]\n|-prepare|p1a: Fishy|Meteor Beam\n|upkeep\n|turn|2")
+    t = run(
+        START
+        + "|move|p1a: Fishy|Meteor Beam||[still]\n|-prepare|p1a: Fishy|Meteor Beam\n|upkeep\n|turn|2"
+    )
     assert t["p1"].charging == "meteorbeam"
     t = run(START + "|move|p1a: Fishy|Solar Beam||[still]\n|-prepare|p1a: Fishy|Solar Beam\n"
             "|-anim|p1a: Fishy|Solar Beam|p2a: Bob\n|upkeep\n|turn|2")  # fmt: skip
@@ -431,14 +436,22 @@ def test_more_of_the_logs_facts():
     boost after a status move is not the move's; Destiny Bond till its next move; Roost this turn;
     the Metronome item's count; a reflected move is its reflector's result; a switch-in's first
     turn out; Skill Swap: no Regenerator at its switch-out."""
-    t = run(START + "|move|p2a: Bob|Pyro Ball|p1a: Fishy\n|-start|p2a: Bob|typechange|Fire|[from] ability: Libero")
+    t = run(
+        START
+        + "|move|p2a: Bob|Pyro Ball|p1a: Fishy\n|-start|p2a: Bob|typechange|Fire|[from] ability: Libero"
+    )
     assert t["p2"].protean
-    t = run(START + "|move|p2a: Bob|Pyro Ball|p1a: Fishy\n|-start|p1a: Fishy|ability: Flash Fire\n|upkeep\n|turn|2")
+    t = run(
+        START
+        + "|move|p2a: Bob|Pyro Ball|p1a: Fishy\n|-start|p1a: Fishy|ability: Flash Fire\n|upkeep\n|turn|2"
+    )
     assert t["p2"].last_failed and t["p1"].flashfire
     t = run(START + "|move|p2a: Bob|Hurricane|p1a: Fishy\n|-ability|p1a: Fishy|Wind Rider|boost\n"
             "|-boost|p1a: Fishy|atk|1\n|upkeep\n|turn|2")  # fmt: skip
     assert t["p2"].last_failed
-    t = run(START + "|move|p1a: Fishy|Synthesis|p1a: Fishy\n|-fail|p1a: Fishy|heal\n|upkeep\n|turn|2")
+    t = run(
+        START + "|move|p1a: Fishy|Synthesis|p1a: Fishy\n|-fail|p1a: Fishy|heal\n|upkeep\n|turn|2"
+    )
     assert not t["p1"].last_failed
     t = run(START + "|move|p1a: Fishy|Substitute|p1a: Fishy\n|-fail|p1a: Fishy|move: Substitute|[weak]\n"
             "|upkeep\n|turn|2")  # fmt: skip
@@ -452,11 +465,17 @@ def test_more_of_the_logs_facts():
     t = run(START + "|move|p2a: Bob|Stealth Rock||[still]\n|-fail|p2a: Bob\n"
             "|-ability|p1a: Fishy|Speed Boost|boost\n|-boost|p1a: Fishy|spe|1\n|upkeep\n|turn|2")  # fmt: skip
     assert t["p2"].last_failed
-    t = run(START + "|move|p2a: Bob|Destiny Bond|p2a: Bob\n|-singlemove|p2a: Bob|Destiny Bond\n|upkeep\n|turn|2")
+    t = run(
+        START
+        + "|move|p2a: Bob|Destiny Bond|p2a: Bob\n|-singlemove|p2a: Bob|Destiny Bond\n|upkeep\n|turn|2"
+    )
     assert t["p2"].destinybond
     t = run(START + "|move|p2a: Bob|Roost|p2a: Bob\n|-singleturn|p2a: Bob|move: Roost")
     assert t["p2"].roosted
-    t = run(START + "|move|p1a: Fishy|Body Press|p2a: Bob\n|upkeep\n|turn|2\n|move|p1a: Fishy|Body Press|p2a: Bob")
+    t = run(
+        START
+        + "|move|p1a: Fishy|Body Press|p2a: Bob\n|upkeep\n|turn|2\n|move|p1a: Fishy|Body Press|p2a: Bob"
+    )
     assert t["p1"].consecutive == 1
     t = run(START + "|move|p1a: Fishy|Stealth Rock|p2a: Bob\n"
             "|move|p2a: Bob|Stealth Rock||[from] ability: Magic Bounce|[still]\n|-fail|p2a: Bob\n|upkeep\n|turn|2")  # fmt: skip
@@ -494,7 +513,10 @@ def test_the_logs_facts_third_batch():
     eaten, a gem's, not one knocked off, a popped Air Balloon; Harvest clears it; Lunar Dance
     restores the PP; Cud Chew's counter; a Simple Beam / Gastro Acid's ability; a type change
     before / after terastallizing."""
-    t = run(START + "|-activate|p1a: Fishy|confusion\n|-damage|p1a: Fishy|400/503|[from] confusion\n|upkeep\n|turn|2")
+    t = run(
+        START
+        + "|-activate|p1a: Fishy|confusion\n|-damage|p1a: Fishy|400/503|[from] confusion\n|upkeep\n|turn|2"
+    )
     assert t["p1"].last_failed and t["p1"].fresh == 0
     t = run(START + "|move|p2a: Bob|Substitute|p2a: Bob\n|-start|p2a: Bob|Substitute\n"
             "|move|p1a: Fishy|Will-O-Wisp||[still]\n|-fail|p1a: Fishy\n|upkeep\n|turn|2")  # fmt: skip
@@ -512,20 +534,35 @@ def test_the_logs_facts_third_batch():
     assert t["p1"].last_item["dondozo"] == "normalgem" and "gliscor" not in t["p2"].last_item
     t = run(START + "|-enditem|p1a: Fishy|Air Balloon")
     assert "dondozo" not in t["p1"].last_item
-    t = run(START + "|-enditem|p1a: Fishy|Sitrus Berry|[eat]\n|-item|p1a: Fishy|Sitrus Berry|[from] ability: Harvest")
+    t = run(
+        START
+        + "|-enditem|p1a: Fishy|Sitrus Berry|[eat]\n|-item|p1a: Fishy|Sitrus Berry|[from] ability: Harvest"
+    )
     assert "dondozo" not in t["p1"].last_item
     t = run(START + "|move|p1a: Fishy|Spite|p2a: Bob\n|-activate|p2a: Bob|move: Spite|Earthquake|4\n"
             "|-heal|p2a: Bob|100/100|[from] move: Lunar Dance")  # fmt: skip
     assert "gliscor" not in t["p2"].pp_taken  # (Lunar Dance's PP restore: poke-env's, S84)
-    t = run(START + "|move|p2a: Bob|Earthquake|p1a: Fishy\n|-enditem|p1a: Fishy|Sitrus Berry|[eat]\n|upkeep\n|turn|2")
+    t = run(
+        START
+        + "|move|p2a: Bob|Earthquake|p1a: Fishy\n|-enditem|p1a: Fishy|Sitrus Berry|[eat]\n|upkeep\n|turn|2"
+    )
     assert t["p1"].cud == 1
-    t = run(START + "|move|p2a: Bob|Simple Beam|p1a: Fishy\n|-ability|p1a: Fishy|Simple|[from] move: Simple Beam")
+    t = run(
+        START
+        + "|move|p2a: Bob|Simple Beam|p1a: Fishy\n|-ability|p1a: Fishy|Simple|[from] move: Simple Beam"
+    )
     assert t["p1"].ability_now == "simple"
     t = run(START + "|move|p2a: Bob|Gastro Acid|p1a: Fishy\n|-endability|p1a: Fishy")
     assert t["p1"].ability_now == "none" and t["p1"].gastro
-    t = run(START + "|-terastallize|p2a: Bob|Electric\n|-start|p2a: Bob|typechange|Ground|[from] move: Double Shock")
+    t = run(
+        START
+        + "|-terastallize|p2a: Bob|Electric\n|-start|p2a: Bob|typechange|Ground|[from] move: Double Shock"
+    )
     assert not t["p2"].typechanged
-    t = run(START + "|-start|p2a: Bob|typechange|Fire|[from] ability: Protean\n|-terastallize|p2a: Bob|Ice")
+    t = run(
+        START
+        + "|-start|p2a: Bob|typechange|Fire|[from] ability: Protean\n|-terastallize|p2a: Bob|Ice"
+    )
     assert t["p2"].typechanged
 
 
@@ -545,7 +582,6 @@ def test_pressure_under_neutralizing_gas_takes_one_pp():
         b.parse_message(line.split("|"))
     mv = next(iter(b.active_pokemon.moves.values()))
     assert mv.max_pp - mv.current_pp == 1
-
 
 
 def test_a_broken_illusion_keeps_its_volatiles():
@@ -591,8 +627,14 @@ def test_a_broken_illusion_keeps_its_volatiles():
 
     b = Battle("battle-gen9ou-2", "us", logging.getLogger("t"), gen=9)
     b.player_role = "p1"
-    side = lambda z: {"name": "us", "id": "p1", "pokemon": [  # noqa: E731
-        mon("p1: Bronzong", "Bronzong", not z), mon("p1: Zoroark", "Zoroark-Hisui, M", z)]}
+    side = lambda z: {  # noqa: E731
+        "name": "us",
+        "id": "p1",
+        "pokemon": [
+            mon("p1: Bronzong", "Bronzong", not z),
+            mon("p1: Zoroark", "Zoroark-Hisui, M", z),
+        ],
+    }
     b.parse_request({"side": side(False), "rqid": 1})
     for line in ["|switch|p1a: Bronzong|Bronzong|100/100", "|switch|p2a: Slowking|Slowking|100/100",
                  "|turn|1", "|move|p2a: Slowking|Sticky Web|p1a: Bronzong", "|upkeep", "|turn|2",
@@ -611,6 +653,7 @@ def test_a_broken_illusion_keeps_its_volatiles():
     b.parse_request({"active": [{"moves": [{"move": "Night Daze", "id": "nightdaze", "pp": 16, "maxpp": 16,
                                             "disabled": False}]}], "side": side(True), "rqid": 1})  # fmt: skip
     assert b.active_pokemon.species == "zoroarkhisui" and b.active_pokemon.boosts["atk"] == -1
+
     # (later turns: the request made the Zoroark the active, the log names the disguise -- its
     # stage changes are the Zoroark's -- poke-env's own get_pokemon -- and stay through the
     # Illusion's end: S81)
@@ -628,17 +671,28 @@ def test_a_broken_illusion_keeps_its_volatiles():
     b.parse_request(req(3))
     assert b.active_pokemon.species == "zoroarkhisui"
     assert (b.active_pokemon.boosts["atk"], b.active_pokemon.boosts["spd"]) == (-1, -1)
+
     # (live, our Zoroark switched in as a Pressure mon: its max HP the Zoroark's -- poke-env
     # switches the Zoroark in, a hit at it takes 1 PP: S86)
     def mon2(ident, details, hp, active, ability):
-        return {**mon(ident, details, active), "condition": hp, "baseAbility": ability, "ability": ability}
+        return {
+            **mon(ident, details, active),
+            "condition": hp,
+            "baseAbility": ability,
+            "ability": ability,
+        }
 
     b = Battle("battle-gen9ou-7", "us", logging.getLogger("t"), gen=9)
     b.player_role = "p1"
-    team = lambda z: {"name": "us", "id": "p1", "pokemon": [  # noqa: E731
-        mon2("p1: Clodsire", "Clodsire, M", "464/464", not z, "unaware"),
-        mon2("p1: Corviknight", "Corviknight, F", "399/399", False, "pressure"),
-        mon2("p1: Zoroark", "Zoroark-Hisui, M", "251/251", z, "illusion")]}
+    team = lambda z: {  # noqa: E731
+        "name": "us",
+        "id": "p1",
+        "pokemon": [
+            mon2("p1: Clodsire", "Clodsire, M", "464/464", not z, "unaware"),
+            mon2("p1: Corviknight", "Corviknight, F", "399/399", False, "pressure"),
+            mon2("p1: Zoroark", "Zoroark-Hisui, M", "251/251", z, "illusion"),
+        ],
+    }
     b.parse_request({"side": team(False), "rqid": 1})
     for line in ["|switch|p1a: Clodsire|Clodsire, M|464/464", "|switch|p2a: Azumarill|Azumarill, F|100/100",
                  "|turn|1", "|switch|p1a: Corviknight|Corviknight, F|251/251",
@@ -648,6 +702,7 @@ def test_a_broken_illusion_keeps_its_volatiles():
     mv = b.opponent_active_pokemon.moves["liquidation"]
     assert mv.max_pp - mv.current_pp == 1
     assert b._replay_data[-3][2] == "p1a: Corviknight"  # (the log as shown: the timers' disguise)
+
 
 def test_a_temporary_forme_ends_with_its_switch_out():
     """S66: Meloetta-Pirouette (-formechange) switched out and back in as Aria kept Pirouette's
@@ -739,22 +794,30 @@ def test_lunar_dance_and_skill_swap_pp():
         b.parse_message(line.split("|"))
     assert Effect.YAWN in b.opponent_active_pokemon.effects
 
+
 def test_the_logs_facts_fourth_batch():
     """2026-10-23 (state-construction differential): Eerie Spell's PP; Court Change swaps the
     conditions' counts; a Regenerator going out under Neutralizing Gas heals nothing; a lock ends
     at its third use (its fatigue silent when confused); Fling's item is the last item; an
     ability's -fail (Synchronize) is not the move's; a broken Illusion's last move."""
-    t = run(START + "|move|p1a: Fishy|Eerie Spell|p2a: Bob\n|-activate|p2a: Bob|move: Eerie Spell|Earthquake|3")
+    t = run(
+        START
+        + "|move|p1a: Fishy|Eerie Spell|p2a: Bob\n|-activate|p2a: Bob|move: Eerie Spell|Earthquake|3"
+    )
     assert t["p2"].pp_taken["gliscor"]["earthquake"] == 3
     t = run(START + "|-sidestart|p1: A|Reflect\n|upkeep\n|turn|2\n|move|p2a: Bob|Court Change|p2a: Bob\n"
             "|-swapsideconditions\n|-activate|p2a: Bob|move: Court Change")  # fmt: skip
     assert t["p2"].side_elapsed == {"reflect": 1} and t["p1"].side_elapsed == {}
-    t = run(START + "|-ability|p1a: Fishy|Neutralizing Gas\n|switch|p2a: Rob|Corviknight, M|100/100")
+    t = run(
+        START + "|-ability|p1a: Fishy|Neutralizing Gas\n|switch|p2a: Rob|Corviknight, M|100/100"
+    )
     assert "gliscor" in t["p2"].no_regen
     t = run(START + "".join(f"|move|p1a: Fishy|Outrage|p2a: Bob{'|[from]lockedmove' if k else ''}\n|upkeep\n|turn|{k + 2}\n"
                             for k in range(3)))  # fmt: skip
     assert t["p1"].locked is None
-    t = run(START + "|move|p2a: Bob|Fling|p1a: Fishy\n|-enditem|p2a: Bob|Toxic Orb|[from] move: Fling")
+    t = run(
+        START + "|move|p2a: Bob|Fling|p1a: Fishy\n|-enditem|p2a: Bob|Toxic Orb|[from] move: Fling"
+    )
     assert t["p2"].last_item["gliscor"] == "toxicorb"
     t = run(START + "|move|p1a: Fishy|Will-O-Wisp|p2a: Bob\n|-status|p2a: Bob|brn\n"
             "|-activate|p2a: Bob|ability: Synchronize\n|-fail|p2a: Bob\n|upkeep\n|turn|2")  # fmt: skip
@@ -786,15 +849,24 @@ def test_the_logs_facts_fifth_batch():
     t = timers([x.split("|") for x in ["|switch|p1a: Fishy|Dondozo, M|503/503", "|switch|p2a: Bob|Gliscor, F|100/100",
                                        "|-unboost|p1a: Fishy|atk|1", "|turn|1", "|-clearallboost"]])  # fmt: skip
     assert t["p1"].lowered_t1
-    t = run(START + "|move|p1a: Fishy|Spore|p2a: Bob\n|-message|Sleep Clause Mod activated.\n|upkeep\n|turn|2")
+    t = run(
+        START
+        + "|move|p1a: Fishy|Spore|p2a: Bob\n|-message|Sleep Clause Mod activated.\n|upkeep\n|turn|2"
+    )
     assert t["p1"].last_failed
     t = run(START + "|move|p2a: Bob|Shed Tail|p2a: Bob\n|-start|p2a: Bob|Substitute|[from] move: Shed Tail\n"
             "|switch|p2a: Rob|Corviknight, M|100/100|[from] Shed Tail\n|move|p1a: Fishy|Leech Seed||[still]\n"
             "|-fail|p1a: Fishy\n|upkeep\n|turn|2")  # fmt: skip
     assert not t["p1"].last_failed
-    t = run(START + "|move|p1a: Fishy|Double Shock||[still]\n|-fail|p1a: Fishy|move: Double Shock\n|upkeep\n|turn|2")
+    t = run(
+        START
+        + "|move|p1a: Fishy|Double Shock||[still]\n|-fail|p1a: Fishy|move: Double Shock\n|upkeep\n|turn|2"
+    )
     assert not t["p1"].last_failed
-    t = run(START + "|move|p1a: Fishy|Shed Tail|p1a: Fishy\n|-fail|p1a: Fishy|move: Shed Tail|[weak]\n|upkeep\n|turn|2")
+    t = run(
+        START
+        + "|move|p1a: Fishy|Shed Tail|p1a: Fishy\n|-fail|p1a: Fishy|move: Shed Tail|[weak]\n|upkeep\n|turn|2"
+    )
     assert t["p1"].last_failed
 
 
@@ -849,7 +921,11 @@ def test_the_logs_facts_sixth_batch():
     # (a Court Change's swapped screen: its setter of the other side -- S73)
     t = run(START + "|move|p1a: Fishy|Reflect|p1a: Fishy\n|-sidestart|p1: A|Reflect\n|upkeep\n|turn|2\n"
             "|move|p2a: Bob|Court Change|p2a: Bob\n|-swapsideconditions\n|-activate|p2a: Bob|move: Court Change")  # fmt: skip
-    assert t["p2"].setters["reflect"] == "dondozo" and "reflect" in t["p2"].swapped and not t["p1"].swapped
+    assert (
+        t["p2"].setters["reflect"] == "dondozo"
+        and "reflect" in t["p2"].swapped
+        and not t["p1"].swapped
+    )
     # (Slow Start's count stops under a Neutralizing Gas: S74)
     # (Bob comes in this turn and its Slow Start begins: not counted this end of turn -- a mon in
     # at the turn's start whose Slow Start began later is: S153)
@@ -890,7 +966,10 @@ def test_the_logs_facts_seventh_batch():
     Sleep Clause after a Yawn's end is no move's failure (S90); an ability's -block (Aroma Veil)
     fails the move (S91); a Substitute ends with its fainted holder (S92); a status move's -fail at
     a Substitute is kept apart -- an Infiltrator's went through (S93)."""
-    t = run(START + "|move|p1a: Fishy|Will-O-Wisp|p2a: Bob\n|-activate|p2a: Bob|move: Misty Terrain\n|upkeep\n|turn|2")
+    t = run(
+        START
+        + "|move|p1a: Fishy|Will-O-Wisp|p2a: Bob\n|-activate|p2a: Bob|move: Misty Terrain\n|upkeep\n|turn|2"
+    )
     assert t["p1"].last_failed
     t = run(START + "|move|p1a: Fishy|Yawn|p2a: Bob\n|-start|p2a: Bob|move: Yawn|[of] p1a: Fishy\n|upkeep\n|turn|2\n"
             "|move|p1a: Fishy|Earthquake|p2a: Bob\n|-damage|p2a: Bob|80/100\n|-end|p2a: Bob|move: Yawn|[silent]\n"
@@ -899,9 +978,14 @@ def test_the_logs_facts_seventh_batch():
     t = run(START + "|move|p1a: Fishy|Earthquake|p2a: Bob\n|-damage|p2a: Bob|80/100\n|-end|p2a: Bob|move: Yawn|[silent]\n"
             "|-message|Sleep Clause Mod activated.\n|upkeep\n|turn|2")  # fmt: skip
     assert not t["p1"].last_failed
-    t = run(START + "|move|p1a: Fishy|Taunt|p2a: Bob\n|-block|p2a: Bob|ability: Aroma Veil|[of] p2a: Bob\n|upkeep\n|turn|2")
+    t = run(
+        START
+        + "|move|p1a: Fishy|Taunt|p2a: Bob\n|-block|p2a: Bob|ability: Aroma Veil|[of] p2a: Bob\n|upkeep\n|turn|2"
+    )
     assert t["p1"].last_failed
-    t = run(START + "|move|p2a: Bob|Substitute|p2a: Bob\n|-start|p2a: Bob|Substitute\n|faint|p2a: Bob")
+    t = run(
+        START + "|move|p2a: Bob|Substitute|p2a: Bob\n|-start|p2a: Bob|Substitute\n|faint|p2a: Bob"
+    )
     assert not t["p2"].sub_on
     t = run(START + "|move|p2a: Bob|Substitute|p2a: Bob\n|-start|p2a: Bob|Substitute\n"
             "|move|p1a: Fishy|Will-O-Wisp||[still]\n|-fail|p1a: Fishy\n|upkeep\n|turn|2")  # fmt: skip
@@ -944,7 +1028,10 @@ def test_the_logs_facts_seventh_batch():
             "|replace|p1a: Zoroark|Zoroark-Hisui, F\n|-end|p1a: Zoroark|Illusion\n|upkeep\n|turn|3")  # fmt: skip
     assert t["p1"].status.get("zoroarkhisui") == "tox" and t["p1"].toxic == 2
     # (S112: Simple Beam on a Dry Skin mon -- the old ability named -- is an ability change)
-    t = run(START + "|move|p1a: Fishy|Simple Beam|p2a: Bob\n|-ability|p2a: Bob|Simple|Dry Skin|[from] move: Simple Beam")
+    t = run(
+        START
+        + "|move|p1a: Fishy|Simple Beam|p2a: Bob\n|-ability|p2a: Bob|Simple|Dry Skin|[from] move: Simple Beam"
+    )
     assert t["p2"].ability_now == "simple" and not t["p1"].failed_now
     # (S113: a broken Illusion's stage changes cleared -- White Herb's negative ones)
     t = run(START + "|switch|p2a: Rob|Corviknight, F|100/100\n|-unboost|p2a: Rob|spe|1\n|-boost|p2a: Rob|atk|1\n"
@@ -963,7 +1050,10 @@ def test_the_logs_facts_seventh_batch():
             "|-damage|p1a: Fishy|300/503\n|upkeep\n|turn|2")  # fmt: skip
     assert t["p2"].locked == ["outrage", 1]
     # (S118: a mon out by fainting has no Regenerator -- brought back by Revival Blessing)
-    t = run(START + "|faint|p2a: Bob\n|switch|p2a: Rob|Corviknight, M|100/100\n|-heal|p2: Bob|50/100|[from] move: Revival Blessing")
+    t = run(
+        START
+        + "|faint|p2a: Bob\n|switch|p2a: Rob|Corviknight, M|100/100\n|-heal|p2: Bob|50/100|[from] move: Revival Blessing"
+    )
     assert "gliscor" in t["p2"].no_regen
     # (S120: a move into Protect -- a null result -- ends the Metronome item's count)
     t = run(START + "|move|p1a: Fishy|Wave Crash|p2a: Bob\n|-damage|p2a: Bob|80/100\n|upkeep\n|turn|2\n"
@@ -993,7 +1083,10 @@ def test_the_logs_facts_eighth_batch():
     t = run(START + "|move|p1a: Fishy|Perish Song|p1a: Fishy\n|-start|p1a: Fishy|perish3|[silent]\n"
             "|-start|p2a: Bob|perish3|[silent]")  # fmt: skip
     assert t["p1"].perish_fresh and t["p2"].perish_fresh
-    t = run(START + "|faint|p2a: Bob\n|move|p1a: Fishy|Double Shock|p2: Bob|[notarget]\n|-fail|p1a: Fishy\n|upkeep\n|turn|2")
+    t = run(
+        START
+        + "|faint|p2a: Bob\n|move|p1a: Fishy|Double Shock|p2: Bob|[notarget]\n|-fail|p1a: Fishy\n|upkeep\n|turn|2"
+    )
     assert t["p1"].last_failed
     t = run(START + "|switch|p1a: Rob|Corviknight, F|251/251")
     assert t["p1"].stint["max"] == "251" and t["p1"].past_stints[-1]["species"] == "dondozo"
@@ -1017,6 +1110,7 @@ def test_the_logs_facts_eighth_batch():
             "|-ability|p2a: Rob|Intimidate|boost\n|-fail|p1a: Fishy|unboost|atk|[from] ability: Own Tempo|[of] p1a: Fishy\n"
             "|upkeep\n|turn|2")  # fmt: skip
     assert not t["p1"].last_failed
+
 
 def test_imprison_pressure_glaive_rush_and_a_transforms_types():
     """S134: Imprison (self-targeting, mustpressure) at a Pressure foe takes 2 PP -- poke-env
@@ -1054,7 +1148,10 @@ def test_a_replays_illusion_and_transform_records():
     t = run(START + "|-ability|p1a: Fishy|Pressure\n|move|p2a: Bob|Earthquake|p1a: Fishy\n|-damage|p1a: Fishy|400/503\n"
             "|move|p2a: Bob|Swords Dance|p2a: Bob\n|-boost|p2a: Bob|atk|2")  # fmt: skip
     assert t["p2"].stint["costs"] == [2, 1]
-    t = run(START + "|-transform|p2a: Bob|p1a: Fishy|[from] ability: Imposter\n|switch|p2a: Rob|Corviknight, M|100/100")
+    t = run(
+        START
+        + "|-transform|p2a: Bob|p1a: Fishy|[from] ability: Imposter\n|switch|p2a: Rob|Corviknight, M|100/100"
+    )
     assert t["p2"].transformed_out == {"gliscor": "dondozo"}
     # (S147: Psych Up -- |-copyboost|user|target -- the user takes the target's stage changes)
     import logging
@@ -1096,7 +1193,11 @@ def test_a_broken_illusions_tera_is_the_zoroarks():
         b.parse_message(line.split("|"))
     zoroark = b.opponent_active_pokemon
     flygon = next(m for m in b.opponent_team.values() if m.species == "flygon")
-    assert zoroark.species == "zoroarkhisui" and zoroark.is_terastallized and zoroark.tera_type == PokemonType.NORMAL
+    assert (
+        zoroark.species == "zoroarkhisui"
+        and zoroark.is_terastallized
+        and zoroark.tera_type == PokemonType.NORMAL
+    )
     assert not flygon.is_terastallized and flygon.tera_type is None
     assert flygon.level == 85 and zoroark.level == 80
     # (the disguise's own, before: a Serperior terastallized, a Zoroark as it later -- its own)
@@ -1150,7 +1251,10 @@ def test_the_replay_paths_second_run_facts():
         b.parse_message(line.split("|"))
     assert b.opponent_active_pokemon.base_types == [PokemonType.WATER]
     # (a recharge removes Truant's volatile -- Showdown's mustrecharge: no loaf after)
-    t = run(START + "|move|p2a: Bob|Giga Impact|p1a: Fishy\n|-mustrecharge|p2a: Bob\n|upkeep\n|turn|2\n|cant|p2a: Bob|recharge")
+    t = run(
+        START
+        + "|move|p2a: Bob|Giga Impact|p1a: Fishy\n|-mustrecharge|p2a: Bob\n|upkeep\n|turn|2\n|cant|p2a: Bob|recharge"
+    )
     assert not t["p2"].truant_next
 
 
@@ -1169,7 +1273,10 @@ def test_a_healing_wish_waits_for_a_mon_that_needs_it():
             "|-heal|p1a: Cat|300/300|[from] move: Healing Wish\n|upkeep\n|turn|3")  # fmt: skip
     assert t["p1"].healing_wish == 0
     # (no one to switch to: [still], -fail -- none waits)
-    t = run(START + "|move|p1a: Fishy|Healing Wish|p1a: Fishy|[still]\n|-fail|p1a: Fishy\n|upkeep\n|turn|2")
+    t = run(
+        START
+        + "|move|p1a: Fishy|Healing Wish|p1a: Fishy|[still]\n|-fail|p1a: Fishy\n|upkeep\n|turn|2"
+    )
     assert t["p1"].healing_wish == 0
 
 
@@ -1242,11 +1349,11 @@ def test_the_moves_a_choice_lock_counts_since_its_item_or_transform():
     t = run(START + "|move|p2a: Bob|Earthquake|p1a: Fishy\n|upkeep\n|turn|2\n|move|p1a: Fishy|Trick|p2a: Bob\n"
             "|-item|p2a: Bob|Choice Scarf|[from] move: Trick\n|move|p2a: Bob|Toxic|p1a: Fishy\n|upkeep\n|turn|3")  # fmt: skip
     st = t["p2"].stint
-    assert st["moves"][st["item_mark"]:] == ["toxic"]
+    assert st["moves"][st["item_mark"] :] == ["toxic"]
     t = run(START + "|move|p2a: Bob|Transform|p1a: Fishy\n|-transform|p2a: Bob|p1a: Fishy\n|upkeep\n|turn|2\n"
             "|move|p2a: Bob|Substitute|p2a: Bob\n|upkeep\n|turn|3")  # fmt: skip
     st = t["p2"].stint
-    assert st["moves"][st["item_mark"]:] == ["substitute"]
+    assert st["moves"][st["item_mark"] :] == ["substitute"]
 
 
 def test_a_lingering_aromas_ability_on_the_contact_mon():

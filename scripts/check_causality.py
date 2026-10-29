@@ -53,7 +53,9 @@ def game_diffs(row: dict, belief) -> tuple[list[tuple], int]:
 
     P._position = position
     try:
-        positions = P.positions_from_replay(row, belief, random.Random(0), 1.0, 0, 10**6, 0, "split")
+        positions = P.positions_from_replay(
+            row, belief, random.Random(0), 1.0, 0, 10**6, 0, "split"
+        )
     finally:
         P._position = inner
     out = []
@@ -91,7 +93,9 @@ def _games(n: int, seed: int) -> list[dict]:
     rows: list = []
     for f in files:
         pf = pq.ParquetFile(f)
-        for batch in pf.iter_batches(batch_size=2000, columns=["id", "log", "rating", "uploadtime"]):
+        for batch in pf.iter_batches(
+            batch_size=2000, columns=["id", "log", "rating", "uploadtime"]
+        ):
             rows += [r for r in batch.to_pylist() if rng.random() < 0.05]
             if len(rows) >= n:
                 return rows[:n]
@@ -106,7 +110,7 @@ def main() -> None:
     ap.add_argument("--out", default="data/selfplay/diag/causality.json")
     a = ap.parse_args()
     rows = _games(a.games, a.seed)
-    chunks = [rows[i:i + 10] for i in range(0, len(rows), 10)]
+    chunks = [rows[i : i + 10] for i in range(0, len(rows), 10)]
     kinds: collections.Counter = collections.Counter()
     games: dict = collections.defaultdict(set)
     examples: dict = collections.defaultdict(list)
@@ -121,12 +125,24 @@ def main() -> None:
                 games[key].add(gid)
                 if len(examples[key]) < 20:
                     examples[key].append((gid, turn, side, mine, theirs))
-    print(f"{len(rows)} replays, {total} positions: {sum(kinds.values())} differences; failed {len(failed)}")
+    print(
+        f"{len(rows)} replays, {total} positions: {sum(kinds.values())} differences; failed {len(failed)}"
+    )
     for k, c in kinds.most_common():
         print(f"  {c:6d}  {k:24s} in {len(games[k])} games, e.g. {examples[k][0]}"[:300])
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
-    Path(a.out).write_text(json.dumps({"games": len(rows), "positions": total, "kinds": dict(kinds),
-                                       "failed": failed[:50], "examples": examples}, indent=1))
+    Path(a.out).write_text(
+        json.dumps(
+            {
+                "games": len(rows),
+                "positions": total,
+                "kinds": dict(kinds),
+                "failed": failed[:50],
+                "examples": examples,
+            },
+            indent=1,
+        )
+    )
 
 
 if __name__ == "__main__":

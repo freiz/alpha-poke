@@ -106,7 +106,11 @@ def test_an_observation_is_read_with_the_item_held_then():
     turn too (its order was before the swap) --, the turn after the one the log named."""
     speeds = {"basculegion": (255, "", "adaptability")}
     obs = observations(lines(SWITCHEROO), "p1", lambda sp: speeds[sp])
-    assert [(o.turn, o.item_then) for o in obs] == [(1, "lifeorb"), (2, "lifeorb"), (3, "choicescarf")]
+    assert [(o.turn, o.item_then) for o in obs] == [
+        (1, "lifeorb"),
+        (2, "lifeorb"),
+        (3, "choicescarf"),
+    ]
     assert consistent(obs[:1], 217, "choicescarf")  # (its scarf: not at turn 1)
     # (we received nothing: it held none before)
     empty = SWITCHEROO.replace("|-item|p1a: Fish|Life Orb|[from] move: Trick\n", "")
@@ -165,7 +169,14 @@ def test_mycelium_might_and_stall_are_left_out():
 """
     assert _obs(log, {"toedscruel": (224, "", "myceliummight")}) == []
     # (an attack of its: in order)
-    assert len(_obs(log.replace("|Spore|", "|Earth Power|"), {"toedscruel": (224, "", "myceliummight")})) == 1
+    assert (
+        len(
+            _obs(
+                log.replace("|Spore|", "|Earth Power|"), {"toedscruel": (224, "", "myceliummight")}
+            )
+        )
+        == 1
+    )
 
 
 def test_our_speed_is_read_with_our_item_then():
@@ -274,7 +285,9 @@ def test_each_turn_read_with_the_abilities_then():
 """
     assert _obs(log, {"regigigas": (236, "leftovers", "roughskin")}) == []
     # (no change: the same turns kept)
-    plain = log.replace("|-activate|p1a: Regigigas|Skill Swap|Rough Skin|Slow Start|[of] p2a: Garchomp\n", "")
+    plain = log.replace(
+        "|-activate|p1a: Regigigas|Skill Swap|Rough Skin|Slow Start|[of] p2a: Garchomp\n", ""
+    )
     assert [o.turn for o in _obs(plain, {"regigigas": (236, "leftovers", "pressure")})] == [1, 2, 3]
 
 

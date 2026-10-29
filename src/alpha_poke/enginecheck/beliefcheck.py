@@ -68,15 +68,27 @@ def _move_support(belief, mon, team_names) -> set:
     # (the sampler's own weights -- engine_state.move_weights, its floor too: every archetype's and
     # the prior's; 2026-10-25 review, this re-derived them and a broken floor went unseen)
     ss = belief.sets.get(species)
-    ks = range(len(ss.params["move"])) if ss is not None and ss.params and ss.vocab.get("move") else ()
+    ks = (
+        range(len(ss.params["move"]))
+        if ss is not None and ss.params and ss.vocab.get("move")
+        else ()
+    )
     out: set = set()
     for k in (None, *ks):
-        out |= {to_id(m) for m, w in move_weights(ss, k, dist, to_id(mon.species), 0.0).items() if w > 0}
+        out |= {
+            to_id(m) for m, w in move_weights(ss, k, dist, to_id(mon.species), 0.0).items() if w > 0
+        }
     return out
 
 
-def belief_diffs(p1: str, p2: str, seed: int, max_turns: int = 40, script: list | None = None,
-                 fmt: str | None = None) -> dict:
+def belief_diffs(
+    p1: str,
+    p2: str,
+    seed: int,
+    max_turns: int = 40,
+    script: list | None = None,
+    fmt: str | None = None,
+) -> dict:
     """{"decisions", "kinds": {kind: n}, "examples": {kind: [...]}, "errors"} over a recorded
     battle's decisions, both sides' views."""
     from alpha_poke.agents.belief_state import _preview_name, ability_probs
@@ -127,13 +139,25 @@ def belief_diffs(p1: str, p2: str, seed: int, max_turns: int = 40, script: list 
 
     def stat_of(side_id: str, sp: str):
         m = true_sets.get((side_id, sp)) or next(
-            (v for (s, n), v in true_sets.items() if s == side_id and (sp.startswith(n) or n.startswith(sp))), None)
+            (
+                v
+                for (s, n), v in true_sets.items()
+                if s == side_id and (sp.startswith(n) or n.startswith(sp))
+            ),
+            None,
+        )
         if m is None:
             return None
         return lambda base: spe_stat(base, m["evs"][5], to_id(m["nature"]), m["level"], m["ivs"][5])
-    for k, side, b, _built, t in decisions(p1, p2, seed, max_turns, ("p1", "p2"), stats, False, script, fmt):
+
+    for k, side, b, _built, t in decisions(
+        p1, p2, seed, max_turns, ("p1", "p2"), stats, False, script, fmt
+    ):
         out["decisions"] += 1
-        names = tuple(belief.display(m.species) for m in (b.teampreview_opponent_team or list(b.opponent_team.values())))
+        names = tuple(
+            belief.display(m.species)
+            for m in (b.teampreview_opponent_team or list(b.opponent_team.values()))
+        )
         truth = {str(p.id).lower(): p for p in t.side_two.pokemon}
         obs = battle_observations(b) or {}
         hits = getattr(b, "_alpha_hits", None)
@@ -144,7 +168,9 @@ def belief_diffs(p1: str, p2: str, seed: int, max_turns: int = 40, script: list 
         for mon in b.opponent_team.values():
             sp = to_id(mon.species)
             # (poke-env keeps the species it came in as: its forme now the truth's -- a prefix)
-            tm = truth.get(sp) or next((p for x, p in truth.items() if x.startswith(sp) or sp.startswith(x)), None)
+            tm = truth.get(sp) or next(
+                (p for x, p in truth.items() if x.startswith(sp) or sp.startswith(x)), None
+            )
             if tm is None or mon.transformed:
                 continue
             item, ab = str(tm.item).lower(), str(tm.base_ability).lower()
@@ -176,7 +202,11 @@ def belief_diffs(p1: str, p2: str, seed: int, max_turns: int = 40, script: list 
                     # (the candidate holds the item it started with, as F1's candidates do --
                     # likelihood puts the hit's own in for a later phase: the code under test,
                     # not around it -- a mutation check missed it so, 2026-10-24)
-                    if (them, sp) in changes and changes[(them, sp)] is None and h.item_then is None:
+                    if (
+                        (them, sp) in changes
+                        and changes[(them, sp)] is None
+                        and h.item_then is None
+                    ):
                         continue  # (its item changed, the one it started with unknown)
                     then = changes.get((them, sp)) or item
                     try:
@@ -189,20 +219,34 @@ def belief_diffs(p1: str, p2: str, seed: int, max_turns: int = 40, script: list 
                             continue
                         on = h.defender_tera if h.by_us else h.tera
                         tera = on or str(tm.tera_type).lower()
-                        vec = [tm.maxhp, tm.attack, tm.defense, tm.special_attack, tm.special_defense, tm.speed]
-                        p = likelihood(h, bases[h.turn], os_, ts, [(then, ab, vec, tera, bool(on))])[0]
+                        vec = [
+                            tm.maxhp,
+                            tm.attack,
+                            tm.defense,
+                            tm.special_attack,
+                            tm.special_defense,
+                            tm.speed,
+                        ]
+                        p = likelihood(
+                            h, bases[h.turn], os_, ts, [(then, ab, vec, tera, bool(on))]
+                        )[0]
                     except BaseException as e:  # noqa: BLE001
                         out["errors"].append(f"likelihood: {type(e).__name__}: {str(e)[:100]}")
                         continue
                     if p <= EPS:
-                        found("belief:damage", (*where, h.turn, h.move, h.by_us, then, h.before, h.after))
+                        found(
+                            "belief:damage",
+                            (*where, h.turn, h.move, h.by_us, then, h.before, h.after),
+                        )
             # (the prior's support: the soft checks)
             known = list(own_moves(mon))
             if mon.item == "unknown_item" and item not in ("", "none"):
                 if _item_support(belief, mon, names, known).get(item, 0.0) <= 0:
                     found("belief:item", (*where, item))
             if not mon.ability and ab and ab != "none":
-                if ability_probs(mon).get(ab, 0.0) <= 0 and not any(to_id(x) == ab for x in ability_probs(mon)):
+                if ability_probs(mon).get(ab, 0.0) <= 0 and not any(
+                    to_id(x) == ab for x in ability_probs(mon)
+                ):
                     found("belief:ability", (*where, ab))
             if not mon.is_terastallized:
                 # (the name the sampler asks with: engine_state.sample_set's -- poke-env's id is no

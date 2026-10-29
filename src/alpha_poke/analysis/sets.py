@@ -173,5 +173,3 @@ def mine_sets(mons: pd.DataFrame, min_appearances: int = 150, **kw) -> dict[str,
         if res:
             out[sp] = res
     return out
-
-
