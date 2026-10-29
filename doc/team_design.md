@@ -69,8 +69,27 @@ Sets that only replays show (no forum original) are reconstructed; their accurac
   common Pokemon, defensive synergy, the role slots (hazards, removal, speed control, pivoting),
   no auto-losses to the common archetypes (rain, sun, stall, hyper offense), then ladder testing.
   The working hypothesis (the user's): a high expected score while avoiding bad matchups beats
-  picking counters -- the CVaR half of stage 1's score, the none / one counts. Stage 2's results
-  test it (which stage-1 measure predicts the bot's results).
+  picking counters. Tested in stage 2 (below): threat coverage (no unanswered threats) predicts
+  the bot's results somewhat; the matchup model's CVaR does not.
+
+## Stage 2's validation (2026-10-28)
+
+17 teams (stage 1's 12 finalists + the earlier win-rate top 5), each against the same 100 teams of
+the last 21 days' ladder (players >= 1500, sets completed by the belief), our network on both
+sides (1,600 iterations), each pair twice with the bots exchanged: 3,400 games, 35 failed (34 of
+them the stall team's games over the 20-minute cap). The bot's scores 49-75% (about +-7% each:
+the opponents' completed sets are weaker than real ones, so only the ranking means anything):
+the stall team 75% (but its long games time out, and bots may handle stall worse than people),
+the earlier top 5's Darkrai / Garganacl / Iron Treads / Moltres / Ogerpon-W / Zamazenta and
+Dragonite / Gholdengo / Glimmora / Ogerpon-W / Ting-Lu / Zamazenta 71%, the forum's Alomomola /
+Great Tusk / Iron Crown / Sinistcha / Ting-Lu / Zamazenta 70.5%; stage 1's first 67.5%, its
+seventh 49%. Which measure predicts the bot's score (Spearman over the 17): threats with no
+answer -0.34 (the right direction, the most useful), only one answer -0.10, role slots 0.00, the
+matchup model's expected score -0.23 and CVaR -0.22 (the wrong direction). Per simulated pair
+the matchup model's prediction correlates +0.06 with the result (log loss 0.679 vs 0.693): a
+model of people's ladder results says little about the teams in our bot's hands -- stage 2 is
+the decision, stage 1 only a candidate list; threat coverage is a cheap filter worth keeping.
+(`scripts/validate_team_measures.py`; the log data/eval/teamsim/20261028-172543_*.jsonl.)
 
 ## The first friendly game (2026-10-28, r2-gen0a2, 3 s x 4 threads, team ladder_top5/team_04)
 
