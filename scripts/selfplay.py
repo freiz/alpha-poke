@@ -124,7 +124,7 @@ def cmd_run(a) -> None:
 STATE = SELFPLAY_DIR / "state.json"  # the current network and every generation's summary
 # 2026-10-20: self-play restarted from v0 (the v7.1 human data: inputs as the current state
 # construction, no search targets from the old engine); the lineage before it (v5-glu, gens
-# 0-8) is in data/selfplay/archive-v6/ and exp/archive-2026-10-20/, its game data deleted.
+# 0-8) is in data/selfplay/archive-v6/ and data/selfplay/registry/archive-2026-10-20/, its game data deleted.
 # LINEAGE prefixes this lineage's products (self-play data data/train/<LINEAGE>-sp<G>, runs
 # <LINEAGE>-gen<G>): the registry finds runs by name, the old sp-gen<G> runs stay
 BASE_RUN = MODEL  # (2026-10-26: v6arch-pp-v75; 2026-10-23: v6arch-pp on v7.3; was v72/v0)
@@ -220,7 +220,7 @@ def cmd_convert(a) -> None:
 
 def registry_match(mid: str, a_run: str, b_run: str, res: dict, kind: str, elo: bool,
                    **extra) -> None:  # fmt: skip
-    """Add the match to the model registry (exp/) and rebuild exp/models.json."""
+    """Add the match to the model registry (data/selfplay/registry) and rebuild its models.json."""
     from alpha_poke.selfplay import registry
 
     registry.add_match(registry.match_row(mid, a_run, b_run, res, kind=kind, elo=elo, **extra))
@@ -228,8 +228,8 @@ def registry_match(mid: str, a_run: str, b_run: str, res: dict, kind: str, elo: 
 
 
 def cmd_registry(a) -> None:
-    """Rebuild exp/models.json (Elo fit, model entries) from state.json, the runs and
-    exp/matches.jsonl."""
+    """Rebuild the registry's models.json (Elo fit, model entries) from state.json, the runs and
+    matches.jsonl."""
     from alpha_poke.selfplay import registry
 
     out = registry.write(state())
@@ -961,7 +961,7 @@ def main() -> None:
     # after the last faint
     p.add_argument("--loop-margin", type=int, default=10)
     p.set_defaults(fn=cmd_convert)
-    p = sub.add_parser("registry", help="rebuild the model registry exp/models.json")
+    p = sub.add_parser("registry", help="rebuild the model registry (data/selfplay/registry/models.json)")
     p.set_defaults(fn=cmd_registry)
     p = sub.add_parser("stats", help="game statistics of the generation")
     p.add_argument("--gen", type=int, required=True)

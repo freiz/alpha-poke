@@ -1,11 +1,12 @@
-"""The model registry (exp/): every network version with what made it and how it played.
+"""The model registry (data/selfplay/registry/; git-ignored, exp/ until 2026-10-28): every network
+version with what made it and how it played.
 
-  exp/matches.jsonl  one row per head-to-head evaluation: models, settings (search, iterations or
+  matches.jsonl      one row per head-to-head evaluation: models, settings (search, iterations or
                      time, team pool), games, pairs, paired mean and its 95% CI, the SPRT
                      ratio / decision, the log, and ``elo``: whether it enters the Elo fit
                      (promotion-grade evaluations; diagnostics such as policy-only games or
                      A = B controls are kept but not fitted)
-  exp/models.json    one entry per model: run, weights hash, parent, generation, training
+  models.json        one entry per model: run, weights hash, parent, generation, training
                      settings, offline metrics, promoted or not, the generations it played,
                      estimated Elo (95% CI) and its matches
 
@@ -23,10 +24,11 @@ from pathlib import Path
 
 import numpy as np
 
+from alpha_poke import paths
 from alpha_poke.selfplay.runner import MODEL
 
-ROOT = Path(__file__).resolve().parents[3]
-EXP = ROOT / "exp"
+ROOT = paths.ROOT
+EXP = paths.SELFPLAY / "registry"
 MATCHES = EXP / "matches.jsonl"
 MODELS = EXP / "models.json"
 RUNS = ROOT / "data" / "train"  # <data>/runs/<run>
@@ -41,8 +43,8 @@ def run_dir(name: str) -> Path:
 
 
 # 2026-10-09: self-play restarted from v5-glu (the human-data network); the earlier run is in
-# exp/archive-2026-10-08/. 2026-10-20: restarted from v0 (lineage r2, scripts/selfplay.py); the
-# v5-glu lineage's registry is in exp/archive-2026-10-20/. 2026-10-23: the start v6arch-pp (v7.3)
+# registry/archive-2026-10-08/. 2026-10-20: restarted from v0 (lineage r2, scripts/selfplay.py); the
+# v5-glu lineage's registry is in registry/archive-2026-10-20/. 2026-10-23: the start v6arch-pp (v7.3)
 # before r2's first generation (no matches yet), 2026-10-26 v6arch-pp-v75 (v7.5): the anchor is
 # the start's name (runner.MODEL)
 ANCHOR, ANCHOR_ELO = Path(MODEL).name, 1500.0
@@ -60,7 +62,7 @@ def read_matches() -> list[dict]:
 
 def add_match(row: dict) -> None:
     """Append a match (replaces an earlier row with the same id)."""
-    EXP.mkdir(exist_ok=True)
+    EXP.mkdir(parents=True, exist_ok=True)
     rows = [r for r in read_matches() if r["id"] != row["id"]]
     rows.append(row)
     MATCHES.write_text("".join(json.dumps(r) + "\n" for r in rows))
@@ -246,7 +248,7 @@ def build(state: dict) -> dict:
 
 
 def write(state: dict) -> dict:
-    EXP.mkdir(exist_ok=True)
+    EXP.mkdir(parents=True, exist_ok=True)
     out = build(state)
     MODELS.write_text(json.dumps(out, indent=1))
     return out

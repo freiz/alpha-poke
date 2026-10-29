@@ -29,10 +29,9 @@ CATALOG = paths.CATALOG
 POOLS_DIR = paths.POOLS  # (where generated pools go; a pool by name: paths.pool)
 # the evaluation pool: 40 teams reconstructed from replays (2026-10)
 DEFAULT_POOL = paths.pool("replay40")
-DEFAULT_TEAM_DIR = ROOT / "configs" / "teams"
 
 
-def load_team_files(team_dir: Path | str = DEFAULT_TEAM_DIR) -> dict[str, str]:
+def load_team_files(team_dir: Path | str = DEFAULT_POOL) -> dict[str, str]:
     """Return {team name: packed team} for every ``*.txt`` file in ``team_dir``."""
     teams = {}
     for path in sorted(Path(team_dir).glob("*.txt")):
