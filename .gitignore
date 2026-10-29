@@ -24,17 +24,19 @@ wandb/
 *.ckpt
 *.npz
 
-# Data (except the team catalog and the evaluation pools: small; the crawl is slow to redo and
-# the replay pools cannot be rebuilt as they were)
+# Data: all of data/ is local, except the curated team data -- the forum catalog and the fixed
+# pools named here (small; the crawl is slow to redo, the replay pools cannot be rebuilt as they
+# were). Any other pool (sampled, simulated, candidates) stays local: listed by name, not excluded.
 /data/*
 !/data/teams/
 /data/teams/*
 !/data/teams/catalog.jsonl
 !/data/teams/pools/
-# diagnostic pools sampled from a seed (data/selfplay/diag): reproducible, not kept in git
-/data/teams/pools/wide*/
-/data/teams/pools/offmeta*/
-/data/teams/pools/random*/
+/data/teams/pools/*
+!/data/teams/pools/ab600b/
+!/data/teams/pools/forum_curated/
+!/data/teams/pools/replay40/
+!/data/teams/pools/replay40b/
 
 # Editor / OS
 .vscode/
