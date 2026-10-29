@@ -1,0 +1,58 @@
+Galvantula @ Focus Sash  
+Ability: Compound Eyes  
+Tera Type: Ghost  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Sticky Web  
+- Thunder Wave  
+- Thunder  
+- Energy Ball  
+
+Darkrai @ Life Orb  
+Ability: Bad Dreams  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Nasty Plot  
+- Sludge Bomb  
+- Dark Pulse  
+- Ice Beam  
+
+Skeledirge @ Covert Cloak  
+Ability: Unaware  
+Tera Type: Fairy  
+EVs: 252 HP / 4 SpA / 252 SpD  
+Calm Nature  
+- Shadow Ball  
+- Torch Song  
+- Earth Power  
+- Will-O-Wisp  
+
+Dusclops @ Eviolite  
+Ability: Pressure  
+EVs: 252 HP / 4 Def / 252 SpD  
+Calm Nature  
+- Pain Split  
+- Will-O-Wisp  
+- Bind  
+- Calm Mind  
+
+Garchomp @ Life Orb  
+Ability: Rough Skin  
+Tera Type: Fairy  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Naive Nature  
+- Earthquake  
+- Scale Shot  
+- Swords Dance  
+- Stealth Rock  
+
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Power Whip  
+- Ivy Cudgel  
+- U-turn  
+- Horn Leech

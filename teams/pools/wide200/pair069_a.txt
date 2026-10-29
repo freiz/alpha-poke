@@ -1,0 +1,59 @@
+Ceruledge @ Air Balloon  
+Ability: Flash Fire  
+Tera Type: Electric  
+EVs: 96 HP / 236 Atk / 176 Spe  
+Adamant Nature  
+- Swords Dance  
+- Poltergeist  
+- Bitter Blade  
+- Shadow Sneak  
+
+Greninja @ Life Orb  
+Ability: Battle Bond  
+Tera Type: Water  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Water Shuriken  
+- Ice Beam  
+- Dark Pulse  
+- Hydro Pump  
+
+Gardevoir @ Choice Scarf  
+Ability: Trace  
+Tera Type: Fairy  
+EVs: 252 HP / 252 Def / 4 SpA  
+Bold Nature  
+- Thunderbolt  
+- Moonblast  
+- Psyshock  
+- Trick  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Fairy  
+EVs: 244 HP / 12 Def / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Earthquake  
+- Spikes  
+- Protect  
+
+Snorlax @ Chesto Berry  
+Ability: Thick Fat  
+Tera Type: Fairy  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- Rest  
+- Sleep Talk  
+- Curse  
+- Thunderbolt  
+
+Ogerpon-Cornerstone @ Cornerstone Mask  
+Ability: Sturdy  
+Tera Type: Rock  
+EVs: 12 HP / 244 Atk / 252 Spe  
+Adamant Nature  
+- Ivy Cudgel  
+- Horn Leech  
+- Swords Dance  
+- Trailblaze

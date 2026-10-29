@@ -1,0 +1,59 @@
+Fezandipiti @ Life Orb  
+Ability: Toxic Chain  
+Tera Type: Ground  
+EVs: 4 HP / 80 Atk / 252 SpD / 172 Spe  
+Jolly Nature  
+- Beat Up  
+- Play Rough  
+- Roost  
+- Swords Dance  
+
+Dragapult @ Life Orb  
+Ability: Infiltrator  
+Tera Type: Dragon  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Draco Meteor  
+- Dragon Darts  
+- Will-O-Wisp  
+- U-turn  
+
+Great Tusk @ Rocky Helmet  
+Ability: Protosynthesis  
+Tera Type: Fighting  
+EVs: 252 HP / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Close Combat  
+- Stealth Rock  
+- Ice Spinner  
+
+Samurott-Hisui @ Heavy-Duty Boots  
+Ability: Sharpness  
+Tera Type: Poison  
+EVs: 248 HP / 84 Atk / 124 SpD / 52 Spe  
+Adamant Nature  
+- Aqua Jet  
+- Ceaseless Edge  
+- Knock Off  
+- Flip Turn  
+
+Moltres @ Heavy-Duty Boots  
+Ability: Flame Body  
+Tera Type: Fairy  
+EVs: 248 HP / 252 Def / 8 SpD  
+Bold Nature  
+- Will-O-Wisp  
+- U-turn  
+- Flamethrower  
+- Roost  
+
+Scizor @ Leftovers  
+Ability: Technician  
+Tera Type: Fire  
+EVs: 120 HP / 252 Atk / 136 Spe  
+Adamant Nature  
+- Knock Off  
+- Bullet Punch  
+- U-turn  
+- Close Combat

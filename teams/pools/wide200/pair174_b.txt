@@ -1,0 +1,59 @@
+Scizor @ Rocky Helmet  
+Ability: Technician  
+Tera Type: Steel  
+EVs: 108 HP / 252 Atk / 144 SpD  
+Adamant Nature  
+- Trailblaze  
+- Bullet Punch  
+- Knock Off  
+- Swords Dance  
+
+Zamazenta @ Life Orb  
+Ability: Dauntless Shield  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Crunch  
+- Close Combat  
+- Body Press  
+- Ice Fang  
+
+Darkrai @ Red Card  
+Ability: Bad Dreams  
+Tera Type: Poison  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Thunder  
+- Dark Pulse  
+- Ice Beam  
+- Trick  
+
+Dondozo @ Leftovers  
+Ability: Unaware  
+Tera Type: Dragon  
+EVs: 252 HP / 4 Atk / 252 Def  
+Impish Nature  
+- Chilling Water  
+- Bulldoze  
+- Rest  
+- Wave Crash  
+
+Coalossal @ Air Balloon  
+Ability: Flame Body  
+Tera Type: Bug  
+EVs: 248 HP / 252 Def / 8 SpA  
+Bold Nature  
+- Spikes  
+- Meteor Beam  
+- Curse  
+- Flamethrower  
+
+Skeledirge @ Covert Cloak  
+Ability: Unaware  
+Tera Type: Water  
+EVs: 252 HP / 4 Def / 252 SpD  
+Calm Nature  
+- Alluring Voice  
+- Earth Power  
+- Slack Off  
+- Torch Song

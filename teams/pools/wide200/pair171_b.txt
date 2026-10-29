@@ -1,0 +1,59 @@
+Cobalion @ Leftovers  
+Ability: Justified  
+Tera Type: Steel  
+EVs: 252 SpA / 252 Spe  
+Modest Nature  
+- Iron Head  
+- Taunt  
+- Body Press  
+- Stealth Rock  
+
+Gardevoir @ Focus Sash  
+Ability: Trace  
+Tera Type: Fire  
+EVs: 252 SpA / 252 Spe  
+Timid Nature  
+- Moonblast  
+- Psyshock  
+- Trick  
+- Encore  
+
+Garchomp @ Rocky Helmet  
+Ability: Rough Skin  
+Tera Type: Ghost  
+EVs: 252 HP / 216 Def / 40 Spe  
+Impish Nature  
+- Dragon Tail  
+- Stealth Rock  
+- Spikes  
+- Earthquake  
+
+Dragonite @ Heavy-Duty Boots  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Extreme Speed  
+- Earthquake  
+- Dragon Dance  
+- Roost  
+
+Entei @ Leftovers  
+Ability: Inner Focus  
+Tera Type: Normal  
+EVs: 252 Atk / 100 Def / 60 SpD / 96 Spe  
+Adamant Nature  
+- Iron Head  
+- Stone Edge  
+- Extreme Speed  
+- Stomping Tantrum  
+
+Milotic @ Leftovers  
+Ability: Competitive  
+Tera Type: Fairy  
+EVs: 252 HP / 252 Def / 4 SpA  
+Bold Nature  
+- Dragon Tail  
+- Draining Kiss  
+- Scald  
+- Surf

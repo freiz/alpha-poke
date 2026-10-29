@@ -1,0 +1,66 @@
+Deoxys-Speed @ Mental Herb  
+Ability: Pressure  
+Tera Type: Psychic  
+EVs: 248 HP / 8 SpA / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Spikes  
+- Taunt  
+- Psycho Boost  
+- Thunder Wave  
+
+Iron Treads @ Leftovers  
+Ability: Quark Drive  
+Shiny: Yes  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Earthquake  
+- Ice Spinner  
+- Stealth Rock  
+
+Regice @ Leftovers  
+Ability: Ice Body  
+Shiny: Yes  
+Tera Type: Water  
+EVs: 252 HP / 252 Def / 4 SpD  
+Calm Nature  
+IVs: 0 Atk  
+- Ice Beam  
+- Charge Beam  
+- Rest  
+- Sleep Talk  
+
+Latios @ Soul Dew  
+Ability: Levitate  
+Tera Type: Poison  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Draco Meteor  
+- Luster Purge  
+- Energy Ball  
+- Flip Turn  
+
+Kingambit @ Black Glasses  
+Ability: Supreme Overlord  
+Shiny: Yes  
+Tera Type: Flying  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Sucker Punch  
+- Kowtow Cleave  
+- Iron Head  
+- Swords Dance  
+
+Slowking-Galar @ Heavy-Duty Boots  
+Ability: Regenerator  
+Shiny: Yes  
+Tera Type: Fairy  
+EVs: 252 HP / 252 Def / 4 SpD  
+Relaxed Nature  
+IVs: 0 Atk  
+- Chilly Reception  
+- Sludge Bomb  
+- Thunder Wave  
+- Slack Off

@@ -1,0 +1,59 @@
+Ting-Lu @ Rocky Helmet  
+Ability: Vessel of Ruin  
+Tera Type: Steel  
+EVs: 248 HP / 8 Def / 252 SpD  
+Careful Nature  
+- Stealth Rock  
+- Earthquake  
+- Rest  
+- Payback  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Trick  
+- Nasty Plot  
+- Shadow Ball  
+- Recover  
+
+Walking Wake @ Heavy-Duty Boots  
+Ability: Protosynthesis  
+Tera Type: Water  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Draco Meteor  
+- Hydro Steam  
+- Flip Turn  
+- Knock Off  
+
+Zamazenta @ Heavy-Duty Boots  
+Ability: Dauntless Shield  
+Tera Type: Dark  
+EVs: 252 Def / 252 Spe  
+Jolly Nature  
+- Ice Fang  
+- Close Combat  
+- Heavy Slam  
+- Crunch  
+
+Zarude @ Leftovers  
+Ability: Leaf Guard  
+Tera Type: Poison  
+EVs: 252 Atk / 252 Spe  
+Jolly Nature  
+- Trailblaze  
+- Knock Off  
+- Swords Dance  
+- Power Whip  
+
+Dragonite @ Heavy-Duty Boots  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Extreme Speed  
+- Low Kick  
+- Earthquake  
+- Roost

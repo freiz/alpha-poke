@@ -1,0 +1,60 @@
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Flying  
+EVs: 240 HP / 44 Def / 224 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Shadow Ball  
+- Make It Rain  
+- Nasty Plot  
+- Focus Blast  
+
+Dondozo @ Rocky Helmet  
+Ability: Unaware  
+Tera Type: Grass  
+EVs: 248 HP / 136 Def / 124 SpD  
+Impish Nature  
+- Liquidation  
+- Body Press  
+- Rest  
+- Sleep Talk  
+
+Iron Valiant @ Choice Scarf  
+Ability: Quark Drive  
+Tera Type: Psychic  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Naive Nature  
+- Moonblast  
+- Thunderbolt  
+- Close Combat  
+- Psyshock  
+
+Pawmot @ Focus Sash  
+Ability: Natural Cure  
+Tera Type: Electric  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Double Shock  
+- Close Combat  
+- Mach Punch  
+- Revival Blessing  
+
+Ting-Lu @ Red Card  
+Ability: Vessel of Ruin  
+Tera Type: Ghost  
+EVs: 252 HP / 56 Atk / 200 SpD  
+Careful Nature  
+- Spikes  
+- Heavy Slam  
+- Earthquake  
+- Rest  
+
+Corviknight @ Leftovers  
+Ability: Pressure  
+Tera Type: Water  
+EVs: 252 HP / 12 Atk / 156 Def / 88 SpD  
+Careful Nature  
+- Brave Bird  
+- U-turn  
+- Defog  
+- Roost

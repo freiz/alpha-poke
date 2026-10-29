@@ -1,0 +1,28 @@
+{
+ "kind": "ladder robust (stage 2, 2026-10-28)",
+ "from": "data/derived/teams/pools/sim_candidates_v2",
+ "log": "data/eval/teamsim/20261028-172553_g_ma_vs_g_mb.jsonl",
+ "note": "stage 2's top 5 by the bot's score, the stall team (75%, 34 games over the 20-minute cap) replaced by the sixth",
+ "teams": [
+  {
+   "team": "Darkrai|Garganacl|Iron Treads|Moltres|Ogerpon-Wellspring|Zamazenta-*",
+   "bot_score": 0.71
+  },
+  {
+   "team": "Dragonite|Gholdengo|Glimmora|Ogerpon-Wellspring|Ting-Lu|Zamazenta-*",
+   "bot_score": 0.71
+  },
+  {
+   "team": "Alomomola|Great Tusk|Iron Crown|Sinistcha|Ting-Lu|Zamazenta-*",
+   "bot_score": 0.705
+  },
+  {
+   "team": "Dragonite|Iron Treads|Kyurem|Pecharunt|Samurott-Hisui|Zamazenta-*",
+   "bot_score": 0.685
+  },
+  {
+   "team": "Iron Treads|Ogerpon|Okidogi|Pecharunt|Raging Bolt|Ting-Lu",
+   "bot_score": 0.675
+  }
+ ]
+}

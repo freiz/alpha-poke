@@ -1,0 +1,59 @@
+Meowscarada @ Choice Band  
+Ability: Protean  
+Tera Type: Grass  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Triple Axel  
+- Flower Trick  
+- Knock Off  
+
+Pecharunt @ Rocky Helmet  
+Ability: Poison Puppeteer  
+Tera Type: Dark  
+EVs: 252 HP / 228 Def / 28 Spe  
+Bold Nature  
+- Foul Play  
+- Malignant Chain  
+- Recover  
+- Parting Shot  
+
+Enamorus @ Focus Sash  
+Ability: Cute Charm  
+Tera Type: Fairy  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Mystical Fire  
+- Moonblast  
+- Earth Power  
+- Healing Wish  
+
+Iron Treads @ Leftovers  
+Ability: Quark Drive  
+Tera Type: Ice  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Earthquake  
+- Knock Off  
+- Rapid Spin  
+
+Skarmory @ Rocky Helmet  
+Ability: Sturdy  
+Tera Type: Ground  
+EVs: 252 HP / 204 Def / 52 SpD  
+Impish Nature  
+- Spikes  
+- Roost  
+- Stealth Rock  
+- Whirlwind  
+
+Slowking @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Steel  
+EVs: 252 HP / 80 Def / 176 SpD  
+Sassy Nature  
+- Scald  
+- Fire Blast  
+- Future Sight  
+- Psyshock

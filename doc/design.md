@@ -18,7 +18,7 @@
 
 **约束**
 - 服务器：评测和训练只用本地 Showdown（`alpha_poke.servers.local_server` 只允许本机地址）。例外只有两个，都要 `--public` 和已登记的 bot 账号（`.env`；PS 的 bot 政策 2026-10：未登记的 bot 可被封号）：`scripts/play_public.py`（只接受白名单对手的挑战）和 `scripts/ladder.py`（一次一局上天梯）；都不进房间、不发消息、不主动挑战。
-- 许可：Foul Play 为 GPL-3.0，只作为外部进程对手，不 import、不复制代码；poke-engine（MIT）vendored 并打补丁（D17）；Metamon 数据集 CC-BY-NC-4.0，原始 replay 只用于本地研究、不再分发。
+- 许可：Foul Play 为 GPL-3.0，只作为外部进程对手，不 import、不复制代码；poke-engine（MIT）vendored 并打补丁（D17）；replay 数据：我们用的 Metamon raw-replays 与 HolidayOugi 两个 HF 数据集都没有标注许可（Metamon 的 parsed-replays 标注 CC-BY-NC-4.0），原始 replay 只用于本地研究、不再分发；发布的权重限非商业研究（`model_card.md`）。
 - 密钥在 `.env`，不打印、不入库。用户邮箱不出现在任何请求里。
 - 环境：`uv sync --all-groups`（普通 `uv sync` 会卸掉 torch）。
 
@@ -231,4 +231,4 @@ v7.2 输入（2026-10-20，`EXTRA_VERSION` 3，审查后的修复；数据待按
 | 评测噪声 | 配对赛程 + 置信区间 + SPRT；A/B 不显著时加新队伍对，不在同一批上反复挑选 |
 | poke-engine 不保真 | 只作搜索用的近似模型；对局在 Showdown 上跑；D17 问题表；回退记账 |
 | 环境变化（禁用名单、新宝可梦） | 组队按时间加权、校验器按今天的规则；补新数据 |
-| 许可 / 规则 | Metamon 数据非商用；Foul Play 为 GPL；PS 的 bot 政策（2026-10）：先登记，人类自愿和 bot 对战，比赛中用 AI 算代打 |
+| 许可 / 规则 | replay 数据未标注许可：只本地使用、权重限非商业研究；Foul Play 为 GPL；PS 的 bot 政策（2026-10）：先登记，人类自愿和 bot 对战，比赛中用 AI 算代打 |

@@ -1,0 +1,59 @@
+Dragapult @ Life Orb  
+Ability: Infiltrator  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpA / 252 Spe  
+Naive Nature  
+- Shadow Ball  
+- Dragon Darts  
+- Will-O-Wisp  
+- U-turn  
+
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Fire  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Jolly Nature  
+- Earthquake  
+- Stealth Rock  
+- Close Combat  
+- Rapid Spin  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Bug  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Kowtow Cleave  
+- Swords Dance  
+- Iron Head  
+- Low Kick  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Steel  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Make It Rain  
+- Shadow Ball  
+- Nasty Plot  
+- Recover  
+
+Amoonguss @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Steel  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Protect  
+- Giga Drain  
+- Synthesis  
+- Stun Spore  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Fairy  
+EVs: 80 HP / 220 Atk / 208 Spe  
+Jolly Nature  
+- Thunderbolt  
+- Moonblast  
+- Knock Off  
+- Close Combat

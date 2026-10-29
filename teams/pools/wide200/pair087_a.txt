@@ -1,0 +1,59 @@
+Darkrai @ Leftovers  
+Ability: Bad Dreams  
+Tera Type: Dark  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Ice Beam  
+- Dark Pulse  
+- Sludge Bomb  
+- Knock Off  
+
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Knock Off  
+- Play Rough  
+- Ivy Cudgel  
+
+Dragonite @ Leftovers  
+Ability: Inner Focus  
+Tera Type: Fairy  
+EVs: 248 HP / 108 Atk / 152 Spe  
+Adamant Nature  
+- Ice Spinner  
+- Dragon Dance  
+- Roost  
+- Earthquake  
+
+Hatterene @ Leftovers  
+Ability: Magic Bounce  
+Tera Type: Normal  
+EVs: 252 HP / 204 Def / 52 Spe  
+Bold Nature  
+- Nuzzle  
+- Psychic Noise  
+- Draining Kiss  
+- Mystical Fire  
+
+Great Tusk @ Rocky Helmet  
+Ability: Protosynthesis  
+Tera Type: Fighting  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Headlong Rush  
+- Ice Spinner  
+- Close Combat  
+
+Ceruledge @ Life Orb  
+Ability: Flash Fire  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Poltergeist  
+- Swords Dance  
+- Bitter Blade  
+- Shadow Sneak

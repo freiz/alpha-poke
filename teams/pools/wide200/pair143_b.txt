@@ -1,0 +1,59 @@
+Samurott-Hisui @ Focus Sash  
+Ability: Sharpness  
+Tera Type: Poison  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Ceaseless Edge  
+- Sucker Punch  
+- Flip Turn  
+- Razor Shell  
+
+Dragapult @ Light Clay  
+Ability: Cursed Body  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Dragon Darts  
+- Will-O-Wisp  
+- Hex  
+- U-turn  
+
+Raging Bolt @ Assault Vest  
+Ability: Protosynthesis  
+Tera Type: Bug  
+EVs: 252 HP / 4 SpA / 252 Spe  
+Timid Nature  
+- Thunderclap  
+- Draco Meteor  
+- Dragon Pulse  
+- Thunderbolt  
+
+Great Tusk @ Rocky Helmet  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Ice Spinner  
+- Stealth Rock  
+- Headlong Rush  
+
+Kingambit @ Air Balloon  
+Ability: Supreme Overlord  
+Tera Type: Bug  
+EVs: 248 HP / 252 Atk / 8 Def  
+Adamant Nature  
+- Sucker Punch  
+- Iron Head  
+- Low Kick  
+- Kowtow Cleave  
+
+Gholdengo @ Shuca Berry  
+Ability: Good as Gold  
+Tera Type: Steel  
+EVs: 164 HP / 252 SpA / 92 Spe  
+Modest Nature  
+- Nasty Plot  
+- Recover  
+- Make It Rain  
+- Shadow Ball

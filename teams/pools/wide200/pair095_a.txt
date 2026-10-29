@@ -1,0 +1,60 @@
+Staraptor @ Choice Band  
+Ability: Reckless  
+Tera Type: Flying  
+EVs: 252 Atk / 252 Spe  
+Jolly Nature  
+- Close Combat  
+- Brave Bird  
+- U-turn  
+- Quick Attack  
+
+Alomomola @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Wish  
+- Flip Turn  
+- Scald  
+- Play Rough  
+
+Clodsire @ Heavy-Duty Boots  
+Ability: Unaware  
+Tera Type: Steel  
+EVs: 252 HP / 4 Atk / 252 SpD  
+Sassy Nature  
+- Toxic  
+- Recover  
+- Earthquake  
+- Stealth Rock  
+
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Grass  
+EVs: 252 HP / 132 Def / 4 SpD / 120 Spe  
+Impish Nature  
+IVs: 0 Atk  
+- Iron Defense  
+- Body Press  
+- Roost  
+- Defog  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Ghost  
+EVs: 252 HP / 244 Def / 12 SpD  
+Impish Nature  
+- Toxic  
+- Knock Off  
+- Spikes  
+- Protect  
+
+Goodra-Hisui @ Assault Vest  
+Ability: Sap Sipper  
+Tera Type: Fairy  
+EVs: 252 HP / 100 Atk / 16 SpA / 140 SpD  
+Sassy Nature  
+- Knock Off  
+- Earthquake  
+- Draco Meteor  
+- Flash Cannon

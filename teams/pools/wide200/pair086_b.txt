@@ -1,0 +1,58 @@
+Deoxys-Speed @ Eject Pack  
+Ability: Pressure  
+Tera Type: Fighting  
+EVs: 248 HP / 8 Def / 252 Spe  
+Timid Nature  
+- Psycho Boost  
+- Stealth Rock  
+- Ice Beam  
+- Taunt  
+
+Furret @ Sitrus Berry  
+Ability: Frisk  
+EVs: 96 HP / 252 Atk / 160 Spe  
+Jolly Nature  
+- Tidy Up  
+- Trick  
+- U-turn  
+- Knock Off  
+
+Clefable @ Leftovers  
+Ability: Magic Guard  
+Tera Type: Poison  
+EVs: 252 HP / 252 Def / 4 Spe  
+Bold Nature  
+- Thunder Wave  
+- Stealth Rock  
+- Moonblast  
+- Moonlight  
+
+Hydrapple @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Fire  
+EVs: 252 HP / 252 Def / 4 SpA  
+Bold Nature  
+- Earth Power  
+- Giga Drain  
+- Draco Meteor  
+- Nasty Plot  
+
+Weavile @ Life Orb  
+Ability: Pressure  
+Tera Type: Ice  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Icicle Spear  
+- Knock Off  
+- Ice Shard  
+- Triple Axel  
+
+Zapdos @ Rocky Helmet  
+Ability: Static  
+Tera Type: Steel  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Thunder Wave  
+- Hurricane  
+- U-turn  
+- Volt Switch

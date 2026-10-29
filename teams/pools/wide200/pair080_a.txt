@@ -1,0 +1,59 @@
+Raging Bolt @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Fairy  
+EVs: 252 HP / 4 Def / 252 SpA  
+Modest Nature  
+- Dragon Pulse  
+- Thunderbolt  
+- Volt Switch  
+- Calm Mind  
+
+Iron Treads @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ice  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Earthquake  
+- Stone Edge  
+- Knock Off  
+
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Tera Type: Ghost  
+EVs: 248 HP / 252 SpD / 8 Spe  
+Careful Nature  
+- Stealth Rock  
+- Ruination  
+- Earthquake  
+- Whirlwind  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Ghost  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Make It Rain  
+- Shadow Ball  
+- Trick  
+- Nasty Plot  
+
+Zamazenta @ Leftovers  
+Ability: Dauntless Shield  
+Tera Type: Fire  
+EVs: 248 HP / 104 SpD / 156 Spe  
+Jolly Nature  
+- Iron Defense  
+- Body Press  
+- Crunch  
+- Roar  
+
+Tornadus-Therian @ Life Orb  
+Ability: Regenerator  
+Tera Type: Fire  
+EVs: 176 HP / 92 SpD / 240 Spe  
+Timid Nature  
+- Nasty Plot  
+- Bleakwind Storm  
+- Focus Blast  
+- Dark Pulse

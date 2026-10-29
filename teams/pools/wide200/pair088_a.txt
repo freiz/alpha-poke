@@ -1,0 +1,58 @@
+Gholdengo @ Leftovers  
+Ability: Good as Gold  
+Tera Type: Water  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Nasty Plot  
+- Shadow Ball  
+- Recover  
+- Make It Rain  
+
+Cloyster @ Eject Pack  
+Ability: Skill Link  
+Tera Type: Ice  
+EVs: 252 Atk / 4 SpA / 252 Spe  
+Naughty Nature  
+- Icicle Spear  
+- Shell Smash  
+- Ice Shard  
+- Drill Run  
+
+Rillaboom @ Life Orb  
+Ability: Grassy Surge  
+Tera Type: Grass  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- Wood Hammer  
+- U-turn  
+- Knock Off  
+- Swords Dance  
+
+Ninetales-Alola @ Light Clay  
+Ability: Snow Warning  
+Tera Type: Water  
+EVs: 252 HP / 4 Def / 252 Spe  
+Timid Nature  
+- Aurora Veil  
+- Freeze-Dry  
+- Roar  
+- Moonblast  
+
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Tera Type: Poison  
+EVs: 24 HP / 4 Atk / 252 SpD / 228 Spe  
+Jolly Nature  
+- Earthquake  
+- Ruination  
+- Spikes  
+- Stealth Rock  
+
+Flamigo @ Choice Scarf  
+Ability: Scrappy  
+EVs: 24 HP / 252 Atk / 232 Spe  
+Jolly Nature  
+- Copycat  
+- U-turn  
+- Reversal  
+- Acrobatics

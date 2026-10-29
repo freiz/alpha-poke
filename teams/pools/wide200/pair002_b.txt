@@ -1,0 +1,59 @@
+Zamazenta @ Life Orb  
+Ability: Dauntless Shield  
+Tera Type: Ice  
+EVs: 16 HP / 240 Def / 252 Spe  
+Jolly Nature  
+- Body Press  
+- Light Screen  
+- Close Combat  
+- Heavy Slam  
+
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Ivy Cudgel  
+- Trailblaze  
+- Power Whip  
+
+Ceruledge @ Focus Sash  
+Ability: Weak Armor  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Swords Dance  
+- Shadow Sneak  
+- Bitter Blade  
+- Poltergeist  
+
+Hatterene @ Sticky Barb  
+Ability: Magic Bounce  
+Tera Type: Water  
+EVs: 252 HP / 252 Def / 4 Spe  
+Bold Nature  
+- Nuzzle  
+- Mystical Fire  
+- Draining Kiss  
+- Psychic Noise  
+
+Landorus-Therian @ Rocky Helmet  
+Ability: Intimidate  
+Tera Type: Ground  
+EVs: 252 HP / 24 Def / 232 Spe  
+Timid Nature  
+- Stealth Rock  
+- Earth Power  
+- Earthquake  
+- U-turn  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Dark  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Kowtow Cleave  
+- Sucker Punch  
+- Iron Head

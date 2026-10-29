@@ -1,0 +1,59 @@
+Cinderace @ Life Orb  
+Ability: Libero  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- High Jump Kick  
+- Pyro Ball  
+- U-turn  
+- Will-O-Wisp  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Fairy  
+EVs: 244 HP / 236 Def / 12 SpD / 16 Spe  
+Impish Nature  
+- Knock Off  
+- Protect  
+- Toxic  
+- Earthquake  
+
+Weavile @ Life Orb  
+Ability: Pressure  
+Tera Type: Ice  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Ice Punch  
+- Knock Off  
+- Ice Shard  
+- Triple Axel  
+
+Primarina @ Leftovers  
+Ability: Liquid Voice  
+Tera Type: Poison  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+- Psychic  
+- Moonblast  
+- Psychic Noise  
+- Flip Turn  
+
+Iron Treads @ Air Balloon  
+Ability: Quark Drive  
+Tera Type: Flying  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Ice Spinner  
+- Earthquake  
+- Stealth Rock  
+
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 252 Spe  
+Jolly Nature  
+- Trailblaze  
+- Swords Dance  
+- Ivy Cudgel  
+- U-turn

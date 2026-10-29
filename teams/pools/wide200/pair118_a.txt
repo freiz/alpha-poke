@@ -1,0 +1,65 @@
+Muk (F) @ Heavy-Duty Boots  
+Ability: Sticky Hold  
+Tera Type: Steel  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+IVs: 9 Spe  
+- Poison Jab  
+- Knock Off  
+- Sleep Talk  
+- Rest  
+
+Alomomola @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Steel  
+EVs: 252 HP / 252 Def / 4 SpD  
+Relaxed Nature  
+IVs: 0 Spe  
+- Wish  
+- Protect  
+- Flip Turn  
+- Scald  
+
+Blissey @ Heavy-Duty Boots  
+Ability: Natural Cure  
+Tera Type: Ghost  
+EVs: 4 HP / 252 Def / 252 SpD  
+Calm Nature  
+IVs: 0 Atk  
+- Protect  
+- Soft-Boiled  
+- Seismic Toss  
+- Stealth Rock  
+
+Clodsire @ Heavy-Duty Boots  
+Ability: Unaware  
+Tera Type: Steel  
+EVs: 116 HP / 92 Def / 252 SpD  
+Sassy Nature  
+IVs: 0 Atk / 19 Spe  
+- Amnesia  
+- Toxic  
+- Recover  
+- Haze  
+
+Gliscor (F) @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Dragon  
+EVs: 244 HP / 252 Def / 12 SpD  
+Impish Nature  
+IVs: 29 Spe  
+- Poison Jab  
+- Knock Off  
+- Spikes  
+- Protect  
+
+Dondozo @ Heavy-Duty Boots  
+Ability: Unaware  
+Tera Type: Fighting  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+IVs: 0 Atk  
+- Body Press  
+- Curse  
+- Rest  
+- Sleep Talk

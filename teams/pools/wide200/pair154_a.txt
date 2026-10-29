@@ -1,0 +1,62 @@
+Meowscarada @ Heavy-Duty Boots  
+Ability: Protean  
+Shiny: Yes  
+Tera Type: Grass  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Sucker Punch  
+- U-turn  
+- Flower Trick  
+
+Great Tusk @ Heavy-Duty Boots  
+Ability: Protosynthesis  
+Shiny: Yes  
+Tera Type: Fighting  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Headlong Rush  
+- Close Combat  
+- Knock Off  
+- Rapid Spin  
+
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Tera Type: Fairy  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- Stealth Rock  
+- Spikes  
+- Whirlwind  
+- Earthquake  
+
+Rotom-Wash @ Leftovers  
+Ability: Levitate  
+Tera Type: Steel  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Volt Switch  
+- Hydro Pump  
+- Protect  
+- Thunder Wave  
+
+Gholdengo @ Covert Cloak  
+Ability: Good as Gold  
+Tera Type: Fighting  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Nasty Plot  
+- Shadow Ball  
+- Make It Rain  
+- Recover  
+
+Dragapult @ Choice Specs  
+Ability: Infiltrator  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Draco Meteor  
+- Shadow Ball  
+- Flamethrower  
+- U-turn

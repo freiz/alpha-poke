@@ -1,0 +1,59 @@
+Hatterene @ Eject Button  
+Ability: Magic Bounce  
+Tera Type: Normal  
+EVs: 252 HP / 204 Def / 52 SpD  
+Bold Nature  
+- Psychic Noise  
+- Trick Room  
+- Healing Wish  
+- Draining Kiss  
+
+Ursaluna @ Flame Orb  
+Ability: Guts  
+Tera Type: Water  
+EVs: 112 HP / 252 Atk / 144 SpD  
+Adamant Nature  
+- Facade  
+- Headlong Rush  
+- Protect  
+- Swords Dance  
+
+Porygon2 @ Eviolite  
+Ability: Download  
+Tera Type: Ground  
+EVs: 252 HP / 252 Def / 4 SpA  
+Bold Nature  
+- Trick Room  
+- Ice Beam  
+- Tri Attack  
+- Thunderbolt  
+
+Cresselia @ Mental Herb  
+Ability: Levitate  
+Tera Type: Fairy  
+EVs: 252 HP / 204 Def / 52 Spe  
+Bold Nature  
+- Trick Room  
+- Psychic  
+- Lunar Dance  
+- Moonlight  
+
+Iron Hands @ Quick Claw  
+Ability: Quark Drive  
+Tera Type: Flying  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Brave Nature  
+- Swords Dance  
+- Ice Punch  
+- Drain Punch  
+- Supercell Slam  
+
+Volcanion @ Choice Specs  
+Ability: Water Absorb  
+Tera Type: Fairy  
+EVs: 248 HP / 68 Def / 8 SpA / 184 Spe  
+Modest Nature  
+- Sludge Bomb  
+- Steam Eruption  
+- Flamethrower  
+- Earth Power

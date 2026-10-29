@@ -1,7 +1,7 @@
 """Fit the move-reveal model (negative evidence for hidden moves, alpha_poke.belief.reveal).
 
 Usage: uv run python scripts/build_reveal_model.py [--format gen9ou] [--cutoff 1500]
-Writes data/reveal_model.pkl and prints a few examples.
+Writes data/derived/belief/reveal_model.pkl and prints a few examples.
 """
 
 import argparse

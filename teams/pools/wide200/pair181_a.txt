@@ -1,0 +1,59 @@
+Landorus-Therian @ Rocky Helmet  
+Ability: Intimidate  
+Tera Type: Ground  
+EVs: 252 HP / 4 Def / 252 Spe  
+Timid Nature  
+- Stealth Rock  
+- Earthquake  
+- U-turn  
+- Stone Edge  
+
+Scizor @ Sitrus Berry  
+Ability: Technician  
+Tera Type: Fire  
+EVs: 248 HP / 252 Atk / 8 SpD  
+Adamant Nature  
+- Swords Dance  
+- Bullet Punch  
+- Bug Bite  
+- Knock Off  
+
+Heatran @ Eject Pack  
+Ability: Flash Fire  
+Tera Type: Normal  
+EVs: 252 HP / 108 SpA / 148 Spe  
+Modest Nature  
+- Earth Power  
+- Magma Storm  
+- Stealth Rock  
+- Protect  
+
+Gyarados @ Leftovers  
+Ability: Moxie  
+Tera Type: Ground  
+EVs: 252 Atk / 252 Spe  
+Jolly Nature  
+- Waterfall  
+- Dragon Dance  
+- Earthquake  
+- Temper Flare  
+
+Mandibuzz @ Rocky Helmet  
+Ability: Overcoat  
+Tera Type: Water  
+EVs: 248 HP / 244 Def / 16 Spe  
+Impish Nature  
+- Foul Play  
+- Defog  
+- Toxic  
+- Roost  
+
+Sylveon @ Assault Vest  
+Ability: Pixilate  
+Tera Type: Fairy  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+- Hyper Voice  
+- Wish  
+- Draining Kiss  
+- Hyper Beam

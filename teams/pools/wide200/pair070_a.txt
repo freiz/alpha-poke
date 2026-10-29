@@ -1,0 +1,59 @@
+Minior-Indigo @ White Herb  
+Ability: Shields Down  
+Tera Type: Steel  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- Shell Smash  
+- Acrobatics  
+- Power Gem  
+- Earthquake  
+
+Galvantula @ Focus Sash  
+Ability: Compound Eyes  
+Tera Type: Ghost  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Sticky Web  
+- Bug Buzz  
+- Energy Ball  
+- Light Screen  
+
+Ogerpon @ Heavy-Duty Boots  
+Ability: Defiant  
+Tera Type: Grass  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- U-turn  
+- Ivy Cudgel  
+- Synthesis  
+
+Ceruledge @ Focus Sash  
+Ability: Weak Armor  
+Tera Type: Fighting  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Bitter Blade  
+- Poltergeist  
+- Swords Dance  
+- Shadow Sneak  
+
+Espeon @ Leftovers  
+Ability: Magic Bounce  
+Tera Type: Fairy  
+EVs: 252 HP / 252 SpD / 4 Spe  
+Calm Nature  
+- Trick  
+- Protect  
+- Expanding Force  
+- Alluring Voice  
+
+Dondozo @ Leftovers  
+Ability: Unaware  
+Tera Type: Steel  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- Curse  
+- Liquidation  
+- Rest  
+- Sleep Talk

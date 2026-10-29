@@ -1,0 +1,59 @@
+Tyranitar @ Assault Vest  
+Ability: Sand Stream  
+Tera Type: Fighting  
+EVs: 252 HP / 16 Def / 240 SpD  
+Sassy Nature  
+- Earthquake  
+- Knock Off  
+- Dragon Tail  
+- Low Kick  
+
+Kyurem @ Chople Berry  
+Ability: Pressure  
+Tera Type: Poison  
+EVs: 56 HP / 100 Atk / 32 Def / 128 SpD / 192 Spe  
+Jolly Nature  
+- Ice Beam  
+- Freeze-Dry  
+- Earth Power  
+- Shadow Ball  
+
+Staraptor @ Choice Scarf  
+Ability: Intimidate  
+Tera Type: Flying  
+EVs: 252 HP / 172 Atk / 84 Spe  
+Jolly Nature  
+- Brave Bird  
+- Final Gambit  
+- Double-Edge  
+- Close Combat  
+
+Garchomp @ Rocky Helmet  
+Ability: Rough Skin  
+Tera Type: Ghost  
+EVs: 248 HP / 216 Def / 44 Spe  
+Impish Nature  
+- Stealth Rock  
+- Rest  
+- Spikes  
+- Breaking Swipe  
+
+Torkoal @ Heat Rock  
+Ability: Drought  
+Tera Type: Grass  
+EVs: 252 HP / 252 Def / 4 SpA  
+Relaxed Nature  
+- Will-O-Wisp  
+- Rapid Spin  
+- Flamethrower  
+- Stealth Rock  
+
+Dragonite @ Silk Scarf  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 248 HP / 224 Atk / 16 Def / 20 Spe  
+Adamant Nature  
+- Extreme Speed  
+- Dragon Dance  
+- Earthquake  
+- Roost

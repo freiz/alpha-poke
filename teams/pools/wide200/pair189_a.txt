@@ -1,0 +1,61 @@
+Glimmora @ Choice Scarf  
+Ability: Toxic Debris  
+Tera Type: Ground  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Power Gem  
+- Mortal Spin  
+- Earth Power  
+- Toxic Spikes  
+
+Gholdengo @ Rocky Helmet  
+Ability: Good as Gold  
+Tera Type: Water  
+EVs: 252 HP / 196 Def / 60 Spe  
+IVs: 0 Atk  
+- Hex  
+- Thunder Wave  
+- Make It Rain  
+- Recover  
+
+Blissey (F) @ Choice Scarf  
+Ability: Serene Grace  
+Tera Type: Grass  
+EVs: 252 Def / 168 SpA / 88 Spe  
+Modest Nature  
+IVs: 0 Atk  
+- Ice Beam  
+- Flamethrower  
+- Soft-Boiled  
+- Trick  
+
+Slither Wing @ Heavy-Duty Boots  
+Ability: Protosynthesis  
+Tera Type: Bug  
+EVs: 252 HP / 28 Atk / 220 Def / 8 Spe  
+Impish Nature  
+- First Impression  
+- U-turn  
+- Morning Sun  
+- Will-O-Wisp  
+
+Darkrai @ Heavy-Duty Boots  
+Ability: Bad Dreams  
+Tera Type: Fairy  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Focus Blast  
+- Dark Pulse  
+- Sludge Bomb  
+- Ice Beam  
+
+Exeggutor @ Starf Berry  
+Ability: Harvest  
+Tera Type: Poison  
+EVs: 244 HP / 144 Def / 120 Spe  
+Bold Nature  
+IVs: 0 Atk  
+- Substitute  
+- Protect  
+- Synthesis  
+- Stored Power

@@ -1,0 +1,59 @@
+Galvantula @ Focus Sash  
+Ability: Swarm  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Sticky Web  
+- Thunder  
+- Bug Buzz  
+- Energy Ball  
+
+Dragapult @ Heavy-Duty Boots  
+Ability: Infiltrator  
+Tera Type: Dragon  
+EVs: 252 Atk / 4 SpA / 252 Spe  
+Lonely Nature  
+- Dragon Darts  
+- Will-O-Wisp  
+- Shadow Ball  
+- U-turn  
+
+Cloyster @ White Herb  
+Ability: Skill Link  
+Tera Type: Ice  
+EVs: 48 HP / 252 Atk / 208 Spe  
+Adamant Nature  
+- Shell Smash  
+- Icicle Spear  
+- Ice Shard  
+- Rock Blast  
+
+Glimmora @ Red Card  
+Ability: Toxic Debris  
+Tera Type: Ghost  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Stealth Rock  
+- Toxic Spikes  
+- Memento  
+- Earth Power  
+
+Ninetales-Alola @ Light Clay  
+Ability: Snow Warning  
+Tera Type: Steel  
+EVs: 248 HP / 8 Def / 252 Spe  
+Timid Nature  
+- Aurora Veil  
+- Blizzard  
+- Moonblast  
+- Encore  
+
+Haxorus @ Leftovers  
+Ability: Mold Breaker  
+Tera Type: Steel  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Dragon Dance  
+- Close Combat  
+- Iron Head  
+- Scale Shot

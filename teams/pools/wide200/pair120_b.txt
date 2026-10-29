@@ -1,0 +1,59 @@
+Rabsca @ Focus Sash  
+Ability: Synchronize  
+Tera Type: Ground  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Quiet Nature  
+- Revival Blessing  
+- Earth Power  
+- Bug Buzz  
+- Speed Swap  
+
+Great Tusk @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Ghost  
+EVs: 52 HP / 252 Atk / 204 Spe  
+Adamant Nature  
+- Close Combat  
+- Rapid Spin  
+- Ice Spinner  
+- Stealth Rock  
+
+Weavile @ Life Orb  
+Ability: Pressure  
+Tera Type: Ice  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Triple Axel  
+- Low Kick  
+- Swords Dance  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Fairy  
+EVs: 244 HP / 36 Def / 228 SpD  
+Careful Nature  
+- Protect  
+- Earthquake  
+- Substitute  
+- Toxic Spikes  
+
+Metagross @ Leftovers  
+Ability: Clear Body  
+Tera Type: Steel  
+EVs: 248 HP / 100 Atk / 160 SpD  
+Adamant Nature  
+- Psychic Fangs  
+- Earthquake  
+- Bullet Punch  
+- Heavy Slam  
+
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Ivy Cudgel  
+- U-turn  
+- Play Rough  
+- Knock Off

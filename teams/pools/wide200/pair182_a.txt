@@ -1,0 +1,59 @@
+Kyurem @ Black Sludge  
+Ability: Pressure  
+Tera Type: Fairy  
+EVs: 180 Atk / 76 SpA / 252 Spe  
+Naughty Nature  
+- Ice Beam  
+- Freeze-Dry  
+- Earth Power  
+- Body Press  
+
+Hoopa-Unbound @ Eject Pack  
+Ability: Magician  
+Tera Type: Dark  
+EVs: 40 HP / 252 Atk / 216 Spe  
+Adamant Nature  
+- Knock Off  
+- Dark Pulse  
+- Drain Punch  
+- Hyperspace Fury  
+
+Great Tusk @ Rocky Helmet  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Jolly Nature  
+- Headlong Rush  
+- Ice Spinner  
+- Stealth Rock  
+- Rapid Spin  
+
+Kingambit @ Shuca Berry  
+Ability: Supreme Overlord  
+Tera Type: Dark  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- Kowtow Cleave  
+- Sucker Punch  
+- Iron Head  
+- Low Kick  
+
+Iron Moth @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Fairy  
+EVs: 124 Def / 132 SpA / 252 Spe  
+Timid Nature  
+- Fiery Dance  
+- Overheat  
+- Sludge Wave  
+- Substitute  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Steel  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Knock Off  
+- Moonblast  
+- Close Combat  
+- Destiny Bond

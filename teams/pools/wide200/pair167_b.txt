@@ -1,0 +1,59 @@
+Cetitan @ Sitrus Berry  
+Ability: Slush Rush  
+Tera Type: Ground  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Ice Shard  
+- Icicle Crash  
+- Earthquake  
+- Belly Drum  
+
+Slowking-Galar @ Black Sludge  
+Ability: Regenerator  
+Tera Type: Grass  
+EVs: 252 HP / 68 Def / 188 SpD  
+Sassy Nature  
+- Future Sight  
+- Chilly Reception  
+- Sludge Bomb  
+- Toxic  
+
+Kyurem @ Leftovers  
+Ability: Pressure  
+Tera Type: Ground  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Ice Beam  
+- Freeze-Dry  
+- Earth Power  
+- Draco Meteor  
+
+Rillaboom @ Choice Band  
+Ability: Grassy Surge  
+Tera Type: Dark  
+EVs: 144 HP / 252 Atk / 4 Def / 108 SpD  
+Adamant Nature  
+- U-turn  
+- Grassy Glide  
+- Knock Off  
+- Swords Dance  
+
+Alomomola @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Flying  
+EVs: 252 HP / 4 Atk / 252 Def  
+Impish Nature  
+- Scald  
+- Flip Turn  
+- Wish  
+- Protect  
+
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Ground  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Rapid Spin  
+- Stealth Rock  
+- Headlong Rush

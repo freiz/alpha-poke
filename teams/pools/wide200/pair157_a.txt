@@ -1,0 +1,59 @@
+Latios @ Choice Scarf  
+Ability: Levitate  
+Tera Type: Steel  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Luster Purge  
+- Flip Turn  
+- Draco Meteor  
+- Trick  
+
+Quaquaval @ Lum Berry  
+Ability: Moxie  
+Tera Type: Steel  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Aqua Step  
+- Close Combat  
+- Bulk Up  
+
+Pelipper @ Damp Rock  
+Ability: Drizzle  
+Tera Type: Ground  
+EVs: 248 HP / 252 SpA / 8 SpD  
+Modest Nature  
+- Weather Ball  
+- U-turn  
+- Knock Off  
+- Roost  
+
+Basculegion-F @ Leftovers  
+Ability: Adaptability  
+Tera Type: Ghost  
+EVs: 140 HP / 252 SpA / 116 Spe  
+Modest Nature  
+- Flip Turn  
+- Surf  
+- Endeavor  
+- Aqua Jet  
+
+Iron Treads @ Leftovers  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 48 HP / 252 Atk / 208 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Rapid Spin  
+- Earthquake  
+- Knock Off  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Steel  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Swords Dance  
+- Encore  
+- Knock Off  
+- Moonblast

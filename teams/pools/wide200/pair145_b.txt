@@ -1,0 +1,59 @@
+Tyranitar @ Leftovers  
+Ability: Sand Stream  
+Tera Type: Water  
+EVs: 176 HP / 252 Atk / 80 SpD  
+Adamant Nature  
+- Knock Off  
+- Stealth Rock  
+- Ice Beam  
+- Low Kick  
+
+Excadrill @ Air Balloon  
+Ability: Mold Breaker  
+Tera Type: Flying  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Iron Head  
+- Earthquake  
+- Rapid Spin  
+- Rock Slide  
+
+Zamazenta @ Leftovers  
+Ability: Dauntless Shield  
+Tera Type: Fire  
+EVs: 112 HP / 140 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Roar  
+- Crunch  
+- Body Press  
+- Iron Defense  
+
+Alomomola @ Assault Vest  
+Ability: Regenerator  
+Tera Type: Grass  
+EVs: 252 HP / 252 Def / 4 SpD  
+Relaxed Nature  
+- Flip Turn  
+- Mirror Coat  
+- Wish  
+- Body Slam  
+
+Gholdengo @ Ability Shield  
+Ability: Good as Gold  
+Tera Type: Fighting  
+EVs: 252 HP / 196 Def / 60 Spe  
+Bold Nature  
+- Make It Rain  
+- Thunder Wave  
+- Shadow Ball  
+- Nasty Plot  
+
+Skarmory @ Rocky Helmet  
+Ability: Sturdy  
+Tera Type: Ghost  
+EVs: 116 HP / 16 Atk / 124 Def / 116 SpD / 136 Spe  
+Impish Nature  
+- Brave Bird  
+- Roost  
+- Spikes  
+- Body Press

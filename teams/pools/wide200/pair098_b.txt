@@ -1,0 +1,59 @@
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Flying  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Nasty Plot  
+- Shadow Ball  
+- Dazzling Gleam  
+- Make It Rain  
+
+Great Tusk @ Rocky Helmet  
+Ability: Protosynthesis  
+Tera Type: Ice  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Ice Spinner  
+- Headlong Rush  
+- Close Combat  
+- Stealth Rock  
+
+Raging Bolt @ Choice Specs  
+Ability: Protosynthesis  
+Tera Type: Fairy  
+EVs: 188 HP / 64 Def / 252 SpA / 4 SpD  
+Modest Nature  
+- Thunderclap  
+- Dragon Pulse  
+- Volt Switch  
+- Weather Ball  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Flying  
+EVs: 252 HP / 252 Atk / 4 Def  
+Adamant Nature  
+- Iron Head  
+- Swords Dance  
+- Sucker Punch  
+- Kowtow Cleave  
+
+Dragonite @ Leftovers  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Dragon Claw  
+- Earthquake  
+- Dragon Dance  
+- Ice Spinner  
+
+Zamazenta @ Leftovers  
+Ability: Dauntless Shield  
+Tera Type: Fire  
+EVs: 248 HP / 52 Atk / 208 Spe  
+Jolly Nature  
+- Body Press  
+- Iron Defense  
+- Substitute  
+- Roar

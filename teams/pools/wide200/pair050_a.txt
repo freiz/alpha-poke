@@ -1,0 +1,59 @@
+Zamazenta @ Leftovers  
+Ability: Dauntless Shield  
+Tera Type: Dark  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Iron Defense  
+- Body Press  
+- Substitute  
+- Crunch  
+
+Dragonite @ Lum Berry  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Dragon Dance  
+- Earthquake  
+- Extreme Speed  
+- Roost  
+
+Iron Moth @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 124 HP / 132 SpA / 252 Spe  
+Timid Nature  
+- Energy Ball  
+- Sludge Wave  
+- Dazzling Gleam  
+- Fiery Dance  
+
+Corviknight @ Leftovers  
+Ability: Pressure  
+Tera Type: Fairy  
+EVs: 248 HP / 8 Atk / 252 Def  
+Impish Nature  
+- Body Press  
+- Protect  
+- Roost  
+- U-turn  
+
+Scizor @ Life Orb  
+Ability: Technician  
+Tera Type: Steel  
+EVs: 60 HP / 252 Atk / 196 Def  
+Adamant Nature  
+- Swords Dance  
+- Quick Attack  
+- Bullet Punch  
+- Close Combat  
+
+Zapdos @ Life Orb  
+Ability: Static  
+Tera Type: Flying  
+EVs: 248 HP / 252 Def / 8 SpA  
+Bold Nature  
+- Heat Wave  
+- Discharge  
+- Roost  
+- Hurricane

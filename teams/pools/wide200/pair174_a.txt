@@ -1,0 +1,59 @@
+Great Tusk @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Ground  
+EVs: 184 HP / 72 Atk / 252 Spe  
+Jolly Nature  
+- Earthquake  
+- Close Combat  
+- Headlong Rush  
+- Stealth Rock  
+
+Volcanion @ Assault Vest  
+Ability: Water Absorb  
+Tera Type: Grass  
+EVs: 160 HP / 252 SpA / 96 Spe  
+Modest Nature  
+- Sludge Wave  
+- Wild Charge  
+- Steam Eruption  
+- Sludge Bomb  
+
+Rotom-Wash @ Leftovers  
+Ability: Levitate  
+Tera Type: Steel  
+EVs: 28 Def / 112 SpA / 116 SpD / 252 Spe  
+Timid Nature  
+- Thunderbolt  
+- Protect  
+- Volt Switch  
+- Hydro Pump  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Ghost  
+EVs: 132 HP / 252 Atk / 124 Spe  
+Adamant Nature  
+- Kowtow Cleave  
+- Swords Dance  
+- Sucker Punch  
+- Iron Head  
+
+Dragapult @ Life Orb  
+Ability: Infiltrator  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Draco Meteor  
+- Will-O-Wisp  
+- Flamethrower  
+- Shadow Ball  
+
+Greninja @ Focus Sash  
+Ability: Protean  
+Tera Type: Poison  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Mild Nature  
+- Dark Pulse  
+- Water Shuriken  
+- Ice Beam  
+- Hydro Pump

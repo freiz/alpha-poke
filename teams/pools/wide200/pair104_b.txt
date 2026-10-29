@@ -1,0 +1,59 @@
+Serperior @ Leftovers  
+Ability: Contrary  
+Tera Type: Fire  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Modest Nature  
+- Glare  
+- Substitute  
+- Leaf Storm  
+- Leech Seed  
+
+Skarmory @ Rocky Helmet  
+Ability: Sturdy  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Iron Defense  
+- Spikes  
+- Body Press  
+- Stealth Rock  
+
+Dragonite @ Soft Sand  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Dragon Dance  
+- Earthquake  
+- Extreme Speed  
+- Roost  
+
+Gengar @ Life Orb  
+Ability: Cursed Body  
+Tera Type: Ghost  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Sludge Wave  
+- Focus Blast  
+- Encore  
+- Shadow Ball  
+
+Emboar @ Leftovers  
+Ability: Reckless  
+Tera Type: Grass  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Close Combat  
+- Flare Blitz  
+- Knock Off  
+- Head Smash  
+
+Tyranitar @ Leftovers  
+Ability: Sand Stream  
+Tera Type: Water  
+EVs: 252 HP / 16 Def / 236 SpD / 4 Spe  
+Careful Nature  
+- Earthquake  
+- Ice Punch  
+- Knock Off  
+- Stealth Rock

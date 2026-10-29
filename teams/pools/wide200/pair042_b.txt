@@ -1,0 +1,60 @@
+Deoxys-Defense @ Light Clay  
+Ability: Pressure  
+Tera Type: Steel  
+EVs: 252 HP / 220 SpA / 36 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Spikes  
+- Light Screen  
+- Psychic  
+- Calm Mind  
+
+Ceruledge @ Focus Sash  
+Ability: Weak Armor  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Bitter Blade  
+- Swords Dance  
+- Destiny Bond  
+- Close Combat  
+
+Cinderace @ Focus Sash  
+Ability: Blaze  
+Tera Type: Fighting  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Pyro Ball  
+- High Jump Kick  
+- Swords Dance  
+- Sucker Punch  
+
+Hatterene @ Sitrus Berry  
+Ability: Magic Bounce  
+Tera Type: Fire  
+EVs: 252 HP / 128 Def / 128 SpD  
+Bold Nature  
+IVs: 0 Atk  
+- Psychic  
+- Agility  
+- Calm Mind  
+- Healing Wish  
+
+Zamazenta @ Rocky Helmet  
+Ability: Dauntless Shield  
+EVs: 252 HP / 152 Def / 104 SpD  
+Impish Nature  
+IVs: 0 Atk  
+- Body Press  
+- Iron Defense  
+- Roar  
+- Light Screen  
+
+Iron Moth @ Booster Energy  
+Ability: Quark Drive  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+IVs: 0 Atk  
+- Fire Blast  
+- Protect  
+- Toxic Spikes  
+- Toxic

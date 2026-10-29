@@ -1,0 +1,58 @@
+Cloyster @ Focus Sash  
+Ability: Shell Armor  
+Tera Type: Ice  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- Shell Smash  
+- Icicle Spear  
+- Ice Shard  
+- Drill Run  
+
+Greninja @ Life Orb  
+Ability: Battle Bond  
+Tera Type: Poison  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Dark Pulse  
+- Hydro Pump  
+- Ice Beam  
+- Surf  
+
+Walking Wake @ Mystic Water  
+Ability: Protosynthesis  
+Tera Type: Fairy  
+EVs: 12 HP / 244 SpA / 252 Spe  
+Timid Nature  
+- Agility  
+- Hydro Steam  
+- Draco Meteor  
+- Dragon Pulse  
+
+Raging Bolt @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Fairy  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Modest Nature  
+- Thunderclap  
+- Dragon Pulse  
+- Thunderbolt  
+- Weather Ball  
+
+Politoed @ Damp Rock  
+Ability: Drizzle  
+EVs: 252 SpA / 252 Spe  
+Timid Nature  
+- Whirlpool  
+- Weather Ball  
+- Earth Power  
+- Icy Wind  
+
+Moltres @ Heavy-Duty Boots  
+Ability: Flame Body  
+Tera Type: Grass  
+EVs: 248 HP / 32 Def / 216 SpD / 12 Spe  
+Calm Nature  
+- Hurricane  
+- Flamethrower  
+- Will-O-Wisp  
+- Roost

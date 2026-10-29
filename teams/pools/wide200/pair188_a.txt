@@ -1,0 +1,59 @@
+Clodsire @ Heavy-Duty Boots  
+Ability: Unaware  
+Tera Type: Steel  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Spikes  
+- Recover  
+- Toxic  
+- Earthquake  
+
+Dondozo @ Leftovers  
+Ability: Unaware  
+Tera Type: Dark  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- Rest  
+- Body Press  
+- Sleep Talk  
+- Liquidation  
+
+Alomomola @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Def / 252 SpD  
+Sassy Nature  
+- Flip Turn  
+- Wish  
+- Protect  
+- Scald  
+
+Talonflame @ Heavy-Duty Boots  
+Ability: Gale Wings  
+Tera Type: Flying  
+EVs: 248 HP / 228 Def / 32 Spe  
+Bold Nature  
+- Roost  
+- Will-O-Wisp  
+- Defog  
+- Flare Blitz  
+
+Toxapex @ Leftovers  
+Ability: Regenerator  
+Tera Type: Steel  
+EVs: 252 HP / 4 Def / 252 SpD  
+Calm Nature  
+- Infestation  
+- Recover  
+- Baneful Bunker  
+- Toxic  
+
+Blissey @ Heavy-Duty Boots  
+Ability: Natural Cure  
+Tera Type: Dark  
+EVs: 20 HP / 252 Def / 236 SpD  
+Calm Nature  
+- Shadow Ball  
+- Soft-Boiled  
+- Seismic Toss  
+- Calm Mind

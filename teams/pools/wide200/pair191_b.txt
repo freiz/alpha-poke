@@ -1,0 +1,58 @@
+Registeel @ Leftovers  
+Ability: Clear Body  
+Tera Type: Ghost  
+EVs: 252 HP / 180 Def / 76 SpD  
+Impish Nature  
+- Stealth Rock  
+- Iron Defense  
+- Body Press  
+- Heavy Slam  
+
+Regieleki @ Magnet  
+Ability: Transistor  
+Tera Type: Normal  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Volt Switch  
+- Thunderbolt  
+- Light Screen  
+- Explosion  
+
+Regice @ Choice Specs  
+Ability: Ice Body  
+Tera Type: Ice  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+- Blizzard  
+- Focus Punch  
+- Thunderbolt  
+- Ice Beam  
+
+Regidrago @ Leftovers  
+Ability: Dragon's Maw  
+Tera Type: Dragon  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Dragon Dance  
+- Ice Fang  
+- Draco Meteor  
+- Dragon Energy  
+
+Regirock @ Rocky Helmet  
+Ability: Clear Body  
+EVs: 4 HP / 252 Def / 252 SpD  
+Careful Nature  
+- Stealth Rock  
+- Rock Blast  
+- Body Press  
+- Iron Defense  
+
+Regigigas @ Leftovers  
+Ability: Slow Start  
+Tera Type: Water  
+EVs: 172 HP / 184 Atk / 152 Spe  
+Jolly Nature  
+- Body Slam  
+- Thunder Wave  
+- Protect  
+- Rest

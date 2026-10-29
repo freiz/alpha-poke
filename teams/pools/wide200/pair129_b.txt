@@ -1,0 +1,59 @@
+Indeedee-F @ Psychic Seed  
+Ability: Psychic Surge  
+Tera Type: Water  
+EVs: 216 HP / 40 Def / 252 SpD  
+Sassy Nature  
+- Psyshock  
+- Trick Room  
+- Light Screen  
+- Healing Wish  
+
+Clawitzer @ Assault Vest  
+Ability: Mega Launcher  
+Tera Type: Ground  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+- Water Pulse  
+- Aura Sphere  
+- Dragon Pulse  
+- Dark Pulse  
+
+Gogoat @ Leftovers  
+Ability: Sap Sipper  
+Tera Type: Poison  
+EVs: 132 HP / 4 Atk / 252 Def / 120 SpD  
+Impish Nature  
+- Bulk Up  
+- Leech Seed  
+- High Horsepower  
+- Horn Leech  
+
+Tyranitar @ Leftovers  
+Ability: Sand Stream  
+Tera Type: Ghost  
+EVs: 240 HP / 252 Atk / 12 SpD / 4 Spe  
+Adamant Nature  
+- Stealth Rock  
+- Knock Off  
+- Stone Edge  
+- Thunder Wave  
+
+Scrafty @ Weakness Policy  
+Ability: Intimidate  
+Tera Type: Steel  
+EVs: 252 HP / 4 Atk / 252 SpD  
+Careful Nature  
+- Knock Off  
+- Curse  
+- Drain Punch  
+- Iron Head  
+
+Copperajah @ Life Orb  
+Ability: Heavy Metal  
+Tera Type: Fire  
+EVs: 248 HP / 252 Atk / 8 SpD  
+Adamant Nature  
+- Play Rough  
+- Heavy Slam  
+- High Horsepower  
+- Iron Head

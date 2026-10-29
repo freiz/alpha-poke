@@ -1,0 +1,59 @@
+Dragonite @ Loaded Dice  
+Ability: Multiscale  
+Tera Type: Water  
+EVs: 248 HP / 224 Atk / 8 Def / 28 Spe  
+Adamant Nature  
+- Scale Shot  
+- Dragon Dance  
+- Encore  
+- Fire Punch  
+
+Weavile @ Life Orb  
+Ability: Pickpocket  
+Tera Type: Ice  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Triple Axel  
+- Swords Dance  
+- Icicle Crash  
+
+Rillaboom @ Choice Band  
+Ability: Grassy Surge  
+Tera Type: Grass  
+EVs: 160 HP / 252 Atk / 8 Def / 88 SpD  
+Adamant Nature  
+- High Horsepower  
+- Knock Off  
+- Grassy Glide  
+- Swords Dance  
+
+Jolteon @ Flame Orb  
+Ability: Quick Feet  
+Tera Type: Fairy  
+EVs: 76 HP / 252 SpA / 180 Spe  
+Modest Nature  
+- Calm Mind  
+- Thunderbolt  
+- Alluring Voice  
+- Volt Switch  
+
+Clefable @ Leftovers  
+Ability: Unaware  
+Tera Type: Steel  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Cosmic Power  
+- Moonblast  
+- Calm Mind  
+- Moonlight  
+
+Gyarados @ Leftovers  
+Ability: Moxie  
+Tera Type: Ground  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Dragon Dance  
+- Earthquake  
+- Waterfall  
+- Thunder Wave

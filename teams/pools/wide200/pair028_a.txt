@@ -1,0 +1,61 @@
+Ninetales @ Heat Rock  
+Ability: Drought  
+Tera Type: Grass  
+EVs: 248 HP / 20 Def / 240 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Weather Ball  
+- Encore  
+- Healing Wish  
+- Will-O-Wisp  
+
+Great Tusk @ Heavy-Duty Boots  
+Ability: Protosynthesis  
+Tera Type: Fire  
+EVs: 248 HP / 8 Def / 252 Spe  
+Jolly Nature  
+- Headlong Rush  
+- Ice Spinner  
+- Rapid Spin  
+- Stealth Rock  
+
+Arcanine-Hisui (M) @ Choice Band  
+Ability: Rock Head  
+Tera Type: Rock  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Head Smash  
+- Flare Blitz  
+- Extreme Speed  
+- Close Combat  
+
+Venusaur @ Life Orb  
+Ability: Chlorophyll  
+Tera Type: Fire  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+IVs: 29 HP / 0 Atk  
+- Growth  
+- Giga Drain  
+- Weather Ball  
+- Earth Power  
+
+Walking Wake @ Choice Specs  
+Ability: Protosynthesis  
+Tera Type: Water  
+EVs: 12 HP / 244 SpA / 252 Spe  
+Timid Nature  
+- Hydro Steam  
+- Draco Meteor  
+- Flamethrower  
+- Dragon Pulse  
+
+Hatterene (F) @ Eject Button  
+Ability: Magic Bounce  
+Tera Type: Steel  
+EVs: 248 HP / 116 Def / 144 Spe  
+Bold Nature  
+- Healing Wish  
+- Psychic  
+- Dazzling Gleam  
+- Nuzzle

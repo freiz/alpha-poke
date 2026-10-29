@@ -1,0 +1,59 @@
+Hydreigon @ Choice Specs  
+Ability: Levitate  
+Tera Type: Steel  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Dark Pulse  
+- Flash Cannon  
+- Nasty Plot  
+- Draco Meteor  
+
+Great Tusk @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Ground  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Close Combat  
+- Headlong Rush  
+- Ice Spinner  
+- Stealth Rock  
+
+Lokix @ Choice Band  
+Ability: Tinted Lens  
+Tera Type: Bug  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- U-turn  
+- First Impression  
+- Knock Off  
+- Leech Life  
+
+Slowking-Galar @ Assault Vest  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 252 HP / 4 SpA / 252 SpD  
+Calm Nature  
+- Psychic Noise  
+- Future Sight  
+- Sludge Bomb  
+- Flamethrower  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Fairy  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Make It Rain  
+- Shadow Ball  
+- Nasty Plot  
+- Recover  
+
+Dragapult @ Heavy-Duty Boots  
+Ability: Clear Body  
+Tera Type: Ghost  
+EVs: 128 HP / 92 Atk / 36 Def / 252 SpD  
+Bold Nature  
+- Draco Meteor  
+- Dragon Darts  
+- Hex  
+- Will-O-Wisp

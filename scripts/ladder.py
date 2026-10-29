@@ -30,15 +30,20 @@ import random
 import time
 from pathlib import Path
 
+from alpha_poke import paths
+from alpha_poke.selfplay.runner import MODEL
 from alpha_poke.servers import account, local_server, public_account, public_server
-from alpha_poke.teams import POOLS_DIR, load_team_files
+from alpha_poke.teams import load_team_files
 
 OUT = Path("data/ladder")
 STOP = OUT / "STOP"
 
 
 def current_network() -> str:
-    return json.loads(Path("data/selfplay/state.json").read_text())["current"]
+    """The self-play loop's current network (data/selfplay/state.json); without a self-play
+    run, the released one (selfplay.runner.MODEL, scripts/fetch_model.py)."""
+    state = Path("data/selfplay/state.json")
+    return json.loads(state.read_text())["current"] if state.exists() else MODEL
 
 
 def valid_teams(pool_dir: str) -> dict[str, str]:
@@ -56,7 +61,8 @@ def valid_teams(pool_dir: str) -> dict[str, str]:
 def row(b, team: str, seconds: float) -> dict:
     return {"battle": b.battle_tag, "time": int(time.time()), "won": b.won, "lost": b.lost,
             "turns": b.turn, "rating": b.rating, "opponent": b.opponent_username,
-            "opponent_rating": b.opponent_rating, "team": team, "seconds": round(seconds, 1)}  # fmt: skip
+            "opponent_rating": b.opponent_rating, "team": team,
+            "seconds": round(seconds, 1)}  # fmt: skip
 
 
 async def main(a) -> None:
@@ -104,8 +110,8 @@ async def main(a) -> None:
             log.write(json.dumps(r) + "\n")
             log.flush()
             res = "won" if r["won"] else "lost" if r["lost"] else "tie"
-            print(f"  {tag}: {res} in {r['turns']} turns vs {r['opponent']} ({r['opponent_rating']}); "
-                  f"our rating {r['rating']}", flush=True)  # fmt: skip
+            print(f"  {tag}: {res} in {r['turns']} turns vs {r['opponent']} "
+                  f"({r['opponent_rating']}); our rating {r['rating']}", flush=True)  # fmt: skip
     if hasattr(bot, "close"):
         bot.close()
     won = sum(1 for b in bot.battles.values() if b.won)
@@ -116,7 +122,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.WARNING)
     ap = argparse.ArgumentParser()
     ap.add_argument("--n", type=int, default=10, help="ladder games, one at a time")
-    ap.add_argument("--pool", default=str(POOLS_DIR / "ladder_robust"))
+    ap.add_argument("--pool", default=str(paths.pool("ladder_robust")))
     ap.add_argument("--model", default=None, help="network run (default: the current one)")
     ap.add_argument("--search-ms", type=int, default=5000, help="search time per decision")
     ap.add_argument("--threads", type=int, default=2, help="search threads")

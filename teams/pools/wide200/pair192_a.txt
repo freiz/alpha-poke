@@ -1,0 +1,59 @@
+Primeape @ Eviolite  
+Ability: Defiant  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Atk  
+Impish Nature  
+- Taunt  
+- Stealth Rock  
+- Rage Fist  
+- Drain Punch  
+
+Maushold @ Wide Lens  
+Ability: Technician  
+Tera Type: Ghost  
+EVs: 232 Atk / 4 Def / 164 SpD / 108 Spe  
+Jolly Nature  
+- Population Bomb  
+- Encore  
+- Tidy Up  
+- Bite  
+
+Skeledirge @ Quick Claw  
+Ability: Unaware  
+Tera Type: Fighting  
+EVs: 252 HP / 252 Def / 4 SpD  
+Calm Nature  
+- Torch Song  
+- Shadow Ball  
+- Will-O-Wisp  
+- Flame Charge  
+
+Braviary-Hisui @ Weakness Policy  
+Ability: Tinted Lens  
+Tera Type: Flying  
+EVs: 64 Atk / 252 SpA / 4 SpD / 188 Spe  
+Timid Nature  
+- Air Slash  
+- Hurricane  
+- Esper Wing  
+- Close Combat  
+
+Samurott-Hisui @ Assault Vest  
+Ability: Sharpness  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Aqua Cutter  
+- Sucker Punch  
+- Aqua Jet  
+- Ceaseless Edge  
+
+Magnezone @ Leftovers  
+Ability: Analytic  
+Tera Type: Flying  
+EVs: 116 HP / 252 SpA / 56 SpD / 84 Spe  
+Modest Nature  
+- Steel Beam  
+- Thunderbolt  
+- Flash Cannon  
+- Volt Switch

@@ -1,0 +1,61 @@
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Atk / 252 SpD  
+Impish Nature  
+- Spikes  
+- Stealth Rock  
+- Whirlwind  
+- Earthquake  
+
+Sinistcha @ Heavy-Duty Boots  
+Ability: Heatproof  
+Tera Type: Fairy  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+IVs: 0 Atk  
+- Strength Sap  
+- Matcha Gotcha  
+- Shadow Ball  
+- Calm Mind  
+
+Zamazenta @ Choice Band  
+Ability: Dauntless Shield  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Close Combat  
+- Crunch  
+- Ice Fang  
+- Stone Edge  
+
+Alomomola @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 252 HP / 252 Def / 4 SpD  
+Relaxed Nature  
+- Wish  
+- Flip Turn  
+- Play Rough  
+- Scald  
+
+Iron Crown @ Choice Specs  
+Ability: Quark Drive  
+Tera Type: Steel  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 20 Atk  
+- Tachyon Cutter  
+- Volt Switch  
+- Psyshock  
+- Focus Blast  
+
+Great Tusk @ Heavy-Duty Boots  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Headlong Rush  
+- Head Smash  
+- Ice Spinner

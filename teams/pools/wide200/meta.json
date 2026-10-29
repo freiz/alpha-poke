@@ -1,0 +1,4 @@
+{
+ "source": "selfplay teams sampler (real games from 2025-05, 30% catalog sides), seed 9001, 200 pairs; no source game in self-play gens 0-3",
+ "pairs": 200
+}

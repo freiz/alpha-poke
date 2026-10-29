@@ -1,0 +1,59 @@
+Pelipper @ Choice Specs  
+Ability: Drizzle  
+Tera Type: Ground  
+EVs: 248 HP / 252 SpA / 8 SpD  
+Modest Nature  
+- U-turn  
+- Roost  
+- Weather Ball  
+- Hurricane  
+
+Raging Bolt @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Ghost  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+- Weather Ball  
+- Thunderclap  
+- Draco Meteor  
+- Thunder  
+
+Overqwil @ Life Orb  
+Ability: Intimidate  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Gunk Shot  
+- Liquidation  
+- Crunch  
+- Swords Dance  
+
+Barraskewda @ Life Orb  
+Ability: Swift Swim  
+Tera Type: Water  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Flip Turn  
+- Liquidation  
+- Close Combat  
+- Aqua Jet  
+
+Iron Treads @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Steel Beam  
+- Rapid Spin  
+- Earth Power  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Flying  
+EVs: 252 HP / 252 Atk / 4 Spe  
+Adamant Nature  
+- Kowtow Cleave  
+- Swords Dance  
+- Sucker Punch  
+- Iron Head

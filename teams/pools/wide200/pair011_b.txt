@@ -1,0 +1,61 @@
+Raging Bolt @ Choice Specs  
+Ability: Protosynthesis  
+Tera Type: Fairy  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+IVs: 20 Atk  
+- Thunderbolt  
+- Volt Switch  
+- Draco Meteor  
+- Thunderclap  
+
+Scizor @ Choice Band  
+Ability: Technician  
+Tera Type: Steel  
+EVs: 116 HP / 252 Atk / 140 Spe  
+Adamant Nature  
+- U-turn  
+- Bullet Punch  
+- Knock Off  
+- Close Combat  
+
+Ogerpon @ Choice Band  
+Ability: Defiant  
+Tera Type: Grass  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Ivy Cudgel  
+- Knock Off  
+- U-turn  
+- Low Kick  
+
+Great Tusk @ Rocky Helmet  
+Ability: Protosynthesis  
+Tera Type: Ghost  
+EVs: 252 HP / 4 SpD / 252 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Rapid Spin  
+- Headlong Rush  
+- Ice Spinner  
+
+Darkrai @ Choice Scarf  
+Ability: Bad Dreams  
+Tera Type: Poison  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Dark Pulse  
+- Sludge Bomb  
+- Ice Beam  
+- Trick  
+
+Tornadus-Therian @ Assault Vest  
+Ability: Regenerator  
+Tera Type: Fire  
+EVs: 252 HP / 84 SpA / 4 SpD / 168 Spe  
+Timid Nature  
+- Bleakwind Storm  
+- U-turn  
+- Grass Knot  
+- Heat Wave

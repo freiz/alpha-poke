@@ -1,0 +1,59 @@
+Ninetales-Alola @ Light Clay  
+Ability: Snow Warning  
+Tera Type: Water  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Aurora Veil  
+- Moonblast  
+- Freeze-Dry  
+- Encore  
+
+Slowking-Galar @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 248 HP / 8 Def / 252 SpD  
+Sassy Nature  
+- Chilly Reception  
+- Future Sight  
+- Sludge Bomb  
+- Flamethrower  
+
+Kyurem @ Assault Vest  
+Ability: Pressure  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Freeze-Dry  
+- Ice Beam  
+- Earth Power  
+- Draco Meteor  
+
+Great Tusk @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Ground  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Jolly Nature  
+- Headlong Rush  
+- Rapid Spin  
+- Stealth Rock  
+- Ice Spinner  
+
+Manaphy @ Leftovers  
+Ability: Hydration  
+Tera Type: Psychic  
+EVs: 4 HP / 12 Def / 248 SpA / 4 SpD / 240 Spe  
+Timid Nature  
+- Tail Glow  
+- Energy Ball  
+- Scald  
+- Surf  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Ghost  
+EVs: 248 HP / 252 Atk / 8 Def  
+Adamant Nature  
+- Kowtow Cleave  
+- Iron Head  
+- Sucker Punch  
+- Swords Dance

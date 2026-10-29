@@ -1,0 +1,59 @@
+Ninetales-Alola @ Light Clay  
+Ability: Snow Warning  
+Tera Type: Water  
+EVs: 252 HP / 4 SpA / 252 Spe  
+Timid Nature  
+- Aurora Veil  
+- Encore  
+- Freeze-Dry  
+- Snowscape  
+
+Iron Moth @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Grass  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Sludge Wave  
+- Fiery Dance  
+- Toxic Spikes  
+- Substitute  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Normal  
+EVs: 244 HP / 36 Def / 228 SpD  
+Careful Nature  
+- Earthquake  
+- Agility  
+- Swords Dance  
+- Facade  
+
+Hatterene @ Air Balloon  
+Ability: Magic Bounce  
+Tera Type: Steel  
+EVs: 252 HP / 204 Def / 52 Spe  
+Bold Nature  
+- Draining Kiss  
+- Nuzzle  
+- Calm Mind  
+- Dazzling Gleam  
+
+Kyurem @ Heavy-Duty Boots  
+Ability: Pressure  
+Tera Type: Ghost  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Substitute  
+- Icicle Spear  
+- Dragon Dance  
+- Earth Power  
+
+Zamazenta @ Leftovers  
+Ability: Dauntless Shield  
+Tera Type: Fire  
+EVs: 252 HP / 88 Def / 168 Spe  
+Jolly Nature  
+- Iron Defense  
+- Body Press  
+- Crunch  
+- Stone Edge

@@ -1,0 +1,63 @@
+Wo-Chien @ Leftovers  
+Ability: Tablets of Ruin  
+Tera Type: Poison  
+EVs: 252 HP / 252 Def / 4 SpD  
+Relaxed Nature  
+- Knock Off  
+- Leech Seed  
+- Foul Play  
+- Giga Drain  
+
+Talonflame @ Heavy-Duty Boots  
+Ability: Flame Body  
+Tera Type: Steel  
+EVs: 252 HP / 204 Def / 52 Spe  
+Bold Nature  
+IVs: 0 Atk  
+- Roost  
+- Will-O-Wisp  
+- Defog  
+- Flamethrower  
+
+Alomomola @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Flying  
+EVs: 252 HP / 252 Def / 4 SpD  
+Relaxed Nature  
+IVs: 0 Atk / 0 Spe  
+- Wish  
+- Protect  
+- Scald  
+- Whirlpool  
+
+Blissey @ Heavy-Duty Boots  
+Ability: Natural Cure  
+Tera Type: Dark  
+EVs: 4 HP / 252 Def / 252 SpD  
+Calm Nature  
+IVs: 0 Atk  
+- Calm Mind  
+- Stealth Rock  
+- Seismic Toss  
+- Soft-Boiled  
+
+Cyclizar @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Steel  
+EVs: 252 HP / 4 Atk / 252 SpD  
+Jolly Nature  
+- Rapid Spin  
+- U-turn  
+- Knock Off  
+- Protect  
+
+Clodsire @ Leftovers  
+Ability: Unaware  
+Tera Type: Fairy  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+IVs: 12 Spe  
+- Counter  
+- Poison Jab  
+- Recover  
+- Spikes

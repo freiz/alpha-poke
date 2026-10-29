@@ -1,0 +1,59 @@
+Kyurem @ Assault Vest  
+Ability: Pressure  
+Tera Type: Fairy  
+EVs: 96 Def / 160 SpA / 252 Spe  
+Timid Nature  
+- Earth Power  
+- Ice Beam  
+- Freeze-Dry  
+- Draco Meteor  
+
+Slowking-Galar @ Black Sludge  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 248 HP / 252 Def / 8 SpD  
+Relaxed Nature  
+- Chilly Reception  
+- Sludge Bomb  
+- Psychic Noise  
+- Future Sight  
+
+Landorus-Therian @ Rocky Helmet  
+Ability: Intimidate  
+Tera Type: Ground  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Earthquake  
+- Taunt  
+- Earth Power  
+
+Great Tusk @ Assault Vest  
+Ability: Protosynthesis  
+Tera Type: Ghost  
+EVs: 248 HP / 4 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Ice Spinner  
+- Headlong Rush  
+- Knock Off  
+
+Samurott-Hisui @ Focus Sash  
+Ability: Sharpness  
+Tera Type: Poison  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Ceaseless Edge  
+- Sucker Punch  
+- Razor Shell  
+- Knock Off  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Swords Dance  
+- Sucker Punch  
+- Kowtow Cleave  
+- Iron Head

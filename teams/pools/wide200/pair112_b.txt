@@ -1,0 +1,60 @@
+Samurott-Hisui @ Assault Vest  
+Ability: Sharpness  
+Tera Type: Poison  
+EVs: 248 HP / 84 Atk / 124 SpD / 52 Spe  
+Adamant Nature  
+- Ceaseless Edge  
+- Razor Shell  
+- Sucker Punch  
+- Knock Off  
+
+Darkrai @ Heavy-Duty Boots  
+Ability: Bad Dreams  
+Tera Type: Poison  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Nasty Plot  
+- Dark Pulse  
+- Sludge Bomb  
+- Ice Beam  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Calm Mind  
+- Moonblast  
+- Shadow Ball  
+- Encore  
+
+Pecharunt @ Heavy-Duty Boots  
+Ability: Poison Puppeteer  
+Tera Type: Dark  
+EVs: 252 HP / 228 Def / 28 Spe  
+Bold Nature  
+IVs: 0 Atk  
+- Malignant Chain  
+- Foul Play  
+- Parting Shot  
+- Recover  
+
+Landorus-Therian (M) @ Rocky Helmet  
+Ability: Intimidate  
+Tera Type: Water  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Earthquake  
+- Taunt  
+- U-turn  
+
+Ogerpon-Wellspring (F) @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Ivy Cudgel  
+- Power Whip  
+- Knock Off

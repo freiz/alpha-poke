@@ -1,0 +1,65 @@
+Gallade @ Choice Band  
+Ability: Sharpness  
+Shiny: Yes  
+Tera Type: Psychic  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Psycho Cut  
+- X-Scissor  
+- Sacred Sword  
+- Leaf Blade  
+
+Gardevoir @ Colbur Berry  
+Ability: Trace  
+Shiny: Yes  
+Tera Type: Psychic  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Psychic Terrain  
+- Expanding Force  
+- Destiny Bond  
+- Psyshock  
+
+Salazzle @ Poison Barb  
+Ability: Corrosion  
+Tera Type: Poison  
+EVs: 252 Atk / 4 SpA / 252 Spe  
+Hasty Nature  
+- Toxic  
+- Gunk Shot  
+- Sludge Bomb  
+- Trailblaze  
+
+Mew @ Quick Claw  
+Ability: Synchronize  
+Shiny: Yes  
+Tera Type: Psychic  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Hasty Nature  
+IVs: 0 Atk  
+- Calm Mind  
+- Psychic Terrain  
+- Expanding Force  
+- Roar  
+
+Jirachi @ Metronome  
+Ability: Serene Grace  
+Tera Type: Steel  
+EVs: 252 Atk / 4 SpA / 252 Spe  
+Hasty Nature  
+- Body Slam  
+- Iron Head  
+- Meteor Mash  
+- Expanding Force  
+
+Indeedee @ Terrain Extender  
+Ability: Psychic Surge  
+Shiny: Yes  
+Tera Type: Psychic  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Hasty Nature  
+- Psychic Terrain  
+- Expanding Force  
+- Facade  
+- Psychic

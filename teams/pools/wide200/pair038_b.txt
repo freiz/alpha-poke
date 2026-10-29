@@ -1,0 +1,59 @@
+Dondozo @ Leftovers  
+Ability: Unaware  
+Tera Type: Fighting  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Body Press  
+- Avalanche  
+- Rest  
+- Curse  
+
+Corviknight @ Leftovers  
+Ability: Pressure  
+Tera Type: Dragon  
+EVs: 248 HP / 8 Atk / 252 Def  
+Impish Nature  
+- Iron Defense  
+- Roost  
+- Body Press  
+- Defog  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Normal  
+EVs: 252 HP / 160 Def / 96 Spe  
+Impish Nature  
+- Protect  
+- Swords Dance  
+- Knock Off  
+- Earthquake  
+
+Weezing-Galar @ Leftovers  
+Ability: Neutralizing Gas  
+Tera Type: Ghost  
+EVs: 248 HP / 252 Def / 8 Spe  
+Bold Nature  
+- Pain Split  
+- Strange Steam  
+- Defog  
+- Will-O-Wisp  
+
+Blissey @ Leftovers  
+Ability: Healer  
+Tera Type: Poison  
+EVs: 4 HP / 252 Def / 252 SpD  
+Calm Nature  
+- Calm Mind  
+- Seismic Toss  
+- Stealth Rock  
+- Soft-Boiled  
+
+Toxapex @ Leftovers  
+Ability: Regenerator  
+Tera Type: Steel  
+EVs: 252 HP / 4 Atk / 252 Def  
+Relaxed Nature  
+- Toxic  
+- Recover  
+- Poison Jab  
+- Baneful Bunker

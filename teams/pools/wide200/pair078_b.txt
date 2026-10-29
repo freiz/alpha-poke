@@ -1,0 +1,59 @@
+Weavile @ Life Orb  
+Ability: Pressure  
+Tera Type: Ice  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Triple Axel  
+- Swords Dance  
+- Ice Shard  
+
+Pecharunt @ Rocky Helmet  
+Ability: Poison Puppeteer  
+Tera Type: Dark  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Foul Play  
+- Parting Shot  
+- Nasty Plot  
+- Recover  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Shadow Ball  
+- Moonblast  
+- Vacuum Wave  
+- Calm Mind  
+
+Iron Treads @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Dark  
+EVs: 4 Atk / 252 Def / 252 Spe  
+Hardy Nature  
+- Stealth Rock  
+- Knock Off  
+- Rapid Spin  
+- Earthquake  
+
+Skarmory @ Leftovers  
+Ability: Sturdy  
+Tera Type: Dragon  
+EVs: 252 HP / 160 Def / 96 Spe  
+Bold Nature  
+- Whirlwind  
+- Roost  
+- Spikes  
+- Brave Bird  
+
+Slowking @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Steel  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+- Psyshock  
+- Future Sight  
+- Scald  
+- Trick Room

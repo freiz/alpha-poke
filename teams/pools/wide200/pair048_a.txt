@@ -1,0 +1,59 @@
+Lokix @ Life Orb  
+Ability: Tinted Lens  
+Tera Type: Bug  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- First Impression  
+- U-turn  
+- Leech Life  
+- Knock Off  
+
+Cinderace @ Eject Button  
+Ability: Libero  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Court Change  
+- Pyro Ball  
+- Will-O-Wisp  
+
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Atk / 40 Spe  
+Impish Nature  
+- Earthquake  
+- Rapid Spin  
+- Knock Off  
+- Bulk Up  
+
+Alomomola @ Assault Vest  
+Ability: Regenerator  
+Tera Type: Grass  
+EVs: 4 Atk / 252 Def / 252 SpD  
+Sassy Nature  
+- Flip Turn  
+- Aqua Jet  
+- Body Slam  
+- Mirror Coat  
+
+Enamorus @ Choice Scarf  
+Ability: Contrary  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Moonblast  
+- Earth Power  
+- Healing Wish  
+- Mystical Fire  
+
+Slowking-Galar @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Grass  
+EVs: 248 HP / 8 Def / 252 SpD  
+Sassy Nature  
+- Sludge Bomb  
+- Chilly Reception  
+- Future Sight  
+- Ice Beam

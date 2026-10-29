@@ -1,0 +1,59 @@
+Kingambit @ Air Balloon  
+Ability: Supreme Overlord  
+Tera Type: Fighting  
+EVs: 136 HP / 228 Atk / 144 Spe  
+Adamant Nature  
+- Low Kick  
+- Kowtow Cleave  
+- Iron Head  
+- Swords Dance  
+
+Iron Treads @ Assault Vest  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Volt Switch  
+- Rapid Spin  
+- Ice Spinner  
+- Earthquake  
+
+Necrozma @ Leftovers  
+Ability: Prism Armor  
+Tera Type: Poison  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Quiet Nature  
+- Trick Room  
+- Earth Power  
+- Knock Off  
+- Heat Wave  
+
+Pecharunt @ Air Balloon  
+Ability: Poison Puppeteer  
+Tera Type: Dark  
+EVs: 252 HP / 4 SpA / 252 Spe  
+Timid Nature  
+- Malignant Chain  
+- Recover  
+- Shadow Ball  
+- Parting Shot  
+
+Enamorus @ Life Orb  
+Ability: Contrary  
+Tera Type: Ground  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Modest Nature  
+- Moonblast  
+- Earth Power  
+- Mystical Fire  
+- Superpower  
+
+Samurott-Hisui @ Leftovers  
+Ability: Sharpness  
+Tera Type: Poison  
+EVs: 248 HP / 144 Atk / 56 SpD / 60 Spe  
+Adamant Nature  
+- Razor Shell  
+- Knock Off  
+- Ceaseless Edge  
+- Aqua Jet

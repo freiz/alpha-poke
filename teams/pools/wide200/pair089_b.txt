@@ -1,0 +1,60 @@
+Garganacl @ Leftovers  
+Ability: Purifying Salt  
+Tera Type: Water  
+EVs: 252 HP / 60 Def / 196 SpD  
+Careful Nature  
+- Salt Cure  
+- Protect  
+- Recover  
+- Iron Defense  
+
+Cyclizar @ Assault Vest  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 112 HP / 144 SpD / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Dragon Tail  
+- Knock Off  
+- U-turn  
+
+Toxapex @ Black Sludge  
+Ability: Regenerator  
+Tera Type: Flying  
+EVs: 252 HP / 4 Def / 252 SpD  
+Calm Nature  
+IVs: 0 Atk  
+- Toxic  
+- Infestation  
+- Baneful Bunker  
+- Recover  
+
+Dondozo @ Leftovers  
+Ability: Unaware  
+Tera Type: Dark  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- Liquidation  
+- Curse  
+- Sleep Talk  
+- Rest  
+
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Flying  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Brave Bird  
+- Bulk Up  
+- Roost  
+- Defog  
+
+Wo-Chien @ Leftovers  
+Ability: Tablets of Ruin  
+Tera Type: Poison  
+EVs: 252 HP / 4 Def / 252 SpD  
+Calm Nature  
+- Giga Drain  
+- Knock Off  
+- Leech Seed  
+- Protect

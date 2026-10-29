@@ -1,0 +1,59 @@
+Deoxys-Speed @ Life Orb  
+Ability: Pressure  
+Tera Type: Fighting  
+EVs: 248 HP / 8 Def / 252 Spe  
+Timid Nature  
+- Taunt  
+- Psycho Boost  
+- Stealth Rock  
+- Ice Beam  
+
+Ceruledge @ Life Orb  
+Ability: Weak Armor  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Poltergeist  
+- Bitter Blade  
+- Shadow Sneak  
+
+Zamazenta @ Leftovers  
+Ability: Dauntless Shield  
+Tera Type: Fire  
+EVs: 16 HP / 252 Atk / 240 Spe  
+Adamant Nature  
+- Iron Defense  
+- Roar  
+- Crunch  
+- Body Press  
+
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Trailblaze  
+- Ivy Cudgel  
+- Play Rough  
+- Swords Dance  
+
+Glimmora @ Power Herb  
+Ability: Corrosion  
+Tera Type: Ghost  
+EVs: 244 HP / 216 Def / 48 Spe  
+Bold Nature  
+- Earth Power  
+- Mortal Spin  
+- Stealth Rock  
+- Meteor Beam  
+
+Moltres-Galar @ Sitrus Berry  
+Ability: Berserk  
+Tera Type: Ghost  
+EVs: 212 HP / 252 SpA / 44 Spe  
+Modest Nature  
+- Nasty Plot  
+- Air Slash  
+- Hurricane  
+- Fiery Wrath

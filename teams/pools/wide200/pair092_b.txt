@@ -1,0 +1,60 @@
+Pelipper @ Damp Rock  
+Ability: Drizzle  
+Tera Type: Water  
+EVs: 248 HP / 8 Atk / 252 Def  
+Relaxed Nature  
+- Hurricane  
+- U-turn  
+- Knock Off  
+- Roost  
+
+Barraskewda @ Choice Band  
+Ability: Swift Swim  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Liquidation  
+- Close Combat  
+- Ice Fang  
+- Psychic Fangs  
+
+Floatzel @ Choice Band  
+Ability: Swift Swim  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Wave Crash  
+- Liquidation  
+- Brick Break  
+- Ice Spinner  
+
+Kilowattrel @ Choice Specs  
+Ability: Volt Absorb  
+Tera Type: Electric  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Thunder  
+- Hurricane  
+- Weather Ball  
+- Roost  
+
+Iron Treads @ Assault Vest  
+Ability: Quark Drive  
+Tera Type: Ground  
+EVs: 252 HP / 4 Def / 252 SpD  
+Calm Nature  
+- Earthquake  
+- Knock Off  
+- Rapid Spin  
+- Volt Switch  
+
+Dondozo @ Leftovers  
+Ability: Unaware  
+Tera Type: Water  
+EVs: 252 HP / 4 Atk / 252 Def  
+Impish Nature  
+- Liquidation  
+- Curse  
+- Sleep Talk  
+- Rest

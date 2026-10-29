@@ -1,0 +1,59 @@
+Araquanid @ Custap Berry  
+Ability: Water Bubble  
+Tera Type: Ghost  
+EVs: 252 HP / 40 Def / 216 SpA  
+Quiet Nature  
+- Sticky Web  
+- Surf  
+- Endeavor  
+- Lunge  
+
+Meowscarada @ Choice Band  
+Ability: Protean  
+Tera Type: Ghost  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Triple Axel  
+- Knock Off  
+- Flower Trick  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Fairy  
+EVs: 252 HP / 196 Def / 60 Spe  
+Bold Nature  
+- Shadow Ball  
+- Make It Rain  
+- Nasty Plot  
+- Trick  
+
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 200 HP / 88 Atk / 88 Def / 12 SpD / 120 Spe  
+Impish Nature  
+- Rapid Spin  
+- Ice Spinner  
+- Headlong Rush  
+- Stealth Rock  
+
+Walking Wake @ Choice Specs  
+Ability: Protosynthesis  
+Tera Type: Water  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Modest Nature  
+- Draco Meteor  
+- Hydro Steam  
+- Dragon Pulse  
+- Flip Turn  
+
+Grafaiai @ Focus Sash  
+Ability: Unburden  
+Tera Type: Flying  
+EVs: 128 HP / 252 SpA / 128 Spe  
+Modest Nature  
+- Sunny Day  
+- U-turn  
+- Swagger  
+- Encore

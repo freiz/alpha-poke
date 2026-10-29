@@ -1,0 +1,59 @@
+Tinkaton @ Air Balloon  
+Ability: Pickpocket  
+Tera Type: Water  
+EVs: 248 HP / 52 Def / 208 Spe  
+Jolly Nature  
+- Thunder Wave  
+- Stealth Rock  
+- Gigaton Hammer  
+- Ice Hammer  
+
+Ogerpon @ Heavy-Duty Boots  
+Ability: Defiant  
+Tera Type: Grass  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Rock Tomb  
+- Ivy Cudgel  
+- U-turn  
+
+Great Tusk @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Headlong Rush  
+- Close Combat  
+- Stealth Rock  
+
+Pecharunt @ Rocky Helmet  
+Ability: Poison Puppeteer  
+Tera Type: Water  
+EVs: 248 HP / 252 Def / 8 SpD  
+Bold Nature  
+- Shadow Ball  
+- Malignant Chain  
+- Parting Shot  
+- Toxic  
+
+Alomomola @ Assault Vest  
+Ability: Regenerator  
+Tera Type: Normal  
+EVs: 248 HP / 8 Def / 252 SpD  
+Sassy Nature  
+- Flip Turn  
+- Aqua Jet  
+- Body Slam  
+- Mirror Coat  
+
+Hydreigon @ Leftovers  
+Ability: Levitate  
+Tera Type: Steel  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Dark Pulse  
+- Flash Cannon  
+- Draco Meteor  
+- Earth Power

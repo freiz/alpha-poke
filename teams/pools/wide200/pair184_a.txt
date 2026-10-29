@@ -1,0 +1,59 @@
+Iron Treads @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Electric  
+EVs: 252 HP / 64 Atk / 192 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Stealth Rock  
+- Knock Off  
+- Earthquake  
+
+Skeledirge @ Leftovers  
+Ability: Unaware  
+Tera Type: Fairy  
+EVs: 252 HP / 252 Def / 4 SpA  
+Bold Nature  
+- Will-O-Wisp  
+- Slack Off  
+- Torch Song  
+- Hex  
+
+Darkrai @ Leftovers  
+Ability: Bad Dreams  
+Tera Type: Poison  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Timid Nature  
+- Sludge Bomb  
+- Nasty Plot  
+- Ice Beam  
+- Dark Pulse  
+
+Dragonite @ Leftovers  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Extreme Speed  
+- Earthquake  
+- Roost  
+- Dragon Dance  
+
+Zamazenta @ Leftovers  
+Ability: Dauntless Shield  
+Tera Type: Steel  
+EVs: 252 HP / 4 SpD / 252 Spe  
+Jolly Nature  
+- Body Press  
+- Iron Defense  
+- Crunch  
+- Light Screen  
+
+Ogerpon @ Life Orb  
+Ability: Defiant  
+Tera Type: Grass  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Horn Leech  
+- Encore  
+- U-turn  
+- Ivy Cudgel

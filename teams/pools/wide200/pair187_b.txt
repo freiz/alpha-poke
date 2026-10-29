@@ -1,0 +1,59 @@
+Primarina @ Heavy-Duty Boots  
+Ability: Torrent  
+Tera Type: Grass  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Modest Nature  
+- Flip Turn  
+- Surf  
+- Moonblast  
+- Psychic Noise  
+
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Water  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Knock Off  
+- Earthquake  
+- Headlong Rush  
+
+Hydrapple @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Poison  
+EVs: 248 HP / 172 Def / 76 SpA / 12 Spe  
+Modest Nature  
+- Fickle Beam  
+- Nasty Plot  
+- Giga Drain  
+- Earth Power  
+
+Dragonite @ Heavy-Duty Boots  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Dragon Dance  
+- Earthquake  
+- Extreme Speed  
+- Roost  
+
+Cinderace @ Heavy-Duty Boots  
+Ability: Libero  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Pyro Ball  
+- Will-O-Wisp  
+- Court Change  
+
+Gholdengo @ Leftovers  
+Ability: Good as Gold  
+Tera Type: Flying  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Trick  
+- Shadow Ball  
+- Make It Rain  
+- Nasty Plot

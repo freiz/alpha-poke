@@ -1,0 +1,59 @@
+Hoopa-Unbound @ Eject Pack  
+Ability: Magician  
+Tera Type: Dark  
+EVs: 40 HP / 252 Atk / 216 Spe  
+Adamant Nature  
+- Hyperspace Fury  
+- Knock Off  
+- Zen Headbutt  
+- Drain Punch  
+
+Slowking-Galar @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 252 HP / 252 Def / 4 SpD  
+Calm Nature  
+- Future Sight  
+- Chilly Reception  
+- Sludge Bomb  
+- Toxic  
+
+Alomomola @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 12 HP / 244 Def / 252 SpD  
+Relaxed Nature  
+- Flip Turn  
+- Wish  
+- Protect  
+- Body Slam  
+
+Zamazenta @ Lum Berry  
+Ability: Dauntless Shield  
+Tera Type: Fighting  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Crunch  
+- Reflect  
+- Body Press  
+- Roar  
+
+Great Tusk @ Rocky Helmet  
+Ability: Protosynthesis  
+Tera Type: Fire  
+EVs: 120 HP / 44 Atk / 248 SpD / 96 Spe  
+Adamant Nature  
+- Headlong Rush  
+- Ice Spinner  
+- Stealth Rock  
+- Close Combat  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Ghost  
+EVs: 140 HP / 252 Atk / 116 Spe  
+Adamant Nature  
+- Sucker Punch  
+- Kowtow Cleave  
+- Low Kick  
+- Iron Head

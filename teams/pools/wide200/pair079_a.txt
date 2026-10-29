@@ -1,0 +1,59 @@
+Mew @ Leftovers  
+Ability: Synchronize  
+Tera Type: Fairy  
+EVs: 252 HP / 4 Def / 252 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Toxic Spikes  
+- Dragon Tail  
+- Imprison  
+
+Mudsdale @ Leftovers  
+Ability: Stamina  
+Tera Type: Grass  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Brave Nature  
+- Roar  
+- Earthquake  
+- Body Press  
+- Stealth Rock  
+
+Ting-Lu @ Heavy-Duty Boots  
+Ability: Vessel of Ruin  
+Tera Type: Water  
+EVs: 248 HP / 8 Def / 252 SpD  
+Careful Nature  
+- Spikes  
+- Whirlwind  
+- Earthquake  
+- Stealth Rock  
+
+Dondozo @ Leftovers  
+Ability: Unaware  
+Tera Type: Grass  
+EVs: 248 HP / 252 Def / 8 SpD  
+Impish Nature  
+- Curse  
+- Wave Crash  
+- Rest  
+- Sleep Talk  
+
+Blaziken @ Life Orb  
+Ability: Speed Boost  
+Tera Type: Electric  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Hasty Nature  
+- Close Combat  
+- Protect  
+- Knock Off  
+- Focus Blast  
+
+Gholdengo @ Life Orb  
+Ability: Good as Gold  
+Tera Type: Fairy  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Dazzling Gleam  
+- Shadow Ball  
+- Focus Blast  
+- Nasty Plot

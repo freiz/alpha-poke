@@ -1,0 +1,59 @@
+Dudunsparce @ Leftovers  
+Ability: Rattled  
+Tera Type: Ghost  
+EVs: 204 HP / 252 SpA / 52 SpD  
+Modest Nature  
+- Glare  
+- Boomburst  
+- Roost  
+- Stealth Rock  
+
+Clefable @ Leftovers  
+Ability: Unaware  
+Tera Type: Water  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+- Moonblast  
+- Knock Off  
+- Stealth Rock  
+- Moonlight  
+
+Sableye @ Heavy-Duty Boots  
+Ability: Prankster  
+Tera Type: Dark  
+EVs: 252 HP / 252 Def / 4 SpD  
+Relaxed Nature  
+- Reflect  
+- Light Screen  
+- Recover  
+- Taunt  
+
+Haxorus @ Lum Berry  
+Ability: Mold Breaker  
+Tera Type: Steel  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Scale Shot  
+- Swords Dance  
+- Dragon Dance  
+- Close Combat  
+
+Glimmora @ Red Card  
+Ability: Toxic Debris  
+Tera Type: Ghost  
+EVs: 248 HP / 132 Def / 128 SpD  
+Calm Nature  
+- Mortal Spin  
+- Stealth Rock  
+- Meteor Beam  
+- Earth Power  
+
+Kilowattrel @ Choice Specs  
+Ability: Wind Power  
+Tera Type: Ice  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Discharge  
+- Substitute  
+- Air Slash  
+- Volt Switch

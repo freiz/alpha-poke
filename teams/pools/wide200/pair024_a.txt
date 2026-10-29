@@ -1,0 +1,59 @@
+Ribombee @ Focus Sash  
+Ability: Shield Dust  
+Tera Type: Steel  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Psychic Noise  
+- Stun Spore  
+- Sticky Web  
+- Moonblast  
+
+Cinderace @ Heavy-Duty Boots  
+Ability: Libero  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Pyro Ball  
+- U-turn  
+- Court Change  
+- Sucker Punch  
+
+Serperior @ Choice Scarf  
+Ability: Contrary  
+Tera Type: Grass  
+EVs: 248 HP / 8 SpA / 252 Spe  
+Timid Nature  
+- Leaf Storm  
+- Dragon Pulse  
+- Glare  
+- Knock Off  
+
+Mimikyu @ Red Card  
+Ability: Disguise  
+Tera Type: Fighting  
+EVs: 252 Atk / 252 Spe  
+Jolly Nature  
+- Shadow Claw  
+- Destiny Bond  
+- Play Rough  
+- Trick Room  
+
+Dragapult @ Life Orb  
+Ability: Infiltrator  
+Tera Type: Fire  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Hydro Pump  
+- Dragon Darts  
+- Flamethrower  
+- Draco Meteor  
+
+Bisharp @ Eviolite  
+Ability: Defiant  
+Tera Type: Flying  
+EVs: 248 HP / 132 Atk / 4 Def / 124 SpD  
+Adamant Nature  
+- Sucker Punch  
+- Swords Dance  
+- Low Kick  
+- Throat Chop

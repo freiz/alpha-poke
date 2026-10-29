@@ -1,0 +1,59 @@
+Primarina @ Leftovers  
+Ability: Torrent  
+Tera Type: Ghost  
+EVs: 248 HP / 84 SpD / 176 Spe  
+Calm Nature  
+- Whirlpool  
+- Moonblast  
+- Psychic Noise  
+- Ice Beam  
+
+Great Tusk @ Rocky Helmet  
+Ability: Protosynthesis  
+Tera Type: Electric  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Ice Spinner  
+- Headlong Rush  
+- Knock Off  
+
+Samurott-Hisui @ Life Orb  
+Ability: Sharpness  
+Tera Type: Ghost  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Sacred Sword  
+- Aqua Jet  
+- Flip Turn  
+- Ceaseless Edge  
+
+Slowking-Galar @ Assault Vest  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 4 HP / 252 Def / 252 SpD  
+Bold Nature  
+- Flamethrower  
+- Sludge Bomb  
+- Ice Beam  
+- Psyshock  
+
+Ogerpon @ Choice Band  
+Ability: Defiant  
+Tera Type: Grass  
+EVs: 12 HP / 244 Atk / 252 Spe  
+Jolly Nature  
+- Rock Tomb  
+- Ivy Cudgel  
+- U-turn  
+- Knock Off  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Fire  
+EVs: 244 HP / 252 Atk / 12 Spe  
+Adamant Nature  
+- Kowtow Cleave  
+- Swords Dance  
+- Sucker Punch  
+- Iron Head

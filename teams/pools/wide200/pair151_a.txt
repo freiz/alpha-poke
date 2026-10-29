@@ -1,0 +1,61 @@
+Glastrier @ Assault Vest  
+Ability: Chilling Neigh  
+Tera Type: Water  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Icicle Crash  
+- High Horsepower  
+- Heavy Slam  
+- Close Combat  
+
+Hatterene @ Leftovers  
+Ability: Magic Bounce  
+Tera Type: Water  
+EVs: 252 HP / 252 Def / 4 SpA  
+Bold Nature  
+IVs: 0 Atk  
+- Calm Mind  
+- Draining Kiss  
+- Psyshock  
+- Mystical Fire  
+
+Alomomola @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Wish  
+- Scald  
+- Flip Turn  
+- Play Rough  
+
+Iron Crown @ Choice Specs  
+Ability: Quark Drive  
+Tera Type: Steel  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 20 Atk  
+- Tachyon Cutter  
+- Volt Switch  
+- Psychic Noise  
+- Focus Blast  
+
+Zamazenta @ Choice Band  
+Ability: Dauntless Shield  
+Tera Type: Fighting  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Ice Fang  
+- Close Combat  
+- Crunch  
+- Stone Edge  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Atk / 252 SpD  
+Careful Nature  
+- Spikes  
+- Protect  
+- Knock Off  
+- Toxic

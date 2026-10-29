@@ -1,0 +1,59 @@
+Toxtricity @ Throat Spray  
+Ability: Punk Rock  
+Tera Type: Normal  
+EVs: 252 HP / 252 SpA / 4 Spe  
+Modest Nature  
+- Boomburst  
+- Overdrive  
+- Shift Gear  
+- Encore  
+
+Corviknight @ Leftovers  
+Ability: Pressure  
+Tera Type: Dragon  
+EVs: 248 HP / 252 Def / 8 SpD  
+Impish Nature  
+- Brave Bird  
+- Roost  
+- U-turn  
+- Protect  
+
+Iron Moth @ Choice Specs  
+Ability: Quark Drive  
+Tera Type: Fire  
+EVs: 124 Def / 132 SpA / 252 Spe  
+Timid Nature  
+- Fiery Dance  
+- Morning Sun  
+- Sludge Wave  
+- Overheat  
+
+Mudsdale @ Leftovers  
+Ability: Stamina  
+Tera Type: Fighting  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Roar  
+- Earthquake  
+- Body Press  
+- Stealth Rock  
+
+Garchomp @ Rocky Helmet  
+Ability: Rough Skin  
+Tera Type: Ghost  
+EVs: 248 HP / 216 Def / 44 Spe  
+Impish Nature  
+- Earthquake  
+- Dragon Tail  
+- Stealth Rock  
+- Spikes  
+
+Zarude @ Life Orb  
+Ability: Leaf Guard  
+Tera Type: Poison  
+EVs: 32 HP / 252 Atk / 4 Def / 16 SpD / 204 Spe  
+Jolly Nature  
+- Swords Dance  
+- Knock Off  
+- Petal Blizzard  
+- Synthesis

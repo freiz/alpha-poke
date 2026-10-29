@@ -1,0 +1,59 @@
+Mabosstiff @ Choice Band  
+Ability: Stakeout  
+Tera Type: Dark  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- Crunch  
+- Fire Fang  
+- Hone Claws  
+- Trailblaze  
+
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Dragon  
+EVs: 248 HP / 140 Def / 120 Spe  
+Bold Nature  
+- U-turn  
+- Roost  
+- Brave Bird  
+- Defog  
+
+Gholdengo @ Leftovers  
+Ability: Good as Gold  
+Tera Type: Fairy  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Trick  
+- Thunderbolt  
+- Shadow Ball  
+- Make It Rain  
+
+Hatterene @ Eject Button  
+Ability: Magic Bounce  
+Tera Type: Fire  
+EVs: 252 HP / 204 Def / 52 Spe  
+Bold Nature  
+- Draining Kiss  
+- Psychic Noise  
+- Nuzzle  
+- Psyshock  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Water  
+EVs: 252 Def / 252 Spe  
+Hardy Nature  
+- Knock Off  
+- Toxic  
+- Protect  
+- Stealth Rock  
+
+Iron Treads @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ground  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Rapid Spin  
+- Knock Off  
+- Steel Beam

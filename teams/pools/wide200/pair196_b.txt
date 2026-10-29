@@ -1,0 +1,59 @@
+Zapdos @ Heavy-Duty Boots  
+Ability: Static  
+Tera Type: Grass  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Hardy Nature  
+- Volt Switch  
+- Hurricane  
+- Discharge  
+- Thunder Wave  
+
+Quaquaval @ Leftovers  
+Ability: Moxie  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Aqua Step  
+- Knock Off  
+- Aqua Jet  
+- Roost  
+
+Slowking-Galar @ Black Sludge  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 248 HP / 252 Def / 8 SpD  
+Bold Nature  
+- Chilly Reception  
+- Sludge Bomb  
+- Psyshock  
+- Thunder Wave  
+
+Meowscarada @ Focus Sash  
+Ability: Protean  
+Tera Type: Dark  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Triple Axel  
+- Flower Trick  
+- U-turn  
+
+Blaziken @ Grassy Seed  
+Ability: Speed Boost  
+Tera Type: Flying  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- Protect  
+- Close Combat  
+- Swords Dance  
+- Flare Blitz  
+
+Kyurem @ Leftovers  
+Ability: Pressure  
+Tera Type: Ice  
+EVs: 216 HP / 40 SpA / 252 Spe  
+Timid Nature  
+- Freeze-Dry  
+- Dragon Dance  
+- Ice Beam  
+- Substitute

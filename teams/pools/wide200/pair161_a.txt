@@ -1,0 +1,62 @@
+Bellibolt (F) @ Leftovers  
+Ability: Electromorphosis  
+Shiny: Yes  
+Tera Type: Fairy  
+EVs: 252 HP / 252 Def / 4 SpA  
+Bold Nature  
+IVs: 0 Atk  
+- Soak  
+- Discharge  
+- Toxic  
+- Slack Off  
+
+Rillaboom (F) @ Choice Band  
+Ability: Grassy Surge  
+Tera Type: Grass  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Grassy Glide  
+- Knock Off  
+- Wood Hammer  
+- U-turn  
+
+Garganacl (F) @ Leftovers  
+Ability: Purifying Salt  
+Tera Type: Water  
+EVs: 252 HP / 4 Atk / 252 SpD  
+Careful Nature  
+- Stealth Rock  
+- Recover  
+- Salt Cure  
+- Protect  
+
+Alomomola (F) @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Steel  
+EVs: 252 HP / 252 Def / 4 SpD  
+Relaxed Nature  
+IVs: 0 Spe  
+- Wish  
+- Flip Turn  
+- Scald  
+- Tickle  
+
+Dragapult (F) @ Heavy-Duty Boots  
+Ability: Infiltrator  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Hex  
+- U-turn  
+- Will-O-Wisp  
+- Draco Meteor  
+
+Great Tusk @ Heavy-Duty Boots  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Ice Spinner  
+- Close Combat  
+- Headlong Rush

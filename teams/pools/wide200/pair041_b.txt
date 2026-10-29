@@ -1,0 +1,59 @@
+Slowking-Galar @ Black Sludge  
+Ability: Regenerator  
+Tera Type: Grass  
+EVs: 248 HP / 252 Def / 8 SpD  
+Relaxed Nature  
+- Chilly Reception  
+- Toxic  
+- Psychic Noise  
+- Sludge Bomb  
+
+Tornadus-Therian @ Assault Vest  
+Ability: Regenerator  
+Tera Type: Poison  
+EVs: 248 HP / 8 SpD / 252 Spe  
+Timid Nature  
+- Bleakwind Storm  
+- U-turn  
+- Knock Off  
+- Heat Wave  
+
+Cinderace @ Choice Scarf  
+Ability: Libero  
+Tera Type: Fire  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- U-turn  
+- Pyro Ball  
+- Court Change  
+- Will-O-Wisp  
+
+Lokix @ Heavy-Duty Boots  
+Ability: Tinted Lens  
+Tera Type: Bug  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- U-turn  
+- First Impression  
+- Knock Off  
+- Leech Life  
+
+Hydrapple @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Poison  
+EVs: 184 HP / 252 Def / 72 SpA  
+Bold Nature  
+- Nasty Plot  
+- Fickle Beam  
+- Earth Power  
+- Giga Drain  
+
+Great Tusk @ Rocky Helmet  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 184 HP / 136 Atk / 188 Spe  
+Adamant Nature  
+- Ice Spinner  
+- Stealth Rock  
+- Earthquake  
+- Knock Off

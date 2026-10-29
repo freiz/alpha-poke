@@ -1,0 +1,59 @@
+Arboliva @ Leftovers  
+Ability: Seed Sower  
+Tera Type: Normal  
+EVs: 4 HP / 252 SpA / 252 SpD  
+Quiet Nature  
+- Energy Ball  
+- Protect  
+- Leech Seed  
+- Weather Ball  
+
+Primarina @ Custap Berry  
+Ability: Liquid Voice  
+Tera Type: Grass  
+EVs: 248 HP / 208 SpA / 52 SpD  
+Modest Nature  
+- Surf  
+- Flip Turn  
+- Psychic Noise  
+- Moonblast  
+
+Dragapult @ Focus Sash  
+Ability: Clear Body  
+Tera Type: Ghost  
+EVs: 48 HP / 252 SpA / 208 Spe  
+Modest Nature  
+- Dragon Darts  
+- Will-O-Wisp  
+- Hex  
+- U-turn  
+
+Garganacl @ Rocky Helmet  
+Ability: Purifying Salt  
+Tera Type: Water  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Salt Cure  
+- Protect  
+- Recover  
+- Stealth Rock  
+
+Ceruledge @ Life Orb  
+Ability: Weak Armor  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Bitter Blade  
+- Shadow Sneak  
+- Poltergeist  
+- Swords Dance  
+
+Landorus-Therian @ Rocky Helmet  
+Ability: Intimidate  
+Tera Type: Ghost  
+EVs: 248 HP / 8 Atk / 252 Spe  
+Jolly Nature  
+- Scorching Sands  
+- Stealth Rock  
+- Taunt  
+- U-turn

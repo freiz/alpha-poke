@@ -1,0 +1,63 @@
+Sinistcha @ Heavy-Duty Boots  
+Ability: Heatproof  
+Tera Type: Poison  
+EVs: 252 HP / 252 Def / 4 SpA  
+Bold Nature  
+IVs: 0 Atk  
+- Calm Mind  
+- Shadow Ball  
+- Strength Sap  
+- Matcha Gotcha  
+
+Skarmory @ Rocky Helmet  
+Ability: Sturdy  
+Shiny: Yes  
+Tera Type: Dragon  
+EVs: 252 HP / 232 Def / 24 Spe  
+Impish Nature  
+- Spikes  
+- Whirlwind  
+- Roost  
+- Brave Bird  
+
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- Stealth Rock  
+- Earthquake  
+- Ruination  
+- Whirlwind  
+
+Ogerpon-Wellspring (F) @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Ivy Cudgel  
+- Horn Leech  
+- Encore  
+
+Great Tusk @ Heavy-Duty Boots  
+Ability: Protosynthesis  
+Shiny: Yes  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Knock Off  
+- Ice Spinner  
+- Headlong Rush  
+
+Sylveon @ Assault Vest  
+Ability: Pixilate  
+Shiny: Yes  
+Tera Type: Poison  
+EVs: 218 HP / 142 SpA / 148 SpD  
+Calm Nature  
+- Hyper Voice  
+- Shadow Ball  
+- Quick Attack  
+- Psyshock

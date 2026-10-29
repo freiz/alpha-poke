@@ -3,7 +3,8 @@ writes; the scripts' defaults come from here.
 
   teams/                  tracked: the curated team data
     catalog.jsonl           the forum's complete teams (scripts/teams.py build)
-    pools/<name>/           the fixed pools (ab600b, forum_curated, replay40, replay40b)
+    pools/<name>/           the fixed pools (ab600b, forum_curated, replay40, replay40b; wide200:
+                            the A/B and Foul Play pairs; ladder_robust: the human-game teams)
   data/                   local (git-ignored)
     raw/                    downloaded, slow to redo
       metamon/ replays_hf/  replay datasets (scripts/fetch_metamon.py)

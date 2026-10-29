@@ -1,0 +1,59 @@
+Alomomola @ Leftovers  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 244 HP / 12 Def / 252 SpD  
+Sassy Nature  
+- Flip Turn  
+- Wish  
+- Aqua Jet  
+- Protect  
+
+Goodra-Hisui @ Leftovers  
+Ability: Sap Sipper  
+Tera Type: Poison  
+EVs: 248 HP / 8 Def / 252 SpD  
+Sassy Nature  
+- Earthquake  
+- Flash Cannon  
+- Knock Off  
+- Ice Beam  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Water  
+EVs: 252 HP / 36 Def / 220 SpD  
+Careful Nature  
+- Protect  
+- Spikes  
+- Toxic  
+- Earthquake  
+
+Weezing-Galar @ Heavy-Duty Boots  
+Ability: Neutralizing Gas  
+Tera Type: Grass  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Will-O-Wisp  
+- Flamethrower  
+- Defog  
+- Pain Split  
+
+Moltres @ Heavy-Duty Boots  
+Ability: Flame Body  
+Tera Type: Fairy  
+EVs: 248 HP / 32 Def / 216 SpD / 12 Spe  
+Calm Nature  
+- Roar  
+- Will-O-Wisp  
+- U-turn  
+- Flamethrower  
+
+Dragapult @ Leftovers  
+Ability: Infiltrator  
+Tera Type: Ghost  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Hex  
+- Draco Meteor  
+- U-turn  
+- Will-O-Wisp

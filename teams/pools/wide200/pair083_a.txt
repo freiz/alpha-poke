@@ -1,0 +1,59 @@
+Weavile @ Life Orb  
+Ability: Pressure  
+Tera Type: Ice  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Ice Shard  
+- Knock Off  
+- Triple Axel  
+- Low Kick  
+
+Volcanion @ Choice Specs  
+Ability: Water Absorb  
+Tera Type: Ground  
+EVs: 248 HP / 252 SpA / 8 SpD  
+Modest Nature  
+- Flamethrower  
+- Steam Eruption  
+- Sludge Bomb  
+- Earth Power  
+
+Great Tusk @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Ice Spinner  
+- Close Combat  
+- Headlong Rush  
+
+Hatterene @ Rocky Helmet  
+Ability: Magic Bounce  
+Tera Type: Fire  
+EVs: 252 HP / 4 Atk / 252 SpA  
+Quiet Nature  
+- Nuzzle  
+- Draining Kiss  
+- Psychic Noise  
+- Healing Wish  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Fairy  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+- Make It Rain  
+- Shadow Ball  
+- Trick  
+- Nasty Plot  
+
+Dragonite @ Leftovers  
+Ability: Multiscale  
+Tera Type: Ground  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Dragon Dance  
+- Encore  
+- Earthquake  
+- Ice Spinner

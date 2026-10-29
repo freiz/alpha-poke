@@ -1,0 +1,59 @@
+Garganacl @ Leftovers  
+Ability: Purifying Salt  
+Tera Type: Water  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Adamant Nature  
+- Salt Cure  
+- Body Press  
+- Iron Defense  
+- Recover  
+
+Dragapult @ Heavy-Duty Boots  
+Ability: Infiltrator  
+Tera Type: Ghost  
+EVs: 88 Atk / 168 SpA / 252 Spe  
+Naive Nature  
+- Draco Meteor  
+- Will-O-Wisp  
+- Hex  
+- U-turn  
+
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Synthesis  
+- Ivy Cudgel  
+- Swords Dance  
+- Trailblaze  
+
+Moltres @ Heavy-Duty Boots  
+Ability: Flame Body  
+Tera Type: Grass  
+EVs: 248 HP / 248 Def / 12 Spe  
+Bold Nature  
+- Flamethrower  
+- Roost  
+- Will-O-Wisp  
+- Roar  
+
+Zamazenta @ Leftovers  
+Ability: Dauntless Shield  
+Tera Type: Steel  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Body Press  
+- Crunch  
+- Close Combat  
+- Iron Defense  
+
+Iron Treads @ Leftovers  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 252 HP / 152 SpD / 104 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Earthquake  
+- Knock Off  
+- Ice Spinner

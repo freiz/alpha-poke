@@ -1,0 +1,59 @@
+Ursaluna @ Flame Orb  
+Ability: Guts  
+Tera Type: Normal  
+EVs: 248 HP / 252 Atk / 8 SpD  
+Adamant Nature  
+- Trailblaze  
+- Headlong Rush  
+- Facade  
+- Fire Punch  
+
+Maushold @ Wide Lens  
+Ability: Technician  
+Tera Type: Ghost  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Encore  
+- Population Bomb  
+- Bite  
+- Tidy Up  
+
+Raging Bolt @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Bug  
+EVs: 240 HP / 252 SpA / 16 SpD  
+Modest Nature  
+- Dragon Pulse  
+- Calm Mind  
+- Thunderbolt  
+- Weather Ball  
+
+Manaphy @ Assault Vest  
+Ability: Hydration  
+Tera Type: Ice  
+EVs: 112 HP / 4 Def / 140 SpA / 252 Spe  
+Timid Nature  
+- Ice Beam  
+- Shadow Ball  
+- Surf  
+- Mud-Slap  
+
+Cinderace @ Focus Sash  
+Ability: Blaze  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- High Jump Kick  
+- Court Change  
+- Will-O-Wisp  
+- Pyro Ball  
+
+Pecharunt @ Rocky Helmet  
+Ability: Poison Puppeteer  
+Tera Type: Ghost  
+EVs: 248 HP / 8 Def / 252 Spe  
+Timid Nature  
+- Recover  
+- Shadow Ball  
+- Nasty Plot  
+- Malignant Chain

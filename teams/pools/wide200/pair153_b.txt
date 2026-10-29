@@ -1,0 +1,63 @@
+Slowking @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Dark  
+EVs: 252 HP / 16 Def / 240 SpD  
+Sassy Nature  
+IVs: 0 Atk / 0 Spe  
+- Scald  
+- Chilly Reception  
+- Future Sight  
+- Focus Blast  
+
+Kyurem @ Heavy-Duty Boots  
+Ability: Pressure  
+Tera Type: Ice  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Blizzard  
+- Freeze-Dry  
+- Earth Power  
+- Draco Meteor  
+
+Skarmory @ Rocky Helmet  
+Ability: Sturdy  
+Tera Type: Water  
+EVs: 252 HP / 160 Def / 96 Spe  
+Impish Nature  
+IVs: 0 Atk  
+- Spikes  
+- Roost  
+- Iron Defense  
+- Body Press  
+
+Darkrai @ Choice Scarf  
+Ability: Bad Dreams  
+Tera Type: Poison  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Dark Pulse  
+- Ice Beam  
+- Trick  
+- Sludge Bomb  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Normal  
+EVs: 244 HP / 248 Def / 16 SpD  
+Impish Nature  
+- Earthquake  
+- Dual Wingbeat  
+- Protect  
+- Swords Dance  
+
+Tinkaton @ Air Balloon  
+Ability: Pickpocket  
+Tera Type: Ground  
+EVs: 252 HP / 56 SpD / 200 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Encore  
+- Play Rough  
+- Knock Off

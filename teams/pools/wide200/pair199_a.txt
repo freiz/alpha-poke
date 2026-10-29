@@ -1,0 +1,59 @@
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Fairy  
+EVs: 244 HP / 12 Atk / 252 Spe  
+Jolly Nature  
+- Protect  
+- Substitute  
+- Toxic  
+- Spikes  
+
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Fighting  
+EVs: 252 HP / 160 Def / 96 SpD  
+Impish Nature  
+- U-turn  
+- Roost  
+- Brave Bird  
+- Defog  
+
+Toxapex @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Haze  
+- Recover  
+- Poison Jab  
+- Baneful Bunker  
+
+Chansey @ Eviolite  
+Ability: Natural Cure  
+Tera Type: Psychic  
+EVs: 252 HP / 4 Def / 252 SpD  
+Calm Nature  
+- Charm  
+- Seismic Toss  
+- Stealth Rock  
+- Soft-Boiled  
+
+Alomomola @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Poison  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Wish  
+- Protect  
+- Flip Turn  
+- Mirror Coat  
+
+Slowking-Galar @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 248 HP / 8 SpA / 252 SpD  
+Sassy Nature  
+- Future Sight  
+- Thunder Wave  
+- Sludge Bomb  
+- Chilly Reception

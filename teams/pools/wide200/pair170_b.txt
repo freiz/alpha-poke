@@ -1,0 +1,59 @@
+Zamazenta @ Life Orb  
+Ability: Dauntless Shield  
+Tera Type: Steel  
+EVs: 252 HP / 252 Def / 4 Spe  
+Impish Nature  
+- Crunch  
+- Reflect  
+- Close Combat  
+- Roar  
+
+Salamence @ Leftovers  
+Ability: Intimidate  
+Tera Type: Poison  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Hasty Nature  
+- Air Slash  
+- Dragon Claw  
+- Dual Wingbeat  
+- Outrage  
+
+Tyranitar @ Rocky Helmet  
+Ability: Sand Stream  
+Tera Type: Flying  
+EVs: 248 HP / 4 Atk / 4 Def / 252 SpD  
+Sassy Nature  
+- Stealth Rock  
+- Knock Off  
+- Ice Beam  
+- Stone Edge  
+
+Excadrill @ Air Balloon  
+Ability: Sand Rush  
+Tera Type: Rock  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Earthquake  
+- Rock Slide  
+- Rock Blast  
+- Rapid Spin  
+
+Iron Crown @ Choice Scarf  
+Ability: Quark Drive  
+Tera Type: Fairy  
+EVs: 84 HP / 172 SpA / 252 Spe  
+Timid Nature  
+- Volt Switch  
+- Psychic Noise  
+- Tachyon Cutter  
+- Focus Blast  
+
+Azumarill @ Sitrus Berry  
+Ability: Huge Power  
+Tera Type: Ground  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Belly Drum  
+- Play Rough  
+- Liquidation  
+- Aqua Jet

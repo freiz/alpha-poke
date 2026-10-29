@@ -1,0 +1,59 @@
+Iron Crown @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Fighting  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Iron Defense  
+- Calm Mind  
+- Focus Blast  
+- Tachyon Cutter  
+
+Iron Hands @ Leftovers  
+Ability: Quark Drive  
+Tera Type: Steel  
+EVs: 252 Atk / 44 Def / 112 SpD / 100 Spe  
+Adamant Nature  
+- Swords Dance  
+- Thunder Punch  
+- Ice Punch  
+- Drain Punch  
+
+Grimmsnarl @ Light Clay  
+Ability: Prankster  
+Tera Type: Steel  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- Reflect  
+- Light Screen  
+- Parting Shot  
+- Spirit Break  
+
+Great Tusk @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 248 HP / 4 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Ice Spinner  
+- Rapid Spin  
+- Headlong Rush  
+- Stealth Rock  
+
+Dragonite @ Lum Berry  
+Ability: Multiscale  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Dragon Dance  
+- Fire Punch  
+- Earthquake  
+- Extreme Speed  
+
+Glimmora @ Power Herb  
+Ability: Toxic Debris  
+Tera Type: Ground  
+EVs: 16 HP / 240 SpA / 252 Spe  
+Timid Nature  
+- Earth Power  
+- Mortal Spin  
+- Meteor Beam  
+- Stealth Rock

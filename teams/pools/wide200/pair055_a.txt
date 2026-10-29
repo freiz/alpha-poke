@@ -1,0 +1,59 @@
+Torkoal @ Heat Rock  
+Ability: Drought  
+Tera Type: Ghost  
+EVs: 104 HP / 236 SpA / 168 SpD  
+Quiet Nature  
+- Overheat  
+- Stealth Rock  
+- Lava Plume  
+- Will-O-Wisp  
+
+Iron Valiant @ Life Orb  
+Ability: Quark Drive  
+Tera Type: Fairy  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Close Combat  
+- Moonblast  
+- Knock Off  
+- Shadow Ball  
+
+Raging Bolt @ Life Orb  
+Ability: Protosynthesis  
+Tera Type: Fire  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+- Thunderclap  
+- Solar Beam  
+- Weather Ball  
+- Volt Switch  
+
+Slither Wing @ Assault Vest  
+Ability: Protosynthesis  
+Tera Type: Water  
+EVs: 248 HP / 176 Def / 84 Spe  
+Impish Nature  
+- First Impression  
+- U-turn  
+- Earthquake  
+- Close Combat  
+
+Venusaur @ Life Orb  
+Ability: Overgrow  
+Tera Type: Fire  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Modest Nature  
+- Earthquake  
+- Growth  
+- Weather Ball  
+- Sludge Bomb  
+
+Walking Wake @ Wise Glasses  
+Ability: Protosynthesis  
+Tera Type: Water  
+EVs: 244 SpA / 12 SpD / 252 Spe  
+Timid Nature  
+- Weather Ball  
+- Hydro Steam  
+- Draco Meteor  
+- Flip Turn

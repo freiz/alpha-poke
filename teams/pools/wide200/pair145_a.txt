@@ -1,0 +1,59 @@
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Hex  
+- Nasty Plot  
+- Focus Blast  
+- Recover  
+
+Raging Bolt @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Bug  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Modest Nature  
+- Draco Meteor  
+- Volt Switch  
+- Discharge  
+- Thunderbolt  
+
+Rillaboom @ Choice Band  
+Ability: Grassy Surge  
+Tera Type: Fire  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- U-turn  
+- Grassy Glide  
+- Wood Hammer  
+- Knock Off  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 28 HP / 252 SpA / 228 Spe  
+Modest Nature  
+- Moonblast  
+- Calm Mind  
+- Shadow Ball  
+- Encore  
+
+Great Tusk @ Rocky Helmet  
+Ability: Protosynthesis  
+Tera Type: Dark  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Stealth Rock  
+- Ice Spinner  
+- Headlong Rush  
+
+Heatran @ Leftovers  
+Ability: Flash Fire  
+Tera Type: Bug  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Modest Nature  
+- Will-O-Wisp  
+- Taunt  
+- Magma Storm  
+- Earth Power

@@ -1,0 +1,59 @@
+Ting-Lu @ Rocky Helmet  
+Ability: Vessel of Ruin  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Def / 252 SpD  
+Careful Nature  
+- Stealth Rock  
+- Ruination  
+- Whirlwind  
+- Earthquake  
+
+Corviknight @ Rocky Helmet  
+Ability: Pressure  
+Tera Type: Dragon  
+EVs: 248 HP / 252 Def / 8 SpD  
+Impish Nature  
+- Body Press  
+- Roost  
+- U-turn  
+- Defog  
+
+Darkrai @ Focus Sash  
+Ability: Bad Dreams  
+Tera Type: Fighting  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Dark Pulse  
+- Ice Beam  
+- Sludge Bomb  
+- Will-O-Wisp  
+
+Cinderace @ Heavy-Duty Boots  
+Ability: Libero  
+Tera Type: Bug  
+EVs: 148 HP / 252 Atk / 108 Spe  
+Adamant Nature  
+- Pyro Ball  
+- Court Change  
+- U-turn  
+- Will-O-Wisp  
+
+Kyurem @ Loaded Dice  
+Ability: Pressure  
+Tera Type: Water  
+EVs: 168 Atk / 88 SpA / 252 Spe  
+Hasty Nature  
+- Earth Power  
+- Icicle Spear  
+- Scale Shot  
+- Freeze-Dry  
+
+Slowking-Galar @ Black Sludge  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 196 HP / 116 Def / 104 SpA / 92 SpD  
+Calm Nature  
+- Slack Off  
+- Sludge Bomb  
+- Chilly Reception  
+- Future Sight

@@ -1,0 +1,58 @@
+Ariados @ Choice Scarf  
+Ability: Insomnia  
+EVs: 252 HP / 252 Atk / 4 Def  
+Adamant Nature  
+- Sticky Web  
+- Poison Jab  
+- Shadow Sneak  
+- Toxic Spikes  
+
+Dragapult @ Eject Pack  
+Ability: Infiltrator  
+Tera Type: Fire  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Surf  
+- U-turn  
+- Draco Meteor  
+- Flamethrower  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Steel  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Naive Nature  
+- Close Combat  
+- Encore  
+- Moonblast  
+- Destiny Bond  
+
+Thundurus @ Focus Sash  
+Ability: Prankster  
+Tera Type: Electric  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Rain Dance  
+- Weather Ball  
+- Volt Switch  
+- Sunny Day  
+
+Great Tusk @ Assault Vest  
+Ability: Protosynthesis  
+Tera Type: Poison  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Ice Spinner  
+- Close Combat  
+- Headlong Rush  
+
+Garganacl @ Leftovers  
+Ability: Purifying Salt  
+Tera Type: Fairy  
+EVs: 252 HP / 24 Def / 232 SpD  
+Careful Nature  
+- Salt Cure  
+- Iron Defense  
+- Body Press  
+- Recover

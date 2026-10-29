@@ -1,0 +1,59 @@
+Zamazenta @ Leftovers  
+Ability: Dauntless Shield  
+Tera Type: Steel  
+EVs: 252 HP / 80 Def / 140 SpD / 36 Spe  
+Impish Nature  
+- Roar  
+- Crunch  
+- Body Press  
+- Iron Defense  
+
+Hatterene @ Rocky Helmet  
+Ability: Magic Bounce  
+Tera Type: Steel  
+EVs: 252 HP / 232 Def / 24 SpD  
+Bold Nature  
+- Nuzzle  
+- Psychic Noise  
+- Dazzling Gleam  
+- Draining Kiss  
+
+Volcanion @ Shuca Berry  
+Ability: Water Absorb  
+Tera Type: Poison  
+EVs: 248 HP / 144 Def / 8 SpA / 108 Spe  
+Bold Nature  
+- Steam Eruption  
+- Will-O-Wisp  
+- Sludge Wave  
+- Sludge Bomb  
+
+Dragonite @ Life Orb  
+Ability: Multiscale  
+Tera Type: Ghost  
+EVs: 248 HP / 184 Atk / 52 Def / 24 Spe  
+Adamant Nature  
+- Encore  
+- Dragon Dance  
+- Extreme Speed  
+- Earthquake  
+
+Ting-Lu @ Red Card  
+Ability: Vessel of Ruin  
+Tera Type: Ghost  
+EVs: 24 HP / 4 Atk / 252 SpD / 228 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Earthquake  
+- Ruination  
+- Whirlwind  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Fairy  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Focus Blast  
+- Shadow Ball  
+- Nasty Plot  
+- Make It Rain

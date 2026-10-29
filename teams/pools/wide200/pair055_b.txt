@@ -1,0 +1,56 @@
+Kleavor @ Life Orb  
+Ability: Sharpness  
+Tera Type: Flying  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Stone Axe  
+- Tailwind  
+- Quick Attack  
+- U-turn  
+
+Charizard @ Sitrus Berry  
+Ability: Solar Power  
+Tera Type: Ground  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Flamethrower  
+- Scorching Sands  
+- Will-O-Wisp  
+- Flame Charge  
+
+Oranguru @ Rocky Helmet  
+Ability: Symbiosis  
+EVs: 84 HP / 84 Atk / 84 Def / 84 SpA / 84 SpD / 84 Spe  
+Serious Nature  
+- Calm Mind  
+- Trick Room  
+- Expanding Force  
+
+Muk-Alola @ Leftovers  
+Ability: Poison Touch  
+Tera Type: Flying  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Knock Off  
+- Crunch  
+- Acid Armor  
+- Poison Jab  
+
+Granbull @ Custap Berry  
+Ability: Intimidate  
+EVs: 248 HP / 252 Atk / 8 SpD  
+Adamant Nature  
+- Play Rough  
+- Encore  
+- Earthquake  
+- Thunder Wave  
+
+Ampharos  
+Ability: Static  
+Tera Type: Fairy  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+- Dazzling Gleam  
+- Discharge  
+- Power Gem  
+- Dragon Pulse

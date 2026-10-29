@@ -1,0 +1,59 @@
+Primarina @ Grassy Seed  
+Ability: Torrent  
+Tera Type: Steel  
+EVs: 252 HP / 248 Def / 8 Spe  
+Bold Nature  
+- Moonblast  
+- Shadow Ball  
+- Substitute  
+- Psychic Noise  
+
+Cinderace @ Heavy-Duty Boots  
+Ability: Blaze  
+Tera Type: Fire  
+EVs: 148 HP / 252 Atk / 108 Spe  
+Adamant Nature  
+- Pyro Ball  
+- Will-O-Wisp  
+- Court Change  
+- U-turn  
+
+Zamazenta @ Leftovers  
+Ability: Dauntless Shield  
+Tera Type: Steel  
+EVs: 104 HP / 152 SpD / 252 Spe  
+Jolly Nature  
+- Body Press  
+- Iron Defense  
+- Crunch  
+- Heavy Slam  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Water  
+EVs: 248 HP / 8 Def / 252 SpD  
+Careful Nature  
+- Knock Off  
+- Earthquake  
+- Toxic  
+- Protect  
+
+Dragonite @ Loaded Dice  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Dragon Dance  
+- Encore  
+- Scale Shot  
+- Extreme Speed  
+
+Darkrai @ Life Orb  
+Ability: Bad Dreams  
+Tera Type: Fairy  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Dark Pulse  
+- Will-O-Wisp  
+- Focus Blast  
+- Ice Beam

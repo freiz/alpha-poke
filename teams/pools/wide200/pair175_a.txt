@@ -1,0 +1,59 @@
+Exeggutor-Alola @ Sitrus Berry  
+Ability: Harvest  
+Tera Type: Fairy  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Modest Nature  
+- Protect  
+- Draco Meteor  
+- Dragon Hammer  
+- Stored Power  
+
+Moltres @ Heavy-Duty Boots  
+Ability: Flame Body  
+Tera Type: Grass  
+EVs: 248 HP / 248 Def / 12 Spe  
+Bold Nature  
+- Roost  
+- U-turn  
+- Flamethrower  
+- Hurricane  
+
+Ting-Lu @ Leftovers  
+Ability: Vessel of Ruin  
+Tera Type: Water  
+EVs: 252 HP / 4 Atk / 252 SpD  
+Careful Nature  
+- Stealth Rock  
+- Ruination  
+- Earthquake  
+- Spikes  
+
+Gholdengo @ Rocky Helmet  
+Ability: Good as Gold  
+Tera Type: Flying  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Shadow Ball  
+- Make It Rain  
+- Nasty Plot  
+- Recover  
+
+Great Tusk @ Rocky Helmet  
+Ability: Protosynthesis  
+Tera Type: Ground  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Headlong Rush  
+- Ice Spinner  
+- Bulk Up  
+
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Ivy Cudgel  
+- Play Rough  
+- Power Whip  
+- Taunt

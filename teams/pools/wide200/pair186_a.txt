@@ -1,0 +1,59 @@
+Dragapult @ Leftovers  
+Ability: Infiltrator  
+Tera Type: Ghost  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Naive Nature  
+- Will-O-Wisp  
+- Hex  
+- Dragon Darts  
+- U-turn  
+
+Suicune @ Leftovers  
+Ability: Pressure  
+Tera Type: Grass  
+EVs: 252 HP / 4 Def / 252 SpD  
+Calm Nature  
+- Protect  
+- Ice Beam  
+- Calm Mind  
+- Scald  
+
+Zamazenta @ Life Orb  
+Ability: Dauntless Shield  
+Tera Type: Fighting  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Light Screen  
+- Close Combat  
+- Crunch  
+- Heavy Slam  
+
+Kyurem @ Heavy-Duty Boots  
+Ability: Pressure  
+Tera Type: Ice  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Ice Beam  
+- Earth Power  
+- Freeze-Dry  
+- Blizzard  
+
+Cinderace @ Heavy-Duty Boots  
+Ability: Libero  
+Tera Type: Fire  
+EVs: 248 HP / 8 Atk / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Pyro Ball  
+- Court Change  
+- Will-O-Wisp  
+
+Deoxys-Defense @ Leftovers  
+Ability: Pressure  
+Tera Type: Poison  
+EVs: 252 HP / 252 Spe  
+Bold Nature  
+- Thunder Wave  
+- Knock Off  
+- Protect  
+- Night Shade

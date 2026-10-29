@@ -1,0 +1,61 @@
+Rillaboom @ Life Orb  
+Ability: Grassy Surge  
+Tera Type: Poison  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Grassy Glide  
+- High Horsepower  
+- U-turn  
+
+Zamazenta @ Grassy Seed  
+Ability: Dauntless Shield  
+Tera Type: Steel  
+EVs: 128 Atk / 128 Def / 252 Spe  
+Jolly Nature  
+- Body Press  
+- Heavy Slam  
+- Stone Edge  
+- Psychic Fangs  
+
+Clefable @ Rocky Helmet  
+Ability: Magic Guard  
+Tera Type: Steel  
+EVs: 252 HP / 4 SpA / 252 SpD  
+Calm Nature  
+IVs: 0 Atk  
+- Thunder Wave  
+- Moonblast  
+- Moonlight  
+- Encore  
+
+Glimmora @ Power Herb  
+Ability: Toxic Debris  
+Tera Type: Grass  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Earth Power  
+- Energy Ball  
+- Meteor Beam  
+- Sludge Wave  
+
+Moltres @ Choice Specs  
+Ability: Flame Body  
+Tera Type: Ground  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Flamethrower  
+- Hurricane  
+- Scorching Sands  
+- U-turn  
+
+Iron Treads @ Focus Sash  
+Ability: Quark Drive  
+Tera Type: Water  
+EVs: 248 HP / 8 Atk / 252 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Rapid Spin  
+- Iron Head  
+- Volt Switch

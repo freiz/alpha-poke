@@ -1,0 +1,59 @@
+Dragapult @ Life Orb  
+Ability: Infiltrator  
+Tera Type: Ghost  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- U-turn  
+- Shadow Ball  
+- Draco Meteor  
+- Thunder Wave  
+
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Ice Spinner  
+- Close Combat  
+- Headlong Rush  
+- Stealth Rock  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Ghost  
+EVs: 252 Atk / 248 Def / 8 Spe  
+Adamant Nature  
+- Kowtow Cleave  
+- Sucker Punch  
+- Iron Head  
+- Swords Dance  
+
+Slowking-Galar @ Leftovers  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 252 HP / 4 SpA / 252 SpD  
+Calm Nature  
+- Chilly Reception  
+- Future Sight  
+- Sludge Bomb  
+- Flamethrower  
+
+Rotom-Wash @ Leftovers  
+Ability: Levitate  
+Tera Type: Steel  
+EVs: 252 HP / 212 Def / 44 Spe  
+Bold Nature  
+- Hydro Pump  
+- Volt Switch  
+- Thunder Wave  
+- Will-O-Wisp  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Steel  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Knock Off  
+- Encore  
+- Moonblast  
+- Close Combat

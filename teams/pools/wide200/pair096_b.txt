@@ -1,0 +1,59 @@
+Lokix @ Silver Powder  
+Ability: Tinted Lens  
+Tera Type: Bug  
+EVs: 252 Atk / 252 Spe  
+Hardy Nature  
+- First Impression  
+- Leech Life  
+- U-turn  
+- Knock Off  
+
+Cinderace @ Heavy-Duty Boots  
+Ability: Libero  
+Tera Type: Fire  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Pyro Ball  
+- Court Change  
+- U-turn  
+- Will-O-Wisp  
+
+Great Tusk @ Leftovers  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Bulk Up  
+- Knock Off  
+- Rapid Spin  
+- Earthquake  
+
+Alomomola @ Black Sludge  
+Ability: Regenerator  
+Tera Type: Dark  
+EVs: 252 HP / 4 Atk / 252 Def  
+Impish Nature  
+- Flip Turn  
+- Mirror Coat  
+- Body Slam  
+- Scald  
+
+Enamorus @ Choice Scarf  
+Ability: Cute Charm  
+Tera Type: Ground  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Modest Nature  
+- Moonblast  
+- Healing Wish  
+- Earth Power  
+- Mystical Fire  
+
+Slowking-Galar @ Shuca Berry  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 252 HP / 252 SpA / 4 SpD  
+Bold Nature  
+- Future Sight  
+- Chilly Reception  
+- Ice Beam  
+- Sludge Bomb

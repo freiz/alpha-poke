@@ -1,0 +1,59 @@
+Kyurem @ Leftovers  
+Ability: Pressure  
+Tera Type: Ground  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Flash Cannon  
+- Substitute  
+- Earth Power  
+- Freeze-Dry  
+
+Garganacl @ Leftovers  
+Ability: Purifying Salt  
+Tera Type: Water  
+EVs: 252 HP / 4 Atk / 252 SpD  
+Careful Nature  
+- Salt Cure  
+- Protect  
+- Recover  
+- Stealth Rock  
+
+Landorus-Therian @ Rocky Helmet  
+Ability: Intimidate  
+Tera Type: Ground  
+EVs: 252 HP / 252 Def / 4 SpA  
+Relaxed Nature  
+- Earthquake  
+- U-turn  
+- Stealth Rock  
+- Taunt  
+
+Gholdengo @ Leftovers  
+Ability: Good as Gold  
+Tera Type: Fairy  
+EVs: 200 HP / 252 Def / 56 SpA  
+Bold Nature  
+- Make It Rain  
+- Nasty Plot  
+- Shadow Ball  
+- Recover  
+
+Zamazenta @ Leftovers  
+Ability: Dauntless Shield  
+Tera Type: Dark  
+EVs: 252 HP / 88 Def / 168 Spe  
+Jolly Nature  
+- Roar  
+- Body Press  
+- Iron Defense  
+- Crunch  
+
+Weezing-Galar @ Leftovers  
+Ability: Neutralizing Gas  
+Tera Type: Grass  
+EVs: 252 HP / 68 Def / 188 SpD  
+Sassy Nature  
+- Pain Split  
+- Sludge Bomb  
+- Will-O-Wisp  
+- Defog

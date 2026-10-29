@@ -1,0 +1,59 @@
+Chansey @ Eviolite  
+Ability: Serene Grace  
+Tera Type: Dark  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Stealth Rock  
+- Seismic Toss  
+- Ice Beam  
+- Soft-Boiled  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Normal  
+EVs: 244 HP / 12 Atk / 252 Spe  
+Jolly Nature  
+- Facade  
+- Swords Dance  
+- Protect  
+- Knock Off  
+
+Mandibuzz @ Rocky Helmet  
+Ability: Weak Armor  
+Tera Type: Water  
+EVs: 252 HP / 252 Def  
+Bold Nature  
+- Foul Play  
+- Roost  
+- Defog  
+- Toxic  
+
+Deoxys-Defense @ Weakness Policy  
+Ability: Pressure  
+Tera Type: Steel  
+EVs: 248 HP / 8 Atk / 172 Def / 80 SpD  
+Relaxed Nature  
+- Cosmic Power  
+- Drain Punch  
+- Stored Power  
+- Recover  
+
+Landorus-Therian @ Leftovers  
+Ability: Intimidate  
+Tera Type: Ground  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- U-turn  
+- Stealth Rock  
+- Earthquake  
+- Earth Power  
+
+Cresselia @ Leftovers  
+Ability: Levitate  
+Tera Type: Fairy  
+EVs: 252 HP / 204 Def / 52 Spe  
+Bold Nature  
+- Moonblast  
+- Substitute  
+- Stored Power  
+- Calm Mind

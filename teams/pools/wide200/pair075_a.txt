@@ -1,0 +1,59 @@
+Ninetales-Alola @ Light Clay  
+Ability: Snow Warning  
+Tera Type: Steel  
+EVs: 252 HP / 4 SpA / 252 Spe  
+Timid Nature  
+- Aurora Veil  
+- Encore  
+- Freeze-Dry  
+- Snowscape  
+
+Kyurem @ Choice Specs  
+Ability: Pressure  
+Tera Type: Dragon  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Earth Power  
+- Ice Beam  
+- Freeze-Dry  
+- Blizzard  
+
+Weavile @ Focus Sash  
+Ability: Pressure  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Poison Jab  
+- Swords Dance  
+- Knock Off  
+- Ice Shard  
+
+Mamoswine @ Life Orb  
+Ability: Oblivious  
+Tera Type: Ice  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Adamant Nature  
+- Smack Down  
+- Earthquake  
+- Icicle Spear  
+- Ancient Power  
+
+Sandslash-Alola @ Air Balloon  
+Ability: Slush Rush  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Iron Head  
+- Earthquake  
+- Knock Off  
+- Rapid Spin  
+
+Articuno @ Iron Ball  
+Ability: Pressure  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Hurricane  
+- Freeze-Dry  
+- Ice Beam  
+- U-turn

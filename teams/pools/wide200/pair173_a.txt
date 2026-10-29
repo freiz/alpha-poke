@@ -1,0 +1,59 @@
+Sceptile @ Throat Spray  
+Ability: Unburden  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Roar  
+- Vacuum Wave  
+- Giga Drain  
+- Acrobatics  
+
+Gallade @ Life Orb  
+Ability: Sharpness  
+Tera Type: Steel  
+EVs: 252 HP / 128 Atk / 128 SpD  
+Brave Nature  
+- Agility  
+- Psycho Cut  
+- Sacred Sword  
+- Shadow Sneak  
+
+Torkoal @ Eject Pack  
+Ability: Drought  
+Tera Type: Flying  
+EVs: 248 HP / 252 Def / 8 SpD  
+Bold Nature  
+- Stealth Rock  
+- Lava Plume  
+- Overheat  
+- Rapid Spin  
+
+Klefki @ Leftovers  
+Ability: Prankster  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Thunder Wave  
+- Reflect  
+- Light Screen  
+- Spikes  
+
+Slither Wing @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Ground  
+EVs: 248 HP / 252 Atk / 8 Spe  
+Adamant Nature  
+- First Impression  
+- Leech Life  
+- Earthquake  
+- Bulk Up  
+
+Dragonite @ Loaded Dice  
+Ability: Multiscale  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Dragon Dance  
+- Fire Punch  
+- Extreme Speed  
+- Scale Shot

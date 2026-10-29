@@ -1,0 +1,59 @@
+Orthworm @ Leftovers  
+Ability: Earth Eater  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Body Press  
+- Heavy Slam  
+- Spikes  
+- Stealth Rock  
+
+Clodsire @ Leftovers  
+Ability: Unaware  
+Tera Type: Water  
+EVs: 248 HP / 8 Def / 252 SpD  
+Careful Nature  
+- Toxic  
+- Earthquake  
+- Stealth Rock  
+- Spikes  
+
+Pecharunt @ Rocky Helmet  
+Ability: Poison Puppeteer  
+Tera Type: Ghost  
+EVs: 252 HP / 252 Def / 4 Spe  
+Bold Nature  
+- Parting Shot  
+- Recover  
+- Malignant Chain  
+- Hex  
+
+Great Tusk @ Rocky Helmet  
+Ability: Protosynthesis  
+Tera Type: Steel  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Rapid Spin  
+- Headlong Rush  
+- Ice Spinner  
+
+Slowking @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 164 HP / 128 Def / 216 SpA  
+Hardy Nature  
+- Future Sight  
+- Chilly Reception  
+- Ice Beam  
+- Scald  
+
+Weavile @ Life Orb  
+Ability: Pressure  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Triple Axel  
+- Ice Shard  
+- Swords Dance

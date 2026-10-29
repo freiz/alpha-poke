@@ -1,0 +1,59 @@
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Fairy  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Moonblast  
+- Knock Off  
+- Close Combat  
+- Thunderbolt  
+
+Hoopa-Unbound @ Leftovers  
+Ability: Magician  
+Tera Type: Fighting  
+EVs: 40 HP / 252 Atk / 216 Spe  
+Adamant Nature  
+- Drain Punch  
+- Dark Pulse  
+- Focus Blast  
+- Nasty Plot  
+
+Garchomp @ Life Orb  
+Ability: Rough Skin  
+Tera Type: Poison  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Scale Shot  
+- Earthquake  
+- Stealth Rock  
+
+Dragapult @ Life Orb  
+Ability: Clear Body  
+Tera Type: Ghost  
+EVs: 12 HP / 96 Atk / 148 SpA / 252 Spe  
+Naughty Nature  
+- Dragon Darts  
+- Draco Meteor  
+- Shadow Ball  
+- U-turn  
+
+Moltres @ Heavy-Duty Boots  
+Ability: Flame Body  
+Tera Type: Grass  
+EVs: 248 HP / 156 SpA / 104 Spe  
+Modest Nature  
+- Hurricane  
+- U-turn  
+- Roost  
+- Flamethrower  
+
+Iron Treads @ Air Balloon  
+Ability: Quark Drive  
+Tera Type: Water  
+EVs: 248 HP / 252 SpD / 8 Spe  
+Careful Nature  
+- Stealth Rock  
+- Earthquake  
+- Knock Off  
+- Rapid Spin

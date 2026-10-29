@@ -1,0 +1,58 @@
+Braviary-Hisui @ Life Orb  
+Ability: Tinted Lens  
+Tera Type: Flying  
+EVs: 252 HP / 252 SpA  
+Modest Nature  
+- Calm Mind  
+- Dazzling Gleam  
+- Air Slash  
+- Hurricane  
+
+Talonflame @ Heavy-Duty Boots  
+Ability: Flame Body  
+Tera Type: Flying  
+EVs: 164 HP / 252 Def / 92 Spe  
+Bold Nature  
+- Swords Dance  
+- Will-O-Wisp  
+- Overheat  
+- Flare Blitz  
+
+Honchkrow @ Mirror Herb  
+Ability: Moxie  
+Tera Type: Dark  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Sucker Punch  
+- Swagger  
+- Taunt  
+- Night Slash  
+
+Staraptor @ Leftovers  
+Ability: Reckless  
+Tera Type: Flying  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Tailwind  
+- Brave Bird  
+- Final Gambit  
+- Double-Edge  
+
+Noctowl  
+Ability: Tinted Lens  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Modest Nature  
+- Hyper Voice  
+- Defog  
+- Hurricane  
+- Tailwind  
+
+Toucannon @ Rocky Helmet  
+Ability: Skill Link  
+Tera Type: Rock  
+EVs: 252 HP / 4 Def / 252 Spe  
+Hardy Nature  
+- Tailwind  
+- Swords Dance  
+- Beak Blast  
+- Knock Off

@@ -1,0 +1,59 @@
+Darkrai @ Heavy-Duty Boots  
+Ability: Bad Dreams  
+Tera Type: Poison  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Sucker Punch  
+- Knock Off  
+- Dark Pulse  
+- Ice Beam  
+
+Great Tusk @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Fighting  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Bulk Up  
+- Headlong Rush  
+- Ice Spinner  
+- Rapid Spin  
+
+Gholdengo @ Air Balloon  
+Ability: Good as Gold  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Nasty Plot  
+- Dazzling Gleam  
+- Make It Rain  
+- Thunderbolt  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Ghost  
+EVs: 160 HP / 252 Atk / 96 Spe  
+Adamant Nature  
+- Kowtow Cleave  
+- Sucker Punch  
+- Iron Head  
+- Swords Dance  
+
+Glimmora @ Focus Sash  
+Ability: Toxic Debris  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Stealth Rock  
+- Mortal Spin  
+- Meteor Beam  
+- Earth Power  
+
+Dragonite @ Heavy-Duty Boots  
+Ability: Multiscale  
+Tera Type: Normal  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Earthquake  
+- Extreme Speed  
+- Dragon Dance  
+- Dragon Tail

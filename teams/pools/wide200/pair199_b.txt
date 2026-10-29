@@ -1,0 +1,59 @@
+Great Tusk @ Rocky Helmet  
+Ability: Protosynthesis  
+Tera Type: Water  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Headlong Rush  
+- Rapid Spin  
+- Ice Spinner  
+- Knock Off  
+
+Alomomola @ Heavy-Duty Boots  
+Ability: Regenerator  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Atk / 252 Def  
+Relaxed Nature  
+- Flip Turn  
+- Wish  
+- Scald  
+- Protect  
+
+Gholdengo @ Life Orb  
+Ability: Good as Gold  
+Tera Type: Steel  
+EVs: 252 HP / 4 SpA / 252 SpD  
+Calm Nature  
+- Trick  
+- Make It Rain  
+- Thunderbolt  
+- Shadow Ball  
+
+Gliscor @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Normal  
+EVs: 172 HP / 228 Atk / 108 Spe  
+Adamant Nature  
+- Knock Off  
+- Swords Dance  
+- Facade  
+- Protect  
+
+Enamorus @ Life Orb  
+Ability: Contrary  
+Tera Type: Ground  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Moonblast  
+- Earth Power  
+- Agility  
+- Mystical Fire  
+
+Chansey @ Eviolite  
+Ability: Natural Cure  
+Tera Type: Dark  
+EVs: 252 Def / 252 SpD / 4 Spe  
+Bold Nature  
+- Soft-Boiled  
+- Shadow Ball  
+- Thunder Wave  
+- Stealth Rock

@@ -1,0 +1,59 @@
+Zamazenta @ Leftovers  
+Ability: Dauntless Shield  
+Tera Type: Fire  
+EVs: 104 HP / 248 Def / 156 Spe  
+Jolly Nature  
+- Iron Defense  
+- Body Press  
+- Roar  
+- Heavy Slam  
+
+Ceruledge @ Focus Sash  
+Ability: Weak Armor  
+Tera Type: Fairy  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Swords Dance  
+- Close Combat  
+- Poltergeist  
+- Bitter Blade  
+
+Scizor @ Heavy-Duty Boots  
+Ability: Technician  
+Tera Type: Steel  
+EVs: 252 HP / 252 Atk / 4 SpD  
+Adamant Nature  
+- Knock Off  
+- U-turn  
+- Defog  
+- Bullet Punch  
+
+Zapdos @ Heavy-Duty Boots  
+Ability: Static  
+Tera Type: Flying  
+EVs: 248 HP / 252 Def / 8 SpA  
+Bold Nature  
+- Discharge  
+- Hurricane  
+- Roost  
+- Volt Switch  
+
+Great Tusk @ Booster Energy  
+Ability: Protosynthesis  
+Tera Type: Water  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Headlong Rush  
+- Ice Spinner  
+- Rapid Spin  
+- Knock Off  
+
+Greninja @ Life Orb  
+Ability: Battle Bond  
+Tera Type: Ghost  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Dark Pulse  
+- Hydro Pump  
+- Surf  
+- Water Shuriken

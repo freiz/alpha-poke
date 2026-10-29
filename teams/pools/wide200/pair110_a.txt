@@ -1,0 +1,59 @@
+Iron Leaves @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Fire  
+EVs: 96 HP / 160 Atk / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Psyblade  
+- Wild Charge  
+- Leaf Blade  
+
+Iron Jugulis @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ground  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Modest Nature  
+- Taunt  
+- Earth Power  
+- Hurricane  
+- Dark Pulse  
+
+Kleavor @ Salac Berry  
+Ability: Sharpness  
+Tera Type: Flying  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Stone Axe  
+- Swords Dance  
+- Close Combat  
+
+Iron Treads @ Life Orb  
+Ability: Quark Drive  
+Tera Type: Dragon  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Knock Off  
+- Rapid Spin  
+- Earthquake  
+- Stealth Rock  
+
+Iron Moth @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Grass  
+EVs: 4 HP / 252 SpA / 252 Spe  
+Timid Nature  
+- Fiery Dance  
+- Dazzling Gleam  
+- Sludge Wave  
+- Toxic Spikes  
+
+Zapdos @ Heavy-Duty Boots  
+Ability: Static  
+Tera Type: Flying  
+EVs: 240 HP / 52 Def / 216 Spe  
+Timid Nature  
+- Volt Switch  
+- Hurricane  
+- Roost  
+- Discharge

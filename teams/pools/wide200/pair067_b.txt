@@ -1,0 +1,59 @@
+Landorus-Therian @ Rocky Helmet  
+Ability: Intimidate  
+Tera Type: Fairy  
+EVs: 252 HP / 4 Def / 252 Spe  
+Timid Nature  
+- U-turn  
+- Earthquake  
+- Earth Power  
+- Stealth Rock  
+
+Alomomola @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Dark  
+EVs: 252 HP / 4 Atk / 252 Def  
+Relaxed Nature  
+- Mirror Coat  
+- Wish  
+- Flip Turn  
+- Protect  
+
+Iron Treads @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Bug  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Rapid Spin  
+- Earthquake  
+- Stealth Rock  
+- Ice Spinner  
+
+Gholdengo @ Leftovers  
+Ability: Good as Gold  
+Tera Type: Flying  
+EVs: 16 Def / 236 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Shadow Ball  
+- Substitute  
+- Focus Blast  
+- Nasty Plot  
+
+Rotom-Heat @ Heavy-Duty Boots  
+Ability: Levitate  
+Tera Type: Steel  
+EVs: 248 HP / 216 SpD / 44 Spe  
+Calm Nature  
+- Will-O-Wisp  
+- Volt Switch  
+- Overheat  
+- Nasty Plot  
+
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Horn Leech  
+- Ivy Cudgel  
+- Swords Dance  
+- U-turn

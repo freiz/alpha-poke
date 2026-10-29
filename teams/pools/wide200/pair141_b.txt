@@ -1,0 +1,62 @@
+Samurott-Hisui @ Focus Sash  
+Ability: Sharpness  
+Tera Type: Ghost  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Ceaseless Edge  
+- Razor Shell  
+- Knock Off  
+- Aqua Jet  
+
+Iron Valiant @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Steel  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Close Combat  
+- Knock Off  
+- Encore  
+
+Cinderace @ Heavy-Duty Boots  
+Ability: Libero  
+Tera Type: Fire  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Pyro Ball  
+- U-turn  
+- Sucker Punch  
+- Court Change  
+
+Slowking-Galar @ Assault Vest  
+Ability: Regenerator  
+Shiny: Yes  
+Tera Type: Fairy  
+EVs: 252 HP / 16 Def / 120 SpA / 120 SpD  
+Calm Nature  
+IVs: 0 Atk  
+- Future Sight  
+- Sludge Bomb  
+- Flamethrower  
+- Surf  
+
+Enamorus @ Heavy-Duty Boots  
+Ability: Cute Charm  
+Tera Type: Fairy  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Calm Mind  
+- Moonblast  
+- Earth Power  
+- Mystical Fire  
+
+Landorus-Therian @ Leftovers  
+Ability: Intimidate  
+Tera Type: Water  
+EVs: 252 HP / 252 Def / 4 SpD  
+Relaxed Nature  
+- Earthquake  
+- Grass Knot  
+- Stealth Rock  
+- U-turn

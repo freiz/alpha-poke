@@ -1,0 +1,59 @@
+Breloom @ Toxic Orb  
+Ability: Poison Heal  
+Tera Type: Fire  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Substitute  
+- Leech Seed  
+- Focus Punch  
+- Protect  
+
+Ogerpon @ Scope Lens  
+Ability: Defiant  
+Tera Type: Grass  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Ivy Cudgel  
+- Knock Off  
+- Swords Dance  
+
+Rillaboom @ Life Orb  
+Ability: Grassy Surge  
+Tera Type: Grass  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Knock Off  
+- U-turn  
+- Wood Hammer  
+- Grassy Glide  
+
+Garganacl @ Leftovers  
+Ability: Purifying Salt  
+Tera Type: Water  
+EVs: 252 HP / 52 Def / 204 SpD  
+Careful Nature  
+- Stealth Rock  
+- Protect  
+- Recover  
+- Salt Cure  
+
+Torterra @ Leftovers  
+Ability: Overgrow  
+Tera Type: Fairy  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Shell Smash  
+- Rock Blast  
+- Bullet Seed  
+- Wood Hammer  
+
+Hydrapple @ Rocky Helmet  
+Ability: Regenerator  
+Tera Type: Poison  
+EVs: 252 HP / 4 Def / 252 SpA  
+Modest Nature  
+- Fickle Beam  
+- Nasty Plot  
+- Giga Drain  
+- Earth Power

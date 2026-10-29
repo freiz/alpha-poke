@@ -1,0 +1,59 @@
+Torkoal @ Heat Rock  
+Ability: Drought  
+Tera Type: Ghost  
+EVs: 248 HP / 8 Def / 252 SpA  
+Quiet Nature  
+- Stealth Rock  
+- Lava Plume  
+- Will-O-Wisp  
+- Rapid Spin  
+
+Walking Wake @ Life Orb  
+Ability: Protosynthesis  
+Tera Type: Water  
+EVs: 12 HP / 244 SpA / 252 Spe  
+Timid Nature  
+- Hydro Steam  
+- Draco Meteor  
+- Dragon Pulse  
+- Flip Turn  
+
+Ceruledge @ Life Orb  
+Ability: Weak Armor  
+Tera Type: Fighting  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- Bitter Blade  
+- Poltergeist  
+- Shadow Sneak  
+- Swords Dance  
+
+Great Tusk @ Rocky Helmet  
+Ability: Protosynthesis  
+Tera Type: Fighting  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Jolly Nature  
+- Ice Spinner  
+- Earthquake  
+- Headlong Rush  
+- Rapid Spin  
+
+Iron Moth @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Flying  
+EVs: 124 Def / 132 SpA / 252 Spe  
+Timid Nature  
+- Substitute  
+- Fiery Dance  
+- Sludge Wave  
+- Dazzling Gleam  
+
+Venusaur @ Life Orb  
+Ability: Chlorophyll  
+Tera Type: Fire  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Growth  
+- Sludge Bomb  
+- Giga Drain  
+- Weather Ball

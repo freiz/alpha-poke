@@ -1,0 +1,59 @@
+Zapdos @ Leftovers  
+Ability: Static  
+Tera Type: Water  
+EVs: 248 HP / 252 Def / 8 SpA  
+Bold Nature  
+- Roost  
+- Discharge  
+- Heat Wave  
+- U-turn  
+
+Cyclizar @ Heavy-Duty Boots  
+Ability: Shed Skin  
+Tera Type: Fairy  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Jolly Nature  
+- Taunt  
+- Knock Off  
+- U-turn  
+- Rapid Spin  
+
+Araquanid @ Leftovers  
+Ability: Water Bubble  
+Tera Type: Water  
+EVs: 252 HP / 252 Atk / 4 Spe  
+Adamant Nature  
+- Sticky Web  
+- Liquidation  
+- Surf  
+- Endure  
+
+Jirachi @ Leftovers  
+Ability: Serene Grace  
+Tera Type: Ghost  
+EVs: 252 HP / 4 Atk / 252 Spe  
+Naive Nature  
+- Iron Head  
+- Substitute  
+- Thunder Wave  
+- Doom Desire  
+
+Sinistcha @ Leftovers  
+Ability: Heatproof  
+Tera Type: Poison  
+EVs: 252 HP / 160 Def / 96 Spe  
+Bold Nature  
+- Calm Mind  
+- Matcha Gotcha  
+- Hex  
+- Strength Sap  
+
+Coalossal @ Leftovers  
+Ability: Flame Body  
+Tera Type: Bug  
+EVs: 252 Atk / 252 SpA  
+Brave Nature  
+- Stealth Rock  
+- Body Press  
+- Scald  
+- Spikes

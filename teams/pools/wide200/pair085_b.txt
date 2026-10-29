@@ -1,0 +1,59 @@
+Dragonite @ Leftovers  
+Ability: Multiscale  
+Tera Type: Ground  
+EVs: 236 HP / 252 Atk / 20 Spe  
+Adamant Nature  
+- Earthquake  
+- Dragon Dance  
+- Roost  
+- Ice Spinner  
+
+Hatterene @ Rocky Helmet  
+Ability: Magic Bounce  
+Tera Type: Steel  
+EVs: 248 HP / 8 SpA / 200 SpD / 52 Spe  
+Modest Nature  
+- Nuzzle  
+- Draining Kiss  
+- Pain Split  
+- Psychic Noise  
+
+Cinderace @ Choice Band  
+Ability: Libero  
+Tera Type: Fire  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Will-O-Wisp  
+- Pyro Ball  
+- Court Change  
+
+Kyurem @ Choice Scarf  
+Ability: Pressure  
+Tera Type: Ice  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+- Freeze-Dry  
+- Ice Beam  
+- Earth Power  
+- Draco Meteor  
+
+Fezandipiti @ Leftovers  
+Ability: Technician  
+Tera Type: Water  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Moonblast  
+- Roost  
+- Calm Mind  
+- U-turn  
+
+Kingambit @ Leftovers  
+Ability: Supreme Overlord  
+Tera Type: Ghost  
+EVs: 92 HP / 252 Atk / 164 Spe  
+Adamant Nature  
+- Kowtow Cleave  
+- Sucker Punch  
+- Swords Dance  
+- Iron Head

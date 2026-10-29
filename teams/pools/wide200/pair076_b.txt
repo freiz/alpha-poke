@@ -1,0 +1,59 @@
+Slowking @ Leftovers  
+Ability: Regenerator  
+Tera Type: Fairy  
+EVs: 252 HP / 4 SpA / 252 SpD  
+Sassy Nature  
+- Chilly Reception  
+- Thunder Wave  
+- Hydro Pump  
+- Scald  
+
+Glastrier @ Leftovers  
+Ability: Chilling Neigh  
+Tera Type: Water  
+EVs: 248 HP / 16 Def / 200 SpD / 44 Spe  
+Adamant Nature  
+- Avalanche  
+- Swords Dance  
+- High Horsepower  
+- Close Combat  
+
+Ceruledge @ Focus Sash  
+Ability: Weak Armor  
+Tera Type: Fighting  
+EVs: 252 Atk / 4 Def / 252 Spe  
+Adamant Nature  
+- Swords Dance  
+- Bitter Blade  
+- Close Combat  
+- Poltergeist  
+
+Garganacl @ Leftovers  
+Ability: Purifying Salt  
+Tera Type: Fairy  
+EVs: 252 HP / 52 Def / 204 SpD  
+Careful Nature  
+- Iron Defense  
+- Body Press  
+- Salt Cure  
+- Recover  
+
+Clefable @ Leftovers  
+Ability: Magic Guard  
+Tera Type: Ice  
+EVs: 252 HP / 252 Def / 4 SpD  
+Bold Nature  
+- Calm Mind  
+- Moonblast  
+- Knock Off  
+- Moonlight  
+
+Chansey @ Eviolite  
+Ability: Natural Cure  
+Tera Type: Dark  
+EVs: 4 HP / 252 Def / 252 SpD  
+Bold Nature  
+- Thunder Wave  
+- Ice Beam  
+- Seismic Toss  
+- Stealth Rock

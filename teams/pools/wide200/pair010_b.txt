@@ -1,0 +1,59 @@
+Garganacl @ Leftovers  
+Ability: Purifying Salt  
+Tera Type: Fairy  
+EVs: 160 HP / 96 Def / 252 SpD  
+Careful Nature  
+- Salt Cure  
+- Protect  
+- Iron Defense  
+- Body Press  
+
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 4 HP / 252 Atk / 252 Spe  
+Jolly Nature  
+- Swords Dance  
+- Knock Off  
+- Ivy Cudgel  
+- Encore  
+
+Zapdos @ Heavy-Duty Boots  
+Ability: Static  
+Tera Type: Grass  
+EVs: 252 HP / 4 Def / 252 SpD  
+Calm Nature  
+- Thunder Wave  
+- Hurricane  
+- U-turn  
+- Heat Wave  
+
+Slowking-Galar @ Black Sludge  
+Ability: Regenerator  
+Tera Type: Water  
+EVs: 252 HP / 252 Def / 4 SpD  
+Relaxed Nature  
+- Chilly Reception  
+- Sludge Bomb  
+- Future Sight  
+- Toxic  
+
+Kyurem @ Leftovers  
+Ability: Pressure  
+Tera Type: Electric  
+EVs: 252 Def / 156 SpA / 100 Spe  
+Modest Nature  
+- Earth Power  
+- Scale Shot  
+- Substitute  
+- Freeze-Dry  
+
+Clefable @ Rocky Helmet  
+Ability: Magic Guard  
+Tera Type: Steel  
+EVs: 252 HP / 252 Def / 4 Spe  
+Bold Nature  
+- Thunder Wave  
+- Stealth Rock  
+- Moonlight  
+- Knock Off

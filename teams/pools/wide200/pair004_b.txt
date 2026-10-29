@@ -1,0 +1,59 @@
+Ninetales-Alola @ Light Clay  
+Ability: Snow Warning  
+Tera Type: Water  
+EVs: 128 Def / 4 SpA / 124 SpD / 252 Spe  
+Bold Nature  
+- Aurora Veil  
+- Freeze-Dry  
+- Encore  
+- Moonblast  
+
+Dondozo @ Leftovers  
+Ability: Unaware  
+Tera Type: Dragon  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Curse  
+- Wave Crash  
+- Sleep Talk  
+- Body Press  
+
+Iron Treads @ Booster Energy  
+Ability: Quark Drive  
+Tera Type: Ground  
+EVs: 252 HP / 88 SpD / 168 Spe  
+Jolly Nature  
+- Stealth Rock  
+- Steel Beam  
+- Earthquake  
+- Rapid Spin  
+
+Kyurem @ Leftovers  
+Ability: Pressure  
+Tera Type: Ground  
+EVs: 4 Def / 252 SpA / 252 Spe  
+Timid Nature  
+- Dragon Dance  
+- Icicle Spear  
+- Earth Power  
+- Flash Cannon  
+
+Comfey @ Life Orb  
+Ability: Triage  
+Tera Type: Poison  
+EVs: 252 HP / 252 SpA / 4 Spe  
+Modest Nature  
+- Draining Kiss  
+- Calm Mind  
+- Stored Power  
+- Synthesis  
+
+Polteageist @ White Herb  
+Ability: Weak Armor  
+Tera Type: Fighting  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Modest Nature  
+- Shell Smash  
+- Shadow Ball  
+- Strength Sap  
+- Will-O-Wisp

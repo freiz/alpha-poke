@@ -1,0 +1,60 @@
+Darkrai @ Choice Specs  
+Ability: Bad Dreams  
+Tera Type: Poison  
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Timid Nature  
+IVs: 0 Atk  
+- Trick  
+- Dark Pulse  
+- Ice Beam  
+- Sludge Bomb  
+
+Garganacl @ Leftovers  
+Ability: Purifying Salt  
+Tera Type: Fairy  
+EVs: 252 HP / 252 Def / 4 SpD  
+Impish Nature  
+- Salt Cure  
+- Recover  
+- Stealth Rock  
+- Protect  
+
+Iron Treads @ Leftovers  
+Ability: Quark Drive  
+Tera Type: Ghost  
+EVs: 224 HP / 252 SpD / 32 Spe  
+Careful Nature  
+- Earthquake  
+- Knock Off  
+- Rapid Spin  
+- Stealth Rock  
+
+Moltres @ Heavy-Duty Boots  
+Ability: Flame Body  
+Tera Type: Fairy  
+EVs: 248 HP / 248 SpD / 12 Spe  
+Careful Nature  
+- Flamethrower  
+- Roost  
+- U-turn  
+- Hurricane  
+
+Ogerpon-Wellspring @ Wellspring Mask  
+Ability: Water Absorb  
+Tera Type: Water  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Jolly Nature  
+- U-turn  
+- Ivy Cudgel  
+- Spikes  
+- Knock Off  
+
+Zamazenta @ Leftovers  
+Ability: Dauntless Shield  
+Tera Type: Electric  
+EVs: 252 HP / 80 Def / 176 Spe  
+Jolly Nature  
+- Body Press  
+- Iron Defense  
+- Crunch  
+- Substitute
