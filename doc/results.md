@@ -1,1032 +1,1032 @@
-# 结果台账（训练与评测）
+# Results ledger (training and evaluation)
 
-方便以后对比的数字汇总。下面的"关键结果"是手写的（附设置与结论），末尾的表由
-`uv run python scripts/results_table.py --write` 从日志重新生成（`data/eval/*.jsonl`、
-`data/train/*/runs/*`）。2026-10-06 起每次 arena 运行都会写 `<log>.meta.json`（commit、
-`ALPHA_*` 环境变量、参数、bot 定义、汇总），生成的表会自动带上设置。
+A summary of the numbers, kept for later comparisons. The "key results" below are written by hand (with setup and conclusions); the tables at the end are regenerated from the logs by
+`uv run python scripts/results_table.py --write` (`data/eval/*.jsonl`,
+`data/train/*/runs/*`). Since 2026-10-06 every arena run writes `<log>.meta.json` (commit,
+`ALPHA_*` environment variables, arguments, bot definitions, summary), so the generated tables carry the setup automatically.
 
-约定：胜率均为 A 方的配对胜率 ± 95% 置信区间（每对队伍交换各打一局）；"heldout" = 信念模型不含评测队伍池；
-本地 Showdown 服务器、40 支队伍池（`data/teams/pools/replay40`）。Elo ≈ 400·log10(p / (1 − p))。
+Conventions: all win rates are side A's paired win rate ± 95% confidence interval (each pair of teams is played twice, sides swapped); "heldout" = the belief model does not include the evaluation team pool;
+local Showdown server, 40-team pool (`data/teams/pools/replay40`). Elo ≈ 400·log10(p / (1 − p)).
 
-## 离线：策略 / 价值网络（v1 数据，2026-10-06）
+## Offline: policy / value network (v1 data, 2026-10-06)
 
-数据：Metamon Gen9 OU 2,036,999 局 × 每局 4 个决策点 = 812 万局面（训练 788 万，验证 = 最新 3% 的对局 24.4 万）。
+Data: Metamon Gen9 OU, 2,036,999 games × 4 decision points per game = 8.12M positions (train 7.88M, validation = the newest 3% of games, 244k).
 
-| 模型 | 参数 | 策略 CE | top-1 | top-3 | 价值 BCE | 价值准确率 | 前 / 中 / 后期 | ECE |
+| model | params | policy CE | top-1 | top-3 | value BCE | value accuracy | early / mid / late | ECE |
 |---|---|---|---|---|---|---|---|---|
-| 均匀策略 / 常数 0.5 | — | 2.309 | — | — | 0.693 | — | — | — |
-| 手写评估（拟合缩放 sigmoid(a·eval/100+b)） | — | — | — | — | 0.5946 | 66.5% | — | — |
-| 手写评估（搜索用的缩放 1.25·eval/100） | — | — | — | — | 0.6254 | — | — | — |
-| v1 小（残差） | 208k | 1.445 | 47.7% | 82.4% | 0.5668 | 69.1% | 63.6 / 74.2 / 76.3% | 0.004 |
-| **v1 中（残差）** | 468k | **1.413** | **48.9%** | **83.2%** | **0.5625** | **69.5%** | 64.2 / 74.4 / 76.6% | 0.009 |
-| v1 中（普通价值） | 468k | 1.418 | 48.8% | 83.1% | 0.5653 | 69.3% | 63.8 / 74.3 / 76.6% | 0.011 |
-| v1 大（残差） | 1431k | 1.420 | 48.8% | 83.2% | 0.5634 | 69.6% | 64.3 / 74.4 / 76.9% | 0.020（过拟合，训练−验证差距 0.135） |
+| uniform policy / constant 0.5 | — | 2.309 | — | — | 0.693 | — | — | — |
+| handcrafted eval (fitted scaling sigmoid(a·eval/100+b)) | — | — | — | — | 0.5946 | 66.5% | — | — |
+| handcrafted eval (the search's scaling 1.25·eval/100) | — | — | — | — | 0.6254 | — | — | — |
+| v1 small (residual) | 208k | 1.445 | 47.7% | 82.4% | 0.5668 | 69.1% | 63.6 / 74.2 / 76.3% | 0.004 |
+| **v1 medium (residual)** | 468k | **1.413** | **48.9%** | **83.2%** | **0.5625** | **69.5%** | 64.2 / 74.4 / 76.6% | 0.009 |
+| v1 medium (plain value) | 468k | 1.418 | 48.8% | 83.1% | 0.5653 | 69.3% | 63.8 / 74.3 / 76.6% | 0.011 |
+| v1 large (residual) | 1431k | 1.420 | 48.8% | 83.2% | 0.5634 | 69.6% | 64.3 / 74.4 / 76.9% | 0.020 (overfits, train−validation gap 0.135) |
 
-推理（Rust，CPU f32 单线程）：前向 51 µs（仅价值 41 µs），特征化 1 µs；与 PyTorch 对齐（价值差 2e-6、策略差 1e-5）。
+Inference (Rust, CPU f32, single thread): forward pass 51 µs (value only 41 µs), featurization 1 µs; matches PyTorch (value difference 2e-6, policy difference 1e-5).
 
-## 离线：v2 结构对比（小样本 v2s，2026-10-06）
+## Offline: v2 architecture comparison (small sample v2s, 2026-10-06)
 
-数据 v2s：10% 的对局（20.4 万局）× 每局约 12 个局面 = 242 万；中档，6 个 epoch，残差价值，价值损失每局最多计 4 个局面。
-锚点验证集：v2s 中上传时间 ≥ v1 验证截止（1776921722）的 6,042 局 / 71,777 个局面——所有模型（含 v1）都没训练过（`scripts/eval_pv.py`，已删除）。
+Data v2s: 10% of the games (204k games) × about 12 positions per game = 2.42M; medium size, 6 epochs, residual value, the value loss counts at most 4 positions per game.
+Anchor validation set: the 6,042 games / 71,777 positions of v2s uploaded at or after the v1 validation cutoff (1776921722) -- no model (v1 included) was trained on them (`scripts/eval_pv.py`, deleted).
 
-| 模型 | 参数 | 策略 CE | top-1 | top-3 | 换人 top-1 | 换人 CE | 价值 BCE | 价值准确率 | ECE | 训练−验证差距（策略 / 价值） | GPU 训练样本/秒 |
+| model | params | policy CE | top-1 | top-3 | switch top-1 | switch CE | value BCE | value accuracy | ECE | train−validation gap (policy / value) | GPU training samples/s |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| v1 中档 MLP（全量 204 万局 × 4） | 468k | 1.415 | 48.9% | 83.1% | 21.8% | 2.274 | **0.5629** | **69.3%** | 0.013 | 0.053 / 0.005 | 36 万 |
-| v2s MLP | 468k | 1.532 | 44.4% | 79.9% | 18.2% | 2.421 | 0.5757 | 68.4% | 0.025 | 0.084 / 0.026 | 32 万 |
-| v2s MLP + 历史 | 525k | 1.495 | 45.7% | 80.6% | 20.2% | 2.355 | 0.5741 | 68.5% | 0.023 | 0.076 / 0.022 | 30 万 |
-| v2s Transformer | 573k | 1.473 | 46.9% | 81.7% | 21.9% | 2.343 | 0.5754 | 68.7% | 0.030 | 0.120 / 0.034 | 13 万 |
-| **v2s Transformer + 历史** | 598k | **1.419** | **49.0%** | 82.9% | **25.1%** | **2.225** | 0.5739 | 68.6% | 0.030 | 0.127 / 0.031 | 8.5 万 |
+| v1 medium MLP (full 2.04M games × 4) | 468k | 1.415 | 48.9% | 83.1% | 21.8% | 2.274 | **0.5629** | **69.3%** | 0.013 | 0.053 / 0.005 | 360k |
+| v2s MLP | 468k | 1.532 | 44.4% | 79.9% | 18.2% | 2.421 | 0.5757 | 68.4% | 0.025 | 0.084 / 0.026 | 320k |
+| v2s MLP + history | 525k | 1.495 | 45.7% | 80.6% | 20.2% | 2.355 | 0.5741 | 68.5% | 0.023 | 0.076 / 0.022 | 300k |
+| v2s Transformer | 573k | 1.473 | 46.9% | 81.7% | 21.9% | 2.343 | 0.5754 | 68.7% | 0.030 | 0.120 / 0.034 | 130k |
+| **v2s Transformer + history** | 598k | **1.419** | **49.0%** | 82.9% | **25.1%** | **2.225** | 0.5739 | 68.6% | 0.030 | 0.127 / 0.031 | 85k |
 
-### 历史长度（v2h：同 v2s 的对局与抽样，历史最多存 32 步；锚点验证集同上，71,773 个局面）
+### History length (v2h: the same games and sampling as v2s, up to 32 history steps stored; anchor validation set as above, 71,773 positions)
 
-| 模型 | 历史步数 | 策略 CE | top-1 | 换人 top-1 | 价值 BCE | 价值准确率 | GPU 训练样本/秒 |
+| model | history steps | policy CE | top-1 | switch top-1 | value BCE | value accuracy | GPU training samples/s |
 |---|---|---|---|---|---|---|---|
-| Transformer + 历史 | 8 | 1.418 | 49.1% | 25.3% | 0.5745 | 68.8% | 8.7 万 |
-| Transformer + 历史 | 16 | 1.418 | 49.0% | 25.2% | 0.5762 | 68.5% | 6.6 万 |
-| Transformer + 历史 | 32 | 1.415 | 49.1% | 24.6% | 0.5729 | 68.6% | 4.3 万 |
-| MLP + 历史 | 32 | 1.505 | 45.2% | 20.8% | 0.5747 | 68.6% | 20.8 万 |
-| （对照）v2s Transformer + 历史 | 8 | 1.418 | 49.1% | 25.1% | 0.5741 | 68.6% | 8.5 万 |
+| Transformer + history | 8 | 1.418 | 49.1% | 25.3% | 0.5745 | 68.8% | 87k |
+| Transformer + history | 16 | 1.418 | 49.0% | 25.2% | 0.5762 | 68.5% | 66k |
+| Transformer + history | 32 | 1.415 | 49.1% | 24.6% | 0.5729 | 68.6% | 43k |
+| MLP + history | 32 | 1.505 | 45.2% | 20.8% | 0.5747 | 68.6% | 208k |
+| (control) v2s Transformer + history | 8 | 1.418 | 49.1% | 25.1% | 0.5741 | 68.6% | 85k |
 
-8 步之后饱和：16 / 32 步的差别（≤ 0.003）与重复训练的差别同量级（v2s 与 v2h 的 8 步相差 0.0004，但两者数据几乎相同，真实的种子方差未测），计算量却翻倍 / 翻两倍。MLP 用 32 步也不比 8 步好（1.505 vs 1.495）。
+Saturates after 8 steps: the 16 / 32-step differences (≤ 0.003) are the same size as the difference between repeated trainings (v2s and v2h differ by 0.0004 at 8 steps, but their data is nearly identical; the real seed variance was not measured), while the compute doubles / triples. MLP with 32 steps is no better than with 8 either (1.505 vs 1.495).
 
-### MTP：多步动作预测（v2m：同 v2h 的对局与抽样，PYTHONHASHSEED=0 可复现；Transformer + 8 步历史，MTP 权重 0.5；锚点验证集 71,776 个局面）
+### MTP: multi-token action prediction (v2m: the same games and sampling as v2h, reproducible with PYTHONHASHSEED=0; Transformer + 8 history steps, MTP weight 0.5; anchor validation set, 71,776 positions)
 
-| 模型 | 策略 CE | top-1 | 换人 top-1 | 换人 CE | 价值 BCE | 价值准确率 | ECE | 训练−验证差距（策略 / 价值） | 对手当前动作准确率 |
+| model | policy CE | top-1 | switch top-1 | switch CE | value BCE | value accuracy | ECE | train−validation gap (policy / value) | opponent current-action accuracy |
 |---|---|---|---|---|---|---|---|---|---|
-| 基线（无 MTP） | **1.418** | **49.0%** | 24.8% | 2.229 | 0.5752 | 68.5% | 0.030 | 0.130 / 0.031 | — |
-| + 对手当前动作（mtp=1） | 1.438 | 47.9% | **25.9%** | **2.209** | 0.5710 | 68.7% | **0.013** | 0.089 / 0.009 | 37.9% |
-| + 双方未来 3 步（mtp=3） | 1.423 | 48.7% | 25.4% | 2.211 | **0.5679** | **69.0%** | 0.022 | 0.110 / 0.019 | 33.4% |
-| （对照）v2h 8 步 | 1.419 | 49.1% | 25.4% | 2.229 | 0.5744 | 68.7% | 0.027 | | |
-| （参考）v1 全量 MLP | 1.414 | 49.0% | 21.8% | 2.273 | 0.5631 | 69.4% | 0.013 | | |
+| baseline (no MTP) | **1.418** | **49.0%** | 24.8% | 2.229 | 0.5752 | 68.5% | 0.030 | 0.130 / 0.031 | — |
+| + opponent's current action (mtp=1) | 1.438 | 47.9% | **25.9%** | **2.209** | 0.5710 | 68.7% | **0.013** | 0.089 / 0.009 | 37.9% |
+| + both sides' next 3 steps (mtp=3) | 1.423 | 48.7% | 25.4% | 2.211 | **0.5679** | **69.0%** | 0.022 | 0.110 / 0.019 | 33.4% |
+| (control) v2h 8 steps | 1.419 | 49.1% | 25.4% | 2.229 | 0.5744 | 68.7% | 0.027 | | |
+| (reference) v1 full-data MLP | 1.414 | 49.0% | 21.8% | 2.273 | 0.5631 | 69.4% | 0.013 | | |
 
-### MTP 调参（v2m，锚点验证集；同一份数据与种子）
+### MTP tuning (v2m, anchor validation set; the same data and seed)
 
-| 模型 | 策略 CE | top-1 | top-3 | top-5 | 换人 top-1 / top-3 | 换人 CE | 价值 BCE | 价值准确率 | ECE | 对手动作 top-1 / top-3 |
+| model | policy CE | top-1 | top-3 | top-5 | switch top-1 / top-3 | switch CE | value BCE | value accuracy | ECE | opponent action top-1 / top-3 |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 基线（6 epoch） | 1.418 | 49.0% | 83.1% | 93.8% | 24.6 / 58.6% | 2.229 | 0.5752 | 68.5% | 0.030 | — |
-| MTP-3 权重 0.5 | 1.423 | 48.7% | 82.9% | 93.6% | 25.4 / 58.3% | 2.211 | 0.5679 | 69.0% | 0.022 | 33.4 / 62.7% |
-| **MTP-3 权重 0.2** | **1.414** | **49.1%** | **83.2%** | 93.8% | 25.3 / **59.1%** | 2.215 | 0.5707 | 68.7% | 0.029 | 31.8 / 60.3% |
-| **MTP-3 权重 0.5，按步衰减 0.5^k** | 1.420 | 48.8% | 82.8% | 93.6% | **26.3** / 58.5% | **2.198** | **0.5671** | **69.0%** | 0.022 | **36.0 / 65.7%** |
-| 基线 10 epoch | 1.420 | 48.7% | 83.0% | 93.8% | 23.9 / 56.5% | 2.274 | 0.5755 | 68.7% | 0.032 | — |
-| MTP-3 权重 0.2，10 epoch | 1.418 | 48.7% | 83.0% | 93.7% | 24.0 / 57.9% | 2.213 | 0.5721 | 68.7% | 0.029 | 31.4 / 60.0% |
+| baseline (6 epochs) | 1.418 | 49.0% | 83.1% | 93.8% | 24.6 / 58.6% | 2.229 | 0.5752 | 68.5% | 0.030 | — |
+| MTP-3 weight 0.5 | 1.423 | 48.7% | 82.9% | 93.6% | 25.4 / 58.3% | 2.211 | 0.5679 | 69.0% | 0.022 | 33.4 / 62.7% |
+| **MTP-3 weight 0.2** | **1.414** | **49.1%** | **83.2%** | 93.8% | 25.3 / **59.1%** | 2.215 | 0.5707 | 68.7% | 0.029 | 31.8 / 60.3% |
+| **MTP-3 weight 0.5, per-step decay 0.5^k** | 1.420 | 48.8% | 82.8% | 93.6% | **26.3** / 58.5% | **2.198** | **0.5671** | **69.0%** | 0.022 | **36.0 / 65.7%** |
+| baseline 10 epochs | 1.420 | 48.7% | 83.0% | 93.8% | 23.9 / 56.5% | 2.274 | 0.5755 | 68.7% | 0.032 | — |
+| MTP-3 weight 0.2, 10 epochs | 1.418 | 48.7% | 83.0% | 93.7% | 24.0 / 57.9% | 2.213 | 0.5721 | 68.7% | 0.029 | 31.4 / 60.0% |
 
-10 epoch 在 10% 数据上过拟合（最佳在第 2500 / 5730 步，价值训练−验证差距 0.05–0.06）。
+10 epochs overfit on 10% of the data (best at step 2500 / 5730, value train−validation gap 0.05–0.06).
 
-### MTP 种子方差（v2m，每个配置 3 个种子 0 / 1 / 2，锚点验证集；均值 ± 标准差，Δ 为相对基线，SE = 均值差的标准误）
+### MTP seed variance (v2m, 3 seeds 0 / 1 / 2 per configuration, anchor validation set; mean ± standard deviation, Δ relative to the baseline, SE = standard error of the mean difference)
 
-| 配置 | 策略 CE | top-1 | top-3 | 换人 top-1 | 换人 CE | 价值 BCE | 价值准确率 | 对手动作 top-1 / top-3 |
+| configuration | policy CE | top-1 | top-3 | switch top-1 | switch CE | value BCE | value accuracy | opponent action top-1 / top-3 |
 |---|---|---|---|---|---|---|---|---|
-| 基线 | 1.4182 ± 0.0032 | 48.9% | 83.1% | 25.0% | 2.225 ± 0.008 | 0.5728 ± 0.0027 | 68.6% | — |
-| **MTP-3 权重 0.5 + 衰减 0.5^k（采纳）** | 1.4175（Δ −0.001，0.2 SE） | 48.9% | 82.9% | 25.7% | **2.199**（Δ −0.026，5.5 SE） | **0.5672**（Δ −0.0056，2.5 SE） | **69.1%**（+0.5，4.6 SE） | **35.7 / 65.4%** |
-| MTP-3 权重 0.2 | **1.4107**（Δ −0.0075，2.7 SE） | **49.2%**（+0.3，2.5 SE） | 83.2% | 25.5% | 2.204（Δ −0.022，2.9 SE） | 0.5706（Δ −0.0022，1.2 SE） | 68.9% | 31.5 / 60.3% |
+| baseline | 1.4182 ± 0.0032 | 48.9% | 83.1% | 25.0% | 2.225 ± 0.008 | 0.5728 ± 0.0027 | 68.6% | — |
+| **MTP-3 weight 0.5 + decay 0.5^k (adopted)** | 1.4175 (Δ −0.001, 0.2 SE) | 48.9% | 82.9% | 25.7% | **2.199** (Δ −0.026, 5.5 SE) | **0.5672** (Δ −0.0056, 2.5 SE) | **69.1%** (+0.5, 4.6 SE) | **35.7 / 65.4%** |
+| MTP-3 weight 0.2 | **1.4107** (Δ −0.0075, 2.7 SE) | **49.2%** (+0.3, 2.5 SE) | 83.2% | 25.5% | 2.204 (Δ −0.022, 2.9 SE) | 0.5706 (Δ −0.0022, 1.2 SE) | 68.9% | 31.5 / 60.3% |
 
-种子标准差：策略 CE 约 0.003–0.004，价值 BCE 约 0.002–0.003——单次运行 0.005 以下的差别不可信。
+Seed standard deviation: policy CE about 0.003–0.004, value BCE about 0.002–0.003 -- single-run differences below 0.005 are not trustworthy.
 
-### 对手先验：翻转视角 vs MTP 对手头（`scripts/eval_opp_prior.py`，已删除；v2m 锚点集 62,572 个局面）
+### Opponent prior: flipped view vs the MTP opponent head (`scripts/eval_opp_prior.py`, deleted; v2m anchor set, 62,572 positions)
 
-预测对手本回合实际动作，投影到该局面世界（一次信念采样）的选项上，太晶合并（10 类）；对手实际动作在世界选项内的覆盖率 79.9%。
+Predicts the opponent's actual action this turn, projected onto the options of that position's world (one belief sample), tera merged (10 classes); the opponent's actual action is among the world's options in 79.9% of positions.
 
-| 对手先验 | top-1 | top-3 | NLL | 每节点前向 |
+| opponent prior | top-1 | top-3 | NLL | forward passes per node |
 |---|---|---|---|---|
-| 翻转视角主策略头（基线模型；搜索现用） | **48.6%** | **82.6%** | **1.409** | 2 |
-| MTP 对手头（我方视角，MTP-3 权重 0.5） | 43.6% | 77.8% | 1.571 | 1 |
+| flipped-view main policy head (baseline model; what the search uses now) | **48.6%** | **82.6%** | **1.409** | 2 |
+| MTP opponent head (our view, MTP-3 weight 0.5) | 43.6% | 77.8% | 1.571 | 1 |
 
-### 网络 v3 第一批：特征与辅助输出（v3s = v2m 同样的对局与局面，加 v3 列；每组 3 个种子，锚点验证集；基线 = v2m 的 MTP-3 权重 0.5 + 衰减，3 个种子）
+### Network v3, first batch: features and auxiliary outputs (v3s = the same games and positions as v2m, plus the v3 columns; 3 seeds per group, anchor validation set; baseline = v2m's MTP-3 weight 0.5 + decay, 3 seeds)
 
-A = 公开信息标记 + 全局数值 + 招式属性表；B = 对阵计算（伤害 / 击倒线、有效速度、谁先动、入场钉子伤害）；C = 辅助输出（对手配置、本步倒下、剩余数量之差、剩余回合）。括号内为相对基线的差值（标准误倍数）。"价值 BCE（≥12 回合）"只算第 12 回合起的局面（开局接近抛硬币，见下）。
+A = public-information flags + global scalars + move property table; B = matchup calculations (damage / KO thresholds, effective speed, who moves first, entry hazard damage); C = auxiliary outputs (opponent sets, fainting this step, difference in remaining Pokémon, remaining turns). In parentheses: the difference from the baseline (in standard errors). "Value BCE (≥12 turns)" counts only positions from turn 12 on (the opening is close to a coin flip, see below).
 
-| 组 | 策略 CE | top-1 | top-3 | 换人 top-1 | 换人 CE | 价值 BCE | 价值 BCE（≥12 回合） | 价值准确率 | ECE | 对手动作 top-1 |
+| group | policy CE | top-1 | top-3 | switch top-1 | switch CE | value BCE | value BCE (≥12 turns) | value accuracy | ECE | opponent action top-1 |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 基线 | 1.4175 | 48.9% | 82.9% | 25.7% | 2.199 | 0.5672 | 0.4979 | 69.1% | 0.024 | 35.7% |
-| A | 1.3980（−0.020，4.5） | 49.7% | 83.5% | 26.0% | 2.181 | 0.5690（+0.002，1.1） | 0.5000 | 68.8% | 0.019 | 36.3% |
-| B | 1.3673（−0.050，19） | 50.9% | 84.1% | 26.5% | 2.169（−0.030，6.7） | 0.5652（−0.002，1.1） | 0.4952（−0.003，1.5） | 69.3% | 0.023 | 36.6% |
-| C | 1.4151（−0.003，0.8） | 49.0% | 83.1% | 25.6% | 2.193 | 0.5676（+0.000） | 0.5002 | 69.1% | 0.022 | 35.7% |
-| **ABC** | **1.3566（−0.061，17）** | **51.4%（+2.5）** | **84.4%** | **26.8%（+1.1）** | **2.153（−0.046，33）** | 0.5654（−0.002，0.7） | 0.4949（−0.003，1.5） | 69.2% | 0.030 | **37.0%（+1.3）** |
+| baseline | 1.4175 | 48.9% | 82.9% | 25.7% | 2.199 | 0.5672 | 0.4979 | 69.1% | 0.024 | 35.7% |
+| A | 1.3980 (−0.020, 4.5) | 49.7% | 83.5% | 26.0% | 2.181 | 0.5690 (+0.002, 1.1) | 0.5000 | 68.8% | 0.019 | 36.3% |
+| B | 1.3673 (−0.050, 19) | 50.9% | 84.1% | 26.5% | 2.169 (−0.030, 6.7) | 0.5652 (−0.002, 1.1) | 0.4952 (−0.003, 1.5) | 69.3% | 0.023 | 36.6% |
+| C | 1.4151 (−0.003, 0.8) | 49.0% | 83.1% | 25.6% | 2.193 | 0.5676 (+0.000) | 0.5002 | 69.1% | 0.022 | 35.7% |
+| **ABC** | **1.3566 (−0.061, 17)** | **51.4% (+2.5)** | **84.4%** | **26.8% (+1.1)** | **2.153 (−0.046, 33)** | 0.5654 (−0.002, 0.7) | 0.4949 (−0.003, 1.5) | 69.2% | 0.030 | **37.0% (+1.3)** |
 
-对手配置头（C / ABC），只看预测时尚未暴露的字段，对比局面中的信念单次采样（对网络有利：网络取最可能值，且输入里有信念样本）：
+Opponent set head (C / ABC), only fields not yet revealed at prediction time, compared with a single belief sample in the position (favours the network: the network takes the most likely value, and a belief sample is among its inputs):
 
-| | 道具 | 特性 | 太晶属性 | 招式（未暴露的，命中率） |
+| | item | ability | tera type | moves (unrevealed, hit rate) |
 |---|---|---|---|---|
-| 网络（ABC） | 63.8% | 96.3% | 40.7% | 63.5% |
-| 信念单次采样 | 48.3% | 89.8% | 31.6% | 61.8% |
+| network (ABC) | 63.8% | 96.3% | 40.7% | 63.5% |
+| single belief sample | 48.3% | 89.8% | 31.6% | 61.8% |
 
-其他辅助头（ABC）：本步倒下准确率 88.0%，剩余数量之差（13 类）23.9%，剩余回合平均误差 5.5 回合。
+Other auxiliary heads (ABC): fainting-this-step accuracy 88.0%, difference in remaining Pokémon (13 classes) 23.9%, remaining-turns mean error 5.5 turns.
 
-价值按对局阶段（基线模型 / 只用手写评估，a、b 在锚点集上拟合）：第 0–5 回合 0.658 / 0.675，6–11 回合 0.575 / 0.599，12–19 回合 0.507 / 0.544，20–29 回合 0.493 / 0.535，30+ 回合 0.468 / 0.511。整体：常数 0.692，手写评估 0.5956，模型 0.567；去掉网络项、只留 a·eval + b 为 0.598（网络项标准差 0.92 logit，与手写评估的相关 0.47）。
+Value by game phase (baseline model / the handcrafted eval alone, a and b fitted on the anchor set): turns 0–5 0.658 / 0.675, turns 6–11 0.575 / 0.599, turns 12–19 0.507 / 0.544, turns 20–29 0.493 / 0.535, turns 30+ 0.468 / 0.511. Overall: constant 0.692, handcrafted eval 0.5956, model 0.567; without the network term, only a·eval + b, 0.598 (network term standard deviation 0.92 logit, correlation with the handcrafted eval 0.47).
 
-### 全量训练（v5 = 全部 204 万局，每局从所有决策点合成的池里抽 20 个，共 4,006 万个局面；`--stream 4`，6 个 epoch）
+### Full-data training (v5 = all 2.04M games, 20 positions per game drawn from a pool built from all decision points, 40.06M positions in total; `--stream 4`, 6 epochs)
 
-锚点集：v5 中上传时间 ≥ 1776921722 的全部 61,121 局 / 120 万个局面（所有模型都没训练过）。"全部"指标包含所有决策点，各类按真实比例。
+Anchor set: all 61,121 games / 1.2M positions of v5 uploaded at or after 1776921722 (no model was trained on them). "All" metrics include every decision point, each kind in its real proportion.
 
-| 模型 | 回合开始 CE（全部） | 价值 BCE（全部） | 价值 BCE（有偏子集） | 价值准确率 | ECE | 主动换人 top-1 / CE | 强制换人 top-1 | 对手动作 top-1 | 对手配置：道具 / 太晶 / 招式 |
+| model | turn-start CE (all) | value BCE (all) | value BCE (biased subset) | value accuracy | ECE | voluntary switch top-1 / CE | forced switch top-1 | opponent action top-1 | opponent sets: item / tera / moves |
 |---|---|---|---|---|---|---|---|---|---|
-| v1 中档 MLP（搜索中在用） | 1.319 | 0.5575 | 0.5627 | 69.5% | 0.009 | 22.3% / 2.264 | 43.1% | — | — |
-| v2m Transformer + 历史 + MTP（10%） | 1.323 | 0.5631 | 0.5691 | 69.0% | 0.021 | 26.6% / 2.182 | 42.9% | 35.9% | — |
-| v4s 基线，+ A / B 特征（10%） | 1.274 | 0.5685 | 0.5691 | 69.0% | 0.023 | 26.6% / 2.156 | 42.7% | 37.0% | 68.0% / 45.3% / 66.3% |
-| v4w 最终配置（10%） | 1.236 | 0.5556 | 0.5699 | 69.3% | 0.036 | 23.0% / 2.301 | 55.1% | 37.5% | 68.6% / 46.4% / 67.2% |
-| v5-nofeat 同样数据，不加 v3 / v4 特征（全量） | 1.149 | 0.5320 | 0.5455 | 71.1% | 0.014 | 26.6% / 2.094 | 57.2% | 41.4% | — |
-| **v5-final 最终配置（全量）** | **1.129** | **0.5277** | **0.5408** | **71.4%** | 0.013 | **27.3% / 2.075** | **57.7%** | **42.1%** | **71.2% / 49.7% / 70.2%** |
+| v1 medium MLP (in use in the search) | 1.319 | 0.5575 | 0.5627 | 69.5% | 0.009 | 22.3% / 2.264 | 43.1% | — | — |
+| v2m Transformer + history + MTP (10%) | 1.323 | 0.5631 | 0.5691 | 69.0% | 0.021 | 26.6% / 2.182 | 42.9% | 35.9% | — |
+| v4s baseline, + A / B features (10%) | 1.274 | 0.5685 | 0.5691 | 69.0% | 0.023 | 26.6% / 2.156 | 42.7% | 37.0% | 68.0% / 45.3% / 66.3% |
+| v4w final configuration (10%) | 1.236 | 0.5556 | 0.5699 | 69.3% | 0.036 | 23.0% / 2.301 | 55.1% | 37.5% | 68.6% / 46.4% / 67.2% |
+| v5-nofeat same data, no v3 / v4 features (full) | 1.149 | 0.5320 | 0.5455 | 71.1% | 0.014 | 26.6% / 2.094 | 57.2% | 41.4% | — |
+| **v5-final final configuration (full)** | **1.129** | **0.5277** | **0.5408** | **71.4%** | 0.013 | **27.3% / 2.075** | **57.7%** | **42.1%** | **71.2% / 49.7% / 70.2%** |
 
-top-1 / top-3（有出招记录的回合开始）：v1 48.6% / 83.0%，v2m 48.6% / 82.8%，v4s 51.0% / 84.3%，v4w 51.4% / 84.5%，v5-nofeat 54.7% / 86.9%，**v5-final 55.6% / 87.4%**（top-5 95.8%）；对手动作 top-3：v5-final 73.2%。全量数据上 v3 / v4 特征的收益比 10% 数据时小（策略 CE −0.020 对 −0.06），但仍然确定。
+top-1 / top-3 (turn starts with a recorded move): v1 48.6% / 83.0%, v2m 48.6% / 82.8%, v4s 51.0% / 84.3%, v4w 51.4% / 84.5%, v5-nofeat 54.7% / 86.9%, **v5-final 55.6% / 87.4%** (top-5 95.8%); opponent action top-3: v5-final 73.2%. On the full data the v3 / v4 features gain less than on 10% of the data (policy CE −0.020 vs −0.06), but the gain is still certain.
 
-v5-final：Transformer（d=128，3 层，74 万参数，推理部分约 60 万）+ 8 步历史 + MTP-3（权重 0.5，衰减 0.5）+ 特征 reveal / num / movetab / matchup / elo / counter + 对手配置头，全部决策点；训练 99 分钟（含建缓存 28 分钟），约 5.9 万样本/秒。
+v5-final: Transformer (d=128, 3 layers, 740k parameters, about 600k of them used at inference) + 8 history steps + MTP-3 (weight 0.5, decay 0.5) + features reveal / num / movetab / matchup / elo / counter + opponent set head, all decision points; training 99 minutes (including 28 minutes of cache building), about 59k samples/s.
 
-### 网络 v6：计数特征（`count`）的对照（2026-10-15；v6 数据 = v5 同样的对局按现在的局面构造重新转换，4,598 万个局面；小模型 d 96 × 2 层，15,000 步，同种子，锚点验证集 50 万）
+### Network v6: an ablation of the counter features (`count`) (2026-10-15; v6 data = the same games as v5 reconverted with the current state construction, 45.98M positions; small model d 96 × 2 layers, 15,000 steps, same seed, anchor validation set 500k)
 
-"计数起作用"的局面 = 有任一方的计数非零（守住、替身、愿望、预知未来、持续状态回合）、有被禁用的招、睡眠回合，或我方在场宝可梦有招只剩 ≤ 4 PP：占验证集 9.7%。
+Positions "where the counters matter" = either side has a nonzero counter (Protect, Substitute, Wish, Future Sight, turns left of a lasting condition), a disabled move, sleep turns, or our active Pokémon has a move with ≤ 4 PP left: 9.7% of the validation set.
 
-| 指标 | 有 count | 无 count | 差 |
+| metric | with count | without count | difference |
 |---|---|---|---|
-| 策略 CE（计数起作用的回合开始） | 1.1564 | 1.1649 | **−0.0085**（第 4,000 步起每个检查点都在 −0.008 ~ −0.009） |
-| 价值 BCE（计数起作用） | 0.5301 | 0.5321 | −0.0020 |
-| 策略 CE（全部回合开始，加权） | 1.1903 | 1.1917 | −0.0014 |
-| 价值 BCE（全部，加权） | 0.5547 | 0.5549 | −0.0002 |
-| 剩余回合数平均误差 | 5.55 | 5.63 | −0.08 回合 |
-| MTP 损失 / 对手招式命中 | 2.797 / 66.8% | 2.789 / 67.2% | 略差（容量 / 噪声） |
+| policy CE (turn starts where the counters matter) | 1.1564 | 1.1649 | **−0.0085** (every checkpoint from step 4,000 on at −0.008 ~ −0.009) |
+| value BCE (where the counters matter) | 0.5301 | 0.5321 | −0.0020 |
+| policy CE (all turn starts, weighted) | 1.1903 | 1.1917 | −0.0014 |
+| value BCE (all, weighted) | 0.5547 | 0.5549 | −0.0002 |
+| remaining-turns mean error | 5.55 | 5.63 | −0.08 turns |
+| MTP loss / opponent move hit rate | 2.797 / 66.8% | 2.789 / 67.2% | slightly worse (capacity / noise) |
 
-结论：新特征在它起作用的局面上稳定改进策略（约为 v3 对阵特征组整体收益的 1/6），整体因为这类局面少而只有 −0.0014；保留。
+Conclusion: the new features steadily improve the policy in the positions where they matter (about 1/6 of the v3 matchup feature group's overall gain); overall only −0.0014 because such positions are rare; kept.
 
-### 网络 v6：人类数据预训练与自对弈训练（2026-10-15）
+### Network v6: human-data pretraining and self-play training (2026-10-15)
 
-- **v6-h**（v5-glu 的配方 + `count` + 剩余回合数头；v6 人类数据，HF 对局只进训练，6 个 epoch，65,589 步，113 分钟）对 v5-glu（锚点验证集，同一批对局）：策略 CE（回合开始，加权）1.1227 / 1.1345，价值 BCE（全部，加权）0.5409 / 0.5439，top-1 56.2% / 55.9%，ECE 0.0124 / 0.0134，对手动作 42.7% / 42.2%，剩余回合数误差 5.25 回合。（v6-h 多了 HF 对局做训练数据，不全是新特征的功劳。）
-- **v6-s**（从 v6-h，sp0–sp7 全部自对弈数据：1,585 万个局面（每局最多 50 个），策略目标 3 遍；人类 20%；13,806 步，lr 4e-4；`--sp-stream 1500000`）。价值调度对照（每个结果都只学 1 次）：
+- **v6-h** (v5-glu's recipe + `count` + the remaining-turns head; v6 human data, HF games in training only, 6 epochs, 65,589 steps, 113 minutes) vs v5-glu (anchor validation set, the same games): policy CE (turn starts, weighted) 1.1227 / 1.1345, value BCE (all, weighted) 0.5409 / 0.5439, top-1 56.2% / 55.9%, ECE 0.0124 / 0.0134, opponent action 42.7% / 42.2%, remaining-turns error 5.25 turns. (v6-h also has the HF games as training data, so not all of it is the new features' credit.)
+- **v6-s** (from v6-h, all self-play data sp0–sp7: 15.85M positions (at most 50 per game), policy targets 3 passes; 20% human; 13,806 steps, lr 4e-4; `--sp-stream 1500000`). Value schedule comparison (each result learned only once):
 
-| | v6-h（起点） | first | spread |
+| | v6-h (start) | first | spread |
 |---|---|---|---|
-| 自对弈价值 BCE | 0.4822 | 0.4530 | **0.4387**（根节点 q：0.4350） |
-| 自对弈策略 CE / top-1 | 1.4720 / 63.5% | 1.2890 / 72.6% | 1.2904 / 72.5% |
-| 人类价值 BCE（加权） | 0.5409 | **0.5453** | 0.5485 |
-| 人类策略 CE（加权） | 1.1227 | 1.1636 | 1.1639 |
-| 剩余回合数误差（自对弈） | 6.81 | 5.57 | 5.57 |
+| self-play value BCE | 0.4822 | 0.4530 | **0.4387** (root q: 0.4350) |
+| self-play policy CE / top-1 | 1.4720 / 63.5% | 1.2890 / 72.6% | 1.2904 / 72.5% |
+| human value BCE (weighted) | 0.5409 | **0.5453** | 0.5485 |
+| human policy CE (weighted) | 1.1227 | 1.1636 | 1.1639 |
+| remaining-turns error (self-play) | 6.81 | 5.57 | 5.57 |
 
-spread 的自对弈价值明显更好（累计价值权重约为 first 的 3 倍），人类价值略差；策略一样。
-- 对战（1,600 次迭代，GPU 流程，无回退）：**spread 对 first 52.38% ± 2.60%**（600 对 wide1000；区间 49.8%–55.0%，偏向 spread，不显著）；**v6-s-spread 对 sp-gen7 49.67% ± 2.45%**（600 对 ab600b；区间 47.2%–52.1%，持平）：一次从头训练（人类预训练 + 全部自对弈数据，约 2.5 小时）追平了 8 代逐代训练的网络。
-- **剩余回合数项（速胜，v6-s-spread 开对关，1,600 次迭代，600 对）**：ml1（slope 0.005 / 回合，cap 0.03，threshold 0.5，双方）**51.58% ± 2.53%**（wide1000），开的一方赢的局平均 32.3 回合（中位 26）对 38.1（28）；ml2（0.01, 0.05, 0.3，双方）**51.33% ± 2.35%**（ab600b），33.8（26）对 38.9（28）。但到 300 回合上限的局 8 / 6（同池不开时每 1,200 局 2–5 / 2）：上限算平局，"落后方偏好更长"就是拖到上限；加了只对领先方的选项（`c2afa57`）。ml3（ml1 的参数，只对领先方）**50.96% ± 2.42%**（新池 wide600c），赢的局 33.7（26）对 36.3（27）；上限局 5（其中一对两局都到上限，是双方都拖的结构性队伍对，其余 3 局与基线相当）。采用 ml3 作为 v6 的默认（`SEARCH_ML`）。
-- **对 Foul Play（2026-10-15，各 200 ms，wide200，200 对，同一天同条件，速胜项关）**：**v6-s-spread 64.32% ± 4.27%**（199 对），**sp-gen7 63.69% ± 4.08%**（199 对；10-13 的 sp-gen6 为 64.3% ± 4.6%）：跳出自对弈环境的强度与 sp-gen7 相同。
-- 训练速度：全部 8 代自对弈数据内存映射为 42 GB，随机读盘只有正常速度的 1/30（约 1,000 样本/秒，停掉）；改为按块流式读取（`SpStream`）后约 40,000 样本/秒。
+spread's self-play value is clearly better (cumulative value weight about 3 times first's), its human value slightly worse; the policy is the same.
+- Games (1,600 iterations, GPU pipeline, no fallback): **spread vs first 52.38% ± 2.60%** (600 pairs, wide1000; interval 49.8%–55.0%, leaning to spread, not significant); **v6-s-spread vs sp-gen7 49.67% ± 2.45%** (600 pairs, ab600b; interval 47.2%–52.1%, even): one training from scratch (human pretraining + all the self-play data, about 2.5 hours) matched the network trained generation by generation over 8 generations.
+- **Remaining-turns term (fast wins, v6-s-spread on vs off, 1,600 iterations, 600 pairs)**: ml1 (slope 0.005 / turn, cap 0.03, threshold 0.5, both sides) **51.58% ± 2.53%** (wide1000), games won by the side with it on average 32.3 turns (median 26) vs 38.1 (28); ml2 (0.01, 0.05, 0.3, both sides) **51.33% ± 2.35%** (ab600b), 33.8 (26) vs 38.9 (28). But 8 / 6 games reached the 300-turn cap (with it off on the same pool, 2–5 / 2 per 1,200 games): the cap counts as a draw, so "the side behind prefers longer" means stalling to the cap; added an option for the side ahead only (`c2afa57`). ml3 (ml1's parameters, side ahead only) **50.96% ± 2.42%** (new pool wide600c), games won 33.7 (26) vs 36.3 (27); 5 games at the cap (one pair hit the cap in both games, a structural team pair where both sides stall; the other 3 games are in line with the baseline). ml3 adopted as v6's default (`SEARCH_ML`).
+- **vs Foul Play (2026-10-15, 200 ms each, wide200, 200 pairs, same day and conditions, fast-win term off)**: **v6-s-spread 64.32% ± 4.27%** (199 pairs), **sp-gen7 63.69% ± 4.08%** (199 pairs; sp-gen6 on 10-13 was 64.3% ± 4.6%): outside the self-play environment it is as strong as sp-gen7.
+- Training speed: all 8 generations of self-play data memory-mapped come to 42 GB, and random disk reads ran at only 1/30 of normal speed (about 1,000 samples/s, stopped); after switching to chunked streaming reads (`SpStream`), about 40,000 samples/s.
 
-### 网络 v7 输入组的消融（2026-10-19；v7 数据 = 同样的对局按现在的局面构造重新转换，含后备对阵 / 可用位两个修复，4,598 万个局面；小模型 d 96 × 2 层，15,000 步，种子 0，锚点验证集 50 万；设计见 design.md D13 附）
+### Network v7 input-group ablation (2026-10-19; v7 data = the same games reconverted with the current state construction, including the two fixes for fallback matchups / available slots, 45.98M positions; small model d 96 × 2 layers, 15,000 steps, seed 0, anchor validation set 500k; design in design.md, appendix to D13)
 
-基线 = v6 的 7 组（`reveal, num, movetab, matchup, elo, counter, count`）；每行在基线上加一组。子集（`train_pv.py` 的 `v7_subsets`）：ko2 = 我方在场有两击击倒而没有一击击倒，或有先制击倒（30%）；tera = 我方还能太晶（61%）；太晶回合 = 玩家这一步太晶了（2.5%）；残局 = 场上合计 ≤ 6 只存活（18%）；post = 信念世界对我方在场者的后果有分歧（某个概率在 0.1–0.9 之间，26%）。
+Baseline = v6's 7 groups (`reveal, num, movetab, matchup, elo, counter, count`); each row adds one group to the baseline. Subsets (`v7_subsets` in `train_pv.py`): ko2 = our active Pokémon has a 2HKO but no OHKO, or a priority KO (30%); tera = we can still terastallize (61%); tera turns = the player terastallized on this step (2.5%); endgame = ≤ 6 Pokémon alive on both sides combined (18%); post = the belief worlds disagree on the consequences for our active Pokémon (some probability between 0.1 and 0.9, 26%).
 
-| 组 | 策略 CE（回合开始，加权） | 价值 BCE（全部，加权） | top-1 | ECE | ko2 子集 CE | 太晶回合 CE / top-1 | 残局 BCE / CE | post 子集 CE | best_val_loss |
+| group | policy CE (turn starts, weighted) | value BCE (all, weighted) | top-1 | ECE | ko2 subset CE | tera-turn CE / top-1 | endgame BCE / CE | post subset CE | best_val_loss |
 |---|---|---|---|---|---|---|---|---|---|
-| 基线 | 1.195 | 0.5540 | 53.4% | 0.0113 | 1.181 | 3.01 / 7.7% | 0.4175 / 0.938 | 1.227 | 1.749 |
-| + ko2（F3a） | −0.002 | +0.0045 | 0 | 0.0108 | −0.003 | −0.03 / 8.9% | +0.0056 / −0.004 | −0.002 | 1.751 |
-| + tera（F6） | −0.010 | +0.0044 | +0.3% | 0.0108 | −0.013 | **−0.22 / 12.4%** | +0.0048 / −0.013 | −0.012 | 1.744 |
-| + team（F5） | −0.005 | +0.0016 | +0.2% | 0.0109 | −0.003 | −0.03 / 8.7% | +0.0010 / −0.007 | −0.006 | 1.746 |
-| + post（F2） | **−0.028** | −0.0018 | +1.5% | 0.0106 | −0.032 | −0.05 / 9.2% | −0.0029 / −0.032 | −0.046 | 1.719 |
-| 全部 | **−0.040** | **−0.0024** | **+1.8%** | **0.0100** | −0.048 | **−0.29 / 13.3%** | −0.0027 / −0.043 | −0.059 | **1.706** |
-| 全部 − ko2 | −0.039 | −0.0016 | +1.8% | 0.0109 | −0.046 | −0.28 / 13.1% | −0.0020 / −0.044 | −0.060 | 1.708 |
+| baseline | 1.195 | 0.5540 | 53.4% | 0.0113 | 1.181 | 3.01 / 7.7% | 0.4175 / 0.938 | 1.227 | 1.749 |
+| + ko2 (F3a) | −0.002 | +0.0045 | 0 | 0.0108 | −0.003 | −0.03 / 8.9% | +0.0056 / −0.004 | −0.002 | 1.751 |
+| + tera (F6) | −0.010 | +0.0044 | +0.3% | 0.0108 | −0.013 | **−0.22 / 12.4%** | +0.0048 / −0.013 | −0.012 | 1.744 |
+| + team (F5) | −0.005 | +0.0016 | +0.2% | 0.0109 | −0.003 | −0.03 / 8.7% | +0.0010 / −0.007 | −0.006 | 1.746 |
+| + post (F2) | **−0.028** | −0.0018 | +1.5% | 0.0106 | −0.032 | −0.05 / 9.2% | −0.0029 / −0.032 | −0.046 | 1.719 |
+| all | **−0.040** | **−0.0024** | **+1.8%** | **0.0100** | −0.048 | **−0.29 / 13.3%** | −0.0027 / −0.043 | −0.059 | **1.706** |
+| all − ko2 | −0.039 | −0.0016 | +1.8% | 0.0109 | −0.046 | −0.28 / 13.1% | −0.0020 / −0.044 | −0.060 | 1.708 |
 
-- 策略上每组都有收益且大致可加；post 最大，tera 集中在太晶决策上（太晶回合 top-1 从 7.7% 到 12.4%）。
-- 单开 ko2 / tera / team 的价值都比基线差 0.002–0.0045，单开 post 和全开反而更好：大概是同种子下输入维度改变初始化的噪声（v7 的 45 维实体列任一组开就整块加上，只按组遮掉），没有多种子，不下结论。
-- ko2 单开看不出收益；全开去掉 ko2 在价值、ECE、ko2 子集上都略差（差距在噪声内，方向一致），计算代价小，v0 保留全部组。
-- post 的对手配置只按当时已暴露的信息采样（和网络输入的单个世界同一个信念），不读未来信息。
+- On the policy every group gains, roughly additively; post the most, tera concentrated on tera decisions (tera-turn top-1 from 7.7% to 12.4%).
+- ko2 / tera / team alone each make the value 0.002–0.0045 worse than the baseline, while post alone and all groups together make it better: probably initialization noise from the changed input dimension under the same seed (v7's 45-dim entity columns are added as a whole when any group is on, and masked only per group); no multiple seeds, no conclusion.
+- ko2 alone shows no gain; all groups minus ko2 is slightly worse on value, ECE and the ko2 subset (the gaps within noise, the direction consistent), the compute cost is small, v0 keeps all groups.
+- post samples the opponent sets only from the information revealed at the time (the same belief as the single world in the network's input); it reads no future information.
 
-### 网络 v0-post：v7 数据的人类预训练，含 F2 `post`（2026-10-19；离线大幅领先、带搜索更弱，弃用；现在的 v0 见下一节）
+### Network v0-post: human pretraining on v7 data, with F2 `post` (2026-10-19; far ahead offline, weaker with search, dropped; the current v0 is in the next section)
 
-v6-h 的配方（medium，d 128 × 3 层，d_ff 171，6 个 epoch，65,590 步）+ 全部 v7 输入组（`ko2, tera, team, post`），v7 数据，`--stream 3`（内存上限 38G；`--stream 4` 时被系统内存压力停掉一次），121 分钟。锚点验证集：同一批对局按两次转换得到，局面数相差不到万分之一。
+v6-h's recipe (medium, d 128 × 3 layers, d_ff 171, 6 epochs, 65,590 steps) + all v7 input groups (`ko2, tera, team, post`), v7 data, `--stream 3` (memory cap 38G; with `--stream 4` it was killed once by system memory pressure), 121 minutes. Anchor validation set: the same games from the two conversions, position counts differ by less than 1 in 10,000.
 
-| 指标 | v0 | v6-h | 差 |
+| metric | v0 | v6-h | difference |
 |---|---|---|---|
-| 策略 CE（回合开始，加权） | **1.0799** | 1.1227 | **−0.043** |
-| 价值 BCE（全部，加权） | **0.5309** | 0.5409 | **−0.010** |
+| policy CE (turn starts, weighted) | **1.0799** | 1.1227 | **−0.043** |
+| value BCE (all, weighted) | **0.5309** | 0.5409 | **−0.010** |
 | top-1 | **58.2%** | 56.2% | +2.0% |
-| 价值准确率 / ECE | 72.5% / **0.0091** | 71.8% / 0.0124 | |
-| 换人回合 CE / top-1 | 2.014 / 28.7% | 2.036 / 28.2% | |
-| 计数起作用的局面 CE | 1.051 | 1.089 | −0.038 |
-| 剩余回合数误差 | **4.85** | 5.25 | −0.40 回合 |
-| 对手动作命中 | 42.9% | 42.7% | 持平 |
-| 对手配置头（道具 / 太晶） | 70.8% / 48.8% | 70.9% / 49.2% | 持平 |
-| 太晶回合 CE / top-1 | 2.394 / 20.9% | — | |
+| value accuracy / ECE | 72.5% / **0.0091** | 71.8% / 0.0124 | |
+| switch-turn CE / top-1 | 2.014 / 28.7% | 2.036 / 28.2% | |
+| CE in positions where the counters matter | 1.051 | 1.089 | −0.038 |
+| remaining-turns error | **4.85** | 5.25 | −0.40 turns |
+| opponent action hit rate | 42.9% | 42.7% | even |
+| opponent set head (item / tera) | 70.8% / 48.8% | 70.9% / 49.2% | even |
+| tera-turn CE / top-1 | 2.394 / 20.9% | — | |
 | best_val_loss | **1.611** | 1.664 | |
 
-中等模型上的策略收益和小模型消融相同（−0.040），价值收益更大（−0.010 对 −0.0024）。`check_tnet`：Rust = PyTorch 到 1.5e-5（4,000 个局面，两个视角，首选 100% 一致）；`check_batch_search`：GPU = CPU 到 2e-5，首选和不分批的 CPU 搜索一致 90%（两个 CPU 种子之间 82%）。
+The policy gain on the medium model is the same as in the small-model ablation (−0.040), the value gain larger (−0.010 vs −0.0024). `check_tnet`: Rust = PyTorch to 1.5e-5 (4,000 positions, both views, top choice 100% the same); `check_batch_search`: GPU = CPU to 2e-5, top choice the same as the unbatched CPU search 90% of the time (82% between two CPU seeds).
 
-搜索开销（`check_batch_search`，60 个局面，2,000 次迭代，8 个世界）：GPU 批量 v0 7,110 叶 / 秒 对 v6-h 9,142（**慢 22%**，v7 输入的伤害计算在 CPU 上）；CPU 单线程 3,148 对 3,460（慢 9%）。
+Search cost (`check_batch_search`, 60 positions, 2,000 iterations, 8 worlds): GPU batched v0 7,110 leaves / s vs v6-h 9,142 (**22% slower**, the v7 inputs' damage calculations run on the CPU); CPU single thread 3,148 vs 3,460 (9% slower).
 
-**对战（wide1000）**：带搜索（GPU 批量，1,600 次迭代，ml3）v0-post 对 v6-h **46.79% ± 2.59%**（530 对，约 −22 Elo，显著更弱）；不带搜索（`p_m*`，网络自己的策略，4 个信念世界平均，tau 0.05，500 对）**55.15% ± 2.60%**（约 +36 Elo，显著更强）。小模型的同样对照（v7-small-*，wide1000）：
+**Games (wide1000)**: with search (GPU batched, 1,600 iterations, ml3) v0-post vs v6-h **46.79% ± 2.59%** (530 pairs, about −22 Elo, significantly weaker); without search (`p_m*`, the network's own policy, averaged over 4 belief worlds, tau 0.05, 500 pairs) **55.15% ± 2.60%** (about +36 Elo, significantly stronger). The same comparison with small models (v7-small-*, wide1000):
 
-| A 对 B | 不带搜索（500 对） | 带搜索（1,600 次迭代，300 对） |
+| A vs B | without search (500 pairs) | with search (1,600 iterations, 300 pairs) |
 |---|---|---|
-| v7 基线 对 v6 基线（v6-small-count，同配方，只换数据） | — | 51.75% ± 3.42% |
-| 全开 对 基线 | **53.50% ± 2.66%** | **46.25% ± 3.65%** |
-| post 对 基线 | 50.40% ± 2.66% | 48.92% ± 3.43% |
-| tera 对 基线 | — | 50.67% ± 3.34% |
+| v7 baseline vs v6 baseline (v6-small-count, same recipe, only the data changed) | — | 51.75% ± 3.42% |
+| all groups vs baseline | **53.50% ± 2.66%** | **46.25% ± 3.65%** |
+| post vs baseline | 50.40% ± 2.66% | 48.92% ± 3.43% |
+| tera vs baseline | — | 50.67% ± 3.34% |
 
-网络本身更强，加上搜索反而更弱，而 v7 数据本身没问题。原因在 `post` 进搜索的方式（树内检查：5 个局面、1.4 万个叶节点行，ent4 / post 100% 非零、根行与参考特征逐位一致，不是输入丢失）：
+The network itself is stronger, but weaker with search, and the v7 data itself is fine. The cause is how `post` enters the search (in-tree check: 5 positions, 14k leaf rows, ent4 / post 100% nonzero, the root rows bit-identical to the reference features; no input is lost):
 
-- `post` 在根节点用全部根世界算一次，整棵树沿用（树内不更新）。v0-post 很依赖它：同 6,000 个人类局面，`post` 换成同一局同一方上一个决策点的（模拟树内陈旧一步），价值 BCE 0.5148 → 0.5264、策略 CE 1.144 → 1.276，胜率估计平均偏移 0.049；全 0 时 0.5661 / 1.792。整个 post 组的离线收益只有策略 CE 约 0.03，树里叶节点的价值被系统性带偏。
-- 对手视角的节点上，对手“己方”的配置位是我们的后验（小数），训练里己方从没出现过小数（v7.1 起）。
-- v7 数据里 3 个额外信念世界把我方未暴露的配置也重采样了，我方的后验行是小数（审查发现，v7.1 修复），实战里我方配置已知、只有 0 / 1。
+- `post` is computed once at the root from all the root worlds and reused through the whole tree (not updated in the tree). v0-post leans on it heavily: on the same 6,000 human positions, with `post` replaced by the one from the same game and side's previous decision point (simulating one step of staleness in the tree), value BCE 0.5148 → 0.5264, policy CE 1.144 → 1.276, the win-probability estimate shifts by 0.049 on average; with all zeros, 0.5661 / 1.792. The whole post group's offline gain is only about 0.03 policy CE, and the values of leaves in the tree are systematically biased.
+- At nodes in the opponent's view, the opponent's "own" set slots hold our posterior (fractions); in training one's own side never had fractions (from v7.1 on).
+- In the v7 data the 3 extra belief worlds also resampled our unrevealed sets, so our posterior rows were fractions (found in review, fixed in v7.1); in real games our sets are known, only 0 / 1.
 
-结论：`post` 不进 v0；要用它，得重新设计树内的用法（叶节点按自己的世界重算后果列，训练混合 1 个世界和 4 个世界的后验），见 issue #11。
+Conclusion: `post` stays out of v0; to use it, its in-tree use needs a redesign (leaves recompute the consequence columns from their own world; training mixes 1-world and 4-world posteriors), see issue #11.
 
-### 网络 v0：v7.1 数据的人类预训练，不含 `post`（2026-10-20；自对弈重开的起点）
+### Network v0: human pretraining on v7.1 data, without `post` (2026-10-20; the starting point of the self-play restart)
 
-v6-h 的配方（medium，d 128 × 3 层，6 个 epoch）+ `ko2, tera, team`（不含 `post`），v7.1 数据（`--pool all --per-game 20 --heldout`，流式写出），`--stream 3`，内存上限 36G，115.6 分钟。模型 `data/train/v71/runs/v0-v71`（2026-10-20 改名：v7.2 的 v0 在 `data/train/v72/runs/v0`）。
+v6-h's recipe (medium, d 128 × 3 layers, 6 epochs) + `ko2, tera, team` (no `post`), v7.1 data (`--pool all --per-game 20 --heldout`, streamed out), `--stream 3`, memory cap 36G, 115.6 minutes. Model `data/train/v71/runs/v0-v71` (renamed 2026-10-20: the v7.2 v0 is at `data/train/v72/runs/v0`).
 
-| 指标 | v0 | v0-post | v6-h |
+| metric | v0 | v0-post | v6-h |
 |---|---|---|---|
-| 策略 CE（回合开始，加权） | 1.1136 | 1.0799 | 1.1227 |
-| 价值 BCE（全部，加权） | 0.5372 | 0.5309 | 0.5409 |
+| policy CE (turn starts, weighted) | 1.1136 | 1.0799 | 1.1227 |
+| value BCE (all, weighted) | 0.5372 | 0.5309 | 0.5409 |
 | top-1 | 56.4% | 58.2% | 56.2% |
-| 价值 ECE | 0.0109 | 0.0091 | 0.0124 |
-| 换人回合 CE | 2.041 | 2.014 | 2.036 |
-| 剩余回合数误差 | 5.26 | 4.85 | 5.25 |
-| 对手动作命中 | 43.0% | 42.9% | 42.7% |
-| 太晶回合 CE / top-1 | 2.458 / 20.9% | 2.394 / 20.9% | — |
+| value ECE | 0.0109 | 0.0091 | 0.0124 |
+| switch-turn CE | 2.041 | 2.014 | 2.036 |
+| remaining-turns error | 5.26 | 4.85 | 5.25 |
+| opponent action hit rate | 43.0% | 42.9% | 42.7% |
+| tera-turn CE / top-1 | 2.458 / 20.9% | 2.394 / 20.9% | — |
 | best_val_loss | 1.651 | 1.611 | 1.664 |
 
-离线比 v6-h 小幅好（策略 −0.009、价值 −0.004），post 那部分收益没有了。`check_tnet`、`check_batch_search` 通过。
+Offline slightly better than v6-h (policy −0.009, value −0.004); the post part of the gain is gone. `check_tnet` and `check_batch_search` pass.
 
-**对战（对 v6-h）**：
-- 不带搜索（`p_m*`，4 个信念世界平均，tau 0.05，wide1000，500 对）：49.5% ± 2.66%。
-- 带搜索（GPU 批量，1,600 次迭代，ml3）：wide1000 **51.92% ± 2.49%**（600 对）；ab600b 49.83% ± 2.35%（597 对，停在最后几对）。
-- 合计 **50.9% ± 1.7%**（1,197 对，约 +6 Elo，不显著）；两边 0 次搜索回退（L229 修复之后）。
+**Games (vs v6-h)**:
+- Without search (`p_m*`, averaged over 4 belief worlds, tau 0.05, wide1000, 500 pairs): 49.5% ± 2.66%.
+- With search (GPU batched, 1,600 iterations, ml3): wide1000 **51.92% ± 2.49%** (600 pairs); ab600b 49.83% ± 2.35% (597 pairs, stopped short of the last few pairs).
+- Combined **50.9% ± 1.7%** (1,197 pairs, about +6 Elo, not significant); 0 search fallbacks on either side (after the L229 fix).
 
-注：v0 用的是 v7.1 输入（`EXTRA_VERSION` 2）。审查后修了特征（v7.2，见下一节），实体输入从 45 维变成 50 维，这个 v0 不能直接读新输入，要按新数据重训。
+Note: v0 uses the v7.1 inputs (`EXTRA_VERSION` 2). After review the features were fixed (v7.2, see the next section) and the entity input went from 45 to 50 dims; this v0 cannot read the new inputs directly and has to be retrained on the new data.
 
-结论：v0 的强度和 v6-h 持平。它的价值在于干净：输入与现在的局面构造一致（太晶属性约定、后备对阵、L1–L229），策略目标不来自旧引擎上的搜索。作为自对弈重开的起点，不和第 0–8 代的旧自对弈数据混用。
+Conclusion: v0 is as strong as v6-h. Its value is that it is clean: its inputs match the current state construction (tera type convention, fallback matchups, L1–L229), and its policy targets do not come from searches on the old engine. It is the starting point of the self-play restart and is not mixed with the old self-play data of generations 0–8.
 
-### 网络 v0（v7.2）：v7.2 数据的人类预训练（2026-10-21；自对弈重开的起点）
+### Network v0 (v7.2): human pretraining on v7.2 data (2026-10-21; the starting point of the self-play restart)
 
-v7.1 v0 的配方，数据换成 v7.2（`EXTRA_VERSION` 3，见下一节；2,348,551 局、46,050,050 个局面，建数据 5.1 小时），`--stream 2`（3 超过 36G 上限被杀掉一次：实体输入 50 维），116 分钟。模型 `data/train/v72/runs/v0`。
+The v7.1 v0's recipe with the data changed to v7.2 (`EXTRA_VERSION` 3, see the next section; 2,348,551 games, 46,050,050 positions, 5.1 hours to build the data), `--stream 2` (3 went over the 36G cap and was killed once: the entity input is 50 dims), 116 minutes. Model `data/train/v72/runs/v0`.
 
-| 指标 | v0（v7.2） | v0-v71 | v6-h |
+| metric | v0 (v7.2) | v0-v71 | v6-h |
 |---|---|---|---|
-| 策略 CE（回合开始，加权） | **1.1103** | 1.1136 | 1.1227 |
-| 价值 BCE（全部，加权） | 0.5395 | **0.5372** | 0.5409 |
+| policy CE (turn starts, weighted) | **1.1103** | 1.1136 | 1.1227 |
+| value BCE (all, weighted) | 0.5395 | **0.5372** | 0.5409 |
 | top-1 | **56.6%** | 56.4% | 56.2% |
-| 太晶回合 CE / top-1 | **2.428 / 21.6%** | 2.458 / 20.9% | — |
-| 换人回合 CE | **2.027** | 2.041 | 2.036 |
+| tera-turn CE / top-1 | **2.428 / 21.6%** | 2.458 / 20.9% | — |
+| switch-turn CE | **2.027** | 2.041 | 2.036 |
 | best_val_loss | **1.649** | 1.651 | 1.664 |
 
-`check_tnet`：Rust = PyTorch 到 1.1e-5，首选 100% 一致；`check_batch_search` 通过。搜索速度（60 个局面，2,000 次迭代，8 个世界）：GPU 批量 3,539 叶 / 秒对 v6-h 5,676（**慢 38%**），CPU 单线程 2,366 对 3,373（慢 30%）。
+`check_tnet`: Rust = PyTorch to 1.1e-5, top choice 100% the same; `check_batch_search` passes. Search speed (60 positions, 2,000 iterations, 8 worlds): GPU batched 3,539 leaves / s vs v6-h 5,676 (**38% slower**), CPU single thread 2,366 vs 3,373 (30% slower).
 
-对战（对 v6-h，GPU 批量搜索，ml3，wide1000，各 600 对）：
-- 同样 1,600 次迭代：**48.92% ± 2.37%**；
-- 等时间（按速度比，v0 1,000 次对 v6-h 1,600 次）：**49.21% ± 2.44%**。
+Games (vs v6-h, GPU batched search, ml3, wide1000, 600 pairs each):
+- The same 1,600 iterations: **48.92% ± 2.37%**;
+- Equal time (by the speed ratio, v0 1,000 iterations vs v6-h 1,600): **49.21% ± 2.44%**.
 
-和 v6-h 持平（v0-v71 是 50.9% ± 1.7%，区别在噪声内）：修过的特征没有带来可见的棋力变化，少 38% 的迭代也没有让它变弱。3 次搜索退回启发式（2,400 局里；两边都有）：引擎的评估遇到 +7 的能力等级（`Invalid boost value: 7`）；没能复现（随机推进 15.8 万步、能力等级在上下限时的全部招式组合 103 万个、唱反调 / 单纯等特性的组合，都没越界），已加诊断：搜索评估前检查能力等级、越界时打印局面（`bsearch.rs` 的 `evaluate_checked`），批量搜索失败时把根的全部世界写到 `data/selfplay/diag/search_failures.jsonl`。
+Even with v6-h (v0-v71 was 50.9% ± 1.7%; the difference is within noise): the fixed features brought no visible change in strength, and 38% fewer iterations did not make it weaker either. 3 searches fell back to the heuristic (out of 2,400 games; on both sides): the engine's evaluation hit a +7 stat stage (`Invalid boost value: 7`); not reproduced (158k random steps, all 1.03M move combinations with stat stages at their limits, combinations of abilities such as Contrary / Simple: none went out of bounds); diagnostics added: the search checks stat stages before evaluating and prints the position when out of bounds (`evaluate_checked` in `bsearch.rs`), and when a batched search fails, all the root's worlds are written to `data/selfplay/diag/search_failures.jsonl`.
 
-### 网络 v6arch-pp-v75：v7.5 数据的人类预训练（2026-10-26；r2 自对弈的起点）
+### Network v6arch-pp-v75: human pretraining on v7.5 data (2026-10-26; the starting point of r2 self-play)
 
-v6arch-pp 的配方（v6 的 7 个输入组，6 个 epoch，lr 0.002），数据换成 v7.5（2026-10-26 的局面构造：S158–S159 之后；2,347,512 局、46,071,040 个局面，训练 44,866,526 / 验证 500,000），65,722 步，110 分钟。模型 `data/train/v75/runs/v6arch-pp-v75`。
+v6arch-pp's recipe (v6's 7 input groups, 6 epochs, lr 0.002) with the data changed to v7.5 (the state construction of 2026-10-26: after S158–S159; 2,347,512 games, 46,071,040 positions, train 44,866,526 / validation 500,000), 65,722 steps, 110 minutes. Model `data/train/v75/runs/v6arch-pp-v75`.
 
-| 指标（验证集） | v6arch-pp-v75 | v6arch-pp（v7.3） |
+| metric (validation set) | v6arch-pp-v75 | v6arch-pp (v7.3) |
 |---|---|---|
-| 策略 CE | 1.219 | **1.206** |
+| policy CE | 1.219 | **1.206** |
 | top-1 | 55.95% | **56.21%** |
-| 价值 BCE | 0.5381 | **0.5354** |
-| 价值准确率 | 71.61% | **71.88%** |
+| value BCE | 0.5381 | **0.5354** |
+| value accuracy | 71.61% | **71.88%** |
 
-离线略差（验证集也是按新构造转换的，不完全同一把尺子）。对 Foul Play（各 200 ms × 1，wide200）：v75 **65.0% ± 4.1%**（199 对），v7.3 **68.4% ± 4.1%**（200 对），配对差 −3.7 ± 5.1，不显著。r2 自对弈从 v75 起步：它的输入和当前代码的局面构造一致。
+Slightly worse offline (the validation set was also converted with the new construction, so not quite the same yardstick). Vs Foul Play (200 ms × 1 each, wide200): v75 **65.0% ± 4.1%** (199 pairs), v7.3 **68.4% ± 4.1%** (200 pairs), paired difference −3.7 ± 5.1, not significant. r2 self-play starts from v75: its inputs match the current code's state construction.
 
-### 公开局面键 `phase_key`（2026-10-22）
+### Public position key `phase_key` (2026-10-22)
 
-`phase_key` 让子节点按结果之后的公开局面（双方首发、双方是否必须换人）再分一层，例如伤害骰子击倒和没击倒进不同的节点（搜索审查第 2 节，下面“搜索自我审查”）。A/B 设置：v6-h 对 v6-h，A 方打开，GPU 批量搜索，1,600 次迭代，ml3。
+`phase_key` splits child nodes one level further by the public position after the outcome (both sides' active Pokémon, whether either side must switch), so that, for example, a damage roll that KOs and one that does not go to different nodes (search review section 2, "Search self-review" below). A/B setup: v6-h vs v6-h, side A with it on, GPU batched search, 1,600 iterations, ml3.
 
-| 池 | A 方（打开）胜率 |
+| pool | side A (on) win rate |
 |---|---|
-| wide1000（600 对） | 52.08% ± 2.37% |
-| ab600b（600 对） | 49.33% ± 2.37% |
-| 合计（1,200 对） | 约 50.7% ± 1.7% |
+| wide1000 (600 pairs) | 52.08% ± 2.37% |
+| ab600b (600 pairs) | 49.33% ± 2.37% |
+| combined (1,200 pairs) | about 50.7% ± 1.7% |
 
-没有收益，保持默认关。和 D12 里删掉的"按可观察结果拆分"结论一致：开环在这一层的合并（4.6% 的重复访问）对棋力影响不大。两组 1,200 局各用时 4,224 秒和 4,219 秒，GPU 下降过程挪动查子节点的位置没有拖慢搜索。
+No gain; the default stays off. This agrees with the conclusion in D12, where "splitting by observable outcome" was removed: open-loop merging at this level (4.6% repeated visits) matters little for strength. The two sets of 1,200 games took 4,224 s and 4,219 s; moving the child lookup within the GPU descent did not slow the search.
 
-ab600b 那一组里，不开的一方有 2 次搜索失败，是引擎的能力等级 +7（`engine-diff.md` L231，已修）。10-21 那 3 次没能复现的回退报错相同（`Invalid boost value: 7`），很可能是同一个原因，但当时没有存下局面，无法确认。
+In the ab600b set the side with it off had 2 search failures, from the engine's +7 stat stage (`engine-diff.md` L231, fixed). The 3 unreproduced fallbacks of 10-21 had the same error (`Invalid boost value: 7`) and very likely the same cause, but the positions were not saved then, so it cannot be confirmed.
 
-### 搜索自我审查（2026-10-21 / 22，原 `search_review.md`）
+### Search self-review (2026-10-21 / 22, formerly `search_review.md`)
 
-外部审查 6 条加复查 4 条，逐条在代码里核实并修复（共 17 项，`rust/alpha_search` 的 ismcts.rs / bsearch.rs、search_player、batcher）：根先验改为所有世界的均值（原来只来自第一个世界：与 16 个世界均值的 L1 平均 0.042、最大 0.229）并在可选项上重新归一化；CPU 缓存的 logits 对不上选项；能力等级到 +7 时局面评估 panic（不屈之盾 / 不挠之剑在 +6 仍加，引擎 L231）；根噪声只加在最后一个世界的选项上；对方的根先验改为以当前世界为条件；GPU 根评估突破批量上限；CPU 计时不含根评估（200 ms 实际约 261 ms）；树内 history 与回合数在 pivot / 换人阶段的对齐（第 11–17 项，含挣扎没有动作槽）。还没修的几项（开环合并不同公开局面、对方在树里看穿我方配置、最后只取访问最多的纯策略、非根节点的先验只设一次）转入 GitHub issues #7、#8、#10。验证工具：`scripts/check_search_worlds.py`、`tests/test_search_worlds.py`、ismcts.rs 的 ignored 测试 `measure_cached_logits_fit` 与 `matrix_games`。
+6 points from an external review plus 4 from a re-review, each verified in the code and fixed (17 items in total, in `rust/alpha_search`'s ismcts.rs / bsearch.rs, search_player, batcher): the root prior is now the mean over all worlds (it used to come only from the first world: mean L1 to the 16-world mean 0.042, maximum 0.229) and is renormalized over the available options; the CPU-cached logits did not line up with the options; position evaluation panicked at a +7 stat stage (Dauntless Shield / Intrepid Sword still boost at +6, engine L231); the root noise was added only to the last world's options; the opponent's root prior is now conditioned on the current world; the GPU root evaluation broke the batch size limit; the CPU timing left out the root evaluation (200 ms was actually about 261 ms); the alignment of in-tree history and turn count in the pivot / switch phases (items 11–17, including Struggle having no action slot). The items not yet fixed (open-loop merging of different public positions, the opponent seeing through our sets in the tree, only the most-visited pure strategy taken at the end, non-root priors set only once) moved to GitHub issues #7, #8, #10. Verification tools: `scripts/check_search_worlds.py`, `tests/test_search_worlds.py`, the ignored tests `measure_cached_logits_fit` and `matrix_games` in ismcts.rs.
 
-### 对 Foul Play：搜索审查修复之后（2026-10-22）
+### Vs Foul Play: after the search review fixes (2026-10-22)
 
-条件和 10-15 相同（`data/selfplay/diag/run_fp_v72.sh`）：我方 CPU 搜索 `s_ismcts_ma`，双方各 200 ms × 1，wide200，200 对，速胜项关。搜索含根先验均值和 CPU 缓存 logits 的修复（`0243828`、`710f26f`）。
+The same conditions as 10-15 (`data/selfplay/diag/run_fp_v72.sh`): our CPU search `s_ismcts_ma`, 200 ms × 1 each side, wide200, 200 pairs, fast-win term off. The search includes the fixes for the root prior mean and the CPU-cached logits (`0243828`, `710f26f`).
 
-| 网络 | 对 Foul Play |
+| network | vs Foul Play |
 |---|---|
-| v6-s-spread（锚点；10-15 用旧搜索 64.32% ± 4.27%） | **67.59% ± 4.11%**（199 对） |
-| v6-h | 65.66% ± 4.11%（198 对） |
-| v0（v7.2） | 65.75% ± 4.37%（200 对） |
-| v6arch | 65.03% ± 4.58%（198 对） |
+| v6-s-spread (anchor; 10-15 with the old search 64.32% ± 4.27%) | **67.59% ± 4.11%** (199 pairs) |
+| v6-h | 65.66% ± 4.11% (198 pairs) |
+| v0 (v7.2) | 65.75% ± 4.37% (200 pairs) |
+| v6arch | 65.03% ± 4.58% (198 pairs) |
 
-- **这一轮不是等时间（10-22 复查）**：CPU 搜索的计时不含根评估，而且每 256 次迭代才查一次时间，我方每步实际约 250–270 ms（Foul Play 200 ms）。10-15 的锚点同样多用了时间，所以"锚点比修复前高 3.3 个百分点"不能算作搜索修复的效果，收回。
-- 四个网络之间差不到 2.6 个百分点，在 ±4.3% 的区间内。对外部对手也看不出 v7.2 网络的收益，和自对弈 A/B 的结论相同。
-- 1,595 局没有搜索退回。失败局共 5 局，都是 Foul Play 进程崩溃（`can_z` 的 AttributeError，10-13 也出现过；`Total of weights must be greater than zero`），按配对剔除。
+- **This round was not at equal time (10-22 re-review)**: the CPU search's timing left out the root evaluation and checked the clock only every 256 iterations, so our side actually took about 250–270 ms per move (Foul Play 200 ms). The 10-15 anchor also overran its time, so "the anchor is 3.3 points higher than before the fixes" cannot be counted as the effect of the search fixes; withdrawn.
+- The four networks are within 2.6 points of each other, inside the ±4.3% interval. Against an outside opponent no gain from the v7.2 networks shows either, the same conclusion as the self-play A/B.
+- No search fallbacks in 1,595 games. 5 games failed, all from Foul Play process crashes (`can_z` AttributeError, also seen on 10-13; `Total of weights must be greater than zero`), removed by pair.
 
-**严格等时间重测（10-22 下午，`run_fp_v72b.sh`）**：计时含根评估、每 16 次迭代查一次（200 ms 预算实测 203–207 ms），并且含复查的修复（对方根先验按世界条件化、根噪声覆盖全部选项、根评估分批）。
+**Strict equal-time rerun (10-22 afternoon, `run_fp_v72b.sh`)**: the timing includes the root evaluation and checks the clock every 16 iterations (a 200 ms budget measured 203–207 ms), and the re-review's fixes are in (the opponent's root prior conditioned per world, root noise covering all options, the root evaluation batched).
 
-| 网络 | 对 Foul Play |
+| network | vs Foul Play |
 |---|---|
-| v6-s-spread | **70.37% ± 4.05%**（200 对） |
-| v6-h | 64.82% ± 4.12%（199 对） |
-| v0、v6arch | 未测完：为了先处理第三份复查的问题而停下 |
+| v6-s-spread | **70.37% ± 4.05%** (200 pairs) |
+| v6-h | 64.82% ± 4.12% (199 pairs) |
+| v0, v6arch | not finished: stopped to deal with the third re-review's issues first |
 
-我方时间少了约 20%，成绩没有下降。v6-s-spread（训练用了第 0–7 代自对弈数据）比 v6-h 高 5.6 个百分点，在显著的边缘。
+Our side had about 20% less time and the results did not drop. v6-s-spread (trained with self-play data from generations 0–7) is 5.6 points above v6-h, at the edge of significance.
 
-### 策略 / 价值交叉评估：v0（v7.2）的哪一半有用（2026-10-22）
+### Policy / value cross-evaluation: which half of v0 (v7.2) helps (2026-10-22)
 
-`gpu_net.CrossNet`：一方的先验来自一个网络，叶节点价值来自另一个网络。GPU 批量搜索，1,600 次迭代，ml3，wide1000，各 600 对，对手都是 v6-h；搜索已含根先验均值的修复。
+`gpu_net.CrossNet`: one side's priors come from one network and its leaf values from another. GPU batched search, 1,600 iterations, ml3, wide1000, 600 pairs each, the opponent always v6-h; the search includes the root prior mean fix.
 
-| A 方（策略 + 价值） | 对 v6-h |
+| side A (policy + value) | vs v6-h |
 |---|---|
-| v0 的策略 + v6-h 的价值 | 50.88% ± 2.42% |
-| v6-h 的策略 + v0 的价值 | 50.33% ± 2.39% |
+| v0's policy + v6-h's value | 50.88% ± 2.42% |
+| v6-h's policy + v0's value | 50.33% ± 2.39% |
 
-两半单独换上都没有可见收益，和整网对 v6-h 的 48.92% ± 2.37% 一致：v0 的策略 CE 好 0.012、价值 BCE 好 0.0014，这些离线改进在这个搜索下都测不出棋力。2,400 局没有搜索退回。
+Neither half swapped in alone gives a visible gain, consistent with the whole network's 48.92% ± 2.37% vs v6-h: v0's policy CE is 0.012 better and its value BCE 0.0014 better, and under this search none of these offline improvements shows up as strength. No search fallbacks in 2,400 games.
 
-### 搜索审查的修复：根先验取所有世界的均值，GPU 路径传配置（2026-10-21）
+### Search review fixes: root prior as the mean over all worlds, the GPU path passes the configuration (2026-10-21)
 
-第四份审查指出六处问题，在代码里逐条核对过，都成立。本节修了其中两处：
-- 根先验原来只来自第一个信念世界（`bsearch.rs` 的根节点只评估一次，`ismcts.rs` 只在第一次展开时设先验），现在是所有世界的网络先验的均值。某个选项不在某个世界里时，那个世界按 0 计。PUCT 选择时把先验在可选项上重新归一化。
-- GPU 搜索原来没有把 `ml` / `policy_opponent` 传给 `BatchSearch`，现在传了。默认值和原来的一样，现有对局不受影响。
+The fourth review pointed out six problems; each was checked in the code and all hold. This section fixes two of them:
+- The root prior used to come only from the first belief world (`bsearch.rs` evaluates the root only once, `ismcts.rs` sets the prior only at the first expansion); it is now the mean of the network priors over all worlds. When an option is not in a world, that world counts it as 0. PUCT selection renormalizes the prior over the available options.
+- The GPU search did not pass `ml` / `policy_opponent` to `BatchSearch`; now it does. The defaults are the same as before, so existing games are unaffected.
 
-测试：`tests/test_search_worlds.py` 构造两个世界 A、B（B 中对方首发的速度翻倍），GPU 和 CPU 两条路径上都满足：[A, B] 和 [B, A] 的根先验相同，并且等于两者的均值。
+Test: `tests/test_search_worlds.py` builds two worlds A, B (in B the opponent's lead has double the speed); on both the GPU and the CPU path, the root priors of [A, B] and [B, A] are the same and equal the mean of the two.
 
-真实信念世界上的检验 `scripts/check_search_worlds.py`：v6arch，100 个回放局面，每个 16 个世界，按训练数据的方式抽取，1,600 次迭代。
+The check on real belief worlds, `scripts/check_search_worlds.py`: v6arch, 100 replay positions, 16 worlds each, drawn the way the training data is, 1,600 iterations.
 
-| 对比 | 访问分布 TV | 首选相同 |
+| comparison | visit distribution TV | same top choice |
 |---|---|---|
-| 换种子（搜索自身的噪声） | 0.069 | 88% |
-| 打乱世界顺序（种子不变） | 0.067 | 90% |
+| different seed (the search's own noise) | 0.069 | 88% |
+| shuffled world order (same seed) | 0.067 | 90% |
 
-打乱顺序的影响和种子噪声相当。旧做法的误差（第一个世界的先验与 16 个世界均值的 L1）平均 0.042，中位数 0.033，最大 0.229。问题存在，平均幅度不大，所以没有单独做棋力 A/B（600 对的分辨率约 ±2.4%）。
+Shuffling the order matters about as much as seed noise. The old way's error (L1 between the first world's prior and the 16-world mean) averages 0.042, median 0.033, maximum 0.229. The problem is real but small on average, so there was no separate strength A/B (the resolution of 600 pairs is about ±2.4%).
 
-### 是不是数据的问题：v6 的输入组 + v7.2 数据（v6arch，2026-10-21）
+### Is it the data: v6's input groups + v7.2 data (v6arch, 2026-10-21)
 
-v6-h 的配方和输入组（`reveal, num, movetab, matchup, elo, counter, count`，不含 v7 的 `ko2 / tera / team`），数据换成 v7.2（v3 输入也是修过的 `EXTRA_VERSION` 3），`--stream 2`，143.5 分钟。模型 `data/train/v72/runs/v6arch`。
+v6-h's recipe and input groups (`reveal, num, movetab, matchup, elo, counter, count`, without v7's `ko2 / tera / team`), with the data changed to v7.2 (the v3 inputs also the fixed `EXTRA_VERSION` 3), `--stream 2`, 143.5 minutes. Model `data/train/v72/runs/v6arch`.
 
-| 指标 | v6arch | v0（v7.2） | v6-h |
+| metric | v6arch | v0 (v7.2) | v6-h |
 |---|---|---|---|
-| 策略 CE（回合开始，加权） | 1.1173 | **1.1103** | 1.1227 |
-| 价值 BCE（全部，加权） | 0.5400 | **0.5395** | 0.5409 |
+| policy CE (turn starts, weighted) | 1.1173 | **1.1103** | 1.1227 |
+| value BCE (all, weighted) | 0.5400 | **0.5395** | 0.5409 |
 | top-1 | 56.2% | **56.6%** | 56.2% |
 
-对战（GPU 批量搜索，1,600 次迭代，ml3，wide1000，各 600 对）：
-- v6arch 对 v6-h（只差数据）：**50.54% ± 2.41%**；
-- v6arch 对 v0（v7.2）（数据相同，只差 v7 的三组输入）：**50.04% ± 2.39%**。
+Games (GPU batched search, 1,600 iterations, ml3, wide1000, 600 pairs each):
+- v6arch vs v6-h (only the data differs): **50.54% ± 2.41%**;
+- v6arch vs v0 (v7.2) (same data, only v7's three input groups differ): **50.04% ± 2.39%**.
 
-结论：不是数据的问题，新数据（连同修过的 v3 特征定义）不比旧的差也不比旧的好；v7 的三组输入离线略好（策略 CE −0.007），带搜索没有可见收益，搜索却慢 38%。三个网络在同一水平：在当前的训练配方和当前的搜索下，v7.2 的网络改进没有测出棋力提升；不能据此断定特征无用或人类预训练已到上限（搜索有几处会吞掉网络改进的缺陷待查：根先验只来自一个世界、开环下公开结果不分节点、对手看穿我方配置，2026-10-21 的审查，issue #18）。这 2,400 局没有搜索退回，越界检查也没打印任何局面。
+Conclusion: it is not the data; the new data (along with the fixed v3 feature definitions) is neither worse nor better than the old; v7's three input groups are slightly better offline (policy CE −0.007), show no visible gain with search, and make the search 38% slower. The three networks are at the same level: under the current training recipe and the current search, the v7.2 network improvements showed no gain in strength; this does not show that the features are useless or that human pretraining has hit its ceiling (the search has a few flaws that may swallow network improvements, still to be looked at: the root prior from only one world, public outcomes not split into nodes under open loop, the opponent seeing through our sets; the 2026-10-21 review, issue #18). No search fallbacks in these 2,400 games, and the bounds check printed no position.
 
-### 特征断言检验（2026-10-20；`EXTRA_VERSION` 3，design.md D13 附“v7.2 输入”，doc/engine-diff.md L230 / 经验 11）
+### Feature assertion checks (2026-10-20; `EXTRA_VERSION` 3, design.md, appendix to D13 "v7.2 inputs", doc/engine-diff.md L230 / lesson 11)
 
-起因是另一个模型的审查。先在 Showdown 里逐条复现（`tests/test_feature_claims.py` 用同样的局面），旧特征全部是错的：
-- Endeavor 打一般系的 Blissey：Showdown 478，特征 0；打幽灵系的 Dusknoir：Showdown 0，特征 102。Final Gambit 同样反了。
-- 两次 Super Fang / Ruination：Showdown 714 → 357 → 179，ko2 判“可能两击击倒”。
-- 太晶一般系的 Toxapex 带黑色污泥：Showdown 每回合扣 1/8、两次地球上投击倒，ko2 当成回血、判不能。
-- 雪天拨雪的 Cetitan 对 Jolly Garchomp：Showdown 里 Cetitan 先动，特征判对方先动。
-- 另外找到：多段招式只算一段（鳞射 114，Showdown 打 4 段 329）；必定会心的招式按不会心算；蓄力招式、预知未来、刚上场才能用的击掌奇袭也算成立即击倒；击倒没算替身、气势披带。
-- `team` 的“应对”（挨一击不倒且两击击倒）不看速度和换入白挨的一击：Kingambit 对 Garchomp（更慢，每次被打掉 82%，自己打掉 51%）判为应对，Showdown 里输。
+It started from another model's review. Each point was first reproduced in Showdown (`tests/test_feature_claims.py` uses the same positions), and the old features were all wrong:
+- Endeavor into Normal-type Blissey: Showdown 478, feature 0; into Ghost-type Dusknoir: Showdown 0, feature 102. Final Gambit was reversed the same way.
+- Two Super Fangs / Ruinations: Showdown 714 → 357 → 179, ko2 judged "possible 2HKO".
+- Tera Normal Toxapex holding Black Sludge: Showdown takes 1/8 per turn and two Seismic Tosses KO; ko2 treated it as healing and judged no.
+- Slush Rush Cetitan in snow vs Jolly Garchomp: in Showdown Cetitan moves first, the feature judged the opponent moves first.
+- Also found: multi-hit moves counted as one hit (Scale Shot 114, Showdown hits 4 times for 329); always-crit moves counted as not critting; charge moves, Future Sight and Fake Out (usable only on the first turn out) also counted as immediate KOs; KOs ignored Substitute and Focus Sash.
+- `team`'s "answer" (survives a hit and 2HKOs) ignored speed and the free hit taken on the switch-in: Kingambit vs Garchomp (slower, losing 82% per hit, dealing 51%) was judged an answer; in Showdown it loses.
 
-原因：特征拷贝了引擎的规则（拷贝落后于引擎修复），借用的固定伤害分支不在转移路径上（伤害差分又恰好排除了 Endeavor），组合结论从来没有和实际结果比过。
+Causes: the features copied the engine's rules (the copy lagged behind engine fixes), the borrowed fixed-damage branch was not on the transition path (and the damage differential test happened to exclude Endeavor), and the combined claims had never been compared with actual outcomes.
 
-**检验方法**（`scripts/check_feature_claims.py`）：在真实局面上（1,000 个实战局面，双方视角），把特征的每个结论放到它自己的假设下，用引擎转移（与 Showdown 100% 一致）验证：没有概率事件（引擎开关 `set_no_chance`：不会心、不未命中、不完全麻痹、概率附加效果不发生），目标不行动（一击 / 两击击倒），双方各用固定一招（对攻）。“必定”类：转移里必须 100% 成立；“可能”类：必须有成立的分支。
+**Check method** (`scripts/check_feature_claims.py`): on real positions (1,000 positions from real games, both views), each claim of the features is put under its own assumptions and verified with engine transitions (100% consistent with Showdown): no chance events (engine switch `set_no_chance`: no crits, no misses, no full paralysis, no chance-based secondary effects), the target does not act (OHKO / 2HKO), each side uses one fixed move (trading hits). "Certain" claims must hold 100% in the transition; "possible" claims must have a branch where they hold.
 
-| 结论 | 检验数 | 错（判是，转移不成立） | 漏（判否，转移里总成立） | 未知 | 无法验证 |
+| claim | checks | false (claimed yes, the transition does not hold) | missed (claimed no, always holds in the transition) | unknown | unverifiable |
 |---|---|---|---|---|---|
-| 谁先动 | 1,582 | 0.63% | — | — | — |
-| 一击必定击倒 | 3,698 | 0.22% | 0.43% | — | — |
-| 一击可能击倒 | 3,698 | 0.46% | — | — | — |
-| 两击之内必定击倒 | 3,347 | 0.54% | 1.70% | — | — |
-| 两击之内可能击倒 | 3,347 | 0.57% | — | — | 74 |
-| 换入可靠应对 | 6,001 | 0.62% | 1.98% | 24.3% | — |
-| 换入可能应对 | 6,001 | 0.70% | — | 24.2% | 197 |
-| 同场对攻可靠赢 | 1,546 | 0.97% | 2.07% | 17.5% | — |
-| 可靠复仇击杀 | 6,473 | 0.93% | 2.58% | 0.2% | — |
+| who moves first | 1,582 | 0.63% | — | — | — |
+| certain OHKO | 3,698 | 0.22% | 0.43% | — | — |
+| possible OHKO | 3,698 | 0.46% | — | — | — |
+| certain KO within two hits | 3,347 | 0.54% | 1.70% | — | — |
+| possible KO within two hits | 3,347 | 0.57% | — | — | 74 |
+| reliable switch-in answer | 6,001 | 0.62% | 1.98% | 24.3% | — |
+| possible switch-in answer | 6,001 | 0.70% | — | 24.2% | 197 |
+| reliably wins a head-on trade | 1,546 | 0.97% | 2.07% | 17.5% | — |
+| reliable revenge kill | 6,473 | 0.93% | 2.58% | 0.2% | — |
 
-- 第二轮审查（同日）又找到交换模拟里的 4 处，均用具体局面复现后修复，并补了组合回归测试（`tests/test_feature_claims.py`）：多段招式打破替身时把整段溢出传给本体（龙箭打挂替身的 Dragonite：旧判“可能击倒”，Showdown 剩 48 HP）；换入回合把突袭当成命中（Enamorus 换入 Kingambit：最险的一局只剩 2 HP 赢，多挨一击就输）；多回合重复用第一回合的回合末变化（剧毒 1/16 每回合不变：Clefable 对 Jolteon 的同场对攻判输，Showdown 赢）；`eot_on` 提前返回没恢复已改的 HP。
-- 第三轮审查又找到 3 处，均复现后修复：回合末按“双方第 j 只”一起预计算（无关天气等取决于具体对手：沙暴下只交换对方两只后备 Golduck 和 Snorlax 的位置，同一对阵的换入应对从赢变成输）——改成按实际对阵的上下文缓存，并加结构性测试（交换后备槽位，输入只换位、不变值：3,000 个真实局面 12,000 次检查；上一个提交在真实局面上立即失败）；ko2 不跟踪攻击方的 HP（1 HP 带生命宝珠的地震判两击击倒，实际第一击后就倒下）；回合末在 3/4 HP 上量净变化（400 HP 的愿望回复 200 只量到 100，判两击击倒，实际两击后剩 80）——改成回复和伤害分开、在不截断的 HP 上量。另把“只有一个应对”的标志换成“结果未知的有几只”，“唯一应对”改称“唯一已确认应对”。表中数字是第三轮修复后的（变化很小：修的是少见的组合，但会让输入随队伍顺序变化）。
-- “未知”是第二轮收紧的结果：对攻遇到不支持的机制（`unsupported`，design.md D13 附）不给输赢。剩下的“未知”大多来自还没上场的驱劲能量（宝可梦的 4.7%）、碎裂铠甲（1.4%）、自由者 / 变幻自如（2.1%）、红牌 / 逃脱按钮 / 背包（1.6%）、不服输 / 弱点保险 / 加速等；超出 4 回合的少数。之后按频率逐项支持。气球（3.7%）、Knock Off 打掉的道具、减半果、文柚果已支持（第一版收紧时“未知”是 35%）。
-**直接以 Showdown 为真值**（`scripts/check_feature_claims_sd.py`，2026-10-20）：随机对局（差分的队伍对，300 局）每 4 个决策点把 Showdown 的整场战斗序列化，在那场战斗里按结论自己的假设打出来（`enginecheck/showdown_claims.js`：必中；`randomChance` 只在必然时为真——不会心、不麻痹、无概率附加效果和特性；伤害掷骰和多段次数按结论固定，“必定 / 可靠”用己方最低、对方最高，“可能”反过来）。每个结论一场确定的对局，两击的“可能”也能验证（引擎检验里“无法验证”的那部分）。
+- A second review (same day) found 4 more in the exchange simulation, each reproduced with a concrete position and fixed, with combined regression tests added (`tests/test_feature_claims.py`): a multi-hit move breaking a Substitute passed the whole overflow on to the Pokémon (Dragonite whose Dragon Darts break a Substitute: the old judgment "possible KO", Showdown leaves 48 HP); on the switch-in turn Sucker Punch was treated as hitting (Enamorus switching into Kingambit: the closest game is won with only 2 HP left; one more hit and it loses); over multiple turns the first turn's end-of-turn change was reused (Toxic at a constant 1/16 per turn: Clefable vs Jolteon's head-on trade judged a loss, Showdown wins); `eot_on` returned early without restoring the HP it had changed.
+- A third review found 3 more, each reproduced and fixed: the end of turn was precomputed together "for both sides' j-th Pokémon" (Cloud Nine and the like depend on the specific opponent: in a sandstorm, only swapping the slots of the opponent's two reserves Golduck and Snorlax turned the switch-in answer for the same matchup from a win into a loss) -- now cached by the actual matchup's context, with a structural test added (swapping reserve slots must only permute the inputs, not change the values: 12,000 checks on 3,000 real positions; the previous commit failed on real positions at once); ko2 did not track the attacker's HP (an Earthquake from a 1 HP Life Orb holder was judged a 2HKO; in fact it faints after the first hit); the end of turn measured the net change at 3/4 HP (a 400 HP Wish restoring 200 measured only 100, judged a 2HKO; in fact 80 left after two hits) -- now recovery and damage are separate and measured on unclamped HP. Also the "only one answer" flag was replaced by "how many have an unknown outcome", and "the only answer" renamed "the only confirmed answer". The numbers in the table are from after the third round of fixes (little changed: the fixes are for rare combinations, but they made the inputs vary with team order).
+- "Unknown" is the result of the second round's tightening: a head-on trade that meets an unsupported mechanic (`unsupported`, design.md, appendix to D13) gives no win or loss. Most of the remaining "unknown" comes from Booster Energy not yet activated (4.7% of Pokémon), Weak Armor (1.4%), Libero / Protean (2.1%), Red Card / Eject Button / Eject Pack (1.6%), Defiant / Weakness Policy / Speed Boost and so on; a few go beyond 4 turns. Support follows item by item by frequency. Air Balloon (3.7%), items removed by Knock Off, resist berries and Sitrus Berry are supported (at the first tightening "unknown" was 35%).
+**Showdown directly as the ground truth** (`scripts/check_feature_claims_sd.py`, 2026-10-20): random battles (the differential test's team pairs, 300 games); every 4 decision points the whole Showdown battle is serialized, and in that battle each claim is played out under its own assumptions (`enginecheck/showdown_claims.js`: moves always hit; `randomChance` is true only when certain -- no crits, no paralysis, no chance-based secondary effects or abilities; damage rolls and hit counts fixed per claim, "certain / reliable" with our lowest and the opponent's highest, "possible" the other way round). Each claim gets one deterministic game, and two-hit "possible" claims can be verified too (the "unverifiable" part of the engine check).
 
-| 结论 | 检验数 | 错 | 漏 | 未知 |
+| claim | checks | false | missed | unknown |
 |---|---|---|---|---|
-| 谁先动 | 4,532 | 0.09% | — | — |
-| 一击必定 / 可能击倒 | 10,865 / 10,886 | 0.12% / 0.28% | 0.17% | — |
-| 两击之内必定 / 可能击倒 | 10,003 / 10,024 | 0.38% / 0.66% | 0.41% | — |
-| 换入可靠 / 可能应对 | 14,120 / 14,105 | 0.56% / 1.13% | 0.28% | 28% |
-| 同场对攻可靠赢 | 4,614 | 0.35% | 0.33% | 18% |
+| who moves first | 4,532 | 0.09% | — | — |
+| certain / possible OHKO | 10,865 / 10,886 | 0.12% / 0.28% | 0.17% | — |
+| certain / possible KO within two hits | 10,003 / 10,024 | 0.38% / 0.66% | 0.41% | — |
+| reliable / possible switch-in answer | 14,120 / 14,105 | 0.56% / 1.13% | 0.28% | 28% |
+| reliably wins a head-on trade | 4,614 | 0.35% | 0.33% | 18% |
 
-- 它找到了引擎检验看不到的几处，均已修：换人招式（急速折返等）当成可以连用两次 / 作为对攻的固定招式（Showdown 里用完就换下）；预知未来在两回合内算一击（它第二个回合末之后才命中）；换入的入场效果没进对攻——威吓、不挠之剑 / 不屈之盾、黏黏网减速，改由引擎的换人入场读出能力等级，入场改变天气 / 场地的给未知；大爆炸 / 自爆让用招方倒下；“可能”两击不包含“必定”（文柚果让最高掷骰反而打不倒）；还没发动的火焰 / 剧毒宝珠给未知（烧伤后的毅力、减半）。
-- 检验脚本自身的两处问题也在这里暴露并修正：Showdown 的附加效果用 `random(100)` 而不是 `randomChance`（要单独过滤）；太晶后的物种名变了，改按队伍槽位对应。
-- **不变量和变形测试**（`extra.rs` 的 `invariants`，`--ignored` 版本在真实局面和随机对局局面上各跑数千个）：必定 ⇒ 可能（一击、两击、先制、太晶、威胁）、一击 ⇒ 两击之内、可靠 ⇒ 可能应对、已确认 + 未知 ≤ 存活数，以及对方 HP 降低时击倒标志和可靠应对数不减少（排除规则本身不单调的：依赖 HP 的招式和特性、吸取招式被目标 HP 截断、按 HP 触发的树果）。实战局面 5,290 个视角、随机对局 7,968 个视角，无违反（第一次跑出的 4 处：1 处是特征的问题，“可能”不含“必定”；3 处是规则本身不单调，已从检查中排除）。
+- It found several problems the engine check could not see, all fixed: pivot moves (U-turn and the like) treated as usable twice in a row / as the fixed move of a head-on trade (in Showdown the user switches out after using one); Future Sight counted as one hit within two turns (it hits only after the end of its second turn); switch-in entry effects were left out of head-on trades -- Intimidate, Intrepid Sword / Dauntless Shield, Sticky Web's speed drop; now the stat stages are read from the engine's switch-in entry, and entries that change weather / terrain give unknown; Explosion / Self-Destruct make the user faint; two-hit "possible" did not include "certain" (Sitrus Berry makes the highest roll fail to KO); Flame / Toxic Orbs not yet activated give unknown (Guts after the burn, halving).
+- Two problems in the check script itself also came out here and were corrected: Showdown's secondary effects use `random(100)` rather than `randomChance` (they need separate filtering); after tera the species name changes, so matching is now by team slot.
+- **Invariant and metamorphic tests** (`invariants` in `extra.rs`; the `--ignored` version runs thousands each on real positions and random-battle positions): certain ⇒ possible (OHKO, 2HKO, priority, tera, threat), OHKO ⇒ within two hits, reliable ⇒ possible answer, confirmed + unknown ≤ number alive, and when the opponent's HP drops, the KO flags and the number of reliable answers do not decrease (excluding the cases where the rule itself is not monotonic: HP-dependent moves and abilities, draining moves capped by the target's HP, HP-triggered berries). 5,290 views of real positions and 7,968 views of random battles, no violations (the first run found 4: 1 a feature problem, "possible" not including "certain"; 3 where the rule itself is not monotonic, now excluded from the check).
 
-- “漏”单独监控：它让“可靠”保持为下界，但应对数量、唯一应对会少算。主要是剩饭 / 生命宝珠 / 凸凸头盔一类按 85% 掷骰估最低伤害偏低，以及 Knock Off 的组合。检验脚本按招式 / 能力 / 道具拆分错和漏（`feature_claims.json` 的 `breakdown`）。
-- 修复过程中，第一版检验的错误率是 9–17%。一半来自检验本身（Sucker Punch 这类需要对方出招的招式、完全麻痹、回合末磨血），另一半是特征的问题，逐个修掉：替身、三旋击和种子炸弹的段数、蓄力招式、击掌奇袭、Knock Off 打掉道具、自降能力的招式（流星群、近身战）、反伤 / 生命宝珠 / 粗糙皮肤、唱反调、盐腌和束缚的回合末伤害、必定发生的附加降能力。
-- “无法验证”：两击合起来才击倒的“可能”。引擎对一击能否击倒按 16 档掷骰精确分支，打不倒的那一击取平均，所以两次高掷骰才击倒的情形在转移里没有分支。
-- 剩下的错误是写明的近似：对攻击有反应的能力和道具（弱点保险、碎裂铠甲、逃脱按钮、白色香草的时机）、反击 / 金属爆炸这类按受到的伤害反击的招式、自由者改属性、先制之爪 / 释陀果、驱劲能量在回合中途发动。
-- 特征耗时（Rust，单局面）：v3 约 20 µs，v7 约 121 µs（交换模拟约 81 µs：按对阵上下文的回合末、逐回合序列在内）；v7.1 估计约 70 µs。对搜索速度的影响在重训后实测。
+- "Missed" is monitored separately: it keeps "reliable" a lower bound, but the number of answers and the only answer get undercounted. Mostly the lowest damage estimated at the 85% roll comes out too low for Leftovers / Life Orb / Rocky Helmet and the like, plus Knock Off combinations. The check script breaks false and missed claims down by move / ability / item (`breakdown` in `feature_claims.json`).
+- During the fixes, the first version of the check had a 9–17% error rate. Half came from the check itself (moves that need the opponent to attack, like Sucker Punch; full paralysis; end-of-turn chip damage), the other half were feature problems, fixed one by one: Substitute, the hit counts of Triple Axel and Bullet Seed, charge moves, Fake Out, Knock Off removing items, self-lowering moves (Draco Meteor, Close Combat), recoil / Life Orb / Rough Skin, Contrary, Salt Cure and binding end-of-turn damage, guaranteed secondary stat drops.
+- "Unverifiable": "possible" claims where only the two hits together KO. The engine branches exactly over the 16 damage rolls on whether one hit KOs, and averages a hit that does not KO, so the case where two high rolls are needed to KO has no branch in the transition.
+- The remaining errors are documented approximations: abilities and items that react to attacks (Weakness Policy, Weak Armor, Eject Button, White Herb timing), moves that retaliate by the damage taken such as Counter / Metal Burst, Libero changing type, Quick Claw / Custap Berry, Booster Energy activating mid-turn.
+- Feature cost (Rust, single position): v3 about 20 µs, v7 about 121 µs (the exchange simulation about 81 µs, including the matchup-context end of turn and the turn-by-turn sequence); v7.1 estimated about 70 µs. The effect on search speed to be measured after retraining.
 
-### F1：伤害证据更新对手配置（2026-10-19；`scripts/check_damage_belief.py`（2026-10-28 已删），第 8 代自对弈 600 局，双方真实配置已知）
+### F1: damage evidence updates the opponent's sets (2026-10-19; `scripts/check_damage_belief.py` (deleted 2026-10-28), 600 games of generation 8 self-play, both sides' true sets known)
 
-2,855 只宝可梦，8,515 次干净命中（回合第一招、单段、无要害 / 替身 / 气势披带等保命、前面只有换人）。候选 = 信念的前 8 个道具 × 可能的特性 × 前 12 个努力值配置。
+2,855 Pokémon, 8,515 clean hits (the first move of the turn, single-hit, no crit / Substitute / Focus Sash or other survival effects, only switches before it). Candidates = the belief's top 8 items × the possible abilities × the top 12 EV spreads.
 
-| | 先验 | 后验 |
+| | prior | posterior |
 |---|---|---|
-| 真实道具的概率 | 0.435 | **0.503** |
-| 真实特性的概率 | 0.616 | 0.652 |
-| 命中涉及的能力值（真实配置）的概率 | 0.183 | **0.284** |
-| 最可能的道具就是真实道具 | 51.6% | **57.4%** |
+| probability of the true item | 0.435 | **0.503** |
+| probability of the true ability | 0.616 | 0.652 |
+| probability of the stats involved in the hit (true set) | 0.183 | **0.284** |
+| the most likely item is the true item | 51.6% | **57.4%** |
 
-真实配置似然为 0（没有下限保护就会被剔除）的命中 0.41%（修掉旧局面的太晶属性约定、我方太晶、龙箭、视角、拍落已失去的道具之前是 7.4%）；后验有 1e-3 × 先验的下限，不会真的剔除。实战冒烟测试（CPU 搜索 2 局）：每局 13–15 次干净命中，0 次回退。
+Hits where the true set's likelihood is 0 (they would be eliminated without a floor): 0.41% (7.4% before fixing the old positions' tera type convention, our own tera, Dragon Darts, the view, and Knock Off on items already lost); the posterior has a floor of 1e-3 × prior, so nothing is really eliminated. Real-game smoke test (CPU search, 2 games): 13–15 clean hits per game, 0 fallbacks.
 
-对战 A/B（网络不变：双方都是 v6-h，GPU 批量搜索 1,600 次迭代，ml3，wide1000，600 对；A 开 F1，B 关）：**52.29% ± 2.43%**（约 +16 Elo，偏向开，不显著，区间下限 49.9%）；保持默认开启。这批对局里双方共有 51 次搜索因 L229（引擎保存的招式泄漏，doc/engine-diff.md）崩溃、退回启发式，之后已修。同时修了审查发现的两处：被打的一方入场吃了钉子后仍按满血算（多鳞 / 幻影防守：子弹拳满血最多 61、88% 血量最多 123；600 局的验收数字不变，这里少见），从伤害后验抽的道具改为按配置类型（与已暴露招式一致）重新加权。
+Game A/B (network unchanged: v6-h on both sides, GPU batched search, 1,600 iterations, ml3, wide1000, 600 pairs; A with F1 on, B off): **52.29% ± 2.43%** (about +16 Elo, leaning to on, not significant, lower bound of the interval 49.9%); kept on by default. In these games the two sides had 51 searches in total crash on L229 (a leaked saved move in the engine, doc/engine-diff.md) and fall back to the heuristic; fixed since. Two problems found in review were fixed at the same time: the side being hit was still counted at full HP after taking hazard damage on entry (Multiscale / Shadow Shield: Bullet Punch at most 61 at full HP, at most 123 at 88% HP; the 600-game acceptance numbers are unchanged, this is rare here), and items drawn from the damage posterior are now reweighted by set type (consistent with the revealed moves).
 
-### 网络 v4：Elo、历史结果、换人克制、新决策点（v4s = v3s 同样的回合开始局面 + 每局最多 8 个新决策点；各 3 个种子，锚点验证集）
+### Network v4: Elo, history outcomes, switch counters, new decision points (v4s = the same turn-start positions as v3s + at most 8 new decision points per game; 3 seeds each, anchor validation set)
 
-基线 = v3 的 A + B 特征 + 对手配置头 + MTP-3。"有偏"指标只算有出招记录的回合开始局面（与 v3 可比，但漏掉了被先手击倒 / 被阻止的回合，这些回合玩家一定选了招式）；"全部"把看不到动作的回合按部分标签算进来。注意：新决策点的抽样率（约 60%）高于回合开始局面（约 28%），"全部"类指标也受此影响（下一步加抽样权重）。
+Baseline = v3's A + B features + opponent set head + MTP-3. "Biased" metrics count only turn-start positions with a recorded move (comparable with v3, but missing the turns where the Pokémon was KOed by a faster move / blocked, turns in which the player certainly chose a move); "all" includes the turns with no visible action, counted with partial labels. Note: new decision points are sampled at a higher rate (about 60%) than turn-start positions (about 28%), which also affects the "all" metrics (sampling weights come next).
 
-| 组 | 策略 CE（有偏） | 主动换人 CE | 强制换人 top-1 / CE | 回合开始 CE（全部） | 看不到动作的回合 CE | 价值 BCE（有偏） | 价值 BCE（全部） | 价值 BCE（看不到动作的回合） | ECE（有偏） | 对手动作 top-1 |
+| group | policy CE (biased) | voluntary switch CE | forced switch top-1 / CE | turn-start CE (all) | CE on turns with no visible action | value BCE (biased) | value BCE (all) | value BCE (turns with no visible action) | ECE (biased) | opponent action top-1 |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 基线 | 1.3576 | 2.160 | 42.2% / 1.240 | 1.2127 | 0.537 | 0.5655 | 0.5617 | 0.5407 | 0.023 | 37.1% |
+| baseline | 1.3576 | 2.160 | 42.2% / 1.240 | 1.2127 | 0.537 | 0.5655 | 0.5617 | 0.5407 | 0.023 | 37.1% |
 | + Elo | 1.3532 | 2.161 | 42.3% / 1.234 | 1.2073 | 0.527 | 0.5634 | 0.5586 | 0.5400 | 0.016 | 37.0% |
-| + 历史结果（修复后） | 1.3542 | 2.156 | 42.2% / 1.257 | 1.2152 | 0.567 | 0.5643 | 0.5592 | 0.5362 | 0.019 | 37.3% |
-| + 换人克制 | 1.3510 | 2.148 | 43.5% / 1.216 | 1.2066 | 0.533 | 0.5638 | 0.5552 | 0.5393 | 0.017 | 37.1% |
-| + 强制 / U-turn 换人 | 1.3475 | 2.136 | 53.4% / 1.034 | 1.2042 | 0.536 | 0.5656 | 0.5513 | 0.5377 | 0.031 | 37.3% |
-| + 新决策点（含看不到动作的回合） | 1.3614 | 2.323 | 53.5% / 1.035 | 1.1651 | 0.250 | 0.5776 | 0.5557 | 0.5000 | 0.046 | 37.2% |
-| 全部合并 | 1.3528 | 2.301 | 54.5% / 1.016 | 1.1581 | 0.250 | 0.5690 | 0.5474 | 0.4920 | 0.038 | 37.6% |
+| + history outcomes (after the fix) | 1.3542 | 2.156 | 42.2% / 1.257 | 1.2152 | 0.567 | 0.5643 | 0.5592 | 0.5362 | 0.019 | 37.3% |
+| + switch counters | 1.3510 | 2.148 | 43.5% / 1.216 | 1.2066 | 0.533 | 0.5638 | 0.5552 | 0.5393 | 0.017 | 37.1% |
+| + forced / U-turn switches | 1.3475 | 2.136 | 53.4% / 1.034 | 1.2042 | 0.536 | 0.5656 | 0.5513 | 0.5377 | 0.031 | 37.3% |
+| + new decision points (including turns with no visible action) | 1.3614 | 2.323 | 53.5% / 1.035 | 1.1651 | 0.250 | 0.5776 | 0.5557 | 0.5000 | 0.046 | 37.2% |
+| all combined | 1.3528 | 2.301 | 54.5% / 1.016 | 1.1581 | 0.250 | 0.5690 | 0.5474 | 0.4920 | 0.038 | 37.6% |
 
-历史结果的第一次实验（`v4s-hresbug-*`）有 bug：缓存把伤害列存成 uint8，截断成 0；修复后的结果见上表。
+The first history-outcomes experiment (`v4s-hresbug-*`) had a bug: the cache stored the damage column as uint8, truncating it to 0; the results after the fix are in the table above.
 
-### 抽样权重（v4w = v4s 加每个局面的抽样权重；全量配置 A + B + Elo + 换人克制 + 对手配置头，全部决策点；各 3 个种子）
+### Sampling weights (v4w = v4s plus a sampling weight per position; full configuration A + B + Elo + switch counters + opponent set head, all decision points; 3 seeds each)
 
-"加权"指标按抽样权重还原真实对局里各类决策点的比例（检查点也按它选）。
+"Weighted" metrics use the sampling weights to restore the proportions of each kind of decision point in real games (checkpoints are also chosen by them).
 
-| 训练 | 主动换人 top-1 / CE | 强制换人 top-1 | 回合开始 CE（加权） | 看不到动作的回合 CE | 价值 BCE（有偏子集） | 价值 BCE（全部，加权） | ECE（有偏子集） |
+| training | voluntary switch top-1 / CE | forced switch top-1 | turn-start CE (weighted) | CE on turns with no visible action | value BCE (biased subset) | value BCE (all, weighted) | ECE (biased subset) |
 |---|---|---|---|---|---|---|---|
-| 不加权 | 22.2% / 2.322 | 54.2% | **1.2631** | 0.244 | 0.5740 | 0.5789 | 0.043 |
-| 加权 | 24.0% / 2.258 | 53.3% | 1.2693 | 0.300 | 0.5671 | 0.5732 | 0.034 |
-| 加权，不含看不到动作的回合 | 27.1% / 2.155 | 53.1% | 1.2884 | 0.524 | 0.5641 | 0.5744 | 0.027 |
+| unweighted | 22.2% / 2.322 | 54.2% | **1.2631** | 0.244 | 0.5740 | 0.5789 | 0.043 |
+| weighted | 24.0% / 2.258 | 53.3% | 1.2693 | 0.300 | 0.5671 | 0.5732 | 0.034 |
+| weighted, without turns with no visible action | 27.1% / 2.155 | 53.1% | 1.2884 | 0.524 | 0.5641 | 0.5744 | 0.027 |
 
-加权只部分纠正了主动换人的低估，按真实比例的指标上反而略差（有效样本量变小）。全量数据改为从每局所有决策点合成的一个池里统一抽样（`--pool all`），比例天然正确、不需要权重。
+Weighting only partly corrects the underestimation of voluntary switches, and is slightly worse on the real-proportion metrics (smaller effective sample size). For the full data, sampling is now uniform from one pool built from all decision points of each game (`--pool all`), so the proportions are naturally right and need no weights.
 
-### 输入里的信念样本 vs 遮成"未知"（v3s，A + C，各 3 个种子，锚点验证集）
+### Belief samples in the input vs masked as "unknown" (v3s, A + C, 3 seeds each, anchor validation set)
 
-| 输入 | 策略 CE | 换人 CE | 价值 BCE | 价值 BCE（≥12 回合） | 对手动作 top-1 | 配置头：道具 / 特性 / 太晶 / 招式（未暴露的字段） |
+| input | policy CE | switch CE | value BCE | value BCE (≥12 turns) | opponent action top-1 | set head: item / ability / tera / moves (unrevealed fields) |
 |---|---|---|---|---|---|---|
-| 信念样本（`v3s-AC`） | 1.3986 | 2.185 | 0.5683 | 0.4987 | 36.3% | 63.7% / 96.2% / 41.3% / 63.5% |
-| 遮成未知（`v3s-AC-mask`） | 1.3979 | 2.187 | 0.5679 | 0.4995 | 36.6% | 64.9% / 96.7% / 42.1% / 63.6% |
-| 信念模型单次采样 | | | | | | 48.3% / 89.8% / 31.6% / 61.8% |
+| belief sample (`v3s-AC`) | 1.3986 | 2.185 | 0.5683 | 0.4987 | 36.3% | 63.7% / 96.2% / 41.3% / 63.5% |
+| masked as unknown (`v3s-AC-mask`) | 1.3979 | 2.187 | 0.5679 | 0.4995 | 36.6% | 64.9% / 96.7% / 42.1% / 63.6% |
+| single sample from the belief model | | | | | | 48.3% / 89.8% / 31.6% / 61.8% |
 
-信念样本对网络没有额外信息；网络独立推断对手配置不比信念模型差（仍有的不公平：网络取最可能值，信念是一次随机采样）。
+The belief sample gives the network no extra information; the network inferring the opponent's sets on its own is no worse than the belief model (the remaining unfairness: the network takes the most likely value, the belief is one random sample).
 
-### 网络结构（同等参数量，v4w，baseline-v5 的全部特征 / 输出 / 决策点，6 个 epoch，各 3 个种子；2026-10-08）
+### Network architecture (equal parameter count, v4w, all of baseline-v5's features / outputs / decision points, 6 epochs, 3 seeds each; 2026-10-08)
 
-base 就是 v5-final 的结构（PyTorch `TransformerEncoderLayer`，pre-LN，ReLU 前馈 256，3 层，d = 128，4 个头，73.7 万参数），只是数据是 10%。其他组调 d_ff / 宽度使参数量相同（73.6–73.8 万）。
+base is exactly v5-final's architecture (PyTorch `TransformerEncoderLayer`, pre-LN, ReLU feed-forward 256, 3 layers, d = 128, 4 heads, 737k parameters), only the data is 10%. The other groups adjust d_ff / width to keep the parameter count the same (736k–738k).
 
-**价值头在 10% 数据上 1,500–3,500 步后就开始过拟合**，策略却一直在变好，所以按"策略 + 价值之和"选的检查点两头都不是最好（例如 glu-s2：之和选在 3,500 步，ce 1.2713；策略最好 1.2600）。下表策略和价值**各取各自最好的验证点**。
+**The value head starts to overfit after 1,500–3,500 steps on 10% of the data**, while the policy keeps improving, so a checkpoint chosen by "policy + value sum" is best at neither (for example glu-s2: the sum picks step 3,500, ce 1.2713; the best policy is 1.2600). In the table below policy and value **each take their own best validation point**.
 
-| 结构 | 策略 ce_turn_w | 价值 bce_all_w | Δ策略 | Δ价值 | top-1 | 强制换人 top-1 | 价值最好的步数 |
+| architecture | policy ce_turn_w | value bce_all_w | Δpolicy | Δvalue | top-1 | forced switch top-1 | best value step |
 |---|---|---|---|---|---|---|---|
 | base | 1.2642 ± 0.0020 | 0.5689 ± 0.0019 | — | — | 51.5% | 54.2% | 2,000–3,500 |
-| glu：SwiGLU（d_ff 171）+ RMSNorm + QK-norm | **1.2585 ± 0.0019** | 0.5682 ± 0.0016 | **−0.0057** | −0.0007 | 51.7% | 54.6% | 1,500–3,500 |
-| deep：6 层，d = 96，d_ff 192 | 1.2643 ± 0.0026 | 0.5670 ± 0.0022 | +0.0001 | −0.0019 | 51.4% | 54.3% | 2,000–3,000 |
-| smolgen 64（d_ff 160） | 1.2727 ± 0.0014 | 0.5720 ± 0.0031 | +0.0085 | +0.0031 | 51.2% | 53.5% | 1,500–2,000 |
-| all：glu + smolgen（d_ff 105） | 1.2698 ± 0.0012 | 0.5731 ± 0.0013 | +0.0056 | +0.0043 | 51.3% | 53.8% | 1,500 |
-| gluNoQK：SwiGLU + RMSNorm，不带 QK-norm | 1.2609 ± 0.0049 | 0.5709 ± 0.0010 | −0.0033 | +0.0020 | 51.7% | 54.2% | 2,000–2,500 |
+| glu: SwiGLU (d_ff 171) + RMSNorm + QK-norm | **1.2585 ± 0.0019** | 0.5682 ± 0.0016 | **−0.0057** | −0.0007 | 51.7% | 54.6% | 1,500–3,500 |
+| deep: 6 layers, d = 96, d_ff 192 | 1.2643 ± 0.0026 | 0.5670 ± 0.0022 | +0.0001 | −0.0019 | 51.4% | 54.3% | 2,000–3,000 |
+| smolgen 64 (d_ff 160) | 1.2727 ± 0.0014 | 0.5720 ± 0.0031 | +0.0085 | +0.0031 | 51.2% | 53.5% | 1,500–2,000 |
+| all: glu + smolgen (d_ff 105) | 1.2698 ± 0.0012 | 0.5731 ± 0.0013 | +0.0056 | +0.0043 | 51.3% | 53.8% | 1,500 |
+| gluNoQK: SwiGLU + RMSNorm, without QK-norm | 1.2609 ± 0.0049 | 0.5709 ± 0.0010 | −0.0033 | +0.0020 | 51.7% | 54.2% | 2,000–2,500 |
 
-- glu 3 个种子的策略都比 base 最好的种子好；价值无差别。
-- 去掉 QK-norm 后种子间波动大了 2–3 倍（策略 1.2553 / 1.2636 / 1.2638），价值在 3 个种子上都明显过拟合（结束时比最好点高 0.010 / 0.035 / 0.023；base 和 glu 各只有 1 个种子这样）：提升和训练稳定性都依赖 QK-norm。
-- 全量数据（v5-final）上价值不过拟合：策略和价值都在最后一步最好（1.1429 / 0.5466）。过拟合是 10% 数据的现象。
-- deep 两项都在噪声内。
-- smolgen 两项都更差，价值更早过拟合（从整个局面生成注意力偏置的通路容量大；Lc0 的数据量是我们的上千倍）；组合里它抵消了 glu 的提升。
+- All 3 glu seeds have a better policy than base's best seed; no difference in value.
+- Without QK-norm the spread between seeds grows 2–3 times (policy 1.2553 / 1.2636 / 1.2638), and the value clearly overfits on all 3 seeds (at the end 0.010 / 0.035 / 0.023 above the best point; base and glu each have only 1 seed like that): both the gain and training stability depend on QK-norm.
+- On the full data (v5-final) the value does not overfit: policy and value are both best at the last step (1.1429 / 0.5466). Overfitting is a 10%-data phenomenon.
+- deep is within noise on both.
+- smolgen is worse on both, and the value overfits earlier (the path that generates attention biases from the whole position has a large capacity; Lc0 has thousands of times our data); in the combination it cancels glu's gain.
 
-推理速度（只有 3 个注意力块，T = 21；机器空闲时测，PyTorch）：
+Inference speed (only 3 attention blocks, T = 21; measured with the machine idle, PyTorch):
 
-| 结构 | CPU 单条 | CPU batch 32 | GPU batch 32（eager） | **GPU batch 32（CUDA graph，搜索实际用的）** | GPU batch 256（CUDA graph） | 训练一步（batch 1024） |
+| architecture | CPU single | CPU batch 32 | GPU batch 32 (eager) | **GPU batch 32 (CUDA graph, what the search actually uses)** | GPU batch 256 (CUDA graph) | one training step (batch 1024) |
 |---|---|---|---|---|---|---|
-| base（PyTorch 层） | 332 µs | 5.94 ms | 613 µs | 201 µs | 855 µs | 12.9 ms |
-| base（自己的 Block） | 0.96× | 1.01× | 1.01× | 0.93× | 0.90× | 0.74× |
+| base (PyTorch layer) | 332 µs | 5.94 ms | 613 µs | 201 µs | 855 µs | 12.9 ms |
+| base (our own Block) | 0.96× | 1.01× | 1.01× | 0.93× | 0.90× | 0.74× |
 | SwiGLU | 1.03× | 0.90× | 1.11× | 0.93× | 0.95× | 0.81× |
 | SwiGLU + RMSNorm | 1.20× | 0.90× | 1.13× | 0.92× | 0.91× | 0.79× |
-| glu（+ QK-norm） | 1.44× | 0.95× | 1.30× | **1.14×** | 1.11× | 0.95× |
+| glu (+ QK-norm) | 1.44× | 0.95× | 1.30× | **1.14×** | 1.11× | 0.95× |
 
-计算量相同（CPU batch 32 时 glu 不慢）；变慢的是小算子开销，**额外成本全部来自 QK-norm**（每层多两次未融合的 RMSNorm）。SwiGLU + RMSNorm 不变慢。
+The compute is the same (at CPU batch 32 glu is not slower); what slows down is small-op overhead, and **all the extra cost comes from QK-norm** (two more unfused RMSNorms per layer). SwiGLU + RMSNorm is not slower.
 
-**全量数据确认（`v5-glu`，与 v5-final 完全相同的设置，只换结构；单个种子，2026-10-08）**：
+**Full-data confirmation (`v5-glu`, exactly v5-final's settings with only the architecture changed; single seed, 2026-10-08)**:
 
-| 全量，最终检查点（56,924 步） | v5-final | v5-glu | 差 |
+| full data, final checkpoint (56,924 steps) | v5-final | v5-glu | difference |
 |---|---|---|---|
-| 策略 ce_turn_w / ce_turn | 1.1429 / 1.1269 | **1.1345 / 1.1188** | −0.0084 / −0.0081 |
-| 价值 bce_all_w / bce_all | 0.5466 / 0.5282 | **0.5439 / 0.5249** | −0.0027 / −0.0033 |
+| policy ce_turn_w / ce_turn | 1.1429 / 1.1269 | **1.1345 / 1.1188** | −0.0084 / −0.0081 |
+| value bce_all_w / bce_all | 0.5466 / 0.5282 | **0.5439 / 0.5249** | −0.0027 / −0.0033 |
 | top-1 / top-3 | 55.6% / 87.4% | 55.9% / 87.6% | +0.3 / +0.2 |
-| 强制换人 top-1 | 57.7% | 57.9% | +0.25 |
-| 价值 ECE | 0.0126 | 0.0134 | |
-| 训练时间 | 99 分钟 | 107 分钟 | +8% |
+| forced switch top-1 | 57.7% | 57.9% | +0.25 |
+| value ECE | 0.0126 | 0.0134 | |
+| training time | 99 minutes | 107 minutes | +8% |
 
-全量数据上的提升（策略 −0.008）比 10% 数据上（−0.006）还大，价值也有小幅提升；训练全程都领先（1 万步 −0.010、3 万步 −0.008、5 万步 −0.0085）。
+The gain on the full data (policy −0.008) is even larger than on 10% of the data (−0.006), and the value improves slightly too; it leads throughout training (−0.010 at 10k steps, −0.008 at 30k, −0.0085 at 50k).
 
-**Rust 推理（`tnet.rs`，2026-10-08）**：
+**Rust inference (`tnet.rs`, 2026-10-08)**:
 
-| 检查 | v5-final | v5-glu |
+| check | v5-final | v5-glu |
 |---|---|---|
-| `check_tnet`（4,000 个局面，PyTorch 对 Rust）：最大 logit 差 / 价值差，我方 / 对手视角 | 1.05e-5 / 3.8e-6，1.0e-5 / 4.3e-6（与改动前完全相同） | 9.5e-6 / 6.7e-6，7.6e-6 / 8.7e-6；argmax 100% 一致 |
-| `check_batch_search`（GPU 对 Rust，真实搜索的叶子）：价值差 / logit 差 | 6.8e-6 / 8.6e-6 | 7.4e-6 / 1.05e-5（CUDA graph 正常） |
-| 单线程一次前向（8 步历史，3 次中位） | 202 µs | **207 µs（+2.5%）** |
-| CPU 搜索（30 个局面 × 1,500 次迭代，8 个世界，两次） | 2,975 / 2,946 叶子/秒 | **2,962 / 2,942 叶子/秒（−0.3%）** |
+| `check_tnet` (4,000 positions, PyTorch vs Rust): max logit difference / value difference, our / opponent's view | 1.05e-5 / 3.8e-6, 1.0e-5 / 4.3e-6 (exactly as before the change) | 9.5e-6 / 6.7e-6, 7.6e-6 / 8.7e-6; argmax 100% the same |
+| `check_batch_search` (GPU vs Rust, leaves of real searches): value difference / logit difference | 6.8e-6 / 8.6e-6 | 7.4e-6 / 1.05e-5 (CUDA graph fine) |
+| one single-thread forward pass (8 history steps, median of 3) | 202 µs | **207 µs (+2.5%)** |
+| CPU search (30 positions × 1,500 iterations, 8 worlds, twice) | 2,975 / 2,946 leaves/s | **2,962 / 2,942 leaves/s (−0.3%)** |
 
-实现过程中的速度：中间维度补到 192、标量 exp：232 µs（+15%）；改用多项式 exp 但没被向量化：242 µs；**补到 176（两半合起来正好 11 个 32 宽的块）+ AVX-512 的 silu**：207 µs。前馈每层 21.7 µs（旧结构 19.6 µs）。
+Speed during the implementation: inner dimension padded to 192 with scalar exp: 232 µs (+15%); a polynomial exp that was not vectorized: 242 µs; **padded to 176 (the two halves together exactly 11 blocks of 32) + AVX-512 silu**: 207 µs. Feed-forward 21.7 µs per layer (old architecture 19.6 µs).
 
-**搜索中的冒烟测试（`s_ismcts_glu` 对 `s_ismcts_tf`，CPU，每步 500 ms，heldout，10 局，2026-10-08）**：6 胜 4 负（10 局没有统计意义，只为查异常）。没有回退、失败的对局或队伍错配；每步迭代数中位 1,536 对 1,536，用时中位 0.54 对 0.55 秒（最长 0.61 秒）。迭代数超过 10 万的决策（glu 12 次，tf 9 次）都在对方只剩最后一只时：树很快走到终局，不再调用网络，属正常。
+**Smoke test in search (`s_ismcts_glu` vs `s_ismcts_tf`, CPU, 500 ms per move, heldout, 10 games, 2026-10-08)**: 6 wins, 4 losses (10 games mean nothing statistically; only a check for anomalies). No fallbacks, failed games or team mismatches; median iterations per move 1,536 vs 1,536, median time 0.54 vs 0.55 s (longest 0.61 s). The decisions with over 100k iterations (glu 12, tf 9) all came when the opponent had only its last Pokémon left: the tree quickly reaches terminal states and stops calling the network, which is normal.
 
-融合以后（`torch.compile` + CUDA graph，与未编译的输出差 ≤ 1.2e-6）：
+After fusion (`torch.compile` + CUDA graph, output within ≤ 1.2e-6 of the uncompiled one):
 
-| 结构 | GPU batch 32 | GPU batch 256 |
+| architecture | GPU batch 32 | GPU batch 256 |
 |---|---|---|
-| base（PyTorch 层，现在线上用的，不编译） | 198 µs | 858 µs |
-| base（自己的 Block，编译） | 148 µs（0.75×） | 584 µs（0.68×） |
-| SwiGLU + RMSNorm（编译） | 156 µs（0.79×） | 748 µs（0.87×） |
-| glu（编译） | 165 µs（0.84×） | 628 µs（0.73×） |
+| base (PyTorch layer, what is used live now, uncompiled) | 198 µs | 858 µs |
+| base (our own Block, compiled) | 148 µs (0.75×) | 584 µs (0.68×) |
+| SwiGLU + RMSNorm (compiled) | 156 µs (0.79×) | 748 µs (0.87×) |
+| glu (compiled) | 165 µs (0.84×) | 628 µs (0.73×) |
 
-同样优化的 base 相比，glu 在 batch 32 时贵 11%，batch 256 时贵 7.5%（只算注意力块，不含输入嵌入和输出头）。另外，编译本身让现在的 base 在 GPU 上快 25%（batch 32）到 32%（batch 256）。
+Against an equally optimized base, glu costs 11% more at batch 32 and 7.5% more at batch 256 (attention blocks only, not counting the input embedding and the output heads). Also, compilation by itself makes the current base 25% (batch 32) to 32% (batch 256) faster on the GPU.
 
-## 离线：信念模型
+## Offline: belief model
 
-第一行的设置（2026-10-04，原 `belief_prior_eval.md`，`scripts/eval_belief_priors.py`）：当时下载的 8,289 场高分 replay（约 1740–2049）按时间切分，2026-08-24 之前 6,631 场建先验、之后 1,658 场测试；只给对手预览的 6 只，预测之后暴露的道具 / 太晶 / 招式（8,448 / 2,502 / 35,709 个）。先验逐级回退（Smogon 边缘 → 本物种的 replay → 同一最大核心 → 完全相同的 6 只，Dirichlet α=5）：整队条件最好，收益主要来自认出被照搬的热门队伍（高分段约 40%），没见过的队伍上核心条件仍明显好于物种边缘；replay 本身也好于 Smogon 统计。局限：只评得到会暴露的信息（讲究眼镜这类安静道具几乎测不到）、只有高分段。
+The first row's setup (2026-10-04; formerly `belief_prior_eval.md`; `scripts/eval_belief_priors.py`): the 8,289 high-rated replays downloaded then (about 1740–2049), split by time: the 6,631 before 2026-08-24 build the prior, the 1,658 after it test; given only the opponent's 6 from team preview, predict the items / tera types / moves revealed later (8,448 / 2,502 / 35,709 of them). The prior backs off level by level (Smogon marginals → this species' replays → the same largest core → the identical 6, Dirichlet α=5): conditioning on the whole team is best, its gain mostly from recognizing copied popular teams (about 40% at high ratings); on unseen teams core conditioning is still clearly better than species marginals; replays themselves also beat Smogon stats. Limits: only information that gets revealed can be scored (quiet items such as Choice Specs are almost unmeasurable), and only high ratings.
 
-| 指标 | 数值 |
+| measure | value |
 |---|---|
-| 时间切分高分 replay（2026-10-04）：整队条件先验 道具 top-1 / 太晶 top-1 / 招式 recall@4 | 76.6% / 68.2% / 84.3%（Smogon 边缘 55.4% / 50.4% / 73.3%；见过的队伍 92.1% / 83.3% / 94.7%） |
-| 5 万局重建后（4 万训练 / 1 万测试）：招式 recall@4 / 道具 / 太晶 | 84.8%（见过的队伍 95.8%）/ 79.5% / 70.5% |
-| 采样的 4 招覆盖之后暴露的招式：套路 / 整队边缘 / 套路 × 整队（β=1）/ β=2 / β=3 | 61.7% / 76.3% / **77.3%** / 81.1% / 82.6% |
-| 池队伍上采样 4 招中的真实招式数（heldout）：β=0 / β=2 | 2.37 / 2.76（什么都没暴露时 4 招全对约 20%） |
-| 负证据（上场 t 次未用某招）：覆盖率 不用 / 用（t ≥ 4 时） | 85.1% / 85.2%（80.4% / 80.9%）——几乎无增益 |
+| Time-split high-rated replays (2026-10-04): whole-team prior, item top-1 / tera top-1 / moves recall@4 | 76.6% / 68.2% / 84.3% (Smogon marginals 55.4% / 50.4% / 73.3%; seen teams 92.1% / 83.3% / 94.7%) |
+| After rebuilding on 50k games (40k train / 10k test): moves recall@4 / item / tera | 84.8% (seen teams 95.8%) / 79.5% / 70.5% |
+| Sampled 4 moves covering the moves revealed later: archetype / whole-team marginal / archetype × whole team (β=1) / β=2 / β=3 | 61.7% / 76.3% / **77.3%** / 81.1% / 82.6% |
+| True moves among the 4 sampled on pool teams (heldout): β=0 / β=2 | 2.37 / 2.76 (with nothing revealed, all 4 right about 20%) |
+| Negative evidence (on the field t times without using a move): coverage without / with (at t ≥ 4) | 85.1% / 85.2% (80.4% / 80.9%) -- almost no gain |
 
-## 吞吐与速度
+## Throughput and speed
 
-| 项目 | 数值 |
+| item | value |
 |---|---|
-| poke-env → 4 服务器 × 8 客户端（随机策略，2026-10-03） | 3,767 回合/秒（单服务器上限约 1.3k；8 服务器反而 3,057） |
-| 直驱 `BattleStream` × 8 node 进程 | 6,261 回合/秒 |
-| poke-engine MCTS / alpha_search 的 ISMCTS（手写评估，单线程） | 约 43–52 万 / 约 22 万次迭代/秒；ISMCTS 4 线程 79 万 |
-| ISMCTS + 网络（单线程）：仅价值 / 我方先验 / 双方先验 | 21.8k / 18.7k / 14.2k 次迭代/秒（深度 5 / 6 / 10） |
-| 一步决策的 Python 开销 | 建一个世界约 0.9 ms（N=32 约 30 ms，占 500 ms 的 6%） |
+| poke-env → 4 servers × 8 clients (random policy, 2026-10-03) | 3,767 turns/s (one server caps at about 1.3k; 8 servers only 3,057) |
+| Driving `BattleStream` directly × 8 node processes | 6,261 turns/s |
+| poke-engine MCTS / alpha_search's ISMCTS (handwritten eval, single thread) | about 430–520k / about 220k iterations/s; ISMCTS 4 threads 790k |
+| ISMCTS + network (single thread): value only / own prior / both priors | 21.8k / 18.7k / 14.2k iterations/s (depth 5 / 6 / 10) |
+| Python overhead of one decision | building one world about 0.9 ms (N=32 about 30 ms, 6% of 500 ms) |
 
-## 队伍数据（`scripts/teams.py`，2026-10-08；设计见 D5-T）
+## Team data (`scripts/teams.py`, 2026-10-08; design in D5-T)
 
-Smogon 论坛抓取：1,785 个帖子页 + 1,660 个 pokepaste（全部还在），找到 3,199 支队伍（pokepaste 1,660，帖子里直接贴的 1,304）。规范化并去掉昵称后去重，得到 2,572 支不同的队伍，其中今天合法的 1,189 支（目录只保留这些），1,383 支不合法的丢弃。跳过：pokepaste 备注是其他格式的 17 支，不是 6 只的 23 支。
+Smogon forum crawl: 1,785 thread pages + 1,660 pokepastes (all still up); 3,199 teams found (1,660 from pokepastes, 1,304 pasted directly in posts). Normalized, nicknames removed, deduplicated: 2,572 distinct teams, of which 1,189 are legal today (the catalog keeps only these); the 1,383 illegal ones are dropped. Skipped: 17 whose pokepaste notes name another format, 23 that are not 6 Pokémon.
 
-| 来源 | 不同队伍（含不合法） | 合法 + 完整 | 其中 6 只物种在 replay 里出现过 | 出现 ≥ 10 次 |
+| source | distinct teams (incl. illegal) | legal + complete | of these, the 6 species seen in replays | seen ≥ 10 times |
 |---|---|---|---|---|
-| `sample`（SV OU Sample Teams） | 196 | 108 | 71% | 54 |
+| `sample` (SV OU Sample Teams) | 196 | 108 | 71% | 54 |
 | `teams_of_week` | 161 | 49 | 12% | 1 |
 | `tour_bazaar` | 9 | 6 | 100% | 2 |
-| `rmt`（Rate My Team 首帖） | 2,257 | 1,046 | 23% | 106 |
-| 合计 | 2,572 | 1,183（不同物种组合 997） | | |
+| `rmt` (Rate My Team first posts) | 2,257 | 1,046 | 23% | 106 |
+| total | 2,572 | 1,183 (997 distinct species sets) | | |
 
-- 不合法的主要原因是之后的禁用：Tera Blast（427 支）、升入 Uber 的物种（Roaring Moon、Baxcalibur、Volcarona、Sneasler 等）、Sleep Moves Clause（Spore）；另有约 100 支是贴错的招式名。
-- 合法 + 完整的队伍按首次发帖年份：2022 年 87、2023 年 351、2024 年 271、2025 年 222、2026 年 252。
-- RMT 的质量参差不齐；标题里声称 peak / 分数 / 排名的有 408 支。
-- 样例队伍被大量照搬：71% 在 replay 里出现过。`replay40` 的 40 支里有 14 支在目录里能找到原版配置，可以用来检查 replay 重建和信念模型补全得准不准。
-- 池：`forum_curated` = sample + teams_of_week + tour_bazaar 里合法且完整的 162 支。
+- Illegal mostly because of later bans: Tera Blast (427 teams), species moved up to Ubers (Roaring Moon, Baxcalibur, Volcarona, Sneasler, etc.), Sleep Moves Clause (Spore); about 100 more have misspelled move names.
+- Legal + complete teams by year of first post: 2022 87, 2023 351, 2024 271, 2025 222, 2026 252.
+- RMT quality varies widely; 408 claim a peak / rating / rank in the title.
+- Sample teams are copied a lot: 71% appear in replays. 14 of `replay40`'s 40 teams have their original sets in the catalog, usable to check how accurate replay reconstruction and the belief model's completion are.
+- Pool: `forum_curated` = the 162 legal, complete teams of sample + teams_of_week + tour_bazaar.
 
-## 针对特定对手：离线第 1、2 步（`scripts/player.py`，设计见 D5-O；2026-10-08）
+## Against a specific opponent: offline steps 1 and 2 (`scripts/player.py`, design in D5-O; 2026-10-08)
 
-目标对手：公开 Gen9 OU replay 57 局（2026-07-17 到 08-30，天梯约 1000–1200 分）。评测方式是滚动的：用第 1..i−1 局预测第 i 局，从第 11 局开始，共 47 局。
+Target opponent: 57 public Gen9 OU replays (2026-07-17 to 08-30, ladder about 1000–1200). The evaluation is rolling: games 1..i−1 predict game i, from game 11 on, 47 games in all.
 
-**第 1 步，队伍（物种层面）**：预测他下一局带哪些物种。"每物种比特"是 log2(p/6) 的平均（越高越好）；召回是他下一局的 6 只里落在模型前 10 名里的比例。
+**Step 1, team (species level)**: predict which species they bring next game. "Bits per species" is the mean of log2(p/6) (higher is better); recall is the fraction of their next game's 6 that fall in the model's top 10.
 
-| 模型 | 每物种比特 | 召回 @10 |
+| model | bits per species | recall @10 |
 |---|---|---|
-| 天梯使用率（Smogon gen9ou-0 / 1500） | −6.07 / −5.98 | 36% / 34% |
-| 他自己的频率，不平滑、不按时间加权 | −6.01 | 49% |
-| 按时间衰减（最好：半衰期 3 天，k = 2） | −4.94 | 66% |
-| **按局数衰减（最好：半衰期 2 局，k = 1）** | **−4.82** | **70%** |
+| Ladder usage (Smogon gen9ou-0 / 1500) | −6.07 / −5.98 | 36% / 34% |
+| Their own frequencies, unsmoothed, not time-weighted | −6.01 | 49% |
+| Decay by time (best: half-life 3 days, k = 2) | −4.94 | 66% |
+| **Decay by games (best: half-life 2 games, k = 1)** | **−4.82** | **70%** |
 
-- 按局数衰减更好，而且不会在长时间没打之后退化成天梯先验，所以采用它。
-- 38% 的对局用的是以前用过的完整队伍；47 局里有 28 局与之前某支队伍至少有 5 只相同。他是一段时间连续用同一支或相近的队伍。
-- 网格的边上就是最优值：半衰期 2 局，k = 1。只有一个对手、47 局，超参数可能过拟合，应该在大量玩家上选（见 TODO）。
+- Decay by games is better, and it does not fall back to the ladder prior after a long break, so it is the one used.
+- 38% of games use a complete team used before; 28 of the 47 games share at least 5 Pokémon with some earlier team. They use the same or a similar team for stretches.
+- The optimum is at the grid's edge: half-life 2 games, k = 1. With one opponent and 47 games the hyperparameters may overfit; they should be chosen over many players (see TODO).
 
-**第 1 步，配置**：个人化信念 = 通用信念先验（权重 k）+ 他暴露过的值，与通用信念对比。
+**Step 1, sets**: personalized belief = the general belief prior (weight k) + the values they have revealed, compared with the general belief.
 
-| 字段（暴露过的个数） | 通用信念：对数似然 / 命中 | 个人化（k = 1–4） |
+| field (number revealed) | general belief: log-likelihood / hit | personalized (k = 1–4) |
 |---|---|---|
-| 道具（107） | −1.00 / top-1 66% | −0.88 / 71% |
-| 太晶（38） | −1.96 / top-1 47% | −1.59 / 55% |
-| 招式（462） | −1.99 / 前 4 召回 76% | −1.84 / 83% |
+| item (107) | −1.00 / top-1 66% | −0.88 / 71% |
+| tera (38) | −1.96 / top-1 47% | −1.59 / 55% |
+| moves (462) | −1.99 / top-4 recall 76% | −1.84 / 83% |
 
-只用他自己的数据（k = 0）反而比通用信念差，需要先验。
+Their own data alone (k = 0) is worse than the general belief; a prior is needed.
 
-**第 2 步，打法**：v5-final 的策略，拟合分数输入 r 和温度 τ。前 2/3 的对局（1,115 个决策）拟合，后 1/3（475 个）测试。
+**Step 2, play**: v5-final's policy, fitting the rating input r and the temperature τ. The first 2/3 of the games (1,115 decisions) fit, the last 1/3 (475) test.
 
-| 设置 | 拟合集交叉熵 | 测试集交叉熵 | top-1（拟合 / 测试） |
+| setting | fit-set cross-entropy | test-set cross-entropy | top-1 (fit / test) |
 |---|---|---|---|
-| 这局的真实分数（约 1100），τ = 1 | 1.371 | **1.220** | 50% / 55% |
-| 分数未知，τ = 1 | 1.377 | 1.225 | 50% / 54% |
-| 拟合：r = 1100，τ = 1.1 | 1.365 | 1.228 | 50% / 55% |
+| This game's true rating (about 1100), τ = 1 | 1.371 | **1.220** | 50% / 55% |
+| Rating unknown, τ = 1 | 1.377 | 1.225 | 50% / 54% |
+| Fitted: r = 1100, τ = 1.1 | 1.365 | 1.228 | 50% / 55% |
 
-- 拟合出的 r（1100）就是他的真实分数。分数输入越高，越解释不了他的选择：r = 2000 时交叉熵 1.457，比 1100 高 0.09。这说明网络的分数条件确实学到了不同水平的打法。
-- 拟合没有带来测试集上的改进：用他的真实分数作输入，已经是对他打法的好模型；57 局的数据不足以做更多的个人化。
-- 参照：同一批对局里他的对手（分数相近）的交叉熵 1.295、top-1 53%，他的可预测程度和同分段的人差不多。
+- The fitted r (1100) is their true rating. The higher the rating input, the worse it explains their choices: at r = 2000 the cross-entropy is 1.457, 0.09 above 1100. So the network's rating conditioning did learn different levels of play.
+- Fitting brought no test-set gain: their true rating as input is already a good model of their play; 57 games are not enough data for more personalization.
+- Reference: their opponents in the same games (similar ratings) have cross-entropy 1.295, top-1 53%; they are about as predictable as people at their level.
 
-## 针对特定对手：选队（`scripts/counter_team.py`，2026-10-08）
+## Against a specific opponent: team choice (`scripts/counter_team.py`, 2026-10-08)
 
-**候选**：
-- 用 200 万局训练的匹配模型（`analysis/matchups.py`：分数差 + 物种强度 + 物种对物种，2025-05 以后的 83.7 万局；留出集 log-loss：只看分数 0.6906，加物种强度 0.6846，再加物种对位 0.6805），给目录里 998 种物种组合打分：对他最近队伍的期望胜率（双方水平相同）。
-- 取前 12 名 + 排名中位的一支作对照；他的队伍取按最近使用加权的 8 支，用他所有对局暴露过的值补全配置（其余用 Smogon gen9ou-0），通过校验。
+**Candidates**:
+- The matchup model trained on 2M games (`analysis/matchups.py`: rating difference + species strength + species vs species, 837k games since 2025-05; held-out log loss: ratings only 0.6906, + species strength 0.6846, + species matchups 0.6805) scores the catalog's 998 species sets: expected win rate against their recent teams (equal skill on both sides).
+- The top 12 + one from the middle of the ranking as a control; their teams: the 8 weighted by recent use, sets completed with the values revealed across all their games (the rest from Smogon gen9ou-0), validated.
 
-**第一阶段**（双方都是 `pol`：网络策略，分数输入 1100，τ 1.1，不搜索；逐轮减半，每轮局数翻倍；约 1,480 局，几分钟）：
-- 第 1 轮（各 40 局）：前几名 92.5% / 87.5% / 87.5%，对照组 50%；匹配模型打分很高的两支只有 45% 和 47.5%（只看物种会看错）。
-- 最后一轮（各 280 局）：team_11 83.2%、team_09 81.8%、team_07 78.6%（在误差内）。
+**Stage 1** (both sides `pol`: network policy, rating input 1100, τ 1.1, no search; successive halving, games doubled each round; about 1,480 games, a few minutes):
+- Round 1 (40 games each): the top ones 92.5% / 87.5% / 87.5%, the control 50%; two teams the matchup model rated highly only 45% and 47.5% (species alone mislead).
+- Last round (280 games each): team_11 83.2%, team_09 81.8%, team_07 78.6% (within error).
 
-**第二阶段**：
-- 我方用搜索 bot（`s_ismcts_tf`，200 ms）、对方用 `pol`：三支都约 99%（440 局），对手太弱，分不出来。
-- 双方都用搜索 bot（`s_ismcts_tf`，200 ms，分数输入都是未知 = "发挥很好的他"）；每轮淘汰显著落后于第一名的（单侧检验 p < 0.05），其余局数翻倍：
+**Stage 2**:
+- Our side the search bot (`s_ismcts_tf`, 200 ms), theirs `pol`: all three about 99% (440 games); the opponent is too weak to separate them.
+- Both sides the search bot (`s_ismcts_tf`, 200 ms, rating input unknown on both = "them playing very well"); each round drops those significantly behind the leader (one-sided test p < 0.05), the rest double their games:
 
-| 候选 | 战绩 | |
+| candidate | record | |
 |---|---|---|
-| **team_09**：Corviknight / Iron Valiant / Kingambit / Ogerpon-Wellspring / Raging Bolt / Slowking-Galar | **32 / 34 = 94.1%** | 选定（`counter/team_00`） |
-| team_11：Gholdengo / Iron Moth / Kingambit / Manaphy / Ogerpon-Wellspring / Ribombee | 44 / 60 = 73.3%（第 1 轮 18 / 20，第 2 轮 26 / 40） | 备选（`counter/team_01`） |
-| team_07：Hatterene / Iron Treads / Kingambit / Ogerpon-Cornerstone / Okidogi / Zapdos | 11 / 20 = 55% | 第 1 轮淘汰 |
+| **team_09**: Corviknight / Iron Valiant / Kingambit / Ogerpon-Wellspring / Raging Bolt / Slowking-Galar | **32 / 34 = 94.1%** | chosen (`counter/team_00`) |
+| team_11: Gholdengo / Iron Moth / Kingambit / Manaphy / Ogerpon-Wellspring / Ribombee | 44 / 60 = 73.3% (round 1 18 / 20, round 2 26 / 40) | backup (`counter/team_01`) |
+| team_07: Hatterene / Iron Treads / Kingambit / Ogerpon-Cornerstone / Okidogi / Zapdos | 11 / 20 = 55% | dropped in round 1 |
 
-- 只用策略网络的阶段排名靠前的队伍，在双方都搜索时差距会拉开（team_07：78.6% → 55%）：对手打得好时，有些队伍的优势来自对手的失误。
-- 局限：他未暴露的配置是补全的；对方是搜索版的"他"，比真实的他强；实战结果以后补充。
+- Teams ranked high in the policy-only stage spread apart when both sides search (team_07: 78.6% → 55%): against an opponent who plays well, some teams' edge came from the opponent's mistakes.
+- Limits: their unrevealed sets are completed; the opponent is a search version of "them", stronger than the real one; real results to be added later.
 
-## 自对弈（设计见 D15）
+## Self-play (design in D15)
 
-**第 0 代（2026-10-08，验证流程）**：2,000 局，组队：真实对局补全 2,805 支 / 目录完整队伍 1,195 支（30%）；搜索 25% × 3,000 次（目标）+ 75% × 600 次，根节点噪声 0.1 / 10，按访问分布下招，网络 v5-glu。
-- 生成：2 → 4 进程，约 3.6 万叶子/秒，约 1,400 局/小时（中途换上伤害特征提速、修好队伍打包后重启过）。回合中位数 26，90% 分位 50；1 局到 300 回合上限；回退 118 次（0.08%）；先手方胜率 50.8%。
-- 转换：148,709 个决策 → 148,145 个训练局面（99.6%），日志里的招与记录一致 99.57%；完整搜索的策略目标 34,633 个。
-- 训练（从 v5-glu 热启动，人类 : 自对弈 = 1 : 1，145 步，每个自对弈局面约 2 次，lr 3e-4，预热 2 步）：
+**Generation 0 (2026-10-08, validating the pipeline)**: 2,000 games; teams: 2,805 completed from real games / 1,195 complete catalog teams (30%); search 25% × 3,000 iterations (target) + 75% × 600, root noise 0.1 / 10, moves drawn from the visit distribution, network v5-glu.
+- Generation: 2 → 4 processes, about 36k leaves/s, about 1,400 games/hour (restarted midway to switch in the damage features for speed and after fixing team packing). Median 26 turns, 90th percentile 50; 1 game reached the 300-turn cap; 118 fallbacks (0.08%); first player's win rate 50.8%.
+- Conversion: 148,709 decisions → 148,145 training positions (99.6%); the moves in the logs agree with the records 99.57%; 34,633 policy targets from full searches.
+- Training (warm-started from v5-glu, human : self-play = 1 : 1, 145 steps, each self-play position about 2 times, lr 3e-4, 2 warmup steps):
 
-| 验证集 | 训练前 | 第 50 步 | 训练后 |
+| validation set | before training | step 50 | after training |
 |---|---|---|---|
-| 自对弈：KL(搜索 ‖ 网络) | 0.344 | 0.305 | 0.300 |
-| 自对弈：首选与搜索一致 | 65.7% | 66.8% | 67.0% |
-| 自对弈：价值 BCE（根节点 q：0.525） | 0.546 | 0.523 | 0.527 |
-| 人类：策略 ce_turn_w | 1.134 | 1.145 | 1.145（+0.011） |
-| 人类：价值 bce_all_w / ECE | 0.544 / 0.013 | 0.556 / 0.030 | 0.557 / 0.033（+0.013） |
+| self-play: KL(search ‖ network) | 0.344 | 0.305 | 0.300 |
+| self-play: top choice agrees with search | 65.7% | 66.8% | 67.0% |
+| self-play: value BCE (root q: 0.525) | 0.546 | 0.523 | 0.527 |
+| human: policy ce_turn_w | 1.134 | 1.145 | 1.145 (+0.011) |
+| human: value bce_all_w / ECE | 0.544 / 0.013 | 0.556 / 0.030 | 0.557 / 0.033 (+0.013) |
 
-  人类验证集的漂移几乎都在前 50 步，之后不变：热启动时 AdamW 的状态是新的、预热只有 2 步。之后改为 lr 1e-4、预热 20%。
-- 评估：sp-gen0 对 v5-glu，同等时间（CPU，500 ms），200 局：**50.25% ± 5.7%**，不显著变差 → 晋升。
+  Nearly all of the human validation drift is in the first 50 steps, flat afterwards: on a warm start AdamW's state is fresh, and warmup was only 2 steps. Changed afterwards to lr 1e-4, 20% warmup.
+- Evaluation: sp-gen0 vs v5-glu, equal time (CPU, 500 ms), 200 games: **50.25% ± 5.7%**, not significantly worse → promoted.
 
-**第 1 代（2026-10-08）**：5,000 局（v5-glu 下，见下方注意），369,349 个局面；训练 sp0+sp1，460 步，lr 1e-4，预热 20%，人类占 45%（自对弈局面平均被抽到约 2.1 次，人类数据约 0.02 个 epoch）；与起点的 KL 仅 0.002；对 sp-gen0 100 局 50.0% ± 9.7%，晋升。
+**Generation 1 (2026-10-08)**: 5,000 games (under v5-glu, see the note below), 369,349 positions; trained on sp0+sp1, 460 steps, lr 1e-4, 20% warmup, 45% human (each self-play position drawn about 2.1 times on average, human data about 0.02 epochs); KL to the start only 0.002; vs sp-gen0, 100 games, 50.0% ± 9.7%, promoted.
 
-**第 1 代重训：更大的更新（同一起点 sp-gen0、同样数据，每批 4,096 中自对弈 55%；2026-10-08）**
+**Generation 1 retrained: bigger updates (same start sp-gen0, same data, self-play 55% of each 4,096 batch; 2026-10-08)**
 
-| 运行 | lr | 遍数 | 与起点 KL | 自对弈 KL(搜索‖网络) | 自对弈首选一致 | 自对弈价值 BCE | 人类价值 BCE | hce_true | 对手招预测 |
+| run | lr | passes | KL to start | self-play KL(search‖network) | self-play top-choice agreement | self-play value BCE | human value BCE | hce_true | opponent move prediction |
 |---|---|---|---|---|---|---|---|---|---|
-| 起点 sp-gen0 | — | — | 0 | 0.295 | 68.3% | 0.458 | 0.557 | 1.2285 | 41.8% |
-| sp-gen1（原） | 1e-4 | 2 | 0.002 | 0.287 | 68.5% | **0.455** | 0.552 | 1.2298 | 41.8% |
+| start sp-gen0 | — | — | 0 | 0.295 | 68.3% | 0.458 | 0.557 | 1.2285 | 41.8% |
+| sp-gen1 (original) | 1e-4 | 2 | 0.002 | 0.287 | 68.5% | **0.455** | 0.552 | 1.2298 | 41.8% |
 | lr2e-4-p3 | 2e-4 | 3 | 0.006 | 0.282 | 68.8% | 0.458 | 0.554 | 1.2311 | 41.8% |
 | lr4e-4-p3 | 4e-4 | 3 | 0.010 | 0.279 | 69.0% | 0.465 | 0.558 | 1.2329 | 41.7% |
 | lr2e-4-p6 | 2e-4 | 6 | 0.009 | 0.278 | 69.1% | 0.465 | 0.558 | 1.2316 | 41.7% |
-| **lr4e-4-p3-v1**（自对弈价值只训 1 遍） | 4e-4 | 3 | 0.009 | **0.278** | **69.2%** | 0.462 | **0.547** | 1.2318 | 41.8% |
+| **lr4e-4-p3-v1** (self-play value trained for 1 pass only) | 4e-4 | 3 | 0.009 | **0.278** | **69.2%** | 0.462 | **0.547** | 1.2318 | 41.8% |
 
-- 策略随更新加大持续靠近搜索分布；lr2e-4-p6 的后半程几乎不再变（0.281 → 0.278），移动量停在 0.009。
-- 自对弈价值 BCE 在约 1.2 遍处最低，之后变差（价值目标是每局一个胜负，约 7,000 局）；`--sp-value-passes 1`（一个局面的胜负只在第一次被抽到时计入价值损失）只挽回一小部分，自对弈验证集只有约 350 局，差距接近噪声。
-- 对战：**lr4e-4-p3-v1 对 sp-gen1，同等时间 500 ms，100 对 200 局：56.5% ± 6.6%**（成对；z ≈ 1.93，双侧 p ≈ 0.05，单侧 ≈ 0.03）。评估中 3 条对战线卡在第一局的挑战上（arena 没有单局超时，已加 1 小时超时），缺的 12 对单独补打进同一日志。
-- 结论：之前的更新过于保守；每代默认改为 lr 4e-4、3 遍、自对弈价值只训 1 遍，lr4e-4-p3-v1 按"不显著变差就晋升"成为当前网络。
+- The policy keeps moving toward the search distribution as the updates grow; lr2e-4-p6's second half barely changes (0.281 → 0.278), the movement stalls at 0.009.
+- Self-play value BCE is lowest at about 1.2 passes and worse after (the value target is one result per game, about 7,000 games); `--sp-value-passes 1` (a position's result counts in the value loss only the first time it is drawn) recovers only a small part; the self-play validation set is only about 350 games, the gap close to noise.
+- Match: **lr4e-4-p3-v1 vs sp-gen1, equal time 500 ms, 100 pairs, 200 games: 56.5% ± 6.6%** (paired; z ≈ 1.93, two-sided p ≈ 0.05, one-sided ≈ 0.03). During the evaluation 3 match lines got stuck on the first game's challenge (arena had no per-game timeout; a 1-hour timeout was added); the 12 missing pairs were played separately into the same log.
+- Conclusion: the earlier updates were too conservative; the per-generation default is now lr 4e-4, 3 passes, self-play value trained for 1 pass only; lr4e-4-p3-v1 becomes the current network under "promote unless significantly worse".
 
-**注意**：第 0、1、2 代（gen2 停在 262 局）的对局都是 **v5-glu** 下的：`selfplay.py run` 的 `--model` 默认写死成 v5-glu，`loop` / `cycle` 也没传当前网络（2026-10-08 发现，已改为默认用 state.json 里的当前网络；目录里已有别的网络下的对局时拒绝运行）。
+**Note**: the games of generations 0, 1 and 2 (gen2 stopped at 262 games) were all played under **v5-glu**: `selfplay.py run`'s `--model` default was hardcoded to v5-glu, and `loop` / `cycle` did not pass the current network either (found 2026-10-08; it now defaults to the current network in state.json, and refuses to run when the directory already holds games played under another network).
 
-**运气校正的离线验证（AIVAT 式控制变量，`scripts/luck.py`，gen1 随机 1,000 局，2026-10-08）**：每个双方都在回合开始做决定的回合，用双方各自的记录拼成完全信息局面，按引擎的转移模型列出这一对招的所有随机结果，运气 = V(实际发生的那个分支) − Σ pᵢ·V(分支ᵢ)，实际分支按下一条记录匹配；V = v5-glu 价值头。校正后分数 = 胜负 − Σ 运气。
+**Offline validation of luck correction (AIVAT-style control variates, `scripts/luck.py`, 1,000 random gen1 games, 2026-10-08)**: on each turn where both sides decide at the start of the turn, both sides' records are merged into a perfect-information position, all random outcomes of this pair of moves are listed with the engine's transition model, luck = V(the branch that actually happened) − Σ pᵢ·V(branchᵢ), the actual branch matched by the next record; V = v5-glu's value head. Corrected score = result − Σ luck.
 
-| 设置 | 校正后方差 / 原方差 |
+| setting | corrected variance / raw variance |
 |---|---|
-| 引擎默认分支（暴击、命中、追加效果等；伤害取平均） | 0.944 |
-| 加上伤害浮动分支（斩杀线） | 0.897 |
-| 同上，V 取双方视角平均 | **0.882** |
-| 再加自对弈的出招抽样运气（Q(所选) − E_π[Q]，Q = 搜索根节点均值） | 0.906（更差：快速搜索的 Q 噪声大） |
-| 两项按回归最优系数（样本内，上限参考） | 0.825 |
+| Engine default branches (critical hits, accuracy, secondary effects, etc.; damage averaged) | 0.944 |
+| Plus damage roll branches (KO thresholds) | 0.897 |
+| Same, V averaged over both sides' views | **0.882** |
+| Plus self-play's move-sampling luck (Q(chosen) − E_π[Q], Q = search root mean) | 0.906 (worse: the fast search's Q is noisy) |
+| Both terms at the regression-optimal coefficients (in-sample, an upper reference) | 0.825 |
 
-- 无偏性检查：每回合运气均值 0.0006 ± 0.0004，接近 0；每局有约 20 个可校正的回合。
-- 价值头沿整局对胜负的预测：BCE 0.508，相关 0.55。可解释的部分有限，所以方差只降约 12%（相当于少打约 12% 的局）。对比：成对对局降方差约 33%（第 0 代评估 ±6.9% → ±5.7%）。
-- 结论：运气校正的收益远小于扑克里的 AIVAT（DeepStack 降约 85% 标准差）。宝可梦的随机性大多不是"某回合的一次抽签"能隔离出来的（伤害浮动只在斩杀线上分支，信息不对称，搜索本身的噪声）；暂不接入晋升评估，优先序贯检验和不依赖胜负的决策质量指标。
+- Unbiasedness check: mean luck per turn 0.0006 ± 0.0004, close to 0; about 20 correctable turns per game.
+- The value head's prediction of the result along the game: BCE 0.508, correlation 0.55. The explainable part is limited, so the variance falls only about 12% (equivalent to about 12% fewer games). By comparison, paired games cut variance about 33% (generation 0's evaluation ±6.9% → ±5.7%).
+- Conclusion: luck correction gains far less than AIVAT in poker (DeepStack cut the standard deviation by about 85%). Most of Pokémon's randomness cannot be isolated as "one draw on one turn" (damage rolls branch only at KO thresholds, information asymmetry, the search's own noise); not wired into promotion evaluation for now; sequential tests and result-independent decision quality measures come first.
 
-**r2 第 0 代（2026-10-26 / 27，起点 v6arch-pp-v75，`selfplay.py iterate`）**：只在有把握更好时晋升——序贯检验 H0 = +13.9 Elo（52%）、H1 = +34.9 Elo（55%），α 0.05、β 0.1，最多 2,000 对，1,600 次迭代，每次尝试一个新的队伍池；不过则同一个网络再打 25,000 局、在累计的全部对局上重新微调。组队：一半合成（selfplay.teams.Composer + 跨队友组合的 Metropolis-Hastings，design.md D16），实战补全 43%，目录 6%。
-- 生成：10 进程 × 24 局，约 3,500 局 / 小时（6 进程约 3,000；每个进程被 Python 单核卡住，GPU 约 30%）。回合均值 32.0、中位 26、p90 51；到上限 46 局；每局 73.1 个决策；合成 + 合成 31.9 回合、实战 + 实战 30.6（无系统差异），目录队伍偏长（目录 + 目录 45.6）。134 局（0.25%）出现请求 / 引擎状态不一致（多为对手的封印、封印后变身，issue #3）。
-- 第 1 次尝试（52,959 局）：转换 386 万个局面，动作一致 99.89%；每局最多 50 个局面后 252 万，策略目标 93 万；训练 3,501 步（人类 50%，lr 4e-4，3 遍，`--stream 1`：`--stream 2` 用到 31 GB，超过 30 GB 上限被杀）。自对弈验证：CE 1.304 → 1.253、首选 71.5% → 73.5%、价值 BCE 0.4675 → 0.4394；人类验证：CE 1.129 → 1.139、hce_true +0.010（漂移护栏触发）、对手动作 42.4% 持平；KL 到起点 0.033。
-- **对战：r2-gen0a1 对 v6arch-pp-v75，50.22% ± 3.71%**（232 对，LLR −2.76 → H0），未晋升；155 对（67%）各胜一局。继续打第 2 次尝试的对局（暂停于 53,691 局）。
+**r2 generation 0 (2026-10-26 / 27, start v6arch-pp-v75, `selfplay.py iterate`)**: promote only when confidently better -- sequential test H0 = +13.9 Elo (52%), H1 = +34.9 Elo (55%), α 0.05, β 0.1, at most 2,000 pairs, 1,600 iterations, a new team pool for each attempt; on failure the same network plays another 25,000 games and is fine-tuned again on all the games so far. Teams: half synthetic (selfplay.teams.Composer + Metropolis-Hastings over teammate combinations across teams, design.md D16), completed real ones 43%, catalog 6%.
+- Generation: 10 processes × 24 games, about 3,500 games/hour (6 processes about 3,000; each process is bound by Python's single core, GPU about 30%). Turns: mean 32.0, median 26, p90 51; 46 games hit the cap; 73.1 decisions per game; synthetic + synthetic 31.9 turns, real + real 30.6 (no systematic difference), catalog teams run longer (catalog + catalog 45.6). 134 games (0.25%) had request / engine state mismatches (mostly the opponent's Imprison, Transform after Imprison, issue #3).
+- Attempt 1 (52,959 games): 3.86M positions converted, action agreement 99.89%; 2.52M after at most 50 positions per game, 930k policy targets; trained 3,501 steps (50% human, lr 4e-4, 3 passes, `--stream 1`: `--stream 2` used 31 GB, over the 30 GB cap, and was killed). Self-play validation: CE 1.304 → 1.253, top choice 71.5% → 73.5%, value BCE 0.4675 → 0.4394; human validation: CE 1.129 → 1.139, hce_true +0.010 (the drift guard triggered), opponent action 42.4% flat; KL to the start 0.033.
+- **Match: r2-gen0a1 vs v6arch-pp-v75, 50.22% ± 3.71%** (232 pairs, LLR −2.76 → H0), not promoted; 155 pairs (67%) split one game each. Attempt 2's games continue (paused at 53,691 games).
 
-### 可塑性诊断（`scripts/plasticity.py`，2026-10-09；4,096 行真实局面，双方视角；CPU）
+### Plasticity diagnostics (`scripts/plasticity.py`, 2026-10-09; 4,096 rows of real positions, both sides' views; CPU)
 
-| 网络 | 休眠单元比例 FFN 第 1 / 2 / 3 层（τ = 0.025 / 0.1） | 招式头 / 换人头隐层 | 主干特征有效秩（全局 / 实体，满 128） | 参数范数 |
+| network | dormant unit fraction, FFN layers 1 / 2 / 3 (τ = 0.025 / 0.1) | move head / switch head hidden layer | trunk feature effective rank (global / entity, full 128) | parameter norm |
 |---|---|---|---|---|
-| 随机初始化（同结构） | 0 / 0 / 0 | 0.14 / 0.28，0.20 / 0.33 | 124 / 122 | 311 |
-| v5-glu | 0 / 0 / 0 | 0.00 / 0.05，0.05 / 0.08 | 124 / 124 | 439 |
-| sp-gen0 … sp-gen3（旧一轮） | 0 / 0 / 0 | 同上（±0.02） | 124 / 124 | 439 |
+| random init (same architecture) | 0 / 0 / 0 | 0.14 / 0.28, 0.20 / 0.33 | 124 / 122 | 311 |
+| v5-glu | 0 / 0 / 0 | 0.00 / 0.05, 0.05 / 0.08 | 124 / 124 | 439 |
+| sp-gen0 … sp-gen3 (old round) | 0 / 0 / 0 | same as above (±0.02) | 124 / 124 | 439 |
 
-没有可塑性下降的迹象：SwiGLU 前馈层没有休眠单元（门控是平滑的）；输出头的 ReLU 隐层休眠单元比随机初始化还少；特征有效秩几乎满秩，没有坍缩。参数范数在监督训练中从 311 增到 439（+41%），自对弈几代几乎不变，与每代更新幅度很小（相对权重变化约 1%）一致。所以每代进步小不是"网络学不动了"，更可能来自热启动泛化、数据或不传递。
+No sign of plasticity loss: the SwiGLU feed-forward layers have no dormant units (the gating is smooth); the output heads' ReLU hidden layers have even fewer dormant units than at random init; the feature effective rank is nearly full, no collapse. The parameter norm grew from 311 to 439 (+41%) in supervised training and barely changes across the self-play generations, consistent with each generation's tiny updates (about 1% relative weight change). So the small per-generation progress is not "the network can no longer learn"; more likely it comes from warm-start generalization, the data or intransitivity.
 
-### 队伍分布的诊断池（设计见 D16，2026-10-09；每格 200 对，配对，交换两边）
+### Diagnostic pools for the team distribution (design in D16, 2026-10-09; 200 pairs per cell, paired, sides swapped)
 
-sp-gen1 = 重启后第 1 代（两代自对弈）。偏门池 `offmeta200`：双方都偏门的真实对局（每队平均 4.94 只不在使用率前 40）；随机池 `random200`：按使用率^0.5 随机组的队伍（3.25 只）；天梯池 `wide200`：2.44 只。
+sp-gen1 = generation 1 after the restart (two generations of self-play). Off-meta pool `offmeta200`: real games where both sides are off-meta (on average 4.94 per team outside the top 40 by usage); random pool `random200`: teams drawn at random by usage^0.5 (3.25); ladder pool `wide200`: 2.44.
 
-| 对手 | 天梯池 | 偏门池 | 随机池 |
+| opponent | ladder pool | off-meta pool | random pool |
 |---|---|---|---|
-| v5-glu（GPU 批量搜索，3,000 次迭代） | **54.6% ± 3.9%** | 51.6% ± 4.2%（193 对：WSL 崩溃打断） | 51.8% ± 4.5% |
-| Foul Play（我方 CPU 200 ms 对 200 ms × 1） | **59.1% ± 4.4%**（198 对） | **63.3% ± 4.4%** | **60.8% ± 4.3%** |
+| v5-glu (GPU batched search, 3,000 iterations) | **54.6% ± 3.9%** | 51.6% ± 4.2% (193 pairs: interrupted by a WSL crash) | 51.8% ± 4.5% |
+| Foul Play (ours CPU 200 ms vs 200 ms × 1) | **59.1% ± 4.4%** (198 pairs) | **63.3% ± 4.4%** | **60.8% ± 4.3%** |
 
-- 自对弈带来的进步（对 v5-glu）在天梯池最明显（约 +32 Elo，显著），偏门 / 随机池只有约三分之一（+11 / +12 Elo，不显著）；但池之间的差约 3 个点，差的 95% 区间约 ±6 个点，**不显著**。方向与"自对弈的进步主要在常见队伍上"一致，没有在偏门 / 随机队伍上变差。
-- 整体实力对 Foul Play 在偏门 / 随机队伍上**没有变弱**（略高）：两边的对手配置推断都依赖天梯统计，遇到偏门队伍时 Foul Play 同样吃亏。对比：sp-gen0 在天梯池 56.1% ± 4.5%。
-- 过程中修的问题：Foul Play 遇到魔法空间等场地效果崩溃、除零（本地补丁，`research_foul_play.md` 6.3）；评估在对手崩溃 / 挑战没人接时永远等待（每局超时、对手进程监视、整条线重启、续跑）；评估加载队伍时导出行末的空格留在昵称里，长名字的宝可梦没带道具时超过 18 个字符被服务器拒收（偏门池 2 对每次都卡住）。
+- Self-play's progress (vs v5-glu) is clearest on the ladder pool (about +32 Elo, significant), on the off-meta / random pools only about a third of it (+11 / +12 Elo, not significant); but the pools differ by about 3 points, and the difference's 95% interval is about ±6 points: **not significant**. The direction agrees with "self-play's progress is mainly on common teams"; no regression on off-meta / random teams.
+- Overall strength against Foul Play is **not weaker** on off-meta / random teams (slightly higher): both sides infer the opponent's sets from ladder stats, so Foul Play suffers against off-meta teams too. By comparison: sp-gen0 on the ladder pool 56.1% ± 4.5%.
+- Problems fixed along the way: Foul Play crashing on field effects such as Magic Room, and on a division by zero (local patch, `research_foul_play.md` 6.3); the evaluation waiting forever when the opponent crashed / a challenge went unaccepted (per-game timeout, opponent process watchdog, whole-line restart, resume); when the evaluation loaded teams, the trailing spaces of export lines stayed in nicknames, and long-named Pokémon without an item went over 18 characters and were rejected by the server (2 pairs of the off-meta pool got stuck every time).
 
-### 重启后第 3 代的检查（2026-10-10）
+### Check of generation 3 after the restart (2026-10-10)
 
-| 比较 | 结果 |
+| comparison | result |
 |---|---|
-| sp-gen3 对 sp-gen2（晋升评估，3,000 次迭代，400 对） | 47.8% ± 3.0%，不晋升 |
-| sp-gen2 对 sp-gen0（累计检查，3,000 次迭代，400 对） | 49.3% ± 2.9%，没有可测的进步（停滞 1 次） |
-| sp-gen2 对 sp-gen0（只用策略，tau 0.05，wide1000，1,000 对） | **52.4% ± 1.9%**（约 +17 Elo，显著） |
+| sp-gen3 vs sp-gen2 (promotion evaluation, 3,000 iterations, 400 pairs) | 47.8% ± 3.0%, not promoted |
+| sp-gen2 vs sp-gen0 (cumulative check, 3,000 iterations, 400 pairs) | 49.3% ± 2.9%, no measurable progress (1 stall) |
+| sp-gen2 vs sp-gen0 (policy only, tau 0.05, wide1000, 1,000 pairs) | **52.4% ± 1.9%** (about +17 Elo, significant) |
 
-- 先验在变强（只用策略显著更好），但在 3,000 次迭代的搜索下优势消失：自对弈主要把策略拉向搜索的选择，而深搜索本来就会做出这些选择；深搜索的强度取决于价值头，价值在新对局上的 BCE 每代只降约 0.005。与第一轮"四代没有可测进步"同一现象。
-- 单代晋升时的 51.6% / 51.9% 是 SPRT 越线即停时的分数，系统性偏高（停在高点）；Elo 重新拟合后 sp-gen1 / sp-gen2 = 1494 / 1496（v5-glu = 1500）。
-- 离线：sp-gen3 自对弈 KL −0.007、价值 BCE −0.003（比上一代小）；`hce_unk`（分数输入"未知"时对人类招式的交叉熵）逐代上升 1.2612 → 1.2841 → 1.3023（自对弈局面的分数输入都是"未知"，把这一输入下的策略拉向 bot），`hce_true` 只 +0.003 / 代。
+- The prior is getting stronger (policy only is significantly better), but under 3,000-iteration search the edge disappears: self-play mostly pulls the policy toward the search's choices, which deep search makes anyway; deep search's strength depends on the value head, whose BCE on new games falls only about 0.005 per generation. The same phenomenon as the first round's "four generations without measurable progress".
+- The 51.6% / 51.9% at single-generation promotion are the scores where SPRT stopped on crossing the line, systematically high (stopped at a peak); refitting Elo gives sp-gen1 / sp-gen2 = 1494 / 1496 (v5-glu = 1500).
+- Offline: sp-gen3 self-play KL −0.007, value BCE −0.003 (smaller than the previous generation's); `hce_unk` (cross-entropy on human moves with the rating input "unknown") rises generation by generation, 1.2612 → 1.2841 → 1.3023 (self-play positions all have the rating input "unknown", which pulls the policy under this input toward the bot), `hce_true` only +0.003 / generation.
 
-### 自对弈的动作一致性（`scripts/check_actions.py`（2026-10-28 已删），第 5 代 9,000 局、64 万条决策；2026-10-11）
+### Action consistency in self-play (`scripts/check_actions.py` (deleted 2026-10-28), generation 5's 9,000 games, 640k decisions; 2026-10-11)
 
-每条记录的选择（`names[slot]`）对照服务器日志里该回合实际发生的动作：
+Each record's choice (`names[slot]`) checked against the action that actually happened in that turn in the server log:
 
-| 类别 | 占比 |
+| category | share |
 |---|---|
-| 一致（主动作） | 79.67% |
-| 一致（强制 / 中途换人） | 12.67% |
-| 没出手：先被击倒 / 混乱打到自己 / 对局先结束 | 6.08% / 0.07% / 0.02% |
-| 不能行动（`cant`：睡眠、麻痹、畏缩…） | 1.34% |
-| 招式被对面先手的再来一次改掉 | 0.09% |
-| 出手前被逃脱按钮 / 红牌 / 吹飞弄下场 | 0.04% |
-| 幻觉（洗翠索罗亚克伪装成别的宝可梦） | 0.02% |
-| 真正不一致 | **0.0006%**（4 条） |
+| agrees (main action) | 79.67% |
+| agrees (forced / mid-turn switch) | 12.67% |
+| did not act: fainted first / hit itself in confusion / the game ended first | 6.08% / 0.07% / 0.02% |
+| cannot act (`cant`: sleep, paralysis, flinch…) | 1.34% |
+| move changed by the opponent's faster Encore | 0.09% |
+| removed before acting by Eject Button / Red Card / Whirlwind | 0.04% |
+| Illusion (Zoroark-Hisui disguised as another Pokémon) | 0.02% |
+| true mismatch | **0.0006%** (4 records) |
 
-真正不一致的 4 条：3 条是换人被服务器拒绝（被磁力等未暴露的特性困住）后重新选择，同一回合留下两条记录，转换数据时取了被拒的第一条；1 条是 PP 用尽只能挣扎，记录仍是搜索选的招（`engine_move_to_order` 只剩一个可用招时直接发它）。太晶：选了太晶的都太晶了，没选的都没有。结论：自对弈里记录的动作就是服务器执行的动作。
+The 4 true mismatches: 3 are switches rejected by the server (trapped by an unrevealed ability such as Magnet Pull) and then rechosen, which leaves two records in the same turn, and the conversion took the rejected first one; 1 is out of PP with only Struggle left, the record still the move the search chose (`engine_move_to_order` sends the move directly when only one usable move remains). Tera: every choice of tera terastallized, no other did. Conclusion: the actions recorded in self-play are the actions the server executed.
 
-### GPU 推理精度：BF16 对 FP32（`scripts/bench_precision.py`，sp-gen2，2026-10-10；GPU 空闲、开编译与 CUDA graph）
+### GPU inference precision: BF16 vs FP32 (`scripts/bench_precision.py`, sp-gen2, 2026-10-10; GPU idle, compilation and CUDA graphs on)
 
-16,384 行真实局面（第 3 代决策的根局面，两个视角）：胜率 |差| 平均 0.0016、99% 分位 0.0070、最大 0.012；策略 KL 平均 4.7e-5；首选动作相同 99.4%。
+16,384 rows of real positions (the root positions of generation 3's decisions, both views): win probability |diff| mean 0.0016, 99th percentile 0.0070, max 0.012; policy KL mean 4.7e-5; same top action 99.4%.
 
-| 批大小（行） | 64 | 128 | 256 | 512 | 1,024 |
+| batch size (rows) | 64 | 128 | 256 | 512 | 1,024 |
 |---|---|---|---|---|---|
-| FP32（ms） | 0.83 | 0.94 | 1.34 | 2.82 | 4.24 |
-| BF16（ms） | 0.77 | 0.86 | 0.87 | 2.20 | 2.26 |
-| 加速 | 1.07 | 1.09 | **1.55** | 1.28 | **1.88** |
+| FP32 (ms) | 0.83 | 0.94 | 1.34 | 2.82 | 4.24 |
+| BF16 (ms) | 0.77 | 0.86 | 0.87 | 2.20 | 2.26 |
+| speedup | 1.07 | 1.09 | **1.55** | 1.28 | **1.88** |
 
-自对弈每轮平均约 165 行（补齐到 256），推理约快 1.5 倍。训练本来就是 BF16 自动混合精度，推理改 BF16 与训练一致；2026-10-10 起默认 BF16（`check_batch_search.py` 与 CPU 参考对照时用 FP32）。没有做棋力对比（差异远小于搜索噪声）。
+Self-play averages about 165 rows per round (padded to 256): inference about 1.5 times faster. Training already uses BF16 automatic mixed precision, so BF16 inference matches training; BF16 is the default since 2026-10-10 (FP32 when `check_batch_search.py` compares against the CPU reference). No strength comparison (the differences are far below search noise).
 
-### 价值头实验：pv_bench（`scripts/pv_bench.py`，2026-10-10 / 11；设计见 design.md P0 价值头）
+### Value head experiments: pv_bench (`scripts/pv_bench.py`, 2026-10-10 / 11; design in design.md P0 value head)
 
-测试集（2/3，自对弈 1,027 个局面 / 人类 1,016 个）。价值 = 只用价值的搜索（均匀先验，800 次）；带先验 = 800 次。每格：与参考答案首选一致 / 选项均值的秩相关 ρ / 平均决策损失（参考答案里最好选项与所选选项的胜率差，百分点；参考答案几乎没搜的选项按其最差的可靠选项计）。首选一致的标准误约 1.5 个百分点。变体都从 sp-gen2 起训（A = sp-gen4 的起点；第 3 代未晋升），配方同 sp-gen4（A）。
+Test set (2/3; 1,027 self-play positions / 1,016 human). Value = value-only search (uniform prior, 800 iterations); with prior = 800 iterations. Each cell: top-choice agreement with the reference / rank correlation ρ of the option means / mean decision loss (the win-probability gap between the reference's best option and the chosen one, in percentage points; options the reference barely searched count as its worst reliable option). The standard error of top-choice agreement is about 1.5 points. The variants are all trained from sp-gen2 (the start of A = sp-gen4; generation 3 was not promoted), with sp-gen4's (A) recipe.
 
-| 网络 | 自对弈 BCE | 斜率 | 先验首选 | 自对弈：价值 | 自对弈：带先验 | 人类 BCE | 人类：带先验损失 |
+| network | self-play BCE | slope | prior top choice | self-play: value | self-play: with prior | human BCE | human: loss with prior |
 |---|---|---|---|---|---|---|---|
-| 手写评估 | 0.580 | 3.05 | — | 46.4% / 0.483 / 1.80 | 66.4% / 0.533 / 1.63 | 0.629 | 1.52 |
+| handwritten eval | 0.580 | 3.05 | — | 46.4% / 0.483 / 1.80 | 66.4% / 0.533 / 1.63 | 0.629 | 1.52 |
 | v5-glu | 0.470 | 1.15 | 54.9% | 52.1% / 0.591 / 1.46 | 72.0% / 0.686 / 1.35 | 0.547 | 1.09 |
 | sp-gen0 | 0.451 | 1.15 | 59.0% | 53.8% / 0.589 / 1.35 | 74.1% / 0.700 / 1.32 | 0.547 | 1.05 |
 | sp-gen1 | 0.443 | 1.07 | 60.0% | 53.4% / 0.596 / 1.43 | 75.0% / 0.704 / 1.23 | 0.550 | 1.04 |
 | sp-gen2 | 0.437 | 1.06 | 61.5% | 52.7% / 0.583 / 1.50 | 76.1% / 0.705 / 1.19 | 0.549 | 0.99 |
 | sp-gen3 | 0.434 | 1.03 | 61.4% | 52.6% / 0.579 / 1.47 | 75.9% / 0.701 / 1.17 | 0.549 | 1.01 |
-| sp-gen4（A） | 0.433 | 1.05 | 61.2% | 52.5% / 0.583 / 1.45 | 75.3% / 0.694 / 1.20 | 0.549 | 0.98 |
-| F 价值隐藏层 256 | 0.432 | 1.05 | 61.7% | 53.8% / 0.584 | 76.1% / 0.698 | 0.549 | |
+| sp-gen4 (A) | 0.433 | 1.05 | 61.2% | 52.5% / 0.583 / 1.45 | 75.3% / 0.694 / 1.20 | 0.549 | 0.98 |
+| F value hidden layer 256 | 0.432 | 1.05 | 61.7% | 53.8% / 0.584 | 76.1% / 0.698 | 0.549 | |
 | C λ 0.9 | 0.437 | 1.11 | 61.0% | 53.5% / 0.589 | 75.5% / 0.702 | 0.549 | |
 | D λ 0.7 | 0.439 | 1.14 | 61.3% | 54.4% / 0.594 | 75.3% / 0.702 | 0.549 | |
-| B 每局 8 个价值局面 | 0.432 | 1.05 | 61.5% | 53.5% / 0.584 | 74.8% / 0.698 | 0.548 | |
-| E 价值 3 遍 | 0.426 | 1.00 | 61.6% | 51.9% / 0.579 | 75.8% / 0.684 | 0.548 | |
-| 子节点：回归 | 0.431 | 1.06 | 61.1% | 54.8% / 0.598 | 75.8% / 0.708 | 0.551 | |
-| 子节点：排序 | 0.439 | 1.34 | 60.7% | 51.1% / 0.581 | 72.5% / 0.676 | 0.553 | |
-| 子节点：两者 | 0.431 | 1.12 | 60.9% | 53.4% / 0.593 | 73.7% / 0.695 | 0.553 | |
-| 子节点回归 ×2 | 0.430 | 1.05 | 61.2% | 54.0% / 0.590 | 75.5% / 0.695 | 0.552 | |
-| 子节点回归 ×4 | 0.431 | 1.04 | 60.7% | 53.5% / 0.588 | 74.9% / 0.699 | 0.553 | |
-| 子节点回归 ×8 | 0.431 | 1.04 | 59.9% | 53.9% / 0.596 | 74.8% / 0.695 | 0.554 | |
+| B 8 value positions per game | 0.432 | 1.05 | 61.5% | 53.5% / 0.584 | 74.8% / 0.698 | 0.548 | |
+| E value 3 passes | 0.426 | 1.00 | 61.6% | 51.9% / 0.579 | 75.8% / 0.684 | 0.548 | |
+| children: regression | 0.431 | 1.06 | 61.1% | 54.8% / 0.598 | 75.8% / 0.708 | 0.551 | |
+| children: ranking | 0.439 | 1.34 | 60.7% | 51.1% / 0.581 | 72.5% / 0.676 | 0.553 | |
+| children: both | 0.431 | 1.12 | 60.9% | 53.4% / 0.593 | 73.7% / 0.695 | 0.553 | |
+| child regression ×2 | 0.430 | 1.05 | 61.2% | 54.0% / 0.590 | 75.5% / 0.695 | 0.552 | |
+| child regression ×4 | 0.431 | 1.04 | 60.7% | 53.5% / 0.588 | 74.9% / 0.699 | 0.553 | |
+| child regression ×8 | 0.431 | 1.04 | 59.9% | 53.9% / 0.596 | 74.8% / 0.695 | 0.554 | |
 
-- 自对弈 BCE 逐代下降，区分选项（只用价值）不变；手写评估差得多，指标是灵敏的。F、B–E 无差别；E 的 BCE 最好但选招最差。
-- 子节点回归在只用价值上最好（开发集 56.2%），但**对战对 A 49.1% ± 2.9%**（3,000 次迭代，400 对，宽池）：几个点的离线差别不足以预测对战。权重加大无剂量效应，人类 BCE 与先验变差；排序损失破坏校准（斜率 1.34），代码已删除（2026-10-11），只保留回归。
-- 决策损失（带先验）在谱系上从 v5-glu 1.35 降到 sp-gen3 1.17（人类 1.09 → 0.98），方向与对战一致（v5-glu < 第 0–2 代），但第 2–4 代之间差别在误差内（标准误约 0.08），与对战持平一致；补算（自对弈 / 人类测试集，带先验）：F 1.18 / 1.00，子节点回归 1.18 / 1.00，A 1.20 / 0.98（只用价值：F 1.40 / 1.18，子节点回归 1.47 / 1.18，A 1.45 / 1.19）。子节点回归在首选一致上的 +2 个百分点在决策损失里不存在，与对战 49.1% 一致：决策损失比首选一致更不容易被「选中参考答案的首选、但各选项差别很小」的局面误导。
+- Self-play BCE falls generation by generation; telling the options apart (value only) does not change; the handwritten eval is much worse, so the measure is sensitive. F, B–E make no difference; E has the best BCE but the worst move choice.
+- Child regression is the best on value only (dev set 56.2%), but **in matches vs A 49.1% ± 2.9%** (3,000 iterations, 400 pairs, wide pool): a few points of offline difference do not predict matches. No dose effect from larger weights, and human BCE and the prior get worse; the ranking loss breaks calibration (slope 1.34); its code was deleted (2026-10-11), only regression kept.
+- Decision loss (with prior) falls along the lineage from v5-glu's 1.35 to sp-gen3's 1.17 (human 1.09 → 0.98), the same direction as the matches (v5-glu < generations 0–2), but generations 2–4 differ within error (standard error about 0.08), consistent with the flat matches; computed later (self-play / human test set, with prior): F 1.18 / 1.00, child regression 1.18 / 1.00, A 1.20 / 0.98 (value only: F 1.40 / 1.18, child regression 1.47 / 1.18, A 1.45 / 1.19). Child regression's +2 points of top-choice agreement do not exist in decision loss, consistent with the 49.1% in matches: decision loss is less easily misled than top-choice agreement by positions that "pick the reference's top choice, but where the options differ very little".
 
-### 大网络 G（`scripts/exp_capacity.py --g-only`，2026-10-11）
+### Large network G (`scripts/exp_capacity.py --g-only`, 2026-10-11)
 
-G = `large` 主干（宽 192、4 层、6 头，SwiGLU 256，约 2.3 倍计算）+ 价值隐藏层 256，按 v5-glu 的配方在全部人类数据上从头训练（新增 hf 对局只进训练集，比 v5-glu 多约 15% 数据），65,589 步（批 4,096，与 v5-glu 同样每步样本，可按步对比）。人类验证集（v5-glu 的）：
+G = the `large` trunk (width 192, 4 layers, 6 heads, SwiGLU 256, about 2.3 times the compute) + value hidden layer 256, trained from scratch on all the human data with v5-glu's recipe (the newly added hf games go only into the training set: about 15% more data than v5-glu), 65,589 steps (batch 4,096, the same samples per step as v5-glu, so comparable step by step). Human validation set (v5-glu's):
 
-| 步 | G 策略 ce | v5-glu | G top1 | v5-glu | G 价值 bce | v5-glu | G ECE | v5-glu |
+| step | G policy ce | v5-glu | G top1 | v5-glu | G value bce | v5-glu | G ECE | v5-glu |
 |---|---|---|---|---|---|---|---|---|
 | 10,000 | 1.171 | 1.191 | 54.6% | 53.9% | 0.555 | 0.556 | 0.021 | 0.007 |
 | 30,000 | 1.130 | 1.155 | 56.1% | 55.2% | 0.571 | 0.555 | 0.047 | 0.027 |
-| 52,000（G 最好） | 1.102 | 1.136 | 57.1% | 55.9% | 0.562 | 0.545 | 0.040 | 0.014 |
-| 最后 | 1.097 | 1.135 | 57.3% | 55.9% | 0.568 | 0.544 | 0.047 | 0.013 |
+| 52,000 (G's best) | 1.102 | 1.136 | 57.1% | 55.9% | 0.562 | 0.545 | 0.040 | 0.014 |
+| last | 1.097 | 1.135 | 57.3% | 55.9% | 0.568 | 0.544 | 0.047 | 0.013 |
 
-- 策略：大网络从约 8,000 步起一直领先，最后 ce −0.038、top1 +1.4 个百分点。
-- 价值：**过拟合**。训练集价值 bce 到 0.43（v5-glu 0.52），验证 bce 在 0.553–0.727 之间大幅波动（尖峰时 ECE 0.13），学习率衰减后回到 0.568，仍比 v5-glu 差 0.024。每局只有一个胜负信号，200 万局对价值不算多；大网络先记住了对局结果。容量不是价值的瓶颈（与 F 一致）。
-- 自对弈微调：从 G 最好的检查点（`--init-ckpt best`）、A 的配方（sp0–sp4，4,013 步）：人类 ce 1.125（A 1.159）、价值 bce 0.594（A 0.548）、ECE 0.065；自对弈 ce 1.308 / 首选 71.1%（A 1.286 / 73.9%）、自对弈价值 bce 0.446（A 0.441）。A 是逐代微调累积而来（谱系 sp-gen0 → 1 → 2 → 4 共 6,716 步；第 3 代未晋升，不在谱系上），一次 A 长度的微调对 G 不公平；改为 8,500 步（`--g-ft-steps lineage`，exp-G-large-ft8500；当时误把未晋升的第 3 代也算进去，比 A 的 6,716 步多约 27%，对结论无影响；已改为沿热启动链求和）后再比 pv_bench 与对战。
-- pv_bench（测试集；每格首选一致 / ρ / 决策损失）：
+- Policy: the large network leads from about step 8,000 on; at the end ce −0.038, top1 +1.4 points.
+- Value: **overfits**. Training value bce reaches 0.43 (v5-glu 0.52); validation bce swings widely between 0.553 and 0.727 (ECE 0.13 at the spikes), returns to 0.568 after the learning rate decays, still 0.024 worse than v5-glu. Each game has only one result signal, and 2M games are not many for the value; the large network memorizes game results first. Capacity is not the value's bottleneck (consistent with F).
+- Self-play fine-tuning: from G's best checkpoint (`--init-ckpt best`), A's recipe (sp0–sp4, 4,013 steps): human ce 1.125 (A 1.159), value bce 0.594 (A 0.548), ECE 0.065; self-play ce 1.308 / top choice 71.1% (A 1.286 / 73.9%), self-play value bce 0.446 (A 0.441). A accumulated through per-generation fine-tuning (lineage sp-gen0 → 1 → 2 → 4, 6,716 steps in all; generation 3 was not promoted and is not in the lineage), so a single fine-tune of A's length is unfair to G; changed to 8,500 steps (`--g-ft-steps lineage`, exp-G-large-ft8500; at the time the unpromoted generation 3 was mistakenly counted too, about 27% more than A's 6,716 steps, no effect on the conclusion; it now sums along the warm-start chain) before comparing on pv_bench and in matches.
+- pv_bench (test set; each cell top-choice agreement / ρ / decision loss):
 
-| 网络 | 自对弈：带先验 | 人类：带先验 | 只看先验的损失（自对弈 / 人类） | 自对弈 BCE | 人类 BCE |
+| network | self-play: with prior | human: with prior | prior-only loss (self-play / human) | self-play BCE | human BCE |
 |---|---|---|---|---|---|
 | A = sp-gen4 | **75.3% / 0.694 / 1.20** | **72.8% / 0.696 / 0.98** | 2.02 / 2.06 | 0.433 | 0.549 |
-| G 4,013 步 | 71.2% / 0.634 / 1.31 | 66.2% / 0.561 / 1.21 | 1.92 / 1.96 | 0.429 | 0.562 |
-| G 8,500 步 | 71.3% / 0.640 / 1.29 | 67.4% / 0.611 / 1.18 | 1.90 / 2.02 | 0.443 | 0.539 |
-| G 8,500 步 + 子节点回归 | 72.2% / 0.643 / 1.28 | 68.8% / 0.613 / 1.14 | 1.91 / 2.02 | 0.425 | 0.544 |
+| G 4,013 steps | 71.2% / 0.634 / 1.31 | 66.2% / 0.561 / 1.21 | 1.92 / 1.96 | 0.429 | 0.562 |
+| G 8,500 steps | 71.3% / 0.640 / 1.29 | 67.4% / 0.611 / 1.18 | 1.90 / 2.02 | 0.443 | 0.539 |
+| G 8,500 steps + child regression | 72.2% / 0.643 / 1.28 | 68.8% / 0.613 / 1.14 | 1.91 / 2.02 | 0.425 | 0.544 |
 
-- 增加微调步数后，自对弈首选一致在约 5,000 步后停在 71.5%（A 73.9%）：差距不是训练量。
-- **对战：G（8,500 步）对 A，双方 3,000 次迭代，400 对，宽池：49.8% ± 2.9%**，持平。pv_bench 上 G 带先验落后 3–6 个百分点、ρ 低 0.05–0.08、损失高约 0.1，对战却不输：**pv_bench（以及自对弈验证集）偏向参考答案所在的谱系**（参考 = v5-glu、sp-gen2 的深搜索；A 从同一谱系一路微调），不能用来比较独立训练的不同结构；只适合比同一谱系里的变体。
-- 结论：2.3 倍计算的大网络在相同迭代数下不比 A 强（相同时间下只会更差）；策略在人类数据上明显更好，价值不更好，对战持平，与"价值是瓶颈"一致。
+- With more fine-tuning steps, self-play top-choice agreement stops at 71.5% after about 5,000 steps (A 73.9%): the gap is not the amount of training.
+- **Match: G (8,500 steps) vs A, both 3,000 iterations, 400 pairs, wide pool: 49.8% ± 2.9%**, even. On pv_bench G with prior trails by 3–6 points, ρ 0.05–0.08 lower, loss about 0.1 higher, yet it does not lose the match: **pv_bench (and the self-play validation set) favour the lineage the reference comes from** (reference = deep searches of v5-glu and sp-gen2; A was fine-tuned all the way along the same lineage), so they cannot compare independently trained architectures; they only suit comparing variants within one lineage.
+- Conclusion: the large network with 2.3 times the compute is not stronger than A at the same number of iterations (at the same time it can only be worse); its policy is clearly better on human data, its value is not, matches are even, consistent with "the value is the bottleneck".
 
-### 胜负幅度辅助头（`scripts/exp_margin.py`，2026-10-11）
+### Win-margin auxiliary head (`scripts/exp_margin.py`, 2026-10-11)
 
-sp-gen5 的训练（同起点 sp-gen4、同数据、3,280 步）加剩余数量之差的辅助头（13 类，辅助损失权重 0.3；搜索不用）。幅度头准确率 22.9%（13 类）。人类 ce 1.166 / bce 0.550（sp-gen5 1.164 / 0.549），自对弈首选 75.1% / BCE 0.4426（75.5% / 0.4415）；pv_bench 带先验损失自对弈 1.15 / 人类 1.02（1.18 / 1.07），只用价值首选 53.4%（54.2%）。**对战对 sp-gen5：50.1% ± 2.9%**（398 对，3,000 次迭代，宽池；双方都用计时修复后的搜索）。不采用：作为纯辅助损失对价值没有帮助；要用就得让搜索直接用比分（KataGo 式），改动大。
+sp-gen5's training (same start sp-gen4, same data, 3,280 steps) plus an auxiliary head for the difference in remaining Pokémon (13 classes, auxiliary loss weight 0.3; not used by the search). Margin head accuracy 22.9% (13 classes). Human ce 1.166 / bce 0.550 (sp-gen5 1.164 / 0.549), self-play top choice 75.1% / BCE 0.4426 (75.5% / 0.4415); pv_bench loss with prior self-play 1.15 / human 1.02 (1.18 / 1.07), value-only top choice 53.4% (54.2%). **Match vs sp-gen5: 50.1% ± 2.9%** (398 pairs, 3,000 iterations, wide pool; both sides with the search after the timer fixes). Not adopted: as a pure auxiliary loss it does not help the value; using it would mean the search using the score directly (KataGo-style), a big change.
 
-### 价值数据的来源：不搜索的对局（`scripts/exp_value_source.py` / `exp_value_scale.py` / `exp_value_only.py`，2026-10-11 / 12；设计见 design.md P0 价值数据）
+### Source of value data: games without search (`scripts/exp_value_source.py` / `exp_value_scale.py` / `exp_value_only.py`, 2026-10-11 / 12; design in design.md P0 value data)
 
-不搜索对局 = 网络先验抽样（`selfplay.py run --policy-only`，只有价值标签），12 进程约 10 万局/小时。pv_bench 测试集，每格：结果 BCE / 只用价值的决策损失 / 带先验的决策损失（标准误：BCE 约 0.016，损失约 0.08）。头 A = 冻结主干上的两层 MLP（256），B = A + 一个价值专用 Transformer 块，BU = B + 解冻主干最上面一块（`--policy-anchor 1` 保住策略）。
+Games without search = sampling from the network prior (`selfplay.py run --policy-only`, value labels only), 12 processes about 100k games/hour. pv_bench test set, each cell: result BCE / value-only decision loss / decision loss with prior (standard errors: BCE about 0.016, loss about 0.08). Head A = a two-layer MLP (256) on a frozen trunk, B = A + one value-only Transformer block, BU = B + the trunk's top block unfrozen (`--policy-anchor 1` keeps the policy).
 
-| 网络 | 数据 | 自对弈测试 | 人类测试 |
+| network | data | self-play test | human test |
 |---|---|---|---|
 | sp-gen5 | — | 0.429 / 1.44 / 1.18 | 0.547 / 1.17 / 1.07 |
-| VS-S（sp-gen5 的配方，联合训练） | 5 万局搜索对局（第 5 代） | 0.433 / 1.43 / 1.19 | 0.548 / 1.17 / 1.00 |
-| VS-P（同上） | 5 万局不搜索对局 | 0.440 / 1.38 / 1.25 | 0.551 / 1.22 / 0.97 |
-| VH-A-S（冻结主干） | 搜索对局 | 0.430 / 1.44 / 1.13 | 0.547 / 1.15 / 0.97 |
-| VH-A-P / VH-B-P | 不搜索对局 | 0.430 / 1.44 / 1.19，0.432 / 1.42 / 1.16 | 0.547 / 1.21 / 1.01，0.548 / 1.19 / 1.02 |
-| VX-A4 / A1 / B4 / B4U1（混人类数据 sp_frac 0.75，价值只计一次，3,280 步） | 40 万局不搜索，每局 4 个（A1：1 个）局面 | 0.430 / 1.45–1.49 / 1.15–1.22 | 0.547 / 1.14–1.18 / 0.95–1.00 |
-| VO-A / B / BU（只用新局面 sp_frac 1，每次抽到都计，按留出的不搜索局面 BCE 选） | 同上（约 152 万个训练局面，3 遍） | 0.431–0.434 / 1.45–1.50 / 1.15–1.16 | 0.549–0.555 / 1.19–1.26 / 0.99–1.03 |
+| VS-S (sp-gen5's recipe, joint training) | 50k search games (generation 5) | 0.433 / 1.43 / 1.19 | 0.548 / 1.17 / 1.00 |
+| VS-P (same) | 50k games without search | 0.440 / 1.38 / 1.25 | 0.551 / 1.22 / 0.97 |
+| VH-A-S (frozen trunk) | search games | 0.430 / 1.44 / 1.13 | 0.547 / 1.15 / 0.97 |
+| VH-A-P / VH-B-P | games without search | 0.430 / 1.44 / 1.19, 0.432 / 1.42 / 1.16 | 0.547 / 1.21 / 1.01, 0.548 / 1.19 / 1.02 |
+| VX-A4 / A1 / B4 / B4U1 (mixed with human data, sp_frac 0.75, value counted once, 3,280 steps) | 400k games without search, 4 (A1: 1) positions per game | 0.430 / 1.45–1.49 / 1.15–1.22 | 0.547 / 1.14–1.18 / 0.95–1.00 |
+| VO-A / B / BU (new positions only, sp_frac 1, counted every time drawn, chosen by BCE on held-out no-search positions) | same as above (about 1.52M training positions, 3 passes) | 0.431–0.434 / 1.45–1.50 / 1.15–1.16 | 0.549–0.555 / 1.19–1.26 / 0.99–1.03 |
 
-- 留出的不搜索局面上的价值 BCE（起点 sp-gen5 0.4424）：VX 训练中最低 0.4392（第 656 步），之后回到起点附近（混入人类数据、价值只计一次，后面的步只剩人类价值在学）；修正后 VO-A 0.4392、VO-B 0.4371、VO-BU 0.4370，300–600 步就到顶，训练 BCE 与验证一致（不是过拟合，是标签噪声的下限）。人类价值 BCE 随之变差 0.002–0.008。
-- 对战（各 1,600 次迭代，宽池，配对）：VH-A-S 对 sp-gen5 49.7% ± 2.9%（400 对）；VX-B4 49.6% ± 2.9%（400 对）；VO-A 46.2% ± 3.8%（210 对，中途停掉开第 6 代）。
-- 结论：**不搜索对局的价值标签没有带来可测的提升**。BCE 降 0.003–0.005 只是校准到了不搜索对局的胜负分布，没有变成更好的决策（只用价值的损失反而略差）。
+- Value BCE on held-out no-search positions (start sp-gen5 0.4424): VX's lowest during training 0.4392 (step 656), then back near the start (mixed with human data and value counted once, the later steps learn only the human value); after the fix VO-A 0.4392, VO-B 0.4371, VO-BU 0.4370, topping out after 300–600 steps, training BCE matching validation (not overfitting: the floor set by label noise). Human value BCE gets worse by 0.002–0.008 along with it.
+- Matches (1,600 iterations each, wide pool, paired): VH-A-S vs sp-gen5 49.7% ± 2.9% (400 pairs); VX-B4 49.6% ± 2.9% (400 pairs); VO-A 46.2% ± 3.8% (210 pairs, stopped midway to start generation 6).
+- Conclusion: **value labels from games without search bring no measurable gain**. The BCE drop of 0.003–0.005 is only calibration to the result distribution of no-search games and did not turn into better decisions (the value-only loss is even slightly worse).
 
-### 拖延循环：到 300 回合上限的对局（2026-10-14；第 6 代 199 局 + 第 7 代 200 局，约 0.2% 的对局、约 2% 的自对弈算力）
+### Stall loops: games at the 300-turn cap (2026-10-14; generation 6's 199 games + generation 7's 200, about 0.2% of the games, about 2% of the self-play compute)
 
-| 类别（最后 100 回合） | 局数 | 占比 | 场上还有再生力的局 |
+| category (last 100 turns) | games | share | games with Regenerator still on the field |
 |---|---|---|---|
-| 双方一直换人 | 312 | 78% | 304 |
-| 一方一直换人，另一方出招 | 53 | 13% | 48 |
-| 攻击 / 回复消耗战 | 27 | 7% | 22 |
-| 几乎没有伤害 | 7 | 2% | 6 |
+| both sides switch all the time | 312 | 78% | 304 |
+| one side switches all the time, the other attacks | 53 | 13% | 48 |
+| attack / recovery attrition | 27 | 7% | 22 |
+| almost no damage | 7 | 2% | 6 |
 
-- 剩下的多是受队成员（钢铠鸦、浪花鱼、天蝎王、吃吼霸、超坏星、幸福蛋、伽勒尔呆呆王、土王）。
-- 价值是准的：打到 150–299 回合分出胜负的 477 局，第 100–140 回合价值 0.8–1.0 的一方赢 94%，0.6–0.8 赢 73%，0.4–0.6 赢 48%。但第 6 代到上限的局里 31% 有一方价值 ≥ 0.9、29% 在 0.75–0.9，只有 40% 双方接近：**赢家不收**（例：对手只剩 1% 血的拉帝欧斯和钢铠鸦，6 只满编的一方一直换人）。
-- 机制（第 6 代第 150 回合以后的 61,666 个决策）：双方都换人的那类里，出招与换人的均值差中位 −0.004（77% 在 0.02 以内）；换人的访问占比 0.71 ≈ 先验占比 0.69（搜索几乎不改变先验）；后期温度 0.25 让 88% 选了换人。赢家价值饱和（所有选项都约等于 1），没有"更快赢"的梯度；到上限的对局没有价值标签，策略目标照常训练，自我强化"受队就换人"。
-- 循环检测（某一方 20 回合没有宝可梦倒下、最近 8 回合换了 6 次人）：在第 6 代数据上抓到全部到上限的局，正常对局只碰 1.6% 的局 / 0.46% 的决策。
-- 平手裁决（`agents/tiebreak.py`）在 4 局"大优却一直换人"的 28 个决策上改了 12 个，改成的都是有进展的招（撒菱、剧毒、纠缠不休、热水、重踏）。
+- What remains is mostly stall team members (Corviknight, Alomomola, Gliscor, Dondozo, Toxapex, Blissey, Slowking-Galar, Clodsire).
+- The value is accurate: of the 477 games decided at turns 150–299, the side with value 0.8–1.0 at turns 100–140 wins 94%, 0.6–0.8 wins 73%, 0.4–0.6 wins 48%. But among generation 6's games at the cap, in 31% one side has value ≥ 0.9 and in 29% 0.75–0.9; only in 40% are both sides close: **the winner does not close it out** (example: the opponent has only a Latios at 1% HP and a Corviknight left, and the side with all 6 keeps switching).
+- Mechanism (generation 6's 61,666 decisions after turn 150): in the both-sides-switch category, the median difference between the means of moves and switches is −0.004 (77% within 0.02); the switches' visit share 0.71 ≈ their prior share 0.69 (the search barely changes the prior); the late temperature 0.25 makes 88% pick a switch. The winner's value is saturated (all options about 1), with no "win faster" gradient; games at the cap have no value labels while their policy targets train as usual, self-reinforcing "against stall, switch".
+- Loop detection (one side has had no Pokémon faint for 20 turns and switched 6 times in the last 8 turns): on generation 6's data it catches every game at the cap, and touches only 1.6% of the games / 0.46% of the decisions of normal games.
+- The tiebreak (`agents/tiebreak.py`) changes 12 of the 28 decisions in 4 "far ahead but keeps switching" games, all to moves that make progress (Spikes, Toxic, Infestation, Scald, Bulldoze).
 
-### 引擎状态修复的对战 A/B（2026-10-11，设计见 D17）
+### Match A/B of the engine state fixes (2026-10-11, design in D17)
 
-同一个 sp-gen5，A 方带修复、B 方为修复前的引擎状态（`ALPHA_STATE_FIXES_B=0`），1,600 次迭代，宽池；混乱补丁在引擎里，双方都有。
+The same sp-gen5; side A with the fixes, side B with the engine state from before them (`ALPHA_STATE_FIXES_B=0`), 1,600 iterations, wide pool; the confusion patch is in the engine, so both sides have it.
 
-| A 方的修复 | 结果 |
+| side A's fixes | result |
 |---|---|
-| 计时（睡眠 / 睡觉、剧毒、连续守住、愿望、混乱 / 挑衅 / 再来一次 / 哈欠）+ 消失的道具不重抽（3,000 次迭代） | 45.2% ± 5.4%（115 对，停掉）：古代活性 / 夸克充能的提升从没传给引擎，旧的道具重抽碰巧补回了它，单修道具反而去掉了 |
-| 上面 + 能力提升和其他持续状态 + 预知未来 | **56.2% ± 2.5%**（598 对；约 +43 Elo） |
+| Timers (sleep / Rest, Toxic, consecutive Protect, Wish, confusion / Taunt / Encore / Yawn) + vanished items not resampled (3,000 iterations) | 45.2% ± 5.4% (115 pairs, stopped): the Protosynthesis / Quark Drive boost was never passed to the engine, the old item resampling happened to make up for it, and fixing items alone removed that |
+| The above + stat boosts and other volatile statuses + Future Sight | **56.2% ± 2.5%** (598 pairs; about +43 Elo) |
 
-| 全部修复（档位 2：+ 复活祈祷按候选搜索、请求里的 PP、逃脱按钮 / 红牌、对手速度推断）对上一行的版本（档位 1） | **51.96% ± 2.43%**（600 对；区间 49.5%–54.4%：不变差，约 +14 Elo，不显著）；回退 A 0 / B 4（B 的复活祈祷走老路） |
-| （中途停掉）全部修复对全关 | 57.2% ± 5.9%（97 对） |
-| 档位 3（2026-10-13：必须休息、对手 PP、灭亡之歌 / 定身法、回复封锁 / 电磁飘浮 / 深渊突刺计时、被打过的替身、延长道具、新道具按名字、幻觉）对档位 2，sp-gen6；当天的引擎补丁双方都有 | 48.96% ± 2.43%（600 对；作废：这一版有两个 bug，代码审查后修复（`151e686`）：poke-env 的必须休息标记在休息回合后不清除，休息完的宝可梦被当成还要休息；灭亡之歌的旧计数一起传入） |
-| 档位 3（审查修复后，`151e686`）对档位 2，sp-gen6 | **52.08% ± 1.66%**（1,200 对：wide1000 前 600 对 51.46% ± 2.40%，新的 600 对（wide1000 600–999 + wide200）52.67% ± 2.29%；区间 50.4%–53.7%，显著，约 +14 Elo；回退 0 / 0） |
-| 搜索树内的上下文（2026-10-14，合并 `a6ed97f`：招式按引擎的 `Acted` 标记才算用过 / 暴露，没出手记"行动前倒下"/"被阻止"；倒下后的强制换人不算新回合）对旧的上下文（`ALPHA_LEGACY_CONTEXT_B=1`），sp-gen7 | **51.33% ± 1.65%**（1,200 对：wide1000 51.62% ± 2.32%，ab600b 51.08% ± 2.35%；区间 49.7%–53.0%：两批方向一致，略好、不显著，不变差；回退 0 / 0） |
-| 平手裁决（`agents/tiebreak.py` 默认参数：根价值 ≥ 0.85、均值差 ≤ 0.01、访问 ≥ 5%、进展多 ≥ 0.1）开对关，sp-gen7 | **48.75% ± 1.66%**（1,200 对：wide1000 48.17% ± 2.38%，ab600b 49.33% ± 2.31%；区间 47.1%–50.4%，两批都偏低，约 −9 Elo，不显著但没有帮助）。触发很频繁：2,400 局里 766 局（32%）、共 2,687 次；触发过的局 A 赢 91.5%（本来就是占优的局），对局没有变短（A 赢 / B 赢的局平均约 33 回合）；到上限 0 局（评估本身就很少循环）。保持关闭 |
+| All fixes (tier 2: + Revival Blessing searched over candidates, PP from the request, Eject Button / Red Card, opponent speed inference) vs the previous row's version (tier 1) | **51.96% ± 2.43%** (600 pairs; interval 49.5%–54.4%: not worse, about +14 Elo, not significant); fallbacks A 0 / B 4 (B's Revival Blessing takes the old path) |
+| (stopped midway) all fixes vs all off | 57.2% ± 5.9% (97 pairs) |
+| Tier 3 (2026-10-13: must recharge, opponent PP, Perish Song / Disable, Heal Block / Magnet Rise / Throat Chop timers, Substitutes that have been hit, extender items, new items by name, Illusion) vs tier 2, sp-gen6; that day's engine patches on both sides | 48.96% ± 2.43% (600 pairs; void: this version had two bugs, fixed after code review (`151e686`): poke-env's must-recharge flag was not cleared after the recharge turn, so a Pokémon done recharging was treated as still having to recharge; Perish Song's old count was passed in as well) |
+| Tier 3 (after the review fixes, `151e686`) vs tier 2, sp-gen6 | **52.08% ± 1.66%** (1,200 pairs: wide1000's first 600 pairs 51.46% ± 2.40%, the new 600 pairs (wide1000 600–999 + wide200) 52.67% ± 2.29%; interval 50.4%–53.7%, significant, about +14 Elo; fallbacks 0 / 0) |
+| Context in the search tree (2026-10-14, merged `a6ed97f`: a move counts as used / revealed only by the engine's `Acted` flag; not acting is recorded as "fainted before acting" / "prevented"; the forced switch after a faint is not a new turn) vs the old context (`ALPHA_LEGACY_CONTEXT_B=1`), sp-gen7 | **51.33% ± 1.65%** (1,200 pairs: wide1000 51.62% ± 2.32%, ab600b 51.08% ± 2.35%; interval 49.7%–53.0%: both batches point the same way, slightly better, not significant, not worse; fallbacks 0 / 0) |
+| Tiebreak (`agents/tiebreak.py` defaults: root value ≥ 0.85, mean difference ≤ 0.01, visits ≥ 5%, progress ≥ 0.1 more) on vs off, sp-gen7 | **48.75% ± 1.66%** (1,200 pairs: wide1000 48.17% ± 2.38%, ab600b 49.33% ± 2.31%; interval 47.1%–50.4%, both batches low, about −9 Elo, not significant but no help). It fires often: in 766 of 2,400 games (32%), 2,687 times in all; A wins 91.5% of the games where it fired (games that were already ahead), and games did not get shorter (games won by A / by B average about 33 turns); 0 games at the cap (the evaluation itself rarely loops). Kept off |
 
-对比：最近几代自对弈每代 50–51%。
+For comparison: recent self-play generations score 50–51% each.
 
-### 引擎准确性对决策的影响（2026-10-18；差分工作 L1–L228 前后，doc/engine-diff.md）
+### Engine accuracy's effect on decisions (2026-10-18; before and after the differential work L1–L228, doc/engine-diff.md)
 
-问题：差分工作之前，引擎的逐回合一致率只有约 86%。它是不是自对弈提升的瓶颈？
+Question: before the differential work, the engine's per-turn agreement was only about 86%. Was it the bottleneck of self-play progress?
 
-做法：
-- 旧版用差分工作开始前的 `5e2deb4`（10-15）。只把它的 alpha_search 加旧引擎单独编译成 `alpha_search_old`，和新版放在同一个进程里。两版的搜索代码（ismcts / tnet / BatchSearch）完全相同；features.rs 的改动保持网络训练时的含义；旧引擎解析新格式的状态串也没问题。所以这个对比只隔离了引擎这一项。网络里用引擎算出的伤害特征也随引擎变化，这部分算作引擎的影响。
-- 局面：第 8 代自对弈（旧代码，网络 v6-s-spread）120 局里回合开始的决策点，用双方记录合并成完全信息局面，共 5,288 个。
-- 每个局面跑：新、旧引擎各 2 次 800 次迭代的单世界 PUCT 搜索（种子不同），再用新引擎跑一次 16,000 次迭代的深搜索作参考。
-- 置信区间按对局做 cluster bootstrap。
+Method:
+- The old version is `5e2deb4` (10-15), from before the differential work started. Only its alpha_search plus the old engine are compiled separately as `alpha_search_old`, in the same process as the new version. The two versions' search code (ismcts / tnet / BatchSearch) is identical; the changes to features.rs keep the meanings the network was trained with; the old engine parses the new state string format without problems. So the comparison isolates the engine alone. The damage features the network gets from the engine also change with the engine; that part counts as the engine's effect.
+- Positions: the decision points at turn start in 120 games of generation 8 self-play (old code, network v6-s-spread), merged from both sides' records into perfect-information positions, 5,288 in all.
+- Each position runs: 2 single-world PUCT searches of 800 iterations each with the new and with the old engine (different seeds), plus one 16,000-iteration deep search with the new engine as the reference.
+- Confidence intervals by cluster bootstrap over games.
 
-| 指标 | 数值 [95% 区间] |
+| measure | value [95% interval] |
 |---|---|
-| 首选不同：新 vs 新（只是种子不同，即搜索噪声） | 7.4% [6.5, 8.5] |
-| 首选不同：旧 vs 新 | 10.1% [8.8, 11.6] |
-| **超出噪声的翻转率** | **2.7% [1.9, 3.5]**；两个种子都稳定的翻转 185 个（3.5%），多为招式↔招式、换人↔招式，涉及太晶的只有 8 个 |
-| 访问分布总变差：新 vs 新 / 旧 vs 新 | 0.054 / 0.072 |
-| 根节点网络先验的首选不同 | 1.1% |
-| 和深搜索首选一致：新 / 旧 | 75.8% / 74.3% |
-| 参考搜索下每个决策的遗憾值（胜率）：新 / 旧 | 0.0049 / 0.0056 |
-| **旧比新多出的遗憾值** | **0.0007 [0.0003, 0.0012]** / 决策；按访问分布采样（τ = 1）时相同 |
+| top choice differs: new vs new (seeds only, i.e. search noise) | 7.4% [6.5, 8.5] |
+| top choice differs: old vs new | 10.1% [8.8, 11.6] |
+| **flip rate beyond noise** | **2.7% [1.9, 3.5]**; 185 flips stable across both seeds (3.5%), mostly move↔move and switch↔move, only 8 involving tera |
+| total variation of the visit distributions: new vs new / old vs new | 0.054 / 0.072 |
+| root network prior's top choice differs | 1.1% |
+| agrees with the deep search's top choice: new / old | 75.8% / 74.3% |
+| regret per decision under the reference search (win probability): new / old | 0.0049 / 0.0056 |
+| **old's extra regret over new** | **0.0007 [0.0003, 0.0012]** / decision; the same when sampling from the visit distribution (τ = 1) |
 
-结论：
-- 旧引擎的误差确实让决策变差，而且显著，但很小。每个决策多损失约 0.07% 的胜率；每方每局约 22 个决策，按步累加约 1.5% 的胜率，相当于 +10 Elo 量级（+5 到 +18）。
-- **对战 A/B 验证**（用户质疑“误差会在一局里多步累积”）：同一个 v6-s-spread，双方都是 GPU 批量搜索、1,600 次迭代、ml3；A 用现在的引擎，B 用旧引擎（B 方的 Batcher 用 `alpha_search_old`）。结果：wide1000 **52.58% ± 2.43%**（600 对），ab600b **52.17% ± 2.39%**（600 对），合计 **52.38% ± 1.70%**（1,200 对，**+16.5 Elo**，区间 +4.7 到 +28.4）；0 失败、0 回退。两批方向一致，结果显著。整局结果比单步累加的估计略高（+16.5 对 +10），但置信区间重叠：多步误差确实是在叠加，但没有放大到另一个量级。这符合“胜率损失按步相加”的分析：前一步的错误体现在后续局面的价值里，不会相乘。测到的是固定网络、搜索预算和队伍分布下替换一次引擎的收益：既不是所有引擎改进收益的上限，也不能严格证明是重新训练后收益的下限。网络是在旧引擎的搜索目标上训练的，可能已经适应了旧引擎的偏差，这会让测得的收益偏低；网络训练信号受到的影响这次没有测。
-- 损失高度集中：前 1% 的局面贡献了全部净差，其余局面互相抵消、属于噪声。看了遗憾值最大的几个例子，新旧引擎在当前回合的转移都相同，差别出在树更深处的回合。也就是说，影响来自少数关键局面里的连锁效果，而不是普遍性的偏差。
-- 对比：在同一个参考下，800 次迭代的搜索本身就有 0.0049 的遗憾值，约是引擎误差的 7 倍；搜索的种子噪声（7.4%）也是引擎翻转（2.7%）的近 3 倍。10-11 修复“传给引擎的局面”（计时、能力等级、易变状态）带来了 +43 Elo。所以之前自对弈提升慢，主要瓶颈不在引擎的准确性，而在搜索预算和网络质量，其次是传给引擎的局面是否准确。引擎准确性带来约 +16 Elo：确实存在，大约相当于一两代自对弈的提升，但不是主要瓶颈。
-- 局限：
-  - 参考搜索本身用的是新引擎，对新版有利；
-  - 用的是完全信息单世界，实战是 32 个信念世界；
-  - 局面来自旧系统自己的对局，分布由旧系统决定；
-  - 单步换算成 Elo 很粗，对战 A/B 才是整局的直接测量（见上）。
+Conclusions:
+- The old engine's errors do make decisions worse, significantly, but only slightly. About 0.07% win probability lost per decision; with about 22 decisions per side per game, summed step by step about 1.5% win probability, on the order of +10 Elo (+5 to +18).
+- **Match A/B check** (the user questioned this: "errors accumulate over many steps in a game"): the same v6-s-spread, both sides GPU batched search, 1,600 iterations, ml3; A with the current engine, B with the old one (B's Batcher uses `alpha_search_old`). Result: wide1000 **52.58% ± 2.43%** (600 pairs), ab600b **52.17% ± 2.39%** (600 pairs), together **52.38% ± 1.70%** (1,200 pairs, **+16.5 Elo**, interval +4.7 to +28.4); 0 failures, 0 fallbacks. Both batches point the same way, and the result is significant. The whole-game result is slightly above the step-sum estimate (+16.5 vs +10), but the confidence intervals overlap: errors over many steps do add up, but they do not grow by an order of magnitude. This fits the analysis that "win-probability losses add up per step": an earlier step's mistake shows in the values of the later positions; the losses do not multiply. What was measured is the gain from swapping the engine once with a fixed network, search budget and team distribution: neither an upper bound on the gains of all engine improvements nor, strictly, a lower bound on the gain after retraining. The network was trained on the old engine's search targets and may have adapted to the old engine's biases, which would make the measured gain low; the effect on the network's training signal was not measured this time.
+- The loss is highly concentrated: the top 1% of positions contribute the whole net difference; the other positions cancel out and are noise. In the examples with the largest regret, the old and new engines have the same transition on the current turn; the difference is in turns deeper in the tree. So the effect comes from chain effects in a few key positions, not from a widespread bias.
+- By comparison: under the same reference, the 800-iteration search itself has a regret of 0.0049, about 7 times the engine error; the search's seed noise (7.4%) is also nearly 3 times the engine flips (2.7%). The 10-11 fix of "the position passed to the engine" (timers, stat stages, volatile statuses) brought +43 Elo. So the main bottleneck behind the earlier slow self-play progress was not engine accuracy but the search budget and the network's quality, and second whether the position passed to the engine is accurate. Engine accuracy brings about +16 Elo: real, about one or two generations of self-play progress, but not the main bottleneck.
+- Limits:
+  - the reference search itself uses the new engine, which favours the new version;
+  - the positions are perfect-information single worlds, while real games use 32 belief worlds;
+  - the positions come from the old system's own games, so their distribution is set by the old system;
+  - converting single steps to Elo is crude; the match A/B is the direct whole-game measurement (above).
 
-### 2026-10-25 一批状态 / 引擎修复的对战 A/B（`9885c52` 对 `42a5a7f`）
+### Match A/B of a batch of state / engine fixes, 2026-10-25 (`9885c52` vs `42a5a7f`)
 
-上一次 A/B（B6，`42a5a7f`）之后的全部修复：状态构建（B8；S157；S158a–d：性格与努力值、对手的 Choice 锁定、隐藏形态、伪装 Zoroark 的太晶与等级、变身锁定的槽位、待生效的 Healing Wish、毒菱的顺序、Rage Fist 计数、Revival Blessing 次数、变身后的一次性特性、Stellar 标记）和引擎（L243–L247：锁定中 0 PP、Sleep Talk 不该调出的招式、胜负已分后不再结算、Cursed Body 按段、Magic Bounce 先于命中）。状态构建和引擎两边都改了，一个进程装不下两份，所以用新的拆分评测（`scripts/eval_pairs.py --other`：B 方由旧版本的 worktree 和它自己的 venv 运行；拆分本身的 A/A 8 / 16）。
+All the fixes since the previous A/B (B6, `42a5a7f`): state construction (B8; S157; S158a–d: natures and EVs, the opponent's Choice lock, hidden formes, a disguised Zoroark's tera type and level, Transform-locked slots, a pending Healing Wish, the order of Toxic Spikes, the Rage Fist count, Revival Blessing uses, one-time abilities after Transform, the Stellar flag) and the engine (L243–L247: 0 PP while locked, moves Sleep Talk should not call, no further resolution once the game is decided, Cursed Body per hit, Magic Bounce before the accuracy check). Both state construction and the engine changed, and one process cannot hold two copies, so a new split evaluation is used (`scripts/eval_pairs.py --other`: side B is run by a worktree of the old version with its own venv; the split's own A/A 8 / 16).
 
-同一个 v6-h，双方都是 GPU 批量搜索、1,600 次迭代、ml3：wide1000 **49.33% ± 2.38%**（600 对），ab600b **50.88% ± 2.41%**（600 对），合计约 **50.1% ± 1.7%**：持平；双方 0 失败、0 回退、队伍全部对得上。和预期一致：这些修复各自影响的局面很少（`state_chain` 的 9,475 处多数集中在少数字段、少数对局），之前整个旧引擎的误差也只值 +16.5 Elo（见上）。日志里的 `switch greninja: not a live benched mon` 是一致性检查的误报（下单层按前缀把 Greninja-Bond 对回请求，2026-10-24 已修，检查没跟上；两个版本都有，旧版本一方 867 次），已改。
+The same v6-h, both sides GPU batched search, 1,600 iterations, ml3: wide1000 **49.33% ± 2.38%** (600 pairs), ab600b **50.88% ± 2.41%** (600 pairs), together about **50.1% ± 1.7%**: even; 0 failures, 0 fallbacks on both sides, all teams matched. As expected: each of these fixes affects few positions (most of `state_chain`'s 9,475 cases sit in a few fields and a few games), and the whole old engine's error was worth only +16.5 Elo (above). The log's `switch greninja: not a live benched mon` is a false alarm of the consistency check (the order layer matches Greninja-Bond back to the request by prefix, fixed 2026-10-24, and the check had not followed; both versions have it, 867 times on the old version's side); fixed.
 
-### 代码清理的回归检查（2026-10-14，`d290678` / `ac2b3c0` / `7575f7a`）
+### Regression check of the code cleanup (2026-10-14, `d290678` / `ac2b3c0` / `7575f7a`)
 
-- 确定性检查（固定种子）前后完全一致：40 步 sp-gen7 训练的验证指标（权重差 < 7e-9）；测试对局的 27 个引擎状态；搜索结果（UCB1、CPU 网络 PUCT、批量搜索，2 个局面）；`check_tnet` 误差 < 7e-6。
-- 端到端对战：sp-gen7 对 sp-gen6，GPU 流程，1,600 次迭代，wide1000：**50.83% ± 2.44%**（600 对；晋升时 49.83% ± 2.64%，一致）；回退 0 / 0，失败对局 0。
+- Deterministic checks (fixed seeds) identical before and after: the validation metrics of 40 sp-gen7 training steps (weight difference < 7e-9); 27 engine states of a test game; search results (UCB1, CPU network PUCT, batched search, 2 positions); `check_tnet` error < 7e-6.
+- End-to-end match: sp-gen7 vs sp-gen6, GPU pipeline, 1,600 iterations, wide1000: **50.83% ± 2.44%** (600 pairs; 49.83% ± 2.64% at promotion, consistent); fallbacks 0 / 0, failed games 0.
 
-## 关键对局结果
+## Key match results
 
-### 搜索 + 网络（ISMCTS，heldout，每步 500 ms 单线程，32 个世界，300 局）
+### Search + network (ISMCTS, heldout, 500 ms per move single-threaded, 32 worlds, 300 games)
 
-| A | B | A 胜率 | Elo | 说明 |
+| A | B | A win rate | Elo | notes |
 |---|---|---|---|---|
-| 价值网络 + 双方先验（`s_ismcts_pv`） | 手写评估（`s_ismcts`） | **66.3% ± 5.2%** | +117 | 网络进入搜索的总效果 |
-| 仅价值网络（`s_ismcts_net`，UCB1） | 手写评估 | 37.0% ± 5.3% | −92 | 迭代少约 10 倍 + 绝对胜率压缩了差距 |
-| 价值网络 + 双方先验 | 仅价值网络 | **73.0% ± 5.0%** | +173 | 策略先验的贡献 |
-| 价值网络 + 双方先验 | 先验 + 手写评估（`s_ismcts_p`） | **56.7% ± 5.3%** | +47 | 有先验时价值网络仍有贡献（推算先验 + 手写 对 手写约 +70 Elo） |
+| value network + both priors (`s_ismcts_pv`) | handwritten eval (`s_ismcts`) | **66.3% ± 5.2%** | +117 | the total effect of the network entering the search |
+| value network only (`s_ismcts_net`, UCB1) | handwritten eval | 37.0% ± 5.3% | −92 | about 10 times fewer iterations + the absolute win rate compresses the gap |
+| value network + both priors | value network only | **73.0% ± 5.0%** | +173 | the policy prior's contribution |
+| value network + both priors | prior + handwritten eval (`s_ismcts_p`) | **56.7% ± 5.3%** | +47 | the value network still contributes with priors (implied: prior + handwritten vs handwritten about +70 Elo) |
 
-每步迭代（500 ms，32 世界，8 进程并发时）：手写约 9.3 万，仅价值约 9 千，价值 + 先验约 6 千，先验 + 手写约 1.1 万（先验在节点第二次被访问时才算）。根节点最大访问份额中位数：手写 0.57、仅价值 0.26、价值 + 先验 0.66、先验 + 手写 0.68。
+Iterations per move (500 ms, 32 worlds, 8 processes running concurrently): handwritten about 93k, value only about 9k, value + prior about 6k, prior + handwritten about 11k (the prior is computed only on a node's second visit). Median of the largest root visit share: handwritten 0.57, value only 0.26, value + prior 0.66, prior + handwritten 0.68.
 
-### 全量 Transformer 进入搜索（heldout，每步 500 ms 单线程，32 个世界，300 局；2026-10-07）
+### The full Transformer in the search (heldout, 500 ms per move single-threaded, 32 worlds, 300 games; 2026-10-07)
 
-| A | B | A 胜率 | Elo | 说明 |
+| A | B | A win rate | Elo | notes |
 |---|---|---|---|---|
-| Transformer v5-final（`s_ismcts_tf`，Rust CPU 推理） | v1 中档 MLP（`s_ismcts_pv`） | **58.0% ± 5.5%** | +56 | 每步迭代约 1.5k–3.6k 对约 6.6k；双方先验 + 价值 |
-| 同一网络 GPU 树并行搜索（`s_ismcts_tfg`，批量 32 × 5 线程，流水线） | 同一网络 CPU 搜索（`s_ismcts_tf`） | **60.8%**（配对 61.3% ± 8.2%） | 约 +80 | 107 局后停止（2 局并行，GPU 版只用 5 线程）；`20261007-140457` |
+| Transformer v5-final (`s_ismcts_tf`, Rust CPU inference) | v1 medium MLP (`s_ismcts_pv`) | **58.0% ± 5.5%** | +56 | about 1.5k–3.6k iterations per move vs about 6.6k; both priors + value |
+| the same network, GPU tree-parallel search (`s_ismcts_tfg`, batch 32 × 5 threads, pipelined) | the same network, CPU search (`s_ismcts_tf`) | **60.8%** (paired 61.3% ± 8.2%) | about +80 | stopped after 107 games (2 games in parallel, the GPU version only used 5 threads); `20261007-140457` |
 
-### 搜索质量的代理指标（同样 0.5 秒，40 个局面，32 个相同世界；与单棵树 16,000 次迭代的深搜索比较根节点首选和访问分布）
+### Proxy measures of search quality (the same 0.5 s, 40 positions, 32 identical worlds; root top choice and visit distribution compared with a single-tree 16,000-iteration deep search)
 
-| 搜索 | 每步叶子数 | 首选一致 | 总变差 |
+| search | leaves per move | top-choice agreement | total variation |
 |---|---|---|---|
-| 两次深搜索（不同种子）：上限 | 16,000 | 82% | 0.148 |
-| CPU 单棵树 1k / 2k / 4k / 8k 次迭代（不限时） | — | 55% / 62% / 78% / 82% | 0.290 / 0.249 / 0.200 / 0.148 |
-| CPU 单线程，0.5 秒 | 3,600–3,750 | 65% | 0.254–0.261 |
-| GPU 根并行 8 棵树 × 批量 16 | 17,698 | 62% | 0.271 |
-| GPU 树并行，批量 32 × 8 线程 | 11,203 | 75% | 0.204 |
-| GPU 树并行 + 流水线，批量 16 / 32 / 48 | 12,021 / 16,161 / 16,759 | 72% / 70% / 78% | 0.196 / 0.195 / 0.213 |
-| GPU 树并行，批量 64 / 128（vl 3） | 13,657 / 16,025 | 70% / 57% | 0.214 / 0.288 |
+| two deep searches (different seeds): ceiling | 16,000 | 82% | 0.148 |
+| CPU single tree 1k / 2k / 4k / 8k iterations (no time limit) | — | 55% / 62% / 78% / 82% | 0.290 / 0.249 / 0.200 / 0.148 |
+| CPU single thread, 0.5 s | 3,600–3,750 | 65% | 0.254–0.261 |
+| GPU root-parallel 8 trees × batch 16 | 17,698 | 62% | 0.271 |
+| GPU tree-parallel, batch 32 × 8 threads | 11,203 | 75% | 0.204 |
+| GPU tree-parallel + pipelining, batch 16 / 32 / 48 | 12,021 / 16,161 / 16,759 | 72% / 70% / 78% | 0.196 / 0.195 / 0.213 |
+| GPU tree-parallel, batch 64 / 128 (vl 3) | 13,657 / 16,025 | 70% / 57% | 0.214 / 0.288 |
 
-### 自对弈的搜索设置（`scripts/check_search_targets.py`，60 个局面，与单棵树 16,000 次无噪声深搜索比较；2026-10-07）
+### Search settings for self-play (`scripts/check_search_targets.py`, 60 positions, compared with a single-tree 16,000-iteration noiseless deep search; 2026-10-07)
 
-| 搜索 | 首选一致 | 总变差 | 单线程耗时 / 次 |
+| search | top-choice agreement | total variation | single-thread time / search |
 |---|---|---|---|
-| 网络先验本身 | 47% | 0.406 | — |
-| 500 / 1,000 / 2,000 / 3,000 / 4,000 次 | 57% / 63% / 70% / 73% / 78% | 0.300 / 0.272 / 0.230 / 0.204 / 0.184 | 0.19 / 0.39 / 0.78 / 1.16 / 1.54 s |
+| the network prior itself | 47% | 0.406 | — |
+| 500 / 1,000 / 2,000 / 3,000 / 4,000 iterations | 57% / 63% / 70% / 73% / 78% | 0.300 / 0.272 / 0.230 / 0.204 / 0.184 | 0.19 / 0.39 / 0.78 / 1.16 / 1.54 s |
 
-（47% 是与深搜索首选的一致率，不是与人类动作的一致率：后者即 top-1 55.6%。）
+(47% is the agreement with the deep search's top choice, not with human actions: the latter is the top-1 of 55.6%.)
 
-根节点 Dirichlet 噪声（3,000 次；探索量 = 先验 < 5% 的招拿到 ≥ 10% 访问的比例，"有用" = 其中深搜索也给 ≥ 10% 的比例）：
+Root Dirichlet noise (3,000 iterations; exploration = the fraction of moves with prior < 5% that get ≥ 10% of the visits, "useful" = the fraction of those to which the deep search also gives ≥ 10%):
 
-| ε \ 总浓度 | 3 | 10 | 30 |
+| ε \ total concentration | 3 | 10 | 30 |
 |---|---|---|---|
-| 0 | 72% / 0.201 / 4.4% / 78%（无噪声） | | |
+| 0 | 72% / 0.201 / 4.4% / 78% (no noise) | | |
 | 0.10 | 72% / 0.224 / 4.6% / 68% | **82% / 0.180 / 5.3% / 77%** | 80% / 0.194 / 5.3% / 73% |
 | 0.25 | 70% / 0.247 / 5.1% / 67% | 72% / 0.228 / 5.1% / 62% | 72% / 0.222 / 5.8% / 58% |
 | 0.40 | 68% / 0.273 / 6.5% / 48% | 73% / 0.245 / 5.1% / 62% | 68% / 0.258 / 5.6% / 65% |
 
-（每格：首选一致 / 总变差 / 探索量 / 有用。）选定 ε = 0.10、总浓度 10。
+(Each cell: top-choice agreement / total variation / exploration / useful.) Chosen: ε = 0.10, total concentration 10.
 
-### ISMCTS vs 确定化（heldout，300 局）
+### ISMCTS vs determinization (heldout, 300 games)
 
-| A | B | 设置 | A 胜率 |
+| A | B | setting | A win rate |
 |---|---|---|---|
-| ISMCTS N=32（`s_ismcts`） | 确定化 K=4（`s_computed`） | 500 ms | **57.3% ± 5.3%** |
-| ISMCTS N=1（`s_ismcts_n1`） | poke-engine MCTS K=1（`s_c_k1`） | 500 ms | 50.7% ± 5.4%（实现正确性：持平） |
-| ISMCTS 前 2 层闭环（`s_ismcts_cl2`） | ISMCTS 开环 | 500 ms | 48.2% ± 5.1%（无提升） |
-| ISMCTS | 确定化 K=2 | 200 ms（`normal` 档） | 48.3% ± 5.4%（持平） |
-| ISMCTS | 确定化 | 1000 ms × 4（`hard` 档） | 36.4%，仅 46 局、中止，只作参考 |
+| ISMCTS N=32 (`s_ismcts`) | determinization K=4 (`s_computed`) | 500 ms | **57.3% ± 5.3%** |
+| ISMCTS N=1 (`s_ismcts_n1`) | poke-engine MCTS K=1 (`s_c_k1`) | 500 ms | 50.7% ± 5.4% (implementation correctness: even) |
+| ISMCTS closed-loop for the first 2 levels (`s_ismcts_cl2`) | ISMCTS open-loop | 500 ms | 48.2% ± 5.1% (no gain) |
+| ISMCTS | determinization K=2 | 200 ms (`normal` level) | 48.3% ± 5.4% (even) |
+| ISMCTS | determinization | 1000 ms × 4 (`hard` level) | 36.4%, only 46 games, aborted, for reference only |
 
-### 确定化搜索的分解（`s_computed` 为 B，500 ms × 4，300 局）
+### Breakdown of the determinized search (`s_computed` as B, 500 ms × 4, 300 games)
 
-| A | A 胜率 | 说明 |
+| A | A win rate | notes |
 |---|---|---|
-| 完全知道对方配置（`s_c_oracle`） | 58.3% ± 5.5% | 隐藏信息的总价值 |
-| 只知道招式 | 57.5% ± 5.1% | 主要来自招式 |
-| 只知道努力值分配 | 53.2% ± 5.1% | |
-| 只知道道具 | 51.3% ± 5.2% | |
-| 只知道太晶 | 49.8% ± 5.2% | |
-| K=1 / 2 / 8 / 16 个样本 | 44.2 / 45.0 / 49.8 / 45.0% | 倒 U 形，最优 K=4–8 |
-| 招式 β=1 / 2 / 3（heldout） | 53.7 / 52.2 / 47.7% | 默认 β=1 |
-| 修复 1 HP bug 后 vs 修复前（`d93802d`） | 58.5% ± 6.2%（200 局） | |
+| knows the opponent's sets fully (`s_c_oracle`) | 58.3% ± 5.5% | the total value of the hidden information |
+| knows moves only | 57.5% ± 5.1% | mostly from the moves |
+| knows EV spreads only | 53.2% ± 5.1% | |
+| knows items only | 51.3% ± 5.2% | |
+| knows tera only | 49.8% ± 5.2% | |
+| K=1 / 2 / 8 / 16 samples | 44.2 / 45.0 / 49.8 / 45.0% | inverted U, best K=4–8 |
+| moves β=1 / 2 / 3 (heldout) | 53.7 / 52.2 / 47.7% | default β=1 |
+| after the 1 HP bug fix vs before (`d93802d`) | 58.5% ± 6.2% (200 games) | |
 
-### LLM 计划（2026-10-05，500 ms × 4）
+### LLM plans (2026-10-05, 500 ms × 4)
 
-| A | B | A 胜率 |
+| A | B | A win rate |
 |---|---|---|
-| LLM 首发（`s_llmplan`） | 规则首发（`s_computed`） | 47.3% ± 6.6%（186 局；无价值） |
-| LLM 计划作先验（`s_llmplan_prior`） | `s_llmplan` | 46.8% ± 7.3%（174 局；无提升） |
-| 知道对方真实配置（`s_oracle`） | `s_llmplan` | 61.8% ± 6.4%（186 局） |
+| LLM lead (`s_llmplan`) | rule-based lead (`s_computed`) | 47.3% ± 6.6% (186 games; no value) |
+| LLM plan as prior (`s_llmplan_prior`) | `s_llmplan` | 46.8% ± 7.3% (174 games; no gain) |
+| knows the opponent's true sets (`s_oracle`) | `s_llmplan` | 61.8% ± 6.4% (186 games) |
 
-### 对 Foul Play（外部基准）
+### Against Foul Play (external baseline)
 
-| A | 对手档位 | A 胜率 |
+| A | opponent level | A win rate |
 |---|---|---|
-| 启发式知识 bot（`k_llmplan`） | 1000 ms × 4 | 约 10%（6 轮 × 20 局：5–20%） |
-| 启发式知识 bot | 100 / 30 / 10 ms × 1 | 20% / 27.5% / 42.5%（各 20–40 局） |
-| 确定化搜索（`s_llmplan`） | 10 ms × 1 | 65.0%（40 局） |
-| 确定化搜索 | 1000 ms × 4 | 15.0%（20 局） |
-| **`s_ismcts_tfg`（baseline-v5：全量 Transformer + GPU 树并行，每步 1.9 s，6 线程）** | **1000 ms × 4（实际每步约 1.65–1.9 s）** | **49.5%（配对 49.0% ± 7.7%，101 局，heldout）**；`20261007-150729`，停在 101 局。我方每步约 4.1 万次迭代，Foul Play 约 350 万次（8 个世界的独立树）。信息不对称对 Foul Play 有利：它约 80% 的配置预测来自"完整队伍"数据库，很可能认识池里这些照搬的流行队伍，而我们用 heldout 信念。 |
-| `s_ismcts_ma` sp-gen1（CPU 200 ms，wide200） | 200 ms × 1 | 59.1% ± 4.4%（198 对，2026-10-09） |
-| `s_ismcts_ma` sp-gen5（修复前） | 200 ms × 1 | 61.7% ± 4.2%（199 对，2026-10-11） |
-| **`s_ismcts_ma` sp-gen5 + 全部引擎状态修复（`best-2026-10-11`）** | 200 ms × 1 | **63.5% ± 4.4%**（200 对，2026-10-11）：比修复前 +1.8，不显著（自对弈 A/B 里修复约 +43 Elo；这里每步 200 ms 的 CPU 搜索迭代少得多，对手打法也不同） |
-| `s_ismcts_ma` sp-gen6（第 6 代 + 变身修复） | 200 ms × 1 | **64.3% ± 4.6%**（198 对，397 局，2026-10-13；最后 3 局因 Foul Play 自身崩溃（`format_decision` 的 `can_z` AttributeError）后卡住而停掉）：与 sp-gen5 持平。实测我方每步迭代（8 条线并发，wide200 8 对 trace）：中位 768、p10 512、p90 768（按 256 一批；均值 1,523 是被终局拉高的），用时中位 0.25 秒；晋升与自对弈用 1,600 次 |
-| `s_ismcts_ma` sp-gen6 | 1,000 ms × 1（双方各 1 秒） | **62.6% ± 4.5%**（200 对，2026-10-13；我方每步迭代中位 3,072、p10 2,816、p90 4,352）：与 200 ms 的 64.3% 持平（差 −1.7，不显著）；时间加到 5 倍，相对优势没有明显变化。回退 1 次（必须休息的回合，见 design.md D17 待修 K） |
-| `s_ismcts_ma` v6arch-pp（v7.3） | 200 ms × 1 | **68.4% ± 4.1%**（200 对，wide200，2026-10-26） |
-| `s_ismcts_ma` v6arch-pp-v75 | 200 ms × 1 | **65.0% ± 4.1%**（199 对，wide200，2026-10-26）：与 v7.3 的配对差 −3.7 ± 5.1，不显著 |
-| `s_ismcts_ma` v6arch-pp-v75 | **5,000 ms × 2**（双方每步 5 秒：我方 2 线程，Foul Play 2 个采样世界；4 条线共 16 线程） | **67.1% ± 6.3%**（108 对，220 局，wide1000 前段，2026-10-27，按计划提前停）：与 200 ms 持平——双方一起加时间，相对优势不变。每局约 36 回合、6.5 分钟（Foul Play 在对方招式多半未知时采样加倍）；1 局失败：Foul Play 自己的 Keldeo 在对局中变成 Keldeo-Resolute 后它找不到（`Could not find keldeoresolute in team_dict`，崩溃后重启），该对不计 |
+| heuristic knowledge bot (`k_llmplan`) | 1000 ms × 4 | about 10% (6 rounds × 20 games: 5–20%) |
+| heuristic knowledge bot | 100 / 30 / 10 ms × 1 | 20% / 27.5% / 42.5% (20–40 games each) |
+| determinized search (`s_llmplan`) | 10 ms × 1 | 65.0% (40 games) |
+| determinized search | 1000 ms × 4 | 15.0% (20 games) |
+| **`s_ismcts_tfg` (baseline-v5: full Transformer + GPU tree parallelism, 1.9 s per move, 6 threads)** | **1000 ms × 4 (actually about 1.65–1.9 s per move)** | **49.5% (paired 49.0% ± 7.7%, 101 games, heldout)**; `20261007-150729`, stopped at 101 games. Ours about 41k iterations per move, Foul Play about 3.5M (independent trees of 8 worlds). The information asymmetry favours Foul Play: about 80% of its set predictions come from a "complete teams" database, which very likely knows the copied popular teams in the pool, while we use the heldout belief. |
+| `s_ismcts_ma` sp-gen1 (CPU 200 ms, wide200) | 200 ms × 1 | 59.1% ± 4.4% (198 pairs, 2026-10-09) |
+| `s_ismcts_ma` sp-gen5 (before the fixes) | 200 ms × 1 | 61.7% ± 4.2% (199 pairs, 2026-10-11) |
+| **`s_ismcts_ma` sp-gen5 + all engine state fixes (`best-2026-10-11`)** | 200 ms × 1 | **63.5% ± 4.4%** (200 pairs, 2026-10-11): +1.8 over before the fixes, not significant (in the self-play A/B the fixes were worth about +43 Elo; here the 200 ms CPU search per move runs far fewer iterations, and the opponent plays differently) |
+| `s_ismcts_ma` sp-gen6 (generation 6 + the Transform fix) | 200 ms × 1 | **64.3% ± 4.6%** (198 pairs, 397 games, 2026-10-13; the last 3 games were stopped after getting stuck when Foul Play itself crashed (`format_decision`'s `can_z` AttributeError)): even with sp-gen5. Our measured iterations per move (8 lines concurrently, traces of 8 wide200 pairs): median 768, p10 512, p90 768 (in batches of 256; the mean of 1,523 is pulled up by endgames), time median 0.25 s; promotion and self-play use 1,600 |
+| `s_ismcts_ma` sp-gen6 | 1,000 ms × 1 (1 second for each side) | **62.6% ± 4.5%** (200 pairs, 2026-10-13; our iterations per move median 3,072, p10 2,816, p90 4,352): even with the 64.3% at 200 ms (difference −1.7, not significant); with 5 times the time the relative edge does not change noticeably. 1 fallback (a must-recharge turn, see design.md D17 pending fix K) |
+| `s_ismcts_ma` v6arch-pp (v7.3) | 200 ms × 1 | **68.4% ± 4.1%** (200 pairs, wide200, 2026-10-26) |
+| `s_ismcts_ma` v6arch-pp-v75 | 200 ms × 1 | **65.0% ± 4.1%** (199 pairs, wide200, 2026-10-26): paired difference with v7.3 −3.7 ± 5.1, not significant |
+| `s_ismcts_ma` v6arch-pp-v75 | **5,000 ms × 2** (5 seconds per move for both sides: ours 2 threads, Foul Play 2 sampled worlds; 4 lines, 16 threads in all) | **67.1% ± 6.3%** (108 pairs, 220 games, the start of wide1000, 2026-10-27, stopped early as planned): even with 200 ms -- adding time to both sides together leaves the relative edge unchanged. About 36 turns and 6.5 minutes per game (Foul Play doubles its sampling when most of the opponent's moves are unknown); 1 game failed: Foul Play's own Keldeo turned into Keldeo-Resolute during the game and it could not find it (`Could not find keldeoresolute in team_dict`, restarted after the crash); that pair is not counted |
 
-### 启发式知识 bot（2026-10-04，各 2000 局）
+### Heuristic knowledge bot (2026-10-04, 2000 games each)
 
-| A | B | A 胜率 |
+| A | B | A win rate |
 |---|---|---|
-| `knowledge` | `heuristic` | 65.3% ± 2.0%（heldout 65.8%） |
-| `knowledge` | 无信念 / 无计划 / 无首发 / 随机首发 | 51.6 / 49.0 / 50.2 / 49.9% |
+| `knowledge` | `heuristic` | 65.3% ± 2.0% (heldout 65.8%) |
+| `knowledge` | no belief / no plan / no lead / random lead | 51.6 / 49.0 / 50.2 / 49.9% |
 
 <!-- BEGIN GENERATED -->
 

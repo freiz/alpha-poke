@@ -1,234 +1,234 @@
-# alpha-poke 设计文档（Design Doc）
+# alpha-poke design doc
 
 | | |
 |---|---|
-| 状态 | **当前状态版**（2026-10-28 整理：只保留现行设计和有效结论；待办在 GitHub issues 里追踪，不在本文；已结束的实验过程、被取代的设置见 git 历史） |
-| 数字 | 所有训练 / 评测数字在 [`results.md`](results.md)，本文只引用结论 |
-| 配套文档 | [`research.md`](research.md)（调研，引用写作 `R§x.y`）、[`research_foul_play.md`](research_foul_play.md)、[`results.md`](results.md)（结果台账）、[`difftest.md`](difftest.md) / [`engine-diff.md`](engine-diff.md) / [`state-diff.md`](state-diff.md)（差分）、[`team_design.md`](team_design.md)（对人选队） |
+| Status | **Current-state version** (consolidated 2026-10-28: only the current design and the conclusions that still hold; to-dos are tracked in GitHub issues, not here; finished experiments and superseded settings are in the git history) |
+| Numbers | All training / evaluation numbers are in [`results.md`](results.md); this doc only cites the conclusions |
+| Companion docs | [`research.md`](research.md) (survey, cited as `R§x.y`), [`research_foul_play.md`](research_foul_play.md), [`results.md`](results.md) (results ledger), [`difftest.md`](difftest.md) / [`engine-diff.md`](engine-diff.md) / [`state-diff.md`](state-diff.md) (differential testing), [`team_design.md`](team_design.md) (team selection for playing people) |
 
-决策编号沿用旧版（代码注释里引用 D5、D11–D17）。
+Decision ids follow the old version (code comments cite D5, D11–D17).
 
 ---
 
-## 1. 目标与约束
+## 1. Goals and constraints
 
-**目标**：Gen9 OU 单打的强力对战 AI，水平接近或超越人类 pro；本地训练与评测（Python + uv + poke-env + 本地 Showdown，搜索与推理在自有 Rust crate）。研究方向：**隐藏信息有机地融入搜索**（D14）。
+**Goal**: a strong battle AI for Gen9 OU singles, at or above human pro level; trained and evaluated locally (Python + uv + poke-env + a local Showdown; search and inference in our own Rust crate). Research direction: **hidden information built organically into the search** (D14).
 
-**非目标**：每回合调用 LLM 的在线策略（R§8.4）；双打 / VGC；其他世代。组队在计划内但不是当前重点（D5）。
+**Non-goals**: an online policy that calls an LLM every turn (R§8.4); doubles / VGC; other generations. Team building is planned but not the current focus (D5).
 
-**约束**
-- 服务器：评测和训练只用本地 Showdown（`alpha_poke.servers.local_server` 只允许本机地址）。例外只有两个，都要 `--public` 和已登记的 bot 账号（`.env`；PS 的 bot 政策 2026-10：未登记的 bot 可被封号）：`scripts/play_public.py`（只接受白名单对手的挑战）和 `scripts/ladder.py`（一次一局上天梯）；都不进房间、不发消息、不主动挑战。
-- 许可：Foul Play 为 GPL-3.0，只作为外部进程对手，不 import、不复制代码；poke-engine（MIT）vendored 并打补丁（D17）；replay 数据：我们用的 Metamon raw-replays 与 HolidayOugi 两个 HF 数据集都没有标注许可（Metamon 的 parsed-replays 标注 CC-BY-NC-4.0），原始 replay 只用于本地研究、不再分发；发布的权重限非商业研究（`model_card.md`）。
-- 密钥在 `.env`，不打印、不入库。用户邮箱不出现在任何请求里。
-- 环境：`uv sync --all-groups`（普通 `uv sync` 会卸掉 torch）。
+**Constraints**
+- Servers: evaluation and training use only the local Showdown (`alpha_poke.servers.local_server` allows only local addresses). There are only two exceptions, both requiring `--public` and the registered bot account (`.env`; PS's bot policy 2026-10: unregistered bots can be banned): `scripts/play_public.py` (accepts challenges only from whitelisted opponents) and `scripts/ladder.py` (ladder, one game at a time); neither joins rooms, sends messages or challenges anyone.
+- Licenses: Foul Play is GPL-3.0 and is used only as an external-process opponent: not imported, no code copied; poke-engine (MIT) is vendored and patched (D17); replay data: the two HF datasets we use, Metamon raw-replays and HolidayOugi, carry no license (Metamon's parsed-replays is labeled CC-BY-NC-4.0); raw replays are used only for local research and not redistributed; the released weights are limited to non-commercial research (`model_card.md`).
+- Secrets live in `.env`; never printed, never committed. The user's email appears in no request.
+- Environment: `uv sync --all-groups` (a plain `uv sync` uninstalls torch).
 
-## 2. 问题特性
+## 2. Problem characteristics
 
-双人零和、**不完全信息**（对手配置隐藏，队伍预览只见 6 只物种）、**同时出招**（每回合约 9×9 的矩阵博弈，最优解常是混合策略）、随机性大、长时程。招式、道具、特性、太晶在对局中逐步暴露，努力值 / 性格永不可见：对手配置的信念模型和"怎么在搜索里用它"是核心问题。
+Two-player zero-sum, **imperfect information** (the opponent's sets are hidden; team preview shows only the 6 species), **simultaneous moves** (each turn is roughly a 9×9 matrix game whose optimum is often a mixed strategy), lots of chance, a long horizon. Moves, items, abilities and tera come out gradually during the game; EVs / natures are never visible: the belief model of the opponent's sets, and "how to use it in the search", are the core problems.
 
-## 3. 当前系统
+## 3. Current system
 
 ```
-poke-env（协议、局面跟踪）──► SelfPlayPlayer / SearchPlayer（Python 薄适配层）
-                                 │ build_state：信念模型采样 32 个对方配置（D8），引擎状态（D17）
+poke-env (protocol, battle tracking) ──► SelfPlayPlayer / SearchPlayer (thin Python adapter)
+                                 │ build_state: the belief model samples 32 opponent sets (D8), engine state (D17)
                                  ▼
-                        alpha_search（Rust）
-                        SO-ISMCTS：一棵树、每次迭代换一个世界、开环随机（D12）
-                        PUCT：双方先验 = 策略网络（对方用翻转视角前向）
-                        叶子：价值网络（残差：手写评估的线性项 + 网络）
-                                 │ 我方根访问分布
+                        alpha_search (Rust)
+                        SO-ISMCTS: one tree, a different world each iteration, open-loop chance (D12)
+                        PUCT: both sides' priors = the policy network (the opponent's from a flipped-view forward pass)
+                        leaves: the value network (residual: a linear term of the handcrafted evaluation + the network)
+                                 │ our root visit distribution
                                  ▼
-                        指令；任何失败 → KnowledgePlayer 的启发式决策
-开局：KnowledgePlayer 的规则计划只决定首发
+                        the command; any failure → KnowledgePlayer's heuristic decision
+Opening: KnowledgePlayer's rule-based plan only decides the lead
 ```
 
-### 当前配置（2026-10-28）
+### Current configuration (2026-10-28)
 
-- **网络**：`data/train/v75/runs/v6arch-pp-v75`（v6 的 7 组输入，v7.5 人类数据从头训练：现行局面构造下的 234 万局、4,607 万个局面）；自对弈谱系 r2 的起点和当前网络（`data/selfplay/state.json` 的 `current`，登记在 `exp/models.json`）。
-- **自对弈**：r2 第 0 代按“明确更好才晋升”逐步扩大（D15），两次尝试均未晋升（5.3 万局 50.2%、7.8 万局 52.5% ± 2.1%），已有 10.4 万局。
-- **引擎状态**：`build_state`（D17）；poke-engine 补丁与同源 Python 绑定（`rust/patches`）。
-- **搜索**：GPU 批量 ISMCTS（`selfplay.batcher`），32 个世界，BF16 推理；评估取访问最多（`g_ma` / `g_mb`），1,600 次迭代；CPU 版 `s_ismcts_ma`（对 Foul Play、对人类，按时间）。
-- **强度参照**：对 Foul Play，v75：各 200 ms × 1（wide200）65.0% ± 4.1%；各 5 秒 × 2（wide1000，108 对）67.1% ± 6.3%——双方一起加时间，相对优势不变。对人类：友谊赛 1 局负（1300 分左右的玩家，`doc/team_design.md`）；天梯待 bot 登记批准。
+- **Network**: `data/train/v75/runs/v6arch-pp-v75` (v6's 7 input groups, trained from scratch on the v7.5 human data: 2.34M games, 46.07M positions under the current state construction); the starting point and the current network of self-play line r2 (`current` in `data/selfplay/state.json`, registered in `exp/models.json`).
+- **Self-play**: r2 generation 0 is extended step by step under "promote only when clearly better" (D15); two attempts, neither promoted (53k games 50.2%, 78k games 52.5% ± 2.1%); 104k games so far.
+- **Engine state**: `build_state` (D17); poke-engine patches and Python bindings from the same source (`rust/patches`).
+- **Search**: GPU batched ISMCTS (`selfplay.batcher`), 32 worlds, BF16 inference; evaluation plays the most visited action (`g_ma` / `g_mb`), 1,600 iterations; the CPU version `s_ismcts_ma` (against Foul Play and humans, time-based).
+- **Strength reference**: against Foul Play, v75: 200 ms × 1 each (wide200) 65.0% ± 4.1%; 5 s × 2 each (wide1000, 108 pairs) 67.1% ± 6.3% -- more time for both sides leaves the relative edge unchanged. Against humans: one friendly game, lost (a player around 1300, `doc/team_design.md`); the ladder waits for the bot registration to be approved.
 
-## 4. 设计决策
+## 4. Design decisions
 
-### D1. 目标赛制
-Gen9 OU 单打：人口最大，人类水平有意义，没有公开的顶尖 RL agent。
+### D1. Target format
+Gen9 OU singles: the largest player base, human level is meaningful, no public top-level RL agent.
 
-### D2. 基础设施
-- **对战环境**：poke-env + 多个本地 Showdown 服务器（多个服务器要依次启动：每次启动都会 `node build`），训练、自对弈和评测共用一条路径。对局在 Showdown 上跑，poke-engine 只作搜索里的近似模型，不作真值。
-- **Python / Rust 分工**：Rust（`rust/alpha_search`，pyo3 + maturin）做每步反复跑的计算（搜索、特征化、推理）；Python 做协议、局面跟踪、信念采样、训练、评测。接口粗粒度：每步一次调用，传局面字符串和 numpy 缓冲区；Rust 的 panic 在 Python 侧转成异常、退回启发式。
-- 改 Rust 代码后 `uv run` 会自动重编；正在跑的流程依赖已编译的版本时，改动放在 worktree 里，流程结束后再合并。
+### D2. Infrastructure
+- **Battle environment**: poke-env + several local Showdown servers (started one after another: each start runs `node build`); training, self-play and evaluation share one path. Games run on Showdown; poke-engine is only an approximate model inside the search, not the ground truth.
+- **Python / Rust split**: Rust (`rust/alpha_search`, pyo3 + maturin) does the computation repeated at every step (search, featurization, inference); Python does the protocol, battle tracking, belief sampling, training and evaluation. The interface is coarse-grained: one call per step, passing a state string and numpy buffers; a Rust panic becomes an exception on the Python side and falls back to the heuristic.
+- After a Rust change `uv run` rebuilds automatically; when a running job depends on the compiled version, make the change in a worktree and merge after the job ends.
 
-### D3. 算法路线
-AlphaZero 式：信息集 MCTS（D12）+ 策略 / 价值网络（D13），expert iteration 自对弈（D15）。先人类数据（行为克隆 + 胜负）再自对弈。不用 alpha-beta（同时出招、期望节点、隐藏信息）。LLM 不进决策（D11）。
+### D3. Algorithm
+AlphaZero-style: information-set MCTS (D12) + a policy / value network (D13), expert-iteration self-play (D15). Human data first (behavior cloning + outcomes), then self-play. No alpha-beta (simultaneous moves, chance nodes, hidden information). No LLM in the decisions (D11).
 
-### D4. 复用 vs 自研
-核心栈自研；Foul Play 作外部评测对手（`scripts/vs_foulplay.py`）；复用 Metamon 的数据不复用代码；信念推断规则 clean-room 重写。
+### D4. Reuse vs build
+The core stack is our own; Foul Play is an external evaluation opponent (`scripts/vs_foulplay.py`); Metamon's data is reused, not its code; the belief inference rules are a clean-room rewrite.
 
-### D5. 组队
-- **评测**：每次评估新抽一批真实对局的队伍对（`eval_pool`，与自对弈同一个抽样器、种子不重合）；固定池 `wide200` / `wide1000`（A/B、Foul Play）、诊断池 `offmeta200` / `random200`（D16）。
-- **自对弈**（`selfplay/teams.py`）：抽一局真实对局、用双方各自的队伍（按最近使用加权，半衰期 120 天），未暴露的配置用信念模型补全（温度 1.3，比搜索更分散，避免"对手太好猜"），本地校验器检查合法性；30% 的一方换成队伍库（`data/teams/catalog.jsonl`）的完整队伍。
-- **队伍数据**（`data/teams`，`scripts/teams.py`）：完整队伍目录（Smogon 论坛）、replay 重建的队伍池、replay / Smogon 使用率统计。
-- **D5-L 对人对战的队伍**（`doc/team_design.md`，2026-10-27 / 28）：天梯胜率主要是玩家的，不是队伍的；按对阵模型算对最近环境的期望得分与最差 20%，加威胁覆盖（每个常见威胁的几种主流配置各有几只能应对）和功能位，最后让我们的 bot 实际拿候选队伍对最近的天梯队伍打（模拟对战）选 3–5 支；配置从回放重建（论坛的相似配置借努力值），交叉验证过准确度。
-- **D5-O 针对特定对手**（科研方向，已有流程 `scripts/counter_pipeline.py`）：对手的队伍分布（精确队伍 + 风格，按局数衰减）、个人化信念、打法模型（网络的分数输入即可）；只在 `play_public.py` 白名单内对战，对手名不入库（`data/players/<id>/`）。
+### D5. Teams
+- **Evaluation**: each evaluation draws a fresh batch of team pairs from real games (`eval_pool`, the same sampler as self-play, non-overlapping seeds); fixed pools `wide200` / `wide1000` (A/B, Foul Play), diagnostic pools `offmeta200` / `random200` (D16).
+- **Self-play** (`selfplay/teams.py`): draw a real game and use both sides' own teams (weighted by recent use, half-life 120 days); unrevealed sets are completed by the belief model (temperature 1.3, more spread than in the search, to avoid "the opponent is too easy to guess"); a local validator checks legality; for 30%, one side is replaced by a complete team from the team catalog (`data/teams/catalog.jsonl`).
+- **Team data** (`data/teams`, `scripts/teams.py`): a catalog of complete teams (Smogon forums), team pools reconstructed from replays, replay / Smogon usage statistics.
+- **D5-L Teams for playing people** (`doc/team_design.md`, 2026-10-27 / 28): a ladder win rate is mostly the player's, not the team's; rank by the matchup model's expected score against the recent metagame and its worst 20%, plus threat coverage (how many answers there are to each of the main builds of each common threat) and role slots; finally have our bot actually play the candidate teams against recent ladder teams (simulated games) and pick 3–5; sets are reconstructed from replays (EVs borrowed from similar forum sets), with the accuracy cross-validated.
+- **D5-O Targeting a specific opponent** (research direction; a pipeline exists, `scripts/counter_pipeline.py`): the opponent's team distribution (exact teams + style, decayed by game count), a personalized belief, a play-style model (the network's rating input is enough); played only within the `play_public.py` whitelist; opponent names are not committed (`data/players/<id>/`).
 
-### D6. 算力
-本机 20 个逻辑 CPU、48 GB（WSL）、RTX 4070 Ti 12 GB。自对弈期间不训练（抢 GPU / CPU）；大内存任务一次只跑一个，用 `systemd-run --user --scope -p MemoryMax=...` 限制（曾经 OOM 导致 WSL 崩溃）。玩游戏等占 GPU 时自对弈会明显变慢。
+### D6. Compute
+This machine: 20 logical CPUs, 48 GB (WSL), RTX 4070 Ti 12 GB. No training during self-play (they compete for the GPU / CPU); large-memory jobs one at a time, capped with `systemd-run --user --scope -p MemoryMax=...` (an OOM once crashed WSL). Self-play slows down noticeably when games etc. use the GPU.
 
-### D7. 评测协议
-- **配对赛程**：每对交换队伍各打一局，报配对胜率 ± 95% CI（成对分数标准差约 0.335：100 对约 ±6.6 个百分点）。每次运行写 `<log>.meta.json`；arena 每局 1 小时超时；汇总含启发式回退与搜索回退次数。
-- **A/B**：只改一处（网络用 `ALPHA_MODEL_A/B`；行为改动临时加 `_A/_B` 开关，结论后删掉旧路径），1,600 次迭代、600 对起；结论不显著时换一批新的队伍对再加 600 对，不在同一批上重复挑选。
-- **外部对手**：Foul Play（200 ms × 1，wide200；或各 5 秒 × 2，wide1000，4 条线；本地版本完整，只是参数比它上天梯时弱，`research_foul_play.md`）。
-- **离线**：人类锚点验证集（上传时间 ≥ 1776921722）；种子标准差约策略 CE 0.003、价值 BCE 0.0025。
-- **公共天梯**：bot 登记批准后用 `scripts/ladder.py`（一次一局、CPU 搜索、低优先级），队伍见 D5-L。
+### D7. Evaluation protocol
+- **Paired schedule**: each pair plays one game each way with the teams exchanged; report the paired win rate ± 95% CI (the per-pair score standard deviation is about 0.335: 100 pairs ≈ ±6.6 points). Each run writes `<log>.meta.json`; the arena has a 1-hour timeout per game; the summary includes the counts of heuristic fallbacks and search fallbacks.
+- **A/B**: change one thing only (networks via `ALPHA_MODEL_A/B`; behavior changes get a temporary `_A/_B` switch, and the old path is deleted after the verdict), 1,600 iterations, 600 pairs to start; when the result is not significant, add 600 pairs on a fresh batch of team pairs; never re-select on the same batch.
+- **External opponent**: Foul Play (200 ms × 1, wide200; or 5 s × 2 each, wide1000, 4 lanes; the local version is complete, only its parameters are weaker than when it played the ladder, `research_foul_play.md`).
+- **Offline**: the human anchor validation set (upload time ≥ 1776921722); seed standard deviation about 0.003 for policy CE, 0.0025 for value BCE.
+- **Public ladder**: once the bot registration is approved, `scripts/ladder.py` (one game at a time, CPU search, low priority); teams in D5-L.
 
-### D8. 对手信念模型
-- `belief/priors.py`：整队条件先验（认出被照搬的队伍 → 核心条件 → 物种分布，逐级回退）；招式 = 套路后验 × 整队条件边缘^β（β = 1）；道具 / 太晶的套路权重与基础边缘按 `ARCH_MIX` 0.6 混合（2026-10-25）；伤害证据更新对手配置（F1，`agents/damage_obs.py`）。2026-10-04 用 5 万局自爬 replay 构建，评测用 heldout 版；10 月环境变化后待重建（issue #16）。
-- 结论：整队条件先验明显优于 Smogon 边缘分布；对手实际招式不在世界里的约 21% 都是之前没用过、信念也没猜中的，改进要靠信念（D14-3）。短板是招式不确定性（完全信息的价值几乎全在招式上，D11）。
-- 对手速度：每个世界从使用率统计的配置里抽速度档，排除与已观察出手顺序矛盾的（D17 #14）。
+### D8. Opponent belief model
+- `belief/priors.py`: whole-team-conditioned priors (recognize a copied team → core-conditioned → species distribution, backing off level by level); moves = archetype posterior × team-conditioned marginal^β (β = 1); for items / tera the archetype weights and the base marginal are mixed with `ARCH_MIX` 0.6 (2026-10-25); damage evidence updates the opponent's sets (F1, `agents/damage_obs.py`). Built 2026-10-04 from 50k self-crawled replays; evaluation uses the heldout version; to be rebuilt after the October metagame shift (issue #16).
+- Conclusions: team-conditioned priors are clearly better than Smogon marginals; of the opponent's actual moves that are missing from the worlds, about 21% were not used before and not guessed by the belief either, so improvement has to come from the belief (D14-3). The weak spot is move uncertainty (the value of perfect information is almost all in the moves, D11).
+- Opponent speed: each world draws a speed tier from the sets in the usage statistics, excluding tiers that contradict the observed move order (D17 #14).
 
-### D11. 隐藏信息与 LLM：已有结论
-知道对方真实配置约 +8–12 个百分点，几乎全部来自招式；确定化搜索的世界数和深度争同一份预算，ISMCTS 对确定化 57.3%；LLM 开局计划没有可测价值，方向已结束。
+### D11. Hidden information and LLMs: settled conclusions
+Knowing the opponent's true sets is worth about +8–12 points, almost all of it from the moves; in determinized search the number of worlds and the depth compete for the same budget; ISMCTS against determinization 57.3%; an LLM opening plan has no measurable value; the direction is closed.
 
-### D12. ISMCTS（`rust/alpha_search/src/ismcts.rs`、`bsearch.rs`）
-- **SO-ISMCTS**：一棵树建在我方信息集上，每次迭代轮换一个世界，原地 apply / reverse；子节点键 =（我方行动标签, 对方行动标签）；双方解耦的可用性 PUCT，FPU 取已访问分支 Q 的均值；开环随机，只缓存根节点的指令表。
-- **先验**：我方来自叶子前向，对方来自翻转视角前向；价值和先验要一起用（先验约 +70 Elo，价值约 +47 Elo）。
-- **树中的上下文**：路径上的步加进历史，按**实际转移结果**记（引擎补丁的 `Acted` 标记：招式真正开始才算用过、才标为已暴露；先被击倒记"行动前倒下"、被阻止记"被阻止"，与训练回放一致）；倒下后的强制换人不算新回合（2026-10-14，A/B 51.3% ± 1.7%，不变差）。
-- **GPU 批量**：许多局的搜索共享批量线程，树并行（virtual loss），流水线。**CPU**：根并行。
-- **试过无效、已删**：根节点平手裁决（大优且几个选项均值相近时按一步推演的进展挑；A/B 48.75% ± 1.66%，代码在 `4489812`）；按可观察结果拆分的机会节点（现为纯开环）。
-- **已知局限**（issues #7–#10、#18）：最后只下访问最多的纯策略，可被会适应的对手针对；对方在树中看穿我方全部配置（D14-1）；对方统计跨世界平均（正解 MO-ISMCTS）；树内不更新信念（D14-3）；开环合并不同公开局面；树内历史没有结果标记（伤害、先后手）。
+### D12. ISMCTS (`rust/alpha_search/src/ismcts.rs`, `bsearch.rs`)
+- **SO-ISMCTS**: one tree built on our information set, one world per iteration in rotation, apply / reverse in place; child key = (our action label, opponent action label); decoupled availability PUCT for both sides, FPU = the mean Q of the visited branches; open-loop chance, only the root's instruction table is cached.
+- **Priors**: ours from the leaf forward pass, the opponent's from a flipped-view forward pass; value and priors must be used together (priors about +70 Elo, value about +47 Elo).
+- **Context in the tree**: the steps along the path are added to the history, recorded by the **actual transition outcome** (the engine patch's `Acted` marker: a move counts as used, and is marked revealed, only once it actually starts; KO'd first is recorded as "fainted before acting", blocked as "blocked", consistent with the training replays); the forced switch after a faint is not a new turn (2026-10-14, A/B 51.3% ± 1.7%, no worse).
+- **GPU batching**: the searches of many games share batching threads, tree parallelism (virtual loss), pipelining. **CPU**: root parallelism.
+- **Tried, no effect, removed**: a root tie-break (when well ahead and several options have similar means, pick by the progress of a one-step rollout; A/B 48.75% ± 1.66%, code in `4489812`); chance nodes split by observable outcome (now pure open loop).
+- **Known limitations** (issues #7–#10, #18): in the end it plays only the most-visited pure strategy, which an adapting opponent can exploit; the opponent in the tree sees all of our sets (D14-1); the opponent's statistics are averaged across worlds (the proper fix is MO-ISMCTS); no belief update inside the tree (D14-3); open loop merges different public states; the in-tree history has no outcome markers (damage, move order).
 
-### D13. 策略 / 价值网络（现行 v6arch-pp-v75：v6 的 7 组输入 + 剩余回合数头；v7 输入组 `ko2, tera, team, post` 已实现但现行网络不用）
-- **人类数据**：Metamon 的 Gen9 OU 约 204 万局 + HF 公开 replay 31 万局（只进训练集）；`train/positions.py` 逐行回放、为抽中的决策点建单方视角的引擎局面；决策步与引擎的决策节点一一对应（回合开始、U-turn 后换人、倒下后换人），每局抽 20 个。
-- **特征**（Rust `features.rs` + `extra.rs` + `counts.rs`，训练与搜索共用同一个函数；完整清单见下面的“D13 附”）：12 个实体、全局特征、14 槽合法动作掩码、8 步历史（每步双方动作；结果一组 `hres` 现行网络没用）；公开信息标记、双方赛前分数；**对阵计算**（伤害比例与击倒线、谁先动等，收益最大的一组）。
-- **模型**（`train/model.py` 的 `TransformerPV`）：12 实体 token + 全局 token + 8 历史 token，pre-norm 3 层，d = 128，4 头，SwiGLU + RMSNorm + QK-norm，约 74 万参数；价值残差 `logit = a·eval/100 + b + net`；辅助输出 MTP-3、对手配置头、剩余回合数（v6，推理时也输出，供速胜项用）。v6 新增输入组 `count`（`counts.rs`：PP、被禁用、睡眠回合、守住次数、替身血量、愿望 / 预知未来、持续状态回合）。
-- **有效结论**：历史与 Transformer 叠加的效果大于各自之和（8 步饱和）；MTP-3 帮价值和换人；只有 GLU 结构稳定变好；推理不能系统性变慢；2.3 倍计算的大网络在相同迭代数下不更强（价值过拟合）；价值头加层、冻结主干单独学价值、不搜索对局的价值标签、胜负幅度辅助头都没有提升。
-- **推理**：Rust CPU（`tnet.rs`，与 PyTorch 逐层一致，改推理代码后跑 `scripts/check_tnet.py` / `check_extra.py`）；GPU（`agents/gpu_net.py`，CUDA Graph + compile）。
+### D13. Policy / value network (current v6arch-pp-v75: v6's 7 input groups + a remaining-turns head; the v7 input groups `ko2, tera, team, post` are implemented but not used by the current network)
+- **Human data**: about 2.04M Gen9 OU games from Metamon + 310k public HF replays (training set only); `train/positions.py` replays them line by line and builds a one-sided engine state for each sampled decision point; decision steps map one-to-one to the engine's decision nodes (turn start, the switch after U-turn, the switch after a faint), 20 sampled per game.
+- **Features** (Rust `features.rs` + `extra.rs` + `counts.rs`, one function shared by training and search; the full list is in "D13 appendix" below): 12 entities, global features, a 14-slot legal-action mask, an 8-step history (both sides' actions per step; the outcome group `hres` is not used by the current network); public-information markers, both sides' pre-game ratings; **matchup calculations** (damage ratios and KO thresholds, who moves first, etc.; the group with the largest gain).
+- **Model** (`TransformerPV` in `train/model.py`): 12 entity tokens + a global token + 8 history tokens, pre-norm, 3 layers, d = 128, 4 heads, SwiGLU + RMSNorm + QK-norm, about 740k parameters; value residual `logit = a·eval/100 + b + net`; auxiliary outputs MTP-3, an opponent-set head, remaining turns (v6; also output at inference, used by the quick-win term). v6 added the input group `count` (`counts.rs`: PP, disabled, sleep turns, Protect count, Substitute HP, Wish / Future Sight, durations of volatile conditions).
+- **Conclusions that hold**: history and the Transformer together gain more than the sum of the two (saturates at 8 steps); MTP-3 helps the value and switching; only GLU structures improve consistently; inference must not get systematically slower; a large network with 2.3× the compute is not stronger at the same number of iterations (the value overfits); more layers in the value head, a frozen trunk learning the value alone, value labels from games without search, a win-margin auxiliary head: none of them helped.
+- **Inference**: Rust CPU (`tnet.rs`, equal to PyTorch layer by layer; after changing inference code run `scripts/check_tnet.py` / `check_extra.py`); GPU (`agents/gpu_net.py`, CUDA Graph + compile).
 
-#### D13 附：现行网络的输入特征一览（v6-s-spread，2026-10-18）
+#### D13 appendix: the current network's input features (v6-s-spread, 2026-10-18)
 
-所有特征都从世界状态（poke-engine 局面，我方视角：side one 是我们）算出，训练和搜索用同一个 Rust 函数（`features.rs` / `extra.rs` / `counts.rs`，Python 经 `alpha_search.featurize*` 调用）。对手的未知字段（道具、特性、太晶属性、没用过的招式）填的是信念模型采样出的配置，不是“未知”（`mask_hidden` 关闭）。网络配置见 `data/train/v6/runs/v6-s-spread/config.json`：`feats = reveal, num, movetab, matchup, elo, counter, count`。
+All features are computed from the world state (a poke-engine state from our view: side one is us); training and search use the same Rust function (`features.rs` / `extra.rs` / `counts.rs`, called from Python via `alpha_search.featurize*`). The opponent's unknown fields (item, ability, tera type, unused moves) are filled with the set the belief model sampled, not with "unknown" (`mask_hidden` off). The network configuration is in `data/train/v6/runs/v6-s-spread/config.json`: `feats = reveal, num, movetab, matchup, elo, counter, count`.
 
-**实体 token（12 个：我方队伍 0–5 号位，再对方 0–5 号位；换人动作 8 + j 对应实体 j）**
+**Entity tokens (12: our team's slots 0–5, then the opponent's slots 0–5; switch action 8 + j corresponds to entity j)**
 
-| 组 | 维度 | 内容 |
+| group | dims | content |
 |---|---|---|
-| 稀疏 id（基础） | 10 | 种族、道具、特性、太晶属性、属性 1、属性 2、4 个招式；查嵌入表（词表 1536 / 256 / 384 / 32 / 1024）。引擎补丁新加的道具（Eject Button 起，网络训练时还没有）统一映射为“未知” |
-| 稠密（基础） | 23 | HP 比例、存活、在场、已太晶、异常状态 one-hot（7）、攻 / 防 / 特攻 / 特防 / 速 / 最大 HP（/ 500）、4 个招式能否使用（没被禁用且有 PP）、是否我方、等级 / 100 |
-| `reveal` | 8 位 | 公开信息：上过场；道具 / 特性 / 太晶属性已暴露；4 个招式位各自已暴露。对手的是我方见过的，我方的是对手见过的 |
-| `matchup` | 22 | 对对方在场宝可梦的速度 log2 比值 / 2；对方在场宝可梦的最强一击对它的最大伤害 / HP、必定击倒、可能击倒；在场的：自己 4 个招式打对方在场宝可梦的伤害 / HP、必定击倒、可能击倒、克制 log2 / 2（免疫 −1.5）；后备的：入场陷阱伤害比例、是否入场即倒。伤害用引擎的完整第 9 代伤害计算（`calculate_damage_rolls`） |
-| `counter` | 3 | 后备的：换上来吃对方预测招式（打我方在场最强的那一招）的伤害 / HP、是否被击倒；自己最强一击打对方在场宝可梦的伤害 / 对方 HP |
-| `count` | 10 | 4 个招式的剩余 PP（min(pp, 16) / 16；对手的按 `build_state` 推算）、4 个招式是否被禁用（Choice 锁定、Disable）、睡觉（Rest）回合 / 3、其他睡眠回合 / 3 |
+| sparse ids (base) | 10 | species, item, ability, tera type, type 1, type 2, 4 moves; embedding-table lookups (vocabularies 1536 / 256 / 384 / 32 / 1024). Items added by the engine patches (from Eject Button on; not yet present when the network was trained) all map to "unknown" |
+| dense (base) | 23 | HP fraction, alive, active, terastallized, status one-hot (7), Atk / Def / SpA / SpD / Spe / max HP (/ 500), whether each of the 4 moves is usable (not disabled and has PP), is ours, level / 100 |
+| `reveal` | 8 bits | public information: has been in; item / ability / tera type revealed; each of the 4 move slots revealed. For the opponent's Pokémon, what we have seen; for ours, what the opponent has seen |
+| `matchup` | 22 | against the opponent's active Pokémon: speed log2 ratio / 2; the strongest hit of the opponent's active on it: max damage / HP, sure KO, possible KO; for the active one: its 4 moves on the opponent's active: damage / HP, sure KO, possible KO, effectiveness log2 / 2 (immune −1.5); for the bench: entry hazard damage fraction, whether it faints on entry. Damage uses the engine's full Gen 9 damage calculation (`calculate_damage_rolls`) |
+| `counter` | 3 | for the bench: damage / HP taken when switching in on the opponent's predicted move (its strongest move against our active), whether it is KO'd; its own strongest hit on the opponent's active: damage / the opponent's HP |
+| `count` | 10 | remaining PP of the 4 moves (min(pp, 16) / 16; the opponent's inferred by `build_state`), whether each of the 4 moves is disabled (Choice lock, Disable), Rest turns / 3, other sleep turns / 3 |
 
-**全局 token**
+**Global token**
 
-| 组 | 维度 | 内容 |
+| group | dims | content |
 |---|---|---|
-| 基础 | 277 | 天气 one-hot（8）、场地 one-hot（5）、戏法空间及剩余回合；每方 131 维：反射壁 / 光墙 / 极光幕 / 顺风 / 神秘守护 / 白雾的剩余回合 / 8，撒菱层数 / 3、毒菱层数 / 2、隐形岩、黏黏网、治愈之愿、新月舞、祈愿、预知未来、替身、剧毒计数 / 8、接力棒、断尾，7 个能力等级 / 6，强制换人、被困，在场宝可梦的 104 个易变状态位（第 0 位保持旧含义“有任何易变状态”） |
-| `num` | 19 | 每方：存活数 / 6、HP 比例之和 / 6、已用太晶、上一招（无或换人 / 0–3 号招式，体现 Choice 锁定）；天气 / 场地剩余回合 / 8；回合数 |
-| `matchup` | 2 | 双方在场宝可梦谁先动（+1 我方 / −1 对方 / 0 同速；计入戏法空间）、速度 log2 比值 / 2 |
-| `elo` | 5 | 双方赛前分数（(r − 1500) / 300）、两者之差、是否已知（自对弈里为 0 = 未知） |
-| `count` | 28 | 每方：连续守住次数 / 4、替身 HP / 在场宝可梦最大 HP、祈愿剩余回合 / 2 及回复量 / 最大 HP、预知未来剩余回合 / 3；混乱、再来一次、锁定招式、慢启动、挑衅、哈欠、回复封锁、电磁飘浮、深渊突刺的持续回合 / 5 |
+| base | 277 | weather one-hot (8), terrain one-hot (5), Trick Room and its remaining turns; 131 dims per side: remaining turns / 8 of Reflect / Light Screen / Aurora Veil / Tailwind / Safeguard / Mist, Spikes layers / 3, Toxic Spikes layers / 2, Stealth Rock, Sticky Web, Healing Wish, Lunar Dance, Wish, Future Sight, Substitute, Toxic counter / 8, Baton Pass, Shed Tail, 7 stat stages / 6, forced switch, trapped, 104 volatile-status bits of the active Pokémon (bit 0 keeps its old meaning "has any volatile status") |
+| `num` | 19 | per side: alive count / 6, sum of HP fractions / 6, tera used, last move (none or switch / move 0–3, which shows a Choice lock); weather / terrain remaining turns / 8; turn number |
+| `matchup` | 2 | which active Pokémon moves first (+1 ours / −1 the opponent's / 0 speed tie; Trick Room included), speed log2 ratio / 2 |
+| `elo` | 5 | both pre-game ratings ((r − 1500) / 300), their difference, whether known (0 = unknown in self-play) |
+| `count` | 28 | per side: consecutive Protect count / 4, Substitute HP / the active's max HP, Wish remaining turns / 2 and heal amount / max HP, Future Sight remaining turns / 3; durations / 5 of confusion, Encore, locked move, Slow Start, Taunt, Yawn, Heal Block, Magnet Rise, Throat Chop |
 
-**历史 token（8 步，最近的在前；一步是一个决策点：回合开始的双方选择、倒下后的换人、换人招式后的换人）**
+**History tokens (8 steps, most recent first; a step is one decision point: both sides' choices at the start of a turn, the switch after a faint, the switch after a pivot move)**
 
-| 组 | 维度 | 内容 |
+| group | dims | content |
 |---|---|---|
-| 稀疏 | 6 | 我方：出手者种族、招式、换上来的种族；对方同样（0 = 无） |
-| 稠密 | 7 | 这一步存在；我方招式 / 换人 / 太晶；对方招式 / 换人 / 太晶 |
+| sparse | 6 | ours: the acting species, the move, the species switched in; the same for the opponent (0 = none) |
+| dense | 7 | the step exists; our move / switch / tera; the opponent's move / switch / tera |
 
-训练时历史取自回放；搜索时取自真实对局，加上树内路径（树内按引擎的实际结果记，D12）。
+In training the history comes from the replay; in search from the real game, plus the path inside the tree (recorded in the tree by the engine's actual outcomes, D12).
 
-**其他输入**
+**Other inputs**
 
-- 合法动作掩码（14）：0–3 招式、4–7 招式 + 太晶、8–13 换到某号位。
-- `movetab`：静态招式表，每个招式 53 维，投影后加到招式嵌入上：属性 one-hot（20）、分类（3）、威力 / 150、命中 / 100、优先度 / 5、16 个标志（咬、弹、蓄力、接触、拖人、回复、粉末、可守住、波动、拳、硬直、可反弹、切、声音、换人、风）、吸取、反伤、撞墙、回复量、对自己 / 对目标的能力变化之和 / 2、异常状态、易变状态、对己方 / 对方场地、追加效果最大概率。
-- 价值残差：手写评估（引擎的 `evaluate`）。价值 logit = a · eval / 100 + b + 网络输出。
+- Legal-action mask (14): 0–3 moves, 4–7 moves + tera, 8–13 switch to a slot.
+- `movetab`: a static move table, 53 dims per move, projected and added to the move embedding: type one-hot (20), category (3), power / 150, accuracy / 100, priority / 5, 16 flags (bite, bullet, charge, contact, drag, heal, powder, protect, pulse, punch, recharge, reflectable, slicing, sound, pivot, wind), drain, recoil, crash, heal amount, sum of the stat changes to the user / the target / 2, status, volatile status, own / opposing side condition, the highest secondary-effect chance.
+- Value residual: the handcrafted evaluation (the engine's `evaluate`). Value logit = a · eval / 100 + b + network output.
 
-**v7 新增的输入组（2026-10-19；特征候选 F2 / F3a / F5 / F6，消融见 `results.md`“网络 v7 输入组的消融”；v0 用 `ko2, tera, team`，不用 `post`，原因见表后）**
+**Input groups added in v7 (2026-10-19; feature candidates F2 / F3a / F5 / F6; the ablation is in `results.md` "Ablation of the network v7 input groups"; v0 uses `ko2, tera, team`, not `post`, for the reason given after the table)**
 
-实体 token 多 50 维（v7.1 是 45 维，`team` 7 列；`extra.rs` 的 `featurize_extra_full`，和 `featurize_extra` 共用一份伤害缓存；任一组打开就整块加上，没开的组遮成 0），另加 `post` 10 维。只有读这些输入的网络才计算（`Context.full`），旧网络的搜索不变慢。
+Entity tokens get 50 more dims (45 in v7.1, with 7 `team` columns; `featurize_extra_full` in `extra.rs`, which shares one damage cache with `featurize_extra`; the whole block is added when any group is on, and the groups that are off are masked to 0), plus 10 dims of `post`. They are computed only for networks that read these inputs (`Context.full`), so the search with older networks does not get slower.
 
-| 组 | 维度 | 内容 |
+| group | dims | content |
 |---|---|---|
-| `ko2`（F3a，在场的） | 10 | 自己 4 个招式打对方在场宝可梦：两次之内必定 / 可能击倒，逐击计算（对方不行动；第二击按第一击后的 HP 和能力等级重算——Super Fang 打一半、流星群降特攻；两击之间计入对方的回合末 HP 变化，用引擎自己的回合末结算；气势披带 / 结实、替身、Knock Off 打掉道具后的第二击、蓄力招式 / 预知未来只算一击、击掌奇袭只在刚上场时）；对方在场宝可梦的先制招式（优先度用引擎的）：必定 / 可能击倒自己（精神场地下的接地目标不算） |
-| `tera`（F6，在场的） | 28 | 我方还能太晶时：自己 4 个招式太晶后打对方的伤害 / HP、必定击倒、可能击倒（12），对方最强一击打太晶后的自己（3）；对方还能太晶时：自己 4 个招式打太晶后的对方的伤害 / HP、可能击倒（8），太晶后的对方最强一击打自己（3）；两个标志（我方 / 对方还能太晶）。对方的太晶属性是这个世界的采样，跨世界就是后验。另把每个招式的 ko2（2）+ 太晶后（3 + 2）共 7 维接到招式输出头，太晶与不太晶两组动作不再共用一份输入 |
-| `team`（F5，每只存活的） | 12 | 对对方每只存活的（双方都当成在场，不带在场者的能力等级 / 易变状态；计数 / 6）：一击能击倒几只、被几只一击击倒；然后按“对攻”模拟（下面），作为换入可靠 / 可能应对几只、同场对攻可靠赢几只、可靠复仇击杀几只、换入对攻在回合上限内分不出结果的几只；作为威胁，对方能可靠换入应对它的有几只、换入结果未知的有几只（不等于打不过）、能可靠复仇击杀它的有几只；作为应对，它是几个威胁唯一已确认的换入应对、唯一已确认的复仇击杀者（另有未知的也可能应对） |
-| `post`（F2，每只存活的） | 10 | 在根节点对全部信念世界（32 个；训练数据每个局面 4 个）求平均（联合后验，不是独立边际），对对方在场者：比它快、被它的最强一击击倒、能击倒它、吃它一击不到半血、先制招式能击倒它；自身配置：有回复招、有强化招、有吹飞 / 清场 / 清强化招、Choice 道具、气势披带或结实（满血吃一击击倒能活）。树内不更新，随上下文传下去 |
+| `ko2` (F3a, active) | 10 | its 4 moves on the opponent's active: sure / possible KO within two hits, computed hit by hit (the opponent does not act; the second hit is recomputed from the HP and stat stages after the first -- Super Fang takes half, Draco Meteor lowers SpA; between the two hits the opponent's end-of-turn HP change counts, using the engine's own end-of-turn resolution; Focus Sash / Sturdy, Substitute, the second hit after Knock Off has removed the item; charge moves / Future Sight count one hit only, Fake Out only right after switching in); priority moves of the opponent's active (priority from the engine): sure / possible KO on it (not against a grounded target in Psychic Terrain) |
+| `tera` (F6, active) | 28 | while we can still tera: its 4 moves after tera on the opponent: damage / HP, sure KO, possible KO (12), the opponent's strongest hit on it after tera (3); while the opponent can still tera: its 4 moves on the opponent after tera: damage / HP, possible KO (8), the strongest hit of the tera'd opponent on it (3); two flags (we / the opponent can still tera). The opponent's tera type is this world's sample; across worlds that is the posterior. In addition, each move's ko2 (2) + after tera (3 + 2), 7 dims in all, feed the move output head, so the tera and non-tera action groups no longer share one input |
+| `team` (F5, each living one) | 12 | against each living opponent (both treated as active, without the active one's stat stages / volatiles; counts / 6): how many it KOs in one hit, how many KO it in one hit; then by the "exchange" simulation (below): as a switch-in, how many it reliably / possibly answers, how many it reliably beats head-to-head, how many it reliably revenge-kills, how many switch-in exchanges are undecided within the round cap; as a threat, how many of the opponent's can reliably switch in to answer it, how many have an unknown switch-in outcome (not the same as losing to it), how many can reliably revenge-kill it; as an answer, for how many threats it is the only confirmed switch-in answer, the only confirmed revenge killer (other, unknown ones may also answer) |
+| `post` (F2, each living one) | 10 | averaged at the root over all belief worlds (32; 4 per position in the training data) (a joint posterior, not independent marginals); against the opponent's active: faster than it, KO'd by its strongest hit, can KO it, takes less than half from its hit, a priority move can KO it; own set: has a recovery move, has a setup move, has a phazing / hazard-removal / boost-clearing move, a Choice item, Focus Sash or Sturdy (survives a one-hit KO from full HP). Not updated in the tree; passed down with the context |
 
-`post` 不进 v0：离线收益最大，但带搜索时变弱（v0-post 对 v6-h 带搜索 46.8%，不带搜索 55.2%）。它在根节点算一次、整棵树沿用，叶节点处已经陈旧；网络又很依赖它（陈旧一步，价值 BCE +0.012、策略 CE +0.13）。对手视角的节点上，对手己方的配置位是小数，训练里没出现过。数据里仍保留这一列（v7.1：额外世界不再重采样我方配置），要用得先重新设计树内的用法（issue #11）。
+`post` is not in v0: it has the largest offline gain but is weaker with search (v0-post against v6-h 46.8% with search, 55.2% without). It is computed once at the root and reused across the whole tree, so it is already stale at the leaves; and the network relies on it heavily (one step stale: value BCE +0.012, policy CE +0.13). At nodes from the opponent's view, the opponent's own set slots are fractions, never seen in training. The column stays in the data (v7.1: the extra worlds no longer resample our sets); using it first needs a redesign of how it is used in the tree (issue #11).
 
-F1（伤害证据更新对手配置，`agents/damage_obs.py`）不是网络输入：它改的是信念世界，从而影响搜索的世界、单个世界的输入和 `post`。只在实战时用（同速度推断），训练数据不变。
+F1 (damage evidence updates the opponent's sets, `agents/damage_obs.py`) is not a network input: it changes the belief worlds, and through them the search's worlds, the inputs of each world and `post`. It is used only in live play (like speed inference); the training data do not change.
 
-**对攻模拟**（`team` 的三类应对，2026-10-20，`extra.rs` 的 `fight`；第二轮审查后收紧）：双方各用一招固定的招式（对另一方最高伤害的那招；不算只能在第一回合用的、要隔回合才命中的、按受到的伤害反击的；在场者受讲究锁定），都不换人、不回复、不强化、不太晶，没有概率事件（不会心、不未命中、概率附加效果不发生）。
-- 逐击：每一击按当时的 HP、能力等级、道具（Super Fang、蛮干、多鳞；流星群、近身战的自降，必定发生的附加降能力；Knock Off 打掉的、被打爆的气球、吃掉的减半果之后，由引擎按没有道具重算），一击倒下就结束；每击之后算对使用者的影响（反伤、吸取、生命宝珠、粗糙皮肤 / 凸凸头盔，唱反调 / 单纯）；替身逐段吃伤害（打破它的那一段溢出不算）；文柚果 / 1/3 回复果按触发线回一次（紧张感 / 人马一体下不吃）。
-- 需要对方出招的招式（突袭、Thunderclap、Upper Hand）：换入那一回合失败；之后只在自己先动、对方用攻击招式时成功。
-- 回合末：用引擎连续推进 5 个回合末，状态带到下一个（剧毒逐回合加重、愿望 / 预知未来只结算一次、天气 / 场地到期），整体撤销。每个回合末分别量回复和伤害（在 1/4 最大 HP 上量，有一方倒下时回复在 1/2、伤害在满 HP 上量），都不被当时的 HP 截断（之前在 3/4 HP 上量净变化：愿望回复一半被截成 1/4）；对攻里按实际 HP 先加回复（不超过最大 HP）再扣伤害。按 HP 触发的树果量时拿掉（由对攻自己结算）。按实际对阵缓存：同一只宝可梦对不同对手只在对手会改变它的回合末时（无关天气 / 气闸、化学变化气体、梦魇、挂着寄生种子的对方在场者）分开算（之前按“双方第 j 只”一起算，队伍顺序会改变结论）；失去道具、被挂上盐腌 / 束缚的另算一份。只改了 HP 的回合末，之后的照抄；先算前 2 个，对攻走得更远才补全。
-- 先后手：引擎的优先度，再引擎的速度和戏法空间；同速时“可靠”判对方先、“可能”判己方先；精神场地挡下对接地目标的先制招式。
-- 不支持的机制给“未知”，不给输赢（`unsupported`）：对攻击或回合有反应、改变对攻的能力和道具（加速、碎裂铠甲、持久力、怒火、正义之心、不服输、好胜、心情不定、自由者 / 变幻自如、变色、画皮 / 结冻头、危险回避 / 跃跃欲逃、弱点保险、逃脱按钮 / 背包、红牌、白色香草、客房服务、其余树果），还没上场的驱劲能量（上场时才发动）、还没发动的火焰 / 剧毒宝珠（烧伤后的毅力、减半）。换人招式（急速折返等）、大爆炸类不作固定招式时的处理：换人招式不作固定招式、ko2 只算一次；大爆炸类用后用招方倒下。“未知”的比例和按机制拆分的错误在 `results.md` 的断言检验里。
-- 换入应对：先按引擎的换人入场扣入场陷阱、读出入场后的能力等级（威吓、不挠之剑、黏黏网减速；入场改变天气 / 场地的给未知），再白挨对方一击（突袭类不算），之后按先后手交换；“可靠”用己方最低伤害（85% × 最少段数）、对方最高伤害，“可能”反过来。
-- 同场对攻：已在场的双方，不扣入场、不白挨，直接交换（可靠）。
-- 复仇击杀：倒下后免费上场（扣入场陷阱），必须先动、第一击就击倒对方（可靠；对方有画皮 / 结冻头时未知）。
-- ko2 同样逐击：跟踪攻击方的 HP（反伤、生命宝珠、吸取，攻击方自己的回合末），攻击方倒下就没有第二次。
-- 回合上限 4（`ROUNDS`），超过记为“未知”，单独计数，不算输。
+**Exchange simulation** (`team`'s three kinds of answers, 2026-10-20, `fight` in `extra.rs`; tightened after the second review): each side uses one fixed move (its highest-damage move against the other; not counting moves usable only on the first turn, moves that hit a turn later, or moves that counter the damage taken; an active Pokémon is bound by its Choice lock), no switching, no recovery, no setup, no tera, no chance events (no crits, no misses, chance secondary effects do not happen).
+- Hit by hit: each hit uses the HP, stat stages and item at that moment (Super Fang, Endeavor, Multiscale; the self-drops of Draco Meteor and Close Combat, guaranteed secondary stat drops; after Knock Off removes an item, an Air Balloon pops or a resist berry is eaten, the engine recomputes without the item); it ends as soon as one faints in one hit; after each hit the effects on the user count (recoil, drain, Life Orb, Rough Skin / Rocky Helmet, Contrary / Simple); a Substitute takes damage piece by piece (the overflow of the hit that breaks it does not count); Sitrus Berry / the 1/3-heal berries heal once at their threshold (not eaten under Unnerve / As One).
+- Moves that need the opponent to act (Sucker Punch, Thunderclap, Upper Hand): they fail on the switch-in turn; after that they succeed only when the user moves first and the opponent uses an attacking move.
+- End of turn: the engine advances 5 ends of turn in a row, carrying the state over to the next (Toxic getting worse turn by turn, Wish / Future Sight resolved only once, weather / terrain expiring), all undone afterwards. Healing and damage are measured separately at each end of turn (measured at 1/4 max HP; when one side has fainted, healing at 1/2 and damage at full HP), and neither is capped by the current HP (the net change used to be measured at 3/4 HP: Wish's half-HP heal was capped to 1/4); in the exchange, healing is added first at the actual HP (up to max HP), then damage is subtracted. HP-triggered berries are removed while measuring (the exchange resolves them itself). Cached by the actual pairing: the same Pokémon is computed separately against different opponents only when the opponent changes its end of turn (Cloud Nine / Air Lock, Neutralizing Gas, Nightmare, an opposing active with Leech Seed on it) (previously computed together by "both sides' j-th Pokémon", so the team order could change the result); one that has lost its item, or has Salt Cure / partial trapping on it, gets its own copy. Ends of turn that only change HP are copied for the remaining ones; the first 2 are computed first and the rest only filled in when the exchange goes further.
+- Move order: the engine's priority, then the engine's speed and Trick Room; on a speed tie "reliable" assumes the opponent moves first and "possible" that we do; Psychic Terrain blocks priority moves against grounded targets.
+- Unsupported mechanics give "unknown", not a win or a loss (`unsupported`): abilities and items that react to a hit or a turn and change the exchange (Speed Boost, Weak Armor, Stamina, Berserk, Justified, Defiant, Competitive, Moody, Libero / Protean, Color Change, Disguise / Ice Face, Emergency Exit / Wimp Out, Weakness Policy, Eject Button / Eject Pack, Red Card, White Herb, Room Service, other berries), a Booster Energy on a Pokémon not yet in (it activates on entry), a Flame / Toxic Orb not yet activated (Guts after the burn, the halving). How pivot moves (U-turn etc.) and Explosion-type moves are handled when they are not the fixed move: pivot moves are not used as the fixed move, and ko2 counts them once; after an Explosion-type move the user faints. The share of "unknown" and the errors broken down by mechanism are in the assertion checks in `results.md`.
+- Switch-in answer: first apply the engine's switch-in, subtracting entry hazards and reading the stat stages after entry (Intimidate, Intrepid Sword, the Sticky Web Speed drop; weather / terrain set on entry gives unknown), then take one free hit from the opponent (Sucker Punch-type moves excluded), then exchange hits in move order; "reliable" uses our lowest damage (85% × the fewest hits) and the opponent's highest, "possible" the reverse.
+- Head-to-head: both already active; no entry costs, no free hit, a direct exchange (reliable).
+- Revenge kill: free entry after a faint (entry hazards subtracted); it must move first and KO with the first hit (reliable; unknown when the opponent has Disguise / Ice Face).
+- ko2 is also hit by hit: it tracks the attacker's HP (recoil, Life Orb, drain, the attacker's own end of turn); if the attacker faints there is no second hit.
+- Round cap 4 (`ROUNDS`); beyond it the result is "unknown", counted separately, not a loss.
 
-v7.1 数据（2026-10-20，`data/train/v71`，现行）：在 v7 上修了审查发现的 4 处——`post` 的额外世界只重采样对手；“有回复招”不算吸取类招式；“有强化招”补上腹鼓 / 甩肉 / 魂舞、幽灵系的诅咒不算；`post` 的先制击倒和 ko2 一样考虑精神场地。
+v7.1 data (2026-10-20, `data/train/v71`, current): fixes 4 issues the review found in v7 -- `post`'s extra worlds resample only the opponent; "has a recovery move" does not count draining moves; "has a setup move" adds Belly Drum / Fillet Away / Clangorous Soul, and a Ghost-type's Curse does not count; `post`'s priority KO takes Psychic Terrain into account like ko2.
 
-v7.2 输入（2026-10-20，`EXTRA_VERSION` 3，审查后的修复；数据待按它重建，`results.md`“特征断言检验”）：游戏规则不再拷贝，直接调用引擎（速度 `get_effective_speed`、优先度 `modify_choice_priority`、换人入场 `generate_instructions_from_switch`、回合末 `add_end_of_turn_instructions`、替身 `hits_substitute`、会心 `hit_crit_chance`，都在工作副本上执行后撤销）；之前的拷贝落后于引擎修复（雪天的拨雪、Power 系道具、轻装、Cloud Nine、魔法空间），回合末和钉子用原属性（太晶后的黑色污泥、沙暴、盐腌、飞行系判断都错）。另修：多段招式按引擎的段数（之前只算一段：鳞射少算 2–5 倍）、必定会心的招式按会心伤害（激流连打等）、蛮干 / 搏命的免疫（之前按幽灵系招式判，L230）、击倒标志计入气势披带 / 结实和替身、蓄力招式和预知未来当回合不算击倒、击掌奇袭只在刚上场时；`ko2` 逐击、`team` 改成对攻模拟（12 列）。特征耗时：单局面约 141 µs（v3 20 + v7 121；v7.1 约 91 µs，估计）。
+v7.2 inputs (2026-10-20, `EXTRA_VERSION` 3, fixes after the review; the data are still to be rebuilt with it, `results.md` "Feature assertion checks"): game rules are no longer copied; the engine is called directly (speed `get_effective_speed`, priority `modify_choice_priority`, switch-in `generate_instructions_from_switch`, end of turn `add_end_of_turn_instructions`, Substitute `hits_substitute`, crits `hit_crit_chance`, all run on a working copy and then undone); the earlier copies lagged behind the engine fixes (Slush Rush in snow, the Power items, Unburden, Cloud Nine, Magic Room), and the end of turn and hazards used the original types (Black Sludge, sandstorm, Salt Cure and Flying-type checks after tera were all wrong). Also fixed: multi-hit moves use the engine's hit count (previously one hit: Scale Shot was undercounted 2–5×), always-crit moves use crit damage (Surging Strikes etc.), immunity to Endeavor / Final Gambit (previously judged as for Ghost-type moves, L230), the KO flags take Focus Sash / Sturdy and Substitute into account, charge moves and Future Sight do not count as a KO on that turn, Fake Out only right after switching in; `ko2` is computed hit by hit, `team` became the exchange simulation (12 columns). Feature cost: about 141 µs per position (v3 20 + v7 121; v7.1 about 91 µs, estimated).
 
-同时修的两个输入 bug（P0 / P2，v7 数据起）：后备的假想对阵不再沿用在场者的能力等级 / 易变状态 / 替身（`EXTRA_VERSION` 2，影响 `counter`、后备的 `matchup`）；倒下和空槽实体的 4 个招式可用位为 0。
+Two input bugs fixed at the same time (P0 / P2, from the v7 data on): hypothetical matchups for the bench no longer carry over the active Pokémon's stat stages / volatiles / Substitute (`EXTRA_VERSION` 2, affects `counter` and the bench's `matchup`); fainted and empty-slot entities have their 4 move-usable bits at 0.
 
-**计算了但现行网络没用**：`hres`（历史每步的结果：先手、造成伤害、要害、未命中 / 失败、击倒、被阻止、行动前倒下，每方 7 维，数据里有）；辅助头 `faint`、`margin`（实验过，没有提升）。现行的辅助输出是 `oppset`（对手配置）、`turns`（剩余回合数，供速胜项用）和 MTP-3。
+**Computed but not used by the current network**: `hres` (the outcome of each history step: moved first, damage dealt, crit, miss / fail, KO, blocked, fainted before acting; 7 dims per side, present in the data); the auxiliary heads `faint`, `margin` (tried, no gain). The current auxiliary outputs are `oppset` (the opponent's sets), `turns` (remaining turns, for the quick-win term) and MTP-3.
 
-### D15. 自对弈 pipeline（`scripts/selfplay.py`，代码在 `alpha_poke/selfplay/`）
-- **一代的流程**（`iterate`）：`teams` → `run` → `convert` → `train` → `eval`，没过就继续 `run`（见下“逐步扩大一代”）；单独的命令 `stats`、`value`（新对局上的价值检查）、`baseline`（对几代前）、`foulplay`、`diag`。状态在 `state.json`；中途停掉后接着跑只补还差的局数。
-- **对局**：10 进程 × 24 局（约 3,500–4,000 局 / 小时，被每个决策的 Python 开销卡住，issue #15），跨对局批量搜索；25% 的决策完整搜索（1,600 次，产出策略目标），其余快速搜索（400 次、16 个世界）；根节点 Dirichlet 噪声 ε = 0.1、浓度 10；前 8 回合温度 1、之后 0.25；只有一个合法选项时不搜索；bot 的分数输入为"未知"；300 回合上限（认输、记为 capped）。**循环探索**：某一方 20 回合没有宝可梦倒下且最近 8 回合换了 6 次人时，温度 1、噪声 0.25（第 8 代起）。
-- **记录与转换**（`convert.py`）：每次决策由 Rust 记录根节点网络输入、各槽访问 / 均值 / 先验、根 q；整局才知道的标签由回放管线对齐；到上限的对局价值记 0.5（平局），最后一次倒下 10 回合后的决策不进策略目标。
-- **训练**（`train_pv.py --init <当前网络>`）：策略对访问分布做软交叉熵，价值 BCE，MTP 与对手配置头；数据 = 最新一代全部 + 更早各代按对局抽样合计其 50%（`--window 1 --old-share 0.5`），每局最多 50 个局面，与人类数据混合（人类比例 max(20%, 50% − 5% × 代数)，漂移超过警戒线时不再下调）；lr 4e-4、约 3 遍、20% 预热、余弦衰减；价值每个局面只计一次，从第 8 代起均匀摊到整个训练（`--sp-value-schedule spread`，对 first 52.4% ± 2.6%）；自对弈数据按块流式读取（`--sp-stream`）。
-- **逐步扩大一代直到明确更好**（2026-10-27 起，`selfplay.py iterate`）：当前网络的对局累计到一批（`--chunk`，2026-10-28 起 5 万局，原 2.5 万）就在全部对局上微调一个候选（r2-gen<G>a<k>），序贯检验 H0 = 51%、H1 = 54%（2026-10-28 起，原 52% / 55%），α 0.05、β 0.1，最多 2,000 对，每次尝试一个新的队伍池；只有判定 H1（或打满仍未判定但 95% 区间下端 ≥ 51%）才晋升，否则继续打。第 0 代：5.3 万局 50.2% ± 3.7%、7.8 万局 52.5% ± 2.1%，均未晋升。
-- **评估**：见上（H0 51% / H1 54% 的序贯检验，完整配对不足 80% 时不判定）；模型登记 `exp/`（`matches.jsonl`、`models.json`）。旧谱系的“不变差就晋升”（H0 弱 20 Elo）已停用：一代一代的小进步测不出来，也不知道多少对局才够。
-- **监控**：每次尝试的训练前后验证（自对弈 / 人类的策略 CE、价值 BCE、到起点的 KL）、人类数据漂移护栏、对局统计（回合数、按队伍来源分组）、请求与引擎状态不一致的计数。
+### D15. Self-play pipeline (`scripts/selfplay.py`, code in `alpha_poke/selfplay/`)
+- **One generation's flow** (`iterate`): `teams` → `run` → `convert` → `train` → `eval`; if it does not pass, continue with `run` (see "Extending a generation" below); separate commands `stats`, `value` (a value check on new games), `baseline` (against a few generations back), `foulplay`, `diag`. The state is in `state.json`; resuming after a stop only plays the games still missing.
+- **Games**: 10 processes × 24 games (about 3,500–4,000 games / hour, limited by the Python overhead per decision, issue #15), batched search across games; 25% of the decisions get a full search (1,600 iterations, producing policy targets), the rest a fast search (400 iterations, 16 worlds); root Dirichlet noise ε = 0.1, concentration 10; temperature 1 for the first 8 turns, 0.25 after; no search when there is only one legal option; the bot's rating input is "unknown"; a 300-turn cap (resign, recorded as capped). **Loop exploration**: when for one side no Pokémon has fainted in 20 turns and it has switched 6 times in the last 8 turns, temperature 1 and noise 0.25 (from generation 8).
+- **Recording and conversion** (`convert.py`): for each decision Rust records the root's network inputs, the per-slot visits / means / priors and the root q; labels known only at the end of the game are aligned by the replay pipeline; capped games get the value 0.5 (a draw); decisions more than 10 turns after the last faint are left out of the policy targets.
+- **Training** (`train_pv.py --init <current network>`): soft cross-entropy of the policy against the visit distribution, value BCE, MTP and the opponent-set head; data = all of the latest generation + the earlier generations, sampled by game, together 50% of that (`--window 1 --old-share 0.5`), at most 50 positions per game, mixed with human data (human share max(20%, 50% − 5% × generation), no longer lowered once the drift passes the alarm line); lr 4e-4, about 3 epochs, 20% warmup, cosine decay; the value counts once per position, spread evenly over the whole training from generation 8 (`--sp-value-schedule spread`, against first 52.4% ± 2.6%); self-play data are streamed in chunks (`--sp-stream`).
+- **Extending a generation until it is clearly better** (since 2026-10-27, `selfplay.py iterate`): each time the current network's games accumulate a chunk (`--chunk`, 50k games since 2026-10-28, 25k before), a candidate (r2-gen<G>a<k>) is fine-tuned on all the games and put through a sequential test H0 = 51%, H1 = 54% (since 2026-10-28; 52% / 55% before), α 0.05, β 0.1, up to 2,000 pairs, a new team pool for each attempt; it is promoted only when the test accepts H1 (or, undecided at the cap, the lower end of the 95% interval is ≥ 51%); otherwise play continues. Generation 0: 53k games 50.2% ± 3.7%, 78k games 52.5% ± 2.1%, neither promoted.
+- **Evaluation**: see above (the sequential test with H0 51% / H1 54%; no verdict when fewer than 80% of the pairs are complete); models are registered in `exp/` (`matches.jsonl`, `models.json`). The old line's "promote when not worse" (H0: 20 Elo weaker) is retired: the small gains from generation to generation could not be measured, and nobody knew how many games would be enough.
+- **Monitoring**: validation before and after training for each attempt (self-play / human policy CE, value BCE, KL to the starting point), the human-data drift guard, game statistics (turn counts, grouped by team source), counts of inconsistencies between the request and the engine state.
 
-### D16. 自对弈的队伍分布（研究中）
-诊断（sp-gen1 对 v5-glu：天梯 / 偏门 / 随机池 54.6% / 51.6% / 51.8%，均不显著不同）：多样性当时不是明显短板。现行：压平热门度（权重再乘 1 / 组合次数^0.3）、队伍库比例 15%、一半合成队伍（下）；诊断池需要时手动跑（`selfplay.py diag`）。
+### D16. Self-play team distribution (under study)
+Diagnosis (sp-gen1 against v5-glu: ladder / off-meta / random pools 54.6% / 51.6% / 51.8%, none significantly different): diversity was not a clear weakness at the time. Current: popularity flattened (weights further multiplied by 1 / composition count^0.3), team catalog share 15%, half synthetic teams (below); the diagnostic pools are run by hand when needed (`selfplay.py diag`).
 
-**合成队伍（2026-10-26，`selfplay/teams.py` Composer / `synthetic`、`selfplay/synergy.py`）**：自对弈一半的队伍（`--synth-frac 0.5`）为合成：物种按 Smogon 使用率与已选队友的提升度依次抽（γ 0.7，种族条款按基础物种，ε 0.1 的压平噪音）；配置按信念先补全，每个招式位 / 道具 / 特性 / 太晶各以 0.1 概率从 Smogon 分布（开方压平）重抽；再做 12 步 Metropolis-Hastings：每步重抽一只的配置，按 exp(β·跨队友组合分的变化) 接受（β 0.5；组合分 = 队友间特征对的 log 提升度之和，扣除物种本身能解释的部分，`scripts/build_synergy.py` 用 12 万局已暴露配置统计）；最后过本地校验器。诊断（`scripts/check_synthetic_teams.py`，1,000 队）：组合 92% 不在天梯出现过、99.8% 互不相同；前 200 队友对频率与天梯相关 0.80（独立抽 0.63）；第二个戏法空间手比例 0.17 → 0.46（β 1.0：0.53，天梯已暴露 0.53），道具分布与 Smogon 的 TV 0.23 → 0.17；全部通过校验（重抽 2–4%）。不会显示的特性（叶绿素、悠游自如）天梯统计里看不到，组合分学不到。
+**Synthetic teams (2026-10-26, `selfplay/teams.py` Composer / `synthetic`, `selfplay/synergy.py`)**: half of self-play's teams (`--synth-frac 0.5`) are synthetic: species are drawn one by one by Smogon usage and lift with the teammates already picked (γ 0.7, Species Clause by base species, ε 0.1 flattening noise); sets are first completed by the belief, then each move slot / item / ability / tera is redrawn with probability 0.1 from the Smogon distribution (square-root flattened); then 12 Metropolis-Hastings steps: each step redraws one member's set and accepts with exp(β·change in the cross-teammate synergy score) (β 0.5; synergy score = the sum of the log lifts of feature pairs between teammates, minus what the species themselves explain; `scripts/build_synergy.py`, statistics of the revealed sets in 120k games); finally the local validator. Diagnosis (`scripts/check_synthetic_teams.py`, 1,000 teams): 92% of the compositions never appeared on the ladder, 99.8% are distinct; the frequencies of the top 200 teammate pairs correlate 0.80 with the ladder (0.63 with independent draws); the share with a second Trick Room setter 0.17 → 0.46 (β 1.0: 0.53; revealed on the ladder: 0.53), the item distribution's TV to Smogon 0.23 → 0.17; all pass validation (2–4% redrawn). Abilities that are never shown (Chlorophyll, Swift Swim) cannot be seen in the ladder statistics, so the synergy score cannot learn them.
 
-### D17. 引擎状态与规则模拟（`agents/engine_state.py`、`agents/timers.py`、`rust/patches`）
-引擎 = poke-engine 0.0.48 + alpha-poke 补丁（注释"alpha-poke patch"），Python 绑定用同一份源码。每次搜索前 `agents/consistency.py` 检查请求与引擎状态。验证工具：`scripts/difftest.py`（状态构造与引擎对 Showdown 的差分；原来的 check_actions / check_timers / check_speed 已于 2026-10-28 删去）、`tests/test_engine_patches.py`、`test_timers.py`、`test_engine_state.py`、`test_transform.py`。
+### D17. Engine state and rule simulation (`agents/engine_state.py`, `agents/timers.py`, `rust/patches`)
+Engine = poke-engine 0.0.48 + the alpha-poke patches (commented "alpha-poke patch"); the Python bindings are built from the same source. Before every search `agents/consistency.py` checks the request against the engine state. Verification tools: `scripts/difftest.py` (differential tests of the state construction and the engine against Showdown; the old check_actions / check_timers / check_speed were deleted on 2026-10-28), `tests/test_engine_patches.py`, `test_timers.py`, `test_engine_state.py`, `test_transform.py`.
 
-**已模拟**：换人按位置编号；睡眠 / 睡觉、剧毒、连续守住、愿望、预知未来、混乱 / 挑衅 / 再来一次 / 哈欠、回复封锁 / 电磁飘浮 / 深渊突刺（含禁声音招式）、灭亡之歌、定身法、必须休息的计数；消失的道具不重抽；能力提升与持续状态；复活祈祷（每个候选各搜一次）；请求里的准确 PP，对手 PP 按使用次数；逃脱按钮 / 红牌 / 逃脱背包 / 紧急逃脱 / 跃跃欲逃；状态树果、柿仔果、心灵香草、防尘护目镜、早起；充电用后结束；被打过的替身按一半；延长道具（8 回合）；对手速度推断；变身；幻觉（按概率）。
+**Simulated**: switches by slot number; sleep / Rest, Toxic, consecutive Protect, Wish, Future Sight, confusion / Taunt / Encore / Yawn, Heal Block / Magnet Rise / Throat Chop (including its ban on sound moves), Perish Song, Disable, the must-recharge counter; items that are gone are not resampled; stat boosts and volatile conditions; Revival Blessing (one search per candidate); exact PP from the request, the opponent's PP by use count; Eject Button / Red Card / Eject Pack / Emergency Exit / Wimp Out; status berries, Persim Berry, Mental Herb, Safety Goggles, Early Bird; Charge ends after use; a Substitute that has been hit counts as half; duration-extending items (8 turns); opponent speed inference; Transform; Illusion (by probability).
 
-**待修**：引擎侧原来列的近似已在差分工作中按 Showdown 实现（`engine-diff.md` L1–L247）；还剩的在 issues（标签 `engine` / `state` / `difftest`：#1–#3、#5、#6、#21）。
+**To fix**: the approximations listed earlier on the engine side have been implemented as in Showdown during the differential work (`engine-diff.md` L1–L247); what remains is in the issues (labels `engine` / `state` / `difftest`: #1–#3, #5, #6, #21).
 
-### D14. 研究方向：隐藏信息进入搜索（待逐项验证；立项前查文献；issues #18、#19、#10）
-1. **双向信息建模（首选）**：对手先验的翻转视角前向遮住它看不到的我方信息（遮蔽机制 `--mask-hidden` 已有）；验证：对战对比 + 太晶 / 关键招式的暴露时机。
-2. **身份条件化 + 陪练**：输入我方 / 对方身份（`人类@分数`、`bot@第 g 代`、未知）；自对弈陪练取历代 bot 和"人类@分数"；对手身份辅助头。
-3. **学出来的信念 + 一致性过滤**：网络的对手配置头在未暴露字段上比信念单次采样准；路线：网络给信念候选重新加权 → 生成式配置模型 → 用出手顺序和伤害剔除矛盾世界。
-4. **同时出招的博弈论搜索**：regret matching 产生混合策略。
+### D14. Research direction: hidden information in the search (each item to be validated; check the literature before starting; issues #18, #19, #10)
+1. **Two-way information modeling (first choice)**: the flipped-view forward pass for the opponent's prior masks the information about us that it cannot see (the masking mechanism `--mask-hidden` exists); validation: battle comparisons + the timing of tera / key-move reveals.
+2. **Identity conditioning + sparring partners**: input our / the opponent's identity (`human@rating`, `bot@generation g`, unknown); self-play sparring partners drawn from past bots and "human@rating"; an opponent-identity auxiliary head.
+3. **Learned belief + consistency filtering**: the network's opponent-set head is more accurate on unrevealed fields than a single belief sample; route: the network reweights the belief's candidates → a generative set model → remove worlds contradicted by the move order and the damage.
+4. **Game-theoretic search for simultaneous moves**: regret matching to produce mixed strategies.
 
-## 5. 路线图与待办
+## 5. Roadmap and to-dos
 
-待办都在 GitHub issues 里（`gh issue list`；优先级标签 P0–P3，领域标签 engine / state / difftest / search / network / training / selfplay / belief / eval / team / research）。完成后关闭 issue，结论写进对应的 D 节，数字写进 `results.md`。
+The to-dos are all in GitHub issues (`gh issue list`; priority labels P0–P3, area labels engine / state / difftest / search / network / training / selfplay / belief / eval / team / research). When one is done, close the issue, write the conclusion into the matching D section and the numbers into `results.md`.
 
-当前的主线（2026-10-28）：
-1. 对人：选队流程（`team_design.md`）出一组队伍，bot 登记批准后上天梯（#20）；对人类的已知问题：纯策略可被针对（#7）、速度判断（#4）。
-2. 自对弈 r2 第 0 代继续扩大到明确更好（D15）；吞吐（#15）、信念按新环境重建（#16）。
-3. 局面与引擎：#1–#3。
+The current main lines (2026-10-28):
+1. Playing people: the team-selection process (`team_design.md`) produces a set of teams; the ladder once the bot registration is approved (#20); known problems against humans: the pure strategy can be exploited (#7), speed judgments (#4).
+2. Self-play r2 generation 0 keeps extending until clearly better (D15); throughput (#15), the belief rebuilt for the new metagame (#16).
+3. States and engine: #1–#3.
 
-排序依据（2026-10-18 的测量，`results.md`“引擎准确性对决策的影响”）：引擎换成差分工作后的版本 +16.5 Elo，修复传给引擎的局面 +43 Elo，800 次迭代搜索本身的遗憾值约是引擎误差的 7 倍——棋力的主要杠杆在网络、搜索、信念和局面的准确性。
+Basis of the ordering (measurements of 2026-10-18, `results.md` "Effect of engine accuracy on decisions"): switching the engine to the version after the differential work +16.5 Elo, fixing the states passed to the engine +43 Elo, the regret of the 800-iteration search itself about 7× the engine error -- the main levers of playing strength are the network, the search, the belief and the accuracy of the state.
 
-## 7. 风险
+## 7. Risks
 
-| 风险 | 缓解 |
+| Risk | Mitigation |
 |---|---|
-| 自对弈收敛到"对付自己"、循环 / 遗忘 | 人类数据锚点；更早各代的抽样；每 3 代的累计检查、Foul Play 参照；陪练（D14-2） |
-| 慢性退化（每代都略弱但测不出） | 只在明确更好时晋升（H0 51%）；`baseline` 对几代前 |
-| 价值学得慢 / 过拟合 / 被人类数据带偏 | 价值调度（v6）；每代在新对局上检查价值 |
-| 搜索与训练的输入不一致 | 特征同一个函数；树内上下文按实际结果记（D12）；改推理后跑一致性检查 |
-| 推理拖慢搜索 | 结构改动以叶子速度为约束 |
-| 评测噪声 | 配对赛程 + 置信区间 + SPRT；A/B 不显著时加新队伍对，不在同一批上反复挑选 |
-| poke-engine 不保真 | 只作搜索用的近似模型；对局在 Showdown 上跑；D17 问题表；回退记账 |
-| 环境变化（禁用名单、新宝可梦） | 组队按时间加权、校验器按今天的规则；补新数据 |
-| 许可 / 规则 | replay 数据未标注许可：只本地使用、权重限非商业研究；Foul Play 为 GPL；PS 的 bot 政策（2026-10）：先登记，人类自愿和 bot 对战，比赛中用 AI 算代打 |
+| Self-play converges on "beating itself", cycles / forgetting | human-data anchor; sampling of earlier generations; a cumulative check every 3 generations, the Foul Play reference; sparring partners (D14-2) |
+| Slow decline (each generation slightly weaker, but not measurably) | promote only when clearly better (H0 51%); `baseline` against a few generations back |
+| The value learns slowly / overfits / is pulled off by human data | the value schedule (v6); a value check on new games every generation |
+| Inputs differ between search and training | one function for the features; in-tree context recorded by actual outcomes (D12); consistency checks after inference changes |
+| Inference slows the search | structural changes constrained by leaf speed |
+| Evaluation noise | paired schedule + confidence intervals + SPRT; when an A/B is not significant, add new team pairs; never re-select on the same batch |
+| poke-engine is not faithful | used only as an approximate model in the search; games run on Showdown; the D17 problem table; fallback accounting |
+| Metagame changes (ban lists, new Pokémon) | team sampling weighted by time, the validator on today's rules; add new data |
+| Licenses / rules | the replay data carry no license: local use only, weights limited to non-commercial research; Foul Play is GPL; PS's bot policy (2026-10): register first, humans play bots by choice, using AI in a tournament counts as having someone else play for you |

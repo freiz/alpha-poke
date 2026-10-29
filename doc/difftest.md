@@ -1,112 +1,111 @@
-# 差分测试框架
+# Differential testing framework
 
-## 为什么
+## Why
 
-到目前为止的差分是一个个单独写的脚本（引擎差分、实战 / 回放的状态构造差分、树内历史、因果性），各自重跑 Showdown、各自统计，各有各的覆盖盲区：
+Until now the differential tests were separate scripts (the engine diff, the state-construction diff for live play / replays, the in-tree history, causality), each rerunning Showdown and computing its own statistics, each with its own blind spots:
 
-- **只走一步。** 引擎差分从 Showdown 的真实状态出发，只比一次转移；根节点的值本来就对，所以"树里第二步起读到过期的值"（上一招的开关、存招泄漏 L229）原理上测不出。
-- **只走随机对局碰到的组合。** 复查用确定性的多步场景（Trick 之后、Knock Off 之后、Neutralizing Gas 在场时……）查出的问题，随机对局很少走到。
-- **只验证"构造"，不验证"推断"。** 先知模式把对方隐藏的配置换成真实配置，构造错误看得见，信念（抽样、F1 伤害后验、速度推断）把真实配置排除掉的错误看不见。
-- **慢。** 每次回归都重跑 Showdown，所以平时只跑小样本，大样本靠手动。
+- **One step only.** The engine diff starts from Showdown's real state and compares a single transition; the values at the root are right to begin with, so "the tree reads stale values from the second step on" (the last-move switch, the stored-move leak L229) cannot be detected in principle.
+- **Only the combinations random games run into.** Problems found in review with deterministic multi-step scenarios (after Trick, after Knock Off, with Neutralizing Gas active...) are rarely reached by random games.
+- **Verifies "construction" only, not "inference".** Oracle mode replaces the opponent's hidden sets with the real ones: construction errors are visible, but errors where the belief (sampling, the F1 damage posterior, speed inference) excludes the real set are not.
+- **Slow.** Every regression run reruns Showdown, so normally only small samples are run, and large ones by hand.
 
-## 结构
+## Structure
 
 ```
-对局规格（BattleSpec）──> 轨迹（Showdown 录制，缓存）──> 检查（每个检查一个函数）──> 发现（类别 + 例子）──> 基线
-   随机对局 / 场景剧本         真实状态、选择、request、         引擎一步 / 引擎链式 /              按（语料，检查）
-                               三方视角日志                      实战构造 / 回放构造 / 选项 /       钉住类别和次数
-                                                                 树内历史 / 信念真值
+battle spec (BattleSpec) ──> trace (Showdown recording, cached) ──> checks (one function each) ──> findings (category + examples) ──> baseline
+   random games / scenario       real states, choices, requests,       engine one-step / engine chain /         per (corpus, check),
+   scripts                       logs from three viewpoints            live construction / replay construction / pins categories and counts
+                                                                       options / tree history / belief truth
 ```
 
-- **对局规格**：两支队伍、种子、回合上限，可选的剧本（每个决策点双方的选择，用完后回到随机选择）。随机语料来自 `tests/fixtures/random_battle_teams*.jsonl` 和 `data/teams/`；场景语料由 `enginecheck/scenarios.py` 按机制生成。
-- **轨迹缓存**：`random_battle` 的输出按（规格、Showdown 版本、录制脚本）的哈希存在 `data/difftest/cache/`。Showdown 对同样的种子是确定的，所以检查改了代码也不必重跑 Showdown；Showdown 或录制脚本一变，缓存自动失效。
-- **检查**：都接受同一份轨迹，互不依赖：
-  - `engine_step`：每个回合开始，一次转移（原 `check_engine_random`）；
-  - `engine_chain`：从真实状态出发，沿 Showdown 实际的选择连续推进几个回合，每一步取与 Showdown 最接近的结果继续（HP 按真实值同步，避免伤害取均值带来的漂移），从第二步起与 Showdown 比较——专抓"树里第二步起才错"的问题；
-  - `engine_dist`（2026-10-25）：分支概率对 Showdown 的分布。`engine_step` 只把实际出现的那一个结果匹配到概率为正的某个分支，命中率 85% 改成 1% 照样匹配（复查第 2 批）。现在每 4 个可比回合序列化一次 Showdown 的对局，换 100 个种子重放同一组选择（`showdown_resample.js`），每个结果按不含 HP 的状态（异常、易变状态、能力等级、在场者……）和谁倒下归类，引擎的每个分支（不带提示，用引擎自己的随机）同样归类，比较频率和概率：超出 4 个标准差且差 ≥ 0.06 记 `dist.freq`，引擎没有的结果占比 > 0.06 记 `dist.unmatched`。Showdown 已经抽好的隐藏值（在场者身上运行中的混乱、锁定、束缚的长度，睡眠）存在序列化里，重放时固定，引擎按概率算，这类回合跳过并计数。纯伤害招式的命中与否不在类别里（伤害和剩饭回复可能互相抵消，随机数一差就落到别的类），留给 HP 比较；
-  - `state_live` / `state_replay`：两条路径的状态构造（原 `check_state_build`，含选项往返）；
-  - `tree_history`：树内历史与日志的历史（原 `check_tree_history`）；
-  - `state_facts`（2026-10-25）：非先知的构建（信念自己的抽样），检查它认定已知的事实——poke-env / 跟踪器记下的对手当前特性、原始特性、道具、已暴露的招式——必须为真。先知模式的检查给对手真实配置，这些推断从来没被检验（B8：Worry Seed 之后的原始特性）。抽样一致性不能代替“已知”：确定性的点估计（努力值）、接近确定的先验（99% 的特性）抽几次都一样，却只是猜测。
-  - `state_chain`（2026-10-25）：从我们构建的状态（先知模式，p1 视角）出发，沿实际选择推 2 回合，从第一步起和 Showdown 比较——“当下对、往后推才错”的问题。起点按真实状态的槽位顺序重排（Showdown 的队伍顺序；我们的是 poke-env 的），玩家不可能知道的取真实值（Showdown 暗中抽的持续时间、被打过的替身 HP、已混乱时锁定招式悄无声息的结束、从未被识破的伪装对象的 HP 和 PP），Illusion 伪装中（真实的，或我们构建时猜的）不比较；我们的命名（Greninja-Bond）按别名比较（换人选择是物种 id，双向）。起点还比较双方的合法选项和 Showdown 的 request（`start_options`）：每步之后的状态由引擎自己的规则设定，起点缺的锁定（对手的 Choice 锁）走一步就被补上，只比步后看不出来。
-  - `belief_truth`：非先知模式下，真实配置从来不被排除——硬约束（速度观测、伤害证据、Assault Vest 与变化招式等规则）下真实值的似然不为 0，F1 的候选（经 `_candidates`，不代入真实值）含真实的初始特性（`belief:candidates`）；先验的支撑（真实的道具 / 特性 / 招式 / 太晶在信念里概率不为 0）单独计数。
-- **基线**：每个（语料，检查）一个文件 `tests/fixtures/difftest/<语料>.<检查>.json`，记各类别的次数：不许出现新类别，任何类别不许变多；修好的类别自动从基线里去掉（`--update-baseline`，只许变少）。另按对局记各类别的次数（`@specs`）：只比总数时，一局修好的旧错误会抵消另一局新出现的同类错误（2026-10-25 复查第 3 批），现在任何一局的任何类别都不许变多。
-- **分层**：
-  - `fast`：全部场景 + 少量随机对局，所有检查；pytest 里跑，缓存命中时几分钟；
-  - `full`：每组 fixtures 各 50 局（约 2,000 局），提交前跑；
-  - 百万级：`scripts/state_build_sweep.sh` 等，换新种子，定期跑。
-- **复现**：报告里每个例子都带规格编号和步数；`scripts/difftest.py --repro <编号> --check <检查> --step <k>` 打印那一段日志和两边的值。
+- **Battle spec**: two teams, a seed, a turn cap, an optional script (both sides' choices at each decision point; random choices once it runs out). The random corpus comes from `tests/fixtures/random_battle_teams*.jsonl` and `data/teams/`; the scenario corpus is generated per mechanism by `enginecheck/scenarios.py`.
+- **Trace cache**: the output of `random_battle` is stored in `data/difftest/cache/` under the hash of (spec, Showdown version, recording script). Showdown is deterministic for the same seed, so changing a check's code does not require rerunning Showdown; when Showdown or the recording script changes, the cache is invalidated automatically.
+- **Checks**: all take the same trace and are independent of each other:
+  - `engine_step`: one transition at the start of each turn (formerly `check_engine_random`);
+  - `engine_chain`: from the real state, advance several turns along Showdown's actual choices, each step continuing from the outcome closest to Showdown's (HP synced to the real values, to avoid the drift from averaged damage), and compare with Showdown from the second step on -- aimed at problems that only go wrong "from the second step in the tree";
+  - `engine_dist` (2026-10-25): branch probabilities against Showdown's distribution. `engine_step` only matches the one outcome that actually happened to some branch with positive probability; an 85% hit chance changed to 1% would still match (review batch 2). Now every 4 comparable turns the Showdown battle is serialized and the same choices are replayed with 100 seeds (`showdown_resample.js`); each outcome is classed by its state without HP (status, volatiles, stat stages, the active Pokémon...) and by who fainted; each engine branch (no hints, the engine's own randomness) is classed the same way, and frequencies are compared with probabilities: more than 4 standard deviations off and a difference ≥ 0.06 is recorded as `dist.freq`; outcomes the engine does not have, with a share > 0.06, as `dist.unmatched`. Hidden values Showdown has already drawn (the lengths of a running confusion, lock or partial trapping on the active Pokémon, sleep) are in the serialization and stay fixed in the replays while the engine computes them by probability; such turns are skipped and counted. Whether a pure damage move hits is not part of the class (damage and Leftovers healing can cancel out, and a different random number lands in another class); that is left to the HP comparison;
+  - `state_live` / `state_replay`: state construction on the two paths (formerly `check_state_build`, including the options round trip);
+  - `tree_history`: the in-tree history against the history from the log (formerly `check_tree_history`);
+  - `state_facts` (2026-10-25): a non-oracle build (the belief's own samples), checking that the facts it treats as known -- the opponent's current ability, original ability, item and revealed moves as recorded by poke-env / the tracker -- are true. Oracle-mode checks give the opponent's real set, so these inferences were never tested (B8: the original ability after Worry Seed). Consistent samples cannot stand in for "known": deterministic point estimates (EVs) and near-certain priors (a 99% ability) come out the same however many times they are sampled, yet they are only guesses.
+  - `state_chain` (2026-10-25): from the state we build (oracle mode, p1's view), advance 2 turns along the actual choices and compare with Showdown from the first step on -- problems that are "right now, wrong further on". The start is reordered by the real state's slot order (Showdown's team order; ours is poke-env's); what a player cannot know takes the real values (durations Showdown drew in secret, the HP of a Substitute that has been hit, the silent end of a locked move when already confused, the HP and PP of a disguised Pokémon that was never unmasked); nothing is compared during an Illusion disguise (a real one, or one our build guessed); our names (Greninja-Bond) are compared via aliases (switch choices are species ids, both ways). At the start it also compares both sides' legal options with Showdown's request (`start_options`): the state after each step is set by the engine's own rules, so a lock missing at the start (the opponent's Choice lock) gets filled in after one step, and comparing only after steps would not show it.
+  - `belief_truth`: in non-oracle mode the real set is never excluded -- under the hard constraints (speed observations, damage evidence, rules such as Assault Vest and status moves) the real value's likelihood is not 0, and F1's candidates (via `_candidates`, without substituting the real value) include the real initial ability (`belief:candidates`); the prior's support (the real item / ability / moves / tera having nonzero probability in the belief) is counted separately.
+- **Baseline**: one file per (corpus, check), `tests/fixtures/difftest/<corpus>.<check>.json`, recording the count of each category: no new category may appear and no category may grow; categories that get fixed are removed from the baseline automatically (`--update-baseline`, which may only shrink it). The category counts are also recorded per battle (`@specs`): comparing only totals, an old error fixed in one battle offsets a new error of the same category in another (review batch 3, 2026-10-25); now no category may grow in any battle.
+- **Tiers**:
+  - `fast`: all scenarios + a few random games, all checks; runs in pytest, a few minutes with a cache hit;
+  - `full`: 50 games from each fixture set (about 2,000 games), run before commits;
+  - Million-scale: `scripts/state_build_sweep.sh` etc., with new seeds, run periodically.
+- **Reproduction**: every example in the report carries its spec id and step; `scripts/difftest.py --repro <id> --check <check> --step <k>` prints that part of the log and both sides' values.
 
-## 变异测试
+## Mutation testing
 
-基线只说明"没有变多"，说明不了"测到了"（2026-10-25 复查：七处检查没比较也报"无差异"——参考状态转换失败返回空差异、比较次数为 0 也通过、链式检查过滤掉新施加的效果是否存在、概率为 0 的分支也能匹配、基线更新被拒绝时退出码 0、`--only` 覆盖全量基线、缓存指纹漏了 `dist/config` 的格式规则。现在：转换失败是差异 `reference_state`；基线还记每个检查的实际比较次数 `#compared`（变少是回归）和每种跳过原因 `#skipped: …`（变多是回归）；链式检查只不比较新效果的随机持续时间；`closest` 只接受正概率分支、各分支概率之和须为 1；被拒绝的更新退出码 1，`--only` 不写基线；指纹扫描 `dist/{sim,data,lib,config}`。各自的测试：`tests/test_difftest_framework.py`。修好转换之后，昏厥回合的扩展字段第一次被比较：17,743 个回合，查出两处比较器的时间点问题——昏厥一方的 Toxic 计数、换人决策点的 Wish / Future Sight 回合数，统一由 `showdown_state.js` 的 `upkept` 处理——和引擎的 L240）：一个场景能跑通，不等于它走到了要测的机制（2026-10-24：第一个 Endure 场景里 Endure 从来没有真正撑住，把 S152 改回去，`fast` 毫无反应）。所以：
+The baseline only shows "no increase"; it cannot show "detected" (the 2026-10-25 review: seven places reported "no difference" without comparing anything -- a failed reference-state conversion returned an empty diff, zero comparisons also passed, the chain check filtered out whether newly applied effects exist at all, branches with probability 0 could also match, a refused baseline update exited with code 0, `--only` overwrote the full baseline, the cache fingerprint missed the format rules of `dist/config`. Now: a failed conversion is the difference `reference_state`; the baseline also records each check's actual number of comparisons, `#compared` (a decrease is a regression), and each skip reason, `#skipped: …` (an increase is a regression); the chain check leaves out only the random durations of new effects; `closest` accepts only positive-probability branches, and the branch probabilities must sum to 1; a refused update exits with code 1, and `--only` does not write the baseline; the fingerprint scans `dist/{sim,data,lib,config}`. Their tests: `tests/test_difftest_framework.py`. Once the conversion was fixed, the extended fields of turns with a faint were compared for the first time: 17,743 turns, which found two timing problems in the comparator -- the fainted side's Toxic counter and the Wish / Future Sight turn counts at switch decision points, both now handled by `upkept` in `showdown_state.js` -- and the engine's L240): a scenario that runs through does not mean it reaches the mechanism it is meant to test (2026-10-24: in the first Endure scenario Endure never actually held; reverting S152 got no reaction from `fast`). So:
 
-- 场景声明 `expect`：它的日志里必须出现的行（Endure 的 `-activate`、Minior 的 `-formechange`……），`tests/test_difftest.py` 检查它真的发生了。
-- `scripts/difftest_mutations.py`：把每一处修复临时改回去，`fast` 必须报出回归，没报的就是没被守住的修复（`--rust`：引擎 / 搜索的修复，要重新编译）。每修一个问题，就在这里加一条。运行器的退出码只能是 0（无回归）或 1（有 REGRESSION 行），否则算错误、不算抓到；一个变异都没跑报错（2026-10-25：只设了 `RUST` 没加 `--rust` 的包装脚本跑了空列表，照样打印 every mutation caught——L244 的变异因此当时其实没跑）；全部跑完后未变异的代码必须重新通过 `fast`，否则退出码 3（原来只打印 STALE、返回 0）。
+- Scenarios declare `expect`: lines that must appear in their log (Endure's `-activate`, Minior's `-formechange`...), and `tests/test_difftest.py` checks that they really happen.
+- `scripts/difftest_mutations.py`: temporarily reverts each fix; `fast` must report a regression, and a fix it does not report is not guarded (`--rust`: engine / search fixes, which need a rebuild). Every fix adds an entry here. The runner's exit code may only be 0 (no regression) or 1 (REGRESSION lines); anything else counts as an error, not a catch; running no mutation at all is an error (2026-10-25: a wrapper script that set only `RUST` without `--rust` ran an empty list and still printed every mutation caught -- so L244's mutation did not actually run at the time); after all of them, the unmutated code must pass `fast` again, otherwise exit code 3 (previously it only printed STALE and returned 0).
 
-## 场景
+## Scenarios
 
-场景是确定性的短剧本，按机制写：一个机制写出它的各个维度（事件之前 / 之后；道具换手、特性变化、压制；变身前后……），组合成多个场景。配置尽量"中性"：除了要测的机制，不带会顺带打开别的机制的特性、道具、招式（2026-10-24 复查：Spite 的测试因为 Gengar 的 Cursed Body 碰巧通过）。场景加进语料后，所有检查都自动跑在它上面。
+Scenarios are short deterministic scripts written per mechanism: a mechanism's dimensions are spelled out (before / after the event; items changing hands, ability changes, suppression; before / after Transform...) and combined into several scenarios. The sets are kept as "neutral" as possible: apart from the mechanism under test, no abilities, items or moves that switch on other mechanisms along the way (the 2026-10-24 review: the Spite test passed by accident because of Gengar's Cursed Body). Once a scenario is in the corpus, every check runs on it automatically.
 
-## 现状（2026-10-25）
+## Status (2026-10-25)
 
-`fast`：71 个场景 + 30 局随机，全部检查约 4 秒（缓存命中、14 个进程）；`full`：71 个场景 + 2,400 局，约 100 秒。
+`fast`: 71 scenarios + 30 random games, all checks in about 4 seconds (cache hit, 14 processes); `full`: 71 scenarios + 2,400 games, about 100 seconds.
 
-| 检查 | `full` 比较了 | 发现 |
+| check | `full` compared | findings |
 |---|---|---|
-| `engine_step` | 77,457 个回合 | 42（原 72）：Skill Swap 换走 Slow Start（4，L239，待确认）；没有目标的招式的 lastMove（L240，待确认）；Copycat 调出的 Dig 被 Earthquake 打中的那一回合，其昏厥宝可梦的各字段（25 类各 1）；Klutz / Embargo / 魔法空间下的延长道具——L234；电系变化招式对地面系——L235；Sheer Force 去掉 Protect 等——L236；“上一招失败”——L237（比较器原来跳过这个标记，开始比较时一次暴露 4,309 处，逐类对照 Showdown 源码修到 1 处：Copycat 调出的 Dig 被 Earthquake 打中）；`gen9ou` 的第二次睡眠（该格式没有 Sleep Clause Mod）——L238；其余零星 |
-| `engine_dist` | 19,851 个回合（跳过：隐藏长度 360、睡眠 677、Metronome 2；含终局回合） | 120（首次 148；L244 / L246 / L247 修后，重放种子的偏差改正后——原来的数字有一部分是它；2026-10-26 自查：终局样本按谁倒下合为一类、精确二项检验，132 → 120）：约 0.45% 的可比回合、3.5% 的对局里有，多数是引擎对“不击倒的伤害”取平均（击倒与否按 16 个随机数精确分支，L34；回合末残余的阈值也分支，L109），同一回合里之后靠剩余 HP 的事件随之确定：后手的击倒 / 残余击倒（0.29% 的回合）、反伤击倒（0.11%）、Sitrus Berry 的阈值（0.05%），出现时概率差的中位数约 0.2–0.26；另有零散（约 25 处：Population Bomb / Triple Axel 的逐次命中、Air Balloon，待确认）；已知的 Copycat 调出的 Dig、Counter（engine_step 的同类） |
-| `engine_chain` | 24,463 个回合 | 23（原 108）：同上（L239 占 8）；链式只同步 HP、不同步异常状态，上一步已有的状态差异会连锁（Baneful Bunker 的中毒之后的 Toxic 失败） |
-| `state_live` / `state_replay` | 各 149,760 个决策点 | 0（第一轮的 12 / 18：变身的体重、复制招式的 PP——S154、S155；比较器原来不比较 `types` / `base_types`，加上后查出 Double Shock 之后的属性——S156） |
-| `tree_history` | 64,450 步 | 175：已知的三类（Illusion、Minior 的颜色、Revival Blessing） |
-| `belief_truth` | 30,105 个决策点 | 硬约束 0（B5：值在另一只身上改变时的阶段——Magician 的失主、Skill Swap / Mummy / Lingering Aroma 之后的特性，速度观测同样；候选检查原来代入真实特性，看不见）：速度观测原排除真实速度 990 处（B1 道具换手；B2：我方道具、对方形态、变身、Healing Wish 的治愈、Encore、Mycelium Might / Stall、Illusion），伤害证据原 57 处（B3：Pain Split 的 `-sethp`、变身、另一形态、Illusion、Stakeout；以及 S156 的属性）；先验支撑（每局每只每个值计一次）原约 8,600，0（B4、B6：回退先验、下限） |
+| `engine_step` | 77,457 turns | 42 (was 72): Skill Swap taking Slow Start away (4, L239, to be confirmed); the lastMove of a move with no target (L240, to be confirmed); in the turn a Dig called by Copycat is hit by Earthquake, the fields of the fainted Pokémon (25 categories, 1 each); duration-extending items under Klutz / Embargo / Magic Room -- L234; Electric-type status moves against Ground types -- L235; Sheer Force removing the effect of Protect etc. -- L236; "the last move failed" -- L237 (the comparator used to skip this flag; once it was compared it exposed 4,309 cases at once, fixed category by category against Showdown's source down to 1: the Dig called by Copycat hit by Earthquake); a second sleep in `gen9ou` (that format has no Sleep Clause Mod) -- L238; other scattered ones |
+| `engine_dist` | 19,851 turns (skipped: hidden lengths 360, sleep 677, Metronome 2; end-of-game turns included) | 120 (148 at first; after the L244 / L246 / L247 fixes and after the replay-seed bias was corrected -- part of the original number was that; 2026-10-26 self-review: end-of-game samples merged into one class by who fainted, exact binomial test, 132 → 120): present in about 0.45% of the comparable turns and 3.5% of the battles; most are the engine averaging "damage that does not KO" (whether it KOs branches exactly over the 16 random rolls, L34; the thresholds of end-of-turn residual damage branch too, L109), so later events in the same turn that depend on the remaining HP become fixed: the slower side's KO / a residual KO (0.29% of the turns), a recoil KO (0.11%), Sitrus Berry's threshold (0.05%), with a median probability difference of about 0.2–0.26 where they occur; plus scattered ones (about 25: the per-hit accuracy of Population Bomb / Triple Axel, Air Balloon, to be confirmed); the known Dig called by Copycat, Counter (the same categories as in engine_step) |
+| `engine_chain` | 24,463 turns | 23 (was 108): as above (L239 accounts for 8); the chain syncs only HP, not status, so status differences already present at the previous step cascade (Toxic failing after Baneful Bunker's poison) |
+| `state_live` / `state_replay` | 149,760 decision points each | 0 (the first round's 12 / 18: weight after Transform, PP of copied moves -- S154, S155; the comparator used not to compare `types` / `base_types`, and adding them found the types after Double Shock -- S156) |
+| `tree_history` | 64,450 steps | 175: the three known categories (Illusion, Minior's color, Revival Blessing) |
+| `belief_truth` | 30,105 decision points | hard constraints 0 (B5: the phase when a value changes on another Pokémon -- Magician's victim, the ability after Skill Swap / Mummy / Lingering Aroma, and the same for speed observations; the candidate check used to substitute the real ability, so it could not see this): speed observations used to exclude the real speed in 990 cases (B1: items changing hands; B2: our item, the opponent's forme, Transform, Healing Wish's cure, Encore, Mycelium Might / Stall, Illusion), damage evidence in 57 (B3: Pain Split's `-sethp`, Transform, another forme, Illusion, Stakeout; and the types of S156); prior support (counted once per value per Pokémon per battle) was about 8,600, now 0 (B4, B6: the fallback prior, the floor) |
 
-变异测试：46 个修复（Python 36、引擎 / 搜索 10）全部抓到（B6 的回退先验在支撑检查里看不出——下限已让支撑不为 0，由 `test_sample_set.py` 守住）；脚本先确认未改动的代码对基线零回归（基线过期时任何变异都会显得"被抓到"）。
+Mutation testing: 46 fixes (Python 36, engine / search 10), all caught (B6's fallback prior cannot be seen in the support check -- the floor already makes the support nonzero -- so `test_sample_set.py` guards it); the script first confirms that the unmodified code has zero regressions against the baseline (with a stale baseline every mutation would look "caught").
 
-信念检查的错误（状态构造失败）原来只留在 `decisions` 里、不计入类别：2026-10-24 一个类型错误让每个 F1 命中都失败，检查却报 0，已并入。
+Errors in the belief check (failed state construction) used to stay only in `decisions` and were not counted in the categories: on 2026-10-24 a type error made every F1 hit fail while the check still reported 0; they are now merged in.
 
-精确 HP 的格式是 `gen9customgame`（没有 Sleep Clause Mod，与玩家的 `[Gen 9] OU` 一致：L238）。
+The exact-HP format is `gen9customgame` (no Sleep Clause Mod, the same as the players' `[Gen 9] OU`: L238).
 
-未覆盖：状态构造检查只在精确 HP 的格式下跑（它的比较器读真实 HP，百分比下对方 HP 的取整不是错误，还没有容差）；信念检查只在百分比格式下跑。
+Not covered: the state-construction checks run only in the exact-HP format (their comparator reads the real HP; in the percent format the rounding of the opponent's HP is not an error, and there is no tolerance for it yet); the belief checks run only in the percent format.
 
-## 什么时候加什么
+## What to add when
 
-- 修一个问题：先加能复现它的场景（各个维度都覆盖），确认在 `fast` 里报出，再修；修完基线自动收紧。
-- 加一个检查：注册进检查表，跑一遍各语料生成基线。
-- 换 Showdown 版本：缓存失效，重录；基线照常比较。
+- Fixing a problem: first add a scenario that reproduces it (covering every dimension), confirm that `fast` reports it, then fix it; after the fix the baseline tightens automatically.
+- Adding a check: register it in the check table and run each corpus once to generate its baselines.
+- A new Showdown version: the cache is invalidated and re-recorded; the baselines compare as usual.
 
-## 偏差（2026-10-25）
+## Biases (2026-10-25)
 
-外部复查用 Showdown 构造的反例，连续找到这些检查漏掉的问题（Worry Seed 之后的原始特性、Sleep Talk 调出的 Rollout、锁定中 0 PP 的招式……）。漏掉的原因不是某一处疏忽，而是框架本身的几种偏差：
+External reviews, with counterexamples built in Showdown, kept finding problems these checks had missed (the original ability after Worry Seed, a Rollout called by Sleep Talk, a 0-PP move during a lock...). The cause was not a single oversight but several biases of the framework itself:
 
-- **语料**：随机队伍加随机选择，约 2,400 局。需要特定招式同时出现、再按特定顺序触发的组合几乎碰不到。
-- **先知**：状态检查让对手隐藏的部分取真实配置，我方取 request 的真值。构建器靠推断得到的字段（原始特性、原始道具……）从来没被检验。
-- **时间点**：只比较决策点当下的状态。引擎检查的起点是 Showdown 状态的换算，不是我们构建的状态；“当下对、往后推才错”的问题（换下后特性恢复）没有检查覆盖。
-- **共用规则**：Showdown 状态的换算和 `build_state` 共用一些规则（`derived_disable`、锁定）。规则本身错时两边一起错，比较一致。
-- **比较字段**：比较哪些字段是手工列的。没列的永远是 0（Uproar 的计数在 L241 之前从未比较；状态检查的 side condition 列表漏了 Healing Wish，我们的状态从来没构建它，`state_chain` 才发现：S158c——现在取引擎的全部字段，`test_every_side_condition_is_compared` 守住；`pe.State` / `pe.Side` / `pe.Pokemon` 的每个字段要么比较、要么在 `statebuild` 的跳过表里写明原因，`test_every_field_is_compared_or_says_why` 守住——引擎加了字段，测试先失败；改完当天又查出 Rage Fist 计数、Revival Blessing 次数、变身后的一次性特性、Stellar 标记四类：S158d）。
-- **场景**：场景是按我们对机制的理解写的，测的是已经实现的东西；没想到的维度就没有场景。
-- **随机数种子**：这个版本的 Showdown 解析 `gen5,` 种子时，期望的是四段 4 位十六进制连在一起（`slice(5, 9)`……）；我们传的 `gen5,i,j,...`（十进制、逗号分隔）被切成几乎相同、彼此相关的种子。`engine_dist` 的重放因此有偏：一次冰冻解除（20%）重放出 39%，看上去像引擎的问题；`chance_count.js`（双端测试的 `showdown_rate`）同样如此，它原有的注释已经记过 King's Rock 的 10% 测出 28.75%，当时只把种子打散，没找到根因。两者都改为由哈希生成的 sodium 种子（2026-10-25）。录制用的 `random_battle` 只要求确定，不要求分布，没有改。
-- **自查（2026-10-26，三份独立审查）**：链式检查里的 `end_diff` 走不到（终局转移被 `at_decision` 挡住）——改为比较后结束这条链；`engine_dist` 的终局样本全部记到第一个分支的类（约 12 处假发现进了基线）——终局的分支和样本都按谁倒下合为一类；它的正态近似对引擎多出的低概率结果不敏感（Showdown 为 0 时 p > 0.138 才报）、小 p 时假阳性偏高——改为精确二项检验（双侧 α = 1e-4，下限 0.04）；`state_facts` 的比较数记的是决策数、形态名不同的宝可梦被静默跳过、已知没有道具从不比较、构建出的招式没核对——都补上（比较数按事实条数）；3 条变异在 HEAD 已对不上（`test_every_mutation_applies` 守住）；只让检查抛异常的变异算 ERROR；拆分评测一边超时后整条通道停下（原来两边错位）；`state_chain` 遇到 "no outcome" 不再整个规格出错。
-- **终局**：最后一次转移（胜负已分）原来在单步、链式、树历史里都被跳过。Showdown 在分出胜负时就停止这个回合，引擎把回合走完；现在只比较谁倒下（`ec.end_diff`），树历史的最后一回合照常比较。
-- **跳过和基线**：跳过的比较里可能藏着整类问题（有昏厥的回合 17,743 个，参考状态一直转换失败）；基线只拦“变多”，已知的差异进了基线就不再显眼。
-- **变异测试**只能证明已有的测试能发现修复被撤销，证明不了覆盖得全。
+- **Corpus**: random teams plus random choices, about 2,400 games. Combinations that need specific moves together, triggered in a specific order, are almost never hit.
+- **Oracle**: the state checks give the opponent's hidden parts the real set and ours the true values from the request. The fields the builder gets by inference (original ability, original item...) were never tested.
+- **Timing**: only the state at the decision point itself is compared. The engine checks start from a conversion of Showdown's state, not from the state we build; problems that are "right now, wrong further on" (the ability restored after switching out) were not covered by any check.
+- **Shared rules**: the conversion of Showdown's state and `build_state` share some rules (`derived_disable`, locks). When a rule itself is wrong, both sides are wrong together and the comparison agrees.
+- **Compared fields**: which fields are compared was listed by hand. Unlisted ones are always 0 (Uproar's counter was never compared before L241; the side-condition list of the state check missed Healing Wish, our state never built it, and only `state_chain` found it: S158c -- now all of the engine's fields are taken, guarded by `test_every_side_condition_is_compared`; every field of `pe.State` / `pe.Side` / `pe.Pokemon` is either compared or listed with a reason in the skip table of `statebuild`, guarded by `test_every_field_is_compared_or_says_why` -- when the engine adds a field, the test fails first; on the day of the change it found four more categories: Rage Fist's counter, the Revival Blessing count, one-time abilities after Transform, the Stellar marker: S158d).
+- **Scenarios**: scenarios are written from our understanding of a mechanism and test what is already implemented; a dimension nobody thought of has no scenario.
+- **Random seeds**: this version of Showdown, when parsing a `gen5,` seed, expects four groups of 4 hex digits concatenated (`slice(5, 9)`...); the `gen5,i,j,...` we passed (decimal, comma-separated) was cut into nearly identical, correlated seeds. The replays of `engine_dist` were biased as a result: a thaw from freeze (20%) replayed at 39%, which looked like an engine problem; `chance_count.js` (the dual tests' `showdown_rate`) was affected the same way -- its existing comment had already noted King's Rock's 10% measuring 28.75%, but back then the seeds were only scrambled and the root cause was not found. Both now use sodium seeds generated from a hash (2026-10-25). `random_battle`, used for recording, only needs to be deterministic, not to have the right distribution, and was not changed.
+- **Self-review (2026-10-26, three independent reviews)**: `end_diff` in the chain check was unreachable (end-of-game transitions were blocked by `at_decision`) -- now the chain ends after comparing it; `engine_dist` recorded all end-of-game samples in the first branch's class (about 12 false findings went into the baseline) -- end-of-game branches and samples are now merged into one class by who fainted; its normal approximation was insensitive to low-probability outcomes the engine has in excess (when Showdown's is 0, reported only at p > 0.138), with too many false positives at small p -- now an exact binomial test (two-sided α = 1e-4, floor 0.04); `state_facts` counted decisions as its comparisons, silently skipped Pokémon whose forme names differ, never compared a known lack of item, and did not check the built moves -- all added (comparisons counted by number of facts); 3 mutations no longer applied at HEAD (guarded by `test_every_mutation_applies`); a mutation that only makes a check throw counts as an ERROR; when one side of a split evaluation times out, the whole lane stops (previously the two sides got out of step); `state_chain` no longer fails the whole spec on "no outcome".
+- **End of game**: the last transition (the winner decided) used to be skipped in the one-step, chain and tree-history checks. Showdown stops the turn as soon as the winner is decided, while the engine plays the turn to the end; now only who fainted is compared (`ec.end_diff`), and the last turn of the tree history is compared as usual.
+- **Skips and baselines**: skipped comparisons can hide whole categories of problems (17,743 turns with a faint, whose reference state kept failing to convert); the baseline only stops "more", and known differences no longer stand out once they are in the baseline.
+- **Mutation testing** can only prove that the existing tests notice a reverted fix, not that the coverage is complete.
 
-对策见 GitHub issue #6（差分框架补强）。
+The countermeasures are in GitHub issue #6 (strengthening the differential framework).
 
-## 移植一个机制的清单
+## Checklist for porting a mechanism
 
-1. 读 Showdown 源码里这个机制的全部代码，把每个条件判断逐条列出来（`onModifyMove` 的睡眠、`getLockedMove`、被调用、PP、没有目标……）。
-2. 找出这条规则的每一份实现：引擎（Rust）、`timers` / `poke_env_fixes`（我方状态构建）、差分框架的换算。逐条核对清单。
-3. 加了新语义时（例如“锁定”），搜一遍和它矛盾的旧假设（“可选 = PP > 0”“列出的招式至少 1 PP”）。
-4. 场景和双边测试按标准维度展开：
-   - 自己用，或被 Copycat / Metronome / Sleep Talk 调用；
-   - 使用者睡着或混乱，目标已倒下或使用 Protect；
-   - PP 耗尽（Pressure、Spite）；
-   - 被迫换下、换下后再上场；
-   - Illusion、Transform；
-   - 我方和对手两个视角，实战和回放两条路径。
-5. 修复一个值时，列出它的所有消费方（F1、速度推断、`sample_set`、`build_state` 读 poke-env 的地方……）。
+1. Read all of the mechanism's code in Showdown's source and list every condition it checks (sleep in `onModifyMove`, `getLockedMove`, being called by another move, PP, no target...).
+2. Find every implementation of the rule: the engine (Rust), `timers` / `poke_env_fixes` (our state construction), the differential framework's conversion. Check each against the list.
+3. When adding new semantics (e.g. "locked"), search for old assumptions that contradict them ("selectable = PP > 0", "a listed move has at least 1 PP").
+4. Expand the scenarios and dual tests along the standard dimensions:
+   - used directly, or called by Copycat / Metronome / Sleep Talk;
+   - the user asleep or confused, the target already fainted or using Protect;
+   - PP used up (Pressure, Spite);
+   - forced out, coming back in after switching out;
+   - Illusion, Transform;
+   - both our view and the opponent's, both the live and the replay path.
+5. When fixing a value, list all of its consumers (F1, speed inference, `sample_set`, the places where `build_state` reads poke-env...).
 
-## Showdown 的调用方式（2026-10-28）
+## How Showdown is called (2026-10-28)
 
-单元测试和检查里对 Showdown 的调用（`showdown_case` / `crit_ratio` / `chance_count` / `showdown_claims` / `showdown_resample`）经 `enginecheck.node_script` 走一个常驻 node 进程（`showdown_server.js`：模拟器只加载一次，每个请求调一次脚本的 `main()`），每个 Python 进程一个；出错或卡住就退回原来的每次新开 `node <脚本>`（同一个 `main()`，命令行形式不变）；`ALPHA_NODE_SERVER=0` 总是新开。双测 1,001 个从 218 秒降到 34 秒，结果相同；全量测试加 `-n 8`（pytest-xdist）从 414 秒降到 86 秒。`random_battle.js` 不走常驻进程：录制缓存的键含它（和 `showdown_state.js`、`showdown_damage.js`）的文本，改它会让已录的对局全部失效。
-
+The calls to Showdown in unit tests and checks (`showdown_case` / `crit_ratio` / `chance_count` / `showdown_claims` / `showdown_resample`) go through `enginecheck.node_script` to a resident node process (`showdown_server.js`: the simulator is loaded once, and each request calls the script's `main()`), one per Python process; on an error or a hang it falls back to the old way of starting a new `node <script>` each time (the same `main()`, the same command-line form); `ALPHA_NODE_SERVER=0` always starts a new one. The 1,001 dual tests went from 218 seconds to 34 seconds with the same results; the full test suite with `-n 8` (pytest-xdist) from 414 seconds to 86 seconds. `random_battle.js` does not go through the resident process: the key of the recording cache includes its text (and that of `showdown_state.js` and `showdown_damage.js`), so changing it would invalidate every recorded battle.

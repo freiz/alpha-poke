@@ -73,7 +73,7 @@ the most visited action (any failure: a rule-based fallback player)
   iteration: the search's visit counts are the policy targets and game results the value
   targets. A new network is promoted only when a sequential test says it is clearly better.
 
-The design document (`doc/design.md`, in Chinese) has the decisions and their evidence. Every
+The design document (`doc/design.md`) has the decisions and their evidence. Every
 number is in `doc/results.md`, and open problems are GitHub issues.
 
 ## Results
