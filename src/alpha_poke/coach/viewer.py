@@ -42,10 +42,10 @@ PAGE = r"""<!DOCTYPE html>
   .tag.bad { background: var(--bad); color: #fff; } .tag.ok { background: var(--good); color: #fff; } .tag.mild { background: var(--mild); color: #fff; }
   .tune { font-size: 12px; color: var(--muted); display: flex; gap: 14px; flex-wrap: wrap; align-items: center; margin: 4px 0 2px; }
   .tune input { vertical-align: middle; width: 110px; } .tune b { color: var(--ink); }
-  .opt { display: grid; grid-template-columns: minmax(96px, 150px) 1.4fr 38px 30px 40px 1fr 40px; gap: 6px 8px; align-items: center; margin: 3px 0; }
+  .opt { display: grid; grid-template-columns: minmax(96px, 150px) 1.4fr 38px 22px 42px 1fr 40px; gap: 6px 8px; align-items: center; margin: 3px 0; }
   .opt.head { color: var(--muted); font-size: 12px; margin-top: 6px; } .opt.head span:nth-child(2) { grid-column: 2 / 6; } .opt.head span:nth-child(3) { grid-column: 6 / 8; }
   .opt .se { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
-  .opt .diff { white-space: nowrap; text-align: right; }
+  .opt .diff { white-space: nowrap; margin-left: -5px; }
   .opt .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .opt .name.me { color: var(--me); font-weight: 600; } .opt .name.ai { color: var(--ai); font-weight: 600; }
   .bar { position: relative; height: 14px; background: var(--bg); border-radius: 3px; overflow: hidden; }
