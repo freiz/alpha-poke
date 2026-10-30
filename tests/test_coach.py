@@ -165,3 +165,22 @@ def test_the_app_reviews_an_uploaded_replay(game):
         )
     finally:
         httpd.shutdown()
+
+
+def test_the_launcher_survives_a_console_without_chinese():
+    """2026-10-30, the Windows build's smoke test: printing the start message to a cp1252 stdout
+    raised UnicodeEncodeError and the frozen app died."""
+    import subprocess
+    import sys
+
+    code = (
+        "from alpha_poke.coach import launcher, app, server\n"
+        "server.open_page = lambda url: None\n"
+        "server.running = lambda port: False\n"
+        "app.free_port = lambda start=8090: 1\n"
+        "app.make = lambda port: type('S', (), {'serve_forever': lambda self: None})()\n"
+        "launcher.main()\n"
+    )
+    r = subprocess.run([sys.executable, "-c", code], capture_output=True, timeout=60,
+                       env={**__import__("os").environ, "PYTHONIOENCODING": "cp1252"})  # fmt: skip
+    assert r.returncode == 0, r.stderr.decode(errors="replace")[-500:]

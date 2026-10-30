@@ -24,6 +24,11 @@ def install(assets: Path, data: Path) -> None:
 
 
 def main() -> None:
+    # (the console or a redirected file may not take the Chinese messages in its code page --
+    # cp1252 on an English Windows: 2026-10-30, the first build's smoke test)
+    for stream in (sys.stdout, sys.stderr):
+        if stream is not None and hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
     if getattr(sys, "frozen", False):
         data = Path(os.environ.get("LOCALAPPDATA") or Path.home()) / "alpha-poke"
         os.environ.setdefault("ALPHA_DATA", str(data))
