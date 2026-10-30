@@ -23,8 +23,15 @@ def main() -> int:
     ap.add_argument("--port", type=int, default=8090)
     ap.add_argument("--offline", action="store_true", help="serve the cache only")
     ap.add_argument("--refresh", action="store_true", help="fetch every client file anew")
+    ap.add_argument(
+        "--lan",
+        action="store_true",
+        help="open to the local network (other devices at home; default: this computer only)",
+    )
     a = ap.parse_args()
-    httpd = app.make(a.port, a.offline, a.refresh)
+    httpd = app.make(a.port, a.offline, a.refresh, host="0.0.0.0" if a.lan else "127.0.0.1")
+    if a.lan:
+        print("open to the local network: anyone on it can view and start reviews")
     print(f"the app: http://127.0.0.1:{a.port}/")
     for page in sorted((paths.DATA / "coach").glob("*/viewer.html")):
         print(f"http://127.0.0.1:{a.port}/coach/{page.parent.name}/viewer.html")

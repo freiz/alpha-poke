@@ -199,13 +199,15 @@ def handler(cache, jobs: Jobs):
 
 
 def make(port: int, offline: bool = False, refresh: bool = False, threads: int | None = None,
-         model: str | None = None, strengths: dict | None = None):  # fmt: skip
-    """The app's server on 127.0.0.1:``port`` (``serve_forever()`` it)."""
+         model: str | None = None, strengths: dict | None = None, host: str = "127.0.0.1"):  # fmt: skip
+    """The app's server on ``host``:``port`` (``serve_forever()`` it): loopback by default;
+    "0.0.0.0" opens it to the local network (the family's other devices; anyone on the network
+    can then start reviews)."""
     from http.server import ThreadingHTTPServer
 
     cache = server.Cache(COACH / "client", offline, refresh)
     jobs = Jobs(threads or max(1, min(4, (os.cpu_count() or 2) - 1)), model, strengths)
-    return ThreadingHTTPServer(("127.0.0.1", port), handler(cache, jobs))
+    return ThreadingHTTPServer((host, port), handler(cache, jobs))
 
 
 def free_port(start: int = 8090) -> int:
