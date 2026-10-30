@@ -6,9 +6,13 @@ scripts/play_public.py (explicit --public, registered bot account, whitelisted o
 ladder) for friendly games the user arranges.
 """
 
+import asyncio
+import random
 from pathlib import Path
 
 from poke_env import AccountConfiguration, ServerConfiguration
+from poke_env.concurrency import handle_threaded_coroutines
+from poke_env.data import to_id_str
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -55,3 +59,46 @@ def public_account() -> AccountConfiguration:
     if not user or not password:
         raise RuntimeError("PS_BOT_USERNAME / PS_BOT_PASSWORD missing in .env")
     return AccountConfiguration(user, password)
+
+
+async def _accept_one(player, opponent: str, start_timeout: float) -> None:
+    await player.ps_client.logged_in.wait()
+    want = to_id_str(opponent)
+    while True:
+        if to_id_str(await player._challenge_queue.get()) != want:
+            continue
+        await player.ps_client.accept_challenge(want, player.next_team)
+        try:
+            await asyncio.wait_for(player._battle_semaphore.acquire(), start_timeout)
+            break
+        except TimeoutError:
+            player.logger.warning("accepted %s's challenge but no battle started within %.0f s "
+                                  "(withdrawn first?): waiting for a new one", want, start_timeout)  # fmt: skip
+    await player._battle_count_queue.join()
+
+
+async def accept_one(player, opponent: str, start_timeout: float = 30.0) -> None:
+    """One challenge from ``opponent`` accepted and its battle played to the end: poke-env's
+    accept_challenges(opponent, 1), except a failed accept. A challenge withdrawn before we accept
+    it (the server: "... is not challenging you") never starts a battle, and poke-env waits for
+    one forever (2026-10-29, a friendly game: the bot stopped answering). Now: no battle within
+    ``start_timeout`` s of the accept -> back to waiting for the next challenge."""
+    await handle_threaded_coroutines(
+        _accept_one(player, opponent, start_timeout), player.ps_client.loop
+    )
+
+
+class TeamDeck:
+    """A pool's teams in a shuffled order, each once before any comes again (a new shuffle per
+    round); ``seed`` None: a different order every session (2026-10-29: independent random draws
+    repeated a team before others were used)."""
+
+    def __init__(self, names, seed: int | None = None):
+        self.names = sorted(names)
+        self.rng = random.Random(seed)
+        self.order: list[str] = []
+
+    def next(self) -> str:
+        if not self.order:
+            self.order = self.rng.sample(self.names, len(self.names))
+        return self.order.pop(0)

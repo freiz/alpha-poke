@@ -9,8 +9,10 @@ account from .env (PS_BOT_USERNAME / PS_BOT_PASSWORD), accepts challenges ONLY f
 exits after --n games. Without --public it runs against a local server (dry run).
 
 The opponent challenges the bot in Gen 9 OU with their own team. The bot's team: --team (pool
-team name or a Showdown-export file), default a random team of --pool each game (default
-ladder_robust, 2026-10-28: the team-design pipeline's stage 2, doc/team_design.md). The network:
+team name or a Showdown-export file), default the teams of --pool in a shuffled order, each once
+a round (--seed; a new order every session); --pool default ladder_robust (2026-10-28: the
+team-design pipeline's stage 2, doc/team_design.md). A challenge withdrawn before the bot
+accepts it: back to waiting (servers.accept_one). The network:
 the current one (the last promoted, state.json; without self-play the released one), or --model
 <run> (e.g. a self-play attempt still under evaluation).
 Difficulty: easy = heuristic bot, normal = ISMCTS + the current network 200 ms, hard = ISMCTS +
@@ -35,7 +37,6 @@ import argparse
 import asyncio
 import logging
 import os
-import random
 import time
 from pathlib import Path
 
@@ -44,7 +45,14 @@ from poke_env.teambuilder import Teambuilder
 from alpha_poke import paths
 from alpha_poke.eval.bots import make_bot
 from alpha_poke.selfplay.runner import MODEL
-from alpha_poke.servers import account, local_server, public_account, public_server
+from alpha_poke.servers import (
+    TeamDeck,
+    accept_one,
+    account,
+    local_server,
+    public_account,
+    public_server,
+)
 from alpha_poke.teams import load_team_files
 
 DIFFICULTY = {  # variant, search env (the search variants get --model)
@@ -63,9 +71,9 @@ def current_network() -> str:
     return json.loads(state.read_text())["current"] if state.exists() else MODEL
 
 
-def pick_team(arg: str | None, pool: dict[str, str], rng: random.Random) -> tuple[str, str]:
+def pick_team(arg: str | None, pool: dict[str, str], deck: TeamDeck) -> tuple[str, str]:
     if arg is None:
-        name = rng.choice(sorted(pool))
+        name = deck.next()
         return name, pool[name]
     if arg in pool:
         return arg, pool[arg]
@@ -87,14 +95,14 @@ async def main(a) -> None:
 
         os.environ["ALPHA_ML"] = ml_for(model)
     pool = load_team_files(a.pool)
-    rng = random.Random()
+    deck = TeamDeck(pool, a.seed)
     out = Path("data/public_games") / time.strftime("%Y%m%d")
     out.mkdir(parents=True, exist_ok=True)
     if a.public:
         server, acct = public_server(confirm=True), public_account()
     else:
         server, acct = local_server(a.local_port), account(a.local_name)
-    name, team = pick_team(a.team, pool, rng)
+    name, team = pick_team(a.team, pool, deck)
     bot = make_bot(
         variant,
         acct.username,
@@ -113,12 +121,12 @@ async def main(a) -> None:
     print(f"[{where}] bot {acct.username} ({a.difficulty}: {variant}{net}); only {a.opponent!r}")
     for i in range(a.n):
         if i:
-            name, team = pick_team(a.team, pool, rng)
+            name, team = pick_team(a.team, pool, deck)
             bot.update_team(team)
         print(f"game {i + 1}/{a.n}: waiting for a Gen 9 OU challenge from {a.opponent} "
               f"(bot team: {name})", flush=True)  # fmt: skip
         before = set(bot.battles)
-        await bot.accept_challenges(a.opponent, n_challenges=1)
+        await accept_one(bot, a.opponent)
         for tag in set(bot.battles) - before:
             b = bot.battles[tag]
             res = "bot won" if b.won else "bot lost" if b.lost else "tie"
@@ -137,6 +145,7 @@ if __name__ == "__main__":
     ap.add_argument("--difficulty", choices=sorted(DIFFICULTY), default="normal")
     ap.add_argument("--team", default=None, help="pool team name or Showdown-export file")
     ap.add_argument("--pool", default=str(paths.pool("ladder_robust")))
+    ap.add_argument("--seed", type=int, default=None, help="the pool's team order (default: new)")
     ap.add_argument("--model", default=None, help="network run (default: the current one)")
     ap.add_argument("--search-ms", type=int, default=None, help="search time per decision")
     ap.add_argument("--threads", type=int, default=None, help="search threads")

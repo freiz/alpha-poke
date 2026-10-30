@@ -178,6 +178,8 @@ class SearchPlayer(KnowledgePlayer):
         ours, n = self._run(states, ctxs, budget, rng)
         total = sum(v for _, v, _ in ours) or 1
         ranked = sorted(((c, v / total) for c, v, _ in ours), key=lambda kv: -kv[1])
+        means = {c: q for c, _, q in ours}
+        value = sum(v * q for _, v, q in ours) / total
         orders = [(c, s, engine_move_to_order(self, battle, c)) for c, s in ranked]
         orders = [(c, s, o) for c, s, o in orders if o is not None]
         if not orders:
@@ -185,7 +187,7 @@ class SearchPlayer(KnowledgePlayer):
             return None
         chosen, _, order = orders[0]
         if self.trace_dir:
-            self._trace_search(battle, ranked, chosen, n, time.time() - t0)
+            self._trace_search(battle, ranked, means, value, chosen, n, time.time() - t0)
         return order
 
     def _trace_fallback(self, battle, reason: str) -> None:
@@ -204,7 +206,10 @@ class SearchPlayer(KnowledgePlayer):
         with open(d / f"{battle.battle_tag}_{self.username}.jsonl", "a") as f:
             f.write(json.dumps(row) + "\n")
 
-    def _trace_search(self, battle, ranked, chosen, iters, seconds) -> None:
+    def _trace_search(self, battle, ranked, means, value, chosen, iters, seconds) -> None:
+        """One decision: ``search`` [option, visit share, its mean value], ``value`` the root's
+        (the visit-weighted mean: the search's estimate of our winning chance, 2026-10-29: for
+        the game reviews)."""
         me, opp = battle.active_pokemon, battle.opponent_active_pokemon
         row = {
             "turn": battle.turn,
@@ -214,7 +219,8 @@ class SearchPlayer(KnowledgePlayer):
             "opp_hp": round(opp.current_hp_fraction, 3),
             "our_fainted": sum(m.fainted for m in battle.team.values()),
             "their_fainted": sum(m.fainted for m in battle.opponent_team.values()),
-            "search": [[c, round(s, 3)] for c, s in ranked[:6]],
+            "value": round(value, 3),
+            "search": [[c, round(s, 3), round(means[c], 3)] for c, s in ranked[:6]],
             "chosen": chosen,
             "iterations": iters,
             "seconds": round(seconds, 2),
