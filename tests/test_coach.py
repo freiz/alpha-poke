@@ -73,3 +73,33 @@ def test_the_move_check_flags_unlearnable_moves(report):
     foreign = next(x for x in ("Spore", "Shell Smash", "Quiver Dance", "Tail Glow")
                    if to_id(x) not in learnable)  # fmt: skip
     assert narrate.unknown_moves(f"Keep using {used}; teach it {foreign}.", report) == [foreign]
+
+
+def test_the_page_carries_the_review_and_the_log(game, report):
+    from alpha_poke.coach import viewer
+
+    local, online = viewer.render(report, game, "local"), viewer.render(report, game, "official")
+    assert "/js/battle.js" in local and "replay-embed.js" not in local
+    assert "play.pokemonshowdown.com/js/replay-embed.js" in online
+    log = local.split('class="battle-log-data">', 1)[1].split("</script>", 1)[0]
+    assert "|turn|1" in log and "</" not in log  # (no early end of the script element)
+    assert '"decisions"' in local and "__" not in local.split("<style>", 1)[0]
+
+
+def test_the_client_cache_fetches_once_and_stays_inside(tmp_path, monkeypatch):
+    from alpha_poke.coach import server
+
+    calls = []
+
+    class Response:
+        status_code, content = 200, b"sprite"
+
+    cache = server.Cache(tmp_path)
+    monkeypatch.setattr(cache.session, "get", lambda url, timeout: calls.append(url) or Response())
+    assert cache.get("sprites/gen5/pikachu.png").read_bytes() == b"sprite"
+    assert cache.get("sprites/gen5/pikachu.png") is not None and len(calls) == 1  # (cached)
+    assert cache.get("../etc/passwd") is None and cache.get("sprites/../../x") is None
+    assert cache.get("config/secret.js") is None  # (not a client path)
+    offline = server.Cache(tmp_path, offline=True)
+    assert offline.get("sprites/gen5/pikachu.png") is not None and offline.get("js/new.js") is None
+    assert len(calls) == 1

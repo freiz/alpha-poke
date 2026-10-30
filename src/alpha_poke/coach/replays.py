@@ -43,6 +43,8 @@ def from_json(data: dict) -> dict:
 def load(source: str) -> dict:
     """A replay from a file path (.html / .json / a log) or a Showdown replay id / URL."""
     path = Path(source)
+    if path.is_dir():
+        raise ValueError(f"{source}: a directory, not a replay")
     if path.exists():
         if path.suffix == ".html":
             return from_html(path)

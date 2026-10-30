@@ -221,7 +221,17 @@ facts (the moves it names are checked against the teams' learnsets). Output in
 
 ```bash
 uv run python scripts/review_game.py gen9ou-2706514881 --player <name> --llm
+uv run python scripts/review_server.py   # then http://127.0.0.1:8090/coach/<review>/viewer.html
 ```
+
+The review page (`viewer.html`) puts Showdown's own replay player (sprites, animations) next to
+the review: the winning-chance curve with the mistakes marked, each decision's options, previous
+/ next decision, next mistake; the player and the panel follow each other (`#t=<turn>` opens a
+turn). `scripts/review_server.py` serves it with Showdown's client from a local cache
+(`data/coach/client/`: each file fetched once from play.pokemonshowdown.com on first use, then
+offline; `--refresh` updates it); `viewer-online.html` loads the player from Showdown's site
+instead and opens as a plain file. Showdown's client (AGPL-3.0) is only fetched and served
+unmodified for local viewing, never committed.
 
 The numbers are estimates (a few seconds of search per decision, sampled hidden sets): they find
 the decisions that mattered; they are not exact.
@@ -291,7 +301,7 @@ Every script's docstring has its usage; `--help` lists the options.
 |---|---|
 | model and data | `fetch_model.py` (the released model), `fetch_metamon.py`, `fetch_smogon_stats.py`, `crawl_replays.py`, `split_shards.py`, `build_replay_tables.py`, `build_reveal_model.py`, `build_training_data.py`, `train_pv.py`, `build_synergy.py` (teammate synergy for synthetic teams) |
 | play and evaluate | `start_showdown.sh`, `eval_pairs.py` (paired games between two bots; `eval_pairs_opponent.py`: bot B from another checkout), `vs_foulplay.py` / `setup_foul_play.py`, `play_public.py`, `ladder.py`, `results_table.py` (the generated tables of `doc/results.md`) |
-| game reviews | `review_game.py` (a player's decisions searched from their view; `--llm`: a coach's write-up) |
+| game reviews | `review_game.py` (a player's decisions searched from their view; `--llm`: a coach's write-up), `review_server.py` (the review pages with Showdown's player, cached locally) |
 | self-play | `selfplay.py` (`iterate`, `teams`, `run`, `convert`, `train`, `eval`, `registry`, ...), `team_pools.py` (diagnostic pools), `check_synthetic_teams.py` |
 | team design (`doc/team_design.md`) | `teams.py` (forum catalog, pools), `meta_shift.py`, `top_ladder_teams.py`, `check_team_reconstruction.py`, `build_robust_teams.py`, `threat_check.py`, `sim_team_pool.py`, `validate_team_measures.py` |
 | one specific opponent (public replays; names stay in `data/players/`) | `player.py`, `counter_team.py`, `counter_pipeline.py` |

@@ -6,7 +6,9 @@ the decisions that cost the most, the swings; optionally a coach's write-up by a
   uv run python scripts/review_game.py https://replay.pokemonshowdown.com/gen9ou-... --player <name>
 
 Writes data/coach/<replay id>-<side>/: review.json (every decision: options, winning chances,
-the public state, the turn's events), summary.md, and with --llm coach.md (.env:
+the public state, the turn's events), summary.md, viewer.html (the replay with the review, served
+by scripts/review_server.py), viewer-online.html (the same, the player from Showdown's site: open
+the file), and with --llm coach.md (.env:
 COACH_LLM_BASE_URL / COACH_LLM_API_KEY / COACH_LLM_MODEL, an OpenAI-compatible endpoint).
 CPU: one search of --ms per decision (--threads); nice it while a bot plays (time-based search).
 Players' names stay in data/ (local): the reports say ME / OPP.
@@ -18,7 +20,7 @@ import sys
 
 from alpha_poke import paths
 from alpha_poke.agents.belief_state import BeliefModel
-from alpha_poke.coach import narrate, replays
+from alpha_poke.coach import narrate, replays, viewer
 from alpha_poke.coach.review import review
 from alpha_poke.selfplay.runner import MODEL
 
@@ -47,6 +49,10 @@ def main() -> int:
                      threads=a.threads)  # fmt: skip
         (out / "review.json").write_text(json.dumps(rep, ensure_ascii=False, indent=1))
     (out / "summary.md").write_text(narrate.summary(rep))
+    # the review page: through scripts/review_server.py (Showdown's player from a local cache), and
+    # one that loads the player from Showdown's site (open the file itself)
+    (out / "viewer.html").write_text(viewer.render(rep, row, client="local"))
+    (out / "viewer-online.html").write_text(viewer.render(rep, row, client="official"))
     print(narrate.summary(rep))
     if a.llm:
         (out / "coach.md").write_text(narrate.write_up(rep, a.language))

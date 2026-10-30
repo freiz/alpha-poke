@@ -13,6 +13,7 @@ hidden sets), good for finding the decisions that mattered, not exact probabilit
 """
 
 import random
+import re
 from dataclasses import asdict, dataclass, field
 
 import alpha_search
@@ -106,7 +107,8 @@ def turn_events(log: str, side: str) -> dict[int, list[str]]:
             for key, species in nick.items():
                 if key.startswith(who):
                     text = text.replace(f"{who}a: {key[3:]}", f"{tag} {species}")
-            text = text.replace(f"{who}: ", f"{tag} side: ").replace(f"[of] {who}a", f"[of] {tag}")
+            text = re.sub(rf"\b{who}: [^|]*", f"{tag} side", text)  # (a side: no player name)
+            text = text.replace(f"[of] {who}a", f"[of] {tag}")
         out[turn].append(text)
     return out
 
