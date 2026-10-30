@@ -30,17 +30,17 @@ jobs:
         with:
           toolchain: "1.95.0"
       - uses: astral-sh/setup-uv@v6
-      - name: environment (the project's own dependencies: no torch, no dev tools)
+      - name: "environment (the project's own dependencies: no torch, no dev tools)"
         run: |
           uv sync --locked --no-default-groups
           uv pip install "pyinstaller>=6.10"
-      - name: assets (the release's network and belief models, SHA-256 checked; Smogon 2026-09)
+      - name: "assets (the release's network and belief models, SHA-256 checked; Smogon 2026-09)"
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           ALPHA_DATA: build/assets
         run: uv run --no-sync python scripts/fetch_model.py
-      - name: freeze
+      - name: "freeze"
         shell: bash
         run: >
           uv run --no-sync pyinstaller --noconfirm --clean --onedir --console
@@ -48,13 +48,13 @@ jobs:
           --collect-submodules alpha_poke --collect-data poke_env
           --add-data "build/assets;assets"
           packaging/windows/review_app.py
-      - name: smoke test (the frozen app reviews a fixture replay end to end)
+      - name: "smoke test (the frozen app reviews a fixture replay end to end)"
         shell: bash
         run: |
           export LOCALAPPDATA="$RUNNER_TEMP/appdata"
           ./dist/alpha-poke-review/alpha-poke-review.exe > app.log 2>&1 &
           uv run --no-sync python packaging/windows/smoke_test.py
-      - name: zip
+      - name: "zip"
         shell: pwsh
         run: Compress-Archive -Path dist/alpha-poke-review/* -DestinationPath alpha-poke-review-windows-x64.zip
       - uses: actions/upload-artifact@v4
@@ -62,13 +62,13 @@ jobs:
           name: alpha-poke-review-windows-x64
           path: alpha-poke-review-windows-x64.zip
           retention-days: 14
-      - name: attach to the release
+      - name: "attach to the release"
         if: ${{ inputs.release_tag != '' }}
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release upload "${{ inputs.release_tag }}" alpha-poke-review-windows-x64.zip --clobber
-      - name: the app's log (on failure)
+      - name: "the app's log (on failure)"
         if: failure()
         shell: bash
         run: cat app.log || true
