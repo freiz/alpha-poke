@@ -42,7 +42,7 @@ PAGE = r"""<!DOCTYPE html>
   .tag.bad { background: var(--bad); color: #fff; } .tag.ok { background: var(--good); color: #fff; } .tag.mild { background: var(--mild); color: #fff; }
   .tune { font-size: 12px; color: var(--muted); display: flex; gap: 14px; flex-wrap: wrap; align-items: center; margin: 4px 0 2px; }
   .tune input { vertical-align: middle; width: 110px; } .tune b { color: var(--ink); }
-  .opt { display: grid; grid-template-columns: minmax(96px, 150px) 1.4fr 76px 1fr 40px; gap: 6px 8px; align-items: center; margin: 3px 0; }
+  .opt { display: grid; grid-template-columns: minmax(96px, 150px) 1.4fr 108px 1fr 40px; gap: 6px 8px; align-items: center; margin: 3px 0; }
   .opt.head { color: var(--muted); font-size: 12px; margin-top: 6px; } .opt.head span:nth-child(2) { grid-column: 2 / 4; } .opt.head span:nth-child(3) { grid-column: 4 / 6; }
   .opt .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .opt .name.me { color: var(--me); font-weight: 600; } .opt .name.ai { color: var(--ai); font-weight: 600; }
@@ -52,7 +52,7 @@ PAGE = r"""<!DOCTYPE html>
   .bar .win { background: var(--ai); opacity: .8; } .bar .share { background: var(--muted); opacity: .7; }
   .diff { color: var(--muted); font-size: 11px; }
   .home { font-size: 13px; color: var(--ai); text-decoration: none; margin-right: 4px; } .home:hover { text-decoration: underline; }
-  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
   .legend, .state, .events { color: var(--muted); font-size: 12px; }
   .events { white-space: pre-wrap; margin-top: 6px; max-height: 120px; overflow: auto; }
   .moments li { cursor: pointer; margin: 2px 0; } .moments li:hover { color: var(--ai); }
@@ -141,7 +141,7 @@ const STATS = {
 const T = {
   en: {
     title: id => `Review · ${id}`, won: "won", lost: "lost",
-    note: (ms, w) => `Your side: ${SIDE == "p1" ? "p1 (bottom left)" : "p2"} | winning chances are the AI search's estimates (${ms} ms × ${w} belief worlds per decision)`,
+    note: (ms, w) => `Your side: ${SIDE} (bottom left) | winning chances are the AI search's estimates (${ms} ms × ${w} belief worlds per decision)`,
     ui: "Interface", names: "Names",
     curve: "Your winning chance through the game, by turn (● your choice at the start of a turn, ○ your switch after a faint or a pivot move; red: the AI clearly disagreed). Click to jump; ←/→ previous / next turn, M next mistake.",
     first: "⏮ Start", prev: "◀ Previous turn", next: "Next turn ▶", mistake: "⚠ Next mistake",
@@ -193,7 +193,7 @@ const T = {
   },
   zh: {
     title: id => `复盘 · ${id}`, won: "胜", lost: "负",
-    note: (ms, w) => `分析视角：${SIDE == "p1" ? "p1（左下）" : "p2"} ｜ 胜率为 AI 搜索的估计（每步 ${ms} ms × ${w} 个信念世界）`,
+    note: (ms, w) => `分析视角：${SIDE}（左下）｜ 胜率为 AI 搜索的估计（每步 ${ms} ms × ${w} 个信念世界）`,
     ui: "界面", names: "名称",
     curve: "整局的胜率变化，按回合（● 回合开始时你的选择，○ 倒下后或折返后的换人；红色：AI 明显不认同）。点击跳转；←/→ 上一回合 / 下一回合，M 下一个失误。",
     first: "⏮ 开局", prev: "◀ 上一回合", next: "下一回合 ▶", mistake: "⚠ 下一个失误",
