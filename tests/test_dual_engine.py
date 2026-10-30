@@ -2502,7 +2502,7 @@ def test_no_name_defined_twice():
     import ast
     import collections
 
-    tree = ast.parse(Path(__file__).read_text())
+    tree = ast.parse(Path(__file__).read_text(encoding="utf-8"))
     names = collections.Counter(
         t.id
         for n in tree.body
@@ -8016,7 +8016,7 @@ def test_l218_state_string_keeps_doom_desire():
     from pathlib import Path
 
     s = pe.State.from_string(
-        Path("tests/fixtures/engine_state_6v6.txt").read_text().splitlines()[0]
+        Path("tests/fixtures/engine_state_6v6.txt").read_text(encoding="utf-8").splitlines()[0]
     )
     s1 = s.side_one
     side = pe.Side(pokemon=s1.pokemon, active_index=s1.active_index, side_conditions=s1.side_conditions,
@@ -8092,7 +8092,7 @@ def test_l220_state_string_keeps_revived_faints():
     from pathlib import Path
 
     s = pe.State.from_string(
-        Path("tests/fixtures/engine_state_6v6.txt").read_text().splitlines()[0]
+        Path("tests/fixtures/engine_state_6v6.txt").read_text(encoding="utf-8").splitlines()[0]
     )
     s1 = s.side_one
     side = pe.Side(pokemon=s1.pokemon, active_index=s1.active_index, side_conditions=s1.side_conditions,
@@ -8191,7 +8191,7 @@ def test_l224_state_string_keeps_uproar_count():
     from pathlib import Path
 
     s = pe.State.from_string(
-        Path("tests/fixtures/engine_state_6v6.txt").read_text().splitlines()[0]
+        Path("tests/fixtures/engine_state_6v6.txt").read_text(encoding="utf-8").splitlines()[0]
     )
     s1 = s.side_one
     side = pe.Side(pokemon=s1.pokemon, active_index=s1.active_index, side_conditions=s1.side_conditions,
@@ -8263,7 +8263,7 @@ def test_l226_state_string_keeps_toxic_spikes_order():
     from pathlib import Path
 
     s = pe.State.from_string(
-        Path("tests/fixtures/engine_state_6v6.txt").read_text().splitlines()[0]
+        Path("tests/fixtures/engine_state_6v6.txt").read_text(encoding="utf-8").splitlines()[0]
     )
     s1 = s.side_one
     side = pe.Side(pokemon=s1.pokemon, active_index=s1.active_index,

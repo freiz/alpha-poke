@@ -71,7 +71,7 @@ def load_gen(gen_dir: Path) -> tuple[dict, dict]:
                 continue
             games[g["pair"]] = g
     for f in gen_dir.glob("logs-w*.jsonl"):
-        with open(f) as fh:
+        with open(f, encoding="utf-8") as fh:
             for line in fh:
                 try:
                     x = json.loads(line)
@@ -93,7 +93,7 @@ def split_decisions(gen_dir: Path, shard_of: dict, tmp: Path) -> None:
     out: dict = {}
     try:
         for f in sorted(gen_dir.glob("decisions-w*.jsonl")):
-            with open(f) as fh:
+            with open(f, encoding="utf-8") as fh:
                 for line in fh:
                     i = line.rfind('"game": ')
                     j = line.find(",", i) if i >= 0 else -1
@@ -107,7 +107,7 @@ def split_decisions(gen_dir: Path, shard_of: dict, tmp: Path) -> None:
                     if k is None:
                         continue
                     if k not in out:
-                        out[k] = open(tmp / f"{k:04d}.jsonl", "w")
+                        out[k] = open(tmp / f"{k:04d}.jsonl", "w", encoding="utf-8")
                     out[k].write(line)
     finally:
         for fh in out.values():
@@ -215,7 +215,7 @@ def _convert_shard(args) -> dict:
     stats: dict = defaultdict(int)
     decs = defaultdict(list)
     if dec_file.exists():
-        with open(dec_file) as fh:
+        with open(dec_file, encoding="utf-8") as fh:
             for line in fh:
                 try:
                     d = json.loads(line)

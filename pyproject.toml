@@ -41,6 +41,11 @@ select = ["E", "F", "I", "UP", "B"]
 # line length is the formatter's (ruff format, 100); the lines it leaves long are the hand-aligned
 # `# fmt: skip` ones
 ignore = ["E501"]
+# PLW1514 (a preview rule, enabled alone): text files opened with an explicit encoding -- the
+# Windows app read and wrote them in cp1252 (2026-10-30)
+preview = true
+explicit-preview-rules = true
+extend-select = ["PLW1514"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -47,8 +47,8 @@ def _check(baseline: Path, teams: Path, replay: bool = False) -> None:
     if replay:
         from alpha_poke.enginecheck.replaybuild import battle_diffs as replay_diffs
 
-    base = json.loads(baseline.read_text())
-    pairs = [json.loads(x) for x in teams.read_text().splitlines()]
+    base = json.loads(baseline.read_text(encoding="utf-8"))
+    pairs = [json.loads(x) for x in teams.read_text(encoding="utf-8").splitlines()]
     kinds: collections.Counter = collections.Counter()
     decisions = 0
     examples: dict = {}

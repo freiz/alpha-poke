@@ -41,9 +41,9 @@ def training_table() -> list[str]:
     ]
     for cfg in sorted(glob.glob("data/train/*/runs/*/config.json")):
         d = Path(cfg).parent
-        c = json.loads(Path(cfg).read_text())
+        c = json.loads(Path(cfg).read_text(encoding="utf-8"))
         v = c["val"]
-        ev = [json.loads(line) for line in open(d / "metrics.jsonl")]
+        ev = [json.loads(line) for line in open(d / "metrics.jsonl", encoding="utf-8")]
         data = next((e for e in ev if e["event"] == "data"), {})
         done = next((e for e in ev if e["event"] == "done"), {})
         train = [e for e in ev if e["event"] == "train"]
@@ -71,7 +71,7 @@ def eval_table(min_games: int) -> list[str]:
         "|" + "---|" * 9,
     ]
     for f in sorted(glob.glob("data/eval/*.jsonl")):
-        rows = [json.loads(line) for line in open(f) if line.strip()]
+        rows = [json.loads(line) for line in open(f, encoding="utf-8") if line.strip()]
         if len(rows) < min_games:
             continue
         s = summarize(rows)
@@ -116,9 +116,9 @@ def main() -> None:
     if not a.write:
         print(text)
         return
-    doc = DOC.read_text()
+    doc = DOC.read_text(encoding="utf-8")
     i, j = doc.index(BEGIN), doc.index(END) + len(END)
-    DOC.write_text(doc[:i] + text + doc[j:])
+    DOC.write_text(doc[:i] + text + doc[j:], encoding="utf-8")
     print(f"updated {DOC}")
 
 

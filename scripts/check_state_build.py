@@ -66,7 +66,7 @@ def main() -> None:
     files = sorted({f for t in a.teams.split(",") for f in (glob.glob(t) or [t])})
     jobs = []
     for f in files:  # (a.battles from each file; the job id: the file and the seed)
-        pairs = [json.loads(x) for x in Path(f).read_text().splitlines()]
+        pairs = [json.loads(x) for x in Path(f).read_text(encoding="utf-8").splitlines()]
         jobs += [((Path(f).stem, a.seed_offset + i), pairs[i % len(pairs)]["p1"],
                   pairs[i % len(pairs)]["p2"], a.max_turns, not a.belief, a.path) for i in range(a.battles)]  # fmt: skip
     kinds: collections.Counter = collections.Counter()
@@ -116,7 +116,8 @@ def main() -> None:
                 "examples": {k: v[:20] for k, v in examples.items()},
             },
             indent=1,
-        )
+        ),
+        encoding="utf-8",
     )
 
 

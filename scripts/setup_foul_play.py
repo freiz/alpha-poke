@@ -63,12 +63,12 @@ def install():
 
 
 def _patch(path: Path, anchor: str, insert: str, marker: str):
-    text = path.read_text()
+    text = path.read_text(encoding="utf-8")
     if marker in text:
         print(f"already patched: {path.relative_to(FP)}")
         return
     assert anchor in text, f"anchor not found in {path}: {anchor!r}"
-    path.write_text(text.replace(anchor, anchor + insert, 1))
+    path.write_text(text.replace(anchor, anchor + insert, 1), encoding="utf-8")
     print(f"patched: {path.relative_to(FP)}")
 
 

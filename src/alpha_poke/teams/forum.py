@@ -63,7 +63,7 @@ class Fetcher:
     def get(self, url: str, cache: Path, refresh: bool = False) -> str | None:
         """The page (cached); None if it does not exist."""
         if cache.exists() and not (refresh and self.refresh):
-            text = cache.read_text()
+            text = cache.read_text(encoding="utf-8")
             return text or None
         time.sleep(max(0.0, self._last + self.delay - time.time()))
         r = self.session.get(url, timeout=60)
@@ -71,10 +71,10 @@ class Fetcher:
         self.requests += 1
         cache.parent.mkdir(parents=True, exist_ok=True)
         if r.status_code == 404:
-            cache.write_text("")
+            cache.write_text("", encoding="utf-8")
             return None
         r.raise_for_status()
-        cache.write_text(r.text)
+        cache.write_text(r.text, encoding="utf-8")
         return r.text
 
 

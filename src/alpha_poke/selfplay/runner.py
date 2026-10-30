@@ -251,7 +251,7 @@ async def _process(wid: int, jobs: list, port: int, gen_dir: Path, settings: dic
                     "games_per_h": round(counters["games"] / dt * 3600),
                     "batcher": {k: round(v, 1) if isinstance(v, float) else v
                                 for k, v in batcher.stats.items()}}  # fmt: skip
-            with open(gen_dir / f"progress-w{wid}.log", "a") as f:
+            with open(gen_dir / f"progress-w{wid}.log", "a", encoding="utf-8") as f:
                 f.write(json.dumps(line) + "\n")
 
     reporter = asyncio.create_task(progress())

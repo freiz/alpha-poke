@@ -342,7 +342,9 @@ def main() -> None:
     ap.add_argument("--procs", type=int, default=8)
     ap.add_argument("--out", default="data/selfplay/diag/feature_claims.json")
     a = ap.parse_args()
-    lines = [x.strip() for x in Path(a.states).read_text().splitlines() if x.strip()]
+    lines = [
+        x.strip() for x in Path(a.states).read_text(encoding="utf-8").splitlines() if x.strip()
+    ]
     if a.limit:
         lines = lines[: a.limit]
     stats = collections.defaultdict(collections.Counter)
@@ -383,7 +385,7 @@ def main() -> None:
               "breakdown": breakdown,
               "examples": {f"{k}/{v}": x for (k, v), x in examples.items()}}  # fmt: skip
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
-    Path(a.out).write_text(json.dumps(report, indent=1))
+    Path(a.out).write_text(json.dumps(report, indent=1), encoding="utf-8")
     print(f"{len(lines)} states ({errors} errors) -> {a.out}")
     for k, c in sorted(stats.items()):
         n = sum(c.values())

@@ -75,9 +75,13 @@ class Jobs:
                              threads=self.threads, log=lambda *_: None, progress=progress)  # fmt: skip
                 out = COACH / f"{row['id']}-{side}"
                 out.mkdir(parents=True, exist_ok=True)
-                (out / "review.json").write_text(json.dumps(rep, ensure_ascii=False, indent=1))
-                (out / "summary.md").write_text(narrate.summary(rep))
-                (out / "viewer.html").write_text(viewer.render(rep, row, client="local"))
+                (out / "review.json").write_text(
+                    json.dumps(rep, ensure_ascii=False, indent=1), encoding="utf-8"
+                )
+                (out / "summary.md").write_text(narrate.summary(rep), encoding="utf-8")
+                (out / "viewer.html").write_text(
+                    viewer.render(rep, row, client="local"), encoding="utf-8"
+                )
                 job["url"] = f"/coach/{out.name}/viewer.html"
                 job["status"] = "done"
             except Exception as e:  # noqa: BLE001 - shown on the page
@@ -91,7 +95,7 @@ def load_row(body: dict) -> dict:
         name = re.sub(r"[^A-Za-z0-9._-]", "_", Path(up.get("name") or "replay.html").name)[-80:]
         UPLOADS.mkdir(parents=True, exist_ok=True)
         path = UPLOADS / name
-        path.write_text(up.get("text") or "")
+        path.write_text(up.get("text") or "", encoding="utf-8")
         return replays.load(str(path))
     source = (body.get("source") or "").strip()
     if not source:
@@ -105,7 +109,7 @@ def reviews() -> list[dict]:
     out = []
     for f in sorted(COACH.glob("*/review.json"), key=lambda p: -p.stat().st_mtime):
         try:
-            r = json.loads(f.read_text())
+            r = json.loads(f.read_text(encoding="utf-8"))
         except (OSError, ValueError):
             continue
         out.append({"url": f"/coach/{f.parent.name}/viewer.html", "id": r["id"], "player": r.get("player"),

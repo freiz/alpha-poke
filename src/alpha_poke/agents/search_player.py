@@ -203,7 +203,7 @@ class SearchPlayer(KnowledgePlayer):
         }
         d = Path(self.trace_dir)
         d.mkdir(parents=True, exist_ok=True)
-        with open(d / f"{battle.battle_tag}_{self.username}.jsonl", "a") as f:
+        with open(d / f"{battle.battle_tag}_{self.username}.jsonl", "a", encoding="utf-8") as f:
             f.write(json.dumps(row) + "\n")
 
     def _trace_search(self, battle, ranked, means, value, chosen, iters, seconds) -> None:
@@ -227,5 +227,5 @@ class SearchPlayer(KnowledgePlayer):
         }
         d = Path(self.trace_dir)
         d.mkdir(parents=True, exist_ok=True)
-        with open(d / f"{battle.battle_tag}_{self.username}.jsonl", "a") as f:
+        with open(d / f"{battle.battle_tag}_{self.username}.jsonl", "a", encoding="utf-8") as f:
             f.write(json.dumps(row) + "\n")

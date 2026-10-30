@@ -43,7 +43,7 @@ def current_network() -> str:
     """The self-play loop's current network (data/selfplay/state.json); without a self-play
     run, the released one (selfplay.runner.MODEL, scripts/fetch_model.py)."""
     state = Path("data/selfplay/state.json")
-    return json.loads(state.read_text())["current"] if state.exists() else MODEL
+    return json.loads(state.read_text(encoding="utf-8"))["current"] if state.exists() else MODEL
 
 
 def valid_teams(pool_dir: str) -> dict[str, str]:
@@ -93,7 +93,7 @@ async def main(a) -> None:
     where = "OFFICIAL server" if a.public else f"local server :{a.local_port} (dry run)"
     print(f"[{where}] {model}, {a.search_ms} ms x {a.threads} threads; {len(pool)} valid teams; "
           f"{a.n} games (stop early: touch {STOP})", flush=True)  # fmt: skip
-    log = open(out / "games.jsonl", "a")
+    log = open(out / "games.jsonl", "a", encoding="utf-8")
     for i in range(a.n):
         if STOP.exists():
             print(f"{STOP} found: stopped before game {i + 1}")

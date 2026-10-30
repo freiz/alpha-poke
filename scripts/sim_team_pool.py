@@ -88,7 +88,10 @@ def main() -> None:
     ap.add_argument("--out", default=str(POOLS_DIR / "ladder_robust"))
     a = ap.parse_args()
 
-    model = a.model or json.loads(Path("data/selfplay/state.json").read_text())["current"]
+    model = (
+        a.model
+        or json.loads(Path("data/selfplay/state.json").read_text(encoding="utf-8"))["current"]
+    )
     from alpha_poke.selfplay.batcher import ml_for
 
     os.environ.update({"ALPHA_MODEL_A": model, "ALPHA_MODEL_B": model, "ALPHA_ML_A": ml_for(model),

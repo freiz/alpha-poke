@@ -44,7 +44,7 @@ def load_env(path: Path = ROOT / ".env") -> dict[str, str]:
     """The KEY=value lines of .env (secrets: never printed or logged)."""
     env = {}
     if path.exists():
-        for line in path.read_text().splitlines():
+        for line in path.read_text(encoding="utf-8").splitlines():
             line = line.strip()
             if line and not line.startswith("#") and "=" in line:
                 k, v = line.split("=", 1)

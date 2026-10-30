@@ -1096,7 +1096,7 @@ def main() -> None:
     run = a.run or f"{time.strftime('%Y%m%d-%H%M%S')}_{a.data}_{a.size}"
     out_dir = Path("data/train") / a.data / "runs" / run
     out_dir.mkdir(parents=True, exist_ok=True)
-    log = open(out_dir / "metrics.jsonl", "a")
+    log = open(out_dir / "metrics.jsonl", "a", encoding="utf-8")
 
     def emit(row: dict) -> None:
         log.write(json.dumps(row) + "\n")

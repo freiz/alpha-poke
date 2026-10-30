@@ -34,5 +34,5 @@ if __name__ == "__main__":
                        capture_output=True, text=True, check=True)  # fmt: skip
     lines = r.stdout.strip().splitlines()
     assert len(lines) == a.pairs and all(json.loads(x)["p1"] for x in lines)
-    Path(a.out).write_text("\n".join(lines) + "\n")
+    Path(a.out).write_text("\n".join(lines) + "\n", encoding="utf-8")
     print(f"{len(lines)} pairs -> {a.out}")

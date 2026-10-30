@@ -47,20 +47,24 @@ def main() -> int:
     out = paths.DATA / "coach" / f"{row['id']}-{side}"
     out.mkdir(parents=True, exist_ok=True)
     if a.from_json and (out / "review.json").exists():
-        rep = json.loads((out / "review.json").read_text())
+        rep = json.loads((out / "review.json").read_text(encoding="utf-8"))
     else:
         print(f"{row['id']}: reviewing {side}'s decisions ({a.ms} ms x {a.threads} threads each)")
         rep = review(row, side, BeliefModel.load(), a.model, worlds=a.worlds, ms=a.ms,
                      threads=a.threads)  # fmt: skip
-        (out / "review.json").write_text(json.dumps(rep, ensure_ascii=False, indent=1))
-    (out / "summary.md").write_text(narrate.summary(rep))
+        (out / "review.json").write_text(
+            json.dumps(rep, ensure_ascii=False, indent=1), encoding="utf-8"
+        )
+    (out / "summary.md").write_text(narrate.summary(rep), encoding="utf-8")
     # the review page: through scripts/review_server.py (Showdown's player from a local cache), and
     # one that loads the player from Showdown's site (open the file itself)
-    (out / "viewer.html").write_text(viewer.render(rep, row, client="local"))
-    (out / "viewer-online.html").write_text(viewer.render(rep, row, client="official"))
+    (out / "viewer.html").write_text(viewer.render(rep, row, client="local"), encoding="utf-8")
+    (out / "viewer-online.html").write_text(
+        viewer.render(rep, row, client="official"), encoding="utf-8"
+    )
     print(narrate.summary(rep))
     if a.llm:
-        (out / "coach.md").write_text(narrate.write_up(rep, a.language))
+        (out / "coach.md").write_text(narrate.write_up(rep, a.language), encoding="utf-8")
         print(f"coach's write-up: {out / 'coach.md'}")
     print(f"written: {out}")
     if a.open:

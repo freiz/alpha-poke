@@ -148,7 +148,7 @@ async def _lane(bot_a, bot_b, matches, port, pool_dir, heldout, lane_id, log_pat
             "search_fallbacks_b": getattr(b, "search_fallbacks", 0) - fb0[1][1],
         }
         rows.append(row)
-        with open(log_path, "a") as f:
+        with open(log_path, "a", encoding="utf-8") as f:
             f.write(json.dumps(row) + "\n")
     for me in (a, b):  # search bots with worker processes must stop them
         if hasattr(me, "close"):
@@ -315,7 +315,7 @@ def read_log(path: str) -> list[dict]:
     p = Path(path)
     if not p.exists():
         return []
-    return [json.loads(line) for line in p.read_text().splitlines() if line.strip()]
+    return [json.loads(line) for line in p.read_text(encoding="utf-8").splitlines() if line.strip()]
 
 
 def pair_scores(rows: list[dict]) -> list[float]:

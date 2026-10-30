@@ -188,7 +188,7 @@ def main() -> None:
     text = json.dumps(out, indent=1)
     print(text)
     if a.out:
-        open(a.out, "w").write(text)
+        open(a.out, "w", encoding="utf-8").write(text)
 
 
 if __name__ == "__main__":

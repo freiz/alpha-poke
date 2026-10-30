@@ -18,7 +18,7 @@ from pathlib import Path
 
 def _one(job):
     f, seed, offset, path = job
-    pairs = [json.loads(x) for x in Path(f).read_text().splitlines()]
+    pairs = [json.loads(x) for x in Path(f).read_text(encoding="utf-8").splitlines()]
     p = pairs[(seed - offset) % len(pairs)]
     try:
         if path == "replay":
@@ -50,7 +50,7 @@ def main() -> None:
     a = ap.parse_args()
     jobs = set()
     for r in sorted({f for x in a.reports for f in (glob.glob(x) or [x])}):
-        rep = json.loads(Path(r).read_text())
+        rep = json.loads(Path(r).read_text(encoding="utf-8"))
         files = {Path(f).stem: f for f in rep["teams"]}
         path = a.path or rep.get("path", "live")
         for kind, ex in rep["examples"].items():

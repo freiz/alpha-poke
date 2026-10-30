@@ -123,7 +123,7 @@ def open_page(url: str) -> None:
     import webbrowser
 
     wsl = (
-        "microsoft" in Path("/proc/version").read_text().lower()
+        "microsoft" in Path("/proc/version").read_text(encoding="utf-8").lower()
         if Path("/proc/version").exists()
         else False
     )

@@ -28,7 +28,7 @@ def _row(rid: str, log: str, rating=None, uploadtime=0) -> dict:
 
 
 def from_html(path: Path) -> dict:
-    text = Path(path).read_text()
+    text = Path(path).read_text(encoding="utf-8")
     m = re.search(r'class="battle-log-data">(.*?)</script>', text, re.S)
     if m is None:
         raise ValueError(f"{path}: no battle log in the page")
@@ -48,7 +48,7 @@ def load(source: str) -> dict:
     if path.exists():
         if path.suffix == ".html":
             return from_html(path)
-        text = path.read_text()
+        text = path.read_text(encoding="utf-8")
         if text.lstrip().startswith("{"):
             return from_json(json.loads(text))
         return _row(path.stem, text)

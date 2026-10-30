@@ -27,7 +27,7 @@ def main() -> None:
             break
     sp = sorted(glob.glob("data/selfplay/gen*/decisions-w*.jsonl"))
     for f in sp[:4]:
-        with open(f) as fh:
+        with open(f, encoding="utf-8") as fh:
             for i, line in enumerate(fh):
                 if i >= a.n // 8:
                     break

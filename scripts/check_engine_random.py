@@ -75,7 +75,7 @@ def main() -> None:
                     "baseline's)")  # fmt: skip
     ap.add_argument("--out", default="data/selfplay/diag/engine_random.json")
     a = ap.parse_args()
-    text = Path(a.teams).read_text()
+    text = Path(a.teams).read_text(encoding="utf-8")
     pairs = [json.loads(x) for x in text.splitlines()]
     jobs = [(i, pairs[i % len(pairs)]["p1"], pairs[i % len(pairs)]["p2"], a.max_turns,
              a.seed_offset) for i in range(a.battles)]  # fmt: skip
@@ -84,7 +84,7 @@ def main() -> None:
     if a.seed_offset:
         setup["seed_offset"] = a.seed_offset
     if a.from_report:
-        rep = json.loads(Path(a.out).read_text())
+        rep = json.loads(Path(a.out).read_text(encoding="utf-8"))
         if {k: rep.get(k) for k in setup} != setup:
             print(f"the report {a.out} is of another setup: not used")
             sys.exit(1)
@@ -118,7 +118,7 @@ def main() -> None:
            "pairs": {k: v.most_common(20) for k, v in pairs_by_kind.items()},
            "mismatches": dict(sorted(mismatches.items())), "errors": errors.most_common()}  # fmt: skip
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
-    Path(a.out).write_text(json.dumps(rep, indent=1))
+    Path(a.out).write_text(json.dumps(rep, indent=1), encoding="utf-8")
     sys.exit(check_baseline(a, setup, mismatches))
 
 
@@ -127,7 +127,7 @@ def check_baseline(a, setup: dict, mismatches: dict) -> int:
     now = pairs_of(mismatches)
     path = Path(a.baseline)
     if path.exists():
-        base = json.loads(path.read_text())
+        base = json.loads(path.read_text(encoding="utf-8"))
         if base["setup"] != setup:
             print(f"baseline of another setup {base['setup']} (now {setup}): not compared")
             return 1
@@ -150,7 +150,9 @@ def check_baseline(a, setup: dict, mismatches: dict) -> int:
         ids = {}
         for i, k in sorted(now):
             ids.setdefault(i, []).append(k)
-        path.write_text(json.dumps({"setup": setup, "mismatches": ids}, indent=0) + "\n")
+        path.write_text(
+            json.dumps({"setup": setup, "mismatches": ids}, indent=0) + "\n", encoding="utf-8"
+        )
         print(f"baseline updated: {len(now)} (position, kind)")
     return 1 if new else 0
 

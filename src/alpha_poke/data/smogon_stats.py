@@ -74,7 +74,7 @@ class UsageStats:
 
     @classmethod
     def load(cls, path: Path | str) -> "UsageStats":
-        return cls(json.loads(Path(path).read_text()))
+        return cls(json.loads(Path(path).read_text(encoding="utf-8")))
 
     def ranked(self) -> list[SpeciesStats]:
         return sorted(self.species.values(), key=lambda s: -s.usage)

@@ -430,12 +430,12 @@ def poke_env_clash(text: str) -> bool:
 
 def save(pairs: list[TeamPair], path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("".join(json.dumps(p.row()) + "\n" for p in pairs))
+    path.write_text("".join(json.dumps(p.row()) + "\n" for p in pairs), encoding="utf-8")
 
 
 def load(path: Path) -> list[TeamPair]:
     out = []
-    for line in path.read_text().splitlines():
+    for line in path.read_text(encoding="utf-8").splitlines():
         d = json.loads(line)
         out.append(TeamPair(Side(**d["p1"]), Side(**d["p2"]), d["game"], d["time"],
                             tuple(d["ratings"])))  # fmt: skip

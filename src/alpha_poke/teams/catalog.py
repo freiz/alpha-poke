@@ -86,11 +86,13 @@ def build(links: list[dict], fmt: str = "gen9ou", log=print) -> list[Entry]:
 
 def save(entries: list[Entry], path: Path = CATALOG) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("".join(json.dumps(asdict(e)) + "\n" for e in entries))
+    path.write_text("".join(json.dumps(asdict(e)) + "\n" for e in entries), encoding="utf-8")
 
 
 def load(path: Path = CATALOG) -> list[Entry]:
-    return [Entry(**json.loads(line)) for line in path.read_text().splitlines() if line]
+    return [
+        Entry(**json.loads(line)) for line in path.read_text(encoding="utf-8").splitlines() if line
+    ]
 
 
 def write_pool(out: Path, teams: list[tuple[str, str]], meta: dict) -> None:

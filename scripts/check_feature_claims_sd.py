@@ -235,7 +235,7 @@ def main() -> None:
     ap.add_argument("--procs", type=int, default=8)
     ap.add_argument("--out", default="data/selfplay/diag/feature_claims_sd.json")
     a = ap.parse_args()
-    pairs = [json.loads(x) for x in Path(a.teams).read_text().splitlines()]
+    pairs = [json.loads(x) for x in Path(a.teams).read_text(encoding="utf-8").splitlines()]
     jobs = [(i, pairs[i % len(pairs)]["p1"], pairs[i % len(pairs)]["p2"], a.every, a.max_turns)
             for i in range(a.battles)]  # fmt: skip
     stats = collections.defaultdict(collections.Counter)
@@ -264,7 +264,7 @@ def main() -> None:
     report = {"battles": a.battles, "claims": {k: dict(c) for k, c in sorted(stats.items())},
               "breakdown": breakdown, "examples": {f"{k}/{v}": x for (k, v), x in examples.items()}}  # fmt: skip
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
-    Path(a.out).write_text(json.dumps(report, indent=1))
+    Path(a.out).write_text(json.dumps(report, indent=1), encoding="utf-8")
     print(f"{a.battles} battles -> {a.out}")
     for k, c in sorted(stats.items()):
         n = sum(c.values())

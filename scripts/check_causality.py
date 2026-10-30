@@ -141,7 +141,8 @@ def main() -> None:
                 "examples": examples,
             },
             indent=1,
-        )
+        ),
+        encoding="utf-8",
     )
 
 

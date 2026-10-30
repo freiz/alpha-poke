@@ -68,7 +68,7 @@ def current_network() -> str:
     import json
 
     state = Path("data/selfplay/state.json")
-    return json.loads(state.read_text())["current"] if state.exists() else MODEL
+    return json.loads(state.read_text(encoding="utf-8"))["current"] if state.exists() else MODEL
 
 
 def pick_team(arg: str | None, pool: dict[str, str], deck: TeamDeck) -> tuple[str, str]:
@@ -77,7 +77,7 @@ def pick_team(arg: str | None, pool: dict[str, str], deck: TeamDeck) -> tuple[st
         return name, pool[name]
     if arg in pool:
         return arg, pool[arg]
-    text = Path(arg).read_text()
+    text = Path(arg).read_text(encoding="utf-8")
     return Path(arg).stem, Teambuilder.join_team(Teambuilder.parse_showdown_team(text + "\n\n"))
 
 

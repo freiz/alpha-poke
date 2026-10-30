@@ -78,7 +78,7 @@ async def _lane(
             "seconds": round(time.time() - t0, 1),
         }
         rows.append(row)
-        with open(log_path, "a") as f:
+        with open(log_path, "a", encoding="utf-8") as f:
             f.write(json.dumps(row) + "\n")
     if hasattr(me, "close"):
         me.close()
@@ -91,7 +91,7 @@ def _worker(args):
     cmd = [str(Path(other) / ".venv" / "bin" / "python"), str(ROOT / "scripts" / "eval_pairs_opponent.py"), bot_b,
            "--pool", str(Path(pool).resolve()), "--pairs", str(pairs), "--lanes-total", str(n_lanes),
            "--lanes", *map(str, ids), "--port", str(port), "--run", run]  # fmt: skip
-    out = open(Path(log_path).with_suffix(f".opp{ids[0]}.log"), "w")
+    out = open(Path(log_path).with_suffix(f".opp{ids[0]}.log"), "w", encoding="utf-8")
     proc = subprocess.Popen(
         cmd, cwd=other, stdout=out, stderr=subprocess.STDOUT, env=dict(os.environ)
     )

@@ -477,7 +477,9 @@ def test_pending_moves_struggle_and_speed():
     import alpha_search
     import poke_engine as pe
 
-    s = pe.State.from_string(open("tests/fixtures/engine_state_6v6.txt").readline().strip())
+    s = pe.State.from_string(
+        open("tests/fixtures/engine_state_6v6.txt", encoding="utf-8").readline().strip()
+    )
     parts = s.to_string().split("/")
     # every move of the opponent's active out of PP: it struggles
     mons = parts[1].split("=")

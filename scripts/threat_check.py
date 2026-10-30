@@ -174,7 +174,9 @@ def main() -> None:
     months = sorted(p.name for p in Path(DEFAULT_DIR).iterdir() if p.is_dir())
     stats = UsageStats.load(DEFAULT_DIR / months[-1] / "chaos" / "gen9ou-1500.json")
     rep = Path(a.meta)
-    meta_threats = json.loads(rep.read_text()).get("threats") if rep.exists() else None
+    meta_threats = (
+        json.loads(rep.read_text(encoding="utf-8")).get("threats") if rep.exists() else None
+    )
     if meta_threats:  # (the recent metagame's, build_robust_teams' report)
         names = [s for s, _ in meta_threats[: a.threats]] + list(a.also)
     else:
@@ -201,7 +203,7 @@ def main() -> None:
               f"one {len(single)} [{', '.join(single) or '-'}]; roles lacking [{', '.join(lacking) or '-'}]"
               f"   ({team})", flush=True)  # fmt: skip
     if a.out:
-        Path(a.out).write_text(json.dumps(result, indent=1))
+        Path(a.out).write_text(json.dumps(result, indent=1), encoding="utf-8")
 
 
 if __name__ == "__main__":

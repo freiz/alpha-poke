@@ -104,7 +104,7 @@ async def _lane(bot, matches, port, pool_dir, lane, log_path, opp, extras, run_d
         cmd, cwd, env, label = _opponent_cmd(opp, port, opp_name, our_name, we_challenge, left,
                                              pool_dir, run_dir, lane, restarts)  # fmt: skip
         suffix = f"_r{restarts}" if restarts else ""
-        fp_log = open(run_dir / f"opponent_lane{lane}{suffix}.log", "w")
+        fp_log = open(run_dir / f"opponent_lane{lane}{suffix}.log", "w", encoding="utf-8")
         me = make_bot(bot, our_name, port, first, **extras)
         if not we_challenge:  # we must be logged in before the opponent starts challenging us
             await asyncio.sleep(3)
@@ -167,7 +167,7 @@ async def _lane(bot, matches, port, pool_dir, lane, log_path, opp, extras, run_d
                     | ({"failed": failed} if failed else {})
                 )
                 rows.append(row)
-                with open(log_path, "a") as f:
+                with open(log_path, "a", encoding="utf-8") as f:
                     f.write(json.dumps(row) + "\n")
                 k += 1
                 if failed:
@@ -227,10 +227,14 @@ def run_external(
         schedule = make_schedule(sorted(load_team_files(pool_dir)), n_pairs, seed)
     done: set = set()
     if resume:
-        old = [json.loads(line) for line in Path(resume).read_text().splitlines() if line]
+        old = [
+            json.loads(line)
+            for line in Path(resume).read_text(encoding="utf-8").splitlines()
+            if line
+        ]
         shutil.copy(resume, resume + ".bak")
         kept = [r for r in old if r.get("battle") and not r.get("failed")]
-        Path(resume).write_text("".join(json.dumps(r) + "\n" for r in kept))
+        Path(resume).write_text("".join(json.dumps(r) + "\n" for r in kept), encoding="utf-8")
         done = {(r["pair"], r["game"]) for r in kept}
     left = [m for m in schedule if (m.pair, m.game) not in done]
     pairs = [[m for m in left if m.pair == k] for k in dict.fromkeys(m.pair for m in left)]
@@ -258,7 +262,11 @@ def run_external(
     with ProcessPoolExecutor(lanes, mp_context=mp.get_context("spawn")) as pool:
         rows = [r for part in pool.map(_worker, jobs) for r in part]
     if resume:  # the whole run: the games kept from the interrupted one too
-        rows = [json.loads(line) for line in Path(log_path).read_text().splitlines() if line]
+        rows = [
+            json.loads(line)
+            for line in Path(log_path).read_text(encoding="utf-8").splitlines()
+            if line
+        ]
     return summarize(rows) | {
         "log": log_path,
         "seconds": round(time.time() - t0, 1),

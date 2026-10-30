@@ -96,7 +96,7 @@ def main() -> None:
     print(f"pairs: {len(full)} complete; model vs result: corr {np.corrcoef(full.pred, full.score)[0, 1]:+.3f}, "
           f"log loss {ll:.4f} (0.5 everywhere: {np.log(2):.4f})")  # fmt: skip
 
-    threats = json.loads(Path(a.threats).read_text()) if a.threats else {}
+    threats = json.loads(Path(a.threats).read_text(encoding="utf-8")) if a.threats else {}
     out = []
     for n in names:
         d = df[df.team == n]

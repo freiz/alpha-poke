@@ -22,7 +22,7 @@ def test_load_gen_takes_the_named_attempts_log(tmp_path):
     _write(tmp_path / "logs-w0.jsonl", [{"pair": 3, "attempt": "a", "log": "OLD"},
                                          {"pair": 3, "attempt": "b", "log": "NEW"}])  # fmt: skip
     # (a games line cut by a stop is skipped)
-    with open(tmp_path / "games-w0.jsonl", "a") as f:
+    with open(tmp_path / "games-w0.jsonl", "a", encoding="utf-8") as f:
         f.write('{"pair": 4, "att')
     games, logs = convert.load_gen(tmp_path)
     assert set(games) == {3} and logs == {3: "NEW"}
@@ -38,7 +38,7 @@ def test_shard_passes_the_named_attempts_decisions(tmp_path, monkeypatch):
     dec = tmp_path / "0000.jsonl"
     _write(dec, [{"game": 3, "turn": 1, "attempt": "a"}, {"game": 3, "turn": 1, "attempt": "b"},
                  {"game": 3, "turn": 2, "attempt": "b"}])  # fmt: skip
-    with open(dec, "a") as f:
+    with open(dec, "a", encoding="utf-8") as f:
         f.write('{"game": 3, "tu')  # (cut)
     stats = convert._convert_shard(
         (tmp_path / "x.parquet", [(3, {"attempt": "b"}, "")], dec, 1, 0, 10)
@@ -121,7 +121,7 @@ def _attempt(gen, attempt, upto=None):
             return
         if upto == (name, "cut"):
             append_lines(path, lines[:-1])
-            with open(path, "a") as f:
+            with open(path, "a", encoding="utf-8") as f:
                 f.write(lines[-1][: len(lines[-1]) // 2])  # (no newline: the stop)
             return
         append_lines(path, lines)

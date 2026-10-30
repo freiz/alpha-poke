@@ -44,7 +44,7 @@ def main() -> int:
         for sid, e in o["errors"][: a.show]:
             print(f"    error {sid}: {e[:200]}")
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
-    Path(a.out).write_text(json.dumps(res, indent=1, default=str))
+    Path(a.out).write_text(json.dumps(res, indent=1, default=str), encoding="utf-8")
     bp = dt.baseline_path(a.corpus)
     base = json.loads(bp.read_text()) if bp.exists() else {}
     grown = dt.regressions(res, base, subset=bool(a.only))

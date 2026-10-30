@@ -184,7 +184,7 @@ def _run_info(run: Path) -> dict:
 def _played_by(gen_dir: Path) -> str | None:
     """The network that played a generation's self-play games (their own records)."""
     for f in sorted(gen_dir.glob("games-w*.jsonl")):
-        with open(f) as fh:
+        with open(f, encoding="utf-8") as fh:
             line = fh.readline()
         if line:
             return json.loads(line).get("model")

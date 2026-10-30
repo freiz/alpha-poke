@@ -109,7 +109,7 @@ def main() -> None:
     ap.add_argument("--procs", type=int, default=8)
     ap.add_argument("--out", default="data/selfplay/diag/damage_calc.json")
     a = ap.parse_args()
-    pairs = [json.loads(x) for x in Path(a.teams).read_text().splitlines()]
+    pairs = [json.loads(x) for x in Path(a.teams).read_text(encoding="utf-8").splitlines()]
     jobs = [(i, pairs[i % len(pairs)]["p1"], pairs[i % len(pairs)]["p2"], a.max_turns)
             for i in range(a.battles)]  # fmt: skip
     rows, errors = [], collections.Counter()
@@ -145,7 +145,7 @@ def main() -> None:
         for x in rows:
             f.write(json.dumps(x) + "\n")
     Path(a.out).write_text(json.dumps({"bands": bands, "groups": groups, "beyond": beyond,
-                                       "errors": errors.most_common()}, indent=1))  # fmt: skip
+                                       "errors": errors.most_common()}, indent=1), encoding="utf-8")  # fmt: skip
 
 
 if __name__ == "__main__":

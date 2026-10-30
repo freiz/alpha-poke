@@ -36,7 +36,7 @@ def main() -> None:
     files = sorted({f for t in a.teams.split(",") for f in (glob.glob(t) or [t])})
     jobs = []
     for f in files:
-        pairs = [json.loads(x) for x in Path(f).read_text().splitlines()]
+        pairs = [json.loads(x) for x in Path(f).read_text(encoding="utf-8").splitlines()]
         jobs += [((Path(f).stem, a.seed_offset + i), pairs[i % len(pairs)]["p1"], pairs[i % len(pairs)]["p2"])
                  for i in range(a.battles)]  # fmt: skip
     total = 0
@@ -74,7 +74,8 @@ def main() -> None:
                 "bad": bad,
             },
             indent=1,
-        )
+        ),
+        encoding="utf-8",
     )
 
 

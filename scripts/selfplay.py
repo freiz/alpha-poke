@@ -283,7 +283,7 @@ def cmd_value(a) -> None:
     pick = set(random.Random(a.gen).sample(range(total), min(total, int(a.n * 1.2) + 100)))
     rows, base = [], 0
     for f, c in zip(files, counts, strict=True):
-        with open(f) as fh:
+        with open(f, encoding="utf-8") as fh:
             for i, line in enumerate(fh):
                 if base + i in pick:
                     d = json.loads(line)
@@ -511,7 +511,7 @@ def cmd_train(a) -> None:
         print(f"{run} is trained already; summary only (--force retrains)", flush=True)
     else:
         print("$", cmd, flush=True)
-        with open(log_path, "w") as f:
+        with open(log_path, "w", encoding="utf-8") as f:
             subprocess.run(shlex.split(cmd), check=True, stdout=f, stderr=subprocess.STDOUT)
 
     rows = [json.loads(line) for line in (out / "metrics.jsonl").read_text().splitlines()]
@@ -815,7 +815,7 @@ def cmd_iterate(a) -> None:
     def step(name: str, args: list[str]) -> None:
         t0 = time.time()
         print(f"[{time.strftime('%m-%d %H:%M:%S')}] gen {a.gen}: {name}", flush=True)
-        with open(gen_dir / f"{name}.log", "a") as f:
+        with open(gen_dir / f"{name}.log", "a", encoding="utf-8") as f:
             subprocess.run(capped(me + args, a.mem_cap_gb), check=True, stdout=f,
                            stderr=subprocess.STDOUT)  # fmt: skip
         record(a.gen, f"{name}_minutes", round((time.time() - t0) / 60, 1))

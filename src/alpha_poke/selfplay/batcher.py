@@ -122,7 +122,7 @@ class Batcher:
             import time
 
             out = paths.SELFPLAY / "diag" / "search_failures.jsonl"
-            with open(out, "a") as fh:
+            with open(out, "a", encoding="utf-8") as fh:
                 for j in jobs:
                     fh.write(
                         json.dumps(

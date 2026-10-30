@@ -844,7 +844,9 @@ class KnowledgePlayer(Player):
             "plan_changed_decision": best is not best_tactical,
             "events": state.log[-3:] if state else [],
         }
-        with open(self.trace_dir / f"{battle.battle_tag}_{self.username}.jsonl", "a") as f:
+        with open(
+            self.trace_dir / f"{battle.battle_tag}_{self.username}.jsonl", "a", encoding="utf-8"
+        ) as f:
             f.write(json.dumps(row) + "\n")
 
     def _first(self, battle, mv, ov, move, ov_moves, hp: float | None = None) -> float:

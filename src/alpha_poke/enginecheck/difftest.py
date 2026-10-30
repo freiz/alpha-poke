@@ -59,7 +59,7 @@ def random_specs(
     """``n`` battles of each team-pair file (globs, comma-separated): pairs[i], seed offset + i."""
     out = []
     for f in sorted({x for g in files.split(",") for x in (glob.glob(str(ROOT / g)) or [g])}):
-        pairs = [json.loads(x) for x in Path(f).read_text().splitlines()]
+        pairs = [json.loads(x) for x in Path(f).read_text(encoding="utf-8").splitlines()]
         stem = Path(f).stem.replace("random_battle_teams", "rbt")
         for i in range(n):
             p = pairs[i % len(pairs)]
