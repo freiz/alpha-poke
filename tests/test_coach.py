@@ -527,3 +527,19 @@ def test_the_smoke_test_finds_its_replay():
     smoke = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(smoke)
     assert smoke.FIXTURE.is_file()
+
+
+def test_a_struggle_is_named_struggle(monkeypatch):
+    """Issue #28's follow-up: the search names the engine's none option "No Move"; a review shows
+    Struggle when the side struggles (its slots' name), so the player's choice matches it."""
+    from types import SimpleNamespace
+
+    from alpha_poke.coach import review as rv
+
+    names = ["struggle", "switch greattusk"] + [""] * 12
+    monkeypatch.setattr(rv.slots, "names", lambda state: names)
+    monkeypatch.setattr(rv, "public_state", lambda state: {})
+    p = SimpleNamespace(state="", action=0, turn=24, kind=0)
+    d = rv._decision(p, [([("No Move", 60, 0.01), ("switch greattusk", 40, 0.02)], 100)], {})
+    assert {o[0] for o in d.options} == {"struggle", "switch greattusk"}
+    assert d.chosen == "struggle" and d.chosen_value == 0.01

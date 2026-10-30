@@ -262,11 +262,14 @@ def _by_point(positions) -> dict:
 def _decision(p, searches, events) -> "Decision":
     """One decision from its searches ([(options, iterations)]: alpha_search.ismcts')."""
     runs, roots, visits = [], [], 0
+    names = slots.names(p.state)
+    # (the search's "No Move": Struggle when the side struggles -- the slots' name, issue #28)
+    none = "struggle" if "struggle" in names else "No Move"
     for ours, _ in searches:
         total = sum(v for _, v, _ in ours) or 1
         visits += sum(v for _, v, _ in ours)
         # (an option the search never tried has no value: None, not its 0 mean)
-        run = {c: (v / total, q if v else None) for c, v, q in ours}
+        run = {(none if c == "No Move" else c): (v / total, q if v else None) for c, v, q in ours}
         runs.append(run)
         roots.append(sum(sh * q for sh, q in run.values() if q is not None))
     opts = []
@@ -275,7 +278,7 @@ def _decision(p, searches, events) -> "Decision":
         q, se = _mean_se([run[c][1] for run in runs if c in run and run[c][1] is not None])
         opts.append([c, share, q, se])
     opts.sort(key=lambda o: (-o[1], o[0]))
-    chosen = slots.names(p.state)[p.action]
+    chosen = names[p.action]
     by = {o[0]: o for o in opts}
     best = opts[0]
     ch = by.get(chosen)
