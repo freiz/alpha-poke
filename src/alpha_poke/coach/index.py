@@ -68,7 +68,7 @@ def record(rep: dict, row: dict, has_team: bool, reviewed: int) -> dict:
     m, s = metrics(rep), rep["settings"]
     team = lambda x: json.dumps([t["species"].replace("-*", "") for t in rep["teams"][x]])  # noqa: E731
     return {"id": rep["id"], "side": side, "player": row["players"][int(side[1]) - 1],
-            "opponent": row["players"][int(other[1]) - 1], "won": int(rep["winner"] == side),
+            "opponent": row["players"][int(other[1]) - 1], "won": None if rep["winner"] not in ("p1", "p2") else int(rep["winner"] == side),
             "turns": rep["turns"], "played": played_at(row), "reviewed": reviewed,
             "team_me": team(side), "team_opp": team(other), "repeats": s.get("repeats", 1),
             "ms": s["ms"], "worlds": s["worlds"], "team": int(has_team), "decisions": m["decisions"],
@@ -133,7 +133,7 @@ def query(root: Path, q: str = "", sort: str = "reviewed", desc: bool = True, pa
     for r in rows:
         d = dict(r)
         d["teams"] = [json.loads(d.pop("team_me") or "[]"), json.loads(d.pop("team_opp") or "[]")]
-        d["won"], d["team"] = bool(d["won"]), bool(d["team"])
+        d["won"], d["team"] = None if d["won"] is None else bool(d["won"]), bool(d["team"])
         d["url"] = f"/coach/{d['dir']}/viewer.html"
         out.append(d)
     return {"total": total, "page": page, "size": size, "pages": pages, "rows": out}

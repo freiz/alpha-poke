@@ -5,6 +5,9 @@ the log's events with the sides as ME / OPP; the write-up's move check."""
 import gzip
 import json
 import random
+import re
+import shutil
+import subprocess
 from pathlib import Path
 
 import poke_engine as pe
@@ -67,7 +70,7 @@ def test_every_decision_is_searched(report):
 
 def test_repeated_searches_give_errors(game):
     """repeats > 1: each decision searched over that many draws of belief worlds; the values are
-    means with standard errors, the loss with the two errors combined."""
+    means with standard errors, the loss's from each search's own gap (paired)."""
     rep = review(game, "p1", BeliefModel.load(), str(FIXTURES / "tiny_net"), worlds=2, ms=20,
                  threads=1, log=lambda *_: None, repeats=3)  # fmt: skip
     ds = rep["decisions"]
@@ -76,7 +79,7 @@ def test_repeated_searches_give_errors(game):
         abs(sum(o[1] for o in d["options"]) - 1) < 0.05 or len(d["options"]) >= 6 for d in ds
     )
     assert any(d["value_se"] is not None for d in ds)
-    assert all(len(o) == 4 for d in ds for o in d["options"])
+    assert all(len(o) == 5 for d in ds for o in d["options"])
 
 
 def test_parallel_searches_count_and_visits(game, report):
@@ -543,3 +546,239 @@ def test_a_struggle_is_named_struggle(monkeypatch):
     d = rv._decision(p, [([("No Move", 60, 0.01), ("switch greattusk", 40, 0.02)], 100)], {})
     assert {o[0] for o in d.options} == {"struggle", "switch greattusk"}
     assert d.chosen == "struggle" and d.chosen_value == 0.01
+
+
+LOG_FAST = """|player|p1|Alice|1|
+|player|p2|Bob|2|
+|gen|9
+|tier|[Gen 9] OU
+|poke|p1|Great Tusk|
+|poke|p1|Dragonite, M|
+|poke|p2|Gliscor, M|
+|poke|p2|Kingambit, M|
+|start
+|switch|p1a: Great Tusk|Great Tusk|100/100
+|switch|p2a: Gliscor|Gliscor, M|100/100
+|turn|1
+|move|p2a: Gliscor|Knock Off|p1a: Great Tusk
+|-damage|p1a: Great Tusk|80/100
+|move|p1a: Great Tusk|Headlong Rush|p2a: Gliscor
+|-immune|p2a: Gliscor
+|-heal|p2a: Gliscor|100/100|[from] item: Leftovers
+|upkeep
+|turn|2
+|move|p1a: Great Tusk|Rapid Spin|p2a: Gliscor
+|-damage|p2a: Gliscor|90/100
+|upkeep
+|turn|3
+|win|Alice
+"""
+TEAM_FAST = """Great Tusk
+Ability: Protosynthesis
+Tera Type: Steel
+EVs: 252 Atk / 4 Def / 252 Spe
+Jolly Nature
+- Headlong Rush
+- Rapid Spin
+- Close Combat
+
+Dragonite @ Heavy-Duty Boots
+Ability: Multiscale
+Tera Type: Normal
+EVs: 252 Atk / 4 Def / 252 Spe
+Adamant Nature
+- Extreme Speed
+- Earthquake
+- Dragon Dance
+- Roost
+"""
+
+
+def _turn2(known=None, k=0):
+    ps = positions_from_replay({"id": "fast", "log": LOG_FAST, "rating": None, "uploadtime": 0},
+                               BeliefModel.load(), random.Random(k), extra_per_game=10**6,
+                               worlds=8, known_sets=known, side="p1")  # fmt: skip
+    p = next(p for p in ps if p.turn == 2 and p.kind == 0)
+    return [pe.State.from_string(w) for w in [p.state, *(p.worlds or [])]]
+
+
+def test_a_pasted_team_is_not_completed():
+    """2026-10-30 review: a pasted Dragonite with no item and three moves drew Boots / Leftovers
+    and a fourth move (Roost, Ice Spinner): the AI weighed moves and items the player has not.
+    An exact set is the set (here the itemless three-move Great Tusk)."""
+    known = {"p1": parse_team(TEAM_FAST)}
+    for k in range(4):
+        for st in _turn2(known, k):
+            tusk = next(p for p in st.side_one.pokemon if str(p.id).lower() == "greattusk")
+            assert str(tusk.item).lower() == "none", tusk.item
+            assert sorted(str(m.id).lower() for m in tusk.moves if str(m.id).lower() != "none") == [
+                "closecombat", "headlongrush", "rapidspin"]  # fmt: skip
+
+
+def test_a_pasted_team_uses_the_speed_evidence():
+    """2026-10-30 review: a review ignored the move order -- a foe that had just moved first drawn
+    slower than ours. Here a Gliscor (Leftovers: no Choice Scarf) moved before a 300-Speed Great
+    Tusk, which most of its spreads cannot. With the team pasted our speed is exact: every world's
+    Gliscor is at least as fast (play's rule, the evidence before the decision only)."""
+    known = {"p1": parse_team(TEAM_FAST)}
+    for k in range(3):
+        for st in _turn2(known, k):
+            tusk = next(p for p in st.side_one.pokemon if str(p.id).lower() == "greattusk")
+            gliscor = st.side_two.pokemon[int(st.side_two.active_index)]
+            assert tusk.speed == 300 and gliscor.speed >= 300, (tusk.speed, gliscor.speed)
+
+
+def test_a_pasted_team_uses_the_damage_evidence(monkeypatch):
+    """The same for F1's damage evidence: turn 1's Knock Off on our exact Great Tusk weighs the
+    Gliscor's sets at turn 2 (the turn-start worlds kept as the hits' bases); without the team,
+    none (our stats are a guess)."""
+    import alpha_poke.agents.engine_state as es
+
+    seen = []
+    inner = es.damage_posteriors
+
+    def spy(battle, *a, **k):
+        out = inner(battle, *a, **k)
+        seen.append((battle.turn, sorted(out)))
+        return out
+
+    monkeypatch.setattr(es, "damage_posteriors", spy)
+    _turn2({"p1": parse_team(TEAM_FAST)})
+    assert (2, ["gliscor"]) in seen, seen
+    seen.clear()
+    _turn2()
+    assert seen == []
+
+
+def test_the_gaps_error_is_paired(monkeypatch):
+    """2026-10-30 review: the gap's error combined the two options' errors as if independent; in
+    one search they share the hidden sets' draw and move together. Three searches whose values
+    swing by 15 points but whose gap is 10 points each time: no error in the gap, a sure "bad"."""
+    from types import SimpleNamespace
+
+    from alpha_poke.coach import review as rv
+
+    monkeypatch.setattr(rv.slots, "names", lambda state: ["a", "b"] + [""] * 12)
+    monkeypatch.setattr(rv, "public_state", lambda state: {})
+    p = SimpleNamespace(state="", action=1, turn=3, kind=0)
+    runs = [([("a", 95, q + 0.1), ("b", 5, q)], 100) for q in (0.3, 0.45, 0.6)]
+    d = rv._decision(p, runs, {})
+    assert d.loss == 0.1 and d.loss_se == 0.0
+    assert rv.verdict(vars(d)) == "bad"
+
+
+def test_a_tie_is_reviewed(game):
+    """2026-10-30 review: a tie (no winner) gave a finished review with no decisions, shown as a
+    loss -- the training data's filter (no value label). A review needs no label: every decision,
+    shown as a tie; a replay with nothing to rebuild is an error, not an empty review."""
+    from alpha_poke.coach.review import decision_count
+    from alpha_poke.coach.viewer import render
+
+    log = re.sub(r"^\|win\|.*$", "|tie", game["log"], flags=re.M)
+    tie = game | {"log": log}
+    rep = review(tie, "p1", BeliefModel.load(), str(FIXTURES / "tiny_net"), worlds=2, ms=20,
+                 threads=1, log=lambda *_: None)  # fmt: skip
+    assert rep["winner"] is None and len(rep["decisions"]) == decision_count(tie, "p1") > 0
+    assert '"won": null' in render(rep, tie, "local")
+    cut = game | {"log": game["log"].split("|turn|1\n")[0]}
+    with pytest.raises(ValueError, match="no decision"):
+        review(cut, "p1", BeliefModel.load(), str(FIXTURES / "tiny_net"), worlds=2, ms=20,
+               threads=1, log=lambda *_: None)  # fmt: skip
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="needs node")
+def test_an_eject_buttons_switch_is_its_decisions_step():
+    """2026-10-30 review: the page took a pivot's switch only from a switch line with "[from]"
+    (U-turn's); an Eject Button's has none, and its decision was put at the turn's end as one the
+    log does not show. The page's own steps(), run in node on that turn."""
+    from alpha_poke.coach import viewer
+
+    js = viewer.PAGE
+    fns = (
+        js[js.index("const fromOf") : js.index("function event(")]
+        + js[
+            js.index("function steps(t) {") : js.index("\n}\n", js.index("function steps(t) {")) + 3
+        ]
+    )
+    # (the turn as turn_events gives it -- gen9ou-demo-fp-281849-p1's turn 2)
+    events = {2: ["", "switch|ME Toxapex|Toxapex, F|100/100", "-terastallize|OPP Pecharunt|Ghost",
+                  "move|OPP Pecharunt|Shadow Ball|ME Toxapex", "-damage|ME Toxapex|48/100",
+                  "-enditem|ME Toxapex|Eject Button", "", "switch|ME Weavile|Weavile, M|100/100",
+                  "-ability|ME Weavile|Pressure", "", "upkeep"]}  # fmt: skip
+    decisions = [{"turn": 2, "kind": "turn"}, {"turn": 2, "kind": "pivot switch"}]
+    code = (f"const R = {json.dumps({'events': events, 'decisions': decisions})};\n{fns}\n"
+            "console.log(JSON.stringify(steps(2).map(s => [s.kind, s.dec ?? null])));")  # fmt: skip
+    out = json.loads(
+        subprocess.run(["node", "-e", code], capture_output=True, text=True, check=True).stdout
+    )
+    assert out == [["switch", 0], ["move", None], ["switch", 1]], out
+
+
+def test_guessed_moves_are_marked(game, report):
+    """Without the team, the player's moves the game never showed are the belief's guesses: a
+    review marks them (the AI may be suggesting a move the player has not); with the team, none."""
+    from alpha_poke.analysis.roles import to_id
+
+    records = {to_id(m.species): {to_id(x) for x in m.moves}
+               for m in parse_replay(game).teams["p1"] if not m.phantom}  # fmt: skip
+    marked = [
+        (to_id(d["state"]["me"]["active"]["species"]), g)
+        for d in report["decisions"]
+        for g in d["guessed"]
+    ]
+    assert marked
+    for sp, g in marked:
+        known = next(v for k, v in records.items() if sp.startswith(k) or k.startswith(sp))
+        assert g.removesuffix("-tera") not in known
+    team = review(game, "p1", BeliefModel.load(), str(FIXTURES / "tiny_net"), worlds=2, ms=20,
+                  threads=1, log=lambda *_: None, team=_export(game, "p1"))  # fmt: skip
+    assert all(not d["guessed"] for d in team["decisions"])
+
+
+def test_the_team_must_fit_the_tera_item_and_ability_shown():
+    """A pasted team that contradicts what the game showed of the player's own sets is refused
+    (the tera type, the item, the ability), but not for a forme's ability (Ogerpon's Embody
+    Aspect on terastallizing) nor an item that changed hands (a Trick's Choice Scarf knocked off)."""
+    head = ("|player|p1|Alice|1|\n|player|p2|Bob|2|\n|gen|9\n|tier|[Gen 9] OU\n"
+            "|poke|p1|Ogerpon-Wellspring, F|\n|poke|p1|Garchomp, M|\n|poke|p2|Kingambit, M|\n"
+            "|poke|p2|Gholdengo|\n")  # fmt: skip
+    log = head + "\n".join([
+        "|start", "|switch|p1a: Ogerpon|Ogerpon-Wellspring, F|100/100",
+        "|switch|p2a: Kingambit|Kingambit, M|100/100", "|turn|1",
+        "|-terastallize|p1a: Ogerpon|Water",
+        "|-ability|p1a: Ogerpon|Embody Aspect (Wellspring)|boost", "|-boost|p1a: Ogerpon|spd|1",
+        "|move|p1a: Ogerpon|Ivy Cudgel|p2a: Kingambit", "|-damage|p2a: Kingambit|60/100",
+        "|-heal|p1a: Ogerpon|100/100|[from] item: Wellspring Mask", "|upkeep", "|turn|2",
+        "|switch|p1a: Garchomp|Garchomp, M|100/100", "|-ability|p1a: Garchomp|Rough Skin",
+        "|-enditem|p1a: Garchomp|Leftovers|[from] move: Knock Off", "|upkeep", "|turn|3", "|win|Alice", ""])  # fmt: skip
+    team = """Ogerpon-Wellspring @ Wellspring Mask
+Ability: Water Absorb
+Tera Type: Water
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- Ivy Cudgel
+- Horn Leech
+- Knock Off
+- U-turn
+
+Garchomp @ Leftovers
+Ability: Rough Skin
+Tera Type: Steel
+EVs: 252 HP / 4 Def / 252 Spe
+Jolly Nature
+- Earthquake
+- Stealth Rock
+- Spikes
+- Dragon Tail
+"""
+    records = [m for m in parse_replay({"id": "t", "log": log}).teams["p1"] if not m.phantom]
+    assert match_team(parse_team(team), records, log, "p1")  # (Embody Aspect: the forme's)
+    for wrong, what in (("Tera Type: Water", "Tera Type: Fire"), ("Garchomp @ Leftovers", "Garchomp @ Rocky Helmet"),
+                        ("Ability: Rough Skin", "Ability: Sand Veil")):  # fmt: skip
+        with pytest.raises(TeamError, match="team_mismatch"):
+            match_team(parse_team(team.replace(wrong, what)), records, log, "p1")
+    # (a Trick gave it a Choice Scarf, then lost: the side's items changed hands -- no item check)
+    tricked = log.replace("|-enditem|p1a: Garchomp|Leftovers|", "|-item|p1a: Garchomp|Choice Scarf|[from] move: Trick\n"
+                          "|-enditem|p1a: Garchomp|Choice Scarf|")  # fmt: skip
+    records = [m for m in parse_replay({"id": "t", "log": tricked}).teams["p1"] if not m.phantom]
+    assert match_team(parse_team(team), records, tricked, "p1")

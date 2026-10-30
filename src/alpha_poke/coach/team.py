@@ -5,10 +5,13 @@ sampling what the replay did not show (the player knew it: the search should too
 
 import re
 
+from poke_env.data import GenData
 from poke_env.teambuilder import Teambuilder
 
 from alpha_poke.agents.engine_state import KnownSet
 from alpha_poke.analysis.roles import to_id
+
+GEN = GenData.from_gen(9)
 
 
 class TeamError(ValueError):
@@ -73,6 +76,7 @@ def parse_team(text: str) -> dict[str, KnownSet]:
             # (no "EVs:" / "IVs:" line: none / all 31 -- the export leaves out the defaults)
             evs=tuple(int(x) for x in m.evs) if m.evs else (0,) * 6,
             ivs=tuple(int(x) for x in m.ivs) if m.ivs else (31,) * 6,
+            exact=True,
         )
     if not out:
         raise TeamError("team_unreadable")
@@ -84,22 +88,47 @@ def _same(a: str, b: str) -> bool:
     return a == b or a.startswith(b) or b.startswith(a)
 
 
-def match_team(team: dict[str, KnownSet], records) -> dict[str, KnownSet]:
+def match_team(team: dict[str, KnownSet], records, log: str | None = None,
+               side: str | None = None) -> dict[str, KnownSet]:  # fmt: skip
     """``team`` keyed for the replay's player (``records``: its mons as the replay shows them,
-    replay.parse_replay's): every one of them in the team, with every move it used (else
-    TeamError "team_mismatch" naming what does not fit). Keyed by the record's species and the
-    team's own (a preview's "Urshifu-*" is "urshifurapidstrike" once in)."""
+    replay.parse_replay's): every one of them in the team, with every move it used, and -- with
+    the game's ``log`` and the player's ``side`` -- the tera type, item and ability the game
+    showed as its own (else TeamError "team_mismatch" naming what does not fit). Keyed by the
+    record's species and the team's own (a preview's "Urshifu-*" is "urshifurapidstrike" once
+    in). Cautious, as a wrong refusal costs more than a missed one: an ability only when it is one
+    of the species' own (not a forme's change -- Ogerpon's Embody Aspect -- nor a copied one), an
+    item not on a side whose items changed hands (Trick, Thief, Magician, ...)."""
+    swapped = side is not None and log is not None and any(
+        f[1] == "-item" and f[2].startswith(side) and any(x.startswith(("[from] move:", "[from] ability:"))
+                                                       and "Frisk" not in x for x in f[4:])
+        for f in (line.split("|") for line in log.split("\n")) if len(f) > 3
+    )  # fmt: skip
     out, missing = {}, []
     for rec in records:
-        sid = to_id(rec.species.replace("-*", ""))
+        name = rec.species.replace("-*", "")
+        sid = to_id(name)
         key = next((k for k in team if _same(k, sid)), None)
         if key is None:
-            missing.append(rec.species.replace("-*", ""))
+            missing.append(name)
             continue
-        moves = set(team[key].moves)
+        k = team[key]
+        moves = set(k.moves)
         odd = [m for m in rec.moves if to_id(m) not in moves and to_id(m) != "struggle"]
+        if log is not None:
+            if rec.tera_type and k.tera and to_id(rec.tera_type) != to_id(k.tera):
+                odd.append(f"Tera {rec.tera_type}")
+            if rec.item and not swapped and to_id(rec.item) != (k.item or ""):
+                odd.append(rec.item)
+            own = {to_id(x) for x in (GEN.pokedex.get(key) or {}).get("abilities", {}).values()}
+            if (
+                rec.ability
+                and k.ability
+                and to_id(rec.ability) in own
+                and to_id(rec.ability) != k.ability
+            ):
+                odd.append(rec.ability)
         if odd:
-            missing.append(f"{rec.species.replace('-*', '')}: {', '.join(odd)}")
+            missing.append(f"{name}: {', '.join(odd)}")
         out[to_id(rec.species)] = out[key] = team[key]
     if missing:
         raise TeamError("team_mismatch", "; ".join(missing))

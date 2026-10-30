@@ -181,7 +181,9 @@ def stored_team(d: Path) -> dict | None:
     if not (d / "team.json").is_file():
         return None
     sets = json.loads((d / "team.json").read_text(encoding="utf-8"))
-    return {k: KnownSet(**{f: tuple(x) if f in ("evs", "ivs") and x else x for f, x in v.items()})
+    # (a pasted team, so exact -- also one saved before the field: 2026-10-30)
+    return {k: KnownSet(**({"exact": True} | {f: tuple(x) if f in ("evs", "ivs") and x else x
+                                              for f, x in v.items()}))
             for k, v in sets.items()}  # fmt: skip
 
 
@@ -321,7 +323,7 @@ def handler(cache, jobs: Jobs):
                     try:
                         side = replays.side_of(row, player)
                         records = [m for m in parse_replay(row).teams[side] if not m.phantom]
-                        team = match_team(load_team(body["team"]), records)
+                        team = match_team(load_team(body["team"]), records, row["log"], side)
                     except TeamError as e:
                         return self._json({"error": message(e.code, lang, names=e.names)},
                                           HTTPStatus.BAD_REQUEST)  # fmt: skip
@@ -456,7 +458,7 @@ const T = {
        colReviewed: "Reviewed", colNote: "Note", edit: "Rename / note", teamPasted: "team pasted", pts: "pts",
        titlePh: "Name (empty: the players)", notePh: "Note", save: "Save", cancel: "Cancel",
        pageOf: (p, n, t) => `page ${p} of ${n} · ${t} reviews`,
-       won: "won", lost: "lost", turns: n => `${n} turns`},
+       won: "won", lost: "lost", drawn: "tie", turns: n => `${n} turns`},
   zh: {title: "对局复盘", ui: "界面",
        intro: "AI 从你的视角重新思考你的每一步：每个选择的胜率、AI 的选择、关键失误。只支持 Gen 9 OU。全部在你的电脑上运行。",
        link: "Showdown 回放链接或编号", fileLabel: "或者选择保存的回放文件（.html / .json / .log）", load: "读取对局",
@@ -467,7 +469,7 @@ const T = {
        colReviewed: "复盘时间", colNote: "备注", edit: "重命名 / 备注", teamPasted: "已贴队伍", pts: "点",
        titlePh: "名称（留空就显示双方玩家）", notePh: "备注", save: "保存", cancel: "取消",
        pageOf: (p, n, t) => `第 ${p} / ${n} 页 · 共 ${t} 份`,
-       won: "胜", lost: "负", turns: n => `${n} 回合`},
+       won: "胜", lost: "负", drawn: "平", turns: n => `${n} 回合`},
 };
 let UI = "en";
 try { UI = new URLSearchParams(location.search).get("ui") || localStorage.getItem("coach-ui") || "en"; } catch (e) {}
@@ -531,7 +533,7 @@ function rowHTML(r) {
     + `<div class="sub">${esc(r.id)}</div>`;
   const settings = `${r.repeats} × ${r.ms / 1000} s · ${r.worlds}` + (r.team ? `<div class="sub">${L.teamPasted}</div>` : "");
   let h = `<tr><td>${game}</td><td class="nw">${when(r.played)}</td>`
-    + `<td class="nw"><span class="${r.won ? "won" : "lost"}">${r.won ? L.won : L.lost}</span><div class="sub">${L.turns(r.turns)}</div></td>`
+    + `<td class="nw"><span class="${r.won == null ? "" : r.won ? "won" : "lost"}">${r.won == null ? L.drawn : r.won ? L.won : L.lost}</span><div class="sub">${L.turns(r.turns)}</div></td>`
     + `<td class="teams"><div>${icons(r.teams[0])}</div><div>${icons(r.teams[1])}</div></td>`
     + `<td class="num">${pct(r.top1)}<div class="sub">${r.decisions ? Math.round((r.top1 || 0) * r.decisions) + "/" + r.decisions : ""}</div></td>`
     + `<td class="num">${r.mean_loss == null ? "—" : (100 * r.mean_loss).toFixed(1) + " " + L.pts}</td>`

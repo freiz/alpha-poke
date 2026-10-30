@@ -48,6 +48,7 @@ PAGE = r"""<!DOCTYPE html>
   .opt .diff { white-space: nowrap; margin-left: -5px; }
   .opt .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .opt .name.me { color: var(--me); font-weight: 600; } .opt .name.ai { color: var(--ai); font-weight: 600; }
+  .opt .name .guess { color: var(--muted); font-weight: 400; font-size: 12px; }
   .bar { position: relative; height: 14px; background: var(--bg); border-radius: 3px; overflow: hidden; }
   .aibox .bar { background: var(--panel); }
   .bar span { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; }
@@ -143,7 +144,7 @@ const STATS = {
 };
 const T = {
   en: {
-    title: id => `Review · ${id}`, won: "won", lost: "lost",
+    title: id => `Review · ${id}`, won: "won", lost: "lost", drawn: "tie",
     note: (ms, w) => `Your side: ${R.player || SIDE} (bottom left) | winning chances are the AI search's estimates (${ms} ms × ${w} belief worlds per decision)`,
     ui: "Interface", names: "Names",
     curve: "Your winning chance through the game, by turn (● your choice at the start of a turn, ○ your switch after a faint or a pivot move; red: the AI clearly disagreed). Click to jump; ←/→ previous / next turn, M next mistake.",
@@ -170,7 +171,8 @@ const T = {
     scoreNote: n => `Over your ${n} decisions with a choice; the last tile follows the strictness below.`,
     untried: "untried", left: n => `${n} left`, tera: "terastallized",
     hazMe: "hazards on your side", hazOpp: "on the opponent's side", unseen: x => `You chose ${x} (the log does not show it as such)`,
-    switchTo: x => `Switch to ${x}`, teraSuffix: " + Tera",
+    switchTo: x => `Switch to ${x}`, teraSuffix: " + Tera", guess: "(guess)",
+    guessTip: "The game never showed you using this move: without your team the AI guessed it, and you may not have it.",
     moment: (t, c, b, cv, bv) => `Turn ${t}: you chose <b>${c}</b>, the AI <b>${b}</b> (${cv} → ${bv})`,
     mine: x => `your ${x}`, theirs: x => `the opposing ${x}`, side: me => me ? "your side" : "the opposing side",
     ev: {
@@ -197,7 +199,7 @@ const T = {
     },
   },
   zh: {
-    title: id => `复盘 · ${id}`, won: "胜", lost: "负",
+    title: id => `复盘 · ${id}`, won: "胜", lost: "负", drawn: "平",
     note: (ms, w) => `分析视角：${R.player || SIDE}（左下）｜ 胜率为 AI 搜索的估计（每步 ${ms} ms × ${w} 个信念世界）`,
     ui: "界面", names: "名称",
     curve: "整局的胜率变化，按回合（● 回合开始时你的选择，○ 倒下后或折返后的换人；红色：AI 明显不认同）。点击跳转；←/→ 上一回合 / 下一回合，M 下一个失误。",
@@ -224,7 +226,8 @@ const T = {
     scoreNote: n => `只算有选择余地的 ${n} 步决策；最后一项随下面的判定标准变化。`,
     untried: "未尝试", left: n => `剩 ${n} 只`, tera: "已太晶",
     hazMe: "你这边的钉子", hazOpp: "对手那边的钉子", unseen: x => `你选择了 ${x}（日志里没有按这样显示）`,
-    switchTo: x => `换上 ${x}`, teraSuffix: " + 太晶",
+    switchTo: x => `换上 ${x}`, teraSuffix: " + 太晶", guess: "（推测）",
+    guessTip: "这局里你没用过这招：没贴队伍时 AI 只能猜，你可能并没有这招。",
     moment: (t, c, b, cv, bv) => `回合 ${t}：你选了 <b>${c}</b>，AI 选 <b>${b}</b>（${cv} → ${bv}）`,
     mine: x => `你的 ${x}`, theirs: x => `对手的 ${x}`, side: me => me ? "你这一侧" : "对手那一侧",
     ev: {
@@ -353,7 +356,10 @@ function steps(t) {
   // each decision of the player at its step: the turn's choice at the player's action, a pivot's
   // switch at the pivot switch, the switches after a faint in order; one the log does not show as
   // such (a called move, ...) as its own step
-  const pools = {turn: ["move", "switch", "cant"], "pivot switch": ["pivot"], "switch after a faint": ["replace"]};
+  // (a pivot's switch the log shows without "[from]" -- an Eject Button's, an Emergency Exit's --
+  // is a plain switch line: the decision kind is the review's, the turn's choice took its own first;
+  // 2026-10-30 review: an Eject Button's switch fell to the turn's end, "not in the log as such")
+  const pools = {turn: ["move", "switch", "cant"], "pivot switch": ["pivot", "switch"], "switch after a faint": ["replace"]};
   const used = new Set();
   R.decisions.forEach((d, i) => {
     if (d.turn != t) return;
@@ -384,14 +390,16 @@ function aiHTML(d) {
   const opts = d.options.slice();
   if (!opts.some(o => o[0] == d.chosen)) opts.push([d.chosen, d.chosen_share, d.chosen_value, null]);
   const bestSe = (d.options[0] || [])[3];
-  for (const [o, share, q, se] of opts) {
+  for (const [o, share, q, se, pairedSe] of opts) {
     const cls = o == d.chosen ? "me" : o == d.best ? "ai" : "";
     let diff = "";
     if (q != null && o != d.best) {  // the gap to the AI's choice, "≈" within Z errors
-      const gap = q - d.best_value, gse = se && bestSe ? Math.hypot(se, bestSe) : null;
+      // (the gap's own error, from each search's gap -- the review's; older reviews: combined)
+      const gap = q - d.best_value, gse = pairedSe != null ? pairedSe : se && bestSe ? Math.hypot(se, bestSe) : null;
       diff = `(${gse && Math.abs(gap) <= Z * gse ? L.approx : (gap >= 0 ? "+" : "") + Math.round(100 * gap)})`;
     }
-    h += `<div class="opt"><span class="name ${cls}" title="${esc(o)}">${esc(option(o))}</span>
+    const guess = (d.guessed || []).includes(o) ? ` <span class="guess" title="${esc(L.guessTip)}">${L.guess}</span>` : "";
+    h += `<div class="opt"><span class="name ${cls}" title="${esc(o)}">${esc(option(o))}${guess}</span>
       <span class="bar"><span class="win" style="width:${q == null ? 0 : 100 * q}%"></span></span>
       ${q == null ? `<span class="num" style="grid-column: span 3">${L.untried}</span>`
         : `<span class="num">${pct(q)}</span><span class="se">${pm(se).trim()}</span><span class="diff">${diff}</span>`}
@@ -476,7 +484,7 @@ document.title = L.title(R.title || R.id);
 document.documentElement.lang = UI == "zh" ? "zh" : "en";
 document.getElementById("title").textContent = L.title(R.title || R.id);
 if (location.protocol.startsWith("http")) { const a = document.getElementById("home"); a.textContent = L.home; a.hidden = false; }
-document.getElementById("res").textContent = R.won ? L.won : L.lost;
+document.getElementById("res").textContent = R.won == null ? L.drawn : R.won ? L.won : L.lost;
 document.getElementById("note").textContent = L.note(R.ms, R.worlds) + L.noteRuns(R.repeats || 1) + L.noteTeam(R.team);
 document.getElementById("lui").textContent = L.ui;
 document.getElementById("lnames").textContent = L.names;
@@ -680,7 +688,7 @@ def render(report: dict, row: dict, client: str = "official", title: str | None 
     ds = [{k: v for k, v in d.items() if k != "events"} | {"score": round(mistake_score(d), 3)}
           for d in report["decisions"]]  # fmt: skip
     # (the verdicts and the moments: computed by the page, its thresholds adjustable)
-    won = report["winner"] == report["side"]
+    won = None if report["winner"] not in ("p1", "p2") else report["winner"] == report["side"]
     data = {"id": report["id"], "title": title or "", "side": report["side"], "player": report.get("player"), "won": won, "turns": report["turns"],
             "ms": report["settings"]["ms"], "worlds": report["settings"]["worlds"],
             "decisions": ds, "events": events, "repeats": report["settings"].get("repeats", 1),

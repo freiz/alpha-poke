@@ -397,23 +397,24 @@ def consistent(obs: list[Obs], speed_stat: int, item: str, stat_of=None) -> bool
     return True
 
 
-def battle_observations(battle) -> dict[str, list[Obs]]:
+def battle_observations(battle, our_speed=None) -> dict[str, list[Obs]]:
     """``observations`` of a live poke-env battle (our view: our mons' real speeds, items and
     abilities at each turn's end), by the opponent's species; the tracker kept on the battle and
-    fed the messages added since the last call."""
+    fed the messages added since the last call. ``our_speed``: ObsTracker's, when the battle has
+    no request (a replay's side with its team pasted: engine_state._exact_speed)."""
     data = battle._replay_data
     n, tr, by = getattr(battle, "_alpha_speed_obs", (0, None, None))
     if tr is not None and n == len(data):
         return by
     if tr is None or n > len(data):
 
-        def our_speed(sp: str) -> tuple:
+        def request_speed(sp: str) -> tuple:
             for m in battle.team.values():
                 if to_id(m.species) == sp:
                     return (m.stats or {}).get("spe") or 0, m.item or "", to_id(m.ability or "")
             return 0, "", ""
 
-        n, tr = 0, ObsTracker(battle.player_role or "p1", our_speed)
+        n, tr = 0, ObsTracker(battle.player_role or "p1", our_speed or request_speed)
     for m in data[n:]:
         tr.feed(m)
     by = {}

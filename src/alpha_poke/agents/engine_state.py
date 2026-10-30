@@ -181,6 +181,9 @@ class KnownSet:
     # (two moves in one stint on the field, its item the same: it holds no Choice item --
     # train.positions.choice_free; issue #28, a replay's own side now locked by the item it drew)
     no_choice: bool = False
+    # (the whole set given -- a pasted team: no item is none, fewer than four moves are all;
+    # nothing drawn. 2026-10-30 review: a pasted itemless three-move Dragonite drew Boots, Roost)
+    exact: bool = False
 
 
 @dataclass
@@ -399,8 +402,8 @@ def sample_set(
     tera = _tera(mon) if mon.is_terastallized else None
     if known is not None:
         revealed += [m for m in known.moves if m in _MOVES and m not in revealed]
-        if item is None and known.item and not gone:
-            item = known.item
+        if item is None and (known.item or known.exact) and not gone:
+            item = known.item or "none"
         if tera is None and known.tera:
             tera = known.tera
 
@@ -469,7 +472,7 @@ def sample_set(
     for mid in list(weights):
         if mid in moves or mid not in _MOVES or (item == "assaultvest" and _status(mid)):
             weights.pop(mid)
-    while len(moves) < 4 and weights:
+    while len(moves) < 4 and weights and not (known is not None and known.exact):
         keys, ws = zip(*weights.items(), strict=True)
         if sum(ws) <= 0:
             break
@@ -819,6 +822,34 @@ def _sleep(mon, tm: SideTimers | None) -> dict:
         return {}
     rest, sleep = tm.rest_sleep(tm.k(to_id(mon.species)))
     return {"rest_turns": rest, "sleep_turns": sleep}
+
+
+def _exact_side(spectator: SpectatorSide) -> bool:
+    """Every set of a replay's side given whole (its team pasted: KnownSet.exact)."""
+    return bool(spectator.known) and all(k.exact for k in spectator.known.values())
+
+
+def _exact_speed(battle, spectator: SpectatorSide):
+    """ObsTracker's our_speed for a replay's side with exact sets: (speed stat, item id, ability
+    id) of a species -- its item as the log has it by then (Knock Off, Trick), else its own."""
+
+    def speed(sp: str) -> tuple:
+        known = spectator.known.get(sp)
+        mon = next((m for m in battle.team.values() if to_id(m.species) == sp), None)
+        if known is None or mon is None or not (known.nature and known.evs):
+            return 0, "", ""
+        spe = calc_stats(own_base_stats(mon), Spread(known.nature, tuple(known.evs)), level=mon.level or 100,
+                         ivs=known.ivs)["spe"]  # fmt: skip
+        item = (
+            ""
+            if mon.item is None
+            else mon.item
+            if mon.item != "unknown_item"
+            else (known.item or "")
+        )
+        return spe, item, to_id(current_ability(mon) or known.ability or "")
+
+    return speed
 
 
 def _own_set(battle, mon) -> tuple | None:
@@ -1486,11 +1517,15 @@ def build_state(
                 theirs.append(m)
     opp_active = battle.opponent_active_pokemon
 
-    # the opponent's speed: usage spreads consistent with the observed move order
-    obs = battle_observations(battle) if spectator is None else None
-    # F1: the damage evidence (play time only, as the speed's): a posterior per mon with hits
+    # the opponent's speed: usage spreads consistent with the observed move order. F1: the damage
+    # evidence, a posterior per mon with hits. Both need our real sets: play time, or a replay's
+    # side whose team was pasted (a review -- 2026-10-30 review: it had neither, a foe that had
+    # just outsped ours drawn slower); not the training data's replays (issue)
+    evidence = spectator is None or _exact_side(spectator)
+    obs = (battle_observations(battle, None if spectator is None else _exact_speed(battle, spectator))
+           if evidence else None)  # fmt: skip
     dmg = (damage_posteriors(battle, belief, theirs, team_names, arch_mix)
-           if spectator is None and damage_belief else {})  # fmt: skip
+           if evidence and damage_belief else {})  # fmt: skip
     their_keys = [next((k for k, v in battle.opponent_team.items() if v is m), None)
                   for m in theirs]  # fmt: skip
     our_keys = [next((k for k, v in battle.team.items() if v is m), None) for m in ours]
@@ -2159,7 +2194,7 @@ def build_state(
         if pending != "none":
             st = _with_saved_move(st, pending)
     # F1: a turn start's world is the base of that turn's hits (not a mid-turn switch's)
-    if spectator is None and not (battle.force_switch if force_switch is None else force_switch):
+    if evidence and not (battle.force_switch if force_switch is None else force_switch):
         record_base(battle, st.to_string())
     return st
 

@@ -382,6 +382,7 @@ def positions_from_replay(
     worlds: int = 0,
     known_sets: dict | None = None,
     side: str | None = None,
+    any_result: bool = False,
 ):
     """``row``: a replay dict with ``id``, ``log`` (+ ``rating``, ``uploadtime``). ``per_game``
     > 0: only that many decision points, drawn at random (positions within a game are strongly
@@ -396,9 +397,10 @@ def positions_from_replay(
     posterior is computed over them; game reviews, alpha_poke.coach).
     ``known_sets``: side -> species id -> KnownSet, over what the replay reveals (a reviewed
     player's own team, pasted: coach.team). ``side``: that side's positions only (a review: the
-    other's states not built)."""
+    other's states not built). ``any_result``: a game without a winner too (a tie: no value
+    label to learn, but a review needs no label -- 2026-10-30 review: a tie reviewed to nothing)."""
     rep = parse_replay(row)
-    if rep.warnings or rep.winner not in ("p1", "p2"):
+    if rep.warnings or (rep.winner not in ("p1", "p2") and not any_result):
         return []
     actions = {}
     for a in rep.actions:

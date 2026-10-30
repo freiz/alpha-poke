@@ -23,6 +23,7 @@ import alpha_search
 import poke_engine as pe
 
 from alpha_poke.agents import slots
+from alpha_poke.analysis.roles import to_id
 from alpha_poke.coach.team import load_team, match_team
 from alpha_poke.replay import parse_replay
 from alpha_poke.selfplay.batcher import ml_for, parse_ml
@@ -65,8 +66,9 @@ class Decision:
     best_value: float
     loss: float | None  # best_value - chosen_value
     chosen_share: float  # the chosen option's share of the search's visits
-    # [name, visit share, mean value, its standard error], by share; with repeats > 1 the share and
-    # the value are the means over the independent searches (the error: their spread / sqrt(n))
+    # [name, visit share, mean value, its standard error, the error of its gap to the best], by
+    # share; with repeats > 1 the share and the value are the means over the independent searches
+    # (the errors: their spread / sqrt(n); the gap's from each search's own gap -- _decision)
     options: list = field(default_factory=list)
     state: dict = field(default_factory=dict)  # the public state at the decision
     events: list = field(default_factory=list)  # the turn's log lines, sides as ME / OPP
@@ -74,6 +76,9 @@ class Decision:
     loss_se: float | None = None  # the loss's standard error (the two values' combined)
     repeats: int = 1
     visits: int = 0  # the searches' visits at the root, all repeats (more: surer numbers)
+    # options that are a move the game never showed the player using (no team pasted): the move
+    # is a guess of the belief's, the player may not have it (2026-10-30)
+    guessed: list = field(default_factory=list)
 
 
 def _mon(p) -> dict:
@@ -163,16 +168,35 @@ def review(row: dict, side: str, belief, model: str, worlds: int = 16, ms: int =
     known = None
     if team:
         sets = load_team(team) if isinstance(team, str) else team
-        known = {side: match_team(sets, [m for m in rep.teams[side] if not m.phantom])}
+        known = {
+            side: match_team(sets, [m for m in rep.teams[side] if not m.phantom], row["log"], side)
+        }
     # one draw per repeat: its own positions (the player's guessed parts too), matched by point
     draws = []
     for k in range(repeats):
         ps = [p for p in positions_from_replay(row, belief, random.Random(seed + k),
                                                extra_per_game=10**6, seed=seed + k, worlds=worlds,
-                                               known_sets=known, side=side)
+                                               known_sets=known, side=side, any_result=True)
               if p.kind != KIND_BLIND]  # fmt: skip
         draws.append(_by_point(ps))
     points = list(draws[0])
+    # the player's moves known for sure: its whole game's (and a transformed mon's copied ones);
+    # all of them with its team pasted (nothing marked)
+    sure = None
+    if known is None:
+        sure = {
+            to_id(m.species): {to_id(x) for x in m.moves} for m in rep.teams[side] if not m.phantom
+        }
+        for (sd, _), ms in rep.copied.items():  # (the transformed mon's: it used some of them)
+            if sd == side:
+                for v in sure.values():
+                    if v & {to_id(x) for x in ms}:
+                        v.update(to_id(x) for x in ms)
+    if not points:  # (not a review with nothing in it: 2026-10-30 review, it read as no slips)
+        raise ValueError(
+            "no decision of this player could be rebuilt from the replay"
+            + (f" ({'; '.join(rep.warnings[:2])})" if rep.warnings else "")
+        )
     ml = parse_ml(ml_for(model))
     events = turn_events(row["log"], side)
     if progress:
@@ -207,7 +231,7 @@ def review(row: dict, side: str, belief, model: str, worlds: int = 16, ms: int =
             if left[i]:
                 continue
             p = draws[0][points[i]]
-            decisions[i] = d = _decision(p, [r for r in results[i] if r is not None], events)
+            decisions[i] = d = _decision(p, [r for r in results[i] if r is not None], events, sure)
             done += 1
             if progress:
                 progress(done, len(points))
@@ -259,8 +283,10 @@ def _by_point(positions) -> dict:
     return out
 
 
-def _decision(p, searches, events) -> "Decision":
-    """One decision from its searches ([(options, iterations)]: alpha_search.ismcts')."""
+def _decision(p, searches, events, sure: dict | None = None) -> "Decision":
+    """One decision from its searches ([(options, iterations)]: alpha_search.ismcts').
+    ``sure``: species id -> the moves the player is known to have (the game's, or its pasted
+    team's); a move option of the active outside them is ``guessed``. None: all known."""
     runs, roots, visits = [], [], 0
     names = slots.names(p.state)
     # (the search's "No Move": Struggle when the side struggles -- the slots' name, issue #28)
@@ -284,8 +310,18 @@ def _decision(p, searches, events) -> "Decision":
     ch = by.get(chosen)
     ch = ch if ch and ch[2] is not None else None
     value, value_se = _mean_se(roots)
-    loss_se = (math.hypot(best[3], ch[3]) if ch and best[3] is not None and ch[3] is not None
-               else None)  # fmt: skip
+
+    # (the gap's error from each search's own gap: the two options of one search share its draw
+    # of the hidden sets, so their values move together -- 2026-10-30 review: three searches each
+    # 10 points apart gave 16 points of error as the two errors combined; that only without pairs)
+    def gap_se(c: str, se: float | None) -> float | None:
+        pairs = [run[best[0]][1] - run[c][1] for run in runs
+                 if run.get(best[0], (0, None))[1] is not None and run.get(c, (0, None))[1] is not None]  # fmt: skip
+        if len(pairs) > 1:
+            return _mean_se(pairs)[1]
+        return math.hypot(best[3], se) if best[3] is not None and se is not None else None
+
+    loss_se = gap_se(chosen, ch[3]) if ch else None
     r3 = lambda x: None if x is None else round(x, 3)  # noqa: E731
     shown = opts[:6] + ([by[chosen]] if chosen in by and by[chosen] not in opts[:6] else [])
     return Decision(
@@ -293,10 +329,28 @@ def _decision(p, searches, events) -> "Decision":
         value=round(value, 3), chosen_value=r3(ch[2]) if ch else None, best_value=round(best[2], 3),
         loss=round(best[2] - ch[2], 3) if ch else None,
         chosen_share=round(by[chosen][1], 3) if chosen in by else 0.0,
-        options=[[c, round(s, 3), r3(q), r3(e)] for c, s, q, e in shown],
+        options=[[c, round(s, 3), r3(q), r3(e), r3(gap_se(c, e)) if c != best[0] and q is not None else None]
+                 for c, s, q, e in shown],
+        guessed=_guessed(p.state, [c for c, *_ in shown], sure),
         state=public_state(p.state), events=events.get(p.turn, []),
         value_se=r3(value_se), loss_se=r3(loss_se), repeats=len(searches), visits=visits,
     )  # fmt: skip
+
+
+def _guessed(state: str, options: list, sure: dict | None) -> list:
+    """The move options of the active that are not among the player's known moves (``sure``)."""
+    if sure is None:
+        return []
+    sp = to_id(public_state(state)["me"]["active"]["species"])
+    known = next((v for k, v in sure.items() if sp.startswith(k) or k.startswith(sp)), None)
+    if known is None:
+        return []
+    moves = {
+        c: c.removesuffix("-tera")
+        for c in options
+        if not c.startswith("switch ") and c != "struggle"
+    }
+    return [c for c, m in moves.items() if m not in known]
 
 
 def _revealed(m) -> dict:
