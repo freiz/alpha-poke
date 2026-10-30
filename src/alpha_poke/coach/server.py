@@ -104,3 +104,30 @@ def serve(port: int = 8090, offline: bool = False, refresh: bool = False) -> Thr
     """The server (loopback only); ``serve_forever()`` it."""
     cache = Cache(paths.DATA / "coach" / "client", offline, refresh)
     return ThreadingHTTPServer(("127.0.0.1", port), handler(cache, paths.DATA / "coach"))
+
+
+def running(port: int) -> bool:
+    """Whether our server already answers on ``port``."""
+    try:
+        r = requests.get(f"http://127.0.0.1:{port}/config/config.js", timeout=2)
+    except requests.RequestException:
+        return False
+    return r.status_code == 200 and "Config.routes" in r.text
+
+
+def open_page(url: str) -> None:
+    """``url`` in the desktop's browser (WSL: Windows' default browser, which reaches the server
+    through WSL's localhost forwarding)."""
+    import shutil
+    import subprocess
+    import webbrowser
+
+    wsl = (
+        "microsoft" in Path("/proc/version").read_text().lower()
+        if Path("/proc/version").exists()
+        else False
+    )
+    if wsl and shutil.which("explorer.exe"):
+        subprocess.run(["explorer.exe", url], check=False)  # (its exit status is 1 on success)
+    else:
+        webbrowser.open(url)

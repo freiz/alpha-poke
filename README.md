@@ -148,6 +148,16 @@ uv run python scripts/setup_foul_play.py cache
 uv run python scripts/vs_foulplay.py s_ismcts_ma --pairs 20 --lanes 2 --search-ms 200 --parallelism 2
 ```
 
+**Review your own games**: any Gen 9 OU replay, yours or one you saved, judged decision by
+decision (see [Game reviews](#game-reviews)); the page opens in your browser:
+
+```bash
+uv run python scripts/review_game.py https://replay.pokemonshowdown.com/gen9ou-XXXXXXXXXX \
+    --player <your Showdown name> --open
+```
+
+It needs no Showdown server and no GPU: about a minute of CPU per game (`--ms`, `--threads`).
+
 ## Training from scratch
 
 Everything below writes under `data/` (git-ignored). The full pipeline needs about 100 GB of

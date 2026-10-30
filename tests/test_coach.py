@@ -103,3 +103,21 @@ def test_the_client_cache_fetches_once_and_stays_inside(tmp_path, monkeypatch):
     offline = server.Cache(tmp_path, offline=True)
     assert offline.get("sprites/gen5/pikachu.png") is not None and offline.get("js/new.js") is None
     assert len(calls) == 1
+
+
+def test_the_page_server_answers_once_started():
+    import socket
+    import threading
+
+    from alpha_poke.coach import server
+
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        port = s.getsockname()[1]
+    assert not server.running(port)
+    httpd = server.serve(port, offline=True)
+    threading.Thread(target=httpd.serve_forever, daemon=True).start()
+    try:
+        assert server.running(port)
+    finally:
+        httpd.shutdown()

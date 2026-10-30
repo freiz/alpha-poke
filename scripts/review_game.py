@@ -3,7 +3,10 @@ the decisions that cost the most, the swings; optionally a coach's write-up by a
 
   uv run python scripts/review_game.py data/public_games/20261029/replays/<file>.html --player <name>
   uv run python scripts/review_game.py gen9ou-2706511006 --player <name> --llm
-  uv run python scripts/review_game.py https://replay.pokemonshowdown.com/gen9ou-... --player <name>
+  uv run python scripts/review_game.py https://replay.pokemonshowdown.com/gen9ou-... --player <name> --open
+
+--open: the review page in the browser when done (starting the page server,
+scripts/review_server.py, if it is not running: Ctrl-C stops it).
 
 Writes data/coach/<replay id>-<side>/: review.json (every decision: options, winning chances,
 the public state, the turn's events), summary.md, viewer.html (the replay with the review, served
@@ -20,7 +23,7 @@ import sys
 
 from alpha_poke import paths
 from alpha_poke.agents.belief_state import BeliefModel
-from alpha_poke.coach import narrate, replays, viewer
+from alpha_poke.coach import narrate, replays, server, viewer
 from alpha_poke.coach.review import review
 from alpha_poke.selfplay.runner import MODEL
 
@@ -36,6 +39,8 @@ def main() -> int:
     ap.add_argument("--llm", action="store_true", help="also the chat model's write-up")
     ap.add_argument("--language", default="Chinese (简体中文)")
     ap.add_argument("--from-json", action="store_true", help="reuse review.json (no search)")
+    ap.add_argument("--open", action="store_true", help="open the review page in the browser")
+    ap.add_argument("--port", type=int, default=8090, help="the page server's port (--open)")
     a = ap.parse_args()
     row = replays.load(a.replay)
     side = replays.side_of(row, a.player)
@@ -58,6 +63,17 @@ def main() -> int:
         (out / "coach.md").write_text(narrate.write_up(rep, a.language))
         print(f"coach's write-up: {out / 'coach.md'}")
     print(f"written: {out}")
+    if a.open:
+        url = f"http://localhost:{a.port}/coach/{out.name}/viewer.html"
+        httpd = None if server.running(a.port) else server.serve(a.port)
+        server.open_page(url)
+        print(f"opened {url}")
+        if httpd is not None:
+            print("serving the page; Ctrl-C stops")
+            try:
+                httpd.serve_forever()
+            except KeyboardInterrupt:
+                pass
     return 0
 
 
