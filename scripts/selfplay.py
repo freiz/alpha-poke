@@ -863,6 +863,9 @@ def cmd_iterate(a) -> None:
         if ev["promoted"]:
             print(f"gen {a.gen}: promoted {tr['run']} after {games} games")
             return
+        if a.once:  # (this attempt only: no more games without being asked)
+            print(f"gen {a.gen}: not promoted after {games} games -- stopped (--once)")
+            return
 
 
 def _stop_workers(*_) -> None:
@@ -1087,6 +1090,11 @@ def main() -> None:
     # (30, 2026-10-27: a 40 GB training left the 48 GB WSL too little -- the session's background
     # tasks were stopped for low memory)
     p.add_argument("--mem-cap-gb", type=float, default=30, help="memory cap of every step")
+    p.add_argument(
+        "--once",
+        action="store_true",
+        help="stop after this attempt's test (not promoted: no more games)",
+    )
     p.set_defaults(fn=cmd_iterate)
     a = ap.parse_args()
     a.fn(a)
