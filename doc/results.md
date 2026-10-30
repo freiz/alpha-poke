@@ -922,6 +922,51 @@ The same v6-h, both sides GPU batched search, 1,600 iterations, ml3: wide1000 **
 - Deterministic checks (fixed seeds) identical before and after: the validation metrics of 40 sp-gen7 training steps (weight difference < 7e-9); 27 engine states of a test game; search results (UCB1, CPU network PUCT, batched search, 2 positions); `check_tnet` error < 7e-6.
 - End-to-end match: sp-gen7 vs sp-gen6, GPU pipeline, 1,600 iterations, wide1000: **50.83% ± 2.44%** (600 pairs; 49.83% ± 2.64% at promotion, consistent); fallbacks 0 / 0, failed games 0.
 
+### r2-gen0a3: the gain by evaluation and by search budget (2026-10-30)
+
+r2-gen0a3 (self-play gen 0, attempt 3: 127,959 games, 8,473 steps from v6arch-pp-v75) was promoted on the per-attempt pool; the evaluations after it, all against v6arch-pp-v75, paired, sides swapped:
+
+| evaluation | pairs | r2-gen0a3's score | about |
+|---|---|---|---|
+| promotion (per-attempt pool drawn like self-play's teams, belief-completed; GPU, 1,600 iterations) | 327 | 55.9% ± 3.2% | +41 Elo |
+| — the 284 pairs whose source game was no self-play source (43 were: 60.5% ± 9.5%) | 284 | 55.2% ± 3.4% | |
+| **fair1000** (real games after the training cutoff, both >= 1500, revealed parts + reveal-corrected usage; GPU, 1,600 it.) | 600 | **52.8% ± 2.5%** | +20 Elo |
+| fair1000 first 300 pairs, CPU 200 ms x 1 thread (about 700 iterations) | 300 | 56.8% ± 3.6% | +47 Elo |
+| team bank draw (teambank10k, seed 777; GPU) at 400 iterations | 300 | 55.6% ± 3.7% | +39 Elo |
+| the same draw at 6,400 iterations | 300 | (running) | |
+| the same draw at 1,600 iterations | 300 | (queued) | |
+
+Against Foul Play (200 ms x 1 each, fair1000's first 300 pairs, 600 games each): r2-gen0a3 **73.7% ± 3.4%**, v6arch-pp-v75 **67.7% ± 3.5%**; on the same pairs new - old = +6.0 ± 4.9 points, about +50 ± 41 Elo against +17 ± 25 head to head at 1,600 iterations on those pairs (z = 1.38: not a significant difference). Head to head at 200 ms vs at 1,600 iterations on the same 296 pairs: +4.6 ± 5.2 points (z = 1.70). So far the gain looks larger at small budgets (400 / 700 iterations ~ +40-47 Elo, 1,600 ~ +17-20), not yet significant.
+
+- The fair pools: `alpha_poke.selfplay.fair` (fair1000; the team bank teambank10k that promotion now draws from, 2,000 pairs per test). Reveal rates on 120k mons that were on the field: Booster Energy 0.99, Leftovers 0.85, Life Orb 0.84, Rocky Helmet 0.79, Heavy-Duty Boots 0.14, Assault Vest 0.11, Choice Scarf 0.08. Of the eligible sides, 46% belong to 427 compositions seen >= 50 times (a widely used team: 155 players), 17.6% to 263 player-composition pairs with >= 50 games (one player's grind) -- the bank weights a side by min(1, 10 / its player-composition games).
+- Value metrics of the training (start -> end): human value BCE 0.5404 -> 0.5446, ECE 0.0142 -> 0.0152 (the human drift flag); self-play value BCE 0.472 -> 0.439, below the search's own root q (0.446); the value residual (a, b) 0.282 / 0.077 -> 0.293 / 0.078 (unchanged in effect).
+- Where self-play's game outcomes come from (gen 0, 200k decisions of worker 0): 75% of the decisions are fast searches (600 iterations, 16 worlds); the move is drawn from the visits at tau 1 for 8 turns, 0.25 after. Choosing another than the most visited option, and its loss by the search's own means:
+
+| | decisions | not the most visited | loss when so | loss per decision |
+|---|---|---|---|---|
+| tau 0.25, fast | 110,880 | 10.9% | 0.38 pts | 0.04 pts |
+| tau 0.25, full | 36,818 | 9.6% | 0.27 pts | 0.03 pts |
+| tau 1.0 (turns <= 8), fast | 37,813 | 43.9% | 2.83 pts | 1.24 pts |
+| tau 1.0 (turns <= 8), full | 12,647 | 38.3% | 2.38 pts | 0.91 pts |
+
+  A lower late temperature changes nothing; the first 8 turns' tau 1 moves the outcome by several points per game. A position's outcome label depends only on the play after it: the opening's randomness labels the opening's positions, the later ones carry the fast searches' play quality.
+- If the 6,400-iteration result is below 50%, the hypotheses (none tested yet): (1) the policy, trained toward the search's visit distribution, is sharper and narrows a deep search's exploration (PUCT follows the prior); (2) the value, trained on outcomes of mostly 600-iteration, sampled continuations, is calibrated to weak play and misjudges positions precise play wins, more so in a deep tree's unusual positions; (3) a fit to self-play's search budget; (4) noise. Earlier value-target experiments did not help (λ 0.9 / 0.7 targets: no offline difference, never matched; child-node regression: 49.1% ± 2.9% in matches at 3,000 iterations; "Value head experiments" above) -- but none of them looked at the gain by budget. The policy / value cross evaluation of 2026-10-22 (above) found neither half alone helping at 1,600 iterations; its code was removed on 2026-10-28.
+- Next (issue): the head swap at 6,400 iterations (`agents.gpu_net.make_hybrid`: r2-gen0a3's policy + v6arch-pp-v75's value, and the reverse, each vs v6arch-pp-v75 on the same draw); then, by its answer, the fast searches' budget / share (value labels of the later positions), the opening temperature (tau 1 for 8 turns), or a smoother policy target -- each a new self-play run, judged at more than one search budget.
+
+### Search agreement with players by rating band (2026-10-30)
+
+Held-out games (hf-part13-1 / 13-2: after the training cutoff), 60 players per band of their pre-game rating, up to 5 turn-start decisions each, rebuilt from the player's view with 16 belief worlds (as coach.review) and searched 1 s x 4 threads (v6arch-pp-v75, rating input unknown for all bands):
+
+| band | decisions | agrees with the search's choice | in its top two | mean loss | loss >= 5 pts |
+|---|---|---|---|---|---|
+| < 1200 | 294 | 46.3% ± 2.9% | 74.5% | 2.32 | 17.3% |
+| 1200-1399 | 291 | 43.6% ± 2.9% | 69.4% | 2.67 | 21.0% |
+| 1400-1599 | 295 | 47.8% ± 2.9% | 74.2% | 2.55 | 16.3% |
+| 1600-1799 | 300 | 51.3% ± 2.9% | 78.0% | 2.35 | 17.7% |
+| 1800+ | 300 | 51.3% ± 2.9% | 74.7% | 2.48 | 15.0% |
+
+Agreement rises a little with rating (about 45% below 1600, 51% above) and stops there; the mean loss does not separate the bands at all. The review's "mean loss" is no skill score; the search's judgement is not shown to be above 1600+ players'.
+
 ## Key match results
 
 ### Search + network (ISMCTS, heldout, 500 ms per move single-threaded, 32 worlds, 300 games)

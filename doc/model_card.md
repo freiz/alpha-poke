@@ -48,9 +48,31 @@ smogon.com by `fetch_model.py`).
 - Validation: the 500,000 positions of the games uploaded from 2026-04-23 on
   (`--val-cutoff 1776921722`); the HF dump only in training.
 - Recipe: `scripts/build_training_data.py --name v75 --per-game 20 --since 2022-01-01
-  --heldout`, then `scripts/train_pv.py` (README, "Training"): 6 epochs, batch 4096, lr 0.002,
-  2% warm-up, value loss capped at 4 positions' worth per game; 65,722 steps, 110 minutes on
-  an RTX 4070 Ti. Exported checkpoint: step 60,000 (best validation loss).
+  --heldout`, then 6 epochs, batch 4096, lr 0.002, 2% warm-up, value loss capped at 4
+  positions' worth per game; 65,722 steps, 110 minutes on an RTX 4070 Ti. Exported checkpoint:
+  step 60,000 (best validation loss):
+
+  ```bash
+  uv run --group train python scripts/train_pv.py --data v75 --run v6arch-pp-v75 \
+      --arch transformer --history --mtp 3 --feats reveal,num,movetab,matchup,elo,counter,count \
+      --aux oppset,turns --d-ff 171 --ffn swiglu --norm rms --qk-norm --value-residual \
+      --value-per-game 4 --epochs 6 --batch 4096 --lr 0.002 --warmup-frac 0.02 --stream 2 \
+      --train-only hf- --val-cutoff 1776921722 --export best
+  ```
+
+## Reproducing it
+
+About 100 GB of disk and 30+ GB of RAM for the large steps; run those under a memory cap
+(`systemd-run --user --scope -p MemoryMax=30G ...`).
+
+```bash
+uv run python scripts/fetch_metamon.py               # Metamon's ~2M Gen 9 OU replays
+#   the HolidayOugi dump: by hand for now (#23), to data/raw/replays_hf/gen9ou/*.parquet
+uv run python scripts/fetch_smogon_stats.py --months 3
+uv run python scripts/build_replay_tables.py         # replay tables (the belief models build on first use)
+uv run python scripts/build_training_data.py --name v75 --per-game 20 --pool all --heldout --workers 12
+# then scripts/train_pv.py with the recipe above (~2 h on an RTX 4070 Ti)
+```
 
 ## Evaluation
 
@@ -70,10 +92,13 @@ paired games on real-game team pairs (each pair played twice, teams exchanged; �
 | time per decision (both sides) | win rate |
 |---|---|
 | 200 ms × 1 thread (`teams/pools/wide200`, 199 pairs) | 65.0% ± 4.1% |
+| 200 ms × 1 thread (fair1000: real ladder teams, hidden sets from usage; 300 pairs, 2026-10-30) | 67.7% ± 3.5% |
 | 5 s × 2 threads (wide1000, 108 pairs) | 67.1% ± 6.3% |
 
-Against people: one friendly game so far (lost, against a ~1300 player); public ladder games
-are pending the bot account's registration.
+These compare two bots on our machine and our team pools; they say little about play against
+people. Against people: a handful of friendly games (the first lost, against a ~1300 player);
+no data against strong players; public ladder games are pending the bot account's
+registration.
 
 ## Limitations
 

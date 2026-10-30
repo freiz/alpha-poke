@@ -1,375 +1,191 @@
 # alpha-poke
 
-An AI for Pokémon Showdown's Gen 9 OU singles. It plays with information-set Monte Carlo
-tree search (ISMCTS) over worlds sampled from a belief about the opponent's hidden sets. The
-search runs on a patched [poke-engine](https://github.com/pmariglia/poke-engine) and is guided by
-a small transformer policy / value network. The network was trained on about 2.3M human games
-and is now being improved by self-play. Showdown's own simulator is the reference for every
-rule: a differential-test framework checks the engine and our state reconstruction against it.
+[![CI](https://github.com/freiz/alpha-poke/actions/workflows/ci.yml/badge.svg)](https://github.com/freiz/alpha-poke/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-Status: a research project, run on one desktop (20 CPU threads, an RTX 4070 Ti). The released
-network (human data only) beats [Foul Play](https://github.com/pmariglia/foul-play), the
-strongest open-source Showdown bot we know of, 65–67% at equal time per move. Public ladder
-results against people are not in yet.
+An AI for Pokémon Showdown's Gen 9 OU singles: tree search over the opponent's possible hidden
+sets, guided by a small neural network trained on human games. A research project on one
+desktop (20 CPU threads, an RTX 4070 Ti), so experiments are slow.
 
-## Contents
+## The problem
 
-- [How it works](#how-it-works)
-- [Results](#results)
-- [Quick start: play and evaluate the released model](#quick-start)
-- [Training from scratch](#training-from-scratch)
-- [Self-play](#self-play)
-- [Game reviews](#game-reviews)
-- [Team design](#team-design)
-- [Engine correctness](#engine-correctness)
-- [Repository layout](#repository-layout), [Scripts](#scripts), [Tests](#tests), [Data and licenses](#data-and-licenses),
-  [Playing on the official server](#playing-on-the-official-server), [License](#license)
+Gen 9 OU is a two-player game with **simultaneous moves** (both players choose before either
+acts), **hidden information** (at team preview each side sees only the opponent's six species;
+moves, items, abilities and tera types come out during the game, EVs and natures never do) and
+**a lot of chance** (damage rolls, accuracy, secondary effects, critical hits). A good move
+depends on what the opponent probably has and probably does, not on a single known position.
 
-## How it works
-
-Gen 9 OU is a two-player zero-sum game with simultaneous moves and hidden information. At team
-preview each player sees only the opponent's six species. Moves, items, abilities and tera
-types come out during the game, and EVs and natures never do. A turn is roughly a 9 × 9
-matrix game with plenty of chance (damage rolls, accuracy, secondary effects, crits).
+## Our approach
 
 ```
 Showdown battle (poke-env: protocol, battle tracking)
   │
-  ├─ belief: 32 worlds = the opponent's sets sampled from team-conditioned priors,
-  │          updated by what has been revealed, the speed order seen and the damage seen
-  ├─ state construction: each world as an exact poke-engine state (timers, PP, volatiles, ...)
+  ├─ belief: 32 "worlds", each a guess of the opponent's full sets, sampled from priors
+  │          conditioned on their team and updated by everything seen so far
+  ├─ state construction: each world as an exact simulator state (timers, PP, volatiles, ...)
   ▼
-alpha_search (Rust)
-  SO-ISMCTS: one tree over our information set, a different world each iteration
-  decoupled PUCT for both sides; priors from the policy network (the opponent's from the
-  flipped view), leaves valued by the network
-  │
+search (Rust): ISMCTS -- one search tree shared by all worlds; each iteration plays one world;
+  both sides choose by PUCT, guided by the network's move priors and position values
   ▼
-the most visited action (any failure: a rule-based fallback player)
+the most visited action
 ```
 
-- **Belief** (`agents/belief_state.py`, `belief/`): set priors conditioned on the whole team.
-  They back off from a recognized copied team, to a common core, to species usage. Moves come
-  from set archetypes. In battle the belief is updated with revealed moves and items, a model
-  of how likely a move would have been shown by now (`belief/reveal.py`), speed tiers
-  consistent with the observed move order, and damage-roll evidence.
-- **State construction** (`agents/engine_state.py`, `agents/timers.py`): every world becomes a
-  full engine state, including sleep and toxic counters, Protect streaks, Wish / Future Sight,
-  PP, choice locks and transformed Pokémon. A consistency check against Showdown's request runs
-  before every search.
-- **Search** (`rust/alpha_search`): single-observer ISMCTS with open-loop chance. Each node is
-  keyed by (our action, opponent action). Both sides pick by decoupled PUCT with
-  availability-normalized counts. Moves applied along the path are recorded with their real
-  outcome (moved, fainted first, blocked) and become the network's history input. On the GPU
-  many games' searches share batched inference (tree parallelism with virtual loss); on the
-  CPU, root parallelism.
-- **Network** (`train/model.py`, Rust inference in `tnet.rs`): about 742k parameters. Its
-  input is 12 Pokémon tokens, a global token and 8 history tokens. It has 3 transformer
-  layers, d = 128, SwiGLU, RMSNorm and QK-norm. Inputs include matchup calculations made with
-  the engine's own damage code: damage ratios, KO thresholds, who moves first. The policy has
-  14 action slots and the value is a win probability (a residual over the engine's handcrafted
-  evaluation). Auxiliary heads predict the next 3 actions, the opponent's sets and the
-  remaining turns. Training and search share one featurizer.
-- **Training**: behavior cloning plus game outcomes on human replays. Self-play is expert
-  iteration: the search's visit counts are the policy targets and game results the value
-  targets. A new network is promoted only when a sequential test says it is clearly better.
+- **Belief**: priors over the opponent's sets conditioned on the whole team (from a recognized
+  team down to species usage), updated in battle by revealed moves and items, how likely a move
+  would have shown by now, the move order (speed) and damage rolls.
+- **Search**: information-set Monte Carlo tree search (ISMCTS). Because every world adds its
+  results to the same nodes, a choice anywhere in the tree has to be good across all the
+  opponent sets that fit what we know, rather than "cheating" by assuming one of them. It runs
+  on a patched [poke-engine](https://github.com/pmariglia/poke-engine); Showdown's own simulator
+  is the reference for every rule.
+- **Network**: a small transformer (about 742k parameters) over the 12 Pokémon, the field and
+  the recent turns, with damage and speed calculations from the simulator as inputs. It outputs
+  a move distribution (the search's priors) and a win probability (the search's leaf values).
+- **Training**: supervised on about 2.3M human games (imitating the players' choices and
+  predicting the winner). We are also trying self-play (the search's choices and the game
+  results as targets), so far without a clear gain (below).
 
-The design document (`doc/design.md`) has the decisions and their evidence. Every
-number is in `doc/results.md`, and open problems are GitHub issues.
+More: [doc/design.md](doc/design.md) (decisions and their evidence),
+[doc/model_card.md](doc/model_card.md) (the released network).
 
 ## Results
 
-Paired evaluation: each pair of real-game teams is played twice, with the teams exchanged.
-Results are win rates ± 95% CI.
+Paired evaluation: each pair of teams (taken from real games) is played twice, the teams
+exchanged; ± 95% confidence intervals.
 
 | | result |
 |---|---|
-| vs Foul Play, 200 ms × 1 thread each per decision (199 pairs) | **65.0% ± 4.1%** |
-| vs Foul Play, 5 s × 2 threads each (108 pairs) | **67.1% ± 6.3%** |
-| network in the search vs the handcrafted evaluation (500 ms) | 66.3% ± 5.2% (+117 Elo) |
-| ISMCTS vs determinized search with the same budget | 57.3% |
-| knowing the opponent's true sets (an oracle) | about +8–12 points, nearly all from the moves |
-| network, human validation positions | policy top-1 55.9%, value accuracy 71.7% |
+| vs [Foul Play](https://github.com/pmariglia/foul-play), 200 ms × 1 thread per move each | 65.0% ± 4.1% (199 pairs); 67.7% ± 3.5% (300 pairs) |
+| vs Foul Play, 5 s × 2 threads per move each | 67.1% ± 6.3% (108 pairs) |
+| the network vs the simulator's handcrafted evaluation, inside the search | 66.3% ± 5.2% |
+| the network on held-out human positions | predicts the player's move 55.9%, the winner 71.7% |
 
-Self-play (line r2, from the released network): attempts at 53k and 78k games scored 50.2% ±
-3.7% and 52.5% ± 2.1% against their start. Neither cleared the "confidently above 51%"
-promotion bar, so self-play continues on the same generation.
+Foul Play is the strongest open-source Showdown bot we know of. These numbers compare two bots
+on our machine; they say little about play against people. Every number and how it was
+measured: [doc/results.md](doc/results.md).
 
-## Quick start
+## Limitations and what's next
 
-Requirements: Linux or WSL2 (developed on WSL2 Ubuntu), [uv](https://docs.astral.sh/uv/),
-Node.js ≥ 22.18 (the local Showdown server), a Rust toolchain (the search is built on install),
-git. A CUDA GPU is optional: everything runs on the CPU alone (the network falls back to
-the CPU without CUDA graphs, compilation or BF16; checked with `CUDA_VISIBLE_DEVICES=""`). The
-CPU search is what plays people and Foul Play anyway; a GPU makes self-play, training and the
-large batched evaluations much faster.
+- **No results against strong players.** The bot has played a handful of friendly games; ladder
+  games wait on the bot account's registration ([#20](https://github.com/freiz/alpha-poke/issues/20)).
+- **Self-play has not worked well yet.** Its networks gain a little, and how much depends on how
+  we measure: with deeper searches the gain seems to shrink
+  ([#26](https://github.com/freiz/alpha-poke/issues/26)), and the self-play games themselves are
+  noisy in ways that may hurt the value targets ([#27](https://github.com/freiz/alpha-poke/issues/27)).
+  We are investigating; no self-play network is released.
+- **The opponent model is coarse.** The search treats the opponent as if it, too, did not know
+  its own sets ([#10](https://github.com/freiz/alpha-poke/issues/10)), and the bot always plays
+  its most visited move, which an adaptive opponent can exploit
+  ([#7](https://github.com/freiz/alpha-poke/issues/7)).
+- **The simulator is an approximation** of Showdown's; known differences are tracked
+  ([#2](https://github.com/freiz/alpha-poke/issues/2), [#5](https://github.com/freiz/alpha-poke/issues/5)).
+
+All open problems: [GitHub issues](https://github.com/freiz/alpha-poke/issues). Questions and
+suggestions are welcome there.
+
+## Try it
+
+Linux or WSL2, [uv](https://docs.astral.sh/uv/), Node.js ≥ 22.18, a Rust toolchain, git. A CUDA
+GPU is optional.
 
 ```bash
 git clone https://github.com/freiz/alpha-poke && cd alpha-poke
-uv sync --all-groups                 # all groups: a plain `uv sync` removes torch (train group)
+uv sync --all-groups                 # all groups: a plain `uv sync` removes torch
 uv run python scripts/fetch_model.py # the released network + belief models (SHA-256 checked)
-                                     # and one Smogon usage-statistics file
-./scripts/start_showdown.sh 8000     # a local Showdown server (clones it at a pinned commit;
-                                     # leave it running, another terminal for the rest)
-```
+./scripts/start_showdown.sh 8000     # a local Showdown server (leave it running)
 
-**Watch it play** a few paired games against poke-env's heuristic bot, using CPU search, 200 ms
-per move:
-
-```bash
-uv run python scripts/eval_pairs.py s_ismcts_ma heuristic --pairs 5 --procs 1 --lanes 2 \
-    --ports 8000 --log-dir data/eval/quickstart
-```
-
-`s_ismcts_ma` is the search with the network `ALPHA_MODEL_A` (default: the released one).
-`ALPHA_SEARCH_MS` and `ALPHA_SEARCH_THREADS` set its time per move. The other bots are listed
-in `src/alpha_poke/eval/bots.py`: `g_ma` is the GPU-batched search by iterations, `p_ma` the
-network's policy without search, `knowledge` a rule-based player.
-
-**Play against it yourself**: open <http://localhost:8000>, pick a name (say `me`), then:
-
-```bash
+# watch it play poke-env's heuristic bot (200 ms per move)
+uv run python scripts/eval_pairs.py s_ismcts_ma heuristic --pairs 5 --procs 1 --lanes 2 --ports 8000
+# play against it: open http://localhost:8000 as "me", then challenge it to Gen 9 OU
 uv run python scripts/play_public.py --opponent me --n 3 --difficulty hard
 ```
 
-Without `--public` this script connects to the local server as `alphapokebot` and accepts
-challenges only from `--opponent`. Challenge it to Gen 9 OU with your own team. Its team is
-a random one of `teams/pools/ladder_robust` (or `--team`). Difficulties: `easy` is the
-rule-based player, `normal` searches 200 ms per move, `hard` 1 s × 4 threads; `--search-ms`
-and `--threads` set your own.
+Against Foul Play, the bots and their settings: [doc/evaluation.md](doc/evaluation.md).
 
-**Against Foul Play** (GPL-3.0; installed into `external/` and run as a separate process,
-never imported):
+### Game reviews
 
-```bash
-uv run python scripts/setup_foul_play.py install && uv run python scripts/setup_foul_play.py patch
-uv run python scripts/fetch_smogon_stats.py --months 1   # Foul Play's set data: last month's stats
-uv run python scripts/setup_foul_play.py cache
-uv run python scripts/vs_foulplay.py s_ismcts_ma --pairs 20 --lanes 2 --search-ms 200 --parallelism 2
-```
+![A game review: Showdown's replay player beside the search's view of each decision](doc/images/review.png)
 
-**Review your own games**: any Gen 9 OU replay, yours or one you saved, judged decision by
-decision (see [Game reviews](#game-reviews)); the page opens in your browser:
+*A game between our bot and Foul Play, reviewed from Foul Play's side: on turn 24 any attack
+wins, but it switches out; the switch-in faints and the game is lost.*
+
+The same search can give a second opinion on a game, decision by decision: each option's
+estimated winning chance, the player's choice and the search's. It may help newer players spot
+clear slips. It is not a verdict on strong players: we have no evidence its choices are better
+than theirs, and its numbers are estimates with blind spots of their own (for example, plans
+that pay off many turns later).
 
 ```bash
-uv run python scripts/review_game.py https://replay.pokemonshowdown.com/gen9ou-XXXXXXXXXX \
-    --player <your Showdown name> --open
+uv run python scripts/review_server.py      # the review app: http://127.0.0.1:8090
 ```
 
-It needs no Showdown server and no GPU: about a minute of CPU per game (`--ms`, `--threads`).
+Paste a replay link (optionally your team or its PokéPaste link); the review appears next to
+Showdown's own replay player, and past reviews stay in a searchable list. Windows / macOS
+builds need nothing installed. More: [doc/reviews.md](doc/reviews.md).
 
-## Training from scratch
+## For developers
 
-Everything below writes under `data/` (git-ignored). The full pipeline needs about 100 GB of
-disk and, for the large steps, 30+ GB of RAM. Run those steps under a memory cap
-(`systemd-run --user --scope -p MemoryMax=30G ...`): an out-of-memory WSL takes the machine
-down with it.
+- **Training from scratch**: about 100 GB of disk and 30+ GB of RAM; the steps and the released
+  recipe are in [doc/model_card.md](doc/model_card.md). Compare networks by playing them, not by
+  offline metrics alone: the two have disagreed before.
+- **Self-play**: `scripts/selfplay.py iterate --gen 0 --once` (GPU): games of the current
+  network against itself, fine-tuning on them mixed with human data, then a sequential test on
+  team pairs drawn from a held-out bank of real ladder teams. Design:
+  [doc/design.md](doc/design.md) D15–D16.
+- **Team design** for games against people: [doc/team_design.md](doc/team_design.md).
+- **Engine correctness**: every rule difference from Showdown is confirmed by a Showdown test
+  and a simulator test that agree, then fixed; recorded battles are replayed turn by turn
+  against Showdown. Logs: [doc/difftest.md](doc/difftest.md),
+  [doc/engine-diff.md](doc/engine-diff.md), [doc/state-diff.md](doc/state-diff.md).
+- **Layout**: `src/alpha_poke/` (agents, belief, replay, train, selfplay, eval, coach, ...),
+  `rust/` (the search and the patched simulator), `scripts/` (entry points, usage in each
+  docstring), `tests/`, `doc/`. `data/` is git-ignored; its layout is in
+  `src/alpha_poke/paths.py`.
+- **Tests**: `scripts/start_showdown.sh --setup` once, then `uv run pytest -n 8` (about 1,500
+  tests, on the repository's fixtures only) and `scripts/lint.sh`. CI runs both on every push.
 
-```bash
-# 1. replays: Metamon's Gen 9 OU dataset (~2M games, 5.7 GB download, filtered to gen9ou)
-uv run python scripts/fetch_metamon.py
-#    newer games: the HolidayOugi dump (HF HolidayOugi/pokemon-showdown-replays), by hand for
-#    now (#23), to data/raw/replays_hf/gen9ou/*.parquet with Metamon's columns (id, format,
-#    players, log, uploadtime, formatid, rating); split big shards with scripts/split_shards.py
-# 2. Smogon usage statistics (the belief's fallback and the speed tiers)
-uv run python scripts/fetch_smogon_stats.py --months 3
-# 3. our own recent replays (polite crawler: ~2 s between requests) and the replay tables
-uv run python scripts/crawl_replays.py list --mode new --pages 2000
-uv run python scripts/crawl_replays.py download --target 50000 --min-rating 1500
-uv run python scripts/build_replay_tables.py
-# 4. the belief and reveal models (built on first use; or explicitly)
-uv run python scripts/build_reveal_model.py
-uv run python -c "from alpha_poke.agents.belief_state import BeliefModel; BeliefModel.load(rebuild=True)"
-# 5. training positions: 20 decision points per game, each rebuilt as the engine state the
-#    player saw (~46M positions; resumable per shard)
-uv run python scripts/build_training_data.py --name v75 --per-game 20 --pool all --heldout --workers 12
-# 6. the network (the released recipe; ~2 h on an RTX 4070 Ti; features are cached on the first epoch)
-uv run --group train python scripts/train_pv.py --data v75 --run v6arch-pp-v75 \
-    --arch transformer --history --mtp 3 --feats reveal,num,movetab,matchup,elo,counter,count \
-    --aux oppset,turns --d-ff 171 --ffn swiglu --norm rms --qk-norm --value-residual \
-    --value-per-game 4 --epochs 6 --batch 4096 --lr 0.002 --warmup-frac 0.02 --stream 2 \
-    --train-only hf- --val-cutoff 1776921722 --export best
-```
+## Data, licenses and the official server
 
-The run directory (`data/train/v75/runs/<run>`) holds `best.safetensors` and `config.json`
-(what the Rust inference loads), the checkpoints and `metrics.jsonl`. Compare two networks with
-the search, not offline metrics alone. An input that improves the offline numbers can lose in
-search (`doc/results.md` has an example):
+- Replays: [Metamon](https://huggingface.co/datasets/jakegrigsby/metamon-raw-replays)'s Gen 9 OU
+  dataset, the [HolidayOugi](https://huggingface.co/datasets/HolidayOugi/pokemon-showdown-replays)
+  dump and public replays of the official server (a polite crawler, about one request per 2 s).
+  Neither dataset states a license; raw replays are used locally and never redistributed.
+- [Smogon usage statistics](https://www.smogon.com/stats/) and forum teams (sets only).
+- Evaluation and self-play run on local servers only. `play_public.py` and `ladder.py` connect
+  to the official server only with `--public` and a registered bot account (Showdown's bot
+  policy); they never join rooms, chat or challenge anyone.
+- The code is MIT ([LICENSE](LICENSE)); the released model files are for non-commercial
+  research use. Foul Play (GPL-3.0) runs as a separate process, Showdown's client (AGPL-3.0)
+  is fetched and served unmodified for local viewing, poke-engine is MIT.
 
-```bash
-ALPHA_MODEL_A=<run A> ALPHA_MODEL_B=<run B> uv run python scripts/eval_pairs.py g_ma g_mb
-```
+## References
 
-## Self-play
+**Software we build on or compare with**
 
-```bash
-uv run python scripts/selfplay.py iterate --gen 0     # needs the GPU and the replay data
-```
+- [Pokémon Showdown](https://github.com/smogon/pokemon-showdown): the battle simulator and
+  client; the reference for every rule.
+- [poke-env](https://github.com/hsahovic/poke-env): the Python interface to Showdown battles.
+- [poke-engine](https://github.com/pmariglia/poke-engine): the fast simulator our search runs
+  on (patched).
+- [Foul Play](https://github.com/pmariglia/foul-play): the open-source Showdown bot we evaluate
+  against.
+- [Metamon](https://github.com/UT-Austin-RPL/metamon): offline RL agents for earlier
+  generations, and the replay dataset we train on.
 
-A generation's loop is: team pairs, then games (10 processes × 24 games, batched GPU search,
-1,600-iteration full searches on 25% of the decisions as policy targets), then conversion,
-then fine-tuning on all of the generation's games mixed with human data, then a sequential
-test against the current network (H0 51%, H1 54%). Without a promotion, the loop plays 50k
-more games and tries again. Half of the teams are synthetic: species drawn by usage and
-teammate lift, sets refined by Metropolis–Hastings over a teammate-synergy score. The rest
-are real teams with their hidden sets completed by the belief, plus forum teams. State and
-history are kept in `data/selfplay/state.json`; the single steps (`teams`, `run`, `convert`,
-`train`, `eval`) are subcommands. Design: `doc/design.md` D15–D16.
+**Data**
 
-## Game reviews
+- [Metamon raw replays](https://huggingface.co/datasets/jakegrigsby/metamon-raw-replays),
+  [HolidayOugi's Showdown replays](https://huggingface.co/datasets/HolidayOugi/pokemon-showdown-replays),
+  [Smogon usage statistics](https://www.smogon.com/stats/), [PokéPaste](https://pokepast.es/).
 
-The bot cannot explain its play, but its search can judge anyone's. `scripts/review_game.py`
-takes a replay (a saved game, or any Showdown replay id / URL) and a player, rebuilds each of
-that player's decisions from their own view (the training data's state construction: their
-team, what the opponent has revealed, belief samples for the rest), and searches it as the bot
-would. Per decision: every option's estimated winning chance, the player's choice, the
-search's, and the difference. The report lists the decisions that cost the most and the largest
-swings, with the turn's events and the public state; `--llm` hands it to an OpenAI-compatible
-chat model (`.env`: `COACH_LLM_*`) for a coach's write-up that may only use those numbers and
-facts (the moves it names are checked against the teams' learnsets). Output in
-`data/coach/<replay>-<side>/`.
+**Papers**
 
-```bash
-uv run python scripts/review_game.py gen9ou-2706514881 --player <name> --llm
-uv run python scripts/review_server.py   # then http://127.0.0.1:8090/coach/<review>/viewer.html
-```
-
-The review page (`viewer.html`) puts Showdown's own replay player (sprites, animations) next to
-the review: the winning-chance curve with the mistakes marked, each decision's options, previous
-/ next decision, next mistake; the player and the panel follow each other (`#t=<turn>` opens a
-turn). `scripts/review_server.py` serves it with Showdown's client from a local cache
-(`data/coach/client/`: each file fetched once from play.pokemonshowdown.com on first use, then
-offline; `--refresh` updates it); `viewer-online.html` loads the player from Showdown's site
-instead and opens as a plain file. Showdown's client (AGPL-3.0) is only fetched and served
-unmodified for local viewing, never committed.
-
-The numbers are estimates (a few seconds of search per decision, sampled hidden sets): they find
-the decisions that mattered; they are not exact.
-
-## Team design
-
-For games against people the bot needs teams that win *in its hands* against the *current*
-ladder. A team's ladder win rate is mostly its players' skill. `doc/team_design.md` has the
-pipeline and its findings:
-
-1. crawl recent replays, measure the metagame's shift (`meta_shift.py`);
-2. candidates from forum teams and from teams reconstructed from replays (sets are recovered
-   at 96% item / 96% move accuracy against the forum originals), scored against the recent
-   metagame by a species matchup model (`build_robust_teams.py`);
-3. threat coverage: how many answers each candidate has to every common threat's main builds
-   (`threat_check.py`);
-4. the decision: our bot plays each candidate against 100 recent ladder teams
-   (`sim_team_pool.py`). The cheap measures only shortlist (threats with no answer:
-   Spearman −0.34 against the simulated score; the matchup model: none).
-
-The result is `teams/pools/ladder_robust`, the default pool of `play_public.py` and
-`ladder.py`.
-
-## Engine correctness
-
-The search is only as good as its simulator. poke-engine 0.0.48 is vendored with our patches
-(`rust/patches`, marked "alpha-poke patch"); the Python binding is built from the same source.
-Every rule difference is confirmed by two tests that agree: a Showdown test and an engine test
-(`tests/test_dual_engine.py`, run through a persistent Node process). Then the Showdown
-mechanism is ported. `scripts/difftest.py` compares recorded battles turn by turn against
-Showdown, for both the state we build and the engine's transitions, and fails on any
-regression from the baseline. Logs: `doc/difftest.md`, `doc/engine-diff.md` (about 250
-logged engine fixes), `doc/state-diff.md`.
-
-## Repository layout
-
-```
-src/alpha_poke/
-  agents/      search player, belief state, engine-state construction, GPU network, damage model
-  belief/      set priors and the move-reveal model
-  analysis/    replay tables, matchup model, roles
-  replay/      replay parser, fetcher and crawler
-  train/       network, training positions, loading
-  selfplay/    teams (synthetic and real), runner, batched GPU search, conversion, registry
-  eval/        arena (paired evaluation), bots, Foul Play
-  enginecheck/ differential checks against Showdown
-  teams/       forum team catalog, pools, validator
-  players/     models of one specific opponent (public replays only)
-  paths.py     where every piece of data lives
-rust/          alpha_search (ISMCTS, batched search, featurizer, inference) + patched poke-engine
-teams/         tracked team data: catalog.jsonl (forum teams), pools/<fixed pool> (teams/README.md)
-scripts/       entry points (below; each one's docstring has its usage)
-tests/         unit tests, including the dual Showdown / engine tests
-doc/           design, results ledger, differential-test logs, team design, model card
-```
-
-`data/` is git-ignored (layout in `src/alpha_poke/paths.py`): `raw/` holds downloads
-(replay datasets, crawled replays, Smogon statistics, the forum cache), `derived/` what
-scripts rebuild from them (replay tables, belief models, generated pools), plus `train/`,
-`selfplay/` and the run outputs (`eval/`, `difftest/`, `public_games/`, `ladder/`).
-
-## Scripts
-
-Every script's docstring has its usage; `--help` lists the options.
-
-| area | scripts |
-|---|---|
-| model and data | `fetch_model.py` (the released model), `fetch_metamon.py`, `fetch_smogon_stats.py`, `crawl_replays.py`, `split_shards.py`, `build_replay_tables.py`, `build_reveal_model.py`, `build_training_data.py`, `train_pv.py`, `build_synergy.py` (teammate synergy for synthetic teams) |
-| play and evaluate | `start_showdown.sh`, `eval_pairs.py` (paired games between two bots; `eval_pairs_opponent.py`: bot B from another checkout), `vs_foulplay.py` / `setup_foul_play.py`, `play_public.py`, `ladder.py`, `results_table.py` (the generated tables of `doc/results.md`) |
-| game reviews | `review_game.py` (a player's decisions searched from their view; `--llm`: a coach's write-up), `review_server.py` (the review pages with Showdown's player, cached locally) |
-| self-play | `selfplay.py` (`iterate`, `teams`, `run`, `convert`, `train`, `eval`, `registry`, ...), `team_pools.py` (diagnostic pools), `check_synthetic_teams.py` |
-| team design (`doc/team_design.md`) | `teams.py` (forum catalog, pools), `meta_shift.py`, `top_ladder_teams.py`, `check_team_reconstruction.py`, `build_robust_teams.py`, `threat_check.py`, `sim_team_pool.py`, `validate_team_measures.py` |
-| one specific opponent (public replays; names stay in `data/players/`) | `player.py`, `counter_team.py`, `counter_pipeline.py` |
-| engine and state vs Showdown (`doc/difftest.md`, `engine-diff.md`, `state-diff.md`) | `difftest.py`, `difftest_mutations.py`, `check_engine_random.py`, `check_engine_random_sets.sh`, `check_engine_random_big.sh`, `randbats_teams.py`, `check_damage_calc.py`, `check_state_build.py`, `rerun_state_build.py`, `state_build_sweep.sh`, `check_causality.py`, `check_tree_history.py` |
-| development | `lint.sh` (the CI's lint checks) |
-| network and search checks | `check_tnet.py` (Rust vs PyTorch inference), `check_extra.py`, `check_feature_claims.py`, `check_feature_claims_sd.py`, `check_batch_search.py`, `check_search_worlds.py`, `eval_belief_priors.py` |
-
-## Tests
-
-```bash
-scripts/start_showdown.sh --setup   # once: the pinned Showdown checkout, built (the dual tests)
-uv run pytest -n 8                  # ~1,500 tests, about 2 minutes with 8 workers
-scripts/lint.sh                     # ruff check + format, cargo fmt + clippy (--fix: format first)
-(cd rust/alpha_search && cargo test)
-```
-
-The tests run on the repository alone: `tests/conftest.py` points `ALPHA_DATA` at a temporary
-copy of `tests/fixtures/data` (trimmed Smogon statistics, a 5,000-game replay-table sample; the
-belief model is built from it in a few seconds), and the fixtures hold anonymized replays, team
-pairs, positions and a tiny random network (`tests/make_fixture_data.py` rebuilds them from the
-local data). No `data/`, no GPU. CI (`.github/workflows/ci.yml`) runs the lint, both crates'
-Rust tests and the Python tests (CPU-only torch) on every push and pull request.
-
-When changing the Rust inference or featurizer, also run `scripts/check_tnet.py` (Rust vs
-PyTorch, layer by layer) and `scripts/check_extra.py`.
-
-## Data and licenses
-
-| source | how | notes |
-|---|---|---|
-| Metamon's Gen 9 OU replays (to 2026-05) | `scripts/fetch_metamon.py` | HF `jakegrigsby/metamon-raw-replays`; usernames pseudonymized |
-| HolidayOugi replay dump (to 2026-10) | manual download for now (#23) | HF `HolidayOugi/pokemon-showdown-replays` |
-| Showdown replays (newest) | `scripts/crawl_replays.py` | public replays of the official server |
-| Smogon usage statistics | `scripts/fetch_smogon_stats.py` | smogon.com/stats |
-| Smogon forum teams | `scripts/teams.py` | `teams/catalog.jsonl` (sets only) |
-
-Neither replay dataset states a license. Raw replays (with real usernames) are used locally and
-never redistributed: `data/` is not in the repository. The released weights are for
-non-commercial research use (`doc/model_card.md`). Foul Play (GPL-3.0) is installed separately
-and run as an external process; poke-engine is MIT (`rust/patches/*/LICENSE`).
-
-Every fetch uses a polite client (`alpha_poke.http.PoliteClient`): one connection, about 2 s
-between requests with jitter, `Retry-After` honored, exponential backoff on 429 / 5xx, and an
-abort on 403 or after 5 failures in a row. Its User-Agent states the purpose with no personal
-contact, and its state is resumable.
-
-## Playing on the official server
-
-Evaluation and self-play run on local servers only: `servers.local_server` refuses
-non-loopback hosts. `play_public.py` (friendly games against one named user) and `ladder.py`
-(rated games, one at a time) connect to play.pokemonshowdown.com only with `--public` and a bot
-account in `.env` (`PS_BOT_USERNAME`, `PS_BOT_PASSWORD`). Showdown's bot policy requires the
-account to be registered as a bot first: open a help ticket, choose "Something else", then "I
-want to register my bot". An unregistered bot can be banned. The scripts never join rooms,
-chat, or challenge anyone.
-
-## License
-
-The code is MIT (`LICENSE`). The released model files (network weights, belief and reveal
-models) are trained on public Showdown replays whose datasets state no license; they are
-released for non-commercial research use (`doc/model_card.md`).
+- P. I. Cowling, E. J. Powley, D. Whitehouse. [Information Set Monte Carlo Tree
+  Search](https://doi.org/10.1109/TCIAIG.2012.2200894). IEEE TCIAIG, 2012.
+- D. Silver et al. [Mastering Chess and Shogi by Self-Play with a General Reinforcement
+  Learning Algorithm](https://arxiv.org/abs/1712.01815) (AlphaZero), 2017.
+- D. J. Wu. [Accelerating Self-Play Learning in Go](https://arxiv.org/abs/1902.10565)
+  (KataGo), 2019.
+- J. Grigsby, Y. Xie, J. Sasek, S. Zheng, Y. Zhu. [Human-Level Competitive Pokémon via
+  Scalable Offline Reinforcement Learning with Transformers](https://arxiv.org/abs/2504.04395)
+  (Metamon), RLC 2025.

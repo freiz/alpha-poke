@@ -11,10 +11,16 @@ of hundreds of small kernels. Falls back to eager execution if a capture fails.
 ``launch(batch)`` / ``result(handle)``: the same, asynchronous (inputs through pinned staging
 buffers, outputs copied back to pinned memory, an event to wait on), so that the next batch
 can be collected on the CPU meanwhile. One launch in flight at a time.
+A hybrid run (``hybrid.json`` in the run directory: {"policy": run, "value": run}, beside a copy
+of one's config.json): the policy logits of one network, the value (its residual, its remaining
+turns) of the other -- the head-swap experiments (2026-10-30: which head of a new network makes
+it weaker at a large search budget). GPU searches only (the CPU search reads one network).
 """
 
+import json
 import os
 import threading
+from pathlib import Path
 
 import alpha_search
 import numpy as np
@@ -29,6 +35,27 @@ SIZES = (32, 64, 128, 256, 512, 1024)
 # several GpuNets in one process (an evaluation: one per network, each driven by its own batcher
 # thread) must not capture graphs at the same time: one capture at a time, thread-local mode
 _CAPTURE = threading.Lock()
+
+
+def hybrid_of(run: str) -> dict | None:
+    """A hybrid run's {"policy": run, "value": run} (``hybrid.json``), else None."""
+    f = Path(run) / "hybrid.json"
+    return json.loads(f.read_text(encoding="utf-8")) if f.exists() else None
+
+
+def make_hybrid(out: str, policy: str, value: str) -> str:
+    """A hybrid run directory at ``out``: ``policy``'s policy, ``value``'s value (same features:
+    the value network's config.json copied, read by the search's input checks and ml_for)."""
+    a = json.loads((Path(policy) / "config.json").read_text(encoding="utf-8"))
+    b = json.loads((Path(value) / "config.json").read_text(encoding="utf-8"))
+    for k in ("dims", "feats", "history"):
+        assert a.get(k) == b.get(k), f"{k} differs: {policy} vs {value}"
+    d = Path(out)
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "config.json").write_text(json.dumps(b, indent=1), encoding="utf-8")
+    (d / "hybrid.json").write_text(json.dumps({"policy": str(policy), "value": str(value)}, indent=1),
+                                   encoding="utf-8")  # fmt: skip
+    return str(d)
 
 
 class GpuNet:
@@ -51,14 +78,21 @@ class GpuNet:
             # while idle) took the CPU from the searches (2026-10-08: 6 self-play processes x
             # 10 spinning threads, a third less throughput on 20 logical CPUs than on 10)
             torch.set_num_threads(1)
-        self.model = load_run(run, self.device).float()
+        hybrid = hybrid_of(run)
+        # (a hybrid: the value network is ``model`` -- the residual, the remaining turns)
+        self.model = load_run(hybrid["value"] if hybrid else run, self.device).float()
+        self.policy_model = load_run(hybrid["policy"], self.device).float() if hybrid else None
         self.has_turns = "turns" in getattr(self.model, "aux_heads", ())
         # torch.compile (fused kernels; one compile per padded batch size at its first use, then
         # captured in the CUDA graph): ALPHA_GPU_COMPILE=1 or compile=True
         if compile is None:
             compile = os.environ.get("ALPHA_GPU_COMPILE", "0") == "1"
-        self.net = (torch.compile(self.model, dynamic=False)
-                    if compile and self.device.type == "cuda" else self.model)  # fmt: skip
+
+        def wrap(m):
+            return torch.compile(m, dynamic=False) if compile and self.device.type == "cuda" else m
+
+        self.net = wrap(self.model)
+        self.policy_net = wrap(self.policy_model) if self.policy_model is not None else None
         self.use_graphs = graphs and self.device.type == "cuda"
         self.graphs: dict = {}  # padded size -> (graph, static inputs, static outputs)
 
@@ -91,16 +125,20 @@ class GpuNet:
         }
         return args, x, t("eval", np.float32, (n,))
 
-    def forward(self, args, x, ev):
-        """-> (value logits, policy logits, remaining turns or None)"""
-        kw = {"turns": True} if self.has_turns else {}
+    def _run(self, net, args, x, turns: bool) -> tuple:
+        kw = {"turns": True} if turns else {}
         if self.dtype == "bf16":
             with torch.autocast(self.device.type, dtype=torch.bfloat16):
-                out = self.net(*args, x=x, **kw)
-            out = tuple(o.float() for o in out)
-        else:
-            out = self.net(*args, x=x, **kw)
+                out = net(*args, x=x, **kw)
+            return tuple(o.float() for o in out)
+        return net(*args, x=x, **kw)
+
+    def forward(self, args, x, ev):
+        """-> (value logits, policy logits, remaining turns or None)"""
+        out = self._run(self.net, args, x, self.has_turns)
         logits, v = out[0], out[1]
+        if self.policy_net is not None:  # (a hybrid: the other network's policy)
+            logits = self._run(self.policy_net, args, x, False)[0]
         if self.model.residual is not None:
             v = self.model.residual[0] * ev / 100 + self.model.residual[1] + v
         turns = torch.expm1(out[2].clamp(max=6)).clamp(min=0) if self.has_turns else None
