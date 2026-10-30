@@ -39,12 +39,16 @@ PAGE = r"""<!DOCTYPE html>
   .dec h3 { margin: 0 0 6px; font-size: 15px; }
   .tag { display: inline-block; font-size: 12px; padding: 1px 7px; border-radius: 10px; margin-left: 6px; }
   .tag.bad { background: var(--bad); color: #fff; } .tag.ok { background: var(--good); color: #fff; }
-  .opt { display: grid; grid-template-columns: 170px 1fr 48px; gap: 8px; align-items: center; margin: 3px 0; }
+  .opt { display: grid; grid-template-columns: minmax(96px, 150px) 1.4fr 76px 1fr 40px; gap: 6px 8px; align-items: center; margin: 3px 0; }
+  .opt.head { color: var(--muted); font-size: 12px; margin-top: 6px; } .opt.head span:nth-child(2) { grid-column: 2 / 4; } .opt.head span:nth-child(3) { grid-column: 4 / 6; }
   .opt .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .opt .name.me { color: var(--me); font-weight: 600; } .opt .name.ai { color: var(--ai); font-weight: 600; }
-  .bars { position: relative; height: 18px; background: var(--bg); border-radius: 4px; overflow: hidden; }
-  .bars .win { position: absolute; left: 0; top: 0; bottom: 6px; background: var(--ai); opacity: .75; }
-  .bars .share { position: absolute; left: 0; bottom: 0; height: 4px; background: var(--muted); }
+  .bar { position: relative; height: 14px; background: var(--bg); border-radius: 3px; overflow: hidden; }
+  .aibox .bar { background: var(--panel); }
+  .bar span { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; }
+  .bar .win { background: var(--ai); opacity: .8; } .bar .share { background: var(--muted); opacity: .7; }
+  .diff { color: var(--muted); font-size: 11px; }
+  .home { font-size: 13px; color: var(--ai); text-decoration: none; margin-right: 4px; } .home:hover { text-decoration: underline; }
   .num { text-align: right; font-variant-numeric: tabular-nums; }
   .legend, .state, .events { color: var(--muted); font-size: 12px; }
   .events { white-space: pre-wrap; margin-top: 6px; max-height: 120px; overflow: auto; }
@@ -55,14 +59,14 @@ PAGE = r"""<!DOCTYPE html>
   .step.me { border-left-color: var(--me); } .step.opp { border-left-color: var(--muted); }
   .step.sel { background: color-mix(in srgb, var(--ai) 10%, transparent); }
   .stitle { font-size: 12px; color: var(--muted); font-weight: 600; } .shead { font-weight: 600; margin: 2px 0; }
-  .slines { color: var(--muted); font-size: 12px; } .ai { margin-top: 8px; padding: 8px; background: var(--bg); border-radius: 6px; }
+  .slines { color: var(--muted); font-size: 12px; } .aibox { margin-top: 8px; padding: 8px; background: var(--bg); border-radius: 6px; }
   .aihead { font-weight: 600; margin-bottom: 4px; }
   .lang { margin-left: auto; font-size: 12px; color: var(--muted); }
   .lang button { background: var(--bg); color: var(--ink); border: 1px solid var(--line); padding: 2px 8px; cursor: pointer; font: inherit; }
   .lang button.sel { background: var(--ai); color: #fff; border-color: var(--ai); }
 </style>
 <header>
-  <h1 id="title"></h1><span class="res" id="res"></span><span class="legend" id="note"></span>
+  <a class="home" id="home" href="/" hidden></a><h1 id="title"></h1><span class="res" id="res"></span><span class="legend" id="note"></span>
   <span class="lang"><span id="lui"></span> <button data-k="ui" data-v="en">EN</button><button data-k="ui" data-v="zh">中文</button>
     &nbsp; <span id="lnames"></span> <button data-k="names" data-v="en">EN</button><button data-k="names" data-v="zh">中文</button></span>
 </header>
@@ -127,7 +131,8 @@ const T = {
     kinds: {move: "move", cant: "could not move", switch: "switch", pivot: "switch (pivot move)", replace: "switch after a faint", drag: "forced out", choice: "your choice"},
     aiHead: {turn: "The AI on your choice at the start of the turn", "pivot switch": "The AI on your switch", "switch after a faint": "The AI on your switch"},
     chanceAt: v => `your winning chance at this decision: ${v}`, bad: "AI disagrees", same: "same as the AI", ok: "acceptable",
-    bars: `Bar: winning chance after the option; thin bar: the AI's share of thinking. <span style="color:var(--me)">Orange</span> = your choice, <span style="color:var(--ai)">blue</span> = the AI's.`,
+    bars: `<span style="color:var(--me)">Orange</span> = your choice, <span style="color:var(--ai)">blue</span> = the AI's choice. In brackets: the difference from the AI's choice.`,
+    winCol: "Winning chance after it", shareCol: "The AI's share of thinking", home: "← Home",
     untried: "untried", left: n => `${n} left`, tera: "terastallized",
     hazMe: "hazards on your side", hazOpp: "on the opponent's side", unseen: x => `You chose ${x} (the log does not show it as such)`,
     switchTo: x => `Switch to ${x}`, teraSuffix: " + Tera",
@@ -169,7 +174,8 @@ const T = {
     kinds: {move: "出招", cant: "无法行动", switch: "换人", pivot: "折返换人", replace: "倒下后换人", drag: "被强制换下", choice: "你的选择"},
     aiHead: {turn: "AI 怎么看你回合开始时的选择", "pivot switch": "AI 怎么看你这次换人", "switch after a faint": "AI 怎么看你这次换人"},
     chanceAt: v => `做这个决策时你的胜率 ${v}`, bad: "AI 不认同", same: "和 AI 一致", ok: "可以接受",
-    bars: `长条：选这一步后的胜率；底部细条：AI 搜索在这一步上花的比例。<span style="color:var(--me)">橙色</span>=你的选择，<span style="color:var(--ai)">蓝色</span>=AI 的选择`,
+    bars: `<span style="color:var(--me)">橙色</span>=你的选择，<span style="color:var(--ai)">蓝色</span>=AI 的选择；括号里是和 AI 选择的胜率差距。`,
+    winCol: "选这一步后的胜率", shareCol: "AI 思考的比例", home: "← 主页",
     untried: "未尝试", left: n => `剩 ${n} 只`, tera: "已太晶",
     hazMe: "你这边的钉子", hazOpp: "对手那边的钉子", unseen: x => `你选择了 ${x}（日志里没有按这样显示）`,
     switchTo: x => `换上 ${x}`, teraSuffix: " + 太晶",
@@ -313,15 +319,19 @@ function steps(t) {
 }
 function aiHTML(d) {
   const bad = d.score >= 0.10;
-  let h = `<div class="ai"><div class="aihead">${L.aiHead[d.kind] || L.aiHead.turn} <span class="tag ${bad ? "bad" : "ok"}">${bad ? L.bad : d.chosen == d.best ? L.same : L.ok}</span> <span class="legend">${L.chanceAt(pct(d.value))}</span></div>`;
+  let h = `<div class="aibox"><div class="aihead">${L.aiHead[d.kind] || L.aiHead.turn} <span class="tag ${bad ? "bad" : "ok"}">${bad ? L.bad : d.chosen == d.best ? L.same : L.ok}</span> <span class="legend">${L.chanceAt(pct(d.value))}</span></div>`;
   h += `<div class="legend">${L.bars}</div>`;
+  h += `<div class="opt head"><span></span><span>${L.winCol}</span><span>${L.shareCol}</span></div>`;
   const opts = d.options.slice();
   if (!opts.some(o => o[0] == d.chosen)) opts.push([d.chosen, d.chosen_share, d.chosen_value]);
   for (const [o, share, q] of opts) {
     const cls = o == d.chosen ? "me" : o == d.best ? "ai" : "";
+    const diff = q == null || o == d.best ? "" : ` <span class="diff">(${q >= d.best_value ? "+" : ""}${Math.round(100 * (q - d.best_value))})</span>`;
     h += `<div class="opt"><span class="name ${cls}" title="${esc(o)}">${esc(option(o))}</span>
-      <span class="bars"><span class="win" style="width:${q == null ? 0 : 100 * q}%"></span><span class="share" style="width:${100 * share}%"></span></span>
-      <span class="num">${q == null ? L.untried : pct(q)}</span></div>`;
+      <span class="bar"><span class="win" style="width:${q == null ? 0 : 100 * q}%"></span></span>
+      <span class="num">${q == null ? L.untried : pct(q)}${diff}</span>
+      <span class="bar"><span class="share" style="width:${100 * share}%"></span></span>
+      <span class="num">${pct(share)}</span></div>`;
   }
   const st = d.state, me = st.me, op = st.opp;
   const b = x => Object.entries(x || {}).map(([k, v]) => (ST[k] || k) + " " + (v > 0 ? "+" + v : v)).join(", ");
@@ -382,6 +392,7 @@ function go(t, dec = null, seek = true) {
 document.title = L.title(R.id);
 document.documentElement.lang = UI == "zh" ? "zh" : "en";
 document.getElementById("title").textContent = L.title(R.id);
+if (location.protocol.startsWith("http")) { const a = document.getElementById("home"); a.textContent = L.home; a.hidden = false; }
 document.getElementById("res").textContent = R.won ? L.won : L.lost;
 document.getElementById("note").textContent = L.note(R.ms, R.worlds);
 document.getElementById("lui").textContent = L.ui;
