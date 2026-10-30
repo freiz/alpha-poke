@@ -515,3 +515,15 @@ def test_the_frozen_app_keeps_its_data_where_the_platform_wants(monkeypatch, tmp
                            ("linux", tmp_path / "xdg" / "alpha-poke")):  # fmt: skip
         monkeypatch.setattr(launcher.sys, "platform", platform)
         assert launcher.user_data() == want
+
+
+def test_the_smoke_test_finds_its_replay():
+    """packaging/smoke_test.py (run by the desktop app's workflow only) reads a fixture replay by a
+    path relative to itself: there (2026-10-30: moved up a directory, its path was not)."""
+    import importlib.util
+
+    path = Path(__file__).resolve().parents[1] / "packaging" / "smoke_test.py"
+    spec = importlib.util.spec_from_file_location("smoke_test", path)
+    smoke = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(smoke)
+    assert smoke.FIXTURE.is_file()

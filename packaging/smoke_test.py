@@ -10,7 +10,7 @@ from pathlib import Path
 import requests
 
 BASE = "http://127.0.0.1:8090"
-FIXTURE = Path(__file__).resolve().parents[2] / "tests" / "fixtures" / "replays_gen9ou.jsonl.gz"
+FIXTURE = Path(__file__).resolve().parents[1] / "tests" / "fixtures" / "replays_gen9ou.jsonl.gz"
 
 
 def main() -> int:

@@ -20,7 +20,7 @@ permissions:
 jobs:
   build:
     strategy:
-      fail-fast: false
+      fail-fast: true  # (one platform failing stops the other: its minutes are not spent for nothing)
       matrix:
         include:
           - os: windows-latest
