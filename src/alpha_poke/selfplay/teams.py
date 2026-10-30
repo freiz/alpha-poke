@@ -30,6 +30,7 @@ Per game:
      completed again (up to ``retries`` times), otherwise the game is skipped.
 """
 
+import collections
 import json
 import logging
 import random
@@ -162,6 +163,99 @@ def _species(rec) -> str:
     return seen[0] if seen else base
 
 
+# kinds of a set's parts whose reveal rates correct the marginal draws (a tera type shows only
+# when used, whatever it is: no correction)
+REVEAL_KINDS = ("item", "ability", "move")
+MIN_EXPECTED = 20.0  # (a part expected fewer times in the sample: its kind's overall rate)
+# the least weight a part keeps (x its usage) however often it shows: a rate of 1 is an estimate,
+# and a set must still find four moves
+UNSEEN_FLOOR = 0.02
+# moves a Choice item holder still uses (the item given away)
+CHOICE_STATUS_OK = frozenset({"trick", "switcheroo"})
+
+
+def reveal_rates(records: list, stats: UsageStats) -> dict[str, dict[str, float]]:
+    """How often a set's part shows in a game when a mon that was on the field has it (2026-10-30,
+    the fair evaluation pool): per kind ("item", "ability", "move"), id -> the times replays
+    revealed it over the times Smogon's usage (complete teams: no reveal bias) says brought mons
+    had it, at most 1; "default" -> each kind's overall rate. Leftovers heal every turn (near 1),
+    Heavy-Duty Boots almost never show (near 0). ``records``: replay.parse_replay mons."""
+    exp = {k: collections.Counter() for k in REVEAL_KINDS}
+    obs = {k: collections.Counter() for k in REVEAL_KINDS}
+    for rec in records:
+        if not rec.brought:
+            continue
+        smog = smogon_entry(stats, _species(rec))
+        if smog is None:
+            continue
+        for kind, dist, seen in (("item", smog.items, [rec.item] if rec.item else []),
+                                 ("ability", smog.abilities, [rec.ability] if rec.ability else []),
+                                 ("move", smog.move_has, rec.moves)):  # fmt: skip
+            for k, p in dist.items():
+                if to_id(k):
+                    exp[kind][to_id(k)] += p
+            for x in seen:
+                obs[kind][to_id(x)] += 1
+    out: dict[str, dict[str, float]] = {"default": {}}
+    for kind in REVEAL_KINDS:
+        total = sum(exp[kind].values())
+        out["default"][kind] = (
+            min(1.0, sum(obs[kind][k] for k in exp[kind]) / total) if total else 0.0
+        )
+        out[kind] = {
+            k: min(1.0, obs[kind][k] / e) for k, e in exp[kind].items() if e >= MIN_EXPECTED
+        }
+    return out
+
+
+def marginal_set(smog, known, brought: bool, rates: dict, legal: set, rng: random.Random,
+                 banned: frozenset = frozenset()) -> tuple[str, str, str, list[str]]:  # fmt: skip
+    """(item, ability, tera, moves) of one side's mon from a real game (the fair evaluation
+    pool): what the game revealed (``known``) kept; the rest each drawn from the species'
+    Smogon usage, weighted for a mon that was on the field by 1 - its reveal rate
+    (``reveal_rates``: a part that would have shown is unlikely when it did not; at least
+    UNSEEN_FLOOR of its usage); a mon never
+    on the field: the usage as is. Coherent: no Assault Vest / Choice item beside a status move
+    (Trick / Switcheroo with a Choice item allowed), moves legal for the species."""
+    from alpha_poke.agents.engine_state import _status
+
+    def weights(dist: dict, kind: str | None, skip=()) -> dict[str, float]:
+        out = {}
+        for k, p in dist.items():
+            kid = to_id(k)
+            if not kid or kid in skip:
+                continue
+            rho = 0.0
+            if kind is not None and brought:
+                rho = rates.get(kind, {}).get(kid, rates.get("default", {}).get(kind, 0.0))
+            if p > 0:
+                out[kid] = p * max(1 - rho, UNSEEN_FLOOR)
+        return out
+
+    def draw(w: dict) -> str | None:
+        return rng.choices(list(w), weights=list(w.values()))[0] if w else None
+
+    moves = [m for m in known.moves if m not in banned][:4]
+    status = any(_status(m) and m not in CHOICE_STATUS_OK for m in moves)
+    blocked = {"assaultvest", "choiceband", "choicespecs", "choicescarf"} if status else set()
+    item = known.item or draw(weights(smog.items, "item", blocked)) or "none"
+    ability = known.ability or draw(weights(smog.abilities, "ability")) or ""
+    tera = known.tera or draw(weights({k: v for k, v in smog.tera_types.items()
+                                       if to_id(k) != "stellar"}, None)) or ""  # fmt: skip
+    choice = item.startswith("choice")
+    pool = weights({m: p for m, p in smog.move_has.items() if to_id(m) in legal}, "move",
+                   set(moves) | banned)  # fmt: skip
+    if item == "assaultvest" or choice:
+        pool = {
+            m: w for m, w in pool.items() if not _status(m) or (choice and m in CHOICE_STATUS_OK)
+        }
+    while len(moves) < 4 and pool:
+        m = draw(pool)
+        moves.append(m)
+        pool.pop(m)
+    return item, ability, tera, moves
+
+
 class TeamSampler:
     def __init__(self, belief, since: int | None = None, half_life_days: float = 120.0,
                  catalog_frac: float = 0.3, temp: float = 1.3, spread_temp: float = 1.0,
@@ -169,12 +263,22 @@ class TeamSampler:
                  stats_cutoff: str = "1500", popularity_beta: float = 0.0, synth_frac: float = 0.0,
                  synth_tau: float = 1.0, synth_gamma: float = 0.7, synth_eps: float = 0.1,
                  set_eps: float = 0.1, synth_beta: float = 0.5, synth_steps: int = 12,
-                 synergy=None):  # fmt: skip
+                 synergy=None, fill: str = "belief", min_rating: int = 0, exclude=None,
+                 rates: dict | None = None):  # fmt: skip
+        """``fill``: how a replay side's unrevealed parts are drawn -- "belief" (the search's
+        belief, flattened by ``temp``: self-play's variety) or "marginal" (Smogon's usage,
+        reveal-corrected: ``marginal_set`` with ``rates``; the fair evaluation pool).
+        ``min_rating``: only games both players were rated at least this before; ``exclude``:
+        game ids never drawn (self-play's and earlier tests' sources)."""
         g = pd.read_parquet(GAMES, columns=["id", "time", "r1", "r2", "winner", "shard", "row",
                                             "team1", "team2"])  # fmt: skip
         g = g[g.winner > 0]
         if since is not None:
             g = g[g.time >= since]
+        if min_rating:
+            g = g[(g.r1 >= min_rating) & (g.r2 >= min_rating)]
+        if exclude:
+            g = g[~g.id.isin(set(exclude))]
         age = (g.time.max() - g.time) / DAY
         self.games = g.reset_index(drop=True)
         self.weights = np.array(0.5 ** (age / half_life_days), dtype=float)
@@ -210,6 +314,9 @@ class TeamSampler:
         self.rng = random.Random(seed)
         self.banned_moves: set[str] = set()  # move ids the validator reported as banned
         self.np_rng = np.random.default_rng(seed)
+        self.fill, self.rates = fill, rates or {}
+        # (marginal fills: how many parts of the sets were revealed / drawn)
+        self.fill_counts: dict[str, int] = collections.Counter()
 
     def spread(self, species: str) -> str:
         smog = smogon_entry(self.stats, species)
@@ -223,8 +330,29 @@ class TeamSampler:
         """One completed export of a replay side (preview order)."""
         from alpha_poke.train.positions import _known
 
+        if self.fill == "marginal":
+            return "\n\n".join(self._marginal(rec, _known(rec)) for rec in records)
+
         names = tuple(self.belief.display(to_id(r.species.replace("-*", ""))) for r in records)
         return self._complete([(_species(rec), _known(rec)) for rec in records], names)
+
+    def _marginal(self, rec, known) -> str:
+        """One mon's export: ``marginal_set`` (the game's revealed parts, the rest from usage)."""
+        from alpha_poke.dex import MOVE_IDS, learnset
+
+        species = _species(rec)
+        smog = smogon_entry(self.stats, species)
+        if smog is None:
+            raise KeyError(species)  # (rejected: _try_complete)
+        legal = {m for m in (learnset(species) or set()) if m in MOVE_IDS}
+        item, ability, tera, moves = marginal_set(smog, known, rec.brought, self.rates, legal,
+                                                  self.rng, frozenset(self.banned_moves))  # fmt: skip
+        c = self.fill_counts
+        c["moves_revealed"] += len(known.moves[:4])
+        c["moves_drawn"] += len(moves) - len(known.moves[:4])
+        for part, k in (("item", known.item), ("ability", known.ability), ("tera", known.tera)):
+            c[f"{part}_{'revealed' if k else 'drawn'}"] += 1
+        return export_set(species, item, ability, tera, moves, self.spread(species))
 
     def synthetic(self) -> str:
         """One completed export of a synthetic team (Composer's six; nothing known; the sets'
