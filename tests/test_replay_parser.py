@@ -22,8 +22,8 @@ def test_header_and_result(sample):
     assert sample.turns == 15
     assert sample.players == {"p1": "PlayerOne", "p2": "PlayerTwo"}
     assert sample.winner == "p1"
-    assert sample.ratings_before == {"p1": 1686, "p2": 1664}
-    assert sample.ratings_after == {"p1": 1705, "p2": 1645}
+    assert sample.ratings_before == {"p1": 1600, "p2": 1580}
+    assert sample.ratings_after == {"p1": 1619, "p2": 1561}
 
 
 def test_teams_and_leads(sample):

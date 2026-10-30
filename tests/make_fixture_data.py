@@ -2,6 +2,7 @@
 copies it into a temporary ALPHA_DATA directory; the tests never read the local data/).
 
   uv run python tests/make_fixture_data.py      # from the local data/ (the full datasets)
+  uv run python tests/make_fixture_data.py --scrub   # only scrub the replay fixtures in place
 
 - raw/smogon/2026-09/chaos/gen9ou-{0,1500,1825}.json.gz: the month the released belief was built
   from, trimmed (no checks and counters; the 30 most common spreads, the 60 most common
@@ -12,7 +13,11 @@ copies it into a temporary ALPHA_DATA directory; the tests never read the local 
 And next to it, in tests/fixtures/:
 - replays_gen9ou.jsonl.gz: 200 rated games of the newest HF replay shard, anonymized: the two
   players renamed everywhere in the log (Player A / Player B), chat / join / leave / raw lines
-  dropped, synthetic ids;
+  dropped, synthetic ids, and ``scrub_log``: every nickname replaced by its species' default
+  name (players' nicknames can be personal or offensive), no timestamps, no upload time (both
+  would lead back to the public replay);
+- gen9ou_sample.json (the replay parser's test game) and selfplay_game.json.gz: scrubbed alike
+  (``scrub_existing``): a synthetic id, no timestamps, made-up ratings, no real source game id;
 - state_build_ou_pairs.jsonl: the 60 catalog team pairs of test_state_build's OU baseline;
 - tiny_net/: a randomly initialized TransformerPV (seed 0) with the released network's inputs
   and heads but d 32 x 1 layer: tests of the search and the network code, not of play;
@@ -39,6 +44,60 @@ def top(d: dict, n: int) -> dict:
     return dict(sorted(d.items(), key=lambda kv: -kv[1])[:n])
 
 
+_IDENT = re.compile(r"^\|(?:switch|drag|replace)\|(p[12])[a-d]?: ([^|]+)\|([^|,]+)", re.M)
+
+
+def scrub_log(log: str) -> str | None:
+    """``log`` without timestamps and with every nickname replaced by the species' default name
+    (its base species, as Showdown names an unnamed Pokemon); None when a renamed mon would take
+    a name another mon of its side already uses."""
+    from poke_env.data import GenData
+
+    dex = GenData.from_gen(9).pokedex
+    to_id = lambda x: re.sub(r"[^a-z0-9]", "", x.lower())  # noqa: E731
+    names: dict[tuple[str, str], str] = {}
+    for side, nick, species in _IDENT.findall(log):
+        e = dex.get(to_id(species)) or {}
+        # (poke-env: a forme's baseSpecies is the base's name; a base's own is its id)
+        names[(side, nick.strip())] = (
+            e["baseSpecies"] if e.get("forme") else e.get("name")
+        ) or species.strip()
+    for side in ("p1", "p2"):
+        mine = {n: b for (s, n), b in names.items() if s == side}
+        if len(set(mine.values())) < len(mine):
+            return None
+    for (side, nick), base in sorted(names.items(), key=lambda kv: -len(kv[0][1])):
+        if nick != base:
+            log = re.sub(rf"({side}[a-d]?): {re.escape(nick)}(?=$|[|,\]\n])", rf"\1: {base}", log,
+                         flags=re.M)  # fmt: skip
+    return "\n".join(line for line in log.split("\n") if not line.startswith("|t:|"))
+
+
+def scrub_existing() -> None:
+    """Scrub the replay fixtures in place (without the local data the full rebuild needs)."""
+    root = paths.ROOT / "tests" / "fixtures"
+    path = root / "replays_gen9ou.jsonl.gz"
+    rows = [json.loads(x) for x in gzip.decompress(path.read_bytes()).decode().splitlines()]
+    for r in rows:
+        log = scrub_log(r["log"])
+        assert log is not None, r["id"]
+        r["log"], r["uploadtime"] = log, 0
+    path.write_bytes(gzip.compress("".join(json.dumps(x) + "\n" for x in rows).encode(), mtime=0))
+    sample = root / "gen9ou_sample.json"
+    d = json.loads(sample.read_text(encoding="utf-8"))
+    log = scrub_log(d["log"])
+    # (made-up ratings, the same changes: the parser's test reads them)
+    for old, new in (("1686", "1600"), ("1705", "1619"), ("1664", "1580"), ("1645", "1561")):
+        log = log.replace(old, new)
+    d |= {"id": "gen9ou-sample", "log": log, "uploadtime": 0, "rating": 1561, "views": "0"}
+    sample.write_text(json.dumps(d), encoding="utf-8")
+    game = root / "selfplay_game.json.gz"
+    text = gzip.decompress(game.read_bytes()).decode()
+    text = re.sub(r"(?:smogtours-)?gen9ou-2\d{9}", "gen9ou-source", text)
+    game.write_bytes(gzip.compress(text.encode(), mtime=0))
+    print("scrubbed", len(rows), "replays, the sample, the self-play game")
+
+
 def anonymized_replays(n: int = 200) -> None:
     import pyarrow.parquet as pq
 
@@ -61,9 +120,12 @@ def anonymized_replays(n: int = 200) -> None:
             log = log.replace(name, new)
         if any(len(x) >= 3 and x.lower() in log.lower() for x in names):
             continue  # a name left in another spelling: skip the game
+        log = scrub_log(log)
+        if log is None:
+            continue
         out.append({"id": f"gen9ou-fixture{len(out)}", "format": r["format"],
                     "players": ["Player A", "Player B"], "log": log, "rating": r["rating"],
-                    "uploadtime": r["uploadtime"], "formatid": r["formatid"]})  # fmt: skip
+                    "uploadtime": 0, "formatid": r["formatid"]})  # fmt: skip
     path = paths.ROOT / "tests" / "fixtures" / "replays_gen9ou.jsonl.gz"
     path.write_bytes(gzip.compress("".join(json.dumps(x) + "\n" for x in out).encode(), mtime=0))
     print(path.relative_to(paths.ROOT), path.stat().st_size // 1024, "KB,", len(out), "games")
@@ -114,6 +176,9 @@ def positions(n: int = 50, rows: int = 64) -> None:
 
 
 def main() -> int:
+    if "--scrub" in sys.argv:
+        scrub_existing()
+        return 0
     for c in CUTOFFS:
         raw = json.loads((paths.SMOGON / MONTH / "chaos" / f"gen9ou-{c}.json").read_text())
         for d in raw["data"].values():
