@@ -29,11 +29,18 @@ BOOSTS = ("attack", "defense", "special_attack", "special_defense", "speed", "ac
 HAZARDS = ("stealth_rock", "spikes", "toxic_spikes", "sticky_web")
 SCREENS = ("reflect", "light_screen", "aurora_veil", "tailwind")
 # log lines kept in a turn's events (the rest: chat, timers, animations)
-EVENTS = {"move", "switch", "drag", "faint", "-terastallize", "-damage", "-heal", "-status",
-          "-boost", "-unboost", "-setboost", "-clearallboost", "-crit", "-supereffective",
-          "-resisted", "-immune", "-miss", "-fail", "-item", "-enditem", "-ability",
-          "-sidestart", "-sideend", "-weather", "-fieldstart", "-fieldend", "-start", "-end",
-          "cant", "-activate", "detailschange", "replace", "win", "-message"}  # fmt: skip
+# (the battle's record as the replay shows it; "" is the log's blank separator line: it ends the
+# turn's actions before the end-of-turn effects; "upkeep" ends those, the switches after a faint
+# follow)
+EVENTS = {"", "upkeep", "move", "switch", "drag", "replace", "faint", "cant", "-terastallize",
+          "-damage", "-heal", "-sethp", "-status", "-curestatus", "-cureteam", "-boost", "-unboost",
+          "-setboost", "-swapboost", "-copyboost", "-clearboost", "-clearallboost",
+          "-clearnegativeboost", "-crit", "-supereffective", "-resisted", "-immune", "-miss",
+          "-fail", "-block", "-notarget", "-item", "-enditem", "-ability", "-endability",
+          "-transform", "-formechange", "detailschange", "-sidestart", "-sideend",
+          "-swapsideconditions", "-weather", "-fieldstart", "-fieldend", "-start", "-end",
+          "-activate", "-singleturn", "-prepare", "-mustrecharge", "-hitcount", "-message",
+          "win", "tie"}  # fmt: skip
 
 
 @dataclass
@@ -99,7 +106,7 @@ def turn_events(log: str, side: str) -> dict[int, list[str]]:
             continue
         if f[1] in ("switch", "drag", "replace") and len(f) > 3:
             nick[f[2][:3] + f[2].split(":", 1)[1].strip()] = f[3].split(",")[0]
-        if f[1] not in EVENTS:
+        if f[1] not in EVENTS or "[silent]" in f:
             continue
         text = "|".join(f[1:])
         for who in (side, other):

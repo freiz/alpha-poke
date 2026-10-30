@@ -50,6 +50,13 @@ PAGE = r"""<!DOCTYPE html>
   .events { white-space: pre-wrap; margin-top: 6px; max-height: 120px; overflow: auto; }
   .moments li { cursor: pointer; margin: 2px 0; } .moments li:hover { color: var(--ai); }
   .none { color: var(--muted); padding: 10px 0; }
+  #turnhead { margin: 6px 0 4px; font-size: 16px; }
+  .step { border-left: 3px solid var(--line); padding: 6px 0 6px 10px; margin: 6px 0; }
+  .step.me { border-left-color: var(--me); } .step.opp { border-left-color: var(--muted); }
+  .step.sel { background: color-mix(in srgb, var(--ai) 10%, transparent); }
+  .stitle { font-size: 12px; color: var(--muted); font-weight: 600; } .shead { font-weight: 600; margin: 2px 0; }
+  .slines { color: var(--muted); font-size: 12px; } .ai { margin-top: 8px; padding: 8px; background: var(--bg); border-radius: 6px; }
+  .aihead { font-weight: 600; margin-bottom: 4px; }
   .lang { margin-left: auto; font-size: 12px; color: var(--muted); }
   .lang button { background: var(--bg); color: var(--ink); border: 1px solid var(--line); padding: 2px 8px; cursor: pointer; font: inherit; }
   .lang button.sel { background: var(--ai); color: #fff; border-color: var(--ai); }
@@ -71,6 +78,7 @@ PAGE = r"""<!DOCTYPE html>
       <button data-go="first"></button><button data-go="prev"></button>
       <button data-go="next"></button><button data-go="mistake"></button>
     </div>
+    <h3 id="turnhead"></h3>
     <div id="decisions"></div>
     <h3 id="momentshead"></h3><ol class="moments" id="moments"></ol>
   </section>
@@ -97,63 +105,96 @@ const STATS = {
   en: {atk: "Attack", def: "Defense", spa: "Sp. Atk", spd: "Sp. Def", spe: "Speed", accuracy: "accuracy", evasion: "evasion",
        attack: "Atk", defense: "Def", special_attack: "SpA", special_defense: "SpD", speed: "Spe",
        stealth_rock: "Stealth Rock", spikes: "Spikes", toxic_spikes: "Toxic Spikes", sticky_web: "Sticky Web",
-       brn: "burned", par: "paralyzed", slp: "asleep", frz: "frozen", psn: "poisoned", tox: "badly poisoned"},
+       brn: "burned", par: "paralyzed", slp: "asleep", frz: "frozen", psn: "poisoned", tox: "badly poisoned",
+       RainDance: "rain", SunnyDay: "harsh sunlight", Sandstorm: "a sandstorm", Snowscape: "snow", Snow: "snow", none: "none"},
   zh: {atk: "攻击", def: "防御", spa: "特攻", spd: "特防", spe: "速度", accuracy: "命中率", evasion: "闪避率",
        attack: "攻击", defense: "防御", special_attack: "特攻", special_defense: "特防", speed: "速度",
        stealth_rock: "隐形岩", spikes: "撒菱", toxic_spikes: "毒菱", sticky_web: "黏黏网",
-       brn: "灼伤", par: "麻痹", slp: "睡眠", frz: "冰冻", psn: "中毒", tox: "剧毒"},
+       brn: "灼伤", par: "麻痹", slp: "睡眠", frz: "冰冻", psn: "中毒", tox: "剧毒",
+       RainDance: "下雨", SunnyDay: "大晴天", Sandstorm: "沙暴", Snowscape: "下雪", Snow: "下雪", none: "无"},
 };
 const T = {
   en: {
     title: id => `Review · ${id}`, won: "won", lost: "lost",
     note: (ms, w) => `Your side: ${SIDE == "p1" ? "p1 (bottom left)" : "p2"} | winning chances are the AI search's estimates (${ms} ms × ${w} belief worlds per decision)`,
     ui: "Interface", names: "Names",
-    curve: "Your winning chance at each of your decisions (red: the AI clearly disagreed). Click a point to jump there; ←/→ previous / next, M next mistake.",
-    first: "⏮ Start", prev: "◀ Previous", next: "Next ▶", mistake: "⚠ Next mistake",
-    momentsHead: "Where the AI disagreed most", noMoments: "No clear mistakes.", noDecision: "No decision of yours this turn.",
-    turn: t => `Turn ${t}`, kinds: {"pivot switch": " (switch after a pivot move)", "switch after a faint": " (switch after a faint)"},
-    now: "winning chance", bad: "AI disagrees", same: "same as the AI", ok: "acceptable",
+    curve: "Your winning chance through the game, by turn (● your choice at the start of a turn, ○ your switch after a faint or a pivot move; red: the AI clearly disagreed). Click to jump; ←/→ previous / next turn, M next mistake.",
+    first: "⏮ Start", prev: "◀ Previous turn", next: "Next turn ▶", mistake: "⚠ Next mistake",
+    momentsHead: "Where the AI disagreed most", noMoments: "No clear mistakes.",
+    turn: t => `Turn ${t}`, chanceStart: v => `your winning chance at its start: ${v}`,
+    lead: "Leads", end: "End of the turn", before: "Before the actions",
+    you: "You", opp: "Opponent",
+    kinds: {move: "move", cant: "could not move", switch: "switch", pivot: "switch (pivot move)", replace: "switch after a faint", drag: "forced out", choice: "your choice"},
+    aiHead: {turn: "The AI on your choice at the start of the turn", "pivot switch": "The AI on your switch", "switch after a faint": "The AI on your switch"},
+    chanceAt: v => `your winning chance at this decision: ${v}`, bad: "AI disagrees", same: "same as the AI", ok: "acceptable",
     bars: `Bar: winning chance after the option; thin bar: the AI's share of thinking. <span style="color:var(--me)">Orange</span> = your choice, <span style="color:var(--ai)">blue</span> = the AI's.`,
-    untried: "untried", you: "You", opp: "Opponent", left: n => `${n} left`, tera: "terastallized",
-    hazMe: "hazards on your side", hazOpp: "on the opponent's side", happened: "What happened this turn:",
+    untried: "untried", left: n => `${n} left`, tera: "terastallized",
+    hazMe: "hazards on your side", hazOpp: "on the opponent's side", unseen: x => `You chose ${x} (the log does not show it as such)`,
     switchTo: x => `Switch to ${x}`, teraSuffix: " + Tera",
     moment: (t, c, b, cv, bv) => `Turn ${t}: you chose <b>${c}</b>, the AI <b>${b}</b> (${cv} → ${bv})`,
     mine: x => `your ${x}`, theirs: x => `the opposing ${x}`, side: me => me ? "your side" : "the opposing side",
     ev: {
-      move: (a, m, t) => `${cap(a)} used ${m}` + (t && t != a ? ` on ${t}` : ""), switch: a => `${cap(a)} came in`, drag: a => `${cap(a)} was dragged in`,
-      faint: a => `${cap(a)} fainted`, "-supereffective": a => `→ super effective on ${a}`, "-resisted": a => `→ ${a} resisted it`,
-      "-immune": (a, f) => `→ ${a} is immune` + (f ? ` (${f})` : ""), "-crit": () => "→ a critical hit", "-miss": a => `${cap(a)} missed`,
-      "-terastallize": (a, t) => `${cap(a)} terastallized into ${t}`, "-boost": (a, s, n) => `${cap(a)}'s ${s} rose by ${n}`,
-      "-unboost": (a, s, n) => `${cap(a)}'s ${s} fell by ${n}`, "-sidestart": (sd, c) => `${cap(sd)}: ${c} set`, "-sideend": (sd, c) => `${cap(sd)}: ${c} removed`,
-      "-enditem": (a, i, f) => `${cap(a)} lost its ${i}` + (f ? ` (${f})` : ""), "-item": (a, i) => `${cap(a)} holds ${i}`,
-      "-ability": (a, ab) => `${cap(a)}'s ${ab}`, "-status": (a, st) => `${cap(a)} is ${st}`, "-damage": (a, hp) => `${cap(a)}: ${hp} HP`,
-      cant: (a, r) => `${cap(a)} could not move (${r})`, win: w => `Winner: ${w}`,
+      move: (a, m, t) => `${cap(a)} used ${m}` + (t && t != a ? ` on ${t}` : ""), switch: (a, hp) => `${cap(a)} came in (${hp})`,
+      drag: a => `${cap(a)} was dragged in`, replace: a => `${cap(a)} was revealed`, faint: a => `${cap(a)} fainted`,
+      "-supereffective": a => `super effective on ${a}`, "-resisted": a => `${cap(a)} resisted it`, "-crit": () => "a critical hit",
+      "-immune": (a, f) => `${cap(a)} is immune` + (f ? ` (${f})` : ""), "-miss": a => `${cap(a)} missed`, "-fail": a => `it failed`,
+      "-block": (a, f) => `${cap(a)} blocked it` + (f ? ` (${f})` : ""), "-notarget": () => "no target",
+      "-terastallize": (a, t) => `${cap(a)} terastallized into the ${t} type`, "-boost": (a, s, n) => `${cap(a)}'s ${s} rose by ${n}`,
+      "-unboost": (a, s, n) => `${cap(a)}'s ${s} fell by ${n}`, "-setboost": (a, s, n) => `${cap(a)}'s ${s} set to ${n}`,
+      "-clearallboost": () => "all stat changes were removed", "-clearboost": a => `${cap(a)}'s stat changes were removed`,
+      "-clearnegativeboost": a => `${cap(a)}'s lowered stats were restored`,
+      "-sidestart": (sd, c) => `${cap(sd)}: ${c} set`, "-sideend": (sd, c) => `${cap(sd)}: ${c} removed`,
+      "-enditem": (a, i, f) => `${cap(a)} lost its ${i}` + (f ? ` (${f})` : ""), "-item": (a, i, f) => `${cap(a)} holds ${i}` + (f ? ` (${f})` : ""),
+      "-ability": (a, ab) => `${cap(a)}'s ability: ${ab}`, "-endability": a => `${cap(a)}'s ability was suppressed`,
+      "-status": (a, st, f) => `${cap(a)} is ${st}` + (f ? ` (${f})` : ""), "-curestatus": (a, st) => `${cap(a)} is no longer ${st}`,
+      "-damage": (a, hp, f) => `${cap(a)}: ${hp} left` + (f ? ` (${f})` : ""), "-heal": (a, hp, f) => `${cap(a)} healed to ${hp}` + (f ? ` (${f})` : ""),
+      "-sethp": (a, hp) => `${cap(a)}: ${hp}`, "-hitcount": (a, n) => `hit ${n} times`,
+      "-weather": (w, up) => up ? `${cap(w)} continues` : `the weather: ${w}`, "-fieldstart": c => `${c} started`, "-fieldend": c => `${c} ended`,
+      "-start": (a, c) => `${cap(a)}: ${c}`, "-end": (a, c) => `${cap(a)}: ${c} ended`, "-activate": (a, c) => `${cap(a)}: ${c}`,
+      "-singleturn": (a, c) => `${cap(a)}: ${c}`, "-prepare": (a, m) => `${cap(a)} is preparing ${m}`, "-mustrecharge": a => `${cap(a)} must recharge`,
+      "-transform": (a, b) => `${cap(a)} transformed into ${b}`, "-formechange": (a, f) => `${cap(a)} changed form: ${f}`, detailschange: (a, f) => `${cap(a)} became ${f}`,
+      cant: (a, r) => `${cap(a)} could not move (${r})`, "-message": m => m, win: w => `Winner: ${w}`, tie: () => "A tie",
     },
   },
   zh: {
     title: id => `复盘 · ${id}`, won: "胜", lost: "负",
     note: (ms, w) => `分析视角：${SIDE == "p1" ? "p1（左下）" : "p2"} ｜ 胜率为 AI 搜索的估计（每步 ${ms} ms × ${w} 个信念世界）`,
     ui: "界面", names: "名称",
-    curve: "你每次决策时的胜率（红点：AI 明显不认同的决策）。点击曲线跳到该处；←/→ 上一步 / 下一步，M 下一个失误。",
-    first: "⏮ 开局", prev: "◀ 上一步", next: "下一步 ▶", mistake: "⚠ 下一个失误",
-    momentsHead: "AI 最不认同的决策", noMoments: "没有明显的失误。", noDecision: "这一回合你没有需要做的决策。",
-    turn: t => `回合 ${t}`, kinds: {"pivot switch": "（折返换人）", "switch after a faint": "（倒下后换人）"},
-    now: "当前胜率", bad: "AI 不认同", same: "和 AI 一致", ok: "可以接受",
+    curve: "整局的胜率变化，按回合（● 回合开始时你的选择，○ 倒下后或折返后的换人；红色：AI 明显不认同）。点击跳转；←/→ 上一回合 / 下一回合，M 下一个失误。",
+    first: "⏮ 开局", prev: "◀ 上一回合", next: "下一回合 ▶", mistake: "⚠ 下一个失误",
+    momentsHead: "AI 最不认同的决策", noMoments: "没有明显的失误。",
+    turn: t => `回合 ${t}`, chanceStart: v => `回合开始时你的胜率 ${v}`,
+    lead: "开局：双方首发", end: "回合末", before: "行动之前",
+    you: "你", opp: "对手",
+    kinds: {move: "出招", cant: "无法行动", switch: "换人", pivot: "折返换人", replace: "倒下后换人", drag: "被强制换下", choice: "你的选择"},
+    aiHead: {turn: "AI 怎么看你回合开始时的选择", "pivot switch": "AI 怎么看你这次换人", "switch after a faint": "AI 怎么看你这次换人"},
+    chanceAt: v => `做这个决策时你的胜率 ${v}`, bad: "AI 不认同", same: "和 AI 一致", ok: "可以接受",
     bars: `长条：选这一步后的胜率；底部细条：AI 搜索在这一步上花的比例。<span style="color:var(--me)">橙色</span>=你的选择，<span style="color:var(--ai)">蓝色</span>=AI 的选择`,
-    untried: "未尝试", you: "你", opp: "对手", left: n => `剩 ${n} 只`, tera: "已太晶",
-    hazMe: "你这边的钉子", hazOpp: "对手那边的钉子", happened: "这一回合发生了什么：",
+    untried: "未尝试", left: n => `剩 ${n} 只`, tera: "已太晶",
+    hazMe: "你这边的钉子", hazOpp: "对手那边的钉子", unseen: x => `你选择了 ${x}（日志里没有按这样显示）`,
     switchTo: x => `换上 ${x}`, teraSuffix: " + 太晶",
     moment: (t, c, b, cv, bv) => `回合 ${t}：你选了 <b>${c}</b>，AI 选 <b>${b}</b>（${cv} → ${bv}）`,
     mine: x => `你的 ${x}`, theirs: x => `对手的 ${x}`, side: me => me ? "你这一侧" : "对手那一侧",
     ev: {
-      move: (a, m, t) => `${a} 使用了 ${m}` + (t && t != a ? `（对 ${t}）` : ""), switch: a => `${a} 上场`, drag: a => `${a} 被强制换上场`,
-      faint: a => `${a} 倒下了`, "-supereffective": a => `→ 对 ${a} 效果绝佳`, "-resisted": a => `→ ${a} 抵抗了（效果不好）`,
-      "-immune": (a, f) => `→ ${a} 免疫` + (f ? `（${f}）` : ""), "-crit": () => "→ 击中要害（暴击）", "-miss": a => `${a} 的招式没有命中`,
+      move: (a, m, t) => `${a} 使用了 ${m}` + (t && t != a ? `（对 ${t}）` : ""), switch: (a, hp) => `${a} 上场（${hp}）`,
+      drag: a => `${a} 被强制拉上场`, replace: a => `${a} 的真身暴露了`, faint: a => `${a} 倒下了`,
+      "-supereffective": a => `对 ${a} 效果绝佳`, "-resisted": a => `${a} 抵抗了（效果不好）`, "-crit": () => "击中要害（暴击）",
+      "-immune": (a, f) => `${a} 免疫` + (f ? `（${f}）` : ""), "-miss": a => `${a} 的招式没有命中`, "-fail": () => "但是失败了",
+      "-block": (a, f) => `${a} 挡住了` + (f ? `（${f}）` : ""), "-notarget": () => "没有目标",
       "-terastallize": (a, t) => `${a} 太晶化为 ${t} 属性`, "-boost": (a, s, n) => `${a} 的${s}提升 ${n} 级`,
-      "-unboost": (a, s, n) => `${a} 的${s}下降 ${n} 级`, "-sidestart": (sd, c) => `${sd}被放了 ${c}`, "-sideend": (sd, c) => `${sd}的 ${c} 被清除`,
-      "-enditem": (a, i, f) => `${a} 的 ${i} 没了` + (f ? `（${f}）` : ""), "-item": (a, i) => `${a} 的道具是 ${i}`,
-      "-ability": (a, ab) => `${a} 的特性 ${ab} 发动`, "-status": (a, st) => `${a} 陷入${st}状态`, "-damage": (a, hp) => `${a} 剩余 ${hp}`,
-      cant: (a, r) => `${a} 无法行动（${r}）`, win: w => `胜者：${w}`,
+      "-unboost": (a, s, n) => `${a} 的${s}下降 ${n} 级`, "-setboost": (a, s, n) => `${a} 的${s}变为 ${n} 级`,
+      "-clearallboost": () => "所有能力变化被清除", "-clearboost": a => `${a} 的能力变化被清除`, "-clearnegativeboost": a => `${a} 下降的能力复原了`,
+      "-sidestart": (sd, c) => `${sd}被放了 ${c}`, "-sideend": (sd, c) => `${sd}的 ${c} 被清除`,
+      "-enditem": (a, i, f) => `${a} 的 ${i} 没了` + (f ? `（${f}）` : ""), "-item": (a, i, f) => `${a} 的道具是 ${i}` + (f ? `（${f}）` : ""),
+      "-ability": (a, ab) => `${a} 的特性：${ab}`, "-endability": a => `${a} 的特性被消除了`,
+      "-status": (a, st, f) => `${a} 陷入${st}状态` + (f ? `（${f}）` : ""), "-curestatus": (a, st) => `${a} 的${st}状态解除了`,
+      "-damage": (a, hp, f) => `${a} 剩余 ${hp}` + (f ? `（${f}）` : ""), "-heal": (a, hp, f) => `${a} 回复到 ${hp}` + (f ? `（${f}）` : ""),
+      "-sethp": (a, hp) => `${a} 的 HP 变为 ${hp}`, "-hitcount": (a, n) => `共击中 ${n} 次`,
+      "-weather": (w, up) => up ? `${w}还在继续` : `天气：${w}`, "-fieldstart": c => `${c} 开始了`, "-fieldend": c => `${c} 结束了`,
+      "-start": (a, c) => `${a}：${c}`, "-end": (a, c) => `${a}：${c} 结束`, "-activate": (a, c) => `${a}：${c}`,
+      "-singleturn": (a, c) => `${a}：${c}`, "-prepare": (a, m) => `${a} 正在准备 ${m}`, "-mustrecharge": a => `${a} 需要休息一回合`,
+      "-transform": (a, b) => `${a} 变身成了 ${b}`, "-formechange": (a, f) => `${a} 变成了 ${f}`, detailschange: (a, f) => `${a} 变成了 ${f}`,
+      cant: (a, r) => `${a} 无法行动（${r}）`, "-message": m => m, win: w => `胜者：${w}`, tie: () => "平局",
     },
   },
 };
@@ -186,49 +227,93 @@ function who(x) {  // "ME Garchomp" / "OPP Ting-Lu" -> your / the opposing (tran
   if (x.startsWith("OPP ")) return L.theirs(monName(x.slice(4)));
   return x;
 }
-function from(f) {  // "[from] ability: Water Absorb" / "[from] move: Knock Off" / "[from] item: Air Balloon"
-  if (!f) return "";
-  const s = f.replace("[from] ", "");
+function effect(s) {  // "move: Taunt" / "ability: Water Absorb" / "item: Leftovers" / "Substitute" / "psn" -> its name
+  if (!s) return "";
+  s = s.replace("[from] ", "");
   if (s.startsWith("ability: ")) return abilityName(s.slice(9));
   if (s.startsWith("move: ")) return moveName(s.slice(6));
   if (s.startsWith("item: ")) return itemName(s.slice(6));
-  return s;
+  if (ST[s]) return ST[s];
+  if (s.startsWith("[")) return "";
+  const m = moveName(s); if (m != s) return m;
+  const a = abilityName(s); if (a != s) return a;
+  return itemName(s);
 }
+function hp(x) {  // "343/380" / "47/100 psn" / "0 fnt" -> "90%" / "47% (poisoned)" / "0%"
+  const m = /^(\d+)(?:\/(\d+))?\s*([a-z]*)/.exec(x || ""); if (!m) return x || "";
+  const v = m[2] ? Math.round(100 * m[1] / m[2]) : +m[1];
+  return v + "%" + (m[3] && m[3] != "fnt" ? ` (${ST[m[3]] || m[3]})` : "");
+}
+const fromOf = f => (f.find(x => x && x.startsWith("[from]")) || "");
 function event(line) {
   const f = line.split("|"), tag = f[0], E = L.ev;
   if (!E[tag]) return null;
+  const fr = effect(fromOf(f.slice(2)));
   switch (tag) {
     case "move": return E.move(who(f[1]), moveName(f[2]), who(f[3]));
-    case "-immune": return E[tag](who(f[1]), from(f[2]));
+    case "switch": case "drag": case "replace": return E[tag](who(f[1]), hp(f[3]));
+    case "-immune": case "-block": return E[tag](who(f[1]), fr || effect(f[2]));
     case "-terastallize": return E[tag](who(f[1]), typeName(f[2]));
-    case "-boost": case "-unboost": return E[tag](who(f[1]), ST[f[2]] || f[2], f[3]);
-    case "-sidestart": case "-sideend": return E[tag](L.side(f[1].startsWith("ME")), moveName((f[2] || "").replace("move: ", "")));
-    case "-enditem": return E[tag](who(f[1]), itemName(f[2]), from(f[3]));
-    case "-item": return E[tag](who(f[1]), itemName(f[2]));
+    case "-boost": case "-unboost": case "-setboost": return E[tag](who(f[1]), ST[f[2]] || f[2], f[3]);
+    case "-sidestart": case "-sideend": return E[tag](L.side(f[1].startsWith("ME")), effect(f[2]));
+    case "-enditem": case "-item": return E[tag](who(f[1]), itemName(f[2]), fr);
     case "-ability": return E[tag](who(f[1]), abilityName(f[2]));
-    case "-status": return E[tag](who(f[1]), ST[f[2]] || f[2]);
-    case "-damage": return /\d/.test(f[2] || "") ? E[tag](who(f[1]), f[2].split(" ")[0]) : null;
-    case "cant": return E[tag](who(f[1]), from(f[2]) || f[2]);
-    case "win": return E[tag](f[1]);
+    case "-status": return E[tag](who(f[1]), ST[f[2]] || f[2], fr);
+    case "-curestatus": return E[tag](who(f[1]), ST[f[2]] || f[2]);
+    case "-damage": case "-heal": return E[tag](who(f[1]), hp(f[2]), fr);
+    case "-sethp": return E[tag](who(f[1]), hp(f[2]));
+    case "-hitcount": return E[tag](who(f[1]), f[2]);
+    case "-weather": return f[1] == "none" ? null : E[tag](ST[f[1]] || f[1], f.includes("[upkeep]"));
+    case "-fieldstart": case "-fieldend": return E[tag](effect(f[1]));
+    case "-start": case "-end": case "-activate": case "-singleturn": return E[tag](who(f[1]), effect(f[2]));
+    case "-prepare": return E[tag](who(f[1]), moveName(f[2]));
+    case "-transform": return E[tag](who(f[1]), who(f[2]));
+    case "-formechange": case "detailschange": return E[tag](who(f[1]), monName((f[2] || "").split(",")[0]));
+    case "cant": return E[tag](who(f[1]), effect(f[2]) || f[2]);
+    case "-message": case "win": return E[tag](f[1]);
     default: return E[tag](who(f[1]), who(f[2]));
   }
 }
-function curve() {
-  const s = document.getElementById("curve"), n = R.decisions.length, W = 600, H = 150, P = 8;
-  if (!n) return;
-  const x = i => P + (n == 1 ? 0 : i * (W - 2 * P) / (n - 1)), y = v => H - P - v * (H - 2 * P);
-  let g = "";
-  for (const v of [0, .5, 1]) g += `<line x1="${P}" x2="${W-P}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-dasharray="${v == .5 ? "4 4" : "1 0"}"/><text x="${W-P-2}" y="${y(v) - 3}" text-anchor="end" font-size="10" fill="var(--muted)">${100 * v}%</text>`;
-  g += `<polyline fill="none" stroke="var(--me)" stroke-width="2" points="${R.decisions.map((d, i) => x(i) + "," + y(d.value)).join(" ")}"/>`;
+// a turn's record as steps, in the order things happened: the leads (turn 1), each action (a move
+// with its tera, a switch, a Pokemon that could not move) with what followed it, the end of the
+// turn (after the log's blank line), the switches after a faint (after "upkeep")
+function steps(t) {
+  const out = [];
+  if (t == 1 && R.events[0]) out.push({kind: "lead", side: null, main: null, lines: R.events[0].filter(Boolean)});
+  let cur = null, phase = "act", tera = null, acted = false;
+  for (const line of R.events[t] || []) {
+    const f = line.split("|"), tag = f[0];
+    if (tag === "") { if (acted && phase == "act") { phase = "end"; cur = null; } continue; }
+    if (tag == "upkeep") { phase = "after"; cur = null; continue; }
+    const side = (f[1] || "").startsWith("ME") ? "me" : (f[1] || "").startsWith("OPP") ? "opp" : null;
+    if (tag == "-terastallize") { tera = line; continue; }
+    if (tag == "move" || tag == "cant") {
+      cur = {kind: tag, side, main: line, tera: tera && tera.split("|")[1] == f[1] ? tera : null, lines: []};
+      tera = null; acted = true; out.push(cur); continue;
+    }
+    if (tag == "switch" || tag == "drag") {
+      const kind = tag == "drag" ? "drag" : phase == "after" ? "replace" : fromOf(f) ? "pivot" : "switch";
+      cur = {kind, side, main: line, lines: []}; if (phase == "act") acted = true; out.push(cur); continue;
+    }
+    if (!cur) { cur = {kind: phase == "act" ? "before" : "end", side: null, main: null, lines: []}; out.push(cur); }
+    cur.lines.push(line);
+  }
+  // each decision of the player at its step: the turn's choice at the player's action, a pivot's
+  // switch at the pivot switch, the switches after a faint in order; one the log does not show as
+  // such (a called move, ...) as its own step
+  const pools = {turn: ["move", "switch", "cant"], "pivot switch": ["pivot"], "switch after a faint": ["replace"]};
+  const used = new Set();
   R.decisions.forEach((d, i) => {
-    const bad = d.score >= 0.10;
-    g += `<circle data-i="${i}" cx="${x(i)}" cy="${y(d.value)}" r="${i == cur ? 6 : bad ? 5 : 3}" fill="${bad ? "var(--bad)" : "var(--me)"}" stroke="${i == cur ? "var(--ink)" : "none"}" stroke-width="2"><title>${L.turn(d.turn)}: ${pct(d.value)}</title></circle>`;
+    if (d.turn != t) return;
+    const s = out.find(s => s.side == "me" && pools[d.kind].includes(s.kind) && !used.has(s));
+    if (s) { used.add(s); s.dec = i; }
+    else out.push({kind: "choice", side: "me", main: null, lines: [], dec: i});
   });
-  s.innerHTML = g;
+  return out;
 }
-function decisionHTML(d) {
+function aiHTML(d) {
   const bad = d.score >= 0.10;
-  let h = `<div class="dec"><h3>${L.turn(d.turn)}${L.kinds[d.kind] || ""} · ${L.now} ${pct(d.value)}<span class="tag ${bad ? "bad" : "ok"}">${bad ? L.bad : d.chosen == d.best ? L.same : L.ok}</span></h3>`;
+  let h = `<div class="ai"><div class="aihead">${L.aiHead[d.kind] || L.aiHead.turn} <span class="tag ${bad ? "bad" : "ok"}">${bad ? L.bad : d.chosen == d.best ? L.same : L.ok}</span> <span class="legend">${L.chanceAt(pct(d.value))}</span></div>`;
   h += `<div class="legend">${L.bars}</div>`;
   const opts = d.options.slice();
   if (!opts.some(o => o[0] == d.chosen)) opts.push([d.chosen, d.chosen_share, d.chosen_value]);
@@ -242,24 +327,55 @@ function decisionHTML(d) {
   const b = x => Object.entries(x || {}).map(([k, v]) => (ST[k] || k) + " " + (v > 0 ? "+" + v : v)).join(", ");
   const sideText = (s, label) => `${label}: ${esc(monName(s.active.species))} ${pct(s.active.hp)}${Object.keys(s.boosts || {}).length ? " (" + b(s.boosts) + ")" : ""} · ${L.left(s.alive)}${s.tera_used ? " · " + L.tera : ""}`;
   h += `<div class="state">${sideText(me, L.you)} | ${sideText(op, L.opp)}${Object.keys(me.hazards).length ? " | " + L.hazMe + ": " + b(me.hazards) : ""}${Object.keys(op.hazards).length ? " | " + L.hazOpp + ": " + b(op.hazards) : ""}</div>`;
-  const evs = (d.events || []).map(event).filter(Boolean);
-  if (evs.length) h += `<div class="events"><b>${L.happened}</b>\n${evs.map(esc).join("\n")}</div>`;
+  return h + "</div>";
+}
+function stepHTML(s, n) {
+  const title = s.kind == "lead" ? L.lead : s.kind == "end" ? L.end : s.kind == "before" ? L.before
+    : `${n}. ${s.side == "me" ? L.you : L.opp} · ${L.kinds[s.kind]}`;
+  let head = s.kind == "choice" ? L.unseen(option(R.decisions[s.dec].chosen)) : [s.tera, s.main].filter(Boolean).map(event).filter(Boolean).join("; ");
+  const lines = s.lines.map(event).filter(Boolean);
+  let h = `<div class="step ${s.side || "neutral"}${s.dec != null && s.dec == selD ? " sel" : ""}" ${s.dec != null ? `data-dec="${s.dec}"` : ""}><div class="stitle">${esc(title)}</div>`;
+  if (head) h += `<div class="shead">${esc(head)}</div>`;
+  if (lines.length) h += `<div class="slines">${lines.map(x => "· " + esc(x)).join("<br>")}</div>`;
+  if (s.dec != null) h += aiHTML(R.decisions[s.dec]);
   return h + "</div>";
 }
 function render() {
-  const d = R.decisions[cur];
-  const same = d ? R.decisions.filter(x => x.turn == d.turn) : [];
-  document.getElementById("decisions").innerHTML = same.length ? same.map(decisionHTML).join("") : `<div class="none">${L.noDecision}</div>`;
+  const st = steps(curT);
+  const start = R.decisions.find(d => d.turn == curT && d.kind == "turn");
+  let n = 0;
+  document.getElementById("turnhead").innerHTML = `${esc(L.turn(curT))}${start ? ` <span class="legend">${esc(L.chanceStart(pct(start.value)))}</span>` : ""}`;
+  document.getElementById("decisions").innerHTML = st.map(s => stepHTML(s, ["lead", "end", "before"].includes(s.kind) ? 0 : ++n)).join("");
   document.getElementById("moments").innerHTML = R.moments.map(m => `<li data-i="${m.i}">${L.moment(m.turn, esc(option(m.chosen)), esc(option(m.best)), pct(m.chosen_value), pct(m.best_value))}</li>`).join("") || `<li>${L.noMoments}</li>`;
   curve();
+  const sel = document.querySelector(".step.sel"); if (sel) sel.scrollIntoView({block: "nearest"});
+}
+// the curve by turn: a turn-start decision at its turn, a switch after a faint / a pivot halfway to
+// the next; the current turn marked
+function curve() {
+  const s = document.getElementById("curve"), W = 600, H = 150, P = 10, B = 14, last = Math.max(1, R.last_turn);
+  const x = t => P + (t - 1) * (W - 2 * P) / Math.max(1, last), y = v => P + (1 - v) * (H - P - B);
+  const xd = d => x(d.turn + (d.kind == "turn" ? 0 : 0.5));
+  let g = `<rect x="${x(curT) - 6}" y="${P - 4}" width="12" height="${H - B - P + 8}" fill="var(--line)" opacity=".6"/>`;
+  for (const v of [0, .5, 1]) g += `<line x1="${P}" x2="${W - P}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-dasharray="${v == .5 ? "4 4" : "1 0"}"/><text x="${W - P - 2}" y="${y(v) - 3}" text-anchor="end" font-size="10" fill="var(--muted)">${100 * v}%</text>`;
+  const every = Math.max(1, Math.ceil(last / 15));
+  for (let t = 1; t <= last; t++) if (t == 1 || t % every == 0) g += `<text x="${x(t)}" y="${H - 2}" text-anchor="middle" font-size="10" fill="var(--muted)">${t}</text>`;
+  g += `<polyline fill="none" stroke="var(--me)" stroke-width="2" points="${R.decisions.map(d => xd(d) + "," + y(d.value)).join(" ")}"/>`;
+  R.decisions.forEach((d, i) => {
+    const bad = d.score >= 0.10, mid = d.kind != "turn", color = bad ? "var(--bad)" : "var(--me)";
+    g += `<circle data-i="${i}" cx="${xd(d)}" cy="${y(d.value)}" r="${i == selD ? 6 : bad ? 5 : 4}" fill="${mid ? "var(--panel)" : color}" stroke="${i == selD ? "var(--ink)" : color}" stroke-width="2"><title>${esc(L.turn(d.turn))}${mid ? " · " + esc(L.kinds[d.kind == "pivot switch" ? "pivot" : "replace"]) : ""}: ${pct(d.value)}</title></circle>`;
+  });
+  s.innerHTML = g;
+  s.dataset.last = last;
 }
 function battle() { return window.Replays && Replays.battle; }
-function go(i, seek = true) {
-  if (!R.decisions.length) return;
-  cur = Math.max(0, Math.min(R.decisions.length - 1, i));
+let curT = 1, selD = null;
+function go(t, dec = null, seek = true) {
+  curT = Math.max(1, Math.min(Math.max(1, R.last_turn), t));
+  selD = dec;
   render();
   const b = battle();
-  if (seek && b) b.seekTurn(R.decisions[cur].turn);
+  if (seek && b) b.seekTurn(curT);
 }
 document.title = L.title(R.id);
 document.documentElement.lang = UI == "zh" ? "zh" : "en";
@@ -275,23 +391,32 @@ document.querySelectorAll(".lang button").forEach(btn => {
   if ((btn.dataset.k == "ui" ? UI : NAMES) == btn.dataset.v) btn.classList.add("sel");
   btn.addEventListener("click", () => setPref(btn.dataset.k, btn.dataset.v));
 });
+function nextMistake() {
+  const order = R.decisions.map((d, i) => i).filter(i => R.decisions[i].score >= 0.10);
+  const after = order.find(i => R.decisions[i].turn > curT || (R.decisions[i].turn == curT && selD != null && i > selD));
+  const i = after != null ? after : order[0];
+  if (i != null) go(R.decisions[i].turn, i);
+}
 document.querySelector(".nav").addEventListener("click", e => {
   const a = e.target.dataset.go; if (!a) return;
-  if (a == "first") go(0);
-  if (a == "prev") go(cur - 1);
-  if (a == "next") go(cur + 1);
-  if (a == "mistake") {
-    const j = R.decisions.findIndex((d, k) => k > cur && d.score >= 0.10);
-    go(j >= 0 ? j : R.decisions.findIndex(d => d.score >= 0.10));
-  }
+  if (a == "first") go(1);
+  if (a == "prev") go(curT - 1);
+  if (a == "next") go(curT + 1);
+  if (a == "mistake") nextMistake();
 });
-document.getElementById("curve").addEventListener("click", e => { const i = e.target.dataset && e.target.dataset.i; if (i != null) go(+i); });
+document.getElementById("curve").addEventListener("click", e => {
+  const i = e.target.dataset && e.target.dataset.i;
+  if (i != null) return go(R.decisions[+i].turn, +i);
+  const s = e.currentTarget, r = s.getBoundingClientRect(), last = +s.dataset.last || 1;
+  const fx = (e.clientX - r.left) / r.width * 600;
+  go(Math.round(1 + (fx - 10) / (580 / last)));
+});
 document.addEventListener("keydown", e => {
-  if (e.key == "ArrowLeft") go(cur - 1);
-  if (e.key == "ArrowRight") go(cur + 1);
-  if (e.key == "m" || e.key == "M") document.querySelector('[data-go="mistake"]').click();
+  if (e.key == "ArrowLeft") go(curT - 1);
+  if (e.key == "ArrowRight") go(curT + 1);
+  if (e.key == "m" || e.key == "M") nextMistake();
 });
-document.getElementById("moments").addEventListener("click", e => { const li = e.target.closest("li"); if (li && li.dataset.i != null) go(+li.dataset.i); });
+document.getElementById("moments").addEventListener("click", e => { const li = e.target.closest("li"); if (li && li.dataset.i != null) go(R.decisions[+li.dataset.i].turn, +li.dataset.i); });
 render();
 // the player in the names' language: Showdown's own translation (its Dex reads the language from
 // its prefs; the zh-cn text data loaded before the battle is made)
@@ -330,14 +455,13 @@ const hook = setInterval(() => {
   const prev = b.subscription;
   b.subscribe(function (state) {
     if (prev) prev.call(b, state);
-    if (state == "turn" || state == "paused" || state == "atqueueend") {
-      const i = R.decisions.findIndex(d => d.turn == b.turn);
-      if (i >= 0 && i != cur && R.decisions[cur].turn != b.turn) { cur = i; render(); }
+    if ((state == "turn" || state == "paused" || state == "atqueueend") && b.turn >= 1 && b.turn != curT) {
+      curT = Math.min(b.turn, Math.max(1, R.last_turn)); selD = null; render();
     }
   });
   render();  // (the names, now that the client's data has loaded)
-  const m = /t=(\d+)/.exec(location.hash);  // #t=<turn>: open at that turn's decision
-  if (m) { const i = R.decisions.findIndex(d => d.turn == +m[1]); if (i >= 0) go(i); }
+  const m = /t=(\d+)/.exec(location.hash);  // #t=<turn>: open at that turn
+  if (m) go(+m[1]);
 }, 200);
 </script>
 __PLAYER__
@@ -407,7 +531,7 @@ def render(report: dict, row: dict, client: str = "official") -> str:
     (Showdown's site serves the player: open the file directly) or "local" (our server,
     coach.server: open http://127.0.0.1:<port>/coach/<review>/viewer.html)."""
     events = turn_events(row["log"], report["side"])  # (from the log: the current wording)
-    ds = [d | {"score": round(mistake_score(d), 3), "events": events.get(d["turn"], [])}
+    ds = [{k: v for k, v in d.items() if k != "events"} | {"score": round(mistake_score(d), 3)}
           for d in report["decisions"]]  # fmt: skip
     index = {id(d): i for i, d in enumerate(report["decisions"])}
     moments = [{"i": index[id(m0)], **{k: m[k] for k in ("turn", "chosen", "best", "chosen_value", "best_value")}}
@@ -417,7 +541,8 @@ def render(report: dict, row: dict, client: str = "official") -> str:
     won = report["winner"] == report["side"]
     data = {"id": report["id"], "side": report["side"], "won": won, "turns": report["turns"],
             "ms": report["settings"]["ms"], "worlds": report["settings"]["worlds"],
-            "decisions": ds, "moments": moments}  # fmt: skip
+            "decisions": ds, "moments": moments, "events": events,
+            "last_turn": max(events)}  # fmt: skip
     log = row["log"].replace("</", "<\\/")
     return (PAGE.replace("__REVIEW__", json.dumps(data, ensure_ascii=False).replace("</", "<\\/"))
             .replace("__LOG__", log)
