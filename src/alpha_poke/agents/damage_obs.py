@@ -67,9 +67,9 @@ class Hit:
     # their mon's ability at the hit when the log changed it (``_Abilities``: a Skill Swap's, a
     # Mummy's, a Gastro Acid's "none"); None: the one it started with (the candidates')
     ability_then: str | None = None
-    # our HP shown in percent too: a replay's (a spectator's log -- a review with the team pasted;
-    # 2026-10-30 review: its 100/100 -> 76/100 was read as 24 HP lost, every candidate's
-    # likelihood 0, and the full HP set to 100 of 371)
+    # every HP in percent: a replay's (a review with the team pasted; 2026-10-30 reviews: its
+    # 100/100 -> 76/100 on us was read as 24 HP lost, every candidate's likelihood 0, the full HP
+    # set to 100 of 371; a local replay's exact side is put in percent too -- hits(pct))
     pct: bool = False
 
 
@@ -77,10 +77,16 @@ def _side(ident: str) -> str:
     return ident[:2]
 
 
-def _hp(cond: str) -> int:
-    """'123/300 brn' -> 123; '0 fnt' -> 0"""
+def _hp(cond: str, pct: bool = False) -> int:
+    """'123/300 brn' -> 123; '0 fnt' -> 0. ``pct``: as Showdown shows it in percent ('281/371'
+    -> 76; '76/100' -> 76): a replay's HP, whatever its units -- a local replay has its saver's
+    side exact, the other in percent (2026-10-30 review: 371/371 -> 281/371 read as percent).
+    (No Gen 9 OU mon has 100 max HP: a denominator of 100 is a percent.)"""
     cond = cond.split()[0] if cond else "0"
-    return int(cond.split("/")[0]) if "/" in cond else 0
+    if "/" not in cond:
+        return 0
+    cur, den = (int(x) for x in cond.split("/")[:2])
+    return _shown(cur, den) if pct and den != 100 else cur
 
 
 def _species(details: str) -> str:
@@ -89,7 +95,7 @@ def _species(details: str) -> str:
 
 def hits(lines: list[str], our_side: str, pct: bool = False) -> list[Hit]:
     """The clean hits of a battle's log (the player's own view: its HP exact; ``pct``: a
-    spectator's log, ours in percent as theirs)."""
+    replay's, every HP in percent -- both sides', whatever the log's units)."""
     out: list[Hit] = []
     active: dict[str, str] = {}  # "p1a" -> species id
     hp: dict[tuple[str, str], int] = {}  # (side, species) -> HP (ours exact, theirs percent)
@@ -139,7 +145,7 @@ def hits(lines: list[str], our_side: str, pct: bool = False) -> list[Hit]:
             sp = came_as.setdefault((slot[:2], f[2].split(": ", 1)[-1]), shown)
             active[slot] = sp
             abil.entered((slot[:2], sp))
-            hp[(slot[:2], sp)] = _hp(f[4])
+            hp[(slot[:2], sp)] = _hp(f[4], pct)
             forme[(slot[:2], sp)] = shown
             transformed.discard(slot)
             since[slot] = len(out)
@@ -174,7 +180,7 @@ def hits(lines: list[str], our_side: str, pct: bool = False) -> list[Hit]:
             # 2026-10-24, the belief check)
             slot = f[2][:3]
             sp = active.get(slot)
-            new = _hp(f[3])
+            new = _hp(f[3], pct)
             if pending is not None and tag == "-damage" and len(f) == 4 and slot == pending["def"]:
                 out.append(Hit(turn, pending["by_us"], pending["move"], pending["att"], sp,
                                pending["before"], new, pending["tera"], pending["dtera"],

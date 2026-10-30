@@ -567,8 +567,11 @@ LOG_FAST = """|player|p1|Alice|1|
 |-heal|p2a: Gliscor|100/100|[from] item: Leftovers
 |upkeep
 |turn|2
+|move|p2a: Gliscor|Spikes|p1a: Great Tusk
+|-sidestart|p1: Alice|Spikes
 |move|p1a: Great Tusk|Rapid Spin|p2a: Gliscor
 |-damage|p2a: Gliscor|90/100
+|-sideend|p1: Alice|Spikes|[from] move: Rapid Spin|[of] p1a: Great Tusk
 |upkeep
 |turn|3
 |win|Alice
@@ -594,10 +597,36 @@ Adamant Nature
 """
 
 
-def _turn2(known=None, k=0):
-    ps = positions_from_replay({"id": "fast", "log": LOG_FAST, "rating": None, "uploadtime": 0},
+TEAM_FAST_P2 = """Gliscor @ Leftovers
+Ability: Poison Heal
+Tera Type: Water
+EVs: 244 HP / 12 Def / 252 Spe
+Jolly Nature
+- Earthquake
+- Knock Off
+- Protect
+- Spikes
+
+Kingambit @ Leftovers
+Ability: Supreme Overlord
+Tera Type: Dark
+EVs: 252 HP / 252 Atk / 4 SpD
+Adamant Nature
+- Kowtow Cleave
+- Sucker Punch
+- Iron Head
+- Swords Dance
+"""
+# (a local replay: its saver's side, p1, in exact HP -- the Great Tusk's 371 -- the other in percent)
+LOG_FAST_EXACT = LOG_FAST.replace("|Great Tusk|100/100", "|Great Tusk|371/371").replace(
+    "|p1a: Great Tusk|76/100", "|p1a: Great Tusk|281/371"
+)
+
+
+def _turn2(known=None, k=0, log=None, side="p1"):
+    ps = positions_from_replay({"id": "fast", "log": log or LOG_FAST, "rating": None, "uploadtime": 0},
                                BeliefModel.load(), random.Random(k), extra_per_game=10**6,
-                               worlds=8, known_sets=known, side="p1")  # fmt: skip
+                               worlds=8, known_sets=known, side=side)  # fmt: skip
     p = next(p for p in ps if p.turn == 2 and p.kind == 0)
     return [pe.State.from_string(w) for w in [p.state, *(p.worlds or [])]]
 
@@ -795,11 +824,15 @@ Jolly Nature
     assert match_team(parse_team(team), records, tricked, "p1")
 
 
-def test_a_replays_hit_on_us_is_read_in_percent(monkeypatch):
-    """2026-10-30 review: the damage evidence of a review read our HP as exact, as in play, but a
-    replay shows both sides in percent: Gliscor's Earthquake taking our 371-HP Great Tusk from
-    100/100 to 76/100 was 24 HP lost (every candidate's likelihood 0) and its full HP set to 100.
-    In percent it is 86-89 HP, which the Gliscor's sets do."""
+@pytest.mark.parametrize("log", ["percent", "p1 exact"])
+@pytest.mark.parametrize("side", ["p1", "p2"])
+def test_a_replays_hits_are_read_in_percent(monkeypatch, log, side):
+    """2026-10-30 reviews: a review's damage evidence read our HP as exact, as in play, but a
+    public replay shows both sides in percent -- Gliscor's Earthquake taking our 371-HP Great Tusk
+    from 100/100 to 76/100 was 24 HP lost (every candidate's likelihood 0) and its full HP set to
+    100 -- while a local replay has its saver's side exact (371/371 -> 281/371) and the other in
+    percent. A replay's every HP is read in percent, whatever its units, from either player's
+    view: the hit on us (p1's view) and by us (p2's)."""
     from alpha_poke.agents import damage_obs
 
     seen = []
@@ -811,7 +844,11 @@ def test_a_replays_hit_on_us_is_read_in_percent(monkeypatch):
         return out
 
     monkeypatch.setattr(damage_obs, "likelihood", spy)
-    _turn2({"p1": parse_team(TEAM_FAST)})
-    ours = [(h, out) for h, out in seen if not h.by_us and h.move == "earthquake"]
-    assert ours and all(h.pct and h.before == 100 and h.after == 76 for h, _ in ours)
-    assert all(any(x > 0 for x in out) for _, out in ours), ours
+    team = TEAM_FAST if side == "p1" else TEAM_FAST_P2
+    _turn2(
+        {side: parse_team(team)}, log=LOG_FAST if log == "percent" else LOG_FAST_EXACT, side=side
+    )
+    hits = [(h, out) for h, out in seen if h.move == "earthquake"]
+    assert hits and all(h.by_us == (side == "p2") for h, _ in hits)
+    assert all(h.pct and h.before == 100 and h.after == 76 for h, _ in hits), hits
+    assert all(any(x > 0 for x in out) for _, out in hits), hits
