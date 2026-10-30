@@ -56,5 +56,7 @@ Windows / macOS builds of the app (no Python or Rust needed): `.github/workflows
   not a skill score.
 
 A marked decision is a question worth a second look, not a proven mistake. The screenshot in the
-README is a game between our bot and Foul Play: on turn 24 Foul Play switched out of a won
-position (any attack wins; the switch-in fainted and the game was lost), and the review marks it.
+README is a game between our bot and Foul Play, reviewed from Foul Play's side with its team
+pasted: on turn 6 its Great Tusk (+2 Attack) switches out to Corviknight, the opposing Great Tusk
+boosts again and knocks Corviknight out with Close Combat the next turn. Every option that stays
+in is rated above the switch (Rapid Spin 37%, Bulk Up 33%, the switch 21%, each ± 1-2).

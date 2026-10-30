@@ -106,8 +106,10 @@ Against Foul Play, the bots and their settings: [doc/evaluation.md](doc/evaluati
 
 ![A game review: Showdown's replay player beside the search's view of each decision](doc/images/review.png)
 
-*A game between our bot and Foul Play, reviewed from Foul Play's side: on turn 24 any attack
-wins, but it switches out; the switch-in faints and the game is lost.*
+*A game between our bot and Foul Play, reviewed from Foul Play's side with its team pasted. On
+turn 6 its boosted Great Tusk switches out to Corviknight; the other Great Tusk boosts again and
+knocks Corviknight out the next turn. The search rates every option that stays in above the
+switch (Rapid Spin 37%, the switch 21%).*
 
 The same search can give a second opinion on a game, decision by decision: each option's
 estimated winning chance, the player's choice and the search's. It may help newer players spot
