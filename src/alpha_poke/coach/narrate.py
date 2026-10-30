@@ -79,7 +79,7 @@ def summary(report: dict) -> str:
     for d in key_moments(report):
         opts = ", ".join(
             f"{c} {'untried' if q is None else f'{100 * q:.0f}%'} ({100 * s:.0f}% of the search)"
-            for c, s, q in d["options"][:4]
+            for c, s, q, *_ in d["options"][:4]
         )
         lines.append(f"- turn {d['turn']}: chose **{d['chosen']}**"
                      f" ({'never tried by the search' if d['chosen_value'] is None else f'{100 * d['chosen_value']:.0f}%'}),"

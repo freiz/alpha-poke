@@ -36,6 +36,9 @@ def main() -> int:
     ap.add_argument("--worlds", type=int, default=16, help="belief worlds per decision")
     ap.add_argument("--ms", type=int, default=2000, help="search time per decision")
     ap.add_argument("--threads", type=int, default=2)
+    ap.add_argument(
+        "--repeats", type=int, default=3, help="independent searches per decision (errors)"
+    )
     ap.add_argument("--llm", action="store_true", help="also the chat model's write-up")
     ap.add_argument("--language", default="Chinese (简体中文)")
     ap.add_argument("--from-json", action="store_true", help="reuse review.json (no search)")
@@ -51,7 +54,7 @@ def main() -> int:
     else:
         print(f"{row['id']}: reviewing {side}'s decisions ({a.ms} ms x {a.threads} threads each)")
         rep = review(row, side, BeliefModel.load(), a.model, worlds=a.worlds, ms=a.ms,
-                     threads=a.threads)  # fmt: skip
+                     threads=a.threads, repeats=a.repeats)  # fmt: skip
         (out / "review.json").write_text(
             json.dumps(rep, ensure_ascii=False, indent=1), encoding="utf-8"
         )

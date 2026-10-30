@@ -8,7 +8,7 @@ local file: it needs the internet for the player's scripts and sprites)."""
 
 import json
 
-from alpha_poke.coach.review import key_moments, mistake_score, turn_events
+from alpha_poke.coach.review import mistake_score, turn_events
 
 PAGE = r"""<!DOCTYPE html>
 <html lang="en">
@@ -17,7 +17,7 @@ PAGE = r"""<!DOCTYPE html>
 <title>Game review</title>
 <style>
   :root { --bg: #f5f6f8; --panel: #ffffff; --ink: #1d2330; --muted: #677085; --line: #d9dde5;
-          --good: #2f9e5b; --bad: #d64545; --ai: #3567d6; --me: #e08a1e; }
+          --good: #2f9e5b; --bad: #d64545; --mild: #c9a227; --ai: #3567d6; --me: #e08a1e; }
   @media (prefers-color-scheme: dark) {
     :root { --bg: #15181e; --panel: #1f242d; --ink: #e6e9ef; --muted: #9aa3b5; --line: #343b48; }
   }
@@ -38,7 +38,9 @@ PAGE = r"""<!DOCTYPE html>
   .dec { border-top: 1px solid var(--line); padding: 10px 0 4px; }
   .dec h3 { margin: 0 0 6px; font-size: 15px; }
   .tag { display: inline-block; font-size: 12px; padding: 1px 7px; border-radius: 10px; margin-left: 6px; }
-  .tag.bad { background: var(--bad); color: #fff; } .tag.ok { background: var(--good); color: #fff; }
+  .tag.bad { background: var(--bad); color: #fff; } .tag.ok { background: var(--good); color: #fff; } .tag.mild { background: var(--mild); color: #fff; }
+  .tune { font-size: 12px; color: var(--muted); display: flex; gap: 14px; flex-wrap: wrap; align-items: center; margin: 4px 0 2px; }
+  .tune input { vertical-align: middle; width: 110px; } .tune b { color: var(--ink); }
   .opt { display: grid; grid-template-columns: minmax(96px, 150px) 1.4fr 76px 1fr 40px; gap: 6px 8px; align-items: center; margin: 3px 0; }
   .opt.head { color: var(--muted); font-size: 12px; margin-top: 6px; } .opt.head span:nth-child(2) { grid-column: 2 / 4; } .opt.head span:nth-child(3) { grid-column: 4 / 6; }
   .opt .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -78,6 +80,9 @@ PAGE = r"""<!DOCTYPE html>
   <section id="panel">
     <svg id="curve"></svg>
     <div class="legend" id="curvenote"></div>
+    <div class="tune"><span id="tunehead"></span>
+      <label><span id="tz"></span> <input type="range" id="z" min="1" max="3" step="0.5" /> <b id="zv"></b></label>
+      <label><span id="tl"></span> <input type="range" id="low" min="5" max="30" step="5" /> <b id="lowv"></b></label></div>
     <div class="nav">
       <button data-go="first"></button><button data-go="prev"></button>
       <button data-go="next"></button><button data-go="mistake"></button>
@@ -130,9 +135,11 @@ const T = {
     you: "You", opp: "Opponent",
     kinds: {move: "move", cant: "could not move", switch: "switch", pivot: "switch (pivot move)", replace: "switch after a faint", drag: "forced out", choice: "your choice"},
     aiHead: {turn: "The AI on your choice at the start of the turn", "pivot switch": "The AI on your switch", "switch after a faint": "The AI on your switch"},
-    chanceAt: v => `your winning chance at this decision: ${v}`, bad: "AI disagrees", same: "same as the AI", ok: "acceptable",
+    chanceAt: v => `your winning chance at this decision: ${v}`, bad: "AI disagrees", mild: "AI doesn't like it", same: "same as the AI", ok: "acceptable",
     bars: `<span style="color:var(--me)">Orange</span> = your choice, <span style="color:var(--ai)">blue</span> = the AI's choice. In brackets: the difference from the AI's choice.`,
     winCol: "Winning chance after it", shareCol: "The AI's share of thinking", home: "← Home",
+    tune: "How strict:", tz: "a gap counts beyond", tzv: v => `${v}× its error`, tl: "the AI shuns a choice it thinks about less than", tlv: v => `${v}%`,
+    noteRuns: n => n > 1 ? ` × ${n} searches` : "", approx: "≈",
     untried: "untried", left: n => `${n} left`, tera: "terastallized",
     hazMe: "hazards on your side", hazOpp: "on the opponent's side", unseen: x => `You chose ${x} (the log does not show it as such)`,
     switchTo: x => `Switch to ${x}`, teraSuffix: " + Tera",
@@ -173,9 +180,11 @@ const T = {
     you: "你", opp: "对手",
     kinds: {move: "出招", cant: "无法行动", switch: "换人", pivot: "折返换人", replace: "倒下后换人", drag: "被强制换下", choice: "你的选择"},
     aiHead: {turn: "AI 怎么看你回合开始时的选择", "pivot switch": "AI 怎么看你这次换人", "switch after a faint": "AI 怎么看你这次换人"},
-    chanceAt: v => `做这个决策时你的胜率 ${v}`, bad: "AI 不认同", same: "和 AI 一致", ok: "可以接受",
+    chanceAt: v => `做这个决策时你的胜率 ${v}`, bad: "AI 不认同", mild: "AI 不太喜欢", same: "和 AI 一致", ok: "可以接受",
     bars: `<span style="color:var(--me)">橙色</span>=你的选择，<span style="color:var(--ai)">蓝色</span>=AI 的选择；括号里是和 AI 选择的胜率差距。`,
     winCol: "选这一步后的胜率", shareCol: "AI 思考的比例", home: "← 主页",
+    tune: "判定标准：", tz: "胜率差距超出误差的", tzv: v => `${v} 倍才算数`, tl: "AI 思考比例低于", tlv: v => `${v}% 算不认同`,
+    noteRuns: n => n > 1 ? ` × ${n} 次搜索` : "", approx: "≈",
     untried: "未尝试", left: n => `剩 ${n} 只`, tera: "已太晶",
     hazMe: "你这边的钉子", hazOpp: "对手那边的钉子", unseen: x => `你选择了 ${x}（日志里没有按这样显示）`,
     switchTo: x => `换上 ${x}`, teraSuffix: " + 太晶",
@@ -317,19 +326,37 @@ function steps(t) {
   });
   return out;
 }
+function setting(k, d) { try { const v = parseFloat(localStorage.getItem("coach-" + k)); return isNaN(v) ? d : v; } catch (e) { return d; } }
+let Z = setting("z", 2), LOW = setting("low", 10);
+// as coach.review.verdict: "same"; "bad" -- the AI hardly thought of the choice and the chance it
+// loses is beyond the noise (Z standard errors; without errors 5 points), or the loss alone is
+// beyond the noise and at least 5 points; "mild" -- hardly thought of, the loss within the noise
+function verdict(d) {
+  if (d.chosen == d.best) return "same";
+  const real = d.loss != null && (d.loss_se ? d.loss > Z * d.loss_se : d.loss >= 0.05);
+  const shunned = d.chosen_share < LOW / 100 && d.options[0][1] >= 0.5;
+  if (shunned) return real ? "bad" : "mild";
+  return real && d.loss >= 0.05 ? "bad" : "ok";
+}
+const pm = se => se ? ` ±${Math.max(1, Math.round(100 * se))}` : "";
 function aiHTML(d) {
-  const bad = d.score >= 0.10;
-  let h = `<div class="aibox"><div class="aihead">${L.aiHead[d.kind] || L.aiHead.turn} <span class="tag ${bad ? "bad" : "ok"}">${bad ? L.bad : d.chosen == d.best ? L.same : L.ok}</span> <span class="legend">${L.chanceAt(pct(d.value))}</span></div>`;
+  const v = verdict(d), tag = {bad: L.bad, mild: L.mild, same: L.same, ok: L.ok}[v];
+  let h = `<div class="aibox"><div class="aihead">${L.aiHead[d.kind] || L.aiHead.turn} <span class="tag ${v == "same" ? "ok" : v}">${tag}</span> <span class="legend">${L.chanceAt(pct(d.value) + pm(d.value_se))}</span></div>`;
   h += `<div class="legend">${L.bars}</div>`;
   h += `<div class="opt head"><span></span><span>${L.winCol}</span><span>${L.shareCol}</span></div>`;
   const opts = d.options.slice();
-  if (!opts.some(o => o[0] == d.chosen)) opts.push([d.chosen, d.chosen_share, d.chosen_value]);
-  for (const [o, share, q] of opts) {
+  if (!opts.some(o => o[0] == d.chosen)) opts.push([d.chosen, d.chosen_share, d.chosen_value, null]);
+  const bestSe = (d.options[0] || [])[3];
+  for (const [o, share, q, se] of opts) {
     const cls = o == d.chosen ? "me" : o == d.best ? "ai" : "";
-    const diff = q == null || o == d.best ? "" : ` <span class="diff">(${q >= d.best_value ? "+" : ""}${Math.round(100 * (q - d.best_value))})</span>`;
+    let diff = "";
+    if (q != null && o != d.best) {  // the gap to the AI's choice, "≈" within Z errors
+      const gap = q - d.best_value, gse = se && bestSe ? Math.hypot(se, bestSe) : null;
+      diff = ` <span class="diff">(${gse && Math.abs(gap) <= Z * gse ? L.approx : (gap >= 0 ? "+" : "") + Math.round(100 * gap)})</span>`;
+    }
     h += `<div class="opt"><span class="name ${cls}" title="${esc(o)}">${esc(option(o))}</span>
       <span class="bar"><span class="win" style="width:${q == null ? 0 : 100 * q}%"></span></span>
-      <span class="num">${q == null ? L.untried : pct(q)}${diff}</span>
+      <span class="num">${q == null ? L.untried : pct(q) + pm(se)}${diff}</span>
       <span class="bar"><span class="share" style="width:${100 * share}%"></span></span>
       <span class="num">${pct(share)}</span></div>`;
   }
@@ -356,7 +383,9 @@ function render() {
   let n = 0;
   document.getElementById("turnhead").innerHTML = `${esc(L.turn(curT))}${start ? ` <span class="legend">${esc(L.chanceStart(pct(start.value)))}</span>` : ""}`;
   document.getElementById("decisions").innerHTML = st.map(s => stepHTML(s, ["lead", "end", "before"].includes(s.kind) ? 0 : ++n)).join("");
-  document.getElementById("moments").innerHTML = R.moments.map(m => `<li data-i="${m.i}">${L.moment(m.turn, esc(option(m.chosen)), esc(option(m.best)), pct(m.chosen_value), pct(m.best_value))}</li>`).join("") || `<li>${L.noMoments}</li>`;
+  // the decisions the AI disagreed with (under the current thresholds), most first
+  const moments = R.decisions.map((d, i) => ({d, i})).filter(x => verdict(x.d) == "bad").sort((a, b) => b.d.score - a.d.score).slice(0, 5);
+  document.getElementById("moments").innerHTML = moments.map(({d, i}) => `<li data-i="${i}">${L.moment(d.turn, esc(option(d.chosen)), esc(option(d.best)), d.chosen_value == null ? L.untried : pct(d.chosen_value), pct(d.best_value))}</li>`).join("") || `<li>${L.noMoments}</li>`;
   curve();
   const sel = document.querySelector(".step.sel"); if (sel) sel.scrollIntoView({block: "nearest"});
 }
@@ -374,7 +403,7 @@ function curve() {
   for (let t = 1; t <= last; t++) if (t == 1 || t % every == 0) g += `<text x="${x(t)}" y="${H - 2}" text-anchor="middle" font-size="10" fill="var(--muted)">${t}</text>`;
   g += `<polyline fill="none" stroke="var(--me)" stroke-width="2" points="${R.decisions.map(d => xd(d) + "," + y(d.value)).join(" ")}"/>`;
   R.decisions.forEach((d, i) => {
-    const bad = d.score >= 0.10, mid = d.kind != "turn", color = bad ? "var(--bad)" : "var(--me)";
+    const v = verdict(d), bad = v == "bad", mid = d.kind != "turn", color = bad ? "var(--bad)" : v == "mild" ? "var(--mild)" : "var(--me)";
     g += `<circle data-i="${i}" cx="${xd(d)}" cy="${y(d.value)}" r="${i == selD ? 6 : bad ? 5 : 4}" fill="${mid ? "var(--panel)" : color}" stroke="${i == selD ? "var(--ink)" : color}" stroke-width="2"><title>${esc(L.turn(d.turn))}${mid ? " · " + esc(L.kinds[d.kind == "pivot switch" ? "pivot" : "replace"]) : ""}: ${pct(d.value)}</title></circle>`;
   });
   s.innerHTML = g;
@@ -394,18 +423,26 @@ document.documentElement.lang = UI == "zh" ? "zh" : "en";
 document.getElementById("title").textContent = L.title(R.id);
 if (location.protocol.startsWith("http")) { const a = document.getElementById("home"); a.textContent = L.home; a.hidden = false; }
 document.getElementById("res").textContent = R.won ? L.won : L.lost;
-document.getElementById("note").textContent = L.note(R.ms, R.worlds);
+document.getElementById("note").textContent = L.note(R.ms, R.worlds) + L.noteRuns(R.repeats || 1);
 document.getElementById("lui").textContent = L.ui;
 document.getElementById("lnames").textContent = L.names;
 document.getElementById("curvenote").textContent = L.curve;
 document.getElementById("momentshead").textContent = L.momentsHead;
 for (const k of ["first", "prev", "next", "mistake"]) document.querySelector(`[data-go="${k}"]`).textContent = L[k];
+document.getElementById("tunehead").textContent = L.tune;
+document.getElementById("tz").textContent = L.tz; document.getElementById("tl").textContent = L.tl;
+for (const [id, get, set] of [["z", () => Z, v => { Z = v; }], ["low", () => LOW, v => { LOW = v; }]]) {
+  const el = document.getElementById(id), out = document.getElementById(id + "v");
+  const show = () => { out.textContent = id == "z" ? L.tzv(get()) : L.tlv(get()); };
+  el.value = get(); show();
+  el.addEventListener("input", () => { set(parseFloat(el.value)); show(); try { localStorage.setItem("coach-" + id, el.value); } catch (e) {} render(); });
+}
 document.querySelectorAll(".lang button").forEach(btn => {
   if ((btn.dataset.k == "ui" ? UI : NAMES) == btn.dataset.v) btn.classList.add("sel");
   btn.addEventListener("click", () => setPref(btn.dataset.k, btn.dataset.v));
 });
 function nextMistake() {
-  const order = R.decisions.map((d, i) => i).filter(i => R.decisions[i].score >= 0.10);
+  const order = R.decisions.map((d, i) => i).filter(i => verdict(R.decisions[i]) == "bad");
   const after = order.find(i => R.decisions[i].turn > curT || (R.decisions[i].turn == curT && selD != null && i > selD));
   const i = after != null ? after : order[0];
   if (i != null) go(R.decisions[i].turn, i);
@@ -547,15 +584,11 @@ def render(report: dict, row: dict, client: str = "official") -> str:
     events = turn_events(row["log"], report["side"])  # (from the log: the current wording)
     ds = [{k: v for k, v in d.items() if k != "events"} | {"score": round(mistake_score(d), 3)}
           for d in report["decisions"]]  # fmt: skip
-    index = {id(d): i for i, d in enumerate(report["decisions"])}
-    moments = [{"i": index[id(m0)], **{k: m[k] for k in ("turn", "chosen", "best", "chosen_value", "best_value")}}
-               for m in key_moments(report)
-               for m0 in report["decisions"] if m0["turn"] == m["turn"] and m0["chosen"] == m["chosen"]
-               and m0["kind"] == m["kind"]][:5]  # fmt: skip
+    # (the verdicts and the moments: computed by the page, its thresholds adjustable)
     won = report["winner"] == report["side"]
     data = {"id": report["id"], "side": report["side"], "won": won, "turns": report["turns"],
             "ms": report["settings"]["ms"], "worlds": report["settings"]["worlds"],
-            "decisions": ds, "moments": moments, "events": events,
+            "decisions": ds, "events": events, "repeats": report["settings"].get("repeats", 1),
             "last_turn": max(events)}  # fmt: skip
     log = row["log"].replace("</", "<\\/")
     return (PAGE.replace("__REVIEW__", json.dumps(data, ensure_ascii=False).replace("</", "<\\/"))

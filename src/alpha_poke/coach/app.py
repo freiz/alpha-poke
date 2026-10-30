@@ -5,7 +5,7 @@ to look, and gets the review page when the search is done. Loopback only; one re
 
   GET  /                      the home page (the reviews so far, the form)
   POST /api/players           {source} or {upload: {name, text}} -> the replay's players
-  POST /api/review            {source | upload, player, strength} -> {job}
+  POST /api/review            {source | upload, player, strength | custom} -> {job}
   GET  /api/job/<id>          {status, done, total, url, error}
   GET  /api/reviews           the reviews in data/coach
 """
@@ -26,7 +26,19 @@ from alpha_poke.coach.review import review
 from alpha_poke.selfplay.runner import MODEL
 
 # search effort per decision: (belief worlds, milliseconds)
-STRENGTH = {"fast": (8, 500), "standard": (16, 2000), "deep": (32, 5000)}
+# search effort per decision: (belief worlds, milliseconds, independent searches -- their spread
+# gives the values' errors, 2026-10-30)
+STRENGTH = {"fast": (8, 500, 1), "standard": (16, 2000, 3), "deep": (32, 3000, 5)}
+LIMITS = {"worlds": (4, 64), "ms": (200, 10_000), "repeats": (1, 8)}  # (a custom strength's)
+
+
+def custom_strength(c: dict) -> tuple[int, int, int]:
+    """A custom strength {worlds, seconds, repeats} within LIMITS."""
+    clamp = lambda k, v: int(min(max(v, LIMITS[k][0]), LIMITS[k][1]))  # noqa: E731
+    return (clamp("worlds", float(c.get("worlds", 16))), clamp("ms", 1000 * float(c.get("seconds", 2))),
+            clamp("repeats", float(c.get("repeats", 3))))  # fmt: skip
+
+
 COACH = paths.DATA / "coach"
 # the messages the page shows, in its interface language (the request's "lang")
 MESSAGES = {
@@ -72,7 +84,8 @@ class Jobs:
             self._belief = BeliefModel.load()
         return self._belief
 
-    def submit(self, row: dict, player: str, strength: str) -> str:
+    def submit(self, row: dict, player: str, strength) -> str:
+        """``strength``: a preset's name or (worlds, ms, repeats)."""
         jid = uuid.uuid4().hex[:12]
         self.jobs[jid] = {"status": "queued", "done": 0, "total": 0, "url": None, "error": None}
         self.queue.put((jid, row, player, strength))
@@ -85,12 +98,13 @@ class Jobs:
             try:
                 job["status"] = "running"
                 side = replays.side_of(row, player)
-                worlds, ms = self.strengths.get(strength, self.strengths["standard"])
+                worlds, ms, repeats = (strength if isinstance(strength, tuple)
+                                       else self.strengths.get(strength, self.strengths["standard"]))  # fmt: skip
 
                 def progress(done, total, job=job):
                     job["done"], job["total"] = done, total
 
-                rep = review(row, side, self.belief(), self.model or model_dir(), worlds=worlds, ms=ms,
+                rep = review(row, side, self.belief(), self.model or model_dir(), worlds=worlds, ms=ms, repeats=repeats,
                              threads=self.threads, log=lambda *_: None, progress=progress)  # fmt: skip
                 out = COACH / f"{row['id']}-{side}"
                 out.mkdir(parents=True, exist_ok=True)
@@ -191,7 +205,15 @@ def handler(cache, jobs: Jobs):
                 if player not in row["players"]:
                     return self._json({"error": message("player", lang)}, HTTPStatus.BAD_REQUEST)
                 return self._json(
-                    {"job": jobs.submit(row, player, body.get("strength") or "standard")}
+                    {
+                        "job": jobs.submit(
+                            row,
+                            player,
+                            custom_strength(body["custom"])
+                            if body.get("custom")
+                            else body.get("strength") or "standard",
+                        )
+                    }
                 )
             return self._json({"error": "not found"}, HTTPStatus.NOT_FOUND)
 
@@ -268,7 +290,15 @@ HOME = r"""<!DOCTYPE html>
         <label><input type="radio" name="strength" value="fast" /> <span data-t="fast"></span></label>
         <label><input type="radio" name="strength" value="standard" checked /> <span data-t="standard"></span></label>
         <label><input type="radio" name="strength" value="deep" /> <span data-t="deep"></span></label>
+        <label><input type="radio" name="strength" value="custom" /> <span data-t="custom"></span></label>
       </div>
+      <div class="choice" id="customize" hidden>
+        <label><span data-t="repeats"></span> <input type="number" id="c-repeats" min="1" max="8" value="3" style="width:4em" /></label>
+        <label><span data-t="seconds"></span> <input type="number" id="c-seconds" min="0.2" max="10" step="0.1" value="2" style="width:4.5em" /></label>
+        <label><span data-t="worlds"></span> <input type="number" id="c-worlds" min="4" max="64" value="16" style="width:4em" /></label>
+        <span class="muted" id="c-est"></span>
+      </div>
+      <div class="muted" data-t="strengthNote"></div>
       <button class="go" id="go" data-t="start"></button>
     </div>
     <div id="progress" hidden><div class="muted" id="ptext"></div><div class="bar"><span id="pbar"></span></div></div>
@@ -281,15 +311,19 @@ const T = {
   en: {title: "Game review", ui: "Interface",
        intro: "An AI rethinks each of your decisions from your side of the game: every option's winning chance, the AI's choice, the key mistakes. Gen 9 OU only. Everything runs on your computer.",
        link: "Showdown replay link or id", fileLabel: "or a saved replay file (.html / .json / .log)", load: "Load the game",
-       which: "Which player were you?", strength: "How deep to look", fast: "Fast (about half a minute)",
-       standard: "Standard (1–2 minutes)", deep: "Deep (about 5 minutes)", start: "Review", past: "Reviews so far", none: "None yet.",
+       which: "Which player were you?", strength: "How deep to look", fast: "Fast: 1 search × 0.5 s per decision",
+       standard: "Standard: 3 searches × 2 s", deep: "Deep: 5 searches × 3 s", custom: "Custom",
+       repeats: "searches", seconds: "seconds each", worlds: "belief worlds", est: s => `≈ ${s} s per decision`,
+       strengthNote: "More searches give steadier numbers and their error ranges (the hidden sets are guessed anew each time); a game has 20–40 decisions.", start: "Review", past: "Reviews so far", none: "None yet.",
        queued: "Waiting…", building: "Rebuilding each decision's position…", step: (d, n) => `Thinking about decision ${d} of ${n}…`,
        won: "won", lost: "lost", turns: n => `${n} turns`},
   zh: {title: "对局复盘", ui: "界面",
        intro: "AI 从你的视角重新思考你的每一步：每个选择的胜率、AI 的选择、关键失误。只支持 Gen 9 OU。全部在你的电脑上运行。",
        link: "Showdown 回放链接或编号", fileLabel: "或者选择保存的回放文件（.html / .json / .log）", load: "读取对局",
-       which: "你是哪一位玩家？", strength: "分析强度", fast: "快速（约半分钟）", standard: "标准（1–2 分钟）",
-       deep: "深入（约 5 分钟）", start: "开始分析", past: "以前的复盘", none: "还没有。",
+       which: "你是哪一位玩家？", strength: "分析强度", fast: "快速：每步 1 次搜索 × 0.5 秒", standard: "标准：3 次 × 2 秒",
+       deep: "深入：5 次 × 3 秒", custom: "自定义",
+       repeats: "搜索次数", seconds: "每次秒数", worlds: "信念世界数", est: s => `约每步 ${s} 秒`,
+       strengthNote: "搜索次数越多，数字越稳，还能给出误差范围（每次都重新猜一遍对手的隐藏配置）；一局通常有 20–40 个决策。", start: "开始分析", past: "以前的复盘", none: "还没有。",
        queued: "排队中……", building: "正在重建每一步的局面……", step: (d, n) => `正在分析第 ${d} / ${n} 步……`,
        won: "胜", lost: "负", turns: n => `${n} 回合`},
 };
@@ -304,6 +338,9 @@ document.querySelectorAll(".lang button").forEach(b => {
   b.onclick = () => { try { localStorage.setItem("coach-ui", b.dataset.v); } catch (e) {} location.search = "?ui=" + b.dataset.v; };
 });
 const $ = id => document.getElementById(id);
+const estimate = () => { $("c-est").textContent = L.est(Math.round(10 * $("c-repeats").value * $("c-seconds").value) / 10); };
+document.querySelectorAll("input[name=strength]").forEach(r => r.addEventListener("change", () => { $("customize").hidden = r.value != "custom" || !r.checked; }));
+["c-repeats", "c-seconds", "c-worlds"].forEach(id => $(id).addEventListener("input", estimate)); estimate();
 const esc = x => String(x).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
 let body = null;
 async function post(url, data) {
@@ -330,7 +367,8 @@ $("go").onclick = async () => {
   try {
     const player = document.querySelector("input[name=player]:checked").value;
     const strength = document.querySelector("input[name=strength]:checked").value;
-    const {job} = await post("/api/review", {...body, player, strength});
+    const custom = strength == "custom" ? {repeats: +$("c-repeats").value, seconds: +$("c-seconds").value, worlds: +$("c-worlds").value} : null;
+    const {job} = await post("/api/review", {...body, player, strength, custom});
     const poll = async () => {
       const j = await (await fetch("/api/job/" + job)).json();
       if (j.status == "error") throw new Error(j.error);

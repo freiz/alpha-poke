@@ -46,6 +46,40 @@ def test_every_decision_is_searched(report):
     assert key_moments(report, min_score=0.0)  # (some decision ranks first)
 
 
+def test_repeated_searches_give_errors(game):
+    """repeats > 1: each decision searched over that many draws of belief worlds; the values are
+    means with standard errors, the loss with the two errors combined."""
+    rep = review(game, "p1", BeliefModel.load(), str(FIXTURES / "tiny_net"), worlds=2, ms=20,
+                 threads=1, log=lambda *_: None, repeats=3)  # fmt: skip
+    ds = rep["decisions"]
+    assert rep["settings"]["repeats"] == 3 and all(d["repeats"] == 3 for d in ds)
+    assert all(
+        abs(sum(o[1] for o in d["options"]) - 1) < 0.05 or len(d["options"]) >= 6 for d in ds
+    )
+    assert any(d["value_se"] is not None for d in ds)
+    assert all(len(o) == 4 for d in ds for o in d["options"])
+
+
+def test_the_verdict():
+    from alpha_poke.coach.review import verdict
+
+    base = {
+        "chosen": "a",
+        "best": "b",
+        "options": [["b", 0.8, 0.40, 0.01], ["a", 0.02, 0.30, 0.01]],
+    }
+    shunned = base | {"chosen_share": 0.02}
+    assert verdict(base | {"chosen": "b", "chosen_share": 0.8, "loss": 0}) == "same"
+    assert verdict(shunned | {"loss": 0.10, "loss_se": 0.014}) == "bad"  # beyond 2 errors
+    assert verdict(shunned | {"loss": 0.02, "loss_se": 0.014}) == "mild"  # within the noise
+    assert (
+        verdict(shunned | {"loss": 0.02, "loss_se": 0.014}, z=1) == "bad"
+    )  # (stricter on noise: 1 error)
+    assert verdict(shunned | {"loss": None, "loss_se": None}) == "mild"  # never tried: no value
+    assert verdict(base | {"chosen_share": 0.3, "loss": 0.03, "loss_se": None}) == "ok"
+    assert verdict(base | {"chosen_share": 0.3, "loss": 0.08, "loss_se": 0.01}) == "bad"
+
+
 def test_events_name_the_sides(game):
     ev = turn_events(game["log"], "p1")
     lines = [x for t in ev.values() for x in t]
@@ -138,7 +172,7 @@ def test_the_app_reviews_an_uploaded_replay(game):
         s.bind(("127.0.0.1", 0))
         port = s.getsockname()[1]
     httpd = app.make(port, offline=True, threads=1, model=str(FIXTURES / "tiny_net"),
-                     strengths={"standard": (2, 20)})  # fmt: skip
+                     strengths={"standard": (2, 20, 2)})  # fmt: skip
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
     base = f"http://127.0.0.1:{port}"
     try:

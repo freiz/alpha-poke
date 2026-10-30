@@ -12,8 +12,10 @@ The numbers are the search's estimates (noisy: a few seconds of search, belief s
 hidden sets), good for finding the decisions that mattered, not exact probabilities.
 """
 
+import math
 import random
 import re
+import statistics
 from dataclasses import asdict, dataclass, field
 
 import alpha_search
@@ -54,9 +56,14 @@ class Decision:
     best_value: float
     loss: float | None  # best_value - chosen_value
     chosen_share: float  # the chosen option's share of the search's visits
-    options: list = field(default_factory=list)  # [name, visit share, mean value], by share
+    # [name, visit share, mean value, its standard error], by share; with repeats > 1 the share and
+    # the value are the means over the independent searches (the error: their spread / sqrt(n))
+    options: list = field(default_factory=list)
     state: dict = field(default_factory=dict)  # the public state at the decision
     events: list = field(default_factory=list)  # the turn's log lines, sides as ME / OPP
+    value_se: float | None = None
+    loss_se: float | None = None  # the loss's standard error (the two values' combined)
+    repeats: int = 1
 
 
 def _mon(p) -> dict:
@@ -120,15 +127,26 @@ def turn_events(log: str, side: str) -> dict[int, list[str]]:
     return out
 
 
+def _mean_se(xs: list) -> tuple[float | None, float | None]:
+    if not xs:
+        return None, None
+    return statistics.fmean(xs), (
+        statistics.stdev(xs) / math.sqrt(len(xs)) if len(xs) > 1 else None
+    )
+
+
 def review(row: dict, side: str, belief, model: str, worlds: int = 16, ms: int = 2000,
-           threads: int = 2, seed: int = 0, log=print, progress=None) -> dict:  # fmt: skip
+           threads: int = 2, seed: int = 0, log=print, progress=None, repeats: int = 1) -> dict:  # fmt: skip
     """The review of ``side``'s decisions in ``row`` (coach.replays): {"decisions": [...],
     "teams": ..., "result": ..., "settings": ...}. ``progress(done, total)``: called before the
-    first search and after each (the app's progress bar)."""
+    first search and after each (the app's progress bar). ``repeats`` > 1: each decision searched
+    that many times, each over its own ``worlds`` belief worlds (2026-10-30: one search's option
+    values moved by +-2-5 points from one draw of the hidden sets to the next, as much as the
+    options differ; the visit shares hardly moved): means and standard errors."""
     rep = parse_replay(row)
     rng = random.Random(seed)
     positions = [p for p in positions_from_replay(row, belief, rng, extra_per_game=10**6,
-                                                  seed=seed, worlds=worlds)
+                                                  seed=seed, worlds=worlds * repeats)
                  if p.side == side and p.kind != KIND_BLIND]  # fmt: skip
     ml = parse_ml(ml_for(model))
     events = turn_events(row["log"], side)
@@ -137,26 +155,44 @@ def review(row: dict, side: str, belief, model: str, worlds: int = 16, ms: int =
         progress(0, len(positions))
     for i, p in enumerate(positions):
         ctx = (list(p.reveal), (p.rating_own, p.rating_opp), p.turn, p.history)
-        ours, n, _, _ = alpha_search.ismcts(p.worlds, ms, threads=threads, model_dir=model,
-                                            use_policy=True, policy_opponent=True,
-                                            contexts=[ctx] * len(p.worlds), ml=ml,
-                                            seed=seed)  # fmt: skip
-        total = sum(v for _, v, _ in ours) or 1
-        # (an option the search never tried has no value: None, not its 0 mean)
-        opts = sorted(([c, v / total, q if v else None] for c, v, q in ours), key=lambda o: -o[1])
+        runs, roots, n = [], [], 0
+        for k in range(
+            repeats
+        ):  # (each search its own worlds: the world draws' spread is the noise)
+            ws = p.worlds[k * worlds : (k + 1) * worlds]
+            ours, it, _, _ = alpha_search.ismcts(ws, ms, threads=threads, model_dir=model,
+                                                 use_policy=True, policy_opponent=True,
+                                                 contexts=[ctx] * len(ws), ml=ml, seed=seed + k)  # fmt: skip
+            n += it
+            total = sum(v for _, v, _ in ours) or 1
+            # (an option the search never tried has no value: None, not its 0 mean)
+            run = {c: (v / total, q if v else None) for c, v, q in ours}
+            runs.append(run)
+            roots.append(sum(sh * q for sh, q in run.values() if q is not None))
+        opts = []
+        for c in {c for run in runs for c in run}:
+            share = statistics.fmean(run.get(c, (0.0, None))[0] for run in runs)
+            q, se = _mean_se([run[c][1] for run in runs if c in run and run[c][1] is not None])
+            opts.append([c, share, q, se])
+        opts.sort(key=lambda o: (-o[1], o[0]))
         chosen = slots.names(p.state)[p.action]
         by = {o[0]: o for o in opts}
         best = opts[0]
         ch = by.get(chosen)
         ch = ch if ch and ch[2] is not None else None
+        value, value_se = _mean_se(roots)
+        loss_se = (math.hypot(best[3], ch[3]) if ch and best[3] is not None and ch[3] is not None
+                   else None)  # fmt: skip
+        r3 = lambda x: None if x is None else round(x, 3)  # noqa: E731
+        shown = opts[:6] + ([by[chosen]] if chosen in by and by[chosen] not in opts[:6] else [])
         d = Decision(
             turn=p.turn, kind=KINDS.get(p.kind, "turn"), chosen=chosen, best=best[0],
-            value=round(sum(o[1] * o[2] for o in opts if o[2] is not None), 3),
-            chosen_value=round(ch[2], 3) if ch else None, best_value=round(best[2], 3),
+            value=round(value, 3), chosen_value=r3(ch[2]) if ch else None, best_value=round(best[2], 3),
             loss=round(best[2] - ch[2], 3) if ch else None,
-            chosen_share=round(ch[1], 3) if ch else 0.0,
-            options=[[c, round(s, 3), None if q is None else round(q, 3)] for c, s, q in opts[:6]],
+            chosen_share=round(by[chosen][1], 3) if chosen in by else 0.0,
+            options=[[c, round(s, 3), r3(q), r3(e)] for c, s, q, e in shown],
             state=public_state(p.state), events=events.get(p.turn, []),
+            value_se=r3(value_se), loss_se=r3(loss_se), repeats=repeats,
         )  # fmt: skip
         decisions.append(d)
         if progress:
@@ -171,7 +207,14 @@ def review(row: dict, side: str, belief, model: str, worlds: int = 16, ms: int =
         "turns": rep.turns,
         "teams": {s: [_revealed(m) for m in rep.teams[s] if not m.phantom] for s in ("p1", "p2")},
         "decisions": [asdict(d) for d in decisions],
-        "settings": {"model": model, "worlds": worlds, "ms": ms, "threads": threads, "seed": seed},
+        "settings": {
+            "model": model,
+            "worlds": worlds,
+            "ms": ms,
+            "threads": threads,
+            "seed": seed,
+            "repeats": repeats,
+        },
     }
 
 
@@ -192,13 +235,29 @@ def mistake_score(d: dict) -> float:
     return max(0.0, d["loss"] or 0.0) + 0.15 * (d["options"][0][1] - d["chosen_share"])
 
 
+def verdict(d: dict, z: float = 2.0, low_share: float = 0.10) -> str:
+    """How the search sees a decision (the review page computes the same, its two thresholds
+    adjustable): "same" (the search's own choice); "bad" -- the search hardly tried the choice
+    (its visit share under ``low_share`` while its own choice took at least half) and the
+    winning chance it loses is real (more than ``z`` standard errors; without errors: 5 points),
+    or the loss alone is real and at least 5 points; "mild" -- hardly tried but the loss is
+    within the noise (or unknown: never tried); "ok" otherwise."""
+    if d["chosen"] == d["best"]:
+        return "same"
+    loss, se = d.get("loss"), d.get("loss_se")
+    real = loss is not None and (loss > z * se if se else loss >= 0.05)
+    shunned = d["chosen_share"] < low_share and d["options"][0][1] >= 0.5
+    if shunned:
+        return "bad" if real else "mild"
+    return "bad" if real and loss >= 0.05 else "ok"
+
+
 def key_moments(report: dict, k: int = 5, min_score: float = 0.10) -> list[dict]:
     """The decisions the search disagreed with most (mistake_score >= ``min_score``), worst
     first, each with its score."""
     ds = sorted(report["decisions"], key=mistake_score, reverse=True)
-    return [d | {"score": round(mistake_score(d), 3)} for d in ds if mistake_score(d) >= min_score][
-        :k
-    ]
+    return [d | {"score": round(mistake_score(d), 3)} for d in ds
+            if mistake_score(d) >= min_score and verdict(d) == "bad"][:k]  # fmt: skip
 
 
 def swings(report: dict, k: int = 3) -> list[dict]:
