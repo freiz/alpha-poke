@@ -92,3 +92,26 @@ def test_revealed_parts_are_kept():
     assert all(
         marginal_set(USAGE, status, False, {}, LEGAL, rng)[0] != "choicespecs" for _ in range(200)
     )
+
+
+def test_the_fair_pools_games_and_size(tmp_path):
+    """selfplay.fair: the games of every fair pool (self-play leaves them out), not another kind's;
+    a pool's pair count; a pool is never rewritten in place."""
+    import json
+
+    import pytest
+
+    from alpha_poke.selfplay import fair
+
+    for name, kind, games in (("fair10", "fair", ["g1", "g2"]), ("fair20", "fair", ["g3"]),
+                              ("fairish", "offmeta", ["g9"])):  # fmt: skip
+        d = tmp_path / name
+        d.mkdir()
+        (d / "meta.json").write_text(json.dumps({"kind": kind, "games": games}), encoding="utf-8")
+        for k in range(len(games)):
+            for x in "ab":
+                (d / f"pair{k:03d}_{x}.txt").write_text("team", encoding="utf-8")
+    assert fair.games(tmp_path) == {"g1", "g2", "g3"}
+    assert fair.size(tmp_path / "fair10") == 2
+    with pytest.raises(FileExistsError):
+        fair.build("fair10", 2, pools=tmp_path)

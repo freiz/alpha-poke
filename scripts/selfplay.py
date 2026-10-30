@@ -43,10 +43,11 @@ def sample_pairs(n: int, seed: int, since: int = 0, half_life: float = 120.0,
     """``n`` validated real-game team pairs, drawn like self-play's (selfplay.teams); ``synth_frac``
     of the sides synthetic (Composer: the usage and teammates' joint draw; evaluation pools: 0)."""
     from alpha_poke.agents.belief_state import BeliefModel
-    from alpha_poke.selfplay import teams
+    from alpha_poke.selfplay import fair, teams
 
     logging.disable(logging.WARNING)
-    ts = teams.TeamSampler(BeliefModel.load(), since=since or SINCE_DEFAULT,
+    # (never a fair pool's games: promotion's test would meet teams self-play trained on)
+    ts = teams.TeamSampler(BeliefModel.load(), since=since or SINCE_DEFAULT, exclude=fair.games(),
                            half_life_days=half_life, catalog_frac=catalog_frac, temp=temp,
                            popularity_beta=popularity_beta, synth_frac=synth_frac, synth_tau=synth_tau,
                            synth_gamma=synth_gamma, synth_eps=synth_eps, set_eps=set_eps, synth_beta=synth_beta,
@@ -558,9 +559,12 @@ def sequential_match(a, net_a: str, net_b: str, seed: int, log_dir: str) -> dict
     ratio leaves [log(beta / (1 - alpha)), log((1 - beta) / alpha)], at most --pairs pairs
     (then: the sign of the ratio). "decision": "H1" (not worse) or "H0" (worse).
 
-    The teams: fresh real-game pairs drawn like self-play's (seed ``seed`` + 100,000), not the
-    40 copied teams of replay40 (2026-10-08: on those gen 2 scored 46.5% against gen 1, on 200
-    real-game pairs 53.6%: the small pool misjudged)."""
+    The teams: the fixed fair pool --pool (selfplay.fair: real games after the training cutoff,
+    both players >= 1500, the revealed parts kept and the rest from reveal-corrected usage; built
+    if missing), its first --pairs at most. 2026-10-30: was a fresh pool per attempt drawn like
+    self-play's teams (belief-completed, 13% of its games self-play sources): r2-gen0a3 scored
+    55.9% +- 3.2% there, 52.8% +- 2.5% on fair1000. Before: not the 40 copied teams of replay40
+    (2026-10-08: on those gen 2 scored 46.5% against gen 1, on 200 real-game pairs 53.6%)."""
     import math
     import os
 
@@ -594,23 +598,29 @@ def sequential_match(a, net_a: str, net_b: str, seed: int, log_dir: str) -> dict
         bots, procs, lanes = ("g_ma", "g_mb"), a.gpu_procs, a.gpu_lanes
     else:
         bots, procs, lanes = ("s_ismcts_ma", "s_ismcts_mb"), a.procs, a.lanes
-    pool = eval_pool(Path(log_dir), f"eval_pool_{seed}", a.pairs, 100_000 + seed)
-    res = run_arena(*bots, a.pairs, pool_dir=pool, ports=tuple(a.ports), procs=procs,
+    from alpha_poke.selfplay import fair
+
+    pool = paths.POOLS / a.pool
+    if not pool.exists():
+        fair.build(a.pool, a.pairs)
+    n_pairs = min(a.pairs, fair.size(pool))
+    pool = str(pool)
+    res = run_arena(*bots, n_pairs, pool_dir=pool, ports=tuple(a.ports), procs=procs,
                     lanes_per_proc=lanes, seed=seed, log_dir=log_dir, stop=stop,
                     pairs=True)  # fmt: skip
     from alpha_poke.eval.arena import read_log
 
     rows = read_log(res["log"])
     scores = pair_scores(rows)
-    if not res["stopped_early"] and len(rows) < 2 * a.pairs:
+    if not res["stopped_early"] and len(rows) < 2 * n_pairs:
         # the workers ended before the schedule was played (killed, crashed): no decision
         # (2026-10-08: an evaluation killed with no game finished promoted). A played schedule
         # with failed or timed-out games decides on its complete pairs
-        raise RuntimeError(f"evaluation incomplete: {len(rows)} of {2 * a.pairs} games, no "
+        raise RuntimeError(f"evaluation incomplete: {len(rows)} of {2 * n_pairs} games, no "
                            f"decision ({res['log']})")  # fmt: skip
-    if len(scores) < MIN_PAIRS_FRAC * a.pairs and not res["stopped_early"]:
+    if len(scores) < MIN_PAIRS_FRAC * n_pairs and not res["stopped_early"]:
         # (2026-10-14: every game failed -> no pair -> llr 0 -> H1 would promote)
-        raise RuntimeError(f"evaluation: {len(scores)} complete pairs of {a.pairs}, no "
+        raise RuntimeError(f"evaluation: {len(scores)} complete pairs of {n_pairs}, no "
                            f"decision ({res['log']})")  # fmt: skip
     if not scores:
         raise RuntimeError(f"evaluation: no complete pair, no decision ({res['log']})")
@@ -851,7 +861,7 @@ def cmd_iterate(a) -> None:
         step("eval", ["eval", "--gen", str(a.gen), "--attempt", str(k), "--force",
                       "--pairs", str(a.eval_pairs), "--iterations", str(a.eval_iterations),
                       "--elo0", str(a.elo0), "--elo1", str(a.elo1), "--alpha", str(a.alpha),
-                      "--beta", str(a.beta)])  # fmt: skip
+                      "--beta", str(a.beta), "--pool", a.eval_pool])  # fmt: skip
         g = state()["generations"][str(a.gen)]
         ev, tr = g[f"eval_a{k}"], g["train"]
         attempts.append({"attempt": k, "games": games, "run": tr["run"], "steps": tr["steps"],
@@ -888,6 +898,8 @@ def sprt_args(p) -> None:
     p.add_argument("--gpu-procs", type=int, default=4)
     p.add_argument("--gpu-lanes", type=int, default=12, help="games per process (GPU search)")
     p.add_argument("--batch-pairs", type=int, default=12, help="test every this many pairs")
+    p.add_argument("--pool", default="fair2000",
+                   help="the fixed team pairs (data/derived/teams/pools; selfplay.fair)")  # fmt: skip
     p.add_argument("--elo0", type=float, default=-20.0, help="H0: the new network this weaker")
     p.add_argument("--elo1", type=float, default=0.0, help="H1: this (not worse)")
     p.add_argument("--alpha", type=float, default=0.05)
@@ -1081,6 +1093,7 @@ def main() -> None:
     p.add_argument("--threads", type=int, default=2)
     p.add_argument("--eval-pairs", type=int, default=2000, help="the test's most pairs")
     p.add_argument("--eval-iterations", type=int, default=1600)
+    p.add_argument("--eval-pool", default="fair2000", help="the test's fixed team pairs")
     # (H0: 51% -- 400 log10(0.51 / 0.49) Elo; H1: 54%. 2026-10-28, was 52% / 55%: promoted with
     # P ~ 18% / 57% / 86% at a true 52 / 53 / 54%, ~1% at 50%)
     p.add_argument("--elo0", type=float, default=7.0, help="H0: the candidate this much better")
