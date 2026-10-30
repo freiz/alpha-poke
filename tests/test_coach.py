@@ -146,6 +146,9 @@ def test_the_app_reviews_an_uploaded_replay(game):
         upload = {"upload": {"name": "game.json", "text": json.dumps(game)}}
         players = requests.post(base + "/api/players", json=upload, timeout=30).json()["players"]
         assert players == ["Player A", "Player B"]
+        for lang, text in (("en", "Paste a replay"), ("zh", "请粘贴")):  # (the page's language)
+            r = requests.post(base + "/api/players", json={"source": "", "lang": lang}, timeout=5)
+            assert r.status_code == 400 and text in r.json()["error"]
         bad = requests.post(base + "/api/review", json=upload | {"player": "Player A"},
                             headers={"Origin": "https://elsewhere.example"}, timeout=5)  # fmt: skip
         assert bad.status_code == 403
