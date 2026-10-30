@@ -141,7 +141,7 @@ const STATS = {
 const T = {
   en: {
     title: id => `Review · ${id}`, won: "won", lost: "lost",
-    note: (ms, w) => `Your side: ${SIDE} (bottom left) | winning chances are the AI search's estimates (${ms} ms × ${w} belief worlds per decision)`,
+    note: (ms, w) => `Your side: ${R.player || SIDE} (bottom left) | winning chances are the AI search's estimates (${ms} ms × ${w} belief worlds per decision)`,
     ui: "Interface", names: "Names",
     curve: "Your winning chance through the game, by turn (● your choice at the start of a turn, ○ your switch after a faint or a pivot move; red: the AI clearly disagreed). Click to jump; ←/→ previous / next turn, M next mistake.",
     first: "⏮ Start", prev: "◀ Previous turn", next: "Next turn ▶", mistake: "⚠ Next mistake",
@@ -193,7 +193,7 @@ const T = {
   },
   zh: {
     title: id => `复盘 · ${id}`, won: "胜", lost: "负",
-    note: (ms, w) => `分析视角：${SIDE}（左下）｜ 胜率为 AI 搜索的估计（每步 ${ms} ms × ${w} 个信念世界）`,
+    note: (ms, w) => `分析视角：${R.player || SIDE}（左下）｜ 胜率为 AI 搜索的估计（每步 ${ms} ms × ${w} 个信念世界）`,
     ui: "界面", names: "名称",
     curve: "整局的胜率变化，按回合（● 回合开始时你的选择，○ 倒下后或折返后的换人；红色：AI 明显不认同）。点击跳转；←/→ 上一回合 / 下一回合，M 下一个失误。",
     first: "⏮ 开局", prev: "◀ 上一回合", next: "下一回合 ▶", mistake: "⚠ 下一个失误",
@@ -662,7 +662,7 @@ def render(report: dict, row: dict, client: str = "official") -> str:
           for d in report["decisions"]]  # fmt: skip
     # (the verdicts and the moments: computed by the page, its thresholds adjustable)
     won = report["winner"] == report["side"]
-    data = {"id": report["id"], "side": report["side"], "won": won, "turns": report["turns"],
+    data = {"id": report["id"], "side": report["side"], "player": report.get("player"), "won": won, "turns": report["turns"],
             "ms": report["settings"]["ms"], "worlds": report["settings"]["worlds"],
             "decisions": ds, "events": events, "repeats": report["settings"].get("repeats", 1),
             "team": report["settings"].get("team", False), "last_turn": max(events)}  # fmt: skip
