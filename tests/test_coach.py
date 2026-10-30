@@ -21,7 +21,7 @@ from alpha_poke.coach.review import (
     turn_events,
     verdict,
 )
-from alpha_poke.coach.team import TeamError, match_team, parse_team
+from alpha_poke.coach.team import TeamError, load_team, match_team, parse_team
 from alpha_poke.replay import parse_replay
 from alpha_poke.train.positions import positions_from_replay
 
@@ -56,7 +56,9 @@ def test_every_decision_is_searched(report):
         assert 0.0 <= d["value"] <= 1.0
         assert d["chosen_value"] is None or 0.0 <= d["chosen_value"] <= 1.0
         assert d["state"]["me"]["active"]["species"] and d["state"]["opp"]["alive"] >= 1
-    assert all(len(d["options"]) <= 6 for d in ds)
+    # (the first six by visits, and the chosen one when it is not among them)
+    assert all(len(d["options"]) <= 6 or (len(d["options"]) == 7 and d["options"][6][0] == d["chosen"])
+               for d in ds)  # fmt: skip
     # (the moments: the "bad" verdicts, worst first -- none at all is possible, the search timed)
     moments = key_moments(report, min_score=0.0)
     assert all(verdict(d) == "bad" for d in moments)
@@ -159,6 +161,61 @@ def test_a_team_that_is_not_the_games_is_refused(game):
     with pytest.raises(TeamError) as e:
         parse_team("")
     assert e.value.code == "team_unreadable"
+
+
+PASTE = """G.O.A.T. (Orthworm) (F) @ Rocky Helmet  \r
+Ability: Earth Eater  \r
+Shiny: Yes  \r
+Tera Type: Ghost  \r
+EVs: 248 HP / 252 Def / 8 Spe  \r
+Impish Nature  \r
+- Iron Defense  \r
+- Body Press  \r
+- Heavy Slam  \r
+- Spikes  \r
+\r
+Slowking-Galar @ Heavy-Duty Boots  \r
+Ability: Regenerator  \r
+Tera Type: Fairy  \r
+EVs: 248 HP / 16 Def / 4 SpA / 240 SpD  \r
+Sassy Nature  \r
+IVs: 0 Atk / 0 Spe  \r
+- Chilly Reception  \r
+- Future Sight  \r
+- Sludge Bomb  \r
+- Thunder Wave  \r
+"""
+
+
+def test_a_pokepaste_link_is_fetched(monkeypatch):
+    """A PokéPaste link: its raw text fetched (a nickname, a gender, Shiny, CRLF; no IVs line:
+    all 31); an export pasted as is; a link that cannot be fetched: TeamError "team_fetch"."""
+    import requests
+
+    asked = []
+
+    class Reply:
+        text = PASTE
+
+        def raise_for_status(self):
+            pass
+
+    def get(url, **kw):
+        asked.append(url)
+        if "0000" in url:
+            raise requests.ConnectionError("offline")
+        return Reply()
+
+    monkeypatch.setattr(requests, "get", get)
+    team = load_team("  https://pokepast.es/6E7F76243D853231 \n")
+    assert asked == ["https://pokepast.es/6e7f76243d853231/raw"]
+    assert team["orthworm"].evs == (248, 0, 252, 0, 0, 8) and team["orthworm"].ivs == (31,) * 6
+    assert team["orthworm"].nature == "impish" and team["orthworm"].tera == "ghost"
+    assert team["slowkinggalar"].ivs == (31, 0, 31, 31, 31, 0)
+    assert load_team(PASTE) == team and len(asked) == 1  # (an export: no fetch)
+    with pytest.raises(TeamError) as e:
+        load_team("pokepast.es/0000")
+    assert e.value.code == "team_fetch"
 
 
 def test_the_verdict():
@@ -314,17 +371,40 @@ def test_the_app_reviews_an_uploaded_replay(game):
             json=upload | {"player": "Player B", "team": _export(game, "p2"), "parallel": 2},
             timeout=30,
         ).json()["job"]
-        for _ in range(240):
-            j = requests.get(f"{base}/api/job/{job}", timeout=5).json()
-            if j["status"] in ("done", "error"):
-                break
-            time.sleep(0.5)
-        assert j["status"] == "done", j
+
+        def wait(job):
+            for _ in range(240):
+                j = requests.get(f"{base}/api/job/{job}", timeout=5).json()
+                if j["status"] in ("done", "error"):
+                    break
+                time.sleep(0.5)
+            assert j["status"] == "done", j
+            return j
+
+        j = wait(job)
         page = requests.get(base + j["url"], timeout=5).text
-        assert '"side": "p2"' in page and "/js/battle.js" in page
+        assert '"side": "p2"' in page and "/js/battle.js" in page and "reviewForm(" in page
         assert any(
             r["url"] == j["url"] for r in requests.get(base + "/api/reviews", timeout=5).json()
         )
+        # review again (the page's button): the game, the player and the team kept with it
+        name = j["url"].split("/")[2]
+        redo = requests.get(f"{base}/api/redo-info?review={name}", timeout=5).json()
+        assert redo["team"] is True and redo["settings"]["repeats"] == 2 and redo["decisions"] >= 1
+        again = requests.post(base + "/api/redo", json={"review": name, "custom": {"repeats": 1, "seconds": 0.2,
+                              "worlds": 4}, "parallel": 1}, timeout=30).json()["job"]  # fmt: skip
+        assert wait(again)["url"] == j["url"]
+        rep = json.loads((app.COACH / name / "review.json").read_text(encoding="utf-8"))
+        assert rep["settings"]["team"] is True and rep["settings"]["repeats"] == 1
+        # (a review saved before its replay was kept: the log in its page)
+        (app.COACH / name / "replay.json").unlink()
+        assert requests.get(f"{base}/api/redo-info?review={name}", timeout=5).status_code == 200
+        assert app.stored(name)[1]["log"] == game["log"]
+        assert '"side": "p2"' in requests.get(base + j["url"], timeout=5).text
+        gone = requests.post(
+            base + "/api/redo", json={"review": "nothing-here", "lang": "zh"}, timeout=5
+        )
+        assert gone.status_code == 400 and "找不到这份复盘" in gone.json()["error"]
     finally:
         httpd.shutdown()
 

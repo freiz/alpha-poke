@@ -41,7 +41,10 @@ def main() -> int:
         "--repeats", type=int, default=3, help="independent searches per decision (errors)"
     )
     ap.add_argument("--parallel", type=int, default=2, help="searches at once")
-    ap.add_argument("--team", help="the player's own team, a Showdown export file (exact sets)")
+    ap.add_argument(
+        "--team",
+        help="the player's own team (exact sets): a Showdown export file or a PokéPaste link",
+    )
     ap.add_argument("--llm", action="store_true", help="also the chat model's write-up")
     ap.add_argument("--language", default="Chinese (简体中文)")
     ap.add_argument("--from-json", action="store_true", help="reuse review.json (no search)")
@@ -58,10 +61,12 @@ def main() -> int:
         print(f"{row['id']}: reviewing {side}'s decisions ({a.ms} ms x {a.threads} threads each)")
         rep = review(row, side, BeliefModel.load(), a.model, worlds=a.worlds, ms=a.ms,
                      threads=a.threads, repeats=a.repeats, parallel=a.parallel,
-                     team=Path(a.team).read_text(encoding="utf-8") if a.team else None)  # fmt: skip
+                     team=(Path(a.team).read_text(encoding="utf-8") if a.team and Path(a.team).is_file() else a.team))  # fmt: skip
         (out / "review.json").write_text(
             json.dumps(rep, ensure_ascii=False, indent=1), encoding="utf-8"
         )
+        # (the app's "review again" reads it: coach.app.stored)
+        (out / "replay.json").write_text(json.dumps(row, ensure_ascii=False), encoding="utf-8")
     (out / "summary.md").write_text(narrate.summary(rep), encoding="utf-8")
     # the review page: through scripts/review_server.py (Showdown's player from a local cache), and
     # one that loads the player from Showdown's site (open the file itself)

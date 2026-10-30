@@ -8,6 +8,7 @@ local file: it needs the internet for the player's scripts and sprites)."""
 
 import json
 
+from alpha_poke.coach import form
 from alpha_poke.coach.review import mistake_score, turn_events
 
 PAGE = r"""<!DOCTYPE html>
@@ -68,16 +69,24 @@ PAGE = r"""<!DOCTYPE html>
   .tile b { display: block; font-size: 28px; line-height: 1.2; font-variant-numeric: tabular-nums; }
   .tile b small { font-size: 13px; color: var(--muted); font-weight: 400; margin-left: 4px; }
   .tile span { color: var(--muted); font-size: 12px; } .score .legend { align-self: flex-end; max-width: 360px; }
+  .redo { background: var(--ai); color: #fff; border: 0; border-radius: 6px; padding: 4px 12px; cursor: pointer; font: inherit; font-size: 13px; }
+  .redobox { margin: 0 16px 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 16px 14px; max-width: 760px; }
+  .redobox h3 { margin: 0; font-size: 15px; }
+__RF_CSS__
   .lang { margin-left: auto; font-size: 12px; color: var(--muted); }
   .lang button { background: var(--bg); color: var(--ink); border: 1px solid var(--line); padding: 2px 8px; cursor: pointer; font: inherit; }
   .lang button.sel { background: var(--ai); color: #fff; border-color: var(--ai); }
 </style>
 <header>
   <a class="home" id="home" href="/" hidden></a><h1 id="title"></h1><span class="res" id="res"></span><span class="legend" id="note"></span>
+  <button class="redo" id="redo" hidden></button>
   <span class="lang"><span id="lui"></span> <button data-k="ui" data-v="en">EN</button><button data-k="ui" data-v="zh">中文</button>
     &nbsp; <span id="lnames"></span> <button data-k="names" data-v="en">EN</button><button data-k="names" data-v="zh">中文</button></span>
 </header>
 <div class="score" id="score"></div>
+<section class="redobox" id="redobox" hidden><h3 id="redohead"></h3><div class="legend" id="redonote"></div>
+__RF_HTML__
+</section>
 <main>
   <div class="wrapper replay-wrapper">
     <div class="battle"></div><div class="battle-log"></div>
@@ -100,6 +109,7 @@ PAGE = r"""<!DOCTYPE html>
 </main>
 <script type="text/plain" class="battle-log-data">__LOG__</script>
 <script>
+__RF_JS__
 const R = __REVIEW__;
 const SIDE = R.side;
 let cur = 0;  // index into R.decisions
@@ -148,6 +158,8 @@ const T = {
     noteRuns: n => n > 1 ? ` × ${n} searches` : "", approx: "≈",
     noteTeam: t => t ? " | your team: pasted (exact)" : " | your team: what the game showed, the rest guessed",
     visits: n => `${n.toLocaleString("en")} visits`,
+    redo: "↻ Review again, deeper", redoHead: "Review this game again",
+    redoNote: "With more searches, more time or your team pasted; when it is done this page shows the new review (in place of this one).",
     top1: "Matched the AI's first choice", top2: "In the AI's top two", meanLoss: "Average winning chance lost", pts: "pts",
     badMild: "AI disagreed / didn't like it",
     scoreNote: n => `Over your ${n} decisions with a choice; the last tile follows the strictness below.`,
@@ -198,6 +210,8 @@ const T = {
     noteRuns: n => n > 1 ? ` × ${n} 次搜索` : "", approx: "≈",
     noteTeam: t => t ? " ｜ 我方队伍：已粘贴（精确）" : " ｜ 我方队伍：这局亮出来的部分，其余靠猜",
     visits: n => `访问 ${n.toLocaleString("en")} 次`,
+    redo: "↻ 用更强的配置重新分析", redoHead: "重新分析这一局",
+    redoNote: "可以多搜几次、每次多想一会儿，或者贴上你的队伍；完成后这一页会换成新的结果（替换掉现在这份）。",
     top1: "AI 一选吻合率", top2: "AI 前二吻合率", meanLoss: "平均每步胜率损失", pts: "点",
     badMild: "AI 不认同 / 不太喜欢",
     scoreNote: n => `只算有选择余地的 ${n} 步决策；最后一项随下面的判定标准变化。`,
@@ -469,6 +483,36 @@ for (const [id, get, set] of [["z", () => Z, v => { Z = v; }], ["low", () => LOW
   el.value = get(); show();
   el.addEventListener("input", () => { set(parseFloat(el.value)); show(); try { localStorage.setItem("coach-" + id, el.value); } catch (e) {} render(); });
 }
+// "review again" (served by the app: /api/redo-info answers): the home page's form, set one step
+// deeper than this review (fast -> standard -> deep -> custom: two more searches), the team pasted
+// before kept; when done the page reloads with the new review
+const DIR = (location.pathname.match(/\/coach\/([^/]+)\/viewer\.html$/) || [])[1];
+if (location.protocol.startsWith("http") && DIR) {
+  fetch("/api/redo-info?review=" + encodeURIComponent(DIR)).then(r => r.ok ? r.json() : null).then(info => {
+    if (!info) return;
+    const btn = document.getElementById("redo"), box = document.getElementById("redobox");
+    btn.textContent = L.redo; btn.hidden = false;
+    document.getElementById("redohead").textContent = L.redoHead; document.getElementById("redonote").textContent = L.redoNote;
+    let form = null;
+    btn.onclick = () => {
+      box.hidden = !box.hidden;
+      if (form || box.hidden) return;
+      const order = ["fast", "standard", "deep"], cur = [R.worlds, R.ms, R.repeats || 1].join();
+      const at = order.findIndex(k => (info.strengths[k] || []).join() == cur);
+      form = reviewForm(UI, info, {
+        decisions: () => info.decisions, preset: at >= 0 && at < 2 ? order[at + 1] : "custom",
+        custom: [R.worlds, R.ms / 1000, Math.min(8, (R.repeats || 1) + 2)], keptTeam: info.team,
+        submit: async v => {
+          const r = await fetch("/api/redo", {method: "POST", headers: {"Content-Type": "application/json"},
+                                              body: JSON.stringify({...v, review: DIR, lang: UI})});
+          const j = await r.json(); if (!r.ok) throw new Error(j.error || r.statusText); return j.job;
+        },
+        done: () => location.reload(),
+      });
+      box.scrollIntoView({block: "nearest"});
+    };
+  }).catch(() => {});
+}
 document.querySelectorAll(".lang button").forEach(btn => {
   if ((btn.dataset.k == "ui" ? UI : NAMES) == btn.dataset.v) btn.classList.add("sel");
   btn.addEventListener("click", () => setPref(btn.dataset.k, btn.dataset.v));
@@ -623,6 +667,6 @@ def render(report: dict, row: dict, client: str = "official") -> str:
             "decisions": ds, "events": events, "repeats": report["settings"].get("repeats", 1),
             "team": report["settings"].get("team", False), "last_turn": max(events)}  # fmt: skip
     log = row["log"].replace("</", "<\\/")
-    return (PAGE.replace("__REVIEW__", json.dumps(data, ensure_ascii=False).replace("</", "<\\/"))
+    return (form.embed(PAGE).replace("__REVIEW__", json.dumps(data, ensure_ascii=False).replace("</", "<\\/"))
             .replace("__LOG__", log)
             .replace("__PLAYER__", LOCAL if client == "local" else OFFICIAL))  # fmt: skip

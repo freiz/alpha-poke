@@ -23,7 +23,7 @@ import alpha_search
 import poke_engine as pe
 
 from alpha_poke.agents import slots
-from alpha_poke.coach.team import match_team, parse_team
+from alpha_poke.coach.team import load_team, match_team
 from alpha_poke.replay import parse_replay
 from alpha_poke.selfplay.batcher import ml_for, parse_ml
 from alpha_poke.train.positions import (
@@ -156,13 +156,13 @@ def review(row: dict, side: str, belief, model: str, worlds: int = 16, ms: int =
     by +-2-5 points from one draw of the hidden sets to the next, as much as the options differ;
     drawing only the opponent's again showed +-1, the player's own guesses were most of it; the
     visit shares hardly moved): means and standard errors. ``team``: the player's own team (a
-    Showdown export, or coach.team.parse_team's) -- its sets exact, nothing of them sampled
+    Showdown export or a PokéPaste link, or coach.team.parse_team's) -- its sets exact, nothing of them sampled
     (TeamError when it is not the replay's team). ``parallel``: searches run at once (each with
     ``threads`` threads; the search releases the GIL)."""
     rep = parse_replay(row)
     known = None
     if team:
-        sets = parse_team(team) if isinstance(team, str) else team
+        sets = load_team(team) if isinstance(team, str) else team
         known = {side: match_team(sets, [m for m in rep.teams[side] if not m.phantom])}
     # one draw per repeat: its own positions (the player's guessed parts too), matched by point
     draws = []
