@@ -374,7 +374,7 @@ HOME = r"""<!DOCTYPE html>
   :root { --bg: #f5f6f8; --panel: #fff; --ink: #1d2330; --muted: #677085; --line: #d9dde5; --ai: #3567d6; --bad: #d64545; --good: #2f9e5b; }
   @media (prefers-color-scheme: dark) { :root { --bg: #15181e; --panel: #1f242d; --ink: #e6e9ef; --muted: #9aa3b5; --line: #343b48; } }
   body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 system-ui, sans-serif; }
-  main { max-width: 1240px; margin: 0 auto; padding: 24px 16px; } .narrow { max-width: 760px; }
+  main { max-width: 1240px; margin: 0 auto; padding: 24px 16px; } .narrow { max-width: 820px; }
   .top { display: flex; align-items: baseline; gap: 12px; } .top .lang { margin-left: auto; font-size: 12px; color: var(--muted); }
   .lang button { background: var(--bg); color: var(--ink); border: 1px solid var(--line); padding: 2px 8px; cursor: pointer; font: inherit; margin: 0; border-radius: 0; }
   .lang button.sel { background: var(--ai); color: #fff; border-color: var(--ai); }
@@ -419,7 +419,7 @@ __RF_CSS__  ul { padding-left: 18px; } li { margin: 4px 0; } a { color: var(--ai
   <div class="top"><h1 data-t="title"></h1>
     <span class="lang"><span data-t="ui"></span> <button data-v="en">EN</button><button data-v="zh">中文</button></span></div>
   <div class="muted narrow" data-t="intro"></div>
-  <section class="narrow">
+  <section><div class="narrow">
     <label for="src" data-t="link"></label>
     <input type="text" id="src" placeholder="https://replay.pokemonshowdown.com/gen9ou-1234567890" />
     <label for="file" data-t="fileLabel"></label>
@@ -430,7 +430,7 @@ __RF_CSS__  ul { padding-left: 18px; } li { margin: 4px 0; } a { color: var(--ai
 __RF_HTML__
     </div>
     <div class="err" id="err"></div>
-  </section>
+  </div></section>
   <section>
     <div class="lhead"><b data-t="past"></b><input type="search" id="q" />
       <label><span data-t="perPage"></span> <select id="size"><option>10</option><option>20</option><option>50</option><option>100</option></select></label></div>
