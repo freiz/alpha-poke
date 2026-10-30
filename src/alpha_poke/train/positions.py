@@ -269,6 +269,57 @@ def _known(rec) -> KnownSet:
     )
 
 
+def choice_free(log: str, teams: dict) -> dict[str, set[str]]:
+    """Side -> the species ids (``teams``: parse_replay's records) that used two moves in one stint
+    on the field with the same item: no Choice item (issue #28 -- a replay's own side is locked by
+    the item drawn for it; the player knows its own). Not a move another one called ([from]),
+    nor Struggle; an item's change (Trick, Knock Off, a berry eaten: any -item / -enditem but a
+    Frisk's reveal) starts the count again. Not under Magic Room, nor for a Klutz, nor on a side
+    with a Zoroark (its moves under another's name)."""
+    by_nick = {
+        s: {n: to_id(m.species) for m in recs for n in m.nicknames} for s, recs in teams.items()
+    }
+    skip = {
+        s for s, recs in teams.items() if any(to_id(m.species).startswith("zoroark") for m in recs)
+    }
+    klutz = {
+        to_id(m.species)
+        for recs in teams.values()
+        for m in recs
+        if to_id(m.ability or "") == "klutz"
+    }
+    out: dict[str, set[str]] = {s: set() for s in teams}
+    used: dict[tuple[str, str], set[str]] = {}
+    room = False
+    for line in log.split("\n"):
+        f = line.split("|")
+        if len(f) < 3:
+            continue
+        if f[1] in ("-fieldstart", "-fieldend") and "Magic Room" in f[2]:
+            room = f[1] == "-fieldstart"
+            continue
+        if f[2][:2] not in out or ": " not in f[2]:
+            continue
+        side, nick = f[2][:2], f[2].split(": ", 1)[1]
+        sp = by_nick[side].get(nick)
+        if sp is None:
+            continue
+        if f[1] in ("switch", "drag", "replace"):
+            used[(side, sp)] = set()
+        elif f[1] in ("-item", "-enditem") and not any(x.startswith("[from] ability: Frisk") or x == "[identify]"
+                                                        for x in f[4:]):  # fmt: skip
+            used[(side, sp)] = set()
+        elif f[1] == "move" and len(f) > 3 and not any(x.startswith("[from]") for x in f[4:]):
+            mv = to_id(f[3])
+            if mv == "struggle" or room or sp in klutz or side in skip:
+                continue
+            u = used.setdefault((side, sp), set())
+            u.add(mv)
+            if len(u) >= 2:
+                out[side].add(sp)
+    return out
+
+
 def _same_species(a: str, b: str) -> bool:
     a, b = to_id(a.replace("-*", "")), to_id(b.replace("-*", ""))
     return a == b or a.startswith(b) or b.startswith(a)
@@ -425,6 +476,10 @@ def _emit_positions(row, rep, blind, actions, extra, w_main, w_extra, belief, rn
     battles = {s: Battle(f"battle-{row['id']}-{s}", names[s], _log, gen=9) for s in ("p1", "p2")}
     records = {s: [m for m in rep.teams[s] if not m.phantom] for s in ("p1", "p2")}
     known = {s: {to_id(m.species): _known(m) for m in records[s]} for s in ("p1", "p2")}
+    for s, free in choice_free(row["log"], records).items():
+        for sp in free:
+            if sp in known[s]:
+                known[s][sp].no_choice = True
     for s, sets in (known_sets or {}).items():
         known[s].update(sets)
     # the moves a side's transformed active used, by its target (known to it from the transform

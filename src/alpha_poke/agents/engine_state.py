@@ -178,6 +178,9 @@ class KnownSet:
     nature: str | None = None
     evs: tuple[int, ...] | None = None
     ivs: tuple[int, ...] | None = None
+    # (two moves in one stint on the field, its item the same: it holds no Choice item --
+    # train.positions.choice_free; issue #28, a replay's own side now locked by the item it drew)
+    no_choice: bool = False
 
 
 @dataclass
@@ -442,9 +445,12 @@ def sample_set(
         # archetype's item and moves are drawn apart; 2026-10-24, plan C's slot check: a replay's
         # Slowking-Galar with Toxic and Chilly Reception held an Assault Vest, its Toxic no option)
         no_vest = ("assaultvest",) if any(map(_status, revealed)) else ()
+        no_choice = CHOICE_ITEMS if known is not None and known.no_choice else ()
         item = (
             (required_item(mon) if (mix if mix is not None else ARCH_MIX) > 0 else None)
-            or draw("item", base_marginal(belief, species, team_names, "item", mix), no_vest)
+            or draw(
+                "item", base_marginal(belief, species, team_names, "item", mix), no_vest + no_choice
+            )
             or "none"
         )
     if tera is None:
@@ -1864,26 +1870,29 @@ def build_state(
                                        for x in em.moves])  # fmt: skip
     # (S158: the foe's Choice lock -- its world's Choice item or Gorilla Tactics and the move it
     # chose this time in: the engine keeps it by the other moves' flags, as ours by our request's;
-    # its options were all of its moves. Not an item it got after that move -- L228)
-    if their_idx is not None and their_idx < len(their_mons) and not tm_them.locked:
-        em = their_mons[their_idx]
-        last = tm_them.own_last
+    # its options were all of its moves. Not an item it got after that move -- L228. A replay's
+    # own side the same way: no request -- 2026-10-30, issue #28, a Choice Band Kingambit's
+    # every move offered)
+    for mons, i, tm, mine in ((their_mons, their_idx, tm_them, False),
+                              (our_mons, our_active_idx, tm_us, True)):  # fmt: skip
+        if (mine and spectator is None) or i is None or i >= len(mons) or tm.locked:
+            continue
+        em = mons[i]
+        last = tm.own_last
         # (not a world that contradicts the log -- two moves this time in: no Choice item, whatever
         # it drew; nor an item doing nothing: Klutz, Embargo, Magic Room -- Showdown's choicelock
         # ignoringItem; 2026-10-26 review)
         used = {
-            m
-            for m in tm_them.stint.get("moves", [])[tm_them.stint.get("item_mark", 0) :]
-            if m != "struggle"
+            m for m in tm.stint.get("moves", [])[tm.stint.get("item_mark", 0) :] if m != "struggle"
         }
         item_on = (
             str(em.ability).lower() != "klutz"
-            and not tm_them.embargo
+            and not tm.embargo
             and Field.MAGIC_ROOM not in battle.fields
         )
         if (
             last
-            and not tm_them.item_new
+            and not tm.item_new
             and any(x.id == last for x in em.moves)
             and len(used) <= 1
             and (
@@ -1891,8 +1900,8 @@ def build_state(
                 or str(em.ability).lower() == "gorillatactics"
             )
         ):
-            their_mons[their_idx] = _with(em, moves=[pe.Move(id=x.id, pp=x.pp, disabled=x.disabled or x.id != last)
-                                                     for x in em.moves])  # fmt: skip
+            mons[i] = _with(em, moves=[pe.Move(id=x.id, pp=x.pp, disabled=x.disabled or x.id != last)
+                                       for x in em.moves])  # fmt: skip
     # Disable (L70): its volatile and its move's slot and count, not the move's flag alone (the
     # engine's next move enabled it again; 2026-10-23 review)
     disable = {}

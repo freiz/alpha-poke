@@ -766,6 +766,36 @@ def test_the_first_choice_of_a_copied_move_is_a_position(belief, seed):
     assert sorted(p.turn for p in mine) == [1, 2], [(p.turn, p.kind) for p in ps]
 
 
+def test_two_moves_in_one_stint_rule_out_a_choice_item():
+    """Issue #28: a replay's own side is Choice-locked by the item drawn for it, so a draw must
+    fit what the whole game shows -- the player knows its own item (LOG4's Ditto: Taunt, then
+    Kowtow Cleave; a Choice Scarf drawn locked it into Taunt and the second choice was dropped)."""
+    from alpha_poke.replay import parse_replay
+    from alpha_poke.train.positions import choice_free
+
+    head = LOG4.split("|turn|1")[0]
+
+    def free(*turns: str) -> set:
+        log = head + "".join(f"|turn|{i + 1}\n{t}|upkeep\n" for i, t in enumerate(turns))
+        return choice_free(log, parse_replay({"id": "c", "log": log}).teams)["p1"]
+
+    taunt = "|move|p1a: Ditto|Taunt|p2a: Kingambit\n"
+    cleave = "|move|p1a: Ditto|Kowtow Cleave|p2a: Kingambit\n"
+    assert free(taunt, cleave) == {"ditto"}
+    assert free(taunt, taunt) == set()
+    # (a stint each; an item's change between; a called move; Struggle)
+    out = "|switch|p1a: Garchomp|Garchomp, M|100/100\n|switch|p1a: Ditto|Ditto|100/100\n"
+    knocked = "|-enditem|p1a: Ditto|Choice Scarf|[from] move: Knock Off|[of] p2a: Kingambit\n"
+    called = "|move|p1a: Ditto|Kowtow Cleave|p2a: Kingambit|[from] move: Sleep Talk\n"
+    struggle = "|move|p1a: Ditto|Struggle|p2a: Kingambit\n"
+    assert free(taunt, out, cleave) == set()
+    assert free(taunt, knocked + cleave) == set()
+    assert free(taunt, called, struggle) == set()
+    # (a Frisk only shows the item: no change)
+    frisk = "|-item|p1a: Ditto|Leftovers|[from] ability: Frisk|[of] p2a: Kingambit\n"
+    assert free(taunt, frisk + cleave) == {"ditto"}
+
+
 def test_a_disable_the_engine_derives_is_no_flag(belief):
     """2026-10-23 (state-construction differential): the request's Assault Vest / Taunt / recharge
     disables were the moves' flags -- the engine never clears a flag it did not set (the vest

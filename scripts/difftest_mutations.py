@@ -246,10 +246,10 @@ MUTATIONS = [
         "            pass",
     ),
     (
-        "S158 the foe's Choice lock",
+        "S158 the foe's Choice lock (and a replay's own: issue #28)",
         "src/alpha_poke/agents/engine_state.py",
-        "        if (\n            last\n            and not tm_them.item_new",
-        "        if (\n            False\n            and not tm_them.item_new",
+        "        if (\n            last\n            and not tm.item_new",
+        "        if (\n            False\n            and not tm.item_new",
     ),
     (
         "S158 a hidden forme",

@@ -160,6 +160,21 @@ def decisions(
             yield k, side, b, built, truth if side == "p1" else _flip(truth)
 
 
+def _option_diffs(built, t) -> list[tuple[str, str]]:
+    """The side's options by name against the true state's (statebuild.option_diffs without the
+    request's round trip: a replay has none). Not at a switch decision (the true states leave
+    force_switch off). 2026-10-30, issue #28: the replay path compared no options, and a Choice
+    lock's other moves -- the request's to rule out, none here -- stayed options unseen."""
+    from alpha_poke.agents import slots
+    from alpha_poke.enginecheck.statebuild import _silent_lock_end
+
+    if built.side_one.force_switch or _silent_lock_end(built.side_one, t.side_one):
+        return []
+    a = {n.replace("switch greninjabond", "switch greninja") for n in slots.names(built) if n}
+    z = {n.replace("switch greninjabond", "switch greninja") for n in slots.names(t) if n}
+    return [("options", f"{sorted(a - z)} vs {sorted(z - a)}")] if a != z else []
+
+
 class _Mirror:
     """A battle seen from the other side (statebuild._disguised reads the opponent's lines)."""
 
@@ -195,5 +210,8 @@ def battle_diffs(
             if not (kind == "own:pp" and foe_hidden) and not (kind == "foe:pp" and own_hidden)
         ]
         diffs += field_diffs(built, t)
+        # (an active Zoroark not found out: a spectator offers its disguise's moves)
+        if not own_hidden:
+            diffs += _option_diffs(built, t)
         out += [(k, side, kind, detail) for kind, detail in diffs]
     return out, stats
