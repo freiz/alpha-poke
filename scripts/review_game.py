@@ -20,6 +20,7 @@ Players' names stay in data/ (local): the reports say ME / OPP.
 import argparse
 import json
 import sys
+from pathlib import Path
 
 from alpha_poke import paths
 from alpha_poke.agents.belief_state import BeliefModel
@@ -39,6 +40,8 @@ def main() -> int:
     ap.add_argument(
         "--repeats", type=int, default=3, help="independent searches per decision (errors)"
     )
+    ap.add_argument("--parallel", type=int, default=2, help="searches at once")
+    ap.add_argument("--team", help="the player's own team, a Showdown export file (exact sets)")
     ap.add_argument("--llm", action="store_true", help="also the chat model's write-up")
     ap.add_argument("--language", default="Chinese (简体中文)")
     ap.add_argument("--from-json", action="store_true", help="reuse review.json (no search)")
@@ -54,7 +57,8 @@ def main() -> int:
     else:
         print(f"{row['id']}: reviewing {side}'s decisions ({a.ms} ms x {a.threads} threads each)")
         rep = review(row, side, BeliefModel.load(), a.model, worlds=a.worlds, ms=a.ms,
-                     threads=a.threads, repeats=a.repeats)  # fmt: skip
+                     threads=a.threads, repeats=a.repeats, parallel=a.parallel,
+                     team=Path(a.team).read_text(encoding="utf-8") if a.team else None)  # fmt: skip
         (out / "review.json").write_text(
             json.dumps(rep, ensure_ascii=False, indent=1), encoding="utf-8"
         )

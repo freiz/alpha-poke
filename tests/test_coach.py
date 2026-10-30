@@ -4,15 +4,29 @@ the log's events with the sides as ME / OPP; the write-up's move check."""
 
 import gzip
 import json
+import random
 from pathlib import Path
 
+import poke_engine as pe
 import pytest
+from poke_env.data import GenData
 
 from alpha_poke.agents.belief_state import BeliefModel
 from alpha_poke.coach import narrate, replays
-from alpha_poke.coach.review import key_moments, review, turn_events
+from alpha_poke.coach.review import (
+    decision_count,
+    key_moments,
+    metrics,
+    review,
+    turn_events,
+    verdict,
+)
+from alpha_poke.coach.team import TeamError, match_team, parse_team
+from alpha_poke.replay import parse_replay
+from alpha_poke.train.positions import positions_from_replay
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
+GEN = GenData.from_gen(9)
 
 
 @pytest.fixture(scope="module")
@@ -43,7 +57,10 @@ def test_every_decision_is_searched(report):
         assert d["chosen_value"] is None or 0.0 <= d["chosen_value"] <= 1.0
         assert d["state"]["me"]["active"]["species"] and d["state"]["opp"]["alive"] >= 1
     assert all(len(d["options"]) <= 6 for d in ds)
-    assert key_moments(report, min_score=0.0)  # (some decision ranks first)
+    # (the moments: the "bad" verdicts, worst first -- none at all is possible, the search timed)
+    moments = key_moments(report, min_score=0.0)
+    assert all(verdict(d) == "bad" for d in moments)
+    assert [d["score"] for d in moments] == sorted((d["score"] for d in moments), reverse=True)
 
 
 def test_repeated_searches_give_errors(game):
@@ -58,6 +75,90 @@ def test_repeated_searches_give_errors(game):
     )
     assert any(d["value_se"] is not None for d in ds)
     assert all(len(o) == 4 for d in ds for o in d["options"])
+
+
+def test_parallel_searches_count_and_visits(game, report):
+    """Searches run at once give every decision (the count the home page shows beforehand), each
+    with the root's visits of all its searches."""
+    rep = review(game, "p1", BeliefModel.load(), str(FIXTURES / "tiny_net"), worlds=2, ms=20,
+                 threads=1, log=lambda *_: None, repeats=2, parallel=3)  # fmt: skip
+    turns = [(d["turn"], d["kind"]) for d in report["decisions"]]
+    assert [(d["turn"], d["kind"]) for d in rep["decisions"]] == turns
+    assert decision_count(game, "p1") == len(turns)
+    assert all(d["visits"] > 0 and d["repeats"] == 2 for d in rep["decisions"])
+    assert rep["settings"]["parallel"] == 3 and rep["settings"]["team"] is False
+
+
+def _export(game, side: str, drop_move: bool = False) -> str:
+    """A Showdown export of ``side``'s team in ``game``: its revealed parts, the rest made up
+    (Modest, 252 HP / 4 Def / 252 Spe, 0 Atk IVs)."""
+    out = []
+    for m in [m for m in parse_replay(game).teams[side] if not m.phantom]:
+        moves = [] if drop_move else list(m.moves)
+        moves = (moves + [x for x in ("Protect", "Substitute", "Rest", "Toxic") if x not in moves])[
+            :4
+        ]
+        out += [f"{m.species.replace('-*', '')} @ {m.item or 'Leftovers'}",
+                f"Ability: {m.ability or 'Pressure'}", f"Tera Type: {m.tera_type or 'Fairy'}",
+                "EVs: 252 HP / 4 Def / 252 Spe", "Modest Nature", "IVs: 0 Atk",
+                *[f"- {x}" for x in moves], ""]  # fmt: skip
+    return "\n".join(out)
+
+
+def _own_sides(game, belief, seed: int, known=None) -> list:
+    """The player's sets in each position of one draw (the move slots' order is shuffled)."""
+    ps = positions_from_replay(game, belief, random.Random(seed), extra_per_game=10**6, seed=seed,
+                               worlds=2, known_sets=known, side="p1")  # fmt: skip
+    return [[(str(m.id), str(m.item), str(m.ability), str(m.nature), tuple(m.evs), m.attack,
+              m.speed, sorted(str(x.id) for x in m.moves))
+             for m in pe.State.from_string(p.state).side_one.pokemon]
+            for p in ps]  # fmt: skip
+
+
+def test_a_pasted_team_is_the_players_sets_exactly(game):
+    """The player's own team pasted: every state has its sets (moves, item, ability, nature,
+    EVs, IVs: the stats) in every draw; without it, the parts the game did not show are drawn
+    anew for each repeat (their spread is in the error ranges)."""
+    belief = BeliefModel.load()
+    records = [m for m in parse_replay(game).teams["p1"] if not m.phantom]
+    sets = match_team(parse_team(_export(game, "p1")), records)
+    known = {"p1": sets}
+    a, b = _own_sides(game, belief, 0, known), _own_sides(game, belief, 1, known)
+    assert a == b
+    assert _own_sides(game, belief, 0) != _own_sides(game, belief, 1)
+    st = pe.State.from_string(
+        positions_from_replay(
+            game,
+            belief,
+            random.Random(0),
+            extra_per_game=10**6,
+            worlds=2,
+            known_sets=known,
+            side="p1",
+        )[0].state  # fmt: skip
+    )
+    for p in st.side_one.pokemon:
+        k = next(v for key, v in sets.items() if key.startswith(str(p.id).lower()[:5]))
+        assert str(p.nature).lower() == "modest" and tuple(p.evs) == (252, 0, 4, 0, 0, 252)
+        assert sorted(str(m.id).lower() for m in p.moves) == sorted(k.moves)
+        base = GEN.pokedex[str(p.id).lower()]["baseStats"]["atk"]
+        assert p.attack == int(((2 * base + 0) * 100 // 100 + 5) * 0.9)  # (0 Atk IVs, Modest)
+    rep = review(game, "p1", belief, str(FIXTURES / "tiny_net"), worlds=2, ms=20, threads=1,
+                 log=lambda *_: None, team=_export(game, "p1"))  # fmt: skip
+    assert rep["settings"]["team"] is True and rep["decisions"]
+
+
+def test_a_team_that_is_not_the_games_is_refused(game):
+    records = [m for m in parse_replay(game).teams["p1"] if not m.phantom]
+    with pytest.raises(TeamError) as e:  # (another side's team)
+        match_team(parse_team(_export(game, "p2")), records)
+    assert e.value.code == "team_mismatch"
+    if any(m.moves for m in records):  # (a move the game showed, missing from the set)
+        with pytest.raises(TeamError):
+            match_team(parse_team(_export(game, "p1", drop_move=True)), records)
+    with pytest.raises(TeamError) as e:
+        parse_team("")
+    assert e.value.code == "team_unreadable"
 
 
 def test_the_verdict():
@@ -78,6 +179,23 @@ def test_the_verdict():
     assert verdict(shunned | {"loss": None, "loss_se": None}) == "mild"  # never tried: no value
     assert verdict(base | {"chosen_share": 0.3, "loss": 0.03, "loss_se": None}) == "ok"
     assert verdict(base | {"chosen_share": 0.3, "loss": 0.08, "loss_se": 0.01}) == "bad"
+
+
+def test_the_scorecard():
+    """metrics: first / top-two matches and the mean loss over the decisions with a choice (one
+    option: left out), the verdicts' counts over all."""
+    opt = lambda *names: [[c, 0.5, 0.5, None] for c in names]  # noqa: E731
+    ds = [
+        {"chosen": "a", "best": "a", "options": opt("a", "b"), "loss": 0.0, "chosen_share": 0.6},
+        {"chosen": "b", "best": "a", "options": opt("a", "b", "c"), "loss": 0.02, "chosen_share": 0.3},
+        {"chosen": "c", "best": "a", "options": [["a", 0.9, 0.6, None], ["b", 0.08, 0.5, None],
+                                                 ["c", 0.02, 0.4, None]],
+         "loss": 0.2, "chosen_share": 0.02},
+        {"chosen": "a", "best": "a", "options": opt("a"), "loss": 0.0, "chosen_share": 1.0},
+    ]  # fmt: skip
+    m = metrics({"decisions": ds})
+    assert m["decisions"] == 3 and m["top1"] == 1 / 3 and m["top2"] == 2 / 3
+    assert abs(m["mean_loss"] - 0.22 / 3) < 1e-9 and m["bad"] == 1 and m["mild"] == 0
 
 
 def test_events_name_the_sides(game):
@@ -179,8 +297,12 @@ def test_the_app_reviews_an_uploaded_replay(game):
         home = requests.get(base + "/", timeout=5)
         assert "对局复盘" in home.text and home.headers["Cache-Control"] == "no-cache"
         upload = {"upload": {"name": "game.json", "text": json.dumps(game)}}
-        players = requests.post(base + "/api/players", json=upload, timeout=30).json()["players"]
-        assert players == ["Player A", "Player B"]
+        info = requests.post(base + "/api/players", json=upload, timeout=30).json()
+        assert info["players"] == ["Player A", "Player B"] and info["max_parallel"] >= 1
+        assert info["decisions"] == [decision_count(game, s) for s in ("p1", "p2")]
+        wrong = requests.post(base + "/api/review", json=upload | {"player": "Player B", "lang": "zh",
+                              "team": _export(game, "p1")}, timeout=30)  # fmt: skip
+        assert wrong.status_code == 400 and "队伍和这局对不上" in wrong.json()["error"]
         for lang, text in (("en", "Paste a replay"), ("zh", "请粘贴")):  # (the page's language)
             r = requests.post(base + "/api/players", json={"source": "", "lang": lang}, timeout=5)
             assert r.status_code == 400 and text in r.json()["error"]
@@ -188,7 +310,9 @@ def test_the_app_reviews_an_uploaded_replay(game):
                             headers={"Origin": "https://elsewhere.example"}, timeout=5)  # fmt: skip
         assert bad.status_code == 403
         job = requests.post(
-            base + "/api/review", json=upload | {"player": "Player B"}, timeout=30
+            base + "/api/review",
+            json=upload | {"player": "Player B", "team": _export(game, "p2"), "parallel": 2},
+            timeout=30,
         ).json()["job"]
         for _ in range(240):
             j = requests.get(f"{base}/api/job/{job}", timeout=5).json()

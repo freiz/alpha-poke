@@ -33,12 +33,15 @@ class Spread:
         return cls(nature.lower(), tuple(int(x) for x in evs.split("/")))
 
 
-def calc_stats(base: dict[str, int], spread: Spread, level: int = 100) -> dict[str, int]:
+def calc_stats(base: dict[str, int], spread: Spread, level: int = 100,
+               ivs: tuple[int, ...] | None = None) -> dict[str, int]:  # fmt: skip
+    """``ivs``: all 31 when None (sampled sets; a known team's own)."""
     nat = GEN.natures.get(spread.nature, {})
     out = {}
     for i, s in enumerate(STATS):
         ev = spread.evs[i]
-        core = (2 * base[s] + 31 + ev // 4) * level // 100
+        iv = 31 if ivs is None else ivs[i]
+        core = (2 * base[s] + iv + ev // 4) * level // 100
         out[s] = core + level + 10 if s == "hp" else int((core + 5) * nat.get(s, 1.0))
     return out
 

@@ -63,6 +63,11 @@ PAGE = r"""<!DOCTYPE html>
   .stitle { font-size: 12px; color: var(--muted); font-weight: 600; } .shead { font-weight: 600; margin: 2px 0; }
   .slines { color: var(--muted); font-size: 12px; } .aibox { margin-top: 8px; padding: 8px; background: var(--bg); border-radius: 6px; }
   .aihead { font-weight: 600; margin-bottom: 4px; }
+  .score { display: flex; gap: 12px; flex-wrap: wrap; padding: 0 16px 12px; align-items: stretch; }
+  .tile { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px 16px; min-width: 130px; }
+  .tile b { display: block; font-size: 28px; line-height: 1.2; font-variant-numeric: tabular-nums; }
+  .tile b small { font-size: 13px; color: var(--muted); font-weight: 400; margin-left: 4px; }
+  .tile span { color: var(--muted); font-size: 12px; } .score .legend { align-self: flex-end; max-width: 360px; }
   .lang { margin-left: auto; font-size: 12px; color: var(--muted); }
   .lang button { background: var(--bg); color: var(--ink); border: 1px solid var(--line); padding: 2px 8px; cursor: pointer; font: inherit; }
   .lang button.sel { background: var(--ai); color: #fff; border-color: var(--ai); }
@@ -72,6 +77,7 @@ PAGE = r"""<!DOCTYPE html>
   <span class="lang"><span id="lui"></span> <button data-k="ui" data-v="en">EN</button><button data-k="ui" data-v="zh">中文</button>
     &nbsp; <span id="lnames"></span> <button data-k="names" data-v="en">EN</button><button data-k="names" data-v="zh">中文</button></span>
 </header>
+<div class="score" id="score"></div>
 <main>
   <div class="wrapper replay-wrapper">
     <div class="battle"></div><div class="battle-log"></div>
@@ -140,6 +146,11 @@ const T = {
     winCol: "Winning chance after it", shareCol: "The AI's share of thinking", home: "← Home",
     tune: "How strict:", tz: "a gap counts beyond", tzv: v => `${v}× its error`, tl: "the AI shuns a choice it thinks about less than", tlv: v => `${v}%`,
     noteRuns: n => n > 1 ? ` × ${n} searches` : "", approx: "≈",
+    noteTeam: t => t ? " | your team: pasted (exact)" : " | your team: what the game showed, the rest guessed",
+    visits: n => `${n.toLocaleString("en")} visits`,
+    top1: "Matched the AI's first choice", top2: "In the AI's top two", meanLoss: "Average winning chance lost", pts: "pts",
+    badMild: "AI disagreed / didn't like it",
+    scoreNote: n => `Over your ${n} decisions with a choice; the last tile follows the strictness below.`,
     untried: "untried", left: n => `${n} left`, tera: "terastallized",
     hazMe: "hazards on your side", hazOpp: "on the opponent's side", unseen: x => `You chose ${x} (the log does not show it as such)`,
     switchTo: x => `Switch to ${x}`, teraSuffix: " + Tera",
@@ -185,6 +196,11 @@ const T = {
     winCol: "选这一步后的胜率", shareCol: "AI 思考的比例", home: "← 主页",
     tune: "判定标准：", tz: "胜率差距超出误差的", tzv: v => `${v} 倍才算数`, tl: "AI 思考比例低于", tlv: v => `${v}% 算不认同`,
     noteRuns: n => n > 1 ? ` × ${n} 次搜索` : "", approx: "≈",
+    noteTeam: t => t ? " ｜ 我方队伍：已粘贴（精确）" : " ｜ 我方队伍：这局亮出来的部分，其余靠猜",
+    visits: n => `访问 ${n.toLocaleString("en")} 次`,
+    top1: "AI 一选吻合率", top2: "AI 前二吻合率", meanLoss: "平均每步胜率损失", pts: "点",
+    badMild: "AI 不认同 / 不太喜欢",
+    scoreNote: n => `只算有选择余地的 ${n} 步决策；最后一项随下面的判定标准变化。`,
     untried: "未尝试", left: n => `剩 ${n} 只`, tera: "已太晶",
     hazMe: "你这边的钉子", hazOpp: "对手那边的钉子", unseen: x => `你选择了 ${x}（日志里没有按这样显示）`,
     switchTo: x => `换上 ${x}`, teraSuffix: " + 太晶",
@@ -341,7 +357,7 @@ function verdict(d) {
 const pm = se => se ? ` ±${Math.max(1, Math.round(100 * se))}` : "";
 function aiHTML(d) {
   const v = verdict(d), tag = {bad: L.bad, mild: L.mild, same: L.same, ok: L.ok}[v];
-  let h = `<div class="aibox"><div class="aihead">${L.aiHead[d.kind] || L.aiHead.turn} <span class="tag ${v == "same" ? "ok" : v}">${tag}</span> <span class="legend">${L.chanceAt(pct(d.value) + pm(d.value_se))}</span></div>`;
+  let h = `<div class="aibox"><div class="aihead">${L.aiHead[d.kind] || L.aiHead.turn} <span class="tag ${v == "same" ? "ok" : v}">${tag}</span> <span class="legend">${L.chanceAt(pct(d.value) + pm(d.value_se))}${d.visits ? " · " + L.visits(d.visits) : ""}</span></div>`;
   h += `<div class="legend">${L.bars}</div>`;
   h += `<div class="opt head"><span></span><span>${L.winCol}</span><span>${L.shareCol}</span></div>`;
   const opts = d.options.slice();
@@ -387,7 +403,23 @@ function render() {
   const moments = R.decisions.map((d, i) => ({d, i})).filter(x => verdict(x.d) == "bad").sort((a, b) => b.d.score - a.d.score).slice(0, 5);
   document.getElementById("moments").innerHTML = moments.map(({d, i}) => `<li data-i="${i}">${L.moment(d.turn, esc(option(d.chosen)), esc(option(d.best)), d.chosen_value == null ? L.untried : pct(d.chosen_value), pct(d.best_value))}</li>`).join("") || `<li>${L.noMoments}</li>`;
   curve();
+  scorecard();
   const sel = document.querySelector(".step.sel"); if (sel) sel.scrollIntoView({block: "nearest"});
+}
+// the game's scorecard (as coach.review.metrics): first / top-two choice matches and the mean loss
+// over the decisions with a choice; the verdicts' counts under the current thresholds
+function scorecard() {
+  const ds = R.decisions.filter(d => d.options.length >= 2), n = ds.length;
+  const rate = k => n ? Math.round(100 * ds.filter(d => d.options.slice(0, k).some(o => o[0] == d.chosen)).length / n) + "%" : "—";
+  const cnt = k => `<small>${ds.filter(d => d.options.slice(0, k).some(o => o[0] == d.chosen)).length}/${n}</small>`;
+  const losses = ds.filter(d => d.loss != null).map(d => Math.max(0, d.loss));
+  const mean = losses.length ? (100 * losses.reduce((a, b) => a + b, 0) / losses.length).toFixed(1) : "—";
+  const vs = R.decisions.map(verdict);
+  const tile = (v, label) => `<div class="tile"><b>${v}</b><span>${label}</span></div>`;
+  document.getElementById("score").innerHTML = tile(rate(1) + cnt(1), L.top1) + tile(rate(2) + cnt(2), L.top2)
+    + tile(`${mean}<small>${L.pts}</small>`, L.meanLoss)
+    + tile(`<span style="color:var(--bad);font-size:inherit">${vs.filter(v => v == "bad").length}</span> / <span style="color:var(--mild);font-size:inherit">${vs.filter(v => v == "mild").length}</span>`, L.badMild)
+    + `<div class="legend">${esc(L.scoreNote(n))}</div>`;
 }
 // the curve by turn: a turn-start decision at its turn, a switch after a faint / a pivot halfway to
 // the next; the current turn marked
@@ -423,7 +455,7 @@ document.documentElement.lang = UI == "zh" ? "zh" : "en";
 document.getElementById("title").textContent = L.title(R.id);
 if (location.protocol.startsWith("http")) { const a = document.getElementById("home"); a.textContent = L.home; a.hidden = false; }
 document.getElementById("res").textContent = R.won ? L.won : L.lost;
-document.getElementById("note").textContent = L.note(R.ms, R.worlds) + L.noteRuns(R.repeats || 1);
+document.getElementById("note").textContent = L.note(R.ms, R.worlds) + L.noteRuns(R.repeats || 1) + L.noteTeam(R.team);
 document.getElementById("lui").textContent = L.ui;
 document.getElementById("lnames").textContent = L.names;
 document.getElementById("curvenote").textContent = L.curve;
@@ -589,7 +621,7 @@ def render(report: dict, row: dict, client: str = "official") -> str:
     data = {"id": report["id"], "side": report["side"], "won": won, "turns": report["turns"],
             "ms": report["settings"]["ms"], "worlds": report["settings"]["worlds"],
             "decisions": ds, "events": events, "repeats": report["settings"].get("repeats", 1),
-            "last_turn": max(events)}  # fmt: skip
+            "team": report["settings"].get("team", False), "last_turn": max(events)}  # fmt: skip
     log = row["log"].replace("</", "<\\/")
     return (PAGE.replace("__REVIEW__", json.dumps(data, ensure_ascii=False).replace("</", "<\\/"))
             .replace("__LOG__", log)

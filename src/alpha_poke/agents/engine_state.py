@@ -173,6 +173,11 @@ class KnownSet:
     item: str | None = None  # item id (the original item)
     ability: str | None = None
     tera: str | None = None  # tera type, lower case
+    # (the whole set, from the player's own team -- a game review with the team pasted: nothing
+    # of it sampled)
+    nature: str | None = None
+    evs: tuple[int, ...] | None = None
+    ivs: tuple[int, ...] | None = None
 
 
 @dataclass
@@ -466,7 +471,11 @@ def sample_set(
         moves.append(pick)
         weights.pop(pick)
     spread = None
-    if dmg_post:  # F1: (item, ability, spread) from the damage posterior (agents/damage_obs.py)
+    if known is not None and known.nature and known.evs:  # (the player's own team: exact)
+        spread = Spread(known.nature, tuple(known.evs))
+    if (
+        spread is None and dmg_post
+    ):  # F1: (item, ability, spread) from the damage posterior (agents/damage_obs.py)
         level = mon.level or 100
         w = [p for *_, p in dmg_post]
         if k is not None and not item_seen and ss.vocab.get("item"):
@@ -503,7 +512,8 @@ def sample_set(
     forme = resolve_forme(sp, item, ability, moves) if hidden else None
     forme = forme if forme != sp else None
     base = (GEN.pokedex.get(forme) or {}).get("baseStats") if forme else None
-    stats = calc_stats(base or own_base_stats(mon), spread, level=mon.level or 100)
+    ivs = known.ivs if known is not None and known.nature and known.evs else None
+    stats = calc_stats(base or own_base_stats(mon), spread, level=mon.level or 100, ivs=ivs)
     return SampledSet(
         moves or ["tackle"], item, ability, tera, stats, spread.nature, tuple(spread.evs), forme
     )

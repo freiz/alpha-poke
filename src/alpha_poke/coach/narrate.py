@@ -10,7 +10,7 @@ import re
 import requests
 
 from alpha_poke.analysis.roles import to_id
-from alpha_poke.coach.review import key_moments, mistake_score, swings
+from alpha_poke.coach.review import key_moments, metrics, mistake_score, swings
 from alpha_poke.dex import MOVE_IDS, learnset
 from alpha_poke.servers import load_env
 
@@ -68,6 +68,12 @@ def summary(report: dict) -> str:
     won = report["winner"] == me
     ds = report["decisions"]
     lines = [f"# Review: {report['id']} ({'won' if won else 'lost'}, {report['turns']} turns)", ""]
+    m = metrics(report)
+    pc = lambda x: "-" if x is None else f"{100 * x:.0f}%"  # noqa: E731
+    lines += [f"Matched the AI's first choice {pc(m['top1'])}, its top two {pc(m['top2'])} "
+              f"({m['decisions']} decisions with a choice); mean winning chance lost "
+              f"{'-' if m['mean_loss'] is None else f'{100 * m['mean_loss']:.1f} points'}; "
+              f"AI disagreed {m['bad']}, didn't like it {m['mild']}.", ""]  # fmt: skip
     lines += ["## Winning chance by decision (the search's estimate)", "",
               "| turn | kind | chosen | AI's choice | win % | loss |", "|---|---|---|---|---|---|"]  # fmt: skip
     for d in ds:

@@ -4,8 +4,10 @@ to look, and gets the review page when the search is done. Loopback only; one re
 (a background thread), progress polled by the page.
 
   GET  /                      the home page (the reviews so far, the form)
-  POST /api/players           {source} or {upload: {name, text}} -> the replay's players
-  POST /api/review            {source | upload, player, strength | custom} -> {job}
+  POST /api/players           {source} or {upload: {name, text}} -> the replay's players, each
+                              one's decision count, the machine's search threads
+  POST /api/review            {source | upload, player, strength | custom, team, parallel}
+                              -> {job}
   GET  /api/job/<id>          {status, done, total, url, error}
   GET  /api/reviews           the reviews in data/coach
 """
@@ -22,10 +24,11 @@ from pathlib import Path
 
 from alpha_poke import paths
 from alpha_poke.coach import narrate, replays, server, viewer
-from alpha_poke.coach.review import review
+from alpha_poke.coach.review import decision_count, review
+from alpha_poke.coach.team import TeamError, match_team, parse_team
+from alpha_poke.replay import parse_replay
 from alpha_poke.selfplay.runner import MODEL
 
-# search effort per decision: (belief worlds, milliseconds)
 # search effort per decision: (belief worlds, milliseconds, independent searches -- their spread
 # gives the values' errors, 2026-10-30)
 STRENGTH = {"fast": (8, 500, 1), "standard": (16, 2000, 3), "deep": (32, 3000, 5)}
@@ -48,6 +51,10 @@ MESSAGES = {
     "format": {"en": "Only Gen 9 OU games can be reviewed (this one: {fmt}).",
                "zh": "只支持 Gen 9 OU 的对局（这一局：{fmt}）。"},
     "player": {"en": "Choose which player you were.", "zh": "请选择你是哪一位玩家。"},
+    "team_unreadable": {"en": "The team could not be read: paste it as Showdown's teambuilder exports it.",
+                        "zh": "队伍读不出来：请粘贴 Showdown 队伍编辑器“导出”的文本。"},
+    "team_mismatch": {"en": "The team does not fit this game ({names}).",
+                      "zh": "队伍和这局对不上（{names}）。"},
 }  # fmt: skip
 
 
@@ -84,16 +91,22 @@ class Jobs:
             self._belief = BeliefModel.load()
         return self._belief
 
-    def submit(self, row: dict, player: str, strength) -> str:
-        """``strength``: a preset's name or (worlds, ms, repeats)."""
+    def max_parallel(self) -> int:
+        """Searches at once the machine has the cores for (each ``threads`` threads)."""
+        return max(1, (os.cpu_count() or 2) // self.threads)
+
+    def submit(self, row: dict, player: str, strength, team=None, parallel: int = 2) -> str:
+        """``strength``: a preset's name or (worlds, ms, repeats); ``team``: the player's sets
+        (coach.team); ``parallel``: searches at once."""
         jid = uuid.uuid4().hex[:12]
         self.jobs[jid] = {"status": "queued", "done": 0, "total": 0, "url": None, "error": None}
-        self.queue.put((jid, row, player, strength))
+        parallel = int(min(max(parallel, 1), self.max_parallel()))
+        self.queue.put((jid, row, player, strength, team, parallel))
         return jid
 
     def _work(self) -> None:
         while True:
-            jid, row, player, strength = self.queue.get()
+            jid, row, player, strength, team, parallel = self.queue.get()
             job = self.jobs[jid]
             try:
                 job["status"] = "running"
@@ -105,7 +118,8 @@ class Jobs:
                     job["done"], job["total"] = done, total
 
                 rep = review(row, side, self.belief(), self.model or model_dir(), worlds=worlds, ms=ms, repeats=repeats,
-                             threads=self.threads, log=lambda *_: None, progress=progress)  # fmt: skip
+                             threads=self.threads, log=lambda *_: None, progress=progress, team=team,
+                             parallel=parallel)  # fmt: skip
                 out = COACH / f"{row['id']}-{side}"
                 out.mkdir(parents=True, exist_ok=True)
                 (out / "review.json").write_text(
@@ -199,22 +213,30 @@ def handler(cache, jobs: Jobs):
                 return self._json({"error": message("format", lang, fmt=row.get("formatid"))},
                                   HTTPStatus.BAD_REQUEST)  # fmt: skip
             if self.path == "/api/players":
-                return self._json({"id": row["id"], "players": row["players"]})
+                return self._json({"id": row["id"], "players": row["players"],
+                                   "decisions": [decision_count(row, s) for s in ("p1", "p2")],
+                                   "max_parallel": jobs.max_parallel(), "threads": jobs.threads,
+                                   "strengths": jobs.strengths})  # fmt: skip
             if self.path == "/api/review":
                 player = body.get("player") or ""
                 if player not in row["players"]:
                     return self._json({"error": message("player", lang)}, HTTPStatus.BAD_REQUEST)
-                return self._json(
-                    {
-                        "job": jobs.submit(
-                            row,
-                            player,
-                            custom_strength(body["custom"])
-                            if body.get("custom")
-                            else body.get("strength") or "standard",
-                        )
-                    }
-                )
+                team = None
+                if (body.get("team") or "").strip():  # (checked now: the page shows what is wrong)
+                    try:
+                        side = replays.side_of(row, player)
+                        records = [m for m in parse_replay(row).teams[side] if not m.phantom]
+                        team = match_team(parse_team(body["team"]), records)
+                    except TeamError as e:
+                        return self._json({"error": message(e.code, lang, names=e.names)},
+                                          HTTPStatus.BAD_REQUEST)  # fmt: skip
+                strength = (custom_strength(body["custom"]) if body.get("custom")
+                            else body.get("strength") or "standard")  # fmt: skip
+                try:
+                    parallel = int(body.get("parallel") or 2)
+                except (TypeError, ValueError):
+                    parallel = 2
+                return self._json({"job": jobs.submit(row, player, strength, team, parallel)})
             return self._json({"error": "not found"}, HTTPStatus.NOT_FOUND)
 
     return Handler
@@ -264,6 +286,7 @@ HOME = r"""<!DOCTYPE html>
   h1 { font-size: 22px; margin: 0 0 4px; } .muted { color: var(--muted); font-size: 13px; }
   section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin: 16px 0; }
   label { display: block; margin: 10px 0 4px; font-weight: 600; }
+  textarea { width: 100%; box-sizing: border-box; min-height: 7em; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); font: 13px/1.4 ui-monospace, monospace; }
   input[type=text] { width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); font: inherit; }
   .go { background: var(--ai); color: #fff; border: 0; border-radius: 6px; padding: 8px 16px; font: inherit; cursor: pointer; margin-top: 12px; }
   .go:disabled { opacity: .5; cursor: default; }
@@ -296,9 +319,14 @@ HOME = r"""<!DOCTYPE html>
         <label><span data-t="repeats"></span> <input type="number" id="c-repeats" min="1" max="8" value="3" style="width:4em" /></label>
         <label><span data-t="seconds"></span> <input type="number" id="c-seconds" min="0.2" max="10" step="0.1" value="2" style="width:4.5em" /></label>
         <label><span data-t="worlds"></span> <input type="number" id="c-worlds" min="4" max="64" value="16" style="width:4em" /></label>
-        <span class="muted" id="c-est"></span>
       </div>
       <div class="muted" data-t="strengthNote"></div>
+      <label for="team" data-t="teamLabel"></label>
+      <textarea id="team" spellcheck="false"></textarea>
+      <div class="muted" data-t="teamNote"></div>
+      <label><span data-t="parallel"></span> <input type="number" id="parallel" min="1" value="2" style="width:4em" /></label>
+      <div class="muted" id="parallelNote"></div>
+      <div id="est"></div>
       <button class="go" id="go" data-t="start"></button>
     </div>
     <div id="progress" hidden><div class="muted" id="ptext"></div><div class="bar"><span id="pbar"></span></div></div>
@@ -313,18 +341,24 @@ const T = {
        link: "Showdown replay link or id", fileLabel: "or a saved replay file (.html / .json / .log)", load: "Load the game",
        which: "Which player were you?", strength: "How deep to look", fast: "Fast: 1 search × 0.5 s per decision",
        standard: "Standard: 3 searches × 2 s", deep: "Deep: 5 searches × 3 s", custom: "Custom",
-       repeats: "searches", seconds: "seconds each", worlds: "belief worlds", est: s => `≈ ${s} s per decision`,
-       strengthNote: "More searches give steadier numbers and their error ranges (the hidden sets are guessed anew each time); a game has 20–40 decisions.", start: "Review", past: "Reviews so far", none: "None yet.",
-       queued: "Waiting…", building: "Rebuilding each decision's position…", step: (d, n) => `Thinking about decision ${d} of ${n}…`,
+       repeats: "searches", seconds: "seconds each", worlds: "belief worlds",
+       strengthNote: "More searches give steadier numbers and their error ranges (everything hidden is guessed anew each time).",
+       teamLabel: "Your team (optional)", teamNote: "Paste the team you played (Showdown teambuilder → Export). With it the AI knows your sets exactly, as you did; without it, what the game did not show of your team is guessed, and the error ranges grow.",
+       parallel: "Searches at once", parallelNote: (t, m) => `Each search uses ${t} threads; this computer has room for ${m} at once. More is faster.`,
+       est: (n, t) => `<b>${n}</b> decisions to review · about <b>${t}</b>`, min: m => `${m} min`, sec: s => `${s} s`, start: "Review", past: "Reviews so far", none: "None yet.",
+       queued: "Waiting…", building: "Rebuilding each decision's position…", step: (d, n) => `Decisions reviewed: ${d} of ${n}…`,
        won: "won", lost: "lost", turns: n => `${n} turns`},
   zh: {title: "对局复盘", ui: "界面",
        intro: "AI 从你的视角重新思考你的每一步：每个选择的胜率、AI 的选择、关键失误。只支持 Gen 9 OU。全部在你的电脑上运行。",
        link: "Showdown 回放链接或编号", fileLabel: "或者选择保存的回放文件（.html / .json / .log）", load: "读取对局",
        which: "你是哪一位玩家？", strength: "分析强度", fast: "快速：每步 1 次搜索 × 0.5 秒", standard: "标准：3 次 × 2 秒",
        deep: "深入：5 次 × 3 秒", custom: "自定义",
-       repeats: "搜索次数", seconds: "每次秒数", worlds: "信念世界数", est: s => `约每步 ${s} 秒`,
-       strengthNote: "搜索次数越多，数字越稳，还能给出误差范围（每次都重新猜一遍对手的隐藏配置）；一局通常有 20–40 个决策。", start: "开始分析", past: "以前的复盘", none: "还没有。",
-       queued: "排队中……", building: "正在重建每一步的局面……", step: (d, n) => `正在分析第 ${d} / ${n} 步……`,
+       repeats: "搜索次数", seconds: "每次秒数", worlds: "信念世界数",
+       strengthNote: "搜索次数越多，数字越稳，还能给出误差范围（每次都把看不到的部分重新猜一遍）。",
+       teamLabel: "你的队伍（可选）", teamNote: "粘贴你这局用的队伍（Showdown 队伍编辑器 → Export 导出）。贴上后 AI 和你一样清楚自己的配置；不贴的话，这局没亮出来的配置要靠猜，误差范围会变大。",
+       parallel: "同时进行的搜索数", parallelNote: (t, m) => `每个搜索用 ${t} 个线程；这台电脑最多可以同时跑 ${m} 个。越多越快。`,
+       est: (n, t) => `共 <b>${n}</b> 步决策 · 预计约 <b>${t}</b>`, min: m => `${m} 分钟`, sec: s => `${s} 秒`, start: "开始分析", past: "以前的复盘", none: "还没有。",
+       queued: "排队中……", building: "正在重建每一步的局面……", step: (d, n) => `已分析 ${d} / ${n} 步……`,
        won: "胜", lost: "负", turns: n => `${n} 回合`},
 };
 let UI = "en";
@@ -338,9 +372,22 @@ document.querySelectorAll(".lang button").forEach(b => {
   b.onclick = () => { try { localStorage.setItem("coach-ui", b.dataset.v); } catch (e) {} location.search = "?ui=" + b.dataset.v; };
 });
 const $ = id => document.getElementById(id);
-const estimate = () => { $("c-est").textContent = L.est(Math.round(10 * $("c-repeats").value * $("c-seconds").value) / 10); };
-document.querySelectorAll("input[name=strength]").forEach(r => r.addEventListener("change", () => { $("customize").hidden = r.value != "custom" || !r.checked; }));
-["c-repeats", "c-seconds", "c-worlds"].forEach(id => $(id).addEventListener("input", estimate)); estimate();
+let info = null;  // the loaded game's: decisions per side, the machine's room, the strengths
+function effort() {  // [worlds, seconds, searches] of the chosen strength
+  const strength = document.querySelector("input[name=strength]:checked").value;
+  if (strength == "custom") return [+$("c-worlds").value, +$("c-seconds").value, +$("c-repeats").value];
+  const [w, ms, r] = info.strengths[strength] || info.strengths.standard; return [w, ms / 1000, r];
+}
+function estimate() {  // the searches in waves of `parallel`, plus rebuilding the positions (≈ 4.5 ms per world)
+  if (!info) return;
+  const i = info.players.indexOf((document.querySelector("input[name=player]:checked") || {}).value);
+  const n = info.decisions[Math.max(0, i)] || 0, [w, s, r] = effort();
+  const p = Math.min(Math.max(1, +$("parallel").value || 1), info.max_parallel);
+  const secs = Math.ceil(n * r / p) * s + r * n * w * 0.0045;
+  $("est").innerHTML = L.est(n, secs >= 90 ? L.min(Math.round(secs / 60)) : L.sec(Math.max(1, Math.round(secs))));
+}
+document.querySelectorAll("input[name=strength]").forEach(r => r.addEventListener("change", () => { $("customize").hidden = r.value != "custom" || !r.checked; estimate(); }));
+["c-repeats", "c-seconds", "c-worlds", "parallel"].forEach(id => $(id).addEventListener("input", estimate));
 const esc = x => String(x).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
 let body = null;
 async function post(url, data) {
@@ -357,9 +404,13 @@ $("load").onclick = async () => {
   try {
     body = await source();
     const r = await post("/api/players", body);
-    $("players").innerHTML = r.players.filter(Boolean).map((p, i) =>
-      `<label><input type="radio" name="player" value="${esc(p)}" ${i ? "" : "checked"} /> ${esc(p)}</label>`).join("");
-    $("pick").hidden = false;
+    info = r;
+    $("players").innerHTML = r.players.map((p, i) => p ?
+      `<label><input type="radio" name="player" value="${esc(p)}" ${i == r.players.findIndex(Boolean) ? "checked" : ""} /> ${esc(p)}</label>` : "").join("");
+    document.querySelectorAll("input[name=player]").forEach(x => x.addEventListener("change", estimate));
+    $("parallel").max = r.max_parallel; $("parallel").value = Math.min(2, r.max_parallel);
+    $("parallelNote").textContent = L.parallelNote(r.threads, r.max_parallel);
+    $("pick").hidden = false; estimate();
   } catch (e) { $("err").textContent = e.message; }
 };
 $("go").onclick = async () => {
@@ -368,7 +419,7 @@ $("go").onclick = async () => {
     const player = document.querySelector("input[name=player]:checked").value;
     const strength = document.querySelector("input[name=strength]:checked").value;
     const custom = strength == "custom" ? {repeats: +$("c-repeats").value, seconds: +$("c-seconds").value, worlds: +$("c-worlds").value} : null;
-    const {job} = await post("/api/review", {...body, player, strength, custom});
+    const {job} = await post("/api/review", {...body, player, strength, custom, team: $("team").value, parallel: +$("parallel").value});
     const poll = async () => {
       const j = await (await fetch("/api/job/" + job)).json();
       if (j.status == "error") throw new Error(j.error);

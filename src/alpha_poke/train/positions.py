@@ -329,6 +329,8 @@ def positions_from_replay(
     seed: int = 0,
     pool: str = "split",
     worlds: int = 0,
+    known_sets: dict | None = None,
+    side: str | None = None,
 ):
     """``row``: a replay dict with ``id``, ``log`` (+ ``rating``, ``uploadtime``). ``per_game``
     > 0: only that many decision points, drawn at random (positions within a game are strongly
@@ -340,7 +342,10 @@ def positions_from_replay(
     ``pool="all"``: one pool of all decision points (turn starts and the others), ``per_game``
     drawn from it, so each kind keeps its real share (no sampling weights needed).
     ``worlds`` > 0: each position also carries that many belief worlds (``Position.worlds``; the
-    posterior is computed over them; game reviews, alpha_poke.coach)."""
+    posterior is computed over them; game reviews, alpha_poke.coach).
+    ``known_sets``: side -> species id -> KnownSet, over what the replay reveals (a reviewed
+    player's own team, pasted: coach.team). ``side``: that side's positions only (a review: the
+    other's states not built)."""
     rep = parse_replay(row)
     if rep.warnings or rep.winner not in ("p1", "p2"):
         return []
@@ -359,16 +364,16 @@ def positions_from_replay(
     extra: list = []
     rng2 = random.Random(zlib.crc32(f"{seed}:{row['id']}".encode()))
     if extra_per_game:
-        extra = _extra_points(rep, blind)
+        extra = extra_points(rep, blind)
     n_extra = len(extra)
     if extra_per_game and len(extra) > extra_per_game:
         extra = [extra[i] for i in sorted(rng2.sample(range(len(extra)), extra_per_game))]
     w_extra = n_extra / max(1, len(extra))
     return _emit_positions(row, rep, blind, actions, extra, w_main, w_extra, belief, rng, rng2,
-                           move_beta, worlds)  # fmt: skip
+                           move_beta, worlds, known_sets, side)  # fmt: skip
 
 
-def _extra_points(rep, blind) -> list:
+def extra_points(rep, blind) -> list:
     """The decision points other than visible turn starts: (kind, turn, side, action or Blind)."""
     extra = []
     for a in rep.actions:
@@ -380,7 +385,7 @@ def _extra_points(rep, blind) -> list:
 def _from_pool(row, rep, actions, belief, rng, move_beta, per_game, seed):
     """pool="all": per_game decision points from all of them, each kind at its real share."""
     blind = blind_sides(rep)
-    extra_all = _extra_points(rep, blind)
+    extra_all = extra_points(rep, blind)
     cands = [("m", k) for k in sorted(actions)] + [("x", i) for i in range(len(extra_all))]
     n = len(cands)
     if per_game and n > per_game:
@@ -393,7 +398,8 @@ def _from_pool(row, rep, actions, belief, rng, move_beta, per_game, seed):
 
 
 def _emit_positions(row, rep, blind, actions, extra, w_main, w_extra, belief, rng, rng2,
-                    move_beta, worlds: int = 0):  # fmt: skip
+                    move_beta, worlds: int = 0, known_sets: dict | None = None,
+                    only: str | None = None):  # fmt: skip
     lines = row["log"].split("\n")
     names: dict[str, str] = {}
     for x in lines:  # first non-empty name: logs often end with "|player|p1|" (player left)
@@ -419,6 +425,8 @@ def _emit_positions(row, rep, blind, actions, extra, w_main, w_extra, belief, rn
     battles = {s: Battle(f"battle-{row['id']}-{s}", names[s], _log, gen=9) for s in ("p1", "p2")}
     records = {s: [m for m in rep.teams[s] if not m.phantom] for s in ("p1", "p2")}
     known = {s: {to_id(m.species): _known(m) for m in records[s]} for s in ("p1", "p2")}
+    for s, sets in (known_sets or {}).items():
+        known[s].update(sets)
     # the moves a side's transformed active used, by its target (known to it from the transform
     # on: in the target's sampled set -- 2026-10-23 review: its first choice of one was dropped)
     copied = {s: {to_id(t): [to_id(x) for x in ms] for (sd, t), ms in rep.copied.items() if sd == s}
@@ -430,6 +438,8 @@ def _emit_positions(row, rep, blind, actions, extra, w_main, w_extra, belief, rn
     out = []
 
     def emit(kind, side, turn, a, key, gen):
+        if only and side != only:
+            return
         other = "p2" if side == "p1" else "p1"
         pos = _position(battles[side], side, a, records[side], known[side], belief, gen,
                         move_beta, kind, copied[side], worlds or POST_WORLDS)  # fmt: skip

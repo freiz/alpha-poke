@@ -16,15 +16,24 @@ import math
 import random
 import re
 import statistics
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict, dataclass, field
 
 import alpha_search
 import poke_engine as pe
 
 from alpha_poke.agents import slots
+from alpha_poke.coach.team import match_team, parse_team
 from alpha_poke.replay import parse_replay
 from alpha_poke.selfplay.batcher import ml_for, parse_ml
-from alpha_poke.train.positions import KIND_BLIND, KIND_FORCED, KIND_PIVOT, positions_from_replay
+from alpha_poke.train.positions import (
+    KIND_BLIND,
+    KIND_FORCED,
+    KIND_PIVOT,
+    blind_sides,
+    extra_points,
+    positions_from_replay,
+)
 
 KINDS = {KIND_FORCED: "switch after a faint", KIND_PIVOT: "pivot switch"}
 BOOSTS = ("attack", "defense", "special_attack", "special_defense", "speed", "accuracy", "evasion")
@@ -64,6 +73,7 @@ class Decision:
     value_se: float | None = None
     loss_se: float | None = None  # the loss's standard error (the two values' combined)
     repeats: int = 1
+    visits: int = 0  # the searches' visits at the root, all repeats (more: surer numbers)
 
 
 def _mon(p) -> dict:
@@ -136,69 +146,75 @@ def _mean_se(xs: list) -> tuple[float | None, float | None]:
 
 
 def review(row: dict, side: str, belief, model: str, worlds: int = 16, ms: int = 2000,
-           threads: int = 2, seed: int = 0, log=print, progress=None, repeats: int = 1) -> dict:  # fmt: skip
+           threads: int = 2, seed: int = 0, log=print, progress=None, repeats: int = 1,
+           team=None, parallel: int = 1) -> dict:  # fmt: skip
     """The review of ``side``'s decisions in ``row`` (coach.replays): {"decisions": [...],
     "teams": ..., "result": ..., "settings": ...}. ``progress(done, total)``: called before the
-    first search and after each (the app's progress bar). ``repeats`` > 1: each decision searched
-    that many times, each over its own ``worlds`` belief worlds (2026-10-30: one search's option
-    values moved by +-2-5 points from one draw of the hidden sets to the next, as much as the
-    options differ; the visit shares hardly moved): means and standard errors."""
+    first search and after each decision (the app's progress bar). ``repeats`` > 1: each decision
+    searched that many times, each over its own draw of everything hidden -- the opponent's
+    worlds and the player's own unrevealed set parts (2026-10-30: one search's option values moved
+    by +-2-5 points from one draw of the hidden sets to the next, as much as the options differ;
+    drawing only the opponent's again showed +-1, the player's own guesses were most of it; the
+    visit shares hardly moved): means and standard errors. ``team``: the player's own team (a
+    Showdown export, or coach.team.parse_team's) -- its sets exact, nothing of them sampled
+    (TeamError when it is not the replay's team). ``parallel``: searches run at once (each with
+    ``threads`` threads; the search releases the GIL)."""
     rep = parse_replay(row)
-    rng = random.Random(seed)
-    positions = [p for p in positions_from_replay(row, belief, rng, extra_per_game=10**6,
-                                                  seed=seed, worlds=worlds * repeats)
-                 if p.side == side and p.kind != KIND_BLIND]  # fmt: skip
+    known = None
+    if team:
+        sets = parse_team(team) if isinstance(team, str) else team
+        known = {side: match_team(sets, [m for m in rep.teams[side] if not m.phantom])}
+    # one draw per repeat: its own positions (the player's guessed parts too), matched by point
+    draws = []
+    for k in range(repeats):
+        ps = [p for p in positions_from_replay(row, belief, random.Random(seed + k),
+                                               extra_per_game=10**6, seed=seed + k, worlds=worlds,
+                                               known_sets=known, side=side)
+              if p.kind != KIND_BLIND]  # fmt: skip
+        draws.append(_by_point(ps))
+    points = list(draws[0])
     ml = parse_ml(ml_for(model))
     events = turn_events(row["log"], side)
-    decisions = []
     if progress:
-        progress(0, len(positions))
-    for i, p in enumerate(positions):
+        progress(0, len(points))
+
+    def search(i: int, k: int):
+        p = draws[k].get(points[i])
+        if p is None:
+            return None
         ctx = (list(p.reveal), (p.rating_own, p.rating_opp), p.turn, p.history)
-        runs, roots, n = [], [], 0
-        for k in range(
-            repeats
-        ):  # (each search its own worlds: the world draws' spread is the noise)
-            ws = p.worlds[k * worlds : (k + 1) * worlds]
-            ours, it, _, _ = alpha_search.ismcts(ws, ms, threads=threads, model_dir=model,
-                                                 use_policy=True, policy_opponent=True,
-                                                 contexts=[ctx] * len(ws), ml=ml, seed=seed + k)  # fmt: skip
-            n += it
-            total = sum(v for _, v, _ in ours) or 1
-            # (an option the search never tried has no value: None, not its 0 mean)
-            run = {c: (v / total, q if v else None) for c, v, q in ours}
-            runs.append(run)
-            roots.append(sum(sh * q for sh, q in run.values() if q is not None))
-        opts = []
-        for c in {c for run in runs for c in run}:
-            share = statistics.fmean(run.get(c, (0.0, None))[0] for run in runs)
-            q, se = _mean_se([run[c][1] for run in runs if c in run and run[c][1] is not None])
-            opts.append([c, share, q, se])
-        opts.sort(key=lambda o: (-o[1], o[0]))
-        chosen = slots.names(p.state)[p.action]
-        by = {o[0]: o for o in opts}
-        best = opts[0]
-        ch = by.get(chosen)
-        ch = ch if ch and ch[2] is not None else None
-        value, value_se = _mean_se(roots)
-        loss_se = (math.hypot(best[3], ch[3]) if ch and best[3] is not None and ch[3] is not None
-                   else None)  # fmt: skip
-        r3 = lambda x: None if x is None else round(x, 3)  # noqa: E731
-        shown = opts[:6] + ([by[chosen]] if chosen in by and by[chosen] not in opts[:6] else [])
-        d = Decision(
-            turn=p.turn, kind=KINDS.get(p.kind, "turn"), chosen=chosen, best=best[0],
-            value=round(value, 3), chosen_value=r3(ch[2]) if ch else None, best_value=round(best[2], 3),
-            loss=round(best[2] - ch[2], 3) if ch else None,
-            chosen_share=round(by[chosen][1], 3) if chosen in by else 0.0,
-            options=[[c, round(s, 3), r3(q), r3(e)] for c, s, q, e in shown],
-            state=public_state(p.state), events=events.get(p.turn, []),
-            value_se=r3(value_se), loss_se=r3(loss_se), repeats=repeats,
-        )  # fmt: skip
-        decisions.append(d)
-        if progress:
-            progress(i + 1, len(positions))
-        log(f"  turn {p.turn:>3} {d.kind:<21} chose {chosen:<24} search {best[0]:<24} "
-            f"win {d.value:.2f}  loss {d.loss if d.loss is not None else '-'}  ({i + 1}/{len(positions)}, {n} it)")  # fmt: skip
+        ours, it, _, _ = alpha_search.ismcts(p.worlds, ms, threads=threads, model_dir=model,
+                                             use_policy=True, policy_opponent=True,
+                                             contexts=[ctx] * len(p.worlds), ml=ml, seed=seed + k)  # fmt: skip
+        return ours, it
+
+    results = [[None] * repeats for _ in points]
+    left = [repeats] * len(points)
+    decisions: list = [None] * len(points)
+    done = 0
+    with ThreadPoolExecutor(max(1, parallel)) as pool:
+        futures = {
+            pool.submit(search, i, k): (i, k) for i in range(len(points)) for k in range(repeats)
+        }
+        for f in as_completed(futures):
+            i, k = futures[f]
+            try:
+                results[i][k] = f.result()
+            except BaseException:
+                pool.shutdown(cancel_futures=True)  # (not the remaining searches' minutes)
+                raise
+            left[i] -= 1
+            if left[i]:
+                continue
+            p = draws[0][points[i]]
+            decisions[i] = d = _decision(p, [r for r in results[i] if r is not None], events)
+            done += 1
+            if progress:
+                progress(done, len(points))
+            log(f"  turn {p.turn:>3} {d.kind:<21} chose {d.chosen:<24} search {d.best:<24} "
+                f"win {d.value:.2f}  loss {d.loss if d.loss is not None else '-'}  ({done}/{len(points)}, "
+                f"{d.visits} visits)")  # fmt: skip
+
     return {
         "id": row["id"],
         "side": side,
@@ -214,8 +230,70 @@ def review(row: dict, side: str, belief, model: str, worlds: int = 16, ms: int =
             "threads": threads,
             "seed": seed,
             "repeats": repeats,
+            "team": bool(team),
+            "parallel": parallel,
         },
     }
+
+
+def decision_count(row: dict, side: str) -> int:
+    """How many decisions of ``side`` a review searches (its turn starts the log shows, its
+    switches after a faint and pivot switches): positions_from_replay's points, without building
+    them (the home page's time estimate; a point whose state is not built is counted)."""
+    rep = parse_replay(row)
+    main = {(a.turn, a.side) for a in rep.actions
+            if a.turn >= 1 and not a.forced and not a.pivot and a.kind in ("move", "switch")}  # fmt: skip
+    return sum(sd == side for _, sd in main) + sum(
+        sd == side for k, _, sd, _ in extra_points(rep, blind_sides(rep)) if k != KIND_BLIND
+    )
+
+
+def _by_point(positions) -> dict:
+    """Positions by decision point: (turn, kind, n-th of that turn and kind) -- the same in every
+    draw of one replay."""
+    out, n = {}, {}
+    for p in positions:
+        key = (p.turn, p.kind)
+        n[key] = n.get(key, 0) + 1
+        out[(*key, n[key])] = p
+    return out
+
+
+def _decision(p, searches, events) -> "Decision":
+    """One decision from its searches ([(options, iterations)]: alpha_search.ismcts')."""
+    runs, roots, visits = [], [], 0
+    for ours, _ in searches:
+        total = sum(v for _, v, _ in ours) or 1
+        visits += sum(v for _, v, _ in ours)
+        # (an option the search never tried has no value: None, not its 0 mean)
+        run = {c: (v / total, q if v else None) for c, v, q in ours}
+        runs.append(run)
+        roots.append(sum(sh * q for sh, q in run.values() if q is not None))
+    opts = []
+    for c in {c for run in runs for c in run}:
+        share = statistics.fmean(run.get(c, (0.0, None))[0] for run in runs)
+        q, se = _mean_se([run[c][1] for run in runs if c in run and run[c][1] is not None])
+        opts.append([c, share, q, se])
+    opts.sort(key=lambda o: (-o[1], o[0]))
+    chosen = slots.names(p.state)[p.action]
+    by = {o[0]: o for o in opts}
+    best = opts[0]
+    ch = by.get(chosen)
+    ch = ch if ch and ch[2] is not None else None
+    value, value_se = _mean_se(roots)
+    loss_se = (math.hypot(best[3], ch[3]) if ch and best[3] is not None and ch[3] is not None
+               else None)  # fmt: skip
+    r3 = lambda x: None if x is None else round(x, 3)  # noqa: E731
+    shown = opts[:6] + ([by[chosen]] if chosen in by and by[chosen] not in opts[:6] else [])
+    return Decision(
+        turn=p.turn, kind=KINDS.get(p.kind, "turn"), chosen=chosen, best=best[0],
+        value=round(value, 3), chosen_value=r3(ch[2]) if ch else None, best_value=round(best[2], 3),
+        loss=round(best[2] - ch[2], 3) if ch else None,
+        chosen_share=round(by[chosen][1], 3) if chosen in by else 0.0,
+        options=[[c, round(s, 3), r3(q), r3(e)] for c, s, q, e in shown],
+        state=public_state(p.state), events=events.get(p.turn, []),
+        value_se=r3(value_se), loss_se=r3(loss_se), repeats=len(searches), visits=visits,
+    )  # fmt: skip
 
 
 def _revealed(m) -> dict:
@@ -250,6 +328,28 @@ def verdict(d: dict, z: float = 2.0, low_share: float = 0.10) -> str:
     if shunned:
         return "bad" if real else "mild"
     return "bad" if real and loss >= 0.05 else "ok"
+
+
+def metrics(report: dict, z: float = 2.0, low_share: float = 0.10) -> dict:
+    """The game's scorecard (as Go and chess reviews give, 2026-10-30): over the decisions with a
+    choice (two options or more the search tried) how often the player chose the search's first
+    choice ("top1") and one of its first two by visits ("top2"), the mean winning chance lost
+    (each decision's loss, at least 0; unknown for a choice never tried: left out), and over all
+    decisions how many verdicts were "bad" / "mild" (``z`` / ``low_share``: verdict's)."""
+    ds = [d for d in report["decisions"] if len(d["options"]) >= 2]
+    n = len(ds)
+    losses = [max(0.0, d["loss"]) for d in ds if d["loss"] is not None]
+    vs = [verdict(d, z, low_share) for d in report["decisions"]]
+    return {
+        "decisions": n,
+        "top1": sum(d["chosen"] == d["options"][0][0] for d in ds) / n if n else None,
+        "top2": sum(d["chosen"] in (d["options"][0][0], d["options"][1][0]) for d in ds) / n
+        if n
+        else None,
+        "mean_loss": statistics.fmean(losses) if losses else None,
+        "bad": vs.count("bad"),
+        "mild": vs.count("mild"),
+    }
 
 
 def key_moments(report: dict, k: int = 5, min_score: float = 0.10) -> list[dict]:
