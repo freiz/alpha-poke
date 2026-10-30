@@ -6,7 +6,8 @@ estimated time, the start button and the progress. CSS scoped to ``.rf``; the sc
 
   info  {strengths: {name: [worlds, ms, repeats]}, max_parallel, threads} (the app's)
   opts  {decisions(): the count, submit(values) -> job id, done(url), preset, custom: [worlds,
-         seconds, repeats], keptTeam: a team from before is kept when the box is left empty}
+         seconds, repeats], keptTeam: a team from before is kept when the box is left empty (or
+         a function saying so: checked again with each estimate)}
 """
 
 CSS = r"""
@@ -78,7 +79,6 @@ function reviewForm(ui, info, opts) {
   if (opts.preset) radios.forEach(r => { r.checked = r.value == opts.preset; });
   if (opts.custom) [["rf-worlds", 0], ["rf-seconds", 1], ["rf-repeats", 2]].forEach(([id, k]) => { $(id).value = opts.custom[k]; });
   $("rf-customize").hidden = chosen() != "custom";
-  $("rf-teamnote").textContent = L.teamNote + (opts.keptTeam ? " " + L.kept : "");
   $("rf-parallel").max = info.max_parallel; $("rf-parallel").value = Math.min(2, info.max_parallel);
   $("rf-parallelnote").textContent = L.parallelNote(info.threads, info.max_parallel);
   function effort() {  // [worlds, seconds, searches] of the chosen strength
@@ -87,6 +87,8 @@ function reviewForm(ui, info, opts) {
     const [w, ms, r] = info.strengths[s] || info.strengths.standard; return [w, ms / 1000, r];
   }
   function estimate() {  // the searches in waves of `parallel`, plus rebuilding the positions (≈ 4.5 ms per world)
+    const kept = typeof opts.keptTeam == "function" ? opts.keptTeam() : opts.keptTeam;
+    $("rf-teamnote").textContent = L.teamNote + (kept ? " " + L.kept : "");
     const n = opts.decisions() || 0, [w, s, r] = effort();
     const p = Math.min(Math.max(1, +$("rf-parallel").value || 1), info.max_parallel);
     const secs = Math.ceil(n * r / p) * s + r * n * w * 0.0045;

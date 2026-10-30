@@ -79,12 +79,13 @@ __RF_CSS__
 </style>
 <header>
   <a class="home" id="home" href="/" hidden></a><h1 id="title"></h1><span class="res" id="res"></span><span class="legend" id="note"></span>
-  <button class="redo" id="redo" hidden></button>
+  <button class="redo" id="redo" hidden></button><a class="home" id="other" hidden></a>
   <span class="lang"><span id="lui"></span> <button data-k="ui" data-v="en">EN</button><button data-k="ui" data-v="zh">中文</button>
     &nbsp; <span id="lnames"></span> <button data-k="names" data-v="en">EN</button><button data-k="names" data-v="zh">中文</button></span>
 </header>
 <div class="score" id="score"></div>
 <section class="redobox" id="redobox" hidden><h3 id="redohead"></h3><div class="legend" id="redonote"></div>
+<div class="rf"><label id="whohead"></label><div class="choice" id="who"></div><div class="muted" id="whonote"></div></div>
 __RF_HTML__
 </section>
 <main>
@@ -158,7 +159,9 @@ const T = {
     noteRuns: n => n > 1 ? ` × ${n} searches` : "", approx: "≈",
     noteTeam: t => t ? " | your team: pasted (exact)" : " | your team: what the game showed, the rest guessed",
     visits: n => `${n.toLocaleString("en")} visits`,
-    redo: "↻ Review again, deeper", redoHead: "Review this game again",
+    redo: "↻ Review again, deeper", redoHead: "Review this game again", whoHead: "Whose decisions",
+    whoNote: "The other player's view is a review of its own (this one stays); a team pasted is that player's.",
+    otherView: n => `↔ ${n}'s view`,
     redoNote: "With more searches, more time or your team pasted; when it is done this page shows the new review (in place of this one).",
     top1: "Matched the AI's first choice", top2: "In the AI's top two", meanLoss: "Average winning chance lost", pts: "pts",
     badMild: "AI disagreed / didn't like it",
@@ -210,7 +213,9 @@ const T = {
     noteRuns: n => n > 1 ? ` × ${n} 次搜索` : "", approx: "≈",
     noteTeam: t => t ? " ｜ 我方队伍：已粘贴（精确）" : " ｜ 我方队伍：这局亮出来的部分，其余靠猜",
     visits: n => `访问 ${n.toLocaleString("en")} 次`,
-    redo: "↻ 用更强的配置重新分析", redoHead: "重新分析这一局",
+    redo: "↻ 用更强的配置重新分析", redoHead: "重新分析这一局", whoHead: "分析谁的决策",
+    whoNote: "换成另一位玩家的视角会另存一份复盘（这一份保留）；贴的队伍算那位玩家的。",
+    otherView: n => `↔ ${n} 的视角`,
     redoNote: "可以多搜几次、每次多想一会儿，或者贴上你的队伍；完成后这一页会换成新的结果（替换掉现在这份）。",
     top1: "AI 一选吻合率", top2: "AI 前二吻合率", meanLoss: "平均每步胜率损失", pts: "点",
     badMild: "AI 不认同 / 不太喜欢",
@@ -492,6 +497,14 @@ if (location.protocol.startsWith("http") && DIR) {
     if (!info) return;
     const btn = document.getElementById("redo"), box = document.getElementById("redobox");
     btn.textContent = L.redo; btn.hidden = false;
+    const otherName = info.players.find(p => p && p != info.player);
+    if (info.other && otherName) {
+      const a = document.getElementById("other"); a.href = info.other; a.textContent = L.otherView(otherName); a.hidden = false;
+    }
+    document.getElementById("whohead").textContent = L.whoHead; document.getElementById("whonote").textContent = L.whoNote;
+    document.getElementById("who").innerHTML = info.players.map(p => p ?
+      `<label><input type="radio" name="rf-who" value="${esc(p).replace(/"/g, "&quot;")}" ${p == info.player ? "checked" : ""} /> ${esc(p)}</label>` : "").join("");
+    const who = () => (document.querySelector("input[name=rf-who]:checked") || {}).value || info.player;
     document.getElementById("redohead").textContent = L.redoHead; document.getElementById("redonote").textContent = L.redoNote;
     let form = null;
     btn.onclick = () => {
@@ -500,15 +513,17 @@ if (location.protocol.startsWith("http") && DIR) {
       const order = ["fast", "standard", "deep"], cur = [R.worlds, R.ms, R.repeats || 1].join();
       const at = order.findIndex(k => (info.strengths[k] || []).join() == cur);
       form = reviewForm(UI, info, {
-        decisions: () => info.decisions, preset: at >= 0 && at < 2 ? order[at + 1] : "custom",
-        custom: [R.worlds, R.ms / 1000, Math.min(8, (R.repeats || 1) + 2)], keptTeam: info.team,
+        decisions: () => info.decisions[Math.max(0, info.players.indexOf(who()))],
+        preset: at >= 0 && at < 2 ? order[at + 1] : "custom",
+        custom: [R.worlds, R.ms / 1000, Math.min(8, (R.repeats || 1) + 2)], keptTeam: () => info.team && who() == info.player,
         submit: async v => {
           const r = await fetch("/api/redo", {method: "POST", headers: {"Content-Type": "application/json"},
-                                              body: JSON.stringify({...v, review: DIR, lang: UI})});
+                                              body: JSON.stringify({...v, review: DIR, player: who(), lang: UI})});
           const j = await r.json(); if (!r.ok) throw new Error(j.error || r.statusText); return j.job;
         },
-        done: () => location.reload(),
+        done: url => { if (url == location.pathname) location.reload(); else location.href = url; },
       });
+      document.querySelectorAll("input[name=rf-who]").forEach(x => { x.onchange = form.estimate; });
       box.scrollIntoView({block: "nearest"});
     };
   }).catch(() => {});

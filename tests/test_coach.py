@@ -390,12 +390,28 @@ def test_the_app_reviews_an_uploaded_replay(game):
         # review again (the page's button): the game, the player and the team kept with it
         name = j["url"].split("/")[2]
         redo = requests.get(f"{base}/api/redo-info?review={name}", timeout=5).json()
-        assert redo["team"] is True and redo["settings"]["repeats"] == 2 and redo["decisions"] >= 1
+        assert (
+            redo["team"] is True
+            and redo["settings"]["repeats"] == 2
+            and redo["decisions"] == [decision_count(game, s) for s in ("p1", "p2")]
+        )
         again = requests.post(base + "/api/redo", json={"review": name, "custom": {"repeats": 1, "seconds": 0.2,
                               "worlds": 4}, "parallel": 1}, timeout=30).json()["job"]  # fmt: skip
         assert wait(again)["url"] == j["url"]
         rep = json.loads((app.COACH / name / "review.json").read_text(encoding="utf-8"))
         assert rep["settings"]["team"] is True and rep["settings"]["repeats"] == 1
+        # the other player's view: its own review (this one stays), the team kept not its own
+        assert redo["players"] == ["Player A", "Player B"] and redo["other"] is None
+        other = requests.post(base + "/api/redo", json={"review": name, "player": "Player A", "custom": {
+                              "repeats": 1, "seconds": 0.2, "worlds": 4}}, timeout=30).json()["job"]  # fmt: skip
+        url = wait(other)["url"]
+        assert url != j["url"] and (app.COACH / name / "review.json").is_file()
+        rep = json.loads(
+            (app.COACH / url.split("/")[2] / "review.json").read_text(encoding="utf-8")
+        )
+        assert rep["side"] == "p1" and rep["settings"]["team"] is False
+        link = requests.get(f"{base}/api/redo-info?review={name}", timeout=5).json()["other"]
+        assert link == url
         # (a review saved before its replay was kept: the log in its page)
         (app.COACH / name / "replay.json").unlink()
         assert requests.get(f"{base}/api/redo-info?review={name}", timeout=5).status_code == 200

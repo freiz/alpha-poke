@@ -8,8 +8,9 @@ to look, and gets the review page when the search is done. Loopback only; one re
                               one's decision count, the machine's search threads
   POST /api/review            {source | upload, player, strength | custom, team, parallel}
                               -> {job}
-  POST /api/redo              {review, strength | custom, team, parallel} -> {job}: a review's
-                              game again (its replay and its team kept with it)
+  POST /api/redo              {review, player, strength | custom, team, parallel} -> {job}: a
+                              review's game again, from either player's view (the replay and
+                              each player's team kept with its review)
   GET  /api/job/<id>          {status, done, total, url, error}
   GET  /api/reviews           the reviews in data/coach
   GET  /api/redo-info?review= what the review page's "review again" form needs
@@ -171,12 +172,16 @@ def stored(name: str) -> tuple[dict, dict, dict | None]:
         if m is None:
             raise Refused("no_review")
         row = replays.from_json({"id": rep["id"], "log": m.group(1).replace("<\\/", "</")})
-    team = None
-    if (d / "team.json").is_file():
-        sets = json.loads((d / "team.json").read_text(encoding="utf-8"))
-        team = {k: KnownSet(**{f: tuple(x) if f in ("evs", "ivs") and x else x for f, x in v.items()})
-                for k, v in sets.items()}  # fmt: skip
-    return rep, row, team
+    return rep, row, stored_team(d)
+
+
+def stored_team(d: Path) -> dict | None:
+    """The team a review in ``d`` was given (team.json), if any."""
+    if not (d / "team.json").is_file():
+        return None
+    sets = json.loads((d / "team.json").read_text(encoding="utf-8"))
+    return {k: KnownSet(**{f: tuple(x) if f in ("evs", "ivs") and x else x for f, x in v.items()})
+            for k, v in sets.items()}  # fmt: skip
 
 
 def load_row(body: dict) -> dict:
@@ -230,14 +235,21 @@ def handler(cache, jobs: Jobs):
                 return self._json(reviews())
             if path == "/api/redo-info":
                 try:
-                    rep, _, team = stored(
+                    rep, row, team = stored(
                         parse_qs(urlsplit(self.path).query).get("review", [""])[0]
                     )
                 except Refused:
                     return self._json({"error": "no such review"}, HTTPStatus.NOT_FOUND)
+                # (either player's view: the other's review, when there is one, linked)
+                other = "p2" if rep["side"] == "p1" else "p1"
+                other_dir = COACH / f"{rep['id']}-{other}"
                 return self._json({"strengths": jobs.strengths, "max_parallel": jobs.max_parallel(),
-                                   "threads": jobs.threads, "decisions": len(rep["decisions"]),
-                                   "team": team is not None, "settings": rep["settings"]})  # fmt: skip
+                                   "threads": jobs.threads, "players": row["players"],
+                                   "decisions": [decision_count(row, s) for s in ("p1", "p2")],
+                                   "player": rep["player"], "team": team is not None,
+                                   "settings": rep["settings"],
+                                   "other": (f"/coach/{other_dir.name}/viewer.html"
+                                             if (other_dir / "review.json").is_file() else None)})  # fmt: skip
             m = re.fullmatch(r"/coach/([A-Za-z0-9_-]+)/viewer\.html", path)
             if m:  # (rendered anew: a review from before has the current page's code too)
                 try:
@@ -270,7 +282,13 @@ def handler(cache, jobs: Jobs):
                 lang = body.get("lang") or "en"
                 if self.path == "/api/redo":  # (the review's game, its player, its team)
                     rep, row, kept = stored(body.get("review") or "")
-                    body["player"] = rep["player"]
+                    # (another player's view: its own review; the team kept is this player's)
+                    if body.get("player") not in row["players"]:
+                        body["player"] = rep["player"]
+                    if body["player"] != rep["player"]:
+                        kept = stored_team(
+                            COACH / f"{row['id']}-{replays.side_of(row, body['player'])}"
+                        )
                 else:
                     row = load_row(body)
             except Refused as e:
