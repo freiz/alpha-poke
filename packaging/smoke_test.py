@@ -1,4 +1,4 @@
-"""The frozen app's smoke test (.github/workflows/windows-app.yml): it answers on 8090, takes a
+"""The frozen app's smoke test (.github/workflows/desktop-app.yml, Windows and macOS): it answers on 8090, takes a
 fixture replay (anonymized, tests/fixtures), reviews it at the fast strength and serves the page."""
 
 import gzip

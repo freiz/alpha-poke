@@ -1,0 +1,102 @@
+name: Desktop app
+
+# The review app for Windows and macOS (alpha_poke.coach.launcher): Python, the libraries and the
+# two Rust extensions frozen by PyInstaller with the released model, the belief models and
+# Smogon's usage statistics -- nothing to install for the user. Run by hand (optionally attached
+# to a release). macOS: Apple silicon only (an Intel Mac cannot run it), not notarized (the first
+# start: right-click start.command -> Open).
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "attach the zips to this release (empty: the run's artifacts only)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            zip: alpha-poke-review-windows-x64.zip
+            exe: alpha-poke-review.exe
+            sep: ";"
+            # a portable build: AVX2 / FMA (x86-64-v3, 2013 on), not the build machine's own CPU
+            # (rust/alpha_search/.cargo/config.toml's target-cpu=native, overridden)
+            rustflags: "-C target-cpu=x86-64-v3"
+          - os: macos-latest
+            zip: alpha-poke-review-macos-arm64.zip
+            exe: alpha-poke-review
+            sep: ":"
+            rustflags: "-C target-cpu=apple-m1"  # (every Apple silicon Mac)
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 75
+    env:
+      RUSTFLAGS: ${{ matrix.rustflags }}
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.95.0"
+      - uses: astral-sh/setup-uv@v6
+      - name: "environment (the project's own dependencies: no torch, no dev tools)"
+        shell: bash
+        run: |
+          uv sync --locked --no-default-groups
+          uv pip install "pyinstaller>=6.10"
+      - name: "assets (the release's network and belief models, SHA-256 checked; Smogon 2026-09)"
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ALPHA_DATA: build/assets
+        run: uv run --no-sync python scripts/fetch_model.py
+      - name: "freeze"
+        shell: bash
+        run: >
+          uv run --no-sync pyinstaller --noconfirm --clean --onedir --console
+          --name alpha-poke-review --paths src
+          --collect-submodules alpha_poke --collect-data poke_env
+          --add-data "build/assets${{ matrix.sep }}assets"
+          packaging/review_app.py
+      - name: "macOS: the double-click start script"
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          cp packaging/macos/start.command dist/alpha-poke-review/
+          chmod +x dist/alpha-poke-review/start.command
+      - name: "smoke test (the frozen app reviews a fixture replay end to end)"
+        shell: bash
+        run: |
+          export LOCALAPPDATA="$RUNNER_TEMP/appdata"
+          ./dist/alpha-poke-review/${{ matrix.exe }} > app.log 2>&1 &
+          uv run --no-sync python packaging/smoke_test.py
+      - name: "zip (Windows)"
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: Compress-Archive -Path dist/alpha-poke-review -DestinationPath ${{ matrix.zip }}
+      - name: "zip (macOS: ditto keeps the executable bits and the signatures)"
+        if: runner.os == 'macOS'
+        shell: bash
+        run: ditto -c -k --keepParent dist/alpha-poke-review ${{ matrix.zip }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.zip }}
+          path: ${{ matrix.zip }}
+          retention-days: 14
+      - name: "attach to the release"
+        if: ${{ inputs.release_tag != '' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ inputs.release_tag }}" ${{ matrix.zip }} --clobber
+      - name: "the app's log (on failure)"
+        if: failure()
+        shell: bash
+        run: cat app.log || true

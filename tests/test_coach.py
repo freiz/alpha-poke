@@ -500,3 +500,18 @@ def test_the_launcher_survives_a_console_without_chinese():
     r = subprocess.run([sys.executable, "-c", code], capture_output=True, timeout=60,
                        env={**__import__("os").environ, "PYTHONIOENCODING": "cp1252"})  # fmt: skip
     assert r.returncode == 0, r.stderr.decode(errors="replace")[-500:]
+
+
+def test_the_frozen_app_keeps_its_data_where_the_platform_wants(monkeypatch, tmp_path):
+    """The packaged app's data directory: Windows %LOCALAPPDATA%, macOS Application Support,
+    elsewhere XDG's data home."""
+    from alpha_poke.coach import launcher
+
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "local"))
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "xdg"))
+    monkeypatch.setattr(launcher.Path, "home", lambda: tmp_path / "home")
+    for platform, want in (("win32", tmp_path / "local" / "alpha-poke"),
+                           ("darwin", tmp_path / "home" / "Library" / "Application Support" / "alpha-poke"),
+                           ("linux", tmp_path / "xdg" / "alpha-poke")):  # fmt: skip
+        monkeypatch.setattr(launcher.sys, "platform", platform)
+        assert launcher.user_data() == want

@@ -1,9 +1,11 @@
-"""The packaged review app's entry (packaging/windows): nothing to install for the user.
+"""The packaged review app's entry (packaging/, .github/workflows/desktop-app.yml): nothing to
+install for the user.
 
-Frozen (PyInstaller): the data under %LOCALAPPDATA%\\alpha-poke (ALPHA_DATA, set before any
-alpha_poke module reads it), the bundled model, belief models and usage statistics copied there
-on first run (assets/, the data directory's layout); then the app on a free port from 8090 and
-the browser opened at its home page. Closing the console window stops it. From a checkout (not
+Frozen (PyInstaller): the data under the user's application data (ALPHA_DATA, set before any
+alpha_poke module reads it: Windows %LOCALAPPDATA%\\alpha-poke, macOS ~/Library/Application
+Support/alpha-poke), the bundled model, belief models and usage statistics copied there on first
+run (assets/, the data directory's layout); then the app on a free port from 8090 and the browser
+opened at its home page. Closing the console (Terminal) window stops it. From a checkout (not
 frozen) the same with the repository's data/.
 """
 
@@ -23,6 +25,15 @@ def install(assets: Path, data: Path) -> None:
                 shutil.copyfile(src, dst)
 
 
+def user_data() -> Path:
+    """Where the frozen app keeps its data: the platform's place for an application's own."""
+    if sys.platform == "win32":
+        return Path(os.environ.get("LOCALAPPDATA") or Path.home()) / "alpha-poke"
+    if sys.platform == "darwin":
+        return Path.home() / "Library" / "Application Support" / "alpha-poke"
+    return Path(os.environ.get("XDG_DATA_HOME") or Path.home() / ".local" / "share") / "alpha-poke"
+
+
 def main() -> None:
     # (the console or a redirected file may not take the Chinese messages in its code page --
     # cp1252 on an English Windows: 2026-10-30, the first build's smoke test)
@@ -30,7 +41,7 @@ def main() -> None:
         if stream is not None and hasattr(stream, "reconfigure"):
             stream.reconfigure(encoding="utf-8", errors="replace")
     if getattr(sys, "frozen", False):
-        data = Path(os.environ.get("LOCALAPPDATA") or Path.home()) / "alpha-poke"
+        data = user_data()
         os.environ.setdefault("ALPHA_DATA", str(data))
         install(Path(sys._MEIPASS) / "assets", Path(os.environ["ALPHA_DATA"]))
     from alpha_poke.coach import app, server
