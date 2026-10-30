@@ -332,6 +332,52 @@ def test_the_page_server_answers_once_started():
         httpd.shutdown()
 
 
+def test_the_reviews_index(game, report, tmp_path, monkeypatch):
+    """coach.index: the saved reviews' rows (the reviewed player first, the scorecard, both
+    teams), searched, sorted and paged; a review's name and note kept when it is indexed again;
+    a review gone, its row gone."""
+    import copy
+    import os
+    import shutil
+
+    from alpha_poke.coach import app, index
+
+    monkeypatch.setattr(app, "COACH", tmp_path)
+    other = copy.deepcopy(report) | {"side": "p2", "player": "Player B"}
+    app.save(report, game)
+    app.save(other, game)
+    os.utime(tmp_path / f"{game['id']}-p1" / "review.json", (1, 1))  # (p1 reviewed long ago)
+    index.sync(tmp_path, app.stored)
+    rows = index.query(tmp_path)["rows"]
+    assert [(r["player"], r["opponent"]) for r in rows] == [
+        ("Player B", "Player A"),
+        ("Player A", "Player B"),
+    ]
+    assert rows[1]["teams"][0] == rows[0]["teams"][1] and rows[1]["decisions"] >= 1
+    assert rows[1]["played"] == index.played_at(game) and rows[1]["url"].endswith("-p1/viewer.html")
+    assert [r["side"] for r in index.query(tmp_path, q="player b")["rows"]] == ["p2", "p1"]
+    mon = rows[0]["teams"][1][0].lower()[:5]
+    assert index.query(tmp_path, q=mon)["total"] == 2
+    page = index.query(tmp_path, sort="reviewed", desc=False, size=1, page=2)
+    assert page["pages"] == 2 and page["rows"][0]["side"] == "p2"
+    assert index.set_meta(tmp_path, f"{game['id']}-p1", "  Zeta game ", "watch turn 5")
+    assert not index.set_meta(tmp_path, "nothing-here", "x", "")
+    assert [r["side"] for r in index.query(tmp_path, sort="title", desc=False)["rows"]] == [
+        "p2",
+        "p1",
+    ]
+    assert index.query(tmp_path, q="turn 5")["rows"][0]["title"] == "Zeta game"
+    app.save(report, game)  # (reviewed again: indexed again, its name and note kept)
+    index.sync(tmp_path, app.stored)
+    r = next(r for r in index.query(tmp_path)["rows"] if r["side"] == "p1")
+    assert r["title"] == "Zeta game" and r["note"] == "watch turn 5" and r["reviewed"] > 1
+    page = (tmp_path / f"{game['id']}-p1" / "viewer.html").read_text(encoding="utf-8")
+    assert '"title": "Zeta game"' in page
+    shutil.rmtree(tmp_path / f"{game['id']}-p2")
+    index.sync(tmp_path, app.stored)
+    assert [r["side"] for r in index.query(tmp_path)["rows"]] == ["p1"]
+
+
 def test_the_app_reviews_an_uploaded_replay(game):
     """The home page's flow: upload -> players -> a review job (the tiny network, a token search)
     -> the review page; a request from another site's page refused."""
@@ -385,7 +431,8 @@ def test_the_app_reviews_an_uploaded_replay(game):
         page = requests.get(base + j["url"], timeout=5).text
         assert '"side": "p2"' in page and "/js/battle.js" in page and "reviewForm(" in page
         assert any(
-            r["url"] == j["url"] for r in requests.get(base + "/api/reviews", timeout=5).json()
+            r["url"] == j["url"]
+            for r in requests.get(base + "/api/reviews", timeout=5).json()["rows"]
         )
         # review again (the page's button): the game, the player and the team kept with it
         name = j["url"].split("/")[2]
@@ -417,6 +464,17 @@ def test_the_app_reviews_an_uploaded_replay(game):
         assert requests.get(f"{base}/api/redo-info?review={name}", timeout=5).status_code == 200
         assert app.stored(name)[1]["log"] == game["log"]
         assert '"side": "p2"' in requests.get(base + j["url"], timeout=5).text
+        # the home page's list and a rename (the review page shows the name)
+        listed = requests.get(base + "/api/reviews?sort=title&order=asc&size=1", timeout=5).json()
+        assert listed["total"] == 2 and listed["pages"] == 2 and len(listed["rows"]) == 1
+        ok = requests.post(base + "/api/meta", json={"review": name, "title": "Practice 1", "note": "n"},
+                           timeout=5)  # fmt: skip
+        assert ok.json() == {"ok": True}
+        assert '"title": "Practice 1"' in requests.get(base + j["url"], timeout=5).text
+        assert (
+            requests.get(base + "/api/reviews?q=practice", timeout=5).json()["rows"][0]["dir"]
+            == name
+        )
         gone = requests.post(
             base + "/api/redo", json={"review": "nothing-here", "lang": "zh"}, timeout=5
         )

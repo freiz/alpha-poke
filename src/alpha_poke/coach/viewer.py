@@ -469,9 +469,9 @@ function go(t, dec = null, seek = true) {
   const b = battle();
   if (seek && b) b.seekTurn(curT);
 }
-document.title = L.title(R.id);
+document.title = L.title(R.title || R.id);
 document.documentElement.lang = UI == "zh" ? "zh" : "en";
-document.getElementById("title").textContent = L.title(R.id);
+document.getElementById("title").textContent = L.title(R.title || R.id);
 if (location.protocol.startsWith("http")) { const a = document.getElementById("home"); a.textContent = L.home; a.hidden = false; }
 document.getElementById("res").textContent = R.won ? L.won : L.lost;
 document.getElementById("note").textContent = L.note(R.ms, R.worlds) + L.noteRuns(R.repeats || 1) + L.noteTeam(R.team);
@@ -668,16 +668,17 @@ window.addEventListener('load', function () { withNames(function () { Replays.in
 )
 
 
-def render(report: dict, row: dict, client: str = "official") -> str:
+def render(report: dict, row: dict, client: str = "official", title: str | None = None) -> str:
     """The review page of ``report`` (coach.review) for the replay ``row``; ``client``: "official"
     (Showdown's site serves the player: open the file directly) or "local" (our server,
-    coach.server: open http://127.0.0.1:<port>/coach/<review>/viewer.html)."""
+    coach.server: open http://127.0.0.1:<port>/coach/<review>/viewer.html); ``title``: the name
+    the person gave it (coach.index; else the replay's id)."""
     events = turn_events(row["log"], report["side"])  # (from the log: the current wording)
     ds = [{k: v for k, v in d.items() if k != "events"} | {"score": round(mistake_score(d), 3)}
           for d in report["decisions"]]  # fmt: skip
     # (the verdicts and the moments: computed by the page, its thresholds adjustable)
     won = report["winner"] == report["side"]
-    data = {"id": report["id"], "side": report["side"], "player": report.get("player"), "won": won, "turns": report["turns"],
+    data = {"id": report["id"], "title": title or "", "side": report["side"], "player": report.get("player"), "won": won, "turns": report["turns"],
             "ms": report["settings"]["ms"], "worlds": report["settings"]["worlds"],
             "decisions": ds, "events": events, "repeats": report["settings"].get("repeats", 1),
             "team": report["settings"].get("team", False), "last_turn": max(events)}  # fmt: skip
