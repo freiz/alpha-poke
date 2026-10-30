@@ -64,21 +64,25 @@ class Decision:
     value: float  # the root's value: the player's winning chance as the search sees it
     chosen_value: float | None  # the chosen option's mean value (None: the search never tried it)
     best_value: float
-    loss: float | None  # best_value - chosen_value
+    loss: float | None  # best_value - chosen_value (repeats > 1: over the searches that tried both)
     chosen_share: float  # the chosen option's share of the search's visits
-    # [name, visit share, mean value, its standard error, the error of its gap to the best], by
-    # share; with repeats > 1 the share and the value are the means over the independent searches
-    # (the errors: their spread / sqrt(n); the gap's from each search's own gap -- _decision)
+    # [name, visit share, mean value, its standard error, its gap to the best, that gap's error],
+    # by share; with repeats > 1 the share and the value are the means over the independent
+    # searches (the errors: their spread / sqrt(n)); the gap and its error from the searches that
+    # tried both (_decision), None when fewer than two did
     options: list = field(default_factory=list)
     state: dict = field(default_factory=dict)  # the public state at the decision
     events: list = field(default_factory=list)  # the turn's log lines, sides as ME / OPP
     value_se: float | None = None
-    loss_se: float | None = None  # the loss's standard error (the two values' combined)
+    loss_se: float | None = None  # the loss's standard error (its searches' gaps)
     repeats: int = 1
     visits: int = 0  # the searches' visits at the root, all repeats (more: surer numbers)
     # options that are a move the game never showed the player using (no team pasted): the move
     # is a guess of the belief's, the player may not have it (2026-10-30)
     guessed: list = field(default_factory=list)
+    # repeats > 1: how many searches tried both the choice and the best (the loss's sample; under
+    # two the loss is not trusted -- verdict)
+    paired: int | None = None
 
 
 def _mon(p) -> dict:
@@ -311,29 +315,36 @@ def _decision(p, searches, events, sure: dict | None = None) -> "Decision":
     ch = ch if ch and ch[2] is not None else None
     value, value_se = _mean_se(roots)
 
-    # (the gap's error from each search's own gap: the two options of one search share its draw
-    # of the hidden sets, so their values move together -- 2026-10-30 review: three searches each
-    # 10 points apart gave 16 points of error as the two errors combined; that only without pairs)
-    def gap_se(c: str, se: float | None) -> float | None:
+    # (the gap to the best and its error from the searches that tried both: in one search the
+    # two share its draw of the hidden sets, their values move together -- 2026-10-30 review:
+    # three searches each 10 points apart gave 16 points of error as two errors combined; and the
+    # gap of means over different searches -- the best untried in one -- made a sure 26-point
+    # loss of two pairs 1 point apart. (gap, error, searches): one search: its own gap, no error)
+    def gap(c: str) -> tuple:
+        if c == best[0]:
+            return 0.0, None, None
+        if c not in by:
+            return None, None, None
+        if len(runs) == 1:
+            q = by[c][2]
+            return (best[2] - q if q is not None else None), None, None
         pairs = [run[best[0]][1] - run[c][1] for run in runs
                  if run.get(best[0], (0, None))[1] is not None and run.get(c, (0, None))[1] is not None]  # fmt: skip
-        if len(pairs) > 1:
-            return _mean_se(pairs)[1]
-        return math.hypot(best[3], se) if best[3] is not None and se is not None else None
+        g, se = _mean_se(pairs)
+        return g, se, len(pairs)
 
-    loss_se = gap_se(chosen, ch[3]) if ch else None
+    loss, loss_se, paired = gap(chosen)
     r3 = lambda x: None if x is None else round(x, 3)  # noqa: E731
     shown = opts[:6] + ([by[chosen]] if chosen in by and by[chosen] not in opts[:6] else [])
     return Decision(
         turn=p.turn, kind=KINDS.get(p.kind, "turn"), chosen=chosen, best=best[0],
         value=round(value, 3), chosen_value=r3(ch[2]) if ch else None, best_value=round(best[2], 3),
-        loss=round(best[2] - ch[2], 3) if ch else None,
+        loss=r3(loss),
         chosen_share=round(by[chosen][1], 3) if chosen in by else 0.0,
-        options=[[c, round(s, 3), r3(q), r3(e), r3(gap_se(c, e)) if c != best[0] and q is not None else None]
-                 for c, s, q, e in shown],
+        options=[[c, round(s, 3), r3(q), r3(e), *map(r3, gap(c)[:2])] for c, s, q, e in shown],
         guessed=_guessed(p.state, [c for c, *_ in shown], sure),
         state=public_state(p.state), events=events.get(p.turn, []),
-        value_se=r3(value_se), loss_se=r3(loss_se), repeats=len(searches), visits=visits,
+        value_se=r3(value_se), loss_se=r3(loss_se), repeats=len(searches), visits=visits, paired=paired,
     )  # fmt: skip
 
 
@@ -376,11 +387,13 @@ def verdict(d: dict, z: float = 2.0, low_share: float = 0.10) -> str:
     (its visit share under ``low_share`` while its own choice took at least half) and the
     winning chance it loses is real (more than ``z`` standard errors; without errors: 5 points),
     or the loss alone is real and at least 5 points; "mild" -- hardly tried but the loss is
-    within the noise (or unknown: never tried); "ok" otherwise."""
+    within the noise (or unknown: never tried; repeated searches of which under two tried both
+    the choice and the best); "ok" otherwise."""
     if d["chosen"] == d["best"]:
         return "same"
     loss, se = d.get("loss"), d.get("loss_se")
-    real = loss is not None and (loss > z * se if se else loss >= 0.05)
+    unsure = d.get("repeats", 1) > 1 and d.get("paired") is not None and d["paired"] < 2
+    real = loss is not None and not unsure and (loss > z * se if se else loss >= 0.05)
     shunned = d["chosen_share"] < low_share and d["options"][0][1] >= 0.5
     if shunned:
         return "bad" if real else "mild"

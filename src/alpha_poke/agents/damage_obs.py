@@ -67,6 +67,10 @@ class Hit:
     # their mon's ability at the hit when the log changed it (``_Abilities``: a Skill Swap's, a
     # Mummy's, a Gastro Acid's "none"); None: the one it started with (the candidates')
     ability_then: str | None = None
+    # our HP shown in percent too: a replay's (a spectator's log -- a review with the team pasted;
+    # 2026-10-30 review: its 100/100 -> 76/100 was read as 24 HP lost, every candidate's
+    # likelihood 0, and the full HP set to 100 of 371)
+    pct: bool = False
 
 
 def _side(ident: str) -> str:
@@ -83,8 +87,9 @@ def _species(details: str) -> str:
     return to_id(details.split(",")[0])
 
 
-def hits(lines: list[str], our_side: str) -> list[Hit]:
-    """The clean hits of a battle's log (the player's own view: its HP exact)."""
+def hits(lines: list[str], our_side: str, pct: bool = False) -> list[Hit]:
+    """The clean hits of a battle's log (the player's own view: its HP exact; ``pct``: a
+    spectator's log, ours in percent as theirs)."""
     out: list[Hit] = []
     active: dict[str, str] = {}  # "p1a" -> species id
     hp: dict[tuple[str, str], int] = {}  # (side, species) -> HP (ours exact, theirs percent)
@@ -174,7 +179,7 @@ def hits(lines: list[str], our_side: str) -> list[Hit]:
                 out.append(Hit(turn, pending["by_us"], pending["move"], pending["att"], sp,
                                pending["before"], new, pending["tera"], pending["dtera"],
                                items.now.get(pending["key"]), pending["forme"],
-                               abil.now.get(pending["key"])))  # fmt: skip
+                               abil.now.get(pending["key"]), pct))  # fmt: skip
                 recent = True
                 pending = None
             if sp is not None:
@@ -258,21 +263,24 @@ def likelihood(
         cands = [(c[0], hit.ability_then, *c[2:]) for c in cands]
     if hit.before > 0:
         base = (_with_hp(base, False, their_slot, pct=hit.before) if hit.by_us
+                else _with_hp(base, True, our_slot, pct=hit.before) if hit.pct
                 else _with_hp(base, True, our_slot, hp=hit.before))  # fmt: skip
     rolls = alpha_search.set_damage_rolls(base, hit.by_us, hit.move, our_slot, their_slot, cands,
                                           own_tera)  # fmt: skip
+    our_max = int(base.split("/")[0].split("=")[our_slot].split(",")[7])
     out = []
     for c, r in zip(cands, rolls, strict=True):
         if not r:
             out.append(1.0)  # no / fixed damage: no evidence
             continue
-        if not hit.by_us:  # theirs on ours: our HP exact
+        if not hit.by_us and not hit.pct:  # theirs on ours: our HP exact
             if hit.after > 0:
                 out.append(sum(x == hit.before - hit.after for x in r) / len(r))
             else:
                 out.append(sum(x >= hit.before for x in r) / len(r))
             continue
-        maxhp = c[2][0]
+        # (the defender's HP in percent: theirs, or ours in a replay -- our max HP the state's)
+        maxhp = c[2][0] if hit.by_us else our_max
         # their HP before: every value Showdown shows as ``before`` percent
         befores = [maxhp] if hit.before >= 100 else [
             h for h in range(1, maxhp + 1) if _shown(h, maxhp) == hit.before]  # fmt: skip
@@ -617,10 +625,12 @@ def _candidates(
     return cands, prior
 
 
-def damage_posteriors(battle, belief, theirs: list, team_names: tuple[str, ...], mix=None) -> dict:
+def damage_posteriors(battle, belief, theirs: list, team_names: tuple[str, ...], mix=None,
+                      pct: bool = False) -> dict:  # fmt: skip
     """Per opposing species id with clean hits: [(item, ability, Spread, posterior weight)] over
     its candidates (``_candidates``), from the turn-start states the search recorded
-    (``record_base``). Cached per mon and evidence."""
+    (``record_base``). Cached per mon and evidence. ``pct``: our HP in percent too (a replay's
+    side, its team pasted)."""
     import poke_engine as pe
 
     from alpha_poke.agents.damage import calc_stats
@@ -635,7 +645,12 @@ def damage_posteriors(battle, belief, theirs: list, team_names: tuple[str, ...],
     lines = [m if isinstance(m, str) else "|".join(m) for m in battle_log(battle)]
     parsed_log = getattr(battle, "_alpha_hits", None)  # (lines seen, hits): once per new message
     if parsed_log is None or parsed_log[0] != len(lines):
-        parsed_log = (len(lines), hits(lines, role), item_changes(lines), ability_changes(lines))
+        parsed_log = (
+            len(lines),
+            hits(lines, role, pct),
+            item_changes(lines),
+            ability_changes(lines),
+        )
         battle._alpha_hits = parsed_log
     them = "p2" if role == "p1" else "p1"
     changes = parsed_log[2]

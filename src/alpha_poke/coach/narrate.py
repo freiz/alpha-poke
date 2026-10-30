@@ -77,7 +77,8 @@ def summary(report: dict) -> str:
     lines += ["## Winning chance by decision (the search's estimate)", "",
               "| turn | kind | chosen | AI's choice | win % | loss |", "|---|---|---|---|---|---|"]  # fmt: skip
     for d in ds:
-        loss = "untried" if d["chosen_value"] is None else f"{max(0.0, 100 * d['loss']):.0f}"
+        loss = ("untried" if d["chosen_value"] is None else "?" if d["loss"] is None  # (never with the best)
+                else f"{max(0.0, 100 * d['loss']):.0f}")  # fmt: skip
         mark = " **" if mistake_score(d) >= 0.10 else ""
         lines.append(f"| {d['turn']} | {d['kind']} | {d['chosen']}{mark} | {d['best']} | "
                      f"{100 * d['value']:.0f} | {loss} |")  # fmt: skip

@@ -79,7 +79,7 @@ def test_repeated_searches_give_errors(game):
         abs(sum(o[1] for o in d["options"]) - 1) < 0.05 or len(d["options"]) >= 6 for d in ds
     )
     assert any(d["value_se"] is not None for d in ds)
-    assert all(len(o) == 5 for d in ds for o in d["options"])
+    assert all(len(o) == 6 for d in ds for o in d["options"])
 
 
 def test_parallel_searches_count_and_visits(game, report):
@@ -560,8 +560,8 @@ LOG_FAST = """|player|p1|Alice|1|
 |switch|p1a: Great Tusk|Great Tusk|100/100
 |switch|p2a: Gliscor|Gliscor, M|100/100
 |turn|1
-|move|p2a: Gliscor|Knock Off|p1a: Great Tusk
-|-damage|p1a: Great Tusk|80/100
+|move|p2a: Gliscor|Earthquake|p1a: Great Tusk
+|-damage|p1a: Great Tusk|76/100
 |move|p1a: Great Tusk|Headlong Rush|p2a: Gliscor
 |-immune|p2a: Gliscor
 |-heal|p2a: Gliscor|100/100|[from] item: Leftovers
@@ -651,9 +651,11 @@ def test_a_pasted_team_uses_the_damage_evidence(monkeypatch):
 
 
 def test_the_gaps_error_is_paired(monkeypatch):
-    """2026-10-30 review: the gap's error combined the two options' errors as if independent; in
-    one search they share the hidden sets' draw and move together. Three searches whose values
-    swing by 15 points but whose gap is 10 points each time: no error in the gap, a sure "bad"."""
+    """2026-10-30 reviews: the gap's error combined the two options' errors as if independent; in
+    one search they share the hidden sets' draw and move together -- three searches whose values
+    swing by 15 points but whose gap is 10 points each time: no error in the gap, a sure "bad".
+    And the gap must come from the same searches as its error: the best untried in one search
+    (90/89, 80/79, -/10) is a 1-point gap over two searches, not 26 points with no error."""
     from types import SimpleNamespace
 
     from alpha_poke.coach import review as rv
@@ -663,8 +665,17 @@ def test_the_gaps_error_is_paired(monkeypatch):
     p = SimpleNamespace(state="", action=1, turn=3, kind=0)
     runs = [([("a", 95, q + 0.1), ("b", 5, q)], 100) for q in (0.3, 0.45, 0.6)]
     d = rv._decision(p, runs, {})
-    assert d.loss == 0.1 and d.loss_se == 0.0
+    assert d.loss == 0.1 and d.loss_se == 0.0 and d.paired == 3
     assert rv.verdict(vars(d)) == "bad"
+    runs = [([("a", 95, 0.9), ("b", 5, 0.89)], 100), ([("a", 95, 0.8), ("b", 5, 0.79)], 100),
+            ([("a", 0, 0.0), ("b", 100, 0.1)], 100)]  # fmt: skip
+    d = rv._decision(p, runs, {})
+    assert d.loss == 0.01 and d.paired == 2 and rv.verdict(vars(d)) != "bad"
+    b = next(o for o in d.options if o[0] == "b")
+    assert b[4] == 0.01 and b[5] == 0.0
+    # (one search with both: unsure -- not a "bad", however large the gap)
+    d = rv._decision(p, runs[:1] + [([("a", 100, 0.8), ("b", 0, 0.0)], 100)] * 2, {})
+    assert d.paired == 1 and rv.verdict(vars(d)) != "bad"
 
 
 def test_a_tie_is_reviewed(game):
@@ -782,3 +793,25 @@ Jolly Nature
                           "|-enditem|p1a: Garchomp|Choice Scarf|")  # fmt: skip
     records = [m for m in parse_replay({"id": "t", "log": tricked}).teams["p1"] if not m.phantom]
     assert match_team(parse_team(team), records, tricked, "p1")
+
+
+def test_a_replays_hit_on_us_is_read_in_percent(monkeypatch):
+    """2026-10-30 review: the damage evidence of a review read our HP as exact, as in play, but a
+    replay shows both sides in percent: Gliscor's Earthquake taking our 371-HP Great Tusk from
+    100/100 to 76/100 was 24 HP lost (every candidate's likelihood 0) and its full HP set to 100.
+    In percent it is 86-89 HP, which the Gliscor's sets do."""
+    from alpha_poke.agents import damage_obs
+
+    seen = []
+    inner = damage_obs.likelihood
+
+    def spy(hit, base, *a, **k):
+        out = inner(hit, base, *a, **k)
+        seen.append((hit, out))
+        return out
+
+    monkeypatch.setattr(damage_obs, "likelihood", spy)
+    _turn2({"p1": parse_team(TEAM_FAST)})
+    ours = [(h, out) for h, out in seen if not h.by_us and h.move == "earthquake"]
+    assert ours and all(h.pct and h.before == 100 and h.after == 76 for h, _ in ours)
+    assert all(any(x > 0 for x in out) for _, out in ours), ours

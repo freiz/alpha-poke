@@ -1524,7 +1524,7 @@ def build_state(
     evidence = spectator is None or _exact_side(spectator)
     obs = (battle_observations(battle, None if spectator is None else _exact_speed(battle, spectator))
            if evidence else None)  # fmt: skip
-    dmg = (damage_posteriors(battle, belief, theirs, team_names, arch_mix)
+    dmg = (damage_posteriors(battle, belief, theirs, team_names, arch_mix, pct=spectator is not None)
            if evidence and damage_belief else {})  # fmt: skip
     their_keys = [next((k for k, v in battle.opponent_team.items() if v is m), None)
                   for m in theirs]  # fmt: skip

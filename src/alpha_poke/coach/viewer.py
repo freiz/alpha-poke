@@ -376,7 +376,8 @@ let Z = setting("z", 2), LOW = setting("low", 10);
 // beyond the noise and at least 5 points; "mild" -- hardly thought of, the loss within the noise
 function verdict(d) {
   if (d.chosen == d.best) return "same";
-  const real = d.loss != null && (d.loss_se ? d.loss > Z * d.loss_se : d.loss >= 0.05);
+  const unsure = d.repeats > 1 && d.paired != null && d.paired < 2;  // (as coach.review.verdict)
+  const real = d.loss != null && !unsure && (d.loss_se ? d.loss > Z * d.loss_se : d.loss >= 0.05);
   const shunned = d.chosen_share < LOW / 100 && d.options[0][1] >= 0.5;
   if (shunned) return real ? "bad" : "mild";
   return real && d.loss >= 0.05 ? "bad" : "ok";
@@ -390,13 +391,18 @@ function aiHTML(d) {
   const opts = d.options.slice();
   if (!opts.some(o => o[0] == d.chosen)) opts.push([d.chosen, d.chosen_share, d.chosen_value, null]);
   const bestSe = (d.options[0] || [])[3];
-  for (const [o, share, q, se, pairedSe] of opts) {
+  for (const row of opts) {
+    const [o, share, q, se] = row;
     const cls = o == d.chosen ? "me" : o == d.best ? "ai" : "";
     let diff = "";
     if (q != null && o != d.best) {  // the gap to the AI's choice, "≈" within Z errors
-      // (the gap's own error, from each search's gap -- the review's; older reviews: combined)
-      const gap = q - d.best_value, gse = pairedSe != null ? pairedSe : se && bestSe ? Math.hypot(se, bestSe) : null;
-      diff = `(${gse && Math.abs(gap) <= Z * gse ? L.approx : (gap >= 0 ? "+" : "") + Math.round(100 * gap)})`;
+      // (the review's gap and error, from the searches that tried both -- null: too few, "?";
+      // older reviews: the means' gap, its error the two combined)
+      // (gap: this option's value minus the AI's choice's, negative when worse)
+      const paired = row.length >= 6, gap = paired ? (row[4] == null ? null : -row[4]) : q - d.best_value;
+      const gse = paired ? row[5] : row.length == 5 ? row[4] : se && bestSe ? Math.hypot(se, bestSe) : null;
+      diff = gap == null || (paired && d.repeats > 1 && gse == null) ? "(?)"
+        : `(${gse && Math.abs(gap) <= Z * gse ? L.approx : (gap >= 0 ? "+" : "") + Math.round(100 * gap)})`;
     }
     const guess = (d.guessed || []).includes(o) ? ` <span class="guess" title="${esc(L.guessTip)}">${L.guess}</span>` : "";
     h += `<div class="opt"><span class="name ${cls}" title="${esc(o)}">${esc(option(o))}${guess}</span>
