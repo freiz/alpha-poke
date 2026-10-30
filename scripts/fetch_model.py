@@ -27,12 +27,13 @@ from alpha_poke import paths
 from alpha_poke.selfplay.runner import MODEL
 
 REPO = "freiz/alpha-poke"
+NET = paths.DATA / Path(MODEL).relative_to("data")  # (under ALPHA_DATA when set: the packaged app)
 TAG = "v0.1.0"
 # v6arch-pp-v75: trained on human games only (no self-play), doc/model_card.md
 ASSETS = {
-    "best.safetensors": (paths.ROOT / MODEL,
+    "best.safetensors": (NET,
                          "1c3440d1d7c76bb840b3fbf817046627c800b552f699cc5ddc664834f529c92d"),
-    "config.json": (paths.ROOT / MODEL,
+    "config.json": (NET,
                     "8e8740402520b2a0b3329877d3549e2c03de67e09a32542b5cc45c46a5b39671"),
     "belief_model.pkl": (paths.BELIEF,
                          "473aab2a1e5df6f98a06821937b0cc4b6cc66cea77c9d9211d061f43db5aab63"),
@@ -75,10 +76,10 @@ def main() -> int:
         for name, (where, digest) in ASSETS.items():
             dest = where / name
             if dest.exists() and sha256(dest) == digest:
-                print(f"ok (present): {dest.relative_to(paths.ROOT)}")
+                print(f"ok (present): {dest}")
                 continue
             if dest.exists() and not a.force:
-                print(f"kept: {dest.relative_to(paths.ROOT)} differs from the release (--force)")
+                print(f"kept: {dest} differs from the release (--force)")
                 continue
             got = download(name, base, Path(tmp))
             if sha256(got) != digest:
@@ -87,12 +88,12 @@ def main() -> int:
                 continue
             where.mkdir(parents=True, exist_ok=True)
             shutil.move(got, dest)
-            print(f"installed: {dest.relative_to(paths.ROOT)}")
+            print(f"installed: {dest}")
     if not any(paths.SMOGON.glob("*/chaos/gen9ou-1825.json")):
         from alpha_poke.data.smogon_stats import SmogonStatsClient
 
         got = SmogonStatsClient().fetch_file(*STATS)
-        print(f"usage statistics: {got.relative_to(paths.ROOT) if got else 'FAILED'}")
+        print(f"usage statistics: {got if got else 'FAILED'}")
         failed += got is None
     return 1 if failed else 0
 

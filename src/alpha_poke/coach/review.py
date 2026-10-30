@@ -114,9 +114,10 @@ def turn_events(log: str, side: str) -> dict[int, list[str]]:
 
 
 def review(row: dict, side: str, belief, model: str, worlds: int = 16, ms: int = 2000,
-           threads: int = 2, seed: int = 0, log=print) -> dict:  # fmt: skip
+           threads: int = 2, seed: int = 0, log=print, progress=None) -> dict:  # fmt: skip
     """The review of ``side``'s decisions in ``row`` (coach.replays): {"decisions": [...],
-    "teams": ..., "result": ..., "settings": ...}."""
+    "teams": ..., "result": ..., "settings": ...}. ``progress(done, total)``: called before the
+    first search and after each (the app's progress bar)."""
     rep = parse_replay(row)
     rng = random.Random(seed)
     positions = [p for p in positions_from_replay(row, belief, rng, extra_per_game=10**6,
@@ -125,6 +126,8 @@ def review(row: dict, side: str, belief, model: str, worlds: int = 16, ms: int =
     ml = parse_ml(ml_for(model))
     events = turn_events(row["log"], side)
     decisions = []
+    if progress:
+        progress(0, len(positions))
     for i, p in enumerate(positions):
         ctx = (list(p.reveal), (p.rating_own, p.rating_opp), p.turn, p.history)
         ours, n, _, _ = alpha_search.ismcts(p.worlds, ms, threads=threads, model_dir=model,
@@ -149,6 +152,8 @@ def review(row: dict, side: str, belief, model: str, worlds: int = 16, ms: int =
             state=public_state(p.state), events=events.get(p.turn, []),
         )  # fmt: skip
         decisions.append(d)
+        if progress:
+            progress(i + 1, len(positions))
         log(f"  turn {p.turn:>3} {d.kind:<21} chose {chosen:<24} search {best[0]:<24} "
             f"win {d.value:.2f}  loss {d.loss if d.loss is not None else '-'}  ({i + 1}/{len(positions)}, {n} it)")  # fmt: skip
     return {

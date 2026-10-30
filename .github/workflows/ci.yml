@@ -19,8 +19,8 @@ jobs:
       - uses: astral-sh/setup-uv@v6
       - name: ruff (the locked version)
         run: uv sync --locked --only-group dev --no-install-project
-      - run: uv run --no-sync ruff check src scripts tests
-      - run: uv run --no-sync ruff format --check src scripts tests
+      - run: uv run --no-sync ruff check src scripts tests packaging
+      - run: uv run --no-sync ruff format --check src scripts tests packaging
 
   rust:
     runs-on: ubuntu-latest

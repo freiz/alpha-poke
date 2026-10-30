@@ -1,5 +1,7 @@
-"""Serve the game reviews' pages with Showdown's replay player from a local cache
-(alpha_poke.coach.server): http://127.0.0.1:<port>/coach/<review>/viewer.html
+"""The review app (alpha_poke.coach.app): http://127.0.0.1:<port>/ -- paste a replay link or pick
+a saved replay, choose your player, get the review page (Showdown's replay player from a local
+cache, coach.server); the reviews so far at /coach/<review>/viewer.html. (The Windows package
+starts the same app: coach.launcher.)
 
   uv run python scripts/review_server.py              # fetches missing client files once
   uv run python scripts/review_server.py --offline    # never fetches (the cache only)
@@ -13,7 +15,7 @@ import argparse
 import sys
 
 from alpha_poke import paths
-from alpha_poke.coach.server import serve
+from alpha_poke.coach import app
 
 
 def main() -> int:
@@ -22,7 +24,8 @@ def main() -> int:
     ap.add_argument("--offline", action="store_true", help="serve the cache only")
     ap.add_argument("--refresh", action="store_true", help="fetch every client file anew")
     a = ap.parse_args()
-    httpd = serve(a.port, a.offline, a.refresh)
+    httpd = app.make(a.port, a.offline, a.refresh)
+    print(f"the app: http://127.0.0.1:{a.port}/")
     for page in sorted((paths.DATA / "coach").glob("*/viewer.html")):
         print(f"http://127.0.0.1:{a.port}/coach/{page.parent.name}/viewer.html")
     print(

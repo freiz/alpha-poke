@@ -121,3 +121,47 @@ def test_the_page_server_answers_once_started():
         assert server.running(port)
     finally:
         httpd.shutdown()
+
+
+def test_the_app_reviews_an_uploaded_replay(game):
+    """The home page's flow: upload -> players -> a review job (the tiny network, a token search)
+    -> the review page; a request from another site's page refused."""
+    import socket
+    import threading
+    import time
+
+    import requests
+
+    from alpha_poke.coach import app
+
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        port = s.getsockname()[1]
+    httpd = app.make(port, offline=True, threads=1, model=str(FIXTURES / "tiny_net"),
+                     strengths={"standard": (2, 20)})  # fmt: skip
+    threading.Thread(target=httpd.serve_forever, daemon=True).start()
+    base = f"http://127.0.0.1:{port}"
+    try:
+        assert "对局复盘" in requests.get(base + "/", timeout=5).text
+        upload = {"upload": {"name": "game.json", "text": json.dumps(game)}}
+        players = requests.post(base + "/api/players", json=upload, timeout=30).json()["players"]
+        assert players == ["Player A", "Player B"]
+        bad = requests.post(base + "/api/review", json=upload | {"player": "Player A"},
+                            headers={"Origin": "https://elsewhere.example"}, timeout=5)  # fmt: skip
+        assert bad.status_code == 403
+        job = requests.post(
+            base + "/api/review", json=upload | {"player": "Player B"}, timeout=30
+        ).json()["job"]
+        for _ in range(240):
+            j = requests.get(f"{base}/api/job/{job}", timeout=5).json()
+            if j["status"] in ("done", "error"):
+                break
+            time.sleep(0.5)
+        assert j["status"] == "done", j
+        page = requests.get(base + j["url"], timeout=5).text
+        assert '"side": "p2"' in page and "/js/battle.js" in page
+        assert any(
+            r["url"] == j["url"] for r in requests.get(base + "/api/reviews", timeout=5).json()
+        )
+    finally:
+        httpd.shutdown()
