@@ -75,11 +75,13 @@ def handler(cache: Cache, pages: Path):
         def log_message(self, fmt, *args):  # quiet
             pass
 
-        def _send(self, body: bytes, ctype: str) -> None:
+        def _send(self, body: bytes, ctype: str, cache: bool = False) -> None:
             self.send_response(HTTPStatus.OK)
             self.send_header("Content-Type", ctype)
             self.send_header("Content-Length", str(len(body)))
-            self.send_header("Cache-Control", "max-age=3600")
+            # Showdown's client files may be cached; our pages never (2026-10-30: an updated
+            # home page stayed hidden behind the browser's hour-long copy)
+            self.send_header("Cache-Control", "max-age=3600" if cache else "no-cache")
             self.end_headers()
             self.wfile.write(body)
 
@@ -95,6 +97,7 @@ def handler(cache: Cache, pages: Path):
                 path = cache.get(rel)
                 if path is None:
                     return self.send_error(HTTPStatus.NOT_FOUND)
+                return self._send(path.read_bytes(), self.guess_type(str(path)), cache=True)
             return self._send(path.read_bytes(), self.guess_type(str(path)))
 
     return Handler

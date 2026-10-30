@@ -142,7 +142,8 @@ def test_the_app_reviews_an_uploaded_replay(game):
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
     base = f"http://127.0.0.1:{port}"
     try:
-        assert "对局复盘" in requests.get(base + "/", timeout=5).text
+        home = requests.get(base + "/", timeout=5)
+        assert "对局复盘" in home.text and home.headers["Cache-Control"] == "no-cache"
         upload = {"upload": {"name": "game.json", "text": json.dumps(game)}}
         players = requests.post(base + "/api/players", json=upload, timeout=30).json()["players"]
         assert players == ["Player A", "Player B"]
