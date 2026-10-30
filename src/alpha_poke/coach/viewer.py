@@ -72,7 +72,7 @@ PAGE = r"""<!DOCTYPE html>
     <div class="replay-controls"></div><div class="replay-controls-2"></div>
   </div>
   <section id="panel">
-    <svg id="curve" viewBox="0 0 600 150" preserveAspectRatio="none"></svg>
+    <svg id="curve"></svg>
     <div class="legend" id="curvenote"></div>
     <div class="nav">
       <button data-go="first"></button><button data-go="prev"></button>
@@ -353,7 +353,9 @@ function render() {
 // the curve by turn: a turn-start decision at its turn, a switch after a faint / a pivot halfway to
 // the next; the current turn marked
 function curve() {
-  const s = document.getElementById("curve"), W = 600, H = 150, P = 10, B = 14, last = Math.max(1, R.last_turn);
+  // drawn at the panel's own pixel width (a fixed viewBox stretched to it flattened the text)
+  const s = document.getElementById("curve"), W = Math.max(200, s.clientWidth || 600), H = 150, P = 10, B = 14, last = Math.max(1, R.last_turn);
+  s.setAttribute("viewBox", `0 0 ${W} ${H}`);
   const x = t => P + (t - 1) * (W - 2 * P) / Math.max(1, last), y = v => P + (1 - v) * (H - P - B);
   const xd = d => x(d.turn + (d.kind == "turn" ? 0 : 0.5));
   let g = `<rect x="${x(curT) - 6}" y="${P - 4}" width="12" height="${H - B - P + 8}" fill="var(--line)" opacity=".6"/>`;
@@ -366,7 +368,7 @@ function curve() {
     g += `<circle data-i="${i}" cx="${xd(d)}" cy="${y(d.value)}" r="${i == selD ? 6 : bad ? 5 : 4}" fill="${mid ? "var(--panel)" : color}" stroke="${i == selD ? "var(--ink)" : color}" stroke-width="2"><title>${esc(L.turn(d.turn))}${mid ? " · " + esc(L.kinds[d.kind == "pivot switch" ? "pivot" : "replace"]) : ""}: ${pct(d.value)}</title></circle>`;
   });
   s.innerHTML = g;
-  s.dataset.last = last;
+  s.dataset.last = last; s.dataset.w = W;
 }
 function battle() { return window.Replays && Replays.battle; }
 let curT = 1, selD = null;
@@ -407,9 +409,9 @@ document.querySelector(".nav").addEventListener("click", e => {
 document.getElementById("curve").addEventListener("click", e => {
   const i = e.target.dataset && e.target.dataset.i;
   if (i != null) return go(R.decisions[+i].turn, +i);
-  const s = e.currentTarget, r = s.getBoundingClientRect(), last = +s.dataset.last || 1;
-  const fx = (e.clientX - r.left) / r.width * 600;
-  go(Math.round(1 + (fx - 10) / (580 / last)));
+  const s = e.currentTarget, r = s.getBoundingClientRect(), last = +s.dataset.last || 1, W = +s.dataset.w || r.width;
+  const fx = (e.clientX - r.left) / r.width * W;
+  go(Math.round(1 + (fx - 10) * Math.max(1, last) / (W - 20)));
 });
 document.addEventListener("keydown", e => {
   if (e.key == "ArrowLeft") go(curT - 1);
@@ -418,6 +420,7 @@ document.addEventListener("keydown", e => {
 });
 document.getElementById("moments").addEventListener("click", e => { const li = e.target.closest("li"); if (li && li.dataset.i != null) go(R.decisions[+li.dataset.i].turn, +li.dataset.i); });
 render();
+window.addEventListener("resize", () => curve());
 // the player in the names' language: Showdown's own translation (its Dex reads the language from
 // its prefs; the zh-cn text data loaded before the battle is made)
 function withNames(start) {
