@@ -72,6 +72,9 @@ class Position:
     # worlds of this position ([12 * N_POST], alpha_search.posterior, x 255 rounded); None
     # without them
     post: list[float] | None = None
+    # positions_from_replay(worlds=W): the state and W - 1 more belief worlds of the position (the
+    # opponent re-sampled, side one the same), what a search of it needs (alpha_poke.coach)
+    worlds: list[str] | None = None
 
 
 # F2: belief worlds per position (the main one + POST_WORLDS - 1 more draws; 1 = no posterior).
@@ -325,6 +328,7 @@ def positions_from_replay(
     extra_per_game: int = 0,
     seed: int = 0,
     pool: str = "split",
+    worlds: int = 0,
 ):
     """``row``: a replay dict with ``id``, ``log`` (+ ``rating``, ``uploadtime``). ``per_game``
     > 0: only that many decision points, drawn at random (positions within a game are strongly
@@ -334,7 +338,9 @@ def positions_from_replay(
     after a faint, pivot switches, Blind turn starts), drawn with their own generator (seeded
     from the game id) so that the turn-start positions stay exactly as without them.
     ``pool="all"``: one pool of all decision points (turn starts and the others), ``per_game``
-    drawn from it, so each kind keeps its real share (no sampling weights needed)."""
+    drawn from it, so each kind keeps its real share (no sampling weights needed).
+    ``worlds`` > 0: each position also carries that many belief worlds (``Position.worlds``; the
+    posterior is computed over them; game reviews, alpha_poke.coach)."""
     rep = parse_replay(row)
     if rep.warnings or rep.winner not in ("p1", "p2"):
         return []
@@ -359,7 +365,7 @@ def positions_from_replay(
         extra = [extra[i] for i in sorted(rng2.sample(range(len(extra)), extra_per_game))]
     w_extra = n_extra / max(1, len(extra))
     return _emit_positions(row, rep, blind, actions, extra, w_main, w_extra, belief, rng, rng2,
-                           move_beta)  # fmt: skip
+                           move_beta, worlds)  # fmt: skip
 
 
 def _extra_points(rep, blind) -> list:
@@ -387,7 +393,7 @@ def _from_pool(row, rep, actions, belief, rng, move_beta, per_game, seed):
 
 
 def _emit_positions(row, rep, blind, actions, extra, w_main, w_extra, belief, rng, rng2,
-                    move_beta):  # fmt: skip
+                    move_beta, worlds: int = 0):  # fmt: skip
     lines = row["log"].split("\n")
     names: dict[str, str] = {}
     for x in lines:  # first non-empty name: logs often end with "|player|p1|" (player left)
@@ -426,7 +432,7 @@ def _emit_positions(row, rep, blind, actions, extra, w_main, w_extra, belief, rn
     def emit(kind, side, turn, a, key, gen):
         other = "p2" if side == "p1" else "p1"
         pos = _position(battles[side], side, a, records[side], known[side], belief, gen,
-                        move_beta, kind, copied[side])  # fmt: skip
+                        move_beta, kind, copied[side], worlds or POST_WORLDS)  # fmt: skip
         if pos is None:
             return
         st, action, more = pos
@@ -452,6 +458,7 @@ def _emit_positions(row, rep, blind, actions, extra, w_main, w_extra, belief, rn
                 len(records[other]) - total_faints[other],
                 cur, ratings[side], ratings[other], kind,
                 w_main if kind == KIND_MAIN else w_extra, post,
+                [st.to_string(), *more] if worlds else None,
             )
         )  # fmt: skip
 
@@ -491,7 +498,7 @@ def _emit_positions(row, rep, blind, actions, extra, w_main, w_extra, belief, rn
 
 
 def _position(battle, side, a, records, known, belief, rng, move_beta, kind=KIND_MAIN,
-              copied: dict | None = None):  # fmt: skip
+              copied: dict | None = None, n_worlds: int = POST_WORLDS):  # fmt: skip
     me = battle.active_pokemon
     switch_only = kind in (KIND_FORCED, KIND_PIVOT)
     if me is None or (me.fainted and kind != KIND_FORCED) or battle.opponent_active_pokemon is None:
@@ -515,7 +522,7 @@ def _position(battle, side, a, records, known, belief, rng, move_beta, kind=KIND
     more = [own + "/" + build_state(battle, belief, opp_names, rng, move_beta=move_beta,
                                     spectator=spec, force_switch=switch_only
                                     ).to_string().split("/", 1)[1]
-            for _ in range(POST_WORLDS - 1)]  # fmt: skip
+            for _ in range(n_worlds - 1)]  # fmt: skip
     if isinstance(a, Blind):
         rec = next((r for r in records if _same_species(r.species, me.species)), None)
         tera = rec is not None and rec.tera_turn == battle.turn  # tera shows before any move

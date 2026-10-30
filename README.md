@@ -19,6 +19,7 @@ results against people are not in yet.
 - [Quick start: play and evaluate the released model](#quick-start)
 - [Training from scratch](#training-from-scratch)
 - [Self-play](#self-play)
+- [Game reviews](#game-reviews)
 - [Team design](#team-design)
 - [Engine correctness](#engine-correctness)
 - [Repository layout](#repository-layout), [Scripts](#scripts), [Tests](#tests), [Data and licenses](#data-and-licenses),
@@ -205,6 +206,26 @@ are real teams with their hidden sets completed by the belief, plus forum teams.
 history are kept in `data/selfplay/state.json`; the single steps (`teams`, `run`, `convert`,
 `train`, `eval`) are subcommands. Design: `doc/design.md` D15–D16.
 
+## Game reviews
+
+The bot cannot explain its play, but its search can judge anyone's. `scripts/review_game.py`
+takes a replay (a saved game, or any Showdown replay id / URL) and a player, rebuilds each of
+that player's decisions from their own view (the training data's state construction: their
+team, what the opponent has revealed, belief samples for the rest), and searches it as the bot
+would. Per decision: every option's estimated winning chance, the player's choice, the
+search's, and the difference. The report lists the decisions that cost the most and the largest
+swings, with the turn's events and the public state; `--llm` hands it to an OpenAI-compatible
+chat model (`.env`: `COACH_LLM_*`) for a coach's write-up that may only use those numbers and
+facts (the moves it names are checked against the teams' learnsets). Output in
+`data/coach/<replay>-<side>/`.
+
+```bash
+uv run python scripts/review_game.py gen9ou-2706514881 --player <name> --llm
+```
+
+The numbers are estimates (a few seconds of search per decision, sampled hidden sets): they find
+the decisions that mattered; they are not exact.
+
 ## Team design
 
 For games against people the bot needs teams that win *in its hands* against the *current*
@@ -270,6 +291,7 @@ Every script's docstring has its usage; `--help` lists the options.
 |---|---|
 | model and data | `fetch_model.py` (the released model), `fetch_metamon.py`, `fetch_smogon_stats.py`, `crawl_replays.py`, `split_shards.py`, `build_replay_tables.py`, `build_reveal_model.py`, `build_training_data.py`, `train_pv.py`, `build_synergy.py` (teammate synergy for synthetic teams) |
 | play and evaluate | `start_showdown.sh`, `eval_pairs.py` (paired games between two bots; `eval_pairs_opponent.py`: bot B from another checkout), `vs_foulplay.py` / `setup_foul_play.py`, `play_public.py`, `ladder.py`, `results_table.py` (the generated tables of `doc/results.md`) |
+| game reviews | `review_game.py` (a player's decisions searched from their view; `--llm`: a coach's write-up) |
 | self-play | `selfplay.py` (`iterate`, `teams`, `run`, `convert`, `train`, `eval`, `registry`, ...), `team_pools.py` (diagnostic pools), `check_synthetic_teams.py` |
 | team design (`doc/team_design.md`) | `teams.py` (forum catalog, pools), `meta_shift.py`, `top_ladder_teams.py`, `check_team_reconstruction.py`, `build_robust_teams.py`, `threat_check.py`, `sim_team_pool.py`, `validate_team_measures.py` |
 | one specific opponent (public replays; names stay in `data/players/`) | `player.py`, `counter_team.py`, `counter_pipeline.py` |
