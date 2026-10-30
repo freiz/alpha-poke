@@ -1,9 +1,21 @@
 name: CI
 
+# (not for a change that touches only docs, the license or the desktop app's workflow: no code
+# runs differently -- Actions minutes are counted on a private repository)
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "**.md"
+      - "doc/**"
+      - "LICENSE"
+      - ".github/workflows/desktop-app.yml"
   pull_request:
+    paths-ignore:
+      - "**.md"
+      - "doc/**"
+      - "LICENSE"
+      - ".github/workflows/desktop-app.yml"
   workflow_dispatch:
 
 concurrency:
