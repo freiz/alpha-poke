@@ -270,8 +270,8 @@ class TeamSampler:
         reveal-corrected: ``marginal_set`` with ``rates``; the fair evaluation pool).
         ``min_rating``: only games both players were rated at least this before; ``exclude``:
         game ids never drawn (self-play's and earlier tests' sources)."""
-        g = pd.read_parquet(GAMES, columns=["id", "time", "r1", "r2", "winner", "shard", "row",
-                                            "team1", "team2"])  # fmt: skip
+        g = pd.read_parquet(GAMES, columns=["id", "time", "p1", "p2", "r1", "r2", "winner", "shard",
+                                            "row", "team1", "team2"])  # fmt: skip
         g = g[g.winner > 0]
         if since is not None:
             g = g[g.time >= since]

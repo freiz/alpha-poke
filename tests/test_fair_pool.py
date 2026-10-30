@@ -115,3 +115,47 @@ def test_the_fair_pools_games_and_size(tmp_path):
     assert fair.size(tmp_path / "fair10") == 2
     with pytest.raises(FileExistsError):
         fair.build("fair10", 2, pools=tmp_path)
+
+
+def test_a_bank_pairs_teams_as_the_ladder_would(tmp_path):
+    """selfplay.fair.bank_pairs / bank_pool: every team once, a pair's two teams from the same
+    month with ratings within 200, a test's draw its own for its seed (another seed: other
+    pairs), a resumed test the same pairs; the bank's games kept from self-play."""
+    import json
+
+    from alpha_poke.selfplay import fair
+
+    rng = random.Random(0)
+    day = fair.DAY
+    teams = [{"game": f"g{i}", "side": "p1", "time": 1_780_000_000 + rng.randrange(90) * day,
+              "rating": rng.randrange(1500, 2000), "text": f"team {i}"} for i in range(400)]  # fmt: skip
+    pairs = fair.bank_pairs(teams, 150, seed=1)
+    assert len(pairs) == 150
+    seen = [t["game"] for p in pairs for t in p]
+    assert len(seen) == len(set(seen))
+    for a, b in pairs:
+        assert (
+            a["time"] // (31 * day) == b["time"] // (31 * day)
+            and abs(a["rating"] - b["rating"]) <= 200
+        )
+    assert (
+        fair.bank_pairs(teams, 150, seed=1) == pairs
+        and fair.bank_pairs(teams, 150, seed=2) != pairs
+    )
+    bank = tmp_path / "teambank"
+    bank.mkdir()
+    (bank / "teams.jsonl").write_text(
+        "".join(json.dumps(t) + "\n" for t in teams), encoding="utf-8"
+    )
+    (bank / "meta.json").write_text(
+        json.dumps({"kind": "fairbank", "games": ["g1", "g2"]}), encoding="utf-8"
+    )
+    out = fair.bank_pool(bank, tmp_path / "draw", 20, seed=5)
+    assert fair.size(out) == 20
+    first = (tmp_path / "draw" / "pair000_a.txt").read_text(encoding="utf-8")
+    fair.bank_pool(bank, tmp_path / "draw", 20, seed=6)  # (present: kept)
+    assert (tmp_path / "draw" / "pair000_a.txt").read_text(encoding="utf-8") == first
+    assert {"g1", "g2"} <= fair.games(tmp_path)
+    assert fair.test_half("gen9ou-1") in (True, False) and fair.test_half("x") == fair.test_half(
+        "x"
+    )
