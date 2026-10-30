@@ -42,8 +42,10 @@ PAGE = r"""<!DOCTYPE html>
   .tag.bad { background: var(--bad); color: #fff; } .tag.ok { background: var(--good); color: #fff; } .tag.mild { background: var(--mild); color: #fff; }
   .tune { font-size: 12px; color: var(--muted); display: flex; gap: 14px; flex-wrap: wrap; align-items: center; margin: 4px 0 2px; }
   .tune input { vertical-align: middle; width: 110px; } .tune b { color: var(--ink); }
-  .opt { display: grid; grid-template-columns: minmax(96px, 150px) 1.4fr 108px 1fr 40px; gap: 6px 8px; align-items: center; margin: 3px 0; }
-  .opt.head { color: var(--muted); font-size: 12px; margin-top: 6px; } .opt.head span:nth-child(2) { grid-column: 2 / 4; } .opt.head span:nth-child(3) { grid-column: 4 / 6; }
+  .opt { display: grid; grid-template-columns: minmax(96px, 150px) 1.4fr 38px 30px 40px 1fr 40px; gap: 6px 8px; align-items: center; margin: 3px 0; }
+  .opt.head { color: var(--muted); font-size: 12px; margin-top: 6px; } .opt.head span:nth-child(2) { grid-column: 2 / 6; } .opt.head span:nth-child(3) { grid-column: 6 / 8; }
+  .opt .se { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .opt .diff { white-space: nowrap; text-align: right; }
   .opt .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .opt .name.me { color: var(--me); font-weight: 600; } .opt .name.ai { color: var(--ai); font-weight: 600; }
   .bar { position: relative; height: 14px; background: var(--bg); border-radius: 3px; overflow: hidden; }
@@ -387,11 +389,12 @@ function aiHTML(d) {
     let diff = "";
     if (q != null && o != d.best) {  // the gap to the AI's choice, "≈" within Z errors
       const gap = q - d.best_value, gse = se && bestSe ? Math.hypot(se, bestSe) : null;
-      diff = ` <span class="diff">(${gse && Math.abs(gap) <= Z * gse ? L.approx : (gap >= 0 ? "+" : "") + Math.round(100 * gap)})</span>`;
+      diff = `(${gse && Math.abs(gap) <= Z * gse ? L.approx : (gap >= 0 ? "+" : "") + Math.round(100 * gap)})`;
     }
     h += `<div class="opt"><span class="name ${cls}" title="${esc(o)}">${esc(option(o))}</span>
       <span class="bar"><span class="win" style="width:${q == null ? 0 : 100 * q}%"></span></span>
-      <span class="num">${q == null ? L.untried : pct(q) + pm(se)}${diff}</span>
+      ${q == null ? `<span class="num" style="grid-column: span 3">${L.untried}</span>`
+        : `<span class="num">${pct(q)}</span><span class="se">${pm(se).trim()}</span><span class="diff">${diff}</span>`}
       <span class="bar"><span class="share" style="width:${100 * share}%"></span></span>
       <span class="num">${pct(share)}</span></div>`;
   }
