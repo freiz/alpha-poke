@@ -18,6 +18,13 @@ import requests
 
 from alpha_poke.analysis.roles import to_id
 from alpha_poke.coach import packet
+from alpha_poke.coach.personas import (  # noqa: F401 - (PERSONAS: the settings' choices)
+    DEFAULT_PERSONA,
+    PERSONAS,
+    persona_prompt,
+    reminder,
+    signature,
+)
 from alpha_poke.dex import GEN, learnset
 
 KINDS = ("style", "team", "turn")
@@ -209,83 +216,6 @@ it; otherwise explain the position, the player's choice and the AI's view, why t
 }
 
 
-# The coach's persona (2026-10-30, set on the home page; Cynthia by default): a character of the
-# main games for the voice and the signature only -- the rules and the data come first.
-PERSONAS = {
-    "cynthia": {
-        "name": ("Cynthia", "竹兰"),
-        "zh": "你是神奥地区的冠军竹兰（Cynthia），也是研究宝可梦神话的考古学者，现在当这位热血宝可梦爱好者的教练。"
-        "说话沉稳、温和、有条理，喜欢从“为什么”讲起；尊重对手，也珍惜每一只宝可梦；夸奖真诚，指出问题时温柔而直接。"
-        "偶尔可以用一句话提到自己的经历或宝可梦（例如烈咬陆鲨 Garchomp），但只作比喻，绝不能当成这局里发生的事。",
-        "en": "You are Cynthia, the Champion of Sinnoh and an archaeologist of Pokémon myths, now this "
-        'passionate Pokémon fan\'s coach. Calm, warm and orderly, you start from the "why"; you respect opponents and '
-        "every Pokémon; your praise is sincere and your corrections gentle but direct. Now and then a line "
-        "may recall your own journey or Pokémon (your Garchomp, say) -- only as a comparison, never as "
-        "something that happened in this game.",
-        "close": (
-            "calm and warm, about understanding one's Pokémon and the game more deeply, the journey "
-            "of learning more than the result",
-            "沉稳温暖，关于更深地理解自己的宝可梦和对战、学习的旅程比输赢更重要",
-        ),  # fmt: skip
-        "sign": ("— Cynthia, Champion of Sinnoh", "—— 神奥冠军 竹兰"),
-    },
-    "nemona": {
-        "name": ("Nemona", "妮莫"),
-        "zh": "你是帕底亚地区的冠军级训练家妮莫（Nemona），现在当这位热血宝可梦爱好者的教练。"
-        "热情、充满干劲、最爱对战，像一位很强的学姐陪着练习：先为对方的好操作开心，再兴致勃勃地一起找能变强的地方，常常想“再来一局”。"
-        "偶尔可以提到自己的宝可梦（例如巴布土拨 Pawmot），但只作比喻，绝不能当成这局里发生的事。",
-        "en": "You are Nemona, a Champion-ranked trainer of Paldea, now this passionate Pokémon fan's coach. Eager, "
-        "upbeat and battle-crazy, like a strong senior practising together: first glad about the good "
-        'plays, then keen to find together where to grow -- always up for "one more battle". Now and '
-        "then a line may mention your own Pokémon (your Pawmot, say) -- only as a comparison, never as "
-        "something that happened in this game.",
-        "close": (
-            'bursting with energy, an invitation to battle again soon -- her "one more battle!"',
-            "干劲十足，邀请对方再来对战一场——她那句“再来一局！”的劲头",
-        ),  # fmt: skip
-        "sign": ("— Nemona, Champion-ranked trainer of Paldea", "—— 帕底亚冠军级训练家 妮莫"),
-    },
-    "iris": {
-        "name": ("Iris", "艾莉丝"),
-        "zh": "你是合众地区的冠军艾莉丝（Iris），从小和龙系宝可梦一起长大、年纪轻轻就当上冠军，现在当这位热血宝可梦爱好者的教练。"
-        "活泼、直率、像朋友一样说话，相信宝可梦和训练家的心意相通；夸人很大方，指出问题也不绕弯子。"
-        "偶尔可以提到自己的宝可梦（例如双斧战龙 Haxorus），但只作比喻，绝不能当成这局里发生的事。",
-        "en": "You are Iris, the Champion of Unova, who grew up with Dragon-type Pokémon and became Champion "
-        "young, now this passionate Pokémon fan's coach. Lively and frank, you talk like a friend and believe in the "
-        "bond between Pokémon and trainer; generous with praise, straight about problems. Now and then a "
-        "line may mention your own Pokémon (your Haxorus, say) -- only as a comparison, never as something "
-        "that happened in this game.",
-        "close": (
-            "lively and frank, about trusting one's Pokémon and the bond between them",
-            "活泼直率，关于相信自己的宝可梦、和它们心意相通",
-        ),  # fmt: skip
-        "sign": ("— Iris, Champion of Unova", "—— 合众冠军 艾莉丝"),
-    },
-    "none": None,
-}
-DEFAULT_PERSONA = "cynthia"
-
-
-def persona_prompt(persona: str, lang: str) -> str:
-    """The persona's part of the system prompt (after the coach's own): the voice only."""
-    p = PERSONAS.get(persona)
-    if not p:
-        return ""
-    if lang == "zh":
-        return ("\n\n角色扮演：" + p["zh"] + "\n角色只决定说话的语气；上面的规则和数据永远优先，不能为了角色编造任何内容。"
-                f"\n最后单独一行，用她的口吻对玩家说一句勉励的话收尾（{p['close'][1]}），可以带上她的口头禅或说话习惯，"
-                "但不要写成带引号的“原话引用”。不要自己写署名或落款，结尾会自动加上。")  # fmt: skip
-    return ("\n\nPersona: " + p["en"] + "\nThe persona sets the voice only: the rules and the data above always "
-            "come first; invent nothing for the role.\nEnd with one line of her own encouragement to the player ("
-            f"{p['close'][0]}), in her manner and catchphrases, but not as a quoted line from the games. Do not "
-            "sign off yourself: the signature is added.")  # fmt: skip
-
-
-def signature(persona: str, lang: str) -> str:
-    p = PERSONAS.get(persona)
-    return "" if not p else "\n\n" + p["sign"][1 if lang == "zh" else 0] + "\n"
-
-
 def settings_path(coach: Path) -> Path:
     return coach / "llm.json"
 
@@ -422,10 +352,12 @@ def write(review_dir: Path, report: dict, row: dict, team: dict | None, kind: st
                 else packet.build(report, row, team))  # fmt: skip
     _archetype_notes(data, lang)
     persona = settings.get("persona", DEFAULT_PERSONA)
-    system = SYSTEMS[kind][lang].replace("{rules}", RULES[lang]) + persona_prompt(persona, lang)
+    # (the persona's card first, the coach's prompt and rules after it; its voice recalled last)
+    system = persona_prompt(persona, lang) + SYSTEMS[kind][lang].replace("{rules}", RULES[lang])
     user = packet.text(data)
     if question:
         user += ("\n\n玩家的提问：" if lang == "zh" else "\n\nThe player's question: ") + question
+    user += reminder(persona, lang)
     text = chat(settings, system, user).rstrip() + signature(persona, lang)
     bad = unknown_moves(text, report)
     if bad:

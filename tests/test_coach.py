@@ -1035,17 +1035,29 @@ def test_a_language_models_write_up(game, report, tmp_path, monkeypatch):
     monkeypatch.setattr(llm, "chat", chat)
     text = llm.write(tmp_path, report, game, None, "style", "en", llm.load_settings(tmp_path))
     assert "Spore" in text.split("Check:")[1] and llm.cached(tmp_path, "style", "en") == text
-    assert "turn-by-turn log" in seen["system"] and json.loads(seen["user"])["decisions"]
+    assert (
+        "turn-by-turn log" in seen["system"]
+        and json.JSONDecoder().raw_decode(seen["user"])[0]["decisions"]
+    )
     assert llm.cached(tmp_path, "style", "zh") is None
-    # (the persona: its voice after the rules, its signature added -- before the move check's note)
-    assert "Persona: You are Cynthia" in seen["system"]
-    assert seen["system"].index("Rules:") < seen["system"].index("Persona:")
+    # (the persona: its character card before the coach's prompt and rules, its voice recalled at
+    # the end of the facts, its signature added -- before the move check's note)
+    assert (
+        seen["system"].startswith("You coach this player as Cynthia")
+        and "[Voice]" in seen["system"]
+    )
+    assert seen["system"].index("[Voice]") < seen["system"].index("Rules:")
+    assert seen["user"].endswith("(Write in Cynthia's voice, as her character card says.)")
     assert text.index("— Cynthia, Champion of Sinnoh") < text.index("Check:")
     zh = llm.write(tmp_path, report, game, None, "style", "zh", llm.load_settings(tmp_path))
-    assert "角色扮演：你是神奥地区的冠军竹兰" in seen["system"] and "—— 神奥冠军 竹兰" in zh
+    assert (
+        seen["system"].startswith("你以竹兰的身份担任这位玩家的教练")
+        and "【说话方式】" in seen["system"]
+    )
+    assert "—— 神奥冠军 竹兰" in zh
     llm.save_settings(tmp_path, "https://example.invalid/v1", "m2", "", "none")
     plain = llm.write(tmp_path, report, game, None, "style", "en", llm.load_settings(tmp_path))
-    assert "Persona" not in seen["system"] and "Cynthia" not in plain
+    assert "Cynthia" not in seen["system"] + seen["user"] + plain
     llm.save_settings(tmp_path, "https://example.invalid/v1", "m2", "", "nobody")  # (unknown: kept)
     assert llm.load_settings(tmp_path)["persona"] == "none"
 
@@ -1100,10 +1112,15 @@ def test_team_and_turn_write_ups(game, report, tmp_path, monkeypatch):
     )
     s = {"base_url": "x", "api_key": "k", "model": "m"}
     assert llm.write(tmp_path, report, game, None, "team", "zh", s).startswith("answer 1")
-    assert "team_facts" in asked[0][0] and "team_facts" in json.loads(asked[0][1])
+    assert (
+        "team_facts" in asked[0][0]
+        and "team_facts" in json.JSONDecoder().raw_decode(asked[0][1])[0]
+    )
     llm.write(tmp_path, report, game, None, "turn", "en", s, dec=i)
     llm.write(tmp_path, report, game, None, "turn", "en", s, dec=i, question="Why not switch?")
-    assert asked[2][1].endswith("The player's question: Why not switch?")
+    assert asked[2][1].endswith(
+        "The player's question: Why not switch?\n\n(Write in Cynthia's voice, as her character card says.)"
+    )
     assert llm.cached(tmp_path, "turn", "en", i).startswith("answer 2")
     assert llm.cached(tmp_path, "turn", "en", i, "Why not switch?").startswith("answer 3")
     assert llm.cached(tmp_path, "turn", "en", i + 1) is None
