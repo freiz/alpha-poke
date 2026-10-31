@@ -381,23 +381,29 @@ def mistake_score(d: dict) -> float:
     return max(0.0, d["loss"] or 0.0) + 0.15 * (d["options"][0][1] - d["chosen_share"])
 
 
+MIN_LOSS, BIG_LOSS = 0.03, 0.05
+
+
 def verdict(d: dict, z: float = 2.0, low_share: float = 0.10) -> str:
     """How the search sees a decision (the review page computes the same, its two thresholds
-    adjustable): "same" (the search's own choice); "bad" -- the search hardly tried the choice
-    (its visit share under ``low_share`` while its own choice took at least half) and the
-    winning chance it loses is real (more than ``z`` standard errors; without errors: 5 points),
-    or the loss alone is real and at least 5 points; "mild" -- hardly tried but the loss is
-    within the noise (or unknown: never tried; repeated searches of which under two tried both
-    the choice and the best); "ok" otherwise."""
+    adjustable, and states the rule): "same" (the search's own choice); "ok" under MIN_LOSS lost
+    (2026-10-30: a 1-point gap, sure once the errors were paired, read as "bad" -- not a
+    mistake); "bad" -- the winning chance it loses is real (more than ``z`` standard errors;
+    without errors: 5 points) and the search hardly tried the choice (its visit share under
+    ``low_share`` while its own choice took at least half), or the loss is real and at least
+    BIG_LOSS; "mild" -- hardly tried but the loss is uncertain (or unknown: never tried; repeated
+    searches of which under two tried both the choice and the best); "ok" otherwise."""
     if d["chosen"] == d["best"]:
         return "same"
+    if d.get("loss") is not None and d["loss"] < MIN_LOSS:
+        return "ok"
     loss, se = d.get("loss"), d.get("loss_se")
     unsure = d.get("repeats", 1) > 1 and d.get("paired") is not None and d["paired"] < 2
     real = loss is not None and not unsure and (loss > z * se if se else loss >= 0.05)
     shunned = d["chosen_share"] < low_share and d["options"][0][1] >= 0.5
     if shunned:
         return "bad" if real else "mild"
-    return "bad" if real and loss >= 0.05 else "ok"
+    return "bad" if real and loss >= BIG_LOSS else "ok"
 
 
 def metrics(report: dict, z: float = 2.0, low_share: float = 0.10) -> dict:

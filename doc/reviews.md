@@ -14,9 +14,11 @@ play it, several times over independent draws of everything hidden, giving per o
 - the search's share of thinking (visits);
 - the gap to the search's own choice, shown as "≈" when it is within the error.
 
-A decision is marked "the AI disagrees" when the search hardly considered the choice and the loss
-is beyond the error, or the loss alone is beyond the error and at least 5 points; both thresholds
-are adjustable on the page. A scorecard sums up the game: how often the player chose the search's
+A decision is marked "the AI disagrees" when the loss is at least 3 points and beyond the error,
+and either the search hardly considered the choice or the loss is at least 5 points; "the AI
+doesn't like it" when the search hardly considered the choice but the loss is uncertain; a loss
+under 3 points is always acceptable. The error multiple and the "hardly considered" share are
+adjustable on the page, which states the rule in full. A scorecard sums up the game: how often the player chose the search's
 first or second choice, the average winning chance lost, the number of marked decisions.
 
 ## Using it

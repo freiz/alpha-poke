@@ -102,6 +102,7 @@ __RF_HTML__
     <div class="tune"><span id="tunehead"></span>
       <label><span id="tz"></span> <input type="range" id="z" min="1" max="3" step="0.5" /> <b id="zv"></b></label>
       <label><span id="tl"></span> <input type="range" id="low" min="5" max="30" step="5" /> <b id="lowv"></b></label></div>
+    <div class="legend" id="rules"></div>
     <div class="nav">
       <button data-go="first"></button><button data-go="prev"></button>
       <button data-go="next"></button><button data-go="mistake"></button>
@@ -159,6 +160,7 @@ const T = {
     bars: `<span style="color:var(--me)">Orange</span> = your choice, <span style="color:var(--ai)">blue</span> = the AI's choice. In brackets: the difference from the AI's choice.`,
     winCol: "Winning chance after it", shareCol: "The AI's share of thinking", home: "← Home",
     tune: "How strict:", tz: "a gap counts beyond", tzv: v => `${v}× its error`, tl: "the AI shuns a choice it thinks about less than", tlv: v => `${v}%`,
+    rules: (z, low, min, big) => `“AI disagrees”: the AI's choice wins at least ${min} points more, the gap beyond ${z}× its error, and either the AI gave your choice under ${low}% of its thinking or the gap is at least ${big} points. “AI doesn't like it”: under ${low}% of its thinking, but the gap is uncertain. A gap under ${min} points is always “acceptable”.`,
     noteRuns: n => n > 1 ? ` × ${n} searches` : "", approx: "≈",
     noteTeam: t => t ? " | your team: pasted (exact)" : " | your team: what the game showed, the rest guessed",
     visits: n => `${n.toLocaleString("en")} visits`,
@@ -214,6 +216,7 @@ const T = {
     bars: `<span style="color:var(--me)">橙色</span>=你的选择，<span style="color:var(--ai)">蓝色</span>=AI 的选择；括号里是和 AI 选择的胜率差距。`,
     winCol: "选这一步后的胜率", shareCol: "AI 思考的比例", home: "← 主页",
     tune: "判定标准：", tz: "胜率差距超出误差的", tzv: v => `${v} 倍才算数`, tl: "AI 思考比例低于", tlv: v => `${v}% 算不认同`,
+    rules: (z, low, min, big) => `“AI 不认同”：AI 的选择胜率至少高 ${min} 个点，且差距超出误差的 ${z} 倍；同时满足以下之一：AI 对你的选择思考比例低于 ${low}%，或差距至少 ${big} 个点。“AI 不太喜欢”：AI 对你的选择思考比例低于 ${low}%，但差距还不确定。差距不到 ${min} 个点一律算“可以接受”。`,
     noteRuns: n => n > 1 ? ` × ${n} 次搜索` : "", approx: "≈",
     noteTeam: t => t ? " ｜ 我方队伍：已粘贴（精确）" : " ｜ 我方队伍：这局亮出来的部分，其余靠猜",
     visits: n => `访问 ${n.toLocaleString("en")} 次`,
@@ -371,16 +374,19 @@ function steps(t) {
 }
 function setting(k, d) { try { const v = parseFloat(localStorage.getItem("coach-" + k)); return isNaN(v) ? d : v; } catch (e) { return d; } }
 let Z = setting("z", 2), LOW = setting("low", 10);
-// as coach.review.verdict: "same"; "bad" -- the AI hardly thought of the choice and the chance it
-// loses is beyond the noise (Z standard errors; without errors 5 points), or the loss alone is
-// beyond the noise and at least 5 points; "mild" -- hardly thought of, the loss within the noise
+// as coach.review.verdict (the page states it: L.rules): "same"; under MIN_LOSS lost "ok"; "bad"
+// -- the chance it loses is beyond the noise (Z standard errors; without errors 5 points) and the
+// AI hardly thought of the choice, or the loss is at least BIG_LOSS; "mild" -- hardly thought of,
+// the loss uncertain; "ok" otherwise
+const MIN_LOSS = 0.03, BIG_LOSS = 0.05;
 function verdict(d) {
   if (d.chosen == d.best) return "same";
+  if (d.loss != null && d.loss < MIN_LOSS) return "ok";  // (2026-10-30: a 1-point gap, paired-sure, read as "bad")
   const unsure = d.repeats > 1 && d.paired != null && d.paired < 2;  // (as coach.review.verdict)
   const real = d.loss != null && !unsure && (d.loss_se ? d.loss > Z * d.loss_se : d.loss >= 0.05);
   const shunned = d.chosen_share < LOW / 100 && d.options[0][1] >= 0.5;
   if (shunned) return real ? "bad" : "mild";
-  return real && d.loss >= 0.05 ? "bad" : "ok";
+  return real && d.loss >= BIG_LOSS ? "bad" : "ok";
 }
 const pm = se => se ? ` ±${Math.max(1, Math.round(100 * se))}` : "";
 function aiHTML(d) {
@@ -501,7 +507,10 @@ document.getElementById("tunehead").textContent = L.tune;
 document.getElementById("tz").textContent = L.tz; document.getElementById("tl").textContent = L.tl;
 for (const [id, get, set] of [["z", () => Z, v => { Z = v; }], ["low", () => LOW, v => { LOW = v; }]]) {
   const el = document.getElementById(id), out = document.getElementById(id + "v");
-  const show = () => { out.textContent = id == "z" ? L.tzv(get()) : L.tlv(get()); };
+  const show = () => {
+    out.textContent = id == "z" ? L.tzv(get()) : L.tlv(get());
+    document.getElementById("rules").textContent = L.rules(Z, LOW, Math.round(100 * MIN_LOSS), Math.round(100 * BIG_LOSS));
+  };
   el.value = get(); show();
   el.addEventListener("input", () => { set(parseFloat(el.value)); show(); try { localStorage.setItem("coach-" + id, el.value); } catch (e) {} render(); });
 }

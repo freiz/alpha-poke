@@ -232,10 +232,13 @@ def test_the_verdict():
     shunned = base | {"chosen_share": 0.02}
     assert verdict(base | {"chosen": "b", "chosen_share": 0.8, "loss": 0}) == "same"
     assert verdict(shunned | {"loss": 0.10, "loss_se": 0.014}) == "bad"  # beyond 2 errors
-    assert verdict(shunned | {"loss": 0.02, "loss_se": 0.014}) == "mild"  # within the noise
+    assert verdict(shunned | {"loss": 0.04, "loss_se": 0.025}) == "mild"  # within the noise
     assert (
-        verdict(shunned | {"loss": 0.02, "loss_se": 0.014}, z=1) == "bad"
+        verdict(shunned | {"loss": 0.04, "loss_se": 0.025}, z=1) == "bad"
     )  # (stricter on noise: 1 error)
+    # (under 3 points is no mistake, however sure: 2026-10-30, a Tera Fire Punch 1.2 +- 0.3
+    # points below the plain one, read as "AI disagrees")
+    assert verdict(shunned | {"loss": 0.012, "loss_se": 0.003, "repeats": 5, "paired": 5}) == "ok"
     assert verdict(shunned | {"loss": None, "loss_se": None}) == "mild"  # never tried: no value
     assert verdict(base | {"chosen_share": 0.3, "loss": 0.03, "loss_se": None}) == "ok"
     assert verdict(base | {"chosen_share": 0.3, "loss": 0.08, "loss_se": 0.01}) == "bad"
