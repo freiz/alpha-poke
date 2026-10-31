@@ -351,6 +351,91 @@ def archetype(snap: dict, team: list[str], export: tuple[str, bool] | None, p=No
     return out
 
 
+def this_game(report: dict, team_sets: dict | None = None, snap: dict | None = None) -> dict | None:
+    """This game's two teams against each other (2026-10-31: why the first turn's chance is what
+    it is): set by set both ways (teams.threats, each side's export -- the player's pasted sets,
+    else what the game showed plus the usual sets): for each Pokemon, who of the other side checks
+    or revenge-kills it and whom it KOs in one hit; the speed order; the matchup model's view of
+    these twelve species (its chance at even ratings, split into strength, matchups -- the pairs
+    weighing most -- and teammates); both archetypes; the AI's chance on the first turn."""
+    from alpha_poke.analysis.roles import to_id
+    from alpha_poke.teams.threats import answers, ko_by, own_views
+
+    me = report["side"]
+    opp = "p2" if me == "p1" else "p1"
+    exports = {me: team_export(report, team_sets), opp: team_export(report | {"side": opp})}
+    try:
+        views = {k: own_views(v[0]) for k, v in exports.items()}
+    except Exception:  # noqa: BLE001 - an export poke-env cannot read: no breakdown
+        return None
+    names = {k: [r["species"].replace("-*", "") for r in report["teams"][k]] for k in (me, opp)}
+    if any(len(views[k]) != len(names[k]) for k in (me, opp)):
+        return None
+    display = {to_id(n): n for k in (me, opp) for n in names[k]}
+
+    def show(x: str) -> str:  # (a species id, maybe with "(check)": its display name)
+        sid, _, tag = x.partition("(")
+        return display.get(sid, sid) + (f"({tag}" if tag else "")
+
+    def against(att: str, dfn: str) -> list[dict]:
+        out = []
+        for name, v in zip(names[dfn], views[dfn], strict=True):
+            b = [(1.0, v)]
+            out.append({"species": name, "answered_by": [show(x) for x in answers(views[att], b)],
+                        "kos_in_one_hit": [show(x) for x in ko_by(views[att], b)]})  # fmt: skip
+        return out
+
+    speed = sorted(((v.stats["spe"], n, "you" if k == me else "opponent")
+                    for k in (me, opp) for n, (v, _) in zip(names[k], views[k], strict=True)), reverse=True)  # fmt: skip
+    out = {
+        "your_sets_exact": exports[me][1],
+        "their_pokemon_vs_your_team": against(me, opp),
+        "your_pokemon_vs_their_team": against(opp, me),
+        "speed_order": [{"species": n, "side": side, "speed": spe} for spe, n, side in speed],
+    }
+    ds = report.get("decisions") or []
+    if ds:
+        d = ds[0]
+        out["first_turn"] = {"turn": d["turn"], "win_chance": d["value"], "ai_choice": d["best"],
+                             "opponent_expected": [{"option": o[0], "share": o[1], "your_win_chance": o[2]}
+                                                   for o in (d.get("opp_options") or [])[:3]]}  # fmt: skip
+    snap = snap or load()
+    if snap and snap.get("_idx"):
+        idx, a, M, S = snap["_idx"], snap["_a"], snap["_M"], snap["_S"]
+        other = len(a) - 1
+        mine = [s for s in report["teams"][me]]
+        ia = [idx.get(r["species"], other) for r in mine]
+        ib = [idx.get(r["species"], other) for r in report["teams"][opp]]
+        sa, sb = [r["species"] for r in mine], [r["species"] for r in report["teams"][opp]]
+        mt = M[np.ix_(ia, ib)]
+        strength = float(a[ia].sum() - a[ib].sum())
+        syn = float(S[np.ix_(ia, ia)].sum() / 2 - S[np.ix_(ib, ib)].sum() / 2)
+        z = strength + float(mt.sum()) + syn
+        pts = lambda x: round(100 * float(x) / 4, 1)  # noqa: E731  (logit -> points of chance at even odds)
+        pairs = sorted((mt[i, j], sa[i], sb[j]) for i in range(len(sa)) for j in range(len(sb)))
+        out["species_model"] = {
+            "win_chance_at_even_ratings": round(float(1 / (1 + np.exp(-z))), 3),
+            "points": {"strength": pts(strength), "matchups": pts(mt.sum()), "teammates": pts(syn)},
+            "pairs_against_you": [{"yours": x, "theirs": y, "points": pts(v)} for v, x, y in pairs[:5] if v < 0],
+            "pairs_for_you": [{"yours": x, "theirs": y, "points": pts(v)} for v, x, y in pairs[::-1][:3] if v > 0],
+        }  # fmt: skip
+    arch = (
+        archetype(snap, [r["species"] for r in report["teams"][me]], exports[me]) if snap else None
+    )
+    theirs = revealed_archetype(report["teams"][opp], snap)
+    if arch and theirs:
+        out["archetypes"] = {"yours": arch["style"], "theirs": theirs["style"], "their_features": theirs["features"],
+                             "your_features": arch["features"]}  # fmt: skip
+        vs = (
+            ((snap.get("archetypes") or {}).get("vs") or {})
+            .get(arch["style"], {})
+            .get(theirs["style"])
+        )
+        if vs:
+            out["archetypes"]["style_record"] = {"games": vs[0], "margin_over_ratings": vs[1]}
+    return out
+
+
 def revealed_archetype(recs: list[dict], snap: dict | None = None) -> dict | None:
     """The archetype of a team as a game showed it (the review's records: species, the moves,
     item and ability seen) -- the opponent's: a guess from what it revealed."""

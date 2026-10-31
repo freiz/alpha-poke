@@ -1301,3 +1301,28 @@ def test_a_decisions_conversation(game, report, tmp_path, monkeypatch):
     assert llm.asked(tmp_path, "zh") == {3: 3} and llm.thread(tmp_path, 3, "en") == []
     llm.clear_thread(tmp_path, 3, "zh")
     assert llm.thread(tmp_path, 3, "zh") == [] and llm.asked(tmp_path, "zh") == {}
+
+
+def test_this_games_matchup_breakdown(report, monkeypatch):
+    """coach.meta.this_game: both teams against each other set by set (each side's every Pokemon
+    with who answers it and whom it KOs), the speed order, the first turn's chance; the team
+    write-up's facts carry it."""
+    from alpha_poke.coach import meta
+
+    monkeypatch.setattr(meta, "load", lambda: None)
+    t = meta.this_game(report)
+    me, opp = report["side"], "p2" if report["side"] == "p1" else "p1"
+    assert [x["species"] for x in t["their_pokemon_vs_your_team"]] == [
+        r["species"].replace("-*", "") for r in report["teams"][opp]
+    ]
+    assert len(t["your_pokemon_vs_their_team"]) == len(report["teams"][me])
+    mine = {r["species"].replace("-*", "") for r in report["teams"][me]}
+    for x in t["their_pokemon_vs_your_team"]:  # (answers and KOs name the player's own Pokemon)
+        assert all(a.split("(")[0] in mine for a in x["answered_by"] + x["kos_in_one_hit"])
+    sp = [x["speed"] for x in t["speed_order"]]
+    assert sp == sorted(sp, reverse=True) and {x["side"] for x in t["speed_order"]} == {
+        "you",
+        "opponent",
+    }
+    assert t["first_turn"]["win_chance"] == report["decisions"][0]["value"]
+    assert "species_model" not in t  # (no snapshot)

@@ -241,6 +241,10 @@ def team(report: dict, row: dict, team_sets: dict | None = None, review_dir=None
         facts = meta.facts(mine, export=export)
     if facts:
         data["team_facts"]["metagame"] = facts
+    # (this game's two teams against each other: why the first turn's chance is what it is)
+    game = meta.this_game(report, team_sets)
+    if game:
+        data["team_facts"]["this_game"] = game
     data["names_zh"] = _names(data)
     return data
 
