@@ -76,6 +76,11 @@ PAGE = r"""<!DOCTYPE html>
   .llmbox { margin: 0 16px 12px; padding: 10px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
   .llmhead { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
   .llmhead button { background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 4px 10px; cursor: pointer; font: inherit; }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  .llmwait { color: var(--muted); font-style: italic; padding: 8px 0; }
+  .llmwait::before { content: ""; display: inline-block; width: 10px; height: 10px; margin-right: 8px; border: 2px solid var(--muted);
+                     border-top-color: transparent; border-radius: 50%; animation: llmspin 1s linear infinite; vertical-align: -1px; }
+  @keyframes llmspin { to { transform: rotate(360deg); } }
   .llmtext { font-size: 14px; line-height: 1.6; max-width: 980px; } .llmtext h4 { margin: 12px 0 4px; }
   #llmFold summary { cursor: pointer; color: var(--muted); margin-top: 6px; }
   .llmhead button.sel, .aihead .ask.sel { border-color: var(--ai); }
@@ -194,7 +199,7 @@ const T = {
     visits: n => `${n.toLocaleString("en")} visits`,
     redo: "↻ Review again, deeper", redoHead: "Review this game again", whoHead: "Whose decisions",
     llmHead: "AI commentary (a language model, from the review's facts)", llmStyle: "Your playing style", llmAgain: "↻ Write it again",
-    llmWorking: "The language model is writing… (up to a minute or two)", llmNoSet: "Set a language model on the home page first.",
+    llmWorking: "The language model is writing… (up to a minute or two)", llmBusy: "Writing…", llmNoSet: "Set a language model on the home page first.",
     llmShow: k => `${k} (click to open or fold)`, llmTeam: "Your team",
     cardExp: (m, w) => `Against the recent metagame (the matchup model, species only): expected ${m}, against its hardest fifth ${w}`,
     cardThreats: "Hardest of the popular Pokémon (your expected score against teams with it)", cardMembers: n => `Each one's strength in the model (rank of ${n})`,
@@ -284,7 +289,7 @@ const T = {
     visits: n => `访问 ${n.toLocaleString("en")} 次`,
     redo: "↻ 用更强的配置重新分析", redoHead: "重新分析这一局", whoHead: "分析谁的决策",
     llmHead: "AI 解说（语言模型根据复盘数据撰写）", llmStyle: "操作风格评价", llmAgain: "↻ 重新生成",
-    llmWorking: "语言模型正在撰写……（可能要一两分钟）", llmNoSet: "请先在首页设置语言模型。",
+    llmWorking: "语言模型正在撰写……（可能要一两分钟）", llmBusy: "生成中…", llmNoSet: "请先在首页设置语言模型。",
     llmShow: k => `${k}（点击展开 / 收起）`, llmTeam: "队伍分析",
     cardExp: (m, w) => `对近期环境（对局模型，只看宝可梦种类）：期望胜率 ${m}，对最难打的 20% 对手 ${w}`,
     cardThreats: "最怕的热门宝可梦（对带它的队伍的期望胜率）", cardMembers: n => `每只在模型里的强度排名（共 ${n} 种）`,
@@ -764,10 +769,15 @@ if (LLM_ON) {
                               sum.textContent = L.llmShow(k == "style" ? L.llmStyle : L.llmTeam);
                               fold.hidden = false; fold.open = open; relabel(); };
   fetch(`/api/team-facts?review=${encodeURIComponent(DIR)}`).then(r => r.ok ? r.json() : null).then(j => { CARD = j; if (shown == "team") show("team", fold.open); });
+  // (while writing: the old text cleared for a "writing" line, every button greyed, this one saying
+  // so -- 2026-10-30, a regeneration showed no change for a minute; the old text back on a failure)
   const make = async k => {
-    btns.forEach(b => { b.disabled = true; }); again.disabled = true; msg.textContent = L.llmWorking;
-    try { TEXT[k] = await llmAsk({kind: k}); show(k, true); msg.textContent = ""; } catch (e) { msg.textContent = e.message; }
-    btns.forEach(b => { b.disabled = false; }); again.disabled = false;
+    const old = TEXT[k];
+    btns.forEach(b => { b.disabled = true; }); again.disabled = true; again.textContent = L.llmBusy; msg.textContent = "";
+    delete TEXT[k]; show(k, true); out.insertAdjacentHTML("beforeend", `<div class="llmwait">${L.llmWorking}</div>`);
+    try { TEXT[k] = await llmAsk({kind: k}); }
+    catch (e) { if (old) TEXT[k] = old; msg.textContent = e.message; }
+    show(k, true); btns.forEach(b => { b.disabled = false; }); again.disabled = false; again.textContent = L.llmAgain;
   };
   Promise.all(["style", "team"].map(k => llmGet("kind=" + k).then(j => { if (j && j.text) TEXT[k] = j.text; return j; }))).then(js => {
     if (!js.some(Boolean)) return;
@@ -784,10 +794,10 @@ function askHTML(i) {
   const a = ASK[i];
   if (!a || !a.open) return "";
   let h = `<div class="askbox"><div class="askrow"><input type="text" id="askq-${i}" placeholder="${esc(L.askPh)}" maxlength="300" />
-    <button data-askgo="${i}" ${a.busy ? "disabled" : ""}>${a.text ? L.askAgain : L.askGo}</button></div>`;
-  if (a.busy) h += `<div class="legend">${L.llmWorking}</div>`;
+    <button data-askgo="${i}" ${a.busy ? "disabled" : ""}>${a.busy ? L.llmBusy : a.text ? L.askAgain : L.askGo}</button></div>`;
+  if (a.busy) h += `<div class="llmwait">${L.llmWorking}</div>`;
   if (a.error) h += `<div class="legend">${esc(a.error)}</div>`;
-  if (a.text) h += `<div class="llmtext">${md(a.text)}</div>`;
+  if (a.text && !a.busy) h += `<div class="llmtext">${md(a.text)}</div>`;
   return h + "</div>";
 }
 if (LLM_ON) {
