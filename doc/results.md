@@ -953,6 +953,42 @@ Against Foul Play (200 ms x 1 each, fair1000's first 300 pairs, 600 games each):
 - If the 6,400-iteration result is below 50%, the hypotheses (none tested yet): (1) the policy, trained toward the search's visit distribution, is sharper and narrows a deep search's exploration (PUCT follows the prior); (2) the value, trained on outcomes of mostly 600-iteration, sampled continuations, is calibrated to weak play and misjudges positions precise play wins, more so in a deep tree's unusual positions; (3) a fit to self-play's search budget; (4) noise. Earlier value-target experiments did not help (λ 0.9 / 0.7 targets: no offline difference, never matched; child-node regression: 49.1% ± 2.9% in matches at 3,000 iterations; "Value head experiments" above) -- but none of them looked at the gain by budget. The policy / value cross evaluation of 2026-10-22 (above) found neither half alone helping at 1,600 iterations; its code was removed on 2026-10-28.
 - Next (issue): the head swap at 6,400 iterations (`agents.gpu_net.make_hybrid`: r2-gen0a3's policy + v6arch-pp-v75's value, and the reverse, each vs v6arch-pp-v75 on the same draw); then, by its answer, the fast searches' budget / share (value labels of the later positions), the opening temperature (tau 1 for 8 turns), or a smoother policy target -- each a new self-play run, judged at more than one search budget.
 
+### Gen 0's data retrained three ways, and how noisy a paired evaluation is (2026-10-31)
+
+Issues #26 / #27: r2-gen0a3's recipe (from v6arch-pp-v75 on gen 0's 127,959 games, 8,473 steps,
+seed 0) with one change each, `train_pv.py --sp-early-turns 8 --sp-early-value 0` (no value loss
+for the positions of the tau-1 opening, 26% of them) and `--sp-pi-temp 2` (policy targets visits **
+1/2), about 25 minutes each. All against v6arch-pp-v75 on the head swaps' draw (bankdraw_scaling,
+300 pairs, sides swapped), GPU batched search:
+
+| network | 400 iterations | 1,600 iterations |
+|---|---|---|
+| r2-gen0a3 (control) | 55.6% ± 3.6% (repeat: 55.1% ± 3.7%) | 54.8% ± 3.6% |
+| x1: no opening value loss | 54.3% ± 3.5% | 55.1% ± 3.5% |
+| x2: smoother policy target | 49.9% ± 3.5% | 50.3% ± 3.5% |
+| x3: both | 54.5% ± 3.4% | 51.5% ± 3.5% |
+
+- The opening's value labels: dropping them changes nothing measurable at either budget.
+- The smoother target is worse at both budgets (x2 about 5 points below the control), so the
+  gain shrinking with depth (#26) is not this policy's sharpness, at least not by this cure.
+- Gen 1 keeps gen 0's recipe and settings.
+
+How noisy the evaluation is (`scripts/eval_stats.py`, pairs as the unit):
+- Pentanomial: about 60% of the pairs split 1-1, 40% decisive; ties are rare.
+- The repeat of r2-gen0a3 at 400 iterations: −0.5 ± 5.0 points from the first run (pair by
+  pair): the intervals are honest.
+- A pair's result does not carry over between runs (its split rate correlates 0.19 between two
+  halves of 12 runs), and comparing two runs pair by pair barely narrows the interval (±4.9
+  against ±5.1 points): the noise is each game's, not the teams'. The matchup model's prior does
+  not predict which pairs split (58% to 63% from the most even quarter to the most lopsided).
+  Choosing pairs was ruled out anyway: it would change what is measured (no lopsided matchups,
+  no comebacks) and could favour one side.
+- Counting the luck (crits, misses, full paralyses: outcome − probability per event, a control
+  variate) explained 5.3% of the games' variance and narrowed ±3.7 to ±3.6: removed. A
+  correction weighted by what each chance event changed (AIVAT) is noted in an issue; part of the
+  noise is the bots' own sampled moves, which no correction removes.
+- At 300 pairs two networks must differ by about 5 points to tell apart; about 800 pairs for 3.
+
 ### Search agreement with players by rating band (2026-10-30)
 
 Held-out games (hf-part13-1 / 13-2: after the training cutoff), 60 players per band of their pre-game rating, up to 5 turn-start decisions each, rebuilt from the player's view with 16 belief worlds (as coach.review) and searched 1 s x 4 threads (v6arch-pp-v75, rating input unknown for all bands):
