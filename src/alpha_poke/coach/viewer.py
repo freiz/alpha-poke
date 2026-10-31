@@ -238,6 +238,10 @@ const T = {
     askBtn: "Ask the AI", askDefault: "Why the AI sees it so", askLost: "(an earlier question: its words were not kept)",
     askQ1: c => `Why does the AI see this decision so? Was ${c} right?`,
     askQ2: (c, b) => `I chose ${c}; the AI preferred ${b}. What's the difference, and why?`,
+    askQ1By: (n, c) => `${n}, how do you see this decision? Was ${c} right?`,
+    askQ2By: (n, c, b) => `${n}, I chose ${c} and you'd have gone for ${b}. What's the difference, and why?`,
+    askDefaultBy: n => `${n}, how do you see this decision?`, chatTitleBy: (t, n) => `Turn ${t} · ask ${n}`,
+    chatThinking: n => `${n} is thinking… (up to a minute or two)`,
     chatTitle: (t, kind) => `Turn ${t} · ${kind}`, chatSend: "Send", chatPh: "Ask about this decision (Enter sends, Shift+Enter a new line)",
     chatFollow: "Ask a follow-up…", chatClear: "Clear", chatClearSure: "Delete this conversation?", chatClose: "Close",
     chatAI: "AI coach", chatYou: "You",
@@ -334,6 +338,10 @@ const T = {
     askBtn: "问 AI", askDefault: "AI 为什么这样看", askLost: "（较早的提问：问题原文没有保存）",
     askQ1: c => `AI 为什么这样看这一步？我选的${c}对吗？`,
     askQ2: (c, b) => `我选了${c}，AI 更想${b}，差别在哪里，为什么？`,
+    askQ1By: (n, c) => `${n}，这一步你怎么看？我选的${c}对吗？`,
+    askQ2By: (n, c, b) => `${n}，我选了${c}，你更推荐${b}，差别在哪里，为什么？`,
+    askDefaultBy: n => `${n}，这一步你怎么看？`, chatTitleBy: (t, n) => `第 ${t} 回合 · 问${n}`,
+    chatThinking: n => `${n}正在思考……（可能要一两分钟）`,
     chatTitle: (t, kind) => `第 ${t} 回合 · ${kind}`, chatSend: "发送", chatPh: "关于这一步想问什么（回车发送，Shift+回车换行）",
     chatFollow: "继续追问……", chatClear: "清空", chatClearSure: "删除这段对话？", chatClose: "关闭",
     chatAI: "AI 教练", chatYou: "你",
@@ -769,6 +777,7 @@ if (LLM_ON) {
   fetch("/api/llm-settings").then(r => r.ok ? r.json() : null).then(s => {
     const p = s && (s.personas || []).find(x => x[0] == s.persona && x[0] != "none");
     if (p) document.getElementById("llmhead").textContent = UI == "zh" ? L.llmHeadBy(p[2], p[4]) : L.llmHeadBy(p[1], p[3]);
+    COACH = p || null; COACHES = (s && s.personas) || []; chatRender();
   }).catch(() => {});
   const label = k => (k == "style" ? L.llmStyle : L.llmTeam) + (TEXT[k] ? " ✓" : "");
   const relabel = () => btns.forEach(b => { b.textContent = label(b.dataset.llm); b.classList.toggle("sel", b.dataset.llm == shown && !fold.hidden); });
@@ -829,24 +838,35 @@ if (LLM_ON) {
 // CHAT: the decision shown (null: closed), each decision's messages, busy, the error; ASKED: each
 // decision's count of questions and answers, on its button
 const CHAT = {dec: null, msgs: {}, busy: false, asking: null, error: null}, ASKED = {};
+// (the coach chosen on the home page, [id, en, zh, en title, zh title], null: none -- the panel says
+// her name where it would say "AI")
+let COACH = null, COACHES = [];
+const coachName = () => COACH ? COACH[UI == "zh" ? 2 : 1] : null;
+// (an answer kept before answers named their coach: the coach its signature names, else the one chosen)
+const signedBy = text => { const last = (text || "").trim().split("\n").pop();
+                           const c = /^—/.test(last) && COACHES.find(x => x[0] != "none" && (last.includes(x[1]) || last.includes(x[2])));
+                           return c ? c[UI == "zh" ? 2 : 1] : null; };
 function chatDefault(i) {
   const d = R.decisions[i];
-  return d.chosen == d.best || !d.best ? L.askQ1(option(d.chosen)) : L.askQ2(option(d.chosen), option(d.best));
+  const n = coachName(), same = d.chosen == d.best || !d.best;
+  if (n) return same ? L.askQ1By(n, option(d.chosen)) : L.askQ2By(n, option(d.chosen), option(d.best));
+  return same ? L.askQ1(option(d.chosen)) : L.askQ2(option(d.chosen), option(d.best));
 }
 function chatRender() {
   const box = document.getElementById("chat"), i = CHAT.dec;
   if (i === null) { box.hidden = true; return; }
   const d = R.decisions[i], msgs = CHAT.msgs[i] || [];
   box.hidden = false;
-  document.getElementById("chatTitle").textContent = L.chatTitle(d.turn, L.aiHead[d.kind] || L.aiHead.turn);
+  const n = coachName();
+  document.getElementById("chatTitle").textContent = n ? L.chatTitleBy(d.turn, n) : L.chatTitle(d.turn, L.aiHead[d.kind] || L.aiHead.turn);
   let h = "";
   for (const m of msgs) {
-    const q = m.question === null ? L.askDefault : m.question === "" ? L.askLost : m.question;
-    const who = m.coach ? m.coach[UI == "zh" ? 1 : 0] : L.chatAI;
+    const q = m.question === null ? (n ? L.askDefaultBy(n) : L.askDefault) : m.question === "" ? L.askLost : m.question;
+    const who = m.coach ? m.coach[UI == "zh" ? 1 : 0] : signedBy(m.answer) || n || L.chatAI;
     h += `<div class="askmsg me"><div class="who">${L.chatYou}</div>${esc(q)}</div>
       <div class="askmsg ai"><div class="who">${esc(who)}</div><div class="llmtext">${md(m.answer)}</div></div>`;
   }
-  if (CHAT.busy) h += `<div class="askmsg me"><div class="who">${L.chatYou}</div>${esc(CHAT.asking)}</div><div class="askmsg ai"><div class="llmwait">${L.llmWorking}</div></div>`;
+  if (CHAT.busy) h += `<div class="askmsg me"><div class="who">${L.chatYou}</div>${esc(CHAT.asking)}</div><div class="askmsg ai"><div class="llmwait">${n ? L.chatThinking(n) : L.llmWorking}</div></div>`;
   if (CHAT.error) h += `<div class="legend">${esc(CHAT.error)}</div>`;
   const body = document.getElementById("chatBody");
   body.innerHTML = h; body.scrollTop = body.scrollHeight;
