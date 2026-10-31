@@ -328,6 +328,69 @@ def pair_scores(rows: list[dict]) -> list[float]:
     return [sum(v) / len(v) for v in by_pair.values() if len(v) == 2]
 
 
+def pair_score_map(rows: list[dict]) -> dict[int, float]:
+    """Pair -> A's mean score over its two games (pairs with both games finished)."""
+    by_pair: dict[int, list[float]] = {}
+    for r in rows:
+        s = _score(r)
+        if s is not None:
+            by_pair.setdefault(r["pair"], []).append(s)
+    return {k: sum(v) / len(v) for k, v in by_pair.items() if len(v) == 2}
+
+
+def pentanomial(scores: list[float]) -> list[int]:
+    """Pairs by A's points over the two games: [0, 0.5, 1, 1.5, 2] (fishtest's pentanomial: a
+    pair split 1-1 -- each side won with the same team, or two ties -- counts as 1)."""
+    out = [0] * 5
+    for x in scores:
+        out[min(4, max(0, round(4 * x)))] += 1
+    return out
+
+
+def score_elo(score: float) -> float:
+    score = min(max(score, 1e-6), 1 - 1e-6)
+    return -400 * math.log10(1 / score - 1)
+
+
+def pair_stats(scores: list[float]) -> dict:
+    """Paired statistics of A's pair scores: the mean with its 95% interval (the pairs' own
+    variance: the games' noise included), Elo with its interval, normalized Elo (the score's
+    distance from even in standard deviations of a pair, x 800 / ln 10 -- comparable across
+    designs: its resolution, as fishtest's nElo), the pentanomial and the share of decisive pairs."""
+    n = len(scores)
+    if n < 2:
+        return {"pairs": n}
+    mean = sum(scores) / n
+    var = sum((x - mean) ** 2 for x in scores) / (n - 1)
+    ci = 1.96 * math.sqrt(var / n)
+    penta = pentanomial(scores)
+    return {"pairs": n, "score": round(mean, 4), "ci95": round(ci, 4),
+            "elo": round(score_elo(mean), 1),
+            "elo_ci95": [round(score_elo(mean - ci), 1), round(score_elo(mean + ci), 1)],
+            "nelo": round((mean - 0.5) / math.sqrt(var) * 800 / math.log(10), 1) if var > 0 else None,
+            "pentanomial": penta, "decisive": round((penta[0] + penta[4]) / n, 3)}  # fmt: skip
+
+
+def paired_difference(x: dict[int, float], y: dict[int, float]) -> dict:
+    """Two evaluations against the same opponent on the same pairs (x and y: pair -> score): the
+    mean of each pair's difference x - y, its 95% interval, and the interval if the two were
+    independent (what comparing their own intervals assumes)."""
+    ks = sorted(set(x) & set(y))
+    n = len(ks)
+    if n < 2:
+        return {"pairs": n}
+    d = [x[k] - y[k] for k in ks]
+    mean = sum(d) / n
+    var = sum((v - mean) ** 2 for v in d) / (n - 1)
+
+    def var_of(z):
+        m = sum(z[k] for k in ks) / n
+        return sum((z[k] - m) ** 2 for k in ks) / (n - 1)
+
+    return {"pairs": n, "diff": round(mean, 4), "ci95": round(1.96 * math.sqrt(var / n), 4),
+            "ci95_if_independent": round(1.96 * math.sqrt((var_of(x) + var_of(y)) / n), 4)}  # fmt: skip
+
+
 def elo_score(elo: float) -> float:
     return 1 / (1 + 10 ** (-elo / 400))
 
