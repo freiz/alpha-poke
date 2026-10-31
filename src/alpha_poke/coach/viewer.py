@@ -515,7 +515,8 @@ for (const [id, get, set] of [["z", () => Z, v => { Z = v; }], ["low", () => LOW
   el.addEventListener("input", () => { set(parseFloat(el.value)); show(); try { localStorage.setItem("coach-" + id, el.value); } catch (e) {} render(); });
 }
 // "review again" (served by the app: /api/redo-info answers): the home page's form, set one step
-// deeper than this review (fast -> standard -> deep -> custom: two more searches), the team pasted
+// deeper than this review (fast -> standard -> deep; deep and custom stay deep -- custom, its
+// fields filled in with two more searches, only when picked), the team pasted
 // before kept; when done the page reloads with the new review
 const DIR = (location.pathname.match(/\/coach\/([^/]+)\/viewer\.html$/) || [])[1];
 if (location.protocol.startsWith("http") && DIR) {
@@ -540,7 +541,9 @@ if (location.protocol.startsWith("http") && DIR) {
       const at = order.findIndex(k => (info.strengths[k] || []).join() == cur);
       form = reviewForm(UI, info, {
         decisions: () => info.decisions[Math.max(0, info.players.indexOf(who()))],
-        preset: at >= 0 && at < 2 ? order[at + 1] : "custom",
+        // (one step deeper, deep at most: custom only when the person picks it -- 2026-10-30, a
+        // deep review's "review again" opened on custom, seven searches x 3 s)
+        preset: at >= 0 && at < 2 ? order[at + 1] : "deep",
         custom: [R.worlds, R.ms / 1000, Math.min(8, (R.repeats || 1) + 2)], keptTeam: () => info.team && who() == info.player,
         submit: async v => {
           const r = await fetch("/api/redo", {method: "POST", headers: {"Content-Type": "application/json"},
