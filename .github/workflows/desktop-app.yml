@@ -85,10 +85,12 @@ jobs:
         if: runner.os == 'macOS'
         shell: bash
         run: ditto -c -k --keepParent dist/alpha-poke-review ${{ matrix.zip }}
-      - uses: actions/upload-artifact@v4
+      # (the zip as is: v4 zipped it again, a zip in a zip that a Mac's Archive Utility left half
+      # opened; its own zip of the folder would lose the executable bits -- 2026-10-30)
+      - uses: actions/upload-artifact@v7
         with:
-          name: ${{ matrix.zip }}
           path: ${{ matrix.zip }}
+          archive: false
           retention-days: 14
       - name: "attach to the release"
         if: ${{ inputs.release_tag != '' }}
