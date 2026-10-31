@@ -1326,3 +1326,23 @@ def test_this_games_matchup_breakdown(report, monkeypatch):
     }
     assert t["first_turn"]["win_chance"] == report["decisions"][0]["value"]
     assert "species_model" not in t  # (no snapshot)
+
+
+def test_a_guessed_first_choice_is_judged_by_the_known_moves():
+    """coach.review.verdict: the search's choice a guessed move (no team: the player may not have
+    it) -- the choice is judged against the best of the rest: "guess" when it is that one (a
+    Dragonite told to Earthquake it did not carry, 2026-10-31), else by the usual rule against
+    it; a known first choice as before."""
+    from alpha_poke.coach.review import known_best, verdict
+
+    opts = [
+        ["earthquake", 0.6, 0.50, 0.01],
+        ["lowkick", 0.2, 0.30, 0.01],
+        ["dragondance", 0.2, 0.25, 0.01],
+    ]
+    d = {"chosen": "lowkick", "best": "earthquake", "loss": 0.2, "loss_se": 0.01, "chosen_share": 0.2,
+         "options": opts, "guessed": ["earthquake"], "repeats": 3, "paired": 3}  # fmt: skip
+    assert known_best(d)[0] == "lowkick" and verdict(d) == "guess"
+    assert verdict(d | {"chosen": "dragondance"}) == "ok"  # (5 points behind Low Kick, not shunned)
+    assert verdict(d | {"guessed": []}) == "bad"  # (the same numbers, Earthquake known)
+    assert known_best(d | {"guessed": []}) is None

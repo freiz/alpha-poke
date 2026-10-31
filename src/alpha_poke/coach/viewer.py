@@ -209,6 +209,7 @@ const T = {
     kinds: {move: "move", cant: "could not move", switch: "switch", pivot: "switch (pivot move)", replace: "switch after a faint", drag: "forced out", choice: "your choice"},
     aiHead: {turn: "The AI on your choice at the start of the turn", "pivot switch": "The AI on your switch", "switch after a faint": "The AI on your switch"},
     chanceAt: v => `your winning chance at this decision: ${v}`, bad: "AI disagrees", mild: "AI doesn't like it", same: "same as the AI", ok: "acceptable",
+    vGuess: "best of your known moves", vGuessTip: "The AI's first choice is a move it only guessed you have (no team pasted); among the moves you surely have, this was the best.",
     bars: `<span style="color:var(--me)">Orange</span> = your choice, <span style="color:var(--ai)">blue</span> = the AI's choice. In brackets: the difference from the AI's choice.`,
     winCol: "Winning chance after it", shareCol: "The AI's share of thinking", home: "← Home",
     tune: "How strict:", tz: "a gap counts beyond", tzv: v => `${v}× its error`, tl: "the AI shuns a choice it thinks about less than", tlv: v => `${v}%`,
@@ -309,6 +310,7 @@ const T = {
     kinds: {move: "出招", cant: "无法行动", switch: "换人", pivot: "折返换人", replace: "倒下后换人", drag: "被强制换下", choice: "你的选择"},
     aiHead: {turn: "AI 怎么看你回合开始时的选择", "pivot switch": "AI 怎么看你这次换人", "switch after a faint": "AI 怎么看你这次换人"},
     chanceAt: v => `做这个决策时你的胜率 ${v}`, bad: "AI 不认同", mild: "AI 不太喜欢", same: "和 AI 一致", ok: "可以接受",
+    vGuess: "确定有的招式里最好", vGuessTip: "AI 的首选是它猜你有的招式（没贴队伍，你未必有）；在你确定有的招式里，这一步就是最好的。",
     bars: `<span style="color:var(--me)">橙色</span>=你的选择，<span style="color:var(--ai)">蓝色</span>=AI 的选择；括号里是和 AI 选择的胜率差距。`,
     winCol: "选这一步后的胜率", shareCol: "AI 思考的比例", home: "← 主页",
     tune: "判定标准：", tz: "胜率差距超出误差的", tzv: v => `${v} 倍才算数`, tl: "AI 思考比例低于", tlv: v => `${v}% 算不认同`,
@@ -522,6 +524,20 @@ let Z = setting("z", 2), LOW = setting("low", 10);
 // the loss uncertain; "ok" otherwise
 const MIN_LOSS = 0.03, BIG_LOSS = 0.05;
 function verdict(d) {
+  // (the search's choice a guessed move -- one the player may not have: judged against the best
+  // of the rest, "guess" when that is the choice; as coach.review.verdict / known_best)
+  const g = new Set(d.guessed || []);
+  if (g.has(d.best)) {
+    const known = d.options.filter(o => !g.has(o[0]) && o[2] != null);
+    if (known.length) {
+      const kb = known.reduce((a, b) => (b[2] > a[2] ? b : a));
+      if (d.chosen == kb[0]) return "guess";
+      const ch = d.options.find(o => o[0] == d.chosen);
+      const loss = ch && ch[2] != null ? kb[2] - ch[2] : null;
+      const se = loss != null && kb[3] && ch[3] ? Math.hypot(kb[3], ch[3]) : null;
+      d = {...d, best: kb[0], loss, loss_se: se, paired: null, options: [kb, ...d.options.filter(o => o !== kb)]};
+    }
+  }
   if (d.chosen == d.best) return "same";
   if (d.loss != null && d.loss < MIN_LOSS) return "ok";  // (2026-10-30: a 1-point gap, paired-sure, read as "bad")
   const unsure = d.repeats > 1 && d.paired != null && d.paired < 2;  // (as coach.review.verdict)
@@ -532,10 +548,10 @@ function verdict(d) {
 }
 const pm = se => se ? ` ±${Math.max(1, Math.round(100 * se))}` : "";
 function aiHTML(d) {
-  const v = verdict(d), tag = {bad: L.bad, mild: L.mild, same: L.same, ok: L.ok}[v];
+  const v = verdict(d), tag = {bad: L.bad, mild: L.mild, same: L.same, ok: L.ok, guess: L.vGuess}[v];
   const di = R.decisions.indexOf(d), n = ASKED[di] || 0;
   const ask = LLM_ON ? ` <button class="ask${n ? " has" : ""}${CHAT.dec === di ? " sel" : ""}" data-ask="${di}">${n ? `💬 ${L.askBtn} · ${n}` : L.askBtn}</button>` : "";
-  let h = `<div class="aibox"><div class="aihead">${L.aiHead[d.kind] || L.aiHead.turn} <span class="tag ${v == "same" ? "ok" : v}">${tag}</span> <span class="legend">${L.chanceAt(pct(d.value) + pm(d.value_se))}${d.visits ? " · " + L.visits(d.visits) : ""}</span>${ask}</div>`;
+  let h = `<div class="aibox"><div class="aihead">${L.aiHead[d.kind] || L.aiHead.turn} <span class="tag ${v == "same" || v == "guess" ? "ok" : v}" ${v == "guess" ? `title="${esc(L.vGuessTip)}"` : ""}>${tag}</span> <span class="legend">${L.chanceAt(pct(d.value) + pm(d.value_se))}${d.visits ? " · " + L.visits(d.visits) : ""}</span>${ask}</div>`;
   h += `<div class="legend">${L.bars}</div>`;
   h += `<div class="opt head"><span></span><span>${L.winCol}</span><span>${L.shareCol}</span></div>`;
   const opts = d.options.slice();

@@ -37,7 +37,7 @@ RULES = {
   position_win_chance 是这一步之前的局面胜率，不是哪个选项的。不要说某一步一定错了。差距不到 3 个百分点的不算失误；讲失误时按 loss 从大到小，最大的先讲。
 - 太晶化之后，宝可梦挨打时只按太晶属性算相克（log 里 -terastallize 那一回合起），不要再按原来的属性算。
 - kind 为 switch after a faint 时，倒下的是哪只看 log 里那一回合的 faint 行，ME 是玩家、OPP 是对手，不要弄混。
-- verdict 的含义：same 和 AI 一致，ok 可以接受，mild AI 不太喜欢，bad AI 不认同。
+- verdict 的含义：same 和 AI 一致，ok 可以接受，mild AI 不太喜欢，bad AI 不认同，guess AI 的首选是猜测的招式（玩家未必有），在确定有的招式里玩家选的就是最好的——不算失误。
 - guessed_moves 是没贴队伍时 AI 猜测的招式，玩家未必有，不要据此批评。
 - 胜率的大起大落可能来自运气（会心一击、没命中、麻痹等，见 log）或对手没走 AI 预想的应对（opponent_expected 与 opponent_did）：不要把它们算成玩家的失误，
   也不要算成玩家的功劳。swings 是程序算好的胜率变化最大的几处（change 正为上升、负为下降），带着玩家那一步的损失 your_loss、
@@ -61,7 +61,8 @@ RULES = {
 - For a "switch after a faint", which one fainted is the log's faint line of that turn (ME the
   player, OPP the opponent): do not mix them up.
 - verdict: same = the AI's own choice, ok = acceptable, mild = the AI doesn't like it, bad = the
-  AI disagrees.
+  AI disagrees, guess = the AI's first choice is a move it only guessed the player has; among the
+  moves the player surely has, the choice was the best -- no mistake.
 - guessed_moves are the AI's guesses of the player's moves (no team pasted): the player may not
   have them; do not criticize on them.
 - Big swings can come from luck (critical hits, misses, full paralysis: see the log) or from the

@@ -495,6 +495,17 @@ def mistake_score(d: dict) -> float:
 MIN_LOSS, BIG_LOSS = 0.03, 0.05
 
 
+def known_best(d: dict) -> list | None:
+    """When the search's choice is a guessed move (no team pasted: one the player may not have,
+    2026-10-31 -- a Dragonite "should have used" Earthquake it did not carry), its best option
+    among the rest (an options row); None otherwise."""
+    guessed = set(d.get("guessed") or [])
+    if d["best"] not in guessed:
+        return None
+    known = [o for o in d["options"] if o[0] not in guessed and o[2] is not None]
+    return max(known, key=lambda o: o[2]) if known else None
+
+
 def verdict(d: dict, z: float = 2.0, low_share: float = 0.10) -> str:
     """How the search sees a decision (the review page computes the same, its two thresholds
     adjustable, and states the rule): "same" (the search's own choice); "ok" under MIN_LOSS lost
@@ -503,7 +514,18 @@ def verdict(d: dict, z: float = 2.0, low_share: float = 0.10) -> str:
     without errors: 5 points) and the search hardly tried the choice (its visit share under
     ``low_share`` while its own choice took at least half), or the loss is real and at least
     BIG_LOSS; "mild" -- hardly tried but the loss is uncertain (or unknown: never tried; repeated
-    searches of which under two tried both the choice and the best); "ok" otherwise."""
+    searches of which under two tried both the choice and the best); "ok" otherwise. When the
+    search's choice is a guessed move, the player is judged against the best of the rest
+    (known_best): "guess" if that is the choice -- no mistake by what the player surely has."""
+    kb = known_best(d)
+    if kb is not None:
+        if d["chosen"] == kb[0]:
+            return "guess"
+        ch = next((o for o in d["options"] if o[0] == d["chosen"]), None)
+        loss = kb[2] - ch[2] if ch is not None and ch[2] is not None else None
+        se = (kb[3] ** 2 + ch[3] ** 2) ** 0.5 if loss is not None and kb[3] and ch[3] else None
+        d = d | {"best": kb[0], "loss": loss, "loss_se": se, "paired": None,
+                 "options": [kb] + [o for o in d["options"] if o is not kb]}  # fmt: skip
     if d["chosen"] == d["best"]:
         return "same"
     if d.get("loss") is not None and d["loss"] < MIN_LOSS:
