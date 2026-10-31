@@ -29,6 +29,11 @@ PAGE = r"""<!DOCTYPE html>
   main { display: flex; gap: 16px; padding: 0 16px 16px; align-items: flex-start; flex-wrap: wrap; }
   .wrapper.replay-wrapper { flex: 0 0 auto; width: 640px; max-width: 100%; position: relative; }
   .wrapper .battle-log { height: 160px !important; position: static !important; width: auto !important; }
+  /* side by side and tall enough: the replay stays in view while the panel scrolls (2026-10-30: a
+     long panel took it off the screen); stacked, it scrolls away as usual */
+  @media (min-width: 1120px) and (min-height: 700px) {
+    .wrapper.replay-wrapper { position: sticky; top: 8px; }
+  }
   #panel { flex: 1 1 420px; min-width: 320px; background: var(--panel); border: 1px solid var(--line);
            border-radius: 10px; padding: 12px 14px; }
   #curve { width: 100%; height: 150px; display: block; cursor: pointer; }
