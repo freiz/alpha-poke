@@ -1016,11 +1016,16 @@ def test_a_language_models_write_up(game, report, tmp_path, monkeypatch):
     llm.save_settings(tmp_path, "https://example.invalid/v1", "m", "sk-secret")
     llm.save_settings(tmp_path, "https://example.invalid/v1", "m2", "")
     assert llm.load_settings(tmp_path)["api_key"] == "sk-secret"
-    assert llm.public_settings(tmp_path) == {
+    pub = llm.public_settings(tmp_path)
+    assert {k: pub[k] for k in ("base_url", "model", "has_key", "persona")} == {
         "base_url": "https://example.invalid/v1",
         "model": "m2",
         "has_key": True,
+        "persona": "cynthia",  # (the default coach)
     }
+    assert (
+        "sk-secret" not in json.dumps(pub) and ["none", "No role", "不扮演角色"] in pub["personas"]
+    )
     seen = {}
 
     def chat(settings, system, user, timeout=300):
@@ -1032,6 +1037,17 @@ def test_a_language_models_write_up(game, report, tmp_path, monkeypatch):
     assert "Spore" in text.split("Check:")[1] and llm.cached(tmp_path, "style", "en") == text
     assert "turn-by-turn log" in seen["system"] and json.loads(seen["user"])["decisions"]
     assert llm.cached(tmp_path, "style", "zh") is None
+    # (the persona: its voice after the rules, its signature added -- before the move check's note)
+    assert "Persona: You are Cynthia" in seen["system"]
+    assert seen["system"].index("Rules:") < seen["system"].index("Persona:")
+    assert text.index("— Cynthia, Champion of Sinnoh") < text.index("Check:")
+    zh = llm.write(tmp_path, report, game, None, "style", "zh", llm.load_settings(tmp_path))
+    assert "角色扮演：你是神奥地区的冠军竹兰" in seen["system"] and "—— 神奥冠军 竹兰" in zh
+    llm.save_settings(tmp_path, "https://example.invalid/v1", "m2", "", "none")
+    plain = llm.write(tmp_path, report, game, None, "style", "en", llm.load_settings(tmp_path))
+    assert "Persona" not in seen["system"] and "Cynthia" not in plain
+    llm.save_settings(tmp_path, "https://example.invalid/v1", "m2", "", "nobody")  # (unknown: kept)
+    assert llm.load_settings(tmp_path)["persona"] == "none"
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="needs node")

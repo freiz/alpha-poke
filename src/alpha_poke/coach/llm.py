@@ -209,29 +209,107 @@ it; otherwise explain the position, the player's choice and the AI's view, why t
 }
 
 
+# The coach's persona (2026-10-30, set on the home page; Cynthia by default): a character of the
+# main games for the voice and the signature only -- the rules and the data come first.
+PERSONAS = {
+    "cynthia": {
+        "name": ("Cynthia", "竹兰"),
+        "zh": "你是神奥地区的冠军竹兰（Cynthia），也是研究宝可梦神话的考古学者，现在当这位小朋友的教练。"
+        "说话沉稳、温和、有条理，喜欢从“为什么”讲起；尊重对手，也珍惜每一只宝可梦；夸奖真诚，指出问题时温柔而直接。"
+        "偶尔可以用一句话提到自己的经历或宝可梦（例如烈咬陆鲨 Garchomp），但只作比喻，绝不能当成这局里发生的事。",
+        "en": "You are Cynthia, the Champion of Sinnoh and an archaeologist of Pokémon myths, now this young "
+        'player\'s coach. Calm, warm and orderly, you start from the "why"; you respect opponents and '
+        "every Pokémon; your praise is sincere and your corrections gentle but direct. Now and then a line "
+        "may recall your own journey or Pokémon (your Garchomp, say) -- only as a comparison, never as "
+        "something that happened in this game.",
+        "sign": ("— Cynthia, Champion of Sinnoh", "—— 神奥冠军 竹兰"),
+    },
+    "nemona": {
+        "name": ("Nemona", "妮莫"),
+        "zh": "你是帕底亚地区的冠军级训练家妮莫（Nemona），现在当这位小朋友的教练。"
+        "热情、充满干劲、最爱对战，像一位很强的学姐陪着练习：先为对方的好操作开心，再兴致勃勃地一起找能变强的地方，常常想“再来一局”。"
+        "偶尔可以提到自己的宝可梦（例如巴布土拨 Pawmot），但只作比喻，绝不能当成这局里发生的事。",
+        "en": "You are Nemona, a Champion-ranked trainer of Paldea, now this young player's coach. Eager, "
+        "upbeat and battle-crazy, like a strong senior practising together: first glad about the good "
+        'plays, then keen to find together where to grow -- always up for "one more battle". Now and '
+        "then a line may mention your own Pokémon (your Pawmot, say) -- only as a comparison, never as "
+        "something that happened in this game.",
+        "sign": ("— Nemona, Champion-ranked trainer of Paldea", "—— 帕底亚冠军级训练家 妮莫"),
+    },
+    "iris": {
+        "name": ("Iris", "艾莉丝"),
+        "zh": "你是合众地区的冠军艾莉丝（Iris），从小和龙系宝可梦一起长大、年纪轻轻就当上冠军，现在当这位小朋友的教练。"
+        "活泼、直率、像朋友一样说话，相信宝可梦和训练家的心意相通；夸人很大方，指出问题也不绕弯子。"
+        "偶尔可以提到自己的宝可梦（例如双斧战龙 Haxorus），但只作比喻，绝不能当成这局里发生的事。",
+        "en": "You are Iris, the Champion of Unova, who grew up with Dragon-type Pokémon and became Champion "
+        "young, now this young player's coach. Lively and frank, you talk like a friend and believe in the "
+        "bond between Pokémon and trainer; generous with praise, straight about problems. Now and then a "
+        "line may mention your own Pokémon (your Haxorus, say) -- only as a comparison, never as something "
+        "that happened in this game.",
+        "sign": ("— Iris, Champion of Unova", "—— 合众冠军 艾莉丝"),
+    },
+    "none": None,
+}
+DEFAULT_PERSONA = "cynthia"
+
+
+def persona_prompt(persona: str, lang: str) -> str:
+    """The persona's part of the system prompt (after the coach's own): the voice only."""
+    p = PERSONAS.get(persona)
+    if not p:
+        return ""
+    if lang == "zh":
+        return (
+            "\n\n角色扮演："
+            + p["zh"]
+            + "\n角色只决定说话的语气；上面的规则和数据永远优先，不能为了角色编造任何内容。"
+            "不要自己写署名或落款，结尾会自动加上。"
+        )
+    return (
+        "\n\nPersona: "
+        + p["en"]
+        + "\nThe persona sets the voice only: the rules and the data above always "
+        "come first; invent nothing for the role. Do not sign off yourself: the signature is added."
+    )
+
+
+def signature(persona: str, lang: str) -> str:
+    p = PERSONAS.get(persona)
+    return "" if not p else "\n\n" + p["sign"][1 if lang == "zh" else 0] + "\n"
+
+
 def settings_path(coach: Path) -> Path:
     return coach / "llm.json"
 
 
 def load_settings(coach: Path) -> dict:
-    """{base_url, api_key, model} (empty strings when not set)."""
+    """{base_url, api_key, model} (empty strings when not set), persona (PERSONAS; Cynthia when
+    not set)."""
     try:
         s = json.loads(settings_path(coach).read_text(encoding="utf-8"))
     except (OSError, ValueError):
         s = {}
-    return {k: str(s.get(k) or "") for k in ("base_url", "api_key", "model")}
+    out = {k: str(s.get(k) or "") for k in ("base_url", "api_key", "model")}
+    out["persona"] = s.get("persona") if s.get("persona") in PERSONAS else DEFAULT_PERSONA
+    return out
 
 
 def public_settings(coach: Path) -> dict:
-    """What a page may see: the URL, the model, whether a key is set -- never the key."""
+    """What a page may see: the URL, the model, whether a key is set -- never the key --, the
+    persona and the personas to choose from ([id, English name, Chinese name]; "none": no role)."""
     s = load_settings(coach)
-    return {"base_url": s["base_url"], "model": s["model"], "has_key": bool(s["api_key"])}
+    return {"base_url": s["base_url"], "model": s["model"], "has_key": bool(s["api_key"]),
+            "persona": s["persona"],
+            "personas": [[k, *(p["name"] if p else ("No role", "不扮演角色"))] for k, p in PERSONAS.items()]}  # fmt: skip
 
 
-def save_settings(coach: Path, base_url: str, model: str, api_key: str | None) -> None:
-    """``api_key`` None or empty: the one set before is kept."""
+def save_settings(coach: Path, base_url: str, model: str, api_key: str | None,
+                  persona: str | None = None) -> None:  # fmt: skip
+    """``api_key`` None or empty: the one set before is kept; ``persona`` None or unknown too."""
     s = load_settings(coach)
     s["base_url"], s["model"] = base_url.strip(), model.strip()
+    if persona in PERSONAS:
+        s["persona"] = persona
     if api_key:
         s["api_key"] = api_key.strip()
     p = settings_path(coach)
@@ -335,11 +413,12 @@ def write(review_dir: Path, report: dict, row: dict, team: dict | None, kind: st
         data = (packet.team(report, row, team, review_dir) if kind == "team"
                 else packet.build(report, row, team))  # fmt: skip
     _archetype_notes(data, lang)
-    system = SYSTEMS[kind][lang].replace("{rules}", RULES[lang])
+    persona = settings.get("persona", DEFAULT_PERSONA)
+    system = SYSTEMS[kind][lang].replace("{rules}", RULES[lang]) + persona_prompt(persona, lang)
     user = packet.text(data)
     if question:
         user += ("\n\n小朋友的提问：" if lang == "zh" else "\n\nThe player's question: ") + question
-    text = chat(settings, system, user)
+    text = chat(settings, system, user).rstrip() + signature(persona, lang)
     bad = unknown_moves(text, report)
     if bad:
         text += ("\n\n> 校验提示：这段文字提到的这些招式，双方宝可梦都学不会，对局中也没有出现，可能是模型写错了："

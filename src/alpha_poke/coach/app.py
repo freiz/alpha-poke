@@ -17,7 +17,7 @@ to look, and gets the review page when the search is done. Loopback only; one re
   GET  /api/redo-info?review= what the review page's "review again" form needs
   GET  /coach/<review>/viewer.html   the review page, rendered anew (the current page's code)
   GET  /api/llm-settings      the language model's URL and model, whether a key is set (coach.llm)
-  POST /api/llm-settings      {base_url, model, api_key}: set them (from this computer only)
+  POST /api/llm-settings      {base_url, model, api_key, persona}: set them (from this computer only)
   POST /api/llm-test          {lang}: a one-line question to the model, its answer
   GET  /api/llm?review=&kind=&lang=[&dec=]   a write-up kept with the review, or null
   GET  /api/team-facts?review=   what the metagame says of the reviewed player's team (coach.meta)
@@ -353,7 +353,7 @@ def handler(cache, jobs: Jobs):
                         )
                     if self.path == "/api/llm-settings":
                         llm.save_settings(COACH, str(body.get("base_url") or ""), str(body.get("model") or ""),
-                                          str(body.get("api_key") or "") or None)  # fmt: skip
+                                          str(body.get("api_key") or "") or None, body.get("persona"))  # fmt: skip
                         return self._json(llm.public_settings(COACH))
                     try:
                         answer = llm.chat(llm.load_settings(COACH), "Answer in one short line.",
@@ -532,6 +532,7 @@ __RF_HTML__
       <label for="llmUrl" data-t="llmUrl"></label><input type="text" id="llmUrl" placeholder="https://api.openai.com/v1" />
       <label for="llmModel" data-t="llmModel"></label><input type="text" id="llmModel" placeholder="gpt-4.1" />
       <label for="llmKey" data-t="llmKey"></label><input type="password" id="llmKey" autocomplete="off" />
+      <label for="llmPersona" data-t="llmPersona"></label><select id="llmPersona"></select>
       <div><button class="go" id="llmSave" data-t="llmSave"></button> <button id="llmTest" data-t="llmTest"></button></div>
       <div class="muted" id="llmOut"></div>
     </div></details></section>
@@ -562,7 +563,7 @@ const T = {
        pageOf: (p, n, t) => `page ${p} of ${n} · ${t} reviews`,
        won: "won", lost: "lost", drawn: "tie", turns: n => `${n} turns`,
        llmHead: "Language model (AI commentary)", llmUrl: "API address (OpenAI-compatible)", llmModel: "Model",
-       llmKey: "API key", llmSave: "Save", llmTest: "Test", llmSet: "set", llmUnset: "not set",
+       llmKey: "API key", llmPersona: "Coach (the voice and the signature)", llmSave: "Save", llmTest: "Test", llmSet: "set", llmUnset: "not set",
        llmKeySet: "a key is set (leave empty to keep it)", llmSaved: "Saved.", llmTesting: "Asking the model…",
        llmNote: "For the review pages' AI commentary. A capable model is recommended: a game's facts are about 30,000 tokens. The key stays on this computer and is sent only to this address."},
   zh: {title: "对局复盘", ui: "界面",
@@ -577,7 +578,7 @@ const T = {
        pageOf: (p, n, t) => `第 ${p} / ${n} 页 · 共 ${t} 份`,
        won: "胜", lost: "负", drawn: "平", turns: n => `${n} 回合`,
        llmHead: "语言模型（AI 解说）", llmUrl: "接口地址（兼容 OpenAI）", llmModel: "模型名",
-       llmKey: "API Key", llmSave: "保存", llmTest: "测试", llmSet: "已设置", llmUnset: "未设置",
+       llmKey: "API Key", llmPersona: "教练（说话的语气和署名）", llmSave: "保存", llmTest: "测试", llmSet: "已设置", llmUnset: "未设置",
        llmKeySet: "已设置 Key（留空表示不改）", llmSaved: "已保存。", llmTesting: "正在询问模型…",
        llmNote: "用于复盘页上的 AI 解说。建议用能力强的模型：一局的数据约 3 万 token。Key 只存在这台电脑上，也只发给这个地址。"},
 };
@@ -602,11 +603,14 @@ async function post(url, data) {
 async function llmLoad() {
   const s = await (await fetch("/api/llm-settings")).json();
   $("llmUrl").value = s.base_url; $("llmModel").value = s.model; $("llmKey").value = "";
+  $("llmPersona").innerHTML = s.personas.map(([k, en, zh]) => `<option value="${esc(k)}">${esc(UI == "zh" ? zh : en)}</option>`).join("");
+  $("llmPersona").value = s.persona;
   $("llmKey").placeholder = s.has_key ? L.llmKeySet : "";
   $("llmState").textContent = s.has_key && s.base_url && s.model ? `(${L.llmSet}: ${s.model})` : `(${L.llmUnset})`;
 }
 $("llmSave").onclick = async () => {
-  try { await post("/api/llm-settings", {base_url: $("llmUrl").value, model: $("llmModel").value, api_key: $("llmKey").value});
+  try { await post("/api/llm-settings", {base_url: $("llmUrl").value, model: $("llmModel").value, api_key: $("llmKey").value,
+                                         persona: $("llmPersona").value});
         await llmLoad(); $("llmOut").textContent = L.llmSaved; } catch (e) { $("llmOut").textContent = e.message; }
 };
 $("llmTest").onclick = async () => {
