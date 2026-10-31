@@ -890,6 +890,16 @@ document.getElementById("curve").addEventListener("click", e => {
   go(Math.round(1 + (fx - 10) * Math.max(1, last) / (W - 20)));
 });
 document.addEventListener("keydown", e => {
+  // (not while typing: the arrows and "m" belong to the field -- 2026-10-30, the ask box's
+  // left / right moved the replay; Enter in the ask box asks)
+  const t = e.target;
+  if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) {
+    if (e.key == "Enter" && t.id && t.id.startsWith("askq-") && !e.isComposing) {
+      const b = document.querySelector(`[data-askgo="${t.id.slice(5)}"]`); if (b && !b.disabled) b.click();
+    }
+    return;
+  }
+  if (e.altKey || e.ctrlKey || e.metaKey) return;
   if (e.key == "ArrowLeft") go(curT - 1);
   if (e.key == "ArrowRight") go(curT + 1);
   if (e.key == "m" || e.key == "M") nextMistake();
