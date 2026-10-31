@@ -7,8 +7,13 @@ then commit the file.
 
 It holds:
   model     the matchup model (analysis.matchups, refit on the games since --since as
-            build_robust_teams does; cached by the games' newest time): the --top species by games
-            (the rest "other"), their strength a and the matchup matrix M (rounded)
+            build_robust_teams does, with its teammate term S -- synergy; cached by the games'
+            newest time): the --top species by games (the rest "other"), their strength a, the
+            matchup matrix M and the teammate matrix S (rounded); its held-out log loss beside the
+            model without S
+  threats   the metagame's --threats most used species' main builds (scripts/threat_check: the
+            belief's set archetypes as exports with Smogon spreads), for coach.meta's set-by-set
+            threat coverage
   metagame  the compositions played by players >= --meta-elo in the last --meta-days, each game
             weighted 0.5 ** (age / --meta-half-life) (build_robust_teams.metagame): the --meta-teams
             heaviest, with their weights
@@ -38,6 +43,7 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import build_robust_teams as brt  # noqa: E402
+import threat_check  # noqa: E402
 import top_ladder_teams as tlt  # noqa: E402
 
 from alpha_poke import paths  # noqa: E402
@@ -49,17 +55,19 @@ from alpha_poke.teams import catalog  # noqa: E402
 DAY = 86400
 
 
-def model_of(g: pd.DataFrame, since: int):
+def model_of(g: pd.DataFrame, since: int, synergy: bool):
     fit_g = (g[(g.time >= since) & (g.winner > 0) & (g.r1 > 0) & (g.r2 > 0)]
              .sort_values("time").reset_index(drop=True))  # fmt: skip
-    cache = paths.TEAM_DATA / f"matchup_model_{int(g.time.max())}.pkl"
+    cache = paths.TEAM_DATA / f"matchup_model_{'syn_' if synergy else ''}{int(g.time.max())}.pkl"
     if cache.exists():
         return pickle.loads(cache.read_bytes())
     import torch
 
     torch.set_num_threads(max(1, (os.cpu_count() or 4) // 4))
-    print(f"fitting the matchup model on {len(fit_g)} games ...", flush=True)
-    model, val = matchups.fit(fit_g, l2_a=1e-4, l2_m=1e-3, iters=150, log=lambda *x: None)
+    print(f"fitting the matchup model (synergy {synergy}) on {len(fit_g)} games ...", flush=True)
+    model, val = matchups.fit(
+        fit_g, l2_a=1e-4, l2_m=1e-3, iters=150, synergy=synergy, log=lambda *x: None
+    )
     cache.write_bytes(pickle.dumps((model, val)))
     return model, val
 
@@ -69,9 +77,30 @@ def compact_model(model, g: pd.DataFrame, top: int) -> dict:
     games = pd.concat([g.team1, g.team2]).str.split("|").explode().value_counts()
     keep = [s for s in games.index if s in set(model.species[:-1])][:top]
     idx = [model.species.index(s) for s in keep] + [len(model.species) - 1]
-    return {"species": keep + ["other"], "beta": round(float(model.beta), 4),
-            "a": [round(float(x), 4) for x in model.a[idx]],
-            "M": [[round(float(x), 4) for x in row] for row in model.M[np.ix_(idx, idx)]]}  # fmt: skip
+    out = {"species": keep + ["other"], "beta": round(float(model.beta), 4),
+           "a": [round(float(x), 4) for x in model.a[idx]],
+           "M": [[round(float(x), 4) for x in row] for row in model.M[np.ix_(idx, idx)]]}  # fmt: skip
+    if model.S is not None:
+        out["S"] = [[round(float(x), 4) for x in row] for row in model.S[np.ix_(idx, idx)]]
+    return out
+
+
+def threat_builds(meta: pd.Series, k: int) -> dict:
+    """The metagame's k most used species (by weight) -> [[weight, export]] of their main builds."""
+    from alpha_poke.agents.belief_state import BeliefModel
+    from alpha_poke.data.smogon_stats import UsageStats
+    from alpha_poke.teams.replay_pool import PREVIEW_FORMS
+
+    use: dict[str, float] = {}
+    for team, w in meta.items():
+        for s in team.split("|"):
+            use[s] = use.get(s, 0.0) + w
+    names = sorted(use, key=lambda s: -use[s])[:k]
+    months = sorted(p.name for p in DEFAULT_DIR.iterdir() if p.is_dir())
+    stats = UsageStats.load(DEFAULT_DIR / months[-1] / "chaos" / "gen9ou-1500.json")
+    belief = BeliefModel.load()
+    return {n: [[round(w, 3), text] for w, text in threat_check.threat_sets(belief, stats, PREVIEW_FORMS.get(n, n), 3, 0.15)]
+            for n in names}  # fmt: skip
 
 
 def smogon() -> tuple[str, dict]:
@@ -122,11 +151,14 @@ def main() -> None:
     ap.add_argument("--core-min", type=int, default=300)
     ap.add_argument("--min-elo", type=int, default=1600, help="(the ladder's: as top_ladder_teams)")
     ap.add_argument("--ladder", type=int, default=300)
+    ap.add_argument("--threats", type=int, default=15)
     ap.add_argument("--out", default=str(SNAPSHOT))
     a = ap.parse_args()
 
     g = brt.all_games()
-    model, val = model_of(g, a.since)
+    _, plain = model_of(g, a.since, synergy=False)
+    model, val = model_of(g, a.since, synergy=True)
+    val["val_logloss_without_synergy"] = plain["val_logloss"]
     print("model:", {k: round(v, 4) if isinstance(v, float) else v for k, v in val.items()})
     meta = brt.metagame(g, a).head(a.meta_teams)
     month, smog = smogon()
@@ -143,6 +175,7 @@ def main() -> None:
                     "meta_days": a.meta_days, "meta_elo": a.meta_elo, "smogon_month": month,
                     "core_days": a.core_days, "forum_teams": len(forum), "model_val": val},
         "model": m,
+        "threats": threat_builds(meta, a.threats),
         "metagame": [[k, round(float(w), 4)] for k, w in meta.items()],
         "smogon": smog,
         "cores": cores(g, a.core_days, a.meta_elo, a.core_min, set(m["species"])),

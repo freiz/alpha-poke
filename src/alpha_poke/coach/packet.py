@@ -185,7 +185,7 @@ def team(report: dict, row: dict, team_sets: dict | None = None) -> dict:
     data["team_facts"] = team_facts(data)
     # (the metagame's view of the team: the shipped snapshot, by species -- coach.meta)
     mine = [m["species"] for m in report["teams"][report["side"]]]
-    facts = meta.facts(mine) if len(mine) == 6 else None
+    facts = meta.facts(mine, export=meta.team_export(report, team_sets)) if len(mine) == 6 else None
     if facts:
         data["team_facts"]["metagame"] = facts
     data["names_zh"] = _names(data)

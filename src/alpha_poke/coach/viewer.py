@@ -198,8 +198,10 @@ const T = {
     llmShow: k => `${k} (click to open or fold)`, llmTeam: "Your team",
     cardExp: (m, w) => `Against the recent metagame (the matchup model, species only): expected ${m}, against its hardest fifth ${w}`,
     cardThreats: "Hardest of the popular Pokémon (your expected score against teams with it)", cardMembers: n => `Each one's strength in the model (rank of ${n})`,
+    cardUnanswered: exact => `Popular threats nobody on the team checks or revenge-kills (damage calc${exact ? "" : ", your unshown sets guessed"})`, cardNone: "none",
+    cardSynergy: "Pairs the model sees work together or not (points)",
     cardSwaps: "The model's leads for a swap", cardSwap: (o, i, g) => `${o} → ${i} (${g} pts)`,
-    cardNote: (g, m) => `From the ladder's games to ${g} and Smogon's ${m} statistics; the model sees no sets, roles or synergy.`,
+    cardNote: (g, m) => `From the ladder's games to ${g} and Smogon's ${m} statistics. The matchup model sees species and pairs of teammates, not sets; the threat check is a damage calculation with sets.`,
     askBtn: "Ask the AI", askPh: "Ask about this decision (optional: empty = why the AI sees it so)", askGo: "Ask", askAgain: "Ask again",
     whoNote: "The other player's view is a review of its own (this one stays); a team pasted is that player's.",
     otherView: n => `↔ ${n}'s view`,
@@ -278,8 +280,10 @@ const T = {
     llmShow: k => `${k}（点击展开 / 收起）`, llmTeam: "队伍分析",
     cardExp: (m, w) => `对近期环境（对局模型，只看宝可梦种类）：期望胜率 ${m}，对最难打的 20% 对手 ${w}`,
     cardThreats: "最怕的热门宝可梦（对带它的队伍的期望胜率）", cardMembers: n => `每只在模型里的强度排名（共 ${n} 种）`,
+    cardUnanswered: exact => `队里没人能硬接或先手打倒的热门宝可梦（伤害计算${exact ? "" : "，没亮出的配置是推测的"}）`, cardNone: "没有",
+    cardSynergy: "模型看到的队友配合（胜率点数）",
     cardSwaps: "模型给出的换人线索", cardSwap: (o, i, g) => `${o} → ${i}（${g} 点）`,
-    cardNote: (g, m) => `来自截至 ${g} 的天梯对局和 Smogon ${m} 的统计；模型看不到配置、分工和配合。`,
+    cardNote: (g, m) => `来自截至 ${g} 的天梯对局和 Smogon ${m} 的统计。对局模型只看宝可梦种类和两两队友配合，看不到配置；威胁检查是按配置做的伤害计算。`,
     askBtn: "问 AI", askPh: "关于这一步想问什么（可不填：默认解释 AI 为什么这样看）", askGo: "提问", askAgain: "再问一次",
     whoNote: "换成另一位玩家的视角会另存一份复盘（这一份保留）；贴的队伍算那位玩家的。",
     otherView: n => `↔ ${n} 的视角`,
@@ -718,8 +722,12 @@ if (LLM_ON) {
     const th = f.threats_worst.slice(0, 3).map(t => `${mon(t.species)} ${p(t.score_vs_teams_with_it)}`).join(L.sep);
     const mem = f.members.map(m => `${mon(m.species)} ${m.model_strength_rank ? "#" + m.model_strength_rank : "—"}`).join(L.sep);
     const sw = f.swaps.slice(0, 2).map(s => L.cardSwap(mon(s.out), mon(s.in), (s.gain >= 0 ? "+" : "") + Math.round(100 * s.gain))).join(L.sep);
+    const syn = (f.synergy || []).map(x => `${mon(x.pair[0])} + ${mon(x.pair[1])} ${x.points > 0 ? "+" : ""}${x.points}`).join(L.sep);
+    const tc = f.threat_coverage, un = tc ? tc.unanswered.map(mon).join(L.sep) : "";
     return `<div class="tcard"><div><b>${L.cardExp(p(f.expected_vs_metagame), p(f.worst_20pct_of_metagame))}</b></div>
       <div>${L.cardThreats}${L.colon}${th}</div><div>${L.cardMembers(f.members[0].of)}${L.colon}${mem}</div>
+      ${tc ? `<div>${L.cardUnanswered(tc.your_sets_exact)}${L.colon}${un || L.cardNone}</div>` : ""}
+      ${syn ? `<div>${L.cardSynergy}${L.colon}${syn}</div>` : ""}
       ${sw ? `<div>${L.cardSwaps}${L.colon}${sw}</div>` : ""}<div class="legend">${L.cardNote(esc(f.about.games_to), esc(f.about.smogon_month))}</div></div>`;
   };
   const show = (k, open) => { shown = k; out.innerHTML = (k == "team" ? card() : "") + (TEXT[k] ? md(TEXT[k]) : "");

@@ -1074,9 +1074,11 @@ def test_the_metagame_facts_of_a_team():
     sp = ["A", "B", "C", "D", "E", "F", "G", "H", "other"]
     M = np.zeros((9, 9))
     M[6, 0], M[0, 6] = 1.5, -1.5
+    S = np.zeros((9, 9))
+    S[1, 2] = S[2, 1] = 0.4  # (B and C together: +10 points)
     snap = meta.prepare({
         "built": "2026-10-30", "sources": {"games_to": "2026-10-29", "smogon_month": "2026-09", "meta_days": 21},
-        "model": {"species": sp, "beta": 1.0, "a": [0.0] * 9, "M": M.tolist()},
+        "model": {"species": sp, "beta": 1.0, "a": [0.0] * 9, "M": M.tolist(), "S": S.tolist()},
         "metagame": [["B|C|D|E|F|G", 1.0], ["B|C|D|E|F|H", 1.0]],
         "smogon": {"A": {"usage": 0.1, "teammates": ["B"], "counters": [["G", 0.7, 900]]}},
         "cores": {"A|B": [400, 0.55, 0.02]},
@@ -1104,3 +1106,20 @@ def test_the_metagame_facts_of_a_team():
     )
     ladder = next(x for x in f["similar_teams"] if x["source"] == "ladder")
     assert ladder["they_have"] == ["G"] and ladder["games"] == 50
+    assert f["synergy"] == [{"pair": ["B", "C"], "points": 10.0}]
+    assert "threat_coverage" not in f  # (no builds in the snapshot, no export)
+
+
+def test_threat_coverage_set_by_set():
+    """coach.meta.threat_coverage (teams.threats' damage checks): a Ground-only Great Tusk is
+    checked by a Corviknight (immune, its Brave Bird hits back hard) and KOs nothing; a team
+    without such an answer leaves it unanswered."""
+    from alpha_poke.coach import meta
+
+    tusk = "Great Tusk @ Booster Energy\nAbility: Protosynthesis\nEVs: 252 Atk / 4 Def / 252 Spe\nJolly Nature\n- Headlong Rush\n- Earthquake"
+    corv = "Corviknight @ Leftovers\nAbility: Pressure\nEVs: 252 HP / 252 Atk / 4 Def\nAdamant Nature\n- Brave Bird\n- Body Press"
+    blissey = "Blissey @ Leftovers\nAbility: Natural Cure\nEVs: 252 HP / 252 Def / 4 SpD\nBold Nature\n- Seismic Toss\n- Soft-Boiled"
+    snap = {"threats": {"Great Tusk": [[1.0, tusk]]}}
+    c = meta.threat_coverage(corv + "\n\n" + blissey, snap)
+    assert c["threats"][0]["answered_by"] == ["corviknight(check)"] and c["unanswered"] == []
+    assert meta.threat_coverage(blissey, snap)["unanswered"] == ["Great Tusk"]

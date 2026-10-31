@@ -271,11 +271,16 @@ def handler(cache, jobs: Jobs):
                 return self._json(llm.public_settings(COACH))
             if path == "/api/team-facts":
                 try:
-                    rep, _, _ = stored(parse_qs(urlsplit(self.path).query).get("review", [""])[0])
+                    rep, _, team = stored(
+                        parse_qs(urlsplit(self.path).query).get("review", [""])[0]
+                    )
                 except Refused:
                     return self._json({"error": "no such review"}, HTTPStatus.NOT_FOUND)
                 mine = [m["species"] for m in rep["teams"][rep["side"]]]
-                return self._json({"facts": meta.facts(mine) if len(mine) == 6 else None})
+                export = meta.team_export(rep, team and {k: asdict(v) for k, v in team.items()})
+                return self._json(
+                    {"facts": meta.facts(mine, export=export) if len(mine) == 6 else None}
+                )
             if path == "/api/llm":
                 qs = parse_qs(urlsplit(self.path).query)
                 name = qs.get("review", [""])[0]

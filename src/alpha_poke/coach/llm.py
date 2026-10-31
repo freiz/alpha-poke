@@ -91,7 +91,9 @@ your_team_pasted 为 false 时，玩家的配置只有这局亮出来的部分�
 - team_facts.metagame 是从几十万场天梯对局和论坛队伍整理的环境数据（只看宝可梦种类，不看配置）：
   expected_vs_metagame 是对局模型估计的、对近期环境的平均胜率，worst_20pct_of_metagame 是最难打的那 20% 对手下的胜率；
   threats_worst 是最怕的热门宝可梦；members 里有每只的强度排名、常见克星 checks_and_counters、常见队友；
-  cores 是队里两两组合在天梯上的场次、胜率和超出分数预期的部分；swaps 是把一只换成另一只热门宝可梦后模型估计的变化，
+  cores 是队里两两组合在天梯上的场次、胜率和超出分数预期的部分；synergy 是对局模型学到的队友配合（两只放在一起比各自单独多出或少掉的胜率点数）；
+  threat_coverage 是按配置做的伤害计算：对每个热门宝可梦的主流配置，队里谁能硬接（check）、谁能先手打倒（revenge）、它能一击打倒队里的谁，
+  unanswered 是谁也接不住的，your_sets_exact 为 false 时玩家没亮出的配置是按常见配置推测的；swaps 是把一只换成另一只热门宝可梦后模型估计的变化，
   只是线索（模型看不到配置、分工和配合），提到时要说明这一点；similar_teams 是论坛或天梯上相似的队伍和它们不一样的地方（论坛队伍注意 date：太旧的可能不适合现在的环境）。
   这些数字是统计结果，场次少的不要下结论，天梯胜率里也有玩家水平的因素。
 - 建议改配置时，只能用 your_common_sets 或 similar_teams 里出现的招式、道具、太晶属性、特性，并说明为什么有用；建议换宝可梦要谨慎，说清楚取舍。
@@ -114,7 +116,11 @@ showed: do not take an unshown part as missing.
   against the recent metagame, worst_20pct_of_metagame its chance against the hardest fifth;
   threats_worst the popular species it fears most; members each one's strength rank, its checks
   and counters and usual teammates; cores the team's pairs on the ladder (games, win rate, margin
-  over the ratings' expectation); swaps the model's change when one member is replaced by a
+  over the ratings' expectation); synergy the matchup model's teammate term (points of winning
+  chance two bring together beyond each alone); threat_coverage the damage calculation set by set
+  -- for each popular threat's main builds, which of the team checks it, which revenge-kills it,
+  which of the team it KOs in one hit, unanswered the ones nobody answers (your_sets_exact false:
+  the player's unshown parts are the common set's guess); swaps the model's change when one member is replaced by a
   popular species -- leads only (the model sees no sets, roles or synergy): say so when you use
   them; similar_teams the forum's and the ladder's teams like this one and what they run instead
   (a forum team's date: an old one may not fit today's metagame).

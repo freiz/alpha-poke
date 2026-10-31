@@ -16,33 +16,11 @@ import json
 import sys
 from pathlib import Path
 
-from poke_env.battle import Pokemon
-from poke_env.teambuilder import Teambuilder
-
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from alpha_poke import paths  # noqa: E402
-from alpha_poke.agents.damage import (
-    MonView,
-    Spread,
-    best_damage,
-    calc_stats,
-    damage_fraction,
-    effective_speed,
-    priority,
-)
-
-
-def own_views(text: str) -> list[tuple[MonView, list]]:
-    out = []
-    for tb in Teambuilder.parse_showdown_team(text.strip() + "\n\n"):
-        mon = Pokemon(gen=9, teambuilder=tb)
-        evs = tuple(int(x) for x in (tb.evs or [0] * 6))
-        stats = calc_stats(mon.base_stats, Spread((tb.nature or "serious").lower(), evs))
-        mon._terastallized_type = None  # (not terastallized: its own types)
-        view = MonView(mon, stats, {mon.item: 1.0} if mon.item else {}, mon.ability)
-        out.append((view, list(mon.moves.values())))
-    return out
+from alpha_poke.agents.damage import MonView, priority  # noqa: E402
+from alpha_poke.teams.threats import answers, own_views  # noqa: E402,F401  (here since 2026-10-30)
 
 
 def threat_sets(belief, stats, name: str, k: int, min_w: float) -> list[tuple[float, str]]:
@@ -130,28 +108,6 @@ def roles(ours: list[tuple[MonView, list]]) -> dict[str, list[str]]:
     return out
 
 
-def answers(ours: list[tuple[MonView, list]], builds: list, a) -> list[str]:
-    """Our mons answering the threat in every one of its main builds: 'check' / 'revenge'."""
-    out = []
-    for v, moves in ours:
-        tags = None
-        for _, (tv, tmoves) in builds:
-            dmg_in = max((damage_fraction(tv, v, m) for m in tmoves), default=0.0)
-            best, dmg_out = best_damage(v, tv, moves)
-            first = effective_speed(v) > effective_speed(tv) or (
-                best is not None and priority(best) > 0
-            )
-            t = set()
-            if dmg_in < a.check_in and dmg_out >= a.check_out:
-                t.add("check")
-            if first and dmg_out >= 1.0:
-                t.add("revenge")
-            tags = t if tags is None else tags & t
-        if tags:
-            out.append(f"{v.mon.species}({'/'.join(sorted(tags))})")
-    return out
-
-
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("pools", nargs="+", help="pool directories (team_XX.txt) or export files")
@@ -192,7 +148,7 @@ def main() -> None:
     for f in files:
         ours = own_views(f.read_text())
         team = "|".join(v.mon.species for v, _ in ours)
-        cover = {n: answers(ours, t, a) for n, t in threats.items()}
+        cover = {n: answers(ours, t, a.check_in, a.check_out) for n, t in threats.items()}
         missing = [n for n, x in cover.items() if not x]
         single = [n for n, x in cover.items() if len(x) == 1]
         rl = roles(ours)

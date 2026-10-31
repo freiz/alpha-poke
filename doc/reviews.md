@@ -53,6 +53,16 @@ uv run python scripts/review_game.py <replay URL, id or file> --player <name> --
 - **Review again**: on the review page, with a deeper setting or from the other player's view.
 - **The list of reviews**: searchable, sortable, with both teams, the result and the scorecard;
   each review can be renamed and noted on (`data/coach/reviews.sqlite`).
+- **The team against the metagame** (`coach.meta`, no language model; shown at once when the team
+  analysis opens): from a snapshot shipped with the app (`scripts/build_meta_knowledge.py`,
+  rebuilt with the team design's monthly update, doc/team_design.md) -- the matchup model's
+  expected score against the recent metagame and over its hardest fifth (species, rating-adjusted,
+  with a teammate term: held-out log loss 0.6896 ratings only, 0.6798 with species, 0.6778 with
+  teammates), the threats it fears, each member's rank, counters and usual teammates, the team's
+  pairs on the ladder and in the model, the model's swap leads, similar forum / ladder teams, and
+  a set-by-set threat check (the damage model: which of the team checks or revenge-kills each
+  popular threat's main builds, which it KOs; the sets exact when pasted). Nothing is fetched on
+  the player's computer.
 - **AI commentary** (`coach.llm`): a language model's write-ups on the review page -- the
   player's style (habits, with the turns and numbers that show them, what to practise), the team
   (its make-up, strengths, weaknesses from the type matchups over the team, coverage, speeds and

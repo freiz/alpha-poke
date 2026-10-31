@@ -4,6 +4,9 @@
                                  + sum_{s in A} a_s - sum_{t in B} a_t   (species strength)
                                  + sum_{s in A, t in B} M[s, t]          (species matchups)
 with M antisymmetric (M = U - U^T) and L2 on a and U. Fit by full-batch L-BFGS on the CPU.
+``synergy`` (2026-10-30, the review app's team analysis): also
+                               + sum_{s<s' in A} S[s, s'] - sum_{t<t' in B} S[t, t']  (teammates)
+with S symmetric, zero on its diagonal, L2 -- what two species bring together beyond each alone.
 Both ratings must be known; species seen in fewer than ``min_games`` games share one "other"
 index. Held-out: the latest ``val_frac`` of the games by time."""
 
@@ -22,15 +25,23 @@ class MatchupModel:
     beta: float
     a: np.ndarray  # [V]
     M: np.ndarray  # [V, V], antisymmetric
+    S: np.ndarray | None = None  # [V, V], symmetric, zero diagonal: teammates (``synergy``)
 
     def index(self, team: list[str]) -> list[int]:
         idx = {s: i for i, s in enumerate(self.species)}
         return [idx.get(s, len(self.species) - 1) for s in team]
 
+    def synergy(self, team: list[str]) -> float:
+        """The sum of S over the team's pairs (0 without S)."""
+        if self.S is None:
+            return 0.0
+        i = self.index(team)
+        return float(self.S[np.ix_(i, i)].sum() / 2)
+
     def logit(self, team_a: list[str], team_b: list[str], rating_diff: float = 0.0) -> float:
         ia, ib = self.index(team_a), self.index(team_b)
         return float(self.beta * rating_diff / 400 + self.a[ia].sum() - self.a[ib].sum()
-                     + self.M[np.ix_(ia, ib)].sum())  # fmt: skip
+                     + self.M[np.ix_(ia, ib)].sum() + self.synergy(team_a) - self.synergy(team_b))  # fmt: skip
 
     def win(self, team_a: list[str], team_b: list[str], rating_diff: float = 0.0) -> float:
         return 1 / (1 + np.exp(-self.logit(team_a, team_b, rating_diff)))
@@ -45,7 +56,7 @@ def load_games(since: int = 0, rating: tuple[int, int] = (1, 10_000)) -> pd.Data
 
 def fit(g: pd.DataFrame, l2_a: float = 1e-4, l2_m: float = 1e-3, min_games: int = 300,
         val_frac: float = 0.1, pairs: bool = True, iters: int = 200,
-        log=print) -> tuple[MatchupModel, dict]:  # fmt: skip
+        synergy: bool = False, l2_s: float = 1e-3, log=print) -> tuple[MatchupModel, dict]:  # fmt: skip
     counts = pd.Series([s for t in pd.concat([g.team1, g.team2]) for s in t.split("|")])
     vc = counts.value_counts()
     species = sorted(vc[vc >= min_games].index) + ["other"]
@@ -64,21 +75,31 @@ def fit(g: pd.DataFrame, l2_a: float = 1e-4, l2_m: float = 1e-3, min_games: int 
     beta = torch.zeros(1, requires_grad=True)
     a = torch.zeros(V, requires_grad=True)
     U = torch.zeros(V, V, requires_grad=True)
+    W = torch.zeros(V, V, requires_grad=True)
+    off = 1 - torch.eye(V)
+
+    def sym():
+        return (W + W.T) / 2 * off
 
     def logits(sl):
         z = beta * rd[sl] + a[t1[sl]].sum(1) - a[t2[sl]].sum(1)
         if pairs:
             M = U - U.T
             z = z + M[t1[sl][:, :, None], t2[sl][:, None, :]].sum((1, 2))
+        if synergy:  # (each pair counted twice over the 6 x 6, the diagonal zero)
+            S = sym()
+            z = z + (S[t1[sl][:, :, None], t1[sl][:, None, :]].sum((1, 2))
+                     - S[t2[sl][:, :, None], t2[sl][:, None, :]].sum((1, 2))) / 2  # fmt: skip
         return z
 
-    params = [beta, a] + ([U] if pairs else [])
+    params = [beta, a] + ([U] if pairs else []) + ([W] if synergy else [])
     opt = torch.optim.LBFGS(params, max_iter=iters, line_search_fn="strong_wolfe")
     bce = torch.nn.functional.binary_cross_entropy_with_logits
 
     def closure():
         opt.zero_grad()
-        loss = bce(logits(tr), y[tr]) + l2_a * (a**2).sum() + (l2_m * (U**2).sum() if pairs else 0)
+        loss = (bce(logits(tr), y[tr]) + l2_a * (a**2).sum() + (l2_m * (U**2).sum() if pairs else 0)
+                + (l2_s * (W**2).sum() if synergy else 0))  # fmt: skip
         loss.backward()
         return loss
 
@@ -92,7 +113,8 @@ def fit(g: pd.DataFrame, l2_a: float = 1e-4, l2_m: float = 1e-3, min_games: int 
             "n_train": len(g) - n_val, "n_val": n_val, "species": V,
         }  # fmt: skip
     M = (U - U.T).detach().numpy() if pairs else np.zeros((V, V), np.float32)
-    model = MatchupModel(species, float(beta.detach()), a.detach().numpy(), M)
+    S = sym().detach().numpy() if synergy else None
+    model = MatchupModel(species, float(beta.detach()), a.detach().numpy(), M, S)
     log(val)
     return model, val
 
