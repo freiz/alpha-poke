@@ -187,6 +187,9 @@ pub struct Config {
     /// forced switches; 2026-10-21, the search review): else open loop, one child per joint
     /// action (a KO and no KO by the damage roll share a node)
     pub phase_key: bool,
+    /// the principal variations to return (`variations`): our top options, the opponent's top
+    /// replies to each, plies; (0, 0, 0) = none (a review's, 2026-10-30)
+    pub pv: (usize, usize, usize),
 }
 
 impl Default for Config {
@@ -203,6 +206,7 @@ impl Default for Config {
             root_noise_conc: 10.0,
             ml: MlParams::default(),
             phase_key: false,
+            pv: (0, 0, 0),
         }
     }
 }
@@ -222,6 +226,8 @@ pub struct SearchResult {
     /// the opponent's root actions: (label, visits, mean value -- side one's: what that choice of
     /// theirs leaves us); a review shows what the search expected of the opponent (2026-10-30)
     pub s2: Vec<(Label, u32, f32)>,
+    /// the principal variations (`Config::pv`, `variations`)
+    pub variations: Vec<Vec<PvStep>>,
     /// our root actions' priors (PUCT; < 0 = none, e.g. without a network)
     pub s1_priors: Vec<(Label, f32)>,
     pub iterations: u32,
@@ -1211,6 +1217,11 @@ pub fn search(
             })
             .collect(),
         s1_priors: root.s1.iter().map(|a| (a.label, a.prior)).collect(),
+        variations: if cfg.pv.0 > 0 {
+            variations(&tree, cfg.pv)
+        } else {
+            Vec::new()
+        },
         iterations: it,
         nodes: tree.nodes.len(),
         max_depth: tree.nodes.iter().map(|n| n.depth).max().unwrap_or(0),
@@ -1247,6 +1258,12 @@ pub fn search_parallel(
     SearchResult {
         s1: merge_root(results.iter().map(|r| &r.s1)),
         s2: merge_root(results.iter().map(|r| &r.s2)),
+        // (one tree's: the one that ran most)
+        variations: results
+            .iter()
+            .max_by_key(|r| r.iterations)
+            .map(|r| r.variations.clone())
+            .unwrap_or_default(),
         s1_priors: results
             .first()
             .map(|r| r.s1_priors.clone())
@@ -1258,6 +1275,72 @@ pub fn search_parallel(
 }
 
 /// Our root option in `state` for a label (our side is the same in every world).
+/// One step of a principal variation: the joint action (our label, theirs: None when that side
+/// does not choose -- the other's switch after a faint), the visits of the node it leads to, and
+/// our winning chance there (the node's backed-up mean; None when it was never expanded).
+#[derive(Clone, Debug)]
+pub struct PvStep {
+    pub ours: Label,
+    pub theirs: Label,
+    pub visits: u32,
+    pub value: Option<f32>,
+}
+
+/// The principal variations of a tree, as KataGo shows its variations (2026-10-30, game reviews):
+/// for each of our `pv.0` most visited root options and each of the opponent's `pv.1` most
+/// visited replies to it (the joint children's visits), the most visited joint action at every
+/// node below, `pv.2` steps in all. Open loop: a node stands for every chance outcome of its
+/// joint action (a KO and no KO share it unless `phase_key`), so a line is the search's main
+/// expectation, not one game.
+pub fn variations(tree: &Tree, pv: (usize, usize, usize)) -> Vec<Vec<PvStep>> {
+    let mut kids: FxHashMap<u32, Vec<(u16, u16, u32)>> = FxHashMap::default();
+    for (&(parent, i1, i2, _), &child) in &tree.children {
+        kids.entry(parent).or_default().push((i1, i2, child));
+    }
+    let value = |c: u32| {
+        let n = &tree.nodes[c as usize];
+        let v: u32 = n.s1.iter().map(|a| a.visits).sum();
+        (v > 0).then(|| n.s1.iter().map(|a| a.total).sum::<f32>() / v as f32)
+    };
+    let step = |node: u32, i1: u16, i2: u16, child: u32| {
+        let n = &tree.nodes[node as usize];
+        PvStep {
+            ours: n.s1[i1 as usize].label,
+            theirs: n.s2[i2 as usize].label,
+            visits: tree.nodes[child as usize].visits,
+            value: value(child),
+        }
+    };
+    let by_visits = |v: &mut Vec<(u16, u16, u32)>| {
+        v.sort_by_key(|&(_, _, c)| std::cmp::Reverse(tree.nodes[c as usize].visits))
+    };
+    let mut ours: Vec<usize> = (0..tree.nodes[0].s1.len()).collect();
+    ours.sort_by_key(|&i| std::cmp::Reverse(tree.nodes[0].s1[i].visits));
+    let mut out = Vec::new();
+    for &i1 in ours.iter().take(pv.0) {
+        let mut first: Vec<(u16, u16, u32)> = kids
+            .get(&0)
+            .map(|v| v.iter().filter(|k| k.0 as usize == i1).copied().collect())
+            .unwrap_or_default();
+        by_visits(&mut first);
+        for &(a, b, c) in first.iter().take(pv.1) {
+            let mut line = vec![step(0, a, b, c)];
+            let mut node = c;
+            while line.len() < pv.2 {
+                let Some(mut next) = kids.get(&node).cloned() else {
+                    break;
+                };
+                by_visits(&mut next);
+                let (a, b, c) = next[0];
+                line.push(step(node, a, b, c));
+                node = c;
+            }
+            out.push(line);
+        }
+    }
+    out
+}
+
 /// Root statistics of independent trees merged by label: visits summed, means weighted by them.
 fn merge_root<'a>(
     runs: impl Iterator<Item = &'a Vec<(Label, u32, f32)>>,

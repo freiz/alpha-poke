@@ -895,19 +895,21 @@ def test_the_page_explains_a_jump():
     from alpha_poke.coach import viewer
 
     js = viewer.PAGE
-    a = js.index("const JUMP")
+    a = js.index("function stepText(")
     fns = js[a : js.index("function stepHTML(")]
     stubs = ("const L = {oppThen: v => `(${v})`, sep: ', ', colon: ': ', oppExpect: t => `exp ${t}`, "
              "oppDid: (o, v) => `did ${o} ${v}`, jumpHead: (a, b) => `${a}->${b}`, goodLuck: 'good', badLuck: 'bad', "
              "luckCrit: m => `crit on ${m}`, luckMiss: m => `${m} missed`, luckCant: (m, r) => `${m} cant ${r}`, "
              "luckConfused: m => `${m} confused`, oppBetter: (e, ev, d, dv) => `better ${e} ${ev} ${d} ${dv}`, "
              "oppWorse: (e, ev, d, dv) => `worse ${e} ${ev} ${d} ${dv}`, oppOther: (e, d) => `other ${e} ${d}`, "
-             "jumpUnknown: 'unknown'};\nconst esc = x => String(x), option = x => x, who = x => x, effect = x => x, "
+             "jumpUnknown: 'unknown', youDo: o => `you ${o}`, theyDo: o => `they ${o}`, mine: x => `my ${x}`, theirs: x => `their ${x}`, fainted: (m, p) => `${m} down ${p}`, faintSome: p => ` (down ${p})`, lineEnd: v => ` = ${v}`, feared: t => `feared ${t}`, linesHead: 'lines', linesNote: ''};\nconst esc = x => String(x), option = x => x, monName = x => x, who = x => x, effect = x => x, "
              "pct = x => Math.round(100 * x) + '%';\n")  # fmt: skip
     R = {"events": {3: ["move|OPP Hatterene|Draining Kiss|ME Ogerpon", "-crit|ME Ogerpon", "-damage|ME Ogerpon|0 fnt"],
                     4: ["move|OPP Meowscarada|Knock Off|ME Alomomola"]},
          "decisions": [{"turn": 3, "kind": "turn", "value": 0.62, "opp_options": [["drainingkiss", 0.6, 0.61]], "opp_did": "drainingkiss"},
-                       {"turn": 4, "kind": "turn", "value": 0.03, "opp_options": [["uturn", 0.9, 0.02], ["knockoff", 0.1, 0.6]], "opp_did": "knockoff"},
+                       {"turn": 4, "kind": "turn", "value": 0.03, "chosen": "switch alomomola", "opp_options": [["uturn", 0.9, 0.02], ["knockoff", 0.1, 0.6]], "opp_did": "knockoff",
+                        "lines": [[{"o": "switch alomomola", "t": "uturn", "v": 0.02, "me": ["alomomola", 0.64, 0], "opp": ["meowscarada", 1, 0]},
+                                   {"o": "protect", "t": "thunderbolt", "v": 0.01, "me": ["alomomola", 0, 0.78], "opp": ["dragapult", 0.48, 0]}]]},
                        {"turn": 5, "kind": "turn", "value": 0.68},
                        {"turn": 6, "kind": "turn", "value": 0.7}]}  # fmt: skip
     code = (f"const R = {json.dumps(R)};\n{stubs}{fns}\n"
@@ -919,4 +921,35 @@ def test_the_page_explains_a_jump():
         out[0]
     )
     assert "3%->68%" in out[1] and "better uturn 2% knockoff 60%" in out[1], out[1]
+    assert (
+        "feared you switch alomomola, they uturn ⇒ my alomomola 64%, their meowscarada 100%"
+        in out[1]
+    ), out[1]
+    assert "my alomomola down 78%" in out[1] and out[1].endswith("= 1%</li></ul></div>"), out[1]
     assert out[2] == "" and out[3] == ""
+
+
+def test_the_lines_are_played_out_in_the_worlds():
+    """play_lines: a principal variation (alpha_search.ismcts(pv=...)) played in each world with
+    the engine -- the actives after each step (median HP, the share fainted), the worlds it could
+    be played in (an opponent's move only some worlds have); and the search returns its lines."""
+    import alpha_search
+
+    from alpha_poke.coach.review import PV, play_lines
+
+    worlds = [s.to_string() for s in _turn2({"p1": parse_team(TEAM_FAST)})]
+    line = [("rapidspin", "earthquake", 10, 0.5), ("closecombat", "earthquake", 5, 0.4)]
+    (steps,) = play_lines(worlds, [line])
+    assert [s["o"] for s in steps] == ["rapidspin", "closecombat"] and all(
+        s["k"] == len(worlds) for s in steps
+    )
+    assert steps[0]["me"][0] == "greattusk" and steps[0]["opp"][0] == "gliscor"
+    assert 0 < steps[0]["me"][1] < 1 and steps[1]["me"][1] <= steps[0]["me"][1]  # (Earthquake hits)
+    assert play_lines(worlds, [[("rapidspin", "hyperbeam", 1, None)]]) == [[]]  # (no world has it)
+    *_, theirs, lines = alpha_search.ismcts(
+        worlds, 0, iterations=3000, seed=1, opponent=True, pv=PV
+    )
+    assert lines and all(1 <= len(x) <= PV[2] for x in lines)
+    assert all(
+        isinstance(o, str) and isinstance(t, str) and n > 0 for x in lines for o, t, n, _ in x
+    )

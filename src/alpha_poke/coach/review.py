@@ -12,6 +12,7 @@ The numbers are the search's estimates (noisy: a few seconds of search, belief s
 hidden sets), good for finding the decisions that mattered, not exact probabilities.
 """
 
+import collections
 import math
 import random
 import re
@@ -86,6 +87,9 @@ class Decision:
     # page explains a jump in the winning chance with them -- 2026-10-30)
     opp_options: list = field(default_factory=list)
     opp_did: str | None = None
+    # the search's principal variations (its first search's: PV), played out in the decision's
+    # worlds (play_lines): what the AI expects to happen next, as KataGo's variations
+    lines: list = field(default_factory=list)
     # repeats > 1: how many searches tried both the choice and the best (the loss's sample; under
     # two the loss is not trusted -- verdict)
     paired: int | None = None
@@ -218,11 +222,10 @@ def review(row: dict, side: str, belief, model: str, worlds: int = 16, ms: int =
         if p is None:
             return None
         ctx = (list(p.reveal), (p.rating_own, p.rating_opp), p.turn, p.history)
-        ours, it, _, _, theirs = alpha_search.ismcts(p.worlds, ms, threads=threads, model_dir=model,
-                                                     use_policy=True, policy_opponent=True,
-                                                     contexts=[ctx] * len(p.worlds), ml=ml,
-                                                     seed=seed + k, opponent=True)  # fmt: skip
-        return ours, it, theirs
+        ours, it, _, _, theirs, lines = alpha_search.ismcts(
+            p.worlds, ms, threads=threads, model_dir=model, use_policy=True, policy_opponent=True,
+            contexts=[ctx] * len(p.worlds), ml=ml, seed=seed + k, opponent=True, pv=PV)  # fmt: skip
+        return ours, it, theirs, lines
 
     results = [[None] * repeats for _ in points]
     left = [repeats] * len(points)
@@ -358,7 +361,67 @@ def _decision(
         state=public_state(p.state), events=events.get(p.turn, []),
         value_se=r3(value_se), loss_se=r3(loss_se), repeats=len(searches), visits=visits, paired=paired,
         opp_options=_theirs([s[2] for s in searches if len(s) > 2]), opp_did=opp_did,
+        lines=play_lines(p.worlds or [], searches[0][3]) if len(searches[0]) > 3 else [],
     )  # fmt: skip
+
+
+PV = (
+    2,
+    2,
+    4,
+)  # the variations a review keeps: our top 2 options x the opponent's top 2 replies, 4 steps
+
+
+def _engine_choice(name: str) -> str:
+    """An option name as poke_engine.generate_instructions takes it."""
+    return "none" if name == "No Move" else name.removeprefix("switch ")
+
+
+def play_lines(worlds: list, lines: list, seed: int = 0) -> list:
+    """The principal variations (alpha_search.ismcts(pv=...)) played out in each of the
+    position's worlds with the engine, a chance outcome drawn at each step: per line, per step,
+    {"o": our option, "t": theirs, "n": the search's visits, "v": our value there, "k": the worlds
+    it could be played in (an opponent's move only some worlds have), "me" / "opp": the active
+    after the step -- [species id, median HP fraction, the share of worlds where it fainted]}.
+    The search's tree is open loop: a line is its main expectation, the outcomes are the worlds'."""
+    import poke_engine as pe
+
+    rng = random.Random(seed)
+    out = []
+    for line in lines:
+        states = [pe.State.from_string(w) for w in worlds]
+        steps = []
+        for ours, theirs, visits, value in line:
+            after = []
+            for st in states:
+                try:
+                    outs = pe.generate_instructions(
+                        st, _engine_choice(ours), _engine_choice(theirs)
+                    )
+                except BaseException:  # noqa: BLE001 - this world has no such option: it drops out
+                    continue
+                o = rng.choices(outs, weights=[x.percentage for x in outs])[0] if outs else None
+                after.append(
+                    pe.State.from_string(st.to_string()).apply_instructions(o) if o else st
+                )
+            if not after:
+                break
+            states = after
+
+            steps.append({"o": ours, "t": theirs, "n": visits, "v": None if value is None else round(value, 3),
+                          "k": len(states), "me": _active([st.side_one for st in states]),
+                          "opp": _active([st.side_two for st in states])})  # fmt: skip
+        out.append(steps)
+    return out
+
+
+def _active(sides: list) -> list:
+    """[species id, median HP fraction, the share fainted] of the sides' actives (the most common
+    species among the worlds; its HP and faints over those)."""
+    mons = [sd.pokemon[int(sd.active_index)] for sd in sides]
+    sp = collections.Counter(str(m.id).lower() for m in mons).most_common(1)[0][0]
+    hp = sorted(m.hp / max(m.maxhp, 1) for m in mons if str(m.id).lower() == sp)
+    return [sp, round(hp[len(hp) // 2], 2), round(sum(x <= 0 for x in hp) / len(hp), 2)]
 
 
 def _theirs(runs: list, top: int = 6) -> list:

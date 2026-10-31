@@ -49,7 +49,9 @@ fn roundtrip(state: &str) -> String {
 /// ([(our option, visits, mean value)], iterations, tree nodes, max depth); `opponent`: a fifth
 /// item, [(the opponent's option, visits, our mean value when it takes it)] at the root (a
 /// review's: what the search expected of the opponent -- its options named in the first world
-/// that has each, their moves differing between worlds). threads > 1: root
+/// that has each, their moves differing between worlds); `pv` (our options, the opponent's
+/// replies, steps) > 0: a sixth, the principal variations (`ismcts::variations`, as KataGo's):
+/// per line [(our option, theirs, visits, our value there or None)]. threads > 1: root
 /// parallel (independent trees, merged root statistics). A model directory (the transformer)
 /// needs `contexts`: per world (public-information bits [12], (own rating,
 /// opponent rating), turn, history string), side one's view.
@@ -58,7 +60,7 @@ fn roundtrip(state: &str) -> String {
                     cache_root=true, branch_depth=2, threads=1, model_dir=None,
                     use_policy=false, policy_opponent=true, c_puct=1.0, contexts=None,
                     root_noise=(0.0, 10.0), ml=(0.0, 0.0, 0.0, false), phase_key=false,
-                    opponent=false))]
+                    opponent=false, pv=(0, 0, 0)))]
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 fn py_ismcts(
     py: Python<'_>,
@@ -79,6 +81,7 @@ fn py_ismcts(
     ml: (f32, f32, f32, bool),
     phase_key: bool,
     opponent: bool,
+    pv: (usize, usize, usize),
 ) -> PyResult<Py<PyAny>> {
     if states.is_empty() {
         return Err(PyValueError::new_err("ismcts needs at least one world"));
@@ -118,6 +121,7 @@ fn py_ismcts(
         root_noise_conc: root_noise.1,
         ml: ml_params(ml),
         phase_key,
+        pv,
     };
     let res = py.detach(|| {
         if threads > 1 {
@@ -150,7 +154,7 @@ fn py_ismcts(
         };
         ours.push((name, visits, mean));
     }
-    if !opponent {
+    if !opponent && pv.0 == 0 {
         return Ok((ours, res.iterations, res.nodes, res.max_depth)
             .into_pyobject(py)?
             .into_any()
@@ -164,10 +168,52 @@ fn py_ismcts(
             .unwrap_or_else(|| format!("{l:?}"));
         theirs.push((name, visits, mean));
     }
-    Ok((ours, res.iterations, res.nodes, res.max_depth, theirs)
+    if pv.0 == 0 {
+        return Ok((ours, res.iterations, res.nodes, res.max_depth, theirs)
+            .into_pyobject(py)?
+            .into_any()
+            .unbind());
+    }
+    let lines: Vec<Vec<(String, String, u32, Option<f32>)>> = res
+        .variations
+        .iter()
+        .map(|line| {
+            line.iter()
+                .map(|s| {
+                    (
+                        label_name(&w0.side_one, s.ours),
+                        label_name(&w0.side_two, s.theirs),
+                        s.visits,
+                        s.value,
+                    )
+                })
+                .collect()
+        })
+        .collect();
+    Ok((
+        ours,
+        res.iterations,
+        res.nodes,
+        res.max_depth,
+        theirs,
+        lines,
+    )
         .into_pyobject(py)?
         .into_any()
         .unbind())
+}
+
+/// A label's option name below the root (its move by id, its switch by the team slot's species:
+/// the active differs there), as the search names options ("thunderbolt", "thunderbolt-tera",
+/// "switch dragapult", "No Move").
+fn label_name(side: &Side, l: ismcts::Label) -> String {
+    match l {
+        ismcts::Label::Move(c) => format!("{c}").to_lowercase(),
+        ismcts::Label::MoveTera(c) => format!("{c}-tera").to_lowercase(),
+        ismcts::Label::Switch(i) => format!("switch {}", side.pokemon[i].id).to_lowercase(),
+        ismcts::Label::None => "No Move".to_string(),
+        other => format!("{other:?}"),
+    }
 }
 
 /// `f` on every item, the items split into contiguous chunks over the available cores; results in

@@ -68,6 +68,8 @@ PAGE = r"""<!DOCTYPE html>
   .slines { color: var(--muted); font-size: 12px; } .aibox { margin-top: 8px; padding: 8px; background: var(--bg); border-radius: 6px; }
   .aibox .opp { margin-top: 4px; } .jump { margin-top: 6px; padding: 6px 8px; border-left: 3px solid var(--ai); font-size: 13px; }
   .jump ul { margin: 4px 0 0 18px; padding: 0; }
+  .lines { margin-top: 6px; font-size: 12px; } .lines summary { cursor: pointer; color: var(--muted); }
+  .lines ol { margin: 4px 0 4px 18px; padding: 0; } .lines li { margin: 3px 0; }
   .aihead { font-weight: 600; margin-bottom: 4px; }
   .score { display: flex; gap: 12px; flex-wrap: wrap; padding: 0 16px 12px; align-items: stretch; }
   .tile { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px 16px; min-width: 130px; }
@@ -186,6 +188,11 @@ const T = {
     oppWorse: (e, ev, d, dv) => `the opponent's choice was worse for you than the AI expected: it expected ${e} (your chance ${ev}), they played ${d} (${dv})`,
     oppOther: (e, d) => `the opponent did not play what the AI expected most (${e}) but ${d}`,
     jumpUnknown: "no luck in the log, and the opponent played as the AI expected: what this turn revealed (a move, an item, an ability) changed the AI's view",
+    youDo: o => `you: ${o}`, theyDo: o => `they: ${o}`, fainted: (m, p) => `${m} fainted (in ${p} of the worlds)`,
+    faintSome: p => ` (fainted in ${p} of the worlds)`, lineEnd: v => ` — your chance ${v}`,
+    linesHead: "What the AI expects next (its main lines)",
+    linesNote: "Each line follows the choices the search looked at most, for your top options and the opponent's likeliest replies; the results are the engine's, over the hidden sets the AI guessed (HP: the median).",
+    feared: t => `the line the AI feared: ${t}`,
     guessTip: "The game never showed you using this move: without your team the AI guessed it, and you may not have it.",
     moment: (t, c, b, cv, bv) => `Turn ${t}: you chose <b>${c}</b>, the AI <b>${b}</b> (${cv} → ${bv})`,
     mine: x => `your ${x}`, theirs: x => `the opposing ${x}`, side: me => me ? "your side" : "the opposing side",
@@ -252,6 +259,11 @@ const T = {
     oppWorse: (e, ev, d, dv) => `对手的选择比 AI 预想的对你不利：AI 原以为对手最可能用 ${e}（你的胜率 ${ev}），对手实际用了 ${d}（${dv}）`,
     oppOther: (e, d) => `对手没有用 AI 最预料的 ${e}，而是用了 ${d}`,
     jumpUnknown: "日志里没有运气因素，对手也按 AI 的预料出招：是这一回合新暴露的招式、道具或特性改变了 AI 的判断",
+    youDo: o => `你：${o}`, theyDo: o => `对手：${o}`, fainted: (m, p) => `${m} 倒下（${p} 的世界里）`,
+    faintSome: p => `（${p} 的世界里倒下）`, lineEnd: v => ` —— 你的胜率 ${v}`,
+    linesHead: "AI 预想的走向（主干路径）",
+    linesNote: "每条路径沿着搜索考虑最多的选择往下走：你的前两个选项 × 对手最可能的两个应对。结果由引擎在 AI 猜测的各种对手配置下模拟得出（HP 取中位数）。",
+    feared: t => `AI 担心的线路：${t}`,
     guessTip: "这局里你没用过这招：没贴队伍时 AI 只能猜，你可能并没有这招。",
     moment: (t, c, b, cv, bv) => `回合 ${t}：你选了 <b>${c}</b>，AI 选 <b>${b}</b>（${cv} → ${bv}）`,
     mine: x => `你的 ${x}`, theirs: x => `对手的 ${x}`, side: me => me ? "你这一侧" : "对手那一侧",
@@ -446,7 +458,22 @@ function aiHTML(d) {
   const b = x => Object.entries(x || {}).map(([k, v]) => (ST[k] || k) + " " + (v > 0 ? "+" + v : v)).join(", ");
   const sideText = (s, label) => `${label}: ${esc(monName(s.active.species))} ${pct(s.active.hp)}${Object.keys(s.boosts || {}).length ? " (" + b(s.boosts) + ")" : ""} · ${L.left(s.alive)}${s.tera_used ? " · " + L.tera : ""}`;
   h += `<div class="state">${sideText(me, L.you)} | ${sideText(op, L.opp)}${Object.keys(me.hazards).length ? " | " + L.hazMe + ": " + b(me.hazards) : ""}${Object.keys(op.hazards).length ? " | " + L.hazOpp + ": " + b(op.hazards) : ""}</div>`;
-  return h + oppHTML(d) + jumpHTML(d) + "</div>";
+  return h + oppHTML(d) + jumpHTML(d) + linesHTML(d) + "</div>";
+}
+// the search's principal variations (the review's lines, as KataGo's variations): each step's
+// choices and what the worlds made of them -- the actives' HP (median) and how often one fainted
+function stepText(st) {
+  const act = [st.o != "No Move" ? L.youDo(oppName(st.o)) : null, st.t != "No Move" ? L.theyDo(oppName(st.t)) : null].filter(Boolean).join(L.sep);
+  const mon = ([sp, hp, faint], mine) => {
+    const name = esc(mine ? L.mine(monName(sp)) : L.theirs(monName(sp)));
+    return faint >= 0.5 ? L.fainted(name, pct(faint)) : `${name} ${pct(hp)}` + (faint > 0 ? L.faintSome(pct(faint)) : "");
+  };
+  return `${act} ⇒ ${mon(st.me, true)}${L.sep}${mon(st.opp, false)}`;
+}
+const lineText = line => line.map(stepText).join(" → ") + (line.length && line[line.length - 1].v != null ? L.lineEnd(pct(line[line.length - 1].v)) : "");
+function linesHTML(d) {
+  if (!d.lines || !d.lines.length) return "";
+  return `<details class="lines"><summary>${L.linesHead}</summary><ol>${d.lines.map(l => `<li>${lineText(l)}</li>`).join("")}</ol><div class="legend">${L.linesNote}</div></details>`;
 }
 // the opponent as the search saw it (the review's opp_options: share, our chance if it takes
 // it -- a guess from the player's view, the opponent's sets unknown) and what it did that turn
@@ -485,6 +512,9 @@ function jumpHTML(d) {
     const did = opts.find(o => o[0] == d.opp_did), q = did ? did[2] : null;
     if (q == null || exp[2] == null) items.push(L.oppOther(oppName(exp[0]), oppName(d.opp_did)));
     else if (Math.abs(q - exp[2]) >= 0.05) items.push((q > exp[2] ? L.oppBetter : L.oppWorse)(oppName(exp[0]), pct(exp[2]), oppName(d.opp_did), pct(q)));
+    // (the line the search expected after your choice and that reply: why it mattered)
+    const line = (d.lines || []).find(l => l.length && l[0].o == d.chosen && l[0].t == exp[0]);
+    if (line && items.length) items.push(L.feared(lineText(line)));
   }
   if (!items.length) items.push(L.jumpUnknown);
   return `<div class="jump"><b>${L.jumpHead(pct(d.value), pct(n.value))}</b><ul>${items.map(x => `<li>${x}</li>`).join("")}</ul></div>`;

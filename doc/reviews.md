@@ -26,8 +26,15 @@ player's chance after each: a guess, the opponent's sets unknown) and what the o
 the winning chance moves by 15 points or more by the next decision, the page says why, from
 templates, no language model: the turn's luck from the log (a critical hit, a miss, a full
 paralysis, a flinch, a thaw that did not come, a hit in confusion) and an opponent's choice that
-left the player 5 points or more better or worse off than the one the search expected; with
-neither, what the turn revealed changed the picture.
+left the player 5 points or more better or worse off than the one the search expected, with the
+line the search feared after it; with neither, what the turn revealed changed the picture.
+
+Each turn also lists the search's main lines, as KataGo shows its variations: for the player's
+two most considered options and the opponent's two likeliest replies to each, the most visited
+choices of both sides for four steps (`alpha_search.ismcts(pv=...)`), played out by the engine
+in every world of the decision -- each step's actives with their median HP and how often one
+fainted. The search's tree does not branch on chance outcomes, so a line is its main
+expectation, not a single game.
 
 ## Using it
 
