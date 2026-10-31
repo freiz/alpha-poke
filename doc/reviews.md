@@ -54,15 +54,21 @@ uv run python scripts/review_game.py <replay URL, id or file> --player <name> --
 - **The list of reviews**: searchable, sortable, with both teams, the result and the scorecard;
   each review can be renamed and noted on (`data/coach/reviews.sqlite`).
 - **The team against the metagame** (`coach.meta`, no language model; shown at once when the team
-  analysis opens): from a snapshot shipped with the app (`scripts/build_meta_knowledge.py`,
-  rebuilt with the team design's monthly update, doc/team_design.md) -- the matchup model's
+  analysis opens): from a snapshot shipped with the app (`scripts/knowledge.py`: fetch, build,
+  validate, promote -- doc/team_design.md) -- the team's archetype (`teams.archetypes`: its style
+  by a classifier fit on the forum's titled teams, leave-one-out 75% against 52% for hand rules;
+  its features by rules; the team's expected score by the style it meets, and the answers to its
+  style where the matchup model and the games agree), the matchup model's
   expected score against the recent metagame and over its hardest fifth (species, rating-adjusted,
   with a teammate term: held-out log loss 0.6896 ratings only, 0.6798 with species, 0.6778 with
   teammates), the threats it fears, each member's rank, counters and usual teammates, the team's
   pairs on the ladder and in the model, the model's swap leads, similar forum / ladder teams, and
   a set-by-set threat check (the damage model: which of the team checks or revenge-kills each
   popular threat's main builds, which it KOs; the sets exact when pasted). Nothing is fetched on
-  the player's computer.
+  the player's computer. A snapshot ships only when its checks pass (`teams.knowledge_checks`:
+  OU legality by the local Showdown's rules, freshness, threat coverage, the model's held-out
+  loss, the archetypes against the forum's titles, the move since the last snapshot, and the
+  damage model against poke-engine); a species banned since is never suggested.
 - **AI commentary** (`coach.llm`): a language model's write-ups on the review page -- the
   player's style (habits, with the turns and numbers that show them, what to practise), the team
   (its make-up, strengths, weaknesses from the type matchups over the team, coverage, speeds and

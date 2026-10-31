@@ -27,6 +27,9 @@ dev = [
     "pytest-xdist>=3.8.0",
     "ruff>=0.16.10",
 ]
+knowledge = [
+    "scikit-learn>=1.9.1",
+]
 train = [
     "safetensors>=0.8.0",
     "torch>=2.14.1",

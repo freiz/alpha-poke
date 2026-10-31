@@ -89,7 +89,7 @@ jobs:
         run: scripts/start_showdown.sh --setup
       - name: Python environment (CPU-only torch)
         run: |
-          uv sync --locked
+          uv sync --locked --group knowledge  # (scikit-learn: the archetypes' style classifier)
           uv pip install --index-url https://download.pytorch.org/whl/cpu torch==2.14.1
           uv pip install safetensors==0.8.0
       - name: pytest (on the repository's fixtures only; no data/, no GPU)

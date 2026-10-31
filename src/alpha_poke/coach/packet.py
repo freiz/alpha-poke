@@ -148,6 +148,7 @@ def _decision(d: dict) -> dict:
 def build(report: dict, row: dict, team: dict | None = None) -> dict:
     """The facts of a review (``team``: the player's pasted sets, species id -> KnownSet as a
     dict, as team.json keeps them)."""
+    from alpha_poke.coach.meta import revealed_archetype
     from alpha_poke.coach.narrate import common_sets
 
     me, opp = report["side"], "p2" if report["side"] == "p1" else "p1"
@@ -168,6 +169,7 @@ def build(report: dict, row: dict, team: dict | None = None) -> dict:
                  "review": {k: report["settings"].get(k) for k in ("ms", "worlds", "repeats")}},
         "teams": teams,
         "opponent_common_sets": common_sets([m["species"] for m in report["teams"][opp]], top=4),
+        "opponent_archetype": revealed_archetype(report["teams"][opp]),
         "metrics": metrics(report),
         "log": _turns(row, me),
         "decisions": [_decision(d) for d in report["decisions"]],

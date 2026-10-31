@@ -57,6 +57,7 @@ SYSTEMS = {
 你会收到这局的 JSON 数据包：双方队伍（you = 玩家，opponent = 对手）、逐回合日志（ME = 玩家，OPP = 对手）、
 玩家每个决策时一个强力搜索 AI 的看法（各选项的胜率估计 win_chance 和思考比例 share、AI 的选择 ai_choice、
 损失 loss、判定 verdict、AI 预计的对手应对和对手实际的选择、AI 预想的走向 ai_lines），以及中英文名对照 names_zh。
+opponent_archetype 是从对手亮出的部分猜的对手流派（style 风格、features 特色、about 打法和一般的克制方法），只是猜测，讲到时说“看起来像”。
 {rules}
 用简体中文写，亲切、具体、适合小朋友，不超过 800 字。分四节：
 1. 总体风格（2-3 句：这局是怎么打的，偏进攻还是稳健，换人多不多，太晶用在哪）
@@ -68,7 +69,9 @@ one game. You get the game's data as JSON: both teams (you = the player, opponen
 turn-by-turn log (ME = the player, OPP = the opponent), and for each of the player's decisions a
 strong search AI's view (each option's estimated win_chance and its share of the AI's thinking,
 the AI's choice ai_choice, the loss, the verdict, the opponent's reply the AI expected and what
-the opponent did, the AI's expected lines ai_lines).
+the opponent did, the AI's expected lines ai_lines). opponent_archetype is the opponent's
+archetype guessed from what it revealed (style, features, about: how it plays and is beaten in
+general) -- a guess: say "looks like".
 {rules}
 Write in English, friendly and concrete for a child, under 500 words. Four sections:
 1. Overall style (2-3 sentences: how the game was played -- aggressive or careful, many
@@ -96,6 +99,10 @@ your_team_pasted 为 false 时，玩家的配置只有这局亮出来的部分�
   或先手打倒（revenge）的对手宝可梦所占比例；unanswered 是谁也接不住的（按出场率排序）；one_answer 只有一只能应对；most_used 是最常见 15 只的完整结果；
   rare_counters 是出场率低于 0.5%、没人能接、还能一击打倒两只以上的冷门天敌；your_sets_exact 为 false 时玩家没亮出的配置是按常见配置推测的；
   counters_by_model 是对局模型看来专门克制这支队伍的宝可梦（不论热门与否，points_against_you 是对你的胜率点数）。
+  archetype 是队伍的流派：style 是风格（受队/平衡/重攻/高速进攻，style_probs 是分类器的把握，它在论坛队伍上的准确率约四分之三，不确定时要说“偏向”），
+  features 是特色（钉子、黏网、天气、戏法空间、双墙、轮转），about 是各流派的打法和一般的克制方法；metagame 里有每个流派在环境中的占比、
+  超出分数预期的战绩、常见成员和克制它的宝可梦 answers（model_logit 是对局模型的估计，games_lift 是对局数据里的实际表现、games 是场次，两者一致才可信）；
+  your_score_by_opponent_style 是这支队伍面对各风格对手的预计胜率，style_vs_style 是这种风格对其他风格的历史表现。
 - 讲威胁时把常见威胁和冷门天敌分开：常见威胁（出场率高）要优先想办法解决；冷门天敌讲清楚遇到时怎么应对就行，不必为它改队。swaps 是把一只换成另一只热门宝可梦后模型估计的变化，
   只是线索（模型看不到配置、分工和配合），提到时要说明这一点；similar_teams 是论坛或天梯上相似的队伍和它们不一样的地方（论坛队伍注意 date：太旧的可能不适合现在的环境）。
   这些数字是统计结果，场次少的不要下结论，天梯胜率里也有玩家水平的因素。
@@ -127,6 +134,14 @@ showed: do not take an unshown part as missing.
   (share < 0.5%) nobody answers that KO two or more of the team (your_sets_exact false: the
   player's unshown parts are the common set's guess); counters_by_model the species the matchup
   model sees countering this team in particular, however rare (points_against_you);
+  archetype the team's archetype: its style (stall / balance / bulky offense / hyper offense;
+  style_probs the classifier's confidence -- about three in four right on the forum's teams: say
+  "leans" when unsure), its features (hazard stack, webs, weather, Trick Room, screens,
+  volt-turn), about how each plays and is beaten in general; metagame per archetype its share,
+  record (margin over the ratings), usual members and answers (model_logit the matchup model's,
+  games_lift what the games show, games how many: trust an answer when both agree);
+  your_score_by_opponent_style the team's expected chance against each style; style_vs_style
+  its style's record against the others;
   swaps the model's change when one member is replaced by a
   popular species -- leads only (the model sees no sets, roles or synergy): say so when you use
   them; similar_teams the forum's and the ladder's teams like this one and what they run instead
@@ -252,6 +267,18 @@ def cached(review_dir: Path, kind: str, lang: str, dec: int | None = None,
     return f.read_text(encoding="utf-8") if f.is_file() else None
 
 
+def _archetype_notes(data: dict, lang: str) -> None:
+    """The archetypes named in the facts, described in ``lang`` (teams.archetypes.ABOUT)."""
+    from alpha_poke.teams import archetypes
+
+    for d in (
+        data.get("opponent_archetype"),
+        ((data.get("team_facts") or {}).get("metagame") or {}).get("archetype"),
+    ):
+        if d:
+            d["about"] = archetypes.notes(d, lang)
+
+
 def write(review_dir: Path, report: dict, row: dict, team: dict | None, kind: str, lang: str,
           settings: dict, dec: int | None = None, question: str | None = None) -> str:  # fmt: skip
     """The ``kind`` write-up of a review in ``lang`` ("zh" / "en"), kept with it; "turn": the
@@ -267,6 +294,7 @@ def write(review_dir: Path, report: dict, row: dict, team: dict | None, kind: st
     else:
         data = (packet.team(report, row, team, review_dir) if kind == "team"
                 else packet.build(report, row, team))  # fmt: skip
+    _archetype_notes(data, lang)
     system = SYSTEMS[kind][lang].replace("{rules}", RULES[lang])
     user = packet.text(data)
     if question:

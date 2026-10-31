@@ -36,8 +36,13 @@ RARE = 0.005  # (a threat's share of the opponents' Pokemon under which it is a 
 
 @functools.cache
 def load(path: Path = SNAPSHOT) -> dict | None:
-    """The shipped snapshot, prepared (None without it)."""
-    return prepare(json.loads(gzip.decompress(path.read_bytes()))) if path.exists() else None
+    """The shipped snapshot, prepared (None without it); "_sha" its file's (facts_kept's key)."""
+    import hashlib
+
+    if not path.exists():
+        return None
+    raw = path.read_bytes()
+    return prepare(json.loads(gzip.decompress(raw))) | {"_sha": hashlib.sha1(raw).hexdigest()[:12]}
 
 
 def prepare(snap: dict) -> dict:
@@ -179,13 +184,15 @@ def threat_coverage(export: str, snap: dict) -> dict | None:
 def counters_by_model(snap: dict, team: list[str], k: int = 5) -> list[dict]:
     """The species the matchup model sees countering this team in particular, however rare: the
     sum of their matchup terms against its six (M; not their strength in general), in points of
-    winning chance at even odds, with their share of the opponents' Pokemon."""
+    winning chance at even odds, with their share of the opponents' Pokemon (never one banned
+    since: the snapshot's "banned")."""
     other = len(snap["_a"]) - 1
+    banned = snap.get("banned") or {}
     ic = [snap["_idx"].get(s, other) for s in team]
     share = {s: u / 6 for s, u in snap["_use"]}
     out = []
     for t, j in snap["_idx"].items():
-        if j == other or t in team:
+        if j == other or t in team or t in banned:
             continue
         hurt = float(-snap["_M"][ic, j].sum())
         out.append(
@@ -215,8 +222,10 @@ def facts(
         has = np.array([s in t for t in snap["_teams"]])
         threats[s] = (float((p[has] * w[has]).sum() / w[has].sum()), round(share, 3))
     ranked = sorted(threats.items(), key=lambda kv: kv[1][0])
-    strength = {s: i + 1 for i, s in enumerate(sorted(snap["model"]["species"][:-1],
-                                                      key=lambda s: -snap["_a"][snap["_idx"][s]]))}  # fmt: skip
+    legal = [s for s in snap["model"]["species"][:-1] if s not in (snap.get("banned") or {})]
+    strength = {
+        s: i + 1 for i, s in enumerate(sorted(legal, key=lambda s: -snap["_a"][snap["_idx"][s]]))
+    }
     members = []
     for s in team:
         sm = snap["smogon"].get(s, {})
@@ -261,6 +270,7 @@ def facts(
     close = [x for x in similar if x["shared"] >= 4] or similar
     similar = sorted(close, key=lambda x: (-x["shared"], -x["model_expected"]))[:5]
     cover = threat_coverage(export[0], snap) if export else None
+    arch = archetype(snap, team, export, p)
     by_model = counters_by_model(snap, team)
     return {
         "about": {"built": snap["built"], **{k: snap["sources"][k] for k in ("games_to", "smogon_month", "meta_days")},
@@ -272,7 +282,7 @@ def facts(
                          for s, (v, sh) in ranked[-3:]],
         "members": members, "cores": cores, "synergy": _synergy(snap, team), "swaps": swaps, "similar_teams": similar,
         "counters_by_model": by_model,
-    } | ({"threat_coverage": cover | {"your_sets_exact": export[1]}} if cover else {})  # fmt: skip
+    } | ({"archetype": arch} if arch else {}) | ({"threat_coverage": cover | {"your_sets_exact": export[1]}} if cover else {})  # fmt: skip
 
 
 def facts_kept(review_dir: Path, team: list[str], export: tuple[str, bool]) -> dict | None:
@@ -284,7 +294,9 @@ def facts_kept(review_dir: Path, team: list[str], export: tuple[str, bool]) -> d
     if snap is None:
         return None
     key = hashlib.sha1(
-        json.dumps([snap["built"], snap["sources"].get("games_to"), team, export]).encode()
+        json.dumps(
+            [snap.get("_sha"), snap["built"], snap["sources"].get("games_to"), team, export]
+        ).encode()
     ).hexdigest()
     f = review_dir / "team_facts.json"
     try:
@@ -299,6 +311,60 @@ def facts_kept(review_dir: Path, team: list[str], export: tuple[str, bool]) -> d
     except OSError:
         pass
     return out
+
+
+def archetype(snap: dict, team: list[str], export: tuple[str, bool] | None, p=None) -> dict | None:
+    """The team's archetype (teams.archetypes: its style by the snapshot's classifier, its
+    features by the rules; from its export -- the pasted sets, else what the game showed plus the
+    usual sets -- else its species alone) and the metagame's numbers for it: per style and feature
+    of the team, the share of the metagame, its record (margin over the Elo expectation), its
+    usual members and its answers (the matchup model's logit against a typical such team, the
+    games' lift, their games); the team's own expected score by the style it meets (the matchup
+    model, ``p`` per composition) and its style's margins against the others."""
+    from alpha_poke.teams import archetypes as A
+
+    arch = snap.get("archetypes")
+    if not arch:
+        return None
+    mons = A.from_export(export[0]) if export else [A.mon(s.replace("-*", "")) for s in team]
+    t = A.tags(mons, arch["model"])
+    out = {"style": t["style"], "style_probs": t["style_probs"], "features": t["features"],
+           "from": "sets" if export else "species only"}  # fmt: skip
+    stats = arch.get("stats") or {}
+    out["metagame"] = {k: {"share": v["share"], "games": v["games"], "margin_over_ratings": v["margin"],
+                           "usual_members": [s for s, *_ in v["members"][:6]],
+                           "answers": [{"species": s, "model_logit": lg, "games_lift": lf, "games": n}
+                                       for s, lg, lf, n in v["answers"][:5]]}
+                       for k, v in stats.items() if k in (t["style"], *t["features"])}  # fmt: skip
+    if p is not None and arch.get("metagame") and len(arch["metagame"]) == len(p):
+        w = snap["_w"]
+        by = {}
+        for style in A.STYLES:
+            has = np.array([tags[0] == style for tags in arch["metagame"]])
+            if has.any():
+                by[style] = {"share": round(float(w[has].sum()), 3),
+                             "expected": round(float((p[has] * w[has]).sum() / w[has].sum()), 3)}  # fmt: skip
+        out["your_score_by_opponent_style"] = by
+    if (arch.get("vs") or {}).get(t["style"]):
+        out["style_vs_style"] = {o: {"games": n, "margin_over_ratings": m}
+                                 for o, (n, m) in arch["vs"][t["style"]].items()}  # fmt: skip
+    return out
+
+
+def revealed_archetype(recs: list[dict], snap: dict | None = None) -> dict | None:
+    """The archetype of a team as a game showed it (the review's records: species, the moves,
+    item and ability seen) -- the opponent's: a guess from what it revealed."""
+    from alpha_poke.teams import archetypes as A
+
+    snap = snap or load()
+    model = ((snap or {}).get("archetypes") or {}).get("model")
+    if not model:
+        return None
+    mons = [A.mon(r["species"].replace("-*", ""), r.get("moves") or (), r.get("item") or "",
+                  r.get("ability") or "") for r in recs]  # fmt: skip
+    t = A.tags(mons, model)
+    return {"style": t["style"], "style_probs": t["style_probs"], "features": t["features"],
+            "from": "what the game revealed"}  # fmt: skip
 
 
 def _synergy(snap: dict, team: list[str]) -> list[dict]:

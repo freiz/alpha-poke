@@ -19,9 +19,13 @@ uv run python scripts/threat_check.py data/derived/teams/pools/robust_candidates
 # 5. stage 2 (GPU, not with self-play): our bot plays each candidate against 100 recent ladder teams
 uv run python scripts/sim_team_pool.py --candidates data/derived/teams/pools/robust_candidates --keep 5
 # 6. scripts/ladder.py / play_public.py --pool data/derived/teams/pools/<the kept pool>
-# 7. the review app's metagame knowledge (its team analysis; shipped with the app, nothing fetched
-#    by the players): rebuild the snapshot from the same games, then commit it
-uv run python scripts/build_meta_knowledge.py   # -> src/alpha_poke/coach/meta_knowledge.json.gz
+# 7. the review app's metagame knowledge (its team analysis and archetypes; shipped with the app,
+#    nothing fetched by the players): one entry -- build a candidate from the same games, check it
+#    (OU legality today, freshness, coverage, the model, the archetypes vs the forum's titles, the
+#    move since the last one, the damage model vs the engine), ship it only if nothing fails;
+#    commit it with its report (data/derived/teams/knowledge/report-<date>.md). Alone (without
+#    steps 1-6): `knowledge.py all --fetch`. After a Showdown update: `knowledge.py check`.
+uv run python scripts/knowledge.py all   # -> src/alpha_poke/coach/meta_knowledge.json.gz
 ```
 
 Sets that only replays show (no forum original) are reconstructed; their accuracy:
@@ -37,6 +41,7 @@ Sets that only replays show (no forum original) are reconstructed; their accurac
 | `check_team_reconstruction.py` | the reconstruction cross-validated against complete forum teams |
 | `build_robust_teams.py` | stage 1: matchup model + recent metagame -> mean / CVaR / worst threat; forum + ladder candidates |
 | `threat_check.py` | answers (check / revenge) to the top threats across their main builds; role slots |
+| `knowledge.py` | the review app's metagame knowledge: status / fetch / build (`build_meta_knowledge.py`) / validate / promote / all / check |
 | `sim_team_pool.py` | stage 2: our bot's results with each candidate against recent ladder teams |
 | `ladder.py`, `play_public.py` | play on the official server (registered bot account; --public) |
 

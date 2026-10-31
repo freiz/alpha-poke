@@ -202,6 +202,11 @@ const T = {
     cardUnanswered: "Nobody answers (by how often they appear)", cardNone: "none",
     cardRare: "Rare counters (worth knowing how to play, not to rebuild for)",
     rareDmg: (m, s, k) => `${m} ${s} (KOs ${k} in one hit)`, rareModel: (m, s, p) => `${m} ${s} (the model: −${p} pts)`,
+    cardArch: (st, p, ft) => `Archetype: ${st} (${p} sure)${ft ? " · " + ft : ""}`, cardArchVs: "Against each style",
+    cardArchAns: "What beats this style (the model and the games agree)",
+    arch: {"stall": "Stall", "balance": "Balance", "bulky offense": "Bulky offense", "hyper offense": "Hyper offense",
+           "hazard stack": "Hazard stack", "webs": "Sticky Web", "rain": "Rain", "sun": "Sun", "sand": "Sand", "snow": "Snow",
+           "trick room": "Trick Room", "screens": "Screens", "volt-turn": "Volt-turn"},
     cardSynergy: "Pairs the model sees work together or not (points)",
     cardSwaps: "The model's leads for a swap", cardSwap: (o, i, g) => `${o} → ${i} (${g} pts)`,
     cardNote: (g, m) => `From the ladder's games to ${g} and Smogon's ${m} statistics. The matchup model sees species and pairs of teammates, not sets; the threat check is a damage calculation with sets.`,
@@ -287,6 +292,11 @@ const T = {
     cardUnanswered: "没人接得住的（按出场频率）", cardNone: "没有",
     cardRare: "冷门天敌（知道怎么应对就行，不必为它改队）",
     rareDmg: (m, s, k) => `${m} ${s}（一击打倒 ${k} 只）`, rareModel: (m, s, p) => `${m} ${s}（模型：−${p} 点）`,
+    cardArch: (st, p, ft) => `流派：${st}（把握 ${p}）${ft ? " · " + ft : ""}`, cardArchVs: "对各风格",
+    cardArchAns: "克制这种风格的宝可梦（模型和对局数据一致）",
+    arch: {"stall": "受队", "balance": "平衡队", "bulky offense": "重攻队", "hyper offense": "高速进攻队",
+           "hazard stack": "钉子队", "webs": "黏网队", "rain": "雨天队", "sun": "晴天队", "sand": "沙暴队", "snow": "雪天队",
+           "trick room": "戏法空间队", "screens": "双墙队", "volt-turn": "轮转队"},
     cardSynergy: "模型看到的队友配合（胜率点数）",
     cardSwaps: "模型给出的换人线索", cardSwap: (o, i, g) => `${o} → ${i}（${g} 点）`,
     cardNote: (g, m) => `来自截至 ${g} 的天梯对局和 Smogon ${m} 的统计。对局模型只看宝可梦种类和两两队友配合，看不到配置；威胁检查是按配置做的伤害计算。`,
@@ -735,7 +745,14 @@ if (LLM_ON) {
     const rare = [], seen = new Set();
     for (const x of (tc ? tc.rare_counters : [])) { seen.add(x.threat); rare.push(L.rareDmg(mon(x.threat), sh(x.share), x.kos_in_one_hit.length)); }
     for (const x of (f.counters_by_model || [])) if (x.share < 0.005 && x.points_against_you >= 1 && !seen.has(x.species)) rare.push(L.rareModel(mon(x.species), sh(x.share), x.points_against_you));
-    return `<div class="tcard"><div><b>${L.cardExp(p(f.expected_vs_metagame), p(f.worst_20pct_of_metagame))}</b></div>
+    // (the archetype: teams.archetypes via coach.meta -- its style, features, chances by the style met;
+    // its answers when the model (>= 0.05 logit) and the games (>= 0.5 points) agree)
+    const ar = f.archetype, an = k => esc(L.arch[k] || k);
+    const arch = ar ? `<div>${L.cardArch(an(ar.style), p(ar.style_probs[ar.style]), ar.features.map(an).join(L.sep))}</div>
+      ${ar.your_score_by_opponent_style ? `<div>${L.cardArchVs}${L.colon}${Object.entries(ar.your_score_by_opponent_style).map(([k, v]) => `${an(k)} ${p(v.expected)}`).join(L.sep)}</div>` : ""}
+      ${(((ar.metagame || {})[ar.style] || {}).answers || []).some(x => x.model_logit >= 0.05 && x.games_lift >= 0.005)
+        ? `<div>${L.cardArchAns}${L.colon}${ar.metagame[ar.style].answers.filter(x => x.model_logit >= 0.05 && x.games_lift >= 0.005).slice(0, 4).map(x => mon(x.species)).join(L.sep)}</div>` : ""}` : "";
+    return `<div class="tcard"><div><b>${L.cardExp(p(f.expected_vs_metagame), p(f.worst_20pct_of_metagame))}</b></div>${arch}
       <div>${L.cardThreats}${L.colon}${th}</div><div>${L.cardMembers(f.members[0].of)}${L.colon}${mem}</div>
       ${tc ? `<div>${L.cardCover(sh(tc.answered_share), tc.checked, sh(tc.checked_share), tc.your_sets_exact)}</div>
              <div>${L.cardUnanswered}${L.colon}${un || L.cardNone}</div>` : ""}

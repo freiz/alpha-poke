@@ -44,3 +44,27 @@ def check(texts: list[str], fmt: str = "gen9ou") -> list[dict]:
         d = json.loads(line)
         out[d.pop("id")] = d
     return [out[i] for i in range(len(texts))]
+
+
+_BANNED_JS = """
+const {Dex} = require(process.argv[1]);
+const fmt = Dex.formats.get(process.argv[2]);
+const rules = Dex.formats.getRuleTable(fmt);
+const out = {};
+for (const name of JSON.parse(require('fs').readFileSync(0, 'utf8'))) {
+  const s = Dex.forFormat(fmt).species.get(name.replace(/-\\*$/, ''));
+  out[name] = !s.exists ? 'unknown' : rules.isBannedSpecies(s) ? `banned (${s.tier})`
+    : s.isNonstandard ? `not in the game (${s.isNonstandard})` : '';
+}
+console.log(JSON.stringify(out));
+"""
+
+
+def banned_species(names: list[str], fmt: str = "gen9ou") -> dict[str, str]:
+    """Species (names, preview "-*" forms too) not allowed in ``fmt`` today by the local Showdown
+    checkout's rules (its tiers, the format's bans, past or unreleased): name -> why."""
+    r = subprocess.run(
+        ["node", "-e", _BANNED_JS, str(SIM), fmt],
+        input=json.dumps(sorted(set(names))), capture_output=True, text=True, check=True, timeout=600,
+    )  # fmt: skip
+    return {k: v for k, v in json.loads(r.stdout).items() if v}
