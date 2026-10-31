@@ -234,11 +234,13 @@ def load_settings(coach: Path) -> dict:
 
 def public_settings(coach: Path) -> dict:
     """What a page may see: the URL, the model, whether a key is set -- never the key --, the
-    persona and the personas to choose from ([id, English name, Chinese name]; "none": no role)."""
+    persona and the personas to choose from ([id, English name, Chinese name, English title,
+    Chinese title]; "none": no role)."""
     s = load_settings(coach)
     return {"base_url": s["base_url"], "model": s["model"], "has_key": bool(s["api_key"]),
             "persona": s["persona"],
-            "personas": [[k, *(p["name"] if p else ("No role", "不扮演角色"))] for k, p in PERSONAS.items()]}  # fmt: skip
+            "personas": [[k, *(p["name"] if p else ("No role", "不扮演角色")), *(p["title"] if p else ("", ""))]
+                         for k, p in PERSONAS.items()]}  # fmt: skip
 
 
 def save_settings(coach: Path, base_url: str, model: str, api_key: str | None,
@@ -259,15 +261,19 @@ def save_settings(coach: Path, base_url: str, model: str, api_key: str | None,
         pass
 
 
-def chat(settings: dict, system: str, user: str, timeout: float = 300) -> str:
-    """One answer of the configured chat model (OpenAI's /chat/completions)."""
+def chat(
+    settings: dict, system: str, user: str, timeout: float = 300, messages: list | None = None
+) -> str:
+    """One answer of the configured chat model (OpenAI's /chat/completions); ``messages``: a
+    conversation after the system prompt (user / assistant turns) instead of ``user`` alone."""
     if not (settings["base_url"] and settings["api_key"] and settings["model"]):
         raise RuntimeError("no_llm")
     r = requests.post(
         settings["base_url"].rstrip("/") + "/chat/completions",
         headers={"Authorization": f"Bearer {settings['api_key']}", "Content-Type": "application/json"},
         json={"model": settings["model"], "temperature": 0.3,
-              "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]},
+              "messages": [{"role": "system", "content": system},
+                           *(messages or [{"role": "user", "content": user}])]},
         timeout=timeout,
     )  # fmt: skip
     if r.status_code != 200:
@@ -341,13 +347,93 @@ def answers(review_dir: Path, dec: int, lang: str) -> list[dict]:
 
 
 def asked(review_dir: Path, lang: str) -> dict[int, int]:
-    """Decision index -> how many answers are kept for it in ``lang``."""
-    out: dict[int, int] = {}
-    for f in review_dir.glob(f"llm-turn-*.{lang}.md"):
-        dec = f.name.split(".")[0].split("-")[2]
-        if dec.isdigit():
-            out[int(dec)] = out.get(int(dec), 0) + 1
+    """Decision index -> how many questions and answers are kept for it in ``lang`` (its thread)."""
+    decs = {f.name.split(".")[0].split("-")[2] for f in review_dir.glob(f"llm-turn-*.{lang}.md")}
+    decs |= {
+        f.name.split(".")[0].split("-")[2] for f in review_dir.glob(f"llm-thread-*.{lang}.json")
+    }
+    return {int(d): n for d in decs if d.isdigit() and (n := len(thread(review_dir, int(d), lang)))}
+
+
+# "ask the AI" as a conversation per decision (2026-10-30, the review page's side panel): the
+# player's questions and the coach's answers, follow-ups with the whole conversation before them
+DEFAULT_QUESTION = {"zh": "AI 为什么这样看这一步？", "en": "Why does the AI see this decision so?"}
+THREAD = {
+    "zh": "\n这是一段关于这一步的对话：像聊天一样直接回答玩家最新的问题，可以接着前面说过的内容，不重复已经讲过的；"
+    "一般不超过 300 字；不用每次都总结或勉励，也不要署名。",
+    "en": "\nThis is a conversation about this decision: answer the player's latest question directly, as "
+    "in a chat, building on what was said and not repeating it; usually under 200 words; no summary "
+    "or encouragement each time, and no signature.",
+}
+
+
+def _thread_file(review_dir: Path, dec: int, lang: str) -> Path:
+    return review_dir / f"llm-thread-{int(dec)}.{lang}.json"
+
+
+def thread(review_dir: Path, dec: int, lang: str) -> list[dict]:
+    """The ``dec``-th decision's conversation in ``lang``: [{"question", "answer", "coach" ([en,
+    zh] name or None)}], the answers kept before the conversations first (answers: question None
+    the default explanation, "" one whose words were not kept)."""
+    out = [{"question": a["question"], "answer": a["text"], "coach": None}
+           for a in answers(review_dir, dec, lang)]  # fmt: skip
+    try:
+        out += json.loads(_thread_file(review_dir, dec, lang).read_text(encoding="utf-8"))[
+            "messages"
+        ]
+    except (OSError, ValueError, KeyError):
+        pass
     return out
+
+
+def clear_thread(review_dir: Path, dec: int, lang: str) -> None:
+    """The ``dec``-th decision's conversation in ``lang`` deleted (and its earlier answers)."""
+    for f in [_thread_file(review_dir, dec, lang), _questions(review_dir, dec, lang),
+              review_dir / f"llm-turn-{int(dec)}.{lang}.md", *review_dir.glob(f"llm-turn-{int(dec)}-*.{lang}.md")]:  # fmt: skip
+        f.unlink(missing_ok=True)
+
+
+def ask(review_dir: Path, report: dict, row: dict, team: dict | None, dec: int, lang: str,
+        settings: dict, question: str | None = None) -> dict:  # fmt: skip
+    """The coach's answer to ``question`` (None: DEFAULT_QUESTION) about the ``dec``-th decision,
+    after the conversation so far (the decision's facts with the first question), appended to
+    the conversation and returned ({"question", "answer", "coach"})."""
+    lang = "zh" if lang == "zh" else "en"
+    if not 0 <= int(dec) < len(report["decisions"]):
+        raise ValueError("no such decision")
+    question = (question or "").strip()[:500] or DEFAULT_QUESTION[lang]
+    data = packet.turn(report, row, team, int(dec))
+    _archetype_notes(data, lang)
+    persona = settings.get("persona", DEFAULT_PERSONA)
+    system = (persona_prompt(persona, lang, chat=True) + SYSTEMS["turn"][lang].replace("{rules}", RULES[lang])
+              + THREAD[lang])  # fmt: skip
+    before = thread(review_dir, dec, lang)
+    label = "\n\n玩家的提问：" if lang == "zh" else "\n\nThe player's question: "
+    messages = []
+    for i, m in enumerate([*before, {"question": question, "answer": None}]):
+        q = m["question"] or DEFAULT_QUESTION[lang]
+        messages.append(
+            {"role": "user", "content": (packet.text(data) + label if i == 0 else "") + q}
+        )
+        if m["answer"] is not None:
+            messages.append({"role": "assistant", "content": m["answer"]})
+    messages[-1]["content"] += reminder(persona, lang)
+    text = chat(settings, system, "", messages=messages).rstrip()
+    bad = unknown_moves(text, report)
+    if bad:
+        text += ("\n\n> 校验提示：这段文字提到的这些招式，双方宝可梦都学不会，对局中也没有出现，可能是模型写错了："
+                 if lang == "zh" else
+                 "\n\n> Check: these moves the text names are not learnable by either team nor used in the game -- "
+                 "likely the model's mistake: ") + ", ".join(bad) + "\n"  # fmt: skip
+    p = PERSONAS.get(persona)
+    m = {"question": question, "answer": text, "coach": list(p["name"]) if p else None}
+    f = _thread_file(review_dir, dec, lang)
+    try:
+        kept = json.loads(f.read_text(encoding="utf-8"))["messages"]
+    except (OSError, ValueError, KeyError):
+        kept = []
+    f.write_text(json.dumps({"messages": [*kept, m]}, ensure_ascii=False), encoding="utf-8")
+    return m
 
 
 def cached(review_dir: Path, kind: str, lang: str, dec: int | None = None,

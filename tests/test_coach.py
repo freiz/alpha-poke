@@ -1023,9 +1023,9 @@ def test_a_language_models_write_up(game, report, tmp_path, monkeypatch):
         "has_key": True,
         "persona": "cynthia",  # (the default coach)
     }
-    assert (
-        "sk-secret" not in json.dumps(pub) and ["none", "No role", "不扮演角色"] in pub["personas"]
-    )
+    assert "sk-secret" not in json.dumps(pub)
+    assert ["none", "No role", "不扮演角色", "", ""] in pub["personas"]
+    assert ["cynthia", "Cynthia", "竹兰", "Champion of Sinnoh", "神奥冠军"] in pub["personas"]
     seen = {}
 
     def chat(settings, system, user, timeout=300):
@@ -1262,3 +1262,42 @@ def test_every_answer_to_a_decision_is_kept_with_its_question(game, report, tmp_
     ]
     assert llm.asked(tmp_path, "zh") == {1: 3, 2: 1} and llm.asked(tmp_path, "en") == {}
     assert llm.answers(tmp_path, 1, "en") == []
+
+
+def test_a_decisions_conversation(game, report, tmp_path, monkeypatch):
+    """coach.llm.ask: the decision's conversation -- the first question with the decision's
+    facts, a follow-up with everything said before it (the answers kept before conversations
+    first), each answer in the coach's voice without a signature; kept, counted, cleared."""
+    from alpha_poke.coach import llm
+
+    sent = []
+    monkeypatch.setattr(llm, "chat", lambda settings, system, user, timeout=300, messages=None:
+                        sent.append((system, messages)) or f"answer {len(sent)}")  # fmt: skip
+    s = {"base_url": "x", "api_key": "k", "model": "m", "persona": "marnie"}
+    (tmp_path / "llm-turn-3.zh.md").write_text("old explanation")
+    a = llm.ask(tmp_path, report, game, None, 3, "zh", s, "为什么不换人？")
+    assert a == {"question": "为什么不换人？", "answer": "answer 1", "coach": ["Marnie", "玛俐"]}
+    system, msgs = sent[0]
+    assert (
+        system.startswith("你以玛俐的身份")
+        and "不要署名" in system
+        and "最后单独一行" not in system
+    )
+    assert [m["role"] for m in msgs] == ["user", "assistant", "user"]
+    assert json.JSONDecoder().raw_decode(msgs[0]["content"])[0]["decision"]  # (the facts first)
+    assert (
+        msgs[0]["content"].endswith(llm.DEFAULT_QUESTION["zh"])
+        and msgs[1]["content"] == "old explanation"
+    )
+    assert msgs[2]["content"].startswith("为什么不换人？") and "玛俐的口吻" in msgs[2]["content"]
+    llm.ask(tmp_path, report, game, None, 3, "zh", s, "那换保姆曼波呢？")
+    assert [m["content"].split("（请用")[0].strip() for m in sent[1][1][2:]] == [
+        "为什么不换人？",
+        "answer 1",
+        "那换保姆曼波呢？",
+    ]
+    t = llm.thread(tmp_path, 3, "zh")
+    assert [m["question"] for m in t] == [None, "为什么不换人？", "那换保姆曼波呢？"]
+    assert llm.asked(tmp_path, "zh") == {3: 3} and llm.thread(tmp_path, 3, "en") == []
+    llm.clear_thread(tmp_path, 3, "zh")
+    assert llm.thread(tmp_path, 3, "zh") == [] and llm.asked(tmp_path, "zh") == {}

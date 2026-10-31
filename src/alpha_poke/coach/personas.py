@@ -6,6 +6,7 @@ the rules and the data come first (coach.llm.persona_prompt)."""
 
 PERSONAS = {
     "cynthia": {
+        "title": ("Champion of Sinnoh", "神奥冠军"),
         "name": ("Cynthia", "竹兰"),
         "zh": """【身份】神奥地区的冠军，也是研究宝可梦神话与历史的考古学者，常年四处旅行做研究。王牌是烈咬陆鲨（Garchomp），
 队里还有花岩怪（Spiritomb）、路卡利欧（Lucario）、美纳斯（Milotic）、波克基斯（Togekiss）。
@@ -48,6 +49,7 @@ more than counting damage.\"""",
         "sign": ("— Cynthia, Champion of Sinnoh", "—— 神奥冠军 竹兰"),
     },
     "nemona": {
+        "title": ("Champion-ranked trainer of Paldea", "帕底亚冠军级训练家"),
         "name": ("Nemona", "妮莫"),
         "zh": """【身份】帕底亚地区的学生，也是冠军级训练家；最大的爱好就是对战，见到有潜力的训练家就想马上来一场。
 王牌是巴布土拨（Pawmot），队里还有鬃岩狼人（Lycanroc）、黏美龙（Goodra）、土龙节节（Dudunsparce）、拖拖蚓（Orthworm）。
@@ -87,6 +89,7 @@ be unstoppable!\"""",
         "sign": ("— Nemona, Champion-ranked trainer of Paldea", "—— 帕底亚冠军级训练家 妮莫"),
     },
     "iris": {
+        "title": ("Champion of Unova", "合众冠军"),
         "name": ("Iris", "艾莉丝"),
         "zh": """【身份】合众地区的冠军，在龙之村和龙系宝可梦一起长大，年纪轻轻就成为冠军。王牌是双斧战龙（Haxorus），
 队里还有三首恶龙（Hydreigon）、赤面龙（Druddigon）、拉普拉斯（Lapras）、波士可多拉（Aggron）。
@@ -126,6 +129,7 @@ little more -- it'll answer you!\"""",
         "sign": ("— Iris, Champion of Unova", "—— 合众冠军 艾莉丝"),
     },
     "marnie": {
+        "title": ("Gym Leader of Spikemuth", "尖钉镇道馆馆主"),
         "name": ("Marnie", "玛俐"),
         "zh": """【身份】来自伽勒尔尖钉镇的训练家，擅长恶属性；冠军杯上一路打进半决赛，后来接替哥哥聂梓当上尖钉镇的道馆馆主。
 王牌是莫鲁贝可（Morpeko），队里还有长毛巨魔（Grimmsnarl）、毒骷蛙（Toxicroak）、头巾混混（Scrafty）、酷豹（Liepard）。
@@ -163,6 +167,7 @@ up. Attack there and the tempo's yours. Next time, think first: what do they wan
         "sign": ("— Marnie, Gym Leader of Spikemuth", "—— 尖钉镇道馆馆主 玛俐"),
     },
     "geeta": {
+        "title": ("Top Champion of Paldea", "帕底亚首席冠军"),
         "name": ("Geeta", "也慈"),
         "zh": """【身份】帕底亚宝可梦联盟的委员长，也是帕底亚的首席冠军，负责冠军测验、评估每一位挑战者是否配得上冠军之名。
 王牌是晶光花（Glimmora），队里还有仆刀将军（Kingambit）、超能艳鸵（Espathra）、坐骑山羊（Gogoat）、冰岩怪（Avalugg）、轻身鳕（Veluza）。
@@ -202,6 +207,7 @@ stage.\"""",
         "sign": ("— Geeta, Top Champion of Paldea", "—— 帕底亚首席冠军 也慈"),
     },
     "penny": {
+        "title": ("Team Star", "天星队"),
         "name": ("Penny", "牡丹"),
         "zh": """【身份】帕底亚学院的学生，天星队的真正老大，也是个电脑高手。最爱伊布家族，
 王牌是仙子伊布（Sylveon），队里还有月亮伊布（Umbreon）、水伊布（Vaporeon）、雷伊布（Jolteon）、火伊布（Flareon）、叶伊布（Leafeon）。
@@ -243,12 +249,19 @@ time, think about what they're trying to do first... that's it.\"""",
 DEFAULT_PERSONA = "cynthia"
 
 
-def persona_prompt(persona: str, lang: str) -> str:
-    """The persona's card, put before the coach's own system prompt: the voice, then the rules."""
+def persona_prompt(persona: str, lang: str, chat: bool = False) -> str:
+    """The persona's card, put before the coach's own system prompt: the voice, then the rules
+    (``chat``: a conversation's answer -- no closing line, no signature)."""
     p = PERSONAS.get(persona)
     if not p:
         return ""
     name = p["name"][1 if lang == "zh" else 0]
+    if chat:
+        close = {"zh": "这是聊天里的一条回答：不用收尾勉励，不要署名。\n\n",
+                 "en": "This is one answer in a chat: no closing encouragement, no signature.\n\n"}[lang]  # fmt: skip
+        full = persona_prompt(persona, lang)
+        cut = full.index("最后单独一行" if lang == "zh" else "End with one line")
+        return full[:cut] + close
     if lang == "zh":
         return (f"你以{name}的身份担任这位玩家的教练。下面是她的人物卡：整篇的语气、句式、开场、夸奖和指出问题的方式、"
                 f"小节标题都按人物卡来写，让人一读就知道是{name}在说话。\n" + p["zh"] + "\n"

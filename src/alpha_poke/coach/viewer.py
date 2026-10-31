@@ -88,11 +88,25 @@ PAGE = r"""<!DOCTYPE html>
                                border: 1px solid var(--line); border-radius: 6px; cursor: pointer; }
   .aihead { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
   .tcard { margin: 8px 0; padding: 8px 10px; background: var(--bg); border-radius: 6px; font-size: 13px; line-height: 1.7; }
-  .askbox { margin-top: 6px; border-top: 1px dashed var(--line); padding-top: 6px; }
-  .askq { margin-top: 8px; font-size: 13px; font-weight: 600; color: var(--muted); }
-  .askrow { display: flex; gap: 6px; } .askrow input { flex: 1; min-width: 0; font: inherit; font-size: 13px; padding: 3px 6px;
-  background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; }
-  .askrow button { font: inherit; font-size: 13px; padding: 3px 10px; background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; cursor: pointer; }
+  .aihead .ask.has { background: var(--ai); color: #fff; border-color: var(--ai); }
+  .askpanel { position: fixed; top: 0; right: 0; z-index: 1000; width: min(460px, 100vw); height: 100vh; display: flex; flex-direction: column;
+          background: var(--panel); border-left: 1px solid var(--line); box-shadow: -6px 0 24px rgba(0,0,0,.18); }
+  .askpanel[hidden] { display: none; }  /* (not .chat: Showdown's battle log lines are .chat) */
+  @media (max-width: 760px) { .askpanel { top: auto; bottom: 0; left: 0; right: 0; width: auto; height: 78vh; border-left: 0; border-top: 1px solid var(--line);
+                                      border-radius: 12px 12px 0 0; box-shadow: 0 -6px 24px rgba(0,0,0,.18); } }
+  .askhead { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  .askhead b { flex: 1; } .askhead button.small { margin-left: 0; }
+  .askhead .x { font-size: 20px; line-height: 1; padding: 0 6px; background: none; border: 0; color: var(--muted); cursor: pointer; }
+  .askbody { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+  .askmsg { max-width: 92%; padding: 8px 10px; border-radius: 10px; font-size: 14px; line-height: 1.6; }
+  .askmsg .who { font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 2px; }
+  .askmsg.me { align-self: flex-end; background: var(--bg); border: 1px solid var(--line); white-space: pre-wrap; }
+  .askmsg.ai { align-self: flex-start; border: 1px solid var(--line); border-left: 3px solid var(--ai); }
+  .askmsg.ai .llmtext { font-size: 14px; }
+  .askfoot { display: flex; gap: 6px; padding: 10px; border-top: 1px solid var(--line); }
+  .askfoot textarea { flex: 1; min-width: 0; font: inherit; font-size: 14px; padding: 6px 8px; resize: vertical;
+                       background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; }
+  .askfoot button { font: inherit; padding: 4px 14px; background: var(--ai); color: #fff; border: 0; border-radius: 6px; cursor: pointer; }
   .llmtext ul, .llmtext ol { margin: 4px 0 4px 20px; padding: 0; } .llmtext blockquote { color: var(--muted); margin: 6px 0; }
   .lines { margin-top: 6px; font-size: 12px; } .lines summary { cursor: pointer; color: var(--muted); }
   .lines ol { margin: 4px 0 4px 18px; padding: 0; } .lines li { margin: 3px 0; }
@@ -121,6 +135,10 @@ __RF_CSS__
   <button data-llm="style"></button><button data-llm="team"></button> <span class="legend" id="llmMsg"></span></div>
   <details id="llmFold" hidden><summary id="llmSum"></summary><div class="llmtext" id="llmText"></div>
     <button id="llmAgain" class="small"></button></details></section>
+<aside class="askpanel" id="chat" hidden><div class="askhead"><b id="chatTitle"></b>
+  <button id="chatClear" class="small"></button><button id="chatClose" class="x"></button></div>
+  <div class="askbody" id="chatBody"></div>
+  <div class="askfoot"><textarea id="chatQ" rows="3" maxlength="500"></textarea><button id="chatSend"></button></div></aside>
 <section class="redobox" id="redobox" hidden><h3 id="redohead"></h3><div class="legend" id="redonote"></div>
 <div class="rf"><label id="whohead"></label><div class="choice" id="who"></div><div class="muted" id="whonote"></div></div>
 __RF_HTML__
@@ -199,7 +217,8 @@ const T = {
     noteTeam: t => t ? " | your team: pasted (exact)" : " | your team: what the game showed, the rest guessed",
     visits: n => `${n.toLocaleString("en")} visits`,
     redo: "↻ Review again, deeper", redoHead: "Review this game again", whoHead: "Whose decisions",
-    llmHead: "AI commentary (a language model, from the review's facts)", llmStyle: "Your playing style", llmAgain: "↻ Write it again",
+    llmHead: "AI commentary (a language model, from the review's facts)",
+    llmHeadBy: (name, title) => `Commentary by ${name}, ${title} (a language model, from the review's facts)`, llmStyle: "Your playing style", llmAgain: "↻ Write it again",
     llmWorking: "The language model is writing… (up to a minute or two)", llmBusy: "Writing…", llmNoSet: "Set a language model on the home page first.",
     llmShow: k => `${k} (click to open or fold)`, llmTeam: "Your team",
     cardExp: (m, w) => `Against the recent metagame (the matchup model, species only): expected ${m}, against its hardest fifth ${w}`,
@@ -216,8 +235,12 @@ const T = {
     cardSynergy: "Pairs the model sees work together or not (points)",
     cardSwaps: "The model's leads for a swap", cardSwap: (o, i, g) => `${o} → ${i} (${g} pts)`,
     cardNote: (g, m) => `From the ladder's games to ${g} and Smogon's ${m} statistics. The matchup model sees species and pairs of teammates, not sets; the threat check is a damage calculation with sets.`,
-    askBtn: "Ask the AI", askPh: "Ask about this decision (optional: empty = why the AI sees it so)", askGo: "Ask", askAgain: "Ask again",
-    askDefault: "Why the AI sees it so", askLost: "(an earlier question: its words were not kept)",
+    askBtn: "Ask the AI", askDefault: "Why the AI sees it so", askLost: "(an earlier question: its words were not kept)",
+    askQ1: c => `Why does the AI see this decision so? Was ${c} right?`,
+    askQ2: (c, b) => `I chose ${c}; the AI preferred ${b}. What's the difference, and why?`,
+    chatTitle: (t, kind) => `Turn ${t} · ${kind}`, chatSend: "Send", chatPh: "Ask about this decision (Enter sends, Shift+Enter a new line)",
+    chatFollow: "Ask a follow-up…", chatClear: "Clear", chatClearSure: "Delete this conversation?", chatClose: "Close",
+    chatAI: "AI coach", chatYou: "You",
     whoNote: "The other player's view is a review of its own (this one stays); a team pasted is that player's.",
     otherView: n => `↔ ${n}'s view`,
     redoNote: "With more searches, more time or your team pasted; when it is done this page shows the new review (in place of this one).",
@@ -290,7 +313,8 @@ const T = {
     noteTeam: t => t ? " ｜ 我方队伍：已粘贴（精确）" : " ｜ 我方队伍：这局亮出来的部分，其余靠猜",
     visits: n => `访问 ${n.toLocaleString("en")} 次`,
     redo: "↻ 用更强的配置重新分析", redoHead: "重新分析这一局", whoHead: "分析谁的决策",
-    llmHead: "AI 解说（语言模型根据复盘数据撰写）", llmStyle: "操作风格评价", llmAgain: "↻ 重新生成",
+    llmHead: "AI 解说（语言模型根据复盘数据撰写）",
+    llmHeadBy: (name, title) => `${title} ${name} 解说（语言模型根据复盘数据撰写）`, llmStyle: "操作风格评价", llmAgain: "↻ 重新生成",
     llmWorking: "语言模型正在撰写……（可能要一两分钟）", llmBusy: "生成中…", llmNoSet: "请先在首页设置语言模型。",
     llmShow: k => `${k}（点击展开 / 收起）`, llmTeam: "队伍分析",
     cardExp: (m, w) => `对近期环境（对局模型，只看宝可梦种类）：期望胜率 ${m}，对最难打的 20% 对手 ${w}`,
@@ -307,8 +331,12 @@ const T = {
     cardSynergy: "模型看到的队友配合（胜率点数）",
     cardSwaps: "模型给出的换人线索", cardSwap: (o, i, g) => `${o} → ${i}（${g} 点）`,
     cardNote: (g, m) => `来自截至 ${g} 的天梯对局和 Smogon ${m} 的统计。对局模型只看宝可梦种类和两两队友配合，看不到配置；威胁检查是按配置做的伤害计算。`,
-    askBtn: "问 AI", askPh: "关于这一步想问什么（可不填：默认解释 AI 为什么这样看）", askGo: "提问", askAgain: "再问一次",
-    askDefault: "AI 为什么这样看", askLost: "（较早的提问：问题原文没有保存）",
+    askBtn: "问 AI", askDefault: "AI 为什么这样看", askLost: "（较早的提问：问题原文没有保存）",
+    askQ1: c => `AI 为什么这样看这一步？我选的${c}对吗？`,
+    askQ2: (c, b) => `我选了${c}，AI 更想${b}，差别在哪里，为什么？`,
+    chatTitle: (t, kind) => `第 ${t} 回合 · ${kind}`, chatSend: "发送", chatPh: "关于这一步想问什么（回车发送，Shift+回车换行）",
+    chatFollow: "继续追问……", chatClear: "清空", chatClearSure: "删除这段对话？", chatClose: "关闭",
+    chatAI: "AI 教练", chatYou: "你",
     whoNote: "换成另一位玩家的视角会另存一份复盘（这一份保留）；贴的队伍算那位玩家的。",
     otherView: n => `↔ ${n} 的视角`,
     redoNote: "可以多搜几次、每次多想一会儿，或者贴上你的队伍；完成后这一页会换成新的结果（替换掉现在这份）。",
@@ -497,7 +525,8 @@ function verdict(d) {
 const pm = se => se ? ` ±${Math.max(1, Math.round(100 * se))}` : "";
 function aiHTML(d) {
   const v = verdict(d), tag = {bad: L.bad, mild: L.mild, same: L.same, ok: L.ok}[v];
-  const di = R.decisions.indexOf(d), ask = LLM_ON ? ` <button class="ask${ASK[di] && ASK[di].open ? " sel" : ""}" data-ask="${di}">${L.askBtn}${ASKED[di] ? ` (${ASKED[di]})` : ""}</button>` : "";
+  const di = R.decisions.indexOf(d), n = ASKED[di] || 0;
+  const ask = LLM_ON ? ` <button class="ask${n ? " has" : ""}${CHAT.dec === di ? " sel" : ""}" data-ask="${di}">${n ? `💬 ${L.askBtn} · ${n}` : L.askBtn}</button>` : "";
   let h = `<div class="aibox"><div class="aihead">${L.aiHead[d.kind] || L.aiHead.turn} <span class="tag ${v == "same" ? "ok" : v}">${tag}</span> <span class="legend">${L.chanceAt(pct(d.value) + pm(d.value_se))}${d.visits ? " · " + L.visits(d.visits) : ""}</span>${ask}</div>`;
   h += `<div class="legend">${L.bars}</div>`;
   h += `<div class="opt head"><span></span><span>${L.winCol}</span><span>${L.shareCol}</span></div>`;
@@ -529,7 +558,7 @@ function aiHTML(d) {
   const b = x => Object.entries(x || {}).map(([k, v]) => (ST[k] || k) + " " + (v > 0 ? "+" + v : v)).join(", ");
   const sideText = (s, label) => `${label}: ${esc(monName(s.active.species))} ${pct(s.active.hp)}${Object.keys(s.boosts || {}).length ? " (" + b(s.boosts) + ")" : ""} · ${L.left(s.alive)}${s.tera_used ? " · " + L.tera : ""}`;
   h += `<div class="state">${sideText(me, L.you)} | ${sideText(op, L.opp)}${Object.keys(me.hazards).length ? " | " + L.hazMe + ": " + b(me.hazards) : ""}${Object.keys(op.hazards).length ? " | " + L.hazOpp + ": " + b(op.hazards) : ""}</div>`;
-  return h + oppHTML(d) + jumpHTML(d) + linesHTML(d) + askHTML(di) + "</div>";
+  return h + oppHTML(d) + jumpHTML(d) + linesHTML(d) + "</div>";
 }
 // the search's principal variations (the review's lines, as KataGo's variations): each step's
 // choices and what the worlds made of them -- the actives' HP (median) and how often one fainted
@@ -736,6 +765,11 @@ if (LLM_ON) {
   const TEXT = {}, btns = [...document.querySelectorAll("[data-llm]")];
   let shown = null;
   document.getElementById("llmhead").textContent = L.llmHead; again.textContent = L.llmAgain;
+  // (the coach chosen on the home page: "<title> <name>'s commentary"; none: the plain heading)
+  fetch("/api/llm-settings").then(r => r.ok ? r.json() : null).then(s => {
+    const p = s && (s.personas || []).find(x => x[0] == s.persona && x[0] != "none");
+    if (p) document.getElementById("llmhead").textContent = UI == "zh" ? L.llmHeadBy(p[2], p[4]) : L.llmHeadBy(p[1], p[3]);
+  }).catch(() => {});
   const label = k => (k == "style" ? L.llmStyle : L.llmTeam) + (TEXT[k] ? " ✓" : "");
   const relabel = () => btns.forEach(b => { b.textContent = label(b.dataset.llm); b.classList.toggle("sel", b.dataset.llm == shown && !fold.hidden); });
   // (the team's: the metagame's numbers first -- coach.meta, no language model -- the write-up under them)
@@ -790,42 +824,84 @@ if (LLM_ON) {
   btns.forEach(b => { b.onclick = () => { const k = b.dataset.llm; if (TEXT[k]) { show(k, true); } else { if (k == "team") show(k, true); make(k); } }; });
   again.onclick = () => { if (shown) make(shown); };
 }
-// a decision asked about (the review page's "ask the AI" under each decision): per decision index
-// {open, answers: [{question, text}] (every one kept, oldest first: coach.llm.answers), busy,
-// asking, error}; the answers fetched the first time it is opened and after each question
-const ASK = {}, ASKED = {};  // (ASKED: decision index -> answers kept, shown on its button)
-function askHTML(i) {
-  const a = ASK[i];
-  if (!a || !a.open) return "";
-  let h = `<div class="askbox"><div class="askrow"><input type="text" id="askq-${i}" placeholder="${esc(L.askPh)}" maxlength="300" />
-    <button data-askgo="${i}" ${a.busy ? "disabled" : ""}>${a.busy ? L.llmBusy : L.askGo}</button></div>`;
-  for (const x of a.answers || []) {
-    // (asking the same again: its old answer gives way to the "writing" line)
-    if (a.busy && x.question === a.asking) continue;
-    const q = x.question === null ? L.askDefault : x.question === "" ? L.askLost : x.question;
-    h += `<div class="askq">${esc(q)}</div><div class="llmtext">${md(x.text)}</div>`;
+// "ask the AI" (2026-10-30): a side panel with the decision's conversation (coach.llm.thread) --
+// a question ready to send or edit, follow-ups, closed at will; the page stays as long as it was.
+// CHAT: the decision shown (null: closed), each decision's messages, busy, the error; ASKED: each
+// decision's count of questions and answers, on its button
+const CHAT = {dec: null, msgs: {}, busy: false, asking: null, error: null}, ASKED = {};
+function chatDefault(i) {
+  const d = R.decisions[i];
+  return d.chosen == d.best || !d.best ? L.askQ1(option(d.chosen)) : L.askQ2(option(d.chosen), option(d.best));
+}
+function chatRender() {
+  const box = document.getElementById("chat"), i = CHAT.dec;
+  if (i === null) { box.hidden = true; return; }
+  const d = R.decisions[i], msgs = CHAT.msgs[i] || [];
+  box.hidden = false;
+  document.getElementById("chatTitle").textContent = L.chatTitle(d.turn, L.aiHead[d.kind] || L.aiHead.turn);
+  let h = "";
+  for (const m of msgs) {
+    const q = m.question === null ? L.askDefault : m.question === "" ? L.askLost : m.question;
+    const who = m.coach ? m.coach[UI == "zh" ? 1 : 0] : L.chatAI;
+    h += `<div class="askmsg me"><div class="who">${L.chatYou}</div>${esc(q)}</div>
+      <div class="askmsg ai"><div class="who">${esc(who)}</div><div class="llmtext">${md(m.answer)}</div></div>`;
   }
-  if (a.busy) h += `<div class="askq">${esc(a.asking === null ? L.askDefault : a.asking)}</div><div class="llmwait">${L.llmWorking}</div>`;
-  if (a.error) h += `<div class="legend">${esc(a.error)}</div>`;
-  return h + "</div>";
+  if (CHAT.busy) h += `<div class="askmsg me"><div class="who">${L.chatYou}</div>${esc(CHAT.asking)}</div><div class="askmsg ai"><div class="llmwait">${L.llmWorking}</div></div>`;
+  if (CHAT.error) h += `<div class="legend">${esc(CHAT.error)}</div>`;
+  const body = document.getElementById("chatBody");
+  body.innerHTML = h; body.scrollTop = body.scrollHeight;
+  const q = document.getElementById("chatQ"), send = document.getElementById("chatSend");
+  q.placeholder = msgs.length ? L.chatFollow : L.chatPh;
+  send.disabled = CHAT.busy; send.textContent = CHAT.busy ? L.llmBusy : L.chatSend;
+  document.getElementById("chatClear").hidden = !msgs.length || CHAT.busy;
+}
+async function chatOpen(i) {
+  const q = document.getElementById("chatQ");
+  if (CHAT.dec !== i) { CHAT.error = null; q.value = ""; }
+  CHAT.dec = i; render(); chatRender();
+  if (!CHAT.msgs[i]) {
+    const j = await llmGet(`kind=turn&dec=${i}&all=1`);
+    CHAT.msgs[i] = j && j.thread || []; ASKED[i] = CHAT.msgs[i].length;
+  }
+  if (!CHAT.msgs[i].length && !q.value) q.value = chatDefault(i);  // (a question ready: edit or send)
+  chatRender(); q.focus();
+}
+function chatClose() { CHAT.dec = null; chatRender(); render(); }
+async function chatSend() {
+  const i = CHAT.dec, q = document.getElementById("chatQ"), text = q.value.trim();
+  if (i === null || CHAT.busy || !text) return;
+  CHAT.busy = true; CHAT.asking = text; CHAT.error = null; q.value = ""; chatRender();
+  try {
+    await llmAsk({kind: "turn", dec: i, question: text});
+    const j = await llmGet(`kind=turn&dec=${i}&all=1`);
+    CHAT.msgs[i] = j && j.thread || []; ASKED[i] = CHAT.msgs[i].length;
+  } catch (err) { CHAT.error = err.message; if (!q.value) q.value = text; }
+  CHAT.busy = false; chatRender(); render();
 }
 if (LLM_ON) {
-  const askLoad = async (i, a) => { const j = await llmGet(`kind=turn&dec=${i}&all=1`); a.answers = j && j.answers || [];
-                                    ASKED[i] = a.answers.length; };
-  llmGet("asked=1").then(j => { if (j && j.asked) { Object.assign(ASKED, j.asked); render(); } });
-  document.addEventListener("click", async e => {
-    const open = e.target.closest("[data-ask]"), go = e.target.closest("[data-askgo]");
-    if (open) {
-      const i = +open.dataset.ask, a = ASK[i] = ASK[i] || {};
-      a.open = !a.open; render();
-      if (a.open && a.answers === undefined) { await askLoad(i, a); render(); }
-    } else if (go) {
-      const i = +go.dataset.askgo, a = ASK[i], q = ((document.getElementById("askq-" + i) || {}).value || "").trim();
-      a.busy = true; a.asking = q || null; a.error = null; render();
-      try { await llmAsk({kind: "turn", dec: i, question: q || null}); await askLoad(i, a); } catch (err) { a.error = err.message; }
-      a.busy = false; render();
-    }
+  document.getElementById("chatClose").textContent = "×";
+  document.getElementById("chatClose").title = L.chatClose;
+  document.getElementById("chatClear").textContent = L.chatClear;
+  document.getElementById("chatClose").onclick = chatClose;
+  document.getElementById("chatSend").onclick = chatSend;
+  document.getElementById("chatClear").onclick = async () => {
+    const i = CHAT.dec;
+    if (i === null || !confirm(L.chatClearSure)) return;
+    try { await fetch("/api/llm-clear", {method: "POST", headers: {"Content-Type": "application/json"},
+                                         body: JSON.stringify({review: DIR, dec: i, lang: UI})}); } catch (e) {}
+    CHAT.msgs[i] = []; ASKED[i] = 0; document.getElementById("chatQ").value = chatDefault(i); chatRender(); render();
+  };
+  document.getElementById("chatQ").addEventListener("keydown", e => {
+    if (e.key == "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); chatSend(); }
   });
+  document.addEventListener("click", e => {
+    const open = e.target.closest("[data-ask]");
+    if (open) { const i = +open.dataset.ask; if (CHAT.dec === i) chatClose(); else chatOpen(i); }
+  });
+  llmGet("asked=1").then(j => { if (j && j.asked) { Object.assign(ASKED, j.asked); render(); } });
+  // (a link to a decision's conversation: #ask=<decision index>)
+  const deep = /^#ask=(\d+)$/.exec(location.hash);
+  if (deep && R.decisions[+deep[1]]) setTimeout(() => chatOpen(+deep[1]), 0);
 }
 if (location.protocol.startsWith("http") && DIR) {
   fetch("/api/redo-info?review=" + encodeURIComponent(DIR)).then(r => r.ok ? r.json() : null).then(info => {
@@ -891,14 +967,10 @@ document.getElementById("curve").addEventListener("click", e => {
 });
 document.addEventListener("keydown", e => {
   // (not while typing: the arrows and "m" belong to the field -- 2026-10-30, the ask box's
-  // left / right moved the replay; Enter in the ask box asks)
+  // left / right moved the replay; Esc closes the "ask the AI" panel)
   const t = e.target;
-  if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) {
-    if (e.key == "Enter" && t.id && t.id.startsWith("askq-") && !e.isComposing) {
-      const b = document.querySelector(`[data-askgo="${t.id.slice(5)}"]`); if (b && !b.disabled) b.click();
-    }
-    return;
-  }
+  if (e.key == "Escape" && CHAT.dec !== null) { chatClose(); return; }
+  if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
   if (e.altKey || e.ctrlKey || e.metaKey) return;
   if (e.key == "ArrowLeft") go(curT - 1);
   if (e.key == "ArrowRight") go(curT + 1);

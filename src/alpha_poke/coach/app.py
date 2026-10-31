@@ -20,7 +20,8 @@ to look, and gets the review page when the search is done. Loopback only; one re
   POST /api/llm-settings      {base_url, model, api_key, persona}: set them (from this computer only)
   POST /api/llm-test          {lang}: a one-line question to the model, its answer
   GET  /api/llm?review=&kind=&lang=[&dec=]   a write-up kept with the review, or null
-  GET  /api/llm?...&kind=turn&dec=&all=1   every answer kept for a decision: {answers: [{question, text}]}
+  GET  /api/llm?...&kind=turn&dec=&all=1   a decision's conversation: {thread: [{question, answer, coach}]}
+  POST /api/llm-clear         {review, dec, lang}: that conversation deleted
   GET  /api/llm?review=&lang=&asked=1      the decisions asked about: {asked: {index: answers}}
   GET  /api/team-facts?review=   what the metagame says of the reviewed player's team (coach.meta)
   POST /api/llm               {review, kind, lang[, dec, question]}: a write-up -> {job}
@@ -129,8 +130,14 @@ class Jobs:
 
         def run(job=self.jobs[jid]):
             try:
-                job["text"] = llm.write(COACH / name, rep, row, team and {k: asdict(v) for k, v in team.items()},
-                                        kind, lang, llm.load_settings(COACH), dec, question)  # fmt: skip
+                sets = team and {k: asdict(v) for k, v in team.items()}
+                if kind == "turn":  # (a decision's conversation: the answer appended to it)
+                    job["text"] = llm.ask(COACH / name, rep, row, sets, dec, lang, llm.load_settings(COACH),
+                                          question)["answer"]  # fmt: skip
+                else:
+                    job["text"] = llm.write(
+                        COACH / name, rep, row, sets, kind, lang, llm.load_settings(COACH)
+                    )
                 job["status"] = "done"
             except Exception as e:  # noqa: BLE001 - shown on the page
                 job["status"], job["error"] = "error", str(e)
@@ -290,9 +297,8 @@ def handler(cache, jobs: Jobs):
             if path == "/api/llm":
                 qs = parse_qs(urlsplit(self.path).query)
                 name = qs.get("review", [""])[0]
-                if REVIEW_NAME.fullmatch(name) and qs.get(
-                    "asked"
-                ):  # (the decisions asked about: counts)
+                # (the decisions asked about: their conversations' lengths)
+                if REVIEW_NAME.fullmatch(name) and qs.get("asked"):
                     lang = "zh" if qs.get("lang", [""])[0] == "zh" else "en"
                     return self._json({"asked": llm.asked(COACH / name, lang)})
                 if not REVIEW_NAME.fullmatch(name) or qs.get("kind", [""])[0] not in llm.KINDS:
@@ -301,10 +307,8 @@ def handler(cache, jobs: Jobs):
                 dec = qs.get("dec", [""])[0]
                 if qs["kind"][0] == "turn" and not dec.isdigit():
                     return self._json({"error": "no such write-up"}, HTTPStatus.NOT_FOUND)
-                if qs["kind"][0] == "turn" and qs.get(
-                    "all"
-                ):  # (every question asked, with its answer)
-                    return self._json({"answers": llm.answers(COACH / name, int(dec), lang)})
+                if qs["kind"][0] == "turn" and qs.get("all"):  # (the decision's conversation)
+                    return self._json({"thread": llm.thread(COACH / name, int(dec), lang)})
                 return self._json({"text": llm.cached(COACH / name, qs["kind"][0], lang,
                                                       int(dec) if dec.isdigit() else None)})  # fmt: skip
             if path == "/api/redo-info":
@@ -373,6 +377,12 @@ def handler(cache, jobs: Jobs):
                         return self._json({"error": message("no_llm", lang) if str(e) == "no_llm" else str(e)},
                                           HTTPStatus.BAD_REQUEST)  # fmt: skip
                     return self._json({"answer": answer})
+                if self.path == "/api/llm-clear":
+                    name = str(body.get("review") or "")
+                    if not REVIEW_NAME.fullmatch(name) or not isinstance(body.get("dec"), int):
+                        return self._json({"error": "no such conversation"}, HTTPStatus.NOT_FOUND)
+                    llm.clear_thread(COACH / name, body["dec"], "zh" if lang == "zh" else "en")
+                    return self._json({"ok": True})
                 if self.path == "/api/llm":
                     if body.get("kind") not in llm.KINDS:
                         return self._json({"error": "unknown kind"}, HTTPStatus.BAD_REQUEST)
