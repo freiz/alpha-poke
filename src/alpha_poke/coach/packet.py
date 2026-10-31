@@ -176,7 +176,7 @@ def build(report: dict, row: dict, team: dict | None = None) -> dict:
     return data
 
 
-def team(report: dict, row: dict, team_sets: dict | None = None) -> dict:
+def team(report: dict, row: dict, team_sets: dict | None = None, review_dir=None) -> dict:
     """The facts for a team's analysis: build's (the game's numbers show what the team met) with
     team_facts, the names again over all of it."""
     from alpha_poke.coach import meta
@@ -185,7 +185,13 @@ def team(report: dict, row: dict, team_sets: dict | None = None) -> dict:
     data["team_facts"] = team_facts(data)
     # (the metagame's view of the team: the shipped snapshot, by species -- coach.meta)
     mine = [m["species"] for m in report["teams"][report["side"]]]
-    facts = meta.facts(mine, export=meta.team_export(report, team_sets)) if len(mine) == 6 else None
+    export = meta.team_export(report, team_sets)
+    if len(mine) != 6:
+        facts = None
+    elif review_dir is not None:
+        facts = meta.facts_kept(review_dir, mine, export)
+    else:
+        facts = meta.facts(mine, export=export)
     if facts:
         data["team_facts"]["metagame"] = facts
     data["names_zh"] = _names(data)

@@ -92,8 +92,11 @@ your_team_pasted 为 false 时，玩家的配置只有这局亮出来的部分�
   expected_vs_metagame 是对局模型估计的、对近期环境的平均胜率，worst_20pct_of_metagame 是最难打的那 20% 对手下的胜率；
   threats_worst 是最怕的热门宝可梦；members 里有每只的强度排名、常见克星 checks_and_counters、常见队友；
   cores 是队里两两组合在天梯上的场次、胜率和超出分数预期的部分；synergy 是对局模型学到的队友配合（两只放在一起比各自单独多出或少掉的胜率点数）；
-  threat_coverage 是按配置做的伤害计算：对每个热门宝可梦的主流配置，队里谁能硬接（check）、谁能先手打倒（revenge）、它能一击打倒队里的谁，
-  unanswered 是谁也接不住的，your_sets_exact 为 false 时玩家没亮出的配置是按常见配置推测的；swaps 是把一只换成另一只热门宝可梦后模型估计的变化，
+  threat_coverage 是按配置做的伤害计算，覆盖出场率 0.05% 以上的所有宝可梦（占对手出场的 98%）：answered_share 是按出场频率算的、队里有人能硬接（check）
+  或先手打倒（revenge）的对手宝可梦所占比例；unanswered 是谁也接不住的（按出场率排序）；one_answer 只有一只能应对；most_used 是最常见 15 只的完整结果；
+  rare_counters 是出场率低于 0.5%、没人能接、还能一击打倒两只以上的冷门天敌；your_sets_exact 为 false 时玩家没亮出的配置是按常见配置推测的；
+  counters_by_model 是对局模型看来专门克制这支队伍的宝可梦（不论热门与否，points_against_you 是对你的胜率点数）。
+- 讲威胁时把常见威胁和冷门天敌分开：常见威胁（出场率高）要优先想办法解决；冷门天敌讲清楚遇到时怎么应对就行，不必为它改队。swaps 是把一只换成另一只热门宝可梦后模型估计的变化，
   只是线索（模型看不到配置、分工和配合），提到时要说明这一点；similar_teams 是论坛或天梯上相似的队伍和它们不一样的地方（论坛队伍注意 date：太旧的可能不适合现在的环境）。
   这些数字是统计结果，场次少的不要下结论，天梯胜率里也有玩家水平的因素。
 - 建议改配置时，只能用 your_common_sets 或 similar_teams 里出现的招式、道具、太晶属性、特性，并说明为什么有用；建议换宝可梦要谨慎，说清楚取舍。
@@ -118,13 +121,19 @@ showed: do not take an unshown part as missing.
   and counters and usual teammates; cores the team's pairs on the ladder (games, win rate, margin
   over the ratings' expectation); synergy the matchup model's teammate term (points of winning
   chance two bring together beyond each alone); threat_coverage the damage calculation set by set
-  -- for each popular threat's main builds, which of the team checks it, which revenge-kills it,
-  which of the team it KOs in one hit, unanswered the ones nobody answers (your_sets_exact false:
-  the player's unshown parts are the common set's guess); swaps the model's change when one member is replaced by a
+  over every species with a share >= 0.05% (98% of the opponents' Pokemon): answered_share the
+  share of the opponents' Pokemon the team checks or revenge-kills, unanswered the ones nobody
+  answers (by share), one_answer, most_used the 15 most used in full, rare_counters rare ones
+  (share < 0.5%) nobody answers that KO two or more of the team (your_sets_exact false: the
+  player's unshown parts are the common set's guess); counters_by_model the species the matchup
+  model sees countering this team in particular, however rare (points_against_you);
+  swaps the model's change when one member is replaced by a
   popular species -- leads only (the model sees no sets, roles or synergy): say so when you use
   them; similar_teams the forum's and the ladder's teams like this one and what they run instead
   (a forum team's date: an old one may not fit today's metagame).
   These are statistics: do not conclude from few games; ladder records are their players' too.
+- Keep common threats and rare counters apart: the common ones (high share) are worth fixing the
+  team for; for a rare counter say how to play it, without rebuilding the team around it.
 - Suggest set changes only from your_common_sets or similar_teams (moves, items, tera types,
   abilities) and say why each helps; suggest replacing a Pokémon only carefully, with the trade-off.
 Write in English, friendly and concrete for a child, under 600 words. Five sections:
@@ -256,7 +265,8 @@ def write(review_dir: Path, report: dict, row: dict, team: dict | None, kind: st
             raise ValueError("no such decision")
         data = packet.turn(report, row, team, int(dec))
     else:
-        data = packet.team(report, row, team) if kind == "team" else packet.build(report, row, team)
+        data = (packet.team(report, row, team, review_dir) if kind == "team"
+                else packet.build(report, row, team))  # fmt: skip
     system = SYSTEMS[kind][lang].replace("{rules}", RULES[lang])
     user = packet.text(data)
     if question:

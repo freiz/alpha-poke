@@ -1107,19 +1107,48 @@ def test_the_metagame_facts_of_a_team():
     ladder = next(x for x in f["similar_teams"] if x["source"] == "ladder")
     assert ladder["they_have"] == ["G"] and ladder["games"] == 50
     assert f["synergy"] == [{"pair": ["B", "C"], "points": 10.0}]
+    assert (
+        f["counters_by_model"][0]["species"] == "G"
+        and f["counters_by_model"][0]["points_against_you"] > 30
+    )
     assert "threat_coverage" not in f  # (no builds in the snapshot, no export)
 
 
-def test_threat_coverage_set_by_set():
-    """coach.meta.threat_coverage (teams.threats' damage checks): a Ground-only Great Tusk is
-    checked by a Corviknight (immune, its Brave Bird hits back hard) and KOs nothing; a team
-    without such an answer leaves it unanswered."""
+def test_threat_coverage_set_by_set(tmp_path):
+    """coach.meta.threat_coverage (teams.threats' damage checks) over the snapshot's threats with
+    their shares: a Ground-only Great Tusk is checked by a Corviknight (immune, its Brave Bird hits
+    back hard); a rare Choice Specs Chandelure nobody answers that KOs both is a rare counter; the answered
+    share is weighted by how often each appears. facts_kept keeps it with the review."""
     from alpha_poke.coach import meta
 
     tusk = "Great Tusk @ Booster Energy\nAbility: Protosynthesis\nEVs: 252 Atk / 4 Def / 252 Spe\nJolly Nature\n- Headlong Rush\n- Earthquake"
+    lure = "Chandelure @ Choice Specs\nAbility: Flash Fire\nEVs: 252 SpA / 4 SpD / 252 Spe\nTimid Nature\n- Overheat\n- Shadow Ball"
     corv = "Corviknight @ Leftovers\nAbility: Pressure\nEVs: 252 HP / 252 Atk / 4 Def\nAdamant Nature\n- Brave Bird\n- Body Press"
-    blissey = "Blissey @ Leftovers\nAbility: Natural Cure\nEVs: 252 HP / 252 Def / 4 SpD\nBold Nature\n- Seismic Toss\n- Soft-Boiled"
-    snap = {"threats": {"Great Tusk": [[1.0, tusk]]}}
-    c = meta.threat_coverage(corv + "\n\n" + blissey, snap)
-    assert c["threats"][0]["answered_by"] == ["corviknight(check)"] and c["unanswered"] == []
-    assert meta.threat_coverage(blissey, snap)["unanswered"] == ["Great Tusk"]
+    pichu = "Pichu\nAbility: Static\nEVs: 4 HP\nSerious Nature\n- Thunder Shock"
+    snap = {"threats": {"Great Tusk": {"share": 0.06, "builds": [[1.0, tusk]]},
+                        "Chandelure": {"share": 0.003, "builds": [[1.0, lure]]}}}  # fmt: skip
+    c = meta.threat_coverage(corv + "\n\n" + pichu, snap)
+    tusk_row = next(x for x in c["most_used"] if x["threat"] == "Great Tusk")
+    assert tusk_row["answered_by"] == ["corviknight(check)"]
+    assert [x["threat"] for x in c["unanswered"]] == ["Chandelure"]
+    assert [x["threat"] for x in c["rare_counters"]] == ["Chandelure"]
+    assert c["answered_share"] == round(0.06 / 0.063, 3) and c["checked"] == 2
+    assert meta.threat_coverage(pichu, snap)["answered_share"] == 0.0
+
+
+def test_the_team_facts_are_kept_with_the_review(tmp_path, monkeypatch):
+    """coach.meta.facts_kept: computed once per snapshot and team export, then read back."""
+    from alpha_poke.coach import meta
+
+    snap = {"built": "x", "sources": {"games_to": "y"}}
+    monkeypatch.setattr(meta, "load", lambda: snap)
+    calls = []
+    monkeypatch.setattr(
+        meta, "facts", lambda team, s, export: calls.append(team) or {"n": len(calls)}
+    )
+    team, export = ["A"] * 6, ("A", True)
+    assert meta.facts_kept(tmp_path, team, export) == {"n": 1}
+    assert meta.facts_kept(tmp_path, team, export) == {"n": 1} and len(calls) == 1
+    assert meta.facts_kept(tmp_path, team, ("B", True)) == {"n": 2}  # (another team: again)
+    snap["built"] = "z"
+    assert meta.facts_kept(tmp_path, team, ("B", True)) == {"n": 3}  # (a new snapshot: again)

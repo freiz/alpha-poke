@@ -270,16 +270,20 @@ def handler(cache, jobs: Jobs):
             if path == "/api/llm-settings":
                 return self._json(llm.public_settings(COACH))
             if path == "/api/team-facts":
+                name = parse_qs(urlsplit(self.path).query).get("review", [""])[0]
                 try:
-                    rep, _, team = stored(
-                        parse_qs(urlsplit(self.path).query).get("review", [""])[0]
-                    )
+                    rep, _, team = stored(name)
                 except Refused:
                     return self._json({"error": "no such review"}, HTTPStatus.NOT_FOUND)
                 mine = [m["species"] for m in rep["teams"][rep["side"]]]
                 export = meta.team_export(rep, team and {k: asdict(v) for k, v in team.items()})
+                # (kept with the review: the threat check runs once per team and snapshot)
                 return self._json(
-                    {"facts": meta.facts(mine, export=export) if len(mine) == 6 else None}
+                    {
+                        "facts": meta.facts_kept(COACH / name, mine, export)
+                        if len(mine) == 6
+                        else None
+                    }
                 )
             if path == "/api/llm":
                 qs = parse_qs(urlsplit(self.path).query)

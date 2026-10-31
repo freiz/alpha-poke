@@ -11,9 +11,11 @@ It holds:
             newest time): the --top species by games (the rest "other"), their strength a, the
             matchup matrix M and the teammate matrix S (rounded); its held-out log loss beside the
             model without S
-  threats   the metagame's --threats most used species' main builds (scripts/threat_check: the
-            belief's set archetypes as exports with Smogon spreads), for coach.meta's set-by-set
-            threat coverage
+  threats   every species of the metagame with a share of its Pokemon >= --threat-share, with that
+            share and its main builds (scripts/threat_check: the belief's set archetypes as exports
+            with Smogon spreads; 3 for the --threats most used, 2 for the rest), for coach.meta's
+            set-by-set threat check -- 123 species, 98% of the opponents' Pokemon, 2026-10-30: the
+            15 most used were half of them, a rare counter of the team went unseen
   metagame  the compositions played by players >= --meta-elo in the last --meta-days, each game
             weighted 0.5 ** (age / --meta-half-life) (build_robust_teams.metagame): the --meta-teams
             heaviest, with their weights
@@ -85,8 +87,9 @@ def compact_model(model, g: pd.DataFrame, top: int) -> dict:
     return out
 
 
-def threat_builds(meta: pd.Series, k: int) -> dict:
-    """The metagame's k most used species (by weight) -> [[weight, export]] of their main builds."""
+def threat_builds(meta: pd.Series, k: int, min_share: float) -> dict:
+    """The metagame's species with a share of its Pokemon >= ``min_share`` -> {"share", "builds":
+    [[weight, export]]}: 3 builds for the k most used, 2 for the rest."""
     from alpha_poke.agents.belief_state import BeliefModel
     from alpha_poke.data.smogon_stats import UsageStats
     from alpha_poke.teams.replay_pool import PREVIEW_FORMS
@@ -95,12 +98,15 @@ def threat_builds(meta: pd.Series, k: int) -> dict:
     for team, w in meta.items():
         for s in team.split("|"):
             use[s] = use.get(s, 0.0) + w
-    names = sorted(use, key=lambda s: -use[s])[:k]
+    total = sum(use.values())
+    names = [s for s in sorted(use, key=lambda s: -use[s]) if use[s] / total >= min_share]
     months = sorted(p.name for p in DEFAULT_DIR.iterdir() if p.is_dir())
     stats = UsageStats.load(DEFAULT_DIR / months[-1] / "chaos" / "gen9ou-1500.json")
     belief = BeliefModel.load()
-    return {n: [[round(w, 3), text] for w, text in threat_check.threat_sets(belief, stats, PREVIEW_FORMS.get(n, n), 3, 0.15)]
-            for n in names}  # fmt: skip
+    return {n: {"share": round(use[n] / total, 5),
+                "builds": [[round(w, 3), text] for w, text in
+                           threat_check.threat_sets(belief, stats, PREVIEW_FORMS.get(n, n), 3 if i < k else 2, 0.15)]}
+            for i, n in enumerate(names)}  # fmt: skip
 
 
 def smogon() -> tuple[str, dict]:
@@ -151,7 +157,13 @@ def main() -> None:
     ap.add_argument("--core-min", type=int, default=300)
     ap.add_argument("--min-elo", type=int, default=1600, help="(the ladder's: as top_ladder_teams)")
     ap.add_argument("--ladder", type=int, default=300)
-    ap.add_argument("--threats", type=int, default=15)
+    ap.add_argument("--threats", type=int, default=60, help="the most used: 3 builds each")
+    ap.add_argument(
+        "--threat-share",
+        type=float,
+        default=0.0005,
+        help="a threat's share of the metagame's Pokemon",
+    )
     ap.add_argument("--out", default=str(SNAPSHOT))
     a = ap.parse_args()
 
@@ -175,7 +187,7 @@ def main() -> None:
                     "meta_days": a.meta_days, "meta_elo": a.meta_elo, "smogon_month": month,
                     "core_days": a.core_days, "forum_teams": len(forum), "model_val": val},
         "model": m,
-        "threats": threat_builds(meta, a.threats),
+        "threats": threat_builds(meta, a.threats, a.threat_share),
         "metagame": [[k, round(float(w), 4)] for k, w in meta.items()],
         "smogon": smog,
         "cores": cores(g, a.core_days, a.meta_elo, a.core_min, set(m["species"])),

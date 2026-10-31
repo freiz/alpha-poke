@@ -30,7 +30,8 @@ from pathlib import Path
 import numpy as np
 
 SNAPSHOT = Path(__file__).with_name("meta_knowledge.json.gz")
-TAIL, THREATS, SWAP_POOL = 0.2, 15, 40
+TAIL, THREATS, SWAP_POOL = 0.2, 30, 40
+RARE = 0.005  # (a threat's share of the opponents' Pokemon under which it is a rare one)
 
 
 @functools.cache
@@ -139,7 +140,11 @@ def team_export(report: dict, team_sets: dict | None = None) -> tuple[str, bool]
 
 
 def threat_coverage(export: str, snap: dict) -> dict | None:
-    """Set by set: per threat (the snapshot's builds) which of the team answers it, which it KOs."""
+    """Set by set (teams.threats' damage checks) against every threat of the snapshot (its species
+    with a share of the opponents' Pokemon >= 0.05%: 98% of them): the share of the opponents'
+    Pokemon the team answers (checks or revenge-kills in every main build), the unanswered and the
+    singly answered by share, the 15 most used in full, and the rare ones (share < RARE) nobody
+    answers that KO two or more of the team in one hit -- a counter its rarity would hide."""
     from alpha_poke.teams.threats import answers, ko_by, own_views
 
     if not snap.get("threats"):
@@ -149,17 +154,48 @@ def threat_coverage(export: str, snap: dict) -> dict | None:
     except Exception:  # noqa: BLE001 - an export poke-env cannot read: no coverage
         return None
     out = []
-    for name, builds in snap["threats"].items():
+    for name, t in snap["threats"].items():
+        share, builds = (t["share"], t["builds"]) if isinstance(t, dict) else (None, t)
         views = [(w, own_views(text)[0]) for w, text in builds]
+        out.append({"threat": name, "share": share, "answered_by": answers(ours, views),
+                    "kos_in_one_hit": ko_by(ours, views)})  # fmt: skip
+    total = sum(x["share"] or 0 for x in out)
+    by_share = sorted(out, key=lambda x: -(x["share"] or 0))
+
+    def brief(x):
+        return {"threat": x["threat"], "share": x["share"], "kos_in_one_hit": x["kos_in_one_hit"]}
+
+    return {
+        "checked": len(out), "checked_share": round(total, 3),
+        "answered_share": round(sum(x["share"] or 0 for x in out if x["answered_by"]) / total, 3) if total else None,
+        "unanswered": [brief(x) for x in by_share if not x["answered_by"]][:10],
+        "one_answer": [brief(x) | {"answered_by": x["answered_by"]} for x in by_share if len(x["answered_by"]) == 1][:10],
+        "rare_counters": sorted((brief(x) for x in out if not x["answered_by"] and (x["share"] or 0) < RARE
+                                 and len(x["kos_in_one_hit"]) >= 2), key=lambda x: -len(x["kos_in_one_hit"]))[:5],
+        "most_used": by_share[:15],
+    }  # fmt: skip
+
+
+def counters_by_model(snap: dict, team: list[str], k: int = 5) -> list[dict]:
+    """The species the matchup model sees countering this team in particular, however rare: the
+    sum of their matchup terms against its six (M; not their strength in general), in points of
+    winning chance at even odds, with their share of the opponents' Pokemon."""
+    other = len(snap["_a"]) - 1
+    ic = [snap["_idx"].get(s, other) for s in team]
+    share = {s: u / 6 for s, u in snap["_use"]}
+    out = []
+    for t, j in snap["_idx"].items():
+        if j == other or t in team:
+            continue
+        hurt = float(-snap["_M"][ic, j].sum())
         out.append(
             {
-                "threat": name,
-                "answered_by": answers(ours, views),
-                "kos_in_one_hit": ko_by(ours, views),
+                "species": t,
+                "points_against_you": round(100 * hurt / 4, 1),
+                "share": round(float(share.get(t, 0.0)), 4),
             }
         )
-    return {"threats": out, "unanswered": [x["threat"] for x in out if not x["answered_by"]],
-            "one_answer": [x["threat"] for x in out if len(x["answered_by"]) == 1]}  # fmt: skip
+    return sorted(out, key=lambda x: -x["points_against_you"])[:k]
 
 
 def facts(
@@ -225,6 +261,7 @@ def facts(
     close = [x for x in similar if x["shared"] >= 4] or similar
     similar = sorted(close, key=lambda x: (-x["shared"], -x["model_expected"]))[:5]
     cover = threat_coverage(export[0], snap) if export else None
+    by_model = counters_by_model(snap, team)
     return {
         "about": {"built": snap["built"], **{k: snap["sources"][k] for k in ("games_to", "smogon_month", "meta_days")},
                   "note": "species only: the model knows no sets; ladder records are their players' too"},
@@ -234,7 +271,34 @@ def facts(
         "threats_best": [{"species": s, "score_vs_teams_with_it": round(v, 3), "metagame_share": sh}
                          for s, (v, sh) in ranked[-3:]],
         "members": members, "cores": cores, "synergy": _synergy(snap, team), "swaps": swaps, "similar_teams": similar,
+        "counters_by_model": by_model,
     } | ({"threat_coverage": cover | {"your_sets_exact": export[1]}} if cover else {})  # fmt: skip
+
+
+def facts_kept(review_dir: Path, team: list[str], export: tuple[str, bool]) -> dict | None:
+    """facts, kept with the review (team_facts.json): computed again only when the snapshot or the
+    team's export changed (the threat check takes a few seconds)."""
+    import hashlib
+
+    snap = load()
+    if snap is None:
+        return None
+    key = hashlib.sha1(
+        json.dumps([snap["built"], snap["sources"].get("games_to"), team, export]).encode()
+    ).hexdigest()
+    f = review_dir / "team_facts.json"
+    try:
+        kept = json.loads(f.read_text(encoding="utf-8"))
+        if kept.get("key") == key:
+            return kept["facts"]
+    except (OSError, ValueError):
+        pass
+    out = facts(team, snap, export)
+    try:
+        f.write_text(json.dumps({"key": key, "facts": out}, ensure_ascii=False), encoding="utf-8")
+    except OSError:
+        pass
+    return out
 
 
 def _synergy(snap: dict, team: list[str]) -> list[dict]:
