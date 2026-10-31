@@ -53,9 +53,17 @@ uv run python scripts/review_game.py <replay URL, id or file> --player <name> --
 - **Review again**: on the review page, with a deeper setting or from the other player's view.
 - **The list of reviews**: searchable, sortable, with both teams, the result and the scorecard;
   each review can be renamed and noted on (`data/coach/reviews.sqlite`).
-- **A write-up** (`review_game.py --llm`): an OpenAI-compatible chat model (`.env`:
-  `COACH_LLM_*`) writes a coach's summary from the numbers only; the moves it names are checked
-  against the teams' learnsets.
+- **AI commentary** (`coach.llm`): a language model's write-up on the review page -- for now
+  the player's style (habits, with the turns and numbers that show them, what to practise). Its
+  address (any OpenAI-compatible API), key and model are set on the home page; the key stays in
+  the data directory (`coach/llm.json`, this computer's only, settable from it alone) and is never
+  sent back to a page. The model gets the review's facts (`coach.packet`, about 27,000 tokens for
+  a 40-turn game, so a capable model): both teams with their types, base stats, matchups and the
+  moves seen, the ladder's common sets, the log, every decision's numbers, and Showdown's Chinese
+  names for all of them -- it is told to use only these, in English or in Chinese with those
+  names. Every move it names, in either language, is checked against the teams' learnsets and
+  the moves used; a write-up is kept with its review. `review_game.py --llm` writes the older
+  summary (`.env`: `COACH_LLM_*`).
 
 The page shows Showdown's own replay player beside the review. Showdown's client (AGPL-3.0) is
 fetched once into `data/coach/client/` and served unmodified for local viewing, never committed.

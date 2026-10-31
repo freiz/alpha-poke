@@ -16,6 +16,12 @@ to look, and gets the review page when the search is done. Loopback only; one re
   GET  /api/reviews?q=&sort=&order=&page=&size=   the home page's list (coach.index.query)
   GET  /api/redo-info?review= what the review page's "review again" form needs
   GET  /coach/<review>/viewer.html   the review page, rendered anew (the current page's code)
+  GET  /api/llm-settings      the language model's URL and model, whether a key is set (coach.llm)
+  POST /api/llm-settings      {base_url, model, api_key}: set them (from this computer only)
+  POST /api/llm-test          {lang}: a one-line question to the model, its answer
+  GET  /api/llm?review=&kind=&lang=   a write-up kept with the review, or null
+  POST /api/llm               {review, kind, lang}: a write-up -> {job} (GET /api/job/<id>:
+                              {status, text, error})
 """
 
 import json
@@ -30,7 +36,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
 from alpha_poke import paths
-from alpha_poke.coach import form, index, narrate, replays, server, viewer
+from alpha_poke.coach import form, index, llm, narrate, replays, server, viewer
 from alpha_poke.coach.review import decision_count, review
 from alpha_poke.coach.team import KnownSet, TeamError, load_team, match_team
 from alpha_poke.replay import parse_replay
@@ -65,6 +71,10 @@ MESSAGES = {
                    "zh": "PokéPaste 链接读取失败（{names}）。"},
     "team_mismatch": {"en": "The team does not fit this game ({names}).",
                       "zh": "队伍和这局对不上（{names}）。"},
+    "no_llm": {"en": "Set the language model first (the home page: its URL, key and model).",
+               "zh": "请先在首页设置语言模型（地址、Key、模型名）。"},
+    "local_only": {"en": "The language model can only be set on the computer the app runs on.",
+                   "zh": "语言模型只能在运行这个 app 的电脑上设置。"},
 }  # fmt: skip
 
 
@@ -104,6 +114,24 @@ class Jobs:
     def max_parallel(self) -> int:
         """Searches at once the machine has the cores for (each ``threads`` threads)."""
         return max(1, (os.cpu_count() or 2) // self.threads)
+
+    def write_up(self, name: str, kind: str, lang: str) -> str:
+        """A language model's write-up of the review ``name`` (coach.llm), on its own thread: a
+        review's searches do not hold it up."""
+        rep, row, team = stored(name)
+        jid = uuid.uuid4().hex[:12]
+        self.jobs[jid] = {"status": "running", "text": None, "error": None}
+
+        def run(job=self.jobs[jid]):
+            try:
+                job["text"] = llm.write(COACH / name, rep, row, team and {k: asdict(v) for k, v in team.items()},
+                                        kind, lang, llm.load_settings(COACH))  # fmt: skip
+                job["status"] = "done"
+            except Exception as e:  # noqa: BLE001 - shown on the page
+                job["status"], job["error"] = "error", str(e)
+
+        threading.Thread(target=run, daemon=True).start()
+        return jid
 
     def submit(self, row: dict, player: str, strength, team=None, parallel: int = 2) -> str:
         """``strength``: a preset's name or (worlds, ms, repeats); ``team``: the player's sets
@@ -236,6 +264,15 @@ def handler(cache, jobs: Jobs):
                 return self._send(HOME.encode(), "text/html; charset=utf-8")
             if path == "/api/reviews":
                 return self._json(reviews(parse_qs(urlsplit(self.path).query)))
+            if path == "/api/llm-settings":
+                return self._json(llm.public_settings(COACH))
+            if path == "/api/llm":
+                qs = parse_qs(urlsplit(self.path).query)
+                name = qs.get("review", [""])[0]
+                if not REVIEW_NAME.fullmatch(name) or qs.get("kind", [""])[0] not in llm.KINDS:
+                    return self._json({"error": "no such write-up"}, HTTPStatus.NOT_FOUND)
+                lang = "zh" if qs.get("lang", [""])[0] == "zh" else "en"
+                return self._json({"text": llm.cached(COACH / name, qs["kind"][0], lang)})
             if path == "/api/redo-info":
                 try:
                     rep, row, team = stored(
@@ -285,6 +322,31 @@ def handler(cache, jobs: Jobs):
             try:
                 body = json.loads(self.rfile.read(min(n, 20_000_000)) or b"{}")
                 lang = body.get("lang") or "en"
+                if self.path in ("/api/llm-settings", "/api/llm-test"):
+                    # (the key: set from this computer only -- the app on the network (--lan) too)
+                    if self.client_address[0] not in ("127.0.0.1", "::1", "::ffff:127.0.0.1"):
+                        return self._json(
+                            {"error": message("local_only", lang)}, HTTPStatus.FORBIDDEN
+                        )
+                    if self.path == "/api/llm-settings":
+                        llm.save_settings(COACH, str(body.get("base_url") or ""), str(body.get("model") or ""),
+                                          str(body.get("api_key") or "") or None)  # fmt: skip
+                        return self._json(llm.public_settings(COACH))
+                    try:
+                        answer = llm.chat(llm.load_settings(COACH), "Answer in one short line.",
+                                          "Say hello in Chinese and English.", timeout=60)  # fmt: skip
+                    except Exception as e:  # noqa: BLE001 - shown on the page
+                        return self._json({"error": message("no_llm", lang) if str(e) == "no_llm" else str(e)},
+                                          HTTPStatus.BAD_REQUEST)  # fmt: skip
+                    return self._json({"answer": answer})
+                if self.path == "/api/llm":
+                    if body.get("kind") not in llm.KINDS:
+                        return self._json({"error": "unknown kind"}, HTTPStatus.BAD_REQUEST)
+                    if not llm.public_settings(COACH)["has_key"]:
+                        raise Refused("no_llm")
+                    return self._json(
+                        {"job": jobs.write_up(str(body.get("review") or ""), body["kind"], lang)}
+                    )
                 if self.path == "/api/meta":  # (a review renamed / noted on: its id and link stay)
                     index.sync(COACH, stored)
                     if not index.set_meta(COACH, str(body.get("review") or ""), str(body.get("title") or ""),
@@ -433,6 +495,15 @@ __RF_HTML__
     </div>
     <div class="err" id="err"></div>
   </div></section>
+  <section><details id="llm"><summary><b data-t="llmHead"></b> <span class="muted" id="llmState"></span></summary>
+    <div class="narrow">
+      <div class="muted" data-t="llmNote"></div>
+      <label for="llmUrl" data-t="llmUrl"></label><input type="text" id="llmUrl" placeholder="https://api.openai.com/v1" />
+      <label for="llmModel" data-t="llmModel"></label><input type="text" id="llmModel" placeholder="gpt-4.1" />
+      <label for="llmKey" data-t="llmKey"></label><input type="password" id="llmKey" autocomplete="off" />
+      <div><button class="go" id="llmSave" data-t="llmSave"></button> <button id="llmTest" data-t="llmTest"></button></div>
+      <div class="muted" id="llmOut"></div>
+    </div></details></section>
   <section>
     <div class="lhead"><b data-t="past"></b><input type="search" id="q" />
       <label><span data-t="perPage"></span> <select id="size"><option>10</option><option>20</option><option>50</option><option>100</option></select></label></div>
@@ -458,7 +529,11 @@ const T = {
        colReviewed: "Reviewed", colNote: "Note", edit: "Rename / note", teamPasted: "team pasted", pts: "pts",
        titlePh: "Name (empty: the players)", notePh: "Note", save: "Save", cancel: "Cancel",
        pageOf: (p, n, t) => `page ${p} of ${n} · ${t} reviews`,
-       won: "won", lost: "lost", drawn: "tie", turns: n => `${n} turns`},
+       won: "won", lost: "lost", drawn: "tie", turns: n => `${n} turns`,
+       llmHead: "Language model (AI commentary)", llmUrl: "API address (OpenAI-compatible)", llmModel: "Model",
+       llmKey: "API key", llmSave: "Save", llmTest: "Test", llmSet: "set", llmUnset: "not set",
+       llmKeySet: "a key is set (leave empty to keep it)", llmSaved: "Saved.", llmTesting: "Asking the model…",
+       llmNote: "For the review pages' AI commentary. A capable model is recommended: a game's facts are about 30,000 tokens. The key stays on this computer and is sent only to this address."},
   zh: {title: "对局复盘", ui: "界面",
        intro: "AI 从你的视角重新思考你的每一步：每个选择的胜率、AI 的选择、关键失误。只支持 Gen 9 OU。全部在你的电脑上运行。",
        link: "Showdown 回放链接或编号", fileLabel: "或者选择保存的回放文件（.html / .json / .log）", load: "读取对局",
@@ -469,7 +544,11 @@ const T = {
        colReviewed: "复盘时间", colNote: "备注", edit: "重命名 / 备注", teamPasted: "已贴队伍", pts: "点",
        titlePh: "名称（留空就显示双方玩家）", notePh: "备注", save: "保存", cancel: "取消",
        pageOf: (p, n, t) => `第 ${p} / ${n} 页 · 共 ${t} 份`,
-       won: "胜", lost: "负", drawn: "平", turns: n => `${n} 回合`},
+       won: "胜", lost: "负", drawn: "平", turns: n => `${n} 回合`,
+       llmHead: "语言模型（AI 解说）", llmUrl: "接口地址（兼容 OpenAI）", llmModel: "模型名",
+       llmKey: "API Key", llmSave: "保存", llmTest: "测试", llmSet: "已设置", llmUnset: "未设置",
+       llmKeySet: "已设置 Key（留空表示不改）", llmSaved: "已保存。", llmTesting: "正在询问模型…",
+       llmNote: "用于复盘页上的 AI 解说。建议用能力强的模型：一局的数据约 3 万 token。Key 只存在这台电脑上，也只发给这个地址。"},
 };
 let UI = "en";
 try { UI = new URLSearchParams(location.search).get("ui") || localStorage.getItem("coach-ui") || "en"; } catch (e) {}
@@ -488,6 +567,22 @@ async function post(url, data) {
   const r = await fetch(url, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({...data, lang: UI})});
   const j = await r.json(); if (!r.ok) throw new Error(j.error || r.statusText); return j;
 }
+// the language model (coach.llm): its address and model shown, its key never sent back
+async function llmLoad() {
+  const s = await (await fetch("/api/llm-settings")).json();
+  $("llmUrl").value = s.base_url; $("llmModel").value = s.model; $("llmKey").value = "";
+  $("llmKey").placeholder = s.has_key ? L.llmKeySet : "";
+  $("llmState").textContent = s.has_key && s.base_url && s.model ? `(${L.llmSet}: ${s.model})` : `(${L.llmUnset})`;
+}
+$("llmSave").onclick = async () => {
+  try { await post("/api/llm-settings", {base_url: $("llmUrl").value, model: $("llmModel").value, api_key: $("llmKey").value});
+        await llmLoad(); $("llmOut").textContent = L.llmSaved; } catch (e) { $("llmOut").textContent = e.message; }
+};
+$("llmTest").onclick = async () => {
+  $("llmOut").textContent = L.llmTesting;
+  try { $("llmOut").textContent = "✓ " + (await post("/api/llm-test", {})).answer; } catch (e) { $("llmOut").textContent = "✗ " + e.message; }
+};
+llmLoad();
 async function source() {
   const f = $("file").files[0];
   if (f) return {upload: {name: f.name, text: await f.text()}};

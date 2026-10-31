@@ -957,3 +957,73 @@ def test_the_lines_are_played_out_in_the_worlds():
     assert all(
         isinstance(o, str) and isinstance(t, str) and n > 0 for x in lines for o, t, n, _ in x
     )
+
+
+def test_the_facts_for_a_language_model(game, report):
+    """coach.packet: the review's facts as a language model gets them -- both teams with their
+    types, base stats and matchups, every decision's numbers, the log; compact JSON."""
+    from alpha_poke.coach import packet
+
+    data = packet.build(report, game)
+    assert set(data) >= {"game", "teams", "decisions", "log", "metrics", "names_zh"}
+    assert len(data["decisions"]) == len(report["decisions"])
+    mon = data["teams"]["you"][0]
+    assert mon["types"] and mon["base"]["spe"] > 0 and "takes" in mon
+    assert all(
+        set(d) >= {"turn", "chosen", "ai_choice", "win_chance", "verdict"}
+        for d in data["decisions"]
+    )
+    assert json.loads(packet.text(data)) == json.loads(json.dumps(data))
+
+
+def test_a_language_models_write_up(game, report, tmp_path, monkeypatch):
+    """coach.llm: settings kept on this computer (the key never shown to a page; empty keeps
+    it), a write-up from the facts kept with the review, and a move neither team can learn nor
+    anyone used flagged as the model's mistake."""
+    from alpha_poke.coach import llm
+
+    llm.save_settings(tmp_path, "https://example.invalid/v1", "m", "sk-secret")
+    llm.save_settings(tmp_path, "https://example.invalid/v1", "m2", "")
+    assert llm.load_settings(tmp_path)["api_key"] == "sk-secret"
+    assert llm.public_settings(tmp_path) == {
+        "base_url": "https://example.invalid/v1",
+        "model": "m2",
+        "has_key": True,
+    }
+    seen = {}
+
+    def chat(settings, system, user, timeout=300):
+        seen.update(system=system, user=user)
+        return "## Style\nOn turn 3 a Spore would have won."
+
+    monkeypatch.setattr(llm, "chat", chat)
+    text = llm.write(tmp_path, report, game, None, "style", "en", llm.load_settings(tmp_path))
+    assert "Spore" in text.split("Check:")[1] and llm.cached(tmp_path, "style", "en") == text
+    assert "turn-by-turn log" in seen["system"] and json.loads(seen["user"])["decisions"]
+    assert llm.cached(tmp_path, "style", "zh") is None
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="needs node")
+def test_the_pages_scripts_parse(game, report, tmp_path):
+    """The home page's and a review page's scripts are valid JavaScript (2026-10-30: strings put
+    outside their language's object -- a page of undefined labels, no error anywhere)."""
+    from alpha_poke.coach import app, viewer
+
+    for name, html in (("home", app.HOME), ("review", viewer.render(report, game, "local"))):
+        js = "\n".join(re.findall(r"<script>(.*?)</script>", html, re.S))
+        f = tmp_path / f"{name}.js"
+        f.write_text(js, encoding="utf-8")
+        r = subprocess.run(["node", "--check", str(f)], capture_output=True, text=True)
+        assert r.returncode == 0, (name, r.stderr[:500])
+        # (and every label in both languages, inside them: the keys of T.en and T.zh the same,
+        # nothing else in T, every data-t of the page among them)
+        t = js[js.index("const T = {") :]
+        t = t[: t.index("\n};") + 3]
+        out = subprocess.run(["node", "-e", t + "\nconsole.log(JSON.stringify({top: Object.keys(T), "
+                              "en: Object.keys(T.en), zh: Object.keys(T.zh)}))"],
+                             capture_output=True, text=True, check=True).stdout  # fmt: skip
+        keys = json.loads(out)
+        assert keys["top"] == ["en", "zh"], (name, keys["top"])
+        assert set(keys["en"]) == set(keys["zh"]), (name, set(keys["en"]) ^ set(keys["zh"]))
+        used = set(re.findall(r'data-t="([A-Za-z]+)"', html))
+        assert used <= set(keys["en"]), (name, used - set(keys["en"]))

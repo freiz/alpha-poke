@@ -73,6 +73,12 @@ PAGE = r"""<!DOCTYPE html>
   .slines { color: var(--muted); font-size: 12px; } .aibox { margin-top: 8px; padding: 8px; background: var(--bg); border-radius: 6px; }
   .aibox .opp { margin-top: 4px; } .jump { margin-top: 6px; padding: 6px 8px; border-left: 3px solid var(--ai); font-size: 13px; }
   .jump ul { margin: 4px 0 0 18px; padding: 0; }
+  .llmbox { margin: 0 16px 12px; padding: 10px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+  .llmhead { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .llmhead button { background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 4px 10px; cursor: pointer; font: inherit; }
+  .llmtext { font-size: 14px; line-height: 1.6; max-width: 980px; } .llmtext h4 { margin: 12px 0 4px; }
+  #llmFold summary { cursor: pointer; color: var(--muted); margin-top: 6px; }
+  .llmtext ul, .llmtext ol { margin: 4px 0 4px 20px; padding: 0; } .llmtext blockquote { color: var(--muted); margin: 6px 0; }
   .lines { margin-top: 6px; font-size: 12px; } .lines summary { cursor: pointer; color: var(--muted); }
   .lines ol { margin: 4px 0 4px 18px; padding: 0; } .lines li { margin: 3px 0; }
   .aihead { font-weight: 600; margin-bottom: 4px; }
@@ -96,6 +102,9 @@ __RF_CSS__
     &nbsp; <span id="lnames"></span> <button data-k="names" data-v="en">EN</button><button data-k="names" data-v="zh">中文</button></span>
 </header>
 <div class="score" id="score"></div>
+<section class="llmbox" id="llmbox" hidden><div class="llmhead"><b id="llmhead"></b>
+  <button id="llmStyle"></button> <span class="legend" id="llmMsg"></span></div>
+  <details id="llmFold" hidden><summary id="llmSum"></summary><div class="llmtext" id="llmText"></div></details></section>
 <section class="redobox" id="redobox" hidden><h3 id="redohead"></h3><div class="legend" id="redonote"></div>
 <div class="rf"><label id="whohead"></label><div class="choice" id="who"></div><div class="muted" id="whonote"></div></div>
 __RF_HTML__
@@ -174,6 +183,9 @@ const T = {
     noteTeam: t => t ? " | your team: pasted (exact)" : " | your team: what the game showed, the rest guessed",
     visits: n => `${n.toLocaleString("en")} visits`,
     redo: "↻ Review again, deeper", redoHead: "Review this game again", whoHead: "Whose decisions",
+    llmHead: "AI commentary (a language model, from the review's facts)", llmStyle: "Your playing style", llmAgain: "↻ Write it again",
+    llmWorking: "The language model is writing… (up to a minute or two)", llmNoSet: "Set a language model on the home page first.",
+    llmShow: "Your playing style (written before: click to open)",
     whoNote: "The other player's view is a review of its own (this one stays); a team pasted is that player's.",
     otherView: n => `↔ ${n}'s view`,
     redoNote: "With more searches, more time or your team pasted; when it is done this page shows the new review (in place of this one).",
@@ -246,6 +258,9 @@ const T = {
     noteTeam: t => t ? " ｜ 我方队伍：已粘贴（精确）" : " ｜ 我方队伍：这局亮出来的部分，其余靠猜",
     visits: n => `访问 ${n.toLocaleString("en")} 次`,
     redo: "↻ 用更强的配置重新分析", redoHead: "重新分析这一局", whoHead: "分析谁的决策",
+    llmHead: "AI 解说（语言模型根据复盘数据撰写）", llmStyle: "操作风格评价", llmAgain: "↻ 重新生成",
+    llmWorking: "语言模型正在撰写……（可能要一两分钟）", llmNoSet: "请先在首页设置语言模型。",
+    llmShow: "操作风格评价（之前生成的，点击展开）",
     whoNote: "换成另一位玩家的视角会另存一份复盘（这一份保留）；贴的队伍算那位玩家的。",
     otherView: n => `↔ ${n} 的视角`,
     redoNote: "可以多搜几次、每次多想一会儿，或者贴上你的队伍；完成后这一页会换成新的结果（替换掉现在这份）。",
@@ -633,6 +648,53 @@ for (const [id, get, set] of [["z", () => Z, v => { Z = v; }], ["low", () => LOW
 // fields filled in with two more searches, only when picked), the team pasted
 // before kept; when done the page reloads with the new review
 const DIR = (location.pathname.match(/\/coach\/([^/]+)\/viewer\.html$/) || [])[1];
+// the AI commentary (coach.llm, served by the app): a write-up kept with the review is shown,
+// a new one asked for and polled; the model's Markdown shown as text (escaped, a few marks kept)
+function md(text) {
+  const inline = x => esc(x).replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>");
+  let out = "", list = null;
+  const close = () => { if (list) { out += `</${list}>`; list = null; } };
+  for (const raw of text.split("\n")) {
+    const line = raw.trim(), h = line.match(/^#{1,4}\s+(.*)$/), ul = line.match(/^[-*]\s+(.*)$/), ol = line.match(/^\d+[.)]\s+(.*)$/);
+    if (h) { close(); out += `<h4>${inline(h[1])}</h4>`; }
+    else if (ul || ol) { const k = ul ? "ul" : "ol"; if (list != k) { close(); out += `<${k}>`; list = k; } out += `<li>${inline((ul || ol)[1])}</li>`; }
+    else if (line.startsWith(">")) { close(); out += `<blockquote>${inline(line.replace(/^>\s*/, ""))}</blockquote>`; }
+    else if (line) { close(); out += `<p>${inline(line)}</p>`; }
+    else close();
+  }
+  close();
+  return out;
+}
+if (location.protocol.startsWith("http") && DIR) {
+  const box = document.getElementById("llmbox"), btn = document.getElementById("llmStyle"), msg = document.getElementById("llmMsg"), out = document.getElementById("llmText");
+  // (folded: a write-up is long, the replay under it; open when it was just written)
+  const fold = document.getElementById("llmFold");
+  document.getElementById("llmSum").textContent = L.llmShow;
+  const show = (text, open) => { out.innerHTML = md(text); fold.hidden = false; fold.open = open; };
+  document.getElementById("llmhead").textContent = L.llmHead;
+  const q = `review=${encodeURIComponent(DIR)}&kind=style&lang=${UI}`;
+  fetch("/api/llm?" + q).then(r => r.ok ? r.json() : null).then(j => {
+    if (!j) return;
+    box.hidden = false;
+    btn.textContent = j.text ? L.llmAgain : L.llmStyle;
+    if (j.text) show(j.text, false);
+  });
+  btn.onclick = async () => {
+    btn.disabled = true; msg.textContent = L.llmWorking;
+    try {
+      const r = await fetch("/api/llm", {method: "POST", headers: {"Content-Type": "application/json"},
+                                          body: JSON.stringify({review: DIR, kind: "style", lang: UI})});
+      const j = await r.json(); if (!r.ok) throw new Error(j.error || r.statusText);
+      for (;;) {
+        await new Promise(res => setTimeout(res, 2000));
+        const s = await (await fetch("/api/job/" + j.job)).json();
+        if (s.status == "done") { show(s.text, true); msg.textContent = ""; btn.textContent = L.llmAgain; break; }
+        if (s.status == "error") throw new Error(s.error);
+      }
+    } catch (e) { msg.textContent = e.message; }
+    btn.disabled = false;
+  };
+}
 if (location.protocol.startsWith("http") && DIR) {
   fetch("/api/redo-info?review=" + encodeURIComponent(DIR)).then(r => r.ok ? r.json() : null).then(info => {
     if (!info) return;

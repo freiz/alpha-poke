@@ -4,6 +4,7 @@ never printed) told to use only the review's numbers and facts. Every move the w
 checked against the two teams' learnsets and the moves used in the game: an unknown one gets a
 warning appended (a model's invention, not a fact)."""
 
+import functools
 import json
 import re
 
@@ -37,10 +38,18 @@ what the AI preferred and why, the lesson) 3. 队伍与配置 (team weaknesses t
 concrete set suggestions) 4. 下次练习 (2-3 points)."""
 
 
+@functools.cache
+def _usage(path) -> dict:
+    """Species id -> its usage statistics (one file read per process: 5 s each time)."""
+    from alpha_poke.data.smogon_stats import UsageStats
+
+    return {to_id(n): s for n, s in UsageStats.load(path).species.items()}
+
+
 def common_sets(species: list[str], top: int = 6) -> dict:
     """The species' most common abilities, items, moves, tera types and spreads in the latest
     month of Smogon's gen9ou statistics (data/raw/smogon; {} without them)."""
-    from alpha_poke.data.smogon_stats import DEFAULT_DIR, UsageStats
+    from alpha_poke.data.smogon_stats import DEFAULT_DIR
 
     months = (
         sorted(p.name for p in DEFAULT_DIR.iterdir() if p.is_dir()) if DEFAULT_DIR.exists() else []
@@ -48,8 +57,7 @@ def common_sets(species: list[str], top: int = 6) -> dict:
     path = DEFAULT_DIR / months[-1] / "chaos" / "gen9ou-1500.json" if months else None
     if path is None or not path.exists():
         return {}
-    stats = UsageStats.load(path)
-    by_id = {to_id(n): s for n, s in stats.species.items()}
+    by_id = _usage(path)
     out = {}
     for sp in species:
         s = by_id.get(to_id(sp.replace("-*", "")))
