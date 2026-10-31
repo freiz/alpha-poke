@@ -26,7 +26,10 @@ RULES = {
     "zh": """规则：
 - 只能使用数据包里的事实和数字。不要编造招式、道具、特性、配置或对局中没发生的事；数据包里没有的就说不知道。
 - 宝可梦、招式、道具、特性、属性一律用 names_zh 里的官方中文名；第一次提到时在括号里附英文名，例如 保姆曼波（Alomomola）。
-- AI 的数字是几秒钟搜索得出的估计：说“AI 认为……更好（胜率约 X% 对 Y%）”，不要说某一步一定错了。差距不到 3 个百分点的不算失误。
+- AI 的数字是几秒钟搜索得出的估计：说“AI 认为……更好（胜率约 X% 对 Y%）”，X 是 ai_choice_win_chance（AI 的选择），Y 是 chosen_win_chance（玩家的选择）；
+  position_win_chance 是这一步之前的局面胜率，不是哪个选项的。不要说某一步一定错了。差距不到 3 个百分点的不算失误；讲失误时按 loss 从大到小，最大的先讲。
+- 太晶化之后，宝可梦挨打时只按太晶属性算相克（log 里 -terastallize 那一回合起），不要再按原来的属性算。
+- kind 为 switch after a faint 时，倒下的是哪只看 log 里那一回合的 faint 行，ME 是玩家、OPP 是对手，不要弄混。
 - verdict 的含义：same 和 AI 一致，ok 可以接受，mild AI 不太喜欢，bad AI 不认同。
 - guessed_moves 是没贴队伍时 AI 猜测的招式，玩家未必有，不要据此批评。
 - 胜率的大起大落可能来自运气（会心一击、没命中、麻痹等，见 log）或对手没走 AI 预想的应对（opponent_expected 与 opponent_did）：不要把它们算成玩家的失误。
@@ -37,8 +40,13 @@ RULES = {
   events; say you don't know what the data does not show.
 - Name Pokémon, moves, items, abilities and types in English exactly as the data does.
 - The AI's numbers are estimates from a few seconds of search: say "the AI thought ... was better
-  (about X% vs Y% to win)", never that a move was certainly wrong. A gap under 3 points is no
-  mistake.
+  (about X% vs Y% to win)" -- X the ai_choice_win_chance, Y the chosen_win_chance (the
+  position_win_chance is the position's before the move, no option's) -- never that a move was
+  certainly wrong. A gap under 3 points is no mistake; take the mistakes by loss, largest first.
+- A terastallized Pokémon takes hits by its tera type alone (from the turn of its -terastallize
+  in the log), not its old types.
+- For a "switch after a faint", which one fainted is the log's faint line of that turn (ME the
+  player, OPP the opponent): do not mix them up.
 - verdict: same = the AI's own choice, ok = acceptable, mild = the AI doesn't like it, bad = the
   AI disagrees.
 - guessed_moves are the AI's guesses of the player's moves (no team pasted): the player may not

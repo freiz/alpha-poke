@@ -985,10 +985,12 @@ def test_the_facts_for_a_language_model(game, report):
     assert len(data["decisions"]) == len(report["decisions"])
     mon = data["teams"]["you"][0]
     assert mon["types"] and mon["base"]["spe"] > 0 and "takes" in mon
-    assert all(
-        set(d) >= {"turn", "chosen", "ai_choice", "win_chance", "verdict"}
-        for d in data["decisions"]
-    )
+    for d, r in zip(data["decisions"], report["decisions"], strict=True):
+        # (the chances named apart; the chosen option among the options shown)
+        assert set(d) >= {"turn", "chosen", "ai_choice", "position_win_chance", "chosen_win_chance",
+                          "ai_choice_win_chance", "verdict"} and "win_chance" not in d  # fmt: skip
+        if r["chosen"] in [o[0] for o in r["options"]]:
+            assert d["chosen"] in [o["option"] for o in d["options"]]
     assert json.loads(packet.text(data)) == json.loads(json.dumps(data))
 
 

@@ -127,9 +127,14 @@ def _turns(row: dict, side: str) -> dict[int, list[str]]:
 
 
 def _decision(d: dict) -> dict:
+    # (the chances named apart: the position's, the chosen option's, the AI's choice's -- one
+    # "win_chance" for the position read as the chosen move's, 2026-10-30; the chosen option always
+    # among the options shown)
+    opts = d["options"][:4] + [o for o in d["options"][4:] if o[0] == d["chosen"]][:1]
     out = {"turn": d["turn"], "kind": d["kind"], "chosen": d["chosen"], "ai_choice": d["best"],
-           "win_chance": d["value"], "loss": d["loss"], "verdict": verdict(d),
-           "options": [{"option": o[0], "share": o[1], "win_chance": o[2]} for o in d["options"][:4]]}  # fmt: skip
+           "position_win_chance": d["value"], "chosen_win_chance": d.get("chosen_value"),
+           "ai_choice_win_chance": d.get("best_value"), "loss": d["loss"], "verdict": verdict(d),
+           "options": [{"option": o[0], "share": o[1], "win_chance": o[2]} for o in opts]}  # fmt: skip
     if d.get("guessed"):
         out["guessed_moves"] = d["guessed"]
     if d.get("opp_options"):
