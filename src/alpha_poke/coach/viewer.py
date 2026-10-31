@@ -190,6 +190,7 @@ const T = {
     jumpUnknown: "no luck in the log, and the opponent played as the AI expected: what this turn revealed (a move, an item, an ability) changed the AI's view",
     youDo: o => `you: ${o}`, theyDo: o => `they: ${o}`, fainted: (m, p) => `${m} fainted (in ${p} of the worlds)`,
     faintSome: p => ` (fainted in ${p} of the worlds)`, lineEnd: v => ` — your chance ${v}`,
+    comesIn: (m, hp) => `${m} comes in (${hp})`, noChange: "no change",
     linesHead: "What the AI expects next (its main lines)",
     linesNote: "Each line follows the choices the search looked at most, for your top options and the opponent's likeliest replies; the results are the engine's, over the hidden sets the AI guessed (HP: the median).",
     feared: t => `the line the AI feared: ${t}`,
@@ -261,6 +262,7 @@ const T = {
     jumpUnknown: "日志里没有运气因素，对手也按 AI 的预料出招：是这一回合新暴露的招式、道具或特性改变了 AI 的判断",
     youDo: o => `你：${o}`, theyDo: o => `对手：${o}`, fainted: (m, p) => `${m} 倒下（${p} 的世界里）`,
     faintSome: p => `（${p} 的世界里倒下）`, lineEnd: v => ` —— 你的胜率 ${v}`,
+    comesIn: (m, hp) => `${m} 上场（${hp}）`, noChange: "没有变化",
     linesHead: "AI 预想的走向（主干路径）",
     linesNote: "每条路径沿着搜索考虑最多的选择往下走：你的前两个选项 × 对手最可能的两个应对。结果由引擎在 AI 猜测的各种对手配置下模拟得出（HP 取中位数）。",
     feared: t => `AI 担心的线路：${t}`,
@@ -462,18 +464,30 @@ function aiHTML(d) {
 }
 // the search's principal variations (the review's lines, as KataGo's variations): each step's
 // choices and what the worlds made of them -- the actives' HP (median) and how often one fainted
-function stepText(st) {
+// (only what changed, from the decision's actives on: a mon coming in with its HP, an HP change
+// as before -> after, a faint; 2026-10-30, every step's HP read as damage -- a Dragapult's 48% it
+// had had for turns)
+function stepText(st, prev) {
   const act = [st.o != "No Move" ? L.youDo(oppName(st.o)) : null, st.t != "No Move" ? L.theyDo(oppName(st.t)) : null].filter(Boolean).join(L.sep);
   const mon = ([sp, hp, faint], mine) => {
-    const name = esc(mine ? L.mine(monName(sp)) : L.theirs(monName(sp)));
-    return faint >= 0.5 ? L.fainted(name, pct(faint)) : `${name} ${pct(hp)}` + (faint > 0 ? L.faintSome(pct(faint)) : "");
+    const name = esc(mine ? L.mine(monName(sp)) : L.theirs(monName(sp))), was = prev[mine ? "me" : "opp"];
+    if (faint >= 0.5) return L.fainted(name, pct(faint));
+    const some = faint > 0 ? L.faintSome(pct(faint)) : "";
+    if (!was || was[0] != sp) return L.comesIn(name, pct(hp)) + some;
+    return Math.abs(hp - was[1]) >= 0.01 ? `${name} ${pct(was[1])}→${pct(hp)}` + some : some ? name + some : "";
   };
-  return `${act} ⇒ ${mon(st.me, true)}${L.sep}${mon(st.opp, false)}`;
+  const res = [mon(st.me, true), mon(st.opp, false)].filter(Boolean).join(L.sep);
+  prev.me = st.me; prev.opp = st.opp;
+  return `${act} ⇒ ${res || L.noChange}`;
 }
-const lineText = line => line.map(stepText).join(" → ") + (line.length && line[line.length - 1].v != null ? L.lineEnd(pct(line[line.length - 1].v)) : "");
+function lineText(line, d) {
+  const a = ((d || {}).state || {}), key = x => x && x.active ? [String(x.active.species).toLowerCase(), x.active.hp] : null;
+  const prev = {me: key(a.me), opp: key(a.opp)};
+  return line.map(st => stepText(st, prev)).join(" → ") + (line.length && line[line.length - 1].v != null ? L.lineEnd(pct(line[line.length - 1].v)) : "");
+}
 function linesHTML(d) {
   if (!d.lines || !d.lines.length) return "";
-  return `<details class="lines"><summary>${L.linesHead}</summary><ol>${d.lines.map(l => `<li>${lineText(l)}</li>`).join("")}</ol><div class="legend">${L.linesNote}</div></details>`;
+  return `<details class="lines"><summary>${L.linesHead}</summary><ol>${d.lines.map(l => `<li>${lineText(l, d)}</li>`).join("")}</ol><div class="legend">${L.linesNote}</div></details>`;
 }
 // the opponent as the search saw it (the review's opp_options: share, our chance if it takes
 // it -- a guess from the player's view, the opponent's sets unknown) and what it did that turn
@@ -514,7 +528,7 @@ function jumpHTML(d) {
     else if (Math.abs(q - exp[2]) >= 0.05) items.push((q > exp[2] ? L.oppBetter : L.oppWorse)(oppName(exp[0]), pct(exp[2]), oppName(d.opp_did), pct(q)));
     // (the line the search expected after your choice and that reply: why it mattered)
     const line = (d.lines || []).find(l => l.length && l[0].o == d.chosen && l[0].t == exp[0]);
-    if (line && items.length) items.push(L.feared(lineText(line)));
+    if (line && items.length) items.push(L.feared(lineText(line, d)));
   }
   if (!items.length) items.push(L.jumpUnknown);
   return `<div class="jump"><b>${L.jumpHead(pct(d.value), pct(n.value))}</b><ul>${items.map(x => `<li>${x}</li>`).join("")}</ul></div>`;

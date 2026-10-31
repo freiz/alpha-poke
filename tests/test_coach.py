@@ -902,13 +902,16 @@ def test_the_page_explains_a_jump():
              "luckCrit: m => `crit on ${m}`, luckMiss: m => `${m} missed`, luckCant: (m, r) => `${m} cant ${r}`, "
              "luckConfused: m => `${m} confused`, oppBetter: (e, ev, d, dv) => `better ${e} ${ev} ${d} ${dv}`, "
              "oppWorse: (e, ev, d, dv) => `worse ${e} ${ev} ${d} ${dv}`, oppOther: (e, d) => `other ${e} ${d}`, "
-             "jumpUnknown: 'unknown', youDo: o => `you ${o}`, theyDo: o => `they ${o}`, mine: x => `my ${x}`, theirs: x => `their ${x}`, fainted: (m, p) => `${m} down ${p}`, faintSome: p => ` (down ${p})`, lineEnd: v => ` = ${v}`, feared: t => `feared ${t}`, linesHead: 'lines', linesNote: ''};\nconst esc = x => String(x), option = x => x, monName = x => x, who = x => x, effect = x => x, "
+             "jumpUnknown: 'unknown', youDo: o => `you ${o}`, theyDo: o => `they ${o}`, mine: x => `my ${x}`, theirs: x => `their ${x}`, fainted: (m, p) => `${m} down ${p}`, faintSome: p => ` (down ${p})`, lineEnd: v => ` = ${v}`, comesIn: (m, hp) => `${m} in ${hp}`, noChange: 'same', feared: t => `feared ${t}`, linesHead: 'lines', linesNote: ''};\nconst esc = x => String(x), option = x => x, monName = x => x, who = x => x, effect = x => x, "
              "pct = x => Math.round(100 * x) + '%';\n")  # fmt: skip
     R = {"events": {3: ["move|OPP Hatterene|Draining Kiss|ME Ogerpon", "-crit|ME Ogerpon", "-damage|ME Ogerpon|0 fnt"],
                     4: ["move|OPP Meowscarada|Knock Off|ME Alomomola"]},
          "decisions": [{"turn": 3, "kind": "turn", "value": 0.62, "opp_options": [["drainingkiss", 0.6, 0.61]], "opp_did": "drainingkiss"},
-                       {"turn": 4, "kind": "turn", "value": 0.03, "chosen": "switch alomomola", "opp_options": [["uturn", 0.9, 0.02], ["knockoff", 0.1, 0.6]], "opp_did": "knockoff",
+                       {"turn": 4, "kind": "turn", "value": 0.03, "chosen": "switch alomomola",
+                        "state": {"me": {"active": {"species": "LOKIX", "hp": 0.34}}, "opp": {"active": {"species": "MEOWSCARADA", "hp": 1.0}}}, "opp_options": [["uturn", 0.9, 0.02], ["knockoff", 0.1, 0.6]], "opp_did": "knockoff",
                         "lines": [[{"o": "switch alomomola", "t": "uturn", "v": 0.02, "me": ["alomomola", 0.64, 0], "opp": ["meowscarada", 1, 0]},
+                                   {"o": "No Move", "t": "switch dragapult", "v": 0.02, "me": ["alomomola", 0.64, 0], "opp": ["dragapult", 0.48, 0]},
+                                   {"o": "protect", "t": "thunderbolt", "v": 0.02, "me": ["alomomola", 0.64, 0.09], "opp": ["dragapult", 0.48, 0]},
                                    {"o": "protect", "t": "thunderbolt", "v": 0.01, "me": ["alomomola", 0, 0.78], "opp": ["dragapult", 0.48, 0]}]]},
                        {"turn": 5, "kind": "turn", "value": 0.68},
                        {"turn": 6, "kind": "turn", "value": 0.7}]}  # fmt: skip
@@ -921,10 +924,11 @@ def test_the_page_explains_a_jump():
         out[0]
     )
     assert "3%->68%" in out[1] and "better uturn 2% knockoff 60%" in out[1], out[1]
-    assert (
-        "feared you switch alomomola, they uturn ⇒ my alomomola 64%, their meowscarada 100%"
-        in out[1]
-    ), out[1]
+    # (only what changed: the switch-ins with their HP, an HP change before -> after, faints --
+    # not the Dragapult's 48% at every step, read as damage)
+    assert "feared you switch alomomola, they uturn ⇒ my alomomola in 64%" in out[1], out[1]
+    assert "they switch dragapult ⇒ their dragapult in 48%" in out[1], out[1]
+    assert "⇒ my alomomola (down 9%)" in out[1] and out[1].count("48%") == 1, out[1]
     assert "my alomomola down 78%" in out[1] and out[1].endswith("= 1%</li></ul></div>"), out[1]
     assert out[2] == "" and out[3] == ""
 
