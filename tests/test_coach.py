@@ -292,6 +292,21 @@ def test_the_move_check_flags_unlearnable_moves(report):
     assert narrate.unknown_moves(f"Keep using {used}; teach it {foreign}.", report) == [foreign]
 
 
+def test_the_move_check_skips_move_names_inside_other_names(report, monkeypatch):
+    """王牌 (Trump Card) inside 闪焰王牌 (Cinderace) is the Pokemon, not the move (2026-10-30: a
+    style write-up flagged Trump Card); the move named alone still counts."""
+    from alpha_poke.coach import llm, packet
+    from alpha_poke.dex import learnset
+
+    names = {"pokemon": {"cinderace": "闪焰王牌"}, "moves": {"trumpcard": "王牌", "uturn": "急速折返"},
+             "items": {}, "abilities": {}, "types": {}}  # fmt: skip
+    monkeypatch.setattr(packet, "zh_names", lambda: names)
+    teams = [m for side in ("p1", "p2") for m in report["teams"][side]]
+    assert "trumpcard" not in set().union(*(learnset(m["species"]) or set() for m in teams))
+    assert llm.unknown_moves("闪焰王牌（Cinderace）用急速折返轮转。", report) == []
+    assert llm.unknown_moves("闪焰王牌可以学王牌吗？", report) == ["Trump Card"]
+
+
 def test_the_page_carries_the_review_and_the_log(game, report):
     from alpha_poke.coach import viewer
 

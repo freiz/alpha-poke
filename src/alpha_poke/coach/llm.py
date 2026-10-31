@@ -237,13 +237,23 @@ def unknown_moves(text: str, report: dict) -> list[str]:
         for m in report["teams"][side]:
             allowed |= learnset(m["species"]) or set()
             allowed |= {to_id(x) for x in m["moves"]}
-    zh = packet.zh_names()["moves"]
+    names = packet.zh_names()
+    zh = names["moves"]
+    # (a move's Chinese name inside a Pokemon's, an item's or an ability's is not the move: 王牌,
+    # Trump Card, in 闪焰王牌, Cinderace -- those names masked first, the longest first)
+    masked = text
+    others = {
+        v for k in ("pokemon", "items", "abilities") for v in names[k].values() if len(v) >= 2
+    }
+    for other in sorted(others, key=len, reverse=True):
+        if other in masked and other not in zh.values():
+            masked = masked.replace(other, "\0")
     found = set()
     for mid, mv in GEN.moves.items():
         name = mv.get("name") or ""
         if len(name) > 4 and re.search(rf"(?<![A-Za-z]){re.escape(name)}(?![A-Za-z])", text):
             found.add(mid)
-        if len(zh.get(mid, "")) >= 2 and zh[mid] in text:
+        if len(zh.get(mid, "")) >= 2 and zh[mid] in masked:
             found.add(mid)
     bad = found - allowed
     # (a Chinese name inside a longer one the text names -- 冲浪 in 冲浪板 -- is that one's)
