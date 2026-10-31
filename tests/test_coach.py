@@ -1237,3 +1237,28 @@ def test_the_swings_name_their_causes():
         and s[0]["opponent_most_expected"]["your_chance"] == 0.02
     )
     assert s[1]["luck_in_log"] == ["-crit|ME Ogerpon"] and "luck_in_log" not in s[0]
+
+
+def test_every_answer_to_a_decision_is_kept_with_its_question(game, report, tmp_path, monkeypatch):
+    """coach.llm.answers: a decision's default explanation and each question asked, with the
+    question's words (2026-10-30: the page showed only the default; a question's answer, kept
+    under its hash, was never shown again), oldest first; asked counts them per decision."""
+    from alpha_poke.coach import llm
+
+    n = iter(range(10))
+    monkeypatch.setattr(llm, "chat", lambda *a, **k: f"answer {next(n)}")
+    s = {"base_url": "x", "api_key": "k", "model": "m", "persona": "none"}
+    llm.write(tmp_path, report, game, None, "turn", "zh", s, dec=1)
+    llm.write(tmp_path, report, game, None, "turn", "zh", s, dec=1, question="为什么不换人？")
+    llm.write(tmp_path, report, game, None, "turn", "zh", s, dec=2, question="Why?")
+    (tmp_path / "llm-turn-1-0123456789.zh.md").write_text(
+        "old"
+    )  # (asked before questions were kept)
+    a = llm.answers(tmp_path, 1, "zh")
+    assert [(x["question"], x["text"].strip()) for x in a] == [
+        (None, "answer 0"),
+        ("为什么不换人？", "answer 1"),
+        ("", "old"),
+    ]
+    assert llm.asked(tmp_path, "zh") == {1: 3, 2: 1} and llm.asked(tmp_path, "en") == {}
+    assert llm.answers(tmp_path, 1, "en") == []

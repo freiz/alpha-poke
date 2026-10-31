@@ -317,6 +317,39 @@ def _file(review_dir: Path, kind: str, lang: str, dec: int | None, question: str
     return review_dir / f"{name}.{lang}.md"
 
 
+def _questions(review_dir: Path, dec: int, lang: str) -> Path:
+    """A decision's asked questions (their hash -> the question: the answers' file names keep only
+    the hash)."""
+    return review_dir / f"llm-turn-{int(dec)}.{lang}.questions.json"
+
+
+def answers(review_dir: Path, dec: int, lang: str) -> list[dict]:
+    """Every answer kept for the ``dec``-th decision in ``lang``, oldest first: {"question" (None:
+    the default explanation; "" when asked before the questions were kept), "text"}."""
+    try:
+        asked = json.loads(_questions(review_dir, dec, lang).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        asked = {}
+    files = [review_dir / f"llm-turn-{int(dec)}.{lang}.md",
+             *review_dir.glob(f"llm-turn-{int(dec)}-*.{lang}.md")]  # fmt: skip
+    out = []
+    for f in sorted((f for f in files if f.is_file()), key=lambda f: f.stat().st_mtime):
+        sha = f.name.split(".")[0].split("-")[3] if f.name.count("-") >= 3 else None
+        out.append({"question": None if sha is None else asked.get(sha, ""),
+                    "text": f.read_text(encoding="utf-8")})  # fmt: skip
+    return out
+
+
+def asked(review_dir: Path, lang: str) -> dict[int, int]:
+    """Decision index -> how many answers are kept for it in ``lang``."""
+    out: dict[int, int] = {}
+    for f in review_dir.glob(f"llm-turn-*.{lang}.md"):
+        dec = f.name.split(".")[0].split("-")[2]
+        if dec.isdigit():
+            out[int(dec)] = out.get(int(dec), 0) + 1
+    return out
+
+
 def cached(review_dir: Path, kind: str, lang: str, dec: int | None = None,
            question: str | None = None) -> str | None:  # fmt: skip
     f = _file(review_dir, kind, lang, dec, question)
@@ -366,4 +399,12 @@ def write(review_dir: Path, report: dict, row: dict, team: dict | None, kind: st
                  "\n\n> Check: these moves the text names are not learnable by either team nor used in the game -- "
                  "likely the model's mistake: ") + ", ".join(bad) + "\n"  # fmt: skip
     _file(review_dir, kind, lang, dec, question).write_text(text, encoding="utf-8")
+    if kind == "turn" and question:  # (the question itself kept: answers shows it with its answer)
+        q = _questions(review_dir, dec, lang)
+        try:
+            asked = json.loads(q.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            asked = {}
+        asked[hashlib.sha1(question.encode()).hexdigest()[:10]] = question
+        q.write_text(json.dumps(asked, ensure_ascii=False), encoding="utf-8")
     return text

@@ -20,6 +20,8 @@ to look, and gets the review page when the search is done. Loopback only; one re
   POST /api/llm-settings      {base_url, model, api_key, persona}: set them (from this computer only)
   POST /api/llm-test          {lang}: a one-line question to the model, its answer
   GET  /api/llm?review=&kind=&lang=[&dec=]   a write-up kept with the review, or null
+  GET  /api/llm?...&kind=turn&dec=&all=1   every answer kept for a decision: {answers: [{question, text}]}
+  GET  /api/llm?review=&lang=&asked=1      the decisions asked about: {asked: {index: answers}}
   GET  /api/team-facts?review=   what the metagame says of the reviewed player's team (coach.meta)
   POST /api/llm               {review, kind, lang[, dec, question]}: a write-up -> {job}
                               (GET /api/job/<id>: {status, text, error}); kind "turn": the
@@ -288,12 +290,21 @@ def handler(cache, jobs: Jobs):
             if path == "/api/llm":
                 qs = parse_qs(urlsplit(self.path).query)
                 name = qs.get("review", [""])[0]
+                if REVIEW_NAME.fullmatch(name) and qs.get(
+                    "asked"
+                ):  # (the decisions asked about: counts)
+                    lang = "zh" if qs.get("lang", [""])[0] == "zh" else "en"
+                    return self._json({"asked": llm.asked(COACH / name, lang)})
                 if not REVIEW_NAME.fullmatch(name) or qs.get("kind", [""])[0] not in llm.KINDS:
                     return self._json({"error": "no such write-up"}, HTTPStatus.NOT_FOUND)
                 lang = "zh" if qs.get("lang", [""])[0] == "zh" else "en"
                 dec = qs.get("dec", [""])[0]
                 if qs["kind"][0] == "turn" and not dec.isdigit():
                     return self._json({"error": "no such write-up"}, HTTPStatus.NOT_FOUND)
+                if qs["kind"][0] == "turn" and qs.get(
+                    "all"
+                ):  # (every question asked, with its answer)
+                    return self._json({"answers": llm.answers(COACH / name, int(dec), lang)})
                 return self._json({"text": llm.cached(COACH / name, qs["kind"][0], lang,
                                                       int(dec) if dec.isdigit() else None)})  # fmt: skip
             if path == "/api/redo-info":

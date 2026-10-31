@@ -89,6 +89,7 @@ PAGE = r"""<!DOCTYPE html>
   .aihead { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
   .tcard { margin: 8px 0; padding: 8px 10px; background: var(--bg); border-radius: 6px; font-size: 13px; line-height: 1.7; }
   .askbox { margin-top: 6px; border-top: 1px dashed var(--line); padding-top: 6px; }
+  .askq { margin-top: 8px; font-size: 13px; font-weight: 600; color: var(--muted); }
   .askrow { display: flex; gap: 6px; } .askrow input { flex: 1; min-width: 0; font: inherit; font-size: 13px; padding: 3px 6px;
   background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; }
   .askrow button { font: inherit; font-size: 13px; padding: 3px 10px; background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; cursor: pointer; }
@@ -216,6 +217,7 @@ const T = {
     cardSwaps: "The model's leads for a swap", cardSwap: (o, i, g) => `${o} → ${i} (${g} pts)`,
     cardNote: (g, m) => `From the ladder's games to ${g} and Smogon's ${m} statistics. The matchup model sees species and pairs of teammates, not sets; the threat check is a damage calculation with sets.`,
     askBtn: "Ask the AI", askPh: "Ask about this decision (optional: empty = why the AI sees it so)", askGo: "Ask", askAgain: "Ask again",
+    askDefault: "Why the AI sees it so", askLost: "(an earlier question: its words were not kept)",
     whoNote: "The other player's view is a review of its own (this one stays); a team pasted is that player's.",
     otherView: n => `↔ ${n}'s view`,
     redoNote: "With more searches, more time or your team pasted; when it is done this page shows the new review (in place of this one).",
@@ -306,6 +308,7 @@ const T = {
     cardSwaps: "模型给出的换人线索", cardSwap: (o, i, g) => `${o} → ${i}（${g} 点）`,
     cardNote: (g, m) => `来自截至 ${g} 的天梯对局和 Smogon ${m} 的统计。对局模型只看宝可梦种类和两两队友配合，看不到配置；威胁检查是按配置做的伤害计算。`,
     askBtn: "问 AI", askPh: "关于这一步想问什么（可不填：默认解释 AI 为什么这样看）", askGo: "提问", askAgain: "再问一次",
+    askDefault: "AI 为什么这样看", askLost: "（较早的提问：问题原文没有保存）",
     whoNote: "换成另一位玩家的视角会另存一份复盘（这一份保留）；贴的队伍算那位玩家的。",
     otherView: n => `↔ ${n} 的视角`,
     redoNote: "可以多搜几次、每次多想一会儿，或者贴上你的队伍；完成后这一页会换成新的结果（替换掉现在这份）。",
@@ -494,7 +497,7 @@ function verdict(d) {
 const pm = se => se ? ` ±${Math.max(1, Math.round(100 * se))}` : "";
 function aiHTML(d) {
   const v = verdict(d), tag = {bad: L.bad, mild: L.mild, same: L.same, ok: L.ok}[v];
-  const di = R.decisions.indexOf(d), ask = LLM_ON ? ` <button class="ask${ASK[di] && ASK[di].open ? " sel" : ""}" data-ask="${di}">${L.askBtn}</button>` : "";
+  const di = R.decisions.indexOf(d), ask = LLM_ON ? ` <button class="ask${ASK[di] && ASK[di].open ? " sel" : ""}" data-ask="${di}">${L.askBtn}${ASKED[di] ? ` (${ASKED[di]})` : ""}</button>` : "";
   let h = `<div class="aibox"><div class="aihead">${L.aiHead[d.kind] || L.aiHead.turn} <span class="tag ${v == "same" ? "ok" : v}">${tag}</span> <span class="legend">${L.chanceAt(pct(d.value) + pm(d.value_se))}${d.visits ? " · " + L.visits(d.visits) : ""}</span>${ask}</div>`;
   h += `<div class="legend">${L.bars}</div>`;
   h += `<div class="opt head"><span></span><span>${L.winCol}</span><span>${L.shareCol}</span></div>`;
@@ -788,31 +791,38 @@ if (LLM_ON) {
   again.onclick = () => { if (shown) make(shown); };
 }
 // a decision asked about (the review page's "ask the AI" under each decision): per decision index
-// {open, text, busy, error}; its kept answer fetched the first time it is opened
-const ASK = {};
+// {open, answers: [{question, text}] (every one kept, oldest first: coach.llm.answers), busy,
+// asking, error}; the answers fetched the first time it is opened and after each question
+const ASK = {}, ASKED = {};  // (ASKED: decision index -> answers kept, shown on its button)
 function askHTML(i) {
   const a = ASK[i];
   if (!a || !a.open) return "";
   let h = `<div class="askbox"><div class="askrow"><input type="text" id="askq-${i}" placeholder="${esc(L.askPh)}" maxlength="300" />
-    <button data-askgo="${i}" ${a.busy ? "disabled" : ""}>${a.busy ? L.llmBusy : a.text ? L.askAgain : L.askGo}</button></div>`;
-  if (a.busy) h += `<div class="llmwait">${L.llmWorking}</div>`;
+    <button data-askgo="${i}" ${a.busy ? "disabled" : ""}>${a.busy ? L.llmBusy : L.askGo}</button></div>`;
+  for (const x of a.answers || []) {
+    // (asking the same again: its old answer gives way to the "writing" line)
+    if (a.busy && x.question === a.asking) continue;
+    const q = x.question === null ? L.askDefault : x.question === "" ? L.askLost : x.question;
+    h += `<div class="askq">${esc(q)}</div><div class="llmtext">${md(x.text)}</div>`;
+  }
+  if (a.busy) h += `<div class="askq">${esc(a.asking === null ? L.askDefault : a.asking)}</div><div class="llmwait">${L.llmWorking}</div>`;
   if (a.error) h += `<div class="legend">${esc(a.error)}</div>`;
-  if (a.text && !a.busy) h += `<div class="llmtext">${md(a.text)}</div>`;
   return h + "</div>";
 }
 if (LLM_ON) {
+  const askLoad = async (i, a) => { const j = await llmGet(`kind=turn&dec=${i}&all=1`); a.answers = j && j.answers || [];
+                                    ASKED[i] = a.answers.length; };
+  llmGet("asked=1").then(j => { if (j && j.asked) { Object.assign(ASKED, j.asked); render(); } });
   document.addEventListener("click", async e => {
     const open = e.target.closest("[data-ask]"), go = e.target.closest("[data-askgo]");
     if (open) {
       const i = +open.dataset.ask, a = ASK[i] = ASK[i] || {};
       a.open = !a.open; render();
-      if (a.open && a.text === undefined) {
-        const j = await llmGet(`kind=turn&dec=${i}`); a.text = j && j.text || null; render();
-      }
+      if (a.open && a.answers === undefined) { await askLoad(i, a); render(); }
     } else if (go) {
-      const i = +go.dataset.askgo, a = ASK[i], q = (document.getElementById("askq-" + i) || {}).value || "";
-      a.busy = true; a.error = null; render();
-      try { a.text = await llmAsk({kind: "turn", dec: i, question: q.trim() || null}); } catch (err) { a.error = err.message; }
+      const i = +go.dataset.askgo, a = ASK[i], q = ((document.getElementById("askq-" + i) || {}).value || "").trim();
+      a.busy = true; a.asking = q || null; a.error = null; render();
+      try { await llmAsk({kind: "turn", dec: i, question: q || null}); await askLoad(i, a); } catch (err) { a.error = err.message; }
       a.busy = false; render();
     }
   });
