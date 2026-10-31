@@ -345,7 +345,7 @@ def load_selfplay(items: list[tuple[str, float]], per_game: int, seed: int,
     return out, n_before
 
 
-SP_SMALL = ("game", "pi_w", "value_ok")
+SP_SMALL = ("game", "pi_w", "value_ok", "turn")
 
 
 def selfplay_small(plan) -> tuple[list[Path], dict]:
@@ -1079,6 +1079,19 @@ def main() -> None:
     ap.add_argument("--sp-passes", type=float, default=0.0,
                     help="steps = passes over the kept self-play train positions")  # fmt: skip
     ap.add_argument("--sp-frac", type=float, default=0.5, help="share of each batch from self-play")
+    ap.add_argument(
+        "--sp-early-turns",
+        type=int,
+        default=0,
+        help="self-play positions at turns <= this: value weight --sp-early-value",
+    )
+    ap.add_argument("--sp-early-value", type=float, default=1.0)
+    ap.add_argument(
+        "--sp-pi-temp",
+        type=float,
+        default=1.0,
+        help="self-play policy targets as visits ** (1 / T): T > 1 smoother",
+    )
     ap.add_argument("--sp-val-frac", type=float, default=0.05, help="self-play games held out")
     ap.add_argument("--init", default="", help="warm start: a run directory (its last.pt)")
     ap.add_argument("--steps", type=int, default=0, help="training steps (default: from --epochs)")
@@ -1249,6 +1262,11 @@ def main() -> None:
         _, sinv, scnt = np.unique(dsp["game"], return_inverse=True, return_counts=True)
         sp_vw = (np.minimum(1.0, a.value_per_game / scnt[sinv]) if a.value_per_game > 0
                  else np.ones(len(sinv))) * dsp["value_ok"]  # fmt: skip
+        if a.sp_early_turns > 0:
+            # (issue #27: the moves of the first --sp-early-turns turns were sampled at tau 1,
+            # so those positions' outcomes carry the opening's randomness: their value weighed by
+            # --sp-early-value; the policy targets unchanged)
+            sp_vw = sp_vw * np.where(dsp["turn"] <= a.sp_early_turns, a.sp_early_value, 1.0)
         sp_vw = sp_vw.astype(np.float32)
         sp_seen = np.zeros(len(sp_vw), np.int32)  # draws per position (--sp-value-passes)
         bsp = int(round(a.batch * a.sp_frac))
@@ -1356,6 +1374,9 @@ def main() -> None:
             with torch.autocast(device.type, dtype=torch.bfloat16, enabled=device.type == "cuda"):
                 s_out = model(s_sp, s_de, s_gl, s_ma, s_hs, s_hd, aux=bool(a.mtp or heads), **s_kw)
             pi = torch.from_numpy(s_data["pi"][b_loc]).to(device)
+            if a.sp_pi_temp != 1.0:  # (issue #26: a smoother policy target, visits ** (1 / T))
+                pi = pi.clamp_min(0) ** (1.0 / a.sp_pi_temp)
+                pi = pi / pi.sum(-1, keepdim=True).clamp_min(1e-12)
             pw_s = torch.from_numpy(s_data["pi_w"][b_loc]).to(device)
             s_ce = (soft_policy_loss(s_out[0], pi, s_ma) * pw_s).sum() / pw_s.sum().clamp_min(1)
             bw_s = torch.from_numpy(sp_vw[bs]).to(device)
