@@ -31,6 +31,11 @@ if __name__ == "__main__":
         "--other", default="", help="a checkout running bot B (scripts/eval_pairs_opponent.py)"
     )
     ap.add_argument("--run", default="r", help="a short tag in the split run's player names")
+    ap.add_argument(
+        "--replays",
+        action="store_true",
+        help="save each game's replay (both views) next to the log: <log>.replays/",
+    )
     a = ap.parse_args()
     ks = sorted({int(m.group(1)) for f in Path(a.pool).glob("pair*_a.txt")
                  if (m := re.match(r"pair(\d+)_a", f.stem))})  # fmt: skip
@@ -50,5 +55,6 @@ if __name__ == "__main__":
                          procs=a.procs, lanes_per_proc=a.lanes, run=a.run)  # fmt: skip
     else:
         rows = run_schedule(a.bot_a, a.bot_b, schedule, a.pool, log, ports=tuple(a.ports),
-                            procs=a.procs, lanes_per_proc=a.lanes)  # fmt: skip
+                            procs=a.procs, lanes_per_proc=a.lanes,
+                            replay_dir=str(Path(log).with_suffix(".replays")) if a.replays else None)  # fmt: skip
     print("SUMMARY", json.dumps(summarize(rows) | {"log": log}))
