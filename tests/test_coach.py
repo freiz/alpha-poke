@@ -1027,3 +1027,38 @@ def test_the_pages_scripts_parse(game, report, tmp_path):
         assert set(keys["en"]) == set(keys["zh"]), (name, set(keys["en"]) ^ set(keys["zh"]))
         used = set(re.findall(r'data-t="([A-Za-z]+)"', html))
         assert used <= set(keys["en"]), (name, used - set(keys["en"]))
+
+
+def test_team_and_turn_write_ups(game, report, tmp_path, monkeypatch):
+    """coach.llm's other kinds: "team" (the facts with team_facts -- type matchups over the team,
+    coverage, speeds, the roles its moves fill and lack) and "turn" (one decision's facts, the
+    log around it), kept per decision and per question asked."""
+    from alpha_poke.coach import llm, packet
+
+    t = packet.team(report, game)["team_facts"]
+    assert set(t) >= {"defense_by_attacking_type", "roles", "roles_missing", "speed", "ladder_top"}
+    assert packet.roles("stealthrock") == ["hazards"] and "pivot" in packet.roles("uturn")
+    assert "priority" in packet.roles("extremespeed") and "setup" in packet.roles("swordsdance")
+    i = next(k for k, d in enumerate(report["decisions"]) if d["kind"] == "turn")
+    u = packet.turn(report, game, None, i)
+    assert u["decision"]["turn"] == report["decisions"][i]["turn"] and "decisions" not in u
+    assert all(int(t) <= u["decision"]["turn"] for t in u["log"])
+    asked = []
+    monkeypatch.setattr(
+        llm,
+        "chat",
+        lambda st, system, user, timeout=300: (
+            asked.append((system, user)) or f"answer {len(asked)}"
+        ),
+    )
+    s = {"base_url": "x", "api_key": "k", "model": "m"}
+    assert llm.write(tmp_path, report, game, None, "team", "zh", s).startswith("answer 1")
+    assert "team_facts" in asked[0][0] and "team_facts" in json.loads(asked[0][1])
+    llm.write(tmp_path, report, game, None, "turn", "en", s, dec=i)
+    llm.write(tmp_path, report, game, None, "turn", "en", s, dec=i, question="Why not switch?")
+    assert asked[2][1].endswith("The player's question: Why not switch?")
+    assert llm.cached(tmp_path, "turn", "en", i).startswith("answer 2")
+    assert llm.cached(tmp_path, "turn", "en", i, "Why not switch?").startswith("answer 3")
+    assert llm.cached(tmp_path, "turn", "en", i + 1) is None
+    with pytest.raises(ValueError):
+        llm.write(tmp_path, report, game, None, "turn", "en", s, dec=10_000)

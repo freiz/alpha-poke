@@ -2,10 +2,13 @@
 the home page (its base URL, key and model kept in the data directory's llm.json, the key never
 sent back to a page), given the review's facts (coach.packet) and told to use only them. Kinds:
 "style" -- how the player played (habits, with the turns and numbers that show them, and what to
-practise). Each write-up is kept with its review (llm-<kind>.<lang>.md): opened again it costs
-nothing. Every move it names, in English or Chinese, is checked against the two teams' learnsets
+practise); "team" -- the player's team (its make-up, strengths, weaknesses, what this game showed,
+suggestions within its common sets); "turn" -- one decision explained, or a question about it
+answered. Each write-up is kept with its review (llm-<kind>[-<decision>[-<question>]].<lang>.md):
+opened again it costs nothing. Every move it names, in English or Chinese, is checked against the two teams' learnsets
 and the moves used in the game; an unknown one gets a warning appended."""
 
+import hashlib
 import json
 import os
 import re
@@ -17,7 +20,7 @@ from alpha_poke.analysis.roles import to_id
 from alpha_poke.coach import packet
 from alpha_poke.dex import GEN, learnset
 
-KINDS = ("style",)
+KINDS = ("style", "team", "turn")
 
 RULES = {
     "zh": """规则：
@@ -75,6 +78,58 @@ Write in English, friendly and concrete for a child, under 500 words. Four secti
    preferred and why)
 4. What to practise next (2-3 concrete suggestions)""",
     },
+}
+
+
+SYSTEMS["team"] = {
+    "zh": """你是宝可梦 Showdown 第九世代 OU 的教练，在帮一位小朋友分析他这一局用的队伍。
+你会收到 JSON 数据包：双方队伍（you = 玩家）、team_facts（各攻击属性打过来时队里谁怕谁抗、已知招式能克制哪些属性、
+速度对比、招式起的作用 roles 和缺少的作用 roles_missing、玩家每只宝可梦在天梯上的常见配置 your_common_sets、
+天梯上最常见的宝可梦 ladder_top）、这一局的日志和每个决策的数据，以及中英文名对照 names_zh。
+your_team_pasted 为 false 时，玩家的配置只有这局亮出来的部分，没亮出的不要当成没有。
+{rules}
+- 建议改配置时，只能用 your_common_sets 里的招式、道具、太晶属性、特性，并说明为什么有用；建议换宝可梦要谨慎，说清楚取舍。
+用简体中文写，亲切、具体、适合小朋友，不超过 900 字。分五节：
+1. 队伍构成（每只大概担任什么角色）
+2. 优点（2-3 点）
+3. 弱点（属性弱点是否集中、速度、缺少的作用等，用 team_facts 的数据说明）
+4. 这一局暴露的问题（引用回合）
+5. 建议（2-4 条，具体）""",
+    "en": """You are a Pokémon Showdown Gen 9 OU coach helping a young player understand the team they used in
+one game. You get JSON: both teams (you = the player), team_facts (which of the team each
+attacking type hits hard or is resisted by, the types its known attacks hit super effectively,
+speeds, the roles its moves fill and roles_missing, the player's species' common sets on the
+ladder your_common_sets, the ladder's most used species ladder_top), this game's log and every
+decision's numbers. If your_team_pasted is false the player's sets are only what this game
+showed: do not take an unshown part as missing.
+{rules}
+- Suggest set changes only from your_common_sets (moves, items, tera types, abilities) and say why
+  each helps; suggest replacing a Pokémon only carefully, with the trade-off.
+Write in English, friendly and concrete for a child, under 600 words. Five sections:
+1. The team (each member's rough role)
+2. Strengths (2-3)
+3. Weaknesses (stacked type weaknesses, speed, missing roles -- with team_facts' data)
+4. What this game exposed (with turns)
+5. Suggestions (2-4, concrete)""",
+}
+
+SYSTEMS["turn"] = {
+    "zh": """你是宝可梦 Showdown 第九世代 OU 的教练，在给一位小朋友讲他这局里的某一步。
+你会收到 JSON 数据包：双方队伍、这一回合和前两回合的日志、这一步的数据 decision（玩家的选择 chosen、
+各选项的胜率估计和 AI 思考比例、AI 的选择、判定、当时的场面 state、AI 预计的对手应对 opponent_expected
+和对手实际的选择 opponent_did、AI 预想的走向 ai_lines），以及中英文名对照 names_zh。
+{rules}
+用简体中文写，亲切、具体，不超过 350 字。如果有小朋友的提问，就直接回答这个问题；没有的话，讲清楚：
+当时的局面、玩家的选择和 AI 的看法、AI 为什么这样看（对手可能怎么应对、接下来会怎样）、这一步可以学到什么。""",
+    "en": """You are a Pokémon Showdown Gen 9 OU coach explaining one decision of a game to a young player.
+You get JSON: both teams, the log of this turn and the two before, the decision (the player's
+choice chosen, each option's estimated win_chance and the AI's share of thinking, the AI's
+choice, the verdict, the public state, the opponent's replies the AI expected and what it did,
+the AI's expected lines ai_lines).
+{rules}
+Write in English, friendly and concrete, under 200 words. If the player asks a question, answer
+it; otherwise explain the position, the player's choice and the AI's view, why the AI sees it so
+(how the opponent could reply, what happens next), and what to learn from it.""",
 }
 
 
@@ -151,25 +206,45 @@ def unknown_moves(text: str, report: dict) -> list[str]:
     return sorted(GEN.moves[m].get("name", m) for m in bad)
 
 
-def cached(review_dir: Path, kind: str, lang: str) -> str | None:
-    f = review_dir / f"llm-{kind}.{lang}.md"
+def _file(review_dir: Path, kind: str, lang: str, dec: int | None, question: str | None) -> Path:
+    name = f"llm-{kind}"
+    if kind == "turn":
+        name += f"-{int(dec)}"
+        if question:
+            name += "-" + hashlib.sha1(question.encode()).hexdigest()[:10]
+    return review_dir / f"{name}.{lang}.md"
+
+
+def cached(review_dir: Path, kind: str, lang: str, dec: int | None = None,
+           question: str | None = None) -> str | None:  # fmt: skip
+    f = _file(review_dir, kind, lang, dec, question)
     return f.read_text(encoding="utf-8") if f.is_file() else None
 
 
 def write(review_dir: Path, report: dict, row: dict, team: dict | None, kind: str, lang: str,
-          settings: dict) -> str:  # fmt: skip
-    """The ``kind`` write-up of a review in ``lang`` ("zh" / "en"), kept with it."""
+          settings: dict, dec: int | None = None, question: str | None = None) -> str:  # fmt: skip
+    """The ``kind`` write-up of a review in ``lang`` ("zh" / "en"), kept with it; "turn": the
+    ``dec``-th decision's, ``question`` the player's own (else the default explanation)."""
     if kind not in KINDS:
         raise ValueError(f"unknown kind {kind}")
     lang = "zh" if lang == "zh" else "en"
-    data = packet.build(report, row, team)
+    question = (question or "").strip()[:500] or None
+    if kind == "turn":
+        if dec is None or not 0 <= int(dec) < len(report["decisions"]):
+            raise ValueError("no such decision")
+        data = packet.turn(report, row, team, int(dec))
+    else:
+        data = packet.team(report, row, team) if kind == "team" else packet.build(report, row, team)
     system = SYSTEMS[kind][lang].replace("{rules}", RULES[lang])
-    text = chat(settings, system, packet.text(data))
+    user = packet.text(data)
+    if question:
+        user += ("\n\n小朋友的提问：" if lang == "zh" else "\n\nThe player's question: ") + question
+    text = chat(settings, system, user)
     bad = unknown_moves(text, report)
     if bad:
         text += ("\n\n> 校验提示：这段文字提到的这些招式，双方宝可梦都学不会，对局中也没有出现，可能是模型写错了："
                  if lang == "zh" else
                  "\n\n> Check: these moves the text names are not learnable by either team nor used in the game -- "
                  "likely the model's mistake: ") + ", ".join(bad) + "\n"  # fmt: skip
-    (review_dir / f"llm-{kind}.{lang}.md").write_text(text, encoding="utf-8")
+    _file(review_dir, kind, lang, dec, question).write_text(text, encoding="utf-8")
     return text

@@ -53,8 +53,12 @@ uv run python scripts/review_game.py <replay URL, id or file> --player <name> --
 - **Review again**: on the review page, with a deeper setting or from the other player's view.
 - **The list of reviews**: searchable, sortable, with both teams, the result and the scorecard;
   each review can be renamed and noted on (`data/coach/reviews.sqlite`).
-- **AI commentary** (`coach.llm`): a language model's write-up on the review page -- for now
-  the player's style (habits, with the turns and numbers that show them, what to practise). Its
+- **AI commentary** (`coach.llm`): a language model's write-ups on the review page -- the
+  player's style (habits, with the turns and numbers that show them, what to practise), the team
+  (its make-up, strengths, weaknesses from the type matchups over the team, coverage, speeds and
+  the roles its moves fill or lack, what the game exposed, suggestions within its common sets),
+  and any decision explained or asked about ("Ask the AI" beside it; only that decision's facts,
+  about 5,000 tokens). Its
   address (any OpenAI-compatible API), key and model are set on the home page; the key stays in
   the data directory (`coach/llm.json`, this computer's only, settable from it alone) and is never
   sent back to a page. The model gets the review's facts (`coach.packet`, about 27,000 tokens for

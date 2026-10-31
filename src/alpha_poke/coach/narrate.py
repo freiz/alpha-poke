@@ -46,18 +46,23 @@ def _usage(path) -> dict:
     return {to_id(n): s for n, s in UsageStats.load(path).species.items()}
 
 
-def common_sets(species: list[str], top: int = 6) -> dict:
-    """The species' most common abilities, items, moves, tera types and spreads in the latest
-    month of Smogon's gen9ou statistics (data/raw/smogon; {} without them)."""
+def usage_table() -> dict:
+    """Species id -> its statistics in the latest month of Smogon's gen9ou statistics
+    (data/raw/smogon; {} without them)."""
     from alpha_poke.data.smogon_stats import DEFAULT_DIR
 
     months = (
         sorted(p.name for p in DEFAULT_DIR.iterdir() if p.is_dir()) if DEFAULT_DIR.exists() else []
     )
     path = DEFAULT_DIR / months[-1] / "chaos" / "gen9ou-1500.json" if months else None
-    if path is None or not path.exists():
+    return _usage(path) if path is not None and path.exists() else {}
+
+
+def common_sets(species: list[str], top: int = 6) -> dict:
+    """The species' most common abilities, items, moves, tera types and spreads (usage_table)."""
+    by_id = usage_table()
+    if not by_id:
         return {}
-    by_id = _usage(path)
     out = {}
     for sp in species:
         s = by_id.get(to_id(sp.replace("-*", "")))

@@ -78,6 +78,14 @@ PAGE = r"""<!DOCTYPE html>
   .llmhead button { background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 4px 10px; cursor: pointer; font: inherit; }
   .llmtext { font-size: 14px; line-height: 1.6; max-width: 980px; } .llmtext h4 { margin: 12px 0 4px; }
   #llmFold summary { cursor: pointer; color: var(--muted); margin-top: 6px; }
+  .llmhead button.sel, .aihead .ask.sel { border-color: var(--ai); }
+  button.small, .aihead .ask { font-size: 12px; padding: 1px 8px; margin-left: auto; background: var(--bg); color: var(--ink);
+                               border: 1px solid var(--line); border-radius: 6px; cursor: pointer; }
+  .aihead { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+  .askbox { margin-top: 6px; border-top: 1px dashed var(--line); padding-top: 6px; }
+  .askrow { display: flex; gap: 6px; } .askrow input { flex: 1; min-width: 0; font: inherit; font-size: 13px; padding: 3px 6px;
+  background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; }
+  .askrow button { font: inherit; font-size: 13px; padding: 3px 10px; background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; cursor: pointer; }
   .llmtext ul, .llmtext ol { margin: 4px 0 4px 20px; padding: 0; } .llmtext blockquote { color: var(--muted); margin: 6px 0; }
   .lines { margin-top: 6px; font-size: 12px; } .lines summary { cursor: pointer; color: var(--muted); }
   .lines ol { margin: 4px 0 4px 18px; padding: 0; } .lines li { margin: 3px 0; }
@@ -103,8 +111,9 @@ __RF_CSS__
 </header>
 <div class="score" id="score"></div>
 <section class="llmbox" id="llmbox" hidden><div class="llmhead"><b id="llmhead"></b>
-  <button id="llmStyle"></button> <span class="legend" id="llmMsg"></span></div>
-  <details id="llmFold" hidden><summary id="llmSum"></summary><div class="llmtext" id="llmText"></div></details></section>
+  <button data-llm="style"></button><button data-llm="team"></button> <span class="legend" id="llmMsg"></span></div>
+  <details id="llmFold" hidden><summary id="llmSum"></summary><div class="llmtext" id="llmText"></div>
+    <button id="llmAgain" class="small"></button></details></section>
 <section class="redobox" id="redobox" hidden><h3 id="redohead"></h3><div class="legend" id="redonote"></div>
 <div class="rf"><label id="whohead"></label><div class="choice" id="who"></div><div class="muted" id="whonote"></div></div>
 __RF_HTML__
@@ -185,7 +194,8 @@ const T = {
     redo: "↻ Review again, deeper", redoHead: "Review this game again", whoHead: "Whose decisions",
     llmHead: "AI commentary (a language model, from the review's facts)", llmStyle: "Your playing style", llmAgain: "↻ Write it again",
     llmWorking: "The language model is writing… (up to a minute or two)", llmNoSet: "Set a language model on the home page first.",
-    llmShow: "Your playing style (written before: click to open)",
+    llmShow: k => `${k} (click to open or fold)`, llmTeam: "Your team",
+    askBtn: "Ask the AI", askPh: "Ask about this decision (optional: empty = why the AI sees it so)", askGo: "Ask", askAgain: "Ask again",
     whoNote: "The other player's view is a review of its own (this one stays); a team pasted is that player's.",
     otherView: n => `↔ ${n}'s view`,
     redoNote: "With more searches, more time or your team pasted; when it is done this page shows the new review (in place of this one).",
@@ -260,7 +270,8 @@ const T = {
     redo: "↻ 用更强的配置重新分析", redoHead: "重新分析这一局", whoHead: "分析谁的决策",
     llmHead: "AI 解说（语言模型根据复盘数据撰写）", llmStyle: "操作风格评价", llmAgain: "↻ 重新生成",
     llmWorking: "语言模型正在撰写……（可能要一两分钟）", llmNoSet: "请先在首页设置语言模型。",
-    llmShow: "操作风格评价（之前生成的，点击展开）",
+    llmShow: k => `${k}（点击展开 / 收起）`, llmTeam: "队伍分析",
+    askBtn: "问 AI", askPh: "关于这一步想问什么（可不填：默认解释 AI 为什么这样看）", askGo: "提问", askAgain: "再问一次",
     whoNote: "换成另一位玩家的视角会另存一份复盘（这一份保留）；贴的队伍算那位玩家的。",
     otherView: n => `↔ ${n} 的视角`,
     redoNote: "可以多搜几次、每次多想一会儿，或者贴上你的队伍；完成后这一页会换成新的结果（替换掉现在这份）。",
@@ -449,7 +460,8 @@ function verdict(d) {
 const pm = se => se ? ` ±${Math.max(1, Math.round(100 * se))}` : "";
 function aiHTML(d) {
   const v = verdict(d), tag = {bad: L.bad, mild: L.mild, same: L.same, ok: L.ok}[v];
-  let h = `<div class="aibox"><div class="aihead">${L.aiHead[d.kind] || L.aiHead.turn} <span class="tag ${v == "same" ? "ok" : v}">${tag}</span> <span class="legend">${L.chanceAt(pct(d.value) + pm(d.value_se))}${d.visits ? " · " + L.visits(d.visits) : ""}</span></div>`;
+  const di = R.decisions.indexOf(d), ask = LLM_ON ? ` <button class="ask${ASK[di] && ASK[di].open ? " sel" : ""}" data-ask="${di}">${L.askBtn}</button>` : "";
+  let h = `<div class="aibox"><div class="aihead">${L.aiHead[d.kind] || L.aiHead.turn} <span class="tag ${v == "same" ? "ok" : v}">${tag}</span> <span class="legend">${L.chanceAt(pct(d.value) + pm(d.value_se))}${d.visits ? " · " + L.visits(d.visits) : ""}</span>${ask}</div>`;
   h += `<div class="legend">${L.bars}</div>`;
   h += `<div class="opt head"><span></span><span>${L.winCol}</span><span>${L.shareCol}</span></div>`;
   const opts = d.options.slice();
@@ -480,7 +492,7 @@ function aiHTML(d) {
   const b = x => Object.entries(x || {}).map(([k, v]) => (ST[k] || k) + " " + (v > 0 ? "+" + v : v)).join(", ");
   const sideText = (s, label) => `${label}: ${esc(monName(s.active.species))} ${pct(s.active.hp)}${Object.keys(s.boosts || {}).length ? " (" + b(s.boosts) + ")" : ""} · ${L.left(s.alive)}${s.tera_used ? " · " + L.tera : ""}`;
   h += `<div class="state">${sideText(me, L.you)} | ${sideText(op, L.opp)}${Object.keys(me.hazards).length ? " | " + L.hazMe + ": " + b(me.hazards) : ""}${Object.keys(op.hazards).length ? " | " + L.hazOpp + ": " + b(op.hazards) : ""}</div>`;
-  return h + oppHTML(d) + jumpHTML(d) + linesHTML(d) + "</div>";
+  return h + oppHTML(d) + jumpHTML(d) + linesHTML(d) + askHTML(di) + "</div>";
 }
 // the search's principal variations (the review's lines, as KataGo's variations): each step's
 // choices and what the worlds made of them -- the actives' HP (median) and how often one fainted
@@ -665,35 +677,74 @@ function md(text) {
   close();
   return out;
 }
-if (location.protocol.startsWith("http") && DIR) {
-  const box = document.getElementById("llmbox"), btn = document.getElementById("llmStyle"), msg = document.getElementById("llmMsg"), out = document.getElementById("llmText");
-  // (folded: a write-up is long, the replay under it; open when it was just written)
-  const fold = document.getElementById("llmFold");
-  document.getElementById("llmSum").textContent = L.llmShow;
-  const show = (text, open) => { out.innerHTML = md(text); fold.hidden = false; fold.open = open; };
-  document.getElementById("llmhead").textContent = L.llmHead;
-  const q = `review=${encodeURIComponent(DIR)}&kind=style&lang=${UI}`;
-  fetch("/api/llm?" + q).then(r => r.ok ? r.json() : null).then(j => {
-    if (!j) return;
-    box.hidden = false;
-    btn.textContent = j.text ? L.llmAgain : L.llmStyle;
-    if (j.text) show(j.text, false);
-  });
-  btn.onclick = async () => {
-    btn.disabled = true; msg.textContent = L.llmWorking;
-    try {
-      const r = await fetch("/api/llm", {method: "POST", headers: {"Content-Type": "application/json"},
-                                          body: JSON.stringify({review: DIR, kind: "style", lang: UI})});
-      const j = await r.json(); if (!r.ok) throw new Error(j.error || r.statusText);
-      for (;;) {
-        await new Promise(res => setTimeout(res, 2000));
-        const s = await (await fetch("/api/job/" + j.job)).json();
-        if (s.status == "done") { show(s.text, true); msg.textContent = ""; btn.textContent = L.llmAgain; break; }
-        if (s.status == "error") throw new Error(s.error);
-      }
-    } catch (e) { msg.textContent = e.message; }
-    btn.disabled = false;
+// a write-up asked for and polled: its text (the error thrown)
+async function llmAsk(body) {
+  const r = await fetch("/api/llm", {method: "POST", headers: {"Content-Type": "application/json"},
+                                      body: JSON.stringify({review: DIR, lang: UI, ...body})});
+  const j = await r.json(); if (!r.ok) throw new Error(j.error || r.statusText);
+  for (;;) {
+    await new Promise(res => setTimeout(res, 2000));
+    const s = await (await fetch("/api/job/" + j.job)).json();
+    if (s.status == "done") return s.text;
+    if (s.status == "error") throw new Error(s.error);
+  }
+}
+const llmGet = q => fetch(`/api/llm?review=${encodeURIComponent(DIR)}&lang=${UI}&${q}`).then(r => r.ok ? r.json() : null);
+const LLM_ON = location.protocol.startsWith("http") && !!DIR;
+if (LLM_ON) {
+  // the top bar: the style and the team write-ups, one fold showing the one picked (folded on
+  // load: a write-up is long, the replay under it; open when just written)
+  const box = document.getElementById("llmbox"), msg = document.getElementById("llmMsg"), out = document.getElementById("llmText");
+  const fold = document.getElementById("llmFold"), again = document.getElementById("llmAgain"), sum = document.getElementById("llmSum");
+  const TEXT = {}, btns = [...document.querySelectorAll("[data-llm]")];
+  let shown = null;
+  document.getElementById("llmhead").textContent = L.llmHead; again.textContent = L.llmAgain;
+  const label = k => (k == "style" ? L.llmStyle : L.llmTeam) + (TEXT[k] ? " ✓" : "");
+  const relabel = () => btns.forEach(b => { b.textContent = label(b.dataset.llm); b.classList.toggle("sel", b.dataset.llm == shown && !fold.hidden); });
+  const show = (k, open) => { shown = k; out.innerHTML = md(TEXT[k]); sum.textContent = L.llmShow(k == "style" ? L.llmStyle : L.llmTeam);
+                              fold.hidden = false; fold.open = open; relabel(); };
+  const make = async k => {
+    btns.forEach(b => { b.disabled = true; }); again.disabled = true; msg.textContent = L.llmWorking;
+    try { TEXT[k] = await llmAsk({kind: k}); show(k, true); msg.textContent = ""; } catch (e) { msg.textContent = e.message; }
+    btns.forEach(b => { b.disabled = false; }); again.disabled = false;
   };
+  Promise.all(["style", "team"].map(k => llmGet("kind=" + k).then(j => { if (j && j.text) TEXT[k] = j.text; return j; }))).then(js => {
+    if (!js.some(Boolean)) return;
+    box.hidden = false; relabel();
+    const k = ["style", "team"].find(k => TEXT[k]); if (k) show(k, false);
+  });
+  btns.forEach(b => { b.onclick = () => { const k = b.dataset.llm; if (TEXT[k]) { show(k, true); } else make(k); }; });
+  again.onclick = () => { if (shown) make(shown); };
+}
+// a decision asked about (the review page's "ask the AI" under each decision): per decision index
+// {open, text, busy, error}; its kept answer fetched the first time it is opened
+const ASK = {};
+function askHTML(i) {
+  const a = ASK[i];
+  if (!a || !a.open) return "";
+  let h = `<div class="askbox"><div class="askrow"><input type="text" id="askq-${i}" placeholder="${esc(L.askPh)}" maxlength="300" />
+    <button data-askgo="${i}" ${a.busy ? "disabled" : ""}>${a.text ? L.askAgain : L.askGo}</button></div>`;
+  if (a.busy) h += `<div class="legend">${L.llmWorking}</div>`;
+  if (a.error) h += `<div class="legend">${esc(a.error)}</div>`;
+  if (a.text) h += `<div class="llmtext">${md(a.text)}</div>`;
+  return h + "</div>";
+}
+if (LLM_ON) {
+  document.addEventListener("click", async e => {
+    const open = e.target.closest("[data-ask]"), go = e.target.closest("[data-askgo]");
+    if (open) {
+      const i = +open.dataset.ask, a = ASK[i] = ASK[i] || {};
+      a.open = !a.open; render();
+      if (a.open && a.text === undefined) {
+        const j = await llmGet(`kind=turn&dec=${i}`); a.text = j && j.text || null; render();
+      }
+    } else if (go) {
+      const i = +go.dataset.askgo, a = ASK[i], q = (document.getElementById("askq-" + i) || {}).value || "";
+      a.busy = true; a.error = null; render();
+      try { a.text = await llmAsk({kind: "turn", dec: i, question: q.trim() || null}); } catch (err) { a.error = err.message; }
+      a.busy = false; render();
+    }
+  });
 }
 if (location.protocol.startsWith("http") && DIR) {
   fetch("/api/redo-info?review=" + encodeURIComponent(DIR)).then(r => r.ok ? r.json() : null).then(info => {

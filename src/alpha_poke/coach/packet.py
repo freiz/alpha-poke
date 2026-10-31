@@ -176,6 +176,15 @@ def build(report: dict, row: dict, team: dict | None = None) -> dict:
     return data
 
 
+def team(report: dict, row: dict, team_sets: dict | None = None) -> dict:
+    """The facts for a team's analysis: build's (the game's numbers show what the team met) with
+    team_facts, the names again over all of it."""
+    data = build(report, row, team_sets)
+    data["team_facts"] = team_facts(data)
+    data["names_zh"] = _names(data)
+    return data
+
+
 def _names(data: dict) -> dict:
     """The Chinese names of every Pokémon, move, item, ability and type the facts name."""
     zh = zh_names()
@@ -197,6 +206,113 @@ def _names(data: dict) -> dict:
                 names[en] = name
         out[kind] = names
     out["types"] = {t: n for t, n in zh["types"].items() if t in TYPES}
+    return out
+
+
+HAZARDS = {"stealthrock", "spikes", "toxicspikes", "stickyweb", "stoneaxe", "ceaselessedge"}
+REMOVAL = {"rapidspin", "defog", "courtchange", "tidyup", "mortalspin"}
+PROTECT = {"protect", "detect", "kingsshield", "spikyshield", "banefulbunker", "silktrap",
+           "burningbulwark", "obstruct"}  # fmt: skip
+RECOVERY = {"wish", "rest", "strengthsap", "painsplit", "lifedew", "junglehealing"}
+
+
+def roles(mid: str) -> list[str]:
+    """What a move does for a team: hazards, hazard removal, priority, pivot, recovery, setup,
+    protect, status."""
+    mid = to_id(mid)
+    m = GEN.moves.get(mid) or {}
+    out = []
+    if mid in HAZARDS or m.get("sideCondition") in HAZARDS:
+        out.append("hazards")
+    if mid in REMOVAL:
+        out.append("hazard removal")
+    if (m.get("priority") or 0) > 0 and m.get("category") != "Status":
+        out.append("priority")
+    if m.get("selfSwitch") and mid != "batonpass":
+        out.append("pivot")
+    if mid in RECOVERY or (m.get("heal") and m.get("target") == "self"):
+        out.append("recovery")
+    if m.get("boosts") and m.get("target") == "self":
+        out.append("setup")
+    if mid in PROTECT:
+        out.append("protect")
+    if m.get("category") == "Status" and m.get("status"):
+        out.append("status")
+    return out
+
+
+def team_facts(data: dict, top: int = 15) -> dict:
+    """The player's team as a whole (data: build's): how many of it each attacking type hits
+    super effectively / is resisted by / cannot touch; what its known attacks hit super
+    effectively and what nothing does; its speeds against the opponent's; the roles its known
+    moves fill and the ones none does; its species' common sets on the ladder; the ladder's most
+    used species (types, base Speed, their most common moves) -- the threats a team meets."""
+    from alpha_poke.coach.narrate import common_sets, usage_table
+
+    you = data["teams"]["you"]
+    defense = {}
+    for t in TYPES:
+        row = {
+            k: [m["species"] for m in you if t in m["takes"].get(k, [])]
+            for k in ("x4", "x2", "x0.5", "x0.25", "immune")
+        }
+        weak = row["x4"] + row["x2"]
+        if weak or row["immune"]:
+            defense[t] = {
+                "weak": weak,
+                "resist": row["x0.5"] + row["x0.25"],
+                "immune": row["immune"],
+            }
+    moves = [mv for m in you for mv in m.get("moves") or m.get("moves_seen") or []]
+    hit = set()
+    for mv in moves:
+        if mv.get("cat") in ("Physical", "Special") and mv.get("type"):
+            hit |= {
+                d.capitalize()
+                for d, row in GEN.type_chart.items()
+                if row.get(mv["type"].upper(), 1) > 1
+            }
+    filled: dict[str, list] = {}
+    for m in you:
+        for mv in m.get("moves") or m.get("moves_seen") or []:
+            for r in roles(mv["name"]):
+                filled.setdefault(r, []).append(f"{m['species']}: {mv['name']}")
+    usage = usage_table()
+    ladder = sorted(usage.items(), key=lambda kv: -kv[1].usage)[:top]
+    return {
+        "defense_by_attacking_type": defense,
+        "known_attacks_super_effective_on": sorted(hit),
+        "known_attacks_nothing_super_effective_on": [t for t in TYPES if t not in hit],
+        "speed": {"you": [[m["species"], m["base"]["spe"]] for m in you if m.get("base")],
+                  "opponent": [[m["species"], m["base"]["spe"]] for m in data["teams"]["opponent"] if m.get("base")]},
+        "roles": filled,
+        "roles_missing": [r for r in ("hazards", "hazard removal", "priority", "pivot", "recovery") if r not in filled],
+        "your_common_sets": common_sets([m["species"] for m in you], top=8),
+        "ladder_top": [{"species": (GEN.pokedex.get(k) or {}).get("name", k), "usage": round(s.usage, 3),
+                        "types": (GEN.pokedex.get(k) or {}).get("types"),
+                        "base_spe": ((GEN.pokedex.get(k) or {}).get("baseStats") or {}).get("spe"),
+                        "moves": [(GEN.moves.get(to_id(x)) or {}).get("name", x) for x in list(s.move_has)[:4]]}
+                       for k, s in ladder],
+    }  # fmt: skip
+
+
+def turn(report: dict, row: dict, team: dict | None, i: int) -> dict:
+    """The facts of one decision (the i-th of the review): both teams, the decision with every
+    option, the opponent's expected replies, the AI's lines, the public state, the log of its turn
+    and the two before."""
+    data = build(report, row, team)
+    d = report["decisions"][i]
+    full = _decision(d) | {
+        "options": [{"option": o[0], "share": o[1], "win_chance": o[2], "error": o[3]} for o in d["options"]],
+        "state": d.get("state"),
+    }  # fmt: skip
+    if d.get("lines"):
+        full["ai_lines"] = _decision(d | {"lines": d["lines"]})["ai_lines"] if len(d["lines"]) <= 2 else [
+            _decision(d | {"lines": [x]})["ai_lines"][0] for x in d["lines"]]  # fmt: skip
+    out = {k: data[k] for k in ("game", "teams", "opponent_common_sets")}
+    out["log"] = {t: v for t, v in data["log"].items() if d["turn"] - 2 <= int(t) <= d["turn"]}
+    out["decision"] = full
+    out["names_zh"] = _names(out)
     return out
 
 

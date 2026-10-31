@@ -19,9 +19,10 @@ to look, and gets the review page when the search is done. Loopback only; one re
   GET  /api/llm-settings      the language model's URL and model, whether a key is set (coach.llm)
   POST /api/llm-settings      {base_url, model, api_key}: set them (from this computer only)
   POST /api/llm-test          {lang}: a one-line question to the model, its answer
-  GET  /api/llm?review=&kind=&lang=   a write-up kept with the review, or null
-  POST /api/llm               {review, kind, lang}: a write-up -> {job} (GET /api/job/<id>:
-                              {status, text, error})
+  GET  /api/llm?review=&kind=&lang=[&dec=]   a write-up kept with the review, or null
+  POST /api/llm               {review, kind, lang[, dec, question]}: a write-up -> {job}
+                              (GET /api/job/<id>: {status, text, error}); kind "turn": the
+                              dec-th decision's, the player's question if any
 """
 
 import json
@@ -115,7 +116,8 @@ class Jobs:
         """Searches at once the machine has the cores for (each ``threads`` threads)."""
         return max(1, (os.cpu_count() or 2) // self.threads)
 
-    def write_up(self, name: str, kind: str, lang: str) -> str:
+    def write_up(self, name: str, kind: str, lang: str, dec: int | None = None,
+                 question: str | None = None) -> str:  # fmt: skip
         """A language model's write-up of the review ``name`` (coach.llm), on its own thread: a
         review's searches do not hold it up."""
         rep, row, team = stored(name)
@@ -125,7 +127,7 @@ class Jobs:
         def run(job=self.jobs[jid]):
             try:
                 job["text"] = llm.write(COACH / name, rep, row, team and {k: asdict(v) for k, v in team.items()},
-                                        kind, lang, llm.load_settings(COACH))  # fmt: skip
+                                        kind, lang, llm.load_settings(COACH), dec, question)  # fmt: skip
                 job["status"] = "done"
             except Exception as e:  # noqa: BLE001 - shown on the page
                 job["status"], job["error"] = "error", str(e)
@@ -272,7 +274,11 @@ def handler(cache, jobs: Jobs):
                 if not REVIEW_NAME.fullmatch(name) or qs.get("kind", [""])[0] not in llm.KINDS:
                     return self._json({"error": "no such write-up"}, HTTPStatus.NOT_FOUND)
                 lang = "zh" if qs.get("lang", [""])[0] == "zh" else "en"
-                return self._json({"text": llm.cached(COACH / name, qs["kind"][0], lang)})
+                dec = qs.get("dec", [""])[0]
+                if qs["kind"][0] == "turn" and not dec.isdigit():
+                    return self._json({"error": "no such write-up"}, HTTPStatus.NOT_FOUND)
+                return self._json({"text": llm.cached(COACH / name, qs["kind"][0], lang,
+                                                      int(dec) if dec.isdigit() else None)})  # fmt: skip
             if path == "/api/redo-info":
                 try:
                     rep, row, team = stored(
@@ -345,7 +351,15 @@ def handler(cache, jobs: Jobs):
                     if not llm.public_settings(COACH)["has_key"]:
                         raise Refused("no_llm")
                     return self._json(
-                        {"job": jobs.write_up(str(body.get("review") or ""), body["kind"], lang)}
+                        {
+                            "job": jobs.write_up(
+                                str(body.get("review") or ""),
+                                body["kind"],
+                                lang,
+                                body["dec"] if isinstance(body.get("dec"), int) else None,
+                                str(body.get("question") or "") or None,
+                            )
+                        }  # fmt: skip
                     )
                 if self.path == "/api/meta":  # (a review renamed / noted on: its id and link stay)
                     index.sync(COACH, stored)
