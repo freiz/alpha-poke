@@ -139,8 +139,11 @@ def _decision(d: dict) -> dict:
         out["guessed_moves"] = d["guessed"]
     if d.get("opp_options"):
         out["opponent_expected"] = [{"option": o[0], "share": o[1], "your_win_chance": o[2]}
-                                    for o in d["opp_options"][:3]]  # fmt: skip
+                                    for o in d["opp_options"][:3]
+                                    + [o for o in d["opp_options"][3:] if o[0] == d.get("opp_did")][:1]]  # fmt: skip
         out["opponent_did"] = d.get("opp_did")
+        if d.get("opp_did") and d["opp_did"] not in [o[0] for o in d["opp_options"]]:
+            out["opponent_did_unexpected"] = True  # (not among the replies the AI weighed)
     if d.get("lines"):
         out["ai_lines"] = [[f"{s['o']} / {s['t']}: you {s['me'][0]} {s['me'][1]:.0%}"
                             + (f" (fainted in {s['me'][2]:.0%})" if s["me"][2] else "")
@@ -148,6 +151,42 @@ def _decision(d: dict) -> dict:
                             + (f" (fainted in {s['opp'][2]:.0%})" if s["opp"][2] else "")
                             for s in line] for line in d["lines"][:2]]  # fmt: skip
     return out
+
+
+LUCK = ("-crit", "-miss", "cant")  # (critical hits, misses, full paralysis / sleep / flinch)
+
+
+def swings(
+    report: dict, log: dict[int, list[str]], k: int = 4, min_move: float = 0.15
+) -> list[dict]:
+    """The largest moves of the player's winning chance between one decision and the next (up
+    or down, >= ``min_move``), each with what can explain it: the player's own loss there, the
+    opponent's reply against the AI's most expected one (the player's chance after each), and
+    the luck in the log of those turns."""
+    ds = report["decisions"]
+    out = []
+    for a, b in zip(ds, ds[1:], strict=False):
+        move = b["value"] - a["value"]
+        if abs(move) < min_move:
+            continue
+        x = {"from_turn": a["turn"], "to_turn": b["turn"], "before": a["value"], "after": b["value"],
+             "change": round(move, 3), "your_choice": a["chosen"], "your_loss": a["loss"]}  # fmt: skip
+        opts = {o[0]: o for o in a.get("opp_options") or []}
+        if a.get("opp_did"):
+            x["opponent_did"] = a["opp_did"]
+            if a["opp_did"] in opts:
+                x["your_chance_after_opponent_did"] = opts[a["opp_did"]][2]
+            elif opts:
+                x["opponent_did_unexpected"] = True
+        if opts:
+            top = max(opts.values(), key=lambda o: o[1])
+            x["opponent_most_expected"] = {"option": top[0], "your_chance": top[2]}
+        luck = [ln for t in range(a["turn"], b["turn"] + (a["turn"] == b["turn"]))
+                for ln in log.get(t, []) if ln.split("|")[0] in LUCK]  # fmt: skip
+        if luck:
+            x["luck_in_log"] = luck
+        out.append(x)
+    return sorted(out, key=lambda x: -abs(x["change"]))[:k]
 
 
 def build(report: dict, row: dict, team: dict | None = None) -> dict:
@@ -179,6 +218,7 @@ def build(report: dict, row: dict, team: dict | None = None) -> dict:
         "log": _turns(row, me),
         "decisions": [_decision(d) for d in report["decisions"]],
     }  # fmt: skip
+    data["swings"] = swings(report, data["log"])
     data["names_zh"] = _names(data)
     return data
 

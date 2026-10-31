@@ -991,6 +991,19 @@ def test_the_facts_for_a_language_model(game, report):
                           "ai_choice_win_chance", "verdict"} and "win_chance" not in d  # fmt: skip
         if r["chosen"] in [o[0] for o in r["options"]]:
             assert d["chosen"] in [o["option"] for o in d["options"]]
+        # (the opponent's actual reply among those shown, else marked unexpected)
+        if r.get("opp_did") and r.get("opp_options"):
+            shown = [o["option"] for o in d["opponent_expected"]]
+            weighed = r["opp_did"] in [o[0] for o in r["opp_options"]]
+            assert (r["opp_did"] in shown) == weighed and d.get(
+                "opponent_did_unexpected", False
+            ) != weighed
+    # (the largest swings, each with the player's loss, the opponent's reply and the luck)
+    for x in data["swings"]:
+        assert abs(x["change"]) >= 0.15 and abs(x["after"] - x["before"] - x["change"]) < 1e-3
+    assert [abs(x["change"]) for x in data["swings"]] == sorted(
+        (abs(x["change"]) for x in data["swings"]), reverse=True
+    )
     assert json.loads(packet.text(data)) == json.loads(json.dumps(data))
 
 
@@ -1169,3 +1182,25 @@ def test_the_team_facts_are_kept_with_the_review(tmp_path, monkeypatch):
     assert meta.facts_kept(tmp_path, team, ("B", True)) == {"n": 2}  # (another team: again)
     snap["built"] = "z"
     assert meta.facts_kept(tmp_path, team, ("B", True)) == {"n": 3}  # (a new snapshot: again)
+
+
+def test_the_swings_name_their_causes():
+    """coach.packet.swings: a 65-point rise after an opponent's reply the AI gave the player 62% for
+    (its expected one: 2%) and a 56-point fall with a crit on the player's side, largest first."""
+    from alpha_poke.coach import packet
+
+    def dec(turn, value, opp=None, did=None):
+        return {"turn": turn, "value": value, "chosen": "x", "loss": 0.0, "opp_options": opp or [],
+                "opp_did": did}  # fmt: skip
+
+    report = {"decisions": [dec(33, 0.62, [["drainingkiss", 0.3, 0.6], ["switch m", 0.7, 0.6]], "drainingkiss"),
+                            dec(34, 0.06), dec(35, 0.02, [["uturn", 0.74, 0.02], ["knockoff", 0.01, 0.62]], "knockoff"),
+                            dec(36, 0.67)]}  # fmt: skip
+    log = {33: ["move|OPP Hatterene|Draining Kiss|ME Ogerpon", "-crit|ME Ogerpon"]}
+    s = packet.swings(report, log)
+    assert [x["from_turn"] for x in s] == [35, 33]
+    assert (
+        s[0]["your_chance_after_opponent_did"] == 0.62
+        and s[0]["opponent_most_expected"]["your_chance"] == 0.02
+    )
+    assert s[1]["luck_in_log"] == ["-crit|ME Ogerpon"] and "luck_in_log" not in s[0]
