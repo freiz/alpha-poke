@@ -7,8 +7,6 @@ teams' share of the noise taken out: a tighter interval than comparing the two i
       [--baseline scaling_400] [--elo0 0 --elo1 20]
 
 A path: a run's directory (its .jsonl log) or the log itself; a run is named by its directory.
---luck: runs saved with their replays (eval_pairs --replays) also with each game's luck taken out
-(eval.luck: crits, misses, full paralyses -- the same expected score, less variance).
 """
 
 import argparse
@@ -32,26 +30,12 @@ def main() -> None:
     ap.add_argument("--elo0", type=float, default=0.0)
     ap.add_argument("--elo1", type=float, default=20.0)
     ap.add_argument("--json", action="store_true")
-    ap.add_argument(
-        "--luck", action="store_true", help="also with the luck taken out (--replays runs)"
-    )
     a = ap.parse_args()
     scores = {}
     for r in a.runs:
         f = log_of(r)
         name = f.parent.name if f.parent.name != "diag" else f.stem
-        rows = read_log(str(f))
-        scores[name] = pair_score_map(rows)
-        rep = f.with_suffix(".replays")
-        if a.luck and rep.is_dir():
-            from alpha_poke.eval.luck import adjusted_pairs
-
-            adj, fit = adjusted_pairs(rows, rep)
-            scores[name + "+luck"] = adj
-            if not a.json:
-                print(
-                    f"{name}: luck fit on {fit['games']} games, theta {fit['theta']}, R2 {fit.get('r2')}"
-                )
+        scores[name] = pair_score_map(read_log(str(f)))
     out = {}
     for name, m in scores.items():
         st = pair_stats(list(m.values()))
@@ -60,7 +44,7 @@ def main() -> None:
         if not a.json:
             print(f"{name:32} {st['pairs']:4} pairs  score {st['score']:.3f} ± {st['ci95']:.3f}  "
                   f"Elo {st['elo']:+.0f} [{st['elo_ci95'][0]:+.0f}, {st['elo_ci95'][1]:+.0f}]  nElo {st['nelo']:+.0f}  "
-                  f"penta {st['pentanomial']}  decisive {st['decisive']:.0%}  LLR({a.elo0:g},{a.elo1:g}) {st['llr']:+.2f}")  # fmt: skip
+                  f"W/D/L {st['wdl']}  penta {st['pentanomial']}  decisive {st['decisive']:.0%}  LLR({a.elo0:g},{a.elo1:g}) {st['llr']:+.2f}")  # fmt: skip
     if a.baseline:
         base = scores[a.baseline]
         if not a.json:

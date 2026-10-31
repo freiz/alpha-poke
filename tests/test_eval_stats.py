@@ -28,37 +28,15 @@ def test_a_paired_difference_is_tighter_when_the_pairs_agree():
     assert d["pairs"] == 60 and d["diff"] > 0 and d["ci95"] < d["ci95_if_independent"] / 5
 
 
-LOG = """|player|p1|Aone|
-|player|p2|Btwo|
-|turn|1
-|move|p1a: Great Tusk|Headlong Rush|p2a: Gholdengo
-|-supereffective|p2a: Gholdengo
-|-crit|p2a: Gholdengo
-|-damage|p2a: Gholdengo|10/100
-|move|p2a: Gholdengo|Thunder Wave|p1a: Great Tusk
-|-status|p1a: Great Tusk|par
-|turn|2
-|cant|p1a: Great Tusk|par
-|move|p2a: Gholdengo|Focus Blast|p1a: Great Tusk|[miss]
-|-miss|p2a: Gholdengo|p1a: Great Tusk
-|turn|3
-|move|p1a: Great Tusk|Stone Edge|p2a: Gholdengo
-|-damage|p2a: Gholdengo|0 fnt
-"""
+def test_a_summary_counts_pairs_won_drawn_and_lost():
+    """eval.arena.summarize: the pair as the unit -- won, drawn (split 1-1) or lost -- beside the
+    win rate it equals, with the pentanomial and Elo."""
+    from alpha_poke.eval.arena import summarize
 
-
-def test_the_luck_in_a_log():
-    """eval.luck: a crit (1 - 1/24), Thunder Wave's paralysis then one full paralysis (1 - 1/4)
-    and one move through it (0 - 1/4), Focus Blast's miss (1 - 0.3), Stone Edge hitting (0 -
-    0.2) with its own crit chance (1/8); Thunder Wave (accuracy 90) hitting: 0 - 0.1."""
-    from alpha_poke.eval import luck
-
-    r = luck.residuals(LOG)
-    p1, p2 = r["p1"], r["p2"]
-    assert p1["crit_n"] == 2 and abs(p1["crit"] - (1 - 1 / 24 - 1 / 8)) < 1e-9
-    assert p1["para_n"] == 2 and abs(p1["para"] - (0.75 - 0.25)) < 1e-9
-    assert p1["miss_n"] == 1 and abs(p1["miss"] - (-0.2)) < 1e-9
-    assert p2["miss_n"] == 2 and abs(p2["miss"] - (0.7 - 0.1)) < 1e-9
-    assert luck.side_of(LOG, "A") == "p1"
-    f = luck.features(LOG, "p1")
-    assert f[0] == p1["crit"] - p2["crit"] and f[1] == p2["miss"] - p1["miss"]
+    rows = _rows(
+        [(0, True), (0, True), (1, True), (1, False), (2, False), (2, False), (3, True), (3, True)]
+    )
+    rows = [r | {"fallbacks_a": 0, "fallbacks_b": 0} for r in rows]
+    s = summarize(rows)
+    assert s["pair_wdl"] == [2, 1, 1] and s["pentanomial"] == [1, 0, 1, 0, 2]
+    assert s["paired_mean"] == s["win_rate"] == 0.625 and s["elo"] > 0

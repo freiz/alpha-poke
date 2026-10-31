@@ -270,7 +270,7 @@ def run_schedule(bot_a: str, bot_b: str, schedule: list[Match], pool_dir: str, l
     """Play any list of matches (teams from ``pool_dir``), spread over procs x lanes; one JSONL
     row per game appended to ``log_path``. ``run_arena`` is this with the paired schedule.
     ``replay_dir``: each game's replay saved there by both bots (their own views: the full
-    log, for an analysis after the games -- the luck's share of each game)."""
+    log, for an analysis after the games)."""
     extras = {"replay_dir": replay_dir} if replay_dir else {}
     n_lanes = procs * lanes_per_proc
     lanes = [schedule[i::n_lanes] for i in range(n_lanes)]
@@ -371,7 +371,9 @@ def pair_stats(scores: list[float]) -> dict:
             "elo": round(score_elo(mean), 1),
             "elo_ci95": [round(score_elo(mean - ci), 1), round(score_elo(mean + ci), 1)],
             "nelo": round((mean - 0.5) / math.sqrt(var) * 800 / math.log(10), 1) if var > 0 else None,
-            "pentanomial": penta, "decisive": round((penta[0] + penta[4]) / n, 3)}  # fmt: skip
+            "pentanomial": penta, "decisive": round((penta[0] + penta[4]) / n, 3),
+            "wdl": [sum(1 for x in scores if x > 0.5), sum(1 for x in scores if x == 0.5),
+                    sum(1 for x in scores if x < 0.5)]}  # fmt: skip
 
 
 def paired_difference(x: dict[int, float], y: dict[int, float]) -> dict:
@@ -423,6 +425,12 @@ def summarize(rows: list[dict]) -> dict:
     mean = sum(scores) / max(len(scores), 1)
     var = sum((x - mean) ** 2 for x in scores) / max(len(scores) - 1, 1)
     p = total / max(n, 1)
+    # (the pair as the unit, 2026-10-31: a pair won, drawn -- split 1-1, or both games tied -- or
+    # lost; its score is the pairs' mean, which equals the win rate: the pentanomial and nElo
+    # say how much of it the decisive pairs carry)
+    ps = pair_stats(scores)
+    wdl = [sum(1 for x in scores if x > 0.5), sum(1 for x in scores if x == 0.5),
+           sum(1 for x in scores if x < 0.5)]  # fmt: skip
     return {
         "games": n,
         "a_wins": sum(1 for _, s in done if s == 1.0),
@@ -433,6 +441,11 @@ def summarize(rows: list[dict]) -> dict:
         "paired_mean": round(mean, 4),
         "ci95_paired": round(1.96 * math.sqrt(var / max(len(scores), 1)), 4),
         "split_pairs": sum(1 for x in scores if x == 0.5),
+        "pair_wdl": wdl,
+        "pentanomial": ps.get("pentanomial"),
+        "elo": ps.get("elo"),
+        "elo_ci95": ps.get("elo_ci95"),
+        "nelo": ps.get("nelo"),
         "fallbacks_a": sum(r["fallbacks_a"] or 0 for r in rows),  # per-game counts
         "fallbacks_b": sum(r["fallbacks_b"] or 0 for r in rows),
         # the search's failures (a heuristic decision instead; 2026-10-14: per game only, the
