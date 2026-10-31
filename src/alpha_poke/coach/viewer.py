@@ -82,6 +82,7 @@ PAGE = r"""<!DOCTYPE html>
   button.small, .aihead .ask { font-size: 12px; padding: 1px 8px; margin-left: auto; background: var(--bg); color: var(--ink);
                                border: 1px solid var(--line); border-radius: 6px; cursor: pointer; }
   .aihead { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+  .tcard { margin: 8px 0; padding: 8px 10px; background: var(--bg); border-radius: 6px; font-size: 13px; line-height: 1.7; }
   .askbox { margin-top: 6px; border-top: 1px dashed var(--line); padding-top: 6px; }
   .askrow { display: flex; gap: 6px; } .askrow input { flex: 1; min-width: 0; font: inherit; font-size: 13px; padding: 3px 6px;
   background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; }
@@ -195,6 +196,10 @@ const T = {
     llmHead: "AI commentary (a language model, from the review's facts)", llmStyle: "Your playing style", llmAgain: "↻ Write it again",
     llmWorking: "The language model is writing… (up to a minute or two)", llmNoSet: "Set a language model on the home page first.",
     llmShow: k => `${k} (click to open or fold)`, llmTeam: "Your team",
+    cardExp: (m, w) => `Against the recent metagame (the matchup model, species only): expected ${m}, against its hardest fifth ${w}`,
+    cardThreats: "Hardest of the popular Pokémon (your expected score against teams with it)", cardMembers: n => `Each one's strength in the model (rank of ${n})`,
+    cardSwaps: "The model's leads for a swap", cardSwap: (o, i, g) => `${o} → ${i} (${g} pts)`,
+    cardNote: (g, m) => `From the ladder's games to ${g} and Smogon's ${m} statistics; the model sees no sets, roles or synergy.`,
     askBtn: "Ask the AI", askPh: "Ask about this decision (optional: empty = why the AI sees it so)", askGo: "Ask", askAgain: "Ask again",
     whoNote: "The other player's view is a review of its own (this one stays); a team pasted is that player's.",
     otherView: n => `↔ ${n}'s view`,
@@ -271,6 +276,10 @@ const T = {
     llmHead: "AI 解说（语言模型根据复盘数据撰写）", llmStyle: "操作风格评价", llmAgain: "↻ 重新生成",
     llmWorking: "语言模型正在撰写……（可能要一两分钟）", llmNoSet: "请先在首页设置语言模型。",
     llmShow: k => `${k}（点击展开 / 收起）`, llmTeam: "队伍分析",
+    cardExp: (m, w) => `对近期环境（对局模型，只看宝可梦种类）：期望胜率 ${m}，对最难打的 20% 对手 ${w}`,
+    cardThreats: "最怕的热门宝可梦（对带它的队伍的期望胜率）", cardMembers: n => `每只在模型里的强度排名（共 ${n} 种）`,
+    cardSwaps: "模型给出的换人线索", cardSwap: (o, i, g) => `${o} → ${i}（${g} 点）`,
+    cardNote: (g, m) => `来自截至 ${g} 的天梯对局和 Smogon ${m} 的统计；模型看不到配置、分工和配合。`,
     askBtn: "问 AI", askPh: "关于这一步想问什么（可不填：默认解释 AI 为什么这样看）", askGo: "提问", askAgain: "再问一次",
     whoNote: "换成另一位玩家的视角会另存一份复盘（这一份保留）；贴的队伍算那位玩家的。",
     otherView: n => `↔ ${n} 的视角`,
@@ -701,8 +710,22 @@ if (LLM_ON) {
   document.getElementById("llmhead").textContent = L.llmHead; again.textContent = L.llmAgain;
   const label = k => (k == "style" ? L.llmStyle : L.llmTeam) + (TEXT[k] ? " ✓" : "");
   const relabel = () => btns.forEach(b => { b.textContent = label(b.dataset.llm); b.classList.toggle("sel", b.dataset.llm == shown && !fold.hidden); });
-  const show = (k, open) => { shown = k; out.innerHTML = md(TEXT[k]); sum.textContent = L.llmShow(k == "style" ? L.llmStyle : L.llmTeam);
+  // (the team's: the metagame's numbers first -- coach.meta, no language model -- the write-up under them)
+  let CARD = null;
+  const card = () => {
+    const f = CARD && CARD.facts; if (!f) return "";
+    const p = x => pct(x), mon = s => esc(monName(s.replace("-*", "")));
+    const th = f.threats_worst.slice(0, 3).map(t => `${mon(t.species)} ${p(t.score_vs_teams_with_it)}`).join(L.sep);
+    const mem = f.members.map(m => `${mon(m.species)} ${m.model_strength_rank ? "#" + m.model_strength_rank : "—"}`).join(L.sep);
+    const sw = f.swaps.slice(0, 2).map(s => L.cardSwap(mon(s.out), mon(s.in), (s.gain >= 0 ? "+" : "") + Math.round(100 * s.gain))).join(L.sep);
+    return `<div class="tcard"><div><b>${L.cardExp(p(f.expected_vs_metagame), p(f.worst_20pct_of_metagame))}</b></div>
+      <div>${L.cardThreats}${L.colon}${th}</div><div>${L.cardMembers(f.members[0].of)}${L.colon}${mem}</div>
+      ${sw ? `<div>${L.cardSwaps}${L.colon}${sw}</div>` : ""}<div class="legend">${L.cardNote(esc(f.about.games_to), esc(f.about.smogon_month))}</div></div>`;
+  };
+  const show = (k, open) => { shown = k; out.innerHTML = (k == "team" ? card() : "") + (TEXT[k] ? md(TEXT[k]) : "");
+                              sum.textContent = L.llmShow(k == "style" ? L.llmStyle : L.llmTeam);
                               fold.hidden = false; fold.open = open; relabel(); };
+  fetch(`/api/team-facts?review=${encodeURIComponent(DIR)}`).then(r => r.ok ? r.json() : null).then(j => { CARD = j; if (shown == "team") show("team", fold.open); });
   const make = async k => {
     btns.forEach(b => { b.disabled = true; }); again.disabled = true; msg.textContent = L.llmWorking;
     try { TEXT[k] = await llmAsk({kind: k}); show(k, true); msg.textContent = ""; } catch (e) { msg.textContent = e.message; }
@@ -713,7 +736,7 @@ if (LLM_ON) {
     box.hidden = false; relabel();
     const k = ["style", "team"].find(k => TEXT[k]); if (k) show(k, false);
   });
-  btns.forEach(b => { b.onclick = () => { const k = b.dataset.llm; if (TEXT[k]) { show(k, true); } else make(k); }; });
+  btns.forEach(b => { b.onclick = () => { const k = b.dataset.llm; if (TEXT[k]) { show(k, true); } else { if (k == "team") show(k, true); make(k); } }; });
   again.onclick = () => { if (shown) make(shown); };
 }
 // a decision asked about (the review page's "ask the AI" under each decision): per decision index

@@ -88,7 +88,13 @@ SYSTEMS["team"] = {
 天梯上最常见的宝可梦 ladder_top）、这一局的日志和每个决策的数据，以及中英文名对照 names_zh。
 your_team_pasted 为 false 时，玩家的配置只有这局亮出来的部分，没亮出的不要当成没有。
 {rules}
-- 建议改配置时，只能用 your_common_sets 里的招式、道具、太晶属性、特性，并说明为什么有用；建议换宝可梦要谨慎，说清楚取舍。
+- team_facts.metagame 是从几十万场天梯对局和论坛队伍整理的环境数据（只看宝可梦种类，不看配置）：
+  expected_vs_metagame 是对局模型估计的、对近期环境的平均胜率，worst_20pct_of_metagame 是最难打的那 20% 对手下的胜率；
+  threats_worst 是最怕的热门宝可梦；members 里有每只的强度排名、常见克星 checks_and_counters、常见队友；
+  cores 是队里两两组合在天梯上的场次、胜率和超出分数预期的部分；swaps 是把一只换成另一只热门宝可梦后模型估计的变化，
+  只是线索（模型看不到配置、分工和配合），提到时要说明这一点；similar_teams 是论坛或天梯上相似的队伍和它们不一样的地方（论坛队伍注意 date：太旧的可能不适合现在的环境）。
+  这些数字是统计结果，场次少的不要下结论，天梯胜率里也有玩家水平的因素。
+- 建议改配置时，只能用 your_common_sets 或 similar_teams 里出现的招式、道具、太晶属性、特性，并说明为什么有用；建议换宝可梦要谨慎，说清楚取舍。
 用简体中文写，亲切、具体、适合小朋友，不超过 900 字。分五节：
 1. 队伍构成（每只大概担任什么角色）
 2. 优点（2-3 点）
@@ -103,8 +109,18 @@ ladder your_common_sets, the ladder's most used species ladder_top), this game's
 decision's numbers. If your_team_pasted is false the player's sets are only what this game
 showed: do not take an unshown part as missing.
 {rules}
-- Suggest set changes only from your_common_sets (moves, items, tera types, abilities) and say why
-  each helps; suggest replacing a Pokémon only carefully, with the trade-off.
+- team_facts.metagame is the metagame's view from hundreds of thousands of ladder games and the
+  forum's teams, by species only (no sets): expected_vs_metagame is the matchup model's mean chance
+  against the recent metagame, worst_20pct_of_metagame its chance against the hardest fifth;
+  threats_worst the popular species it fears most; members each one's strength rank, its checks
+  and counters and usual teammates; cores the team's pairs on the ladder (games, win rate, margin
+  over the ratings' expectation); swaps the model's change when one member is replaced by a
+  popular species -- leads only (the model sees no sets, roles or synergy): say so when you use
+  them; similar_teams the forum's and the ladder's teams like this one and what they run instead
+  (a forum team's date: an old one may not fit today's metagame).
+  These are statistics: do not conclude from few games; ladder records are their players' too.
+- Suggest set changes only from your_common_sets or similar_teams (moves, items, tera types,
+  abilities) and say why each helps; suggest replacing a Pokémon only carefully, with the trade-off.
 Write in English, friendly and concrete for a child, under 600 words. Five sections:
 1. The team (each member's rough role)
 2. Strengths (2-3)

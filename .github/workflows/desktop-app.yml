@@ -64,6 +64,7 @@ jobs:
           --name alpha-poke-review --paths src
           --collect-submodules alpha_poke --collect-data poke_env
           --add-data "build/assets${{ matrix.sep }}assets"
+          --add-data "src/alpha_poke/coach/meta_knowledge.json.gz${{ matrix.sep }}alpha_poke/coach"
           packaging/review_app.py
       - name: "macOS: the double-click start script"
         if: runner.os == 'macOS'
@@ -71,6 +72,9 @@ jobs:
         run: |
           cp packaging/macos/start.command dist/alpha-poke-review/
           chmod +x dist/alpha-poke-review/start.command
+      - name: "the metagame knowledge is in the app (coach.meta: the team analysis)"
+        shell: bash
+        run: test -f dist/alpha-poke-review/_internal/alpha_poke/coach/meta_knowledge.json.gz
       - name: "smoke test (the frozen app reviews a fixture replay end to end)"
         shell: bash
         run: |

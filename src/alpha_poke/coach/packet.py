@@ -179,8 +179,15 @@ def build(report: dict, row: dict, team: dict | None = None) -> dict:
 def team(report: dict, row: dict, team_sets: dict | None = None) -> dict:
     """The facts for a team's analysis: build's (the game's numbers show what the team met) with
     team_facts, the names again over all of it."""
+    from alpha_poke.coach import meta
+
     data = build(report, row, team_sets)
     data["team_facts"] = team_facts(data)
+    # (the metagame's view of the team: the shipped snapshot, by species -- coach.meta)
+    mine = [m["species"] for m in report["teams"][report["side"]]]
+    facts = meta.facts(mine) if len(mine) == 6 else None
+    if facts:
+        data["team_facts"]["metagame"] = facts
     data["names_zh"] = _names(data)
     return data
 

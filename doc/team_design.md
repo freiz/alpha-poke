@@ -19,6 +19,9 @@ uv run python scripts/threat_check.py data/derived/teams/pools/robust_candidates
 # 5. stage 2 (GPU, not with self-play): our bot plays each candidate against 100 recent ladder teams
 uv run python scripts/sim_team_pool.py --candidates data/derived/teams/pools/robust_candidates --keep 5
 # 6. scripts/ladder.py / play_public.py --pool data/derived/teams/pools/<the kept pool>
+# 7. the review app's metagame knowledge (its team analysis; shipped with the app, nothing fetched
+#    by the players): rebuild the snapshot from the same games, then commit it
+uv run python scripts/build_meta_knowledge.py   # -> src/alpha_poke/coach/meta_knowledge.json.gz
 ```
 
 Sets that only replays show (no forum original) are reconstructed; their accuracy:

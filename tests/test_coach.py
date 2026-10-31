@@ -10,6 +10,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
+import numpy as np
 import poke_engine as pe
 import pytest
 from poke_env.data import GenData
@@ -1062,3 +1063,44 @@ def test_team_and_turn_write_ups(game, report, tmp_path, monkeypatch):
     assert llm.cached(tmp_path, "turn", "en", i + 1) is None
     with pytest.raises(ValueError):
         llm.write(tmp_path, report, game, None, "turn", "en", s, dec=10_000)
+
+
+def test_the_metagame_facts_of_a_team():
+    """coach.meta on a made-up snapshot: G beats A in the matchup model, so G is the worst threat
+    of a team with A, swapping A out is the best gain, the forum team with H instead of F is the
+    similar one (with H's set), the team's pair on the ladder and A's counters are reported."""
+    from alpha_poke.coach import meta
+
+    sp = ["A", "B", "C", "D", "E", "F", "G", "H", "other"]
+    M = np.zeros((9, 9))
+    M[6, 0], M[0, 6] = 1.5, -1.5
+    snap = meta.prepare({
+        "built": "2026-10-30", "sources": {"games_to": "2026-10-29", "smogon_month": "2026-09", "meta_days": 21},
+        "model": {"species": sp, "beta": 1.0, "a": [0.0] * 9, "M": M.tolist()},
+        "metagame": [["B|C|D|E|F|G", 1.0], ["B|C|D|E|F|H", 1.0]],
+        "smogon": {"A": {"usage": 0.1, "teammates": ["B"], "counters": [["G", 0.7, 900]]}},
+        "cores": {"A|B": [400, 0.55, 0.02]},
+        "forum": [{"key": "A|B|C|D|E|H", "text": "A @ X\n- a\n\nH @ Y\n- h", "date": "2026-10-01T00:00"}],
+        "ladder": [{"key": "A|B|C|D|E|G", "games": 50, "win": 0.6, "margin": 0.03, "players": 6}],
+    })  # fmt: skip
+    f = meta.facts(["A", "B", "C", "D", "E", "F"], snap)
+    assert (
+        f["threats_worst"][0]["species"] == "G"
+        and f["threats_worst"][0]["score_vs_teams_with_it"] < 0.3
+    )
+    assert (
+        f["expected_vs_metagame"] < 0.5 and f["worst_20pct_of_metagame"] < f["expected_vs_metagame"]
+    )
+    assert f["swaps"][0]["out"] == "A" and f["swaps"][0]["gain"] > 0
+    assert f["members"][0]["checks_and_counters"][0]["species"] == "G"
+    assert f["cores"] == [
+        {"pair": ["A", "B"], "games": 400, "win": 0.55, "margin_over_ratings": 0.02}
+    ]
+    forum = next(x for x in f["similar_teams"] if x["source"] == "forum")
+    assert (
+        forum["they_have"] == ["H"]
+        and forum["you_have"] == ["F"]
+        and forum["their_sets"] == ["H @ Y\n- h"]
+    )
+    ladder = next(x for x in f["similar_teams"] if x["source"] == "ladder")
+    assert ladder["they_have"] == ["G"] and ladder["games"] == 50

@@ -20,6 +20,7 @@ to look, and gets the review page when the search is done. Loopback only; one re
   POST /api/llm-settings      {base_url, model, api_key}: set them (from this computer only)
   POST /api/llm-test          {lang}: a one-line question to the model, its answer
   GET  /api/llm?review=&kind=&lang=[&dec=]   a write-up kept with the review, or null
+  GET  /api/team-facts?review=   what the metagame says of the reviewed player's team (coach.meta)
   POST /api/llm               {review, kind, lang[, dec, question]}: a write-up -> {job}
                               (GET /api/job/<id>: {status, text, error}); kind "turn": the
                               dec-th decision's, the player's question if any
@@ -37,7 +38,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
 from alpha_poke import paths
-from alpha_poke.coach import form, index, llm, narrate, replays, server, viewer
+from alpha_poke.coach import form, index, llm, meta, narrate, replays, server, viewer
 from alpha_poke.coach.review import decision_count, review
 from alpha_poke.coach.team import KnownSet, TeamError, load_team, match_team
 from alpha_poke.replay import parse_replay
@@ -268,6 +269,13 @@ def handler(cache, jobs: Jobs):
                 return self._json(reviews(parse_qs(urlsplit(self.path).query)))
             if path == "/api/llm-settings":
                 return self._json(llm.public_settings(COACH))
+            if path == "/api/team-facts":
+                try:
+                    rep, _, _ = stored(parse_qs(urlsplit(self.path).query).get("review", [""])[0])
+                except Refused:
+                    return self._json({"error": "no such review"}, HTTPStatus.NOT_FOUND)
+                mine = [m["species"] for m in rep["teams"][rep["side"]]]
+                return self._json({"facts": meta.facts(mine) if len(mine) == 6 else None})
             if path == "/api/llm":
                 qs = parse_qs(urlsplit(self.path).query)
                 name = qs.get("review", [""])[0]
