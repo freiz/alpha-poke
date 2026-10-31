@@ -76,8 +76,9 @@ uv run python scripts/review_game.py <replay URL, id or file> --player <name> --
   and any decision explained or asked about ("Ask the AI" beside it; only that decision's facts,
   about 5,000 tokens). Its
   address (any OpenAI-compatible API), key, model and coach are set on the home page (the coach: a
-  character of the main games for the voice and the signature only -- Cynthia by default, Nemona,
-  Iris, or none; the rules and the data come first); the key stays in
+  character of the main games, a character card for the voice and the signature only -- Cynthia by
+  default, Nemona, Iris, Marnie, Geeta, Penny,
+  or none; the rules and the data come first); the key stays in
   the data directory (`coach/llm.json`, this computer's only, settable from it alone) and is never
   sent back to a page. The model gets the review's facts (`coach.packet`, about 27,000 tokens for
   a 40-turn game, so a capable model): both teams with their types, base stats, matchups and the
