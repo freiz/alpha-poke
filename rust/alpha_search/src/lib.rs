@@ -46,7 +46,10 @@ fn roundtrip(state: &str) -> String {
 }
 
 /// SO-ISMCTS over belief-sampled worlds (state strings sharing our side). Returns
-/// ([(our option, visits, mean value)], iterations, tree nodes, max depth). threads > 1: root
+/// ([(our option, visits, mean value)], iterations, tree nodes, max depth); `opponent`: a fifth
+/// item, [(the opponent's option, visits, our mean value when it takes it)] at the root (a
+/// review's: what the search expected of the opponent -- its options named in the first world
+/// that has each, their moves differing between worlds). threads > 1: root
 /// parallel (independent trees, merged root statistics). A model directory (the transformer)
 /// needs `contexts`: per world (public-information bits [12], (own rating,
 /// opponent rating), turn, history string), side one's view.
@@ -54,7 +57,8 @@ fn roundtrip(state: &str) -> String {
 #[pyo3(signature = (states, duration_ms, iterations=0, seed=None, c=std::f32::consts::SQRT_2,
                     cache_root=true, branch_depth=2, threads=1, model_dir=None,
                     use_policy=false, policy_opponent=true, c_puct=1.0, contexts=None,
-                    root_noise=(0.0, 10.0), ml=(0.0, 0.0, 0.0, false), phase_key=false))]
+                    root_noise=(0.0, 10.0), ml=(0.0, 0.0, 0.0, false), phase_key=false,
+                    opponent=false))]
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 fn py_ismcts(
     py: Python<'_>,
@@ -74,7 +78,8 @@ fn py_ismcts(
     root_noise: (f32, f32),
     ml: (f32, f32, f32, bool),
     phase_key: bool,
-) -> PyResult<(Vec<(String, u32, f32)>, u32, usize, u16)> {
+    opponent: bool,
+) -> PyResult<Py<PyAny>> {
     if states.is_empty() {
         return Err(PyValueError::new_err("ismcts needs at least one world"));
     }
@@ -145,7 +150,24 @@ fn py_ismcts(
         };
         ours.push((name, visits, mean));
     }
-    Ok((ours, res.iterations, res.nodes, res.max_depth))
+    if !opponent {
+        return Ok((ours, res.iterations, res.nodes, res.max_depth)
+            .into_pyobject(py)?
+            .into_any()
+            .unbind());
+    }
+    let mut theirs = Vec::with_capacity(res.s2.len());
+    for (l, visits, mean) in res.s2 {
+        let name = worlds
+            .iter()
+            .find_map(|w| ismcts::their_choice(w, l).map(|mc| choice_str(&w.side_two, &mc)))
+            .unwrap_or_else(|| format!("{l:?}"));
+        theirs.push((name, visits, mean));
+    }
+    Ok((ours, res.iterations, res.nodes, res.max_depth, theirs)
+        .into_pyobject(py)?
+        .into_any()
+        .unbind())
 }
 
 /// `f` on every item, the items split into contiguous chunks over the available cores; results in

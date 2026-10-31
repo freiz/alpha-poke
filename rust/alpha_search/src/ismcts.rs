@@ -219,6 +219,9 @@ pub struct Tree {
 pub struct SearchResult {
     /// our root actions: (label, visits, mean value)
     pub s1: Vec<(Label, u32, f32)>,
+    /// the opponent's root actions: (label, visits, mean value -- side one's: what that choice of
+    /// theirs leaves us); a review shows what the search expected of the opponent (2026-10-30)
+    pub s2: Vec<(Label, u32, f32)>,
     /// our root actions' priors (PUCT; < 0 = none, e.g. without a network)
     pub s1_priors: Vec<(Label, f32)>,
     pub iterations: u32,
@@ -1195,6 +1198,18 @@ pub fn search(
             .iter()
             .map(|a| (a.label, a.visits, a.mean()))
             .collect(),
+        // (its arms back up the opponent's value: 1 - ours)
+        s2: root
+            .s2
+            .iter()
+            .map(|a| {
+                (
+                    a.label,
+                    a.visits,
+                    if a.visits > 0 { 1.0 - a.mean() } else { 0.0 },
+                )
+            })
+            .collect(),
         s1_priors: root.s1.iter().map(|a| (a.label, a.prior)).collect(),
         iterations: it,
         nodes: tree.nodes.len(),
@@ -1229,9 +1244,27 @@ pub fn search_parallel(
             .collect();
         handles.into_iter().map(|h| h.join().unwrap()).collect()
     });
+    SearchResult {
+        s1: merge_root(results.iter().map(|r| &r.s1)),
+        s2: merge_root(results.iter().map(|r| &r.s2)),
+        s1_priors: results
+            .first()
+            .map(|r| r.s1_priors.clone())
+            .unwrap_or_default(),
+        iterations: results.iter().map(|r| r.iterations).sum(),
+        nodes: results.iter().map(|r| r.nodes).sum(),
+        max_depth: results.iter().map(|r| r.max_depth).max().unwrap_or(0),
+    }
+}
+
+/// Our root option in `state` for a label (our side is the same in every world).
+/// Root statistics of independent trees merged by label: visits summed, means weighted by them.
+fn merge_root<'a>(
+    runs: impl Iterator<Item = &'a Vec<(Label, u32, f32)>>,
+) -> Vec<(Label, u32, f32)> {
     let mut merged: Vec<(Label, u32, f32)> = Vec::new();
-    for r in &results {
-        for &(l, visits, mean) in &r.s1 {
+    for run in runs {
+        for &(l, visits, mean) in run {
             match merged.iter_mut().find(|m| m.0 == l) {
                 Some(m) => {
                     let total = m.1 + visits;
@@ -1244,19 +1277,9 @@ pub fn search_parallel(
             }
         }
     }
-    SearchResult {
-        s1: merged,
-        s1_priors: results
-            .first()
-            .map(|r| r.s1_priors.clone())
-            .unwrap_or_default(),
-        iterations: results.iter().map(|r| r.iterations).sum(),
-        nodes: results.iter().map(|r| r.nodes).sum(),
-        max_depth: results.iter().map(|r| r.max_depth).max().unwrap_or(0),
-    }
+    merged
 }
 
-/// Our root option in `state` for a label (our side is the same in every world).
 pub fn our_choice(state: &State, l: Label) -> Option<MoveChoice> {
     let (o1, _) = state.root_get_all_options();
     o1.into_iter().find(|mc| label(&state.side_one, mc) == l)

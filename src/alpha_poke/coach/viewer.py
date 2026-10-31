@@ -66,6 +66,8 @@ PAGE = r"""<!DOCTYPE html>
   .step.sel { background: color-mix(in srgb, var(--ai) 10%, transparent); }
   .stitle { font-size: 12px; color: var(--muted); font-weight: 600; } .shead { font-weight: 600; margin: 2px 0; }
   .slines { color: var(--muted); font-size: 12px; } .aibox { margin-top: 8px; padding: 8px; background: var(--bg); border-radius: 6px; }
+  .aibox .opp { margin-top: 4px; } .jump { margin-top: 6px; padding: 6px 8px; border-left: 3px solid var(--ai); font-size: 13px; }
+  .jump ul { margin: 4px 0 0 18px; padding: 0; }
   .aihead { font-weight: 600; margin-bottom: 4px; }
   .score { display: flex; gap: 12px; flex-wrap: wrap; padding: 0 16px 12px; align-items: stretch; }
   .tile { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px 16px; min-width: 130px; }
@@ -173,7 +175,17 @@ const T = {
     scoreNote: n => `Over your ${n} decisions with a choice; the last tile follows the strictness below.`,
     untried: "untried", left: n => `${n} left`, tera: "terastallized",
     hazMe: "hazards on your side", hazOpp: "on the opponent's side", unseen: x => `You chose ${x} (the log does not show it as such)`,
-    switchTo: x => `Switch to ${x}`, teraSuffix: " + Tera", guess: "(guess)",
+    switchTo: x => `Switch to ${x}`, teraSuffix: " + Tera", guess: "(guess)", sep: ", ", colon: ": ",
+    oppExpect: top => `The AI expected the opponent (a guess: their sets are unknown) to play ${top}.`,
+    oppThen: v => ` (your chance then ${v})`, oppDid: (o, v) => `They played ${o}` + (v ? ` (your chance then ${v})` : "") + ".",
+    jumpHead: (a, b) => `Why your winning chance went from ${a} to ${b} by the next decision`,
+    goodLuck: "Luck for you", badLuck: "Luck against you",
+    luckCrit: m => `a critical hit on ${m}`, luckMiss: m => `${m} missed`, luckCant: (m, r) => `${m} could not move (${r})`,
+    luckConfused: m => `${m} hurt itself in its confusion`,
+    oppBetter: (e, ev, d, dv) => `the opponent's choice was better for you than the AI expected: it expected ${e} (your chance ${ev}), they played ${d} (${dv})`,
+    oppWorse: (e, ev, d, dv) => `the opponent's choice was worse for you than the AI expected: it expected ${e} (your chance ${ev}), they played ${d} (${dv})`,
+    oppOther: (e, d) => `the opponent did not play what the AI expected most (${e}) but ${d}`,
+    jumpUnknown: "no luck in the log, and the opponent played as the AI expected: what this turn revealed (a move, an item, an ability) changed the AI's view",
     guessTip: "The game never showed you using this move: without your team the AI guessed it, and you may not have it.",
     moment: (t, c, b, cv, bv) => `Turn ${t}: you chose <b>${c}</b>, the AI <b>${b}</b> (${cv} → ${bv})`,
     mine: x => `your ${x}`, theirs: x => `the opposing ${x}`, side: me => me ? "your side" : "the opposing side",
@@ -194,7 +206,7 @@ const T = {
       "-damage": (a, hp, f) => `${cap(a)}: ${hp} left` + (f ? ` (${f})` : ""), "-heal": (a, hp, f) => `${cap(a)} healed to ${hp}` + (f ? ` (${f})` : ""),
       "-sethp": (a, hp) => `${cap(a)}: ${hp}`, "-hitcount": (a, n) => `hit ${n} times`,
       "-weather": (w, up) => up ? `${cap(w)} continues` : `the weather: ${w}`, "-fieldstart": c => `${c} started`, "-fieldend": c => `${c} ended`,
-      "-start": (a, c) => `${cap(a)}: ${c}`, "-end": (a, c) => `${cap(a)}: ${c} ended`, "-activate": (a, c) => `${cap(a)}: ${c}`,
+      "-start": (a, c) => `${cap(a)}: ${c}`, "-end": (a, c) => `${cap(a)}: ${c} ended`, typechange: (a, t) => `${cap(a)} became ${t} type`, "-activate": (a, c) => `${cap(a)}: ${c}`,
       "-singleturn": (a, c) => `${cap(a)}: ${c}`, "-prepare": (a, m) => `${cap(a)} is preparing ${m}`, "-mustrecharge": a => `${cap(a)} must recharge`,
       "-transform": (a, b) => `${cap(a)} transformed into ${b}`, "-formechange": (a, f) => `${cap(a)} changed form: ${f}`, detailschange: (a, f) => `${cap(a)} became ${f}`,
       cant: (a, r) => `${cap(a)} could not move (${r})`, "-message": m => m, win: w => `Winner: ${w}`, tie: () => "A tie",
@@ -229,7 +241,17 @@ const T = {
     scoreNote: n => `只算有选择余地的 ${n} 步决策；最后一项随下面的判定标准变化。`,
     untried: "未尝试", left: n => `剩 ${n} 只`, tera: "已太晶",
     hazMe: "你这边的钉子", hazOpp: "对手那边的钉子", unseen: x => `你选择了 ${x}（日志里没有按这样显示）`,
-    switchTo: x => `换上 ${x}`, teraSuffix: " + 太晶", guess: "（推测）",
+    switchTo: x => `换上 ${x}`, teraSuffix: " + 太晶", guess: "（推测）", sep: "、", colon: "：",
+    oppExpect: top => `AI 预计对手会（只是推测，AI 不知道对手的配置）：${top}。`,
+    oppThen: v => `（你的胜率 ${v}）`, oppDid: (o, v) => `对手实际：${o}` + (v ? `（你的胜率 ${v}）` : "") + "。",
+    jumpHead: (a, b) => `为什么到下一步，你的胜率从 ${a} 变成了 ${b}`,
+    goodLuck: "对你有利的运气", badLuck: "对你不利的运气",
+    luckCrit: m => `${m} 被打出会心一击`, luckMiss: m => `${m} 的招式没有命中`, luckCant: (m, r) => `${m} 无法行动（${r}）`,
+    luckConfused: m => `${m} 因混乱攻击了自己`,
+    oppBetter: (e, ev, d, dv) => `对手的选择比 AI 预想的对你有利：AI 原以为对手最可能用 ${e}（你的胜率 ${ev}），对手实际用了 ${d}（${dv}）`,
+    oppWorse: (e, ev, d, dv) => `对手的选择比 AI 预想的对你不利：AI 原以为对手最可能用 ${e}（你的胜率 ${ev}），对手实际用了 ${d}（${dv}）`,
+    oppOther: (e, d) => `对手没有用 AI 最预料的 ${e}，而是用了 ${d}`,
+    jumpUnknown: "日志里没有运气因素，对手也按 AI 的预料出招：是这一回合新暴露的招式、道具或特性改变了 AI 的判断",
     guessTip: "这局里你没用过这招：没贴队伍时 AI 只能猜，你可能并没有这招。",
     moment: (t, c, b, cv, bv) => `回合 ${t}：你选了 <b>${c}</b>，AI 选 <b>${b}</b>（${cv} → ${bv}）`,
     mine: x => `你的 ${x}`, theirs: x => `对手的 ${x}`, side: me => me ? "你这一侧" : "对手那一侧",
@@ -249,7 +271,7 @@ const T = {
       "-damage": (a, hp, f) => `${a} 剩余 ${hp}` + (f ? `（${f}）` : ""), "-heal": (a, hp, f) => `${a} 回复到 ${hp}` + (f ? `（${f}）` : ""),
       "-sethp": (a, hp) => `${a} 的 HP 变为 ${hp}`, "-hitcount": (a, n) => `共击中 ${n} 次`,
       "-weather": (w, up) => up ? `${w}还在继续` : `天气：${w}`, "-fieldstart": c => `${c} 开始了`, "-fieldend": c => `${c} 结束了`,
-      "-start": (a, c) => `${a}：${c}`, "-end": (a, c) => `${a}：${c} 结束`, "-activate": (a, c) => `${a}：${c}`,
+      "-start": (a, c) => `${a}：${c}`, "-end": (a, c) => `${a}：${c} 结束`, typechange: (a, t) => `${a} 变成了 ${t} 属性`, "-activate": (a, c) => `${a}：${c}`,
       "-singleturn": (a, c) => `${a}：${c}`, "-prepare": (a, m) => `${a} 正在准备 ${m}`, "-mustrecharge": a => `${a} 需要休息一回合`,
       "-transform": (a, b) => `${a} 变身成了 ${b}`, "-formechange": (a, f) => `${a} 变成了 ${f}`, detailschange: (a, f) => `${a} 变成了 ${f}`,
       cant: (a, r) => `${a} 无法行动（${r}）`, "-message": m => m, win: w => `胜者：${w}`, tie: () => "平局",
@@ -323,7 +345,9 @@ function event(line) {
     case "-hitcount": return E[tag](who(f[1]), f[2]);
     case "-weather": return f[1] == "none" ? null : E[tag](ST[f[1]] || f[1], f.includes("[upkeep]"));
     case "-fieldstart": case "-fieldend": return E[tag](effect(f[1]));
-    case "-start": case "-end": case "-activate": case "-singleturn": return E[tag](who(f[1]), effect(f[2]));
+    // (a type change -- Protean / Libero, Soak, ...: its new type, as Showdown says it)
+    case "-start": if (f[2] == "typechange") return E.typechange(who(f[1]), (f[3] || "").split("/").map(typeName).join("/"));
+    case "-end": case "-activate": case "-singleturn": return E[tag](who(f[1]), effect(f[2]));
     case "-prepare": return E[tag](who(f[1]), moveName(f[2]));
     case "-transform": return E[tag](who(f[1]), who(f[2]));
     case "-formechange": case "detailschange": return E[tag](who(f[1]), monName((f[2] || "").split(",")[0]));
@@ -422,7 +446,48 @@ function aiHTML(d) {
   const b = x => Object.entries(x || {}).map(([k, v]) => (ST[k] || k) + " " + (v > 0 ? "+" + v : v)).join(", ");
   const sideText = (s, label) => `${label}: ${esc(monName(s.active.species))} ${pct(s.active.hp)}${Object.keys(s.boosts || {}).length ? " (" + b(s.boosts) + ")" : ""} · ${L.left(s.alive)}${s.tera_used ? " · " + L.tera : ""}`;
   h += `<div class="state">${sideText(me, L.you)} | ${sideText(op, L.opp)}${Object.keys(me.hazards).length ? " | " + L.hazMe + ": " + b(me.hazards) : ""}${Object.keys(op.hazards).length ? " | " + L.hazOpp + ": " + b(op.hazards) : ""}</div>`;
-  return h + "</div>";
+  return h + oppHTML(d) + jumpHTML(d) + "</div>";
+}
+// the opponent as the search saw it (the review's opp_options: share, our chance if it takes
+// it -- a guess from the player's view, the opponent's sets unknown) and what it did that turn
+const JUMP = 0.15;  // a change of the winning chance by the next decision that the page explains
+const oppName = o => esc(option(o));
+function oppHTML(d) {
+  const opts = d.opp_options || [];
+  if (!opts.length) return "";
+  const top = opts.slice(0, 3).filter(o => o[1] >= 0.01).map(([o, s, q]) => `${oppName(o)} ${pct(s)}` + (q != null ? L.oppThen(pct(q)) : "")).join(L.sep);
+  const did = d.opp_did, dq = did ? (opts.find(o => o[0] == did) || [])[2] : null;
+  return `<div class="legend opp">${L.oppExpect(top)}${did ? " " + L.oppDid(oppName(did), dq != null ? pct(dq) : null) : ""}</div>`;
+}
+// the turn's luck as the log shows it: [what, good for the player]
+function luck(t) {
+  const out = [];
+  for (const line of R.events[t] || []) {
+    const f = line.split("|"), tag = f[0], mine = (f[1] || "").startsWith("ME"), mon = esc(who(f[1]) || "");
+    if (tag == "-crit") out.push([L.luckCrit(mon), !mine]);  // (a critical hit on that mon)
+    else if (tag == "-miss") out.push([L.luckMiss(mon), !mine]);  // (that mon missed)
+    else if (tag == "cant" && ["par", "flinch", "frz"].includes(f[2])) out.push([L.luckCant(mon, esc(effect(f[2]) || f[2])), !mine]);
+    else if (tag == "-damage" && line.includes("[from] confusion")) out.push([L.luckConfused(mon), !mine]);
+  }
+  return out;
+}
+// a big change of the winning chance by the next decision, explained: the turn's luck, the
+// opponent's choice against what the search expected, else what the turn showed
+function jumpHTML(d) {
+  if (d.kind != "turn") return "";
+  const n = R.decisions[R.decisions.indexOf(d) + 1];
+  if (!n || Math.abs(n.value - d.value) < JUMP) return "";
+  const items = luck(d.turn).map(([what, good]) => `${good ? L.goodLuck : L.badLuck}${L.colon}${what}`);
+  const opts = d.opp_options || [], exp = opts[0];
+  if (d.opp_did && exp && exp[0] != d.opp_did) {
+    // (only a choice that moved your chance -- 5 points or more from the expected one's; one the
+    // search never tried: said as such)
+    const did = opts.find(o => o[0] == d.opp_did), q = did ? did[2] : null;
+    if (q == null || exp[2] == null) items.push(L.oppOther(oppName(exp[0]), oppName(d.opp_did)));
+    else if (Math.abs(q - exp[2]) >= 0.05) items.push((q > exp[2] ? L.oppBetter : L.oppWorse)(oppName(exp[0]), pct(exp[2]), oppName(d.opp_did), pct(q)));
+  }
+  if (!items.length) items.push(L.jumpUnknown);
+  return `<div class="jump"><b>${L.jumpHead(pct(d.value), pct(n.value))}</b><ul>${items.map(x => `<li>${x}</li>`).join("")}</ul></div>`;
 }
 function stepHTML(s, n) {
   const title = s.kind == "lead" ? L.lead : s.kind == "end" ? L.end : s.kind == "before" ? L.before

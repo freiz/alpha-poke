@@ -98,3 +98,36 @@ def test_unrevealed_opponent_mon_is_at_full_hp():
     seen = Pokemon(details="Kyurem", gen=9)
     seen.set_hp_status("50/100")
     assert _their_mon(seen, s).hp == round(0.5 * 391)
+
+
+def test_the_search_reports_the_opponents_root_options():
+    """opponent=True (game reviews, 2026-10-30): the opponent's root options as the search saw
+    them -- (name, visits, our value when it takes it), named in the first world that has each
+    (its moves differ between worlds); without it the result stays four items."""
+    import alpha_search
+    import poke_engine as pe
+
+    def world(their_moves):
+        s = _encore_state((set(), {}))
+        s2 = pe.Side(pokemon=([_engine_mon("ogerpon", their_moves)] + [pe.Pokemon.create_fainted()] * 6)[:6],
+                     active_index=pe.PokemonIndex("0"), side_conditions=pe.SideConditions(),
+                     volatile_statuses=set())  # fmt: skip
+        return pe.State(side_one=s.side_one, side_two=s2, weather=pe.Weather("none"),
+                        weather_turns_remaining=0, terrain=pe.Terrain("none"),
+                        terrain_turns_remaining=0, trick_room=False,
+                        trick_room_turns_remaining=0).to_string()  # fmt: skip
+
+    worlds = [world(["knockoff", "splash"]), world(["splash", "closecombat"])]
+    assert len(alpha_search.ismcts(worlds, 0, iterations=200, seed=1)) == 4
+    ours, n, _, _, theirs = alpha_search.ismcts(worlds, 0, iterations=4000, seed=1, opponent=True)
+    names = {c for c, v, _ in theirs if v}
+    assert {"knockoff", "splash", "closecombat"} <= names, theirs
+    assert all(0.0 <= q <= 1.0 for _, _, q in theirs)
+    # (every iteration backs up one option of each side at the root: the opponent's arms, in our
+    # value, average to what ours do)
+    mean = lambda arms: sum(v * q for _, v, q in arms) / sum(v for _, v, _ in arms)  # noqa: E731
+    assert abs(mean(theirs) - mean(ours)) < 1e-3, (mean(theirs), mean(ours))
+    ours, n, _, _, theirs = alpha_search.ismcts(
+        worlds, 0, iterations=4000, seed=1, threads=2, opponent=True
+    )
+    assert abs(mean(theirs) - mean(ours)) < 1e-3  # (and merged over the threads' trees)

@@ -15,6 +15,7 @@ import pytest
 from poke_env.data import GenData
 
 from alpha_poke.agents.belief_state import BeliefModel
+from alpha_poke.analysis.roles import to_id
 from alpha_poke.coach import narrate, replays
 from alpha_poke.coach.review import (
     decision_count,
@@ -855,3 +856,67 @@ def test_a_replays_hits_are_read_in_percent(monkeypatch, log, side):
     assert hits and all(h.by_us == (side == "p2") for h, _ in hits)
     assert all(h.pct and h.before == 100 and h.after == 76 for h, _ in hits), hits
     assert all(any(x > 0 for x in out) for _, out in hits), hits
+
+
+def test_the_opponents_expected_and_actual_choices(game, monkeypatch):
+    """A review keeps what the search expected of the opponent (its root options: share, our
+    value) and what the opponent did that turn, the log's (opponent_choices); the page explains a
+    big change of the winning chance with them."""
+    from types import SimpleNamespace
+
+    from alpha_poke.coach import review as rv
+
+    rep = parse_replay(game)
+    did = rv.opponent_choices(rep, "p1")
+    acts = [
+        a for a in rep.actions if a.side == "p2" and a.turn >= 1 and not a.forced and not a.pivot
+    ]
+    first = min(a.turn for a in acts)
+    a = next(x for x in acts if x.turn == first)
+    assert did[first] == (
+        to_id(a.move) + ("-tera" if a.tera else "") if a.kind == "move" else "switch " + to_id(a.to)
+    )
+    monkeypatch.setattr(rv.slots, "names", lambda state: ["a", "b"] + [""] * 12)
+    monkeypatch.setattr(rv, "public_state", lambda state: {})
+    p = SimpleNamespace(state="", action=0, turn=3, kind=0)
+    runs = [([("a", 90, 0.6), ("b", 10, 0.5)], 100, [("uturn", 80, 0.1), ("knockoff", 20, 0.7)]),
+            ([("a", 90, 0.6), ("b", 10, 0.5)], 100, [("uturn", 60, 0.2), ("knockoff", 40, 0.6)])]  # fmt: skip
+    d = rv._decision(p, runs, {}, opp_did="knockoff")
+    assert (
+        d.opp_options == [["uturn", 0.7, 0.15], ["knockoff", 0.3, 0.65]] and d.opp_did == "knockoff"
+    )
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="needs node")
+def test_the_page_explains_a_jump():
+    """The page's jumpHTML (run in node): a winning chance moving 15 points or more by the next
+    decision is explained -- the turn's luck from the log (a critical hit on ours: against us),
+    the opponent's choice against the expected one (5 points or more apart); a small change, none."""
+    from alpha_poke.coach import viewer
+
+    js = viewer.PAGE
+    a = js.index("const JUMP")
+    fns = js[a : js.index("function stepHTML(")]
+    stubs = ("const L = {oppThen: v => `(${v})`, sep: ', ', colon: ': ', oppExpect: t => `exp ${t}`, "
+             "oppDid: (o, v) => `did ${o} ${v}`, jumpHead: (a, b) => `${a}->${b}`, goodLuck: 'good', badLuck: 'bad', "
+             "luckCrit: m => `crit on ${m}`, luckMiss: m => `${m} missed`, luckCant: (m, r) => `${m} cant ${r}`, "
+             "luckConfused: m => `${m} confused`, oppBetter: (e, ev, d, dv) => `better ${e} ${ev} ${d} ${dv}`, "
+             "oppWorse: (e, ev, d, dv) => `worse ${e} ${ev} ${d} ${dv}`, oppOther: (e, d) => `other ${e} ${d}`, "
+             "jumpUnknown: 'unknown'};\nconst esc = x => String(x), option = x => x, who = x => x, effect = x => x, "
+             "pct = x => Math.round(100 * x) + '%';\n")  # fmt: skip
+    R = {"events": {3: ["move|OPP Hatterene|Draining Kiss|ME Ogerpon", "-crit|ME Ogerpon", "-damage|ME Ogerpon|0 fnt"],
+                    4: ["move|OPP Meowscarada|Knock Off|ME Alomomola"]},
+         "decisions": [{"turn": 3, "kind": "turn", "value": 0.62, "opp_options": [["drainingkiss", 0.6, 0.61]], "opp_did": "drainingkiss"},
+                       {"turn": 4, "kind": "turn", "value": 0.03, "opp_options": [["uturn", 0.9, 0.02], ["knockoff", 0.1, 0.6]], "opp_did": "knockoff"},
+                       {"turn": 5, "kind": "turn", "value": 0.68},
+                       {"turn": 6, "kind": "turn", "value": 0.7}]}  # fmt: skip
+    code = (f"const R = {json.dumps(R)};\n{stubs}{fns}\n"
+            "console.log(JSON.stringify(R.decisions.map(jumpHTML)));")  # fmt: skip
+    out = json.loads(
+        subprocess.run(["node", "-e", code], capture_output=True, text=True, check=True).stdout
+    )
+    assert "62%->3%" in out[0] and "bad: crit on ME Ogerpon" in out[0] and "other" not in out[0], (
+        out[0]
+    )
+    assert "3%->68%" in out[1] and "better uturn 2% knockoff 60%" in out[1], out[1]
+    assert out[2] == "" and out[3] == ""

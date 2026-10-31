@@ -21,6 +21,14 @@ under 3 points is always acceptable. The error multiple and the "hardly consider
 adjustable on the page, which states the rule in full. A scorecard sums up the game: how often the player chose the search's
 first or second choice, the average winning chance lost, the number of marked decisions.
 
+Each turn also shows what the search expected of the opponent (its options at the root, with the
+player's chance after each: a guess, the opponent's sets unknown) and what the opponent did. When
+the winning chance moves by 15 points or more by the next decision, the page says why, from
+templates, no language model: the turn's luck from the log (a critical hit, a miss, a full
+paralysis, a flinch, a thaw that did not come, a hit in confusion) and an opponent's choice that
+left the player 5 points or more better or worse off than the one the search expected; with
+neither, what the turn revealed changed the picture.
+
 ## Using it
 
 ```bash

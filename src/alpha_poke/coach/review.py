@@ -30,6 +30,7 @@ from alpha_poke.selfplay.batcher import ml_for, parse_ml
 from alpha_poke.train.positions import (
     KIND_BLIND,
     KIND_FORCED,
+    KIND_MAIN,
     KIND_PIVOT,
     blind_sides,
     extra_points,
@@ -80,6 +81,11 @@ class Decision:
     # options that are a move the game never showed the player using (no team pasted): the move
     # is a guess of the belief's, the player may not have it (2026-10-30)
     guessed: list = field(default_factory=list)
+    # what the search expected of the opponent at the root: [name, visit share, our value if it
+    # takes it], by share (means over the searches), and what the opponent did that turn (the
+    # page explains a jump in the winning chance with them -- 2026-10-30)
+    opp_options: list = field(default_factory=list)
+    opp_did: str | None = None
     # repeats > 1: how many searches tried both the choice and the best (the loss's sample; under
     # two the loss is not trusted -- verdict)
     paired: int | None = None
@@ -203,6 +209,7 @@ def review(row: dict, side: str, belief, model: str, worlds: int = 16, ms: int =
         )
     ml = parse_ml(ml_for(model))
     events = turn_events(row["log"], side)
+    theirs_did = opponent_choices(rep, side)
     if progress:
         progress(0, len(points))
 
@@ -211,10 +218,11 @@ def review(row: dict, side: str, belief, model: str, worlds: int = 16, ms: int =
         if p is None:
             return None
         ctx = (list(p.reveal), (p.rating_own, p.rating_opp), p.turn, p.history)
-        ours, it, _, _ = alpha_search.ismcts(p.worlds, ms, threads=threads, model_dir=model,
-                                             use_policy=True, policy_opponent=True,
-                                             contexts=[ctx] * len(p.worlds), ml=ml, seed=seed + k)  # fmt: skip
-        return ours, it
+        ours, it, _, _, theirs = alpha_search.ismcts(p.worlds, ms, threads=threads, model_dir=model,
+                                                     use_policy=True, policy_opponent=True,
+                                                     contexts=[ctx] * len(p.worlds), ml=ml,
+                                                     seed=seed + k, opponent=True)  # fmt: skip
+        return ours, it, theirs
 
     results = [[None] * repeats for _ in points]
     left = [repeats] * len(points)
@@ -235,7 +243,8 @@ def review(row: dict, side: str, belief, model: str, worlds: int = 16, ms: int =
             if left[i]:
                 continue
             p = draws[0][points[i]]
-            decisions[i] = d = _decision(p, [r for r in results[i] if r is not None], events, sure)
+            decisions[i] = d = _decision(p, [r for r in results[i] if r is not None], events, sure,
+                                         theirs_did.get(p.turn) if p.kind == KIND_MAIN else None)  # fmt: skip
             done += 1
             if progress:
                 progress(done, len(points))
@@ -287,15 +296,18 @@ def _by_point(positions) -> dict:
     return out
 
 
-def _decision(p, searches, events, sure: dict | None = None) -> "Decision":
-    """One decision from its searches ([(options, iterations)]: alpha_search.ismcts').
-    ``sure``: species id -> the moves the player is known to have (the game's, or its pasted
-    team's); a move option of the active outside them is ``guessed``. None: all known."""
+def _decision(
+    p, searches, events, sure: dict | None = None, opp_did: str | None = None
+) -> "Decision":
+    """One decision from its searches ([(options, iterations[, the opponent's options])]:
+    alpha_search.ismcts'). ``sure``: species id -> the moves the player is known to have (the
+    game's, or its pasted team's); a move option of the active outside them is ``guessed``. None:
+    all known. ``opp_did``: the opponent's choice that turn (opponent_choices)."""
     runs, roots, visits = [], [], 0
     names = slots.names(p.state)
     # (the search's "No Move": Struggle when the side struggles -- the slots' name, issue #28)
     none = "struggle" if "struggle" in names else "No Move"
-    for ours, _ in searches:
+    for ours, *_ in searches:
         total = sum(v for _, v, _ in ours) or 1
         visits += sum(v for _, v, _ in ours)
         # (an option the search never tried has no value: None, not its 0 mean)
@@ -345,7 +357,43 @@ def _decision(p, searches, events, sure: dict | None = None) -> "Decision":
         guessed=_guessed(p.state, [c for c, *_ in shown], sure),
         state=public_state(p.state), events=events.get(p.turn, []),
         value_se=r3(value_se), loss_se=r3(loss_se), repeats=len(searches), visits=visits, paired=paired,
+        opp_options=_theirs([s[2] for s in searches if len(s) > 2]), opp_did=opp_did,
     )  # fmt: skip
+
+
+def _theirs(runs: list, top: int = 6) -> list:
+    """The opponent's root options over the searches: [name, mean visit share, mean of our value
+    in the searches that tried it], by share."""
+    if not runs:
+        return []
+    shares: dict = {}
+    values: dict = {}
+    for run in runs:
+        total = sum(v for _, v, _ in run) or 1
+        for c, v, q in run:
+            shares.setdefault(c, []).append(v / total)
+            if v:
+                values.setdefault(c, []).append(q)
+    out = [[c, round(sum(x) / len(runs), 3),
+            round(statistics.fmean(values[c]), 3) if c in values else None] for c, x in shares.items()]  # fmt: skip
+    out.sort(key=lambda o: (-o[1], o[0]))
+    return out[:top]
+
+
+def opponent_choices(rep, side: str) -> dict[int, str]:
+    """Turn -> the opponent's turn-start choice as an option name (agents.slots': "knockoff",
+    "knockoff-tera", "switch dragapult"), from the replay's actions; none when the log does not
+    show it (it fainted first, it could not move)."""
+    other = "p2" if side == "p1" else "p1"
+    out = {}
+    for a in rep.actions:
+        if a.side != other or a.turn < 1 or a.forced or a.pivot or a.turn in out:
+            continue
+        if a.kind == "move" and a.move:
+            out[a.turn] = to_id(a.move) + ("-tera" if a.tera else "")
+        elif a.kind == "switch" and a.to:
+            out[a.turn] = "switch " + to_id(a.to.replace("-*", ""))
+    return out
 
 
 def _guessed(state: str, options: list, sure: dict | None) -> list:
