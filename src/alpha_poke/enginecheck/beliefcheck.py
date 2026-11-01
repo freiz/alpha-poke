@@ -23,7 +23,13 @@ def _item_support(belief, mon, team_names, known_moves) -> dict:
     weights under the posterior of its revealed moves; the team prior's marginal without
     archetypes); an Assault Vest out with a status move known."""
     from alpha_poke.agents.belief_state import _preview_name
-    from alpha_poke.agents.engine_state import _status, arch_mix, base_marginal, required_item
+    from alpha_poke.agents.engine_state import (
+        _status,
+        arch_mix,
+        base_marginal,
+        rake_factors,
+        required_item,
+    )
 
     species = _preview_name(mon, team_names)
     if required_item(mon):  # (a forme's item: the sampler's for sure)
@@ -43,7 +49,8 @@ def _item_support(belief, mon, team_names, known_moves) -> dict:
             out[n] += float(x)
     if any(map(_status, known_moves)):
         out.pop("assaultvest", None)
-    return out
+    c = rake_factors(belief, species, "item")  # (the sampler's raked weights, if on)
+    return {k: v * c.get(k, 1.0) for k, v in out.items()} if c else out
 
 
 def _tera_support(belief, species: str, team_names) -> dict:

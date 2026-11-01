@@ -596,12 +596,16 @@ def _candidates(
     The ability likewise the one it started with: ``ab``, for a mon whose ability changed since
     (``ability_changes``), the log's (None: not known -- the species', not poke-env's now)."""
     from alpha_poke.agents.belief_state import _preview_name, ability_probs, species_ability_probs
-    from alpha_poke.agents.engine_state import base_marginal, required_item
+    from alpha_poke.agents.engine_state import base_marginal, rake_factors, raked, required_item
     from alpha_poke.agents.speed import spread_dist
 
     # (the sampler's base item marginal: engine_state.base_marginal -- the team prior's sees the
     # revealed items only; 2026-10-25)
-    marg = base_marginal(belief, _preview_name(mon, team_names), team_names, "item", mix)
+    # (raked as the sampler draws: engine_state.rake_factors; sample_set swaps this prior for the
+    # archetype's, raked alike: the factors cancel in its ratio)
+    species = _preview_name(mon, team_names)
+    marg = raked(base_marginal(belief, species, team_names, "item", mix),
+                 rake_factors(belief, species, "item", mix))  # fmt: skip
     if then is not False and then is not None:
         items = [(then, 1.0)]
     elif then is None:

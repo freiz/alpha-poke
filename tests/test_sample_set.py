@@ -260,3 +260,40 @@ def test_a_seen_base_forme_is_no_hidden_forme():
     seen = Pokemon(species="urshifu", gen=9)
     seen._revealed = True  # (it came in as "Urshifu": Single Strike)
     assert sample_set(belief, seen, ("Urshifu",), random.Random(0), known=known).forme is None
+
+
+def test_raked_items_match_the_usage():
+    """2026-10-31 (issue #33): the archetypes and the team prior count the items replays show, so
+    the drawn items lean to the self-revealing ones. With the belief's ``rake`` on, a species'
+    items drawn with nothing revealed follow Smogon's usage (the teams' own items); off, they do
+    not -- and an item the usage lacks stays possible (the floor)."""
+    from alpha_poke.agents.engine_state import _smogon, rake_factors
+    from alpha_poke.analysis.roles import to_id
+
+    belief = BeliefModel.load()
+    name = "Dragapult"
+    usage = _smogon(belief).predict(name, (name,)).item
+    t = sum(usage.values())
+    usage = {("none" if to_id(k) == "nothing" else to_id(k)): v / t for k, v in usage.items()}
+
+    def drawn(rake: bool) -> dict:
+        belief.rake = rake
+        rng = random.Random(0)
+        n = 4000
+        counts: dict = {}
+        for _ in range(n):
+            it = sample_set(belief, Pokemon(species="dragapult", gen=9), (name,), rng).item
+            counts[it] = counts.get(it, 0) + 1
+        return {k: v / n for k, v in counts.items()}
+
+    def tv(d: dict) -> float:
+        return sum(abs(d.get(k, 0.0) - usage.get(k, 0.0)) for k in set(d) | set(usage)) / 2
+
+    try:
+        off, on = drawn(False), drawn(True)
+        assert tv(on) < 0.06, tv(on)
+        assert tv(off) > tv(on) + 0.05, (tv(off), tv(on))
+        c = rake_factors(belief, name, "item")
+        assert c and all(v > 0 for v in c.values())  # (nothing the draw made is ruled out)
+    finally:
+        belief.rake = False

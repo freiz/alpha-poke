@@ -39,6 +39,7 @@ class BeliefModel:
     lead_rate: dict[str, float]  # species -> P(lead | on team)
     names: dict[str, str]  # species id -> name as used in replay tables (e.g. 'Zamazenta-*')
     in_battle_update: bool = True  # re-weight unrevealed moves with set-archetype posteriors
+    rake: bool = False  # items / tera drawn at Smogon's marginals (engine_state.rake_factors)
 
     @classmethod
     def build(

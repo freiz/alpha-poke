@@ -367,6 +367,80 @@ def arch_mix(ss, k: int, attr: str, base: dict, mix: float | None = None) -> dic
     return out
 
 
+# Raking (2026-10-31, issue #33): the archetypes are mined from replays and the team prior counts
+# them, so the drawn items lean to the ones that reveal themselves (Life Orb, Leftovers, Booster
+# Energy, Air Balloon) and away from the silent ones (Choice Specs / Scarf, Heavy-Duty Boots,
+# Assault Vest): at preview, 0.23 of 14 top species' item mass misplaced against Smogon's usage
+# (Dragapult's Specs 0.21 for 0.50). Smogon counts the teams' own sets, shown or not. One factor
+# per value (``rake_factors``), multiplied into every archetype's item / tera weights, makes the
+# drawn marginal with nothing revealed the usage's (iterative proportional fitting over the
+# archetypes' prior mix): which items go with which moves stays the archetypes', the marginal
+# is the ladder's. On a belief with ``rake`` set (off by default until its search A/B).
+RAKE_ITERS = 30
+_RAKES: dict = {}
+
+
+def rake_factors(belief: BeliefModel, species: str, attr: str, mix: float | None = None) -> dict:
+    """Value id -> the factor its drawn weight is multiplied by ({}: none -- the belief's
+    ``rake`` off, the old belief at ``mix`` 0, or no usage for the species). Cached."""
+    if not getattr(belief, "rake", False) or (mix if mix is not None else ARCH_MIX) <= 0:
+        return {}
+    key = (id(belief), species, attr)
+    c = _RAKES.get(key)
+    if c is None:
+        if len(_RAKES) > 20_000:
+            _RAKES.clear()
+        c = _RAKES[key] = _fit_rake(belief, species, attr)
+    return c
+
+
+def raked(weights: dict, factors: dict) -> dict:
+    return {k: v * factors.get(k, 1.0) for k, v in weights.items()} if factors else weights
+
+
+def _fit_rake(belief: BeliefModel, species: str, attr: str) -> dict:
+    sm = _smogon(belief)
+    if sm is None:
+        return {}
+    usage: dict = {}
+    for k, v in getattr(sm.predict(species, (species,)), attr).items():
+        k = "none" if to_id(k) == "nothing" else to_id(k)  # (the sampler's no-item)
+        usage[k] = usage.get(k, 0.0) + v
+    total = sum(usage.values())
+    if total <= 0:
+        return {}
+    # the draw with nothing revealed, the species alone: its archetypes' prior mix of their
+    # weights mixed with the base, or the base alone (sample_set's draw)
+    base = base_marginal(belief, species, (species,), attr)
+    ss = belief.sets.get(species)
+    if ss is not None and ss.params and ss.vocab.get(attr):
+        post = np.asarray(ss.posterior(), dtype=float)
+        post = post / post.sum()
+        parts = [(float(p), arch_mix(ss, k, attr, base)) for k, p in enumerate(post) if p > 0]
+    else:
+        parts = [(1.0, base)]
+
+    def marginal(c: dict) -> dict:
+        out: dict = {}
+        for p, w in parts:
+            z = sum(v * c.get(i, 1.0) for i, v in w.items()) or 1.0
+            for i, v in w.items():
+                out[i] = out.get(i, 0.0) + p * v * c.get(i, 1.0) / z
+        return out
+
+    # the target: the usage, with the FLOOR of the draw's own under it (a value the usage lacks
+    # stays possible); a value the draw never makes cannot be scaled up -- left out
+    m0 = marginal({})
+    target = {i: (1 - FLOOR) * usage.get(i, 0.0) / total + FLOOR * v for i, v in m0.items()}
+    t = sum(target.values())
+    target = {i: v / t for i, v in target.items()}
+    c: dict = {}
+    for _ in range(RAKE_ITERS):
+        m = marginal(c)
+        c = {i: c.get(i, 1.0) * target[i] / m[i] for i in m if m[i] > 0}
+    return c
+
+
 def sample_set(
     belief: BeliefModel,
     mon,
@@ -426,6 +500,8 @@ def sample_set(
     def draw(attr, fallback: dict[str, float], exclude: tuple = ()):
         if k is not None and ss.vocab.get(attr) and attr in ("item", "tera"):
             fallback = arch_mix(ss, k, attr, fallback, mix)  # (its weights with the base: ARCH_MIX)
+        if attr in ("item", "tera"):  # (the usage's marginal: rake_factors)
+            fallback = raked(fallback, rake_factors(belief, species, attr, mix))
         elif k is not None and ss.vocab.get(attr):
             w = flat(ss.params[attr][k])
             if exclude:
