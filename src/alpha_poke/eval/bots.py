@@ -69,6 +69,8 @@ VARIANTS: dict[str, tuple[str, dict]] = {
                 "tau": 0.05,
                 "rating": 0,
                 "ratings": os.environ.get(f"ALPHA_RATING_{x.upper()}"),
+                # (2026-11-01) the belief worlds its prior is averaged over (one network call each)
+                "policy_worlds": int(os.environ.get(f"ALPHA_POLICY_WORLDS_{x.upper()}") or 4),
             },
         )
         for x in ("a", "b")
