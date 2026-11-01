@@ -53,3 +53,13 @@ def test_a_guess_is_played_mixed():
     assert greedy_choice(options, mean, 0.0, random.Random(0)) == 0
     picks = [greedy_choice(options, mean, 0.02, random.Random(s)) for s in range(400)]
     assert 2 not in picks and 0.55 < picks.count(0) / 400 < 0.8
+
+
+def test_the_rating_input_override():
+    """2026-11-01: ALPHA_RATING_A / _B ("own,opponent") set the network's rating input of a bot;
+    unset, the log's (0 on a local server) -- the old behaviour."""
+    from alpha_poke.eval.bots import parse_ratings
+
+    assert parse_ratings(None) is None and parse_ratings("") is None
+    assert parse_ratings("1800,1800") == (1800, 1800) and parse_ratings("0,0") == (0, 0)
+    assert parse_ratings((1500, 1600)) == (1500, 1600)

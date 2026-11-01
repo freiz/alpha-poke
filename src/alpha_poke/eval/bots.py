@@ -51,6 +51,9 @@ VARIANTS: dict[str, tuple[str, dict]] = {
                 # (2026-10-31) the belief's switches, comma-separated (BeliefModel's booleans):
                 # rake, f1_all, stratify
                 "belief": os.environ.get(f"ALPHA_BELIEF_{x.upper()}"),
+                # (2026-11-01) the network's rating input, "own,opponent" (0 = unknown); unset:
+                # the log's (0 on a local server)
+                "ratings": os.environ.get(f"ALPHA_RATING_{x.upper()}"),
             },
         )
         for x in ("a", "b")
@@ -65,6 +68,7 @@ VARIANTS: dict[str, tuple[str, dict]] = {
                 "model": os.environ.get(f"ALPHA_MODEL_{x.upper()}", DEFAULT_MODEL),
                 "tau": 0.05,
                 "rating": 0,
+                "ratings": os.environ.get(f"ALPHA_RATING_{x.upper()}"),
             },
         )
         for x in ("a", "b")
@@ -115,16 +119,26 @@ def make_bot(
         if cls_name == "batched":
             return _batched_bot(extra["model"], heldout_pool, trace_dir, kw, extra.get("dtype"),
                                 extra.get("iters"), extra.get("ml"), extra.get("root_rm"),
-                                extra.get("mix"), extra.get("belief"))  # fmt: skip
+                                extra.get("mix"), extra.get("belief"), extra.get("ratings"))  # fmt: skip
         if cls_name == "search":
             from alpha_poke.agents.search_player import SearchPlayer as cls
         elif cls_name == "policy":
             from alpha_poke.agents.policy_player import PolicyPlayer as cls
+
+            extra = extra | {"ratings": parse_ratings(extra.get("ratings"))}
         else:
             from alpha_poke.agents.knowledge_player import KnowledgePlayer as cls
         belief = BeliefModel.load(heldout_pool=heldout_pool)
         return cls(belief, trace_dir=trace_dir, **extra, **kw)
     return BASELINES[kind](**kw)
+
+
+def parse_ratings(text) -> tuple[int, int] | None:
+    """ "own,opponent" -> the rating input (0 = unknown); None / "" -> None (the log's)."""
+    if text is None or isinstance(text, tuple) or str(text).strip() == "":
+        return text or None
+    own, opp = (int(v) for v in str(text).split(","))
+    return own, opp
 
 
 # (model, dtype, ml) -> Batcher, one per network in each (worker) process
@@ -133,7 +147,8 @@ _BATCHERS: dict = {}
 
 def _batched_bot(model: str, heldout_pool, trace_dir, kw, dtype: str | None = None,
                  iters: str | None = None, ml: str | None = None, root_rm: str | None = None,
-                 mix: str | None = None, belief_opts: str | None = None) -> Player:  # fmt: skip
+                 mix: str | None = None, belief_opts: str | None = None,
+                 ratings: str | None = None) -> Player:  # fmt: skip
     import random
 
     from alpha_poke.agents.belief_state import BeliefModel
@@ -153,6 +168,6 @@ def _batched_bot(model: str, heldout_pool, trace_dir, kw, dtype: str | None = No
         belief, trace_dir=trace_dir, worlds=32,
         net_policy="both", model=model, batcher=_BATCHERS[key], full_frac=1.0,
         full_iters=iters, noise=(0.0, 10.0), greedy=True, record=False, mix=float(mix or 0),
-        turn_cap=int(os.environ.get("ALPHA_TURN_CAP", 300)),
+        turn_cap=int(os.environ.get("ALPHA_TURN_CAP", 300)), ratings=parse_ratings(ratings),
         seed=random.randrange(1 << 30), **kw,
     )  # fmt: skip

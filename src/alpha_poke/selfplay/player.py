@@ -68,8 +68,9 @@ class SelfPlayPlayer(SearchPlayer):
                  noise: tuple[float, float] = (0.1, 10.0), turn_cap: int = 300, seed: int = 0,
                  greedy: bool = False, record: bool = True, temp_turns: int = 8,
                  temp_late: float = 0.25, loop: tuple | None = None, mix: float = 0.0,
-                 **kwargs):  # fmt: skip
+                 ratings: tuple | None = None, **kwargs):  # fmt: skip
         super().__init__(*args, **kwargs)
+        self.ratings = ratings  # (the network's rating input; None: the log's -- net_context)
         assert self.model_transformer and batcher is not None
         self.batcher = batcher
         self.full_frac, self.full_iters, self.fast_iters = full_frac, full_iters, fast_iters
@@ -158,7 +159,7 @@ class SelfPlayPlayer(SearchPlayer):
         for m in cands:
             states = build_worlds(battle, self.belief, names, self.rng, self.fast_worlds,
                                   move_beta=self.move_beta, force_switch=False, revived=m.species)  # fmt: skip
-            ctxs = net_context.contexts(battle, states, self.batcher.post)
+            ctxs = net_context.contexts(battle, states, self.batcher.post, self.ratings)
             futs.append((m, self.batcher.submit([s.to_string() for s in states], ctxs,
                                                 self.fast_iters, self.rng.randrange(1 << 30),
                                                 (0.0, 10.0))))  # fmt: skip
@@ -203,7 +204,7 @@ class SelfPlayPlayer(SearchPlayer):
             log.warning("request / engine state mismatch (%s turn %d): %s", battle.battle_tag,
                         battle.turn, issues)  # fmt: skip
         t1 = time.time()
-        ctxs = net_context.contexts(battle, states, self.batcher.post)
+        ctxs = net_context.contexts(battle, states, self.batcher.post, self.ratings)
         t2 = time.time()
         iters = self.full_iters if full else self.fast_iters
         looping = self.looping(battle)

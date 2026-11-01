@@ -86,18 +86,23 @@ def needs_post(model_dir: str | None) -> bool:
     return bool(model_dir) and "post" in model_feats(model_dir)
 
 
-def contexts(battle, states, post: bool = False) -> list[tuple]:
+def contexts(battle, states, post: bool = False, ratings: tuple | None = None) -> list[tuple]:
     """One (reveal bits [12], (own rating, opponent rating), turn, history) per world state
     (poke_engine.State, side one = us), as alpha_search.ismcts(contexts=...) takes them. ``post``
     (a network with F2): + the action-consequence probabilities over all these worlds
-    (alpha_search.posterior: computed once at the root, the same in every world's context)."""
+    (alpha_search.posterior: computed once at the root, the same in every world's context).
+    ``ratings``: the rating input instead of the log's (own, opponent; 0 = unknown)."""
     lines = battle_log(battle)
     side = battle.player_role or "p1"
     other = "p2" if side == "p1" else "p1"
     rep = _parsed(battle, lines)
     steps = decision_steps(rep.actions, blind_sides(rep))
     hist = history_string(steps, END, side)
-    ratings = (rep.ratings_before.get(side) or 0, rep.ratings_before.get(other) or 0)
+    ratings = (
+        tuple(ratings)
+        if ratings is not None
+        else (rep.ratings_before.get(side) or 0, rep.ratings_before.get(other) or 0)
+    )
     shadow = opponent_view(battle, lines)
     theirs = list(battle.opponent_team.values())
     ours = list(shadow.opponent_team.values())

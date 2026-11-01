@@ -19,10 +19,13 @@ from alpha_poke.agents.search_player import SearchPlayer
 
 class PolicyPlayer(SearchPlayer):
     def __init__(self, *args, rating: int | None = None, tau: float | None = None,
-                 policy_worlds: int = 4, seed: int | None = None, **kwargs):  # fmt: skip
+                 policy_worlds: int = 4, seed: int | None = None, ratings: tuple | None = None,
+                 **kwargs):  # fmt: skip
         """``rating``: the rating input (0 = unknown; default ALPHA_POLICY_RATING or 0);
+        ``ratings``: both sides' (own, opponent) instead, the opponent's too;
         ``tau``: the temperature (default ALPHA_POLICY_TAU or 1)."""
         super().__init__(*args, **kwargs)
+        self.ratings = ratings
         assert self.model_transformer, "PolicyPlayer needs a transformer model"
         self.rating = (
             rating if rating is not None else int(os.environ.get("ALPHA_POLICY_RATING", 0))
@@ -41,7 +44,8 @@ class PolicyPlayer(SearchPlayer):
                               move_beta=self.move_beta)  # fmt: skip
         ctxs = net_context.contexts(battle, states, net_context.needs_post(self.model))
         # the modelled player's rating as our own rating input (the opponent's stays)
-        ctxs = [(rv, (self.rating, rt[1]), turn, hist, *rest) for rv, rt, turn, hist, *rest in ctxs]
+        ctxs = [(rv, tuple(self.ratings) if self.ratings is not None else (self.rating, rt[1]), turn, hist, *rest)
+                for rv, rt, turn, hist, *rest in ctxs]  # fmt: skip
         prior: dict[str, float] = defaultdict(float)
         for st, ctx in zip(states, ctxs, strict=True):
             for choice, p in alpha_search.root_priors([st.to_string()], self.model, [ctx]):
