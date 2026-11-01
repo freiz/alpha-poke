@@ -19,6 +19,8 @@ to look, and gets the review page when the search is done. Loopback only; one re
   GET  /api/llm-settings      the language model's URL and model, whether a key is set (coach.llm)
   POST /api/llm-settings      {base_url, model, api_key, persona}: set them (from this computer only)
   POST /api/llm-test          {lang}: a one-line question to the model, its answer
+  POST /api/llm-models        {base_url, api_key}: the models the service offers ({models}; the
+                              saved key for the saved address when none is given; this computer only)
   GET  /api/llm?review=&kind=&lang=[&dec=]   a write-up kept with the review, or null
   GET  /api/llm?...&kind=turn&dec=&all=1   a decision's conversation: {thread: [{question, answer, coach}]}
   POST /api/llm-clear         {review, dec, lang}: that conversation deleted
@@ -364,12 +366,23 @@ def handler(cache, jobs: Jobs):
             try:
                 body = json.loads(self.rfile.read(min(n, 20_000_000)) or b"{}")
                 lang = body.get("lang") or "en"
-                if self.path in ("/api/llm-settings", "/api/llm-test"):
+                if self.path in ("/api/llm-settings", "/api/llm-test", "/api/llm-models"):
                     # (the key: set from this computer only -- the app on the network (--lan) too)
                     if self.client_address[0] not in ("127.0.0.1", "::1", "::ffff:127.0.0.1"):
                         return self._json(
                             {"error": message("local_only", lang)}, HTTPStatus.FORBIDDEN
                         )
+                    if self.path == "/api/llm-models":
+                        url = str(body.get("base_url") or "")
+                        try:
+                            models = llm.list_models(
+                                url, llm.key_for(COACH, url, str(body.get("api_key") or ""))
+                            )
+                        except Exception as e:  # noqa: BLE001 - shown on the page
+                            return self._json(
+                                {"error": str(e) or type(e).__name__}, HTTPStatus.BAD_REQUEST
+                            )
+                        return self._json({"models": models})
                     if self.path == "/api/llm-settings":
                         llm.save_settings(COACH, str(body.get("base_url") or ""), str(body.get("model") or ""),
                                           str(body.get("api_key") or "") or None, body.get("persona"))  # fmt: skip
@@ -504,6 +517,9 @@ HOME = r"""<!DOCTYPE html>
   .lang button.sel { background: var(--ai); color: #fff; border-color: var(--ai); }
   h1 { font-size: 22px; margin: 0 0 4px; } .muted { color: var(--muted); font-size: 13px; }
   .fmt { color: var(--good); font-size: 13px; margin-top: 8px; }
+  .mrow { display: flex; gap: 8px; align-items: center; } .mrow select, .mrow input { flex: 1; min-width: 0; }
+  .mrow select { padding: 8px 10px; border-radius: 6px; }
+  .mrow button { white-space: nowrap; }
   .intro p { margin: 4px 0; } .intro ul { margin: 4px 0; padding-left: 18px; } .intro b { color: var(--ink); }
   section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin: 16px 0; }
   label { display: block; margin: 10px 0 4px; font-weight: 600; }
@@ -567,8 +583,10 @@ __RF_HTML__
         <p><span data-t="llmAdvice"></span> <a href="https://artificialanalysis.ai/#intelligence" target="_blank" rel="noopener" data-t="llmBoard"></a></p>
         <p data-t="llmPrivacy"></p></div>
       <label for="llmUrl" data-t="llmUrl"></label><input type="text" id="llmUrl" placeholder="https://api.openai.com/v1" />
-      <label for="llmModel" data-t="llmModel"></label><input type="text" id="llmModel" placeholder="gpt-4.1" />
       <label for="llmKey" data-t="llmKey"></label><input type="password" id="llmKey" autocomplete="off" />
+      <label for="llmModel" data-t="llmModel"></label>
+      <div class="mrow"><select id="llmModel" hidden></select><input type="text" id="llmModelText" placeholder="gpt-4.1" />
+        <button id="llmFetch" data-t="llmFetch"></button></div>
       <label for="llmPersona" data-t="llmPersona"></label><select id="llmPersona"></select>
       <div><button class="go" id="llmSave" data-t="llmSave"></button> <button id="llmTest" data-t="llmTest"></button></div>
       <div class="muted" id="llmOut"></div>
@@ -613,7 +631,10 @@ const T = {
        llmAdvice: "Choose a strong model: one scoring above 45 on the Artificial Analysis Intelligence Index (v5.0). The coach has to find the turns that mattered in tens of thousands of tokens and tie each number to its cause; a smarter model catches more of the details and makes up less, while a weaker one tends to get moves and turns wrong or call luck a mistake. Models small enough for an ordinary graphics card rarely reach that level, so for good commentary a strong cloud model is usually the better choice.",
        llmBoard: "The leaderboard →",
        llmPrivacy: "The key stays on this computer and is sent only to this address.",
-       llmKeyLocal: "a model on this computer needs no key"},
+       llmKeyLocal: "a model on this computer needs no key",
+       llmFetch: "Fetch the models", llmFetching: "Asking the service for its models…",
+       llmFound: n => `${n} models: choose one from the list.`,
+       llmFetchFail: e => `Could not fetch the models (${e}); type the model's name instead.`},
   zh: {title: "宝可梦 Gen 9 OU 对战复盘", ui: "界面",
        intro: "复盘 Pokémon Showdown 的 Gen 9 OU 单打对局，从你的视角看每一个决策。复盘由两部分完成：",
        engineName: "引擎（已内置，无需设置）：",
@@ -639,7 +660,10 @@ const T = {
        llmAdvice: "建议选强一点的模型：Artificial Analysis 智能指数（Intelligence Index v5.0）45 分以上。教练要在几万 token 的数据里找出关键回合，把每个数字和背后的原因对上：越聪明的模型抓到的细节越多，编造的越少；弱一些的模型常会说错招式和回合，或者把运气当成失误。普通显卡能跑的本地模型很少达到这个水平，想要好的点评，通常云端的强模型更合适。",
        llmBoard: "查看排行榜 →",
        llmPrivacy: "Key 只存在这台电脑上，也只发给这个地址。",
-       llmKeyLocal: "本机的模型不需要 Key"},
+       llmKeyLocal: "本机的模型不需要 Key",
+       llmFetch: "获取模型列表", llmFetching: "正在向接口获取模型列表…",
+       llmFound: n => `找到 ${n} 个模型，请从下拉框选择。`,
+       llmFetchFail: e => `没能获取模型列表（${e}），可以手动输入模型名。`},
 };
 let UI = "en";
 try { UI = new URLSearchParams(location.search).get("ui") || localStorage.getItem("coach-ui") || "en"; } catch (e) {}
@@ -658,17 +682,45 @@ async function post(url, data) {
   const r = await fetch(url, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({...data, lang: UI})});
   const j = await r.json(); if (!r.ok) throw new Error(j.error || r.statusText); return j;
 }
-// the language model (coach.llm): its address and model shown, its key never sent back
+// the language model (coach.llm): its address and model shown, its key never sent back; the
+// models the service offers in a list (its GET /models, as most chat clients do: no misspelt
+// name), typed by hand only when the list cannot be had
+let MODELS = null, SAVED_MODEL = "";
+const modelValue = () => MODELS ? $("llmModel").value : $("llmModelText").value.trim();
+function showModels(list, keep) {
+  const sel = $("llmModel"), txt = $("llmModelText");
+  MODELS = list && list.length ? list : null;
+  if (MODELS) {
+    const opts = !keep || MODELS.includes(keep) ? MODELS : [keep, ...MODELS];
+    sel.innerHTML = opts.map(m => `<option value="${esc(m)}">${esc(m)}</option>`).join("");
+    if (keep) sel.value = keep;
+  } else if (keep) txt.value = keep;
+  sel.hidden = !MODELS; txt.hidden = !!MODELS;
+}
+async function fetchModels(quiet) {
+  const keep = modelValue() || SAVED_MODEL;
+  if (!$("llmUrl").value.trim()) return;
+  if (!quiet) $("llmOut").textContent = L.llmFetching;
+  try {
+    const r = await post("/api/llm-models", {base_url: $("llmUrl").value, api_key: $("llmKey").value});
+    showModels(r.models, keep);
+    if (!quiet) $("llmOut").textContent = r.models.length ? L.llmFound(r.models.length) : L.llmFetchFail("0");
+  } catch (e) { showModels(null, keep); if (!quiet) $("llmOut").textContent = L.llmFetchFail(e.message); }
+}
+$("llmFetch").onclick = () => fetchModels(false);
+$("llmUrl").onchange = $("llmKey").onchange = () => fetchModels(false);
 async function llmLoad() {
   const s = await (await fetch("/api/llm-settings")).json();
-  $("llmUrl").value = s.base_url; $("llmModel").value = s.model; $("llmKey").value = "";
+  $("llmUrl").value = s.base_url; $("llmKey").value = ""; SAVED_MODEL = s.model;
+  showModels(null, s.model);
+  if (s.base_url) fetchModels(true);
   $("llmPersona").innerHTML = s.personas.map(([k, en, zh]) => `<option value="${esc(k)}">${esc(UI == "zh" ? zh : en)}</option>`).join("");
   $("llmPersona").value = s.persona;
   $("llmKey").placeholder = s.has_key ? L.llmKeySet : s.local ? L.llmKeyLocal : "";
   $("llmState").textContent = s.ready ? `(${L.llmSet}: ${s.model})` : `(${L.llmUnset})`;
 }
 $("llmSave").onclick = async () => {
-  try { await post("/api/llm-settings", {base_url: $("llmUrl").value, model: $("llmModel").value, api_key: $("llmKey").value,
+  try { await post("/api/llm-settings", {base_url: $("llmUrl").value, model: modelValue(), api_key: $("llmKey").value,
                                          persona: $("llmPersona").value});
         await llmLoad(); $("llmOut").textContent = L.llmSaved; } catch (e) { $("llmOut").textContent = e.message; }
 };

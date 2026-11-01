@@ -307,6 +307,41 @@ def save_settings(coach: Path, base_url: str, model: str, api_key: str | None,
         pass
 
 
+def key_for(coach: Path, base_url: str, api_key: str) -> str:
+    """The key to call ``base_url`` with: the one given, else the saved one -- for the saved
+    address only (a saved key never goes to an address typed since)."""
+    if api_key.strip():
+        return api_key.strip()
+    s = load_settings(coach)
+    same = base_url.strip().rstrip("/") == s["base_url"].rstrip("/")
+    return s["api_key"] if same else ""
+
+
+def list_models(base_url: str, api_key: str, timeout: float = 20) -> list[str]:
+    """The models the service offers, sorted: OpenAI's GET /models ({"data": [{"id"}]}), which
+    Ollama, OpenRouter, DeepSeek and the like serve too (a list under "models" taken as well)."""
+    if not base_url.strip():
+        raise RuntimeError("no address")
+    headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+    url = base_url.strip().rstrip("/") + "/models"
+    try:
+        r = requests.get(url, headers=headers, timeout=timeout)
+    except requests.Timeout:
+        raise RuntimeError(f"no answer from {url} in {timeout:.0f} s") from None
+    except requests.RequestException:
+        raise RuntimeError(
+            f"cannot reach {url} -- is the address right, the service running?"
+        ) from None
+    if r.status_code != 200:
+        raise RuntimeError(f"the model's service answered {r.status_code}: {r.text[:300]}")
+    body = r.json()
+    items = (body.get("data") or body.get("models") or []) if isinstance(body, dict) else body
+    ids = {
+        str((m.get("id") or m.get("name") or "") if isinstance(m, dict) else m) for m in items or []
+    }
+    return sorted(ids - {""})
+
+
 def chat(
     settings: dict, system: str, user: str, timeout: float = 300, messages: list | None = None
 ) -> str:

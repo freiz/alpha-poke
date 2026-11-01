@@ -1418,3 +1418,40 @@ def test_a_local_model_needs_no_key(tmp_path, monkeypatch):
     )
     llm.save_settings(tmp_path, "https://api.example.invalid/v1", "m", "")
     assert not llm.public_settings(tmp_path)["ready"]
+
+
+def test_the_models_a_service_offers(tmp_path, monkeypatch):
+    """2026-11-01: the home page lists the service's models (GET /models) for a dropdown, as
+    chat clients do -- no misspelt model name; the saved key is used for the saved address only
+    (never sent to an address typed since)."""
+    from alpha_poke.coach import llm
+
+    calls = []
+
+    class Resp:
+        def __init__(self, code, body):
+            self.status_code, self._body, self.text = code, body, str(body)
+
+        def json(self):
+            return self._body
+
+    bodies = {"https://a.example/v1/models": (200, {"data": [{"id": "m-b"}, {"id": "m-a"}, {"id": "m-a"}]}),
+              "http://localhost:11434/v1/models": (200, {"models": [{"name": "qwen3:32b"}]}),
+              "https://down.example/v1/models": (401, {"error": "bad key"})}  # fmt: skip
+    monkeypatch.setattr(
+        llm.requests,
+        "get",
+        lambda url, headers, timeout: calls.append((url, headers)) or Resp(*bodies[url]),
+    )
+    assert llm.list_models("https://a.example/v1/", "sk-1") == ["m-a", "m-b"]
+    assert calls[-1] == ("https://a.example/v1/models", {"Authorization": "Bearer sk-1"})
+    assert llm.list_models("http://localhost:11434/v1", "") == ["qwen3:32b"] and calls[-1][1] == {}
+    try:
+        llm.list_models("https://down.example/v1", "x")
+        raise AssertionError("a 401 is an error")
+    except RuntimeError as e:
+        assert "401" in str(e)
+    llm.save_settings(tmp_path, "https://a.example/v1", "m-a", "sk-saved")
+    assert llm.key_for(tmp_path, "https://a.example/v1/", "") == "sk-saved"
+    assert llm.key_for(tmp_path, "https://other.example/v1", "") == ""
+    assert llm.key_for(tmp_path, "https://other.example/v1", "sk-new") == "sk-new"
