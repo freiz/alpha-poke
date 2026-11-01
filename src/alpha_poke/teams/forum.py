@@ -18,12 +18,19 @@ DELAY = 1.0  # seconds between requests
 
 # name -> where to look. "threads": thread ids, every post of every page; "forum": a forum's
 # threads, the first post only (Rate My Team: the opening post is the team, replies are
-# suggestions). The name is kept on every team found (catalog sources).
+# suggestions) -- with "all_posts", every post of every thread (discussion forums: teams are
+# posted in replies). The name is kept on every team found (catalog sources). Teams of other
+# generations and tiers there are dropped when the catalog is built (the gen9ou validator).
 SOURCES: dict[str, dict] = {
     "sample": {"threads": [3712513]},  # SV OU Sample Teams (council-picked)
     "teams_of_week": {"threads": [3712009]},  # SV OU Teams of the Week
     "tour_bazaar": {"threads": [3752863]},  # SV OU Tournament Team's Bazaar
     "rmt": {"forum": "sv-ou-teams.748"},  # Rate My Team > SV OU Teams
+    # (2026-10-31: more teams, the ones people post in discussions and tournaments)
+    "ou_forum": {"forum": "overused.726", "all_posts": True},  # Gen 9 OU (metagame discussion)
+    "ou_archive": {"forum": "gen-9-ou-archive.841", "all_posts": True},
+    "spl": {"forum": "smogon-premier-league.130", "all_posts": True},
+    "scl": {"forum": "smogon-classic.334", "all_posts": True},
 }
 
 PASTE_RE = re.compile(r"pokepast\.es/([0-9a-f]{16})\b")
@@ -202,8 +209,8 @@ def crawl(f: Fetcher, sources: dict[str, dict] = SOURCES, log=print) -> list[Fou
     found: list[Found] = []
     for name, spec in sources.items():
         threads = [(t, "") for t in spec.get("threads", [])]
-        first_only = "forum" in spec
-        if first_only:
+        first_only = "forum" in spec and not spec.get("all_posts")
+        if "forum" in spec:
             threads = forum_threads(f, spec["forum"])
         n0 = len(found)
         for k, (tid, title) in enumerate(threads):
