@@ -51,6 +51,35 @@ def test_posts_and_paste_links():
     assert PASTE_RE.findall(p["body"]) == ["0123456789abcdef"]  # signature dropped
 
 
+def test_browser_check_not_cached(tmp_path):
+    """The forum's browser check is neither cached nor read as the page, a cached one is fetched
+    again, and once turned away the crawler sends no more requests."""
+    from alpha_poke.teams.forum import Fetcher
+
+    gate = '<html><body><script>document.cookie = "xf_smogon_gate=" + n;</script></body></html>'
+
+    class Resp:
+        def __init__(self, text):
+            self.status_code, self.text = 200, text
+
+        def raise_for_status(self):
+            pass
+
+    f = Fetcher(delay=0)
+    sent = []
+    f.session.get = lambda url, timeout: sent.append(url) or Resp(gate)
+    cache = tmp_path / "1" / "page-1.html"
+    assert f.get("u1", cache) is None and not cache.exists() and f.blocked == 1
+    assert f.get("u2", tmp_path / "2" / "page-1.html") is None
+    assert sent == ["u1"] and f.blocked == 2
+    # a gate page cached by an older crawl is fetched again (here: the real page)
+    f = Fetcher(delay=0)
+    f.session.get = lambda url, timeout: Resp("<html>thread</html>")
+    cache.parent.mkdir(parents=True, exist_ok=True)
+    cache.write_text(gate, encoding="utf-8")
+    assert f.get("u1", cache) == "<html>thread</html>" == cache.read_text(encoding="utf-8")
+
+
 def test_preview_key_and_completeness():
     from alpha_poke.teams.catalog import is_complete
     from alpha_poke.teams.validate import preview_name, team_key

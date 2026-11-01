@@ -66,12 +66,17 @@ class Fetcher:
         self.session.headers["User-Agent"] = USER_AGENT
         self.refresh, self.delay, self._last = refresh, delay, 0.0
         self.requests = 0
+        self.blocked = 0  # pages not read: the site's browser check (see ``gated``)
 
     def get(self, url: str, cache: Path, refresh: bool = False) -> str | None:
         """The page (cached); None if it does not exist."""
         if cache.exists() and not (refresh and self.refresh):
             text = cache.read_text(encoding="utf-8")
-            return text or None
+            if not gated(text):
+                return text or None
+        if self.blocked:  # (checked once: no more requests to a site that turns bots away)
+            self.blocked += 1
+            return None
         time.sleep(max(0.0, self._last + self.delay - time.time()))
         r = self.session.get(url, timeout=60)
         self._last = time.time()
@@ -81,8 +86,17 @@ class Fetcher:
             cache.write_text("", encoding="utf-8")
             return None
         r.raise_for_status()
+        if gated(r.text):  # (not cached: it is not the page)
+            self.blocked += 1
+            return None
         cache.write_text(r.text, encoding="utf-8")
         return r.text
+
+
+def gated(page: str) -> bool:
+    """Smogon's browser check (since 2026-10-31, on thread pages): a JavaScript proof-of-work
+    page instead of the thread. Not solved here -- the site turns crawlers away."""
+    return "xf_smogon_gate" in page[:4000]
 
 
 def _last_page(page: str, prefix: str) -> int:
@@ -230,4 +244,7 @@ def crawl(f: Fetcher, sources: dict[str, dict] = SOURCES, log=print) -> list[Fou
                 log(f"  {name}: {k + 1}/{len(threads)} threads, {len(found) - n0} teams, "
                     f"{f.requests} requests")  # fmt: skip
         log(f"{name}: {len(threads)} threads, {len(found) - n0} teams found")
+    if f.blocked:
+        log(f"warning: {f.blocked} pages not read -- the forum's browser check turned the "
+            "crawler away; the cached pages were read")  # fmt: skip
     return found
