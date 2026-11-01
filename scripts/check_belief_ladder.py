@@ -155,7 +155,7 @@ def main() -> None:
     a = ap.parse_args()
 
     import pandas as pd
-    from check_belief_sets import HEAD, f1_items, line, score, tera_dist
+    from check_belief_sets import CONFIGS, HEAD, configure, f1_items, line, score, tera_dist
     from poke_env.battle import Pokemon
 
     from alpha_poke.agents.belief_state import BeliefModel
@@ -212,10 +212,10 @@ def main() -> None:
         print(f"item shares vs Smogon {month} gen9ou-{cut} (top 20 species, mean TV): raw revealed "
               f"{sum(tv['raw']) / len(tv['raw']):.3f}, weighted {sum(tv['weighted']) / len(tv['weighted']):.3f}")  # fmt: skip
 
-    print(f"{'':22} {'shown':>5} {'n':>6} {'weight':>8}  {HEAD}  (weighted)")
+    print(f"{'':24} {'shown':>5} {'n':>6} {'weight':>8}  {HEAD}  (weighted)")
     skipped = collections.Counter()
-    for label, on in (("belief", False), ("belief raked", True)):
-        belief.rake = on
+    for label, opts in CONFIGS:
+        configure(belief, opts)
         st = collections.defaultdict(lambda: collections.defaultdict(float))
         for names, sp, item, tera, moves, ins in mons:
             name = belief.display(to_id(sp.replace("-*", "")))
@@ -226,7 +226,7 @@ def main() -> None:
                     continue
                 r = rate(counts[attr], val, bucket(ins))
                 if r is None or r < MIN_RATE:
-                    skipped[(attr, "rare or unseen in self-play")] += on is False
+                    skipped[(attr, "rare or unseen in self-play")] += not opts
                     continue
                 w = 1 / r
                 for shown in (0, 2):
@@ -237,15 +237,16 @@ def main() -> None:
                         else tera_dist(belief, name, team, mv)
                     )
                     f1 = f1_items(belief, mon, team) if attr == "item" else None
-                    score(d, val, st[(attr, shown)], w=w, f1=f1)
+                    score(d, val, st[(attr, shown)], w=w, f1=f1,
+                          strat=belief.stratify and attr == "item")  # fmt: skip
         for attr in ("item", "tera"):
             for shown in (0, 2):
                 s = st[(attr, shown)]
                 if s["n"]:
                     print(
-                        f"{attr + ': ' + label:22} {shown:5} {int(s['n']):6} {s['w']:8.0f}  {line(s)}"
+                        f"{attr + ': ' + label:24} {shown:5} {int(s['n']):6} {s['w']:8.0f}  {line(s)}"
                     )
-    belief.rake = False
+    configure(belief, ())
     print(f"left out: {dict(skipped)}")
 
 

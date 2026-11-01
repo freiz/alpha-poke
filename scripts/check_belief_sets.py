@@ -4,7 +4,7 @@ show in a game too), one team per near-duplicate family, the probability the sam
 mon's true item and tera type at preview with 0 or 2 of its moves shown (engine_state.sample_set's
 marginals: enginecheck.beliefcheck's item support; the archetype mix of the tera weights).
 
-  uv run python scripts/check_belief_sets.py [--since 2025-06] [--rake both]
+  uv run python scripts/check_belief_sets.py [--since 2025-06]
 
 Precision -- NLL: the mean -log P(the true value), floored at 1e-6; top-1: the most likely value
 is the true one. Recall -- at 0: P < 1e-4 (the draw hardly ever makes it); in 16 / in 32: the
@@ -48,6 +48,19 @@ def tera_dist(belief, species: str, team_names, known_moves) -> dict:
 
 
 WORLDS = (16, 32)  # the worlds a decision draws: self-play's fast searches, the full ones
+# the belief's switches compared (BeliefModel's booleans; all off by default)
+CONFIGS = (
+    ("belief", ()),
+    ("raked", ("rake",)),
+    ("raked+F1all", ("rake", "f1_all")),
+    ("raked+F1all+strat", ("rake", "f1_all", "stratify")),
+)
+SWITCHES = ("rake", "f1_all", "stratify")
+
+
+def configure(belief, opts) -> None:
+    for o in SWITCHES:
+        setattr(belief, o, o in opts)
 
 
 def f1_items(belief, mon, team_names) -> set:
@@ -58,10 +71,14 @@ def f1_items(belief, mon, team_names) -> set:
     return {c[0] for c in _candidates(belief, mon, team_names)[0]}
 
 
-def score(dist: dict, truth: str, s: dict, w: float = 1.0, f1: set | None = None) -> None:
+def score(dist: dict, truth: str, s: dict, w: float = 1.0, f1: set | None = None,
+          strat: bool = False) -> None:  # fmt: skip
     """Precision: NLL, top-1. Recall: at 0 (P < 1e-4: as good as never drawn); in W worlds (the
-    chance the true value is in at least one of a decision's W draws: 1 - (1 - P) ** W -- not
-    in any, the search never considers it there); in F1's candidates (``f1``, items)."""
+    chance the true value is in at least one of a decision's W draws: 1 - (1 - P) ** W, or
+    min(1, W P) for stratified draws -- not in any, the search never considers it there); in
+    F1's candidates (``f1``, items: named, or covered by its OTHER)."""
+    from alpha_poke.agents.damage_obs import OTHER
+
     t = sum(dist.values()) or 1.0
     p = dist.get(truth, 0.0) / t
     s["n"] += 1
@@ -70,9 +87,9 @@ def score(dist: dict, truth: str, s: dict, w: float = 1.0, f1: set | None = None
     s["top1"] += w * (bool(dist) and max(dist, key=dist.get) == truth)
     s["zero"] += w * (p < 1e-4)
     for n in WORLDS:
-        s[f"in{n}"] += w * (1 - (1 - p) ** n)
+        s[f"in{n}"] += w * (min(1.0, n * p) if strat else 1 - (1 - p) ** n)
     if f1 is not None:
-        s["f1"] += w * (truth in f1)
+        s["f1"] += w * (truth in f1 or OTHER in f1)
         s["f1n"] += w
 
 
@@ -94,7 +111,6 @@ def line(s: dict) -> str:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--since", default="2025-06", help="teams first posted from this month on")
-    ap.add_argument("--rake", choices=["off", "on", "both"], default="both")
     ap.add_argument("--seed", type=int, default=0)
     a = ap.parse_args()
 
@@ -126,14 +142,12 @@ def main() -> None:
     )
 
     rows = {}
-    for label, on in (("belief", False), ("belief raked", True)):
-        if a.rake != "both" and (a.rake == "on") != on:
-            continue
-        belief.rake = on
+    for label, opts in CONFIGS:
+        configure(belief, opts)
         stats = collections.defaultdict(lambda: collections.defaultdict(float))
         for names, mon, species, shown, item, tera in cases:
             score(_item_support(belief, mon, names, shown), item, stats[("item", len(shown))],
-                  f1=f1_items(belief, mon, names))  # fmt: skip
+                  f1=f1_items(belief, mon, names), strat=belief.stratify)  # fmt: skip
             if tera:
                 score(tera_dist(belief, species, names, shown), tera, stats[("tera", len(shown))])
         rows[label] = stats

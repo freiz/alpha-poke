@@ -40,6 +40,8 @@ class BeliefModel:
     names: dict[str, str]  # species id -> name as used in replay tables (e.g. 'Zamazenta-*')
     in_battle_update: bool = True  # re-weight unrevealed moves with set-archetype posteriors
     rake: bool = False  # items / tera drawn at Smogon's marginals (engine_state.rake_factors)
+    f1_all: bool = False  # F1's candidates cover every item (damage_obs._top_items: OTHER)
+    stratify: bool = False  # a decision's worlds' items stratified (engine_state.build_worlds)
 
     @classmethod
     def build(

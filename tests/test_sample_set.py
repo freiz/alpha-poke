@@ -297,3 +297,95 @@ def test_raked_items_match_the_usage():
         assert c and all(v > 0 for v in c.values())  # (nothing the draw made is ruled out)
     finally:
         belief.rake = False
+
+
+def test_evidence_items_are_the_damage_and_speed_ones():
+    from alpha_poke.belief.priors import evidence_items
+
+    ev = evidence_items()
+    for item in ("choicespecs", "choiceband", "choicescarf", "lifeorb", "expertbelt", "assaultvest",
+                 "eviolite", "occaberry", "dracoplate", "mysticwater", "normalgem"):  # fmt: skip
+        assert item in ev, item
+    for item in ("leftovers", "heavydutyboots", "rockyhelmet", "covertcloak", "sitrusberry"):
+        assert item not in ev, item
+
+
+def test_f1_other_draws_an_item_its_candidates_do_not_list():
+    """2026-10-31 (issue #33): once a clean hit is seen, F1's candidates are the only items drawn;
+    the TOP_ITEMS cut left 3-4% of true items (Rocky Helmet, Leftovers, ...) never drawn again.
+    With the belief's ``f1_all``: OTHER stands for the rest, an item among them drawn after."""
+    from alpha_poke.agents.damage_obs import OTHER, TOP_ITEMS, _candidates
+    from alpha_poke.agents.speed import spread_dist
+
+    belief = BeliefModel.load()
+    names = ("Dragapult", "Great Tusk", "Kingambit", "Gholdengo", "Corviknight", "Primarina")
+    mon = Pokemon(species="dragapult", gen=9)
+    try:
+        belief.f1_all = False
+        plain = {c[0] for c in _candidates(belief, mon, names)[0]}
+        assert len(plain) <= TOP_ITEMS and OTHER not in plain
+        belief.f1_all = True
+        cands = {c[0] for c in _candidates(belief, mon, names)[0]}
+        assert OTHER in cands and plain < cands
+        listed = cands - {OTHER}
+        spread = spread_dist("dragapult")[0][0]
+        # (the posterior over every candidate, as damage_posteriors gives it: Specs and the rest)
+        post = [(c, "infiltrator", spread, 1.0 if c in ("choicespecs", OTHER) else 0.0)
+                for c in sorted(cands)]  # fmt: skip
+        rng = random.Random(0)
+        items = [sample_set(belief, mon, names, rng, dmg_post=post).item for _ in range(400)]
+        assert "choicespecs" in items and OTHER not in items and "other" not in items
+        others = [i for i in items if i != "choicespecs"]
+        assert others and not set(others) & listed, set(others) & listed
+    finally:
+        belief.f1_all = False
+
+
+def test_stratified_worlds_cover_every_likely_item():
+    """2026-10-31 (issue #33): a decision's W worlds drawn apart miss a value of probability P
+    with (1 - P) ** W (37% at 1 / W); at Latin-hypercube quantiles each mon's item covers every
+    value of P >= 1 / W, and over many decisions the items keep their marginal."""
+    from alpha_poke.agents.engine_state import item_marginal
+
+    belief = BeliefModel.load()
+    names = ("Dragapult", "Great Tusk", "Kingambit", "Gholdengo", "Corviknight", "Primarina")
+    mon = Pokemon(species="dragapult", gen=9)
+    ss = belief.sets.get("Dragapult")
+    marg, _ = item_marginal(belief, ss, "Dragapult", names, ss.posterior())
+    likely = {i for i, p in marg.items() if p >= 1 / 32}
+    rng = random.Random(0)
+    counts: dict = {}
+    for _ in range(60):  # (decisions)
+        off = rng.random()
+        perm = list(range(32))
+        rng.shuffle(perm)
+        drawn = [
+            sample_set(belief, mon, names, rng, u=(perm[j] + off) / 32).item for j in range(32)
+        ]
+        assert likely <= set(drawn), likely - set(drawn)
+        for i in drawn:
+            counts[i] = counts.get(i, 0) + 1
+    n = sum(counts.values())
+    tv = sum(abs(counts.get(i, 0) / n - marg.get(i, 0)) for i in set(counts) | set(marg)) / 2
+    assert tv < 0.03, tv
+
+
+def test_build_worlds_is_the_plain_loop_unless_stratified(monkeypatch):
+    import alpha_poke.agents.engine_state as es
+
+    calls = []
+    monkeypatch.setattr(es, "build_state", lambda *a, **kw: calls.append(kw) or a[3].random())
+    belief = BeliefModel.load()
+    plain = es.build_worlds(None, belief, (), random.Random(1), 4, move_beta=2.0)
+    assert plain == [random.Random(1).random() for _ in range(1)] + plain[1:]
+    r = random.Random(1)
+    assert plain == [r.random() for _ in range(4)]  # (the same draws as the loop)
+    assert all("strata" not in kw and kw["move_beta"] == 2.0 for kw in calls)
+    calls.clear()
+    try:
+        belief.stratify = True
+        es.build_worlds(None, belief, (), random.Random(1), 4)
+        assert [kw["strata"][:2] for kw in calls] == [(j, 4) for j in range(4)]
+        assert len({kw["strata"][2] for kw in calls}) == 1  # (one seed per decision)
+    finally:
+        belief.stratify = False

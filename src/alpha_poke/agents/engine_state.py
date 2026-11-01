@@ -28,7 +28,7 @@ from alpha_poke.agents import (
 )
 from alpha_poke.agents.belief_state import BeliefModel, _preview_name, ability_probs
 from alpha_poke.agents.damage import Spread, calc_stats
-from alpha_poke.agents.damage_obs import damage_posteriors, record_base
+from alpha_poke.agents.damage_obs import OTHER, damage_posteriors, record_base
 from alpha_poke.agents.pokeview import (
     copied_ability,
     copied_pp,
@@ -416,6 +416,81 @@ def raked(weights: dict, factors: dict) -> dict:
     return {k: v * factors.get(k, 1.0) for k, v in weights.items()} if factors else weights
 
 
+# Stratified worlds (2026-10-31, issue #33; a belief with ``stratify``, off by default): the
+# W worlds of a decision draw each opposing mon's unknown item at Latin-hypercube quantiles of its
+# marginal (u = (perm(j) + U) / W, a permutation and an offset per mon), the archetype then given
+# the item -- the same joint distribution (P(item) P(k | item) = P(k) P(item | k)), but a value of
+# probability P is in min(1, W P) of the decisions' worlds, not 1 - (1 - P) ** W (at P = 1 / W:
+# always, not 63%); and fewer duplicate worlds. A mon with F1 evidence: its candidates' draw at u.
+def build_worlds(battle, belief: BeliefModel, team_names, rng: random.Random, n: int, **kw) -> list:
+    """``n`` determinizations of the battle (build_state), stratified on a belief with
+    ``stratify`` (the draws otherwise exactly the plain loop's)."""
+    if not getattr(belief, "stratify", False) or n < 2:
+        return [build_state(battle, belief, team_names, rng, **kw) for _ in range(n)]
+    seed = rng.getrandbits(64)
+    return [build_state(battle, belief, team_names, rng, strata=(j, n, seed), **kw)
+            for j in range(n)]  # fmt: skip
+
+
+def stratum(strata: tuple[int, int, int], key: str) -> float:
+    """World ``j`` of ``n``'s quantile for ``key`` (a mon): its own permutation and offset."""
+    j, n, seed = strata
+    r = random.Random(f"{seed}:{key}")
+    perm = list(range(n))
+    r.shuffle(perm)
+    return (perm[j] + r.random()) / n
+
+
+def _index_at(weights, u: float) -> int:
+    """The index at quantile ``u`` of the weights, in their order."""
+    total = float(sum(weights)) or 1.0
+    acc = 0.0
+    for i, w in enumerate(weights):
+        acc += w / total
+        if u < acc:
+            return i
+    return len(weights) - 1
+
+
+def item_marginal(belief, ss, species, team_names, post, exclude: tuple = (), mix=None) -> tuple:
+    """(the unknown item's marginal the sampler draws from -- the archetypes' posterior ``post``
+    mix of their item draws, raked, ``exclude`` out --, the archetypes' item draws)."""
+    base = base_marginal(belief, species, team_names, "item", mix)
+    c = rake_factors(belief, species, "item", mix)
+
+    def drawn(w: dict) -> dict:
+        w = {i: v for i, v in raked(w, c).items() if i not in exclude and v > 0}
+        t = sum(w.values())
+        return {i: v / t for i, v in w.items()} if t > 0 else {}
+
+    if ss is None or post is None or not ss.vocab.get("item"):
+        parts = [drawn(base)] * (1 if post is None else len(post))
+        pk = np.ones(len(parts)) if post is None else np.asarray(post, dtype=float)
+    else:
+        parts = [drawn(arch_mix(ss, k, "item", base, mix)) for k in range(len(post))]
+        pk = np.asarray(post, dtype=float)
+    pk = pk / pk.sum()
+    marg: dict = {}
+    for p, q in zip(pk, parts, strict=True):
+        for i, v in q.items():
+            marg[i] = marg.get(i, 0.0) + p * v
+    return marg, list(zip(pk, parts, strict=True))
+
+
+def _item_at(belief, ss, species, team_names, post, u: float, exclude: tuple, mix) -> tuple:
+    """(the item at quantile ``u`` of the mon's item marginal, the archetypes' posterior given
+    it)."""
+    marg, parts = item_marginal(belief, ss, species, team_names, post, exclude, mix)
+    if not marg:
+        return None, post
+    keys = sorted(marg, key=lambda i: (-marg[i], i))
+    item = keys[_index_at([marg[i] for i in keys], u)]
+    if post is None:
+        return item, None
+    given = np.asarray([p * q.get(item, 0.0) for p, q in parts])
+    return item, (given if given.sum() > 0 else np.asarray(post, dtype=float))
+
+
 def _fit_rake(belief: BeliefModel, species: str, attr: str) -> dict:
     sm = _rake_usage(belief)
     if sm is None:
@@ -471,6 +546,7 @@ def sample_set(
     dmg_post: list | None = None,
     exclude: frozenset = frozenset(),
     mix: float | None = None,
+    u: float | None = None,
 ):
     """One plausible full set for an opposing mon, consistent with what it revealed (and with
     ``known``: game-wide facts about the mon, used for side one of replay positions).
@@ -480,7 +556,9 @@ def sample_set(
     Moves: from the sampled (species-level) archetype; with ``move_beta`` > 0 the archetype's
     move weights are multiplied by the team-conditioned move marginal ** move_beta (the archetype
     ignores the opponent's team; the team prior is much sharper: time-split coverage of later
-    revealed moves 61.7% -> 77.3% / 81.1% / 82.6% at beta 1 / 2 / 3, design D11)."""
+    revealed moves 61.7% -> 77.3% / 81.1% / 82.6% at beta 1 / 2 / 3, design D11).
+    ``u``: this world's stratum of the mon's item (build_worlds, a belief with ``stratify``): the
+    unknown item drawn at quantile ``u`` of its marginal, the archetype given it."""
     species = _preview_name(mon, team_names)
     dist = _prior(belief, species, team_names, mix)
     # (``exclude``: moves its line showed that were a disguised Illusion's: _illusion_fix)
@@ -507,13 +585,27 @@ def sample_set(
             return {key: v ** (1 / temp) for key, v in w.items()}
         return np.asarray(w, dtype=float) ** (1 / temp)
 
+    # (an Assault Vest holder cannot choose a status move: not with one known -- the archetype's
+    # item and moves are drawn apart; 2026-10-24, plan C's slot check: a replay's Slowking-Galar
+    # with Toxic and Chilly Reception held an Assault Vest, its Toxic no option)
+    no_vest = ("assaultvest",) if any(map(_status, revealed)) else ()
+    no_choice = CHOICE_ITEMS if known is not None and known.no_choice else ()
+    req = required_item(mon) if (mix if mix is not None else ARCH_MIX) > 0 else None
+    strat = u is not None and item is None and not gone and not req and not dmg_post
+    item_u = None  # (a stratified world's item: build_worlds)
     k = None
     if ss is not None and ss.params:
         names = {to_id(n): n for n in ss.vocab["move"]}
         item_name = next((n for n in ss.vocab["item"] if to_id(n) == item), None) if item else None
         post = flat(ss.posterior(item=item_name, moves=[names.get(m, m) for m in revealed]))
+        if strat:
+            item_u, post = _item_at(
+                belief, ss, species, team_names, post, u, no_vest + no_choice, mix
+            )
         k = int(np.searchsorted(np.cumsum(post), rng.random() * post.sum()))
         k = min(k, len(post) - 1)
+    elif strat:
+        item_u, _ = _item_at(belief, None, species, team_names, None, u, no_vest + no_choice, mix)
 
     def draw(attr, fallback: dict[str, float], exclude: tuple = ()):
         if k is not None and ss.vocab.get(attr) and attr in ("item", "tera"):
@@ -538,13 +630,9 @@ def sample_set(
     if gone:
         item = "none"
     elif item is None:
-        # (an Assault Vest holder cannot choose a status move: not with one known -- the
-        # archetype's item and moves are drawn apart; 2026-10-24, plan C's slot check: a replay's
-        # Slowking-Galar with Toxic and Chilly Reception held an Assault Vest, its Toxic no option)
-        no_vest = ("assaultvest",) if any(map(_status, revealed)) else ()
-        no_choice = CHOICE_ITEMS if known is not None and known.no_choice else ()
         item = (
-            (required_item(mon) if (mix if mix is not None else ARCH_MIX) > 0 else None)
+            req
+            or item_u
             or draw(
                 "item", base_marginal(belief, species, team_names, "item", mix), no_vest + no_choice
             )
@@ -588,6 +676,14 @@ def sample_set(
             # otherwise; ARCH_MIX)
             marg = base_marginal(belief, species, team_names, "item", mix)
             arch = flat(arch_mix(ss, k, "item", marg, mix))
+            if any(it == OTHER for it, *_ in dmg_post):  # (the rest's: their sums, raked alike)
+                c = rake_factors(belief, species, "item", mix)
+                listed = {it for it, *_ in dmg_post}
+                rest = [i for i in set(arch) | set(marg) if i not in listed]
+                arch = dict(arch)
+                arch[OTHER] = sum(arch.get(i, 0.0) * c.get(i, 1.0) for i in rest)
+                marg = dict(marg)
+                marg[OTHER] = sum(marg.get(i, 0.0) * c.get(i, 1.0) for i in rest)
             w = [p * arch.get(it, 0.0) / max(marg.get(it, 0.0), 1e-9)
                  for (it, *_), p in zip(dmg_post, w, strict=True)]  # fmt: skip
         if not item_seen and any(map(_status, moves)):  # (no Assault Vest with a status move)
@@ -596,11 +692,17 @@ def sample_set(
             base = own_base_stats(mon)
             # (each turn's in the forme it was in then: a Minior's Meteor, an Eiscue's Noice)
             w = [p * (1.0 if consistent(speed_obs, calc_stats(base, s, level=level)["spe"],
-                                        it if not item_seen else item, _forme_stat(s, level)) else 1e-3)
+                                        ("none" if it == OTHER else it) if not item_seen else item,
+                                        _forme_stat(s, level)) else 1e-3)
                  for (it, _, s, _), p in zip(dmg_post, w, strict=True)]  # fmt: skip
         if sum(w) > 0:
-            it, ab, spread, _ = rng.choices(dmg_post, weights=w)[0]
-            if not item_seen:
+            pick = _index_at(w, u) if u is not None else rng.choices(range(len(w)), weights=w)[0]
+            it, ab, spread, _ = dmg_post[pick]
+            if not item_seen and it == OTHER:  # (one of the items F1 did not list, by the prior)
+                listed = tuple(x for x, *_ in dmg_post if x != OTHER)
+                item = draw("item", base_marginal(belief, species, team_names, "item", mix),
+                            listed + no_vest + no_choice) or "none"  # fmt: skip
+            elif not item_seen:
                 item = it
             if own_ability(mon) is None and not (known is not None and known.ability):
                 ability = ab
@@ -1484,6 +1586,7 @@ def build_state(
     damage_belief: bool = True,
     foe_pending: dict[str, float] | None = None,
     arch_mix: float | None = None,
+    strata: tuple[int, int, int] | None = None,
 ) -> pe.State:
     """One determinization of the current battle (side_one = us): the opponent's sets sampled
     from the belief, consistent with what they revealed. With ``spectator`` side
@@ -1644,6 +1747,7 @@ def build_state(
                                  if id(m) in z_them else None),
                              speed_obs=None if obs is None else obs.get(to_id(m.species), []),
                              dmg_post=dmg.get(to_id(m.species)),
+                             u=None if strata is None else stratum(strata, to_id(m.species)),
                              exclude=frozenset(dis_them[id(m)][1]) if id(m) in dis_them else frozenset())
                   for i, m in enumerate(theirs)]  # fmt: skip
     their_mons = [_their_mon(m, st, tm_them, tm_them.disabled if m is opp_active else None,

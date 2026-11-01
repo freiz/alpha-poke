@@ -23,7 +23,7 @@ from poke_env.player.battle_order import ForfeitBattleOrder
 
 from alpha_poke.agents import net_context
 from alpha_poke.agents.consistency import request_mismatch
-from alpha_poke.agents.engine_state import build_state, engine_move_to_order
+from alpha_poke.agents.engine_state import build_worlds, engine_move_to_order
 from alpha_poke.agents.knowledge_player import KnowledgePlayer, sync_tera_types
 
 log = logging.getLogger("alpha_poke.search")
@@ -136,9 +136,8 @@ class SearchPlayer(KnowledgePlayer):
         budget = max(20, self.search_ms // len(cands))
         vals = {}
         for m in cands:
-            states = [build_state(battle, self.belief, names, rng, move_beta=self.move_beta,
-                                  force_switch=False, revived=m.species)
-                      for _ in range(self.worlds)]  # fmt: skip
+            states = build_worlds(battle, self.belief, names, rng, self.worlds,
+                                  move_beta=self.move_beta, force_switch=False, revived=m.species)  # fmt: skip
             ctxs = (
                 net_context.contexts(battle, states, net_context.needs_post(self.model))
                 if self.model_transformer
@@ -162,8 +161,9 @@ class SearchPlayer(KnowledgePlayer):
         names = self._opp_team_names(battle)
         rng = random.Random(f"{battle.battle_tag}:{battle.turn}:{len(battle.available_moves)}")
         t0 = time.time()
-        states = [build_state(battle, self.belief, names, rng, move_beta=self.move_beta)
-                  for _ in range(self.worlds)]  # fmt: skip
+        states = build_worlds(
+            battle, self.belief, names, rng, self.worlds, move_beta=self.move_beta
+        )
         issues = request_mismatch(battle, states[0])
         if issues:
             self.mismatches += 1

@@ -334,6 +334,13 @@ def posterior(prior: list[float], likes: list[list[float]]) -> list[float]:
 
 
 TOP_ITEMS = 8  # the belief's most likely items per mon (+ a revealed one)
+# (2026-10-31, issue #33; on a belief with ``f1_all``, off by default) beyond TOP_ITEMS, every
+# item that changes damage or speed (priors.evidence_items) at F1_EVIDENCE_MIN or more, and OTHER:
+# one candidate for the rest, its damage no item's (theirs is none apart), the item drawn among
+# them after (engine_state.sample_set) -- else, once a clean hit is seen, an item outside the
+# TOP_ITEMS is never drawn again (3-4% of true items: Rocky Helmet, Leftovers, Covert Cloak, ...)
+OTHER = "__other__"
+F1_EVIDENCE_MIN = 0.002
 TOP_SPREADS = 12
 
 
@@ -609,14 +616,14 @@ def _candidates(
     if then is not False and then is not None:
         items = [(then, 1.0)]
     elif then is None:
-        items = sorted(marg.items(), key=lambda kv: -kv[1])[:TOP_ITEMS] or [("none", 1.0)]
+        items = _top_items(belief, marg)
     elif mon.item and mon.item != "unknown_item":
         items = [(mon.item, 1.0)]
     # (a forme's item: engine_state.required_item)
     elif required_item(mon) and (mix is None or mix > 0):
         items = [(required_item(mon), 1.0)]
     else:
-        items = sorted(marg.items(), key=lambda kv: -kv[1])[:TOP_ITEMS] or [("none", 1.0)]
+        items = _top_items(belief, marg)
     if ab is not False and ab is not None:
         abilities = [(ab, 1.0)]
     else:
@@ -630,9 +637,25 @@ def _candidates(
     for it, pi in items:
         for ab, pa in abilities:
             for sp, w in zip(spreads, ws, strict=True):
-                cands.append((to_id(it), to_id(ab), sp))
+                cands.append((it if it == OTHER else to_id(it), to_id(ab), sp))
                 prior.append(pi * pa * (w if sum(ws) > 0 else 1.0))
     return cands, prior
+
+
+def _top_items(belief, marg: dict) -> list[tuple[str, float]]:
+    """F1's candidate items of a mon whose item is unknown: the TOP_ITEMS likeliest; with the
+    belief's ``f1_all`` also the evidence items at F1_EVIDENCE_MIN and OTHER for the rest."""
+    ranked = sorted(marg.items(), key=lambda kv: -kv[1])
+    items = ranked[:TOP_ITEMS]
+    if getattr(belief, "f1_all", False):
+        from alpha_poke.belief.priors import evidence_items
+
+        ev = evidence_items()
+        more = [(i, p) for i, p in ranked[TOP_ITEMS:] if i in ev and p >= F1_EVIDENCE_MIN]
+        listed = {i for i, _ in items + more}
+        rest = sum(p for i, p in ranked if i not in listed)
+        items = items + more + ([(OTHER, rest)] if rest > 0 else [])
+    return items or [("none", 1.0)]
 
 
 def damage_posteriors(battle, belief, theirs: list, team_names: tuple[str, ...], mix=None,
@@ -700,7 +723,8 @@ def damage_posteriors(battle, belief, theirs: list, team_names: tuple[str, ...],
                 on = h.defender_tera if h.by_us else h.tera  # their mon terastallized at the hit
                 tera = on or (m.tera_type.name.lower() if m.tera_type else "typeless")
                 try:
-                    likes.append(likelihood(h, base, os_, ts, [(c[0], c[1], v, tera, bool(on))
+                    # (OTHER: the items its candidates do not list, their damage no item's)
+                    likes.append(likelihood(h, base, os_, ts, [("none" if c[0] == OTHER else c[0], c[1], v, tera, bool(on))
                                                                for c, v in zip(cands, vec, strict=True)]))  # fmt: skip
                 except BaseException:  # noqa: BLE001 - an engine panic: no evidence from it
                     continue

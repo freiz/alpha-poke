@@ -12,7 +12,7 @@ from collections import defaultdict
 import alpha_search
 
 from alpha_poke.agents import net_context
-from alpha_poke.agents.engine_state import build_state, engine_move_to_order
+from alpha_poke.agents.engine_state import build_worlds, engine_move_to_order
 from alpha_poke.agents.knowledge_player import sync_tera_types
 from alpha_poke.agents.search_player import SearchPlayer
 
@@ -37,8 +37,8 @@ class PolicyPlayer(SearchPlayer):
             return None
         names = self._opp_team_names(battle)
         rng = random.Random(f"{battle.battle_tag}:{battle.turn}:{len(battle.available_moves)}")
-        states = [build_state(battle, self.belief, names, rng, move_beta=self.move_beta)
-                  for _ in range(self.policy_worlds)]  # fmt: skip
+        states = build_worlds(battle, self.belief, names, rng, self.policy_worlds,
+                              move_beta=self.move_beta)  # fmt: skip
         ctxs = net_context.contexts(battle, states, net_context.needs_post(self.model))
         # the modelled player's rating as our own rating input (the opponent's stays)
         ctxs = [(rv, (self.rating, rt[1]), turn, hist, *rest) for rv, rt, turn, hist, *rest in ctxs]

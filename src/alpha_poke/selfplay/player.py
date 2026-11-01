@@ -15,7 +15,7 @@ from poke_env.player.battle_order import ForfeitBattleOrder
 
 from alpha_poke.agents import net_context
 from alpha_poke.agents.consistency import request_mismatch
-from alpha_poke.agents.engine_state import build_state, engine_move_to_order
+from alpha_poke.agents.engine_state import build_worlds, engine_move_to_order
 from alpha_poke.agents.knowledge_player import KnowledgePlayer, sync_tera_types
 from alpha_poke.agents.search_player import SearchPlayer
 from alpha_poke.train.positions import KIND_FORCED, KIND_MAIN, KIND_PIVOT
@@ -156,9 +156,8 @@ class SelfPlayPlayer(SearchPlayer):
         names = self._opp_team_names(battle)
         futs = []
         for m in cands:
-            states = [build_state(battle, self.belief, names, self.rng, move_beta=self.move_beta,
-                                  force_switch=False, revived=m.species)
-                      for _ in range(self.fast_worlds)]  # fmt: skip
+            states = build_worlds(battle, self.belief, names, self.rng, self.fast_worlds,
+                                  move_beta=self.move_beta, force_switch=False, revived=m.species)  # fmt: skip
             ctxs = net_context.contexts(battle, states, self.batcher.post)
             futs.append((m, self.batcher.submit([s.to_string() for s in states], ctxs,
                                                 self.fast_iters, self.rng.randrange(1 << 30),
@@ -196,9 +195,8 @@ class SelfPlayPlayer(SearchPlayer):
         names = self._opp_team_names(battle)
         last = self._foe_moves.get(battle.battle_tag)
         pending = last[1] if kind == KIND_PIVOT and last and last[0] == battle.turn else None
-        states = [build_state(battle, self.belief, names, self.rng, move_beta=self.move_beta,
-                                  foe_pending=pending)
-                  for _ in range(n_worlds)]  # fmt: skip
+        states = build_worlds(battle, self.belief, names, self.rng, n_worlds,
+                              move_beta=self.move_beta, foe_pending=pending)  # fmt: skip
         issues = request_mismatch(battle, states[0])
         if issues:
             self.mismatches += 1

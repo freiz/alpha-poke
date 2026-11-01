@@ -121,6 +121,29 @@ def standard_items() -> frozenset:
                      if "isNonstandard" not in m.group(2))  # fmt: skip
 
 
+# Showdown's item handlers that change a hit's damage or the speed order: the items F1's damage
+# evidence and the speed observations can tell apart (data/items.ts)
+EVIDENCE_HANDLERS = ("onBasePower", "onModifyAtk", "onModifySpA", "onModifyDef", "onModifySpD",
+                     "onModifyDamage", "onSourceModifyDamage", "onSourceModifyAtk",
+                     "onSourceModifySpA", "onSourceBasePower", "onModifySpe", "isGem")  # fmt: skip
+
+
+@functools.cache
+def evidence_items() -> frozenset:
+    """Gen 9's items whose Showdown entry changes damage or speed (EVIDENCE_HANDLERS): Choice
+    items, Life Orb, Expert Belt, plates and type boosters, gems, Assault Vest, Eviolite, resist
+    berries, ... -- the rest hold no hit's damage or the order apart from no item."""
+    import re
+
+    try:
+        text = ITEMS_TS.read_text()
+    except OSError:
+        return frozenset()
+    return frozenset(m.group(1) for m in re.finditer(r"\n\t(\w+): \{(.*?)\n\t\}", text, re.S)
+                     if "isNonstandard" not in m.group(2)
+                     and any(h in m.group(2) for h in EVIDENCE_HANDLERS))  # fmt: skip
+
+
 def items_for(sid: str, items: dict[str, float]) -> dict[str, float]:
     """OU's items across species (``global_item``) as one species can use them, normalized: not
     another species' own (its itemUser: an Ogerpon mask, a Latias's Soul Dew), no Booster Energy
