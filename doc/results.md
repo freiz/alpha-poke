@@ -1040,6 +1040,44 @@ The network reads both players' ratings: (r − 1500) / 300 each, their differen
 - The self-play network gains nothing: what self-play taught it sits on the unknown input, so keep unknown for it.
 - With the search the gain is gone within the noise (8 of the 840 games hit the time cap). `ALPHA_RATING_A` / `_B` set it per side (unset: the log's, as before).
 
+### The policy alone: against Foul Play, its width, the two networks (2026-11-01)
+
+The network's policy with no search (`p_ma`: the prior averaged over W belief worlds, one network call each and one batch; tau 0.05). Each network at its best rating input: v6arch-pp-v75 (human data) at 1800 / 1800, r2-gen0a3 (one round of self-play) at unknown.
+
+**Against Foul Play** (wide200, 200 pairs, 1 thread, 8 lanes; as `run_fp_v72b.sh`; self-play paused). Foul Play's iterations are from its logs, medians; it samples 2 worlds in 74% of its decisions:
+
+| Foul Play per move | its iterations per world / per decision | v6arch-pp-v75, 1800 | r2-gen0a3, unknown |
+|---|---|---|---|
+| 200 ms | 101k / 192k | 44.0% ± 4.3% | 43.5% ± 4.6% |
+| 50 ms | 29k / 54k | | 49.0% ± 4.2% |
+| 20 ms | 12k / 22k | | 56.9% ± 4.3% |
+| reference: our search, 200 ms (about 768 iterations, 10-26) | | 65.0% ± 4.1% | |
+
+- The policy alone (4 network calls per move) plays about as well as Foul Play at 40–50 ms, some 25k iterations per world.
+- The two networks are even against it: pair by pair, a difference of −0.5 ± 5.8 points.
+
+**Width** (forum2025, 420 pairs; W worlds against 4, the same network):
+
+| W | 1 | 2 | 8 | 16 | 32 | 64 |
+|---|---|---|---|---|---|---|
+| v6arch-pp-v75 | 48.6% | 51.5% | 49.4% | 50.2% | 51.6% | 49.9% |
+| r2-gen0a3 | 50.3% | 53.3% | 47.9% | 49.5% | 51.1% | 51.4% |
+
+Each about ± 3%: flat. More belief worlds do not make the policy stronger. The one value past its interval (r2 at 2 worlds) beats both 1 and 4, which is the noise of twelve comparisons.
+
+**Head to head** (forum2025, 420 pairs):
+
+| | v6arch-pp-v75's score |
+|---|---|
+| both unknown | 44.6% ± 3.0% (r2-gen0a3 +38 Elo) |
+| v6arch-pp-v75 at 1800, r2-gen0a3 unknown | 44.4% ± 2.9% (+39 Elo) |
+
+Not transitive:
+- 1800 makes v6arch-pp-v75 stronger than itself at unknown (+37 Elo), but not against r2-gen0a3.
+- r2-gen0a3 beats both, yet against Foul Play the three are even.
+
+Self-play's gain may be largely against its own lineage. An outside opponent stays needed to measure progress.
+
 ### Search agreement with players by rating band (2026-10-30)
 
 Held-out games (hf-part13-1 / 13-2: after the training cutoff), 60 players per band of their pre-game rating, up to 5 turn-start decisions each, rebuilt from the player's view with 16 belief worlds (as coach.review) and searched 1 s x 4 threads (v6arch-pp-v75, rating input unknown for all bands):
