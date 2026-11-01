@@ -874,8 +874,10 @@ pub(crate) fn prior_dist(
 }
 
 /// Regret matching (RM+) at the root: the strategy over `avail` -- the positive regrets
-/// normalized (the priors while none is positive) -- mixed with the priors at weight `gamma`
-/// (every option keeps a share: the sampled regrets' importance weights stay bounded)
+/// normalized (the priors while none is positive) -- mixed with the uniform at weight `gamma`:
+/// every option keeps gamma / n, so a sampled regret's importance weight stays under n / gamma
+/// (2026-10-31: mixed with the priors instead, a 0.01-prior option got ~0.001 and one draw's
+/// weight blew its regret up -- 2.8% against the plain search)
 pub(crate) fn rm_strategy(
     arms: &[Arm],
     avail: &[(usize, MoveChoice)],
@@ -893,10 +895,8 @@ pub(crate) fn rm_strategy(
     } else {
         p.clone()
     };
-    base.iter()
-        .zip(&p)
-        .map(|(b, q)| (1.0 - gamma) * b + gamma * q)
-        .collect()
+    let u = 1.0 / avail.len() as f32;
+    base.iter().map(|b| (1.0 - gamma) * b + gamma * u).collect()
 }
 
 /// An option drawn from RM+'s strategy over `avail`: (its arm, its move, the arms' shares)
@@ -2963,6 +2963,49 @@ mod tests {
                 "{name}: average strategy {x:?} vs equilibrium {nash:?} (TV {tv:.3})"
             );
         }
+    }
+
+    /// Regret matching with skewed priors (2026-10-31: E2, 2.8% against the plain search -- an
+    /// option the priors give 0.01 got a share near 0.001 when explored by the priors, and one
+    /// draw's importance weight v / share blew its regret up): row 0 is best whatever the
+    /// opponent does, the priors favour it but leave others tiny; the average strategy must put
+    /// most of its weight on row 0, none of it on the rare bad rows.
+    #[test]
+    fn root_regret_matching_survives_skewed_priors() {
+        let n = 6;
+        let m: Vec<Vec<f32>> = (0..n)
+            .map(|i| (0..n).map(|_| if i == 0 { 0.7 } else { 0.3 }).collect())
+            .collect();
+        let pri = [0.80f32, 0.10, 0.05, 0.03, 0.015, 0.005];
+        let arm = |prior: f32| Arm {
+            label: Label::None,
+            visits: 0,
+            avail: 0,
+            total: 0.0,
+            prior,
+            ml_total: 0.0,
+            ml_n: 0,
+            regret: 0.0,
+            strat: 0.0,
+        };
+        let mut a1: Vec<Arm> = pri.iter().map(|&p| arm(p)).collect();
+        let mut a2: Vec<Arm> = pri.iter().map(|&p| arm(p)).collect();
+        let av: Vec<(usize, MoveChoice)> = (0..n).map(|i| (i, MoveChoice::None)).collect();
+        let mut rng = StdRng::seed_from_u64(3);
+        for _ in 0..3000 {
+            let (i, _, s1) = rm_select(&a1, &av, 0.1, None, &mut rng);
+            let (j, _, s2) = rm_select(&a2, &av, 0.1, None, &mut rng);
+            let r = if rng.random::<f32>() < m[i][j] {
+                1.0
+            } else {
+                0.0
+            };
+            rm_update(&mut a1, &s1, i as u16, r);
+            rm_update(&mut a2, &s2, j as u16, 1.0 - r);
+        }
+        let z: f32 = a1.iter().map(|a| a.strat).sum();
+        let x: Vec<f32> = a1.iter().map(|a| a.strat / z).collect();
+        assert!(x[0] > 0.6, "the dominant row's average share {x:?}");
     }
 
     /// Simultaneous moves (2026-10-21, the search review): the decoupled PUCT of both sides on
