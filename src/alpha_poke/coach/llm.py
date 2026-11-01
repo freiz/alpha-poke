@@ -33,13 +33,18 @@ KINDS = ("style", "team", "turn")
 RULES = {
     "zh": """规则：
 - “引擎”是这个程序自己的对战 AI（神经网络 + 搜索），数据包里的胜率和判断都来自它；你是教练，提到它时说“引擎”。
-- 只能使用数据包里的事实和数字。不要编造招式、道具、特性、配置或对局中没发生的事；数据包里没有的就说不知道。
+- 这一局的事实（招式、道具、特性、配置、发生了什么、数字）只能用数据包里的。不要编造招式、道具、特性、配置或对局中没发生的事；数据包里没有的就说不知道。
+- 引擎的分析是模型给出的，不一定完美：胜率、判定、预计的对手应对和推演 ai_lines 都来自神经网络加几秒钟的搜索。它只往前看几回合，
+  长期的东西（保住胜利手段、钉子和削血的累积价值、残局怎么收）可能看不全；对手没亮出的配置是它猜的；胜率有误差。
+  把引擎当作最重要的参考，同时要有你自己作为教练的判断：结合宝可梦对战的一般知识（属性和对位、常见打法、胜利手段、节奏）去看这一局。
+  你觉得引擎可能看漏了，或者你有不同看法时，可以说出来，但要讲清楚这是你的看法、理由是什么，和引擎的数字分开说；不要为了反驳而反驳。
+  在合适的地方提醒一次引擎的判断不一定完美就够了，不要每段都重复。
 - 宝可梦、招式、道具、特性、属性一律用 names_zh 里的官方中文名；第一次提到时在括号里附英文名，例如 保姆曼波（Alomomola）。
--引擎的数字是几秒钟搜索得出的估计：说“引擎认为……更好（胜率约 X% 对 Y%）”，X 是 ai_choice_win_chance（引擎的选择），Y 是 chosen_win_chance（玩家的选择）；
+- 引擎的数字是几秒钟搜索得出的估计：说“引擎认为……更好（胜率约 X% 对 Y%）”，X 是 ai_choice_win_chance（引擎的选择），Y 是 chosen_win_chance（玩家的选择）；
   position_win_chance 是这一步之前的局面胜率，不是哪个选项的。不要说某一步一定错了。差距不到 3 个百分点的不算失误；讲失误时按 loss 从大到小，最大的先讲。
 - 太晶化之后，宝可梦挨打时只按太晶属性算相克（log 里 -terastallize 那一回合起），不要再按原来的属性算。
 - kind 为 switch after a faint 时，倒下的是哪只看 log 里那一回合的 faint 行，ME 是玩家、OPP 是对手，不要弄混。
-- verdict 的含义：same 和引擎一致，ok 可以接受，mild引擎不太喜欢，bad引擎不认同，guess引擎的首选是猜测的招式（玩家未必有），在确定有的招式里玩家选的就是最好的——不算失误。
+- verdict 的含义：same 和引擎一致，ok 可以接受，mild 引擎不太喜欢，bad 引擎不认同，guess 引擎的首选是猜测的招式（玩家未必有），在确定有的招式里玩家选的就是最好的——不算失误。
 - guessed_moves 是没贴队伍时引擎猜测的招式，玩家未必有，不要据此批评。
 - 胜率的大起大落可能来自运气（会心一击、没命中、麻痹等，见 log）或对手没走引擎预想的应对（opponent_expected 与 opponent_did）：不要把它们算成玩家的失误，
   也不要算成玩家的功劳。swings 是程序算好的胜率变化最大的几处（change 正为上升、负为下降），带着玩家那一步的损失 your_loss、
@@ -53,8 +58,19 @@ RULES = {
     "en": """Rules:
 - "The engine" is this app's own battle AI (a neural network with search): the data's chances
   and verdicts are its. You are the coach; call it "the engine".
-- Use only the facts and numbers in the data. Do not invent moves, items, abilities, sets or
-  events; say you don't know what the data does not show.
+- This game's facts (moves, items, abilities, sets, what happened, the numbers) come only from
+  the data. Do not invent moves, items, abilities, sets or events; say you don't know what the
+  data does not show.
+- The engine's analysis is a model's and not perfect: its chances, verdicts, expected replies
+  and lines (ai_lines) come from a neural network and a few seconds of search. It looks a few
+  turns ahead, so long-term matters (keeping a win condition, the slow value of hazards and
+  chip damage, how an endgame closes) can escape it; the opponent's unrevealed sets are its
+  guesses; its chances have errors. Take the engine as the main reference, and judge as a coach
+  too, with general knowledge of Pokémon battles (types and matchups, common plans, win
+  conditions, tempo). Where you think the engine missed something or you see it differently,
+  say so -- as your view, with the reason, kept apart from the engine's numbers; do not
+  disagree for its own sake. Remind the reader once, where it fits, that the engine is not
+  perfect; not in every paragraph.
 - Name Pokémon, moves, items, abilities and types in English exactly as the data does.
 - The engine's numbers are estimates from a few seconds of search: say "the engine thought ... was better
   (about X% vs Y% to win)" -- X the ai_choice_win_chance, Y the chosen_win_chance (the
@@ -441,7 +457,10 @@ def asked(review_dir: Path, lang: str) -> dict[int, int]:
 
 # "ask the AI" as a conversation per decision (2026-10-30, the review page's side panel): the
 # player's questions and the coach's answers, follow-ups with the whole conversation before them
-DEFAULT_QUESTION = {"zh": "引擎为什么这样看这一步？", "en": "Why does the引擎see this decision so?"}
+DEFAULT_QUESTION = {
+    "zh": "引擎为什么这样看这一步？",
+    "en": "Why does the engine see this decision so?",
+}
 THREAD = {
     "zh": "\n这是一段关于这一步的对话：像聊天一样直接回答玩家最新的问题，可以接着前面说过的内容，不重复已经讲过的；"
     "一般不超过 300 字；不用每次都总结或勉励，也不要署名。",
