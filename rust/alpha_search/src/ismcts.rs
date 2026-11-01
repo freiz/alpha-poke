@@ -65,6 +65,10 @@ pub struct Arm {
     /// the root to the game's end (turns on the path + the leaf's predicted remaining turns)
     pub ml_total: f32,
     pub ml_n: u32,
+    /// regret matching at the root (`Config::root_rm`, 2026-10-31): the cumulative regret
+    /// (RM+: floored at 0) and the cumulative strategy (the average strategy's weight)
+    pub regret: f32,
+    pub strat: f32,
 }
 
 impl Arm {
@@ -141,6 +145,8 @@ pub(crate) fn arm_index(arms: &mut Vec<Arm>, l: Label) -> usize {
                 prior: -1.0,
                 ml_total: 0.0,
                 ml_n: 0,
+                regret: 0.0,
+                strat: 0.0,
             });
             arms.len() - 1
         }
@@ -190,6 +196,10 @@ pub struct Config {
     /// the principal variations to return (`variations`): our top options, the opponent's top
     /// replies to each, plies; (0, 0, 0) = none (a review's, 2026-10-30)
     pub pv: (usize, usize, usize),
+    /// regret matching at the root (2026-10-31; simultaneous moves -- decoupled PUCT need not
+    /// reach an equilibrium, Lisy et al. 2013): both sides' root actions sampled from RM+'s
+    /// strategy mixed with the priors at this weight (exploration); 0 = off (PUCT)
+    pub root_rm: f32,
 }
 
 impl Default for Config {
@@ -207,6 +217,7 @@ impl Default for Config {
             ml: MlParams::default(),
             phase_key: false,
             pv: (0, 0, 0),
+            root_rm: 0.0,
         }
     }
 }
@@ -827,6 +838,112 @@ pub(crate) fn select_puct_with(
         }
     }
     best
+}
+
+/// The priors over `avail` as `select_puct_with` uses them: an arm with none gets the known
+/// ones' mean, then normalized (uniform when none is known)
+pub(crate) fn prior_dist(
+    arms: &[Arm],
+    avail: &[(usize, MoveChoice)],
+    priors: Option<&[f32]>,
+) -> Vec<f32> {
+    let prior = |i: usize| match priors {
+        Some(v) => v.get(i).copied().unwrap_or(-1.0),
+        None => arms[i].prior,
+    };
+    let known: Vec<f32> = avail
+        .iter()
+        .map(|&(i, _)| prior(i))
+        .filter(|&p| p >= 0.0)
+        .collect();
+    let stand_in = if known.is_empty() {
+        1.0
+    } else {
+        known.iter().sum::<f32>() / known.len() as f32
+    };
+    let raw: Vec<f32> = avail
+        .iter()
+        .map(|&(i, _)| if prior(i) >= 0.0 { prior(i) } else { stand_in })
+        .collect();
+    let z: f32 = raw.iter().sum();
+    if z > 0.0 {
+        raw.iter().map(|r| r / z).collect()
+    } else {
+        vec![1.0 / avail.len() as f32; avail.len()]
+    }
+}
+
+/// Regret matching (RM+) at the root: the strategy over `avail` -- the positive regrets
+/// normalized (the priors while none is positive) -- mixed with the priors at weight `gamma`
+/// (every option keeps a share: the sampled regrets' importance weights stay bounded)
+pub(crate) fn rm_strategy(
+    arms: &[Arm],
+    avail: &[(usize, MoveChoice)],
+    gamma: f32,
+    priors: Option<&[f32]>,
+) -> Vec<f32> {
+    let p = prior_dist(arms, avail, priors);
+    let pos: Vec<f32> = avail
+        .iter()
+        .map(|&(i, _)| arms[i].regret.max(0.0))
+        .collect();
+    let z: f32 = pos.iter().sum();
+    let base: Vec<f32> = if z > 0.0 {
+        pos.iter().map(|r| r / z).collect()
+    } else {
+        p.clone()
+    };
+    base.iter()
+        .zip(&p)
+        .map(|(b, q)| (1.0 - gamma) * b + gamma * q)
+        .collect()
+}
+
+/// An option drawn from RM+'s strategy over `avail`: (its arm, its move, the arms' shares)
+pub(crate) fn rm_select(
+    arms: &[Arm],
+    avail: &[(usize, MoveChoice)],
+    gamma: f32,
+    priors: Option<&[f32]>,
+    rng: &mut StdRng,
+) -> (usize, MoveChoice, Vec<(u16, f32)>) {
+    let sigma = rm_strategy(arms, avail, gamma, priors);
+    let mut x = rng.random::<f32>();
+    let mut k = sigma.len() - 1;
+    for (j, s) in sigma.iter().enumerate() {
+        if x < *s {
+            k = j;
+            break;
+        }
+        x -= s;
+    }
+    let shares = avail
+        .iter()
+        .zip(&sigma)
+        .map(|(&(i, _), &s)| (i as u16, s))
+        .collect();
+    (avail[k].0, avail[k].1, shares)
+}
+
+/// RM+'s update after the sampled joint action's value `v` (this side's): each option's sampled
+/// counterfactual value (v / its share for the one played, 0 for the others) less v added to
+/// its regret, floored at 0; its share added to the average strategy
+pub(crate) fn rm_update(arms: &mut [Arm], shares: &[(u16, f32)], played: u16, v: f32) {
+    for &(i, s) in shares {
+        let u = if i == played { v / s.max(1e-6) } else { 0.0 };
+        let a = &mut arms[i as usize];
+        a.regret = (a.regret + u - v).max(0.0);
+        a.strat += s;
+    }
+}
+
+/// The root's regret-matching draw of one descent: both sides' shares and the arms played
+#[derive(Clone, Debug)]
+pub struct RootSel {
+    pub s1: Vec<(u16, f32)>,
+    pub i1: u16,
+    pub s2: Vec<(u16, f32)>,
+    pub i2: u16,
 }
 
 /// The moves-left term's common parts at a node for one side (`MlParams`): (-sign(2q - 1) x the
@@ -2476,6 +2593,8 @@ mod tests {
             prior: 0.5,
             ml_total: 10.0 * ml,
             ml_n: 10,
+            regret: 0.0,
+            strat: 0.0,
         };
         let avail: Vec<(usize, MoveChoice)> = (0..2).map(|i| (i, MoveChoice::None)).collect();
         let ml = MlParams {
@@ -2514,6 +2633,8 @@ mod tests {
                 prior: [0.7, 0.2, 0.1, 0.0][k],
                 ml_total: 0.0,
                 ml_n: 0,
+                regret: 0.0,
+                strat: 0.0,
             })
             .collect();
         let avail: Vec<(usize, MoveChoice)> = (0..4).map(|i| (i, MoveChoice::None)).collect();
@@ -2778,6 +2899,72 @@ mod tests {
         }
     }
 
+    /// Regret matching at the root (2026-10-31): on matrix games with known equilibria (value
+    /// M[i][j] for side one, Bernoulli), both sides' average strategies (`strat`) approach the
+    /// equilibrium, where the decoupled PUCT's visit shares do not (`matrix_games`: protect
+    /// guess's PUCT mix stays near 50/50 against 2/3, 1/3)
+    #[test]
+    fn root_regret_matching_finds_equilibria() {
+        let games: [(&str, Vec<Vec<f32>>, Vec<f32>); 3] = [
+            (
+                "matching pennies",
+                vec![vec![1.0, 0.0], vec![0.0, 1.0]],
+                vec![0.5, 0.5],
+            ),
+            (
+                "biased rps",
+                vec![
+                    vec![0.5, 0.25, 1.0],
+                    vec![0.75, 0.5, 0.25],
+                    vec![0.0, 0.75, 0.5],
+                ],
+                vec![0.25, 0.5, 0.25],
+            ),
+            (
+                "protect guess",
+                vec![vec![0.5, 1.0], vec![1.0, 0.0]],
+                vec![2.0 / 3.0, 1.0 / 3.0],
+            ),
+        ];
+        let arm = |prior: f32| Arm {
+            label: Label::None,
+            visits: 0,
+            avail: 0,
+            total: 0.0,
+            prior,
+            ml_total: 0.0,
+            ml_n: 0,
+            regret: 0.0,
+            strat: 0.0,
+        };
+        for (name, m, nash) in games {
+            let (n1, n2) = (m.len(), m[0].len());
+            let mut a1: Vec<Arm> = (0..n1).map(|_| arm(1.0 / n1 as f32)).collect();
+            let mut a2: Vec<Arm> = (0..n2).map(|_| arm(1.0 / n2 as f32)).collect();
+            let av1: Vec<(usize, MoveChoice)> = (0..n1).map(|i| (i, MoveChoice::None)).collect();
+            let av2: Vec<(usize, MoveChoice)> = (0..n2).map(|i| (i, MoveChoice::None)).collect();
+            let mut rng = StdRng::seed_from_u64(7);
+            for _ in 0..20000 {
+                let (i, _, s1) = rm_select(&a1, &av1, 0.1, None, &mut rng);
+                let (j, _, s2) = rm_select(&a2, &av2, 0.1, None, &mut rng);
+                let r = if rng.random::<f32>() < m[i][j] {
+                    1.0
+                } else {
+                    0.0
+                };
+                rm_update(&mut a1, &s1, i as u16, r);
+                rm_update(&mut a2, &s2, j as u16, 1.0 - r);
+            }
+            let z: f32 = a1.iter().map(|a| a.strat).sum();
+            let x: Vec<f32> = a1.iter().map(|a| a.strat / z).collect();
+            let tv = 0.5 * x.iter().zip(&nash).map(|(a, b)| (a - b).abs()).sum::<f32>();
+            assert!(
+                tv < 0.1,
+                "{name}: average strategy {x:?} vs equilibrium {nash:?} (TV {tv:.3})"
+            );
+        }
+    }
+
     /// Simultaneous moves (2026-10-21, the search review): the decoupled PUCT of both sides on
     /// matrix games with known equilibria, as at a node whose children are terminal (value
     /// M[i][j] for side one, Bernoulli). Prints our visit shares against the equilibrium and
@@ -2830,6 +3017,8 @@ mod tests {
             prior,
             ml_total: 0.0,
             ml_n: 0,
+            regret: 0.0,
+            strat: 0.0,
         };
         for (name, m, nash, value) in games {
             for iters in [200u32, 1600, 12800] {

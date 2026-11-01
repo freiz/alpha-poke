@@ -40,3 +40,16 @@ def test_a_summary_counts_pairs_won_drawn_and_lost():
     s = summarize(rows)
     assert s["pair_wdl"] == [2, 1, 1] and s["pentanomial"] == [1, 0, 1, 0, 2]
     assert s["paired_mean"] == s["win_rate"] == 0.625 and s["elo"] > 0
+
+
+def test_a_guess_is_played_mixed():
+    """selfplay.player.greedy_choice: the most visited option, unless others are within the
+    value margin -- then drawn by visits among them (a guess played mixed); never one far behind."""
+    import random
+
+    from alpha_poke.selfplay.player import greedy_choice
+
+    options, mean = [(0, 600), (1, 300), (2, 100)], [0.42, 0.41, 0.20]
+    assert greedy_choice(options, mean, 0.0, random.Random(0)) == 0
+    picks = [greedy_choice(options, mean, 0.02, random.Random(s)) for s in range(400)]
+    assert 2 not in picks and 0.55 < picks.count(0) / 400 < 0.8

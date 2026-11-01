@@ -66,9 +66,12 @@ class _Job:
 
 class Batcher:
     def __init__(self, model: str, leaves: int = 8, threads: int = 8, dtype: str | None = None,
-                 ml: tuple[float, float, float, bool] = (0.0, 0.0, 0.0, False)):  # fmt: skip
+                 ml: tuple[float, float, float, bool] = (0.0, 0.0, 0.0, False),
+                 root_rm: float = 0.0):  # fmt: skip
         """``ml``: the moves-left term of every search (``parse_ml``; needs a network with the
-        remaining-turns head)."""
+        remaining-turns head). ``root_rm``: regret matching at the root (alpha_search
+        BatchSearch's; 0 = PUCT)."""
+        self.root_rm = root_rm
         from alpha_poke.agents.gpu_net import GpuNet
 
         self.net = GpuNet(model, dtype=dtype)
@@ -100,8 +103,8 @@ class Batcher:
             states, ctxs, iters, seed, noise, f = item
             try:
                 bs = alpha_search.BatchSearch(states, ctxs, seed=seed, threads=1, vl=1,
-                                              root_noise=noise, ml=self.ml,
-                                              full=self.full)  # fmt: skip
+                                              root_noise=noise, ml=self.ml, full=self.full,
+                                              root_rm=self.root_rm)  # fmt: skip
                 active.append(_Job(bs, iters, f, states=states, contexts=ctxs, seed=seed))
             except Exception as e:  # noqa: BLE001 - the game falls back, the batcher goes on
                 f.set_exception(e)

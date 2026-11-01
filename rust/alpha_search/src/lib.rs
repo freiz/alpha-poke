@@ -122,6 +122,8 @@ fn py_ismcts(
         ml: ml_params(ml),
         phase_key,
         pv,
+        // (regret matching at the root: the batched search's alone, `BatchSearch(root_rm=...)`)
+        root_rm: 0.0,
     };
     let res = py.detach(|| {
         if threads > 1 {
@@ -918,7 +920,7 @@ impl PyBatchSearch {
     #[new]
     #[pyo3(signature = (states, contexts, c_puct=1.0, policy_opponent=true, seed=None,
                         branch_depth=2, threads=1, vl=1, root_noise=(0.0, 10.0),
-                        ml=(0.0, 0.0, 0.0, false), full=false, phase_key=false))]
+                        ml=(0.0, 0.0, 0.0, false), full=false, phase_key=false, root_rm=0.0))]
     #[allow(clippy::too_many_arguments)]
     fn new(
         states: Vec<String>,
@@ -933,6 +935,7 @@ impl PyBatchSearch {
         ml: (f32, f32, f32, bool),
         full: bool,
         phase_key: bool,
+        root_rm: f32,
     ) -> PyResult<Self> {
         if states.is_empty() || states.len() != contexts.len() {
             return Err(PyValueError::new_err(
@@ -956,6 +959,9 @@ impl PyBatchSearch {
             root_noise_conc: root_noise.1,
             ml: ml_params(ml),
             phase_key,
+            // (regret matching at the root: both sides' actions drawn from RM+, mixed with the
+            // priors at this weight; 0 = PUCT -- 2026-10-31)
+            root_rm,
             ..ismcts::Config::default()
         };
         Ok(PyBatchSearch {

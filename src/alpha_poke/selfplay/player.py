@@ -45,6 +45,19 @@ def order_is(order, name: str) -> bool:
     return getattr(o, "id", None) == name.removesuffix("-tera") and bool(order.terastallize) == tera
 
 
+def greedy_choice(options: list[tuple[int, int]], mean: list[float], mix: float, rng) -> int:
+    """The evaluation's choice from the root's (option, visits): the most visited, or with
+    ``mix`` > 0 one drawn by visits among the options whose value is within ``mix`` of the most
+    visited one's (a guess between near-equal options played mixed, not always the same)."""
+    best = max(options, key=lambda o: o[1])[0]
+    if mix <= 0:
+        return best
+    near = [(i, v) for i, v in options if mean[i] >= mean[best] - mix]
+    if len(near) < 2:
+        return best
+    return rng.choices([i for i, _ in near], weights=[v for _, v in near])[0]
+
+
 class SelfPlayPlayer(SearchPlayer):
     """``batcher``: the process's ``selfplay.batcher.Batcher`` (shared by all its games);
     ``choose_move`` is asynchronous (poke-env awaits it), so other games go on while this one
@@ -54,7 +67,8 @@ class SelfPlayPlayer(SearchPlayer):
                  fast_iters: int = 600, fast_worlds: int = 16,
                  noise: tuple[float, float] = (0.1, 10.0), turn_cap: int = 300, seed: int = 0,
                  greedy: bool = False, record: bool = True, temp_turns: int = 8,
-                 temp_late: float = 0.25, loop: tuple | None = None, **kwargs):  # fmt: skip
+                 temp_late: float = 0.25, loop: tuple | None = None, mix: float = 0.0,
+                 **kwargs):  # fmt: skip
         super().__init__(*args, **kwargs)
         assert self.model_transformer and batcher is not None
         self.batcher = batcher
@@ -65,6 +79,11 @@ class SelfPlayPlayer(SearchPlayer):
         self.records: dict[str, list[dict]] = {}
         # evaluation (eval.bots g_ma / g_mb): the most visited option, nothing recorded
         self.greedy, self.record = greedy, record
+        # greedy, mixed where it is a guess (2026-10-31, gen9ou-demo-fp-281900 turn 35: a
+        # simultaneous-move guess played as a pure choice is exploitable -- the matrix games'
+        # most visited option alone 0.17-0.5 exploitable, the visit mix 0.02-0.07): the options
+        # whose value is within ``mix`` of the most visited one's are drawn by their visits
+        self.mix = mix
         # the move: sampled from the visits ** (1 / tau), tau = 1 for the first ``temp_turns``
         # turns (variety), then ``temp_late`` (AlphaZero / KataGo: later blunders would make
         # the outcome a noisy label of the position: in gen 2 only 58% of the moves played were
@@ -214,7 +233,7 @@ class SelfPlayPlayer(SearchPlayer):
             tau = self.loop[3]
         if self.greedy:
             tau = 0.0
-            slot = max(options, key=lambda o: o[1])[0]
+            slot = greedy_choice(options, rec["mean"], self.mix, self.rng)
         else:
             weights = [v ** (1 / tau) for _, v in options]
             slot = self.rng.choices([i for i, _ in options], weights=weights)[0]

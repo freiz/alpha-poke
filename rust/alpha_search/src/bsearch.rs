@@ -65,6 +65,8 @@ pub struct Pending {
     inputs: Box<(Input, Input)>,
     /// turns from the root to the leaf (the moves-left estimate's offset)
     turns: i32,
+    /// the root's regret-matching draw (`Config::root_rm`)
+    root: Option<crate::ismcts::RootSel>,
 }
 
 /// The engine's evaluation, the stat stages checked first: one past -6..6 panics in it (a
@@ -221,7 +223,13 @@ impl Shared {
         score: f32,
         vl: u32,
         ml: Option<f32>,
+        root: Option<&crate::ismcts::RootSel>,
     ) {
+        if let Some(r) = root {
+            let n = &mut self.tree.nodes[0];
+            crate::ismcts::rm_update(&mut n.s1, &r.s1, r.i1, score);
+            crate::ismcts::rm_update(&mut n.s2, &r.s2, r.i2, 1.0 - score);
+        }
         self.tree.nodes[leaf as usize].visits += 1;
         self.undo(path, vl - 1);
         for &(nd, i1, i2) in path.iter().rev() {
@@ -264,6 +272,7 @@ fn descend(
     let mut path: Vec<(u32, u16, u16)> = Vec::with_capacity(16);
     let mut applied: Vec<Vec<Instruction>> = Vec::with_capacity(16);
     let mut root_step: Option<(Arc<Vec<StateInstructions>>, usize)> = None;
+    let mut root_sel: Option<crate::ismcts::RootSel> = None;
     let mut node: u32 = 0;
     let result = loop {
         let over = state.battle_is_over();
@@ -293,17 +302,37 @@ fn descend(
             n.s2[i].avail += 1;
             av2.push((i, mc));
         }
-        let (i1, m1) = select_puct(&n.s1, &av1, cfg.c_puct, &cfg.ml);
-        let (i2, m2) = if cfg.policy_opponent {
-            // (the root: this world's own priors for the opponent, `RootPriors`)
-            let own = if node == 0 {
+        // (the root with regret matching: both sides drawn from RM+'s strategies, `Config::root_rm`)
+        let rm = node == 0 && cfg.root_rm > 0.0;
+        let (i1, m1, i2, m2) = if rm {
+            let own = if cfg.policy_opponent {
                 tree.root_opp.get(w as usize).map(|v| v.as_slice())
             } else {
                 None
             };
-            select_puct_with(&n.s2, &av2, cfg.c_puct, &cfg.ml, own)
+            let (i1, m1, s1) = crate::ismcts::rm_select(&n.s1, &av1, cfg.root_rm, None, rng);
+            let (i2, m2, s2) = crate::ismcts::rm_select(&n.s2, &av2, cfg.root_rm, own, rng);
+            root_sel = Some(crate::ismcts::RootSel {
+                s1,
+                i1: i1 as u16,
+                s2,
+                i2: i2 as u16,
+            });
+            (i1, m1, i2, m2)
         } else {
-            crate::ismcts::select(&n.s2, &av2, cfg.c)
+            let (i1, m1) = select_puct(&n.s1, &av1, cfg.c_puct, &cfg.ml);
+            let (i2, m2) = if cfg.policy_opponent {
+                // (the root: this world's own priors for the opponent, `RootPriors`)
+                let own = if node == 0 {
+                    tree.root_opp.get(w as usize).map(|v| v.as_slice())
+                } else {
+                    None
+                };
+                select_puct_with(&n.s2, &av2, cfg.c_puct, &cfg.ml, own)
+            } else {
+                crate::ismcts::select(&n.s2, &av2, cfg.c)
+            };
+            (i1, m1, i2, m2)
         };
         let depth = n.depth;
         if m1 == MoveChoice::None
@@ -391,7 +420,7 @@ fn descend(
     let mut g = shared.lock().unwrap();
     match result {
         Descent::Terminal(score, ml) => {
-            g.backup(&path, node, score, vl, ml);
+            g.backup(&path, node, score, vl, ml, root_sel.as_ref());
             g.iterations += 1;
         }
         Descent::Collision => {
@@ -404,6 +433,7 @@ fn descend(
             state: *state,
             inputs,
             turns,
+            root: root_sel,
         }),
     }
 }
@@ -432,6 +462,7 @@ impl BatchSearch {
                 state: w.clone(),
                 inputs: inputs(w, c),
                 turns: 0,
+                root: None,
             })
             .collect();
         let root_left = worlds.len();
@@ -595,7 +626,7 @@ impl BatchSearch {
             if p.node != 0 {
                 let v = 1.0 / (1.0 + (-values[2 * k]).exp());
                 let ml = turns.map(|t| p.turns as f32 + t[2 * k]);
-                g.backup(&p.path, p.node, v, vl, ml);
+                g.backup(&p.path, p.node, v, vl, ml, p.root.as_ref());
                 g.iterations += 1;
             }
         }
