@@ -80,8 +80,8 @@ MESSAGES = {
                    "zh": "PokéPaste 链接读取失败（{names}）。"},
     "team_mismatch": {"en": "The team does not fit this game ({names}).",
                       "zh": "队伍和这局对不上（{names}）。"},
-    "no_llm": {"en": "Set the language model first (the home page: its URL, key and model).",
-               "zh": "请先在首页设置语言模型（地址、Key、模型名）。"},
+    "no_llm": {"en": "No coach yet (optional): set a language model on the home page (its address, key and model).",
+               "zh": "还没有设置教练（可选）：请在首页设置语言模型（地址、Key、模型名）。"},
     "local_only": {"en": "The language model can only be set on the computer the app runs on.",
                    "zh": "语言模型只能在运行这个 app 的电脑上设置。"},
 }  # fmt: skip
@@ -504,6 +504,7 @@ HOME = r"""<!DOCTYPE html>
   .lang button.sel { background: var(--ai); color: #fff; border-color: var(--ai); }
   h1 { font-size: 22px; margin: 0 0 4px; } .muted { color: var(--muted); font-size: 13px; }
   .fmt { color: var(--good); font-size: 13px; margin-top: 8px; }
+  .intro p { margin: 4px 0; } .intro ul { margin: 4px 0; padding-left: 18px; } .intro b { color: var(--ink); }
   section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin: 16px 0; }
   label { display: block; margin: 10px 0 4px; font-weight: 600; }
   input[type=text] { width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); font: inherit; }
@@ -543,7 +544,10 @@ __RF_CSS__  ul { padding-left: 18px; } li { margin: 4px 0; } a { color: var(--ai
 <main>
   <div class="top"><h1 data-t="title"></h1>
     <span class="lang"><span data-t="ui"></span> <button data-v="en">EN</button><button data-v="zh">中文</button></span></div>
-  <div class="muted narrow" data-t="intro"></div>
+  <div class="muted narrow intro"><p data-t="intro"></p>
+    <ul><li><b data-t="engineName"></b><span data-t="introEngine"></span></li>
+        <li><b data-t="coachName"></b><span data-t="introCoach"></span></li></ul>
+    <p data-t="introLimits"></p></div>
   <section><div class="narrow">
     <label for="src" data-t="link"></label>
     <input type="text" id="src" placeholder="https://replay.pokemonshowdown.com/gen9ou-1234567890" />
@@ -583,37 +587,47 @@ __RF_HTML__
 __RF_JS__
 const T = {
   en: {title: "Pokémon Gen 9 OU battle review", ui: "Interface",
-       intro: "For Pokémon Showdown's Gen 9 OU singles: an AI rethinks each of your decisions from your side of the game — every option's winning chance, the AI's choice, the key mistakes. Other formats (doubles, VGC, random battles, other generations) are not supported yet. Everything runs on your computer.",
+       intro: "Review a Pokémon Showdown Gen 9 OU singles game, every decision from your side. Two parts do the work:",
+       engineName: "The engine (always): ",
+       introEngine: "this app's own battle AI — a neural network with search, like a chess engine. It rethinks each of your decisions on your computer: every option's winning chance, its first choice, the key mistakes.",
+       coachName: "The coach (optional): ",
+       introCoach: "a language model you set up below (GPT, Gemini, DeepSeek, …). It reads the engine's analysis and writes the game's commentary and a team analysis, and answers your questions on any decision, follow-ups included. Without it the review works the same; only these write-ups and the questions are missing.",
+       introLimits: "Other formats (doubles, VGC, random battles, other generations) are not supported yet. The engine runs only on this computer; with the coach on, the review's data goes to the language model's address you set.",
        format: f => `✓ ${f} · singles`,
        link: "Showdown replay link or id", fileLabel: "or a saved replay file (.html / .json / .log)", load: "Load the game",
        which: "Which player were you?", past: "Reviews so far", none: "None yet.", noMatch: "Nothing matches.",
        search: "Search: name, note, player, Pokémon, id", perPage: "per page",
        colGame: "Game (reviewed player first)", colPlayed: "Played", colResult: "Result", colTeams: "Teams",
-       colTop1: "AI's first choice", colLoss: "Avg. loss", colBad: "Disagreed", colSettings: "Analysis",
+       colTop1: "Engine's first choice", colLoss: "Avg. loss", colBad: "Disagreed", colSettings: "Analysis",
        colReviewed: "Reviewed", colNote: "Note", edit: "Rename / note", teamPasted: "team pasted", pts: "pts",
        titlePh: "Name (empty: the players)", notePh: "Note", save: "Save", cancel: "Cancel",
        pageOf: (p, n, t) => `page ${p} of ${n} · ${t} reviews`,
        won: "won", lost: "lost", drawn: "tie", turns: n => `${n} turns`,
-       llmHead: "Language model (AI commentary)", llmUrl: "API address (OpenAI-compatible)", llmModel: "Model",
+       llmHead: "Coach (a language model, optional)", llmUrl: "API address (OpenAI-compatible)", llmModel: "Model",
        llmKey: "API key", llmPersona: "Coach (the voice and the signature)", llmSave: "Save", llmTest: "Test", llmSet: "set", llmUnset: "not set",
        llmKeySet: "a key is set (leave empty to keep it)", llmSaved: "Saved.", llmTesting: "Asking the model…",
-       llmNote: "For the review pages' AI commentary. A capable model is recommended: a game's facts are about 30,000 tokens. The key stays on this computer and is sent only to this address."},
+       llmNote: "Set up, the coach reads the engine's analysis: it writes each game's commentary and team analysis, and answers your questions on any decision in the review page's side panel. Without it the reviews are complete otherwise. Any OpenAI-compatible model works; a capable one is recommended (a game's facts are about 30,000 tokens). The key stays on this computer and is sent only to this address."},
   zh: {title: "宝可梦 Gen 9 OU 对战复盘", ui: "界面",
-       intro: "适用于 Pokémon Showdown 的 Gen 9 OU 单打：AI 从你的视角重新思考你的每一步——每个选择的胜率、AI 的选择、关键失误。其他格式（双打、VGC、随机对战、其他世代）暂不支持。全部在你的电脑上运行。",
+       intro: "复盘 Pokémon Showdown 的 Gen 9 OU 单打对局，从你的视角看每一个决策。复盘由两部分完成：",
+       engineName: "引擎（必有）：",
+       introEngine: "这个程序自己的对战 AI——神经网络 + 搜索，类似国际象棋引擎。它在你的电脑上重新思考你的每一步：每个选择的胜率、引擎的首选、关键失误。",
+       coachName: "教练（可选）：",
+       introCoach: "你在下面设置的语言模型（GPT、Gemini、DeepSeek 等）。它读引擎的分析，写整局点评和队伍分析，并回答你对任何一步的提问，可以追问。不设置也能正常复盘，只是少了这些文字点评和问答。",
+       introLimits: "其他格式（双打、VGC、随机对战、其他世代）暂不支持。引擎只在本机运行；用教练时，复盘数据会发到你设置的语言模型地址。",
        format: f => `✓ ${f} · 单打`,
        link: "Showdown 回放链接或编号", fileLabel: "或者选择保存的回放文件（.html / .json / .log）", load: "读取对局",
        which: "你是哪一位玩家？", past: "以前的复盘", none: "还没有。", noMatch: "没有符合的复盘。",
        search: "搜索：名称、备注、玩家、宝可梦、编号", perPage: "每页",
        colGame: "对局（被分析的玩家在前）", colPlayed: "比赛时间", colResult: "结果", colTeams: "双方队伍",
-       colTop1: "AI 一选吻合", colLoss: "平均损失", colBad: "不认同", colSettings: "分析设置",
+       colTop1: "引擎一选吻合", colLoss: "平均损失", colBad: "不认同", colSettings: "分析设置",
        colReviewed: "复盘时间", colNote: "备注", edit: "重命名 / 备注", teamPasted: "已贴队伍", pts: "点",
        titlePh: "名称（留空就显示双方玩家）", notePh: "备注", save: "保存", cancel: "取消",
        pageOf: (p, n, t) => `第 ${p} / ${n} 页 · 共 ${t} 份`,
        won: "胜", lost: "负", drawn: "平", turns: n => `${n} 回合`,
-       llmHead: "语言模型（AI 解说）", llmUrl: "接口地址（兼容 OpenAI）", llmModel: "模型名",
+       llmHead: "教练（语言模型，可选）", llmUrl: "接口地址（兼容 OpenAI）", llmModel: "模型名",
        llmKey: "API Key", llmPersona: "教练（说话的语气和署名）", llmSave: "保存", llmTest: "测试", llmSet: "已设置", llmUnset: "未设置",
        llmKeySet: "已设置 Key（留空表示不改）", llmSaved: "已保存。", llmTesting: "正在询问模型…",
-       llmNote: "用于复盘页上的 AI 解说。建议用能力强的模型：一局的数据约 3 万 token。Key 只存在这台电脑上，也只发给这个地址。"},
+       llmNote: "设置后，教练会读引擎的分析：写整局点评和队伍分析，并在复盘页侧栏回答你对任何一步的提问。不设置不影响复盘本身。任何兼容 OpenAI 接口的模型都可以，建议用能力强的（一局的数据约 3 万 token）。Key 只存在这台电脑上，也只发给这个地址。"},
 };
 let UI = "en";
 try { UI = new URLSearchParams(location.search).get("ui") || localStorage.getItem("coach-ui") || "en"; } catch (e) {}
