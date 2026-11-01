@@ -26,6 +26,12 @@ play it, several times over independent draws of everything hidden, giving per o
 - the search's share of thinking (visits);
 - the gap to the search's own choice, shown as "≈" when it is within the error.
 
+The network is told both players are rated 1800, whatever the replay says
+(`coach.review.REVIEW_RATINGS`): the judgement is the same whoever played, and the released
+human-data network plays its best there; its "unknown" rating plays like an average player
+([results.md](results.md), "The network's rating input"). A self-play network goes back to
+unknown (issue #34).
+
 A decision is marked "the engine disagrees" when the loss is at least 3 points and beyond the
 error, and either the search hardly considered the choice or the loss is at least 5 points; "the
 engine doesn't like it" when the search hardly considered the choice but the loss is uncertain; a

@@ -164,9 +164,18 @@ def _mean_se(xs: list) -> tuple[float | None, float | None]:
     )
 
 
+# The network's rating input in a review (2026-11-01, doc/results.md "The network's rating
+# input"): both sides at 1800, not the replay's ratings -- the engine's judgement the same whoever
+# played, and the released human-data network's policy at its strongest (its unknown input plays
+# like the average player: 1800 / 1800 +37 Elo with the policy alone, +5 with the search). Both
+# sides always alike: the value head reads a difference as skill. A self-play fine-tuned network
+# learned on unknown (0, 0): back to it then (issue #34). None: the replay's own ratings.
+REVIEW_RATINGS: tuple[int, int] | None = (1800, 1800)
+
+
 def review(row: dict, side: str, belief, model: str, worlds: int = 16, ms: int = 2000,
            threads: int = 2, seed: int = 0, log=print, progress=None, repeats: int = 1,
-           team=None, parallel: int = 1) -> dict:  # fmt: skip
+           team=None, parallel: int = 1, ratings: tuple | None = REVIEW_RATINGS) -> dict:  # fmt: skip
     """The review of ``side``'s decisions in ``row`` (coach.replays): {"decisions": [...],
     "teams": ..., "result": ..., "settings": ...}. ``progress(done, total)``: called before the
     first search and after each decision (the app's progress bar). ``repeats`` > 1: each decision
@@ -221,7 +230,8 @@ def review(row: dict, side: str, belief, model: str, worlds: int = 16, ms: int =
         p = draws[k].get(points[i])
         if p is None:
             return None
-        ctx = (list(p.reveal), (p.rating_own, p.rating_opp), p.turn, p.history)
+        ctx = (list(p.reveal), tuple(ratings) if ratings is not None else (p.rating_own, p.rating_opp),
+               p.turn, p.history)  # fmt: skip
         ours, it, _, _, theirs, lines = alpha_search.ismcts(
             p.worlds, ms, threads=threads, model_dir=model, use_policy=True, policy_opponent=True,
             contexts=[ctx] * len(p.worlds), ml=ml, seed=seed + k, opponent=True, pv=PV)  # fmt: skip
@@ -270,6 +280,7 @@ def review(row: dict, side: str, belief, model: str, worlds: int = 16, ms: int =
             "threads": threads,
             "seed": seed,
             "repeats": repeats,
+            "ratings": list(ratings) if ratings is not None else None,  # (None: the replay's)
             "team": bool(team),
             "parallel": parallel,
         },

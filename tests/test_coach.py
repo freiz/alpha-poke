@@ -1455,3 +1455,29 @@ def test_the_models_a_service_offers(tmp_path, monkeypatch):
     assert llm.key_for(tmp_path, "https://a.example/v1/", "") == "sk-saved"
     assert llm.key_for(tmp_path, "https://other.example/v1", "") == ""
     assert llm.key_for(tmp_path, "https://other.example/v1", "sk-new") == "sk-new"
+
+
+def test_the_review_passes_its_fixed_rating_input(game, monkeypatch):
+    """2026-11-01 (doc/results.md, "The network's rating input"; issue #34): the review searches
+    with the rating input 1800 / 1800 on both sides, not the replay's ratings (the engine's
+    judgement the same whoever played); ratings=None keeps the replay's."""
+    import alpha_search
+
+    from alpha_poke.coach import review as rv
+
+    seen = []
+    real = alpha_search.ismcts
+
+    def spy(*a, **kw):
+        seen.append({tuple(c[1]) for c in kw["contexts"]})
+        return real(*a, **kw)
+
+    monkeypatch.setattr(alpha_search, "ismcts", spy)
+    rep = rv.review(game, "p1", BeliefModel.load(), str(FIXTURES / "tiny_net"), worlds=2, ms=20,
+                    threads=1, log=lambda *_: None)  # fmt: skip
+    assert rv.REVIEW_RATINGS == (1800, 1800) and rep["settings"]["ratings"] == [1800, 1800]
+    assert seen and all(s == {(1800, 1800)} for s in seen)
+    seen.clear()
+    rep = rv.review(game, "p1", BeliefModel.load(), str(FIXTURES / "tiny_net"), worlds=2, ms=20,
+                    threads=1, log=lambda *_: None, ratings=None)  # fmt: skip
+    assert rep["settings"]["ratings"] is None and seen and all(s != {(1800, 1800)} for s in seen)
