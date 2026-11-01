@@ -46,10 +46,13 @@ class PolicyPlayer(SearchPlayer):
         # the modelled player's rating as our own rating input (the opponent's stays)
         ctxs = [(rv, tuple(self.ratings) if self.ratings is not None else (self.rating, rt[1]), turn, hist, *rest)
                 for rv, rt, turn, hist, *rest in ctxs]  # fmt: skip
+        # (all the worlds in one call: the root's prior is their mean, evaluated as one batch --
+        # the same as one call per world averaged, to 1e-7; 2026-11-01)
         prior: dict[str, float] = defaultdict(float)
-        for st, ctx in zip(states, ctxs, strict=True):
-            for choice, p in alpha_search.root_priors([st.to_string()], self.model, [ctx]):
-                prior[choice] += p / len(states)
+        for choice, p in alpha_search.root_priors(
+            [st.to_string() for st in states], self.model, ctxs
+        ):
+            prior[choice] += p
         options = [(c, p ** (1 / self.tau)) for c, p in prior.items() if p > 0]
         options = [(c, w, engine_move_to_order(self, battle, c)) for c, w in options]
         options = [(c, w, o) for c, w, o in options if o is not None]
