@@ -111,11 +111,14 @@ turn 6 its boosted Great Tusk switches out to Corviknight; the other Great Tusk 
 knocks Corviknight out the next turn. The search rates every option that stays in above the
 switch (Rapid Spin 37%, the switch 21%).*
 
-The same search can give a second opinion on a game, decision by decision: each option's
-estimated winning chance, the player's choice and the search's. It may help newer players spot
-clear slips. It is not a verdict on strong players: we have no evidence its choices are better
-than theirs, and its numbers are estimates with blind spots of their own (for example, plans
-that pay off many turns later).
+The same search, as a review **engine**, gives a second opinion on a Gen 9 OU singles game,
+decision by decision: each option's estimated winning chance, the player's choice and the
+engine's. An optional **coach** -- a language model you set up (a cloud model, or a local one
+with Ollama) -- reads that analysis and writes about your style and your team, and answers your
+questions on any decision, in a character's voice. It may help newer players spot clear slips.
+It is not a verdict on strong players: we have no evidence the engine's choices are better than
+theirs, and its numbers are estimates with blind spots of their own (for example, plans that
+pay off many turns later).
 
 ```bash
 uv run python scripts/review_server.py      # the review app: http://127.0.0.1:8090
@@ -123,7 +126,8 @@ uv run python scripts/review_server.py      # the review app: http://127.0.0.1:8
 
 Paste a replay link (optionally your team or its PokéPaste link); the review appears next to
 Showdown's own replay player, and past reviews stay in a searchable list. Windows / macOS
-builds need nothing installed. More: [doc/reviews.md](doc/reviews.md).
+builds need nothing installed; the coach needs only a model's address (and key) on the home
+page. More: [doc/reviews.md](doc/reviews.md).
 
 ## For developers
 
