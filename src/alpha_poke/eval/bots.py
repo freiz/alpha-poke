@@ -54,6 +54,8 @@ VARIANTS: dict[str, tuple[str, dict]] = {
                 # (2026-11-01) the network's rating input, "own,opponent" (0 = unknown); unset:
                 # the log's (0 on a local server)
                 "ratings": os.environ.get(f"ALPHA_RATING_{x.upper()}"),
+                # (2026-11-01) the belief worlds of a decision's one tree (default 32)
+                "worlds": os.environ.get(f"ALPHA_WORLDS_{x.upper()}"),
             },
         )
         for x in ("a", "b")
@@ -121,7 +123,8 @@ def make_bot(
         if cls_name == "batched":
             return _batched_bot(extra["model"], heldout_pool, trace_dir, kw, extra.get("dtype"),
                                 extra.get("iters"), extra.get("ml"), extra.get("root_rm"),
-                                extra.get("mix"), extra.get("belief"), extra.get("ratings"))  # fmt: skip
+                                extra.get("mix"), extra.get("belief"), extra.get("ratings"),
+                                extra.get("worlds"))  # fmt: skip
         if cls_name == "search":
             from alpha_poke.agents.search_player import SearchPlayer as cls
         elif cls_name == "policy":
@@ -150,7 +153,7 @@ _BATCHERS: dict = {}
 def _batched_bot(model: str, heldout_pool, trace_dir, kw, dtype: str | None = None,
                  iters: str | None = None, ml: str | None = None, root_rm: str | None = None,
                  mix: str | None = None, belief_opts: str | None = None,
-                 ratings: str | None = None) -> Player:  # fmt: skip
+                 ratings: str | None = None, worlds: str | None = None) -> Player:  # fmt: skip
     import random
 
     from alpha_poke.agents.belief_state import BeliefModel
@@ -167,7 +170,7 @@ def _batched_bot(model: str, heldout_pool, trace_dir, kw, dtype: str | None = No
             raise ValueError(f"ALPHA_BELIEF: no belief switch {opt!r}")
         setattr(belief, opt, True)
     return SelfPlayPlayer(
-        belief, trace_dir=trace_dir, worlds=32,
+        belief, trace_dir=trace_dir, worlds=int(worlds or 32),
         net_policy="both", model=model, batcher=_BATCHERS[key], full_frac=1.0,
         full_iters=iters, noise=(0.0, 10.0), greedy=True, record=False, mix=float(mix or 0),
         turn_cap=int(os.environ.get("ALPHA_TURN_CAP", 300)), ratings=parse_ratings(ratings),
