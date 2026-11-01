@@ -60,6 +60,42 @@ def load(source: str) -> dict:
     return from_json(PoliteClient().get(REPLAY_URL.format(m.group(1))).json())
 
 
+# The formats a review takes (Showdown's format ids): the network, the belief and the metagame
+# knowledge are Gen 9 OU singles' -- one place to widen when more are supported
+REVIEWABLE = ("gen9ou", "gen9oubo3")
+MULTI = ("doubles", "triples", "multi", "freeforall")  # (Showdown's |gametype| other than singles)
+
+
+def game_format(row: dict) -> dict:
+    """{"tier": the format's name as the log gives it ("[Gen 9] OU"), "id": its format id
+    ("gen9ou"; without a |tier| line, the replay id's prefix), "gametype", "gen"} from the log's
+    own lines -- not from a file's name."""
+    tier = gametype = gen = None
+    for line in row.get("log", "").split("\n"):
+        f = line.split("|")
+        if len(f) > 2 and f[1] == "tier" and tier is None:
+            tier = f[2].strip()
+        elif len(f) > 2 and f[1] == "gametype" and gametype is None:
+            gametype = f[2].strip()
+        elif len(f) > 2 and f[1] == "gen" and gen is None and f[2].strip().isdigit():
+            gen = int(f[2])
+    fid = to_id(tier) if tier else (row.get("formatid") or "")
+    return {"tier": tier or fid, "id": fid, "gametype": gametype or "singles", "gen": gen}
+
+
+def format_problem(row: dict) -> tuple[str, str] | None:
+    """Why the replay cannot be reviewed -- ("doubles" | "format" | "no_format", the format's name
+    to show) -- or None (a Gen 9 OU singles game)."""
+    f = game_format(row)
+    if f["gametype"] in MULTI:
+        return "doubles", f["tier"] or f["gametype"]
+    if not f["id"]:
+        return "no_format", ""
+    if f["id"] not in REVIEWABLE:
+        return "format", f["tier"]
+    return None
+
+
 def side_of(row: dict, player: str) -> str:
     """The side ('p1' / 'p2') a player had in the replay."""
     for side, name in zip(("p1", "p2"), row["players"], strict=True):

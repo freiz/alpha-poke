@@ -421,7 +421,21 @@ def test_the_app_reviews_an_uploaded_replay(game):
     base = f"http://127.0.0.1:{port}"
     try:
         home = requests.get(base + "/", timeout=5)
-        assert "对局复盘" in home.text and home.headers["Cache-Control"] == "no-cache"
+        assert "Gen 9 OU 对战复盘" in home.text and home.headers["Cache-Control"] == "no-cache"
+        # (the log's format, not the file's name: a doubles game named like an OU one refused with
+        # its reason; an OU game in a plainly named log file taken)
+        doubles = (
+            game["log"]
+            .replace("|gametype|singles", "|gametype|doubles")
+            .replace("|tier|[Gen 9] OU", "|tier|[Gen 9] Doubles OU")
+        )
+        for lang, text in (("en", "doubles battle ([Gen 9] Doubles OU)"), ("zh", "双打对战")):
+            r = requests.post(base + "/api/players", json={"lang": lang, "upload": {
+                "name": "gen9ou-1.json", "text": json.dumps(game | {"log": doubles})}}, timeout=30)  # fmt: skip
+            assert r.status_code == 400 and text in r.json()["error"], r.json()
+        plain = requests.post(base + "/api/players", json={"upload": {"name": "my game.log", "text": game["log"]}},
+                              timeout=30).json()  # fmt: skip
+        assert plain["format"] == "[Gen 9] OU" and plain["players"] == ["Player A", "Player B"]
         upload = {"upload": {"name": "game.json", "text": json.dumps(game)}}
         info = requests.post(base + "/api/players", json=upload, timeout=30).json()
         assert info["players"] == ["Player A", "Player B"] and info["max_parallel"] >= 1
@@ -1346,3 +1360,30 @@ def test_a_guessed_first_choice_is_judged_by_the_known_moves():
     assert verdict(d | {"chosen": "dragondance"}) == "ok"  # (5 points behind Low Kick, not shunned)
     assert verdict(d | {"guessed": []}) == "bad"  # (the same numbers, Earthquake known)
     assert known_best(d | {"guessed": []}) is None
+
+
+def test_format_problem_reads_the_log():
+    """2026-11-01: the review takes Gen 9 OU singles only -- read from the log's |gametype| / |tier|
+    lines (the file's name said the format before: a renamed doubles game passed, an OU game in a
+    plainly named file was refused)."""
+    from alpha_poke.coach.replays import format_problem, game_format
+
+    ou = "|gametype|singles\n|gen|9\n|tier|[Gen 9] OU\n"
+    assert format_problem({"log": ou, "formatid": "mygame"}) is None
+    assert game_format({"log": ou})["id"] == "gen9ou"
+    assert format_problem(
+        {"log": ou.replace("singles", "doubles").replace("OU", "Doubles OU")}
+    ) == ("doubles", "[Gen 9] Doubles OU")
+    assert (
+        format_problem({"log": "|gametype|doubles\n|tier|[Gen 9 Champions] VGC 2026 Reg M-C\n"})[0]
+        == "doubles"
+    )
+    assert format_problem({"log": ou.replace("[Gen 9] OU", "[Gen 8] OU")}) == (
+        "format",
+        "[Gen 8] OU",
+    )
+    assert format_problem({"log": ou.replace("[Gen 9] OU", "[Gen 9] Random Battle")})[0] == "format"
+    assert format_problem({"log": ou.replace("[Gen 9] OU", "[Gen 9] OU (Bo3)")}) is None
+    # (no |tier| line: the replay id's prefix, else refused as unknown)
+    assert format_problem({"log": "|gametype|singles\n", "formatid": "gen9ou"}) is None
+    assert format_problem({"log": "|gametype|singles\n", "formatid": ""}) == ("no_format", "")

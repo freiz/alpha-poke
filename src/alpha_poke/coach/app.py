@@ -66,8 +66,12 @@ MESSAGES = {
     "no_source": {"en": "Paste a replay link or id, or pick a replay file.",
                   "zh": "请粘贴回放链接或编号，或者选择一个回放文件。"},
     "not_a_link": {"en": "Paste a Showdown replay link or id.", "zh": "请粘贴 Showdown 回放链接或编号。"},
-    "format": {"en": "Only Gen 9 OU games can be reviewed (this one: {fmt}).",
-               "zh": "只支持 Gen 9 OU 的对局（这一局：{fmt}）。"},
+    "format": {"en": "Only Gen 9 OU singles games can be reviewed; this one is {fmt}.",
+               "zh": "只支持 Gen 9 OU 单打对局；这一局是 {fmt}。"},
+    "doubles": {"en": "This is a doubles battle ({fmt}): only Gen 9 OU singles games can be reviewed.",
+                "zh": "这是一场双打对战（{fmt}）：只支持 Gen 9 OU 单打对局。"},
+    "no_format": {"en": "The replay does not say its format (no |tier| line): only Gen 9 OU singles games can be reviewed.",
+                  "zh": "这份回放没有写明对战格式（缺少 |tier| 行）：只支持 Gen 9 OU 单打对局。"},
     "player": {"en": "Choose which player you were.", "zh": "请选择你是哪一位玩家。"},
     "no_review": {"en": "That review is not there any more.", "zh": "找不到这份复盘了。"},
     "team_unreadable": {"en": "The team could not be read: paste it as Showdown's teambuilder exports it.",
@@ -420,11 +424,15 @@ def handler(cache, jobs: Jobs):
                 return self._json({"error": message(str(e), lang)}, HTTPStatus.BAD_REQUEST)
             except Exception as e:  # noqa: BLE001 - the page shows it
                 return self._json({"error": str(e) or type(e).__name__}, HTTPStatus.BAD_REQUEST)
-            if not row.get("formatid", "").startswith("gen9ou"):
-                return self._json({"error": message("format", lang, fmt=row.get("formatid"))},
+            # (the log's own format and battle type, not the file's name: a doubles game refused
+            # with its reason)
+            problem = replays.format_problem(row)
+            if problem:
+                return self._json({"error": message(problem[0], lang, fmt=problem[1])},
                                   HTTPStatus.BAD_REQUEST)  # fmt: skip
+            row["format"] = replays.game_format(row)["tier"]
             if self.path == "/api/players":
-                return self._json({"id": row["id"], "players": row["players"],
+                return self._json({"id": row["id"], "players": row["players"], "format": row["format"],
                                    "decisions": [decision_count(row, s) for s in ("p1", "p2")],
                                    "max_parallel": jobs.max_parallel(), "threads": jobs.threads,
                                    "strengths": jobs.strengths})  # fmt: skip
@@ -485,7 +493,7 @@ HOME = r"""<!DOCTYPE html>
 <html lang="en">
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Game review</title>
+<title>Pokémon Gen 9 OU battle review</title>
 <style>
   :root { --bg: #f5f6f8; --panel: #fff; --ink: #1d2330; --muted: #677085; --line: #d9dde5; --ai: #3567d6; --bad: #d64545; --good: #2f9e5b; }
   @media (prefers-color-scheme: dark) { :root { --bg: #15181e; --panel: #1f242d; --ink: #e6e9ef; --muted: #9aa3b5; --line: #343b48; } }
@@ -495,6 +503,7 @@ HOME = r"""<!DOCTYPE html>
   .lang button { background: var(--bg); color: var(--ink); border: 1px solid var(--line); padding: 2px 8px; cursor: pointer; font: inherit; margin: 0; border-radius: 0; }
   .lang button.sel { background: var(--ai); color: #fff; border-color: var(--ai); }
   h1 { font-size: 22px; margin: 0 0 4px; } .muted { color: var(--muted); font-size: 13px; }
+  .fmt { color: var(--good); font-size: 13px; margin-top: 8px; }
   section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin: 16px 0; }
   label { display: block; margin: 10px 0 4px; font-weight: 600; }
   input[type=text] { width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); font: inherit; }
@@ -542,6 +551,7 @@ __RF_CSS__  ul { padding-left: 18px; } li { margin: 4px 0; } a { color: var(--ai
     <input type="file" id="file" accept=".html,.json,.log,.txt" />
     <div><button class="go" id="load" data-t="load"></button></div>
     <div id="pick" hidden>
+      <div class="fmt" id="fmt"></div>
       <label data-t="which"></label><div class="choice" id="players"></div>
 __RF_HTML__
     </div>
@@ -572,8 +582,9 @@ __RF_HTML__
 <script>
 __RF_JS__
 const T = {
-  en: {title: "Game review", ui: "Interface",
-       intro: "An AI rethinks each of your decisions from your side of the game: every option's winning chance, the AI's choice, the key mistakes. Gen 9 OU only. Everything runs on your computer.",
+  en: {title: "Pokémon Gen 9 OU battle review", ui: "Interface",
+       intro: "For Pokémon Showdown's Gen 9 OU singles: an AI rethinks each of your decisions from your side of the game — every option's winning chance, the AI's choice, the key mistakes. Other formats (doubles, VGC, random battles, other generations) are not supported yet. Everything runs on your computer.",
+       format: f => `✓ ${f} · singles`,
        link: "Showdown replay link or id", fileLabel: "or a saved replay file (.html / .json / .log)", load: "Load the game",
        which: "Which player were you?", past: "Reviews so far", none: "None yet.", noMatch: "Nothing matches.",
        search: "Search: name, note, player, Pokémon, id", perPage: "per page",
@@ -587,8 +598,9 @@ const T = {
        llmKey: "API key", llmPersona: "Coach (the voice and the signature)", llmSave: "Save", llmTest: "Test", llmSet: "set", llmUnset: "not set",
        llmKeySet: "a key is set (leave empty to keep it)", llmSaved: "Saved.", llmTesting: "Asking the model…",
        llmNote: "For the review pages' AI commentary. A capable model is recommended: a game's facts are about 30,000 tokens. The key stays on this computer and is sent only to this address."},
-  zh: {title: "对局复盘", ui: "界面",
-       intro: "AI 从你的视角重新思考你的每一步：每个选择的胜率、AI 的选择、关键失误。只支持 Gen 9 OU。全部在你的电脑上运行。",
+  zh: {title: "宝可梦 Gen 9 OU 对战复盘", ui: "界面",
+       intro: "适用于 Pokémon Showdown 的 Gen 9 OU 单打：AI 从你的视角重新思考你的每一步——每个选择的胜率、AI 的选择、关键失误。其他格式（双打、VGC、随机对战、其他世代）暂不支持。全部在你的电脑上运行。",
+       format: f => `✓ ${f} · 单打`,
        link: "Showdown 回放链接或编号", fileLabel: "或者选择保存的回放文件（.html / .json / .log）", load: "读取对局",
        which: "你是哪一位玩家？", past: "以前的复盘", none: "还没有。", noMatch: "没有符合的复盘。",
        search: "搜索：名称、备注、玩家、宝可梦、编号", perPage: "每页",
@@ -649,6 +661,7 @@ $("load").onclick = async () => {
   try {
     body = await source();
     const r = await post("/api/players", body);
+    $("fmt").textContent = L.format(r.format);
     $("players").innerHTML = r.players.map((p, i) => p ?
       `<label><input type="radio" name="player" value="${esc(p)}" ${i == r.players.findIndex(Boolean) ? "checked" : ""} /> ${esc(p)}</label>` : "").join("");
     const player = () => document.querySelector("input[name=player]:checked").value;
