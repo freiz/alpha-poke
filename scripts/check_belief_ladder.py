@@ -18,7 +18,6 @@ import argparse
 import collections
 import gzip
 import json
-import math
 import sqlite3
 
 MIN_N = 30  # self-play observations a reveal rate needs (else the value's pooled over switch-ins)
@@ -156,7 +155,7 @@ def main() -> None:
     a = ap.parse_args()
 
     import pandas as pd
-    from check_belief_sets import tera_dist
+    from check_belief_sets import HEAD, f1_items, line, score, tera_dist
     from poke_env.battle import Pokemon
 
     from alpha_poke.agents.belief_state import BeliefModel
@@ -213,7 +212,7 @@ def main() -> None:
         print(f"item shares vs Smogon {month} gen9ou-{cut} (top 20 species, mean TV): raw revealed "
               f"{sum(tv['raw']) / len(tv['raw']):.3f}, weighted {sum(tv['weighted']) / len(tv['weighted']):.3f}")  # fmt: skip
 
-    print(f"{'':22} {'shown':>5} {'n':>6} {'weight':>8}  {'NLL':>6} {'top-1':>6}  (weighted)")
+    print(f"{'':22} {'shown':>5} {'n':>6} {'weight':>8}  {HEAD}  (weighted)")
     skipped = collections.Counter()
     for label, on in (("belief", False), ("belief raked", True)):
         belief.rake = on
@@ -237,18 +236,15 @@ def main() -> None:
                         if attr == "item"
                         else tera_dist(belief, name, team, mv)
                     )
-                    p = d.get(val, 0.0) / (sum(d.values()) or 1.0)
-                    s = st[(attr, shown)]
-                    s["n"] += 1
-                    s["w"] += w
-                    s["nll"] += w * -math.log(max(p, 1e-6))
-                    s["top1"] += w * (bool(d) and max(d, key=d.get) == val)
+                    f1 = f1_items(belief, mon, team) if attr == "item" else None
+                    score(d, val, st[(attr, shown)], w=w, f1=f1)
         for attr in ("item", "tera"):
             for shown in (0, 2):
                 s = st[(attr, shown)]
                 if s["n"]:
-                    print(f"{attr + ': ' + label:22} {shown:5} {int(s['n']):6} {s['w']:8.0f}  "
-                          f"{s['nll'] / s['w']:6.3f} {s['top1'] / s['w']:6.1%}")  # fmt: skip
+                    print(
+                        f"{attr + ': ' + label:22} {shown:5} {int(s['n']):6} {s['w']:8.0f}  {line(s)}"
+                    )
     belief.rake = False
     print(f"left out: {dict(skipped)}")
 

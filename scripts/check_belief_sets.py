@@ -6,8 +6,11 @@ marginals: enginecheck.beliefcheck's item support; the archetype mix of the tera
 
   uv run python scripts/check_belief_sets.py [--since 2025-06] [--rake both]
 
-NLL: the mean -log P(the true value), floored at 1e-6; top-1: the most likely value is the true
-one; at 0: P < 1e-4 (the draw hardly ever makes it). The teams are the forum's, which lean to
+Precision -- NLL: the mean -log P(the true value), floored at 1e-6; top-1: the most likely value
+is the true one. Recall -- at 0: P < 1e-4 (the draw hardly ever makes it); in 16 / in 32: the
+chance the true value is among a decision's 16 / 32 worlds at all (1 - (1 - P) ** W); in F1:
+the true item among the items the damage evidence weighs (once a clean hit is seen, the only
+ones drawn). The teams are the forum's, which lean to
 polished, showcased sets (issue #33): Smogon's ladder usage is a reference row, not the truth.
 """
 
@@ -44,13 +47,48 @@ def tera_dist(belief, species: str, team_names, known_moves) -> dict:
     return out
 
 
-def score(dist: dict, truth: str, s: dict) -> None:
+WORLDS = (16, 32)  # the worlds a decision draws: self-play's fast searches, the full ones
+
+
+def f1_items(belief, mon, team_names) -> set:
+    """The items F1's damage evidence weighs (damage_obs._candidates: the base marginal's
+    TOP_ITEMS): once a clean hit is seen, an unrevealed item is drawn from these alone."""
+    from alpha_poke.agents.damage_obs import _candidates
+
+    return {c[0] for c in _candidates(belief, mon, team_names)[0]}
+
+
+def score(dist: dict, truth: str, s: dict, w: float = 1.0, f1: set | None = None) -> None:
+    """Precision: NLL, top-1. Recall: at 0 (P < 1e-4: as good as never drawn); in W worlds (the
+    chance the true value is in at least one of a decision's W draws: 1 - (1 - P) ** W -- not
+    in any, the search never considers it there); in F1's candidates (``f1``, items)."""
     t = sum(dist.values()) or 1.0
     p = dist.get(truth, 0.0) / t
     s["n"] += 1
-    s["nll"] += -math.log(max(p, 1e-6))
-    s["top1"] += bool(dist) and max(dist, key=dist.get) == truth
-    s["zero"] += p < 1e-4
+    s["w"] += w
+    s["nll"] += w * -math.log(max(p, 1e-6))
+    s["top1"] += w * (bool(dist) and max(dist, key=dist.get) == truth)
+    s["zero"] += w * (p < 1e-4)
+    for n in WORLDS:
+        s[f"in{n}"] += w * (1 - (1 - p) ** n)
+    if f1 is not None:
+        s["f1"] += w * (truth in f1)
+        s["f1n"] += w
+
+
+HEAD = (
+    f"{'NLL':>6} {'top-1':>6} {'at 0':>6} "
+    + " ".join(f"{'in ' + str(n):>6}" for n in WORLDS)
+    + f" {'in F1':>6}"
+)
+
+
+def line(s: dict) -> str:
+    """The row of ``score``'s sums."""
+    w = s["w"] or 1.0
+    out = f"{s['nll'] / w:6.3f} {s['top1'] / w:6.1%} {s['zero'] / w:6.1%} "
+    out += " ".join(f"{s[f'in{n}'] / w:6.1%}" for n in WORLDS)
+    return out + (f" {s['f1'] / s['f1n']:6.1%}" if s.get("f1n") else f" {'':>6}")
 
 
 def main() -> None:
@@ -94,7 +132,8 @@ def main() -> None:
         belief.rake = on
         stats = collections.defaultdict(lambda: collections.defaultdict(float))
         for names, mon, species, shown, item, tera in cases:
-            score(_item_support(belief, mon, names, shown), item, stats[("item", len(shown))])
+            score(_item_support(belief, mon, names, shown), item, stats[("item", len(shown))],
+                  f1=f1_items(belief, mon, names))  # fmt: skip
             if tera:
                 score(tera_dist(belief, species, names, shown), tera, stats[("tera", len(shown))])
         rows[label] = stats
@@ -112,14 +151,13 @@ def main() -> None:
             score({to_id(k): v for k, v in d.tera.items()}, tera, usage[("tera", 0)])  # fmt: skip
     rows["Smogon usage (reference)"] = usage
 
-    print(f"{'':26} {'shown':>5} {'n':>6}  {'NLL':>6} {'top-1':>6} {'at 0':>6}")
+    print(f"{'':26} {'shown':>5} {'n':>6}  {HEAD}")
     for attr in ("item", "tera"):
         for label, stats in rows.items():
             for shown in (0, 2):
                 s = stats.get((attr, shown))
                 if s and s["n"]:
-                    print(f"{attr + ': ' + label:26} {shown:5} {int(s['n']):6}  {s['nll'] / s['n']:6.3f} "
-                          f"{s['top1'] / s['n']:6.1%} {s['zero'] / s['n']:6.1%}")  # fmt: skip
+                    print(f"{attr + ': ' + label:26} {shown:5} {int(s['n']):6}  {line(s)}")
 
 
 if __name__ == "__main__":
