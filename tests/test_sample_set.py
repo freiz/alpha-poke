@@ -265,14 +265,14 @@ def test_a_seen_base_forme_is_no_hidden_forme():
 def test_raked_items_match_the_usage():
     """2026-10-31 (issue #33): the archetypes and the team prior count the items replays show, so
     the drawn items lean to the self-revealing ones. With the belief's ``rake`` on, a species'
-    items drawn with nothing revealed follow Smogon's usage (the teams' own items); off, they do
+    items drawn with nothing revealed follow Smogon's usage (the teams' own items, RAKE_CUTOFF); off, they do
     not -- and an item the usage lacks stays possible (the floor)."""
-    from alpha_poke.agents.engine_state import _smogon, rake_factors
+    from alpha_poke.agents.engine_state import _rake_usage, rake_factors
     from alpha_poke.analysis.roles import to_id
 
     belief = BeliefModel.load()
     name = "Dragapult"
-    usage = _smogon(belief).predict(name, (name,)).item
+    usage = _rake_usage(belief).predict(name, (name,)).item
     t = sum(usage.values())
     usage = {("none" if to_id(k) == "nothing" else to_id(k)): v / t for k, v in usage.items()}
 

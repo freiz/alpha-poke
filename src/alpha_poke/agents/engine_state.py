@@ -377,7 +377,25 @@ def arch_mix(ss, k: int, attr: str, base: dict, mix: float | None = None) -> dic
 # archetypes' prior mix): which items go with which moves stays the archetypes', the marginal
 # is the ladder's. On a belief with ``rake`` set (off by default until its search A/B).
 RAKE_ITERS = 30
+# the usage the marginals are raked to: Smogon's at this rating cutoff, the latest month (None:
+# the belief's own Smogon prior, 1825)
+RAKE_CUTOFF: int | None = 1500
 _RAKES: dict = {}
+_RAKE_PRIORS: dict = {}
+
+
+def _rake_usage(belief: BeliefModel):
+    if RAKE_CUTOFF is None:
+        return _smogon(belief)
+    sm = _RAKE_PRIORS.get(RAKE_CUTOFF)
+    if sm is None:
+        from alpha_poke.belief.priors import SmogonPrior
+        from alpha_poke.data.smogon_stats import DEFAULT_DIR, UsageStats
+
+        months = sorted(p.name for p in DEFAULT_DIR.iterdir() if p.is_dir())
+        f = DEFAULT_DIR / months[-1] / "chaos" / f"gen9ou-{RAKE_CUTOFF}.json"
+        sm = _RAKE_PRIORS[RAKE_CUTOFF] = SmogonPrior(UsageStats.load(f)) if f.exists() else None
+    return sm
 
 
 def rake_factors(belief: BeliefModel, species: str, attr: str, mix: float | None = None) -> dict:
@@ -385,7 +403,7 @@ def rake_factors(belief: BeliefModel, species: str, attr: str, mix: float | None
     ``rake`` off, the old belief at ``mix`` 0, or no usage for the species). Cached."""
     if not getattr(belief, "rake", False) or (mix if mix is not None else ARCH_MIX) <= 0:
         return {}
-    key = (id(belief), species, attr)
+    key = (id(belief), species, attr, RAKE_CUTOFF)
     c = _RAKES.get(key)
     if c is None:
         if len(_RAKES) > 20_000:
@@ -399,7 +417,7 @@ def raked(weights: dict, factors: dict) -> dict:
 
 
 def _fit_rake(belief: BeliefModel, species: str, attr: str) -> dict:
-    sm = _smogon(belief)
+    sm = _rake_usage(belief)
     if sm is None:
         return {}
     usage: dict = {}

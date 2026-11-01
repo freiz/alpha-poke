@@ -2,12 +2,12 @@
 but the Wayback Machine has archived ~100k of its pastes -- their ids from its index (CDX), their
 pages from the archive (not from pokepast.es: a small site), parsed into the pastes' cache
 (teams.pokepaste: {"title", "author", "notes", "paste"}) and added to the links as source
-"wayback". Most of them are VGC team lists: the catalog's build keeps the gen9ou ones that pass
-the validator (a paste's "Format:" note, or none and legal in gen9ou).
+"wayback". Most of them are VGC team lists: only the ones labelled gen9ou are linked (unlabelled
+ones with --unlabelled), and the catalog's build keeps those that pass the validator.
 
   uv run python scripts/harvest_pastes.py list          # the archived ids -> raw/pokepaste_index.jsonl
   uv run python scripts/harvest_pastes.py fetch [--max N] [--delay 2]   # resumable
-  uv run python scripts/harvest_pastes.py links         # gen9ou / unlabelled pastes -> links.jsonl
+  uv run python scripts/harvest_pastes.py links         # gen9ou-labelled pastes -> links.jsonl
   uv run python scripts/teams.py build                  # then the catalog as usual
 """
 
@@ -117,8 +117,9 @@ def cmd_fetch(a) -> None:
 
 
 def cmd_links(a) -> None:
-    """The archived gen9ou pastes (or unlabelled ones: the validator decides) not linked yet ->
-    links.jsonl rows of source "wayback" (the date: the snapshot's)."""
+    """The archived pastes labelled gen9ou (their "Format:" note) not linked yet -> links.jsonl rows
+    of source "wayback" (the date: the snapshot's). Unlabelled ones only with --unlabelled: a UU
+    or RU team is legal in OU, so the validator alone does not make one an OU team."""
     rows = [json.loads(line) for line in INDEX.read_text().splitlines()]
     links = (
         [json.loads(line) for line in LINKS.read_text().splitlines() if line]
@@ -134,14 +135,15 @@ def cmd_links(a) -> None:
             continue
         fmt = pokepaste.paste_format(p) or "?"
         formats[fmt] = formats.get(fmt, 0) + 1
-        if fmt not in ("gen9ou", "?") or r["id"] in have:
+        if not (fmt == "gen9ou" or (a.unlabelled and fmt == "?")) or r["id"] in have:
             continue
         ts = r["ts"]
         new.append({"source": "wayback", "thread": 0, "thread_title": "", "post": 0, "author": "",
                     "date": f"{ts[:4]}-{ts[4:6]}-{ts[6:8]}T{ts[8:10]}:{ts[10:12]}:00+0000", "paste": r["id"]})  # fmt: skip
     LINKS.write_text("".join(json.dumps(r) + "\n" for r in keep + new))
     top = sorted(formats.items(), key=lambda kv: -kv[1])[:8]
-    print(f"{len(new)} archived pastes added (gen9ou or unlabelled); formats seen: {top}")
+    print(f"{len(new)} archived pastes added (gen9ou{' or unlabelled' if a.unlabelled else ''}); "
+          f"formats seen: {top}")  # fmt: skip
 
 
 def main() -> None:
@@ -155,7 +157,11 @@ def main() -> None:
     p.add_argument("--max", type=int, default=0)
     p.add_argument("--delay", type=float, default=2.0)
     p.set_defaults(fn=cmd_fetch)
-    sub.add_parser("links").set_defaults(fn=cmd_links)
+    p = sub.add_parser("links")
+    p.add_argument(
+        "--unlabelled", action="store_true", help="unlabelled pastes too (unchecked tier)"
+    )
+    p.set_defaults(fn=cmd_links)
     a = ap.parse_args()
     a.fn(a)
 
