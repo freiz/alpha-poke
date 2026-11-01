@@ -989,6 +989,26 @@ How noisy the evaluation is (`scripts/eval_stats.py`, pairs as the unit):
   noise is the bots' own sampled moves, which no correction removes.
 - At 300 pairs two networks must differ by about 5 points to tell apart; about 800 pairs for 3.
 
+### The belief's items: raked to the ladder, F1 over every item, stratified worlds (2026-10-31)
+
+Issue #33. Three belief switches, each off by default:
+
+- `rake`: items and tera types raked to Smogon's gen9ou-1500 usage.
+- `f1_all`: F1's candidates are the top 8 plus the evidence items plus OTHER.
+- `stratify`: a decision's worlds draw items at Latin-hypercube quantiles.
+
+Offline (`scripts/check_belief_sets.py`, forum teams; `scripts/check_belief_ladder.py`, held-out ladder replays weighted by 1 / P(revealed)):
+- The ladder item NLL / top-1 goes from 1.392 / 59.1% to 1.276 / 60.2%.
+- The true item is in a decision's 32 worlds 92.7% → 96.2% of the time, and in F1's candidates 96.6% → 100%.
+
+Search A/B: all three on (B) vs off (A); the same network r2-gen0a3, 1,600 iterations, 32 worlds. The pool is `forum2025`: 420 complete forum teams first posted since 2025, one per family, each in two pairs. These are people's own sets, completed neither by the belief nor from Smogon. The fair pools are filled from Smogon's usage and would favour `rake`; the self-play pools are completed by the belief and would favour the old one.
+
+| | pairs | B's score | Elo (B) | W/D/L (pairs, B) | pentanomial (A's view) |
+|---|---|---|---|---|---|
+| all three on vs off | 420 | 51.0% ± 3.1% | +7 [−15, +29] | 94 / 239 / 87 | [93, 1, 239, 4, 83] |
+
+Flat within the noise. 7 of the 840 games hit the 1,200 s cap (counted as ties). The switches stay off. The better calibrated and fuller belief does not show at this resolution, which fits the other measurements: the belief's worlds are not where the search loses most.
+
 ### Search agreement with players by rating band (2026-10-30)
 
 Held-out games (hf-part13-1 / 13-2: after the training cutoff), 60 players per band of their pre-game rating, up to 5 turn-start decisions each, rebuilt from the player's view with 16 belief worlds (as coach.review) and searched 1 s x 4 threads (v6arch-pp-v75, rating input unknown for all bands):
