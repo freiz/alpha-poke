@@ -72,6 +72,11 @@ jobs:
         run: |
           cp packaging/macos/start.command dist/alpha-poke-review/
           chmod +x dist/alpha-poke-review/start.command
+      - name: "how to start it (README.txt beside the app: English and Chinese)"
+        shell: bash
+        run: |
+          cp packaging/${{ runner.os == 'macOS' && 'macos' || 'windows' }}/README.txt dist/alpha-poke-review/
+          test -s dist/alpha-poke-review/README.txt
       - name: "the metagame knowledge is in the app (coach.meta: the team analysis)"
         shell: bash
         run: test -f dist/alpha-poke-review/_internal/alpha_poke/coach/meta_knowledge.json.gz
