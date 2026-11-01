@@ -588,7 +588,7 @@ __RF_JS__
 const T = {
   en: {title: "Pokémon Gen 9 OU battle review", ui: "Interface",
        intro: "Review a Pokémon Showdown Gen 9 OU singles game, every decision from your side. Two parts do the work:",
-       engineName: "The engine (always): ",
+       engineName: "The engine (built in, nothing to set up): ",
        introEngine: "this app's own battle AI — a neural network with search, like a chess engine. It rethinks each of your decisions on your computer: every option's winning chance, its first choice, the key mistakes.",
        coachName: "The coach (optional): ",
        introCoach: "a language model you set up below (GPT, Gemini, DeepSeek, …). It reads the engine's analysis and writes the game's commentary and a team analysis, and answers your questions on any decision, follow-ups included. Without it the review works the same; only these write-ups and the questions are missing.",
@@ -609,7 +609,7 @@ const T = {
        llmNote: "Set up, the coach reads the engine's analysis: it writes each game's commentary and team analysis, and answers your questions on any decision in the review page's side panel. Without it the reviews are complete otherwise. Any OpenAI-compatible model works; a capable one is recommended (a game's facts are about 30,000 tokens). The key stays on this computer and is sent only to this address."},
   zh: {title: "宝可梦 Gen 9 OU 对战复盘", ui: "界面",
        intro: "复盘 Pokémon Showdown 的 Gen 9 OU 单打对局，从你的视角看每一个决策。复盘由两部分完成：",
-       engineName: "引擎（必有）：",
+       engineName: "引擎（已内置，无需设置）：",
        introEngine: "这个程序自己的对战 AI——神经网络 + 搜索，类似国际象棋引擎。它在你的电脑上重新思考你的每一步：每个选择的胜率、引擎的首选、关键失误。",
        coachName: "教练（可选）：",
        introCoach: "你在下面设置的语言模型（GPT、Gemini、DeepSeek 等）。它读引擎的分析，写整局点评和队伍分析，并回答你对任何一步的提问，可以追问。不设置也能正常复盘，只是少了这些文字点评和问答。",
