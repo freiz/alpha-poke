@@ -1009,6 +1009,37 @@ Search A/B: all three on (B) vs off (A); the same network r2-gen0a3, 1,600 itera
 
 Flat within the noise. 7 of the 840 games hit the 1,200 s cap (counted as ties). The switches stay off. The better calibrated and fuller belief does not show at this resolution, which fits the other measurements: the belief's worlds are not where the search loses most.
 
+### The network's rating input: unknown vs 1800 (2026-11-01)
+
+The network reads both players' ratings: (r − 1500) / 300 each, their difference, and two known flags; 0 means unknown, not the lowest rating. Local games (self-play, evaluations, games against people on a local server) pass 0 / 0. The ladder and reviews pass the log's ratings. In v75's human data, 98.6% of positions have ratings (median 1311, 90th percentile 1616, 99th 1822).
+
+**Offline** (`scripts/check_rating_input.py`): hf-part13-2, all after the validation cutoff; 6,193 games and 120k positions with both ratings known. Policy CE on the move played, against the game's own ratings (95% CI by games):
+
+| mover's rating | unknown | 1500 / 1500 | 1800 / 1800 | 2100 / 2100 |
+|---|---|---|---|---|
+| < 1300 | +0.006 | +0.025 | +0.055 | +0.100 |
+| 1300–1600 | +0.005 | +0.002 | +0.015 | +0.048 |
+| ≥ 1600 | +0.019 | +0.008 | −0.000 [−0.002, +0.002] | +0.015 |
+
+(v6arch-pp-v75; r2-gen0a3 alike, its unknown further off at every band: its self-play data are all unknown.)
+
+- The input carries play strength. Unknown is the average player, not the strong one.
+- Raising one's own rating alone breaks the value head, which reads the difference as skill: value BCE +0.07 for < 1300 movers. Set both or neither.
+
+**Play** (`forum2025`, 420 pairs, each played both ways; A has the rating input, B unknown; same network):
+
+| | network | A's input | A's score | Elo |
+|---|---|---|---|---|
+| policy only (tau 0.05) | v6arch-pp-v75 | 1500 / 1500 | 52.3% ± 3.1% | +16 [−6, +38] |
+| policy only | v6arch-pp-v75 | 1800 / 1800 | **55.4% ± 2.9%** | **+37 [+17, +58]** |
+| policy only | v6arch-pp-v75 | 2100 / 2100 | 53.3% ± 2.9% | +23 [+3, +43] |
+| policy only | r2-gen0a3 | 1800 / 1800 | 50.0% ± 3.0% | 0 [−21, +21] |
+| search, 1,600 iterations | v6arch-pp-v75 | 1800 / 1800 | 50.8% ± 2.9% | +5 [−15, +26] |
+
+- The policy alone gains at 1800, an inverted U: 2100 lies beyond the data.
+- The self-play network gains nothing: what self-play taught it sits on the unknown input, so keep unknown for it.
+- With the search the gain is gone within the noise (8 of the 840 games hit the time cap). `ALPHA_RATING_A` / `_B` set it per side (unset: the log's, as before).
+
 ### Search agreement with players by rating band (2026-10-30)
 
 Held-out games (hf-part13-1 / 13-2: after the training cutoff), 60 players per band of their pre-game rating, up to 5 turn-start decisions each, rebuilt from the player's view with 16 belief worlds (as coach.review) and searched 1 s x 4 threads (v6arch-pp-v75, rating input unknown for all bands):
