@@ -162,10 +162,11 @@ signature, answers in a conversation do not. The rules and the data come first:
 - The coach's words are a language model's: checked for invented moves, told the engine's limits,
   but still able to be wrong; a stronger model is wrong less often.
 
-A marked decision is a question worth a second look, not a proven mistake. The screenshots
-(the README's and the one above) are a game between our bot and Foul Play, reviewed from Foul
-Play's side with its team pasted: on turn 4 its Great Tusk, at -1 Defense from Headlong Rush,
-used Bulk Up in the mirror, and the engine preferred switching to Slowking-Galar (61% against
-48.5%, each ± 1; the reply it expected most, Close Combat at 53%, is resisted four times over by
+A marked decision is a question worth a second look, not a proven mistake. The screenshots (the
+README's and the one above) are a game between our bot and Foul Play, reviewed from Foul Play's
+side with its team pasted: on turn 4 its Great Tusk, at -1 Defense from Headlong Rush, used Bulk
+Up in the mirror, and the engine preferred switching to Slowking-Galar (61% against 48.5%, each
+±1; the reply it expected most, Close Combat at 53%, is resisted four times over by
 Slowking-Galar). The opponent used Bulk Up too, and the game turned on turns 6-7: Foul Play's
-Corviknight came in on the boosted opposing Great Tusk, which boosted again and knocked it out with Close Combat.
+Corviknight came in on the boosted opposing Great Tusk, which boosted again and knocked it out
+with Close Combat.
