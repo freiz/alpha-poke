@@ -46,7 +46,7 @@ def cmd_list(a) -> None:
     latest: dict[str, str] = {}
     for p in range(pages):
         f = cache / f"page-{p}.txt"
-        if not f.exists():
+        if not f.exists() or a.refresh:  # (--refresh: the archive's index again -- new pastes)
             time.sleep(a.delay)
             r = s.get(CDX, params={"url": "pokepast.es/*", "fl": "original,timestamp,statuscode",
                                    "collapse": "urlkey", "page": p}, timeout=300)  # fmt: skip
@@ -149,6 +149,7 @@ def main() -> None:
     sub = ap.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser("list")
     p.add_argument("--delay", type=float, default=3.0)
+    p.add_argument("--refresh", action="store_true", help="read the index again (new pastes)")
     p.set_defaults(fn=cmd_list)
     p = sub.add_parser("fetch")
     p.add_argument("--max", type=int, default=0)

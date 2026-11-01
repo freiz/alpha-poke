@@ -320,7 +320,9 @@ def build(a: argparse.Namespace, log=print) -> dict:
     )
     lad, _ = tlt.ranked(tlt_args)
     lad = lad[[legal(k) for k in lad.index]].head(a.ladder)
-    forum = [e for e in catalog.load() if e.complete]
+    forum = [
+        e for e in catalog.load(dedup=True) if e.complete
+    ]  # (one per family of near-duplicates)
     problems = check([e.text for e in forum])
     dropped = [e for e, r in zip(forum, problems, strict=True) if r["problems"]]
     forum = [e for e, r in zip(forum, problems, strict=True) if not r["problems"]]

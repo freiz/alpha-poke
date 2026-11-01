@@ -845,9 +845,10 @@ def cmd_iterate(a) -> None:
     while True:
         k = len(attempts) + 1
         games = len(runner.done_pairs(gen_dir))
-        # (more games before another attempt: --chunk more than the last attempt had; a resumed
-        # run plays only what the chunk still lacks)
-        target = attempts[-1]["games"] + a.chunk if attempts else 0
+        # (more games before another attempt: --chunk more than the last attempt had -- the first
+        # attempt --chunk games, 2026-10-31: a new generation went to its training with none; a
+        # resumed run plays only what the chunk still lacks)
+        target = (attempts[-1]["games"] if attempts else 0) + a.chunk
         if games < target:
             if games >= a.max_games:
                 print(f"gen {a.gen}: {games} games, no clearly better network -- stopped")

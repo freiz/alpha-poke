@@ -61,3 +61,65 @@ def test_preview_key_and_completeness():
     assert team_key(["Kingambit", "Gholdengo"]) == "Gholdengo|Kingambit"
     six = "\n\n".join(SET.format(name=f"M{i}") for i in range(6))
     assert is_complete(six) and not is_complete(six.replace("- Ice Beam", ""))
+
+
+def test_catalog_near_duplicates_share_a_family():
+    """teams.catalog.families: the same six species with at most NEAR_DIFF differences (an item,
+    an ability, a tera type, a swapped move; spreads ignored) join one family, its
+    representative the entry with the most sources; a team three changes away stays apart."""
+    from alpha_poke.teams.catalog import Entry, families
+
+    def team(item="Leftovers", move="Roost", tera="Water"):
+        sets = [
+            f"Mon{i} @ {item if i == 0 else 'Leftovers'}\nAbility: A\nTera Type: {tera if i == 0 else 'Fire'}\n"
+            f"EVs: 252 HP\n- {move if i == 0 else 'Tackle'}\n- B\n- C\n- D"
+            for i in range(6)
+        ]
+        return "\n\n".join(sets)
+
+    base = Entry("a", "k", team(), True, "2026-01-01", [{"source": "rmt"}, {"source": "sample"}])
+    tweak = Entry(
+        "b",
+        "k",
+        team(move="Recover").replace("252 HP", "248 HP"),
+        True,
+        "2025-01-01",
+        [{"source": "rmt"}],
+    )
+    far = Entry(
+        "c",
+        "k",
+        team(item="Life Orb", move="Earthquake", tera="Fire"),
+        True,
+        "2026-02-01",
+        [{"source": "rmt"}],
+    )
+    families([base, tweak, far])
+    assert base.family == tweak.family == "a" and far.family == "c"
+
+
+def test_catalog_reads_a_paste_once_and_keeps_every_source(monkeypatch):
+    """teams.catalog.build: a paste linked by several posts and sources is validated once; its
+    entry keeps every source and the earliest date."""
+    from alpha_poke.teams import catalog
+
+    calls = []
+
+    def check(texts, fmt="gen9ou"):
+        calls.append(len(texts))
+        return [
+            {"n": 6, "species": [f"S{i}" for i in range(6)], "text": t, "problems": []}
+            for t in texts
+        ]
+
+    monkeypatch.setattr(catalog, "check", check)
+    monkeypatch.setattr(
+        catalog.pokepaste,
+        "load",
+        lambda pid: {"title": "T", "notes": "Format: gen9ou", "paste": "x"},
+    )
+    links = [{"source": "rmt", "date": "2026-03-01", "paste": "p1"},
+             {"source": "wayback", "date": "2026-01-01", "paste": "p1"}]  # fmt: skip
+    es = catalog.build(links, log=lambda *a: None)
+    assert calls == [1] and len(es) == 1
+    assert {s["source"] for s in es[0].sources} == {"rmt", "wayback"} and es[0].date == "2026-01-01"
