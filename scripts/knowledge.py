@@ -6,8 +6,9 @@ replaces, the engine) and ships it only when no check fails.
 
   uv run python scripts/knowledge.py status      # the shipped snapshot: built from what, how old
   uv run python scripts/knowledge.py fetch       # new replays (the polite crawler: hours),
-                                                 # Smogon's months, the forum's teams, archived
-                                                 # PokéPastes (deduplicated: teams.catalog)
+                                                 # Smogon's months, archived PokéPastes, then the
+                                                 # catalog with the forum's cached teams
+                                                 # (deduplicated: teams.catalog)
   uv run python scripts/knowledge.py build       # -> data/derived/teams/knowledge/candidate.json.gz
   uv run python scripts/knowledge.py validate    # the checks -> report (markdown) + exit 1 on a fail
   uv run python scripts/knowledge.py promote     # the validated candidate -> the shipped snapshot
@@ -16,7 +17,7 @@ replaces, the engine) and ships it only when no check fails.
   uv run python scripts/knowledge.py check       # the checks on the shipped snapshot itself (after a
                                                  # Showdown update: a new ban fails it)
 
-Options after the step go to it: fetch --hours / --new / --skip-replays / --skip-forum /
+Options after the step go to it: fetch --hours / --new / --skip-replays /
 --pastes N (archived pastes fetched this time; 0 = none) / --skip-pastes, build
 (scripts/build_meta_knowledge.py's own: --meta-days, --top, ...), validate --damage-pairs. Run
 the heavy steps under a memory cap (systemd-run --user --scope -p MemoryMax=24G ...); commit the
@@ -84,7 +85,6 @@ def fetch(argv) -> int:
     ap.add_argument("--new", type=int, default=20000, help="replays to download (>= 1500, 25 days)")
     ap.add_argument("--download-hours", type=float, default=5.0)
     ap.add_argument("--skip-replays", action="store_true")
-    ap.add_argument("--skip-forum", action="store_true")
     ap.add_argument(
         "--pastes",
         type=int,
@@ -109,18 +109,16 @@ def fetch(argv) -> int:
         run("scripts/crawl_replays.py", "--max-hours", str(a.download_hours), "download", "--target",
             str(done + a.new), "--min-rating", "1500", "--since-days", "25")  # fmt: skip
     run("scripts/fetch_smogon_stats.py", "--months", "2")
-    # the teams: the forum's (its threads read again), then the archived pastes (scripts/
-    # harvest_pastes.py: the archive's index again, the next --pastes pages, the gen9ou ones as
-    # links) -- then the catalog: one validation per paste, one entry per canonical team,
-    # near-duplicates in families (teams.catalog)
-    if not a.skip_forum:
-        run("scripts/teams.py", "collect", "--refresh")
+    # the teams: the archived pastes (scripts/harvest_pastes.py: the archive's index again, the
+    # next --pastes pages, the gen9ou ones as links; the forum is not read again: its threads
+    # turn crawlers away since 2026-10-31, its cached teams stay in the links) -- then the
+    # catalog: one validation per paste, one entry per canonical team, near-duplicates in
+    # families (teams.catalog)
     if not a.skip_pastes:
         run("scripts/harvest_pastes.py", "list", "--refresh")
         if a.pastes > 0:
             run("scripts/harvest_pastes.py", "fetch", "--max", str(a.pastes))
         run("scripts/harvest_pastes.py", "links")
-    if not (a.skip_forum and a.skip_pastes):
         run("scripts/teams.py", "build")
     return 0
 
