@@ -844,7 +844,10 @@ if (LLM_ON) {
   Promise.all(["style", "team"].map(k => llmGet("kind=" + k).then(j => { if (j && j.text) TEXT[k] = j.text; return j; }))).then(js => {
     if (!js.some(Boolean)) return;
     box.hidden = false; relabel();
-    const k = ["style", "team"].find(k => TEXT[k]); if (k) show(k, false);
+    // (a link to a write-up, opened: #coach=style / #coach=team; else the first one, folded)
+    const want = /[#&]coach=(style|team)/.exec(location.hash);
+    const k = want && TEXT[want[1]] ? want[1] : ["style", "team"].find(k => TEXT[k]);
+    if (k) show(k, !!want);
   });
   btns.forEach(b => { b.onclick = () => { const k = b.dataset.llm; if (TEXT[k]) { show(k, true); } else { if (k == "team") show(k, true); make(k); } }; });
   again.onclick = () => { if (shown) make(shown); };
@@ -935,8 +938,8 @@ if (LLM_ON) {
     if (open) { const i = +open.dataset.ask; if (CHAT.dec === i) chatClose(); else chatOpen(i); }
   });
   llmGet("asked=1").then(j => { if (j && j.asked) { Object.assign(ASKED, j.asked); render(); } });
-  // (a link to a decision's conversation: #ask=<decision index>)
-  const deep = /^#ask=(\d+)$/.exec(location.hash);
+  // (a link to a decision's conversation: #ask=<decision index>; with a turn: #t=<turn>&ask=<index>)
+  const deep = /[#&]ask=(\d+)/.exec(location.hash);
   if (deep && R.decisions[+deep[1]]) setTimeout(() => chatOpen(+deep[1]), 0);
 }
 if (location.protocol.startsWith("http") && DIR) {

@@ -104,12 +104,13 @@ Against Foul Play, the bots and their settings: [doc/evaluation.md](doc/evaluati
 
 ### Game reviews
 
-![A game review: Showdown's replay player beside the search's view of each decision](doc/images/review.png)
+![A game review: Showdown's replay player and the engine's scorecard, with the coach answering a question about turn 4](doc/images/review.png)
 
 *A game between our bot and Foul Play, reviewed from Foul Play's side with its team pasted. On
-turn 6 its boosted Great Tusk switches out to Corviknight; the other Great Tusk boosts again and
-knocks Corviknight out the next turn. The search rates every option that stays in above the
-switch (Rapid Spin 37%, the switch 21%).*
+turn 4 its Great Tusk, down a Defense stage from Headlong Rush, used Bulk Up in the mirror; the
+engine preferred switching to Slowking-Galar (61% against 48.5%), which resists the Close Combat
+it expected four times over. On the right, the coach (Cynthia, played by a language model)
+answers the player's question about it.*
 
 The same search, as a review **engine**, gives a second opinion on a Gen 9 OU singles game,
 decision by decision: each option's estimated winning chance, the player's choice and the

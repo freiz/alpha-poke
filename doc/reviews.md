@@ -95,6 +95,8 @@ Windows / macOS builds of the app (no Python or Rust needed): `.github/workflows
 
 ## The coach (optional)
 
+![The coach's write-up on a player's style: the opening, the turning points with their chances and causes, what went well](images/review-coach.png)
+
 A language model's write-ups on the review page, from the review's facts:
 
 - **Style** (操作风格评价): how the game was played, its turning points -- the largest swings of the
@@ -107,8 +109,9 @@ A language model's write-ups on the review page, from the review's facts:
   sets and the metagame facts above.
 - **Ask the coach** (问教练): a side panel beside any decision, a conversation with follow-ups
   (the whole conversation sent with each); each decision's button shows how many questions it
-  has; the conversation is kept with the review and can be cleared; `#ask=<decision>` opens one.
-  Only that decision's facts, about 5,000 tokens.
+  has; the conversation is kept with the review and can be cleared. Links: `#t=<turn>&ask=<decision>`
+  opens a decision's conversation at its turn, `#coach=style` / `#coach=team` a write-up. Only
+  that decision's facts, about 5,000 tokens.
 
 The write-ups are in the page's language and kept with their review; "↻ Write it again" clears
 the old text while the new one is written. The coach speaks as a character of the main games
@@ -159,8 +162,10 @@ signature, answers in a conversation do not. The rules and the data come first:
 - The coach's words are a language model's: checked for invented moves, told the engine's limits,
   but still able to be wrong; a stronger model is wrong less often.
 
-A marked decision is a question worth a second look, not a proven mistake. The screenshot in the
-README is a game between our bot and Foul Play, reviewed from Foul Play's side with its team
-pasted: on turn 6 its Great Tusk (+2 Attack) switches out to Corviknight, the opposing Great Tusk
-boosts again and knocks Corviknight out with Close Combat the next turn. Every option that stays
-in is rated above the switch (Rapid Spin 37%, Bulk Up 33%, the switch 21%, each ± 1-2).
+A marked decision is a question worth a second look, not a proven mistake. The screenshots
+(the README's and the one above) are a game between our bot and Foul Play, reviewed from Foul
+Play's side with its team pasted: on turn 4 its Great Tusk, at -1 Defense from Headlong Rush,
+used Bulk Up in the mirror, and the engine preferred switching to Slowking-Galar (61% against
+48.5%, each ± 1; the reply it expected most, Close Combat at 53%, is resisted four times over by
+Slowking-Galar). The opponent used Bulk Up too, and the game turned on turns 6-7: Foul Play's
+Corviknight came in on the boosted opposing Great Tusk, which boosted again and knocked it out with Close Combat.
