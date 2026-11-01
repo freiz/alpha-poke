@@ -1387,3 +1387,34 @@ def test_format_problem_reads_the_log():
     # (no |tier| line: the replay id's prefix, else refused as unknown)
     assert format_problem({"log": "|gametype|singles\n", "formatid": "gen9ou"}) is None
     assert format_problem({"log": "|gametype|singles\n", "formatid": ""}) == ("no_format", "")
+
+
+def test_a_local_model_needs_no_key(tmp_path, monkeypatch):
+    """2026-11-01: a model served on this computer (Ollama, http://localhost:11434/v1) takes no
+    key: the coach is ready without one, and no Authorization header is sent; a remote address
+    still needs its key."""
+    from alpha_poke.coach import llm
+
+    llm.save_settings(tmp_path, "http://localhost:11434/v1", "qwen3", "")
+    pub = llm.public_settings(tmp_path)
+    assert pub["ready"] and pub["local"] and not pub["has_key"]
+    sent = {}
+
+    class Resp:
+        status_code = 200
+
+        def json(self):
+            return {"choices": [{"message": {"content": "hi"}}]}
+
+    monkeypatch.setattr(
+        llm.requests,
+        "post",
+        lambda url, headers, json, timeout: sent.update(url=url, headers=headers) or Resp(),
+    )
+    assert llm.chat(llm.load_settings(tmp_path), "s", "u") == "hi"
+    assert (
+        sent["url"] == "http://localhost:11434/v1/chat/completions"
+        and "Authorization" not in sent["headers"]
+    )
+    llm.save_settings(tmp_path, "https://api.example.invalid/v1", "m", "")
+    assert not llm.public_settings(tmp_path)["ready"]

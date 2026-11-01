@@ -390,7 +390,7 @@ def handler(cache, jobs: Jobs):
                 if self.path == "/api/llm":
                     if body.get("kind") not in llm.KINDS:
                         return self._json({"error": "unknown kind"}, HTTPStatus.BAD_REQUEST)
-                    if not llm.public_settings(COACH)["has_key"]:
+                    if not llm.public_settings(COACH)["ready"]:
                         raise Refused("no_llm")
                     return self._json(
                         {
@@ -563,7 +563,9 @@ __RF_HTML__
   </div></section>
   <section><details id="llm"><summary><b data-t="llmHead"></b> <span class="muted" id="llmState"></span></summary>
     <div class="narrow">
-      <div class="muted" data-t="llmNote"></div>
+      <div class="muted intro"><p data-t="llmNote"></p><p data-t="llmApi"></p>
+        <p><span data-t="llmAdvice"></span> <a href="https://artificialanalysis.ai/#intelligence" target="_blank" rel="noopener" data-t="llmBoard"></a></p>
+        <p data-t="llmPrivacy"></p></div>
       <label for="llmUrl" data-t="llmUrl"></label><input type="text" id="llmUrl" placeholder="https://api.openai.com/v1" />
       <label for="llmModel" data-t="llmModel"></label><input type="text" id="llmModel" placeholder="gpt-4.1" />
       <label for="llmKey" data-t="llmKey"></label><input type="password" id="llmKey" autocomplete="off" />
@@ -591,7 +593,7 @@ const T = {
        engineName: "The engine (built in, nothing to set up): ",
        introEngine: "this app's own battle AI — a neural network with search, like a chess engine. It rethinks each of your decisions on your computer: every option's winning chance, its first choice, the key mistakes.",
        coachName: "The coach (optional): ",
-       introCoach: "a language model you set up below (GPT, Gemini, DeepSeek, …). It reads the engine's analysis and writes the game's commentary and a team analysis, and answers your questions on any decision, follow-ups included. Without it the review works the same; only these write-ups and the questions are missing.",
+       introCoach: "a language model you set up below — one in the cloud (GPT, Gemini, DeepSeek, …) or one you run on your own computer with Ollama. It reads the engine's analysis and writes the game's commentary and a team analysis, and answers your questions on any decision, follow-ups included. Without it the review works the same; only these write-ups and the questions are missing.",
        introLimits: "Other formats (doubles, VGC, random battles, other generations) are not supported yet. The engine runs only on this computer; with the coach on, the review's data goes to the language model's address you set.",
        format: f => `✓ ${f} · singles`,
        link: "Showdown replay link or id", fileLabel: "or a saved replay file (.html / .json / .log)", load: "Load the game",
@@ -606,13 +608,18 @@ const T = {
        llmHead: "Coach (a language model, optional)", llmUrl: "API address (OpenAI-compatible)", llmModel: "Model",
        llmKey: "API key", llmPersona: "Coach (the voice and the signature)", llmSave: "Save", llmTest: "Test", llmSet: "set", llmUnset: "not set",
        llmKeySet: "a key is set (leave empty to keep it)", llmSaved: "Saved.", llmTesting: "Asking the model…",
-       llmNote: "Set up, the coach reads the engine's analysis: it writes each game's commentary and team analysis, and answers your questions on any decision in the review page's side panel. Without it the reviews are complete otherwise. Any OpenAI-compatible model works; a capable one is recommended (a game's facts are about 30,000 tokens). The key stays on this computer and is sent only to this address."},
+       llmNote: "Set up, the coach reads the engine's analysis: it writes each game's commentary and team analysis, and answers your questions on any decision in the review page's side panel. Without it the reviews are complete otherwise.",
+       llmApi: "Any OpenAI-compatible service works. For Ollama on this computer: the address http://localhost:11434/v1, the key left empty — and raise Ollama's context length to 32k or more (OLLAMA_CONTEXT_LENGTH=32768): a game's data is about 30,000 tokens, and a shorter context silently cuts it.",
+       llmAdvice: "Choose a strong model: one scoring above 45 on the Artificial Analysis Intelligence Index (v5.0). The coach has to find the turns that mattered in tens of thousands of tokens and tie each number to its cause; a smarter model catches more of the details and makes up less, while a weaker one tends to get moves and turns wrong or call luck a mistake. Models small enough for an ordinary graphics card rarely reach that level, so for good commentary a strong cloud model is usually the better choice.",
+       llmBoard: "The leaderboard →",
+       llmPrivacy: "The key stays on this computer and is sent only to this address.",
+       llmKeyLocal: "a model on this computer needs no key"},
   zh: {title: "宝可梦 Gen 9 OU 对战复盘", ui: "界面",
        intro: "复盘 Pokémon Showdown 的 Gen 9 OU 单打对局，从你的视角看每一个决策。复盘由两部分完成：",
        engineName: "引擎（已内置，无需设置）：",
        introEngine: "这个程序自己的对战 AI——神经网络 + 搜索，类似国际象棋引擎。它在你的电脑上重新思考你的每一步：每个选择的胜率、引擎的首选、关键失误。",
        coachName: "教练（可选）：",
-       introCoach: "你在下面设置的语言模型（GPT、Gemini、DeepSeek 等）。它读引擎的分析，写整局点评和队伍分析，并回答你对任何一步的提问，可以追问。不设置也能正常复盘，只是少了这些文字点评和问答。",
+       introCoach: "你在下面设置的语言模型——云端的 GPT、Gemini、DeepSeek 等，或者用 Ollama 在自己电脑上部署的模型都可以。它读引擎的分析，写整局点评和队伍分析，并回答你对任何一步的提问，可以追问。不设置也能正常复盘，只是少了这些文字点评和问答。",
        introLimits: "其他格式（双打、VGC、随机对战、其他世代）暂不支持。引擎只在本机运行；用教练时，复盘数据会发到你设置的语言模型地址。",
        format: f => `✓ ${f} · 单打`,
        link: "Showdown 回放链接或编号", fileLabel: "或者选择保存的回放文件（.html / .json / .log）", load: "读取对局",
@@ -627,7 +634,12 @@ const T = {
        llmHead: "教练（语言模型，可选）", llmUrl: "接口地址（兼容 OpenAI）", llmModel: "模型名",
        llmKey: "API Key", llmPersona: "教练（说话的语气和署名）", llmSave: "保存", llmTest: "测试", llmSet: "已设置", llmUnset: "未设置",
        llmKeySet: "已设置 Key（留空表示不改）", llmSaved: "已保存。", llmTesting: "正在询问模型…",
-       llmNote: "设置后，教练会读引擎的分析：写整局点评和队伍分析，并在复盘页侧栏回答你对任何一步的提问。不设置不影响复盘本身。任何兼容 OpenAI 接口的模型都可以，建议用能力强的（一局的数据约 3 万 token）。Key 只存在这台电脑上，也只发给这个地址。"},
+       llmNote: "设置后，教练会读引擎的分析：写整局点评和队伍分析，并在复盘页侧栏回答你对任何一步的提问。不设置不影响复盘本身。",
+       llmApi: "任何兼容 OpenAI 接口的服务都可以。用本机的 Ollama：地址填 http://localhost:11434/v1，Key 留空；另外要把 Ollama 的上下文长度调到 32k 以上（OLLAMA_CONTEXT_LENGTH=32768）——一局的数据约 3 万 token，上下文不够会被悄悄截断。",
+       llmAdvice: "建议选强一点的模型：Artificial Analysis 智能指数（Intelligence Index v5.0）45 分以上。教练要在几万 token 的数据里找出关键回合，把每个数字和背后的原因对上：越聪明的模型抓到的细节越多，编造的越少；弱一些的模型常会说错招式和回合，或者把运气当成失误。普通显卡能跑的本地模型很少达到这个水平，想要好的点评，通常云端的强模型更合适。",
+       llmBoard: "查看排行榜 →",
+       llmPrivacy: "Key 只存在这台电脑上，也只发给这个地址。",
+       llmKeyLocal: "本机的模型不需要 Key"},
 };
 let UI = "en";
 try { UI = new URLSearchParams(location.search).get("ui") || localStorage.getItem("coach-ui") || "en"; } catch (e) {}
@@ -652,8 +664,8 @@ async function llmLoad() {
   $("llmUrl").value = s.base_url; $("llmModel").value = s.model; $("llmKey").value = "";
   $("llmPersona").innerHTML = s.personas.map(([k, en, zh]) => `<option value="${esc(k)}">${esc(UI == "zh" ? zh : en)}</option>`).join("");
   $("llmPersona").value = s.persona;
-  $("llmKey").placeholder = s.has_key ? L.llmKeySet : "";
-  $("llmState").textContent = s.has_key && s.base_url && s.model ? `(${L.llmSet}: ${s.model})` : `(${L.llmUnset})`;
+  $("llmKey").placeholder = s.has_key ? L.llmKeySet : s.local ? L.llmKeyLocal : "";
+  $("llmState").textContent = s.ready ? `(${L.llmSet}: ${s.model})` : `(${L.llmUnset})`;
 }
 $("llmSave").onclick = async () => {
   try { await post("/api/llm-settings", {base_url: $("llmUrl").value, model: $("llmModel").value, api_key: $("llmKey").value,

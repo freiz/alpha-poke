@@ -13,6 +13,7 @@ import json
 import os
 import re
 from pathlib import Path
+from urllib.parse import urlsplit
 
 import requests
 
@@ -260,12 +261,29 @@ def load_settings(coach: Path) -> dict:
     return out
 
 
+def is_local(base_url: str) -> bool:
+    """A model served on this computer (Ollama: http://localhost:11434/v1): no key needed."""
+    try:
+        host = urlsplit(base_url.strip()).hostname or ""
+    except ValueError:
+        return False
+    return host in ("localhost", "127.0.0.1", "::1")
+
+
+def ready(settings: dict) -> bool:
+    """An address, a model, and a key unless the model is served on this computer."""
+    return bool(settings["base_url"] and settings["model"]
+                and (settings["api_key"] or is_local(settings["base_url"])))  # fmt: skip
+
+
 def public_settings(coach: Path) -> dict:
-    """What a page may see: the URL, the model, whether a key is set -- never the key --, the
-    persona and the personas to choose from ([id, English name, Chinese name, English title,
-    Chinese title]; "none": no role)."""
+    """What a page may see: the URL, the model, whether a key is set -- never the key --, whether
+    the coach is ready (``ready``; a local model needs no key: ``local``), the persona and the
+    personas to choose from ([id, English name, Chinese name, English title, Chinese title];
+    "none": no role)."""
     s = load_settings(coach)
     return {"base_url": s["base_url"], "model": s["model"], "has_key": bool(s["api_key"]),
+            "ready": ready(s), "local": is_local(s["base_url"]),
             "persona": s["persona"],
             "personas": [[k, *(p["name"] if p else ("No role", "不扮演角色")), *(p["title"] if p else ("", ""))]
                          for k, p in PERSONAS.items()]}  # fmt: skip
@@ -294,11 +312,14 @@ def chat(
 ) -> str:
     """One answer of the configured chat model (OpenAI's /chat/completions); ``messages``: a
     conversation after the system prompt (user / assistant turns) instead of ``user`` alone."""
-    if not (settings["base_url"] and settings["api_key"] and settings["model"]):
+    if not ready(settings):
         raise RuntimeError("no_llm")
+    headers = {"Content-Type": "application/json"}
+    if settings["api_key"]:  # (a local model: none)
+        headers["Authorization"] = f"Bearer {settings['api_key']}"
     r = requests.post(
         settings["base_url"].rstrip("/") + "/chat/completions",
-        headers={"Authorization": f"Bearer {settings['api_key']}", "Content-Type": "application/json"},
+        headers=headers,
         json={"model": settings["model"], "temperature": 0.3,
               "messages": [{"role": "system", "content": system},
                            *(messages or [{"role": "user", "content": user}])]},
