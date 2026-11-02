@@ -1078,6 +1078,21 @@ Not transitive:
 
 Self-play's gain may be largely against its own lineage. An outside opponent stays needed to measure progress.
 
+### Search: 4 belief worlds against 32, at a fixed budget (2026-11-01)
+
+Iterations are a decision's total, shared by its worlds (32 worlds at 1,600 iterations: 50 each), and the tree is one tree, so fewer worlds do not make it deeper: they only spend more iterations on each world. Does a world need a minimum number of iterations before it pays? Same network on both sides (r2-gen0a3), forum2025, 420 pairs planned, `ALPHA_WORLDS_A=4`:
+
+| iterations | iterations per world (4 / 32) | pairs | 4 worlds' score | Elo | pair W/D/L |
+|---|---|---|---|---|---|
+| 1,600 | 400 / 50 | 420 | 49.5% ± 3.0% | −4 [−25, +17] | 83 / 250 / 87 |
+| 6,400 | 1,600 / 200 | 288 | 45.0% ± 3.6% | −35 [−60, −10] | 42 / 175 / 71 |
+
+- At 6,400 iterations 32 worlds beat 4; at 1,600 the two are even. No sign of a threshold above which fewer, better searched worlds win, up to 1,600 iterations per world.
+- The 6,400 run stopped early, by decision and not by a planned rule, to give the computer back to self-play: 288 of 420 pairs (the log: 620 of 840 games, `--resume` can finish it). A WSL shutdown had interrupted it at 287 pairs. 4 of its 620 games hit the turn cap.
+- Whether the gap really grows with the budget is not shown: the difference between the two rows is 4.5 ± 4.7 points.
+
+32 worlds stay the default.
+
 ### Search agreement with players by rating band (2026-10-30)
 
 Held-out games (hf-part13-1 / 13-2: after the training cutoff), 60 players per band of their pre-game rating, up to 5 turn-start decisions each, rebuilt from the player's view with 16 belief worlds (as coach.review) and searched 1 s x 4 threads (v6arch-pp-v75, rating input unknown for all bands):
