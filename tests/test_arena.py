@@ -1,4 +1,4 @@
-from alpha_poke.eval.arena import make_schedule, summarize
+from alpha_poke.eval.arena import Match, make_schedule, summarize, unplayed
 
 
 def test_schedule_swaps_teams_and_challenger_within_each_pair():
@@ -24,3 +24,10 @@ def test_summarize_paired_scores_and_ties():
     assert abs(s["win_rate"] - 2.5 / 4) < 1e-9
     assert abs(s["paired_mean"] - (0.5 + 0.75) / 2) < 1e-9
     assert s["split_pairs"] == 1
+
+
+def test_unplayed_keeps_the_schedule_without_the_logged_games():
+    schedule = [Match(k, g, f"a{k}", f"b{k}", True) for k in (3, 7) for g in (0, 1)]
+    rows = [{"pair": 3, "game": 1}, {"pair": 7, "game": 0}, {"pair": 7, "game": 1}]
+    assert [(m.pair, m.game) for m in unplayed(schedule, rows)] == [(3, 0)]
+    assert unplayed(schedule, []) == schedule

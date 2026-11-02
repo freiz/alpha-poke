@@ -4,6 +4,9 @@ the teams exchanged. Networks: ALPHA_MODEL_A / ALPHA_MODEL_B with the bots of ev
 
   ALPHA_MODEL_A=<run> ALPHA_MODEL_B=<run> uv run python scripts/eval_pairs.py g_ma g_mb \\
       --pool data/derived/teams/pools/wide200
+
+--resume <log>: an interrupted run, with the same settings (environment and arguments): its
+finished games are kept and only the missing ones played, into the same log.
 """
 
 import argparse
@@ -13,7 +16,7 @@ import time
 from pathlib import Path
 
 from alpha_poke import paths  # noqa: E402
-from alpha_poke.eval.arena import Match, run_schedule, summarize
+from alpha_poke.eval.arena import Match, read_log, run_schedule, summarize, unplayed
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
@@ -36,7 +39,10 @@ if __name__ == "__main__":
         action="store_true",
         help="save each game's replay (both views) next to the log: <log>.replays/",
     )
+    ap.add_argument("--resume", default="", help="the log of an interrupted run to finish")
     a = ap.parse_args()
+    if a.resume and a.other:
+        ap.error("--resume: not with --other")
     ks = sorted({int(m.group(1)) for f in Path(a.pool).glob("pair*_a.txt")
                  if (m := re.match(r"pair(\d+)_a", f.stem))})  # fmt: skip
     if a.pairs:
@@ -46,8 +52,12 @@ if __name__ == "__main__":
         x, y = f"pair{k:03d}_a", f"pair{k:03d}_b"
         schedule += [Match(k, 0, x, y, k % 2 == 0), Match(k, 1, y, x, k % 2 == 1)]
     Path(a.log_dir).mkdir(parents=True, exist_ok=True)
-    log = str(Path(a.log_dir) / f"{time.strftime('%Y%m%d-%H%M%S')}_{a.bot_a}_vs_{a.bot_b}_"
-              f"{Path(a.pool).name}.jsonl")  # fmt: skip
+    log = a.resume or str(Path(a.log_dir) / f"{time.strftime('%Y%m%d-%H%M%S')}_{a.bot_a}_vs_{a.bot_b}_"
+                          f"{Path(a.pool).name}.jsonl")  # fmt: skip
+    if a.resume:
+        before = len(schedule)
+        schedule = unplayed(schedule, read_log(log))
+        print(f"resuming {log}: {before - len(schedule)} of {before} games kept", flush=True)
     if a.other:
         from alpha_poke.eval.split import run_split
 
@@ -57,4 +67,5 @@ if __name__ == "__main__":
         rows = run_schedule(a.bot_a, a.bot_b, schedule, a.pool, log, ports=tuple(a.ports),
                             procs=a.procs, lanes_per_proc=a.lanes,
                             replay_dir=str(Path(log).with_suffix(".replays")) if a.replays else None)  # fmt: skip
+        rows = read_log(log) if a.resume else rows  # (the whole run: the games kept too)
     print("SUMMARY", json.dumps(summarize(rows) | {"log": log}))

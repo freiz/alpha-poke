@@ -314,6 +314,12 @@ def _score(r: dict) -> float | None:
     return None
 
 
+def unplayed(schedule: list[Match], rows: list[dict]) -> list[Match]:
+    """The schedule's games not in the log's rows (an interrupted run: only these are played)."""
+    done = {(r["pair"], r["game"]) for r in rows}
+    return [m for m in schedule if (m.pair, m.game) not in done]
+
+
 def read_log(path: str) -> list[dict]:
     p = Path(path)
     if not p.exists():
