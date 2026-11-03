@@ -1,6 +1,8 @@
 # Team data
 
 Tracked, curated team data; everything generated goes to `data/derived/teams/` (git-ignored).
+The repository's MIT license does not cover this data: it comes from Smogon forum posts and ladder
+games and stays under its sources' terms.
 A pool by name: `alpha_poke.paths.pool(name)` looks here first, then in the generated pools.
 
 | file / pool | what | used by |

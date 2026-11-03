@@ -50,7 +50,7 @@ jobs:
         shell: bash
         run: |
           uv sync --locked --no-default-groups
-          uv pip install "pyinstaller>=6.10"
+          uv pip install "pyinstaller>=6.10" "pip-licenses>=5"
       - name: "assets (the release's network and belief models, SHA-256 checked; Smogon 2026-09)"
         shell: bash
         env:
@@ -77,6 +77,12 @@ jobs:
         run: |
           cp packaging/${{ runner.os == 'macOS' && 'macos' || 'windows' }}/README.txt dist/alpha-poke-review/
           test -s dist/alpha-poke-review/README.txt
+      - name: "the licenses (ours, and the third-party software frozen into the app)"
+        shell: bash
+        run: |
+          cp LICENSE dist/alpha-poke-review/
+          uv run --no-sync python packaging/third_party_licenses.py dist/alpha-poke-review/THIRD_PARTY_LICENSES.txt
+          grep -q "poke-engine 0.0.48 (Rust)" dist/alpha-poke-review/THIRD_PARTY_LICENSES.txt
       - name: "the metagame knowledge is in the app (coach.meta: the team analysis)"
         shell: bash
         run: test -f dist/alpha-poke-review/_internal/alpha_poke/coach/meta_knowledge.json.gz

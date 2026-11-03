@@ -128,7 +128,8 @@ uv run python scripts/review_server.py      # the review app: http://127.0.0.1:8
 Paste a replay link (optionally your team or its PokéPaste link); the review appears next to
 Showdown's own replay player, and past reviews stay in a searchable list. Windows / macOS
 builds need nothing installed; the coach needs only a model's address (and key) on the home
-page. More: [doc/reviews.md](doc/reviews.md).
+page. The builds are not signed, so the first start shows a system warning; the `README.txt` in
+each zip gives the steps. More: [doc/reviews.md](doc/reviews.md).
 
 ## For developers
 
@@ -156,14 +157,22 @@ page. More: [doc/reviews.md](doc/reviews.md).
 - Replays: [Metamon](https://huggingface.co/datasets/jakegrigsby/metamon-raw-replays)'s Gen 9 OU
   dataset, the [HolidayOugi](https://huggingface.co/datasets/HolidayOugi/pokemon-showdown-replays)
   dump and public replays of the official server (a polite crawler, about one request per 2 s).
-  Neither dataset states a license; raw replays are used locally and never redistributed.
+  Neither dataset states a license; they are used locally and not redistributed. The only game
+  logs in this repository are 200 scrubbed ones in the tests' fixtures: no nicknames, timestamps
+  or real game ids (`tests/make_fixture_data.py`).
 - [Smogon usage statistics](https://www.smogon.com/stats/) and forum teams (sets only).
 - Evaluation and self-play run on local servers only. `play_public.py` and `ladder.py` connect
   to the official server only with `--public` and a registered bot account (Showdown's bot
   policy); they never join rooms, chat or challenge anyone.
-- The code is MIT ([LICENSE](LICENSE)); the released model files are for non-commercial
-  research use. Foul Play (GPL-3.0) runs as a separate process, Showdown's client (AGPL-3.0)
-  is fetched and served unmodified for local viewing, poke-engine is MIT.
+- The code is MIT ([LICENSE](LICENSE)). That covers our code, not the third-party data kept here
+  for tests and evaluation: `teams/` (sets from Smogon forum posts and from ladder games) and
+  `tests/fixtures/` (Smogon's statistics, scrubbed game logs) stay under their sources' terms.
+- The released model files are for non-commercial research use: the replays they were trained on
+  are public games, but neither dataset states a license, so we cannot offer more than that. If
+  you hold rights in any of this data and object, please open an issue and we will remove it.
+- Foul Play (GPL-3.0) runs as a separate process, Showdown's client (AGPL-3.0) is fetched and
+  served unmodified for local viewing, poke-engine is MIT. The desktop builds carry their
+  third-party licenses (`THIRD_PARTY_LICENSES.txt`).
 
 ## References
 

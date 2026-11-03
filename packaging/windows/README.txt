@@ -33,6 +33,12 @@ YOUR DATA
   Reviews and settings are kept in %LOCALAPPDATA%\alpha-poke (they stay when
   you update the app; delete that folder to remove everything).
 
+LICENSES
+  The app's code is MIT (LICENSE). The network and belief models are for
+  non-commercial research use: the replays they were trained on are public
+  games from datasets that state no license. Third-party software:
+  THIRD_PARTY_LICENSES.txt.
+
 
 宝可梦对战复盘 —— Windows（x64）
 ================================
@@ -66,3 +72,8 @@ YOUR DATA
 你的数据
   复盘和设置保存在 %LOCALAPPDATA%\alpha-poke（更新程序后仍然保留；
   删掉这个文件夹即可清除全部数据）。
+
+许可证
+  程序代码采用 MIT 许可证（LICENSE）。神经网络和信念模型仅供非商业研究使用：
+  训练用的回放是公开对局，所在的数据集没有声明许可证。第三方软件的许可证见
+  THIRD_PARTY_LICENSES.txt。

@@ -118,4 +118,5 @@ official Showdown server a bot needs a registered bot account (the server's bot 
 must not be used for others in rated or tournament play.
 
 The replays the network was trained on are public Showdown games; neither dataset states a
-license. The weights are released for non-commercial research use.
+license. The weights are released for non-commercial research use. If you hold rights in this
+data and object, please open an issue and we will remove the affected files.
