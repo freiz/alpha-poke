@@ -124,12 +124,13 @@ def status(d: dict) -> None:
     run = alive(d.get("pgid"))
     n = games(d["gen"])
     target = (n // d["chunk"] + 1) * d["chunk"]
-    line = f"gen {d['gen']}: {'running' if run else 'paused'}"
-    line += (
-        f", step '{step_now(d['gen'])}'"
-        if run
-        else f" (since {d.get('paused_at')}, in '{d.get('paused_in')}')"
-    )
+    if run:
+        line = f"gen {d['gen']}: running, step '{step_now(d['gen'])}'"
+    elif d.get("state") == "running":  # (not paused by us: it failed, or the computer restarted)
+        line = (f"gen {d['gen']}: STOPPED unexpectedly in '{step_now(d['gen'])}' "
+                f"(see gen{d['gen']}/iterate.out; resume continues)")  # fmt: skip
+    else:
+        line = f"gen {d['gen']}: paused (since {d.get('paused_at')}, in '{d.get('paused_in')}')"
     line += f"; {n} games, the batch trains at {target}"
     if run and d.get("since"):
         try:

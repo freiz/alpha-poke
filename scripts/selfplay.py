@@ -837,7 +837,8 @@ def cmd_iterate(a) -> None:
         t0 = time.time()
         print(f"[{time.strftime('%m-%d %H:%M:%S')}] gen {a.gen}: {name}", flush=True)
         with open(gen_dir / f"{name}.log", "a", encoding="utf-8") as f:
-            subprocess.run(capped(me + args, a.mem_cap_gb), check=True, stdout=f,
+            gb = a.train_mem_cap_gb if name == "train" else a.mem_cap_gb
+            subprocess.run(capped(me + args, gb), check=True, stdout=f,
                            stderr=subprocess.STDOUT)  # fmt: skip
         record(a.gen, f"{name}_minutes", round((time.time() - t0) / 60, 1))
 
@@ -1114,7 +1115,10 @@ def main() -> None:
     p.add_argument("--beta", type=float, default=0.1)
     # (30, 2026-10-27: a 40 GB training left the 48 GB WSL too little -- the session's background
     # tasks were stopped for low memory)
-    p.add_argument("--mem-cap-gb", type=float, default=30, help="memory cap of every step")
+    p.add_argument("--mem-cap-gb", type=float, default=30, help="memory cap of every other step")
+    # (2026-11-02: gen 1's first training, 10.7M self-play positions kept, was killed at 30 GB of
+    # its own memory, not cache; gen 0's last, 6.1M, fitted. The small columns grow with the data)
+    p.add_argument("--train-mem-cap-gb", type=float, default=38, help="memory cap of the training")
     p.add_argument(
         "--once",
         action="store_true",
