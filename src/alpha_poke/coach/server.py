@@ -13,6 +13,8 @@ Showdown's client is AGPL-3.0: it is fetched and served unmodified, for local vi
 never committed (data/ is git-ignored); our page only loads it in the browser.
 """
 
+import ipaddress
+import socket
 import threading
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -70,10 +72,42 @@ class Cache:
         return path
 
 
+def allowed_host(header: str | None, bound: str = "127.0.0.1") -> bool:
+    """Whether a request's Host names this computer: localhost, an IP address, or (when the app is
+    open to the network, ``bound`` "0.0.0.0") the computer's own name. Anything else is another
+    site's page that pointed its domain at us (DNS rebinding): to the browser and to the Origin
+    check it is same-origin, and it would reach the app, whose saved API key it could send away.
+    No Host at all: not a browser."""
+    if not header:
+        return True
+    try:
+        name = (urlsplit(f"//{header}").hostname or "").lower()
+    except ValueError:
+        return False
+    if name == "localhost":
+        return True
+    try:
+        ipaddress.ip_address(name)
+        return True
+    except ValueError:
+        pass
+    if bound == "127.0.0.1":
+        return False
+    return name in (socket.gethostname().lower(), f"{socket.gethostname().lower()}.local")
+
+
 def handler(cache: Cache, pages: Path):
     class Handler(SimpleHTTPRequestHandler):
         def log_message(self, fmt, *args):  # quiet
             pass
+
+        def parse_request(self):  # (every method: a page, a job's state, the settings)
+            if not super().parse_request():
+                return False
+            if not allowed_host(self.headers.get("Host"), self.server.server_address[0]):
+                self.send_error(HTTPStatus.FORBIDDEN)
+                return False
+            return True
 
         def _send(self, body: bytes, ctype: str, cache: bool = False) -> None:
             self.send_response(HTTPStatus.OK)

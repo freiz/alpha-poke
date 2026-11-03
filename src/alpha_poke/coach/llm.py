@@ -305,15 +305,23 @@ def public_settings(coach: Path) -> dict:
                          for k, p in PERSONAS.items()]}  # fmt: skip
 
 
+def _same_address(a: str, b: str) -> bool:
+    return a.strip().rstrip("/") == b.strip().rstrip("/")
+
+
 def save_settings(coach: Path, base_url: str, model: str, api_key: str | None,
                   persona: str | None = None) -> None:  # fmt: skip
-    """``api_key`` None or empty: the one set before is kept; ``persona`` None or unknown too."""
+    """``api_key`` None or empty: the one set before is kept, for the same address only (a key is
+    never sent to another service than the one it was given for: another address without a key
+    has none); ``persona`` None or unknown: kept too."""
     s = load_settings(coach)
+    if api_key:
+        s["api_key"] = api_key.strip()
+    elif not _same_address(base_url, s["base_url"]):
+        s["api_key"] = ""
     s["base_url"], s["model"] = base_url.strip(), model.strip()
     if persona in PERSONAS:
         s["persona"] = persona
-    if api_key:
-        s["api_key"] = api_key.strip()
     p = settings_path(coach)
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text(json.dumps(s), encoding="utf-8")
@@ -329,8 +337,7 @@ def key_for(coach: Path, base_url: str, api_key: str) -> str:
     if api_key.strip():
         return api_key.strip()
     s = load_settings(coach)
-    same = base_url.strip().rstrip("/") == s["base_url"].rstrip("/")
-    return s["api_key"] if same else ""
+    return s["api_key"] if _same_address(base_url, s["base_url"]) else ""
 
 
 def list_models(base_url: str, api_key: str, timeout: float = 20) -> list[str]:

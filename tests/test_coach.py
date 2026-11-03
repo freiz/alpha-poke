@@ -449,6 +449,17 @@ def test_the_app_reviews_an_uploaded_replay(game):
         bad = requests.post(base + "/api/review", json=upload | {"player": "Player A"},
                             headers={"Origin": "https://elsewhere.example"}, timeout=5)  # fmt: skip
         assert bad.status_code == 403
+        # (DNS rebinding: Origin and Host agree, both another site's name; every method refused)
+        evil = f"evil.example:{port}"
+        for r in (
+            requests.get(base + "/", headers={"Host": evil}, timeout=5),
+            requests.post(base + "/api/llm-settings", json={"base_url": "https://evil.example/v1"},
+                          headers={"Host": evil, "Origin": f"http://{evil}"}, timeout=5),
+            requests.post(base + "/api/llm-test", json={},
+                          headers={"Host": evil, "Origin": f"http://{evil}"}, timeout=5),
+        ):  # fmt: skip
+            assert r.status_code == 403
+        assert requests.get(f"http://localhost:{port}/", timeout=5).status_code == 200
         job = requests.post(
             base + "/api/review",
             json=upload | {"player": "Player B", "team": _export(game, "p2"), "parallel": 2},
@@ -1455,6 +1466,53 @@ def test_the_models_a_service_offers(tmp_path, monkeypatch):
     assert llm.key_for(tmp_path, "https://a.example/v1/", "") == "sk-saved"
     assert llm.key_for(tmp_path, "https://other.example/v1", "") == ""
     assert llm.key_for(tmp_path, "https://other.example/v1", "sk-new") == "sk-new"
+
+
+def test_a_saved_key_stays_with_its_address(tmp_path):
+    """2026-11-02: saving another address without a key drops the key (it was kept, and the next
+    call sent it to the new address); the same address, a trailing slash apart, keeps it."""
+    from alpha_poke.coach import llm
+
+    llm.save_settings(tmp_path, "https://a.example/v1", "m", "sk-saved")
+    llm.save_settings(tmp_path, "https://a.example/v1/", "m2", "")
+    assert llm.load_settings(tmp_path)["api_key"] == "sk-saved"
+    llm.save_settings(tmp_path, "https://evil.example/v1", "m", "")
+    assert llm.load_settings(tmp_path)["api_key"] == ""
+    assert llm.public_settings(tmp_path)["has_key"] is False
+    llm.save_settings(tmp_path, "https://b.example/v1", "m", "sk-b")
+    assert llm.load_settings(tmp_path)["api_key"] == "sk-b"
+
+
+@pytest.mark.parametrize(
+    ("host", "bound", "ok"),
+    [
+        ("127.0.0.1:8090", "127.0.0.1", True),
+        ("localhost:8090", "127.0.0.1", True),
+        ("LOCALHOST", "127.0.0.1", True),
+        ("[::1]:8090", "127.0.0.1", True),
+        ("192.168.1.20:8090", "0.0.0.0", True),
+        (None, "127.0.0.1", True),
+        ("evil.example:8090", "127.0.0.1", False),
+        ("evil.example:8090", "0.0.0.0", False),
+        ("localhost.evil.example", "127.0.0.1", False),
+        ("127.0.0.1.evil.example", "127.0.0.1", False),
+        ("[not-an-address", "127.0.0.1", False),
+    ],
+)
+def test_the_app_answers_only_to_this_computers_names(host, bound, ok):
+    from alpha_poke.coach.server import allowed_host
+
+    assert allowed_host(host, bound) is ok
+
+
+def test_the_computers_name_only_when_open_to_the_network():
+    import socket
+
+    from alpha_poke.coach.server import allowed_host
+
+    name = socket.gethostname()
+    assert allowed_host(f"{name}:8090", "0.0.0.0") is True
+    assert allowed_host(f"{name}:8090", "127.0.0.1") is False
 
 
 def test_the_review_passes_its_fixed_rating_input(game, monkeypatch):
